@@ -2,15 +2,29 @@
 % Please edit documentation in R/pipe-composition.R
 \name{print.rtf_document}
 \alias{print.rtf_document}
-\title{Print an rtf_document object}
+\title{Inspect an `rtf_document`'s structure (text)}
 \usage{
 \method{print}{rtf_document}(x, ...)
 }
 \arguments{
-\item{x}{An rtf_document object.}
+\item{x}{An [rtf_document()] object.}
 
-\item{...}{Additional arguments (unused).}
+\item{...}{Unused.}
+}
+\value{
+Invisibly, `x`.
 }
 \description{
-Print an rtf_document object
+`print.rtf_document()` is a **build-time structural inspector**.  As you
+assemble a document with the pipe (`rtf_document()` -> `rtf_section()` ->
+`rtf_tables()`/`rtf_figures()`), printing it shows -- as plain text -- the
+page setup, every section's running **header** and **footer** (left / centre
+/ right cells, including page-number tokens), and every content block (type,
+size, column headers, title, footnote).  The goal is to confirm the layout
+and attributes are what you intended *before* rendering to RTF and opening
+the file in Word / LibreOffice.
+}
+\details{
+For one table's detail see [print.rtftable()]; for a quick visual sketch see
+[plot.rtf_document()]; to write the file use [generate_rtfreport()].
 }

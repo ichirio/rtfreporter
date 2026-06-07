@@ -142,6 +142,7 @@ reference:
     contents:
       - rtf_document
       - print.rtf_document
+      - print.rtftable
       - rtf_config
       - rtf_section
       - rtf_tables

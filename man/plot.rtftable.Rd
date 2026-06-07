@@ -18,9 +18,11 @@ to be 10 inches = landscape letter minus margins).  Default `8`.}
 Invisibly returns `x`.
 }
 \description{
-Draws a wireframe of the table: column-header band, data band (with the
-row count annotated), spanning headers if any, and column widths drawn
-proportional to the table's effective layout.  Borders are sketched at
-the table's outer frame and at zone boundaries (TFL preset is shown by
-default).
+A quick **visual** companion to [print.rtftable()] (which gives the full
+text detail): draws a wireframe of the table -- the column-header band with
+the real header labels, the data band (row count annotated), spanning
+headers if any, and column widths drawn proportional to the table's
+effective layout.  Borders are sketched at the table's outer frame and zone
+boundaries.  Use it -- like `print()` -- to check the layout while building
+a report, before rendering to RTF.
 }

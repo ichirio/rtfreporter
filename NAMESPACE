@@ -11,6 +11,7 @@ export(rtf_header_format)
 export(rtf_footer_format)
 export(rtf_figure_format)
 S3method(print, rtf_document)
+S3method(print, rtftable)
 
 # Content constructors (for detailed formatting)
 export(rtftable)

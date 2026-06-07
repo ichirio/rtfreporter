@@ -803,17 +803,177 @@ rtf_figure_format <- function(doc, ...) {
 # S3 Methods for printing
 # ============================================================================
 
-#' Print an rtf_document object
+# -- Inspection helpers (shared by print.rtf_document / print.rtftable) -------
+
+# Truncate a string for compact console display (ASCII ellipsis "..").
+.insp_trunc <- function(s, n = 48L) {
+  s <- gsub("[\r\n]+", " ", paste(as.character(s), collapse = " / "))
+  if (nchar(s) > n) paste0(substr(s, 1L, n - 2L), "..") else s
+}
+
+# One text line per header/footer row, marking left / centre / right cells.
+.insp_hf_lines <- function(hf) {
+  rows <- hf$rows
+  if (is.null(rows) || length(rows) == 0L) return(character(0))
+  vapply(rows, function(r) {
+    nm <- names(r) %||% rep("", length(r))
+    cells <- vapply(seq_along(r), function(i) {
+      tag <- switch(nm[[i]], l = "L:", c = "C:", r = "R:", "?:")
+      paste0(tag, " ", .insp_trunc(r[[i]], 34L))
+    }, character(1L))
+    paste(cells, collapse = "   ")
+  }, character(1L))
+}
+
+# One text line per column-header row ("a | b | c").
+.insp_colheader_lines <- function(col_header, fallback = NULL) {
+  if (is.null(col_header)) {
+    return(if (is.null(fallback)) character(0)
+           else paste(fallback, collapse = " | "))
+  }
+  rows <- if (is.character(col_header)) list(col_header) else col_header
+  vapply(rows, function(row) {
+    labs <- if (is.character(row)) row else vapply(row, function(cell) {
+      if (is.list(cell)) as.character(cell$label %||% "") else as.character(cell)
+    }, character(1L))
+    paste(labs, collapse = " | ")
+  }, character(1L))
+}
+
+# Short human description of a resolved table border.
+.insp_border_desc <- function(b) {
+  if (is.null(b)) return("none")
+  sides <- c(
+    if (!is.null(b$header$top))      "header-top",
+    if (!is.null(b$header$bottom))   "header-bottom",
+    if (!is.null(b$last_row$bottom)) "last-row-bottom")
+  if (length(sides) == 0L) "custom" else paste(sides, collapse = " + ")
+}
+
+# Compact column-width description.
+.insp_width_desc <- function(x) {
+  if (!is.null(x$column_widths_twips))
+    paste0("fixed twips: ", paste(x$column_widths_twips, collapse = " / "))
+  else if (!is.null(x$col_rel_width))
+    paste0("relative: ", paste(x$col_rel_width, collapse = " : "))
+  else "equal (auto)"
+}
+
+#' Inspect an `rtftable`'s layout (text)
 #'
-#' @param x An rtf_document object.
-#' @param ... Additional arguments (unused).
+#' `print.rtftable()` is a **build-time layout inspector**: it shows, as plain
+#' text, how a single table will be laid out -- its column headers (each row,
+#' with spanning noted), per-column body alignment, column widths, border
+#' style, row count, and any title / footnote that travelled with the object
+#' (e.g. from [as_rtftables()]).  It is meant for checking the structure while
+#' you build a report, without rendering to RTF and opening Word.  For the full
+#' document outline see [print.rtf_document()]; for a quick picture see
+#' [plot.rtftable()].
 #'
+#' @param x An [rtftable()] object.
+#' @param ... Unused.
+#' @return Invisibly, `x`.
+#' @export
+print.rtftable <- function(x, ...) {
+  ref   <- if (!is.null(x$data_list)) x$data_list[[1L]] else x$data
+  ncols <- if (is.null(ref)) 0L else ncol(ref)
+  ndata <- if (!is.null(x$data_list)) sum(vapply(x$data_list, nrow, integer(1L)))
+           else nrow(x$data %||% data.frame())
+  cat(sprintf("<rtftable>  %d column%s x %d data row%s%s\n",
+              ncols, if (ncols == 1L) "" else "s",
+              ndata, if (ndata == 1L) "" else "s",
+              if (!is.null(x$data_list))
+                sprintf("  (%d data.frames)", length(x$data_list)) else ""))
+
+  hdr <- .insp_colheader_lines(x$col_header, names(ref))
+  if (length(hdr)) {
+    cat("  Column headers:\n")
+    for (h in hdr) cat("    ", h, "\n", sep = "")
+  }
+  if (!is.null(x$spanning_header) && length(x$spanning_header))
+    cat("    (+ spanning header)\n")
+
+  aligns <- vapply(x$col_spec %||% list(),
+                   function(s) substr(s$align %||% "?", 1L, 1L), character(1L))
+  if (length(aligns))
+    cat("  Body alignment: ", paste(aligns, collapse = " | "), "\n", sep = "")
+  cat("  Column widths:  ", .insp_width_desc(x), "\n", sep = "")
+  cat("  Border:         ", .insp_border_desc(x$border), "\n", sep = "")
+
+  tt <- attr(x, "rtf_titles",    exact = TRUE)
+  fn <- attr(x, "rtf_footnotes", exact = TRUE)
+  if (!is.null(tt)) cat("  Title:    ", .insp_trunc(unlist(tt), 56L), "\n", sep = "")
+  if (!is.null(fn)) cat("  Footnote: ", .insp_trunc(unlist(fn), 56L), "\n", sep = "")
+  invisible(x)
+}
+
+#' Inspect an `rtf_document`'s structure (text)
+#'
+#' `print.rtf_document()` is a **build-time structural inspector**.  As you
+#' assemble a document with the pipe (`rtf_document()` -> `rtf_section()` ->
+#' `rtf_tables()`/`rtf_figures()`), printing it shows -- as plain text -- the
+#' page setup, every section's running **header** and **footer** (left / centre
+#' / right cells, including page-number tokens), and every content block (type,
+#' size, column headers, title, footnote).  The goal is to confirm the layout
+#' and attributes are what you intended *before* rendering to RTF and opening
+#' the file in Word / LibreOffice.
+#'
+#' For one table's detail see [print.rtftable()]; for a quick visual sketch see
+#' [plot.rtf_document()]; to write the file use [generate_rtfreport()].
+#'
+#' @param x An [rtf_document()] object.
+#' @param ... Unused.
+#' @return Invisibly, `x`.
 #' @export
 print.rtf_document <- function(x, ...) {
-  cat("rtf_document object\n")
-  cat("  Pages:", length(x$contents), "\n")
-  cat("  Sections defined:", length(x$sections), "\n")
-  cat("  Document page size:", x$document$page$width_in, "x",
-      x$document$page$height_in, "inches\n")
+  pg  <- x$document$page %||% list()
+  fmt <- x$document$default_format %||% list()
+  orient <- pg$orientation %||% "landscape"
+  w   <- pg$width_in  %||% 11
+  h   <- pg$height_in %||% 8.5
+  fs  <- (fmt$font_size_half_points %||% 18L) / 2
+
+  cat("<rtf_document>\n")
+  cat(sprintf("  Page:  %g x %g in, %s; font %gpt\n", w, h, orient, fs))
+
+  secs <- x$sections
+  cat(sprintf("  Sections (%d):\n",
+              length(secs %||% list())))
+  for (nm in names(secs)) {
+    s <- secs[[nm]]
+    label <- if (identical(nm, "_default")) "default (auto)" else paste("from page", nm)
+    cat("    - ", label, ":\n", sep = "")
+    hl <- if (!is.null(s$header)) .insp_hf_lines(s$header) else character(0)
+    fl <- if (!is.null(s$footer)) .insp_hf_lines(s$footer) else character(0)
+    if (length(hl)) { cat("        header:\n"); for (l in hl) cat("          ", l, "\n", sep = "") }
+    if (length(fl)) { cat("        footer:\n"); for (l in fl) cat("          ", l, "\n", sep = "") }
+    if (!length(hl) && !length(fl)) cat("        (no header / footer)\n")
+  }
+
+  ct <- x$contents
+  cat(sprintf("  Content blocks (%d):\n", length(ct %||% list())))
+  for (i in seq_along(ct)) {
+    item  <- ct[[i]]
+    if (inherits(item, "rtftable")) {
+      ref   <- if (!is.null(item$data_list)) item$data_list[[1L]] else item$data
+      ncols <- if (is.null(ref)) 0L else ncol(ref)
+      ndata <- if (!is.null(item$data_list))
+        sum(vapply(item$data_list, nrow, integer(1L))) else nrow(item$data %||% data.frame())
+      hdr <- .insp_colheader_lines(item$col_header, names(ref))
+      cat(sprintf("    [%d] table   %d x %d   cols: %s\n", i, ncols, ndata,
+                  if (length(hdr)) .insp_trunc(hdr[[1L]], 46L) else "-"))
+    } else if (inherits(item, "rtfplot") || inherits(item, "rtf_figure")) {
+      cat(sprintf("    [%d] figure\n", i))
+    } else {
+      cat(sprintf("    [%d] %s\n", i, class(item)[[1L]]))
+    }
+    tt <- x$titles[[i]]
+    fn <- x$footnotes[[i]]
+    if (!is.null(tt) && length(tt) && any(nzchar(unlist(tt))))
+      cat("         title:    ", .insp_trunc(unlist(tt), 50L), "\n", sep = "")
+    if (!is.null(fn) && length(fn) && any(nzchar(unlist(fn))))
+      cat("         footnote: ", .insp_trunc(unlist(fn), 50L), "\n", sep = "")
+  }
+  cat("  -> generate_rtfreport() writes the .rtf; plot() draws a sketch.\n")
   invisible(x)
 }

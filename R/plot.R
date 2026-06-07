@@ -98,11 +98,13 @@ plot.rtf_table_border <- function(x, ...) {
 
 #' Visualise an `rtftable`
 #'
-#' Draws a wireframe of the table: column-header band, data band (with the
-#' row count annotated), spanning headers if any, and column widths drawn
-#' proportional to the table's effective layout.  Borders are sketched at
-#' the table's outer frame and at zone boundaries (TFL preset is shown by
-#' default).
+#' A quick **visual** companion to [print.rtftable()] (which gives the full
+#' text detail): draws a wireframe of the table -- the column-header band with
+#' the real header labels, the data band (row count annotated), spanning
+#' headers if any, and column widths drawn proportional to the table's
+#' effective layout.  Borders are sketched at the table's outer frame and zone
+#' boundaries.  Use it -- like `print()` -- to check the layout while building
+#' a report, before rendering to RTF.
 #'
 #' @param x An [rtftable()] object.
 #' @param width Plot width in inches (the page's writable width is assumed
@@ -150,12 +152,26 @@ plot.rtftable <- function(x, width = 8, ...) {
     if (n_dfs > 1L) sprintf(" (%d data.frames)", n_dfs) else ""
   ), cex.main = 0.95)
 
-  # Header band.
+  # Header band -- draw the actual column-header labels in their columns so
+  # the sketch shows the real layout (not just a grey strip).
   graphics::rect(0, 0, width, n_header_rows,
                  col = "gray90", border = NA)
-  graphics::text(width / 2, n_header_rows / 2,
-                 sprintf("column header x %d", n_header_rows),
-                 cex = 0.85, font = 2)
+  hdr_rows <- .insp_colheader_lines(x$col_header, names(ref_df))
+  if (length(hdr_rows)) {
+    mids <- (xs[-length(xs)] + xs[-1L]) / 2
+    for (r in seq_along(hdr_rows)) {
+      labs <- strsplit(hdr_rows[[r]], " | ", fixed = TRUE)[[1L]]
+      yy   <- r - 0.5
+      for (k in seq_along(labs)) {
+        if (k <= length(mids) && nzchar(labs[k]))
+          graphics::text(mids[k], yy, labs[k], cex = 0.7, font = 2)
+      }
+    }
+  } else {
+    graphics::text(width / 2, n_header_rows / 2,
+                   sprintf("column header x %d", n_header_rows),
+                   cex = 0.85, font = 2)
+  }
 
   # Data band.
   graphics::rect(0, n_header_rows, width, n_header_rows + 2L,
@@ -185,9 +201,10 @@ plot.rtftable <- function(x, width = 8, ...) {
 
 #' Visualise an `rtf_document`
 #'
-#' Draws a grid of page thumbnails.  Each thumbnail shows the title /
-#' content / footnote regions, with header and footer bands sketched in
-#' grey.
+#' A quick **visual** companion to [print.rtf_document()] (which gives the full
+#' text outline): draws a grid of page thumbnails, each annotated with its
+#' title and table size, with header and footer bands sketched in grey.  Use it
+#' to eyeball the page layout while building a report, before rendering to RTF.
 #'
 #' @param x An [rtf_document()] object.
 #' @param max_pages Maximum number of pages to draw (default `12`).  Larger
@@ -231,14 +248,21 @@ plot.rtf_document <- function(x, max_pages = 12L, ...) {
                    col = "gray92", border = NA)
     graphics::text(pw / 2, ph - 0.65, "footer", cex = 0.75, col = "gray40")
 
-    # Title / content / footnote zones.
+    # Title / content / footnote zones, annotated with the real text where
+    # available so the sketch identifies each page.
+    ttl <- x$titles[[i]]
+    ttl <- if (!is.null(ttl) && length(ttl) && any(nzchar(unlist(ttl))))
+      .insp_trunc(unlist(ttl), 40L) else "title"
     graphics::rect(0.6, 1.0, pw - 0.6, 1.5, col = "gray97", border = NA)
-    graphics::text(pw / 2, 1.25, "title", cex = 0.75, col = "gray50")
+    graphics::text(pw / 2, 1.25, ttl, cex = 0.75, col = "gray40")
 
     ct <- x$contents[[i]]
-    label <- if (inherits(ct, "rtftable")) "table"
-             else if (inherits(ct, "rtfplot")) "figure"
-             else "content"
+    label <- if (inherits(ct, "rtftable")) {
+      ref <- if (!is.null(ct$data_list)) ct$data_list[[1L]] else ct$data
+      sprintf("table  %d x %d", if (is.null(ref)) 0L else ncol(ref),
+              if (!is.null(ct$data_list)) sum(vapply(ct$data_list, nrow, integer(1L)))
+              else nrow(ct$data %||% data.frame()))
+    } else if (inherits(ct, "rtfplot")) "figure" else "content"
     graphics::rect(0.6, 1.7, pw - 0.6, ph - 1.4,
                    col = "white", border = "gray60")
     graphics::text(pw / 2, (1.7 + ph - 1.4) / 2, label, cex = 1.0, font = 2)

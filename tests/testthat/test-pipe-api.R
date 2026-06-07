@@ -94,12 +94,12 @@ test_that("deprecated rtf_*_format() functions warn and return the doc unchanged
   }
 })
 
-test_that("print(rtf_document) prints a summary header", {
+test_that("print(rtf_document) outlines the document structure", {
   df1 <- data.frame(A = 1:3, B = c("x", "y", "z"))
   doc <- rtf_section(rtf_tables(rtf_document(), list(df1, df1, df1)),
                      page = 1, secinfo = list(header = NULL, footer = NULL))
-  expect_output(print(doc), "rtf_document object")
-  expect_output(print(doc), "Pages: 3")
+  expect_output(print(doc), "<rtf_document>")
+  expect_output(print(doc), "Content blocks \\(3\\)")
 })
 
 test_that("end-to-end pipe-style workflow builds a valid document", {

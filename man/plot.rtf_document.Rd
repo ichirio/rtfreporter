@@ -18,7 +18,8 @@ documents are truncated with a note.}
 Invisibly returns `x`.
 }
 \description{
-Draws a grid of page thumbnails.  Each thumbnail shows the title /
-content / footnote regions, with header and footer bands sketched in
-grey.
+A quick **visual** companion to [print.rtf_document()] (which gives the full
+text outline): draws a grid of page thumbnails, each annotated with its
+title and table size, with header and footer bands sketched in grey.  Use it
+to eyeball the page layout while building a report, before rendering to RTF.
 }

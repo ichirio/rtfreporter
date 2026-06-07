@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+## rtfreporter 0.0.75
+
+### Redesigned `print()` / `plot()` as build-time layout inspectors
+
+`print()` and `plot()` for documents and tables are now purpose-built to verify
+layout *before* rendering to RTF.  `print.rtftable()` shows, as plain text, the
+column-header rows, body alignment, column widths, border configuration, and any
+title/footnote attributes.  `print.rtf_document()` outlines the page setup, each
+section's header/footer cells (including page-number tokens such as
+`{PAGE}`/`{TOTAL_PAGES}`), and the content blocks with their titles and sizes.
+`plot()` is the quick visual companion: it sketches the real column-header
+labels in their columns rather than a featureless grey strip.
+
 ## rtfreporter 0.0.64
 
 ### Article: pharmaverse code folded, table print + snapshot shown
