@@ -116,6 +116,8 @@ navbar:
           href: articles/pagination.html
         - text: "Headers and footers (sections)"
           href: articles/headers-footers.html
+        - text: "Splitting a report into sections"
+          href: articles/section-splitting.html
         - text: "Rendering, post-processing & assembly"
           href: articles/output.html
         # ── Worked clinical examples ────────────────────────────────────
@@ -364,6 +366,7 @@ articles:
       - articles/importing-tables
       - articles/pagination
       - articles/headers-footers
+      - articles/section-splitting
       - articles/output
 
   - title: Worked clinical examples
