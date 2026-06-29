@@ -1,0 +1,219 @@
+---
+title: "Splitting a report into sections, by table object"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      message = FALSE, warning = FALSE)
+```
+
+```{r setup}
+library(rtfreporter)
+```
+
+A common clinical layout is **one section per group** -- one section per lab
+test, per cohort, per visit -- each starting on its own page with the group
+name in the running header. rtfreporter builds this with
+`rtf_tables(..., auto_section = TRUE)`. This article shows, for each kind of
+table object, how to get the section names where `auto_section` can see them.
+
+## How `auto_section` decides where sections start
+
+`rtf_tables(auto_section = TRUE)` reads the **names of the list elements** it is
+given:
+
+- a **non-empty** name starts a **new section** and is appended to the running
+  header (the base header defined once by `rtf_section()` without a `page`);
+- an **empty / unnamed** element **falls through** into the current section.
+
+So the whole question is: *how do the per-page `rtftable`s in the list get their
+names?* `as_rtftables()` returns **one element per page**, so there are two
+natural answers depending on where the grouping variable lives.
+
+| Where the group lives | Object types | How to name the sections |
+|---|---|---|
+| A **column** of the rendered body | a `data.frame` / `Tplyr` body you assemble; `cards` + `tfrmt` with `label_loc = "column"` | `as_rtftables(split = "by_value", group_col = ...)` -- names each page by the group value |
+| **Row groups** (label rows in the stub) | `gt`, `gtsummary`, `rtables` / `tern`, `tfrmt` (indented) | build one table per group, then [`combine_sections()`] |
+
+Both routes end the same way -- a flat, named list handed to
+`rtf_tables(..., auto_section = TRUE)`.
+
+## The data
+
+A small lab dataset: three lab tests, two visits, three treatment arms.
+
+```{r data}
+set.seed(1)
+n      <- 24
+arms   <- c("Placebo", "Low Dose", "High Dose")
+tests  <- c("ALT (U/L)", "AST (U/L)", "Bilirubin (umol/L)")
+visits <- c("Baseline", "Week 24")
+centre <- c("ALT (U/L)" = 25, "AST (U/L)" = 22, "Bilirubin (umol/L)" = 10)
+
+adlb <- do.call(rbind, lapply(tests, function(p) do.call(rbind, lapply(visits,
+  function(v) data.frame(
+    SUBJID  = seq_len(n),
+    ARM     = factor(sample(arms, n, TRUE), levels = arms),
+    PARAMCD = factor(p, levels = tests),
+    AVISIT  = factor(v, levels = visits),
+    AVAL    = round(rnorm(n, centre[p], 5), 1),
+    stringsAsFactors = FALSE)))))
+
+str(adlb, give.attr = FALSE)
+```
+
+We want **one section per lab test**.
+
+## Route A -- the group is a column (`split = "by_value"`)
+
+When you assemble the body yourself (a plain `data.frame`, or a `Tplyr` result),
+keep the grouping variable as a **column**. Here we summarise `adlb` to a
+display body whose first column, `Test`, is the section key:
+
+```{r summarise}
+cell <- function(p, v, a) {
+  x <- adlb$AVAL[adlb$PARAMCD == p & adlb$AVISIT == v & adlb$ARM == a]
+  sprintf("%.1f (%.1f)", mean(x), sd(x))
+}
+lab_body <- do.call(rbind, lapply(tests, function(p) {
+  d <- data.frame(Test = p, Visit = visits, check.names = FALSE,
+                  stringsAsFactors = FALSE)
+  for (a in arms) d[[a]] <- vapply(visits, function(v) cell(p, v, a), character(1))
+  d
+}))
+lab_body
+```
+
+`as_rtftables(split = "by_value", group_col = "Test")` makes **one page per
+distinct `Test`** and names each page with that value. `drop_cols = "Test"`
+hides the key column from the printed table while still using it to split and
+name -- so the page names survive even though the column does not:
+
+```{r by-value}
+pages <- as_rtftables(lab_body,
+                      split      = "by_value",
+                      group_col  = "Test",
+                      drop_cols  = "Test",
+                      col_header = c("Visit", arms))
+names(pages)              # one section name per lab test
+```
+
+That named list is already `auto_section`-ready:
+
+```{r by-value-doc}
+hdr <- rtf_header(rows = list(
+  c(l = "Acme Biopharma, Inc.", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"),
+  c(c = "Table 14.3  Laboratory Results -- Mean (SD) by Visit"),
+  c(c = "Safety Population"),
+  c(c = "")))
+
+doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
+  rtf_section(secinfo = list(header = hdr)) |>     # base header (no `page`)
+  rtf_tables(pages, auto_section = TRUE)           # one section per lab test
+```
+
+```{r by-value-render, eval = FALSE}
+generate_rtfreport(doc, "lab_by_test.rtf", overwrite = TRUE)
+```
+
+Each lab test now opens its own section with the test name appended to the
+shared header. `Tplyr` fits the same route: `Tplyr::build()` returns a data
+frame, so add the `Test` column and call `as_rtftables(split = "by_value")`
+exactly as above.
+
+## Route B -- row-grouped frameworks (`combine_sections()`)
+
+`gt`, `gtsummary` and `rtables` / `tern` render a grouping variable as
+**indented label rows in the stub**, not as a column. After rendering there is
+no column for `split = "by_value"` to key on. The natural unit there is **one
+table per section**: build a small table for each lab test, then stitch them
+together with [`combine_sections()`], which names each table's first page and
+lets the rest fall through.
+
+`combine_sections()` is format-agnostic -- it only arranges the names of a list
+of `rtftable`s, so the same call works whatever built them:
+
+```{r combine-demo}
+# (stand-in page lists; in practice each comes from as_rtftables() below)
+alt <- as_rtftables(data.frame(Visit = visits, Placebo = c("26.2", "25.8")))
+ast <- as_rtftables(data.frame(Visit = visits, Placebo = c("23.7", "19.9")))
+
+sections <- combine_sections(`ALT (U/L)` = alt, `AST (U/L)` = ast)
+names(sections)          # first page named, the rest blank (fall-through)
+```
+
+### gtsummary
+
+Build one `tbl_*` per test, convert each with `as_rtftables()`, and combine.
+`setNames()` + `do.call()` keep it to a single loop:
+
+```{r gtsummary, eval = FALSE}
+library(gtsummary)
+
+one_test <- function(p) {
+  adlb[adlb$PARAMCD == p, c("ARM", "AVISIT", "AVAL")] |>
+    tbl_continuous(variable = AVAL, by = ARM, include = AVISIT,
+                   statistic = ~ "{mean} ({sd})") |>
+    as_rtftables(read_meta = TRUE)
+}
+
+sections <- do.call(combine_sections, setNames(lapply(tests, one_test), tests))
+
+doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
+  rtf_section(secinfo = list(header = hdr)) |>
+  rtf_tables(sections, auto_section = TRUE)
+generate_rtfreport(doc, "lab_gtsummary.rtf", overwrite = TRUE)
+```
+
+### rtables / tern
+
+Same shape -- one `build_table()` per test, then combine:
+
+```{r rtables, eval = FALSE}
+library(rtables)
+
+one_test <- function(p) {
+  basic_table(show_colcounts = TRUE) |>
+    split_cols_by("ARM") |>
+    split_rows_by("AVISIT") |>
+    analyze("AVAL", afun = function(x)
+      rcell(c(mean(x), sd(x)), format = "xx.x (xx.x)")) |>
+    build_table(df = adlb[adlb$PARAMCD == p, ]) |>
+    as_rtftables(read_meta = TRUE)
+}
+
+sections <- do.call(combine_sections, setNames(lapply(tests, one_test), tests))
+```
+
+> **One table, or one per section?** If instead you `split_rows_by("PARAMCD")`
+> in a *single* `rtables` table, all three tests render as row groups inside
+> **one** table -- i.e. **one** section, with the tests as indented headings.
+> That is a perfectly good layout; use it when you want the tests together.
+> Build *per-test* tables and `combine_sections()` only when each test should be
+> its **own** section.
+
+## Choosing a route
+
+```{r choose, echo = FALSE}
+knitr::kable(data.frame(
+  `Object`  = c("data.frame / Tplyr", "cards + tfrmt (label_loc = \"column\")",
+                "gt / gtsummary", "rtables / tern", "tfrmt (indented)"),
+  `Route`   = c("A -- split = \"by_value\"", "A -- split = \"by_value\"",
+                "B -- combine_sections()", "B -- combine_sections()",
+                "B -- combine_sections()"),
+  check.names = FALSE))
+```
+
+## A note on the "one section per page" default
+
+You do **not** have to use either route. If you hand `auto_section = TRUE` a
+list whose pages are each named (or each unnamed), you simply get **one RTF
+section per page**. That is harmless -- it matches the one-page-one-section
+convention many SAS-based pipelines use -- and the page numbering and headers
+still come out correct. `split = "by_value"` and `combine_sections()` are for
+the tidier **one-section-per-group** layout, not a correctness fix.
+
+See also [Headers and footers](headers-footers.html) for the section /
+header model, [Paginating with `as_rtftables()`](pagination.html) for the
+`split` strategies, and [Importing tables](importing-tables.html) for reading
+each framework's object.
