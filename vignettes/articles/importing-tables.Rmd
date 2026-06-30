@@ -373,6 +373,54 @@ For a plain data.frame (no metadata), set them on `rtf_tables()` with `titles =`
 / `footnotes =` instead.
 
 
+## Spanning headers from delimited names -- `header_sep`
+
+gt, gtsummary, rtables/tern, flextable and huxtable all carry real spanning
+(multi-row) header metadata, which `as_rtftables()` reads directly. A **plain
+data.frame** has none: the only place the nesting can live is the column *names*.
+A common producer is `ydisctools::pivot_stats_wider()`, which spreads grouping
+columns into headers joined by `____`:
+
+```
+group1 group2 label   cohort1____trt1 cohort1____trt2 cohort2____trt1 cohort2____trt2
+Hoge   Sex    Male     11 (55.0)        9 (45.0)        13 (65.0)       7 (35.0)
+Hoge   Sex    Female    9 (45.0)       11 (55.0)        7 (35.0)       13 (65.0)
+```
+
+`as_rtftables()` reconstructs the two-level header from those names
+automatically -- `cohort1` / `cohort2` become spanners over their `trt1` / `trt2`
+leaf columns, and the id columns (`group1`, `group2`, `label`) keep their name on
+the leaf row:
+
+```{r header-sep, eval = FALSE}
+# `df` produced by ydisctools::pivot_stats_wider(); names use the "____" sep.
+as_rtftables(df)            # 2-row header reconstructed by default
+```
+
+`header_sep` controls the delimiter(s). Its default recognizes **both**
+`"____"` (ydisctools) and `"___tlang_delim___"` (the delimiter tfrmt puts in its
+flattened column names), so a data.frame from either tool just works. Pass your
+own separator(s) to override, or `NULL` to keep the plain one-row header:
+
+```{r header-sep-custom, eval = FALSE}
+as_rtftables(df, header_sep = "::")     # split on your own delimiter
+as_rtftables(df, header_sep = NULL)     # disable: use names(df) verbatim
+```
+
+Adjacent columns merge into one spanning cell only when they share both the
+label *and* the same ancestor path, so a `trt1` under `cohort1` never merges with
+a `trt1` under `cohort2`. An explicit `col_header =` (passed through to
+`rtftable()`) always wins over the reconstructed one.
+
+With the `"____"` separator a **doubled** separator (`"________"`) splits to an
+empty middle segment, i.e. a blank cell at that header level -- useful to align a
+column that skips an intermediate spanner (e.g. an `Overall________n` column
+sitting beside `Drug____Dose____n` columns).
+
+This only applies to plain data.frame input; framework tables keep using their
+own spanning metadata.
+
+
 ## Pagination
 
 Everything above is independent of how the table is split into pages. When the

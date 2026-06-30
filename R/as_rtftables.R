@@ -42,6 +42,84 @@
   best
 }
 
+# Default separators understood when reconstructing a spanning column header
+# from a plain data.frame's column names (see `.split_names_to_col_header()`):
+#   "____"              -- ydisctools::pivot_stats_wider()
+#   "___tlang_delim___" -- tfrmt's column delimiter
+.default_header_seps <- function() c("____", "___tlang_delim___")
+
+# Reconstruct a multi-row spanning column header by splitting delimited column
+# names on `seps`.  A bare data.frame carries no spanning metadata, so the
+# nesting is parsed out of the names: each name becomes a stack of segments,
+# horizontally adjacent columns that share a label AND the same ancestor path
+# are merged into a spanning cell, and columns with fewer segments (e.g. id
+# columns with no separator) are bottom-aligned so their label sits on the leaf
+# row with blank cells above.  A doubled "____" (i.e. "________") splits to an
+# empty middle segment -> a blank cell at that header level.
+#
+# Returns the same shape the rtables adapter emits -- upper rows as lists of
+# `col_cell()`, bottom row as a character vector -- so `drop_cols` reindexing
+# and the rest of the pipeline treat it like any adapter spanning header.
+# Returns NULL when no name splits into more than one segment (caller then
+# falls back to the plain `names(data)` single-row header).
+.split_names_to_col_header <- function(col_names, seps) {
+  if (is.null(seps)) return(NULL)
+  seps <- seps[!is.na(seps) & nzchar(seps)]
+  if (length(seps) == 0L || length(col_names) == 0L) return(NULL)
+
+  # Literal-quote each separator (PCRE \Q...\E) and try longest first, so a
+  # longer separator wins over a shorter one that is its prefix.  \Q...\E avoids
+  # gsub-style backreference escaping (unreliable in this R build).
+  seps    <- seps[order(-nchar(seps))]
+  pattern <- paste0("\\Q", seps, "\\E", collapse = "|")
+
+  segs  <- strsplit(col_names, pattern, perl = TRUE)
+  segs  <- lapply(segs, function(s) if (length(s) == 0L) "" else s)
+  depth <- max(lengths(segs))
+  if (depth <= 1L) return(NULL)
+
+  ncol <- length(col_names)
+  # Bottom-align each column's segments into a depth x ncol label matrix; cells
+  # above a short column's top segment are NA ("no cell"), distinct from an
+  # explicit empty-string segment ("" -> a blank labelled cell).
+  M <- matrix(NA_character_, nrow = depth, ncol = ncol)
+  for (j in seq_len(ncol)) {
+    s <- segs[[j]]
+    M[(depth - length(s) + 1L):depth, j] <- s
+  }
+
+  same_label <- function(a, b) {
+    (is.na(a) && is.na(b)) || (!is.na(a) && !is.na(b) && a == b)
+  }
+
+  # Upper rows (1 .. depth-1): merge adjacent columns sharing this row's label
+  # and the identical ancestor path (rows above).  Each run -> one col_cell.
+  upper_rows <- vector("list", depth - 1L)
+  for (r in seq_len(depth - 1L)) {
+    cells <- list()
+    j <- 1L
+    while (j <= ncol) {
+      k <- j
+      while (k + 1L <= ncol &&
+             same_label(M[r, k + 1L], M[r, j]) &&
+             identical(M[seq_len(r - 1L), k + 1L], M[seq_len(r - 1L), j])) {
+        k <- k + 1L
+      }
+      lab <- if (is.na(M[r, j])) "" else M[r, j]
+      cells <- c(cells,
+                 list(col_cell(pos = if (j == k) j else c(j, k), label = lab)))
+      j <- k + 1L
+    }
+    upper_rows[[r]] <- cells
+  }
+
+  # Bottom (leaf) row: one label per column, never merged.
+  bottom <- M[depth, ]
+  bottom[is.na(bottom)] <- ""
+
+  c(upper_rows, list(bottom))
+}
+
 # Resolve a `read_meta` request to the concrete vector of enabled metadata
 # tokens.  Shared by every table-object adapter (gt, rtables, flextable,
 # huxtable), each of which wraps this with its own allowed-token set and label:
@@ -297,6 +375,23 @@
 #'   the `" (Cont.)"` marker is written into the `group_col` cell, so if
 #'   `group_col` is itself dropped the marker is not shown (group on the visible
 #'   label column if the marker is wanted).
+#' @param header_sep Separator(s) used to reconstruct a **spanning (multi-row)
+#'   column header** from a plain **data.frame**'s column names.  A bare
+#'   data.frame carries no spanning metadata, so the nesting is parsed out of the
+#'   names: each name is split on `header_sep` into segments that become stacked
+#'   header rows, and horizontally adjacent columns sharing a label *and* the
+#'   same ancestor path are merged into one spanning cell.  Columns with no
+#'   separator (e.g. id columns such as `label`) keep their name on the bottom
+#'   (leaf) row with blank cells above.  The default recognizes **both** built-in
+#'   delimiters: `"____"` (from `ydisctools::pivot_stats_wider()`) and
+#'   `"___tlang_delim___"` (tfrmt's column delimiter).  Pass your own
+#'   separator(s) to override, or `NULL` to disable (use the plain `names(data)`
+#'   single-row header).  Only applies to plain data.frame input -- gt /
+#'   gtsummary / rtables / tern / flextable / huxtable already carry real
+#'   spanning metadata.  With the `"____"` separator a doubled separator
+#'   (`"________"`) yields an empty middle segment, i.e. a **blank cell** at that
+#'   header level (handy to align a column that skips an intermediate spanner
+#'   level).  An explicit `col_header` (passed via `...`) always wins.
 #' @param auto_width Logical (default `FALSE`).  When `TRUE`, each column is
 #'   sized to its widest content (column header label or data cell) via
 #'   [auto_col_widths()], so long row labels and column headers do not wrap.
@@ -376,6 +471,7 @@ as_rtftables <- function(x,
                          cell_format     = NULL,
                          collapse_repeats = NULL,
                          drop_cols       = NULL,
+                         header_sep      = .default_header_seps(),
                          auto_width        = FALSE,
                          table_width_twips = NULL,
                          border          = "tfl",
@@ -403,7 +499,7 @@ as_rtftables <- function(x,
         blank_row_end = blank_row_end, count_blank_rows = count_blank_rows,
         align_count_pct = align_count_pct,
         cell_format = cell_format, collapse_repeats = collapse_repeats,
-        drop_cols = drop_cols,
+        drop_cols = drop_cols, header_sep = header_sep,
         auto_width = auto_width, table_width_twips = table_width_twips,
         border = border, style = style, ...)
       if (!is.null(in_names) && nzchar(in_names[i])) {
@@ -462,6 +558,13 @@ as_rtftables <- function(x,
     cell_styles     <- NULL
     titles_block    <- NULL
     footnotes_block <- NULL
+    # Reconstruct a spanning header from delimited column names (e.g.
+    # ydisctools "cohort1____trt1" or tfrmt "cohort1___tlang_delim___trt1").
+    # An explicit user `col_header` (via ...) always wins, so skip then.
+    if (is.null(user_args$col_header)) {
+      auto_hdr <- .split_names_to_col_header(names(body), header_sep)
+      if (!is.null(auto_hdr)) kw$col_header <- auto_hdr
+    }
   } else {
     stop("`as_rtftables()` supports gt_tbl, gtsummary, rtables/tern, ",
          "flextable, huxtable, data.frame/tibble, or a list of these; got '",

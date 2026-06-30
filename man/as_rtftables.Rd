@@ -24,6 +24,7 @@ as_rtftables(
   cell_format = NULL,
   collapse_repeats = NULL,
   drop_cols = NULL,
+  header_sep = .default_header_seps(),
   auto_width = FALSE,
   table_width_twips = NULL,
   border = "tfl",
@@ -215,6 +216,24 @@ the pages are still named by it; but under `"group_safe"` / `"group_force"`
 the `" (Cont.)"` marker is written into the `group_col` cell, so if
 `group_col` is itself dropped the marker is not shown (group on the visible
 label column if the marker is wanted).}
+
+\item{header_sep}{Separator(s) used to reconstruct a **spanning (multi-row)
+column header** from a plain **data.frame**'s column names.  A bare
+data.frame carries no spanning metadata, so the nesting is parsed out of the
+names: each name is split on `header_sep` into segments that become stacked
+header rows, and horizontally adjacent columns sharing a label *and* the
+same ancestor path are merged into one spanning cell.  Columns with no
+separator (e.g. id columns such as `label`) keep their name on the bottom
+(leaf) row with blank cells above.  The default recognizes **both** built-in
+delimiters: `"____"` (from `ydisctools::pivot_stats_wider()`) and
+`"___tlang_delim___"` (tfrmt's column delimiter).  Pass your own
+separator(s) to override, or `NULL` to disable (use the plain `names(data)`
+single-row header).  Only applies to plain data.frame input -- gt /
+gtsummary / rtables / tern / flextable / huxtable already carry real
+spanning metadata.  With the `"____"` separator a doubled separator
+(`"________"`) yields an empty middle segment, i.e. a **blank cell** at that
+header level (handy to align a column that skips an intermediate spanner
+level).  An explicit `col_header` (passed via `...`) always wins.}
 
 \item{auto_width}{Logical (default `FALSE`).  When `TRUE`, each column is
 sized to its widest content (column header label or data cell) via
