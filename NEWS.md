@@ -2,6 +2,17 @@
 
 ### New features
 
+- `as_rtftables()` / `as_rtftable()` gain **`header_sep`**, reconstructing a
+  **spanning (multi-row) column header** from a plain data.frame's delimited
+  column names. The default recognizes both `"____"` (from
+  `ydisctools::pivot_stats_wider()`) and `"___tlang_delim___"` (tfrmt's column
+  delimiter); pass your own separator(s) to override, or `NULL` to disable.
+  Adjacent columns that share a label and ancestor path merge into a spanning
+  cell; columns without a separator (id columns) keep their name on the leaf
+  row. With `"____"` a doubled separator (`"________"`) inserts a blank cell at
+  that header level. Only applies to plain data.frames -- gt / gtsummary /
+  rtables / tern / flextable / huxtable already carry real spanning metadata.
+  See the *Importing tables* article.
 - New **`combine_sections()`** assembles several converted tables -- each an
   `rtftable` or an `as_rtftables()` page list -- into one flat, named list ready
   for `rtf_tables(..., auto_section = TRUE)`, so each argument renders as **one
