@@ -63,7 +63,10 @@
     # paragraphs (full writable width), "table" = a content-width single-column
     # table.  Title defaults to text; footnote keeps the table form.
     rtfreporter.title_format             = "text",
-    rtfreporter.footnote_format          = "table"
+    rtfreporter.footnote_format          = "table",
+    # DPI assumed for an embedded figure (rtfplot) whose file carries no
+    # resolution metadata. Figures default to their native size at this DPI.
+    rtfreporter.figure.default_dpi       = 96L
   )
 }
 

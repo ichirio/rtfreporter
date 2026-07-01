@@ -16,8 +16,8 @@
 }
 \description{
 Prints a compact summary of an [rtfplot()] figure: the image type and file,
-the image's native pixel size, the display size that will be embedded (in
-twips and inches, or the defaults when unset), and the alignment.
+the image's native pixel size and DPI, the display size that will be embedded
+(in inches and twips), and the alignment.
 }
 \examples{
 \dontrun{

@@ -414,7 +414,7 @@
     return(as.integer(cellx[ncols]))
   }
   if (inherits(ct, "rtfplot")) {
-    return(as.integer(ct$width_twips %||% min(writable_width_twips, .in_to_twips(9))))
+    return(as.integer(.rtfplot_display_twips(ct)$w))
   }
   as.integer(writable_width_twips)
 }
@@ -1038,13 +1038,11 @@
 .render_rtfplot <- function(plot_obj, writable_width_twips) {
   cmds <- .load_rtf_commands()
 
-  # Display dimensions.
-  disp_w <- plot_obj$width_twips %||% min(writable_width_twips, .in_to_twips(9))
-  disp_h <- if (!is.null(plot_obj$height_twips)) {
-    plot_obj$height_twips
-  } else {
-    as.integer(round(disp_w * plot_obj$img_height / plot_obj$img_width))
-  }
+  # Display dimensions: native size at the image's DPI (100%) unless the user
+  # gave an explicit width_twips / height_twips. See .rtfplot_display_twips().
+  disp   <- .rtfplot_display_twips(plot_obj)
+  disp_w <- disp$w
+  disp_h <- disp$h
 
   # Read file and convert to uppercase hex.
   raw  <- readBin(plot_obj$path, "raw", n = file.info(plot_obj$path)$size)
@@ -1324,7 +1322,7 @@
     }
   }
   if (inherits(content, "rtfplot")) {
-    return(content$width_twips %||% writable_width)
+    return(as.integer(.rtfplot_display_twips(content)$w))
   }
   writable_width
 }
