@@ -1,5 +1,16 @@
 # rtfreporter (development version)
 
+### Behavior changes
+
+- **`rtfplot()` / `rtf_figures()` now embed a figure at its native size (100%)
+  by default** (#208), instead of scaling it to `min(writable width, 9in)`. The
+  display size is the image's pixel dimensions divided by its embedded DPI (read
+  from the PNG `pHYs` chunk / JPEG JFIF density) -- e.g. a 2500 x 1438 px image
+  at 300 DPI embeds at 2500/300 x 1438/300 in. Files with no resolution metadata
+  assume the new **`rtfreporter.figure.default_dpi`** option (factory `96`). An
+  explicit `width_twips` / `height_twips` still wins, and the native size is not
+  auto-capped to the page -- pass `width_twips` to shrink an over-wide figure.
+
 ### New features
 
 - `as_rtftables()` / `as_rtftable()` gain **`header_sep`**, reconstructing a

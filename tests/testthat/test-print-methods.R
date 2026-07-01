@@ -95,8 +95,7 @@ test_that("print.rtfplot shows native px, display size and alignment", {
   out <- paste(capture.output(print(fig)), collapse = "\n")
   expect_match(out, "<rtfplot> PNG")
   expect_match(out, "Native size:  120 x 80 px")
-  expect_match(out, "9000 twips \\(6.25 in\\)")          # display width in inches
-  expect_match(out, "auto \\(aspect ratio\\)")           # height unset
+  expect_match(out, "6.25 in \\(9000 twips\\)")          # explicit display width
   expect_match(out, "Align:        center")
   expect_invisible(print(fig))
 })

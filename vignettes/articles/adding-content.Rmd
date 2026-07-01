@@ -229,15 +229,31 @@ list of image paths (PNG/JPEG) or `rtfplot()` objects; `width_twips` /
 `height_twips` / `align` control the display, and `titles` / `footnotes` work
 exactly as for tables.
 
+**By default a figure embeds at its native size (100%)** -- the pixel dimensions
+divided by the image's own DPI (read from the PNG `pHYs` chunk / JPEG JFIF
+density). A 2500 x 1438 px plot saved at 300 DPI therefore appears at
+2500/300 x 1438/300 in. If the file carries no DPI, the
+`rtfreporter.figure.default_dpi` option (96) is assumed. Save your graphics
+device at the resolution you want on the page:
+
 ```{r figure}
-# A small example PNG to embed.
+# Save at 300 DPI so the native size is predictable.
 img <- tempfile(fileext = ".png")
-png(img, width = 480, height = 320); plot(1:10, main = "Mean over time"); dev.off()
+png(img, width = 2500, height = 1438, res = 300)
+plot(1:10, main = "Mean over time"); dev.off()
 
 doc <- rtf_document() |>
-  rtf_figures(list(img), width_twips = 6000L, align = "center",
+  rtf_figures(list(img), align = "center",           # native size (~8.3 x 4.8 in)
               titles = list(c("Figure 14.2.1", "Mean over time")))
 length(doc$contents)        # one figure page
+```
+
+Pass an explicit `width_twips` (the height then follows the aspect ratio) to
+scale a figure -- for example to shrink one that is wider than the page, since
+the native size is **not** auto-capped to the writable width:
+
+```{r figure-scale, eval = FALSE}
+rtf_figures(list(img), width_twips = 9000L)          # force 6.25 in wide
 ```
 
 Tables and figures share the same page model, so a report is just a sequence of

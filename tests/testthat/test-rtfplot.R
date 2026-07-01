@@ -67,6 +67,64 @@ test_that("rtfplot() rejects invalid align", {
   expect_error(rtfplot(f, align = "justify"), "align")
 })
 
+# ──────── DPI / native-size default ───────────────────────────────────────
+
+# 600x300 PNG carrying a pHYs chunk of 11811 ppm (~300 dpi).
+.tmp_png_dpi <- function() {
+  bytes <- as.raw(c(
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+    # IHDR: width=600 (0x0258), height=300 (0x012C)
+    0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x02, 0x58, 0x00, 0x00, 0x01, 0x2C,
+    0x08, 0x02, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,                      # dummy CRC (not validated)
+    # pHYs: 11811 x 11811 ppm, unit = 1 (metre)
+    0x00, 0x00, 0x00, 0x09, 0x70, 0x48, 0x59, 0x73,
+    0x00, 0x00, 0x2E, 0x23, 0x00, 0x00, 0x2E, 0x23, 0x01,
+    0x00, 0x00, 0x00, 0x00,                      # dummy CRC
+    # IDAT + IEND (content irrelevant to the parser)
+    0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54,
+    0x08, 0x99, 0x63, 0xF8, 0xFF, 0xFF, 0xFF, 0x3F,
+    0x00, 0x05, 0xFE, 0x02, 0xFE, 0xDC, 0xCC, 0x59, 0xE7,
+    0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
+    0xAE, 0x42, 0x60, 0x82
+  ))
+  f <- tempfile(fileext = ".png"); writeBin(bytes, f); f
+}
+
+test_that("rtfplot() reads PNG DPI and defaults to native size (100%)", {
+  f <- .tmp_png_dpi(); on.exit(unlink(f), add = TRUE)
+  fig <- rtfplot(f)
+  expect_equal(fig$img_width, 600L)
+  expect_equal(fig$dpi_x, 300, tolerance = 0.01)
+  # Native display: 600 px / 300 dpi * 1440 = 2880 twips wide, 300/300 -> 1440.
+  disp <- rtfreporter:::.rtfplot_display_twips(fig)
+  expect_equal(disp$w, 2880L)
+  expect_equal(disp$h, 1440L)
+})
+
+test_that("a native-size figure emits its \\picwgoal in twips", {
+  f <- .tmp_png_dpi(); on.exit(unlink(f), add = TRUE)
+  doc <- rtf_document() |>
+    rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
+    rtf_figures(list(rtfplot(f)))            # no explicit width -> native
+  out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
+  generate_rtfreport(doc, out, overwrite = TRUE)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_match(txt, "\\\\picwgoal2880")
+  expect_match(txt, "\\\\pichgoal1440")
+})
+
+test_that("a PNG without pHYs falls back to the default-DPI option", {
+  f <- .tmp_png(); on.exit(unlink(f), add = TRUE)   # 1x1, no pHYs
+  fig <- rtfplot(f)
+  expect_null(fig$dpi_x)
+  old <- options(rtfreporter.figure.default_dpi = 144L)
+  on.exit(options(old), add = TRUE)
+  disp <- rtfreporter:::.rtfplot_display_twips(fig)
+  expect_equal(disp$w, as.integer(round(1 / 144 * 1440)))   # 10 twips
+})
+
 # ──────── End-to-end render via rtf_figures() / generate_rtfreport() ──────
 
 test_that("a figure can be embedded into a generated RTF document", {
@@ -129,6 +187,37 @@ test_that("a figure can be embedded into a generated RTF document", {
   writeBin(bytes, f)
   f
 }
+
+# 1x1 JPEG whose JFIF APP0 records units = 1 (DPI), 300 x 300.
+.tmp_jpeg_dpi <- function() {
+  bytes <- as.raw(c(
+    0xFF, 0xD8,
+    0xFF, 0xE0, 0x00, 0x10,
+    0x4A, 0x46, 0x49, 0x46, 0x00,
+    0x01, 0x01,
+    0x01,              # units = 1 (dpi)
+    0x01, 0x2C,        # Xdensity = 300
+    0x01, 0x2C,        # Ydensity = 300
+    0x00, 0x00,
+    0xFF, 0xDB, 0x00, 0x43, 0x00, rep(0x01, 64L),
+    0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01,
+    0x01, 0x01, 0x11, 0x00,
+    0xFF, 0xC4, 0x00, 0x1F, 0x00, rep(0x00, 16L),
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0A, 0x0B,
+    0xFF, 0xC4, 0x00, 0xB5, 0x10, rep(0x00, 178L),
+    0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00,
+    0x80, 0xFF, 0xD9
+  ))
+  f <- tempfile(fileext = ".jpg"); writeBin(bytes, f); f
+}
+
+test_that("rtfplot() reads JPEG JFIF density (units = dpi)", {
+  f <- .tmp_jpeg_dpi(); on.exit(unlink(f), add = TRUE)
+  fig <- rtfplot(f)
+  expect_equal(fig$dpi_x, 300)
+  expect_equal(fig$dpi_y, 300)
+})
 
 test_that("rtfplot() reads dimensions from a JPEG file", {
   f <- .tmp_jpeg(); on.exit(unlink(f), add = TRUE)
