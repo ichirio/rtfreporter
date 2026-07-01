@@ -32,6 +32,20 @@
   twips and inches) and alignment. For an `rtfreport`: page / section counts, the
   page geometry, and the font / colour table sizes.
 
+### Behavior changes
+
+- **Default page margins are now based on the FDA eCTD *Portable Document Format
+  (PDF) Specifications* minimums** (#204): top/bottom `0.9"` &rarr; **`0.75"`**
+  and left/right `0.6"` &rarr; a symmetric **`0.5"`**. The right satisfies the
+  eCTD 0.375" floor and the bottom leaves room for an overall page-number footer;
+  a symmetric left/right reads better and TFL output is granted practical leeway
+  on the 0.75" binding recommendation.
+- **The header / footer band distance (`\headery` / `\footery`) now defaults to
+  the full top / bottom margin, not half of it** (#204), so the band sits at the
+  margin boundary. With the new margins `\headery` / `\footery` go from `648` to
+  `1080` twips. Set `header_dist_in` / `footer_dist_in` (or the
+  `rtfreporter.page.*` options) to pin either explicitly, as before.
+
 ### Bug fixes
 
 - `as_rtftables()` / `as_rtftable()` no longer error on a `gt_tbl` with **more

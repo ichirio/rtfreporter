@@ -85,15 +85,20 @@ you omit falls back to its default.
 | `orientation` | `"landscape"` or `"portrait"` | `"landscape"` |
 | `width_in` | Paper width (inches) -- explicit override | from `paper_size` |
 | `height_in` | Paper height (inches) -- explicit override | from `paper_size` |
-| `margin_top_in` | Top margin | `0.9` |
-| `margin_bottom_in` | Bottom margin | `0.9` |
-| `margin_left_in` | Left margin | `0.6` |
-| `margin_right_in` | Right margin | `0.6` |
-| `header_dist_in` | Header band distance from page edge | half `margin_top_in` |
-| `footer_dist_in` | Footer band distance from page edge | half `margin_bottom_in` |
+| `margin_top_in` | Top margin | `0.75` |
+| `margin_bottom_in` | Bottom margin | `0.75` |
+| `margin_left_in` | Left margin | `0.5` |
+| `margin_right_in` | Right margin | `0.5` |
+| `header_dist_in` | Header band distance from page edge | `margin_top_in` |
+| `footer_dist_in` | Footer band distance from page edge | `margin_bottom_in` |
+
+The default margins follow the FDA eCTD *Portable Document Format (PDF)
+Specifications* minimums (left/binding &ge; 0.75", other sides &ge; 0.375",
+landscape top &ge; 0.75"): 0.75" top/bottom (the bottom leaves room for an
+overall page-number footer) and a symmetric 0.5" left/right.
 
 The header/footer band distances (`\headery` / `\footery` in the RTF) default to
-**half the top / bottom margin**, so the band sits inside the margin. Set
+the **full top / bottom margin**, so the band sits at the margin boundary. Set
 `header_dist_in` / `footer_dist_in` to pin them explicitly.
 
 **Pick a paper size by name.** For the common case, `paper_size` + `orientation`

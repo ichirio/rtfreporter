@@ -45,14 +45,14 @@ test_that("hardened RTF preamble: codepage, \\uc1, charset, widowctrl (#82)", {
 })
 
 test_that("header/footer band distance is emitted and coordinated with margins (#82)", {
-  # Default top/bottom margin is 0.9in = 1296 twips, so headery/footery = 648.
+  # Default top/bottom margin is 0.75in = 1080 twips, so headery/footery = 1080.
   df  <- data.frame(A = c("1", "2"), B = c("x", "y"), stringsAsFactors = FALSE)
   doc <- rtf_document() |>
     rtf_tables(as_rtftables(df)) |>
     rtf_section(page = 1, secinfo = list(header = "H", footer = "F"))
   txt <- .render_to_string(doc)
-  expect_match(txt, "\\\\headery648")
-  expect_match(txt, "\\\\footery648")
+  expect_match(txt, "\\\\headery1080")
+  expect_match(txt, "\\\\footery1080")
 })
 
 test_that("the document font size is emitted as a document-level \\fs<n>", {

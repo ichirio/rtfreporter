@@ -25,7 +25,7 @@ test_that("rtfreporter_options() snapshots the resolved values", {
   on.exit(options(old), add = TRUE)
   snap <- rtfreporter_options()
   expect_identical(snap$rtfreporter.font, "Arial")            # option override
-  expect_identical(snap$rtfreporter.page.margin_left_in, 0.6) # factory fallback
+  expect_identical(snap$rtfreporter.page.margin_left_in, 0.5) # factory fallback
 })
 
 test_that("an option override flows into rtf_document() defaults", {
@@ -52,19 +52,19 @@ test_that("rtfreporter_reset_defaults() restores the factory baseline", {
   on.exit(options(old), add = TRUE)
   rtfreporter_reset_defaults()
   expect_identical(getOption("rtfreporter.font"), "Courier")
-  expect_identical(getOption("rtfreporter.page.margin_top_in"), 0.9)
+  expect_identical(getOption("rtfreporter.page.margin_top_in"), 0.75)
 })
 
 # Header / footer band distance -------------------------------------------
 
-test_that("header/footer distance defaults to half the margin when unset", {
-  # Default top/bottom margin 0.9in = 1296 twips -> half = 648.
+test_that("header/footer distance defaults to the full margin when unset", {
+  # Default top/bottom margin 0.75in = 1080 twips -> band = full margin = 1080.
   rtf <- .gen(.doc1())
-  expect_match(rtf, "\\\\headery648")
-  expect_match(rtf, "\\\\footery648")
+  expect_match(rtf, "\\\\headery1080")
+  expect_match(rtf, "\\\\footery1080")
 })
 
-test_that("explicit header_dist_in / footer_dist_in override the half-margin rule (#111)", {
+test_that("explicit header_dist_in / footer_dist_in override the full-margin rule (#111)", {
   rtf <- .gen(.doc1(list(header_dist_in = 0.5, footer_dist_in = 0.25)))
   expect_match(rtf, "\\\\headery720")   # 0.5in
   expect_match(rtf, "\\\\footery360")   # 0.25in

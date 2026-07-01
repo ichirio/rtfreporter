@@ -23,8 +23,15 @@
 
 # The factory baseline. The ONLY place package default values are defined.
 # Header/footer band distances are deliberately absent: when unset they are
-# derived as half the top / bottom margin (see the renderer). A site may still
+# derived as the full top / bottom margin (see the renderer). A site may still
 # set `rtfreporter.page.header_dist_in` / `.footer_dist_in` to pin them.
+#
+# The margins are based on the FDA eCTD "Portable Document Format (PDF)
+# Specifications" minimums (left/binding >= 0.75", other sides >= 0.375",
+# landscape top >= 0.75"): top/bottom 0.75" (bottom leaves room for an overall
+# page-number footer) and a symmetric 0.5" left/right (the right satisfies the
+# 0.375" floor; the left is a small, practically-tolerated deviation from the
+# 0.75" binding recommendation, as TFL output is granted such leeway).
 #
 # Document-wide style defaults (row height, cell padding) are seeded as `NULL`,
 # meaning "inherit the font-aware / resource-file baseline". Set them (here, in
@@ -35,10 +42,10 @@
   list(
     rtfreporter.page.paper_size       = "letter",
     rtfreporter.page.orientation      = "landscape",
-    rtfreporter.page.margin_top_in    = 0.9,
-    rtfreporter.page.margin_bottom_in = 0.9,
-    rtfreporter.page.margin_left_in   = 0.6,
-    rtfreporter.page.margin_right_in  = 0.6,
+    rtfreporter.page.margin_top_in    = 0.75,
+    rtfreporter.page.margin_bottom_in = 0.75,
+    rtfreporter.page.margin_left_in   = 0.5,
+    rtfreporter.page.margin_right_in  = 0.5,
     rtfreporter.font                  = "Courier",
     rtfreporter.font_size_half_points = 18L,
     # Document-wide style defaults. NULL = inherit the baseline:
