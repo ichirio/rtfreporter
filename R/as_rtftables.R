@@ -1,7 +1,7 @@
 # Internal: writable width (twips) of rtfreporter's default page -- landscape
-# Letter (11in) with the default 0.5in left/right margins.  Used as the cap for
+# Letter (11in) with the default 0.75in left/right margins.  Used as the cap for
 # `auto_width` so an over-wide table is scaled to fit the page by default.
-.default_writable_twips <- function() as.integer((11 - 2 * 0.5) * 1440)
+.default_writable_twips <- function() as.integer((11 - 2 * 0.75) * 1440)
 
 # Internal: flatten a (possibly multi-row, possibly spanning) col_header into a
 # plain character vector of length `ncols`, where each element is the LONGEST
@@ -403,7 +403,7 @@
 #'   their widths sum to this value (e.g. to fill, or fit within, the writable
 #'   page width).  `NULL` (default) uses each column's natural content width,
 #'   but **capped at the default page's writable width** (landscape Letter,
-#'   0.5in margins) so a naturally over-wide table is scaled down to fit the
+#'   0.75in margins) so a naturally over-wide table is scaled down to fit the
 #'   page without you having to compute the width.
 #' @param border,style Passed to [rtftable()] for every page.  `border`
 #'   defaults to `"tfl"`.

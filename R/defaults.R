@@ -28,10 +28,12 @@
 #
 # The margins are based on the FDA eCTD "Portable Document Format (PDF)
 # Specifications" minimums (left/binding >= 0.75", other sides >= 0.375",
-# landscape top >= 0.75"): top/bottom 0.75" (bottom leaves room for an overall
-# page-number footer) and a symmetric 0.5" left/right (the right satisfies the
-# 0.375" floor; the left is a small, practically-tolerated deviation from the
-# 0.75" binding recommendation, as TFL output is granted such leeway).
+# landscape top >= 0.75"): a uniform 0.75" on all four sides (the bottom leaves
+# room for an overall page-number footer). A wide TFL that does not fit can trade
+# horizontal room by narrowing the left/right margins to eCTD's 0.5" (they still
+# clear the 0.375" floor) -- either per document via `rtf_document(page = ...)` /
+# `rtf_page()`, or site-wide via the `rtfreporter.page.margin_left_in` /
+# `.margin_right_in` options. See the "Page setup" article.
 #
 # Document-wide style defaults (row height, cell padding) are seeded as `NULL`,
 # meaning "inherit the font-aware / resource-file baseline". Set them (here, in
@@ -44,8 +46,8 @@
     rtfreporter.page.orientation      = "landscape",
     rtfreporter.page.margin_top_in    = 0.75,
     rtfreporter.page.margin_bottom_in = 0.75,
-    rtfreporter.page.margin_left_in   = 0.5,
-    rtfreporter.page.margin_right_in  = 0.5,
+    rtfreporter.page.margin_left_in   = 0.75,
+    rtfreporter.page.margin_right_in  = 0.75,
     rtfreporter.font                  = "Courier",
     rtfreporter.font_size_half_points = 18L,
     # Document-wide style defaults. NULL = inherit the baseline:

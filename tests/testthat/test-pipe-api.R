@@ -28,7 +28,7 @@ test_that("rtf_config() merges page per key, keeping unspecified keys (#108)", {
   expect_identical(doc2$document$page$height_in, 8.27)
   # Untouched keys are preserved (merge, not replace):
   expect_identical(doc2$document$page$orientation,    "landscape")
-  expect_identical(doc2$document$page$margin_left_in, 0.5)
+  expect_identical(doc2$document$page$margin_left_in, 0.75)
 })
 
 test_that("rtf_config() merges default_format per key (#108)", {

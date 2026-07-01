@@ -87,19 +87,47 @@ you omit falls back to its default.
 | `height_in` | Paper height (inches) -- explicit override | from `paper_size` |
 | `margin_top_in` | Top margin | `0.75` |
 | `margin_bottom_in` | Bottom margin | `0.75` |
-| `margin_left_in` | Left margin | `0.5` |
-| `margin_right_in` | Right margin | `0.5` |
+| `margin_left_in` | Left margin | `0.75` |
+| `margin_right_in` | Right margin | `0.75` |
 | `header_dist_in` | Header band distance from page edge | `margin_top_in` |
 | `footer_dist_in` | Footer band distance from page edge | `margin_bottom_in` |
 
 The default margins follow the FDA eCTD *Portable Document Format (PDF)
 Specifications* minimums (left/binding &ge; 0.75", other sides &ge; 0.375",
-landscape top &ge; 0.75"): 0.75" top/bottom (the bottom leaves room for an
-overall page-number footer) and a symmetric 0.5" left/right.
+landscape top &ge; 0.75"): a uniform **0.75" on all four sides** (the bottom
+leaves room for an overall page-number footer).
 
 The header/footer band distances (`\headery` / `\footery` in the RTF) default to
 the **full top / bottom margin**, so the band sits at the margin boundary. Set
 `header_dist_in` / `footer_dist_in` to pin them explicitly.
+
+### Changing the margins
+
+Pass any of the four `margin_*_in` keys to `rtf_document(page = )` (or
+`rtf_page()`) to override a margin for one document; an omitted key keeps its
+default. **A wide table (many treatment arms, toxicity-grade shift tables) often
+does not fit inside the 0.75" left/right default.** Narrowing the left/right
+margins to eCTD's **0.5"** buys an extra inch of horizontal room -- they still
+clear the 0.375" floor:
+
+```{r narrow-lr, eval = FALSE}
+# Landscape Letter, left/right narrowed to 0.5" for a wide TFL.
+# Writable width = 11 - 2*0.5 = 10 in = 14400 twips (vs 9.5 in / 13680 at 0.75").
+rtf_document(page = list(margin_left_in = 0.5, margin_right_in = 0.5))
+```
+
+To apply the same margins to **every** report in a session or site (e.g. in
+`Rprofile.site`), set the matching options instead of repeating them per
+document:
+
+```{r narrow-lr-option, eval = FALSE}
+options(rtfreporter.page.margin_left_in  = 0.5,
+        rtfreporter.page.margin_right_in = 0.5)
+```
+
+`auto_width` (and `as_rtftables()`) size columns to the *default* writable width,
+so they follow the current margins automatically; only **absolute**
+`column_widths_twips` need to be recomputed when you change the margins.
 
 **Pick a paper size by name.** For the common case, `paper_size` + `orientation`
 is easier than remembering inch dimensions. One line gives **A4 landscape**:

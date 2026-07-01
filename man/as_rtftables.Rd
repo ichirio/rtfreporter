@@ -247,7 +247,7 @@ keeping paginated pages aligned.  Ignored if you pass an explicit
 their widths sum to this value (e.g. to fill, or fit within, the writable
 page width).  `NULL` (default) uses each column's natural content width,
 but **capped at the default page's writable width** (landscape Letter,
-0.5in margins) so a naturally over-wide table is scaled down to fit the
+0.75in margins) so a naturally over-wide table is scaled down to fit the
 page without you having to compute the width.}
 
 \item{border, style}{Passed to [rtftable()] for every page.  `border`

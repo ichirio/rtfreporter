@@ -11,8 +11,8 @@ rtf_page(
   height_in = NULL,
   margin_top_in = 0.75,
   margin_bottom_in = 0.75,
-  margin_left_in = 0.5,
-  margin_right_in = 0.5,
+  margin_left_in = 0.75,
+  margin_right_in = 0.75,
   header_dist_in = NULL,
   footer_dist_in = NULL
 )
@@ -54,6 +54,10 @@ falls back to that option, so the resolution order is **explicit argument >
 \examples{
 # Defaults made explicit (landscape Letter):
 rtf_page()
+
+# Wide TFL: narrow the left/right margins from the 0.75" default to 0.5"
+# (still clears the eCTD 0.375" floor) to gain an inch of table width.
+rtf_page(margin_left_in = 0.5, margin_right_in = 0.5)
 
 # A4 portrait with tighter margins:
 rtf_page(paper_size = "A4", orientation = "portrait",

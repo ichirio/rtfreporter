@@ -35,11 +35,13 @@
 ### Behavior changes
 
 - **Default page margins are now based on the FDA eCTD *Portable Document Format
-  (PDF) Specifications* minimums** (#204): top/bottom `0.9"` &rarr; **`0.75"`**
-  and left/right `0.6"` &rarr; a symmetric **`0.5"`**. The right satisfies the
-  eCTD 0.375" floor and the bottom leaves room for an overall page-number footer;
-  a symmetric left/right reads better and TFL output is granted practical leeway
-  on the 0.75" binding recommendation.
+  (PDF) Specifications* minimums** (#204, #206): a uniform **`0.75"`** on all four
+  sides (was `0.9"` top/bottom and `0.6"` left/right). The bottom leaves room for
+  an overall page-number footer. A wide TFL that does not fit the 0.75" left/right
+  can trade horizontal room by narrowing them to eCTD's `0.5"` (still clears the
+  0.375" floor) -- per document via `rtf_document(page = ...)` / `rtf_page()`, or
+  site-wide via the `rtfreporter.page.margin_left_in` / `.margin_right_in`
+  options. See the *Page setup* article ("Changing the margins").
 - **The header / footer band distance (`\headery` / `\footery`) now defaults to
   the full top / bottom margin, not half of it** (#204), so the band sits at the
   margin boundary. With the new margins `\headery` / `\footery` go from `648` to
