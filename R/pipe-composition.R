@@ -43,7 +43,7 @@
 #' @param page The page geometry. Pass an [rtf_page()] object (recommended --
 #'   its help lists every key with its default), a named list with the same
 #'   keys, or `NULL` (default) to use the option / factory defaults (landscape
-#'   Letter, 0.75" top/bottom and 0.5" left/right margins). An omitted key falls
+#'   Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
 #'   back to the corresponding `rtfreporter.*` option (see [rtfreporter_options()]).
 #' @param default_format Document-wide default formatting. Pass an
 #'   [rtf_default_format()] object (recommended -- its help lists every key with

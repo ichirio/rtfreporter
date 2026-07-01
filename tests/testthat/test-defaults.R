@@ -25,7 +25,7 @@ test_that("rtfreporter_options() snapshots the resolved values", {
   on.exit(options(old), add = TRUE)
   snap <- rtfreporter_options()
   expect_identical(snap$rtfreporter.font, "Arial")            # option override
-  expect_identical(snap$rtfreporter.page.margin_left_in, 0.5) # factory fallback
+  expect_identical(snap$rtfreporter.page.margin_left_in, 0.75) # factory fallback
 })
 
 test_that("an option override flows into rtf_document() defaults", {
