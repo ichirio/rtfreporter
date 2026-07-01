@@ -1745,13 +1745,13 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
 
   # Header/footer band distance from the page edge. When set explicitly (page
   # key `header_dist_in`/`footer_dist_in` or the matching option) that value is
-  # used; otherwise it is derived as half the top/bottom margin so the
-  # header/footer text sits inside the margin area instead of at the RTF/Word
-  # built-in default (720 twips), which can land outside the body.
+  # used; otherwise it is derived as the full top/bottom margin so the
+  # header/footer band sits at the margin boundary, rather than the RTF/Word
+  # built-in default (720 twips) which can land outside the body.
   header_dist_twips <- page_defaults$header_dist_twips %||%
-    max(0L, as.integer(page_defaults$margin_top_twips    %||% 1440L) %/% 2L)
+    max(0L, as.integer(page_defaults$margin_top_twips    %||% 1440L))
   footer_dist_twips <- page_defaults$footer_dist_twips %||%
-    max(0L, as.integer(page_defaults$margin_bottom_twips %||% 1440L) %/% 2L)
+    max(0L, as.integer(page_defaults$margin_bottom_twips %||% 1440L))
 
   total_pages     <- length(report$pages)
   doc_colors      <- .collect_report_colors(report)

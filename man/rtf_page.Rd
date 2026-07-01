@@ -9,10 +9,10 @@ rtf_page(
   orientation = "landscape",
   width_in = NULL,
   height_in = NULL,
-  margin_top_in = 0.9,
-  margin_bottom_in = 0.9,
-  margin_left_in = 0.6,
-  margin_right_in = 0.6,
+  margin_top_in = 0.75,
+  margin_bottom_in = 0.75,
+  margin_left_in = 0.5,
+  margin_right_in = 0.5,
   header_dist_in = NULL,
   footer_dist_in = NULL
 )
@@ -32,8 +32,8 @@ rtf_page(
 page margins, in inches.}
 
 \item{header_dist_in, footer_dist_in}{Distance (inches) of the header / footer
-band from the page edge. `NULL` (default) uses **half** the corresponding
-top / bottom margin.}
+band from the page edge. `NULL` (default) uses the **full** corresponding
+top / bottom margin (so the band sits at the margin boundary).}
 }
 \value{
 An `rtf_page` object (a classed named list) for `rtf_document(page =)`.

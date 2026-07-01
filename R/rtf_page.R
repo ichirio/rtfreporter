@@ -47,8 +47,8 @@
 #' @param margin_top_in,margin_bottom_in,margin_left_in,margin_right_in The four
 #'   page margins, in inches.
 #' @param header_dist_in,footer_dist_in Distance (inches) of the header / footer
-#'   band from the page edge. `NULL` (default) uses **half** the corresponding
-#'   top / bottom margin.
+#'   band from the page edge. `NULL` (default) uses the **full** corresponding
+#'   top / bottom margin (so the band sits at the margin boundary).
 #'
 #' @return An `rtf_page` object (a classed named list) for `rtf_document(page =)`.
 #'
@@ -72,10 +72,10 @@ rtf_page <- function(paper_size       = "letter",
                      orientation      = "landscape",
                      width_in         = NULL,
                      height_in        = NULL,
-                     margin_top_in    = 0.9,
-                     margin_bottom_in = 0.9,
-                     margin_left_in   = 0.6,
-                     margin_right_in  = 0.6,
+                     margin_top_in    = 0.75,
+                     margin_bottom_in = 0.75,
+                     margin_left_in   = 0.5,
+                     margin_right_in  = 0.5,
                      header_dist_in   = NULL,
                      footer_dist_in   = NULL) {
   # Site defaults (#111): only an argument the caller did NOT pass falls back to
