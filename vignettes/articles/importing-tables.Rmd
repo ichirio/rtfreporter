@@ -159,9 +159,11 @@ footnote concept, so none is extracted.
 
 **Not carried** (RTF cannot reproduce them, so they are intentionally ignored):
 per-cell bold / italic / underline, cell background fills, font/size styling, and
-Markdown inside labels or titles. A plain `data.frame` / tibble carries **no**
-metadata -- you set `col_header`, `col_spec`, etc. yourself (see *Pass-through*
-below).
+Markdown inside labels or titles. A plain `data.frame` / tibble carries two
+pieces of metadata: column **`label` attributes** become header labels (see
+*Finishing a plain data.frame* below), and **delimited column names** are
+reconstructed into a spanning header (see `header_sep`); everything else
+(`col_spec`, widths, ...) you set yourself (see *Pass-through* below).
 
 `read_meta` controls the extraction:
 
@@ -173,7 +175,10 @@ below).
   rtables/tern: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,
   `"footnotes"`, `"indent"`, `"footnote_marks"`. For flextable:
   `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`. For
-  huxtable: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`.
+  huxtable: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`. For a
+  plain data.frame / tibble: `"labels"` (column `label` attributes as header
+  labels); unknown tokens are *ignored* for data.frames, so a `list()` mixing
+  table objects and data.frames can share one `read_meta`.
 
 ```{r gt-meta, eval = .has_gt}
 library(gt)
@@ -419,6 +424,96 @@ sitting beside `Drug____Dose____n` columns).
 
 This only applies to plain data.frame input; framework tables keep using their
 own spanning metadata.
+
+
+## Finishing a plain data.frame
+
+A framework table (gt / rtables / ...) arrives *finished*: row-group labels are
+interleaved, children are indented, headers are labelled. A tidy data.frame is
+not -- it usually looks like "hierarchy columns + statistic columns". Two
+finishing tools close that gap without leaving base R.
+
+### Hierarchy columns into a stub -- `stub_cols()`
+
+`stub_cols()` merges hierarchy columns (parent first, leaf last) into **one
+stub column**: each parent value becomes its own full-width label row, and the
+leaf rows under it are indented with non-breaking spaces -- the same layout the
+gt / rtables / tfrmt adapters emit, produced here from plain columns.
+
+```{r stub-cols}
+ae <- data.frame(
+  soc = c("", "Cardiac disorders", "Cardiac disorders",
+          "Gastrointestinal disorders"),
+  pt  = c("Any adverse event", "Atrial fibrillation", "Bradycardia",
+          "Nausea"),
+  n   = c("9 (6.3%)", "3 (2.1%)", "1 (0.7%)", "5 (3.5%)"),
+  stringsAsFactors = FALSE
+)
+
+tbl <- stub_cols(ae, vars = c("soc", "pt"),
+                 label = "System Organ Class / Preferred Term")
+tbl
+```
+
+Note the `"Any adverse event"` summary row: its parent cell is empty (`""`),
+so it gets **no label row and no indent** -- it stays flush left at the top.
+Label rows hold `NA` in the statistic columns, which renders as an empty cell.
+
+Because the output is an ordinary data.frame with baked-in indentation,
+everything downstream works unchanged -- `group_by = "auto"` detects the
+indent, the group-aware splits keep a label row with its children and append
+`" (Cont.)"` when a group continues, and `blank_rows = "between_groups"`
+separates the groups:
+
+```{r stub-cols-pipeline}
+pages <- as_rtftables(tbl, split = "group_force", max_rows = 20,
+                      blank_rows = "between_groups")
+```
+
+With more than two `vars` each level indents one step further; a run of the
+same parent value gets one label row, so **sort the input first** (or use
+`sort_by`) if the hierarchy is scattered.
+
+### Column `label` attributes as header labels
+
+Clinical data.frames read via haven / labelled / xportr usually carry a
+`label` attribute on each column. The data.frame branch of `as_rtftables()`
+reads it (the `"labels"` `read_meta` token, on by default): a labelled column
+uses its label as the header label, an unlabelled one keeps its name, and an
+explicit `col_header =` still always wins.
+
+```{r df-labels}
+df <- data.frame(param = c("Age", "Sex"), val = c("75.1", "53%"),
+                 stringsAsFactors = FALSE)
+attr(df$param, "label") <- "Parameter"
+
+as_rtftable(df)$col_header               # "Parameter", "val"
+as_rtftable(df, read_meta = FALSE)$col_header  # NULL -> names(df) used
+```
+
+The labels feed the `header_sep` reconstruction too, so a label containing
+`"____"` splits into a spanning header exactly like a delimited column name.
+`stub_cols()` preserves the `label` attributes of the columns it keeps, and
+uses the labels of the columns it merges for its default stub header.
+
+### Coming from `reporter::create_table()`
+
+If you know the reporter package's table spec, the finishing features map to
+existing arguments -- there is no spec object to build:
+
+| reporter | rtfreporter |
+|----------|-------------|
+| `stub(vars)` + `define(label_row=)` / `define(indent=)` | `stub_cols(vars=)` before converting |
+| `use_attributes = "label"` | `read_meta` `"labels"` token (default on) |
+| `define(visible = FALSE)` | `drop_cols` |
+| `define(dedupe = TRUE)` | `collapse_repeats` |
+| `define(blank_after = TRUE)` | `blank_rows = blank_rows_by_change(...)` |
+| `define(page_break = TRUE)` | `split = "by_value", group_col =` |
+| `define(align =, width =, label =)` | `col_spec` / `auto_width` / `col_header` |
+| `spanning_header()` | `header_sep` delimited names, or `col_header` |
+| `create_table(first_row_blank =)` | `blank_row_first` |
+| `create_table(show_cols =)` | subset the data.frame, or `drop_cols` |
+| sorting | `sort_by` / `sort_desc` |
 
 
 ## Pagination

@@ -2,6 +2,17 @@
 
 ### Behavior changes
 
+- **`as_rtftables()` / `as_rtftable()` now read a plain data.frame's column
+  `label` attributes** (the haven / labelled / xportr convention) **as header
+  labels** (#210) -- the `"labels"` `read_meta` token, enabled by the default
+  `read_meta = TRUE`. A labelled data.frame that previously showed its raw
+  column names now shows the labels; pass `read_meta = FALSE` (or drop the
+  attributes) for the old headers. Columns without a label keep their name,
+  the display names feed the `header_sep` spanning reconstruction, and an
+  explicit `col_header` still always wins. Token resolution is lenient for
+  data.frames (unknown tokens are ignored) so a `list()` mixing table objects
+  and data.frames can share one `read_meta`.
+
 - **`rtfplot()` / `rtf_figures()` now embed a figure at its native size (100%)
   by default** (#208), instead of scaling it to `min(writable width, 9in)`. The
   display size is the image's pixel dimensions divided by its embedded DPI (read
@@ -13,6 +24,18 @@
 
 ### New features
 
+- New **`stub_cols()`** (#210): finish a tidy "hierarchy columns + statistic
+  columns" data.frame for clinical display by merging the hierarchy columns
+  (parent first, leaf last) into **one indented stub column** -- each parent
+  value becomes a full-width label row (the other columns render blank) and
+  the leaf rows are indented with non-breaking spaces. The output is a plain
+  data.frame, so `as_rtftables()`'s indent-based group detection, the
+  group-aware splits (`(Cont.)`, widow/orphan control) and
+  `blank_rows = "between_groups"` all work on it unchanged. An `NA` / empty
+  parent cell emits no label row and no indent, keeping summary rows (e.g.
+  "Any adverse event") flush left. See the *Importing tables* article, which
+  also maps `reporter::create_table()` spec features to their rtfreporter
+  equivalents.
 - `as_rtftables()` / `as_rtftable()` gain **`header_sep`**, reconstructing a
   **spanning (multi-row) column header** from a plain data.frame's delimited
   column names. The default recognizes both `"____"` (from

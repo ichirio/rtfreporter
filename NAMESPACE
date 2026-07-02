@@ -32,6 +32,9 @@ export(as_rtftable)
 export(as_rtftables)
 export(combine_sections)
 
+# data.frame finishing: merge hierarchy columns into an indented stub column
+export(stub_cols)
+
 # Header / footer constructors
 export(rtf_header)
 export(rtf_footer)

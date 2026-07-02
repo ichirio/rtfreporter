@@ -39,13 +39,18 @@ as_rtftables(
 \item{read_meta}{Controls metadata extraction from the source table:
 `TRUE` (default, read everything in the table above), `FALSE` (use only
 the rendered body -- equivalent to the old `paginate()`), or a character
-vector of tokens.  Ignored for plain data.frame inputs.  Tokens for
+vector of tokens.  Tokens for
 gt/gtsummary: `"col_header"`, `"alignment"`, `"spanning"`, `"widths"`,
 `"titles"`, `"footnotes"`.  For rtables/tern: `"col_header"`,
 `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`, `"indent"`,
 `"footnote_marks"`.  For flextable: `"col_header"`, `"alignment"`,
 `"spanning"`, `"titles"`, `"footnotes"`.  For huxtable: `"col_header"`,
-`"alignment"`, `"spanning"`, `"titles"`.}
+`"alignment"`, `"spanning"`, `"titles"`.  For a plain data.frame /
+tibble the single token is `"labels"`: a column's `label` attribute (the
+haven / labelled / xportr convention) is used as its header label
+(columns without one keep their name).  Unknown tokens are *ignored* for
+data.frames -- a `list()` mixing table objects and data.frames shares one
+`read_meta`, so adapter tokens must not error on the data.frame elements.}
 
 \item{max_rows}{Integer or `NULL`.  Maximum body rows per page for the
 `"group_safe"` / `"group_force"` splits (required by them).  Ignored by
@@ -325,8 +330,13 @@ the caption (a page title) is carried.
 **Not carried** (RTF cannot reproduce these, so they are intentionally
 ignored): per-cell bold / italic / underline from `gt::tab_style()`, cell
 background colours / fills, font and size styling, and Markdown formatting
-inside labels or titles.  Plain `data.frame` / tibble inputs carry no
-metadata at all -- set `col_header`, `col_spec`, etc. yourself.
+inside labels or titles.  For a plain `data.frame` / tibble two pieces of
+metadata are read: column `label` attributes become header labels (the
+`"labels"` token, see `read_meta`), and delimited column names are
+reconstructed into a spanning header (see `header_sep`); everything else
+(`col_spec`, widths, ...) you set yourself.  See also [stub_cols()] for
+finishing a tidy hierarchy-column data.frame into the indented stub
+layout beforehand.
 }
 
 \examples{
