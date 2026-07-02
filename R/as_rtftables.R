@@ -120,6 +120,53 @@
   c(upper_rows, list(bottom))
 }
 
+# Resolve a column spec (character names and/or integer indices, or a list
+# mixing the two) to integer column indices into `df`, preserving the supplied
+# order.  Shared by `sort_by`, `drop_cols` and stub_cols()'s `vars`; `arg`
+# names the argument in the error messages.
+.resolve_col_indices <- function(cols, df, arg) {
+  vapply(cols, function(c1) {
+    if (is.character(c1)) {
+      m <- match(c1, names(df))
+      if (is.na(m)) {
+        stop(sprintf("`%s` column '%s' not found in the table.", arg, c1),
+             call. = FALSE)
+      }
+      as.integer(m)
+    } else {
+      i <- as.integer(c1)
+      if (is.na(i) || i < 1L || i > ncol(df)) {
+        stop(sprintf("`%s` index %s out of range (1..%d).", arg, c1, ncol(df)),
+             call. = FALSE)
+      }
+      i
+    }
+  }, integer(1L), USE.NAMES = FALSE)
+}
+
+# Is the "labels" metadata token enabled for a plain data.frame input?
+# data.frame token resolution is deliberately LENIENT (unknown tokens are
+# ignored, not an error): a `list(gt_tbl, df)` input shares one `read_meta`,
+# so adapter-only tokens must not error on the data.frame elements.
+.df_labels_enabled <- function(read_meta) {
+  isTRUE(read_meta) || (is.character(read_meta) && "labels" %in% read_meta)
+}
+
+# Display name per data.frame column: the column's `label` attribute (the
+# haven / labelled / xportr convention) when the "labels" token is enabled
+# and the attribute is a usable single string, else the column name.
+.df_display_names <- function(df, read_meta) {
+  nms <- names(df)
+  if (!.df_labels_enabled(read_meta)) return(nms)
+  for (j in seq_along(df)) {
+    lb <- attr(df[[j]], "label", exact = TRUE)
+    if (!is.null(lb) && length(lb) == 1L && !is.na(lb) && nzchar(lb)) {
+      nms[j] <- as.character(lb)
+    }
+  }
+  nms
+}
+
 # Resolve a `read_meta` request to the concrete vector of enabled metadata
 # tokens.  Shared by every table-object adapter (gt, rtables, flextable,
 # huxtable), each of which wraps this with its own allowed-token set and label:
@@ -206,21 +253,31 @@
 #' **Not carried** (RTF cannot reproduce these, so they are intentionally
 #' ignored): per-cell bold / italic / underline from `gt::tab_style()`, cell
 #' background colours / fills, font and size styling, and Markdown formatting
-#' inside labels or titles.  Plain `data.frame` / tibble inputs carry no
-#' metadata at all -- set `col_header`, `col_spec`, etc. yourself.
+#' inside labels or titles.  For a plain `data.frame` / tibble two pieces of
+#' metadata are read: column `label` attributes become header labels (the
+#' `"labels"` token, see `read_meta`), and delimited column names are
+#' reconstructed into a spanning header (see `header_sep`); everything else
+#' (`col_spec`, widths, ...) you set yourself.  See also [stub_cols()] for
+#' finishing a tidy hierarchy-column data.frame into the indented stub
+#' layout beforehand.
 #'
 #' @param x A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`, a
 #'   `flextable`, a `huxtable`, a `data.frame` / tibble, or a `list` of these.
 #' @param read_meta Controls metadata extraction from the source table:
 #'   `TRUE` (default, read everything in the table above), `FALSE` (use only
 #'   the rendered body -- equivalent to the old `paginate()`), or a character
-#'   vector of tokens.  Ignored for plain data.frame inputs.  Tokens for
+#'   vector of tokens.  Tokens for
 #'   gt/gtsummary: `"col_header"`, `"alignment"`, `"spanning"`, `"widths"`,
 #'   `"titles"`, `"footnotes"`.  For rtables/tern: `"col_header"`,
 #'   `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`, `"indent"`,
 #'   `"footnote_marks"`.  For flextable: `"col_header"`, `"alignment"`,
 #'   `"spanning"`, `"titles"`, `"footnotes"`.  For huxtable: `"col_header"`,
-#'   `"alignment"`, `"spanning"`, `"titles"`.
+#'   `"alignment"`, `"spanning"`, `"titles"`.  For a plain data.frame /
+#'   tibble the single token is `"labels"`: a column's `label` attribute (the
+#'   haven / labelled / xportr convention) is used as its header label
+#'   (columns without one keep their name).  Unknown tokens are *ignored* for
+#'   data.frames -- a `list()` mixing table objects and data.frames shares one
+#'   `read_meta`, so adapter tokens must not error on the data.frame elements.
 #' @param split How to break the body into pages. A strategy name:
 #'   \describe{
 #'     \item{`"none"`}{(default) one page; no row limit checked.}
@@ -558,12 +615,20 @@ as_rtftables <- function(x,
     cell_styles     <- NULL
     titles_block    <- NULL
     footnotes_block <- NULL
-    # Reconstruct a spanning header from delimited column names (e.g.
-    # ydisctools "cohort1____trt1" or tfrmt "cohort1___tlang_delim___trt1").
-    # An explicit user `col_header` (via ...) always wins, so skip then.
+    # Header from the column display names: a column's `label` attribute
+    # (read_meta "labels" token, on by default) wins over its name, and the
+    # resulting names feed the spanning-header reconstruction of delimited
+    # names (e.g. ydisctools "cohort1____trt1" or tfrmt
+    # "cohort1___tlang_delim___trt1").  An explicit user `col_header`
+    # (via ...) always wins, so skip then.
     if (is.null(user_args$col_header)) {
-      auto_hdr <- .split_names_to_col_header(names(body), header_sep)
-      if (!is.null(auto_hdr)) kw$col_header <- auto_hdr
+      disp     <- .df_display_names(body, read_meta)
+      auto_hdr <- .split_names_to_col_header(disp, header_sep)
+      if (!is.null(auto_hdr)) {
+        kw$col_header <- auto_hdr
+      } else if (!identical(disp, names(body))) {
+        kw$col_header <- disp
+      }
     }
   } else {
     stop("`as_rtftables()` supports gt_tbl, gtsummary, rtables/tern, ",
@@ -731,24 +796,7 @@ as_rtftables <- function(x,
 # unknown names / out-of-range indices, and refuses to drop every column.
 .resolve_drop_cols <- function(cols, df) {
   if (is.null(cols) || length(cols) == 0L) return(integer(0))
-  idx <- vapply(cols, function(c1) {
-    if (is.character(c1)) {
-      m <- match(c1, names(df))
-      if (is.na(m)) {
-        stop(sprintf("`drop_cols` column '%s' not found in the table.", c1),
-             call. = FALSE)
-      }
-      as.integer(m)
-    } else {
-      i <- as.integer(c1)
-      if (is.na(i) || i < 1L || i > ncol(df)) {
-        stop(sprintf("`drop_cols` index %s out of range (1..%d).",
-                     c1, ncol(df)), call. = FALSE)
-      }
-      i
-    }
-  }, integer(1L), USE.NAMES = FALSE)
-  idx <- sort(unique(idx))
+  idx <- sort(unique(.resolve_col_indices(cols, df, "drop_cols")))
   if (length(idx) >= ncol(df)) {
     stop("`drop_cols` must leave at least one column to display.", call. = FALSE)
   }
@@ -775,23 +823,7 @@ as_rtftables <- function(x,
 # Resolve `sort_by` columns (names / integers / a mixing list) to integer
 # indices into `df`, preserving the supplied order (sort priority).
 .resolve_sort_cols <- function(cols, df) {
-  vapply(cols, function(c1) {
-    if (is.character(c1)) {
-      m <- match(c1, names(df))
-      if (is.na(m)) {
-        stop(sprintf("`sort_by` column '%s' not found in the table.", c1),
-             call. = FALSE)
-      }
-      as.integer(m)
-    } else {
-      i <- as.integer(c1)
-      if (is.na(i) || i < 1L || i > ncol(df)) {
-        stop(sprintf("`sort_by` index %s out of range (1..%d).", c1, ncol(df)),
-             call. = FALSE)
-      }
-      i
-    }
-  }, integer(1L), USE.NAMES = FALSE)
+  .resolve_col_indices(cols, df, "sort_by")
 }
 
 # Normalise `sort_desc` to a logical vector of length `n` (one per sort key).

@@ -226,11 +226,14 @@ reference:
       reading the source's metadata and paginating in one call.
       `as_rtftables()` returns one rtftable **per page** (a list);
       `as_rtftable()` is the single-page form returning **one** object — they
-      differ only in singular vs. list.
+      differ only in singular vs. list.  `stub_cols()` finishes a tidy
+      data.frame beforehand, merging hierarchy columns into one indented
+      stub column.
     contents:
       - as_rtftables
       - as_rtftable
       - combine_sections
+      - stub_cols
 
   # ── 5. Column headers ──────────────────────────────────────────────────
   - title: Column headers
