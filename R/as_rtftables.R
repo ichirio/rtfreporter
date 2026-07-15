@@ -211,7 +211,10 @@
 #' rtftable as the attributes `rtf_titles` / `rtf_footnotes`, which
 #' [rtf_tables()] consumes automatically.
 #'
-#' Supported inputs: `gt_tbl`, gtsummary tables, rtables/tern `VTableTree`
+#' Supported inputs: `gt_tbl`, `gt_group` (gt's multi-table container from
+#' [gt::gt_group()] / [gt::gt_split()] -- and what tfrmt's `print_to_gt()`
+#' returns when the spec has a `page_plan`; expanded to one page set per
+#' member table), gtsummary tables, rtables/tern `VTableTree`
 #' tables, `flextable` tables, `huxtable` tables, plain `data.frame` / tibble,
 #' or a `list` of any of these (the list is flattened, names propagated as
 #' `name`, `name.1`, `name.2`, ...).  Figures are out of scope -- use
@@ -261,8 +264,9 @@
 #' finishing a tidy hierarchy-column data.frame into the indented stub
 #' layout beforehand.
 #'
-#' @param x A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`, a
-#'   `flextable`, a `huxtable`, a `data.frame` / tibble, or a `list` of these.
+#' @param x A `gt_tbl`, a `gt_group`, a gtsummary table, an rtables/tern
+#'   `VTableTree`, a `flextable`, a `huxtable`, a `data.frame` / tibble, or a
+#'   `list` of these.
 #' @param read_meta Controls metadata extraction from the source table:
 #'   `TRUE` (default, read everything in the table above), `FALSE` (use only
 #'   the rendered body -- equivalent to the old `paginate()`), or a character
@@ -539,6 +543,13 @@ as_rtftables <- function(x,
   group_by <- match.arg(group_by)
   user_args <- list(...)
 
+  # ---- gt_group input: expand to its member gt_tbl list -----------------
+  # A gt_group (gt::gt_group() / gt::gt_split(); also what tfrmt's
+  # print_to_gt() returns under a page_plan) is itself a plain S3 list of
+  # internal slots, so it must be expanded BEFORE the list-recursion guard
+  # below -- otherwise the guard would iterate the slots, not the tables.
+  if (.is_gt_group(x)) x <- .gt_group_tables(x)
+
   # ---- list input: recurse, concatenate, propagate names ----------------
   if (is.list(x) && !is.data.frame(x) && !isS4(x) &&
       !.is_gt_tbl(x) && !.is_gtsummary_tbl(x) && !.is_rtables_tbl(x) &&
@@ -631,8 +642,9 @@ as_rtftables <- function(x,
       }
     }
   } else {
-    stop("`as_rtftables()` supports gt_tbl, gtsummary, rtables/tern, ",
-         "flextable, huxtable, data.frame/tibble, or a list of these; got '",
+    stop("`as_rtftables()` supports gt_tbl, gt_group, gtsummary, ",
+         "rtables/tern, flextable, huxtable, data.frame/tibble, or a list ",
+         "of these; got '",
          paste(class(x), collapse = "/"), "'.", call. = FALSE)
   }
 

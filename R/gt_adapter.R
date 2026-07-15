@@ -57,6 +57,25 @@
   gt_obj
 }
 
+# Is `x` a gt_group -- gt's multi-table container from gt::gt_group() /
+# gt::gt_split()?  tfrmt's print_to_gt() also returns one whenever the spec
+# carries a page_plan.  Cheap class check; does not import gt.
+.is_gt_group <- function(x) inherits(x, "gt_group")
+
+# Expand a gt_group into the plain list of its member gt_tbl objects.
+# Members are pulled through the exported gt::grp_pull() API; only the member
+# COUNT comes from the object's own `gt_tbls` slot (list access, no `:::`),
+# as gt exports no size accessor.
+.gt_group_tables <- function(x) {
+  if (!requireNamespace("gt", quietly = TRUE)) {
+    stop("Reading from a gt_group requires the `gt` package.  Install it ",
+         "with install.packages(\"gt\").", call. = FALSE)
+  }
+  n <- nrow(x[["gt_tbls"]])
+  if (is.null(n) || n < 1L) return(list())
+  lapply(seq_len(n), function(i) gt::grp_pull(x, which = i))
+}
+
 
 # ── Token resolution ─────────────────────────────────────────────────────
 

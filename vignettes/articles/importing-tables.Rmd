@@ -44,6 +44,10 @@ class(pages[[1]])
 `as_rtftables()` accepts any of:
 
 - a **`gt`** table (`gt::gt(...)`),
+- a **`gt_group`** -- gt's multi-table container from `gt::gt_group()` /
+  `gt::gt_split()`, and what **tfrmt**'s `print_to_gt()` returns when the spec
+  has a `page_plan`. Each member table becomes its own page set, so a
+  paginated tfrmt render can be handed over as-is,
 - a **gtsummary** table (`tbl_summary()`, `tbl_regression()`, …; converted via
   `gtsummary::as_gt()`),
 - an **rtables / tern** `VTableTree`,
@@ -60,6 +64,10 @@ exactly `as_rtftables(x, split = "none")[[1]]`:
 tbl <- as_rtftable(df)        # one rtftable, not a list
 class(tbl)
 ```
+
+Being a single-table wrapper, `as_rtftable()` accepts a `gt_group` only when it
+holds exactly one table; a multi-member group errors and points you to
+`as_rtftables()`.
 
 
 ## What the columns are called (and how to check) {#column-names}
