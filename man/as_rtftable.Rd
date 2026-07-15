@@ -10,8 +10,9 @@ as_rtftable(gt_obj, read_meta = TRUE, ...)
 \item{gt_obj}{A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
 a `flextable`, a `huxtable`, or a plain `data.frame` / tibble.  A
 `gt_group` ([gt::gt_group()] / [gt::gt_split()], or a tfrmt `page_plan`
-render) is accepted when it holds exactly one table; multi-member groups
-error -- convert those with [as_rtftables()].}
+render) or a gtsummary `tbl_split` container is accepted when it holds
+exactly one table; multi-member containers error -- convert those with
+[as_rtftables()].}
 
 \item{read_meta}{`TRUE` (default, read all render-relevant metadata),
 `FALSE` (rendered body only), or a character vector of tokens.  See
