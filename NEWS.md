@@ -24,6 +24,15 @@
 
 ### New features
 
+- **`as_rtftables()` now accepts a `gt_group`** (#214) -- gt's multi-table
+  container from `gt::gt_group()` / `gt::gt_split()`, and what tfrmt's
+  `print_to_gt()` returns when the spec has a `page_plan`. Each member table
+  becomes its own page set (expanded via the exported `gt::grp_pull()`), so a
+  paginated tfrmt render can be handed over directly. `as_rtftable()` unwraps
+  a single-member `gt_group` and errors informatively for a multi-member one.
+  (Previously a `gt_group` slipped into the list branch, which iterated its
+  internal slots and failed with a misleading `"got 'logical'"` error.)
+
 - New **`stub_cols()`** (#210): finish a tidy "hierarchy columns + statistic
   columns" data.frame for clinical display by merging the hierarchy columns
   (parent first, leaf last) into **one indented stub column** -- each parent

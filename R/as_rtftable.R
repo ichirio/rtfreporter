@@ -15,7 +15,10 @@
 #' bold/italic styling, cell fills and Markdown are not.
 #'
 #' @param gt_obj A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
-#'   a `flextable`, a `huxtable`, or a plain `data.frame` / tibble.
+#'   a `flextable`, a `huxtable`, or a plain `data.frame` / tibble.  A
+#'   `gt_group` ([gt::gt_group()] / [gt::gt_split()], or a tfrmt `page_plan`
+#'   render) is accepted when it holds exactly one table; multi-member groups
+#'   error -- convert those with [as_rtftables()].
 #' @param read_meta `TRUE` (default, read all render-relevant metadata),
 #'   `FALSE` (rendered body only), or a character vector of tokens.  See
 #'   [as_rtftables()].
@@ -38,6 +41,17 @@
 #'
 #' @export
 as_rtftable <- function(gt_obj, read_meta = TRUE, ...) {
+  # A gt_group (gt::gt_group() / gt::gt_split(); tfrmt page_plan output) is
+  # accepted only when it holds exactly one table -- this is a single-table
+  # wrapper.  Multi-member groups belong to as_rtftables().
+  if (.is_gt_group(gt_obj)) {
+    tbls <- .gt_group_tables(gt_obj)
+    if (length(tbls) != 1L) {
+      stop("`gt_obj` is a gt_group holding ", length(tbls), " tables; use ",
+           "as_rtftables() to convert them all.", call. = FALSE)
+    }
+    gt_obj <- tbls[[1L]]
+  }
   # Accept gtsummary tables: convert to gt first, then validate.
   if (.is_gtsummary_tbl(gt_obj)) {
     gt_obj <- .gtsummary_to_gt(gt_obj)

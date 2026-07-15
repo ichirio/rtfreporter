@@ -33,8 +33,9 @@ as_rtftables(
 )
 }
 \arguments{
-\item{x}{A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`, a
-`flextable`, a `huxtable`, a `data.frame` / tibble, or a `list` of these.}
+\item{x}{A `gt_tbl`, a `gt_group`, a gtsummary table, an rtables/tern
+`VTableTree`, a `flextable`, a `huxtable`, a `data.frame` / tibble, or a
+`list` of these.}
 
 \item{read_meta}{Controls metadata extraction from the source table:
 `TRUE` (default, read everything in the table above), `FALSE` (use only
@@ -287,7 +288,10 @@ The page-level title / source-note blocks travel with each returned
 rtftable as the attributes `rtf_titles` / `rtf_footnotes`, which
 [rtf_tables()] consumes automatically.
 
-Supported inputs: `gt_tbl`, gtsummary tables, rtables/tern `VTableTree`
+Supported inputs: `gt_tbl`, `gt_group` (gt's multi-table container from
+[gt::gt_group()] / [gt::gt_split()] -- and what tfrmt's `print_to_gt()`
+returns when the spec has a `page_plan`; expanded to one page set per
+member table), gtsummary tables, rtables/tern `VTableTree`
 tables, `flextable` tables, `huxtable` tables, plain `data.frame` / tibble,
 or a `list` of any of these (the list is flattened, names propagated as
 `name`, `name.1`, `name.2`, ...).  Figures are out of scope -- use
