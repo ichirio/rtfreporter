@@ -76,6 +76,20 @@
   lapply(seq_len(n), function(i) gt::grp_pull(x, which = i))
 }
 
+# Is `x` a gtsummary tbl_split -- the container returned by
+# gtsummary::tbl_split_by_rows() / tbl_split_by_columns() (and the deprecated
+# tbl_split())?  Cheap class check; does not import gtsummary.
+.is_gtsummary_split <- function(x) inherits(x, "tbl_split")
+
+# Expand a tbl_split into the plain list of its member gtsummary tables.
+# Unlike a gt_group the object IS the member list, so dropping the container
+# class is enough; centralized here so the handling mirrors
+# .gt_group_tables() (and has one place to change if gtsummary ever adds
+# non-table slots to the container).
+.gtsummary_split_tables <- function(x) {
+  unclass(x)
+}
+
 
 # ── Token resolution ─────────────────────────────────────────────────────
 

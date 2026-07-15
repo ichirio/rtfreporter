@@ -49,7 +49,9 @@ class(pages[[1]])
   has a `page_plan`. Each member table becomes its own page set, so a
   paginated tfrmt render can be handed over as-is,
 - a **gtsummary** table (`tbl_summary()`, `tbl_regression()`, …; converted via
-  `gtsummary::as_gt()`),
+  `gtsummary::as_gt()`). A **`tbl_split`** container
+  (`tbl_split_by_rows()` / `tbl_split_by_columns()`) is likewise expanded,
+  one member per page set,
 - an **rtables / tern** `VTableTree`,
 - a **`flextable`** table (`flextable::flextable(...)`),
 - a **`huxtable`** table (`huxtable::huxtable(...)`),
@@ -65,9 +67,9 @@ tbl <- as_rtftable(df)        # one rtftable, not a list
 class(tbl)
 ```
 
-Being a single-table wrapper, `as_rtftable()` accepts a `gt_group` only when it
-holds exactly one table; a multi-member group errors and points you to
-`as_rtftables()`.
+Being a single-table wrapper, `as_rtftable()` accepts a `gt_group` or a
+gtsummary `tbl_split` only when it holds exactly one table; a multi-member
+container errors and points you to `as_rtftables()`.
 
 
 ## What the columns are called (and how to check) {#column-names}

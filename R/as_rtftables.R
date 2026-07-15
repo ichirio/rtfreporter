@@ -214,7 +214,9 @@
 #' Supported inputs: `gt_tbl`, `gt_group` (gt's multi-table container from
 #' [gt::gt_group()] / [gt::gt_split()] -- and what tfrmt's `print_to_gt()`
 #' returns when the spec has a `page_plan`; expanded to one page set per
-#' member table), gtsummary tables, rtables/tern `VTableTree`
+#' member table), gtsummary tables (including a `tbl_split` container from
+#' `gtsummary::tbl_split_by_rows()` / `tbl_split_by_columns()`, likewise
+#' expanded member by member), rtables/tern `VTableTree`
 #' tables, `flextable` tables, `huxtable` tables, plain `data.frame` / tibble,
 #' or a `list` of any of these (the list is flattened, names propagated as
 #' `name`, `name.1`, `name.2`, ...).  Figures are out of scope -- use
@@ -264,9 +266,9 @@
 #' finishing a tidy hierarchy-column data.frame into the indented stub
 #' layout beforehand.
 #'
-#' @param x A `gt_tbl`, a `gt_group`, a gtsummary table, an rtables/tern
-#'   `VTableTree`, a `flextable`, a `huxtable`, a `data.frame` / tibble, or a
-#'   `list` of these.
+#' @param x A `gt_tbl`, a `gt_group`, a gtsummary table (or `tbl_split`
+#'   container), an rtables/tern `VTableTree`, a `flextable`, a `huxtable`, a
+#'   `data.frame` / tibble, or a `list` of these.
 #' @param read_meta Controls metadata extraction from the source table:
 #'   `TRUE` (default, read everything in the table above), `FALSE` (use only
 #'   the rendered body -- equivalent to the old `paginate()`), or a character
@@ -549,6 +551,12 @@ as_rtftables <- function(x,
   # internal slots, so it must be expanded BEFORE the list-recursion guard
   # below -- otherwise the guard would iterate the slots, not the tables.
   if (.is_gt_group(x)) x <- .gt_group_tables(x)
+
+  # ---- tbl_split input: drop the container class ------------------------
+  # A gtsummary tbl_split (tbl_split_by_rows() / tbl_split_by_columns()) IS
+  # a list of member gtsummary tables; unwrap it explicitly so the support
+  # is by design, not an accident of the list branch below.
+  if (.is_gtsummary_split(x)) x <- .gtsummary_split_tables(x)
 
   # ---- list input: recurse, concatenate, propagate names ----------------
   if (is.list(x) && !is.data.frame(x) && !isS4(x) &&

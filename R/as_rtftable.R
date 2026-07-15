@@ -17,8 +17,9 @@
 #' @param gt_obj A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
 #'   a `flextable`, a `huxtable`, or a plain `data.frame` / tibble.  A
 #'   `gt_group` ([gt::gt_group()] / [gt::gt_split()], or a tfrmt `page_plan`
-#'   render) is accepted when it holds exactly one table; multi-member groups
-#'   error -- convert those with [as_rtftables()].
+#'   render) or a gtsummary `tbl_split` container is accepted when it holds
+#'   exactly one table; multi-member containers error -- convert those with
+#'   [as_rtftables()].
 #' @param read_meta `TRUE` (default, read all render-relevant metadata),
 #'   `FALSE` (rendered body only), or a character vector of tokens.  See
 #'   [as_rtftables()].
@@ -48,6 +49,15 @@ as_rtftable <- function(gt_obj, read_meta = TRUE, ...) {
     tbls <- .gt_group_tables(gt_obj)
     if (length(tbls) != 1L) {
       stop("`gt_obj` is a gt_group holding ", length(tbls), " tables; use ",
+           "as_rtftables() to convert them all.", call. = FALSE)
+    }
+    gt_obj <- tbls[[1L]]
+  }
+  # Same rule for a gtsummary tbl_split container.
+  if (.is_gtsummary_split(gt_obj)) {
+    tbls <- .gtsummary_split_tables(gt_obj)
+    if (length(tbls) != 1L) {
+      stop("`gt_obj` is a tbl_split holding ", length(tbls), " tables; use ",
            "as_rtftables() to convert them all.", call. = FALSE)
     }
     gt_obj <- tbls[[1L]]

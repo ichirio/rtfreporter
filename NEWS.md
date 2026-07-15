@@ -33,6 +33,14 @@
   (Previously a `gt_group` slipped into the list branch, which iterated its
   internal slots and failed with a misleading `"got 'logical'"` error.)
 
+- **gtsummary `tbl_split` containers are now supported by design** (#215) --
+  `tbl_split_by_rows()` / `tbl_split_by_columns()` output is unwrapped
+  explicitly into its member gtsummary tables, one page set per member
+  (before, it only happened to work through the generic list branch, with no
+  tests or documentation guarding it). `as_rtftable()` unwraps a
+  single-member `tbl_split` and errors informatively for a multi-member one,
+  mirroring the `gt_group` behaviour.
+
 - New **`stub_cols()`** (#210): finish a tidy "hierarchy columns + statistic
   columns" data.frame for clinical display by merging the hierarchy columns
   (parent first, leaf last) into **one indented stub column** -- each parent
