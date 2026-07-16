@@ -15,7 +15,10 @@
   field). *Not* carried: `cell_fill()`, fonts/sizes, header text colour, and
   gt's **theme** borders (`tab_options()`) -- rtfreporter's `border` presets
   keep governing the frame. Pass `read_meta = FALSE` or a token list without
-  `"styles"` for the previous behaviour.
+  `"styles"` for the previous behaviour. **Transparent** gt borders are
+  likewise skipped (#226): tfrmt overlays transparent borders everywhere to
+  hide gt's theme lines, and an invisible border carries no author intent --
+  a plain `tfrmt::print_to_gt()` table converts exactly as before.
 
 - **`as_rtftables()` / `as_rtftable()` now read a plain data.frame's column
   `label` attributes** (the haven / labelled / xportr convention) **as header

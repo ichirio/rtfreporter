@@ -303,8 +303,17 @@
 
 # One gt cell_border_* declaration -> rtf_border_side(), or NULL when the CSS
 # style has no RTF counterpart.  Widths: px -> twips (x15), pt -> twips (x20).
-# Black is passed as NULL (the RTF default colour).
+# Black is passed as NULL (the RTF default colour).  A TRANSPARENT border is
+# invisible -- tfrmt overlays transparent borders everywhere to hide gt's
+# theme lines -- so it carries no author intent for RTF and is skipped
+# (the zone presets keep governing).
 .gt_border_side <- function(decl) {
+  raw <- as.character(decl$color %||% "")
+  if (identical(tolower(raw), "transparent") ||
+      (startsWith(raw, "#") && nchar(raw) >= 9L &&
+       substr(raw, 8L, 9L) == "00")) {
+    return(NULL)
+  }
   style <- unname(.GT_BORDER_STYLE_MAP[as.character(decl$style %||% "solid")])
   if (is.na(style)) return(NULL)
   w <- as.character(decl$width %||% "")
