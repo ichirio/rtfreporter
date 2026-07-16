@@ -157,6 +157,49 @@ test_that("the styles token can be switched off", {
   expect_null(t2$cell_styles)
 })
 
+# ── transparent borders (#226) ────────────────────────────────────────────────
+
+test_that("transparent gt borders are invisible and therefore not carried", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(.gs_df()) |>
+    gt::tab_style(style = gt::cell_borders(sides = "bottom",
+                                           color = "transparent"),
+                  locations = gt::cells_body(columns = A, rows = 1)) |>
+    gt::tab_style(style = gt::cell_borders(sides = "top", color = "#FFFFFF00"),
+                  locations = gt::cells_column_labels(columns = B))
+  tbl <- as_rtftable(g, read_meta = TRUE)
+  expect_null(tbl$cell_styles)
+  expect_true(is.character(tbl$col_header[[1]]))   # labels row NOT promoted
+})
+
+test_that("a plain tfrmt render carries no borders (its transparent overlay)", {
+  skip_if_not_installed("gt")
+  skip_if_not_installed("tfrmt")
+  dat <- expand.grid(grp = "Age", lbl = c("n", "Mean"),
+                     trt = c("Placebo", "Drug"),
+                     param = "value", stringsAsFactors = FALSE)
+  dat$val <- seq_len(nrow(dat))
+  spec <- tfrmt::tfrmt(
+    group = grp, label = lbl, column = trt,
+    param = param, value = val,
+    body_plan = tfrmt::body_plan(
+      tfrmt::frmt_structure(group_val = ".default", label_val = ".default",
+                            tfrmt::frmt("xx"))))
+  tbl <- as_rtftable(tfrmt::print_to_gt(spec, dat), read_meta = TRUE)
+  # tfrmt's transparent overlay must not promote the labels row nor attach
+  # any header-cell border.
+  borders <- unlist(lapply(tbl$col_header, function(row) {
+    if (is.character(row)) return(logical(0))
+    vapply(row, function(cell) !is.null(cell$border), logical(1))
+  }))
+  expect_equal(sum(borders), 0L)
+  cs_list <- if (is.null(tbl$cell_styles)) list() else tbl$cell_styles
+  no_cell_border <- vapply(cs_list, function(cs) {
+    is.null(cs) || is.null(cs$border)
+  }, logical(1))
+  expect_true(all(no_cell_border))
+})
+
 # ── gtsummary round-trip ──────────────────────────────────────────────────────
 
 test_that("gtsummary bold_labels() is carried through as_gt()", {
