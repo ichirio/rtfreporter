@@ -216,6 +216,19 @@
 #' there (`NULL` sides leave the existing side alone; use
 #' `rtf_border_side("none")` for an explicit "no line").
 #'
+#' @section Body cells:
+#' `style_body()` overrides, per cell, everything the data-row renderer
+#' otherwise takes from `col_spec` -- `bold` / `italic` / `underline` /
+#' `indent_twips` / `color` / `align` -- plus `border`, which merges on top
+#' of the row's resolved zone border (`body` crossed with `first_row` /
+#' `last_row`), per side.  So a rule under a summary row is
+#' `style_body(rows = ~ Item == "Total",
+#' border = rtf_border(bottom = rtf_border_side("single")))`, and an
+#' `rtf_border_side("none")` side erases a zone rule on the selected cells.
+#' Row height and cell padding are deliberately *not* per-row properties --
+#' they stay uniform per table / document (see `rtf_document(default_format)`
+#' and the `rtfreporter.*` options).
+#'
 #' @section Header rows and the two row kinds:
 #' A column header holds two kinds of rows (see [rtf_col_header()]): **cell
 #' rows** (lists of [col_cell()] spans -- spanning rows, or any row built from
@@ -242,7 +255,8 @@
 #'   cells in order.
 #' @param border An [rtf_border()] merged onto the targeted cells
 #'   (side-by-side; existing sides survive where the new border leaves them
-#'   `NULL`).
+#'   `NULL`).  In `style_body()` the merge lands on top of the row's zone
+#'   border; in `style_cols()` it becomes the column's header-cell border.
 #' @param align `"left"`, `"center"`, or `"right"`.
 #' @param bold,italic,underline `TRUE`/`FALSE`.  (On a character label row
 #'   `underline` triggers the cell promotion described above.)
@@ -420,7 +434,8 @@ style_body <- function(x, ...) UseMethod("style_body")
 #' @export
 style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
                                 italic = NULL, underline = NULL,
-                                indent_twips = NULL, color = NULL, ...) {
+                                indent_twips = NULL, color = NULL,
+                                align = NULL, border = NULL, ...) {
   frames   <- .style_body_frames(x)
   rows_idx <- .style_resolve_rows(rows, frames, "style_body")
   cols_idx <- .style_resolve_cols(x, cols, "style_body")
@@ -428,6 +443,8 @@ style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
     v <- get(arg)
     if (!is.null(v)) assign(arg, .style_check_flag(v, arg, "style_body"))
   }
+  if (!is.null(align))  align  <- .style_check_align(align, "style_body")
+  if (!is.null(border)) border <- .style_check_border(border, "style_body")
   if (length(rows_idx) == 0L) return(x)
 
   total <- sum(vapply(frames, nrow, integer(1L)))
@@ -458,6 +475,16 @@ style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
       v <- cs$color %||% blank(NA_character_)
       v[cols_idx] <- as.character(color)
       cs$color <- v
+    }
+    if (!is.null(align)) {
+      v <- cs$align %||% blank(NA_character_)
+      v[cols_idx] <- align
+      cs$align <- v
+    }
+    if (!is.null(border)) {
+      v <- cs$border %||% vector("list", ncols)
+      for (j in cols_idx) v[[j]] <- .merge_rtf_border(v[[j]], border)
+      cs$border <- v
     }
     cs_all[[r]] <- cs
   }

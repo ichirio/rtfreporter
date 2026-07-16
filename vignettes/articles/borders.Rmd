@@ -208,9 +208,18 @@ tbl <- tbl |>
   style_header(row = 2, cols = 2:4,
                border = rtf_border(top    = rtf_border_side("single"),
                                    bottom = rtf_border_side("none"))) |>
+  # rule under one BODY row (a summary/total row, selected by predicate)
+  style_body(rows = ~ Item == "Sex",
+             border = rtf_border(bottom = rtf_border_side("single"))) |>
   # double rule under the whole table
   style_zone(last_row = rtf_border(bottom = rtf_border_side("double")))
 ```
+
+Body borders follow the same two-step chain as everything else: the row's
+zone border (`body`, crossed with `first_row` / `last_row`) first, then the
+per-cell override from `style_body(border = )` -- last writer wins, per side.
+Restrict `cols` to rule only part of a row, or pass an
+`rtf_border_side("none")` side to erase a zone rule on selected cells.
 
 `style_header(row =, cols =)` addresses header cells by header-row index and
 data-column position; `style_cols()`, `style_body()` and `style_zone()` cover

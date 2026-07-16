@@ -66,6 +66,8 @@ style_body(x, ...)
   underline = NULL,
   indent_twips = NULL,
   color = NULL,
+  align = NULL,
+  border = NULL,
   ...
 )
 
@@ -111,7 +113,8 @@ cells in order.}
 
 \item{border}{An [rtf_border()] merged onto the targeted cells
 (side-by-side; existing sides survive where the new border leaves them
-`NULL`).}
+`NULL`).  In `style_body()` the merge lands on top of the row's zone
+border; in `style_cols()` it becomes the column's header-cell border.}
 
 \item{align}{`"left"`, `"center"`, or `"right"`.}
 
@@ -170,6 +173,21 @@ border passed to a verb is merged side-by-side onto whatever is already
 there (`NULL` sides leave the existing side alone; use
 `rtf_border_side("none")` for an explicit "no line").
 }
+\section{Body cells}{
+
+`style_body()` overrides, per cell, everything the data-row renderer
+otherwise takes from `col_spec` -- `bold` / `italic` / `underline` /
+`indent_twips` / `color` / `align` -- plus `border`, which merges on top
+of the row's resolved zone border (`body` crossed with `first_row` /
+`last_row`), per side.  So a rule under a summary row is
+`style_body(rows = ~ Item == "Total",
+border = rtf_border(bottom = rtf_border_side("single")))`, and an
+`rtf_border_side("none")` side erases a zone rule on the selected cells.
+Row height and cell padding are deliberately *not* per-row properties --
+they stay uniform per table / document (see `rtf_document(default_format)`
+and the `rtfreporter.*` options).
+}
+
 \section{Header rows and the two row kinds}{
 
 A column header holds two kinds of rows (see [rtf_col_header()]): **cell

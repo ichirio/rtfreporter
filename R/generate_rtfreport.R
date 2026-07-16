@@ -703,10 +703,12 @@
 }
 
 # Render one data row.
-# row_cell_styles: NULL, or a list with optional logical/integer vectors
-#   $bold, $italic, $underline, $indent_twips -- each of length ncols.
-#   NA values mean "no override; fall back to col_spec".
-#   Non-NA values win over col_spec for that column.
+# row_cell_styles: NULL, or a list with optional per-column vectors
+#   $bold, $italic, $underline (logical), $indent_twips (integer),
+#   $align, $color (character), and $border (a list of rtf_border / NULL) --
+#   each of length ncols.  NA / NULL entries mean "no override; fall back to
+#   col_spec (or, for $border, the row's zone border)".  Non-NA values win
+#   over col_spec for that column.
 .render_data_row <- function(vals, cellx, border_spec, row_height_twips,
                               pad_l, pad_r, valign_cmd, col_spec,
                               table_align = "left",
@@ -714,7 +716,23 @@
                               color_index_map = NULL,
                               markup = "script") {
   ncols <- length(cellx)
-  cell_defs     <- .build_cell_defs(cellx, border_spec, valign_cmd)
+
+  # Per-cell border overrides (cell_styles$border): each cell's rtf_border
+  # merges ON TOP of the row's resolved zone border (body x first/last row),
+  # per side -- the same last-writer-wins chain the header renderers use.
+  # Rows without an override keep the shared fast path.
+  cell_borders <- if (!is.null(row_cell_styles)) row_cell_styles$border
+  if (is.list(cell_borders) &&
+      !all(vapply(cell_borders, is.null, logical(1L)))) {
+    cell_defs <- vapply(seq_len(ncols), function(j) {
+      b   <- if (j <= length(cell_borders)) cell_borders[[j]]
+      eff <- if (is.null(b)) border_spec
+             else .effective_row_border(border_spec, b)
+      paste0(.build_border_commands(eff), valign_cmd, "\\cellx", cellx[j])
+    }, character(1L))
+  } else {
+    cell_defs <- .build_cell_defs(cellx, border_spec, valign_cmd)
+  }
   cell_contents <- vapply(seq_len(ncols), function(j) {
     spec        <- col_spec[[j]]
     raw_val     <- if (j <= length(vals)) vals[[j]] else NA
@@ -728,6 +746,9 @@
     # Per-cell style overrides: non-NA entries win over col_spec defaults.
     if (!is.null(row_cell_styles)) {
       cs <- row_cell_styles
+      if (!is.null(cs$align) && j <= length(cs$align) &&
+          !is.na(cs$align[j]))
+        align  <- as.character(cs$align[j])
       if (!is.null(cs$bold) && j <= length(cs$bold) &&
           !is.na(cs$bold[j]))
         bold   <- isTRUE(cs$bold[j])

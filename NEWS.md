@@ -48,6 +48,27 @@
   (render-equivalence is pinned by a test). See the new *Level 4* section of
   the Borders article.
 
+- **Per-cell body alignment and borders** (#221): `cell_styles` gains
+  `align` (`NA` = inherit the column alignment) and `border` (a list of
+  `rtf_border()` per column, merged side-by-side on top of the row's
+  resolved zone border -- so `rtf_border_side("none")` erases a zone rule),
+  and `style_body()` gains the matching `align = ` / `border = ` arguments.
+  This completes the invariant that every visual attribute the data-row
+  renderer takes from `col_spec` or the border zones can be overridden per
+  cell through the one `cell_styles` channel, with the same
+  last-writer-wins-per-side rule. The classic uses are a rule under a
+  summary/total row and one row's alignment flipped:
+
+  ```r
+  tbl |> style_body(rows = ~ Item == "Total",
+                    border = rtf_border(bottom = rtf_border_side("single")))
+  ```
+
+  Per-row row height and cell padding are deliberately **not** added: TFL
+  conventions keep them uniform, and they are already settable per table and
+  document-wide; vertical cell padding remains with the parked 4-direction
+  `\clpad*` work (#125).
+
 - **`as_rtftables()` now accepts a `gt_group`** (#214) -- gt's multi-table
   container from `gt::gt_group()` / `gt::gt_split()`, and what tfrmt's
   `print_to_gt()` returns when the spec has a `page_plan`. Each member table

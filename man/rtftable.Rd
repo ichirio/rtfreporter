@@ -160,6 +160,13 @@ named list with optional vectors of length `ncol(data)`:
     (replaces, does not add to, the column default).}
   \item{`color`}{character `"#RRGGBB"` -- per-cell **text colour**,
     overriding `col_spec[[j]]$color`. `NA` means "use the column colour".}
+  \item{`align`}{character `"left"` / `"center"` / `"right"` -- per-cell
+    alignment, overriding `col_spec[[j]]$align`. `NA` means "use the
+    column alignment".}
+  \item{`border`}{a **list** of [rtf_border()] / `NULL` per column --
+    per-cell border, merged side-by-side on top of the row's resolved
+    zone border (`body` / `first_row` / `last_row`); an
+    [rtf_border_side()] of style `"none"` erases a zone rule.}
 }
 `NA` entries within a vector mean "no override; use the column default".
 This argument is populated automatically by [as_rtftable()] when reading
