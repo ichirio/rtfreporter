@@ -182,6 +182,67 @@ test_that("style_body() rejects bad rows", {
   expect_error(style_body(.sv_tbl(), rows = Item ~ 1), "one-sided")
 })
 
+test_that("style_body(border = ) rules the requested body cells only", {
+  ctrl <- .sv_tbl()
+  pat  <- style_body(ctrl, rows = 1,
+                     border = rtf_border(bottom = rtf_border_side("single")))
+  bc <- .sv_row_counts(.sv_rtf(ctrl), BOT)
+  bp <- .sv_row_counts(.sv_rtf(pat), BOT)
+  expect_equal(bp[4] - bc[4], 4L)          # data row 1 = trowd 4: all 4 cells
+  expect_equal(bp[-4], bc[-4])             # nothing else changed
+
+  part <- style_body(ctrl, rows = 1, cols = 2:3,
+                     border = rtf_border(bottom = rtf_border_side("single")))
+  expect_equal(.sv_row_counts(.sv_rtf(part), BOT)[4] - bc[4], 2L)
+})
+
+test_that("style_body(border = ) merges on top of the zone border, none erases", {
+  tbl <- .sv_tbl() |>
+    style_zone(last_row = rtf_border(bottom = rtf_border_side("single"))) |>
+    style_body(rows = 2, cols = 2,
+               border = rtf_border(bottom = rtf_border_side("none")))
+  bc <- .sv_row_counts(.sv_rtf(tbl), BOT)
+  expect_equal(bc[5], 3L)                  # last data row: 4 zone rules - 1 erased
+})
+
+test_that("style_body(border = ) layers per side across calls", {
+  tbl <- .sv_tbl() |>
+    style_body(rows = 1, cols = 2,
+               border = rtf_border(bottom = rtf_border_side("single"))) |>
+    style_body(rows = 1, cols = 2,
+               border = rtf_border(top = rtf_border_side("double")))
+  b <- tbl$cell_styles[[1]]$border[[2]]
+  expect_equal(b$bottom$style, "single")   # earlier side survives
+  expect_equal(b$top$style, "double")
+})
+
+test_that("style_body(align = ) overrides the column alignment per cell", {
+  ctrl <- .sv_tbl()
+  pat  <- style_body(ctrl, rows = 1, cols = 2:4, align = "left")
+  ql_c <- .sv_row_counts(.sv_rtf(ctrl), "\\\\ql")
+  ql_p <- .sv_row_counts(.sv_rtf(pat), "\\\\ql")
+  expect_equal(ql_p[4] - ql_c[4], 3L)      # cols 2-4 flip center -> left
+  expect_equal(ql_p[5], ql_c[5])           # row 2 untouched
+  expect_equal(pat$cell_styles[[1]]$align, c(NA, "left", "left", "left"))
+  expect_error(style_body(ctrl, rows = 1, align = "middle"), "left")
+})
+
+test_that("cell_styles border/align survive the drop_cols reindex", {
+  df <- data.frame(Item = c("Age", "Sex"), A = c("1", "2"),
+                   B = c("3", "4"), C = c("5", "6"), stringsAsFactors = FALSE)
+  b  <- rtf_border(bottom = rtf_border_side("double"))
+  styles <- list(
+    list(align  = c(NA, "left", NA, NA),
+         border = list(NULL, b, NULL, NULL)),
+    NULL
+  )
+  page <- as_rtftables(df, drop_cols = 3, cell_styles = styles)[[1]]
+  expect_equal(length(page$cell_styles[[1]]$align), 3L)
+  expect_equal(page$cell_styles[[1]]$align[2], "left")
+  expect_length(page$cell_styles[[1]]$border, 3L)
+  expect_equal(page$cell_styles[[1]]$border[[2]]$bottom$style, "double")
+})
+
 # ── style_zone ────────────────────────────────────────────────────────────────
 
 test_that("style_zone() merges onto the resolved table border", {
