@@ -24,6 +24,30 @@
 
 ### New features
 
+- **Post-hoc styling verbs** (#218): `style_header()`, `style_cols()`,
+  `style_body()`, `style_zone()` and `add_header_row()` restyle an
+  already-built `rtftable` -- or every page of an `as_rtftables()` list at
+  once -- addressing header rows, body rows and columns by position, so a
+  table read with `read_meta = TRUE` keeps everything the adapter extracted
+  and only the requested detail changes:
+
+  ```r
+  pages <- as_rtftables(gt_obj, read_meta = TRUE) |>
+    style_header(row = 2, cols = 2:4,
+                 border = rtf_border(top    = rtf_border_side("single"),
+                                     bottom = rtf_border_side("none"))) |>
+    style_body(rows = ~ label == "Mean", bold = TRUE)
+  ```
+
+  Merge semantics everywhere are the border rule generalized: last writer
+  wins, per side / per field. `style_body(rows = )` takes positions, a
+  logical vector, a predicate function or a one-sided formula (evaluated in
+  the body data); on a page list only the predicate forms are allowed, since
+  page-local row numbers are ambiguous. A `border`/`underline` request on a
+  character label row transparently promotes it to an equivalent cell row
+  (render-equivalence is pinned by a test). See the new *Level 4* section of
+  the Borders article.
+
 - **`as_rtftables()` now accepts a `gt_group`** (#214) -- gt's multi-table
   container from `gt::gt_group()` / `gt::gt_split()`, and what tfrmt's
   `print_to_gt()` returns when the spec has a `page_plan`. Each member table

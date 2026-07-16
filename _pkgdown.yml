@@ -246,6 +246,17 @@ reference:
       - rtf_col_header
       - add_col_header_row
 
+  # ── 5b. Post-hoc styling verbs ─────────────────────────────────────────
+  - title: Post-hoc styling verbs
+    desc: >
+      Restyle an already-built `rtftable` -- or every page of an
+      `as_rtftables()` list at once -- addressing header rows, body rows and
+      columns by position: `style_header()`, `style_cols()`, `style_body()`,
+      `style_zone()`, `add_header_row()`.  Last writer wins, per side / per
+      field.
+    contents:
+      - style_header
+
   # ── 6. Built-in cell-format functions ──────────────────────────────────
   - title: Built-in cell-format functions
     desc: >
