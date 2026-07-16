@@ -466,8 +466,9 @@
 }
 
 # Build cell definition strings (border + valign + \cellx) for all columns.
-.build_cell_defs <- function(cellx, border_spec, valign_cmd) {
-  border_cmds <- .build_border_commands(border_spec)
+.build_cell_defs <- function(cellx, border_spec, valign_cmd,
+                             color_index_map = NULL) {
+  border_cmds <- .build_border_commands(border_spec, color_index_map)
   vapply(cellx, function(cx) paste0(border_cmds, valign_cmd, "\\cellx", cx), character(1L))
 }
 
@@ -552,7 +553,8 @@
                                    table_align = "left",
                                    group_bottom_side = NULL,
                                    next_boundaries = NULL,
-                                   markup = "script") {
+                                   markup = "script",
+                                   color_index_map = NULL) {
   if (is.null(spanning_header) || length(spanning_header) == 0L) return(character())
   ncols <- length(cellx)
 
@@ -615,11 +617,12 @@
     k <- coverage[j]
     if (k > 0L) {
       to_idx <- as.integer(spanning_header[[k]]$to)
-      bc     <- .build_border_commands(.cell_border(k))
+      bc     <- .build_border_commands(.cell_border(k), color_index_map)
       cell_defs <- c(cell_defs, paste0(bc, valign_cmd, "\\cellx", cellx[to_idx]))
       j <- to_idx + 1L
     } else {
-      bc <- .build_border_commands(.cell_border(NULL, single_col_idx = j))
+      bc <- .build_border_commands(.cell_border(NULL, single_col_idx = j),
+                                   color_index_map)
       cell_defs <- c(cell_defs, paste0(bc, valign_cmd, "\\cellx", cellx[j]))
       j <- j + 1L
     }
@@ -676,7 +679,8 @@
 # without affecting the rest of the header.
 .render_header_row <- function(hdr_labels, cellx, border_spec, row_height_twips,
                                 pad_l, pad_r, valign_cmd, col_spec,
-                                table_align = "left", markup = "script") {
+                                table_align = "left", markup = "script",
+                                color_index_map = NULL) {
   ncols <- length(cellx)
 
   # Build per-cell definitions: each cell may have its own border.
@@ -687,7 +691,7 @@
     } else {
       border_spec
     }
-    bc <- .build_border_commands(eff_border)
+    bc <- .build_border_commands(eff_border, color_index_map)
     paste0(bc, valign_cmd, "\\cellx", cellx[j])
   }, character(1L))
 
@@ -728,10 +732,12 @@
       b   <- if (j <= length(cell_borders)) cell_borders[[j]]
       eff <- if (is.null(b)) border_spec
              else .effective_row_border(border_spec, b)
-      paste0(.build_border_commands(eff), valign_cmd, "\\cellx", cellx[j])
+      paste0(.build_border_commands(eff, color_index_map), valign_cmd,
+             "\\cellx", cellx[j])
     }, character(1L))
   } else {
-    cell_defs <- .build_cell_defs(cellx, border_spec, valign_cmd)
+    cell_defs <- .build_cell_defs(cellx, border_spec, valign_cmd,
+                                  color_index_map)
   }
   cell_contents <- vapply(seq_len(ncols), function(j) {
     spec        <- col_spec[[j]]
@@ -850,12 +856,14 @@
           NULL   # last header row's outer frame already supplies the bottom
         },
         next_boundaries = nb,
-        markup = markup
+        markup = markup,
+        color_index_map = color_index_map
       ))
     } else {
       lines <- c(lines, .render_header_row(
         hdr_row, cellx, row_b, hdr_h, pad_l, pad_r, valign_cmd,
-        col_spec, table_align, markup = markup
+        col_spec, table_align, markup = markup,
+        color_index_map = color_index_map
       ))
     }
   }
@@ -1254,6 +1262,17 @@
     .collect_border_colors(b)
   }
 
+  # Colours of the per-cell borders inside one col_header rows list.
+  .header_border_colors <- function(rows) {
+    if (is.null(rows) || !is.list(rows)) return(character(0))
+    unlist(lapply(rows, function(row) {
+      if (!is.list(row)) return(character(0))
+      unlist(lapply(row, function(cell) {
+        if (is.list(cell)) .collect_border_colors(cell$border) else character(0)
+      }), use.names = FALSE)
+    }), use.names = FALSE)
+  }
+
   .tbl_colors <- function(tbl) {
     if (!inherits(tbl, "rtftable")) return(character(0))
     out <- character(0)
@@ -1261,15 +1280,30 @@
     if (!is.null(tb) && inherits(tb, "rtf_table_border")) {
       out <- c(out, .collect_table_border_colors(tb))
     }
-    # Per-column text colours (col_spec[[j]]$color).
+    # Per-column text colours and border colours (col_spec[[j]]).
     if (!is.null(tbl$col_spec)) {
       out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$color),
                            use.names = FALSE))
+      out <- c(out, unlist(lapply(tbl$col_spec, function(s)
+        .collect_border_colors(s$border)), use.names = FALSE))
     }
-    # Per-cell text colours (cell_styles[[i]]$color vectors).
+    # Header-cell borders (col_cell(border = ) / adapter-read styles).
+    out <- c(out, .header_border_colors(tbl$col_header))
+    if (!is.null(tbl$col_header_list)) {
+      out <- c(out, unlist(lapply(tbl$col_header_list, .header_border_colors),
+                           use.names = FALSE))
+    }
+    if (!is.null(tbl$spanning_header)) {
+      out <- c(out, .header_border_colors(list(tbl$spanning_header)))
+    }
+    # Per-cell text and border colours (cell_styles[[i]]).
     if (!is.null(tbl$cell_styles)) {
       out <- c(out, unlist(lapply(tbl$cell_styles, function(cs) {
         if (is.list(cs)) cs$color else NULL
+      }), use.names = FALSE))
+      out <- c(out, unlist(lapply(tbl$cell_styles, function(cs) {
+        if (!is.list(cs) || !is.list(cs$border)) return(character(0))
+        unlist(lapply(cs$border, .collect_border_colors), use.names = FALSE)
       }), use.names = FALSE))
     }
     out[!is.na(out)]

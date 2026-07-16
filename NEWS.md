@@ -164,6 +164,17 @@
 
 ### Bug fixes
 
+- **Border colours on table cells now actually render** (#224). A coloured
+  [rtf_border_side()] used on a zone (`rtf_table_border()`), a column
+  (`col_spec$border`), a header cell (`col_cell(border = )`) or a body cell
+  (`cell_styles` / `style_body(border = )`) was collected into the RTF
+  colour table but the `\brdrcf` command was never emitted for table-cell
+  borders (only the page header/footer band passed the colour map), so
+  every such rule rendered black. The colour map is now threaded through all
+  cell-definition writers, and the colour collector also picks up header-cell
+  and per-cell border colours -- so a coloured `gt::tab_style()` border
+  arrives coloured end-to-end via the `"styles"` token.
+
 - `as_rtftables()` / `as_rtftable()` no longer error on a `gt_tbl` with **more
   than one stub column** (#193). `gt::extract_body()` assumes a single stub and
   fails with *"the condition has length > 1"* on such tables -- which `tfrmt`
