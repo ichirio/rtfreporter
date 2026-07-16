@@ -11,8 +11,9 @@
 #' rtables via `formatters::matrix_form()`); only render-relevant metadata is
 #' read.  See [as_rtftables()] for the full *What is carried, by source*
 #' table -- in short: column labels, alignment, spanning headers, widths,
-#' titles, footnotes and in-cell footnote marks are carried; per-cell
-#' bold/italic styling, cell fills and Markdown are not.
+#' titles, footnotes, in-cell footnote marks and (for gt/gtsummary) explicit
+#' `tab_style()` borders and text styles are carried; cell fills, fonts, gt
+#' theme borders and Markdown are not.
 #'
 #' @param gt_obj A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
 #'   a `flextable`, a `huxtable`, or a plain `data.frame` / tibble.  A

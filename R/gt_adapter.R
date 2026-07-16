@@ -33,7 +33,7 @@
 # Metadata tokens controllable through `read_meta = c(...)`.  `read_meta = TRUE`
 # reads them all; `FALSE` reads none (the clean body is always produced).
 .GT_META_TOKENS <- c("col_header", "alignment", "spanning", "widths",
-                     "titles", "footnotes")
+                     "titles", "footnotes", "styles")
 
 
 # ── Detection ────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@
 # `body_vars` -- the column ids returned by extract_body(), in render order --
 # as the position reference.  Non-contiguous or fully-hidden spanners are
 # skipped.  Returns list() when there are none.
-.extract_spanners_body <- function(gt_obj, body_vars) {
+.extract_spanners_body <- function(gt_obj, body_vars, spanner_styles = NULL) {
   spans <- gt_obj[["_spanners"]]
   if (is.null(spans) || !nrow(spans)) return(list())
   levels_desc <- sort(unique(as.integer(spans$spanner_level)), decreasing = TRUE)
@@ -248,11 +248,174 @@
       pos <- if (length(idx) == 1L) idx else c(min(idx), max(idx))
       label <- .flatten_to_chr(spans_lv$spanner_label[[j]])
       if (is.na(label)) label <- ""
-      cells[[length(cells) + 1L]] <- col_cell(pos = pos, label = label)
+      # Explicit tab_style() declarations on this spanner ("styles" token):
+      # borders and bold/italic/underline/align ride on the cell itself.
+      s <- if (!is.null(spanner_styles))
+        spanner_styles[[as.character(spans_lv$spanner_id[[j]])]]
+      cells[[length(cells) + 1L]] <- if (is.null(s)) {
+        col_cell(pos = pos, label = label)
+      } else {
+        col_cell(pos = pos, label = label,
+                 align     = s$text$align,
+                 bold      = isTRUE(s$text$bold),
+                 italic    = isTRUE(s$text$italic),
+                 underline = isTRUE(s$text$underline),
+                 border    = s$border)
+      }
     }
     if (length(cells)) rows[[length(rows) + 1L]] <- cells
   }
   rows
+}
+
+
+# ── Per-cell styles from `_styles` (tab_style declarations) ───────────────
+#
+#  gt records every explicit tab_style() call in the `_styles` slot, one row
+#  per (location, style set):
+#    locname "columns_groups"  + grpname          -> a spanner cell
+#    locname "columns_columns" + colname          -> a column label
+#    locname "data"            + colname + rownum -> a body cell
+#    locname "stub"            + rownum           -> the stub body cell
+#  Each `styles` element is a named list of cell_border_* / cell_text
+#  declarations.  We read ONLY what an rtftable can hold: borders, and the
+#  bold / italic / underline / align (+ body text colour) properties.
+#  Fills, fonts and sizes are not representable and are ignored; so are gt's
+#  THEME borders (`_options` / tab_options()) -- those describe gt's own
+#  default look, not the author's explicit styling.  read_meta token:
+#  "styles".
+
+.GT_BORDER_STYLE_MAP <- c(solid = "single", double = "double",
+                          dashed = "dash", dotted = "dot", hidden = "none")
+
+# "#RRGGBB" (an "#RRGGBBAA" alpha suffix is dropped) or an R colour name ->
+# "#RRGGBB"; NA when unusable.
+.gt_normalize_color <- function(x) {
+  if (is.null(x) || length(x) != 1L || is.na(x) || !nzchar(x)) {
+    return(NA_character_)
+  }
+  x <- as.character(x)
+  if (startsWith(x, "#")) return(toupper(substr(x, 1L, 7L)))
+  rgb <- tryCatch(grDevices::col2rgb(x), error = function(e) NULL)
+  if (is.null(rgb)) return(NA_character_)
+  sprintf("#%02X%02X%02X", rgb[1L, 1L], rgb[2L, 1L], rgb[3L, 1L])
+}
+
+# One gt cell_border_* declaration -> rtf_border_side(), or NULL when the CSS
+# style has no RTF counterpart.  Widths: px -> twips (x15), pt -> twips (x20).
+# Black is passed as NULL (the RTF default colour).
+.gt_border_side <- function(decl) {
+  style <- unname(.GT_BORDER_STYLE_MAP[as.character(decl$style %||% "solid")])
+  if (is.na(style)) return(NULL)
+  w <- as.character(decl$width %||% "")
+  num <- suppressWarnings(as.numeric(sub("[a-z%]+$", "", w)))
+  width <- if (is.na(num)) 15L
+           else if (endsWith(w, "pt")) as.integer(round(num * 20))
+           else as.integer(round(num * 15))          # px (and bare numbers)
+  color <- .gt_normalize_color(decl$color)
+  if (is.na(color) || identical(color, "#000000")) color <- NULL
+  rtf_border_side(style = style, width = max(width, 1L), color = color)
+}
+
+# The border half of one `styles` entry -> rtf_border() or NULL.
+.gt_style_border <- function(props) {
+  sides <- list()
+  for (nm in names(props)) {
+    if (!startsWith(nm, "cell_border")) next
+    d    <- props[[nm]]
+    side <- as.character(d$side %||% "")
+    if (!side %in% c("top", "bottom", "left", "right")) next
+    b <- .gt_border_side(d)
+    if (!is.null(b)) sides[[side]] <- b
+  }
+  if (!length(sides)) return(NULL)
+  do.call(rtf_border, sides)
+}
+
+# The text half of one `styles` entry -> list(bold, italic, underline, align,
+# color); absent fields are simply missing from the list.
+.gt_style_text <- function(props) {
+  tx <- props$cell_text
+  if (is.null(tx)) return(list())
+  out <- list()
+  if (identical(as.character(tx$weight %||% ""), "bold"))  out$bold   <- TRUE
+  if (identical(as.character(tx$style  %||% ""), "italic")) out$italic <- TRUE
+  if (!is.null(tx$decorate) &&
+      any(grepl("underline", as.character(tx$decorate), fixed = TRUE))) {
+    out$underline <- TRUE
+  }
+  al <- as.character(tx$align %||% "")
+  if (al %in% c("left", "center", "right")) out$align <- al
+  cl <- .gt_normalize_color(tx$color)
+  if (!is.na(cl)) out$color <- cl
+  out
+}
+
+# Fold `_styles` into per-location accumulators.  gt applies tab_style()
+# calls in order, so later declarations override earlier ones per field /
+# per border side (the package-wide "last writer wins" rule).
+# Returns list(spanner = by grpname, label = by colname,
+#              body = by "colname\rrownum") or NULL when nothing usable.
+.gt_styles_by_location <- function(gt_obj) {
+  st <- gt_obj[["_styles"]]
+  if (is.null(st) || !nrow(st)) return(NULL)
+  acc <- list(spanner = list(), label = list(), body = list())
+  put <- function(bucket, key, border, text) {
+    if (is.na(key) || !nzchar(key)) return()
+    cur <- acc[[bucket]][[key]] %||% list(border = NULL, text = list())
+    if (!is.null(border)) cur$border <- .merge_rtf_border(cur$border, border)
+    for (f in names(text)) cur$text[[f]] <- text[[f]]
+    acc[[bucket]][[key]] <<- cur
+  }
+  for (i in seq_len(nrow(st))) {
+    props  <- st$styles[[i]]
+    border <- .gt_style_border(props)
+    text   <- .gt_style_text(props)
+    if (is.null(border) && !length(text)) next
+    loc <- as.character(st$locname[i])
+    if (identical(loc, "columns_groups")) {
+      put("spanner", as.character(st$grpname[i]), border, text)
+    } else if (identical(loc, "columns_columns")) {
+      put("label", as.character(st$colname[i]), border, text)
+    } else if (identical(loc, "data")) {
+      put("body", paste(as.character(st$colname[i]),
+                        as.integer(st$rownum[i]), sep = "\r"), border, text)
+    } else if (identical(loc, "stub")) {
+      put("body", paste("::rowname::",
+                        as.integer(st$rownum[i]), sep = "\r"), border, text)
+    }
+    # Other locations (title, stubhead, row groups, footnotes, ...) have no
+    # per-cell home on an rtftable and are ignored.
+  }
+  if (!length(acc$spanner) && !length(acc$label) && !length(acc$body)) {
+    return(NULL)
+  }
+  acc
+}
+
+# Rendered body-row index per `_data` row.  extract_body() returns rows in
+# RENDER order: a grouped table is arranged one `_row_groups` group at a
+# time (original order within each group), while `_styles$rownum` refers to
+# `_data` rows.  Ungrouped tables (and the multi-stub slots path, whose body
+# IS `_data`) map 1:1.  Returns NULL when the layout is not one we can
+# reproduce -- the caller then skips body styles with a warning.
+.gt_body_row_map <- function(gt_obj, n) {
+  groups <- gt_obj[["_row_groups"]]
+  if (is.null(groups) || !length(groups)) return(seq_len(n))
+  boxh <- gt_obj[["_boxhead"]]
+  multi_stub <- !is.null(boxh) &&
+    sum(as.character(boxh$type) == "stub", na.rm = TRUE) > 1L
+  if (multi_stub) return(seq_len(n))       # slots body is in `_data` order
+  stub <- gt_obj[["_stub_df"]]
+  gid  <- as.character(stub$group_id)
+  if (length(gid) != n || anyNA(gid) ||
+      !all(gid %in% as.character(groups))) {
+    return(NULL)
+  }
+  render_order <- order(match(gid, as.character(groups)))
+  m <- integer(n)
+  m[render_order] <- seq_len(n)
+  m
 }
 
 
@@ -388,12 +551,132 @@
     }
   }
 
+  # ---- per-cell styles (tab_style declarations) ------------------------
+  sty <- if ("styles" %in% tokens) .gt_styles_by_location(gt_obj)
+
   # ---- spanning -> stacked col_header ----------------------------------
   if ("spanning" %in% tokens) {
-    span_rows <- .extract_spanners_body(gt_obj, body_vars)
+    span_rows <- .extract_spanners_body(gt_obj, body_vars,
+                                        spanner_styles = sty$spanner)
     if (length(span_rows)) {
       bottom <- out$col_header %||% names(df)
       out$col_header <- c(span_rows, list(bottom))
+    }
+  }
+
+  if (!is.null(sty)) {
+    # Get-or-create the partial col_spec entry for body column j.
+    upd_spec <- function(j, fields) {
+      cs  <- out$col_spec %||% list()
+      hit <- which(vapply(cs, function(e) identical(e$col, j), logical(1L)))
+      e   <- if (length(hit)) cs[[hit[1L]]] else list(col = j)
+      for (f in names(fields)) e[[f]] <- fields[[f]]
+      if (length(hit)) cs[[hit[1L]]] <- e else cs[[length(cs) + 1L]] <- e
+      out$col_spec <<- cs
+    }
+    body_col <- function(cn) {
+      if (identical(cn, "::rowname::")) {
+        w <- which(body_vars == "::rowname::")
+        if (length(w)) w[1L] else NA_integer_
+      } else {
+        match(cn, body_vars)
+      }
+    }
+
+    # -- column labels: text -> col_spec header_*; border / underline need
+    #    per-cell fields the labels renderer cannot express, so they promote
+    #    the labels row to single-column cells (same mechanism and caveats
+    #    as style_header(); text colour has no header home and is ignored).
+    lab_borders   <- vector("list", ncol_t)
+    lab_underline <- rep(FALSE, ncol_t)
+    for (cn in names(sty$label)) {
+      j <- body_col(cn)
+      if (is.na(j)) next
+      s  <- sty$label[[cn]]
+      tx <- s$text
+      fields <- list()
+      if (isTRUE(tx$bold))       fields$header_bold   <- TRUE
+      if (isTRUE(tx$italic))     fields$header_italic <- TRUE
+      if (!is.null(tx$align))    fields$header_align  <- tx$align
+      if (length(fields)) upd_spec(j, fields)
+      if (!is.null(s$border))    lab_borders[[j]]  <- s$border
+      if (isTRUE(tx$underline))  lab_underline[j]  <- TRUE
+    }
+    if ((any(!vapply(lab_borders, is.null, logical(1L))) ||
+         any(lab_underline)) && !is.null(out$col_header)) {
+      spec_of <- function(j) {
+        cs  <- out$col_spec %||% list()
+        hit <- which(vapply(cs, function(e) identical(e$col, j), logical(1L)))
+        if (length(hit)) cs[[hit[1L]]] else list()
+      }
+      bottom <- if (is.character(out$col_header)) out$col_header
+                else out$col_header[[length(out$col_header)]]
+      promoted <- lapply(seq_len(ncol_t), function(j) {
+        e <- spec_of(j)
+        # align stays NULL: the renderer resolves it from the column's
+        # header_align cascade, exactly as the labels renderer would.
+        list(from = j, to = j,
+             label     = if (j <= length(bottom)) bottom[[j]] else "",
+             bold      = isTRUE(e$header_bold),
+             italic    = isTRUE(e$header_italic),
+             underline = lab_underline[j],
+             border    = lab_borders[[j]])
+      })
+      if (is.character(out$col_header)) {
+        out$col_header <- list(promoted)
+      } else {
+        out$col_header[[length(out$col_header)]] <- promoted
+      }
+    }
+
+    # -- body / stub cells -> cell_styles ---------------------------------
+    if (length(sty$body)) {
+      rmap <- .gt_body_row_map(gt_obj, nrow(df))
+      if (is.null(rmap)) {
+        warning("as_rtftables(): gt row-group layout not recognized; ",
+                "body tab_style() styling was skipped.", call. = FALSE)
+      } else {
+        cs_all <- rep(list(NULL), nrow(df))
+        for (key in names(sty$body)) {
+          parts <- strsplit(key, "\r", fixed = TRUE)[[1L]]
+          j  <- body_col(parts[1L])
+          rn <- suppressWarnings(as.integer(parts[2L]))
+          if (is.na(j) || is.na(rn) || rn < 1L || rn > length(rmap)) next
+          ri <- rmap[rn]
+          s  <- sty$body[[key]]
+          tx <- s$text
+          entry <- cs_all[[ri]] %||% list()
+          if (isTRUE(tx$bold)) {
+            v <- entry$bold %||% rep(NA, ncol_t);  v[j] <- TRUE
+            entry$bold <- v
+          }
+          if (isTRUE(tx$italic)) {
+            v <- entry$italic %||% rep(NA, ncol_t); v[j] <- TRUE
+            entry$italic <- v
+          }
+          if (isTRUE(tx$underline)) {
+            v <- entry$underline %||% rep(NA, ncol_t); v[j] <- TRUE
+            entry$underline <- v
+          }
+          if (!is.null(tx$align)) {
+            v <- entry$align %||% rep(NA_character_, ncol_t); v[j] <- tx$align
+            entry$align <- v
+          }
+          if (!is.null(tx$color)) {
+            v <- entry$color %||% rep(NA_character_, ncol_t); v[j] <- tx$color
+            entry$color <- v
+          }
+          if (!is.null(s$border)) {
+            v <- entry$border %||% vector("list", ncol_t)
+            v[[j]] <- .merge_rtf_border(v[[j]], s$border)
+            entry$border <- v
+          }
+          cs_all[[ri]] <- entry
+        }
+        if (any(!vapply(cs_all, is.null, logical(1L)))) {
+          out$cell_styles <- cs_all
+        }
+      }
     }
   }
 

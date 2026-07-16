@@ -246,7 +246,21 @@
 #'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab -- \cr
 #'   In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab -- \tab -- \cr
 #'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \cr
+#'   `tab_style()` cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 #' }
+#'
+#' **Explicit `gt::tab_style()` declarations are carried** (the `"styles"`
+#' token, on by default): `cell_borders()` and the `cell_text()` bold /
+#' italic / underline / align properties on column spanners, column labels
+#' and body/stub cells, plus body text colour -- everything the `rtftable`
+#' class can hold.  A border or underline on a column-label cell promotes
+#' the label row to single-column cells (the same mechanism
+#' [style_header()] uses).  The [style_header()] / [style_body()] /
+#' [style_cols()] verbs still override what was read -- adapters populate
+#' first, verbs win per side / per field.  *Not* carried: `cell_fill()`,
+#' fonts and sizes, header text colour, and gt's **theme** borders
+#' (`tab_options()`) -- those describe gt's own default look; rtfreporter's
+#' `border` presets govern the frame instead.
 #'
 #' For flextable the *displayed* text is read (header labels set via
 #' `set_header_labels()` and `colformat_*()` formatting included), not the raw
@@ -255,10 +269,10 @@
 #' read (its `number_format` applied); huxtable has no footnote concept, so only
 #' the caption (a page title) is carried.
 #'
-#' **Not carried** (RTF cannot reproduce these, so they are intentionally
-#' ignored): per-cell bold / italic / underline from `gt::tab_style()`, cell
-#' background colours / fills, font and size styling, and Markdown formatting
-#' inside labels or titles.  For a plain `data.frame` / tibble two pieces of
+#' **Not carried** (RTF cannot reproduce these, or they belong to the
+#' source's own theme): cell background colours / fills, font and size
+#' styling, gt theme borders (`tab_options()`), header text colour, and
+#' Markdown formatting inside labels or titles.  For a plain `data.frame` / tibble two pieces of
 #' metadata are read: column `label` attributes become header labels (the
 #' `"labels"` token, see `read_meta`), and delimited column names are
 #' reconstructed into a spanning header (see `header_sep`); everything else
@@ -274,7 +288,8 @@
 #'   the rendered body -- equivalent to the old `paginate()`), or a character
 #'   vector of tokens.  Tokens for
 #'   gt/gtsummary: `"col_header"`, `"alignment"`, `"spanning"`, `"widths"`,
-#'   `"titles"`, `"footnotes"`.  For rtables/tern: `"col_header"`,
+#'   `"titles"`, `"footnotes"`, `"styles"` (explicit `tab_style()` borders
+#'   and text styles; see *What is carried*).  For rtables/tern: `"col_header"`,
 #'   `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`, `"indent"`,
 #'   `"footnote_marks"`.  For flextable: `"col_header"`, `"alignment"`,
 #'   `"spanning"`, `"titles"`, `"footnotes"`.  For huxtable: `"col_header"`,
