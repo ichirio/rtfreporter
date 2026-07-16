@@ -2,6 +2,21 @@
 
 ### Behavior changes
 
+- **`as_rtftables()` / `as_rtftable()` now carry a gt table's explicit
+  `tab_style()` styling** (#223) -- the new gt `"styles"` `read_meta` token,
+  enabled by the default `read_meta = TRUE`. Carried, because the `rtftable`
+  class can hold them: `cell_borders()` and the `cell_text()`
+  bold / italic / underline / align properties on column spanners, column
+  labels and body/stub cells, plus body text colour (so e.g.
+  `gtsummary::bold_labels()` now arrives bold). A border/underline on a
+  column-label cell promotes the label row to single-column cells -- the
+  same mechanism `style_header()` uses. The `style_*()` verbs still override
+  whatever was read (adapters populate first; verbs win per side / per
+  field). *Not* carried: `cell_fill()`, fonts/sizes, header text colour, and
+  gt's **theme** borders (`tab_options()`) -- rtfreporter's `border` presets
+  keep governing the frame. Pass `read_meta = FALSE` or a token list without
+  `"styles"` for the previous behaviour.
+
 - **`as_rtftables()` / `as_rtftable()` now read a plain data.frame's column
   `label` attributes** (the haven / labelled / xportr convention) **as header
   labels** (#210) -- the `"labels"` `read_meta` token, enabled by the default
