@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`stub_cols()` now folds AE-style group-summary rows onto the group label
+  row** (#231). When a hierarchy row's **leaf** is `NA` / `""`, or repeats its
+  deepest non-empty parent value, that row supplies the group's own summary
+  statistic (e.g. a SOC-level adverse-event count); its cells are placed on the
+  group's label row instead of producing a valueless label row plus a phantom
+  indented leaf. Controlled by the new `group_summary` argument (default
+  `c("na", "parent")`; set `"none"` for the previous behaviour). Demographic
+  tables -- where the leaf is a statistic name such as `"n"` / `"Mean (SD)"`,
+  never `NA` and never equal to the parent -- are unchanged, and the folding
+  nests at intermediate levels for `vars` deeper than two.
+
 ### Behavior changes
 
 - **`as_rtftables()` / `as_rtftable()` now carry a gt table's explicit

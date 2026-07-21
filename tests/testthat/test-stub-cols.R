@@ -122,6 +122,92 @@ test_that("validation errors are raised", {
                "non-negative")
 })
 
+test_that("an NA leaf folds the group summary onto the label row (AE style)", {
+  ae_sum <- data.frame(
+    soc = c("SOC1", "SOC1", "SOC1"),
+    pt  = c(NA, "PT1", "PT2"),
+    n   = c("10 (5%)", "3 (1.5%)", "2 (1%)"),
+    stringsAsFactors = FALSE
+  )
+  out <- stub_cols(ae_sum, vars = c("soc", "pt"))
+  # 1 SOC label row (carrying the summary) + 2 PT leaf rows = 3, not 4.
+  expect_identical(nrow(out), 3L)
+  expect_identical(
+    out[[1L]],
+    c("SOC1",
+      paste0(strrep(nbsp, 4L), "PT1"),
+      paste0(strrep(nbsp, 4L), "PT2")))
+  # The SOC-level count sits on the label row; no phantom empty row.
+  expect_identical(out$n, c("10 (5%)", "3 (1.5%)", "2 (1%)"))
+})
+
+test_that("a leaf repeating its parent value also folds onto the label row", {
+  ae_dup <- data.frame(
+    soc = c("SOC1", "SOC1", "SOC1"),
+    pt  = c("SOC1", "PT1", "PT2"),
+    n   = c("10 (5%)", "3 (1.5%)", "2 (1%)"),
+    stringsAsFactors = FALSE
+  )
+  out <- stub_cols(ae_dup, vars = c("soc", "pt"))
+  expect_identical(nrow(out), 3L)
+  expect_identical(out[[1L]][1L], "SOC1")
+  expect_identical(out$n, c("10 (5%)", "3 (1.5%)", "2 (1%)"))
+})
+
+test_that("group_summary = 'none' keeps the pre-fold behaviour", {
+  ae_sum <- data.frame(
+    soc = c("SOC1", "SOC1"),
+    pt  = c(NA, "PT1"),
+    n   = c("10 (5%)", "3 (1.5%)"),
+    stringsAsFactors = FALSE
+  )
+  out <- stub_cols(ae_sum, vars = c("soc", "pt"), group_summary = "none")
+  # SOC1 label row (NA), an empty indented row carrying the count, then PT1.
+  expect_identical(nrow(out), 3L)
+  expect_identical(out$n, c(NA, "10 (5%)", "3 (1.5%)"))
+  expect_identical(out[[1L]][2L], strrep(nbsp, 4L))   # phantom empty leaf
+})
+
+test_that("group_summary triggers can be enabled individually", {
+  df <- data.frame(
+    soc = c("SOC1", "SOC1", "SOC1"),
+    pt  = c(NA, "SOC1", "PT1"),
+    n   = c("a", "b", "c"),
+    stringsAsFactors = FALSE
+  )
+  # Only NA folds -> the "SOC1"-leaf row stays an indented leaf.
+  na_only <- stub_cols(df, vars = c("soc", "pt"), group_summary = "na")
+  expect_identical(na_only$n[1L], "a")                       # NA folded onto SOC1
+  expect_true(any(na_only[[1L]] == paste0(strrep(nbsp, 4L), "SOC1")))
+  # Only parent-repeat folds -> the NA row stays an empty indented leaf.
+  par_only <- stub_cols(df, vars = c("soc", "pt"), group_summary = "parent")
+  expect_identical(par_only$n[1L], "b")             # repeated-parent folded
+  expect_true(any(par_only[[1L]] == strrep(nbsp, 4L)))       # NA row phantom
+})
+
+test_that("group-summary folding nests at intermediate levels", {
+  df <- data.frame(
+    soc    = c("SOC1", "SOC1", "SOC1", "SOC1"),
+    pt     = c(NA, "PT1", "PT1", "PT1"),
+    detail = c(NA, NA, "d1", "d2"),
+    n      = c("20", "8", "5", "3"),
+    stringsAsFactors = FALSE
+  )
+  out <- stub_cols(df, vars = c("soc", "pt", "detail"), indent = 2L)
+  expect_identical(
+    out[[1L]],
+    c("SOC1",
+      paste0(strrep(nbsp, 2L), "PT1"),
+      paste0(strrep(nbsp, 4L), "d1"),
+      paste0(strrep(nbsp, 4L), "d2")))
+  expect_identical(out$n, c("20", "8", "5", "3"))   # SOC & PT summaries folded
+})
+
+test_that("a bad group_summary token errors", {
+  expect_error(stub_cols(ae, vars = c("soc", "pt"), group_summary = "nope"),
+               "group_summary")
+})
+
 test_that("zero-row input yields a zero-row stub layout", {
   out <- stub_cols(ae[0L, ], vars = c("soc", "pt"))
   expect_identical(nrow(out), 0L)
