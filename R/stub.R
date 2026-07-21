@@ -10,20 +10,20 @@
 .stub_nbsp <- function() intToUtf8(160L)
 
 # Resolve the `group_summary` argument to the enabled detection modes (a subset
-# of c("na", "parent")).  Accepts the token vector, `"all"` (both), `"none"` /
-# `NULL` / `character(0)` (neither), and errors on any other token.
-#   "na"     -- a leaf that is NA / "" marks the row as its group's summary.
+# of c("empty", "parent")).  Accepts the token vector, `"all"` (both), `"none"`
+# / `NULL` / `character(0)` (neither), and errors on any other token.
+#   "empty"  -- a leaf that is NA / "" marks the row as its group's summary.
 #   "parent" -- a leaf equal to its (deepest non-empty) parent value does too.
 .resolve_group_summary <- function(x) {
   if (is.null(x)) return(character(0))
   x <- as.character(x)
   x <- x[!is.na(x) & nzchar(x)]
   if (length(x) == 0L || identical(x, "none")) return(character(0))
-  if (identical(x, "all")) return(c("na", "parent"))
-  allowed <- c("na", "parent")
+  if (identical(x, "all")) return(c("empty", "parent"))
+  allowed <- c("empty", "parent")
   bad <- setdiff(x, allowed)
   if (length(bad)) {
-    stop("`group_summary` must be a subset of c(\"na\", \"parent\") ",
+    stop("`group_summary` must be a subset of c(\"empty\", \"parent\") ",
          "(or \"all\" / \"none\" / NULL); got: ", paste(bad, collapse = ", "),
          call. = FALSE)
   }
@@ -84,7 +84,8 @@
 #' `"n"` / `"Mean (SD)"`, never `NA` and never equal to the parent) are left
 #' untouched, so a parent label row keeps its empty cells and the stats stay on
 #' the indented leaf rows.  Set `group_summary = "none"` to disable the folding
-#' (an `NA` leaf then becomes an empty indented row, as before).
+#' (an `NA` leaf then becomes an empty indented row, as before) -- note the
+#' disable token is `"none"`, distinct from the `"empty"` trigger.
 #'
 #' With more than two `vars`, each additional level indents one step
 #' further: level-1 label rows are flush left, level-2 label rows are
@@ -108,8 +109,8 @@
 #' @param group_summary Which leaf values mark a row as its group's summary,
 #'   folding that row's statistics onto the group label row instead of an
 #'   indented leaf row (see *Group-summary rows*).  A subset of
-#'   `c("na", "parent")` -- `"na"` for an `NA` / `""` leaf, `"parent"` for a
-#'   leaf equal to its deepest non-empty parent value.  Also accepts `"all"`
+#'   `c("empty", "parent")` -- `"empty"` for an `NA` / `""` leaf, `"parent"` for
+#'   a leaf equal to its deepest non-empty parent value.  Also accepts `"all"`
 #'   (both, the default) or `"none"` / `NULL` (disable).
 #'
 #' @return A data.frame: the stub column first, then every column of `data`
@@ -156,7 +157,7 @@
 #'
 #' @export
 stub_cols <- function(data, vars, label = NULL, indent = 4L,
-                      group_summary = c("na", "parent")) {
+                      group_summary = c("empty", "parent")) {
   if (!is.data.frame(data)) {
     stop("`data` must be a data.frame.", call. = FALSE)
   }
@@ -177,7 +178,7 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
     stop("`indent` must be a single non-negative integer.", call. = FALSE)
   }
   summary_modes <- .resolve_group_summary(group_summary)
-  na_mode       <- "na"     %in% summary_modes
+  empty_mode    <- "empty"  %in% summary_modes
   parent_mode   <- "parent" %in% summary_modes
 
   n_row  <- nrow(data)
@@ -200,7 +201,7 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
   # tracks the originating row (NA for inserted label rows) so the non-stub
   # columns can be sliced out of `data` afterwards.
   #
-  # A group-summary row (leaf NA/"" under `na_mode`, or a leaf repeating its
+  # A group-summary row (leaf NA/"" under `empty_mode`, or a leaf repeating its
   # deepest non-empty parent under `parent_mode`) carries no leaf of its own:
   # its statistics belong on the group's label row.  `label_pos[l]` remembers
   # the stub index of the label row currently open at level `l`, so a summary
@@ -230,7 +231,7 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
     d  <- if (length(nz)) nz[length(nz)] else 0L
 
     is_summary <- d > 0L &&
-      ((na_mode     && !nzchar(leafv[i])) ||
+      ((empty_mode  && !nzchar(leafv[i])) ||
        (parent_mode &&  nzchar(leafv[i]) && identical(leafv[i], cur[[d]])))
 
     if (is_summary && !is.na(label_pos[d]) && is.na(src[label_pos[d]])) {

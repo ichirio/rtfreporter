@@ -9,7 +9,7 @@ stub_cols(
   vars,
   label = NULL,
   indent = 4L,
-  group_summary = c("na", "parent")
+  group_summary = c("empty", "parent")
 )
 }
 \arguments{
@@ -30,8 +30,8 @@ prepended per nesting level.}
 \item{group_summary}{Which leaf values mark a row as its group's summary,
 folding that row's statistics onto the group label row instead of an
 indented leaf row (see *Group-summary rows*).  A subset of
-`c("na", "parent")` -- `"na"` for an `NA` / `""` leaf, `"parent"` for a
-leaf equal to its deepest non-empty parent value.  Also accepts `"all"`
+`c("empty", "parent")` -- `"empty"` for an `NA` / `""` leaf, `"parent"` for
+a leaf equal to its deepest non-empty parent value.  Also accepts `"all"`
 (both, the default) or `"none"` / `NULL` (disable).}
 }
 \value{
@@ -94,7 +94,8 @@ Demographic-style tables (pattern where the leaf is a statistic name such as
 `"n"` / `"Mean (SD)"`, never `NA` and never equal to the parent) are left
 untouched, so a parent label row keeps its empty cells and the stats stay on
 the indented leaf rows.  Set `group_summary = "none"` to disable the folding
-(an `NA` leaf then becomes an empty indented row, as before).
+(an `NA` leaf then becomes an empty indented row, as before) -- note the
+disable token is `"none"`, distinct from the `"empty"` trigger.
 
 With more than two `vars`, each additional level indents one step
 further: level-1 label rows are flush left, level-2 label rows are

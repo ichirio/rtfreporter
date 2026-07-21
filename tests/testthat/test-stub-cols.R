@@ -175,10 +175,10 @@ test_that("group_summary triggers can be enabled individually", {
     n   = c("a", "b", "c"),
     stringsAsFactors = FALSE
   )
-  # Only NA folds -> the "SOC1"-leaf row stays an indented leaf.
-  na_only <- stub_cols(df, vars = c("soc", "pt"), group_summary = "na")
-  expect_identical(na_only$n[1L], "a")                       # NA folded onto SOC1
-  expect_true(any(na_only[[1L]] == paste0(strrep(nbsp, 4L), "SOC1")))
+  # Only the empty leaf folds -> the "SOC1"-leaf row stays an indented leaf.
+  empty_only <- stub_cols(df, vars = c("soc", "pt"), group_summary = "empty")
+  expect_identical(empty_only$n[1L], "a")                    # NA folded onto SOC1
+  expect_true(any(empty_only[[1L]] == paste0(strrep(nbsp, 4L), "SOC1")))
   # Only parent-repeat folds -> the NA row stays an empty indented leaf.
   par_only <- stub_cols(df, vars = c("soc", "pt"), group_summary = "parent")
   expect_identical(par_only$n[1L], "b")             # repeated-parent folded
