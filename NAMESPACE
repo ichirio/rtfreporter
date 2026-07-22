@@ -20,6 +20,8 @@ S3method(print, rtf_default_format)
 export(rtftable)
 export(rtfplot)
 S3method(print, rtftable)
+S3method(format, rtftable)
+S3method(summary, rtftable)
 S3method(print, rtfplot)
 S3method(print, rtfreport)
 

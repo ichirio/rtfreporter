@@ -7,6 +7,11 @@ linters: linters_with_defaults(
     object_name_linter = object_name_linter(
       styles = c("snake_case", "symbols", "SNAKE_CASE")   # allow .SCREAMING constants
     ),
+    # `<<-` is used deliberately for accumulator closures throughout (e.g. the
+    # print renderer, gt adapter, report assembler).  lintr 3.2.0 flipped the
+    # assignment_linter default to reject cascading assignment; allow `<-` and
+    # `<<-` (but still not `=`) so the intentional `<<-` usages keep passing.
+    assignment_linter = assignment_linter(operator = c("<-", "<<-")),
     # --- Deferred (disabled for now) ------------------------------------------
     # These are purely stylistic and would require a large, risky reformat that
     # does not belong in the CI-integration change.  They are intentionally

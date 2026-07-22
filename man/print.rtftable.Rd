@@ -4,23 +4,27 @@
 \alias{print.rtftable}
 \title{Print an rtftable object}
 \usage{
-\method{print}{rtftable}(x, n = 6L, ...)
+\method{print}{rtftable}(x, n = 10L, ...)
 }
 \arguments{
 \item{x}{An `rtftable` object.}
 
-\item{n}{Number of body rows to show in the preview (default `6`).}
+\item{n}{Number of body rows to render (default `10`).}
 
 \item{...}{Additional arguments (unused).}
 }
 \value{
-`x`, invisibly. Called for the side effect of printing the summary.
+`x`, invisibly. Called for the side effect of printing.
 }
 \description{
-Prints a compact, reporting-oriented summary of an [rtftable()]: the body
-dimensions, the column (leaf) labels, the row-title column(s), the border
-and column-width mode, any attached title / footnote line counts, and a
-short preview of the rendered body so the cell content can be eyeballed.
+Prints a visual preview of an [rtftable()] -- the laid-out cells with column
+(and spanning) headers, per-column alignment, and horizontal rules drawn
+where the table's border zones are set -- followed by a compact metadata
+block (dimensions, leaf labels, row-title columns, border/width mode, and any
+attached title / footnote counts).  This mirrors printing a `gt_tbl`,
+`rtables` `VTableTree`, or `gtsummary` object: the goal is to eyeball the
+table, not just its metadata.  For an internal multi-table rtftable (one
+carrying several data.frames), the first table is rendered.
 }
 \examples{
 df <- data.frame(
@@ -30,4 +34,8 @@ df <- data.frame(
 )
 print(rtftable(df, col_header = c("Characteristic", "Drug A\nN = 98")))
 
+}
+\seealso{
+[format.rtftable()] to capture the rendered lines,
+  [summary.rtftable()] for the metadata block on its own.
 }

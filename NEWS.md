@@ -1,5 +1,19 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`print()` on an `rtftable` now renders a visual preview of the table**
+  (#229) -- the laid-out cells with column (and spanning) headers, per-column
+  alignment, and horizontal rules drawn where the table's border zones are
+  actually set, so the console shows what the RTF will look like (much like
+  printing a `gt_tbl`, `rtables` `VTableTree`, or `gtsummary` object) instead
+  of only metadata. Long bodies truncate with a "… N more rows" note; an
+  internal multi-table `rtftable` renders its first table. The rendered lines
+  are available on their own via the new `format()` method, and the previous
+  compact metadata block via the new `summary()` method (it is still appended
+  below the table by `print()`). Box-drawing rules degrade to ASCII in a
+  non-UTF-8 locale or under `options(rtfreporter.print_ascii = TRUE)`.
+
 ### Behavior changes
 
 - **`as_rtftables()` / `as_rtftable()` now carry a gt table's explicit

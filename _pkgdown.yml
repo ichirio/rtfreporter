@@ -215,6 +215,8 @@ reference:
       - rtftable
       - rtfplot
       - print.rtftable
+      - format.rtftable
+      - summary.rtftable
       - print.rtfplot
 
   # ── 4. Importing external table objects ────────────────────────────────
