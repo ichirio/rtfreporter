@@ -928,10 +928,13 @@ rtftable <- function(
   style <- side$style %||% "single"
   if (identical(style, "none")) return(NA_character_)
   if (!unicode) return(if (style %in% c("double", "thick")) "=" else "-")
+  # Box-drawing glyphs are written as \u escapes so the R source stays
+  # ASCII-only (R CMD check "non-ASCII characters" WARNING otherwise):
+  # 2500 single, 2550 double, 2501 thick, 2508 dotted, 2504 dashed.
   switch(style,
-    double = "═", thick = "━",
-    dotted = "┈", dashed = "┄",
-    "─")                                  # single / default
+    double = "\u2550", thick = "\u2501",
+    dotted = "\u2508", dashed = "\u2504",
+    "\u2500")                 # single / default
 }
 
 # Render the (first) table body of an rtftable as a character vector of lines.
@@ -1105,7 +1108,7 @@ rtftable <- function(
   if (nshow < nr) {
     more <- nr - nshow
     push(sprintf("%s (%d more row%s)",
-                 if (unicode) "…" else "...", more,
+                 if (unicode) "\u2026" else "...", more,
                  if (more == 1L) "" else "s"))
   }
 
