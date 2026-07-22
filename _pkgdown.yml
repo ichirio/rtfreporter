@@ -32,9 +32,11 @@ template:
 development:
   mode: unreleased
   version_label: warning
+  # Deliberately version-agnostic: naming a specific version here goes stale
+  # every release.  The current release is stated in the `devnotes` sidebar.
   version_tooltip: >
-    v0.1.0.  API may still change in backwards-incompatible ways
-    before v1.0.0.
+    Pre-1.0 development version.  The API may still change in
+    backwards-incompatible ways before v1.0.0.
 
 home:
   title: "rtfreporter — Clinical RTF Reporting Toolkit for R"
@@ -43,7 +45,6 @@ home:
     Listings and Figures (TFLs) for clinical trial deliverables.  Pure
     S3 architecture; no dependency on r2rtf, reporter, or any other RTF
     library; works on any modern R out of the box.
-  # Keep README's H1 (which contains the logo image) on the home page.
   # Keep README's H1 (which contains the logo image) on the home page.
   strip_header: false
   sidebar:
@@ -76,7 +77,7 @@ home:
           ·
           [Browse issues](https://github.com/ichirio/rtfreporter/issues)
           ·
-          [Discussions (TBD)](https://github.com/ichirio/rtfreporter/discussions)
+          [Discussions](https://github.com/ichirio/rtfreporter/discussions)
           ·
           [Contributing](https://github.com/ichirio/rtfreporter/blob/main/CONTRIBUTING.md)
   # The sidebar's "Links" section is auto-generated from DESCRIPTION's URL /
