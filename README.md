@@ -117,9 +117,11 @@ The clinical-table ecosystem has several excellent builders —
 [tfrmt](https://gsk-biostatistics.github.io/tfrmt/),
 [gtsummary](https://www.danieldsjoberg.com/gtsummary/),
 [rtables](https://insightsengineering.github.io/rtables/) /
-[tern](https://insightsengineering.github.io/tern/), and
-[gt](https://gt.rstudio.com) — and, honestly, no single de-facto
-standard has emerged yet.  rtfreporter does not ask you to pick one, to
+[tern](https://insightsengineering.github.io/tern/),
+[gt](https://gt.rstudio.com),
+[flextable](https://davidgohel.github.io/flextable/) and
+[huxtable](https://hughjonesd.github.io/huxtable/) — and, honestly, no
+single de-facto standard has emerged yet.  rtfreporter does not ask you to pick one, to
 switch, or to re-state your table in yet another vocabulary.  Whatever
 your team already uses to compute and format the numbers,
 [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.html)
@@ -133,7 +135,10 @@ rtfreporter lays it out just the same.  A bare data.frame carries no
 display metadata, so you simply re-specify what you want — column headers,
 alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
 
-Worked, tool-by-tool examples will be added as articles over time.
+For worked, tool-by-tool comparisons see the *same report, every framework*
+articles — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
+and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html) —
+plus [Pharmaverse example tables to RTF](https://ichirio.github.io/rtfreporter/articles/tlg-catalog.html).
 
 ## Why RTF?
 
@@ -168,8 +173,15 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
 - **Get started** — `vignette("rtfreporter-quickstart")`
 - **Pipe API** — `vignette("rtfreporter-pipes")`
-- **External API spec** — pkgdown article
-- **Internal class design (S3 architecture)** — pkgdown article
+- **Importing tables** — bringing gt / gtsummary / rtables / flextable /
+  huxtable objects in with
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html)
+- **Pagination** — [splitting long tables across pages](https://ichirio.github.io/rtfreporter/articles/pagination.html)
+- **Headers & footers** — [section-based running headers](https://ichirio.github.io/rtfreporter/articles/headers-footers.html)
+- **Borders and rules** — [the clinical TFL frame](https://ichirio.github.io/rtfreporter/articles/borders.html)
+- **Worked clinical examples** — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
+  and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html)
+- **External API spec** — [the public API surface](https://ichirio.github.io/rtfreporter/articles/external-api.html)
 
 ## Status & roadmap
 
