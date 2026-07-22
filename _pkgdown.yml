@@ -138,8 +138,6 @@ navbar:
         - text: "Specification & internals"
         - text: "External API specification"
           href: articles/external-api.html
-        - text: "Internal class design (S3)"
-          href: articles/internal-design.html
     news:
       text: Changelog
       href: news/index.html
@@ -405,7 +403,6 @@ articles:
       - articles/architecture
       - articles/extending-adapters
       - articles/external-api
-      - articles/internal-design
 
   - title: コントリビューター向け資料（日本語 / Japanese）
     desc: >
@@ -417,7 +414,6 @@ articles:
       - articles/architecture-ja
       - articles/extending-adapters-ja
       - articles/external-api-ja
-      - articles/internal-design-ja
 
 # News configuration:
 # Until v0.1.0 we are publishing every dev release as one rolling section
