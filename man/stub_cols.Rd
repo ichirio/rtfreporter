@@ -4,7 +4,13 @@
 \alias{stub_cols}
 \title{Merge hierarchy columns into one indented stub column}
 \usage{
-stub_cols(data, vars, label = NULL, indent = 4L)
+stub_cols(
+  data,
+  vars,
+  label = NULL,
+  indent = 4L,
+  group_summary = c("empty", "parent")
+)
 }
 \arguments{
 \item{data}{A data.frame (or tibble).}
@@ -20,6 +26,13 @@ column's `label` attribute when it has one.}
 
 \item{indent}{Integer (default `4`).  Number of non-breaking spaces
 prepended per nesting level.}
+
+\item{group_summary}{Which leaf values mark a row as its group's summary,
+folding that row's statistics onto the group label row instead of an
+indented leaf row (see *Group-summary rows*).  A subset of
+`c("empty", "parent")` -- `"empty"` for an `NA` / `""` leaf, `"parent"` for
+a leaf equal to its deepest non-empty parent value.  Also accepts `"all"`
+(both, the default) or `"none"` / `NULL` (disable).}
 }
 \value{
 A data.frame: the stub column first, then every column of `data`
@@ -54,6 +67,35 @@ An `NA` or empty (`""`) parent cell contributes **no label row and no
 indentation** for its rows.  This is the idiomatic way to keep a summary
 row -- e.g. *"Subjects with at least one adverse event"* -- flush left at
 the top of the table: leave its parent columns empty.
+}
+\section{Group-summary rows (AE style)}{
+
+A group can carry its own summary statistic -- the SOC-level count of an
+adverse-event table, say -- supplied on a row whose **leaf** is either `NA` /
+`""` or a repeat of the parent value:
+
+```
+  SOC1  NA    3 (2.1%)          SOC1  SOC1  3 (2.1%)
+  SOC1  PT1   1 (0.7%)    or    SOC1  PT1   1 (0.7%)
+  SOC1  PT2   2 (1.4%)          SOC1  PT2   2 (1.4%)
+```
+
+With `group_summary` enabled (the default), such a row's statistics are
+placed **on the group's label row** and no separate indented leaf row is
+emitted, giving the standard AE layout:
+
+```
+  SOC1        3 (2.1%)
+      PT1     1 (0.7%)
+      PT2     2 (1.4%)
+```
+
+Demographic-style tables (pattern where the leaf is a statistic name such as
+`"n"` / `"Mean (SD)"`, never `NA` and never equal to the parent) are left
+untouched, so a parent label row keeps its empty cells and the stats stay on
+the indented leaf rows.  Set `group_summary = "none"` to disable the folding
+(an `NA` leaf then becomes an empty indented row, as before) -- note the
+disable token is `"none"`, distinct from the `"empty"` trigger.
 
 With more than two `vars`, each additional level indents one step
 further: level-1 label rows are flush left, level-2 label rows are
@@ -64,6 +106,7 @@ Column `label` attributes (the haven / labelled / xportr convention) on
 the remaining columns are preserved, so [as_rtftables()] can still pick
 them up as header labels.
 }
+
 \examples{
 ae <- data.frame(
   soc = c("Cardiac disorders", "Cardiac disorders",
@@ -86,6 +129,16 @@ tbl
 
 # The output feeds straight into the converting / paginating pipeline.
 pages <- as_rtftables(tbl, split = "group_force", max_rows = 4)
+
+# AE style: an NA (or repeated-parent) leaf carries the SOC-level summary,
+# which is folded onto the SOC label row.
+ae_sum <- data.frame(
+  soc = c("Cardiac disorders", "Cardiac disorders", "Cardiac disorders"),
+  pt  = c(NA, "Atrial fibrillation", "Bradycardia"),
+  n   = c("4 (2.8\%)", "3 (2.1\%)", "1 (0.7\%)"),
+  stringsAsFactors = FALSE
+)
+stub_cols(ae_sum, vars = c("soc", "pt"))
 
 }
 \seealso{
