@@ -469,6 +469,35 @@ Note the `"Any adverse event"` summary row: its parent cell is empty (`""`),
 so it gets **no label row and no indent** -- it stays flush left at the top.
 Label rows hold `NA` in the statistic columns, which renders as an empty cell.
 
+#### Group-summary rows (the AE pattern) {#stub-group-summary}
+
+Adverse-event tables usually carry a **group-level count** as well: the total
+for a System Organ Class, printed on the SOC row itself, above its indented
+preferred terms. In the input that count sits on a row whose **leaf** is either
+`NA` / `""` or a repeat of the parent value. `stub_cols()` folds such a row's
+statistics **onto the group's label row** -- no separate indented leaf -- via
+the `group_summary` argument (on by default):
+
+```{r stub-group-summary}
+ae_sum <- data.frame(
+  soc = c("Cardiac disorders", "Cardiac disorders", "Cardiac disorders"),
+  pt  = c(NA, "Atrial fibrillation", "Bradycardia"),   # NA leaf = SOC summary
+  n   = c("4 (2.8%)", "3 (2.1%)", "1 (0.7%)"),
+  stringsAsFactors = FALSE
+)
+stub_cols(ae_sum, vars = c("soc", "pt"))
+```
+
+The `4 (2.8%)` SOC total lands on the `Cardiac disorders` label row. A leaf that
+repeats its parent (e.g. `soc = "Cardiac disorders"`, `pt = "Cardiac
+disorders"`) is folded the same way. Control which markers count with
+`group_summary`: `"empty"` (the `NA` / `""` leaf), `"parent"` (the
+repeated-parent leaf), both (the default `c("empty", "parent")`), or `"none"`
+to switch the folding off. Demographic tables -- where the leaf is a statistic
+name such as `"n"` or `"Mean (SD)"`, never `NA` and never equal to the parent --
+are unaffected either way, so their label rows keep their empty cells and the
+stats stay on the indented leaf rows.
+
 Because the output is an ordinary data.frame with baked-in indentation,
 everything downstream works unchanged -- `group_by = "auto"` detects the
 indent, the group-aware splits keep a label row with its children and append

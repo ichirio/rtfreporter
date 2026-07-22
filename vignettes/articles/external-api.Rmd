@@ -117,5 +117,9 @@ share the input body's column coordinates; see
 
 `print()` methods exist for the document and the spec objects; `plot()` methods
 give base-graphics wireframes of borders / tables / the document for
-sanity-checking a layout before rendering. See the
+sanity-checking a layout before rendering. `print()` on an `rtftable` renders a
+visual preview of the table -- the laid-out cells with column (and spanning)
+headers, per-column alignment and the border rules -- so you can eyeball the
+content in the console (`format()` returns those lines, `summary()` the compact
+metadata block). See the
 [function reference](../reference/index.html) for the full per-function detail.
