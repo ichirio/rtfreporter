@@ -6,10 +6,6 @@ title: "Internal class design (S3)"
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 ```
 
-<p align="right">
-  <a class="btn btn-outline-secondary btn-sm" href="internal-design-ja.html">日本語</a>
-</p>
-
 This document describes rtfreporter's **internal data structures** -- the S3
 objects the renderer works with -- for people extending the package. For the
 public API see [External API specification](external-api.html).
@@ -98,7 +94,9 @@ The richest object: the table data plus all formatting. Single-DF mode stores
 `border` (an `rtf_table_border`), `blank_rows`, width settings, row heights,
 cell padding/valign, and `cell_styles` (per-cell overrides). `as_rtftables()`
 attaches page-level `rtf_titles` / `rtf_footnotes` as attributes for
-`rtf_tables()` to consume.
+`rtf_tables()` to consume. `print()` renders a visual preview of the table
+(headers, cells, rules, alignment); `format()` returns those lines and
+`summary()` the compact metadata block.
 
 ### `rtfplot` (public)
 
@@ -150,10 +148,10 @@ S3 class plays one of three roles:
 | Class | Role |
 |-------|------|
 | `rtf_document` | dispatch (`print`, `plot`) + `inherits()` |
-| `rtftable` | dispatch (`plot`) + `inherits()` |
+| `rtftable` | dispatch (`print`, `format`, `summary`, `plot`) + `inherits()` |
 | `rtf_border_side`, `rtf_border`, `rtf_table_border` | dispatch (`print`, `plot`) + `inherits()` |
 | `rtf_table_style`, `rtf_col_cell`, `rtf_col_header` | dispatch (`print`) + `inherits()` |
-| `rtfplot` | `inherits()` type tag (no method) |
+| `rtfplot` | dispatch (`print`) + `inherits()` |
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()` (blank-row resolver dispatch) |
 | `rtf_toc_heading`, `rtf_toc_entry` | `inherits()` (TOC normalisation) |
 | `rtfreport`, `rtf_auto_section_item` | `inherits()` (internal) |

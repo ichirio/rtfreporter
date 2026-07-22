@@ -138,8 +138,6 @@ navbar:
         - text: "Specification & internals"
         - text: "External API specification"
           href: articles/external-api.html
-        - text: "Internal class design (S3)"
-          href: articles/internal-design.html
     news:
       text: Changelog
       href: news/index.html
@@ -405,7 +403,6 @@ articles:
       - articles/architecture
       - articles/extending-adapters
       - articles/external-api
-      - articles/internal-design
 
   - title: コントリビューター向け資料（日本語 / Japanese）
     desc: >
@@ -417,6 +414,18 @@ articles:
       - articles/architecture-ja
       - articles/extending-adapters-ja
       - articles/external-api-ja
+
+  # Deep-dive S3 / OOP references. Deliberately kept OUT of the navbar
+  # Articles menu -- pkgdown requires every built article to appear in the
+  # index, so they are listed here (advanced, URL-oriented) rather than being
+  # unlisted, which pkgdown treats as an error.
+  - title: "Internals & S3 (advanced)"
+    desc: >
+      Design internals and an R OOP / S3 primer. Not in the navbar menu.
+      S3 内部設計と R のオブジェクト指向／S3 の解説。ナビゲーションメニューには出しません。
+    navbar: ~
+    contents:
+      - articles/internal-design
       - articles/internal-design-ja
 
 # News configuration:
