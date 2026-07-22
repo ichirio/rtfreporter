@@ -415,6 +415,19 @@ articles:
       - articles/extending-adapters-ja
       - articles/external-api-ja
 
+  # Deep-dive S3 / OOP references. Deliberately kept OUT of the navbar
+  # Articles menu -- pkgdown requires every built article to appear in the
+  # index, so they are listed here (advanced, URL-oriented) rather than being
+  # unlisted, which pkgdown treats as an error.
+  - title: "Internals & S3 (advanced)"
+    desc: >
+      Design internals and an R OOP / S3 primer. Not in the navbar menu.
+      S3 内部設計と R のオブジェクト指向／S3 の解説。ナビゲーションメニューには出しません。
+    navbar: ~
+    contents:
+      - articles/internal-design
+      - articles/internal-design-ja
+
 # News configuration:
 # Until v0.1.0 we are publishing every dev release as one rolling section
 # ("Development version").  Once v0.1.0 ships the section breakdown
