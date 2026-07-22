@@ -878,18 +878,338 @@ rtftable <- function(
   s
 }
 
-#' Print an rtftable object
+# -- Console rendering of the table body ---------------------------------------
+#
+# The pieces below lay an rtftable out as a text grid -- column headers
+# (including spanning headers), the rendered cells, per-column alignment, and
+# horizontal rules drawn where the table's border zones are actually set -- so
+# that print()ing an rtftable previews what the RTF will look like, much like
+# printing a gt_tbl / rtables VTableTree / gtsummary object.  The rendering is
+# deliberately faithful to the clinical (TFL) look: rules only where borders
+# exist, columns separated by whitespace, no decorative grid.
+
+# Display width of each string, accounting for wide (CJK) glyphs.  Falls back to
+# the character count when the width is undeterminable (non-representable bytes).
+.disp_width <- function(x) {
+  x <- as.character(x)
+  x[is.na(x)] <- ""
+  w <- suppressWarnings(nchar(x, type = "width", allowNA = TRUE))
+  bad <- is.na(w)
+  if (any(bad)) w[bad] <- nchar(x[bad], type = "chars")
+  as.integer(w)
+}
+
+# Pad a single-line string to `width` display columns under `align`.
+.pad_cell <- function(text, width, align = "left") {
+  text <- as.character(text)
+  gap  <- width - .disp_width(text)
+  if (length(gap) == 0L || is.na(gap) || gap <= 0L) return(text)
+  switch(align,
+    right  = paste0(strrep(" ", gap), text),
+    center = {
+      l <- gap %/% 2L
+      paste0(strrep(" ", l), text, strrep(" ", gap - l))
+    },
+    paste0(text, strrep(" ", gap)))            # left / default
+}
+
+# Whether the console can render box-drawing characters.  ASCII fallback is used
+# in a non-UTF-8 locale or when `options(rtfreporter.print_ascii = TRUE)`.
+.print_uses_unicode <- function() {
+  if (isTRUE(getOption("rtfreporter.print_ascii", FALSE))) return(FALSE)
+  info <- tryCatch(l10n_info(), error = function(e) NULL)
+  isTRUE(info[["UTF-8"]]) || identical(info[["codepage"]], 65001L)
+}
+
+# Horizontal rule glyph for one border side (an rtf_border_side, i.e. a list
+# with `$style`), or NA when the side is absent / "none".
+.rule_char <- function(side, unicode) {
+  if (is.null(side)) return(NA_character_)
+  style <- side$style %||% "single"
+  if (identical(style, "none")) return(NA_character_)
+  if (!unicode) return(if (style %in% c("double", "thick")) "=" else "-")
+  # Box-drawing glyphs are written as \u escapes so the R source stays
+  # ASCII-only (R CMD check "non-ASCII characters" WARNING otherwise):
+  # 2500 single, 2550 double, 2501 thick, 2508 dotted, 2504 dashed.
+  switch(style,
+    double = "\u2550", thick = "\u2501",
+    dotted = "\u2508", dashed = "\u2504",
+    "\u2500")                 # single / default
+}
+
+# Render the (first) table body of an rtftable as a character vector of lines.
+.render_rtftable_console <- function(x, n = 10L) {
+  unicode <- .print_uses_unicode()
+
+  # A multi-DF rtftable carries data_list / col_header_list; preview the first.
+  if (!is.null(x$data_list)) {
+    body <- x$data_list[[1L]]
+    hdr  <- (x$col_header_list %||% list())[[1L]] %||% x$col_header
+  } else {
+    body <- x$data
+    hdr  <- x$col_header
+  }
+  if (is.null(body) || ncol(body) == 0L) return(character(0))
+
+  nc <- ncol(body)
+  nr <- nrow(body)
+  cs <- x$col_spec
+  sep  <- "  "
+  sepw <- nchar(sep)
+
+  # Leaf (per-column) labels used for widths; header rows are rendered below.
+  leaf <- .flatten_col_header_labels(hdr, nc)
+  if (is.null(leaf)) leaf <- names(body) %||% paste0("V", seq_len(nc))
+  leaf <- as.character(leaf)
+
+  # Rows to show, as a character matrix (NA -> "").
+  nshow <- max(0L, min(as.integer(n), nr))
+  colcells <- lapply(seq_len(nc), function(j) {
+    v <- if (nshow > 0L) as.character(body[[j]][seq_len(nshow)]) else character(0)
+    v[is.na(v)] <- ""
+    v
+  })
+
+  # Split each leaf label into physical lines (embedded "\n" -> stacked rows).
+  leaf_lines <- lapply(seq_len(nc), function(j) {
+    z <- strsplit(leaf[[j]] %||% "", "\n", fixed = TRUE)[[1L]]
+    if (length(z) == 0L) "" else z
+  })
+
+  # Column widths: widest of the leaf-label lines and the shown data cells.
+  width <- integer(nc)
+  for (j in seq_len(nc)) {
+    dl <- if (length(colcells[[j]])) max(.disp_width(colcells[[j]])) else 0L
+    hl <- max(.disp_width(leaf_lines[[j]]))
+    width[j] <- max(dl, hl, 1L)
+  }
+
+  # Border-side lookup for a zone ("header"/"spanning"/"body"/first/last row).
+  bd   <- x$border
+  side <- function(zone, s) {
+    z <- if (is.null(bd)) NULL else bd[[zone]]
+    if (is.null(z)) NULL else z[[s]]
+  }
+
+  # Widen columns so any spanning-header label fits across its span.
+  span_rows <- if (is.list(hdr)) Filter(is.list, hdr) else list()
+  for (row in span_rows) {
+    for (cell in row) {
+      from <- cell$from; to <- cell$to
+      if (is.null(from) || is.null(to)) next
+      cols  <- from:to
+      need  <- .disp_width(as.character(cell$label %||% ""))
+      avail <- sum(width[cols]) + sepw * (length(cols) - 1L)
+      if (need > avail) {
+        deficit <- need - avail
+        k   <- length(cols)
+        add <- rep(deficit %/% k, k)
+        rem <- deficit %% k
+        if (rem > 0L) add[seq_len(rem)] <- add[seq_len(rem)] + 1L
+        width[cols] <- width[cols] + add
+      }
+    }
+  }
+  total_w <- sum(width) + sepw * (nc - 1L)
+
+  # Render a stack of per-column cells (each a character vector of physical
+  # lines) into console lines, aligning within columns and v-aligning the
+  # stack ("top" or "bottom").
+  render_cells <- function(cells_lines, aligns, valign = "top") {
+    h <- max(vapply(cells_lines, length, integer(1L)), 1L)
+    vapply(seq_len(h), function(li) {
+      parts <- vapply(seq_len(nc), function(j) {
+        lj  <- cells_lines[[j]]
+        kj  <- length(lj)
+        idx <- if (identical(valign, "bottom")) li - (h - kj) else li
+        txt <- if (idx >= 1L && idx <= kj) lj[[idx]] else ""
+        .pad_cell(txt, width[j], aligns[[j]])
+      }, character(1L))
+      paste(parts, collapse = sep)
+    }, character(1L))
+  }
+
+  # Render one spanning-header row -> a label line plus an underline line.
+  # Contiguous columns not covered by a cell become blank single-column units,
+  # so every unit is separated by exactly one column boundary (one `sep`).
+  render_span <- function(row) {
+    by_from <- list()
+    for (cell in row) by_from[[as.character(as.integer(cell$from))]] <- cell
+    units_lab <- character(0); units_ul <- character(0)
+    col <- 1L
+    while (col <= nc) {
+      cell <- by_from[[as.character(col)]]
+      if (!is.null(cell)) {
+        to  <- as.integer(cell$to)
+        fw  <- sum(width[col:to]) + sepw * (to - col)
+        lab <- as.character(cell$label %||% "")
+        units_lab <- c(units_lab, .pad_cell(lab, fw, cell$align %||% "center"))
+        ul_on <- (isTRUE(cell$underline) || !is.null(cell$border) ||
+                    !is.null(side("spanning", "bottom"))) && nzchar(lab)
+        units_ul <- c(units_ul,
+          if (ul_on) strrep(.rule_char(list(style = "single"), unicode), fw)
+          else strrep(" ", fw))
+        col <- to + 1L
+      } else {
+        units_lab <- c(units_lab, strrep(" ", width[col]))
+        units_ul  <- c(units_ul,  strrep(" ", width[col]))
+        col <- col + 1L
+      }
+    }
+    lab_line <- paste(units_lab, collapse = sep)
+    ul_line  <- paste(units_ul,  collapse = sep)
+    list(label = lab_line, underline = ul_line,
+         has_underline = grepl("[^ ]", ul_line))
+  }
+
+  out  <- character(0)
+  push <- function(...) out <<- c(out, ...)
+  rule <- function(ch) if (!is.na(ch)) push(strrep(ch, total_w))
+
+  # Attached page-level titles (centred) then the header top rule.
+  ti <- attr(x, "rtf_titles", exact = TRUE)
+  if (!is.null(ti)) for (t in ti) push(.pad_cell(as.character(t), total_w, "center"))
+
+  rule(.rule_char(side("header", "top"), unicode))
+
+  # Header rows, in order (spanning rows first, leaf label row last).
+  hdr_rows <- if (is.null(hdr)) list(names(body) %||% leaf) else hdr
+  for (row in hdr_rows) {
+    if (is.character(row)) {
+      lab <- as.character(row)
+      if (length(lab) < nc) lab <- c(lab, rep("", nc - length(lab)))
+      cells <- lapply(seq_len(nc), function(j)
+        strsplit(lab[[j]] %||% "", "\n", fixed = TRUE)[[1L]] %||% "")
+      cells   <- lapply(cells, function(z) if (length(z) == 0L) "" else z)
+      h_align <- lapply(seq_len(nc), function(j)
+        (cs[[j]]$header_align %||% cs[[j]]$align) %||% "center")
+      push(render_cells(cells, h_align, valign = "bottom"))
+    } else if (is.list(row)) {
+      sr <- render_span(row)
+      push(sr$label)
+      if (sr$has_underline) push(sr$underline)
+    }
+  }
+
+  # Rule between header and body.
+  rule(.rule_char(side("header", "bottom"), unicode))
+
+  # Body rows.  A first-row top override draws a rule above the first data row.
+  rule(.rule_char(side("first_row", "top"), unicode))
+  if (nshow > 0L) {
+    d_align <- lapply(seq_len(nc), function(j) cs[[j]]$align %||% "left")
+    for (i in seq_len(nshow)) {
+      cells <- lapply(seq_len(nc), function(j)
+        strsplit(colcells[[j]][[i]], "\n", fixed = TRUE)[[1L]] %||% "")
+      cells <- lapply(cells, function(z) if (length(z) == 0L) "" else z)
+      push(render_cells(cells, d_align, valign = x$cell_valign %||% "top"))
+    }
+  }
+  if (nshow < nr) {
+    more <- nr - nshow
+    push(sprintf("%s (%d more row%s)",
+                 if (unicode) "\u2026" else "...", more,
+                 if (more == 1L) "" else "s"))
+  }
+
+  # Bottom rule of the last data row (last_row override, else body bottom).
+  rule(.rule_char(side("last_row", "bottom") %||% side("body", "bottom"), unicode))
+
+  # Attached footnotes, left-aligned below the table.
+  fo <- attr(x, "rtf_footnotes", exact = TRUE)
+  if (!is.null(fo)) for (f in fo) push(as.character(f))
+
+  out
+}
+
+# Metadata block (the compact, labelled summary that used to be the whole of
+# print()).  Returned as a character vector so print()/summary() can reuse it.
+.rtftable_meta_lines <- function(x) {
+  if (!is.null(x$data_list)) {
+    ntab <- length(x$data_list)
+    nr   <- sum(vapply(x$data_list, nrow, integer(1L)))
+    body <- x$data_list[[1L]]
+    nc   <- if (is.null(body)) 0L else ncol(body)
+    hdr  <- (x$col_header_list %||% list())[[1L]] %||% x$col_header
+    head_line <- sprintf("<rtftable> %d tables, %d body rows x %d columns",
+                         ntab, nr, nc)
+  } else {
+    body <- x$data
+    nr   <- if (is.null(body)) 0L else nrow(body)
+    nc   <- if (is.null(body)) length(x$col_spec) else ncol(body)
+    hdr  <- x$col_header
+    head_line <- sprintf("<rtftable> %d row%s x %d columns",
+                         nr, if (nr == 1L) "" else "s", nc)
+  }
+
+  L <- head_line
+  add <- function(...) L <<- c(L, paste0(...))
+
+  labs <- .flatten_col_header_labels(hdr, nc)
+  if (!is.null(labs) && any(nzchar(labs)))
+    add("  Columns:    ", .fmt_label_line(labs))
+  nhdr <- if (is.null(hdr)) 0L else if (is.character(hdr)) 1L else length(hdr)
+  if (nhdr > 1L) add(sprintf("  Header rows: %d (spanning)", nhdr))
+
+  rt <- x$row_title %||% 1L
+  add("  Row title:  col ", paste(rt, collapse = ", "))
+  add("  Borders:    ", if (is.null(x$border)) "none" else "set")
+  width_desc <-
+    if (!is.null(x$col_rel_width))
+      paste("relative", paste(x$col_rel_width, collapse = ":"))
+    else if (!is.null(x$column_widths_twips))
+      sprintf("fixed (%s twips)", paste(x$column_widths_twips, collapse = ", "))
+    else "auto / inherited"
+  add("  Widths:     ", width_desc)
+  if (length(x$markup))
+    add("  Markup:     ", paste(x$markup, collapse = ", "))
+  if (!is.null(x$cell_styles))
+    add(sprintf("  Cell styles: set (%d rows)", length(x$cell_styles)))
+
+  ti <- attr(x, "rtf_titles",    exact = TRUE)
+  fo <- attr(x, "rtf_footnotes", exact = TRUE)
+  if (!is.null(ti)) add(sprintf("  Titles:     %d line(s)", length(ti)))
+  if (!is.null(fo)) add(sprintf("  Footnotes:  %d line(s)", length(fo)))
+  L
+}
+
+#' Render an rtftable body as console text
 #'
-#' Prints a compact, reporting-oriented summary of an [rtftable()]: the body
-#' dimensions, the column (leaf) labels, the row-title column(s), the border
-#' and column-width mode, any attached title / footnote line counts, and a
-#' short preview of the rendered body so the cell content can be eyeballed.
+#' Lays an [rtftable()] out as a text grid -- column headers (including spanning
+#' headers), the rendered cells, per-column alignment, and horizontal rules
+#' where the table's border zones are set -- so the result previews what the RTF
+#' will look like.  Used by [print.rtftable()]; call it directly to capture the
+#' rendered lines.
 #'
 #' @param x An `rtftable` object.
-#' @param n Number of body rows to show in the preview (default `6`).
+#' @param n Number of body rows to render (default `10`).
 #' @param ... Additional arguments (unused).
 #'
-#' @return `x`, invisibly. Called for the side effect of printing the summary.
+#' @return A character vector, one element per console line.
+#' @export
+format.rtftable <- function(x, n = 10L, ...) {
+  .render_rtftable_console(x, n = n)
+}
+
+#' Print an rtftable object
+#'
+#' Prints a visual preview of an [rtftable()] -- the laid-out cells with column
+#' (and spanning) headers, per-column alignment, and horizontal rules drawn
+#' where the table's border zones are set -- followed by a compact metadata
+#' block (dimensions, leaf labels, row-title columns, border/width mode, and any
+#' attached title / footnote counts).  This mirrors printing a `gt_tbl`,
+#' `rtables` `VTableTree`, or `gtsummary` object: the goal is to eyeball the
+#' table, not just its metadata.  For an internal multi-table rtftable (one
+#' carrying several data.frames), the first table is rendered.
+#'
+#' @param x An `rtftable` object.
+#' @param n Number of body rows to render (default `10`).
+#' @param ... Additional arguments (unused).
+#'
+#' @return `x`, invisibly. Called for the side effect of printing.
+#'
+#' @seealso [format.rtftable()] to capture the rendered lines,
+#'   [summary.rtftable()] for the metadata block on its own.
 #'
 #' @examples
 #' df <- data.frame(
@@ -900,65 +1220,28 @@ rtftable <- function(
 #' print(rtftable(df, col_header = c("Characteristic", "Drug A\nN = 98")))
 #'
 #' @export
-print.rtftable <- function(x, n = 6L, ...) {
-  # Body + header: a multi-table rtftable carries data_list / col_header_list.
-  if (!is.null(x$data_list)) {
-    ntab <- length(x$data_list)
-    nr   <- sum(vapply(x$data_list, nrow, integer(1L)))
-    body <- x$data_list[[1L]]
-    nc   <- if (is.null(body)) 0L else ncol(body)
-    hdr  <- (x$col_header_list %||% list())[[1L]] %||% x$col_header
-    cat(sprintf("<rtftable> %d tables, %d body rows x %d columns\n",
-                ntab, nr, nc))
-  } else {
-    body <- x$data
-    nr   <- if (is.null(body)) 0L else nrow(body)
-    nc   <- if (is.null(body)) length(x$col_spec) else ncol(body)
-    hdr  <- x$col_header
-    cat(sprintf("<rtftable> %d row%s x %d columns\n",
-                nr, if (nr == 1L) "" else "s", nc))
-  }
-
-  # Column (leaf) labels and the header-row depth (spanning headers).
-  labs <- .flatten_col_header_labels(hdr, nc)
-  if (!is.null(labs) && any(nzchar(labs))) {
-    cat("  Columns:    ", .fmt_label_line(labs), "\n", sep = "")
-  }
-  nhdr <- if (is.null(hdr)) 0L else if (is.character(hdr)) 1L else length(hdr)
-  if (nhdr > 1L) cat(sprintf("  Header rows: %d (spanning)\n", nhdr))
-
-  # Layout: row-title columns, borders, column-width mode.
-  rt <- x$row_title %||% 1L
-  cat("  Row title:  col ", paste(rt, collapse = ", "), "\n", sep = "")
-  cat("  Borders:    ", if (is.null(x$border)) "none" else "set", "\n", sep = "")
-  width_desc <-
-    if (!is.null(x$col_rel_width))
-      paste("relative", paste(x$col_rel_width, collapse = ":"))
-    else if (!is.null(x$column_widths_twips))
-      sprintf("fixed (%s twips)", paste(x$column_widths_twips, collapse = ", "))
-    else "auto / inherited"
-  cat("  Widths:     ", width_desc, "\n", sep = "")
-  if (length(x$markup))
-    cat("  Markup:     ", paste(x$markup, collapse = ", "), "\n", sep = "")
-  if (!is.null(x$cell_styles))
-    cat(sprintf("  Cell styles: set (%d rows)\n", length(x$cell_styles)))
-
-  # Page-level title / footnote blocks travel as attributes (set by
-  # as_rtftables()); report their line counts.
-  ti <- attr(x, "rtf_titles",    exact = TRUE)
-  fo <- attr(x, "rtf_footnotes", exact = TRUE)
-  if (!is.null(ti)) cat(sprintf("  Titles:     %d line(s)\n", length(ti)))
-  if (!is.null(fo)) cat(sprintf("  Footnotes:  %d line(s)\n", length(fo)))
-
-  # Body preview -- the rendered cells, so the content can be eyeballed.
-  if (!is.null(body) && nrow(body) > 0L) {
-    nshow <- min(as.integer(n), nrow(body))
-    cat(sprintf("\n  Body preview (first %d of %d row%s):\n",
-                nshow, nr, if (nr == 1L) "" else "s"))
-    out <- utils::capture.output(
-      print(utils::head(body, nshow), row.names = FALSE))
-    cat(paste0("  ", out), sep = "\n")
-    cat("\n")
-  }
+print.rtftable <- function(x, n = 10L, ...) {
+  body_lines <- .render_rtftable_console(x, n = n)
+  if (length(body_lines)) cat(body_lines, sep = "\n")
+  cat("\n")
+  cat(.rtftable_meta_lines(x), sep = "\n")
+  cat("\n")
   invisible(x)
+}
+
+#' Summarise an rtftable object
+#'
+#' Prints the compact metadata block for an [rtftable()] -- dimensions, leaf
+#' labels, row-title columns, border and column-width mode, and any attached
+#' title / footnote counts -- without the visual table body.
+#'
+#' @param object An `rtftable` object.
+#' @param ... Additional arguments (unused).
+#'
+#' @return `object`, invisibly.
+#' @export
+summary.rtftable <- function(object, ...) {
+  cat(.rtftable_meta_lines(object), sep = "\n")
+  cat("\n")
+  invisible(object)
 }
