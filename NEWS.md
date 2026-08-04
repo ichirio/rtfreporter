@@ -2,6 +2,20 @@
 
 ### New features
 
+- **`as_rtftables()` gains `stub_vars` (plus `stub_label` / `stub_indent` /
+  `stub_group_summary`)** (#242) -- folds [stub_cols()] into the extraction
+  pipeline so a clinical indented stub can be built **after** a table is pulled
+  out of its source, on any input that carries the hierarchy as separate
+  columns (a plain `data.frame`, a `gt(df)`, a multi-group-column table, or a
+  tfrmt `row_grp_plan(location = "column")` table) -- no manual extract →
+  `stub_cols()` → re-feed round-trip. The named columns are merged into one
+  stub column at position 1; `drop_cols` / `group_col` / `sort_by` and the
+  `group_by = "indent"` group-aware splits then operate on the reshaped,
+  post-stub columns. Position-indexed metadata (`col_header` including spanning
+  headers, `col_spec`, `col_header_align`, per-cell `cell_styles`) is reindexed
+  automatically. `stub_vars = NULL` (default) is a no-op, so existing calls and
+  direct `stub_cols()` usage are unaffected.
+
 - **`print()` on an `rtftable` now renders a visual preview of the table**
   (#229) -- the laid-out cells with column (and spanning) headers, per-column
   alignment, and horizontal rules drawn where the table's border zones are

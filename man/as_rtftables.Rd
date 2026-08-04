@@ -24,6 +24,10 @@ as_rtftables(
   cell_format = NULL,
   collapse_repeats = NULL,
   drop_cols = NULL,
+  stub_vars = NULL,
+  stub_label = NULL,
+  stub_indent = 4L,
+  stub_group_summary = c("empty", "parent"),
   header_sep = .default_header_seps(),
   auto_width = FALSE,
   table_width_twips = NULL,
@@ -223,6 +227,31 @@ the pages are still named by it; but under `"group_safe"` / `"group_force"`
 the `" (Cont.)"` marker is written into the `group_col` cell, so if
 `group_col` is itself dropped the marker is not shown (group on the visible
 label column if the marker is wanted).}
+
+\item{stub_vars}{Hierarchy columns to merge into a single **indented stub**
+column (parent first, leaf last; at least two), or `NULL` (default, no
+stub built).  Applies [stub_cols()] to the **extracted body** -- after the
+table is pulled out of its source, before pagination -- so any input that
+carries the hierarchy as *separate columns* (a plain `data.frame`, a
+`gt(df)`, a multi-group-column table, or a tfrmt
+`row_grp_plan(location = "column")` table) gains a clinical stub.  The
+named columns are consumed and replaced by one stub column at position 1;
+the remaining columns keep their order, and `drop_cols` / `group_col` /
+`sort_by` (plus `group_by = "indent"` detection and the group-aware
+splits) then refer to the reshaped, **post-stub** columns.  Position-indexed
+metadata (`col_header` incl. spanning, `col_spec`, `col_header_align`,
+per-cell `cell_styles`) is reindexed automatically.  Sources that already
+render an indented stub (rtables / tern, tfrmt indented, gtsummary) come
+out pre-merged, so `stub_vars` does not apply to them.  Column widths from
+the source are **not** carried through the merge -- use `auto_width = TRUE`
+or pass explicit widths.}
+
+\item{stub_label, stub_indent, stub_group_summary}{Forwarded to [stub_cols()]
+when `stub_vars` is set: the merged stub column's name / header
+(`NULL` joins the merged columns' display names with `" / "`), the
+non-breaking spaces per nesting level (default `4`), and which leaf values
+fold a row onto its group label row (default `c("empty", "parent")`).
+Ignored when `stub_vars` is `NULL`.}
 
 \item{header_sep}{Separator(s) used to reconstruct a **spanning (multi-row)
 column header** from a plain **data.frame**'s column names.  A bare

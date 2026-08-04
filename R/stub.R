@@ -271,5 +271,9 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
   out <- cbind(data.frame(.stub. = stub, stringsAsFactors = FALSE), rest)
   names(out) <- c(label, names(data)[keep])
   rownames(out) <- NULL
+  # Per-output-row source index into `data` (NA for inserted label rows).  An
+  # inert attribute for existing callers; `as_rtftables(stub_vars = )` reads it
+  # to remap per-row `cell_styles` through the inserted rows.
+  attr(out, "rtf_stub_src") <- src
   out
 }
