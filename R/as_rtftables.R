@@ -463,7 +463,14 @@
 #'   named columns are consumed and replaced by one stub column at position 1;
 #'   the remaining columns keep their order, and `drop_cols` / `group_col` /
 #'   `sort_by` (plus `group_by = "indent"` detection and the group-aware
-#'   splits) then refer to the reshaped, **post-stub** columns.  Position-indexed
+#'   splits) then refer to the reshaped, **post-stub** columns.  **Exception:
+#'   with `split = "by_value"` the body is split by `group_col` *first* and the
+#'   stub is built per page afterwards** -- each value becomes an independent
+#'   section, so `group_col` here refers to the **pre-stub** columns and is not
+#'   folded into the stub.  This keeps a fixed intermediate hierarchy level
+#'   (e.g. `LBTOX_LBL / group1 / label` with a constant `group1`) from
+#'   collapsing into a single stub label row that spans every group; put the
+#'   inner levels in `stub_vars` and the outer level in `group_col`.  Position-indexed
 #'   metadata (`col_header` incl. spanning, `col_spec`, `col_header_align`,
 #'   per-cell `cell_styles`) is reindexed automatically.  Sources that already
 #'   render an indented stub (rtables / tern, tfrmt indented, gtsummary) come
@@ -701,113 +708,145 @@ as_rtftables <- function(x,
          paste(class(x), collapse = "/"), "'.", call. = FALSE)
   }
 
-  # ---- build the indented stub (stub_cols) on the extracted body --------
-  # When `stub_vars` is given, merge those hierarchy columns into one indented
-  # stub column NOW -- after extraction, before pagination -- so any source
-  # that exposes the hierarchy as separate columns (data.frame, plain gt,
-  # multi-group-column / tfrmt `location = "column"` tables) gains a clinical
-  # stub.  Everything downstream (`drop_cols`, `group_col`, `sort_by`,
-  # `group_by = "indent"`, the group-aware splits) then operates on the
-  # reshaped, post-stub columns.
-  if (!is.null(stub_vars)) {
-    st          <- .apply_stub_vars(body, kw, cell_styles, stub_vars,
-                                    stub_label, stub_indent, stub_group_summary)
-    body        <- st$body
-    kw          <- st$kw
-    cell_styles <- st$cell_styles
-  }
-
-  # ---- resolve hidden (drop) columns ------------------------------------
-  # Columns to remove from the printed pages AFTER pagination (so they can be
-  # used by group_col / collapse_repeats / blank_rows_by_change first, then
-  # hidden).  Resolved here, on the input body's coordinates, before the sidx
-  # helper column is appended below.
-  drop_idx <- .resolve_drop_cols(drop_cols, body)
-
-  # ---- sort body rows ---------------------------------------------------
-  # Order the body BEFORE pagination so group detection, (Cont.) labels and
-  # blank_rows positions all see the sorted order.  cell_styles (per original
-  # row) is reordered in lockstep so per-cell styling stays attached to its row.
-  ord <- .resolve_sort_order(sort_by, sort_desc, body)
-  if (!is.null(ord)) {
-    body <- body[ord, , drop = FALSE]
-    rownames(body) <- NULL
-    # Adapter-extracted cell_styles (per original row) follow the new order.
-    if (!is.null(cell_styles)) cell_styles <- cell_styles[ord]
-    # An explicitly supplied cell_styles (one per body row) likewise reorders so
-    # it stays attached to its row through the sort.
-    if (!is.null(user_args$cell_styles) &&
-        length(user_args$cell_styles) == length(ord)) {
-      user_args$cell_styles <- user_args$cell_styles[ord]
+  # Per-body page builder: build the stub, resolve drops, sort, auto-size,
+  # paginate, then assemble one rtftable per page.  Factored into a closure
+  # (capturing the resolved arguments) so it can run either ONCE on the whole
+  # body -- the usual path -- or PER GROUP for a `by_value` + `stub_vars` split,
+  # where the stub must be built after the split (see the branch below).
+  # `split_mode` defaults to the requested `split`; the per-group calls override
+  # it to "none" so each group's sub-body is not split again.
+  build_pages <- function(body, kw, cell_styles, split_mode = split) {
+    # ---- build the indented stub (stub_cols) on this body ---------------
+    # Merge the `stub_vars` hierarchy columns into one indented stub column
+    # BEFORE pagination, so any source that exposes the hierarchy as separate
+    # columns (data.frame, plain gt, multi-group-column / tfrmt
+    # `location = "column"` tables) gains a clinical stub.  Everything
+    # downstream (`drop_cols`, `group_col`, `sort_by`, `group_by = "indent"`,
+    # the group-aware splits) then operates on the reshaped, post-stub columns.
+    if (!is.null(stub_vars)) {
+      st          <- .apply_stub_vars(body, kw, cell_styles, stub_vars,
+                                      stub_label, stub_indent, stub_group_summary)
+      body        <- st$body
+      kw          <- st$kw
+      cell_styles <- st$cell_styles
     }
-  }
 
-  # ---- auto column widths -----------------------------------------------
-  # When requested, size each column to its widest content (header label or
-  # data cell) so that long row labels and column headers do not wrap.  The
-  # widths are computed once on the full body and applied to every page, so
-  # paginated pages stay aligned.  An explicit `column_widths_twips` /
-  # `col_rel_width` from the user always wins.
-  if (isTRUE(auto_width) &&
-      is.null(user_args$column_widths_twips) &&
-      is.null(user_args$col_rel_width)) {
-    flat_hdr <- .flatten_col_header_labels(kw$col_header, ncol(body))
-    tw <- table_width_twips
-    # With no explicit width, use the natural content widths but cap them at
-    # the default page's writable width -- so a table that is naturally too
-    # wide (e.g. a tfrmt demographics table) is scaled down to fit the page,
-    # while narrower tables keep their natural widths.
-    if (is.null(tw)) {
-      nat <- tryCatch(auto_col_widths(body, col_header = flat_hdr),
-                      error = function(e) NULL)
-      if (!is.null(nat) && sum(nat) > .default_writable_twips()) {
-        tw <- .default_writable_twips()
+    # ---- resolve hidden (drop) columns ----------------------------------
+    # Columns to remove from the printed pages AFTER pagination (so they can be
+    # used by group_col / collapse_repeats / blank_rows_by_change first, then
+    # hidden).  Resolved on this body's coordinates, before the sidx helper
+    # column is appended below.
+    drop_idx <- .resolve_drop_cols(drop_cols, body)
+
+    # ---- sort body rows -------------------------------------------------
+    # Order the body BEFORE pagination so group detection, (Cont.) labels and
+    # blank_rows positions all see the sorted order.  cell_styles (per original
+    # row) is reordered in lockstep so per-cell styling stays with its row.
+    ord <- .resolve_sort_order(sort_by, sort_desc, body)
+    if (!is.null(ord)) {
+      body <- body[ord, , drop = FALSE]
+      rownames(body) <- NULL
+      if (!is.null(cell_styles)) cell_styles <- cell_styles[ord]
+      if (!is.null(user_args$cell_styles) &&
+          length(user_args$cell_styles) == length(ord)) {
+        user_args$cell_styles <- user_args$cell_styles[ord]
       }
     }
-    aw <- tryCatch(
-      auto_col_widths(body, col_header = flat_hdr,
-                      table_width_twips = tw, protect_cols = 1L),
-      error = function(e) NULL)
-    if (!is.null(aw)) user_args$column_widths_twips <- aw
-  }
 
-  # ---- paginate (tracking original rows so per-cell styles can be sliced)
-  have_styles <- !is.null(cell_styles)
-  sidx_col    <- ".__rtf_sidx__"
-  if (have_styles) body[[sidx_col]] <- seq_len(nrow(body))
-
-  pages <- .paginate_df(
-    body, max_rows = max_rows, split = split, split_rows = split_rows,
-    group_col = group_col, group_by = group_by, cont_label = cont_label,
-    min_group_rows = min_group_rows, blank_rows = blank_rows,
-    blank_row_first = blank_row_first, blank_row_end = blank_row_end,
-    count_blank_rows = count_blank_rows,
-    align_count_pct = align_count_pct, cell_format = cell_format,
-    collapse_repeats = collapse_repeats)
-  page_names <- names(pages)
-
-  out <- lapply(seq_along(pages), function(i) {
-    pg         <- pages[[i]]
-    blank_attr <- attr(pg, "rtf_blank_rows", exact = TRUE)
-
-    cs_slice <- NULL
-    if (have_styles) {
-      oidx <- pg[[sidx_col]]
-      pg[[sidx_col]] <- NULL
-      cs_slice <- lapply(oidx, function(r) {
-        if (is.na(r)) NULL else cell_styles[[as.integer(r)]]
-      })
-      if (all(vapply(cs_slice, is.null, logical(1L)))) cs_slice <- NULL
+    # ---- auto column widths ---------------------------------------------
+    # Size each column to its widest content (header label or data cell) so
+    # long row labels / headers do not wrap.  Widths are computed on this body
+    # and applied to every page it yields.  An explicit width always wins.
+    if (isTRUE(auto_width) &&
+        is.null(user_args$column_widths_twips) &&
+        is.null(user_args$col_rel_width)) {
+      flat_hdr <- .flatten_col_header_labels(kw$col_header, ncol(body))
+      tw <- table_width_twips
+      if (is.null(tw)) {
+        nat <- tryCatch(auto_col_widths(body, col_header = flat_hdr),
+                        error = function(e) NULL)
+        if (!is.null(nat) && sum(nat) > .default_writable_twips()) {
+          tw <- .default_writable_twips()
+        }
+      }
+      aw <- tryCatch(
+        auto_col_widths(body, col_header = flat_hdr,
+                        table_width_twips = tw, protect_cols = 1L),
+        error = function(e) NULL)
+      if (!is.null(aw)) user_args$column_widths_twips <- aw
     }
 
-    rt <- .assemble_page_rtftable(pg, kw, cs_slice, user_args,
-                                   border, style, blank_attr, drop_idx)
-    if (!is.null(titles_block))    attr(rt, "rtf_titles")    <- titles_block
-    if (!is.null(footnotes_block)) attr(rt, "rtf_footnotes") <- footnotes_block
-    rt
-  })
-  if (!is.null(page_names)) names(out) <- page_names
-  out
+    # ---- paginate (tracking original rows so per-cell styles can be sliced)
+    have_styles <- !is.null(cell_styles)
+    sidx_col    <- ".__rtf_sidx__"
+    if (have_styles) body[[sidx_col]] <- seq_len(nrow(body))
+
+    pages <- .paginate_df(
+      body, max_rows = max_rows, split = split_mode, split_rows = split_rows,
+      group_col = group_col, group_by = group_by, cont_label = cont_label,
+      min_group_rows = min_group_rows, blank_rows = blank_rows,
+      blank_row_first = blank_row_first, blank_row_end = blank_row_end,
+      count_blank_rows = count_blank_rows,
+      align_count_pct = align_count_pct, cell_format = cell_format,
+      collapse_repeats = collapse_repeats)
+    page_names <- names(pages)
+
+    out <- lapply(seq_along(pages), function(i) {
+      pg         <- pages[[i]]
+      blank_attr <- attr(pg, "rtf_blank_rows", exact = TRUE)
+
+      cs_slice <- NULL
+      if (have_styles) {
+        oidx <- pg[[sidx_col]]
+        pg[[sidx_col]] <- NULL
+        cs_slice <- lapply(oidx, function(r) {
+          if (is.na(r)) NULL else cell_styles[[as.integer(r)]]
+        })
+        if (all(vapply(cs_slice, is.null, logical(1L)))) cs_slice <- NULL
+      }
+
+      rt <- .assemble_page_rtftable(pg, kw, cs_slice, user_args,
+                                     border, style, blank_attr, drop_idx)
+      if (!is.null(titles_block))    attr(rt, "rtf_titles")    <- titles_block
+      if (!is.null(footnotes_block)) attr(rt, "rtf_footnotes") <- footnotes_block
+      rt
+    })
+    if (!is.null(page_names)) names(out) <- page_names
+    out
+  }
+
+  # ---- by_value + stub_vars: split first, build the stub per page --------
+  # A `by_value` split makes each group its own independent section, so the
+  # indented stub must be built AFTER the split -- once per page.  Otherwise a
+  # constant intermediate hierarchy level (e.g. LBTOX_LBL / group1 / label with
+  # a fixed group1) collapses into a single stub label row that spans every
+  # group and cannot be divided, and the outer value grouping fragments to one
+  # page per row.  So here we split the raw body by the `group_col` value first,
+  # then run build_pages(split = "none") on each group.  For every OTHER split
+  # the table stays one logical table paginated across pages, so the stub is
+  # built once on the full body (the plain build_pages() call below).
+  if (!is.function(split) && identical(split, "by_value") &&
+      !is.null(stub_vars)) {
+    gidx <- if (is.null(group_col)) 1L
+            else .resolve_col_indices(list(group_col), body, "group_col")
+    gval <- as.character(body[[gidx]])
+    gval[is.na(gval)] <- ""
+    lv   <- unique(gval)                    # one section per value, in order
+    out  <- list()
+    for (k in seq_along(lv)) {
+      rows     <- which(gval == lv[k])
+      sub_body <- body[rows, , drop = FALSE]
+      rownames(sub_body) <- NULL
+      sub_cs   <- if (!is.null(cell_styles)) cell_styles[rows] else NULL
+      pgs      <- build_pages(sub_body, kw, sub_cs, split_mode = "none")
+      nm       <- if (nzchar(lv[k])) lv[k] else paste0("group_", k)
+      names(pgs) <- rep(nm, length(pgs))    # split_mode "none" => one page
+      out <- c(out, pgs)
+    }
+    return(out)
+  }
+
+  build_pages(body, kw, cell_styles)
 }
 
 
