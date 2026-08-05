@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **New article: "A tfrmt table with several stub columns: one for sections,
+  the rest as a stub"** (#246) -- a runnable recipe for a tfrmt
+  `location = "column"` table whose three stub columns are split one way for
+  `auto_section` sections (lab test code) and merged the other way into a
+  two-level indented stub (a fixed heading + Toxicity Grade).
+
 ### Bug fixes
 
 - **`as_rtftables(split = "by_value", stub_vars = )` now splits by `group_col`

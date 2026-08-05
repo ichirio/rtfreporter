@@ -119,6 +119,8 @@ navbar:
           href: articles/headers-footers.html
         - text: "Splitting a report into sections"
           href: articles/section-splitting.html
+        - text: "Multi-stub tfrmt: sections + merged stub"
+          href: articles/multistub-section-split.html
         - text: "Rendering, post-processing & assembly"
           href: articles/output.html
         # ── Worked clinical examples ────────────────────────────────────
@@ -382,6 +384,7 @@ articles:
       - articles/pagination
       - articles/headers-footers
       - articles/section-splitting
+      - articles/multistub-section-split
       - articles/output
 
   - title: Worked clinical examples
