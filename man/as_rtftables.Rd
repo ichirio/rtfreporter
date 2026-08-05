@@ -238,7 +238,14 @@ carries the hierarchy as *separate columns* (a plain `data.frame`, a
 named columns are consumed and replaced by one stub column at position 1;
 the remaining columns keep their order, and `drop_cols` / `group_col` /
 `sort_by` (plus `group_by = "indent"` detection and the group-aware
-splits) then refer to the reshaped, **post-stub** columns.  Position-indexed
+splits) then refer to the reshaped, **post-stub** columns.  **Exception:
+with `split = "by_value"` the body is split by `group_col` *first* and the
+stub is built per page afterwards** -- each value becomes an independent
+section, so `group_col` here refers to the **pre-stub** columns and is not
+folded into the stub.  This keeps a fixed intermediate hierarchy level
+(e.g. `LBTOX_LBL / group1 / label` with a constant `group1`) from
+collapsing into a single stub label row that spans every group; put the
+inner levels in `stub_vars` and the outer level in `group_col`.  Position-indexed
 metadata (`col_header` incl. spanning, `col_spec`, `col_header_align`,
 per-cell `cell_styles`) is reindexed automatically.  Sources that already
 render an indented stub (rtables / tern, tfrmt indented, gtsummary) come

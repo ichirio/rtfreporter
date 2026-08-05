@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+### Bug fixes
+
+- **`as_rtftables(split = "by_value", stub_vars = )` now splits by `group_col`
+  *before* building the stub** (#244) -- for a `by_value` split each group is an
+  independent section, so the indented stub is now built per page after the
+  split. Previously the stub was built once on the whole body, which (a)
+  fragmented the split to one page per row and produced nameless `group_0` pages
+  when the outer `group_col` was blanked on the inserted label rows, and (b)
+  collapsed a constant intermediate hierarchy level (e.g. `LBTOX_LBL / group1 /
+  label` with a fixed `group1`) into a single stub label row that spanned every
+  group. Put the inner hierarchy in `stub_vars` and the outer level in
+  `group_col`. Every other split keeps the previous stub-then-paginate order.
+
 ### New features
 
 - **`as_rtftables()` gains `stub_vars` (plus `stub_label` / `stub_indent` /

@@ -82,3 +82,89 @@ test_that("stub_vars composes with a group-aware split and renders", {
 test_that("stub_vars needs at least two columns", {
   expect_error(as_rtftables(ae, stub_vars = "SOC"), "two columns")
 })
+
+test_that("by_value + stub_vars works from a gt input and renders (#244)", {
+  skip_if_not_installed("gt")
+  df <- data.frame(
+    grade  = c("Grade 1", "Grade 1", "Grade 2", "Grade 2"),
+    group1 = c("Chemistry", "Chemistry", "Chemistry", "Chemistry"),
+    label  = c("ALT", "AST", "ALT", "AST"),
+    Active = c("3", "2", "1", "4"),
+    stringsAsFactors = FALSE
+  )
+  g <- gt::gt(df)
+  pages <- as_rtftables(g, read_meta = TRUE, stub_vars = c("group1", "label"),
+                        stub_label = "Parameter", split = "by_value",
+                        group_col = "grade", drop_cols = "grade")
+
+  expect_identical(names(pages), c("Grade 1", "Grade 2"))
+  expect_true(all(vapply(pages, inherits, logical(1L), "rtftable")))
+  expect_identical(names(pages[[1L]]$data), c("Parameter", "Active"))
+
+  doc <- rtf_document() |>
+    rtf_section(secinfo = list(header = NULL)) |>
+    rtf_tables(pages, auto_section = TRUE)
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  expect_no_error(generate_rtfreport(doc, f, overwrite = TRUE))
+  expect_true(file.exists(f))
+})
+
+test_that("by_value + stub_vars splits by group_col first, then stubs each page (#244)", {
+  # Outer grouping column (grade) + inner hierarchy (SOC/PT) folded into a stub.
+  # Previously the stub was built once on the whole body, blanking `grade` on
+  # the inserted SOC label rows -> one page per row + nameless "group_0".
+  df <- data.frame(
+    grade = c("Grade 1", "Grade 1", "Grade 1", "Grade 2", "Grade 2"),
+    SOC   = c("Cardiac", "Cardiac", "GI", "Cardiac", "GI"),
+    PT    = c("Arrhythmia", "Tachycardia", "Nausea", "Arrhythmia", "Nausea"),
+    N     = c("3", "2", "5", "1", "4"),
+    stringsAsFactors = FALSE
+  )
+  pages <- as_rtftables(df, stub_vars = c("SOC", "PT"), stub_label = "SOC / PT",
+                        split = "by_value", group_col = "grade",
+                        drop_cols = "grade")
+
+  # one page per grade value, named by it -- NOT one page per row, no group_0
+  expect_identical(names(pages), c("Grade 1", "Grade 2"))
+  expect_false(any(grepl("^group_", names(pages))))
+  # grade dropped from the printed body; stub + stat remain
+  expect_identical(names(pages[[1L]]$data), c("SOC / PT", "N"))
+  # page 1 = Grade 1: 3 leaves + 2 SOC labels; page 2 = Grade 2: 2 leaves + 2
+  expect_identical(nrow(pages[[1L]]$data), 5L)
+  expect_identical(nrow(pages[[2L]]$data), 4L)
+  # each page's stub was built independently: a leaf is indented, a SOC label is
+  # flush left
+  nbsp <- intToUtf8(160L)
+  expect_false(startsWith(pages[[1L]]$data[[1L]][1L], nbsp))
+  expect_true(startsWith(pages[[1L]]$data[[1L]][2L], strrep(nbsp, 4L)))
+})
+
+test_that("by_value + stub_vars handles a constant intermediate hierarchy level (#244)", {
+  # The reported case: LBTOX_LBL / group1 / label where group1 is a fixed value
+  # shared by every row.  Building the stub before the split would collapse
+  # group1 into a single label row spanning both grades; splitting first gives
+  # each grade its own group1 header.
+  df <- data.frame(
+    grade  = c("Grade 1", "Grade 1", "Grade 2", "Grade 2"),
+    group1 = c("Chemistry", "Chemistry", "Chemistry", "Chemistry"),
+    label  = c("ALT", "AST", "ALT", "AST"),
+    N      = c("3", "2", "1", "4"),
+    stringsAsFactors = FALSE
+  )
+  pages <- as_rtftables(df, stub_vars = c("group1", "label"),
+                        stub_label = "Parameter",
+                        split = "by_value", group_col = "grade",
+                        drop_cols = "grade")
+
+  expect_identical(names(pages), c("Grade 1", "Grade 2"))
+  nbsp <- intToUtf8(160L)
+  # every page repeats the group1 header (flush left) then its two indented labels
+  for (pg in pages) {
+    expect_identical(nrow(pg$data), 3L)                 # 1 group1 label + 2 leaves
+    expect_identical(gsub(nbsp, "", pg$data[[1L]], fixed = TRUE),
+                     c("Chemistry", "ALT", "AST"))
+    expect_false(startsWith(pg$data[[1L]][1L], nbsp))   # group1 header flush left
+    expect_true(startsWith(pg$data[[1L]][2L], nbsp))    # leaves indented
+  }
+})
