@@ -1,5 +1,22 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`col_header` label rows can be placed by column name** (#248) -- a *named*
+  character vector such as
+  `c(row_label = "  Category", g1 = "G1", g2 = "G2", g3 = "G3", t = "Total")`
+  is now resolved against the data columns by name instead of by position, so a
+  header no longer lands on the wrong columns when the data column order differs
+  from what the author assumed. A named element targets that column (unknown or
+  duplicate name is an error); an unnamed element is matched as a column name if
+  one exists, otherwise placed positionally; two elements resolving to the same
+  column is an error. A fully-unnamed vector keeps the exact legacy positional
+  behaviour.
+- **`col_cell()` spanning cells can address columns by name** (#248) -- `pos`
+  now also accepts column-name string(s), e.g. `col_cell(c("g1", "g3"), "Drug")`
+  or `col_cell("total", "Total")`, resolved against the data columns (unknown
+  name is an error). Numeric `pos` is unchanged.
+
 ### Documentation
 
 - **New article: "A tfrmt table with several stub columns: one for sections,

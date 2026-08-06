@@ -52,9 +52,20 @@
 #' cell that spans several data columns.  Positions are always relative to
 #' the underlying data columns, not to the previous header row.
 #'
-#' @param pos Numeric of length 1 (single column) or length 2
-#'   (`c(start, end)`, inclusive).  `start <= end` required; values must
-#'   be `>= 1`.
+#' `pos` may instead be **column name(s)** (character), resolved against the
+#' data columns when the header is attached to a table.  This makes a
+#' spanning cell robust to column reordering and errors out on an unknown
+#' name -- for example `col_cell(c("g1", "g3"), "Drug A")` spans from the
+#' column named `g1` to the one named `g3`, and `col_cell("total", "Total")`
+#' targets a single named column.
+#'
+#' @param pos Cell position, one of:
+#'   * a numeric of length 1 (single column) or length 2 (`c(start, end)`,
+#'     inclusive) -- `start <= end` required, values `>= 1`; or
+#'   * a character of length 1 (single column name) or length 2
+#'     (`c(start_name, end_name)`) referring to data columns by name.
+#'   Name resolution (and the `start <= end` check for named ranges) happens
+#'   when the header is attached to a table.
 #' @param label Character scalar.  Cell text; may be `""`.
 #' @param align Optional `"left"`, `"center"`, or `"right"`.  `NULL`
 #'   (default) inherits the leftmost covered column's `header_align`.
@@ -81,13 +92,25 @@
 col_cell <- function(pos, label = "", align = NULL,
                      bold = FALSE, italic = FALSE, underline = FALSE,
                      border = NULL) {
-  if (!is.numeric(pos) || !length(pos) %in% c(1L, 2L) || any(is.na(pos))) {
-    stop("`pos` must be a numeric of length 1 or 2.", call. = FALSE)
+  if (!length(pos) %in% c(1L, 2L) || any(is.na(pos))) {
+    stop("`pos` must be a numeric or character of length 1 or 2.",
+         call. = FALSE)
   }
-  pos <- as.integer(pos)
-  if (any(pos < 1L)) stop("`pos` values must be >= 1.", call. = FALSE)
-  if (length(pos) == 2L && pos[1L] > pos[2L]) {
-    stop("`pos` start must be <= end.", call. = FALSE)
+  if (is.character(pos)) {
+    # Column-name reference; resolved to positions when the header is
+    # attached to a table (see `.pos_row_to_spans()`).
+    if (!all(nzchar(pos))) {
+      stop("`pos` column names must be non-empty strings.", call. = FALSE)
+    }
+  } else if (is.numeric(pos)) {
+    pos <- as.integer(pos)
+    if (any(pos < 1L)) stop("`pos` values must be >= 1.", call. = FALSE)
+    if (length(pos) == 2L && pos[1L] > pos[2L]) {
+      stop("`pos` start must be <= end.", call. = FALSE)
+    }
+  } else {
+    stop("`pos` must be a numeric or character of length 1 or 2.",
+         call. = FALSE)
   }
   if (!is.null(align) && !align %in% c("left", "center", "right")) {
     stop("`align` must be NULL, \"left\", \"center\", or \"right\".",
@@ -110,8 +133,9 @@ col_cell <- function(pos, label = "", align = NULL,
 
 #' @export
 print.rtf_col_cell <- function(x, ...) {
-  pos_str <- if (length(x$pos) == 1L) sprintf("%d", x$pos)
-             else sprintf("%d..%d", x$pos[1L], x$pos[2L])
+  fmt <- if (is.character(x$pos)) "%s" else "%d"
+  pos_str <- if (length(x$pos) == 1L) sprintf(fmt, x$pos)
+             else sprintf(paste0(fmt, "..", fmt), x$pos[1L], x$pos[2L])
   deco <- c(if (isTRUE(x$bold)) "b", if (isTRUE(x$italic)) "i",
              if (isTRUE(x$underline)) "u")
   align <- if (!is.null(x$align)) sprintf(", align=%s", x$align) else ""
@@ -166,10 +190,12 @@ print.rtf_col_header <- function(x, ...) {
     } else if (is.list(row)) {
       cells <- vapply(row, function(c) {
         pos <- c$pos %||% c(c$from %||% NA, c$to %||% NA)
+        fmt <- if (is.character(pos)) "%s" else "%d"
         if (length(pos) == 1L || (length(pos) == 2L && pos[1L] == pos[2L])) {
-          sprintf("%s@%d", c$label %||% "", pos[1L])
+          sprintf(paste0("%s@", fmt), c$label %||% "", pos[1L])
         } else {
-          sprintf("%s@%d-%d", c$label %||% "", pos[1L], pos[2L])
+          sprintf(paste0("%s@", fmt, "-", fmt),
+                  c$label %||% "", pos[1L], pos[2L])
         }
       }, character(1L))
       cat(sprintf("  [%d] cells: %s\n", i,
@@ -223,17 +249,47 @@ add_col_header_row <- function(hdr, row,
   is.list(x) && length(x) > 0L && (!is.null(x$pos) || !is.null(x$from))
 }
 
+# Resolve a single cell `pos` (numeric or character column name(s)) to an
+# integer vector of length 1 or 2.  `col_names` is required only when `pos`
+# is character.
+.resolve_cell_pos <- function(pos, col_names) {
+  if (is.null(pos)) stop("Cell spec missing `pos` field.", call. = FALSE)
+  if (!is.character(pos)) return(as.integer(pos))
+  if (is.null(col_names)) {
+    stop("Column-name `pos` in col_cell() requires the header to be ",
+         "attached to a table (data column names are unknown here).",
+         call. = FALSE)
+  }
+  vapply(pos, function(nm) {
+    j <- which(col_names == nm)
+    if (length(j) == 0L) {
+      stop(sprintf("`pos` column name \"%s\" not found in data columns.", nm),
+           call. = FALSE)
+    }
+    if (length(j) > 1L) {
+      stop(sprintf("`pos` column name \"%s\" is ambiguous (matches %d columns).",
+                   nm, length(j)), call. = FALSE)
+    }
+    as.integer(j)
+  }, integer(1L), USE.NAMES = FALSE)
+}
+
 # Convert a pos-style row into the (from, to)-spanning representation the
 # renderer expects.  Cells are sorted by start position; gaps in coverage
 # are filled with empty cells so every data column is covered exactly once.
-.pos_row_to_spans <- function(row, ncol_df) {
+# `col_names` is used to resolve any column-name `pos` in the cells.
+.pos_row_to_spans <- function(row, ncol_df, col_names = NULL) {
   if (length(row) == 0L) return(list())
 
+  # Resolve any column-name positions to integers up front, so downstream
+  # sorting / range logic is purely numeric.
+  row <- lapply(row, function(c) {
+    c$pos <- .resolve_cell_pos(c$pos, col_names)
+    c
+  })
+
   # Sort cells by start position.
-  starts <- vapply(row, function(c) {
-    if (is.null(c$pos)) stop("Cell spec missing `pos` field.", call. = FALSE)
-    as.integer(c$pos[1L])
-  }, integer(1L))
+  starts <- vapply(row, function(c) as.integer(c$pos[1L]), integer(1L))
   row <- row[order(starts)]
 
   result   <- list()
@@ -275,4 +331,82 @@ add_col_header_row <- function(hdr, row,
     result <- c(result, list(list(from = next_col, to = ncol_df, label = "")))
   }
   result
+}
+
+# Resolve a character label row into a full-length, position-indexed label
+# vector using the data column names.
+#
+# The name-aware path is engaged *only* when at least one element carries a
+# name; a fully-unnamed vector is returned unchanged (legacy positional
+# behaviour).  Per-element resolution:
+#
+#   * named element (`g1 = "G1"`)   -> place on the column named `g1`;
+#                                       unknown / duplicate name is an error.
+#   * unnamed element (`"Total"`)   -> if the value is itself a column name,
+#                                       place there (label == column name);
+#                                       otherwise place positionally at this
+#                                       element's index.
+#
+# Two elements resolving to the same column is a conflict (error).  Columns
+# never targeted keep their own name as the label.
+.resolve_named_label_row <- function(row, col_names) {
+  nms <- names(row)
+  # No names at all -> legacy positional row, untouched.
+  if (is.null(nms) || !any(nzchar(nms))) return(row)
+
+  if (is.null(col_names)) {
+    stop("A named col_header label row needs data column names, which are ",
+         "unknown here (attach the header to a table instead).",
+         call. = FALSE)
+  }
+  n <- length(col_names)
+  out     <- as.character(col_names)   # default: label = column name
+  claimed <- rep(NA_character_, n)     # records how each column was claimed
+
+  claim <- function(j, label, src) {
+    if (!is.na(claimed[j])) {
+      stop(sprintf(
+        "col_header: column %d (\"%s\") is targeted twice -- %s and %s.",
+        j, col_names[j], claimed[j], src), call. = FALSE)
+    }
+    out[j]     <<- label
+    claimed[j] <<- src
+  }
+
+  for (i in seq_along(row)) {
+    nm  <- nms[i]
+    val <- as.character(row[[i]])
+    if (nzchar(nm)) {
+      # Named element: target the column named `nm`.
+      j <- which(col_names == nm)
+      if (length(j) == 0L) {
+        stop(sprintf("col_header: unknown column name \"%s\".", nm),
+             call. = FALSE)
+      }
+      if (length(j) > 1L) {
+        stop(sprintf("col_header: column name \"%s\" is ambiguous (matches %d columns).",
+                     nm, length(j)), call. = FALSE)
+      }
+      claim(j, val, sprintf("name \"%s\"", nm))
+    } else {
+      # Unnamed element: try the value as a column name, else positional.
+      j <- which(col_names == val)
+      if (length(j) == 1L) {
+        claim(j, val, sprintf("value \"%s\" (matched as a column name)", val))
+      } else if (length(j) > 1L) {
+        stop(sprintf("col_header: value \"%s\" matches %d columns; name it explicitly.",
+                     val, length(j)), call. = FALSE)
+      } else {
+        if (i > n) {
+          stop(sprintf(
+            paste0("col_header: label #%d (\"%s\") has no matching column ",
+                   "name and its position (%d) exceeds the number of data ",
+                   "columns (%d)."),
+            i, val, i, n), call. = FALSE)
+        }
+        claim(i, val, sprintf("position %d", i))
+      }
+    }
+  }
+  out
 }
