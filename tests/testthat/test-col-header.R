@@ -19,10 +19,18 @@ test_that("col_cell() handles pos = c(start, end) spans", {
 })
 
 test_that("col_cell() rejects malformed pos", {
-  expect_error(col_cell("a"),       "must be a numeric")
-  expect_error(col_cell(0),         "values must be >= 1")
-  expect_error(col_cell(c(3, 2)),   "start must be <= end")
-  expect_error(col_cell(c(1, 2, 3)), "must be a numeric")
+  expect_error(col_cell(0),          "values must be >= 1")
+  expect_error(col_cell(c(3, 2)),    "start must be <= end")
+  expect_error(col_cell(c(1, 2, 3)), "length 1 or 2")
+  expect_error(col_cell(c("a", "b", "c")), "length 1 or 2")
+  expect_error(col_cell(""),         "non-empty")
+})
+
+test_that("col_cell() accepts column-name pos (resolved later)", {
+  c1 <- col_cell("g1", "G1")
+  expect_identical(c1$pos, "g1")
+  c2 <- col_cell(c("g1", "g3"), "Drug A")
+  expect_identical(c2$pos, c("g1", "g3"))
 })
 
 test_that("col_cell() rejects malformed align", {
@@ -253,6 +261,119 @@ test_that("print.rtf_col_header reports single-row in singular form", {
   hd <- rtf_col_header(c("A", "B"))
   txt <- paste(capture.output(print(hd)), collapse = "\n")
   expect_match(txt, "1 row>")
+})
+
+# ──────── Named label rows (name-aware placement) ─────────────────────────
+
+test_that("named col_header vector places labels by column name", {
+  df <- data.frame(row_label = "x", g1 = 1L, g2 = 2L, g3 = 3L, t = 4L,
+                   stringsAsFactors = FALSE)
+  tbl <- rtftable(df, col_header = c(row_label = "  Category",
+                                     g1 = "G1", g2 = "G2", g3 = "G3",
+                                     t = "Total"))
+  expect_identical(tbl$col_header[[1L]],
+                   c("  Category", "G1", "G2", "G3", "Total"))
+})
+
+test_that("named col_header is order-independent (safety against reordering)", {
+  df <- data.frame(t = 4L, g3 = 3L, g1 = 1L, row_label = "x", g2 = 2L,
+                   stringsAsFactors = FALSE)
+  # Same spec as above, but data columns are shuffled: labels must follow
+  # the names, not the writing order.
+  tbl <- rtftable(df, col_header = c(row_label = "  Category",
+                                     g1 = "G1", g2 = "G2", g3 = "G3",
+                                     t = "Total"))
+  # Column order is t, g3, g1, row_label, g2
+  expect_identical(tbl$col_header[[1L]],
+                   c("Total", "G3", "G1", "  Category", "G2"))
+})
+
+test_that("named col_header errors on an unknown column name", {
+  df <- data.frame(a = 1, b = 2, stringsAsFactors = FALSE)
+  expect_error(
+    rtftable(df, col_header = c(a = "A", zzz = "B")),
+    "unknown column name \"zzz\""
+  )
+})
+
+test_that("mixed named/unnamed col_header: unnamed value matched as a col name", {
+  df <- data.frame(row_label = "x", g1 = 1L, g2 = 2L,
+                   stringsAsFactors = FALSE)
+  # "g2" (unnamed) is matched as a column name; "  Cat" (unnamed, pos 1) is
+  # positional; g1 is by name.
+  tbl <- rtftable(df, col_header = c("  Cat", g1 = "G1", "g2"))
+  expect_identical(tbl$col_header[[1L]], c("  Cat", "G1", "g2"))
+})
+
+test_that("mixed named/unnamed col_header: unnamed non-name label is positional", {
+  df <- data.frame(row_label = "x", g1 = 1L, t = 2L,
+                   stringsAsFactors = FALSE)
+  tbl <- rtftable(df, col_header = c("  Category", g1 = "G1", "Total"))
+  expect_identical(tbl$col_header[[1L]], c("  Category", "G1", "Total"))
+})
+
+test_that("named col_header errors on a conflict (two elements, one column)", {
+  df <- data.frame(g1 = 1L, row_label = "x", g2 = 2L,
+                   stringsAsFactors = FALSE)
+  # Element 1 (unnamed "  Category") is positional -> column 1 (g1);
+  # element `g1 = "G1"` also targets column 1 -> conflict.
+  expect_error(
+    rtftable(df, col_header = c("  Category", g1 = "G1", g2 = "G2")),
+    "targeted twice"
+  )
+})
+
+test_that("unnamed columns default to their own name", {
+  df <- data.frame(row_label = "x", g1 = 1L, g2 = 2L,
+                   stringsAsFactors = FALSE)
+  # Only g1 named; row_label and g2 fall back to their column names.
+  tbl <- rtftable(df, col_header = c(g1 = "Treatment"))
+  expect_identical(tbl$col_header[[1L]], c("row_label", "Treatment", "g2"))
+})
+
+test_that("fully-unnamed character col_header is unchanged (legacy positional)", {
+  df <- data.frame(g1 = 1L, g2 = 2L, g3 = 3L, stringsAsFactors = FALSE)
+  # A label that happens to equal a column name must NOT be re-placed when
+  # no element is named.
+  tbl <- rtftable(df, col_header = c("g3", "g1", "g2"))
+  expect_identical(tbl$col_header[[1L]], c("g3", "g1", "g2"))
+})
+
+# ──────── col_cell() spanning by column name ──────────────────────────────
+
+test_that("col_cell() spanning by name resolves against data columns", {
+  df <- data.frame(item = "x", g1 = 1L, g2 = 2L, g3 = 3L, total = 4L,
+                   stringsAsFactors = FALSE)
+  tbl <- rtftable(df, col_header = rtf_col_header(
+    list(col_cell("item", ""), col_cell(c("g1", "g3"), "Drug"),
+         col_cell("total", "Total")),
+    c(item = "Item", g1 = "N", g2 = "Mean", g3 = "SD", total = "Total")
+  ))
+  spans <- tbl$col_header[[1L]]
+  # item(1,1), Drug(2,4), Total(5,5)
+  expect_identical(spans[[1L]]$from, 1L); expect_identical(spans[[1L]]$to, 1L)
+  expect_identical(spans[[2L]]$from, 2L); expect_identical(spans[[2L]]$to, 4L)
+  expect_identical(spans[[2L]]$label, "Drug")
+  expect_identical(spans[[3L]]$from, 5L); expect_identical(spans[[3L]]$to, 5L)
+})
+
+test_that("col_cell() spanning by name errors on an unknown name", {
+  df <- data.frame(item = "x", g1 = 1L, g2 = 2L, stringsAsFactors = FALSE)
+  expect_error(
+    rtftable(df, col_header = rtf_col_header(
+      list(col_cell("item", ""), col_cell(c("g1", "zzz"), "Drug")))),
+    "not found in data columns"
+  )
+})
+
+test_that(".pos_row_to_spans resolves character pos with col_names", {
+  out <- rtfreporter:::.pos_row_to_spans(
+    list(col_cell(c("b", "c"), "BC")), ncol_df = 4L,
+    col_names = c("a", "b", "c", "d"))
+  # gap a(1,1), BC(2,3), tail d(4,4)
+  expect_identical(out[[2L]]$from, 2L)
+  expect_identical(out[[2L]]$to,   3L)
+  expect_identical(out[[2L]]$label, "BC")
 })
 
 # ──────── .pos_row_to_spans error branches ────────────────────────────────

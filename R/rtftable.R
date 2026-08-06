@@ -215,7 +215,10 @@
 #
 # `ncol_df` is required when any row uses the new pos-style cell spec
 # (it is needed to validate ranges and to fill gaps with empty cells).
-.normalize_col_header_rows <- function(col_header, ncol_df = NULL) {
+# `col_names` (the data column names) enables the name-aware resolution of
+# named label rows and of column-name `pos` in col_cell() cells.
+.normalize_col_header_rows <- function(col_header, ncol_df = NULL,
+                                       col_names = NULL) {
   if (is.null(col_header)) return(NULL)
 
   # rtf_col_header object -> list of rows (still tagged by class for outer
@@ -230,7 +233,7 @@
     col_header <- trimws(strsplit(col_header, "|", fixed = TRUE)[[1L]])
   }
   if (is.character(col_header)) {
-    return(list(col_header))
+    return(list(.resolve_named_label_row(col_header, col_names)))
   }
   if (!is.list(col_header)) {
     stop("`col_header` must be NULL, character, or a list.", call. = FALSE)
@@ -244,7 +247,7 @@
   }
 
   lapply(col_header, function(row) {
-    if (is.character(row)) return(row)
+    if (is.character(row)) return(.resolve_named_label_row(row, col_names))
     if (!is.list(row) || length(row) == 0L) {
       stop("Each col_header row must be a character vector or a non-empty ",
            "list of cell specs.", call. = FALSE)
@@ -255,7 +258,7 @@
           stop("Internal: ncol_df required to normalize pos-style rows.",
                call. = FALSE)
         }
-        return(.pos_row_to_spans(row, ncol_df))
+        return(.pos_row_to_spans(row, ncol_df, col_names))
       }
       if (!is.null(row[[1L]]$from)) {
         return(row)   # legacy spanning row, leave as-is
@@ -284,18 +287,19 @@
 # Returns a list of length n_dfs, each element is a normalized col_header
 # (NULL or a list whose elements are label rows / spanning rows).
 # `ncol_df` is required when any row uses pos-style cells.
-.normalize_multi_col_header <- function(col_header, n_dfs, ncol_df = NULL) {
+.normalize_multi_col_header <- function(col_header, n_dfs, ncol_df = NULL,
+                                        col_names = NULL) {
   if (is.null(col_header)) return(rep(list(NULL), n_dfs))
 
   # rtf_col_header instance is treated as a shared header for all DFs.
   if (inherits(col_header, "rtf_col_header")) {
-    h <- .normalize_col_header_rows(col_header, ncol_df)
+    h <- .normalize_col_header_rows(col_header, ncol_df, col_names)
     return(rep(list(h), n_dfs))
   }
 
   # Plain character -> shared single label row for all DFs.
   if (is.character(col_header)) {
-    h <- .normalize_col_header_rows(col_header, ncol_df)
+    h <- .normalize_col_header_rows(col_header, ncol_df, col_names)
     return(rep(list(h), n_dfs))
   }
 
@@ -308,7 +312,7 @@
   # single-DF normalizer.
   if (length(col_header) > 0L &&
       all(vapply(col_header, .is_cell_spec, logical(1L)))) {
-    h <- .normalize_col_header_rows(col_header, ncol_df)
+    h <- .normalize_col_header_rows(col_header, ncol_df, col_names)
     return(rep(list(h), n_dfs))
   }
 
@@ -320,7 +324,7 @@
   if (length(col_header) == n_dfs &&
       all(vapply(col_header, .is_per_df_spec, logical(1L)))) {
     return(lapply(col_header,
-                   function(h) .normalize_col_header_rows(h, ncol_df)))
+                   function(h) .normalize_col_header_rows(h, ncol_df, col_names)))
   }
 
   # Otherwise treat as shared multi-row header.
@@ -329,7 +333,7 @@
          "cell-spec rows (col_cell()/pos-spec, or list(from, to, ...)).",
          call. = FALSE)
   }
-  h <- .normalize_col_header_rows(col_header, ncol_df)
+  h <- .normalize_col_header_rows(col_header, ncol_df, col_names)
   rep(list(h), n_dfs)
 }
 
@@ -345,13 +349,23 @@
 #' @param col_header The column header. One of:
 #'   \describe{
 #'     \item{`NULL`}{(default) use the column names of `data`.}
-#'     \item{a character vector}{one label per column -- a single header row.}
+#'     \item{a character vector}{one label per column -- a single header row.
+#'       By default labels are placed **by position**.  If the vector is
+#'       **named**, placement becomes name-aware and order-independent (a
+#'       safeguard against column reordering): a named element
+#'       (`g1 = "G1"`) labels the column named `g1` and errors on an unknown
+#'       or duplicate name; an unnamed element is matched as a column name if
+#'       one exists, otherwise placed at its position; two elements resolving
+#'       to the same column is an error.  A fully-unnamed vector keeps the
+#'       exact legacy positional behaviour.}
 #'     \item{a list of rows}{each row is either a character vector (a label row)
 #'       or a spanning row (`list(list(from, to, label, underline), ...)`),
 #'       rendered top to bottom.}
 #'     \item{a list of per-DF specs}{in multi-DF mode, one of the above per
 #'       `data.frame` (same length as `data`).}
 #'   }
+#'   Spanning cells built with [col_cell()] may also address columns by name
+#'   (e.g. `col_cell(c("g1", "g3"), "Drug A")`).
 #' @param col_header_align Column-header text alignment, applied across
 #'   header rows. `NULL` (default) inherits each column's `align` value
 #'   from `col_spec` (i.e. column headers follow the data alignment).
@@ -577,7 +591,8 @@ rtftable <- function(
     # Normalize col_header to a list whose elements are either:
     #   - character vector  (regular label row)
     #   - list of list(from, to, label, underline)  (spanning row)
-    col_hdr_one <- .normalize_col_header_rows(col_header, ncol(data))
+    col_hdr_one <- .normalize_col_header_rows(col_header, ncol(data),
+                                              names(data))
 
     row_title_idx <- .normalize_row_title(row_title, ncol(data), names(data))
     cs <- .normalize_col_spec(
@@ -608,7 +623,8 @@ rtftable <- function(
     }
     data_list    <- data
     col_hdr_list <- .normalize_multi_col_header(col_header, length(data),
-                                                  ncol_df = ncols_all[1L])
+                                                  ncol_df = ncols_all[1L],
+                                                  col_names = names(data[[1L]]))
 
     ref_ncol  <- ncols_all[1L]
     ref_names <- names(data[[1L]])
@@ -792,9 +808,11 @@ rtftable <- function(
   if (has("col_header")) {
     if (!is.null(tbl$data_list)) {
       tbl$col_header_list <- .normalize_multi_col_header(
-        ov$col_header, length(tbl$data_list), ncol_df = ncol_df)
+        ov$col_header, length(tbl$data_list), ncol_df = ncol_df,
+        col_names = col_names)
     } else {
-      tbl$col_header <- .normalize_col_header_rows(ov$col_header, ncol_df)
+      tbl$col_header <- .normalize_col_header_rows(ov$col_header, ncol_df,
+                                                   col_names)
     }
   }
 

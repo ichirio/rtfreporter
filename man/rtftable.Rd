@@ -41,13 +41,23 @@ shares column widths and border settings.}
 \item{col_header}{The column header. One of:
 \describe{
   \item{`NULL`}{(default) use the column names of `data`.}
-  \item{a character vector}{one label per column -- a single header row.}
+  \item{a character vector}{one label per column -- a single header row.
+    By default labels are placed **by position**.  If the vector is
+    **named**, placement becomes name-aware and order-independent (a
+    safeguard against column reordering): a named element
+    (`g1 = "G1"`) labels the column named `g1` and errors on an unknown
+    or duplicate name; an unnamed element is matched as a column name if
+    one exists, otherwise placed at its position; two elements resolving
+    to the same column is an error.  A fully-unnamed vector keeps the
+    exact legacy positional behaviour.}
   \item{a list of rows}{each row is either a character vector (a label row)
     or a spanning row (`list(list(from, to, label, underline), ...)`),
     rendered top to bottom.}
   \item{a list of per-DF specs}{in multi-DF mode, one of the above per
     `data.frame` (same length as `data`).}
-}}
+}
+Spanning cells built with [col_cell()] may also address columns by name
+(e.g. `col_cell(c("g1", "g3"), "Drug A")`).}
 
 \item{col_header_align}{Column-header text alignment, applied across
 header rows. `NULL` (default) inherits each column's `align` value

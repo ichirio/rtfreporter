@@ -15,9 +15,13 @@ col_cell(
 )
 }
 \arguments{
-\item{pos}{Numeric of length 1 (single column) or length 2
-(`c(start, end)`, inclusive).  `start <= end` required; values must
-be `>= 1`.}
+\item{pos}{Cell position, one of:
+* a numeric of length 1 (single column) or length 2 (`c(start, end)`,
+  inclusive) -- `start <= end` required, values `>= 1`; or
+* a character of length 1 (single column name) or length 2
+  (`c(start_name, end_name)`) referring to data columns by name.
+Name resolution (and the `start <= end` check for named ranges) happens
+when the header is attached to a table.}
 
 \item{label}{Character scalar.  Cell text; may be `""`.}
 
@@ -45,6 +49,13 @@ to [rtftable()] (via `col_header =`) or [rtf_col_header()].
 Use `pos = 1` for a single-column cell and `pos = c(start, end)` for a
 cell that spans several data columns.  Positions are always relative to
 the underlying data columns, not to the previous header row.
+
+`pos` may instead be **column name(s)** (character), resolved against the
+data columns when the header is attached to a table.  This makes a
+spanning cell robust to column reordering and errors out on an unknown
+name -- for example `col_cell(c("g1", "g3"), "Drug A")` spans from the
+column named `g1` to the one named `g3`, and `col_cell("total", "Total")`
+targets a single named column.
 }
 \examples{
 col_cell(1, "Item")
