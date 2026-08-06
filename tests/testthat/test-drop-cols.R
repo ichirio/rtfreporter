@@ -67,11 +67,14 @@ test_that("as_rtftable() inherits drop_cols", {
 
 # ── metadata reindexing ───────────────────────────────────────────────────────
 
-test_that("flat col_header / widths / col_header_align reindex to kept columns", {
+test_that("user col_header is final-coords; widths / col_header_align still reindex", {
+  # A USER col_header now addresses the FINAL printed columns (3 after drop),
+  # so it is written for those 3 columns directly -- not the pre-drop 4.
+  # Widths / col_header_align are unchanged (still pre-drop, reindexed).
   rt <- as_rtftables(
     df4(), drop_cols = "grp",
-    col_header       = c("GRP", "Subject", "Count", "Percent"),
-    col_rel_width    = c(1, 3, 2, 2),
+    col_header       = c("Subject", "Count", "Percent"),   # final 3 columns
+    col_rel_width    = c(1, 3, 2, 2),                       # pre-drop 4 -> reindexed
     col_header_align = c("left", "left", "center", "center")
   )[[1L]]
   expect_identical(unlist(rt$col_header), c("Subject", "Count", "Percent"))
@@ -94,30 +97,34 @@ test_that("col_spec reindexes: integer remapped, dropped entry removed, name kep
   expect_identical(aligns, c("left", "center", "right"))  # grp, N(default), Pct
 })
 
-test_that("spanning header positions reindex when a column is dropped", {
+test_that("user spanning header is written in final-column coordinates", {
+  # Final columns after dropping "grp" are: Label, N, Pct.  The span over
+  # N,Pct is therefore final positions 2-3 (no reindexing for user headers).
   sph <- list(
-    list(col_cell(pos = c(3, 4), label = "Stats")),
-    c("grp", "Label", "N", "Pct")
+    list(col_cell(pos = c(2, 3), label = "Stats")),
+    c("Label", "N", "Pct")
   )
   rt <- as_rtftables(df4(), drop_cols = "grp", col_header = sph)[[1L]]
-  # leaf row shrank
   expect_identical(rt$col_header[[2L]], c("Label", "N", "Pct"))
-  # the span over N,Pct shifted from cols 3-4 to cols 2-3
   span <- Filter(function(c) identical(c$label, "Stats"), rt$col_header[[1L]])
   expect_length(span, 1L)
   expect_identical(c(span[[1L]]$from, span[[1L]]$to), c(2L, 3L))
 })
 
-test_that("a spanning cell fully inside the dropped columns is removed", {
-  sph <- list(
+test_that(".reindex_col_header drops a spanning cell fully inside removed columns", {
+  # The AUTO (adapter-derived) header still travels through this reindexer;
+  # a cell covering only dropped columns is removed.
+  ch <- list(
     list(col_cell(pos = c(1, 2), label = "Hidden"),
          col_cell(pos = c(3, 4), label = "Stats")),
     c("grp", "Label", "N", "Pct")
   )
-  rt <- as_rtftables(df4(), drop_cols = c(1L, 2L), col_header = sph)[[1L]]
-  labels <- vapply(rt$col_header[[1L]], function(c) c$label %||% "", character(1L))
+  out <- rtfreporter:::.reindex_col_header(ch, keep = c(3L, 4L), n0 = 4L)
+  labels <- vapply(out[[1L]], function(c) if (is.null(c$label)) "" else c$label,
+                   character(1L))
   expect_false("Hidden" %in% labels)
   expect_true("Stats" %in% labels)
+  expect_identical(out[[2L]], c("N", "Pct"))
 })
 
 test_that("cell_styles per-column vectors reindex to kept columns", {

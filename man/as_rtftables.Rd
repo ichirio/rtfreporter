@@ -218,9 +218,12 @@ present through the split (so
 them), then are removed from **every page** before that page's table is
 rendered.  This makes a column usable as a hidden grouping / sort-key /
 carrier column without it appearing in the report.  Position-indexed
-metadata (`col_header` incl. spanning headers, `col_spec`, column widths,
-`col_header_align`, `row_title`, and per-cell `cell_styles`) is reindexed
-automatically to the remaining columns.  `drop_cols` must leave at least
+metadata (`col_spec`, column widths, `col_header_align`, `row_title`, and
+per-cell `cell_styles`) is reindexed automatically to the remaining
+columns.  A **user-supplied `col_header`** is the exception: it is applied
+against the **final printed columns** (see the `col_header` argument and
+[set_col_header()]), so you write its positions / names for the columns
+that remain -- not the pre-drop layout.  `drop_cols` must leave at least
 one column to display.  Note that for `split = "by_value"` the page
 **names** come from the `group_col` value, so that column may be dropped and
 the pages are still named by it; but under `"group_safe"` / `"group_force"`
@@ -246,8 +249,10 @@ folded into the stub.  This keeps a fixed intermediate hierarchy level
 (e.g. `LBTOX_LBL / group1 / label` with a constant `group1`) from
 collapsing into a single stub label row that spans every group; put the
 inner levels in `stub_vars` and the outer level in `group_col`.  Position-indexed
-metadata (`col_header` incl. spanning, `col_spec`, `col_header_align`,
-per-cell `cell_styles`) is reindexed automatically.  Sources that already
+metadata (`col_spec`, `col_header_align`, per-cell `cell_styles`) is
+reindexed automatically; a user-supplied `col_header` is instead resolved
+against the final columns (which already include the stub at position 1 --
+see [set_col_header()]).  Sources that already
 render an indented stub (rtables / tern, tfrmt indented, gtsummary) come
 out pre-merged, so `stub_vars` does not apply to them.  Column widths from
 the source are **not** carried through the merge -- use `auto_width = TRUE`
@@ -297,10 +302,19 @@ page without you having to compute the width.}
 defaults to `"tfl"`.}
 
 \item{...}{Further arguments forwarded to [rtftable()] for every page
-(e.g. `col_header`, `col_spec`, `row_title`, `col_rel_width`,
-`row_height_twips`).  `row_title` names the row-heading columns (default:
-column 1) and sets the per-column default alignment (heading columns left,
-others centre).  Explicit values always win over the gt-extracted ones.}
+  (e.g. `col_header`, `col_spec`, `row_title`, `col_rel_width`,
+  `row_height_twips`).  `row_title` names the row-heading columns (default:
+  column 1) and sets the per-column default alignment (heading columns left,
+  others centre).  Explicit values always win over the gt-extracted ones.
+
+  A user-supplied `col_header` is resolved against the **final printed
+  columns** -- after `stub_vars` folding and `drop_cols` removal -- so its
+  [col_cell()] positions and names refer to the columns you actually see
+  (position 1 = first printed column; the `stub_vars` stub is that column).
+  This is equivalent to building the pages and then calling
+  [set_col_header()]; use [rtf_columns()] to list the final names first.
+  (`col_spec` / `col_rel_width` / `row_title` still use the pre-drop input
+  coordinates.)}
 }
 \value{
 A list of `rtftable` objects, one per page.  When the split is
