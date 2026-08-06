@@ -242,12 +242,16 @@ reference:
   - title: Column headers
     desc: >
       Multi-row column headers with optional spanning cells expressed
-      uniformly via `pos = 1` or `pos = c(2, 5)`.  Top-level spanning works
-      without a separate `spanning_header` argument.
+      uniformly via `pos = 1` or `pos = c(2, 5)` (or by column name).  Top-level
+      spanning works without a separate `spanning_header` argument.
+      `set_col_header()` configures the header of a finished table against its
+      final printed columns; `rtf_columns()` lists those columns.
     contents:
       - col_cell
       - rtf_col_header
       - add_col_header_row
+      - set_col_header
+      - rtf_columns
 
   # ── 5b. Post-hoc styling verbs ─────────────────────────────────────────
   - title: Post-hoc styling verbs
@@ -255,8 +259,8 @@ reference:
       Restyle an already-built `rtftable` -- or every page of an
       `as_rtftables()` list at once -- addressing header rows, body rows and
       columns by position: `style_header()`, `style_cols()`, `style_body()`,
-      `style_zone()`, `add_header_row()`.  Last writer wins, per side / per
-      field.
+      `style_zone()`, `add_header_row()` (and `set_col_header()`, listed under
+      Column headers).  Last writer wins, per side / per field.
     contents:
       - style_header
 

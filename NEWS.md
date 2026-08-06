@@ -2,6 +2,16 @@
 
 ### New features
 
+- **`set_col_header()` configures a column header against the final printed
+  table** (#251) -- a new post-hoc verb (sibling of `style_header()` /
+  `add_header_row()`) that sets the whole column header of a finished
+  `rtftable`, or every page of an `as_rtftables()` list, resolving each cell by
+  **column name** or **visible position** (1 = first printed column). Because it
+  runs on the finished table there is no intermediate layout to reason about --
+  no hidden `drop_cols`, no `stub_vars` position shifting. Pair it with the new
+  **`rtf_columns()`** accessor (the final body column names) to verify names and
+  order before writing a header. `add_header_row()` now also resolves cells by
+  name.
 - **`col_header` label rows can be placed by column name** (#248) -- a *named*
   character vector such as
   `c(row_label = "  Category", g1 = "G1", g2 = "G2", g3 = "G3", t = "Total")`
@@ -16,6 +26,18 @@
   now also accepts column-name string(s), e.g. `col_cell(c("g1", "g3"), "Drug")`
   or `col_cell("total", "Total")`, resolved against the data columns (unknown
   name is an error). Numeric `pos` is unchanged.
+
+### Breaking changes
+
+- **A user-supplied `col_header` in `as_rtftables()` is now resolved against the
+  final printed columns** (#251), not the pre-`drop_cols` / post-`stub_vars`
+  intermediate body. Headers written in the old coordinates must be renumbered
+  to the visible columns (e.g. with a hidden first column, a span over the six
+  data columns changes from `col_cell(c(3, 8), ...)` to
+  `col_cell(c(2, 7), ...)`, or better, address columns by name). `col_spec`,
+  `col_rel_width`, `row_title` and `cell_styles` are unchanged (still reindexed
+  from the input coordinates); adapter-derived (automatic) headers are also
+  unchanged.
 
 ### Documentation
 

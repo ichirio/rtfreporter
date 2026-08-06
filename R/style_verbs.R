@@ -553,8 +553,9 @@ add_header_row <- function(x, ...) UseMethod("add_header_row")
 add_header_row.rtftable <- function(x, row, .position = c("top", "bottom"),
                                     ...) {
   .position <- match.arg(.position)
-  ncol_df   <- length(x$col_spec)
-  new_row   <- .normalize_col_header_rows(list(row), ncol_df)[[1L]]
+  ref       <- .style_ref_df(x)
+  ncol_df   <- ncol(ref)
+  new_row   <- .normalize_col_header_rows(list(row), ncol_df, names(ref))[[1L]]
 
   insert <- function(hdr) {
     hdr <- hdr %||% list()
@@ -571,4 +572,142 @@ add_header_row.rtftable <- function(x, row, .position = c("top", "bottom"),
 #' @export
 add_header_row.list <- function(x, ...) {
   .style_map_pages(x, add_header_row, ..., verb = "add_header_row")
+}
+
+
+# ── set_col_header() ───────────────────────────────────────────────────────
+
+#' Set the whole column header of a finished table (final-table coordinates)
+#'
+#' `set_col_header()` replaces the column header of an already-built
+#' [rtftable()] -- typically the output of [as_rtftables()] -- resolving every
+#' cell against the **final, printed table**: the columns you actually see,
+#' addressed by **name** or by **visible position** (`1` = first printed
+#' column).  Because it runs on the finished table, there is no "intermediate"
+#' column layout to reason about -- no hidden `drop_cols`, no `stub_vars`
+#' bookkeeping, no position shifting.  This is the recommended way to attach a
+#' multi-row / spanning header on top of an `as_rtftables()` pipeline; pair it
+#' with [rtf_columns()] to see the exact column names first.
+#'
+#' Contrast with the `col_header =` argument of [rtftable()] / [as_rtftables()],
+#' whose positions refer to the source body **before** `drop_cols` /
+#' `stub_vars` are applied.  `set_col_header()` always speaks the final table's
+#' coordinates.
+#'
+#' Like the other post-hoc verbs it is an S3 generic with an `rtftable` method
+#' and a **list** method (every page of an [as_rtftables()] result), and it
+#' chains with the native pipe.
+#'
+#' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
+#' @param ... The header rows, in render order (top first) -- each a character
+#'   vector (a label row, optionally named to place labels by column name) or a
+#'   list of [col_cell()] cells (a spanning / cell row, whose `pos` may be
+#'   column names or final positions).  Alternatively a single pre-built
+#'   [rtf_col_header()] object.  Passing nothing clears the header.
+#' @param align Optional column-header text alignment for the final columns:
+#'   `"left"`/`"center"`/`"right"` (applied to every column) or a character
+#'   vector of length `ncol` (one per printed column).  `NULL` (default) leaves
+#'   the current header alignment untouched.
+#'
+#' @return An object of the same shape as `x` (rtftable, or list of pages).
+#'
+#' @seealso [rtf_columns()] to list the final column names; [rtf_col_header()]
+#'   / [col_cell()] to build header rows; [add_header_row()] to add a single
+#'   row; [style_header()] to restyle existing header cells.
+#'
+#' @examples
+#' df <- data.frame(row_label = c("A", "B"),
+#'                  g1 = 1:2, g2 = 3:4, Total = 5:6)
+#' tbl <- rtftable(df)
+#' tbl <- set_col_header(
+#'   tbl,
+#'   list(col_cell("row_label", ""), col_cell(c("g1", "g2"), "Treatment")),
+#'   c(row_label = "Category", g1 = "Low", g2 = "High", Total = "Total")
+#' )
+#' @export
+set_col_header <- function(x, ...) UseMethod("set_col_header")
+
+#' @rdname set_col_header
+#' @export
+set_col_header.rtftable <- function(x, ..., align = NULL) {
+  rows <- list(...)
+  # One argument is treated as a complete col_header spec in any shape
+  # `.normalize_col_header_rows()` accepts (an rtf_col_header object, a
+  # character label row, a single cell row, or a list of rows); several
+  # arguments are wrapped as consecutive rows.
+  header <-
+    if (length(rows) == 0L) NULL
+    else if (length(rows) == 1L) rows[[1L]]
+    else do.call(rtf_col_header, rows)
+
+  ref <- .style_ref_df(x)
+  nc  <- ncol(ref)
+  cn  <- names(ref)
+
+  if (!is.null(x$data_list)) {
+    x$col_header_list <-
+      .normalize_multi_col_header(header, length(x$data_list), nc, cn)
+    x$col_header <- x$col_header_list[[1L]]
+  } else {
+    x$col_header <- .normalize_col_header_rows(header, nc, cn)
+  }
+
+  if (!is.null(align)) {
+    a <- if (length(align) == 1L) rep(as.character(align), nc) else as.character(align)
+    if (length(a) != nc) {
+      stop(sprintf("`set_col_header(align = )` must have length 1 or %d (one per printed column).",
+                   nc), call. = FALSE)
+    }
+    if (!all(a %in% c("left", "center", "right"))) {
+      stop("`set_col_header(align = )` values must be \"left\", \"center\", or \"right\".",
+           call. = FALSE)
+    }
+    for (j in seq_len(nc)) x$col_spec[[j]]$header_align <- a[[j]]
+  }
+  x
+}
+
+#' @rdname set_col_header
+#' @export
+set_col_header.list <- function(x, ...) {
+  .style_map_pages(x, set_col_header, ..., verb = "set_col_header")
+}
+
+
+# ── rtf_columns() ──────────────────────────────────────────────────────────
+
+#' Column names of a finished table's body
+#'
+#' Returns the body column names of an [rtftable()] -- the **final, printed**
+#' columns, in order.  Use it to see exactly which names (and positions)
+#' [set_col_header()], [style_cols()], [style_header()] etc. address, before
+#' writing a header.  On a list of pages (an [as_rtftables()] result) it
+#' returns the first page's columns (pages share the same column structure).
+#'
+#' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
+#' @param ... Unused.
+#'
+#' @return A character vector of column names.
+#'
+#' @seealso [set_col_header()].
+#'
+#' @examples
+#' tbl <- rtftable(data.frame(Item = "x", A = 1, B = 2))
+#' rtf_columns(tbl)
+#' @export
+rtf_columns <- function(x, ...) UseMethod("rtf_columns")
+
+#' @rdname rtf_columns
+#' @export
+rtf_columns.rtftable <- function(x, ...) names(.style_ref_df(x))
+
+#' @rdname rtf_columns
+#' @export
+rtf_columns.list <- function(x, ...) {
+  if (length(x) == 0L) return(character(0))
+  if (!inherits(x[[1L]], "rtftable")) {
+    stop("`rtf_columns()` on a list expects rtftable pages (as returned by as_rtftables()).",
+         call. = FALSE)
+  }
+  names(.style_ref_df(x[[1L]]))
 }

@@ -263,7 +263,8 @@ add_col_header_row <- function(hdr, row,
   vapply(pos, function(nm) {
     j <- which(col_names == nm)
     if (length(j) == 0L) {
-      stop(sprintf("`pos` column name \"%s\" not found in data columns.", nm),
+      stop(sprintf("`pos` column name \"%s\" not found in data columns. Available: %s.",
+                   nm, paste(sprintf("\"%s\"", col_names), collapse = ", ")),
            call. = FALSE)
     }
     if (length(j) > 1L) {
@@ -380,7 +381,8 @@ add_col_header_row <- function(hdr, row,
       # Named element: target the column named `nm`.
       j <- which(col_names == nm)
       if (length(j) == 0L) {
-        stop(sprintf("col_header: unknown column name \"%s\".", nm),
+        stop(sprintf("col_header: unknown column name \"%s\". Available: %s.",
+                     nm, paste(sprintf("\"%s\"", col_names), collapse = ", ")),
              call. = FALSE)
       }
       if (length(j) > 1L) {
