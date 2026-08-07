@@ -2,6 +2,12 @@
 
 ### New features
 
+- **`collapse_repeats()` blanks repeated values in a data.frame** (#261) -- the
+  standalone, whole-frame version of the per-page `as_rtftables(collapse_repeats
+  = )` argument. Hierarchical suppression (a change in an earlier listed column
+  resets later ones); suppressed cells become `NA`; no rows are removed. Use it
+  to pre-process a single frame; the argument stays preferred for paginated
+  tables (it resets runs at page breaks).
 - **`col_header_from_names()` builds a spanning header from delimited column
   names** (#259) -- the reconstruction `as_rtftables()` applies automatically to
   a plain data.frame (e.g. `"Drug A____N"` / `"Drug A____Mean"` -> a `Drug A`

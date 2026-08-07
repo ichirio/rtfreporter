@@ -36,6 +36,7 @@ export(combine_sections)
 
 # data.frame finishing: merge hierarchy columns into an indented stub column
 export(stub_cols)
+export(collapse_repeats)
 
 # Header / footer constructors
 export(rtf_header)
