@@ -72,6 +72,7 @@ S3method(set_col_header, list)
 export(rtf_columns)
 S3method(rtf_columns, rtftable)
 S3method(rtf_columns, list)
+export(rtf_header_source)
 
 # Pagination of external table objects → per-page data.frames (v0.0.22+)
 export(paginate)

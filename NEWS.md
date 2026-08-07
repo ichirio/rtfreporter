@@ -2,6 +2,15 @@
 
 ### New features
 
+- **`rtf_header_source()` deparses a table's column header back to editable
+  `rtf_col_header()` source** (#253) -- render the current header as name-based
+  `rtf_col_header(...)` text, tweak the labels/spans, and re-apply with
+  `set_col_header()`. Three verbosity `level`s (`"explicit"` / `"default"` /
+  `"all"`); a `snippet = TRUE` mode wraps it in a pipeable
+  `set_col_header(...) |> style_zone(...)` that also reproduces header text
+  alignment and header-zone borders; and `add_span_level = TRUE` previews adding
+  a hierarchy level (the `stub` column stays, the rest are bundled under one
+  spanning cell to label).
 - **`set_col_header()` configures a column header against the final printed
   table** (#251) -- a new post-hoc verb (sibling of `style_header()` /
   `add_header_row()`) that sets the whole column header of a finished

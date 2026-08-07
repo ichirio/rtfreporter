@@ -245,13 +245,16 @@ reference:
       uniformly via `pos = 1` or `pos = c(2, 5)` (or by column name).  Top-level
       spanning works without a separate `spanning_header` argument.
       `set_col_header()` configures the header of a finished table against its
-      final printed columns; `rtf_columns()` lists those columns.
+      final printed columns; `rtf_columns()` lists those columns;
+      `rtf_header_source()` deparses the current header back to editable
+      `rtf_col_header()` source.
     contents:
       - col_cell
       - rtf_col_header
       - add_col_header_row
       - set_col_header
       - rtf_columns
+      - rtf_header_source
 
   # ── 5b. Post-hoc styling verbs ─────────────────────────────────────────
   - title: Post-hoc styling verbs
