@@ -1,8 +1,8 @@
 ## tests/testthat/test-collapse-repeats-fn.R
 ##
-## collapse_repeats() -- the standalone data.frame helper (whole-frame version
-## of the per-page as_rtftables(collapse_repeats=) argument, tested separately
-## in test-collapse-repeats.R).
+## collapse_repeats() -- post-hoc verb on rtftable / page list (per-page for a
+## list). The per-page as_rtftables(collapse_repeats=) argument is tested in
+## test-collapse-repeats.R.
 
 library(testthat)
 
@@ -15,42 +15,58 @@ df3 <- function() {
   )
 }
 
-test_that("a single column blanks consecutive repeats, keeping the first", {
-  out <- collapse_repeats(df3(), cols = "grp")
-  expect_identical(out$grp, c("A", NA, NA, "B", NA))
-  expect_identical(out$sub, df3()$sub)     # untouched
-  expect_identical(out$n,   df3()$n)
+# ── single rtftable ────────────────────────────────────────────────────────
+
+test_that("collapse_repeats() blanks repeats on a single rtftable body", {
+  out <- collapse_repeats(rtftable(df3()), cols = "grp")
+  expect_s3_class(out, "rtftable")
+  expect_identical(as.character(out$data$grp), c("A", NA, NA, "B", NA))
+  expect_identical(out$data$sub, df3()$sub)      # untouched
+  expect_identical(out$data$n,   df3()$n)
 })
 
-test_that("suppression is hierarchical (a change in an earlier column resets)", {
-  out <- collapse_repeats(df3(), cols = c("grp", "sub"))
-  expect_identical(out$grp, c("A", NA, NA, "B", NA))
-  # sub "y" (row 3) shows because it changed within grp A; row 4 "x" shows
-  # because grp reset to B; row 5 repeats -> NA.
-  expect_identical(out$sub, c("x", NA, "y", "x", NA))
+test_that("suppression is hierarchical (an earlier column change resets)", {
+  out <- collapse_repeats(rtftable(df3()), cols = c("grp", "sub"))
+  expect_identical(as.character(out$data$grp), c("A", NA, NA, "B", NA))
+  expect_identical(as.character(out$data$sub), c("x", NA, "y", "x", NA))
 })
 
 test_that("integer positions and a mixing list both work", {
-  out1 <- collapse_repeats(df3(), cols = 1L)
-  expect_identical(out1$grp, c("A", NA, NA, "B", NA))
-  out2 <- collapse_repeats(df3(), cols = list("grp", 2L))
-  expect_identical(out2$sub, c("x", NA, "y", "x", NA))
+  o1 <- collapse_repeats(rtftable(df3()), cols = 1L)
+  expect_identical(as.character(o1$data$grp), c("A", NA, NA, "B", NA))
+  o2 <- collapse_repeats(rtftable(df3()), cols = list("grp", 2L))
+  expect_identical(as.character(o2$data$sub), c("x", NA, "y", "x", NA))
 })
 
-test_that("no rows are removed and other columns are preserved", {
-  out <- collapse_repeats(df3(), cols = c("grp", "sub"))
-  expect_identical(nrow(out), 5L)
-  expect_identical(out$n, 1:5)
+# ── page list: per-page application ────────────────────────────────────────
+
+test_that("on a page list, collapse resets at each page break (per page)", {
+  df <- data.frame(g = c("A", "A", "A", "A"), v = 1:4, stringsAsFactors = FALSE)
+  pages <- as_rtftables(df, split = "rows", split_rows = 2)
+  expect_gt(length(pages), 1L)
+  out <- collapse_repeats(pages, cols = "g")
+  # Per-page: the FIRST row of every page shows "A" again (run reset at the
+  # page break); a whole-frame collapse would blank all but the very first.
+  first_each <- vapply(out, function(p) as.character(p$data$g)[[1L]], character(1L))
+  expect_true(all(first_each == "A"))
+  # within a multi-row page, later repeats are blanked
+  multi <- Filter(function(p) nrow(p$data) > 1L, out)[[1L]]
+  expect_true(is.na(as.character(multi$data$g)[[2L]]))
 })
 
-test_that("errors on non-data.frame and unknown column", {
-  expect_error(collapse_repeats(1:5, cols = 1), "must be a data.frame")
-  expect_error(collapse_repeats(df3(), cols = "nope"), "not found")
+test_that("the page-list verb equals the per-page as_rtftables() argument", {
+  df <- data.frame(g = c("A", "A", "A", "A"), v = 1:4, stringsAsFactors = FALSE)
+  via_arg <- as_rtftables(df, split = "rows", split_rows = 2, collapse_repeats = "g")
+  via_fun <- collapse_repeats(
+    as_rtftables(df, split = "rows", split_rows = 2), cols = "g")
+  gcol <- function(p) lapply(p, function(pg) as.character(pg$data$g))
+  expect_identical(gcol(via_fun), gcol(via_arg))
 })
 
-test_that("matches the as_rtftables() argument on a single (unpaginated) page", {
-  via_arg <- as_rtftables(df3(), collapse_repeats = c("grp", "sub"))[[1L]]
-  via_fun <- collapse_repeats(df3(), cols = c("grp", "sub"))
-  expect_identical(as.character(via_arg$data$grp), as.character(via_fun$grp))
-  expect_identical(as.character(via_arg$data$sub), as.character(via_fun$sub))
+# ── errors ─────────────────────────────────────────────────────────────────
+
+test_that("errors on a data.frame and on an unknown column", {
+  expect_error(collapse_repeats(df3(), cols = "grp"),
+               "expects an rtftable")
+  expect_error(collapse_repeats(rtftable(df3()), cols = "nope"), "not found")
 })

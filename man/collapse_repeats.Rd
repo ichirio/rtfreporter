@@ -2,49 +2,60 @@
 % Please edit documentation in R/collapse_repeats.R
 \name{collapse_repeats}
 \alias{collapse_repeats}
-\title{Blank out consecutive repeated values in a data.frame}
+\alias{collapse_repeats.rtftable}
+\alias{collapse_repeats.list}
+\alias{collapse_repeats.default}
+\title{Blank out consecutive repeated values in a finished table}
 \usage{
-collapse_repeats(df, cols)
+collapse_repeats(x, cols)
+
+\method{collapse_repeats}{rtftable}(x, cols)
+
+\method{collapse_repeats}{list}(x, cols)
+
+\method{collapse_repeats}{default}(x, cols)
 }
 \arguments{
-\item{df}{A `data.frame`.}
+\item{x}{An [rtftable()], or a list of them (pages from [as_rtftables()]).}
 
-\item{cols}{Columns to collapse: character names and/or integer positions.
-Mix names and positions with a `list()` (a bare `c()` would coerce the
-numbers to strings) -- the same convention as `drop_cols` / `sort_by`.
-Processed in the supplied order (outermost group first).}
+\item{cols}{Columns to collapse: character names and/or integer positions in
+the table's **final** body columns.  Mix names and positions with a
+`list()` (a bare `c()` would coerce the numbers to strings).  Processed in
+the supplied order (outermost group first).}
 }
 \value{
-`df` with suppressed cells set to `NA` in the selected columns.
+An object of the same shape as `x` (rtftable, or list of pages), with
+  suppressed cells set to `NA` in the selected columns.
 }
 \description{
-Suppresses consecutive repeated values in the chosen columns, keeping only
-the first row of each run; suppressed cells become `NA`.  No rows are
-removed -- only the display value is blanked (the RTF renderer draws `NA` as
-an empty cell).  This is the classic "don't repeat the group label on every
-row" layout for clinical listings.
+Suppresses consecutive repeated values in the chosen columns of a built
+[rtftable()], keeping only the first row of each run; suppressed cells become
+`NA`.  No rows are removed -- only the display value is blanked (the renderer
+draws `NA` as an empty cell).  This is the classic "don't repeat the group
+label on every row" layout for clinical listings.
 }
 \details{
+Like the other post-hoc verbs it is an S3 generic with an `rtftable` method
+and a **list** method.  Given a **list of pages** (an [as_rtftables()]
+result) it collapses **each page independently**, so a run restarts at every
+page break -- the first row of each page shows its value again.  This makes
+`collapse_repeats(as_rtftables(x, ...), cols)` equivalent to
+`as_rtftables(x, collapse_repeats = cols, ...)`.
+
 Suppression is **hierarchical**: columns are processed in the order given, so
 a change in any earlier-listed column resets the run of every later one.
-Keys are built from the original (pre-blanking) values.
-
-
-[as_rtftables()] has a `collapse_repeats` argument that does the same thing
-but **per page** -- a run is reset at every page break, so the first row of
-each page shows its group value again.  Prefer that argument for paginated
-tables; use `collapse_repeats()` here to pre-process a single frame (e.g.
-before `as_rtftables()`), or when you want whole-frame suppression.
 }
 \examples{
-df <- data.frame(
+tbl <- rtftable(data.frame(
   grp = c("A", "A", "A", "B", "B"),
   sub = c("x", "x", "y", "x", "x"),
   n   = 1:5,
   stringsAsFactors = FALSE
-)
-collapse_repeats(df, cols = c("grp", "sub"))
+))
+out <- collapse_repeats(tbl, cols = c("grp", "sub"))
+out$data
 }
 \seealso{
-[as_rtftables()] (the per-page `collapse_repeats` argument).
+[as_rtftables()] (the equivalent per-page `collapse_repeats`
+  argument); [style_body()] and the other post-hoc verbs.
 }
