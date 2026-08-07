@@ -2,19 +2,32 @@
 % Please edit documentation in R/set_blank_rows.R
 \name{set_blank_rows}
 \alias{set_blank_rows}
-\title{Attach blank-row positions to a data.frame}
+\alias{set_blank_rows.data.frame}
+\alias{set_blank_rows.rtftable}
+\alias{set_blank_rows.list}
+\title{Add blank separator rows to a table or data.frame}
 \usage{
-set_blank_rows(
-  df,
+set_blank_rows(x, ...)
+
+\method{set_blank_rows}{data.frame}(
+  x,
   blank_rows = NULL,
   blank_row_first = FALSE,
   blank_row_end = FALSE,
   group_col = NULL,
-  group_by = c("auto", "indent", "value", "filled")
+  group_by = c("auto", "indent", "value", "filled"),
+  ...
 )
+
+\method{set_blank_rows}{rtftable}(x, ...)
+
+\method{set_blank_rows}{list}(x, ...)
 }
 \arguments{
-\item{df}{A data.frame (or tibble).}
+\item{x}{An [rtftable()], a list of them (pages from [as_rtftables()]), or a
+data.frame (or tibble).}
+
+\item{...}{Passed between methods.}
 
 \item{blank_rows}{Blank-row specification. One of -- or a `list()` combining
 any of (positions are unioned):
@@ -44,22 +57,24 @@ group, used only when `blank_rows = "between_groups"`.  `NULL`
 (see [paginate()]).}
 }
 \value{
-`df` with `attr(., "rtf_blank_rows")` updated.  The
-  attribute is left absent when the resolved position set is
-  empty.
+An object of the same shape as `x` (rtftable, list of pages, or
+  data.frame) with the blank-row positions set / attached.
 }
 \description{
-Resolves a `blank_rows` specification (the same one `paginate()`
-accepts) into integer positions and stores them on
-`attr(df, "rtf_blank_rows")`.  Use this when you already have a
-page-sized data.frame and only need to add blank rows — no
-pagination required.
+Resolves a `blank_rows` specification (the same one `paginate()` accepts)
+into integer positions and records them.  It is an S3 generic:
 }
 \details{
-`paginate()` calls this function on every chunk it produces, so
-the behaviour here defines what `paginate(blank_rows = ...)`,
-`paginate(blank_row_first = ...)` and `paginate(blank_row_end =
-...)` actually do.
+\itemize{
+  \item on a **`rtftable`** (or a **list of pages** from [as_rtftables()])
+    it sets the resolved positions on the table, so the natural
+    `as_rtftables(x, ...) |> set_blank_rows(...)` pipeline works and a list
+    is handled **per page**;
+  \item on a **data.frame** it stores the positions on
+    `attr(., "rtf_blank_rows")` (consumed by `rtftable(read_attributes =
+    TRUE)`).  `paginate()` calls this form on every chunk it produces, so it
+    defines what `paginate(blank_rows = ...)` etc. do.
+}
 }
 \examples{
 df <- data.frame(
@@ -68,14 +83,18 @@ df <- data.frame(
   v = 1:6,
   stringsAsFactors = FALSE
 )
-out <- set_blank_rows(df,
-                      blank_rows      = "between_groups",
-                      blank_row_first = TRUE,
-                      blank_row_end   = TRUE)
+# As a post-hoc verb on the as_rtftables() output:
+as_rtftables(df) |>
+  set_blank_rows(blank_rows = "between_groups", group_by = "indent")
+
+# On a bare data.frame (attaches the attribute):
+out <- set_blank_rows(df, blank_rows = "between_groups",
+                      blank_row_first = TRUE, blank_row_end = TRUE)
 attr(out, "rtf_blank_rows")
 
 }
 \seealso{
 [paginate()] for the per-page version; [rtftable()]
-  (`read_attributes = TRUE`) which consumes the attribute.
+  (`read_attributes = TRUE`) which consumes the attribute; [collapse_repeats()]
+  and the other post-hoc verbs.
 }
