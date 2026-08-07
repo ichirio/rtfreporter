@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **`as_rtftables()` header / styling `...` arguments documented as superseded**
+  (#257) -- a new *Superseded arguments* section steers users to the dedicated
+  post-hoc verbs (`set_col_header()`, `style_cols()`, `style_header()`,
+  `add_header_row()`) for anything beyond a simple one-row header. The arguments
+  keep working unchanged (no warning); this is documentation only.
+
 ### Internal
 
 - **`as_rtftables.R` split into focused files** (#255) -- the self-contained
