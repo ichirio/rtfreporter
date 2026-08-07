@@ -1,5 +1,15 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`set_header_cell()` sets/merges individual column-header cells** (#271) --
+  a post-hoc verb that places one or more [col_cell()]s (by column name or
+  position, spanning via `c(a, b)`, with borders / alignment / decorations)
+  into a chosen header `row` of a built table, **keeping the other cells
+  intact**. Merging currently-separate cells into one spanning cell is the core
+  use. Works on an rtftable or an `as_rtftables()` page list. A target span must
+  align to existing cell boundaries (it will not split an existing span).
+
 ### Breaking changes
 
 - **`collapse_repeats()` is now a post-hoc verb on a built table** (#265) -- its

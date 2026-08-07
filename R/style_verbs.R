@@ -674,6 +674,143 @@ set_col_header.list <- function(x, ...) {
 }
 
 
+# ── set_header_cell() ──────────────────────────────────────────────────────
+
+# Convert a col_cell() to a header cell {from, to, <attrs>}, resolving its `pos`
+# (name(s) or position(s)) against the final column names.
+.header_cell_from_col_cell <- function(cc, cn, nc) {
+  if (!inherits(cc, "rtf_col_cell")) {
+    stop("`set_header_cell()` takes col_cell() objects in `...`.", call. = FALSE)
+  }
+  p    <- .resolve_cell_pos(cc$pos, cn)
+  from <- as.integer(p[[1L]])
+  to   <- if (length(p) == 1L) from else as.integer(p[[2L]])
+  if (from > to) { tmp <- from; from <- to; to <- tmp }
+  if (from < 1L || to > nc) {
+    stop(sprintf("col_cell() covers columns %d-%d, outside 1..%d.", from, to, nc),
+         call. = FALSE)
+  }
+  spec <- list(from = from, to = to, label = cc$label %||% "")
+  for (k in c("align", "bold", "italic", "underline", "border")) {
+    if (!is.null(cc[[k]])) spec[[k]] <- cc[[k]]
+  }
+  spec
+}
+
+# Splice `new_cells` into a header row `cur` (a list of {from,to,label,...}
+# cells that cover columns 1..N with no gaps/overlaps).  Untargeted cells are
+# preserved; every new span must align to existing cell boundaries (no partial
+# split of an existing span); the new spans must not overlap each other.
+.splice_header_cells <- function(cur, new_cells) {
+  cells  <- cur[order(vapply(cur, function(c) as.integer(c$from), integer(1L)))]
+  starts <- vapply(cells, function(c) as.integer(c$from), integer(1L))
+  ends   <- vapply(cells, function(c) as.integer(c$to),   integer(1L))
+
+  ord <- order(vapply(new_cells, function(c) c$from, integer(1L)))
+  nc2 <- new_cells[ord]
+  for (i in seq_along(nc2)) {
+    a <- nc2[[i]]$from; b <- nc2[[i]]$to
+    if (i > 1L && a <= nc2[[i - 1L]]$to) {
+      stop(sprintf("Requested header cells overlap (columns %d-%d and %d-%d).",
+                   nc2[[i - 1L]]$from, nc2[[i - 1L]]$to, a, b), call. = FALSE)
+    }
+    if (!(a %in% starts) || !(b %in% ends)) {
+      stop(sprintf(
+        "Target columns %d-%d do not align to existing header-cell boundaries in that row (would split a spanning cell); adjust the span.",
+        a, b), call. = FALSE)
+    }
+  }
+
+  covered <- function(c) any(vapply(new_cells, function(n)
+    as.integer(c$from) >= n$from && as.integer(c$to) <= n$to, logical(1L)))
+  out <- c(Filter(function(c) !covered(c), cells), new_cells)
+  out[order(vapply(out, function(c) as.integer(c$from), integer(1L)))]
+}
+
+#' Set or merge individual column-header cells (spanning, borders, alignment)
+#'
+#' Edits **specific cells of one header row** of a finished [rtftable()] (or a
+#' list of pages) without rebuilding the whole header: place one or more
+#' [col_cell()]s -- by column **name or position**, spanning via `c(a, b)` --
+#' into row `row`, keeping the other cells of that row intact.  Merging
+#' currently-separate cells into one spanning cell is the core use.  Borders,
+#' alignment and text decorations are carried natively by [col_cell()].
+#'
+#' A **label row** is promoted to cells first (as in [style_header()]), so the
+#' row then renders through the `spanning` border zone (which falls back to the
+#' `header` zone when unset).  Merging cells in one row replaces their
+#' individual labels with the single span label -- to keep the sub-labels, put
+#' the span on a separate upper row (e.g. via [add_header_row()]).
+#'
+#' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
+#' @param ... One or more [col_cell()] objects to place in `row`.  Their `pos`
+#'   may be column names or positions (spanning via `c(a, b)`), resolved against
+#'   the final columns; `align` / `border` / `bold` / `italic` / `underline`
+#'   are applied to the cell.
+#' @param row The header row to edit (1 = top).  Must be an existing row -- add
+#'   a new row with [add_header_row()].
+#'
+#' @return An object of the same shape as `x`.
+#'
+#' @section Rules:
+#' Each target span must align to existing cell boundaries in that row (it
+#' cannot split an existing spanning cell -- an error is raised otherwise), and
+#' the requested cells must not overlap one another.
+#'
+#' @seealso [set_col_header()] to set the whole header; [style_header()] to
+#'   restyle existing cells; [add_header_row()] to add a row; [col_cell()].
+#'
+#' @examples
+#' df  <- data.frame(Item = "x", g1 = 1, g2 = 2, g3 = 3, Total = 4)
+#' tbl <- rtftable(df, col_header = c("Item", "N", "Mean", "SD", "Total"))
+#' # Merge g1..g3 under one spanning "Statistics" cell on the top row:
+#' tbl <- set_header_cell(tbl, col_cell(c("g1", "g3"), "Statistics"), row = 1)
+#' @export
+set_header_cell <- function(x, ...) UseMethod("set_header_cell")
+
+#' @rdname set_header_cell
+#' @export
+set_header_cell.rtftable <- function(x, ..., row) {
+  cells <- list(...)
+  if (length(cells) == 0L) {
+    stop("Provide at least one col_cell() to place.", call. = FALSE)
+  }
+  if (missing(row) || length(row) != 1L || is.na(suppressWarnings(as.integer(row)))) {
+    stop("`row` (a single header-row index, 1 = top) is required.", call. = FALSE)
+  }
+  hdrs <- x$col_header
+  if (is.null(hdrs) || length(hdrs) == 0L) {
+    stop("This rtftable has no column header; use set_col_header() first.",
+         call. = FALSE)
+  }
+  row <- as.integer(row)
+  if (row < 1L || row > length(hdrs)) {
+    stop(sprintf("`row` must be in 1..%d (the header rows, top first). To add a new row use add_header_row().",
+                 length(hdrs)), call. = FALSE)
+  }
+
+  ref <- .style_ref_df(x)
+  cn  <- names(ref)
+  nc  <- ncol(ref)
+
+  new_cells <- lapply(cells, .header_cell_from_col_cell, cn = cn, nc = nc)
+
+  r   <- hdrs[[row]]
+  cur <- if (is.character(r)) .style_promote_labels_row(r, x$col_spec) else r
+  hdrs[[row]] <- .splice_header_cells(cur, new_cells)
+
+  x$col_header <- hdrs
+  if (!is.null(x$col_header_list)) x$col_header_list[[1L]] <- hdrs
+  x
+}
+
+#' @rdname set_header_cell
+#' @export
+set_header_cell.list <- function(x, ...) {
+  .style_map_pages(x, set_header_cell, ..., verb = "set_header_cell")
+}
+
+
 # ── rtf_columns() ──────────────────────────────────────────────────────────
 
 #' Column names of a finished table's body
