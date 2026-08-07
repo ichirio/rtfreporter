@@ -55,9 +55,6 @@ group, used only when `blank_rows = "between_groups"`.  `NULL`
 `blank_rows = "between_groups"`: `"auto"` (default), `"indent"`,
 `"value"`, or `"filled"` — the same detection as the pagination splits
 (see [paginate()]).}
-
-\item{blank_row_first, blank_row_end, group_col, group_by, blank_rows}{See the
-arguments above; forwarded through every method.}
 }
 \value{
 An object of the same shape as `x` (rtftable, list of pages, or

@@ -85,8 +85,6 @@
 set_blank_rows <- function(x, ...) UseMethod("set_blank_rows")
 
 #' @rdname set_blank_rows
-#' @param blank_row_first,blank_row_end,group_col,group_by,blank_rows See the
-#'   arguments above; forwarded through every method.
 #' @export
 set_blank_rows.data.frame <- function(x,
                                       blank_rows      = NULL,
