@@ -88,9 +88,6 @@ S3method(paginate, gt_tbl)
 
 # Blank-row attribute helper (used by paginate(), also standalone)
 export(set_blank_rows)
-S3method(set_blank_rows, data.frame)
-S3method(set_blank_rows, rtftable)
-S3method(set_blank_rows, list)
 
 # Continuation-label helper for custom split= pagination functions
 export(add_cont_label)
