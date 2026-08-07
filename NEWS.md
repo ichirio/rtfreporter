@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+### Internal
+
+- **`as_rtftables.R` split into focused files** (#255) -- the self-contained
+  internal helpers moved out of the ~1337-line orchestrator into
+  `R/col_resolve.R` (`.resolve_col_indices()`), `R/sort_body.R` (sort helpers),
+  `R/col_drop.R` (`drop_cols` hiding + metadata reindexing), and
+  `R/stub_vars.R` (`stub_vars` stub build + reindex). No behaviour change.
+
 ### New features
 
 - **`rtf_header_source()` deparses a table's column header back to editable
