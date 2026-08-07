@@ -231,13 +231,12 @@ reference:
       `as_rtftable()` is the single-page form returning **one** object — they
       differ only in singular vs. list.  `stub_cols()` finishes a tidy
       data.frame beforehand, merging hierarchy columns into one indented
-      stub column; `collapse_repeats()` blanks repeated group values.
+      stub column.
     contents:
       - as_rtftables
       - as_rtftable
       - combine_sections
       - stub_cols
-      - collapse_repeats
 
   # ── 5. Column headers ──────────────────────────────────────────────────
   - title: Column headers
@@ -265,9 +264,11 @@ reference:
       `as_rtftables()` list at once -- addressing header rows, body rows and
       columns by position: `style_header()`, `style_cols()`, `style_body()`,
       `style_zone()`, `add_header_row()` (and `set_col_header()`, listed under
-      Column headers).  Last writer wins, per side / per field.
+      Column headers).  `collapse_repeats()` blanks repeated group values.
+      Last writer wins, per side / per field.
     contents:
       - style_header
+      - collapse_repeats
 
   # ── 6. Built-in cell-format functions ──────────────────────────────────
   - title: Built-in cell-format functions

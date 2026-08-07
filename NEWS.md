@@ -1,5 +1,16 @@
 # rtfreporter (development version)
 
+### Breaking changes
+
+- **`collapse_repeats()` is now a post-hoc verb on a built table** (#265) -- its
+  first argument is an [rtftable()] or a **list of pages** (an `as_rtftables()`
+  result), not a bare data.frame. On a page **list it collapses each page
+  independently** (runs reset at page breaks), so
+  `collapse_repeats(as_rtftables(x, ...), cols)` now matches
+  `as_rtftables(x, collapse_repeats = cols, ...)` exactly. `cols` resolve against
+  the table's final columns. The data.frame signature was removed (a `.default`
+  method errors with guidance to build the table first).
+
 ### New features
 
 - **Unified blank-row group recognition** (#263):
@@ -10,12 +21,10 @@
   - `blank_rows_by_change()` and `blank_rows_by_rule()` **now work inside
     `as_rtftables()` / `paginate()`** (they previously errored with
     *"Unrecognised blank_rows entry"*); they are resolved per page.
-- **`collapse_repeats()` blanks repeated values in a data.frame** (#261) -- the
-  standalone, whole-frame version of the per-page `as_rtftables(collapse_repeats
-  = )` argument. Hierarchical suppression (a change in an earlier listed column
-  resets later ones); suppressed cells become `NA`; no rows are removed. Use it
-  to pre-process a single frame; the argument stays preferred for paginated
-  tables (it resets runs at page breaks).
+- **`collapse_repeats()` post-hoc verb** (#261, reworked in #265) -- blanks
+  consecutive repeated values in a built [rtftable()] or a list of pages;
+  hierarchical suppression; suppressed cells become `NA`; no rows removed. See
+  *Breaking changes* for the signature.
 - **`col_header_from_names()` builds a spanning header from delimited column
   names** (#259) -- the reconstruction `as_rtftables()` applies automatically to
   a plain data.frame (e.g. `"Drug A____N"` / `"Drug A____Mean"` -> a `Drug A`
