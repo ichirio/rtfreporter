@@ -47,6 +47,7 @@ export(update_footer_row)
 export(col_cell)
 export(rtf_col_header)
 export(add_col_header_row)
+export(col_header_from_names)
 S3method(print, rtf_col_cell)
 S3method(print, rtf_col_header)
 
