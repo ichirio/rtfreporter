@@ -412,3 +412,131 @@ add_col_header_row <- function(hdr, row,
   }
   out
 }
+
+
+# ============================================================================
+#  Spanning header from delimited column names
+# ============================================================================
+
+# Default separators understood when reconstructing a spanning column header
+# from a plain data.frame's column names (see `.split_names_to_col_header()`):
+#   "____"              -- ydisctools::pivot_stats_wider()
+#   "___tlang_delim___" -- tfrmt's column delimiter
+.default_header_seps <- function() c("____", "___tlang_delim___")
+
+# Reconstruct a multi-row spanning column header by splitting delimited column
+# names on `seps`.  A bare data.frame carries no spanning metadata, so the
+# nesting is parsed out of the names: each name becomes a stack of segments,
+# horizontally adjacent columns that share a label AND the same ancestor path
+# are merged into a spanning cell, and columns with fewer segments (e.g. id
+# columns with no separator) are bottom-aligned so their label sits on the leaf
+# row with blank cells above.  A doubled "____" (i.e. "________") splits to an
+# empty middle segment -> a blank cell at that header level.
+#
+# Returns the same shape the rtables adapter emits -- upper rows as lists of
+# `col_cell()`, bottom row as a character vector -- so `drop_cols` reindexing
+# and the rest of the pipeline treat it like any adapter spanning header.
+# Returns NULL when no name splits into more than one segment (caller then
+# falls back to the plain `names(data)` single-row header).
+.split_names_to_col_header <- function(col_names, seps) {
+  if (is.null(seps)) return(NULL)
+  seps <- seps[!is.na(seps) & nzchar(seps)]
+  if (length(seps) == 0L || length(col_names) == 0L) return(NULL)
+
+  # Literal-quote each separator (PCRE \Q...\E) and try longest first, so a
+  # longer separator wins over a shorter one that is its prefix.  \Q...\E avoids
+  # gsub-style backreference escaping (unreliable in this R build).
+  seps    <- seps[order(-nchar(seps))]
+  pattern <- paste0("\\Q", seps, "\\E", collapse = "|")
+
+  segs  <- strsplit(col_names, pattern, perl = TRUE)
+  segs  <- lapply(segs, function(s) if (length(s) == 0L) "" else s)
+  depth <- max(lengths(segs))
+  if (depth <= 1L) return(NULL)
+
+  ncol <- length(col_names)
+  # Bottom-align each column's segments into a depth x ncol label matrix; cells
+  # above a short column's top segment are NA ("no cell"), distinct from an
+  # explicit empty-string segment ("" -> a blank labelled cell).
+  M <- matrix(NA_character_, nrow = depth, ncol = ncol)
+  for (j in seq_len(ncol)) {
+    s <- segs[[j]]
+    M[(depth - length(s) + 1L):depth, j] <- s
+  }
+
+  same_label <- function(a, b) {
+    (is.na(a) && is.na(b)) || (!is.na(a) && !is.na(b) && a == b)
+  }
+
+  # Upper rows (1 .. depth-1): merge adjacent columns sharing this row's label
+  # and the identical ancestor path (rows above).  Each run -> one col_cell.
+  upper_rows <- vector("list", depth - 1L)
+  for (r in seq_len(depth - 1L)) {
+    cells <- list()
+    j <- 1L
+    while (j <= ncol) {
+      k <- j
+      while (k + 1L <= ncol &&
+             same_label(M[r, k + 1L], M[r, j]) &&
+             identical(M[seq_len(r - 1L), k + 1L], M[seq_len(r - 1L), j])) {
+        k <- k + 1L
+      }
+      lab <- if (is.na(M[r, j])) "" else M[r, j]
+      cells <- c(cells,
+                 list(col_cell(pos = if (j == k) j else c(j, k), label = lab)))
+      j <- k + 1L
+    }
+    upper_rows[[r]] <- cells
+  }
+
+  # Bottom (leaf) row: one label per column, never merged.
+  bottom <- M[depth, ]
+  bottom[is.na(bottom)] <- ""
+
+  c(upper_rows, list(bottom))
+}
+
+#' Build a spanning column header from delimited column names
+#'
+#' Reconstructs a multi-row, spanning [rtf_col_header()] by parsing the nesting
+#' encoded in delimited column names -- e.g. `"Drug A____N"`, `"Drug A____Mean"`,
+#' `"Drug B____N"`, `"Drug B____Mean"` becomes a `Drug A` / `Drug B` spanning row
+#' over an `N` / `Mean` leaf row.  Horizontally adjacent columns that share a
+#' label **and** the same ancestor path are merged into one spanning cell;
+#' columns with fewer segments (e.g. an id column with no separator) are
+#' bottom-aligned so their label sits on the leaf row with blank cells above.
+#'
+#' This is the same reconstruction [as_rtftables()] applies automatically to a
+#' plain data.frame; exposing it lets you build the header explicitly and pass
+#' it to [set_col_header()] or `rtftable(col_header = )`.
+#'
+#' @param names A character vector of column names, or a `data.frame` (its
+#'   `names()` are used).
+#' @param sep Character vector of separator(s) to split names on; the longest
+#'   matching separator wins.  Default recognises `"____"`
+#'   (`ydisctools::pivot_stats_wider()`) and `"___tlang_delim___"` (tfrmt's
+#'   column delimiter).  A doubled separator yields an empty (blank) cell at
+#'   that level.
+#'
+#' @return An [rtf_col_header()].  When no name splits into more than one
+#'   segment, a single flat label row of `names`.
+#'
+#' @seealso [set_col_header()] to apply it, [rtf_col_header()] / [col_cell()]
+#'   for the pieces.
+#'
+#' @examples
+#' col_header_from_names(
+#'   c("Item", "Drug A____N", "Drug A____Mean", "Drug B____N", "Drug B____Mean")
+#' )
+#' @export
+col_header_from_names <- function(names, sep = .default_header_seps()) {
+  if (is.data.frame(names)) names <- names(names)
+  if (!is.character(names)) names <- as.character(names)
+  if (length(names) == 0L) {
+    stop("`names` must be a non-empty character vector (or a data.frame).",
+         call. = FALSE)
+  }
+  rows <- .split_names_to_col_header(names, sep)
+  if (is.null(rows)) rows <- list(names)          # flat: one label row
+  structure(rows, class = "rtf_col_header")
+}

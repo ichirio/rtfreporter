@@ -1,5 +1,16 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`col_header_from_names()` builds a spanning header from delimited column
+  names** (#259) -- the reconstruction `as_rtftables()` applies automatically to
+  a plain data.frame (e.g. `"Drug A____N"` / `"Drug A____Mean"` -> a `Drug A`
+  span over `N` / `Mean`) is now a public helper. Pass a character vector (or a
+  data.frame) and an optional `sep`; get back an `rtf_col_header` ready for
+  `set_col_header()` or `rtftable(col_header = )`. (Internally, the
+  `.split_names_to_col_header()` logic moved from `as_rtftables.R` to
+  `col_header.R`; no behaviour change.)
+
 ### Documentation
 
 - **`as_rtftables()` header / styling `...` arguments documented as superseded**

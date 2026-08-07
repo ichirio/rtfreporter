@@ -251,6 +251,7 @@ reference:
     contents:
       - col_cell
       - rtf_col_header
+      - col_header_from_names
       - add_col_header_row
       - set_col_header
       - rtf_columns
