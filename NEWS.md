@@ -1,13 +1,5 @@
 # rtfreporter (development version)
 
-### New features
-
-- **`set_blank_rows()` is now a post-hoc verb** (#267) -- it accepts a built
-  [rtftable()] or a **list of pages** (an `as_rtftables()` result), so
-  `as_rtftables(x, ...) |> set_blank_rows(...)` works and a list is handled
-  **per page**. The data.frame form is unchanged (still used internally by
-  `paginate()`); it is now the `data.frame` method of the generic.
-
 ### Breaking changes
 
 - **`collapse_repeats()` is now a post-hoc verb on a built table** (#265) -- its

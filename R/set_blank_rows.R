@@ -15,24 +15,20 @@
 #  `rtftable(read_attributes = TRUE)` picks them up automatically.
 # ============================================================================
 
-#' Add blank separator rows to a table or data.frame
+#' Attach blank-row positions to a data.frame
 #'
-#' Resolves a `blank_rows` specification (the same one `paginate()` accepts)
-#' into integer positions and records them.  It is an S3 generic:
+#' Resolves a `blank_rows` specification (the same one `paginate()`
+#' accepts) into integer positions and stores them on
+#' `attr(df, "rtf_blank_rows")`.  Use this when you already have a
+#' page-sized data.frame and only need to add blank rows — no
+#' pagination required.
 #'
-#' \itemize{
-#'   \item on a **`rtftable`** (or a **list of pages** from [as_rtftables()])
-#'     it sets the resolved positions on the table, so the natural
-#'     `as_rtftables(x, ...) |> set_blank_rows(...)` pipeline works and a list
-#'     is handled **per page**;
-#'   \item on a **data.frame** it stores the positions on
-#'     `attr(., "rtf_blank_rows")` (consumed by `rtftable(read_attributes =
-#'     TRUE)`).  `paginate()` calls this form on every chunk it produces, so it
-#'     defines what `paginate(blank_rows = ...)` etc. do.
-#' }
+#' `paginate()` calls this function on every chunk it produces, so
+#' the behaviour here defines what `paginate(blank_rows = ...)`,
+#' `paginate(blank_row_first = ...)` and `paginate(blank_row_end =
+#' ...)` actually do.
 #'
-#' @param x An [rtftable()], a list of them (pages from [as_rtftables()]), or a
-#'   data.frame (or tibble).
+#' @param df A data.frame (or tibble).
 #' @param blank_rows Blank-row specification. One of -- or a `list()` combining
 #'   any of (positions are unioned):
 #'   \describe{
@@ -57,10 +53,9 @@
 #'   `"value"`, or `"filled"` — the same detection as the pagination splits
 #'   (see [paginate()]).
 #'
-#' @param ... Passed between methods.
-#'
-#' @return An object of the same shape as `x` (rtftable, list of pages, or
-#'   data.frame) with the blank-row positions set / attached.
+#' @return `df` with `attr(., "rtf_blank_rows")` updated.  The
+#'   attribute is left absent when the resolved position set is
+#'   empty.
 #'
 #' @examples
 #' df <- data.frame(
@@ -69,32 +64,25 @@
 #'   v = 1:6,
 #'   stringsAsFactors = FALSE
 #' )
-#' # As a post-hoc verb on the as_rtftables() output:
-#' as_rtftables(df) |>
-#'   set_blank_rows(blank_rows = "between_groups", group_by = "indent")
-#'
-#' # On a bare data.frame (attaches the attribute):
-#' out <- set_blank_rows(df, blank_rows = "between_groups",
-#'                       blank_row_first = TRUE, blank_row_end = TRUE)
+#' out <- set_blank_rows(df,
+#'                       blank_rows      = "between_groups",
+#'                       blank_row_first = TRUE,
+#'                       blank_row_end   = TRUE)
 #' attr(out, "rtf_blank_rows")
 #'
 #' @seealso [paginate()] for the per-page version; [rtftable()]
-#'   (`read_attributes = TRUE`) which consumes the attribute; [collapse_repeats()]
-#'   and the other post-hoc verbs.
+#'   (`read_attributes = TRUE`) which consumes the attribute.
 #' @export
-set_blank_rows <- function(x, ...) UseMethod("set_blank_rows")
-
-#' @rdname set_blank_rows
-#' @export
-set_blank_rows.data.frame <- function(x,
-                                      blank_rows      = NULL,
-                                      blank_row_first = FALSE,
-                                      blank_row_end   = FALSE,
-                                      group_col       = NULL,
-                                      group_by        = c("auto", "indent",
-                                                          "value", "filled"),
-                                      ...) {
-  df <- x
+set_blank_rows <- function(df,
+                            blank_rows      = NULL,
+                            blank_row_first = FALSE,
+                            blank_row_end   = FALSE,
+                            group_col       = NULL,
+                            group_by        = c("auto", "indent",
+                                                "value", "filled")) {
+  if (!is.data.frame(df)) {
+    stop("`df` must be a data.frame (or tibble).", call. = FALSE)
+  }
   group_by  <- match.arg(group_by)
   group_idx <- .resolve_group_col(group_col, df)
   pos <- .resolve_pagewise_blanks(blank_rows, df, group_idx, group_by = group_by)
@@ -108,20 +96,4 @@ set_blank_rows.data.frame <- function(x,
     attr(df, "rtf_blank_rows") <- NULL
   }
   df
-}
-
-#' @rdname set_blank_rows
-#' @export
-set_blank_rows.rtftable <- function(x, ...) {
-  ref      <- if (!is.null(x$data)) x$data else x$data_list[[1L]]
-  resolved <- set_blank_rows(ref, ...)
-  pos      <- attr(resolved, "rtf_blank_rows", exact = TRUE)
-  x$blank_rows <- if (is.null(pos)) integer(0) else as.integer(pos)
-  x
-}
-
-#' @rdname set_blank_rows
-#' @export
-set_blank_rows.list <- function(x, ...) {
-  .style_map_pages(x, set_blank_rows, ..., verb = "set_blank_rows")
 }

@@ -286,10 +286,7 @@ reference:
 
   # ── 7. Blank rows ──────────────────────────────────────────────────────
   - title: Blank rows
-    desc: >
-      Insert blank separator rows by position, by value change, or by rule.
-      `set_blank_rows()` applies them post-hoc to an `as_rtftables()` result
-      (per page) or to a bare data.frame.
+    desc: Insert blank separator rows by position, by value change, or by rule.
     contents:
       - set_blank_rows
       - blank_rows_by_change
