@@ -254,6 +254,7 @@ reference:
       - col_header_from_names
       - add_col_header_row
       - set_col_header
+      - set_header_cell
       - rtf_columns
       - rtf_header_source
 
