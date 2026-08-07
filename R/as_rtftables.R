@@ -274,8 +274,10 @@
 #'     \item{an integer vector of positions}{a blank row is inserted *after* each
 #'       given data-row index; `0` = before the first row, `-1` = after the last
 #'       row (e.g. `c(0, 5, -1)`).}
-#'     \item{a [blank_rows_by_change()] object}{insert a blank whenever the value
-#'       of one or more columns changes.}
+#'     \item{`"between_groups"`}{a blank at every group transition on `group_col`,
+#'       using this call's `group_by` detection (auto / indent / value / filled).}
+#'     \item{a [blank_rows_by_change()] object}{insert a blank whenever the group
+#'       of one or more columns changes -- the spec carries its own `group_by`.}
 #'     \item{a [blank_rows_by_rule()] object}{insert a blank before / after rows
 #'       whose column matches a regular expression.}
 #'   }

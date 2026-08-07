@@ -2,6 +2,14 @@
 
 ### New features
 
+- **Unified blank-row group recognition** (#263):
+  - `blank_rows_by_change()` gains a **`group_by`** argument (`"value"` default,
+    plus `"indent"` / `"filled"` / `"auto"`) -- the same group detection the
+    pagination splits and `blank_rows = "between_groups"` use. The standalone
+    spec is now a full-power equivalent that carries its own `group_by`.
+  - `blank_rows_by_change()` and `blank_rows_by_rule()` **now work inside
+    `as_rtftables()` / `paginate()`** (they previously errored with
+    *"Unrecognised blank_rows entry"*); they are resolved per page.
 - **`collapse_repeats()` blanks repeated values in a data.frame** (#261) -- the
   standalone, whole-frame version of the per-page `as_rtftables(collapse_repeats
   = )` argument. Hierarchical suppression (a change in an earlier listed column
@@ -91,6 +99,10 @@
 
 ### Bug fixes
 
+- **`blank_rows = "between_groups"` now honours `group_by`** (#263) -- it always
+  used `"auto"` detection regardless of the `group_by` argument; `set_blank_rows()`
+  gains a matching `group_by` argument. (`group_by` defaults preserve prior
+  output.)
 - **`as_rtftables(split = "by_value", stub_vars = )` now splits by `group_col`
   *before* building the stub** (#244) -- for a `by_value` split each group is an
   independent section, so the indented stub is now built per page after the
