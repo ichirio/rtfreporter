@@ -410,6 +410,25 @@ finishing a tidy hierarchy-column data.frame into the indented stub
 layout beforehand.
 }
 
+\section{Superseded arguments}{
+
+These `...` arguments still work and are handy for simple one-shot tables,
+but dedicated post-hoc verbs supersede them for anything beyond a single
+label row -- they address the **final** printed columns (by name or visible
+position), are inspectable, and compose in a pipe:
+
+\itemize{
+  \item `col_header` -> [set_col_header()] (multi-row / spanning headers,
+    name-based; [rtf_columns()] lists the columns and [rtf_header_source()]
+    shows the current header as editable source).
+  \item column text styling / added header rows -> [style_cols()],
+    [style_header()], [add_header_row()].
+}
+
+Prefer the verbs for complex headers; the arguments are kept for
+convenience and backward compatibility.
+}
+
 \examples{
 # A plain data.frame: one page, no splitting.
 df <- data.frame(
@@ -442,6 +461,9 @@ generate_rtfreport(doc, "out.rtf", overwrite = TRUE)
 
 }
 \seealso{
-[as_rtftable()] for the single-page convenience wrapper,
-  [rtf_tables()] to append the result to a document.
+[set_col_header()] / [rtf_columns()] / [rtf_header_source()] and the
+  styling verbs [style_cols()] / [style_header()] / [add_header_row()] (which
+  supersede the header / styling `...` arguments); [as_rtftable()] for the
+  single-page convenience wrapper; [rtf_tables()] to append the result to a
+  document.
 }

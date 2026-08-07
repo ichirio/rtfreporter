@@ -511,11 +511,31 @@
 #'   (`col_spec` / `col_rel_width` / `row_title` still use the pre-drop input
 #'   coordinates.)
 #'
+#' @section Superseded arguments:
+#' These `...` arguments still work and are handy for simple one-shot tables,
+#' but dedicated post-hoc verbs supersede them for anything beyond a single
+#' label row -- they address the **final** printed columns (by name or visible
+#' position), are inspectable, and compose in a pipe:
+#'
+#' \itemize{
+#'   \item `col_header` -> [set_col_header()] (multi-row / spanning headers,
+#'     name-based; [rtf_columns()] lists the columns and [rtf_header_source()]
+#'     shows the current header as editable source).
+#'   \item column text styling / added header rows -> [style_cols()],
+#'     [style_header()], [add_header_row()].
+#' }
+#'
+#' Prefer the verbs for complex headers; the arguments are kept for
+#' convenience and backward compatibility.
+#'
 #' @return A list of `rtftable` objects, one per page.  When the split is
 #'   value-based (or the input was a named list) the list is named.
 #'
-#' @seealso [as_rtftable()] for the single-page convenience wrapper,
-#'   [rtf_tables()] to append the result to a document.
+#' @seealso [set_col_header()] / [rtf_columns()] / [rtf_header_source()] and the
+#'   styling verbs [style_cols()] / [style_header()] / [add_header_row()] (which
+#'   supersede the header / styling `...` arguments); [as_rtftable()] for the
+#'   single-page convenience wrapper; [rtf_tables()] to append the result to a
+#'   document.
 #'
 #' @examples
 #' # A plain data.frame: one page, no splitting.
