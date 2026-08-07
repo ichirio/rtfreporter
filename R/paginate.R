@@ -357,7 +357,8 @@ paginate.data.frame <- function(x, ...) {
   materialised_blanks <- FALSE
   if (isTRUE(count_blank_rows)) {
     base_pos <- attr(
-      set_blank_rows(x, blank_rows = blank_rows, group_col = group_col),
+      set_blank_rows(x, blank_rows = blank_rows, group_col = group_col,
+                     group_by = group_by),
       "rtf_blank_rows", exact = TRUE)
     in_attr  <- attr(x, "rtf_blank_rows", exact = TRUE)
     pos <- sort(unique(c(
@@ -438,7 +439,8 @@ paginate.data.frame <- function(x, ...) {
                                blank_rows      = blank_rows,
                                blank_row_first = blank_row_first,
                                blank_row_end   = blank_row_end,
-                               group_col       = group_col)
+                               group_col       = group_col,
+                               group_by        = group_by)
     }
     if (length(collapse_idx)) {
       chunk <- .collapse_repeats_chunk(chunk, collapse_idx)
@@ -1049,11 +1051,17 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
 
 # Resolve the user's blank_rows spec into an integer vector of positions
 # valid for ONE page (a chunk).  Accepts:
-#   NULL                 -> integer(0)
-#   integer / numeric    -> positions (passed through, clipped to chunk)
-#   "between_groups"     -> auto-fill between detected group transitions
-#   list                 -> union of any of the above
-.resolve_pagewise_blanks <- function(spec, chunk, group_idx) {
+#   NULL                        -> integer(0)
+#   integer / numeric           -> positions (passed through, clipped to chunk)
+#   "between_groups"            -> fill between detected group transitions,
+#                                  using `group_by` (auto / indent / value /
+#                                  filled)
+#   blank_rows_by_change() /
+#   blank_rows_by_rule() object -> delegated to the shared spec resolver, so
+#                                  the same specs work per page here
+#   list                        -> union of any of the above
+.resolve_pagewise_blanks <- function(spec, chunk, group_idx,
+                                     group_by = "auto") {
   if (is.null(spec) || length(spec) == 0L) return(integer(0))
 
   one <- function(s) {
@@ -1061,7 +1069,7 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
       return(as.integer(s))
     }
     if (is.character(s) && length(s) == 1L && s == "between_groups") {
-      info <- .compute_group_info(chunk, group_idx)
+      info <- .compute_group_info(chunk, group_idx, group_by = group_by)
       if (length(info$id) <= 1L) return(integer(0))
       # Find rows where id changes from previous row.  Skip the first row
       # (that is the start of the chunk, not a transition).
@@ -1070,15 +1078,20 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
       # inserted after that row.
       return(as.integer(changes - 1L))
     }
+    if (inherits(s, "rtf_blank_rows_by_change") ||
+        inherits(s, "rtf_blank_rows_by_rule")) {
+      return(.resolve_blank_rows(s, chunk))
+    }
     stop("Unrecognised `blank_rows` entry: ", paste(s, collapse = " "),
          call. = FALSE)
   }
 
-  positions <- if (is.list(spec)) {
-    unlist(lapply(spec, one))
-  } else {
-    one(spec)
-  }
+  # A classed spec object (by_change / by_rule) is itself a list, so treat only
+  # a *plain* list as a collection of items to union.
+  is_collection <- is.list(spec) &&
+    !inherits(spec, "rtf_blank_rows_by_change") &&
+    !inherits(spec, "rtf_blank_rows_by_rule")
+  positions <- if (is_collection) unlist(lapply(spec, one)) else one(spec)
   positions <- positions[!is.na(positions)]
   positions <- positions[positions >= 0L & positions <= nrow(chunk)]
   sort(unique(as.integer(positions)))

@@ -9,7 +9,8 @@ set_blank_rows(
   blank_rows = NULL,
   blank_row_first = FALSE,
   blank_row_end = FALSE,
-  group_col = NULL
+  group_col = NULL,
+  group_by = c("auto", "indent", "value", "filled")
 )
 }
 \arguments{
@@ -21,8 +22,10 @@ any of (positions are unioned):
   \item{`NULL`}{(default) no positions from this argument.}
   \item{an integer vector}{explicit positions: `0` = before the first row,
     `k` = after row `k`.}
-  \item{`"between_groups"`}{auto-insert a blank at every group transition
-    (the same indent-based detection as the pagination splits).}
+  \item{`"between_groups"`}{insert a blank at every group transition,
+    using `group_by` (the same detection as the pagination splits).}
+  \item{a [blank_rows_by_change()] or [blank_rows_by_rule()] spec}{resolved
+    per page (each carries its own rule / `group_by`).}
 }}
 
 \item{blank_row_first}{Logical, default `FALSE`.  When `TRUE`,
@@ -33,8 +36,12 @@ adds position `nrow(df)` (blank row at the bottom of `df`).}
 
 \item{group_col}{Column name or 1-based index identifying the
 group, used only when `blank_rows = "between_groups"`.  `NULL`
-(default) means indent-based detection on column 1 — see
-[paginate()].}
+(default) means detection on column 1 — see [paginate()].}
+
+\item{group_by}{How groups are recognised when
+`blank_rows = "between_groups"`: `"auto"` (default), `"indent"`,
+`"value"`, or `"filled"` — the same detection as the pagination splits
+(see [paginate()]).}
 }
 \value{
 `df` with `attr(., "rtf_blank_rows")` updated.  The

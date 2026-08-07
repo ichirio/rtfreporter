@@ -39,11 +39,26 @@
 #' Blank-row specification: insert when a variable's value changes
 #'
 #' Constructor for a blank-row spec that inserts a blank separator row each
-#' time the value of any column in `cols` differs from the previous row.
-#' Pass the result to `rtftable(blank_rows = ...)`, optionally combined with
-#' other specs via a list.
+#' time the *group* of any column in `cols` changes from the previous row.
+#' Pass the result to `rtftable(blank_rows = ...)` or
+#' `as_rtftables(blank_rows = ...)`, optionally combined with other specs via a
+#' list.
 #'
 #' @param cols Character vector of column names in the data frame.
+#' @param group_by How a "group" is recognised in each column -- the same
+#'   detection the pagination splits and `blank_rows = "between_groups"` use:
+#'   \describe{
+#'     \item{`"value"`}{(default) a group is a run of equal values; a blank is
+#'       inserted whenever a value differs from the previous row (the classic
+#'       behaviour).}
+#'     \item{`"indent"`}{a non-indented, non-empty cell starts a group; indented
+#'       / empty cells are members.}
+#'     \item{`"filled"`}{a non-empty cell starts a group; `NA` / `""` cells are
+#'       members.}
+#'     \item{`"auto"`}{pick one of the above from each column's content.}
+#'   }
+#'   With several `cols`, a blank is inserted where **any** column's group
+#'   changes.
 #' @param include_before_first Logical. When `TRUE` (default), also insert a
 #'   blank row before the first data row.
 #' @param include_after_last Logical. When `TRUE` (default), also insert a
@@ -54,18 +69,24 @@
 #' @examples
 #' \dontrun{
 #' rtftable(df, blank_rows = blank_rows_by_change(c("Treatment", "Visit")))
+#' # indent-based groups (a stub/label column):
+#' rtftable(df, blank_rows = blank_rows_by_change("label", group_by = "indent"))
 #' }
 #'
 #' @export
 blank_rows_by_change <- function(cols,
+                                  group_by = c("value", "indent",
+                                               "filled", "auto"),
                                   include_before_first = TRUE,
                                   include_after_last   = TRUE) {
   if (!is.character(cols) || length(cols) < 1L) {
     stop("`cols` must be a non-empty character vector.", call. = FALSE)
   }
+  group_by <- match.arg(group_by)
   structure(
     list(
       cols                 = cols,
+      group_by             = group_by,
       include_before_first = isTRUE(include_before_first),
       include_after_last   = isTRUE(include_after_last)
     ),
@@ -157,10 +178,15 @@ blank_rows_by_rule <- function(col, pattern,
   sort(unique(out))
 }
 
-# Mode 2: by-variable-change
+# Mode 2: by-variable-change.  `group_by = "value"` (default) uses exact
+# equality on each column (the historical behaviour); "indent" / "filled" /
+# "auto" reuse the pagination group detection (`.compute_group_info()`), so a
+# blank lands at each group transition -- the same recognition as
+# `blank_rows = "between_groups"`.  Several columns union their transitions.
 .resolve_by_change <- function(spec, df) {
   n <- nrow(df)
   if (n == 0L) return(integer(0))
+  mode <- spec$group_by %||% "value"
   out <- integer(0)
   for (col in spec$cols) {
     if (!col %in% names(df)) {
@@ -169,13 +195,20 @@ blank_rows_by_rule <- function(col, pattern,
         call. = FALSE)
       next
     }
-    vals <- df[[col]]
-    if (n >= 2L) {
+    if (n < 2L) next
+    if (identical(mode, "value")) {
+      vals <- df[[col]]
       for (i in 2:n) {
-        if (!identical(vals[[i]], vals[[i - 1L]])) {
-          out <- c(out, i - 1L)
-        }
+        if (!identical(vals[[i]], vals[[i - 1L]])) out <- c(out, i - 1L)
       }
+    } else {
+      info    <- .compute_group_info(df, match(col, names(df)), group_by = mode)
+      id      <- info$id
+      # A blank sits after the row before each id change; NA ids (rows above the
+      # first group header) never form a transition (which() drops NA), matching
+      # `blank_rows = "between_groups"`.
+      changes <- which(c(FALSE, id[-1L] != id[-length(id)]))
+      out     <- c(out, changes - 1L)
     }
   }
   if (isTRUE(spec$include_before_first)) out <- c(out, 0L)
