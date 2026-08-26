@@ -300,8 +300,12 @@ reference:
     desc: >
       Built-in page-split strategies as reusable functions for the `split=`
       argument of `as_rtftables()`, plus a helper for writing your own.
+      `as_rtftables()` splits **rows**; `paginate_cols()` is the horizontal
+      counterpart, splitting a too-wide table by **column** and repeating the
+      row headings on every page.
     contents:
       - page_split
+      - paginate_cols
       - add_cont_label
 
   # ── 8. Borders ─────────────────────────────────────────────────────────

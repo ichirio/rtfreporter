@@ -555,6 +555,61 @@ label (the clinical sub-row layout) is not whitespace-empty, so indented rows ar
 never mistaken for blanks.
 
 
+## Splitting the other way: `paginate_cols()`
+
+Everything above cuts **rows**. A table that is too *wide* needs the other
+axis: `paginate_cols()` splits it by **column** and repeats the row-heading
+column(s) on every page.
+
+```{r pagcols, eval = FALSE}
+as_rtftables(df, split = "group_safe", max_rows = 20) |>
+  paginate_cols(at = c(4, 6))
+```
+
+`at` names the columns to cut **before** (so `c(4, 6)` gives blocks `1:3`,
+`4:5`, `6:ncol`), symmetric with `split_rows`; `cols = list(2:3, 4:5)` states
+the blocks outright. Positions refer to the **final printed columns** -- after
+`drop_cols`, `stub_vars` and any `col_header` you supplied -- the same
+convention `set_col_header()` follows.
+
+Row splitting happens first and the column split is applied to its result, so
+the **row page is the outer level**: a row band sweeps every column block
+before the next band starts, so the reader goes across the table first and then
+down it. Two row pages by three column blocks come out as
+
+```
+page 1  row 1 / cols 1    page 4  row 2 / cols 1
+page 2  row 1 / cols 2    page 5  row 2 / cols 2
+page 3  row 1 / cols 3    page 6  row 2 / cols 3
+```
+
+The columns repeated on each page default to the table's `row_title` (column 1
+unless you set it); `carry =` overrides that, and `carry = integer(0)` repeats
+nothing. A carry column is removed from the blocks automatically, so it is
+never printed twice on one page.
+
+**Column widths are preserved.** A column is the same width on every page it
+appears on, in all three width modes -- so a block narrower than the whole
+table yields a *narrower page* rather than one stretched back out to the
+margins:
+
+```{r pagcols_width, eval = FALSE}
+tbl <- rtftable(df, col_rel_width = c(3, 2, 2, 2, 2, 2, 2))
+# full table:      2736 1824 1824 1824 1824 1824 1824
+# paginate_cols(at = c(4, 6)) ->
+#   page 1:        2736 1824 1824
+#   page 2:        2736 1824 1824
+#   page 3:        2736 1824 1824
+```
+
+Spanning header cells are clipped to each page's columns. By default a cut may
+fall inside a spanning group, and that group's label is repeated over its
+remaining columns on both pages; pass `allow_span_break = FALSE` to reject such
+a cut instead and be told which cell it would break.
+
+Page names are carried through unchanged, so a table's column pages stay in the
+same section under `rtf_tables(auto_section = TRUE)`.
+
 ## Choosing an approach
 
 | You want… | Use |
@@ -567,6 +622,7 @@ never mistaken for blanks.
 | A bespoke rule | a custom `split =` function (+ `add_cont_label()`) |
 | The split already done upstream | pass a (named) list to `as_rtftables()` |
 | A built-in rule plus a tweak | wrap a `page_split_*()` factory |
+| The table is too **wide** for the page | `paginate_cols()` (after the row split) |
 
 Whichever you choose, the result is the same shape -- a list of `rtftable`
 pages -- so the rest of your pipeline does not change:
