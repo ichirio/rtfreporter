@@ -106,8 +106,11 @@ pages <- as_rtftables(
   ) |>
   # one column of two cells: integer part right-aligned, decimals left-aligned
   set_decimal_split(cols = VISITS) |>
-  # then cut the visits into blocks of two, repeating the time-point stub
-  paginate_cols(at = c(4, 6))
+  # then cut after Day 28, repeating the time-point stub on both pages.
+  # Four visits fill the landscape page (2736 + 4 x 1824 = 10032 of the 13680
+  # writable twips); cutting every two visits would leave a third of the sheet
+  # empty, since a column keeps its width whatever page it lands on.
+  paginate_cols(at = 6)
 
 titles <- lapply(seq_along(pages), function(i)
   c("Table 14.2.1",
@@ -126,5 +129,7 @@ doc <- rtf_footnotes(doc, footnotes)
 
 generate_rtfreport(doc, outfile, overwrite = TRUE)
 
+n_blocks <- length(unique(vapply(pages, function(p)
+  paste(names(p$data)[-1L], collapse = "|"), character(1L))))
 message(sprintf("%s: %d pages (%d row bands x %d column blocks)",
-                outfile, length(pages), length(pages) / 3L, 3L))
+                outfile, length(pages), length(pages) / n_blocks, n_blocks))

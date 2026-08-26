@@ -628,11 +628,20 @@ as_rtftables(
     border = "tfl"
   ) |>
   set_decimal_split(cols = VISITS) |>   # one column, two cells
-  paginate_cols(at = c(4, 6))           # visits in blocks of two
+  paginate_cols(at = 6)                 # cut after Day 28
 ```
 
-Three time bands by three visit blocks gives nine pages, each with the nominal
-time stub and identical column widths. PK reports carry three significant
+Three time bands by two visit blocks gives six pages, each with the nominal
+time stub, and every visit column the width it has in the full table.
+
+Where to cut is a layout decision, and the width rule drives it: because a
+column keeps its width whatever page it lands on, a block of four visits fills
+the landscape sheet (`2736 + 4 x 1824 = 10032` of the 13680 writable twips)
+while a block of two would leave a third of it empty. Cutting after Day 28
+gives a full first page and a shorter second one, which reads better than three
+uniformly narrow pages.
+
+PK reports carry three significant
 figures, so the decimal count changes with the magnitude (`1104.5`, `88.012`,
 `9.0125`) -- `set_decimal_split()` lines the points up regardless, `<0.500`
 hangs its `<` to the left of the point, and `BLQ` or a `Min, Max` pair falls
