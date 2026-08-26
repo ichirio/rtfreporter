@@ -2,6 +2,27 @@
 
 ### New features
 
+- **`paginate_cols()` paginates a table horizontally, by column** (#275) --
+  the counterpart to the row pagination `as_rtftables()` performs. A table too
+  wide for the page is cut into column blocks (`at =` names the columns to cut
+  **before**, or `cols =` states the blocks), with the row-heading column(s)
+  repeated on every page. Row splitting happens first and the column split is
+  applied to its result, and the **row page is the outer level**: a row band
+  sweeps every column block before the next band starts, so the reader goes
+  across the table first and then down it (two row pages by three column
+  blocks give `row1/col1`, `row1/col2`, `row1/col3`, `row2/col1`, …).
+  Positions refer
+  to the **final printed columns**, matching `set_col_header()`. The carry set
+  defaults to the table's `row_title`; `carry =` overrides it. **A column is
+  the same width on every page it appears on** in all three width modes --
+  each page's table width is scaled to the kept columns' share so relative
+  widths do not stretch back out to the margins, which means a narrow block
+  gives a narrow page. Spanning header cells are clipped per page; a cut
+  inside a spanning group is allowed by default (the group label repeats) and
+  `allow_span_break = FALSE` rejects it. Page names are carried through
+  unchanged, so column pages stay in one `auto_section` section. Works on an
+  rtftable or an `as_rtftables()` page list.
+
 - **`set_header_cell()` sets/merges individual column-header cells** (#271) --
   a post-hoc verb that places one or more [col_cell()]s (by column name or
   position, spanning via `c(a, b)`, with borders / alignment / decorations)
