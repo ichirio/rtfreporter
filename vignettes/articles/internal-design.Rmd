@@ -121,6 +121,17 @@ renderers, figures via the picture renderer). Page-number tokens
 functions (`.resolve_sections()`, `.render_footnote_table()`,
 `.compute_content_width()`, …) live in `R/generate_rtfreport.R`.
 
+One rendering step deliberately works on a *derived* geometry rather than the
+table's own: `set_decimal_split()` (`R/decimal_split.R`). Because RTF lets each
+row declare its own cells, `.decimal_split_plan()` builds an expanded set of
+`\cellx` positions -- one extra edge inside each split column -- that **only the
+data rows use**. The whole column-header block keeps rendering over the original
+columns, so no header or spanning renderer knows the feature exists, and the
+cumulative positions still end at the same right edge, leaving the table width,
+the title/footnote band and pagination untouched. The plan is derived at render
+time from `tbl$decimal_split` and never written back to the object; when it is
+`NULL` every renderer takes its original path.
+
 ## Why S3 here
 
 S3 fits this design because the objects are mostly **data**: they are built once,

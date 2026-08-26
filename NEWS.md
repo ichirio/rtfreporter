@@ -22,6 +22,22 @@
   `allow_span_break = FALSE` rejects it. Page names are carried through
   unchanged, so column pages stay in one `auto_section` section. Works on an
   rtftable or an `as_rtftables()` page list.
+- **`set_decimal_split()` lines a column up on its decimal point** (#273) -- a
+  post-hoc verb that renders the selected body column(s) as **two adjacent RTF
+  cells**: the part before the first decimal separator (right-aligned) and the
+  separator plus everything after it (left-aligned). The points then line up
+  exactly whatever the font, instead of merely right-aligning the last
+  character. It is an **output option, not a data transformation**: the data
+  frame is never rewritten, the table's total width is unchanged (only the
+  column's own width is divided, sized automatically from the widest left and
+  right part, or by an explicit `ratio`), and the column-header block still
+  renders over the original single column. A relational or sign prefix
+  (`<0.001`, `>=0.5`, `-0.7`) travels with the left half and a suffix
+  (`45.6%`, `12.3^{a}`) with the right, so both hang outside the aligned point.
+  Free text (`"n (%)"`) and -- unless `include_compound = TRUE` -- compound
+  values (`"12.3 (4.56)"`) are rendered as one cell across the pair, exactly as
+  today. Works on an rtftable or an `as_rtftables()` page list. The console
+  preview does not show the split.
 
 - **`set_header_cell()` sets/merges individual column-header cells** (#271) --
   a post-hoc verb that places one or more [col_cell()]s (by column name or
