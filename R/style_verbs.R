@@ -811,6 +811,114 @@ set_header_cell.list <- function(x, ...) {
 }
 
 
+# ── set_decimal_split() ────────────────────────────────────────────────────
+
+#' Line up the decimal points of a numeric column
+#'
+#' Marks one or more body columns to be rendered as **two adjacent RTF cells**:
+#' the part before the first decimal separator (right-aligned) and the
+#' separator plus everything after it (left-aligned).  The decimal points then
+#' line up exactly, whatever the font, instead of merely right-aligning the
+#' last character.
+#'
+#' This is an **RTF-output option**, not a data transformation.  The table's
+#' data frame is never rewritten, the total table width is unchanged (only the
+#' column's own width is divided), and the column-header block keeps rendering
+#' over the original single column.  The console preview
+#' (`print()` / `format()`) therefore does not show the split.
+#'
+#' @section Which cells are split:
+#' A cell is split when it starts with an optional relational or sign prefix
+#' (`<`, `>`, `>=`, `<=`, `~`, `+`, `-`) followed by a digit or the separator,
+#' and contains at least one digit.  The prefix travels with the left half and
+#' any suffix (`%`, a `^{a}` footnote marker, ...) with the right half, so both
+#' hang outside the aligned point:
+#'
+#' \tabular{lll}{
+#'   **cell** \tab **left** \tab **right** \cr
+#'   `3.45`    \tab `3`   \tab `.45`  \cr
+#'   `-0.7`    \tab `-0`  \tab `.7`   \cr
+#'   `<0.001`  \tab `<0`  \tab `.001` \cr
+#'   `45.6%`   \tab `45`  \tab `.6%`  \cr
+#'   `100`     \tab `100` \tab (empty)
+#' }
+#'
+#' Everything else -- free text such as `"n (%)"` or a group label -- is
+#' rendered as **one cell across the pair**, exactly as it looks without the
+#' option.  Leading and trailing spaces (non-breaking ones included, as left by
+#' [fmt_right_align()]) are dropped from split cells, since the split supplies
+#' the alignment they were emulating.
+#'
+#' Compound values such as `"12.3 (4.56)"` (mean (SD)) are excluded by default:
+#' the trailing group would dominate the right half and drag the split point
+#' far to the left.  Set `include_compound = TRUE` to split them anyway.
+#'
+#' A selected column in which no cell carries a separator is left untouched.
+#'
+#' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
+#' @param cols Columns to split: names or positions.  `NULL` clears the
+#'   setting.
+#' @param ratio `NULL` (the default) to size the two halves automatically from
+#'   the widest left and right part actually present, or a number in `(0, 1)`
+#'   giving the left half's share of the column width.  Pass an explicit value
+#'   to keep the split point identical across pages, whose data differ.
+#' @param decimal_mark The separator to split at.  Default `"."`.
+#' @param include_compound Split values carrying a whitespace- or
+#'   parenthesis-separated companion (`"12.3 (4.56)"`) too.  Default `FALSE`.
+#' @param ... Unused.
+#'
+#' @return An object of the same shape as `x`.
+#'
+#' @seealso [style_cols()] for ordinary column alignment; [fmt_right_align()]
+#'   and [fmt_count_paren()] for the text-padding alternatives.
+#'
+#' @examples
+#' df  <- data.frame(
+#'   Statistic = c("Mean", "SD", "p-value"),
+#'   Value     = c("12.3", "1.05", "<0.001"),
+#'   stringsAsFactors = FALSE
+#' )
+#' tbl <- rtftable(df) |> set_decimal_split(cols = "Value")
+#' @export
+set_decimal_split <- function(x, ...) UseMethod("set_decimal_split")
+
+#' @rdname set_decimal_split
+#' @export
+set_decimal_split.rtftable <- function(x, cols = NULL, ratio = NULL,
+                                       decimal_mark = ".",
+                                       include_compound = FALSE, ...) {
+  if (is.null(cols)) {
+    x$decimal_split <- NULL
+    return(x)
+  }
+  cols_idx <- .style_resolve_cols(x, cols, "set_decimal_split")
+  if (!is.character(decimal_mark) || length(decimal_mark) != 1L ||
+      is.na(decimal_mark) || !nzchar(decimal_mark)) {
+    stop("`decimal_mark` must be a single non-empty string.", call. = FALSE)
+  }
+  if (!is.null(ratio)) {
+    ratio <- suppressWarnings(as.numeric(ratio))
+    if (length(ratio) != 1L || is.na(ratio) || ratio <= 0 || ratio >= 1) {
+      stop("`ratio` must be a single number strictly between 0 and 1.",
+           call. = FALSE)
+    }
+  }
+  x$decimal_split <- list(
+    cols             = as.integer(cols_idx),
+    ratio            = ratio,
+    decimal_mark     = as.character(decimal_mark),
+    include_compound = isTRUE(include_compound)
+  )
+  x
+}
+
+#' @rdname set_decimal_split
+#' @export
+set_decimal_split.list <- function(x, ...) {
+  .style_map_pages(x, set_decimal_split, ..., verb = "set_decimal_split")
+}
+
+
 # ── rtf_columns() ──────────────────────────────────────────────────────────
 
 #' Column names of a finished table's body
