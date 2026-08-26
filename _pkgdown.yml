@@ -265,11 +265,13 @@ reference:
       `as_rtftables()` list at once -- addressing header rows, body rows and
       columns by position: `style_header()`, `style_cols()`, `style_body()`,
       `style_zone()`, `add_header_row()` (and `set_col_header()`, listed under
-      Column headers).  `collapse_repeats()` blanks repeated group values.
+      Column headers).  `collapse_repeats()` blanks repeated group values, and
+      `set_decimal_split()` lines up a numeric column on its decimal point.
       Last writer wins, per side / per field.
     contents:
       - style_header
       - collapse_repeats
+      - set_decimal_split
 
   # ── 6. Built-in cell-format functions ──────────────────────────────────
   - title: Built-in cell-format functions

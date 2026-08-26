@@ -706,6 +706,51 @@
   .build_row(cell_defs, cell_contents, row_height_twips, table_align)
 }
 
+# Resolve one body cell's text and styling into an RTF cell-content string.
+#
+# `spec` is the column's entry from col_spec; `j` indexes the per-column
+# override vectors in `row_cell_styles` (non-NA entries win over col_spec).
+# `force_align`, when non-NULL, overrides both -- the decimal-split halves use
+# it so a per-cell align override cannot break the point alignment.
+.data_cell_content <- function(spec, raw_val, j, row_cell_styles,
+                               pad_l, pad_r, markup, color_index_map,
+                               force_align = NULL) {
+  text        <- .format_cell_text(if (is.na(raw_val)) "" else as.character(raw_val), markup)
+  align       <- spec$align       %||% "left"
+  bold        <- isTRUE(spec$bold)
+  itl         <- isTRUE(spec$italic)
+  ul          <- isTRUE(spec$underline)
+  indent      <- as.integer(spec$indent_twips %||% 0L)
+  color_hex   <- spec$color       %||% NULL          # per-column text colour
+  # Per-cell style overrides: non-NA entries win over col_spec defaults.
+  if (!is.null(row_cell_styles)) {
+    cs <- row_cell_styles
+    if (!is.null(cs$align) && j <= length(cs$align) &&
+        !is.na(cs$align[j]))
+      align  <- as.character(cs$align[j])
+    if (!is.null(cs$bold) && j <= length(cs$bold) &&
+        !is.na(cs$bold[j]))
+      bold   <- isTRUE(cs$bold[j])
+    if (!is.null(cs$italic) && j <= length(cs$italic) &&
+        !is.na(cs$italic[j]))
+      itl    <- isTRUE(cs$italic[j])
+    if (!is.null(cs$underline) && j <= length(cs$underline) &&
+        !is.na(cs$underline[j]))
+      ul     <- isTRUE(cs$underline[j])
+    if (!is.null(cs$indent_twips) && j <= length(cs$indent_twips) &&
+        !is.na(cs$indent_twips[j]))
+      indent <- as.integer(cs$indent_twips[j])
+    if (!is.null(cs$color) && j <= length(cs$color) && !is.na(cs$color[j]))
+      color_hex <- cs$color[j]
+  }
+  if (!is.null(force_align)) align <- force_align
+  # Resolve the colour hex to a colour-table index (NULL -> default black).
+  color_idx <- if (!is.null(color_hex) && !is.null(color_index_map))
+                 color_index_map[[color_hex]] else NULL
+  .build_cell_content(text, align, bold, itl, ul, indent, pad_l, pad_r,
+                      color_idx = color_idx)
+}
+
 # Render one data row.
 # row_cell_styles: NULL, or a list with optional per-column vectors
 #   $bold, $italic, $underline (logical), $indent_twips (integer),
@@ -713,12 +758,25 @@
 #   each of length ncols.  NA / NULL entries mean "no override; fall back to
 #   col_spec (or, for $border, the row's zone border)".  Non-NA values win
 #   over col_spec for that column.
+#
+# `dsplit_row`: NULL, or the output of .decimal_split_row() -- the row's cells
+#   already expanded onto the decimal-split geometry.  When supplied, `vals`,
+#   `cellx` and `col_spec` are the EXPANDED ones and rendering is delegated to
+#   .render_data_row_split(); when NULL every code path below is the original,
+#   untouched one.
 .render_data_row <- function(vals, cellx, border_spec, row_height_twips,
                               pad_l, pad_r, valign_cmd, col_spec,
                               table_align = "left",
                               row_cell_styles = NULL,
                               color_index_map = NULL,
-                              markup = "script") {
+                              markup = "script",
+                              dsplit_row = NULL, dsplit = NULL) {
+  if (!is.null(dsplit_row)) {
+    return(.render_data_row_split(
+      vals, cellx, border_spec, row_height_twips, pad_l, pad_r, valign_cmd,
+      col_spec, table_align, row_cell_styles, color_index_map, markup,
+      dsplit_row, dsplit))
+  }
   ncols <- length(cellx)
 
   # Per-cell border overrides (cell_styles$border): each cell's rtf_border
@@ -740,41 +798,10 @@
                                   color_index_map)
   }
   cell_contents <- vapply(seq_len(ncols), function(j) {
-    spec        <- col_spec[[j]]
-    raw_val     <- if (j <= length(vals)) vals[[j]] else NA
-    text        <- .format_cell_text(if (is.na(raw_val)) "" else as.character(raw_val), markup)
-    align       <- spec$align       %||% "left"
-    bold        <- isTRUE(spec$bold)
-    itl         <- isTRUE(spec$italic)
-    ul          <- isTRUE(spec$underline)
-    indent      <- as.integer(spec$indent_twips %||% 0L)
-    color_hex   <- spec$color       %||% NULL          # per-column text colour
-    # Per-cell style overrides: non-NA entries win over col_spec defaults.
-    if (!is.null(row_cell_styles)) {
-      cs <- row_cell_styles
-      if (!is.null(cs$align) && j <= length(cs$align) &&
-          !is.na(cs$align[j]))
-        align  <- as.character(cs$align[j])
-      if (!is.null(cs$bold) && j <= length(cs$bold) &&
-          !is.na(cs$bold[j]))
-        bold   <- isTRUE(cs$bold[j])
-      if (!is.null(cs$italic) && j <= length(cs$italic) &&
-          !is.na(cs$italic[j]))
-        itl    <- isTRUE(cs$italic[j])
-      if (!is.null(cs$underline) && j <= length(cs$underline) &&
-          !is.na(cs$underline[j]))
-        ul     <- isTRUE(cs$underline[j])
-      if (!is.null(cs$indent_twips) && j <= length(cs$indent_twips) &&
-          !is.na(cs$indent_twips[j]))
-        indent <- as.integer(cs$indent_twips[j])
-      if (!is.null(cs$color) && j <= length(cs$color) && !is.na(cs$color[j]))
-        color_hex <- cs$color[j]
-    }
-    # Resolve the colour hex to a colour-table index (NULL -> default black).
-    color_idx <- if (!is.null(color_hex) && !is.null(color_index_map))
-                   color_index_map[[color_hex]] else NULL
-    .build_cell_content(text, align, bold, itl, ul, indent, pad_l, pad_r,
-                        color_idx = color_idx)
+    .data_cell_content(col_spec[[j]],
+                       if (j <= length(vals)) vals[[j]] else NA,
+                       j, row_cell_styles, pad_l, pad_r, markup,
+                       color_index_map)
   }, character(1L))
   .build_row(cell_defs, cell_contents, row_height_twips, table_align)
 }
@@ -791,8 +818,11 @@
     pad_l, pad_r, valign_cmd,
     spanning_header, table_align = "left",
     cell_styles = NULL, color_index_map = NULL,
-    blank_row_normalize = character(0), markup = "script") {
+    blank_row_normalize = character(0), markup = "script",
+    dsplit = NULL, dsplit_offset = 0L) {
 
+  # The whole column-header block always renders over the ORIGINAL column
+  # geometry -- only data rows use the decimal-split one (`dsplit$cellx`).
   ncols <- length(cellx)
   nrows <- nrow(df)
   lines <- character()
@@ -924,13 +954,27 @@
       }
       rcs <- if (!is.null(cell_styles) && i <= length(cell_styles))
                cell_styles[[i]] else NULL
-      add_data(.render_data_row(
-        as.list(df[i, , drop = FALSE]),
-        cellx, row_border, data_h, pad_l, pad_r, valign_cmd, col_spec, table_align,
-        row_cell_styles = rcs,
-        color_index_map = color_index_map,
-        markup = markup
-      ))
+      row_vals <- as.list(df[i, , drop = FALSE])
+      if (is.null(dsplit)) {
+        add_data(.render_data_row(
+          row_vals,
+          cellx, row_border, data_h, pad_l, pad_r, valign_cmd, col_spec, table_align,
+          row_cell_styles = rcs,
+          color_index_map = color_index_map,
+          markup = markup
+        ))
+      } else {
+        drow <- .decimal_split_row(dsplit, row_vals, dsplit_offset + i)
+        add_data(.render_data_row(
+          drow$vals,
+          dsplit$cellx, row_border, data_h, pad_l, pad_r, valign_cmd,
+          dsplit$col_spec, table_align,
+          row_cell_styles = .decimal_split_cell_styles(dsplit, rcs),
+          color_index_map = color_index_map,
+          markup = markup,
+          dsplit_row = drow, dsplit = dsplit
+        ))
+      }
     }
     if (i %in% blank_set) add_blank()
   }
@@ -965,6 +1009,12 @@
   if (ncols == 0L) return(cmds$paragraph$empty_table)
 
   cellx <- .compute_cellx(ncols, writable_width_twips, tbl)
+
+  # Decimal-point alignment (set_decimal_split()): a render-time expansion of
+  # the BODY geometry only.  NULL whenever the feature is off or no selected
+  # column actually carries a decimal separator -- then every renderer below
+  # takes its original path.
+  dsplit <- .decimal_split_plan(tbl, cellx, col_spec, eff_markup)
 
   # Resolve the effective body row height:
   #   * explicit positive integer  -> use as given
@@ -1029,7 +1079,8 @@
         cell_styles     = cs_section,
         color_index_map = color_index_map,
         blank_row_normalize = tbl$blank_row_normalize %||% character(0),
-        markup = eff_markup
+        markup = eff_markup,
+        dsplit = dsplit, dsplit_offset = row_offset
       ))
       row_offset <- row_offset + n_this
     }
@@ -1058,7 +1109,8 @@
     cell_styles     = tbl$cell_styles,
     color_index_map = color_index_map,
     blank_row_normalize = tbl$blank_row_normalize %||% character(0),
-    markup = eff_markup
+    markup = eff_markup,
+    dsplit = dsplit, dsplit_offset = 0L
   )
 }
 
