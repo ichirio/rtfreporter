@@ -2,6 +2,20 @@
 
 ### New features
 
+- **Worked example: a PK concentration summary with both pagination axes**
+  (#277) -- `data-raw/gen_pk_conc.R` builds a pharmacokinetic concentration
+  table with the **visits across the columns**, so it is too wide *and* too
+  tall for one page, and renders it into
+  `inst/rtf-examples/pk-concentration.rtf`. It combines `set_decimal_split()`
+  (one column, two cells) with row pagination and `paginate_cols()`: three time
+  bands by three visit blocks, each page carrying the nominal-time stub at
+  identical column widths. A new integration test covers the interaction the
+  two features could not test separately -- `paginate_cols()` re-indexing
+  `decimal_split$cols` onto each page's columns -- plus the `BLQ`, `<0.500`,
+  integer-`n` and `Min, Max` cell kinds. Documents that the split decision is
+  made **per page**, so an all-`BLQ` visit column is left unsplit on that page
+  while the others split it.
+
 - **`paginate_cols()` paginates a table horizontally, by column** (#275) --
   the counterpart to the row pagination `as_rtftables()` performs. A table too
   wide for the page is cut into column blocks (`at =` names the columns to cut
