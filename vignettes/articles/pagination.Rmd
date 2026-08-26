@@ -610,6 +610,40 @@ a cut instead and be told which cell it would break.
 Page names are carried through unchanged, so a table's column pages stay in the
 same section under `rtf_tables(auto_section = TRUE)`.
 
+### Worked example: a PK concentration summary
+
+`data-raw/gen_pk_conc.R` builds the case that needs all of this at once -- a
+pharmacokinetic concentration table with the **visits across the columns**, so
+it is too wide *and* too tall for one page:
+
+```{r pkconc, eval = FALSE}
+as_rtftables(
+    pk,
+    split = "group_safe", group_by = "indent", max_rows = 21,
+    col_header = list(
+      list(col_cell(c(2, 7), "Plasma Concentration (ng/mL)")),
+      c("Nominal Time (h)", VISITS)
+    ),
+    col_rel_width = c(2.4, rep(1.6, length(VISITS))),
+    border = "tfl"
+  ) |>
+  set_decimal_split(cols = VISITS) |>   # one column, two cells
+  paginate_cols(at = c(4, 6))           # visits in blocks of two
+```
+
+Three time bands by three visit blocks gives nine pages, each with the nominal
+time stub and identical column widths. PK reports carry three significant
+figures, so the decimal count changes with the magnitude (`1104.5`, `88.012`,
+`9.0125`) -- `set_decimal_split()` lines the points up regardless, `<0.500`
+hangs its `<` to the left of the point, and `BLQ` or a `Min, Max` pair falls
+back to a single merged cell.
+
+One consequence is worth knowing: the split decision is made **per page**. A
+visit column that is all `BLQ` within one time band carries no decimal
+separator there, so that page leaves the column unsplit while the other pages
+split it. Each page stays internally consistent, which is what the geometry
+needs.
+
 ## Choosing an approach
 
 | You want… | Use |

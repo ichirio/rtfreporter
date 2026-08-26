@@ -854,6 +854,10 @@ set_header_cell.list <- function(x, ...) {
 #' far to the left.  Set `include_compound = TRUE` to split them anyway.
 #'
 #' A selected column in which no cell carries a separator is left untouched.
+#' That decision is made per table, so across paginated pages a column may be
+#' split on one page and not on another -- a PK visit column that is all `BLQ`
+#' in one time band, for instance. Each page stays internally consistent, which
+#' is what the geometry needs.
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
 #' @param cols Columns to split: names or positions.  `NULL` clears the
