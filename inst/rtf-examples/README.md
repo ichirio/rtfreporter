@@ -24,7 +24,7 @@ run `Rscript data-raw/gen_tlg_catalog_rtf.R` from the repository root.
 
 | File | What it shows | Article |
 |------|---------------|---------|
-| `pk-concentration.rtf` | a PK concentration summary with the **visits across the columns** -- 12 visits sized to their content make the table 1.73x too wide for the sheet, so it is split by column (`paginate_cols()`) as well as by row, with each visit column rendered as two cells (`set_decimal_split()`) so the decimal points line up | [Paginating tables](https://ichirio.github.io/rtfreporter/articles/pagination.html) |
+| `pk-concentration.rtf` | a PK concentration summary with the **visits across the columns** -- 12 visits sized to their content make the table 1.73x too wide for the sheet, so it is split by column (`paginate_cols()`) as well as by row, with each visit column rendered as two cells (`set_decimal_split()`) so the decimal points line up.  A running `rtf_header()` carries the title block and a `Page {PAGE} of {TOTAL_PAGES}` number across all six pages; footnotes sit below the table and there is no page footer | [Paginating tables](https://ichirio.github.io/rtfreporter/articles/pagination.html) |
 
 Regenerate with `Rscript data-raw/gen_pk_conc.R` from the repository root.
 

@@ -310,4 +310,57 @@ test_that("data-raw/gen_pk_conc.R is present and self-consistent", {
   expect_true(any(grepl("set_decimal_split", src)))
   expect_true(any(grepl("paginate_cols", src)))
   expect_true(any(grepl("inst/rtf-examples/pk-concentration.rtf", src)))
+
+  # a running header carrying a page number, footnotes below the table, and
+  # deliberately no page footer
+  expect_true(any(grepl("rtf_header", src, fixed = TRUE)))
+  expect_true(any(grepl("Page {PAGE} of {TOTAL_PAGES}", src, fixed = TRUE)))
+  expect_true(any(grepl("rtf_footnotes", src, fixed = TRUE)))
+
+  # For "is NOT called", look at code only -- the comments discuss both verbs.
+  code <- src[!grepl("^\\s*#", src)]
+  expect_false(any(grepl("rtf_footer", code, fixed = TRUE)))
+  # the titles live in the header now, not above the first table
+  expect_false(any(grepl("rtf_titles", code, fixed = TRUE)))
+})
+
+# ──────── the running header ───────────────────────────────────────────────
+
+test_that("the running header numbers every page of the document", {
+  pages <- .pk_pages()
+  hdr <- rtf_header(rows = list(
+    c(l = "Drug Co., Ltd.",    r = "CONFIDENTIAL"),
+    c(l = "Protocol: RTF-101", r = "Page {PAGE} of {TOTAL_PAGES}"),
+    c(c = "Table 14.2.1"),
+    c(c = "Summary of Plasma Concentrations by Nominal Time and Visit"),
+    c(c = "<Pharmacokinetic Analysis Set>")
+  ))
+  doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
+    rtf_section(page = 1, secinfo = list(header = hdr))
+  for (p in pages) doc <- rtf_tables(doc, p)
+  doc <- rtf_footnotes(doc, lapply(seq_along(pages), function(i)
+    "CV% = coefficient of variation."))
+
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(doc, f, overwrite = TRUE)
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+
+  # every page is numbered, and the tokens are resolved rather than left literal
+  n <- length(pages)
+  for (i in seq_len(n)) {
+    expect_true(grepl(sprintf("Page %d of %d", i, n), txt, fixed = TRUE))
+  }
+  expect_false(grepl("{PAGE}", txt, fixed = TRUE))
+  expect_false(grepl("{TOTAL_PAGES}", txt, fixed = TRUE))
+
+  # the administrative rows and the title block repeat on every page
+  expect_equal(lengths(regmatches(txt, gregexpr("CONFIDENTIAL", txt,
+                                                fixed = TRUE))), n)
+  expect_equal(lengths(regmatches(txt, gregexpr("Table 14.2.1", txt,
+                                                fixed = TRUE))), n)
+
+  # footnotes are still there, and no footer band was emitted
+  expect_true(grepl("coefficient of variation", txt, fixed = TRUE))
+  expect_false(grepl("\\footerr", txt, fixed = TRUE))
 })

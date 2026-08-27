@@ -139,19 +139,33 @@ pages <- as_rtftables(
   # stub plus six visits = 12845 twips, 94% of the sheet.
   paginate_cols(at = HALF + 2L)
 
-titles <- lapply(seq_along(pages), function(i)
-  c("Table 14.2.1",
-    "Summary of Plasma Concentrations by Nominal Time and Visit",
-    "Pharmacokinetic Analysis Set"))
+# ── running header ─────────────────────────────────────────────────────────
+#
+# The same shape as the pharmaverse examples: two administrative rows, then the
+# table's own title block.  Carrying the titles HERE rather than in
+# `rtf_titles()` repeats them on every page, which is what a table split across
+# six pages needs -- and row 2 gives the reader a page number.
+#
+# `{PAGE}` / `{TOTAL_PAGES}` are resolved to static integers at render time;
+# `{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}` are the live-field alternative, updated
+# by the viewer.
+pk_header <- rtf_header(rows = list(
+  c(l = "Drug Co., Ltd.",    r = "CONFIDENTIAL"),
+  c(l = "Protocol: RTF-101", r = "Page {PAGE} of {TOTAL_PAGES}"),
+  c(c = "Table 14.2.1"),
+  c(c = "Summary of Plasma Concentrations by Nominal Time and Visit"),
+  c(c = "<Pharmacokinetic Analysis Set>")
+))
 
+# Footnotes stay below the table; this example carries no page footer.
 footnotes <- lapply(seq_along(pages), function(i)
   c("CV% = coefficient of variation.  BLQ = below the limit of quantitation",
     sprintf("(LLOQ = %.3f ng/mL).  Concentrations are summarised to three", LLOQ),
     "significant figures; the decimal points are aligned by column splitting."))
 
-doc <- rtf_document(page = rtf_page(orientation = "landscape"))
+doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
+  rtf_section(page = 1, secinfo = list(header = pk_header))
 for (p in pages) doc <- rtf_tables(doc, p)
-doc <- rtf_titles(doc, titles)
 doc <- rtf_footnotes(doc, footnotes)
 
 generate_rtfreport(doc, outfile, overwrite = TRUE)

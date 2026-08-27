@@ -2,6 +2,15 @@
 
 ### Documentation
 
+- **The PK concentration example gains a running header with page numbers**
+  (#281), in the same shape as the pharmaverse examples: two administrative
+  rows (`CONFIDENTIAL`, `Protocol: RTF-101` / `Page {PAGE} of
+  {TOTAL_PAGES}`) followed by the table's title block. The titles move out of
+  `rtf_titles()` and into the header so they repeat on all six pages, which is
+  what a table split across two axes needs — and the reader finally gets a page
+  number. Footnotes stay below the table; the example deliberately has no page
+  footer.
+
 - **The PK concentration example now actually needs its column split** (#279).
   Sized with `col_rel_width`, the table was exactly as wide as the sheet --
   relative widths are normalised across the page by `.compute_cellx()`, so a
