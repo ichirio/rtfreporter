@@ -1,5 +1,31 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`fmt_signif()` / `fmt_round()` / `fmt_numeric()` format numeric columns for
+  display** (#287). A column still numeric when it reaches the renderer was
+  converted with `as.character()` — 15 digits, scientific notation outside
+  `1e-4 .. 1e5`, and, worst for a deliverable, **dependent on the session's
+  `options(scipen)`** (`as.character(123456)` is `"123456"` under
+  `scipen = 100` but `"1.23456e+05"` under `scipen = -100`). These functions
+  turn numbers into the report's text beforehand, deterministically.
+  `fmt_signif()` counts **total printed digits including the integer part** —
+  the convention a SAP means by "4 significant digits", not `signif()`: `0` →
+  `"0.000"`, `10.2` → `"10.20"`, `103.4` → `"103.4"`, `23.4463` → `"23.45"`.
+  Values below 1 keep true significant figures by default (`0.0004567` stays
+  `0.0004567`, which matters near a limit of quantitation);
+  `small = "fixed"` applies the integer-counting rule throughout. Decimals are
+  recomputed when rounding grows the integer part (`99.995` → `"100.0"`), and
+  an integer part longer than the request simply prints whole (`12345.6` →
+  `"12346"`). `fmt_round()` fixes the decimal places instead. Both offer
+  `rounding = "sas"` (half away from zero, with an ulp correction so `2.675`
+  cannot fall the wrong way) beside the default `"r"` (`base::round()`,
+  banker's). `fmt_numeric()` applies either across a data frame, with `by`
+  naming a **carrier column** — which may be the row-heading column itself,
+  matched after trimming — so one column can carry a different format per
+  statistic. `NA` and `NaN` both render as the `na` string (default `""`);
+  character columns are taken as already formatted and are never touched.
+
 ### Documentation
 
 - **The PK concentration example gains a running header with page numbers**

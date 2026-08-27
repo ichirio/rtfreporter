@@ -287,6 +287,25 @@ reference:
       - fmt_count_paren_bare
       - fmt_right_align
 
+  # ── 6b. Numeric display formatters ─────────────────────────────────────
+  - title: Numeric display formatters
+    desc: >
+      Turn **numeric** columns into the text a report should show, before the
+      table is built.  A column still numeric at render time is converted with
+      `as.character()`, which prints 15 digits, slips into scientific notation
+      and follows the session's `options(scipen)` — so format it first.
+      `fmt_signif()` counts total digits including the integer part (the
+      convention a SAP means by "4 significant digits"), `fmt_round()` fixes
+      the decimal places, and both offer SAS-style half-away-from-zero rounding
+      alongside R's.  `fmt_numeric()` applies either across a data frame, keyed
+      by a carrier column so one column can carry a different format per
+      statistic.  Character columns are taken as already formatted and are
+      never touched.
+    contents:
+      - fmt_signif
+      - fmt_round
+      - fmt_numeric
+
   # ── 7. Blank rows ──────────────────────────────────────────────────────
   - title: Blank rows
     desc: Insert blank separator rows by position, by value change, or by rule.

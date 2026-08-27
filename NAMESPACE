@@ -115,6 +115,11 @@ export(fmt_right_align)
 export(format_count_pct)
 export(realign_count_pct)
 
+# Numeric -> character display formatters (significant digits / decimals)
+export(fmt_signif)
+export(fmt_round)
+export(fmt_numeric)
+
 # Blank-row spec constructors
 export(blank_rows_by_change)
 export(blank_rows_by_rule)
