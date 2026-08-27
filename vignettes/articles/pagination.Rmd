@@ -617,35 +617,55 @@ pharmacokinetic concentration table with the **visits across the columns**, so
 it is too wide *and* too tall for one page:
 
 ```{r pkconc, eval = FALSE}
+# ABSOLUTE widths, from what the cells actually need
+widths <- auto_col_widths(pk, col_header = names(pk))
+
 as_rtftables(
     pk,
     split = "group_safe", group_by = "indent", max_rows = 21,
     col_header = list(
-      list(col_cell(c(2, 7), "Plasma Concentration (ng/mL)")),
+      list(col_cell(c(2, length(VISITS) + 1), "Plasma Concentration (ng/mL)")),
       c("Nominal Time (h)", VISITS)
     ),
-    col_rel_width = c(2.4, rep(1.6, length(VISITS))),
+    column_widths_twips = widths,
     border = "tfl"
   ) |>
   set_decimal_split(cols = VISITS) |>   # one column, two cells
-  paginate_cols(at = 6)                 # cut after Day 28
+  paginate_cols(at = length(VISITS) / 2 + 2)   # visits cut down the middle
 ```
 
 Three time bands by two visit blocks gives six pages, each with the nominal
 time stub, and every visit column the width it has in the full table.
 
-Where to cut is a layout decision, and the width rule drives it: because a
-column keeps its width whatever page it lands on, a block of four visits fills
-the landscape sheet (`2736 + 4 x 1824 = 10032` of the 13680 writable twips)
-while a block of two would leave a third of it empty. Cutting after Day 28
-gives a full first page and a shorter second one, which reads better than three
-uniformly narrow pages.
+#### Size the table from its content, not from the page
 
-PK reports carry three significant
-figures, so the decimal count changes with the magnitude (`1104.5`, `88.012`,
-`9.0125`) -- `set_decimal_split()` lines the points up regardless, `<0.500`
-hangs its `<` to the left of the point, and `BLQ` or a `Min, Max` pair falls
-back to a single merged cell.
+Note the `column_widths_twips` rather than `col_rel_width`. **Relative widths
+cannot produce a table that needs `paginate_cols()`**: `.compute_cellx()`
+normalises them across the page, so whatever the ratios the full table comes
+out exactly as wide as the sheet, and the split would be decorative.
+`auto_col_widths()` reports what the content needs instead:
+
+```
+stub "Nominal Time (h)"   2021 twips   (widest cell "Min, Max")
+each visit column         1804 twips   (widest cell "496.28, 1461.8")
+```
+
+so only six visits fit on a landscape sheet's 13680 writable twips. The study
+has twelve, which makes the table `2021 + 12 x 1804 = 23669` twips -- **1.73x
+too wide to fit** -- and each half `2021 + 6 x 1804 = 12845`, or **94% of the
+page**. That is what the example should look like: a table that genuinely
+cannot be printed in one piece, cut into blocks that each fill the sheet.
+
+`as_rtftables(auto_width = TRUE)` is deliberately not used here: it clamps the
+total to the writable width when the natural size exceeds it, squeezing the
+columns back onto one page.
+
+#### What the split does to the numbers
+
+PK reports carry three significant figures, so the decimal count changes with
+the magnitude (`1104.5`, `88.012`, `9.0125`) -- `set_decimal_split()` lines the
+points up regardless, `<0.500` hangs its `<` to the left of the point, and
+`BLQ` or a `Min, Max` pair falls back to a single merged cell.
 
 One consequence is worth knowing: the split decision is made **per page**. A
 visit column that is all `BLQ` within one time band carries no decimal
