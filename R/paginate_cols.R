@@ -25,18 +25,38 @@
 #
 #  Column widths
 #  -------------
-#  The same column keeps the same width on every page.  That is automatic for
-#  `column_widths_twips` (absolute), but NOT for `col_rel_width` or for the
-#  default equal distribution: `.compute_cellx()` re-normalises whatever it is
+#  `column_widths_twips` is absolute, so a subset already carries the right
+#  widths and nothing is scaled.  Relative widths (and the default equal
+#  distribution) need help: `.compute_cellx()` re-normalises whatever it is
 #  given across the page's table width, so a bare subset would stretch the kept
-#  columns.  The fix is to scale the page's table width by the kept columns'
-#  share -- `sum(rel[keep]) / sum(rel)`, or `length(keep) / ncol` when no
-#  relative widths were given.  The scale is expressed through
-#  `table_width_pct_of_writable` (or `table_width_twips` when the table pins an
-#  absolute width) so the renderer still resolves the real writable width and
-#  the page geometry stays authoritative.  Rounding drift is bounded by a few
-#  twips on a page's last column, where `.compute_cellx()` absorbs the
-#  remainder.
+#  columns to refill the sheet, making a ratio-1 column a different size on
+#  every page.
+#
+#  So each page's table width is scaled by
+#
+#      share(page) / share(reference)
+#
+#  where a page's "share" is the sum of its kept relative widths (or simply how
+#  many columns it keeps), and the reference is
+#
+#    width = "fill" (default)  PAGE 1's share -- this fixes the twips per ratio
+#                              unit on the first page and reuses it everywhere,
+#                              so page 1 (and any block with the same ratio
+#                              total) fills the sheet while a ratio-1 column is
+#                              the same width on every page;
+#    width = "keep"            the WHOLE table's share -- a kept column then has
+#                              exactly the width it had before the split, and a
+#                              partial block yields a proportionally shorter
+#                              page.
+#
+#  Under "fill" a LATER block totalling more than page 1 scales past 1 and would
+#  run off the sheet; paginate_cols() warns, naming the pages.
+#
+#  The scale is expressed through `table_width_pct_of_writable` (or
+#  `table_width_twips` when the table pins an absolute width) so the renderer
+#  still resolves the real writable width and the page geometry stays
+#  authoritative.  Rounding drift is bounded by a few twips on a page's last
+#  column, where `.compute_cellx()` absorbs the remainder.
 
 # Resolve the carry (row-heading) columns repeated on every column page.
 .resolve_carry_cols <- function(carry, tbl, ref) {
@@ -122,30 +142,44 @@
   invisible(NULL)
 }
 
-# Scale factor for one column page's table width, so that a kept column ends
-# up exactly as wide as it is in the full table.  Returns NULL when the table
-# pins absolute per-column widths (nothing to scale).
-.col_page_width_scale <- function(tbl, keep, n0) {
+# The "share" a set of kept columns represents: the sum of their relative
+# widths, or simply how many there are when the table has none.  NULL when the
+# table pins absolute per-column widths -- there is then nothing to scale.
+.col_page_share <- function(tbl, keep, n0) {
   if (!is.null(tbl$column_widths_twips)) return(NULL)
   rel <- tbl$col_rel_width
   if (!is.null(rel) && length(rel) == n0) {
     tot <- sum(as.numeric(rel))
-    if (tot > 0) return(sum(as.numeric(rel[keep])) / tot)
+    if (tot > 0) return(sum(as.numeric(rel[keep])))
   }
-  length(keep) / n0
+  as.numeric(length(keep))
+}
+
+# The share the scale factors are measured against:
+#   width = "fill" -> PAGE 1's share, so the ratio unit (twips per ratio 1) is
+#                     fixed by the first page and reused on every other one;
+#   width = "keep" -> the WHOLE table's share, so a kept column stays exactly
+#                     as wide as it was before the split.
+.col_page_reference <- function(tbl, keeps, n0, width) {
+  if (!is.null(tbl$column_widths_twips)) return(NULL)
+  if (identical(width, "fill")) return(.col_page_share(tbl, keeps[[1L]], n0))
+  rel <- tbl$col_rel_width
+  if (!is.null(rel) && length(rel) == n0) {
+    tot <- sum(as.numeric(rel))
+    if (tot > 0) return(tot)
+  }
+  as.numeric(n0)
 }
 
 # Subset a BUILT rtftable to `keep` columns, re-indexing every position-indexed
 # field and rescaling the table width (see the note at the top of the file).
-.rtftable_keep_cols <- function(tbl, keep) {
+.rtftable_keep_cols <- function(tbl, keep, scale = NULL) {
   ref <- if (!is.null(tbl$data)) tbl$data else tbl$data_list[[1L]]
   n0  <- ncol(ref)
   keep <- sort(unique(as.integer(keep)))
   if (length(keep) == 0L) {
     stop("A column page must keep at least one column.", call. = FALSE)
   }
-
-  scale <- .col_page_width_scale(tbl, keep, n0)
 
   # -- body (the blank-row attribute does not survive a column subset) -----
   sub_df <- function(d) {
@@ -241,12 +275,31 @@
 #' `col_header` -- the same convention [set_col_header()] uses.
 #'
 #' @section Column widths:
-#' The same column is the same width on every page. With
-#' `column_widths_twips` that is automatic. With `col_rel_width`, or with no
-#' width setting at all, each page's table width is scaled to the kept
-#' columns' share so the ratios do not stretch to refill the page. A column
-#' block narrower than the whole table therefore yields a **narrower page**,
-#' rather than one stretched to the margins.
+#' `column_widths_twips` is absolute, so a subset already carries the right
+#' widths and `width` has no effect. Relative widths (and the default equal
+#' distribution) need a rule, because `.compute_cellx()` re-normalises whatever
+#' it is given across the page: a bare subset would stretch the kept columns to
+#' refill the sheet, making a ratio-1 column a different size on every page.
+#'
+#' `width = "fill"` (the default) fixes the **twips per ratio unit on page 1**
+#' and reuses it everywhere. Page 1 -- and any block with the same ratio total
+#' -- fills the sheet, while a given ratio is the same width on every page.
+#' With `rel = c(3, 1, 1, 1, 1, 1, 1, 1, 1)` on a 13680-twip page:
+#'
+#' \tabular{lll}{
+#'   **blocks** \tab **unit** \tab **page widths** \cr
+#'   4 + 4 \tab 1954.3 \tab 100\% / 100\% \cr
+#'   4 + 3 \tab 1954.3 \tab 100\% / 85.7\% \cr
+#'   2+2+2+2 \tab 2736.0 \tab 100\% on all four
+#' }
+#'
+#' `width = "keep"` measures against the whole table instead, so a kept column
+#' has exactly the width it had before the split and a partial block yields a
+#' proportionally shorter page.
+#'
+#' A block totalling **more** ratio than page 1 scales past the sheet under
+#' `"fill"`; a warning names the pages. Order the blocks so the widest comes
+#' first, or use `"keep"`.
 #'
 #' @section Spanning headers:
 #' Spanning cells are clipped to each page's columns. By default a cut may
@@ -266,6 +319,12 @@
 #'   are never printed twice on a page.
 #' @param allow_span_break Allow a cut inside a spanning header cell. Default
 #'   `TRUE`.
+#' @param width How relative widths are rescaled after the split. `"fill"`
+#'   (default) fixes the twips-per-ratio unit on **page 1** and reuses it on
+#'   every page, so page 1 fills the sheet and a given ratio is the same width
+#'   throughout; `"keep"` gives each kept column exactly the width it had
+#'   before the split. No effect under `column_widths_twips`. See
+#'   *Column widths*.
 #' @param ... Unused.
 #'
 #' @return A list of [rtftable()] pages. Names are carried through unchanged,
@@ -289,15 +348,18 @@ paginate_cols <- function(x, ...) UseMethod("paginate_cols")
 #' @rdname paginate_cols
 #' @export
 paginate_cols.rtftable <- function(x, at = NULL, cols = NULL, carry = NULL,
-                                   allow_span_break = TRUE, ...) {
+                                   allow_span_break = TRUE,
+                                   width = c("fill", "keep"), ...) {
   paginate_cols(list(x), at = at, cols = cols, carry = carry,
-                allow_span_break = allow_span_break, ...)
+                allow_span_break = allow_span_break, width = width, ...)
 }
 
 #' @rdname paginate_cols
 #' @export
 paginate_cols.list <- function(x, at = NULL, cols = NULL, carry = NULL,
-                               allow_span_break = TRUE, ...) {
+                               allow_span_break = TRUE,
+                               width = c("fill", "keep"), ...) {
+  width <- match.arg(width)
   if (length(x) == 0L) return(list())
   ok <- vapply(x, inherits, logical(1L), "rtftable")
   if (!all(ok)) {
@@ -327,6 +389,30 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, carry = NULL,
 
   keeps <- lapply(blocks, function(b) sort(unique(c(carry_idx, b))))
 
+  # Width rescaling: one factor per column block, measured against page 1's
+  # share ("fill") or the whole table's ("keep").  NULL throughout when the
+  # table pins absolute widths -- there is then nothing to scale.
+  n0     <- ncol(ref)
+  ref_sh <- .col_page_reference(x[[1L]], keeps, n0, width)
+  scales <- if (is.null(ref_sh) || ref_sh <= 0) {
+    vector("list", length(keeps))
+  } else {
+    lapply(keeps, function(k) .col_page_share(x[[1L]], k, n0) / ref_sh)
+  }
+  over <- which(vapply(scales, function(s)
+    !is.null(s) && s > 1 + 1e-9, logical(1L)))
+  if (length(over) && identical(width, "fill")) {
+    warning(sprintf(
+      paste0("`paginate_cols()`: column block%s %s total%s more than block 1, so ",
+             "%s page%s wider than the sheet. Put the widest block first, or ",
+             "use width = \"keep\"."),
+      if (length(over) == 1L) "" else "s",
+      paste(over, collapse = ", "),
+      if (length(over) == 1L) "s" else "",
+      if (length(over) == 1L) "its" else "their",
+      if (length(over) == 1L) " is" else "s are"), call. = FALSE)
+  }
+
   in_names <- names(x)
   out   <- vector("list", length(keeps) * length(x))
   onames <- character(length(out))
@@ -334,9 +420,9 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, carry = NULL,
   # Row pages are the OUTER loop: a row band sweeps every column block before
   # the next band starts, so the reader goes across first and then down.
   for (i in seq_along(x)) {
-    for (keep in keeps) {
+    for (bi in seq_along(keeps)) {
       k <- k + 1L
-      out[[k]]  <- .rtftable_keep_cols(x[[i]], keep)
+      out[[k]]  <- .rtftable_keep_cols(x[[i]], keeps[[bi]], scales[[bi]])
       onames[k] <- if (!is.null(in_names)) in_names[i] else ""
     }
   }

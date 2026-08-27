@@ -1,5 +1,22 @@
 # rtfreporter (development version)
 
+### Breaking changes
+
+- **`paginate_cols()` now recomputes relative widths from a page-1 ratio unit**
+  (#289). Splitting a `col_rel_width` table used to scale each page down to the
+  kept columns' share of the whole, so a block of four visits out of eight
+  filled only 64% of the sheet — the ratios were preserved but the table was
+  simply small. A ratio states a proportion *within the page*, so the split now
+  **fixes the twips-per-ratio unit on page 1 and reuses it on every page**:
+  page 1, and any block with the same ratio total, fills the sheet, while a
+  ratio-1 column stays the same width throughout and a shorter final block
+  yields a shorter page. The new `width` argument selects this — `"fill"` is the
+  default, `"keep"` restores the previous behaviour. Absolute
+  `column_widths_twips` are unaffected (there is nothing to rescale), so the
+  shipped PK example is unchanged. A block totalling **more** ratio than block 1
+  would run off the sheet under `"fill"`; `paginate_cols()` warns and names it —
+  put the widest block first, or use `"keep"`.
+
 ### New features
 
 - **`fmt_signif()` / `fmt_round()` / `fmt_numeric()` format numeric columns for
