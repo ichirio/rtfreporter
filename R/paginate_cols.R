@@ -359,6 +359,7 @@ paginate_cols.rtftable <- function(x, at = NULL, cols = NULL, carry = NULL,
 paginate_cols.list <- function(x, at = NULL, cols = NULL, carry = NULL,
                                allow_span_break = TRUE,
                                width = c("fill", "keep"), ...) {
+  .check_own_dots(list(...), paginate_cols.list, "paginate_cols")
   width <- match.arg(width)
   if (length(x) == 0L) return(list())
   ok <- vapply(x, inherits, logical(1L), "rtftable")
