@@ -1,5 +1,22 @@
 # rtfreporter (development version)
 
+### New features
+
+- **Per-element widths for the header / footer, table and footnote** (#291),
+  in one vocabulary: `"content"` (follow the table body), `"page"` (the
+  writable width, margins excluded), a fraction in `(0, 1]` of it, or twips.
+  `rtf_default_format()` gains `title_width` / `footnote_width` (with
+  `rtfreporter.title_width` / `rtfreporter.footnote_width` behind them), and
+  `rtf_header()` / `rtf_footer()` gain `width` — the older `width_twips` stays
+  as the absolute form and wins when both are given. The table body already had
+  its own arguments. **Every default is unchanged**, and output is
+  byte-identical when nothing is set. Notably `footnote_width = "page"` is the
+  way to reach the full page width **and** keep the separator rule:
+  `footnote_format = "text"` widens the block but renders plain paragraphs,
+  which cannot draw a rule (a row-level `border` is silently ignored there).
+  It also matters with `paginate_cols()`, where a narrow column block would
+  otherwise drag the footnote in with it.
+
 ### Breaking changes
 
 - **`paginate_cols()` now recomputes relative widths from a page-1 ratio unit**

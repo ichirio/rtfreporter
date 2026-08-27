@@ -11,7 +11,9 @@ rtf_default_format(
   cell_padding_right_twips = NULL,
   markup = "script",
   title_format = "text",
-  footnote_format = "table"
+  footnote_format = "table",
+  title_width = NULL,
+  footnote_width = NULL
 )
 }
 \arguments{
@@ -33,6 +35,14 @@ centred paragraphs) or `"table"` (a content-width single-column table).}
 
 \item{footnote_format}{How the **footnote** renders: `"table"` (default,
 content-width table with the separator rule) or `"text"` (plain paragraphs).}
+
+\item{title_width, footnote_width}{Width of the title / footnote block:
+`"content"` (the default -- follow the table body), `"page"` (the writable
+width, margins excluded), a fraction in `(0, 1]` of the writable width, or
+twips. `NULL` keeps the default. Applies to the `"table"` form; the
+`"text"` form is plain paragraphs and already spans the page.
+`footnote_width = "page"` is the way to reach the full width **and** keep
+the separator rule, which `footnote_format = "text"` cannot draw.}
 }
 \value{
 An `rtf_default_format` object for `rtf_document(default_format =)`.

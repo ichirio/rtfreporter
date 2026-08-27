@@ -1202,7 +1202,17 @@
 
   rows        <- hf$rows
   hf_border   <- hf$border   # rtf_border or NULL
-  width       <- if (!is.null(hf$width_twips)) hf$width_twips else writable_width_twips
+  # Width: the absolute `width_twips` wins (the legacy form), then the shared
+  # `width` vocabulary, then the writable width.  A header/footer band has no
+  # table body above it, so "content" resolves to the writable width too.
+  width       <- if (!is.null(hf$width_twips)) {
+    as.integer(hf$width_twips)
+  } else if (!is.null(hf$width)) {
+    .resolve_block_width(hf$width, writable_width_twips, writable_width_twips,
+                         default = "page")
+  } else {
+    writable_width_twips
+  }
   cmds <- .load_rtf_commands()
   table_cmd <- cmds$table
   align_cmd <- cmds$alignment
@@ -1925,6 +1935,15 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
     doc$default_format$footnote_format %||% .opt("rtfreporter.footnote_format"),
     "table")
 
+  # Per-element widths (#291).  NULL keeps each block's established default,
+  # which .resolve_block_width() spells as "content".
+  doc_title_width <- .check_block_width(
+    doc$default_format$title_width %||% .opt("rtfreporter.title_width"),
+    "title_width")
+  doc_footnote_width <- .check_block_width(
+    doc$default_format$footnote_width %||% .opt("rtfreporter.footnote_width"),
+    "footnote_width")
+
   # Resolve sections (sorted, with from_page / to_page assigned).
   resolved_sections <- .resolve_sections(report)
 
@@ -2035,6 +2054,10 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
       # so they align with the content above/below (see .render_text_block_table).
       content_w     <- .content_width_twips(ct, writable_w)
       content_align <- .content_align(ct)
+      # Per-element width (#291): "content" (the default -- follow the body),
+      # "page", a fraction of the writable width, or twips.
+      title_w    <- .resolve_block_width(doc_title_width,    content_w, writable_w)
+      footnote_w <- .resolve_block_width(doc_footnote_width, content_w, writable_w)
       # Title / footnote inherit the document-wide cell padding and row height.
       tf_pad_l      <- doc_pad_l
       tf_pad_r      <- doc_pad_r
@@ -2049,7 +2072,7 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
                                 pad_l = tf_pad_l, pad_r = tf_pad_r)
       } else {
         .render_text_block_table(
-          page$title, content_w, is_footer = FALSE, font_half_points,
+          page$title, title_w, is_footer = FALSE, font_half_points,
           tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
           doc_row_height = doc_row_height, markup = doc_markup)
       })
@@ -2075,7 +2098,7 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
                                 pad_l = tf_pad_l, pad_r = tf_pad_r)
       } else {
         .render_text_block_table(
-          page$footnote, content_w, is_footer = TRUE, font_half_points,
+          page$footnote, footnote_w, is_footer = TRUE, font_half_points,
           tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
           doc_row_height = doc_row_height, markup = doc_markup)
       })

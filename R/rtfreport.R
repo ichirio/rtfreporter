@@ -240,6 +240,9 @@ update_footer_row <- function(footer, row, content) {
 #'   for footer).
 #' @param width_twips Integer. Table width in twips. `NULL` (default) uses the
 #'   full writable width (page width minus margins).
+#' @param width Band width in the shared vocabulary: `"page"` (the writable
+#'   width, the default), a fraction in `(0, 1]` of it, or twips. `width_twips`
+#'   is the older absolute-only form and wins when both are given.
 #' @param row_height_twips Integer. Row height in twips. `NULL` (default) reads
 #'   the value from `inst/resources/rtfreporter_defaults.R`.
 #' @param cell_padding_left_twips,cell_padding_right_twips Integer cell padding
@@ -265,6 +268,7 @@ update_footer_row <- function(footer, row, content) {
 rtf_header <- function(rows,
                         border                   = NULL,
                         width_twips              = NULL,
+                        width                    = NULL,
                         row_height_twips         = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL) {
@@ -273,7 +277,9 @@ rtf_header <- function(rows,
   }
   if (is.character(rows)) rows <- list(rows)
   if (!is.list(rows)) stop("`rows` must be a named character vector or list of named vectors.", call. = FALSE)
+  width <- .check_block_width(width, "width")
   list(rows = rows, border = border, width_twips = width_twips,
+       width = width,
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
        cell_padding_right_twips = cell_padding_right_twips)
@@ -284,6 +290,7 @@ rtf_header <- function(rows,
 rtf_footer <- function(rows,
                         border                   = rtf_border_top(),
                         width_twips              = NULL,
+                        width                    = NULL,
                         row_height_twips         = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL) {
@@ -292,7 +299,9 @@ rtf_footer <- function(rows,
   }
   if (is.character(rows)) rows <- list(rows)
   if (!is.list(rows)) stop("`rows` must be a named character vector or list of named vectors.", call. = FALSE)
+  width <- .check_block_width(width, "width")
   list(rows = rows, border = border, width_twips = width_twips,
+       width = width,
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
        cell_padding_right_twips = cell_padding_right_twips)

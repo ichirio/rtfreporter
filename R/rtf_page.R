@@ -155,6 +155,13 @@ print.rtf_page <- function(x, ...) {
 #'   centred paragraphs) or `"table"` (a content-width single-column table).
 #' @param footnote_format How the **footnote** renders: `"table"` (default,
 #'   content-width table with the separator rule) or `"text"` (plain paragraphs).
+#' @param title_width,footnote_width Width of the title / footnote block:
+#'   `"content"` (the default -- follow the table body), `"page"` (the writable
+#'   width, margins excluded), a fraction in `(0, 1]` of the writable width, or
+#'   twips. `NULL` keeps the default. Applies to the `"table"` form; the
+#'   `"text"` form is plain paragraphs and already spans the page.
+#'   `footnote_width = "page"` is the way to reach the full width **and** keep
+#'   the separator rule, which `footnote_format = "text"` cannot draw.
 #'
 #' @return An `rtf_default_format` object for `rtf_document(default_format =)`.
 #'
@@ -177,12 +184,16 @@ rtf_default_format <- function(font_size_half_points    = 18L,
                                cell_padding_right_twips = NULL,
                                markup                   = "script",
                                title_format             = "text",
-                               footnote_format          = "table") {
+                               footnote_format          = "table",
+                               title_width              = NULL,
+                               footnote_width           = NULL) {
   if (missing(font_size_half_points))
     font_size_half_points <- .opt("rtfreporter.font_size_half_points")
   if (missing(markup))          markup          <- .opt("rtfreporter.markup")
   if (missing(title_format))    title_format    <- .opt("rtfreporter.title_format")
   if (missing(footnote_format)) footnote_format <- .opt("rtfreporter.footnote_format")
+  if (missing(title_width))     title_width     <- .opt("rtfreporter.title_width")
+  if (missing(footnote_width))  footnote_width  <- .opt("rtfreporter.footnote_width")
 
   .chk_pos_twips <- function(x, nm) {
     if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || is.na(x) || x < 0)) {
@@ -200,6 +211,8 @@ rtf_default_format <- function(font_size_half_points    = 18L,
   markup <- .resolve_markup(markup)            # validates the tokens
   title_format    <- .resolve_text_block_format(title_format, "text")
   footnote_format <- .resolve_text_block_format(footnote_format, "table")
+  title_width     <- .check_block_width(title_width, "title_width")
+  footnote_width  <- .check_block_width(footnote_width, "footnote_width")
 
   structure(
     list(font_size_half_points = as.integer(font_size_half_points),
@@ -207,7 +220,8 @@ rtf_default_format <- function(font_size_half_points    = 18L,
          cell_padding_left_twips = if (is.null(cell_padding_left_twips)) NULL else as.integer(cell_padding_left_twips),
          cell_padding_right_twips = if (is.null(cell_padding_right_twips)) NULL else as.integer(cell_padding_right_twips),
          markup = markup, title_format = title_format,
-         footnote_format = footnote_format),
+         footnote_format = footnote_format,
+         title_width = title_width, footnote_width = footnote_width),
     class = "rtf_default_format"
   )
 }
