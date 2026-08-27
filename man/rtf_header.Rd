@@ -11,6 +11,8 @@ rtf_header(
   width_twips = NULL,
   width = NULL,
   row_height_twips = NULL,
+  font_size_half_points = NULL,
+  markup = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL
 )
@@ -21,6 +23,8 @@ rtf_footer(
   width_twips = NULL,
   width = NULL,
   row_height_twips = NULL,
+  font_size_half_points = NULL,
+  markup = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL
 )
@@ -54,6 +58,13 @@ is the older absolute-only form and wins when both are given.}
 
 \item{row_height_twips}{Integer. Row height in twips. `NULL` (default) reads
 the value from `inst/resources/rtfreporter_defaults.R`.}
+
+\item{font_size_half_points}{Font size for this band, in half-points.
+`NULL` (default) inherits the document size. Setting it also recomputes
+the row height from that size unless `row_height_twips` is given.}
+
+\item{markup}{Cell-text markup for this band; `NULL` (default) inherits the
+document setting. See [rtftable()].}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Integer cell padding
 on the left / right side of each header (or footer) cell, matching the

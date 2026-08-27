@@ -4,12 +4,27 @@
 \alias{rtf_footnotes}
 \title{Assign content footnotes to pages}
 \usage{
-rtf_footnotes(doc, footnotes)
+rtf_footnotes(
+  doc,
+  footnotes,
+  font_size_half_points = NULL,
+  row_height_twips = NULL,
+  markup = NULL,
+  align = NULL
+)
 }
 \arguments{
 \item{doc}{An rtf_document object.}
 
 \item{footnotes}{A list of length = number of pages, or length 1 (common).}
+
+\item{font_size_half_points, row_height_twips, markup, align}{Style for this
+block, overriding the document default from [rtf_default_format()].
+Anything left `NULL` is inherited. Font size and row height resolve
+**together**: a size given without a height recomputes the height from
+that size rather than inheriting one chosen for a different size, and an
+explicit height always wins. `align` sets the block's default row
+alignment; a per-row `align` still beats it.}
 }
 \value{
 Modified rtf_document.
