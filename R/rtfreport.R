@@ -246,6 +246,9 @@ update_footer_row <- function(footer, row, content) {
 #' @param font_size_half_points Font size for this band, in half-points.
 #'   `NULL` (default) inherits the document size. Setting it also recomputes
 #'   the row height from that size unless `row_height_twips` is given.
+#' @param font Font family for this band, e.g. `"Arial"`. `NULL` (default)
+#'   uses the document font. A family not already in the document's
+#'   `font_table` is added to it automatically, the way a colour is.
 #' @param markup Cell-text markup for this band; `NULL` (default) inherits the
 #'   document setting. See [rtftable()].
 #' @param row_height_twips Integer. Row height in twips. `NULL` (default) reads
@@ -276,6 +279,7 @@ rtf_header <- function(rows,
                         width                    = NULL,
                         row_height_twips         = NULL,
                         font_size_half_points    = NULL,
+                        font                     = NULL,
                         markup                   = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL) {
@@ -289,6 +293,7 @@ rtf_header <- function(rows,
        width = width,
        font_size_half_points =
          .check_font_size(font_size_half_points, "font_size_half_points"),
+       font = .check_font(font, "font"),
        markup = if (is.null(markup)) NULL else .resolve_markup(markup),
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
@@ -303,6 +308,7 @@ rtf_footer <- function(rows,
                         width                    = NULL,
                         row_height_twips         = NULL,
                         font_size_half_points    = NULL,
+                        font                     = NULL,
                         markup                   = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL) {
@@ -316,6 +322,7 @@ rtf_footer <- function(rows,
        width = width,
        font_size_half_points =
          .check_font_size(font_size_half_points, "font_size_half_points"),
+       font = .check_font(font, "font"),
        markup = if (is.null(markup)) NULL else .resolve_markup(markup),
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,

@@ -994,6 +994,7 @@
 # font_half_points drives the default row-height lookup when the table does
 # not specify an explicit row_height_twips.
 .render_rtftable <- function(tbl, writable_width_twips, font_half_points = 18L,
+                             font_index_map = list(),
                              color_index_map = NULL,
                              doc_row_height = NULL, doc_pad_l = 0L, doc_pad_r = 0L,
                              doc_markup = "script") {
@@ -1034,7 +1035,8 @@
                                         tbl$row_height_twips,
                                         font_half_points, doc_row_height)
   effective <- metrics$rh
-  fs_cmd    <- .fs_cmd_for(metrics$fs, font_half_points)
+  fs_cmd    <- paste0(.f_cmd_for(tbl$font, font_index_map),
+                      .fs_cmd_for(metrics$fs, font_half_points))
 
   # Apply row_height_exact flag: negate twips value to signal \trrh exact height.
   .apply_exact <- function(h) {
@@ -1203,7 +1205,8 @@
                                    font_half_points = 18L,
                                    doc_row_height = NULL,
                                    doc_pad_l = NULL, doc_pad_r = NULL,
-                                   doc_markup = character(0)) {
+                                   doc_markup = character(0),
+                                   font_index_map = list()) {
   if (is.null(hf) || length(hf$rows) == 0L) {
     return(character())
   }
@@ -1234,7 +1237,8 @@
                                          hf$row_height_twips,
                                          font_half_points, doc_row_height)
   rh_full <- hf_metrics$rh
-  hf_fs   <- .fs_cmd_for(hf_metrics$fs, font_half_points)
+  hf_fs   <- paste0(.f_cmd_for(hf$font, font_index_map),
+                    .fs_cmd_for(hf_metrics$fs, font_half_points))
   rh_str  <- .cmd_fmt(table_cmd$row_height_template,
                        list(row_height_twips = rh_full))
 
@@ -1542,7 +1546,8 @@
                                       valign_cmd, table_align,
                                       color_index_map = NULL,
                                       doc_row_height = NULL,
-                                      markup = "script", style = NULL) {
+                                      markup = "script", style = NULL,
+                                      font_index_map = list()) {
   rows <- .normalize_text_block(block, is_footer, style$align)
   if (length(rows) == 0L) return(character())
 
@@ -1552,7 +1557,8 @@
                                      style$row_height_twips,
                                      font_half_points, doc_row_height)
   full_h <- m$rh
-  fs_cmd <- .fs_cmd_for(m$fs, font_half_points)
+  fs_cmd <- paste0(.f_cmd_for(style$font, font_index_map),
+                   .fs_cmd_for(m$fs, font_half_points))
   if (!is.null(style$markup)) markup <- style$markup
   cellx  <- as.integer(total_width_twips)
 
@@ -1583,14 +1589,16 @@
 # so the footnote separator is only drawn in the table form.
 .render_text_block_text <- function(block, is_footer, color_index_map = NULL,
                                     markup = "script", pad_l = 0L, pad_r = 0L,
-                                    style = NULL, font_half_points = 18L) {
+                                    style = NULL, font_half_points = 18L,
+                                    font_index_map = list()) {
   rows <- .normalize_text_block(block, is_footer, style$align)
   if (length(rows) == 0L) return(character())
   # Honour the document-wide cell padding as left/right paragraph indent, so the
   # "every element inherits the document padding" contract still holds.
   if (!is.null(style$markup)) markup <- style$markup
-  fs_cmd <- .fs_cmd_for(style$font_size_half_points %||% font_half_points,
-                        font_half_points)
+  fs_cmd <- paste0(.f_cmd_for(style$font, font_index_map),
+                   .fs_cmd_for(style$font_size_half_points %||% font_half_points,
+                        font_half_points))
   indent <- paste0("\\li", as.integer(pad_l), "\\ri", as.integer(pad_r), fs_cmd)
   vapply(rows, function(rec) {
     align_cmd <- switch(rec$align, left = "\\ql", right = "\\qr",
@@ -1879,7 +1887,10 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
 
   doc           <- report$document
   page_defaults <- doc$default_page
-  primary_font  <- doc$font_table[[1]]$name %||% "Courier"
+  # Fonts: the declared table plus anything an element asked for (#293).
+  doc_fonts      <- .collect_fonts(doc$font_table, .collect_report_fonts(report))
+  font_index_map <- .build_font_index_map(doc_fonts)
+  primary_font   <- doc_fonts[[1L]]
   writable_w    <- page_defaults$width_twips -
                    page_defaults$margin_left_twips -
                    page_defaults$margin_right_twips
@@ -1904,7 +1915,7 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
 
   lines <- c(
     doc_cmd$rtf_header_open,
-    .cmd_fmt(doc_cmd$font_table_template, list(font_name = .rtf_escape(primary_font))),
+    .build_font_table_rtf(doc_fonts),
     color_table_str,
     .cmd_fmt(doc_cmd$page_settings_template, list(
       width_twips           = page_defaults$width_twips,
@@ -2035,14 +2046,16 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
                                           font_half_points = font_half_points,
                                           doc_row_height = doc_row_height,
                                           doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r,
-                                          doc_markup = doc_markup)
+                                          doc_markup = doc_markup,
+          font_index_map = font_index_map)
       footer_rtf <- .render_header_footer(cur_footer_hf, writable_w, is_footer = TRUE,
                                           current_page = pg_for_hf, total_pages = total_pages,
                                           color_index_map = color_index_map,
                                           font_half_points = font_half_points,
                                           doc_row_height = doc_row_height,
                                           doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r,
-                                          doc_markup = doc_markup)
+                                          doc_markup = doc_markup,
+          font_index_map = font_index_map)
 
       if (length(header_rtf) > 0L) {
         lines <<- c(lines, .cmd_fmt(doc_cmd$header_wrapper,
@@ -2102,6 +2115,7 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
       lines <- c(lines, if (identical(doc_title_format, "text")) {
         .render_text_block_text(page$title, is_footer = FALSE, style = title_st,
                                 font_half_points = font_half_points,
+                                font_index_map = font_index_map,
                                 color_index_map, markup = doc_markup,
                                 pad_l = tf_pad_l, pad_r = tf_pad_r)
       } else {
@@ -2109,11 +2123,13 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
           page$title, title_w, is_footer = FALSE, font_half_points,
           tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
           doc_row_height = doc_row_height, markup = doc_markup,
-          style = title_st)
+          style = title_st,
+          font_index_map = font_index_map)
       })
       if (!is.null(ct)) {
         if (inherits(ct, "rtftable")) {
           lines <- c(lines, .render_rtftable(ct, writable_w, font_half_points,
+                                              font_index_map = font_index_map,
                                               color_index_map,
                                               doc_row_height = doc_row_height,
                                               doc_pad_l = doc_pad_l,
@@ -2143,7 +2159,8 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
           font_half_points = font_half_points,
           doc_row_height = doc_row_height,
           doc_pad_l = tf_pad_l, doc_pad_r = tf_pad_r,
-          doc_markup = doc_markup)
+          doc_markup = doc_markup,
+          font_index_map = font_index_map)
         # An INDEPENDENT table: RTF merges consecutive \trowd runs that no
         # paragraph separates, so without this the footnote would still be the
         # body table wearing different \cellx values -- and could not carry a
