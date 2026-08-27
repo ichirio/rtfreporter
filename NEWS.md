@@ -2,6 +2,22 @@
 
 ### New features
 
+- **Per-element font size, row height, markup and block alignment** (#292).
+  `rtf_document(default_format = )` stays the baseline; the table body
+  (`rtftable(font_size_half_points = )`), the header / footer band
+  (`rtf_header()` / `rtf_footer()`) and the title / footnote blocks
+  (`rtf_titles()` / `rtf_footnotes()`) may each override it, and anything left
+  `NULL` is inherited. **Font size and row height resolve together**: an element
+  that sets a size without a height has the height recomputed from that size,
+  rather than inheriting one chosen for a different size, while an explicit
+  height always wins — so `font_size_half_points = 24` alone yields `\fs24`
+  with the matching `\trrh290`, and a document `row_height_twips` no longer
+  leaks across a size change. `row_height_twips = 0` keeps meaning "automatic".
+  `align` on a title or footnote sets that block's default row alignment; a
+  per-row `align` still beats it, and block placement continues to follow the
+  content. `markup` can now be switched on for one block alone. Nothing changes
+  when nothing is set — asserted byte-identical.
+
 - **Per-element widths for the header / footer, table and footnote** (#291),
   in one vocabulary: `"content"` (follow the table body), `"page"` (the
   writable width, margins excluded), a fraction in `(0, 1]` of it, or twips.

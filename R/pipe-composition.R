@@ -666,6 +666,13 @@ rtf_figures <- function(doc, figures,
 #'
 #' @param doc An rtf_document object.
 #' @param titles A list of length = number of pages, or length 1 (common).
+#' @param font_size_half_points,row_height_twips,markup,align Style for this
+#'   block, overriding the document default from [rtf_default_format()].
+#'   Anything left `NULL` is inherited. Font size and row height resolve
+#'   **together**: a size given without a height recomputes the height from
+#'   that size rather than inheriting one chosen for a different size, and an
+#'   explicit height always wins. `align` sets the block's default row
+#'   alignment; a per-row `align` still beats it.
 #'
 #' @return Modified rtf_document.
 #'
@@ -680,7 +687,9 @@ rtf_figures <- function(doc, figures,
 #' }
 #'
 #' @export
-rtf_titles <- function(doc, titles) {
+rtf_titles <- function(doc, titles, font_size_half_points = NULL,
+                       row_height_twips = NULL, markup = NULL,
+                       align = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -698,6 +707,9 @@ rtf_titles <- function(doc, titles) {
   }
   doc_copy <- doc
   doc_copy$titles <- titles
+  st <- .element_style(font_size_half_points, row_height_twips, markup,
+                       align, verb = "rtf_titles")
+  if (length(st)) doc_copy$title_style <- st
   doc_copy
 }
 
@@ -712,6 +724,13 @@ rtf_titles <- function(doc, titles) {
 #'
 #' @param doc An rtf_document object.
 #' @param footnotes A list of length = number of pages, or length 1 (common).
+#' @param font_size_half_points,row_height_twips,markup,align Style for this
+#'   block, overriding the document default from [rtf_default_format()].
+#'   Anything left `NULL` is inherited. Font size and row height resolve
+#'   **together**: a size given without a height recomputes the height from
+#'   that size rather than inheriting one chosen for a different size, and an
+#'   explicit height always wins. `align` sets the block's default row
+#'   alignment; a per-row `align` still beats it.
 #'
 #' @return Modified rtf_document.
 #'
@@ -722,7 +741,9 @@ rtf_titles <- function(doc, titles) {
 #'   rtf_footnotes(list(c("Source: ADaM ADSL")))
 #'
 #' @export
-rtf_footnotes <- function(doc, footnotes) {
+rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
+                          row_height_twips = NULL, markup = NULL,
+                          align = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -740,6 +761,9 @@ rtf_footnotes <- function(doc, footnotes) {
   }
   doc_copy <- doc
   doc_copy$footnotes <- footnotes
+  st <- .element_style(font_size_half_points, row_height_twips, markup,
+                       align, verb = "rtf_footnotes")
+  if (length(st)) doc_copy$footnote_style <- st
   doc_copy
 }
 

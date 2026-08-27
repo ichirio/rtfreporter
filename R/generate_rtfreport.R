@@ -434,7 +434,8 @@
 # All decoration flags are logical scalars.
 .build_cell_content <- function(text, align = "left", bold = FALSE, italic = FALSE,
                                  underline = FALSE, indent_twips = 0L,
-                                 pad_l = 72L, pad_r = 72L, color_idx = NULL) {
+                                 pad_l = 72L, pad_r = 72L, color_idx = NULL,
+                                 fs_cmd = "") {
   align_cmd <- switch(align, left = "\\ql", right = "\\qr", center = "\\qc", "\\ql")
   li <- as.integer(pad_l) + as.integer(indent_twips)
   ri <- as.integer(pad_r)
@@ -449,7 +450,7 @@
     text <- paste0("\\cf", as.integer(color_idx), " ", text, "\\cf1 ")
   }
 
-  paste0(align_cmd, "\\li", li, "\\ri", ri, " ", text, "\\cell")
+  paste0(align_cmd, "\\li", li, "\\ri", ri, fs_cmd, " ", text, "\\cell")
 }
 
 # -- Row renderers --------------------------------------------------------------
@@ -554,7 +555,7 @@
                                    group_bottom_side = NULL,
                                    next_boundaries = NULL,
                                    markup = "script",
-                                   color_index_map = NULL) {
+                                   color_index_map = NULL, fs_cmd = "") {
   if (is.null(spanning_header) || length(spanning_header) == 0L) return(character())
   ncols <- length(cellx)
 
@@ -658,11 +659,11 @@
       align_cmd <- switch(al, left = "\\ql", right = "\\qr",
                               center = "\\qc", "\\qc")
       cell_contents <- c(cell_contents,
-        paste0(align_cmd, "\\li", pad_l, "\\ri", pad_r, " ", label, "\\cell"))
+        paste0(align_cmd, "\\li", pad_l, "\\ri", pad_r, fs_cmd, " ", label, "\\cell"))
       j <- as.integer(sp$to) + 1L
     } else {
       cell_contents <- c(cell_contents,
-        paste0("\\ql\\li", pad_l, "\\ri", pad_r, " \\cell"))
+        paste0("\\ql\\li", pad_l, "\\ri", pad_r, fs_cmd, " \\cell"))
       j <- j + 1L
     }
   }
@@ -680,6 +681,7 @@
 .render_header_row <- function(hdr_labels, cellx, border_spec, row_height_twips,
                                 pad_l, pad_r, valign_cmd, col_spec,
                                 table_align = "left", markup = "script",
+                                fs_cmd = "",
                                 color_index_map = NULL) {
   ncols <- length(cellx)
 
@@ -701,7 +703,8 @@
     bold  <- isTRUE(spec$header_bold)
     itl   <- isTRUE(spec$header_italic)
     align <- spec$header_align %||% "center"
-    .build_cell_content(text, align, bold, itl, FALSE, 0L, pad_l, pad_r)
+    .build_cell_content(text, align, bold, itl, FALSE, 0L, pad_l, pad_r,
+                        fs_cmd = fs_cmd)
   }, character(1L))
   .build_row(cell_defs, cell_contents, row_height_twips, table_align)
 }
@@ -714,7 +717,7 @@
 # it so a per-cell align override cannot break the point alignment.
 .data_cell_content <- function(spec, raw_val, j, row_cell_styles,
                                pad_l, pad_r, markup, color_index_map,
-                               force_align = NULL) {
+                               force_align = NULL, fs_cmd = "") {
   text        <- .format_cell_text(if (is.na(raw_val)) "" else as.character(raw_val), markup)
   align       <- spec$align       %||% "left"
   bold        <- isTRUE(spec$bold)
@@ -748,7 +751,7 @@
   color_idx <- if (!is.null(color_hex) && !is.null(color_index_map))
                  color_index_map[[color_hex]] else NULL
   .build_cell_content(text, align, bold, itl, ul, indent, pad_l, pad_r,
-                      color_idx = color_idx)
+                      color_idx = color_idx, fs_cmd = fs_cmd)
 }
 
 # Render one data row.
@@ -770,7 +773,7 @@
                               row_cell_styles = NULL,
                               color_index_map = NULL,
                               markup = "script",
-                              dsplit_row = NULL, dsplit = NULL) {
+                              dsplit_row = NULL, dsplit = NULL, fs_cmd = "") {
   if (!is.null(dsplit_row)) {
     return(.render_data_row_split(
       vals, cellx, border_spec, row_height_twips, pad_l, pad_r, valign_cmd,
@@ -801,7 +804,7 @@
     .data_cell_content(col_spec[[j]],
                        if (j <= length(vals)) vals[[j]] else NA,
                        j, row_cell_styles, pad_l, pad_r, markup,
-                       color_index_map)
+                       color_index_map, fs_cmd = fs_cmd)
   }, character(1L))
   .build_row(cell_defs, cell_contents, row_height_twips, table_align)
 }
@@ -819,7 +822,7 @@
     spanning_header, table_align = "left",
     cell_styles = NULL, color_index_map = NULL,
     blank_row_normalize = character(0), markup = "script",
-    dsplit = NULL, dsplit_offset = 0L) {
+    dsplit = NULL, dsplit_offset = 0L, fs_cmd = "") {
 
   # The whole column-header block always renders over the ORIGINAL column
   # geometry -- only data rows use the decimal-split one (`dsplit$cellx`).
@@ -885,14 +888,14 @@
         } else {
           NULL   # last header row's outer frame already supplies the bottom
         },
-        next_boundaries = nb,
+        next_boundaries = nb, fs_cmd = fs_cmd,
         markup = markup,
         color_index_map = color_index_map
       ))
     } else {
       lines <- c(lines, .render_header_row(
         hdr_row, cellx, row_b, hdr_h, pad_l, pad_r, valign_cmd,
-        col_spec, table_align, markup = markup,
+        col_spec, table_align, markup = markup, fs_cmd = fs_cmd,
         color_index_map = color_index_map
       ))
     }
@@ -961,7 +964,7 @@
           cellx, row_border, data_h, pad_l, pad_r, valign_cmd, col_spec, table_align,
           row_cell_styles = rcs,
           color_index_map = color_index_map,
-          markup = markup
+          markup = markup, fs_cmd = fs_cmd
         ))
       } else {
         drow <- .decimal_split_row(dsplit, row_vals, dsplit_offset + i)
@@ -972,7 +975,7 @@
           row_cell_styles = .decimal_split_cell_styles(dsplit, rcs),
           color_index_map = color_index_map,
           markup = markup,
-          dsplit_row = drow, dsplit = dsplit
+          dsplit_row = drow, dsplit = dsplit, fs_cmd = fs_cmd
         ))
       }
     }
@@ -1020,14 +1023,14 @@
   #   * explicit positive integer  -> use as given
   #   * 0L                          -> legacy "automatic" (no \trrh emitted)
   #   * NULL                        -> apply the document-wide default
-  # Row height: the table's own value wins; otherwise the document default;
-  # otherwise the font-aware baseline.
-  base_rh   <- tbl$row_height_twips %||% doc_row_height
-  effective <- if (is.null(base_rh)) {
-    .default_row_height_twips(font_half_points)
-  } else {
-    as.integer(base_rh)
-  }
+  # Font size and row height resolve together (#292): a table that sets its own
+  # font size gets the height that size implies, rather than inheriting a
+  # document height chosen for a different one.
+  metrics   <- .resolve_element_metrics(tbl$font_size_half_points,
+                                        tbl$row_height_twips,
+                                        font_half_points, doc_row_height)
+  effective <- metrics$rh
+  fs_cmd    <- .fs_cmd_for(metrics$fs, font_half_points)
 
   # Apply row_height_exact flag: negate twips value to signal \trrh exact height.
   .apply_exact <- function(h) {
@@ -1079,7 +1082,7 @@
         cell_styles     = cs_section,
         color_index_map = color_index_map,
         blank_row_normalize = tbl$blank_row_normalize %||% character(0),
-        markup = eff_markup,
+        markup = eff_markup, fs_cmd = fs_cmd,
         dsplit = dsplit, dsplit_offset = row_offset
       ))
       row_offset <- row_offset + n_this
@@ -1110,7 +1113,7 @@
     color_index_map = color_index_map,
     blank_row_normalize = tbl$blank_row_normalize %||% character(0),
     markup = eff_markup,
-    dsplit = dsplit, dsplit_offset = 0L
+    dsplit = dsplit, dsplit_offset = 0L, fs_cmd = fs_cmd
   )
 }
 
@@ -1219,8 +1222,13 @@
 
   # Row height: the band's own value wins; otherwise the document default;
   # otherwise the font-aware baseline.
-  rh_full <- hf$row_height_twips %||% doc_row_height %||%
-               .default_row_height_twips(font_half_points)
+  # Font size and row height resolve together (#292): a band that sets its own
+  # size gets the height that size implies.
+  hf_metrics <- .resolve_element_metrics(hf$font_size_half_points,
+                                         hf$row_height_twips,
+                                         font_half_points, doc_row_height)
+  rh_full <- hf_metrics$rh
+  hf_fs   <- .fs_cmd_for(hf_metrics$fs, font_half_points)
   rh_str  <- .cmd_fmt(table_cmd$row_height_template,
                        list(row_height_twips = rh_full))
 
@@ -1301,7 +1309,7 @@
                    center = align_cmd$center, align_cmd$default)
       txt <- .render_tokens(cols_display[i], current_page = current_page, total_pages = total_pages)
       row <- paste0(row,
-                    at, "\\li", pad_l, "\\ri", pad_r, " ", txt, "\\cell")
+                    at, "\\li", pad_l, "\\ri", pad_r, hf_fs, " ", txt, "\\cell")
     }
     row <- paste0(row, table_cmd$row_end)
     out_rows <- c(out_rows, row)
@@ -1463,8 +1471,8 @@
 
 # Normalize a title/footnote block to a list of resolved row records:
 #   list(text, align, bold, italic, underline, color, border, blank, half)
-.normalize_text_block <- function(block, is_footer) {
-  def_align <- if (is_footer) "left" else "center"
+.normalize_text_block <- function(block, is_footer, align = NULL) {
+  def_align <- align %||% (if (is_footer) "left" else "center")
   def_bold  <- !is_footer
   if (is.null(block)) {
     # Title: a single blank gap row. Footnote: nothing.
@@ -1527,13 +1535,18 @@
                                       valign_cmd, table_align,
                                       color_index_map = NULL,
                                       doc_row_height = NULL,
-                                      markup = "script") {
-  rows <- .normalize_text_block(block, is_footer)
+                                      markup = "script", style = NULL) {
+  rows <- .normalize_text_block(block, is_footer, style$align)
   if (length(rows) == 0L) return(character())
 
   # Title / footnote rows inherit the document default row height, else the
   # font-aware baseline.
-  full_h <- doc_row_height %||% .default_row_height_twips(font_half_points)
+  m      <- .resolve_element_metrics(style$font_size_half_points,
+                                     style$row_height_twips,
+                                     font_half_points, doc_row_height)
+  full_h <- m$rh
+  fs_cmd <- .fs_cmd_for(m$fs, font_half_points)
+  if (!is.null(style$markup)) markup <- style$markup
   cellx  <- as.integer(total_width_twips)
 
   vapply(rows, function(rec) {
@@ -1541,7 +1554,7 @@
                        valign_cmd, "\\cellx", cellx)
     if (isTRUE(rec$blank)) {
       content <- .build_cell_content("", rec$align, FALSE, FALSE, FALSE,
-                                     0L, pad_l, pad_r)
+                                     0L, pad_l, pad_r, fs_cmd = fs_cmd)
       rh <- full_h
     } else {
       color_idx <- if (!is.null(rec$color) && !is.null(color_index_map))
@@ -1549,7 +1562,8 @@
       txt <- .format_cell_text(rec$text, markup)
       content <- .build_cell_content(txt, rec$align, isTRUE(rec$bold),
                                      isTRUE(rec$italic), isTRUE(rec$underline),
-                                     0L, pad_l, pad_r, color_idx)
+                                     0L, pad_l, pad_r, color_idx,
+                                     fs_cmd = fs_cmd)
       rh <- full_h
     }
     .build_row(cell_def, content, rh, table_align)
@@ -1561,12 +1575,16 @@
 # A row `border` does NOT apply in text mode (a paragraph carries no cell rule),
 # so the footnote separator is only drawn in the table form.
 .render_text_block_text <- function(block, is_footer, color_index_map = NULL,
-                                    markup = "script", pad_l = 0L, pad_r = 0L) {
-  rows <- .normalize_text_block(block, is_footer)
+                                    markup = "script", pad_l = 0L, pad_r = 0L,
+                                    style = NULL, font_half_points = 18L) {
+  rows <- .normalize_text_block(block, is_footer, style$align)
   if (length(rows) == 0L) return(character())
   # Honour the document-wide cell padding as left/right paragraph indent, so the
   # "every element inherits the document padding" contract still holds.
-  indent <- paste0("\\li", as.integer(pad_l), "\\ri", as.integer(pad_r))
+  if (!is.null(style$markup)) markup <- style$markup
+  fs_cmd <- .fs_cmd_for(style$font_size_half_points %||% font_half_points,
+                        font_half_points)
+  indent <- paste0("\\li", as.integer(pad_l), "\\ri", as.integer(pad_r), fs_cmd)
   vapply(rows, function(rec) {
     align_cmd <- switch(rec$align, left = "\\ql", right = "\\qr",
                         center = "\\qc", "\\ql")
@@ -1713,6 +1731,10 @@
     if (!is.null(fd)) pg$footer_dist_twips <- .in_to_twips(fd)
     report <- .rtfreport_set_default_page(report, pg)
   }
+  # Per-element style for the title / footnote blocks (#292) rides on the
+  # document alongside the default format.
+  report$document$title_style    <- pipe_doc$title_style
+  report$document$footnote_style <- pipe_doc$footnote_style
   if (!is.null(pipe_doc$document$default_format)) {
     report <- .rtfreport_set_default_format(report, pipe_doc$document$default_format)
   }
@@ -2056,6 +2078,8 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
       content_align <- .content_align(ct)
       # Per-element width (#291): "content" (the default -- follow the body),
       # "page", a fraction of the writable width, or twips.
+      title_st    <- doc$title_style
+      footnote_st <- doc$footnote_style
       title_w    <- .resolve_block_width(doc_title_width,    content_w, writable_w)
       footnote_w <- .resolve_block_width(doc_footnote_width, content_w, writable_w)
       # Title / footnote inherit the document-wide cell padding and row height.
@@ -2067,14 +2091,16 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
       # Default renders as plain paragraphs (full writable width); the legacy
       # content-width table form is opt-in via title_format = "table".
       lines <- c(lines, if (identical(doc_title_format, "text")) {
-        .render_text_block_text(page$title, is_footer = FALSE,
+        .render_text_block_text(page$title, is_footer = FALSE, style = title_st,
+                                font_half_points = font_half_points,
                                 color_index_map, markup = doc_markup,
                                 pad_l = tf_pad_l, pad_r = tf_pad_r)
       } else {
         .render_text_block_table(
           page$title, title_w, is_footer = FALSE, font_half_points,
           tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
-          doc_row_height = doc_row_height, markup = doc_markup)
+          doc_row_height = doc_row_height, markup = doc_markup,
+          style = title_st)
       })
       if (!is.null(ct)) {
         if (inherits(ct, "rtftable")) {
@@ -2093,14 +2119,16 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
       # Default keeps the content-width table form (so the separator rule is
       # drawn); footnote_format = "text" switches to plain paragraphs.
       lines <- c(lines, if (identical(doc_footnote_format, "text")) {
-        .render_text_block_text(page$footnote, is_footer = TRUE,
+        .render_text_block_text(page$footnote, is_footer = TRUE, style = footnote_st,
+                                font_half_points = font_half_points,
                                 color_index_map, markup = doc_markup,
                                 pad_l = tf_pad_l, pad_r = tf_pad_r)
       } else {
         .render_text_block_table(
           page$footnote, footnote_w, is_footer = TRUE, font_half_points,
           tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
-          doc_row_height = doc_row_height, markup = doc_markup)
+          doc_row_height = doc_row_height, markup = doc_markup,
+          style = footnote_st)
       })
 
       # End-of-page break.  A table must be terminated before any paragraph-level

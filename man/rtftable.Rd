@@ -22,6 +22,7 @@ rtftable(
   table_width_pct = NULL,
   table_align = "left",
   row_height_twips = NULL,
+  font_size_half_points = NULL,
   row_height_exact = FALSE,
   header_row_height_twips = NULL,
   blank_row_height_twips = NULL,
@@ -144,6 +145,10 @@ or `"right"`.}
 \item{row_height_twips}{Row height for data rows in twips. `NULL` (default)
 uses the document-wide default from `rtfreporter_defaults.R`
 (font-size-aware). A positive integer specifies an explicit value.}
+
+\item{font_size_half_points}{Font size for this table, in half-points.
+`NULL` (default) inherits the document size. Setting it also recomputes
+the row height from that size unless `row_height_twips` is given.}
 
 \item{row_height_exact}{Logical. `TRUE` = exact (clipped); `FALSE` = minimum.}
 

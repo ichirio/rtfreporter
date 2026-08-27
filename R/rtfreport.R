@@ -243,6 +243,11 @@ update_footer_row <- function(footer, row, content) {
 #' @param width Band width in the shared vocabulary: `"page"` (the writable
 #'   width, the default), a fraction in `(0, 1]` of it, or twips. `width_twips`
 #'   is the older absolute-only form and wins when both are given.
+#' @param font_size_half_points Font size for this band, in half-points.
+#'   `NULL` (default) inherits the document size. Setting it also recomputes
+#'   the row height from that size unless `row_height_twips` is given.
+#' @param markup Cell-text markup for this band; `NULL` (default) inherits the
+#'   document setting. See [rtftable()].
 #' @param row_height_twips Integer. Row height in twips. `NULL` (default) reads
 #'   the value from `inst/resources/rtfreporter_defaults.R`.
 #' @param cell_padding_left_twips,cell_padding_right_twips Integer cell padding
@@ -270,6 +275,8 @@ rtf_header <- function(rows,
                         width_twips              = NULL,
                         width                    = NULL,
                         row_height_twips         = NULL,
+                        font_size_half_points    = NULL,
+                        markup                   = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
@@ -280,6 +287,9 @@ rtf_header <- function(rows,
   width <- .check_block_width(width, "width")
   list(rows = rows, border = border, width_twips = width_twips,
        width = width,
+       font_size_half_points =
+         .check_font_size(font_size_half_points, "font_size_half_points"),
+       markup = if (is.null(markup)) NULL else .resolve_markup(markup),
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
        cell_padding_right_twips = cell_padding_right_twips)
@@ -292,6 +302,8 @@ rtf_footer <- function(rows,
                         width_twips              = NULL,
                         width                    = NULL,
                         row_height_twips         = NULL,
+                        font_size_half_points    = NULL,
+                        markup                   = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
@@ -302,6 +314,9 @@ rtf_footer <- function(rows,
   width <- .check_block_width(width, "width")
   list(rows = rows, border = border, width_twips = width_twips,
        width = width,
+       font_size_half_points =
+         .check_font_size(font_size_half_points, "font_size_half_points"),
+       markup = if (is.null(markup)) NULL else .resolve_markup(markup),
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
        cell_padding_right_twips = cell_padding_right_twips)
