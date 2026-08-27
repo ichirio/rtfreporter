@@ -14,6 +14,7 @@ paginate_cols(x, ...)
   cols = NULL,
   carry = NULL,
   allow_span_break = TRUE,
+  width = c("fill", "keep"),
   ...
 )
 
@@ -23,6 +24,7 @@ paginate_cols(x, ...)
   cols = NULL,
   carry = NULL,
   allow_span_break = TRUE,
+  width = c("fill", "keep"),
   ...
 )
 }
@@ -45,6 +47,13 @@ are never printed twice on a page.}
 
 \item{allow_span_break}{Allow a cut inside a spanning header cell. Default
 `TRUE`.}
+
+\item{width}{How relative widths are rescaled after the split. `"fill"`
+(default) fixes the twips-per-ratio unit on **page 1** and reuses it on
+every page, so page 1 fills the sheet and a given ratio is the same width
+throughout; `"keep"` gives each kept column exactly the width it had
+before the split. No effect under `column_widths_twips`. See
+*Column widths*.}
 }
 \value{
 A list of [rtftable()] pages. Names are carried through unchanged,
@@ -73,12 +82,31 @@ printed columns -- after `drop_cols`, `stub_vars` and any user
 }
 \section{Column widths}{
 
-The same column is the same width on every page. With
-`column_widths_twips` that is automatic. With `col_rel_width`, or with no
-width setting at all, each page's table width is scaled to the kept
-columns' share so the ratios do not stretch to refill the page. A column
-block narrower than the whole table therefore yields a **narrower page**,
-rather than one stretched to the margins.
+`column_widths_twips` is absolute, so a subset already carries the right
+widths and `width` has no effect. Relative widths (and the default equal
+distribution) need a rule, because `.compute_cellx()` re-normalises whatever
+it is given across the page: a bare subset would stretch the kept columns to
+refill the sheet, making a ratio-1 column a different size on every page.
+
+`width = "fill"` (the default) fixes the **twips per ratio unit on page 1**
+and reuses it everywhere. Page 1 -- and any block with the same ratio total
+-- fills the sheet, while a given ratio is the same width on every page.
+With `rel = c(3, 1, 1, 1, 1, 1, 1, 1, 1)` on a 13680-twip page:
+
+\tabular{lll}{
+  **blocks** \tab **unit** \tab **page widths** \cr
+  4 + 4 \tab 1954.3 \tab 100\% / 100\% \cr
+  4 + 3 \tab 1954.3 \tab 100\% / 85.7\% \cr
+  2+2+2+2 \tab 2736.0 \tab 100\% on all four
+}
+
+`width = "keep"` measures against the whole table instead, so a kept column
+has exactly the width it had before the split and a partial block yields a
+proportionally shorter page.
+
+A block totalling **more** ratio than page 1 scales past the sheet under
+`"fill"`; a warning names the pages. Order the blocks so the widest comes
+first, or use `"keep"`.
 }
 
 \section{Spanning headers}{

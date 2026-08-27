@@ -588,19 +588,45 @@ unless you set it); `carry =` overrides that, and `carry = integer(0)` repeats
 nothing. A carry column is removed from the blocks automatically, so it is
 never printed twice on one page.
 
-**Column widths are preserved.** A column is the same width on every page it
-appears on, in all three width modes -- so a block narrower than the whole
-table yields a *narrower page* rather than one stretched back out to the
-margins:
+### Column widths after the split -- `width`
+
+`column_widths_twips` is absolute: a subset already carries the right widths
+and nothing is rescaled. **Relative** widths need a rule, because
+`.compute_cellx()` re-normalises whatever it is given across the page -- a bare
+subset would stretch the kept columns to refill the sheet, making a ratio-1
+column a different size on every page.
+
+`width = "fill"` (the default) fixes the **twips per ratio unit on page 1** and
+reuses it everywhere. Page 1 -- and every block with the same ratio total --
+fills the sheet, while a given ratio is the same width throughout. With
+`rel = c(3, 1, 1, 1, 1, 1, 1, 1, 1)` on a 13680-twip page:
+
+| blocks | unit | page widths |
+|---|---|---|
+| 4 + 4 | 1954.3 | 100% / 100% |
+| 4 + 3 | 1954.3 | 100% / 85.7% |
+| 2+2+2+2 | 2736.0 | 100% on all four |
 
 ```{r pagcols_width, eval = FALSE}
-tbl <- rtftable(df, col_rel_width = c(3, 2, 2, 2, 2, 2, 2))
-# full table:      2736 1824 1824 1824 1824 1824 1824
-# paginate_cols(at = c(4, 6)) ->
-#   page 1:        2736 1824 1824
-#   page 2:        2736 1824 1824
-#   page 3:        2736 1824 1824
+tbl <- rtftable(df, col_rel_width = c(3, rep(1, 8)))
+paginate_cols(tbl, at = 6)
+# page 1: 5863 1954 1954 1954 1955   (13680 -- full)
+# page 2: 5863 1954 1954 1954 1955   (13680 -- full)
 ```
+
+`width = "keep"` measures against the whole table instead, so a kept column has
+exactly the width it had before the split and a partial block yields a
+proportionally shorter page:
+
+```{r pagcols_keep, eval = FALSE}
+paginate_cols(tbl, at = 6, width = "keep")
+# page 1: 3731 1244 1244 1244 1242   (8705 -- 64% of the sheet)
+```
+
+**Order the blocks widest-first.** A block totalling more ratio than block 1
+scales past the sheet under `"fill"` -- three visits then five, say, puts page 2
+at 133% of the width. `paginate_cols()` warns and names the blocks; either
+reorder the cut or use `"keep"`.
 
 Spanning header cells are clipped to each page's columns. By default a cut may
 fall inside a spanning group, and that group's label is repeated over its
