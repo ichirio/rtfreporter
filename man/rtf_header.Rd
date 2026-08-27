@@ -9,6 +9,7 @@ rtf_header(
   rows,
   border = NULL,
   width_twips = NULL,
+  width = NULL,
   row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL
@@ -18,6 +19,7 @@ rtf_footer(
   rows,
   border = rtf_border_top(),
   width_twips = NULL,
+  width = NULL,
   row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL
@@ -45,6 +47,10 @@ for footer).}
 
 \item{width_twips}{Integer. Table width in twips. `NULL` (default) uses the
 full writable width (page width minus margins).}
+
+\item{width}{Band width in the shared vocabulary: `"page"` (the writable
+width, the default), a fraction in `(0, 1]` of it, or twips. `width_twips`
+is the older absolute-only form and wins when both are given.}
 
 \item{row_height_twips}{Integer. Row height in twips. `NULL` (default) reads
 the value from `inst/resources/rtfreporter_defaults.R`.}
