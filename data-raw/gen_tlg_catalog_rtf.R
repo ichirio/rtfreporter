@@ -46,7 +46,7 @@ adsl_dm <- pharmaverseadam::adsl |>
 
 make_header <- function(table_no, title, subtitle = "Safety Analysis Set") {
   rtf_header(rows = list(
-    c(l = "HOGESTER Co. Limited1", r = "CONFIDENTIAL"),
+    c(l = "HOGESTER Co. Limited", r = "CONFIDENTIAL"),
     c(l = "Protocol: RTF-101",     r = "Page {PAGE} of {TOTAL_PAGES}"),
     c(c = paste0("Table ", table_no)),
     c(c = title),
