@@ -1,5 +1,43 @@
 # rtfreporter (development version)
 
+### Breaking changes
+
+- **The footnote block now uses the page footer's mechanism, as a table of its
+  own** (#296). Two visible changes:
+
+  - **No separator rule by default.** The footnote used to draw a top rule on
+    its first row, and because `rtf_border_tfl()` sets only the *header's*
+    borders, that rule was the only line under the table. It is gone; ask for
+    it with `rtf_footnotes(border = rtf_border_top())`.
+  - **Per-row styling is removed.** The
+    `list(text = , bold = , italic = , underline = , color = , border = )` row
+    form no longer works. Style is set for the block instead, via
+    `rtf_footnotes(font_size_half_points = , row_height_twips = , markup = ,
+    align = , border = )`.
+
+  In exchange a footnote row may now be `c(l = , c = , r = )` — up to three
+  cells positioned left / centre / right, exactly as `rtf_footer()` takes them
+  — so "Source: ADSL" on the left and a run date on the right finally fit on
+  one line. A bare string lands in whichever slot `align` selects, so plain
+  text stays left-aligned. Page-number tokens (`{PAGE}`, `{AUTO_PAGE}`, …) are
+  expanded now, as they are in the footer.
+
+  The block is also emitted as an **independent table**: RTF merges
+  consecutive `\trowd` runs that no paragraph separates, so the footnote was
+  previously the body table wearing different `\cellx` values. A separating
+  paragraph makes the `footnote_width` of #291 genuinely its own.
+
+  `footnote_format = "text"` still renders plain paragraphs; a
+  `c(l = , c = , r = )` row cannot be expressed that way and raises a clear
+  error pointing at the table form.
+
+### Bug fixes
+
+- **`rtf_header(markup = )` / `rtf_footer(markup = )` had no effect** — the
+  argument was added in #292 but never reached the renderer, so `^{a}` in a
+  header stayed literal. The band honours it now, inheriting the document
+  setting when unset.
+
 ### New features
 
 - **Per-element font size, row height, markup and block alignment** (#292).

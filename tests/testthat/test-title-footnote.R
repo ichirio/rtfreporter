@@ -55,13 +55,17 @@ test_that("an invalid title_format errors", {
   expect_error(.render_with(doc), "text.*table")
 })
 
-test_that("footnote: top rule on the first row only; blank rows preserved", {
+test_that("footnote: no rule by default (#296); blank rows preserved", {
   txt <- .render_with(.doc_tbl(footnotes = list(c("Note 1: foo.", "", "Note 2: bar."))))
-  # First row carries the separator top rule (left-aligned, top valign).
-  expect_match(txt,
-    "clbrdrt\\\\brdrs\\\\brdrw15\\\\clvertalt\\\\cellx[0-9]+\\\\ql\\\\li0\\\\ri0 Note 1: foo\\.")
-  # A later row has no such rule.
-  expect_match(txt, "\\\\clvertalt\\\\cellx[0-9]+\\\\ql\\\\li0\\\\ri0 Note 2: bar\\.")
+  # The footnote used to draw a separator rule on its first row.  It now
+  # follows the page footer's mechanism, with the opposite default: no rule.
+  # The footer band sets no vertical alignment either, so \clvertalt is gone.
+  expect_match(txt, "\\\\cellx[0-9]+\\\\ql\\\\li0\\\\ri0 Note 1: foo\\.")
+  # no rule on the footnote row itself (the table header still has its own)
+  expect_false(grepl("clbrdrt[^\\n]*Note 1: foo", txt))
+  expect_match(txt, "\\\\cellx[0-9]+\\\\ql\\\\li0\\\\ri0 Note 2: bar\\.")
+  # the blank line between them is still a row of its own
+  expect_match(txt, "\\\\cellx[0-9]+\\\\ql\\\\li0\\\\ri0 \\\\cell")
 })
 
 test_that("legacy magic tokens render as literal text (no expansion)", {
@@ -109,18 +113,16 @@ test_that("per-line styling sets align / bold / colour", {
   expect_false(grepl("\\\\b Left red", txt))   # not bold
 })
 
-test_that("a footnote row border overrides the default separator rule", {
-  df <- data.frame(A = 1L, B = "x", stringsAsFactors = FALSE)
+test_that("rtf_footnotes(border = ) puts a rule back on the first row", {
+  # Per-row borders are gone (#296); the border is a property of the block.
+  df  <- data.frame(A = 1L, B = "x", stringsAsFactors = FALSE)
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
-    rtf_tables(list(df), footnotes = list(list(
-      list(text = "No rule", border = rtf_border())   # explicit empty border
-    )))
+    rtf_tables(list(df)) |>
+    rtf_footnotes(list("With rule"), border = rtf_border_top())
   txt <- .render_with(doc)
-  expect_match(txt, "\\\\clvertalt\\\\cellx[0-9]+\\\\ql\\\\li0\\\\ri0 No rule")
-  expect_false(grepl(
-    "clbrdrt\\\\brdrs\\\\brdrw15\\\\clvertalt\\\\cellx[0-9]+\\\\ql\\\\li0\\\\ri0 No rule",
-    txt))
+  expect_match(txt, "clbrdrt")
+  expect_match(txt, "With rule")
 })
 
 # -- Content-width matching -------------------------------------------------

@@ -10,13 +10,18 @@ rtf_footnotes(
   font_size_half_points = NULL,
   row_height_twips = NULL,
   markup = NULL,
-  align = NULL
+  align = NULL,
+  border = NULL
 )
 }
 \arguments{
 \item{doc}{An rtf_document object.}
 
-\item{footnotes}{A list of length = number of pages, or length 1 (common).}
+\item{footnotes}{A list of length = number of pages, or length 1 (common).
+Each page's element is a list of rows. A row is a single string, or a
+named vector `c(l = , c = , r = )` giving up to three cells positioned
+left / centre / right -- the same row model [rtf_footer()] uses. A bare
+string lands in whichever slot `align` selects.}
 
 \item{font_size_half_points, row_height_twips, markup, align}{Style for this
 block, overriding the document default from [rtf_default_format()].
@@ -25,6 +30,10 @@ Anything left `NULL` is inherited. Font size and row height resolve
 that size rather than inheriting one chosen for a different size, and an
 explicit height always wins. `align` sets the block's default row
 alignment; a per-row `align` still beats it.}
+
+\item{border}{`NULL` (default) for **no rule** -- unlike the page footer,
+the footnote draws none unless asked. An [rtf_border()] puts one on the
+first row, e.g. `border = rtf_border_top()`.}
 }
 \value{
 Modified rtf_document.

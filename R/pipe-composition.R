@@ -724,6 +724,13 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'
 #' @param doc An rtf_document object.
 #' @param footnotes A list of length = number of pages, or length 1 (common).
+#'   Each page's element is a list of rows. A row is a single string, or a
+#'   named vector `c(l = , c = , r = )` giving up to three cells positioned
+#'   left / centre / right -- the same row model [rtf_footer()] uses. A bare
+#'   string lands in whichever slot `align` selects.
+#' @param border `NULL` (default) for **no rule** -- unlike the page footer,
+#'   the footnote draws none unless asked. An [rtf_border()] puts one on the
+#'   first row, e.g. `border = rtf_border_top()`.
 #' @param font_size_half_points,row_height_twips,markup,align Style for this
 #'   block, overriding the document default from [rtf_default_format()].
 #'   Anything left `NULL` is inherited. Font size and row height resolve
@@ -743,7 +750,7 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #' @export
 rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
                           row_height_twips = NULL, markup = NULL,
-                          align = NULL) {
+                          align = NULL, border = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -763,6 +770,13 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
   doc_copy$footnotes <- footnotes
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_footnotes")
+  if (!is.null(border)) {
+    if (!inherits(border, "rtf_border")) {
+      stop("`rtf_footnotes(border = )` must be NULL or an rtf_border() object.",
+           call. = FALSE)
+    }
+    st$border <- border
+  }
   if (length(st)) doc_copy$footnote_style <- st
   doc_copy
 }

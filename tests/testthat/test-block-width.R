@@ -54,13 +54,13 @@ test_that(".check_block_width rejects nonsense", {
 test_that("the default is unchanged -- the footnote follows the content", {
   b <- .block()
   expect_equal(b$cellx, rtfreporter:::.content_width_twips(.tbl(), W))
-  expect_true(b$rule)
+  expect_false(b$rule)        # no rule by default since #296
 })
 
-test_that("footnote_width = 'page' widens it and KEEPS the separator rule", {
+test_that("footnote_width = 'page' widens the block", {
   b <- .block(rtf_default_format(footnote_width = "page"))
   expect_equal(b$cellx, W)
-  expect_true(b$rule)          # what footnote_format = "text" could not do
+  expect_false(b$rule)        # no rule by default since #296
 })
 
 test_that("a fraction and an absolute value both work", {

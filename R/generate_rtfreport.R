@@ -261,11 +261,15 @@
 # every time the RTF viewer opens the file, so they pick up the
 # correct numbers even after `assemble_rtf()` has concatenated
 # multiple deliverables.
-.render_tokens <- function(x, current_page = NULL, total_pages = NULL) {
+.render_tokens <- function(x, current_page = NULL, total_pages = NULL,
+                           markup = character(0)) {
   if (is.null(x)) return("")
   # Escape first; after escaping, { becomes \{ and } becomes \}, so
   # the token {PAGE} appears as \{PAGE\} and can be substituted safely.
-  out <- .rtf_escape(x)
+  # Markup, when the band asks for it, escapes as it goes; otherwise plain
+  # escaping.  Either way braces come out as \{ \}, so the token
+  # substitutions below still match.
+  out <- if (length(markup)) .format_cell_text(x, markup) else .rtf_escape(x)
 
   # Dynamic per-page page number: viewer-rendered.
   out <- gsub("\\{AUTO_PAGE\\}", "\\chpgn ", out, fixed = TRUE)
@@ -1198,12 +1202,14 @@
                                    color_index_map = NULL,
                                    font_half_points = 18L,
                                    doc_row_height = NULL,
-                                   doc_pad_l = NULL, doc_pad_r = NULL) {
+                                   doc_pad_l = NULL, doc_pad_r = NULL,
+                                   doc_markup = character(0)) {
   if (is.null(hf) || length(hf$rows) == 0L) {
     return(character())
   }
 
   rows        <- hf$rows
+  hf_markup   <- hf$markup %||% doc_markup
   hf_border   <- hf$border   # rtf_border or NULL
   # Width: the absolute `width_twips` wins (the legacy form), then the shared
   # `width` vocabulary, then the writable width.  A header/footer band has no
@@ -1307,7 +1313,8 @@
     for (i in seq_len(n_cols)) {
       at <- switch(aligns[i], left = align_cmd$left, right = align_cmd$right,
                    center = align_cmd$center, align_cmd$default)
-      txt <- .render_tokens(cols_display[i], current_page = current_page, total_pages = total_pages)
+      txt <- .render_tokens(cols_display[i], current_page = current_page,
+                            total_pages = total_pages, markup = hf_markup)
       row <- paste0(row,
                     at, "\\li", pad_l, "\\ri", pad_r, hf_fs, " ", txt, "\\cell")
     }
@@ -2027,13 +2034,15 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
                                           color_index_map = color_index_map,
                                           font_half_points = font_half_points,
                                           doc_row_height = doc_row_height,
-                                          doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r)
+                                          doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r,
+                                          doc_markup = doc_markup)
       footer_rtf <- .render_header_footer(cur_footer_hf, writable_w, is_footer = TRUE,
                                           current_page = pg_for_hf, total_pages = total_pages,
                                           color_index_map = color_index_map,
                                           font_half_points = font_half_points,
                                           doc_row_height = doc_row_height,
-                                          doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r)
+                                          doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r,
+                                          doc_markup = doc_markup)
 
       if (length(header_rtf) > 0L) {
         lines <<- c(lines, .cmd_fmt(doc_cmd$header_wrapper,
@@ -2119,16 +2128,28 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
       # Default keeps the content-width table form (so the separator rule is
       # drawn); footnote_format = "text" switches to plain paragraphs.
       lines <- c(lines, if (identical(doc_footnote_format, "text")) {
-        .render_text_block_text(page$footnote, is_footer = TRUE, style = footnote_st,
-                                font_half_points = font_half_points,
-                                color_index_map, markup = doc_markup,
-                                pad_l = tf_pad_l, pad_r = tf_pad_r)
+        .render_text_block_text(
+          .footnote_rows(page$footnote, footnote_st$align %||% "left", "text"),
+          is_footer = TRUE, style = footnote_st,
+          font_half_points = font_half_points,
+          color_index_map, markup = doc_markup,
+          pad_l = tf_pad_l, pad_r = tf_pad_r)
       } else {
-        .render_text_block_table(
-          page$footnote, footnote_w, is_footer = TRUE, font_half_points,
-          tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
-          doc_row_height = doc_row_height, markup = doc_markup,
-          style = footnote_st)
+        fn_rtf <- .render_header_footer(
+          .footnote_hf(page$footnote, footnote_st, footnote_w),
+          footnote_w, is_footer = TRUE,
+          current_page = p_idx, total_pages = total_pages,
+          color_index_map = color_index_map,
+          font_half_points = font_half_points,
+          doc_row_height = doc_row_height,
+          doc_pad_l = tf_pad_l, doc_pad_r = tf_pad_r,
+          doc_markup = doc_markup)
+        # An INDEPENDENT table: RTF merges consecutive \trowd runs that no
+        # paragraph separates, so without this the footnote would still be the
+        # body table wearing different \cellx values -- and could not carry a
+        # width of its own.  \fs2 keeps the separating paragraph from adding
+        # visible space, the same trick the page-break code uses.
+        if (length(fn_rtf)) c("{\\pard\\fs2\\par}", fn_rtf) else fn_rtf
       })
 
       # End-of-page break.  A table must be terminated before any paragraph-level

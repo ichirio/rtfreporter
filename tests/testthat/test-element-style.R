@@ -153,10 +153,9 @@ test_that("align changes only the block asked for", {
   expect_equal(.peek(d, "MYTITLE")$align, "\\qc")   # untouched
 })
 
-test_that("a per-row align still beats the block default", {
-  d <- .doc() |> rtf_footnotes(list(list(list(text = "MYFOOT",
-                                              align = "right"))),
-                               align = "center")
+test_that("a row's own l / c / r slot beats the block default", {
+  # Per-row style lists are gone (#296); a row places itself by naming a slot.
+  d <- .doc() |> rtf_footnotes(list(list(c(r = "MYFOOT"))), align = "center")
   expect_equal(.peek(d, "MYFOOT")$align, "\\qr")
 })
 
