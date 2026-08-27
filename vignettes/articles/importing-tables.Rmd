@@ -249,6 +249,68 @@ attr(tbl, "rtf_titles") # -> "Table 1: Demographics"  (from the caption)
 ```
 
 
+## Numeric columns -- format them first
+
+rtfreporter renders the text it is given. A column that is still **numeric**
+when it reaches the renderer is converted with `as.character()`, and that is
+rarely what a report wants:
+
+```{r numraw, eval = FALSE}
+as.character(1/3)       #> "0.333333333333333"   -- 15 digits
+as.character(100000)    #> "1e+05"               -- scientific notation
+```
+
+Worse, the result follows the session's `options(scipen)`: `as.character(123456)`
+is `"123456"` under `scipen = 100` and `"1.23456e+05"` under `scipen = -100`.
+The same code and data would render differently on different machines.
+
+So convert numbers to their display text **before** building the table.
+`fmt_signif()` counts the total printed digits *including the integer part* --
+what a SAP means by "report to 4 significant digits", which is not what
+`signif()` does:
+
+```{r fmtsignif, eval = FALSE}
+fmt_signif(c(0, 10.2, 103.4, 20.333333, 23.4463), digits = 4)
+#> "0.000" "10.20" "103.4" "20.33" "23.45"
+```
+
+`fmt_round()` fixes the decimal places instead. Both take
+`rounding = "sas"` for half-away-from-zero rounding, next to R's default
+banker's rounding -- they disagree on exact halves (`23.445` is `"23.44"`
+under `"r"`, `"23.45"` under `"sas"`), which matters when the output is
+checked against SAS.
+
+`fmt_numeric()` applies either across a data frame. A clinical column holds
+several statistics with different formats, so `by` names a **carrier column**
+whose values pick the rule -- and it can be the row-heading column itself,
+matched after trimming, so an indented `"  Mean"` keys on `"Mean"`:
+
+```{r fmtnumeric, eval = FALSE}
+pk |>
+  fmt_numeric(
+    cols = visit_cols, by = "Nominal Time (h)",
+    formats = list(
+      n        = list(digits = 0),
+      Mean     = list(signif = 4),
+      SD       = list(signif = 4),
+      `CV%`    = list(digits = 1),
+      .default = list(signif = 4)
+    )) |>
+  as_rtftables(...) |>
+  set_decimal_split(cols = visit_cols)
+```
+
+Rows whose selected cells are all missing need no rule, so group-label and
+blank rows look after themselves; a non-missing cell with no matching rule and
+no `.default` is an error rather than a silent 15-digit number.
+
+Character columns are taken as **already formatted** and are never touched --
+including by `cols`, which skips any non-numeric column it selects.
+
+Format before splitting: `set_decimal_split()` measures the text it is given,
+so the decimal-point ratio is computed from `"0.3333"` rather than from
+`"0.333333333333333"`.
+
 ## Monospaced alignment -- `cell_format`
 
 Clinical tables often need count/percent columns to line up by character.
