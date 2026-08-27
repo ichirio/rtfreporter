@@ -22,7 +22,12 @@ outfile <- "inst/rtf-examples/pk-concentration.rtf"
 
 # ── the analysis data ──────────────────────────────────────────────────────
 
-VISITS <- c("Day 1", "Day 7", "Day 14", "Day 28", "Day 56", "Day 84")
+# Twelve visits, because the point of the example is a table that genuinely
+# does NOT fit: at the width its own content needs (see below) only six visits
+# fit on a landscape sheet, so the full table is 1.73x too wide and each half
+# fills 94% of the page.
+VISITS <- c("Day 1", "Day 7", "Day 14", "Day 28", "Day 42", "Day 56",
+            "Day 70", "Day 84", "Day 112", "Day 140", "Day 168", "Day 196")
 TIMES  <- c(0.5, 1, 2, 4, 8, 12, 24)
 LLOQ   <- 0.500
 
@@ -88,6 +93,28 @@ for (t in TIMES) {
 pk <- as.data.frame(do.call(rbind, rows), stringsAsFactors = FALSE)
 names(pk) <- c("Nominal Time (h)", VISITS)
 
+# ── size the columns from the content ──────────────────────────────────────
+#
+# ABSOLUTE widths, not `col_rel_width`: relative widths are normalised across
+# the page by `.compute_cellx()`, so a table sized that way is always exactly
+# as wide as the sheet and can never be too wide to fit -- which would leave
+# nothing for `paginate_cols()` to do.  `auto_col_widths()` reports what the
+# cells actually need instead:
+#
+#     stub "Nominal Time (h)"   2021 twips   (widest cell "Min, Max")
+#     each visit column         1804 twips   (widest cell "496.28, 1461.8")
+#
+# so only six visits fit on a landscape sheet's 13680 writable twips.  With
+# twelve the table is 23669 twips -- 1.73x too wide -- and each half comes to
+# 12845, or 94% of the page.
+#
+# `as_rtftables(auto_width = TRUE)` is deliberately NOT used: it clamps the
+# total to the writable width when the natural size exceeds it, squeezing the
+# columns back onto one page.
+widths <- auto_col_widths(pk, col_header = names(pk))
+
+HALF <- length(VISITS) / 2L        # cut the visits down the middle
+
 # ── build, then split on BOTH axes ─────────────────────────────────────────
 
 pages <- as_rtftables(
@@ -98,19 +125,19 @@ pages <- as_rtftables(
     blank_rows = blank_rows_by_change("Nominal Time (h)",
                                       group_by = "indent"),
     col_header = list(
-      list(col_cell(c(2, 7), "Plasma Concentration (ng/mL)")),
+      list(col_cell(c(2, length(VISITS) + 1L),
+                    "Plasma Concentration (ng/mL)")),
       c("Nominal Time (h)", VISITS)
     ),
-    col_rel_width = c(2.4, rep(1.6, length(VISITS))),
+    column_widths_twips = widths,
     border = "tfl"
   ) |>
   # one column of two cells: integer part right-aligned, decimals left-aligned
   set_decimal_split(cols = VISITS) |>
-  # then cut after Day 28, repeating the time-point stub on both pages.
-  # Four visits fill the landscape page (2736 + 4 x 1824 = 10032 of the 13680
-  # writable twips); cutting every two visits would leave a third of the sheet
-  # empty, since a column keeps its width whatever page it lands on.
-  paginate_cols(at = 6)
+  # then cut the visits in half, repeating the time-point stub on both pages.
+  # A column keeps its width whatever page it lands on, so each block is the
+  # stub plus six visits = 12845 twips, 94% of the sheet.
+  paginate_cols(at = HALF + 2L)
 
 titles <- lapply(seq_along(pages), function(i)
   c("Table 14.2.1",

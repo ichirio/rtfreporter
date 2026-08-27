@@ -1,5 +1,23 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **The PK concentration example now actually needs its column split** (#279).
+  Sized with `col_rel_width`, the table was exactly as wide as the sheet --
+  relative widths are normalised across the page by `.compute_cellx()`, so a
+  table sized that way always fits and `paginate_cols()` had nothing to do; the
+  two pages came out 73% and 47% full. It is now sized with **absolute widths
+  from `auto_col_widths()`** (stub 2021 twips, each visit 1804) and the study
+  extended to **twelve visits**, which makes the full table 23669 twips --
+  **1.73x too wide for the 13680 writable twips** -- and each of the two visit
+  blocks 12845, or **94% of the page**. `inst/rtf-examples/README.md` gains an
+  entry for the file and names the two screenshots the example needs
+  (`pk-concentration.png` for page 1, `pk-concentration-cols2.png` for page 2),
+  since a single page cannot show a horizontal split. The article explains why
+  `auto_width = TRUE` is not used here: it clamps the total to the writable
+  width when the natural size exceeds it, squeezing the columns back onto one
+  page.
+
 ### New features
 
 - **Worked example: a PK concentration summary with both pagination axes**

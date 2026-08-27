@@ -5,26 +5,38 @@
 # columns each page keeps.  The two features were built on separate branches,
 # so nothing else covers that interaction.
 
-VISITS <- c("Day 1", "Day 7", "Day 14", "Day 28", "Day 56", "Day 84")
+VISITS <- c("Day 1", "Day 7", "Day 14", "Day 28", "Day 42", "Day 56",
+            "Day 70", "Day 84", "Day 112", "Day 140", "Day 168", "Day 196")
 STATS  <- c("n", "Mean", "SD", "CV%", "Median", "Min, Max")
 W      <- rtfreporter:::.default_writable_twips()
+HALF   <- length(VISITS) / 2L
 
-# A miniature of the generated table: two nominal time points, six visits, and
-# one cell of every kind the split has to cope with.
+# A miniature of the generated table: two nominal time points, the full set of
+# visits, and one cell of every kind the split has to cope with.
 .pk_df <- function() {
   cell <- function(stat, t, v) {
     if (t == "24 h" && v == 1L) {
       return(switch(stat, "n" = "24", "Min, Max" = "BLQ, BLQ", "BLQ"))
     }
     if (t == "24 h" && v == 2L && stat %in% c("Mean", "Median")) return("<0.500")
-    base <- c(902.33, 956.47, 1104.5, 88.012, 9.0125, 45.678)[v]
+    # Three significant figures, so the decimal count varies BETWEEN STATS --
+    # which is what the split is for.  The widest cell of every visit column is
+    # the fixed-width "Min, Max" pair, so all visit columns come out the same
+    # width, exactly as in the generated example.
+    fmt <- function(x) {
+      if (x >= 1000) sprintf("%.1f", x)
+      else if (x >= 100) sprintf("%.2f", x)
+      else if (x >= 10)  sprintf("%.3f", x)
+      else               sprintf("%.4f", x)
+    }
+    base <- 1000 + 25 * v
     switch(stat,
       "n"        = "24",
-      "Mean"     = format(base, nsmall = 0L, trim = TRUE),
-      "SD"       = format(round(base * 0.2, 2), nsmall = 0L, trim = TRUE),
+      "Mean"     = fmt(base),
+      "SD"       = fmt(base * 0.2),
       "CV%"      = "19.9",
-      "Median"   = format(round(base * 0.97, 2), nsmall = 0L, trim = TRUE),
-      "Min, Max" = paste(round(base * 0.55, 2), round(base * 1.62, 1), sep = ", "),
+      "Median"   = fmt(base * 0.97),
+      "Min, Max" = sprintf("%.2f, %.1f", base * 0.55, base * 1.62),
       "")
   }
   rows <- list()
@@ -41,25 +53,40 @@ W      <- rtfreporter:::.default_writable_twips()
   d
 }
 
+# Content-derived ABSOLUTE widths, as the example uses: relative widths are
+# normalised to the page, so a table sized that way always fits and there is
+# nothing for paginate_cols() to do.
+.pk_widths <- function() {
+  d <- .pk_df()
+  auto_col_widths(d, col_header = names(d))
+}
+
+# The un-split table, to check that it does NOT fit on the page.
+.pk_full <- function() {
+  as_rtftables(.pk_df(), column_widths_twips = .pk_widths(),
+               border = "tfl")[[1L]]
+}
+
 # The pipeline the example uses: row split -> decimal split -> column split.
 .pk_pages <- function(max_rows = 7L) {
   as_rtftables(
     .pk_df(),
     split = "group_safe", group_by = "indent", max_rows = max_rows,
     col_header = list(
-      list(col_cell(c(2, 7), "Plasma Concentration (ng/mL)")),
+      list(col_cell(c(2, length(VISITS) + 1L),
+                    "Plasma Concentration (ng/mL)")),
       c("Nominal Time (h)", VISITS)
     ),
-    col_rel_width = c(2.4, rep(1.6, length(VISITS))),
+    column_widths_twips = .pk_widths(),
     border = "tfl"
   ) |>
     set_decimal_split(cols = VISITS) |>
-    paginate_cols(at = 6)          # cut after Day 28
+    paginate_cols(at = HALF + 2L)  # cut the visits down the middle
 }
 
 # The two column blocks the example produces.
-.BLOCK1 <- VISITS[1:4]             # Day 1 .. Day 28
-.BLOCK2 <- VISITS[5:6]             # Day 56, Day 84
+.BLOCK1 <- VISITS[seq_len(HALF)]                        # Day 1 .. Day 56
+.BLOCK2 <- VISITS[seq.int(HALF + 1L, length(VISITS))]   # Day 70 .. Day 196
 
 .n_cells <- function(s) lengths(regmatches(s, gregexpr("\\\\cellx", s)))
 
@@ -88,25 +115,24 @@ test_that("pages come out row-band-outer", {
 
 test_that("decimal_split$cols is re-indexed onto each page's columns", {
   pages <- .pk_pages()
-  # every visit column of the page, never the stub -- the block widths differ
   for (p in pages) {
+    # every visit column of the page, never the stub
     expect_equal(p$decimal_split$cols, seq.int(2L, ncol(p$data)))
+    expect_equal(ncol(p$data), HALF + 1L)
   }
-  expect_equal(vapply(pages, function(p) ncol(p$data), integer(1L)),
-               c(5L, 3L, 5L, 3L))
 })
 
 test_that("the split still fires after the column split", {
-  plan <- .plan_of(.pk_pages()[[1L]])    # 0.5 h band, Day 1 .. Day 28
+  plan <- .plan_of(.pk_pages()[[1L]])    # 0.5 h band, Day 1 .. Day 56
   expect_false(is.null(plan))
-  expect_equal(plan$do_split, c(FALSE, rep(TRUE, 4L)))
-  expect_equal(plan$n1, 9L)              # 1 stub + 4 visits x 2 cells
+  expect_equal(plan$do_split, c(FALSE, rep(TRUE, HALF)))
+  expect_equal(plan$n1, 1L + 2L * HALF)  # stub + 6 visits x 2 cells
 })
 
 test_that("a page from the last column block splits its own visits", {
-  plan <- .plan_of(.pk_pages()[[2L]])    # 0.5 h band, Day 56 / Day 84
-  expect_equal(plan$do_split, c(FALSE, TRUE, TRUE))
-  expect_equal(plan$n1, 5L)              # 1 stub + 2 visits x 2 cells
+  plan <- .plan_of(.pk_pages()[[2L]])    # 0.5 h band, Day 70 .. Day 196
+  expect_equal(plan$do_split, c(FALSE, rep(TRUE, HALF)))
+  expect_equal(plan$n1, 1L + 2L * HALF)
 })
 
 # ──────── the row-heading stub ─────────────────────────────────────────────
@@ -127,19 +153,38 @@ test_that("the stub column is never split", {
 
 # ──────── widths ───────────────────────────────────────────────────────────
 
+test_that("the whole table does not fit, but each column block does", {
+  # This is what makes the example worth having: sized by its own content the
+  # table is far wider than the sheet, so the column split is not decorative.
+  full <- .pk_full()
+  nf   <- ncol(full$data)
+  wide <- rtfreporter:::.compute_cellx(nf, W, full)[nf]
+  expect_gt(wide, W)
+  expect_gt(wide / W, 1.5)                          # ~1.73x the page
+
+  for (p in .pk_pages()) {
+    n <- ncol(p$data)
+    expect_lte(rtfreporter:::.compute_cellx(n, W, p)[n], W)
+  }
+})
+
+test_that("each block fills most of the page", {
+  for (p in .pk_pages()) {
+    n     <- ncol(p$data)
+    total <- rtfreporter:::.compute_cellx(n, W, p)[n]
+    expect_gt(total / W, 0.9)                       # ~94% -- little slack
+  }
+})
+
 test_that("every column keeps the width it has in the full table", {
-  full <- as_rtftables(.pk_df(), col_rel_width = c(2.4, rep(1.6, 6L)))[[1L]]
-  wf   <- diff(c(0L, rtfreporter:::.compute_cellx(7L, W, full)))
-
+  wf    <- .pk_widths()
   pages <- .pk_pages()
-  wide  <- diff(c(0L, rtfreporter:::.compute_cellx(5L, W, pages[[1L]])))
-  narrow <- diff(c(0L, rtfreporter:::.compute_cellx(3L, W, pages[[2L]])))
-  expect_equal(wide,   wf[c(1L, 2L, 3L, 4L, 5L)])   # stub + Day 1 .. Day 28
-  expect_equal(narrow, wf[c(1L, 6L, 7L)])           # stub + Day 56 / Day 84
-
-  # a block of two visits therefore yields a SHORTER page, not a stretched one
-  expect_lt(sum(narrow), sum(wide))
-  expect_equal(narrow[1L], wide[1L])                # the stub is unchanged
+  w     <- function(p) {
+    n <- ncol(p$data); diff(c(0L, rtfreporter:::.compute_cellx(n, W, p)))
+  }
+  expect_equal(w(pages[[1L]]), wf[c(1L, seq_len(HALF) + 1L)])
+  expect_equal(w(pages[[2L]]), wf[c(1L, seq.int(HALF + 2L, length(wf)))])
+  expect_equal(w(pages[[1L]])[1L], wf[1L])          # the stub is unchanged
 })
 
 test_that("pages of the same block have identical widths", {
@@ -154,22 +199,29 @@ test_that("pages of the same block have identical widths", {
 test_that("a concentration row renders two cells per visit", {
   out <- rtfreporter:::.render_rtftable(.pk_pages()[[1L]], W)
   mean_row <- grep("Mean", out, fixed = TRUE)[1L]
-  expect_equal(.n_cells(out[mean_row]), 9L)        # stub + 4 visits x 2
-  expect_match(out[mean_row], "\\\\qr\\\\li0\\\\ri0 902\\\\cell")
-  expect_match(out[mean_row], "\\\\ql\\\\li0\\\\ri0 [.]33\\\\cell")
+  expect_equal(.n_cells(out[mean_row]), 1L + 2L * HALF)  # stub + 6 x 2
+  # Mean = "1025.0" -> one decimal
+  expect_match(out[mean_row], "\\\\qr\\\\li0\\\\ri0 1025\\\\cell")
+  expect_match(out[mean_row], "\\\\ql\\\\li0\\\\ri0 [.]0\\\\cell")
+
+  # ... while SD = "205.00" carries two, on the same column: differing decimal
+  # counts are exactly what the split has to line up
+  sd_row <- grep(" SD\\\\cell", out)[1L]
+  expect_match(out[sd_row], "\\\\qr\\\\li0\\\\ri0 205\\\\cell")
+  expect_match(out[sd_row], "\\\\ql\\\\li0\\\\ri0 [.]00\\\\cell")
 })
 
 test_that("an integer-only n row leaves the decimal half empty", {
   out <- rtfreporter:::.render_rtftable(.pk_pages()[[1L]], W)
   n_row <- grep(" n\\\\cell", out)[1L]
-  expect_equal(.n_cells(out[n_row]), 9L)
+  expect_equal(.n_cells(out[n_row]), 1L + 2L * HALF)
   expect_match(out[n_row], "\\\\qr\\\\li0\\\\ri0 24\\\\cell\\\\ql\\\\li0\\\\ri0 \\\\cell")
 })
 
 test_that("a compound Min, Max cell falls back to one merged cell", {
   out <- rtfreporter:::.render_rtftable(.pk_pages()[[1L]], W)
   mm  <- grep("Min, Max", out, fixed = TRUE)[1L]
-  expect_equal(.n_cells(out[mm]), 5L)              # stub + one cell per visit
+  expect_equal(.n_cells(out[mm]), 1L + HALF)       # stub + one cell per visit
 })
 
 test_that("an all-BLQ visit column is left unsplit on that page", {
@@ -182,9 +234,9 @@ test_that("an all-BLQ visit column is left unsplit on that page", {
                     c("24", "BLQ", "BLQ, BLQ")))
 
   plan <- .plan_of(page)
-  expect_equal(plan$do_split, c(FALSE, FALSE, TRUE, TRUE, TRUE))
+  expect_equal(plan$do_split, c(FALSE, FALSE, rep(TRUE, HALF - 1L)))
   expect_null(plan$parts[[2L]])
-  expect_equal(plan$n1, 8L)                # stub + Day 1 + 3 visits x 2
+  expect_equal(plan$n1, 2L + 2L * (HALF - 1L))  # stub + Day 1 + 5 x 2
 })
 
 test_that("a <LLOQ value splits with its prefix on the left", {
@@ -221,7 +273,7 @@ test_that("the spanning header is clipped to each page's visits", {
 test_that("header rows keep the un-split column geometry", {
   out <- rtfreporter:::.render_rtftable(.pk_pages()[[1L]], W)
   expect_equal(.n_cells(out[1L]), 2L)   # stub + the clipped spanning cell
-  expect_equal(.n_cells(out[2L]), 5L)   # stub + one label per visit
+  expect_equal(.n_cells(out[2L]), 1L + HALF)   # stub + one label per visit
   for (v in .BLOCK1) expect_match(out[2L], v, fixed = TRUE)
 })
 
@@ -238,12 +290,13 @@ test_that("every row of a page ends at that page's right edge", {
   }
 })
 
-test_that("the narrow block yields a shorter page, not a stretched one", {
+test_that("both blocks end at the same right edge", {
   pages <- .pk_pages()
   edge  <- function(p) {
     n <- ncol(p$data); rtfreporter:::.compute_cellx(n, W, p)[n]
   }
-  expect_lt(edge(pages[[2L]]), edge(pages[[1L]]))
+  # the two blocks hold the same number of equally wide visit columns
+  expect_equal(edge(pages[[1L]]), edge(pages[[2L]]))
   expect_equal(edge(pages[[1L]]), edge(pages[[3L]]))
   expect_equal(edge(pages[[2L]]), edge(pages[[4L]]))
 })
