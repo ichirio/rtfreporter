@@ -1,5 +1,34 @@
 # rtfreporter (development version)
 
+### Bug fixes
+
+- **A misspelled argument no longer passes unnoticed** (#302). Verbs whose
+  `...` is a pure catch-all now warn when it carries anything they do not
+  consume, naming the offending argument, suggesting the nearest valid name and
+  listing the valid ones:
+
+  ```
+  `set_decimal_split()`: unknown argument `colS` (did you mean `cols`?) ignored.
+    Valid arguments: cols, ratio, decimal_mark, include_compound.
+  ```
+
+  Reported in #301, where `set_decimal_split(colS = 3:31)` silently *cleared*
+  the split instead of applying it: `colS` fell into `...` — R's partial
+  matching is case-sensitive, so it is not a prefix of `cols` — and the call
+  then ran with `cols = NULL`, the documented way to clear the setting. Nothing
+  errored, and the missing split was visible only in the rendered RTF.
+
+  Covered: `set_decimal_split()`, `style_body()`, `style_cols()`,
+  `style_header()`, `style_zone()`, `add_header_row()` and `paginate_cols()`.
+  Deliberately not `set_col_header()`, `set_header_cell()`, `rtf_col_header()`,
+  `rtf_columns()` or `combine_sections()`, whose `...` carries the payload, nor
+  the `print` / `format` / `plot` / `summary` methods, where S3 requires it. On
+  a page list the check runs once per call rather than once per page.
+
+- **`set_decimal_split()` requires `cols`** (#302). Omitting it altogether is
+  now an error rather than a silent clear; clearing a previously set split
+  still works through an explicit `set_decimal_split(x, cols = NULL)`.
+
 ### New features
 
 - **`rtf_tables()` accepts `font_size_half_points` and `font`** (#299), so a

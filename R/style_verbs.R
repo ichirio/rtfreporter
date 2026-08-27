@@ -300,6 +300,7 @@ style_header <- function(x, ...) UseMethod("style_header")
 style_header.rtftable <- function(x, row = NULL, cols = NULL, label = NULL,
                                   border = NULL, align = NULL, bold = NULL,
                                   italic = NULL, underline = NULL, ...) {
+  .check_own_dots(list(...), style_header.rtftable, "style_header")
   if (is.null(x$col_header) || length(x$col_header) == 0L) {
     stop("`style_header()`: this rtftable has no column header.", call. = FALSE)
   }
@@ -363,7 +364,8 @@ style_header.rtftable <- function(x, row = NULL, cols = NULL, label = NULL,
 #' @rdname style_header
 #' @export
 style_header.list <- function(x, ...) {
-  .style_map_pages(x, style_header, ..., verb = "style_header")
+  .style_dispatch_pages(x, style_header, style_header.rtftable,
+                        "style_header", list(...))
 }
 
 
@@ -385,6 +387,7 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
                                 border = NULL, header_align = NULL,
                                 header_bold = NULL, header_italic = NULL,
                                 ...) {
+  .check_own_dots(list(...), style_cols.rtftable, "style_cols")
   cols_idx <- .style_resolve_cols(x, cols, "style_cols")
   if (!is.null(align))        align        <- .style_check_align(align, "style_cols")
   if (!is.null(header_align)) header_align <- .style_check_align(header_align, "style_cols")
@@ -413,7 +416,8 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
 #' @rdname style_header
 #' @export
 style_cols.list <- function(x, ...) {
-  .style_map_pages(x, style_cols, ..., verb = "style_cols")
+  .style_dispatch_pages(x, style_cols, style_cols.rtftable,
+                        "style_cols", list(...))
 }
 
 
@@ -436,6 +440,7 @@ style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
                                 italic = NULL, underline = NULL,
                                 indent_twips = NULL, color = NULL,
                                 align = NULL, border = NULL, ...) {
+  .check_own_dots(list(...), style_body.rtftable, "style_body")
   frames   <- .style_body_frames(x)
   rows_idx <- .style_resolve_rows(rows, frames, "style_body")
   cols_idx <- .style_resolve_cols(x, cols, "style_body")
@@ -499,7 +504,8 @@ style_body.list <- function(x, rows = NULL, ...) {
     stop("`style_body()` on a page list cannot take integer/logical `rows` -- page-local row numbers are ambiguous across pages. Use a predicate function or one-sided formula (evaluated per page), or style a single page directly.",
          call. = FALSE)
   }
-  .style_map_pages(x, style_body, rows = rows, ..., verb = "style_body")
+  .style_dispatch_pages(x, style_body, style_body.rtftable, "style_body",
+                        list(...), fixed = list(rows = rows))
 }
 
 
@@ -518,6 +524,7 @@ style_zone <- function(x, ...) UseMethod("style_zone")
 style_zone.rtftable <- function(x, header = NULL, spanning = NULL,
                                 body = NULL, first_row = NULL,
                                 last_row = NULL, ...) {
+  .check_own_dots(list(...), style_zone.rtftable, "style_zone")
   zones <- list(header = header, spanning = spanning, body = body,
                 first_row = first_row, last_row = last_row)
   zones <- zones[!vapply(zones, is.null, logical(1L))]
@@ -536,7 +543,8 @@ style_zone.rtftable <- function(x, header = NULL, spanning = NULL,
 #' @rdname style_header
 #' @export
 style_zone.list <- function(x, ...) {
-  .style_map_pages(x, style_zone, ..., verb = "style_zone")
+  .style_dispatch_pages(x, style_zone, style_zone.rtftable,
+                        "style_zone", list(...))
 }
 
 
@@ -552,6 +560,7 @@ add_header_row <- function(x, ...) UseMethod("add_header_row")
 #' @export
 add_header_row.rtftable <- function(x, row, .position = c("top", "bottom"),
                                     ...) {
+  .check_own_dots(list(...), add_header_row.rtftable, "add_header_row")
   .position <- match.arg(.position)
   ref       <- .style_ref_df(x)
   ncol_df   <- ncol(ref)
@@ -571,7 +580,8 @@ add_header_row.rtftable <- function(x, row, .position = c("top", "bottom"),
 #' @rdname style_header
 #' @export
 add_header_row.list <- function(x, ...) {
-  .style_map_pages(x, add_header_row, ..., verb = "add_header_row")
+  .style_dispatch_pages(x, add_header_row, add_header_row.rtftable,
+                        "add_header_row", list(...))
 }
 
 
@@ -891,6 +901,15 @@ set_decimal_split <- function(x, ...) UseMethod("set_decimal_split")
 set_decimal_split.rtftable <- function(x, cols = NULL, ratio = NULL,
                                        decimal_mark = ".",
                                        include_compound = FALSE, ...) {
+  .check_own_dots(list(...), set_decimal_split.rtftable, "set_decimal_split")
+  # `cols` not supplied at all is a mistake -- most often a misspelling that
+  # landed in `...` (#301).  Clearing the setting stays available, but only
+  # through an explicit `cols = NULL`.
+  if (missing(cols)) {
+    stop("`set_decimal_split()`: `cols` is required. ",
+         "To clear a previously set split, pass `cols = NULL` explicitly.",
+         call. = FALSE)
+  }
   if (is.null(cols)) {
     x$decimal_split <- NULL
     return(x)
@@ -919,7 +938,13 @@ set_decimal_split.rtftable <- function(x, cols = NULL, ratio = NULL,
 #' @rdname set_decimal_split
 #' @export
 set_decimal_split.list <- function(x, ...) {
-  .style_map_pages(x, set_decimal_split, ..., verb = "set_decimal_split")
+  # Validate once here, then forward only the recognised arguments, so a typo
+  # warns once per call rather than once per page.
+  dots <- .check_dots(list(...), .valid_args(set_decimal_split.rtftable),
+                      "set_decimal_split")
+  do.call(.style_map_pages,
+          c(list(x, set_decimal_split), dots,
+            list(verb = "set_decimal_split")))
 }
 
 
