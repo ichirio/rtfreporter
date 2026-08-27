@@ -90,7 +90,7 @@ table below (the defaults -- landscape Letter, one blank line under the header
 ```{r helpers}
 make_header <- function(table_no, title, subtitle = "Safety Analysis Set") {
   rtf_header(rows = list(
-    c(l = "HOGESTER Co. Limited1", r = "CONFIDENTIAL"),
+    c(l = "HOGESTER Co. Limited", r = "CONFIDENTIAL"),
     c(l = "Protocol: RTF-101",     r = "Page {PAGE} of {TOTAL_PAGES}"),
     c(c = paste0("Table ", table_no)), c(c = title),
     c(c = paste0("<", subtitle, ">"))))
