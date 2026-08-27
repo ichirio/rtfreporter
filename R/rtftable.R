@@ -808,6 +808,17 @@ rtftable <- function(
     tbl$cell_valign <- ov$cell_valign
   }
 
+  # -- typography (#299) ---------------------------------------------------
+  # Font and size are settable on the table when you build it and overridable
+  # from rtf_tables() when you place it in a document -- the same two levels
+  # row_height_twips already has.  They stay together so the size / height
+  # coupling of #292 is resolved in one place.
+  if (has("font_size_half_points")) {
+    tbl$font_size_half_points <-
+      .check_font_size(ov$font_size_half_points, "font_size_half_points")
+  }
+  if (has("font")) tbl$font <- .check_font(ov$font, "font")
+
   # -- border (needs normalisation) ---------------------------------------
   if (has("border")) tbl$border <- .normalize_table_border(ov$border)
 
