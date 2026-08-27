@@ -2,6 +2,19 @@
 
 ### New features
 
+- **`rtf_tables()` accepts `font_size_half_points` and `font`** (#299), so a
+  table's typography can be set from the document side rather than only on the
+  table. `font` and `font_size_half_points` had landed on `rtftable()` (#292,
+  #293) but not here, which left the table as the only page element whose
+  typography lived on the **content object**: the header / footer band carries
+  its own via `rtf_header()` / `rtf_footer()`, and the title / footnote blocks
+  via `rtf_titles()` / `rtf_footnotes()` on the document. Both levels now work,
+  as `row_height_twips` already did — set it on `rtftable()` when building the
+  table, override it from `rtf_tables()` when placing it in a document, where
+  the explicitly-passed value wins. Keeping them in one place also keeps the
+  #292 coupling readable: a size given at either level still recomputes the row
+  height unless a height is given too.
+
 - **Per-element font family, on a variable-length font table** (#293, closing
   the ground of #44). The document carried exactly one font: the resource
   template was fixed at a single `{\fonttbl{\f0 ...}}` entry and the renderer

@@ -260,6 +260,11 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   (`"script"` super/subscript, `"relational"` `>=`/`<=` symbols, `"all"`,
 #'   `"none"`). `NULL` (default) inherits the document default (`"script"`).
 #'   Pre-built `rtftable()` pages keep their own setting. See [rtftable()].
+#' @param font_size_half_points,font Typography for these tables, in
+#'   half-points and as a family name. Both **override** whatever a pre-built
+#'   [rtftable()] carries, so a table can be built once and placed in documents
+#'   of different sizes. Passing a size without `row_height_twips` recomputes
+#'   the row height from it, exactly as on [rtftable()].
 #' @param titles `NULL` (default) or a list of length `length(tables)` **or
 #'   length 1** (a single block applied to every page). Each element is a
 #'   title **block**: either a character vector (one entry per row, default
@@ -350,6 +355,8 @@ rtf_tables <- function(doc, tables,
                         cell_valign = "bottom",
                         blank_row_normalize = c("detect", "collapse"),
                         markup = NULL,
+                        font_size_half_points = NULL,
+                        font = NULL,
                         titles = NULL,
                         footnotes = NULL,
                         auto_section = FALSE,
@@ -381,7 +388,7 @@ rtf_tables <- function(doc, tables,
                  "table_align", "row_height_twips", "row_height_exact",
                  "header_row_height_twips", "blank_row_height_twips",
                  "cell_padding_left_twips", "cell_padding_right_twips",
-                 "cell_valign")
+                 "cell_valign", "font_size_half_points", "font")
   .explicit <- intersect(names(match.call())[-1L], .fmt_args)
   .overrides <- if (length(.explicit))
                   mget(.explicit, envir = environment()) else list()

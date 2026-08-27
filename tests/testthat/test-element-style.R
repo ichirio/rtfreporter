@@ -225,3 +225,62 @@ test_that("a document with no per-element style renders byte-identically", {
   }
   expect_identical(mk(FALSE), mk(TRUE))
 })
+
+# ──────── rtf_tables() overrides the table's typography (#299) ─────────────
+
+.ov <- function(...) {
+  d <- rtf_document() |> rtf_tables(...)
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(d, f, overwrite = TRUE)
+  h <- grep("Mean", readLines(f, warn = FALSE), value = TRUE)
+  list(f    = unique(unlist(regmatches(h, gregexpr("\\\\f[0-9]+(?![a-z0-9])", h,
+                                                   perl = TRUE)))),
+       fs   = unique(unlist(regmatches(h, gregexpr("\\\\fs[0-9]+", h)))),
+       trrh = unique(unlist(regmatches(h, gregexpr("\\\\trrh-?[0-9]+", h)))))
+}
+.ovdf <- function() data.frame(Parameter = c("Age", "  Mean"), A = c("", "45.2"),
+                               stringsAsFactors = FALSE)
+
+test_that("rtf_tables(font_size_half_points = ) reaches the table", {
+  o <- .ov(rtftable(.ovdf(), border = "tfl"), font_size_half_points = 14L)
+  expect_equal(o$fs, "\\fs14")
+  expect_equal(o$trrh,
+               paste0("\\trrh", rtfreporter:::.default_row_height_twips(14L)))
+})
+
+test_that("rtf_tables(font = ) reaches the table", {
+  expect_equal(.ov(rtftable(.ovdf(), border = "tfl"), font = "Arial")$f, "\\f1")
+})
+
+test_that("the rtf_tables() value wins over the table's own", {
+  o <- .ov(rtftable(.ovdf(), border = "tfl", font_size_half_points = 24L),
+           font_size_half_points = 14L)
+  expect_equal(o$fs, "\\fs14")
+})
+
+test_that("the table's own value survives when nothing overrides it", {
+  o <- .ov(rtftable(.ovdf(), border = "tfl", font_size_half_points = 24L))
+  expect_equal(o$fs, "\\fs24")
+})
+
+test_that("an explicit row height still wins at the rtf_tables() level", {
+  o <- .ov(rtftable(.ovdf(), border = "tfl"),
+           font_size_half_points = 14L, row_height_twips = 300L)
+  expect_equal(o$fs, "\\fs14")
+  expect_equal(o$trrh, "\\trrh300")
+})
+
+test_that("the override reaches every page of an as_rtftables() list", {
+  pages <- as_rtftables(.ovdf(), border = "tfl")
+  d <- rtf_document() |> rtf_tables(pages, font_size_half_points = 14L)
+  expect_true(all(vapply(d$contents,
+                         function(p) identical(p$font_size_half_points, 14L),
+                         logical(1L))))
+})
+
+test_that("rtf_tables() validates them like everything else", {
+  d <- rtf_document()
+  expect_error(rtf_tables(d, rtftable(.ovdf()), font = 1), "font family")
+  expect_error(rtf_tables(d, rtftable(.ovdf()), font_size_half_points = 0),
+               "positive")
+})

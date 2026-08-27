@@ -31,6 +31,8 @@ rtf_tables(
   cell_valign = "bottom",
   blank_row_normalize = c("detect", "collapse"),
   markup = NULL,
+  font_size_half_points = NULL,
+  font = NULL,
   titles = NULL,
   footnotes = NULL,
   auto_section = FALSE,
@@ -79,6 +81,12 @@ pages keep their own setting. See [rtftable()] for details.}
 (`"script"` super/subscript, `"relational"` `>=`/`<=` symbols, `"all"`,
 `"none"`). `NULL` (default) inherits the document default (`"script"`).
 Pre-built `rtftable()` pages keep their own setting. See [rtftable()].}
+
+\item{font_size_half_points, font}{Typography for these tables, in
+half-points and as a family name. Both **override** whatever a pre-built
+[rtftable()] carries, so a table can be built once and placed in documents
+of different sizes. Passing a size without `row_height_twips` recomputes
+the row height from it, exactly as on [rtftable()].}
 
 \item{titles}{`NULL` (default) or a list of length `length(tables)` **or
 length 1** (a single block applied to every page). Each element is a
