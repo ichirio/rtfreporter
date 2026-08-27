@@ -1,5 +1,32 @@
 # rtfreporter (development version)
 
+### New features
+
+- **Per-element font family, on a variable-length font table** (#293, closing
+  the ground of #44). The document carried exactly one font: the resource
+  template was fixed at a single `{\fonttbl{\f0 ...}}` entry and the renderer
+  only ever read `font_table[[1]]$name`, so there was no `\f1` to select. The
+  table is now built from every family the document mentions, and
+  `rtftable()`, `rtf_header()` / `rtf_footer()` and `rtf_titles()` /
+  `rtf_footnotes()` each take `font`. A family not already declared is added
+  automatically — the same resolve-and-declare the colour table already does:
+
+  ```r
+  rtf_document() |>
+    rtf_tables(rtftable(df, font = "Arial")) |>
+    rtf_titles(list("Table 14.1.1"), font = "Calibri")
+  #> {\fonttbl{\f0\fnil\fcharset0 Courier;}{\f1\fnil\fcharset0 Calibri;}
+  #>           {\f2\fnil\fcharset0 Arial;}}
+  ```
+
+  Index 0 stays the document default, so an element that asks for nothing —
+  or asks for the default by name — emits no `\f` at all and a single-font
+  document renders exactly as before. `font` pairs with
+  `font_size_half_points` from #292, emitting `\f1\fs24` together.
+
+  This completes the three-part per-element style work: widths (#291), size /
+  height / markup / alignment (#292), and family here.
+
 ### Breaking changes
 
 - **The footnote block now uses the page footer's mechanism, as a table of its

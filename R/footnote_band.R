@@ -73,6 +73,7 @@
     width_twips = as.integer(width_twips),
     row_height_twips      = style$row_height_twips,
     font_size_half_points = style$font_size_half_points,
+    font                  = style$font,
     markup                = style$markup,
     cell_padding_left_twips  = NULL,
     cell_padding_right_twips = NULL

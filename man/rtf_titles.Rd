@@ -10,6 +10,7 @@ rtf_titles(
   font_size_half_points = NULL,
   row_height_twips = NULL,
   markup = NULL,
+  font = NULL,
   align = NULL
 )
 }
@@ -18,8 +19,10 @@ rtf_titles(
 
 \item{titles}{A list of length = number of pages, or length 1 (common).}
 
-\item{font_size_half_points, row_height_twips, markup, align}{Style for this
-block, overriding the document default from [rtf_default_format()].
+\item{font_size_half_points, row_height_twips, markup, align, font}{Style for
+this block, overriding the document default from [rtf_default_format()].
+`font` names a family (e.g. `"Arial"`); one not already in the document's
+`font_table` is added to it automatically, the way a colour is.
 Anything left `NULL` is inherited. Font size and row height resolve
 **together**: a size given without a height recomputes the height from
 that size rather than inheriting one chosen for a different size, and an

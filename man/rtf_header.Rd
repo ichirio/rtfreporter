@@ -12,6 +12,7 @@ rtf_header(
   width = NULL,
   row_height_twips = NULL,
   font_size_half_points = NULL,
+  font = NULL,
   markup = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL
@@ -24,6 +25,7 @@ rtf_footer(
   width = NULL,
   row_height_twips = NULL,
   font_size_half_points = NULL,
+  font = NULL,
   markup = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL
@@ -62,6 +64,10 @@ the value from `inst/resources/rtfreporter_defaults.R`.}
 \item{font_size_half_points}{Font size for this band, in half-points.
 `NULL` (default) inherits the document size. Setting it also recomputes
 the row height from that size unless `row_height_twips` is given.}
+
+\item{font}{Font family for this band, e.g. `"Arial"`. `NULL` (default)
+uses the document font. A family not already in the document's
+`font_table` is added to it automatically, the way a colour is.}
 
 \item{markup}{Cell-text markup for this band; `NULL` (default) inherits the
 document setting. See [rtftable()].}

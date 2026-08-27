@@ -442,6 +442,9 @@
 #' @param font_size_half_points Font size for this table, in half-points.
 #'   `NULL` (default) inherits the document size. Setting it also recomputes
 #'   the row height from that size unless `row_height_twips` is given.
+#' @param font Font family for this table, e.g. `"Arial"`. `NULL` (default)
+#'   uses the document font. A family not already in the document's
+#'   `font_table` is added to it automatically, the way a colour is.
 #' @param blank_row_height_twips Row height for blank separator rows.
 #' @param cell_padding_left_twips Left cell padding in twips (default 0
 #'   since v0.0.21; cell content sits flush against the cell border).
@@ -553,6 +556,7 @@ rtftable <- function(
   table_align = "left",
   row_height_twips = NULL,
   font_size_half_points = NULL,
+  font = NULL,
   row_height_exact = FALSE,
   header_row_height_twips = NULL,
   blank_row_height_twips = NULL,
@@ -723,6 +727,7 @@ rtftable <- function(
       table_align                 = table_align,
       row_height_twips            = if (is.null(row_height_twips)) NULL else as.integer(row_height_twips),
       font_size_half_points       = .check_font_size(font_size_half_points, "font_size_half_points"),
+      font                        = .check_font(font, "font"),
       row_height_exact            = row_height_exact,
       header_row_height_twips     = if (!is.null(header_row_height_twips)) as.integer(header_row_height_twips) else NULL,
       blank_row_height_twips      = if (!is.null(blank_row_height_twips)) as.integer(blank_row_height_twips) else NULL,

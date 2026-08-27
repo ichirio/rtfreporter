@@ -666,8 +666,10 @@ rtf_figures <- function(doc, figures,
 #'
 #' @param doc An rtf_document object.
 #' @param titles A list of length = number of pages, or length 1 (common).
-#' @param font_size_half_points,row_height_twips,markup,align Style for this
-#'   block, overriding the document default from [rtf_default_format()].
+#' @param font_size_half_points,row_height_twips,markup,align,font Style for
+#'   this block, overriding the document default from [rtf_default_format()].
+#'   `font` names a family (e.g. `"Arial"`); one not already in the document's
+#'   `font_table` is added to it automatically, the way a colour is.
 #'   Anything left `NULL` is inherited. Font size and row height resolve
 #'   **together**: a size given without a height recomputes the height from
 #'   that size rather than inheriting one chosen for a different size, and an
@@ -688,7 +690,7 @@ rtf_figures <- function(doc, figures,
 #'
 #' @export
 rtf_titles <- function(doc, titles, font_size_half_points = NULL,
-                       row_height_twips = NULL, markup = NULL,
+                       row_height_twips = NULL, markup = NULL, font = NULL,
                        align = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
@@ -709,6 +711,7 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
   doc_copy$titles <- titles
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_titles")
+  if (!is.null(font)) st$font <- .check_font(font, "rtf_titles(font)")
   if (length(st)) doc_copy$title_style <- st
   doc_copy
 }
@@ -731,8 +734,10 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #' @param border `NULL` (default) for **no rule** -- unlike the page footer,
 #'   the footnote draws none unless asked. An [rtf_border()] puts one on the
 #'   first row, e.g. `border = rtf_border_top()`.
-#' @param font_size_half_points,row_height_twips,markup,align Style for this
-#'   block, overriding the document default from [rtf_default_format()].
+#' @param font_size_half_points,row_height_twips,markup,align,font Style for
+#'   this block, overriding the document default from [rtf_default_format()].
+#'   `font` names a family (e.g. `"Arial"`); one not already in the document's
+#'   `font_table` is added to it automatically, the way a colour is.
 #'   Anything left `NULL` is inherited. Font size and row height resolve
 #'   **together**: a size given without a height recomputes the height from
 #'   that size rather than inheriting one chosen for a different size, and an
@@ -749,7 +754,7 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'
 #' @export
 rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
-                          row_height_twips = NULL, markup = NULL,
+                          row_height_twips = NULL, markup = NULL, font = NULL,
                           align = NULL, border = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
@@ -770,6 +775,7 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
   doc_copy$footnotes <- footnotes
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_footnotes")
+  if (!is.null(font)) st$font <- .check_font(font, "rtf_footnotes(font)")
   if (!is.null(border)) {
     if (!inherits(border, "rtf_border")) {
       stop("`rtf_footnotes(border = )` must be NULL or an rtf_border() object.",
