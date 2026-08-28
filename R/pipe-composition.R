@@ -285,6 +285,17 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   Default `FALSE`.
 #' @param section_label_align Alignment for the auto-appended section label row.
 #'   One of `"left"` (default), `"center"`, or `"right"`.
+#' @param auto_title Logical. When `TRUE` and `tables` is a **named** list,
+#'   each name is appended as the **last row of that table's title block**, so
+#'   it prints immediately above the table rather than in the page header.
+#'   Titles already present -- from `titles =`, or carried on the object as the
+#'   `rtf_titles` attribute by [as_rtftables()] -- are kept and the name goes
+#'   after them; a table with no titles gets the name as its whole block.
+#'   Unnamed items are untouched.  Behaves identically under either
+#'   `title_format`.  Composes with `auto_section`, which puts the same name in
+#'   the section header instead.  Default `FALSE`.
+#' @param title_label_align Alignment for the auto-appended title label row.
+#'   One of `"left"` (default), `"center"`, or `"right"`.
 #' @param read_gt **Legacy.**  Controls metadata extraction when a raw
 #'   `gt_tbl` is handed *directly* to `rtf_tables()` (no pagination).  For
 #'   new code, prefer converting up front with [as_rtftables()], which
@@ -361,6 +372,8 @@ rtf_tables <- function(doc, tables,
                         footnotes = NULL,
                         auto_section = FALSE,
                         section_label_align = "left",
+                        auto_title = FALSE,
+                        title_label_align = "left",
                         read_gt = FALSE) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
@@ -508,6 +521,11 @@ rtf_tables <- function(doc, tables,
   })
   names(tables) <- tables_names
 
+  # Captured before the auto_section block below, which rebuilds `tables`
+  # with lapply(seq_along(.)) and so drops its names.  auto_title needs
+  # them afterwards, and the two options must compose.
+  auto_labels <- names(tables)
+
   # When auto_section = TRUE, wrap each named item in an rtf_auto_section_item
   # sentinel so that .pipe_doc_to_r6_report() can build per-section headers.
   if (isTRUE(auto_section)) {
@@ -566,6 +584,26 @@ rtf_tables <- function(doc, tables,
       if (!is.null(a_footnotes))                       footnotes[[i]] <- a_footnotes
       else if (!is.null(gtx) && !is.null(gtx$footnotes_block))
                                                        footnotes[[i]] <- gtx$footnotes_block
+    }
+  }
+
+  # auto_title: the page name as the LAST row of that table's title block,
+  # after whatever `titles =` or the `rtf_titles` attribute already put there.
+  # Both title formats resolve their rows through .normalize_text_block(),
+  # which honours a per-row `align`, so this needs no renderer change.
+  if (isTRUE(auto_title) && !is.null(auto_labels) && any(nzchar(auto_labels))) {
+    if (!is.character(title_label_align) || length(title_label_align) != 1L ||
+        !title_label_align %in% c("left", "center", "right")) {
+      stop("`title_label_align` must be \"left\", \"center\", or \"right\".",
+           call. = FALSE)
+    }
+    for (i in seq_along(tables)) {
+      nm <- auto_labels[[i]]
+      if (is.na(nm) || !nzchar(nm)) next
+      existing <- titles[[i]]
+      rows <- if (is.null(existing)) list() else if (is.list(existing)) existing
+              else as.list(existing)
+      titles[[i]] <- c(rows, list(list(text = nm, align = title_label_align)))
     }
   }
 

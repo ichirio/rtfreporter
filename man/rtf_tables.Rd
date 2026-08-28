@@ -37,6 +37,8 @@ rtf_tables(
   footnotes = NULL,
   auto_section = FALSE,
   section_label_align = "left",
+  auto_title = FALSE,
+  title_label_align = "left",
   read_gt = FALSE
 )
 }
@@ -110,6 +112,19 @@ element. Unnamed items fall through to the previous section.
 Default `FALSE`.}
 
 \item{section_label_align}{Alignment for the auto-appended section label row.
+One of `"left"` (default), `"center"`, or `"right"`.}
+
+\item{auto_title}{Logical. When `TRUE` and `tables` is a **named** list,
+each name is appended as the **last row of that table's title block**, so
+it prints immediately above the table rather than in the page header.
+Titles already present -- from `titles =`, or carried on the object as the
+`rtf_titles` attribute by [as_rtftables()] -- are kept and the name goes
+after them; a table with no titles gets the name as its whole block.
+Unnamed items are untouched.  Behaves identically under either
+`title_format`.  Composes with `auto_section`, which puts the same name in
+the section header instead.  Default `FALSE`.}
+
+\item{title_label_align}{Alignment for the auto-appended title label row.
 One of `"left"` (default), `"center"`, or `"right"`.}
 
 \item{read_gt}{**Legacy.**  Controls metadata extraction when a raw
