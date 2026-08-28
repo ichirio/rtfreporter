@@ -15,7 +15,8 @@
 # article can link to them on GitHub for download.
 # =============================================================================
 
-library(rtfreporter)
+# Render through the source tree, never a stale install (#306).
+source("data-raw/_load.R")
 library(tern)
 library(rtables)
 library(gtsummary)
