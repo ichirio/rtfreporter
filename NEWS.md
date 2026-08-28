@@ -2,6 +2,31 @@
 
 ### New features
 
+- **`rtf_tables(auto_title = TRUE)` prints each page's name above its table**
+  (#310). The counterpart to `auto_section`, which puts the same name in the
+  section's running header: `auto_title` appends it as the **last row of that
+  table's title block**, left-aligned, so it sits immediately above the table.
+
+  ```r
+  pages <- as_rtftables(df, split = "by_value", group_col = "COHORT")
+  doc   <- rtf_document() |> rtf_tables(pages, auto_title = TRUE)
+  ```
+
+  Titles already present are kept and the name goes after them -- whether they
+  came from `titles =` or were carried on the object as the `rtf_titles`
+  attribute by `as_rtftables()`. A table with no titles gets the name as its
+  whole block. `title_label_align` moves it (`"left"` by default, mirroring
+  `section_label_align`).
+
+  Both title formats behave identically, and neither renderer needed changing:
+  `title_format = "text"` and `"table"` already resolve their rows through the
+  same normaliser, which honours a per-row alignment.
+
+  Gated exactly as `auto_section` is -- a named list, and only the elements
+  with a non-empty name. The two compose, putting the name in both places.
+
+### New features
+
 - **An optional package below its declared minimum now warns** (#308).
   `DESCRIPTION` has always constrained `gt (>= 0.9.0)`,
   `gtsummary (>= 1.7.0)`, `formatters (>= 0.5.0)`, `rtables (>= 0.6.0)`,
