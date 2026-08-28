@@ -2,32 +2,42 @@
 
 ### Bug fixes
 
-- **A misspelled argument no longer passes unnoticed** (#302). Verbs whose
-  `...` is a pure catch-all now warn when it carries anything they do not
-  consume, naming the offending argument, suggesting the nearest valid name and
-  listing the valid ones:
+- **`set_decimal_split()` pads, floors and caps each half's width** (#304).
+  The ratio came from the measured glyph counts alone, so a column of `0.0000`
+  values measured 1 against 5 and gave the integer half one sixth of the
+  column -- at 1200 twips, 200 twips for a single digit, hard against the cell
+  edge. Each half now gets a padding allowance and a floor, in character-width
+  units:
 
   ```
-  `set_decimal_split()`: unknown argument `colS` (did you mean `cols`?) ignored.
-    Valid arguments: cols, ratio, decimal_mark, include_compound.
+  w_eff = max(measured + pad_chars, min_chars)
   ```
 
-  Reported in #301, where `set_decimal_split(colS = 3:31)` silently *cleared*
-  the split instead of applying it: `colS` fell into `...` — R's partial
-  matching is case-sensitive, so it is not a prefix of `cols` — and the call
-  then ran with `cols = NULL`, the documented way to clear the setting. Nothing
-  errored, and the missing split was visible only in the rendered RTF.
+  The defaults `pad_chars = c(1, 1)` and `min_chars = c(4, 6)` give each half
+  one character of breathing room over a three-digit integer part and a
+  five-character decimal part, so anything at or below that size holds a
+  `4 : 6` baseline and anything larger scales from its own measurement. A
+  `0.0000` column goes from `r = 0.167` to `0.400` (480 twips instead of 200,
+  at a 1200-twip column).
 
-  Covered: `set_decimal_split()`, `style_body()`, `style_cols()`,
-  `style_header()`, `style_zone()`, `add_header_row()` and `paginate_cols()`.
-  Deliberately not `set_col_header()`, `set_header_cell()`, `rtf_col_header()`,
-  `rtf_columns()` or `combine_sections()`, whose `...` carries the payload, nor
-  the `print` / `format` / `plot` / `summary` methods, where S3 requires it. On
-  a page list the check runs once per call rather than once per page.
+  Past `max_chars` -- the measured halves together, default `10` -- the
+  allowance is dropped and the raw measured proportions are used however
+  lopsided. A column that long needs every twip it has, and reserving room it
+  does not use would squeeze the digits it does: `123.4567` data measures 3
+  against 8 and keeps its own `3/11 = 0.273` rather than being widened to
+  `4/13`.
 
-- **`set_decimal_split()` requires `cols`** (#302). Omitting it altogether is
-  now an error rather than a silent clear; clearing a previously set split
-  still works through an explicit `set_decimal_split(x, cols = NULL)`.
+  The floor applies per half, so a column with **fewer** than five decimal
+  characters reserves the baseline six on the right and its integer half
+  narrows relative to before: `1439.5 / 88.012` style data moves from
+  `4/7 = 0.571` to `5/11 = 0.455`. Pass
+  `pad_chars = c(0, 0), min_chars = c(0, 0)` for the previous raw ratio,
+  `max_chars = Inf` to keep the allowance at any width, or an explicit `ratio`
+  to fix the split point outright.
+
+  `inst/rtf-examples/pk-concentration.rtf` is regenerated accordingly. That
+  file was also stale against the footnote rework (#297) and now renders the
+  footnote band as an independent borderless table, as current code emits.
 
 ### New features
 
