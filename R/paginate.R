@@ -245,11 +245,7 @@ paginate.gt_tbl <- function(x, ...) {
 # non-breaking spaces normalised to regular spaces (so indent-based group
 # detection works).  Shared by paginate.gt_tbl() and as_rtftables().
 .extract_gt_body <- function(x) {
-  if (!requireNamespace("gt", quietly = TRUE)) {
-    stop("Reading a gt_tbl requires the `gt` package.  ",
-         "Install it with `install.packages(\"gt\")`.",
-         call. = FALSE)
-  }
+  .need_pkg("gt", "Reading a gt_tbl")
   body <- gt::extract_body(x, output = "rtf")
   body[] <- lapply(body, function(col) {
     if (is.character(col)) gsub("\u00a0", " ", col, fixed = TRUE) else col

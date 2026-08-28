@@ -103,10 +103,7 @@
   if (!.is_rtables_tbl(x)) {
     stop("`x` must be an rtables/tern table (VTableTree).", call. = FALSE)
   }
-  if (!requireNamespace("formatters", quietly = TRUE)) {
-    stop("Reading an rtables/tern table requires the `formatters` package. ",
-         "Install it with install.packages(\"formatters\").", call. = FALSE)
-  }
+  .need_pkg("formatters", "Reading an rtables/tern table")
 
   # `indent_rownames = TRUE` bakes the row-label indentation into the
   # rendered stub text (leading spaces), exactly as rtables itself prints it.
