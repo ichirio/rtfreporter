@@ -115,16 +115,30 @@
 #
 #     w_eff = max(w + pad, floor)
 #
-# The defaults (pad 0.5 / floor 3.5 on the left, pad 1 / floor 6 on the right)
-# hold a 3.5 : 6 baseline -- a 3-digit integer part against a 5-character
-# decimal part -- for anything at or below that size, and scale from the
-# measurement above it.  `pad_chars = c(0, 0), min_chars = c(0, 0)` restores
-# the pre-#304 behaviour.
-.decimal_split_ratio <- function(wl, wr, pad_chars = NULL, min_chars = NULL) {
-  pad <- if (is.null(pad_chars)) c(0.5, 1) else as.numeric(pad_chars)
-  flr <- if (is.null(min_chars)) c(3.5, 6) else as.numeric(min_chars)
-  le  <- max(wl + pad[1L], flr[1L])
-  re  <- max(wr + pad[2L], flr[2L])
+# One character of breathing room per half, and a floor corresponding to a
+# 3-digit integer part and a 5-character decimal part plus that character: 4
+# and 6.  Anything at or below that size holds a 4 : 6 baseline; anything
+# larger scales from its own measurement.
+#
+# The allowance is dropped once the measured halves together exceed
+# `max_chars`: a long column needs every twip it has, and reserving room it
+# does not use would squeeze the digits it does.  Above the cap the raw
+# measured proportions are used, however lopsided.
+#
+# `pad_chars = c(0, 0), min_chars = c(0, 0)` restores the pre-#304 behaviour;
+# `max_chars = Inf` never drops the allowance.
+.decimal_split_ratio <- function(wl, wr, pad_chars = NULL, min_chars = NULL,
+                                 max_chars = NULL) {
+  pad <- if (is.null(pad_chars)) c(1, 1) else as.numeric(pad_chars)
+  flr <- if (is.null(min_chars)) c(4, 6) else as.numeric(min_chars)
+  cap <- if (is.null(max_chars)) 10       else as.numeric(max_chars)
+  if (wl + wr > cap) {
+    le <- as.numeric(wl)
+    re <- as.numeric(wr)
+  } else {
+    le <- max(wl + pad[1L], flr[1L])
+    re <- max(wr + pad[2L], flr[2L])
+  }
   if (le + re <= 0) return(0.5)
   le / (le + re)
 }
@@ -139,6 +153,17 @@
       arg), call. = FALSE)
   }
   unname(v)
+}
+
+# Validate the total-width cap: a single positive number, possibly Inf.
+.check_char_cap <- function(v, arg) {
+  if (is.null(v)) return(NULL)
+  v <- suppressWarnings(as.numeric(v))
+  if (length(v) != 1L || is.na(v) || v <= 0) {
+    stop(sprintf("`%s` must be a single positive number (or Inf).", arg),
+         call. = FALSE)
+  }
+  v
 }
 
 # Derive one half's border from the original column's border by suppressing
@@ -167,6 +192,7 @@
     ratio            = spec$ratio,
     pad_chars        = spec$pad_chars,
     min_chars        = spec$min_chars,
+    max_chars        = spec$max_chars,
     include_compound = isTRUE(spec$include_compound)
   )
 }
@@ -234,7 +260,8 @@
     wl <- max(c(1L, wl))
     wr <- max(c(1L, wr))
     r  <- if (!is.null(spec$ratio)) as.numeric(spec$ratio)
-          else .decimal_split_ratio(wl, wr, spec$pad_chars, spec$min_chars)
+          else .decimal_split_ratio(wl, wr, spec$pad_chars, spec$min_chars,
+                                    spec$max_chars)
 
     x0 <- if (j == 1L) 0L else as.integer(cellx[j - 1L])
     x1 <- as.integer(cellx[j])

@@ -115,13 +115,13 @@ test_that("the split point follows the widest left / right part", {
 })
 
 test_that("by default each half is padded and floored (#304)", {
-  # max(3 + 0.5, 3.5) = 3.5 against max(4 + 1, 6) = 6
+  # max(3 + 1, 4) = 4 against max(4 + 1, 6) = 6, total 7 so under the cap
   tbl <- set_decimal_split(rtftable(.df(), col_rel_width = c(3, 2, 2)),
                            cols = "Value")
   cx   <- rtfreporter:::.compute_cellx(3L, W, tbl)
   plan <- rtfreporter:::.decimal_split_plan(tbl, cx, tbl$col_spec, "script")
   expect_equal(plan$cellx[2L],
-               cx[1L] + round((cx[2L] - cx[1L]) * 3.5 / 9.5))
+               cx[1L] + round((cx[2L] - cx[1L]) * 0.4))
 })
 
 test_that("an explicit ratio overrides the automatic one", {
