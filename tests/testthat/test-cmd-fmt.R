@@ -91,7 +91,8 @@ test_that("no rendered report can carry a placeholder", {
   df  <- data.frame(A = "1.5", B = "2", stringsAsFactors = FALSE)
   doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
     rtf_tables(rtftable(df, border = "tfl"))
-  f <- withr::local_tempfile(fileext = ".rtf")
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
   generate_rtfreport(doc, f, overwrite = TRUE)
   txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_false(grepl(rtfreporter:::.CMD_FMT_SLOT, txt))
@@ -101,7 +102,8 @@ test_that("a portrait report is equally clean", {
   df  <- data.frame(A = "1.5", stringsAsFactors = FALSE)
   doc <- rtf_document(page = rtf_page(orientation = "portrait")) |>
     rtf_tables(rtftable(df, border = "tfl"))
-  f <- withr::local_tempfile(fileext = ".rtf")
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
   generate_rtfreport(doc, f, overwrite = TRUE)
   txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_false(grepl(rtfreporter:::.CMD_FMT_SLOT, txt))
