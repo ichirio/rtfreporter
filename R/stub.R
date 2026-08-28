@@ -106,6 +106,24 @@
 #'   column's `label` attribute when it has one.
 #' @param indent Integer (default `4`).  Number of non-breaking spaces
 #'   prepended per nesting level.
+#' @param layout How the hierarchy is laid out.
+#'   \describe{
+#'     \item{`"merged"`}{(default) the hierarchy columns are replaced by one
+#'       indented stub column -- the historical behaviour.}
+#'     \item{`"columns"`}{the hierarchy columns are **kept**, in their
+#'       original positions and with their own headers.  A group value moves
+#'       onto its own row and is blank on that group's member rows, whose leaf
+#'       is indented in the leaf column.  Nothing is merged: the group value
+#'       is simply displayed in its own column.}
+#'   }
+#' @param label_span Render each group's label row as **one cell spanning the
+#'   table** instead of a stub cell followed by empty ones.  `FALSE` by
+#'   default, which is the historical look.  Applies to `layout = "merged"`
+#'   only; `layout = "columns"` keeps the group value in its own column and so
+#'   has nothing to span.  A group-summary row folded onto a label row is never
+#'   spanned -- it carries statistics in the other columns.  The span is
+#'   recorded as `attr(out, "rtf_label_rows")`, which
+#'   `rtftable(read_attributes = TRUE)` consumes.
 #' @param group_summary Which leaf values mark a row as its group's summary,
 #'   folding that row's statistics onto the group label row instead of an
 #'   indented leaf row (see *Group-summary rows*).  A subset of
@@ -157,9 +175,30 @@
 #'
 #' @export
 stub_cols <- function(data, vars, label = NULL, indent = 4L,
-                      group_summary = c("empty", "parent")) {
+                      group_summary = c("empty", "parent"),
+                      layout = c("merged", "columns"),
+                      label_span = FALSE) {
   if (!is.data.frame(data)) {
     stop("`data` must be a data.frame.", call. = FALSE)
+  }
+  layout <- match.arg(layout)
+  if (!is.logical(label_span) || length(label_span) != 1L ||
+      is.na(label_span)) {
+    stop("`label_span` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (identical(layout, "columns")) {
+    # The hierarchy columns stay, so the group value is displayed in its own
+    # column and there is nothing to span; and `label` names a merged column
+    # that this layout does not create.  Both are contradictions, not no-ops.
+    if (isTRUE(label_span)) {
+      stop("`label_span` applies to layout = \"merged\" only; with ",
+           "layout = \"columns\" the group value stays in its own column.",
+           call. = FALSE)
+    }
+    if (!is.null(label)) {
+      stop("`label` names the merged stub column, which layout = \"columns\" ",
+           "does not create.", call. = FALSE)
+    }
   }
   idx <- .resolve_col_indices(vars, data, "vars")
   if (anyDuplicated(idx)) {
@@ -208,6 +247,10 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
   # row can back-fill that row's `src` (and emit no separate leaf row).
   stub      <- character(0)
   src       <- integer(0)
+  # Level each emitted row belongs to: the parent level for a label row, NA
+  # for a leaf row.  Only layout = "columns" needs it, to know which column a
+  # label row's value belongs in.
+  lvl       <- integer(0)
   prev      <- NULL
   label_pos <- rep(NA_integer_, n_par)
   for (i in seq_len(n_row)) {
@@ -222,6 +265,7 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
         depth_l <- sum(nzchar(cur[seq_len(l - 1L)]))
         stub <- c(stub, paste0(strrep(pad, depth_l), cur[l]))
         src  <- c(src, NA_integer_)
+        lvl  <- c(lvl, l)
         label_pos[l] <- length(stub)
       }
     }
@@ -241,6 +285,7 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
       depth <- sum(nzchar(cur))
       stub  <- c(stub, paste0(strrep(pad, depth), leafv[i]))
       src   <- c(src, i)
+      lvl   <- c(lvl, NA_integer_)
     }
     prev <- cur
   }
@@ -268,12 +313,49 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
     label <- paste(disp, collapse = " / ")
   }
 
-  out <- cbind(data.frame(.stub. = stub, stringsAsFactors = FALSE), rest)
-  names(out) <- c(label, names(data)[keep])
-  rownames(out) <- NULL
+  if (identical(layout, "columns")) {
+    # Keep the hierarchy columns.  A label row carries its own parent value in
+    # that parent's column and nothing else; a leaf row blanks every parent and
+    # holds the (indented) leaf.  `lvl` records which level each emitted row
+    # belongs to -- the parent level for a label row, NA for a leaf row.
+    hier <- as.data.frame(
+      replicate(length(idx), rep(NA_character_, length(stub)),
+                simplify = FALSE),
+      stringsAsFactors = FALSE, optional = TRUE)
+    for (r in seq_along(stub)) {
+      if (is.na(lvl[r])) {
+        hier[[length(idx)]][r] <- stub[r]
+      } else {
+        hier[[lvl[r]]][r] <- stub[r]
+      }
+    }
+    names(hier) <- names(data)[idx]
+    for (k in seq_along(idx)) {
+      lb <- attr(data[[idx[k]]], "label", exact = TRUE)
+      if (!is.null(lb)) attr(hier[[k]], "label") <- lb
+    }
+    out <- cbind(hier, rest)
+    # Restore the caller's column order: hierarchy columns where they were.
+    ord <- integer(ncol(data))
+    ord[idx]  <- seq_along(idx)
+    ord[keep] <- length(idx) + seq_along(keep)
+    out <- out[ord]
+    rownames(out) <- NULL
+  } else {
+    out <- cbind(data.frame(.stub. = stub, stringsAsFactors = FALSE), rest)
+    names(out) <- c(label, names(data)[keep])
+    rownames(out) <- NULL
+  }
   # Per-output-row source index into `data` (NA for inserted label rows).  An
   # inert attribute for existing callers; `as_rtftables(stub_vars = )` reads it
   # to remap per-row `cell_styles` through the inserted rows.
   attr(out, "rtf_stub_src") <- src
+  # Rows to render as one cell spanning the table.  Only the label rows that
+  # stayed label rows: a group-summary row folded onto one carries statistics
+  # in the other columns and has a real `src`.
+  if (isTRUE(label_span)) {
+    span <- which(is.na(src))
+    if (length(span)) attr(out, "rtf_label_rows") <- span
+  }
   out
 }
