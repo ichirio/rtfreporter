@@ -15,6 +15,7 @@ export(rtf_footnotes)
 S3method(print, rtf_document)
 S3method(print, rtf_page)
 S3method(print, rtf_default_format)
+S3method(print, rtf_stub_spec)
 
 # Content constructors (for detailed formatting)
 export(rtftable)
@@ -36,6 +37,7 @@ export(combine_sections)
 
 # data.frame finishing: merge hierarchy columns into an indented stub column
 export(stub_cols)
+export(stub_spec)
 export(collapse_repeats)
 S3method(collapse_repeats, rtftable)
 S3method(collapse_repeats, list)

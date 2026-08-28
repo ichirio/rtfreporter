@@ -356,7 +356,42 @@
 #'   the `" (Cont.)"` marker is written into the `group_col` cell, so if
 #'   `group_col` is itself dropped the marker is not shown (group on the visible
 #'   label column if the marker is wanted).
-#' @param stub_vars Hierarchy columns to merge into a single **indented stub**
+#' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
+#'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
+#'   (parent first, leaf last; at least two).  `NULL` (default) builds no
+#'   stub.  This is the **one** argument for everything [stub_cols()] can do,
+#'   including `layout` and `label_span`, which the superseded `stub_vars`
+#'   family cannot reach.  Passing both `stub` and any of the `stub_vars`
+#'   family is an error.
+#'
+#'   The stub is applied to the **extracted body** -- after the table is pulled
+#'   out of its source, before pagination -- so any input that carries the
+#'   hierarchy as *separate columns* (a plain `data.frame`, a `gt(df)`, a
+#'   multi-group-column table, or a tfrmt `row_grp_plan(location = "column")`
+#'   table) gains a clinical stub.  With `layout = "merged"` the named columns
+#'   are consumed and replaced by one stub column at position 1 and the
+#'   remaining columns keep their order; with `layout = "columns"` every column
+#'   stays where it is.  Either way `drop_cols` / `group_col` / `sort_by` (plus
+#'   `group_by = "indent"` detection and the group-aware splits) then refer to
+#'   the reshaped body.  **Exception: with `split = "by_value"` the body is
+#'   split by `group_col` *first* and the stub is built per page afterwards** --
+#'   each value becomes an independent section, so `group_col` here refers to
+#'   the **pre-stub** columns and is not folded into the stub.  This keeps a
+#'   fixed intermediate hierarchy level (e.g. `LBTOX_LBL / group1 / label` with
+#'   a constant `group1`) from collapsing into a single stub label row that
+#'   spans every group; put the inner levels in the stub and the outer level in
+#'   `group_col`.  Position-indexed metadata (`col_spec`, `col_header_align`,
+#'   per-cell `cell_styles`) is reindexed automatically; a user-supplied
+#'   `col_header` is instead resolved against the final columns (see
+#'   [set_col_header()]).  Sources that already render an indented stub
+#'   (rtables / tern, tfrmt indented, gtsummary) come out pre-merged, so a stub
+#'   does not apply to them.  Under `layout = "merged"` the source column
+#'   widths are **not** carried through the merge -- use `auto_width = TRUE` or
+#'   pass explicit widths; `layout = "columns"` keeps them.
+#' @param stub_vars **Superseded** by `stub`; still supported and not
+#'   deprecated, but it cannot reach `layout` or `label_span`, and new stub
+#'   settings are added to [stub_spec()] only.
+#'   Hierarchy columns to merge into a single **indented stub**
 #'   column (parent first, leaf last; at least two), or `NULL` (default, no
 #'   stub built).  Applies [stub_cols()] to the **extracted body** -- after the
 #'   table is pulled out of its source, before pagination -- so any input that
@@ -382,7 +417,8 @@
 #'   out pre-merged, so `stub_vars` does not apply to them.  Column widths from
 #'   the source are **not** carried through the merge -- use `auto_width = TRUE`
 #'   or pass explicit widths.
-#' @param stub_label,stub_indent,stub_group_summary Forwarded to [stub_cols()]
+#' @param stub_label,stub_indent,stub_group_summary **Superseded** by `stub`
+#'   (see [stub_spec()]).  Forwarded to [stub_cols()]
 #'   when `stub_vars` is set: the merged stub column's name / header
 #'   (`NULL` joins the merged columns' display names with `" / "`), the
 #'   non-breaking spaces per nesting level (default `4`), and which leaf values
@@ -513,6 +549,7 @@ as_rtftables <- function(x,
                          cell_format     = NULL,
                          collapse_repeats = NULL,
                          drop_cols       = NULL,
+                         stub            = NULL,
                          stub_vars       = NULL,
                          stub_label      = NULL,
                          stub_indent     = 4L,
@@ -527,6 +564,14 @@ as_rtftables <- function(x,
   if (!is.function(split)) split <- match.arg(split)
   group_by <- match.arg(group_by)
   user_args <- list(...)
+
+  # One spec from `stub =` or the superseded flat family (#314).  `stub_spec`
+  # is the only place new stub settings are added, so this signature stops
+  # growing with stub_cols().
+  stub_spec_obj <- .resolve_stub_spec(
+    stub, stub_vars, stub_label, stub_indent, stub_group_summary,
+    c(!is.null(stub_vars), !is.null(stub_label),
+      !missing(stub_indent), !missing(stub_group_summary)))
 
   # ---- gt_group input: expand to its member gt_tbl list -----------------
   # A gt_group (gt::gt_group() / gt::gt_split(); also what tfrmt's
@@ -559,8 +604,9 @@ as_rtftables <- function(x,
         align_count_pct = align_count_pct,
         cell_format = cell_format, collapse_repeats = collapse_repeats,
         drop_cols = drop_cols,
-        stub_vars = stub_vars, stub_label = stub_label,
-        stub_indent = stub_indent, stub_group_summary = stub_group_summary,
+        # The flat family has already been folded into the spec, so only the
+        # spec is forwarded -- passing both would trip its own guard.
+        stub = stub_spec_obj,
         header_sep = header_sep,
         auto_width = auto_width, table_width_twips = table_width_twips,
         border = border, style = style, ...)
@@ -657,9 +703,8 @@ as_rtftables <- function(x,
     # `location = "column"` tables) gains a clinical stub.  Everything
     # downstream (`drop_cols`, `group_col`, `sort_by`, `group_by = "indent"`,
     # the group-aware splits) then operates on the reshaped, post-stub columns.
-    if (!is.null(stub_vars)) {
-      st          <- .apply_stub_vars(body, kw, cell_styles, stub_vars,
-                                      stub_label, stub_indent, stub_group_summary)
+    if (!is.null(stub_spec_obj)) {
+      st          <- .apply_stub_vars(body, kw, cell_styles, stub_spec_obj)
       body        <- st$body
       kw          <- st$kw
       cell_styles <- st$cell_styles
@@ -760,7 +805,7 @@ as_rtftables <- function(x,
   # the table stays one logical table paginated across pages, so the stub is
   # built once on the full body (the plain build_pages() call below).
   if (!is.function(split) && identical(split, "by_value") &&
-      !is.null(stub_vars)) {
+      !is.null(stub_spec_obj)) {
     gidx <- if (is.null(group_col)) 1L
             else .resolve_col_indices(list(group_col), body, "group_col")
     gval <- as.character(body[[gidx]])

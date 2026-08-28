@@ -2,6 +2,35 @@
 
 ### New features
 
+- **`stub_spec()` folds every stub setting into one argument** (#314).
+  `as_rtftables()` now takes a single `stub =`:
+
+  ```r
+  as_rtftables(x, stub = stub_spec(c("SOC", "PT"), layout = "columns"))
+  as_rtftables(x, stub = c("SOC", "PT"))          # shorthand for the vars
+  ```
+
+  `stub_spec()` takes `stub_cols()`'s own arguments, so the two cannot drift
+  apart, and `as_rtftables()` never has to grow another argument when
+  `stub_cols()` learns something new. This is the idiom the package already
+  uses for `blank_rows = blank_rows_by_change(...)`, `page = rtf_page(...)`
+  and `default_format = rtf_default_format(...)`.
+
+  `stub_vars` / `stub_label` / `stub_indent` / `stub_group_summary` are
+  **superseded**: they still work and are not deprecated, but they cannot
+  reach `layout` or `label_span`, and new settings are added to `stub_spec()`
+  only. Passing both forms is an error rather than a silent precedence rule.
+
+- **`layout` and `label_span` now work from `as_rtftables()`** (#314, closing
+  the gap left by #312). `layout = "columns"` keeps every column where it is,
+  so none of the column-indexed metadata moves and the **source column widths
+  survive** -- unlike the merged layout, which cannot carry them through.
+  `label_span` is converted to a per-row cell style as the stub is built, so
+  it rides the machinery that already slices styles per page and needs no
+  re-indexing through the split.
+
+### New features
+
 - **`stub_cols()` gains `layout` and `label_span`** (#312), two row-heading
   layouts added to the existing verb rather than to a new one.
 
