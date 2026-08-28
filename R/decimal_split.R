@@ -105,6 +105,42 @@
   as.integer(w)
 }
 
+# Split ratio from the two measured half-widths (#304).
+#
+# The raw glyph counts alone leave the integer half cramped whenever the
+# integers are short: a column of `0.0000` values measures wl = 1 against
+# wr = 5 and takes one sixth of the column, so the digit sits hard against the
+# cell edge.  Each half therefore gets a padding allowance and a floor, both in
+# character-width units:
+#
+#     w_eff = max(w + pad, floor)
+#
+# The defaults (pad 0.5 / floor 3.5 on the left, pad 1 / floor 6 on the right)
+# hold a 3.5 : 6 baseline -- a 3-digit integer part against a 5-character
+# decimal part -- for anything at or below that size, and scale from the
+# measurement above it.  `pad_chars = c(0, 0), min_chars = c(0, 0)` restores
+# the pre-#304 behaviour.
+.decimal_split_ratio <- function(wl, wr, pad_chars = NULL, min_chars = NULL) {
+  pad <- if (is.null(pad_chars)) c(0.5, 1) else as.numeric(pad_chars)
+  flr <- if (is.null(min_chars)) c(3.5, 6) else as.numeric(min_chars)
+  le  <- max(wl + pad[1L], flr[1L])
+  re  <- max(wr + pad[2L], flr[2L])
+  if (le + re <= 0) return(0.5)
+  le / (le + re)
+}
+
+# Validate a length-2 non-negative numeric vector of character-width units.
+.check_char_widths <- function(v, arg) {
+  if (is.null(v)) return(NULL)
+  v <- suppressWarnings(as.numeric(v))
+  if (length(v) != 2L || anyNA(v) || any(v < 0)) {
+    stop(sprintf(
+      "`%s` must be two non-negative numbers (integer half, decimal half).",
+      arg), call. = FALSE)
+  }
+  unname(v)
+}
+
 # Derive one half's border from the original column's border by suppressing
 # the INTERIOR vertical edge.  `side = "left"` is the integer half (its right
 # edge is interior); `side = "right"` is the decimal half (its left edge is).
@@ -129,6 +165,8 @@
     cols             = cols,
     decimal_mark     = spec$decimal_mark %||% ".",
     ratio            = spec$ratio,
+    pad_chars        = spec$pad_chars,
+    min_chars        = spec$min_chars,
     include_compound = isTRUE(spec$include_compound)
   )
 }
@@ -195,7 +233,8 @@
     wr <- .decimal_split_width(p$right[p$split], markup)
     wl <- max(c(1L, wl))
     wr <- max(c(1L, wr))
-    r  <- if (!is.null(spec$ratio)) as.numeric(spec$ratio) else wl / (wl + wr)
+    r  <- if (!is.null(spec$ratio)) as.numeric(spec$ratio)
+          else .decimal_split_ratio(wl, wr, spec$pad_chars, spec$min_chars)
 
     x0 <- if (j == 1L) 0L else as.integer(cellx[j - 1L])
     x1 <- as.integer(cellx[j])

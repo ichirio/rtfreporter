@@ -877,6 +877,17 @@ set_header_cell.list <- function(x, ...) {
 #'   giving the left half's share of the column width.  Pass an explicit value
 #'   to keep the split point identical across pages, whose data differ.
 #' @param decimal_mark The separator to split at.  Default `"."`.
+#' @param pad_chars Breathing room added to each measured half before the ratio
+#'   is taken, in character-width units, integer half first.  Default
+#'   `c(0.5, 1)`.
+#' @param min_chars Floor for each half, in the same units, applied after
+#'   `pad_chars`: the effective width of a half is
+#'   `max(measured + pad_chars, min_chars)`.  Default `c(3.5, 6)`, which holds a
+#'   `3.5 : 6` baseline -- a three-digit integer part against a five-character
+#'   decimal part -- for anything at or below that size, and scales from the
+#'   measurement above it.  Without a floor a column of `0.0000` values measures
+#'   1 against 5 and leaves the integer half cramped.  Pass
+#'   `pad_chars = c(0, 0), min_chars = c(0, 0)` for the raw measured ratio.
 #' @param include_compound Split values carrying a whitespace- or
 #'   parenthesis-separated companion (`"12.3 (4.56)"`) too.  Default `FALSE`.
 #' @param ... Unused.
@@ -900,6 +911,8 @@ set_decimal_split <- function(x, ...) UseMethod("set_decimal_split")
 #' @export
 set_decimal_split.rtftable <- function(x, cols = NULL, ratio = NULL,
                                        decimal_mark = ".",
+                                       pad_chars = c(0.5, 1),
+                                       min_chars = c(3.5, 6),
                                        include_compound = FALSE, ...) {
   .check_own_dots(list(...), set_decimal_split.rtftable, "set_decimal_split")
   # `cols` not supplied at all is a mistake -- most often a misspelling that
@@ -930,6 +943,8 @@ set_decimal_split.rtftable <- function(x, cols = NULL, ratio = NULL,
     cols             = as.integer(cols_idx),
     ratio            = ratio,
     decimal_mark     = as.character(decimal_mark),
+    pad_chars        = .check_char_widths(pad_chars, "pad_chars"),
+    min_chars        = .check_char_widths(min_chars, "min_chars"),
     include_compound = isTRUE(include_compound)
   )
   x

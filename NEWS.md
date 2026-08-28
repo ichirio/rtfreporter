@@ -2,6 +2,36 @@
 
 ### Bug fixes
 
+- **`set_decimal_split()` pads and floors each half's width** (#304). The ratio
+  came from the measured glyph counts alone, so a column of `0.0000` values
+  measured 1 against 5 and gave the integer half one sixth of the column -- at
+  1200 twips, 200 twips for a single digit, with the digit hard against the
+  cell edge. Each half now gets a padding allowance and a floor, in
+  character-width units:
+
+  ```
+  w_eff = max(measured + pad_chars, min_chars)
+  ```
+
+  The defaults `pad_chars = c(0.5, 1)` and `min_chars = c(3.5, 6)` hold a
+  `3.5 : 6` baseline -- a three-digit integer part against a five-character
+  decimal part -- for anything at or below that size, and scale from the
+  measurement above it. A `0.0000` column goes from `r = 0.167` to `0.368`
+  (442 twips instead of 200, at a 1200-twip column).
+
+  Note the floor applies per half: a column with **fewer** than five decimal
+  characters now reserves the baseline six on the right, which narrows its
+  integer half relative to before. `1439.5 / 88.012` style data moves from
+  `4/7 = 0.571` to `4.5/10.5 = 0.429`. Pass
+  `pad_chars = c(0, 0), min_chars = c(0, 0)` for the previous raw ratio, or an
+  explicit `ratio` to fix the split point outright.
+
+  `inst/rtf-examples/pk-concentration.rtf` is regenerated accordingly. That
+  file was also stale against the footnote rework (#297) and now renders the
+  footnote band as an independent borderless table, as current code emits.
+
+### Bug fixes
+
 - **A misspelled argument no longer passes unnoticed** (#302). Verbs whose
   `...` is a pure catch-all now warn when it carries anything they do not
   consume, naming the offending argument, suggesting the nearest valid name and

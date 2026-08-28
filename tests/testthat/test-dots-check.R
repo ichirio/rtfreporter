@@ -79,7 +79,8 @@ test_that("nothing is suggested when no valid name is close", {
 
 test_that(".valid_args drops the object and the catch-all", {
   expect_identical(.valid_args(set_decimal_split.rtftable),
-                   c("cols", "ratio", "decimal_mark", "include_compound"))
+                   c("cols", "ratio", "decimal_mark", "pad_chars",
+                     "min_chars", "include_compound"))
 })
 
 # ── set_decimal_split(): the reported bug ──────────────────────────────────
