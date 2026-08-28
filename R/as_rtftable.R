@@ -78,18 +78,9 @@ as_rtftable <- function(gt_obj, read_meta = TRUE, ...) {
          "table (VTableTree), a flextable, a huxtable, or a data.frame/tibble.",
          call. = FALSE)
   }
-  if (is_gt && !requireNamespace("gt", quietly = TRUE)) {
-    stop("`as_rtftable()` requires the `gt` package.  Install it with ",
-         "install.packages(\"gt\").", call. = FALSE)
-  }
-  if (is_ft && !requireNamespace("flextable", quietly = TRUE)) {
-    stop("`as_rtftable()` requires the `flextable` package.  Install it with ",
-         "install.packages(\"flextable\").", call. = FALSE)
-  }
-  if (is_hux && !requireNamespace("huxtable", quietly = TRUE)) {
-    stop("`as_rtftable()` requires the `huxtable` package.  Install it with ",
-         "install.packages(\"huxtable\").", call. = FALSE)
-  }
+  if (is_gt)  .need_pkg("gt",        "`as_rtftable()`")
+  if (is_ft)  .need_pkg("flextable", "`as_rtftable()`")
+  if (is_hux) .need_pkg("huxtable",  "`as_rtftable()`")
 
   # Single-page convenience: delegate to as_rtftables() (split = "none")
   # and unwrap the one-element list.  All metadata extraction, merging and

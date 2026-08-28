@@ -93,10 +93,7 @@
   if (!.is_flextable_tbl(x)) {
     stop("`x` must be a flextable object.", call. = FALSE)
   }
-  if (!requireNamespace("flextable", quietly = TRUE)) {
-    stop("Reading a flextable requires the `flextable` package.  Install it ",
-         "with install.packages(\"flextable\").", call. = FALSE)
-  }
+  .need_pkg("flextable", "Reading a flextable")
 
   col_keys <- x$col_keys
   ncol_t   <- length(col_keys)

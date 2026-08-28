@@ -1,5 +1,27 @@
 # rtfreporter (development version)
 
+### New features
+
+- **An optional package below its declared minimum now warns** (#308).
+  `DESCRIPTION` has always constrained `gt (>= 0.9.0)`,
+  `gtsummary (>= 1.7.0)`, `formatters (>= 0.5.0)`, `rtables (>= 0.6.0)`,
+  `flextable (>= 0.9.0)` and `huxtable (>= 5.0.0)`, but the runtime guards
+  asked `requireNamespace()` only. An installation that satisfied "is it
+  there?" but not the version sailed past and failed later inside the
+  conversion, where the message said nothing about the version.
+
+  Every adapter guard now goes through one helper. Missing is an error, as
+  before and with the same wording; too old is a warning naming the installed
+  version, the required one and the upgrade command, after which the call
+  proceeds -- an older release often still handles the simple cases, and a
+  hard failure over a *Suggests* constraint would be the worse trade. The
+  warning fires once per package per session, so a guard inside a loop does
+  not flood the console.
+
+  The minimum is read from rtfreporter's own `DESCRIPTION` at run time, so the
+  numbers live in exactly one place: adding a constraint there is the whole
+  change, and no version literal is repeated in R code.
+
 ### Bug fixes
 
 - **A command template with an unsupplied placeholder is now an error**

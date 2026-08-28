@@ -79,10 +79,7 @@
   if (!.is_huxtable_tbl(x)) {
     stop("`x` must be a huxtable object.", call. = FALSE)
   }
-  if (!requireNamespace("huxtable", quietly = TRUE)) {
-    stop("Reading a huxtable requires the `huxtable` package.  Install it ",
-         "with install.packages(\"huxtable\").", call. = FALSE)
-  }
+  .need_pkg("huxtable", "Reading a huxtable")
 
   nr  <- nrow(x)
   nc  <- ncol(x)

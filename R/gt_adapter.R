@@ -46,10 +46,7 @@
 
 # Convert a gtsummary table to a gt_tbl via gtsummary::as_gt().
 .gtsummary_to_gt <- function(x) {
-  if (!requireNamespace("gtsummary", quietly = TRUE)) {
-    stop("Reading from a gtsummary table requires the `gtsummary` package. ",
-         "Install it with install.packages(\"gtsummary\").", call. = FALSE)
-  }
+  .need_pkg("gtsummary", "Reading from a gtsummary table")
   gt_obj <- gtsummary::as_gt(x)
   if (!.is_gt_tbl(gt_obj)) {
     stop("gtsummary::as_gt() did not return a gt_tbl.", call. = FALSE)
@@ -67,10 +64,7 @@
 # COUNT comes from the object's own `gt_tbls` slot (list access, no `:::`),
 # as gt exports no size accessor.
 .gt_group_tables <- function(x) {
-  if (!requireNamespace("gt", quietly = TRUE)) {
-    stop("Reading from a gt_group requires the `gt` package.  Install it ",
-         "with install.packages(\"gt\").", call. = FALSE)
-  }
+  .need_pkg("gt", "Reading from a gt_group")
   n <- nrow(x[["gt_tbls"]])
   if (is.null(n) || n < 1L) return(list())
   lapply(seq_len(n), function(i) gt::grp_pull(x, which = i))
@@ -484,10 +478,7 @@
 # titles_block, footnotes_block) -- the same shape the rtables adapter yields.
 .gt_to_rtftable_kwargs <- function(gt_obj, tokens = .GT_META_TOKENS) {
   if (!.is_gt_tbl(gt_obj)) stop("`gt_obj` must be a gt_tbl.", call. = FALSE)
-  if (!requireNamespace("gt", quietly = TRUE)) {
-    stop("Reading from a gt_tbl requires the `gt` package.  Install it with ",
-         "install.packages(\"gt\").", call. = FALSE)
-  }
+  .need_pkg("gt", "Reading from a gt_tbl")
 
   # ---- clean rendered body (visible columns only) ----------------------
   eb        <- .gt_extract_body_safe(gt_obj)
