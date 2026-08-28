@@ -9,7 +9,9 @@ stub_cols(
   vars,
   label = NULL,
   indent = 4L,
-  group_summary = c("empty", "parent")
+  group_summary = c("empty", "parent"),
+  layout = c("merged", "columns"),
+  label_span = FALSE
 )
 }
 \arguments{
@@ -33,6 +35,26 @@ indented leaf row (see *Group-summary rows*).  A subset of
 `c("empty", "parent")` -- `"empty"` for an `NA` / `""` leaf, `"parent"` for
 a leaf equal to its deepest non-empty parent value.  Also accepts `"all"`
 (both, the default) or `"none"` / `NULL` (disable).}
+
+\item{layout}{How the hierarchy is laid out.
+\describe{
+  \item{`"merged"`}{(default) the hierarchy columns are replaced by one
+    indented stub column -- the historical behaviour.}
+  \item{`"columns"`}{the hierarchy columns are **kept**, in their
+    original positions and with their own headers.  A group value moves
+    onto its own row and is blank on that group's member rows, whose leaf
+    is indented in the leaf column.  Nothing is merged: the group value
+    is simply displayed in its own column.}
+}}
+
+\item{label_span}{Render each group's label row as **one cell spanning the
+table** instead of a stub cell followed by empty ones.  `FALSE` by
+default, which is the historical look.  Applies to `layout = "merged"`
+only; `layout = "columns"` keeps the group value in its own column and so
+has nothing to span.  A group-summary row folded onto a label row is never
+spanned -- it carries statistics in the other columns.  The span is
+recorded as `attr(out, "rtf_label_rows")`, which
+`rtftable(read_attributes = TRUE)` consumes.}
 }
 \value{
 A data.frame: the stub column first, then every column of `data`

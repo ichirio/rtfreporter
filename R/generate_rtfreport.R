@@ -796,6 +796,29 @@
 #   `cellx` and `col_spec` are the EXPANDED ones and rendering is delegated to
 #   .render_data_row_split(); when NULL every code path below is the original,
 #   untouched one.
+# One row rendered as a single cell spanning every column (#312).
+#
+# The text is the row's first non-empty value -- for a stub_cols() label row
+# that is the group label, which sits in the stub column with the rest empty.
+# Alignment and styling come from the first column's spec, so the heading
+# inherits the stub column's look, with cell_styles able to override it.
+.render_data_row_span <- function(vals, cellx, border_spec, row_height_twips,
+                                  pad_l, pad_r, valign_cmd, col_spec,
+                                  table_align, row_cell_styles,
+                                  color_index_map, markup, fs_cmd) {
+  txt <- ""
+  for (v in vals) {
+    if (!is.na(v) && nzchar(as.character(v))) { txt <- as.character(v); break }
+  }
+  right <- cellx[length(cellx)]
+  cell_def <- paste0(.build_border_commands(border_spec, color_index_map),
+                     valign_cmd, "\\cellx", right)
+  content <- .data_cell_content(col_spec[[1L]], txt, 1L, row_cell_styles,
+                                pad_l, pad_r, markup, color_index_map,
+                                fs_cmd = fs_cmd)
+  .build_row(cell_def, content, row_height_twips, table_align)
+}
+
 .render_data_row <- function(vals, cellx, border_spec, row_height_twips,
                               pad_l, pad_r, valign_cmd, col_spec,
                               table_align = "left",
@@ -803,6 +826,18 @@
                               color_index_map = NULL,
                               markup = "script",
                               dsplit_row = NULL, dsplit = NULL, fs_cmd = "") {
+  # A spanned label row (stub_cols(label_span = TRUE), #312) is ONE cell
+  # running to the table's right edge.  It takes precedence over the decimal
+  # split: a group heading is never a number to line up.  The span is
+  # expressed as "to the last cellx", never as column indices, so a column
+  # page produced by paginate_cols() merges exactly its own columns with no
+  # re-indexing.
+  if (isTRUE(row_cell_styles$span_row)) {
+    return(.render_data_row_span(
+      vals, cellx, border_spec, row_height_twips, pad_l, pad_r, valign_cmd,
+      col_spec, table_align, row_cell_styles, color_index_map, markup,
+      fs_cmd))
+  }
   if (!is.null(dsplit_row)) {
     return(.render_data_row_split(
       vals, cellx, border_spec, row_height_twips, pad_l, pad_r, valign_cmd,

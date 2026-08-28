@@ -2,6 +2,48 @@
 
 ### New features
 
+- **`stub_cols()` gains `layout` and `label_span`** (#312), two row-heading
+  layouts added to the existing verb rather than to a new one.
+
+  `layout = "columns"` **keeps** the hierarchy columns, in their original
+  positions and with their own headers. A group value moves onto its own row
+  and is blank on that group's member rows, whose leaf is indented in the leaf
+  column:
+
+  ```
+  group  label     HOGE
+  grp1
+           label1  1 (1.11)
+           label2  2 (2.22)
+  grp2
+           label3  3 (3.33)
+  ```
+
+  Nothing is merged -- the group value is simply displayed in its own column.
+
+  `label_span = TRUE` renders each group's label row of the **merged** layout
+  as one cell spanning the table, instead of a stub cell followed by empty
+  ones. `FALSE` by default, so the historical look is unchanged. A
+  group-summary row folded onto a label row is never spanned: it carries
+  statistics in the other columns.
+
+  The two options are contradictory in combination and error rather than
+  silently ignoring each other, as does `label` (which names a merged column)
+  with `layout = "columns"`.
+
+  Both layouts come out of the row walk `stub_cols()` already ran, so
+  `group_summary`, `group_by = "indent"` detection, `blank_rows =
+  "between_groups"` and the group-aware page splits keep working unchanged.
+  The span is carried as a per-row cell style, which means it rides the
+  machinery that already slices styles per page and re-indexes them through
+  `paginate_cols()` -- a column page merges exactly its own columns, with no
+  bookkeeping of its own.
+
+  Not yet wired into `as_rtftables(stub_vars = )`, which still builds the
+  merged layout; use `stub_cols()` ahead of it for now.
+
+### New features
+
 - **`rtf_tables(auto_title = TRUE)` prints each page's name above its table**
   (#310). The counterpart to `auto_section`, which puts the same name in the
   section's running header: `auto_title` appends it as the **last row of that

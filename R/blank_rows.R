@@ -246,5 +246,9 @@ blank_rows_by_rule <- function(col, pattern,
   out <- list()
   rba <- attr(df, "rtf_blank_rows", exact = TRUE)
   if (is.numeric(rba)) out$blank_rows <- as.integer(rba)
+  # Rows that stub_cols(label_span = TRUE) marked to render as one cell
+  # spanning the table (#312).
+  rlr <- attr(df, "rtf_label_rows", exact = TRUE)
+  if (is.numeric(rlr)) out$label_rows <- as.integer(rlr)
   out
 }

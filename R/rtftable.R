@@ -615,6 +615,22 @@ rtftable <- function(
       if (is.null(blank_rows) && !is.null(attr_data$blank_rows)) {
         blank_rows <- attr_data$blank_rows
       }
+      # A spanned label row is carried as a per-row cell style, so it rides
+      # the machinery that already slices styles per page and re-indexes them
+      # through paginate_cols() -- no separate row-index bookkeeping (#312).
+      if (!is.null(attr_data$label_rows)) {
+        if (is.null(cell_styles)) {
+          cell_styles <- vector("list", nrow(data))
+        }
+        for (r in attr_data$label_rows) {
+          if (r >= 1L && r <= nrow(data)) {
+            row_cs <- cell_styles[[r]]
+            if (is.null(row_cs)) row_cs <- list()
+            row_cs$span_row <- TRUE
+            cell_styles[[r]] <- row_cs
+          }
+        }
+      }
     }
 
   } else if (is.list(data) && length(data) > 0L) {
