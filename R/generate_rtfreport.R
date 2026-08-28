@@ -107,11 +107,36 @@
   if (h < lo) lo else h
 }
 
+# A `{name}` slot in a command template.  RTF's own groups always open with a
+# control word (`{\header`, `{\fonttbl`) or are escaped in text (`\{`), so a
+# brace wrapping a bare identifier is unambiguously one of ours.
+.CMD_FMT_SLOT <- "\\{[A-Za-z_][A-Za-z0-9_]*\\}"
+
+# Placeholder names a template declares, in order of appearance.
+.cmd_fmt_slots <- function(template) {
+  hits <- unlist(regmatches(template, gregexpr(.CMD_FMT_SLOT, template)),
+                 use.names = FALSE)
+  unique(sub("^\\{(.*)\\}$", "\\1", hits))
+}
+
+# Fill a command template.
+#
+# Every slot the template declares must be supplied.  Substitution used to be
+# best-effort -- an unsupplied key was simply left in the output -- which let
+# `{orientation_cmd}` and friends ship inside six committed example files
+# (#306): the template gained slots that the renderer of the day did not fill,
+# and the literal text landed in the RTF where a reader shows it on the page.
+# A leftover slot is never valid RTF, so treat it as the bug it is.
 .cmd_fmt <- function(template, values = list()) {
-  out <- template
-  if (length(values) == 0L) {
-    return(out)
+  missing <- setdiff(.cmd_fmt_slots(template), names(values))
+  if (length(missing)) {
+    stop(sprintf(
+      "Command template has unsupplied placeholder%s: %s.\n  Template: %s",
+      if (length(missing) > 1L) "s" else "",
+      paste0("`{", missing, "}`", collapse = ", "),
+      paste(template, collapse = " ")), call. = FALSE)
   }
+  out <- template
   for (nm in names(values)) {
     out <- gsub(paste0("{", nm, "}"), as.character(values[[nm]]), out, fixed = TRUE)
   }
