@@ -24,6 +24,7 @@ as_rtftables(
   cell_format = NULL,
   collapse_repeats = NULL,
   drop_cols = NULL,
+  stub = NULL,
   stub_vars = NULL,
   stub_label = NULL,
   stub_indent = 4L,
@@ -233,7 +234,43 @@ the `" (Cont.)"` marker is written into the `group_col` cell, so if
 `group_col` is itself dropped the marker is not shown (group on the visible
 label column if the marker is wanted).}
 
-\item{stub_vars}{Hierarchy columns to merge into a single **indented stub**
+\item{stub}{Row-stub settings, as a [stub_spec()] object -- or, as a
+  shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
+  (parent first, leaf last; at least two).  `NULL` (default) builds no
+  stub.  This is the **one** argument for everything [stub_cols()] can do,
+  including `layout` and `label_span`, which the superseded `stub_vars`
+  family cannot reach.  Passing both `stub` and any of the `stub_vars`
+  family is an error.
+
+  The stub is applied to the **extracted body** -- after the table is pulled
+  out of its source, before pagination -- so any input that carries the
+  hierarchy as *separate columns* (a plain `data.frame`, a `gt(df)`, a
+  multi-group-column table, or a tfrmt `row_grp_plan(location = "column")`
+  table) gains a clinical stub.  With `layout = "merged"` the named columns
+  are consumed and replaced by one stub column at position 1 and the
+  remaining columns keep their order; with `layout = "columns"` every column
+  stays where it is.  Either way `drop_cols` / `group_col` / `sort_by` (plus
+  `group_by = "indent"` detection and the group-aware splits) then refer to
+  the reshaped body.  **Exception: with `split = "by_value"` the body is
+  split by `group_col` *first* and the stub is built per page afterwards** --
+  each value becomes an independent section, so `group_col` here refers to
+  the **pre-stub** columns and is not folded into the stub.  This keeps a
+  fixed intermediate hierarchy level (e.g. `LBTOX_LBL / group1 / label` with
+  a constant `group1`) from collapsing into a single stub label row that
+  spans every group; put the inner levels in the stub and the outer level in
+  `group_col`.  Position-indexed metadata (`col_spec`, `col_header_align`,
+  per-cell `cell_styles`) is reindexed automatically; a user-supplied
+  `col_header` is instead resolved against the final columns (see
+  [set_col_header()]).  Sources that already render an indented stub
+  (rtables / tern, tfrmt indented, gtsummary) come out pre-merged, so a stub
+  does not apply to them.  Under `layout = "merged"` the source column
+  widths are **not** carried through the merge -- use `auto_width = TRUE` or
+  pass explicit widths; `layout = "columns"` keeps them.}
+
+\item{stub_vars}{**Superseded** by `stub`; still supported and not
+deprecated, but it cannot reach `layout` or `label_span`, and new stub
+settings are added to [stub_spec()] only.
+Hierarchy columns to merge into a single **indented stub**
 column (parent first, leaf last; at least two), or `NULL` (default, no
 stub built).  Applies [stub_cols()] to the **extracted body** -- after the
 table is pulled out of its source, before pagination -- so any input that
@@ -260,7 +297,8 @@ out pre-merged, so `stub_vars` does not apply to them.  Column widths from
 the source are **not** carried through the merge -- use `auto_width = TRUE`
 or pass explicit widths.}
 
-\item{stub_label, stub_indent, stub_group_summary}{Forwarded to [stub_cols()]
+\item{stub_label, stub_indent, stub_group_summary}{**Superseded** by `stub`
+(see [stub_spec()]).  Forwarded to [stub_cols()]
 when `stub_vars` is set: the merged stub column's name / header
 (`NULL` joins the merged columns' display names with `" / "`), the
 non-breaking spaces per nesting level (default `4`), and which leaf values
