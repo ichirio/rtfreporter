@@ -231,12 +231,14 @@ reference:
       `as_rtftable()` is the single-page form returning **one** object — they
       differ only in singular vs. list.  `stub_cols()` finishes a tidy
       data.frame beforehand, merging hierarchy columns into one indented
-      stub column.
+      stub column, or keeping them with the group value on its own row;
+      `stub_spec()` carries the same settings into `as_rtftables(stub = )`.
     contents:
       - as_rtftables
       - as_rtftable
       - combine_sections
       - stub_cols
+      - stub_spec
 
   # ── 5. Column headers ──────────────────────────────────────────────────
   - title: Column headers
