@@ -16,7 +16,8 @@
 #  Writes inst/rtf-examples/pk-concentration.rtf.  Run from the package root:
 #      Rscript data-raw/gen_pk_conc.R
 
-library(rtfreporter)
+# Render through the source tree, never a stale install (#306).
+source("data-raw/_load.R")
 
 outfile <- "inst/rtf-examples/pk-concentration.rtf"
 

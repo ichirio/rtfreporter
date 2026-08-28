@@ -1,4 +1,5 @@
-library(rtfreporter)
+# Render through the source tree, never a stale install (#306).
+source("data-raw/_load.R")
 
 data_dir <- system.file("extdata", package = "rtfreporter")
 demog_p1 <- readRDS(file.path(data_dir, "demog_p1.rds"))

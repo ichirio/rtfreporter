@@ -2,6 +2,32 @@
 
 ### Bug fixes
 
+- **A command template with an unsupplied placeholder is now an error**
+  (#306). `.cmd_fmt()` substituted only the keys it was handed and left
+  everything else verbatim, so a template that gained a slot the renderer did
+  not fill produced RTF carrying the literal `{name}`. Every slot a template
+  declares must now be supplied. Detection is narrow enough not to fire on
+  RTF's own groups, which always open with a control word (`{\header`,
+  `{\fonttbl`) while escaped braces in text are `\{`.
+
+- **The pharmaverse catalog examples are regenerated** (#306). All six shipped
+  with `{orientation_cmd}`, `{header_dist_twips}` and `{footer_dist_twips}`
+  in their preamble -- groups of plain text sitting in the document body ahead
+  of `\sectd`, which a reader renders as visible text on the first page.
+  `\headery` and `\footery` were left without their numeric argument and the
+  document-level `\landscape` was missing. Their margins move 864 -> 1080
+  twips, the generator setting none and the page defaults being 0.75in; page
+  counts are unchanged.
+
+- **The `data-raw/` generators render through the source tree** (#306). Each
+  now `source("data-raw/_load.R")`, which attaches the package with
+  `pkgload::load_all()` instead of `library(rtfreporter)`. A committed example
+  is a derived file of the code beside it, not of whatever build happens to be
+  installed -- that mismatch is what put the placeholders in the examples in
+  the first place.
+
+### Bug fixes
+
 - **`set_decimal_split()` pads, floors and caps each half's width** (#304).
   The ratio came from the measured glyph counts alone, so a column of `0.0000`
   values measured 1 against 5 and gave the integer half one sixth of the

@@ -299,6 +299,19 @@ contributor to several.
 - **Regenerate and commit derived files.**  Run `devtools::document()`
   and commit the updated `man/*.Rd` in the same PR.  `NAMESPACE` is
   **hand-managed** — edit it deliberately, do not let a tool overwrite it.
+- **Regenerate `inst/rtf-examples/` from the package root.**  The generators
+  in `data-raw/` `source("data-raw/_load.R")`, which attaches the package
+  **from the working tree** via `pkgload::load_all()` rather than from
+  whatever is installed:
+
+  ```r
+  Rscript data-raw/gen_tlg_catalog_rtf.R      # from the package root
+  ```
+
+  Never regenerate a committed example through `library(rtfreporter)`.  An
+  installed build that lags the working tree renders old code against new
+  resources, which is how six examples came to ship with literal
+  `{orientation_cmd}` in their preamble (#306).
 - **Merging.**  Squash- or merge-commit per the maintainer's preference;
   make sure the PR title/commit message is meaningful.  The branch is
   deleted after merge.

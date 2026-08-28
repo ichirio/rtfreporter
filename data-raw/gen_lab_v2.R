@@ -1,4 +1,5 @@
-library(rtfreporter)
+# Render through the source tree, never a stale install (#306).
+source("data-raw/_load.R")
 
 data_dir <- system.file("extdata", package = "rtfreporter")
 lab_rbc <- readRDS(file.path(data_dir, "lab_rbc.rds"))
