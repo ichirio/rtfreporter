@@ -90,13 +90,14 @@ test_that("a merged stub takes its own joined name in the header", {
   expect_identical(t[[1L]]$col_header[[1L]], c("SOC / PT", "Count"))
 })
 
-test_that("a header is dropped, not misplaced, when it cannot be projected", {
+test_that("a spanning header is projected, not dropped", {
   skip_if_not_installed("gt")
-  # a spanner produces a list-form header, which the spike does not project yet
+  # this was the spike's recorded limit until the header projection landed;
+  # test-plan-header.R covers the projection itself in detail
   g <- gt::gt(.xd()) |> gt::tab_spanner("Group", c(SOC, PT))
   res <- resolve_plan(rtf_plan_from(g))
-  expect_true(res$header$dropped)
-  expect_null(res$header$col_header)
+  expect_false(res$header$dropped)
+  expect_type(res$header$col_header, "list")
 })
 
 test_that("no header in the source leaves none on the table", {

@@ -97,29 +97,108 @@ rtf_plan_from <- function(x, read_meta = TRUE, header_sep = NULL) {
 
 # Project a source-coordinate column header onto the final columns.
 #
-# A character header is one label per SOURCE column, so the map places it: for
-# each final position, take the label of a source column that maps there.  A
-# merged stub gets the stub column's own name, since its constituents no longer
-# have separate headers.
+# This one function replaces FOUR of the package's eight reindexers --
+# .reindex_col_header(), .reindex_header_row(), .reindex_header_cell() and
+# .prepend_stub_header() -- because the column map already encodes everything
+# they each had to be told separately: which columns were dropped, which were
+# merged into a stub, and where the stub sits.
 #
-# SPIKE LIMIT: a list-form (spanning) header is NOT projected yet -- that is
-# the hardest of the eight reindexers and gets its own step.  It is dropped
-# with the plan recording that it was, rather than being placed wrongly.
-.plan_resolve_header <- function(kw, columns) {
-  ch <- kw$col_header
-  if (is.null(ch)) return(list(col_header = NULL, dropped = FALSE))
-  if (!is.character(ch)) return(list(col_header = NULL, dropped = TRUE))
+# A header is one of:
+#   * a character vector, one label per SOURCE column;
+#   * a list of ROWS, each either such a vector or a list of spanning CELLS
+#     carrying $pos (single or c(min, max)) or legacy $from / $to.
+#
+# For a cell the projection is: take the SOURCE columns it spans, send them
+# through the map, drop the ones that went away, and keep the extent of what
+# is left.  A cell whose columns all vanished vanishes with them.
+.plan_project_header <- function(ch, columns) {
+  m      <- columns$map
+  n0     <- length(m)
+  nfinal <- length(columns$names)
 
-  orig <- names(columns$map)
-  if (length(ch) != length(orig)) {
-    return(list(col_header = NULL, dropped = TRUE))
+  # One value per FINAL column.  Several source columns can share a final
+  # position (a merged stub); `fallback` says what that position gets, since
+  # its constituents no longer have separate entries.
+  project_vec <- function(v, fallback = columns$names) {
+    vapply(seq_len(nfinal), function(j) {
+      src <- which(!is.na(m) & m == j)
+      if (length(src) == 1L) as.character(v[[src[[1L]]]])
+      else as.character(fallback[[j]])
+    }, character(1L))
   }
-  out <- vapply(seq_along(columns$names), function(j) {
-    src <- which(!is.na(columns$map) & columns$map == j)
-    if (length(src) == 0L) return(columns$names[[j]])
-    # several source columns can share a final position (a merged stub); the
-    # stub carries its own joined name rather than one constituent's label
-    if (length(src) > 1L) columns$names[[j]] else ch[[src[[1L]]]]
+
+  project_cell <- function(cell) {
+    if (!is.list(cell)) return(cell)
+    p <- if (!is.null(cell$pos)) cell$pos
+         else if (!is.null(cell$from)) c(cell$from, cell$to)
+         else return(cell)
+    span <- if (length(p) <= 1L) as.integer(p)
+            else seq.int(min(as.integer(p)), max(as.integer(p)))
+    span <- span[span >= 1L & span <= n0]
+    np   <- unique(m[span])
+    np   <- np[!is.na(np)]
+    if (length(np) == 0L) return(NULL)      # every column it covered is gone
+    if (!is.null(cell$pos)) {
+      cell$pos <- if (length(np) == 1L) np else c(min(np), max(np))
+    } else {
+      cell$from <- min(np)
+      cell$to   <- max(np)
+    }
+    cell
+  }
+
+  project_row <- function(row) {
+    if (is.character(row)) {
+      if (length(row) == n0) return(project_vec(row))
+      return(row)
+    }
+    if (is.list(row)) {
+      cells <- Filter(Negate(is.null), lapply(row, project_cell))
+      if (length(cells) == 0L) return(NULL)
+      return(cells)
+    }
+    row
+  }
+
+  if (is.character(ch)) {
+    if (length(ch) == n0) return(project_vec(ch))
+    return(ch)
+  }
+  if (is.list(ch)) {
+    rows <- Filter(Negate(is.null), lapply(ch, project_row))
+    if (length(rows) == 0L) return(NULL)
+    return(rows)
+  }
+  ch
+}
+
+# Per-column header ALIGNMENT, projected the same way.  A spanning cell takes
+# its alignment from the columns it covers, so dropping this silently rendered
+# a spanner centred where the source had it right-aligned -- found by diffing
+# the RTF against as_rtftables(), not by reading either implementation.
+#
+# A merged stub column falls back to "left", matching as_rtftables().
+.plan_project_header_align <- function(cha, columns) {
+  if (is.null(cha) || !is.character(cha)) return(NULL)
+  if (length(cha) != length(columns$map)) return(NULL)
+  .plan_project_header_vec(cha, columns, fallback = "left")
+}
+
+# Shared by both projections: one value per final column, by name.
+.plan_project_header_vec <- function(v, columns, fallback) {
+  m <- columns$map
+  vapply(seq_along(columns$names), function(j) {
+    src <- which(!is.na(m) & m == j)
+    if (length(src) == 1L) as.character(v[[src[[1L]]]]) else fallback
   }, character(1L))
-  list(col_header = out, dropped = FALSE)
+}
+
+.plan_resolve_header <- function(kw, columns) {
+  ch  <- kw$col_header
+  cha <- .plan_project_header_align(kw$col_header_align, columns)
+  if (is.null(ch)) {
+    return(list(col_header = NULL, col_header_align = cha, dropped = FALSE))
+  }
+  out <- .plan_project_header(ch, columns)
+  list(col_header = out, col_header_align = cha, dropped = is.null(out))
 }
