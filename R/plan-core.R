@@ -86,10 +86,25 @@ plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL) {
 }
 
 #' @keywords internal
-plan_pages <- function(plan, max_rows = NULL, keep_groups = NULL,
+# Explicit page breaks, the counterpart of a row budget.  An explicit break is
+# not a suggestion, so it wins over `max_rows`.
+#
+# TWO spellings, because one of them is always the wrong guess and a silent
+# off-by-one page break is a bad way to find out.  as_rtftables(split_rows = )
+# means break_before; the plan's own `plan_blanks(where = )` means "after".
+# Naming them removes the ambiguity instead of documenting it.
+#
+#   break_after  = 8        pages 1-8, 9-n
+#   break_before = 8        pages 1-7, 8-n     (as_rtftables split_rows = 8)
+plan_pages <- function(plan, max_rows = NULL, break_after = NULL,
+                       break_before = NULL, keep_groups = NULL,
                        min_group_rows = NULL, count_blanks = NULL) {
+  if (!is.null(break_after) && !is.null(break_before)) {
+    stop("Give `break_after` or `break_before`, not both.", call. = FALSE)
+  }
   .plan_set(plan, "pages",
-            list(max_rows = max_rows, keep_groups = keep_groups,
+            list(max_rows = max_rows, break_after = break_after,
+                 break_before = break_before, keep_groups = keep_groups,
                  min_group_rows = min_group_rows, count_blanks = count_blanks))
 }
 
@@ -199,8 +214,23 @@ resolve_plan <- function(plan) {
 # `count_blank_rows` used to do by hand, from outside.
 .plan_resolve_pages <- function(spec, n, groups, blanks) {
   if (n == 0L) return(list(integer(0)))
+  if (is.null(spec)) return(list(seq_len(n)))
+
+  # Explicit breaks first: they say exactly where the pages end, so no budget,
+  # grouping or blank accounting applies.
+  brk <- if (!is.null(spec$break_after)) as.integer(spec$break_after)
+         else if (!is.null(spec$break_before)) as.integer(spec$break_before) - 1L
+         else NULL
+  if (!is.null(brk)) {
+    cuts <- sort(unique(brk))
+    cuts <- cuts[cuts >= 1L & cuts < n]
+    starts <- c(1L, cuts + 1L)
+    ends   <- c(cuts, n)
+    return(Map(seq.int, starts, ends))
+  }
+
   max_rows <- spec$max_rows
-  if (is.null(spec) || is.null(max_rows)) return(list(seq_len(n)))
+  if (is.null(max_rows)) return(list(seq_len(n)))
 
   keep_groups  <- spec$keep_groups %||% TRUE
   min_grp      <- as.integer(spec$min_group_rows %||% 2L)
