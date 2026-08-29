@@ -128,8 +128,13 @@ resolve_plan <- function(plan) {
   #    are already resolved, so no argument has to describe them to it.
   pages <- .plan_resolve_pages(.plan_get(plan, "pages"), rows$n, groups, blanks)
 
+  # 6. style -- table-wide settings plus per-column options addressed BY NAME
+  #    and placed through the column map, so col_spec never needs re-indexing.
+  style <- .plan_resolve_style(.plan_get(plan, "style"),
+                               .plan_get(plan, "roles"), columns)
+
   structure(list(columns = columns, rows = rows, groups = groups,
-                 blanks = blanks, pages = pages,
+                 blanks = blanks, pages = pages, style = style,
                  nrow = rows$n, nrow_source = n),
             class = "rtf_resolution")
 }
@@ -142,10 +147,11 @@ resolve_plan <- function(plan) {
   # was folded into a merged stub, the map says so and the answer is the stub
   # column.  This is the payoff of resolving columns by name first: nothing
   # here has to know what the stub did.
-  idx <- unname(columns$map[[columns$group]])
+  # BODY coordinates: a hidden carrier column may group the table without ever
+  # being printed, which is why the projection keeps both views.
+  idx <- unname(columns$body_map[[columns$group]])
   if (is.na(idx)) {
-    stop("The grouping column \"", columns$group,
-         "\" is hidden; it cannot group a table it is not part of.",
+    stop("The grouping column \"", columns$group, "\" is not in the table.",
          call. = FALSE)
   }
   info <- .compute_group_info(body, idx, group_by = columns$mode %||% "auto")
