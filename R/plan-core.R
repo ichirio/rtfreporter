@@ -111,29 +111,44 @@ resolve_plan <- function(plan) {
   #    ever re-indexes anything.
   columns <- .plan_resolve_columns(.plan_get(plan, "roles"), d)
 
-  # 2. grouping -- resolved ONCE, from the column table.  Everything
-  #    downstream reads `groups`, so there is no second place for a group
-  #    column to be declared and disagree.
-  groups <- .plan_resolve_groups(columns, d)
+  # 2. rows -- the stub's label rows enter here, and from this point every
+  #    stage works in OUTPUT row coordinates.  One map, `rows$src`, is the
+  #    only translation back to the source.
+  rows <- .plan_resolve_rows(columns, d)
 
-  # 3. blank rows -- may consult the grouping, and nothing else.
-  blanks <- .plan_resolve_blanks(.plan_get(plan, "blanks"), d, groups)
+  # 3. grouping -- resolved ONCE, on the output rows, from the column table.
+  #    Everything downstream reads `groups`, so there is no second place for a
+  #    group column to be declared and disagree.
+  groups <- .plan_resolve_groups(columns, rows$body)
 
-  # 4. pages -- consumes both.  The row budget can see the blanks because they
+  # 4. blank rows -- may consult the grouping, and nothing else.
+  blanks <- .plan_resolve_blanks(.plan_get(plan, "blanks"), rows$body, groups)
+
+  # 5. pages -- consumes both.  The row budget can see the blanks because they
   #    are already resolved, so no argument has to describe them to it.
-  pages <- .plan_resolve_pages(.plan_get(plan, "pages"), n, groups, blanks)
+  pages <- .plan_resolve_pages(.plan_get(plan, "pages"), rows$n, groups, blanks)
 
-  structure(list(columns = columns, groups = groups, blanks = blanks,
-                 pages = pages, nrow = n),
+  structure(list(columns = columns, rows = rows, groups = groups,
+                 blanks = blanks, pages = pages,
+                 nrow = rows$n, nrow_source = n),
             class = "rtf_resolution")
 }
 
 # The grouping column is read out of the resolved column table -- never from a
 # layer of its own, which is what made it possible to declare it twice.
-.plan_resolve_groups <- function(columns, d) {
+.plan_resolve_groups <- function(columns, body) {
   if (is.null(columns$group)) return(NULL)
-  idx <- match(columns$group, names(d))
-  info <- .compute_group_info(d, idx, group_by = columns$mode %||% "auto")
+  # The column map already knows where the grouping column ended up -- if it
+  # was folded into a merged stub, the map says so and the answer is the stub
+  # column.  This is the payoff of resolving columns by name first: nothing
+  # here has to know what the stub did.
+  idx <- unname(columns$map[[columns$group]])
+  if (is.na(idx)) {
+    stop("The grouping column \"", columns$group,
+         "\" is hidden; it cannot group a table it is not part of.",
+         call. = FALSE)
+  }
+  info <- .compute_group_info(body, idx, group_by = columns$mode %||% "auto")
   info$col <- idx
   info
 }
@@ -251,7 +266,9 @@ show_plan <- function(x, ...) {
 
 #' @keywords internal
 show_resolution <- function(x, ...) {
-  cat("<rtf_resolution>", x$nrow, "rows\n")
+  cat("<rtf_resolution>", x$nrow, "printed rows from", x$nrow_source,
+      "source rows\n")
+  cat("  columns:", paste(x$columns$names, collapse = ", "), "\n")
   cat("  groups :", if (is.null(x$groups)) "none"
       else paste(length(unique(x$groups$id)), "groups"), "\n")
   cat("  blanks :", if (length(x$blanks)) paste(x$blanks, collapse = ",")
