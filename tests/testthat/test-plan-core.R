@@ -1,0 +1,209 @@
+# SPIKE (design/plan-resolver): deferred layers, resolved once.
+#
+# These tests are the spike's evidence.  They pin the three properties the
+# experiment exists to demonstrate:
+#
+#   1. grouping is resolved ONCE and both consumers read the same result,
+#      so the `group_col` split brain measured in as_rtftables() cannot occur;
+#   2. the row budget sees the blank rows by itself, so nothing has to describe
+#      them to it from outside (what `count_blank_rows` does today);
+#   3. re-declaring a layer is LAST WRITER WINS, per field.
+#
+# They also check the resolver agrees with as_rtftables(split = "group_safe")
+# on the cases both can express, so the spike is not quietly reinventing
+# different pagination.
+
+.df <- function() {
+  # Column 1 is unique per row, so a resolver that silently defaults to the
+  # first column produces visibly wrong answers.  The real grouping is col 2.
+  data.frame(PT  = paste0("PT", sprintf("%02d", 1:12)),
+             SOC = rep(c("Cardiac", "GI", "Nervous"), each = 4L),
+             N   = as.character(1:12),
+             stringsAsFactors = FALSE)
+}
+
+.sizes <- function(res) vapply(res$pages, length, integer(1L))
+
+# ── the plan holds declarations, and changes nothing ───────────────────────
+
+test_that("a plan never rewrites the data it was given", {
+  d <- .df()
+  p <- rtf_plan(d) |> plan_group("SOC") |> plan_blanks("between_groups") |>
+    plan_pages(max_rows = 6L)
+  expect_identical(p$data, d)
+})
+
+test_that("a plan rejects a non-data.frame", {
+  expect_error(rtf_plan(1:3), "must be a data.frame")
+})
+
+test_that("a layer verb rejects anything that is not a plan", {
+  expect_error(plan_group(list(), "SOC"), "Expected an rtf_plan")
+})
+
+# ── last writer wins, per field ────────────────────────────────────────────
+
+test_that("a re-declared field is replaced", {
+  p <- rtf_plan(.df()) |> plan_group("PT") |> plan_group("SOC")
+  expect_identical(p$layers$group$cols, "SOC")
+})
+
+test_that("a field the second call did not supply survives", {
+  p <- rtf_plan(.df()) |>
+    plan_pages(max_rows = 6L, keep_groups = TRUE) |>
+    plan_pages(keep_groups = FALSE)
+  expect_identical(p$layers$pages$max_rows, 6L)
+  expect_false(p$layers$pages$keep_groups)
+})
+
+test_that("merging works across all three layers", {
+  p <- rtf_plan(.df()) |>
+    plan_blanks("between_groups", first = TRUE) |>
+    plan_blanks(last = TRUE)
+  expect_identical(p$layers$blanks$where, "between_groups")
+  expect_true(p$layers$blanks$first)
+  expect_true(p$layers$blanks$last)
+})
+
+test_that("an unsupplied field never overwrites with a default", {
+  p <- rtf_plan(.df()) |> plan_pages(max_rows = 6L) |> plan_pages()
+  expect_identical(p$layers$pages$max_rows, 6L)
+})
+
+# ── one grouping, read by every consumer ───────────────────────────────────
+
+test_that("blanks come from the declared grouping, not from column 1", {
+  res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                        plan_blanks("between_groups") |>
+                        plan_pages(max_rows = 12L))
+  expect_identical(res$blanks, c(4L, 8L))
+})
+
+test_that("that matches what as_rtftables() produces on its correct path", {
+  a <- as_rtftables(.df(), split = "none", group_col = "SOC",
+                    blank_rows = "between_groups", border = "tfl")
+  res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                        plan_blanks("between_groups"))
+  expect_identical(as.integer(a[[1L]]$blank_rows), res$blanks)
+})
+
+test_that("blanks without a grouping error instead of guessing a column", {
+  expect_error(
+    resolve_plan(rtf_plan(.df()) |> plan_blanks("between_groups")),
+    "needs a grouping"
+  )
+})
+
+test_that("the resolved grouping is reported once, for inspection", {
+  res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC"))
+  expect_length(unique(res$groups$id), 3L)
+  expect_identical(res$groups$col, 2L)
+})
+
+test_that("an explicit mode is honoured", {
+  d <- data.frame(lbl = c("A", "  a1", "  a2", "B", "  b1"),
+                  N = as.character(1:5), stringsAsFactors = FALSE)
+  res <- resolve_plan(rtf_plan(d) |> plan_group("lbl", mode = "indent") |>
+                        plan_blanks("between_groups"))
+  expect_identical(res$blanks, 3L)
+})
+
+test_that("an unknown mode is rejected at declaration time", {
+  expect_error(plan_group(rtf_plan(.df()), "SOC", mode = "nope"))
+})
+
+# ── the budget sees the blanks by itself ───────────────────────────────────
+
+test_that("counting the blanks changes the page split with no extra argument", {
+  mk <- function(cb) {
+    resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                   plan_blanks("between_groups") |>
+                   plan_pages(max_rows = 6L, keep_groups = FALSE,
+                              count_blanks = cb))
+  }
+  expect_identical(.sizes(mk(FALSE)), c(6L, 6L))
+  expect_identical(.sizes(mk(TRUE)),  c(4L, 4L, 4L))
+})
+
+test_that("with no blanks declared, counting them is a no-op", {
+  a <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                      plan_pages(max_rows = 6L, keep_groups = FALSE,
+                                 count_blanks = TRUE))
+  b <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                      plan_pages(max_rows = 6L, keep_groups = FALSE))
+  expect_identical(.sizes(a), .sizes(b))
+})
+
+# ── pagination ─────────────────────────────────────────────────────────────
+
+test_that("no page budget means one page", {
+  res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC"))
+  expect_length(res$pages, 1L)
+  expect_identical(res$pages[[1L]], 1:12)
+})
+
+test_that("groups are kept whole by default", {
+  for (mx in c(4L, 5L, 6L, 7L)) {
+    res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                          plan_pages(max_rows = mx))
+    expect_identical(.sizes(res), c(4L, 4L, 4L))
+  }
+})
+
+test_that("the resolver agrees with as_rtftables(group_safe)", {
+  for (mx in c(4L, 8L, 9L, 12L)) {
+    a <- as_rtftables(.df(), split = "group_safe", max_rows = mx,
+                      group_col = "SOC", border = "tfl")
+    b <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                        plan_pages(max_rows = mx))
+    expect_identical(vapply(a, function(x) nrow(x$data), integer(1L)),
+                     .sizes(b),
+                     info = paste("max_rows =", mx))
+  }
+})
+
+test_that("a group larger than the budget still makes progress", {
+  big <- data.frame(SOC = rep("One", 10L), N = as.character(1:10),
+                    stringsAsFactors = FALSE)
+  res <- resolve_plan(rtf_plan(big) |> plan_group("SOC") |>
+                        plan_pages(max_rows = 4L))
+  expect_identical(.sizes(res), c(4L, 4L, 2L))
+  expect_identical(sum(.sizes(res)), 10L)
+})
+
+test_that("every row lands on exactly one page", {
+  for (mx in c(2L, 3L, 5L, 7L, 11L)) {
+    for (kg in c(TRUE, FALSE)) {
+      res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                            plan_pages(max_rows = mx, keep_groups = kg))
+      expect_identical(sort(unlist(res$pages)), 1:12,
+                       info = paste("max_rows", mx, "keep", kg))
+    }
+  }
+})
+
+test_that("an empty body yields one empty page", {
+  d <- .df()[0L, , drop = FALSE]
+  res <- resolve_plan(rtf_plan(d) |> plan_pages(max_rows = 5L))
+  expect_length(res$pages, 1L)
+  expect_length(res$pages[[1L]], 0L)
+})
+
+# ── blanks at the edges ────────────────────────────────────────────────────
+
+test_that("first and last add the edge positions", {
+  res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
+                        plan_blanks("between_groups", first = TRUE,
+                                    last = TRUE))
+  expect_identical(res$blanks, c(0L, 4L, 8L, 12L))
+})
+
+test_that("explicit positions are accepted", {
+  res <- resolve_plan(rtf_plan(.df()) |> plan_blanks(c(3L, 7L)))
+  expect_identical(res$blanks, c(3L, 7L))
+})
+
+test_that("an unusable `where` is rejected", {
+  expect_error(resolve_plan(rtf_plan(.df()) |> plan_blanks("nonsense")),
+               "must be")
+})
