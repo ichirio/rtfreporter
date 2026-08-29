@@ -131,7 +131,8 @@ resolve_plan <- function(plan) {
   # 6. style -- table-wide settings plus per-column options addressed BY NAME
   #    and placed through the column map, so col_spec never needs re-indexing.
   style <- .plan_resolve_style(.plan_get(plan, "style"),
-                               .plan_get(plan, "roles"), columns)
+                               .plan_get(plan, "roles"), columns,
+                               plan$source$kw)
 
   # 7. the source's own metadata, placed through the same column map -- the
   #    adapter read it in SOURCE coordinates and never has to know what the
