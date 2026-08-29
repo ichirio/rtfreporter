@@ -379,6 +379,14 @@ rtf_tables <- function(doc, tables,
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
 
+  # SPIKE HOOK (design/plan-resolver): an unresolved plan resolves HERE, at
+  # the moment its declarations meet a document, rather than the caller having
+  # to build it first.  Deliberately three lines in one shared file -- the
+  # whole design lives in R/plan-*.R, and reverting this hunk removes it.
+  if (inherits(tables, "rtf_plan")) {
+    tables <- plan_tables(tables)
+  }
+
   # Auto-wrap a single content item so callers can write rtf_tables(tbl)
   # instead of rtf_tables(list(tbl)).  data.frame is IS a list in R, so it
   # needs an explicit guard; everything else that is not already a plain list
