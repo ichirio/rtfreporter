@@ -48,6 +48,12 @@ plan_tables <- function(plan, ...) {
 
     args <- c(list(data = body), style)
 
+    # The source's own header, already placed at final positions by the column
+    # map.  Nothing here knows what the adapter read or what the stub merged.
+    if (!is.null(res$header$col_header) && is.null(args$col_header)) {
+      args$col_header <- res$header$col_header
+    }
+
     # Blank positions are output-row coordinates; a page needs its own.  This
     # is the only translation left in the design, and it is arithmetic on one
     # vector rather than a re-index of scattered metadata.

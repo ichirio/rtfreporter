@@ -133,8 +133,14 @@ resolve_plan <- function(plan) {
   style <- .plan_resolve_style(.plan_get(plan, "style"),
                                .plan_get(plan, "roles"), columns)
 
+  # 7. the source's own metadata, placed through the same column map -- the
+  #    adapter read it in SOURCE coordinates and never has to know what the
+  #    stub merged or the hidden columns removed.
+  header <- .plan_resolve_header(plan$source$kw %||% list(), columns)
+
   structure(list(columns = columns, rows = rows, groups = groups,
                  blanks = blanks, pages = pages, style = style,
+                 header = header, source = plan$source,
                  nrow = rows$n, nrow_source = n),
             class = "rtf_resolution")
 }
