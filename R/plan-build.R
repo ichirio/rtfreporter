@@ -53,6 +53,10 @@ plan_tables <- function(plan, ...) {
     if (!is.null(res$header$col_header) && is.null(args$col_header)) {
       args$col_header <- res$header$col_header
     }
+    if (!is.null(res$header$col_header_align) &&
+        is.null(args$col_header_align)) {
+      args$col_header_align <- res$header$col_header_align
+    }
 
     # Blank positions are output-row coordinates; a page needs its own.  This
     # is the only translation left in the design, and it is arithmetic on one

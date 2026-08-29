@@ -38,16 +38,46 @@ plan_style <- function(plan, border = NULL, widths = NULL, font = NULL,
 # `columns$map` turns every by-name column style into a position, so nothing
 # here -- and nothing downstream -- has to know what the stub merged or what
 # the hidden columns removed.
-.plan_resolve_style <- function(style, roles, columns) {
+.plan_resolve_style <- function(style, roles, columns, source_kw = NULL) {
   args <- if (is.null(style)) list() else style
   args <- args[!vapply(args, is.null, logical(1L))]
 
-  if (is.null(roles) || length(columns$names) == 0L) return(args)
+  if (length(columns$names) == 0L) return(args)
 
-  # Per-column display options, addressed by name and placed by the map.
   keys <- c("align", "bold", "italic", "underline", "indent_twips", "color",
             "header_align", "header_bold", "header_italic")
   spec <- list()
+
+  # The ADAPTER's own col_spec first -- gt's column alignment, for one, which
+  # a spanning cell inherits.  Dropping it rendered a right-aligned spanner
+  # centred; the RTF diff against as_rtftables() found it, neither source did.
+  # Its `col` is a SOURCE position, so the map places it like everything else.
+  adapter <- source_kw$col_spec
+  if (is.list(adapter)) {
+    n0 <- length(columns$map)
+    for (e in adapter) {
+      if (!is.list(e)) next
+      src <- e$col
+      if (is.character(src)) src <- match(src, names(columns$map))
+      src <- suppressWarnings(as.integer(src))
+      if (length(src) != 1L || is.na(src) || src < 1L || src > n0) next
+      pos <- unname(columns$map[[src]])
+      if (is.na(pos)) next
+      prev <- spec[[as.character(pos)]]
+      if (is.null(prev)) prev <- list(col = as.integer(pos))
+      for (o in intersect(names(e), keys)) prev[[o]] <- e[[o]]
+      spec[[as.character(pos)]] <- prev
+    }
+  }
+
+  if (is.null(roles)) {
+    if (length(spec)) {
+      args$col_spec <- unname(spec[order(as.integer(names(spec)))])
+    }
+    return(args)
+  }
+
+  # Then the plan's own per-column options, which are explicit and so win.
   for (nm in names(roles)) {
     opts <- roles[[nm]]$opts[intersect(names(roles[[nm]]$opts), keys)]
     if (length(opts) == 0L) next
