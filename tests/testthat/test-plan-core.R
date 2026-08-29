@@ -43,9 +43,19 @@ test_that("a layer verb rejects anything that is not a plan", {
 
 # ── last writer wins, per field ────────────────────────────────────────────
 
-test_that("a re-declared field is replaced", {
+test_that("grouping lives in the role table, not a layer of its own", {
+  # moved deliberately: a grouping column with two homes is a grouping column
+  # that can disagree with itself, which is the as_rtftables() defect
+  p <- rtf_plan(.df()) |> plan_group("SOC")
+  expect_null(p$layers$group)
+  expect_identical(p$layers$roles$SOC$roles, "group")
+})
+
+test_that("re-grouping adds the role to the new column", {
   p <- rtf_plan(.df()) |> plan_group("PT") |> plan_group("SOC")
-  expect_identical(p$layers$group$cols, "SOC")
+  expect_identical(p$layers$roles$SOC$roles, "group")
+  # PT keeps its own entry; two groupings are refused when resolved
+  expect_error(resolve_plan(p), "single column")
 })
 
 test_that("a field the second call did not supply survives", {
