@@ -95,11 +95,18 @@ test_that("grouping on a column the stub consumed still works", {
   expect_identical(res$groups$col, 1L)     # the stub column
 })
 
-test_that("grouping on a hidden column is refused", {
-  expect_error(
-    resolve_plan(rtf_plan(.sd()) |> plan_group("SOC") |> plan_hide("SOC")),
-    "hidden and printed|is hidden"
-  )
+test_that("grouping on a hidden column is allowed -- the carrier idiom", {
+  # deliberately permitted: a carrier column that groups the table without
+  # being printed is standard in clinical tables, and the projection keeps a
+  # body view precisely so this works
+  res <- resolve_plan(rtf_plan(.sd()) |> plan_group("SOC") |> plan_hide("SOC"))
+  expect_length(unique(res$groups$id), 3L)
+  expect_false("SOC" %in% res$columns$names)
+})
+
+test_that("grouping on a column that does not exist is still refused", {
+  expect_error(resolve_plan(rtf_plan(.sd()) |> plan_roles(NOPE = "group")),
+               "No such column")
 })
 
 test_that("a label row travels with its group when the page is cut", {
