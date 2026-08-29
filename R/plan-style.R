@@ -23,15 +23,29 @@
 
 # Table-wide styling.  LAST WRITER WINS, PER FIELD, as everywhere else.
 #' @keywords internal
-plan_style <- function(plan, border = NULL, widths = NULL, font = NULL,
+plan_style <- function(plan, border = NULL, widths = NULL, rel_widths = NULL,
+                       auto_width = NULL, table_width = NULL,
+                       table_width_pct = NULL, style = NULL, font = NULL,
                        font_size_half_points = NULL, row_height_twips = NULL,
-                       table_align = NULL) {
+                       table_align = NULL, cell_format = NULL,
+                       align_count_pct = NULL) {
   .plan_set(plan, "style",
-            list(border = border, column_widths_twips = widths, font = font,
+            list(border = border, column_widths_twips = widths,
+                 col_rel_width = rel_widths,
+                 auto_width = auto_width,
+                 table_width_twips = table_width,
+                 table_width_pct = table_width_pct,
+                 style = style, font = font,
                  font_size_half_points = font_size_half_points,
                  row_height_twips = row_height_twips,
-                 table_align = table_align))
+                 table_align = table_align,
+                 cell_format = cell_format,
+                 align_count_pct = align_count_pct))
 }
+
+# Settings that are NOT rtftable() arguments: they shape the body before the
+# table is built, so plan_tables() consumes them rather than passing them on.
+.PLAN_STYLE_PRE <- c("auto_width", "cell_format", "align_count_pct")
 
 # The rtftable() arguments a resolved plan implies.
 #
