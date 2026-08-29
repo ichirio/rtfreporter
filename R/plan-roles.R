@@ -197,6 +197,8 @@ plan_hide <- function(plan, cols) {
   # A hidden column cannot also be printed as part of the stub, and a hidden
   # column cannot be carried onto every column page.  Catch it here rather
   # than letting declaration order decide.
+  # NB grouping is deliberately absent here: a hidden carrier that groups the
+  # table without being printed is the classic clinical idiom.
   clash <- intersect(hidden, c(stub_cols, has("carry")))
   if (length(clash)) {
     stop("Column", if (length(clash) > 1L) "s" else "", " ",
@@ -215,16 +217,34 @@ plan_hide <- function(plan, cols) {
   }
   final <- setdiff(final, hidden)
 
-  # -- the single map ----------------------------------------------------
+  # -- two views of ONE projection ---------------------------------------
+  #
+  # A hidden column has to survive resolution -- the classic clinical idiom is
+  # a carrier column that GROUPS the table without being printed -- but must
+  # not survive into the output.  So the projection yields two positions per
+  # column, both computed here and nowhere else:
+  #
+  #   body_map  position while resolving (stub applied, hidden still present)
+  #   map       position in the printed table (hidden removed; NA if hidden)
+  #
+  # This is one projection with two views, not two coordinate systems: no other
+  # stage computes a position, and each stage is told which view it works in.
+  body <- if (is.null(stub_name)) orig else c(stub_name, setdiff(orig, stub_cols))
+
+  body_map <- match(orig, body)
+  names(body_map) <- orig
   map <- match(orig, final)
   names(map) <- orig
   if (!is.null(stub_name)) {
     # every merged hierarchy column now answers with the stub's position
+    body_map[stub_cols] <- match(stub_name, body)
     map[stub_cols] <- match(stub_name, final)
   }
 
-  list(names  = final,
-       map    = map,
+  list(names     = final,
+       body_names = body,
+       map       = map,
+       body_map  = body_map,
        stub   = stub_cols,
        layout = stub_layout,
        group  = if (length(group_col)) group_col else NULL,

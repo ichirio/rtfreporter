@@ -28,12 +28,25 @@
 plan_tables <- function(plan, ...) {
   res <- if (inherits(plan, "rtf_resolution")) plan else resolve_plan(plan)
 
+  # Styling declared on the plan, resolved once.  Anything passed here still
+  # wins, so the spike's existing call sites keep working while the style
+  # layer takes over.
+  style <- res$style %||% list()
+  extra <- list(...)
+  for (nm in names(extra)) style[[nm]] <- extra[[nm]]
+
   lapply(seq_along(res$pages), function(i) {
     idx  <- res$pages[[i]]
     body <- res$rows$body[idx, , drop = FALSE]
+    # Hidden columns did their work during resolution -- a carrier column can
+    # group the table without being printed -- and leave here.  This is the
+    # single point where the body view becomes the printed view.
+    if (length(res$columns$hidden)) {
+      body <- body[, setdiff(names(body), res$columns$hidden), drop = FALSE]
+    }
     rownames(body) <- NULL
 
-    args <- list(data = body, ...)
+    args <- c(list(data = body), style)
 
     # Blank positions are output-row coordinates; a page needs its own.  This
     # is the only translation left in the design, and it is arithmetic on one
