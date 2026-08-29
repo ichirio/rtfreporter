@@ -60,10 +60,10 @@ test_that("re-grouping adds the role to the new column", {
 
 test_that("a field the second call did not supply survives", {
   p <- rtf_plan(.df()) |>
-    plan_pages(max_rows = 6L, keep_groups = TRUE) |>
-    plan_pages(keep_groups = FALSE)
+    plan_pages(max_rows = 6L, groups = "keep") |>
+    plan_pages(groups = "split")
   expect_identical(p$layers$pages$max_rows, 6L)
-  expect_false(p$layers$pages$keep_groups)
+  expect_identical(p$layers$pages$groups, "split")
 })
 
 test_that("merging works across all three layers", {
@@ -128,7 +128,7 @@ test_that("counting the blanks changes the page split with no extra argument", {
   mk <- function(cb) {
     resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
                    plan_blanks("between_groups") |>
-                   plan_pages(max_rows = 6L, keep_groups = FALSE,
+                   plan_pages(max_rows = 6L, groups = "split",
                               count_blanks = cb))
   }
   expect_identical(.sizes(mk(FALSE)), c(6L, 6L))
@@ -137,10 +137,10 @@ test_that("counting the blanks changes the page split with no extra argument", {
 
 test_that("with no blanks declared, counting them is a no-op", {
   a <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
-                      plan_pages(max_rows = 6L, keep_groups = FALSE,
+                      plan_pages(max_rows = 6L, groups = "split",
                                  count_blanks = TRUE))
   b <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
-                      plan_pages(max_rows = 6L, keep_groups = FALSE))
+                      plan_pages(max_rows = 6L, groups = "split"))
   expect_identical(.sizes(a), .sizes(b))
 })
 
@@ -173,21 +173,30 @@ test_that("the resolver agrees with as_rtftables(group_safe)", {
 })
 
 test_that("a group larger than the budget still makes progress", {
+  # the named strategies are delegated to the functions as_rtftables() uses,
+  # so the assertion is agreement rather than a shape written out by hand
   big <- data.frame(SOC = rep("One", 10L), N = as.character(1:10),
                     stringsAsFactors = FALSE)
   res <- resolve_plan(rtf_plan(big) |> plan_group("SOC") |>
                         plan_pages(max_rows = 4L))
-  expect_identical(.sizes(res), c(4L, 4L, 2L))
-  expect_identical(sum(.sizes(res)), 10L)
+  a <- as_rtftables(big, split = "group_safe", max_rows = 4L,
+                    group_col = "SOC", border = "tfl")
+  expect_identical(.sizes(res),
+                   vapply(a, function(x) nrow(x$data), integer(1L)))
+  # NB the total EXCEEDS the 10 source rows: a group split across pages has
+  # its header row repeated on each continuation, which is what cont_label is
+  # for.  Delegating to .split_group_safe() inherits that, so the plan and
+  # as_rtftables() agree on it too.
+  expect_gt(sum(.sizes(res)), 10L)
 })
 
 test_that("every row lands on exactly one page", {
   for (mx in c(2L, 3L, 5L, 7L, 11L)) {
-    for (kg in c(TRUE, FALSE)) {
+    for (kg in c("keep", "prefer", "split")) {
       res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
-                            plan_pages(max_rows = mx, keep_groups = kg))
+                            plan_pages(max_rows = mx, groups = kg))
       expect_identical(sort(unlist(res$pages)), 1:12,
-                       info = paste("max_rows", mx, "keep", kg))
+                       info = paste("max_rows", mx, "groups", kg))
     }
   }
 })
@@ -214,6 +223,7 @@ test_that("explicit positions are accepted", {
 })
 
 test_that("an unusable `where` is rejected", {
+  # the message comes from the shared blank-row resolver the plan delegates to
   expect_error(resolve_plan(rtf_plan(.df()) |> plan_blanks("nonsense")),
-               "must be")
+               "Unrecognised")
 })

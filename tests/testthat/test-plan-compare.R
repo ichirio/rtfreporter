@@ -229,14 +229,14 @@ test_that("a spanner OVER the merged columns is a deliberate difference", {
 test_that("group_force is a strategy the plan does not express yet", {
   # as_rtftables(split = "group_force") fills to the budget but prefers a
   # group boundary, splitting a group only when forced: 8,6,8,4 where a plain
-  # greedy fill gives 8,8,7,2.  The plan has "never split" (keep_groups = TRUE,
+  # greedy fill gives 8,8,7,2.  The plan has "never split" (groups = "keep",
   # which matches group_safe exactly) and "split freely" (FALSE); the middle
   # strategy is a gap, recorded here so it is not mistaken for a difference.
   d <- .demog()
   a <- as_rtftables(d, split = "group_force", max_rows = 8L, group_col = 1L,
                     border = "tfl")
   b <- rtf_plan_from(d) |> plan_group(names(d)[1L]) |>
-    plan_pages(max_rows = 8L, keep_groups = FALSE) |>
+    plan_pages(max_rows = 8L, groups = "split") |>
     plan_style(border = "tfl") |> plan_tables()
   expect_false(identical(vapply(a, function(x) nrow(x$data), integer(1L)),
                          vapply(b, function(x) nrow(x$data), integer(1L))))

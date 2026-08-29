@@ -42,17 +42,54 @@
 #          declared, otherwise the source unchanged)
 #   src    per output row: the source row it came from, NA when synthesised
 #   n      number of output rows
-.plan_resolve_rows <- function(columns, d) {
-  stub <- columns$stub
-  if (length(stub) < 2L) {
-    return(list(body = d, src = seq_len(nrow(d)), n = nrow(d)))
+.plan_resolve_rows <- function(columns, d, style = NULL) {
+  src <- seq_len(nrow(d))
+
+  # 1. SORT first, so the stub's hierarchy runs, the group detection and every
+  #    blank position all see the same order -- the reason as_rtftables() sorts
+  #    before pagination too.  The row map records it, so per-source-row data
+  #    follows without anyone reordering it separately.
+  if (length(columns$sort)) {
+    ord <- .resolve_sort_order(columns$sort, columns$sort_desc, d)
+    if (!is.null(ord)) {
+      d <- d[ord, , drop = FALSE]
+      rownames(d) <- NULL
+      src <- src[ord]
+    }
   }
-  body <- stub_cols(d, vars = stub,
-                    layout = columns$layout %||% "merged")
-  src <- attr(body, "rtf_stub_src", exact = TRUE)
-  attr(body, "rtf_stub_src")  <- NULL
-  attr(body, "rtf_label_rows") <- NULL
-  list(body = body, src = as.integer(src), n = nrow(body))
+
+  # 2. STUB, which inserts label rows and so rewrites the map.
+  if (length(columns$stub) >= 2L) {
+    o <- columns$stub_opts %||% list()
+    body <- do.call(stub_cols, c(
+      list(d, vars = columns$stub, layout = columns$layout %||% "merged"),
+      o[intersect(names(o), c("label", "indent", "group_summary",
+                              "label_span"))]))
+    ssrc <- as.integer(attr(body, "rtf_stub_src", exact = TRUE))
+    attr(body, "rtf_stub_src")   <- NULL
+    attr(body, "rtf_label_rows") <- NULL
+    # compose the two maps: stub row -> sorted row -> SOURCE row
+    src <- ifelse(is.na(ssrc), NA_integer_, src[ssrc])
+    d <- body
+  }
+
+  # 3. CELL FORMATTING, on the printed body, exactly where .paginate_df()
+  #    applies it: after the reshape, before the split.
+  if (!is.null(style$cell_format)) {
+    fl <- .resolve_cell_format(style$cell_format, ncol(d))
+    if (!is.null(fl)) d <- .apply_cell_format(d, fl)
+  } else if (isTRUE(style$align_count_pct)) {
+    d <- .realign_count_pct_df(d)
+  }
+
+  # 4. COLLAPSE repeated values, addressed BY NAME through the column map.
+  if (length(columns$collapse)) {
+    idx <- unname(columns$body_map[columns$collapse])
+    idx <- unique(idx[!is.na(idx)])
+    if (length(idx)) d <- .collapse_repeats_chunk(d, idx)
+  }
+
+  list(body = d, src = src, n = nrow(d))
 }
 
 # Carry a per-source-row list through the row map.  A synthesised row has no

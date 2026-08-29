@@ -35,9 +35,40 @@ plan_tables <- function(plan, ...) {
   extra <- list(...)
   for (nm in names(extra)) style[[nm]] <- extra[[nm]]
 
-  lapply(seq_along(res$pages), function(i) {
+  # auto_width sizes each column to its widest content so long labels do not
+  # wrap.  It is computed ONCE, on the whole resolved body, and applied to
+  # every page -- the same rule as_rtftables() follows, and the reason it
+  # cannot simply be an rtftable() argument per page.
+  if (isTRUE(style$auto_width) && is.null(style$column_widths_twips) &&
+      is.null(style$col_rel_width)) {
+    hdr <- .flatten_col_header_labels(res$header$col_header,
+                                      length(res$columns$names))
+    full <- res$rows$body
+    if (length(res$columns$hidden)) {
+      full <- full[, setdiff(names(full), res$columns$hidden), drop = FALSE]
+    }
+    tw <- style$table_width_twips
+    if (is.null(tw)) {
+      nat <- tryCatch(auto_col_widths(full, col_header = hdr),
+                      error = function(e) NULL)
+      if (!is.null(nat) && sum(nat) > .default_writable_twips()) {
+        tw <- .default_writable_twips()
+      }
+    }
+    aw <- tryCatch(auto_col_widths(full, col_header = hdr,
+                                   table_width_twips = tw),
+                   error = function(e) NULL)
+    if (!is.null(aw)) style$column_widths_twips <- aw
+  }
+  # Settings that shaped the body upstream are not rtftable() arguments.
+  style <- style[setdiff(names(style), .PLAN_STYLE_PRE)]
+
+  out <- lapply(seq_along(res$pages), function(i) {
     idx  <- res$pages[[i]]
-    body <- res$rows$body[idx, , drop = FALSE]
+    # A delegated split may have rewritten a cell -- cont_label does -- so its
+    # chunk is used verbatim where one exists.
+    body <- if (!is.null(res$page_data)) res$page_data[[i]]
+            else res$rows$body[idx, , drop = FALSE]
     # Hidden columns did their work during resolution -- a carrier column can
     # group the table without being printed -- and leave here.  This is the
     # single point where the body view becomes the printed view.
@@ -82,6 +113,8 @@ plan_tables <- function(plan, ...) {
 
     do.call(rtftable, args)
   })
+  if (!is.null(res$page_names)) names(out) <- res$page_names
+  out
 }
 
 # Per-source-row styles, sliced onto each page.  `plan_row_map()` does the

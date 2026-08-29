@@ -136,7 +136,7 @@ test_that("a page keeps the blanks that fall inside it", {
                   N = as.character(1:12), stringsAsFactors = FALSE)
   p <- rtf_plan(d) |> plan_group("G") |>
     plan_blanks(c(3L, 9L)) |>
-    plan_pages(max_rows = 6L, keep_groups = FALSE) |>
+    plan_pages(max_rows = 6L, groups = "split") |>
     plan_tables(border = "tfl")
   expect_length(p, 2L)
   expect_identical(as.integer(p[[1L]]$blank_rows), 3L)   # interior

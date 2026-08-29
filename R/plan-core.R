@@ -96,15 +96,34 @@ plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL) {
 #
 #   break_after  = 8        pages 1-8, 9-n
 #   break_before = 8        pages 1-7, 8-n     (as_rtftables split_rows = 8)
+#
+# `groups` says what a page budget may do to a group -- one setting where
+# as_rtftables() has three strategy names:
+#
+#   "keep"   never split a group          (split = "group_safe")
+#   "prefer" fill the page but cut at a boundary when one is near
+#                                          (split = "group_force")
+#   "split"  cut wherever the budget runs out
+#
+# `per_group = TRUE` gives each group its own page, named after it
+# (split = "by_value").  `split_fn` hands the whole decision to a function of
+# (df, info, max_rows, cont_label, group_idx, min_group_rows), the same
+# contract as_rtftables() accepts for a custom `split`.
 plan_pages <- function(plan, max_rows = NULL, break_after = NULL,
-                       break_before = NULL, keep_groups = NULL,
+                       break_before = NULL, groups = NULL, per_group = NULL,
+                       cont_label = NULL, split_fn = NULL,
                        min_group_rows = NULL, count_blanks = NULL) {
   if (!is.null(break_after) && !is.null(break_before)) {
     stop("Give `break_after` or `break_before`, not both.", call. = FALSE)
   }
+  if (!is.null(groups)) {
+    groups <- match.arg(groups, c("keep", "prefer", "split"))
+  }
   .plan_set(plan, "pages",
             list(max_rows = max_rows, break_after = break_after,
-                 break_before = break_before, keep_groups = keep_groups,
+                 break_before = break_before, groups = groups,
+                 per_group = per_group, cont_label = cont_label,
+                 split_fn = split_fn,
                  min_group_rows = min_group_rows, count_blanks = count_blanks))
 }
 
@@ -129,7 +148,7 @@ resolve_plan <- function(plan) {
   # 2. rows -- the stub's label rows enter here, and from this point every
   #    stage works in OUTPUT row coordinates.  One map, `rows$src`, is the
   #    only translation back to the source.
-  rows <- .plan_resolve_rows(columns, d)
+  rows <- .plan_resolve_rows(columns, d, .plan_get(plan, "style"))
 
   # 3. grouping -- resolved ONCE, on the output rows, from the column table.
   #    Everything downstream reads `groups`, so there is no second place for a
@@ -141,7 +160,9 @@ resolve_plan <- function(plan) {
 
   # 5. pages -- consumes both.  The row budget can see the blanks because they
   #    are already resolved, so no argument has to describe them to it.
-  pages <- .plan_resolve_pages(.plan_get(plan, "pages"), rows$n, groups, blanks)
+  pg <- .plan_resolve_pages(.plan_get(plan, "pages"), rows$n, groups, blanks,
+                            rows$body)
+  pages <- pg$pages
 
   # 6. style -- table-wide settings plus per-column options addressed BY NAME
   #    and placed through the column map, so col_spec never needs re-indexing.
@@ -155,8 +176,9 @@ resolve_plan <- function(plan) {
   header <- .plan_resolve_header(plan$source$kw %||% list(), columns)
 
   structure(list(columns = columns, rows = rows, groups = groups,
-                 blanks = blanks, pages = pages, style = style,
-                 header = header, source = plan$source,
+                 blanks = blanks, pages = pages,
+                 page_data = pg$data, page_names = pg$names,
+                 style = style, header = header, source = plan$source,
                  nrow = rows$n, nrow_source = n),
             class = "rtf_resolution")
 }
@@ -177,88 +199,133 @@ resolve_plan <- function(plan) {
          call. = FALSE)
   }
   info <- .compute_group_info(body, idx, group_by = columns$mode %||% "auto")
-  info$col <- idx
+  info$col  <- idx
+  info$mode <- columns$mode %||% "auto"
   info
 }
 
 # Blank positions, as "insert a blank AFTER this body row".
+#
+# Delegated to .resolve_pagewise_blanks(), the resolver as_rtftables() already
+# uses, so every spelling works here without a second implementation:
+# positions, "between_groups", blank_rows_by_change(), blank_rows_by_rule(),
+# and a list mixing them.  The plan supplies the resolved GROUPING rather than
+# a column argument, which is the whole difference -- and the reason the two
+# can no longer disagree about what a group is.
 .plan_resolve_blanks <- function(spec, d, groups) {
   if (is.null(spec)) return(integer(0))
   n <- nrow(d)
   where <- spec$where
   pos <- integer(0)
 
-  if (is.character(where) && length(where) == 1L &&
-      identical(where, "between_groups")) {
-    if (is.null(groups)) {
+  if (!is.null(where)) {
+    needs_groups <- function(s) {
+      if (is.character(s) && length(s) == 1L && s == "between_groups") return(TRUE)
+      if (is.list(s) && !inherits(s, "rtf_blank_rows_by_change") &&
+          !inherits(s, "rtf_blank_rows_by_rule")) {
+        return(any(vapply(s, needs_groups, logical(1L))))
+      }
+      FALSE
+    }
+    if (needs_groups(where) && is.null(groups)) {
       stop("`plan_blanks(\"between_groups\")` needs a grouping; ",
            "declare plan_group() first.", call. = FALSE)
     }
-    id <- groups$id
-    if (length(id) > 1L) {
-      pos <- which(c(FALSE, id[-1L] != id[-length(id)])) - 1L
-    }
-  } else if (is.numeric(where)) {
-    pos <- as.integer(where)
-  } else if (!is.null(where)) {
-    stop("`where` must be \"between_groups\" or row positions.", call. = FALSE)
+    pos <- .resolve_pagewise_blanks(
+      where, d,
+      group_idx = if (is.null(groups)) NULL else groups$col,
+      group_by  = groups$mode %||% "auto")
   }
 
   if (isTRUE(spec$first)) pos <- c(0L, pos)
   if (isTRUE(spec$last))  pos <- c(pos, n)
-  sort(unique(pos[pos >= 0L & pos <= n]))
+  sort(unique(as.integer(pos[pos >= 0L & pos <= n])))
 }
 
-# Cut the body into pages.  `blanks` is already resolved, so the budget can
-# charge for the blank lines a page will actually print -- the job
-# `count_blank_rows` used to do by hand, from outside.
-.plan_resolve_pages <- function(spec, n, groups, blanks) {
-  if (n == 0L) return(list(integer(0)))
-  if (is.null(spec)) return(list(seq_len(n)))
+# Cut the body into pages.
+#
+# The four named strategies are DELEGATED to the functions as_rtftables()
+# already uses -- .split_by_rows(), .split_group_safe(), .split_group_force()
+# and .split_by_value() -- so the plan cannot quietly paginate differently.
+# They return data.frames, and `cont_label` writes into a chunk's group cell,
+# which a list of row indices cannot express; so a delegated split keeps its
+# chunks and records the row indices alongside for the row map.
+#
+# `blanks` is already resolved when this runs, which is what lets the budget
+# charge for the blank lines a page will print without being told.
+.plan_resolve_pages <- function(spec, n, groups, blanks, body = NULL) {
+  none <- list(pages = list(seq_len(n)), data = NULL, names = NULL)
+  if (n == 0L) return(list(pages = list(integer(0)), data = NULL, names = NULL))
+  if (is.null(spec)) return(none)
 
-  # Explicit breaks first: they say exactly where the pages end, so no budget,
-  # grouping or blank accounting applies.
+  # Explicit breaks win: they say exactly where the pages end.
   brk <- if (!is.null(spec$break_after)) as.integer(spec$break_after)
          else if (!is.null(spec$break_before)) as.integer(spec$break_before) - 1L
          else NULL
   if (!is.null(brk)) {
     cuts <- sort(unique(brk))
     cuts <- cuts[cuts >= 1L & cuts < n]
-    starts <- c(1L, cuts + 1L)
-    ends   <- c(cuts, n)
-    return(Map(seq.int, starts, ends))
+    return(list(pages = Map(seq.int, c(1L, cuts + 1L), c(cuts, n)),
+                data = NULL, names = NULL))
   }
 
+  strat <- if (!is.null(spec$split_fn)) spec$split_fn
+           else if (isTRUE(spec$per_group)) .split_by_value
+           else if (is.null(spec$max_rows)) NULL
+           else switch(spec$groups %||% "keep",
+                       keep   = .split_group_safe,
+                       prefer = .split_group_force,
+                       split  = NULL)
+  if (is.null(strat)) {
+    if (is.null(spec$max_rows)) return(none)
+    return(list(pages = .plan_greedy_pages(spec, n, groups, blanks),
+                data = NULL, names = NULL))
+  }
+
+  # Delegate.  A row-index column rides along so the chunks can be mapped back
+  # -- the same trick as_rtftables() uses to keep cell_styles aligned.
+  idxc <- ".__plan_idx__"
+  df <- body
+  df[[idxc]] <- seq_len(n)
+  info <- groups %||% list(id = rep(1L, n), label = rep("", n),
+                           headers = c(TRUE, rep(FALSE, max(0L, n - 1L))))
+  chunks <- strat(df, info, spec$max_rows, spec$cont_label %||% " (Cont.)",
+                  if (is.null(groups)) NULL else groups$col,
+                  as.integer(spec$min_group_rows %||% 2L))
+  pages <- lapply(chunks, function(ch) as.integer(ch[[idxc]]))
+  data  <- lapply(chunks, function(ch) {
+    ch[[idxc]] <- NULL
+    rownames(ch) <- NULL
+    ch
+  })
+  nms <- NULL
+  if (isTRUE(spec$per_group) && !is.null(groups)) {
+    nms <- vapply(pages, function(ix) {
+      lb <- groups$label[ix[[1L]]]
+      if (is.na(lb)) "" else as.character(lb)
+    }, character(1L))
+  }
+  list(pages = pages, data = data, names = nms)
+}
+
+# The plain budget: fill a page, charging for the blank lines it will print.
+.plan_greedy_pages <- function(spec, n, groups, blanks) {
   max_rows <- spec$max_rows
-  if (is.null(max_rows)) return(list(seq_len(n)))
+  min_grp  <- as.integer(spec$min_group_rows %||% 2L)
 
-  keep_groups  <- spec$keep_groups %||% TRUE
-  min_grp      <- as.integer(spec$min_group_rows %||% 2L)
-  count_blanks <- isTRUE(spec$count_blanks)
-
-  # Line cost of body row i: itself, plus a blank printed after it.
   cost <- rep(1L, n)
-  if (count_blanks && length(blanks)) {
+  if (isTRUE(spec$count_blanks) && length(blanks)) {
     inner <- blanks[blanks >= 1L & blanks <= n]
     cost[inner] <- cost[inner] + 1L
   }
-
   gid <- if (!is.null(groups)) groups$id else seq_len(n)
-  # A cut is legal after row i when it does not fall inside a group, unless
-  # groups are not being kept whole.
-  legal <- if (keep_groups) c(gid[-n] != gid[-1L], TRUE) else rep(TRUE, n)
-  # Orphan control: leaving fewer than `min_grp` rows of a group on either side
-  # of a cut is what min_group_rows exists to prevent.  With whole groups kept
-  # this never arises, so it only bites when keep_groups is FALSE.
-  if (!keep_groups && min_grp > 1L && !is.null(groups)) {
+  legal <- rep(TRUE, n)
+  if (min_grp > 1L && !is.null(groups)) {
     for (i in seq_len(n - 1L)) {
-      if (!legal[i]) next
+      if (gid[i] != gid[i + 1L]) next
       before <- sum(gid[seq_len(i)] == gid[i])
-      after  <- sum(gid == gid[i + 1L]) -
-                sum(gid[seq_len(i)] == gid[i + 1L])
-      if (gid[i] == gid[i + 1L] && (before < min_grp || after < min_grp)) {
-        legal[i] <- FALSE
-      }
+      after  <- sum(gid == gid[i + 1L]) - sum(gid[seq_len(i)] == gid[i + 1L])
+      if (before < min_grp || after < min_grp) legal[i] <- FALSE
     }
   }
 
@@ -276,8 +343,8 @@ resolve_plan <- function(plan) {
     }
     end <- if (i > n) n
            else if (!is.na(last_legal) && last_legal >= start) last_legal
-           else i - 1L                      # a group larger than the budget
-    if (end < start) end <- start           # never make no progress
+           else i - 1L
+    if (end < start) end <- start
     pages[[length(pages) + 1L]] <- start:end
     start <- end + 1L
   }
