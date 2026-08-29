@@ -130,12 +130,24 @@ plan_group <- function(plan, cols = NULL, mode = NULL) {
 
 # Sugar for the stub, preserving declaration order as the hierarchy order.
 #' @keywords internal
-plan_stub <- function(plan, cols, layout = NULL) {
+plan_stub <- function(plan, cols, layout = NULL, label = NULL,
+                      indent = NULL, group_summary = NULL, label_span = NULL) {
   cols <- as.character(cols)
   args <- list(plan)
+  # The stub's own settings ride on its FIRST column's role, which is where
+  # .plan_resolve_columns() reads them from.  Keeping them on the role rather
+  # than in a layer of their own is the same rule as everything else: one home
+  # per fact.
   for (i in seq_along(cols)) {
-    args[[cols[i]]] <- if (is.null(layout)) role("stub", order = i)
-                       else role("stub", order = i, layout = layout)
+    opts <- list("stub", order = i)
+    if (i == 1L) {
+      if (!is.null(layout))        opts$layout        <- layout
+      if (!is.null(label))         opts$label         <- label
+      if (!is.null(indent))        opts$indent        <- indent
+      if (!is.null(group_summary)) opts$group_summary <- group_summary
+      if (!is.null(label_span))    opts$label_span    <- label_span
+    }
+    args[[cols[i]]] <- do.call(role, opts)
   }
   do.call(plan_roles, args)
 }
@@ -185,6 +197,10 @@ plan_hide <- function(plan, cols) {
   stub_layout <- if (length(stub_cols)) {
     as.character(opt(stub_cols[[1L]], "layout") %||% "merged")
   } else NULL
+  stub_opts <- if (length(stub_cols)) {
+    o <- roles[[stub_cols[[1L]]]]$opts
+    o[intersect(names(o), c("label", "indent", "group_summary", "label_span"))]
+  } else list()
 
   group_col <- has("group")
   if (length(group_col) > 1L) {
@@ -192,7 +208,15 @@ plan_hide <- function(plan, cols) {
          " are declared: ", paste(group_col, collapse = ", "), ".",
          call. = FALSE)
   }
-  hidden <- has("hide")
+  hidden   <- has("hide")
+  collapse <- has("collapse")
+  sort_c   <- has("sort")
+  if (length(sort_c) > 1L) {
+    ordv <- vapply(sort_c, function(c) as.numeric(opt(c, "order") %||% NA),
+                   numeric(1L))
+    if (!anyNA(ordv)) sort_c <- sort_c[order(ordv)]
+  }
+  sort_desc <- vapply(sort_c, function(c) isTRUE(opt(c, "desc")), logical(1L))
 
   # A hidden column cannot also be printed as part of the stub, and a hidden
   # column cannot be carried onto every column page.  Catch it here rather
@@ -212,7 +236,7 @@ plan_hide <- function(plan, cols) {
   final <- orig
   stub_name <- NULL
   if (length(stub_cols) >= 2L && identical(stub_layout, "merged")) {
-    stub_name <- paste(stub_cols, collapse = " / ")
+    stub_name <- stub_opts$label %||% paste(stub_cols, collapse = " / ")
     final <- c(stub_name, setdiff(orig, stub_cols))
   }
   final <- setdiff(final, hidden)
@@ -247,9 +271,13 @@ plan_hide <- function(plan, cols) {
        body_map  = body_map,
        stub   = stub_cols,
        layout = stub_layout,
+       stub_opts = stub_opts,
        group  = if (length(group_col)) group_col else NULL,
        mode   = if (length(group_col)) opt(group_col, "mode") else NULL,
        carry  = unname(map[has("carry")]),
+       collapse  = collapse,
+       sort      = if (length(sort_c)) sort_c else NULL,
+       sort_desc = if (length(sort_c)) unname(sort_desc) else NULL,
        hidden = hidden)
 }
 
