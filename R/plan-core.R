@@ -66,17 +66,19 @@ rtf_plan <- function(data) {
   plan
 }
 
+# Replace a layer wholesale.  The roles layer does its own per-column merge,
+# so it hands the finished table down rather than field-merging here.
+.plan_set_raw <- function(plan, kind, value) {
+  if (!inherits(plan, "rtf_plan")) {
+    stop("Expected an rtf_plan; pipe from rtf_plan(data).", call. = FALSE)
+  }
+  plan$layers[[kind]] <- value
+  plan
+}
+
 .plan_get <- function(plan, kind) plan$layers[[kind]]
 
 # ── layers ─────────────────────────────────────────────────────────────────
-
-#' @keywords internal
-plan_group <- function(plan, cols = NULL, mode = NULL) {
-  if (!is.null(mode)) {
-    mode <- match.arg(mode, c("auto", "value", "indent", "filled"))
-  }
-  .plan_set(plan, "group", list(cols = cols, mode = mode))
-}
 
 #' @keywords internal
 plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL) {
@@ -104,29 +106,34 @@ resolve_plan <- function(plan) {
   d <- plan$data
   n <- nrow(d)
 
-  # 1. grouping -- resolved ONCE.  Everything downstream reads `groups`, so
-  #    there is no second place for a group column to be declared and disagree.
-  groups <- .plan_resolve_groups(.plan_get(plan, "group"), d)
+  # 1. columns -- every reference is a NAME until this point.  One projection
+  #    of the final layout, one name -> position map, and nothing downstream
+  #    ever re-indexes anything.
+  columns <- .plan_resolve_columns(.plan_get(plan, "roles"), d)
 
-  # 2. blank rows -- may consult the grouping, and nothing else.
+  # 2. grouping -- resolved ONCE, from the column table.  Everything
+  #    downstream reads `groups`, so there is no second place for a group
+  #    column to be declared and disagree.
+  groups <- .plan_resolve_groups(columns, d)
+
+  # 3. blank rows -- may consult the grouping, and nothing else.
   blanks <- .plan_resolve_blanks(.plan_get(plan, "blanks"), d, groups)
 
-  # 3. pages -- consumes both.  The row budget can see the blanks because they
+  # 4. pages -- consumes both.  The row budget can see the blanks because they
   #    are already resolved, so no argument has to describe them to it.
   pages <- .plan_resolve_pages(.plan_get(plan, "pages"), n, groups, blanks)
 
-  structure(list(groups = groups, blanks = blanks, pages = pages, nrow = n),
+  structure(list(columns = columns, groups = groups, blanks = blanks,
+                 pages = pages, nrow = n),
             class = "rtf_resolution")
 }
 
-.plan_resolve_groups <- function(spec, d) {
-  if (is.null(spec) || is.null(spec$cols)) return(NULL)
-  idx <- .resolve_col_indices(spec$cols, d, "plan_group(cols)")
-  if (length(idx) != 1L) {
-    stop("The spike resolves a single grouping column; got ", length(idx), ".",
-         call. = FALSE)
-  }
-  info <- .compute_group_info(d, idx, group_by = spec$mode %||% "auto")
+# The grouping column is read out of the resolved column table -- never from a
+# layer of its own, which is what made it possible to declare it twice.
+.plan_resolve_groups <- function(columns, d) {
+  if (is.null(columns$group)) return(NULL)
+  idx <- match(columns$group, names(d))
+  info <- .compute_group_info(d, idx, group_by = columns$mode %||% "auto")
   info$col <- idx
   info
 }
