@@ -109,3 +109,18 @@ plan_style <- function(plan, border = NULL, widths = NULL, rel_widths = NULL,
   }
   args
 }
+
+# ── PROTOTYPE: a column header declared on the plan ─────────────────────────
+#
+# Feasibility probe for the question "do the existing verbs still work?".
+# They do, but only AFTER resolution, which breaks the single pipeline and
+# forces the caller into POST-stub column coordinates.
+#
+# A header declared here is addressed by SOURCE column name and placed by the
+# same map everything else uses, so the caller never learns what the stub
+# merged.  Layer wins over the adapter's header, as an explicit setting should.
+#' @keywords internal
+plan_header <- function(plan, ...) {
+  rows <- list(...)
+  .plan_set(plan, "user_header", list(rows = if (length(rows)) rows else NULL))
+}

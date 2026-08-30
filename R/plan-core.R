@@ -174,6 +174,12 @@ resolve_plan <- function(plan) {
   #    adapter read it in SOURCE coordinates and never has to know what the
   #    stub merged or the hidden columns removed.
   header <- .plan_resolve_header(plan$source$kw %||% list(), columns)
+  uh <- .plan_get(plan, "user_header")
+  if (!is.null(uh$rows)) {
+    # A header the CALLER declared, in source names, projected by the same map.
+    header <- list(col_header = .plan_project_header(uh$rows, columns),
+                   col_header_align = header$col_header_align, dropped = FALSE)
+  }
 
   structure(list(columns = columns, rows = rows, groups = groups,
                  blanks = blanks, pages = pages,
