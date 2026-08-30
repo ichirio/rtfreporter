@@ -87,11 +87,70 @@
 # The plan constructor, widened to any supported source.  Extraction happens
 # HERE, once, because a plan cannot name columns it has not seen; everything
 # after it stays a declaration.
+#
+# ---------------------------------------------------------------------------
+# The shorthand
+# ---------------------------------------------------------------------------
+#
+# Measured against as_rtftables(), the layer form costs 16% more characters and
+# roughly twice the lines for an ordinary table -- a bad trade for the common
+# case, whatever its structural merits.  So the constructor takes the settings
+# most tables need and WRITES THE LAYERS ITSELF.  There is no second code path:
+# every shorthand below is exactly the layer call a reader would have written,
+# so a plan built either way is the same object.
+#
+#   rtf_plan_from(pk, stub = c("Time", "Statistic"), group = "Time",
+#                 blanks = "between_groups", max_rows = 21, border = "tfl")
+#
+# Layers stay available for what the shorthand does not reach, and because the
+# merge rule is last-writer-wins they COMPOSE rather than conflict: a shorthand
+# sets a field, a later layer call overrides that field and leaves the rest.
+#
+# Nothing here is required.  `rtf_plan_from(df)` is still the whole call for a
+# table that needs nothing.
 #' @keywords internal
-rtf_plan_from <- function(x, read_meta = TRUE, header_sep = NULL) {
+rtf_plan_from <- function(x, read_meta = TRUE, header_sep = NULL,
+                          stub = NULL, stub_layout = NULL, stub_indent = NULL,
+                          group = NULL, group_mode = NULL,
+                          hide = NULL, carry = NULL, sort = NULL,
+                          blanks = NULL, blank_first = NULL, blank_last = NULL,
+                          max_rows = NULL, per_group = NULL, groups = NULL,
+                          border = NULL, widths = NULL, auto_width = NULL,
+                          font = NULL, font_size_half_points = NULL) {
   ex <- .plan_extract(x, read_meta = read_meta, header_sep = header_sep)
   p <- rtf_plan(ex$body)
   p$source <- ex[c("kw", "cell_styles", "titles", "footnotes")]
+
+  # Each block is the layer call, nothing more.
+  if (!is.null(stub)) {
+    p <- plan_stub(p, stub, layout = stub_layout, indent = stub_indent)
+  }
+  if (!is.null(group))  p <- plan_group(p, group, mode = group_mode)
+  if (!is.null(hide))   p <- plan_hide(p, hide)
+  if (!is.null(carry)) {
+    for (k in as.character(carry)) {
+      a <- list(p); a[[k]] <- role("carry"); p <- do.call(plan_roles, a)
+    }
+  }
+  if (!is.null(sort)) {
+    for (i in seq_along(sort)) {
+      a <- list(p); a[[as.character(sort[i])]] <- role("sort", order = i)
+      p <- do.call(plan_roles, a)
+    }
+  }
+  if (!is.null(blanks) || !is.null(blank_first) || !is.null(blank_last)) {
+    p <- plan_blanks(p, blanks, first = blank_first, last = blank_last)
+  }
+  if (!is.null(max_rows) || !is.null(per_group) || !is.null(groups)) {
+    p <- plan_pages(p, max_rows = max_rows, per_group = per_group,
+                    groups = groups)
+  }
+  if (!is.null(border) || !is.null(widths) || !is.null(auto_width) ||
+      !is.null(font) || !is.null(font_size_half_points)) {
+    p <- plan_style(p, border = border, widths = widths,
+                    auto_width = auto_width, font = font,
+                    font_size_half_points = font_size_half_points)
+  }
   p
 }
 
