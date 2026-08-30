@@ -1,0 +1,75 @@
+# _pkgdown.yml の変更案（plan 系を採用した場合）
+#
+# 現行ファイルへの差分だけを示します。触るのは3箇所です。
+# ─────────────────────────────────────────────────────────────────────────
+
+# ── 1. 新設：「Page content」の直後に挿入 ────────────────────────────────
+
+  - title: Building a table plan
+    desc: >
+      何を作るかを**宣言**し、解決は最後に1回だけ行います。列は**名前**で
+      指定し、最終的な位置は解決時に1つの写像が決めるので、stub の統合や
+      列の非表示があっても指定が壊れません。
+      `rtf_plan_from()` は常用設定をまとめて受け取り、内部でレイヤーを
+      組み立てます。細かい制御が要るときだけ `plan_*()` を重ねてください
+      （あと勝ち・フィールド単位）。
+      できあがるのは通常の `rtftable()` なので、既存の後付け verb も
+      そのまま使えます。
+    contents:
+      - rtf_plan_from
+      - plan_roles
+      - role
+      - plan_group
+      - plan_stub
+      - plan_hide
+      - plan_unset
+      - plan_blanks
+      - plan_pages
+      - plan_style
+      - plan_header
+      - plan_tables
+
+# ── 2. 変更：「Importing tables」から3つを外す ───────────────────────────
+#
+#   contents:
+#     - as_rtftables        ← 削除（Deprecated へ）
+#     - as_rtftable         ← 削除（Deprecated へ）
+#     - combine_sections
+#     - stub_cols
+#     - stub_spec           ← 削除（Deprecated へ）
+#
+# desc: も「as_rtftables() が…」から「plan 系が…」に書き換えが必要です。
+
+  - title: Importing tables (gt / gtsummary / rtables → rtftable)
+    desc: >
+      gt / gtsummary / rtables・tern / data.frame から本文とメタデータを
+      取り出します。取り込みは `rtf_plan_from()` の入口で行われます。
+      `stub_cols()` は階層列を1列のインデント stub に畳む単体関数で、
+      plan も内部でこれを使います。
+    contents:
+      - combine_sections
+      - stub_cols
+
+# ── 3. 変更：「Pagination strategies & helpers」から page_split を外す ───
+
+  - title: Pagination strategies & helpers
+    desc: >
+      `paginate_cols()` は横方向のページ分割で、広すぎる表を列で分け、
+      行見出しを各ページに再掲します。plan には未統合のため、
+      `plan_tables()` の出力に適用してください。
+    contents:
+      - paginate_cols
+      - add_cont_label
+
+# ── 4. 変更：「Deprecated」を差し替え ────────────────────────────────────
+
+  - title: Deprecated
+    desc: >
+      いずれも**動作は変わりません**。ドキュメント上で後継を案内するだけです。
+      `plan` 系が定着するまで削除の予定はありません。
+    contents:
+      - as_rtftables
+      - as_rtftable
+      - stub_spec
+      - page_split
+      - paginate
