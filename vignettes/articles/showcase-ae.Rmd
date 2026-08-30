@@ -282,6 +282,19 @@ generate_rtfreport(doc, "ae_gtsummary.rtf", overwrite = TRUE)
 
 ## cards + gtsummary
 
+> **Keep `cards` and `gtsummary` in step.** These two packages move together:
+> gtsummary's hierarchical verbs (`tbl_hierarchical()`, `tbl_ard_hierarchical()`,
+> `filter_hierarchical()`, `sort_hierarchical()`) hand their ARD to `cards`, and
+> `cards` validates its structure. A **mismatched pair fails at run time** with
+> `The following columns are not present: ...` raised by
+> `cards::check_ard_structure()` -- for example **gtsummary 2.5.0 with cards
+> 0.9.0**, a combination R will happily install because that gtsummary only
+> declared `cards (>= 0.7.1)`, with no upper bound. Nothing is wrong with the
+> code below; the pair is. **Update both at once**
+> (`install.packages(c("cards", "gtsummary"))`) -- gtsummary 2.6.0 declares
+> `cards (>= 0.9.0)` and the same code runs. The same applies to the
+> **cards + tfrmt** section further down.
+
 The ARD-first variant: compute the hierarchical **Analysis Results Dataset** with
 `cards::ard_stack_hierarchical()`, then summarise it with `tbl_ard_hierarchical()`.
 `tbl_ard_hierarchical()` has no `overall_row` argument -- but the any-AE row is

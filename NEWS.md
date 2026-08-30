@@ -2,6 +2,15 @@
 
 ### Documentation
 
+- **`cards` + `gtsummary` must be updated together** (#319). The
+  hierarchical-AE chunks in `showcase-ae` failed with `The following columns
+  are not present: ...` -- not a bug in the code but a **version mismatch**:
+  gtsummary's hierarchical verbs hand their ARD to `cards`, which validates it
+  in `check_ard_structure()`, and gtsummary 2.5.0 declared only
+  `cards (>= 0.7.1)` so R installs it happily beside cards 0.9.0. gtsummary
+  2.6.0 declares `cards (>= 0.9.0)` and every chunk runs again. The article's
+  **cards + gtsummary** section now says so.
+
 - **Every article now says where to go next** (#317). Measured first: eight of
   the twenty-five articles were **orphans** -- no other article linked to them
   -- and one of those was `rtfreporter-pipes`, which the index itself tells
