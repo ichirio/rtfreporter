@@ -162,12 +162,27 @@ footer:
     license: "[Apache 2.0 licensed](https://github.com/ichirio/rtfreporter/blob/main/LICENSE.md)"
 
 reference:
+  # ── 0. Recipes ─────────────────────────────────────────────────────────
+  - title: Start here — four complete recipes
+    desc: >
+      Copy-and-run examples for the four table shapes a clinical report is
+      mostly made of: demographics, adverse events, PK concentrations and a
+      laboratory shift table.  Each runs end to end, data in and RTF out, and
+      they are shown together because **their arguments barely overlap** --
+      what a demographics table needs, an adverse-events table does not.
+    contents:
+      - rtfreporter-recipes
+
   # ── 1. Document & rendering ────────────────────────────────────────────
   - title: Document & rendering
     desc: >
-      The pipe entry point and the final render call.  Build a document by
-      piping `rtf_document()` through the section / content calls below, then
-      render it with `generate_rtfreport()`.
+      Start here.  `rtf_document()` creates the document; the section and
+      content calls below add to it; `generate_rtfreport()` writes the file.
+      **Acts on:** the `rtf_document` object.
+      `rtf_page()` and `rtf_default_format()` are the only settings that are
+      document-only -- everything else in this reference acts on a table.
+      `rtf_config()` edits an already-composed document; `rtf_document()`
+      starts a new one.
     contents:
       - rtf_document
       - rtf_config
@@ -180,9 +195,11 @@ reference:
   # ── 1b. Package defaults / configuration ───────────────────────────────
   - title: Package defaults
     desc: >
-      Inspect and reset the configurable `rtfreporter.*` option defaults
-      (paper size, orientation, margins, font, font size). A site can set
-      its own values in `Rprofile.site`; see the page-setup article.
+      Inspect and reset the `rtfreporter.*` option defaults (paper size,
+      orientation, margins, font, font size).
+      **Acts on:** nothing -- these set the fallbacks every other function
+      uses when you do not pass a value.  A site can set its own in
+      `Rprofile.site`; see the page-setup article.
     contents:
       - rtfreporter_options
       - rtfreporter_reset_defaults
@@ -190,10 +207,11 @@ reference:
   # ── 2. Sections: headers & footers ─────────────────────────────────────
   - title: Sections — headers & footers
     desc: >
-      A section applies a header / footer to a range of pages.  Headers and
-      footers are themselves small tables whose rows you build with
-      `rtf_header()` / `rtf_footer()` and edit with the `update_*_row()`
-      helpers.
+      A section applies a running header / footer to a range of pages.
+      **Acts on:** the `rtf_document` object.
+      Headers and footers are themselves small tables: build their rows with
+      `rtf_header()` / `rtf_footer()` and edit one row later with
+      `update_header_row()` / `update_footer_row()`.
     contents:
       - rtf_section
       - rtf_header
@@ -204,10 +222,12 @@ reference:
   # ── 3. Page content: tables & figures ──────────────────────────────────
   - title: Page content — tables & figures
     desc: >
-      Add one content item per page with `rtf_tables()` / `rtf_figures()`
-      (each list element becomes one page), and attach per-page titles /
-      footnotes.  For fine-grained control, build the content object yourself
-      with `rtftable()` / `rtfplot()` and pass it in.
+      Place a table or a figure on the page, with its titles and footnotes.
+      **Acts on:** the `rtf_document` object -- `rtf_tables()` takes the
+      `rtftable` objects the sections below produce.
+      **Note the two levels:** `rtftable()` sets how a table looks; passing
+      the same setting to `rtf_tables()` overrides it *for that placement
+      only*, leaving the table object untouched.
     contents:
       - rtf_tables
       - rtf_figures
@@ -223,16 +243,14 @@ reference:
   # ── 4. Importing external table objects ────────────────────────────────
   - title: Importing tables (gt / gtsummary / rtables → rtftable)
     desc: >
-      Convert a table object — a [gt::gt()] table, a gtsummary table, an
-      rtables/tern `VTableTree`, or a plain data.frame / tibble (or a list of
-      any of these) — into `rtftable()` objects ready for `rtf_tables()`,
-      reading the source's metadata and paginating in one call.
-      `as_rtftables()` returns one rtftable **per page** (a list);
-      `as_rtftable()` is the single-page form returning **one** object — they
-      differ only in singular vs. list.  `stub_cols()` finishes a tidy
-      data.frame beforehand, merging hierarchy columns into one indented
-      stub column, or keeping them with the group value on its own row;
-      `stub_spec()` carries the same settings into `as_rtftables(stub = )`.
+      Turn a table object -- a `gt::gt()` table, a gtsummary table, an
+      rtables/tern `VTableTree`, or a plain data.frame -- into `rtftable`
+      objects, reading the source's metadata and paginating in one call.
+      **Acts on:** the source object.  **Produces:** `rtftable` objects.
+      `as_rtftables()` returns one per page (a list); `as_rtftable()` returns
+      a single object.  `stub_cols()` prepares a tidy data.frame beforehand by
+      merging hierarchy columns into one indented stub column; `stub_spec()`
+      carries the same settings into `as_rtftables(stub = )`.
     contents:
       - as_rtftables
       - as_rtftable
@@ -243,13 +261,15 @@ reference:
   # ── 5. Column headers ──────────────────────────────────────────────────
   - title: Column headers
     desc: >
-      Multi-row column headers with optional spanning cells expressed
-      uniformly via `pos = 1` or `pos = c(2, 5)` (or by column name).  Top-level
-      spanning works without a separate `spanning_header` argument.
-      `set_col_header()` configures the header of a finished table against its
-      final printed columns; `rtf_columns()` lists those columns;
-      `rtf_header_source()` deparses the current header back to editable
-      `rtf_col_header()` source.
+      Build and edit the column-header block.
+      **Acts on:** an `rtftable` -- there is no header setting at document
+      level.
+      `col_cell()` describes one header cell and is accepted by
+      `rtf_col_header()`, `rtftable(col_header = )`, `rtf_tables(col_header =
+      )` and `set_header_cell()`.  A whole header built with
+      `rtf_col_header()` goes to the same places plus `set_col_header()`.
+      Coordinates are those of the **finished** table, so a merged stub counts
+      as one column.
     contents:
       - col_cell
       - rtf_col_header
@@ -263,13 +283,12 @@ reference:
   # ── 5b. Post-hoc styling verbs ─────────────────────────────────────────
   - title: Post-hoc styling verbs
     desc: >
-      Restyle an already-built `rtftable` -- or every page of an
-      `as_rtftables()` list at once -- addressing header rows, body rows and
-      columns by position: `style_header()`, `style_cols()`, `style_body()`,
-      `style_zone()`, `add_header_row()` (and `set_col_header()`, listed under
-      Column headers).  `collapse_repeats()` blanks repeated group values, and
-      `set_decimal_split()` lines up a numeric column on its decimal point.
-      Last writer wins, per side / per field.
+      Restyle a table you have already built, without rebuilding it.
+      **Acts on:** an `rtftable`, or a list of them -- every verb here has a
+      list method, so one call styles every page.
+      These are the last word: they override whatever `rtftable()` or the
+      source adapter set.  `set_decimal_split()` is the exception in kind --
+      it does not change the data, only how a numeric column is rendered.
     contents:
       - style_header
       - collapse_repeats
@@ -278,10 +297,10 @@ reference:
   # ── 6. Built-in cell-format functions ──────────────────────────────────
   - title: Built-in cell-format functions
     desc: >
-      Ready-made cell re-formatters for the `cell_format` argument of
-      `rtftable()` / `as_rtftables()` (e.g. monospaced count/percent
-      alignment).  These are provided for convenience — you can also write
-      your own, following the same one-column-in / one-column-out contract.
+      Re-shape the TEXT of cells so counts and percentages line up.
+      **Acts on:** a data.frame or a character vector, **before** it becomes a
+      table.  Pass one to `rtftable(cell_format = )` /
+      `as_rtftables(cell_format = )` to apply it during the build instead.
     contents:
       - format_count_pct
       - realign_count_pct
@@ -292,17 +311,11 @@ reference:
   # ── 6b. Numeric display formatters ─────────────────────────────────────
   - title: Numeric display formatters
     desc: >
-      Turn **numeric** columns into the text a report should show, before the
-      table is built.  A column still numeric at render time is converted with
-      `as.character()`, which prints 15 digits, slips into scientific notation
-      and follows the session's `options(scipen)` — so format it first.
-      `fmt_signif()` counts total digits including the integer part (the
-      convention a SAP means by "4 significant digits"), `fmt_round()` fixes
-      the decimal places, and both offer SAS-style half-away-from-zero rounding
-      alongside R's.  `fmt_numeric()` applies either across a data frame, keyed
-      by a carrier column so one column can carry a different format per
-      statistic.  Character columns are taken as already formatted and are
-      never touched.
+      Turn numbers into the strings a clinical table prints -- significant
+      digits, rounding, alignment.
+      **Acts on:** a data.frame or a numeric vector, **before** it becomes a
+      table.  Numbers reaching `rtftable()` unformatted are converted with
+      `as.character()`, which is rarely what a report wants, so format first.
     contents:
       - fmt_signif
       - fmt_round
@@ -319,11 +332,16 @@ reference:
   # ── 7b. Pagination strategies & helpers ────────────────────────────────
   - title: Pagination strategies & helpers
     desc: >
-      Built-in page-split strategies as reusable functions for the `split=`
-      argument of `as_rtftables()`, plus a helper for writing your own.
-      `as_rtftables()` splits **rows**; `paginate_cols()` is the horizontal
-      counterpart, splitting a too-wide table by **column** and repeating the
-      row headings on every page.
+      Split a table across pages.
+      **Acts on:** the body of a table being built.
+      The `page_split_*()` factories are values for `as_rtftables(split = )`,
+      an alternative to the strategy names; they carry the same settings
+      (`max_rows`, `group_col`, `cont_label`) in one object.  Note that
+      `group_col` given inside a factory drives **pagination only** -- the
+      blank-row logic reads the top-level `group_col`, so pass it there too.
+      `paginate_cols()` is the horizontal counterpart: it acts on a FINISHED
+      `rtftable`, splitting a too-wide table by column and repeating the row
+      headings on every page.
     contents:
       - page_split
       - paginate_cols
@@ -332,9 +350,14 @@ reference:
   # ── 8. Borders ─────────────────────────────────────────────────────────
   - title: Borders
     desc: >
-      Border specifications.  Borders apply not only to content-table zones
-      but also to **header and footer rows** and to individual cells /
-      columns, so the same builders are reused throughout a report.
+      Border specifications, from a single edge upwards:
+      `rtf_border_side()` describes one edge, `rtf_border()` the four edges of
+      a cell or row, `rtf_table_border()` the zones of a whole table.
+      **Where usable:** all of them are accepted by `rtftable(border = )`,
+      `rtf_tables(border = )` and the `style_*()` verbs; `rtf_border()` is
+      also accepted by `col_cell(border = )`.  There is **no border setting at
+      document level**.  Later wins, per edge -- a `style_*()` call overrides
+      `rtftable()`, which overrides the adapter.
     contents:
       - rtf_border_side
       - rtf_border
@@ -349,9 +372,11 @@ reference:
   # ── 9. Shared table styles ─────────────────────────────────────────────
   - title: Shared table styles (S3, snapshot)
     desc: >
-      Bundle border + padding + row-height defaults into a reusable style and
-      share it across many tables.  Snapshot semantics: a table captures the
-      style's state at construction.
+      One object carrying borders, alignment, padding and row height, so a set
+      of tables can share a look.
+      **Where usable:** `rtftable(style = )` and `rtf_tables(style = )`.
+      `rtf_table_style_with()` derives a variant from an existing style,
+      changing only the fields you name.
     contents:
       - rtf_table_style
       - rtf_table_style_with
@@ -359,6 +384,13 @@ reference:
 
   # ── 10. Column-width utilities ─────────────────────────────────────────
   - title: Column-width utilities
+    desc: >
+      Measure text and size columns to their content.
+      **Acts on:** a data.frame; returns widths in twips for
+      `rtftable(column_widths_twips = )`.
+      Use `auto_col_widths()` when long labels wrap; `as_rtftables(auto_width
+      = TRUE)` does the same during the build, clamped to the writable page
+      width.
     contents:
       - text_width_in
       - auto_col_widths
@@ -366,8 +398,9 @@ reference:
   # ── 11. Visual preview (S3 plot methods) ───────────────────────────────
   - title: Visual preview (S3 plot methods)
     desc: >
-      Quick base-graphics wireframes of rtfreporter objects, for
-      sanity-checking layouts before rendering RTF.
+      Look at a table, a border or a document without writing a file.
+      **Acts on:** whichever object you pass; nothing is modified.  These are
+      for checking work in progress, not for producing output.
     contents:
       - plot.rtf_border
       - plot.rtf_border_side
@@ -378,8 +411,11 @@ reference:
   # ── 12. Assembling multiple RTF files ──────────────────────────────────
   - title: Assembling multiple RTF files
     desc: >
-      Combine several rendered RTF files into one deliverable with a table of
-      contents (e.g. a TLF shell catalogue).
+      Join finished RTF FILES into one, with a table of contents and
+      continuous page numbering.
+      **Acts on:** files on disk, not R objects -- this is the step after
+      `generate_rtfreport()`.  A spec (`assemble_spec()`, a .csv/.xlsx) names
+      the files and their TOC entries.
     contents:
       - assemble_rtf
       - assemble_files
@@ -393,13 +429,17 @@ reference:
   # ── 13. Post-processing ────────────────────────────────────────────────
   - title: Post-processing
     desc: >
-      "Last mile" tweaks to an already-rendered RTF file, such as a one-off
-      find-and-replace on the generated bytes.
+      Edit a rendered RTF file in place -- substituting text a report needs
+      only at delivery time, such as a run date or a draft watermark.
+      **Acts on:** a file on disk.
     contents:
       - rtf_replace_text
 
   # ── 14. Deprecated ─────────────────────────────────────────────────────
   - title: Deprecated
+    desc: >
+      Superseded, but still working.  Nothing here is scheduled for removal;
+      each page names its replacement.
     contents:
       - paginate
 

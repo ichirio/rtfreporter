@@ -257,8 +257,8 @@ tbl <- rtftable(
 doc <- rtf_document() |>
   rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
   rtf_tables(tbl, titles = list("Table 14.1.1"))
-\dontrun{
-generate_rtfreport(doc, "demographics.rtf", overwrite = TRUE)
-}
+f <- tempfile(fileext = ".rtf")
+generate_rtfreport(doc, f, overwrite = TRUE)
+unlink(f)
 
 }

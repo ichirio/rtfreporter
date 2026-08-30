@@ -1,5 +1,37 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **Four complete recipes** (#317). A new `?rtfreporter-recipes` page carries
+  runnable end-to-end examples for the four table shapes a clinical report is
+  mostly made of -- demographics, adverse events, PK concentrations and a
+  laboratory shift -- each ending in a rendered RTF. They are shown together
+  because **their arguments barely overlap**: a table of which setting each
+  shape actually uses makes the differences visible at a glance, and the page
+  names the commonest mistake (reaching for `stub_vars` on a table with no
+  hierarchy, or omitting it on one that has).
+
+- **Every reference section now says what it acts on** (#317). The index
+  listed 18 groups without stating which object a function takes, so a reader
+  landing on `rtf_border()` could not tell the table side from the document
+  side. Each description now gives the group's purpose, the object it acts on
+  and -- for anything usable in more than one place -- where it may be passed
+  and which wins. Measured while writing them: of the value constructors only
+  `rtf_page()` and `rtf_default_format()` are document-only, while borders and
+  styles are accepted at four levels.
+
+- **Examples now render** (#317). An audit found 39 of 77 help topics carrying
+  examples of ten lines or fewer and only 10 ending in a rendered RTF -- most
+  pages showed a call but never a result. The `\dontrun{}` around renders that
+  needed nothing but a filename is replaced by a real `tempfile()` render, so
+  those examples run and `R CMD check` exercises them. `page_split`'s example
+  referenced an undefined object and could not be copied at all; it now builds
+  its data, and shows the `group_col`-inside-a-factory pitfall. The three
+  topics with no examples -- `format.rtftable()`, `summary.rtftable()`,
+  `print.rtfreport()` -- have one.
+
+  All 78 topics with examples now run clean.
+
 ### New features
 
 - **`stub_spec()` folds every stub setting into one argument** (#314).

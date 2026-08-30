@@ -183,8 +183,8 @@ doc <- rtf_document() |>
     titles    = list("Table 14.1.1", "Table 14.1.2"),
     footnotes = list("Source: ADSL", NULL)
   )
-\dontrun{
-generate_rtfreport(doc, "tables.rtf", overwrite = TRUE)
-}
+f <- tempfile(fileext = ".rtf")
+generate_rtfreport(doc, f, overwrite = TRUE)
+unlink(f)
 
 }

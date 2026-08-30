@@ -532,9 +532,9 @@
 #' doc <- rtf_document() |>
 #'   rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
 #'   rtf_tables(tbl, titles = list("Table 14.1.1"))
-#' \dontrun{
-#' generate_rtfreport(doc, "demographics.rtf", overwrite = TRUE)
-#' }
+#' f <- tempfile(fileext = ".rtf")
+#' generate_rtfreport(doc, f, overwrite = TRUE)
+#' unlink(f)
 #'
 #' @export
 rtftable <- function(
@@ -1241,6 +1241,25 @@ rtftable <- function(
 #' @param ... Additional arguments (unused).
 #'
 #' @return A character vector, one element per console line.
+#'
+#' @examples
+#' dm <- data.frame(
+#'   Characteristic = c("Age (years)", "  Mean (SD)", "  Median"),
+#'   `Drug A`       = c("", "54.2 (11.3)", "55.0"),
+#'   check.names = FALSE, stringsAsFactors = FALSE
+#' )
+#' tbl <- rtftable(dm, border = "tfl")
+#'
+#' # Capture the console rendering instead of printing it -- useful for
+#' # snapshot tests, or to paste a preview into an issue.
+#' lines <- format(tbl)
+#' length(lines)
+#' writeLines(head(lines, 4))
+#'
+#' # Show more body rows than print() does by default
+#' invisible(format(tbl, n = 3))
+#'
+#' @seealso [print.rtftable()], [summary.rtftable()].
 #' @export
 format.rtftable <- function(x, n = 10L, ...) {
   .render_rtftable_console(x, n = n)
@@ -1294,6 +1313,21 @@ print.rtftable <- function(x, n = 10L, ...) {
 #' @param ... Additional arguments (unused).
 #'
 #' @return `object`, invisibly.
+#'
+#' @examples
+#' dm <- data.frame(
+#'   Characteristic = c("Age (years)", "  Mean (SD)", "Sex", "  Female, n (%)"),
+#'   `Drug A`       = c("", "54.2 (11.3)", "", "31 (51.7%)"),
+#'   `Drug B`       = c("", "56.8 (10.1)", "", "27 (46.6%)"),
+#'   check.names = FALSE, stringsAsFactors = FALSE
+#' )
+#' tbl <- rtftable(dm, border = "tfl", col_rel_width = c(2, 1, 1))
+#'
+#' # The metadata block on its own -- dimensions, header rows, widths, borders
+#' summary(tbl)
+#'
+#' @seealso [print.rtftable()] for the same block plus the table body,
+#'   [format.rtftable()] to capture the rendered lines as a character vector.
 #' @export
 summary.rtftable <- function(object, ...) {
   cat(.rtftable_meta_lines(object), sep = "\n")

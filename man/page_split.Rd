@@ -79,10 +79,33 @@ set on the factory take precedence; anything left `NULL` falls back to the
 value [as_rtftables()] passes at call time.
 }
 \examples{
-\dontrun{
-as_rtftables(tbl, split = page_split_group_safe(max_rows = 20,
-                                                 group_col = "visit"))
-}
+# A factory carries the pagination settings in one object, as an
+# alternative to spelling them out in as_rtftables().
+lb <- data.frame(
+  visit  = rep(c("Week 1", "Week 2", "Week 4"), each = 4),
+  param  = rep(c("ALT", "AST", "ALP", "GGT"), 3),
+  result = sprintf("\%.1f", seq(20, 43, length.out = 12)),
+  stringsAsFactors = FALSE
+)
+
+pages <- as_rtftables(
+  lb,
+  split = page_split_group_safe(max_rows = 8, group_col = "visit"),
+  border = "tfl"
+)
+length(pages)
+vapply(pages, function(p) nrow(p$data), integer(1))
+
+# NB `group_col` inside a factory drives PAGINATION only.  The blank-row
+# logic reads the top-level argument, so pass it there as well:
+pages <- as_rtftables(
+  lb,
+  split      = page_split_group_safe(max_rows = 8, group_col = "visit"),
+  group_col  = "visit",
+  blank_rows = "between_groups",
+  border     = "tfl"
+)
+pages[[1]]$blank_rows
 
 }
 \seealso{
