@@ -497,3 +497,13 @@ Each function returns a modified copy, enabling immutable composition.
 - `vignette("rtfreporter-quickstart")` - S3 Methods API (v0.0.6)
 - `help(rtf_document)` - Detailed function documentation
 - `generate_rtfreport()` - Render document to RTF file
+
+<!-- where-next -->
+
+## Where next
+
+- [Adding content](adding-content.html) --- titles, footnotes, figures
+- [Headers and footers](headers-footers.html) --- running text and page numbers
+- [Borders](borders.html) --- the four-edge model and the TFL preset
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

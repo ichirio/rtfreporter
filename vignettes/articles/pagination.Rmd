@@ -726,3 +726,11 @@ generate_rtfreport(doc, "demographics.rtf", overwrite = TRUE)
 
 See `?as_rtftables` for the full `split =` contract and `?page_split` for the
 factory functions.
+
+<!-- where-next -->
+
+## Where next
+
+- [Output options](output.html) --- rendering the pages you just cut
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

@@ -39,3 +39,8 @@ vignettes/articles/*_files/
 vignettes/articles/figures/
 NEWS.tmp
 Rplots.pdf
+
+# Artefacts left in the repo root by building the articles: several showcase
+# chunks render to a fixed filename rather than tempfile().
+/*.rtf
+docs/

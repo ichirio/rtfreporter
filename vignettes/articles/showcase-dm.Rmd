@@ -464,3 +464,11 @@ Either way the regulatory furniture (`dm_col_header` / `dm_col_spec` /
 `dm_widths`, plus the shared header and footer) lives **once in rtfreporter**,
 and both routes produce the **same RTF**.
 
+<!-- where-next -->
+
+## Where next
+
+- [Showcase: adverse events](showcase-ae.html) --- the hierarchical counterpart
+- [Worked example: demographics](example-demog.html) --- the shorter version of this table
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

@@ -368,3 +368,12 @@ knowledge.
 * `?rtf_tables` for appending pages to a document.
 * The `gt` package documentation: <https://gt.rstudio.com>.
 * The `gtsummary` package: <https://www.danieldsjoberg.com/gtsummary/>.
+
+<!-- where-next -->
+
+## Where next
+
+- [Importing tables](importing-tables.html) --- the same for rtables, flextable and huxtable
+- [The pharmaverse catalog](tlg-catalog.html) --- the same tables built five different ways
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

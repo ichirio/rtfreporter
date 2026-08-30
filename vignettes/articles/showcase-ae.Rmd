@@ -580,3 +580,11 @@ generate_rtfreport(doc, "ae_huxtable.rtf", overwrite = TRUE)
 
 *Coming next, under the same showcase: real Word snapshots in place of the
 current placeholders.*
+
+<!-- where-next -->
+
+## Where next
+
+- [The pharmaverse catalog](tlg-catalog.html) --- every showcase table in one place
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

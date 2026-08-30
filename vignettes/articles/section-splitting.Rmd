@@ -217,3 +217,11 @@ See also [Headers and footers](headers-footers.html) for the section /
 header model, [Paginating with `as_rtftables()`](pagination.html) for the
 `split` strategies, and [Importing tables](importing-tables.html) for reading
 each framework's object.
+
+<!-- where-next -->
+
+## Where next
+
+- [Multi-stub section splits](multistub-section-split.html) --- one section per group, with an indented stub
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.
