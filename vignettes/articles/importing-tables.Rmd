@@ -628,3 +628,13 @@ from the output with `drop_cols` -- all of that is covered in
 
 See `?as_rtftables` for the complete argument reference and the per-source
 *what is carried* table.
+
+<!-- where-next -->
+
+## Where next
+
+- [gt in detail](gt-integration.html) --- what is read from a gt table
+- [Pagination](pagination.html) --- splitting the result across pages
+- [The pharmaverse catalog](tlg-catalog.html) --- the same table from five sources
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

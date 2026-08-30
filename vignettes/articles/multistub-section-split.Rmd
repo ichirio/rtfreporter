@@ -153,3 +153,11 @@ outer level splits, the inner levels merge.
 - [`stub_cols()`] -- the same stub merge on a plain `data.frame`, and the
   `stub_vars` argument of [`as_rtftables()`] that folds it into the pipeline.
 ```
+
+<!-- where-next -->
+
+## Where next
+
+- [Pagination](pagination.html) --- how the rows are cut into pages
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

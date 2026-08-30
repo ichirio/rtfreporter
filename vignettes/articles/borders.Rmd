@@ -238,3 +238,11 @@ pages <- as_rtftables(gt_obj, read_meta = TRUE) |>
 The merge semantics are the ones this article already taught: last writer
 wins, per side. See `?style_header` for the full family, including how a
 character label row is promoted to cells when it needs a per-cell border.
+
+<!-- where-next -->
+
+## Where next
+
+- [Output options](output.html) --- what the rendered file contains
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

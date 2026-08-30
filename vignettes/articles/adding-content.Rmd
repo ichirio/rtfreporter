@@ -262,3 +262,12 @@ footnoted. To control the running header/footer across those pages, see the
 headers & footers article.
 
 See `?rtf_tables` and `?rtf_figures` for the full argument reference.
+
+<!-- where-next -->
+
+## Where next
+
+- [Borders](borders.html) --- how a table gets its rules
+- [Sections](section-splitting.html) --- when one document needs more than one header
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

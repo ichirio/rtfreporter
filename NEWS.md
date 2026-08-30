@@ -2,6 +2,30 @@
 
 ### Documentation
 
+- **Every article now says where to go next** (#317). Measured first: eight of
+  the twenty-five articles were **orphans** -- no other article linked to them
+  -- and one of those was `rtfreporter-pipes`, which the index itself tells
+  readers to open after the Quickstart. Thirteen articles carried no onward
+  link at all. Fifteen articles gain a `Where next` block naming two or three
+  specific follow-ons and why, so the set now reads as a path rather than a
+  pile. **Orphans: 8 -> 0.**
+
+- **The articles point at the new recipes page** (#317). Nothing referenced
+  `?rtfreporter-recipes` when it landed; all fifteen do now.
+
+- **The Quickstart's code actually runs.** It set `eval = FALSE` for the whole
+  document, so its sixteen chunks were printed but never executed and could
+  rot unnoticed. Checked by extracting and running them: **16 of 16 pass**, and
+  every render already went to `tempfile()`, so the vignette now evaluates.
+  A broken example fails the build instead of reaching a reader.
+
+- **Build artefacts no longer land in the repository root.** Building the
+  articles left twelve `.rtf` files there, because several showcase chunks
+  render to a fixed filename rather than `tempfile()`. Those, and `docs/`, are
+  now ignored. The underlying fixed filenames are tracked in #319.
+
+### Documentation
+
 - **Four complete recipes** (#317). A new `?rtfreporter-recipes` page carries
   runnable end-to-end examples for the four table shapes a clinical report is
   mostly made of -- demographics, adverse events, PK concentrations and a
