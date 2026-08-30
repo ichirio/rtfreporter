@@ -38,3 +38,4 @@ vignettes/articles/*_files/
 # Article snapshots are copied here from inst/rtf-examples/ at build time
 vignettes/articles/figures/
 NEWS.tmp
+Rplots.pdf

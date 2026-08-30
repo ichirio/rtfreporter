@@ -472,6 +472,21 @@ rtf_footer <- function(rows,
 #'
 #' @return `x`, invisibly. Called for the side effect of printing the summary.
 #'
+#' @examples
+#' df  <- data.frame(Parameter = c("Age", "Sex"),
+#'                   Value = c("54.2 (11.3)", "31 (51.7%)"),
+#'                   stringsAsFactors = FALSE)
+#' doc <- rtf_document() |>
+#'   rtf_tables(rtftable(df, border = "tfl"),
+#'              titles = list("Table 14.1.1"))
+#'
+#' # generate_rtfreport() returns the rendered report invisibly, so capture it
+#' # to inspect what was written: how many pages, sections, titles.
+#' f   <- tempfile(fileext = ".rtf")
+#' rep <- generate_rtfreport(doc, f, overwrite = TRUE)
+#' print(rep)
+#' unlink(f)
+#'
 #' @export
 print.rtfreport <- function(x, ...) {
   np <- length(x$pages)

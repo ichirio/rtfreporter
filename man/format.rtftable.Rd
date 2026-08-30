@@ -23,3 +23,24 @@ where the table's border zones are set -- so the result previews what the RTF
 will look like.  Used by [print.rtftable()]; call it directly to capture the
 rendered lines.
 }
+\examples{
+dm <- data.frame(
+  Characteristic = c("Age (years)", "  Mean (SD)", "  Median"),
+  `Drug A`       = c("", "54.2 (11.3)", "55.0"),
+  check.names = FALSE, stringsAsFactors = FALSE
+)
+tbl <- rtftable(dm, border = "tfl")
+
+# Capture the console rendering instead of printing it -- useful for
+# snapshot tests, or to paste a preview into an issue.
+lines <- format(tbl)
+length(lines)
+writeLines(head(lines, 4))
+
+# Show more body rows than print() does by default
+invisible(format(tbl, n = 3))
+
+}
+\seealso{
+[print.rtftable()], [summary.rtftable()].
+}

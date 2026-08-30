@@ -19,3 +19,20 @@ Prints the compact metadata block for an [rtftable()] -- dimensions, leaf
 labels, row-title columns, border and column-width mode, and any attached
 title / footnote counts -- without the visual table body.
 }
+\examples{
+dm <- data.frame(
+  Characteristic = c("Age (years)", "  Mean (SD)", "Sex", "  Female, n (\%)"),
+  `Drug A`       = c("", "54.2 (11.3)", "", "31 (51.7\%)"),
+  `Drug B`       = c("", "56.8 (10.1)", "", "27 (46.6\%)"),
+  check.names = FALSE, stringsAsFactors = FALSE
+)
+tbl <- rtftable(dm, border = "tfl", col_rel_width = c(2, 1, 1))
+
+# The metadata block on its own -- dimensions, header rows, widths, borders
+summary(tbl)
+
+}
+\seealso{
+[print.rtftable()] for the same block plus the table body,
+  [format.rtftable()] to capture the rendered lines as a character vector.
+}

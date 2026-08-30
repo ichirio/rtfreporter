@@ -80,9 +80,9 @@
 #' df <- data.frame(Parameter = c("Age, Mean (SD)", "Sex, n (%)"),
 #'                  Value = c("75.1 (8.2)", "120 (53%)"))
 #' doc <- rtf_tables(doc, as_rtftables(df), titles = list("Table 14.1.1"))
-#' \dontrun{
-#' generate_rtfreport(doc, "demographics.rtf", overwrite = TRUE)
-#' }
+#' f <- tempfile(fileext = ".rtf")
+#' generate_rtfreport(doc, f, overwrite = TRUE)
+#' unlink(f)
 #'
 #' @export
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
@@ -336,9 +336,9 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'     titles    = list("Table 14.1.1", "Table 14.1.2"),
 #'     footnotes = list("Source: ADSL", NULL)
 #'   )
-#' \dontrun{
-#' generate_rtfreport(doc, "tables.rtf", overwrite = TRUE)
-#' }
+#' f <- tempfile(fileext = ".rtf")
+#' generate_rtfreport(doc, f, overwrite = TRUE)
+#' unlink(f)
 #'
 #' @export
 rtf_tables <- function(doc, tables,
