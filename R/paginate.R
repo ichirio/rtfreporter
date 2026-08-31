@@ -352,18 +352,28 @@ paginate.data.frame <- function(x, ...) {
   # collapsed back to the public attribute per page in Step 2.
   materialised_blanks <- FALSE
   if (isTRUE(count_blank_rows)) {
-    base_pos <- attr(
-      set_blank_rows(x, blank_rows = blank_rows, group_col = group_col,
-                     group_by = group_by),
-      "rtf_blank_rows", exact = TRUE)
+    # Separator-derived and explicitly-requested blanks are resolved apart, so
+    # the markers can be told which is which.  Only the separators are subject
+    # to the page-edge rule when the pages are cut (#332).
+    parts <- .split_blank_spec(blank_rows)
+    grab  <- function(spec) {
+      if (is.null(spec)) return(integer(0))
+      p <- attr(set_blank_rows(x, blank_rows = spec, group_col = group_col,
+                               group_by = group_by),
+                "rtf_blank_rows", exact = TRUE)
+      if (is.numeric(p)) as.integer(p) else integer(0)
+    }
     in_attr  <- attr(x, "rtf_blank_rows", exact = TRUE)
-    pos <- sort(unique(c(
-      if (is.numeric(base_pos)) as.integer(base_pos) else integer(0),
-      if (is.numeric(in_attr))  as.integer(in_attr)  else integer(0)
-    )))
-    pos <- pos[pos >= 1L & pos <= nrow(x)]
+    sep_pos  <- grab(parts$separator)
+    exp_pos  <- c(grab(parts$explicit),
+                  if (is.numeric(in_attr)) as.integer(in_attr) else integer(0))
+    keep <- function(p) unique(p[p >= 1L & p <= nrow(x)])
+    sep_pos <- keep(sep_pos)
+    exp_pos <- setdiff(keep(exp_pos), sep_pos)   # an explicit hit wins nothing
+    pos     <- sort(c(sep_pos, exp_pos))
     if (length(pos) > 0L) {
-      x <- .materialize_blank_markers(x, pos)
+      x <- .materialize_blank_markers(x, pos,
+                                      separator = pos %in% sep_pos)
       materialised_blanks <- TRUE
     }
   }
@@ -824,12 +834,21 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
 # positions are handled by the leading/trailing logic in the collapse step and
 # by blank_row_first/end, so only 1..nrow are materialised here.  A hidden
 # logical column `.__rtf_blank__` flags the inserted rows.
-.materialize_blank_markers <- function(df, positions) {
+# The flag column is an integer code rather than a bare logical so a marker
+# remembers where it came from: 1 = a separator (subject to the page-edge rule),
+# 2 = an explicit position the caller named.  `as.logical()` still reads both as
+# TRUE, so every existing "is this a marker" test keeps working.
+.MARK_DATA <- 0L; .MARK_SEP <- 1L; .MARK_EXPLICIT <- 2L
+
+.materialize_blank_markers <- function(df, positions, separator = TRUE) {
   n <- nrow(df)
-  positions <- sort(unique(as.integer(positions)))
-  positions <- positions[positions >= 1L & positions <= n]
+  ord <- order(as.integer(positions))
+  positions <- as.integer(positions)[ord]
+  separator <- rep_len(as.logical(separator), length(positions))[ord]
+  ok <- !duplicated(positions) & positions >= 1L & positions <= n
+  positions <- positions[ok]; separator <- separator[ok]
   flag_col <- ".__rtf_blank__"
-  df[[flag_col]] <- FALSE
+  df[[flag_col]] <- .MARK_DATA
   if (length(positions) == 0L) return(df)
 
   # Build one empty row template (matching df's column types).
@@ -837,13 +856,15 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
   for (j in seq_along(blank_row)) {
     blank_row[1L, j] <- if (is.character(df[[j]])) "" else NA
   }
-  blank_row[[flag_col]] <- TRUE
 
   pieces <- list()
   prev <- 0L
-  for (p in positions) {
+  for (k in seq_along(positions)) {
+    p <- positions[[k]]
     if (p > prev) pieces[[length(pieces) + 1L]] <- df[(prev + 1L):p, , drop = FALSE]
-    pieces[[length(pieces) + 1L]] <- blank_row
+    mk <- blank_row
+    mk[[flag_col]] <- if (isTRUE(separator[[k]])) .MARK_SEP else .MARK_EXPLICIT
+    pieces[[length(pieces) + 1L]] <- mk
     prev <- p
   }
   if (prev < n) pieces[[length(pieces) + 1L]] <- df[(prev + 1L):n, , drop = FALSE]
@@ -861,19 +882,27 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
                                     blank_row_end = FALSE) {
   flag_col <- ".__rtf_blank__"
   if (!flag_col %in% names(chunk)) return(chunk)
-  mk <- as.logical(chunk[[flag_col]]); mk[is.na(mk)] <- FALSE
+  code <- suppressWarnings(as.integer(chunk[[flag_col]]))
+  code[is.na(code)] <- .MARK_DATA
+  mk <- code != .MARK_DATA
 
   # Position of each marker = number of DATA rows at or above it (0 = top).
   data_above <- cumsum(!mk)
-  pos <- data_above[mk]
-  pos <- pos[pos > 0L]                       # drop a leading blank at page top
+  pos     <- data_above[mk]
+  is_sep  <- code[mk] == .MARK_SEP
 
   data <- chunk[!mk, , drop = FALSE]
   data[[flag_col]] <- NULL
   rownames(data) <- NULL
 
+  # A separator may only sit BETWEEN rows: at a page edge it separates nothing,
+  # and the edges belong to blank_row_first / blank_row_end (#332).  An
+  # explicitly named position is honoured wherever it lands.
+  n <- nrow(data)
+  pos <- c(.trim_page_edges(pos[is_sep], n), pos[!is_sep])
+
   if (isTRUE(blank_row_first)) pos <- c(0L, pos)
-  if (isTRUE(blank_row_end))   pos <- c(pos, nrow(data))
+  if (isTRUE(blank_row_end))   pos <- c(pos, n)
   pos <- sort(unique(as.integer(pos)))
   pos <- pos[pos >= 0L & pos <= nrow(data)]
   attr(data, "rtf_blank_rows") <- if (length(pos)) pos else NULL
@@ -1079,6 +1108,47 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
 #   blank_rows_by_rule() object -> delegated to the shared spec resolver, so
 #                                  the same specs work per page here
 #   list                        -> union of any of the above
+# Is this one `blank_rows` item a SEPARATOR (a rule that infers where a break
+# belongs) rather than a position the caller named outright?
+.is_separator_blank <- function(s) {
+  (is.character(s) && length(s) == 1L && identical(s, "between_groups")) ||
+    inherits(s, "rtf_blank_rows_by_change") ||
+    inherits(s, "rtf_blank_rows_by_rule")
+}
+
+# Partition a `blank_rows` spec into its separator items and its explicit ones,
+# so the two can be resolved apart and only the separators get the page-edge
+# rule.  Either half may be NULL.
+.split_blank_spec <- function(spec) {
+  if (is.null(spec) || length(spec) == 0L) {
+    return(list(separator = NULL, explicit = NULL))
+  }
+  # A classed spec object is itself a list, so only a PLAIN list is a
+  # collection of items -- the same test .resolve_pagewise_blanks() uses.
+  is_collection <- is.list(spec) &&
+    !inherits(spec, "rtf_blank_rows_by_change") &&
+    !inherits(spec, "rtf_blank_rows_by_rule")
+  items <- if (is_collection) spec else list(spec)
+  sep <- Filter(.is_separator_blank, items)
+  exp <- Filter(function(s) !.is_separator_blank(s), items)
+  list(separator = if (length(sep)) sep else NULL,
+       explicit  = if (length(exp)) exp else NULL)
+}
+
+# A separator blank belongs BETWEEN rows.  Position 0 (before the first row)
+# and `n` (after the last row) are the page's edges, and those are decided by
+# `blank_row_first` / `blank_row_end` alone -- a group boundary that happens to
+# coincide with a page boundary must not put one there, because on that page it
+# separates nothing (#332).
+#
+# Explicit integer positions are NOT separators and never come through here:
+# `blank_rows = 3` is a direct request for "after row 3 of each page" and is
+# honoured even when the page has exactly three rows.
+.trim_page_edges <- function(pos, n) {
+  pos <- pos[!is.na(pos)]
+  pos[pos > 0L & pos < n]
+}
+
 .resolve_pagewise_blanks <- function(spec, chunk, group_idx,
                                      group_by = "auto") {
   if (is.null(spec) || length(spec) == 0L) return(integer(0))
@@ -1099,7 +1169,11 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
     }
     if (inherits(s, "rtf_blank_rows_by_change") ||
         inherits(s, "rtf_blank_rows_by_rule")) {
-      return(.resolve_blank_rows(s, chunk))
+      # A separator, so the page-edge rule applies: it may only sit BETWEEN
+      # rows.  `"between_groups"` above gets this by construction (a change
+      # can never be at row 1, so `changes - 1L` is never 0 or nrow); here it
+      # has to be said (#332).
+      return(.trim_page_edges(.resolve_blank_rows(s, chunk), nrow(chunk)))
     }
     stop("Unrecognised `blank_rows` entry: ", paste(s, collapse = " "),
          call. = FALSE)

@@ -2,6 +2,25 @@
 
 ### Bug fixes
 
+- **A separator blank row could land on a page's first or last row** (#332),
+  where only `blank_row_first` / `blank_row_end` should decide. A group
+  separator belongs *between* groups; when a group boundary coincides with a
+  page boundary it separates nothing on that page.
+
+  `blank_rows = "between_groups"` already behaved this way -- a change can
+  never be at row 1, so its positions were never `0` or `nrow` -- but the
+  other spellings did not. `blank_rows_by_change()` put a blank **before the
+  first row and after the last row of every page** with both page-level flags
+  off, and `count_blank_rows = TRUE` left a marker stranded at the foot of a
+  page.
+
+  Separator specs -- `"between_groups"`, `blank_rows_by_change()`,
+  `blank_rows_by_rule()` -- are now trimmed to interior positions on every
+  path. **Explicit integer positions are unchanged**: `blank_rows = 3` is a
+  direct request for "after row 3 of each page" and is honoured even when the
+  page has exactly three rows. A mixed `list()` spec trims only its separator
+  half.
+
 - **An rlistings listing is no longer silently mis-read as a plain data.frame**
   (#322). `rlistings::as_listing()` returns a `listing_df`, declared as
   `setOldClass(c("listing_df", "tbl_df", "tbl", "data.frame"))` -- an S3
