@@ -1,5 +1,46 @@
 # rtfreporter (development version)
 
+### Bug fixes
+
+- **An rlistings listing is no longer silently mis-read as a plain data.frame**
+  (#322). `rlistings::as_listing()` returns a `listing_df`, declared as
+  `setOldClass(c("listing_df", "tbl_df", "tbl", "data.frame"))` -- an S3
+  tibble, not an S4 `VTableTree`. `.is_rtables_tbl()` therefore rejected it,
+  and because it genuinely *is* a `data.frame` it fell through to the
+  plain-data.frame branch and rendered with no error at all, discarding the
+  listing's own decisions:
+
+  - a column excluded via `disp_cols` **was printed** into the deliverable;
+  - key-column repeat suppression was lost, so the key repeated on every row;
+  - `main_title()` / `subtitles()` / `main_footer()` / `prov_footer()` were
+    dropped.
+
+  `listing_df` is now detected **before** the data.frame branch and read
+  through `formatters::matrix_form()` -- the same canonical structure the
+  rtables adapter already consumes, and which honours `listing_dispcols()` by
+  construction. `as_rtftable()` accepts one too. Add `rlistings` to
+  `Suggests:`; it stays out of `Imports:`.
+
+  Note: the suppression arrives already baked into the cell strings, so unlike
+  `as_rtftables(collapse_repeats = )` a suppressed key does **not** reprint at
+  the top of a new page.
+
+- **A title or footnote block could come back as a `list`** instead of a
+  character vector. The pieces were `c()`-ed together, and the same accessor
+  returns different types across sources -- `formatters::mf_rfnotes()` is
+  `character(0)` for an rtables table but an empty `list()` for an rlistings
+  listing -- so one list among the arguments turned the whole result into a
+  list. The pieces are now unlisted and coerced before use.
+
+### Internal
+
+- The MatrixPrintForm reader behind the rtables adapter is factored out as
+  `.mpf_to_rtftable_kwargs()` and shared with the new rlistings adapter. It was
+  already typed on the `MatrixPrintForm` rather than on `VTableTree` -- it
+  touches no rtables-specific slot -- so no logic changed;
+  `.rtables_to_rtftable_kwargs()` remains as a typed wrapper and its call sites
+  and tests are untouched.
+
 ### Documentation
 
 - **`cards` + `gtsummary` must be updated together** (#319). The

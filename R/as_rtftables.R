@@ -115,7 +115,8 @@
 #' member table), gtsummary tables (including a `tbl_split` container from
 #' `gtsummary::tbl_split_by_rows()` / `tbl_split_by_columns()`, likewise
 #' expanded member by member), rtables/tern `VTableTree`
-#' tables, `flextable` tables, `huxtable` tables, plain `data.frame` / tibble,
+#' tables, rlistings `listing_df` listings,
+#' `flextable` tables, `huxtable` tables, plain `data.frame` / tibble,
 #' or a `list` of any of these (the list is flattened, names propagated as
 #' `name`, `name.1`, `name.2`, ...).  Figures are out of scope -- use
 #' [rtf_figures()] for those.
@@ -123,7 +124,8 @@
 #' @section What is carried, by source:
 #'
 #' The body is always the table's *rendered* body -- for gt/gtsummary via
-#' `gt::extract_body()`, for rtables/tern via `formatters::matrix_form()`.
+#' `gt::extract_body()`, for rtables/tern and rlistings via
+#' `formatters::matrix_form()`.
 #' Only visible columns appear (hidden / helper columns such as tfrmt's
 #' `..tfrmt_row_grp_lbl` are dropped), row-group / stub rows are already
 #' interleaved, and indentation is rendered into the label text.  (A gt table
@@ -179,8 +181,8 @@
 #' layout beforehand.
 #'
 #' @param x A `gt_tbl`, a `gt_group`, a gtsummary table (or `tbl_split`
-#'   container), an rtables/tern `VTableTree`, a `flextable`, a `huxtable`, a
-#'   `data.frame` / tibble, or a `list` of these.
+#'   container), an rtables/tern `VTableTree`, an rlistings `listing_df`, a
+#'   `flextable`, a `huxtable`, a `data.frame` / tibble, or a `list` of these.
 #' @param read_meta Controls metadata extraction from the source table:
 #'   `TRUE` (default, read everything in the table above), `FALSE` (use only
 #'   the rendered body -- equivalent to the old `paginate()`), or a character
@@ -189,7 +191,8 @@
 #'   `"titles"`, `"footnotes"`, `"styles"` (explicit `tab_style()` borders
 #'   and text styles; see *What is carried*).  For rtables/tern: `"col_header"`,
 #'   `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`, `"indent"`,
-#'   `"footnote_marks"`.  For flextable: `"col_header"`, `"alignment"`,
+#'   `"footnote_marks"`; **rlistings takes the same tokens**, because the two
+#'   share one `MatrixPrintForm` reader.  For flextable: `"col_header"`, `"alignment"`,
 #'   `"spanning"`, `"titles"`, `"footnotes"`.  For huxtable: `"col_header"`,
 #'   `"alignment"`, `"spanning"`, `"titles"`.  For a plain data.frame /
 #'   tibble the single token is `"labels"`: a column's `label` attribute (the
@@ -644,6 +647,17 @@ as_rtftables <- function(x,
     cell_styles     <- kw$cell_styles
     titles_block    <- kw$titles_block
     footnotes_block <- kw$footnotes_block
+  } else if (.is_rlistings_tbl(x)) {
+    # NB: an rlistings listing_df is a data.frame subclass; it must be tested
+    # before the plain-data.frame branch below, or it renders with its
+    # disp_cols, key-column suppression, titles and footers silently
+    # discarded (#322).
+    tokens          <- .resolve_rlistings_tokens(read_meta)
+    kw              <- .rlistings_to_rtftable_kwargs(x, tokens = tokens)
+    body            <- kw$data
+    cell_styles     <- kw$cell_styles
+    titles_block    <- kw$titles_block
+    footnotes_block <- kw$footnotes_block
   } else if (.is_flextable_tbl(x)) {
     tokens          <- .resolve_flextable_tokens(read_meta)
     kw              <- .flextable_to_rtftable_kwargs(x, tokens = tokens)
@@ -683,8 +697,8 @@ as_rtftables <- function(x,
     }
   } else {
     stop("`as_rtftables()` supports gt_tbl, gt_group, gtsummary, ",
-         "rtables/tern, flextable, huxtable, data.frame/tibble, or a list ",
-         "of these; got '",
+         "rtables/tern, rlistings, flextable, huxtable, data.frame/tibble, ",
+         "or a list of these; got '",
          paste(class(x), collapse = "/"), "'.", call. = FALSE)
   }
 

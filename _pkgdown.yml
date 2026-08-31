@@ -241,10 +241,11 @@ reference:
       - print.rtfplot
 
   # ── 4. Importing external table objects ────────────────────────────────
-  - title: Importing tables (gt / gtsummary / rtables → rtftable)
+  - title: Importing tables (gt / gtsummary / rtables / rlistings → rtftable)
     desc: >
       Turn a table object -- a `gt::gt()` table, a gtsummary table, an
-      rtables/tern `VTableTree`, or a plain data.frame -- into `rtftable`
+      rtables/tern `VTableTree`, an rlistings `listing_df`, or a plain
+      data.frame -- into `rtftable`
       objects, reading the source's metadata and paginating in one call.
       **Acts on:** the source object.  **Produces:** `rtftable` objects.
       `as_rtftables()` returns one per page (a list); `as_rtftable()` returns
