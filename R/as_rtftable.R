@@ -2,9 +2,9 @@
 #'
 #' Single-page convenience wrapper around [as_rtftables()]: takes a `gt_tbl`,
 #' a [gtsummary](https://www.danieldsjoberg.com/gtsummary/) table, an
-#' rtables/tern `VTableTree`, a `flextable`, a `huxtable`, or a plain
-#' `data.frame` / tibble, and returns one `rtftable` (rather than a list of
-#' pages).  It is exactly
+#' rtables/tern `VTableTree`, an rlistings `listing_df`, a `flextable`, a
+#' `huxtable`, or a plain `data.frame` / tibble, and returns one `rtftable`
+#' (rather than a list of pages).  It is exactly
 #' `as_rtftables(x, read_meta = read_meta, split = "none", ...)[[1]]`.
 #'
 #' The body is the table's *rendered* body (gt via `gt::extract_body()`,
@@ -16,7 +16,8 @@
 #' theme borders and Markdown are not.
 #'
 #' @param gt_obj A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
-#'   a `flextable`, a `huxtable`, or a plain `data.frame` / tibble.  A
+#'   an rlistings `listing_df`, a `flextable`, a `huxtable`, or a plain
+#'   `data.frame` / tibble.  A
 #'   `gt_group` ([gt::gt_group()] / [gt::gt_split()], or a tfrmt `page_plan`
 #'   render) or a gtsummary `tbl_split` container is accepted when it holds
 #'   exactly one table; multi-member containers error -- convert those with
@@ -69,13 +70,16 @@ as_rtftable <- function(gt_obj, read_meta = TRUE, ...) {
   }
   is_gt  <- .is_gt_tbl(gt_obj)
   is_rtb <- .is_rtables_tbl(gt_obj)
+  is_rls <- .is_rlistings_tbl(gt_obj)
   is_ft  <- .is_flextable_tbl(gt_obj)
   is_hux <- .is_huxtable_tbl(gt_obj)
-  # NB: a huxtable is a data.frame subclass; test it before `is.data.frame()`.
-  is_df  <- is.data.frame(gt_obj) && !is_hux
-  if (!is_gt && !is_rtb && !is_ft && !is_hux && !is_df) {
+  # NB: a huxtable and an rlistings listing_df are both data.frame subclasses;
+  # test them before `is.data.frame()`.
+  is_df  <- is.data.frame(gt_obj) && !is_hux && !is_rls
+  if (!is_gt && !is_rtb && !is_rls && !is_ft && !is_hux && !is_df) {
     stop("`gt_obj` must be a gt_tbl, a gtsummary table, an rtables/tern ",
-         "table (VTableTree), a flextable, a huxtable, or a data.frame/tibble.",
+         "table (VTableTree), an rlistings listing (listing_df), a ",
+         "flextable, a huxtable, or a data.frame/tibble.",
          call. = FALSE)
   }
   if (is_gt)  .need_pkg("gt",        "`as_rtftable()`")

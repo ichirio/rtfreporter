@@ -8,7 +8,8 @@ as_rtftable(gt_obj, read_meta = TRUE, ...)
 }
 \arguments{
 \item{gt_obj}{A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
-a `flextable`, a `huxtable`, or a plain `data.frame` / tibble.  A
+an rlistings `listing_df`, a `flextable`, a `huxtable`, or a plain
+`data.frame` / tibble.  A
 `gt_group` ([gt::gt_group()] / [gt::gt_split()], or a tfrmt `page_plan`
 render) or a gtsummary `tbl_split` container is accepted when it holds
 exactly one table; multi-member containers error -- convert those with
@@ -27,9 +28,9 @@ An `rtftable` S3 object.
 \description{
 Single-page convenience wrapper around [as_rtftables()]: takes a `gt_tbl`,
 a [gtsummary](https://www.danieldsjoberg.com/gtsummary/) table, an
-rtables/tern `VTableTree`, a `flextable`, a `huxtable`, or a plain
-`data.frame` / tibble, and returns one `rtftable` (rather than a list of
-pages).  It is exactly
+rtables/tern `VTableTree`, an rlistings `listing_df`, a `flextable`, a
+`huxtable`, or a plain `data.frame` / tibble, and returns one `rtftable`
+(rather than a list of pages).  It is exactly
 `as_rtftables(x, read_meta = read_meta, split = "none", ...)[[1]]`.
 }
 \details{

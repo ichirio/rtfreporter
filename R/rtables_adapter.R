@@ -94,8 +94,14 @@
 }
 
 
-# ── Central mapping: VTableTree + tokens -> rtftable kwargs ───────────────────
+# ── Central mapping: MatrixPrintForm + tokens -> rtftable kwargs ─────────────
 
+# The reader below is deliberately typed on the *MatrixPrintForm*, not on
+# VTableTree: it never touches an rtables-specific slot, only the formatters
+# accessors.  So every package that renders through `matrix_form()` can share
+# it -- rtables/tern here, rlistings in R/rlistings_adapter.R.  Each adapter
+# keeps its own detector, tokens and typed wrapper; only this body is common.
+#
 # Returns a list with the same shape the gt adapter produces, so as_rtftables()
 # / as_rtftable() can consume either source identically:
 #   data, col_header, col_spec, cell_styles, titles_block, footnotes_block.
@@ -103,7 +109,13 @@
   if (!.is_rtables_tbl(x)) {
     stop("`x` must be an rtables/tern table (VTableTree).", call. = FALSE)
   }
-  .need_pkg("formatters", "Reading an rtables/tern table")
+  .mpf_to_rtftable_kwargs(x, tokens = tokens,
+                          what = "an rtables/tern table")
+}
+
+.mpf_to_rtftable_kwargs <- function(x, tokens = .RTABLES_TOKENS_ALL,
+                                    what = "a MatrixPrintForm table") {
+  .need_pkg("formatters", paste("Reading", what))
 
   # `indent_rownames = TRUE` bakes the row-label indentation into the
   # rendered stub text (leading spaces), exactly as rtables itself prints it.
@@ -174,20 +186,33 @@
 
   # ---- "titles": main title + subtitles -----------------------------------
   if ("titles" %in% tokens) {
-    tt <- c(formatters::main_title(x), formatters::subtitles(x))
-    tt <- tt[!is.na(tt) & nzchar(tt)]
-    if (length(tt)) out$titles_block <- tt
+    out$titles_block <- .mpf_text_block(formatters::main_title(x),
+                                        formatters::subtitles(x))
   }
 
   # ---- "footnotes": referential footnote texts + main/prov footer ---------
   if ("footnotes" %in% tokens) {
-    refs  <- tryCatch(formatters::mf_rfnotes(mf), error = function(e) character(0))
-    mainf <- formatters::main_footer(x)
-    provf <- formatters::prov_footer(x)
-    fn <- c(refs, mainf, provf)
-    fn <- fn[!is.na(fn) & nzchar(fn)]
-    if (length(fn)) out$footnotes_block <- fn
+    refs <- tryCatch(formatters::mf_rfnotes(mf), error = function(e) character(0))
+    out$footnotes_block <- .mpf_text_block(refs,
+                                           formatters::main_footer(x),
+                                           formatters::prov_footer(x))
   }
 
   out
+}
+
+# Collect title / footnote material into one character vector, or NULL when
+# there is none.
+#
+# The pieces cannot be `c()`-ed straight together: the same accessor returns
+# different types across the two sources -- `mf_rfnotes()` is `character(0)`
+# for an rtables table but an empty `list()` for an rlistings listing -- and
+# one list among the arguments turns the whole `c()` into a list, which is not
+# what a title block is.  unlist() first, coerce, then drop the empties.
+.mpf_text_block <- function(...) {
+  v <- unlist(list(...), use.names = FALSE)
+  if (!length(v)) return(NULL)
+  v <- as.character(v)
+  v <- v[!is.na(v) & nzchar(v)]
+  if (length(v)) v else NULL
 }
