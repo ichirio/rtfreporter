@@ -746,6 +746,20 @@ page_split_rows <- function(split_rows = NULL) {
   }
 }
 
+# Record a split spec's group configuration on the returned closure.
+#
+# The group column is used by TWO things -- pagination, and the group-dependent
+# row settings (`blank_rows = "between_groups"`, `collapse_repeats`,
+# `blank_rows_by_change()`).  Captured only in the closure environment it was
+# invisible to the second, so naming it here and nowhere else silently changed
+# the output (#328).  The tag lets `as_rtftables()` adopt it, so both spellings
+# mean the same thing.
+.split_spec_tag <- function(f, group_col, group_by) {
+  attr(f, "rtf_split_group_col") <- group_col
+  attr(f, "rtf_split_group_by")  <- group_by
+  f
+}
+
 #' @rdname page_split
 #' @export
 page_split_group_safe <- function(max_rows = NULL, group_col = NULL,
@@ -754,8 +768,9 @@ page_split_group_safe <- function(max_rows = NULL, group_col = NULL,
                                   group_by = "auto") {
   cfg_mr  <- max_rows; cfg_gc <- group_col
   cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  function(df, max_rows = NULL, group_col = NULL,
-           cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL, ...) {
+  f <- function(df, max_rows = NULL, group_col = NULL,
+                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
+                ...) {
     mr  <- cfg_mr %||% max_rows
     gc  <- cfg_gc %||% group_col
     cl  <- cfg_cl %||% cont_label
@@ -768,6 +783,7 @@ page_split_group_safe <- function(max_rows = NULL, group_col = NULL,
     info <- .compute_group_info(df, gidx, gb)
     .split_group_safe(df, info, mr, cl, gidx, mgr)
   }
+  .split_spec_tag(f, group_col, group_by)
 }
 
 #' @rdname page_split
@@ -778,8 +794,9 @@ page_split_group_force <- function(max_rows = NULL, group_col = NULL,
                                    group_by = "auto") {
   cfg_mr  <- max_rows; cfg_gc <- group_col
   cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  function(df, max_rows = NULL, group_col = NULL,
-           cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL, ...) {
+  f <- function(df, max_rows = NULL, group_col = NULL,
+                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
+                ...) {
     mr  <- cfg_mr %||% max_rows
     gc  <- cfg_gc %||% group_col
     cl  <- cfg_cl %||% cont_label
@@ -792,6 +809,7 @@ page_split_group_force <- function(max_rows = NULL, group_col = NULL,
     info <- .compute_group_info(df, gidx, gb)
     .split_group_force(df, info, mr, cl, gidx, mgr)
   }
+  .split_spec_tag(f, group_col, group_by)
 }
 
 #' @rdname page_split
@@ -802,8 +820,9 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
                                 group_by = "auto") {
   cfg_gc  <- group_col; cfg_mr <- max_rows
   cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  function(df, max_rows = NULL, group_col = NULL,
-           cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL, ...) {
+  f <- function(df, max_rows = NULL, group_col = NULL,
+                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
+                ...) {
     gc  <- cfg_gc %||% group_col
     mr  <- cfg_mr %||% max_rows
     cl  <- cfg_cl %||% cont_label
@@ -813,6 +832,7 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
     info <- .compute_group_info(df, gidx, gb)
     .split_by_value(df, info, mr, cl, gidx, mgr)
   }
+  .split_spec_tag(f, group_col, group_by)
 }
 
 
