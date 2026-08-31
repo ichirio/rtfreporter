@@ -123,21 +123,20 @@ pages <- as_rtftables(df, split = "by_value")
 names(pages)
 ```
 
-### The same strategies as reusable functions
+### Reusing a strategy
 
-Each string strategy has an exported **factory** that returns the same splitter
-as a function. These are interchangeable with the string forms, but you can
-configure them once and reuse them, or pass them around:
+Earlier versions also exported a `page_split_*()` factory per strategy, so a
+configured splitter could be built once and passed around. They were retired
+before the first release: a factory carried its own `group_col`, which meant
+the group column could be declared in two places at once, and the two did not
+always agree. Every setting now has exactly one place to live -- alongside
+`split` -- so reuse is a list of arguments rather than an object:
 
-```{r factories}
-strategy <- page_split_group_safe(max_rows = 6, group_col = NULL)
-pages    <- as_rtftables(df, split = strategy)
+```{r reuse}
+args  <- list(split = "group_safe", max_rows = 6)
+pages <- do.call(as_rtftables, c(list(df), args))
 length(pages)
 ```
-
-The factories are `page_split_none()`, `page_split_rows()`,
-`page_split_group_safe()`, `page_split_group_force()`, and
-`page_split_by_value()`.
 
 ### Shared knobs
 
@@ -423,19 +422,16 @@ example `split(df, df$SOC)` for a list of adverse-event tables), or when each
 page comes from a different source entirely.
 
 
-## 4. Advanced: composing a built-in strategy
+## 4. Advanced: post-processing a built-in split
 
-The factories from section 1 are ordinary functions, so you can call one inside
-your own splitter and then post-process its output -- a hybrid of approaches 1
-and 2. For example, reuse `page_split_group_safe()` but drop any empty pages and
-relabel continuations:
+A custom `split =` function can run the built-in machinery first and then
+adjust its output -- a hybrid of approaches 1 and 2. The simplest way is to
+call `as_rtftables()` for the split and post-process the pages:
 
 ```{r compose}
-safe_trimmed <- function(df, ...) {
-  parts <- page_split_group_safe(max_rows = 6, group_col = NULL)(df)
-  Filter(function(p) nrow(p) > 0L, parts)   # keep only non-empty pages
-}
-length(as_rtftables(df, split = safe_trimmed))
+pages <- as_rtftables(df, split = "group_safe", max_rows = 6)
+pages <- Filter(function(p) nrow(p$data) > 0L, pages)   # keep non-empty pages
+length(pages)
 ```
 
 
@@ -710,7 +706,7 @@ needs.
 | One page per group, named | `split = "by_value"` |
 | A bespoke rule | a custom `split =` function (+ `add_cont_label()`) |
 | The split already done upstream | pass a (named) list to `as_rtftables()` |
-| A built-in rule plus a tweak | wrap a `page_split_*()` factory |
+| A built-in rule plus a tweak | split with a built-in, then post-process the pages |
 | The table is too **wide** for the page | `paginate_cols()` (after the row split) |
 
 Whichever you choose, the result is the same shape -- a list of `rtftable`

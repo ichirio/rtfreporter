@@ -92,8 +92,9 @@ rtf_document() |>                                  # -> rtf_document
 `as_rtftables(x, ...)` は統一入口で、`gt` / gtsummary / rtables の `VTableTree` /
 `data.frame` / tibble（およびそれらのリスト）を **`rtftable` ページオブジェクトの
 リスト**へ変換します。メタデータ読み取りと分割を 1 回の呼び出しで行います。
-`as_rtftable(x, ...)` は単一ページ版（`rtftable` 1 つ）。分割戦略は `page_split_*()`
-ファクトリ関数として公開され、自作の `split=` 関数も受け付けます。空行は
+`as_rtftable(x, ...)` は単一ページ版（`rtftable` 1 つ）。分割戦略は名前で指定し
+（`split = "group_safe"` など。設定は同じ階層の引数で渡します）、自作の `split=`
+関数も受け付けます。空行は
 `blank_rows` / `set_blank_rows()` で制御し、`count_blank_rows = TRUE` で `max_rows`
 にカウントできます。さらに、分割の前に本体を**並べ替え**（`sort_by` / `sort_desc`）、
 指定列で**グループ化**（`group_col` / `group_by`、連続重複の抑制は `collapse_repeats`）、

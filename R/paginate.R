@@ -414,19 +414,45 @@ paginate.data.frame <- function(x, ...) {
            "data.frames.", call. = FALSE)
     }
   } else {
-    # The built-in string strategies are thin aliases for the exported
-    # strategy factories, so both paths share exactly one implementation.
-    strat_fn <- switch(split,
-      none         = page_split_none(),
-      rows         = page_split_rows(split_rows),
-      group_safe   = page_split_group_safe(max_rows, group_col,
-                                            min_group_rows, cont_label, group_by),
-      group_force  = page_split_group_force(max_rows, group_col,
-                                            min_group_rows, cont_label, group_by),
-      by_value     = page_split_by_value(group_col, max_rows,
-                                         min_group_rows, cont_label, group_by)
+    # The built-in strategies, called directly.  They used to be reached
+    # through exported page_split_*() factories, which existed only so a
+    # strategy could be *configured* -- and configuring one meant `group_col`
+    # could be named in two places at once, which is what made #328 possible.
+    # With the factories gone there is one declaration site per setting, so
+    # that class of disagreement is unrepresentable rather than fixed.
+    need_rows <- function(what) {
+      if (is.null(max_rows)) {
+        stop(sprintf("`max_rows` is required for %s pagination.", what),
+             call. = FALSE)
+      }
+      as.integer(max_rows)
+    }
+    grouped <- function() {
+      gidx <- .resolve_group_col(group_col, x)
+      list(idx = gidx, info = .compute_group_info(x, gidx, group_by))
+    }
+    mgr <- as.integer(min_group_rows %||% 2L)
+    chunks <- switch(split,
+      none        = list(x),
+      rows        = {
+        if (is.null(split_rows)) {
+          stop("`split_rows` is required for row-position pagination.",
+               call. = FALSE)
+        }
+        .split_by_rows(x, split_rows)
+      },
+      group_safe  = { g <- grouped()
+                      .split_group_safe(x, g$info, need_rows("group_safe"),
+                                        cont_label, g$idx, mgr) },
+      group_force = { g <- grouped()
+                      .split_group_force(x, g$info, need_rows("group_force"),
+                                         cont_label, g$idx, mgr) },
+      by_value    = { g <- grouped()
+                      .split_by_value(x, g$info,
+                                      if (is.null(max_rows)) NULL
+                                      else as.integer(max_rows),
+                                      cont_label, g$idx, mgr) }
     )
-    chunks <- strat_fn(x)
   }
   strategy <- if (is_custom_split) "custom" else split
 
@@ -687,184 +713,6 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
 
 
 # -- Pagination strategy factories -------------------------------------------
-
-#' Built-in pagination strategies as reusable functions
-#'
-#' These factories return a *pagination function* suitable for the
-#' `split=` argument of [as_rtftables()].  They expose the package's built-in
-#' page-splitting strategies on the same footing as a hand-written custom
-#' `split=` function, so you can pass a strategy directly, reuse it across
-#' calls, or wrap one inside your own splitter.
-#'
-#' The string forms accepted by [as_rtftables()] are exact aliases:
-#' `split = "group_safe"` is equivalent to
-#' `split = page_split_group_safe()` with the call's `max_rows` / `group_col` /
-#' `min_group_rows` / `cont_label`.
-#'
-#' Each returned function takes the (cell-formatted) body and returns a list of
-#' data.frames -- one per page (named, for [page_split_by_value()]).  Arguments
-#' set on the factory take precedence; anything left `NULL` falls back to the
-#' value [as_rtftables()] passes at call time.
-#'
-#' @param split_rows Integer positions to cut at (for [page_split_rows()]).
-#' @param max_rows Maximum data rows per page.  Required for
-#'   [page_split_group_safe()] / [page_split_group_force()]; optional for
-#'   [page_split_by_value()] (force-splits an over-long group when set).
-#' @param group_col Group column: a name, a 1-based index, or `NULL` for
-#'   column 1.  Selects only the column; `group_by` selects how a boundary is
-#'   found on it.
-#' @param group_by How a group boundary is detected on `group_col`: `"auto"`
-#'   (default), `"indent"`, `"value"`, or `"filled"`.  See [as_rtftables()].
-#' @param min_group_rows Widow/orphan control (default `2`); see
-#'   [as_rtftables()].
-#' @param cont_label Continuation suffix for repeated group labels (default
-#'   `" (Cont.)"`).
-#'
-#' @return A function `f(df, ...)` returning a list of per-page data.frames.
-#'
-#' @seealso [as_rtftables()] for the `split=` contract and [add_cont_label()].
-#'
-#' @examples
-#' # A factory carries the pagination settings in one object, as an
-#' # alternative to spelling them out in as_rtftables().
-#' lb <- data.frame(
-#'   visit  = rep(c("Week 1", "Week 2", "Week 4"), each = 4),
-#'   param  = rep(c("ALT", "AST", "ALP", "GGT"), 3),
-#'   result = sprintf("%.1f", seq(20, 43, length.out = 12)),
-#'   stringsAsFactors = FALSE
-#' )
-#'
-#' pages <- as_rtftables(
-#'   lb,
-#'   split = page_split_group_safe(max_rows = 8, group_col = "visit"),
-#'   border = "tfl"
-#' )
-#' length(pages)
-#' vapply(pages, function(p) nrow(p$data), integer(1))
-#'
-#' # NB `group_col` inside a factory drives PAGINATION only.  The blank-row
-#' # logic reads the top-level argument, so pass it there as well:
-#' pages <- as_rtftables(
-#'   lb,
-#'   split      = page_split_group_safe(max_rows = 8, group_col = "visit"),
-#'   group_col  = "visit",
-#'   blank_rows = "between_groups",
-#'   border     = "tfl"
-#' )
-#' pages[[1]]$blank_rows
-#'
-#' @name page_split
-NULL
-
-#' @rdname page_split
-#' @export
-page_split_none <- function() {
-  function(df, ...) list(df)
-}
-
-#' @rdname page_split
-#' @export
-page_split_rows <- function(split_rows = NULL) {
-  cfg <- split_rows
-  function(df, split_rows = NULL, ...) {
-    sr <- cfg %||% split_rows
-    if (is.null(sr)) {
-      stop("`split_rows` is required for row-position pagination.",
-           call. = FALSE)
-    }
-    .split_by_rows(df, sr)
-  }
-}
-
-# Record a split spec's group configuration on the returned closure.
-#
-# The group column is used by TWO things -- pagination, and the group-dependent
-# row settings (`blank_rows = "between_groups"`, `collapse_repeats`,
-# `blank_rows_by_change()`).  Captured only in the closure environment it was
-# invisible to the second, so naming it here and nowhere else silently changed
-# the output (#328).  The tag lets `as_rtftables()` adopt it, so both spellings
-# mean the same thing.
-.split_spec_tag <- function(f, group_col, group_by) {
-  attr(f, "rtf_split_group_col") <- group_col
-  attr(f, "rtf_split_group_by")  <- group_by
-  f
-}
-
-#' @rdname page_split
-#' @export
-page_split_group_safe <- function(max_rows = NULL, group_col = NULL,
-                                  min_group_rows = 2L,
-                                  cont_label = " (Cont.)",
-                                  group_by = "auto") {
-  cfg_mr  <- max_rows; cfg_gc <- group_col
-  cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  f <- function(df, max_rows = NULL, group_col = NULL,
-                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
-                ...) {
-    mr  <- cfg_mr %||% max_rows
-    gc  <- cfg_gc %||% group_col
-    cl  <- cfg_cl %||% cont_label
-    mgr <- if (!is.null(cfg_mgr)) cfg_mgr else min_group_rows
-    gb  <- group_by %||% cfg_gb
-    if (is.null(mr)) {
-      stop("`max_rows` is required for group_safe pagination.", call. = FALSE)
-    }
-    gidx <- .resolve_group_col(gc, df)
-    info <- .compute_group_info(df, gidx, gb)
-    .split_group_safe(df, info, mr, cl, gidx, mgr)
-  }
-  .split_spec_tag(f, group_col, group_by)
-}
-
-#' @rdname page_split
-#' @export
-page_split_group_force <- function(max_rows = NULL, group_col = NULL,
-                                   min_group_rows = 2L,
-                                   cont_label = " (Cont.)",
-                                   group_by = "auto") {
-  cfg_mr  <- max_rows; cfg_gc <- group_col
-  cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  f <- function(df, max_rows = NULL, group_col = NULL,
-                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
-                ...) {
-    mr  <- cfg_mr %||% max_rows
-    gc  <- cfg_gc %||% group_col
-    cl  <- cfg_cl %||% cont_label
-    mgr <- if (!is.null(cfg_mgr)) cfg_mgr else min_group_rows
-    gb  <- group_by %||% cfg_gb
-    if (is.null(mr)) {
-      stop("`max_rows` is required for group_force pagination.", call. = FALSE)
-    }
-    gidx <- .resolve_group_col(gc, df)
-    info <- .compute_group_info(df, gidx, gb)
-    .split_group_force(df, info, mr, cl, gidx, mgr)
-  }
-  .split_spec_tag(f, group_col, group_by)
-}
-
-#' @rdname page_split
-#' @export
-page_split_by_value <- function(group_col = NULL, max_rows = NULL,
-                                min_group_rows = 2L,
-                                cont_label = " (Cont.)",
-                                group_by = "auto") {
-  cfg_gc  <- group_col; cfg_mr <- max_rows
-  cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  f <- function(df, max_rows = NULL, group_col = NULL,
-                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
-                ...) {
-    gc  <- cfg_gc %||% group_col
-    mr  <- cfg_mr %||% max_rows
-    cl  <- cfg_cl %||% cont_label
-    mgr <- if (!is.null(cfg_mgr)) cfg_mgr else min_group_rows
-    gb  <- group_by %||% cfg_gb
-    gidx <- .resolve_group_col(gc, df)
-    info <- .compute_group_info(df, gidx, gb)
-    .split_by_value(df, info, mr, cl, gidx, mgr)
-  }
-  .split_spec_tag(f, group_col, group_by)
-}
-
 
 # -- count_blank_rows: materialise / collapse blank markers -------------------
 

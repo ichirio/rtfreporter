@@ -1,5 +1,31 @@
 # rtfreporter (development version)
 
+### Breaking changes
+
+- **The five `page_split_*()` factories are retired** (#334). A strategy is
+  named and its settings are ordinary arguments alongside it:
+
+  | was | write instead |
+  |---|---|
+  | `page_split_none()` | `split = "none"` |
+  | `page_split_rows(split_rows)` | `split = "rows", split_rows = ` |
+  | `page_split_group_safe(...)` | `split = "group_safe", max_rows = , group_col = ` |
+  | `page_split_group_force(...)` | `split = "group_force", ...` |
+  | `page_split_by_value(...)` | `split = "by_value", group_col = ` |
+
+  They were the only reason the same setting could be written in two places:
+  a factory carried its own `group_col`, so it could disagree with the
+  top-level one. #328 made the two agree; this removes the shape that let
+  them disagree, and the machinery that reconciled them goes with it. Every
+  setting now has exactly one declaration site.
+
+  **The custom-function escape hatch is unchanged** -- `split` may still be a
+  function called as `split(df, max_rows =, group_col =, group_by =,
+  cont_label =, min_group_rows =)`. The factories were only pre-built
+  instances of that same contract with configuration baked in.
+
+  Exports: 80 -> 75.
+
 ### Bug fixes
 
 - **A separator blank row could land on a page's first or last row** (#332),
