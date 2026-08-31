@@ -33,8 +33,17 @@ test_that("a plan never rewrites the data it was given", {
   expect_identical(p$data, d)
 })
 
-test_that("a plan rejects a non-data.frame", {
-  expect_error(rtf_plan(1:3), "must be a data.frame")
+test_that("a plan rejects a source no adapter can read", {
+  expect_error(rtf_plan(1:3), "A plan can start from")
+})
+
+test_that("the constructor takes two arguments and nothing else", {
+  # ggplot2 starts from ggplot(data, mapping); a plan starts from
+  # rtf_plan(x, read_meta).  Every setting is a layer, so there is exactly one
+  # way to declare each one.
+  expect_identical(names(formals(rtf_plan)), c("x", "read_meta"))
+  expect_false(exists("rtf_plan_from", envir = asNamespace("rtfreporter"),
+                      inherits = FALSE))
 })
 
 test_that("a layer verb rejects anything that is not a plan", {

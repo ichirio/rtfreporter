@@ -92,7 +92,7 @@ test_that("break_before matches as_rtftables(split_rows = )", {
   for (sr in list(8L, c(6L, 12L, 18L), 5L)) {
     a <- as_rtftables(.demog(), split = "rows", split_rows = sr,
                       border = "tfl")
-    b <- rtf_plan_from(.demog()) |> plan_pages(break_before = sr) |>
+    b <- rtf_plan(.demog()) |> plan_pages(break_before = sr) |>
       plan_style(border = "tfl") |> plan_tables()
     .expect_same(a, b, paste("split_rows =", paste(sr, collapse = ",")))
   }
@@ -114,7 +114,7 @@ test_that("giving both spellings is refused", {
 
 test_that("a plain data.frame renders identically", {
   .expect_same(as_rtftables(.demog(), border = "tfl"),
-               rtf_plan_from(.demog()) |> plan_style(border = "tfl") |>
+               rtf_plan(.demog()) |> plan_style(border = "tfl") |>
                  plan_tables(),
                "plain")
 })
@@ -124,7 +124,7 @@ test_that("grouping plus group-safe pagination renders identically", {
   .expect_same(
     as_rtftables(d, split = "group_safe", max_rows = 10L, group_col = 1L,
                  border = "tfl"),
-    rtf_plan_from(d) |> plan_group(names(d)[1L]) |>
+    rtf_plan(d) |> plan_group(names(d)[1L]) |>
       plan_pages(max_rows = 10L) |> plan_style(border = "tfl") |> plan_tables(),
     "group_safe")
 })
@@ -134,7 +134,7 @@ test_that("blank rows between groups render identically", {
   .expect_same(
     as_rtftables(d, group_col = 1L, blank_rows = "between_groups",
                  border = "tfl"),
-    rtf_plan_from(d) |> plan_group(names(d)[1L]) |>
+    rtf_plan(d) |> plan_group(names(d)[1L]) |>
       plan_blanks("between_groups") |> plan_style(border = "tfl") |>
       plan_tables(),
     "blanks")
@@ -146,7 +146,7 @@ test_that("the PK table -- two-level stub, indent grouping, pagination", {
     as_rtftables(pk, stub_vars = c("Time", "Statistic"),
                  split = "group_safe", max_rows = 21L, group_by = "indent",
                  border = "tfl"),
-    rtf_plan_from(pk) |> plan_stub(c("Time", "Statistic")) |>
+    rtf_plan(pk) |> plan_stub(c("Time", "Statistic")) |>
       plan_group("Time", mode = "indent") |> plan_pages(max_rows = 21L) |>
       plan_style(border = "tfl") |> plan_tables(),
     "pk_stub")
@@ -158,7 +158,7 @@ test_that("the PK table with blank rows between time points", {
     as_rtftables(pk, stub_vars = c("Time", "Statistic"),
                  split = "group_safe", max_rows = 21L, group_by = "indent",
                  blank_rows = "between_groups", border = "tfl"),
-    rtf_plan_from(pk) |> plan_stub(c("Time", "Statistic")) |>
+    rtf_plan(pk) |> plan_stub(c("Time", "Statistic")) |>
       plan_group("Time", mode = "indent") |> plan_blanks("between_groups") |>
       plan_pages(max_rows = 21L) |> plan_style(border = "tfl") |> plan_tables(),
     "pk_blanks")
@@ -170,7 +170,7 @@ test_that("a hidden carrier column that groups but is never printed", {
   .expect_same(
     as_rtftables(d, group_col = "CARRIER", drop_cols = "CARRIER",
                  blank_rows = "between_groups", border = "tfl"),
-    rtf_plan_from(d) |> plan_group("CARRIER") |> plan_hide("CARRIER") |>
+    rtf_plan(d) |> plan_group("CARRIER") |> plan_hide("CARRIER") |>
       plan_blanks("between_groups") |> plan_style(border = "tfl") |>
       plan_tables(),
     "hidden_carrier")
@@ -186,7 +186,7 @@ test_that("a gt source with a spanner, merged into a stub", {
   .expect_same(
     as_rtftables(g, read_meta = TRUE, stub_vars = c("Time", "Statistic"),
                  border = "tfl"),
-    rtf_plan_from(g) |> plan_stub(c("Time", "Statistic")) |>
+    rtf_plan(g) |> plan_stub(c("Time", "Statistic")) |>
       plan_style(border = "tfl") |> plan_tables(),
     "gt_spanner")
 })
@@ -210,7 +210,7 @@ test_that("a spanner OVER the merged columns is a deliberate difference", {
   g <- gt::gt(d) |> gt::tab_spanner("All", gt::everything())
   a <- as_rtftables(g, read_meta = TRUE, stub_vars = c("Time", "Stat"),
                     border = "tfl")[[1L]]
-  p <- rtf_plan_from(g) |> plan_stub(c("Time", "Stat")) |>
+  p <- rtf_plan(g) |> plan_stub(c("Time", "Stat")) |>
     plan_style(border = "tfl") |> plan_tables()
 
   expect_length(a$col_header[[1L]], 2L)          # empty cell + "All" over 2-3
@@ -235,7 +235,7 @@ test_that("group_force is a strategy the plan does not express yet", {
   d <- .demog()
   a <- as_rtftables(d, split = "group_force", max_rows = 8L, group_col = 1L,
                     border = "tfl")
-  b <- rtf_plan_from(d) |> plan_group(names(d)[1L]) |>
+  b <- rtf_plan(d) |> plan_group(names(d)[1L]) |>
     plan_pages(max_rows = 8L, groups = "split") |>
     plan_style(border = "tfl") |> plan_tables()
   expect_false(identical(vapply(a, function(x) nrow(x$data), integer(1L)),
