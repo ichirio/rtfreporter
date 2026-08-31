@@ -137,7 +137,7 @@ test_that("as_rtftables() paginates a listing and renders RTF", {
   expect_gt(length(pages), 1L)
   for (p in pages) expect_s3_class(p, "rtftable")
 
-  f <- withr::local_tempfile(fileext = ".rtf")
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
   generate_rtfreport(rtf_tables(rtf_document(), pages), f, overwrite = TRUE)
   expect_true(file.exists(f))
   expect_gt(file.size(f), 0)
