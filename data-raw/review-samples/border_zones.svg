@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 430" width="1000" height="430" role="img" aria-label="Which rule on a clinical table each rtf_table_border() argument draws">
+  <style>
+    .bg   { fill: #ffffff; }
+    .card { fill: none; stroke: #d0d7de; stroke-width: 1; }
+    .ttl  { font: 600 15px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .cell { font: 13px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; fill: #1f2328; }
+    .hdr  { font: 600 13px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; fill: #1f2328; }
+    .arg  { font: 600 13px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
+    .note { font: 11px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #57606a; }
+    .foot { font: 11px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #57606a; }
+    .lead { stroke: #afb8c1; stroke-width: 1; stroke-dasharray: 2 3; }
+    .rule { stroke-width: 2.5; stroke-linecap: butt; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1000" height="430"/>
+  <rect class="card" x="0.5" y="0.5" width="999" height="429"/>
+
+  <text class="ttl" x="32" y="34">rtf_table_border() — which argument draws which rule</text>
+
+  <!-- header block tint -->
+  <rect x="48" y="72" width="564" height="78" fill="#f6f8fa"/>
+
+  <!-- ============ table text ============ -->
+  <text class="hdr"  x="456" y="98"  text-anchor="middle">Treatment Group</text>
+  <text class="hdr"  x="56"  y="138">Characteristic</text>
+  <text class="hdr"  x="378" y="138" text-anchor="middle">Drug A (N=86)</text>
+  <text class="hdr"  x="534" y="138" text-anchor="middle">Drug B (N=84)</text>
+
+  <text class="cell" x="56"  y="172">Age (years)</text>
+
+  <text class="cell" x="56"  y="204">  Mean (SD)</text>
+  <text class="cell" x="378" y="204" text-anchor="middle">62.1 (10.2)</text>
+  <text class="cell" x="534" y="204" text-anchor="middle">61.4 (9.8)</text>
+
+  <text class="cell" x="56"  y="236">  Median</text>
+  <text class="cell" x="378" y="236" text-anchor="middle">61.5</text>
+  <text class="cell" x="534" y="236" text-anchor="middle">60.0</text>
+
+  <text class="cell" x="56"  y="268">Sex, n (%)</text>
+
+  <text class="cell" x="56"  y="300">  Male</text>
+  <text class="cell" x="378" y="300" text-anchor="middle">45 (52.3)</text>
+  <text class="cell" x="534" y="300" text-anchor="middle">41 (48.8)</text>
+
+  <text class="cell" x="56"  y="332">  Female</text>
+  <text class="cell" x="378" y="332" text-anchor="middle">41 (47.7)</text>
+  <text class="cell" x="534" y="332" text-anchor="middle">43 (51.2)</text>
+
+  <!-- ============ the rules, in the colours the RTF actually uses ============ -->
+  <line class="rule" x1="48"  y1="72"  x2="612" y2="72"  stroke="#c9372c"/>
+  <line class="rule" x1="300" y1="110" x2="612" y2="110" stroke="#1f6feb"/>
+  <line class="rule" x1="48"  y1="150" x2="612" y2="150" stroke="#1f6feb"/>
+  <line class="rule" x1="48"  y1="182" x2="612" y2="182" stroke="#b36b00"/>
+  <line class="rule" x1="48"  y1="214" x2="612" y2="214" stroke="#1a7f37"/>
+  <line class="rule" x1="48"  y1="246" x2="612" y2="246" stroke="#1a7f37"/>
+  <line class="rule" x1="48"  y1="278" x2="612" y2="278" stroke="#1a7f37"/>
+  <line class="rule" x1="48"  y1="310" x2="612" y2="310" stroke="#1a7f37"/>
+  <line class="rule" x1="48"  y1="342" x2="612" y2="342" stroke="#8250df"/>
+
+  <!-- ============ leaders + labels ============ -->
+  <line class="lead" x1="612" y1="72"  x2="660" y2="72"/>
+  <text class="arg" x="668" y="76" fill="#c9372c">spanning$top<tspan class="note" dx="8">topmost header row</tspan></text>
+
+  <line class="lead" x1="612" y1="110" x2="660" y2="110"/>
+  <text class="arg" x="668" y="114" fill="#1f6feb">header$bottom<tspan class="note" dx="8">group underline (automatic)</tspan></text>
+
+  <line class="lead" x1="612" y1="150" x2="660" y2="150"/>
+  <text class="arg" x="668" y="154" fill="#1f6feb">header$bottom<tspan class="note" dx="8">last header row</tspan></text>
+
+  <line class="lead" x1="612" y1="182" x2="660" y2="182"/>
+  <text class="arg" x="668" y="186" fill="#b36b00">first_row$bottom<tspan class="note" dx="8">1st data row</tspan></text>
+
+  <line class="lead" x1="612" y1="214" x2="660" y2="214"/>
+  <line class="lead" x1="612" y1="246" x2="660" y2="246"/>
+  <line class="lead" x1="612" y1="278" x2="660" y2="278"/>
+  <line class="lead" x1="612" y1="310" x2="660" y2="310"/>
+  <line x1="660" y1="214" x2="660" y2="310" stroke="#afb8c1" stroke-width="1"/>
+  <text class="arg" x="668" y="266" fill="#1a7f37">body$bottom<tspan class="note" dx="8">every data row</tspan></text>
+
+  <line class="lead" x1="612" y1="342" x2="660" y2="342"/>
+  <text class="arg" x="668" y="346" fill="#8250df">last_row$bottom<tspan class="note" dx="8">last data row</tspan></text>
+
+  <!-- ============ footnotes ============ -->
+  <text class="foot" x="48" y="378">spanning replaces header on spanning rows: with a spanning row present the table's top rule comes from spanning$top, not header$top.</text>
+  <text class="foot" x="48" y="396">first_row / last_row are merged on top of body, so they override it on the first / last data row. Shaded band = the column-header block.</text>
+  <text class="foot" x="48" y="414">Colours are real border colours: data-raw/review-samples/border_zones.R renders this exact table to output/border_zones.rtf.</text>
+</svg>
