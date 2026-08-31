@@ -21,6 +21,7 @@
   The specs now record their `group_col` / `group_by` as attributes and
   `as_rtftables()` adopts them, so both spellings mean the same thing. An
   explicit top-level argument still wins.
+
 - **A cell-level `rtf_border()` passed to `rtftable(border = )` silently
   rendered no borders at all** (#326). `border` there takes a *table-level*
   border (5 zones); an `rtf_border()` is a classed **named list**, so it
