@@ -350,6 +350,20 @@ paginate.data.frame <- function(x, ...) {
   # the `blank_rows` spec (resolved on the full body, via set_blank_rows()) plus
   # any `rtf_blank_rows` attribute already on the input.  The markers are
   # collapsed back to the public attribute per page in Step 2.
+  # `group_by = "auto"` has to be settled BEFORE the markers go in.  A
+  # materialised blank leaves an EMPTY cell in the group column, and
+  # .detect_group_mode() reads a value-grouped column with empty cells as
+  # "filled" -- under which every non-empty cell opens a group, so every row
+  # becomes its own group and `split = "group_safe"` is free to cut anywhere
+  # (#330).  Resolving here is a no-op when nothing is materialised, because
+  # the body the detector sees is then the same one.
+  if (identical(group_by, "auto") && isTRUE(count_blank_rows)) {
+    gidx <- tryCatch(.resolve_group_col(group_col, x), error = function(e) NULL)
+    if (!is.null(gidx) && length(gidx) == 1L && !is.na(gidx)) {
+      group_by <- .detect_group_mode(as.character(x[[gidx]]))
+    }
+  }
+
   materialised_blanks <- FALSE
   if (isTRUE(count_blank_rows)) {
     base_pos <- attr(
@@ -582,8 +596,14 @@ paginate.data.frame <- function(x, ...) {
 
   # "indent" / "filled": header-based grouping.  A materialised blank row has an
   # empty cell, so it is naturally treated as a member of the current group.
+  # Belt and braces: flag it explicitly too, so a marker can never open a group
+  # even if some future format leaves a non-empty cell behind (#330).
   first_ch <- substr(col, 1L, 1L)
   nonempty <- !is.na(col) & nzchar(col)
+  if (".__rtf_blank__" %in% names(df)) {
+    mk <- as.logical(df[[".__rtf_blank__"]]); mk[is.na(mk)] <- FALSE
+    nonempty <- nonempty & !mk
+  }
   is_header <- if (mode == "filled") {
     nonempty
   } else {
