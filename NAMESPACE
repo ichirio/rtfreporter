@@ -104,11 +104,6 @@ export(set_blank_rows)
 export(add_cont_label)
 
 # Built-in pagination strategies as reusable factory functions
-export(page_split_none)
-export(page_split_rows)
-export(page_split_group_safe)
-export(page_split_group_force)
-export(page_split_by_value)
 
 # Count / percent display-width formatters
 export(fmt_count_paren)

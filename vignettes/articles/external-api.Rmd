@@ -94,8 +94,9 @@ describing a section's header / footer, and `update_header_row()` /
 gtsummary / rtables-`VTableTree` / `data.frame` / tibble (or a list of these)
 into a **list of `rtftable` page objects**, reading the source metadata and
 paginating in one call. `as_rtftable(x, ...)` is the single-page form (one
-`rtftable`). Pagination strategies are exposed as `page_split_*()` factory
-functions and a custom `split=` function is accepted; blank separator rows are
+`rtftable`). Pagination strategies are chosen by name (`split = "group_safe"` and the
+rest, with their settings passed alongside) and a custom `split=` function is
+accepted; blank separator rows are
 controlled by `blank_rows` / `set_blank_rows()` (and may be counted toward
 `max_rows` with `count_blank_rows = TRUE`). The body can also be **ordered**
 before the split (`sort_by` / `sort_desc`), **grouped** on a chosen column

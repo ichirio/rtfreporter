@@ -335,16 +335,14 @@ reference:
     desc: >
       Split a table across pages.
       **Acts on:** the body of a table being built.
-      The `page_split_*()` factories are values for `as_rtftables(split = )`,
-      an alternative to the strategy names; they carry the same settings
-      (`max_rows`, `group_col`, `cont_label`) in one object.  Note that
-      `group_col` given inside a factory drives **pagination only** -- the
-      blank-row logic reads the top-level `group_col`, so pass it there too.
+      Vertical splitting is chosen with `as_rtftables(split = )` -- a strategy
+      name (`"group_safe"`, `"group_force"`, `"by_value"`, `"rows"`, `"none"`)
+      with its settings given as ordinary arguments alongside it, or a function
+      of your own for a bespoke rule.
       `paginate_cols()` is the horizontal counterpart: it acts on a FINISHED
       `rtftable`, splitting a too-wide table by column and repeating the row
       headings on every page.
     contents:
-      - page_split
       - paginate_cols
       - add_cont_label
 
