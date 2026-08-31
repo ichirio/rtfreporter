@@ -26,6 +26,26 @@ test_that(".normalize_table_border rejects unsupported input", {
   expect_error(rtfreporter:::.normalize_table_border("nope"), "must be")
 })
 
+test_that("a cell-level rtf_border is rejected, not silently emptied (#326)", {
+  # An rtf_border is a classed *named list*, so before #326 it reached the
+  # plain-list fallback, which found no zone names and returned a border with
+  # every zone NULL -- the caller asked for a rule and every rule vanished.
+  b <- rtf_border(top = rtf_border_side("single", 15L))
+  expect_error(rtfreporter:::.normalize_table_border(b), "table-level border")
+  expect_error(rtfreporter:::.normalize_table_border(b), "rtf_table_border")
+
+  df <- data.frame(a = c("x", "y"), b = c("1", "2"), stringsAsFactors = FALSE)
+  expect_error(rtftable(df, border = b), "table-level border")
+  expect_error(rtf_tables(rtf_document(), df, border = b), "table-level border")
+
+  # The correct spelling still works, and still carries the rule.
+  tb <- rtf_table_border(header = b)
+  expect_identical(rtftable(df, border = tb)$border$header, b)
+
+  # The opposite mix-up was already guarded; the pair is now symmetric.
+  expect_error(col_cell(1, "x", border = tb), "rtf_border")
+})
+
 # ──────── col_spec validation in rtftable() ───────────────────────────────
 
 test_that("rtftable() rejects non-list col_spec", {
