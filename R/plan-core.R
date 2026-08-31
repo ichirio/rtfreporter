@@ -44,8 +44,9 @@
 
 # ── the plan ───────────────────────────────────────────────────────────────
 
-#' @keywords internal
-rtf_plan <- function(data) {
+# The bare plan.  `rtf_plan()` in R/plan-extract.R is the public constructor
+# and calls this after reading the source; nothing else should.
+.plan_new <- function(data) {
   if (!is.data.frame(data)) {
     stop("`data` must be a data.frame.", call. = FALSE)
   }
@@ -295,9 +296,42 @@ resolve_plan <- function(plan) {
   df[[idxc]] <- seq_len(n)
   info <- groups %||% list(id = rep(1L, n), label = rep("", n),
                            headers = c(TRUE, rep(FALSE, max(0L, n - 1L))))
+
+  # `count_blanks` has to reach the delegated strategies too.  They count ROWS,
+  # so the only way to charge them for a blank line is to give them a row to
+  # count -- the same materialise-then-collapse trick as_rtftables() uses.
+  # Without this the setting was silently ignored on every group-keeping path
+  # (it only worked on the greedy budget), so a page came out over-full.
+  blanked <- FALSE
+  if (isTRUE(spec$count_blanks) && length(blanks)) {
+    pos <- sort(unique(as.integer(blanks)))
+    pos <- pos[pos >= 1L & pos < n]        # a blank after the last row costs
+                                           # nothing: there is no row after it
+    if (length(pos)) {
+      df      <- .materialize_blank_markers(df, pos)
+      keep    <- !as.logical(df[[".__rtf_blank__"]])
+      info    <- list(id      = .plan_carry_forward(info$id, keep),
+                      label   = .plan_carry_forward(info$label, keep),
+                      headers = .plan_expand_flag(info$headers, keep),
+                      col     = info$col)
+      blanked <- TRUE
+    }
+  }
+
   chunks <- strat(df, info, spec$max_rows, spec$cont_label %||% " (Cont.)",
                   if (is.null(groups)) NULL else groups$col,
                   as.integer(spec$min_group_rows %||% 2L))
+  if (blanked) {
+    # Drop the markers again; the blank positions are re-derived per page from
+    # the public attribute, exactly as they are without counting.
+    chunks <- lapply(chunks, function(ch) {
+      ch <- ch[!as.logical(ch[[".__rtf_blank__"]]), , drop = FALSE]
+      ch[[".__rtf_blank__"]] <- NULL
+      rownames(ch) <- NULL
+      ch
+    })
+    chunks <- chunks[vapply(chunks, nrow, integer(1L)) > 0L]
+  }
   pages <- lapply(chunks, function(ch) as.integer(ch[[idxc]]))
   data  <- lapply(chunks, function(ch) {
     ch[[idxc]] <- NULL
@@ -392,4 +426,27 @@ show_resolution <- function(x, ...) {
   cat("  pages  :", length(x$pages), "->",
       paste(vapply(x$pages, length, integer(1L)), collapse = ","), "\n")
   invisible(x)
+}
+
+# Expand a per-row vector to the materialised body: an inserted blank marker
+# inherits the value of the row above it, so it joins that group rather than
+# starting a new one.  `keep` is TRUE for original rows, FALSE for markers.
+.plan_carry_forward <- function(v, keep) {
+  out <- rep(v[[1L]], length(keep))
+  j <- 0L
+  for (i in seq_along(keep)) {
+    if (keep[[i]]) { j <- j + 1L; out[[i]] <- v[[j]] }
+    else if (i > 1L) out[[i]] <- out[[i - 1L]]
+  }
+  out
+}
+
+# Same, for the group-header flag: a marker is never a header.
+.plan_expand_flag <- function(v, keep) {
+  out <- logical(length(keep))
+  j <- 0L
+  for (i in seq_along(keep)) {
+    if (keep[[i]]) { j <- j + 1L; out[[i]] <- isTRUE(v[[j]]) }
+  }
+  out
 }

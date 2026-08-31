@@ -84,73 +84,41 @@
        call. = FALSE)
 }
 
-# The plan constructor, widened to any supported source.  Extraction happens
-# HERE, once, because a plan cannot name columns it has not seen; everything
-# after it stays a declaration.
+# The plan constructor -- the ONE public entry point.
 #
-# ---------------------------------------------------------------------------
-# The shorthand
-# ---------------------------------------------------------------------------
+# Two arguments, and that is the whole of it.  ggplot2 starts from
+# `ggplot(data, mapping)` and everything else is a layer; a plan starts from
+# `rtf_plan(x, read_meta)` for the same reason.
 #
-# Measured against as_rtftables(), the layer form costs 16% more characters and
-# roughly twice the lines for an ordinary table -- a bad trade for the common
-# case, whatever its structural merits.  So the constructor takes the settings
-# most tables need and WRITES THE LAYERS ITSELF.  There is no second code path:
-# every shorthand below is exactly the layer call a reader would have written,
-# so a plan built either way is the same object.
+# An earlier spike gave this constructor a shorthand -- 21 arguments covering
+# stub / group / hide / sort / blanks / pages / style -- on the grounds that
+# the layer form costs 8-16% more characters for a small table.  That trade
+# was withdrawn:
 #
-#   rtf_plan_from(pk, stub = c("Time", "Statistic"), group = "Time",
-#                 blanks = "between_groups", max_rows = 21, border = "tfl")
+#   * 21 arguments is not meaningfully easier to learn than the 30 it
+#     replaced, which was the entire point of the exercise;
+#   * it created TWO ways to write every setting, so 'which one do I use'
+#     became a question the reader had to answer on every table -- the exact
+#     cost the design set out to remove;
+#   * and the saving it bought is characters, which is not what the design is
+#     judged on.
 #
-# Layers stay available for what the shorthand does not reach, and because the
-# merge rule is last-writer-wins they COMPOSE rather than conflict: a shorthand
-# sets a field, a later layer call overrides that field and leaves the rest.
+# So there is one way to declare a setting: a layer.  `x` is any source the
+# adapters read -- gt, gtsummary, rtables/tern, flextable, huxtable or a plain
+# data.frame -- because splitting 'start from a data.frame' and 'start from a
+# table object' into two names would be a second thing to learn for no gain.
 #
-# Nothing here is required.  `rtf_plan_from(df)` is still the whole call for a
-# table that needs nothing.
+# Extraction happens HERE, once, because a plan cannot name columns it has not
+# seen; everything after this point is a declaration.
+#
+# `header_sep` is gone from the signature: the default delimiters are always
+# used, and a column header that needs anything else is declared outright with
+# plan_header(), which is clearer than a separator argument anyway.
 #' @keywords internal
-rtf_plan_from <- function(x, read_meta = TRUE, header_sep = NULL,
-                          stub = NULL, stub_layout = NULL, stub_indent = NULL,
-                          group = NULL, group_mode = NULL,
-                          hide = NULL, carry = NULL, sort = NULL,
-                          blanks = NULL, blank_first = NULL, blank_last = NULL,
-                          max_rows = NULL, per_group = NULL, groups = NULL,
-                          border = NULL, widths = NULL, auto_width = NULL,
-                          font = NULL, font_size_half_points = NULL) {
-  ex <- .plan_extract(x, read_meta = read_meta, header_sep = header_sep)
-  p <- rtf_plan(ex$body)
+rtf_plan <- function(x, read_meta = TRUE) {
+  ex <- .plan_extract(x, read_meta = read_meta)
+  p <- .plan_new(ex$body)
   p$source <- ex[c("kw", "cell_styles", "titles", "footnotes")]
-
-  # Each block is the layer call, nothing more.
-  if (!is.null(stub)) {
-    p <- plan_stub(p, stub, layout = stub_layout, indent = stub_indent)
-  }
-  if (!is.null(group))  p <- plan_group(p, group, mode = group_mode)
-  if (!is.null(hide))   p <- plan_hide(p, hide)
-  if (!is.null(carry)) {
-    for (k in as.character(carry)) {
-      a <- list(p); a[[k]] <- role("carry"); p <- do.call(plan_roles, a)
-    }
-  }
-  if (!is.null(sort)) {
-    for (i in seq_along(sort)) {
-      a <- list(p); a[[as.character(sort[i])]] <- role("sort", order = i)
-      p <- do.call(plan_roles, a)
-    }
-  }
-  if (!is.null(blanks) || !is.null(blank_first) || !is.null(blank_last)) {
-    p <- plan_blanks(p, blanks, first = blank_first, last = blank_last)
-  }
-  if (!is.null(max_rows) || !is.null(per_group) || !is.null(groups)) {
-    p <- plan_pages(p, max_rows = max_rows, per_group = per_group,
-                    groups = groups)
-  }
-  if (!is.null(border) || !is.null(widths) || !is.null(auto_width) ||
-      !is.null(font) || !is.null(font_size_half_points)) {
-    p <- plan_style(p, border = border, widths = widths,
-                    auto_width = auto_width, font = font,
-                    font_size_half_points = font_size_half_points)
-  }
   p
 }
 
