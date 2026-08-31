@@ -565,7 +565,25 @@ as_rtftables <- function(x,
                          ...) {
   # `split` is a built-in strategy name OR a custom pagination function.
   if (!is.function(split)) split <- match.arg(split)
+  group_by_given <- !missing(group_by)
   group_by <- match.arg(group_by)
+
+  # A page_split_*() spec carries its own `group_col` / `group_by`, and the
+  # group column is needed by more than pagination: `blank_rows =
+  # "between_groups"`, `collapse_repeats` and blank_rows_by_change() all read
+  # it.  Naming it only inside the spec used to leave those reading NULL, so
+  # the same intent produced different output depending on where it was
+  # written -- silently (#328).  Adopt it here, with an explicit top-level
+  # argument still winning.
+  if (is.function(split)) {
+    spec_gc <- attr(split, "rtf_split_group_col", exact = TRUE)
+    spec_gb <- attr(split, "rtf_split_group_by",  exact = TRUE)
+    if (is.null(group_col) && !is.null(spec_gc)) group_col <- spec_gc
+    if (!group_by_given && !is.null(spec_gb) &&
+        spec_gb %in% c("auto", "indent", "value", "filled")) {
+      group_by <- spec_gb
+    }
+  }
   user_args <- list(...)
 
   # One spec from `stub =` or the superseded flat family (#314).  `stub_spec`

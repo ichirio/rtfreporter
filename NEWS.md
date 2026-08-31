@@ -2,6 +2,26 @@
 
 ### Bug fixes
 
+- **`group_col` given only inside a `page_split_*()` spec did not reach
+  `blank_rows` / `collapse_repeats`** (#328). The group column is used by two
+  things -- pagination, and the group-dependent row settings
+  (`blank_rows = "between_groups"`, `collapse_repeats`,
+  `blank_rows_by_change()`) -- but the factories captured it in the returned
+  closure's environment, where only pagination could see it. Writing
+  `split = page_split_group_safe(group_col = "SOC")` therefore produced
+  different output from `split = "group_safe", group_col = "SOC"`, with no
+  error and no warning:
+
+  ```
+  group_col at top level        blank_rows 4, 8           correct
+  group_col inside the split    blank_rows 1,2,...,10      wrong
+  group_col nowhere             blank_rows 1,2,...,10
+  ```
+
+  The specs now record their `group_col` / `group_by` as attributes and
+  `as_rtftables()` adopts them, so both spellings mean the same thing. An
+  explicit top-level argument still wins.
+
 - **A cell-level `rtf_border()` passed to `rtftable(border = )` silently
   rendered no borders at all** (#326). `border` there takes a *table-level*
   border (5 zones); an `rtf_border()` is a classed **named list**, so it
