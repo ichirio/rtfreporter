@@ -21,6 +21,16 @@
   The specs now record their `group_col` / `group_by` as attributes and
   `as_rtftables()` adopts them, so both spellings mean the same thing. An
   explicit top-level argument still wins.
+- **A cell-level `rtf_border()` passed to `rtftable(border = )` silently
+  rendered no borders at all** (#326). `border` there takes a *table-level*
+  border (5 zones); an `rtf_border()` is a classed **named list**, so it
+  reached the plain-list fallback in `.normalize_table_border()`, which looks
+  for zone names, found only `top`/`bottom`/`left`/`right`, and returned a
+  border with every zone `NULL`. The output was byte-identical to
+  `border = NULL` -- the caller asked for a rule and every rule disappeared,
+  with no error and no warning. It is now an error naming the correct
+  spelling. The opposite mix-up was already guarded in `col_cell()`, so the
+  pair is now symmetric.
 
 - **An rlistings listing is no longer silently mis-read as a plain data.frame**
   (#322). `rlistings::as_listing()` returns a `listing_df`, declared as
