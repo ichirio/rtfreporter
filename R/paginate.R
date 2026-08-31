@@ -350,6 +350,20 @@ paginate.data.frame <- function(x, ...) {
   # the `blank_rows` spec (resolved on the full body, via set_blank_rows()) plus
   # any `rtf_blank_rows` attribute already on the input.  The markers are
   # collapsed back to the public attribute per page in Step 2.
+  # `group_by = "auto"` has to be settled BEFORE the markers go in.  A
+  # materialised blank leaves an EMPTY cell in the group column, and
+  # .detect_group_mode() reads a value-grouped column with empty cells as
+  # "filled" -- under which every non-empty cell opens a group, so every row
+  # becomes its own group and `split = "group_safe"` is free to cut anywhere
+  # (#330).  Resolving here is a no-op when nothing is materialised, because
+  # the body the detector sees is then the same one.
+  if (identical(group_by, "auto") && isTRUE(count_blank_rows)) {
+    gidx <- tryCatch(.resolve_group_col(group_col, x), error = function(e) NULL)
+    if (!is.null(gidx) && length(gidx) == 1L && !is.na(gidx)) {
+      group_by <- .detect_group_mode(as.character(x[[gidx]]))
+    }
+  }
+
   materialised_blanks <- FALSE
   if (isTRUE(count_blank_rows)) {
     # Separator-derived and explicitly-requested blanks are resolved apart, so
@@ -592,8 +606,14 @@ paginate.data.frame <- function(x, ...) {
 
   # "indent" / "filled": header-based grouping.  A materialised blank row has an
   # empty cell, so it is naturally treated as a member of the current group.
+  # Belt and braces: flag it explicitly too, so a marker can never open a group
+  # even if some future format leaves a non-empty cell behind (#330).
   first_ch <- substr(col, 1L, 1L)
   nonempty <- !is.na(col) & nzchar(col)
+  if (".__rtf_blank__" %in% names(df)) {
+    mk <- as.logical(df[[".__rtf_blank__"]]); mk[is.na(mk)] <- FALSE
+    nonempty <- nonempty & !mk
+  }
   is_header <- if (mode == "filled") {
     nonempty
   } else {
@@ -756,6 +776,20 @@ page_split_rows <- function(split_rows = NULL) {
   }
 }
 
+# Record a split spec's group configuration on the returned closure.
+#
+# The group column is used by TWO things -- pagination, and the group-dependent
+# row settings (`blank_rows = "between_groups"`, `collapse_repeats`,
+# `blank_rows_by_change()`).  Captured only in the closure environment it was
+# invisible to the second, so naming it here and nowhere else silently changed
+# the output (#328).  The tag lets `as_rtftables()` adopt it, so both spellings
+# mean the same thing.
+.split_spec_tag <- function(f, group_col, group_by) {
+  attr(f, "rtf_split_group_col") <- group_col
+  attr(f, "rtf_split_group_by")  <- group_by
+  f
+}
+
 #' @rdname page_split
 #' @export
 page_split_group_safe <- function(max_rows = NULL, group_col = NULL,
@@ -764,8 +798,9 @@ page_split_group_safe <- function(max_rows = NULL, group_col = NULL,
                                   group_by = "auto") {
   cfg_mr  <- max_rows; cfg_gc <- group_col
   cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  function(df, max_rows = NULL, group_col = NULL,
-           cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL, ...) {
+  f <- function(df, max_rows = NULL, group_col = NULL,
+                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
+                ...) {
     mr  <- cfg_mr %||% max_rows
     gc  <- cfg_gc %||% group_col
     cl  <- cfg_cl %||% cont_label
@@ -778,6 +813,7 @@ page_split_group_safe <- function(max_rows = NULL, group_col = NULL,
     info <- .compute_group_info(df, gidx, gb)
     .split_group_safe(df, info, mr, cl, gidx, mgr)
   }
+  .split_spec_tag(f, group_col, group_by)
 }
 
 #' @rdname page_split
@@ -788,8 +824,9 @@ page_split_group_force <- function(max_rows = NULL, group_col = NULL,
                                    group_by = "auto") {
   cfg_mr  <- max_rows; cfg_gc <- group_col
   cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  function(df, max_rows = NULL, group_col = NULL,
-           cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL, ...) {
+  f <- function(df, max_rows = NULL, group_col = NULL,
+                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
+                ...) {
     mr  <- cfg_mr %||% max_rows
     gc  <- cfg_gc %||% group_col
     cl  <- cfg_cl %||% cont_label
@@ -802,6 +839,7 @@ page_split_group_force <- function(max_rows = NULL, group_col = NULL,
     info <- .compute_group_info(df, gidx, gb)
     .split_group_force(df, info, mr, cl, gidx, mgr)
   }
+  .split_spec_tag(f, group_col, group_by)
 }
 
 #' @rdname page_split
@@ -812,8 +850,9 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
                                 group_by = "auto") {
   cfg_gc  <- group_col; cfg_mr <- max_rows
   cfg_mgr <- min_group_rows; cfg_cl <- cont_label; cfg_gb <- group_by
-  function(df, max_rows = NULL, group_col = NULL,
-           cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL, ...) {
+  f <- function(df, max_rows = NULL, group_col = NULL,
+                cont_label = " (Cont.)", min_group_rows = 2L, group_by = NULL,
+                ...) {
     gc  <- cfg_gc %||% group_col
     mr  <- cfg_mr %||% max_rows
     cl  <- cfg_cl %||% cont_label
@@ -823,6 +862,7 @@ page_split_by_value <- function(group_col = NULL, max_rows = NULL,
     info <- .compute_group_info(df, gidx, gb)
     .split_by_value(df, info, mr, cl, gidx, mgr)
   }
+  .split_spec_tag(f, group_col, group_by)
 }
 
 

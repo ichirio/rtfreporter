@@ -21,6 +21,56 @@
   page has exactly three rows. A mixed `list()` spec trims only its separator
   half.
 
+- **`count_blank_rows = TRUE` let `split = "group_safe"` cut a group across a
+  page boundary** (#330). Counting blanks materialises them as empty marker
+  rows before the split, and those empty cells changed what
+  `group_by = "auto"` detected:
+
+  ```r
+  .detect_group_mode(c("A","A","A","B","B","B"))       #> "value"
+  .detect_group_mode(c("A","A","A","","B","B","B"))    #> "filled"
+  ```
+
+  Under `"filled"` every non-empty cell opens a group, so every row became
+  its own group and `group_safe` was free to cut anywhere -- silently, and
+  violating `min_group_rows` at the same time. Of 20 shape / `max_rows`
+  combinations, 14 split at least one group; none do now. `group_by =
+  "auto"` is resolved before the markers go in, and a marker can no longer
+  open a group in `"indent"` / `"filled"` mode either.
+
+  `blank_row_first` / `blank_row_end` were never involved and are unchanged.
+
+- **`group_col` given only inside a `page_split_*()` spec did not reach
+  `blank_rows` / `collapse_repeats`** (#328). The group column is used by two
+  things -- pagination, and the group-dependent row settings
+  (`blank_rows = "between_groups"`, `collapse_repeats`,
+  `blank_rows_by_change()`) -- but the factories captured it in the returned
+  closure's environment, where only pagination could see it. Writing
+  `split = page_split_group_safe(group_col = "SOC")` therefore produced
+  different output from `split = "group_safe", group_col = "SOC"`, with no
+  error and no warning:
+
+  ```
+  group_col at top level        blank_rows 4, 8           correct
+  group_col inside the split    blank_rows 1,2,...,10      wrong
+  group_col nowhere             blank_rows 1,2,...,10
+  ```
+
+  The specs now record their `group_col` / `group_by` as attributes and
+  `as_rtftables()` adopts them, so both spellings mean the same thing. An
+  explicit top-level argument still wins.
+
+- **A cell-level `rtf_border()` passed to `rtftable(border = )` silently
+  rendered no borders at all** (#326). `border` there takes a *table-level*
+  border (5 zones); an `rtf_border()` is a classed **named list**, so it
+  reached the plain-list fallback in `.normalize_table_border()`, which looks
+  for zone names, found only `top`/`bottom`/`left`/`right`, and returned a
+  border with every zone `NULL`. The output was byte-identical to
+  `border = NULL` -- the caller asked for a rule and every rule disappeared,
+  with no error and no warning. It is now an error naming the correct
+  spelling. The opposite mix-up was already guarded in `col_cell()`, so the
+  pair is now symmetric.
+
 - **An rlistings listing is no longer silently mis-read as a plain data.frame**
   (#322). `rlistings::as_listing()` returns a `listing_df`, declared as
   `setOldClass(c("listing_df", "tbl_df", "tbl", "data.frame"))` -- an S3
