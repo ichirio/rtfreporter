@@ -20,20 +20,20 @@
 
 test_that("rtf_tables() accepts an unresolved plan", {
   doc <- rtf_document() |>
-    rtf_tables(rtf_plan_from(.dd()) |> plan_style(border = "tfl"))
+    rtf_tables(rtf_plan(.dd()) |> plan_style(border = "tfl"))
   expect_length(doc$contents, 1L)
   expect_s3_class(doc$contents[[1L]], "rtftable")
 })
 
 test_that("a paginated plan contributes one content item per page", {
   doc <- rtf_document() |>
-    rtf_tables(rtf_plan_from(.dd()) |> plan_pages(break_before = 8L) |>
+    rtf_tables(rtf_plan(.dd()) |> plan_pages(break_before = 8L) |>
                  plan_style(border = "tfl"))
   expect_length(doc$contents, 2L)
 })
 
 test_that("resolving through the document matches resolving first", {
-  p <- rtf_plan_from(.dd()) |> plan_group(names(.dd())[1L]) |>
+  p <- rtf_plan(.dd()) |> plan_group(names(.dd())[1L]) |>
     plan_blanks("between_groups") |> plan_pages(max_rows = 10L) |>
     plan_style(border = "tfl")
 
@@ -47,7 +47,7 @@ test_that("resolving through the document matches resolving first", {
 })
 
 test_that("the plan is unchanged by being handed to a document", {
-  p <- rtf_plan_from(.dd()) |> plan_style(border = "tfl")
+  p <- rtf_plan(.dd()) |> plan_style(border = "tfl")
   before <- p
   invisible(rtf_document() |> rtf_tables(p))
   expect_identical(p, before)
@@ -57,7 +57,7 @@ test_that("the plan is unchanged by being handed to a document", {
 
 test_that("titles and footnotes still apply", {
   doc <- rtf_document() |>
-    rtf_tables(rtf_plan_from(.dd()) |> plan_pages(break_before = 8L) |>
+    rtf_tables(rtf_plan(.dd()) |> plan_pages(break_before = 8L) |>
                  plan_style(border = "tfl"),
                titles = list("Table 14.1.1", "Table 14.1.2"))
   expect_length(doc$titles, 2L)
@@ -67,14 +67,14 @@ test_that("auto_title works on a named plan result", {
   # plan_tables() returns an unnamed list, so auto_title is a no-op rather
   # than an error -- worth pinning, since naming pages is the next question
   doc <- rtf_document() |>
-    rtf_tables(rtf_plan_from(.dd()) |> plan_style(border = "tfl"),
+    rtf_tables(rtf_plan(.dd()) |> plan_style(border = "tfl"),
                auto_title = TRUE)
   expect_null(doc$titles[[1L]])
 })
 
 test_that("a plan renders end to end through generate_rtfreport()", {
   doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
-    rtf_tables(rtf_plan_from(.dd()) |> plan_group(names(.dd())[1L]) |>
+    rtf_tables(rtf_plan(.dd()) |> plan_group(names(.dd())[1L]) |>
                  plan_blanks("between_groups") |> plan_style(border = "tfl"))
   lines <- .render(doc)
   expect_true(length(lines) > 5L)
@@ -91,7 +91,7 @@ test_that("a plan through rtf_tables() matches as_rtftables() through it", {
     a <- rtf_tables(a, t)
   }
   b <- rtf_document(page = rtf_page(orientation = "landscape")) |>
-    rtf_tables(rtf_plan_from(d) |> plan_group(names(d)[1L]) |>
+    rtf_tables(rtf_plan(d) |> plan_group(names(d)[1L]) |>
                  plan_pages(max_rows = 10L) |> plan_style(border = "tfl"))
   expect_identical(.render(a), .render(b))
 })

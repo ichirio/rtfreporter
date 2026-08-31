@@ -126,3 +126,51 @@ plan_cell_styles <- function(res, cell_styles) {
   mapped <- plan_row_map(res, cell_styles)
   lapply(res$pages, function(idx) mapped[idx])
 }
+
+# ── rtf_pages(): the plan -> pages verb ────────────────────────────────────
+#
+# `plan_tables()` reads as "put this in the document", which it does not do --
+# it returns the list of rtftable pages.  That name left the design with no
+# obvious way to get pages in order to LOOK at one, which is the thing
+# as_rtftables() was most used for:
+#
+#     print(rtf_pages(p)[[1]])
+#
+# The plan materialises into the existing `rtftable`, so print() / summary() /
+# format() and every post-hoc verb work on the result unchanged.
+#
+# rtf_tables(doc, plan) still takes a plan directly; it calls this.
+#' @keywords internal
+rtf_pages <- function(plan, ...) plan_tables(plan, ...)
+
+# ── rtf_pages(): the plan -> pages verb ────────────────────────────────────
+#
+# `plan_tables()` reads as "put this in the document", which it does not do --
+# it returns the list of rtftable pages.  That name left the design with no
+# obvious way to get pages in order to LOOK at one, which is the thing
+# as_rtftables() was most used for:
+#
+#     print(rtf_pages(p)[[1]])
+#
+# The plan materialises into the existing `rtftable`, so print() / summary() /
+# format() and every post-hoc verb work on the result unchanged.
+#
+# rtf_tables(doc, plan) still takes a plan directly; it calls this.
+#' @keywords internal
+rtf_pages <- function(plan, ...) plan_tables(plan, ...)
+
+# -- rtf_pages(): the plan -> pages verb ------------------------------------
+#
+# `plan_tables()` reads as "put this in the document", which it does not do --
+# it returns the list of rtftable pages.  That name left the design with no
+# obvious way to get pages in order to LOOK at one, which is the thing
+# as_rtftables() was most used for:
+#
+#     print(rtf_pages(p)[[1]])
+#
+# The plan materialises into the existing `rtftable`, so print() / summary() /
+# format() and every post-hoc verb work on the result unchanged.
+#
+# rtf_tables(doc, plan) still takes a plan directly; it calls this.
+#' @keywords internal
+rtf_pages <- function(plan, ...) plan_tables(plan, ...)
