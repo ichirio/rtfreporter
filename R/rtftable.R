@@ -59,6 +59,17 @@
   if (inherits(border, "rtf_table_style"))  return(.style_to_table_border(border))
   if (identical(border, "tfl")) return(rtf_border_tfl())
   if (identical(border, "none")) return(NULL)   # "none" == no borders
+  # A cell-level rtf_border() is a classed *named list*, so it would otherwise
+  # reach the plain-list fallback below, which looks for zone names, finds none
+  # and returns an empty table border -- every rule silently gone (#326).  The
+  # opposite mix-up is already an error in col_cell(); this makes the pair
+  # symmetric.
+  if (inherits(border, "rtf_border")) {
+    stop("`border` takes a table-level border (5 zones: header, spanning, ",
+         "body, first_row, last_row), not a cell-level rtf_border() ",
+         "(4 sides).\n  Did you mean ",
+         "rtf_table_border(header = rtf_border(...))?", call. = FALSE)
+  }
   if (is.list(border)) return(.plain_list_to_table_border(border))
   stop("`border` must be \"tfl\", \"none\", NULL, an rtf_table_border object, ",
        "an rtf_table_style object, or a named list.", call. = FALSE)
