@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" role="img" aria-label="rtf_border() draws the four sides of one row's cells; rtf_table_border() says which row gets it">
+  <style>
+    .bg   { fill: #ffffff; }
+    .card { fill: none; stroke: #d0d7de; stroke-width: 1; }
+    .ttl  { font: 600 15px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .pnl  { font: 600 13px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .cell { font: 13px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; fill: #1f2328; }
+    .hdr  { font: 600 13px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; fill: #1f2328; }
+    .arg  { font: 600 13px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
+    .note { font: 11px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #57606a; }
+    .foot { font: 11px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #57606a; }
+    .lead { stroke: #afb8c1; stroke-width: 1; stroke-dasharray: 2 3; }
+    .rule { stroke-width: 2.5; stroke-linecap: butt; }
+    .grey { stroke: #8c959f; stroke-width: 2.5; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1000" height="620"/>
+  <rect class="card" x="0.5" y="0.5" width="999" height="619"/>
+
+  <text class="ttl" x="32" y="34">rtf_border() — the four sides; rtf_table_border() — which row gets them</text>
+
+  <!-- ===================== Panel A : one cell ===================== -->
+  <text class="pnl" x="32" y="72">A.  rtf_border() = the four sides of ONE cell</text>
+
+  <rect x="200" y="100" width="270" height="50" fill="#f6f8fa"/>
+  <text class="cell" x="335" y="130" text-anchor="middle">41 (47.7)</text>
+
+  <line class="rule" x1="200" y1="100" x2="470" y2="100" stroke="#bf3989"/>
+  <line class="rule" x1="200" y1="150" x2="470" y2="150" stroke="#0b7285"/>
+  <line class="rule" x1="200" y1="100" x2="200" y2="150" stroke="#9a6700"/>
+  <line class="rule" x1="470" y1="100" x2="470" y2="150" stroke="#6639ba"/>
+
+  <text class="arg" x="335" y="92"  text-anchor="middle" fill="#bf3989">top</text>
+  <text class="arg" x="335" y="167" text-anchor="middle" fill="#0b7285">bottom</text>
+  <text class="arg" x="192" y="130" text-anchor="end"    fill="#9a6700">left</text>
+  <text class="arg" x="478" y="130" fill="#6639ba">right</text>
+
+  <text class="note" x="560" y="114">rtf_border(top =, bottom =, left =, right =)</text>
+  <text class="note" x="560" y="132">It says WHICH SIDES to draw — never which row.</text>
+  <text class="note" x="560" y="150">On its own it cannot be handed to rtftable().</text>
+
+  <!-- ===================== Panel B : the same border on a real row ===================== -->
+  <text class="pnl" x="32" y="215">B.  the same rtf_border() handed to a row: rtf_table_border(last_row = &lt;that border&gt;)</text>
+
+  <!-- header block tint -->
+  <rect x="48" y="250" width="564" height="78" fill="#f6f8fa"/>
+
+  <text class="hdr"  x="456" y="276" text-anchor="middle">Treatment Group</text>
+  <text class="hdr"  x="56"  y="316">Characteristic</text>
+  <text class="hdr"  x="378" y="316" text-anchor="middle">Drug A (N=86)</text>
+  <text class="hdr"  x="534" y="316" text-anchor="middle">Drug B (N=84)</text>
+
+  <text class="cell" x="56"  y="350">Age (years)</text>
+
+  <text class="cell" x="56"  y="382">  Mean (SD)</text>
+  <text class="cell" x="378" y="382" text-anchor="middle">62.1 (10.2)</text>
+  <text class="cell" x="534" y="382" text-anchor="middle">61.4 (9.8)</text>
+
+  <text class="cell" x="56"  y="414">  Median</text>
+  <text class="cell" x="378" y="414" text-anchor="middle">61.5</text>
+  <text class="cell" x="534" y="414" text-anchor="middle">60.0</text>
+
+  <text class="cell" x="56"  y="446">Sex, n (%)</text>
+
+  <text class="cell" x="56"  y="478">  Male</text>
+  <text class="cell" x="378" y="478" text-anchor="middle">45 (52.3)</text>
+  <text class="cell" x="534" y="478" text-anchor="middle">41 (48.8)</text>
+
+  <text class="cell" x="56"  y="510">  Female</text>
+  <text class="cell" x="378" y="510" text-anchor="middle">41 (47.7)</text>
+  <text class="cell" x="534" y="510" text-anchor="middle">43 (51.2)</text>
+
+  <!-- plain grey header rules: they belong to `header`, not to this demo -->
+  <line class="grey" x1="48" y1="250" x2="612" y2="250"/>
+  <line class="grey" x1="300" y1="288" x2="612" y2="288"/>
+  <line class="grey" x1="48" y1="328" x2="612" y2="328"/>
+
+  <!-- the last data row: all four sides -->
+  <line class="rule" x1="48"  y1="488" x2="612" y2="488" stroke="#bf3989"/>
+  <line class="rule" x1="48"  y1="520" x2="612" y2="520" stroke="#0b7285"/>
+  <!-- left of every cell (olive) / right of every cell (indigo); they coincide
+       on the two inner boundaries, drawn 3px apart so both stay visible -->
+  <line class="rule" x1="48"    y1="488" x2="48"    y2="520" stroke="#9a6700"/>
+  <line class="rule" x1="298.5" y1="488" x2="298.5" y2="520" stroke="#6639ba"/>
+  <line class="rule" x1="301.5" y1="488" x2="301.5" y2="520" stroke="#9a6700"/>
+  <line class="rule" x1="454.5" y1="488" x2="454.5" y2="520" stroke="#6639ba"/>
+  <line class="rule" x1="457.5" y1="488" x2="457.5" y2="520" stroke="#9a6700"/>
+  <line class="rule" x1="612"   y1="488" x2="612"   y2="520" stroke="#6639ba"/>
+
+  <line class="lead" x1="612" y1="488" x2="660" y2="488"/>
+  <text class="arg" x="668" y="492" fill="#bf3989">top<tspan class="note" dx="8">above the row</tspan></text>
+  <line class="lead" x1="612" y1="520" x2="660" y2="520"/>
+  <text class="arg" x="668" y="524" fill="#0b7285">bottom<tspan class="note" dx="8">below the row</tspan></text>
+
+  <text class="note" x="48" y="545">The vertical rules are <tspan class="arg" fill="#9a6700">left</tspan> and <tspan class="arg" fill="#6639ba">right</tspan> — emitted on EVERY cell of the row, so they land on every column boundary, not only the outer frame.</text>
+  <text class="note" x="48" y="562">The grey rules come from <tspan class="arg" fill="#8c959f">header</tspan>; they are here only so the table still looks like a table.</text>
+
+  <text class="foot" x="48" y="588">These four colours are SIDES. They are unrelated to the five zone colours in border_zones.svg, which are ROWS.</text>
+  <text class="foot" x="48" y="606">Colours are real border colours: data-raw/review-samples/border_zones.R renders this as page 2 of output/border_zones.rtf.</text>
+</svg>

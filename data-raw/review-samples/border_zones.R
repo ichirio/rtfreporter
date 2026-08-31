@@ -12,9 +12,22 @@
 #   first_row amber   the first data row (merged on top of `body`)
 #   last_row  purple  the last data row  (merged on top of `body`)
 #
+# The second table on page 2 does the same for rtf_border() itself: the four
+# sides of ONE row, each in its own colour.
+#
+#   top     pink     the rule above the row
+#   bottom  teal     the rule below the row
+#   left    olive    the left edge of EVERY cell in the row
+#   right   indigo   the right edge of EVERY cell in the row
+#
+# left/right are emitted per cell (.build_cell_defs applies the same border
+# commands to every \cellx), so a row-level rtf_border(left=, right=) draws a
+# vertical rule at every column boundary -- not just the table's outer frame.
+#
 # Run from the package root:
 #   Rscript data-raw/review-samples/border_zones.R
-# Writes output/border_zones.rtf -- open it in Word next to border_zones.svg.
+# Writes output/border_zones.rtf -- open it in Word next to border_zones.svg
+# and border_cell.svg.
 
 # Render through the source tree, never a stale install (#306).
 source("data-raw/_load.R")
@@ -43,7 +56,7 @@ df <- data.frame(
   stringsAsFactors = FALSE
 )
 
-tbl <- rtftable(
+make_tbl <- function(border) rtftable(
   df,
   col_header = rtf_col_header(
     list(col_cell(1, ""), col_cell(c(2, 3), "Treatment Group")),
@@ -54,14 +67,38 @@ tbl <- rtftable(
                   list(col = 2, align = "center"),
                   list(col = 3, align = "center")),
   row_height_twips = 260L,
-  border = zones
+  border = border
+)
+
+# -- Page 2: rtf_border() -- the four sides of one row --------------------------
+#
+# A different palette on purpose: these four colours are SIDES, not zones.
+PINK   <- "#BF3989"   # top
+TEAL   <- "#0B7285"   # bottom
+OLIVE  <- "#9A6700"   # left
+INDIGO <- "#6639BA"   # right
+GREY   <- "#8C959F"   # plain header rules, so the demo row stands alone
+
+four_sides <- rtf_border(
+  top    = rule(PINK),
+  bottom = rule(TEAL),
+  left   = rule(OLIVE),
+  right  = rule(INDIGO)
+)
+
+# The same rtf_border() carried by one zone: `last_row` says WHICH row,
+# `four_sides` says WHAT that row's border is.
+sides <- rtf_table_border(
+  header   = rtf_border(top = rule(GREY), bottom = rule(GREY)),
+  last_row = four_sides
 )
 
 doc <- rtf_document() |>
   rtf_config(page = list(orientation = "landscape",
                          margin_top_in = 1, margin_bottom_in = 1,
                          margin_left_in = 1, margin_right_in = 1)) |>
-  rtf_tables(list(tbl))
+  rtf_tables(list(make_tbl(zones))) |>
+  rtf_tables(list(make_tbl(sides)))
 
 dir.create("output", showWarnings = FALSE)
 out <- "output/border_zones.rtf"

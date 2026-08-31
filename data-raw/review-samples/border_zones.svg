@@ -83,5 +83,5 @@
   <!-- ============ footnotes ============ -->
   <text class="foot" x="48" y="378">spanning replaces header on spanning rows: with a spanning row present the table's top rule comes from spanning$top, not header$top.</text>
   <text class="foot" x="48" y="396">first_row / last_row are merged on top of body, so they override it on the first / last data row. Shaded band = the column-header block.</text>
-  <text class="foot" x="48" y="414">Colours are real border colours: data-raw/review-samples/border_zones.R renders this exact table to output/border_zones.rtf.</text>
+  <text class="foot" x="48" y="414">Colours are real border colours: data-raw/review-samples/border_zones.R renders this exact table as page 1 of output/border_zones.rtf.</text>
 </svg>
