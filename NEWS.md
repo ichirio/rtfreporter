@@ -2,6 +2,25 @@
 
 ### Bug fixes
 
+- **`count_blank_rows = TRUE` let `split = "group_safe"` cut a group across a
+  page boundary** (#330). Counting blanks materialises them as empty marker
+  rows before the split, and those empty cells changed what
+  `group_by = "auto"` detected:
+
+  ```r
+  .detect_group_mode(c("A","A","A","B","B","B"))       #> "value"
+  .detect_group_mode(c("A","A","A","","B","B","B"))    #> "filled"
+  ```
+
+  Under `"filled"` every non-empty cell opens a group, so every row became
+  its own group and `group_safe` was free to cut anywhere -- silently, and
+  violating `min_group_rows` at the same time. Of 20 shape / `max_rows`
+  combinations, 14 split at least one group; none do now. `group_by =
+  "auto"` is resolved before the markers go in, and a marker can no longer
+  open a group in `"indent"` / `"filled"` mode either.
+
+  `blank_row_first` / `blank_row_end` were never involved and are unchanged.
+
 - **`group_col` given only inside a `page_split_*()` spec did not reach
   `blank_rows` / `collapse_repeats`** (#328). The group column is used by two
   things -- pagination, and the group-dependent row settings
