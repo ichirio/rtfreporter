@@ -32,7 +32,7 @@ test_that("an rtf_border selects the whole table, never silently emptied (#326, 
   # for a rule and every rule vanished.  #326 made that an error; #342 gave it a
   # meaning instead: the border applies to the whole table.  Either way, the one
   # outcome that must never happen is the rule silently disappearing.
-  b  <- rtf_border(top = rtfreporter:::.rtf_border_side("single", 15L))
+  b  <- rtf_border(top = rtf_border_side("single", 15L))
   tb <- rtfreporter:::.normalize_table_border(b)
   expect_s3_class(tb, "rtf_table_border")
   expect_identical(tb$outer, b)

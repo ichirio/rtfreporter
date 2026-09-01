@@ -118,16 +118,18 @@ tbl <- rtftable(df, border = "none") |>
 call draw:
 
 ```{r side}
-rtf_border(top = TRUE, style = "double", width = 30L, color = "#003366")
+rtf_border(top = rtf_border_side("double", 30L, "#003366"))
 ```
 
-Naming the style on the side itself is shorthand for the same thing, so
-`rtf_border(top = "double")` and `rtf_border(top = TRUE, style = "double")` agree.
-`style` is one of `"single"`, `"double"`, `"thick"`, `"dash"`, `"dot"` -- and
-`"none"`, which we meet below. When one side must differ, layer a second call:
+`TRUE` and a bare style name are shorthands for the same value, so
+`rtf_border(top = "double")` and `rtf_border(top = rtf_border_side("double"))`
+agree. `style` is one of `"single"`, `"double"`, `"thick"`, `"dash"`, `"dot"` --
+and `"none"`, which we meet below. Because each side holds its own line, sides
+that differ still fit in one call:
 
-```{r side-layer}
-rtf_border(from = rtf_border(top = TRUE, width = 30L), bottom = TRUE)
+```{r side-differ}
+rtf_border(top    = rtf_border_side("double", 30L),
+           bottom = rtf_border_side(color = "#C9372C"))
 ```
 
 ### Body (data-area) borders
@@ -323,14 +325,11 @@ And the constructors that folded into `rtf_border()` itself:
 
 | Before (≤ 0.5.x) | Now |
 |---|---|
-| `rtf_border_side()` | `TRUE` |
-| `rtf_border_side("none")` | `"none"` (or `FALSE`) |
-| `rtf_border_side("double", 20L)` | side `"double"` plus `width = 20L` |
 | `rtf_border_none()` | `rtf_border()` |
 | `rtf_border_top()` | `rtf_border(top = TRUE)` |
 | `rtf_border_bottom()` | `rtf_border(bottom = TRUE)` |
 | `rtf_border_box()` | `rtf_border(all = TRUE)` |
-| `rtf_border_with(b, bottom = x)` | `rtf_border(from = b, bottom = x)` |
+| `rtf_border_with(b, bottom = x)` | layer at the attach point, e.g. a second `style_zone()` |
 | `rtf_border_tfl()` | `border = "tfl"`, or `rtf_table_style_tfl()` |
 
 All of these still work and warn once per session. They are scheduled for

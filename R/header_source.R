@@ -20,44 +20,30 @@
   else paste0("`", nm, "`")
 }
 
-# The value of one side: TRUE for a plain single rule, otherwise the style name.
-# Weight and colour are not per side any more -- they are arguments of
-# rtf_border() itself -- so they are handled by .hs_border() below.
-.hs_side <- function(sd) {
-  if (identical(sd$style, "single")) "TRUE" else .hs_str(sd$style)
+# One side's source.  A default single rule is just TRUE and a style name
+# stands alone; anything carrying a weight or a colour needs the full value.
+# `level`: "explicit" omits the default width (15); "default" / "all" show it.
+.hs_side <- function(sd, level) {
+  plain_w <- (sd$width %||% 15L) == 15L && !level %in% c("default", "all")
+  if (is.null(sd$color) && plain_w) {
+    return(if (identical(sd$style, "single")) "TRUE" else .hs_str(sd$style))
+  }
+  args <- .hs_str(sd$style)
+  if (!plain_w) args <- c(args, as.character(sd$width %||% 15L))
+  if (!is.null(sd$color)) args <- c(args, paste0("color = ", .hs_str(sd$color)))
+  paste0("rtf_border_side(", paste(args, collapse = ", "), ")")
 }
 
-# rtf_border(...) source (only the sides that are set).  `level`: "explicit"
-# omits the default width (15); "default" / "all" show it.  A non-NULL colour is
-# always shown.
-#
-# Weight and colour belong to the call, not to a side, so sides that disagree
-# about them cannot share one call: they are emitted as layers, innermost
-# first, each `from = ` the previous.
+# rtf_border(...) source (only the sides that are set).  Each side carries its
+# own look, so one call is always enough.
 .hs_border <- function(b, level) {
-  set <- Filter(function(s) !is.null(b[[s]]), c("top", "bottom", "left", "right"))
-  if (!length(set)) return("rtf_border()")
-
-  key <- vapply(set, function(s) {
-    sd <- b[[s]]
-    paste(sd$width %||% 15L, sd$color %||% "", sep = "\r")
-  }, character(1L))
-
-  out <- NULL
-  for (k in unique(key)) {
-    grp <- set[key == k]
-    sd  <- b[[grp[1L]]]
-    parts <- vapply(grp, function(s) paste0(s, " = ", .hs_side(b[[s]])),
-                    character(1L))
-    if (!is.null(out)) parts <- c(paste0("from = ", out), parts)
-    w <- sd$width %||% 15L
-    if (w != 15L || level %in% c("default", "all")) {
-      parts <- c(parts, paste0("width = ", w))
+  parts <- character(0)
+  for (s in c("top", "bottom", "left", "right")) {
+    if (!is.null(b[[s]])) {
+      parts <- c(parts, paste0(s, " = ", .hs_side(b[[s]], level)))
     }
-    if (!is.null(sd$color)) parts <- c(parts, paste0("color = ", .hs_str(sd$color)))
-    out <- paste0("rtf_border(", paste(parts, collapse = ", "), ")")
   }
-  out
+  paste0("rtf_border(", paste(parts, collapse = ", "), ")")
 }
 
 # A cell `pos` expressed by column name(s).

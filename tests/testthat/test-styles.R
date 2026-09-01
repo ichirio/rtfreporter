@@ -8,17 +8,17 @@ test_that("rtf_border is a plain S3 list with class 'rtf_border'", {
   expect_null(b$bottom)
 })
 
-test_that("rtf_border(from = ) returns an independent copy", {
+test_that("a border is a plain record, so building another leaves it alone", {
   base    <- rtf_border(top = TRUE)
-  derived <- rtf_border(from = base, bottom = rtfreporter:::.rtf_border_side("dot"))
+  derived <- rtf_border(top = TRUE, bottom = rtf_border_side("dot"))
   expect_null(base$bottom)
   expect_identical(derived$bottom$style, "dot")
   expect_identical(derived$top$style,    "single")
 })
 
-test_that("rtf_border(from = ) supports multi-side overrides and NULL sides", {
-  two <- rtf_border(from   = rtf_border(top = TRUE),
-                    bottom = "double", width = 20L,
+test_that("sides can differ, and a NULL side stays unset", {
+  two <- rtf_border(top    = TRUE,
+                    bottom = rtf_border_side("double", 20L),
                     left   = NULL)
   expect_identical(two$top$style,    "single")
   expect_identical(two$bottom$style, "double")
@@ -32,10 +32,10 @@ test_that("rtf_border() validates its sides", {
   expect_error(rtf_border(top = list(1)),      "TRUE, FALSE, a border style")
 })
 
-test_that("rtfreporter:::.rtf_border_side() validates style, width, and color", {
-  expect_error(rtfreporter:::.rtf_border_side(style = "nope"), "should be one of")
-  expect_error(rtfreporter:::.rtf_border_side(width = 0L),     "positive integer")
-  expect_error(rtfreporter:::.rtf_border_side(color = "red"),  "6-digit hex")
+test_that("rtf_border_side() validates style, width, and color", {
+  expect_error(rtf_border_side(style = "nope"), "should be one of")
+  expect_error(rtf_border_side(width = 0L),     "positive integer")
+  expect_error(rtf_border_side(color = "red"),  "6-digit hex")
 })
 
 test_that("rtf_table_style is S3 with class 'rtf_table_style'", {
@@ -75,8 +75,8 @@ test_that("col_spec[[j]]$border applies per-column in the header row", {
   tbl <- rtftable(df,
     border = rtfreporter:::.rtf_table_border(header = rtf_border(top = TRUE)),
     col_spec = list(
-      list(col = 2, border = rtf_border(top    = rtfreporter:::.rtf_border_side("double", 20L),
-                                         bottom = rtfreporter:::.rtf_border_side("double", 20L)))
+      list(col = 2, border = rtf_border(top    = rtf_border_side("double", 20L),
+                                         bottom = rtf_border_side("double", 20L)))
     ))
   expect_s3_class(tbl$col_spec[[2L]]$border, "rtf_border")
   expect_identical(tbl$col_spec[[2L]]$border$bottom$style, "double")
@@ -97,19 +97,19 @@ test_that("border = 'tfl' produces an rtf_table_border with header-only zones", 
 # ──────── Print methods (rtf_border_side / rtf_border / rtf_table_border) ─
 
 test_that("print.rtf_border_side renders style + width + colour", {
-  b <- rtfreporter:::.rtf_border_side("double", width = 20L, color = "#FF0000")
+  b <- rtf_border_side("double", width = 20L, color = "#FF0000")
   txt <- capture.output(print(b))
   expect_match(paste(txt, collapse = "\n"), "double")
   expect_match(paste(txt, collapse = "\n"), "20 twips")
   expect_match(paste(txt, collapse = "\n"), "#FF0000")
   # No-colour variant: must not print colour string.
-  b2 <- rtfreporter:::.rtf_border_side("single")
+  b2 <- rtf_border_side("single")
   expect_false(grepl("color", paste(capture.output(print(b2)), collapse = "")))
 })
 
 test_that("print.rtf_border lists all four sides (some none, some set)", {
-  b <- rtf_border(top    = rtfreporter:::.rtf_border_side("single"),
-                  bottom = rtfreporter:::.rtf_border_side("dot",   width = 10L,
+  b <- rtf_border(top    = rtf_border_side("single"),
+                  bottom = rtf_border_side("dot",   width = 10L,
                                             color  = "#00FF00"))
   txt <- paste(capture.output(print(b)), collapse = "\n")
   expect_match(txt, "<rtf_border>")
@@ -122,10 +122,10 @@ test_that("print.rtf_border lists all four sides (some none, some set)", {
 
 test_that("print.rtf_table_border lists each zone", {
   tb <- rtfreporter:::.rtf_table_border(
-    header = rtf_border(top    = rtfreporter:::.rtf_border_side("single"),
-                        bottom = rtfreporter:::.rtf_border_side("single",
+    header = rtf_border(top    = rtf_border_side("single"),
+                        bottom = rtf_border_side("single",
                                                   color = "#123456")),
-    body   = rtf_border(top = rtfreporter:::.rtf_border_side("dot"))
+    body   = rtf_border(top = rtf_border_side("dot"))
   )
   txt <- paste(capture.output(print(tb)), collapse = "\n")
   expect_match(txt, "<rtf_table_border>")
@@ -144,18 +144,18 @@ test_that("rtf_border() returns an empty rtf_border", {
   for (s in c("top", "bottom", "left", "right")) expect_null(b[[s]])
 })
 
-test_that("a side plus style/width/color reaches every named edge", {
-  bt <- rtf_border(top = "double", width = 25L, color = "#001122")
+test_that("a side value carries its own style, weight and colour", {
+  bt <- rtf_border(top = rtf_border_side("double", 25L, "#001122"))
   expect_identical(bt$top$style, "double")
   expect_identical(bt$top$width, 25L)
   expect_identical(bt$top$color, "#001122")
   expect_null(bt$bottom)
 
-  bb <- rtf_border(bottom = "dash", width = 5L)
+  bb <- rtf_border(bottom = rtf_border_side("dash", 5L))
   expect_identical(bb$bottom$style, "dash")
   expect_null(bb$top)
 
-  bx <- rtf_border(all = "thick", width = 40L)
+  bx <- rtf_border(all = rtf_border_side("thick", 40L))
   for (s in c("top", "bottom", "left", "right")) {
     expect_identical(bx[[s]]$style, "thick")
     expect_identical(bx[[s]]$width, 40L)
@@ -189,15 +189,13 @@ test_that("the zone map rejects non-rtf_border values in any zone", {
 
 # ──────── rtf_border_with edge cases ──────────────────────────────────────
 
-test_that("rtf_border(from = NULL, ...) treats NULL as empty base", {
-  b <- rtf_border(from = NULL, top = rtfreporter:::.rtf_border_side("dot"))
+test_that("a side given as a value is stored verbatim", {
+  b <- rtf_border(top = rtf_border_side("dot"))
   expect_s3_class(b, "rtf_border")
   expect_identical(b$top$style, "dot")
 })
 
-test_that("rtf_border(from = ) rejects a non-rtf_border base", {
-  expect_error(rtf_border(from = "oops"), "rtf_border object")
-  # The deprecated spelling still guards the same way, behind its warning.
+test_that("rtf_border_with() still guards its base, behind its warning", {
   expect_error(suppressWarnings(rtf_border_with("oops")), "rtf_border object")
 })
 
@@ -230,18 +228,18 @@ test_that(".merge_rtf_border returns base when over is NULL or empty", {
 })
 
 test_that(".merge_rtf_border overrides only non-NULL sides of over", {
-  base <- rtf_border(top    = rtfreporter:::.rtf_border_side("single"),
-                     bottom = rtfreporter:::.rtf_border_side("single"))
-  over <- rtf_border(bottom = rtfreporter:::.rtf_border_side("double"))
+  base <- rtf_border(top    = rtf_border_side("single"),
+                     bottom = rtf_border_side("single"))
+  over <- rtf_border(bottom = rtf_border_side("double"))
   m    <- rtfreporter:::.merge_rtf_border(base, over)
   expect_identical(m$top$style,    "single")        # unchanged
   expect_identical(m$bottom$style, "double")        # overridden
 })
 
 test_that(".collect_border_colors gathers every non-NULL colour", {
-  b <- rtf_border(top    = rtfreporter:::.rtf_border_side(color = "#aaaaaa"),
-                  bottom = rtfreporter:::.rtf_border_side(color = "#bbbbbb"),
-                  left   = rtfreporter:::.rtf_border_side(),                # no colour
+  b <- rtf_border(top    = rtf_border_side(color = "#aaaaaa"),
+                  bottom = rtf_border_side(color = "#bbbbbb"),
+                  left   = rtf_border_side(),                # no colour
                   right  = NULL)
   cols <- rtfreporter:::.collect_border_colors(b)
   expect_setequal(cols, c("#aaaaaa", "#bbbbbb"))
@@ -295,8 +293,8 @@ test_that(".style_to_table_border copies every zone into rtf_table_border", {
 
 test_that(".collect_table_border_colors walks every zone", {
   tb <- rtfreporter:::.rtf_table_border(
-    header = rtf_border(top = rtfreporter:::.rtf_border_side(color = "#111111")),
-    body   = rtf_border(bottom = rtfreporter:::.rtf_border_side(color = "#222222"))
+    header = rtf_border(top = rtf_border_side(color = "#111111")),
+    body   = rtf_border(bottom = rtf_border_side(color = "#222222"))
   )
   cols <- rtfreporter:::.collect_table_border_colors(tb)
   expect_setequal(cols, c("#111111", "#222222"))

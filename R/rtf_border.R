@@ -26,12 +26,11 @@
 # function you are being told to stop using is not part of what a reader has to
 # learn.  test-api-surface.R asserts both numbers so the claim stays honest.
 .deprecated_exports <- c(
-  "rtf_border_side",   # -> a side value: TRUE / "double" / "none"
   "rtf_border_top",    # -> rtf_border(top = TRUE)
   "rtf_border_bottom", # -> rtf_border(bottom = TRUE)
   "rtf_border_box",    # -> rtf_border(all = TRUE)
   "rtf_border_none",   # -> rtf_border()
-  "rtf_border_with",   # -> rtf_border(from = )
+  "rtf_border_with",   # -> layer at the attach point (style_zone() etc.)
   "rtf_border_tfl",    # -> border = "tfl" / rtf_table_style_tfl()
   "rtf_table_border"   # -> rtftable(border = ) / style_zone()
 )
@@ -146,23 +145,6 @@
 #' "none"   # explicit "no line" that removes an inherited rule
 #' @export
 rtf_border_side <- function(style = "single", width = 15L, color = NULL) {
-  .deprecate_once(
-    "rtf_border_side",
-    paste0(
-      "`rtf_border_side()` is deprecated: a side of `rtf_border()` now takes ",
-      "the value directly.\n",
-      "    rtf_border_side()            ->  TRUE\n",
-      "    rtf_border_side(\"none\")      ->  FALSE    (or \"none\")\n",
-      "    rtf_border_side(\"double\")    ->  \"double\"\n",
-      "    rtf_border_side(\"double\", 20) ->  side \"double\" plus width = 20\n",
-      "  Line weight and colour are arguments of rtf_border() itself; layer a ",
-      "second\n  call with `from = ` when one side must differ.  See ?rtf_border."))
-  .rtf_border_side(style = style, width = width, color = color)
-}
-
-# The record itself.  It stays the renderer's currency -- what changed is that
-# callers no longer have to build one by hand.
-.rtf_border_side <- function(style = "single", width = 15L, color = NULL) {
   style <- match.arg(style, c(.valid_border_styles, "none"))
   width <- as.integer(width)
   if (!identical(style, "none") && width < 1L) {
@@ -178,15 +160,18 @@ rtf_border_side <- function(style = "single", width = 15L, color = NULL) {
 # Resolve whatever a caller wrote for one side into an rtf_border_side.
 #
 #   NULL            -> unset (inherit)
-#   TRUE            -> a rule in this call's style / width / colour
+#   TRUE            -> a default rule: single, 15 twips, black
 #   FALSE           -> an explicit "no line", same as "none"
-#   "double" etc.   -> that style, in this call's width / colour
-#   rtf_border_side -> taken as-is (the deprecated spelling)
-.as_border_side <- function(x, style, width, color, arg) {
+#   "double" etc.   -> that style, at the default weight and colour
+#   rtf_border_side -> taken as-is, for weight and colour of its own
+#
+# The first four are shorthands for the fifth; a line's *type* is what gets
+# named most often, so it should not need a constructor.
+.as_border_side <- function(x, arg) {
   if (is.null(x)) return(NULL)
   if (inherits(x, "rtf_border_side")) return(x)
-  if (isTRUE(x))  return(.rtf_border_side(style, width, color))
-  if (isFALSE(x)) return(.rtf_border_side("none"))
+  if (isTRUE(x))  return(rtf_border_side())
+  if (isFALSE(x)) return(rtf_border_side("none"))
   if (is.character(x) && length(x) == 1L && !is.na(x)) {
     ok <- c(.valid_border_styles, "none")
     if (!x %in% ok) {
@@ -194,14 +179,11 @@ rtf_border_side <- function(style = "single", width = 15L, color = NULL) {
                    arg, paste(dQuote(ok, q = FALSE), collapse = ", "), x),
            call. = FALSE)
     }
-    # "none" is the absence of a line, so weight and colour cannot apply to it.
-    # Normalising here keeps `FALSE` and `"none"` interchangeable.
-    if (identical(x, "none")) return(.rtf_border_side("none"))
-    return(.rtf_border_side(x, width, color))
+    return(rtf_border_side(x))
   }
   stop(sprintf(
-    "`%s` must be TRUE, FALSE, a border style name, or NULL.", arg),
-    call. = FALSE)
+    "`%s` must be TRUE, FALSE, a border style name, an rtf_border_side(), ",
+    arg), "or NULL.", call. = FALSE)
 }
 
 #' @export
@@ -255,15 +237,17 @@ print.rtf_border_side <- function(x, ...) {
 #' selection would otherwise inherit. The style names are `"single"`,
 #' `"double"`, `"thick"`, `"dash"`, `"dot"` and `"none"`.
 #'
-#' Use the logical family when the whole call shares one look, and the names
-#' when the sides differ:
+#' Both are shorthands for the third spelling, an [rtf_border_side()], which is
+#' what a side actually holds. Reach for it when a line needs a weight or a
+#' colour of its own -- and since each side carries its own, one call is always
+#' enough:
 #'
 #' \preformatted{
-#'   rtf_border(all = TRUE, style = "double", width = 30L)   # four edges alike
-#'   rtf_border(top = "double", bottom = "single")           # two that differ
+#'   rtf_border(all = "double")                              # four edges alike
+#'   rtf_border(top = rtf_border_side(color = "#C9372C"),    # ... or all four
+#'              bottom = rtf_border_side("double", 30L))     #     different
 #' }
 #'
-#' `"none"` ignores `width` and `color`, since there is no line to describe, so
 #' `FALSE` and `"none"` are always interchangeable.
 #'
 #' So an edge never means something different depending on which other
@@ -285,41 +269,24 @@ print.rtf_border_side <- function(x, ...) {
 #'     `width` and `color`.}
 #' }
 #'
-#' `from` decides which of two things a call does:
-#'
-#' \describe{
-#'   \item{without `from` -- **build**}{the result is exactly what this call
-#'     says. Every side not named is unset, whatever an earlier variable held.}
-#'   \item{with `from` -- **layer**}{only the sides named here change; the rest
-#'     of `from` survives, each keeping its own style, weight and colour.}
-#' }
-#'
-#' That distinction is what makes per-side differences expressible.
-#' `style`/`width`/`color` describe one line, so a single call cannot give the
-#' top and the bottom different colours -- but each layer carries its own:
+#' A call to `rtf_border()` says everything about the border it returns: every
+#' side not named is unset. Adding to a border already in place is the job of
+#' the place it is attached to -- [style_zone()], [style_header()] and
+#' [style_body()] all merge **side by side**, so a second call adds to the first
+#' rather than replacing it:
 #'
 #' \preformatted{
-#'   b <- rtf_border(top = TRUE, color = "#C9372C", width = 30L)
-#'   b <- rtf_border(from = b, bottom = TRUE, color = "#1F6FEB")
-#'   b <- rtf_border(from = b, left = TRUE, right = TRUE,
-#'                   style = "double", color = "#1A7F37")
-#'   # top stays red/30, bottom blue/15, left and right double green
+#'   tbl |>
+#'     style_zone(header = rtf_border(top = rtf_border_side(color = "#C9372C"))) |>
+#'     style_zone(header = rtf_border(bottom = TRUE))   # the top rule survives
 #' }
 #'
-#' Forgetting `from` is the one thing to watch: the second line below does not
-#' add a bottom rule, it replaces the whole border with one.
+#' A later layer can change a side or erase it with `FALSE`; a side left `NULL`
+#' says nothing and leaves what was there alone.
 #'
-#' \preformatted{
-#'   b <- rtf_border(top = TRUE)
-#'   b <- rtf_border(bottom = TRUE)             # the top rule is gone
-#'   b <- rtf_border(from = b, bottom = TRUE)   # what was meant
-#' }
-#'
-#' Two consequences worth knowing. `rtf_border(all = FALSE)` is the way to say
-#' "explicitly no rule anywhere", which is not the same as `rtf_border()`, where
-#' every side is merely unset. And layering can set a side, change it, or erase
-#' it with `FALSE`, but cannot return it to *unset*: build a fresh border when
-#' that is what you want.
+#' One distinction worth keeping straight: `rtf_border(all = FALSE)` says
+#' "explicitly no rule anywhere", which erases what a border would otherwise
+#' inherit, while `rtf_border()` says nothing at all and inherits.
 #'
 #' @section Writing borders before and after 0.5.0:
 #'
@@ -368,15 +335,11 @@ print.rtf_border_side <- function(x, ...) {
 #' as a value rather than built:
 #'
 #' \preformatted{
-#'   rtf_border_side()                 ->  TRUE
-#'   rtf_border_side("none")           ->  FALSE    (or "none")
-#'   rtf_border_side("double")         ->  "double"
-#'   rtf_border_side("double", 20L)    ->  side "double" plus width = 20L
 #'   rtf_border_none()                 ->  rtf_border()
 #'   rtf_border_top()                  ->  rtf_border(top = TRUE)
 #'   rtf_border_bottom()               ->  rtf_border(bottom = TRUE)
 #'   rtf_border_box()                  ->  rtf_border(all = TRUE)
-#'   rtf_border_with(b, bottom = x)    ->  rtf_border(from = b, bottom = x)
+#'   rtf_border_with(b, bottom = x)    ->  layer at the attach point
 #'   rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
 #' }
 #'
@@ -397,13 +360,6 @@ print.rtf_border_side <- function(x, ...) {
 #' @param top,bottom,left,right The selection's four outer edges. A side takes
 #'   a value from either of two families -- `TRUE`/`FALSE`, or a style name --
 #'   or `NULL` to leave it unset. See *Writing a side* below.
-#' @param style,width,color The line the sides named in this call draw: one of
-#'   `"single"` (default), `"double"`, `"thick"`, `"dash"`, `"dot"`; a weight in
-#'   twips (default `15`, about 0.5 pt); and `NULL` for black or a 6-digit hex
-#'   string. Naming a style on the side itself is shorthand for `style`.
-#' @param from An existing `rtf_border` to layer onto: the sides named here
-#'   replace its own, the rest survive. This is how one side gets a different
-#'   weight or colour from the others.
 #' @param inside_h,inside_v The rules drawn *between* the selection's rows
 #'   (`inside_h`) and *between* its cells (`inside_v`). Same values as the
 #'   edges; `NULL` (default) means no rule there.
@@ -424,16 +380,14 @@ print.rtf_border_side <- function(x, ...) {
 #' # Either family, but one at a time: these two agree.
 #' identical(rtf_border(top = TRUE,     bottom = FALSE),
 #'           rtf_border(top = "single", bottom = "none"))
+#'
+#' # A weight or a colour of its own needs the side value.
+#' rtf_border(top    = rtf_border_side("double", 30L, "#003366"),
+#'            bottom = rtf_border_side(color = "#C9372C"))
 #' @export
 rtf_border <- function(all = NULL, top = NULL, bottom = NULL, left = NULL,
-                       right = NULL, inside_h = NULL, inside_v = NULL,
-                       style = "single", width = 15L, color = NULL,
-                       from = NULL) {
-  if (!is.null(from) && !inherits(from, "rtf_border")) {
-    stop("`from` must be NULL or an rtf_border object.", call. = FALSE)
-  }
-  # `all` is the four outer edges, exactly what rtf_border(all = TRUE) used to build.
-  # A side named explicitly wins over it.
+                       right = NULL, inside_h = NULL, inside_v = NULL) {
+  # `all` is the four outer edges at once; a side named explicitly wins over it.
   if (!is.null(all)) {
     if (is.null(top))    top    <- all
     if (is.null(bottom)) bottom <- all
@@ -442,25 +396,16 @@ rtf_border <- function(all = NULL, top = NULL, bottom = NULL, left = NULL,
   }
   given <- list(top = top, bottom = bottom, left = left, right = right,
                 inside_h = inside_h, inside_v = inside_v)
-  sides <- lapply(.border_slots, function(sl)
-    .as_border_side(given[[sl]], style, width, color, sl))
+  sides <- lapply(.border_slots, function(sl) .as_border_side(given[[sl]], sl))
   names(sides) <- .border_slots
 
-  b <- if (is.null(from)) {
-    structure(sides, class = "rtf_border")
-  } else {
-    # Layering: the sides named here replace those of `from`, the rest survive.
-    for (sl in .border_slots) if (!is.null(sides[[sl]])) from[[sl]] <- sides[[sl]]
-    from
-  }
+  b <- structure(sides, class = "rtf_border")
   # Not part of the value, only of its provenance: it lets rtftable() tell a
   # border written for the pre-0.5 uniform reading from one written for the
   # current outer/inside reading, and warn about the first (see
   # .warn_old_edge_reading()).  Dropped by any merge, which is what we want --
   # a merged border is a new statement.
-  named <- attr(from, "inside_named") %||% c(h = FALSE, v = FALSE)
-  attr(b, "inside_named") <- c(h = !missing(inside_h) || isTRUE(named[["h"]]),
-                               v = !missing(inside_v) || isTRUE(named[["v"]]))
+  attr(b, "inside_named") <- c(h = !missing(inside_h), v = !missing(inside_v))
   b
 }
 
@@ -498,8 +443,8 @@ print.rtf_border <- function(x, ...) {
 #'
 #' @examples
 #' b <- rtf_border(top = TRUE, bottom = TRUE)
-#' rtf_border(from = b, bottom = TRUE, color = "#003366")  # recolour the bottom
-#' rtf_border(from = b, top = "none")                     # drop the top rule
+#' rtf_border(top = b$top, bottom = rtf_border_side(color = "#003366"))
+#' rtf_border(top = "none", bottom = b$bottom)   # an explicit no-line on top
 #' @export
 rtf_border_with <- function(border, top = NULL, bottom = NULL,
                             left = NULL, right = NULL,
@@ -507,19 +452,25 @@ rtf_border_with <- function(border, top = NULL, bottom = NULL,
   .deprecate_once(
     "rtf_border_with",
     paste0(
-      "`rtf_border_with()` is deprecated: layer with `rtf_border(from = )`.\n",
-      "    rtf_border_with(b, bottom = x)  ->  rtf_border(from = b, bottom = x)"))
-  # Forward only what the caller actually supplied: rtf_border() reads the
-  # missing-ness of inside_h / inside_v to tell a pre-0.5 border from a current
-  # one, and passing them unconditionally would claim they were named.
-  args <- list(from = border %||% rtf_border())
+      "`rtf_border_with()` is deprecated. Layering happens where a border is ",
+      "attached:\n",
+      "    style_zone() / style_header() / style_body() merge side by side, ",
+      "so a\n    second call adds to the first instead of replacing it.\n",
+      "  A border that needs different weights or colours per side says so in ",
+      "one\n  call: rtf_border(top = rtf_border_side(...), bottom = ",
+      "rtf_border_side(...))."))
+  if (is.null(border)) border <- rtf_border()
+  if (!inherits(border, "rtf_border")) {
+    stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
+  }
+  args <- list()
   if (!missing(top))      args$top      <- top
   if (!missing(bottom))   args$bottom   <- bottom
   if (!missing(left))     args$left     <- left
   if (!missing(right))    args$right    <- right
   if (!missing(inside_h)) args$inside_h <- inside_h
   if (!missing(inside_v)) args$inside_v <- inside_v
-  do.call(rtf_border, args)
+  .merge_rtf_border(border, do.call(rtf_border, args))
 }
 
 
@@ -540,25 +491,25 @@ rtf_border_none <- function() {
 
 #' @describeIn rtf_border Deprecated. Write `rtf_border(top = TRUE)`.
 #' @param style,width,color Line style, weight in twips and colour, as in
-#'   [rtf_border()].
+#'   [rtf_border_side()].
 #' @export
 rtf_border_top <- function(style = "single", width = 15L, color = NULL) {
   .deprecate_sugar("rtf_border_top", "rtf_border(top = TRUE)")
-  rtf_border(top = TRUE, style = style, width = width, color = color)
+  rtf_border(top = rtf_border_side(style, width, color))
 }
 
 #' @describeIn rtf_border Deprecated. Write `rtf_border(bottom = TRUE)`.
 #' @export
 rtf_border_bottom <- function(style = "single", width = 15L, color = NULL) {
   .deprecate_sugar("rtf_border_bottom", "rtf_border(bottom = TRUE)")
-  rtf_border(bottom = TRUE, style = style, width = width, color = color)
+  rtf_border(bottom = rtf_border_side(style, width, color))
 }
 
 #' @describeIn rtf_border Deprecated. Write `rtf_border(all = TRUE)`.
 #' @export
 rtf_border_box <- function(style = "single", width = 15L, color = NULL) {
   .deprecate_sugar("rtf_border_box", "rtf_border(all = TRUE)")
-  rtf_border(all = TRUE, style = style, width = width, color = color)
+  rtf_border(all = rtf_border_side(style, width, color))
 }
 
 
@@ -713,8 +664,9 @@ rtf_table_border <- function(header    = NULL,
 
   vertical <- function(b) {
     if (is.null(outer) && is.null(iv)) return(b)
-    rtf_border(from = b %||% rtf_border(),
-               left = outer$left, right = outer$right, inside_v = iv)
+    .merge_rtf_border(b %||% rtf_border(),
+                      rtf_border(left = outer$left, right = outer$right,
+                                 inside_v = iv))
   }
 
   base <- vector("list", length(.table_border_zones))
@@ -732,20 +684,20 @@ rtf_table_border <- function(header    = NULL,
   # The table's own top and bottom edges.
   if (!is.null(outer$top)) {
     if (has_header) {
-      base$header <- rtf_border(from = base$header %||% rtf_border(), top = outer$top)
+      base$header <- .merge_rtf_border(base$header, rtf_border(top = outer$top))
     } else {
-      base$first_row <- rtf_border(from = base$first_row %||% rtf_border(),
-                                   top = outer$top)
+      base$first_row <- .merge_rtf_border(base$first_row,
+                                          rtf_border(top = outer$top))
     }
   }
   if (!is.null(outer$bottom)) {
-    base$last_row <- rtf_border(from = base$last_row %||% rtf_border(),
-                                bottom = outer$bottom)
+    base$last_row <- .merge_rtf_border(base$last_row,
+                                       rtf_border(bottom = outer$bottom))
   }
 
   # The header/body seam is an *inside* horizontal rule, not an outer one.
   if (!is.null(ih) && has_header) {
-    base$header <- rtf_border(from = base$header %||% rtf_border(), bottom = ih)
+    base$header <- .merge_rtf_border(base$header, rtf_border(bottom = ih))
   }
 
   for (z in .table_border_zones) {
@@ -825,7 +777,7 @@ rtf_border_tfl <- function(style = "single", width = 15L, color = NULL) {
 
 # The preset itself, for `border = "tfl"` and rtf_table_style_tfl().
 .rtf_border_tfl <- function(style = "single", width = 15L, color = NULL) {
-  s <- .rtf_border_side(style, width, color)
+  s <- rtf_border_side(style, width, color)
   .rtf_table_border(
     header   = rtf_border(top = s, bottom = s),
     spanning = NULL,
@@ -854,7 +806,7 @@ rtf_border_tfl <- function(style = "single", width = 15L, color = NULL) {
     for (side in c("top", "bottom", "left", "right")) {
       st <- spec[[side]]
       if (!is.null(st) && !st %in% c("none", "")) {
-        sides[[side]] <- .rtf_border_side(st, width)
+        sides[[side]] <- rtf_border_side(st, width)
       }
     }
     if (length(sides) > 0L) {

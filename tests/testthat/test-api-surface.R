@@ -28,7 +28,6 @@ test_that("every name on the deprecated list is actually exported", {
 test_that("every deprecated function still works and warns once", {
   b <- rtf_border(top = TRUE)
   calls <- list(
-    rtf_border_side   = function() rtf_border_side(),
     rtf_border_top    = function() rtf_border_top(),
     rtf_border_bottom = function() rtf_border_bottom(),
     rtf_border_box    = function() rtf_border_box(),
@@ -54,22 +53,22 @@ test_that("the deprecated spellings still produce the new values", {
     expect_identical(rtf_border_top(),   rtf_border(top = TRUE))
     expect_identical(rtf_border_bottom(), rtf_border(bottom = TRUE))
     expect_identical(rtf_border_box(),   rtf_border(all = TRUE))
-    expect_identical(rtf_border_side("double", 20L),
-                     rtf_border(top = "double", width = 20L)$top)
     b <- rtf_border(top = TRUE)
     expect_identical(rtf_border_with(b, bottom = TRUE),
-                     rtf_border(from = b, bottom = TRUE))
+                     rtf_border(top = TRUE, bottom = TRUE))
   })
 })
 
 test_that("one border constructor is left once the deprecated ones are set aside", {
   border_api <- grep("^rtf_border|^rtf_table_border$", .exports(), value = TRUE)
   expect_length(border_api, 9L)                       # what NAMESPACE still holds
-  expect_identical(setdiff(border_api, .dep), "rtf_border")
+  # Two, doing different jobs: which edges, and what the line is.
+  expect_setequal(setdiff(border_api, .dep),
+                  c("rtf_border", "rtf_border_side"))
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 75 exports, 8 of them deprecated and slated for removal before CRAN.
+  # 75 exports, 7 of them deprecated and slated for removal before CRAN.
   expect_length(.exports(), 75L)
-  expect_length(setdiff(.exports(), .dep), 67L)
+  expect_length(setdiff(.exports(), .dep), 68L)
 })

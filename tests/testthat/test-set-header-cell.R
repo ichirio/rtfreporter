@@ -52,7 +52,7 @@ test_that("several cells can be placed at once", {
 test_that("border and alignment on the col_cell are applied", {
   tbl <- set_header_cell(tbl5(),
     col_cell(c("g1", "g3"), "Stat", align = "center",
-             border = rtf_border(bottom = rtfreporter:::.rtf_border_side("none"))),
+             border = rtf_border(bottom = rtf_border_side("none"))),
     row = 1)
   s <- span_of(tbl$col_header[[1L]], "Stat")
   expect_identical(s$align, "center")

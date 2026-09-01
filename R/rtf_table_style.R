@@ -191,7 +191,7 @@ print.rtf_table_style <- function(x, ...) {
 #' rtftable(data.frame(Parameter = "Age", Value = "75.1"), style = style)
 #' @export
 rtf_table_style_tfl <- function() {
-  s <- .rtf_border_side()
+  s <- rtf_border_side()
   rtf_table_style(
     border_header = rtf_border(top = s, bottom = s),
     header_bold   = FALSE,

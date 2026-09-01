@@ -25,7 +25,7 @@ test_that("border colours are auto-collected into the RTF \\colortbl", {
   # renderer -- see #36). A coloured border injects its colour into \colortbl.
   df  <- data.frame(A = c("1", "2"), B = c("x", "y"), stringsAsFactors = FALSE)
   hdr <- rtf_header(rows = list(c(l = "X")),
-                    border = rtf_border(bottom = rtfreporter:::.rtf_border_side(color = "#1F4E79")))
+                    border = rtf_border(bottom = rtf_border_side(color = "#1F4E79")))
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = hdr, footer = NULL)) |>
     rtf_tables(as_rtftables(df))
