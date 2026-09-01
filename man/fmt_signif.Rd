@@ -16,57 +16,57 @@ fmt_signif(
 \item{x}{A numeric vector. Character input is an error -- character columns
 are taken as already formatted.}
 
-\item{digits}{Total significant digits. Default `3`.}
+\item{digits}{Total significant digits. Default \code{3}.}
 
-\item{rounding}{`"r"` (default) rounds with [base::round()], which is
-banker's rounding; `"sas"` rounds half away from zero as SAS does. They
-differ on exact halves -- `23.445` is `"23.44"` under `"r"` and `"23.45"`
-under `"sas"`.}
+\item{rounding}{\code{"r"} (default) rounds with \code{\link[base:Round]{base::round()}}, which is
+banker's rounding; \code{"sas"} rounds half away from zero as SAS does. They
+differ on exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"}
+under \code{"sas"}.}
 
-\item{small}{`"signif"` (default) or `"fixed"`; see *Values below 1*.}
+\item{small}{\code{"signif"} (default) or \code{"fixed"}; see \emph{Values below 1}.}
 
-\item{na}{Text for `NA` and `NaN`. Default `""` (an empty cell, which is how
+\item{na}{Text for \code{NA} and \code{NaN}. Default \code{""} (an empty cell, which is how
 rtfreporter renders a missing value anyway).}
 }
 \value{
-A character vector the same length as `x`. `Inf` / `-Inf` pass
-  through as `"Inf"` / `"-Inf"`.
+A character vector the same length as \code{x}. \code{Inf} / \code{-Inf} pass
+through as \code{"Inf"} / \code{"-Inf"}.
 }
 \description{
 Renders a numeric vector as the text a clinical table should show, counting
-**total printed digits including the integer part** -- the convention a SAP
+\strong{total printed digits including the integer part} -- the convention a SAP
 means by "report to 4 significant digits", which is not the same as
-[signif()]:
+\code{\link[base:Round]{base::signif()}}:
 
 \preformatted{
 fmt_signif(c(0, 10.2, 103.4, 20.333333, 23.4463), digits = 4)
 #> "0.000" "10.20" "103.4" "20.33" "23.45"
 }
 
-The decimal places are `digits` minus the number of digits in the integer
-part, never below zero -- so an integer part longer than `digits` simply
-prints whole (`12345.6` at 4 digits is `"12346"`; integer digits are never
+The decimal places are \code{digits} minus the number of digits in the integer
+part, never below zero -- so an integer part longer than \code{digits} simply
+prints whole (\code{12345.6} at 4 digits is \code{"12346"}; integer digits are never
 dropped). When rounding carries the value into another decade the decimals
-are recomputed, so the result really does carry `digits` digits
-(`99.995` is `"100.0"`, not `"100.00"`).
+are recomputed, so the result really does carry \code{digits} digits
+(\code{99.995} is \code{"100.0"}, not \code{"100.00"}).
 }
 \section{Values below 1}{
 
-`small` decides what a value with no integer part means. `"signif"` (the
+\code{small} decides what a value with no integer part means. \code{"signif"} (the
 default) counts from the first significant digit, so precision is kept;
-`"fixed"` applies the integer-counting rule everywhere, which can erase a
+\code{"fixed"} applies the integer-counting rule everywhere, which can erase a
 small value entirely:
 
 \tabular{lll}{
-  **x** \tab **`"signif"`** \tab **`"fixed"`** \cr
-  `0.333333`  \tab `0.3333`    \tab `0.333` \cr
-  `0.0004567` \tab `0.0004567` \tab `0.000` \cr
-  `0.00998`   \tab `0.009980`  \tab `0.010`
+\strong{x} \tab \strong{\code{"signif"}} \tab \strong{\code{"fixed"}} \cr
+\code{0.333333}  \tab \code{0.3333}    \tab \code{0.333} \cr
+\code{0.0004567} \tab \code{0.0004567} \tab \code{0.000} \cr
+\code{0.00998}   \tab \code{0.009980}  \tab \code{0.010}
 }
 
-`0.000` for a concentration near the limit of quantitation is the reason
-`"signif"` is the default. Zero itself prints with `digits - 1` decimals
-under both (`"0.000"` at 4), having no significant digits to count.
+\code{0.000} for a concentration near the limit of quantitation is the reason
+\code{"signif"} is the default. Zero itself prints with \code{digits - 1} decimals
+under both (\code{"0.000"} at 4), having no significant digits to count.
 }
 
 \examples{
@@ -76,7 +76,7 @@ fmt_signif(0.0004567, digits = 4, small = "fixed")     # "0.000"
 fmt_signif(23.445, digits = 4, rounding = "sas")       # "23.45"
 }
 \seealso{
-[fmt_round()] for plain decimal places, [fmt_numeric()] to apply
-  either across a data frame, and [set_decimal_split()] to line the printed
-  decimal points up.
+\code{\link[=fmt_round]{fmt_round()}} for plain decimal places, \code{\link[=fmt_numeric]{fmt_numeric()}} to apply
+either across a data frame, and \code{\link[=set_decimal_split]{set_decimal_split()}} to line the printed
+decimal points up.
 }

@@ -8,23 +8,23 @@ realign_count_pct(x, nbsp = " ")
 }
 \arguments{
 \item{x}{Character vector.  Cells that match the regex
-`^\\d+ \\(\\d+(\\.\\d+)?\\)$` are reformatted; all others are
+\verb{^\\\\d+ \\\\(\\\\d+(\\\\.\\\\d+)?\\\\)$} are reformatted; all others are
 returned unchanged.}
 
-\item{nbsp}{Padding character (see [format_count_pct()]).}
+\item{nbsp}{Padding character (see \code{\link[=format_count_pct]{format_count_pct()}}).}
 }
 \value{
-Character vector the same length as `x`.
+Character vector the same length as \code{x}.
 }
 \description{
-Scans `x` for cells matching the clinical-TFL pattern `"n (xx.x)"`
-(e.g. `"5 (33.3)"`), parses the count and percent, and reformats
-them through [format_count_pct()] so every cell is the same width.
+Scans \code{x} for cells matching the clinical-TFL pattern \code{"n (xx.x)"}
+(e.g. \code{"5 (33.3)"}), parses the count and percent, and reformats
+them through \code{\link[=format_count_pct]{format_count_pct()}} so every cell is the same width.
 Cells that do not match are returned unchanged.
 }
 \details{
-This is the function `paginate()` invokes internally when
-`align_count_pct = TRUE` (see [paginate()]).  It is exported so it
+This is the function \code{paginate()} invokes internally when
+\code{align_count_pct = TRUE} (see \code{\link[=paginate]{paginate()}}).  It is exported so it
 can be applied directly to a data.frame column outside of any
 pagination context.
 }
@@ -34,5 +34,5 @@ realign_count_pct(c("5 (33.3)", "12 (100.0)", "0 (0.0)",
 
 }
 \seealso{
-[format_count_pct()] for the numeric -> string variant.
+\code{\link[=format_count_pct]{format_count_pct()}} for the numeric -> string variant.
 }

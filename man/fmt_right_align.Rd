@@ -10,14 +10,14 @@ fmt_right_align(x, nbsp = " ")
 \item{x}{Character vector (one table column).}
 
 \item{nbsp}{Padding character; defaults to the non-breaking space
-(U+00A0) so RTF / Word keep the alignment.  Pass `" "` for plain text.}
+(U+00A0) so RTF / Word keep the alignment.  Pass \code{" "} for plain text.}
 }
 \value{
-Character vector the same length as `x`.
+Character vector the same length as \code{x}.
 }
 \description{
-A minimal cell-format function (see *The contract* in the
-\code{vignette} / [as_rtftables()]): every non-empty cell is right-justified
+A minimal cell-format function (see \emph{The contract} in the
+\code{vignette} / \code{\link[=as_rtftables]{as_rtftables()}}): every non-empty cell is right-justified
 to the width of the widest cell, padding on the left with non-breaking
 spaces.  Empty cells are left empty.  This is the simplest useful formatter
 and a good template for writing your own.
@@ -27,6 +27,6 @@ fmt_right_align(c("5", "120", "7"))
 
 }
 \seealso{
-[fmt_count_paren()], [realign_count_pct()], and the `cell_format`
-  argument of [as_rtftables()].
+\code{\link[=fmt_count_paren]{fmt_count_paren()}}, \code{\link[=realign_count_pct]{realign_count_pct()}}, and the \code{cell_format}
+argument of \code{\link[=as_rtftables]{as_rtftables()}}.
 }

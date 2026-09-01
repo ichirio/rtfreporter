@@ -48,120 +48,120 @@ rtf_tables(
 \item{tables}{A list where each element is one page's content (a single
 content per page). Each element is one of:
 \describe{
-  \item{a `data.frame`}{a simple table; the table-format arguments below
-    apply to it.}
-  \item{an `rtftable` object}{(from [rtftable()]) a table with full
-    formatting -- usually the output of [as_rtftables()].}
-  \item{an `rtfplot` object}{(from [rtfplot()]) an embedded figure.}
-  \item{a `gt_tbl` object}{(from the gt package) treated like a
-    `data.frame`; pass `read_gt = TRUE` (or a token vector) to also pull
-    through gt's column labels, alignment, title / subtitle and source
-    notes (see `read_gt`).}
-  \item{a gtsummary table}{(`tbl_summary`, `tbl_regression`, ...)
-    auto-converted to a `gt_tbl` first; `read_gt = TRUE` pulls through its
-    labels, titles, source notes, footnotes and spanning headers.}
+\item{a \code{data.frame}}{a simple table; the table-format arguments below
+apply to it.}
+\item{an \code{rtftable} object}{(from \code{\link[=rtftable]{rtftable()}}) a table with full
+formatting -- usually the output of \code{\link[=as_rtftables]{as_rtftables()}}.}
+\item{an \code{rtfplot} object}{(from \code{\link[=rtfplot]{rtfplot()}}) an embedded figure.}
+\item{a \code{gt_tbl} object}{(from the gt package) treated like a
+\code{data.frame}; pass \code{read_gt = TRUE} (or a token vector) to also pull
+through gt's column labels, alignment, title / subtitle and source
+notes (see \code{read_gt}).}
+\item{a gtsummary table}{(\code{tbl_summary}, \code{tbl_regression}, ...)
+auto-converted to a \code{gt_tbl} first; \code{read_gt = TRUE} pulls through its
+labels, titles, source notes, footnotes and spanning headers.}
 }
-  Note: cell-level formatting (row indentation, bold group-header
-  rows, footnote marks in cells) is **not** transferred to RTF.
-  See [as_rtftable()] for details on gtsummary limitations.}
+Note: cell-level formatting (row indentation, bold group-header
+rows, footnote marks in cells) is \strong{not} transferred to RTF.
+See \code{\link[=as_rtftable]{as_rtftable()}} for details on gtsummary limitations.}
 
-\item{col_header, col_header_align, spanning_header, col_spec, row_title, border, blank_rows, read_attributes, style}{Per-table content settings applied to bare `data.frame` elements. `row_title` names the row-heading columns (default: column 1) and sets the per-column default alignment (heading columns left, others centre). See [rtftable()] for details.}
+\item{col_header, col_header_align, spanning_header, col_spec, row_title, border, blank_rows, read_attributes, style}{Per-table content settings applied to bare \code{data.frame} elements. \code{row_title} names the row-heading columns (default: column 1) and sets the per-column default alignment (heading columns left, others centre). See \code{\link[=rtftable]{rtftable()}} for details.}
 
-\item{col_rel_width, column_widths_twips, table_width_twips, table_width_pct_of_writable, table_width_pct, table_align}{Column-width and table-width settings applied to bare `data.frame` elements. See [rtftable()] for details.}
+\item{col_rel_width, column_widths_twips, table_width_twips, table_width_pct_of_writable, table_width_pct, table_align}{Column-width and table-width settings applied to bare \code{data.frame} elements. See \code{\link[=rtftable]{rtftable()}} for details.}
 
-\item{row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips}{Row-height settings applied to bare `data.frame` elements. See [rtftable()] for details.}
+\item{row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips}{Row-height settings applied to bare \code{data.frame} elements. See \code{\link[=rtftable]{rtftable()}} for details.}
 
-\item{cell_padding_left_twips, cell_padding_right_twips, cell_valign}{Cell layout settings applied to bare `data.frame` elements. See [rtftable()] for details.}
+\item{cell_padding_left_twips, cell_padding_right_twips, cell_valign}{Cell layout settings applied to bare \code{data.frame} elements. See \code{\link[=rtftable]{rtftable()}} for details.}
 
 \item{blank_row_normalize}{Blank-row normalisation applied to bare
-`data.frame` elements (default `c("detect", "collapse")`): `"detect"`
-renders an all-empty data row as a single full-width blank row, `"collapse"`
-reduces a run of consecutive blank rows to one. Pre-built `rtftable()`
-pages keep their own setting. See [rtftable()] for details.}
+\code{data.frame} elements (default \code{c("detect", "collapse")}): \code{"detect"}
+renders an all-empty data row as a single full-width blank row, \code{"collapse"}
+reduces a run of consecutive blank rows to one. Pre-built \code{rtftable()}
+pages keep their own setting. See \code{\link[=rtftable]{rtftable()}} for details.}
 
-\item{markup}{Cell-text markup applied to bare `data.frame` elements
-(`"script"` super/subscript, `"relational"` `>=`/`<=` symbols, `"all"`,
-`"none"`). `NULL` (default) inherits the document default (`"script"`).
-Pre-built `rtftable()` pages keep their own setting. See [rtftable()].}
+\item{markup}{Cell-text markup applied to bare \code{data.frame} elements
+(\code{"script"} super/subscript, \code{"relational"} \code{>=}/\code{<=} symbols, \code{"all"},
+\code{"none"}). \code{NULL} (default) inherits the document default (\code{"script"}).
+Pre-built \code{rtftable()} pages keep their own setting. See \code{\link[=rtftable]{rtftable()}}.}
 
 \item{font_size_half_points, font}{Typography for these tables, in
-half-points and as a family name. Both **override** whatever a pre-built
-[rtftable()] carries, so a table can be built once and placed in documents
-of different sizes. Passing a size without `row_height_twips` recomputes
-the row height from it, exactly as on [rtftable()].}
+half-points and as a family name. Both \strong{override} whatever a pre-built
+\code{\link[=rtftable]{rtftable()}} carries, so a table can be built once and placed in documents
+of different sizes. Passing a size without \code{row_height_twips} recomputes
+the row height from it, exactly as on \code{\link[=rtftable]{rtftable()}}.}
 
-\item{titles}{`NULL` (default) or a list of length `length(tables)` **or
-length 1** (a single block applied to every page). Each element is a
-title **block**: either a character vector (one entry per row, default
+\item{titles}{\code{NULL} (default) or a list of length \code{length(tables)} \strong{or
+length 1} (a single block applied to every page). Each element is a
+title \strong{block}: either a character vector (one entry per row, default
 styling) or a list of rows, where a row is a string or a styled
-`list(text=, align=, bold=, italic=, underline=, color=, border=)`. An
-empty string (`""`) is a blank row. The block renders as a single-column
+\code{list(text=, align=, bold=, italic=, underline=, color=, border=)}. An
+empty string (\code{""}) is a blank row. The block renders as a single-column
 table the same width as the content (so it lines up); title rows default
 to centred + bold.}
 
-\item{footnotes}{`NULL` (default) or a list of length `length(tables)` or
-length 1 (common to all). Same block structure as `titles`; footnote rows
+\item{footnotes}{\code{NULL} (default) or a list of length \code{length(tables)} or
+length 1 (common to all). Same block structure as \code{titles}; footnote rows
 default to left-aligned, and the first row carries a top rule (the
-separator) unless that row sets its own `border`.}
+separator) unless that row sets its own \code{border}.}
 
-\item{auto_section}{Logical. When `TRUE` and `tables` is a **named** list,
+\item{auto_section}{Logical. When \code{TRUE} and \code{tables} is a \strong{named} list,
 each name is used as a per-section heading appended to the common header
-defined by `rtf_section(secinfo = ...)` (called without a `page` argument).
+defined by \code{rtf_section(secinfo = ...)} (called without a \code{page} argument).
 The document is then automatically split into one RTF section per named
 element. Unnamed items fall through to the previous section.
-Default `FALSE`.}
+Default \code{FALSE}.}
 
 \item{section_label_align}{Alignment for the auto-appended section label row.
-One of `"left"` (default), `"center"`, or `"right"`.}
+One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}
 
-\item{auto_title}{Logical. When `TRUE` and `tables` is a **named** list,
-each name is appended as the **last row of that table's title block**, so
+\item{auto_title}{Logical. When \code{TRUE} and \code{tables} is a \strong{named} list,
+each name is appended as the \strong{last row of that table's title block}, so
 it prints immediately above the table rather than in the page header.
-Titles already present -- from `titles =`, or carried on the object as the
-`rtf_titles` attribute by [as_rtftables()] -- are kept and the name goes
+Titles already present -- from \verb{titles =}, or carried on the object as the
+\code{rtf_titles} attribute by \code{\link[=as_rtftables]{as_rtftables()}} -- are kept and the name goes
 after them; a table with no titles gets the name as its whole block.
 Unnamed items are untouched.  Behaves identically under either
-`title_format`.  Composes with `auto_section`, which puts the same name in
-the section header instead.  Default `FALSE`.}
+\code{title_format}.  Composes with \code{auto_section}, which puts the same name in
+the section header instead.  Default \code{FALSE}.}
 
 \item{title_label_align}{Alignment for the auto-appended title label row.
-One of `"left"` (default), `"center"`, or `"right"`.}
+One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}
 
-\item{read_gt}{**Legacy.**  Controls metadata extraction when a raw
-`gt_tbl` is handed *directly* to `rtf_tables()` (no pagination).  For
-new code, prefer converting up front with [as_rtftables()], which
-paginates *and* reads metadata, then pass the resulting list here --
+\item{read_gt}{\strong{Legacy.}  Controls metadata extraction when a raw
+\code{gt_tbl} is handed \emph{directly} to \code{rtf_tables()} (no pagination).  For
+new code, prefer converting up front with \code{\link[=as_rtftables]{as_rtftables()}}, which
+paginates \emph{and} reads metadata, then pass the resulting list here --
 the page-level titles / footnotes flow through automatically (via the
-`rtf_titles` / `rtf_footnotes` attributes) with `read_gt` left at its
+\code{rtf_titles} / \code{rtf_footnotes} attributes) with \code{read_gt} left at its
 default.  Allowed values:
 \describe{
-  \item{`FALSE` (default)}{treat `gt_tbl` items as a rendered body only;
-    ignore titles / labels / source notes.}
-  \item{`TRUE`}{read the render-relevant metadata: column labels,
-    per-column alignment, spanning headers, widths, plus the page-level
-    title / subtitle and footnote / source notes.  See [as_rtftables()]
-    for the full *What is carried, by source* table.}
-  \item{a character vector of tokens}{selective opt-in.  See
-    [as_rtftables()] for the token list.}
+\item{\code{FALSE} (default)}{treat \code{gt_tbl} items as a rendered body only;
+ignore titles / labels / source notes.}
+\item{\code{TRUE}}{read the render-relevant metadata: column labels,
+per-column alignment, spanning headers, widths, plus the page-level
+title / subtitle and footnote / source notes.  See \code{\link[=as_rtftables]{as_rtftables()}}
+for the full \emph{What is carried, by source} table.}
+\item{a character vector of tokens}{selective opt-in.  See
+\code{\link[=as_rtftables]{as_rtftables()}} for the token list.}
 }
-Explicit `rtf_tables()` / `rtf_titles()` / `rtf_footnotes()`
+Explicit \code{rtf_tables()} / \code{rtf_titles()} / \code{rtf_footnotes()}
 values always override gt-extracted ones.}
 }
 \value{
 Modified rtf_document with appended contents.
 }
 \description{
-Append one or more content items as pages. **Each element of `tables`
-becomes exactly one page**, holding a single table or figure.
+Append one or more content items as pages. \strong{Each element of \code{tables}
+becomes exactly one page}, holding a single table or figure.
 }
 \details{
-Table-formatting arguments (`col_rel_width`, `border`, `row_height_twips`,
-...) accepted by this function are used to build any bare `data.frame`
-element of `tables`, and -- when passed **explicitly** -- also override the
-matching field of any pre-built `rtftable()` element (for example the
-output of [as_rtftables()]).  Arguments left at their default are not
+Table-formatting arguments (\code{col_rel_width}, \code{border}, \code{row_height_twips},
+...) accepted by this function are used to build any bare \code{data.frame}
+element of \code{tables}, and -- when passed \strong{explicitly} -- also override the
+matching field of any pre-built \code{rtftable()} element (for example the
+output of \code{\link[=as_rtftables]{as_rtftables()}}).  Arguments left at their default are not
 applied to pre-built tables, so those keep their own / gt-derived settings.
-`rtfplot()` elements are never modified.  (The `style` argument seeds
+\code{rtfplot()} elements are never modified.  (The \code{style} argument seeds
 construction-time defaults only; it is not applied as an override to a
 pre-built table.)
 }

@@ -10,8 +10,8 @@ rtfreporter_options()
 A named list of resolved default values.
 }
 \description{
-Returns a named list of the currently **resolved** `rtfreporter.*` default
-values -- the option value where one is set (e.g. in `Rprofile.site`),
+Returns a named list of the currently \strong{resolved} \verb{rtfreporter.*} default
+values -- the option value where one is set (e.g. in \code{Rprofile.site}),
 otherwise the factory baseline. Use it to record the configuration a report
 was generated under (a useful audit trail for validated/reproducible runs).
 }
@@ -20,5 +20,5 @@ rtfreporter_options()
 
 }
 \seealso{
-[rtfreporter_reset_defaults()] to restore the factory baseline.
+\code{\link[=rtfreporter_reset_defaults]{rtfreporter_reset_defaults()}} to restore the factory baseline.
 }

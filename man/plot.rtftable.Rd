@@ -2,20 +2,20 @@
 % Please edit documentation in R/plot.R
 \name{plot.rtftable}
 \alias{plot.rtftable}
-\title{Visualise an `rtftable`}
+\title{Visualise an \code{rtftable}}
 \usage{
 \method{plot}{rtftable}(x, width = 8, ...)
 }
 \arguments{
-\item{x}{An [rtftable()] object.}
+\item{x}{An \code{\link[=rtftable]{rtftable()}} object.}
 
 \item{width}{Plot width in inches (the page's writable width is assumed
-to be 10 inches = landscape letter minus margins).  Default `8`.}
+to be 10 inches = landscape letter minus margins).  Default \code{8}.}
 
 \item{...}{Unused.}
 }
 \value{
-Invisibly returns `x`.
+Invisibly returns \code{x}.
 }
 \description{
 Draws a wireframe of the table: column-header band, data band (with the

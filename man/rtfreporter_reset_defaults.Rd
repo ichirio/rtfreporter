@@ -10,7 +10,7 @@ rtfreporter_reset_defaults()
 Invisibly, the factory default list that was applied.
 }
 \description{
-Re-applies the package's factory baseline to every `rtfreporter.*` option,
+Re-applies the package's factory baseline to every \verb{rtfreporter.*} option,
 discarding any site or session overrides. Use this to recover a known state
 if a configuration has been changed in error.
 }
@@ -22,5 +22,5 @@ options(old)
 
 }
 \seealso{
-[rtfreporter_options()] to inspect the active values.
+\code{\link[=rtfreporter_options]{rtfreporter_options()}} to inspect the active values.
 }

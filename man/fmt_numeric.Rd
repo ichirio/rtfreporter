@@ -22,43 +22,43 @@ fmt_numeric(
 \item{cols}{Columns to format: names or positions. A selected column that is
 not numeric is left alone.}
 
-\item{by}{Optional carrier column (name or position) keying into `formats`.
+\item{by}{Optional carrier column (name or position) keying into \code{formats}.
 May be the row-heading column. Values are matched after trimming.}
 
-\item{formats}{Named list of rules, used with `by`. Each entry gives exactly
-one of `signif` or `digits`, and may add `small`. The reserved name
-`.default` covers unmatched keys.}
+\item{formats}{Named list of rules, used with \code{by}. Each entry gives exactly
+one of \code{signif} or \code{digits}, and may add \code{small}. The reserved name
+\code{.default} covers unmatched keys.}
 
-\item{signif, digits}{Used **without** `by` to format every selected cell the
+\item{signif, digits}{Used \strong{without} \code{by} to format every selected cell the
 same way. Give exactly one of them.}
 
-\item{rounding}{`"r"` (default) rounds with [base::round()], which is
-banker's rounding; `"sas"` rounds half away from zero as SAS does. They
-differ on exact halves -- `23.445` is `"23.44"` under `"r"` and `"23.45"`
-under `"sas"`.}
+\item{rounding}{\code{"r"} (default) rounds with \code{\link[base:Round]{base::round()}}, which is
+banker's rounding; \code{"sas"} rounds half away from zero as SAS does. They
+differ on exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"}
+under \code{"sas"}.}
 
-\item{small}{`"signif"` (default) or `"fixed"`; see *Values below 1*.}
+\item{small}{\code{"signif"} (default) or \code{"fixed"}; see \emph{Values below 1}.}
 
-\item{na}{Text for `NA` and `NaN`. Default `""` (an empty cell, which is how
+\item{na}{Text for \code{NA} and \code{NaN}. Default \code{""} (an empty cell, which is how
 rtfreporter renders a missing value anyway).}
 }
 \value{
-`data` with the selected numeric columns replaced by character
-  columns. Row count, column order and every other column are unchanged.
+\code{data} with the selected numeric columns replaced by character
+columns. Row count, column order and every other column are unchanged.
 }
 \description{
-Applies [fmt_signif()] or [fmt_round()] across a data frame, turning the
-selected **numeric** columns into the text the report should show. Run it
+Applies \code{\link[=fmt_signif]{fmt_signif()}} or \code{\link[=fmt_round]{fmt_round()}} across a data frame, turning the
+selected \strong{numeric} columns into the text the report should show. Run it
 before building the table; character columns are taken as already formatted
-and are never touched, and neither are columns outside `cols`.
+and are never touched, and neither are columns outside \code{cols}.
 }
 \section{One column, several formats -- the carrier column}{
 
 A clinical column holds several statistics, each with its own format, so a
-per-column setting is not enough. `by` names a **carrier column** whose
-values key into `formats`. It can be the **row-heading (stub) column
-itself**: values are matched after trimming, so an indented `"  Mean"` keys
-on `"Mean"` and no extra column is needed.
+per-column setting is not enough. \code{by} names a \strong{carrier column} whose
+values key into \code{formats}. It can be the \strong{row-heading (stub) column
+itself}: values are matched after trimming, so an indented \code{"  Mean"} keys
+on \code{"Mean"} and no extra column is needed.
 
 \preformatted{
 pk |> fmt_numeric(
@@ -71,8 +71,8 @@ pk |> fmt_numeric(
 }
 
 A row whose selected cells are all missing needs no key, so group-label and
-blank rows fall out on their own. A **non-missing** cell whose key matches
-nothing and has no `.default` is an error naming the unmatched keys --
+blank rows fall out on their own. A \strong{non-missing} cell whose key matches
+nothing and has no \code{.default} is an error naming the unmatched keys --
 quietly printing 15 digits into a submission table is the worse outcome.
 }
 
@@ -91,6 +91,6 @@ fmt_numeric(df, cols = "trt", by = "stat",
                            SD   = list(signif = 4)))
 }
 \seealso{
-[fmt_signif()], [fmt_round()]; [set_decimal_split()] to line the
-  printed decimal points up afterwards.
+\code{\link[=fmt_signif]{fmt_signif()}}, \code{\link[=fmt_round]{fmt_round()}}; \code{\link[=set_decimal_split]{set_decimal_split()}} to line the
+printed decimal points up afterwards.
 }

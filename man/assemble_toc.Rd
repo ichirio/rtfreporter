@@ -7,20 +7,20 @@
 assemble_toc(files = NULL, spec = NULL, ...)
 }
 \arguments{
-\item{files}{Vector of `.rtf` paths.}
+\item{files}{Vector of \code{.rtf} paths.}
 
-\item{spec}{Optional assembly spec (from [assemble_spec()]); when supplied,
-`files` is ignored and the spec is converted directly.}
+\item{spec}{Optional assembly spec (from \code{\link[=assemble_spec]{assemble_spec()}}); when supplied,
+\code{files} is ignored and the spec is converted directly.}
 
-\item{...}{Passed to [assemble_spec()] when building from `files`.}
+\item{...}{Passed to \code{\link[=assemble_spec]{assemble_spec()}} when building from \code{files}.}
 }
 \value{
-A list suitable for `assemble_rtf(toc = )`.
+A list suitable for \code{assemble_rtf(toc = )}.
 }
 \description{
-Convenience wrapper that reads the files (via [assemble_spec()]) and returns
-the `toc =` list of [toc_heading()] / [toc_entry()] objects ready for
-[assemble_rtf()].  Pass a ready-made `spec` to convert that instead.
+Convenience wrapper that reads the files (via \code{\link[=assemble_spec]{assemble_spec()}}) and returns
+the \verb{toc =} list of \code{\link[=toc_heading]{toc_heading()}} / \code{\link[=toc_entry]{toc_entry()}} objects ready for
+\code{\link[=assemble_rtf]{assemble_rtf()}}.  Pass a ready-made \code{spec} to convert that instead.
 }
 \examples{
 \dontrun{
@@ -29,5 +29,5 @@ assemble_rtf(assemble_files("output/tfl"), "deliverable.rtf", toc = toc)
 }
 }
 \seealso{
-[assemble_spec()], [assemble_from_spec()].
+\code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_from_spec]{assemble_from_spec()}}.
 }

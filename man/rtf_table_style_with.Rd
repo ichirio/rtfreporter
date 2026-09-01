@@ -2,21 +2,21 @@
 % Please edit documentation in R/rtf_table_style.R
 \name{rtf_table_style_with}
 \alias{rtf_table_style_with}
-\title{Return a copy of an `rtf_table_style` with selected fields replaced}
+\title{Return a copy of an \code{rtf_table_style} with selected fields replaced}
 \usage{
 rtf_table_style_with(style, ...)
 }
 \arguments{
-\item{style}{An [rtf_table_style()] object.}
+\item{style}{An \code{\link[=rtf_table_style]{rtf_table_style()}} object.}
 
 \item{...}{Named field overrides.  Allowed names match the arguments of
-[rtf_table_style()].}
+\code{\link[=rtf_table_style]{rtf_table_style()}}.}
 }
 \value{
-A new `rtf_table_style` object.
+A new \code{rtf_table_style} object.
 }
 \description{
-Non-mutating derivation: returns a new `rtf_table_style` whose listed
+Non-mutating derivation: returns a new \code{rtf_table_style} whose listed
 fields are overridden.  Unknown field names raise an error.
 }
 \examples{

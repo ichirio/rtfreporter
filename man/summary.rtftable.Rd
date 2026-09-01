@@ -7,15 +7,15 @@
 \method{summary}{rtftable}(object, ...)
 }
 \arguments{
-\item{object}{An `rtftable` object.}
+\item{object}{An \code{rtftable} object.}
 
 \item{...}{Additional arguments (unused).}
 }
 \value{
-`object`, invisibly.
+\code{object}, invisibly.
 }
 \description{
-Prints the compact metadata block for an [rtftable()] -- dimensions, leaf
+Prints the compact metadata block for an \code{\link[=rtftable]{rtftable()}} -- dimensions, leaf
 labels, row-title columns, border and column-width mode, and any attached
 title / footnote counts -- without the visual table body.
 }
@@ -33,6 +33,6 @@ summary(tbl)
 
 }
 \seealso{
-[print.rtftable()] for the same block plus the table body,
-  [format.rtftable()] to capture the rendered lines as a character vector.
+\code{\link[=print.rtftable]{print.rtftable()}} for the same block plus the table body,
+\code{\link[=format.rtftable]{format.rtftable()}} to capture the rendered lines as a character vector.
 }

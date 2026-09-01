@@ -2,7 +2,7 @@
 % Please edit documentation in R/stub_spec.R
 \name{stub_spec}
 \alias{stub_spec}
-\title{Bundle the row-stub settings for `as_rtftables()`}
+\title{Bundle the row-stub settings for \code{as_rtftables()}}
 \usage{
 stub_spec(
   vars,
@@ -14,25 +14,25 @@ stub_spec(
 )
 }
 \arguments{
-\item{vars}{The hierarchy columns, **parent first, leaf last** -- at least
-two.  See [stub_cols()].}
+\item{vars}{The hierarchy columns, \strong{parent first, leaf last} -- at least
+two.  See \code{\link[=stub_cols]{stub_cols()}}.}
 
-\item{label, indent, group_summary, layout, label_span}{Passed to [stub_cols()];
+\item{label, indent, group_summary, layout, label_span}{Passed to \code{\link[=stub_cols]{stub_cols()}};
 see there for the full description of each.}
 }
 \value{
-An object of class `rtf_stub_spec`.
+An object of class \code{rtf_stub_spec}.
 }
 \description{
-Collects everything [stub_cols()] accepts into one object, so
-[as_rtftables()] takes a single `stub =` argument instead of one argument
-per setting.  The arguments are `stub_cols()`'s own, so the two never drift
+Collects everything \code{\link[=stub_cols]{stub_cols()}} accepts into one object, so
+\code{\link[=as_rtftables]{as_rtftables()}} takes a single \verb{stub =} argument instead of one argument
+per setting.  The arguments are \code{stub_cols()}'s own, so the two never drift
 apart.
 }
 \details{
-The `stub_vars` / `stub_label` / `stub_indent` / `stub_group_summary`
-arguments of [as_rtftables()] are **superseded** by this: they still work
-and are not deprecated, but they cannot reach `layout` or `label_span`, and
+The \code{stub_vars} / \code{stub_label} / \code{stub_indent} / \code{stub_group_summary}
+arguments of \code{\link[=as_rtftables]{as_rtftables()}} are \strong{superseded} by this: they still work
+and are not deprecated, but they cannot reach \code{layout} or \code{label_span}, and
 new settings will only be added here.
 }
 \examples{
@@ -47,6 +47,6 @@ stub_spec(c("SOC", "PT"), indent = 0, label_span = TRUE)
 
 }
 \seealso{
-[stub_cols()], which does the work and documents every setting;
-  [as_rtftables()], which consumes this through its `stub` argument.
+\code{\link[=stub_cols]{stub_cols()}}, which does the work and documents every setting;
+\code{\link[=as_rtftables]{as_rtftables()}}, which consumes this through its \code{stub} argument.
 }

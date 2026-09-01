@@ -13,12 +13,12 @@ toc_heading(label, level = 1L)
 the rendered TOC.}
 }
 \value{
-A list of class `"rtf_toc_heading"`.
+A list of class \code{"rtf_toc_heading"}.
 }
 \description{
-Use inside [assemble_rtf()]'s `toc =` list to insert a section
+Use inside \code{\link[=assemble_rtf]{assemble_rtf()}}'s \verb{toc =} list to insert a section
 heading (no clickable link, no page number) above a group of
-[toc_entry()]s.
+\code{\link[=toc_entry]{toc_entry()}}s.
 }
 \examples{
 toc_heading("EFFICACY ANALYSES", level = 1)

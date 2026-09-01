@@ -20,29 +20,29 @@ rtf_titles(
 \item{titles}{A list of length = number of pages, or length 1 (common).}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
-this block, overriding the document default from [rtf_default_format()].
-`font` names a family (e.g. `"Arial"`); one not already in the document's
-`font_table` is added to it automatically, the way a colour is.
-Anything left `NULL` is inherited. Font size and row height resolve
-**together**: a size given without a height recomputes the height from
+this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
+\code{font} names a family (e.g. \code{"Arial"}); one not already in the document's
+\code{font_table} is added to it automatically, the way a colour is.
+Anything left \code{NULL} is inherited. Font size and row height resolve
+\strong{together}: a size given without a height recomputes the height from
 that size rather than inheriting one chosen for a different size, and an
-explicit height always wins. `align` sets the block's default row
-alignment; a per-row `align` still beats it.}
+explicit height always wins. \code{align} sets the block's default row
+alignment; a per-row \code{align} still beats it.}
 }
 \value{
 Modified rtf_document.
 }
 \description{
-Replace the per-page title list with the supplied values.  `titles` must
-have length equal to the number of pages already added via [rtf_tables()] /
-[rtf_figures()], **or length 1** -- a single block is then applied to every
+Replace the per-page title list with the supplied values.  \code{titles} must
+have length equal to the number of pages already added via \code{\link[=rtf_tables]{rtf_tables()}} /
+\code{\link[=rtf_figures]{rtf_figures()}}, \strong{or length 1} -- a single block is then applied to every
 page (common title).
 }
 \details{
-Each element is a title **block**: either a character vector (one entry per
+Each element is a title \strong{block}: either a character vector (one entry per
 row, default styling) or a list of rows, where a row is a string or a styled
-`list(text=, align=, bold=, italic=, underline=, color=, border=)`. An empty
-string (`""`) is a blank row. The block renders as a single-column table the
+\code{list(text=, align=, bold=, italic=, underline=, color=, border=)}. An empty
+string (\code{""}) is a blank row. The block renders as a single-column table the
 same width as the content; title rows default to centred + bold.
 }
 \examples{

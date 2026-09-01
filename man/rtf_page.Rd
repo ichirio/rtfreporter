@@ -18,38 +18,38 @@ rtf_page(
 )
 }
 \arguments{
-\item{paper_size}{A named preset (case-insensitive): `"letter"` (8.5x11"),
-`"legal"` (8.5x14"), `"A4"` (210x297mm), `"A3"`, or `"A5"`.}
+\item{paper_size}{A named preset (case-insensitive): \code{"letter"} (8.5x11"),
+\code{"legal"} (8.5x14"), \code{"A4"} (210x297mm), \code{"A3"}, or \code{"A5"}.}
 
-\item{orientation}{`"landscape"` or `"portrait"`.}
+\item{orientation}{\code{"landscape"} or \code{"portrait"}.}
 
 \item{width_in, height_in}{Explicit page size in inches. When supplied these
-**win** over `paper_size`, and the orientation is *inferred* from them
-(`width_in >= height_in` means landscape). `NULL` (default) uses
-`paper_size`.}
+\strong{win} over \code{paper_size}, and the orientation is \emph{inferred} from them
+(\code{width_in >= height_in} means landscape). \code{NULL} (default) uses
+\code{paper_size}.}
 
 \item{margin_top_in, margin_bottom_in, margin_left_in, margin_right_in}{The four
 page margins, in inches.}
 
 \item{header_dist_in, footer_dist_in}{Distance (inches) of the header / footer
-band from the page edge. `NULL` (default) uses the **full** corresponding
+band from the page edge. \code{NULL} (default) uses the \strong{full} corresponding
 top / bottom margin (so the band sits at the margin boundary).}
 }
 \value{
-An `rtf_page` object (a classed named list) for `rtf_document(page =)`.
+An \code{rtf_page} object (a classed named list) for \code{rtf_document(page =)}.
 }
 \description{
-Builds the `page` setting for [rtf_document()] / [rtf_config()] as a
-structured `rtf_page` object, so the available options and their **defaults**
+Builds the \code{page} setting for \code{\link[=rtf_document]{rtf_document()}} / \code{\link[=rtf_config]{rtf_config()}} as a
+structured \code{rtf_page} object, so the available options and their \strong{defaults}
 are visible right here in the signature (rather than buried in a named list).
 }
 \details{
-The default is **landscape Letter** with 0.9" top/bottom and 0.6" left/right
-margins. A *site* can change any default by setting the matching
-`rtfreporter.*` option (e.g. in `Rprofile.site`): an argument you do not pass
-falls back to that option, so the resolution order is **explicit argument >
-`rtfreporter.*` option > the factory default shown below** (see
-[rtfreporter_options()]).
+The default is \strong{landscape Letter} with 0.9" top/bottom and 0.6" left/right
+margins. A \emph{site} can change any default by setting the matching
+\verb{rtfreporter.*} option (e.g. in \code{Rprofile.site}): an argument you do not pass
+falls back to that option, so the resolution order is \strong{explicit argument >
+\verb{rtfreporter.*} option > the factory default shown below} (see
+\code{\link[=rtfreporter_options]{rtfreporter_options()}}).
 }
 \examples{
 # Defaults made explicit (landscape Letter):
@@ -70,5 +70,5 @@ doc <- rtf_document(page = rtf_page(paper_size = "A4", orientation = "portrait")
 
 }
 \seealso{
-[rtf_document()], [rtf_default_format()], [rtfreporter_options()].
+\code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_default_format]{rtf_default_format()}}, \code{\link[=rtfreporter_options]{rtfreporter_options()}}.
 }

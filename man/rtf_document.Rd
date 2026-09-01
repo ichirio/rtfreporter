@@ -13,48 +13,47 @@ rtf_document(
 }
 \arguments{
 \item{font_table}{Optional font table: a list of font specifications, each a
-named list with a `name` (e.g. `list(list(name = "Arial"))`). The first
-entry is the document's default font. Default: `list(list(name =
-"Courier"))` (a fixed-width font, which keeps clinical columns aligned).}
+named list with a \code{name} (e.g. \code{list(list(name = "Arial"))}). The first
+entry is the document's default font. Default: \code{list(list(name = "Courier"))} (a fixed-width font, which keeps clinical columns aligned).}
 
-\item{color_table}{Optional character vector of `"#RRGGBB"` colours to
+\item{color_table}{Optional character vector of \code{"#RRGGBB"} colours to
 pre-declare in the document's colour table (so they are available by
-index). Default `c("#000000")`. Colours actually used by borders and by
-`col_spec` / `cell_styles` `color` are added automatically, so you only
+index). Default \code{c("#000000")}. Colours actually used by borders and by
+\code{col_spec} / \code{cell_styles} \code{color} are added automatically, so you only
 need this to declare colours you reference elsewhere. Black and white are
 reserved and added implicitly.}
 
-\item{page}{The page geometry. Pass an [rtf_page()] object (recommended --
+\item{page}{The page geometry. Pass an \code{\link[=rtf_page]{rtf_page()}} object (recommended --
 its help lists every key with its default), a named list with the same
-keys, or `NULL` (default) to use the option / factory defaults (landscape
+keys, or \code{NULL} (default) to use the option / factory defaults (landscape
 Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
-back to the corresponding `rtfreporter.*` option (see [rtfreporter_options()]).}
+back to the corresponding \verb{rtfreporter.*} option (see \code{\link[=rtfreporter_options]{rtfreporter_options()}}).}
 
 \item{default_format}{Document-wide default formatting. Pass an
-[rtf_default_format()] object (recommended -- its help lists every key with
-its default), a named list with the same keys, or `NULL` (default). Each
-value is a *default* that a per-module setting ([rtftable()] /
-[rtf_header()] / [rtf_footer()] / [rtf_table_style()]) overrides.}
+\code{\link[=rtf_default_format]{rtf_default_format()}} object (recommended -- its help lists every key with
+its default), a named list with the same keys, or \code{NULL} (default). Each
+value is a \emph{default} that a per-module setting (\code{\link[=rtftable]{rtftable()}} /
+\code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}} / \code{\link[=rtf_table_style]{rtf_table_style()}}) overrides.}
 }
 \value{
-An `rtf_document` S3 object: a list with `document`
-  (`font_table` / `color_table` / `page` / `default_format`), `contents`
-  (filled by [rtf_tables()] / [rtf_figures()]), `titles`, `footnotes`, and
-  `sections` (filled by [rtf_section()]).
+An \code{rtf_document} S3 object: a list with \code{document}
+(\code{font_table} / \code{color_table} / \code{page} / \code{default_format}), \code{contents}
+(filled by \code{\link[=rtf_tables]{rtf_tables()}} / \code{\link[=rtf_figures]{rtf_figures()}}), \code{titles}, \code{footnotes}, and
+\code{sections} (filled by \code{\link[=rtf_section]{rtf_section()}}).
 }
 \description{
 Initialize a new RTF document object for building reports with pipes.
 Provides sensible defaults for clinical trial reports.
 }
 \details{
-`rtf_document()` is the **constructor**: it starts a new, empty document and
-supplies a default for anything you do not specify. To **change settings on a
-document you have already composed** -- one that already holds content and
-sections -- use [rtf_config()] instead, which alters only the keys you pass
-and leaves the content untouched. In short: `rtf_document()` *builds a new*
-document from defaults; `rtf_config()` *edits an existing* one in place. The
+\code{rtf_document()} is the \strong{constructor}: it starts a new, empty document and
+supplies a default for anything you do not specify. To \strong{change settings on a
+document you have already composed} -- one that already holds content and
+sections -- use \code{\link[=rtf_config]{rtf_config()}} instead, which alters only the keys you pass
+and leaves the content untouched. In short: \code{rtf_document()} \emph{builds a new}
+document from defaults; \code{rtf_config()} \emph{edits an existing} one in place. The
 two are complementary, not interchangeable -- you cannot change the page of
-an already-composed report with `rtf_document()` without discarding its
+an already-composed report with \code{rtf_document()} without discarding its
 content.
 }
 \examples{
@@ -82,8 +81,8 @@ unlink(f)
 
 }
 \seealso{
-[rtf_page()] / [rtf_default_format()] for the page / formatting
-  settings, [rtf_config()] to edit an already-composed document, [rtf_tables()]
-  / [rtf_figures()] to add content, [rtf_section()] for headers / footers, and
-  [generate_rtfreport()] to render.
+\code{\link[=rtf_page]{rtf_page()}} / \code{\link[=rtf_default_format]{rtf_default_format()}} for the page / formatting
+settings, \code{\link[=rtf_config]{rtf_config()}} to edit an already-composed document, \code{\link[=rtf_tables]{rtf_tables()}}
+/ \code{\link[=rtf_figures]{rtf_figures()}} to add content, \code{\link[=rtf_section]{rtf_section()}} for headers / footers, and
+\code{\link[=generate_rtfreport]{generate_rtfreport()}} to render.
 }

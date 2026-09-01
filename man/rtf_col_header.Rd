@@ -10,18 +10,18 @@ rtf_col_header(...)
 \item{...}{Header rows in render order (top first).}
 }
 \value{
-A list of class `"rtf_col_header"`.
+A list of class \code{"rtf_col_header"}.
 }
 \description{
 Collects column-header rows, top-to-bottom, into a single object that
-can be passed to `rtftable(col_header = ...)`.  Each argument is one
+can be passed to \code{rtftable(col_header = ...)}.  Each argument is one
 row; a row may be either:
 }
 \details{
 \describe{
-  \item{a character vector}{one label per data column (legacy form), or}
-  \item{a list of [col_cell()] objects}{for a row with single and/or
-    spanning cells.}
+\item{a character vector}{one label per data column (legacy form), or}
+\item{a list of \code{\link[=col_cell]{col_cell()}} objects}{for a row with single and/or
+spanning cells.}
 }
 }
 \examples{

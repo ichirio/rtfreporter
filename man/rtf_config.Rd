@@ -19,34 +19,34 @@ rtf_config(
 
 \item{color_table}{Optional colour table; replaces the current one.}
 
-\item{page}{New page geometry, **merged per key** onto the current page: an
-[rtf_page()] object, or a named list with the same keys (see [rtf_page()]).}
+\item{page}{New page geometry, \strong{merged per key} onto the current page: an
+\code{\link[=rtf_page]{rtf_page()}} object, or a named list with the same keys (see \code{\link[=rtf_page]{rtf_page()}}).}
 
-\item{default_format}{New document-wide default formatting, **merged per key**
-onto the current defaults: an [rtf_default_format()] object, or a named list
-with the same keys (see [rtf_default_format()]). Each is a document-wide
-*default* that any per-module setting overrides.}
+\item{default_format}{New document-wide default formatting, \strong{merged per key}
+onto the current defaults: an \code{\link[=rtf_default_format]{rtf_default_format()}} object, or a named list
+with the same keys (see \code{\link[=rtf_default_format]{rtf_default_format()}}). Each is a document-wide
+\emph{default} that any per-module setting overrides.}
 }
 \value{
 Modified rtf_document object (new copy, original unchanged).
 }
 \description{
-Update the **document-level** settings (font, colour, page, default format)
-of an existing `rtf_document`, leaving its content, titles and sections
-untouched. Only the arguments you pass are changed (`NULL` = no change).
+Update the \strong{document-level} settings (font, colour, page, default format)
+of an existing \code{rtf_document}, leaving its content, titles and sections
+untouched. Only the arguments you pass are changed (\code{NULL} = no change).
 }
 \details{
-The point of `rtf_config()` is *deriving variants from an already-composed
-document*. Build the report once -- add tables/figures and sections -- then
+The point of \code{rtf_config()} is \emph{deriving variants from an already-composed
+document}. Build the report once -- add tables/figures and sections -- then
 produce alternative outputs (a different paper size, font, or default text
 size) by changing only the relevant setting and rendering each copy. Because
-an `rtf_document` is immutable, each call returns a fresh copy and the
+an \code{rtf_document} is immutable, each call returns a fresh copy and the
 original is left intact, so the variants are independent.
 
-`page` and `default_format` are **merged per key**: passing
-`page = list(width_in = 8.27, height_in = 11.69)` changes only those two keys
-and keeps the document's existing orientation and margins. `font_table` and
-`color_table` are replaced as a whole.
+\code{page} and \code{default_format} are \strong{merged per key}: passing
+\code{page = list(width_in = 8.27, height_in = 11.69)} changes only those two keys
+and keeps the document's existing orientation and margins. \code{font_table} and
+\code{color_table} are replaced as a whole.
 }
 \examples{
 # Compose once, then render two paper-size variants from the SAME content.
@@ -62,6 +62,6 @@ identical(letter$contents, a4$contents)
 
 }
 \seealso{
-[rtf_document()] (the constructor), [rtf_page()] /
-  [rtf_default_format()] for the settings.
+\code{\link[=rtf_document]{rtf_document()}} (the constructor), \code{\link[=rtf_page]{rtf_page()}} /
+\code{\link[=rtf_default_format]{rtf_default_format()}} for the settings.
 }

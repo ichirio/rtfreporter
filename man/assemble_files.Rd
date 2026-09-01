@@ -9,18 +9,18 @@ assemble_files(dir, pattern = "[.]rtf$", recursive = FALSE, sort = TRUE)
 \arguments{
 \item{dir}{Directory to scan.}
 
-\item{pattern}{File-name pattern (default `"[.]rtf$"`, case-insensitive).}
+\item{pattern}{File-name pattern (default \code{"[.]rtf$"}, case-insensitive).}
 
-\item{recursive}{Recurse into sub-directories?  Default `FALSE`.}
+\item{recursive}{Recurse into sub-directories?  Default \code{FALSE}.}
 
-\item{sort}{Natural-sort the result?  Default `TRUE`.}
+\item{sort}{Natural-sort the result?  Default \code{TRUE}.}
 }
 \value{
 A character vector of file paths.
 }
 \description{
-Lists the `.rtf` files in `dir`, in natural-sorted order (so `t2` comes
-before `t10`), ready to hand to [assemble_rtf()] or the other assembly
+Lists the \code{.rtf} files in \code{dir}, in natural-sorted order (so \code{t2} comes
+before \code{t10}), ready to hand to \code{\link[=assemble_rtf]{assemble_rtf()}} or the other assembly
 helpers.
 }
 \examples{
@@ -29,5 +29,5 @@ files <- assemble_files("output/tfl")        # every .rtf, in catalog order
 }
 }
 \seealso{
-[assemble_spec()], [assemble_toc()], [assemble_folder()].
+\code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_toc]{assemble_toc()}}, \code{\link[=assemble_folder]{assemble_folder()}}.
 }

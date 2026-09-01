@@ -94,113 +94,111 @@ add_header_row(x, ...)
 \method{add_header_row}{list}(x, ...)
 }
 \arguments{
-\item{x}{An [rtftable()], or a list of them (pages from [as_rtftables()]).}
+\item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}}).}
 
 \item{...}{Passed between methods.}
 
-\item{row}{Integer header-row index(es), 1 = top row.  `NULL` (default)
+\item{row}{Integer header-row index(es), 1 = top row.  \code{NULL} (default)
 targets every header row.}
 
 \item{cols}{Data-column selection: integer positions and/or column names of
-the table body (see the *What the columns are called* section of
-[as_rtftables()]).  `NULL` (default) = all columns.  Mix names and
-positions with a `list()` (`c()` would coerce the numbers to strings --
-same convention as `drop_cols` / `sort_by`).  A spanning cell is
-targeted when its span **intersects** `cols`.}
+the table body (see the \emph{What the columns are called} section of
+\code{\link[=as_rtftables]{as_rtftables()}}).  \code{NULL} (default) = all columns.  Mix names and
+positions with a \code{list()} (\code{c()} would coerce the numbers to strings --
+same convention as \code{drop_cols} / \code{sort_by}).  A spanning cell is
+targeted when its span \strong{intersects} \code{cols}.}
 
 \item{label}{Optional replacement label(s), recycled over the targeted
 cells in order.}
 
-\item{border}{An [rtf_border()] merged onto the targeted cells
+\item{border}{An \code{\link[=rtf_border]{rtf_border()}} merged onto the targeted cells
 (side-by-side; existing sides survive where the new border leaves them
-`NULL`).  In `style_body()` the merge lands on top of the row's zone
-border; in `style_cols()` it becomes the column's header-cell border.}
+\code{NULL}).  In \code{style_body()} the merge lands on top of the row's zone
+border; in \code{style_cols()} it becomes the column's header-cell border.}
 
-\item{align}{`"left"`, `"center"`, or `"right"`.}
+\item{align}{\code{"left"}, \code{"center"}, or \code{"right"}.}
 
-\item{bold, italic, underline}{`TRUE`/`FALSE`.  (On a character label row
-`underline` triggers the cell promotion described above.)}
+\item{bold, italic, underline}{\code{TRUE}/\code{FALSE}.  (On a character label row
+\code{underline} triggers the cell promotion described above.)}
 
 \item{indent_twips}{Integer left indent for the column's body cells.}
 
-\item{color}{Body text colour, `"#RRGGBB"`.}
+\item{color}{Body text colour, \code{"#RRGGBB"}.}
 
 \item{header_align, header_bold, header_italic}{Header-label styling for the
 selected columns (what the character label rows render with).}
 
-\item{rows}{Body-row selection: `NULL` (all rows), integer positions, a
-logical vector over all body rows, a predicate `function(data)`
+\item{rows}{Body-row selection: \code{NULL} (all rows), integer positions, a
+logical vector over all body rows, a predicate \verb{function(data)}
 returning one logical per row, or a one-sided formula evaluated inside
 the body data (columns visible as bare names, e.g.
-`rows = ~ label == "Mean"`).  On a **page list**, integer and logical
+\code{rows = ~ label == "Mean"}).  On a \strong{page list}, integer and logical
 selections are rejected -- page-local row numbers are ambiguous across
-pages -- so use a predicate/formula (evaluated per page) or `NULL`.}
+pages -- so use a predicate/formula (evaluated per page) or \code{NULL}.}
 
-\item{header, spanning, body, first_row, last_row}{Per-zone [rtf_border()]
+\item{header, spanning, body, first_row, last_row}{Per-zone \code{\link[=rtf_border]{rtf_border()}}
 overrides, merged side-by-side onto the table's current
-[rtf_table_border()] (see the *Borders* article for what each zone
+\code{\link[=rtf_table_border]{rtf_table_border()}} (see the \emph{Borders} article for what each zone
 covers).}
 
-\item{.position}{`"top"` (default) prepends the new row above the existing
-header rows; `"bottom"` appends below.}
+\item{.position}{\code{"top"} (default) prepends the new row above the existing
+header rows; \code{"bottom"} appends below.}
 }
 \value{
-An object of the same shape as `x` (rtftable, or list of pages),
-  modified.
+An object of the same shape as \code{x} (rtftable, or list of pages),
+modified.
 }
 \description{
-These verbs edit an already-built [rtftable()] -- typically one produced by
-[as_rtftables()] with `read_meta = TRUE`, where labels, alignment and
+These verbs edit an already-built \code{\link[=rtftable]{rtftable()}} -- typically one produced by
+\code{\link[=as_rtftables]{as_rtftables()}} with \code{read_meta = TRUE}, where labels, alignment and
 spanning are already correct and only a detail needs to change.  Each verb
 returns a modified copy (plain copy-on-modify S3) and is an S3 generic with
-two methods: one for a single `rtftable`, one for a **list of pages** as
-returned by [as_rtftables()] (the edit is applied to every page).  They are
+two methods: one for a single \code{rtftable}, one for a \strong{list of pages} as
+returned by \code{\link[=as_rtftables]{as_rtftables()}} (the edit is applied to every page).  They are
 designed to chain with the native pipe:
 }
 \details{
-```
-pages <- as_rtftables(gt_obj, read_meta = TRUE) |>
+\if{html}{\out{<div class="sourceCode">}}\preformatted{pages <- as_rtftables(gt_obj, read_meta = TRUE) |>
   style_header(row = 2, cols = 2:4,
                border = rtf_border(top    = rtf_border_side("single"),
                                    bottom = rtf_border_side("none"))) |>
   style_cols(cols = "AGE", align = "center") |>
   style_body(rows = ~ label == "Mean", bold = TRUE)
-```
+}\if{html}{\out{</div>}}
 
 The merge rule everywhere is the border rule the renderer already
-documents, generalized: **last writer wins, per side / per field**.  A
+documents, generalized: \strong{last writer wins, per side / per field}.  A
 border passed to a verb is merged side-by-side onto whatever is already
-there (`NULL` sides leave the existing side alone; use
-`rtf_border_side("none")` for an explicit "no line").
+there (\code{NULL} sides leave the existing side alone; use
+\code{rtf_border_side("none")} for an explicit "no line").
 }
 \section{Body cells}{
 
-`style_body()` overrides, per cell, everything the data-row renderer
-otherwise takes from `col_spec` -- `bold` / `italic` / `underline` /
-`indent_twips` / `color` / `align` -- plus `border`, which merges on top
-of the row's resolved zone border (`body` crossed with `first_row` /
-`last_row`), per side.  So a rule under a summary row is
-`style_body(rows = ~ Item == "Total",
-border = rtf_border(bottom = rtf_border_side("single")))`, and an
-`rtf_border_side("none")` side erases a zone rule on the selected cells.
-Row height and cell padding are deliberately *not* per-row properties --
-they stay uniform per table / document (see `rtf_document(default_format)`
-and the `rtfreporter.*` options).
+\code{style_body()} overrides, per cell, everything the data-row renderer
+otherwise takes from \code{col_spec} -- \code{bold} / \code{italic} / \code{underline} /
+\code{indent_twips} / \code{color} / \code{align} -- plus \code{border}, which merges on top
+of the row's resolved zone border (\code{body} crossed with \code{first_row} /
+\code{last_row}), per side.  So a rule under a summary row is
+\code{style_body(rows = ~ Item == "Total", border = rtf_border(bottom = rtf_border_side("single")))}, and an
+\code{rtf_border_side("none")} side erases a zone rule on the selected cells.
+Row height and cell padding are deliberately \emph{not} per-row properties --
+they stay uniform per table / document (see \code{rtf_document(default_format)}
+and the \verb{rtfreporter.*} options).
 }
 
 \section{Header rows and the two row kinds}{
 
-A column header holds two kinds of rows (see [rtf_col_header()]): **cell
-rows** (lists of [col_cell()] spans -- spanning rows, or any row built from
-cells) and one or more **character label rows**.  `style_header()` patches
-cell rows directly.  On a label row, `bold` / `italic` / `align` are stored
-in the per-column `col_spec` header styling (note: that styling is shared
-by *all* label rows of the table), and a `border` or `underline` request
+A column header holds two kinds of rows (see \code{\link[=rtf_col_header]{rtf_col_header()}}): \strong{cell
+rows} (lists of \code{\link[=col_cell]{col_cell()}} spans -- spanning rows, or any row built from
+cells) and one or more \strong{character label rows}.  \code{style_header()} patches
+cell rows directly.  On a label row, \code{bold} / \code{italic} / \code{align} are stored
+in the per-column \code{col_spec} header styling (note: that styling is shared
+by \emph{all} label rows of the table), and a \code{border} or \code{underline} request
 -- which the label-row renderer cannot express per cell -- first
-**promotes** the row to an equivalent list of single-column cells (labels
+\strong{promotes} the row to an equivalent list of single-column cells (labels
 and current header styling are copied over, so the rendered output is
-unchanged; the promoted row renders through the `spanning` border zone,
-which falls back to the `header` zone when unset).
+unchanged; the promoted row renders through the \code{spanning} border zone,
+which falls back to the \code{header} zone when unset).
 }
 
 \examples{

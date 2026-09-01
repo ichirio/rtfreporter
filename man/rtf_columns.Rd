@@ -13,7 +13,7 @@ rtf_columns(x, ...)
 \method{rtf_columns}{list}(x, ...)
 }
 \arguments{
-\item{x}{An [rtftable()], or a list of them (pages from [as_rtftables()]).}
+\item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}}).}
 
 \item{...}{Unused.}
 }
@@ -21,10 +21,10 @@ rtf_columns(x, ...)
 A character vector of column names.
 }
 \description{
-Returns the body column names of an [rtftable()] -- the **final, printed**
+Returns the body column names of an \code{\link[=rtftable]{rtftable()}} -- the \strong{final, printed}
 columns, in order.  Use it to see exactly which names (and positions)
-[set_col_header()], [style_cols()], [style_header()] etc. address, before
-writing a header.  On a list of pages (an [as_rtftables()] result) it
+\code{\link[=set_col_header]{set_col_header()}}, \code{\link[=style_cols]{style_cols()}}, \code{\link[=style_header]{style_header()}} etc. address, before
+writing a header.  On a list of pages (an \code{\link[=as_rtftables]{as_rtftables()}} result) it
 returns the first page's columns (pages share the same column structure).
 }
 \examples{
@@ -32,5 +32,5 @@ tbl <- rtftable(data.frame(Item = "x", A = 1, B = 2))
 rtf_columns(tbl)
 }
 \seealso{
-[set_col_header()].
+\code{\link[=set_col_header]{set_col_header()}}.
 }

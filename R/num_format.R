@@ -85,7 +85,7 @@
 #' Renders a numeric vector as the text a clinical table should show, counting
 #' **total printed digits including the integer part** -- the convention a SAP
 #' means by "report to 4 significant digits", which is not the same as
-#' [signif()]:
+#' [base::signif()]:
 #'
 #' \preformatted{
 #' fmt_signif(c(0, 10.2, 103.4, 20.333333, 23.4463), digits = 4)

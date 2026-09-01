@@ -12,8 +12,8 @@
 \item{...}{Additional arguments (unused).}
 }
 \value{
-`x`, invisibly. Called for the side effect of printing a one-line
-  summary (page count, sections defined, page size).
+\code{x}, invisibly. Called for the side effect of printing a one-line
+summary (page count, sections defined, page size).
 }
 \description{
 Print an rtf_document object

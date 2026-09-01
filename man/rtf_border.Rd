@@ -26,28 +26,28 @@ rtf_border_bottom(style = "single", width = 15L, color = NULL)
 rtf_border_box(style = "single", width = 15L, color = NULL)
 }
 \arguments{
-\item{top, bottom, left, right}{`NULL` (no border on that side) or an
-[rtf_border_side()] object.}
+\item{top, bottom, left, right}{\code{NULL} (no border on that side) or an
+\code{\link[=rtf_border_side]{rtf_border_side()}} object.}
 
-\item{inside_h, inside_v}{`NULL` (default, meaning no rule) or an
-[rtf_border_side()]: the rule drawn *between* the selection's rows
-(`inside_h`) and *between* its cells (`inside_v`).}
+\item{inside_h, inside_v}{\code{NULL} (default, meaning no rule) or an
+\code{\link[=rtf_border_side]{rtf_border_side()}}: the rule drawn \emph{between} the selection's rows
+(\code{inside_h}) and \emph{between} its cells (\code{inside_v}).}
 
-\item{style, width, color}{Passed to [rtf_border_side()].}
+\item{style, width, color}{Passed to \code{\link[=rtf_border_side]{rtf_border_side()}}.}
 }
 \value{
-A list of class `"rtf_border"`.
+A list of class \code{"rtf_border"}.
 }
 \description{
 Specifies borders for up to four sides (top, bottom, left, right).  Each
-side is either `NULL` (no border) or an [rtf_border_side()] object.
+side is either \code{NULL} (no border) or an \code{\link[=rtf_border_side]{rtf_border_side()}} object.
 }
 \details{
-To derive a new border from an existing one, use [rtf_border_with()].
+To derive a new border from an existing one, use \code{\link[=rtf_border_with]{rtf_border_with()}}.
 }
 \section{Functions}{
 \itemize{
-\item \code{rtf_border_none()}: All sides `NULL` (explicit "no border").
+\item \code{rtf_border_none()}: All sides \code{NULL} (explicit "no border").
 
 \item \code{rtf_border_top()}: Top edge only.
 
@@ -59,26 +59,27 @@ To derive a new border from an existing one, use [rtf_border_with()].
 \section{What a border applies to}{
 
 
-An `rtf_border` describes a **selection**, and *where* it applies is decided
+An \code{rtf_border} describes a \strong{selection}, and \emph{where} it applies is decided
 by where you attach it -- the same way Word's border dialog acts on whatever
 is selected:
 
 \tabular{ll}{
-  `rtftable(border = )`                  \tab the whole table \cr
-  `style_zone(header = , body = , ...)`  \tab that kind of row \cr
-  `col_cell(border = )`, `cell_styles`   \tab one cell \cr
-  `rtf_header(border = )` / `rtf_footer(border = )` \tab that block
+\code{rtftable(border = )}                  \tab the whole table \cr
+\code{style_zone(header = , body = , ...)}  \tab that kind of row \cr
+\code{col_cell(border = )}, \code{cell_styles}   \tab one cell \cr
+\code{rtf_header(border = )} / \code{rtf_footer(border = )} \tab that block
 }
 
 There is one rule, with no special cases:
-
-* `top` / `bottom` / `left` / `right` are the selection's **outer** edges.
-* `inside_h` / `inside_v` are the rules **inside** it, and an absent one
-  means no rule there.
+\itemize{
+\item \code{top} / \code{bottom} / \code{left} / \code{right} are the selection's \strong{outer} edges.
+\item \code{inside_h} / \code{inside_v} are the rules \strong{inside} it, and an absent one
+means no rule there.
+}
 
 So an edge never means something different depending on which other
-arguments are present.  On a row containing a spanning cell, `inside_v`
-lands on **cell** boundaries rather than column boundaries: nothing is drawn
+arguments are present.  On a row containing a spanning cell, \code{inside_v}
+lands on \strong{cell} boundaries rather than column boundaries: nothing is drawn
 inside a merged cell.  A single cell has no inside, so both are ignored
 there.
 }
@@ -86,11 +87,11 @@ there.
 \section{Writing borders before and after 0.5.0}{
 
 
-Two things changed at 0.5.0.  [rtf_table_border()] is deprecated, so a
-border is aimed with `rtftable(border = )` or [style_zone()] instead; and an
-edge now always means the **outer** edge of the selection, so the rules
-*inside* it have to be asked for by name.  Each case below, `s` being an
-[rtf_border_side()]:
+Two things changed at 0.5.0.  \code{\link[=rtf_table_border]{rtf_table_border()}} is deprecated, so a
+border is aimed with \code{rtftable(border = )} or \code{\link[=style_zone]{style_zone()}} instead; and an
+edge now always means the \strong{outer} edge of the selection, so the rules
+\emph{inside} it have to be asked for by name.  Each case below, \code{s} being an
+\code{\link[=rtf_border_side]{rtf_border_side()}}:
 
 \preformatted{
   ## rules above and below the column header  (unchanged in meaning)
@@ -126,14 +127,14 @@ edge now always means the **outer** edge of the selection, so the rules
                                          right = s, inside_h = s))
 }
 
-`border = "tfl"` and [rtf_border_tfl()] are unaffected, as is any border on
-a single cell ([col_cell()], `cell_styles`): a cell has no inside, so its
+\code{border = "tfl"} and \code{\link[=rtf_border_tfl]{rtf_border_tfl()}} are unaffected, as is any border on
+a single cell (\code{\link[=col_cell]{col_cell()}}, \code{cell_styles}): a cell has no inside, so its
 four edges never meant anything else.
 
 The old and new readings are spelled identically, so rtfreporter warns once
 per session when it meets a border that would have rendered differently
-before.  Naming `inside_h` / `inside_v` says which you mean and silences it
--- use `rtf_border_side("none")` for "no rule there".
+before.  Naming \code{inside_h} / \code{inside_v} says which you mean and silences it
+-- use \code{rtf_border_side("none")} for "no rule there".
 }
 
 \examples{

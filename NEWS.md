@@ -1,5 +1,17 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **Help pages now render their markup instead of printing it** (#344). Every
+  roxygen block was already written in markdown, but `DESCRIPTION` never turned
+  markdown on, so `[rtf_border()]`, backticked code and `**bold**` reached the
+  rendered help verbatim. Cross-references were the real loss: all 65 `[fn()]`
+  references are now followable links. No exported behaviour changes.
+
+  One hand-written `	abular{}` in `?paginate_cols` had to become a markdown
+  table: roxygen escaped the backslash of its `\%`, so the `%` started an Rd
+  comment and swallowed the rest of each row.
+
 ### Breaking changes
 
 - **One border type.** `rtf_border()` now describes a *selection*, and where it

@@ -16,34 +16,34 @@ rtf_table_border(
 )
 }
 \arguments{
-\item{header}{[rtf_border()] for column-header rows.  `NULL` = none.}
+\item{header}{\code{\link[=rtf_border]{rtf_border()}} for column-header rows.  \code{NULL} = none.}
 
-\item{spanning}{[rtf_border()] for spanning-header rows.  `NULL` = none.}
+\item{spanning}{\code{\link[=rtf_border]{rtf_border()}} for spanning-header rows.  \code{NULL} = none.}
 
-\item{body}{[rtf_border()] for data rows.  `NULL` = none.}
+\item{body}{\code{\link[=rtf_border]{rtf_border()}} for data rows.  \code{NULL} = none.}
 
-\item{first_row}{[rtf_border()] override for the first data row.}
+\item{first_row}{\code{\link[=rtf_border]{rtf_border()}} override for the first data row.}
 
-\item{last_row}{[rtf_border()] override for the last data row.}
+\item{last_row}{\code{\link[=rtf_border]{rtf_border()}} override for the last data row.}
 
-\item{outer}{[rtf_border()] for the table's four outermost edges, or
-`NULL` (default).  See the section above.}
+\item{outer}{\code{\link[=rtf_border]{rtf_border()}} for the table's four outermost edges, or
+\code{NULL} (default).  See the section above.}
 
-\item{inside_h, inside_v}{[rtf_border_side()] for the rules between rows and
-between cells, or `NULL` (default).}
+\item{inside_h, inside_v}{\code{\link[=rtf_border_side]{rtf_border_side()}} for the rules between rows and
+between cells, or \code{NULL} (default).}
 }
 \value{
-A list of class `"rtf_table_border"`.
+A list of class \code{"rtf_table_border"}.
 }
 \description{
-Specifies borders for each logical zone of an [rtftable()].
-Each zone is either `NULL` (no border) or an [rtf_border()] object.
-`first_row` and `last_row` are *overrides* merged on top of the `body` spec.
+Specifies borders for each logical zone of an \code{\link[=rtftable]{rtftable()}}.
+Each zone is either \code{NULL} (no border) or an \code{\link[=rtf_border]{rtf_border()}} object.
+\code{first_row} and \code{last_row} are \emph{overrides} merged on top of the \code{body} spec.
 }
 \section{Deprecated since 0.5.0}{
 
 
-A border is now written once with [rtf_border()], and *where* it applies is
+A border is now written once with \code{\link[=rtf_border]{rtf_border()}}, and \emph{where} it applies is
 decided by where you attach it:
 
 \preformatted{
@@ -52,19 +52,19 @@ decided by where you attach it:
   col_cell(border = rtf_border(...))                    # one cell
 }
 
-`outer =` becomes the four edges of that `rtf_border()`; `inside_h =` and
-`inside_v =` keep their names.  This function still works and still returns
+\verb{outer =} becomes the four edges of that \code{rtf_border()}; \verb{inside_h =} and
+\verb{inside_v =} keep their names.  This function still works and still returns
 the same value, but warns once per session.
 }
 
 \section{Writing borders before and after 0.5.0}{
 
 
-Two things changed at 0.5.0.  [rtf_table_border()] is deprecated, so a
-border is aimed with `rtftable(border = )` or [style_zone()] instead; and an
-edge now always means the **outer** edge of the selection, so the rules
-*inside* it have to be asked for by name.  Each case below, `s` being an
-[rtf_border_side()]:
+Two things changed at 0.5.0.  \code{\link[=rtf_table_border]{rtf_table_border()}} is deprecated, so a
+border is aimed with \code{rtftable(border = )} or \code{\link[=style_zone]{style_zone()}} instead; and an
+edge now always means the \strong{outer} edge of the selection, so the rules
+\emph{inside} it have to be asked for by name.  Each case below, \code{s} being an
+\code{\link[=rtf_border_side]{rtf_border_side()}}:
 
 \preformatted{
   ## rules above and below the column header  (unchanged in meaning)
@@ -100,14 +100,14 @@ edge now always means the **outer** edge of the selection, so the rules
                                          right = s, inside_h = s))
 }
 
-`border = "tfl"` and [rtf_border_tfl()] are unaffected, as is any border on
-a single cell ([col_cell()], `cell_styles`): a cell has no inside, so its
+\code{border = "tfl"} and \code{\link[=rtf_border_tfl]{rtf_border_tfl()}} are unaffected, as is any border on
+a single cell (\code{\link[=col_cell]{col_cell()}}, \code{cell_styles}): a cell has no inside, so its
 four edges never meant anything else.
 
 The old and new readings are spelled identically, so rtfreporter warns once
 per session when it meets a border that would have rendered differently
-before.  Naming `inside_h` / `inside_v` says which you mean and silences it
--- use `rtf_border_side("none")` for "no rule there".
+before.  Naming \code{inside_h} / \code{inside_v} says which you mean and silences it
+-- use \code{rtf_border_side("none")} for "no rule there".
 }
 
 \examples{
@@ -134,6 +134,6 @@ rtf_table_border(header = rtf_border(top = s, bottom = s))
 }
 }
 \seealso{
-[rtf_border()] / [rtf_border_side()] for the pieces; pass the result
-  as `rtftable(border = )`.
+\code{\link[=rtf_border]{rtf_border()}} / \code{\link[=rtf_border_side]{rtf_border_side()}} for the pieces; pass the result
+as \code{rtftable(border = )}.
 }

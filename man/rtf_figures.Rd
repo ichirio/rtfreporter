@@ -18,19 +18,19 @@ rtf_figures(
 \item{doc}{An rtf_document object.}
 
 \item{figures}{A list whose elements are either character file paths to
-image files (PNG/JPEG) or pre-built `rtfplot` objects from [rtfplot()].}
+image files (PNG/JPEG) or pre-built \code{rtfplot} objects from \code{\link[=rtfplot]{rtfplot()}}.}
 
-\item{width_twips}{Display width in twips for bare paths.  `NULL` = full
+\item{width_twips}{Display width in twips for bare paths.  \code{NULL} = full
 writable width.}
 
-\item{height_twips}{Display height in twips for bare paths.  `NULL` =
+\item{height_twips}{Display height in twips for bare paths.  \code{NULL} =
 derived from the image's aspect ratio.}
 
-\item{align}{Horizontal alignment for bare paths: `"center"` (default),
-`"left"`, or `"right"`.}
+\item{align}{Horizontal alignment for bare paths: \code{"center"} (default),
+\code{"left"}, or \code{"right"}.}
 
-\item{titles, footnotes}{Optional lists of length `length(figures)` or
-length 1 (common to all figures). See [rtf_tables()] for the block
+\item{titles, footnotes}{Optional lists of length \code{length(figures)} or
+length 1 (common to all figures). See \code{\link[=rtf_tables]{rtf_tables()}} for the block
 structure (character vectors or per-row styled lists).}
 }
 \value{
@@ -39,7 +39,7 @@ Modified rtf_document with appended figure contents.
 \description{
 Append one or more image files (PNG/JPEG) as content pages. Each figure
 creates one new page. Display dimensions and alignment apply to every
-bare path in `figures`; elements already constructed via [rtfplot()] keep
+bare path in \code{figures}; elements already constructed via \code{\link[=rtfplot]{rtfplot()}} keep
 their own settings.
 }
 \examples{

@@ -13,31 +13,31 @@ format_count_pct(
 )
 }
 \arguments{
-\item{count}{Integer / numeric vector of counts.  `NA` and `0`
+\item{count}{Integer / numeric vector of counts.  \code{NA} and \code{0}
 produce the count-only branch (no parentheses).}
 
 \item{pct}{Numeric vector of percentages.  By default expressed
-as a *fraction* in `[0, 1]`; pass `pct_unit = "percent"` if your
-values are already in `[0, 100]`.  Recycled against `count` if
+as a \emph{fraction} in \verb{[0, 1]}; pass \code{pct_unit = "percent"} if your
+values are already in \verb{[0, 100]}.  Recycled against \code{count} if
 one argument is length 1.}
 
-\item{pct_unit}{Either `"fraction"` (default, `0..1`) or
-`"percent"` (`0..100`).}
+\item{pct_unit}{Either \code{"fraction"} (default, \verb{0..1}) or
+\code{"percent"} (\verb{0..100}).}
 
 \item{nbsp}{Character used to replace the padding spaces.  Default
 is the non-breaking space (Unicode code point U+00A0) so that RTF
-and Word do not collapse leading whitespace.  Pass `" "` (regular
+and Word do not collapse leading whitespace.  Pass \code{" "} (regular
 space) for plain-text output.}
 
-\item{pct_sign}{Logical (default `FALSE`).  When `TRUE`, a literal
-`%` is placed before the closing parenthesis (e.g. `" 14 (50.0%)"`)
-and every branch is one character wider so the `)` still aligns.}
+\item{pct_sign}{Logical (default \code{FALSE}).  When \code{TRUE}, a literal
+\verb{\%} is placed before the closing parenthesis (e.g. \code{" 14 (50.0\%)"})
+and every branch is one character wider so the \verb{)} still aligns.}
 }
 \value{
-Character vector the same length as `count` / `pct`.
+Character vector the same length as \code{count} / \code{pct}.
 }
 \description{
-Returns each pair `(count[i], pct[i])` as a padded `"n (xx.x)"`
+Returns each pair \verb{(count[i], pct[i])} as a padded \code{"n (xx.x)"}
 string suitable for monospaced clinical TFL alignment.  The four
 width branches match the convention in the rtfreporter Issue #2
 reference helper.
@@ -54,6 +54,6 @@ format_count_pct(7L, 0.333, nbsp = " ")
 
 }
 \seealso{
-[realign_count_pct()] for the same widths starting from
-  already-formatted strings.
+\code{\link[=realign_count_pct]{realign_count_pct()}} for the same widths starting from
+already-formatted strings.
 }

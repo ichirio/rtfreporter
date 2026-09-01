@@ -9,19 +9,19 @@ toc_entry(label, file = NULL, level = 2L)
 \arguments{
 \item{label}{Character; the entry text.}
 
-\item{file}{Either a path that appears in `input_files`, an integer
-1-based index into `input_files`, or `NULL` (default: consume the
+\item{file}{Either a path that appears in \code{input_files}, an integer
+1-based index into \code{input_files}, or \code{NULL} (default: consume the
 next file in order).}
 
 \item{level}{Integer; 1 to 3.  Indent depth in the rendered TOC
 (1 = flush left, 2 = small indent, ...).}
 }
 \value{
-A list of class `"rtf_toc_entry"`.
+A list of class \code{"rtf_toc_entry"}.
 }
 \description{
-Use inside [assemble_rtf()]'s `toc =` list to add a clickable TOC
-entry pointing at one of the `input_files`.
+Use inside \code{\link[=assemble_rtf]{assemble_rtf()}}'s \verb{toc =} list to add a clickable TOC
+entry pointing at one of the \code{input_files}.
 }
 \examples{
 toc_entry("Table 14.1.1 Demographics",  file = "t14_1_1.rtf", level = 2)

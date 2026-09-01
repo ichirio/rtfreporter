@@ -10,14 +10,14 @@ fmt_count_paren_bare(x, nbsp = " ")
 \item{x}{Character vector (one table column).}
 
 \item{nbsp}{Padding character; defaults to the non-breaking space
-(U+00A0) so RTF / Word keep the alignment.  Pass `" "` for plain text.}
+(U+00A0) so RTF / Word keep the alignment.  Pass \code{" "} for plain text.}
 }
 \value{
-Character vector the same length as `x`.
+Character vector the same length as \code{x}.
 }
 \description{
-Like [fmt_count_paren()], but a **bare integer count** with no parentheses
-(a lone `"0"` for a zero count, or a raw event total) is also padded into
+Like \code{\link[=fmt_count_paren]{fmt_count_paren()}}, but a \strong{bare integer count} with no parentheses
+(a lone \code{"0"} for a zero count, or a raw event total) is also padded into
 the same count field, so it lines up under the parenthetical cells instead
 of drifting out of line.  Cells that do not start with an integer (text,
 decimals, empty cells) are still returned unchanged.
@@ -28,5 +28,5 @@ fmt_count_paren_bare(c("1 (1.2\%)", "0", "11 (3.6\%)", "108 (35.3\%)"))
 
 }
 \seealso{
-[fmt_count_paren()] (parenthetical cells only).
+\code{\link[=fmt_count_paren]{fmt_count_paren()}} (parenthetical cells only).
 }

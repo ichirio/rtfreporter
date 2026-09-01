@@ -103,7 +103,7 @@ blank_rows_by_change <- function(cols,
 #' regular expression `pattern`.
 #'
 #' @param col Name of the column to test.
-#' @param pattern A regular expression (POSIX extended via [grepl()]).
+#' @param pattern A regular expression (POSIX extended via [base::grepl()]).
 #' @param where Either `"before"` (default) or `"after"`.
 #'
 #' @return An object of class `rtf_blank_rows_by_rule`.

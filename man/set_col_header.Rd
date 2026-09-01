@@ -13,41 +13,41 @@ set_col_header(x, ...)
 \method{set_col_header}{list}(x, ...)
 }
 \arguments{
-\item{x}{An [rtftable()], or a list of them (pages from [as_rtftables()]).}
+\item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}}).}
 
 \item{...}{The header rows, in render order (top first) -- each a character
 vector (a label row, optionally named to place labels by column name) or a
-list of [col_cell()] cells (a spanning / cell row, whose `pos` may be
+list of \code{\link[=col_cell]{col_cell()}} cells (a spanning / cell row, whose \code{pos} may be
 column names or final positions).  Alternatively a single pre-built
-[rtf_col_header()] object.  Passing nothing clears the header.}
+\code{\link[=rtf_col_header]{rtf_col_header()}} object.  Passing nothing clears the header.}
 
 \item{align}{Optional column-header text alignment for the final columns:
-`"left"`/`"center"`/`"right"` (applied to every column) or a character
-vector of length `ncol` (one per printed column).  `NULL` (default) leaves
+\code{"left"}/\code{"center"}/\code{"right"} (applied to every column) or a character
+vector of length \code{ncol} (one per printed column).  \code{NULL} (default) leaves
 the current header alignment untouched.}
 }
 \value{
-An object of the same shape as `x` (rtftable, or list of pages).
+An object of the same shape as \code{x} (rtftable, or list of pages).
 }
 \description{
-`set_col_header()` replaces the column header of an already-built
-[rtftable()] -- typically the output of [as_rtftables()] -- resolving every
-cell against the **final, printed table**: the columns you actually see,
-addressed by **name** or by **visible position** (`1` = first printed
+\code{set_col_header()} replaces the column header of an already-built
+\code{\link[=rtftable]{rtftable()}} -- typically the output of \code{\link[=as_rtftables]{as_rtftables()}} -- resolving every
+cell against the \strong{final, printed table}: the columns you actually see,
+addressed by \strong{name} or by \strong{visible position} (\code{1} = first printed
 column).  Because it runs on the finished table, there is no "intermediate"
-column layout to reason about -- no hidden `drop_cols`, no `stub_vars`
+column layout to reason about -- no hidden \code{drop_cols}, no \code{stub_vars}
 bookkeeping, no position shifting.  This is the recommended way to attach a
-multi-row / spanning header on top of an `as_rtftables()` pipeline; pair it
-with [rtf_columns()] to see the exact column names first.
+multi-row / spanning header on top of an \code{as_rtftables()} pipeline; pair it
+with \code{\link[=rtf_columns]{rtf_columns()}} to see the exact column names first.
 }
 \details{
-Contrast with the `col_header =` argument of [rtftable()] / [as_rtftables()],
-whose positions refer to the source body **before** `drop_cols` /
-`stub_vars` are applied.  `set_col_header()` always speaks the final table's
+Contrast with the \verb{col_header =} argument of \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}},
+whose positions refer to the source body \strong{before} \code{drop_cols} /
+\code{stub_vars} are applied.  \code{set_col_header()} always speaks the final table's
 coordinates.
 
-Like the other post-hoc verbs it is an S3 generic with an `rtftable` method
-and a **list** method (every page of an [as_rtftables()] result), and it
+Like the other post-hoc verbs it is an S3 generic with an \code{rtftable} method
+and a \strong{list} method (every page of an \code{\link[=as_rtftables]{as_rtftables()}} result), and it
 chains with the native pipe.
 }
 \examples{
@@ -61,7 +61,7 @@ tbl <- set_col_header(
 )
 }
 \seealso{
-[rtf_columns()] to list the final column names; [rtf_col_header()]
-  / [col_cell()] to build header rows; [add_header_row()] to add a single
-  row; [style_header()] to restyle existing header cells.
+\code{\link[=rtf_columns]{rtf_columns()}} to list the final column names; \code{\link[=rtf_col_header]{rtf_col_header()}}
+/ \code{\link[=col_cell]{col_cell()}} to build header rows; \code{\link[=add_header_row]{add_header_row()}} to add a single
+row; \code{\link[=style_header]{style_header()}} to restyle existing header cells.
 }

@@ -16,50 +16,49 @@ set_blank_rows(
 \arguments{
 \item{df}{A data.frame (or tibble).}
 
-\item{blank_rows}{Blank-row specification. One of -- or a `list()` combining
+\item{blank_rows}{Blank-row specification. One of -- or a \code{list()} combining
 any of (positions are unioned):
 \describe{
-  \item{`NULL`}{(default) no positions from this argument.}
-  \item{an integer vector}{explicit positions: `0` = before the first row,
-    `k` = after row `k`.}
-  \item{`"between_groups"`}{insert a blank at every group transition,
-    using `group_by` (the same detection as the pagination splits).}
-  \item{a [blank_rows_by_change()] or [blank_rows_by_rule()] spec}{resolved
-    per page (each carries its own rule / `group_by`).}
+\item{\code{NULL}}{(default) no positions from this argument.}
+\item{an integer vector}{explicit positions: \code{0} = before the first row,
+\code{k} = after row \code{k}.}
+\item{\code{"between_groups"}}{insert a blank at every group transition,
+using \code{group_by} (the same detection as the pagination splits).}
+\item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} or \code{\link[=blank_rows_by_rule]{blank_rows_by_rule()}} spec}{resolved
+per page (each carries its own rule / \code{group_by}).}
 }}
 
-\item{blank_row_first}{Logical, default `FALSE`.  When `TRUE`,
-also adds position `0` (blank row at the top of `df`).}
+\item{blank_row_first}{Logical, default \code{FALSE}.  When \code{TRUE},
+also adds position \code{0} (blank row at the top of \code{df}).}
 
-\item{blank_row_end}{Logical, default `FALSE`.  When `TRUE`, also
-adds position `nrow(df)` (blank row at the bottom of `df`).}
+\item{blank_row_end}{Logical, default \code{FALSE}.  When \code{TRUE}, also
+adds position \code{nrow(df)} (blank row at the bottom of \code{df}).}
 
 \item{group_col}{Column name or 1-based index identifying the
-group, used only when `blank_rows = "between_groups"`.  `NULL`
-(default) means detection on column 1 — see [paginate()].}
+group, used only when \code{blank_rows = "between_groups"}.  \code{NULL}
+(default) means detection on column 1 — see \code{\link[=paginate]{paginate()}}.}
 
 \item{group_by}{How groups are recognised when
-`blank_rows = "between_groups"`: `"auto"` (default), `"indent"`,
-`"value"`, or `"filled"` — the same detection as the pagination splits
-(see [paginate()]).}
+\code{blank_rows = "between_groups"}: \code{"auto"} (default), \code{"indent"},
+\code{"value"}, or \code{"filled"} — the same detection as the pagination splits
+(see \code{\link[=paginate]{paginate()}}).}
 }
 \value{
-`df` with `attr(., "rtf_blank_rows")` updated.  The
-  attribute is left absent when the resolved position set is
-  empty.
+\code{df} with \code{attr(., "rtf_blank_rows")} updated.  The
+attribute is left absent when the resolved position set is
+empty.
 }
 \description{
-Resolves a `blank_rows` specification (the same one `paginate()`
+Resolves a \code{blank_rows} specification (the same one \code{paginate()}
 accepts) into integer positions and stores them on
-`attr(df, "rtf_blank_rows")`.  Use this when you already have a
+\code{attr(df, "rtf_blank_rows")}.  Use this when you already have a
 page-sized data.frame and only need to add blank rows — no
 pagination required.
 }
 \details{
-`paginate()` calls this function on every chunk it produces, so
-the behaviour here defines what `paginate(blank_rows = ...)`,
-`paginate(blank_row_first = ...)` and `paginate(blank_row_end =
-...)` actually do.
+\code{paginate()} calls this function on every chunk it produces, so
+the behaviour here defines what \code{paginate(blank_rows = ...)},
+\code{paginate(blank_row_first = ...)} and \code{paginate(blank_row_end = ...)} actually do.
 }
 \examples{
 df <- data.frame(
@@ -76,6 +75,6 @@ attr(out, "rtf_blank_rows")
 
 }
 \seealso{
-[paginate()] for the per-page version; [rtftable()]
-  (`read_attributes = TRUE`) which consumes the attribute.
+\code{\link[=paginate]{paginate()}} for the per-page version; \code{\link[=rtftable]{rtftable()}}
+(\code{read_attributes = TRUE}) which consumes the attribute.
 }

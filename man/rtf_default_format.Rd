@@ -17,43 +17,43 @@ rtf_default_format(
 )
 }
 \arguments{
-\item{font_size_half_points}{Body font size in half-points (`18` = 9 pt).}
+\item{font_size_half_points}{Body font size in half-points (\code{18} = 9 pt).}
 
 \item{row_height_twips}{Default row height (twips) for every table-shaped
-element (content table, page header / footer, title / footnote). `NULL`
+element (content table, page header / footer, title / footnote). \code{NULL}
 (default) keeps the font-aware baseline.}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Default cell padding
-(twips, border-to-text). `NULL` (default) keeps the resource baseline (0).}
+(twips, border-to-text). \code{NULL} (default) keeps the resource baseline (0).}
 
-\item{markup}{Cell-text markup: `"script"` (`^{}`/`_{}` super/subscript, the
-default), `"relational"` (`>=`/`<=` to the symbols), `"all"`, or `"none"`.
-See [rtftable()].}
+\item{markup}{Cell-text markup: \code{"script"} (\verb{^\{\}}/\verb{_\{\}} super/subscript, the
+default), \code{"relational"} (\code{>=}/\code{<=} to the symbols), \code{"all"}, or \code{"none"}.
+See \code{\link[=rtftable]{rtftable()}}.}
 
-\item{title_format}{How the page **title** renders: `"text"` (default, plain
-centred paragraphs) or `"table"` (a content-width single-column table).}
+\item{title_format}{How the page \strong{title} renders: \code{"text"} (default, plain
+centred paragraphs) or \code{"table"} (a content-width single-column table).}
 
-\item{footnote_format}{How the **footnote** renders: `"table"` (default,
-content-width table with the separator rule) or `"text"` (plain paragraphs).}
+\item{footnote_format}{How the \strong{footnote} renders: \code{"table"} (default,
+content-width table with the separator rule) or \code{"text"} (plain paragraphs).}
 
 \item{title_width, footnote_width}{Width of the title / footnote block:
-`"content"` (the default -- follow the table body), `"page"` (the writable
-width, margins excluded), a fraction in `(0, 1]` of the writable width, or
-twips. `NULL` keeps the default. Applies to the `"table"` form; the
-`"text"` form is plain paragraphs and already spans the page.
-`footnote_width = "page"` is the way to reach the full width **and** keep
-the separator rule, which `footnote_format = "text"` cannot draw.}
+\code{"content"} (the default -- follow the table body), \code{"page"} (the writable
+width, margins excluded), a fraction in \verb{(0, 1]} of the writable width, or
+twips. \code{NULL} keeps the default. Applies to the \code{"table"} form; the
+\code{"text"} form is plain paragraphs and already spans the page.
+\code{footnote_width = "page"} is the way to reach the full width \strong{and} keep
+the separator rule, which \code{footnote_format = "text"} cannot draw.}
 }
 \value{
-An `rtf_default_format` object for `rtf_document(default_format =)`.
+An \code{rtf_default_format} object for \code{rtf_document(default_format =)}.
 }
 \description{
-Builds the `default_format` setting for [rtf_document()] / [rtf_config()] as a
-structured `rtf_default_format` object, so its options and **defaults** are
-visible in the signature. Every value is a *default*: a per-module setting on
-[rtftable()] / [rtf_header()] / [rtf_footer()] / [rtf_table_style()] always
-overrides it, and a site can change a default via the matching `rtfreporter.*`
-option (an unset argument falls back to it; see [rtfreporter_options()]).
+Builds the \code{default_format} setting for \code{\link[=rtf_document]{rtf_document()}} / \code{\link[=rtf_config]{rtf_config()}} as a
+structured \code{rtf_default_format} object, so its options and \strong{defaults} are
+visible in the signature. Every value is a \emph{default}: a per-module setting on
+\code{\link[=rtftable]{rtftable()}} / \code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}} / \code{\link[=rtf_table_style]{rtf_table_style()}} always
+overrides it, and a site can change a default via the matching \verb{rtfreporter.*}
+option (an unset argument falls back to it; see \code{\link[=rtfreporter_options]{rtfreporter_options()}}).
 }
 \examples{
 # Defaults made explicit:
@@ -67,5 +67,5 @@ doc <- rtf_document(default_format = rtf_default_format(font_size_half_points = 
 
 }
 \seealso{
-[rtf_document()], [rtf_page()], [rtftable()].
+\code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_page]{rtf_page()}}, \code{\link[=rtftable]{rtftable()}}.
 }

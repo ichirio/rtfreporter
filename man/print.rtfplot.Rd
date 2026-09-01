@@ -7,15 +7,15 @@
 \method{print}{rtfplot}(x, ...)
 }
 \arguments{
-\item{x}{An `rtfplot` object.}
+\item{x}{An \code{rtfplot} object.}
 
 \item{...}{Additional arguments (unused).}
 }
 \value{
-`x`, invisibly. Called for the side effect of printing the summary.
+\code{x}, invisibly. Called for the side effect of printing the summary.
 }
 \description{
-Prints a compact summary of an [rtfplot()] figure: the image type and file,
+Prints a compact summary of an \code{\link[=rtfplot]{rtfplot()}} figure: the image type and file,
 the image's native pixel size and DPI, the display size that will be embedded
 (in inches and twips), and the alignment.
 }

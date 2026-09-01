@@ -10,30 +10,30 @@ fmt_count_paren(x, nbsp = " ")
 \item{x}{Character vector (one table column).}
 
 \item{nbsp}{Padding character; defaults to the non-breaking space
-(U+00A0) so RTF / Word keep the alignment.  Pass `" "` for plain text.}
+(U+00A0) so RTF / Word keep the alignment.  Pass \code{" "} for plain text.}
 }
 \value{
-Character vector the same length as `x`.
+Character vector the same length as \code{x}.
 }
 \description{
-Aligns clinical cells made of an integer **count** followed by a
-**parenthetical** part -- e.g. `"69 (80.2%)"`, `"3 (<1%)"`, `"70 (100%)"`.
+Aligns clinical cells made of an integer \strong{count} followed by a
+\strong{parenthetical} part -- e.g. \code{"69 (80.2\%)"}, \code{"3 (<1\%)"}, \code{"70 (100\%)"}.
 It scans the whole column, then right-justifies the count to the widest
-count and right-justifies the text *inside* the parentheses to the widest
-one, so the count digit **and** the percentage line up across rows.
+count and right-justifies the text \emph{inside} the parentheses to the widest
+one, so the count digit \strong{and} the percentage line up across rows.
 }
 \details{
-Only cells that have parentheses are touched; cells **without** them -- a
-lone count such as `"0"` or a raw total, a continuous statistic like
-`"75.2 (8.6)"` whose "count" is not an integer, free text, or empty
-group-label cells -- are returned **unchanged**.  Use
-[fmt_count_paren_bare()] if you also want bare integer counts padded into
+Only cells that have parentheses are touched; cells \strong{without} them -- a
+lone count such as \code{"0"} or a raw total, a continuous statistic like
+\code{"75.2 (8.6)"} whose "count" is not an integer, free text, or empty
+group-label cells -- are returned \strong{unchanged}.  Use
+\code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}} if you also want bare integer counts padded into
 the same column.
 
-Unlike the fixed-width [realign_count_pct()] this adapts to the column's
-actual digit counts and does not care what is *inside* the parentheses,
-coping with mixed notations like `"(<1%)"`, `"(100%)"` and `"( 2.8%)"` in
-one column (e.g. tables produced by `tfrmt`).
+Unlike the fixed-width \code{\link[=realign_count_pct]{realign_count_pct()}} this adapts to the column's
+actual digit counts and does not care what is \emph{inside} the parentheses,
+coping with mixed notations like \code{"(<1\%)"}, \code{"(100\%)"} and \code{"( 2.8\%)"} in
+one column (e.g. tables produced by \code{tfrmt}).
 }
 \examples{
 # Only the parenthetical cells are aligned; the lone "0" is left as-is.
@@ -41,6 +41,6 @@ fmt_count_paren(c("1 (1.2\%)", "0", "11 (3.6\%)", "108 (35.3\%)"))
 
 }
 \seealso{
-[fmt_count_paren_bare()], [fmt_right_align()],
-  [realign_count_pct()], and the `cell_format` argument of [as_rtftables()].
+\code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}}, \code{\link[=fmt_right_align]{fmt_right_align()}},
+\code{\link[=realign_count_pct]{realign_count_pct()}}, and the \code{cell_format} argument of \code{\link[=as_rtftables]{as_rtftables()}}.
 }
