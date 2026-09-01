@@ -360,13 +360,6 @@ print.rtf_border_side <- function(x, ...) {
 #' @param top,bottom,left,right The selection's four outer edges. A side takes
 #'   a value from either of two families -- `TRUE`/`FALSE`, or a style name --
 #'   or `NULL` to leave it unset. See *Writing a side* below.
-#' @param style,width,color The line the sides named in this call draw: one of
-#'   `"single"` (default), `"double"`, `"thick"`, `"dash"`, `"dot"`; a weight in
-#'   twips (default `15`, about 0.5 pt); and `NULL` for black or a 6-digit hex
-#'   string. Naming a style on the side itself is shorthand for `style`.
-#' @param from An existing `rtf_border` to layer onto: the sides named here
-#'   replace its own, the rest survive. This is how one side gets a different
-#'   weight or colour from the others.
 #' @param inside_h,inside_v The rules drawn *between* the selection's rows
 #'   (`inside_h`) and *between* its cells (`inside_v`). Same values as the
 #'   edges; `NULL` (default) means no rule there.
@@ -498,7 +491,7 @@ rtf_border_none <- function() {
 
 #' @describeIn rtf_border Deprecated. Write `rtf_border(top = TRUE)`.
 #' @param style,width,color Line style, weight in twips and colour, as in
-#'   [rtf_border()].
+#'   [rtf_border_side()].
 #' @export
 rtf_border_top <- function(style = "single", width = 15L, color = NULL) {
   .deprecate_sugar("rtf_border_top", "rtf_border(top = TRUE)")

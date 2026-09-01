@@ -39,11 +39,7 @@ or \code{NULL} to leave it unset. See \emph{Writing a side} below.}
 edges; \code{NULL} (default) means no rule there.}
 
 \item{style, width, color}{Line style, weight in twips and colour, as in
-\code{\link[=rtf_border]{rtf_border()}}.}
-
-\item{from}{An existing \code{rtf_border} to layer onto: the sides named here
-replace its own, the rest survive. This is how one side gets a different
-weight or colour from the others.}
+\code{\link[=rtf_border_side]{rtf_border_side()}}.}
 }
 \value{
 A list of class \code{"rtf_border"}.
