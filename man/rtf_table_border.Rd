@@ -9,7 +9,10 @@ rtf_table_border(
   spanning = NULL,
   body = NULL,
   first_row = NULL,
-  last_row = NULL
+  last_row = NULL,
+  outer = NULL,
+  inside_h = NULL,
+  inside_v = NULL
 )
 }
 \arguments{
@@ -22,6 +25,12 @@ rtf_table_border(
 \item{first_row}{[rtf_border()] override for the first data row.}
 
 \item{last_row}{[rtf_border()] override for the last data row.}
+
+\item{outer}{[rtf_border()] for the table's four outermost edges, or
+`NULL` (default).  See the section above.}
+
+\item{inside_h, inside_v}{[rtf_border_side()] for the rules between rows and
+between cells, or `NULL` (default).}
 }
 \value{
 A list of class `"rtf_table_border"`.
@@ -31,6 +40,30 @@ Specifies borders for each logical zone of an [rtftable()].
 Each zone is either `NULL` (no border) or an [rtf_border()] object.
 `first_row` and `last_row` are *overrides* merged on top of the `body` spec.
 }
+\section{Addressing the whole table at once}{
+
+
+The five zones say what each *kind of row* looks like.  `outer`, `inside_h`
+and `inside_v` say it for the table as a whole -- the same three controls
+Word offers for a selection:
+
+\describe{
+  \item{`outer`}{an [rtf_border()] for the table's four outermost edges,
+    and only those: its `left`/`right` land on the first and last cell of
+    every row rather than on every cell.}
+  \item{`inside_h`}{an [rtf_border_side()] for every row boundary inside
+    the table -- between header rows, between the header block and the body,
+    and between data rows.}
+  \item{`inside_v`}{an [rtf_border_side()] for every cell boundary inside a
+    row.  Cell, not column: no rule is drawn inside a spanning cell.}
+}
+
+They are expanded into the five zones before rendering, and any zone given
+explicitly is merged on top afterwards -- so "whole table, except ..." is
+just both together.  All three default to `NULL`, which leaves the zones
+exactly as they were.
+}
+
 \examples{
 # The clinical TFL look spelled out by zone: header top + bottom rules and a
 # bottom rule on the last data row (equivalent to `rtftable(border = "tfl")`).
@@ -38,6 +71,20 @@ rtf_table_border(
   header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
   last_row = rtf_border(bottom = rtf_border_side())
 )
+
+# The listing look: outer frame plus a rule under every row, and no vertical
+# rules between the columns.
+rtf_table_border(outer = rtf_border_box(), inside_h = rtf_border_side())
+
+# A full grid.
+rtf_table_border(outer    = rtf_border_box(),
+                 inside_h = rtf_border_side(),
+                 inside_v = rtf_border_side())
+
+# Outer frame and row rules, but no rule between the two header rows.
+rtf_table_border(outer    = rtf_border_box(),
+                 inside_h = rtf_border_side(),
+                 header   = rtf_border(inside_h = rtf_border_side("none")))
 }
 \seealso{
 [rtf_border()] / [rtf_border_side()] for the pieces; pass the result

@@ -1,5 +1,33 @@
 # rtfreporter (development version)
 
+### New features
+
+- **Borders can be specified the way Word specifies them: an outer frame, the
+  rules between rows, and the rules between columns** (#340). Until now a
+  zone-level `rtf_border(left =, right =)` was emitted on *every* cell of the
+  row, so it always drew a rule at every column boundary; an ordinary listing
+  look -- frame plus horizontal rules, no vertical rules -- needed four
+  `style_header()` / `style_body()` calls on the first and last columns.
+
+  `rtf_table_border()` gains `outer`, `inside_h` and `inside_v`, which address
+  the table as a whole:
+
+  ```r
+  rtf_table_border(outer = rtf_border_box(), inside_h = rtf_border_side())
+  ```
+
+  `rtf_border()` gains `inside_h` and `inside_v` for the same distinction one
+  level down. Naming either one switches that axis from uniform to *outer +
+  inside*: with `inside_v` set, `left`/`right` become the row's outer edges and
+  the boundaries between its cells use `inside_v`; with `inside_h` set,
+  `top`/`bottom` become the zone's outer edges and the boundaries between its
+  rows use `inside_h`. Since `rtf_border_side("none")` is an explicit *no line*,
+  `inside_v = rtf_border_side("none")` reads as "outer edges only".
+
+  All five arguments default to `NULL` and leave existing output untouched.
+  On a row with a spanning cell, `inside_v` lands on cell boundaries rather
+  than column boundaries, so no rule is drawn inside a merged cell.
+
 ### Breaking changes
 
 - **The five `page_split_*()` factories are retired** (#334). A strategy is

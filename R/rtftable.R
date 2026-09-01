@@ -675,8 +675,13 @@ rtftable <- function(
          call. = FALSE)
   }
 
-  # Border: normalize to rtf_table_border (or NULL for no borders).
-  border_resolved <- .normalize_table_border(border)
+  # Border: normalize to rtf_table_border (or NULL for no borders), then expand
+  # the whole-table shortcuts (outer / inside_h / inside_v) into the five zones.
+  # Whether a column header exists decides where the table's top edge lands,
+  # which is why the expansion happens here and not in the constructor.
+  border_resolved <- .expand_table_border(
+    .normalize_table_border(border),
+    has_header = !is.null(spanning_header) || !is.null(col_header))
 
   # Resolve blank_rows spec into a sorted integer vector of positions.
   blank_rows_resolved <- NULL
@@ -847,7 +852,15 @@ rtftable <- function(
   if (has("font")) tbl$font <- .check_font(ov$font, "font")
 
   # -- border (needs normalisation) ---------------------------------------
-  if (has("border")) tbl$border <- .normalize_table_border(ov$border)
+  if (has("border")) {
+    # A header supplied in the same override call counts, so read `ov` first.
+    hdr_now <- if (has("spanning_header")) ov$spanning_header else tbl$spanning_header
+    col_now <- if (has("col_header")) ov$col_header
+               else tbl$col_header %||% tbl$col_header_list
+    tbl$border <- .expand_table_border(
+      .normalize_table_border(ov$border),
+      has_header = !is.null(hdr_now) || !is.null(col_now))
+  }
 
   # -- spanning header (stored verbatim) ----------------------------------
   if (has("spanning_header")) tbl$spanning_header <- ov$spanning_header

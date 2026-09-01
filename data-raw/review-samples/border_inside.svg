@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" width="1000" height="300" role="img" aria-label="outer, inside_h and inside_v produce the three usual table looks">
+  <style>
+    .bg   { fill: #ffffff; }
+    .card { fill: none; stroke: #d0d7de; stroke-width: 1; }
+    .ttl  { font: 600 15px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .arg  { font: 600 12px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; fill: #0969da; }
+    .desc { font: 11px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #57606a; }
+    .cell { font: 10px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; fill: #1f2328; }
+    .hd   { font: 600 10px ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; fill: #1f2328; }
+    .foot { font: 11px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; fill: #57606a; }
+    .rule { stroke: #1f2328; stroke-width: 1.6; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1000" height="300"/>
+  <rect class="card" x="0.5" y="0.5" width="999" height="299"/>
+
+  <text class="ttl" x="32" y="34">outer / inside_h / inside_v — the three looks, one line each</text>
+
+  <!-- ============================= panel A ============================= -->
+  <text class="arg"  x="40" y="66">outer</text>
+  <text class="desc" x="40" y="82">frame only</text>
+  <g>
+    <text class="hd"   x="48"  y="112">Item</text>
+    <text class="hd"   x="215" y="112" text-anchor="end">A</text>
+    <text class="hd"   x="285" y="112" text-anchor="end">B</text>
+    <text class="cell" x="48"  y="140">Age</text>
+    <text class="cell" x="215" y="140" text-anchor="end">62.1</text>
+    <text class="cell" x="285" y="140" text-anchor="end">61.4</text>
+    <text class="cell" x="48"  y="168">Sex</text>
+    <text class="cell" x="48"  y="196">  Male</text>
+    <text class="cell" x="215" y="196" text-anchor="end">45</text>
+    <text class="cell" x="285" y="196" text-anchor="end">41</text>
+    <text class="cell" x="48"  y="224">  Female</text>
+    <text class="cell" x="215" y="224" text-anchor="end">41</text>
+    <text class="cell" x="285" y="224" text-anchor="end">43</text>
+    <rect x="40" y="92" width="260" height="140" fill="none" class="rule"/>
+  </g>
+
+  <!-- ============================= panel B ============================= -->
+  <text class="arg"  x="370" y="66">outer + inside_h</text>
+  <text class="desc" x="370" y="82">frame and a rule under every row — no vertical rules</text>
+  <g>
+    <text class="hd"   x="378" y="112">Item</text>
+    <text class="hd"   x="545" y="112" text-anchor="end">A</text>
+    <text class="hd"   x="615" y="112" text-anchor="end">B</text>
+    <text class="cell" x="378" y="140">Age</text>
+    <text class="cell" x="545" y="140" text-anchor="end">62.1</text>
+    <text class="cell" x="615" y="140" text-anchor="end">61.4</text>
+    <text class="cell" x="378" y="168">Sex</text>
+    <text class="cell" x="378" y="196">  Male</text>
+    <text class="cell" x="545" y="196" text-anchor="end">45</text>
+    <text class="cell" x="615" y="196" text-anchor="end">41</text>
+    <text class="cell" x="378" y="224">  Female</text>
+    <text class="cell" x="545" y="224" text-anchor="end">41</text>
+    <text class="cell" x="615" y="224" text-anchor="end">43</text>
+    <rect x="370" y="92" width="260" height="140" fill="none" class="rule"/>
+    <line class="rule" x1="370" y1="120" x2="630" y2="120"/>
+    <line class="rule" x1="370" y1="148" x2="630" y2="148"/>
+    <line class="rule" x1="370" y1="176" x2="630" y2="176"/>
+    <line class="rule" x1="370" y1="204" x2="630" y2="204"/>
+  </g>
+
+  <!-- ============================= panel C ============================= -->
+  <text class="arg"  x="700" y="66">outer + inside_h + inside_v</text>
+  <text class="desc" x="700" y="82">full grid</text>
+  <g>
+    <text class="hd"   x="708" y="112">Item</text>
+    <text class="hd"   x="875" y="112" text-anchor="end">A</text>
+    <text class="hd"   x="945" y="112" text-anchor="end">B</text>
+    <text class="cell" x="708" y="140">Age</text>
+    <text class="cell" x="875" y="140" text-anchor="end">62.1</text>
+    <text class="cell" x="945" y="140" text-anchor="end">61.4</text>
+    <text class="cell" x="708" y="168">Sex</text>
+    <text class="cell" x="708" y="196">  Male</text>
+    <text class="cell" x="875" y="196" text-anchor="end">45</text>
+    <text class="cell" x="945" y="196" text-anchor="end">41</text>
+    <text class="cell" x="708" y="224">  Female</text>
+    <text class="cell" x="875" y="224" text-anchor="end">41</text>
+    <text class="cell" x="945" y="224" text-anchor="end">43</text>
+    <rect x="700" y="92" width="260" height="140" fill="none" class="rule"/>
+    <line class="rule" x1="700" y1="120" x2="960" y2="120"/>
+    <line class="rule" x1="700" y1="148" x2="960" y2="148"/>
+    <line class="rule" x1="700" y1="176" x2="960" y2="176"/>
+    <line class="rule" x1="700" y1="204" x2="960" y2="204"/>
+    <line class="rule" x1="840" y1="92"  x2="840" y2="232"/>
+    <line class="rule" x1="900" y1="92"  x2="900" y2="232"/>
+  </g>
+
+  <text class="foot" x="40" y="262">Each look is one rtf_table_border() call. Every argument defaults to NULL, so a table that names none of them renders exactly as before.</text>
+  <text class="foot" x="40" y="280">outer takes an rtf_border(); inside_h and inside_v take an rtf_border_side(). Zone arguments still override them, per row kind or per cell.</text>
+</svg>
