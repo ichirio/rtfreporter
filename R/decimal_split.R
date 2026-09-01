@@ -399,9 +399,11 @@
 
   cell_borders <- if (!is.null(row_cell_styles)) row_cell_styles$border
 
-  cell_defs <- vapply(starts, function(j) {
+  n_cells <- length(starts)
+  cell_defs <- vapply(seq_along(starts), function(ci) {
+    j   <- starts[ci]
     to  <- merge_to[j]
-    eff <- border_spec
+    eff <- .cell_edge_border(border_spec, ci, n_cells)
     b   <- if (is.list(cell_borders) && j <= length(cell_borders))
              cell_borders[[j]] else NULL
     if (!is.null(b)) eff <- .effective_row_border(eff, b)

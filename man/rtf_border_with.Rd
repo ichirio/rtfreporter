@@ -4,7 +4,15 @@
 \alias{rtf_border_with}
 \title{Return a copy of an `rtf_border` with selected sides replaced}
 \usage{
-rtf_border_with(border, top = NULL, bottom = NULL, left = NULL, right = NULL)
+rtf_border_with(
+  border,
+  top = NULL,
+  bottom = NULL,
+  left = NULL,
+  right = NULL,
+  inside_h = NULL,
+  inside_v = NULL
+)
 }
 \arguments{
 \item{border}{An [rtf_border()] object.  `NULL` is accepted and treated as
@@ -12,6 +20,9 @@ an empty border.}
 
 \item{top, bottom, left, right}{Replacement [rtf_border_side()] values, or
 `NULL` to leave a side unchanged.}
+
+\item{inside_h, inside_v}{Replacement [rtf_border_side()] values for the
+between-rows and between-cells rules, or `NULL` to leave them unchanged.}
 }
 \value{
 A new `rtf_border` object.

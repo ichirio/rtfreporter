@@ -496,10 +496,50 @@
 }
 
 # Build cell definition strings (border + valign + \cellx) for all columns.
+# Resolve one cell's vertical edges within a row of `n` cells.
+#
+# `inside_v` is what separates this from a plain rtf_border: when it is NULL the
+# border is returned untouched, so `left`/`right` keep landing on every cell --
+# exactly the behaviour every existing table relies on.  When it is set, the
+# border switches to the Word reading: `left`/`right` are the row's OUTER edges
+# and every boundary between cells uses `inside_v`.
+#
+# `j` and `n` count *cells*, not columns: on a row with a spanning cell the
+# interior rules land on cell boundaries, so nothing is drawn inside a merged
+# cell.  Same as Word.
+.cell_edge_border <- function(b, j, n) {
+  if (!inherits(b, "rtf_border") || is.null(b$inside_v)) return(b)
+  b$left  <- if (j == 1L) b$left  else b$inside_v
+  b$right <- if (j == n)  b$right else b$inside_v
+  b
+}
+
+# Resolve one row's horizontal edges within a zone of `n` rows.
+#
+# Mirror image of .cell_edge_border on the other axis: with `inside_h` unset the
+# zone border is returned untouched, with it set `top`/`bottom` become the
+# zone's outer edges and every boundary between its rows uses `inside_h`.
+.zone_row_border <- function(b, idx, n) {
+  if (!inherits(b, "rtf_border") || is.null(b$inside_h)) return(b)
+  b$top    <- if (idx == 1L) b$top    else NULL
+  b$bottom <- if (idx == n)  b$bottom else b$inside_h
+  b
+}
+
 .build_cell_defs <- function(cellx, border_spec, valign_cmd,
                              color_index_map = NULL) {
-  border_cmds <- .build_border_commands(border_spec, color_index_map)
-  vapply(cellx, function(cx) paste0(border_cmds, valign_cmd, "\\cellx", cx), character(1L))
+  n <- length(cellx)
+  if (!inherits(border_spec, "rtf_border") || is.null(border_spec$inside_v)) {
+    border_cmds <- .build_border_commands(border_spec, color_index_map)
+    return(vapply(cellx,
+                  function(cx) paste0(border_cmds, valign_cmd, "\\cellx", cx),
+                  character(1L)))
+  }
+  vapply(seq_len(n), function(j) {
+    paste0(.build_border_commands(.cell_edge_border(border_spec, j, n),
+                                  color_index_map),
+           valign_cmd, "\\cellx", cellx[j])
+  }, character(1L))
 }
 
 # Outer-frame border for a header row at position `idx` of `n` total.
@@ -516,11 +556,15 @@
   is_first <- idx == 1L
   is_last  <- idx == n
   top <- if (is_first) zone_border$top    else NULL
-  bot <- if (is_last)  zone_border$bottom else NULL
+  # A header block already reads top/bottom as the block's outer edges, so
+  # `inside_h` slots straight in as the rule between header rows.
+  bot <- if (is_last)  zone_border$bottom else zone_border$inside_h
   lft <- zone_border$left
   rgt <- zone_border$right
-  if (is.null(top) && is.null(bot) && is.null(lft) && is.null(rgt)) return(NULL)
-  rtf_border(top = top, bottom = bot, left = lft, right = rgt)
+  if (is.null(top) && is.null(bot) && is.null(lft) && is.null(rgt) &&
+      is.null(zone_border$inside_v)) return(NULL)
+  rtf_border(top = top, bottom = bot, left = lft, right = rgt,
+             inside_v = zone_border$inside_v)
 }
 
 # Render spanning-header row(s).
@@ -601,8 +645,9 @@
   #   row's outer frame (border_spec)
   #   + multi-col group bottom (if applicable)
   #   + col_spec[[from]]$border override
-  .cell_border <- function(k, single_col_idx = NULL) {
-    eff <- border_spec
+  .cell_border <- function(k, single_col_idx = NULL,
+                          cell_idx = 1L, n_cells = 1L) {
+    eff <- .cell_edge_border(border_spec, cell_idx, n_cells)
     if (!is.null(k) && k > 0L) {
       sp        <- spanning_header[[k]]
       from_idx  <- as.integer(sp$from)
@@ -641,18 +686,32 @@
   }
 
   # Build cell definitions: spanned columns use merged width.
-  cell_defs <- character()
+  # Count the emitted cells first -- a span counts once -- so that inside_v can
+  # be placed on cell boundaries rather than column boundaries.
+  n_cells <- 0L
   j <- 1L
   while (j <= ncols) {
     k <- coverage[j]
+    n_cells <- n_cells + 1L
+    j <- if (k > 0L) as.integer(spanning_header[[k]]$to) + 1L else j + 1L
+  }
+
+  cell_defs <- character()
+  j <- 1L
+  ci <- 0L
+  while (j <= ncols) {
+    k  <- coverage[j]
+    ci <- ci + 1L
     if (k > 0L) {
       to_idx <- as.integer(spanning_header[[k]]$to)
-      bc     <- .build_border_commands(.cell_border(k), color_index_map)
+      bc     <- .build_border_commands(
+        .cell_border(k, cell_idx = ci, n_cells = n_cells), color_index_map)
       cell_defs <- c(cell_defs, paste0(bc, valign_cmd, "\\cellx", cellx[to_idx]))
       j <- to_idx + 1L
     } else {
-      bc <- .build_border_commands(.cell_border(NULL, single_col_idx = j),
-                                   color_index_map)
+      bc <- .build_border_commands(
+        .cell_border(NULL, single_col_idx = j, cell_idx = ci, n_cells = n_cells),
+        color_index_map)
       cell_defs <- c(cell_defs, paste0(bc, valign_cmd, "\\cellx", cellx[j]))
       j <- j + 1L
     }
@@ -716,11 +775,10 @@
 
   # Build per-cell definitions: each cell may have its own border.
   cell_defs <- vapply(seq_len(ncols), function(j) {
+    eff_border <- .cell_edge_border(border_spec, j, ncols)
     col_border <- col_spec[[j]]$border
-    eff_border <- if (!is.null(col_border)) {
-      .effective_row_border(border_spec, col_border)
-    } else {
-      border_spec
+    if (!is.null(col_border)) {
+      eff_border <- .effective_row_border(eff_border, col_border)
     }
     bc <- .build_border_commands(eff_border, color_index_map)
     paste0(bc, valign_cmd, "\\cellx", cellx[j])
@@ -855,8 +913,8 @@
       !all(vapply(cell_borders, is.null, logical(1L)))) {
     cell_defs <- vapply(seq_len(ncols), function(j) {
       b   <- if (j <= length(cell_borders)) cell_borders[[j]]
-      eff <- if (is.null(b)) border_spec
-             else .effective_row_border(border_spec, b)
+      eff <- .cell_edge_border(border_spec, j, ncols)
+      if (!is.null(b)) eff <- .effective_row_border(eff, b)
       paste0(.build_border_commands(eff, color_index_map), valign_cmd,
              "\\cellx", cellx[j])
     }, character(1L))
@@ -1012,7 +1070,9 @@
       # When nrows == 1 the only row is BOTH the first and the last row;
       # merge both overrides so e.g. the TFL "bottom on last row" still
       # applies to a single-row table.
-      row_border <- border$body
+      # `body` spans every data row, so its inside_h (when set) is the rule
+      # between data rows and its top/bottom become the section's outer edges.
+      row_border <- .zone_row_border(border$body, i, nrows)
       if (i == 1L && !is.null(border$first_row)) {
         row_border <- .effective_row_border(row_border, border$first_row)
       }
