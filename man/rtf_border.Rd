@@ -15,11 +15,7 @@ rtf_border(
   left = NULL,
   right = NULL,
   inside_h = NULL,
-  inside_v = NULL,
-  style = "single",
-  width = 15L,
-  color = NULL,
-  from = NULL
+  inside_v = NULL
 )
 
 rtf_border_none()
@@ -108,15 +104,17 @@ and \code{FALSE} is \code{"none"} -- an explicit \emph{no line}, which erases a 
 selection would otherwise inherit. The style names are \code{"single"},
 \code{"double"}, \code{"thick"}, \code{"dash"}, \code{"dot"} and \code{"none"}.
 
-Use the logical family when the whole call shares one look, and the names
-when the sides differ:
+Both are shorthands for the third spelling, an \code{\link[=rtf_border_side]{rtf_border_side()}}, which is
+what a side actually holds. Reach for it when a line needs a weight or a
+colour of its own -- and since each side carries its own, one call is always
+enough:
 
 \preformatted{
-  rtf_border(all = TRUE, style = "double", width = 30L)   # four edges alike
-  rtf_border(top = "double", bottom = "single")           # two that differ
+  rtf_border(all = "double")                              # four edges alike
+  rtf_border(top = rtf_border_side(color = "#C9372C"),    # ... or all four
+             bottom = rtf_border_side("double", 30L))     #     different
 }
 
-\code{"none"} ignores \code{width} and \code{color}, since there is no line to describe, so
 \code{FALSE} and \code{"none"} are always interchangeable.
 
 So an edge never means something different depending on which other
@@ -140,41 +138,24 @@ an inherited rule.}
 \code{width} and \code{color}.}
 }
 
-\code{from} decides which of two things a call does:
-
-\describe{
-\item{without \code{from} -- \strong{build}}{the result is exactly what this call
-says. Every side not named is unset, whatever an earlier variable held.}
-\item{with \code{from} -- \strong{layer}}{only the sides named here change; the rest
-of \code{from} survives, each keeping its own style, weight and colour.}
-}
-
-That distinction is what makes per-side differences expressible.
-\code{style}/\code{width}/\code{color} describe one line, so a single call cannot give the
-top and the bottom different colours -- but each layer carries its own:
+A call to \code{rtf_border()} says everything about the border it returns: every
+side not named is unset. Adding to a border already in place is the job of
+the place it is attached to -- \code{\link[=style_zone]{style_zone()}}, \code{\link[=style_header]{style_header()}} and
+\code{\link[=style_body]{style_body()}} all merge \strong{side by side}, so a second call adds to the first
+rather than replacing it:
 
 \preformatted{
-  b <- rtf_border(top = TRUE, color = "#C9372C", width = 30L)
-  b <- rtf_border(from = b, bottom = TRUE, color = "#1F6FEB")
-  b <- rtf_border(from = b, left = TRUE, right = TRUE,
-                  style = "double", color = "#1A7F37")
-  # top stays red/30, bottom blue/15, left and right double green
+  tbl |>
+    style_zone(header = rtf_border(top = rtf_border_side(color = "#C9372C"))) |>
+    style_zone(header = rtf_border(bottom = TRUE))   # the top rule survives
 }
 
-Forgetting \code{from} is the one thing to watch: the second line below does not
-add a bottom rule, it replaces the whole border with one.
+A later layer can change a side or erase it with \code{FALSE}; a side left \code{NULL}
+says nothing and leaves what was there alone.
 
-\preformatted{
-  b <- rtf_border(top = TRUE)
-  b <- rtf_border(bottom = TRUE)             # the top rule is gone
-  b <- rtf_border(from = b, bottom = TRUE)   # what was meant
-}
-
-Two consequences worth knowing. \code{rtf_border(all = FALSE)} is the way to say
-"explicitly no rule anywhere", which is not the same as \code{rtf_border()}, where
-every side is merely unset. And layering can set a side, change it, or erase
-it with \code{FALSE}, but cannot return it to \emph{unset}: build a fresh border when
-that is what you want.
+One distinction worth keeping straight: \code{rtf_border(all = FALSE)} says
+"explicitly no rule anywhere", which erases what a border would otherwise
+inherit, while \code{rtf_border()} says nothing at all and inherits.
 }
 
 \section{Writing borders before and after 0.5.0}{
@@ -225,15 +206,11 @@ At 0.6.0 the remaining constructors folded in here too, so a side is written
 as a value rather than built:
 
 \preformatted{
-  rtf_border_side()                 ->  TRUE
-  rtf_border_side("none")           ->  FALSE    (or "none")
-  rtf_border_side("double")         ->  "double"
-  rtf_border_side("double", 20L)    ->  side "double" plus width = 20L
   rtf_border_none()                 ->  rtf_border()
   rtf_border_top()                  ->  rtf_border(top = TRUE)
   rtf_border_bottom()               ->  rtf_border(bottom = TRUE)
   rtf_border_box()                  ->  rtf_border(all = TRUE)
-  rtf_border_with(b, bottom = x)    ->  rtf_border(from = b, bottom = x)
+  rtf_border_with(b, bottom = x)    ->  layer at the attach point
   rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
 }
 
@@ -264,4 +241,8 @@ rtf_border(inside_v = TRUE)
 # Either family, but one at a time: these two agree.
 identical(rtf_border(top = TRUE,     bottom = FALSE),
           rtf_border(top = "single", bottom = "none"))
+
+# A weight or a colour of its own needs the side value.
+rtf_border(top    = rtf_border_side("double", 30L, "#003366"),
+           bottom = rtf_border_side(color = "#C9372C"))
 }

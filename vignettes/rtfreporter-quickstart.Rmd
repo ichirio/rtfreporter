@@ -347,7 +347,7 @@ tbl_framed <- rtftable(df,
 tbl_custom <- rtftable(df, border = "none") |>
   style_zone(
     header   = rtf_border(top = TRUE, bottom = TRUE),
-    last_row = rtf_border(bottom = "double", width = 10L)
+    last_row = rtf_border(bottom = rtf_border_side("double", 10L))
   )
 
 hdr_bordered <- rtf_header(
@@ -506,7 +506,7 @@ tables <- lapply(list(df_demog, df_demog, df_demog),
 
 # Non-mutating derivation
 heavy_tfl <- rtf_table_style_with(tfl,
-  border_last_row = rtf_border(bottom = "double", width = 20L)
+  border_last_row = rtf_border(bottom = rtf_border_side("double", 20L))
 )
 ```
 

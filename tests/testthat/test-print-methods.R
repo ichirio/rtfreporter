@@ -79,7 +79,7 @@ test_that("print.rtftable renders spanning headers centred with an underline", {
     c("Group", "x", "y"))
   rt <- rtftable(df, col_header = hdr,
     border = rtfreporter:::.rtf_table_border(
-      spanning = rtf_border(bottom = rtfreporter:::.rtf_border_side())))
+      spanning = rtf_border(bottom = rtf_border_side())))
   out <- format(rt)
   expect_true(any(grepl("Treated", out)))
   # The line holding "Treated" is not the leaf label line.

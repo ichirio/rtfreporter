@@ -2,6 +2,42 @@
 
 ### Breaking changes
 
+- **The line gets its own type back** (#348, partly reversing #346).
+  `rtf_border_side()` is no longer deprecated: `style`, `width` and `color`
+  describe a *line*, not a border, and folding them into `rtf_border()` set off
+  a chain of complications -- one call could describe only one line, so sides
+  could not differ; hence a scoping rule; hence `from`; hence a
+  build-versus-layer distinction; hence a gap where layering could not return a
+  side to unset. All five dissolve now that a side holds a value again.
+
+  `rtf_border()` therefore drops `style`, `width`, `color` and `from`, leaving
+  the seven arguments that say *where*:
+
+  ```r
+  rtf_border(all, top, bottom, left, right, inside_h, inside_v)
+  ```
+
+  Every side keeps its shorthands, since a line's type is what gets named most
+  often: `TRUE` (a default rule), `FALSE` or `"none"` (an explicit no-line),
+  a style name such as `"double"` (that style at the default weight and
+  colour), or an `rtf_border_side()` for a weight or colour of its own. Sides
+  that differ now fit in one call:
+
+  ```r
+  rtf_border(top    = rtf_border_side(color = "#C9372C"),
+             bottom = rtf_border_side("double", 30L))
+  ```
+
+  Layering is the job of the place a border is attached: `style_zone()`,
+  `style_header()` and `style_body()` all merge side by side, so a second call
+  adds to the first. `rtf_border_with()` stays deprecated and now points there.
+
+  Borders: **2** effective exports, doing different jobs -- which edges, and
+  what the line is. Package exports 75, of which 7 deprecated, so **68**
+  effective.
+
+### Breaking changes
+
 - **One border constructor.** `rtf_border()` absorbs the rest of the family
   (#346), finishing the #324 decision that #342 only half delivered. A side is
   now written as a value rather than built:

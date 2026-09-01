@@ -139,7 +139,7 @@ test_that("style_header() overrides what the adapter read (last writer wins)", {
   skip_if_not_installed("gt")
   tbl <- as_rtftable(.gs_gt(), read_meta = TRUE) |>
     style_header(row = 1, cols = 2:4,
-                 border = rtf_border(top = rtfreporter:::.rtf_border_side("double")))
+                 border = rtf_border(top = rtf_border_side("double")))
   span <- tbl$col_header[[1]]
   cell <- span[[which(vapply(span, function(c) c$label == "(N = 254)",
                              logical(1)))]]

@@ -317,7 +317,7 @@
            else as.integer(round(num * 15))          # px (and bare numbers)
   color <- .gt_normalize_color(decl$color)
   if (is.na(color) || identical(color, "#000000")) color <- NULL
-  .rtf_border_side(style = style, width = max(width, 1L), color = color)
+  rtf_border_side(style = style, width = max(width, 1L), color = color)
 }
 
 # The border half of one `styles` entry -> rtf_border() or NULL.

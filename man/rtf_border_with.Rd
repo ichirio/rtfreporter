@@ -33,6 +33,6 @@ top of \code{border}.  \code{NULL} arguments leave the corresponding side unchan
 }
 \examples{
 b <- rtf_border(top = TRUE, bottom = TRUE)
-rtf_border(from = b, bottom = TRUE, color = "#003366")  # recolour the bottom
-rtf_border(from = b, top = "none")                     # drop the top rule
+rtf_border(top = b$top, bottom = rtf_border_side(color = "#003366"))
+rtf_border(top = "none", bottom = b$bottom)   # an explicit no-line on top
 }

@@ -105,15 +105,11 @@ At 0.6.0 the remaining constructors folded in here too, so a side is written
 as a value rather than built:
 
 \preformatted{
-  rtf_border_side()                 ->  TRUE
-  rtf_border_side("none")           ->  FALSE    (or "none")
-  rtf_border_side("double")         ->  "double"
-  rtf_border_side("double", 20L)    ->  side "double" plus width = 20L
   rtf_border_none()                 ->  rtf_border()
   rtf_border_top()                  ->  rtf_border(top = TRUE)
   rtf_border_bottom()               ->  rtf_border(bottom = TRUE)
   rtf_border_box()                  ->  rtf_border(all = TRUE)
-  rtf_border_with(b, bottom = x)    ->  rtf_border(from = b, bottom = x)
+  rtf_border_with(b, bottom = x)    ->  layer at the attach point
   rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
 }
 
