@@ -192,10 +192,14 @@ test_that("the interior edge of the pair carries no padding", {
 })
 
 test_that("the interior vertical rule is suppressed inside the pair", {
-  vert <- rtf_border(left  = rtf_border_side("single"),
-                     right = rtf_border_side("single"))
-  tbl <- rtftable(.df(), col_rel_width = c(3, 2, 2),
-                  border = rtf_table_border(body = vert)) |>
+  # inside_v puts a rule on every cell boundary, so the split column has edges
+  # on both sides; the point of the test is that the pair's *interior* one is
+  # still suppressed.
+  vert <- rtf_border(left     = rtf_border_side("single"),
+                     right    = rtf_border_side("single"),
+                     inside_v = rtf_border_side("single"))
+  tbl <- rtftable(.df(), col_rel_width = c(3, 2, 2)) |>
+    style_zone(body = vert) |>
     set_decimal_split(cols = "Value")
   out  <- rtfreporter:::.render_rtftable(tbl, W)
   cx   <- rtfreporter:::.compute_cellx(3L, W, tbl)

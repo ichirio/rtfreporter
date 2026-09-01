@@ -75,7 +75,7 @@
   <line class="lead" x1="612" y1="278" x2="660" y2="278"/>
   <line class="lead" x1="612" y1="310" x2="660" y2="310"/>
   <line x1="660" y1="214" x2="660" y2="310" stroke="#afb8c1" stroke-width="1"/>
-  <text class="arg" x="668" y="266" fill="#1a7f37">body$bottom<tspan class="note" dx="8">every data row</tspan></text>
+  <text class="arg" x="668" y="266" fill="#1a7f37">body$inside_h<tspan class="note" dx="8">between the data rows</tspan></text>
 
   <line class="lead" x1="612" y1="342" x2="660" y2="342"/>
   <text class="arg" x="668" y="346" fill="#8250df">last_row$bottom<tspan class="note" dx="8">last data row</tspan></text>

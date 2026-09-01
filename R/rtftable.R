@@ -45,6 +45,22 @@
   unique(x)
 }
 
+# Table shape for the deprecation check, tolerant of the multi-data.frame form.
+.border_warn_ncols <- function(data) {
+  if (is.data.frame(data)) return(ncol(data))
+  if (is.list(data) && length(data) && is.data.frame(data[[1L]])) {
+    return(ncol(data[[1L]]))
+  }
+  1L
+}
+
+.border_warn_nrows <- function(data) {
+  if (is.data.frame(data)) return(nrow(data))
+  if (is.list(data)) return(sum(vapply(
+    data, function(d) if (is.data.frame(d)) nrow(d) else 0L, integer(1L))))
+  1L
+}
+
 # Normalize a border specification to an rtf_table_border (or NULL).
 # Accepts:
 #   rtf_table_border          -> returned as-is
@@ -64,11 +80,14 @@
   # and returns an empty table border -- every rule silently gone (#326).  The
   # opposite mix-up is already an error in col_cell(); this makes the pair
   # symmetric.
+  # An rtf_border here selects the whole table: its four edges are the table's
+  # outer frame and its inside_h / inside_v are the rules between rows and
+  # between cells.  (Before 0.5.0 this was an error -- see #326 -- so nothing
+  # that worked before changes meaning.)
   if (inherits(border, "rtf_border")) {
-    stop("`border` takes a table-level border (5 zones: header, spanning, ",
-         "body, first_row, last_row), not a cell-level rtf_border() ",
-         "(4 sides).\n  Did you mean ",
-         "rtf_table_border(header = rtf_border(...))?", call. = FALSE)
+    return(.rtf_table_border(outer    = border,
+                             inside_h = border$inside_h,
+                             inside_v = border$inside_v))
   }
   if (is.list(border)) return(.plain_list_to_table_border(border))
   stop("`border` must be \"tfl\", \"none\", NULL, an rtf_table_border object, ",
@@ -682,6 +701,11 @@ rtftable <- function(
   border_resolved <- .expand_table_border(
     .normalize_table_border(border),
     has_header = !is.null(spanning_header) || !is.null(col_header))
+  # Raised here because it needs the shape of the table to know whether the
+  # pre-0.5 reading would have produced anything different.
+  .warn_old_edge_reading(.normalize_table_border(border),
+                         ncols = .border_warn_ncols(data),
+                         nrows = .border_warn_nrows(data))
 
   # Resolve blank_rows spec into a sorted integer vector of positions.
   blank_rows_resolved <- NULL

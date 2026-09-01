@@ -158,7 +158,7 @@ print.rtf_table_style <- function(x, ...) {
 # Internal: convert an rtf_table_style into the rtf_table_border S3 spec
 # consumed by the renderer's border pipeline.
 .style_to_table_border <- function(style) {
-  rtf_table_border(
+  .rtf_table_border(
     header    = style$border_header,
     spanning  = style$border_spanning,
     body      = style$border_body,

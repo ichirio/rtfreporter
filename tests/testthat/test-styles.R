@@ -72,7 +72,7 @@ test_that("style values are snapshotted into each rtftable at construction", {
 test_that("col_spec[[j]]$border applies per-column in the header row", {
   df  <- data.frame(L = "x", N = 1L, V = 2.5)
   tbl <- rtftable(df,
-    border = rtf_table_border(header = rtf_border_top()),
+    border = rtfreporter:::.rtf_table_border(header = rtf_border_top()),
     col_spec = list(
       list(col = 2, border = rtf_border(top    = rtf_border_side("double", 20L),
                                          bottom = rtf_border_side("double", 20L)))
@@ -120,7 +120,7 @@ test_that("print.rtf_border lists all four sides (some none, some set)", {
 })
 
 test_that("print.rtf_table_border lists each zone", {
-  tb <- rtf_table_border(
+  tb <- rtfreporter:::.rtf_table_border(
     header = rtf_border(top    = rtf_border_side("single"),
                         bottom = rtf_border_side("single",
                                                   color = "#123456")),
@@ -177,12 +177,13 @@ test_that("rtf_border_tfl() returns a header-only rtf_table_border", {
 
 # ──────── rtf_table_border validation ─────────────────────────────────────
 
-test_that("rtf_table_border() rejects non-rtf_border values in any zone", {
-  expect_error(rtf_table_border(header   = "x"),         "rtf_border object")
-  expect_error(rtf_table_border(spanning = list(top=1)), "rtf_border object")
-  expect_error(rtf_table_border(body     = 42),          "rtf_border object")
-  expect_error(rtf_table_border(first_row = TRUE),       "rtf_border object")
-  expect_error(rtf_table_border(last_row  = NA),         "rtf_border object")
+test_that("the zone map rejects non-rtf_border values in any zone", {
+  ztb <- rtfreporter:::.rtf_table_border
+  expect_error(ztb(header   = "x"),         "rtf_border object")
+  expect_error(ztb(spanning = list(top=1)), "rtf_border object")
+  expect_error(ztb(body     = 42),          "rtf_border object")
+  expect_error(ztb(first_row = TRUE),       "rtf_border object")
+  expect_error(ztb(last_row  = NA),         "rtf_border object")
 })
 
 # ──────── rtf_border_with edge cases ──────────────────────────────────────
@@ -290,7 +291,7 @@ test_that(".style_to_table_border copies every zone into rtf_table_border", {
 })
 
 test_that(".collect_table_border_colors walks every zone", {
-  tb <- rtf_table_border(
+  tb <- rtfreporter:::.rtf_table_border(
     header = rtf_border(top = rtf_border_side(color = "#111111")),
     body   = rtf_border(bottom = rtf_border_side(color = "#222222"))
   )

@@ -336,12 +336,19 @@ tbl_multi <- rtftable(
 ```{r borders}
 tbl_tfl <- rtftable(df, border = "tfl")
 
-tbl_custom <- rtftable(df,
-  border = rtf_table_border(
+# A border applies to whatever you attach it to.  Here: the whole table.
+tbl_framed <- rtftable(df,
+  border = rtf_border(top = rtf_border_side(), bottom = rtf_border_side(),
+                      left = rtf_border_side(), right = rtf_border_side(),
+                      inside_h = rtf_border_side())
+)
+
+# Or one kind of row at a time.
+tbl_custom <- rtftable(df, border = "none") |>
+  style_zone(
     header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
     last_row = rtf_border(bottom = rtf_border_side("double", 10L))
   )
-)
 
 hdr_bordered <- rtf_header(
   rows   = list(c(c = "Study Title")),

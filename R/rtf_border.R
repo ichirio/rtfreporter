@@ -16,6 +16,61 @@
 
 .valid_border_styles <- c("single", "double", "thick", "dash", "dot")
 
+# Deprecation warnings fire once per session: a table-building loop would
+# otherwise repeat the same paragraph for every table.  The environment is
+# package-local, so the state dies with the session.
+.deprecation_state <- new.env(parent = emptyenv())
+
+.deprecate_once <- function(key, msg) {
+  if (isTRUE(.deprecation_state[[key]])) return(invisible(FALSE))
+  .deprecation_state[[key]] <- TRUE
+  warning(msg, call. = FALSE)
+  invisible(TRUE)
+}
+
+# The pre-0.5 reading of an rtf_border was uniform: `left`/`right` reached every
+# cell of a row and a multi-row zone's `top`/`bottom` reached every one of its
+# rows.  Both now mean the selection's outer edge only.  The two readings are
+# spelled identically, so the only honest signal is "edges set, matching
+# inside_* never named" -- and it is worth raising only where the readings
+# actually differ, which is why ncols / nrows are needed.
+.warn_old_edge_reading <- function(tb, ncols, nrows) {
+  if (is.null(tb)) return(invisible(FALSE))
+  differs <- function(b, multi_row) {
+    if (!inherits(b, "rtf_border")) return(FALSE)
+    named <- attr(b, "inside_named") %||% c(h = FALSE, v = FALSE)
+    v <- ncols > 1L && !isTRUE(named[["v"]]) &&
+         (!is.null(b$left) || !is.null(b$right))
+    h <- multi_row && nrows > 1L && !isTRUE(named[["h"]]) &&
+         (!is.null(b$top) || !is.null(b$bottom))
+    v || h
+  }
+  # `header` has always read top/bottom as the block's outer edges, so only its
+  # vertical axis can have changed; `first_row` / `last_row` are single rows.
+  # `outer` is deliberately not checked: rtftable(border = <rtf_border>) was an
+  # error before 0.5.0 (#326), so no existing code can mean the old thing by it.
+  hit <- differs(tb$body, TRUE) || differs(tb$header, FALSE) ||
+         differs(tb$spanning, FALSE) || differs(tb$first_row, FALSE) ||
+         differs(tb$last_row, FALSE)
+  if (!hit) return(invisible(FALSE))
+  .deprecate_once(
+    "border_edge_reading",
+    paste0(
+      "The edges of `rtf_border()` now mean the *outer* edges of whatever you ",
+      "attach it to.\n",
+      "  Before 0.5.0 `left`/`right` were drawn on every cell of a row, and a ",
+      "multi-row zone's\n  `top`/`bottom` on every one of its rows.  ",
+      "To keep that look, name the interior rule:\n",
+      "    rtf_border(left = s, right = s, inside_v = s)   # was: left/right ",
+      "alone\n",
+      "    rtf_border(bottom = s, inside_h = s)            # was: bottom alone ",
+      "on a body zone\n",
+      "  Naming `inside_h` / `inside_v` (with `rtf_border_side(\"none\")` for ",
+      "\"no rule\") silences this.\n",
+      "  See ?rtf_border, section \"Writing borders before and after 0.5.0\", ",
+      "for the old and new spelling of each case."))
+}
+
 # The four physical edges an RTF cell can carry.
 .border_edges <- c("top", "bottom", "left", "right")
 
@@ -103,41 +158,87 @@ print.rtf_border_side <- function(x, ...) {
 #'
 #' To derive a new border from an existing one, use [rtf_border_with()].
 #'
-#' @section Outer edges versus the rules between:
+#' @section What a border applies to:
 #'
-#' An `rtf_border` is applied either to a single cell or to a whole row (that
-#' is what a zone of [rtf_table_border()] does).  On a row, `left` and `right`
-#' reach **every** cell, so they draw a rule at every column boundary -- handy
-#' for a full grid, useless for a plain outer frame.
+#' An `rtf_border` describes a **selection**, and *where* it applies is decided
+#' by where you attach it -- the same way Word's border dialog acts on whatever
+#' is selected:
 #'
-#' `inside_v` and `inside_h` add the other half of Word's border model, and
-#' naming one **switches that axis from uniform to outer + inside**:
-#'
-#' \describe{
-#'   \item{`inside_v` set}{`left` / `right` become the row's **outer** edges
-#'     and every boundary *between* the row's cells uses `inside_v`.}
-#'   \item{`inside_h` set}{`top` / `bottom` become the zone's **outer** edges
-#'     and every boundary *between* the zone's rows uses `inside_h`.}
+#' \tabular{ll}{
+#'   `rtftable(border = )`                  \tab the whole table \cr
+#'   `style_zone(header = , body = , ...)`  \tab that kind of row \cr
+#'   `col_cell(border = )`, `cell_styles`   \tab one cell \cr
+#'   `rtf_header(border = )` / `rtf_footer(border = )` \tab that block
 #' }
 #'
-#' Left `NULL` -- the default -- both axes behave exactly as they always have,
-#' so existing tables are unaffected.  Because `rtf_border_side("none")` is an
-#' explicit *no line*, `inside_v = rtf_border_side("none")` is how you say
-#' "outer edges only".
+#' There is one rule, with no special cases:
 #'
-#' On a row that contains a spanning cell, `inside_v` lands on **cell**
-#' boundaries, not column boundaries: nothing is drawn inside a merged cell.
-#' A single cell has no inside, so both are ignored there.
+#' * `top` / `bottom` / `left` / `right` are the selection's **outer** edges.
+#' * `inside_h` / `inside_v` are the rules **inside** it, and an absent one
+#'   means no rule there.
 #'
-#' For the whole table at once, see the `outer` / `inside_h` / `inside_v`
-#' arguments of [rtf_table_border()].
+#' So an edge never means something different depending on which other
+#' arguments are present.  On a row containing a spanning cell, `inside_v`
+#' lands on **cell** boundaries rather than column boundaries: nothing is drawn
+#' inside a merged cell.  A single cell has no inside, so both are ignored
+#' there.
+#'
+#' @section Writing borders before and after 0.5.0:
+#'
+#' Two things changed at 0.5.0.  [rtf_table_border()] is deprecated, so a
+#' border is aimed with `rtftable(border = )` or [style_zone()] instead; and an
+#' edge now always means the **outer** edge of the selection, so the rules
+#' *inside* it have to be asked for by name.  Each case below, `s` being an
+#' [rtf_border_side()]:
+#'
+#' \preformatted{
+#'   ## rules above and below the column header  (unchanged in meaning)
+#'   was:  rtftable(df, border = rtf_table_border(
+#'                    header = rtf_border(top = s, bottom = s)))
+#'   now:  rtftable(df, border = "none") |>
+#'           style_zone(header = rtf_border(top = s, bottom = s))
+#'
+#'   ## a rule under the last data row                      (unchanged)
+#'   was:  rtf_table_border(last_row = rtf_border(bottom = s))
+#'   now:  style_zone(last_row = rtf_border(bottom = s))
+#'
+#'   ## a rule under EVERY data row              (bottom -> inside_h)
+#'   was:  rtf_table_border(body = rtf_border(bottom = s))
+#'   now:  style_zone(body = rtf_border(inside_h = s))
+#'
+#'   ## a vertical rule at every column boundary  (left/right -> inside_v)
+#'   was:  rtf_table_border(body = rtf_border(left = s, right = s))
+#'   now:  style_zone(body = rtf_border(left = s, right = s, inside_v = s))
+#'
+#'   ## a grid around every data cell
+#'   was:  rtf_table_border(body = rtf_border_box())
+#'   now:  style_zone(body = rtf_border(top = s, bottom = s, left = s,
+#'                                      right = s, inside_h = s, inside_v = s))
+#'
+#'   ## an outer frame only, no rules inside      (was not expressible)
+#'   now:  rtftable(df, border = rtf_border(top = s, bottom = s,
+#'                                          left = s, right = s))
+#'
+#'   ## frame plus a rule under every row -- the listing look
+#'   was:  four style_header() / style_body() calls on the edge columns
+#'   now:  rtftable(df, border = rtf_border(top = s, bottom = s, left = s,
+#'                                          right = s, inside_h = s))
+#' }
+#'
+#' `border = "tfl"` and [rtf_border_tfl()] are unaffected, as is any border on
+#' a single cell ([col_cell()], `cell_styles`): a cell has no inside, so its
+#' four edges never meant anything else.
+#'
+#' The old and new readings are spelled identically, so rtfreporter warns once
+#' per session when it meets a border that would have rendered differently
+#' before.  Naming `inside_h` / `inside_v` says which you mean and silences it
+#' -- use `rtf_border_side("none")` for "no rule there".
 #'
 #' @param top,bottom,left,right `NULL` (no border on that side) or an
 #'   [rtf_border_side()] object.
-#' @param inside_h,inside_v `NULL` (default) or an [rtf_border_side()]: the
-#'   rule drawn *between* the rows of a zone (`inside_h`) and *between* the
-#'   cells of a row (`inside_v`).  See the section above -- setting either one
-#'   turns the matching pair of edges into outer edges.
+#' @param inside_h,inside_v `NULL` (default, meaning no rule) or an
+#'   [rtf_border_side()]: the rule drawn *between* the selection's rows
+#'   (`inside_h`) and *between* its cells (`inside_v`).
 #'
 #' @return A list of class `"rtf_border"`.
 #'
@@ -145,11 +246,11 @@ print.rtf_border_side <- function(x, ...) {
 #' rtf_border(top = rtf_border_side(), bottom = rtf_border_side())  # top + bottom
 #' rtf_border(bottom = rtf_border_side(color = "#003366"))          # blue underline
 #'
-#' # On a row: outer edges only, no rule between the cells.
+#' # A whole table: frame plus a rule under every row, no vertical rules.
 #' s <- rtf_border_side()
-#' rtf_border(left = s, right = s, inside_v = rtf_border_side("none"))
+#' rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s)
 #'
-#' # On a row: a rule between the cells but no outer edges.
+#' # A rule between the cells but no outer edges.
 #' rtf_border(inside_v = s)
 #' @export
 rtf_border <- function(top = NULL, bottom = NULL, left = NULL, right = NULL,
@@ -160,11 +261,18 @@ rtf_border <- function(top = NULL, bottom = NULL, left = NULL, right = NULL,
   .check_border_side(right,    "right")
   .check_border_side(inside_h, "inside_h")
   .check_border_side(inside_v, "inside_v")
-  structure(
+  b <- structure(
     list(top = top, bottom = bottom, left = left, right = right,
          inside_h = inside_h, inside_v = inside_v),
     class = "rtf_border"
   )
+  # Not part of the value, only of its provenance: it lets rtftable() tell a
+  # border written for the pre-0.5 uniform reading from one written for the
+  # current outer/inside reading, and warn about the first (see
+  # .warn_old_edge_reading()).  Dropped by any merge, which is what we want --
+  # a merged border is a new statement.
+  attr(b, "inside_named") <- c(h = !missing(inside_h), v = !missing(inside_v))
+  b
 }
 
 #' @export
@@ -256,27 +364,22 @@ rtf_border_box <- function(style = "single", width = 15L, color = NULL) {
 #' Each zone is either `NULL` (no border) or an [rtf_border()] object.
 #' `first_row` and `last_row` are *overrides* merged on top of the `body` spec.
 #'
-#' @section Addressing the whole table at once:
+#' @section Deprecated since 0.5.0:
 #'
-#' The five zones say what each *kind of row* looks like.  `outer`, `inside_h`
-#' and `inside_v` say it for the table as a whole -- the same three controls
-#' Word offers for a selection:
+#' A border is now written once with [rtf_border()], and *where* it applies is
+#' decided by where you attach it:
 #'
-#' \describe{
-#'   \item{`outer`}{an [rtf_border()] for the table's four outermost edges,
-#'     and only those: its `left`/`right` land on the first and last cell of
-#'     every row rather than on every cell.}
-#'   \item{`inside_h`}{an [rtf_border_side()] for every row boundary inside
-#'     the table -- between header rows, between the header block and the body,
-#'     and between data rows.}
-#'   \item{`inside_v`}{an [rtf_border_side()] for every cell boundary inside a
-#'     row.  Cell, not column: no rule is drawn inside a spanning cell.}
+#' \preformatted{
+#'   rtftable(border = rtf_border(...))                    # the whole table
+#'   style_zone(header = rtf_border(...), body = ...)      # one kind of row
+#'   col_cell(border = rtf_border(...))                    # one cell
 #' }
 #'
-#' They are expanded into the five zones before rendering, and any zone given
-#' explicitly is merged on top afterwards -- so "whole table, except ..." is
-#' just both together.  All three default to `NULL`, which leaves the zones
-#' exactly as they were.
+#' `outer =` becomes the four edges of that `rtf_border()`; `inside_h =` and
+#' `inside_v =` keep their names.  This function still works and still returns
+#' the same value, but warns once per session.
+#'
+#' @inheritSection rtf_border Writing borders before and after 0.5.0
 #'
 #' @param header    [rtf_border()] for column-header rows.  `NULL` = none.
 #' @param spanning  [rtf_border()] for spanning-header rows.  `NULL` = none.
@@ -294,28 +397,57 @@ rtf_border_box <- function(style = "single", width = 15L, color = NULL) {
 #'   as `rtftable(border = )`.
 #'
 #' @examples
-#' # The clinical TFL look spelled out by zone: header top + bottom rules and a
-#' # bottom rule on the last data row (equivalent to `rtftable(border = "tfl")`).
-#' rtf_table_border(
-#'   header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
-#'   last_row = rtf_border(bottom = rtf_border_side())
-#' )
+#' s  <- rtf_border_side()
+#' df <- data.frame(A = c("1", "2"), B = c("x", "y"))
+#'
+#' # The clinical TFL look, spelled out one row kind at a time.
+#' rtftable(df, border = "none") |>
+#'   style_zone(header   = rtf_border(top = s, bottom = s),
+#'              last_row = rtf_border(bottom = s))
 #'
 #' # The listing look: outer frame plus a rule under every row, and no vertical
 #' # rules between the columns.
-#' rtf_table_border(outer = rtf_border_box(), inside_h = rtf_border_side())
+#' rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
+#'                                  inside_h = s))
 #'
-#' # A full grid.
-#' rtf_table_border(outer    = rtf_border_box(),
-#'                  inside_h = rtf_border_side(),
-#'                  inside_v = rtf_border_side())
+#' # A full grid: add the rules between the cells.
+#' rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
+#'                                  inside_h = s, inside_v = s))
 #'
-#' # Outer frame and row rules, but no rule between the two header rows.
-#' rtf_table_border(outer    = rtf_border_box(),
-#'                  inside_h = rtf_border_side(),
-#'                  header   = rtf_border(inside_h = rtf_border_side("none")))
+#' # Deprecated: the same thing written the old way.
+#' \dontrun{
+#' rtf_table_border(header = rtf_border(top = s, bottom = s))
+#' }
 #' @export
 rtf_table_border <- function(header    = NULL,
+                              spanning  = NULL,
+                              body      = NULL,
+                              first_row = NULL,
+                              last_row  = NULL,
+                              outer     = NULL,
+                              inside_h  = NULL,
+                              inside_v  = NULL) {
+  .deprecate_once(
+    "rtf_table_border",
+    paste0(
+      "`rtf_table_border()` is deprecated: a border is now written once with ",
+      "`rtf_border()`, and *where* it applies is decided by where you attach ",
+      "it.\n",
+      "  whole table : rtftable(border = rtf_border(...))\n",
+      "  one row kind: style_zone(header = rtf_border(...), body = ...)\n",
+      "  one cell    : col_cell(border = rtf_border(...))\n",
+      "  `outer =` becomes the four edges of that rtf_border(); `inside_h =` ",
+      "and `inside_v =` keep their names.\n",
+      "  See ?rtf_border, section \"Writing borders before and after 0.5.0\", ",
+      "for the old and new spelling of each case."))
+  .rtf_table_border(header = header, spanning = spanning, body = body,
+                    first_row = first_row, last_row = last_row,
+                    outer = outer, inside_h = inside_h, inside_v = inside_v)
+}
+
+# The five-zone map, unexported.  It stays the renderer's internal vocabulary;
+# users address a row kind with style_zone() or rtf_table_style(border_* = ).
+.rtf_table_border <- function(header    = NULL,
                               spanning  = NULL,
                               body      = NULL,
                               first_row = NULL,
@@ -373,15 +505,10 @@ rtf_table_border <- function(header    = NULL,
   iv    <- tb$inside_v
   if (is.null(outer) && is.null(ih) && is.null(iv)) return(tb)
 
-  # Vertical rules: the interior gets `inside_v`, or an explicit "no line" when
-  # only an outer frame was asked for.  Either way the value is non-NULL, which
-  # is the renderer's signal to treat left/right as outer edges.
-  iv_eff <- iv %||% if (!is.null(outer)) rtf_border_side("none") else NULL
-
   vertical <- function(b) {
-    if (is.null(outer) && is.null(iv_eff)) return(b)
+    if (is.null(outer) && is.null(iv)) return(b)
     rtf_border_with(b %||% rtf_border(),
-                    left = outer$left, right = outer$right, inside_v = iv_eff)
+                    left = outer$left, right = outer$right, inside_v = iv)
   }
 
   base <- vector("list", length(.table_border_zones))
@@ -482,7 +609,7 @@ print.rtf_table_border <- function(x, ...) {
 #' @export
 rtf_border_tfl <- function(style = "single", width = 15L, color = NULL) {
   s <- rtf_border_side(style, width, color)
-  rtf_table_border(
+  .rtf_table_border(
     header   = rtf_border(top = s, bottom = s),
     spanning = NULL,
     body     = NULL,
@@ -517,7 +644,7 @@ rtf_border_tfl <- function(style = "single", width = 15L, color = NULL) {
       result[[zone]] <- do.call(rtf_border, sides)
     }
   }
-  do.call(rtf_table_border, result)
+  do.call(.rtf_table_border, result)
 }
 
 # Merge two rtf_border objects: override sides of `base` with non-NULL sides
