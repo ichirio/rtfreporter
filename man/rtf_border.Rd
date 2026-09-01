@@ -83,26 +83,57 @@ inside a merged cell.  A single cell has no inside, so both are ignored
 there.
 }
 
-\section{Change in 0.5.0}{
+\section{Writing borders before and after 0.5.0}{
 
 
-Before 0.5.0 an edge on a multi-cell or multi-row selection was *uniform*:
-`left`/`right` were drawn on every cell of a row, and a `body` zone's
-`top`/`bottom` on every one of its rows.  Both now mean the outer edge only,
-and the interior rules come from `inside_h` / `inside_v`:
+Two things changed at 0.5.0.  [rtf_table_border()] is deprecated, so a
+border is aimed with `rtftable(border = )` or [style_zone()] instead; and an
+edge now always means the **outer** edge of the selection, so the rules
+*inside* it have to be asked for by name.  Each case below, `s` being an
+[rtf_border_side()]:
 
 \preformatted{
-  # was: left/right alone, meaning a rule at every column boundary
-  rtf_border(left = s, right = s, inside_v = s)
+  ## rules above and below the column header  (unchanged in meaning)
+  was:  rtftable(df, border = rtf_table_border(
+                   header = rtf_border(top = s, bottom = s)))
+  now:  rtftable(df, border = "none") |>
+          style_zone(header = rtf_border(top = s, bottom = s))
 
-  # was: bottom alone on a body zone, meaning a rule under every row
-  rtf_border(bottom = s, inside_h = s)
+  ## a rule under the last data row                      (unchanged)
+  was:  rtf_table_border(last_row = rtf_border(bottom = s))
+  now:  style_zone(last_row = rtf_border(bottom = s))
+
+  ## a rule under EVERY data row              (bottom -> inside_h)
+  was:  rtf_table_border(body = rtf_border(bottom = s))
+  now:  style_zone(body = rtf_border(inside_h = s))
+
+  ## a vertical rule at every column boundary  (left/right -> inside_v)
+  was:  rtf_table_border(body = rtf_border(left = s, right = s))
+  now:  style_zone(body = rtf_border(left = s, right = s, inside_v = s))
+
+  ## a grid around every data cell
+  was:  rtf_table_border(body = rtf_border_box())
+  now:  style_zone(body = rtf_border(top = s, bottom = s, left = s,
+                                     right = s, inside_h = s, inside_v = s))
+
+  ## an outer frame only, no rules inside      (was not expressible)
+  now:  rtftable(df, border = rtf_border(top = s, bottom = s,
+                                         left = s, right = s))
+
+  ## frame plus a rule under every row -- the listing look
+  was:  four style_header() / style_body() calls on the edge columns
+  now:  rtftable(df, border = rtf_border(top = s, bottom = s, left = s,
+                                         right = s, inside_h = s))
 }
 
-The two readings are spelled identically, so rtfreporter warns once per
-session when it meets a border that would have rendered differently.  Naming
-`inside_h` / `inside_v` -- with `rtf_border_side("none")` for "no rule" --
-says which you mean and silences it.
+`border = "tfl"` and [rtf_border_tfl()] are unaffected, as is any border on
+a single cell ([col_cell()], `cell_styles`): a cell has no inside, so its
+four edges never meant anything else.
+
+The old and new readings are spelled identically, so rtfreporter warns once
+per session when it meets a border that would have rendered differently
+before.  Naming `inside_h` / `inside_v` says which you mean and silences it
+-- use `rtf_border_side("none")` for "no rule there".
 }
 
 \examples{
