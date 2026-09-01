@@ -36,7 +36,7 @@ alignment; a per-row \code{align} still beats it.}
 
 \item{border}{\code{NULL} (default) for \strong{no rule} -- unlike the page footer,
 the footnote draws none unless asked. An \code{\link[=rtf_border]{rtf_border()}} puts one on the
-first row, e.g. \code{border = rtf_border_top()}.}
+first row, e.g. \code{border = rtf_border(top = TRUE)}.}
 }
 \value{
 Modified rtf_document.

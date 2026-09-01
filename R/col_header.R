@@ -74,7 +74,7 @@
 #'   only**, overriding the zone border and the automatic group-underline.
 #'   This is how you fine-tune individual rules in a multi-row header --
 #'   for example removing the bottom line under one spanning cell with
-#'   `border = rtf_border(bottom = rtf_border_side("none"))`, or adding a
+#'   `border = rtf_border(bottom = "none")`, or adding a
 #'   thicker rule under one column.  `NULL` (default) inherits the normal
 #'   zone borders.
 #'
@@ -86,7 +86,7 @@
 #'
 #' # Remove the group underline under just this spanning cell:
 #' col_cell(c(2, 3), "Drug A",
-#'          border = rtf_border(bottom = rtf_border_side("none")))
+#'          border = rtf_border(bottom = "none"))
 #'
 #' @export
 col_cell <- function(pos, label = "", align = NULL,

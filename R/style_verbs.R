@@ -10,8 +10,7 @@
 #
 #    as_rtftables(gt_obj) |>
 #      style_header(row = 2, cols = 2:4,
-#                   border = rtf_border(top    = rtf_border_side("single"),
-#                                       bottom = rtf_border_side("none"))) |>
+#                   border = rtf_border(top = TRUE, bottom = "none")) |>
 #      style_body(rows = ~ label == "Mean", bold = TRUE)
 #
 #  Design (locked with the maintainer):
@@ -204,8 +203,8 @@
 #' ```
 #' pages <- as_rtftables(gt_obj, read_meta = TRUE) |>
 #'   style_header(row = 2, cols = 2:4,
-#'                border = rtf_border(top    = rtf_border_side("single"),
-#'                                    bottom = rtf_border_side("none"))) |>
+#'                border = rtf_border(top    = TRUE,
+#'                                    bottom = "none")) |>
 #'   style_cols(cols = "AGE", align = "center") |>
 #'   style_body(rows = ~ label == "Mean", bold = TRUE)
 #' ```
@@ -214,7 +213,7 @@
 #' documents, generalized: **last writer wins, per side / per field**.  A
 #' border passed to a verb is merged side-by-side onto whatever is already
 #' there (`NULL` sides leave the existing side alone; use
-#' `rtf_border_side("none")` for an explicit "no line").
+#' `"none"` for an explicit "no line").
 #'
 #' @section Body cells:
 #' `style_body()` overrides, per cell, everything the data-row renderer
@@ -223,8 +222,8 @@
 #' of the row's resolved zone border (`body` crossed with `first_row` /
 #' `last_row`), per side.  So a rule under a summary row is
 #' `style_body(rows = ~ Item == "Total",
-#' border = rtf_border(bottom = rtf_border_side("single")))`, and an
-#' `rtf_border_side("none")` side erases a zone rule on the selected cells.
+#' border = rtf_border(bottom = TRUE))`, and an
+#' `"none"` side erases a zone rule on the selected cells.
 #' Row height and cell padding are deliberately *not* per-row properties --
 #' they stay uniform per table / document (see `rtf_document(default_format)`
 #' and the `rtfreporter.*` options).
@@ -277,8 +276,8 @@
 #' # Solid rule above -- and no rule below -- the "(N = 254)" cell only:
 #' tbl <- tbl |>
 #'   style_header(row = 2, cols = 2:4,
-#'                border = rtf_border(top    = rtf_border_side("single"),
-#'                                    bottom = rtf_border_side("none")))
+#'                border = rtf_border(top    = TRUE,
+#'                                    bottom = "none"))
 #'
 #' # Centre the body of columns B and C, bold the "Age" row:
 #' tbl <- tbl |>
@@ -287,7 +286,7 @@
 #'
 #' # Double rule under the whole table:
 #' tbl <- tbl |>
-#'   style_zone(last_row = rtf_border(bottom = rtf_border_side("double")))
+#'   style_zone(last_row = rtf_border(bottom = "double"))
 #'
 #' # Add a top header row after the fact:
 #' tbl <- tbl |>

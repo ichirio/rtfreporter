@@ -42,7 +42,7 @@ underlined.  This is added automatically by the renderer.
 \item \strong{No borders on the data section} (\code{body} / \code{first_row} /
 \code{last_row} all \code{NULL}).  Callers who want a bottom rule under the
 last data row can set it explicitly:
-\code{rtf_table_border(last_row = rtf_border(bottom = rtf_border_side()))}.
+\code{rtf_table_border(last_row = rtf_border(bottom = TRUE))}.
 }
 }
 \examples{

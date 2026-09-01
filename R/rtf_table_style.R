@@ -42,8 +42,8 @@
 #' @examples
 #' \dontrun{
 #' tfl_style <- rtf_table_style(
-#'   border_header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
-#'   border_last_row = rtf_border(bottom = rtf_border_side()),
+#'   border_header   = rtf_border(top = TRUE, bottom = TRUE),
+#'   border_last_row = rtf_border(bottom = TRUE),
 #'   header_bold     = FALSE,
 #'   header_align    = NULL    # inherit data alignment
 #' )
@@ -181,7 +181,7 @@ print.rtf_table_style <- function(x, ...) {
 #' \preformatted{
 #'   heavy <- rtf_table_style_with(rtf_table_style_tfl(),
 #'             header_bold = TRUE,
-#'             border_last_row = rtf_border(bottom = rtf_border_side()))
+#'             border_last_row = rtf_border(bottom = TRUE))
 #' }
 #'
 #' @return An `rtf_table_style` object.
@@ -191,7 +191,7 @@ print.rtf_table_style <- function(x, ...) {
 #' rtftable(data.frame(Parameter = "Age", Value = "75.1"), style = style)
 #' @export
 rtf_table_style_tfl <- function() {
-  s <- rtf_border_side()
+  s <- .rtf_border_side()
   rtf_table_style(
     border_header = rtf_border(top = s, bottom = s),
     header_bold   = FALSE,

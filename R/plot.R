@@ -16,7 +16,7 @@
 #' colour.  Useful for previewing the exact look of a border before it is
 #' baked into an RTF document.
 #'
-#' @param x An [rtf_border_side()] object.
+#' @param x A border side object.
 #' @param ... Unused.
 #'
 #' @return Invisibly returns `x`.
@@ -49,7 +49,7 @@ plot.rtf_border_side <- function(x, ...) {
 #' @return Invisibly returns `x`.
 #'
 #' @examples
-#' plot(rtf_border(top = rtf_border_side(), bottom = rtf_border_side(color = "#003366")))
+#' plot(rtf_border(top = TRUE, bottom = rtf_border_side(color = "#003366")))
 #' @export
 plot.rtf_border <- function(x, ...) {
   oldpar <- graphics::par(mar = c(2, 2, 3, 2), xpd = NA)

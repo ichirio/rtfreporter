@@ -42,14 +42,16 @@ GREEN  <- "#1A7F37"   # body
 AMBER  <- "#B36B00"   # first_row
 PURPLE <- "#8250DF"   # last_row
 
-rule <- function(color) rtf_border_side(style = "single", width = 30L, color = color)
+# Every rule here is a thick single line; only the colour changes, so the
+# colour rides on the rtf_border() call that names the sides.
+W <- 30L
 
 zones <- function(tbl) style_zone(tbl,
-  spanning  = rtf_border(top      = rule(RED)),
-  header    = rtf_border(top      = rule(BLUE), bottom = rule(BLUE)),
-  body      = rtf_border(inside_h = rule(GREEN)),
-  first_row = rtf_border(bottom   = rule(AMBER)),
-  last_row  = rtf_border(bottom   = rule(PURPLE))
+  spanning  = rtf_border(top      = TRUE, width = W, color = RED),
+  header    = rtf_border(top      = TRUE, bottom = TRUE, width = W, color = BLUE),
+  body      = rtf_border(inside_h = TRUE, width = W, color = GREEN),
+  first_row = rtf_border(bottom   = TRUE, width = W, color = AMBER),
+  last_row  = rtf_border(bottom   = TRUE, width = W, color = PURPLE)
 )
 
 df <- data.frame(
@@ -83,18 +85,18 @@ OLIVE  <- "#9A6700"   # left
 INDIGO <- "#6639BA"   # right
 GREY   <- "#8C959F"   # plain header rules, so the demo row stands alone
 
-four_sides <- rtf_border(
-  top      = rule(PINK),
-  bottom   = rule(TEAL),
-  left     = rule(OLIVE),
-  right    = rule(INDIGO),
-  inside_v = rtf_border_side("none")
-)
+# Four sides, four colours: colour belongs to the call, so each side is added
+# as its own layer over the one before.
+four_sides <- rtf_border(top = TRUE, width = W, color = PINK)
+four_sides <- rtf_border(from = four_sides, bottom = TRUE, width = W, color = TEAL)
+four_sides <- rtf_border(from = four_sides, left   = TRUE, width = W, color = OLIVE)
+four_sides <- rtf_border(from = four_sides, right  = TRUE, width = W, color = INDIGO)
+four_sides <- rtf_border(from = four_sides, inside_v = "none")
 
 # The same rtf_border() carried by one zone: `last_row` says WHICH row,
 # `four_sides` says WHAT that row's border is.
 sides <- function(tbl) style_zone(tbl,
-  header   = rtf_border(top = rule(GREY), bottom = rule(GREY)),
+  header   = rtf_border(top = TRUE, bottom = TRUE, width = W, color = GREY),
   last_row = four_sides
 )
 

@@ -1,5 +1,45 @@
 # rtfreporter (development version)
 
+### Breaking changes
+
+- **One border constructor.** `rtf_border()` absorbs the rest of the family
+  (#346), finishing the #324 decision that #342 only half delivered. A side is
+  now written as a value rather than built:
+
+  | deprecated | write instead |
+  |---|---|
+  | `rtf_border_side()` | `TRUE` |
+  | `rtf_border_side("none")` | `"none"` (or `FALSE`) |
+  | `rtf_border_side("double", 20L)` | side `"double"` plus `width = 20L` |
+  | `rtf_border_none()` | `rtf_border()` |
+  | `rtf_border_top()` | `rtf_border(top = TRUE)` |
+  | `rtf_border_bottom()` | `rtf_border(bottom = TRUE)` |
+  | `rtf_border_box()` | `rtf_border(all = TRUE)` |
+  | `rtf_border_with(b, bottom = x)` | `rtf_border(from = b, bottom = x)` |
+  | `rtf_border_tfl()` | `border = "tfl"`, or `rtf_table_style_tfl()` |
+
+  `style`, `width` and `color` are arguments of `rtf_border()` itself and
+  describe the line the sides named in that call draw. When one side must
+  differ, layer a second call with `from = `.
+
+  All eight (with `rtf_table_border()` from 0.5.0) **still work and warn once
+  per session**; they are scheduled for bulk removal before the CRAN
+  submission. Until then the API measure is exports excluding them:
+  borders 9 -> **1**, package 75 -> **67**, asserted in `test-api-surface.R`.
+
+- `rtf_border()` gained `all` as its first argument, so positional calls shift.
+  There were none in the package; named calls are unaffected.
+
+### Bug fixes
+
+- `rtf_border_with()` forwarded `inside_h`/`inside_v` even when the caller had
+  not named them, which made the resulting border look like it had declared its
+  interior rules and silenced the 0.5.0 edge-reading warning. It now forwards
+  only what was supplied.
+
+- `rtf_header_source()` emits the surviving spelling, so generated code no
+  longer calls deprecated constructors.
+
 ### Documentation
 
 - **Help pages now render their markup instead of printing it** (#344). Every

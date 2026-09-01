@@ -176,7 +176,7 @@ S3 class plays one of three roles:
   (robust when an object carries more than one class).
 * **Validate** with `stop(msg, call. = FALSE)` (no leading function-name noise).
 * **Copy-on-modify.** Every modifier -- the pipe verbs and the `*_with()`
-  derivers (`rtf_border_with()`, `rtf_table_style_with()`) -- returns a **new**
+  derivers (`rtf_border(from = )`, `rtf_table_style_with()`) -- returns a **new**
   object; nothing is mutated in place.
 * **No class hierarchies.** Classes are single, flat tags. The border family is
   *composition*, not inheritance: an `rtf_table_border` contains `rtf_border`

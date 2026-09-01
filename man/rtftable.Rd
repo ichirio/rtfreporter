@@ -186,7 +186,7 @@ column alignment".}
 \item{\code{border}}{a \strong{list} of \code{\link[=rtf_border]{rtf_border()}} / \code{NULL} per column --
 per-cell border, merged side-by-side on top of the row's resolved
 zone border (\code{body} / \code{first_row} / \code{last_row}); an
-\code{\link[=rtf_border_side]{rtf_border_side()}} of style \code{"none"} erases a zone rule.}
+side of style \code{"none"} erases a zone rule.}
 }
 \code{NA} entries within a vector mean "no override; use the column default".
 This argument is populated automatically by \code{\link[=as_rtftable]{as_rtftable()}} when reading

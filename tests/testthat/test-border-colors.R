@@ -21,8 +21,8 @@ RED_TBL <- "\\\\red255\\\\green0\\\\blue0"
 
 test_that("zone border colours render as \\brdrcf", {
   tbl <- style_zone(rtftable(.bc_df(), border = "none"),
-                    body = rtf_border(bottom   = rtf_border_side(color = "#FF0000"),
-                                      inside_h = rtf_border_side("none")))
+                    body = rtf_border(bottom   = rtfreporter:::.rtf_border_side(color = "#FF0000"),
+                                      inside_h = rtfreporter:::.rtf_border_side("none")))
   rtf <- .bc_rtf(tbl)
   expect_match(rtf, RED_TBL)                       # in the colour table
   expect_match(rtf, "\\\\clbrdrb\\\\brdrs\\\\brdrw15\\\\brdrcf[0-9]+")
@@ -32,7 +32,7 @@ test_that("col_cell() header border colours render as \\brdrcf", {
   hdr <- rtf_col_header(
     list(col_cell(1, ""),
          col_cell(2, "B", border = rtf_border(
-           bottom = rtf_border_side("double", color = "#003366")))),
+           bottom = rtfreporter:::.rtf_border_side("double", color = "#003366")))),
     c("A", "B")
   )
   rtf <- .bc_rtf(rtftable(.bc_df(), col_header = hdr, border = "tfl"))
@@ -43,14 +43,14 @@ test_that("col_cell() header border colours render as \\brdrcf", {
 test_that("col_spec border colours render as \\brdrcf", {
   tbl <- rtftable(.bc_df(), border = "tfl",
                   col_spec = list(list(col = 2, border = rtf_border(
-                    bottom = rtf_border_side("thick", color = "#FF0000")))))
+                    bottom = rtfreporter:::.rtf_border_side("thick", color = "#FF0000")))))
   expect_match(.bc_rtf(tbl), "\\\\brdrth\\\\brdrw15\\\\brdrcf[0-9]+")
 })
 
 test_that("style_body(border = ) colours render as \\brdrcf", {
   tbl <- rtftable(.bc_df(), border = "tfl") |>
     style_body(rows = 1, cols = 2, border = rtf_border(
-      bottom = rtf_border_side(color = "#FF0000")))
+      bottom = rtfreporter:::.rtf_border_side(color = "#FF0000")))
   rtf <- .bc_rtf(tbl)
   expect_match(rtf, RED_TBL)
   expect_match(rtf, "\\\\clbrdrb\\\\brdrs\\\\brdrw15\\\\brdrcf[0-9]+")
@@ -71,6 +71,6 @@ test_that("a coloured gt tab_style border arrives coloured end-to-end", {
 test_that("black borders emit no \\brdrcf (RTF default colour)", {
   tbl <- rtftable(.bc_df(), border = "tfl") |>
     style_body(rows = 1, cols = 2,
-               border = rtf_border(bottom = rtf_border_side()))
+               border = rtf_border(bottom = rtfreporter:::.rtf_border_side()))
   expect_false(grepl("\\\\brdrcf", .bc_rtf(tbl)))
 })

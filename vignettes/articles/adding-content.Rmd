@@ -183,7 +183,7 @@ doc <- rtf_document() |>
       list(text = "Provisional", italic = TRUE, color = "#C00000")
     )),
     footnotes = list(list(
-      list(text = "Source: ADSL", border = rtf_border(top = rtf_border_side()))
+      list(text = "Source: ADSL", border = rtf_border(top = TRUE))
     ))
   )
 ```

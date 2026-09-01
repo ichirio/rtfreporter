@@ -58,8 +58,8 @@ library(testthat)
      envir = rtfreporter:::.deprecation_state)
 }
 
-S    <- rtf_border_side()
-NONE <- rtf_border_side("none")
+S    <- rtfreporter:::.rtf_border_side()
+NONE <- rtfreporter:::.rtf_border_side("none")
 FRAME <- function(...) rtf_border(top = S, bottom = S, left = S, right = S, ...)
 
 
@@ -70,16 +70,20 @@ test_that("rtf_border() carries inside_h / inside_v, defaulting to no rule", {
   expect_null(b$inside_h)
   expect_null(b$inside_v)
 
-  s <- rtf_border_side("double", 30L)
+  s <- rtfreporter:::.rtf_border_side("double", 30L)
   b <- rtf_border(inside_h = s, inside_v = s)
   expect_identical(b$inside_h, s)
   expect_identical(b$inside_v, s)
 })
 
 test_that("rtf_border() validates the two new slots", {
-  expect_error(rtf_border(inside_h = "single"), "inside_h", fixed = TRUE)
+  expect_error(rtf_border(inside_h = "wiggly"), "inside_h", fixed = TRUE)
   expect_error(rtf_border(inside_v = list(style = "single")), "inside_v",
                fixed = TRUE)
+  # ... and accepts the three legal spellings.
+  expect_identical(rtf_border(inside_h = TRUE)$inside_h$style, "single")
+  expect_identical(rtf_border(inside_v = "double")$inside_v$style, "double")
+  expect_identical(rtf_border(inside_v = FALSE)$inside_v$style, "none")
 })
 
 test_that("rtf_border() records which inside_* the caller named", {
@@ -89,11 +93,11 @@ test_that("rtf_border() records which inside_* the caller named", {
                    c(h = FALSE, v = TRUE))
 })
 
-test_that("rtf_border_with() can set and preserve inside_h / inside_v", {
+test_that("rtf_border(from = ) sets and preserves inside_h / inside_v", {
   b <- rtf_border(top = S, inside_v = S)
-  expect_identical(rtf_border_with(b, bottom = S)$inside_v, S)   # preserved
-  expect_identical(rtf_border_with(b, inside_h = S)$inside_h, S) # set
-  expect_identical(rtf_border_with(b, inside_h = S)$top, S)      # untouched
+  expect_identical(rtf_border(from = b, bottom = S)$inside_v, S)   # preserved
+  expect_identical(rtf_border(from = b, inside_h = S)$inside_h, S) # set
+  expect_identical(rtf_border(from = b, inside_h = S)$top, S)      # untouched
 })
 
 

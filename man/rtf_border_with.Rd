@@ -18,10 +18,10 @@ rtf_border_with(
 \item{border}{An \code{\link[=rtf_border]{rtf_border()}} object.  \code{NULL} is accepted and treated as
 an empty border.}
 
-\item{top, bottom, left, right}{Replacement \code{\link[=rtf_border_side]{rtf_border_side()}} values, or
+\item{top, bottom, left, right}{Replacement side values, or
 \code{NULL} to leave a side unchanged.}
 
-\item{inside_h, inside_v}{Replacement \code{\link[=rtf_border_side]{rtf_border_side()}} values for the
+\item{inside_h, inside_v}{Replacement side values for the
 between-rows and between-cells rules, or \code{NULL} to leave them unchanged.}
 }
 \value{
@@ -32,7 +32,7 @@ Non-mutating: returns a new \code{rtf_border} with the supplied side(s) set on
 top of \code{border}.  \code{NULL} arguments leave the corresponding side unchanged.
 }
 \examples{
-b <- rtf_border(top = rtf_border_side(), bottom = rtf_border_side())
-rtf_border_with(b, bottom = rtf_border_side(color = "#003366"))  # recolour bottom
-rtf_border_with(b, top = rtf_border_side("none"))                # drop the top rule
+b <- rtf_border(top = TRUE, bottom = TRUE)
+rtf_border(from = b, bottom = TRUE, color = "#003366")  # recolour the bottom
+rtf_border(from = b, top = "none")                     # drop the top rule
 }

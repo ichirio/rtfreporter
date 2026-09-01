@@ -7,7 +7,7 @@
 \method{plot}{rtf_border_side}(x, ...)
 }
 \arguments{
-\item{x}{An \code{\link[=rtf_border_side]{rtf_border_side()}} object.}
+\item{x}{A border side object.}
 
 \item{...}{Unused.}
 }

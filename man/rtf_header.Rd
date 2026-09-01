@@ -20,7 +20,7 @@ rtf_header(
 
 rtf_footer(
   rows,
-  border = rtf_border_top(),
+  border = rtf_border(top = TRUE),
   width_twips = NULL,
   width = NULL,
   row_height_twips = NULL,
@@ -48,7 +48,7 @@ render time).}
 
 \item{border}{An \code{\link[=rtf_border]{rtf_border()}} object controlling the border applied to
 all rows of the header/footer table. \code{NULL} = no border (default for
-header). Use \code{\link[=rtf_border_top]{rtf_border_top()}} for a horizontal dividing line (default
+header). Use \link{rtf_border(top = TRUE)} for a horizontal dividing line (default
 for footer).}
 
 \item{width_twips}{Integer. Table width in twips. \code{NULL} (default) uses the
