@@ -1,4 +1,4 @@
-# border_zones.R -- What does each argument of rtf_table_border() actually draw?
+# border_zones.R -- Which rule on the page does each border argument draw?
 #
 # Written for the API review (issue #336, discussion #324).  The five zone
 # arguments are rendered in five different colours so the mapping
@@ -17,18 +17,22 @@
 #
 #   top     pink     the rule above the row
 #   bottom  teal     the rule below the row
-#   left    olive    the left edge of EVERY cell in the row
-#   right   indigo   the right edge of EVERY cell in the row
+#   left    olive   the row's left outer edge
+#   right   indigo  the row's right outer edge
 #
-# left/right are emitted per cell (.build_cell_defs applies the same border
-# commands to every \cellx), so a row-level rtf_border(left=, right=) draws a
-# vertical rule at every column boundary -- not just the table's outer frame.
+# Since #342 an edge is always the edge of the selection, so left/right land
+# on the first and last cell only; `inside_v` is what puts a rule between the
+# cells.  Naming it (here as "none") also says which reading is meant.
 #
 # Run from the package root:
 #   Rscript data-raw/review-samples/border_zones.R
 # Writes output/border_zones.rtf -- open it in Word next to border_zones.svg
 # and border_cell.svg.
 
+# Since #342 a border is written once with rtf_border() and aimed with
+# style_zone(); `body` selects every data row, so the rule BETWEEN those rows is
+# `inside_h` (its `bottom` would be the block's outer edge).
+#
 # Render through the source tree, never a stale install (#306).
 source("data-raw/_load.R")
 
@@ -40,12 +44,12 @@ PURPLE <- "#8250DF"   # last_row
 
 rule <- function(color) rtf_border_side(style = "single", width = 30L, color = color)
 
-zones <- rtf_table_border(
-  spanning  = rtf_border(top    = rule(RED)),
-  header    = rtf_border(top    = rule(BLUE), bottom = rule(BLUE)),
-  body      = rtf_border(bottom = rule(GREEN)),
-  first_row = rtf_border(bottom = rule(AMBER)),
-  last_row  = rtf_border(bottom = rule(PURPLE))
+zones <- function(tbl) style_zone(tbl,
+  spanning  = rtf_border(top      = rule(RED)),
+  header    = rtf_border(top      = rule(BLUE), bottom = rule(BLUE)),
+  body      = rtf_border(inside_h = rule(GREEN)),
+  first_row = rtf_border(bottom   = rule(AMBER)),
+  last_row  = rtf_border(bottom   = rule(PURPLE))
 )
 
 df <- data.frame(
@@ -80,15 +84,16 @@ INDIGO <- "#6639BA"   # right
 GREY   <- "#8C959F"   # plain header rules, so the demo row stands alone
 
 four_sides <- rtf_border(
-  top    = rule(PINK),
-  bottom = rule(TEAL),
-  left   = rule(OLIVE),
-  right  = rule(INDIGO)
+  top      = rule(PINK),
+  bottom   = rule(TEAL),
+  left     = rule(OLIVE),
+  right    = rule(INDIGO),
+  inside_v = rtf_border_side("none")
 )
 
 # The same rtf_border() carried by one zone: `last_row` says WHICH row,
 # `four_sides` says WHAT that row's border is.
-sides <- rtf_table_border(
+sides <- function(tbl) style_zone(tbl,
   header   = rtf_border(top = rule(GREY), bottom = rule(GREY)),
   last_row = four_sides
 )
@@ -97,8 +102,8 @@ doc <- rtf_document() |>
   rtf_config(page = list(orientation = "landscape",
                          margin_top_in = 1, margin_bottom_in = 1,
                          margin_left_in = 1, margin_right_in = 1)) |>
-  rtf_tables(list(make_tbl(zones))) |>
-  rtf_tables(list(make_tbl(sides)))
+  rtf_tables(list(zones(make_tbl("none")))) |>
+  rtf_tables(list(sides(make_tbl("none"))))
 
 dir.create("output", showWarnings = FALSE)
 out <- "output/border_zones.rtf"

@@ -7,7 +7,7 @@
 
 test_that(".normalize_table_border accepts every documented input form", {
   expect_null(rtfreporter:::.normalize_table_border(NULL))
-  tb <- rtf_table_border(header = rtf_border_top())
+  tb <- rtfreporter:::.rtf_table_border(header = rtf_border_top())
   expect_identical(rtfreporter:::.normalize_table_border(tb), tb)
   expect_s3_class(rtfreporter:::.normalize_table_border(rtf_table_style_tfl()),
                   "rtf_table_border")
@@ -26,24 +26,30 @@ test_that(".normalize_table_border rejects unsupported input", {
   expect_error(rtfreporter:::.normalize_table_border("nope"), "must be")
 })
 
-test_that("a cell-level rtf_border is rejected, not silently emptied (#326)", {
-  # An rtf_border is a classed *named list*, so before #326 it reached the
-  # plain-list fallback, which found no zone names and returned a border with
-  # every zone NULL -- the caller asked for a rule and every rule vanished.
-  b <- rtf_border(top = rtf_border_side("single", 15L))
-  expect_error(rtfreporter:::.normalize_table_border(b), "table-level border")
-  expect_error(rtfreporter:::.normalize_table_border(b), "rtf_table_border")
+test_that("an rtf_border selects the whole table, never silently emptied (#326, #342)", {
+  # Before #326 an rtf_border here reached the plain-list fallback, which found
+  # no zone names and returned a border with every zone NULL -- the caller asked
+  # for a rule and every rule vanished.  #326 made that an error; #342 gave it a
+  # meaning instead: the border applies to the whole table.  Either way, the one
+  # outcome that must never happen is the rule silently disappearing.
+  b  <- rtf_border(top = rtf_border_side("single", 15L))
+  tb <- rtfreporter:::.normalize_table_border(b)
+  expect_s3_class(tb, "rtf_table_border")
+  expect_identical(tb$outer, b)
 
   df <- data.frame(a = c("x", "y"), b = c("1", "2"), stringsAsFactors = FALSE)
-  expect_error(rtftable(df, border = b), "table-level border")
-  expect_error(rtf_tables(rtf_document(), df, border = b), "table-level border")
+  # The table's top edge is the topmost row's top, and it carries the rule.
+  expect_identical(rtftable(df, border = b)$border$first_row$top, b$top)
+  expect_silent(rtf_tables(rtf_document(), df, border = b))
 
-  # The correct spelling still works, and still carries the rule.
-  tb <- rtf_table_border(header = b)
-  expect_identical(rtftable(df, border = tb)$border$header, b)
+  # A zone map still works when built through the supported route.  (Start from
+  # "none": the default preset would supply a header bottom rule of its own.)
+  expect_identical(style_zone(rtftable(df, border = "none"), header = b)$border$header,
+                   b)
 
-  # The opposite mix-up was already guarded; the pair is now symmetric.
-  expect_error(col_cell(1, "x", border = tb), "rtf_border")
+  # A cell cannot take a zone map: that direction is still an error.
+  expect_error(col_cell(1, "x", border = rtfreporter:::.rtf_table_border(header = b)),
+               "rtf_border")
 })
 
 # ──────── col_spec validation in rtftable() ───────────────────────────────

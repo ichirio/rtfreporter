@@ -110,11 +110,12 @@ test_that("explicit border$last_row still renders under the last data row", {
   tbl <- rtftable(
     data.frame(A = 1:3, B = letters[1:3], stringsAsFactors = FALSE),
     col_header = c("A", "B"),
-    border = rtf_table_border(
+    border = "none"
+  ) |>
+    style_zone(
       header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
       last_row = rtf_border(bottom = rtf_border_side())
     )
-  )
   txt <- .render_tbl(tbl)
   # 2 header bottoms + 2 last-row bottoms.
   expect_identical(.count_bottom(txt), 4L)

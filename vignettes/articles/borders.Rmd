@@ -21,9 +21,24 @@ The border objects are plain S3 records (no reference semantics), so a border
 you build can be reused across tables safely. The vocabulary is small:
 
 * `rtf_border_side(style, width, color)` -- one **edge** (a line).
-* `rtf_border(top, bottom, left, right)` -- the four edges of one **cell/row**.
-* `rtf_table_border(header, spanning, body, first_row, last_row)` -- the
-  per-**zone** borders of a whole table.
+* `rtf_border(top, bottom, left, right, inside_h, inside_v)` -- a border for a
+  **selection**: `top`/`bottom`/`left`/`right` are its outer edges, `inside_h`
+  and `inside_v` the rules *between* its rows and *between* its cells.
+
+That is the whole vocabulary. There is no separate table-border type: what a
+border applies to is decided by where you attach it, the same way Word's border
+dialog acts on whatever is selected.
+
+| Attach it to | The selection is |
+|---|---|
+| `rtftable(border = )` | the whole table |
+| `style_zone(header = , body = , ...)` | that kind of row |
+| `col_cell(border = )`, `cell_styles` | one cell |
+| `rtf_header(border = )` / `rtf_footer(border = )` | that block |
+
+An edge always means the outer edge of the selection, and an absent `inside_h`
+/ `inside_v` always means "no rule there" -- the reading never depends on which
+other arguments are present.
 
 
 ## Level 1 -- a preset
@@ -51,10 +66,25 @@ rtf_border_tfl()
 ```
 
 
-## Level 2 -- zones with `rtf_table_border()`
+## Level 2 -- the whole table
 
-When the preset is not enough, build the zones yourself. A table has five
-border zones:
+Attach an `rtf_border()` to `rtftable(border = )` and it describes the table:
+
+```{r whole-table}
+line <- rtf_border_side()        # single, 15 twips (~0.5pt), black
+
+# The listing look: a frame plus a rule under every row, no vertical rules.
+tbl <- rtftable(df,
+  border = rtf_border(top = line, bottom = line, left = line, right = line,
+                      inside_h = line))
+```
+
+Add `inside_v = line` for a full grid; leave both out for a bare frame.
+
+
+## Level 3 -- one kind of row
+
+`style_zone()` aims a border at one of the five row kinds:
 
 | Zone | Applies to |
 |------|------------|
@@ -64,20 +94,16 @@ border zones:
 | `first_row` | the first data row (merged **on top of** `body`) |
 | `last_row` | the last data row (merged on top of `body`) |
 
-Each zone is an `rtf_border()`; each side is an `rtf_border_side()`. For
-example, a header boxed top and bottom plus a thin rule under the **last data
-row** (a common "close the table" look):
+Each zone takes an `rtf_border()`, read against that zone as the selection. A
+header boxed top and bottom plus a thin rule under the **last data row** (a
+common "close the table" look):
 
 ```{r zones}
-line <- rtf_border_side()                       # single, 15 twips (~0.5pt), black
-
-tbl <- rtftable(
-  df,
-  border = rtf_table_border(
+tbl <- rtftable(df, border = "none") |>
+  style_zone(
     header   = rtf_border(top = line, bottom = line),
     last_row = rtf_border(bottom = line)
   )
-)
 ```
 
 `rtf_border_side()` controls the look of a line:
@@ -91,18 +117,25 @@ rtf_border_side(style = "double", width = 30L, color = "#003366")
 
 ### Body (data-area) borders
 
-Body rules are **per row, not per column**: the `body` / `first_row` /
-`last_row` zones apply the same edge to every column of the row. To draw a grid
-around every data cell, set all four sides on `body`:
+`body` selects every data row, so its `top`/`bottom` are the top and bottom of
+the **block** and `inside_h` is the rule between its rows. Likewise `left` and
+`right` are the outer columns and `inside_v` the rules between the cells. A
+grid around every data cell therefore needs all six:
 
 ```{r body-grid}
-box <- rtf_border_box()        # all four sides, single line
-
 tbl <- rtftable(
   data.frame(A = c("1", "2"), B = c("x", "y"), stringsAsFactors = FALSE),
-  border = rtf_table_border(body = box)
-)
+  border = "none"
+) |>
+  style_zone(body = rtf_border(top = line, bottom = line,
+                               left = line, right = line,
+                               inside_h = line, inside_v = line))
 ```
+
+Before 0.5.0 an edge on a zone was uniform -- `left`/`right` were drawn on every
+cell and `body`'s `top`/`bottom` on every row -- so `rtf_border_box()` alone
+produced this grid. Code written that way now draws only the outer frame, and
+says so once per session with a warning naming `inside_h` / `inside_v`.
 
 
 ## Level 3 -- single columns and single cells

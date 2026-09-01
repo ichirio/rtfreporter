@@ -40,51 +40,45 @@ Specifies borders for each logical zone of an [rtftable()].
 Each zone is either `NULL` (no border) or an [rtf_border()] object.
 `first_row` and `last_row` are *overrides* merged on top of the `body` spec.
 }
-\section{Addressing the whole table at once}{
+\section{Deprecated since 0.5.0}{
 
 
-The five zones say what each *kind of row* looks like.  `outer`, `inside_h`
-and `inside_v` say it for the table as a whole -- the same three controls
-Word offers for a selection:
+A border is now written once with [rtf_border()], and *where* it applies is
+decided by where you attach it:
 
-\describe{
-  \item{`outer`}{an [rtf_border()] for the table's four outermost edges,
-    and only those: its `left`/`right` land on the first and last cell of
-    every row rather than on every cell.}
-  \item{`inside_h`}{an [rtf_border_side()] for every row boundary inside
-    the table -- between header rows, between the header block and the body,
-    and between data rows.}
-  \item{`inside_v`}{an [rtf_border_side()] for every cell boundary inside a
-    row.  Cell, not column: no rule is drawn inside a spanning cell.}
+\preformatted{
+  rtftable(border = rtf_border(...))                    # the whole table
+  style_zone(header = rtf_border(...), body = ...)      # one kind of row
+  col_cell(border = rtf_border(...))                    # one cell
 }
 
-They are expanded into the five zones before rendering, and any zone given
-explicitly is merged on top afterwards -- so "whole table, except ..." is
-just both together.  All three default to `NULL`, which leaves the zones
-exactly as they were.
+`outer =` becomes the four edges of that `rtf_border()`; `inside_h =` and
+`inside_v =` keep their names.  This function still works and still returns
+the same value, but warns once per session.
 }
 
 \examples{
-# The clinical TFL look spelled out by zone: header top + bottom rules and a
-# bottom rule on the last data row (equivalent to `rtftable(border = "tfl")`).
-rtf_table_border(
-  header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
-  last_row = rtf_border(bottom = rtf_border_side())
-)
+s  <- rtf_border_side()
+df <- data.frame(A = c("1", "2"), B = c("x", "y"))
+
+# The clinical TFL look, spelled out one row kind at a time.
+rtftable(df, border = "none") |>
+  style_zone(header   = rtf_border(top = s, bottom = s),
+             last_row = rtf_border(bottom = s))
 
 # The listing look: outer frame plus a rule under every row, and no vertical
 # rules between the columns.
-rtf_table_border(outer = rtf_border_box(), inside_h = rtf_border_side())
+rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
+                                 inside_h = s))
 
-# A full grid.
-rtf_table_border(outer    = rtf_border_box(),
-                 inside_h = rtf_border_side(),
-                 inside_v = rtf_border_side())
+# A full grid: add the rules between the cells.
+rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
+                                 inside_h = s, inside_v = s))
 
-# Outer frame and row rules, but no rule between the two header rows.
-rtf_table_border(outer    = rtf_border_box(),
-                 inside_h = rtf_border_side(),
-                 header   = rtf_border(inside_h = rtf_border_side("none")))
+# Deprecated: the same thing written the old way.
+\dontrun{
+rtf_table_border(header = rtf_border(top = s, bottom = s))
+}
 }
 \seealso{
 [rtf_border()] / [rtf_border_side()] for the pieces; pass the result

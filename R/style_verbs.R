@@ -531,8 +531,16 @@ style_zone.rtftable <- function(x, header = NULL, spanning = NULL,
   if (length(zones) == 0L) return(x)
   for (z in names(zones)) .style_check_border(zones[[z]], "style_zone")
 
+  frames <- .style_body_frames(x)
+  .warn_old_edge_reading(
+    .rtf_table_border(header = zones$header, spanning = zones$spanning,
+                      body = zones$body, first_row = zones$first_row,
+                      last_row = zones$last_row),
+    ncols = ncol(.style_ref_df(x)),
+    nrows = sum(vapply(frames, nrow, integer(1L))))
+
   base <- x$border
-  if (is.null(base)) base <- rtf_table_border()
+  if (is.null(base)) base <- .rtf_table_border()
   for (z in names(zones)) {
     base[[z]] <- .merge_rtf_border(base[[z]], zones[[z]])
   }

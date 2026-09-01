@@ -1,5 +1,45 @@
 # rtfreporter (development version)
 
+### Breaking changes
+
+- **One border type.** `rtf_border()` now describes a *selection*, and where it
+  applies is decided by where you attach it -- the model Word uses, where one
+  dialog acts on whatever is selected (#342).
+
+  | attach it to | the selection is |
+  |---|---|
+  | `rtftable(border = )` | the whole table |
+  | `style_zone(header = , body = , ...)` | that kind of row |
+  | `col_cell(border = )`, `cell_styles` | one cell |
+  | `rtf_header(border = )` / `rtf_footer(border = )` | that block |
+
+  One rule, no special cases: `top`/`bottom`/`left`/`right` are the selection's
+  **outer** edges, and `inside_h`/`inside_v` are the rules **inside** it, absent
+  meaning no rule. This replaces the mode added in 0.4.84, where naming an
+  `inside_*` switched that axis between two readings.
+
+  Two consequences for existing code:
+
+  * A zone edge used to be *uniform*: `left`/`right` reached every cell of a row
+    and a `body` zone's `top`/`bottom` every one of its rows. Both now mean the
+    outer edge only. Name the interior rule to keep the old look --
+    `rtf_border(left = s, right = s, inside_v = s)`,
+    `rtf_border(bottom = s, inside_h = s)`. rtfreporter warns once per session
+    when it meets a border that would have rendered differently.
+  * `rtftable(border = <rtf_border>)` was an error (#326); it now means the whole
+    table. Nothing that worked before changes meaning.
+
+- **`rtf_table_border()` is deprecated** (#342). It still works and still returns
+  the same value, but warns once per session. The five-zone map lives on as an
+  internal type; address a row kind with `style_zone()` or
+  `rtf_table_style(border_* = )`. `outer =` becomes the four edges of an
+  `rtf_border()`; `inside_h =` / `inside_v =` keep their names.
+
+  Borders go from 9 exported entry points to 2 (`rtf_border`,
+  `rtf_border_side`) -- and from two concepts to one. The #326 defect shape,
+  passing one border type where the other was expected and silently losing every
+  rule, cannot occur with a single type.
+
 ### New features
 
 - **Borders can be specified the way Word specifies them: an outer frame, the

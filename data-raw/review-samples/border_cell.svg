@@ -17,7 +17,7 @@
   <rect class="bg" x="0" y="0" width="1000" height="620"/>
   <rect class="card" x="0.5" y="0.5" width="999" height="619"/>
 
-  <text class="ttl" x="32" y="34">rtf_border() — the four sides; rtf_table_border() — which row gets them</text>
+  <text class="ttl" x="32" y="34">rtf_border() — the four sides; where you attach it — which rows get them</text>
 
   <!-- ===================== Panel A : one cell ===================== -->
   <text class="pnl" x="32" y="72">A.  rtf_border() = the four sides of ONE cell</text>
@@ -36,11 +36,11 @@
   <text class="arg" x="478" y="130" fill="#6639ba">right</text>
 
   <text class="note" x="560" y="114">rtf_border(top =, bottom =, left =, right =)</text>
-  <text class="note" x="560" y="132">It says WHICH SIDES to draw — never which row.</text>
-  <text class="note" x="560" y="150">On its own it cannot be handed to rtftable().</text>
+  <text class="note" x="560" y="132">It says WHICH SIDES of a selection to draw.</text>
+  <text class="note" x="560" y="150">Where you attach it decides what the selection is.</text>
 
   <!-- ===================== Panel B : the same border on a real row ===================== -->
-  <text class="pnl" x="32" y="215">B.  the same rtf_border() handed to a row: rtf_table_border(last_row = &lt;that border&gt;)</text>
+  <text class="pnl" x="32" y="215">B.  the same rtf_border() handed to a row: style_zone(last_row = &lt;that border&gt;)</text>
 
   <!-- header block tint -->
   <rect x="48" y="250" width="564" height="78" fill="#f6f8fa"/>
@@ -78,21 +78,16 @@
   <!-- the last data row: all four sides -->
   <line class="rule" x1="48"  y1="488" x2="612" y2="488" stroke="#bf3989"/>
   <line class="rule" x1="48"  y1="520" x2="612" y2="520" stroke="#0b7285"/>
-  <!-- left of every cell (olive) / right of every cell (indigo); they coincide
-       on the two inner boundaries, drawn 3px apart so both stay visible -->
-  <line class="rule" x1="48"    y1="488" x2="48"    y2="520" stroke="#9a6700"/>
-  <line class="rule" x1="298.5" y1="488" x2="298.5" y2="520" stroke="#6639ba"/>
-  <line class="rule" x1="301.5" y1="488" x2="301.5" y2="520" stroke="#9a6700"/>
-  <line class="rule" x1="454.5" y1="488" x2="454.5" y2="520" stroke="#6639ba"/>
-  <line class="rule" x1="457.5" y1="488" x2="457.5" y2="520" stroke="#9a6700"/>
-  <line class="rule" x1="612"   y1="488" x2="612"   y2="520" stroke="#6639ba"/>
+  <!-- left / right are the row's outer edges: first cell, last cell -->
+  <line class="rule" x1="48"  y1="488" x2="48"  y2="520" stroke="#9a6700"/>
+  <line class="rule" x1="612" y1="488" x2="612" y2="520" stroke="#6639ba"/>
 
   <line class="lead" x1="612" y1="488" x2="660" y2="488"/>
   <text class="arg" x="668" y="492" fill="#bf3989">top<tspan class="note" dx="8">above the row</tspan></text>
   <line class="lead" x1="612" y1="520" x2="660" y2="520"/>
   <text class="arg" x="668" y="524" fill="#0b7285">bottom<tspan class="note" dx="8">below the row</tspan></text>
 
-  <text class="note" x="48" y="545">The vertical rules are <tspan class="arg" fill="#9a6700">left</tspan> and <tspan class="arg" fill="#6639ba">right</tspan> — emitted on EVERY cell of the row, so they land on every column boundary, not only the outer frame.</text>
+  <text class="note" x="48" y="545"><tspan class="arg" fill="#9a6700">left</tspan> and <tspan class="arg" fill="#6639ba">right</tspan> are the row's OUTER edges — its first and last cell. A rule between the cells is a separate argument: inside_v.</text>
   <text class="note" x="48" y="562">The grey rules come from <tspan class="arg" fill="#8c959f">header</tspan>; they are here only so the table still looks like a table.</text>
 
   <text class="foot" x="48" y="588">These four colours are SIDES. They are unrelated to the five zone colours in border_zones.svg, which are ROWS.</text>

@@ -498,17 +498,16 @@
 # Build cell definition strings (border + valign + \cellx) for all columns.
 # Resolve one cell's vertical edges within a row of `n` cells.
 #
-# `inside_v` is what separates this from a plain rtf_border: when it is NULL the
-# border is returned untouched, so `left`/`right` keep landing on every cell --
-# exactly the behaviour every existing table relies on.  When it is set, the
-# border switches to the Word reading: `left`/`right` are the row's OUTER edges
-# and every boundary between cells uses `inside_v`.
+# An rtf_border always describes a *selection*: `left`/`right` are the
+# selection's outer edges and `inside_v` is what separates the cells inside it.
+# There is no second reading to switch to -- an absent `inside_v` simply means
+# no interior rule -- so this runs unconditionally.
 #
 # `j` and `n` count *cells*, not columns: on a row with a spanning cell the
 # interior rules land on cell boundaries, so nothing is drawn inside a merged
 # cell.  Same as Word.
 .cell_edge_border <- function(b, j, n) {
-  if (!inherits(b, "rtf_border") || is.null(b$inside_v)) return(b)
+  if (!inherits(b, "rtf_border")) return(b)
   b$left  <- if (j == 1L) b$left  else b$inside_v
   b$right <- if (j == n)  b$right else b$inside_v
   b
@@ -516,11 +515,12 @@
 
 # Resolve one row's horizontal edges within a zone of `n` rows.
 #
-# Mirror image of .cell_edge_border on the other axis: with `inside_h` unset the
-# zone border is returned untouched, with it set `top`/`bottom` become the
-# zone's outer edges and every boundary between its rows uses `inside_h`.
+# Mirror image of .cell_edge_border on the other axis: `top`/`bottom` are the
+# zone's outer edges and `inside_h` is what separates its rows.
 .zone_row_border <- function(b, idx, n) {
-  if (!inherits(b, "rtf_border") || is.null(b$inside_h)) return(b)
+  if (!inherits(b, "rtf_border")) return(b)
+  # Interior boundaries are drawn once, as the bottom of the upper row: giving
+  # the lower row a matching top as well would emit the same rule twice.
   b$top    <- if (idx == 1L) b$top    else NULL
   b$bottom <- if (idx == n)  b$bottom else b$inside_h
   b
@@ -529,7 +529,11 @@
 .build_cell_defs <- function(cellx, border_spec, valign_cmd,
                              color_index_map = NULL) {
   n <- length(cellx)
-  if (!inherits(border_spec, "rtf_border") || is.null(border_spec$inside_v)) {
+  # Nothing to distribute when the row carries no vertical rules at all, which
+  # is the common case (clinical tables draw horizontal rules only).
+  if (!inherits(border_spec, "rtf_border") ||
+      (is.null(border_spec$left) && is.null(border_spec$right) &&
+       is.null(border_spec$inside_v))) {
     border_cmds <- .build_border_commands(border_spec, color_index_map)
     return(vapply(cellx,
                   function(cx) paste0(border_cmds, valign_cmd, "\\cellx", cx),
@@ -553,18 +557,12 @@
 # Returns NULL when nothing would be emitted.
 .header_outer_border <- function(idx, n, zone_border) {
   if (is.null(zone_border)) return(NULL)
-  is_first <- idx == 1L
-  is_last  <- idx == n
-  top <- if (is_first) zone_border$top    else NULL
-  # A header block already reads top/bottom as the block's outer edges, so
-  # `inside_h` slots straight in as the rule between header rows.
-  bot <- if (is_last)  zone_border$bottom else zone_border$inside_h
-  lft <- zone_border$left
-  rgt <- zone_border$right
-  if (is.null(top) && is.null(bot) && is.null(lft) && is.null(rgt) &&
-      is.null(zone_border$inside_v)) return(NULL)
-  rtf_border(top = top, bottom = bot, left = lft, right = rgt,
-             inside_v = zone_border$inside_v)
+  # Same outer/inside rule as every other zone.
+  b <- .zone_row_border(zone_border, idx, n)
+  if (is.null(b$top) && is.null(b$bottom) && is.null(b$left) &&
+      is.null(b$right) && is.null(b$inside_v)) return(NULL)
+  rtf_border(top = b$top, bottom = b$bottom, left = b$left, right = b$right,
+             inside_v = b$inside_v)
 }
 
 # Render spanning-header row(s).

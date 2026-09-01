@@ -29,10 +29,9 @@ rtf_border_box(style = "single", width = 15L, color = NULL)
 \item{top, bottom, left, right}{`NULL` (no border on that side) or an
 [rtf_border_side()] object.}
 
-\item{inside_h, inside_v}{`NULL` (default) or an [rtf_border_side()]: the
-rule drawn *between* the rows of a zone (`inside_h`) and *between* the
-cells of a row (`inside_v`).  See the section above -- setting either one
-turns the matching pair of edges into outer edges.}
+\item{inside_h, inside_v}{`NULL` (default, meaning no rule) or an
+[rtf_border_side()]: the rule drawn *between* the selection's rows
+(`inside_h`) and *between* its cells (`inside_v`).}
 
 \item{style, width, color}{Passed to [rtf_border_side()].}
 }
@@ -57,45 +56,63 @@ To derive a new border from an existing one, use [rtf_border_with()].
 \item \code{rtf_border_box()}: All four edges.
 
 }}
-\section{Outer edges versus the rules between}{
+\section{What a border applies to}{
 
 
-An `rtf_border` is applied either to a single cell or to a whole row (that
-is what a zone of [rtf_table_border()] does).  On a row, `left` and `right`
-reach **every** cell, so they draw a rule at every column boundary -- handy
-for a full grid, useless for a plain outer frame.
+An `rtf_border` describes a **selection**, and *where* it applies is decided
+by where you attach it -- the same way Word's border dialog acts on whatever
+is selected:
 
-`inside_v` and `inside_h` add the other half of Word's border model, and
-naming one **switches that axis from uniform to outer + inside**:
-
-\describe{
-  \item{`inside_v` set}{`left` / `right` become the row's **outer** edges
-    and every boundary *between* the row's cells uses `inside_v`.}
-  \item{`inside_h` set}{`top` / `bottom` become the zone's **outer** edges
-    and every boundary *between* the zone's rows uses `inside_h`.}
+\tabular{ll}{
+  `rtftable(border = )`                  \tab the whole table \cr
+  `style_zone(header = , body = , ...)`  \tab that kind of row \cr
+  `col_cell(border = )`, `cell_styles`   \tab one cell \cr
+  `rtf_header(border = )` / `rtf_footer(border = )` \tab that block
 }
 
-Left `NULL` -- the default -- both axes behave exactly as they always have,
-so existing tables are unaffected.  Because `rtf_border_side("none")` is an
-explicit *no line*, `inside_v = rtf_border_side("none")` is how you say
-"outer edges only".
+There is one rule, with no special cases:
 
-On a row that contains a spanning cell, `inside_v` lands on **cell**
-boundaries, not column boundaries: nothing is drawn inside a merged cell.
-A single cell has no inside, so both are ignored there.
+* `top` / `bottom` / `left` / `right` are the selection's **outer** edges.
+* `inside_h` / `inside_v` are the rules **inside** it, and an absent one
+  means no rule there.
 
-For the whole table at once, see the `outer` / `inside_h` / `inside_v`
-arguments of [rtf_table_border()].
+So an edge never means something different depending on which other
+arguments are present.  On a row containing a spanning cell, `inside_v`
+lands on **cell** boundaries rather than column boundaries: nothing is drawn
+inside a merged cell.  A single cell has no inside, so both are ignored
+there.
+}
+
+\section{Change in 0.5.0}{
+
+
+Before 0.5.0 an edge on a multi-cell or multi-row selection was *uniform*:
+`left`/`right` were drawn on every cell of a row, and a `body` zone's
+`top`/`bottom` on every one of its rows.  Both now mean the outer edge only,
+and the interior rules come from `inside_h` / `inside_v`:
+
+\preformatted{
+  # was: left/right alone, meaning a rule at every column boundary
+  rtf_border(left = s, right = s, inside_v = s)
+
+  # was: bottom alone on a body zone, meaning a rule under every row
+  rtf_border(bottom = s, inside_h = s)
+}
+
+The two readings are spelled identically, so rtfreporter warns once per
+session when it meets a border that would have rendered differently.  Naming
+`inside_h` / `inside_v` -- with `rtf_border_side("none")` for "no rule" --
+says which you mean and silences it.
 }
 
 \examples{
 rtf_border(top = rtf_border_side(), bottom = rtf_border_side())  # top + bottom
 rtf_border(bottom = rtf_border_side(color = "#003366"))          # blue underline
 
-# On a row: outer edges only, no rule between the cells.
+# A whole table: frame plus a rule under every row, no vertical rules.
 s <- rtf_border_side()
-rtf_border(left = s, right = s, inside_v = rtf_border_side("none"))
+rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s)
 
-# On a row: a rule between the cells but no outer edges.
+# A rule between the cells but no outer edges.
 rtf_border(inside_v = s)
 }

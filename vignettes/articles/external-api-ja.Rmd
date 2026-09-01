@@ -59,7 +59,7 @@ rtf_document() |>                                  # -> rtf_document
 | `rtftable` | `rtftable()`, `as_rtftable()`, `as_rtftables()` | 1 つのテーブル（または分割後の 1 ページ）。 |
 | `rtfplot` | `rtfplot()` | 埋め込み図 1 つ。 |
 | `rtf_border` | `rtf_border()`, `rtf_border_side()`, `rtf_border_top()` / `_bottom()` / `_box()` / `_none()`, `rtf_border_with()` | ボーダー指定（辺ごとの線種/太さ/色）。 |
-| `rtf_table_border` | `rtf_table_border()`, `rtf_border_tfl()` | テーブルのゾーンボーダー（header / body / first-row / last-row …）。 |
+| `rtf_table_border` | `rtf_table_border()`（**非推奨**）, `rtf_border_tfl()` | 5ゾーンの割り当て表。表全体なら `rtftable(border = rtf_border(...))`、行の種類ごとなら `style_zone()` に置き換わりました。 |
 | `rtf_table_style` | `rtf_table_style()`, `rtf_table_style_with()`, `rtf_table_style_tfl()` | 再利用可能なスタイル（ボーダー＋パディング＋行高の既定値）。構築時にスナップショット取得。 |
 | `rtf_col_header` | `rtf_col_header()`, `col_cell()`, `add_col_header_row()` | 複数行／スパニングの列ヘッダー。 |
 

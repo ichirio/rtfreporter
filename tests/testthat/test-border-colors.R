@@ -20,8 +20,9 @@ library(testthat)
 RED_TBL <- "\\\\red255\\\\green0\\\\blue0"
 
 test_that("zone border colours render as \\brdrcf", {
-  tbl <- rtftable(.bc_df(), border = rtf_table_border(
-    body = rtf_border(bottom = rtf_border_side(color = "#FF0000"))))
+  tbl <- style_zone(rtftable(.bc_df(), border = "none"),
+                    body = rtf_border(bottom   = rtf_border_side(color = "#FF0000"),
+                                      inside_h = rtf_border_side("none")))
   rtf <- .bc_rtf(tbl)
   expect_match(rtf, RED_TBL)                       # in the colour table
   expect_match(rtf, "\\\\clbrdrb\\\\brdrs\\\\brdrw15\\\\brdrcf[0-9]+")
