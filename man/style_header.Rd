@@ -160,8 +160,8 @@ designed to chain with the native pipe:
 \details{
 \if{html}{\out{<div class="sourceCode">}}\preformatted{pages <- as_rtftables(gt_obj, read_meta = TRUE) |>
   style_header(row = 2, cols = 2:4,
-               border = rtf_border(top    = rtf_border_side("single"),
-                                   bottom = rtf_border_side("none"))) |>
+               border = rtf_border(top    = TRUE,
+                                   bottom = "none")) |>
   style_cols(cols = "AGE", align = "center") |>
   style_body(rows = ~ label == "Mean", bold = TRUE)
 }\if{html}{\out{</div>}}
@@ -170,7 +170,7 @@ The merge rule everywhere is the border rule the renderer already
 documents, generalized: \strong{last writer wins, per side / per field}.  A
 border passed to a verb is merged side-by-side onto whatever is already
 there (\code{NULL} sides leave the existing side alone; use
-\code{rtf_border_side("none")} for an explicit "no line").
+\code{"none"} for an explicit "no line").
 }
 \section{Body cells}{
 
@@ -179,8 +179,8 @@ otherwise takes from \code{col_spec} -- \code{bold} / \code{italic} / \code{unde
 \code{indent_twips} / \code{color} / \code{align} -- plus \code{border}, which merges on top
 of the row's resolved zone border (\code{body} crossed with \code{first_row} /
 \code{last_row}), per side.  So a rule under a summary row is
-\code{style_body(rows = ~ Item == "Total", border = rtf_border(bottom = rtf_border_side("single")))}, and an
-\code{rtf_border_side("none")} side erases a zone rule on the selected cells.
+\code{style_body(rows = ~ Item == "Total", border = rtf_border(bottom = TRUE))}, and an
+\code{"none"} side erases a zone rule on the selected cells.
 Row height and cell padding are deliberately \emph{not} per-row properties --
 they stay uniform per table / document (see \code{rtf_document(default_format)}
 and the \verb{rtfreporter.*} options).
@@ -213,8 +213,8 @@ tbl <- rtftable(df, col_header = hdr, border = "tfl")
 # Solid rule above -- and no rule below -- the "(N = 254)" cell only:
 tbl <- tbl |>
   style_header(row = 2, cols = 2:4,
-               border = rtf_border(top    = rtf_border_side("single"),
-                                   bottom = rtf_border_side("none")))
+               border = rtf_border(top    = TRUE,
+                                   bottom = "none"))
 
 # Centre the body of columns B and C, bold the "Age" row:
 tbl <- tbl |>
@@ -223,7 +223,7 @@ tbl <- tbl |>
 
 # Double rule under the whole table:
 tbl <- tbl |>
-  style_zone(last_row = rtf_border(bottom = rtf_border_side("double")))
+  style_zone(last_row = rtf_border(bottom = "double"))
 
 # Add a top header row after the fact:
 tbl <- tbl |>

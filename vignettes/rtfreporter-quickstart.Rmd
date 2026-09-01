@@ -338,21 +338,21 @@ tbl_tfl <- rtftable(df, border = "tfl")
 
 # A border applies to whatever you attach it to.  Here: the whole table.
 tbl_framed <- rtftable(df,
-  border = rtf_border(top = rtf_border_side(), bottom = rtf_border_side(),
-                      left = rtf_border_side(), right = rtf_border_side(),
-                      inside_h = rtf_border_side())
+  border = rtf_border(top = TRUE, bottom = TRUE,
+                      left = TRUE, right = TRUE,
+                      inside_h = TRUE)
 )
 
 # Or one kind of row at a time.
 tbl_custom <- rtftable(df, border = "none") |>
   style_zone(
-    header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
-    last_row = rtf_border(bottom = rtf_border_side("double", 10L))
+    header   = rtf_border(top = TRUE, bottom = TRUE),
+    last_row = rtf_border(bottom = "double", width = 10L)
   )
 
 hdr_bordered <- rtf_header(
   rows   = list(c(c = "Study Title")),
-  border = rtf_border(bottom = rtf_border_side("single"))
+  border = rtf_border(bottom = TRUE)
 )
 ```
 
@@ -506,7 +506,7 @@ tables <- lapply(list(df_demog, df_demog, df_demog),
 
 # Non-mutating derivation
 heavy_tfl <- rtf_table_style_with(tfl,
-  border_last_row = rtf_border(bottom = rtf_border_side("double", 20L))
+  border_last_row = rtf_border(bottom = "double", width = 20L)
 )
 ```
 

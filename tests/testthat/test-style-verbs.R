@@ -45,8 +45,8 @@ BOT <- "\\\\clbrdrb\\\\brdrs"
 test_that("style_header() adds a top rule and erases the auto underline on one span cell", {
   ctrl <- .sv_tbl()
   pat  <- style_header(ctrl, row = 2, cols = 2:4,
-                       border = rtf_border(top    = rtf_border_side("single"),
-                                           bottom = rtf_border_side("none")))
+                       border = rtf_border(top    = rtfreporter:::.rtf_border_side("single"),
+                                           bottom = rtfreporter:::.rtf_border_side("none")))
   tc <- .sv_row_counts(.sv_rtf(ctrl), TOP)
   bc <- .sv_row_counts(.sv_rtf(ctrl), BOT)
   tp <- .sv_row_counts(.sv_rtf(pat), TOP)
@@ -62,9 +62,9 @@ test_that("style_header() adds a top rule and erases the auto underline on one s
 test_that("style_header() border merge is last-writer-wins per side", {
   tbl <- .sv_tbl() |>
     style_header(row = 2, cols = 2:4,
-                 border = rtf_border(top = rtf_border_side("single"))) |>
+                 border = rtf_border(top = rtfreporter:::.rtf_border_side("single"))) |>
     style_header(row = 2, cols = 2:4,
-                 border = rtf_border(top = rtf_border_side("double")))
+                 border = rtf_border(top = rtfreporter:::.rtf_border_side("double")))
   cell <- tbl$col_header[[2]][[2]]
   expect_equal(cell$border$top$style, "double")
 })
@@ -108,7 +108,7 @@ test_that("labels-row promotion is render-equivalent when nothing is styled", {
 test_that("border on a labels row lands on the requested cell only", {
   ctrl <- .sv_tbl()
   pat  <- style_header(ctrl, row = 3, cols = 3,
-                       border = rtf_border(bottom = rtf_border_side("double")))
+                       border = rtf_border(bottom = rtfreporter:::.rtf_border_side("double")))
   dbl <- .sv_row_counts(.sv_rtf(pat), "\\\\clbrdrb\\\\brdrdb")
   expect_equal(dbl[3], 1L)                # one double rule in header row 3
   expect_equal(sum(dbl[-3]), 0L)
@@ -185,22 +185,22 @@ test_that("style_body() rejects bad rows", {
 test_that("style_body(border = ) rules the requested body cells only", {
   ctrl <- .sv_tbl()
   pat  <- style_body(ctrl, rows = 1,
-                     border = rtf_border(bottom = rtf_border_side("single")))
+                     border = rtf_border(bottom = rtfreporter:::.rtf_border_side("single")))
   bc <- .sv_row_counts(.sv_rtf(ctrl), BOT)
   bp <- .sv_row_counts(.sv_rtf(pat), BOT)
   expect_equal(bp[4] - bc[4], 4L)          # data row 1 = trowd 4: all 4 cells
   expect_equal(bp[-4], bc[-4])             # nothing else changed
 
   part <- style_body(ctrl, rows = 1, cols = 2:3,
-                     border = rtf_border(bottom = rtf_border_side("single")))
+                     border = rtf_border(bottom = rtfreporter:::.rtf_border_side("single")))
   expect_equal(.sv_row_counts(.sv_rtf(part), BOT)[4] - bc[4], 2L)
 })
 
 test_that("style_body(border = ) merges on top of the zone border, none erases", {
   tbl <- .sv_tbl() |>
-    style_zone(last_row = rtf_border(bottom = rtf_border_side("single"))) |>
+    style_zone(last_row = rtf_border(bottom = rtfreporter:::.rtf_border_side("single"))) |>
     style_body(rows = 2, cols = 2,
-               border = rtf_border(bottom = rtf_border_side("none")))
+               border = rtf_border(bottom = rtfreporter:::.rtf_border_side("none")))
   bc <- .sv_row_counts(.sv_rtf(tbl), BOT)
   expect_equal(bc[5], 3L)                  # last data row: 4 zone rules - 1 erased
 })
@@ -208,9 +208,9 @@ test_that("style_body(border = ) merges on top of the zone border, none erases",
 test_that("style_body(border = ) layers per side across calls", {
   tbl <- .sv_tbl() |>
     style_body(rows = 1, cols = 2,
-               border = rtf_border(bottom = rtf_border_side("single"))) |>
+               border = rtf_border(bottom = rtfreporter:::.rtf_border_side("single"))) |>
     style_body(rows = 1, cols = 2,
-               border = rtf_border(top = rtf_border_side("double")))
+               border = rtf_border(top = rtfreporter:::.rtf_border_side("double")))
   b <- tbl$cell_styles[[1]]$border[[2]]
   expect_equal(b$bottom$style, "single")   # earlier side survives
   expect_equal(b$top$style, "double")
@@ -230,7 +230,7 @@ test_that("style_body(align = ) overrides the column alignment per cell", {
 test_that("cell_styles border/align survive the drop_cols reindex", {
   df <- data.frame(Item = c("Age", "Sex"), A = c("1", "2"),
                    B = c("3", "4"), C = c("5", "6"), stringsAsFactors = FALSE)
-  b  <- rtf_border(bottom = rtf_border_side("double"))
+  b  <- rtf_border(bottom = rtfreporter:::.rtf_border_side("double"))
   styles <- list(
     list(align  = c(NA, "left", NA, NA),
          border = list(NULL, b, NULL, NULL)),
@@ -247,7 +247,7 @@ test_that("cell_styles border/align survive the drop_cols reindex", {
 
 test_that("style_zone() merges onto the resolved table border", {
   tbl <- style_zone(.sv_tbl(),
-                    last_row = rtf_border(bottom = rtf_border_side("double")))
+                    last_row = rtf_border(bottom = rtfreporter:::.rtf_border_side("double")))
   expect_equal(tbl$border$last_row$bottom$style, "double")
   rtf <- .sv_rtf(tbl)
   expect_match(rtf, "\\\\clbrdrb\\\\brdrdb")
@@ -280,7 +280,7 @@ test_that("verbs map over every page of an as_rtftables() list", {
 
   out <- pages |>
     style_cols(cols = "A", align = "center") |>
-    style_zone(last_row = rtf_border(bottom = rtf_border_side("double"))) |>
+    style_zone(last_row = rtf_border(bottom = rtfreporter:::.rtf_border_side("double"))) |>
     add_header_row(c("w", "x", "y", "z"), .position = "top")
   for (p in out) {
     expect_equal(p$col_spec[[2]]$align, "center")

@@ -778,7 +778,7 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'   string lands in whichever slot `align` selects.
 #' @param border `NULL` (default) for **no rule** -- unlike the page footer,
 #'   the footnote draws none unless asked. An [rtf_border()] puts one on the
-#'   first row, e.g. `border = rtf_border_top()`.
+#'   first row, e.g. `border = rtf_border(top = TRUE)`.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, overriding the document default from [rtf_default_format()].
 #'   `font` names a family (e.g. `"Arial"`); one not already in the document's

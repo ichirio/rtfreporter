@@ -171,7 +171,7 @@
 # edge is interior); `side = "right"` is the decimal half (its left edge is).
 # The outer edges keep whatever the original column asked for.
 .decimal_split_border <- function(b, side) {
-  none <- rtf_border_side("none")
+  none <- .rtf_border_side("none")
   over <- if (identical(side, "left")) rtf_border(right = none)
           else                         rtf_border(left  = none)
   if (is.null(b)) return(over)

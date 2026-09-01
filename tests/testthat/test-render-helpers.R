@@ -156,15 +156,15 @@ test_that(".effective_row_border handles all NULL combinations", {
   erb <- rtfreporter:::.effective_row_border
   expect_null(erb(NULL, NULL))
 
-  b <- rtf_border_top()
+  b <- rtf_border(top = TRUE)
   expect_identical(erb(b, NULL),    b)
   expect_identical(erb(b, list()),  b)   # length 0 override
   expect_identical(erb(NULL, b),    b)
 })
 
 test_that(".effective_row_border merges overrides into rtf_border base", {
-  base <- rtf_border(top = rtf_border_side("single"))
-  over <- rtf_border(bottom = rtf_border_side("double"))
+  base <- rtf_border(top = rtfreporter:::.rtf_border_side("single"))
+  over <- rtf_border(bottom = rtfreporter:::.rtf_border_side("double"))
   m <- rtfreporter:::.effective_row_border(base, over)
   expect_identical(m$top$style,    "single")   # unchanged
   expect_identical(m$bottom$style, "double")   # set by override
@@ -178,7 +178,7 @@ test_that(".build_border_commands returns empty string for NULL spec", {
 
 test_that(".build_border_commands uses brdrcf<idx> when color is supplied", {
   cmap <- list("#FF0000" = 3L)
-  b <- rtf_border(top = rtf_border_side("single", width = 15L,
+  b <- rtf_border(top = rtfreporter:::.rtf_border_side("single", width = 15L,
                                           color = "#FF0000"))
   out <- rtfreporter:::.build_border_commands(b, color_index_map = cmap)
   expect_match(out, "\\\\brdrcf3")

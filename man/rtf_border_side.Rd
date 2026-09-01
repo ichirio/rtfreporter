@@ -29,9 +29,9 @@ Defines the line style, weight, and colour for one edge of a cell.
 Use this as an argument to \code{\link[=rtf_border]{rtf_border()}}.
 }
 \examples{
-rtf_border_side()                                   # thin black rule (~0.5 pt)
+TRUE                                   # thin black rule (~0.5 pt)
 rtf_border_side(style = "double", width = 30L, color = "#003366")
-rtf_border_side("none")   # explicit "no line" that removes an inherited rule
+"none"   # explicit "no line" that removes an inherited rule
 }
 \seealso{
 \code{\link[=rtf_border]{rtf_border()}} to assemble sides into a cell border, and

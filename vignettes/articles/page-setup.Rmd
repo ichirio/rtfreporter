@@ -305,13 +305,13 @@ colour you reference and builds the RTF colour table automatically -- you never
 maintain a palette. Two things can be coloured, which together cover the usual
 clinical TFL needs.
 
-**Borders** -- `rtf_border(color = ...)` / `rtf_border_side(color = ...)`,
+**Borders** -- `rtf_border(color = ...)`,
 anywhere a border is accepted (column-header rules, the body / first-row /
 last-row zones, spanning headers, and the page header/footer band border). For
 example, a navy rule under a header:
 
 ```{r colors-border}
-navy_rule <- rtf_border(bottom = rtf_border_side(color = "#1F4E79"))
+navy_rule <- rtf_border(bottom = TRUE, color = "#1F4E79")
 
 doc <- rtf_document() |>
   rtf_section(page = 1, secinfo = list(
@@ -345,7 +345,7 @@ Putting it together -- a portrait A4 page, Arial at 11 pt, custom margins, and a
 navy header rule:
 
 ```{r full, eval = FALSE}
-navy_rule <- rtf_border(bottom = rtf_border_side(color = "#1F4E79"))
+navy_rule <- rtf_border(bottom = TRUE, color = "#1F4E79")
 
 doc <- rtf_document(
   page = list(

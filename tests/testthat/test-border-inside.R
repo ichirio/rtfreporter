@@ -58,8 +58,8 @@ library(testthat)
      envir = rtfreporter:::.deprecation_state)
 }
 
-S    <- rtf_border_side()
-NONE <- rtf_border_side("none")
+S    <- rtfreporter:::.rtf_border_side()
+NONE <- rtfreporter:::.rtf_border_side("none")
 FRAME <- function(...) rtf_border(top = S, bottom = S, left = S, right = S, ...)
 
 
@@ -70,16 +70,20 @@ test_that("rtf_border() carries inside_h / inside_v, defaulting to no rule", {
   expect_null(b$inside_h)
   expect_null(b$inside_v)
 
-  s <- rtf_border_side("double", 30L)
+  s <- rtfreporter:::.rtf_border_side("double", 30L)
   b <- rtf_border(inside_h = s, inside_v = s)
   expect_identical(b$inside_h, s)
   expect_identical(b$inside_v, s)
 })
 
 test_that("rtf_border() validates the two new slots", {
-  expect_error(rtf_border(inside_h = "single"), "inside_h", fixed = TRUE)
+  expect_error(rtf_border(inside_h = "wiggly"), "inside_h", fixed = TRUE)
   expect_error(rtf_border(inside_v = list(style = "single")), "inside_v",
                fixed = TRUE)
+  # ... and accepts the three legal spellings.
+  expect_identical(rtf_border(inside_h = TRUE)$inside_h$style, "single")
+  expect_identical(rtf_border(inside_v = "double")$inside_v$style, "double")
+  expect_identical(rtf_border(inside_v = FALSE)$inside_v$style, "none")
 })
 
 test_that("rtf_border() records which inside_* the caller named", {
@@ -89,11 +93,11 @@ test_that("rtf_border() records which inside_* the caller named", {
                    c(h = FALSE, v = TRUE))
 })
 
-test_that("rtf_border_with() can set and preserve inside_h / inside_v", {
+test_that("rtf_border(from = ) sets and preserves inside_h / inside_v", {
   b <- rtf_border(top = S, inside_v = S)
-  expect_identical(rtf_border_with(b, bottom = S)$inside_v, S)   # preserved
-  expect_identical(rtf_border_with(b, inside_h = S)$inside_h, S) # set
-  expect_identical(rtf_border_with(b, inside_h = S)$top, S)      # untouched
+  expect_identical(rtf_border(from = b, bottom = S)$inside_v, S)   # preserved
+  expect_identical(rtf_border(from = b, inside_h = S)$inside_h, S) # set
+  expect_identical(rtf_border(from = b, inside_h = S)$top, S)      # untouched
 })
 
 
@@ -235,4 +239,51 @@ test_that("the tfl preset renders exactly as before and never warns", {
   expect_identical(sides[[1L]][[1L]], "t")           # top rule, stub cell
   expect_identical(sides[[2L]], c("b", "b", "b"))    # bottom of header block
   for (i in 3:6) expect_identical(sides[[i]], c("-", "-", "-"))
+})
+
+
+# -- building versus layering ---------------------------------------------------
+
+test_that("a call without `from` builds: unnamed sides are unset", {
+  b <- rtf_border(top = TRUE)
+  b2 <- rtf_border(bottom = TRUE)          # a fresh call, not an addition
+  expect_null(b2$top)
+  expect_identical(b2$bottom$style, "single")
+})
+
+test_that("`from` layers: unnamed sides survive with their own look", {
+  b <- rtf_border(top = TRUE, color = "#C9372C", width = 30L)
+  b <- rtf_border(from = b, bottom = TRUE, color = "#1F6FEB")
+  b <- rtf_border(from = b, left = TRUE, right = TRUE,
+                  style = "double", width = 45L, color = "#1A7F37")
+
+  # Each layer's style/width/colour applies only to the sides it named.
+  expect_identical(b$top$color,    "#C9372C")
+  expect_identical(b$top$width,    30L)
+  expect_identical(b$bottom$color, "#1F6FEB")
+  expect_identical(b$bottom$width, 15L)
+  expect_identical(b$left$style,   "double")
+  expect_identical(b$right$color,  "#1A7F37")
+  expect_null(b$inside_h)
+})
+
+test_that("a side can be set, changed or erased by a layer, but not unset", {
+  b <- rtf_border(top = TRUE, bottom = TRUE)
+  expect_identical(rtf_border(from = b, top = "double")$top$style, "double")
+  expect_identical(rtf_border(from = b, top = FALSE)$top$style,    "none")
+  # NULL means "say nothing here", so the side keeps what `from` had.
+  expect_identical(rtf_border(from = b, top = NULL)$top, b$top)
+})
+
+test_that("unset and erased are different states", {
+  expect_null(rtf_border()$top)                       # unset: inherits
+  expect_identical(rtf_border(all = FALSE)$top$style, "none")  # erased
+})
+
+test_that("FALSE and \"none\" are interchangeable, whatever the call's line is", {
+  expect_identical(rtf_border(top = TRUE, bottom = FALSE),
+                   rtf_border(top = "single", bottom = "none"))
+  expect_identical(rtf_border(top = TRUE, bottom = FALSE,
+                              style = "double", width = 30L),
+                   rtf_border(top = "double", bottom = "none", width = 30L))
 })

@@ -52,8 +52,8 @@ derive a variant.
 \examples{
 \dontrun{
 tfl_style <- rtf_table_style(
-  border_header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
-  border_last_row = rtf_border(bottom = rtf_border_side()),
+  border_header   = rtf_border(top = TRUE, bottom = TRUE),
+  border_last_row = rtf_border(bottom = TRUE),
   header_bold     = FALSE,
   header_align    = NULL    # inherit data alignment
 )

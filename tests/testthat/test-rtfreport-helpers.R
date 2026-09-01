@@ -26,8 +26,8 @@ test_that("rtf_header() rejects a non-rtf_border `border`", {
                "rtf_border object")
 })
 
-test_that("rtf_header() takes border = rtf_border_top() for a header rule", {
-  h <- rtf_header(rows = c(c = "x"), border = rtf_border_top())
+test_that("rtf_header() takes border = rtf_border(top = TRUE) for a header rule", {
+  h <- rtf_header(rows = c(c = "x"), border = rtf_border(top = TRUE))
   expect_s3_class(h$border, "rtf_border")
 })
 

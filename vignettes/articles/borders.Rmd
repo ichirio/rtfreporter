@@ -20,14 +20,21 @@ with runnable code.
 The border objects are plain S3 records (no reference semantics), so a border
 you build can be reused across tables safely. The vocabulary is small:
 
-* `rtf_border_side(style, width, color)` -- one **edge** (a line).
-* `rtf_border(top, bottom, left, right, inside_h, inside_v)` -- a border for a
-  **selection**: `top`/`bottom`/`left`/`right` are its outer edges, `inside_h`
-  and `inside_v` the rules *between* its rows and *between* its cells.
+```r
+rtf_border(all, top, bottom, left, right, inside_h, inside_v,
+           style, width, color, from)
+```
 
-That is the whole vocabulary. There is no separate table-border type: what a
-border applies to is decided by where you attach it, the same way Word's border
-dialog acts on whatever is selected.
+`top`/`bottom`/`left`/`right` are the selection's outer edges and `all` is the
+four of them at once; `inside_h` and `inside_v` are the rules *between* its rows
+and *between* its cells. Each takes `TRUE` for a rule, `FALSE` or `"none"` for
+none, or a style name such as `"double"`. `style`/`width`/`colour` describe the
+line those sides draw, and `from` layers a border onto an existing one.
+
+That is the whole vocabulary -- **one function**. There is no separate
+table-border type and no per-edge constructor: what a border applies to is
+decided by where you attach it, the same way Word's border dialog acts on
+whatever is selected.
 
 | Attach it to | The selection is |
 |---|---|
@@ -59,10 +66,11 @@ tbl <- rtftable(df, border = "tfl")   # clinical TFL preset
   the span), and the data area has **no** borders. This is the default.
 * `"none"` (or `NULL`) -- no borders anywhere.
 
-`"tfl"` is exactly `rtf_border_tfl()`:
+The same rules are available as a reusable value from `rtf_table_style_tfl()`,
+which is what `"tfl"` resolves to:
 
 ```{r tfl-object}
-rtf_border_tfl()
+rtf_table_style_tfl()
 ```
 
 
@@ -71,7 +79,7 @@ rtf_border_tfl()
 Attach an `rtf_border()` to `rtftable(border = )` and it describes the table:
 
 ```{r whole-table}
-line <- rtf_border_side()        # single, 15 twips (~0.5pt), black
+line <- TRUE        # single, 15 twips (~0.5pt), black
 
 # The listing look: a frame plus a rule under every row, no vertical rules.
 tbl <- rtftable(df,
@@ -106,14 +114,21 @@ tbl <- rtftable(df, border = "none") |>
   )
 ```
 
-`rtf_border_side()` controls the look of a line:
+`style`, `width` and `color` describe the line that the sides named in the same
+call draw:
 
 ```{r side}
-rtf_border_side(style = "double", width = 30L, color = "#003366")
+rtf_border(top = TRUE, style = "double", width = 30L, color = "#003366")
 ```
 
+Naming the style on the side itself is shorthand for the same thing, so
+`rtf_border(top = "double")` and `rtf_border(top = TRUE, style = "double")` agree.
 `style` is one of `"single"`, `"double"`, `"thick"`, `"dash"`, `"dot"` -- and
-`"none"`, which we meet below.
+`"none"`, which we meet below. When one side must differ, layer a second call:
+
+```{r side-layer}
+rtf_border(from = rtf_border(top = TRUE, width = 30L), bottom = TRUE)
+```
 
 ### Body (data-area) borders
 
@@ -133,7 +148,7 @@ tbl <- rtftable(
 ```
 
 Before 0.5.0 an edge on a zone was uniform -- `left`/`right` were drawn on every
-cell and `body`'s `top`/`bottom` on every row -- so `rtf_border_box()` alone
+cell and `body`'s `top`/`bottom` on every row -- so `rtf_border(all = TRUE)` alone
 produced this grid. See *Before and after 0.5.0* at the end of this article for
 each case written both ways.
 
@@ -153,7 +168,7 @@ tbl <- rtftable(
   border   = "tfl",
   col_spec = list(
     list(col = "Value",
-         border = rtf_border(bottom = rtf_border_side("thick")))
+         border = rtf_border(bottom = "thick"))
   )
 )
 ```
@@ -189,7 +204,7 @@ automatic rule), a `"none"` side is an explicit "no line" that wins on merge:
 hdr <- rtf_col_header(
   list(col_cell(1, ""),
        col_cell(c(2, 3), "Drug A",
-                border = rtf_border(bottom = rtf_border_side("none"))),
+                border = rtf_border(bottom = "none")),
        col_cell(c(4, 5), "Drug B")),
   c("Item", "N", "Mean", "N", "Mean")
 )
@@ -239,20 +254,20 @@ tbl <- rtftable(df, col_header = hdr, border = "tfl")
 tbl <- tbl |>
   # solid rule above -- and no rule below -- the "(N = 254)" span only
   style_header(row = 2, cols = 2:4,
-               border = rtf_border(top    = rtf_border_side("single"),
-                                   bottom = rtf_border_side("none"))) |>
+               border = rtf_border(top    = TRUE,
+                                   bottom = "none")) |>
   # rule under one BODY row (a summary/total row, selected by predicate)
   style_body(rows = ~ Item == "Sex",
-             border = rtf_border(bottom = rtf_border_side("single"))) |>
+             border = rtf_border(bottom = TRUE)) |>
   # double rule under the whole table
-  style_zone(last_row = rtf_border(bottom = rtf_border_side("double")))
+  style_zone(last_row = rtf_border(bottom = "double"))
 ```
 
 Body borders follow the same two-step chain as everything else: the row's
 zone border (`body`, crossed with `first_row` / `last_row`) first, then the
 per-cell override from `style_body(border = )` -- last writer wins, per side.
 Restrict `cols` to rule only part of a row, or pass an
-`rtf_border_side("none")` side to erase a zone rule on selected cells.
+`"none"` side to erase a zone rule on selected cells.
 
 `style_header(row =, cols =)` addresses header cells by header-row index and
 data-column position; `style_cols()`, `style_body()` and `style_zone()` cover
@@ -264,8 +279,8 @@ converted multi-page table can be restyled in one pipe:
 ```r
 pages <- as_rtftables(gt_obj, read_meta = TRUE) |>
   style_header(row = 2, cols = 2:4,
-               border = rtf_border(top    = rtf_border_side("single"),
-                                   bottom = rtf_border_side("none")))
+               border = rtf_border(top    = TRUE,
+                                   bottom = "none"))
 ```
 
 The merge semantics are the ones this article already taught: last writer
@@ -284,7 +299,7 @@ The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnabl
 ## Before and after 0.5.0
 
 Two things changed at 0.5.0, and they compound, so here is every common case
-written both ways. `s` is an `rtf_border_side()` throughout.
+written both ways. `s` is an `TRUE` throughout.
 
 First, `rtf_table_border()` is deprecated: a border is aimed with
 `rtftable(border = )` for the whole table, or `style_zone()` for one kind of
@@ -304,11 +319,28 @@ the rules *inside* it are asked for by name -- `inside_h` between the rows,
 | The clinical TFL preset | `border = "tfl"` | `border = "tfl"` -- unchanged |
 | A border on one cell | `col_cell(border = rtf_border(bottom = s))` | unchanged -- a cell has no inside |
 
+And the constructors that folded into `rtf_border()` itself:
+
+| Before (≤ 0.5.x) | Now |
+|---|---|
+| `rtf_border_side()` | `TRUE` |
+| `rtf_border_side("none")` | `"none"` (or `FALSE`) |
+| `rtf_border_side("double", 20L)` | side `"double"` plus `width = 20L` |
+| `rtf_border_none()` | `rtf_border()` |
+| `rtf_border_top()` | `rtf_border(top = TRUE)` |
+| `rtf_border_bottom()` | `rtf_border(bottom = TRUE)` |
+| `rtf_border_box()` | `rtf_border(all = TRUE)` |
+| `rtf_border_with(b, bottom = x)` | `rtf_border(from = b, bottom = x)` |
+| `rtf_border_tfl()` | `border = "tfl"`, or `rtf_table_style_tfl()` |
+
+All of these still work and warn once per session. They are scheduled for
+removal before the CRAN submission.
+
 The first two rows change spelling but not meaning. Rows three to five change
 meaning as well: those are the ones where an edge used to be uniform.
 
 ```{r migration, eval = FALSE}
-s <- rtf_border_side()
+s <- TRUE
 
 # was: rtf_table_border(body = rtf_border(bottom = s))
 tbl <- rtftable(df, border = "none") |>
@@ -324,4 +356,4 @@ Because the two readings are spelled identically, rtfreporter cannot rewrite
 your code for you -- but it can tell you where to look. It warns **once per
 session** when it meets a border that would have rendered differently before,
 and naming `inside_h` / `inside_v` says which reading you mean and silences it.
-Use `rtf_border_side("none")` when the answer is "no rule there".
+Use `"none"` when the answer is "no rule there".

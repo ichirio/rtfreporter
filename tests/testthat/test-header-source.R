@@ -55,12 +55,14 @@ test_that("border default width shows only at level default/all", {
   tbl <- rtftable(df5(), col_header = rtf_col_header(
     list(col_cell(1, ""),
          col_cell(c(2, 5), "Trt",
-                  border = rtf_border(bottom = rtf_border_side("single")))),
+                  border = rtf_border(bottom = TRUE))),
     c("Item", "N", "Mean", "N", "Mean")))
   ex <- rtf_header_source(tbl, level = "explicit", snippet = FALSE)
   al <- rtf_header_source(tbl, level = "all",      snippet = FALSE)
-  expect_true(grepl('rtf_border_side("single")', ex, fixed = TRUE))
-  expect_true(grepl('rtf_border_side("single", 15)', al, fixed = TRUE))
+  # A plain single rule is just TRUE; the default width appears only when the
+  # caller asked to see defaults.
+  expect_true(grepl('rtf_border(bottom = TRUE)', ex, fixed = TRUE))
+  expect_true(grepl('rtf_border(bottom = TRUE, width = 15)', al, fixed = TRUE))
 })
 
 # ── snippet wrapper ────────────────────────────────────────────────────────

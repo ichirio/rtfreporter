@@ -119,7 +119,7 @@ test_that("rtf_footnotes(border = ) puts a rule back on the first row", {
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(list(df)) |>
-    rtf_footnotes(list("With rule"), border = rtf_border_top())
+    rtf_footnotes(list("With rule"), border = rtf_border(top = TRUE))
   txt <- .render_with(doc)
   expect_match(txt, "clbrdrt")
   expect_match(txt, "With rule")

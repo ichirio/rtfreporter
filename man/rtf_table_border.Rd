@@ -29,7 +29,7 @@ rtf_table_border(
 \item{outer}{\code{\link[=rtf_border]{rtf_border()}} for the table's four outermost edges, or
 \code{NULL} (default).  See the section above.}
 
-\item{inside_h, inside_v}{\code{\link[=rtf_border_side]{rtf_border_side()}} for the rules between rows and
+\item{inside_h, inside_v}{Side values for the rules between rows and
 between cells, or \code{NULL} (default).}
 }
 \value{
@@ -64,7 +64,7 @@ Two things changed at 0.5.0.  \code{\link[=rtf_table_border]{rtf_table_border()}
 border is aimed with \code{rtftable(border = )} or \code{\link[=style_zone]{style_zone()}} instead; and an
 edge now always means the \strong{outer} edge of the selection, so the rules
 \emph{inside} it have to be asked for by name.  Each case below, \code{s} being an
-\code{\link[=rtf_border_side]{rtf_border_side()}}:
+a border side:
 
 \preformatted{
   ## rules above and below the column header  (unchanged in meaning)
@@ -86,7 +86,7 @@ edge now always means the \strong{outer} edge of the selection, so the rules
   now:  style_zone(body = rtf_border(left = s, right = s, inside_v = s))
 
   ## a grid around every data cell
-  was:  rtf_table_border(body = rtf_border_box())
+  was:  rtf_table_border(body = rtf_border(all = TRUE))
   now:  style_zone(body = rtf_border(top = s, bottom = s, left = s,
                                      right = s, inside_h = s, inside_v = s))
 
@@ -96,9 +96,29 @@ edge now always means the \strong{outer} edge of the selection, so the rules
 
   ## frame plus a rule under every row -- the listing look
   was:  four style_header() / style_body() calls on the edge columns
-  now:  rtftable(df, border = rtf_border(top = s, bottom = s, left = s,
-                                         right = s, inside_h = s))
+  now:  rtftable(df, border = rtf_border(top = TRUE, bottom = TRUE,
+                                         left = TRUE, right = TRUE,
+                                         inside_h = TRUE))
 }
+
+At 0.6.0 the remaining constructors folded in here too, so a side is written
+as a value rather than built:
+
+\preformatted{
+  rtf_border_side()                 ->  TRUE
+  rtf_border_side("none")           ->  FALSE    (or "none")
+  rtf_border_side("double")         ->  "double"
+  rtf_border_side("double", 20L)    ->  side "double" plus width = 20L
+  rtf_border_none()                 ->  rtf_border()
+  rtf_border_top()                  ->  rtf_border(top = TRUE)
+  rtf_border_bottom()               ->  rtf_border(bottom = TRUE)
+  rtf_border_box()                  ->  rtf_border(all = TRUE)
+  rtf_border_with(b, bottom = x)    ->  rtf_border(from = b, bottom = x)
+  rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
+}
+
+All of them still work and warn once per session; they are scheduled for
+removal before the CRAN submission.
 
 \code{border = "tfl"} and \code{\link[=rtf_border_tfl]{rtf_border_tfl()}} are unaffected, as is any border on
 a single cell (\code{\link[=col_cell]{col_cell()}}, \code{cell_styles}): a cell has no inside, so its
@@ -107,11 +127,11 @@ four edges never meant anything else.
 The old and new readings are spelled identically, so rtfreporter warns once
 per session when it meets a border that would have rendered differently
 before.  Naming \code{inside_h} / \code{inside_v} says which you mean and silences it
--- use \code{rtf_border_side("none")} for "no rule there".
+-- use \code{"none"} for "no rule there".
 }
 
 \examples{
-s  <- rtf_border_side()
+s  <- TRUE
 df <- data.frame(A = c("1", "2"), B = c("x", "y"))
 
 # The clinical TFL look, spelled out one row kind at a time.
@@ -134,6 +154,6 @@ rtf_table_border(header = rtf_border(top = s, bottom = s))
 }
 }
 \seealso{
-\code{\link[=rtf_border]{rtf_border()}} / \code{\link[=rtf_border_side]{rtf_border_side()}} for the pieces; pass the result
+\code{\link[=rtf_border]{rtf_border()}} for the pieces; pass the result
 as \code{rtftable(border = )}.
 }

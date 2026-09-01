@@ -1004,7 +1004,7 @@
         hdr_row, cellx, row_b, hdr_h, pad_l, pad_r, valign_cmd,
         col_spec = col_spec, table_align = table_align,
         group_bottom_side = if (idx < n_hdr_rows) {
-          (hdr_border$bottom %||% span_border$bottom %||% rtf_border_side())
+          (hdr_border$bottom %||% span_border$bottom %||% .rtf_border_side())
         } else {
           NULL   # last header row's outer frame already supplies the bottom
         },
@@ -1641,7 +1641,7 @@
 
   # Footnote separator: a top rule on the first row unless it sets its own border.
   if (is_footer && length(out) >= 1L && is.null(out[[1L]]$border)) {
-    out[[1L]]$border <- rtf_border(top = rtf_border_side(style = "single", width = 15L))
+    out[[1L]]$border <- rtf_border(top = TRUE)
   }
   out
 }

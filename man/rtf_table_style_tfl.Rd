@@ -23,7 +23,7 @@ To override one or more fields, pipe through \code{\link[=rtf_table_style_with]{
 \preformatted{
   heavy <- rtf_table_style_with(rtf_table_style_tfl(),
             header_bold = TRUE,
-            border_last_row = rtf_border(bottom = rtf_border_side()))
+            border_last_row = rtf_border(bottom = TRUE))
 }
 }
 \examples{

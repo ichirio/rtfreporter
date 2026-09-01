@@ -58,8 +58,8 @@ rtf_document() |>                                  # -> rtf_document
 | `rtf_document` | `rtf_document()` | The document being assembled (pages + sections + document-wide settings). |
 | `rtftable` | `rtftable()`, `as_rtftable()`, `as_rtftables()` | One table (or one page of a paginated table). |
 | `rtfplot` | `rtfplot()` | One embedded figure. |
-| `rtf_border` | `rtf_border()`, `rtf_border_side()`, `rtf_border_top()` / `_bottom()` / `_box()` / `_none()`, `rtf_border_with()` | A border for a selection: its outer edges plus the rules between the rows (`inside_h`) and between the cells (`inside_v`) inside it. What it applies to is decided by where you attach it. |
-| `rtf_table_border` | `rtf_table_border()` (**deprecated**), `rtf_border_tfl()` | The five-zone map. Superseded: attach an `rtf_border()` to `rtftable(border = )` for the whole table, or to `style_zone()` for one kind of row. |
+| `rtf_border` | `rtf_border()`, `TRUE`, `rtf_border(top = TRUE)` / `_bottom()` / `_box()` / `_none()`, `rtf_border_with()` | A border for a selection: its outer edges plus the rules between the rows (`inside_h`) and between the cells (`inside_v`) inside it. What it applies to is decided by where you attach it. |
+| `rtf_table_border` | `rtf_table_border()`, `rtf_border_tfl()` — **both deprecated** | The five-zone map. Superseded: attach an `rtf_border()` to `rtftable(border = )` for the whole table, or to `style_zone()` for one kind of row; the TFL preset is `border = "tfl"` or `rtf_table_style_tfl()`. |
 | `rtf_table_style` | `rtf_table_style()`, `rtf_table_style_with()`, `rtf_table_style_tfl()` | A reusable style (borders + padding + row-height defaults), captured by snapshot at construction. |
 | `rtf_col_header` | `rtf_col_header()`, `col_cell()`, `add_col_header_row()` | Multi-row / spanning column headers. |
 

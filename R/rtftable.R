@@ -65,7 +65,7 @@
 # Accepts:
 #   rtf_table_border          -> returned as-is
 #   rtf_table_style (S3)      -> .style_to_table_border(style)
-#   "tfl"                     -> rtf_border_tfl()
+#   "tfl"                     -> the clinical TFL preset
 #   "none" / NULL             -> NULL (no borders)
 #   plain named list          -> .plain_list_to_table_border()
 # anything else errors.
@@ -73,7 +73,7 @@
   if (is.null(border)) return(NULL)
   if (inherits(border, "rtf_table_border")) return(border)
   if (inherits(border, "rtf_table_style"))  return(.style_to_table_border(border))
-  if (identical(border, "tfl")) return(rtf_border_tfl())
+  if (identical(border, "tfl")) return(.rtf_border_tfl())
   if (identical(border, "none")) return(NULL)   # "none" == no borders
   # A cell-level rtf_border() is a classed *named list*, so it would otherwise
   # reach the plain-list fallback below, which looks for zone names, finds none
@@ -498,7 +498,7 @@
 #'     \item{`border`}{a **list** of [rtf_border()] / `NULL` per column --
 #'       per-cell border, merged side-by-side on top of the row's resolved
 #'       zone border (`body` / `first_row` / `last_row`); an
-#'       [rtf_border_side()] of style `"none"` erases a zone rule.}
+#'       side of style `"none"` erases a zone rule.}
 #'   }
 #'   `NA` entries within a vector mean "no override; use the column default".
 #'   This argument is populated automatically by [as_rtftable()] when reading

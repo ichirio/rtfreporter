@@ -78,11 +78,11 @@ test_that("no rule by default -- unlike the page footer", {
 })
 
 test_that("rtf_footnotes(border = ) puts one back", {
-  expect_true(.rule(.run(list(c("FN one")), border = rtf_border_top())))
+  expect_true(.rule(.run(list(c("FN one")), border = rtf_border(top = TRUE))))
 })
 
 test_that("the rule lands on the first row only", {
-  l <- .run(list(c("FN one", "FN two")), border = rtf_border_top())
+  l <- .run(list(c("FN one", "FN two")), border = rtf_border(top = TRUE))
   expect_true(grepl("clbrdrt", .rows(l, "FN one")))
   expect_false(grepl("clbrdrt", .rows(l, "FN two")))
 })

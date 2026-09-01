@@ -88,8 +88,8 @@ test_that("col_spec[[j]]$border still applies when default borders are off", {
     col_header = c("A", "B", "C"),
     border     = NULL,
     col_spec   = list(
-      list(col = 2, border = rtf_border(top    = rtf_border_side("double", 20L),
-                                         bottom = rtf_border_side("double", 20L)))
+      list(col = 2, border = rtf_border(top    = rtfreporter:::.rtf_border_side("double", 20L),
+                                         bottom = rtfreporter:::.rtf_border_side("double", 20L)))
     ))
   txt <- .render_tbl(tbl)
   expect_match(txt, "\\\\brdrdb")
@@ -113,8 +113,8 @@ test_that("explicit border$last_row still renders under the last data row", {
     border = "none"
   ) |>
     style_zone(
-      header   = rtf_border(top = rtf_border_side(), bottom = rtf_border_side()),
-      last_row = rtf_border(bottom = rtf_border_side())
+      header   = rtf_border(top = rtfreporter:::.rtf_border_side(), bottom = rtfreporter:::.rtf_border_side()),
+      last_row = rtf_border(bottom = rtfreporter:::.rtf_border_side())
     )
   txt <- .render_tbl(tbl)
   # 2 header bottoms + 2 last-row bottoms.
@@ -130,7 +130,7 @@ test_that("col_cell(border = none) removes the group underline under one cell (#
   hdr_suppressed <- rtf_col_header(
     list(col_cell(1, ""),
          col_cell(c(2, 3), "Drug A",
-                  border = rtf_border(bottom = rtf_border_side("none"))),
+                  border = rtf_border(bottom = rtfreporter:::.rtf_border_side("none"))),
          col_cell(c(4, 5), "Drug B")),
     c("Item", "N", "Mean", "N", "Mean")
   )
@@ -145,17 +145,17 @@ test_that("col_cell(border = none) removes the group underline under one cell (#
 test_that("col_cell(border = ...) adds a per-cell rule and validates its type (#81)", {
   expect_error(col_cell(1, "x", border = "oops"),
                "must be NULL or an rtf_border")
-  cc <- col_cell(1, "x", border = rtf_border(bottom = rtf_border_side("thick")))
+  cc <- col_cell(1, "x", border = rtf_border(bottom = rtfreporter:::.rtf_border_side("thick")))
   expect_true(inherits(cc$border, "rtf_border"))
 })
 
-test_that('rtf_border_side("none") builds no command but overrides on merge (#81)', {
-  none <- rtf_border_side("none")
+test_that('rtfreporter:::.rtf_border_side("none") builds no command but overrides on merge (#81)', {
+  none <- rtfreporter:::.rtf_border_side("none")
   expect_identical(none$style, "none")
   expect_identical(rtfreporter:::.build_border_commands(
     rtf_border(bottom = none)), "")
   merged <- rtfreporter:::.merge_rtf_border(
-    rtf_border(bottom = rtf_border_side()), rtf_border(bottom = none))
+    rtf_border(bottom = rtfreporter:::.rtf_border_side()), rtf_border(bottom = none))
   expect_identical(merged$bottom$style, "none")
 })
 
