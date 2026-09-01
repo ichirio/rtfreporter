@@ -16,33 +16,33 @@ collapse_repeats(x, cols)
 \method{collapse_repeats}{default}(x, cols)
 }
 \arguments{
-\item{x}{An [rtftable()], or a list of them (pages from [as_rtftables()]).}
+\item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}}).}
 
 \item{cols}{Columns to collapse: character names and/or integer positions in
-the table's **final** body columns.  Mix names and positions with a
-`list()` (a bare `c()` would coerce the numbers to strings).  Processed in
+the table's \strong{final} body columns.  Mix names and positions with a
+\code{list()} (a bare \code{c()} would coerce the numbers to strings).  Processed in
 the supplied order (outermost group first).}
 }
 \value{
-An object of the same shape as `x` (rtftable, or list of pages), with
-  suppressed cells set to `NA` in the selected columns.
+An object of the same shape as \code{x} (rtftable, or list of pages), with
+suppressed cells set to \code{NA} in the selected columns.
 }
 \description{
 Suppresses consecutive repeated values in the chosen columns of a built
-[rtftable()], keeping only the first row of each run; suppressed cells become
-`NA`.  No rows are removed -- only the display value is blanked (the renderer
-draws `NA` as an empty cell).  This is the classic "don't repeat the group
+\code{\link[=rtftable]{rtftable()}}, keeping only the first row of each run; suppressed cells become
+\code{NA}.  No rows are removed -- only the display value is blanked (the renderer
+draws \code{NA} as an empty cell).  This is the classic "don't repeat the group
 label on every row" layout for clinical listings.
 }
 \details{
-Like the other post-hoc verbs it is an S3 generic with an `rtftable` method
-and a **list** method.  Given a **list of pages** (an [as_rtftables()]
-result) it collapses **each page independently**, so a run restarts at every
+Like the other post-hoc verbs it is an S3 generic with an \code{rtftable} method
+and a \strong{list} method.  Given a \strong{list of pages} (an \code{\link[=as_rtftables]{as_rtftables()}}
+result) it collapses \strong{each page independently}, so a run restarts at every
 page break -- the first row of each page shows its value again.  This makes
-`collapse_repeats(as_rtftables(x, ...), cols)` equivalent to
-`as_rtftables(x, collapse_repeats = cols, ...)`.
+\code{collapse_repeats(as_rtftables(x, ...), cols)} equivalent to
+\code{as_rtftables(x, collapse_repeats = cols, ...)}.
 
-Suppression is **hierarchical**: columns are processed in the order given, so
+Suppression is \strong{hierarchical}: columns are processed in the order given, so
 a change in any earlier-listed column resets the run of every later one.
 }
 \examples{
@@ -56,6 +56,6 @@ out <- collapse_repeats(tbl, cols = c("grp", "sub"))
 out$data
 }
 \seealso{
-[as_rtftables()] (the equivalent per-page `collapse_repeats`
-  argument); [style_body()] and the other post-hoc verbs.
+\code{\link[=as_rtftables]{as_rtftables()}} (the equivalent per-page \code{collapse_repeats}
+argument); \code{\link[=style_body]{style_body()}} and the other post-hoc verbs.
 }

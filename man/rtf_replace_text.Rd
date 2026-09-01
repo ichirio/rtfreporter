@@ -19,53 +19,53 @@ rtf_replace_text(
 \item{input_file}{Path to the RTF file to read.}
 
 \item{target}{Character vector of strings (or regex patterns when
-`use_regex = TRUE`) to search for.  Must be non-empty.}
+\code{use_regex = TRUE}) to search for.  Must be non-empty.}
 
 \item{replacement}{Character vector of replacements.  Either the same length
-as `target`, or length 1 (recycled to every target).}
+as \code{target}, or length 1 (recycled to every target).}
 
-\item{output_file}{Path to write the result to.  `NULL` (default) overwrites
-`input_file` in place (see `backup`).}
+\item{output_file}{Path to write the result to.  \code{NULL} (default) overwrites
+\code{input_file} in place (see \code{backup}).}
 
-\item{encoding}{Encoding of `input_file`, used when reading and writing.
-Default `"UTF-8"`.  rtfreporter writes ASCII-safe RTF, so the default is
+\item{encoding}{Encoding of \code{input_file}, used when reading and writing.
+Default \code{"UTF-8"}.  rtfreporter writes ASCII-safe RTF, so the default is
 usually correct.}
 
-\item{use_regex}{Logical.  `FALSE` (default) treats `target` as a fixed
-string; `TRUE` treats it as a Perl-compatible regular expression.}
+\item{use_regex}{Logical.  \code{FALSE} (default) treats \code{target} as a fixed
+string; \code{TRUE} treats it as a Perl-compatible regular expression.}
 
-\item{case_insensitive}{Logical.  `FALSE` (default) matches case-sensitively.
-When `TRUE`, matching ignores case (fixed targets are safely escaped before
+\item{case_insensitive}{Logical.  \code{FALSE} (default) matches case-sensitively.
+When \code{TRUE}, matching ignores case (fixed targets are safely escaped before
 the case-insensitive match, so regex metacharacters stay literal).}
 
-\item{backup}{Logical.  When overwriting in place (`output_file = NULL`),
-first copy the original to `paste0(input_file, ".bak")`.  Default `TRUE`.
-Ignored when `output_file` is given.}
+\item{backup}{Logical.  When overwriting in place (\code{output_file = NULL}),
+first copy the original to \code{paste0(input_file, ".bak")}.  Default \code{TRUE}.
+Ignored when \code{output_file} is given.}
 }
 \value{
 The normalised path to the written file, invisibly.
 }
 \description{
 A post-processing helper that performs find-and-replace directly on a
-rendered `.rtf` file's bytes.  It is meant for the "last mile" of TLG
+rendered \code{.rtf} file's bytes.  It is meant for the "last mile" of TLG
 production -- small textual fixes to a finished deliverable -- not as a
 substitute for building the report correctly with the pipe API.
 }
 \details{
-One or more `target` strings are replaced by `replacement`.  Pass equal-length
-vectors to apply several replacements, or a single `replacement` to use the
-same value for every `target`.  Replacements are applied **sequentially**, so
+One or more \code{target} strings are replaced by \code{replacement}.  Pass equal-length
+vectors to apply several replacements, or a single \code{replacement} to use the
+same value for every \code{target}.  Replacements are applied \strong{sequentially}, so
 an earlier replacement can affect a later one.
 }
 \section{Important -- this operates on the raw RTF bytes}{
 
-The file is treated as plain text, so a `target` only matches when it appears
-**literally** in the file.  RTF stores formatting as control words and
-escapes non-ASCII characters (`\\uN`, `\\'XX`), so:
+The file is treated as plain text, so a \code{target} only matches when it appears
+\strong{literally} in the file.  RTF stores formatting as control words and
+escapes non-ASCII characters (\verb{\\\\uN}, \verb{\\\\'XX}), so:
 \itemize{
-  \item Plain ASCII runs and RTF control words match and replace fine.
-  \item Text that is split across RTF control words, or non-ASCII characters
-    that the renderer escaped, will **not** match their on-screen form.
+\item Plain ASCII runs and RTF control words match and replace fine.
+\item Text that is split across RTF control words, or non-ASCII characters
+that the renderer escaped, will \strong{not} match their on-screen form.
 }
 For anything structural, change the inputs to the pipe API instead.
 }

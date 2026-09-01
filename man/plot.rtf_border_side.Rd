@@ -2,17 +2,17 @@
 % Please edit documentation in R/plot.R
 \name{plot.rtf_border_side}
 \alias{plot.rtf_border_side}
-\title{Visualise an `rtf_border_side`}
+\title{Visualise an \code{rtf_border_side}}
 \usage{
 \method{plot}{rtf_border_side}(x, ...)
 }
 \arguments{
-\item{x}{An [rtf_border_side()] object.}
+\item{x}{An \code{\link[=rtf_border_side]{rtf_border_side()}} object.}
 
 \item{...}{Unused.}
 }
 \value{
-Invisibly returns `x`.
+Invisibly returns \code{x}.
 }
 \description{
 Draws a 1cm-wide swatch of the line in the side's own style, width and

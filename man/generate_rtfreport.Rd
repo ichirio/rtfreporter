@@ -7,19 +7,19 @@
 generate_rtfreport(report, file_path, overwrite = FALSE)
 }
 \arguments{
-\item{report}{An `rtf_document` object (from [rtf_document()]) or an internal
-`rtfreport` object.}
+\item{report}{An \code{rtf_document} object (from \code{\link[=rtf_document]{rtf_document()}}) or an internal
+\code{rtfreport} object.}
 
 \item{file_path}{Output RTF file path.}
 
 \item{overwrite}{Logical; whether to overwrite an existing file.
-Default `FALSE`.}
+Default \code{FALSE}.}
 }
 \value{
-Invisibly returns `file_path`.
+Invisibly returns \code{file_path}.
 }
 \description{
-Renders an `rtf_document` (from the pipe API) or internal `rtfreport`
+Renders an \code{rtf_document} (from the pipe API) or internal \code{rtfreport}
 object to an RTF file.
 }
 \examples{
@@ -33,6 +33,6 @@ generate_rtfreport(doc, out, overwrite = TRUE)
 file.exists(out)
 }
 \seealso{
-[rtf_document()] / [rtf_tables()] to compose the report, and
-  [assemble_rtf()] to concatenate several rendered files into one deliverable.
+\code{\link[=rtf_document]{rtf_document()}} / \code{\link[=rtf_tables]{rtf_tables()}} to compose the report, and
+\code{\link[=assemble_rtf]{assemble_rtf()}} to concatenate several rendered files into one deliverable.
 }

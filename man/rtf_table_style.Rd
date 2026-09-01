@@ -23,30 +23,30 @@ rtf_table_style(
 )
 }
 \arguments{
-\item{border_header, border_spanning, border_body, border_first_row, border_last_row}{[rtf_border()] objects (or `NULL`) controlling each zone of the table.}
+\item{border_header, border_spanning, border_body, border_first_row, border_last_row}{\code{\link[=rtf_border]{rtf_border()}} objects (or \code{NULL}) controlling each zone of the table.}
 
 \item{header_align, header_bold, header_italic}{Defaults for column-header
-row formatting.  `header_align = NULL` means "inherit `align`".}
+row formatting.  \code{header_align = NULL} means "inherit \code{align}".}
 
 \item{align, bold, italic, underline}{Defaults for data-row formatting.}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Cell padding
 (twips) used by both column-header and data cells.}
 
-\item{row_height_twips}{Row height (twips); `NULL` = font-aware default.}
+\item{row_height_twips}{Row height (twips); \code{NULL} = font-aware default.}
 }
 \value{
-A list of class `"rtf_table_style"`.
+A list of class \code{"rtf_table_style"}.
 }
 \description{
 Bundles table-wide formatting defaults -- borders, alignment, bold, cell
 padding, row height -- into a single record that can be passed as the
-`style =` argument of [rtftable()].  Each `rtftable()` call snapshots the
+\verb{style =} argument of \code{\link[=rtftable]{rtftable()}}.  Each \code{rtftable()} call snapshots the
 style fields it needs at construction time, so the style object behaves
 like an immutable template.
 }
 \details{
-Use [rtf_table_style_with()] (or simply construct a fresh style) to
+Use \code{\link[=rtf_table_style_with]{rtf_table_style_with()}} (or simply construct a fresh style) to
 derive a variant.
 }
 \examples{

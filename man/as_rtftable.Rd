@@ -7,39 +7,39 @@
 as_rtftable(gt_obj, read_meta = TRUE, ...)
 }
 \arguments{
-\item{gt_obj}{A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
-an rlistings `listing_df`, a `flextable`, a `huxtable`, or a plain
-`data.frame` / tibble.  A
-`gt_group` ([gt::gt_group()] / [gt::gt_split()], or a tfrmt `page_plan`
-render) or a gtsummary `tbl_split` container is accepted when it holds
+\item{gt_obj}{A \code{gt_tbl}, a gtsummary table, an rtables/tern \code{VTableTree},
+an rlistings \code{listing_df}, a \code{flextable}, a \code{huxtable}, or a plain
+\code{data.frame} / tibble.  A
+\code{gt_group} (\code{\link[gt:gt_group]{gt::gt_group()}} / \code{\link[gt:gt_split]{gt::gt_split()}}, or a tfrmt \code{page_plan}
+render) or a gtsummary \code{tbl_split} container is accepted when it holds
 exactly one table; multi-member containers error -- convert those with
-[as_rtftables()].}
+\code{\link[=as_rtftables]{as_rtftables()}}.}
 
-\item{read_meta}{`TRUE` (default, read all render-relevant metadata),
-`FALSE` (rendered body only), or a character vector of tokens.  See
-[as_rtftables()].}
+\item{read_meta}{\code{TRUE} (default, read all render-relevant metadata),
+\code{FALSE} (rendered body only), or a character vector of tokens.  See
+\code{\link[=as_rtftables]{as_rtftables()}}.}
 
-\item{...}{Passed to [rtftable()] (and on to [as_rtftables()]).  Explicit
+\item{...}{Passed to \code{\link[=rtftable]{rtftable()}} (and on to \code{\link[=as_rtftables]{as_rtftables()}}).  Explicit
 values always win over the values extracted from the source table.}
 }
 \value{
-An `rtftable` S3 object.
+An \code{rtftable} S3 object.
 }
 \description{
-Single-page convenience wrapper around [as_rtftables()]: takes a `gt_tbl`,
-a [gtsummary](https://www.danieldsjoberg.com/gtsummary/) table, an
-rtables/tern `VTableTree`, an rlistings `listing_df`, a `flextable`, a
-`huxtable`, or a plain `data.frame` / tibble, and returns one `rtftable`
+Single-page convenience wrapper around \code{\link[=as_rtftables]{as_rtftables()}}: takes a \code{gt_tbl},
+a \href{https://www.danieldsjoberg.com/gtsummary/}{gtsummary} table, an
+rtables/tern \code{VTableTree}, an rlistings \code{listing_df}, a \code{flextable}, a
+\code{huxtable}, or a plain \code{data.frame} / tibble, and returns one \code{rtftable}
 (rather than a list of pages).  It is exactly
-`as_rtftables(x, read_meta = read_meta, split = "none", ...)[[1]]`.
+\code{as_rtftables(x, read_meta = read_meta, split = "none", ...)[[1]]}.
 }
 \details{
-The body is the table's *rendered* body (gt via `gt::extract_body()`,
-rtables via `formatters::matrix_form()`); only render-relevant metadata is
-read.  See [as_rtftables()] for the full *What is carried, by source*
+The body is the table's \emph{rendered} body (gt via \code{gt::extract_body()},
+rtables via \code{formatters::matrix_form()}); only render-relevant metadata is
+read.  See \code{\link[=as_rtftables]{as_rtftables()}} for the full \emph{What is carried, by source}
 table -- in short: column labels, alignment, spanning headers, widths,
 titles, footnotes, in-cell footnote marks and (for gt/gtsummary) explicit
-`tab_style()` borders and text styles are carried; cell fills, fonts, gt
+\code{tab_style()} borders and text styles are carried; cell fills, fonts, gt
 theme borders and Markdown are not.
 }
 \examples{
@@ -53,6 +53,6 @@ tbl <- as_rtftable(g)
 
 }
 \seealso{
-[as_rtftables()] for the paginating, list-returning version and
-  the per-source metadata table.
+\code{\link[=as_rtftables]{as_rtftables()}} for the paginating, list-returning version and
+the per-source metadata table.
 }

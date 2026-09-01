@@ -13,22 +13,22 @@ split function.}
 \item{label}{Character scalar: the group label to repeat (without the
 continuation suffix).}
 
-\item{cont_label}{Character scalar appended to `label`. Default
-`" (Cont.)"`, matching the built-in group strategies.}
+\item{cont_label}{Character scalar appended to \code{label}. Default
+\code{" (Cont.)"}, matching the built-in group strategies.}
 
 \item{col}{Integer or character column where the label is placed. Default
-`1` (the row-label column).}
+\code{1} (the row-label column).}
 }
 \value{
-`chunk` with one extra row prepended.
+\code{chunk} with one extra row prepended.
 }
 \description{
-A small helper for writing custom `split=` functions for [as_rtftables()].
+A small helper for writing custom \verb{split=} functions for \code{\link[=as_rtftables]{as_rtftables()}}.
 When a group is split across pages, clinical tables repeat the group label
-at the top of the continuation page with a `" (Cont.)"` suffix.
-`add_cont_label()` builds that row: it prepends a blank row to `chunk` and
-places `paste0(label, cont_label)` in column `col`, leaving every other cell
-empty (`""` for character columns, `NA` otherwise).
+at the top of the continuation page with a \code{" (Cont.)"} suffix.
+\code{add_cont_label()} builds that row: it prepends a blank row to \code{chunk} and
+places \code{paste0(label, cont_label)} in column \code{col}, leaving every other cell
+empty (\code{""} for character columns, \code{NA} otherwise).
 }
 \examples{
 df <- data.frame(group = c("B", "B"), value = c("3", "4"))
@@ -36,5 +36,5 @@ add_cont_label(df, label = "Group B")
 
 }
 \seealso{
-[as_rtftables()] for the `split=` custom-function contract.
+\code{\link[=as_rtftables]{as_rtftables()}} for the \verb{split=} custom-function contract.
 }

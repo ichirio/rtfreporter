@@ -6,61 +6,27 @@
 \description{
 Copy-and-run examples for the four table shapes a clinical report is mostly
 made of.  Each builds its data, its table and its document, and ends in a
-rendered RTF.  They are deliberately shown together because **their
-arguments barely overlap** -- what a demographics table needs, an adverse
+rendered RTF.  They are deliberately shown together because \strong{their
+arguments barely overlap} -- what a demographics table needs, an adverse
 events table does not, and vice versa.
 }
 \section{Which arguments each shape actually uses}{
 
 
 \tabular{lllll}{
-  **Setting** \tab **DM** \tab **AE** \tab **PK** \tab **LB** \cr
-  `stub_vars` (hierarchy)      \tab -- \tab yes \tab yes \tab -- \cr
-  `group_col` / `group_by`     \tab yes \tab yes \tab yes \tab yes \cr
-  `blank_rows`                 \tab -- \tab yes \tab yes \tab yes \cr
-  `split` / `max_rows`         \tab yes \tab yes \tab yes \tab -- \cr
-  `drop_cols` (hidden carrier) \tab -- \tab -- \tab -- \tab yes \cr
-  `set_decimal_split()`        \tab -- \tab -- \tab yes \tab -- \cr
-  `paginate_cols()` (too wide) \tab -- \tab -- \tab yes \tab -- \cr
-  `fmt_*()` before building    \tab -- \tab yes \tab yes \tab yes
+\strong{Setting} \tab \strong{DM} \tab \strong{AE} \tab \strong{PK} \tab \strong{LB} \cr
+\code{stub_vars} (hierarchy)      \tab -- \tab yes \tab yes \tab -- \cr
+\code{group_col} / \code{group_by}     \tab yes \tab yes \tab yes \tab yes \cr
+\code{blank_rows}                 \tab -- \tab yes \tab yes \tab yes \cr
+\code{split} / \code{max_rows}         \tab yes \tab yes \tab yes \tab -- \cr
+\code{drop_cols} (hidden carrier) \tab -- \tab -- \tab -- \tab yes \cr
+\code{set_decimal_split()}        \tab -- \tab -- \tab yes \tab -- \cr
+\code{paginate_cols()} (too wide) \tab -- \tab -- \tab yes \tab -- \cr
+\verb{fmt_*()} before building    \tab -- \tab yes \tab yes \tab yes
 }
 
-The single most common mistake is reaching for `stub_vars` on a table that
+The single most common mistake is reaching for \code{stub_vars} on a table that
 has no hierarchy (DM), or omitting it on one that does (AE, PK).
-}
-
-\section{1. DM -- demographics}{
-
-
-A flat table of characteristics.  No hierarchy, so **no stub**; the only
-structure is that a page must not split a characteristic away from its
-statistics, which `split = "group_safe"` guarantees.
-}
-
-\section{2. AE -- adverse events}{
-
-
-A two-level hierarchy (system organ class / preferred term) folded into one
-indented stub column, with a blank line between organ classes.  Because the
-stub merges `SOC` and `PT`, group detection reads the **indentation**
-(`group_by = "indent"`) rather than a column.
-}
-
-\section{3. PK -- concentrations}{
-
-
-Like AE in shape, but the values are numbers with differing decimal counts
-and the visits run across the columns.  So it adds two things no other
-shape needs: `set_decimal_split()` to line the decimal points up, and
-`paginate_cols()` because the table is wider than the page.
-}
-
-\section{4. LB -- laboratory shift}{
-
-
-Grouped by a column that is never printed -- the "carrier" idiom.  Name it
-in `group_col` **and** in `drop_cols`: the first makes it group the table,
-the second keeps it off the page.
 }
 
 \examples{
@@ -181,7 +147,7 @@ generate_rtfreport(lb_doc, f, overwrite = TRUE)
 unlink(f)
 }
 \seealso{
-[as_rtftables()] for the conversion, [rtf_tables()] for placement,
-  [generate_rtfreport()] to render.  The `vignette("rtfreporter-quickstart")`
-  walks through one report slowly.
+\code{\link[=as_rtftables]{as_rtftables()}} for the conversion, \code{\link[=rtf_tables]{rtf_tables()}} for placement,
+\code{\link[=generate_rtfreport]{generate_rtfreport()}} to render.  The \code{vignette("rtfreporter-quickstart")}
+walks through one report slowly.
 }

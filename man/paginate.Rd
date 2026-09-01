@@ -19,55 +19,58 @@ paginate(x, ...)
 \method{paginate}{data.frame}(x, ...)
 }
 \arguments{
-\item{x}{A supported table object: a `gt_tbl` (from [gt::gt()]), a plain
-`data.frame` / tibble, or a `list` of either.  List names are
+\item{x}{A supported table object: a \code{gt_tbl} (from \code{\link[gt:gt]{gt::gt()}}), a plain
+\code{data.frame} / tibble, or a \code{list} of either.  List names are
 propagated to the output (one input -> one page keeps the input
-name; one input -> many pages produces `name.1`, `name.2`, ...).}
+name; one input -> many pages produces \code{name.1}, \code{name.2}, ...).}
 
 \item{...}{Pagination controls, forwarded to the internal splitter and shared
-with [as_rtftables()]: `max_rows`, `split`, `split_rows`,
-`group_col`, `cont_label`, `blank_rows`, `blank_row_first`,
-`blank_row_end`, `align_count_pct`.  See [as_rtftables()] for the
+with \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows},
+\code{group_col}, \code{cont_label}, \code{blank_rows}, \code{blank_row_first},
+\code{blank_row_end}, \code{align_count_pct}.  See \code{\link[=as_rtftables]{as_rtftables()}} for the
 full description of each.}
 }
 \value{
 A list of data.frames (tibbles if the input was a tibble or
-  `gt_tbl`), one element per page.  Each element carries:
+\code{gt_tbl}), one element per page.  Each element carries:
+\itemize{
+\item \code{attr(., "rtf_blank_rows")} -- integer positions consumed by
+\code{\link[=rtftable]{rtftable()}} when \code{read_attributes = TRUE}.
+\item \code{attr(., "rtf_paginate_meta")} -- list with \code{strategy},
+\code{page_index}, \code{total_pages}, \code{group_col}, \code{page_name}.
+}
 
-  * `attr(., "rtf_blank_rows")` -- integer positions consumed by
-    [rtftable()] when `read_attributes = TRUE`.
-  * `attr(., "rtf_paginate_meta")` -- list with `strategy`,
-    `page_index`, `total_pages`, `group_col`, `page_name`.
-
-  When `split = "by_value"` -- or when the caller passed a *named*
-  `list` and no splitting happened -- each element ALSO carries
-  the group label as its `names()` entry.  Pass the resulting list
-  directly to `rtf_tables(pages, auto_section = TRUE)` to get one
-  RTF section per page name.
+When \code{split = "by_value"} -- or when the caller passed a \emph{named}
+\code{list} and no splitting happened -- each element ALSO carries
+the group label as its \code{names()} entry.  Pass the resulting list
+directly to \code{rtf_tables(pages, auto_section = TRUE)} to get one
+RTF section per page name.
 }
 \description{
-**Deprecated.**  Use [as_rtftables()] instead, which both paginates *and*
+\strong{Deprecated.}  Use \code{\link[=as_rtftables]{as_rtftables()}} instead, which both paginates \emph{and}
 reads the source table's metadata (column labels, alignment, spanning
 headers, per-cell styles, titles, footnotes) into ready-to-render
-[rtftable()] page objects.  `paginate()` only ever extracted the rendered
-body, so gt metadata was silently lost when paginating a `gt_tbl`.
+\code{\link[=rtftable]{rtftable()}} page objects.  \code{paginate()} only ever extracted the rendered
+body, so gt metadata was silently lost when paginating a \code{gt_tbl}.
 
 Single entry point that converts various supported table objects into a
-list of data.frames, one per page, ready to be passed to [rtf_tables()]
-(each data.frame carries an `rtf_blank_rows` attribute that
-`rtftable(read_attributes = TRUE)` consumes automatically).
+list of data.frames, one per page, ready to be passed to \code{\link[=rtf_tables]{rtf_tables()}}
+(each data.frame carries an \code{rtf_blank_rows} attribute that
+\code{rtftable(read_attributes = TRUE)} consumes automatically).
 
 Dispatch is by S3 class:
-* `paginate.gt_tbl()` -- for [gt::gt()] tables.  Requires the optional
-  `gt` package; an informative error is raised otherwise.
-* `paginate.data.frame()` -- for plain data.frames / tibbles.  Where the
-  real work happens; the gt method extracts a data.frame and delegates
-  here.
-* `paginate.list()` -- recurses into every element and concatenates the
-  resulting pages in input order.
+\itemize{
+\item \code{paginate.gt_tbl()} -- for \code{\link[gt:gt]{gt::gt()}} tables.  Requires the optional
+\code{gt} package; an informative error is raised otherwise.
+\item \code{paginate.data.frame()} -- for plain data.frames / tibbles.  Where the
+real work happens; the gt method extracts a data.frame and delegates
+here.
+\item \code{paginate.list()} -- recurses into every element and concatenates the
+resulting pages in input order.
+}
 
 New table-object types can be supported by adding another
-`paginate.<class>()` method -- see `vignette("paginate")` for an
+\verb{paginate.<class>()} method -- see \code{vignette("paginate")} for an
 example.
 }
 \examples{

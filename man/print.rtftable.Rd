@@ -7,22 +7,22 @@
 \method{print}{rtftable}(x, n = 10L, ...)
 }
 \arguments{
-\item{x}{An `rtftable` object.}
+\item{x}{An \code{rtftable} object.}
 
-\item{n}{Number of body rows to render (default `10`).}
+\item{n}{Number of body rows to render (default \code{10}).}
 
 \item{...}{Additional arguments (unused).}
 }
 \value{
-`x`, invisibly. Called for the side effect of printing.
+\code{x}, invisibly. Called for the side effect of printing.
 }
 \description{
-Prints a visual preview of an [rtftable()] -- the laid-out cells with column
+Prints a visual preview of an \code{\link[=rtftable]{rtftable()}} -- the laid-out cells with column
 (and spanning) headers, per-column alignment, and horizontal rules drawn
 where the table's border zones are set -- followed by a compact metadata
 block (dimensions, leaf labels, row-title columns, border/width mode, and any
-attached title / footnote counts).  This mirrors printing a `gt_tbl`,
-`rtables` `VTableTree`, or `gtsummary` object: the goal is to eyeball the
+attached title / footnote counts).  This mirrors printing a \code{gt_tbl},
+\code{rtables} \code{VTableTree}, or \code{gtsummary} object: the goal is to eyeball the
 table, not just its metadata.  For an internal multi-table rtftable (one
 carrying several data.frames), the first table is rendered.
 }
@@ -36,6 +36,6 @@ print(rtftable(df, col_header = c("Characteristic", "Drug A\nN = 98")))
 
 }
 \seealso{
-[format.rtftable()] to capture the rendered lines,
-  [summary.rtftable()] for the metadata block on its own.
+\code{\link[=format.rtftable]{format.rtftable()}} to capture the rendered lines,
+\code{\link[=summary.rtftable]{summary.rtftable()}} for the metadata block on its own.
 }

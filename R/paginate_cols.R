@@ -286,12 +286,11 @@
 #' -- fills the sheet, while a given ratio is the same width on every page.
 #' With `rel = c(3, 1, 1, 1, 1, 1, 1, 1, 1)` on a 13680-twip page:
 #'
-#' \tabular{lll}{
-#'   **blocks** \tab **unit** \tab **page widths** \cr
-#'   4 + 4 \tab 1954.3 \tab 100\% / 100\% \cr
-#'   4 + 3 \tab 1954.3 \tab 100\% / 85.7\% \cr
-#'   2+2+2+2 \tab 2736.0 \tab 100\% on all four
-#' }
+#' | blocks  | unit   | page widths      |
+#' |---------|--------|------------------|
+#' | 4 + 4   | 1954.3 | 100% / 100%      |
+#' | 4 + 3   | 1954.3 | 100% / 85.7%     |
+#' | 2+2+2+2 | 2736.0 | 100% on all four |
 #'
 #' `width = "keep"` measures against the whole table instead, so a kept column
 #' has exactly the width it had before the split and a partial block yields a

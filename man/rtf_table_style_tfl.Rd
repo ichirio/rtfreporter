@@ -7,18 +7,18 @@
 rtf_table_style_tfl()
 }
 \value{
-An `rtf_table_style` object.
+An \code{rtf_table_style} object.
 }
 \description{
-Returns a freshly constructed `rtf_table_style` matching the standard
-clinical TFL preset: borders are applied to the **column-header
-block only** (top on the topmost header row, bottom on the
-bottommost; multi-col spanning auto-underlines).  **The data section
-carries no borders by default.**  No vertical lines.  No bold
+Returns a freshly constructed \code{rtf_table_style} matching the standard
+clinical TFL preset: borders are applied to the \strong{column-header
+block only} (top on the topmost header row, bottom on the
+bottommost; multi-col spanning auto-underlines).  \strong{The data section
+carries no borders by default.}  No vertical lines.  No bold
 headers.
 }
 \details{
-To override one or more fields, pipe through [rtf_table_style_with()]:
+To override one or more fields, pipe through \code{\link[=rtf_table_style_with]{rtf_table_style_with()}}:
 
 \preformatted{
   heavy <- rtf_table_style_with(rtf_table_style_tfl(),

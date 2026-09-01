@@ -2,17 +2,17 @@
 % Please edit documentation in R/plot.R
 \name{plot.rtf_border}
 \alias{plot.rtf_border}
-\title{Visualise an `rtf_border`}
+\title{Visualise an \code{rtf_border}}
 \usage{
 \method{plot}{rtf_border}(x, ...)
 }
 \arguments{
-\item{x}{An [rtf_border()] object.}
+\item{x}{An \code{\link[=rtf_border]{rtf_border()}} object.}
 
 \item{...}{Unused.}
 }
 \value{
-Invisibly returns `x`.
+Invisibly returns \code{x}.
 }
 \description{
 Draws a 1cm square showing which of the four edges (top, bottom, left,

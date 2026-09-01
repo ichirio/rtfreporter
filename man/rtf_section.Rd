@@ -7,23 +7,23 @@
 rtf_section(doc, page = NULL, secinfo)
 }
 \arguments{
-\item{doc}{An `rtf_document` object.}
+\item{doc}{An \code{rtf_document} object.}
 
 \item{page}{Where this section starts. Pages are auto-numbered from the
-content order (starting at 1), so this is a **page number**. A single
+content order (starting at 1), so this is a \strong{page number}. A single
 integer starts one section at that page; a vector starts several sections
-at once (its length must match the number of sections in `secinfo`).}
+at once (its length must match the number of sections in \code{secinfo}).}
 
 \item{secinfo}{The section definition(s). A single section is a named list:
 \describe{
-  \item{`header`}{an [rtf_header()] object, or `NULL` for no header}
-  \item{`footer`}{an [rtf_footer()] object, or `NULL` for no footer}
+\item{\code{header}}{an \code{\link[=rtf_header]{rtf_header()}} object, or \code{NULL} for no header}
+\item{\code{footer}}{an \code{\link[=rtf_footer]{rtf_footer()}} object, or \code{NULL} for no footer}
 }
-For several sections, pass a `list` of such section lists -- one per entry
-of `page`.}
+For several sections, pass a \code{list} of such section lists -- one per entry
+of \code{page}.}
 }
 \value{
-The `rtf_document` with the section definition(s) added.
+The \code{rtf_document} with the section definition(s) added.
 }
 \description{
 Map page numbers to sections with headers/footers.
@@ -48,6 +48,6 @@ doc <- rtf_document() |>
 
 }
 \seealso{
-[rtf_header()] / [rtf_footer()] to build the header / footer, and
-  [rtf_document()] for the document and its `page` geometry.
+\code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}} to build the header / footer, and
+\code{\link[=rtf_document]{rtf_document()}} for the document and its \code{page} geometry.
 }

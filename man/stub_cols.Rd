@@ -17,115 +17,112 @@ stub_cols(
 \arguments{
 \item{data}{A data.frame (or tibble).}
 
-\item{vars}{The hierarchy columns to merge, **parent first, leaf last** --
-at least two.  A character / integer vector (or a `list()` to mix names
+\item{vars}{The hierarchy columns to merge, \strong{parent first, leaf last} --
+at least two.  A character / integer vector (or a \code{list()} to mix names
 and indices).}
 
 \item{label}{Column name for the merged stub column (this is what a
-default column header shows).  `NULL` (default) joins the display names
-of the merged columns with `" / "` -- e.g. `"SOC / PT"` -- using a
-column's `label` attribute when it has one.}
+default column header shows).  \code{NULL} (default) joins the display names
+of the merged columns with \code{" / "} -- e.g. \code{"SOC / PT"} -- using a
+column's \code{label} attribute when it has one.}
 
-\item{indent}{Integer (default `4`).  Number of non-breaking spaces
+\item{indent}{Integer (default \code{4}).  Number of non-breaking spaces
 prepended per nesting level.}
 
 \item{group_summary}{Which leaf values mark a row as its group's summary,
 folding that row's statistics onto the group label row instead of an
-indented leaf row (see *Group-summary rows*).  A subset of
-`c("empty", "parent")` -- `"empty"` for an `NA` / `""` leaf, `"parent"` for
-a leaf equal to its deepest non-empty parent value.  Also accepts `"all"`
-(both, the default) or `"none"` / `NULL` (disable).}
+indented leaf row (see \emph{Group-summary rows}).  A subset of
+\code{c("empty", "parent")} -- \code{"empty"} for an \code{NA} / \code{""} leaf, \code{"parent"} for
+a leaf equal to its deepest non-empty parent value.  Also accepts \code{"all"}
+(both, the default) or \code{"none"} / \code{NULL} (disable).}
 
 \item{layout}{How the hierarchy is laid out.
 \describe{
-  \item{`"merged"`}{(default) the hierarchy columns are replaced by one
-    indented stub column -- the historical behaviour.}
-  \item{`"columns"`}{the hierarchy columns are **kept**, in their
-    original positions and with their own headers.  A group value moves
-    onto its own row and is blank on that group's member rows, whose leaf
-    is indented in the leaf column.  Nothing is merged: the group value
-    is simply displayed in its own column.}
+\item{\code{"merged"}}{(default) the hierarchy columns are replaced by one
+indented stub column -- the historical behaviour.}
+\item{\code{"columns"}}{the hierarchy columns are \strong{kept}, in their
+original positions and with their own headers.  A group value moves
+onto its own row and is blank on that group's member rows, whose leaf
+is indented in the leaf column.  Nothing is merged: the group value
+is simply displayed in its own column.}
 }}
 
-\item{label_span}{Render each group's label row as **one cell spanning the
-table** instead of a stub cell followed by empty ones.  `FALSE` by
-default, which is the historical look.  Applies to `layout = "merged"`
-only; `layout = "columns"` keeps the group value in its own column and so
+\item{label_span}{Render each group's label row as \strong{one cell spanning the
+table} instead of a stub cell followed by empty ones.  \code{FALSE} by
+default, which is the historical look.  Applies to \code{layout = "merged"}
+only; \code{layout = "columns"} keeps the group value in its own column and so
 has nothing to span.  A group-summary row folded onto a label row is never
 spanned -- it carries statistics in the other columns.  The span is
-recorded as `attr(out, "rtf_label_rows")`, which
-`rtftable(read_attributes = TRUE)` consumes.}
+recorded as \code{attr(out, "rtf_label_rows")}, which
+\code{rtftable(read_attributes = TRUE)} consumes.}
 }
 \value{
-A data.frame: the stub column first, then every column of `data`
-  not named in `vars`, in their original order.  Label rows hold `NA` in
-  the non-stub columns.  Row count grows by one per emitted label row.
+A data.frame: the stub column first, then every column of \code{data}
+not named in \code{vars}, in their original order.  Label rows hold \code{NA} in
+the non-stub columns.  Row count grows by one per emitted label row.
 }
 \description{
-`stub_cols()` finishes a tidy data.frame for clinical-table display: the
+\code{stub_cols()} finishes a tidy data.frame for clinical-table display: the
 given hierarchy columns (parent first, leaf last) are merged into a
-**single stub column**.  Each parent value becomes its own full-width
-**label row** (the other columns are `NA`, which renders as an empty
-cell), and the leaf rows below it are **indented** with non-breaking
+\strong{single stub column}.  Each parent value becomes its own full-width
+\strong{label row} (the other columns are \code{NA}, which renders as an empty
+cell), and the leaf rows below it are \strong{indented} with non-breaking
 spaces -- the layout a gt / rtables / tfrmt render bakes into its row
 labels, produced here from plain columns.
 }
 \details{
 The result is an ordinary data.frame, so everything downstream of
-[as_rtftables()] works unchanged: `group_by = "auto"` detects the
+\code{\link[=as_rtftables]{as_rtftables()}} works unchanged: \code{group_by = "auto"} detects the
 indentation, the group-aware splits keep a label row with its children
-(and append the `" (Cont.)"` marker on a continued group),
-`blank_rows = "between_groups"` separates the groups, and so on.
+(and append the \code{" (Cont.)"} marker on a continued group),
+\code{blank_rows = "between_groups"} separates the groups, and so on.
 
-
-A label row is emitted at every **run** of a parent value (consecutive
+A label row is emitted at every \strong{run} of a parent value (consecutive
 rows sharing that value), not once per distinct value -- so sort the
-input first if the hierarchy is scattered (see the `sort_by` argument of
-[as_rtftables()], or sort the data.frame directly).  Runs are
+input first if the hierarchy is scattered (see the \code{sort_by} argument of
+\code{\link[=as_rtftables]{as_rtftables()}}, or sort the data.frame directly).  Runs are
 hierarchical: a change in a higher-level column starts a new run in every
 column below it.
 
-An `NA` or empty (`""`) parent cell contributes **no label row and no
-indentation** for its rows.  This is the idiomatic way to keep a summary
-row -- e.g. *"Subjects with at least one adverse event"* -- flush left at
+An \code{NA} or empty (\code{""}) parent cell contributes \strong{no label row and no
+indentation} for its rows.  This is the idiomatic way to keep a summary
+row -- e.g. \emph{"Subjects with at least one adverse event"} -- flush left at
 the top of the table: leave its parent columns empty.
 }
 \section{Group-summary rows (AE style)}{
 
 A group can carry its own summary statistic -- the SOC-level count of an
-adverse-event table, say -- supplied on a row whose **leaf** is either `NA` /
-`""` or a repeat of the parent value:
+adverse-event table, say -- supplied on a row whose \strong{leaf} is either \code{NA} /
+\code{""} or a repeat of the parent value:
 
-```
-  SOC1  NA    3 (2.1%)          SOC1  SOC1  3 (2.1%)
-  SOC1  PT1   1 (0.7%)    or    SOC1  PT1   1 (0.7%)
-  SOC1  PT2   2 (1.4%)          SOC1  PT2   2 (1.4%)
-```
+\if{html}{\out{<div class="sourceCode">}}\preformatted{  SOC1  NA    3 (2.1\%)          SOC1  SOC1  3 (2.1\%)
+  SOC1  PT1   1 (0.7\%)    or    SOC1  PT1   1 (0.7\%)
+  SOC1  PT2   2 (1.4\%)          SOC1  PT2   2 (1.4\%)
+}\if{html}{\out{</div>}}
 
-With `group_summary` enabled (the default), such a row's statistics are
-placed **on the group's label row** and no separate indented leaf row is
+With \code{group_summary} enabled (the default), such a row's statistics are
+placed \strong{on the group's label row} and no separate indented leaf row is
 emitted, giving the standard AE layout:
 
-```
-  SOC1        3 (2.1%)
-      PT1     1 (0.7%)
-      PT2     2 (1.4%)
-```
+\if{html}{\out{<div class="sourceCode">}}\preformatted{  SOC1        3 (2.1\%)
+      PT1     1 (0.7\%)
+      PT2     2 (1.4\%)
+}\if{html}{\out{</div>}}
 
 Demographic-style tables (pattern where the leaf is a statistic name such as
-`"n"` / `"Mean (SD)"`, never `NA` and never equal to the parent) are left
+\code{"n"} / \code{"Mean (SD)"}, never \code{NA} and never equal to the parent) are left
 untouched, so a parent label row keeps its empty cells and the stats stay on
-the indented leaf rows.  Set `group_summary = "none"` to disable the folding
-(an `NA` leaf then becomes an empty indented row, as before) -- note the
-disable token is `"none"`, distinct from the `"empty"` trigger.
+the indented leaf rows.  Set \code{group_summary = "none"} to disable the folding
+(an \code{NA} leaf then becomes an empty indented row, as before) -- note the
+disable token is \code{"none"}, distinct from the \code{"empty"} trigger.
 
-With more than two `vars`, each additional level indents one step
+With more than two \code{vars}, each additional level indents one step
 further: level-1 label rows are flush left, level-2 label rows are
 indented once, and so on; a leaf row is indented once per non-empty
 ancestor.
 
-Column `label` attributes (the haven / labelled / xportr convention) on
-the remaining columns are preserved, so [as_rtftables()] can still pick
+Column \code{label} attributes (the haven / labelled / xportr convention) on
+the remaining columns are preserved, so \code{\link[=as_rtftables]{as_rtftables()}} can still pick
 them up as header labels.
 }
 
@@ -164,8 +161,8 @@ stub_cols(ae_sum, vars = c("soc", "pt"))
 
 }
 \seealso{
-[as_rtftables()], whose `group_by = "indent"` detection,
-  group-aware splits and `blank_rows = "between_groups"` consume this
-  layout directly; `collapse_repeats` / `drop_cols` there for the
-  related repeat-suppression and hidden-column finishing.
+\code{\link[=as_rtftables]{as_rtftables()}}, whose \code{group_by = "indent"} detection,
+group-aware splits and \code{blank_rows = "between_groups"} consume this
+layout directly; \code{collapse_repeats} / \code{drop_cols} there for the
+related repeat-suppression and hidden-column finishing.
 }

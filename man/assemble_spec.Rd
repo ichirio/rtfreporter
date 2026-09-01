@@ -7,31 +7,31 @@
 assemble_spec(dir = NULL, files = NULL, recursive = FALSE)
 }
 \arguments{
-\item{dir}{Directory to scan (ignored if `files` is given).}
+\item{dir}{Directory to scan (ignored if \code{files} is given).}
 
-\item{files}{Optional explicit vector of `.rtf` paths (overrides `dir`).}
+\item{files}{Optional explicit vector of \code{.rtf} paths (overrides \code{dir}).}
 
-\item{recursive}{Passed to [assemble_files()] when scanning `dir`.}
+\item{recursive}{Passed to \code{\link[=assemble_files]{assemble_files()}} when scanning \code{dir}.}
 }
 \value{
-A `data.frame` with columns:
-  \describe{
-    \item{`order`}{integer, the assembly order (editable).}
-    \item{`file`}{path to the `.rtf`.}
-    \item{`table`}{table number read from the header (or `NA`).}
-    \item{`heading`}{section heading to print above this entry in the TOC
-      (`NA` = none); fill these in to group entries.}
-    \item{`label`}{the TOC entry text (defaults to `"Table N  <title>"`).}
-    \item{`level`}{TOC indent level of the entry (default `2`).}
-    \item{`pages`}{page count of the file (informational).}
-  }
+A \code{data.frame} with columns:
+\describe{
+\item{\code{order}}{integer, the assembly order (editable).}
+\item{\code{file}}{path to the \code{.rtf}.}
+\item{\code{table}}{table number read from the header (or \code{NA}).}
+\item{\code{heading}}{section heading to print above this entry in the TOC
+(\code{NA} = none); fill these in to group entries.}
+\item{\code{label}}{the TOC entry text (defaults to \code{"Table N  <title>"}).}
+\item{\code{level}}{TOC indent level of the entry (default \code{2}).}
+\item{\code{pages}}{page count of the file (informational).}
+}
 }
 \description{
 Reads the table number and title from each RTF's running header (the format
-written by rtfreporter's headers) and returns a `data.frame` -- the
-**assembly spec** -- with one row per file.  Edit it (rename labels, add
-section `heading`s, change `level`, reorder rows, or drop rows) and pass it
-to [assemble_from_spec()].
+written by rtfreporter's headers) and returns a \code{data.frame} -- the
+\strong{assembly spec} -- with one row per file.  Edit it (rename labels, add
+section \code{heading}s, change \code{level}, reorder rows, or drop rows) and pass it
+to \code{\link[=assemble_from_spec]{assemble_from_spec()}}.
 }
 \examples{
 \dontrun{
@@ -41,5 +41,5 @@ assemble_from_spec(spec, "deliverable.rtf")
 }
 }
 \seealso{
-[assemble_from_spec()], [assemble_folder()].
+\code{\link[=assemble_from_spec]{assemble_from_spec()}}, \code{\link[=assemble_folder]{assemble_folder()}}.
 }

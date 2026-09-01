@@ -17,29 +17,29 @@ assemble_folder(
 )
 }
 \arguments{
-\item{dir}{Directory of `.rtf` files to assemble.}
+\item{dir}{Directory of \code{.rtf} files to assemble.}
 
-\item{output_file}{Path of the assembled `.rtf` to write.}
+\item{output_file}{Path of the assembled \code{.rtf} to write.}
 
-\item{spec_file}{Optional path (`.xlsx` or `.csv`).  When given, the
-generated spec is **saved** there (so you can inspect / edit it); when
-`NULL` (default) the spec is kept in memory only.}
+\item{spec_file}{Optional path (\code{.xlsx} or \code{.csv}).  When given, the
+generated spec is \strong{saved} there (so you can inspect / edit it); when
+\code{NULL} (default) the spec is kept in memory only.}
 
 \item{recursive}{Recurse into sub-directories when scanning?  Default
-`FALSE`.}
+\code{FALSE}.}
 
 \item{toc_title, toc_leader, toc_page_numbering, overwrite, ...}{Passed through
-to [assemble_from_spec()] / [assemble_rtf()].}
+to \code{\link[=assemble_from_spec]{assemble_from_spec()}} / \code{\link[=assemble_rtf]{assemble_rtf()}}.}
 }
 \value{
-Invisibly, a list with `output` (the assembled file) and `spec`
-  (the assembly spec used).
+Invisibly, a list with \code{output} (the assembled file) and \code{spec}
+(the assembly spec used).
 }
 \description{
-One-call wrapper: scans `dir` for `.rtf` files ([assemble_files()]), builds
-the assembly spec by reading each file's header ([assemble_spec()]),
+One-call wrapper: scans \code{dir} for \code{.rtf} files (\code{\link[=assemble_files]{assemble_files()}}), builds
+the assembly spec by reading each file's header (\code{\link[=assemble_spec]{assemble_spec()}}),
 optionally writes the spec to disk, and assembles the deliverable with a
-Table of Contents ([assemble_from_spec()]).
+Table of Contents (\code{\link[=assemble_from_spec]{assemble_from_spec()}}).
 }
 \examples{
 \dontrun{
@@ -49,5 +49,5 @@ assemble_folder("output/tfl", "deliverable.rtf", toc_title = "Contents")
 }
 }
 \seealso{
-[assemble_files()], [assemble_spec()], [assemble_from_spec()].
+\code{\link[=assemble_files]{assemble_files()}}, \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_from_spec]{assemble_from_spec()}}.
 }

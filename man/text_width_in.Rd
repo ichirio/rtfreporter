@@ -7,20 +7,20 @@
 text_width_in(text, font = "courier_new", size_half_points = 18L)
 }
 \arguments{
-\item{text}{A character vector.  `NA` is treated as `""`.}
+\item{text}{A character vector.  \code{NA} is treated as \code{""}.}
 
-\item{font}{Font name.  One of `"courier_new"` (default), `"courier"`, or
-`"arial"`.  Unrecognised values fall back to Courier New.}
+\item{font}{Font name.  One of \code{"courier_new"} (default), \code{"courier"}, or
+\code{"arial"}.  Unrecognised values fall back to Courier New.}
 
-\item{size_half_points}{Font size in **half-points** (the unit used by RTF
-and the document's `default_format$font_size_half_points`).  Default `18` = 9 pt.}
+\item{size_half_points}{Font size in \strong{half-points} (the unit used by RTF
+and the document's \code{default_format$font_size_half_points}).  Default \code{18} = 9 pt.}
 }
 \value{
 A numeric vector of estimated widths in inches (same length as
-  `text`).
+\code{text}).
 }
 \description{
-Returns an estimated display width in **inches** for a character string
+Returns an estimated display width in \strong{inches} for a character string
 rendered in the given font and size.  For Courier New (monospace) the
 estimate is reliable; for proportional fonts (Arial) it is an average-width
 approximation.

@@ -7,41 +7,43 @@
 rtf_border_tfl(style = "single", width = 15L, color = NULL)
 }
 \arguments{
-\item{style}{Line style.  One of `"single"` (default), `"double"`,
-`"thick"`, `"dash"`, `"dot"`, or `"none"`.  Use `"none"` to build an
-*explicit no-line* side: unlike `NULL` (which simply leaves a side
-unset), a `"none"` side **overrides** any inherited border when it is
+\item{style}{Line style.  One of \code{"single"} (default), \code{"double"},
+\code{"thick"}, \code{"dash"}, \code{"dot"}, or \code{"none"}.  Use \code{"none"} to build an
+\emph{explicit no-line} side: unlike \code{NULL} (which simply leaves a side
+unset), a \code{"none"} side \strong{overrides} any inherited border when it is
 merged on top of another spec.  This is how a per-cell border can
 remove an automatically-drawn rule -- e.g. suppressing the group
 underline under one spanning column-header cell.}
 
-\item{width}{Line weight in twips.  Default `15` ≈ 0.5 pt.  Ignored when
-`style = "none"`.}
+\item{width}{Line weight in twips.  Default \code{15} ≈ 0.5 pt.  Ignored when
+\code{style = "none"}.}
 
-\item{color}{Line colour.  `NULL` (default) = black.  Or a 6-digit hex
-string such as `"#003366"`.}
+\item{color}{Line colour.  \code{NULL} (default) = black.  Or a 6-digit hex
+string such as \code{"#003366"}.}
 }
 \value{
-An `rtf_table_border` object.
+An \code{rtf_table_border} object.
 }
 \description{
-Returns an [rtf_table_border()] matching the standard clinical TFL style:
-**borders are applied to the column-header block only**, with no
+Returns an \code{\link[=rtf_table_border]{rtf_table_border()}} matching the standard clinical TFL style:
+\strong{borders are applied to the column-header block only}, with no
 borders in the data area by default.  Specifically:
 }
 \details{
-* `header$top`    -- top border on the topmost header row
-* `header$bottom` -- bottom border on the bottommost header row
-* A multi-column spanning cell additionally receives a bottom border
-  (group underline) **only where the column grouping changes below it**
-  -- that is, when the next header row subdivides the columns the span
-  covers.  A span repeated unchanged on the following row is not
-  underlined.  This is added automatically by the renderer.
-* No vertical lines.
-* **No borders on the data section** (`body` / `first_row` /
-  `last_row` all `NULL`).  Callers who want a bottom rule under the
-  last data row can set it explicitly:
-  `rtf_table_border(last_row = rtf_border(bottom = rtf_border_side()))`.
+\itemize{
+\item \code{header$top}    -- top border on the topmost header row
+\item \code{header$bottom} -- bottom border on the bottommost header row
+\item A multi-column spanning cell additionally receives a bottom border
+(group underline) \strong{only where the column grouping changes below it}
+-- that is, when the next header row subdivides the columns the span
+covers.  A span repeated unchanged on the following row is not
+underlined.  This is added automatically by the renderer.
+\item No vertical lines.
+\item \strong{No borders on the data section} (\code{body} / \code{first_row} /
+\code{last_row} all \code{NULL}).  Callers who want a bottom rule under the
+last data row can set it explicitly:
+\code{rtf_table_border(last_row = rtf_border(bottom = rtf_border_side()))}.
+}
 }
 \examples{
 rtf_border_tfl()                         # the standard clinical TFL rules

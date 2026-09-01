@@ -2,25 +2,25 @@
 % Please edit documentation in R/col_header.R
 \name{add_col_header_row}
 \alias{add_col_header_row}
-\title{Append (or prepend) a row to an `rtf_col_header`}
+\title{Append (or prepend) a row to an \code{rtf_col_header}}
 \usage{
 add_col_header_row(hdr, row, .position = c("bottom", "top"))
 }
 \arguments{
-\item{hdr}{An [rtf_col_header()], or any value accepted by
-`rtftable(col_header = ...)`.  Non-`rtf_col_header` inputs are
+\item{hdr}{An \code{\link[=rtf_col_header]{rtf_col_header()}}, or any value accepted by
+\code{rtftable(col_header = ...)}.  Non-\code{rtf_col_header} inputs are
 promoted automatically.}
 
 \item{row}{One header row: a character vector or a list of cell specs.}
 
-\item{.position}{`"bottom"` (default) appends below the existing rows;
-`"top"` prepends above.}
+\item{.position}{\code{"bottom"} (default) appends below the existing rows;
+\code{"top"} prepends above.}
 }
 \value{
-A new `rtf_col_header`.
+A new \code{rtf_col_header}.
 }
 \description{
-Append (or prepend) a row to an `rtf_col_header`
+Append (or prepend) a row to an \code{rtf_col_header}
 }
 \examples{
 \dontrun{

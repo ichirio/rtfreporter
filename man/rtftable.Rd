@@ -36,101 +36,101 @@ rtftable(
 )
 }
 \arguments{
-\item{data}{A `data.frame`, or a `list` of `data.frame`s (multi-DF mode).
+\item{data}{A \code{data.frame}, or a \code{list} of \code{data.frame}s (multi-DF mode).
 Multi-DF mode renders each data.frame with its own column headers but
 shares column widths and border settings.}
 
 \item{col_header}{The column header. One of:
 \describe{
-  \item{`NULL`}{(default) use the column names of `data`.}
-  \item{a character vector}{one label per column -- a single header row.
-    By default labels are placed **by position**.  If the vector is
-    **named**, placement becomes name-aware and order-independent (a
-    safeguard against column reordering): a named element
-    (`g1 = "G1"`) labels the column named `g1` and errors on an unknown
-    or duplicate name; an unnamed element is matched as a column name if
-    one exists, otherwise placed at its position; two elements resolving
-    to the same column is an error.  A fully-unnamed vector keeps the
-    exact legacy positional behaviour.}
-  \item{a list of rows}{each row is either a character vector (a label row)
-    or a spanning row (`list(list(from, to, label, underline), ...)`),
-    rendered top to bottom.}
-  \item{a list of per-DF specs}{in multi-DF mode, one of the above per
-    `data.frame` (same length as `data`).}
+\item{\code{NULL}}{(default) use the column names of \code{data}.}
+\item{a character vector}{one label per column -- a single header row.
+By default labels are placed \strong{by position}.  If the vector is
+\strong{named}, placement becomes name-aware and order-independent (a
+safeguard against column reordering): a named element
+(\code{g1 = "G1"}) labels the column named \code{g1} and errors on an unknown
+or duplicate name; an unnamed element is matched as a column name if
+one exists, otherwise placed at its position; two elements resolving
+to the same column is an error.  A fully-unnamed vector keeps the
+exact legacy positional behaviour.}
+\item{a list of rows}{each row is either a character vector (a label row)
+or a spanning row (\code{list(list(from, to, label, underline), ...)}),
+rendered top to bottom.}
+\item{a list of per-DF specs}{in multi-DF mode, one of the above per
+\code{data.frame} (same length as \code{data}).}
 }
-Spanning cells built with [col_cell()] may also address columns by name
-(e.g. `col_cell(c("g1", "g3"), "Drug A")`).}
+Spanning cells built with \code{\link[=col_cell]{col_cell()}} may also address columns by name
+(e.g. \code{col_cell(c("g1", "g3"), "Drug A")}).}
 
 \item{col_header_align}{Column-header text alignment, applied across
-header rows. `NULL` (default) inherits each column's `align` value
-from `col_spec` (i.e. column headers follow the data alignment).
-`"center"` / `"left"` / `"right"` applies a single value to every
-column; a character vector of length `ncol` overrides per-column.}
+header rows. \code{NULL} (default) inherits each column's \code{align} value
+from \code{col_spec} (i.e. column headers follow the data alignment).
+\code{"center"} / \code{"left"} / \code{"right"} applies a single value to every
+column; a character vector of length \code{ncol} overrides per-column.}
 
-\item{spanning_header}{A standalone spanning row placed **above** the
-`col_header` rows.  Each element: `list(from, to, label, underline)`.
+\item{spanning_header}{A standalone spanning row placed \strong{above} the
+\code{col_header} rows.  Each element: \code{list(from, to, label, underline)}.
 Kept for backward compatibility -- new code should put spanning rows
-directly inside `col_header`.}
+directly inside \code{col_header}.}
 
-\item{col_spec}{Per-column formatting, as a `list` of per-column specs. Each
-spec is a named list identifying its column with `col`, plus any of:
+\item{col_spec}{Per-column formatting, as a \code{list} of per-column specs. Each
+spec is a named list identifying its column with \code{col}, plus any of:
 \describe{
-  \item{`col`}{the integer column index (or column name) the spec targets.}
-  \item{`align`}{data alignment `"left"` / `"center"` / `"right"` (overrides
-    the `row_title`-derived default below).}
-  \item{`bold`, `italic`, `underline`}{logical text decorations.}
-  \item{`indent_twips`}{integer left indent of the cell text.}
-  \item{`color`}{a `"#RRGGBB"` hex string -- the column's **text colour**
-    (added to the document colour table automatically).}
-  \item{`header_align`, `header_bold`, `header_italic`}{the same, applied to
-    this column's **header** cell.}
+\item{\code{col}}{the integer column index (or column name) the spec targets.}
+\item{\code{align}}{data alignment \code{"left"} / \code{"center"} / \code{"right"} (overrides
+the \code{row_title}-derived default below).}
+\item{\code{bold}, \code{italic}, \code{underline}}{logical text decorations.}
+\item{\code{indent_twips}}{integer left indent of the cell text.}
+\item{\code{color}}{a \code{"#RRGGBB"} hex string -- the column's \strong{text colour}
+(added to the document colour table automatically).}
+\item{\code{header_align}, \code{header_bold}, \code{header_italic}}{the same, applied to
+this column's \strong{header} cell.}
 }
-e.g. `list(list(col = 1, align = "left"), list(col = 2, bold = TRUE))`.}
+e.g. \code{list(list(col = 1, align = "left"), list(col = 2, bold = TRUE))}.}
 
-\item{row_title}{Which columns are **row-heading** columns.  `NULL`
+\item{row_title}{Which columns are \strong{row-heading} columns.  \code{NULL}
 (default) means the first column only; otherwise an integer vector of
 column indices or a character vector of column names (e.g.
-`row_title = c(1, 2)`).  This sets the per-column **default data
-alignment**: row-heading columns default to `"left"` and every other
-column defaults to `"center"`.  Explicit `col_spec` alignment, an
-`rtf_table_style`, or alignment read from a gt/rtables source all still
+\code{row_title = c(1, 2)}).  This sets the per-column \strong{default data
+alignment}: row-heading columns default to \code{"left"} and every other
+column defaults to \code{"center"}.  Explicit \code{col_spec} alignment, an
+\code{rtf_table_style}, or alignment read from a gt/rtables source all still
 override this default; column headers follow the data alignment via the
 usual cascade.}
 
 \item{border}{The table borders. One of:
 \describe{
-  \item{`"tfl"`}{(default) the clinical TFL preset: header top + bottom
-    rules and a bottom rule on the last row.}
-  \item{`"none"`}{no borders.}
-  \item{an [rtf_table_border()] object}{full per-zone control.}
-  \item{an [rtf_table_style()] object}{its border zones are used.}
+\item{\code{"tfl"}}{(default) the clinical TFL preset: header top + bottom
+rules and a bottom rule on the last row.}
+\item{\code{"none"}}{no borders.}
+\item{an \code{\link[=rtf_table_border]{rtf_table_border()}} object}{full per-zone control.}
+\item{an \code{\link[=rtf_table_style]{rtf_table_style()}} object}{its border zones are used.}
 }}
 
-\item{blank_rows}{Where to insert blank separator rows. One of -- or a `list`
+\item{blank_rows}{Where to insert blank separator rows. One of -- or a \code{list}
 combining any of (positions are unioned):
 \describe{
-  \item{an integer vector}{positions: `0` = before the first row, `k` =
-    after data row `k`, `-1` = after the last row.}
-  \item{a [blank_rows_by_change()] spec}{insert when a column value changes.}
-  \item{a [blank_rows_by_rule()] spec}{insert before / after rows matching a
-    regular expression.}
+\item{an integer vector}{positions: \code{0} = before the first row, \code{k} =
+after data row \code{k}, \code{-1} = after the last row.}
+\item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} spec}{insert when a column value changes.}
+\item{a \code{\link[=blank_rows_by_rule]{blank_rows_by_rule()}} spec}{insert before / after rows matching a
+regular expression.}
 }}
 
-\item{read_attributes}{Logical. When `TRUE` (default), read recognised
-attributes off `data` for use as fallback defaults -- currently
-`attr(data, "rtf_blank_rows")` is folded into `blank_rows` when the
-argument is `NULL`. Set `FALSE` to ignore attributes.}
+\item{read_attributes}{Logical. When \code{TRUE} (default), read recognised
+attributes off \code{data} for use as fallback defaults -- currently
+\code{attr(data, "rtf_blank_rows")} is folded into \code{blank_rows} when the
+argument is \code{NULL}. Set \code{FALSE} to ignore attributes.}
 
-\item{style}{Optional shared `rtf_table_style` (S3).  Provides default
+\item{style}{Optional shared \code{rtf_table_style} (S3).  Provides default
 values for borders, alignment, cell padding, etc.; explicit arguments
-to `rtftable()` always override.  Snapshot semantics: each
-`rtftable()` call captures the style's current state at construction.}
+to \code{rtftable()} always override.  Snapshot semantics: each
+\code{rtftable()} call captures the style's current state at construction.}
 
 \item{col_rel_width}{Numeric vector of relative column widths (e.g.
-`c(2, 1, 1)` makes the first column twice as wide as the others).}
+\code{c(2, 1, 1)} makes the first column twice as wide as the others).}
 
 \item{column_widths_twips}{Integer vector of absolute column widths in
-twips. Overrides `col_rel_width`.}
+twips. Overrides \code{col_rel_width}.}
 
 \item{table_width_twips}{Total table width in twips.}
 
@@ -138,24 +138,24 @@ twips. Overrides `col_rel_width`.}
 writable page width.}
 
 \item{table_width_pct}{Table width as a percentage 0-100 of the writable
-page width (convenience alias for `table_width_pct_of_writable * 100`).}
+page width (convenience alias for \code{table_width_pct_of_writable * 100}).}
 
-\item{table_align}{Horizontal placement: `"left"` (default), `"center"`,
-or `"right"`.}
+\item{table_align}{Horizontal placement: \code{"left"} (default), \code{"center"},
+or \code{"right"}.}
 
-\item{row_height_twips}{Row height for data rows in twips. `NULL` (default)
-uses the document-wide default from `rtfreporter_defaults.R`
+\item{row_height_twips}{Row height for data rows in twips. \code{NULL} (default)
+uses the document-wide default from \code{rtfreporter_defaults.R}
 (font-size-aware). A positive integer specifies an explicit value.}
 
 \item{font_size_half_points}{Font size for this table, in half-points.
-`NULL` (default) inherits the document size. Setting it also recomputes
-the row height from that size unless `row_height_twips` is given.}
+\code{NULL} (default) inherits the document size. Setting it also recomputes
+the row height from that size unless \code{row_height_twips} is given.}
 
-\item{font}{Font family for this table, e.g. `"Arial"`. `NULL` (default)
+\item{font}{Font family for this table, e.g. \code{"Arial"}. \code{NULL} (default)
 uses the document font. A family not already in the document's
-`font_table` is added to it automatically, the way a colour is.}
+\code{font_table} is added to it automatically, the way a colour is.}
 
-\item{row_height_exact}{Logical. `TRUE` = exact (clipped); `FALSE` = minimum.}
+\item{row_height_exact}{Logical. \code{TRUE} = exact (clipped); \code{FALSE} = minimum.}
 
 \item{header_row_height_twips}{Row height for column-header rows.}
 
@@ -166,68 +166,67 @@ since v0.0.21; cell content sits flush against the cell border).}
 
 \item{cell_padding_right_twips}{Right cell padding in twips (default 0).}
 
-\item{cell_valign}{Vertical alignment: `"bottom"` (default), `"top"`,
-or `"center"`.}
+\item{cell_valign}{Vertical alignment: \code{"bottom"} (default), \code{"top"},
+or \code{"center"}.}
 
-\item{cell_styles}{`NULL` (default), or a list of length `nrow(data)`.
-Each element is either `NULL` (no per-cell override for that row) or a
-named list with optional vectors of length `ncol(data)`:
+\item{cell_styles}{\code{NULL} (default), or a list of length \code{nrow(data)}.
+Each element is either \code{NULL} (no per-cell override for that row) or a
+named list with optional vectors of length \code{ncol(data)}:
 \describe{
-  \item{`bold`}{logical -- overrides `col_spec[[j]]$bold` when non-`NA`.}
-  \item{`italic`}{logical -- overrides `col_spec[[j]]$italic`.}
-  \item{`underline`}{logical -- overrides `col_spec[[j]]$underline`.}
-  \item{`indent_twips`}{integer -- overrides `col_spec[[j]]$indent_twips`
-    (replaces, does not add to, the column default).}
-  \item{`color`}{character `"#RRGGBB"` -- per-cell **text colour**,
-    overriding `col_spec[[j]]$color`. `NA` means "use the column colour".}
-  \item{`align`}{character `"left"` / `"center"` / `"right"` -- per-cell
-    alignment, overriding `col_spec[[j]]$align`. `NA` means "use the
-    column alignment".}
-  \item{`border`}{a **list** of [rtf_border()] / `NULL` per column --
-    per-cell border, merged side-by-side on top of the row's resolved
-    zone border (`body` / `first_row` / `last_row`); an
-    [rtf_border_side()] of style `"none"` erases a zone rule.}
+\item{\code{bold}}{logical -- overrides \code{col_spec[[j]]$bold} when non-\code{NA}.}
+\item{\code{italic}}{logical -- overrides \code{col_spec[[j]]$italic}.}
+\item{\code{underline}}{logical -- overrides \code{col_spec[[j]]$underline}.}
+\item{\code{indent_twips}}{integer -- overrides \code{col_spec[[j]]$indent_twips}
+(replaces, does not add to, the column default).}
+\item{\code{color}}{character \code{"#RRGGBB"} -- per-cell \strong{text colour},
+overriding \code{col_spec[[j]]$color}. \code{NA} means "use the column colour".}
+\item{\code{align}}{character \code{"left"} / \code{"center"} / \code{"right"} -- per-cell
+alignment, overriding \code{col_spec[[j]]$align}. \code{NA} means "use the
+column alignment".}
+\item{\code{border}}{a \strong{list} of \code{\link[=rtf_border]{rtf_border()}} / \code{NULL} per column --
+per-cell border, merged side-by-side on top of the row's resolved
+zone border (\code{body} / \code{first_row} / \code{last_row}); an
+\code{\link[=rtf_border_side]{rtf_border_side()}} of style \code{"none"} erases a zone rule.}
 }
-`NA` entries within a vector mean "no override; use the column default".
-This argument is populated automatically by [as_rtftable()] when reading
-from a `gt_tbl` or gtsummary table with `read = TRUE`.}
+\code{NA} entries within a vector mean "no override; use the column default".
+This argument is populated automatically by \code{\link[=as_rtftable]{as_rtftable()}} when reading
+from a \code{gt_tbl} or gtsummary table with \code{read = TRUE}.}
 
 \item{blank_row_normalize}{How blank rows are normalised at render time. A
 character vector of zero or more of:
 \describe{
-  \item{`"detect"`}{a **data** row whose every cell is `NA` / `""` (empty
-    or ASCII-whitespace only) is treated as a blank row and rendered as a
-    single full-width cell, like an explicit blank separator row, instead
-    of one empty cell per column.}
-  \item{`"collapse"`}{a run of two or more consecutive blank rows (separator
-    rows and/or `"detect"`-detected empty data rows) is reduced to a single
-    blank row.}
+\item{\code{"detect"}}{a \strong{data} row whose every cell is \code{NA} / \code{""} (empty
+or ASCII-whitespace only) is treated as a blank row and rendered as a
+single full-width cell, like an explicit blank separator row, instead
+of one empty cell per column.}
+\item{\code{"collapse"}}{a run of two or more consecutive blank rows (separator
+rows and/or \code{"detect"}-detected empty data rows) is reduced to a single
+blank row.}
 }
-Default `c("detect", "collapse")` (both on). Pass `"none"`, `NULL`, or
-`character(0)` to disable. Both behaviours act per rendered table, so for a
+Default \code{c("detect", "collapse")} (both on). Pass \code{"none"}, \code{NULL}, or
+\code{character(0)} to disable. Both behaviours act per rendered table, so for a
 paginated table they apply per page (i.e. after the split).}
 
 \item{markup}{Which cell-text markup is applied at render time, as a
 character vector of zero or more of:
 \describe{
-  \item{`"script"`}{`^{...}` renders as superscript (`\\super`) and
-    `_{...}` as subscript (`\\sub`).}
-  \item{`"relational"`}{`">="` is converted to `U+2265` and `"<="` to
-    `U+2264`.}
+\item{\code{"script"}}{\verb{^\{...\}} renders as superscript (\verb{\\\\super}) and
+\verb{_\{...\}} as subscript (\verb{\\\\sub}).}
+\item{\code{"relational"}}{\code{">="} is converted to \code{U+2265} and \code{"<="} to
+\code{U+2264}.}
 }
-`"all"` enables both; `"none"` / `character(0)` enables neither. `NULL`
-(default) **inherits** the document default (`rtf_document(default_format =
-list(markup = ))` / the `rtfreporter.markup` option), which is `"script"` --
-so super/subscript (e.g. adapter footnote marks `^{N}`) work while the
-`>=` / `<=` symbol conversion is **opt-in**. Applies to all cell text: data
+\code{"all"} enables both; \code{"none"} / \code{character(0)} enables neither. \code{NULL}
+(default) \strong{inherits} the document default (\code{rtf_document(default_format = list(markup = ))} / the \code{rtfreporter.markup} option), which is \code{"script"} --
+so super/subscript (e.g. adapter footnote marks \verb{^\{N\}}) work while the
+\code{>=} / \code{<=} symbol conversion is \strong{opt-in}. Applies to all cell text: data
 cells, column / spanning headers, and title / footnote blocks.}
 }
 \value{
-An `rtftable` (S3) object suitable for use in `rtf_tables()`.
+An \code{rtftable} (S3) object suitable for use in \code{rtf_tables()}.
 }
 \description{
 Constructs a table object with full formatting control.
-The result can be passed directly to `rtf_tables()` in a pipe chain.
+The result can be passed directly to \code{rtf_tables()} in a pipe chain.
 }
 \examples{
 # 1. Simplest: a data.frame straight to a table (column names become the

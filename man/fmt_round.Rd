@@ -10,23 +10,23 @@ fmt_round(x, digits = 2L, rounding = c("r", "sas"), na = "")
 \item{x}{A numeric vector. Character input is an error -- character columns
 are taken as already formatted.}
 
-\item{digits}{Decimal places. Default `2`.}
+\item{digits}{Decimal places. Default \code{2}.}
 
-\item{rounding}{`"r"` (default) rounds with [base::round()], which is
-banker's rounding; `"sas"` rounds half away from zero as SAS does. They
-differ on exact halves -- `23.445` is `"23.44"` under `"r"` and `"23.45"`
-under `"sas"`.}
+\item{rounding}{\code{"r"} (default) rounds with \code{\link[base:Round]{base::round()}}, which is
+banker's rounding; \code{"sas"} rounds half away from zero as SAS does. They
+differ on exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"}
+under \code{"sas"}.}
 
-\item{na}{Text for `NA` and `NaN`. Default `""` (an empty cell, which is how
+\item{na}{Text for \code{NA} and \code{NaN}. Default \code{""} (an empty cell, which is how
 rtfreporter renders a missing value anyway).}
 }
 \value{
-A character vector the same length as `x`. `Inf` / `-Inf` pass
-  through as `"Inf"` / `"-Inf"`.
+A character vector the same length as \code{x}. \code{Inf} / \code{-Inf} pass
+through as \code{"Inf"} / \code{"-Inf"}.
 }
 \description{
-Rounds to `digits` decimal places and prints them all, trailing zeros
-included -- `fmt_round(2.5, 2)` is `"2.50"`, not `"2.5"`.
+Rounds to \code{digits} decimal places and prints them all, trailing zeros
+included -- \code{fmt_round(2.5, 2)} is \code{"2.50"}, not \code{"2.5"}.
 }
 \examples{
 fmt_round(c(2.5, 20.333, 100), digits = 2)
@@ -34,5 +34,5 @@ fmt_round(23.445, digits = 2)                   # "23.44" -- banker's
 fmt_round(23.445, digits = 2, rounding = "sas") # "23.45"
 }
 \seealso{
-[fmt_signif()], [fmt_numeric()].
+\code{\link[=fmt_signif]{fmt_signif()}}, \code{\link[=fmt_numeric]{fmt_numeric()}}.
 }

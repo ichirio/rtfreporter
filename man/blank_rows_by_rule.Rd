@@ -9,17 +9,17 @@ blank_rows_by_rule(col, pattern, where = c("before", "after"))
 \arguments{
 \item{col}{Name of the column to test.}
 
-\item{pattern}{A regular expression (POSIX extended via [grepl()]).}
+\item{pattern}{A regular expression (POSIX extended via \code{\link[base:grep]{base::grepl()}}).}
 
-\item{where}{Either `"before"` (default) or `"after"`.}
+\item{where}{Either \code{"before"} (default) or \code{"after"}.}
 }
 \value{
-An object of class `rtf_blank_rows_by_rule`.
+An object of class \code{rtf_blank_rows_by_rule}.
 }
 \description{
 Constructor for a blank-row spec that inserts a blank separator row
-before or after every data row whose value in `col` matches the
-regular expression `pattern`.
+before or after every data row whose value in \code{col} matches the
+regular expression \code{pattern}.
 }
 \examples{
 \dontrun{

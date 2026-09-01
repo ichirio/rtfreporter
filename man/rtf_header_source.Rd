@@ -2,7 +2,7 @@
 % Please edit documentation in R/header_source.R
 \name{rtf_header_source}
 \alias{rtf_header_source}
-\title{Deparse a table's column header back to editable `rtf_col_header()` source}
+\title{Deparse a table's column header back to editable \code{rtf_col_header()} source}
 \usage{
 rtf_header_source(
   x,
@@ -13,39 +13,39 @@ rtf_header_source(
 )
 }
 \arguments{
-\item{x}{An [rtftable()], or a list of them (pages from [as_rtftables()];
+\item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}};
 the first page is used).}
 
-\item{level}{Verbosity of the emitted cells: `"explicit"` (default -- only
-fields that differ from the defaults), `"default"` (also show each cell's
-effective `align` and default border widths, but not the `FALSE`
-decoration flags), or `"all"` (everything, including `bold = FALSE` etc.).}
+\item{level}{Verbosity of the emitted cells: \code{"explicit"} (default -- only
+fields that differ from the defaults), \code{"default"} (also show each cell's
+effective \code{align} and default border widths, but not the \code{FALSE}
+decoration flags), or \code{"all"} (everything, including \code{bold = FALSE} etc.).}
 
-\item{snippet}{Logical (default `TRUE`).  When `TRUE`, wrap the header in a
-pipeable `set_col_header(...)` call that also reproduces the header text
-alignment (from `col_spec`) and the header-related zone borders
-(`header` / `spanning`, via `style_zone()`).  There is no leading
-`tbl |>` -- the first argument is meant to arrive through the pipe (e.g.
-`my_tbl |> ` followed by the snippet).  When `FALSE`, return the bare
-`rtf_col_header(...)` value.}
+\item{snippet}{Logical (default \code{TRUE}).  When \code{TRUE}, wrap the header in a
+pipeable \code{set_col_header(...)} call that also reproduces the header text
+alignment (from \code{col_spec}) and the header-related zone borders
+(\code{header} / \code{spanning}, via \code{style_zone()}).  There is no leading
+\verb{tbl |>} -- the first argument is meant to arrive through the pipe (e.g.
+\verb{my_tbl |> } followed by the snippet).  When \code{FALSE}, return the bare
+\code{rtf_col_header(...)} value.}
 
-\item{add_span_level}{Logical (default `FALSE`).  When `TRUE`, prepend a
-scaffold spanning row grouping the non-`stub` columns (see *Details*).}
+\item{add_span_level}{Logical (default \code{FALSE}).  When \code{TRUE}, prepend a
+scaffold spanning row grouping the non-\code{stub} columns (see \emph{Details}).}
 
-\item{stub}{Column(s) to keep un-spanned when `add_span_level = TRUE`:
-integer position(s) and/or column name(s).  Default `1` (the first column,
-where `as_rtftables(stub_vars = )` places the stub).}
+\item{stub}{Column(s) to keep un-spanned when \code{add_span_level = TRUE}:
+integer position(s) and/or column name(s).  Default \code{1} (the first column,
+where \code{as_rtftables(stub_vars = )} places the stub).}
 }
 \value{
-A single character string (the source).  Use `cat()` to print it
-  with the line breaks rendered.
+A single character string (the source).  Use \code{cat()} to print it
+with the line breaks rendered.
 }
 \description{
-Renders the **current** column header of a finished [rtftable()] (or the
-first page of an [as_rtftables()] list) as `rtf_col_header(...)` source
-text, addressed by **column name**, so you can copy it, edit the labels /
-spans, and re-apply with [set_col_header()].  It is the inverse companion of
-[set_col_header()] and pairs with [rtf_columns()] (which lists the final
+Renders the \strong{current} column header of a finished \code{\link[=rtftable]{rtftable()}} (or the
+first page of an \code{\link[=as_rtftables]{as_rtftables()}} list) as \code{rtf_col_header(...)} source
+text, addressed by \strong{column name}, so you can copy it, edit the labels /
+spans, and re-apply with \code{\link[=set_col_header]{set_col_header()}}.  It is the inverse companion of
+\code{\link[=set_col_header]{set_col_header()}} and pairs with \code{\link[=rtf_columns]{rtf_columns()}} (which lists the final
 column names).
 }
 \details{
@@ -54,8 +54,8 @@ survive reordering), keeps the header's empty gap cells, and backtick-quotes
 non-syntactic column names.  Per-cell text decorations and borders are
 reproduced faithfully.
 
-`add_span_level = TRUE` previews **adding a second hierarchy level**: the
-`stub` column(s) stay as single (empty) cells and every other column is
+\code{add_span_level = TRUE} previews \strong{adding a second hierarchy level}: the
+\code{stub} column(s) stay as single (empty) cells and every other column is
 bundled under one empty spanning cell whose label you fill in -- a quick
 scaffold for turning a one-row header into a grouped, two-row header.
 }
@@ -70,6 +70,6 @@ cat(rtf_header_source(tbl, snippet = FALSE))
 cat(rtf_header_source(tbl, snippet = FALSE, add_span_level = TRUE))
 }
 \seealso{
-[set_col_header()] to apply an edited header; [rtf_columns()] for
-  the final column names; [rtf_col_header()] / [col_cell()] for the pieces.
+\code{\link[=set_col_header]{set_col_header()}} to apply an edited header; \code{\link[=rtf_columns]{rtf_columns()}} for
+the final column names; \code{\link[=rtf_col_header]{rtf_col_header()}} / \code{\link[=col_cell]{col_cell()}} for the pieces.
 }

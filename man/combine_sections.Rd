@@ -7,41 +7,40 @@
 combine_sections(...)
 }
 \arguments{
-\item{...}{Named arguments, each either an `rtftable` or a list of
-`rtftable`s (e.g. the result of [as_rtftables()]).  Each argument **name**
+\item{...}{Named arguments, each either an \code{rtftable} or a list of
+\code{rtftable}s (e.g. the result of \code{\link[=as_rtftables]{as_rtftables()}}).  Each argument \strong{name}
 becomes a section heading.  An unnamed argument is appended to the previous
 section (its pages all fall through).}
 }
 \value{
-A single flat, named list of `rtftable` objects suitable for
-  `rtf_tables(result, auto_section = TRUE)`.
+A single flat, named list of \code{rtftable} objects suitable for
+\code{rtf_tables(result, auto_section = TRUE)}.
 }
 \description{
-Assembles several converted tables -- each an [rtftable()] or a list of them
-(typically an [as_rtftables()] result) -- into a single flat list ready for
-`rtf_tables(..., auto_section = TRUE)`, where every argument becomes **one RTF
-section**.
+Assembles several converted tables -- each an \code{\link[=rtftable]{rtftable()}} or a list of them
+(typically an \code{\link[=as_rtftables]{as_rtftables()}} result) -- into a single flat list ready for
+\code{rtf_tables(..., auto_section = TRUE)}, where every argument becomes \strong{one RTF
+section}.
 }
 \details{
-`auto_section = TRUE` cuts a new section at each *named* element of the list
+\code{auto_section = TRUE} cuts a new section at each \emph{named} element of the list
 and drops that name into the section header; empty / unnamed elements fall
 through into the current section.  So to give a multi-page table a single
-heading you name its **first** page and leave the rest unnamed.
-`combine_sections()` does exactly that bookkeeping: each argument's name is
+heading you name its \strong{first} page and leave the rest unnamed.
+\code{combine_sections()} does exactly that bookkeeping: each argument's name is
 placed on its first page and the remaining pages are blanked, so one logical
 (possibly paginated) table renders as one clean section.
 
 This is a thin, format-agnostic convenience -- it only manipulates the names
-of a list of `rtftable`s, with no knowledge of the source object.  It is not
+of a list of \code{rtftable}s, with no knowledge of the source object.  It is not
 required: leaving every page named (or unnamed) simply yields one section per
 page, which is harmless (it matches the common one-page-one-section
-convention); `combine_sections()` is for the tidier one-section-per-table
+convention); \code{combine_sections()} is for the tidier one-section-per-table
 layout.
 
-For a *single* table whose grouping variable is a real **column** of the
-body, you usually do not need this at all: `as_rtftables(x, split =
-"by_value", group_col = ...)` already names each page by the group value, so
-`auto_section = TRUE` gives one section per group directly.
+For a \emph{single} table whose grouping variable is a real \strong{column} of the
+body, you usually do not need this at all: \code{as_rtftables(x, split = "by_value", group_col = ...)} already names each page by the group value, so
+\code{auto_section = TRUE} gives one section per group directly.
 }
 \examples{
 df <- data.frame(
@@ -63,7 +62,7 @@ doc <- rtf_document() |>
 
 }
 \seealso{
-[as_rtftables()] (which produces the page lists, and whose
-  `split = "by_value"` already names pages per group), [rtf_tables()] for the
-  `auto_section` argument.
+\code{\link[=as_rtftables]{as_rtftables()}} (which produces the page lists, and whose
+\code{split = "by_value"} already names pages per group), \code{\link[=rtf_tables]{rtf_tables()}} for the
+\code{auto_section} argument.
 }

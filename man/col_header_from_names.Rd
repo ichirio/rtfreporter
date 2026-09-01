@@ -7,32 +7,32 @@
 col_header_from_names(names, sep = .default_header_seps())
 }
 \arguments{
-\item{names}{A character vector of column names, or a `data.frame` (its
-`names()` are used).}
+\item{names}{A character vector of column names, or a \code{data.frame} (its
+\code{names()} are used).}
 
 \item{sep}{Character vector of separator(s) to split names on; the longest
-matching separator wins.  Default recognises `"____"`
-(`ydisctools::pivot_stats_wider()`) and `"___tlang_delim___"` (tfrmt's
+matching separator wins.  Default recognises \code{"____"}
+(\code{ydisctools::pivot_stats_wider()}) and \code{"___tlang_delim___"} (tfrmt's
 column delimiter).  A doubled separator yields an empty (blank) cell at
 that level.}
 }
 \value{
-An [rtf_col_header()].  When no name splits into more than one
-  segment, a single flat label row of `names`.
+An \code{\link[=rtf_col_header]{rtf_col_header()}}.  When no name splits into more than one
+segment, a single flat label row of \code{names}.
 }
 \description{
-Reconstructs a multi-row, spanning [rtf_col_header()] by parsing the nesting
-encoded in delimited column names -- e.g. `"Drug A____N"`, `"Drug A____Mean"`,
-`"Drug B____N"`, `"Drug B____Mean"` becomes a `Drug A` / `Drug B` spanning row
-over an `N` / `Mean` leaf row.  Horizontally adjacent columns that share a
-label **and** the same ancestor path are merged into one spanning cell;
+Reconstructs a multi-row, spanning \code{\link[=rtf_col_header]{rtf_col_header()}} by parsing the nesting
+encoded in delimited column names -- e.g. \code{"Drug A____N"}, \code{"Drug A____Mean"},
+\code{"Drug B____N"}, \code{"Drug B____Mean"} becomes a \verb{Drug A} / \verb{Drug B} spanning row
+over an \code{N} / \code{Mean} leaf row.  Horizontally adjacent columns that share a
+label \strong{and} the same ancestor path are merged into one spanning cell;
 columns with fewer segments (e.g. an id column with no separator) are
 bottom-aligned so their label sits on the leaf row with blank cells above.
 }
 \details{
-This is the same reconstruction [as_rtftables()] applies automatically to a
+This is the same reconstruction \code{\link[=as_rtftables]{as_rtftables()}} applies automatically to a
 plain data.frame; exposing it lets you build the header explicitly and pass
-it to [set_col_header()] or `rtftable(col_header = )`.
+it to \code{\link[=set_col_header]{set_col_header()}} or \code{rtftable(col_header = )}.
 }
 \examples{
 col_header_from_names(
@@ -40,6 +40,6 @@ col_header_from_names(
 )
 }
 \seealso{
-[set_col_header()] to apply it, [rtf_col_header()] / [col_cell()]
-  for the pieces.
+\code{\link[=set_col_header]{set_col_header()}} to apply it, \code{\link[=rtf_col_header]{rtf_col_header()}} / \code{\link[=col_cell]{col_cell()}}
+for the pieces.
 }

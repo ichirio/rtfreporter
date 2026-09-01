@@ -13,33 +13,33 @@ set_header_cell(x, ...)
 \method{set_header_cell}{list}(x, ...)
 }
 \arguments{
-\item{x}{An [rtftable()], or a list of them (pages from [as_rtftables()]).}
+\item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}}).}
 
-\item{...}{One or more [col_cell()] objects to place in `row`.  Their `pos`
-may be column names or positions (spanning via `c(a, b)`), resolved against
-the final columns; `align` / `border` / `bold` / `italic` / `underline`
+\item{...}{One or more \code{\link[=col_cell]{col_cell()}} objects to place in \code{row}.  Their \code{pos}
+may be column names or positions (spanning via \code{c(a, b)}), resolved against
+the final columns; \code{align} / \code{border} / \code{bold} / \code{italic} / \code{underline}
 are applied to the cell.}
 
 \item{row}{The header row to edit (1 = top).  Must be an existing row -- add
-a new row with [add_header_row()].}
+a new row with \code{\link[=add_header_row]{add_header_row()}}.}
 }
 \value{
-An object of the same shape as `x`.
+An object of the same shape as \code{x}.
 }
 \description{
-Edits **specific cells of one header row** of a finished [rtftable()] (or a
+Edits \strong{specific cells of one header row} of a finished \code{\link[=rtftable]{rtftable()}} (or a
 list of pages) without rebuilding the whole header: place one or more
-[col_cell()]s -- by column **name or position**, spanning via `c(a, b)` --
-into row `row`, keeping the other cells of that row intact.  Merging
+\code{\link[=col_cell]{col_cell()}}s -- by column \strong{name or position}, spanning via \code{c(a, b)} --
+into row \code{row}, keeping the other cells of that row intact.  Merging
 currently-separate cells into one spanning cell is the core use.  Borders,
-alignment and text decorations are carried natively by [col_cell()].
+alignment and text decorations are carried natively by \code{\link[=col_cell]{col_cell()}}.
 }
 \details{
-A **label row** is promoted to cells first (as in [style_header()]), so the
-row then renders through the `spanning` border zone (which falls back to the
-`header` zone when unset).  Merging cells in one row replaces their
+A \strong{label row} is promoted to cells first (as in \code{\link[=style_header]{style_header()}}), so the
+row then renders through the \code{spanning} border zone (which falls back to the
+\code{header} zone when unset).  Merging cells in one row replaces their
 individual labels with the single span label -- to keep the sub-labels, put
-the span on a separate upper row (e.g. via [add_header_row()]).
+the span on a separate upper row (e.g. via \code{\link[=add_header_row]{add_header_row()}}).
 }
 \section{Rules}{
 
@@ -55,6 +55,6 @@ tbl <- rtftable(df, col_header = c("Item", "N", "Mean", "SD", "Total"))
 tbl <- set_header_cell(tbl, col_cell(c("g1", "g3"), "Statistics"), row = 1)
 }
 \seealso{
-[set_col_header()] to set the whole header; [style_header()] to
-  restyle existing cells; [add_header_row()] to add a row; [col_cell()].
+\code{\link[=set_col_header]{set_col_header()}} to set the whole header; \code{\link[=style_header]{style_header()}} to
+restyle existing cells; \code{\link[=add_header_row]{add_header_row()}} to add a row; \code{\link[=col_cell]{col_cell()}}.
 }

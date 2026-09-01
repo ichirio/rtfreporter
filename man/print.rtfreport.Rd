@@ -7,23 +7,23 @@
 \method{print}{rtfreport}(x, ...)
 }
 \arguments{
-\item{x}{An `rtfreport` object.}
+\item{x}{An \code{rtfreport} object.}
 
 \item{...}{Additional arguments (unused).}
 }
 \value{
-`x`, invisibly. Called for the side effect of printing the summary.
+\code{x}, invisibly. Called for the side effect of printing the summary.
 }
 \description{
-Prints a compact summary of the internal `rtfreport` render product: its
+Prints a compact summary of the internal \code{rtfreport} render product: its
 page and section counts, the default page geometry (paper, orientation and
 size in inches), and the font / colour table sizes.
 }
 \details{
-Most users never build an `rtfreport` directly: assemble documents with
-[rtf_document()] and the pipe verbs (that object has its own `print` method),
-then hand them to [generate_rtfreport()]. An `rtfreport` is the lower-level
-render product that `generate_rtfreport()` also accepts, and this method lets
+Most users never build an \code{rtfreport} directly: assemble documents with
+\code{\link[=rtf_document]{rtf_document()}} and the pipe verbs (that object has its own \code{print} method),
+then hand them to \code{\link[=generate_rtfreport]{generate_rtfreport()}}. An \code{rtfreport} is the lower-level
+render product that \code{generate_rtfreport()} also accepts, and this method lets
 you inspect one if you hold it.
 }
 \examples{

@@ -23,90 +23,90 @@ set_decimal_split(x, ...)
 \method{set_decimal_split}{list}(x, ...)
 }
 \arguments{
-\item{x}{An [rtftable()], or a list of them (pages from [as_rtftables()]).}
+\item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}}).}
 
 \item{...}{Unused.}
 
-\item{cols}{Columns to split: names or positions.  `NULL` clears the
+\item{cols}{Columns to split: names or positions.  \code{NULL} clears the
 setting.}
 
-\item{ratio}{`NULL` (the default) to size the two halves automatically from
-the widest left and right part actually present, or a number in `(0, 1)`
+\item{ratio}{\code{NULL} (the default) to size the two halves automatically from
+the widest left and right part actually present, or a number in \verb{(0, 1)}
 giving the left half's share of the column width.  Pass an explicit value
 to keep the split point identical across pages, whose data differ.}
 
-\item{decimal_mark}{The separator to split at.  Default `"."`.}
+\item{decimal_mark}{The separator to split at.  Default \code{"."}.}
 
 \item{pad_chars}{Breathing room added to each measured half before the ratio
 is taken, in character-width units, integer half first.  Default
-`c(1, 1)`.}
+\code{c(1, 1)}.}
 
 \item{min_chars}{Floor for each half, in the same units, applied after
-`pad_chars`: the effective width of a half is
-`max(measured + pad_chars, min_chars)`.  Default `c(4, 6)` -- a
+\code{pad_chars}: the effective width of a half is
+\code{max(measured + pad_chars, min_chars)}.  Default \code{c(4, 6)} -- a
 three-digit integer part and a five-character decimal part, each plus its
-padding character -- so anything at or below that size holds a `4 : 6`
+padding character -- so anything at or below that size holds a \code{4 : 6}
 baseline and anything larger scales from its own measurement.  Without a
-floor a column of `0.0000` values measures 1 against 5 and leaves the
-integer half cramped.  Pass `pad_chars = c(0, 0), min_chars = c(0, 0)` for
+floor a column of \code{0.0000} values measures 1 against 5 and leaves the
+integer half cramped.  Pass \verb{pad_chars = c(0, 0), min_chars = c(0, 0)} for
 the raw measured ratio.}
 
 \item{max_chars}{Total measured width, in the same units, above which the
 allowance is dropped and the raw measured proportions are used however
-lopsided.  Default `10`: a column that long needs every twip it has, and
-reserving room it does not use would squeeze the digits it does.  `Inf`
+lopsided.  Default \code{10}: a column that long needs every twip it has, and
+reserving room it does not use would squeeze the digits it does.  \code{Inf}
 never drops the allowance.}
 
 \item{include_compound}{Split values carrying a whitespace- or
-parenthesis-separated companion (`"12.3 (4.56)"`) too.  Default `FALSE`.}
+parenthesis-separated companion (\code{"12.3 (4.56)"}) too.  Default \code{FALSE}.}
 }
 \value{
-An object of the same shape as `x`.
+An object of the same shape as \code{x}.
 }
 \description{
-Marks one or more body columns to be rendered as **two adjacent RTF cells**:
+Marks one or more body columns to be rendered as \strong{two adjacent RTF cells}:
 the part before the first decimal separator (right-aligned) and the
 separator plus everything after it (left-aligned).  The decimal points then
 line up exactly, whatever the font, instead of merely right-aligning the
 last character.
 }
 \details{
-This is an **RTF-output option**, not a data transformation.  The table's
+This is an \strong{RTF-output option}, not a data transformation.  The table's
 data frame is never rewritten, the total table width is unchanged (only the
 column's own width is divided), and the column-header block keeps rendering
 over the original single column.  The console preview
-(`print()` / `format()`) therefore does not show the split.
+(\code{print()} / \code{format()}) therefore does not show the split.
 }
 \section{Which cells are split}{
 
 A cell is split when it starts with an optional relational or sign prefix
-(`<`, `>`, `>=`, `<=`, `~`, `+`, `-`) followed by a digit or the separator,
+(\code{<}, \code{>}, \code{>=}, \code{<=}, \code{~}, \code{+}, \code{-}) followed by a digit or the separator,
 and contains at least one digit.  The prefix travels with the left half and
-any suffix (`%`, a `^{a}` footnote marker, ...) with the right half, so both
+any suffix (\verb{\%}, a \verb{^\{a\}} footnote marker, ...) with the right half, so both
 hang outside the aligned point:
 
 \tabular{lll}{
-  **cell** \tab **left** \tab **right** \cr
-  `3.45`    \tab `3`   \tab `.45`  \cr
-  `-0.7`    \tab `-0`  \tab `.7`   \cr
-  `<0.001`  \tab `<0`  \tab `.001` \cr
-  `45.6%`   \tab `45`  \tab `.6%`  \cr
-  `100`     \tab `100` \tab (empty)
+\strong{cell} \tab \strong{left} \tab \strong{right} \cr
+\code{3.45}    \tab \code{3}   \tab \code{.45}  \cr
+\code{-0.7}    \tab \code{-0}  \tab \code{.7}   \cr
+\verb{<0.001}  \tab \verb{<0}  \tab \code{.001} \cr
+\verb{45.6\%}   \tab \code{45}  \tab \verb{.6\%}  \cr
+\code{100}     \tab \code{100} \tab (empty)
 }
 
-Everything else -- free text such as `"n (%)"` or a group label -- is
-rendered as **one cell across the pair**, exactly as it looks without the
+Everything else -- free text such as \code{"n (\%)"} or a group label -- is
+rendered as \strong{one cell across the pair}, exactly as it looks without the
 option.  Leading and trailing spaces (non-breaking ones included, as left by
-[fmt_right_align()]) are dropped from split cells, since the split supplies
+\code{\link[=fmt_right_align]{fmt_right_align()}}) are dropped from split cells, since the split supplies
 the alignment they were emulating.
 
-Compound values such as `"12.3 (4.56)"` (mean (SD)) are excluded by default:
+Compound values such as \code{"12.3 (4.56)"} (mean (SD)) are excluded by default:
 the trailing group would dominate the right half and drag the split point
-far to the left.  Set `include_compound = TRUE` to split them anyway.
+far to the left.  Set \code{include_compound = TRUE} to split them anyway.
 
 A selected column in which no cell carries a separator is left untouched.
 That decision is made per table, so across paginated pages a column may be
-split on one page and not on another -- a PK visit column that is all `BLQ`
+split on one page and not on another -- a PK visit column that is all \code{BLQ}
 in one time band, for instance. Each page stays internally consistent, which
 is what the geometry needs.
 }
@@ -120,6 +120,6 @@ df  <- data.frame(
 tbl <- rtftable(df) |> set_decimal_split(cols = "Value")
 }
 \seealso{
-[style_cols()] for ordinary column alignment; [fmt_right_align()]
-  and [fmt_count_paren()] for the text-padding alternatives.
+\code{\link[=style_cols]{style_cols()}} for ordinary column alignment; \code{\link[=fmt_right_align]{fmt_right_align()}}
+and \code{\link[=fmt_count_paren]{fmt_count_paren()}} for the text-padding alternatives.
 }

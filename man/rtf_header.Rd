@@ -33,58 +33,58 @@ rtf_footer(
 }
 \arguments{
 \item{rows}{The header (or footer) content, row by row: a single named
-character vector for one row, or a `list` of them for several rows. Within
+character vector for one row, or a \code{list} of them for several rows. Within
 a row, the name of each element chooses its column:
 \describe{
-  \item{`l`}{left-aligned text}
-  \item{`c`}{centred text}
-  \item{`r`}{right-aligned text}
+\item{\code{l}}{left-aligned text}
+\item{\code{c}}{centred text}
+\item{\code{r}}{right-aligned text}
 }
-e.g. `c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")`. Cell text may
-contain **page-number tokens** that the renderer substitutes: `{AUTO_PAGE}`
-(the current page, updated live by the viewer), `{AUTO_TOTAL_PAGES}` (the
-document total), and `{PAGE}` / `{TOTAL_PAGES}` (static numbers baked in at
+e.g. \code{c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")}. Cell text may
+contain \strong{page-number tokens} that the renderer substitutes: \code{{AUTO_PAGE}}
+(the current page, updated live by the viewer), \code{{AUTO_TOTAL_PAGES}} (the
+document total), and \code{{PAGE}} / \code{{TOTAL_PAGES}} (static numbers baked in at
 render time).}
 
-\item{border}{An [rtf_border()] object controlling the border applied to
-all rows of the header/footer table. `NULL` = no border (default for
-header). Use [rtf_border_top()] for a horizontal dividing line (default
+\item{border}{An \code{\link[=rtf_border]{rtf_border()}} object controlling the border applied to
+all rows of the header/footer table. \code{NULL} = no border (default for
+header). Use \code{\link[=rtf_border_top]{rtf_border_top()}} for a horizontal dividing line (default
 for footer).}
 
-\item{width_twips}{Integer. Table width in twips. `NULL` (default) uses the
+\item{width_twips}{Integer. Table width in twips. \code{NULL} (default) uses the
 full writable width (page width minus margins).}
 
-\item{width}{Band width in the shared vocabulary: `"page"` (the writable
-width, the default), a fraction in `(0, 1]` of it, or twips. `width_twips`
+\item{width}{Band width in the shared vocabulary: \code{"page"} (the writable
+width, the default), a fraction in \verb{(0, 1]} of it, or twips. \code{width_twips}
 is the older absolute-only form and wins when both are given.}
 
-\item{row_height_twips}{Integer. Row height in twips. `NULL` (default) reads
-the value from `inst/resources/rtfreporter_defaults.R`.}
+\item{row_height_twips}{Integer. Row height in twips. \code{NULL} (default) reads
+the value from \code{inst/resources/rtfreporter_defaults.R}.}
 
 \item{font_size_half_points}{Font size for this band, in half-points.
-`NULL` (default) inherits the document size. Setting it also recomputes
-the row height from that size unless `row_height_twips` is given.}
+\code{NULL} (default) inherits the document size. Setting it also recomputes
+the row height from that size unless \code{row_height_twips} is given.}
 
-\item{font}{Font family for this band, e.g. `"Arial"`. `NULL` (default)
+\item{font}{Font family for this band, e.g. \code{"Arial"}. \code{NULL} (default)
 uses the document font. A family not already in the document's
-`font_table` is added to it automatically, the way a colour is.}
+\code{font_table} is added to it automatically, the way a colour is.}
 
-\item{markup}{Cell-text markup for this band; `NULL` (default) inherits the
-document setting. See [rtftable()].}
+\item{markup}{Cell-text markup for this band; \code{NULL} (default) inherits the
+document setting. See \code{\link[=rtftable]{rtftable()}}.}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Integer cell padding
 on the left / right side of each header (or footer) cell, matching the
-content-table convention. `NULL` (default) reads from
-`inst/resources/rtfreporter_defaults.R` (0L for both since v0.0.21).}
+content-table convention. \code{NULL} (default) reads from
+\code{inst/resources/rtfreporter_defaults.R} (0L for both since v0.0.21).}
 }
 \value{
-A named list with elements `rows`, `border`, `width_twips`, and
-  `row_height_twips`.
+A named list with elements \code{rows}, \code{border}, \code{width_twips}, and
+\code{row_height_twips}.
 }
 \description{
-`rtf_header()` and `rtf_footer()` create structured header/footer objects
-that can be passed to `rtf_section()`. Use [update_header_row()] /
-[update_footer_row()] to add or replace individual rows after creation.
+\code{rtf_header()} and \code{rtf_footer()} create structured header/footer objects
+that can be passed to \code{rtf_section()}. Use \code{\link[=update_header_row]{update_header_row()}} /
+\code{\link[=update_footer_row]{update_footer_row()}} to add or replace individual rows after creation.
 }
 \examples{
 hdr <- rtf_header(

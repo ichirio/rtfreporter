@@ -16,42 +16,42 @@ auto_col_widths(
 )
 }
 \arguments{
-\item{df}{A `data.frame`.}
+\item{df}{A \code{data.frame}.}
 
-\item{col_header}{Column header labels.  `NULL` (default) uses `names(df)`.
-Accepts the same formats as `rtftable(col_header = ...)`: a character
+\item{col_header}{Column header labels.  \code{NULL} (default) uses \code{names(df)}.
+Accepts the same formats as \code{rtftable(col_header = ...)}: a character
 vector, a pipe-delimited string, or a list of character vectors (only the
 first row is used for width estimation).}
 
-\item{font}{Font name passed to [text_width_in()].  Default `"courier_new"`.}
+\item{font}{Font name passed to \code{\link[=text_width_in]{text_width_in()}}.  Default \code{"courier_new"}.}
 
-\item{size_half_points}{Font size in half-points.  Default `18` (= 9 pt).}
+\item{size_half_points}{Font size in half-points.  Default \code{18} (= 9 pt).}
 
-\item{table_width_twips}{If not `NULL`, the column widths are scaled so that
+\item{table_width_twips}{If not \code{NULL}, the column widths are scaled so that
 their sum equals this value.  Useful for fitting tables to a fixed page
 width.}
 
 \item{min_col_width_twips}{Minimum width per column in twips.  Default
-`720` (= 0.5 inch).}
+\code{720} (= 0.5 inch).}
 
 \item{col_padding_twips}{Extra twips added to each column width to account
-for cell padding and inter-column spacing.  Default `288` (= 0.2 inch).}
+for cell padding and inter-column spacing.  Default \code{288} (= 0.2 inch).}
 
 \item{protect_cols}{Integer column indices to keep at their natural
-(content) width when `table_width_twips` forces the table *narrower* than
+(content) width when \code{table_width_twips} forces the table \emph{narrower} than
 its natural width.  Only the remaining columns are shrunk to fit, so e.g.
-a row-label column (`protect_cols = 1`) stays readable while the data
+a row-label column (\code{protect_cols = 1}) stays readable while the data
 columns absorb the squeeze.  Protection is dropped if it would push the
-scalable columns below `min_col_width_twips`.  Has no effect when scaling
-*up* or when `table_width_twips` is `NULL`.  Default none.}
+scalable columns below \code{min_col_width_twips}.  Has no effect when scaling
+\emph{up} or when \code{table_width_twips} is \code{NULL}.  Default none.}
 }
 \value{
-An integer vector of column widths in twips, one per column of `df`.
+An integer vector of column widths in twips, one per column of \code{df}.
 }
 \description{
 Scans the content of each column (header labels and data values) to derive
-suggested column widths in **twips**.  The widths can be passed directly to
-[rtftable()]'s `column_widths_twips` argument.
+suggested column widths in \strong{twips}.  The widths can be passed directly to
+\code{\link[=rtftable]{rtftable()}}'s \code{column_widths_twips} argument.
 }
 \examples{
 df <- data.frame(

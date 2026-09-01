@@ -3,29 +3,29 @@
 \name{update_header_row}
 \alias{update_header_row}
 \alias{update_footer_row}
-\title{Update a specific row in an `rtf_header()` object}
+\title{Update a specific row in an \code{rtf_header()} object}
 \usage{
 update_header_row(header, row, content)
 
 update_footer_row(footer, row, content)
 }
 \arguments{
-\item{header}{An `rtf_header()` object (returned by `rtf_header()`).}
+\item{header}{An \code{rtf_header()} object (returned by \code{rtf_header()}).}
 
 \item{row}{Integer. Target row number (1-based).}
 
 \item{content}{A named character vector for the row (e.g.
-`c(l = "Left", r = "Right")`). See `rtf_header()` for column rules.}
+\code{c(l = "Left", r = "Right")}). See \code{rtf_header()} for column rules.}
 
-\item{footer}{An `rtf_footer()` object (returned by `rtf_footer()`).}
+\item{footer}{An \code{rtf_footer()} object (returned by \code{rtf_footer()}).}
 }
 \value{
-A modified `rtf_header()` object.
+A modified \code{rtf_header()} object.
 }
 \description{
 Adds a new row or replaces an existing row in a header/footer object.
-If `row` is beyond the current number of rows, intermediate rows are
-auto-filled with empty center-aligned rows (`c(c = "")`).
+If \code{row} is beyond the current number of rows, intermediate rows are
+auto-filled with empty center-aligned rows (\code{c(c = "")}).
 }
 \examples{
 hdr <- rtf_header(rows = list(

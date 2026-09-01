@@ -15,21 +15,21 @@ assemble_from_spec(
 )
 }
 \arguments{
-\item{spec}{An assembly-spec `data.frame`, or a path to a `.xlsx` / `.csv`
+\item{spec}{An assembly-spec \code{data.frame}, or a path to a \code{.xlsx} / \code{.csv}
 spec file.}
 
-\item{output_file}{Path of the assembled `.rtf` to write.}
+\item{output_file}{Path of the assembled \code{.rtf} to write.}
 
 \item{toc_title, toc_leader, toc_page_numbering, overwrite, ...}{Passed to
-[assemble_rtf()].}
+\code{\link[=assemble_rtf]{assemble_rtf()}}.}
 }
 \value{
-Invisibly, `output_file`.
+Invisibly, \code{output_file}.
 }
 \description{
-Runs [assemble_rtf()] with a Table of Contents built from an assembly spec
-(a `data.frame` from [assemble_spec()], or the path to a saved `.xlsx` /
-`.csv` spec).  Rows are ordered by the spec's `order` column when present.
+Runs \code{\link[=assemble_rtf]{assemble_rtf()}} with a Table of Contents built from an assembly spec
+(a \code{data.frame} from \code{\link[=assemble_spec]{assemble_spec()}}, or the path to a saved \code{.xlsx} /
+\code{.csv} spec).  Rows are ordered by the spec's \code{order} column when present.
 }
 \examples{
 \dontrun{
@@ -38,5 +38,5 @@ assemble_from_spec(spec, "deliverable.rtf", toc_title = "Table of Contents")
 }
 }
 \seealso{
-[assemble_spec()], [assemble_folder()], [assemble_rtf()].
+\code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_folder]{assemble_folder()}}, \code{\link[=assemble_rtf]{assemble_rtf()}}.
 }

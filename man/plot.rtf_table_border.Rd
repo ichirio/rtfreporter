@@ -2,17 +2,17 @@
 % Please edit documentation in R/plot.R
 \name{plot.rtf_table_border}
 \alias{plot.rtf_table_border}
-\title{Visualise an `rtf_table_border`}
+\title{Visualise an \code{rtf_table_border}}
 \usage{
 \method{plot}{rtf_table_border}(x, ...)
 }
 \arguments{
-\item{x}{An [rtf_table_border()] object.}
+\item{x}{An \code{\link[=rtf_table_border]{rtf_table_border()}} object.}
 
 \item{...}{Unused.}
 }
 \value{
-Invisibly returns `x`.
+Invisibly returns \code{x}.
 }
 \description{
 Draws a schematic table with the four zones (header, body, first_row,

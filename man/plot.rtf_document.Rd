@@ -2,20 +2,20 @@
 % Please edit documentation in R/plot.R
 \name{plot.rtf_document}
 \alias{plot.rtf_document}
-\title{Visualise an `rtf_document`}
+\title{Visualise an \code{rtf_document}}
 \usage{
 \method{plot}{rtf_document}(x, max_pages = 12L, ...)
 }
 \arguments{
-\item{x}{An [rtf_document()] object.}
+\item{x}{An \code{\link[=rtf_document]{rtf_document()}} object.}
 
-\item{max_pages}{Maximum number of pages to draw (default `12`).  Larger
+\item{max_pages}{Maximum number of pages to draw (default \code{12}).  Larger
 documents are truncated with a note.}
 
 \item{...}{Unused.}
 }
 \value{
-Invisibly returns `x`.
+Invisibly returns \code{x}.
 }
 \description{
 Draws a grid of page thumbnails.  Each thumbnail shows the title /

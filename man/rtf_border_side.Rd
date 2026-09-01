@@ -7,26 +7,26 @@
 rtf_border_side(style = "single", width = 15L, color = NULL)
 }
 \arguments{
-\item{style}{Line style.  One of `"single"` (default), `"double"`,
-`"thick"`, `"dash"`, `"dot"`, or `"none"`.  Use `"none"` to build an
-*explicit no-line* side: unlike `NULL` (which simply leaves a side
-unset), a `"none"` side **overrides** any inherited border when it is
+\item{style}{Line style.  One of \code{"single"} (default), \code{"double"},
+\code{"thick"}, \code{"dash"}, \code{"dot"}, or \code{"none"}.  Use \code{"none"} to build an
+\emph{explicit no-line} side: unlike \code{NULL} (which simply leaves a side
+unset), a \code{"none"} side \strong{overrides} any inherited border when it is
 merged on top of another spec.  This is how a per-cell border can
 remove an automatically-drawn rule -- e.g. suppressing the group
 underline under one spanning column-header cell.}
 
-\item{width}{Line weight in twips.  Default `15` ≈ 0.5 pt.  Ignored when
-`style = "none"`.}
+\item{width}{Line weight in twips.  Default \code{15} ≈ 0.5 pt.  Ignored when
+\code{style = "none"}.}
 
-\item{color}{Line colour.  `NULL` (default) = black.  Or a 6-digit hex
-string such as `"#003366"`.}
+\item{color}{Line colour.  \code{NULL} (default) = black.  Or a 6-digit hex
+string such as \code{"#003366"}.}
 }
 \value{
-A list of class `"rtf_border_side"`.
+A list of class \code{"rtf_border_side"}.
 }
 \description{
 Defines the line style, weight, and colour for one edge of a cell.
-Use this as an argument to [rtf_border()].
+Use this as an argument to \code{\link[=rtf_border]{rtf_border()}}.
 }
 \examples{
 rtf_border_side()                                   # thin black rule (~0.5 pt)
@@ -34,6 +34,6 @@ rtf_border_side(style = "double", width = 30L, color = "#003366")
 rtf_border_side("none")   # explicit "no line" that removes an inherited rule
 }
 \seealso{
-[rtf_border()] to assemble sides into a cell border, and
-  [rtf_table_border()] for whole-table border zones.
+\code{\link[=rtf_border]{rtf_border()}} to assemble sides into a cell border, and
+\code{\link[=rtf_table_border]{rtf_table_border()}} for whole-table border zones.
 }

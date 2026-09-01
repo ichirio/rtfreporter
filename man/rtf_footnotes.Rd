@@ -20,33 +20,33 @@ rtf_footnotes(
 
 \item{footnotes}{A list of length = number of pages, or length 1 (common).
 Each page's element is a list of rows. A row is a single string, or a
-named vector `c(l = , c = , r = )` giving up to three cells positioned
-left / centre / right -- the same row model [rtf_footer()] uses. A bare
-string lands in whichever slot `align` selects.}
+named vector \code{c(l = , c = , r = )} giving up to three cells positioned
+left / centre / right -- the same row model \code{\link[=rtf_footer]{rtf_footer()}} uses. A bare
+string lands in whichever slot \code{align} selects.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
-this block, overriding the document default from [rtf_default_format()].
-`font` names a family (e.g. `"Arial"`); one not already in the document's
-`font_table` is added to it automatically, the way a colour is.
-Anything left `NULL` is inherited. Font size and row height resolve
-**together**: a size given without a height recomputes the height from
+this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
+\code{font} names a family (e.g. \code{"Arial"}); one not already in the document's
+\code{font_table} is added to it automatically, the way a colour is.
+Anything left \code{NULL} is inherited. Font size and row height resolve
+\strong{together}: a size given without a height recomputes the height from
 that size rather than inheriting one chosen for a different size, and an
-explicit height always wins. `align` sets the block's default row
-alignment; a per-row `align` still beats it.}
+explicit height always wins. \code{align} sets the block's default row
+alignment; a per-row \code{align} still beats it.}
 
-\item{border}{`NULL` (default) for **no rule** -- unlike the page footer,
-the footnote draws none unless asked. An [rtf_border()] puts one on the
-first row, e.g. `border = rtf_border_top()`.}
+\item{border}{\code{NULL} (default) for \strong{no rule} -- unlike the page footer,
+the footnote draws none unless asked. An \code{\link[=rtf_border]{rtf_border()}} puts one on the
+first row, e.g. \code{border = rtf_border_top()}.}
 }
 \value{
 Modified rtf_document.
 }
 \description{
-Same shape as [rtf_titles()]: a list with one block per page (or length 1,
+Same shape as \code{\link[=rtf_titles]{rtf_titles()}}: a list with one block per page (or length 1,
 common to all). Each block is a character vector or a list of rows (a string
-or `list(text=, align=, bold=, italic=, underline=, color=, border=)`).
+or \code{list(text=, align=, bold=, italic=, underline=, color=, border=)}).
 Footnote rows default to left-aligned, and the first row carries a top rule
-(the separator) unless that row sets its own `border`. `NULL` per element
+(the separator) unless that row sets its own \code{border}. \code{NULL} per element
 suppresses the footnote for that page.
 }
 \examples{

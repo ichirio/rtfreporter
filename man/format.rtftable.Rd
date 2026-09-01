@@ -7,9 +7,9 @@
 \method{format}{rtftable}(x, n = 10L, ...)
 }
 \arguments{
-\item{x}{An `rtftable` object.}
+\item{x}{An \code{rtftable} object.}
 
-\item{n}{Number of body rows to render (default `10`).}
+\item{n}{Number of body rows to render (default \code{10}).}
 
 \item{...}{Additional arguments (unused).}
 }
@@ -17,10 +17,10 @@
 A character vector, one element per console line.
 }
 \description{
-Lays an [rtftable()] out as a text grid -- column headers (including spanning
+Lays an \code{\link[=rtftable]{rtftable()}} out as a text grid -- column headers (including spanning
 headers), the rendered cells, per-column alignment, and horizontal rules
 where the table's border zones are set -- so the result previews what the RTF
-will look like.  Used by [print.rtftable()]; call it directly to capture the
+will look like.  Used by \code{\link[=print.rtftable]{print.rtftable()}}; call it directly to capture the
 rendered lines.
 }
 \examples{
@@ -42,5 +42,5 @@ invisible(format(tbl, n = 3))
 
 }
 \seealso{
-[print.rtftable()], [summary.rtftable()].
+\code{\link[=print.rtftable]{print.rtftable()}}, \code{\link[=summary.rtftable]{summary.rtftable()}}.
 }

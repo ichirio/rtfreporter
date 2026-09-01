@@ -2,7 +2,7 @@
 % Please edit documentation in R/rtf_border.R
 \name{rtf_border_with}
 \alias{rtf_border_with}
-\title{Return a copy of an `rtf_border` with selected sides replaced}
+\title{Return a copy of an \code{rtf_border} with selected sides replaced}
 \usage{
 rtf_border_with(
   border,
@@ -15,21 +15,21 @@ rtf_border_with(
 )
 }
 \arguments{
-\item{border}{An [rtf_border()] object.  `NULL` is accepted and treated as
+\item{border}{An \code{\link[=rtf_border]{rtf_border()}} object.  \code{NULL} is accepted and treated as
 an empty border.}
 
-\item{top, bottom, left, right}{Replacement [rtf_border_side()] values, or
-`NULL` to leave a side unchanged.}
+\item{top, bottom, left, right}{Replacement \code{\link[=rtf_border_side]{rtf_border_side()}} values, or
+\code{NULL} to leave a side unchanged.}
 
-\item{inside_h, inside_v}{Replacement [rtf_border_side()] values for the
-between-rows and between-cells rules, or `NULL` to leave them unchanged.}
+\item{inside_h, inside_v}{Replacement \code{\link[=rtf_border_side]{rtf_border_side()}} values for the
+between-rows and between-cells rules, or \code{NULL} to leave them unchanged.}
 }
 \value{
-A new `rtf_border` object.
+A new \code{rtf_border} object.
 }
 \description{
-Non-mutating: returns a new `rtf_border` with the supplied side(s) set on
-top of `border`.  `NULL` arguments leave the corresponding side unchanged.
+Non-mutating: returns a new \code{rtf_border} with the supplied side(s) set on
+top of \code{border}.  \code{NULL} arguments leave the corresponding side unchanged.
 }
 \examples{
 b <- rtf_border(top = rtf_border_side(), bottom = rtf_border_side())
