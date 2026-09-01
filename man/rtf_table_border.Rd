@@ -106,7 +106,7 @@ as a value rather than built:
 
 \preformatted{
   rtf_border_side()                 ->  TRUE
-  rtf_border_side("none")           ->  "none"   (or FALSE)
+  rtf_border_side("none")           ->  FALSE    (or "none")
   rtf_border_side("double")         ->  "double"
   rtf_border_side("double", 20L)    ->  side "double" plus width = 20L
   rtf_border_none()                 ->  rtf_border()

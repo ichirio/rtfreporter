@@ -19,8 +19,12 @@
   | `rtf_border_tfl()` | `border = "tfl"`, or `rtf_table_style_tfl()` |
 
   `style`, `width` and `color` are arguments of `rtf_border()` itself and
-  describe the line the sides named in that call draw. When one side must
-  differ, layer a second call with `from = `.
+  describe the line the sides named in that call draw. `from` decides what a
+  call does: without it the result is exactly what that call says, with it only
+  the named sides change and the rest of `from` survives, each keeping its own
+  weight and colour. That is how a border gets a different colour on each side,
+  and it is why `rtf_border(all = FALSE)` ("no rule anywhere") is not the same
+  as `rtf_border()` ("nothing said, so inherit").
 
   All eight (with `rtf_table_border()` from 0.5.0) **still work and warn once
   per session**; they are scheduled for bulk removal before the CRAN

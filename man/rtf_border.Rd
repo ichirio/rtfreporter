@@ -34,10 +34,9 @@ rtf_border_box(style = "single", width = 15L, color = NULL)
 \item{all}{Shorthand for \code{top}, \code{bottom}, \code{left} and \code{right} at once. A side
 named explicitly wins over it.}
 
-\item{top, bottom, left, right}{The selection's four outer edges. Each takes
-\code{TRUE} (a rule in this call's \code{style}/\code{width}/\code{color}), \code{FALSE} or
-\code{"none"} (an explicit \emph{no line}, which erases an inherited rule), a style
-name such as \code{"double"}, or \code{NULL} to leave the side unset.}
+\item{top, bottom, left, right}{The selection's four outer edges. A side takes
+a value from either of two families -- \code{TRUE}/\code{FALSE}, or a style name --
+or \code{NULL} to leave it unset. See \emph{Writing a side} below.}
 
 \item{inside_h, inside_v}{The rules drawn \emph{between} the selection's rows
 (\code{inside_h}) and \emph{between} its cells (\code{inside_v}). Same values as the
@@ -91,12 +90,91 @@ There is one rule, with no special cases:
 \item \code{inside_h} / \code{inside_v} are the rules \strong{inside} it, and an absent one
 means no rule there.
 }
+}
+
+\section{Writing a side}{
+
+
+Every side takes a value from one of two families. Stay inside one family
+within a call and it reads evenly:
+
+\preformatted{
+  logical     rtf_border(top = TRUE,     bottom = FALSE)
+  style name  rtf_border(top = "single", bottom = "none")
+}
+
+The two agree: \code{TRUE} is a rule in this call's \code{style} / \code{width} / \code{color},
+and \code{FALSE} is \code{"none"} -- an explicit \emph{no line}, which erases a rule the
+selection would otherwise inherit. The style names are \code{"single"},
+\code{"double"}, \code{"thick"}, \code{"dash"}, \code{"dot"} and \code{"none"}.
+
+Use the logical family when the whole call shares one look, and the names
+when the sides differ:
+
+\preformatted{
+  rtf_border(all = TRUE, style = "double", width = 30L)   # four edges alike
+  rtf_border(top = "double", bottom = "single")           # two that differ
+}
+
+\code{"none"} ignores \code{width} and \code{color}, since there is no line to describe, so
+\code{FALSE} and \code{"none"} are always interchangeable.
 
 So an edge never means something different depending on which other
 arguments are present.  On a row containing a spanning cell, \code{inside_v}
 lands on \strong{cell} boundaries rather than column boundaries: nothing is drawn
 inside a merged cell.  A single cell has no inside, so both are ignored
 there.
+}
+
+\section{Building versus layering}{
+
+
+A side is in one of three states, and all three matter:
+
+\describe{
+\item{unset (\code{NULL})}{nothing is said about it, so it inherits whatever
+the enclosing selection supplies.}
+\item{erased (\code{FALSE} / \code{"none"})}{an explicit \emph{no line}, which overrides
+an inherited rule.}
+\item{a rule (\code{TRUE} / a style name)}{drawn in this call's \code{style},
+\code{width} and \code{color}.}
+}
+
+\code{from} decides which of two things a call does:
+
+\describe{
+\item{without \code{from} -- \strong{build}}{the result is exactly what this call
+says. Every side not named is unset, whatever an earlier variable held.}
+\item{with \code{from} -- \strong{layer}}{only the sides named here change; the rest
+of \code{from} survives, each keeping its own style, weight and colour.}
+}
+
+That distinction is what makes per-side differences expressible.
+\code{style}/\code{width}/\code{color} describe one line, so a single call cannot give the
+top and the bottom different colours -- but each layer carries its own:
+
+\preformatted{
+  b <- rtf_border(top = TRUE, color = "#C9372C", width = 30L)
+  b <- rtf_border(from = b, bottom = TRUE, color = "#1F6FEB")
+  b <- rtf_border(from = b, left = TRUE, right = TRUE,
+                  style = "double", color = "#1A7F37")
+  # top stays red/30, bottom blue/15, left and right double green
+}
+
+Forgetting \code{from} is the one thing to watch: the second line below does not
+add a bottom rule, it replaces the whole border with one.
+
+\preformatted{
+  b <- rtf_border(top = TRUE)
+  b <- rtf_border(bottom = TRUE)             # the top rule is gone
+  b <- rtf_border(from = b, bottom = TRUE)   # what was meant
+}
+
+Two consequences worth knowing. \code{rtf_border(all = FALSE)} is the way to say
+"explicitly no rule anywhere", which is not the same as \code{rtf_border()}, where
+every side is merely unset. And layering can set a side, change it, or erase
+it with \code{FALSE}, but cannot return it to \emph{unset}: build a fresh border when
+that is what you want.
 }
 
 \section{Writing borders before and after 0.5.0}{
@@ -148,7 +226,7 @@ as a value rather than built:
 
 \preformatted{
   rtf_border_side()                 ->  TRUE
-  rtf_border_side("none")           ->  "none"   (or FALSE)
+  rtf_border_side("none")           ->  FALSE    (or "none")
   rtf_border_side("double")         ->  "double"
   rtf_border_side("double", 20L)    ->  side "double" plus width = 20L
   rtf_border_none()                 ->  rtf_border()
@@ -181,5 +259,9 @@ s <- TRUE
 rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s)
 
 # A rule between the cells but no outer edges.
-rtf_border(inside_v = s)
+rtf_border(inside_v = TRUE)
+
+# Either family, but one at a time: these two agree.
+identical(rtf_border(top = TRUE,     bottom = FALSE),
+          rtf_border(top = "single", bottom = "none"))
 }

@@ -152,7 +152,7 @@ rtf_border_side <- function(style = "single", width = 15L, color = NULL) {
       "`rtf_border_side()` is deprecated: a side of `rtf_border()` now takes ",
       "the value directly.\n",
       "    rtf_border_side()            ->  TRUE\n",
-      "    rtf_border_side(\"none\")      ->  \"none\"   (or FALSE)\n",
+      "    rtf_border_side(\"none\")      ->  FALSE    (or \"none\")\n",
       "    rtf_border_side(\"double\")    ->  \"double\"\n",
       "    rtf_border_side(\"double\", 20) ->  side \"double\" plus width = 20\n",
       "  Line weight and colour are arguments of rtf_border() itself; layer a ",
@@ -194,6 +194,9 @@ rtf_border_side <- function(style = "single", width = 15L, color = NULL) {
                    arg, paste(dQuote(ok, q = FALSE), collapse = ", "), x),
            call. = FALSE)
     }
+    # "none" is the absence of a line, so weight and colour cannot apply to it.
+    # Normalising here keeps `FALSE` and `"none"` interchangeable.
+    if (identical(x, "none")) return(.rtf_border_side("none"))
     return(.rtf_border_side(x, width, color))
   }
   stop(sprintf(
@@ -237,11 +240,86 @@ print.rtf_border_side <- function(x, ...) {
 #' * `inside_h` / `inside_v` are the rules **inside** it, and an absent one
 #'   means no rule there.
 #'
+#' @section Writing a side:
+#'
+#' Every side takes a value from one of two families. Stay inside one family
+#' within a call and it reads evenly:
+#'
+#' \preformatted{
+#'   logical     rtf_border(top = TRUE,     bottom = FALSE)
+#'   style name  rtf_border(top = "single", bottom = "none")
+#' }
+#'
+#' The two agree: `TRUE` is a rule in this call's `style` / `width` / `color`,
+#' and `FALSE` is `"none"` -- an explicit *no line*, which erases a rule the
+#' selection would otherwise inherit. The style names are `"single"`,
+#' `"double"`, `"thick"`, `"dash"`, `"dot"` and `"none"`.
+#'
+#' Use the logical family when the whole call shares one look, and the names
+#' when the sides differ:
+#'
+#' \preformatted{
+#'   rtf_border(all = TRUE, style = "double", width = 30L)   # four edges alike
+#'   rtf_border(top = "double", bottom = "single")           # two that differ
+#' }
+#'
+#' `"none"` ignores `width` and `color`, since there is no line to describe, so
+#' `FALSE` and `"none"` are always interchangeable.
+#'
 #' So an edge never means something different depending on which other
 #' arguments are present.  On a row containing a spanning cell, `inside_v`
 #' lands on **cell** boundaries rather than column boundaries: nothing is drawn
 #' inside a merged cell.  A single cell has no inside, so both are ignored
 #' there.
+#'
+#' @section Building versus layering:
+#'
+#' A side is in one of three states, and all three matter:
+#'
+#' \describe{
+#'   \item{unset (`NULL`)}{nothing is said about it, so it inherits whatever
+#'     the enclosing selection supplies.}
+#'   \item{erased (`FALSE` / `"none"`)}{an explicit *no line*, which overrides
+#'     an inherited rule.}
+#'   \item{a rule (`TRUE` / a style name)}{drawn in this call's `style`,
+#'     `width` and `color`.}
+#' }
+#'
+#' `from` decides which of two things a call does:
+#'
+#' \describe{
+#'   \item{without `from` -- **build**}{the result is exactly what this call
+#'     says. Every side not named is unset, whatever an earlier variable held.}
+#'   \item{with `from` -- **layer**}{only the sides named here change; the rest
+#'     of `from` survives, each keeping its own style, weight and colour.}
+#' }
+#'
+#' That distinction is what makes per-side differences expressible.
+#' `style`/`width`/`color` describe one line, so a single call cannot give the
+#' top and the bottom different colours -- but each layer carries its own:
+#'
+#' \preformatted{
+#'   b <- rtf_border(top = TRUE, color = "#C9372C", width = 30L)
+#'   b <- rtf_border(from = b, bottom = TRUE, color = "#1F6FEB")
+#'   b <- rtf_border(from = b, left = TRUE, right = TRUE,
+#'                   style = "double", color = "#1A7F37")
+#'   # top stays red/30, bottom blue/15, left and right double green
+#' }
+#'
+#' Forgetting `from` is the one thing to watch: the second line below does not
+#' add a bottom rule, it replaces the whole border with one.
+#'
+#' \preformatted{
+#'   b <- rtf_border(top = TRUE)
+#'   b <- rtf_border(bottom = TRUE)             # the top rule is gone
+#'   b <- rtf_border(from = b, bottom = TRUE)   # what was meant
+#' }
+#'
+#' Two consequences worth knowing. `rtf_border(all = FALSE)` is the way to say
+#' "explicitly no rule anywhere", which is not the same as `rtf_border()`, where
+#' every side is merely unset. And layering can set a side, change it, or erase
+#' it with `FALSE`, but cannot return it to *unset*: build a fresh border when
+#' that is what you want.
 #'
 #' @section Writing borders before and after 0.5.0:
 #'
@@ -291,7 +369,7 @@ print.rtf_border_side <- function(x, ...) {
 #'
 #' \preformatted{
 #'   rtf_border_side()                 ->  TRUE
-#'   rtf_border_side("none")           ->  "none"   (or FALSE)
+#'   rtf_border_side("none")           ->  FALSE    (or "none")
 #'   rtf_border_side("double")         ->  "double"
 #'   rtf_border_side("double", 20L)    ->  side "double" plus width = 20L
 #'   rtf_border_none()                 ->  rtf_border()
@@ -316,10 +394,9 @@ print.rtf_border_side <- function(x, ...) {
 #'
 #' @param all Shorthand for `top`, `bottom`, `left` and `right` at once. A side
 #'   named explicitly wins over it.
-#' @param top,bottom,left,right The selection's four outer edges. Each takes
-#'   `TRUE` (a rule in this call's `style`/`width`/`color`), `FALSE` or
-#'   `"none"` (an explicit *no line*, which erases an inherited rule), a style
-#'   name such as `"double"`, or `NULL` to leave the side unset.
+#' @param top,bottom,left,right The selection's four outer edges. A side takes
+#'   a value from either of two families -- `TRUE`/`FALSE`, or a style name --
+#'   or `NULL` to leave it unset. See *Writing a side* below.
 #' @param style,width,color The line the sides named in this call draw: one of
 #'   `"single"` (default), `"double"`, `"thick"`, `"dash"`, `"dot"`; a weight in
 #'   twips (default `15`, about 0.5 pt); and `NULL` for black or a 6-digit hex
@@ -342,7 +419,11 @@ print.rtf_border_side <- function(x, ...) {
 #' rtf_border(top = s, bottom = s, left = s, right = s, inside_h = s)
 #'
 #' # A rule between the cells but no outer edges.
-#' rtf_border(inside_v = s)
+#' rtf_border(inside_v = TRUE)
+#'
+#' # Either family, but one at a time: these two agree.
+#' identical(rtf_border(top = TRUE,     bottom = FALSE),
+#'           rtf_border(top = "single", bottom = "none"))
 #' @export
 rtf_border <- function(all = NULL, top = NULL, bottom = NULL, left = NULL,
                        right = NULL, inside_h = NULL, inside_v = NULL,

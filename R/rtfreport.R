@@ -236,7 +236,7 @@ update_footer_row <- function(footer, row, content) {
 #'   render time).
 #' @param border An [rtf_border()] object controlling the border applied to
 #'   all rows of the header/footer table. `NULL` = no border (default for
-#'   header). Use [rtf_border(top = TRUE)] for a horizontal dividing line (default
+#'   header). Use `rtf_border(top = TRUE)` for a horizontal dividing line (default
 #'   for footer).
 #' @param width_twips Integer. Table width in twips. `NULL` (default) uses the
 #'   full writable width (page width minus margins).
