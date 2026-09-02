@@ -1,5 +1,55 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`as_rtftables(na = )` says what a missing value should print as** (#350).
+  Previously an `NA` cell rendered as an empty cell and there was no way to ask
+  for anything else:
+
+  ```r
+  as_rtftables(df, align_count_pct = TRUE, na = "-")
+  ```
+
+  The substitution is applied to every column, the row-label column included,
+  and **independently of `align_count_pct` / `cell_format`** -- those decide
+  whether the token is also *aligned*, not whether it appears. With one of them
+  set, the token is right-justified in the count field, so its right edge lands
+  on the ones digit and it stays in line with the counts:
+
+  ```
+    1 ( 1.2%)
+  108 (35.3%)
+    -            <- na = "-"
+   NE            <- na = "NE"
+  ```
+
+  The default `na = ""` is the previous behaviour exactly. Text already in the
+  data that is *not* missing (`"NE"`, `"n/a"`, a literal `"-"`) still passes
+  through unchanged and unpadded, and the `NA`s `collapse_repeats` writes to
+  blank out repeated values still render blank.
+
+  `NaN` counts as missing (R's own `is.na()` says so, and in a TFL a `NaN` is a
+  `0/0` percentage). `Inf` / `-Inf` do not: they print as `"Inf"` / `"-Inf"`,
+  because an infinity means a division by zero upstream and rendering it as
+  `"-"` would hide the bug. This is the policy `fmt_round()` / `fmt_signif()`
+  already followed.
+
+- **The shipped cell-format functions take `na` too** (#350), so they work
+  standalone and under `cell_format`: `fmt_right_align()`, `fmt_count_paren()`,
+  `fmt_count_paren_bare()`, `realign_count_pct()` and `format_count_pct()`. The
+  cell-format contract is now `function(x, nbsp, na)`; `na` is passed only to
+  functions that declare it, so one written to the older two-argument contract
+  is called exactly as before.
+
+### Bug fixes
+
+- `format_count_pct()` no longer prints a literal `"NA"` for a missing count
+  (#350). It was a side effect of `sprintf("%3d", NA_integer_)` rather than a
+  decision, and it disagreed with `realign_count_pct()` / `fmt_count_paren()`,
+  which rendered the same cell blank. All of them now follow `na`, which
+  defaults to an empty cell. A missing *percent* next to a real count is not
+  missing data, and still prints the count on its own.
+
 ### Breaking changes
 
 - **The line gets its own type back** (#348, partly reversing #346).

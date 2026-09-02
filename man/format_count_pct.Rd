@@ -9,12 +9,14 @@ format_count_pct(
   pct,
   pct_unit = c("fraction", "percent"),
   nbsp = " ",
-  pct_sign = FALSE
+  pct_sign = FALSE,
+  na = ""
 )
 }
 \arguments{
-\item{count}{Integer / numeric vector of counts.  \code{NA} and \code{0}
-produce the count-only branch (no parentheses).}
+\item{count}{Integer / numeric vector of counts.  A \code{0} count produces the
+count-only branch (no parentheses); a \strong{missing} count produces the \code{na}
+token instead.}
 
 \item{pct}{Numeric vector of percentages.  By default expressed
 as a \emph{fraction} in \verb{[0, 1]}; pass \code{pct_unit = "percent"} if your
@@ -32,6 +34,14 @@ space) for plain-text output.}
 \item{pct_sign}{Logical (default \code{FALSE}).  When \code{TRUE}, a literal
 \verb{\%} is placed before the closing parenthesis (e.g. \code{" 14 (50.0\%)"})
 and every branch is one character wider so the \verb{)} still aligns.}
+
+\item{na}{Text to print when the \strong{count} is missing (\code{NA}, or \code{NaN} --
+R counts it as missing).  Right-justified in the count field, so its right
+edge lands on the ones digit, then padded to the branch width.  The
+default \code{""} returns an empty cell.  A missing \emph{percent} alongside a real
+count is not missing data: the count still prints, on its own.  \code{Inf} /
+\code{-Inf} counts print as \code{"Inf"} / \code{"-Inf"} -- an infinity means a division
+by zero upstream, and hiding it would hide the bug.}
 }
 \value{
 Character vector the same length as \code{count} / \code{pct}.
@@ -51,6 +61,9 @@ format_count_pct(c(5L, 14L, 30L), c(5, 50, 100), pct_unit = "percent")
 
 # Plain spaces if the output is going to plain text rather than RTF
 format_count_pct(7L, 0.333, nbsp = " ")
+
+# A missing count, shown as "-" under the ones digit
+format_count_pct(c(5L, NA), c(0.05, NA), na = "-", nbsp = " ")
 
 }
 \seealso{

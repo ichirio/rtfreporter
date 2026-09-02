@@ -68,3 +68,74 @@ test_that("cell_format function returning wrong length errors", {
   expect_error(as_rtftables(df, cell_format = function(x) character(0)),
                "same length")
 })
+
+
+# ---------------------------------------------------------------------------
+# na = : the text printed for a missing value (#350)
+# ---------------------------------------------------------------------------
+
+test_that("na = '' keeps the previous behaviour: missing cells are empty", {
+  expect_identical(unbsp(fmt_count_paren(c("1 (1.2%)", NA, "108 (35.3%)"))),
+                   c("  1 ( 1.2%)", "", "108 (35.3%)"))
+  expect_identical(unbsp(fmt_right_align(c("5", "120", NA))),
+                   c("  5", "120", ""))
+})
+
+test_that("fmt_count_paren right-justifies the na token in the count field", {
+  out <- unbsp(fmt_count_paren(c("1 (1.2%)", NA, "108 (35.3%)"), na = "-"))
+  expect_identical(out, c("  1 ( 1.2%)", "  -        ", "108 (35.3%)"))
+  # the token's right edge lands on the ones digit, and the cell keeps the
+  # column's full width
+  expect_identical(substr(out[2L], 3L, 3L), "-")
+  expect_true(all(nchar(out) == nchar(out[1L])))
+})
+
+test_that("a two-character na token still ends on the ones digit", {
+  out <- unbsp(fmt_count_paren(c("1 (1.2%)", NA, "108 (35.3%)"), na = "NE"))
+  expect_identical(substr(out[2L], 2L, 3L), "NE")
+  expect_true(all(nchar(out) == nchar(out[1L])))
+})
+
+test_that("a na token wider than every count widens the count field", {
+  out <- unbsp(fmt_count_paren(c("1 (1.2%)", NA, "9 (3.6%)"), na = "N/A"))
+  expect_identical(out, c("  1 (1.2%)", "N/A       ", "  9 (3.6%)"))
+  expect_true(all(nchar(out) == nchar(out[1L])))
+})
+
+test_that("a cell that already holds the token is aligned like a missing one", {
+  # as_rtftables() substitutes first and formats second, so the aligner only
+  # ever sees the token as ordinary text -- this is that path.
+  out <- unbsp(fmt_count_paren(c("1 (1.2%)", "-", "108 (35.3%)"), na = "-"))
+  expect_identical(out[2L], "  -        ")
+})
+
+test_that("text that is not missing is still returned unchanged and unpadded", {
+  out <- fmt_count_paren(c("1 (1.2%)", "NE", "n/a", "75.2 (8.6)"), na = "-")
+  expect_identical(out[2:4], c("NE", "n/a", "75.2 (8.6)"))
+})
+
+test_that("fmt_right_align right-justifies the na token with the rest", {
+  expect_identical(unbsp(fmt_right_align(c("5", "120", NA), na = "-")),
+                   c("  5", "120", "  -"))
+})
+
+test_that("fmt_count_paren_bare takes na too", {
+  out <- unbsp(fmt_count_paren_bare(c("1 (1.2%)", "0", NA), na = "-"))
+  expect_identical(out, c("1 (1.2%)", "0       ", "-       "))
+})
+
+test_that("na must be a single string", {
+  expect_error(fmt_count_paren("1 (1.2%)", na = NA), "single string")
+  expect_error(fmt_count_paren("1 (1.2%)", na = c("-", "x")), "single string")
+  expect_error(fmt_right_align("5", na = 1L), "single string")
+})
+
+test_that(".call_cell_format only passes na to functions that declare it", {
+  seen <- NULL
+  f_no <- function(x) { seen <<- "no"; x }
+  f_yes <- function(x, na = "") { seen <<- na; x }
+  rtfreporter:::.call_cell_format(f_no, "a", "-")
+  expect_identical(seen, "no")
+  rtfreporter:::.call_cell_format(f_yes, "a", "-")
+  expect_identical(seen, "-")
+})

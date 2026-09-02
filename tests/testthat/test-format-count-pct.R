@@ -1,5 +1,8 @@
 # format_count_pct() / realign_count_pct() — uniform "n (xx.x)" widths.
 
+NBSP <- intToUtf8(160L)
+unbsp <- function(x) gsub(NBSP, " ", x, fixed = TRUE)
+
 # ──────── format_count_pct: numeric inputs ───────────────────────────────
 
 test_that("format_count_pct() produces 10-char-wide strings (NBSP padded)", {
@@ -29,13 +32,35 @@ test_that("100% branch right-aligns the closing paren (width 10, ends with ')')"
                    ignore_attr = TRUE)
 })
 
-test_that("format_count_pct() handles count = 0 / NA (count-only branch)", {
-  out_0  <- format_count_pct(0L,        0.0)
-  out_na <- format_count_pct(NA_integer_, NA_real_)
+test_that("format_count_pct() handles count = 0 (count-only branch)", {
+  out_0 <- format_count_pct(0L, 0.0)
   expect_identical(nchar(out_0), 10L)
-  expect_identical(nchar(out_na), 10L)
-  # No parenthesis on the zero / NA branch
+  # No parenthesis on the zero branch
   expect_false(grepl("\\(", out_0))
+})
+
+test_that("format_count_pct() prints the na token for a missing count (#350)", {
+  # Was " NA       ", a side effect of sprintf("%3d", NA_integer_) rather than
+  # anything anyone asked for.  The default is now an empty cell.
+  expect_identical(format_count_pct(NA_integer_, NA_real_), "")
+  expect_identical(format_count_pct(NaN, NaN), "")
+  out <- unbsp(format_count_pct(NA_integer_, NA_real_, na = "-"))
+  expect_identical(out, "  -       ")      # right edge on the ones digit
+  expect_identical(nchar(out), 10L)
+  expect_identical(nchar(unbsp(format_count_pct(NA_integer_, NA_real_,
+                                                na = "-", pct_sign = TRUE))),
+                   11L)
+})
+
+test_that("format_count_pct() keeps a real count whose percent is missing", {
+  # A missing percent is not missing data -- the count still prints on its own.
+  expect_identical(unbsp(format_count_pct(5L, NA_real_, na = "-")), "  5       ")
+  expect_identical(unbsp(format_count_pct(5L, Inf,      na = "-")), "  5       ")
+})
+
+test_that("format_count_pct() shows Inf rather than hiding it as missing", {
+  # An infinite count means a division by zero upstream; "-" would hide it.
+  expect_identical(unbsp(format_count_pct(Inf, 0.5, na = "-")), "Inf       ")
 })
 
 test_that("format_count_pct() picks the < 10 vs >= 10 branch correctly", {
@@ -159,4 +184,84 @@ test_that("format_count_pct(pct_sign = TRUE) adds % and stays width-aligned", {
   # pct_sign = FALSE is unchanged (no %).
   b <- format_count_pct(14L, 50, pct_unit = "percent", nbsp = " ")
   expect_false(grepl("%", b))
+})
+
+
+# ──────── realign_count_pct / as_rtftables: na = (#350) ──────────────────
+
+test_that("realign_count_pct() leaves NA alone by default", {
+  out <- realign_count_pct(c("5 (33.3)", NA))
+  expect_identical(unbsp(out[1L]), "  5 (33.3)")
+  expect_identical(out[2L], NA_character_)
+})
+
+test_that("realign_count_pct() aligns the na token in the count field", {
+  out <- unbsp(realign_count_pct(c("5 (33.3)", NA, "12 (100.0)"), na = "-"))
+  expect_identical(out[2L], "  -       ")
+  expect_true(all(nchar(out) == 10L))
+})
+
+test_that("realign_count_pct() follows the column's percent sign", {
+  out <- unbsp(realign_count_pct(c("5 (33.3%)", NA), na = "-"))
+  expect_true(all(nchar(out) == 11L))    # the "%" widens every branch
+})
+
+test_that("realign_count_pct() does not pad the token in a column with no counts", {
+  # Nothing to line it up WITH, so the fixed 10-wide layout is not imposed.
+  expect_identical(realign_count_pct(c("text", NA), na = "-"), c("text", "-"))
+})
+
+test_that("realign_count_pct() leaves non-missing text unchanged", {
+  out <- realign_count_pct(c("5 (33.3)", "NE", "NA (NA)"), na = "-")
+  expect_identical(out[2:3], c("NE", "NA (NA)"))
+})
+
+test_that("as_rtftables(na =) substitutes with align_count_pct off", {
+  df <- data.frame(P = c("a", "b"), A = c("5 (33.3)", NA),
+                   stringsAsFactors = FALSE)
+  body <- as_rtftables(df, na = "-")[[1L]]$data
+  expect_identical(body$A, c("5 (33.3)", "-"))   # substituted, not padded
+})
+
+test_that("as_rtftables(na =) and align_count_pct compose", {
+  df <- data.frame(P = c("a", "b"), A = c("5 (33.3)", NA),
+                   stringsAsFactors = FALSE)
+  body <- as_rtftables(df, align_count_pct = TRUE, na = "-")[[1L]]$data
+  expect_identical(unbsp(body$A), c("  5 (33.3)", "  -       "))
+})
+
+test_that("as_rtftables(na =) reaches the row-label column too", {
+  df <- data.frame(P = c("a", NA), A = c("5 (33.3)", "1 (2.0)"),
+                   stringsAsFactors = FALSE)
+  body <- as_rtftables(df, align_count_pct = TRUE, na = "-")[[1L]]$data
+  expect_identical(body$P, c("a", "-"))          # column 1 is never padded
+})
+
+test_that("as_rtftables(na =) treats NaN as missing and leaves Inf visible", {
+  df <- data.frame(P = c("a", "b", "c"), V = c(1, NaN, Inf),
+                   stringsAsFactors = FALSE)
+  body <- as_rtftables(df, na = "-")[[1L]]$data
+  expect_identical(body$V, c("1", "-", "Inf"))
+})
+
+test_that("as_rtftables(na =) does not disturb collapse_repeats blanks", {
+  # collapse_repeats writes NA per page AFTER the split to blank out repeated
+  # values; those must stay blank, not become the token.
+  df <- data.frame(G = c("A", "A", "B"), V = c("1", "2", "3"),
+                   stringsAsFactors = FALSE)
+  body <- as_rtftables(df, collapse_repeats = "G", na = "-")[[1L]]$data
+  expect_identical(body$G, c("A", NA, "B"))
+})
+
+test_that("as_rtftables(na =) forwards to a cell_format that declares it", {
+  df <- data.frame(P = c("a", "b"), A = c("1 (1.2%)", NA),
+                   stringsAsFactors = FALSE)
+  body <- as_rtftables(df, cell_format = fmt_count_paren, na = "-")[[1L]]$data
+  expect_identical(unbsp(body$A), c("1 (1.2%)", "-       "))
+})
+
+test_that("as_rtftables(na =) validates its argument", {
+  df <- data.frame(P = "a", A = "1", stringsAsFactors = FALSE)
+  expect_error(as_rtftables(df, na = NA), "single string")
+  expect_error(as_rtftables(df, na = c("-", "x")), "single string")
 })

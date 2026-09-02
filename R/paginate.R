@@ -88,7 +88,7 @@
 #'   Pagination controls, forwarded to the internal splitter and shared
 #'   with [as_rtftables()]: `max_rows`, `split`, `split_rows`,
 #'   `group_col`, `cont_label`, `blank_rows`, `blank_row_first`,
-#'   `blank_row_end`, `align_count_pct`.  See [as_rtftables()] for the
+#'   `blank_row_end`, `align_count_pct`, `na`.  See [as_rtftables()] for the
 #'   full description of each.
 #'
 #' @return
@@ -315,6 +315,7 @@ paginate.data.frame <- function(x, ...) {
                                  count_blank_rows = FALSE,
                                  align_count_pct  = FALSE,
                                  cell_format      = NULL,
+                                 na               = "",
                                  collapse_repeats = NULL,
                                  ...) {
   # `split` is either one of the built-in strategy names (character) or a
@@ -338,11 +339,20 @@ paginate.data.frame <- function(x, ...) {
   # cleaned-up cells.  `cell_format` (a function or list of functions) takes
   # precedence; `align_count_pct = TRUE` is the long-standing shorthand for
   # the built-in "n (xx.x)" realigner.
+  #
+  # `na` is a display substitution, not a formatting option, so it runs whether
+  # or not either of those is set -- and it runs FIRST, which is what makes the
+  # two compose: the aligners below then see the token as ordinary text and pad
+  # it into the count field.  It is also why this belongs here rather than
+  # further down: `collapse_repeats` writes `NA` per page, AFTER the split, to
+  # blank out repeated values, and those must stay blank.
+  na <- .check_na_text(na)
+  x  <- .replace_na_df(x, na)
   if (!is.null(cell_format)) {
     fl <- .resolve_cell_format(cell_format, ncol(x))
-    if (!is.null(fl)) x <- .apply_cell_format(x, fl)
+    if (!is.null(fl)) x <- .apply_cell_format(x, fl, na = na)
   } else if (isTRUE(align_count_pct)) {
-    x <- .realign_count_pct_df(x)
+    x <- .realign_count_pct_df(x, na = na)
   }
 
   # count_blank_rows: materialise the resolved blank positions as empty marker

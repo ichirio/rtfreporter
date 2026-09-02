@@ -4,13 +4,19 @@
 \alias{fmt_count_paren}
 \title{Align "count (parenthetical)" cells}
 \usage{
-fmt_count_paren(x, nbsp = " ")
+fmt_count_paren(x, nbsp = " ", na = "")
 }
 \arguments{
 \item{x}{Character vector (one table column).}
 
 \item{nbsp}{Padding character; defaults to the non-breaking space
 (U+00A0) so RTF / Word keep the alignment.  Pass \code{" "} for plain text.}
+
+\item{na}{Text to print for a missing value (\code{NA}, and \code{NaN} -- R counts it
+as missing).  The default \code{""} leaves the cell empty, as before.  A
+non-empty token is right-justified with the other cells, so its right edge
+lines up with theirs.  \code{Inf} / \code{-Inf} are \strong{not} missing and print as
+\code{"Inf"} / \code{"-Inf"}.  See the \code{na} argument of \code{\link[=as_rtftables]{as_rtftables()}}.}
 }
 \value{
 Character vector the same length as \code{x}.
@@ -34,10 +40,17 @@ Unlike the fixed-width \code{\link[=realign_count_pct]{realign_count_pct()}} thi
 actual digit counts and does not care what is \emph{inside} the parentheses,
 coping with mixed notations like \code{"(<1\%)"}, \code{"(100\%)"} and \code{"( 2.8\%)"} in
 one column (e.g. tables produced by \code{tfrmt}).
+
+With \code{na} set, a missing cell prints that token right-justified in the count
+field -- its right edge under the ones digit -- so it stays in line instead
+of falling out of the column.
 }
 \examples{
 # Only the parenthetical cells are aligned; the lone "0" is left as-is.
 fmt_count_paren(c("1 (1.2\%)", "0", "11 (3.6\%)", "108 (35.3\%)"))
+
+# A missing cell lines up under the counts.
+fmt_count_paren(c("1 (1.2\%)", NA, "108 (35.3\%)"), na = "-", nbsp = " ")
 
 }
 \seealso{

@@ -4,7 +4,7 @@
 \alias{realign_count_pct}
 \title{Re-align existing "n (xx.x)" strings to a uniform display width}
 \usage{
-realign_count_pct(x, nbsp = " ")
+realign_count_pct(x, nbsp = " ", na = "")
 }
 \arguments{
 \item{x}{Character vector.  Cells that match the regex
@@ -12,6 +12,13 @@ realign_count_pct(x, nbsp = " ")
 returned unchanged.}
 
 \item{nbsp}{Padding character (see \code{\link[=format_count_pct]{format_count_pct()}}).}
+
+\item{na}{Text to print for a missing cell -- an \code{NA} in \code{x}, or a cell that
+already holds this token because \code{\link[=as_rtftables]{as_rtftables()}} substituted it.  It is
+right-justified in the count field, so its right edge lands on the ones
+digit.  The default \code{""} leaves the cell empty, as before.  Text that is
+neither the token nor a count/percent cell (\code{"NE"}, \code{"n/a"}, free text) is
+still returned unchanged and unpadded.}
 }
 \value{
 Character vector the same length as \code{x}.
@@ -31,6 +38,9 @@ pagination context.
 \examples{
 realign_count_pct(c("5 (33.3)", "12 (100.0)", "0 (0.0)",
                     "not a count", "1 (5.0)", "1 (50.0)"))
+
+# A missing cell, shown as "-" under the ones digit
+realign_count_pct(c("5 (33.3)", NA, "12 (100.0)"), na = "-", nbsp = " ")
 
 }
 \seealso{

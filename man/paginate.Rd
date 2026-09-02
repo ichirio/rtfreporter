@@ -27,7 +27,7 @@ name; one input -> many pages produces \code{name.1}, \code{name.2}, ...).}
 \item{...}{Pagination controls, forwarded to the internal splitter and shared
 with \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows},
 \code{group_col}, \code{cont_label}, \code{blank_rows}, \code{blank_row_first},
-\code{blank_row_end}, \code{align_count_pct}.  See \code{\link[=as_rtftables]{as_rtftables()}} for the
+\code{blank_row_end}, \code{align_count_pct}, \code{na}.  See \code{\link[=as_rtftables]{as_rtftables()}} for the
 full description of each.}
 }
 \value{

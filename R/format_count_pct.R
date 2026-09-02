@@ -19,7 +19,9 @@
 #  Width rules -- every branch produces a 10-character string, and the
 #  closing parenthesis lands at column 10 so it lines up across rows:
 #
-#       count = NA or 0           ->  "%3d       "           (no paren)
+#       count missing (NA/NaN)    ->  the `na` token, right-justified in
+#                                     the count field ("" = empty cell)
+#       count = 0, or pct missing ->  "%3d       "           (no paren)
 #       pct  >= 100               ->  "%3d  (%3d)"           e.g. " 30  (100)"
 #       0 < pct < 10              ->  "%3d  (%3.1f)"         e.g. "  5  (5.0)"
 #       10 <= pct < 100           ->  "%3d (%4.1f)"          e.g. " 14 (50.0)"
@@ -36,8 +38,9 @@
 #' width branches match the convention in the rtfreporter Issue #2
 #' reference helper.
 #'
-#' @param count Integer / numeric vector of counts.  `NA` and `0`
-#'   produce the count-only branch (no parentheses).
+#' @param count Integer / numeric vector of counts.  A `0` count produces the
+#'   count-only branch (no parentheses); a **missing** count produces the `na`
+#'   token instead.
 #' @param pct   Numeric vector of percentages.  By default expressed
 #'   as a *fraction* in `[0, 1]`; pass `pct_unit = "percent"` if your
 #'   values are already in `[0, 100]`.  Recycled against `count` if
@@ -51,6 +54,13 @@
 #' @param pct_sign Logical (default `FALSE`).  When `TRUE`, a literal
 #'   `%` is placed before the closing parenthesis (e.g. `" 14 (50.0%)"`)
 #'   and every branch is one character wider so the `)` still aligns.
+#' @param na Text to print when the **count** is missing (`NA`, or `NaN` --
+#'   R counts it as missing).  Right-justified in the count field, so its right
+#'   edge lands on the ones digit, then padded to the branch width.  The
+#'   default `""` returns an empty cell.  A missing *percent* alongside a real
+#'   count is not missing data: the count still prints, on its own.  `Inf` /
+#'   `-Inf` counts print as `"Inf"` / `"-Inf"` -- an infinity means a division
+#'   by zero upstream, and hiding it would hide the bug.
 #'
 #' @return Character vector the same length as `count` / `pct`.
 #'
@@ -64,14 +74,19 @@
 #' # Plain spaces if the output is going to plain text rather than RTF
 #' format_count_pct(7L, 0.333, nbsp = " ")
 #'
+#' # A missing count, shown as "-" under the ones digit
+#' format_count_pct(c(5L, NA), c(0.05, NA), na = "-", nbsp = " ")
+#'
 #' @seealso [realign_count_pct()] for the same widths starting from
 #'   already-formatted strings.
 #' @export
 format_count_pct <- function(count, pct,
                               pct_unit = c("fraction", "percent"),
                               nbsp     = "\u00a0",
-                              pct_sign = FALSE) {
+                              pct_sign = FALSE,
+                              na       = "") {
   pct_unit <- match.arg(pct_unit)
+  na <- .check_na_text(na)
   if (!is.numeric(count) || !is.numeric(pct)) {
     stop("`count` and `pct` must both be numeric.", call. = FALSE)
   }
@@ -88,7 +103,17 @@ format_count_pct <- function(count, pct,
   # branch is one character wider, so the ")" still aligns across cells.
   out <- vapply(seq_len(n_in), function(i) {
     c1 <- count[i]; p <- pct[i]
-    if (is.na(c1) || is.na(p) || c1 == 0) {
+    w <- if (pct_sign) 11L else 10L                    # full width of a cell
+    if (is.na(c1)) {
+      # The count itself is missing -- print the token in the count field.
+      if (!nzchar(na)) return("")
+      raw <- formatC(formatC(na, width = 3L, flag = ""), width = w, flag = "-")
+    } else if (!is.finite(c1)) {
+      # Inf / -Inf is not missing; show it rather than hide a bad numerator.
+      raw <- formatC(formatC(as.character(c1), width = 3L, flag = ""),
+                     width = w, flag = "-")
+    } else if (!is.finite(p) || c1 == 0) {
+      # A real count with no usable percent still prints, on its own.
       raw <- if (pct_sign) sprintf("%3d        ", as.integer(c1))
              else          sprintf("%3d       ",  as.integer(c1))
     } else if (p >= 100) {
@@ -127,6 +152,12 @@ format_count_pct <- function(count, pct,
 #'   `^\\d+ \\(\\d+(\\.\\d+)?\\)$` are reformatted; all others are
 #'   returned unchanged.
 #' @param nbsp Padding character (see [format_count_pct()]).
+#' @param na Text to print for a missing cell -- an `NA` in `x`, or a cell that
+#'   already holds this token because [as_rtftables()] substituted it.  It is
+#'   right-justified in the count field, so its right edge lands on the ones
+#'   digit.  The default `""` leaves the cell empty, as before.  Text that is
+#'   neither the token nor a count/percent cell (`"NE"`, `"n/a"`, free text) is
+#'   still returned unchanged and unpadded.
 #'
 #' @return Character vector the same length as `x`.
 #'
@@ -134,10 +165,14 @@ format_count_pct <- function(count, pct,
 #' realign_count_pct(c("5 (33.3)", "12 (100.0)", "0 (0.0)",
 #'                     "not a count", "1 (5.0)", "1 (50.0)"))
 #'
+#' # A missing cell, shown as "-" under the ones digit
+#' realign_count_pct(c("5 (33.3)", NA, "12 (100.0)"), na = "-", nbsp = " ")
+#'
 #' @seealso [format_count_pct()] for the numeric -> string variant.
 #' @export
-realign_count_pct <- function(x, nbsp = "\u00a0") {
+realign_count_pct <- function(x, nbsp = "\u00a0", na = "") {
   if (is.null(x) || length(x) == 0L) return(x)
+  na <- .check_na_text(na)
   if (!is.character(x)) x <- as.character(x)
   out <- x
   # Optional trailing "%" inside the parens is captured so that cells like
@@ -145,14 +180,31 @@ realign_count_pct <- function(x, nbsp = "\u00a0") {
   # "%" preserved.  Cells without "%" keep the original "n (xx.x)" form.
   rx  <- "^\\s*(\\d+)\\s*\\((\\d+(?:\\.\\d+)?)(%?)\\)\\s*$"
   m   <- regmatches(x, regexec(rx, x))
+  hit <- vapply(m, function(g) length(g) == 4L && !is.na(g[1L]) &&
+                               nzchar(g[1L]), logical(1L))
+  # A missing cell has no "%" of its own to go by, so it follows whatever the
+  # rest of the column does -- every branch is one character wider with a "%".
+  # And with no count/percent cell anywhere in the column there is nothing to
+  # line the token up WITH, so it is left alone rather than padded to a width
+  # this column never uses.
+  col_pct_sign <- any(vapply(m[hit], function(g) nzchar(g[4L]), logical(1L)))
+  pad_na       <- nzchar(na) && any(hit)
   for (i in seq_along(x)) {
-    g <- m[[i]]
-    if (length(g) == 4L && !is.na(g[1L]) && nzchar(g[1L])) {
+    if (hit[i]) {
+      g        <- m[[i]]
       n        <- as.integer(g[2L])
       pct      <- as.numeric(g[3L])
       pct_sign <- nzchar(g[4L])
       out[i] <- format_count_pct(n, pct, pct_unit = "percent",
                                  nbsp = nbsp, pct_sign = pct_sign)
+    } else if (nzchar(na) &&
+               (is.na(x[i]) || identical(trimws(x[i]), na))) {
+      out[i] <- if (pad_na) {
+        format_count_pct(NA_integer_, NA_real_, pct_unit = "percent",
+                         nbsp = nbsp, pct_sign = col_pct_sign, na = na)
+      } else {
+        na                       # shown, but with nothing to line it up with
+      }
     }
   }
   out
@@ -164,16 +216,16 @@ realign_count_pct <- function(x, nbsp = "\u00a0") {
 # paginate(align_count_pct = TRUE).
 #
 # Only cells of the form "integer (real)" -- the real part optionally ending in
-# "%" -- are reformatted by realign_count_pct().  Everything else (a bare
-# integer / plain N such as "86", a continuous statistic like "75.2 (8.59)"
-# whose "count" is not a bare integer, free text, and empty cells) is returned
-# UNCHANGED.  Bare integers are NOT padded (#80 wrongly padded them against the
+# "%" -- and cells holding the `na` token are reformatted by
+# realign_count_pct().  Everything else (a bare integer / plain N such as "86",
+# a continuous statistic like "75.2 (8.59)" whose "count" is not a bare
+# integer, free text, and empty cells) is returned UNCHANGED.  Bare integers are NOT padded (#80 wrongly padded them against the
 # count-percent cells; that is removed -- #148).
-.realign_count_pct_df <- function(df, nbsp = "\u00a0") {
+.realign_count_pct_df <- function(df, nbsp = "\u00a0", na = "") {
   if (ncol(df) < 2L) return(df)
   df[, -1L] <- lapply(df[, -1L, drop = FALSE], function(col) {
     if (!is.character(col)) return(col)
-    realign_count_pct(col, nbsp = nbsp)
+    realign_count_pct(col, nbsp = nbsp, na = na)
   })
   df
 }
