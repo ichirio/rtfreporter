@@ -97,7 +97,10 @@ selects only the \emph{column}; how a group boundary is found on it is set by
 \code{group_by}.  Note that for gt / gtsummary the body keeps gt's column
 \strong{ids} (e.g. \code{"label"}, \code{"stat_1"}), and for rtables / flextable /
 huxtable the columns are renamed \code{V1}, \code{V2}, ... -- so an \strong{integer} index
-is the most portable.}
+is the most portable.  A \strong{factor} group column is rendered as its labels:
+it is coerced to character just before the split, so the group-aware splits
+can write the \code{cont_label} suffix into it.  This happens \emph{after} \code{sort_by},
+which still orders a factor by its \strong{levels}.}
 
 \item{group_by}{How a group boundary is found on \code{group_col}:
 \describe{

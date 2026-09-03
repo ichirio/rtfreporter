@@ -43,6 +43,20 @@
 
 ### Bug fixes
 
+- **A factor `group_col` no longer breaks the `" (Cont.)"` continuation row**
+  (#352). The group-aware splits write the continuation label back into the
+  group column, and a factor cannot take a value outside its levels: a
+  `data.frame` stored `NA` instead (with an `invalid factor level` warning), so
+  the continuation page opened with a stray empty row, and a `tibble` failed
+  outright with `Can't convert from <character> to <factor<...>>`. The group
+  column is now coerced to character just before the split. This also covers
+  `split = "group_safe"` / `"by_value"`, which reach the same code whenever a
+  single group exceeds `max_rows` -- which is why a table could work under
+  `"group_safe"` and break the moment it was switched to `"group_force"`. The
+  coercion runs *after* `sort_by`, so a factor is still ordered by its
+  **levels**, not alphabetically. `add_cont_label()` accepts a factor column
+  for the same reason.
+
 - `format_count_pct()` no longer prints a literal `"NA"` for a missing count
   (#350). It was a side effect of `sprintf("%3d", NA_integer_)` rather than a
   decision, and it disagreed with `realign_count_pct()` / `fmt_count_paren()`,

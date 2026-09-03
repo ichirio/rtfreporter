@@ -233,7 +233,10 @@
 #'   `group_by`.  Note that for gt / gtsummary the body keeps gt's column
 #'   **ids** (e.g. `"label"`, `"stat_1"`), and for rtables / flextable /
 #'   huxtable the columns are renamed `V1`, `V2`, ... -- so an **integer** index
-#'   is the most portable.
+#'   is the most portable.  A **factor** group column is rendered as its labels:
+#'   it is coerced to character just before the split, so the group-aware splits
+#'   can write the `cont_label` suffix into it.  This happens *after* `sort_by`,
+#'   which still orders a factor by its **levels**.
 #' @param group_by How a group boundary is found on `group_col`:
 #'   \describe{
 #'     \item{`"auto"`}{(default) pick from the column content: leading

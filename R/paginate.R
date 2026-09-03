@@ -439,6 +439,21 @@ paginate.data.frame <- function(x, ...) {
     }
     grouped <- function() {
       gidx <- .resolve_group_col(group_col, x)
+      # The group-aware splits write the `" (Cont.)"` label back into the group
+      # column, and a factor cannot take a value that is not one of its levels:
+      # a data.frame silently turns the label into NA (with a warning) and a
+      # tibble errors outright (#352).  So coerce that ONE column to character
+      # here -- the point where all three group-aware strategies converge, and
+      # late enough that nothing upstream sees the change: `sort_by` has already
+      # ordered the body by the factor's LEVELS (coercing earlier would silently
+      # re-sort it alphabetically), and the `na` / `cell_format` passes are done.
+      # Doing it inside .split_group_force() instead would leave the pages cut
+      # before the first continuation as factors and the rest as characters, and
+      # .split_group_safe()'s buffer would then rbind() the two together.
+      cidx <- if (is.null(gidx)) 1L else gidx
+      if (ncol(x) >= cidx && !is.character(x[[cidx]]) && !is.list(x[[cidx]])) {
+        x[[cidx]] <<- as.character(x[[cidx]])
+      }
       list(idx = gidx, info = .compute_group_info(x, gidx, group_by))
     }
     mgr <- as.integer(min_group_rows %||% 2L)
@@ -674,7 +689,8 @@ paginate.data.frame <- function(x, ...) {
 #' at the top of the continuation page with a `" (Cont.)"` suffix.
 #' `add_cont_label()` builds that row: it prepends a blank row to `chunk` and
 #' places `paste0(label, cont_label)` in column `col`, leaving every other cell
-#' empty (`""` for character columns, `NA` otherwise).
+#' empty (`""` for character columns, `NA` otherwise).  A **factor** `col` is
+#' coerced to character first, so it can hold the suffixed label.
 #'
 #' @param chunk A data.frame -- a single continuation page produced by your
 #'   split function.
@@ -710,6 +726,12 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
       stop("`col` index ", col, " out of range (1..", ncol(chunk), ").",
            call. = FALSE)
     }
+  }
+  # The label column has to be able to hold `paste0(label, cont_label)`, which
+  # a factor cannot (#352).  Coerce the WHOLE column, not just the new cell, so
+  # the rbind() below does not mix a character row into a factor column.
+  if (!is.character(chunk[[j]]) && !is.list(chunk[[j]])) {
+    chunk[[j]] <- as.character(chunk[[j]])
   }
   cont_row <- chunk[1L, , drop = FALSE]
   for (k in seq_len(ncol(cont_row))) {
