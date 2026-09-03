@@ -28,7 +28,8 @@ When a group is split across pages, clinical tables repeat the group label
 at the top of the continuation page with a \code{" (Cont.)"} suffix.
 \code{add_cont_label()} builds that row: it prepends a blank row to \code{chunk} and
 places \code{paste0(label, cont_label)} in column \code{col}, leaving every other cell
-empty (\code{""} for character columns, \code{NA} otherwise).
+empty (\code{""} for character columns, \code{NA} otherwise).  A \strong{factor} \code{col} is
+coerced to character first, so it can hold the suffixed label.
 }
 \examples{
 df <- data.frame(group = c("B", "B"), value = c("3", "4"))

@@ -22,6 +22,7 @@ as_rtftables(
   count_blank_rows = FALSE,
   align_count_pct = FALSE,
   cell_format = NULL,
+  na = "",
   collapse_repeats = NULL,
   drop_cols = NULL,
   stub = NULL,
@@ -96,7 +97,10 @@ selects only the \emph{column}; how a group boundary is found on it is set by
 \code{group_by}.  Note that for gt / gtsummary the body keeps gt's column
 \strong{ids} (e.g. \code{"label"}, \code{"stat_1"}), and for rtables / flextable /
 huxtable the columns are renamed \code{V1}, \code{V2}, ... -- so an \strong{integer} index
-is the most portable.}
+is the most portable.  A \strong{factor} group column is rendered as its labels:
+it is coerced to character just before the split, so the group-aware splits
+can write the \code{cont_label} suffix into it.  This happens \emph{after} \code{sort_by},
+which still orders a factor by its \strong{levels}.}
 
 \item{group_by}{How a group boundary is found on \code{group_col}:
 \describe{
@@ -185,7 +189,9 @@ and do not affect the row count.}
 \item{align_count_pct}{Logical (default \code{FALSE}).  Shorthand to realign
 \code{"n (xx.x)"} count/percent cells to a uniform width before pagination (the
 built-in \code{\link[=realign_count_pct]{realign_count_pct()}}).  Ignored when \code{cell_format} is supplied,
-which takes precedence.}
+which takes precedence.  Neither one controls whether missing values are
+substituted -- that is \code{na} -- only whether the substituted token is
+aligned with the counts.}
 
 \item{cell_format}{Optional cell re-formatter applied column-by-column to
 the body \strong{before} pagination, for monospaced alignment.  Either a single
@@ -196,6 +202,33 @@ Each function takes one column (a character vector) and returns a
 character vector of the same length; see \code{\link[=fmt_count_paren]{fmt_count_paren()}} /
 \code{\link[=fmt_right_align]{fmt_right_align()}} for built-ins and the contract for writing your own.
 When supplied it takes precedence over \code{align_count_pct}.}
+
+\item{na}{Text to print for a \strong{missing value} (default \code{""}, an empty
+cell -- the previous behaviour).  Applied to every column, the row-label
+column included, and \strong{independently of \code{align_count_pct} / \code{cell_format}}
+-- those decide whether the substituted token is also \emph{aligned}, not
+whether the substitution happens.  With one of them set, the token is
+right-justified in the count field so its right edge lands on the ones
+digit:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{  1 ( 1.2\%)
+108 (35.3\%)
+  -            <- na = "-"
+ NE            <- na = "NE", right edge still under the ones digit
+}\if{html}{\out{</div>}}
+
+Text already in the data that is \emph{not} missing (\code{"NE"}, \code{"n/a"}, a literal
+\code{"-"} you typed yourself) does not match the count pattern and passes
+through unchanged, with no padding.
+
+\code{NaN} counts as missing (R's own \code{is.na()} says so, and in a TFL a \code{NaN}
+is a \code{0/0} percentage).  \code{Inf} / \code{-Inf} do \strong{not}: they print as \code{"Inf"} /
+\code{"-Inf"}, because an infinity means a division by zero upstream and
+rendering it as \code{"-"} would hide the bug.  The \emph{strings} \code{"NA"} / \code{"NaN"}
+are never touched -- \code{"NA"} can be legitimate data.
+
+The substitution happens before the split, so the \code{NA}s \code{collapse_repeats}
+writes per page to blank out repeated values stay blank.}
 
 \item{collapse_repeats}{Columns in which to blank \strong{consecutive repeated
 values} (repeat suppression), or \code{NULL} (default, off).  A character /

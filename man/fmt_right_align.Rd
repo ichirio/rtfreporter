@@ -4,13 +4,19 @@
 \alias{fmt_right_align}
 \title{Right-align the cells of a column to a common width}
 \usage{
-fmt_right_align(x, nbsp = " ")
+fmt_right_align(x, nbsp = " ", na = "")
 }
 \arguments{
 \item{x}{Character vector (one table column).}
 
 \item{nbsp}{Padding character; defaults to the non-breaking space
 (U+00A0) so RTF / Word keep the alignment.  Pass \code{" "} for plain text.}
+
+\item{na}{Text to print for a missing value (\code{NA}, and \code{NaN} -- R counts it
+as missing).  The default \code{""} leaves the cell empty, as before.  A
+non-empty token is right-justified with the other cells, so its right edge
+lines up with theirs.  \code{Inf} / \code{-Inf} are \strong{not} missing and print as
+\code{"Inf"} / \code{"-Inf"}.  See the \code{na} argument of \code{\link[=as_rtftables]{as_rtftables()}}.}
 }
 \value{
 Character vector the same length as \code{x}.

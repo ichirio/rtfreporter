@@ -233,7 +233,10 @@
 #'   `group_by`.  Note that for gt / gtsummary the body keeps gt's column
 #'   **ids** (e.g. `"label"`, `"stat_1"`), and for rtables / flextable /
 #'   huxtable the columns are renamed `V1`, `V2`, ... -- so an **integer** index
-#'   is the most portable.
+#'   is the most portable.  A **factor** group column is rendered as its labels:
+#'   it is coerced to character just before the split, so the group-aware splits
+#'   can write the `cont_label` suffix into it.  This happens *after* `sort_by`,
+#'   which still orders a factor by its **levels**.
 #' @param group_by How a group boundary is found on `group_col`:
 #'   \describe{
 #'     \item{`"auto"`}{(default) pick from the column content: leading
@@ -296,7 +299,9 @@
 #' @param align_count_pct Logical (default `FALSE`).  Shorthand to realign
 #'   `"n (xx.x)"` count/percent cells to a uniform width before pagination (the
 #'   built-in [realign_count_pct()]).  Ignored when `cell_format` is supplied,
-#'   which takes precedence.
+#'   which takes precedence.  Neither one controls whether missing values are
+#'   substituted -- that is `na` -- only whether the substituted token is
+#'   aligned with the counts.
 #' @param min_group_rows Integer (default `2`).  Widow/orphan control for the
 #'   group-aware splits (`"group_force"`, `"group_safe"`, `"by_value"`): when a
 #'   page would end on a group that *starts* on that page while showing fewer
@@ -323,6 +328,31 @@
 #'   character vector of the same length; see [fmt_count_paren()] /
 #'   [fmt_right_align()] for built-ins and the contract for writing your own.
 #'   When supplied it takes precedence over `align_count_pct`.
+#' @param na Text to print for a **missing value** (default `""`, an empty
+#'   cell -- the previous behaviour).  Applied to every column, the row-label
+#'   column included, and **independently of `align_count_pct` / `cell_format`**
+#'   -- those decide whether the substituted token is also *aligned*, not
+#'   whether the substitution happens.  With one of them set, the token is
+#'   right-justified in the count field so its right edge lands on the ones
+#'   digit:
+#'   ```
+#'     1 ( 1.2%)
+#'   108 (35.3%)
+#'     -            <- na = "-"
+#'    NE            <- na = "NE", right edge still under the ones digit
+#'   ```
+#'   Text already in the data that is *not* missing (`"NE"`, `"n/a"`, a literal
+#'   `"-"` you typed yourself) does not match the count pattern and passes
+#'   through unchanged, with no padding.
+#'
+#'   `NaN` counts as missing (R's own `is.na()` says so, and in a TFL a `NaN`
+#'   is a `0/0` percentage).  `Inf` / `-Inf` do **not**: they print as `"Inf"` /
+#'   `"-Inf"`, because an infinity means a division by zero upstream and
+#'   rendering it as `"-"` would hide the bug.  The *strings* `"NA"` / `"NaN"`
+#'   are never touched -- `"NA"` can be legitimate data.
+#'
+#'   The substitution happens before the split, so the `NA`s `collapse_repeats`
+#'   writes per page to blank out repeated values stay blank.
 #' @param collapse_repeats Columns in which to blank **consecutive repeated
 #'   values** (repeat suppression), or `NULL` (default, off).  A character /
 #'   integer vector naming the columns in priority order.  Within each column,
@@ -550,6 +580,7 @@ as_rtftables <- function(x,
                          count_blank_rows = FALSE,
                          align_count_pct = FALSE,
                          cell_format     = NULL,
+                         na              = "",
                          collapse_repeats = NULL,
                          drop_cols       = NULL,
                          stub            = NULL,
@@ -572,6 +603,7 @@ as_rtftables <- function(x,
   # reconciled the two is gone with them.
   if (!is.function(split)) split <- match.arg(split)
   group_by <- match.arg(group_by)
+  na <- .check_na_text(na)
   user_args <- list(...)
 
   # One spec from `stub =` or the superseded flat family (#314).  `stub_spec`
@@ -611,7 +643,8 @@ as_rtftables <- function(x,
         blank_rows = blank_rows, blank_row_first = blank_row_first,
         blank_row_end = blank_row_end, count_blank_rows = count_blank_rows,
         align_count_pct = align_count_pct,
-        cell_format = cell_format, collapse_repeats = collapse_repeats,
+        cell_format = cell_format, na = na,
+        collapse_repeats = collapse_repeats,
         drop_cols = drop_cols,
         # The flat family has already been folded into the spec, so only the
         # spec is forwarded -- passing both would trip its own guard.
@@ -786,7 +819,7 @@ as_rtftables <- function(x,
       min_group_rows = min_group_rows, blank_rows = blank_rows,
       blank_row_first = blank_row_first, blank_row_end = blank_row_end,
       count_blank_rows = count_blank_rows,
-      align_count_pct = align_count_pct, cell_format = cell_format,
+      align_count_pct = align_count_pct, cell_format = cell_format, na = na,
       collapse_repeats = collapse_repeats)
     page_names <- names(pages)
 
