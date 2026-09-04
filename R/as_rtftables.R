@@ -389,6 +389,21 @@
 #'   the `" (Cont.)"` marker is written into the `group_col` cell, so if
 #'   `group_col` is itself dropped the marker is not shown (group on the visible
 #'   label column if the marker is wanted).
+#' @param listing Listing settings, as a [listing_spec()] object, or `NULL`
+#'   (default, no listing preparation).  Applies to a **data.frame / tibble**
+#'   source: [build_listing()] reshapes it into a listing body -- source
+#'   variables joined into their printed columns, long cells wrapped over
+#'   several physical rows, gutter columns, a blank row after each record --
+#'   and the spec's columns then supply the `col_header`, the relative widths
+#'   and the (left) alignment, so none of the three has to be written out by
+#'   hand.  The hidden record column is used to keep a record whole across a
+#'   page break: `group_col` points at it, `split` becomes `"group_safe"` when
+#'   `max_rows` is set, and it is added to `drop_cols`.  Every one of those is
+#'   a **default** -- an argument you pass yourself is never overridden.  A
+#'   body that has already been through [build_listing()] carries its own spec,
+#'   so `as_rtftables()` picks it up and passing `listing` as well is an error.
+#'   An rlistings `listing_df` is rejected: it is already laid out, and needs
+#'   no `listing` argument.
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
 #'   (parent first, leaf last; at least two).  `NULL` (default) builds no
@@ -583,6 +598,7 @@ as_rtftables <- function(x,
                          na              = "",
                          collapse_repeats = NULL,
                          drop_cols       = NULL,
+                         listing         = NULL,
                          stub            = NULL,
                          stub_vars       = NULL,
                          stub_label      = NULL,
@@ -601,6 +617,13 @@ as_rtftables <- function(x,
   # places -- which is what made #328 possible.  #334 retired the factories, so
   # every setting now has exactly one declaration site and the machinery that
   # reconciled the two is gone with them.
+  # Whether the caller SET these decides whether a `listing` may fill them in
+  # below: the listing hook supplies pagination defaults, but never overrides a
+  # decision the caller made.
+  split_given           <- !missing(split)
+  group_by_given        <- !missing(group_by)
+  blank_row_first_given <- !missing(blank_row_first)
+
   if (!is.function(split)) split <- match.arg(split)
   group_by <- match.arg(group_by)
   na <- .check_na_text(na)
@@ -645,7 +668,7 @@ as_rtftables <- function(x,
         align_count_pct = align_count_pct,
         cell_format = cell_format, na = na,
         collapse_repeats = collapse_repeats,
-        drop_cols = drop_cols,
+        drop_cols = drop_cols, listing = listing,
         # The flat family has already been folded into the spec, so only the
         # spec is forwarded -- passing both would trip its own guard.
         stub = stub_spec_obj,
@@ -666,6 +689,56 @@ as_rtftables <- function(x,
       out <- c(out, chunks)
     }
     return(out)
+  }
+
+  # ---- listing preparation (#241) ---------------------------------------
+  # Reshape source data into a listing body BEFORE anything else looks at it,
+  # so the rest of the pipeline sees an ordinary data.frame and needs to know
+  # nothing about listings.  Two things then come from the spec:
+  #
+  #   * the header, the relative widths and the (left) alignment, which are
+  #     put where an adapter would put them -- `kw`, in the data.frame branch
+  #     below -- so an explicit `col_header` / `col_rel_width` in `...` still
+  #     wins, exactly as it does over a gt or rtables source; and
+  #   * the pagination that keeps a record whole: `group_col` on the hidden
+  #     record column, a `"group_safe"` split, and the column named in
+  #     `drop_cols` so it is hidden AFTER pagination has used it.
+  #
+  # Every one of those is a DEFAULT: an argument the caller actually passed is
+  # left alone.
+  listing_res  <- .resolve_listing_arg(listing, x)
+  listing_meta <- NULL
+  if (!is.null(listing_res)) {
+    if (.is_rlistings_tbl(x)) {
+      stop("`listing` does not apply to an rlistings listing (`listing_df`): ",
+           "rlistings has already laid it out.  Drop `listing` and pass it to ",
+           "`as_rtftables()` as it is.", call. = FALSE)
+    }
+    if (!is.data.frame(x)) {
+      stop("`listing` applies to a data.frame or tibble source; got '",
+           paste(class(x), collapse = "/"), "'.", call. = FALSE)
+    }
+    lspec <- listing_res$spec
+    if (isTRUE(listing_res$build)) x <- build_listing(x, lspec)
+    listing_meta <- .listing_metadata(lspec, x)
+
+    if (!blank_row_first_given && isTRUE(lspec$blank_row_first)) {
+      blank_row_first <- TRUE
+    }
+    rec <- lspec$record_col
+    if (!is.null(rec) && rec %in% names(x)) {
+      if (is.null(group_col)) group_col <- rec
+      if (!group_by_given)    group_by  <- "value"
+      if (!split_given && !is.function(split) && identical(split, "none") &&
+          !is.null(max_rows)) {
+        split <- "group_safe"
+      }
+      # A list, not c(): a caller's `drop_cols` may be integer positions, and
+      # c(1L, ".rtf_record") would coerce them to strings.
+      drop_cols <- if (is.null(drop_cols)) rec else {
+        c(as.list(drop_cols), list(rec))
+      }
+    }
   }
 
   # ---- gtsummary -> gt --------------------------------------------------
@@ -719,13 +792,27 @@ as_rtftables <- function(x,
     cell_styles     <- NULL
     titles_block    <- NULL
     footnotes_block <- NULL
+    # A listing spec IS this body's metadata source, the way an adapter is for
+    # a gt or rtables object: it names the columns, sizes them and aligns them.
+    # It is written into `kw` for exactly that reason -- `.assemble_page_rtftable()`
+    # lets a user `...` argument beat anything in `kw`, so an explicit
+    # `col_header` / `col_rel_width` still wins here too.
+    if (!is.null(listing_meta)) {
+      kw$col_header <- listing_meta$col_header
+      kw$col_spec   <- listing_meta$col_spec
+      if (is.null(user_args$col_rel_width) &&
+          is.null(user_args$column_widths_twips)) {
+        kw$col_rel_width <- listing_meta$col_rel_width
+      }
+    }
+
     # Header from the column display names: a column's `label` attribute
     # (read_meta "labels" token, on by default) wins over its name, and the
     # resulting names feed the spanning-header reconstruction of delimited
     # names (e.g. ydisctools "cohort1____trt1" or tfrmt
     # "cohort1___tlang_delim___trt1").  An explicit user `col_header`
     # (via ...) always wins, so skip then.
-    if (is.null(user_args$col_header)) {
+    if (is.null(kw$col_header) && is.null(user_args$col_header)) {
       disp     <- .df_display_names(body, read_meta)
       auto_hdr <- .split_names_to_col_header(disp, header_sep)
       if (!is.null(auto_hdr)) {

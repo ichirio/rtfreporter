@@ -25,6 +25,7 @@ as_rtftables(
   na = "",
   collapse_repeats = NULL,
   drop_cols = NULL,
+  listing = NULL,
   stub = NULL,
   stub_vars = NULL,
   stub_label = NULL,
@@ -267,6 +268,22 @@ the pages are still named by it; but under \code{"group_safe"} / \code{"group_fo
 the \code{" (Cont.)"} marker is written into the \code{group_col} cell, so if
 \code{group_col} is itself dropped the marker is not shown (group on the visible
 label column if the marker is wanted).}
+
+\item{listing}{Listing settings, as a \code{\link[=listing_spec]{listing_spec()}} object, or \code{NULL}
+(default, no listing preparation).  Applies to a \strong{data.frame / tibble}
+source: \code{\link[=build_listing]{build_listing()}} reshapes it into a listing body -- source
+variables joined into their printed columns, long cells wrapped over
+several physical rows, gutter columns, a blank row after each record --
+and the spec's columns then supply the \code{col_header}, the relative widths
+and the (left) alignment, so none of the three has to be written out by
+hand.  The hidden record column is used to keep a record whole across a
+page break: \code{group_col} points at it, \code{split} becomes \code{"group_safe"} when
+\code{max_rows} is set, and it is added to \code{drop_cols}.  Every one of those is
+a \strong{default} -- an argument you pass yourself is never overridden.  A
+body that has already been through \code{\link[=build_listing]{build_listing()}} carries its own spec,
+so \code{as_rtftables()} picks it up and passing \code{listing} as well is an error.
+An rlistings \code{listing_df} is rejected: it is already laid out, and needs
+no \code{listing} argument.}
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a
 shorthand for \code{stub_spec(vars)}, a bare vector of hierarchy columns
