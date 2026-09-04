@@ -11,6 +11,7 @@ fit_listing_widths(
   font = "courier_new",
   size_half_points = 18L,
   total_width = NULL,
+  labels = NULL,
   min_width = 6L,
   probs = 0.9
 )
@@ -33,6 +34,17 @@ the page's width into a number of characters.  Defaults match
 \code{NULL} (default) computes it from \code{page}, \code{font} and \code{size_half_points}.
 Give it directly when you know the budget and would rather not describe
 the page.}
+
+\item{labels}{Named character vector giving the words for the \strong{source}
+variables, e.g. \code{c(USUBJID = "Unique Subject ID", AGE = "Age")}.  Used
+for data that carries no \code{label} attributes -- a CSV, a frame built in
+the program, a \code{subset()} that dropped them.  A column's header is still
+derived from these: the labels of its source variables are joined with
+its separator and wrapped to the width just fitted, so where the lines
+break is still worked out for you.  Precedence: \code{listing_col(label = )},
+then \code{labels}, then the variable's \code{label} attribute, then its name.  A
+define/spec extract converts directly:
+\code{setNames(spec$label, spec$variable)}.}
 
 \item{min_width}{Integer.  The narrowest a fitted column may be (default
 \code{6}).}
@@ -74,8 +86,8 @@ the characters are taken from the columns that have room to spare -- \strong{a
 header is never cut mid-word}.  Only if the headers alone cannot fit the
 page does that guarantee give way.
 
-Where the data carries no \code{label} attributes, \code{listing_spec(labels = )}
-supplies them, and the measurement uses those.
+Where the data carries no \code{label} attributes, \code{labels} supplies the words,
+and the measurement uses those.
 
 Widths are display widths, so a full-width (CJK) glyph counts as two
 throughout.

@@ -73,15 +73,47 @@
 
 ### New features
 
-- **`listing_spec(labels = )` supplies the variable labels in one place**
-  (#373).  Deriving a header from the data's `label` attributes (#366) covers
-  ADaM read through haven and nothing else: a CSV, a frame built in the
-  program or a `subset()` that dropped them arrives with the labels known to
-  the programmer but not to the data.
+- **`fit_listing_widths()` now writes the estimate down in full, so
+  `listing_code()` emits a template you can edit** (#375).  The code it
+  produced was terse by design -- only what differs from the defaults -- which
+  is the wrong shape for something whose whole purpose is to be corrected by
+  hand:
 
   ```r
-  listing_spec(
-    list(listing_col("USUBJID"), listing_col(c("DISPTPD", "BRCA", "HIST"))),
+  # before
+  listing_col(c("DISPTPD", "BRCA", "HIST"), width = 44)
+
+  # now
+  listing_col(c("DISPTPD", "BRCA", "HIST"), width = 44, rel_width = 44,
+    label = "Primary Diagnosis/
+Any (BRCA) Mutations/
+Histology")
+  ```
+
+  Alongside the fitted `width`, each column that does not already set them
+  gets `rel_width` (the fitted width) and `label` (resolved from
+  `fit_listing_widths(labels = )` or the data's attributes, wrapped to the width
+  just chosen).  The two widths are genuinely different decisions -- `width`
+  is where the text wraps, `rel_width` is how much of the sheet the column
+  takes -- and a header you can see is a header you can fix.  A value the
+  author set is still never touched, and freezing the label changes nothing
+  about the rendering: `build_listing()` would have wrapped it to the same
+  width.
+
+  `listing_code()` drops the `labels` lookup once every column carries its own
+  label, because a per-column label wins and editing the table would appear to
+  do nothing.
+
+- **`fit_listing_widths(labels = )` supplies the words for the source
+  variables** (#373, #376).  Deriving a header from the data's `label`
+  attributes (#366) covers ADaM read through haven and nothing else: a CSV, a
+  frame built in the program or a `subset()` that dropped them arrives with
+  the labels known to the programmer but not to the data.
+
+  ```r
+  fitted <- fit_listing_widths(
+    adsl, draft,
+    page   = rtf_page(paper_size = "A4", orientation = "landscape"),
     labels = c(USUBJID = "Unique Subject ID",
                DISPTPD = "Primary Diagnosis",
                BRCA    = "Any (BRCA) Mutations",
@@ -92,11 +124,18 @@
   One table, written once -- the shape a define/spec extract already has
   (`setNames(spec$label, spec$variable)`).  The header is still **derived**:
   the labels of a column's source variables are joined with its separator and
-  wrapped to its width, so where the lines break stays automatic.  Only the
-  words come from here.  Precedence is `listing_col(label = )`, then `labels`,
-  then the variable's attribute, then its name.  `listing_code()` writes the
-  table out, and `fit_listing_widths()` measures against it.
+  wrapped to the width just fitted, so where the lines break stays automatic.
+  Only the words come from here.  Precedence: `listing_col(label = )`, then
+  `labels`, then the variable's `label` attribute, then its name.
 
+  It belongs to the **estimation**, not to `listing_spec()` (#376).  A
+  `labels` argument on the spec reads as "the labels of these columns" and
+  would be expected to hold one entry per *printed* column, while what it
+  carries is keyed by *source variable* and is consumed only while a header
+  is being derived -- and once the fit runs, that header is written onto each
+  column and the table has no further job.  (`listing_spec(labels = )`
+  existed for a few hours in 0.7.13 and is gone; per-column labels have their
+  home in `listing_col(label = )`.)
 - **A header is no longer cut mid-word by the width fit** (#373).  Scaling the
   demands to the page could take a column below the widest token its header
   cannot break -- `"Stage at Initial Diagnosis"` in a nine-character column

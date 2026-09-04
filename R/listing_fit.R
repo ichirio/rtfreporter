@@ -85,8 +85,8 @@
 #' header is never cut mid-word**.  Only if the headers alone cannot fit the
 #' page does that guarantee give way.
 #'
-#' Where the data carries no `label` attributes, `listing_spec(labels = )`
-#' supplies them, and the measurement uses those.
+#' Where the data carries no `label` attributes, `labels` supplies the words,
+#' and the measurement uses those.
 #'
 #' Widths are display widths, so a full-width (CJK) glyph counts as two
 #' throughout.
@@ -104,6 +104,16 @@
 #'   `NULL` (default) computes it from `page`, `font` and `size_half_points`.
 #'   Give it directly when you know the budget and would rather not describe
 #'   the page.
+#' @param labels Named character vector giving the words for the **source**
+#'   variables, e.g. `c(USUBJID = "Unique Subject ID", AGE = "Age")`.  Used
+#'   for data that carries no `label` attributes -- a CSV, a frame built in
+#'   the program, a `subset()` that dropped them.  A column's header is still
+#'   derived from these: the labels of its source variables are joined with
+#'   its separator and wrapped to the width just fitted, so where the lines
+#'   break is still worked out for you.  Precedence: `listing_col(label = )`,
+#'   then `labels`, then the variable's `label` attribute, then its name.  A
+#'   define/spec extract converts directly:
+#'   `setNames(spec$label, spec$variable)`.
 #' @param min_width Integer.  The narrowest a fitted column may be (default
 #'   `6`).
 #' @param probs Quantile of a column's cell widths taken as its demand
@@ -154,6 +164,7 @@ fit_listing_widths <- function(data, spec,
                                font             = "courier_new",
                                size_half_points = 18L,
                                total_width      = NULL,
+                               labels           = NULL,
                                min_width        = 6L,
                                probs            = 0.9) {
   if (!is.data.frame(data)) {
@@ -167,6 +178,17 @@ fit_listing_widths <- function(data, spec,
   if (!is.null(attr(data, "rtf_listing", exact = TRUE))) {
     stop("`data` has already been through build_listing(); fit the widths on ",
          "the source data instead.", call. = FALSE)
+  }
+  if (!is.null(labels)) {
+    labels <- unlist(labels, use.names = TRUE)
+    if (!is.character(labels) || !length(labels) ||
+        is.null(names(labels)) || anyNA(names(labels)) ||
+        !all(nzchar(names(labels)))) {
+      stop("`labels` must be a named character vector mapping SOURCE column ",
+           "names to labels, e.g. c(USUBJID = \"Unique Subject ID\").",
+           call. = FALSE)
+    }
+    labels[is.na(labels)] <- ""
   }
   min_width <- as.integer(min_width)
   if (length(min_width) != 1L || is.na(min_width) || min_width < 1L) {
@@ -217,7 +239,7 @@ fit_listing_widths <- function(data, spec,
     # The header's floor is the widest token it cannot break, not its full
     # length: a header wraps, so a long label should not claim a column the
     # data does not need.
-    lab   <- .listing_resolve_label(data, cl, sepj, lay, spec$labels)
+    lab   <- .listing_resolve_label(data, cl, sepj, lay, labels)
     hdr_w <- .listing_min_wrap_width(lab, sepj)
     floor_hdr[j] <<- hdr_w
     max(cell_w, hdr_w, min_width)
@@ -273,7 +295,25 @@ fit_listing_widths <- function(data, spec,
     out[!fixed] <- fit
   }
 
-  for (j in seq_len(k)) spec$cols[[j]]$width <- as.integer(out[j])
+  # Write the estimate DOWN, in full (#375).  A template you cannot see is a
+  # template you cannot correct, so alongside the fitted `width` each column
+  # gets its `rel_width` and its `label` -- resolved from the lookup or the
+  # data and wrapped to the width just chosen, exactly as build_listing()
+  # would have.  Only where the author has not set them: an explicit value is
+  # still never touched.  Freezing the header here is a no-op for rendering
+  # (build_listing() would wrap it to the same width); what it changes is that
+  # the header becomes something you can edit.
+  for (j in seq_len(k)) {
+    cl <- spec$cols[[j]]
+    cl$width <- as.integer(out[j])
+    if (is.null(cl$rel_width)) cl$rel_width <- as.numeric(cl$width)
+    if (is.null(cl$label)) {
+      sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
+      lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
+      cl$label <- .listing_resolve_label(data, cl, sepj, lay, labels)
+    }
+    spec$cols[[j]] <- cl
+  }
 
   attr(spec, "rtf_listing_fit") <- list(
     total_width = total_width,
@@ -318,6 +358,10 @@ fit_listing_widths <- function(data, spec,
 #' Only what differs from the listing's own defaults is written out, so the
 #' result reads like something a person wrote rather than a dump of every
 #' setting.
+#'
+#' A spec straight from [fit_listing_widths()] therefore comes out in full --
+#' `width`, `rel_width` and `label` on every column -- because the fit wrote
+#' all three down.  That is the point: it is a template to edit.
 #'
 #' @param spec A [listing_spec()].
 #' @param name Name to assign the spec to, e.g. `"listing"` produces
@@ -416,46 +460,16 @@ listing_code <- function(spec, name = NULL, indent = 2L) {
       .listing_arg("record", spec$record_col)
     })
 
-  # The labels lookup is a table, so it gets lines of its own rather than
-  # being crushed onto the closing call.
-  lab_lines <- if (!is.null(spec$labels)) {
-    nm <- names(spec$labels)
-    w  <- max(nchar(nm))
-    entries <- sprintf("%s%-*s = %s", pad, w, nm,
-                       encodeString(unname(spec$labels), quote = "\""))
-    entries[-length(entries)] <- paste0(entries[-length(entries)], ",")
-    c("labels = c(", entries, ")")
-  }
-
   head <- paste0(if (is.null(name)) "" else paste0(name, " <- "),
                  "listing_spec(")
 
-  if (is.null(lab_lines)) {
-    # The compact form: the column list opens the call.
-    close <- if (length(spec_args)) {
-      paste0("), ", paste(spec_args, collapse = ", "), ")")
-    } else {
-      "))"
-    }
-    return(structure(c(paste0(head, "list("), col_lines, close),
-                     class = "rtf_listing_code"))
+  close <- if (length(spec_args)) {
+    paste0("), ", paste(spec_args, collapse = ", "), ")")
+  } else {
+    "))"
   }
-
-  # With a labels table there are two blocks to lay out, so the call opens on
-  # its own line and everything inside it is indented once.
-  out <- c(head,
-           paste0(pad, "list("),
-           paste0(pad, col_lines),
-           paste0(pad, "),"),
-           paste0(pad, lab_lines[[1L]]),
-           paste0(pad, lab_lines[-1L]),
-           if (length(spec_args)) {
-             paste0(pad, paste(spec_args, collapse = ", "))
-           })
-  # The block before the closing bracket must not end in a comma.
-  n <- length(out)
-  out[n] <- sub(",$", "", out[n])
-  structure(c(out, ")"), class = "rtf_listing_code")
+  structure(c(paste0(head, "list("), col_lines, close),
+            class = "rtf_listing_code")
 }
 
 #' @export
