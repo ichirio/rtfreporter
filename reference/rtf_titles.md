@@ -1,0 +1,72 @@
+# Assign content titles to pages
+
+Replace the per-page title list with the supplied values. `titles` must
+have length equal to the number of pages already added via
+[`rtf_tables()`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md)
+/
+[`rtf_figures()`](https://ichirio.github.io/rtfreporter/reference/rtf_figures.md),
+**or length 1** – a single block is then applied to every page (common
+title).
+
+## Usage
+
+``` r
+rtf_titles(
+  doc,
+  titles,
+  font_size_half_points = NULL,
+  row_height_twips = NULL,
+  markup = NULL,
+  font = NULL,
+  align = NULL
+)
+```
+
+## Arguments
+
+- doc:
+
+  An rtf_document object.
+
+- titles:
+
+  A list of length = number of pages, or length 1 (common).
+
+- font_size_half_points, row_height_twips, markup, align, font:
+
+  Style for this block, overriding the document default from
+  [`rtf_default_format()`](https://ichirio.github.io/rtfreporter/reference/rtf_default_format.md).
+  `font` names a family (e.g. `"Arial"`); one not already in the
+  document's `font_table` is added to it automatically, the way a colour
+  is. Anything left `NULL` is inherited. Font size and row height
+  resolve **together**: a size given without a height recomputes the
+  height from that size rather than inheriting one chosen for a
+  different size, and an explicit height always wins. `align` sets the
+  block's default row alignment; a per-row `align` still beats it.
+
+## Value
+
+Modified rtf_document.
+
+## Details
+
+Each element is a title **block**: either a character vector (one entry
+per row, default styling) or a list of rows, where a row is a string or
+a styled
+`list(text=, align=, bold=, italic=, underline=, color=, border=)`. An
+empty string (`""`) is a blank row. The block renders as a single-column
+table the same width as the content; title rows default to centred +
+bold.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+doc <- rtf_document() %>%
+  rtf_tables(list(df1, df2)) %>%
+  rtf_titles(list(
+    c("Table 14.1.1", "{HALF_BLANK_ROW}", "Safety Population"),
+    "Table 14.1.2"
+  ))
+} # }
+```

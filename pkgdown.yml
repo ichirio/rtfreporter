@@ -1,0 +1,34 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  articles/adding-content: adding-content.html
+  articles/architecture-ja: architecture-ja.html
+  articles/architecture: architecture.html
+  articles/borders: borders.html
+  articles/example-demog: example-demog.html
+  articles/example-lab: example-lab.html
+  articles/extending-adapters-ja: extending-adapters-ja.html
+  articles/extending-adapters: extending-adapters.html
+  articles/external-api-ja: external-api-ja.html
+  articles/external-api: external-api.html
+  gt-integration: gt-integration.html
+  articles/headers-footers: headers-footers.html
+  articles/importing-tables: importing-tables.html
+  articles/internal-design-ja: internal-design-ja.html
+  articles/internal-design: internal-design.html
+  articles/listings: listings.html
+  articles/multistub-section-split: multistub-section-split.html
+  articles/output: output.html
+  articles/page-setup: page-setup.html
+  articles/pagination: pagination.html
+  rtfreporter-pipes: rtfreporter-pipes.html
+  rtfreporter-quickstart: rtfreporter-quickstart.html
+  articles/section-splitting: section-splitting.html
+  articles/showcase-ae: showcase-ae.html
+  articles/showcase-dm: showcase-dm.html
+  articles/tlg-catalog: tlg-catalog.html
+last_built: 2026-09-04T07:51Z
+urls:
+  reference: https://ichirio.github.io/rtfreporter/reference
+  article: https://ichirio.github.io/rtfreporter/articles

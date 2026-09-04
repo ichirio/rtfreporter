@@ -1,0 +1,457 @@
+# Rのオブジェクト指向とS3 ― rtfreporterの設計思想
+
+本書は、次の3つを理解することを目的とした読み物です。
+
+1.  **Rにおけるオブジェクト指向プログラミング（OOP）の考え方**
+2.  **S3クラスの仕組みと使い方**
+3.  **rtfreporter がなぜ純粋な S3
+    で設計されているのか（本パッケージの設計思想）**
+
+前半（第1〜2章）は rtfreporter に依存しない一般的な解説なので、R
+で自作の
+クラスやパッケージを設計したい人にも役立つはずです。後半（第3章）で、その考え方が
+本パッケージにどう適用されているかを見ていきます。
+
+> **要約**：rtfreporter のオブジェクトはすべて**純粋な S3**、すなわち
+> `class` 属性を付けただけの素の `list` です。外部の OOP
+> フレームワークは使いません。
+> 公開オブジェクトは**コピーオンモディファイ**（値の意味論）で扱われ、パイプ
+> API
+> は各ステップで新しいオブジェクトを返し、その場で書き換えることはありません。
+
+## 1. Rにおけるオブジェクト指向
+
+### 1.1 Rの「ジェネリック関数」型OOP
+
+多くの言語（Java、Python、C++
+など）のオブジェクト指向は、**メッセージ送信型**
+です。メソッドはオブジェクトの内部に属し、`object.method()`
+のように「オブジェクト に対してメソッドを呼ぶ」形で書きます。
+
+R の主流である S3・S4
+は、これとは異なる**ジェネリック関数型**です。メソッドは
+オブジェクトの中ではなく、**ジェネリック関数**という外側の仕組みに属します。
+
+``` r
+
+# メッセージ送信型（Python 風の擬似コード）
+df.summary()
+
+# ジェネリック関数型（R）
+summary(df)   # summary() が df のクラスを見て適切なメソッドを選ぶ
+```
+
+[`summary()`](https://rdrr.io/r/base/summary.html)、[`print()`](https://rdrr.io/r/base/print.html)、[`plot()`](https://rdrr.io/r/graphics/plot.default.html)
+はいずれもジェネリック関数です。引数の**クラス**を
+見て、対応するメソッド（`summary.data.frame`、`print.lm`
+など）へ処理を振り分けます。 この「振り分け」を**ディスパッチ
+(dispatch)** と呼びます。
+
+この違いは重要です。ジェネリック関数型では、既存のクラスを一切変更せずに、後から
+`plot.myclass`
+のようなメソッドを**追加**できます。関数がクラスに縛られないため、
+拡張に強いのです。
+
+### 1.2 Rの主要なOOPシステム
+
+R には歴史的経緯から複数の OOP
+システムが共存しています。設計を選ぶうえで、
+それぞれの立ち位置を押さえておきましょう。
+
+| システム | 型 | 意味論 | 特徴 | 主な用途 |
+|----|----|----|----|----|
+| **S3** | ジェネリック関数 | 値（コピーオンモディファイ） | 最も軽量。`class` 属性だけ。形式的な定義なし | base R・CRAN の大多数 |
+| **S4** | ジェネリック関数 | 値 | 形式的なクラス定義・多重ディスパッチ・妥当性検証 | Bioconductor |
+| **参照クラス (R5 / RC)** | メッセージ送信 | 参照（可変） | S4 上に構築。メソッドをオブジェクトに内包 | 状態を持つオブジェクト |
+| **R6**（パッケージ） | メッセージ送信 | 参照（可変） | 高速・カプセル化・継承。base 外だが定番 | 可変な状態管理・OOP 志向の設計 |
+| **S7**（新しい標準） | ジェネリック関数 | 値 | S3/S4 を統合する現代的な設計。CRAN で提供 | 新規プロジェクトの選択肢 |
+
+大まかな指針は次のとおりです。
+
+- オブジェクトが主に**データ**で、一度作ったら基本的に書き換えないなら →
+  **S3** （必要になったら S4 / S7 へ）。
+- 形式的な型検証や多重ディスパッチが必要なら → **S4** または **S7**。
+- オブジェクトが**可変な状態**を持ち、参照で共有したいなら → **R6**。
+
+S7 は S3・S4
+の長所を統合しようとする新しい標準で、今後の新規設計では有力な選択肢
+です。ただし本パッケージのように「データを作って流すだけ」の用途では、依存を増やさず
+に済む S3 で十分こと足ります。
+
+### 1.3 値の意味論と参照の意味論
+
+R
+を理解するうえで欠かせないのが、**コピーオンモディファイ（copy-on-modify）**
+です。R の通常のオブジェクト（`list`
+を含む）は**値の意味論**で振る舞います。
+変数に代入したり関数に渡したりすると、変更時には**コピー**が作られ、元のオブジェクト
+は影響を受けません。
+
+``` r
+
+x <- list(a = 1)
+f <- function(z) { z$a <- 999; z }   # z はコピー。x には触れない
+y <- f(x)
+x$a   #> 1     … 元は不変
+y$a   #> 999
+```
+
+S3・S4・S7
+はこの値の意味論に従います。一方、**R6・参照クラス**は**参照の意味論**
+で、オブジェクトは可変であり、関数に渡した先での変更が呼び出し元にも反映されます。
+
+値の意味論には「共有状態による予期せぬ副作用が起きない」「[`str()`](https://rdrr.io/pkg/rtables/man/int_methods.html)
+で中身がそのまま
+見える」「並列化やシリアライズが素直」という利点があります。可変な状態が本当に必要な
+場面（GUI、キャッシュ、巨大なデータの逐次更新など）でなければ、値の意味論のほうが
+安全で扱いやすい、というのが一般的な指針です。
+
+## 2. S3クラスを理解する
+
+### 2.1 S3の3つの構成要素
+
+S3 は驚くほど単純で、次の3つだけで成り立っています。
+
+1.  **`class` 属性** ― オブジェクトに付けた「型の名札」。
+2.  **ジェネリック関数** ―
+    [`UseMethod()`](https://rdrr.io/r/base/UseMethod.html)
+    を呼ぶだけの、振り分け役の関数。
+3.  **メソッド** ― `ジェネリック名.クラス名`
+    という命名規則の普通の関数。
+
+正式なクラス定義（`setClass`
+のようなもの）は**存在しません**。「クラスとは、 `class`
+属性に書かれた文字列にすぎない」というのが S3 の本質です。
+
+### 2.2 クラスを付ける
+
+オブジェクトにクラスを付けるには、`class`
+属性を設定するだけです。慣習として
+[`structure()`](https://rdrr.io/r/base/structure.html) を使い、`list` に
+`class` を添えて構築します。
+
+``` r
+
+new_temperature <- function(celsius) {
+  structure(list(celsius = celsius), class = "temperature")
+}
+
+t <- new_temperature(21)
+class(t)          #> "temperature"
+inherits(t, "temperature")   #> TRUE
+```
+
+中身は素の `list` のままなので、`t$celsius`
+でフィールドにアクセスできますし、 `str(t)` で構造がそのまま見えます。
+
+### 2.3 ジェネリックとディスパッチ
+
+ジェネリック関数は、[`UseMethod()`](https://rdrr.io/r/base/UseMethod.html)
+を呼ぶだけの関数です。[`print()`](https://rdrr.io/r/base/print.html) や
+[`summary()`](https://rdrr.io/r/base/summary.html)
+も内部は同じ形をしています。
+
+``` r
+
+# 独自ジェネリックを定義
+describe <- function(x, ...) UseMethod("describe")
+
+# クラスごとのメソッド
+describe.temperature <- function(x, ...) {
+  cat(sprintf("%.1f°C\n", x$celsius))
+}
+
+# 何にもマッチしないとき用のフォールバック
+describe.default <- function(x, ...) cat("不明なオブジェクト\n")
+
+describe(t)          #> 21.0°C
+describe(42)         #> 不明なオブジェクト
+```
+
+`describe(t)` を呼ぶと、R は `t` の `class`（`"temperature"`）を見て
+`describe.temperature`
+を探し、見つかればそれを実行します。見つからなければ `describe.default`
+にフォールバックします。これがディスパッチです。
+
+既存の `print`
+に自作クラス用のメソッドを足すのも同じで、`print.temperature` を
+定義するだけです。`print` 本体には一切手を入れません。
+
+### 2.4 メソッド解決とinherits()による継承
+
+`class` 属性は**文字列ベクトル**にできます。これが S3 の「継承」です。
+
+``` r
+
+# celsius 型は temperature 型でもある、という階層
+grade_a <- structure(list(celsius = 21), class = c("room", "temperature"))
+
+describe(grade_a)
+#> 21.0°C
+```
+
+`describe(grade_a)` では、R は左から順に `describe.room` →
+`describe.temperature` → `describe.default`
+を探し、最初に見つかったものを使います。`describe.room` が
+なければ、親クラスの `describe.temperature` が使われます。
+
+型を判定するときは、`class(x) == "temperature"` ではなく
+**`inherits(x, "temperature")`**
+を使います。複数クラスを持つ場合でも正しく判定 できるためです。
+
+``` r
+
+class(grade_a) == "temperature"     #> FALSE TRUE   … 先頭要素しか見ていない
+inherits(grade_a, "temperature")    #> TRUE          … 頑健
+```
+
+### 2.5 NextMethod() ― 親メソッドへ委譲する
+
+子クラスのメソッドから、親クラスのメソッドを呼び足したいときは
+[`NextMethod()`](https://rdrr.io/r/base/UseMethod.html) を使います。
+
+``` r
+
+describe.room <- function(x, ...) {
+  cat("室温として: ")
+  NextMethod()          # describe.temperature に続きを任せる
+}
+
+describe(grade_a)
+#> 室温として: 21.0°C
+```
+
+### 2.6 メソッドの登録（パッケージの場合）
+
+対話的に使うだけなら、`describe.temperature`
+を定義すれば自動的に見つかります。 しかしパッケージでは、`NAMESPACE`
+にメソッドを**登録**する必要があります。 `roxygen2`
+を使うなら、メソッドに `@export` を付けると次の行が生成されます。
+
+    S3method(describe, temperature)
+
+これは「`describe` ジェネリックの `temperature`
+メソッドを提供します」という宣言で、 R
+がパッケージ外からのディスパッチでもメソッドを見つけられるようにします。
+ジェネリック自体（`describe`）も、公開するなら `export()` します。
+
+### 2.7 S3の長所と注意点
+
+**長所**
+
+- とにかく軽い。定義の儀式がなく、`list` ＋ `class` だけ。
+- 透過的。[`str()`](https://rdrr.io/pkg/rtables/man/int_methods.html)
+  で中身がそのまま見え、デバッグやシリアライズが容易。
+- 拡張に強い。既存クラスを変えずにメソッドを追加できる。
+- 依存ゼロ。base R だけで完結する。
+
+**注意点**
+
+- 形式的な妥当性検証がない。壊れたオブジェクトも作れてしまうので、コンストラクタで
+  自分で検証する。
+- `class` 属性は誰でも書き換えられる。カプセル化はされない。
+- 単一ディスパッチ（第1引数のクラスだけで振り分ける）。多重ディスパッチが要るなら
+  S4 / S7 を検討する。
+
+これらの「注意点」は、**データを作って流すだけ**の用途ではほとんど問題になりません。
+むしろ軽さと透過性という長所が効いてきます。ここが次章につながります。
+
+## 3. rtfreporterの設計思想
+
+ここからは、以上の考え方が rtfreporter
+にどう適用されているかを見ていきます。
+本パッケージはレンダラが扱う内部オブジェクトを**すべて純粋な S3**
+で表現します。 公開 API
+については[外部インターフェース仕様書](https://ichirio.github.io/rtfreporter/articles/external-api-ja.md)を参照してください。
+
+### 3.1 なぜここでS3なのか
+
+rtfreporter
+のオブジェクトは主に**データ**です。一度構築してパイプを下り、最後に
+レンダリングされるだけで、共有された状態を書き換える必要がありません。
+
+- 素の `list`
+  は**透過的**（[`str()`](https://rdrr.io/pkg/rtables/man/int_methods.html)
+  でそのまま見える）で、シリアライズ可能、依存も ありません。
+- 可変性は不要です。パイプ API は共有状態を露出しないので、参照系（R6
+  等）より、 **コピーオンモディファイの S3** のほうが単純で安全です。
+- ディスパッチ（[`print()`](https://rdrr.io/r/base/print.html) /
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html)）と
+  [`inherits()`](https://rdrr.io/r/base/class.html)
+  による型判定という、S3 が
+  得意とする2つの用途に、設計がそのまま乗ります。
+
+つまり「注意点」が効かず「長所」だけが効く典型的な題材であり、だからこそ
+S3 が 最適だ、という判断です。
+
+### 3.2 二層モデル ― Builderパターン
+
+文書は深い階層では**ありません**。フラットなページ列に、セクションのオーバーレイ
+を重ねた構造です。
+
+    rtf_document（公開・パイプで構築）
+     └─ レンダリング時に変換 → rtfreport（内部）
+          ├─ document   : font_table, color_table, default_page, default_format
+          ├─ pages[]    : rtf_page   （1 ページ 1 コンテンツ）
+          └─ sections[] : rtf_sect   （ページ範囲へのヘッダー／フッター割当）
+
+- **ページは文書直下でフラット**。**1 ページ ＝ 1
+  コンテンツ**（`rtftable` または `rtfplot`）。
+- **セクションはオーバーレイ**。各 `rtf_sect`
+  は、あるページから次のセクションまで
+  ヘッダー／フッターを割り当てるもので、コンテンツ自体は内包しません。
+
+この二層は「文書クラスが冗長に2つある」のではなく、意図的な **Builder
+パターン** です。
+
+- `rtf_document`
+  は**ビルダー**。逐次的に育てる扱いやすいオブジェクトで、パイプ動詞
+  （[`rtf_tables()`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md)、[`rtf_section()`](https://ichirio.github.io/rtfreporter/reference/rtf_section.md)
+  …）が更新後の `rtf_document` を返し、著者の記述
+  順にコンテンツとセクション定義を蓄積します。
+- `rtfreport`
+  は**成果物（product）**。レンダラが消費する、正規化済みで描画可能な形
+  です（コンテンツがタイトル／脚注と束ねられて `rtf_page`
+  になり、セクション定義は ページ範囲へ解決されます）。
+- `.pipe_doc_to_rtfreport()`
+  が両者をつなぐ**ビルドステップ**で、[`generate_rtfreport()`](https://ichirio.github.io/rtfreporter/reference/generate_rtfreport.md)
+  の内部で描画時に一度だけ実行されます。
+
+両者を分けることで、**著述 API** と
+**描画モデル**を独立に進化させられ、双方が単純に
+保たれます。ビルダーは描画可能である必要がなく、成果物は逐次編集を支える必要が
+ありません。
+
+### 3.3 主要なオブジェクト
+
+#### `rtf_document`（公開）
+
+パイプ
+API（[`rtf_document()`](https://ichirio.github.io/rtfreporter/reference/rtf_document.md)
+＋
+[`rtf_tables()`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md)
+/
+[`rtf_figures()`](https://ichirio.github.io/rtfreporter/reference/rtf_figures.md)
+/
+[`rtf_section()`](https://ichirio.github.io/rtfreporter/reference/rtf_section.md)
+…） で構築します。スロットは `document`（font / color / page /
+format）、`contents`
+（ページ単位のコンテンツ列）、`titles`、`footnotes`、`sections`。利用中はイミュータブル
+で、各パイプ動詞はコピーを返します。
+
+#### `rtfreport`（内部）
+
+`.pipe_doc_to_rtfreport()` が `rtf_document`
+から生成する、レンダリング用の形です。 解決済みの `document`
+既定値、`rtf_page` のリスト、`rtf_sect` のリストを保持します。
+構築時検証は `.rtfreport_validate()` にあります。
+
+#### `rtf_page`（内部・S3 タグ付きリスト）
+
+`structure(list(title, content, footnote), class = "rtf_page")` ― 1
+ページを表します。
+
+- `title` ― コンテンツ上部に中央寄せで出す文字ベクトル
+- `content` ― `rtftable` または `rtfplot`（または `NULL`）
+- `footnote` ― コンテンツ下部に出す文字ベクトル
+
+#### `rtf_sect`（内部・S3 タグ付きリスト）
+
+`structure(list(header, footer, from_page), class = "rtf_sect")`。
+
+- `header` / `footer` ―
+  ヘッダー／フッター記述、または前セクションを継承する `NULL`
+- `from_page` ― このセクションが適用される最初のページ
+
+`.resolve_sections()` がレンダリング時に各 `from_page` を
+`(from_page, to_page)` の範囲へ写像します。
+
+#### `rtftable`（公開）
+
+最もリッチなオブジェクトで、表データと全書式を保持します。単一 DF
+モードは `data`、 複数 DF モードは `data_list`。加えて `col_header` /
+`col_header_list`、`col_spec` （列単位：整列、bold / italic /
+underline、indent、文字色 `color` …）、`border`
+（`rtf_table_border`）、`blank_rows`、幅設定、行高、セルパディング／縦整列、
+`cell_styles`（セル単位の上書き）を持ちます。[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+はページ単位の `rtf_titles` / `rtf_footnotes`
+を属性として付け、[`rtf_tables()`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md)
+がそれを消費します。
+
+[`print()`](https://rdrr.io/r/base/print.html)
+は表の視覚的プレビュー（見出し・セル・罫線・アラインメント）をコンソールに
+描画します。[`format()`](https://rdrr.io/r/base/format.html)
+はその描画行を、[`summary()`](https://rdrr.io/r/base/summary.html)
+はメタデータの要約を返します。
+
+#### `rtfplot`（公開）
+
+`structure(list(path, width_twips, height_twips, align), class = "rtfplot")`。
+
+#### スタイル・ボーダーのオブジェクト
+
+`rtf_border`（辺ごとの線指定）、`rtf_table_border`（テーブルのゾーンボーダー）、
+`rtf_table_style`（再利用可能な既定値の束）は、いずれも素の S3
+リストです。 `rtf_table_style`
+は**スナップショット**方式で、テーブルは構築時のスタイル状態を
+取り込み、[`rtf_table_style_with()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style_with.md)
+は元を変更せずに修正コピーを派生します。
+
+### 3.4 S3クラスの3つの役割
+
+各クラスが**なぜ存在するか**を知ると、扱い方が分かります。rtfreporter の
+S3 クラスは、 次の3つの役割のいずれかを担います。
+
+1.  **ジェネリックディスパッチ。** 一部のクラスは
+    [`print()`](https://rdrr.io/r/base/print.html) /
+    [`plot()`](https://rdrr.io/r/graphics/plot.default.html)（さらに
+    `rtftable` は [`format()`](https://rdrr.io/r/base/format.html) /
+    [`summary()`](https://rdrr.io/r/base/summary.html)）メソッドを持ちます（読みやすいコンソール
+    出力、ベースグラフィックスによるレイアウト確認用）。[`paginate()`](https://ichirio.github.io/rtfreporter/reference/paginate.md)
+    も S3 ジェネリック
+    ですが、ディスパッチ対象は**入力の型**（`data.frame` / `gt_tbl` /
+    `list`）であり、 rtfreporter のクラスではありません。
+2.  **[`inherits()`](https://rdrr.io/r/base/class.html) 用の型タグ。**
+    大半のクラスは、通常の `if` 分岐で `inherits(x, "<class>")`
+    により識別されるために存在します。レンダラとパイプ動詞は
+    この方法でオブジェクト種別を判定します。メソッドは介在しません。
+3.  **内部構造マーカー。** `rtf_page` / `rtf_sect` は、可読性と
+    [`str()`](https://rdrr.io/pkg/rtables/man/int_methods.html) /
+    デバッグ出力のためだけにクラスを持ちます。何もディスパッチせず、レンダラは
+    フィールド名でアクセスします。
+
+| クラス | 役割 |
+|----|----|
+| `rtf_document` | ディスパッチ（`print`, `plot`）＋ [`inherits()`](https://rdrr.io/r/base/class.html) |
+| `rtftable` | ディスパッチ（`print`, `format`, `summary`, `plot`）＋ [`inherits()`](https://rdrr.io/r/base/class.html) |
+| `rtf_border_side`, `rtf_border`, `rtf_table_border` | ディスパッチ（`print`, `plot`）＋ [`inherits()`](https://rdrr.io/r/base/class.html) |
+| `rtf_table_style`, `rtf_col_cell`, `rtf_col_header` | ディスパッチ（`print`）＋ [`inherits()`](https://rdrr.io/r/base/class.html) |
+| `rtfplot` | ディスパッチ（`print`）＋ [`inherits()`](https://rdrr.io/r/base/class.html) |
+| `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | [`inherits()`](https://rdrr.io/r/base/class.html)（空行リゾルバの分岐） |
+| `rtf_toc_heading`, `rtf_toc_entry` | [`inherits()`](https://rdrr.io/r/base/class.html)（TOC 正規化） |
+| `rtfreport`, `rtf_auto_section_item` | [`inherits()`](https://rdrr.io/r/base/class.html)（内部） |
+| `rtf_page`, `rtf_sect` | 内部構造マーカー（ディスパッチ無し） |
+
+### 3.5 拡張時に従う規約
+
+本パッケージにクラスを足したり手を入れたりするときは、次の規約に従ってください。
+これらはそのまま、素の S3
+で堅牢に設計するための一般的なベストプラクティスでもあります。
+
+- **構築**は `structure(list(...), class = "<class>")`
+  を、公開コンストラクタまたは `.new_*()` 内部ヘルパーの中で行う。
+- **型判定**は `class(x) == "<class>"` ではなく `inherits(x, "<class>")`
+  を使う （複数クラスを持つ場合でも頑健）。
+- **検証**は `stop(msg, call. = FALSE)`
+  で行う（先頭の関数名ノイズを出さない）。
+- **コピーオンモディファイ。** すべての変更系（パイプ動詞、`*_with()`
+  派生：
+  [`rtf_table_style_with()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style_with.md)）は**新しい**オブジェクトを返し、
+  その場で破壊的変更しない。
+- **クラス階層を作らない。**
+  クラスは単一のフラットなタグ。ボーダー族は継承ではなく
+  **コンポジション**：`rtf_table_border` が `rtf_border` を含み、それが
+  `rtf_border_side` を含む。
+- クラスを付ける価値があるのは、**何かがディスパッチするか
+  [`inherits()`](https://rdrr.io/r/base/class.html) で判定する**
+  場合のみ。そうでなければ素のリストで十分。
