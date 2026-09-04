@@ -44,10 +44,14 @@ the reshaped data before it is rendered.
 
 Under the \code{"multiline"} type, a cell longer than its column's \code{width}
 breaks \strong{after the separator} first, so each source variable starts its own
-line, and only a piece that is still too long breaks again at a word
-boundary (after a space, comma or hyphen).  A single token longer than
-\code{width} is left whole on its own line rather than cut mid-word.  A \code{"\\n"}
-already in the data is honoured before any of this.
+line; a piece that is still too long breaks again at a word boundary (after
+a space, comma or hyphen); and a token that is \emph{still} too wide is
+hard-split, so \strong{every line fits the column it was measured against}.  A
+line break already in the data is honoured before any of this.
+
+\code{width} is a \strong{display width}: a full-width (CJK) glyph occupies two
+monospaced columns and is counted as two, so a Japanese listing wrapped to
+20 really does fit in twenty.
 
 Every column of one record is padded to the tallest, so the record's rows
 stay aligned across columns.

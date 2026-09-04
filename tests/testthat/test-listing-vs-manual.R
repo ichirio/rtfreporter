@@ -8,7 +8,7 @@
 # the ADSL-shaped test data.
 #
 # The claim this feature makes is that build_listing() does the same
-# reshaping automatically.  These tests check it cell by cell, and pin the three
+# reshaping automatically.  These tests check it cell by cell, and pin the four
 # places where the behaviour is deliberately NOT the same.
 #
 # Scope: up to `result` in that pipeline -- the splitting after it is
@@ -131,14 +131,25 @@ test_that("the gutter columns are blank everywhere, in both", {
 
 # ── Where the two deliberately differ ────────────────────────────────────────
 
-test_that("an unbreakable token gets its own line instead of an empty one", {
+test_that("a token wider than the column is hard-split, not left to overflow", {
   # The hand-written rule pushes the empty accumulator before starting on a
   # word that is by itself longer than the width, so the cell opens with a
-  # blank line and the record is a row taller than it needs to be.
+  # blank line AND the token still overflows the column.  Both are wrong: the
+  # blank line makes the record a row taller than it needs to be, and the
+  # overflowing token makes Word add a row this package did not count (#364).
   expect_identical(unlist(split_string("ABCDEFGHIJKLMNOP", 8)),
                    c("", "ABCDEFGHIJKLMNOP"))
   expect_identical(.listing_wrap_sep_word("ABCDEFGHIJKLMNOP", 8, "/"),
-                   "ABCDEFGHIJKLMNOP")
+                   c("ABCDEFGH", "IJKLMNOP"))
+})
+
+test_that("the hand-written rule counts characters, not display width", {
+  # It would let a Japanese cell ask for 8 columns and occupy 16.
+  jp <- "肺腺癌ステージIIIB"
+  manual <- unlist(split_string(jp, 8))
+  expect_true(any(.listing_disp_width(manual) > 8))    # a line 18 columns wide
+  expect_true(all(.listing_disp_width(
+    .listing_wrap_sep_word(jp, 8, "/")) <= 8))         # every line fits
 })
 
 test_that("an empty cell still occupies its row, so the blank row survives", {
