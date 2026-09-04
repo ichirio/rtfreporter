@@ -73,10 +73,20 @@
 #' decisions, not proposals.
 #'
 #' Each remaining column's **demand** is the `probs` quantile of the display
-#' widths of its composed cells, floored by the longest line of its header and
-#' by `min_width`.  A quantile rather than the maximum: one unusually long
-#' value should wrap, not push every other column narrow.  The demands are then
-#' scaled to the budget and rounded.
+#' widths of its composed cells, floored by `min_width` and by the widest token
+#' its header cannot break.  A quantile rather than the maximum: one unusually
+#' long value should wrap, not push every other column narrow.  And the widest
+#' unbreakable token rather than the header's length: a header wraps, so a long
+#' label should not claim a column the data does not need.
+#'
+#' The demands are then scaled to the budget.  Where scaling would take a
+#' column below the width its header needs, the column is raised back to it and
+#' the characters are taken from the columns that have room to spare -- **a
+#' header is never cut mid-word**.  Only if the headers alone cannot fit the
+#' page does that guarantee give way.
+#'
+#' Where the data carries no `label` attributes, `listing_spec(labels = )`
+#' supplies them, and the measurement uses those.
 #'
 #' Widths are display widths, so a full-width (CJK) glyph counts as two
 #' throughout.
@@ -194,6 +204,7 @@ fit_listing_widths <- function(data, spec,
 
   # What each column asks for, whether or not it is being fitted -- the fixed
   # ones are reported too, so print() can show a width that is under-set.
+  floor_hdr <- numeric(k)
   demand <- vapply(seq_len(k), function(j) {
     cl   <- spec$cols[[j]]
     sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
@@ -206,8 +217,9 @@ fit_listing_widths <- function(data, spec,
     # The header's floor is the widest token it cannot break, not its full
     # length: a header wraps, so a long label should not claim a column the
     # data does not need.
-    lab   <- .listing_resolve_label(data, cl, sepj, lay)
+    lab   <- .listing_resolve_label(data, cl, sepj, lay, spec$labels)
     hdr_w <- .listing_min_wrap_width(lab, sepj)
+    floor_hdr[j] <<- hdr_w
     max(cell_w, hdr_w, min_width)
   }, numeric(1L))
 
@@ -219,6 +231,39 @@ fit_listing_widths <- function(data, spec,
     free   <- demand[!fixed]
     scaled <- free * (budget / sum(free))
     fit    <- pmax(min_width, as.integer(round(scaled)))
+
+    # A header must not be cut mid-word.  Scaling to the budget can take a
+    # column below the widest token its header cannot break -- and then the
+    # header is hard-split, which is never acceptable in a deliverable.  So
+    # raise any column that fell under its floor, and pay for it out of the
+    # columns that have slack above theirs, in proportion to that slack.
+    floors <- pmax(min_width, floor_hdr[!fixed])
+    if (sum(floors) <= budget) {
+      fit  <- pmax(fit, floors)
+      over <- sum(fit) - as.integer(round(budget))
+      while (over > 0L) {
+        slack <- fit - floors
+        if (all(slack <= 0L)) break
+        take <- pmin(slack, pmax(1L, as.integer(ceiling(
+          over * slack / sum(slack)))))
+        take[slack <= 0L] <- 0L
+        if (sum(take) > over) {
+          # Trim the last few characters one column at a time, widest first.
+          idx <- order(slack, decreasing = TRUE)
+          take[] <- 0L
+          left <- over
+          for (i in idx) {
+            if (left <= 0L) break
+            t <- min(left, slack[i])
+            take[i] <- t
+            left <- left - t
+          }
+        }
+        fit  <- fit - take
+        over <- sum(fit) - as.integer(round(budget))
+      }
+    }
+
     # Rounding drift lands on the widest fitted column, so the total is exact.
     drift <- as.integer(round(budget)) - sum(fit)
     if (drift != 0L) {
@@ -371,14 +416,46 @@ listing_code <- function(spec, name = NULL, indent = 2L) {
       .listing_arg("record", spec$record_col)
     })
 
-  open  <- paste0(if (is.null(name)) "" else paste0(name, " <- "),
-                  "listing_spec(list(")
-  close <- if (length(spec_args)) {
-    paste0("), ", paste(spec_args, collapse = ", "), ")")
-  } else {
-    "))"
+  # The labels lookup is a table, so it gets lines of its own rather than
+  # being crushed onto the closing call.
+  lab_lines <- if (!is.null(spec$labels)) {
+    nm <- names(spec$labels)
+    w  <- max(nchar(nm))
+    entries <- sprintf("%s%-*s = %s", pad, w, nm,
+                       encodeString(unname(spec$labels), quote = "\""))
+    entries[-length(entries)] <- paste0(entries[-length(entries)], ",")
+    c("labels = c(", entries, ")")
   }
-  structure(c(open, col_lines, close), class = "rtf_listing_code")
+
+  head <- paste0(if (is.null(name)) "" else paste0(name, " <- "),
+                 "listing_spec(")
+
+  if (is.null(lab_lines)) {
+    # The compact form: the column list opens the call.
+    close <- if (length(spec_args)) {
+      paste0("), ", paste(spec_args, collapse = ", "), ")")
+    } else {
+      "))"
+    }
+    return(structure(c(paste0(head, "list("), col_lines, close),
+                     class = "rtf_listing_code"))
+  }
+
+  # With a labels table there are two blocks to lay out, so the call opens on
+  # its own line and everything inside it is indented once.
+  out <- c(head,
+           paste0(pad, "list("),
+           paste0(pad, col_lines),
+           paste0(pad, "),"),
+           paste0(pad, lab_lines[[1L]]),
+           paste0(pad, lab_lines[-1L]),
+           if (length(spec_args)) {
+             paste0(pad, paste(spec_args, collapse = ", "))
+           })
+  # The block before the closing bracket must not end in a comma.
+  n <- length(out)
+  out[n] <- sub(",$", "", out[n])
+  structure(c(out, ")"), class = "rtf_listing_code")
 }
 
 #' @export

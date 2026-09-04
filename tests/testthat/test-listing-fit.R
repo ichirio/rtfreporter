@@ -245,3 +245,140 @@ test_that("a fitted spec renders, and its widths reach the table", {
                    as.numeric(c(rbind(.widths_of(fitted),
                                       c(1, 1, NA))))[1:5])
 })
+
+
+# ── listing_spec(labels = ): one table of labels for data that has none ──────
+
+.unlabelled <- function() {
+  data.frame(
+    USUBJID = c("01-701-1015", "01-701-1023"),
+    DISPTPD = c("COMPLETED", "ONGOING"),
+    BRCA    = c("BRCA1", NA),
+    HIST    = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA OF THE LUNG"),
+    stringsAsFactors = FALSE
+  )
+}
+
+.spec_labels <- c(USUBJID = "Unique Subject ID",
+                  DISPTPD = "Primary Diagnosis",
+                  BRCA    = "Any (BRCA) Mutations",
+                  HIST    = "Histology")
+
+test_that("labels supply the header when the data carries none", {
+  spec <- listing_spec(list(listing_col("USUBJID", width = 20)),
+                       labels = .spec_labels)
+  body <- build_listing(.unlabelled(), spec)
+  expect_identical(attr(body, "rtf_listing", exact = TRUE)$cols[[1L]]$label,
+                   "Unique Subject ID")
+})
+
+test_that("a joined column joins its labels, and the breaks stay automatic", {
+  spec <- listing_spec(list(listing_col(c("DISPTPD", "BRCA", "HIST"),
+                                        width = 22)),
+                       labels = .spec_labels)
+  body <- build_listing(.unlabelled(), spec)
+  lab <- attr(body, "rtf_listing", exact = TRUE)$cols[[1L]]$label
+  expect_identical(strsplit(lab, "\n", fixed = TRUE)[[1L]],
+                   c("Primary Diagnosis/", "Any (BRCA) Mutations/", "Histology"))
+})
+
+test_that("precedence: listing_col(label) > labels > attribute > name", {
+  d <- .unlabelled()
+  attr(d$USUBJID, "label") <- "FROM THE DATA"
+
+  by_col <- listing_spec(list(listing_col("USUBJID", width = 30,
+                                          label = "FROM THE COLUMN")),
+                         labels = .spec_labels)
+  expect_identical(attr(build_listing(d, by_col), "rtf_listing")$cols[[1L]]$label,
+                   "FROM THE COLUMN")
+
+  by_lookup <- listing_spec(list(listing_col("USUBJID", width = 30)),
+                            labels = .spec_labels)
+  expect_identical(attr(build_listing(d, by_lookup), "rtf_listing")$cols[[1L]]$label,
+                   "Unique Subject ID")
+
+  by_attr <- listing_spec(list(listing_col("USUBJID", width = 30)))
+  expect_identical(attr(build_listing(d, by_attr), "rtf_listing")$cols[[1L]]$label,
+                   "FROM THE DATA")
+
+  by_name <- listing_spec(list(listing_col("DISPTPD", width = 30)))
+  expect_identical(attr(build_listing(d, by_name), "rtf_listing")$cols[[1L]]$label,
+                   "DISPTPD")
+})
+
+test_that("a variable the lookup does not name still falls back", {
+  spec <- listing_spec(list(listing_col("USUBJID", width = 20),
+                            listing_col("DISPTPD", width = 20)),
+                       labels = c(USUBJID = "Unique Subject ID"))
+  cols <- attr(build_listing(.unlabelled(), spec), "rtf_listing")$cols
+  expect_identical(cols[[1L]]$label, "Unique Subject ID")
+  expect_identical(cols[[2L]]$label, "DISPTPD")
+})
+
+test_that("the width fit measures the supplied labels", {
+  # "Any (BRCA) Mutations" cannot break below 9 ("Mutations"), so the column
+  # cannot be fitted narrower than that.
+  spec <- listing_spec(list(listing_col("BRCA"), listing_col("USUBJID")),
+                       labels = .spec_labels, spacer = FALSE)
+  fitted <- fit_listing_widths(.unlabelled(), spec, total_width = 30)
+  expect_gte(fitted$cols[[1L]]$width, 9L)
+})
+
+test_that("labels are validated", {
+  expect_error(listing_spec("USUBJID", labels = "no names"), "named character")
+  expect_error(listing_spec("USUBJID", labels = c("Unnamed")), "named character")
+  expect_error(listing_spec("USUBJID", labels = 1:2), "named character")
+})
+
+test_that("listing_code() writes the labels table out, and it round-trips", {
+  spec <- listing_spec(list(listing_col("USUBJID", width = 11),
+                            listing_col(c("DISPTPD", "BRCA"), width = 20)),
+                       labels = .spec_labels)
+  code <- listing_code(spec, name = "listing")
+
+  expect_true(any(grepl("labels = c(", code, fixed = TRUE)))
+  expect_true(any(grepl('USUBJID = "Unique Subject ID"', code, fixed = TRUE)))
+
+  again <- eval(parse(text = paste(code, collapse = "\n")))
+  expect_identical(again$labels, spec$labels)
+  expect_identical(vapply(again$cols, function(cl) as.integer(cl$width),
+                          integer(1L)),
+                   c(11L, 20L))
+})
+
+
+# ── a header is never cut mid-word ───────────────────────────────────────────
+
+test_that("scaling never takes a column below what its header needs", {
+  # "Diagnosis" is nine characters and cannot break; a naive proportional
+  # scaling gave this column eight and split the header as "Diagnosi" / "s".
+  spec <- listing_spec(
+    list(listing_col("USUBJID"),
+         listing_col(c("DISPTPD", "BRCA", "HIST")),
+         listing_col("STAGE")),
+    labels = c(USUBJID = "Unique Subject ID",
+               DISPTPD = "Primary Diagnosis",
+               BRCA    = "Any (BRCA) Mutations",
+               HIST    = "Histology",
+               STAGE   = "Stage at Initial Diagnosis"))
+  d <- .unlabelled()
+  d$STAGE <- c("IIIB", "IV")
+
+  fitted <- fit_listing_widths(d, spec, total_width = 60)
+  expect_gte(fitted$cols[[3L]]$width, 9L)
+
+  lab <- attr(build_listing(d, fitted), "rtf_listing")$cols[[3L]]$label
+  expect_true(all(strsplit(lab, "\n", fixed = TRUE)[[1L]] %in%
+                    c("Stage at", "Initial", "Diagnosis", "Stage",
+                      "at Initial")))
+  expect_false(any(grepl("Diagnosi$", strsplit(lab, "\n", fixed = TRUE)[[1L]])))
+})
+
+test_that("the budget is still respected exactly when a floor is raised", {
+  spec <- listing_spec(
+    list(listing_col("USUBJID"), listing_col("HIST"), listing_col("BRCA")),
+    labels = .spec_labels)
+  fitted <- fit_listing_widths(.unlabelled(), spec, total_width = 45)
+  w <- vapply(fitted$cols, function(cl) as.integer(cl$width), integer(1L))
+  expect_identical(sum(w) + 2, 45)
+})

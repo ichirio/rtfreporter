@@ -73,6 +73,38 @@
 
 ### New features
 
+- **`listing_spec(labels = )` supplies the variable labels in one place**
+  (#373).  Deriving a header from the data's `label` attributes (#366) covers
+  ADaM read through haven and nothing else: a CSV, a frame built in the
+  program or a `subset()` that dropped them arrives with the labels known to
+  the programmer but not to the data.
+
+  ```r
+  listing_spec(
+    list(listing_col("USUBJID"), listing_col(c("DISPTPD", "BRCA", "HIST"))),
+    labels = c(USUBJID = "Unique Subject ID",
+               DISPTPD = "Primary Diagnosis",
+               BRCA    = "Any (BRCA) Mutations",
+               HIST    = "Histology")
+  )
+  ```
+
+  One table, written once -- the shape a define/spec extract already has
+  (`setNames(spec$label, spec$variable)`).  The header is still **derived**:
+  the labels of a column's source variables are joined with its separator and
+  wrapped to its width, so where the lines break stays automatic.  Only the
+  words come from here.  Precedence is `listing_col(label = )`, then `labels`,
+  then the variable's attribute, then its name.  `listing_code()` writes the
+  table out, and `fit_listing_widths()` measures against it.
+
+- **A header is no longer cut mid-word by the width fit** (#373).  Scaling the
+  demands to the page could take a column below the widest token its header
+  cannot break -- `"Stage at Initial Diagnosis"` in a nine-character column
+  printed as `Diagnosi` / `s`.  A column that falls under that floor is now
+  raised back to it and the characters come from the columns with room to
+  spare; only if the headers alone cannot fit the page does the guarantee give
+  way.
+
 - **`fit_listing_widths()` proposes every column's width from the page and
   the data, and `listing_code()` prints the spec as source to paste** (#369).
   Choosing widths by hand is the tedious part of writing a listing, and the
