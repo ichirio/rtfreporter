@@ -511,21 +511,10 @@ print.rtf_listing_spec <- function(x, ...) {
                  paste0("\"", missing_vars, "\"", collapse = ", "),
                  cl$name), call. = FALSE)
   }
-  vals <- lapply(cl$vars, function(v) {
-    x <- data[[v]]
-    if (is.factor(x)) x <- as.character(x)
-    x <- as.character(x)
-    x[is.na(x)] <- ""
-    trimws(x)
-  })
-  n <- nrow(data)
-  out <- character(n)
-  for (i in seq_len(n)) {
-    parts <- vapply(vals, function(v) v[i], character(1L))
-    parts <- parts[nzchar(parts)]
-    out[i] <- paste(parts, collapse = sep)
-  }
-  out
+  # The join itself is catx() (#360), so a listing column and a join the user
+  # writes by hand cannot drift apart.
+  if (nrow(data) == 0L) return(character(0))
+  do.call(catx, c(list(sep), unname(as.list(data[cl$vars]))))
 }
 
 #' Reshape a data.frame into a listing body

@@ -114,11 +114,15 @@ pad_list_elements <- function(list_input, num_vector) {
 # ── The glue, rewritten in base R ────────────────────────────────────────────
 
 # ydisctools::catx() -- join with `sep`, skipping missing and empty values.
-catx <- function(sep, ...) {
+# Named apart from rtfreporter's own catx() (#360) so the package function is
+# not masked during the test run, and left NON-trimming, which is what
+# ydisctools does: rtfreporter's strips blanks around each value, as SAS CATX
+# does.  The #356 data carries no padding, so the two agree on it.
+.ydisc_catx <- function(sep, ...) {
   parts <- lapply(list(...), function(x) {
     x <- as.character(x)
     x[is.na(x)] <- ""
-    trimws(x)
+    x
   })
   n <- max(vapply(parts, length, integer(1L)))
   vapply(seq_len(n), function(i) {
@@ -139,7 +143,7 @@ catx <- function(sep, ...) {
 
   # mutate(COL01 = catx("/", DISPTPD, BRCA, HIST), ...)
   joined <- lapply(nm, function(k) {
-    do.call(catx, c(list("/"), unname(as.list(data[cols[[k]]]))))
+    do.call(.ydisc_catx, c(list("/"), unname(as.list(data[cols[[k]]]))))
   })
   names(joined) <- nm
 

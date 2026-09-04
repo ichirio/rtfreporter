@@ -74,6 +74,13 @@ listing's separator (`/` by default), and **missing and empty values are
 skipped** -- a subject with no `BRCA` prints `COMPLETED/SQUAMOUS...`, not
 `COMPLETED//SQUAMOUS...`.
 
+That join is `catx()`, which the package exports for the columns you build
+yourself -- so a listing needs nothing outside rtfreporter:
+
+```{r catx}
+catx("/", "COMPLETED", NA, "ADENOCARCINOMA")
+```
+
 **`width` is a number of characters, not a rendered width.** It decides where
 the text breaks onto another physical row, and therefore how tall the subject's
 block is. What the column *measures* in the table is `rel_width`, which
