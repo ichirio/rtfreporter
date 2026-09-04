@@ -2,6 +2,66 @@
 
 ### New features
 
+- **Listing preparation: `listing_col()`, `listing_spec()`, `build_listing()`
+  and `as_rtftables(listing = )`** (#241).  A clinical listing is a
+  data.frame problem before it is an RTF problem, and this is the missing
+  step: source variables joined into one printed column, a long cell wrapped
+  over as many physical rows as it needs, narrow gutter columns between the
+  printed ones, and a blank row after each record.
+
+  ```r
+  spec <- listing_spec(list(
+    listing_col("USUBJID", width = 15, label = "Unique
+Subject ID"),
+    listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
+                label = "Primary Diagnosis/
+Any (BRCA) Mutations/
+Histology"),
+    listing_col("STAGE", label = "Stage at
+Initial
+Diagnosis")
+  ))
+
+  as_rtftables(adsl, listing = spec, max_rows = 40)
+  ```
+
+  The division of labour follows the stub: `build_listing()` is the
+  data.frame verb, `listing_spec()` bundles its settings, and
+  `as_rtftables(listing = )` runs the same work as a hook -- and both read
+  the *same* spec, so neither carries a copy of the other's arguments.
+  `build_listing(data, spec) |> as_rtftables()` and `as_rtftables(data,
+  listing = spec)` produce the same tables; reach for the first to look at
+  (or patch) the reshaped data before it is rendered.
+
+  Because the hook runs inside `as_rtftables()`, the spec also supplies the
+  **`col_header`, the relative widths and the left alignment**, so the three
+  hand-maintained vectors a listing used to need -- one header entry per
+  column, `col_rel_width = c(80, 1, 130, 1, ...)`, a `col_spec` repeating
+  `align = "left"` -- are gone, along with the job of keeping them in step
+  with the column list.  Anything you pass yourself still wins.
+
+  **A record is never split across a page.**  `build_listing()` appends a
+  hidden record column and the hook points `group_col` at it, splits with
+  `"group_safe"` and adds it to `drop_cols`; drop columns are hidden after
+  pagination, so it decides the page breaks and is never printed.  No new
+  pagination code was needed for it.
+
+  `listing_spec(type = )` names a template -- one ships, `"multiline"` --
+  which supplies the separator, the gutters, the per-record blank row, the
+  wrapping rule and the default alignment, exactly as `border = "tfl"`
+  resolves a preset.  Adding a type later changes no signature.
+
+  Under `"multiline"` a cell breaks **after the separator** first, so each
+  source variable starts its own line, and only a piece that is still too
+  long breaks again at a word boundary.  A token longer than the width keeps
+  its own line rather than being cut mid-word.
+
+  An rlistings `listing_df` is **rejected** by both entry points, with a
+  pointer: rlistings has already applied `disp_cols`, baked key-column
+  suppression into the strings and carries its own titles, so it goes
+  straight to `as_rtftables()` (#322).  Without the guard it would fall
+  silently into the plain-data.frame path.
+
 - **`as_rtftables(na = )` says what a missing value should print as** (#350).
   Previously an `NA` cell rendered as an empty cell and there was no way to ask
   for anything else:

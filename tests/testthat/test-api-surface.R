@@ -68,7 +68,7 @@ test_that("one border constructor is left once the deprecated ones are set aside
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 75 exports, 7 of them deprecated and slated for removal before CRAN.
-  expect_length(.exports(), 75L)
-  expect_length(setdiff(.exports(), .dep), 68L)
+  # 78 exports, 7 of them deprecated and slated for removal before CRAN.
+  expect_length(.exports(), 78L)
+  expect_length(setdiff(.exports(), .dep), 71L)
 })

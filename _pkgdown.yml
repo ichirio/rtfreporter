@@ -259,6 +259,26 @@ reference:
       - stub_cols
       - stub_spec
 
+  # ── 4b. Listings ───────────────────────────────────────────────
+  - title: Listings (source data → listing body)
+    desc: >
+      Reshape source data into what a listing prints, before any of it is
+      rendered: source variables joined into one printed column, a long cell
+      wrapped over several physical rows, narrow gutter columns, and a blank
+      row after each record.
+      **Acts on:** a data.frame / tibble.  **Produces:** a data.frame, which
+      `as_rtftables()` renders.
+      `listing_col()` describes one printed column and `listing_spec()` the
+      listing as a whole; `build_listing()` applies the spec, and
+      `as_rtftables(listing = )` runs the same work inside the pipeline and
+      derives the header, the widths and the alignment from it.  An rlistings
+      `listing_df` needs none of this -- it is already laid out, and goes
+      straight to `as_rtftables()`.
+    contents:
+      - listing_col
+      - listing_spec
+      - build_listing
+
   # ── 5. Column headers ──────────────────────────────────────────────────
   - title: Column headers
     desc: >
