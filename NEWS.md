@@ -73,6 +73,10 @@
 
 ### New features
 
+- `listing_spec(layout = )` is documented (#366 follow-up).  The argument
+  shipped undocumented, which `R CMD check --as-cran` reports as a WARNING;
+  no behaviour changes.
+
 - **A listing column can take its header from the data, flow its parts, and
   mark itself as a key** (#366).  Three jobs the listing prototype in
   ydisctools had already worked out, brought over as `listing_col()`

@@ -47,6 +47,11 @@ template's.}
 \item{align}{Default alignment for columns that do not set their own.
 \code{NULL} (default) takes the template's.}
 
+\item{layout}{Default cell layout for columns that do not set their own:
+\code{"stack"} breaks after every separator, \code{"flow"} fills each line as far
+as the column's \code{width} allows.  See \code{\link[=listing_col]{listing_col()}}.  \code{NULL} (default)
+takes the template's.}
+
 \item{record}{\code{TRUE} (default) appends the hidden record column under its
 standard name, \code{FALSE} appends none, or a single string names it
 yourself.  See \emph{The record column}.}

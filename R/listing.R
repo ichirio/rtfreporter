@@ -436,6 +436,10 @@ print.rtf_listing_col <- function(x, ...) {
 #'   template's.
 #' @param align Default alignment for columns that do not set their own.
 #'   `NULL` (default) takes the template's.
+#' @param layout Default cell layout for columns that do not set their own:
+#'   `"stack"` breaks after every separator, `"flow"` fills each line as far
+#'   as the column's `width` allows.  See [listing_col()].  `NULL` (default)
+#'   takes the template's.
 #' @param record `TRUE` (default) appends the hidden record column under its
 #'   standard name, `FALSE` appends none, or a single string names it
 #'   yourself.  See *The record column*.
