@@ -41,6 +41,20 @@
   functions that declare it, so one written to the older two-argument contract
   is called exactly as before.
 
+### Documentation
+
+- **The Reference index stops presenting the deprecated border constructors
+  as current API** (#354). *Borders* listed all nine at the same level, so
+  nothing on the page said that seven of them are on their way out. It now
+  holds only the two that are current -- `rtf_border_side()` and
+  `rtf_border()` -- and the seven it replaced sit in a *Deprecated --
+  scheduled for removal* section at the bottom, which says plainly that they
+  will be removed in one batch before the CRAN submission. `paginate()`,
+  which is superseded but is **not** going away, moved to its own
+  *Superseded* section so neither statement has to cover both cases.
+  Documentation only: every deprecated function still works and still has
+  its page.
+
 ### Bug fixes
 
 - **A factor `group_col` no longer breaks the `" (Cont.)"` continuation row**

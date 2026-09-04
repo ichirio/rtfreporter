@@ -349,24 +349,21 @@ reference:
   # ── 8. Borders ─────────────────────────────────────────────────────────
   - title: Borders
     desc: >
-      Border specifications, from a single edge upwards:
-      `rtf_border_side()` describes one edge, `rtf_border()` the four edges of
-      a cell or row, `rtf_table_border()` the zones of a whole table.
-      **Where usable:** all of them are accepted by `rtftable(border = )`,
+      Two constructors, and only two: `rtf_border_side()` describes one edge --
+      its line style, width and colour -- and `rtf_border()` collects edges
+      into the border of a cell, a row or a zone, including the rules *inside*
+      a selection (`inside_h`, `inside_v`).
+      **Where usable:** both are accepted by `rtftable(border = )`,
       `rtf_tables(border = )` and the `style_*()` verbs; `rtf_border()` is
       also accepted by `col_cell(border = )`.  There is **no border setting at
       document level**.  Later wins, per edge -- a `style_*()` call overrides
       `rtftable()`, which overrides the adapter.
+      The constructors these two replaced are listed under *Deprecated* at the
+      bottom of this page; `?rtf_border` pairs the old and the new spelling
+      for every case.
     contents:
       - rtf_border_side
       - rtf_border
-      - rtf_border_with
-      - rtf_border_none
-      - rtf_border_top
-      - rtf_border_bottom
-      - rtf_border_box
-      - rtf_table_border
-      - rtf_border_tfl
 
   # ── 9. Shared table styles ─────────────────────────────────────────────
   - title: Shared table styles (S3, snapshot)
@@ -434,13 +431,28 @@ reference:
     contents:
       - rtf_replace_text
 
-  # ── 14. Deprecated ─────────────────────────────────────────────────────
-  - title: Deprecated
+  # ── 14. Superseded ─────────────────────────────────────────────────────
+  - title: Superseded
     desc: >
-      Superseded, but still working.  Nothing here is scheduled for removal;
-      each page names its replacement.
+      Still working and **not** scheduled for removal: newer work goes into
+      the replacement each page names, but existing code need not change.
     contents:
       - paginate
+
+  # ── 15. Deprecated ────────────────────────────────────────
+  - title: Deprecated -- scheduled for removal
+    desc: >
+      The border constructors that `rtf_border_side()` and `rtf_border()`
+      replaced at 0.5.0 / 0.6.0.  They still work and each warns once per
+      session, naming its replacement, but they will be **removed in one
+      batch before the CRAN submission** -- do not write new code against
+      them.  `?rtf_border` pairs the old and the new spelling for every case.
+      `rtf_border_none()`, `rtf_border_top()`, `rtf_border_bottom()` and
+      `rtf_border_box()` are documented on the `rtf_border()` page itself.
+    contents:
+      - rtf_border_with
+      - rtf_table_border
+      - rtf_border_tfl
 
 # Articles index page (/articles/).  Grouped so users land on the
 # tutorial first; learner-focused material sits at the bottom.
