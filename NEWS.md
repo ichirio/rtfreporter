@@ -73,6 +73,29 @@
 
 ### New features
 
+- **The width fit now accounts for how tall a header will be**
+  (`fit_listing_widths(header_lines = )`, #378).  The demand was data-driven,
+  with the header contributing only the widest token it cannot break -- on the
+  reasoning that a header wraps.  It does, but wrapping a 73-character label
+  into nine characters makes a **ten-line block, printed at the top of every
+  page**, and a column whose label is long and whose data is short was
+  answered with almost nothing.
+
+  A column is now also asked to be wide enough for its header to fit in
+  `header_lines` lines (default `4`), so a long label buys width in
+  proportion to how tall it would otherwise make the header.  Measured
+  against the hand-tuned widths of a real 19-column listing (Discussion
+  #356), the mean error per column falls from 5.7 characters to 3.6 and the
+  header block from ten lines to eight; `header_lines = 3` takes it to 2.8
+  and five lines.  `Inf` restores the previous, purely data-driven fit.
+
+  Two things the same report surfaced, now documented on the same page:
+  `size_half_points` is **half-points** (8pt is `16L`, and the 9pt default
+  silently costs 18 characters of budget on landscape A4), and
+  `spacer_rel_width` is in the same character unit -- its default of `1` gives
+  nine gutters nearly 6% of that page, where a fractional `0.25` gives the
+  hairline divider a hand-tuned listing uses.
+
 - **`fit_listing_widths()` now writes the estimate down in full, so
   `listing_code()` emits a template you can edit** (#375).  The code it
   produced was terse by design -- only what differs from the defaults -- which

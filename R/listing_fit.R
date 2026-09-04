@@ -72,12 +72,28 @@
 #' printed too -- and so is every `width` you set yourself, because those are
 #' decisions, not proposals.
 #'
-#' Each remaining column's **demand** is the `probs` quantile of the display
-#' widths of its composed cells, floored by `min_width` and by the widest token
-#' its header cannot break.  A quantile rather than the maximum: one unusually
-#' long value should wrap, not push every other column narrow.  And the widest
-#' unbreakable token rather than the header's length: a header wraps, so a long
-#' label should not claim a column the data does not need.
+#' A gutter costs `listing_spec(spacer_rel_width = )` characters, and the
+#' default of `1` is a full character each: on a nine-gutter listing that is
+#' close to 6% of the page.  A fraction is allowed -- `spacer_rel_width = 0.25`
+#' gives the hairline divider a hand-tuned listing usually uses.
+#'
+#' Each remaining column's **demand** is the largest of four things:
+#'
+#' * the `probs` quantile of the display widths of its composed cells -- a
+#'   quantile rather than the maximum, so one unusually long value wraps
+#'   instead of pushing every other column narrow;
+#' * the width its header needs to be no more than `header_lines` tall;
+#' * the widest token its header cannot break, below which the header would be
+#'   cut mid-word;
+#' * `min_width`.
+#'
+#' The second is what stops a long label being answered with a very narrow
+#' column.  A header wraps, so it does not need its full length -- but wrapping
+#' a 73-character label into nine characters makes a **ten-line block, printed
+#' at the top of every page**.  `header_lines` says how tall a header may
+#' reasonably be, and the label's width divided by it is what the column needs
+#' to get there.  Lower it for a listing whose headers must stay readable;
+#' raise it (or use `Inf`) to let the data have the page.
 #'
 #' The demands are then scaled to the budget.  Where scaling would take a
 #' column below the width its header needs, the column is raised back to it and
@@ -98,8 +114,12 @@
 #'   be rendered on.  `NULL` (default) uses rtfreporter's own page defaults.
 #'   Ignored when `total_width` is given.
 #' @param font,size_half_points The font the listing renders in, used to turn
-#'   the page's width into a number of characters.  Defaults match
-#'   [auto_col_widths()].
+#'   the page's width into a number of characters.  `size_half_points` is
+#'   **half-points**, as everywhere in RTF: 8pt is `16L`, 9pt (the default)
+#'   is `18L`.  Getting it wrong silently changes the budget -- at 8pt a
+#'   landscape A4 with half-inch margins holds 159 characters, at 9pt only
+#'   141.  Pass the same values the document uses in
+#'   `rtf_document(default_format = )`.
 #' @param total_width Character budget for the whole listing, gutters included.
 #'   `NULL` (default) computes it from `page`, `font` and `size_half_points`.
 #'   Give it directly when you know the budget and would rather not describe
@@ -114,6 +134,12 @@
 #'   then `labels`, then the variable's `label` attribute, then its name.  A
 #'   define/spec extract converts directly:
 #'   `setNames(spec$label, spec$variable)`.
+#' @param header_lines How many lines a header may reasonably occupy (default
+#'   `4`).  A column is asked to be at least wide enough for its header at
+#'   that height, so a long label buys width in proportion to how tall it
+#'   would otherwise make the header block.  `Inf` asks for nothing on the
+#'   header's behalf beyond the token it cannot break, which is the
+#'   data-driven fit.
 #' @param min_width Integer.  The narrowest a fitted column may be (default
 #'   `6`).
 #' @param probs Quantile of a column's cell widths taken as its demand
@@ -165,6 +191,7 @@ fit_listing_widths <- function(data, spec,
                                size_half_points = 18L,
                                total_width      = NULL,
                                labels           = NULL,
+                               header_lines     = 4L,
                                min_width        = 6L,
                                probs            = 0.9) {
   if (!is.data.frame(data)) {
@@ -189,6 +216,11 @@ fit_listing_widths <- function(data, spec,
            call. = FALSE)
     }
     labels[is.na(labels)] <- ""
+  }
+  if (length(header_lines) != 1L || !is.numeric(header_lines) ||
+      is.na(header_lines) || header_lines < 1) {
+    stop("`header_lines` must be a single number >= 1, or Inf.",
+         call. = FALSE)
   }
   min_width <- as.integer(min_width)
   if (length(min_width) != 1L || is.na(min_width) || min_width < 1L) {
@@ -240,9 +272,21 @@ fit_listing_widths <- function(data, spec,
     # length: a header wraps, so a long label should not claim a column the
     # data does not need.
     lab   <- .listing_resolve_label(data, cl, sepj, lay, labels)
+    # Two things the header asks for.  The widest token it cannot break is a
+    # hard floor -- below it the header is cut mid-word.  Its HEIGHT is the
+    # other: a header wraps, but wrapping a 73-character label to nine
+    # characters makes a ten-line block, printed at the top of every page.
+    # `header_lines` says how tall a header may reasonably be, and the label's
+    # total width divided by it is what the column needs to get there.
     hdr_w <- .listing_min_wrap_width(lab, sepj)
     floor_hdr[j] <<- hdr_w
-    max(cell_w, hdr_w, min_width)
+    hdr_h <- if (is.finite(header_lines)) {
+      total <- sum(.listing_disp_width(
+        strsplit(lab, "
+", fixed = TRUE)[[1L]]))
+      ceiling(total / header_lines)
+    } else 0
+    max(cell_w, hdr_w, hdr_h, min_width)
   }, numeric(1L))
 
   out <- vapply(seq_len(k), function(j) {

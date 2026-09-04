@@ -443,3 +443,88 @@ test_that("the template round-trips to the same widths and headers", {
   expect_identical(as_rtftables(.unlabelled(), listing = again),
                    as_rtftables(.unlabelled(), listing = fitted))
 })
+
+
+# ── header_lines: a long label buys width (#378) ─────────────────────────────
+
+.long_header <- function() {
+  d <- data.frame(SHORT = c("12.5", "36.2"), OTHER = c("aaaa", "bbbb"),
+                  stringsAsFactors = FALSE)
+  d
+}
+
+.long_labels <- c(
+  SHORT = "Time since Initial Diagnosis to Date of First Dose of Study Drug (months)",
+  OTHER = "Other")
+
+.fit_hl <- function(hl) {
+  spec <- listing_spec(list(listing_col("SHORT"), listing_col("OTHER")),
+                       spacer = FALSE)
+  fit_listing_widths(.long_header(), spec, total_width = 60,
+                     labels = .long_labels, header_lines = hl)
+}
+
+.hdr_lines <- function(spec, j = 1L) {
+  length(strsplit(spec$cols[[j]]$label, "\n", fixed = TRUE)[[1L]])
+}
+
+test_that("a long label over short data asks for more than its widest token", {
+  # Data of four characters; the label is 73.  With the height ignored the
+  # column gets almost nothing and the header becomes a tall block.
+  tall <- .fit_hl(Inf)
+  wide <- .fit_hl(4)
+  expect_gt(wide$cols[[1L]]$width, tall$cols[[1L]]$width)
+  expect_lt(.hdr_lines(wide), .hdr_lines(tall))
+})
+
+test_that("header_lines is a target the fit gets close to", {
+  fitted <- .fit_hl(4)
+  # not a guarantee -- the budget is shared -- but the block is bounded
+  expect_lte(.hdr_lines(fitted), 6L)
+  expect_gte(fitted$cols[[1L]]$width, 15L)
+})
+
+test_that("a lower header_lines buys more width, monotonically", {
+  w <- vapply(c(Inf, 6, 4, 3), function(hl) .fit_hl(hl)$cols[[1L]]$width,
+              integer(1L))
+  expect_true(all(diff(w) >= 0L))
+})
+
+test_that("header_lines = Inf asks nothing on the header's behalf", {
+  dem <- function(hl) {
+    attr(.fit_hl(hl), "rtf_listing_fit", exact = TRUE)$demand[["SHORT"]]
+  }
+  # With Inf the demand is the data and the widest unbreakable token
+  # ("Diagnosis", nine).  With a height target it is the label's width divided
+  # by that height, which is more.
+  expect_lte(unname(dem(Inf)), 10)
+  expect_gt(unname(dem(4)), unname(dem(Inf)))
+})
+
+test_that("header_lines never overrides a width the author set", {
+  spec <- listing_spec(list(listing_col("SHORT", width = 8),
+                            listing_col("OTHER")), spacer = FALSE)
+  fitted <- fit_listing_widths(.long_header(), spec, total_width = 60,
+                               labels = .long_labels, header_lines = 3)
+  expect_identical(fitted$cols[[1L]]$width, 8L)
+})
+
+test_that("header_lines is validated", {
+  spec <- listing_spec(list(listing_col("SHORT")))
+  expect_error(fit_listing_widths(.long_header(), spec, total_width = 20,
+                                  header_lines = 0), "at least|>= 1")
+  expect_error(fit_listing_widths(.long_header(), spec, total_width = 20,
+                                  header_lines = "four"), "single number")
+})
+
+test_that("a fractional gutter is allowed, and frees width for the columns", {
+  cols <- list(listing_col("SHORT"), listing_col("OTHER"))
+  wide_gutter <- fit_listing_widths(
+    .long_header(), listing_spec(cols, spacer_rel_width = 1),
+    total_width = 40, labels = .long_labels)
+  hair <- fit_listing_widths(
+    .long_header(), listing_spec(cols, spacer_rel_width = 0.25),
+    total_width = 40, labels = .long_labels)
+  expect_gt(sum(vapply(hair$cols, function(cl) cl$width, integer(1L))),
+            sum(vapply(wide_gutter$cols, function(cl) cl$width, integer(1L))))
+})
