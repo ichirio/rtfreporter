@@ -440,18 +440,6 @@ print.rtf_listing_col <- function(x, ...) {
 #'   `"stack"` breaks after every separator, `"flow"` fills each line as far
 #'   as the column's `width` allows.  See [listing_col()].  `NULL` (default)
 #'   takes the template's.
-#' @param labels Named character vector mapping **source column names** to
-#'   labels, e.g. `c(USUBJID = "Unique Subject ID", AGE = "Age")`.  Used
-#'   where a column leaves its `label` unset, for data that carries no `label`
-#'   attributes -- a CSV, a frame built in the program, a `subset()` that
-#'   dropped them.  The header is still *derived*: the labels of a column's
-#'   source variables are joined with its separator and wrapped to its width,
-#'   so where the lines break is still worked out for you.  Only the words
-#'   come from here.  Precedence: `listing_col(label = )`, then `labels`, then
-#'   the variable's `label` attribute, then its name -- explicit-in-the-program
-#'   beats data-derived, so a wrong label in the source can be corrected
-#'   without touching the data.  A define/spec extract converts directly:
-#'   `setNames(spec$label, spec$variable)`.
 #' @param record `TRUE` (default) appends the hidden record column under its
 #'   standard name, `FALSE` appends none, or a single string names it
 #'   yourself.  See *The record column*.
@@ -470,12 +458,6 @@ print.rtf_listing_col <- function(x, ...) {
 #' ))
 #' spec
 #'
-#' # Labels supplied in one place, for data that carries none of its own.
-#' listing_spec(
-#'   list(listing_col("USUBJID"), listing_col(c("AGE", "SEX"))),
-#'   labels = c(USUBJID = "Unique Subject ID", AGE = "Age", SEX = "Sex")
-#' )
-#'
 #' # Bare names are columns too: two unwrapped columns, no gutters.
 #' listing_spec(c("USUBJID", "ARM"), spacer = FALSE)
 #'
@@ -489,7 +471,6 @@ listing_spec <- function(cols,
                          blank_row_first  = NULL,
                          align            = NULL,
                          layout           = NULL,
-                         labels           = NULL,
                          record           = TRUE) {
   tpl <- .listing_template(type)
 
@@ -536,17 +517,6 @@ listing_spec <- function(cols,
   }
   if (!is.null(align)) align <- match.arg(align, c("left", "center", "right"))
   if (!is.null(layout)) layout <- match.arg(layout, c("stack", "flow"))
-  if (!is.null(labels)) {
-    labels <- unlist(labels, use.names = TRUE)
-    if (!is.character(labels) || !length(labels) ||
-        is.null(names(labels)) || anyNA(names(labels)) ||
-        !all(nzchar(names(labels)))) {
-      stop("`labels` must be a named character vector mapping source column ",
-           "names to labels, e.g. c(USUBJID = \"Unique Subject ID\").",
-           call. = FALSE)
-    }
-    labels[is.na(labels)] <- ""
-  }
 
   record_col <-
     if (isTRUE(record)) {
@@ -575,7 +545,6 @@ listing_spec <- function(cols,
                             } else blank_row_first,
          align            = if (is.null(align)) tpl$align else align,
          layout           = if (is.null(layout)) tpl$layout else layout,
-         labels           = labels,
          wrap             = tpl$wrap,
          record_col       = record_col),
     class = "rtf_listing_spec"
@@ -681,10 +650,11 @@ print.rtf_listing_spec <- function(x, ...) {
 # One source column's display name: its `label` attribute when it has a usable
 # one, otherwise the column name.  This is `stub_cols(label = NULL)`'s rule --
 # a listing header and a merged stub label are derived the same way.
-#  `labels` is the listing's own lookup, written in the program: it beats the
-#  data, because data that has no label attributes is exactly the case it
-#  exists for, and a label that is wrong in the source should be correctable
-#  without touching the data.
+#  `labels` is the lookup `fit_listing_widths(labels = )` supplies: the words
+#  for each SOURCE variable, written in the program.  It beats the data,
+#  because data with no label attributes is exactly the case it exists for,
+#  and a label that is wrong in the source should be correctable without
+#  touching the data.
 .listing_var_label <- function(data, v, labels = NULL) {
   if (!is.null(labels) && v %in% names(labels)) {
     lab <- labels[[v]]
@@ -855,8 +825,7 @@ build_listing <- function(data, spec) {
     sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
     lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
     txt  <- .listing_combine(data, cl, sepj)
-    spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay,
-                                                   spec$labels)
+    spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay)
     lines[[j]] <- lapply(txt, function(s) spec$wrap(s, cl$width, sepj, lay))
   }
 

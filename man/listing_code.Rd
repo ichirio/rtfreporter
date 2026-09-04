@@ -29,6 +29,10 @@ where the decisions get made and reviewed.
 Only what differs from the listing's own defaults is written out, so the
 result reads like something a person wrote rather than a dump of every
 setting.
+
+A spec straight from \code{\link[=fit_listing_widths]{fit_listing_widths()}} therefore comes out in full --
+\code{width}, \code{rel_width} and \code{label} on every column -- because the fit wrote
+all three down.  That is the point: it is a template to edit.
 }
 \examples{
 spec <- listing_spec(list(

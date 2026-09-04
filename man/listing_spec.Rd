@@ -14,7 +14,6 @@ listing_spec(
   blank_row_first = NULL,
   align = NULL,
   layout = NULL,
-  labels = NULL,
   record = TRUE
 )
 }
@@ -52,19 +51,6 @@ template's.}
 \code{"stack"} breaks after every separator, \code{"flow"} fills each line as far
 as the column's \code{width} allows.  See \code{\link[=listing_col]{listing_col()}}.  \code{NULL} (default)
 takes the template's.}
-
-\item{labels}{Named character vector mapping \strong{source column names} to
-labels, e.g. \code{c(USUBJID = "Unique Subject ID", AGE = "Age")}.  Used
-where a column leaves its \code{label} unset, for data that carries no \code{label}
-attributes -- a CSV, a frame built in the program, a \code{subset()} that
-dropped them.  The header is still \emph{derived}: the labels of a column's
-source variables are joined with its separator and wrapped to its width,
-so where the lines break is still worked out for you.  Only the words
-come from here.  Precedence: \code{listing_col(label = )}, then \code{labels}, then
-the variable's \code{label} attribute, then its name -- explicit-in-the-program
-beats data-derived, so a wrong label in the source can be corrected
-without touching the data.  A define/spec extract converts directly:
-\code{setNames(spec$label, spec$variable)}.}
 
 \item{record}{\code{TRUE} (default) appends the hidden record column under its
 standard name, \code{FALSE} appends none, or a single string names it
@@ -116,12 +102,6 @@ spec <- listing_spec(list(
   listing_col("ARM", width = 20, label = "Treatment Arm")
 ))
 spec
-
-# Labels supplied in one place, for data that carries none of its own.
-listing_spec(
-  list(listing_col("USUBJID"), listing_col(c("AGE", "SEX"))),
-  labels = c(USUBJID = "Unique Subject ID", AGE = "Age", SEX = "Sex")
-)
 
 # Bare names are columns too: two unwrapped columns, no gutters.
 listing_spec(c("USUBJID", "ARM"), spacer = FALSE)
