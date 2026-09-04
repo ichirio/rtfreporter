@@ -13,6 +13,7 @@ listing_spec(
   blank_row = NULL,
   blank_row_first = NULL,
   align = NULL,
+  layout = NULL,
   record = TRUE
 )
 }

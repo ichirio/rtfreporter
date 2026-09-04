@@ -54,6 +54,7 @@
       blank_row        = TRUE,
       blank_row_first  = TRUE,
       align            = "left",
+      layout           = "stack",
       wrap             = .listing_wrap_sep_word
     )
   )
@@ -167,7 +168,27 @@
   out
 }
 
-.listing_wrap_sep_word <- function(text, width, sep) {
+# Refill separator-delimited pieces into lines of at most `width`, so a cell
+# whose parts are short keeps them side by side.  This is what turns the
+# unconditional break of "stack" into the break OPPORTUNITY of "flow".
+.listing_flow <- function(parts, width) {
+  out <- character(0L)
+  cur <- ""
+  for (p in parts) {
+    if (!nzchar(cur)) {
+      cur <- p
+    } else if (.listing_disp_width(trimws(paste0(cur, p))) <= width) {
+      cur <- paste0(cur, p)
+    } else {
+      out <- c(out, cur)
+      cur <- p
+    }
+  }
+  if (nzchar(cur)) out <- c(out, cur)
+  out
+}
+
+.listing_wrap_sep_word <- function(text, width, sep, layout = "stack") {
   if (is.null(text) || length(text) != 1L || is.na(text)) text <- ""
   text <- as.character(text)
   # A "\n" already in the data is a line break the author asked for; honour it
@@ -175,12 +196,21 @@
   chunks <- strsplit(text, "\n", fixed = TRUE)[[1L]]
   if (!length(chunks)) chunks <- ""
   if (is.null(width) || is.na(width)) {
+    # No width, no layout: with nothing to lay the column out against, both
+    # `layout`s return the text as it stands.  (ydisctools' rule breaks at
+    # every separator here even with no width; that would silently make every
+    # existing width-less multi-variable column taller, and nothing asks for
+    # it -- `width` is what says how the column is laid out.)
     chunks <- trimws(chunks)
     return(if (all(!nzchar(chunks))) "" else chunks)
   }
   out <- character(0L)
   for (ch in chunks) {
-    for (p in .listing_split_after(ch, sep)) {
+    parts <- .listing_split_after(ch, sep)
+    # "flow": refill the pieces first, so a break survives only where the
+    # line ran out of room.  "stack" keeps every separator break.
+    if (identical(layout, "flow")) parts <- .listing_flow(parts, width)
+    for (p in parts) {
       p <- trimws(p)
       if (!nzchar(p)) next
       if (.listing_disp_width(p) <= width) {
@@ -221,8 +251,29 @@
 #'   (`"/"` under the `"multiline"` type).
 #' @param width Integer or `NULL`.  Maximum characters per physical row before
 #'   the cell wraps.  `NULL` (default) never wraps this column.
-#' @param label Column header text.  `"\n"` starts a further header row, as
-#'   everywhere else in rtfreporter.  `NULL` (default) prints an empty header.
+#' @param label Column header text.  A line break starts a further header row,
+#'   as everywhere else in rtfreporter, and what you write is used **exactly**
+#'   -- you laid the lines out, so it is never re-wrapped.  `NULL` (default)
+#'   **derives** the header from the data: each source column's `label`
+#'   attribute when it has one, otherwise its name, joined with `sep` and a
+#'   line break, then wrapped to `width` so it cannot be wider than the column
+#'   it sits over.  `""` asks for a deliberately empty header.
+#' @param layout How a cell lays its parts out: `"stack"` breaks after
+#'   **every** separator, so each source column starts its own line -- the
+#'   conventional listing look, and it keeps a column reading down the page.
+#'   `"flow"` treats the separator as a break *opportunity* and fills each
+#'   line as far as `width` allows, so a column of short parts (an age and a
+#'   sex, a value and its unit) does not spend two rows on four characters.
+#'   `NULL` (default) takes the listing's own (`"stack"` under `"multiline"`).
+#'   With no `width` there is nothing to lay out and both behave alike.
+#' @param collapse_repeats Logical (default `FALSE`).  Mark this as a **key**
+#'   column: its value is carried down every physical row of a record, and
+#'   [as_rtftables()] then blanks the repeats.  Carrying and delegating rather
+#'   than blanking here is what makes the value **reappear at the top of the
+#'   next page** -- the suppression happens per page, after the split, so a
+#'   record continued across a page break still shows its subject.  A cell
+#'   that already wraps onto several lines is padded as usual: there is no one
+#'   value to repeat.
 #' @param name Output column name.  `NULL` (default) uses the first entry of
 #'   `vars`; [listing_spec()] makes the set unique if two columns collide.
 #' @param rel_width Relative width of this column in the rendered table.
@@ -247,6 +298,12 @@
 #' # No wrapping, and a header only.
 #' listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis")
 #'
+#' # Header left to the data's own labels; short parts kept side by side.
+#' listing_col(c("AGE", "SEX"), width = 12, layout = "flow")
+#'
+#' # A key column: printed once per record, again atop the next page.
+#' listing_col("USUBJID", width = 15, collapse_repeats = TRUE)
+#'
 #' @export
 listing_col <- function(vars,
                         sep       = NULL,
@@ -254,7 +311,9 @@ listing_col <- function(vars,
                         label     = NULL,
                         name      = NULL,
                         rel_width = NULL,
-                        align     = NULL) {
+                        align     = NULL,
+                        layout    = NULL,
+                        collapse_repeats = FALSE) {
   if (missing(vars) || is.null(vars) || !is.character(vars) ||
       length(vars) == 0L || anyNA(vars) || !all(nzchar(vars))) {
     stop("`vars` must be one or more non-empty source column names.",
@@ -291,10 +350,18 @@ listing_col <- function(vars,
   if (!is.null(align)) {
     align <- match.arg(align, c("left", "center", "right"))
   }
+  if (!is.null(layout)) {
+    layout <- match.arg(layout, c("stack", "flow"))
+  }
+  if (!is.logical(collapse_repeats) || length(collapse_repeats) != 1L ||
+      is.na(collapse_repeats)) {
+    stop("`collapse_repeats` must be TRUE or FALSE.", call. = FALSE)
+  }
   structure(
     list(vars = vars, sep = sep, width = width, label = label,
          name = if (is.null(name)) vars[1L] else name,
-         rel_width = rel_width, align = align),
+         rel_width = rel_width, align = align, layout = layout,
+         collapse_repeats = collapse_repeats),
     class = "rtf_listing_col"
   )
 }
@@ -399,6 +466,7 @@ listing_spec <- function(cols,
                          blank_row        = NULL,
                          blank_row_first  = NULL,
                          align            = NULL,
+                         layout           = NULL,
                          record           = TRUE) {
   tpl <- .listing_template(type)
 
@@ -444,6 +512,7 @@ listing_spec <- function(cols,
          call. = FALSE)
   }
   if (!is.null(align)) align <- match.arg(align, c("left", "center", "right"))
+  if (!is.null(layout)) layout <- match.arg(layout, c("stack", "flow"))
 
   record_col <-
     if (isTRUE(record)) {
@@ -471,6 +540,7 @@ listing_spec <- function(cols,
                               tpl$blank_row_first
                             } else blank_row_first,
          align            = if (is.null(align)) tpl$align else align,
+         layout           = if (is.null(layout)) tpl$layout else layout,
          wrap             = tpl$wrap,
          record_col       = record_col),
     class = "rtf_listing_spec"
@@ -534,6 +604,35 @@ print.rtf_listing_spec <- function(x, ...) {
     }
   }
   items
+}
+
+# One source column's display name: its `label` attribute when it has a usable
+# one, otherwise the column name.  This is `stub_cols(label = NULL)`'s rule --
+# a listing header and a merged stub label are derived the same way.
+.listing_var_label <- function(data, v) {
+  lab <- attr(data[[v]], "label", exact = TRUE)
+  if (is.character(lab) && length(lab) == 1L && !is.na(lab) && nzchar(lab)) {
+    lab
+  } else {
+    v
+  }
+}
+
+# Resolve one column's header.  A `label` written by hand is used EXACTLY as
+# written -- the author laid the lines out and re-wrapping would fight them.
+# A derived header is built from every source column and wrapped to the
+# column's width, so it can never be wider than the column it sits over.
+.listing_resolve_label <- function(data, cl, sep, layout) {
+  if (!is.null(cl$label)) return(cl$label)
+  labs <- vapply(cl$vars, function(v) .listing_var_label(data, v),
+                 character(1L))
+  n <- length(labs)
+  pieces <- if (n > 1L) c(paste0(labs[-n], sep), labs[[n]]) else labs
+  lines <- unlist(lapply(pieces, function(p) {
+    .listing_wrap_sep_word(p, cl$width, sep, layout)
+  }), use.names = FALSE)
+  paste(lines, collapse = "
+")
 }
 
 # Header / widths / alignment for a body `build_listing()` produced.  Given in
@@ -663,12 +762,18 @@ build_listing <- function(data, spec) {
   k <- length(spec$cols)
 
   # -- wrap every cell -> one character vector of physical lines per cell ----
+  # The header is resolved here too: an omitted `label` is derived from the
+  # data's own `label` attributes, which only this side of the pipeline can
+  # see (#366).  The resolved spec travels on the body, so as_rtftables() and
+  # a second build never have to derive it again.
   lines <- vector("list", k)
   for (j in seq_len(k)) {
     cl   <- spec$cols[[j]]
     sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
+    lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
     txt  <- .listing_combine(data, cl, sepj)
-    lines[[j]] <- lapply(txt, function(s) spec$wrap(s, cl$width, sepj))
+    spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay)
+    lines[[j]] <- lapply(txt, function(s) spec$wrap(s, cl$width, sepj, lay))
   }
 
   # -- how tall is each record's block --------------------------------------
@@ -684,9 +789,22 @@ build_listing <- function(data, spec) {
   filled <- vector("list", k)
   for (j in seq_len(k)) {
     v <- rep("", total)
+    # A key column marked `collapse_repeats` is CARRIED DOWN its record's
+    # rows rather than padded with "", so as_rtftables(collapse_repeats = )
+    # has a constant run to suppress -- and, because it suppresses per page,
+    # after the split, the value reappears at the top of the next page.  Only
+    # a single-line value is carried: a cell that already wraps has no one
+    # value to repeat, and printing it in full is never wrong.
+    down <- isTRUE(spec$cols[[j]]$collapse_repeats)
     for (i in seq_len(n)) {
       L <- lines[[j]][[i]]
-      if (length(L)) v[seq.int(start[i], length.out = length(L))] <- L
+      if (!length(L)) next
+      body_rows <- if (isTRUE(spec$blank_row)) nl[i] - 1L else nl[i]
+      if (down && length(L) == 1L && body_rows > 1L) {
+        v[seq.int(start[i], length.out = body_rows)] <- L
+      } else {
+        v[seq.int(start[i], length.out = length(L))] <- L
+      }
     }
     filled[[j]] <- v
   }
