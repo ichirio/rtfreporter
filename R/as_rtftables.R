@@ -732,8 +732,23 @@ as_rtftables <- function(x,
            paste(class(x), collapse = "/"), "'.", call. = FALSE)
     }
     lspec <- listing_res$spec
-    if (isTRUE(listing_res$build)) x <- build_listing(x, lspec)
+    if (isTRUE(listing_res$build)) {
+      x <- build_listing(x, lspec)
+      # build_listing() resolves the headers against the data's own `label`
+      # attributes and hands the resolved spec back on the body (#366).
+      lspec <- attr(x, "rtf_listing", exact = TRUE)
+    }
     listing_meta <- .listing_metadata(lspec, x)
+
+    # A column marked `collapse_repeats` carries its value down the record's
+    # rows; blanking the repeats is as_rtftables()'s own job, per page, so a
+    # run continued across a break still shows its value at the top.
+    keys <- vapply(lspec$cols, function(cl) isTRUE(cl$collapse_repeats),
+                   logical(1L))
+    if (any(keys) && is.null(collapse_repeats)) {
+      collapse_repeats <- vapply(lspec$cols[keys], function(cl) cl$name,
+                                 character(1L))
+    }
 
     if (!blank_row_first_given && isTRUE(lspec$blank_row_first)) {
       blank_row_first <- TRUE

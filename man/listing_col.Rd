@@ -11,7 +11,9 @@ listing_col(
   label = NULL,
   name = NULL,
   rel_width = NULL,
-  align = NULL
+  align = NULL,
+  layout = NULL,
+  collapse_repeats = FALSE
 )
 }
 \arguments{
@@ -25,8 +27,13 @@ record missing its middle value does not print a doubled separator.}
 \item{width}{Integer or \code{NULL}.  Maximum characters per physical row before
 the cell wraps.  \code{NULL} (default) never wraps this column.}
 
-\item{label}{Column header text.  \code{"\\n"} starts a further header row, as
-everywhere else in rtfreporter.  \code{NULL} (default) prints an empty header.}
+\item{label}{Column header text.  A line break starts a further header row,
+as everywhere else in rtfreporter, and what you write is used \strong{exactly}
+-- you laid the lines out, so it is never re-wrapped.  \code{NULL} (default)
+\strong{derives} the header from the data: each source column's \code{label}
+attribute when it has one, otherwise its name, joined with \code{sep} and a
+line break, then wrapped to \code{width} so it cannot be wider than the column
+it sits over.  \code{""} asks for a deliberately empty header.}
 
 \item{name}{Output column name.  \code{NULL} (default) uses the first entry of
 \code{vars}; \code{\link[=listing_spec]{listing_spec()}} makes the set unique if two columns collide.}
@@ -37,6 +44,24 @@ line of \code{label}.}
 
 \item{align}{\code{"left"}, \code{"center"} or \code{"right"}.  \code{NULL} (default) takes the
 listing's own (\code{"left"} under the \code{"multiline"} type).}
+
+\item{layout}{How a cell lays its parts out: \code{"stack"} breaks after
+\strong{every} separator, so each source column starts its own line -- the
+conventional listing look, and it keeps a column reading down the page.
+\code{"flow"} treats the separator as a break \emph{opportunity} and fills each
+line as far as \code{width} allows, so a column of short parts (an age and a
+sex, a value and its unit) does not spend two rows on four characters.
+\code{NULL} (default) takes the listing's own (\code{"stack"} under \code{"multiline"}).
+With no \code{width} there is nothing to lay out and both behave alike.}
+
+\item{collapse_repeats}{Logical (default \code{FALSE}).  Mark this as a \strong{key}
+column: its value is carried down every physical row of a record, and
+\code{\link[=as_rtftables]{as_rtftables()}} then blanks the repeats.  Carrying and delegating rather
+than blanking here is what makes the value \strong{reappear at the top of the
+next page} -- the suppression happens per page, after the split, so a
+record continued across a page break still shows its subject.  A cell
+that already wraps onto several lines is padded as usual: there is no one
+value to repeat.}
 }
 \value{
 An object of class \code{rtf_listing_col}.
@@ -68,6 +93,12 @@ listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
 
 # No wrapping, and a header only.
 listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis")
+
+# Header left to the data's own labels; short parts kept side by side.
+listing_col(c("AGE", "SEX"), width = 12, layout = "flow")
+
+# A key column: printed once per record, again atop the next page.
+listing_col("USUBJID", width = 15, collapse_repeats = TRUE)
 
 }
 \seealso{

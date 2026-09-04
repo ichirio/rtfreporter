@@ -73,6 +73,39 @@
 
 ### New features
 
+- **A listing column can take its header from the data, flow its parts, and
+  mark itself as a key** (#366).  Three jobs the listing prototype in
+  ydisctools had already worked out, brought over as `listing_col()`
+  arguments:
+
+  - **`label = NULL` now derives the header** from each source column's
+    `label` attribute (falling back to its name), joined with the column's
+    separator and a line break -- `stub_cols(label = NULL)`'s rule, so a
+    listing header and a merged stub label are derived the same way.  A
+    derived header is wrapped to `width` and so can never be wider than the
+    column it sits over; a `label` you write is used **exactly as written**,
+    because you laid the lines out.  `label = ""` asks for an empty header.
+    Since the labels live on the data, the resolution happens in
+    `build_listing()`, and the resolved spec travels back on the body.
+
+  - **`layout = "flow"`** makes the separator a break *opportunity*: fill
+    each line as far as `width` allows instead of breaking after every
+    separator.  Per column, because a listing wants both -- a long diagnosis
+    stacked, an age and a sex flowed.  `"stack"` remains the default.
+
+  - **`collapse_repeats = TRUE`** marks a key column: its value is carried
+    down every physical row of the record, and `as_rtftables()` blanks the
+    repeats.  Carrying and delegating rather than blanking during
+    composition is what makes the value **reappear at the top of the next
+    page** -- the suppression happens per page, after the split.  A
+    `collapse_repeats` you pass yourself still wins.
+
+  One thing was deliberately **not** taken: ydisctools breaks at every
+  separator even with no `width`.  That would silently make every existing
+  width-less multi-variable column taller, and `width` is what says how a
+  column is laid out -- so with no width, both layouts return the text as it
+  stands, as before.
+
 - **`catx()` joins values with a separator, skipping the missing ones**
   (#360) -- the SAS `CATX` rule, and the join `listing_col(vars = )` already
   made internally:
