@@ -2,6 +2,26 @@
 
 ### New features
 
+- **`catx()` joins values with a separator, skipping the missing ones**
+  (#360) -- the SAS `CATX` rule, and the join `listing_col(vars = )` already
+  made internally:
+
+  ```r
+  catx("/", "COMPLETED", NA, "ADENOCARCINOMA")
+  #> "COMPLETED/ADENOCARCINOMA"      # never "COMPLETED//ADENOCARCINOMA"
+  ```
+
+  Exporting it is what lets a listing be prepared with **rtfreporter alone**:
+  auditing the pipeline in Discussion #356, this join was its only call to
+  another package.  `build_listing()` now goes through the same function, so
+  a listing column and a column you join by hand cannot drift apart.
+
+  Arguments are vectorised, a length-1 argument is recycled, a factor joins
+  by its labels, and blanks around each value are stripped -- as SAS `CATX`
+  does, and as the listing columns already did.  (A non-trimming
+  implementation such as `ydisctools::catx()` keeps the padding; that is the
+  one difference, and loading both packages masks one with the other.)
+
 - **Listing preparation: `listing_col()`, `listing_spec()`, `build_listing()`
   and `as_rtftables(listing = )`** (#241).  A clinical listing is a
   data.frame problem before it is an RTF problem, and this is the missing

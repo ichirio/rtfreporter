@@ -87,7 +87,7 @@ test_that("the wrapping itself agrees, cell by cell, on every joined column", {
   wrap <- .listing_wrap_356()
 
   for (k in names(cols)) {
-    joined <- do.call(catx, c(list("/"), unname(as.list(adsl[cols[[k]]]))))
+    joined <- do.call(.ydisc_catx, c(list("/"), unname(as.list(adsl[cols[[k]]]))))
     for (i in seq_along(joined)) {
       w <- wrap[[k]]
       # An empty cell is the one per-cell difference: see the test below.

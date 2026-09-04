@@ -274,10 +274,13 @@ reference:
       derives the header, the widths and the alignment from it.  An rlistings
       `listing_df` needs none of this -- it is already laid out, and goes
       straight to `as_rtftables()`.
+      `catx()` is the join a listing column makes, exported for the columns
+      you build yourself.
     contents:
       - listing_col
       - listing_spec
       - build_listing
+      - catx
 
   # ── 5. Column headers ──────────────────────────────────────────────────
   - title: Column headers
