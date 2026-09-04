@@ -313,6 +313,12 @@ paginate.data.frame <- function(x, ...) {
                                  blank_row_first  = FALSE,
                                  blank_row_end    = FALSE,
                                  count_blank_rows = FALSE,
+                                 # Columns that will not be printed (the
+                                 # `drop_cols` carriers).  A row whose only
+                                 # content is in one of them is a blank row on
+                                 # the page, which is what the page-edge
+                                 # accounting has to see (#362).
+                                 blank_ignore     = character(0),
                                  align_count_pct  = FALSE,
                                  cell_format      = NULL,
                                  na               = "",
@@ -437,6 +443,11 @@ paginate.data.frame <- function(x, ...) {
       }
       as.integer(max_rows)
     }
+    # Under `count_blank_rows = TRUE`, `max_rows` is what the page PRINTS, so
+    # the page-edge blanks count too (#362).  Under FALSE nothing inserted
+    # counts, at the edges or between groups, and these stay off.
+    edge_first <- isTRUE(count_blank_rows) && isTRUE(blank_row_first)
+    edge_end   <- isTRUE(count_blank_rows) && isTRUE(blank_row_end)
     grouped <- function() {
       gidx <- .resolve_group_col(group_col, x)
       # The group-aware splits write the `" (Cont.)"` label back into the group
@@ -468,10 +479,16 @@ paginate.data.frame <- function(x, ...) {
       },
       group_safe  = { g <- grouped()
                       .split_group_safe(x, g$info, need_rows("group_safe"),
-                                        cont_label, g$idx, mgr) },
+                                        cont_label, g$idx, mgr,
+                                        edge_first = edge_first,
+                                        edge_end   = edge_end,
+                                        blank_ignore = blank_ignore) },
       group_force = { g <- grouped()
                       .split_group_force(x, g$info, need_rows("group_force"),
-                                         cont_label, g$idx, mgr) },
+                                         cont_label, g$idx, mgr,
+                                         edge_first = edge_first,
+                                         edge_end   = edge_end,
+                                         blank_ignore = blank_ignore) },
       by_value    = { g <- grouped()
                       .split_by_value(x, g$info,
                                       if (is.null(max_rows)) NULL
@@ -760,6 +777,59 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
 # TRUE, so every existing "is this a marker" test keeps working.
 .MARK_DATA <- 0L; .MARK_SEP <- 1L; .MARK_EXPLICIT <- 2L
 
+# -- printed-row accounting for the page edges (#362) -------------------------
+#
+#  `count_blank_rows = TRUE` means `max_rows` is the number of rows the page
+#  actually PRINTS, so the `blank_row_first` / `blank_row_end` furniture has to
+#  be counted -- it was not, and a page could print `max_rows + 2` rows.
+#
+#  It cannot be a flat reserve of two, because `blank_row_normalize = "detect"`
+#  merges a page-edge blank into an adjacent blank row: the edge costs a row
+#  only when the row it sits against is not blank itself.  A listing ends every
+#  record's block with a blank row, so a flat reserve would throw away a row on
+#  every page.  Hence: ask each candidate page what it would print.
+#
+#  A row counts as blank either because it is a materialised marker (the
+#  `.__rtf_blank__` flag) or because every one of its cells is empty -- an
+#  all-`NA` / `""` row in the source data is a blank row, which is the same
+#  rule `blank_row_normalize` applies.
+
+#  `ignore` names the columns that will not be printed -- the `drop_cols`
+#  carriers (a listing's hidden record column, a sort key) and the internal
+#  helper columns.  A row whose only content is in a column nobody sees is a
+#  blank row on the page, which is what the edge accounting has to reason
+#  about.
+.row_is_blank <- function(df, i, ignore = character(0)) {
+  if (is.null(df) || nrow(df) == 0L || is.na(i) || i < 1L || i > nrow(df)) {
+    return(FALSE)
+  }
+  mk <- df[[".__rtf_blank__"]]
+  if (!is.null(mk) && !is.na(mk[[i]]) && !identical(as.integer(mk[[i]]),
+                                                    .MARK_DATA)) {
+    return(TRUE)
+  }
+  cols <- setdiff(names(df),
+                  c(".__rtf_blank__", ".__rtf_sidx__", ignore))
+  if (length(cols) == 0L) return(TRUE)
+  vals <- vapply(cols, function(k) {
+    v <- df[[k]][[i]]
+    if (is.null(v) || length(v) == 0L) return("")
+    v <- as.character(v)
+    if (is.na(v)) "" else v
+  }, character(1L))
+  all(!nzchar(trimws(vals)))
+}
+
+# Rows the page-edge furniture adds to a chunk: 1 for an edge that is switched
+# on and does not fall against a blank row, 0 otherwise.
+.edge_cost <- function(df, edge_first = FALSE, edge_end = FALSE,
+                       ignore = character(0)) {
+  if (is.null(df) || nrow(df) == 0L) return(0L)
+  n <- nrow(df)
+  (if (isTRUE(edge_first) && !.row_is_blank(df, 1L, ignore)) 1L else 0L) +
+    (if (isTRUE(edge_end) && !.row_is_blank(df, n, ignore)) 1L else 0L)
+}
+
 .materialize_blank_markers <- function(df, positions, separator = TRUE) {
   n <- nrow(df)
   ord <- order(as.integer(positions))
@@ -855,13 +925,28 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
 # stranded at the foot of a page with none (or too few) of its members.  Set
 # `min_group_rows = 0` to disable (the original behaviour).
 .split_group_force <- function(df, info, max_rows, cont_label, group_idx,
-                               min_group_rows = 2L) {
+                               min_group_rows = 2L,
+                               edge_first = FALSE, edge_end = FALSE,
+                               blank_ignore = character(0)) {
   if (nrow(df) == 0L) return(list(df))
   cont_col <- if (is.null(group_idx)) 1L else group_idx
   result <- list()
   pos <- 1L
   while (pos <= nrow(df)) {
-    end <- min(pos + max_rows - 1L, nrow(df))
+    # The page edges print rows too when they are counted (#362): give this
+    # page the budget that is left after them.  The leading edge is settled by
+    # `pos`; the trailing one depends on where the cut lands, so take it off
+    # and give it back when the cut turns out to fall on a blank row anyway.
+    budget <- max_rows -
+      (if (isTRUE(edge_first) &&
+           !.row_is_blank(df, pos, blank_ignore)) 1L else 0L) -
+      (if (isTRUE(edge_end)) 1L else 0L)
+    if (budget < 1L) budget <- 1L
+    end <- min(pos + budget - 1L, nrow(df))
+    if (isTRUE(edge_end) && end < nrow(df) &&
+        .row_is_blank(df, end + 1L, blank_ignore)) {
+      end <- min(end + 1L, nrow(df))   # the trailing edge merges with it
+    }
 
     # Widow/orphan control, only when the boundary group is actually being
     # split (it continues past `end`):
@@ -969,8 +1054,24 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
 # Pack whole groups onto each chunk; spill on overflow.  If a single
 # group exceeds max_rows it is force-split via .split_group_force().
 .split_group_safe <- function(df, info, max_rows, cont_label, group_idx,
-                              min_group_rows = 2L) {
+                              min_group_rows = 2L,
+                              edge_first = FALSE, edge_end = FALSE,
+                              blank_ignore = character(0)) {
   if (nrow(df) == 0L) return(list(df))
+
+  # What this page would PRINT if it ended with `tail`: the rows themselves,
+  # plus whatever the page edges add against the page's first row and `tail`'s
+  # last one (#362).  With both edges off this is just the row count, which is
+  # what it was before.
+  printed <- function(head_df, tail_df) {
+    n <- (if (is.null(head_df)) 0L else nrow(head_df)) + nrow(tail_df)
+    first_src <- if (is.null(head_df) || nrow(head_df) == 0L) tail_df else head_df
+    n +
+      (if (isTRUE(edge_first) &&
+           !.row_is_blank(first_src, 1L, blank_ignore)) 1L else 0L) +
+      (if (isTRUE(edge_end) &&
+           !.row_is_blank(tail_df, nrow(tail_df), blank_ignore)) 1L else 0L)
+  }
 
   # NA group ids (rows before any header) become id = 0L so they form a
   # synthetic "preamble" group.
@@ -992,18 +1093,20 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
     g_n  <- length(rows)
     gdf  <- df[rows, , drop = FALSE]
 
-    if (g_n > max_rows) {
+    if (printed(NULL, gdf) > max_rows) {
       flush()
       sub_info <- list(id      = info$id[rows],
                        label   = info$label[rows],
                        headers = info$headers[rows])
       sub <- .split_group_force(gdf, sub_info, max_rows, cont_label,
-                                group_idx, min_group_rows)
+                                group_idx, min_group_rows,
+                                edge_first = edge_first, edge_end = edge_end,
+                                blank_ignore = blank_ignore)
       # All but the last sub-chunk are full pages; keep the last (the tail)
       # in the buffer so the next group(s) can pack onto it.
       if (length(sub) > 1L) result <- c(result, sub[-length(sub)])
       buf <- sub[[length(sub)]]
-    } else if (!is.null(buf) && (nrow(buf) + g_n) > max_rows) {
+    } else if (!is.null(buf) && printed(buf, gdf) > max_rows) {
       flush()
       buf <- gdf
     } else {

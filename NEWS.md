@@ -1,5 +1,49 @@
 # rtfreporter (development version)
 
+### Breaking changes
+
+- **`count_blank_rows = TRUE` now means what it says: `max_rows` is the
+  number of rows the page prints** (#362).  The `blank_row_first` /
+  `blank_row_end` page edges were printed but never counted, so
+  `as_rtftables(max_rows = 40, blank_row_first = TRUE, blank_row_end = TRUE)`
+  could put **42** rows on a sheet sized for 40.  `count_blank_rows = TRUE`
+  did not help: only the positions from `blank_rows` and the
+  `rtf_blank_rows` attribute were materialised, and the materialiser keeps
+  positions `1..nrow`, which structurally excludes the two edges.
+
+  The two settings now divide cleanly:
+
+  - **`TRUE`** -- `max_rows` counts every row the page prints: body rows,
+    blank rows already in the data, between-group blanks, and the page
+    edges.  A page never overflows the budget.
+  - **`FALSE`** (default, unchanged) -- `max_rows` counts only the rows that
+    were in the input; nothing inserted counts.
+
+  The edges are counted **as they render**, not reserved as a flat two rows.
+  `blank_row_normalize` merges a page-edge blank into a blank row it sits
+  against, so an edge costs a row only where there is not one already --
+  which matters for a listing, whose every record block ends in a blank row
+  and would otherwise lose a row at the foot of every page.  A column that
+  `drop_cols` hides cannot make a row count as non-blank, since it is not on
+  the page.
+
+  This changes pagination for existing code that passes `count_blank_rows =
+  TRUE` together with `blank_row_first` / `blank_row_end`: those pages now
+  hold fewer rows, which is the point.  Nothing else moves.
+
+  It is also what makes a listing paginate like the hand-written pipeline it
+  replaces (Discussion #356).  That code carried the page's leading blank row
+  **inside** its 40, so `k` records fitted while `1 + k x block <= 40`;
+  `split = "group_safe"` had one row more of budget and took one record more
+  per page -- enough to push the page past what Word could fit:
+
+  | record block | hand-written | before #362 | with `count_blank_rows = TRUE` |
+  |---|---|---|---|
+  | 4 rows | 9 | 10 | 9 |
+  | 5 rows | 7 | 8 | 7 |
+  | 8 rows | 4 | 5 | 4 |
+  | 10 rows | 3 | 4 | 3 |
+
 ### New features
 
 - **`catx()` joins values with a separator, skipping the missing ones**

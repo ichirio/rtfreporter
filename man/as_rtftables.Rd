@@ -168,24 +168,37 @@ whose column matches a regular expression.}
 For example
 \code{blank_rows = list(c(-1), blank_rows_by_change("Visit"))} adds a trailing
 blank and a blank at every change of \code{Visit}.  By default these blanks are
-added \emph{after} the split and do not count toward \code{max_rows}; see
-\code{count_blank_rows} to count them.}
+added \emph{after} the split and do not count toward \code{max_rows}; set
+\code{count_blank_rows = TRUE} to make \code{max_rows} mean the rows the page
+actually prints.}
 
 \item{blank_row_first, blank_row_end}{Logical (default \code{FALSE}).  Add a single
 blank row at the very top (\code{blank_row_first}) or bottom (\code{blank_row_end})
-of \strong{every} page, as page furniture.  These are applied after the split
-and are never counted toward \code{max_rows}.}
+of \strong{every} page, as page furniture.  They are applied after the split,
+and whether they count toward \code{max_rows} is \code{count_blank_rows}: under
+\code{TRUE} they do, so \code{max_rows} is the number of rows the page prints;
+under \code{FALSE} (the default) they do not, and the printed page can be up
+to two rows taller than \code{max_rows}.}
 
-\item{count_blank_rows}{Logical (default \code{FALSE}).  When \code{TRUE}, blank
-separator rows are \strong{counted toward \code{max_rows}} during pagination, so a
-page (data rows + blanks) does not overflow the budget.  The blank
-positions resolved from \code{blank_rows} (and from any \code{rtf_blank_rows}
-attribute already on the input) are materialised before the split and
-re-attached per page afterwards, with a leading blank suppressed at the top
-of each page.  \code{blank_row_first} / \code{blank_row_end} remain page furniture
-added after the split and are \strong{not} counted (so they may still exceed
-\code{max_rows}).  When \code{FALSE} (default) blank rows are added after the split
-and do not affect the row count.}
+\item{count_blank_rows}{Logical (default \code{FALSE}).  What \code{max_rows} counts.
+\describe{
+\item{\code{TRUE}}{\code{max_rows} is the number of rows the page \strong{prints}:
+body rows, blank rows already in the data, the blanks \code{blank_rows}
+inserts between groups, \strong{and the \code{blank_row_first} /
+\code{blank_row_end} page edges}.  A page never overflows the budget.
+The edges are counted as they actually render: a page-edge blank
+merges with a blank row it sits against (see \code{blank_row_normalize}),
+so it costs a row only where there is no blank row there already --
+which is why a listing, whose every record block ends in a blank
+row, does not lose a row at the foot of each page.}
+\item{\code{FALSE}}{(default) \code{max_rows} counts only the rows that were in
+the input.  Nothing inserted counts, at the page edges or between
+groups, so the printed page can be taller than \code{max_rows}.}
+}
+Under \code{TRUE} the blank positions resolved from \code{blank_rows} (and from any
+\code{rtf_blank_rows} attribute already on the input) are materialised before
+the split and re-attached per page afterwards, with a leading blank
+suppressed at the top of each page.}
 
 \item{align_count_pct}{Logical (default \code{FALSE}).  Shorthand to realign
 \code{"n (xx.x)"} count/percent cells to a uniform width before pagination (the

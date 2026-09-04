@@ -290,12 +290,16 @@
 #'   For example
 #'   `blank_rows = list(c(-1), blank_rows_by_change("Visit"))` adds a trailing
 #'   blank and a blank at every change of `Visit`.  By default these blanks are
-#'   added *after* the split and do not count toward `max_rows`; see
-#'   `count_blank_rows` to count them.
+#'   added *after* the split and do not count toward `max_rows`; set
+#'   `count_blank_rows = TRUE` to make `max_rows` mean the rows the page
+#'   actually prints.
 #' @param blank_row_first,blank_row_end Logical (default `FALSE`).  Add a single
 #'   blank row at the very top (`blank_row_first`) or bottom (`blank_row_end`)
-#'   of **every** page, as page furniture.  These are applied after the split
-#'   and are never counted toward `max_rows`.
+#'   of **every** page, as page furniture.  They are applied after the split,
+#'   and whether they count toward `max_rows` is `count_blank_rows`: under
+#'   `TRUE` they do, so `max_rows` is the number of rows the page prints;
+#'   under `FALSE` (the default) they do not, and the printed page can be up
+#'   to two rows taller than `max_rows`.
 #' @param align_count_pct Logical (default `FALSE`).  Shorthand to realign
 #'   `"n (xx.x)"` count/percent cells to a uniform width before pagination (the
 #'   built-in [realign_count_pct()]).  Ignored when `cell_format` is supplied,
@@ -309,16 +313,25 @@
 #'   to the next page.  This prevents a lone group header being stranded at the
 #'   foot of a page with none (or too few) of its members.  Set to `0` to
 #'   disable (the previous behaviour).
-#' @param count_blank_rows Logical (default `FALSE`).  When `TRUE`, blank
-#'   separator rows are **counted toward `max_rows`** during pagination, so a
-#'   page (data rows + blanks) does not overflow the budget.  The blank
-#'   positions resolved from `blank_rows` (and from any `rtf_blank_rows`
-#'   attribute already on the input) are materialised before the split and
-#'   re-attached per page afterwards, with a leading blank suppressed at the top
-#'   of each page.  `blank_row_first` / `blank_row_end` remain page furniture
-#'   added after the split and are **not** counted (so they may still exceed
-#'   `max_rows`).  When `FALSE` (default) blank rows are added after the split
-#'   and do not affect the row count.
+#' @param count_blank_rows Logical (default `FALSE`).  What `max_rows` counts.
+#'   \describe{
+#'     \item{`TRUE`}{`max_rows` is the number of rows the page **prints**:
+#'       body rows, blank rows already in the data, the blanks `blank_rows`
+#'       inserts between groups, **and the `blank_row_first` /
+#'       `blank_row_end` page edges**.  A page never overflows the budget.
+#'       The edges are counted as they actually render: a page-edge blank
+#'       merges with a blank row it sits against (see `blank_row_normalize`),
+#'       so it costs a row only where there is no blank row there already --
+#'       which is why a listing, whose every record block ends in a blank
+#'       row, does not lose a row at the foot of each page.}
+#'     \item{`FALSE`}{(default) `max_rows` counts only the rows that were in
+#'       the input.  Nothing inserted counts, at the page edges or between
+#'       groups, so the printed page can be taller than `max_rows`.}
+#'   }
+#'   Under `TRUE` the blank positions resolved from `blank_rows` (and from any
+#'   `rtf_blank_rows` attribute already on the input) are materialised before
+#'   the split and re-attached per page afterwards, with a leading blank
+#'   suppressed at the top of each page.
 #' @param cell_format Optional cell re-formatter applied column-by-column to
 #'   the body **before** pagination, for monospaced alignment.  Either a single
 #'   function -- applied to every data column (columns 2..N; the row-label
@@ -906,6 +919,9 @@ as_rtftables <- function(x,
       min_group_rows = min_group_rows, blank_rows = blank_rows,
       blank_row_first = blank_row_first, blank_row_end = blank_row_end,
       count_blank_rows = count_blank_rows,
+      # The drop columns are invisible on the page, so a row carrying only
+      # them is blank as far as the page-edge accounting goes (#362).
+      blank_ignore = names(body)[drop_idx],
       align_count_pct = align_count_pct, cell_format = cell_format, na = na,
       collapse_repeats = collapse_repeats)
     page_names <- names(pages)
