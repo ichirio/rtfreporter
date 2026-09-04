@@ -285,6 +285,14 @@ Diagnosis")
 
 ### Documentation
 
+- **The listings article covers the whole of the feature again** (#371).  It
+  was written against the API as it first shipped, and gained a section where
+  the page chooses the widths (`fit_listing_widths()`) and hands them back as
+  source to paste and tune (`listing_code()`), plus the three `listing_col()`
+  settings that landed since: headers derived from the data's own labels,
+  `layout = "flow"`, and `collapse_repeats = TRUE`.  Every chunk is
+  evaluated, so the widths on the page are the ones the code really produces.
+
 - **A listings article: source data to the written RTF** (#358).
   [Listings end to end](https://ichirio.github.io/rtfreporter/articles/listings.html)
   runs the whole pipeline in one place -- describing the columns, what
