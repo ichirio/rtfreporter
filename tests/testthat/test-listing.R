@@ -92,11 +92,25 @@ test_that("a piece still too long breaks at a word boundary", {
     c("SQUAMOUS CELL", "CARCINOMA OF", "THE LUNG"))
 })
 
-test_that("a token longer than the width keeps its own line, never cut", {
-  # The sample implementation this rule comes from emitted a leading empty
-  # line here; an unbreakable token gets a line of its own instead.
+test_that("a token wider than the column is hard-split, so every line fits", {
+  # Not prettier, but honest (#364): `rel_width` follows `width`, so a token
+  # wider than the column is wider than the RENDERED column, Word wraps it,
+  # and the record would be a row taller than build_listing() counted.
   expect_identical(.listing_wrap_sep_word("ABCDEFGHIJKLMNOP", 8, "/"),
-                   "ABCDEFGHIJKLMNOP")
+                   c("ABCDEFGH", "IJKLMNOP"))
+  # every returned line fits the column it was measured against
+  lines <- .listing_wrap_sep_word("63016-205-100028", 15, "/")
+  expect_true(all(.listing_disp_width(lines) <= 15))
+})
+
+test_that("widths are display widths, so a full-width glyph counts as two", {
+  jp <- "肺腺癌ステージIIIB"   # 11 chars, 18 columns
+  expect_identical(nchar(jp), 11L)
+  expect_identical(.listing_disp_width(jp), 18L)
+
+  lines <- .listing_wrap_sep_word(jp, 8, "/")
+  expect_gt(length(lines), 1L)                 # nchar() would have kept one
+  expect_true(all(.listing_disp_width(lines) <= 8))
 })
 
 test_that("wrapping honours a newline already in the data, and NA is empty", {
@@ -112,7 +126,7 @@ test_that("no width means no wrapping", {
 
 test_that("a regex-special separator is treated literally", {
   expect_identical(.listing_wrap_sep_word("A.BBBBBBBB", 4, "."),
-                   c("A.", "BBBBBBBB"))
+                   c("A.", "BBBB", "BBBB"))
 })
 
 

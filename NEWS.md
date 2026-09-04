@@ -2,6 +2,33 @@
 
 ### Breaking changes
 
+- **A listing cell now wraps by display width, and every line it produces
+  fits its column** (#364).  Two defects in `build_listing()`'s wrapping, both
+  of which made the line count disagree with what Word renders -- and the line
+  count is what pages the listing.
+
+  - **Display width.** Widths were counted with `nchar()`, so a full-width
+    (CJK) glyph counted as one.  A Japanese listing wrapped to `width = 20`
+    asked for twenty columns and occupied up to forty; Word then re-wrapped
+    it, adding rows this package had not counted.  Widths are now display
+    widths, a full-width glyph counting as two.
+  - **A token wider than the column is hard-split.**  It used to keep its own
+    line, deliberately -- cutting a subject id in half is ugly.  That was
+    wrong: `rel_width` follows `width`, so such a token is wider than the
+    *rendered* column too, Word wraps it, and the record is a row taller than
+    `build_listing()` counted.  Every line now fits the column it was
+    measured against.
+
+  Both were found by reading the listing prototype in ydisctools, which had
+  already solved them.  Where the rule is not wrong it is left alone: the
+  greedy word fill still measures the running line untrimmed, as the
+  hand-written pipeline did, so existing line counts do not move for that
+  reason.
+
+  Line counts change for cells containing full-width glyphs or a token wider
+  than its column; a listing of plain ASCII whose values break normally is
+  unaffected.
+
 - **`count_blank_rows = TRUE` now means what it says: `max_rows` is the
   number of rows the page prints** (#362).  The `blank_row_first` /
   `blank_row_end` page edges were printed but never counted, so

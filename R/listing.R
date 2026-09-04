@@ -80,12 +80,45 @@
 #
 #  Break after the separator first, and only inside a piece that is still too
 #  long fall back to word boundaries (a space, a comma or a hyphen, the break
-#  taken AFTER the character so the reader can see why the line ended).
+#  taken AFTER the character so the reader can see why the line ended).  A
+#  token that is still too wide on its own is hard-split, so **every line this
+#  returns fits the column it was measured against** (#364).
 #
-#  A single token longer than `width` is left whole on a line of its own rather
-#  than cut mid-word: a subject id or a lab code broken in half is worse than
-#  one that overflows, and the column has a relative width in the rendered
-#  table, so RTF wraps what does not fit.
+#  That last rule used to be the opposite -- an over-long token kept its own
+#  line, on the grounds that cutting a subject id in half is ugly.  It is, but
+#  the line count is what pages the listing: `rel_width` follows `width`, so a
+#  token wider than the column is wider than the RENDERED column too, Word
+#  wraps it onto a second line, and the record is a row taller than
+#  `build_listing()` counted.  A page that overflows in Word is worse than a
+#  split id, and it is the same failure as #362 by another route.
+#
+#  Widths are DISPLAY widths, not character counts: a full-width (CJK) glyph
+#  occupies two monospaced columns, so `nchar()` would let a Japanese listing
+#  ask for 20 columns and take up to 40.
+
+# Display width, with the character count as the fallback where the width
+# cannot be determined (an unknown encoding, a control character).
+.listing_disp_width <- function(x) {
+  x <- as.character(x)
+  x[is.na(x)] <- ""
+  w <- suppressWarnings(nchar(x, type = "width", allowNA = TRUE))
+  bad <- is.na(w)
+  if (any(bad)) w[bad] <- nchar(x[bad], type = "chars")
+  as.integer(w)
+}
+
+# The longest prefix of `x` that fits `width`.  Never returns "" for a
+# non-empty `x`, so a caller looping on the remainder always makes progress --
+# even where one glyph is wider than the whole column.
+.listing_take <- function(x, width) {
+  n <- nchar(x, type = "chars")
+  if (n == 0L) return("")
+  best <- 1L
+  for (i in seq_len(n)) {
+    if (.listing_disp_width(substr(x, 1L, i)) <= width) best <- i else break
+  }
+  substr(x, 1L, best)
+}
 
 .listing_split_after <- function(text, sep) {
   if (is.null(sep) || !nzchar(sep)) return(text)
@@ -98,13 +131,32 @@
 
 .listing_wrap_words <- function(text, width) {
   words <- strsplit(text, "(?<=[ ,-])", perl = TRUE)[[1L]]
-  if (!length(words)) return(trimws(text))
+  if (!length(words)) words <- text
   out <- character(0L)
   cur <- ""
   for (w in words) {
-    # `!nzchar(cur)` keeps a token that is by itself longer than `width` on its
-    # own line instead of emitting an empty one before it.
-    if (!nzchar(cur) || nchar(cur) + nchar(w) <= width) {
+    # A token wider than the column on its own.  Split it here, before the
+    # running line is trimmed to measure it -- trimming would eat the trailing
+    # space that separates this word from the next.
+    if (.listing_disp_width(trimws(w)) > width) {
+      if (nzchar(trimws(cur))) out <- c(out, trimws(cur))
+      tok <- sub("^\\s+", "", w)
+      while (.listing_disp_width(trimws(tok)) > width) {
+        piece <- .listing_take(tok, width)
+        out   <- c(out, piece)
+        tok   <- substring(tok, nchar(piece, type = "chars") + 1L)
+      }
+      cur <- tok                       # keeps any trailing separator
+      next
+    }
+    if (!nzchar(cur)) {
+      cur <- w
+      # Measured WITHOUT trimming the running line, which is what the rule
+      # this came from did.  Trimming would let a line end one character
+      # wider (the trailing space is invisible) and would silently change
+      # every existing listing's line counts; that is a separate decision,
+      # not part of fixing #364.
+    } else if (.listing_disp_width(cur) + .listing_disp_width(w) <= width) {
       cur <- paste0(cur, w)
     } else {
       out <- c(out, trimws(cur))
@@ -131,7 +183,7 @@
     for (p in .listing_split_after(ch, sep)) {
       p <- trimws(p)
       if (!nzchar(p)) next
-      if (nchar(p) <= width) {
+      if (.listing_disp_width(p) <= width) {
         out <- c(out, p)
       } else {
         out <- c(out, .listing_wrap_words(p, width))
@@ -156,7 +208,8 @@
 #' `"ADENOCARCINOMA/BRCA1/GRADE 3"` is written `listing_col(c("HIST", "BRCA",
 #' "HISTGRD"))` rather than pasted by hand upstream.
 #'
-#' `width` is a number of **characters**, not a rendered width: it decides
+#' `width` is a **display width in characters** (a full-width CJK glyph
+#' counts as two), not a rendered width: it decides
 #' where the text of this column breaks onto another physical row, and so how
 #' tall each record's block is.  It does not set the column's width in the
 #' table -- that is `rel_width`, which defaults to `width` when you give one.
@@ -453,7 +506,7 @@ print.rtf_listing_spec <- function(x, ...) {
   if (!is.null(cl$width))     return(as.numeric(cl$width))
   if (!is.null(cl$label)) {
     lines <- strsplit(cl$label, "\n", fixed = TRUE)[[1L]]
-    if (length(lines)) return(max(nchar(lines), 1))
+    if (length(lines)) return(max(.listing_disp_width(lines), 1))
   }
   10
 }
@@ -541,10 +594,14 @@ print.rtf_listing_spec <- function(x, ...) {
 #'
 #' Under the `"multiline"` type, a cell longer than its column's `width`
 #' breaks **after the separator** first, so each source variable starts its own
-#' line, and only a piece that is still too long breaks again at a word
-#' boundary (after a space, comma or hyphen).  A single token longer than
-#' `width` is left whole on its own line rather than cut mid-word.  A `"\n"`
-#' already in the data is honoured before any of this.
+#' line; a piece that is still too long breaks again at a word boundary (after
+#' a space, comma or hyphen); and a token that is *still* too wide is
+#' hard-split, so **every line fits the column it was measured against**.  A
+#' line break already in the data is honoured before any of this.
+#'
+#' `width` is a **display width**: a full-width (CJK) glyph occupies two
+#' monospaced columns and is counted as two, so a Japanese listing wrapped to
+#' 20 really does fit in twenty.
 #'
 #' Every column of one record is padded to the tallest, so the record's rows
 #' stay aligned across columns.

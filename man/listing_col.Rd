@@ -52,7 +52,8 @@ further physical row, and what its header says.  A list of these is what
 missing and empty values dropped, so a column reading
 \code{"ADENOCARCINOMA/BRCA1/GRADE 3"} is written \code{listing_col(c("HIST", "BRCA", "HISTGRD"))} rather than pasted by hand upstream.
 
-\code{width} is a number of \strong{characters}, not a rendered width: it decides
+\code{width} is a \strong{display width in characters} (a full-width CJK glyph
+counts as two), not a rendered width: it decides
 where the text of this column breaks onto another physical row, and so how
 tall each record's block is.  It does not set the column's width in the
 table -- that is \code{rel_width}, which defaults to \code{width} when you give one.

@@ -137,10 +137,16 @@ Read that against the source data:
 * **`.rtf_record` is bookkeeping**, not a printed column: one id per source row.
   It is what keeps a subject whole across a page break, below.
 
-A token longer than its column keeps its own line rather than being cut
-mid-word: a subject id or a lab code broken in half is worse than one that
-overflows, and the column has a relative width in the rendered table, so RTF
-wraps whatever does not fit.
+A token that is *still* too wide -- one with nowhere to break -- is hard-split
+at the column width. Cutting a subject id in half is ugly, but the alternative
+is worse: the column's relative width follows `width`, so an overflowing token
+is one Word wraps onto a second line, making the record a row taller than
+`build_listing()` counted and the page taller than `max_rows` allowed for.
+Every line this produces fits the column it was measured against.
+
+Widths are **display widths**: a full-width (CJK) glyph occupies two monospaced
+columns and counts as two, so a Japanese listing wrapped to 20 really does fit
+in twenty.
 
 ## Rendering it
 
@@ -273,12 +279,15 @@ that had to stay in step with all of it.
 
 The package's test suite runs that pipeline -- its three functions verbatim --
 beside `build_listing()` on the same data and compares the result cell for
-cell, so this article's claim is checked rather than asserted. Three
+cell, so this article's claim is checked rather than asserted. Four
 differences are deliberate:
 
-* **A token longer than the width keeps its own line.** The hand-written rule
-  pushed an empty accumulator first, so such a cell opened with a blank line
-  and the record was a row taller than it needed to be.
+* **A token wider than the column is hard-split.** The hand-written rule
+  pushed an empty accumulator first *and* let the token overflow -- so such a
+  cell opened with a blank line, and Word then wrapped the token onto a row
+  nobody had counted.
+* **Widths are display widths.** The hand-written rule counted characters, so
+  a Japanese cell asked for 8 columns and occupied 16.
 * **A `"\n"` already in the data is honoured** as a line break, before any
   width is considered.
 * **An empty cell still occupies its row.** The hand-written `split_string("")`
