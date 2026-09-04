@@ -56,6 +56,17 @@ Diagnosis")
   long breaks again at a word boundary.  A token longer than the width keeps
   its own line rather than being cut mid-word.
 
+  The reshaping is checked **against the hand-written pipeline it replaces**
+  (Discussion #356), not just against itself: that pipeline -- its
+  `split_string()`, `get_max_element_counts()` and `pad_list_elements()`
+  verbatim -- runs beside `build_listing()` on the same ADSL-shaped data and
+  the two are compared cell for cell.  Three differences are deliberate and
+  pinned by tests: a token longer than the width keeps its own line instead
+  of being preceded by an empty one; a newline already in the data is
+  honoured; and an **empty cell still occupies its row**, so a record whose
+  wrapped columns are all empty keeps its blank row (and therefore its record
+  boundary) instead of running into the next record.
+
   An rlistings `listing_df` is **rejected** by both entry points, with a
   pointer: rlistings has already applied `disp_cols`, baked key-column
   suppression into the strings and carries its own titles, so it goes
