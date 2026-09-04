@@ -62,10 +62,20 @@ printed too -- and so is every \code{width} you set yourself, because those are
 decisions, not proposals.
 
 Each remaining column's \strong{demand} is the \code{probs} quantile of the display
-widths of its composed cells, floored by the longest line of its header and
-by \code{min_width}.  A quantile rather than the maximum: one unusually long
-value should wrap, not push every other column narrow.  The demands are then
-scaled to the budget and rounded.
+widths of its composed cells, floored by \code{min_width} and by the widest token
+its header cannot break.  A quantile rather than the maximum: one unusually
+long value should wrap, not push every other column narrow.  And the widest
+unbreakable token rather than the header's length: a header wraps, so a long
+label should not claim a column the data does not need.
+
+The demands are then scaled to the budget.  Where scaling would take a
+column below the width its header needs, the column is raised back to it and
+the characters are taken from the columns that have room to spare -- \strong{a
+header is never cut mid-word}.  Only if the headers alone cannot fit the
+page does that guarantee give way.
+
+Where the data carries no \code{label} attributes, \code{listing_spec(labels = )}
+supplies them, and the measurement uses those.
 
 Widths are display widths, so a full-width (CJK) glyph counts as two
 throughout.
