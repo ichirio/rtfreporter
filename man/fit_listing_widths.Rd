@@ -12,6 +12,7 @@ fit_listing_widths(
   size_half_points = 18L,
   total_width = NULL,
   labels = NULL,
+  header_lines = 4L,
   min_width = 6L,
   probs = 0.9
 )
@@ -27,8 +28,12 @@ be rendered on.  \code{NULL} (default) uses rtfreporter's own page defaults.
 Ignored when \code{total_width} is given.}
 
 \item{font, size_half_points}{The font the listing renders in, used to turn
-the page's width into a number of characters.  Defaults match
-\code{\link[=auto_col_widths]{auto_col_widths()}}.}
+the page's width into a number of characters.  \code{size_half_points} is
+\strong{half-points}, as everywhere in RTF: 8pt is \code{16L}, 9pt (the default)
+is \code{18L}.  Getting it wrong silently changes the budget -- at 8pt a
+landscape A4 with half-inch margins holds 159 characters, at 9pt only
+141.  Pass the same values the document uses in
+\code{rtf_document(default_format = )}.}
 
 \item{total_width}{Character budget for the whole listing, gutters included.
 \code{NULL} (default) computes it from \code{page}, \code{font} and \code{size_half_points}.
@@ -45,6 +50,13 @@ break is still worked out for you.  Precedence: \code{listing_col(label = )},
 then \code{labels}, then the variable's \code{label} attribute, then its name.  A
 define/spec extract converts directly:
 \code{setNames(spec$label, spec$variable)}.}
+
+\item{header_lines}{How many lines a header may reasonably occupy (default
+\code{4}).  A column is asked to be at least wide enough for its header at
+that height, so a long label buys width in proportion to how tall it
+would otherwise make the header block.  \code{Inf} asks for nothing on the
+header's behalf beyond the token it cannot break, which is the
+data-driven fit.}
 
 \item{min_width}{Integer.  The narrowest a fitted column may be (default
 \code{6}).}
@@ -73,12 +85,29 @@ listing has to spend.  The gutter columns are subtracted first -- they are
 printed too -- and so is every \code{width} you set yourself, because those are
 decisions, not proposals.
 
-Each remaining column's \strong{demand} is the \code{probs} quantile of the display
-widths of its composed cells, floored by \code{min_width} and by the widest token
-its header cannot break.  A quantile rather than the maximum: one unusually
-long value should wrap, not push every other column narrow.  And the widest
-unbreakable token rather than the header's length: a header wraps, so a long
-label should not claim a column the data does not need.
+A gutter costs \code{listing_spec(spacer_rel_width = )} characters, and the
+default of \code{1} is a full character each: on a nine-gutter listing that is
+close to 6\% of the page.  A fraction is allowed -- \code{spacer_rel_width = 0.25}
+gives the hairline divider a hand-tuned listing usually uses.
+
+Each remaining column's \strong{demand} is the largest of four things:
+\itemize{
+\item the \code{probs} quantile of the display widths of its composed cells -- a
+quantile rather than the maximum, so one unusually long value wraps
+instead of pushing every other column narrow;
+\item the width its header needs to be no more than \code{header_lines} tall;
+\item the widest token its header cannot break, below which the header would be
+cut mid-word;
+\item \code{min_width}.
+}
+
+The second is what stops a long label being answered with a very narrow
+column.  A header wraps, so it does not need its full length -- but wrapping
+a 73-character label into nine characters makes a \strong{ten-line block, printed
+at the top of every page}.  \code{header_lines} says how tall a header may
+reasonably be, and the label's width divided by it is what the column needs
+to get there.  Lower it for a listing whose headers must stay readable;
+raise it (or use \code{Inf}) to let the data have the page.
 
 The demands are then scaled to the budget.  Where scaling would take a
 column below the width its header needs, the column is raised back to it and
