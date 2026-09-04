@@ -91,8 +91,19 @@ which is why the reshaped data below has a `DISPTPD` column holding the joined
 text. It is an internal name, not a header; pass `name = "COL01"` if you
 would rather read the columns positionally.
 
-**`label` may contain `"\n"`**, which starts another header row -- the same
-convention as everywhere else in rtfreporter.
+**`label` may contain a line break**, which starts another header row -- the
+same convention as everywhere else in rtfreporter, and what you write is used
+exactly as written. Leave it out and the header is **derived from the data**:
+each source column's `label` attribute when it has one, otherwise its name,
+joined with the separator and wrapped to the column. ADaM read through haven
+already carries those labels, so most listings need not write a single header
+by hand. `label = ""` asks for a deliberately empty one.
+
+Two more per-column settings matter before the widths: `layout = "flow"`
+fills each line as far as `width` allows instead of breaking after every
+separator -- for a column like `AGE/SEX`, which would otherwise spend two rows
+on four characters -- and `collapse_repeats = TRUE` marks a **key** column,
+printed once per record and again at the top of the next page.
 
 `listing_spec()` collects the columns, in the order they print, and the
 settings that apply to all of them:
@@ -111,6 +122,73 @@ spec <- listing_spec(list(
 ))
 spec
 ```
+
+## Letting the page choose the widths
+
+Every `width` above was picked by hand. That is the tedious part of writing a
+listing -- too narrow and a cell wraps into a tall ragged block, too wide and
+the listing runs off the sheet -- and it is not a matter of taste: the answer
+follows from the paper, the margins, the font and the data.
+
+`fit_listing_widths()` works it out. Describe the columns without widths:
+
+```{r fit-spec}
+bare <- listing_spec(list(
+  listing_col("USUBJID", collapse_repeats = TRUE),
+  listing_col(c("DISPTPD", "BRCA", "HIST")),
+  listing_col("STAGE"),
+  listing_col(c("HISTGRD", "PRRAD")),
+  listing_col(c("CMBRFST", "CMBRLST")),
+  listing_col("ECOGPS")
+))
+
+fitted <- fit_listing_widths(
+  adsl, bare,
+  page = rtf_page(paper_size = "A4", orientation = "landscape",
+                  margin_left_in = 0.5, margin_right_in = 0.5),
+  size_half_points = 16L
+)
+fitted
+```
+
+Read the budget line first. The page's writable width, divided by the width of
+one character in the listing's font, is how many characters there are to
+spend; the gutters come out of it, because they print too.
+
+Each column's **demand** is the 90th percentile of the display widths of its
+cells -- a quantile rather than the maximum, so one unusually long value wraps
+instead of pushing every other column narrow -- floored by the widest token
+its header cannot break. That floor is why a label like `"Stage at Initial
+Diagnosis"` asks for nine characters (`"Diagnosis"`) and not twenty-six: a
+header wraps, so a long one should not claim a column the data does not need.
+
+A `width` you set yourself is never touched. It comes out of the budget first
+and the rest fit around it:
+
+```{r fit-fixed}
+pinned <- listing_spec(list(
+  listing_col("USUBJID", width = 15),          # this one is a decision
+  listing_col(c("DISPTPD", "BRCA", "HIST")),
+  listing_col("STAGE")
+))
+vapply(fit_listing_widths(adsl, pinned, total_width = 60)$cols,
+       function(cl) cl$width, integer(1))
+```
+
+### Paste it back into the program
+
+The measurement is a starting point, not a verdict, so it comes back as
+source:
+
+```{r listing-code}
+listing_code(fitted, name = "listing")
+```
+
+Paste that into the program and tune it there. A column whose header must not
+break, or one you want roomy, is a judgement the program should record -- not
+something recomputed on every run from data that may change. Only what differs
+from the listing's defaults is written out, so it reads like something a person
+wrote.
 
 ## What `build_listing()` does
 
@@ -320,6 +398,8 @@ data.)
 
 * `?listing_col`, `?listing_spec`, `?build_listing` -- every setting, one page
   each.
+* `?fit_listing_widths`, `?listing_code` -- the widths, and the source they
+  come back as.
 * [Paginating tables with `as_rtftables()`](pagination.html) -- the split
   strategies, `group_col` / `group_by`, and `drop_cols` in general.
 * [Importing tables](importing-tables.html) -- reading a table object,
