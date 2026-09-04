@@ -114,6 +114,17 @@ Diagnosis")
 
 ### Documentation
 
+- **A listings article: source data to the written RTF** (#358).
+  [Listings end to end](https://ichirio.github.io/rtfreporter/articles/listings.html)
+  runs the whole pipeline in one place -- describing the columns, what
+  `build_listing()` reshapes and why, where the header / widths / alignment
+  come from, how a subject's block survives a page break, and the finished
+  landscape report -- then says what the hand-written pipeline it replaces did
+  differently, and when to skip it entirely (an rlistings `listing_df` is
+  already laid out).  Every chunk is **evaluated**, like the pagination
+  article, so the output on the page is what the code actually produces and CI
+  re-checks it on every build.
+
 - **The Reference index stops presenting the deprecated border constructors
   as current API** (#354). *Borders* listed all nine at the same level, so
   nothing on the page said that seven of them are on their way out. It now
