@@ -73,6 +73,49 @@
 
 ### New features
 
+- **`fit_listing_widths()` proposes every column's width from the page and
+  the data, and `listing_code()` prints the spec as source to paste** (#369).
+  Choosing widths by hand is the tedious part of writing a listing, and the
+  answer is not a matter of taste: it follows from the paper, the margins,
+  the font and the values.
+
+  ```r
+  spec <- listing_spec(list(
+    listing_col("USUBJID", collapse_repeats = TRUE),
+    listing_col(c("DISPTPD", "BRCA", "HIST")),
+    listing_col("STAGE")
+  ))
+
+  fitted <- fit_listing_widths(
+    adsl, spec,
+    page = rtf_page(paper_size = "A4", orientation = "landscape",
+                    margin_left_in = 0.5, margin_right_in = 0.5),
+    size_half_points = 16L)
+
+  listing_code(fitted, name = "listing")
+  #> listing <- listing_spec(list(
+  #>   listing_col("USUBJID", width = 24, collapse_repeats = TRUE),
+  #>   listing_col(c("DISPTPD", "BRCA", "HIST"), width = 82),
+  #>   listing_col("STAGE", width = 15)
+  #> ))
+  ```
+
+  The page sets the budget: the sheet's writable width divided by the width of
+  one character in the listing's font, less the gutters -- they print too --
+  and less every `width` you set yourself, because those are decisions, not
+  proposals.  Each remaining column's **demand** is the `probs` quantile
+  (default 0.9) of the display widths of its cells, so one unusually long
+  value wraps instead of pushing every other column narrow, floored by the
+  widest token its header cannot break.  That floor matters: a header wraps,
+  so a label like `"Stage at Initial Diagnosis"` asks for nine characters
+  (`"Diagnosis"`), not twenty-six.
+
+  `listing_code()` writes out only what differs from the listing's defaults,
+  so the result reads like something a person wrote.  The round trip is the
+  point: measure, print, paste into the program, tune by eye -- the
+  measurement is a starting point, and the code is where the decisions get
+  made and reviewed.
+
 - `listing_spec(layout = )` is documented (#366 follow-up).  The argument
   shipped undocumented, which `R CMD check --as-cran` reports as a WARNING;
   no behaviour changes.

@@ -564,6 +564,22 @@ print.rtf_listing_spec <- function(x, ...) {
   }
   cat("  record  : ",
       if (is.null(x$record_col)) "(none)" else x$record_col, "\n", sep = "")
+  fit <- attr(x, "rtf_listing_fit", exact = TRUE)
+  if (!is.null(fit)) {
+    widths <- vapply(x$cols, function(c1) as.integer(c1$width), integer(1L))
+    cat("  fitted  : ", sum(widths), " + ", fit$gutter, " gutter of ",
+        fit$total_width, " characters
+", sep = "")
+    w <- max(nchar(names(fit$demand)))
+    for (i in seq_along(x$cols)) {
+      cat(sprintf("    %-*s  width = %3d %s (demand %.1f)
+", w,
+                  names(fit$demand)[i], widths[i],
+                  if (fit$fixed[i]) "set" else "fit", fit$demand[i]))
+    }
+    cat("  Paste listing_code(spec) into your program, then tune by eye.
+")
+  }
   invisible(x)
 }
 
@@ -608,6 +624,27 @@ print.rtf_listing_spec <- function(x, ...) {
     }
   }
   items
+}
+
+# The narrowest width at which a piece of text can be laid out without a hard
+# split: the widest of its unbreakable tokens.  A header can WRAP, so what a
+# column owes its header is this, not the header's full length -- otherwise a
+# long label ("Time since Initial Diagnosis (months)") would claim a column
+# nearly forty characters wide for data that needs ten.
+.listing_min_wrap_width <- function(text, sep) {
+  if (is.null(text) || !length(text) || is.na(text[[1L]])) return(0L)
+  pieces <- unlist(strsplit(as.character(text)[[1L]], "
+", fixed = TRUE),
+                   use.names = FALSE)
+  pieces <- unlist(lapply(pieces, .listing_split_after, sep = sep),
+                   use.names = FALSE)
+  tokens <- unlist(lapply(pieces, function(p) {
+    strsplit(p, "(?<=[ ,-])", perl = TRUE)[[1L]]
+  }), use.names = FALSE)
+  tokens <- trimws(tokens)
+  tokens <- tokens[nzchar(tokens)]
+  if (!length(tokens)) return(0L)
+  max(.listing_disp_width(tokens))
 }
 
 # One source column's display name: its `label` attribute when it has a usable
