@@ -490,6 +490,7 @@ articles:
       - articles/borders
       - gt-integration
       - articles/importing-tables
+      - articles/listings
       - articles/pagination
       - articles/headers-footers
       - articles/section-splitting

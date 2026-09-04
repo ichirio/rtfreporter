@@ -1,0 +1,310 @@
+---
+title: "Listings end to end: from source data to the written RTF"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      message = FALSE, warning = FALSE)
+options(width = 100)
+```
+
+```{r setup}
+library(rtfreporter)
+```
+
+A table and a listing want different things from the same package. A table is
+already a table by the time it reaches `rtfreporter`: some framework counted,
+summarised and labelled it, and what is left is rendering. A listing is
+different -- it is one row of source data per subject, and the work is
+**shape**:
+
+* several source variables belong in one printed column, joined by `/`;
+* a long cell has to break over several physical rows so it fits a column that
+  is only so many characters wide;
+* narrow blank columns sit between the printed ones as gutters;
+* one blank row separates one subject's block from the next; and
+* **a page break must never land inside a subject's block.**
+
+`listing_col()`, `listing_spec()` and `build_listing()` do the first four.
+The fifth is `as_rtftables()`, which could already do it. This article runs the
+whole thing, source data to `.rtf`.
+
+## The source data
+
+A small ADSL, one row per subject, shaped like a baseline-characteristics
+listing. Note the values that are longer than the column they will print in,
+and the missing ones:
+
+```{r data}
+adsl <- data.frame(
+  USUBJID  = c("63016-204-1015", "63016-204-1023", "63016-205-100028",
+               "63016-206-1034", "63016-206-1045"),
+  DISPTPD  = c("COMPLETED", "COMPLETED", "DISCONTINUED",
+               "ONGOING", "COMPLETED"),
+  BRCA     = c("BRCA1", NA, "BRCA2", "BRCA1", NA),
+  HIST     = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA OF THE LUNG",
+               "SMALL CELL", "HIGH GRADE SEROUS CARCINOMA", "ADENOCARCINOMA"),
+  STAGE    = c("IIIB", "IV", "IIIA", "IV", "IIB"),
+  HISTGRD  = c("GRADE 3", "GRADE 2", "GRADE 3", "GRADE 1", NA),
+  PRRAD    = c("Y", "N", "Y", "N", "Y"),
+  CMBRFST  = c("PARTIAL RESPONSE", "STABLE DISEASE", "COMPLETE RESPONSE",
+               "PROGRESSIVE DISEASE", "PARTIAL RESPONSE"),
+  CMBRLST  = c("STABLE DISEASE", "PROGRESSIVE DISEASE", "STABLE DISEASE",
+               NA, "STABLE DISEASE"),
+  ECOGPS   = c("0", "1", "1", "0", "2"),
+  stringsAsFactors = FALSE
+)
+str(adsl)
+```
+
+## Describing the columns
+
+`listing_col()` describes **one printed column**: which source variables it is
+built from, how wide it may be before its text wraps, and what its header says.
+
+```{r listing-col}
+listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
+            label = "Disposition/\nAny (BRCA) Mutations/\nHistology")
+```
+
+Four things are worth reading twice.
+
+**`vars` may name several columns.** Their values are joined with the
+listing's separator (`/` by default), and **missing and empty values are
+skipped** -- a subject with no `BRCA` prints `COMPLETED/SQUAMOUS...`, not
+`COMPLETED//SQUAMOUS...`.
+
+**`width` is a number of characters, not a rendered width.** It decides where
+the text breaks onto another physical row, and therefore how tall the subject's
+block is. What the column *measures* in the table is `rel_width`, which
+defaults to `width`.
+
+**The output column takes the first variable's name** -- `DISPTPD` above --
+which is why the reshaped data below has a `DISPTPD` column holding the joined
+text. It is an internal name, not a header; pass `name = "COL01"` if you
+would rather read the columns positionally.
+
+**`label` may contain `"\n"`**, which starts another header row -- the same
+convention as everywhere else in rtfreporter.
+
+`listing_spec()` collects the columns, in the order they print, and the
+settings that apply to all of them:
+
+```{r listing-spec}
+spec <- listing_spec(list(
+  listing_col("USUBJID", width = 15, label = "Unique\nSubject ID"),
+  listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
+              label = "Disposition/\nAny (BRCA) Mutations/\nHistology"),
+  listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis"),
+  listing_col(c("HISTGRD", "PRRAD"), width = 18,
+              label = "Histologic Grade/\nPrior Radiation\nTherapy"),
+  listing_col(c("CMBRFST", "CMBRLST"), width = 20,
+              label = "Best Response to\nthe 1st Line/\nthe Last Line"),
+  listing_col("ECOGPS", label = "ECOG\nPerformance\nStatus")
+))
+spec
+```
+
+## What `build_listing()` does
+
+```{r build}
+body <- build_listing(adsl, spec)
+body
+```
+
+Read that against the source data:
+
+* **`USUBJID` wrapped.** `63016-205-100028` is 16 characters and the column
+  takes 15, so it breaks after a hyphen -- `build_listing()` breaks at word
+  boundaries (a space, a comma, a hyphen) and takes the break *after* the
+  character, so the reader can see why the line ended.
+* **The joined column breaks at the separator first.** Each source variable
+  starts its own line, which is what makes a listing of this shape readable at
+  all. Only a piece that is *still* too long breaks again at a word boundary --
+  `SQUAMOUS CELL CARCINOMA OF THE LUNG` becomes two lines under a 22-character
+  column.
+* **Every column of one subject is padded to the tallest**, so the block stays
+  aligned across columns, and **a blank row closes each block**.
+* **`.sp1` … `.sp5` are the gutters**, the narrow blank columns between the
+  printed ones.
+* **`.rtf_record` is bookkeeping**, not a printed column: one id per source row.
+  It is what keeps a subject whole across a page break, below.
+
+A token longer than its column keeps its own line rather than being cut
+mid-word: a subject id or a lab code broken in half is worse than one that
+overflows, and the column has a relative width in the rendered table, so RTF
+wraps whatever does not fit.
+
+## Rendering it
+
+`build_listing()` is preparation only -- it hands back an ordinary
+`data.frame`, and `as_rtftables()` renders. The body carries its spec, so the
+two compose:
+
+```{r render-composed}
+pages <- as_rtftables(body)
+pages[[1]]
+```
+
+The **header, the relative widths and the left alignment all came from the
+spec.** None of the three had to be written out: no vector of header strings
+with an empty entry for every gutter, no `col_rel_width = c(15, 1, 22, 1, ...)`
+to keep in step with the column list, no `col_spec` repeating `align = "left"`
+ten times.
+
+Usually you do not want the intermediate object at all, and pass the spec
+straight to `as_rtftables()`:
+
+```{r render-hook}
+pages <- as_rtftables(adsl, listing = spec)
+length(pages)
+```
+
+The two forms produce the same tables. Reach for `build_listing()` when you
+want to look at -- or patch -- the reshaped data before it is rendered; reach
+for `listing =` the rest of the time.
+
+## Keeping a subject whole across a page break
+
+Give it a row budget and it paginates, **never splitting a subject's block**:
+
+```{r paginate}
+pages <- as_rtftables(adsl, listing = spec, max_rows = 8)
+length(pages)
+vapply(pages, function(p) nrow(p$data), integer(1))
+pages[[2]]
+```
+
+Nothing new implements that. `build_listing()` emitted the `.rtf_record`
+column, and the hook pointed the machinery that was already there at it:
+
+```{r equivalent, eval = FALSE}
+# what as_rtftables(listing = spec, max_rows = 8) sets for you
+as_rtftables(body, max_rows = 8,
+             group_col = ".rtf_record",   # a group is one subject's block
+             group_by  = "value",         # a new value starts a new group
+             split     = "group_safe",    # fill the page, never split a group
+             drop_cols = ".rtf_record")   # ... and never print it
+```
+
+`drop_cols` columns are hidden **after** pagination, which is why a column can
+decide the page breaks and still never appear. Every one of those is a
+*default*: pass `split`, `group_col` or `drop_cols` yourself and the hook
+leaves your choice alone.
+
+## The whole report
+
+Landscape, because a listing is wide; a title block, a footnote block, and the
+file:
+
+```{r report}
+pages <- as_rtftables(adsl, listing = spec, max_rows = 8)
+
+doc <- rtf_document(
+  page = list(orientation = "landscape", paper_size = "A4",
+              margin_top_in = 0.5, margin_bottom_in = 0.5,
+              margin_left_in = 0.5, margin_right_in = 0.5),
+  default_format = list(font_size_half_points = 16L)
+) |>
+  rtf_section(secinfo = list(
+    header = rtf_header(list(
+      c("Listing 16.2.4.2.1.2"),
+      c("Baseline Characteristics"),
+      c("<Safety Analysis Set>")
+    )),
+    footer = rtf_footer(list(
+      c(l = "ECOG: Eastern Cooperative Oncology Group")
+    ))
+  )) |>
+  rtf_tables(pages)
+
+path <- file.path(tempdir(), "listing-16-2-4-2-1-2.rtf")
+generate_rtfreport(doc, path, overwrite = TRUE)
+file.exists(path)
+```
+
+That is the whole pipeline: `adsl` in, one `.rtf` out, with the column
+description as the only thing written by hand.
+
+## Listing types
+
+`listing_spec(type = )` names a template that supplies the defaults --
+separator, gutters and their width, the blank row after each record, the
+default alignment, and the wrapping rule itself. One ships:
+
+| `type` | what it means |
+|---|---|
+| `"multiline"` | `/` separator, gutter columns, a blank row after each record and one at the top of every page, left aligned, and text wrapped at the separator first and at word boundaries only where a piece is still too long. |
+
+Any argument you pass explicitly overrides the template, the same relationship
+`rtftable(border = "tfl")` has with its preset:
+
+```{r overrides}
+listing_spec(c("USUBJID", "STAGE"),
+             sep       = " | ",   # join with something else
+             spacer    = FALSE,   # no gutter columns
+             blank_row = FALSE)   # no blank row between records
+```
+
+`record = FALSE` drops the hidden record column too -- do that only if you
+intend to paginate some other way, because it is what a page break is told to
+respect.
+
+Because the wrapping rule belongs to the template rather than to
+`build_listing()`, a future type can bring its own without disturbing this one.
+
+## The hand-written version this replaces
+
+Before this existed, the same listing was a page of pipeline: `catx()` calls to
+join the columns, a `split_string()` that broke a cell at `/` and then at word
+boundaries, a `get_max_element_counts()` to find each record's height, a
+`pad_list_elements()` to pad every column to it, `unnest_longer()`, a manually
+interleaved `S00`…`S08`, a blank row bound on top, and a
+`split_df_by_blank_rows()` to cut pages at record boundaries -- plus the three
+hand-maintained vectors (`col_rel_width`, the header strings, the `col_spec`)
+that had to stay in step with all of it.
+
+The package's test suite runs that pipeline -- its three functions verbatim --
+beside `build_listing()` on the same data and compares the result cell for
+cell, so this article's claim is checked rather than asserted. Three
+differences are deliberate:
+
+* **A token longer than the width keeps its own line.** The hand-written rule
+  pushed an empty accumulator first, so such a cell opened with a blank line
+  and the record was a row taller than it needed to be.
+* **A `"\n"` already in the data is honoured** as a line break, before any
+  width is considered.
+* **An empty cell still occupies its row.** The hand-written `split_string("")`
+  returned no lines at all, so a record whose wrapped columns were all empty
+  lost its blank row -- and with it the boundary a page split needs.
+
+One more difference is a matter of placement rather than behaviour: the blank
+row that used to be bound on top of the body is now
+`as_rtftables(blank_row_first = )`, which the `"multiline"` template turns on,
+so it appears at the top of **every** page rather than only the first.
+
+## When not to use this
+
+If your listing comes from **rlistings**, it is already laid out: `disp_cols`
+has been applied, key-column repeat suppression is baked into the strings, and
+the titles and footers travel with it. Pass it straight to `as_rtftables()`,
+which reads all of that:
+
+```{r rlistings, eval = FALSE}
+lsting <- rlistings::as_listing(adsl, key_cols = "USUBJID")
+as_rtftables(lsting, max_rows = 20)     # no `listing =` argument
+```
+
+`build_listing()` and `as_rtftables(listing = )` refuse a `listing_df` for that
+reason, with a message pointing here. (An rlistings listing is a `data.frame`
+subclass, so without that guard it would quietly be treated as raw source
+data.)
+
+## See also
+
+* `?listing_col`, `?listing_spec`, `?build_listing` -- every setting, one page
+  each.
+* [Paginating tables with `as_rtftables()`](pagination.html) -- the split
+  strategies, `group_col` / `group_by`, and `drop_cols` in general.
+* [Importing tables](importing-tables.html) -- reading a table object,
+  rlistings included, when the layout is already done.
