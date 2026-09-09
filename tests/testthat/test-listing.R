@@ -34,7 +34,7 @@ test_that("listing_col() validates and defaults its arguments", {
   expect_error(listing_col(1L), "one or more non-empty")
   expect_error(listing_col("A", width = 0), "positive number of characters")
   expect_error(listing_col("A", rel_width = -1), "positive number")
-  expect_error(listing_col("A", label = c("a", "b")), "single string")
+  expect_error(listing_col("A", label = 1:2), "character vector of header")
   expect_error(listing_col("A", align = "middle"), "should be one of")
 })
 
@@ -165,7 +165,15 @@ test_that("build_listing() honours spacer / blank_row / record switches", {
 test_that("build_listing() carries the spec and refuses to build twice", {
   spec <- demo_spec()
   body <- build_listing(adsl_demo(), spec)
-  expect_identical(attr(body, "rtf_listing"), spec)
+  carried <- attr(body, "rtf_listing", exact = TRUE)
+
+  # The carried spec is the one that was applied -- the same columns, with
+  # their headers now resolved and laid out at each column's width (#380).
+  expect_s3_class(carried, "rtf_listing_spec")
+  expect_identical(vapply(carried$cols, function(cl) cl$name, character(1L)),
+                   vapply(spec$cols, function(cl) cl$name, character(1L)))
+  expect_identical(carried$cols[[1L]]$width, spec$cols[[1L]]$width)
+
   expect_error(build_listing(body, spec), "already been through build_listing")
 })
 

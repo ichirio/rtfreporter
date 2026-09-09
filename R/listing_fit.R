@@ -354,7 +354,11 @@ fit_listing_widths <- function(data, spec,
     if (is.null(cl$label)) {
       sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
       lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
-      cl$label <- .listing_resolve_label(data, cl, sepj, lay, labels)
+      # Frozen UNWRAPPED: the structural breaks between source variables are
+      # kept, the width-induced ones are not, so widening the column in the
+      # pasted template re-flows the header (#380).
+      cl$label <- .listing_resolve_label(data, cl, sepj, lay, labels,
+                                         wrap = FALSE)
     }
     spec$cols[[j]] <- cl
   }

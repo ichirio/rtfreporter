@@ -284,6 +284,7 @@ reference:
       - build_listing
       - fit_listing_widths
       - listing_code
+      - listing_wrap
       - catx
 
   # ── 5. Column headers ──────────────────────────────────────────────────

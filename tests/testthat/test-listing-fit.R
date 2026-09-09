@@ -396,8 +396,13 @@ test_that("fitting writes rel_width and the label down, not just the width", {
     expect_false(is.null(cl$label))
     expect_identical(as.numeric(cl$rel_width), as.numeric(cl$width))
   }
-  # the header is resolved AND wrapped to the width just chosen
-  lines <- strsplit(.label_of(fitted), "\n", fixed = TRUE)[[1L]]
+  # The header is resolved but NOT wrapped: widening the column in the pasted
+  # template must re-flow it, so the frozen label keeps only its structural
+  # breaks (#380).  build_listing() lays it out at the width.
+  expect_identical(.label_of(fitted), "Unique Subject ID")
+  built <- attr(build_listing(.unlabelled(), fitted), "rtf_listing",
+                exact = TRUE)$cols[[1L]]$label
+  lines <- strsplit(built, "\n", fixed = TRUE)[[1L]]
   expect_true(all(.listing_disp_width(lines) <= fitted$cols[[1L]]$width))
 })
 
@@ -474,7 +479,13 @@ test_that("a long label over short data asks for more than its widest token", {
   tall <- .fit_hl(Inf)
   wide <- .fit_hl(4)
   expect_gt(wide$cols[[1L]]$width, tall$cols[[1L]]$width)
-  expect_lt(.hdr_lines(wide), .hdr_lines(tall))
+  # the block is measured after build_listing(), which lays the header out
+  built <- function(spec) {
+    lab <- attr(build_listing(.long_header(), spec), "rtf_listing",
+                exact = TRUE)$cols[[1L]]$label
+    length(strsplit(lab, "\n", fixed = TRUE)[[1L]])
+  }
+  expect_lt(built(wide), built(tall))
 })
 
 test_that("header_lines is a target the fit gets close to", {
