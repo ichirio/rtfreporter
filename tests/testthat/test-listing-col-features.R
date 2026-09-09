@@ -497,6 +497,11 @@ test_that("listing_wrap_code() validates `name`", {
 
 test_that("the template has not drifted from the rule it was copied from", {
   # Regenerate with: Rscript data-raw/gen_listing_wrap_template.R
+  #
+  # Not under covr: it rewrites every function body to count what runs, so
+  # the live deparse is instrumented code and would never match a source
+  # file.  The comparison still runs in R CMD check on every platform.
+  skip_on_covr()
   env <- new.env(parent = globalenv())
   eval(parse(text = .listing_wrap_template()), envir = env)
   for (nm in .listing_wrap_parts()) {
