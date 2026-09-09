@@ -109,6 +109,47 @@
 
 ### New features
 
+- **A derived header now breaks where the data breaks** (#384).  A column
+  joining `SEX` and `AGE` should read
+
+  ```
+  Sex/     Female/          Sex/Age   Female/18
+  Age      18
+  ```
+
+  -- two lines where the cell needs two, one line where the cell fits on one.
+  The rule was already shared, but the step before it was not: a cell is
+  joined into one string and wrapped once, while a derived header wrapped
+  **each label separately**, so two labels could never share a line and
+  `layout = "flow"` flowed the cells and not the header.  The header is now
+  joined and wrapped the same way, so the priority is the one that was always
+  intended: break at the separator -- where the data breaks -- and only then
+  because the width ran out.
+
+  Under `"stack"` nothing changes, since stack breaks at every separator
+  anyway.  The two cannot always agree -- a header is a different length from
+  its cells, so it can fit where they do not -- but the order of preference
+  now matches.
+
+  `fit_listing_widths()` consequently freezes the label as the joined words
+  with no breaks at all, so editing a `width` in the pasted template re-flows
+  the whole header rather than only within the pieces it was frozen into.
+
+- **`listing_spec(wrap = )` takes your own splitter** (#384).  The rule was
+  already a function on the spec, carried there from the type's template;
+  there was simply no way to set it.
+
+  ```r
+  listing_spec(cols, sep = "|",
+               wrap = function(text, width, sep, layout) { ... })
+  ```
+
+  A house rule that breaks on a different character, a byte budget for a SAS
+  transport, a script-specific rule: all expressible without a fork.  The same
+  function lays out the cells **and** the headers, which is what (1) makes
+  possible.  `listing_code()` cannot write a function out and says so in the
+  code it emits, rather than silently losing it.
+
 - **`listing_col(label = )` takes a vector as the header's lines, and lays a
   single string out at the width** (#380).  The two acts an author performs
   are now distinguished:

@@ -457,6 +457,14 @@ print.rtf_listing_col <- function(x, ...) {
 #'   `"stack"` breaks after every separator, `"flow"` fills each line as far
 #'   as the column's `width` allows.  See [listing_col()].  `NULL` (default)
 #'   takes the template's.
+#' @param wrap The rule that breaks a cell -- and a derived header -- into
+#'   lines: `function(text, width, sep, layout)` returning a character vector
+#'   of lines.  `NULL` (default) uses the `type`'s own rule; see
+#'   [listing_wrap()] for what that one does.  Supply your own for a house
+#'   rule the shipped one does not cover -- a different break character, a
+#'   byte budget for a SAS transport.  The same function lays out the cells
+#'   and the headers, so they stay consistent.  [listing_code()] cannot write
+#'   a function out and says so in the code it emits.
 #' @param record `TRUE` (default) appends the hidden record column under its
 #'   standard name, `FALSE` appends none, or a single string names it
 #'   yourself.  See *The record column*.
@@ -488,6 +496,7 @@ listing_spec <- function(cols,
                          blank_row_first  = NULL,
                          align            = NULL,
                          layout           = NULL,
+                         wrap             = NULL,
                          record           = TRUE) {
   tpl <- .listing_template(type)
 
@@ -534,6 +543,16 @@ listing_spec <- function(cols,
   }
   if (!is.null(align)) align <- match.arg(align, c("left", "center", "right"))
   if (!is.null(layout)) layout <- match.arg(layout, c("stack", "flow"))
+  if (!is.null(wrap)) {
+    if (!is.function(wrap)) {
+      stop("`wrap` must be a function(text, width, sep, layout) returning ",
+           "the lines, or NULL for the type's own rule.", call. = FALSE)
+    }
+    if (length(formals(wrap)) < 4L) {
+      stop("`wrap` must accept four arguments: text, width, sep, layout.",
+           call. = FALSE)
+    }
+  }
 
   record_col <-
     if (isTRUE(record)) {
@@ -562,7 +581,8 @@ listing_spec <- function(cols,
                             } else blank_row_first,
          align            = if (is.null(align)) tpl$align else align,
          layout           = if (is.null(layout)) tpl$layout else layout,
-         wrap             = tpl$wrap,
+         wrap             = if (is.null(wrap)) tpl$wrap else wrap,
+         wrap_custom      = !is.null(wrap),
          record_col       = record_col),
     class = "rtf_listing_spec"
   )
@@ -697,7 +717,7 @@ print.rtf_listing_spec <- function(x, ...) {
 #  fit_listing_widths() freezes that, so widening a column in the pasted
 #  template re-flows its header instead of leaving it broken at the old width.
 .listing_resolve_label <- function(data, cl, sep, layout, labels = NULL,
-                                   wrap = TRUE) {
+                                   wrap = TRUE, wrap_fn = NULL) {
   if (!is.null(cl$label)) {
     # A label the author wrote is words to lay out when it is one line, and a
     # layout to leave alone when it is not: a vector, or a string carrying its
@@ -705,23 +725,35 @@ print.rtf_listing_spec <- function(x, ...) {
     if (!isTRUE(wrap)) return(cl$label)
     if (grepl("
 ", cl$label, fixed = TRUE)) return(cl$label)
-    lines <- .listing_wrap_sep_word(cl$label, cl$width, sep, layout)
+    lines <- .listing_wrap_call(wrap_fn, cl$label, cl$width, sep, layout)
     return(paste(lines, collapse = "
 "))
   }
   labs <- vapply(cl$vars, function(v) .listing_var_label(data, v, labels),
                  character(1L))
-  n <- length(labs)
-  pieces <- if (n > 1L) c(paste0(labs[-n], sep), labs[[n]]) else labs
-  lines <- if (isTRUE(wrap)) {
-    unlist(lapply(pieces, function(p) {
-      .listing_wrap_sep_word(p, cl$width, sep, layout)
-    }), use.names = FALSE)
-  } else {
-    trimws(pieces)
-  }
-  paste(lines, collapse = "
+  # Joined once and wrapped once, exactly as the cells are (#384).  The rule
+  # breaks after the separator first -- which is where the data breaks -- and
+  # only then because the width ran out, so a header follows its column: two
+  # lines where the cell needs two, one line where the cell fits on one.
+  # Wrapping each label separately (as this did) meant two labels could never
+  # share a line, so `layout = "flow"` flowed the cells and not the header.
+  joined <- paste(labs, collapse = sep)
+  if (!isTRUE(wrap)) return(joined)
+  paste(.listing_wrap_call(wrap_fn, joined, cl$width, sep, layout),
+        collapse = "
 ")
+}
+
+# Apply a listing's wrapping rule.  `NULL` means the built-in one, so every
+# caller can pass `spec$wrap` without checking (#384).
+.listing_wrap_call <- function(fn, text, width, sep, layout) {
+  if (is.null(fn)) fn <- .listing_wrap_sep_word
+  out <- fn(text, width, sep, layout)
+  if (!is.character(out) || !length(out)) {
+    stop("The listing's `wrap` function must return a non-empty character ",
+         "vector of lines.", call. = FALSE)
+  }
+  out
 }
 
 # Header / widths / alignment for a body `build_listing()` produced.  Given in
@@ -861,7 +893,8 @@ build_listing <- function(data, spec) {
     sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
     lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
     txt  <- .listing_combine(data, cl, sepj)
-    spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay)
+    spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay,
+                                                   wrap_fn = spec$wrap)
     lines[[j]] <- lapply(txt, function(s) spec$wrap(s, cl$width, sepj, lay))
   }
 

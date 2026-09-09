@@ -14,6 +14,7 @@ listing_spec(
   blank_row_first = NULL,
   align = NULL,
   layout = NULL,
+  wrap = NULL,
   record = TRUE
 )
 }
@@ -51,6 +52,15 @@ template's.}
 \code{"stack"} breaks after every separator, \code{"flow"} fills each line as far
 as the column's \code{width} allows.  See \code{\link[=listing_col]{listing_col()}}.  \code{NULL} (default)
 takes the template's.}
+
+\item{wrap}{The rule that breaks a cell -- and a derived header -- into
+lines: \verb{function(text, width, sep, layout)} returning a character vector
+of lines.  \code{NULL} (default) uses the \code{type}'s own rule; see
+\code{\link[=listing_wrap]{listing_wrap()}} for what that one does.  Supply your own for a house
+rule the shipped one does not cover -- a different break character, a
+byte budget for a SAS transport.  The same function lays out the cells
+and the headers, so they stay consistent.  \code{\link[=listing_code]{listing_code()}} cannot write
+a function out and says so in the code it emits.}
 
 \item{record}{\code{TRUE} (default) appends the hidden record column under its
 standard name, \code{FALSE} appends none, or a single string names it
