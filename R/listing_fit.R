@@ -265,7 +265,7 @@ fit_listing_widths <- function(data, spec,
     lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
     cells <- if (nrow(data)) .listing_combine(data, cl, sepj) else character(0)
     cell_w <- if (length(cells)) {
-      as.numeric(stats::quantile(.listing_disp_width(cells), probs = probs,
+      as.numeric(stats::quantile(listing_disp_width(cells), probs = probs,
                                  names = FALSE, type = 7))
     } else 0
     # The header's floor is the widest token it cannot break, not its full
@@ -282,7 +282,7 @@ fit_listing_widths <- function(data, spec,
     hdr_w <- .listing_min_wrap_width(lab, sepj)
     floor_hdr[j] <<- hdr_w
     hdr_h <- if (is.finite(header_lines)) {
-      total <- sum(.listing_disp_width(
+      total <- sum(listing_disp_width(
         strsplit(lab, "
 ", fixed = TRUE)[[1L]]))
       ceiling(total / header_lines)

@@ -50,7 +50,7 @@ test_that("a derived header is wrapped to the column, so it cannot be wider", {
                         listing_spec(list(listing_col("USUBJID", width = 8))))
   lines <- strsplit(unname(.labels_of(body)), "\n", fixed = TRUE)[[1L]]
   expect_gt(length(lines), 1L)
-  expect_true(all(.listing_disp_width(lines) <= 8))
+  expect_true(all(listing_disp_width(lines) <= 8))
 })
 
 test_that("a label the author laid out is used exactly as written", {
@@ -234,7 +234,7 @@ test_that("the layout rule is the cells' rule: separator, words, hard split", {
   spec2 <- listing_spec(list(listing_col("HIST", width = 8,
                                          label = "Immunohistochemistry")))
   lines <- strsplit(.lab_of(spec2), "\n", fixed = TRUE)[[1L]]
-  expect_true(all(.listing_disp_width(lines) <= 8))
+  expect_true(all(listing_disp_width(lines) <= 8))
 })
 
 test_that("label is validated", {
@@ -252,7 +252,7 @@ test_that("listing_wrap() applies the rule and returns the lines", {
   expect_identical(listing_wrap("COMPLETED/BRCA1/ADENOCARCINOMA", 22),
                    c("COMPLETED/", "BRCA1/", "ADENOCARCINOMA"))
   expect_identical(listing_wrap("40/F", 20, layout = "flow"), "40/F")
-  expect_true(all(.listing_disp_width(
+  expect_true(all(listing_disp_width(
     listing_wrap("Immunohistochemistry", 8)) <= 8))
 })
 
@@ -422,16 +422,16 @@ test_that("wrap = listing_wrap is a no-op, so it can be delegated to", {
 test_that("the emitted rule is self-contained and IS the shipped rule", {
   src <- listing_wrap_code("my_wrap")
 
-  # Self-contained: nothing in it reaches back into the package.
+  # Nothing in it reaches back into the package's INTERNALS; the measurements
+  # it does call are exported, and shared on purpose (#392).
   expect_false(any(grepl(":::", src, fixed = TRUE)))
   expect_false(any(grepl(".listing_", src, fixed = TRUE)))
-  expect_false(any(grepl("rtfreporter", src[-1L], fixed = TRUE)))
+  expect_true(any(grepl("listing_disp_width(", src, fixed = TRUE)))
 
   env <- new.env(parent = globalenv())
   eval(parse(text = src), envir = env)
-  expect_setequal(ls(env), c("my_wrap", "my_wrap_disp_width", "my_wrap_flow",
-                             "my_wrap_split_after", "my_wrap_take",
-                             "my_wrap_words"))
+  expect_setequal(ls(env),
+                  c("my_wrap", "my_wrap_flow", "my_wrap_words"))
 
   # And it cannot have drifted, because it is read off the live functions.
   # Widths, separators, layouts, CJK, an embedded newline, an empty cell.
@@ -509,4 +509,37 @@ test_that("the template has not drifted from the rule it was copied from", {
                      deparse(get(nm, envir = asNamespace("rtfreporter"))),
                      info = nm)
   }
+})
+
+# ── the measurements the rule is built on ────────────────────────────────────
+
+test_that("listing_disp_width() counts columns, not characters", {
+  expect_identical(listing_disp_width(c("ABC", "\u3042\u3044\u3046")), c(3L, 6L))
+  expect_identical(listing_disp_width(c(NA, "")), c(0L, 0L))
+  expect_identical(listing_disp_width(42), 2L)
+})
+
+test_that("listing_take() gives the longest prefix that fits", {
+  expect_identical(listing_take("ADENOCARCINOMA", 6), "ADENOC")
+  expect_identical(listing_take("\u3042\u3044\u3046", 4), "\u3042\u3044")
+  expect_identical(listing_take("", 5), "")
+  # Never "" for non-empty text: a caller looping on the remainder must be
+  # able to make progress even where one glyph is wider than the column.
+  expect_identical(listing_take("\u3042", 1), "\u3042")
+})
+
+test_that("listing_split_after() keeps the separator on the line it closes", {
+  expect_identical(listing_split_after("COMPLETED/BRCA1", "/"),
+                   c("COMPLETED/", "BRCA1"))
+  expect_identical(listing_split_after("a.b", "."), c("a.", "b"))   # literal
+  expect_identical(listing_split_after("a/b", ""), "a/b")
+  expect_identical(listing_split_after("a/b", NULL), "a/b")
+})
+
+test_that("the emitted rule shares them rather than carrying a copy", {
+  # The fork calls the package's measurements, so fixing one fixes every fork.
+  src <- listing_wrap_code("shared")
+  expect_false(any(grepl("shared_disp_width", src, fixed = TRUE)))
+  expect_true(any(grepl("listing_disp_width(", src, fixed = TRUE)))
+  expect_true(any(grepl("listing_split_after(", src, fixed = TRUE)))
 })

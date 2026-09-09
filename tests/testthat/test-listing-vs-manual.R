@@ -147,8 +147,8 @@ test_that("the hand-written rule counts characters, not display width", {
   # It would let a Japanese cell ask for 8 columns and occupy 16.
   jp <- "肺腺癌ステージIIIB"
   manual <- unlist(split_string(jp, 8))
-  expect_true(any(.listing_disp_width(manual) > 8))    # a line 18 columns wide
-  expect_true(all(.listing_disp_width(
+  expect_true(any(listing_disp_width(manual) > 8))    # a line 18 columns wide
+  expect_true(all(listing_disp_width(
     .listing_wrap_sep_word(jp, 8, "/")) <= 8))         # every line fits
 })
 

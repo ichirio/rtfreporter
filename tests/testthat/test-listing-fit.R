@@ -412,7 +412,7 @@ test_that("fitting writes rel_width and the label down, not just the width", {
   built <- attr(build_listing(.unlabelled(), fitted), "rtf_listing",
                 exact = TRUE)$cols[[1L]]$label
   lines <- strsplit(built, "\n", fixed = TRUE)[[1L]]
-  expect_true(all(.listing_disp_width(lines) <= fitted$cols[[1L]]$width))
+  expect_true(all(listing_disp_width(lines) <= fitted$cols[[1L]]$width))
 })
 
 test_that("a value the author set is still never touched", {

@@ -109,6 +109,17 @@
 
 ### New features
 
+- **The measurements a wrapping rule is built on are exported** (#392):
+  `listing_disp_width()`, `listing_take()` and `listing_split_after()`.
+  `listing_wrap_code()` used to write these out with the rest, so every
+  forked rule carried its own copy of code no one edits -- and the width
+  estimator already used them.  Now it emits the rule's three POLICY
+  functions, which call the exported measurements: the template drops from
+  124 lines to 99, and a fix to how a display width is counted reaches every
+  fork instead of none.  `listing_disp_width()` is worth having on its own --
+  it is what makes a listing's arithmetic CJK-aware, where a full-width glyph
+  counts as two.
+
 - **`listing_wrap_code()`: the default wrapping rule as source to edit**
   (#390).  A `listing_spec(wrap = )` that only adjusts the shipped rule can
   delegate to `listing_wrap()`, but one that has to break text *differently*

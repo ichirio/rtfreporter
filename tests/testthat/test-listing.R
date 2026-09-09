@@ -100,17 +100,17 @@ test_that("a token wider than the column is hard-split, so every line fits", {
                    c("ABCDEFGH", "IJKLMNOP"))
   # every returned line fits the column it was measured against
   lines <- .listing_wrap_sep_word("63016-205-100028", 15, "/")
-  expect_true(all(.listing_disp_width(lines) <= 15))
+  expect_true(all(listing_disp_width(lines) <= 15))
 })
 
 test_that("widths are display widths, so a full-width glyph counts as two", {
   jp <- "肺腺癌ステージIIIB"   # 11 chars, 18 columns
   expect_identical(nchar(jp), 11L)
-  expect_identical(.listing_disp_width(jp), 18L)
+  expect_identical(listing_disp_width(jp), 18L)
 
   lines <- .listing_wrap_sep_word(jp, 8, "/")
   expect_gt(length(lines), 1L)                 # nchar() would have kept one
-  expect_true(all(.listing_disp_width(lines) <= 8))
+  expect_true(all(listing_disp_width(lines) <= 8))
 })
 
 test_that("wrapping honours a newline already in the data, and NA is empty", {
