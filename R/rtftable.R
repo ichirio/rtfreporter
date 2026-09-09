@@ -368,6 +368,21 @@
 }
 
 
+# `table_width_pct` as the fraction of the writable width it stands for.
+#
+# The coercion is silenced rather than left to warn: a non-number is an error
+# with a message that says what the setting takes, and R's "NAs introduced by
+# coercion" arriving FIRST tells the user nothing and, under
+# `options(warn = 2)`, replaces that message with itself (#388).  A string
+# that is a number ("50") is still accepted, as it always was.
+.table_width_pct_frac <- function(x, arg = "table_width_pct") {
+  pct <- suppressWarnings(as.numeric(x))
+  if (length(pct) != 1L || is.na(pct) || pct <= 0 || pct > 100) {
+    stop(sprintf("`%s` must be a number in (0, 100].", arg), call. = FALSE)
+  }
+  pct / 100
+}
+
 #' Create an RTF table object
 #'
 #' Constructs a table object with full formatting control.
@@ -730,11 +745,7 @@ rtftable <- function(
   # table width %
   twpw <- table_width_pct_of_writable
   if (!is.null(table_width_pct)) {
-    pct <- as.numeric(table_width_pct)
-    if (is.na(pct) || pct <= 0 || pct > 100) {
-      stop("`table_width_pct` must be a number in (0, 100].", call. = FALSE)
-    }
-    twpw <- pct / 100
+    twpw <- .table_width_pct_frac(table_width_pct)
   }
 
   if (!table_align %in% c("left", "center", "right")) {
@@ -820,11 +831,7 @@ rtftable <- function(
   if (has("table_width_pct_of_writable"))
     tbl$table_width_pct_of_writable <- ov$table_width_pct_of_writable
   if (has("table_width_pct") && !is.null(ov$table_width_pct)) {
-    pct <- as.numeric(ov$table_width_pct)
-    if (is.na(pct) || pct <= 0 || pct > 100) {
-      stop("`table_width_pct` must be a number in (0, 100].", call. = FALSE)
-    }
-    tbl$table_width_pct_of_writable <- pct / 100
+    tbl$table_width_pct_of_writable <- .table_width_pct_frac(ov$table_width_pct)
   }
   if (has("table_align")) {
     if (!ov$table_align %in% c("left", "center", "right")) {
