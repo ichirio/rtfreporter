@@ -256,7 +256,8 @@
 rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
                     align = "center", render_width = 6.5,
                     render_height = 4.5, render_dpi = 300) {
-  if (.rtfplot_is_object(x)) {
+  drawn <- .rtfplot_is_object(x)
+  if (drawn) {
     path <- .rtfplot_render(x, render_width, render_height, render_dpi)
   } else {
     given <- c(!missing(render_width), !missing(render_height),
@@ -279,6 +280,14 @@ rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
 
   dims <- if (img_type == "png") .read_png_dims(path) else .read_jpeg_dims(path)
   density <- if (img_type == "png") .read_png_density(path) else .read_jpeg_density(path)
+  if (drawn) {
+    # We drew it, so we know its resolution: take it from `render_dpi` rather
+    # than reading back what the device recorded.  macOS's quartz PNG device
+    # writes no `pHYs` chunk at all, and a figure that silently fell back to
+    # 96 dpi would be half again too big on the page there and correct
+    # everywhere else -- the worst kind of platform difference.
+    density <- list(dpi_x = render_dpi, dpi_y = render_dpi)
+  }
 
   if (!align %in% c("left", "center", "right")) {
     stop("`align` must be 'left', 'center', or 'right'.", call. = FALSE)

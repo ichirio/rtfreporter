@@ -127,7 +127,11 @@
   resolution in the PNG itself, so the figure lands at exactly
   `render_width` x `render_height` inches (default 6.5 x 4.5) and
   `render_dpi` (default 300) decides only how sharp it is.  Those three are
-  refused for a file, which has a size and a resolution already.
+  refused for a file, which has a size and a resolution already.  (The
+  object carries the resolution it was drawn at rather than reading it back
+  out of the PNG: macOS's quartz device records none, and a figure that
+  fell back to 96 dpi would be half again too big there and right
+  everywhere else.)
 
   `rtfplot()`'s first argument is renamed `path` -> `x`, since it is no
   longer only a path.

@@ -297,8 +297,10 @@ test_that("a plot object is drawn at render_width x render_height inches", {
   expect_s3_class(fig, "rtfplot")
   expect_identical(fig$img_type, "png")
   expect_identical(c(fig$img_width, fig$img_height), c(600L, 450L))
-  # The device writes the resolution into pHYs, so the native size -- what the
-  # figure occupies on the page -- is the inches asked for, not the pixels.
+  # The size on the page is the inches asked for, not the pixels, on every
+  # platform -- macOS's quartz PNG device records no resolution in the file,
+  # so the object carries the one it was drawn at (#394).
+  expect_equal(fig$dpi_x, 150)
   disp <- rtfreporter:::.rtfplot_display_twips(fig)
   expect_equal(disp$w / 1440, 4, tolerance = 0.01)
   expect_equal(disp$h / 1440, 3, tolerance = 0.01)
