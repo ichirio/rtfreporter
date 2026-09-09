@@ -271,7 +271,8 @@ fit_listing_widths <- function(data, spec,
     # The header's floor is the widest token it cannot break, not its full
     # length: a header wraps, so a long label should not claim a column the
     # data does not need.
-    lab   <- .listing_resolve_label(data, cl, sepj, lay, labels)
+    lab   <- .listing_resolve_label(data, cl, sepj, lay, labels,
+                                    wrap_fn = spec$wrap)
     # Two things the header asks for.  The widest token it cannot break is a
     # hard floor -- below it the header is cut mid-word.  Its HEIGHT is the
     # other: a header wraps, but wrapping a 73-character label to nine
@@ -358,7 +359,7 @@ fit_listing_widths <- function(data, spec,
       # kept, the width-induced ones are not, so widening the column in the
       # pasted template re-flows the header (#380).
       cl$label <- .listing_resolve_label(data, cl, sepj, lay, labels,
-                                         wrap = FALSE)
+                                         wrap = FALSE, wrap_fn = spec$wrap)
     }
     spec$cols[[j]] <- cl
   }
@@ -516,7 +517,13 @@ listing_code <- function(spec, name = NULL, indent = 2L) {
   } else {
     "))"
   }
-  structure(c(paste0(head, "list("), col_lines, close),
+  # A wrapping rule is a function, and a function cannot be written out.  Say
+  # so rather than emit code that silently loses it (#384).
+  note <- if (isTRUE(spec$wrap_custom)) {
+    c("# NOTE: this listing uses a custom `wrap` function, which cannot be",
+      "# written out here -- add `wrap = ` back when you paste this.")
+  }
+  structure(c(note, paste0(head, "list("), col_lines, close),
             class = "rtf_listing_code")
 }
 

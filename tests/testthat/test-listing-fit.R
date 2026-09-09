@@ -278,11 +278,20 @@ test_that("labels supply the header when the data carries none", {
 })
 
 test_that("a joined column joins its labels, and the breaks stay automatic", {
-  fitted <- fit_listing_widths(
-    .unlabelled(),
-    listing_spec(list(listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22))),
-    total_width = 22, labels = .spec_labels)
-  expect_identical(strsplit(.label_of(fitted), "\n", fixed = TRUE)[[1L]],
+  spec <- listing_spec(list(listing_col(c("DISPTPD", "BRCA", "HIST"),
+                                        width = 22)))
+  fitted <- fit_listing_widths(.unlabelled(), spec, total_width = 22,
+                               labels = .spec_labels)
+
+  # The fit freezes the joined words with no breaks at all (#384), so editing
+  # the width in the pasted template re-flows the whole header.
+  expect_identical(.label_of(fitted),
+                   "Primary Diagnosis/Any (BRCA) Mutations/Histology")
+
+  # build_listing() lays it out at the width, breaking at the separator first.
+  built <- attr(build_listing(.unlabelled(), fitted), "rtf_listing",
+                exact = TRUE)$cols[[1L]]$label
+  expect_identical(strsplit(built, "\n", fixed = TRUE)[[1L]],
                    c("Primary Diagnosis/", "Any (BRCA) Mutations/", "Histology"))
 })
 

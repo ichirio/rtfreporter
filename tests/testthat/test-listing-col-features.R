@@ -275,3 +275,108 @@ test_that("listing_wrap() validates its arguments", {
   expect_error(listing_wrap("a", 10, sep = c("/", "-")), "single string")
   expect_error(listing_wrap("a", -1), "positive number")
 })
+
+
+# ── a derived header breaks where the data breaks (#384) ─────────────────────
+
+.sexage <- function() {
+  d <- data.frame(SEX = c("Female", "Male"), AGE = c("18", "72"),
+                  stringsAsFactors = FALSE)
+  attr(d$SEX, "label") <- "Sex"
+  attr(d$AGE, "label") <- "Age"
+  d
+}
+
+.pair <- function(width, layout) {
+  spec <- listing_spec(list(listing_col(c("SEX", "AGE"), width = width,
+                                        layout = layout)),
+                       spacer = FALSE, blank_row = FALSE, record = FALSE)
+  b <- build_listing(.sexage(), spec)
+  list(cell = b[[1L]][1:2],
+       head = strsplit(attr(b, "rtf_listing", exact = TRUE)$cols[[1L]]$label,
+                       "\n", fixed = TRUE)[[1L]])
+}
+
+test_that("stacked: the header breaks at the separator, as the cell does", {
+  r <- .pair(9, "stack")
+  expect_identical(r$cell, c("Female/", "18"))
+  expect_identical(r$head, c("Sex/", "Age"))
+})
+
+test_that("flowed: a cell on one line gets a header on one line", {
+  r <- .pair(9, "flow")
+  expect_identical(r$cell[[1L]], "Female/18")
+  expect_identical(r$head, "Sex/Age")
+})
+
+test_that("a flowed header used to stay stacked -- two labels can share a line", {
+  # Before #384 each label was wrapped separately, so `layout = "flow"` flowed
+  # the cells and never the header.
+  expect_length(.pair(20, "flow")$head, 1L)
+  expect_length(.pair(20, "stack")$head, 2L)
+})
+
+test_that("stacked headers are unchanged by the join", {
+  # Joining and wrapping once must give what wrapping each label gave, because
+  # stack breaks at every separator anyway.
+  d <- .labelled_adsl()
+  spec <- listing_spec(list(listing_col(c("AGE", "SEX"), width = 4)))
+  expect_identical(
+    attr(build_listing(d, spec), "rtf_listing", exact = TRUE)$cols[[1L]]$label,
+    "Age/\nSex")
+})
+
+
+# ── listing_spec(wrap = ): a listing's own splitter ──────────────────────────
+
+test_that("a custom wrap lays out the cells and the headers alike", {
+  by_pipe <- function(text, width, sep, layout) {
+    unlist(strsplit(as.character(text)[[1L]], "|", fixed = TRUE))
+  }
+  spec <- listing_spec(list(listing_col("A", width = 20, label = "X|Y|Z")),
+                       sep = "|", wrap = by_pipe, spacer = FALSE,
+                       blank_row = FALSE, record = FALSE)
+  b <- build_listing(data.frame(A = "a|b|c", stringsAsFactors = FALSE), spec)
+
+  expect_identical(b$A, c("a", "b", "c"))
+  expect_identical(attr(b, "rtf_listing", exact = TRUE)$cols[[1L]]$label,
+                   "X\nY\nZ")
+})
+
+test_that("a custom wrap is used for a DERIVED header too", {
+  by_pipe <- function(text, width, sep, layout) {
+    unlist(strsplit(as.character(text)[[1L]], "|", fixed = TRUE))
+  }
+  d <- data.frame(A = "a", B = "b", stringsAsFactors = FALSE)
+  attr(d$A, "label") <- "Alpha"
+  attr(d$B, "label") <- "Beta"
+  spec <- listing_spec(list(listing_col(c("A", "B"), width = 20)),
+                       sep = "|", wrap = by_pipe, spacer = FALSE,
+                       blank_row = FALSE, record = FALSE)
+  expect_identical(
+    attr(build_listing(d, spec), "rtf_listing", exact = TRUE)$cols[[1L]]$label,
+    "Alpha\nBeta")
+})
+
+test_that("wrap is validated, and its contract enforced", {
+  expect_error(listing_spec("A", wrap = "nope"), "must be a function")
+  expect_error(listing_spec("A", wrap = function(x) x), "four arguments")
+
+  bad <- function(text, width, sep, layout) 42
+  spec <- listing_spec(list(listing_col("A", width = 5)), wrap = bad,
+                       spacer = FALSE, blank_row = FALSE, record = FALSE)
+  expect_error(build_listing(data.frame(A = "x", stringsAsFactors = FALSE),
+                             spec),
+               "non-empty character")
+})
+
+test_that("listing_code() says a custom wrap cannot be written out", {
+  by_pipe <- function(text, width, sep, layout) {
+    unlist(strsplit(as.character(text)[[1L]], "|", fixed = TRUE))
+  }
+  plain  <- listing_code(listing_spec(list(listing_col("A", width = 5))))
+  custom <- listing_code(listing_spec(list(listing_col("A", width = 5)),
+                                      wrap = by_pipe))
+  expect_false(any(grepl("custom `wrap`", plain, fixed = TRUE)))
+  expect_true(any(grepl("custom `wrap`", custom, fixed = TRUE)))
+})
