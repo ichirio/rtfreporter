@@ -458,13 +458,36 @@ print.rtf_listing_col <- function(x, ...) {
 #'   as the column's `width` allows.  See [listing_col()].  `NULL` (default)
 #'   takes the template's.
 #' @param wrap The rule that breaks a cell -- and a derived header -- into
-#'   lines: `function(text, width, sep, layout)` returning a character vector
-#'   of lines.  `NULL` (default) uses the `type`'s own rule; see
-#'   [listing_wrap()] for what that one does.  Supply your own for a house
-#'   rule the shipped one does not cover -- a different break character, a
-#'   byte budget for a SAS transport.  The same function lays out the cells
-#'   and the headers, so they stay consistent.  [listing_code()] cannot write
-#'   a function out and says so in the code it emits.
+#'   lines.  `NULL` (default) uses the `type`'s own rule, which is exactly
+#'   [listing_wrap()]: passing `wrap = listing_wrap` changes nothing.
+#'
+#'   Supply your own for a house rule the shipped one does not cover -- a
+#'   different break character, a byte budget for a SAS transport.  The same
+#'   function lays out the cells **and** the headers, so the two stay
+#'   consistent.  The contract is:
+#'   \describe{
+#'     \item{arguments}{called **positionally** with four:
+#'       `function(text, width, sep, layout)`.}
+#'     \item{`text`}{a **length-1** character -- one composed cell, or the
+#'       column's labels already joined.  Never a vector.}
+#'     \item{`width`}{the column's `width`: a positive number, **or `NULL`**
+#'       for a column that sets none.  Handle `NULL` -- it means "no limit".}
+#'     \item{`sep`}{the effective separator, the column's own or the
+#'       listing's.}
+#'     \item{`layout`}{`"stack"` or `"flow"`, already resolved to one
+#'       string.}
+#'     \item{value}{a **non-empty character vector**, one element per line.}
+#'   }
+#'   The simplest way to write one is to delegate to the built-in rule and
+#'   adjust around it:
+#'   \preformatted{
+#'     wrap = function(text, width, sep, layout) \{
+#'       out <- listing_wrap(text, width, sep, layout)
+#'       ...
+#'     \}
+#'   }
+#'   [listing_code()] cannot write a function out and says so in the code it
+#'   emits.
 #' @param record `TRUE` (default) appends the hidden record column under its
 #'   standard name, `FALSE` appends none, or a single string names it
 #'   yourself.  See *The record column*.
@@ -895,7 +918,12 @@ build_listing <- function(data, spec) {
     txt  <- .listing_combine(data, cl, sepj)
     spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay,
                                                    wrap_fn = spec$wrap)
-    lines[[j]] <- lapply(txt, function(s) spec$wrap(s, cl$width, sepj, lay))
+    # Through the same caller as the header (#386), so a `wrap` that returns
+    # the wrong thing is caught here with the same message rather than failing
+    # confusingly further down.
+    lines[[j]] <- lapply(txt, function(s) {
+      .listing_wrap_call(spec$wrap, s, cl$width, sepj, lay)
+    })
   }
 
   # -- how tall is each record's block --------------------------------------
@@ -992,6 +1020,12 @@ build_listing <- function(data, spec) {
 #' on its own -- to preview where a column will break, or to lay a header out
 #' by hand and hand the result to `listing_col(label = )`, which takes a
 #' character vector as its lines.
+#'
+#' It is **exactly** the `"multiline"` type's own rule, so
+#' `listing_spec(wrap = listing_wrap)` changes nothing, and it is the
+#' reference implementation of that contract: a custom `wrap` is easiest to
+#' write by delegating to this and adjusting around it.  See
+#' [listing_spec()] for the contract in full.
 #'
 #' @section The rule:
 #'

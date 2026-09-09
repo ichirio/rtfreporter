@@ -499,6 +499,18 @@ Diagnosis")
 
 ### Documentation
 
+- **`listing_spec(wrap = )` states its contract, so writing one needs no
+  look at the source** (#386).  `?listing_spec` now says what a `wrap`
+  function is called with -- positionally, with `text` (always length 1),
+  `width` (which may be `NULL`), `sep` and an already-resolved `layout` --
+  and what it must return: a non-empty character vector, one element per
+  line.  `listing_wrap()` is named as the reference implementation: it is
+  exactly the `"multiline"` type's own rule, so `wrap = listing_wrap`
+  changes nothing and a custom rule can delegate to it and adjust around
+  it.  The cell path now validates the return value through the same check
+  as the header path, so a `wrap` that returns the wrong thing fails with
+  that message wherever it is first called.
+
 - **The listings article covers the whole of the feature again** (#371).  It
   was written against the API as it first shipped, and gained a section where
   the page chooses the widths (`fit_listing_widths()`) and hands them back as
