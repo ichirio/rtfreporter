@@ -2,6 +2,42 @@
 
 ### Breaking changes
 
+- **`as_rtftables()` now speaks the same table-width vocabulary as
+  `rtftable()`** (#382).  Two settings did not mean there what they mean
+  everywhere else.
+
+  - **`table_width_twips` was ignored.**  It is a formal of `as_rtftables()`
+    and was read only inside the `auto_width` branch, so it never reached
+    `rtftable()` -- and, being a formal, it could not pass through `...`
+    either.  `as_rtftables(df, table_width_twips = 6000)` asked for a
+    6000-twip table and rendered one 13680 wide.  There was no spelling that
+    worked.
+  - **`auto_width = TRUE` ignored `table_width_pct`.**  The branch took its
+    budget from `table_width_twips` alone and fell back to the default page,
+    and the per-column widths it then set short-circuited the renderer's
+    total-width logic, so the percentage was silently dropped.  "Size the
+    columns within half the page" could not be expressed.
+
+  The total width is now resolved once -- absolute, else the percentage, else
+  the default -- and used both as the auto-sizing budget and as the table's
+  width.  The vocabulary, unchanged and now uniform wherever it is written:
+
+  | | |
+  |---|---|
+  | `column_widths_twips` | per column, absolute; wins outright |
+  | `col_rel_width` | per column, relative; apportions the total |
+  | `table_width_twips` | the total, absolute |
+  | `table_width_pct` | the total, as a share of the writable width |
+  | nothing | the writable width, split equally |
+
+  `table_width_twips` and `table_width_pct` are two spellings of one thing, so
+  the absolute wins; neither has anything to do with `auto_width`, which
+  decides the columns rather than the total.  `rtftable()` and `rtf_tables()`
+  were already right and are unchanged -- measured on every row of that table.
+
+  Existing code that passed `table_width_twips` to `as_rtftables()` was
+  getting nothing; it now gets the width it asked for.
+
 - **A listing cell now wraps by display width, and every line it produces
   fits its column** (#364).  Two defects in `build_listing()`'s wrapping, both
   of which made the line count disagree with what Word renders -- and the line

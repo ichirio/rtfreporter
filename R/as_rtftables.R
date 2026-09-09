@@ -3,6 +3,20 @@
 # `auto_width` so an over-wide table is scaled to fit the page by default.
 .default_writable_twips <- function() as.integer((11 - 2 * 0.75) * 1440)
 
+# The table's total width in twips, resolved the way rtftable() resolves it
+# (#382): an absolute `table_width_twips` first, then a percentage of the
+# writable width, then NULL for "whatever the page gives".  The two spellings
+# of a percentage are rtftable()'s own, and reach as_rtftables() through `...`.
+.resolve_total_width_twips <- function(twips, user_args) {
+  if (!is.null(twips)) return(as.integer(twips))
+  frac <- user_args$table_width_pct_of_writable
+  if (is.null(frac) && !is.null(user_args$table_width_pct)) {
+    frac <- as.numeric(user_args$table_width_pct) / 100
+  }
+  if (is.null(frac)) return(NULL)
+  as.integer(round(.default_writable_twips() * as.numeric(frac)))
+}
+
 # Internal: flatten a (possibly multi-row, possibly spanning) col_header into a
 # plain character vector of length `ncols`, where each element is the LONGEST
 # label seen at that column across every header row.  Used by `auto_width` so
@@ -504,17 +518,33 @@
 #'   level).  An explicit `col_header` (passed via `...`) always wins.
 #' @param auto_width Logical (default `FALSE`).  When `TRUE`, each column is
 #'   sized to its widest content (column header label or data cell) via
-#'   [auto_col_widths()], so long row labels and column headers do not wrap.
-#'   The widths are computed once on the full table and applied to every page,
-#'   keeping paginated pages aligned.  Ignored if you pass an explicit
-#'   `column_widths_twips` or `col_rel_width`.
-#' @param table_width_twips Optional total table width in twips, used only when
-#'   `auto_width = TRUE`.  When supplied, the auto-sized columns are scaled so
-#'   their widths sum to this value (e.g. to fill, or fit within, the writable
-#'   page width).  `NULL` (default) uses each column's natural content width,
-#'   but **capped at the default page's writable width** (landscape Letter,
-#'   0.75in margins) so a naturally over-wide table is scaled down to fit the
-#'   page without you having to compute the width.
+#'   [auto_col_widths()], so long labels do not wrap.  It decides how the
+#'   columns divide the table, not how wide the table is: the total comes from
+#'   `table_width_twips`, else `table_width_pct`, else the natural content
+#'   width capped at the default page's writable width.  An explicit
+#'   `column_widths_twips` or `col_rel_width` always wins over it.
+#' @param table_width_twips Total table width in **twips**, or `NULL`
+#'   (default).  This is the same setting as `rtftable(table_width_twips = )`
+#'   and means the same thing: the table is exactly this wide, and
+#'   `col_rel_width` apportions it.  It is independent of `auto_width` -- it
+#'   says how wide the TABLE is, while `auto_width` decides how the COLUMNS
+#'   divide it -- and it wins over `table_width_pct`, the same total said as a
+#'   share of the page.  `NULL` leaves the total to `table_width_pct` if given,
+#'   and otherwise to the writable page width.
+#'
+#'   The whole vocabulary, in the order it resolves:
+#'   \describe{
+#'     \item{`column_widths_twips`}{per column, absolute -- wins outright,
+#'       and the table's total is their sum.}
+#'     \item{`col_rel_width`}{per column, relative -- apportions whatever the
+#'       total turns out to be.}
+#'     \item{`table_width_twips`}{the total, absolute.}
+#'     \item{`table_width_pct` / `table_width_pct_of_writable`}{the total, as
+#'       a share of the writable page width (paper minus the side margins).}
+#'     \item{nothing}{the writable width, divided equally.}
+#'   }
+#'   All of them are `rtftable()`'s, and mean here exactly what they mean
+#'   there.
 #' @param border,style Passed to [rtftable()] for every page.  `border`
 #'   defaults to `"tfl"`.
 #' @param ... Further arguments forwarded to [rtftable()] for every page
@@ -908,7 +938,14 @@ as_rtftables <- function(x,
         is.null(user_args$column_widths_twips) &&
         is.null(user_args$col_rel_width)) {
       flat_hdr <- .flatten_col_header_labels(kw$col_header, ncol(body))
-      tw <- table_width_twips
+      # The budget is the table's total width, resolved the way rtftable()
+      # resolves it: absolute first, then a percentage of the writable width
+      # (#382).  Reading only `table_width_twips` here made
+      # `auto_width = TRUE` deaf to `table_width_pct` -- the columns were sized
+      # against the default page and the percentage then had nothing left to
+      # act on, because the widths this sets short-circuit the renderer's
+      # total-width logic.
+      tw <- .resolve_total_width_twips(table_width_twips, user_args)
       if (is.null(tw)) {
         nat <- tryCatch(auto_col_widths(body, col_header = flat_hdr),
                         error = function(e) NULL)
@@ -921,6 +958,16 @@ as_rtftables <- function(x,
                         table_width_twips = tw, protect_cols = 1L),
         error = function(e) NULL)
       if (!is.null(aw)) user_args$column_widths_twips <- aw
+    }
+
+    # An absolute total width is a table setting, not an auto-sizing one
+    # (#382): forward it so `as_rtftables(table_width_twips = )` means what
+    # `rtftable(table_width_twips = )` means.  It was previously read only in
+    # the branch above, and being a formal of this function it could not reach
+    # rtftable() through `...` either -- so there was no way to ask for one.
+    if (!is.null(table_width_twips) &&
+        is.null(user_args$table_width_twips)) {
+      user_args$table_width_twips <- as.integer(table_width_twips)
     }
 
     # ---- paginate (tracking original rows so per-cell styles can be sliced)
