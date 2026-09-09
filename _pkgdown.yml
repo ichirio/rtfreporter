@@ -276,8 +276,10 @@ reference:
       straight to `as_rtftables()`.
       `fit_listing_widths()` proposes every column's width from the page and
       the data, and `listing_code()` prints the spec as source to paste and
-      tune.  `catx()` is the join a listing column makes, exported for the
-      columns you build yourself.
+      tune.  `listing_wrap()` is the rule that breaks a cell into lines, and
+      `listing_wrap_code()` writes that rule out as source when a listing
+      needs a different one.  `catx()` is the join a listing column makes,
+      exported for the columns you build yourself.
     contents:
       - listing_col
       - listing_spec
@@ -285,6 +287,7 @@ reference:
       - fit_listing_widths
       - listing_code
       - listing_wrap
+      - listing_wrap_code
       - catx
 
   # ── 5. Column headers ──────────────────────────────────────────────────
