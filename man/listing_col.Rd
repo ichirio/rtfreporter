@@ -27,13 +27,16 @@ record missing its middle value does not print a doubled separator.}
 \item{width}{Integer or \code{NULL}.  Maximum characters per physical row before
 the cell wraps.  \code{NULL} (default) never wraps this column.}
 
-\item{label}{Column header text.  A line break starts a further header row,
-as everywhere else in rtfreporter, and what you write is used \strong{exactly}
--- you laid the lines out, so it is never re-wrapped.  \code{NULL} (default)
-\strong{derives} the header from the data: each source column's \code{label}
-attribute when it has one, otherwise its name, joined with \code{sep} and a
-line break, then wrapped to \code{width} so it cannot be wider than the column
-it sits over.  \code{""} asks for a deliberately empty header.}
+\item{label}{The column header.  A \strong{character vector is the lines} --
+one element, one line -- and so is a string that carries its own line
+breaks: both say "I have laid this out", and neither is re-wrapped.  A
+\strong{single string with no breaks} is words for the package to lay out: it
+is wrapped to \code{width} by the same rule the cells use (see
+\code{\link[=listing_wrap]{listing_wrap()}}), or left as one line when there is no \code{width}.
+\code{NULL} (default) \strong{derives} the header from the data -- each source
+column's \code{label} attribute when it has one, otherwise its name, joined
+with \code{sep} -- or from \code{fit_listing_widths(labels = )}.  \code{""} asks for a
+deliberately empty header.}
 
 \item{name}{Output column name.  \code{NULL} (default) uses the first entry of
 \code{vars}; \code{\link[=listing_spec]{listing_spec()}} makes the set unique if two columns collide.}
@@ -96,6 +99,12 @@ listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis")
 
 # Header left to the data's own labels; short parts kept side by side.
 listing_col(c("AGE", "SEX"), width = 12, layout = "flow")
+
+# A vector is the header's lines, exactly as given.
+listing_col("USUBJID", width = 15, label = c("Unique", "Subject ID"))
+
+# One string and a width: the package lays it out.
+listing_col("HIST", width = 16, label = "Histology of the tumour")
 
 # A key column: printed once per record, again atop the next page.
 listing_col("USUBJID", width = 15, collapse_repeats = TRUE)

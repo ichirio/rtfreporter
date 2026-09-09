@@ -251,13 +251,16 @@
 #'   (`"/"` under the `"multiline"` type).
 #' @param width Integer or `NULL`.  Maximum characters per physical row before
 #'   the cell wraps.  `NULL` (default) never wraps this column.
-#' @param label Column header text.  A line break starts a further header row,
-#'   as everywhere else in rtfreporter, and what you write is used **exactly**
-#'   -- you laid the lines out, so it is never re-wrapped.  `NULL` (default)
-#'   **derives** the header from the data: each source column's `label`
-#'   attribute when it has one, otherwise its name, joined with `sep` and a
-#'   line break, then wrapped to `width` so it cannot be wider than the column
-#'   it sits over.  `""` asks for a deliberately empty header.
+#' @param label The column header.  A **character vector is the lines** --
+#'   one element, one line -- and so is a string that carries its own line
+#'   breaks: both say "I have laid this out", and neither is re-wrapped.  A
+#'   **single string with no breaks** is words for the package to lay out: it
+#'   is wrapped to `width` by the same rule the cells use (see
+#'   [listing_wrap()]), or left as one line when there is no `width`.
+#'   `NULL` (default) **derives** the header from the data -- each source
+#'   column's `label` attribute when it has one, otherwise its name, joined
+#'   with `sep` -- or from `fit_listing_widths(labels = )`.  `""` asks for a
+#'   deliberately empty header.
 #' @param layout How a cell lays its parts out: `"stack"` breaks after
 #'   **every** separator, so each source column starts its own line -- the
 #'   conventional listing look, and it keeps a column reading down the page.
@@ -301,6 +304,12 @@
 #' # Header left to the data's own labels; short parts kept side by side.
 #' listing_col(c("AGE", "SEX"), width = 12, layout = "flow")
 #'
+#' # A vector is the header's lines, exactly as given.
+#' listing_col("USUBJID", width = 15, label = c("Unique", "Subject ID"))
+#'
+#' # One string and a width: the package lays it out.
+#' listing_col("HIST", width = 16, label = "Histology of the tumour")
+#'
 #' # A key column: printed once per record, again atop the next page.
 #' listing_col("USUBJID", width = 15, collapse_repeats = TRUE)
 #'
@@ -339,9 +348,17 @@ listing_col <- function(vars,
     }
     rel_width <- as.numeric(rel_width)
   }
-  if (!is.null(label) && (!is.character(label) || length(label) != 1L ||
-                          is.na(label))) {
-    stop("`label` must be a single string, or NULL.", call. = FALSE)
+  if (!is.null(label)) {
+    if (!is.character(label) || !length(label) || anyNA(label)) {
+      stop("`label` must be a string, or a character vector of header ",
+           "lines, or NULL.", call. = FALSE)
+    }
+    # A vector IS the layout: one element, one line.  Collapsing it here
+    # means the rest of the package only ever sees a string, and the
+    # resulting line breaks are indistinguishable from ones written by hand
+    # -- which is the point, both say "I laid this out".
+    if (length(label) > 1L) label <- paste(label, collapse = "
+")
   }
   if (!is.null(name) && (!is.character(name) || length(name) != 1L ||
                          is.na(name) || !nzchar(name))) {
@@ -675,15 +692,34 @@ print.rtf_listing_spec <- function(x, ...) {
 # written -- the author laid the lines out and re-wrapping would fight them.
 # A derived header is built from every source column and wrapped to the
 # column's width, so it can never be wider than the column it sits over.
-.listing_resolve_label <- function(data, cl, sep, layout, labels = NULL) {
-  if (!is.null(cl$label)) return(cl$label)
+#  `wrap = FALSE` returns the label with its STRUCTURAL line breaks only --
+#  one source variable per line -- and none of the ones a width would add.
+#  fit_listing_widths() freezes that, so widening a column in the pasted
+#  template re-flows its header instead of leaving it broken at the old width.
+.listing_resolve_label <- function(data, cl, sep, layout, labels = NULL,
+                                   wrap = TRUE) {
+  if (!is.null(cl$label)) {
+    # A label the author wrote is words to lay out when it is one line, and a
+    # layout to leave alone when it is not: a vector, or a string carrying its
+    # own breaks, has already said where the lines go.
+    if (!isTRUE(wrap)) return(cl$label)
+    if (grepl("
+", cl$label, fixed = TRUE)) return(cl$label)
+    lines <- .listing_wrap_sep_word(cl$label, cl$width, sep, layout)
+    return(paste(lines, collapse = "
+"))
+  }
   labs <- vapply(cl$vars, function(v) .listing_var_label(data, v, labels),
                  character(1L))
   n <- length(labs)
   pieces <- if (n > 1L) c(paste0(labs[-n], sep), labs[[n]]) else labs
-  lines <- unlist(lapply(pieces, function(p) {
-    .listing_wrap_sep_word(p, cl$width, sep, layout)
-  }), use.names = FALSE)
+  lines <- if (isTRUE(wrap)) {
+    unlist(lapply(pieces, function(p) {
+      .listing_wrap_sep_word(p, cl$width, sep, layout)
+    }), use.names = FALSE)
+  } else {
+    trimws(pieces)
+  }
   paste(lines, collapse = "
 ")
 }
@@ -912,4 +948,77 @@ build_listing <- function(data, spec) {
     return(list(spec = listing, build = TRUE))
   }
   NULL
+}
+
+
+# ── The wrapping rule, on its own ────────────────────────────────────────────
+
+#' Break a listing cell or header into the lines it occupies
+#'
+#' The rule `build_listing()` applies to every cell, exposed so it can be used
+#' on its own -- to preview where a column will break, or to lay a header out
+#' by hand and hand the result to `listing_col(label = )`, which takes a
+#' character vector as its lines.
+#'
+#' @section The rule:
+#'
+#' 1. **After the separator.**  `"COMPLETED/BRCA1"` prefers to break between
+#'    its parts, and the separator stays at the end of the line it closes --
+#'    the look a stacked listing column is expected to have.
+#' 2. **At a word boundary** -- after a space, a comma or a hyphen -- filling
+#'    each line as far as `width` allows.
+#' 3. **Hard split**, for a token still too wide on its own.  Every line
+#'    returned therefore fits `width`, which is what lets the row count
+#'    describe the page (see [build_listing()]).
+#'
+#' `width` is a **display width**: a full-width (CJK) glyph counts as two.  A
+#' line break already in `text` is honoured before any of this.  With no
+#' `width` there is nothing to break against and `text` is returned as it
+#' stands.
+#'
+#' @param text The text to break.  A vector is wrapped element by element.
+#' @param width Maximum display width per line, or `NULL` for no limit.
+#' @param sep The separator to break after (default `"/"`).  `""` or `NULL`
+#'   skips step 1.
+#' @param layout `"stack"` (default) breaks after **every** separator;
+#'   `"flow"` treats it as a break opportunity and fills the line.  See
+#'   [listing_col()].
+#'
+#' @return For a length-1 `text`, a character vector of lines; for a longer
+#'   one, a list of such vectors.
+#'
+#' @seealso [listing_col()], whose `width` applies this to a column's cells and
+#'   whose `label` accepts the result as header lines.
+#'
+#' @examples
+#' listing_wrap("COMPLETED/BRCA1/ADENOCARCINOMA", 22)
+#'
+#' # A token with nowhere to break is split, so every line fits.
+#' listing_wrap("Immunohistochemistry", 8)
+#'
+#' # Lay a header out by hand, then hand the lines to listing_col().
+#' listing_col("HIST", width = 16,
+#'             label = listing_wrap("Histology of the tumour", 16))
+#'
+#' # "flow" keeps short parts side by side.
+#' listing_wrap("40/F", 20)
+#' listing_wrap("40/F", 20, layout = "flow")
+#'
+#' @export
+listing_wrap <- function(text, width, sep = "/",
+                         layout = c("stack", "flow")) {
+  layout <- match.arg(layout)
+  if (!is.null(sep) && (!is.character(sep) || length(sep) != 1L ||
+                        is.na(sep))) {
+    stop("`sep` must be a single string, or NULL.", call. = FALSE)
+  }
+  if (!is.null(width) && (!is.numeric(width) || length(width) != 1L ||
+                          (!is.na(width) && width < 1))) {
+    stop("`width` must be a single positive number, or NULL.", call. = FALSE)
+  }
+  if (length(text) == 1L) {
+    return(.listing_wrap_sep_word(text, width, sep, layout))
+  }
+  lapply(text, .listing_wrap_sep_word, width = width, sep = sep,
+         layout = layout)
 }

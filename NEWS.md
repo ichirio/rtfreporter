@@ -73,6 +73,49 @@
 
 ### New features
 
+- **`listing_col(label = )` takes a vector as the header's lines, and lays a
+  single string out at the width** (#380).  The two acts an author performs
+  are now distinguished:
+
+  ```r
+  listing_col("USUBJID", width = 15, label = c("Unique", "Subject ID"))
+  #> the lines, exactly as given -- not re-wrapped, even if one is too wide
+
+  listing_col("HIST", width = 16, label = "Histology of the tumour")
+  #> the words; laid out at the width -> "Histology of" / "the tumour"
+  ```
+
+  A vector, or a string carrying its own line breaks, says "I laid this out"
+  and is left alone.  A single string with no breaks says "these are the
+  words" and is wrapped by the same rule the cells use -- separator first,
+  then word boundaries, then a hard split -- or left as one line when the
+  column has no `width`.  Previously every explicit label was left alone,
+  which made a one-line label the author's problem to break.
+
+  `fit_listing_widths()` now freezes the label **unwrapped**, keeping only the
+  structural breaks between source variables, so **editing a width in the
+  pasted template re-flows that header** instead of leaving it broken at the
+  old width.
+
+- **`listing_wrap()` exports the wrapping rule** (#380), so it can be used on
+  its own -- to preview where a column will break, or to lay a header out by
+  hand.  It composes with the above, since what it returns is a vector of
+  lines:
+
+  ```r
+  listing_col("HIST", width = 16,
+              label = listing_wrap("Histology of the tumour", 16))
+  ```
+
+  `width` itself stays, and is not replaceable by this function: its main job
+  is not the header but the **cell data**, and how many physical rows a record
+  occupies is what `max_rows` and `split = "group_safe"` page on.  Measured on
+  the same data, a column wrapped at 16 paginates 10,8,10,8 where the same
+  column with no `width` gives 10,10,4 -- the body says one row, Word prints
+  two.  A column whose cells always fit its rendered width needs no `width`,
+  which is why the hand-written listing of Discussion #356 omitted it for
+  `STAGE` and `ECOGPS`.
+
 - **The width fit now accounts for how tall a header will be**
   (`fit_listing_widths(header_lines = )`, #378).  The demand was data-driven,
   with the header contributing only the widest token it cannot break -- on the

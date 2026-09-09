@@ -53,13 +53,15 @@ test_that("a derived header is wrapped to the column, so it cannot be wider", {
   expect_true(all(.listing_disp_width(lines) <= 8))
 })
 
-test_that("a label written by hand is used exactly as written", {
-  # Deliberately wider than the column: the author laid the lines out.
-  hand <- "A header the author wrote"
+test_that("a label the author laid out is used exactly as written", {
+  # A vector, or a string carrying its own breaks, says "I laid this out" --
+  # even where a line is wider than the column (#380).
+  hand <- c("A header the", "author wrote")
   body <- build_listing(.labelled_adsl(),
                         listing_spec(list(listing_col("HIST", width = 6,
                                                       label = hand))))
-  expect_identical(unname(.labels_of(body)), hand)
+  expect_identical(unname(.labels_of(body)), "A header the
+author wrote")
 })
 
 test_that("label = \"\" asks for a deliberately empty header", {
@@ -184,4 +186,92 @@ test_that("a caller's own collapse_repeats wins over the marked columns", {
 test_that("collapse_repeats is validated", {
   expect_error(listing_col("A", collapse_repeats = "yes"), "TRUE or FALSE")
   expect_error(listing_col("A", collapse_repeats = NA), "TRUE or FALSE")
+})
+
+
+# ── label: a vector is the lines, a string is words to lay out (#380) ────────
+
+.lab_of <- function(spec, data = .labelled_adsl(), j = 1L) {
+  attr(build_listing(data, spec), "rtf_listing", exact = TRUE)$cols[[j]]$label
+}
+
+test_that("a character vector is one line per element", {
+  spec <- listing_spec(list(listing_col("HIST", width = 15,
+                                        label = c("Unique", "Subject ID"))))
+  expect_identical(.lab_of(spec), "Unique\nSubject ID")
+})
+
+test_that("a vector is a layout, so it is not re-wrapped", {
+  # the second line is wider than the column and stays whole
+  spec <- listing_spec(list(listing_col("HIST", width = 4,
+                                        label = c("A", "BBBB CCCC"))))
+  expect_identical(.lab_of(spec), "A\nBBBB CCCC")
+})
+
+test_that("a single string is laid out at the width", {
+  spec <- listing_spec(list(listing_col("HIST", width = 16,
+                                        label = "Histology of the tumour")))
+  expect_identical(.lab_of(spec), "Histology of\nthe tumour")
+})
+
+test_that("a single string with no width is left as one line", {
+  spec <- listing_spec(list(listing_col("HIST",
+                                        label = "Histology of the tumour")))
+  expect_identical(.lab_of(spec), "Histology of the tumour")
+})
+
+test_that("a string carrying its own breaks is a layout too", {
+  spec <- listing_spec(list(listing_col("HIST", width = 8,
+                                        label = "Histology\nof the tumour")))
+  expect_identical(.lab_of(spec), "Histology\nof the tumour")
+})
+
+test_that("the layout rule is the cells' rule: separator, words, hard split", {
+  spec <- listing_spec(list(listing_col("HIST", width = 22,
+                                        label = "COMPLETED/BRCA1/ADENOCARCINOMA")))
+  expect_identical(.lab_of(spec), "COMPLETED/\nBRCA1/\nADENOCARCINOMA")
+
+  spec2 <- listing_spec(list(listing_col("HIST", width = 8,
+                                         label = "Immunohistochemistry")))
+  lines <- strsplit(.lab_of(spec2), "\n", fixed = TRUE)[[1L]]
+  expect_true(all(.listing_disp_width(lines) <= 8))
+})
+
+test_that("label is validated", {
+  expect_error(listing_col("A", label = 1:2), "character vector of header")
+  expect_error(listing_col("A", label = character(0)),
+               "character vector of header")
+  expect_error(listing_col("A", label = c("a", NA)),
+               "character vector of header")
+})
+
+
+# ── listing_wrap() ───────────────────────────────────────────────────────────
+
+test_that("listing_wrap() applies the rule and returns the lines", {
+  expect_identical(listing_wrap("COMPLETED/BRCA1/ADENOCARCINOMA", 22),
+                   c("COMPLETED/", "BRCA1/", "ADENOCARCINOMA"))
+  expect_identical(listing_wrap("40/F", 20, layout = "flow"), "40/F")
+  expect_true(all(.listing_disp_width(
+    listing_wrap("Immunohistochemistry", 8)) <= 8))
+})
+
+test_that("listing_wrap() vectorises, and NULL width means no limit", {
+  out <- listing_wrap(c("A/B", "C/D"), 20)
+  expect_type(out, "list")
+  expect_length(out, 2L)
+  expect_identical(listing_wrap("Histology of the tumour", NULL),
+                   "Histology of the tumour")
+})
+
+test_that("listing_wrap() composes with a vector label", {
+  spec <- listing_spec(list(
+    listing_col("HIST", width = 16,
+                label = listing_wrap("Histology of the tumour", 16))))
+  expect_identical(.lab_of(spec), "Histology of\nthe tumour")
+})
+
+test_that("listing_wrap() validates its arguments", {
+  expect_error(listing_wrap("a", 10, sep = c("/", "-")), "single string")
+  expect_error(listing_wrap("a", -1), "positive number")
 })
