@@ -28,6 +28,13 @@ on its own -- to preview where a column will break, or to lay a header out
 by hand and hand the result to \code{listing_col(label = )}, which takes a
 character vector as its lines.
 }
+\details{
+It is \strong{exactly} the \code{"multiline"} type's own rule, so
+\code{listing_spec(wrap = listing_wrap)} changes nothing, and it is the
+reference implementation of that contract: a custom \code{wrap} is easiest to
+write by delegating to this and adjusting around it.  See
+\code{\link[=listing_spec]{listing_spec()}} for the contract in full.
+}
 \section{The rule}{
 
 \enumerate{

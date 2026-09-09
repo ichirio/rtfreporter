@@ -380,3 +380,39 @@ test_that("listing_code() says a custom wrap cannot be written out", {
   expect_false(any(grepl("custom `wrap`", plain, fixed = TRUE)))
   expect_true(any(grepl("custom `wrap`", custom, fixed = TRUE)))
 })
+
+test_that("the cell path enforces the contract too, not just the header", {
+  # A vector label is a layout, so it is NOT wrapped: the only call left is
+  # the one on the cell, and it must be validated the same way (#386).
+  bad  <- function(text, width, sep, layout) list("x")
+  spec <- listing_spec(list(listing_col("A", width = 5,
+                                        label = c("A", "B"))),
+                       wrap = bad, spacer = FALSE, blank_row = FALSE,
+                       record = FALSE)
+  expect_error(build_listing(data.frame(A = "x", stringsAsFactors = FALSE),
+                             spec),
+               "non-empty character")
+})
+
+test_that("wrap = listing_wrap is a no-op, so it can be delegated to", {
+  d <- data.frame(SEX = "Female", AGE = "18", stringsAsFactors = FALSE)
+  attr(d$SEX, "label") <- "Sex"
+  attr(d$AGE, "label") <- "Age"
+  build <- function(...) {
+    spec <- listing_spec(list(listing_col(c("SEX", "AGE"), width = 9)),
+                         spacer = FALSE, blank_row = FALSE, record = FALSE,
+                         ...)
+    b <- build_listing(d, spec)
+    list(cells = b[[1L]],
+         label = attr(b, "rtf_listing", exact = TRUE)$cols[[1L]]$label)
+  }
+  expect_identical(build(wrap = listing_wrap), build())
+
+  # ... and the documented way to write one: delegate, then adjust.
+  shout <- function(text, width, sep, layout) {
+    toupper(listing_wrap(text, width, sep, layout))
+  }
+  got <- build(wrap = shout)
+  expect_identical(got$cells, toupper(build()$cells))
+  expect_identical(got$label, toupper(build()$label))
+})

@@ -54,13 +54,36 @@ as the column's \code{width} allows.  See \code{\link[=listing_col]{listing_col(
 takes the template's.}
 
 \item{wrap}{The rule that breaks a cell -- and a derived header -- into
-lines: \verb{function(text, width, sep, layout)} returning a character vector
-of lines.  \code{NULL} (default) uses the \code{type}'s own rule; see
-\code{\link[=listing_wrap]{listing_wrap()}} for what that one does.  Supply your own for a house
-rule the shipped one does not cover -- a different break character, a
-byte budget for a SAS transport.  The same function lays out the cells
-and the headers, so they stay consistent.  \code{\link[=listing_code]{listing_code()}} cannot write
-a function out and says so in the code it emits.}
+lines.  \code{NULL} (default) uses the \code{type}'s own rule, which is exactly
+\code{\link[=listing_wrap]{listing_wrap()}}: passing \code{wrap = listing_wrap} changes nothing.
+
+Supply your own for a house rule the shipped one does not cover -- a
+different break character, a byte budget for a SAS transport.  The same
+function lays out the cells \strong{and} the headers, so the two stay
+consistent.  The contract is:
+\describe{
+\item{arguments}{called \strong{positionally} with four:
+\verb{function(text, width, sep, layout)}.}
+\item{\code{text}}{a \strong{length-1} character -- one composed cell, or the
+column's labels already joined.  Never a vector.}
+\item{\code{width}}{the column's \code{width}: a positive number, \strong{or \code{NULL}}
+for a column that sets none.  Handle \code{NULL} -- it means "no limit".}
+\item{\code{sep}}{the effective separator, the column's own or the
+listing's.}
+\item{\code{layout}}{\code{"stack"} or \code{"flow"}, already resolved to one
+string.}
+\item{value}{a \strong{non-empty character vector}, one element per line.}
+}
+The simplest way to write one is to delegate to the built-in rule and
+adjust around it:
+\preformatted{
+    wrap = function(text, width, sep, layout) \{
+      out <- listing_wrap(text, width, sep, layout)
+      ...
+    \}
+  }
+\code{\link[=listing_code]{listing_code()}} cannot write a function out and says so in the code it
+emits.}
 
 \item{record}{\code{TRUE} (default) appends the hidden record column under its
 standard name, \code{FALSE} appends none, or a single string names it
