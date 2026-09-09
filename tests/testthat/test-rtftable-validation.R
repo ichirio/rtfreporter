@@ -260,6 +260,23 @@ test_that("rtftable() rejects invalid table_width_pct", {
   expect_error(rtftable(data.frame(A = 1L), table_width_pct = 0),     "0.*100")
   expect_error(rtftable(data.frame(A = 1L), table_width_pct = 200),   "0.*100")
   expect_error(rtftable(data.frame(A = 1L), table_width_pct = "x"),   "0.*100")
+  expect_error(rtftable(data.frame(A = 1L), table_width_pct = c(50, 60)),
+               "0.*100")
+})
+
+test_that("an invalid table_width_pct errors without warning first (#388)", {
+  # The coercion warning used to reach the user ahead of the message that says
+  # what the setting takes -- and to REPLACE it under options(warn = 2).
+  expect_no_warning(try(rtftable(data.frame(A = 1L), table_width_pct = "x"),
+                        silent = TRUE))
+  op <- options(warn = 2)
+  on.exit(options(op), add = TRUE)
+  expect_error(rtftable(data.frame(A = 1L), table_width_pct = "x"), "0.*100")
+})
+
+test_that("a numeric string is still accepted, as it always was", {
+  tbl <- rtftable(data.frame(A = 1L), table_width_pct = "50")
+  expect_equal(tbl$table_width_pct_of_writable, 0.5)
 })
 
 test_that("rtftable() accepts table_width_pct in (0, 100]", {

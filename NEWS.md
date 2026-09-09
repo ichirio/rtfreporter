@@ -544,6 +544,14 @@ Diagnosis")
 
 ### Bug fixes
 
+- **An invalid `table_width_pct` no longer warns before it errors** (#388).
+  `as.numeric()` was called on the raw value, so R's "NAs introduced by
+  coercion" reached the user ahead of the message saying what the setting
+  takes -- and under `options(warn = 2)` replaced it entirely.  Both spellings
+  of the percentage now go through one validating helper, which also gives
+  `as_rtftables()` the range check its own copy of these lines had skipped.
+  A numeric string (`"50"`) is still accepted, as before.
+
 - **A factor `group_col` no longer breaks the `" (Cont.)"` continuation row**
   (#352). The group-aware splits write the continuation label back into the
   group column, and a factor cannot take a value outside its levels: a

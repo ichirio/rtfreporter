@@ -11,7 +11,9 @@
   if (!is.null(twips)) return(as.integer(twips))
   frac <- user_args$table_width_pct_of_writable
   if (is.null(frac) && !is.null(user_args$table_width_pct)) {
-    frac <- as.numeric(user_args$table_width_pct) / 100
+    # Validated here rather than coerced, so a bad percentage is refused with
+    # rtftable()'s own message instead of quietly resolving to NA (#388).
+    frac <- .table_width_pct_frac(user_args$table_width_pct)
   }
   if (is.null(frac)) return(NULL)
   as.integer(round(.default_writable_twips() * as.numeric(frac)))
