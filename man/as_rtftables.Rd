@@ -389,18 +389,34 @@ level).  An explicit \code{col_header} (passed via \code{...}) always wins.}
 
 \item{auto_width}{Logical (default \code{FALSE}).  When \code{TRUE}, each column is
 sized to its widest content (column header label or data cell) via
-\code{\link[=auto_col_widths]{auto_col_widths()}}, so long row labels and column headers do not wrap.
-The widths are computed once on the full table and applied to every page,
-keeping paginated pages aligned.  Ignored if you pass an explicit
-\code{column_widths_twips} or \code{col_rel_width}.}
+\code{\link[=auto_col_widths]{auto_col_widths()}}, so long labels do not wrap.  It decides how the
+columns divide the table, not how wide the table is: the total comes from
+\code{table_width_twips}, else \code{table_width_pct}, else the natural content
+width capped at the default page's writable width.  An explicit
+\code{column_widths_twips} or \code{col_rel_width} always wins over it.}
 
-\item{table_width_twips}{Optional total table width in twips, used only when
-\code{auto_width = TRUE}.  When supplied, the auto-sized columns are scaled so
-their widths sum to this value (e.g. to fill, or fit within, the writable
-page width).  \code{NULL} (default) uses each column's natural content width,
-but \strong{capped at the default page's writable width} (landscape Letter,
-0.75in margins) so a naturally over-wide table is scaled down to fit the
-page without you having to compute the width.}
+\item{table_width_twips}{Total table width in \strong{twips}, or \code{NULL}
+(default).  This is the same setting as \code{rtftable(table_width_twips = )}
+and means the same thing: the table is exactly this wide, and
+\code{col_rel_width} apportions it.  It is independent of \code{auto_width} -- it
+says how wide the TABLE is, while \code{auto_width} decides how the COLUMNS
+divide it -- and it wins over \code{table_width_pct}, the same total said as a
+share of the page.  \code{NULL} leaves the total to \code{table_width_pct} if given,
+and otherwise to the writable page width.
+
+The whole vocabulary, in the order it resolves:
+\describe{
+\item{\code{column_widths_twips}}{per column, absolute -- wins outright,
+and the table's total is their sum.}
+\item{\code{col_rel_width}}{per column, relative -- apportions whatever the
+total turns out to be.}
+\item{\code{table_width_twips}}{the total, absolute.}
+\item{\code{table_width_pct} / \code{table_width_pct_of_writable}}{the total, as
+a share of the writable page width (paper minus the side margins).}
+\item{nothing}{the writable width, divided equally.}
+}
+All of them are \code{rtftable()}'s, and mean here exactly what they mean
+there.}
 
 \item{border, style}{Passed to \code{\link[=rtftable]{rtftable()}} for every page.  \code{border}
 defaults to \code{"tfl"}.}
