@@ -367,9 +367,12 @@ cap_two("SQUAMOUS CELL CARCINOMA OF THE LUNG", 12, "/", "stack")
 **Change the rule from inside.** When the break logic itself has to differ --
 a different notion of a word, a byte budget rather than a display width --
 `listing_wrap_code()` writes the shipped rule out as source to paste into your
-program and edit. It is the real code, read back off the functions the package
-is running, so it cannot disagree with them, and it depends on nothing but
-base R:
+program and edit. It is the real code -- generated from the rule itself and
+checked against it by the test suite, so it cannot disagree with what the
+package runs. What it hands you is the *policy*: the three functions a fork
+rewrites. The measurements they are built on -- `listing_disp_width()`,
+`listing_take()`, `listing_split_after()` -- are exported and called, not
+copied, so a fix to those reaches every fork:
 
 ```{r wrap-code}
 src <- listing_wrap_code("my_wrap")

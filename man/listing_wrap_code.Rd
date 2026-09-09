@@ -22,15 +22,17 @@ to \code{listing_wrap()} and fixing up its result will not do.
 }
 \details{
 What comes back is a verbatim copy of the shipped rule, comments and all,
-regenerated from it and checked against it by the test suite.  It is
-self-contained -- base R only, no \verb{rtfreporter:::} -- so it runs as it
-stands, and the entry function already matches the \code{wrap} contract
-described in \code{\link[=listing_spec]{listing_spec()}}.
+regenerated from it and checked against it by the test suite.  There is no
+\verb{rtfreporter:::} in it, and the entry function already matches the \code{wrap}
+contract described in \code{\link[=listing_spec]{listing_spec()}}.
 
-The five helpers are named after \code{name}, so two edited rules can live in
-one script.  Two of them, \verb{*_disp_width()} and \verb{*_split_after()}, are
-package primitives the rule happens to call rather than parts of the rule;
-they are included so the file stands alone.
+What it hands out is the rule's POLICY -- three functions.  What they
+measure with is exported instead: \code{\link[=listing_disp_width]{listing_disp_width()}}, \code{\link[=listing_take]{listing_take()}}
+and \code{\link[=listing_split_after]{listing_split_after()}} are called, not copied, because every fork
+would keep them verbatim.  Edit the policy; leave the measurements shared.
+
+The two helpers are named after \code{name}, so two edited rules can live in
+one script.
 }
 \examples{
 # Print it, paste it, edit it.

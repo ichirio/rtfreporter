@@ -278,7 +278,9 @@ reference:
       the data, and `listing_code()` prints the spec as source to paste and
       tune.  `listing_wrap()` is the rule that breaks a cell into lines, and
       `listing_wrap_code()` writes that rule out as source when a listing
-      needs a different one.  `catx()` is the join a listing column makes,
+      needs a different one -- calling `listing_disp_width()`,
+      `listing_take()` and `listing_split_after()`, the measurements a rule
+      is built on, rather than copying them.  `catx()` is the join a listing column makes,
       exported for the columns you build yourself.
     contents:
       - listing_col
@@ -288,6 +290,7 @@ reference:
       - listing_code
       - listing_wrap
       - listing_wrap_code
+      - listing_measures
       - catx
 
   # ── 5. Column headers ──────────────────────────────────────────────────

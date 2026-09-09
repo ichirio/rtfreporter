@@ -18,9 +18,13 @@ parts <- rtfreporter:::.listing_wrap_parts()
 out <- c(
   "# GENERATED FILE -- do not edit.",
   "#",
-  "# The \"multiline\" wrapping rule, copied verbatim from R/listing.R by",
-  "# data-raw/gen_listing_wrap_template.R.  listing_wrap_code() renames these",
-  "# functions and hands them out; the suite checks this file still matches.",
+  "# The \"multiline\" wrapping rule -- its policy half, copied verbatim from",
+  "# R/listing.R by data-raw/gen_listing_wrap_template.R.  What it measures with",
+  "# (listing_disp_width(), listing_take(), listing_split_after()) is exported,",
+  "# so a fork shares those rather than carrying a copy.",
+  "#",
+  "# listing_wrap_code() renames these and hands them out; the suite checks",
+  "# this file still matches.",
   "")
 for (nm in parts) {
   fn <- get(nm, envir = asNamespace("rtfreporter"))

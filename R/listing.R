@@ -97,9 +97,41 @@
 #  occupies two monospaced columns, so `nchar()` would let a Japanese listing
 #  ask for 20 columns and take up to 40.
 
-# Display width, with the character count as the fallback where the width
-# cannot be determined (an unknown encoding, a control character).
-.listing_disp_width <- function(x) {
+#' The measurements a listing's wrapping rule is built on
+#'
+#' The three primitives [listing_wrap()] uses to lay text out, exported so
+#' that a rule of your own -- see [listing_wrap_code()] -- shares them rather
+#' than carrying a copy.  They are useful on their own too: a listing's
+#' arithmetic is done in DISPLAY widths, where a full-width (CJK) glyph counts
+#' as two, and `nchar()` alone would let a Japanese column ask for 20 columns
+#' and take up to 40.
+#'
+#' `listing_disp_width()` measures.  `listing_take()` cuts: the longest prefix
+#' that still fits, never `""` for non-empty text, so a caller looping on the
+#' remainder always makes progress even where one glyph is wider than the whole
+#' column.  `listing_split_after()` breaks after each separator and keeps it at
+#' the end of the piece it closes, which is the look a stacked listing column
+#' is expected to have.
+#'
+#' @param x,text Text to measure, cut or split.  `listing_disp_width()` is
+#'   vectorised; the other two take one string.
+#' @param width Maximum display width.
+#' @param sep The separator to break after.  `""` or `NULL` returns `text`
+#'   unsplit.
+#' @return `listing_disp_width()` an integer vector; `listing_take()` a single
+#'   string; `listing_split_after()` a character vector of pieces.
+#' @seealso [listing_wrap()], the rule these build; [listing_wrap_code()] to
+#'   fork that rule.
+#' @examples
+#' listing_disp_width(c("ABC", "あいう"))   # 3 and 6
+#' listing_take("ADENOCARCINOMA", 6)
+#' listing_split_after("COMPLETED/BRCA1", "/")
+#' @name listing_measures
+NULL
+
+#' @rdname listing_measures
+#' @export
+listing_disp_width <- function(x) {
   x <- as.character(x)
   x[is.na(x)] <- ""
   w <- suppressWarnings(nchar(x, type = "width", allowNA = TRUE))
@@ -108,20 +140,21 @@
   as.integer(w)
 }
 
-# The longest prefix of `x` that fits `width`.  Never returns "" for a
-# non-empty `x`, so a caller looping on the remainder always makes progress --
-# even where one glyph is wider than the whole column.
-.listing_take <- function(x, width) {
+#' @rdname listing_measures
+#' @export
+listing_take <- function(x, width) {
   n <- nchar(x, type = "chars")
   if (n == 0L) return("")
   best <- 1L
   for (i in seq_len(n)) {
-    if (.listing_disp_width(substr(x, 1L, i)) <= width) best <- i else break
+    if (listing_disp_width(substr(x, 1L, i)) <= width) best <- i else break
   }
   substr(x, 1L, best)
 }
 
-.listing_split_after <- function(text, sep) {
+#' @rdname listing_measures
+#' @export
+listing_split_after <- function(text, sep) {
   if (is.null(sep) || !nzchar(sep)) return(text)
   # \Q...\E quotes the separator, so a "." or a "|" separator is a literal and
   # the lookbehind stays fixed-width.  (Written this way rather than with an
@@ -139,11 +172,11 @@
     # A token wider than the column on its own.  Split it here, before the
     # running line is trimmed to measure it -- trimming would eat the trailing
     # space that separates this word from the next.
-    if (.listing_disp_width(trimws(w)) > width) {
+    if (listing_disp_width(trimws(w)) > width) {
       if (nzchar(trimws(cur))) out <- c(out, trimws(cur))
       tok <- sub("^\\s+", "", w)
-      while (.listing_disp_width(trimws(tok)) > width) {
-        piece <- .listing_take(tok, width)
+      while (listing_disp_width(trimws(tok)) > width) {
+        piece <- listing_take(tok, width)
         out   <- c(out, piece)
         tok   <- substring(tok, nchar(piece, type = "chars") + 1L)
       }
@@ -157,7 +190,7 @@
       # wider (the trailing space is invisible) and would silently change
       # every existing listing's line counts; that is a separate decision,
       # not part of fixing #364.
-    } else if (.listing_disp_width(cur) + .listing_disp_width(w) <= width) {
+    } else if (listing_disp_width(cur) + listing_disp_width(w) <= width) {
       cur <- paste0(cur, w)
     } else {
       out <- c(out, trimws(cur))
@@ -177,7 +210,7 @@
   for (p in parts) {
     if (!nzchar(cur)) {
       cur <- p
-    } else if (.listing_disp_width(trimws(paste0(cur, p))) <= width) {
+    } else if (listing_disp_width(trimws(paste0(cur, p))) <= width) {
       cur <- paste0(cur, p)
     } else {
       out <- c(out, cur)
@@ -206,14 +239,14 @@
   }
   out <- character(0L)
   for (ch in chunks) {
-    parts <- .listing_split_after(ch, sep)
+    parts <- listing_split_after(ch, sep)
     # "flow": refill the pieces first, so a break survives only where the
     # line ran out of room.  "stack" keeps every separator break.
     if (identical(layout, "flow")) parts <- .listing_flow(parts, width)
     for (p in parts) {
       p <- trimws(p)
       if (!nzchar(p)) next
-      if (.listing_disp_width(p) <= width) {
+      if (listing_disp_width(p) <= width) {
         out <- c(out, p)
       } else {
         out <- c(out, .listing_wrap_words(p, width))
@@ -657,7 +690,7 @@ print.rtf_listing_spec <- function(x, ...) {
   if (!is.null(cl$width))     return(as.numeric(cl$width))
   if (!is.null(cl$label)) {
     lines <- strsplit(cl$label, "\n", fixed = TRUE)[[1L]]
-    if (length(lines)) return(max(.listing_disp_width(lines), 1))
+    if (length(lines)) return(max(listing_disp_width(lines), 1))
   }
   10
 }
@@ -697,7 +730,7 @@ print.rtf_listing_spec <- function(x, ...) {
   pieces <- unlist(strsplit(as.character(text)[[1L]], "
 ", fixed = TRUE),
                    use.names = FALSE)
-  pieces <- unlist(lapply(pieces, .listing_split_after, sep = sep),
+  pieces <- unlist(lapply(pieces, listing_split_after, sep = sep),
                    use.names = FALSE)
   tokens <- unlist(lapply(pieces, function(p) {
     strsplit(p, "(?<=[ ,-])", perl = TRUE)[[1L]]
@@ -705,7 +738,7 @@ print.rtf_listing_spec <- function(x, ...) {
   tokens <- trimws(tokens)
   tokens <- tokens[nzchar(tokens)]
   if (!length(tokens)) return(0L)
-  max(.listing_disp_width(tokens))
+  max(listing_disp_width(tokens))
 }
 
 # One source column's display name: its `label` attribute when it has a usable
@@ -1098,33 +1131,34 @@ listing_wrap <- function(text, width, sep = "/",
 #  `wrap` can be delegated to (call `listing_wrap()`, adjust around it), but a
 #  rule that differs INSIDE -- word boundaries that never split a token, a byte
 #  budget rather than a display width -- has to be edited, and editing needs
-#  the code.  `print(listing_wrap)` shows a wrapper, and the six functions
-#  under it are unexported, so copying used to mean `:::` (#390).
+#  the code.  `print(listing_wrap)` shows a wrapper, and what is under it is
+#  unexported, so copying used to mean `:::` (#390).
 #
-#  What is handed out is a copy of those six, verbatim and with their comments,
-#  kept in `inst/templates/listing_wrap.R` and regenerated from them by
-#  `data-raw/gen_listing_wrap_template.R`.  It is a file rather than the
-#  installed package's own srcrefs because `KeepSource: yes` nearly doubles the
-#  installed R/ directory (700 kB -> 1.3 MB), for this one feature; the file
-#  costs 5 kB and a reviewer can see it change in a diff.
+#  What is handed out is the POLICY -- the three functions a fork rewrites,
+#  verbatim and with their comments, kept in `inst/templates/listing_wrap.R`
+#  and regenerated from them by `data-raw/gen_listing_wrap_template.R`.  What
+#  they measure with is exported rather than copied (#392): every fork would
+#  keep `listing_disp_width()`, `listing_take()` and `listing_split_after()`
+#  verbatim, and the width estimator uses them too, so a copy of those in each
+#  fork is duplication with nothing to show for it.  Forking the other three
+#  is not duplication -- it is the point.
+#
+#  A file rather than the installed package's own srcrefs because
+#  `KeepSource: yes` nearly doubles the installed R/ directory (700 kB ->
+#  1.3 MB), for this one feature; the file costs a few kB and a reviewer can
+#  see it change in a diff.
 #
 #  It cannot drift unnoticed: the suite parses the template, evaluates it and
 #  compares each function's deparse with the live one, then checks the emitted
 #  rule reproduces `listing_wrap()` over a corpus.  A rule changed in
 #  R/listing.R without regenerating the template fails both.
 
-# The rule's closed set of functions, in dependency order: each one calls only
-# base R and the ones before it, which is what makes the emitted file run on
-# its own.  `.listing_disp_width()` and `.listing_split_after()` are in it
-# because the rule calls them, not because they belong to the rule -- both are
-# used elsewhere in the package as well.
+# The policy functions, in dependency order: each calls base R, the exported
+# measurements, and the ones before it.
 .listing_wrap_parts <- function() {
-  c(disp_width  = ".listing_disp_width",
-    take        = ".listing_take",
-    split_after = ".listing_split_after",
-    flow        = ".listing_flow",
-    words       = ".listing_wrap_words",
-    rule        = ".listing_wrap_sep_word")
+  c(flow  = ".listing_flow",
+    words = ".listing_wrap_words",
+    rule  = ".listing_wrap_sep_word")
 }
 
 .listing_wrap_template <- function() {
@@ -1144,15 +1178,17 @@ listing_wrap <- function(text, width, sep = "/",
 #' to `listing_wrap()` and fixing up its result will not do.
 #'
 #' What comes back is a verbatim copy of the shipped rule, comments and all,
-#' regenerated from it and checked against it by the test suite.  It is
-#' self-contained -- base R only, no `rtfreporter:::` -- so it runs as it
-#' stands, and the entry function already matches the `wrap` contract
-#' described in [listing_spec()].
+#' regenerated from it and checked against it by the test suite.  There is no
+#' `rtfreporter:::` in it, and the entry function already matches the `wrap`
+#' contract described in [listing_spec()].
 #'
-#' The five helpers are named after `name`, so two edited rules can live in
-#' one script.  Two of them, `*_disp_width()` and `*_split_after()`, are
-#' package primitives the rule happens to call rather than parts of the rule;
-#' they are included so the file stands alone.
+#' What it hands out is the rule's POLICY -- three functions.  What they
+#' measure with is exported instead: [listing_disp_width()], [listing_take()]
+#' and [listing_split_after()] are called, not copied, because every fork
+#' would keep them verbatim.  Edit the policy; leave the measurements shared.
+#'
+#' The two helpers are named after `name`, so two edited rules can live in
+#' one script.
 #'
 #' @param name Name for the entry function -- the one to pass as `wrap`.  The
 #'   helpers are prefixed with it.
@@ -1207,6 +1243,9 @@ listing_wrap_code <- function(name = "my_wrap") {
     "# (text, width, sep, layout); `text` is length 1; `width` may be NULL;",
     "# `layout` is already \"stack\" or \"flow\"; return a non-empty character",
     "# vector, one element per line.",
+    "#",
+    "# listing_disp_width(), listing_take() and listing_split_after() below are",
+    "# rtfreporter's own, shared rather than copied -- library(rtfreporter).",
     "")
   structure(c(head_lines, src), class = c("rtf_listing_code", "character"))
 }

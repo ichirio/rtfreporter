@@ -1,36 +1,12 @@
 # GENERATED FILE -- do not edit.
 #
-# The "multiline" wrapping rule, copied verbatim from R/listing.R by
-# data-raw/gen_listing_wrap_template.R.  listing_wrap_code() renames these
-# functions and hands them out; the suite checks this file still matches.
-
-.listing_disp_width <- function(x) {
-  x <- as.character(x)
-  x[is.na(x)] <- ""
-  w <- suppressWarnings(nchar(x, type = "width", allowNA = TRUE))
-  bad <- is.na(w)
-  if (any(bad)) w[bad] <- nchar(x[bad], type = "chars")
-  as.integer(w)
-}
-
-.listing_take <- function(x, width) {
-  n <- nchar(x, type = "chars")
-  if (n == 0L) return("")
-  best <- 1L
-  for (i in seq_len(n)) {
-    if (.listing_disp_width(substr(x, 1L, i)) <= width) best <- i else break
-  }
-  substr(x, 1L, best)
-}
-
-.listing_split_after <- function(text, sep) {
-  if (is.null(sep) || !nzchar(sep)) return(text)
-  # \Q...\E quotes the separator, so a "." or a "|" separator is a literal and
-  # the lookbehind stays fixed-width.  (Written this way rather than with an
-  # escaping gsub(): backreferences are unreliable in some R builds.)
-  parts <- strsplit(text, paste0("(?<=\\Q", sep, "\\E)"), perl = TRUE)[[1L]]
-  if (!length(parts)) text else parts
-}
+# The "multiline" wrapping rule -- its policy half, copied verbatim from
+# R/listing.R by data-raw/gen_listing_wrap_template.R.  What it measures with
+# (listing_disp_width(), listing_take(), listing_split_after()) is exported,
+# so a fork shares those rather than carrying a copy.
+#
+# listing_wrap_code() renames these and hands them out; the suite checks
+# this file still matches.
 
 .listing_flow <- function(parts, width) {
   out <- character(0L)
@@ -38,7 +14,7 @@
   for (p in parts) {
     if (!nzchar(cur)) {
       cur <- p
-    } else if (.listing_disp_width(trimws(paste0(cur, p))) <= width) {
+    } else if (listing_disp_width(trimws(paste0(cur, p))) <= width) {
       cur <- paste0(cur, p)
     } else {
       out <- c(out, cur)
@@ -58,11 +34,11 @@
     # A token wider than the column on its own.  Split it here, before the
     # running line is trimmed to measure it -- trimming would eat the trailing
     # space that separates this word from the next.
-    if (.listing_disp_width(trimws(w)) > width) {
+    if (listing_disp_width(trimws(w)) > width) {
       if (nzchar(trimws(cur))) out <- c(out, trimws(cur))
       tok <- sub("^\\s+", "", w)
-      while (.listing_disp_width(trimws(tok)) > width) {
-        piece <- .listing_take(tok, width)
+      while (listing_disp_width(trimws(tok)) > width) {
+        piece <- listing_take(tok, width)
         out   <- c(out, piece)
         tok   <- substring(tok, nchar(piece, type = "chars") + 1L)
       }
@@ -76,7 +52,7 @@
       # wider (the trailing space is invisible) and would silently change
       # every existing listing's line counts; that is a separate decision,
       # not part of fixing #364.
-    } else if (.listing_disp_width(cur) + .listing_disp_width(w) <= width) {
+    } else if (listing_disp_width(cur) + listing_disp_width(w) <= width) {
       cur <- paste0(cur, w)
     } else {
       out <- c(out, trimws(cur))
@@ -105,14 +81,14 @@
   }
   out <- character(0L)
   for (ch in chunks) {
-    parts <- .listing_split_after(ch, sep)
+    parts <- listing_split_after(ch, sep)
     # "flow": refill the pieces first, so a break survives only where the
     # line ran out of room.  "stack" keeps every separator break.
     if (identical(layout, "flow")) parts <- .listing_flow(parts, width)
     for (p in parts) {
       p <- trimws(p)
       if (!nzchar(p)) next
-      if (.listing_disp_width(p) <= width) {
+      if (listing_disp_width(p) <= width) {
         out <- c(out, p)
       } else {
         out <- c(out, .listing_wrap_words(p, width))
