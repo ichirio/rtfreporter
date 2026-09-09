@@ -487,7 +487,8 @@ print.rtf_listing_col <- function(x, ...) {
 #'     \}
 #'   }
 #'   [listing_code()] cannot write a function out and says so in the code it
-#'   emits.
+#'   emits.  To change the rule from the inside rather than around it,
+#'   start from its source: [listing_wrap_code()].
 #' @param record `TRUE` (default) appends the hidden record column under its
 #'   standard name, `FALSE` appends none, or a single string names it
 #'   yourself.  See *The record column*.
@@ -1025,7 +1026,8 @@ build_listing <- function(data, spec) {
 #' `listing_spec(wrap = listing_wrap)` changes nothing, and it is the
 #' reference implementation of that contract: a custom `wrap` is easiest to
 #' write by delegating to this and adjusting around it.  See
-#' [listing_spec()] for the contract in full.
+#' [listing_spec()] for the contract in full, and [listing_wrap_code()]
+#' for this rule's own source when the change belongs INSIDE it.
 #'
 #' @section The rule:
 #'
@@ -1088,4 +1090,123 @@ listing_wrap <- function(text, width, sep = "/",
   }
   lapply(text, .listing_wrap_sep_word, width = width, sep = sep,
          layout = layout)
+}
+
+
+# ── The rule as source ───────────────────────────────────────────────────────
+#
+#  `wrap` can be delegated to (call `listing_wrap()`, adjust around it), but a
+#  rule that differs INSIDE -- word boundaries that never split a token, a byte
+#  budget rather than a display width -- has to be edited, and editing needs
+#  the code.  `print(listing_wrap)` shows a wrapper, and the six functions
+#  under it are unexported, so copying used to mean `:::` (#390).
+#
+#  What is handed out is a copy of those six, verbatim and with their comments,
+#  kept in `inst/templates/listing_wrap.R` and regenerated from them by
+#  `data-raw/gen_listing_wrap_template.R`.  It is a file rather than the
+#  installed package's own srcrefs because `KeepSource: yes` nearly doubles the
+#  installed R/ directory (700 kB -> 1.3 MB), for this one feature; the file
+#  costs 5 kB and a reviewer can see it change in a diff.
+#
+#  It cannot drift unnoticed: the suite parses the template, evaluates it and
+#  compares each function's deparse with the live one, then checks the emitted
+#  rule reproduces `listing_wrap()` over a corpus.  A rule changed in
+#  R/listing.R without regenerating the template fails both.
+
+# The rule's closed set of functions, in dependency order: each one calls only
+# base R and the ones before it, which is what makes the emitted file run on
+# its own.  `.listing_disp_width()` and `.listing_split_after()` are in it
+# because the rule calls them, not because they belong to the rule -- both are
+# used elsewhere in the package as well.
+.listing_wrap_parts <- function() {
+  c(disp_width  = ".listing_disp_width",
+    take        = ".listing_take",
+    split_after = ".listing_split_after",
+    flow        = ".listing_flow",
+    words       = ".listing_wrap_words",
+    rule        = ".listing_wrap_sep_word")
+}
+
+.listing_wrap_template <- function() {
+  path <- system.file("templates", "listing_wrap.R", package = "rtfreporter")
+  if (!nzchar(path)) {
+    stop("The wrapping-rule template is missing from the installed package.",
+         call. = FALSE)
+  }
+  readLines(path, encoding = "UTF-8")
+}
+
+#' The default wrapping rule, as source to edit
+#'
+#' The code [listing_wrap()] runs, written out ready to paste into a script
+#' and change.  Use it when a custom [listing_spec()] `wrap` needs a
+#' *different* rule rather than an adjustment to this one -- when delegating
+#' to `listing_wrap()` and fixing up its result will not do.
+#'
+#' What comes back is a verbatim copy of the shipped rule, comments and all,
+#' regenerated from it and checked against it by the test suite.  It is
+#' self-contained -- base R only, no `rtfreporter:::` -- so it runs as it
+#' stands, and the entry function already matches the `wrap` contract
+#' described in [listing_spec()].
+#'
+#' The five helpers are named after `name`, so two edited rules can live in
+#' one script.  Two of them, `*_disp_width()` and `*_split_after()`, are
+#' package primitives the rule happens to call rather than parts of the rule;
+#' they are included so the file stands alone.
+#'
+#' @param name Name for the entry function -- the one to pass as `wrap`.  The
+#'   helpers are prefixed with it.
+#' @return A character vector of source lines, classed so that printing it
+#'   writes the code out.
+#' @seealso [listing_wrap()] to delegate to the rule instead of editing it,
+#'   [listing_spec()] for the contract an edited rule still has to keep, and
+#'   [listing_code()], which writes a spec out the same way.
+#' @examples
+#' # Print it, paste it, edit it.
+#' listing_wrap_code("my_wrap")
+#'
+#' # It runs as it stands: the emitted rule is the shipped one.
+#' src <- listing_wrap_code("my_wrap")
+#' env <- new.env(parent = globalenv())
+#' eval(parse(text = src), envir = env)
+#' identical(env$my_wrap("COMPLETED/BRCA1", 12, "/", "stack"),
+#'           listing_wrap("COMPLETED/BRCA1", 12))
+#' @export
+listing_wrap_code <- function(name = "my_wrap") {
+  if (!is.character(name) || length(name) != 1L || is.na(name) ||
+      !nzchar(name)) {
+    stop("`name` must be a single non-empty string.", call. = FALSE)
+  }
+  if (!grepl("^[a-zA-Z.][a-zA-Z0-9._]*$", name)) {
+    stop("`name` must be a syntactic R name; got \"", name, "\".",
+         call. = FALSE)
+  }
+
+  parts <- .listing_wrap_parts()
+  new   <- ifelse(names(parts) == "rule", name,
+                  paste0(name, "_", names(parts)))
+  # The template's own header goes; this function writes the one that says
+  # what to do with the code.
+  src <- .listing_wrap_template()
+  src <- src[cumsum(!grepl("^#", src) & nzchar(src)) > 0L]
+
+  # Longest name first, so `.listing_wrap_sep_word` is never eaten by a
+  # shorter prefix.  Comments are renamed too, which is what a reader of the
+  # pasted file wants.
+  for (k in order(nchar(parts), decreasing = TRUE)) {
+    src <- gsub(parts[[k]], new[[k]], src, fixed = TRUE)
+  }
+
+  head_lines <- c(
+    paste0("# The \"multiline\" wrapping rule from rtfreporter ",
+           utils::packageVersion("rtfreporter"), ", to edit."),
+    "#",
+    paste0("#   listing_spec(cols, wrap = ", name, ")"),
+    "#",
+    "# Keep the contract (see ?listing_spec): called positionally with",
+    "# (text, width, sep, layout); `text` is length 1; `width` may be NULL;",
+    "# `layout` is already \"stack\" or \"flow\"; return a non-empty character",
+    "# vector, one element per line.",
+    "")
+  structure(c(head_lines, src), class = c("rtf_listing_code", "character"))
 }

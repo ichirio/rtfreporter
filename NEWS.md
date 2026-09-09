@@ -109,6 +109,22 @@
 
 ### New features
 
+- **`listing_wrap_code()`: the default wrapping rule as source to edit**
+  (#390).  A `listing_spec(wrap = )` that only adjusts the shipped rule can
+  delegate to `listing_wrap()`, but one that has to break text *differently*
+  has to change the algorithm -- and the algorithm was six unexported
+  functions, so copying it meant `:::`.  `listing_wrap_code()` writes them
+  out as one self-contained, base-R-only file, comments intact, renamed after
+  the name you give it and ready to paste and tune -- the same idea as
+  `listing_code()`, which does this for a spec.
+
+  The copy lives in `inst/templates/listing_wrap.R` and is regenerated from
+  the rule itself by `data-raw/gen_listing_wrap_template.R`, so it is never
+  hand-written.  It cannot drift unnoticed: the suite parses it, compares
+  each function's deparse with the live one, and checks that what
+  `listing_wrap_code()` emits reproduces `listing_wrap()` over a corpus of
+  widths, separators, layouts, CJK text and embedded newlines.
+
 - **A derived header now breaks where the data breaks** (#384).  A column
   joining `SEX` and `AGE` should read
 

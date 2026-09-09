@@ -83,7 +83,8 @@ adjust around it:
     \}
   }
 \code{\link[=listing_code]{listing_code()}} cannot write a function out and says so in the code it
-emits.}
+emits.  To change the rule from the inside rather than around it,
+start from its source: \code{\link[=listing_wrap_code]{listing_wrap_code()}}.}
 
 \item{record}{\code{TRUE} (default) appends the hidden record column under its
 standard name, \code{FALSE} appends none, or a single string names it

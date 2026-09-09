@@ -33,7 +33,8 @@ It is \strong{exactly} the \code{"multiline"} type's own rule, so
 \code{listing_spec(wrap = listing_wrap)} changes nothing, and it is the
 reference implementation of that contract: a custom \code{wrap} is easiest to
 write by delegating to this and adjusting around it.  See
-\code{\link[=listing_spec]{listing_spec()}} for the contract in full.
+\code{\link[=listing_spec]{listing_spec()}} for the contract in full, and \code{\link[=listing_wrap_code]{listing_wrap_code()}}
+for this rule's own source when the change belongs INSIDE it.
 }
 \section{The rule}{
 

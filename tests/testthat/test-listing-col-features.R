@@ -416,3 +416,97 @@ test_that("wrap = listing_wrap is a no-op, so it can be delegated to", {
   expect_identical(got$cells, toupper(build()$cells))
   expect_identical(got$label, toupper(build()$label))
 })
+
+# ── listing_wrap_code(): the rule as source ──────────────────────────────────
+
+test_that("the emitted rule is self-contained and IS the shipped rule", {
+  src <- listing_wrap_code("my_wrap")
+
+  # Self-contained: nothing in it reaches back into the package.
+  expect_false(any(grepl(":::", src, fixed = TRUE)))
+  expect_false(any(grepl(".listing_", src, fixed = TRUE)))
+  expect_false(any(grepl("rtfreporter", src[-1L], fixed = TRUE)))
+
+  env <- new.env(parent = globalenv())
+  eval(parse(text = src), envir = env)
+  expect_setequal(ls(env), c("my_wrap", "my_wrap_disp_width", "my_wrap_flow",
+                             "my_wrap_split_after", "my_wrap_take",
+                             "my_wrap_words"))
+
+  # And it cannot have drifted, because it is read off the live functions.
+  # Widths, separators, layouts, CJK, an embedded newline, an empty cell.
+  txt <- c("COMPLETED/BRCA1/ADENOCARCINOMA",
+           "SQUAMOUS CELL CARCINOMA OF THE LUNG",
+           "\u65e5\u672c\u8a9e\u306e\u9577\u3044\u8a18\u8ff0/A", "a\nb", "",
+           "SUPERCALIFRAGILISTIC")
+  for (w in list(NULL, 6, 12, 40)) {
+    for (lay in c("stack", "flow")) {
+      for (t in txt) {
+        expect_identical(env$my_wrap(t, w, "/", lay),
+                         listing_wrap(t, w, "/", lay),
+                         info = paste(t, w, lay))
+      }
+    }
+  }
+})
+
+test_that("what it emits can be handed straight back as `wrap`", {
+  src <- listing_wrap_code("edited")
+  env <- new.env(parent = globalenv())
+  eval(parse(text = src), envir = env)
+
+  d <- data.frame(HIST = "SQUAMOUS CELL CARCINOMA", stringsAsFactors = FALSE)
+  plain <- listing_spec(list(listing_col("HIST", width = 12, label = "H")),
+                        spacer = FALSE, blank_row = FALSE, record = FALSE)
+  edited <- listing_spec(list(listing_col("HIST", width = 12, label = "H")),
+                         wrap = env$edited, spacer = FALSE, blank_row = FALSE,
+                         record = FALSE)
+  expect_identical(build_listing(d, edited)$HIST, build_listing(d, plain)$HIST)
+})
+
+test_that("the source keeps its comments, which is the point of copying it", {
+  src <- listing_wrap_code()
+  expect_true(any(grepl("^[[:space:]]*#", src[-seq_len(9L)])))
+  expect_true(any(grepl("#364", src, fixed = TRUE)))   # the rationale, kept
+})
+
+test_that("the header names the entry function and states the contract", {
+  src <- listing_wrap_code("house_rule")
+  expect_true(any(grepl("wrap = house_rule", src, fixed = TRUE)))
+  expect_true(any(grepl("text, width, sep, layout", src, fixed = TRUE)))
+  expect_true(any(grepl(as.character(utils::packageVersion("rtfreporter")),
+                        src, fixed = TRUE)))
+})
+
+test_that("the helpers are named after `name`, so two rules can coexist", {
+  a <- listing_wrap_code("alpha")
+  b <- listing_wrap_code("beta")
+  env <- new.env(parent = globalenv())
+  eval(parse(text = a), envir = env)
+  eval(parse(text = b), envir = env)
+  expect_true(all(c("alpha", "alpha_words", "beta", "beta_words") %in% ls(env)))
+  expect_identical(env$alpha("A/B", 3, "/", "stack"),
+                   env$beta("A/B", 3, "/", "stack"))
+})
+
+test_that("listing_wrap_code() validates `name`", {
+  expect_error(listing_wrap_code(c("a", "b")), "single non-empty string")
+  expect_error(listing_wrap_code(""), "single non-empty string")
+  expect_error(listing_wrap_code("2fast"), "syntactic R name")
+})
+
+test_that("the template has not drifted from the rule it was copied from", {
+  # Regenerate with: Rscript data-raw/gen_listing_wrap_template.R
+  #
+  # Not under covr: it rewrites every function body to count what runs, so
+  # the live deparse is instrumented code and would never match a source
+  # file.  The comparison still runs in R CMD check on every platform.
+  skip_on_covr()
+  env <- new.env(parent = globalenv())
+  eval(parse(text = .listing_wrap_template()), envir = env)
+  for (nm in .listing_wrap_parts()) {
+    expect_identical(deparse(get(nm, envir = env)),
+                     deparse(get(nm, envir = asNamespace("rtfreporter"))),
+                     info = nm)
+  }
+})

@@ -344,6 +344,42 @@ respect.
 Because the wrapping rule belongs to the template rather than to
 `build_listing()`, a future type can bring its own without disturbing this one.
 
+### Changing how a cell breaks
+
+`listing_spec(wrap = )` takes a function of `(text, width, sep, layout)` that
+returns one element per line -- the contract is in `?listing_spec`. There are
+two ways in, and they answer different questions.
+
+**Adjust the rule from outside.** `listing_wrap()` *is* the shipped rule, so
+call it and fix up what comes back:
+
+```{r wrap-delegate}
+cap_two <- function(text, width, sep, layout) {
+  out <- listing_wrap(text, width, sep, layout)
+  if (!is.null(width) && length(out) > 2L) {
+    out <- c(out[1L], paste0(substr(out[2L], 1, width - 1), "\u2026"))
+  }
+  out
+}
+cap_two("SQUAMOUS CELL CARCINOMA OF THE LUNG", 12, "/", "stack")
+```
+
+**Change the rule from inside.** When the break logic itself has to differ --
+a different notion of a word, a byte budget rather than a display width --
+`listing_wrap_code()` writes the shipped rule out as source to paste into your
+program and edit. It is the real code, read back off the functions the package
+is running, so it cannot disagree with them, and it depends on nothing but
+base R:
+
+```{r wrap-code}
+src <- listing_wrap_code("my_wrap")
+cat(head(src, 12), sep = "\n")
+```
+
+Paste it, change what you need, and hand the entry function to
+`listing_spec(wrap = my_wrap)`.
+
+
 ## The hand-written version this replaces
 
 Before this existed, the same listing was a page of pipeline: `catx()` calls to
