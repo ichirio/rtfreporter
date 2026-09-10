@@ -138,6 +138,28 @@ resolve_plan <- function(plan) {
   if (!inherits(plan, "rtf_plan")) {
     stop("Expected an rtf_plan.", call. = FALSE)
   }
+  # 0. listing -- the only stage allowed to replace the data wholesale, and it
+  #    has to come first: a listing's printed columns do not exist in the
+  #    source, so there is nothing for the later stages to name until the
+  #    reshape has run.  Afterwards the body is an ordinary data.frame and
+  #    every stage below is the table pipeline, unchanged.
+  listing <- .plan_resolve_listing(plan)
+  src0 <- NULL
+  if (!is.null(listing)) {
+    plan <- .plan_merge_listing_roles(plan, listing$roles)
+    plan <- .plan_drop_consumed_roles(plan, listing$consumed,
+                                      names(listing$data))
+    plan$data <- listing$data
+    # The listing's header, widths and alignment go exactly where an adapter's
+    # metadata goes, so nothing downstream contains listing-specific code.
+    # They REPLACE rather than defer to whatever the data.frame branch of
+    # extraction derived: that header named the SOURCE columns, which the
+    # reshape has just consumed.
+    kw <- plan$source$kw %||% list()
+    for (nm in names(listing$kw)) kw[[nm]] <- listing$kw[[nm]]
+    plan$source$kw <- kw
+    src0 <- listing$src
+  }
   d <- plan$data
   n <- nrow(d)
 
@@ -149,7 +171,7 @@ resolve_plan <- function(plan) {
   # 2. rows -- the stub's label rows enter here, and from this point every
   #    stage works in OUTPUT row coordinates.  One map, `rows$src`, is the
   #    only translation back to the source.
-  rows <- .plan_resolve_rows(columns, d, .plan_get(plan, "style"))
+  rows <- .plan_resolve_rows(columns, d, .plan_get(plan, "style"), src0)
 
   # 3. grouping -- resolved ONCE, on the output rows, from the column table.
   #    Everything downstream reads `groups`, so there is no second place for a
@@ -157,12 +179,14 @@ resolve_plan <- function(plan) {
   groups <- .plan_resolve_groups(columns, rows$body)
 
   # 4. blank rows -- may consult the grouping, and nothing else.
-  blanks <- .plan_resolve_blanks(.plan_get(plan, "blanks"), rows$body, groups)
+  blank_spec <- .plan_get(plan, "blanks")
+  blanks <- .plan_resolve_blanks(blank_spec, rows$body, groups)
+  edges  <- c(first = isTRUE(blank_spec$first), last = isTRUE(blank_spec$last))
 
   # 5. pages -- consumes both.  The row budget can see the blanks because they
   #    are already resolved, so no argument has to describe them to it.
   pg <- .plan_resolve_pages(.plan_get(plan, "pages"), rows$n, groups, blanks,
-                            rows$body)
+                            rows$body, edges)
   pages <- pg$pages
 
   # 6. style -- table-wide settings plus per-column options addressed BY NAME
@@ -170,6 +194,21 @@ resolve_plan <- function(plan) {
   style <- .plan_resolve_style(.plan_get(plan, "style"),
                                .plan_get(plan, "roles"), columns,
                                plan$source$kw)
+
+  #    A listing sizes its own columns -- `width` is a character count and
+  #    `rel_width` follows it -- so the relative widths travel with the rest of
+  #    its metadata and are placed through the same column map.  An explicit
+  #    width on plan_style() still wins, the same precedence an adapter's
+  #    metadata has everywhere else.
+  if (!is.null(listing) && is.null(style$col_rel_width) &&
+      is.null(style$column_widths_twips)) {
+    rw <- listing$kw$col_rel_width
+    m  <- columns$map
+    if (length(rw) == length(m)) {
+      keep <- !is.na(m)
+      style$col_rel_width <- as.numeric(rw[keep][order(m[keep])])
+    }
+  }
 
   # 7. the source's own metadata, placed through the same column map -- the
   #    adapter read it in SOURCE coordinates and never has to know what the
@@ -183,10 +222,13 @@ resolve_plan <- function(plan) {
   }
 
   structure(list(columns = columns, rows = rows, groups = groups,
-                 blanks = blanks, pages = pages,
+                 blanks = blanks, blank_edges = edges, pages = pages,
                  page_data = pg$data, page_names = pg$names,
                  style = style, header = header, source = plan$source,
-                 nrow = rows$n, nrow_source = n),
+                 listing = listing$spec,
+                 nrow = rows$n,
+                 nrow_source = if (is.null(listing)) n else
+                   max(c(0L, listing$src), na.rm = TRUE)),
             class = "rtf_resolution")
 }
 
@@ -244,9 +286,12 @@ resolve_plan <- function(plan) {
       group_by  = groups$mode %||% "auto")
   }
 
-  if (isTRUE(spec$first)) pos <- c(0L, pos)
-  if (isTRUE(spec$last))  pos <- c(pos, n)
-  sort(unique(as.integer(pos[pos >= 0L & pos <= n])))
+  # `first` / `last` are NOT positions in the body: they are page furniture, a
+  # blank at the top or foot of EVERY page.  Folding them in here made them a
+  # position in page one and nowhere else -- which is what a listing exposed,
+  # since its template asks for a blank atop every page.  They travel as flags
+  # and are applied per page, where pages exist.
+  sort(unique(as.integer(pos[pos >= 1L & pos <= n])))
 }
 
 # Cut the body into pages.
@@ -260,10 +305,23 @@ resolve_plan <- function(plan) {
 #
 # `blanks` is already resolved when this runs, which is what lets the budget
 # charge for the blank lines a page will print without being told.
-.plan_resolve_pages <- function(spec, n, groups, blanks, body = NULL) {
+.plan_resolve_pages <- function(spec, n, groups, blanks, body = NULL,
+                                edges = c(first = FALSE, last = FALSE)) {
   none <- list(pages = list(seq_len(n)), data = NULL, names = NULL)
   if (n == 0L) return(list(pages = list(integer(0)), data = NULL, names = NULL))
   if (is.null(spec)) return(none)
+
+  # Page furniture costs the same on every page, so it comes off the budget
+  # once rather than being counted row by row.  (as_rtftables() counts the
+  # edges as they RENDER -- blank_row_normalize can merge an edge into a blank
+  # already there, #362 -- which this flat charge does not model.)
+  if (isTRUE(spec$count_blanks) && !is.null(spec$max_rows)) {
+    spec$max_rows <- spec$max_rows - sum(edges)
+    if (spec$max_rows < 1L) {
+      stop("`max_rows` leaves no room once the page-edge blank rows are ",
+           "counted.", call. = FALSE)
+    }
+  }
 
   # Explicit breaks win: they say exactly where the pages end.
   brk <- if (!is.null(spec$break_after)) as.integer(spec$break_after)

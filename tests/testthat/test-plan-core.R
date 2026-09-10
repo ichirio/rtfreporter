@@ -219,11 +219,36 @@ test_that("an empty body yields one empty page", {
 
 # ── blanks at the edges ────────────────────────────────────────────────────
 
-test_that("first and last add the edge positions", {
+test_that("first and last are page furniture, not positions in the body", {
   res <- resolve_plan(rtf_plan(.df()) |> plan_group("SOC") |>
                         plan_blanks("between_groups", first = TRUE,
                                     last = TRUE))
-  expect_identical(res$blanks, c(0L, 4L, 8L, 12L))
+  # The body positions are the group boundaries and nothing else: an edge
+  # blank belongs to a PAGE, and which pages there are is decided later.
+  expect_identical(res$blanks, c(4L, 8L))
+  expect_true(unname(res$blank_edges[["first"]]))
+  expect_true(unname(res$blank_edges[["last"]]))
+})
+
+test_that("every page gets the edge blanks, not just the first", {
+  pages <- rtf_plan(.df()) |> plan_group("SOC") |>
+    plan_blanks(first = TRUE, last = TRUE) |>
+    plan_pages(max_rows = 6L, groups = "split") |>
+    rtf_pages()
+  expect_gt(length(pages), 1L)
+  for (i in seq_along(pages)) {
+    expect_true(0L %in% pages[[i]]$blank_rows, info = paste("page", i))
+    expect_true(nrow(pages[[i]]$data) %in% pages[[i]]$blank_rows,
+                info = paste("page", i))
+  }
+})
+
+test_that("count_blanks charges the page for the furniture it prints", {
+  p <- rtf_plan(.df()) |> plan_blanks(first = TRUE, last = TRUE) |>
+    plan_pages(max_rows = 6L, groups = "split", count_blanks = TRUE)
+  res <- resolve_plan(p)
+  # 6 printed rows per page, two of which are the edges, so 4 body rows.
+  expect_true(all(vapply(res$pages, length, integer(1L)) <= 4L))
 })
 
 test_that("explicit positions are accepted", {

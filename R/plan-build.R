@@ -77,6 +77,16 @@ plan_tables <- function(plan, ...) {
     }
     rownames(body) <- NULL
 
+    # Repeated values are suppressed PER PAGE, addressed by name through the
+    # column map -- the same point in the pipeline `.paginate_df()` does it,
+    # and for the same reason: a run continued across a break shows its value
+    # again at the top of the next page.
+    if (length(res$columns$collapse)) {
+      cidx <- unname(res$columns$map[res$columns$collapse])
+      cidx <- unique(cidx[!is.na(cidx)])
+      if (length(cidx)) body <- .collapse_repeats_chunk(body, cidx)
+    }
+
     args <- c(list(data = body), style)
 
     # The source's own header, already placed at final positions by the column
@@ -97,13 +107,20 @@ plan_tables <- function(plan, ...) {
     # page, which is not a separator between anything.  as_rtftables() drops it
     # and so does this -- a behaviour the spike found by diffing the rendered
     # RTF, not by reading the code.
+    local <- integer(0)
     if (length(res$blanks)) {
       first <- idx[[1L]]
       last  <- idx[[length(idx)]]
       local <- res$blanks[res$blanks >= first & res$blanks < last] -
         (first - 1L)
-      if (length(local)) args$blank_rows <- as.integer(local)
     }
+    # Page furniture: position 0 is above the page's first row, nrow below its
+    # last.  Every page gets it, which is what makes it furniture rather than
+    # a separator between two particular rows.
+    ed <- res$blank_edges %||% c(first = FALSE, last = FALSE)
+    if (isTRUE(unname(ed[["first"]]))) local <- c(0L, local)
+    if (isTRUE(unname(ed[["last"]])))  local <- c(local, nrow(body))
+    if (length(local)) args$blank_rows <- as.integer(sort(unique(local)))
 
     # Carry columns are already final positions -- the column map resolved
     # them, so nothing here knows what the stub or the hidden columns did.
@@ -126,38 +143,6 @@ plan_cell_styles <- function(res, cell_styles) {
   mapped <- plan_row_map(res, cell_styles)
   lapply(res$pages, function(idx) mapped[idx])
 }
-
-# ── rtf_pages(): the plan -> pages verb ────────────────────────────────────
-#
-# `plan_tables()` reads as "put this in the document", which it does not do --
-# it returns the list of rtftable pages.  That name left the design with no
-# obvious way to get pages in order to LOOK at one, which is the thing
-# as_rtftables() was most used for:
-#
-#     print(rtf_pages(p)[[1]])
-#
-# The plan materialises into the existing `rtftable`, so print() / summary() /
-# format() and every post-hoc verb work on the result unchanged.
-#
-# rtf_tables(doc, plan) still takes a plan directly; it calls this.
-#' @keywords internal
-rtf_pages <- function(plan, ...) plan_tables(plan, ...)
-
-# ── rtf_pages(): the plan -> pages verb ────────────────────────────────────
-#
-# `plan_tables()` reads as "put this in the document", which it does not do --
-# it returns the list of rtftable pages.  That name left the design with no
-# obvious way to get pages in order to LOOK at one, which is the thing
-# as_rtftables() was most used for:
-#
-#     print(rtf_pages(p)[[1]])
-#
-# The plan materialises into the existing `rtftable`, so print() / summary() /
-# format() and every post-hoc verb work on the result unchanged.
-#
-# rtf_tables(doc, plan) still takes a plan directly; it calls this.
-#' @keywords internal
-rtf_pages <- function(plan, ...) plan_tables(plan, ...)
 
 # -- rtf_pages(): the plan -> pages verb ------------------------------------
 #

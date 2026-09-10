@@ -18,13 +18,14 @@ for (l in ref) {
 }
 if (!is.null(cur)) secs[[length(secs) + 1L]] <- cur
 
-RETIRE <- c("as_rtftables", "as_rtftable", "stub_spec", "page_split",
-            "page_split_none", "page_split_rows", "page_split_group_safe",
-            "page_split_group_force", "page_split_by_value")
+# The five page_split_*() factories are already gone from main (#334), so they
+# no longer appear in _pkgdown.yml and no longer need marking here.
+RETIRE <- c("as_rtftables", "as_rtftable", "stub_spec")
 
-PLAN <- c("rtf_plan_from", "plan_roles", "role", "plan_group", "plan_stub",
-          "plan_hide", "plan_unset", "plan_blanks", "plan_pages",
-          "plan_style", "plan_header", "plan_tables")
+PLAN <- c("rtf_plan", "plan_roles", "role", "plan_group", "plan_stub",
+          "plan_hide", "plan_unset", "plan_listing", "plan_blanks",
+          "plan_pages", "plan_style", "plan_header", "plan_tables",
+          "rtf_pages")
 
 out <- c(
 "# Reference 索引の草案 — plan 系を採用した場合",
@@ -46,11 +47,22 @@ for (s in secs) {
              "> `as_rtftables()` / `as_rtftable()` / `stub_spec()` は plan 系に置き換わるため Deprecated へ移動。",
              "> `combine_sections()` と `stub_cols()` は残ります（`stub_cols()` は plan が内部で使用）。",
              "")
+  } else if (grepl("^Listings", ttl)) {
+    out <- c(out, sprintf("### %s", ttl),
+             "",
+             "> **listing 系はそのまま残ります。** `listing_col()` / `listing_spec()` /",
+             "> `build_listing()` は「並べ方」を決める関数で、plan が置き換えるのは",
+             "> 入口の `as_rtftables(listing = )` だけです（→ `plan_listing()`）。",
+             "> `plan_listing()` は `listing_spec()` の11設定のうち8つだけを持ちます。",
+             "> `blank_row_first` は `plan_blanks(first = )`、`align` は",
+             "> `plan_roles(role(align = ))` に寄せたためです。",
+             "")
   } else if (grepl("^Pagination strategies", ttl)) {
     out <- c(out, sprintf("### %s", ttl),
              "",
-             "> `page_split_*()` 5関数は `plan_pages()` に置き換わるため Deprecated へ移動。",
-             "> `paginate_cols()` と `add_cont_label()` は残ります（plan 未対応のため必須）。",
+             "> `page_split_*()` は #334 で廃止済み。plan 系では `plan_pages()` が",
+             "> その役目を持ちます。`paginate_cols()` と `add_cont_label()` は残ります",
+             "> （plan 未対応のため必須）。",
              "")
   } else {
     out <- c(out, sprintf("### %s", ttl), "")
@@ -79,17 +91,15 @@ out <- c(out, "---", "",
   "",
   "| 関数 | 後継 |",
   "|---|---|",
-  "| `as_rtftables()` | `rtf_plan_from()` |",
-  "| `as_rtftable()` | `rtf_plan_from()`（単数形は `plan_tables(p)[[1]]`） |",
+  "| `as_rtftables()` | `rtf_plan()` + レイヤー |",
+  "| `as_rtftable()` | `rtf_plan()`（単数形は `rtf_pages(p)[[1]]`） |",
   "| `stub_spec()` | `plan_stub()` |",
-  "| `page_split_none()` | `plan_pages()` |",
-  "| `page_split_rows()` | `plan_pages(break_before =)` |",
-  "| `page_split_group_safe()` | `plan_pages(groups = \"keep\")` |",
-  "| `page_split_group_force()` | `plan_pages(groups = \"prefer\")` |",
-  "| `page_split_by_value()` | `plan_pages(per_group = TRUE)` |",
   "| `paginate()` | `plan_pages()`（既に Deprecated） |",
   "",
-  "**9関数のみ**が Deprecated になります。",
+  "**3関数のみ**が Deprecated になります（`page_split_*()` の5つは #334 で",
+  "廃止済みなので、この表には残っていません）。",
+  "listing 系は1つも Deprecated になりません: `as_rtftables(listing = )` という",
+  "**引数**が `plan_listing()` に置き換わるだけです。",
   "`set_col_header()` / `set_header_cell()` / `set_blank_rows()` /",
   "`collapse_repeats()` は plan でも宣言できますが、**完成テーブルへの",
   "後付け調整**という別の役割があるため、すべて残します。",

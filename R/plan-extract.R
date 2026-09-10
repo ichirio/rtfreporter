@@ -66,6 +66,14 @@
   }
   if (is.data.frame(x)) {
     kw <- list()
+    # A body build_listing() produced names its own columns (and its gutters
+    # and record column); deriving a header from those names would be reading
+    # the reshape's plumbing as if it were data.  The listing stage supplies
+    # the real header, so leave `kw` empty here.
+    if (!is.null(attr(x, "rtf_listing", exact = TRUE))) {
+      return(list(body = x, kw = kw, cell_styles = NULL,
+                  titles = NULL, footnotes = NULL))
+    }
     # Column display names: a `label` attribute wins over the name, and a
     # delimited name becomes a spanning header -- the same reconstruction
     # as_rtftables() performs for a plain data.frame.

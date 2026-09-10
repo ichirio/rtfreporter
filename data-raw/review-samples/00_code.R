@@ -197,3 +197,33 @@ pages <- rtf_plan(ae) |>
   plan_style(border = "tfl",
              widths = c(2600L, 3000L, 1500L, 1200L, 1500L, 1200L)) |>
   rtf_pages()
+
+# ======================================================================
+# AD  Subject listing -- wrapped cells, a record kept whole across pages
+# ======================================================================
+
+# --- OLD (as_rtftables) ---
+
+ad_sorted <- ad[order(ad$ORD), ]
+
+pages <- as_rtftables(
+  ad_sorted,
+  listing  = listing_spec(listing_cols),
+  max_rows = 16,
+  border   = "tfl"
+)
+# listing_spec() also carries blank_row_first, the column alignments and the
+# record column, and `listing =` turns that last one into group_col +
+# group_by = "value" + split = "group_safe" + drop_cols behind the call.
+
+# --- NEW (rtf_plan + layers) ---
+
+pages <- rtf_plan(ad) |>
+  plan_listing(listing_cols) |>
+  plan_roles(ORD = role("sort")) |>
+  plan_blanks(first = TRUE) |>
+  plan_pages(max_rows = 16) |>
+  plan_style(border = "tfl") |>
+  rtf_pages()
+# The record column is an ordinary hidden grouping carrier, so keeping a
+# record whole is plan_pages(groups = "keep"), which is the default.

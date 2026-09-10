@@ -50,6 +50,35 @@ cat("  1. \"indent\"      -- same fact, same place\n")
 cat("  -> 1 fact.  Every column is named as it is named in `ae`:\n")
 cat("     SOC, PT, SOCORD, `Drug A____Events`, `Drug B____Events`\n")
 
+cat("\n############ 2b. THE SAME QUESTION, FOR A LISTING ############\n\n")
+
+cat("OLD -- `listing = listing_spec(cols)` is ONE argument that sets four\n")
+cat("       others.  None of the four appears in the call:\n")
+cat("  1. group_col  <- the spec's hidden record column (\".rtf_record\")\n")
+cat("  2. group_by   <- \"value\"\n")
+cat("  3. split      <- \"group_safe\", but only when max_rows was passed\n")
+cat("  4. drop_cols  <- the record column again, AFTER pagination used it\n")
+cat("  ... and blank_row_first, the column alignments and collapse_repeats\n")
+cat("      come from the spec too, where a table writes them on the call.\n")
+cat("  -> 4 facts you cannot read off your call, and 3 settings that live in\n")
+cat("     a second place\n\n")
+
+cat("NEW\n")
+cat("  The record column is a hidden column that groups the body -- the same\n")
+cat("  idiom a table uses for a sort carrier -- so keeping a record whole is\n")
+cat("  plan_pages(groups = \"keep\"), which is the default.  Alignment is\n")
+cat("  plan_roles(), the page's blank row is plan_blanks(first = TRUE), and\n")
+cat("  suppressing a repeat is role(\"collapse\").\n")
+cat("  -> 0 facts.  plan_listing() declares the RESHAPE and nothing else.\n\n")
+
+cat("  settings on the listing constructor:\n")
+cat(sprintf("    listing_spec()  %d  (%s)\n", length(formals(listing_spec)),
+            paste(names(formals(listing_spec)), collapse = ", ")))
+cat(sprintf("    plan_listing()  %d  (%s)\n",
+            length(setdiff(names(formals(plan_listing)), c("plan", "..."))),
+            paste(setdiff(names(formals(plan_listing)), c("plan", "...")),
+                  collapse = ", ")))
+
 cat("\n############ 3. IS A MISTAKE CAUGHT? ############\n\n")
 set.seed(11)
 soc <- c("Cardiac disorders","Gastrointestinal disorders")

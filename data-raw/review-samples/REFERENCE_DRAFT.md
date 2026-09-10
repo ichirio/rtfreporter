@@ -53,18 +53,20 @@
 > 何を作るかを宣言し、解決は最後に1回だけ行う。
 > 列は**名前**で指定し、位置は解決時に1つの写像が決めます。
 
-- `rtf_plan_from()`  **NEW**
+- `rtf_plan()`  **NEW**
 - `plan_roles()`  **NEW**
 - `role()`  **NEW**
 - `plan_group()`  **NEW**
 - `plan_stub()`  **NEW**
 - `plan_hide()`  **NEW**
 - `plan_unset()`  **NEW**
+- `plan_listing()`  **NEW**
 - `plan_blanks()`  **NEW**
 - `plan_pages()`  **NEW**
 - `plan_style()`  **NEW**
 - `plan_header()`  **NEW**
 - `plan_tables()`  **NEW**
+- `rtf_pages()`  **NEW**
 
 ### Importing tables (gt / gtsummary / rtables / rlistings → rtftable)
 
@@ -78,6 +80,13 @@
 - ~~`stub_spec()`~~
 
 ### Listings (source data → listing body)
+
+> **listing 系はそのまま残ります。** `listing_col()` / `listing_spec()` /
+> `build_listing()` は「並べ方」を決める関数で、plan が置き換えるのは
+> 入口の `as_rtftables(listing = )` だけです（→ `plan_listing()`）。
+> `plan_listing()` は `listing_spec()` の11設定のうち8つだけを持ちます。
+> `blank_row_first` は `plan_blanks(first = )`、`align` は
+> `plan_roles(role(align = ))` に寄せたためです。
 
 - `listing_col()`
 - `listing_spec()`
@@ -128,8 +137,9 @@
 
 ### Pagination strategies & helpers
 
-> `page_split_*()` 5関数は `plan_pages()` に置き換わるため Deprecated へ移動。
-> `paginate_cols()` と `add_cont_label()` は残ります（plan 未対応のため必須）。
+> `page_split_*()` は #334 で廃止済み。plan 系では `plan_pages()` が
+> その役目を持ちます。`paginate_cols()` と `add_cont_label()` は残ります
+> （plan 未対応のため必須）。
 
 - `paginate_cols()`
 - `add_cont_label()`
@@ -191,17 +201,15 @@
 
 | 関数 | 後継 |
 |---|---|
-| `as_rtftables()` | `rtf_plan_from()` |
-| `as_rtftable()` | `rtf_plan_from()`（単数形は `plan_tables(p)[[1]]`） |
+| `as_rtftables()` | `rtf_plan()` + レイヤー |
+| `as_rtftable()` | `rtf_plan()`（単数形は `rtf_pages(p)[[1]]`） |
 | `stub_spec()` | `plan_stub()` |
-| `page_split_none()` | `plan_pages()` |
-| `page_split_rows()` | `plan_pages(break_before =)` |
-| `page_split_group_safe()` | `plan_pages(groups = "keep")` |
-| `page_split_group_force()` | `plan_pages(groups = "prefer")` |
-| `page_split_by_value()` | `plan_pages(per_group = TRUE)` |
 | `paginate()` | `plan_pages()`（既に Deprecated） |
 
-**9関数のみ**が Deprecated になります。
+**3関数のみ**が Deprecated になります（`page_split_*()` の5つは #334 で
+廃止済みなので、この表には残っていません）。
+listing 系は1つも Deprecated になりません: `as_rtftables(listing = )` という
+**引数**が `plan_listing()` に置き換わるだけです。
 `set_col_header()` / `set_header_cell()` / `set_blank_rows()` /
 `collapse_repeats()` は plan でも宣言できますが、**完成テーブルへの
 後付け調整**という別の役割があるため、すべて残します。
