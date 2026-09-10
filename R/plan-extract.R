@@ -43,26 +43,36 @@
 .plan_extract <- function(x, read_meta = TRUE, header_sep = NULL) {
   if (.is_gtsummary_tbl(x)) x <- .gtsummary_to_gt(x)
 
-  pick <- function(kw) {
+  pick <- function(kw, kind) {
     list(body = kw$data, kw = kw, cell_styles = kw$cell_styles,
-         titles = kw$titles_block, footnotes = kw$footnotes_block)
+         titles = kw$titles_block, footnotes = kw$footnotes_block,
+         kind = kind)
   }
 
   if (.is_gt_tbl(x)) {
-    return(pick(.gt_to_rtftable_kwargs(x, tokens = .resolve_gt_tokens(read_meta))))
+    return(pick(.gt_to_rtftable_kwargs(x, tokens = .resolve_gt_tokens(read_meta)),
+                "gt"))
   }
   if (.is_rtables_tbl(x)) {
     return(pick(.rtables_to_rtftable_kwargs(
-      x, tokens = .resolve_rtables_tokens(read_meta))))
+      x, tokens = .resolve_rtables_tokens(read_meta)), "rtables"))
+  }
+  if (.is_rlistings_tbl(x)) {
+    # NB an rlistings listing_df IS a data.frame subclass, so this must precede
+    # the plain case below -- without it the listing renders with its
+    # disp_cols, key-column suppression, titles and footers silently discarded,
+    # which is #322 by another route.
+    return(pick(.rlistings_to_rtftable_kwargs(
+      x, tokens = .resolve_rlistings_tokens(read_meta)), "rlistings"))
   }
   if (.is_flextable_tbl(x)) {
     return(pick(.flextable_to_rtftable_kwargs(
-      x, tokens = .resolve_flextable_tokens(read_meta))))
+      x, tokens = .resolve_flextable_tokens(read_meta)), "flextable"))
   }
   if (.is_huxtable_tbl(x)) {
     # a huxtable IS a data.frame subclass, so this must precede the plain case
     return(pick(.huxtable_to_rtftable_kwargs(
-      x, tokens = .resolve_huxtable_tokens(read_meta))))
+      x, tokens = .resolve_huxtable_tokens(read_meta)), "huxtable"))
   }
   if (is.data.frame(x)) {
     kw <- list()
@@ -72,7 +82,7 @@
     # the real header, so leave `kw` empty here.
     if (!is.null(attr(x, "rtf_listing", exact = TRUE))) {
       return(list(body = x, kw = kw, cell_styles = NULL,
-                  titles = NULL, footnotes = NULL))
+                  titles = NULL, footnotes = NULL, kind = "listing_body"))
     }
     # Column display names: a `label` attribute wins over the name, and a
     # delimited name becomes a spanning header -- the same reconstruction
@@ -85,11 +95,11 @@
       kw$col_header <- disp
     }
     return(list(body = x, kw = kw, cell_styles = NULL,
-                titles = NULL, footnotes = NULL))
+                titles = NULL, footnotes = NULL, kind = "data.frame"))
   }
-  stop("A plan can start from a gt_tbl, gtsummary, rtables/tern, flextable, ",
-       "huxtable or data.frame; got '", paste(class(x), collapse = "/"), "'.",
-       call. = FALSE)
+  stop("A plan can start from a gt_tbl, gtsummary, rtables/tern, rlistings, ",
+       "flextable, huxtable or data.frame; got '",
+       paste(class(x), collapse = "/"), "'.", call. = FALSE)
 }
 
 # The plan constructor -- the ONE public entry point.
@@ -126,7 +136,7 @@
 rtf_plan <- function(x, read_meta = TRUE) {
   ex <- .plan_extract(x, read_meta = read_meta)
   p <- .plan_new(ex$body)
-  p$source <- ex[c("kw", "cell_styles", "titles", "footnotes")]
+  p$source <- ex[c("kw", "cell_styles", "titles", "footnotes", "kind")]
   p
 }
 

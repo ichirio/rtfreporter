@@ -62,6 +62,11 @@ test_that("an unsupported input is refused, listing what is supported", {
 test_that("the plan's dispatch agrees with as_rtftables() on every source", {
   srcs <- list(df = .xd())
   if (requireNamespace("gt", quietly = TRUE)) srcs$gt <- gt::gt(.xd())
+  # An rlistings listing_df is a data.frame SUBCLASS, so a dispatch that
+  # forgets it does not error -- it silently renders the wrong columns (#322).
+  if (requireNamespace("rlistings", quietly = TRUE)) {
+    srcs$rlistings <- rlistings::as_listing(.xd(), key_cols = "SOC")
+  }
   for (nm in names(srcs)) {
     p <- rtf_plan(srcs[[nm]])
     a <- as_rtftables(srcs[[nm]], border = "tfl")[[1L]]
