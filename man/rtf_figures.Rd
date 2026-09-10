@@ -17,8 +17,10 @@ rtf_figures(
 \arguments{
 \item{doc}{An rtf_document object.}
 
-\item{figures}{A list whose elements are either character file paths to
-image files (PNG/JPEG) or pre-built \code{rtfplot} objects from \code{\link[=rtfplot]{rtfplot()}}.}
+\item{figures}{A list whose elements are character file paths to image
+files (PNG/JPEG), plot objects (a ggplot2 plot, a grob, a recorded base
+plot, a function that draws -- see \code{\link[=rtfplot]{rtfplot()}}), or pre-built \code{rtfplot}
+objects.}
 
 \item{width_twips}{Display width in twips for bare paths.  \code{NULL} = full
 writable width.}
@@ -37,10 +39,10 @@ structure (character vectors or per-row styled lists).}
 Modified rtf_document with appended figure contents.
 }
 \description{
-Append one or more image files (PNG/JPEG) as content pages. Each figure
-creates one new page. Display dimensions and alignment apply to every
-bare path in \code{figures}; elements already constructed via \code{\link[=rtfplot]{rtfplot()}} keep
-their own settings.
+Append one or more figures as content pages -- image files (PNG/JPEG) or
+plot objects. Each figure creates one new page. Display dimensions and
+alignment apply to every path and plot object in \code{figures}; elements
+already constructed via \code{\link[=rtfplot]{rtfplot()}} keep their own settings.
 }
 \examples{
 \dontrun{

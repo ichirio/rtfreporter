@@ -109,6 +109,33 @@
 
 ### New features
 
+- **A figure can be a plot object, not only a saved file** (#394).
+  `rtfplot()` and `rtf_figures()` now take a **ggplot2** plot, a **lattice**
+  trellis object, a **patchwork**, a **grid** grob or `gtable`, a base plot
+  recorded with `recordPlot()`, or a **function of no arguments that draws**
+  -- as well as the PNG/JPEG path they always took.  Writing the temporary
+  file was the caller's job for no reason: every figure in a report is a plot
+  object a moment before it is a file.
+
+  ```r
+  rtf_document() |>
+    rtf_figures(list(ggplot(dat, aes(week, mean)) + geom_line()),
+                titles = list(c("Figure 14.2.1", "Mean over time")))
+  ```
+
+  The object is drawn through `grDevices::png(res = )`, which records the
+  resolution in the PNG itself, so the figure lands at exactly
+  `render_width` x `render_height` inches (default 6.5 x 4.5) and
+  `render_dpi` (default 300) decides only how sharp it is.  Those three are
+  refused for a file, which has a size and a resolution already.  (The
+  object carries the resolution it was drawn at rather than reading it back
+  out of the PNG: macOS's quartz device records none, and a figure that
+  fell back to 96 dpi would be half again too big there and right
+  everywhere else.)
+
+  `rtfplot()`'s first argument is renamed `path` -> `x`, since it is no
+  longer only a path.
+
 - **The measurements a wrapping rule is built on are exported** (#392):
   `listing_disp_width()`, `listing_take()` and `listing_split_after()`.
   `listing_wrap_code()` used to write these out with the rest, so every

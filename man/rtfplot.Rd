@@ -4,10 +4,28 @@
 \alias{rtfplot}
 \title{Create an RTF figure object}
 \usage{
-rtfplot(path, width_twips = NULL, height_twips = NULL, align = "center")
+rtfplot(
+  x,
+  width_twips = NULL,
+  height_twips = NULL,
+  align = "center",
+  render_width = 6.5,
+  render_height = 4.5,
+  render_dpi = 300
+)
 }
 \arguments{
-\item{path}{Path to a PNG or JPEG image file.}
+\item{x}{A figure.  Either the path to a \strong{PNG or JPEG} file (RTF's
+\verb{\\pngblip} and \verb{\\jpegblip}; no other format is emitted), or a plot
+object to draw:
+\itemize{
+\item anything that draws when printed -- a \strong{ggplot2} plot, a
+\strong{lattice} trellis object, a \strong{patchwork};
+\item a \strong{grid} grob or \code{gtable}, drawn with \code{grid::grid.draw()};
+\item a base plot recorded with \code{grDevices::recordPlot()};
+\item a \strong{function of no arguments} that draws -- the escape hatch
+for anything not covered above.
+}}
 
 \item{width_twips}{Display width in twips. \code{NULL} (default) uses the image's
 \strong{native size at its embedded DPI} (100\% scale). If only \code{height_twips} is
@@ -18,13 +36,24 @@ size at the image's DPI, or -- when \code{width_twips} is given -- the height
 derived from the native aspect ratio.}
 
 \item{align}{Horizontal alignment: \code{"center"} (default), \code{"left"}, or \code{"right"}.}
+
+\item{render_width, render_height}{Size \strong{in inches} to draw a plot object
+at (default 6.5 x 4.5, which fits a portrait letter page).  Because the
+drawn PNG records its own resolution, this is also the size the figure
+takes on the page unless \code{width_twips}/\code{height_twips} say otherwise.
+Refused for a file, which has its size already.}
+
+\item{render_dpi}{Resolution to draw a plot object at (default \code{300}).  It
+decides how sharp the figure is, \strong{not} how big: a plot drawn at 600 dpi
+occupies the same inches on the page as one drawn at 150.}
 }
 \value{
 An \code{rtfplot} (S3) object suitable for use in \code{rtf_tables()}.
 }
 \description{
-Embeds a PNG or JPEG image into the RTF output.
-The result can be passed directly to \code{rtf_tables()} in a pipe chain.
+Embeds a figure into the RTF output -- a PNG or JPEG file, or a plot object
+drawn here and then embedded.  The result can be passed directly to
+\code{\link[=rtf_figures]{rtf_figures()}} or \code{\link[=rtf_tables]{rtf_tables()}} in a pipe chain.
 }
 \details{
 The native size is read from the file's resolution metadata (PNG \code{pHYs}

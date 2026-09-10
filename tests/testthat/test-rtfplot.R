@@ -287,3 +287,79 @@ test_that("rtfplot() rejects unrecognised extension via file_ext()", {
   f <- tempfile(); file.create(f); on.exit(unlink(f), add = TRUE)
   expect_error(rtfplot(f), "PNG and JPEG")
 })
+
+# ──────── plot objects, drawn here rather than saved by hand (#394) ────────
+
+test_that("a plot object is drawn at render_width x render_height inches", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  fig <- rtfplot(function() plot(1:10), render_width = 4, render_height = 3,
+                 render_dpi = 150)
+  expect_s3_class(fig, "rtfplot")
+  expect_identical(fig$img_type, "png")
+  expect_identical(c(fig$img_width, fig$img_height), c(600L, 450L))
+  # The size on the page is the inches asked for, not the pixels, on every
+  # platform -- macOS's quartz PNG device records no resolution in the file,
+  # so the object carries the one it was drawn at (#394).
+  expect_equal(fig$dpi_x, 150)
+  disp <- rtfreporter:::.rtfplot_display_twips(fig)
+  expect_equal(disp$w / 1440, 4, tolerance = 0.01)
+  expect_equal(disp$h / 1440, 3, tolerance = 0.01)
+})
+
+test_that("render_dpi changes the sharpness, not the size", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  lo <- rtfplot(function() plot(1:10), render_width = 4, render_height = 3,
+                render_dpi = 150)
+  hi <- rtfplot(function() plot(1:10), render_width = 4, render_height = 3,
+                render_dpi = 600)
+  expect_gt(hi$img_width, lo$img_width * 3)
+  expect_equal(rtfreporter:::.rtfplot_display_twips(hi)$w,
+               rtfreporter:::.rtfplot_display_twips(lo)$w, tolerance = 0.01)
+})
+
+test_that("the kinds of object that draw are all accepted", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  expect_s3_class(rtfplot(grid::circleGrob()), "rtfplot")          # grob
+  expect_s3_class(rtfplot(function() plot(1:3)), "rtfplot")        # function
+  skip_if_not_installed("ggplot2")
+  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+  expect_s3_class(rtfplot(p), "rtfplot")                           # printed
+})
+
+test_that("a failed draw closes the device and leaves no file behind", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  before <- length(grDevices::dev.list())
+  expect_error(rtfplot(function() stop("boom")), "boom")
+  expect_identical(length(grDevices::dev.list()), before)
+})
+
+test_that("render_* are refused for a file, which has its own size", {
+  f <- .tmp_png(); on.exit(unlink(f), add = TRUE)
+  expect_error(rtfplot(f, render_dpi = 300), "a file already has a size")
+  expect_error(rtfplot(f, render_width = 4), "a file already has a size")
+  expect_s3_class(rtfplot(f), "rtfplot")          # ... and still works
+})
+
+test_that("render_* are validated", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  expect_error(rtfplot(function() plot(1), render_width = -1), "positive")
+  expect_error(rtfplot(function() plot(1), render_dpi = c(1, 2)), "positive")
+})
+
+test_that("a figure is one path or one object", {
+  expect_error(rtfplot(c("a.png", "b.png")), "one file path")
+  expect_error(rtfplot(NULL), "one file path")
+})
+
+test_that("rtf_figures() takes plot objects and renders them", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  doc <- rtf_document() |>
+    rtf_figures(list(function() plot(1:10), grid::circleGrob()),
+                titles = list(c("Figure 14.1"), c("Figure 14.2")))
+  expect_length(doc$contents, 2L)
+
+  out <- file.path(tempdir(), "rtfplot-objects.rtf")
+  on.exit(unlink(out), add = TRUE)
+  generate_rtfreport(doc, out, overwrite = TRUE)
+  expect_length(grep("pngblip", readLines(out, warn = FALSE)), 2L)
+})

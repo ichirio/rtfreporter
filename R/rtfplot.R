@@ -121,12 +121,98 @@
        native_w = native_w, native_h = native_h)
 }
 
+# ── Drawing an in-memory plot ────────────────────────────────────────────────
+#
+#  Every figure in a report is a plot object a moment before it is a file, and
+#  the file is an artefact of the old API rather than of the report (#394).  So
+#  draw the object here, into a PNG whose resolution is written into its `pHYs`
+#  chunk by the device -- which means .rtfplot_display_twips() reads it back
+#  and the figure lands at exactly `render_width` x `render_height` inches,
+#  with `render_dpi` deciding only how sharp it is.
+#
+#  Dispatch is by capability rather than by package: a grob is drawn with grid,
+#  a recorded base plot is replayed, a function of no arguments is called, and
+#  anything else is printed -- which is what makes ggplot2, lattice and
+#  patchwork work without this file naming any of them.
+
+.rtfplot_is_object <- function(x) {
+  # A path is one string.  Anything else that would draw nothing -- NULL, a
+  # vector of paths -- is refused here rather than embedded as a blank page.
+  if (is.character(x)) {
+    if (length(x) != 1L || is.na(x)) {
+      stop("A figure is one file path, or one plot object.", call. = FALSE)
+    }
+    return(FALSE)
+  }
+  # A number, a logical, a raw vector: nothing that draws.  Printing one
+  # would leave a blank page rather than say what was wrong.
+  if (is.null(x) || is.atomic(x)) {
+    stop("A figure is one file path, or one plot object; got ",
+         if (is.null(x)) "NULL" else paste0("a ", class(x)[[1L]], " vector"),
+         ".", call. = FALSE)
+  }
+  TRUE
+}
+
+.rtfplot_draw <- function(x) {
+  if (is.function(x)) {
+    x()
+  } else if (inherits(x, "recordedplot")) {
+    grDevices::replayPlot(x)
+  } else if (inherits(x, c("grob", "gTree", "gtable"))) {
+    grid::grid.draw(x)
+  } else {
+    print(x)
+  }
+  invisible(NULL)
+}
+
+# Draw `x` into a temporary PNG and return its path.  The file lives for the
+# session, which is as long as the rtfplot that points at it needs it.
+.rtfplot_render <- function(x, width, height, dpi) {
+  for (nm in c("render_width", "render_height", "render_dpi")) {
+    v <- switch(nm, render_width = width, render_height = height,
+                render_dpi = dpi)
+    if (!is.numeric(v) || length(v) != 1L || is.na(v) || v <= 0) {
+      stop(sprintf("`%s` must be a single positive number.", nm),
+           call. = FALSE)
+    }
+  }
+  if (!isTRUE(unname(capabilities("png")))) {
+    stop("This R has no PNG device, so a plot object cannot be drawn.  ",
+         "Save the figure yourself and pass the file path.", call. = FALSE)
+  }
+  path <- tempfile(fileext = ".png")
+  grDevices::png(filename = path, width = width, height = height,
+                 units = "in", res = dpi)
+  ok <- FALSE
+  on.exit({
+    grDevices::dev.off()
+    # A device left open by a failed draw would swallow every later plot.
+    if (!ok) unlink(path)
+  }, add = TRUE)
+  .rtfplot_draw(x)
+  ok <- TRUE
+  path
+}
+
 #' Create an RTF figure object
 #'
-#' Embeds a PNG or JPEG image into the RTF output.
-#' The result can be passed directly to `rtf_tables()` in a pipe chain.
+#' Embeds a figure into the RTF output -- a PNG or JPEG file, or a plot object
+#' drawn here and then embedded.  The result can be passed directly to
+#' [rtf_figures()] or [rtf_tables()] in a pipe chain.
 #'
-#' @param path Path to a PNG or JPEG image file.
+#' @param x A figure.  Either the path to a **PNG or JPEG** file (RTF's
+#'   `\pngblip` and `\jpegblip`; no other format is emitted), or a plot
+#'   object to draw:
+#'   \itemize{
+#'     \item anything that draws when printed -- a **ggplot2** plot, a
+#'       **lattice** trellis object, a **patchwork**;
+#'     \item a **grid** grob or `gtable`, drawn with `grid::grid.draw()`;
+#'     \item a base plot recorded with `grDevices::recordPlot()`;
+#'     \item a **function of no arguments** that draws -- the escape hatch
+#'       for anything not covered above.
+#'   }
 #' @param width_twips Display width in twips. `NULL` (default) uses the image's
 #'   **native size at its embedded DPI** (100% scale). If only `height_twips` is
 #'   given, the width is derived from the native aspect ratio.
@@ -134,6 +220,14 @@
 #'   size at the image's DPI, or -- when `width_twips` is given -- the height
 #'   derived from the native aspect ratio.
 #' @param align Horizontal alignment: `"center"` (default), `"left"`, or `"right"`.
+#' @param render_width,render_height Size **in inches** to draw a plot object
+#'   at (default 6.5 x 4.5, which fits a portrait letter page).  Because the
+#'   drawn PNG records its own resolution, this is also the size the figure
+#'   takes on the page unless `width_twips`/`height_twips` say otherwise.
+#'   Refused for a file, which has its size already.
+#' @param render_dpi Resolution to draw a plot object at (default `300`).  It
+#'   decides how sharp the figure is, **not** how big: a plot drawn at 600 dpi
+#'   occupies the same inches on the page as one drawn at 150.
 #'
 #' @details
 #' The native size is read from the file's resolution metadata (PNG `pHYs`
@@ -159,8 +253,22 @@
 #' }
 #'
 #' @export
-rtfplot <- function(path, width_twips = NULL, height_twips = NULL,
-                    align = "center") {
+rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
+                    align = "center", render_width = 6.5,
+                    render_height = 4.5, render_dpi = 300) {
+  drawn <- .rtfplot_is_object(x)
+  if (drawn) {
+    path <- .rtfplot_render(x, render_width, render_height, render_dpi)
+  } else {
+    given <- c(!missing(render_width), !missing(render_height),
+               !missing(render_dpi))
+    if (any(given)) {
+      stop("`render_width`, `render_height` and `render_dpi` say how to draw ",
+           "a plot object; a file already has a size and a resolution.",
+           call. = FALSE)
+    }
+    path <- x
+  }
   if (!file.exists(path)) {
     stop(sprintf("Image file not found: %s", path), call. = FALSE)
   }
@@ -172,6 +280,14 @@ rtfplot <- function(path, width_twips = NULL, height_twips = NULL,
 
   dims <- if (img_type == "png") .read_png_dims(path) else .read_jpeg_dims(path)
   density <- if (img_type == "png") .read_png_density(path) else .read_jpeg_density(path)
+  if (drawn) {
+    # We drew it, so we know its resolution: take it from `render_dpi` rather
+    # than reading back what the device recorded.  macOS's quartz PNG device
+    # writes no `pHYs` chunk at all, and a figure that silently fell back to
+    # 96 dpi would be half again too big on the page there and correct
+    # everywhere else -- the worst kind of platform difference.
+    density <- list(dpi_x = render_dpi, dpi_y = render_dpi)
+  }
 
   if (!align %in% c("left", "center", "right")) {
     stop("`align` must be 'left', 'center', or 'right'.", call. = FALSE)

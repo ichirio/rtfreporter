@@ -617,14 +617,16 @@ rtf_tables <- function(doc, tables,
 
 #' Add figure content to document
 #'
-#' Append one or more image files (PNG/JPEG) as content pages. Each figure
-#' creates one new page. Display dimensions and alignment apply to every
-#' bare path in `figures`; elements already constructed via [rtfplot()] keep
-#' their own settings.
+#' Append one or more figures as content pages -- image files (PNG/JPEG) or
+#' plot objects. Each figure creates one new page. Display dimensions and
+#' alignment apply to every path and plot object in `figures`; elements
+#' already constructed via [rtfplot()] keep their own settings.
 #'
 #' @param doc An rtf_document object.
-#' @param figures A list whose elements are either character file paths to
-#'   image files (PNG/JPEG) or pre-built `rtfplot` objects from [rtfplot()].
+#' @param figures A list whose elements are character file paths to image
+#'   files (PNG/JPEG), plot objects (a ggplot2 plot, a grob, a recorded base
+#'   plot, a function that draws -- see [rtfplot()]), or pre-built `rtfplot`
+#'   objects.
 #' @param width_twips Display width in twips for bare paths.  `NULL` = full
 #'   writable width.
 #' @param height_twips Display height in twips for bare paths.  `NULL` =
@@ -653,7 +655,8 @@ rtf_figures <- function(doc, figures,
   }
 
   if (!is.list(figures)) {
-    stop("`figures` must be a list of file paths or rtfplot() objects",
+    stop("`figures` must be a list of file paths, plot objects or ",
+         "rtfplot() objects",
          call. = FALSE)
   }
 
@@ -663,13 +666,13 @@ rtf_figures <- function(doc, figures,
     if (inherits(fig, "rtfplot")) {
       return(fig)
     }
-    if (!is.character(fig) || length(fig) != 1L) {
-      stop("Item ", i,
-           " must be a single character file path or an rtfplot() object",
-           call. = FALSE)
-    }
-    rtfplot(path = fig, width_twips = width_twips,
-            height_twips = height_twips, align = align)
+    # rtfplot() knows what can be drawn; say which item it was.
+    tryCatch(
+      rtfplot(fig, width_twips = width_twips,
+              height_twips = height_twips, align = align),
+      error = function(e) {
+        stop("Item ", i, ": ", conditionMessage(e), call. = FALSE)
+      })
   })
 
   .validate_parallel <- function(x, n, name) {
