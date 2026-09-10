@@ -177,6 +177,9 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
   huxtable objects in with
   [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html)
 - **Pagination** — [splitting long tables across pages](https://ichirio.github.io/rtfreporter/articles/pagination.html)
+- **Listings** — [source data to the written RTF](https://ichirio.github.io/rtfreporter/articles/listings.html),
+  including the column-width estimator and the wrapping rule
+- **Figures** — [a plot object to a page](https://ichirio.github.io/rtfreporter/articles/figures.html)
 - **Headers & footers** — [section-based running headers](https://ichirio.github.io/rtfreporter/articles/headers-footers.html)
 - **Borders and rules** — [the clinical TFL frame](https://ichirio.github.io/rtfreporter/articles/borders.html)
 - **Worked clinical examples** — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
@@ -189,24 +192,31 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 `lifecycle: experimental` badge; the API may still change in
 backward-incompatible ways before v1.0.0.
 
-- **Latest release: `v0.4.0`** — the current stable version, installable from
-  GitHub (`remotes::install_github("ichirio/rtfreporter@v0.4.0")`); not yet on
-  CRAN. It adds the flextable & huxtable adapters, `group_by` group-detection
+- **Latest release: `v0.4.0`** (2026-06-16) -- installable from GitHub
+  (`remotes::install_github("ichirio/rtfreporter@v0.4.0")`); not yet on CRAN.
+  It added the flextable & huxtable adapters, `group_by` group-detection
   modes, document-wide style defaults, configurable `rtfreporter.*` options,
-  `collapse_repeats`, `blank_row_normalize`, and a corrected multi-page page
-  break — see [`NEWS.md`](NEWS.md).
-- **Development version on `main`** tracks ongoing work; each pull request
-  advances only the development *patch* number. A MINOR/MAJOR bump is a
-  deliberate, labelled release action (enforced by the `version-guard` CI), not
-  an accident.
+  `collapse_repeats`, `blank_row_normalize` and a corrected multi-page page
+  break.
+- **Development version on `main`** has moved a long way since: **listings**
+  end to end (`listing_col()` / `listing_spec()` / `build_listing()`, the
+  column-width estimator `fit_listing_widths()`, and an editable wrapping
+  rule), the **merged stub** (`stub_cols()` / `stub_spec()`), a rewritten
+  **border** vocabulary, a table-width vocabulary shared by `rtftable()` and
+  `as_rtftables()`, and **figures from plot objects** rather than saved files.
+  See [`NEWS.md`](NEWS.md).
+- Each pull request advances only the development *patch* number. A
+  MINOR/MAJOR bump is a deliberate, labelled release action (enforced by the
+  `version-guard` CI), not an accident -- which is why the development
+  version has run past the milestone numbers below without releasing them.
 
 Planned release milestones:
 
 | Version | Goal |
 |---------|------|
-| **v0.5.0** | CRAN-submission **preparation** — full `R CMD check --as-cran` clean, increased test coverage, documentation/metadata polish. |
-| **v0.6.0** | **CRAN registration** — initial CRAN release. |
-| **v1.0.0** | **Stable API** — the `lifecycle: experimental` badge is removed; "the API may change" wording is dropped. |
+| **v0.8.0** | CRAN-submission **preparation** -- full `R CMD check --as-cran` clean, increased test coverage, documentation/metadata polish. |
+| **v0.9.0** | **CRAN registration** -- initial CRAN release. |
+| **v1.0.0** | **Stable API** -- the `lifecycle: experimental` badge is removed; "the API may change" wording is dropped. |
 
 See [`NEWS.md`](NEWS.md) for the user-facing changelog and
 [`CHANGELOG.md`](CHANGELOG.md) for detailed per-version notes.

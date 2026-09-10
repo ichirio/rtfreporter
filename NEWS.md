@@ -553,6 +553,26 @@ Diagnosis")
 
 ### Documentation
 
+- **An article for figures** (#396).  Figures had one section of "Adding
+  content" and nothing of their own, and that section still told the reader
+  to save a PNG by hand.  The new article answers what a figure actually
+  raises: a plot object straight onto a page; what decides its size (inches,
+  not pixels -- with a worked table showing `render_dpi` changing the file
+  and not the page); how to span the writable width of your own page; where a
+  file's native size comes from and what happens when it records none; and
+  why PNG and JPEG are the only formats embedded.  Every chunk is evaluated.
+
+- **The listings and figures articles are on the site's navigation and in the
+  README** (#396).  The listings article (#358) had been reachable only by
+  URL since it was written.
+
+- **The roadmap says where the package actually is** (#396).  It still named
+  `v0.4.0` as the current work and planned milestones at `v0.5.0`/`v0.6.0`,
+  numbers the development version had long passed.  The milestones move to
+  `v0.8.0` (CRAN-submission preparation), `v0.9.0` (CRAN registration) and
+  `v1.0.0` (stable API), and the status now lists what has landed since
+  `v0.4.0`.
+
 - **`listing_spec(wrap = )` states its contract, so writing one needs no
   look at the source** (#386).  `?listing_spec` now says what a `wrap`
   function is called with -- positionally, with `text` (always length 1),
