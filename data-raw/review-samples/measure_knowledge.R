@@ -6,7 +6,7 @@
 # how much you must hold in your head, and how much of it you cannot read
 # off your own data.
 
-setwd("C:/Users/ichir/AppData/Local/Temp/claude/C--Users-ichir/0e8953d4-534f-4543-9b50-71c7b61ba96a/scratchpad/plan-wt")
+# Run from the repository root (the package worktree).
 suppressMessages(pkgload::load_all(".", quiet = TRUE))
 
 rule <- function() cat(strrep("-", 78), "\n")
@@ -16,7 +16,7 @@ cat("\n############ 1. NAMES YOU MUST KNOW ############\n\n")
 old_args <- c("stub_vars", "stub_label", "drop_cols", "group_col", "group_by",
               "blank_rows", "count_blank_rows", "split", "max_rows", "border",
               "column_widths_twips", "col_spec")
-new_fns  <- c("rtf_plan_from", "plan_stub", "plan_roles", "plan_hide",
+new_fns  <- c("rtf_plan", "plan_stub", "plan_roles", "plan_hide",
               "plan_group", "plan_blanks", "plan_pages", "plan_style")
 new_args <- c("label", "order", "align", "mode", "max_rows", "border", "widths")
 
@@ -67,22 +67,24 @@ probe <- function(lbl, expr) {
 cat("OLD -- name the stub column the way it appears in your data:\n")
 probe('group_col = "SOC"', quote(as_rtftables(ae2, stub_vars=c("SOC","PT"), group_col="SOC")))
 probe('sort_by  = "PT"',   quote(as_rtftables(ae2, stub_vars=c("SOC","PT"), sort_by="PT")))
-cat("\nOLD -- put group_col inside the split strategy instead of at top level:\n")
+cat("\nOLD -- the second declaration site for group_col (RETIRED on main, #334):\n")
 probe('split = page_split_group_safe(group_col = "SOC")',
       quote(as_rtftables(ae2, split = page_split_group_safe(group_col = "SOC"),
                          max_rows = 2, blank_rows = "between_groups")))
-cat("     (^ this one is the dangerous shape: it is ACCEPTED, and the blank\n")
-cat("        rows silently come out wrong -- see the opening post)\n")
+cat("     (^ this used to be ACCEPTED, with the blank rows silently coming out\n")
+cat("        wrong -- #328.  #334 retired the five page_split_*() factories, so\n")
+cat("        the shape no longer exists: the error above is the fix working.\n")
+cat("        Every setting now has exactly one declaration site.)\n")
 
 cat("\nNEW -- the same intent, named in source coordinates:\n")
 probe('plan_group("SOC") after plan_stub(c("SOC","PT"))',
-      quote(plan_tables(rtf_plan_from(ae2) |> plan_stub(c("SOC","PT")) |>
+      quote(plan_tables(rtf_plan(ae2) |> plan_stub(c("SOC","PT")) |>
                         plan_group("SOC", mode="indent"))))
 probe('plan_roles(PT = role("sort"))',
-      quote(plan_tables(rtf_plan_from(ae2) |> plan_stub(c("SOC","PT")) |>
+      quote(plan_tables(rtf_plan(ae2) |> plan_stub(c("SOC","PT")) |>
                         plan_roles(PT = role("sort", order = 1)))))
 probe('plan_group("NOPE") -- a column that does not exist',
-      quote(plan_tables(rtf_plan_from(ae2) |> plan_group("NOPE"))))
+      quote(plan_tables(rtf_plan(ae2) |> plan_group("NOPE"))))
 
 cat("\n############ 4. CAN YOU ADD ONE FEATURE WITHOUT TOUCHING THE REST? ############\n\n")
 cat("The question a maintainer actually faces six months later.\n\n")

@@ -1,4 +1,4 @@
-setwd("C:/Yrepo/rtfreporter")
+# Run from the repository root (the package worktree).
 
 # Read the CURRENT reference index straight out of _pkgdown.yml, so the draft
 # below is a diff against what is actually published rather than my memory.

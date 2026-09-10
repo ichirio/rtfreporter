@@ -51,14 +51,34 @@ library(rtfreporter, lib.loc = LIB_NEW)
 `detach()` が効かない場合（他パッケージが掴んでいる等）は **R を再起動**して
 ください。これが最も確実です。RStudio なら Ctrl+Shift+F10。
 
+### plan 系の関数は export していません
+
+このブランチは NAMESPACE に手を入れていません。main の
+`tests/testthat/test-api-surface.R` が export 数を数えており、spike の
+関数がそこに混ざると「公開 API がいくつか」という main 側の測定が狂うためです。
+したがって `library(rtfreporter)` だけでは `rtf_plan()` は見えません。
+
+**呼び出し方は2通りあります。**
+
+```r
+# (a) 名前空間から直接 --- R CMD INSTALL した版で使えます
+rtfreporter:::rtf_plan(df) |> rtfreporter:::plan_stub(c("SOC", "PT"))
+
+# (b) load_all --- こちらが実際のレビューでは楽です（内部が全部見えます）
+pkgload::load_all("C:/Yrepo/rtfreporter-plan")
+rtf_plan(df) |> plan_stub(c("SOC", "PT"))
+```
+
+同梱の `00_code.R` と `measure_*.R` はすべて (b) を前提に書いてあります。
+
 ### いま「どちら」を読んでいるか確かめる
 
-`DESCRIPTION` の Version は両者とも `0.4.74` です（ブランチは
-リベース衝突を避けるため DESCRIPTION に触れていません）。
+`DESCRIPTION` の Version は両者とも同じです（ブランチは DESCRIPTION に
+触れていないので、main をリベースするたび main の版数をそのまま引き継ぎます）。
 判定は**関数の有無**で行ってください。
 
 ```r
-exists("rtf_plan_from")   # FALSE = 旧 / TRUE = 新
+exists("rtf_plan", envir = asNamespace("rtfreporter"))   # FALSE = 旧 / TRUE = 新
 find.package("rtfreporter")
 ```
 
@@ -87,13 +107,18 @@ run <- function(lib, expr) {
 
 | ファイル | 内容 |
 |---|---|
-| `01_DM` | グループ化 + group-safe ページ分割（3ページ） |
+| `01_DM` | グループ化 + group-safe ページ分割（4ページ） |
 | `02_AE` | SOC / PT stub + SOC 間の空行（2ページ） |
-| `03_PK` | Time / Statistic stub、VISIT を列方向（3ページ） |
+| `03_PK` | Time / Statistic stub、VISIT を列方向（4ページ） |
 | `04_LB` | 印字しない列でグループ化（1ページ） |
 | `05_AE_by_SOC` | SOC ごとに1ページ、ページ名付き（4ページ） |
 
 5組すべて **RTF がバイト単位で一致**しています。
+
+以前は 01_DM / 02_AE / 03_PK の3件で、旧側だけがページ最終行の後ろに空行を
+出していました（計7箇所）。main の #362 が `count_blank_rows = TRUE` の下で
+ページ端の空行を数えるようになり、この差は消えています。
+`measure_remaining_diff.R` で確認できます。
 
 ### 一致の確認方法
 

@@ -9,7 +9,7 @@
 # Writes, per case:  <id>_old.rtf, <id>_new.rtf
 # and 00_code.R with both spellings side by side.
 
-setwd("C:/Users/ichir/AppData/Local/Temp/claude/C--Users-ichir/0e8953d4-534f-4543-9b50-71c7b61ba96a/scratchpad/plan-wt")
+# Run from the repository root (the package worktree).
 suppressMessages(pkgload::load_all(".", quiet = TRUE))
 
 OUT <- "data-raw/review-samples"
