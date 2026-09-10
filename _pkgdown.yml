@@ -109,6 +109,10 @@ navbar:
           href: articles/page-setup.html
         - text: "Adding tables and figures"
           href: articles/adding-content.html
+        - text: "Figures: plot objects to pages"
+          href: articles/figures.html
+        - text: "Listings: source data to RTF"
+          href: articles/listings.html
         - text: "Borders and rules"
           href: articles/borders.html
         - text: "Importing tables with as_rtftables()"

@@ -224,10 +224,15 @@ rtftable(df_rel, markup = "none")      # no markup at all (everything literal)
 
 ## Figures
 
-Images are content too: one figure per page, added with `rtf_figures()`. Pass a
-list of image paths (PNG/JPEG) or `rtfplot()` objects; `width_twips` /
-`height_twips` / `align` control the display, and `titles` / `footnotes` work
-exactly as for tables.
+Figures are content too: one figure per page, added with `rtf_figures()`. Pass a
+list of **plot objects** (a ggplot2 plot, a grid grob, a function that draws --
+see the [figures article](figures.html)), image paths (PNG/JPEG), or
+`rtfplot()` objects; `width_twips` / `height_twips` / `align` control the
+display, and `titles` / `footnotes` work exactly as for tables.
+
+```{r figure-object, eval = FALSE}
+rtf_figures(list(ggplot(dat, aes(week, mean)) + geom_line()))  # no file needed
+```
 
 **By default a figure embeds at its native size (100%)** -- the pixel dimensions
 divided by the image's own DPI (read from the PNG `pHYs` chunk / JPEG JFIF
@@ -267,6 +272,7 @@ See `?rtf_tables` and `?rtf_figures` for the full argument reference.
 
 ## Where next
 
+- [Figures](figures.html) --- plot objects, size on the page, formats
 - [Borders](borders.html) --- how a table gets its rules
 - [Sections](section-splitting.html) --- when one document needs more than one header
 
