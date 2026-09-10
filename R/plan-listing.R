@@ -89,6 +89,11 @@ plan_listing <- function(plan, ..., type = NULL, sep = NULL, spacer = NULL,
          "produced, and it carries its own spec.  Drop plan_listing(), or ",
          "start the plan from the unbuilt source data.", call. = FALSE)
   }
+  if (identical(plan$source$kind, "rlistings")) {
+    stop("`plan_listing()` does not apply to an rlistings listing ",
+         "(`listing_df`): rlistings has already laid it out.  Drop ",
+         "plan_listing() and let the plan render it as it is.", call. = FALSE)
+  }
   cols <- list(...)
   # A single list of columns is accepted as well as columns spread over `...`,
   # because listing_spec() takes a list and copying an existing one across
