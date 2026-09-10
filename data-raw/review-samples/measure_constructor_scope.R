@@ -1,11 +1,11 @@
-setwd("C:/Yrepo/rtfreporter")
+# Run from the repository root (the package worktree).
 suppressMessages(devtools::load_all(".", quiet = TRUE))
 
 df <- data.frame(A = c("a", "b"), B = c("1", "2"), stringsAsFactors = FALSE)
 tb <- rtftable(df, border = "tfl")
 
 bd  <- rtf_border(top = rtf_border_side("single"))
-tbd <- rtf_table_border(body = bd)
+tbd <- suppressWarnings(rtf_table_border(body = bd))   # deprecated on main (#342)
 sty <- rtf_table_style(border_body = bd)
 cc  <- col_cell(1L, "X")
 ch  <- rtf_col_header(c("A", "B"))
@@ -33,7 +33,8 @@ accepts <- function(fun, arg, value, ...) {
 m <- function(x) if (isTRUE(x)) "o" else "-"
 
 cat("値のコンストラクタは、どこで使えるか\n")
-cat("（o = その関数のその引数に渡せる / - = 渡せない、または引数が無い）\n\n")
+cat("（o = その関数のその引数に渡せる / - = 渡せない、または引数が無い）\n")
+cat("（* = main で非推奨。動きますがセッション1回だけ警告します）\n\n")
 cat(sprintf("%-22s %-9s %-11s %-9s %-11s %-9s %s\n",
             "コンストラクタ", "rtftable", "plan_style", "style_*",
             "rtf_default_", "rtf_tables", "その他"))
@@ -53,11 +54,11 @@ row("rtf_border()",
                                   label = "X")),
            " rtf_table_border:", m(accepts("rtf_table_border", "body", bd))))
 
-row("rtf_table_border()",
+row("rtf_table_border()*",
     accepts("rtftable", "border", tbd, data = df),
     accepts("plan_style", "border", tbd, plan = rtf_plan(df)),
     accepts("style_body", "border", bd, x = tb, rows = 1L),
-    accepts("rtf_default_format", "border", tbd),
+    suppressWarnings(accepts("rtf_default_format", "border", tbd)),
     accepts("rtf_tables", "border", tbd, doc = rtf_document(), tables = tb),
     "")
 
@@ -122,3 +123,8 @@ for (a in c("font_size_half_points", "row_height_twips")) {
       m(a %in% names(formals(plan_style))),
       m(a %in% names(formals(rtf_tables)))))
 }
+
+cat("\n=== 辺そのものを書く値 ===\n")
+cat("  rtf_border_side()  -- rtf_border() の top/bottom/left/right/all/inside_*\n")
+cat("     の各スロットにだけ渡します。border= を取る関数に直接は渡しません。\n")
+cat("     TRUE / FALSE / \"none\" はこの値の略記です（#348）。\n")

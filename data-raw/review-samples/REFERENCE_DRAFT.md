@@ -8,6 +8,10 @@
 
 ---
 
+### Start here — four complete recipes
+
+- `rtfreporter-recipes()`
+
 ### Document & rendering
 
 - `rtf_document()`
@@ -62,7 +66,7 @@
 - `plan_header()`  **NEW**
 - `plan_tables()`  **NEW**
 
-### Importing tables (gt / gtsummary / rtables → rtftable)
+### Importing tables (gt / gtsummary / rtables / rlistings → rtftable)
 
 > `as_rtftables()` / `as_rtftable()` / `stub_spec()` は plan 系に置き換わるため Deprecated へ移動。
 > `combine_sections()` と `stub_cols()` は残ります（`stub_cols()` は plan が内部で使用）。
@@ -72,6 +76,18 @@
 - `combine_sections()`
 - `stub_cols()`
 - ~~`stub_spec()`~~
+
+### Listings (source data → listing body)
+
+- `listing_col()`
+- `listing_spec()`
+- `build_listing()`
+- `fit_listing_widths()`
+- `listing_code()`
+- `listing_wrap()`
+- `listing_wrap_code()`
+- `listing_measures()`
+- `catx()`
 
 ### Column headers
 
@@ -115,7 +131,6 @@
 > `page_split_*()` 5関数は `plan_pages()` に置き換わるため Deprecated へ移動。
 > `paginate_cols()` と `add_cont_label()` は残ります（plan 未対応のため必須）。
 
-- ~~`page_split()`~~
 - `paginate_cols()`
 - `add_cont_label()`
 
@@ -123,13 +138,6 @@
 
 - `rtf_border_side()`
 - `rtf_border()`
-- `rtf_border_with()`
-- `rtf_border_none()`
-- `rtf_border_top()`
-- `rtf_border_bottom()`
-- `rtf_border_box()`
-- `rtf_table_border()`
-- `rtf_border_tfl()`
 
 ### Shared table styles (S3, snapshot)
 
@@ -165,9 +173,15 @@
 
 - `rtf_replace_text()`
 
-### Deprecated
+### Superseded
 
 - `paginate()`
+
+### Deprecated -- scheduled for removal
+
+- `rtf_border_with()`
+- `rtf_table_border()`
+- `rtf_border_tfl()`
 
 ---
 

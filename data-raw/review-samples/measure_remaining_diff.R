@@ -1,11 +1,13 @@
-setwd("C:/Users/ichir/AppData/Local/Temp/claude/C--Users-ichir/0e8953d4-534f-4543-9b50-71c7b61ba96a/scratchpad/plan-wt")
+# Run from the repository root (the package worktree).
 suppressMessages(pkgload::load_all(".", quiet = TRUE))
 src <- new.env()
 code <- readLines("data-raw/review-samples/generate.R")
 stop_at <- grep("^# ------------------------------------------------------------- render ----", code)
 eval(parse(text = paste(code[seq_len(stop_at - 1L)], collapse = "\n")), envir = src)
 
-cat("Is every remaining difference the trailing blank row?\n\n")
+cat("Is every remaining difference the trailing blank row?\n")
+cat("(main #362 counts the page-edge blanks, so the answer is now: there
+ are none left.)\n\n")
 for (cs in src$cases) {
   o <- cs$old(); n <- cs$new()
   extra <- 0L; other <- character(0)
@@ -29,5 +31,6 @@ for (cs in src$cases) {
   }
   cat(sprintf("  %-14s extra blanks in old: %d   %s\n", cs$id, extra,
               if (length(other)) paste("OTHER:", paste(other, collapse="; "))
+              else if (extra == 0L) "no difference"
               else "all of them at the page's last row"))
 }
