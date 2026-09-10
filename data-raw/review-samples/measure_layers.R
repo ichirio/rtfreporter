@@ -8,6 +8,11 @@
 # The `rtf_plan_from()` shorthand this file used to measure as a third column
 # was retired: 21 arguments were not easier to learn than 30, and it gave the
 # package a second place to write a setting.  There is one spelling now.
+#
+# 06_LST is the case where the old side wins on characters by the largest
+# margin, and it is worth seeing why: `listing = listing_spec(...)` is one
+# argument that sets four others (group_col, group_by, split, drop_cols).
+# Short, and four facts you cannot read off the call.
 
 # Run from the repository root (the package worktree).
 suppressMessages(pkgload::load_all(".", quiet = TRUE))
@@ -45,6 +50,17 @@ cases <- list(
   plan_group("SOC", mode = "indent") |>
   plan_blanks("between_groups") |>
   plan_pages(max_rows = 12) |>
+  plan_style(border = "tfl")'),
+
+  list(id = "06_LST", feats = 5,
+       old = 'ad_sorted <- ad[order(ad$ORD), ]
+as_rtftables(ad_sorted, listing = listing_spec(listing_cols),
+             max_rows = 16, border = "tfl")',
+       layer = 'rtf_plan(ad) |>
+  plan_listing(listing_cols) |>
+  plan_roles(ORD = role("sort")) |>
+  plan_blanks(first = TRUE) |>
+  plan_pages(max_rows = 16) |>
   plan_style(border = "tfl")'),
 
   list(id = "FULLSET", feats = 10,
