@@ -42,8 +42,16 @@
 #          declared, otherwise the source unchanged)
 #   src    per output row: the source row it came from, NA when synthesised
 #   n      number of output rows
-.plan_resolve_rows <- function(columns, d, style = NULL) {
-  src <- seq_len(nrow(d))
+#
+# `src0` seeds the map for a body that has ALREADY been reshaped once -- a
+# listing, whose rows are physical lines belonging to a source record.  The
+# stub then composes onto it exactly as it composes onto the identity map, so
+# there is still one row map and no listing-specific translation anywhere.
+.plan_resolve_rows <- function(columns, d, style = NULL, src0 = NULL) {
+  src <- if (is.null(src0)) seq_len(nrow(d)) else as.integer(src0)
+  if (length(src) != nrow(d)) {
+    stop("`src0` must have one element per row of the body.", call. = FALSE)
+  }
 
   # 1. SORT first, so the stub's hierarchy runs, the group detection and every
   #    blank position all see the same order -- the reason as_rtftables() sorts
@@ -82,12 +90,12 @@
     d <- .realign_count_pct_df(d)
   }
 
-  # 4. COLLAPSE repeated values, addressed BY NAME through the column map.
-  if (length(columns$collapse)) {
-    idx <- unname(columns$body_map[columns$collapse])
-    idx <- unique(idx[!is.na(idx)])
-    if (length(idx)) d <- .collapse_repeats_chunk(d, idx)
-  }
+  # COLLAPSE repeated values is deliberately NOT here.  It runs per page, in
+  # plan_tables(), which is where `.paginate_df()` runs it too: a run that
+  # continues across a page break must show its value again at the top of the
+  # next page, and a body-wide pass cannot know where the breaks fell.  Doing
+  # it here silently dropped the first value of every continued run -- found by
+  # diffing a listing's RTF against as_rtftables(), not by reading either.
 
   list(body = d, src = src, n = nrow(d))
 }
