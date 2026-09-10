@@ -505,6 +505,7 @@ articles:
       - rtfreporter-pipes
       - articles/page-setup
       - articles/adding-content
+      - articles/figures
       - articles/borders
       - gt-integration
       - articles/importing-tables
