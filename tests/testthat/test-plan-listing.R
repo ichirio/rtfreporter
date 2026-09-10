@@ -290,3 +290,25 @@ test_that("a role on a column the listing consumed is refused, by name", {
                    plan_roles(BRCA = role("display", align = "right"))),
     "consumed the source column")
 })
+
+# ── rlistings ──────────────────────────────────────────────────────────────
+
+test_that("an rlistings listing is read as one, not as a plain data.frame", {
+  skip_if_not_installed("rlistings")
+  d <- data.frame(SOC = c("A", "A", "B"), PT = c("p1", "p2", "p3"),
+                  N = c("1", "2", "3"), stringsAsFactors = FALSE)
+  l <- rlistings::as_listing(d, key_cols = "SOC", disp_cols = c("PT", "N"))
+  # A listing_df IS a data.frame subclass, so a dispatch that forgets it does
+  # not error -- it silently drops disp_cols, key suppression and titles (#322).
+  a <- as_rtftables(l, border = "tfl")
+  b <- rtf_plan(l) |> plan_style(border = "tfl") |> rtf_pages()
+  .same(a, b, "rlistings source")
+})
+
+test_that("plan_listing() is refused on a listing rlistings already laid out", {
+  skip_if_not_installed("rlistings")
+  d <- data.frame(SOC = c("A", "B"), PT = c("p1", "p2"),
+                  stringsAsFactors = FALSE)
+  l <- rlistings::as_listing(d, key_cols = "SOC")
+  expect_error(rtf_plan(l) |> plan_listing("PT"), "already laid it out")
+})
