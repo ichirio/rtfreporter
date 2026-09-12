@@ -63,13 +63,17 @@ data.frames -- a \code{list()} mixing table objects and data.frames shares one
 \code{read_meta}, so adapter tokens must not error on the data.frame elements.}
 
 \item{max_rows}{Integer or \code{NULL}.  Maximum body rows per page for the
-\code{"group_safe"} / \code{"group_force"} splits (required by them).  Ignored by
-\code{"none"}, \code{"rows"} (which uses \code{split_rows}) and \code{"by_value"}.}
+\code{"group_safe"} / \code{"group_force"} splits (required by them).  \strong{This is the
+setting for fixed-size pages} -- \code{max_rows = 25} gives pages of 25 rows.
+Ignored by \code{"none"}, \code{"rows"} (which cuts at the positions in
+\code{split_rows}) and \code{"by_value"}.}
 
 \item{split}{How to break the body into pages. A strategy name:
 \describe{
 \item{\code{"none"}}{(default) one page; no row limit checked.}
-\item{\code{"rows"}}{fixed chunk size; requires \code{split_rows}.}
+\item{\code{"rows"}}{cut before each row position given in \code{split_rows};
+requires \code{split_rows}.  For fixed-size pages use \code{"group_safe"} /
+\code{"group_force"} with \code{max_rows}.}
 \item{\code{"group_safe"}}{fill up to \code{max_rows} but never split a group
 (defined by \code{group_col}) across a page; requires \code{max_rows}.}
 \item{\code{"group_force"}}{like \code{"group_safe"}, but a single group larger than
@@ -88,8 +92,11 @@ style replication) is applied to its output unchanged.  Write the function
 with a \code{...} so it tolerates the context arguments it does not use, and see
 \code{\link[=add_cont_label]{add_cont_label()}} for re-creating the \code{" (Cont.)"} continuation row.}
 
-\item{split_rows}{Integer or \code{NULL}.  Rows per page for \code{split = "rows"}
-(required by it; ignored otherwise).}
+\item{split_rows}{Integer vector or \code{NULL}.  Row \strong{positions} to cut
+before, for \code{split = "rows"} (required by it; ignored otherwise).
+\code{split_rows = c(20, 40)} yields pages \code{1:19}, \code{20:39}, \code{40:nrow}.  It is
+not a page size: for pages of a fixed number of rows use \code{max_rows} with
+\code{split = "group_safe"} or \code{"group_force"}.}
 
 \item{group_col}{Character, integer, or \code{NULL}.  The column the group-aware
 splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"}) detect groups on,
@@ -563,9 +570,15 @@ df <- data.frame(
 pages <- as_rtftables(df)               # length-1 list of rtftable
 length(pages)
 
-# Fixed-size pagination: 3 body rows per page.
-pages <- as_rtftables(df, split = "rows", split_rows = 3)
-length(pages)                           # 2 pages
+# Cut before the given row positions: pages 1:3, 4:5, 6:6.
+pages <- as_rtftables(df, split = "rows", split_rows = c(4, 6))
+vapply(pages, function(p) nrow(p$data), integer(1))   # 3 2 1
+
+# Fixed-size pages -- a different setting.  `"group_force"` also repeats the
+# group label as a "(Cont.)" row when a cut lands inside a group, so the six
+# body rows come out as four pages of two rather than three.
+pages <- as_rtftables(df, split = "group_force", max_rows = 2)
+vapply(pages, function(p) nrow(p$data), integer(1))   # 2 2 2 2
 
 # Blank separator rows: after row 3 and after the last row.
 pages <- as_rtftables(df, blank_rows = c(3, -1))

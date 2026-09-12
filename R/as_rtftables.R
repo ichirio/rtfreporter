@@ -219,7 +219,9 @@
 #' @param split How to break the body into pages. A strategy name:
 #'   \describe{
 #'     \item{`"none"`}{(default) one page; no row limit checked.}
-#'     \item{`"rows"`}{fixed chunk size; requires `split_rows`.}
+#'     \item{`"rows"`}{cut before each row position given in `split_rows`;
+#'       requires `split_rows`.  For fixed-size pages use `"group_safe"` /
+#'       `"group_force"` with `max_rows`.}
 #'     \item{`"group_safe"`}{fill up to `max_rows` but never split a group
 #'       (defined by `group_col`) across a page; requires `max_rows`.}
 #'     \item{`"group_force"`}{like `"group_safe"`, but a single group larger than
@@ -238,10 +240,15 @@
 #'   with a `...` so it tolerates the context arguments it does not use, and see
 #'   [add_cont_label()] for re-creating the `" (Cont.)"` continuation row.
 #' @param max_rows Integer or `NULL`.  Maximum body rows per page for the
-#'   `"group_safe"` / `"group_force"` splits (required by them).  Ignored by
-#'   `"none"`, `"rows"` (which uses `split_rows`) and `"by_value"`.
-#' @param split_rows Integer or `NULL`.  Rows per page for `split = "rows"`
-#'   (required by it; ignored otherwise).
+#'   `"group_safe"` / `"group_force"` splits (required by them).  **This is the
+#'   setting for fixed-size pages** -- `max_rows = 25` gives pages of 25 rows.
+#'   Ignored by `"none"`, `"rows"` (which cuts at the positions in
+#'   `split_rows`) and `"by_value"`.
+#' @param split_rows Integer vector or `NULL`.  Row **positions** to cut
+#'   before, for `split = "rows"` (required by it; ignored otherwise).
+#'   `split_rows = c(20, 40)` yields pages `1:19`, `20:39`, `40:nrow`.  It is
+#'   not a page size: for pages of a fixed number of rows use `max_rows` with
+#'   `split = "group_safe"` or `"group_force"`.
 #' @param group_col Character, integer, or `NULL`.  The column the group-aware
 #'   splits (`"group_safe"`, `"group_force"`, `"by_value"`) detect groups on,
 #'   given by name or position.  `NULL` (default) uses **column 1**.  This
@@ -600,9 +607,15 @@
 #' pages <- as_rtftables(df)               # length-1 list of rtftable
 #' length(pages)
 #'
-#' # Fixed-size pagination: 3 body rows per page.
-#' pages <- as_rtftables(df, split = "rows", split_rows = 3)
-#' length(pages)                           # 2 pages
+#' # Cut before the given row positions: pages 1:3, 4:5, 6:6.
+#' pages <- as_rtftables(df, split = "rows", split_rows = c(4, 6))
+#' vapply(pages, function(p) nrow(p$data), integer(1))   # 3 2 1
+#'
+#' # Fixed-size pages -- a different setting.  `"group_force"` also repeats the
+#' # group label as a "(Cont.)" row when a cut lands inside a group, so the six
+#' # body rows come out as four pages of two rather than three.
+#' pages <- as_rtftables(df, split = "group_force", max_rows = 2)
+#' vapply(pages, function(p) nrow(p$data), integer(1))   # 2 2 2 2
 #'
 #' # Blank separator rows: after row 3 and after the last row.
 #' pages <- as_rtftables(df, blank_rows = c(3, -1))
