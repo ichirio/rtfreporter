@@ -109,6 +109,25 @@
 
 ### New features
 
+- **Page-number tokens now work in titles and footnotes, not only in the
+  header and footer bands** (#398).  `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`,
+  `{SECTION_PAGES}`, `{PAGE}` and `{TOTAL_PAGES}` mean the same thing in every
+  band.  Before this they passed through the title band as literal text, and
+  the footnote band resolved them only under `footnote_format = "table"` --
+  switching to `"text"` dropped them silently.
+
+  This is where sponsors actually put a per-table page number when it is not
+  in the page margin: alongside the table, so it travels with it.  Novartis
+  writes it into the title line itself (`Table 6-3.7 (Page 123 of 294)`);
+  Amgen puts it in the footnote block, right-aligned above the `Program:`
+  line.
+
+  A static `{PAGE}` costs nothing in these bands.  The title and footnote are
+  re-emitted for every page, so each page bakes its own number -- unlike a
+  header, where the same token forces one RTF section per page.
+
+  Header and footer output is unchanged.
+
 - **A figure can be a plot object, not only a saved file** (#394).
   `rtfplot()` and `rtf_figures()` now take a **ggplot2** plot, a **lattice**
   trellis object, a **patchwork**, a **grid** grob or `gtable`, a base plot

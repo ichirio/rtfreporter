@@ -295,7 +295,16 @@
   # escaping.  Either way braces come out as \{ \}, so the token
   # substitutions below still match.
   out <- if (length(markup)) .format_cell_text(x, markup) else .rtf_escape(x)
+  .substitute_page_tokens(out, current_page, total_pages)
+}
 
+# The substitution half of `.render_tokens()`, on text that is ALREADY escaped.
+#
+# Split out so the bands that do their own escaping -- the title and footnote
+# blocks, which run the text through `.format_cell_text()` themselves -- resolve
+# the same five tokens with the same semantics, instead of printing them
+# literally (#398).  Header / footer keep going through `.render_tokens()`.
+.substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
   # Dynamic per-page page number: viewer-rendered.
   out <- gsub("\\{AUTO_PAGE\\}", "\\chpgn ", out, fixed = TRUE)
 
@@ -1665,7 +1674,9 @@
                                       color_index_map = NULL,
                                       doc_row_height = NULL,
                                       markup = "script", style = NULL,
-                                      font_index_map = list()) {
+                                      font_index_map = list(),
+                                      current_page = NULL,
+                                      total_pages = NULL) {
   rows <- .normalize_text_block(block, is_footer, style$align)
   if (length(rows) == 0L) return(character())
 
@@ -1690,7 +1701,8 @@
     } else {
       color_idx <- if (!is.null(rec$color) && !is.null(color_index_map))
                      color_index_map[[rec$color]] else NULL
-      txt <- .format_cell_text(rec$text, markup)
+      txt <- .substitute_page_tokens(.format_cell_text(rec$text, markup),
+                                     current_page, total_pages)
       content <- .build_cell_content(txt, rec$align, isTRUE(rec$bold),
                                      isTRUE(rec$italic), isTRUE(rec$underline),
                                      0L, pad_l, pad_r, color_idx,
@@ -1708,7 +1720,8 @@
 .render_text_block_text <- function(block, is_footer, color_index_map = NULL,
                                     markup = "script", pad_l = 0L, pad_r = 0L,
                                     style = NULL, font_half_points = 18L,
-                                    font_index_map = list()) {
+                                    font_index_map = list(),
+                                    current_page = NULL, total_pages = NULL) {
   rows <- .normalize_text_block(block, is_footer, style$align)
   if (length(rows) == 0L) return(character())
   # Honour the document-wide cell padding as left/right paragraph indent, so the
@@ -1724,7 +1737,8 @@
     if (isTRUE(rec$blank)) {
       return(paste0("\\pard", align_cmd, indent, "\\par"))
     }
-    txt <- .format_cell_text(rec$text, markup)
+    txt <- .substitute_page_tokens(.format_cell_text(rec$text, markup),
+                                   current_page, total_pages)
     if (isTRUE(rec$underline)) txt <- paste0("\\ul ", txt, "\\ulnone ")
     if (isTRUE(rec$italic))    txt <- paste0("\\i ",  txt, "\\i0 ")
     if (isTRUE(rec$bold))      txt <- paste0("\\b ",  txt, "\\b0 ")
@@ -2235,14 +2249,16 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
                                 font_half_points = font_half_points,
                                 font_index_map = font_index_map,
                                 color_index_map, markup = doc_markup,
-                                pad_l = tf_pad_l, pad_r = tf_pad_r)
+                                pad_l = tf_pad_l, pad_r = tf_pad_r,
+                                current_page = p_idx, total_pages = total_pages)
       } else {
         .render_text_block_table(
           page$title, title_w, is_footer = FALSE, font_half_points,
           tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
           doc_row_height = doc_row_height, markup = doc_markup,
           style = title_st,
-          font_index_map = font_index_map)
+          font_index_map = font_index_map,
+          current_page = p_idx, total_pages = total_pages)
       })
       if (!is.null(ct)) {
         if (inherits(ct, "rtftable")) {
@@ -2267,7 +2283,8 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
           is_footer = TRUE, style = footnote_st,
           font_half_points = font_half_points,
           color_index_map, markup = doc_markup,
-          pad_l = tf_pad_l, pad_r = tf_pad_r)
+          pad_l = tf_pad_l, pad_r = tf_pad_r,
+          current_page = p_idx, total_pages = total_pages)
       } else {
         fn_rtf <- .render_header_footer(
           .footnote_hf(page$footnote, footnote_st, footnote_w),

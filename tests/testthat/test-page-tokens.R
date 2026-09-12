@@ -144,3 +144,59 @@ test_that("AUTO-only headers stay on the cheap one-header-per-section path", {
   # No internal section breaks (only the closing document structure).
   expect_identical(n_sect, 0L)
 })
+
+# ──────── Title / footnote bands (#398) ───────────────────────────────────
+
+# Same three-page document, but the tokens live in the title and footnote
+# blocks rather than the running header, and the band format is selectable.
+.render_bands_for_token_test <- function(title, footnote,
+                                         title_format = "text",
+                                         footnote_format = "table") {
+  doc <- rtf_document(default_format = rtf_default_format(
+    title_format = title_format, footnote_format = footnote_format))
+  doc <- rtf_section(doc, page = 1, secinfo = list(
+    header = rtf_header(rows = list(c(l = "Protocol RTF-101"))), footer = NULL))
+  doc <- rtf_tables(doc,
+    replicate(3L, data.frame(A = 1L, B = "x", stringsAsFactors = FALSE),
+              simplify = FALSE),
+    titles    = list(c(title)),
+    footnotes = list(c(footnote)))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(doc, f, overwrite = TRUE)
+  paste(readLines(f, warn = FALSE), collapse = "\n")
+}
+
+test_that("page tokens resolve in the title band, in both title formats", {
+  for (fmt in c("text", "table")) {
+    txt <- .render_bands_for_token_test(
+      "Table 6-3.7 (Page {PAGE} of {TOTAL_PAGES})", "note", title_format = fmt)
+    # Novartis-style: the number is part of the title line itself.
+    expect_match(txt, "Page 1 of 3", fixed = TRUE, info = fmt)
+    expect_match(txt, "Page 3 of 3", fixed = TRUE, info = fmt)
+    expect_false(grepl("{PAGE}", txt, fixed = TRUE), info = fmt)
+    expect_false(grepl("{TOTAL_PAGES}", txt, fixed = TRUE), info = fmt)
+  }
+})
+
+test_that("page tokens resolve in the footnote band, in BOTH formats (#398)", {
+  # The "table" form already worked; "text" printed the token literally.
+  for (fmt in c("text", "table")) {
+    txt <- .render_bands_for_token_test(
+      "T", "Page {AUTO_PAGE} of {SECTION_PAGES}", footnote_format = fmt)
+    expect_match(txt, "\\chpgn",     info = fmt)
+    expect_match(txt, "SECTIONPAGES",  info = fmt)
+    expect_false(grepl("{AUTO_PAGE}",     txt, fixed = TRUE), info = fmt)
+    expect_false(grepl("{SECTION_PAGES}", txt, fixed = TRUE), info = fmt)
+  }
+})
+
+test_that("a static {PAGE} in a body band does not force per-page sections", {
+  # `.uses_static_page_token()` inspects the header/footer only, and rightly
+  # so: title and footnote are re-emitted for every page, so each page bakes
+  # its own number without an extra RTF section.
+  txt <- .render_bands_for_token_test("T (Page {PAGE} of {TOTAL_PAGES})", "note")
+  lines <- strsplit(txt, "\n", fixed = TRUE)[[1L]]
+  expect_identical(sum(grepl("^\\sect$", lines)), 0L)
+  expect_match(txt, "Page 2 of 3", fixed = TRUE)
+})
