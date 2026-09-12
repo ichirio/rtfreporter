@@ -618,6 +618,17 @@ Diagnosis")
 
 ### Bug fixes
 
+- **`assemble_rtf()`'s cached table-of-contents page numbers were wrong for
+  any multi-page deliverable** (#401).  The internal page count matched
+  `\sbkpage` only.  That control word starts a *section*, and rtfreporter
+  emits one section per `rtf_section` -- not one per rendered page -- so a
+  six-page table inside one section counted as a single page, and a table of
+  contents over N inputs numbered them 1, 2, 3, ... whatever their real
+  length.  The pages inside a section are separated by a plain `\page`, which
+  is now counted as well.  (Word refreshes the numbers from the `PAGEREF`
+  fields, so what this fixes is the cached value a reader sees before
+  refreshing, and any consumer that reads the file as written.)
+
 - **An invalid `table_width_pct` no longer warns before it errors** (#388).
   `as.numeric()` was called on the raw value, so R's "NAs introduced by
   coercion" reached the user ahead of the message saying what the setting

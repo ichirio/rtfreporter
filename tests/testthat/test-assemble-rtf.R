@@ -675,6 +675,47 @@ test_that(".count_rtf_pages counts one page per section break", {
   expect_equal(rtfreporter:::.count_rtf_pages(readLines(f, warn = FALSE)), 1L)
 })
 
+# One `rtf_section` holding several rendered pages.  `cuts` are row positions
+# to break before, so the table comes out as length(cuts) + 1 pages.
+.write_multipage_rtf <- function(title, cuts) {
+  doc <- rtf_document()
+  doc <- rtf_section(doc, page = 1, secinfo = list(
+    header = rtf_header(rows = list(
+      c(l = "Protocol RTF-101", r = "Page {AUTO_PAGE}")
+    ))
+  ))
+  df <- data.frame(A = 1:60, B = sprintf("r%02d", 1:60), stringsAsFactors = FALSE)
+  pages <- if (is.null(cuts)) {
+    as_rtftables(df)
+  } else {
+    as_rtftables(df, split = "rows", split_rows = cuts)
+  }
+  doc <- rtf_tables(doc, pages, titles = list(c(title)))
+  f <- tempfile(fileext = ".rtf")
+  generate_rtfreport(doc, f, overwrite = TRUE)
+  f
+}
+
+test_that(".count_rtf_pages counts in-section page breaks too (#401)", {
+  # A section is emitted per `rtf_section`, not per page, so counting
+  # `\sbkpage` alone reported 1 for every one of these.
+  for (cuts in list(NULL, 20L, c(20L, 40L), c(10L, 20L, 30L, 40L, 50L))) {
+    f     <- .write_multipage_rtf("Multi", cuts)
+    lines <- readLines(f, warn = FALSE)
+    expect_equal(rtfreporter:::.count_rtf_pages(lines),
+                 length(cuts) + 1L,
+                 info = paste("cuts =", paste(cuts, collapse = ",")))
+  }
+})
+
+test_that(".count_rtf_pages does not mistake other \\page... words for a break", {
+  # `\pagebb` is a paragraph property, not a page break; `\sbkpage` must not
+  # be double-counted by the `\page` pattern either.
+  expect_equal(rtfreporter:::.count_rtf_pages(
+    c("\\sectd\\sbkpage", "\\pard\\pagebb hello\\par")), 1L)
+  expect_equal(rtfreporter:::.count_rtf_pages(character(0)), 0L)
+})
+
 test_that("assemble_rtf TOC caches cumulative page numbers (decimal = continuous)", {
   f1 <- .write_demo_rtf("First")
   f2 <- .write_demo_rtf("Second")
