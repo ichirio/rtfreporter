@@ -136,9 +136,14 @@
 #   header    -- rtf_header() | named vector | NULL (NULL = inherit from previous)
 #   footer    -- rtf_footer() | named vector | NULL (NULL = inherit from previous)
 #   from_page -- integer: first page this section applies to
-.new_sect <- function(header = NULL, footer = NULL, from_page = NULL) {
+.new_sect <- function(header = NULL, footer = NULL, from_page = NULL,
+                      watermark = NULL, has_watermark = FALSE) {
+  # `has_watermark` distinguishes "this section says nothing about a watermark"
+  # (inherit the document's) from "this section says NA" (none here).  A bare
+  # NULL cannot carry that difference.
   structure(
-    list(header = header, footer = footer, from_page = from_page),
+    list(header = header, footer = footer, from_page = from_page,
+         watermark = watermark, has_watermark = isTRUE(has_watermark)),
     class = "rtf_sect"
   )
 }
@@ -426,9 +431,11 @@ rtf_footer <- function(rows,
 # -- Section ops -------------------------------------------------------------
 
 .rtfreport_add_section <- function(report, header = NULL, footer = NULL,
-                                    from_page = NULL) {
+                                    from_page = NULL, watermark = NULL,
+                                    has_watermark = FALSE) {
   if (!is.null(from_page)) from_page <- as.integer(from_page)
-  sec <- .new_sect(header = header, footer = footer, from_page = from_page)
+  sec <- .new_sect(header = header, footer = footer, from_page = from_page,
+                   watermark = watermark, has_watermark = has_watermark)
   report$sections[[length(report$sections) + 1L]] <- sec
   report
 }

@@ -8,7 +8,8 @@ rtf_document(
   font_table = NULL,
   color_table = NULL,
   page = NULL,
-  default_format = NULL
+  default_format = NULL,
+  watermark = NULL
 )
 }
 \arguments{
@@ -34,10 +35,17 @@ back to the corresponding \verb{rtfreporter.*} option (see \code{\link[=rtfrepor
 its default), a named list with the same keys, or \code{NULL} (default). Each
 value is a \emph{default} that a per-module setting (\code{\link[=rtftable]{rtftable()}} /
 \code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}} / \code{\link[=rtf_table_style]{rtf_table_style()}}) overrides.}
+
+\item{watermark}{A diagonal word drawn behind the page body on every page:
+an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare string (\code{watermark = "DRAFT"} uses the
+defaults), or \code{NULL} (default) for none. A section can override it by
+passing \code{watermark} in its \code{rtf_section(secinfo = )} -- including
+\code{watermark = NA} to switch it off for that section alone.}
 }
 \value{
 An \code{rtf_document} S3 object: a list with \code{document}
-(\code{font_table} / \code{color_table} / \code{page} / \code{default_format}), \code{contents}
+(\code{font_table} / \code{color_table} / \code{page} / \code{default_format} / \code{watermark}),
+\code{contents}
 (filled by \code{\link[=rtf_tables]{rtf_tables()}} / \code{\link[=rtf_figures]{rtf_figures()}}), \code{titles}, \code{footnotes}, and
 \code{sections} (filled by \code{\link[=rtf_section]{rtf_section()}}).
 }

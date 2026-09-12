@@ -9,7 +9,8 @@ rtf_config(
   font_table = NULL,
   color_table = NULL,
   page = NULL,
-  default_format = NULL
+  default_format = NULL,
+  watermark = NULL
 )
 }
 \arguments{

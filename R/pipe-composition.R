@@ -50,9 +50,15 @@
 #'   its default), a named list with the same keys, or `NULL` (default). Each
 #'   value is a *default* that a per-module setting ([rtftable()] /
 #'   [rtf_header()] / [rtf_footer()] / [rtf_table_style()]) overrides.
+#' @param watermark A diagonal word drawn behind the page body on every page:
+#'   an [rtf_watermark()] object, a bare string (`watermark = "DRAFT"` uses the
+#'   defaults), or `NULL` (default) for none. A section can override it by
+#'   passing `watermark` in its `rtf_section(secinfo = )` -- including
+#'   `watermark = NA` to switch it off for that section alone.
 #'
 #' @return An `rtf_document` S3 object: a list with `document`
-#'   (`font_table` / `color_table` / `page` / `default_format`), `contents`
+#'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
+#'   `contents`
 #'   (filled by [rtf_tables()] / [rtf_figures()]), `titles`, `footnotes`, and
 #'   `sections` (filled by [rtf_section()]).
 #'
@@ -86,7 +92,7 @@
 #'
 #' @export
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
-                         default_format = NULL) {
+                         default_format = NULL, watermark = NULL) {
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
   # resolved to its default at render time -- including inferring the
@@ -117,7 +123,8 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         font_table = font_table,
         color_table = color_table,
         page = page,
-        default_format = default_format
+        default_format = default_format,
+        watermark = .normalize_watermark(watermark)
       ),
       contents  = list(),
       titles    = list(),
@@ -181,7 +188,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #'
 #' @export
 rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
-                       default_format = NULL) {
+                       default_format = NULL, watermark = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -203,6 +210,11 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
   if (!is.null(default_format)) {
     doc_copy$document$default_format <-
       .merge_list(doc_copy$document$default_format, default_format)
+  }
+  # Whole-object replacement, like font_table.  `NA` clears an existing one --
+  # `NULL` cannot, since it is this function's "leave alone" value.
+  if (!is.null(watermark)) {
+    doc_copy$document$watermark <- .normalize_watermark(watermark)
   }
 
   doc_copy

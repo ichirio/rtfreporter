@@ -109,6 +109,24 @@
 
 ### New features
 
+- **`rtf_watermark()`: a diagonal word behind the page body** (#399).
+  `rtf_document(watermark = "DRAFT")` takes the defaults;
+  `rtf_watermark()` sets the text, size, colour, rotation, font and box.
+  `rtf_config(watermark =)` puts one on an already-composed document, or
+  clears it with `NA`.
+
+  The shape is written into the section header -- what Word's own
+  Insert > Watermark does -- so it repeats on every page and stays scoped to
+  its section.  That scoping is the point for `assemble_rtf()`: one
+  deliverable's watermark cannot leak into the next.  A section overrides the
+  document setting by passing `watermark` in its `rtf_section(secinfo = )`,
+  including `watermark = NA` to switch it off for that section alone.
+
+  The shape says "behind the text" twice, as the destination flag
+  (`\shpfblwtxt1`) and as the `fBehindDocument` property, because readers
+  honour one or the other.  Verified by rendering through LibreOffice: the
+  table text stays fully legible over it.
+
 - **Page-number tokens now work in titles and footnotes, not only in the
   header and footer bands** (#398).  `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`,
   `{SECTION_PAGES}`, `{PAGE}` and `{TOTAL_PAGES}` mean the same thing in every
