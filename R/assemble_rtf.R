@@ -121,13 +121,30 @@
     else character(0))
 }
 
-# Count the rendered pages of an RTF file's lines.  rtfreporter starts each
-# rendered page with a `\sbkpage` section break, so the page count is the
-# number of `\sbkpage` control words across the content.
+# Count the rendered pages of an RTF file's lines.
+#
+# Two things start a new page, and a file mixes them:
+#   \sbkpage   a section break that begins on a new page.  rtfreporter emits
+#              one per `rtf_section` -- NOT one per rendered page.
+#   \page      a plain page break, used between the sub-pages *inside* one
+#              section (`doc_cmd$page_break`).
+# So the page count is "one page for the first section, plus one for every
+# further section start, plus one for every in-section break".  Counting
+# `\sbkpage` alone reported 1 for any single-section file however long (#401).
+#
+# `\page` is matched only when the control word ends there, so `\pagebb` and
+# friends cannot be mistaken for a break.  `\sbkpage` is not matched by the
+# `\page` pattern either: the backslash the pattern requires is not there.
 .count_rtf_pages <- function(lines) {
   txt <- paste(lines, collapse = "\n")
-  m   <- gregexpr("\\\\sbkpage", txt)[[1L]]
-  if (length(m) == 1L && m[1L] == -1L) 0L else length(m)
+  .n  <- function(pattern) {
+    m <- gregexpr(pattern, txt, perl = TRUE)[[1L]]
+    if (length(m) == 1L && m[1L] == -1L) 0L else length(m)
+  }
+  sections <- .n("\\\\sbkpage")
+  breaks   <- .n("\\\\page(?![a-zA-Z])")
+  if (sections == 0L && breaks == 0L) return(0L)
+  max(sections, 1L) + breaks
 }
 
 # Inject a `\pgnrestart\pgndec` right after the first \sectd, so the body
@@ -643,8 +660,9 @@ assemble_rtf <- function(input_files, output_file, overwrite = FALSE,
 
   # Page on which each input file STARTS in the assembled document, used as
   # the TOC's cached page numbers (the viewer refreshes them to the live value
-  # via the PAGEREF fields).  rtfreporter renders one `\page` per page, so the
-  # start page of file i = front-matter pages + 1 + pages in files 1..i-1.
+  # via the PAGEREF fields).  `.count_rtf_pages()` knows how a file's pages are
+  # spelled, so the start page of file i = front-matter pages + 1 + pages in
+  # files 1..i-1.
   entry_pages <- NULL
   if (use_toc) {
     npages <- vapply(input_files, function(f)
