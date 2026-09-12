@@ -109,6 +109,25 @@
 
 ### New features
 
+- **Page-number tokens now work in titles and footnotes, not only in the
+  header and footer bands** (#398).  `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`,
+  `{SECTION_PAGES}`, `{PAGE}` and `{TOTAL_PAGES}` mean the same thing in every
+  band.  Before this they passed through the title band as literal text, and
+  the footnote band resolved them only under `footnote_format = "table"` --
+  switching to `"text"` dropped them silently.
+
+  This is where sponsors actually put a per-table page number when it is not
+  in the page margin: alongside the table, so it travels with it.  Novartis
+  writes it into the title line itself (`Table 6-3.7 (Page 123 of 294)`);
+  Amgen puts it in the footnote block, right-aligned above the `Program:`
+  line.
+
+  A static `{PAGE}` costs nothing in these bands.  The title and footnote are
+  re-emitted for every page, so each page bakes its own number -- unlike a
+  header, where the same token forces one RTF section per page.
+
+  Header and footer output is unchanged.
+
 - **A figure can be a plot object, not only a saved file** (#394).
   `rtfplot()` and `rtf_figures()` now take a **ggplot2** plot, a **lattice**
   trellis object, a **patchwork**, a **grid** grob or `gtable`, a base plot
@@ -615,6 +634,19 @@ Diagnosis")
   *Superseded* section so neither statement has to cover both cases.
   Documentation only: every deprecated function still works and still has
   its page.
+
+### Documentation
+
+- **`split = "rows"` is cut positions, not a page size** (#402).  `split_rows`
+  was documented as "Rows per page" and `"rows"` as "fixed chunk size", but
+  `.split_by_rows()` has always taken `split_rows` as the row positions to cut
+  *before*: on 200 rows, `split_rows = 25` gives two pages of 24 and 176, not
+  eight of 25.  Fixed-size pages are what `max_rows` does, with
+  `split = "group_safe"` / `"group_force"`.  Both behaviours were always
+  there; only the wording was wrong, and each entry now points at the other.
+  The roxygen example hid it by using a 4-row frame and `split_rows = 3`,
+  where cut-position and chunk readings both give two pages; it now uses a
+  case where they differ.
 
 ### Bug fixes
 
