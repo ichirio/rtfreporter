@@ -168,6 +168,9 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #'   onto the current defaults: an [rtf_default_format()] object, or a named list
 #'   with the same keys (see [rtf_default_format()]). Each is a document-wide
 #'   *default* that any per-module setting overrides.
+#' @param watermark New page watermark: an [rtf_watermark()] object, a bare
+#'   string, or `NA` to remove the one the document has. `NULL` (default)
+#'   leaves it unchanged -- so `NA`, not `NULL`, is how one is cleared.
 #'
 #' @return Modified rtf_document object (new copy, original unchanged).
 #'

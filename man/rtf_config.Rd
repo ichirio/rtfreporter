@@ -27,6 +27,10 @@ rtf_config(
 onto the current defaults: an \code{\link[=rtf_default_format]{rtf_default_format()}} object, or a named list
 with the same keys (see \code{\link[=rtf_default_format]{rtf_default_format()}}). Each is a document-wide
 \emph{default} that any per-module setting overrides.}
+
+\item{watermark}{New page watermark: an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare
+string, or \code{NA} to remove the one the document has. \code{NULL} (default)
+leaves it unchanged -- so \code{NA}, not \code{NULL}, is how one is cleared.}
 }
 \value{
 Modified rtf_document object (new copy, original unchanged).
