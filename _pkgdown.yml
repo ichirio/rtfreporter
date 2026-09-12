@@ -192,6 +192,7 @@ reference:
       - rtf_config
       - rtf_page
       - rtf_default_format
+      - rtf_watermark
       - generate_rtfreport
       - print.rtf_document
       - print.rtfreport

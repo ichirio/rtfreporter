@@ -1568,6 +1568,9 @@
     list(
       header    = sections[[i]]$header,
       footer    = sections[[i]]$footer,
+      # Absent -> inherit the document setting; NA -> off for this section.
+      watermark     = sections[[i]]$watermark,
+      has_watermark = isTRUE(sections[[i]]$has_watermark),
       from_page = from_pages[i],
       to_page   = to_pages[i]
     )
@@ -1882,6 +1885,7 @@
   # document alongside the default format.
   report$document$title_style    <- pipe_doc$title_style
   report$document$footnote_style <- pipe_doc$footnote_style
+  report$document$watermark      <- pipe_doc$document$watermark
   if (!is.null(pipe_doc$document$default_format)) {
     report <- .rtfreport_set_default_format(report, pipe_doc$document$default_format)
   }
@@ -1901,7 +1905,9 @@
     for (key in explicit_keys) {
       si <- pipe_doc$sections[[as.character(key)]]
       report <- .rtfreport_add_section(report, header = si$header,
-                                       footer = si$footer, from_page = key)
+                                       footer = si$footer, from_page = key,
+                                       watermark = si$watermark,
+                                       has_watermark = "watermark" %in% names(si))
     }
 
     # Process contents one by one, creating one RTF section per named item.
@@ -1917,7 +1923,10 @@
         sec_footer  <- if (!is.null(default_sec)) default_sec$footer else NULL
         report <- .rtfreport_add_section(report, header = sec_header,
                                          footer = sec_footer,
-                                         from_page = page_counter)
+                                         from_page = page_counter,
+                                         watermark = default_sec$watermark,
+                                         has_watermark =
+                                           "watermark" %in% names(default_sec))
         ct <- .unwrap_auto_section_item(content_item)
       } else {
         ct <- .normalise_content_item(content_item)
@@ -1933,7 +1942,10 @@
     if (length(report$sections) == 0L) {
       if (!is.null(default_sec)) {
         report <- .rtfreport_add_section(report, header = default_sec$header,
-                                         footer = default_sec$footer)
+                                         footer = default_sec$footer,
+                                         watermark = default_sec$watermark,
+                                         has_watermark =
+                                           "watermark" %in% names(default_sec))
       } else {
         report <- .rtfreport_add_section(report)
       }
@@ -1950,7 +1962,10 @@
       default_sec <- pipe_doc$sections[["_default"]]
       if (!is.null(default_sec)) {
         report <- .rtfreport_add_section(report, header = default_sec$header,
-                                         footer = default_sec$footer)
+                                         footer = default_sec$footer,
+                                         watermark = default_sec$watermark,
+                                         has_watermark =
+                                           "watermark" %in% names(default_sec))
       } else {
         report <- .rtfreport_add_section(report)  # default covering all pages
       }
@@ -1958,7 +1973,10 @@
       for (key in section_keys) {
         si <- pipe_doc$sections[[as.character(key)]]
         report <- .rtfreport_add_section(report, header = si$header,
-                                         footer = si$footer, from_page = key)
+                                         footer = si$footer, from_page = key,
+                                         watermark = si$watermark,
+                                         has_watermark =
+                                           "watermark" %in% names(si))
       }
     }
 
@@ -2107,6 +2125,9 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
     doc$default_format$footnote_format %||% .opt("rtfreporter.footnote_format"),
     "table")
 
+  # Document-wide watermark; a section may override it (see the loop below).
+  doc_watermark <- .normalize_watermark(doc$watermark)
+
   # Per-element widths (#291).  NULL keeps each block's established default,
   # which .resolve_block_width() spells as "content".
   doc_title_width <- .check_block_width(
@@ -2135,6 +2156,19 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
     cur_footer_hf <- .normalize_hf(rs$footer)
     if (is.null(cur_footer_hf)) cur_footer_hf <- prev_footer_hf
     prev_footer_hf <- cur_footer_hf
+
+    # The watermark rides in the header group, so it is resolved per section:
+    # a section that names one (including NA for "none") wins, otherwise the
+    # document setting applies.  Scoping it to the section is what keeps
+    # assemble_rtf() from leaking one deliverable's watermark into the next.
+    cur_watermark <- if (isTRUE(rs$has_watermark)) {
+      .normalize_watermark(rs$watermark)
+    } else {
+      doc_watermark
+    }
+    watermark_rtf <- .render_watermark_rtf(
+      cur_watermark, page_defaults$width_twips, page_defaults$height_twips,
+      default_font = primary_font)
 
     # Helper: emit `\sectd` + page settings + {\header} + {\footer} with
     # the page-number tokens resolved for `pg_for_hf`.  Used either:
@@ -2189,9 +2223,12 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
                                           doc_markup = doc_markup,
           font_index_map = font_index_map)
 
-      if (length(header_rtf) > 0L) {
+      # The watermark shape lives in the header group so it repeats on every
+      # page of the section.  It goes in even when there is no header text --
+      # then the group carries the shape and an empty paragraph, nothing else.
+      if (length(header_rtf) > 0L || nzchar(watermark_rtf)) {
         lines <<- c(lines, .cmd_fmt(doc_cmd$header_wrapper,
-                                    list(content = paste0(fs_cmd,
+                                    list(content = paste0(watermark_rtf, fs_cmd,
                                           paste(header_rtf, collapse = "")))))
       }
       if (length(footer_rtf) > 0L) {
