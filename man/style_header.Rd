@@ -46,10 +46,12 @@ style_cols(x, ...)
   underline = NULL,
   indent_twips = NULL,
   color = NULL,
+  background = NULL,
   border = NULL,
   header_align = NULL,
   header_bold = NULL,
   header_italic = NULL,
+  header_background = NULL,
   ...
 )
 
@@ -66,6 +68,7 @@ style_body(x, ...)
   underline = NULL,
   indent_twips = NULL,
   color = NULL,
+  background = NULL,
   align = NULL,
   border = NULL,
   ...
@@ -125,8 +128,17 @@ border; in \code{style_cols()} it becomes the column's header-cell border.}
 
 \item{color}{Body text colour, \code{"#RRGGBB"}.}
 
+\item{background}{Cell fill colour, \code{"#RRGGBB"}. \code{NULL} (default) leaves
+cells unfilled, which is what every existing table does. On
+\code{style_cols()} it fills the column's body cells; on \code{style_body()} it
+fills the selected cells, overriding the column's own fill.}
+
 \item{header_align, header_bold, header_italic}{Header-label styling for the
 selected columns (what the character label rows render with).}
+
+\item{header_background}{Fill colour for the selected columns' \strong{header}
+cells, \code{"#RRGGBB"}. Kept separate from \code{background} so a shaded header
+does not drag the body along with it.}
 
 \item{rows}{Body-row selection: \code{NULL} (all rows), integer positions, a
 logical vector over all body rows, a predicate \verb{function(data)}
