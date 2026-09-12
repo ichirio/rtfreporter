@@ -331,6 +331,30 @@
   out
 }
 
+# Cell shading: `\clcbpat<N>` names a colour-table index as the cell's fill.
+# It belongs in the cell DEFINITION (next to the borders and \cellx), not in
+# the cell content -- a fill is a property of the cell, not of its text.
+# Returns "" for no fill, so callers can paste0() it unconditionally.
+# The fill colour for each of a row's `ncols` cells: the column's own
+# `background`, overridden by a non-NA `cell_styles$background` entry.  Mirrors
+# how `.data_cell_content()` resolves text colour, so the two behave alike.
+.row_backgrounds <- function(col_spec, row_cell_styles, ncols) {
+  cs <- row_cell_styles$background
+  lapply(seq_len(ncols), function(j) {
+    bg <- col_spec[[j]]$background %||% NULL
+    if (!is.null(cs) && j <= length(cs) && !is.na(cs[j])) bg <- as.character(cs[j])
+    bg
+  })
+}
+
+.cell_shading_cmd <- function(hex, color_index_map = NULL) {
+  if (is.null(hex) || length(hex) != 1L || is.na(hex) || !nzchar(hex)) return("")
+  if (is.null(color_index_map)) return("")
+  idx <- color_index_map[[hex]]
+  if (is.null(idx)) return("")
+  paste0("\\clcbpat", as.integer(idx))
+}
+
 # -- Border helpers -------------------------------------------------------------
 
 # Build RTF border commands for all four sides of a single cell.
@@ -536,22 +560,28 @@
 }
 
 .build_cell_defs <- function(cellx, border_spec, valign_cmd,
-                             color_index_map = NULL) {
+                             color_index_map = NULL, shade = NULL) {
   n <- length(cellx)
+  # One shading command per column, "" where the column has no fill.
+  shade_cmds <- if (is.null(shade)) rep("", n) else
+    vapply(seq_len(n), function(j)
+      .cell_shading_cmd(if (j <= length(shade)) shade[[j]] else NULL,
+                        color_index_map), character(1L))
   # Nothing to distribute when the row carries no vertical rules at all, which
   # is the common case (clinical tables draw horizontal rules only).
   if (!inherits(border_spec, "rtf_border") ||
       (is.null(border_spec$left) && is.null(border_spec$right) &&
        is.null(border_spec$inside_v))) {
     border_cmds <- .build_border_commands(border_spec, color_index_map)
-    return(vapply(cellx,
-                  function(cx) paste0(border_cmds, valign_cmd, "\\cellx", cx),
+    return(vapply(seq_len(n),
+                  function(j) paste0(border_cmds, shade_cmds[j], valign_cmd,
+                                     "\\cellx", cellx[j]),
                   character(1L)))
   }
   vapply(seq_len(n), function(j) {
     paste0(.build_border_commands(.cell_edge_border(border_spec, j, n),
                                   color_index_map),
-           valign_cmd, "\\cellx", cellx[j])
+           shade_cmds[j], valign_cmd, "\\cellx", cellx[j])
   }, character(1L))
 }
 
@@ -788,7 +818,9 @@
       eff_border <- .effective_row_border(eff_border, col_border)
     }
     bc <- .build_border_commands(eff_border, color_index_map)
-    paste0(bc, valign_cmd, "\\cellx", cellx[j])
+    paste0(bc, .cell_shading_cmd(col_spec[[j]]$header_background,
+                                 color_index_map),
+           valign_cmd, "\\cellx", cellx[j])
   }, character(1L))
 
   cell_contents <- vapply(seq_len(ncols), function(j) {
@@ -916,18 +948,23 @@
   # per side -- the same last-writer-wins chain the header renderers use.
   # Rows without an override keep the shared fast path.
   cell_borders <- if (!is.null(row_cell_styles)) row_cell_styles$border
+  # Cell fill, resolved per column the way text colour is: the column's
+  # `background` is the default, a non-NA `cell_styles$background` wins.
+  shade <- .row_backgrounds(col_spec, row_cell_styles, ncols)
   if (is.list(cell_borders) &&
       !all(vapply(cell_borders, is.null, logical(1L)))) {
+    shade_cmds <- vapply(seq_len(ncols), function(j)
+      .cell_shading_cmd(shade[[j]], color_index_map), character(1L))
     cell_defs <- vapply(seq_len(ncols), function(j) {
       b   <- if (j <= length(cell_borders)) cell_borders[[j]]
       eff <- .cell_edge_border(border_spec, j, ncols)
       if (!is.null(b)) eff <- .effective_row_border(eff, b)
-      paste0(.build_border_commands(eff, color_index_map), valign_cmd,
-             "\\cellx", cellx[j])
+      paste0(.build_border_commands(eff, color_index_map), shade_cmds[j],
+             valign_cmd, "\\cellx", cellx[j])
     }, character(1L))
   } else {
     cell_defs <- .build_cell_defs(cellx, border_spec, valign_cmd,
-                                  color_index_map)
+                                  color_index_map, shade = shade)
   }
   cell_contents <- vapply(seq_len(ncols), function(j) {
     .data_cell_content(col_spec[[j]],
@@ -1492,6 +1529,10 @@
     if (!is.null(tbl$col_spec)) {
       out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$color),
                            use.names = FALSE))
+      out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$background),
+                           use.names = FALSE))
+      out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$header_background),
+                           use.names = FALSE))
       out <- c(out, unlist(lapply(tbl$col_spec, function(s)
         .collect_border_colors(s$border)), use.names = FALSE))
     }
@@ -1508,6 +1549,9 @@
     if (!is.null(tbl$cell_styles)) {
       out <- c(out, unlist(lapply(tbl$cell_styles, function(cs) {
         if (is.list(cs)) cs$color else NULL
+      }), use.names = FALSE))
+      out <- c(out, unlist(lapply(tbl$cell_styles, function(cs) {
+        if (is.list(cs)) cs$background else NULL
       }), use.names = FALSE))
       out <- c(out, unlist(lapply(tbl$cell_styles, function(cs) {
         if (!is.list(cs) || !is.list(cs$border)) return(character(0))

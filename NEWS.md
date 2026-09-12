@@ -109,6 +109,20 @@
 
 ### New features
 
+- **Cells can carry a background colour** (#400).  `style_cols(background =)`
+  fills a column's body cells, `header_background =` fills its header cells,
+  and `style_body(background =)` fills selected cells, overriding the column's
+  own fill -- the same precedence text colour already follows.
+
+  The fill is emitted as `\clcbpat` in the **cell definition**, next to the
+  borders and `\cellx`, because a fill is a property of the cell and not of
+  its text.  Colours join the document colour table through the existing
+  machinery, so there is no second mechanism to keep in step.
+
+  Everything defaults to `NULL`: a table that does not ask for a fill renders
+  byte-identically to before.  This also closes the hole `as_rtftables()`
+  documents about gt / gtsummary themes, whose cell fills had nowhere to go.
+
 - **`rtf_watermark()`: a diagonal word behind the page body** (#399).
   `rtf_document(watermark = "DRAFT")` takes the defaults;
   `rtf_watermark()` sets the text, size, colour, rotation, font and box.

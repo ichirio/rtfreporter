@@ -373,8 +373,15 @@ style_header.list <- function(x, ...) {
 #' @rdname style_header
 #' @param indent_twips Integer left indent for the column's body cells.
 #' @param color Body text colour, `"#RRGGBB"`.
+#' @param background Cell fill colour, `"#RRGGBB"`. `NULL` (default) leaves
+#'   cells unfilled, which is what every existing table does. On
+#'   `style_cols()` it fills the column's body cells; on `style_body()` it
+#'   fills the selected cells, overriding the column's own fill.
 #' @param header_align,header_bold,header_italic Header-label styling for the
 #'   selected columns (what the character label rows render with).
+#' @param header_background Fill colour for the selected columns' **header**
+#'   cells, `"#RRGGBB"`. Kept separate from `background` so a shaded header
+#'   does not drag the body along with it.
 #' @export
 style_cols <- function(x, ...) UseMethod("style_cols")
 
@@ -383,9 +390,10 @@ style_cols <- function(x, ...) UseMethod("style_cols")
 style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
                                 italic = NULL, underline = NULL,
                                 indent_twips = NULL, color = NULL,
-                                border = NULL, header_align = NULL,
-                                header_bold = NULL, header_italic = NULL,
-                                ...) {
+                                background = NULL, border = NULL,
+                                header_align = NULL, header_bold = NULL,
+                                header_italic = NULL,
+                                header_background = NULL, ...) {
   .check_own_dots(list(...), style_cols.rtftable, "style_cols")
   cols_idx <- .style_resolve_cols(x, cols, "style_cols")
   if (!is.null(align))        align        <- .style_check_align(align, "style_cols")
@@ -403,6 +411,9 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
     if (!is.null(underline))     spec$underline     <- underline
     if (!is.null(indent_twips))  spec$indent_twips  <- as.integer(indent_twips)
     if (!is.null(color))         spec$color         <- as.character(color)
+    if (!is.null(background))    spec$background    <- as.character(background)
+    if (!is.null(header_background))
+      spec$header_background <- as.character(header_background)
     if (!is.null(border))        spec$border        <- .merge_rtf_border(spec$border, border)
     if (!is.null(header_align))  spec$header_align  <- header_align
     if (!is.null(header_bold))   spec$header_bold   <- header_bold
@@ -438,7 +449,8 @@ style_body <- function(x, ...) UseMethod("style_body")
 style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
                                 italic = NULL, underline = NULL,
                                 indent_twips = NULL, color = NULL,
-                                align = NULL, border = NULL, ...) {
+                                background = NULL, align = NULL,
+                                border = NULL, ...) {
   .check_own_dots(list(...), style_body.rtftable, "style_body")
   frames   <- .style_body_frames(x)
   rows_idx <- .style_resolve_rows(rows, frames, "style_body")
@@ -479,6 +491,11 @@ style_body.rtftable <- function(x, rows = NULL, cols = NULL, bold = NULL,
       v <- cs$color %||% blank(NA_character_)
       v[cols_idx] <- as.character(color)
       cs$color <- v
+    }
+    if (!is.null(background)) {
+      v <- cs$background %||% blank(NA_character_)
+      v[cols_idx] <- as.character(background)
+      cs$background <- v
     }
     if (!is.null(align)) {
       v <- cs$align %||% blank(NA_character_)
