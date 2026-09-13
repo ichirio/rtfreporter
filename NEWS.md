@@ -135,6 +135,37 @@
 
 ### New features
 
+- **`{BOOK_PAGE}`: a slot the deliverable reserves and `assemble_rtf()` fills**
+  (#413).  A table that will be bound into a compiled document needs two page
+  numbers — its own (`Page 1 of 3`) and the book's (`Page 2 of 6`).  Both were
+  already expressible, but writing both from the start prints the same number
+  twice on a standalone deliverable, where the two are equal.
+
+  The deliverable now reserves the position instead:
+
+  ```r
+  footer = rtf_footer(rows = list(
+    c(c = "Company Confidential"),
+    c(l = "Statistical Programming", r = "Draft"),
+    c(c = "{BOOK_PAGE}")))
+
+  assemble_rtf(files, "book.rtf",
+               book_page = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
+  ```
+
+  On its own the slot renders as an empty *ignorable destination*, so nothing
+  prints and the row keeps its full height — filling it later cannot shift the
+  layout.  The other footer rows are untouched and each deliverable keeps its
+  own footer, which replacing the whole band could not have managed.
+
+  The slot works in any band — header, footer, title or footnote — because it
+  is only a token in cell text, and there is no addressing to learn: wherever
+  the token is written is where the number goes.  The total resolves to the
+  **book's** page count, front matter included.  The static `{PAGE}` /
+  `{TOTAL_PAGES}` are rejected in `book_page`: the slot sits in one band shared
+  by every page of a section, so one substitution cannot give each page its own
+  number.
+
 - **Cells can carry a background colour** (#400).  `style_cols(background =)`
   fills a column's body cells, `header_background =` fills its header cells,
   and `style_body(background =)` fills selected cells, overriding the column's
