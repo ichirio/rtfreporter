@@ -24,14 +24,24 @@ rtf_commands <- list(
     # closed with \pard before paragraph-level content, or strict RTF readers
     # absorb the break into the table flow (#130).
     table_end = "\\pard",
-    # Manual page break.  A bare \page is NOT honoured by Word when it is not
-    # flanked by real paragraphs -- it gets dropped (#138).  Wrap it in empty
-    # 1pt paragraphs (the form r2rtf's as_rtf_new_page() and reporter use): the
-    # leading {\pard\fs2\par} terminates the preceding table, \page forces the
-    # break, and the trailing {\pard\fs2\par} anchors it so the next table
-    # starts on the new page.  The \fs2 is scoped by the {...} group so the tiny
-    # font size never leaks into following content.
-    page_break = "{\\pard\\fs2\\par}\\page{\\pard\\fs2\\par}",
+    # Manual page break, as ONE group holding two empty 1pt paragraphs around
+    # the \page:
+    #
+    #   * the leading \pard\fs2\par terminates the preceding table.  It must be
+    #     a *terminated* paragraph: a bare \pard with no \par leaves Word with
+    #     nothing to flank the break and Word drops it (#138).
+    #   * \page forces the break.
+    #   * the trailing \pard\fs2\par anchors it so the next table starts on the
+    #     new page.
+    #   * the single enclosing group scopes \fs2, so the 1pt size cannot leak
+    #     into the content that follows.
+    #
+    # Grouping the two paragraphs SEPARATELY -- r2rtf's as_rtf_new_page() and
+    # reporter both do -- satisfies Word but makes LibreOffice's RTF importer
+    # drop the break outright when it sits between two tables (#408), which
+    # silently ruins any RTF -> PDF batch conversion that goes through
+    # LibreOffice.  One group around the whole break satisfies both.
+    page_break = "{\\pard\\fs2\\par\\page\\pard\\fs2\\par}",
     section_break = "\\sect",
     header_wrapper = "{\\header {content}}",
     footer_wrapper = "{\\footer {content}}",

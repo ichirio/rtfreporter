@@ -64,11 +64,12 @@ test_that("the document font size is emitted as a document-level \\fs<n>", {
   expect_match(.render_to_string(.simple_doc()), "\\\\fs18\\b")
 })
 
-test_that("a multi-page table wraps each \\page in empty paragraphs (#130, #138)", {
+test_that("a multi-page table wraps each \\page in empty paragraphs (#130, #138, #408)", {
   # group_safe with no page-number token used to emit a bare `\page` straight
   # after a `\row`; Word then ignored the break and rendered the next page flush
   # against the previous one.  Every `\page` must now be the wrapped form
-  # {\pard\fs2\par}\page{\pard\fs2\par} so Word honours it.
+  # {\pard\fs2\par\page\pard\fs2\par} -- ONE group, so `\fs2` stays scoped and
+  # LibreOffice honours the break too (#408).
   df <- data.frame(grp = c("A", "A", "B", "B", "C", "C"),
                    val = as.character(1:6), stringsAsFactors = FALSE)
   pages <- as_rtftables(df, split = "group_safe", max_rows = 2,
@@ -83,10 +84,13 @@ test_that("a multi-page table wraps each \\page in empty paragraphs (#130, #138)
   # paragraph, the \page, and another empty paragraph).
   n_page    <- length(gregexpr("\\\\page(?![a-z])", txt, perl = TRUE)[[1]])
   n_wrapped <- length(gregexpr(
-    "\\{\\\\pard\\\\fs2\\\\par\\}\\\\page\\{\\\\pard\\\\fs2\\\\par\\}",
+    "\\{\\\\pard\\\\fs2\\\\par\\\\page\\\\pard\\\\fs2\\\\par\\}",
     txt)[[1]])
   expect_equal(n_page, 2L)
   expect_equal(n_wrapped, 2L)
+  # The two paragraphs must NOT be grouped separately: that form satisfies Word
+  # but LibreOffice then drops the break between tables (#408).
+  expect_false(grepl("\\{\\\\pard\\\\fs2\\\\par\\}\\\\page", txt))
   # No bare `\page` survives directly after a `\row` (the old broken form).
   expect_false(grepl("\\\\row\\\\page", txt))
   # The final page is terminated with a \pard before the document close.
