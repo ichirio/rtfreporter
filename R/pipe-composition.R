@@ -290,8 +290,8 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   to centred + bold.
 #'
 #'   Title and footnote text may carry the same **page-number tokens** as a
-#'   header or footer band -- `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`,
-#'   `{SECTION_PAGES}`, `{PAGE}`, `{TOTAL_PAGES}` -- which is how a per-table
+#'   header or footer band -- `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`, `{PAGE}`,
+#'   `{TOTAL_PAGES}` -- which is how a per-table
 #'   "Page 1 of 3" sits next to the table instead of at the page margin. A
 #'   static `{PAGE}` costs nothing here: these bands are re-emitted for every
 #'   page, so each page bakes its own number without the extra RTF section the

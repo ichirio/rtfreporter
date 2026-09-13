@@ -279,9 +279,17 @@ sec_footer <- rtf_footer(rows = list(
 | `{AUTO_PAGE}` | Dynamic page number (`\chpgn`) |
 | `{AUTO_TOTAL_PAGES}` | Dynamic NUMPAGES field — **recommended** |
 | `{TOTAL_PAGES}` | Static total computed at render time |
-| `{SECTION_PAGES}` | Dynamic SECTIONPAGES field |
 
-Recommended: `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"`.
+Two numbers, two jobs. The **per-table** number belongs in the header and must
+be static, so that binding the table into a compiled document does not change
+it: `"Page {PAGE} of {TOTAL_PAGES}"` — within one generated file these count
+that file's table, and `assemble_rtf()` leaves them alone. The **document-wide**
+number belongs in the footer and must be dynamic, because only the reader knows
+it: `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"`. Writing both from the start
+means nothing has to be rewritten at assembly time.
+
+For a single standalone table, `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"` alone
+is enough — the document *is* the table.
 
 ---
 

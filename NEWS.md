@@ -2,6 +2,32 @@
 
 ### Breaking changes
 
+- **`{SECTION_PAGES}` is removed** (#410).  The token wrote an RTF
+  `SECTIONPAGES` field — the page count of one `rtf_section`.  It was either
+  redundant or wrong, with nothing in between:
+
+  - **Standalone**, one file is one section is one document, so `SECTIONPAGES`
+    equals `NUMPAGES` and `{AUTO_TOTAL_PAGES}` already gave the same number.
+  - **After `assemble_rtf()`**, the section survives as one deliverable, so it
+    keeps counting that table (3, 2) while the only numerator available —
+    `{AUTO_PAGE}` — counts the whole document (1..5).  `\pgnrestart` is not
+    emitted on assembly, so the one expression a user could write,
+    `Page {AUTO_PAGE} of {SECTION_PAGES}`, read **"Page 4 of 2"** once the
+    deliverable was bound.
+
+  Making it coherent would need a "page within this section" numerator, which
+  requires `\pgnrestart` per section — and that destroys the document-wide
+  numbering `assemble_rtf()` exists to produce.
+
+  Using the token now **errors**, naming the replacement, rather than falling
+  through: an unrecognised token is passed along as literal text, and
+  `{SECTION_PAGES}` printed into a rendered deliverable is worse than a stop.
+
+  | want | use |
+  |---|---|
+  | per-table total, surviving assembly | `{TOTAL_PAGES}` (static) |
+  | document total | `{AUTO_TOTAL_PAGES}` |
+
 - **`as_rtftables()` now speaks the same table-width vocabulary as
   `rtftable()`** (#382).  Two settings did not mean there what they mean
   everywhere else.

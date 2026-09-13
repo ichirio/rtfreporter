@@ -183,12 +183,34 @@ test_that("page tokens resolve in the footnote band, in BOTH formats (#398)", {
   # The "table" form already worked; "text" printed the token literally.
   for (fmt in c("text", "table")) {
     txt <- .render_bands_for_token_test(
-      "T", "Page {AUTO_PAGE} of {SECTION_PAGES}", footnote_format = fmt)
-    expect_match(txt, "\\chpgn",     info = fmt)
-    expect_match(txt, "SECTIONPAGES",  info = fmt)
-    expect_false(grepl("{AUTO_PAGE}",     txt, fixed = TRUE), info = fmt)
-    expect_false(grepl("{SECTION_PAGES}", txt, fixed = TRUE), info = fmt)
+      "T", "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}", footnote_format = fmt)
+    expect_match(txt, "\\chpgn", info = fmt)
+    expect_match(txt, "NUMPAGES", info = fmt)
+    expect_false(grepl("{AUTO_PAGE}",        txt, fixed = TRUE), info = fmt)
+    expect_false(grepl("{AUTO_TOTAL_PAGES}", txt, fixed = TRUE), info = fmt)
   }
+})
+
+test_that("{SECTION_PAGES} errors instead of printing itself (#410)", {
+  # An unrecognised token falls through as literal text, which would put
+  # "{SECTION_PAGES}" into a rendered deliverable.  The removal is loud.
+  for (band in c("title", "footnote")) {
+    expect_error(
+      if (band == "title") {
+        .render_bands_for_token_test("T {SECTION_PAGES}", "note")
+      } else {
+        .render_bands_for_token_test("T", "note {SECTION_PAGES}")
+      },
+      "SECTION_PAGES.*removed", info = band)
+  }
+  # And in the header band it goes through `.render_tokens()`.
+  expect_error(rtfreporter:::.render_tokens("of {SECTION_PAGES}"),
+               "SECTION_PAGES.*removed")
+  # The message names both replacements.
+  err <- tryCatch(rtfreporter:::.render_tokens("{SECTION_PAGES}"),
+                  error = function(e) conditionMessage(e))
+  expect_match(err, "TOTAL_PAGES", fixed = TRUE)
+  expect_match(err, "AUTO_TOTAL_PAGES", fixed = TRUE)
 })
 
 test_that("a static {PAGE} in a body band does not force per-page sections", {
