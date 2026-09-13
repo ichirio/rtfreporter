@@ -1,0 +1,78 @@
+/* ============================================================================
+   rtfreporter — pkgdown site customisations
+   ============================================================================
+   Loaded automatically by pkgdown from pkgdown/extra.css.
+   ========================================================================== */
+
+/* ----------------------------------------------------------------------------
+   Home page hero: place pkgdown's auto-inserted `<img class="logo">`
+   LEFT of the H1 (default behaviour floats it right).
+   The .page-header container becomes a flex row, vertically centred,
+   so logo and title align nicely on one line.
+   ---------------------------------------------------------------------------- */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.page-header img.logo {
+  float: none !important;       /* override Bootswatch's default */
+  margin: 0 !important;
+  max-height: 110px;             /* landscape SVG: ~220px wide @ 2:1  */
+  width: auto;
+  flex-shrink: 0;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(26, 58, 90, 0.18);
+}
+.page-header h1 {
+  margin: 0 !important;
+  line-height: 1.2;
+}
+
+/* ----------------------------------------------------------------------------
+   README's inline `<img align="right">` (used by GitHub README rendering).
+   On the pkgdown site we don't need a second copy of the logo inside the
+   H1 — pkgdown already auto-inserts one above.  Hide the in-H1 image.
+   ---------------------------------------------------------------------------- */
+.page-header h1 img {
+  display: none;
+}
+
+/* ----------------------------------------------------------------------------
+   Sidebar dev-badges block (pkgdown lifts README's
+   `<!-- badges: start --> ... <!-- badges: end -->` here when `dev` is
+   in `home.sidebar.structure`).  Wrap nicely on narrow screens.
+   ---------------------------------------------------------------------------- */
+aside .dev img,
+aside .dev a img {
+  max-width: 100%;
+  height: auto;
+  margin: 0 4px 4px 0;
+  vertical-align: middle;
+}
+
+/* ----------------------------------------------------------------------------
+   Sidebar section titles: BOLD + slightly larger + small-caps tracking,
+   with a thin accent rule below so the eye picks up each group quickly.
+   The navy accent colour matches the bslib `primary` so the headings
+   feel of-a-piece with the navbar.
+   ---------------------------------------------------------------------------- */
+aside h2,
+aside .section h2 {
+  font-size: 1.20rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  color: #1f4e79;                       /* matches navbar `primary` */
+  margin-top: 1.75rem;
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid #d8e2ec;
+  line-height: 1.25;
+}
+
+/* First sidebar heading: no extra top margin (it's already at the top). */
+aside > div:first-child h2 {
+  margin-top: 0;
+}
