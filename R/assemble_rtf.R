@@ -175,6 +175,28 @@
          character(1L), USE.NAMES = FALSE)
 }
 
+# Point every NUMPAGES cache at the assembled document's page count (#415).
+#
+# `{AUTO_TOTAL_PAGES}` bakes the count of the document being written, so each
+# input arrives claiming its own old total while sitting in a book of a
+# different length.  Word recalculates header/footer fields during layout and
+# so shows the right number anyway; what this fixes is the file as written --
+# for readers that display the cached result, for anything that parses rather
+# than renders, and for a body-placed total, which Word does not recompute
+# until the fields are refreshed.
+#
+# Rewriting a cached RESULT is not the conversion step this design avoids: the
+# instruction is untouched, and the cache is only ever a stale answer to it.
+.retotal_numpages <- function(lines, total_pages) {
+  if (is.null(total_pages) || is.na(total_pages)) return(lines)
+  # {\field{\*\fldinst NUMPAGES}{\fldrslt <anything but a brace>}}
+  pattern <- paste0("(\\{\\\\field\\{\\\\\\*\\\\fldinst NUMPAGES\\}",
+                    "\\{\\\\fldrslt )[^{}]*(\\}\\})")
+  vapply(lines,
+         function(l) gsub(pattern, paste0("\\1", as.integer(total_pages), "\\2"), l),
+         character(1L), USE.NAMES = FALSE)
+}
+
 # Inject a `\pgnrestart\pgndec` right after the first \sectd, so the body
 # pages restart at 1 when the preceding TOC used Roman numbering.
 .insert_pgnrestart <- function(content) {
@@ -773,14 +795,19 @@ assemble_rtf <- function(input_files, output_file, overwrite = FALSE,
     body <- c(body, "\\sect", content)
   }
 
-  # Fill the reserved slots before closing, now that the book's own page count
-  # is known.  Front matter counts: a cover is one page, the TOC one more.
+  # The assembled document's own page count, known only here.  Front matter
+  # counts: a cover is one page, the TOC one more.
+  body_pages  <- sum(vapply(input_files, function(f)
+    .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L)))
+  front_pages <- (if (use_cover) 1L else 0L) + (if (use_toc) 1L else 0L)
+  book_pages  <- body_pages + front_pages
+
+  # Fill the reserved slots, then make every NUMPAGES cache -- the inputs' own
+  # included -- agree with the book they now sit in.
   if (!is.null(book_page)) {
-    body_pages <- sum(vapply(input_files, function(f)
-      .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L)))
-    front_pages <- (if (use_cover) 1L else 0L) + (if (use_toc) 1L else 0L)
-    body <- .fill_book_page_slots(body, book_page, body_pages + front_pages)
+    body <- .fill_book_page_slots(body, book_page, book_pages)
   }
+  body <- .retotal_numpages(body, book_pages)
 
   body <- c(body, "}")
   writeLines(body, con = output_file, useBytes = TRUE)
