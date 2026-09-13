@@ -682,6 +682,19 @@ Diagnosis")
 
 ### Bug fixes
 
+- **LibreOffice dropped every page break between tables** (#408).  The break
+  was emitted as two separately grouped paragraphs around the `\page`
+  (`{\pard\fs2\par}\page{\pard\fs2\par}`, the form r2rtf and reporter use).
+  Word honours that; LibreOffice's RTF importer does not, and ran the next
+  table onto the same page -- so any pipeline batch-converting RTF to PDF
+  through LibreOffice silently lost its pagination.  The whole break is now
+  one group (`{\pard\fs2\par\page\pard\fs2\par}`), which keeps both properties
+  the old form was chosen for: the `\page` is still flanked by *terminated*
+  paragraphs (what #138 found Word needs -- the bug there was a bare `\pard`
+  with no `\par`, not the grouping), and `\fs2` is still scoped so the 1pt
+  size cannot leak.  Verified in LibreOffice, and checked in Word: the two
+  forms render identically there.
+
 - **`assemble_rtf()`'s cached table-of-contents page numbers were wrong for
   any multi-page deliverable** (#401).  The internal page count matched
   `\sbkpage` only.  That control word starts a *section*, and rtfreporter
