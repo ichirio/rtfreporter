@@ -739,6 +739,21 @@ Diagnosis")
 
 ### Bug fixes
 
+- **Assembling left every NUMPAGES cache claiming its own old total** (#415).
+  `{AUTO_TOTAL_PAGES}` bakes the count of the document being written, so a
+  3-page and a 2-page deliverable bound into a 5-page book each went on
+  insisting on 3 and 2.  `assemble_rtf()` now points every cache at the book's
+  page count, front matter included.
+
+  Word recalculates header and footer fields during layout, so a Word reader
+  already saw the right number — confirmed on the desktop version.  What this
+  fixes is the file as written: readers that display the cached result,
+  anything that parses the RTF rather than rendering it, and a body-placed
+  total, which Word does not recompute until the fields are refreshed.
+
+  Only the cached *result* is rewritten; the field instruction is untouched.
+  A cache is a stale answer, not a value.
+
 - **LibreOffice dropped every page break between tables** (#408).  The break
   was emitted as two separately grouped paragraphs around the `\page`
   (`{\pard\fs2\par}\page{\pard\fs2\par}`, the form r2rtf and reporter use).
