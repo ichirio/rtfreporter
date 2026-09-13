@@ -111,9 +111,11 @@ rtf_commands <- list(
     auto_page        = "\\chpgn ",
     # Dynamic total-pages field — updated by the RTF viewer (NUMPAGES).
     # {total_pages} is substituted with the static fallback count.
-    auto_total_pages  = "{\\field{\\*\\fldinst NUMPAGES}{\\fldrslt {total_pages}}}",
-    # Dynamic section-pages field — number of pages in the current section.
-    section_pages     = "{\\field{\\*\\fldinst SECTIONPAGES}{\\fldrslt 1}}"
+    auto_total_pages  = "{\\field{\\*\\fldinst NUMPAGES}{\\fldrslt {total_pages}}}"
+    # A SECTIONPAGES field lived here until 0.7.31 (#410).  It counted the
+    # pages of one rtf_section, which equals NUMPAGES in a standalone file and
+    # keeps counting one table after assemble_rtf() while the page number
+    # counts the whole document -- redundant or wrong, never useful.
   ),
   # Package-wide configurable defaults.
   # Adjust these values to tune the visual appearance without touching renderer code.

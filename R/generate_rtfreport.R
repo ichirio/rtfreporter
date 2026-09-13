@@ -273,8 +273,6 @@
 #                                        the user is looking at)
 #   \{AUTO_TOTAL_PAGES\}             -> RTF NUMPAGES field (DYNAMIC total,
 #                                        recomputed across the document)
-#   \{SECTION_PAGES\}                -> RTF SECTIONPAGES field (DYNAMIC,
-#                                        current section's page count)
 #   \{PAGE\}                         -> STATIC integer at render time
 #                                        (the section's first-page number)
 #   \{TOTAL_PAGES\}                  -> STATIC integer at render time
@@ -302,9 +300,22 @@
 #
 # Split out so the bands that do their own escaping -- the title and footnote
 # blocks, which run the text through `.format_cell_text()` themselves -- resolve
-# the same five tokens with the same semantics, instead of printing them
+# the same four tokens with the same semantics, instead of printing them
 # literally (#398).  Header / footer keep going through `.render_tokens()`.
 .substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
+  # `{SECTION_PAGES}` was removed in 0.7.31 (#410).  An unrecognised token is
+  # passed through as literal text, so falling through silently would print
+  # "{SECTION_PAGES}" into a rendered deliverable -- error instead, and say
+  # what to use.
+  if (grepl("\\{SECTION_PAGES\\}", out, fixed = TRUE)) {
+    stop("`{SECTION_PAGES}` was removed: the RTF SECTIONPAGES field it wrote ",
+         "equals `{AUTO_TOTAL_PAGES}` in a standalone file, and after ",
+         "assemble_rtf() it keeps counting one table while the page number ",
+         "counts the whole document (\"Page 4 of 2\").\n",
+         "  per-table total  -> `{TOTAL_PAGES}` (static, survives assembly)\n",
+         "  document total   -> `{AUTO_TOTAL_PAGES}`", call. = FALSE)
+  }
+
   # Dynamic per-page page number: viewer-rendered.
   out <- gsub("\\{AUTO_PAGE\\}", "\\chpgn ", out, fixed = TRUE)
 
@@ -313,9 +324,6 @@
   cmds <- .load_rtf_commands()
   numpages_rtf <- .cmd_fmt(cmds$fields$auto_total_pages, list(total_pages = fallback))
   out <- gsub("\\{AUTO_TOTAL_PAGES\\}", numpages_rtf, out, fixed = TRUE)
-
-  # Dynamic section-pages: RTF SECTIONPAGES field.
-  out <- gsub("\\{SECTION_PAGES\\}", cmds$fields$section_pages, out, fixed = TRUE)
 
   # Static per-section page number: integer baked in at render time.
   # `current_page` is the first-page number of the section being rendered.

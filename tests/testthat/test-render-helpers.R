@@ -81,7 +81,6 @@ test_that(".render_tokens substitutes every documented token", {
   expect_match(rt("Page {AUTO_PAGE}"),       "\\\\chpgn")
   expect_match(rt("Total {AUTO_TOTAL_PAGES}",
                   total_pages = 7L),         "NUMPAGES")
-  expect_match(rt("Sec {SECTION_PAGES}"),    "SECTIONPAGES")
   expect_match(rt("Page {PAGE}", current_page = 3L),
                                               "Page 3")
   expect_match(rt("Total {TOTAL_PAGES}", total_pages = 9L),
