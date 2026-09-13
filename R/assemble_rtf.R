@@ -147,6 +147,34 @@
   max(sections, 1L) + breaks
 }
 
+# Fill every `{BOOK_PAGE}` slot with the compiled document's page number (#413).
+#
+# The slot is an empty ignorable destination the deliverable left behind; it
+# can sit in any band, because it is only text in a cell.  `book_page` is the
+# text to put there and may use the dynamic tokens -- the total it gets is the
+# BOOK's page count, which is the whole point of filling this at assembly time
+# rather than at generation.
+#
+# The static `{PAGE}` / `{TOTAL_PAGES}` cannot work here: the slot usually
+# lives in a header or footer, one band shared by every page of its section,
+# so a single substitution cannot carry a different number per page.
+.fill_book_page_slots <- function(lines, book_page, total_pages) {
+  if (is.null(book_page)) return(lines)
+  book_page <- as.character(book_page)[1L]
+  if (grepl("(?:^|[^A-Z_])\\{(PAGE|TOTAL_PAGES)\\}", book_page, perl = TRUE)) {
+    stop("`book_page` cannot use the static `{PAGE}` / `{TOTAL_PAGES}` tokens: ",
+         "the slot sits in one band shared by every page of a section, so a ",
+         "single substitution cannot give each page its own number.\n",
+         "  Use `{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}`, which the reader ",
+         "resolves per page.", call. = FALSE)
+  }
+  slot <- .load_rtf_commands()$fields$book_page_slot
+  filled <- .render_tokens(book_page, current_page = NULL,
+                           total_pages = total_pages)
+  vapply(lines, function(l) gsub(slot, filled, l, fixed = TRUE),
+         character(1L), USE.NAMES = FALSE)
+}
+
 # Inject a `\pgnrestart\pgndec` right after the first \sectd, so the body
 # pages restart at 1 when the preceding TOC used Roman numbering.
 .insert_pgnrestart <- function(content) {
@@ -561,6 +589,24 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #' @param bookmark_prefix String prepended to every auto-generated
 #'   bookmark name (default `"tfl_"`).  Helps avoid clashes if you
 #'   later concatenate multiple assembled outputs.
+#' @param book_page Text for the compiled document's page number, put into
+#'   every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves the
+#'   slots empty.
+#'
+#'   A deliverable that will be bound into a book needs two page numbers: its
+#'   own (`Page 1 of 3`) and the book's (`Page 4 of 57`).  Written from the
+#'   start they print the same number twice on a standalone deliverable, where
+#'   the two are equal.  So the deliverable reserves the position instead --
+#'   `c(c = "{BOOK_PAGE}")` in whichever band it wants, header, footer, title
+#'   or footnote -- and renders it empty, keeping the row's height.  This
+#'   argument supplies the content when the book is built, so filling it cannot
+#'   shift anything.
+#'
+#'   Typically `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"`.  The total resolves
+#'   to the **book's** page count, which is what the deliverable could not know
+#'   on its own.  The static `{PAGE}` / `{TOTAL_PAGES}` are rejected: the slot
+#'   sits in one band shared by every page of a section, so a single
+#'   substitution cannot give each page its own number.
 #'
 #' @return Invisibly returns `output_file`.
 #'
@@ -605,7 +651,8 @@ assemble_rtf <- function(input_files, output_file, overwrite = FALSE,
                           toc_title          = "Table of Contents",
                           toc_leader         = c("dot", "none"),
                           toc_page_numbering = c("none", "roman", "decimal"),
-                          bookmark_prefix    = "tfl_") {
+                          bookmark_prefix    = "tfl_",
+                          book_page          = NULL) {
   toc_leader         <- match.arg(toc_leader)
   toc_page_numbering <- match.arg(toc_page_numbering)
 
@@ -724,6 +771,15 @@ assemble_rtf <- function(input_files, output_file, overwrite = FALSE,
                                    outline_label = file_outline_labels[[i]])
     }
     body <- c(body, "\\sect", content)
+  }
+
+  # Fill the reserved slots before closing, now that the book's own page count
+  # is known.  Front matter counts: a cover is one page, the TOC one more.
+  if (!is.null(book_page)) {
+    body_pages <- sum(vapply(input_files, function(f)
+      .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L)))
+    front_pages <- (if (use_cover) 1L else 0L) + (if (use_toc) 1L else 0L)
+    body <- .fill_book_page_slots(body, book_page, body_pages + front_pages)
   }
 
   body <- c(body, "}")

@@ -111,7 +111,14 @@ rtf_commands <- list(
     auto_page        = "\\chpgn ",
     # Dynamic total-pages field — updated by the RTF viewer (NUMPAGES).
     # {total_pages} is substituted with the static fallback count.
-    auto_total_pages  = "{\\field{\\*\\fldinst NUMPAGES}{\\fldrslt {total_pages}}}"
+    auto_total_pages  = "{\\field{\\*\\fldinst NUMPAGES}{\\fldrslt {total_pages}}}",
+    # The `{BOOK_PAGE}` slot (#413): an empty ignorable destination.  `\*` tells
+    # every reader to skip a group whose control word it does not know, so a
+    # deliverable that is never assembled shows nothing here -- the row keeps
+    # its height and no stray token is printed.  assemble_rtf(book_page =)
+    # finds this exact string and puts the compiled document's page number in
+    # its place.
+    book_page_slot    = "{\\*\\rtfreporterbookpage}"
     # A SECTIONPAGES field lived here until 0.7.31 (#410).  It counted the
     # pages of one rtf_section, which equals NUMPAGES in a standalone file and
     # keeps counting one table after assemble_rtf() while the page number

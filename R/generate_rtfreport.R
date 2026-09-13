@@ -277,6 +277,9 @@
 #                                        (the section's first-page number)
 #   \{TOTAL_PAGES\}                  -> STATIC integer at render time
 #                                        (document total page count)
+#   \{BOOK_PAGE\}                    -> a RESERVED SLOT, empty here, filled by
+#                                        assemble_rtf(book_page =) with the
+#                                        compiled document's page number
 #
 # The static tokens freeze at render time and stay verbatim through
 # downstream tooling (notably assemble_rtf, which never rewrites
@@ -315,6 +318,13 @@
          "  per-table total  -> `{TOTAL_PAGES}` (static, survives assembly)\n",
          "  document total   -> `{AUTO_TOTAL_PAGES}`", call. = FALSE)
   }
+
+  # The reserved slot for the compiled document's page number (#413).  It goes
+  # in as an empty ignorable destination and stays that way unless
+  # assemble_rtf(book_page =) fills it, so a deliverable rendered on its own
+  # shows an empty -- but full height -- row where the book number will sit.
+  out <- gsub("\\{BOOK_PAGE\\}", .load_rtf_commands()$fields$book_page_slot,
+              out, fixed = TRUE)
 
   # Dynamic per-page page number: viewer-rendered.
   out <- gsub("\\{AUTO_PAGE\\}", "\\chpgn ", out, fixed = TRUE)

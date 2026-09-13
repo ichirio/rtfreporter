@@ -279,17 +279,43 @@ sec_footer <- rtf_footer(rows = list(
 | `{AUTO_PAGE}` | Dynamic page number (`\chpgn`) |
 | `{AUTO_TOTAL_PAGES}` | Dynamic NUMPAGES field — **recommended** |
 | `{TOTAL_PAGES}` | Static total computed at render time |
+| `{BOOK_PAGE}` | A slot left empty here, filled by `assemble_rtf(book_page =)` |
 
 Two numbers, two jobs. The **per-table** number belongs in the header and must
 be static, so that binding the table into a compiled document does not change
 it: `"Page {PAGE} of {TOTAL_PAGES}"` — within one generated file these count
 that file's table, and `assemble_rtf()` leaves them alone. The **document-wide**
 number belongs in the footer and must be dynamic, because only the reader knows
-it: `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"`. Writing both from the start
-means nothing has to be rewritten at assembly time.
+it: `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"`.
 
 For a single standalone table, `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"` alone
 is enough — the document *is* the table.
+
+### Both numbers on one page
+
+Writing both from the start works, but on a standalone deliverable they are the
+same number, so it prints twice. `{BOOK_PAGE}` reserves the position instead:
+
+```r
+# the deliverable -- the slot renders empty, keeping the row's height
+footer = rtf_footer(rows = list(
+  c(c = "Company Confidential"),
+  c(l = "Statistical Programming", r = "Draft"),
+  c(c = "{BOOK_PAGE}")))
+
+# the book
+assemble_rtf(files, "book.rtf",
+             book_page = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
+```
+
+Standalone, the header reads `Page 1 of 3` and that footer row is blank. In the
+book the same page reads `Page 1 of 3` at the top and `Page 2 of 6` at the
+bottom — and because the row was already there at its full height, filling it
+cannot move anything. The other footer rows are untouched; each deliverable
+keeps its own footer.
+
+The slot may sit in any band — header, footer, title or footnote — and there is
+no addressing to learn: wherever you write the token is where the number goes.
 
 ---
 
