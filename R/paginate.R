@@ -342,9 +342,10 @@ paginate.data.frame <- function(x, ...) {
 
   # Optional cell-format pass: rewrite the body cells column-by-column to a
   # uniform display width BEFORE splitting, so every chunk inherits the
-  # cleaned-up cells.  `cell_format` (a function or list of functions) takes
-  # precedence; `align_count_pct = TRUE` is the long-standing shorthand for
-  # the built-in "n (xx.x)" realigner.
+  # cleaned-up cells.  `cell_format` (a function, a built-in's name, or a list
+  # of either) takes precedence; `align_count_pct = TRUE` is the long-standing
+  # shorthand for the built-in "n (xx.x)" realigner, and a name there means
+  # the same as it does in `cell_format`.
   #
   # `na` is a display substitution, not a formatting option, so it runs whether
   # or not either of those is set -- and it runs FIRST, which is what makes the
@@ -354,11 +355,12 @@ paginate.data.frame <- function(x, ...) {
   # blank out repeated values, and those must stay blank.
   na <- .check_na_text(na)
   x  <- .replace_na_df(x, na)
-  if (!is.null(cell_format)) {
-    fl <- .resolve_cell_format(cell_format, ncol(x))
+  fmt <- if (!is.null(cell_format)) cell_format else
+    .resolve_align_count_pct(align_count_pct)
+  if (!is.null(fmt)) {
+    arg <- if (!is.null(cell_format)) "cell_format" else "align_count_pct"
+    fl  <- .resolve_cell_format(fmt, ncol(x), arg)
     if (!is.null(fl)) x <- .apply_cell_format(x, fl, na = na)
-  } else if (isTRUE(align_count_pct)) {
-    x <- .realign_count_pct_df(x, na = na)
   }
 
   # count_blank_rows: materialise the resolved blank positions as empty marker

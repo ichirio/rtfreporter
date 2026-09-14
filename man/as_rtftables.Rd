@@ -207,22 +207,36 @@ Under \code{TRUE} the blank positions resolved from \code{blank_rows} (and from 
 the split and re-attached per page afterwards, with a leading blank
 suppressed at the top of each page.}
 
-\item{align_count_pct}{Logical (default \code{FALSE}).  Shorthand to realign
-\code{"n (xx.x)"} count/percent cells to a uniform width before pagination (the
-built-in \code{\link[=realign_count_pct]{realign_count_pct()}}).  Ignored when \code{cell_format} is supplied,
-which takes precedence.  Neither one controls whether missing values are
-substituted -- that is \code{na} -- only whether the substituted token is
-aligned with the counts.}
+\item{align_count_pct}{The cell alignment to apply before pagination.
+\code{FALSE} (default) none; \code{TRUE} the built-in \code{\link[=realign_count_pct]{realign_count_pct()}}, which
+realigns \code{"n (xx.x)"} count/percent cells to a uniform width.  It also
+accepts the \strong{name of any built-in} (\code{"count_paren"}, \code{"value_paren"},
+\code{"right_align"}, ... -- the \code{fmt_} prefix is optional) or a function of
+your own, in which case it behaves exactly like \code{cell_format}.  Ignored
+when \code{cell_format} is supplied, which takes precedence.  Neither one
+controls whether missing values are substituted -- that is \code{na} -- only
+whether the substituted token is aligned with the counts.}
 
 \item{cell_format}{Optional cell re-formatter applied column-by-column to
-the body \strong{before} pagination, for monospaced alignment.  Either a single
-function -- applied to every data column (columns 2..N; the row-label
-column 1 is left alone) -- or a list of functions taken positionally
-(\code{cell_format[[j]]} for column \code{j}; non-function entries are skipped).
-Each function takes one column (a character vector) and returns a
-character vector of the same length; see \code{\link[=fmt_count_paren]{fmt_count_paren()}} /
-\code{\link[=fmt_right_align]{fmt_right_align()}} for built-ins and the contract for writing your own.
-When supplied it takes precedence over \code{align_count_pct}.}
+the body \strong{before} pagination, for monospaced alignment.  Either one
+formatter -- applied to every data column (columns 2..N; the row-label
+column 1 is left alone) -- or a list of them taken positionally
+(\code{cell_format[[j]]} for column \code{j}; entries that are neither a function
+nor a name are skipped).
+
+A formatter is a \strong{function} taking one column (a character vector) and
+returning a character vector of the same length, or the \strong{name} of a
+built-in as a string -- \code{"right_align"}, \code{"count_paren"},
+\code{"count_paren_bare"}, \code{"value_paren"}, \code{"count_pct"}, with the \code{fmt_}
+prefix optional, so \code{"fmt_count_paren"} works too:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{as_rtftables(x, cell_format = "value_paren")
+as_rtftables(x, cell_format = list(NULL, "right_align", my_fmt))
+}\if{html}{\out{</div>}}
+
+See \code{\link[=fmt_count_paren]{fmt_count_paren()}} / \code{\link[=fmt_value_paren]{fmt_value_paren()}} / \code{\link[=fmt_right_align]{fmt_right_align()}} for
+what each one does, and the contract in \code{?fmt_right_align} for writing
+your own.  When supplied it takes precedence over \code{align_count_pct}.}
 
 \item{na}{Text to print for a \strong{missing value} (default \code{""}, an empty
 cell -- the previous behaviour).  Applied to every column, the row-label

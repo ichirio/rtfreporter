@@ -323,12 +323,15 @@
 #'   `TRUE` they do, so `max_rows` is the number of rows the page prints;
 #'   under `FALSE` (the default) they do not, and the printed page can be up
 #'   to two rows taller than `max_rows`.
-#' @param align_count_pct Logical (default `FALSE`).  Shorthand to realign
-#'   `"n (xx.x)"` count/percent cells to a uniform width before pagination (the
-#'   built-in [realign_count_pct()]).  Ignored when `cell_format` is supplied,
-#'   which takes precedence.  Neither one controls whether missing values are
-#'   substituted -- that is `na` -- only whether the substituted token is
-#'   aligned with the counts.
+#' @param align_count_pct The cell alignment to apply before pagination.
+#'   `FALSE` (default) none; `TRUE` the built-in [realign_count_pct()], which
+#'   realigns `"n (xx.x)"` count/percent cells to a uniform width.  It also
+#'   accepts the **name of any built-in** (`"count_paren"`, `"value_paren"`,
+#'   `"right_align"`, ... -- the `fmt_` prefix is optional) or a function of
+#'   your own, in which case it behaves exactly like `cell_format`.  Ignored
+#'   when `cell_format` is supplied, which takes precedence.  Neither one
+#'   controls whether missing values are substituted -- that is `na` -- only
+#'   whether the substituted token is aligned with the counts.
 #' @param min_group_rows Integer (default `2`).  Widow/orphan control for the
 #'   group-aware splits (`"group_force"`, `"group_safe"`, `"by_value"`): when a
 #'   page would end on a group that *starts* on that page while showing fewer
@@ -356,14 +359,24 @@
 #'   the split and re-attached per page afterwards, with a leading blank
 #'   suppressed at the top of each page.
 #' @param cell_format Optional cell re-formatter applied column-by-column to
-#'   the body **before** pagination, for monospaced alignment.  Either a single
-#'   function -- applied to every data column (columns 2..N; the row-label
-#'   column 1 is left alone) -- or a list of functions taken positionally
-#'   (`cell_format[[j]]` for column `j`; non-function entries are skipped).
-#'   Each function takes one column (a character vector) and returns a
-#'   character vector of the same length; see [fmt_count_paren()] /
-#'   [fmt_right_align()] for built-ins and the contract for writing your own.
-#'   When supplied it takes precedence over `align_count_pct`.
+#'   the body **before** pagination, for monospaced alignment.  Either one
+#'   formatter -- applied to every data column (columns 2..N; the row-label
+#'   column 1 is left alone) -- or a list of them taken positionally
+#'   (`cell_format[[j]]` for column `j`; entries that are neither a function
+#'   nor a name are skipped).
+#'
+#'   A formatter is a **function** taking one column (a character vector) and
+#'   returning a character vector of the same length, or the **name** of a
+#'   built-in as a string -- `"right_align"`, `"count_paren"`,
+#'   `"count_paren_bare"`, `"value_paren"`, `"count_pct"`, with the `fmt_`
+#'   prefix optional, so `"fmt_count_paren"` works too:
+#'   ```r
+#'   as_rtftables(x, cell_format = "value_paren")
+#'   as_rtftables(x, cell_format = list(NULL, "right_align", my_fmt))
+#'   ```
+#'   See [fmt_count_paren()] / [fmt_value_paren()] / [fmt_right_align()] for
+#'   what each one does, and the contract in `?fmt_right_align` for writing
+#'   your own.  When supplied it takes precedence over `align_count_pct`.
 #' @param na Text to print for a **missing value** (default `""`, an empty
 #'   cell -- the previous behaviour).  Applied to every column, the row-label
 #'   column included, and **independently of `align_count_pct` / `cell_format`**

@@ -134,7 +134,7 @@ test_that("paginate(align_count_pct = FALSE) leaves columns untouched (default)"
   expect_identical(pages[[1L]]$a[2L], "5 (33.3)")
 })
 
-test_that(".realign_count_pct_df() leaves an integer-only column untouched (#80)", {
+test_that("align_count_pct leaves an integer-only column untouched (#80)", {
   # A plain count column with no "n (xx.x)" cells must NOT be padded:
   # values like "3" must stay flush-left with no leading spaces inserted.
   df <- data.frame(
@@ -142,11 +142,11 @@ test_that(".realign_count_pct_df() leaves an integer-only column untouched (#80)
     n     = c("",      "3",   "12"),
     stringsAsFactors = FALSE
   )
-  out <- rtfreporter:::.realign_count_pct_df(df, nbsp = " ")
+  out <- as_rtftables(df, align_count_pct = TRUE)[[1L]]$data
   expect_identical(out$n, c("", "3", "12"))
 })
 
-test_that(".realign_count_pct_df() reformats only 'integer (real)' cells (#148)", {
+test_that("align_count_pct reformats only 'integer (real)' cells (#148)", {
   # align_count_pct only reformats "integer (real)" count-percent cells (the
   # real part may end in "%").  A bare integer (a plain N) and a continuous
   # statistic like "75.2 (8.6)" (whose "count" is not a bare integer) must pass
@@ -156,7 +156,7 @@ test_that(".realign_count_pct_df() reformats only 'integer (real)' cells (#148)"
     a     = c("86", "75.2 (8.6)", "", "16 (53.3%)", "8 (46.7%)"),
     stringsAsFactors = FALSE
   )
-  out <- rtfreporter:::.realign_count_pct_df(df, nbsp = " ")
+  out <- lapply(as_rtftables(df, align_count_pct = TRUE)[[1L]]$data, unbsp)
   expect_identical(out$a[1L], "86")           # bare N untouched
   expect_identical(out$a[2L], "75.2 (8.6)")   # continuous stat untouched
   expect_identical(out$a[3L], "")             # empty untouched

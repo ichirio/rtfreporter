@@ -30,10 +30,10 @@ them through \code{\link[=format_count_pct]{format_count_pct()}} so every cell i
 Cells that do not match are returned unchanged.
 }
 \details{
-This is the function \code{paginate()} invokes internally when
-\code{align_count_pct = TRUE} (see \code{\link[=paginate]{paginate()}}).  It is exported so it
-can be applied directly to a data.frame column outside of any
-pagination context.
+This is what \code{align_count_pct = TRUE} applies, column by column, to every
+character column but the first (see \code{\link[=as_rtftables]{as_rtftables()}}); it is also the
+built-in named \code{"count_pct"}.  It is exported so it can be applied directly
+to a data.frame column outside of any pagination context.
 }
 \examples{
 realign_count_pct(c("5 (33.3)", "12 (100.0)", "0 (0.0)",

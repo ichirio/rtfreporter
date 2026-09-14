@@ -315,15 +315,31 @@ so the decimal-point ratio is computed from `"0.3333"` rather than from
 
 Clinical tables often need count/percent columns to line up by character.
 `cell_format` re-formats the body **before** pagination, column by column. Pass a
-single function (applied to every data column; the row-label column 1 is left
-alone) or a list of functions taken positionally. rtfreporter ships a few:
+single formatter (applied to every data column; the row-label column 1 is left
+alone) or a list of them taken positionally. rtfreporter ships a few:
 
 - `fmt_count_paren()` -- right-justify an integer count and the number inside the
   parentheses, e.g. `"10 (11.6%)"` over `" 4 ( 4.7%)"`;
+- `fmt_count_paren_bare()` -- the same, and a bare count with no parentheses
+  (a lone `"0"`, a raw total) is padded into the same field;
+- `fmt_value_paren()` -- the general form: the value before the parenthesis may
+  be **any text** (`"n=3"`, `"3/12"`, a word), and inside the parentheses the
+  **ones digit** is aligned rather than the closing parenthesis, so `"(100%)"`
+  and `"(35.3%)"` line up on their units;
 - `fmt_right_align()` -- the minimal "right-justify a column" formatter and a
   template for writing your own;
 - `align_count_pct = TRUE` -- the long-standing shorthand for the built-in
   `"n (xx.x)"` realigner.
+
+A formatter is either the **function** or its **name as a string**, with the
+`fmt_` prefix optional -- handy when the choice comes from a config file or a
+recipe rather than from code:
+
+```r
+as_rtftables(x, cell_format = "value_paren")
+as_rtftables(x, cell_format = list(NULL, "right_align", my_fmt))
+as_rtftables(x, align_count_pct = "count_paren")   # the switch takes a name too
+```
 
 ```{r cellfmt}
 counts <- data.frame(
@@ -333,6 +349,18 @@ counts <- data.frame(
 )
 tbl <- as_rtftable(counts, cell_format = fmt_count_paren)
 tbl$data$n_pct                       # both cells padded to one width
+```
+
+`fmt_value_paren()` is the one to reach for when a column mixes shapes -- a
+plain N, a count with a percentage, a text value:
+
+```{r cellfmt_value}
+mixed <- data.frame(
+  Group = c("N", "Responders", "Rare"),
+  stat  = c("86", "12 (14.0)", "1 (<1)"),
+  stringsAsFactors = FALSE
+)
+as_rtftable(mixed, cell_format = "value_paren")$data$stat
 ```
 
 ### Writing your own `cell_format` function
