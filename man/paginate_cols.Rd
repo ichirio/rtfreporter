@@ -15,6 +15,7 @@ paginate_cols(x, ...)
   carry = NULL,
   allow_span_break = TRUE,
   width = c("fill", "keep"),
+  page_order = c("across", "down"),
   ...
 )
 
@@ -25,6 +26,7 @@ paginate_cols(x, ...)
   carry = NULL,
   allow_span_break = TRUE,
   width = c("fill", "keep"),
+  page_order = c("across", "down"),
   ...
 )
 }
@@ -54,6 +56,15 @@ every page, so page 1 fills the sheet and a given ratio is the same width
 throughout; \code{"keep"} gives each kept column exactly the width it had
 before the split. No effect under \code{column_widths_twips}. See
 \emph{Column widths}.}
+
+\item{page_order}{Which axis is the outer level when a table is split both
+ways. \code{"across"} (default) keeps the \strong{row page} outside -- a row band
+sweeps every column block, then the next band -- so the table is read
+across and then down. \code{"down"} puts the \strong{column block} outside, so one
+block is read all the way down before the next starts. The pages
+themselves are identical; only their order differs. A page's name follows
+its row page either way, so under \code{"down"} pages sharing a name are no
+longer adjacent -- see \emph{Page names}.}
 }
 \value{
 A list of \code{\link[=rtftable]{rtftable()}} pages. Names are carried through unchanged,
@@ -65,12 +76,15 @@ Splits a table across pages \strong{by column} -- the horizontal counterpart of
 the row pagination \code{\link[=as_rtftables]{as_rtftables()}} performs -- repeating the row-heading
 column(s) on every page so each one can be read on its own.
 
-Row splitting happens first; this verb then splits the resulting pages. The
-\strong{row page is the outer level}: a row band sweeps every column block before
-the next band starts, so the reader goes across the table first and then
-down it. Two row pages by three column blocks come out as
-\code{row1/col1}, \code{row1/col2}, \code{row1/col3}, \code{row2/col1}, \code{row2/col2},
-\code{row2/col3}.
+Row splitting happens first; this verb then splits the resulting pages, and
+\code{page_order} says which axis is the \strong{outer} level. By default it is the row
+page: a row band sweeps every column block before the next band starts, so
+the reader goes across the table first and then down it. Two row pages by three
+column blocks come out as \code{row1/col1}, \code{row1/col2}, \code{row1/col3},
+\code{row2/col1}, \code{row2/col2}, \code{row2/col3} -- and as \code{row1/col1}, \code{row2/col1},
+\code{row1/col2}, \code{row2/col2}, \code{row1/col3}, \code{row2/col3} under
+\code{page_order = "down"}, which reads one column block all the way down before
+starting the next.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{as_rtftables(x, max_rows = 20) |> paginate_cols(at = c(4, 6))
 }\if{html}{\out{</div>}}
@@ -113,6 +127,17 @@ Spanning cells are clipped to each page's columns. By default a cut may
 fall inside a spanning group, and the group's label is repeated over its
 remaining columns on each page; \code{allow_span_break = FALSE} rejects such a
 cut instead.
+}
+
+\section{Page names}{
+
+A column page inherits the name of the row page it was cut from, whatever
+\code{page_order} is. \code{rtf_tables(auto_section = TRUE)} opens a section per
+\strong{run} of equal names, so with one name per table -- the usual case --
+every page of that table stays in one section under either order. Only when
+the row pages carry \emph{different} names (e.g. \code{split = "by_value"}, which
+names a page per group) does \code{"down"} interleave them, giving a section per
+page.
 }
 
 \examples{

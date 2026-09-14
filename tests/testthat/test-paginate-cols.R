@@ -231,6 +231,51 @@ test_that("the row page is the outer level: across first, then down", {
   expect_equal(band, c(rep(d$Parameter[1L], 3L), rep(d$Parameter[4L], 3L)))
 })
 
+test_that("page_order = \"down\" makes the column block the outer level", {
+  d  <- .df()
+  t1 <- rtftable(d[1:3, , drop = FALSE])          # row band 1
+  t2 <- rtftable(d[4:6, , drop = FALSE])          # row band 2
+  pages <- paginate_cols(list(t1, t2), at = c(4, 6), page_order = "down")
+  expect_length(pages, 6L)
+
+  # 2 row bands x 3 column blocks ->
+  #   row1/col1 row2/col1 row1/col2 row2/col2 row1/col3 row2/col3
+  blocks <- vapply(pages, function(p) names(p$data)[2L], character(1L))
+  expect_equal(blocks, rep(c("A_n", "B_n", "C_n"), each = 2L))
+
+  band <- vapply(pages, function(p) p$data$Parameter[1L], character(1L))
+  expect_equal(band, rep(d$Parameter[c(1L, 4L)], 3L))
+})
+
+test_that("page_order only reorders: the same pages come back either way", {
+  d  <- .df()
+  pg <- list(rtftable(d[1:3, , drop = FALSE]), rtftable(d[4:6, , drop = FALSE]))
+  a <- paginate_cols(pg, at = c(4, 6))                          # across
+  b <- paginate_cols(pg, at = c(4, 6), page_order = "down")     # down
+  # across index (row i, block bi) -> down index
+  expect_equal(b, a[c(1L, 4L, 2L, 5L, 3L, 6L)])
+})
+
+test_that("page_order is a no-op on a single row page", {
+  tbl <- rtftable(.df())
+  expect_equal(paginate_cols(tbl, at = c(4, 6), page_order = "down"),
+               paginate_cols(tbl, at = c(4, 6)))
+})
+
+test_that("under page_order = \"down\" a name follows its row page", {
+  d  <- .df()
+  pg <- list(g1 = rtftable(d[1:3, , drop = FALSE]),
+             g2 = rtftable(d[4:6, , drop = FALSE]))
+  out <- paginate_cols(pg, at = 4, width = "keep", page_order = "down")
+  # the pages are reordered, so equal names are no longer adjacent
+  expect_equal(names(out), c("g1", "g2", "g1", "g2"))
+})
+
+test_that("`page_order` is validated", {
+  expect_error(paginate_cols(rtftable(.df()), at = 4, page_order = "sideways"),
+               "arg")
+})
+
 test_that("page names are carried through unchanged", {
   d  <- .df()
   pg <- list(one = rtftable(d[1:3, , drop = FALSE]),
