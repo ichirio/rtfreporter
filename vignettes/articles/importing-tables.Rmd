@@ -323,9 +323,10 @@ alone) or a list of them taken positionally. rtfreporter ships a few:
 - `fmt_count_paren_bare()` -- the same, and a bare count with no parentheses
   (a lone `"0"`, a raw total) is padded into the same field;
 - `fmt_value_paren()` -- the general form: the value before the parenthesis may
-  be **any text** (`"n=3"`, `"3/12"`, a word), and inside the parentheses the
-  **ones digit** is aligned rather than the closing parenthesis, so `"(100%)"`
-  and `"(35.3%)"` line up on their units;
+  be **any text** (`"n=3"`, `"3/12"`, a word), the `(...)` block is
+  right-justified the way `format_count_pct()` does it (the padding falls
+  *before* the `(`, never inside the parentheses), and a zero count prints
+  without its parentheses;
 - `fmt_right_align()` -- the minimal "right-justify a column" formatter and a
   template for writing your own;
 - `align_count_pct = TRUE` -- the long-standing shorthand for the built-in
@@ -352,15 +353,22 @@ tbl$data$n_pct                       # both cells padded to one width
 ```
 
 `fmt_value_paren()` is the one to reach for when a column mixes shapes -- a
-plain N, a count with a percentage, a text value:
+plain N, a count with a percentage, a zero, a text value:
 
 ```{r cellfmt_value}
 mixed <- data.frame(
-  Group = c("N", "Responders", "Rare"),
-  stat  = c("86", "12 (14.0)", "1 (<1)"),
+  Group = c("N", "Responders", "  Mild", "  Severe"),
+  stat  = c("86", "12 (100)", "6 (50.0)", "0 (0.0)"),
   stringsAsFactors = FALSE
 )
 as_rtftable(mixed, cell_format = "value_paren")$data$stat
+```
+
+```
+ 86
+ 12  (100)      <- no decimals: flush against the ")"
+  6 (50.0)
+  0             <- a zero count prints on its own
 ```
 
 ### Writing your own `cell_format` function

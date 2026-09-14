@@ -182,22 +182,26 @@
   which continues to win when both are supplied.
 
   **`fmt_value_paren()`** is the general form of `fmt_count_paren_bare()`.  The
-  count aligners require a bare integer before the parenthesis and right-justify
-  the parenthetical as one block, so a column mixing a plain N, a text value and
-  different decimal counts stays ragged.  The new one right-justifies **any**
-  value — so its rightmost character lines up — and inside the parentheses
-  aligns the **ones digit** rather than the closing parenthesis:
+  count aligners require a bare integer before the parenthesis, so a column
+  mixing a plain N with a text value stays ragged.  The new one right-justifies
+  **any** value — so its rightmost character lines up — while the parenthesis
+  itself follows `format_count_pct()`'s long-standing rule (#421): the whole
+  `(...)` block is right-justified to a common right edge, so the padding falls
+  **before** the `(` and never inside the parentheses, a zero count prints
+  without its parentheses, and a decimal-less `(100)` sits flush against its
+  `)` rather than being dragged into line with the decimal cells.
 
   ```
-   86                 <- no parenthesis: padded into the same field
-   12 (14.0)
-    1 (<1  )          <- the "1" under the "4" of 14.0
-  n=3 ( 3.5)
+  12  (100)          <- no decimals: flush against the ")"
+   6 (50.0)
+   1  (8.3)          <- the "8" under the "0" of 50.0
+   0                 <- a zero count, on its own
   ```
 
   Cells with no parenthesis are padded into the same field; empty cells, cells
   whose parenthesis is not the last thing in the cell (`"Mean (SD) by visit"`)
-  and cells with nothing before the parenthesis are returned unchanged.
+  and cells with nothing before the parenthesis are returned unchanged.  Only
+  an all-zero parenthetical is dropped, so `"0 (BLQ)"` keeps what it says.
 
 - **`{BOOK_PAGE}`: a slot the deliverable reserves and `assemble_rtf()` fills**
   (#413).  A table that will be bound into a compiled document needs two page

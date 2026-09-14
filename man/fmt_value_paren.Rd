@@ -27,23 +27,28 @@ parenthesis may be \strong{any text}, and cells with and without a parenthesis
 are both padded into one column.
 }
 \details{
-Two rules, applied to the whole column at once:
+Three rules, applied to the whole column at once:
 \itemize{
 \item the \strong{value} is right-justified, so its rightmost character lines up --
 whether it is a count (\code{"86"}), a fraction (\code{"3/12"}), an \code{"n=3"} or a
 word;
-\item inside the parentheses, the text up to the end of the first run of digits
-is right-justified and the remainder is left-justified, so the \strong{ones
-digit} lines up as far as it can even when the cells carry different
-decimal counts -- \code{"(100\%)"} under \code{"(35.3\%)"}, \code{"(<1)"} under \code{"(14.0)"}.
-With no digits inside, the parenthetical is right-justified as a whole,
-which is what \code{\link[=fmt_count_paren]{fmt_count_paren()}} does.
+\item the whole \code{(...)} block is right-justified to a common right edge, so the
+padding falls \strong{before} the \code{(} and never inside the parentheses. Every
+\verb{)} lands in the same column, and cells sharing a decimal layout line up
+on the decimal point and the ones digit -- the rule
+\code{\link[=format_count_pct]{format_count_pct()}} has always used. A parenthetical with no decimals,
+\code{"(100)"}, therefore sits flush against its \verb{)} and is \emph{not} digit-aligned
+with the decimal cells;
+\item a \strong{zero count drops its parenthetical}: \code{"0 (0.0)"} prints as \code{"0"},
+again as \code{\link[=format_count_pct]{format_count_pct()}} does. Only an all-zero parenthetical is
+dropped, so \code{"0 (BLQ)"} keeps what it says.
 }
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{ 86                 <- no parenthesis: padded into the same field
- 12 (14.0)
-  1 (<1  )          <- the "1" under the "4" of 14.0
-n=3 ( 3.5)
+\if{html}{\out{<div class="sourceCode">}}\preformatted{12  (100)          <- no decimals: flush against the ")", digits not aligned
+ 6 (50.0)
+ 1  (8.3)          <- the "8" under the "0" of 50.0
+ 0                 <- a zero count, and cells with no parenthesis at all,
+                       padded into the same field
 }\if{html}{\out{</div>}}
 
 Empty cells, and cells whose parenthesis is not the last thing in the cell
@@ -52,19 +57,21 @@ nothing before the parenthesis, since there is no value to line up. Nested
 parentheses are not parsed.
 
 Compared with the other built-ins: \code{\link[=fmt_count_paren]{fmt_count_paren()}} touches only
-parenthetical cells and only when the value is a bare integer,
-\code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}} adds bare integers to the same field, and this one
-drops the integer requirement and aligns the ones digit inside the
-parentheses rather than the closing parenthesis.
+parenthetical cells and only when the value is a bare integer, and pads
+\emph{inside} the parentheses; \code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}} adds bare integers to the
+same field; this one drops the integer requirement, pads before the \code{(} as
+\code{\link[=format_count_pct]{format_count_pct()}} does, and prints a zero count on its own.
 }
 \examples{
-fmt_value_paren(c("86", "12 (14.0)", "1 (<1)", "n=3 (3.5)"), nbsp = " ")
+# A zero count prints on its own; "(100)" is flush against its ")".
+fmt_value_paren(c("12 (100)", "6 (50.0)", "1 (8.3)", "0 (0.0)"), nbsp = " ")
 
-# Mixed decimal counts still line up on the ones digit.
-fmt_value_paren(c("70 (100\%)", "24 (34.3\%)", "3 (<1\%)"), nbsp = " ")
+# The value may be any text -- its rightmost character is what lines up.
+fmt_value_paren(c("86", "12 (14.0)", "n=3 (3.5)"), nbsp = " ")
 
 }
 \seealso{
 \code{\link[=fmt_count_paren]{fmt_count_paren()}}, \code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}},
-\code{\link[=fmt_right_align]{fmt_right_align()}}, and the \code{cell_format} argument of \code{\link[=as_rtftables]{as_rtftables()}}.
+\code{\link[=format_count_pct]{format_count_pct()}} for the same parenthesis rules from numbers, and the
+\code{cell_format} argument of \code{\link[=as_rtftables]{as_rtftables()}}.
 }

@@ -145,22 +145,33 @@ test_that(".call_cell_format only passes na to functions that declare it", {
 test_that("fmt_value_paren aligns text values and pads bare cells", {
   out <- unbsp(fmt_value_paren(c("86", "12 (14.0)", "1 (<1)", "n=3 (3.5)")))
   expect_identical(out, c(" 86       ", " 12 (14.0)",
-                          "  1 (<1  )", "n=3 ( 3.5)"))
+                          "  1   (<1)", "n=3  (3.5)"))
   expect_true(all(nchar(out) == nchar(out[1L])))   # one column width
 })
 
-test_that("fmt_value_paren aligns the ones digit, not the closing paren", {
-  out <- unbsp(fmt_value_paren(c("70 (100%)", "24 (34.3%)", "3 (<1%)")))
-  expect_identical(out, c("70 (100%  )", "24 ( 34.3%)", " 3 ( <1%  )"))
-  # the ones digit of every parenthetical sits in the same character position
-  ones <- vapply(out, function(s) regexpr("(", s, fixed = TRUE)[[1L]] + 3L,
-                 numeric(1L), USE.NAMES = FALSE)
-  expect_identical(substr(out, ones, ones), c("0", "4", "1"))
+test_that("fmt_value_paren follows the original parenthesis spec", {
+  # The maintainer's case (#421): the padding falls BEFORE the "(", a zero
+  # count drops its parenthetical, and "(100)" is flush against its ")".
+  out <- unbsp(fmt_value_paren(c("12 (100)", "6 (50.0)", "1 (8.3)", "0 (0.0)")))
+  expect_identical(out, c("12  (100)", " 6 (50.0)", " 1  (8.3)", " 0       "))
+  expect_true(all(nchar(out) == nchar(out[1L])))
+  # every ")" in the same column, and no padding inside the parentheses
+  expect_identical(unique(regexpr(")", out[1:3], fixed = TRUE)), 9L)
+  expect_false(any(grepl("( ", out, fixed = TRUE)))   # nothing after "("
+  expect_false(any(grepl(" )", out, fixed = TRUE)))   # nothing before ")"
+  # the decimal cells line up on the point (and so on the ones digit); the
+  # decimal-less "(100)" does not, which is the point of the rule
+  expect_identical(unique(regexpr(".", out[2:3], fixed = TRUE)), 7L)
+})
+
+test_that("fmt_value_paren keeps a parenthetical that is not all zeros", {
+  out <- unbsp(fmt_value_paren(c("5 (12.5)", "0 (BLQ)", "0 (0.0)")))
+  expect_identical(out, c("5 (12.5)", "0  (BLQ)", "0       "))
 })
 
 test_that("fmt_value_paren right-justifies a parenthetical with no digits", {
   expect_identical(unbsp(fmt_value_paren(c("5 (n/a)", "120 (ND)"))),
-                   c("  5 (n/a)", "120 ( ND)"))
+                   c("  5 (n/a)", "120  (ND)"))
 })
 
 test_that("fmt_value_paren leaves cells it cannot parse unchanged", {
@@ -171,7 +182,7 @@ test_that("fmt_value_paren leaves cells it cannot parse unchanged", {
 
 test_that("fmt_value_paren lines the na token up with the values", {
   out <- unbsp(fmt_value_paren(c("1 (1.2%)", NA, "108 (35.3%)"), na = "-"))
-  expect_identical(out, c("  1 ( 1.2%)", "  -        ", "108 (35.3%)"))
+  expect_identical(out, c("  1  (1.2%)", "  -        ", "108 (35.3%)"))
 })
 
 test_that("fmt_value_paren copes with a column of bare values only", {
