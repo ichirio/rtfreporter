@@ -569,15 +569,43 @@ the blocks outright. Positions refer to the **final printed columns** -- after
 convention `set_col_header()` follows.
 
 Row splitting happens first and the column split is applied to its result, so
-the **row page is the outer level**: a row band sweeps every column block
-before the next band starts, so the reader goes across the table first and then
-down it. Two row pages by three column blocks come out as
+by default the **row page is the outer level**: a row band sweeps every column
+block before the next band starts, so the reader goes across the table first
+and then down it. Two row pages by three column blocks come out as
 
 ```
 page 1  row 1 / cols 1    page 4  row 2 / cols 1
 page 2  row 1 / cols 2    page 5  row 2 / cols 2
 page 3  row 1 / cols 3    page 6  row 2 / cols 3
 ```
+
+### Which axis is the outer level -- `page_order`
+
+`page_order = "down"` turns that around: the **column block** becomes the outer
+level, so one block is read all the way down before the next block starts.
+
+```{r pagcols_order, eval = FALSE}
+as_rtftables(df, split = "group_safe", max_rows = 20) |>
+  paginate_cols(at = c(4, 6), page_order = "down")
+```
+
+```
+page 1  row 1 / cols 1    page 4  row 1 / cols 2
+page 2  row 2 / cols 1    page 5  row 2 / cols 2
+page 3  row 3 / cols 1    page 6  row 3 / cols 2
+```
+
+The pages themselves are identical under either setting -- only their order
+differs -- so pick the one your deliverable reads in: `"across"` (the default)
+when a reader follows a row band across the sheet, `"down"` when each column
+block is a self-contained table of its own.
+
+One thing to check before switching: a page's **name** follows the row page it
+was cut from, and `rtf_tables(auto_section = TRUE)` opens a section per *run*
+of equal names. With one name per table -- the usual case -- every page stays
+in one section either way. But when the row pages carry different names (a
+`split = "by_value"` table names a page per group), `"down"` interleaves them
+and each page lands in a section of its own.
 
 The columns repeated on each page default to the table's `row_title` (column 1
 unless you set it); `carry =` overrides that, and `carry = integer(0)` repeats

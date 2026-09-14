@@ -135,6 +135,34 @@
 
 ### New features
 
+- **`paginate_cols(page_order = )` chooses which axis is the outer level**
+  (#417).  When a table is split both ways — rows by `as_rtftables()`, columns
+  by `paginate_cols()` — the page order was fixed: the row page was always
+  outside, so a row band swept every column block before the next band started.
+
+  ```r
+  as_rtftables(df, split = "group_safe", max_rows = 20) |>
+    paginate_cols(at = c(4, 6), page_order = "down")
+  ```
+
+  `"across"` (the default, the old behaviour) reads across the table and then
+  down it; `"down"` puts the **column block** outside, so one block is read all
+  the way down before the next starts:
+
+  | | `"across"` | `"down"` |
+  |---|---|---|
+  | page 1 | row 1 / cols 1 | row 1 / cols 1 |
+  | page 2 | row 1 / cols 2 | row 2 / cols 1 |
+  | page 3 | row 2 / cols 1 | row 1 / cols 2 |
+  | page 4 | row 2 / cols 2 | row 2 / cols 2 |
+
+  The pages themselves are identical; only their order differs.  A page's name
+  still follows the row page it was cut from, so under `"down"` pages sharing a
+  name are no longer adjacent — worth knowing because
+  `rtf_tables(auto_section = TRUE)` opens a section per *run* of equal names.
+  With one name per table, the usual case, every page stays in one section
+  either way.
+
 - **`{BOOK_PAGE}`: a slot the deliverable reserves and `assemble_rtf()` fills**
   (#413).  A table that will be bound into a compiled document needs two page
   numbers — its own (`Page 1 of 3`) and the book's (`Page 2 of 6`).  Both were
