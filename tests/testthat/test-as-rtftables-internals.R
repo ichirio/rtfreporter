@@ -97,14 +97,13 @@ test_that("format_count_pct validates its inputs", {
                "same length")
 })
 
-# ── .realign_count_pct_df(): lone integers left untouched (#148) ─────────────
+# ── align_count_pct = TRUE: lone integers left untouched (#148) ─────────────
 
-test_that(".realign_count_pct_df leaves a lone count untouched, aligns paren cells", {
-  realign <- rtfreporter:::.realign_count_pct_df
+test_that("align_count_pct leaves a lone count untouched, aligns paren cells", {
   df <- data.frame(label = c("x", "y"),
                    b     = c("12 (50%)", "3"),
                    stringsAsFactors = FALSE)
-  out <- realign(df, nbsp = " ")          # plain spaces -> readable assertion
+  out <- as_rtftables(df, align_count_pct = TRUE)[[1L]]$data
   # A lone count ("3") is NOT a count-percent cell and must pass through as-is.
   expect_identical(out$b[2L], "3")
   # The row-label column (column 1) is never touched.

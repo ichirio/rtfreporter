@@ -143,10 +143,10 @@ format_count_pct <- function(count, pct,
 #' them through [format_count_pct()] so every cell is the same width.
 #' Cells that do not match are returned unchanged.
 #'
-#' This is the function `paginate()` invokes internally when
-#' `align_count_pct = TRUE` (see [paginate()]).  It is exported so it
-#' can be applied directly to a data.frame column outside of any
-#' pagination context.
+#' This is what `align_count_pct = TRUE` applies, column by column, to every
+#' character column but the first (see [as_rtftables()]); it is also the
+#' built-in named `"count_pct"`.  It is exported so it can be applied directly
+#' to a data.frame column outside of any pagination context.
 #'
 #' @param x Character vector.  Cells that match the regex
 #'   `^\\d+ \\(\\d+(\\.\\d+)?\\)$` are reformatted; all others are
@@ -208,24 +208,4 @@ realign_count_pct <- function(x, nbsp = "\u00a0", na = "") {
     }
   }
   out
-}
-
-
-# Internal: realign the count-percent cells of every character column of `df`
-# except the first (the row label by clinical convention).  Used by
-# paginate(align_count_pct = TRUE).
-#
-# Only cells of the form "integer (real)" -- the real part optionally ending in
-# "%" -- and cells holding the `na` token are reformatted by
-# realign_count_pct().  Everything else (a bare integer / plain N such as "86",
-# a continuous statistic like "75.2 (8.59)" whose "count" is not a bare
-# integer, free text, and empty cells) is returned UNCHANGED.  Bare integers are NOT padded (#80 wrongly padded them against the
-# count-percent cells; that is removed -- #148).
-.realign_count_pct_df <- function(df, nbsp = "\u00a0", na = "") {
-  if (ncol(df) < 2L) return(df)
-  df[, -1L] <- lapply(df[, -1L, drop = FALSE], function(col) {
-    if (!is.character(col)) return(col)
-    realign_count_pct(col, nbsp = nbsp, na = na)
-  })
-  df
 }
