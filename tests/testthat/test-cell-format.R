@@ -139,3 +139,99 @@ test_that(".call_cell_format only passes na to functions that declare it", {
   rtfreporter:::.call_cell_format(f_yes, "a", "-")
   expect_identical(seen, "-")
 })
+
+# ──────── fmt_value_paren(): text values, ones-digit parentheticals ─────────
+
+test_that("fmt_value_paren aligns text values and pads bare cells", {
+  out <- unbsp(fmt_value_paren(c("86", "12 (14.0)", "1 (<1)", "n=3 (3.5)")))
+  expect_identical(out, c(" 86       ", " 12 (14.0)",
+                          "  1 (<1  )", "n=3 ( 3.5)"))
+  expect_true(all(nchar(out) == nchar(out[1L])))   # one column width
+})
+
+test_that("fmt_value_paren aligns the ones digit, not the closing paren", {
+  out <- unbsp(fmt_value_paren(c("70 (100%)", "24 (34.3%)", "3 (<1%)")))
+  expect_identical(out, c("70 (100%  )", "24 ( 34.3%)", " 3 ( <1%  )"))
+  # the ones digit of every parenthetical sits in the same character position
+  ones <- vapply(out, function(s) regexpr("(", s, fixed = TRUE)[[1L]] + 3L,
+                 numeric(1L), USE.NAMES = FALSE)
+  expect_identical(substr(out, ones, ones), c("0", "4", "1"))
+})
+
+test_that("fmt_value_paren right-justifies a parenthetical with no digits", {
+  expect_identical(unbsp(fmt_value_paren(c("5 (n/a)", "120 (ND)"))),
+                   c("  5 (n/a)", "120 ( ND)"))
+})
+
+test_that("fmt_value_paren leaves cells it cannot parse unchanged", {
+  x   <- c("12 (14.0)", "", "Mean (SD) by visit", "(100%)", "  ")
+  out <- unbsp(fmt_value_paren(x))
+  expect_identical(out[2:5], x[2:5])      # empty / trailing text / no value
+})
+
+test_that("fmt_value_paren lines the na token up with the values", {
+  out <- unbsp(fmt_value_paren(c("1 (1.2%)", NA, "108 (35.3%)"), na = "-"))
+  expect_identical(out, c("  1 ( 1.2%)", "  -        ", "108 (35.3%)"))
+})
+
+test_that("fmt_value_paren copes with a column of bare values only", {
+  expect_identical(unbsp(fmt_value_paren(c("5", "120", "7", ""))),
+                   c("  5", "120", "  7", ""))
+})
+
+# ──────── naming a built-in ────────────────────────────────────────────────
+
+test_that("cell_format accepts a built-in's name, with or without the prefix", {
+  x <- c("86", "12 (14.0)")
+  expect_identical(rtfreporter:::.builtin_cell_format("value_paren"),
+                   fmt_value_paren)
+  expect_identical(rtfreporter:::.builtin_cell_format("fmt_value_paren"),
+                   fmt_value_paren)
+  expect_identical(rtfreporter:::.builtin_cell_format("count_pct"),
+                   realign_count_pct)
+  df <- data.frame(lab = c("A", "B"), x = x, stringsAsFactors = FALSE)
+  expect_identical(as_rtftables(df, cell_format = "value_paren")[[1L]]$data$x,
+                   as_rtftables(df, cell_format = fmt_value_paren)[[1L]]$data$x)
+})
+
+test_that("a list of cell formats may name built-ins", {
+  df <- data.frame(a = c("1 (1.2%)", "0"), b = c("5", "120"),
+                   stringsAsFactors = FALSE)
+  p <- as_rtftables(df, cell_format = list(NULL, "right_align"))[[1L]]
+  expect_identical(p$data[[1L]], c("1 (1.2%)", "0"))     # col 1 untouched
+  expect_identical(unbsp(p$data[[2L]]), c("  5", "120"))
+})
+
+test_that("an unknown built-in name errors and lists the built-ins", {
+  df <- data.frame(lab = "A", x = "1 (1.2%)", stringsAsFactors = FALSE)
+  expect_error(as_rtftables(df, cell_format = "nope"),
+               "not a built-in cell format")
+  expect_error(as_rtftables(df, cell_format = "nope"), "value_paren")
+  expect_error(as_rtftables(df, cell_format = list(NULL, "nope")),
+               "not a built-in cell format")
+  expect_error(as_rtftables(df, cell_format = TRUE), "must be a function")
+})
+
+test_that("align_count_pct takes a name or a function as well as TRUE", {
+  df <- data.frame(lab = c("A", "B"), x = c("86", "12 (14.0)"),
+                   stringsAsFactors = FALSE)
+  expect_identical(as_rtftables(df, align_count_pct = "value_paren")[[1L]]$data$x,
+                   as_rtftables(df, cell_format = fmt_value_paren)[[1L]]$data$x)
+  expect_identical(as_rtftables(df, align_count_pct = fmt_right_align)[[1L]]$data$x,
+                   as_rtftables(df, cell_format = fmt_right_align)[[1L]]$data$x)
+})
+
+test_that("align_count_pct = TRUE / FALSE keep their old meaning", {
+  df <- data.frame(lab = c("A", "B"), x = c("5 (5.0)", "12 (100.0)"),
+                   stringsAsFactors = FALSE)
+  expect_identical(as_rtftables(df, align_count_pct = TRUE)[[1L]]$data$x,
+                   realign_count_pct(df$x))
+  expect_identical(as_rtftables(df, align_count_pct = FALSE)[[1L]]$data$x, df$x)
+})
+
+test_that("align_count_pct rejects what is neither a switch nor a format", {
+  df <- data.frame(lab = "A", x = "1 (1.2%)", stringsAsFactors = FALSE)
+  expect_error(as_rtftables(df, align_count_pct = 3), "align_count_pct")
+  expect_error(as_rtftables(df, align_count_pct = "nope"),
+               "not a built-in cell format")
+})

@@ -34,9 +34,16 @@
 #      [as_rtftables()]); it does not know which column it is, so base any
 #      width decisions on `x` alone.
 #
-#  rtfreporter ships a few ready-made format functions (below).  When none of
-#  them fits your data's exact notation, write your own following the rules
-#  above and pass it as `cell_format`.
+#  rtfreporter ships a few ready-made format functions (below).  Each can be
+#  passed as the function itself or NAMED as a string -- "count_paren" or
+#  "fmt_count_paren", the prefix is optional -- so a built-in can be chosen
+#  from a config file or a recipe without carrying a function object around:
+#
+#      as_rtftables(x, cell_format = "value_paren")
+#      as_rtftables(x, cell_format = list(NULL, "right_align", my_fmt))
+#
+#  When none of them fits your data's exact notation, write your own following
+#  the rules above and pass it as `cell_format`.
 # ============================================================================
 
 
@@ -247,28 +254,214 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 }
 
 
+# Internal: split the text inside a parenthesis at the end of its FIRST run of
+# digits -- "35.3%" -> ("35", ".3%"), "<1%" -> ("<1", "%"), "n/a" -> ("n/a", "").
+# Right-justifying the first half and left-justifying the second is what puts
+# the ones digit in the same place on every row.
+.split_ones_digit <- function(x) {
+  m <- regmatches(x, regexec("^([^0-9]*[0-9]*)(.*)$", x))
+  lead <- vapply(m, function(g) if (length(g) == 3L) g[2L] else "", character(1L))
+  rest <- vapply(m, function(g) if (length(g) == 3L) g[3L] else "", character(1L))
+  list(lead = lead, rest = rest)
+}
+
+#' Align "value (parenthetical)" cells, text values included
+#'
+#' The general form of [fmt_count_paren_bare()]: the value before the
+#' parenthesis may be **any text**, and cells with and without a parenthesis
+#' are both padded into one column.
+#'
+#' Two rules, applied to the whole column at once:
+#'
+#' * the **value** is right-justified, so its rightmost character lines up --
+#'   whether it is a count (`"86"`), a fraction (`"3/12"`), an `"n=3"` or a
+#'   word;
+#' * inside the parentheses, the text up to the end of the first run of digits
+#'   is right-justified and the remainder is left-justified, so the **ones
+#'   digit** lines up as far as it can even when the cells carry different
+#'   decimal counts -- `"(100%)"` under `"(35.3%)"`, `"(<1)"` under `"(14.0)"`.
+#'   With no digits inside, the parenthetical is right-justified as a whole,
+#'   which is what [fmt_count_paren()] does.
+#'
+#' ```
+#'  86                 <- no parenthesis: padded into the same field
+#'  12 (14.0)
+#'   1 (<1  )          <- the "1" under the "4" of 14.0
+#' n=3 ( 3.5)
+#' ```
+#'
+#' Empty cells, and cells whose parenthesis is not the last thing in the cell
+#' (`"Mean (SD) by visit"`), are returned unchanged -- as is a cell with
+#' nothing before the parenthesis, since there is no value to line up. Nested
+#' parentheses are not parsed.
+#'
+#' Compared with the other built-ins: [fmt_count_paren()] touches only
+#' parenthetical cells and only when the value is a bare integer,
+#' [fmt_count_paren_bare()] adds bare integers to the same field, and this one
+#' drops the integer requirement and aligns the ones digit inside the
+#' parentheses rather than the closing parenthesis.
+#'
+#' @inheritParams fmt_right_align
+#'
+#' @return Character vector the same length as `x`.
+#'
+#' @examples
+#' fmt_value_paren(c("86", "12 (14.0)", "1 (<1)", "n=3 (3.5)"), nbsp = " ")
+#'
+#' # Mixed decimal counts still line up on the ones digit.
+#' fmt_value_paren(c("70 (100%)", "24 (34.3%)", "3 (<1%)"), nbsp = " ")
+#'
+#' @seealso [fmt_count_paren()], [fmt_count_paren_bare()],
+#'   [fmt_right_align()], and the `cell_format` argument of [as_rtftables()].
+#' @export
+fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
+  if (length(x) == 0L) return(x)
+  na <- .check_na_text(na)
+  x <- as.character(x)
+  x[is.na(x)] <- na
+
+  n     <- length(x)
+  value <- rep(NA_character_, n)     # the text before the parenthesis
+  inner <- rep(NA_character_, n)     # the text inside it, NA when there is none
+
+  # "<value> (<inner>)" with the parenthesis at the very END, or a bare
+  # "<value>".  Neither part may contain a parenthesis of its own, so a label
+  # like "Mean (SD) by visit" matches nothing and is left alone.  The missing
+  # value token (`na`) needs no special case: it is a value like any other and
+  # is right-justified with them, its right edge under the ones digit.
+  par  <- regmatches(x, regexec(
+    "^[[:space:]]*([^()]*[^()[:space:]])[[:space:]]*\\(([^()]*)\\)[[:space:]]*$", x))
+  bare <- regmatches(x, regexec(
+    "^[[:space:]]*([^()]*[^()[:space:]])[[:space:]]*$", x))
+  for (i in seq_len(n)) {
+    g <- par[[i]]
+    if (length(g) == 3L) {
+      value[i] <- g[2L]
+      inner[i] <- trimws(g[3L])
+      next
+    }
+    g <- bare[[i]]
+    if (length(g) == 2L) value[i] <- g[2L]
+  }
+
+  do <- !is.na(value)
+  if (!any(do)) return(x)
+  hp <- do & !is.na(inner)                          # has a parenthetical
+  wv <- max(nchar(value[do]))                       # width of the value field
+  ins <- rep(NA_character_, n)
+
+  if (any(hp)) {
+    sp   <- .split_ones_digit(inner[hp])
+    w1   <- max(nchar(sp$lead))
+    w2   <- max(nchar(sp$rest))
+    ins[hp] <- paste0(formatC(sp$lead, width = w1, flag = ""),
+                      formatC(sp$rest, width = w2, flag = "-"))
+    full <- wv + 2L + w1 + w2 + 1L                  # "<value> (<inner>)"
+  } else {
+    full <- wv
+  }
+
+  out <- x
+  for (i in which(do)) {
+    if (hp[i]) {
+      val <- paste0(formatC(value[i], width = wv, flag = ""), " (", ins[i], ")")
+    } else {
+      # No parenthesis: right-justify in the value field, then pad out to the
+      # width of the parenthetical cells so the whole column is one block.
+      val <- formatC(formatC(value[i], width = wv, flag = ""),
+                     width = max(full, wv), flag = "-")
+    }
+    if (!identical(nbsp, " ")) val <- gsub(" ", nbsp, val, fixed = TRUE)
+    out[i] <- val
+  }
+  out
+}
+
+
+# ---------------------------------------------------------------------------
+#  Naming a built-in
+# ---------------------------------------------------------------------------
+#  A built-in can be passed as the function itself (`fmt_count_paren`, which a
+#  bare symbol evaluates to) or NAMED as a string -- what a report script, a
+#  config file or a recipe wants to write.  The `fmt_` prefix is optional, so
+#  both "fmt_count_paren" and "count_paren" resolve.
+.CELL_FORMATS <- list(
+  right_align       = "fmt_right_align",
+  count_paren       = "fmt_count_paren",
+  count_paren_bare  = "fmt_count_paren_bare",
+  value_paren       = "fmt_value_paren",
+  count_pct         = "realign_count_pct",
+  realign_count_pct = "realign_count_pct"
+)
+
+# Internal: one built-in, by name.  Unknown names list what there is.
+.builtin_cell_format <- function(name, arg = "cell_format") {
+  key <- sub("^fmt_", "", trimws(name))
+  fn  <- .CELL_FORMATS[[key]]
+  if (is.null(fn)) {
+    stop(sprintf(
+      "`%s`: \"%s\" is not a built-in cell format.  The built-ins are %s (the \"fmt_\" prefix is optional), or pass a function of your own.",
+      arg, name,
+      paste0("\"", setdiff(names(.CELL_FORMATS), "realign_count_pct"), "\"",
+             collapse = ", ")), call. = FALSE)
+  }
+  get(fn, envir = asNamespace("rtfreporter"))
+}
+
+# Internal: one cell-format value -> a function, or NULL when it is neither a
+# function nor a name (a list, or an entry to skip).  A bad NAME is an error;
+# anything else is left for the caller to decide about.
+.as_cell_format_fn <- function(f, arg = "cell_format") {
+  if (is.function(f)) return(f)
+  if (is.character(f) && length(f) == 1L && !is.na(f)) {
+    return(.builtin_cell_format(f, arg))
+  }
+  NULL
+}
+
 # Internal: resolve the `cell_format` argument into a per-column list of
 # functions (length `ncol`; NULL entries = leave the column untouched).
 #
-#   * a single function -> applied to columns 2..ncol (column 1 is the row
-#     label and is left alone, the usual clinical convention);
-#   * a list            -> taken positionally, `cell_format[[j]]` for column j
-#     (entries that are not functions are ignored).
-.resolve_cell_format <- function(cell_format, ncol) {
+#   * a single function, or the NAME of a built-in -> applied to columns
+#     2..ncol (column 1 is the row label and is left alone, the usual clinical
+#     convention);
+#   * a list -> taken positionally, `cell_format[[j]]` for column j; entries
+#     may be functions or built-in names, and anything else is ignored.
+.resolve_cell_format <- function(cell_format, ncol, arg = "cell_format") {
   if (is.null(cell_format) || ncol < 1L) return(NULL)
   fl <- vector("list", ncol)
-  if (is.function(cell_format)) {
-    if (ncol >= 2L) for (j in 2:ncol) fl[[j]] <- cell_format
+  single <- .as_cell_format_fn(cell_format, arg)
+  if (!is.null(single)) {
+    if (ncol >= 2L) for (j in 2:ncol) fl[[j]] <- single
   } else if (is.list(cell_format)) {
     n <- min(length(cell_format), ncol)
     for (j in seq_len(n)) {
-      if (is.function(cell_format[[j]])) fl[[j]] <- cell_format[[j]]
+      f <- .as_cell_format_fn(cell_format[[j]], arg)
+      if (!is.null(f)) fl[[j]] <- f
     }
   } else {
-    stop("`cell_format` must be a function or a list of functions.",
-         call. = FALSE)
+    stop(sprintf(paste0("`%s` must be a function, the name of a built-in cell ",
+                        "format, or a list of either."), arg), call. = FALSE)
   }
   fl
+}
+
+# Internal: `align_count_pct` -> a `cell_format` value, or NULL for "off".
+#
+# It began as a logical switch onto ONE built-in, and TRUE still means exactly
+# that.  A name (or a function) makes it the same argument `cell_format` is,
+# which is how any other built-in is reached from the switch.
+.resolve_align_count_pct <- function(v) {
+  if (is.null(v)) return(NULL)
+  if (is.logical(v) && length(v) == 1L && !is.na(v)) {
+    return(if (isTRUE(v)) realign_count_pct else NULL)
+  }
+  if (is.function(v) || (is.character(v) && length(v) == 1L && !is.na(v)) ||
+      is.list(v)) {
+    return(v)
+  }
+  stop(paste0("`align_count_pct` must be TRUE / FALSE, the name of a built-in ",
+              "cell format, or a cell-format function."), call. = FALSE)
 }
 
 # Internal: call one cell-format function.  `na` reaches only the functions

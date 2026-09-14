@@ -346,6 +346,7 @@ reference:
       - realign_count_pct
       - fmt_count_paren
       - fmt_count_paren_bare
+      - fmt_value_paren
       - fmt_right_align
 
   # ── 6b. Numeric display formatters ─────────────────────────────────────

@@ -123,6 +123,7 @@ export(add_cont_label)
 # Count / percent display-width formatters
 export(fmt_count_paren)
 export(fmt_count_paren_bare)
+export(fmt_value_paren)
 export(fmt_right_align)
 export(format_count_pct)
 export(realign_count_pct)

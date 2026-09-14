@@ -135,6 +135,42 @@
 
 ### New features
 
+- **A built-in cell format can be NAMED, and `fmt_value_paren()` aligns text
+  values** (#418).  Two related gaps in the cell formatters.
+
+  `align_count_pct` was a logical switch onto exactly one built-in, so reaching
+  any other one meant passing a function object through `cell_format`.  Now a
+  built-in can be named wherever a formatter is accepted — the `fmt_` prefix is
+  optional, and an unknown name lists the built-ins:
+
+  ```r
+  as_rtftables(x, cell_format = "value_paren")
+  as_rtftables(x, cell_format = list(NULL, "right_align", my_fmt))
+  as_rtftables(x, align_count_pct = "count_paren")   # the switch takes a name
+  ```
+
+  `align_count_pct = TRUE` still means `realign_count_pct()` and `FALSE` is
+  still off; given a name or a function it behaves exactly like `cell_format`,
+  which continues to win when both are supplied.
+
+  **`fmt_value_paren()`** is the general form of `fmt_count_paren_bare()`.  The
+  count aligners require a bare integer before the parenthesis and right-justify
+  the parenthetical as one block, so a column mixing a plain N, a text value and
+  different decimal counts stays ragged.  The new one right-justifies **any**
+  value — so its rightmost character lines up — and inside the parentheses
+  aligns the **ones digit** rather than the closing parenthesis:
+
+  ```
+   86                 <- no parenthesis: padded into the same field
+   12 (14.0)
+    1 (<1  )          <- the "1" under the "4" of 14.0
+  n=3 ( 3.5)
+  ```
+
+  Cells with no parenthesis are padded into the same field; empty cells, cells
+  whose parenthesis is not the last thing in the cell (`"Mean (SD) by visit"`)
+  and cells with nothing before the parenthesis are returned unchanged.
+
 - **`{BOOK_PAGE}`: a slot the deliverable reserves and `assemble_rtf()` fills**
   (#413).  A table that will be bound into a compiled document needs two page
   numbers — its own (`Page 1 of 3`) and the book's (`Page 2 of 6`).  Both were
