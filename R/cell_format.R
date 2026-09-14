@@ -254,40 +254,34 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 }
 
 
-# Internal: split the text inside a parenthesis at the end of its FIRST run of
-# digits -- "35.3%" -> ("35", ".3%"), "<1%" -> ("<1", "%"), "n/a" -> ("n/a", "").
-# Right-justifying the first half and left-justifying the second is what puts
-# the ones digit in the same place on every row.
-.split_ones_digit <- function(x) {
-  m <- regmatches(x, regexec("^([^0-9]*[0-9]*)(.*)$", x))
-  lead <- vapply(m, function(g) if (length(g) == 3L) g[2L] else "", character(1L))
-  rest <- vapply(m, function(g) if (length(g) == 3L) g[3L] else "", character(1L))
-  list(lead = lead, rest = rest)
-}
-
 #' Align "value (parenthetical)" cells, text values included
 #'
 #' The general form of [fmt_count_paren_bare()]: the value before the
 #' parenthesis may be **any text**, and cells with and without a parenthesis
 #' are both padded into one column.
 #'
-#' Two rules, applied to the whole column at once:
+#' Three rules, applied to the whole column at once:
 #'
 #' * the **value** is right-justified, so its rightmost character lines up --
 #'   whether it is a count (`"86"`), a fraction (`"3/12"`), an `"n=3"` or a
 #'   word;
-#' * inside the parentheses, the text up to the end of the first run of digits
-#'   is right-justified and the remainder is left-justified, so the **ones
-#'   digit** lines up as far as it can even when the cells carry different
-#'   decimal counts -- `"(100%)"` under `"(35.3%)"`, `"(<1)"` under `"(14.0)"`.
-#'   With no digits inside, the parenthetical is right-justified as a whole,
-#'   which is what [fmt_count_paren()] does.
+#' * the whole `(...)` block is right-justified to a common right edge, so the
+#'   padding falls **before** the `(` and never inside the parentheses. Every
+#'   `)` lands in the same column, and cells sharing a decimal layout line up
+#'   on the decimal point and the ones digit -- the rule
+#'   [format_count_pct()] has always used. A parenthetical with no decimals,
+#'   `"(100)"`, therefore sits flush against its `)` and is *not* digit-aligned
+#'   with the decimal cells;
+#' * a **zero count drops its parenthetical**: `"0 (0.0)"` prints as `"0"`,
+#'   again as [format_count_pct()] does. Only an all-zero parenthetical is
+#'   dropped, so `"0 (BLQ)"` keeps what it says.
 #'
 #' ```
-#'  86                 <- no parenthesis: padded into the same field
-#'  12 (14.0)
-#'   1 (<1  )          <- the "1" under the "4" of 14.0
-#' n=3 ( 3.5)
+#' 12  (100)          <- no decimals: flush against the ")", digits not aligned
+#'  6 (50.0)
+#'  1  (8.3)          <- the "8" under the "0" of 50.0
+#'  0                 <- a zero count, and cells with no parenthesis at all,
+#'                        padded into the same field
 #' ```
 #'
 #' Empty cells, and cells whose parenthesis is not the last thing in the cell
@@ -296,23 +290,25 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 #' parentheses are not parsed.
 #'
 #' Compared with the other built-ins: [fmt_count_paren()] touches only
-#' parenthetical cells and only when the value is a bare integer,
-#' [fmt_count_paren_bare()] adds bare integers to the same field, and this one
-#' drops the integer requirement and aligns the ones digit inside the
-#' parentheses rather than the closing parenthesis.
+#' parenthetical cells and only when the value is a bare integer, and pads
+#' *inside* the parentheses; [fmt_count_paren_bare()] adds bare integers to the
+#' same field; this one drops the integer requirement, pads before the `(` as
+#' [format_count_pct()] does, and prints a zero count on its own.
 #'
 #' @inheritParams fmt_right_align
 #'
 #' @return Character vector the same length as `x`.
 #'
 #' @examples
-#' fmt_value_paren(c("86", "12 (14.0)", "1 (<1)", "n=3 (3.5)"), nbsp = " ")
+#' # A zero count prints on its own; "(100)" is flush against its ")".
+#' fmt_value_paren(c("12 (100)", "6 (50.0)", "1 (8.3)", "0 (0.0)"), nbsp = " ")
 #'
-#' # Mixed decimal counts still line up on the ones digit.
-#' fmt_value_paren(c("70 (100%)", "24 (34.3%)", "3 (<1%)"), nbsp = " ")
+#' # The value may be any text -- its rightmost character is what lines up.
+#' fmt_value_paren(c("86", "12 (14.0)", "n=3 (3.5)"), nbsp = " ")
 #'
 #' @seealso [fmt_count_paren()], [fmt_count_paren_bare()],
-#'   [fmt_right_align()], and the `cell_format` argument of [as_rtftables()].
+#'   [format_count_pct()] for the same parenthesis rules from numbers, and the
+#'   `cell_format` argument of [as_rtftables()].
 #' @export
 fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
   if (length(x) == 0L) return(x)
@@ -344,32 +340,36 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
     if (length(g) == 2L) value[i] <- g[2L]
   }
 
+  # A zero count is one fact, not two: "0 (0.0)" prints as "0", the way
+  # format_count_pct()'s `count = 0` branch has always rendered it.  Only an
+  # ALL-ZERO parenthetical is dropped, so "0 (BLQ)" keeps what it says.
+  zero <- !is.na(inner) & grepl("^0+$", value) &
+          grepl("[0-9]", inner) & !grepl("[1-9]", inner)
+  inner[zero] <- NA_character_
+
   do <- !is.na(value)
   if (!any(do)) return(x)
   hp <- do & !is.na(inner)                          # has a parenthetical
   wv <- max(nchar(value[do]))                       # width of the value field
-  ins <- rep(NA_character_, n)
 
-  if (any(hp)) {
-    sp   <- .split_ones_digit(inner[hp])
-    w1   <- max(nchar(sp$lead))
-    w2   <- max(nchar(sp$rest))
-    ins[hp] <- paste0(formatC(sp$lead, width = w1, flag = ""),
-                      formatC(sp$rest, width = w2, flag = "-"))
-    full <- wv + 2L + w1 + w2 + 1L                  # "<value> (<inner>)"
-  } else {
-    full <- wv
-  }
+  # The whole "(...)" block is right-justified to a common right edge, so the
+  # padding falls BEFORE the "(" and never inside the parentheses.  Every ")"
+  # then lands in the same column, cells sharing a decimal layout line up on
+  # the point and the ones digit, and a "(100)" simply sits flush against its
+  # ")" -- format_count_pct()'s rule, which is what a clinical table expects.
+  wb   <- if (any(hp)) max(nchar(inner[hp])) + 2L else 0L
+  full <- wv + if (wb > 0L) 1L + wb else 0L
 
   out <- x
   for (i in which(do)) {
+    v <- formatC(value[i], width = wv, flag = "")
     if (hp[i]) {
-      val <- paste0(formatC(value[i], width = wv, flag = ""), " (", ins[i], ")")
+      val <- paste0(v, " ",
+                    formatC(paste0("(", inner[i], ")"), width = wb, flag = ""))
     } else {
       # No parenthesis: right-justify in the value field, then pad out to the
       # width of the parenthetical cells so the whole column is one block.
-      val <- formatC(formatC(value[i], width = wv, flag = ""),
-                     width = max(full, wv), flag = "-")
+      val <- formatC(v, width = max(full, wv), flag = "-")
     }
     if (!identical(nbsp, " ")) val <- gsub(" ", nbsp, val, fixed = TRUE)
     out[i] <- val
