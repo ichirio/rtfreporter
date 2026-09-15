@@ -310,8 +310,11 @@ reference:
       `rtf_col_header()` goes to the same places plus `set_col_header()`.
       Coordinates are those of the **finished** table, so a merged stub counts
       as one column.
+      `col_key()` lets a cell name the columns it covers by a column-name
+      segment instead of by position.
     contents:
       - col_cell
+      - col_key
       - rtf_col_header
       - col_header_from_names
       - add_col_header_row
