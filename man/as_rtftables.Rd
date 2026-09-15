@@ -12,6 +12,7 @@ as_rtftables(
   split_rows = NULL,
   group_col = NULL,
   group_by = c("auto", "indent", "value", "filled"),
+  page_by = NULL,
   sort_by = NULL,
   sort_desc = NULL,
   cont_label = " (Cont.)",
@@ -125,6 +126,57 @@ value is one group.}
 non-empty; only \code{NA} / \code{""} cells are members (the label appears once,
 on the group's first row).}
 }}
+
+\item{page_by}{Column(s) whose value starts a \strong{new page} and \strong{names} it,
+or \code{NULL} (default, off).  The body is partitioned on runs of the
+\code{page_by} value(s) \strong{first}, and every other pagination setting --
+\code{split}, \code{max_rows}, \code{group_col}, \code{group_by}, \code{min_group_rows},
+\code{cont_label}, \code{blank_rows}, \code{collapse_repeats} -- then applies \strong{within}
+one partition.  This is the two-level clinical layout: a BY variable
+(period, cohort, analysis set) owns the page, while an inner group (a
+parameter block) is kept whole inside it.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{as_rtftables(lab, page_by = "period",   # a page per period, named by it
+             split = "group_safe",      # from here on: inside one period
+             group_by = "indent", max_rows = 20,
+             drop_cols = "period")
+}\if{html}{\out{</div>}}
+
+\describe{
+\item{Page names}{\code{"<value>"} when a partition makes one page;
+\code{"<value>.1"}, \code{"<value>.2"}, ... when it makes several -- the
+convention \code{split = "by_value"} already uses.  When the inner split
+names its own pages (an inner \code{"by_value"}) the two compose:
+\code{"<value>.<inner label>"}.  These names are what
+\code{rtf_tables(auto_section = TRUE)} / \code{auto_title = TRUE} print, and a
+section opens at every \strong{named} page -- to give a partition one
+section, blank the names of its continuation pages
+(\code{names(pages)[-1] <- ""} for that run).}
+\item{\code{group_col}}{when left \code{NULL}, defaults to the first column \strong{not}
+named in \code{page_by}, so \code{group_by = "indent"} (which reads the group
+column) never lands on the BY column -- where every row of a partition
+carries the same value and there is no structure to find.}
+\item{Order of operations}{\code{page_by} cuts pages, then \code{split} cuts rows
+inside each one, then \code{\link[=paginate_cols]{paginate_cols()}} cuts columns on the result
+(its \code{page_order} decides the final page sequence).  The three are
+independent and compose in that order.}
+\item{Per partition}{\code{split_rows} positions, \code{blank_rows} positions
+(\code{0} / \code{-1} included), \code{count_blank_rows} accounting and any
+\code{rtf_blank_rows} attribute on the input are all resolved inside the
+partition.  \code{na} and \code{cell_format}, by contrast, run \strong{body-wide}
+before the partition, so one column width is shared by every page.}
+\item{Partitions are runs}{a value that comes back later in the body is
+a new page rather than being merged with the earlier one -- the same
+run-based reading \code{"by_value"} uses.  \code{sort_by} first if that is not
+what you want.}
+}
+\code{page_by} does \strong{not} imply \code{drop_cols}: name the column there too to
+keep it out of the printed table.  Like \code{group_col} / \code{sort_by} /
+\code{drop_cols} it addresses the body \strong{after} a \code{stub} reshape, so a column
+the stub consumed cannot be a \code{page_by} key (use \code{split = "by_value"},
+which splits before the stub is built).  With \code{page_by = NULL} nothing
+changes anywhere -- \code{"by_value"} still takes its page names from
+\code{group_col}.}
 
 \item{sort_by}{Columns to \strong{order the body rows by, before pagination}, or
 \code{NULL} (default, keep the input order).  A character / integer vector (or a

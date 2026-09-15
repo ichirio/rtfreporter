@@ -135,6 +135,43 @@
 
 ### New features
 
+- **`as_rtftables(page_by = )`: one page per BY value, with the inner grouping
+  still protected** (#423).  `group_col` says where a *group* boundary is;
+  `page_by` says where a *page* boundary is, and what the page is called.
+
+  ```r
+  as_rtftables(lab,
+               page_by   = "period",      # new page when it changes, named by it
+               split     = "group_safe",  # from here on: inside one period only
+               group_by  = "indent",
+               max_rows  = 20,
+               drop_cols = "period")
+  #>  "Period 1.1"  "Period 1.2"  "Period 2.1"  "Period 2.2"  "Period 3"
+  ```
+
+  The body is partitioned on runs of the `page_by` value(s) **first**, and every
+  other pagination setting — `split`, `max_rows`, `group_col`, `group_by`,
+  `min_group_rows`, `cont_label`, `blank_rows`, `collapse_repeats` — then
+  applies **within** one partition.  `split = "by_value"` on its own could not
+  express this: the group it protects is the BY column itself, so a parameter
+  block inside a period was cut wherever `max_rows` happened to fall.  The
+  by-hand recipe (`split()` the data, drop the BY column, pass a named list) is
+  now one argument — and its trap is gone too, because `group_col` left `NULL`
+  defaults to the first column **not** named in `page_by`, never the BY column
+  whose value is constant within a page.
+
+  Page names follow `"by_value"`'s convention: `"<value>"` for a partition that
+  makes one page, `"<value>.1"`, `"<value>.2"`, … when it makes several, and
+  `"<value>.<inner label>"` when the inner split names its own pages — so they
+  feed `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` directly.
+
+  `page_by` cuts pages, `split` then cuts rows inside each one, and
+  `paginate_cols()` then cuts columns on the result: three independent axes in
+  one pipeline.  `na` and `cell_format` still run body-wide, before the
+  partition, so one column width is shared by every page.  With
+  `page_by = NULL` nothing changes anywhere — `"by_value"` still takes its page
+  names from `group_col`.
+
 - **`paginate_cols(page_order = )` chooses which axis is the outer level**
   (#417).  When a table is split both ways — rows by `as_rtftables()`, columns
   by `paginate_cols()` — the page order was fixed: the row page was always

@@ -275,6 +275,55 @@
 #'       non-empty; only `NA` / `""` cells are members (the label appears once,
 #'       on the group's first row).}
 #'   }
+#' @param page_by Column(s) whose value starts a **new page** and **names** it,
+#'   or `NULL` (default, off).  The body is partitioned on runs of the
+#'   `page_by` value(s) **first**, and every other pagination setting --
+#'   `split`, `max_rows`, `group_col`, `group_by`, `min_group_rows`,
+#'   `cont_label`, `blank_rows`, `collapse_repeats` -- then applies **within**
+#'   one partition.  This is the two-level clinical layout: a BY variable
+#'   (period, cohort, analysis set) owns the page, while an inner group (a
+#'   parameter block) is kept whole inside it.
+#'   ```r
+#'   as_rtftables(lab, page_by = "period",   # a page per period, named by it
+#'                split = "group_safe",      # from here on: inside one period
+#'                group_by = "indent", max_rows = 20,
+#'                drop_cols = "period")
+#'   ```
+#'   \describe{
+#'     \item{Page names}{`"<value>"` when a partition makes one page;
+#'       `"<value>.1"`, `"<value>.2"`, ... when it makes several -- the
+#'       convention `split = "by_value"` already uses.  When the inner split
+#'       names its own pages (an inner `"by_value"`) the two compose:
+#'       `"<value>.<inner label>"`.  These names are what
+#'       `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` print, and a
+#'       section opens at every **named** page -- to give a partition one
+#'       section, blank the names of its continuation pages
+#'       (`names(pages)[-1] <- ""` for that run).}
+#'     \item{`group_col`}{when left `NULL`, defaults to the first column **not**
+#'       named in `page_by`, so `group_by = "indent"` (which reads the group
+#'       column) never lands on the BY column -- where every row of a partition
+#'       carries the same value and there is no structure to find.}
+#'     \item{Order of operations}{`page_by` cuts pages, then `split` cuts rows
+#'       inside each one, then [paginate_cols()] cuts columns on the result
+#'       (its `page_order` decides the final page sequence).  The three are
+#'       independent and compose in that order.}
+#'     \item{Per partition}{`split_rows` positions, `blank_rows` positions
+#'       (`0` / `-1` included), `count_blank_rows` accounting and any
+#'       `rtf_blank_rows` attribute on the input are all resolved inside the
+#'       partition.  `na` and `cell_format`, by contrast, run **body-wide**
+#'       before the partition, so one column width is shared by every page.}
+#'     \item{Partitions are runs}{a value that comes back later in the body is
+#'       a new page rather than being merged with the earlier one -- the same
+#'       run-based reading `"by_value"` uses.  `sort_by` first if that is not
+#'       what you want.}
+#'   }
+#'   `page_by` does **not** imply `drop_cols`: name the column there too to
+#'   keep it out of the printed table.  Like `group_col` / `sort_by` /
+#'   `drop_cols` it addresses the body **after** a `stub` reshape, so a column
+#'   the stub consumed cannot be a `page_by` key (use `split = "by_value"`,
+#'   which splits before the stub is built).  With `page_by = NULL` nothing
+#'   changes anywhere -- `"by_value"` still takes its page names from
+#'   `group_col`.
 #' @param sort_by Columns to **order the body rows by, before pagination**, or
 #'   `NULL` (default, keep the input order).  A character / integer vector (or a
 #'   `list()` to mix names and indices) in the **input body's** coordinates --
@@ -656,6 +705,7 @@ as_rtftables <- function(x,
                          group_col       = NULL,
                          group_by        = c("auto", "indent", "value",
                                              "filled"),
+                         page_by         = NULL,
                          sort_by         = NULL,
                          sort_desc       = NULL,
                          cont_label      = " (Cont.)",
@@ -732,7 +782,7 @@ as_rtftables <- function(x,
       chunks <- as_rtftables(
         x[[i]], read_meta = read_meta, max_rows = max_rows, split = split,
         split_rows = split_rows, group_col = group_col, group_by = group_by,
-        sort_by = sort_by, sort_desc = sort_desc,
+        page_by = page_by, sort_by = sort_by, sort_desc = sort_desc,
         cont_label = cont_label, min_group_rows = min_group_rows,
         blank_rows = blank_rows, blank_row_first = blank_row_first,
         blank_row_end = blank_row_end, count_blank_rows = count_blank_rows,
@@ -1005,7 +1055,8 @@ as_rtftables <- function(x,
 
     pages <- .paginate_df(
       body, max_rows = max_rows, split = split_mode, split_rows = split_rows,
-      group_col = group_col, group_by = group_by, cont_label = cont_label,
+      group_col = group_col, group_by = group_by, page_by = page_by,
+      cont_label = cont_label,
       min_group_rows = min_group_rows, blank_rows = blank_rows,
       blank_row_first = blank_row_first, blank_row_end = blank_row_end,
       count_blank_rows = count_blank_rows,
