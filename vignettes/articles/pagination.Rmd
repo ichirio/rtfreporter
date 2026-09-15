@@ -692,18 +692,32 @@ differs -- so pick the one your deliverable reads in: `"down"` when a reader
 follows a row band across the sheet, `"across"` when each column block is a
 self-contained table read on its own.
 
-A **group** sits above both. When the row pagination made a page per group
-value -- `as_rtftables(split = "by_value", group_col = )`, with `page_by`
-running inside it -- the column split happens **within** one group, so a
-group's pages always stay together:
+Those two are shorthands. In general `page_order` names the **axes** of the
+split, in the order they nest -- outermost first:
 
-| `page_order` | page sequence |
+| axis | what it is |
 |---|---|
-| `"across"` | group / column block / `page_by` |
-| `"down"`   | group / `page_by` / column block |
+| `"group"` | the pages a value-based split made (`as_rtftables(split = "by_value", group_col = )`) |
+| `"rows"` | the row pages: `page_by`, and every other row split |
+| `"cols"` | the column blocks `paginate_cols()` cuts |
 
-Each page records its own group (in `rtf_paginate_meta$page_group`), so the
-column split never has to read a page name to know where a group ends.
+```{r pagcols_axes, eval = FALSE}
+paginate_cols(pages, at = c(4, 6), page_order = c("group", "cols", "rows"))
+paginate_cols(pages, at = c(4, 6), page_order = c("cols", "group", "rows"))
+paginate_cols(pages, at = c(4, 6), page_order = "cols")   # cols first, rest as usual
+```
+
+`"across"` is `c("group", "cols", "rows")` and `"down"` is
+`c("group", "rows", "cols")`. An axis left out is appended in the default order
+(`"group"`, `"rows"`, `"cols"`), and an axis the table does not have never
+varies -- so the same call works whether or not `group_col` / `page_by` were
+used. Each page records its own group (in `rtf_paginate_meta$page_group`), so
+the sort never has to read a page name.
+
+One consequence: `rtf_tables(auto_section = TRUE)` opens a section where the
+page **name** changes, and a page is named by its group. A group's pages are
+one section only while `"group"` comes first; put `"cols"` outside it and every
+column block starts the groups again, giving a section per block and group.
 
 One thing to know about the names: a page's **name** follows the row page it
 was cut from, so under `"across"` pages that share a name are no longer

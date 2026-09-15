@@ -317,3 +317,74 @@ test_that("a heading that already ends in ...n is renumbered, not doubled", {
                    c("A...1", "A...2", "B"))
   expect_identical(rtfreporter:::.page_name_base("A...12"), "A")
 })
+
+# ──────── page_order as an axis order (#444) ───────────────────────────────
+
+.axis_seq <- function(pages) {
+  m <- lapply(pages, function(p) attr(p$data, "rtf_paginate_meta", exact = TRUE))
+  paste0(vapply(m, function(z) z$page_group %||% "-", character(1L)),
+         vapply(m, function(z) z$page_by    %||% "-", character(1L)), "/",
+         vapply(pages, function(p) names(p$data)[2L], character(1L)))
+}
+
+test_that("the shorthands are the two usual axis orders", {
+  pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
+                     page_by = "period", drop_cols = c("cohort", "period"))
+  cut <- function(po) .axis_seq(paginate_cols(pg, at = 4, carry = 1,
+                                              width = "keep", page_order = po))
+  expect_identical(cut("across"), cut(c("group", "cols", "rows")))
+  expect_identical(cut("down"),   cut(c("group", "rows", "cols")))
+})
+
+test_that("every axis order is expressible", {
+  pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
+                     page_by = "period", drop_cols = c("cohort", "period"))
+  cut <- function(po) unname(.axis_seq(paginate_cols(pg, at = 4, carry = 1,
+                                                     width = "keep",
+                                                     page_order = po)))
+  expect_identical(cut(c("group", "cols", "rows")),
+                   c("G1P1/V1", "G1P2/V1", "G1P1/V3", "G1P2/V3",
+                     "G2P1/V1", "G2P2/V1", "G2P1/V3", "G2P2/V3"))
+  expect_identical(cut(c("group", "rows", "cols")),
+                   c("G1P1/V1", "G1P1/V3", "G1P2/V1", "G1P2/V3",
+                     "G2P1/V1", "G2P1/V3", "G2P2/V1", "G2P2/V3"))
+  expect_identical(cut(c("cols", "group", "rows")),
+                   c("G1P1/V1", "G1P2/V1", "G2P1/V1", "G2P2/V1",
+                     "G1P1/V3", "G1P2/V3", "G2P1/V3", "G2P2/V3"))
+  expect_identical(cut(c("rows", "cols", "group")),
+                   c("G1P1/V1", "G2P1/V1", "G1P1/V3", "G2P1/V3",
+                     "G1P2/V1", "G2P2/V1", "G1P2/V3", "G2P2/V3"))
+  # the same pages, whatever the order
+  for (po in list(c("group", "rows", "cols"), c("cols", "group", "rows"),
+                  c("rows", "cols", "group"))) {
+    expect_setequal(cut(po), cut(c("group", "cols", "rows")))
+  }
+})
+
+test_that("an axis left out is appended in the default order", {
+  pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
+                     page_by = "period", drop_cols = c("cohort", "period"))
+  cut <- function(po) .axis_seq(paginate_cols(pg, at = 4, carry = 1,
+                                              width = "keep", page_order = po))
+  expect_identical(cut("cols"), cut(c("cols", "group", "rows")))
+  expect_identical(cut("rows"), cut(c("rows", "group", "cols")))
+})
+
+test_that("`page_order` axes are validated", {
+  pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
+                     page_by = "period", drop_cols = c("cohort", "period"))
+  expect_error(paginate_cols(pg, at = 4, page_order = "sideways"),
+               "is not an axis")
+  expect_error(paginate_cols(pg, at = 4, page_order = c("cols", "cols")),
+               "may appear once")
+})
+
+test_that(".resolve_page_axes fills and validates on its own", {
+  f <- rtfreporter:::.resolve_page_axes
+  expect_identical(f(NULL),      c("group", "cols", "rows"))   # the default
+  expect_identical(f("across"),  c("group", "cols", "rows"))
+  expect_identical(f("down"),    c("group", "rows", "cols"))
+  expect_identical(f(c("rows")), c("rows", "group", "cols"))
+  expect_identical(f(c("cols", "rows", "group")),
+                   c("cols", "rows", "group"))
+})

@@ -22,15 +22,17 @@
 #      "across"   col1/row1  col1/row2  col2/row1  col2/row2  col3/row1 ...
 #      "down"     row1/col1  row1/col2  row1/col3  row2/col1  row2/col2 ...
 #
-#  A GROUP is above both.  When the row pagination made a page per group value
-#  (`as_rtftables(split = "by_value", group_col = )`, with `page_by` running
-#  inside it), the column split happens WITHIN one group: a group's pages stay
-#  together whatever `page_order` says, so with a group G, a `page_by` value P
-#  and column blocks C the three axes come out as
+#  Those two are shorthands for the general form: `page_order` names the axes
+#  of the split -- "group" (a value-based split's pages), "rows" (page_by and
+#  every other row split) and "cols" (the column blocks) -- in the order they
+#  nest, OUTERMOST FIRST.
 #
-#      "across"   G / C / P            "down"   G / P / C
+#      "across" == c("group", "cols", "rows")
+#      "down"   == c("group", "rows", "cols")
+#      c("cols", "group", "rows")   one column block at a time, groups inside
 #
-#  Each page records its own group in `rtf_paginate_meta$page_group`, so this
+#  Any subset works; the axes left out are appended in the default order.  Each
+#  page records its own group in `rtf_paginate_meta$page_group`, so the sort
 #  never depends on reading a page NAME.
 #
 #  A page's NAME follows the row page it came from either way (that is the only
@@ -82,6 +84,53 @@
 #  still resolves the real writable width and the page geometry stays
 #  authoritative.  Rounding drift is bounded by a few twips on a page's last
 #  column, where `.compute_cellx()` absorbs the remainder.
+
+# The three axes a paginated table can have, outermost first by default.
+.PAGE_AXES <- c("group", "rows", "cols")
+
+# `page_order` -> the axes in nesting order, outermost first.
+#
+#   "across" / "down"  the two shorthands, kept from when this argument could
+#                      only reorder two axes;
+#   c("cols", "group") any subset, in the order wanted -- the axes left out are
+#                      appended in the default order, and an axis the table
+#                      does not have simply never varies.
+.resolve_page_axes <- function(page_order) {
+  if (is.null(page_order) || length(page_order) == 0L ||
+      identical(page_order, c("across", "down"))) {
+    page_order <- "across"                       # the formal's default
+  }
+  if (length(page_order) == 1L && page_order %in% c("across", "down")) {
+    return(if (identical(page_order, "across")) c("group", "cols", "rows")
+           else c("group", "rows", "cols"))
+  }
+  ax <- as.character(page_order)
+  bad <- setdiff(ax, .PAGE_AXES)
+  if (length(bad)) {
+    stop(sprintf(paste0("`page_order`: %s is not an axis.  Give the axes ",
+                        "outermost first, from %s -- or \"across\" / \"down\" ",
+                        "for the two usual orders."),
+                 paste0("\"", bad[1L], "\""),
+                 paste0("\"", .PAGE_AXES, "\"", collapse = ", ")),
+         call. = FALSE)
+  }
+  if (anyDuplicated(ax)) {
+    stop("`page_order`: each axis may appear once.", call. = FALSE)
+  }
+  c(ax, setdiff(.PAGE_AXES, ax))                 # the rest keep their order
+}
+
+# The group each row page belongs to, and its position inside that group --
+# the two row-side keys the ordering sorts on.
+.page_row_keys <- function(x) {
+  runs <- .page_group_runs(x)
+  g <- integer(length(x)); r <- integer(length(x))
+  for (k in seq_along(runs)) {
+    g[runs[[k]]] <- k
+    r[runs[[k]]] <- seq_along(runs[[k]])
+  }
+  list(group = g, rows = r)
+}
 
 # Which pages belong to the same GROUP -- the outermost page axis when the row
 # pagination made a page per group value (`split = "by_value"`, and the group
@@ -475,15 +524,18 @@
 #'   throughout; `"keep"` gives each kept column exactly the width it had
 #'   before the split. No effect under `column_widths_twips`. See
 #'   *Column widths*.
-#' @param page_order Which axis the page number advances along first when a
-#'   table is split both ways. `"across"` (default) advances **across the
-#'   columns** -- the column block first, the row pages running inside it;
-#'   `"down"` advances **down the rows** -- the row page first, its column
-#'   blocks following it. A group is above both and is never broken up (see
-#'   *Page order*). The pages themselves are identical; only their order
-#'   differs. A page's name follows its row page either way, so under
-#'   `"across"` pages sharing a name are no longer adjacent -- which does not
-#'   change the sectioning, see *Page names*.
+#' @param page_order The order the pages come out in, as the **axes** of the
+#'   split, outermost first: any of `"group"` (the pages a value-based split
+#'   made, `as_rtftables(split = "by_value", group_col = )`), `"rows"` (the row
+#'   pages -- `page_by` and every other row split) and `"cols"` (the column
+#'   blocks this verb cuts). Axes left out are appended in that default order,
+#'   and an axis the table does not have never varies.
+#'
+#'   `"across"` and `"down"` are the two usual orders, kept as shorthands:
+#'   `"across"` is `c("group", "cols", "rows")` -- the page number advances
+#'   across the columns first -- and `"down"` is `c("group", "rows", "cols")`,
+#'   advancing down the rows. The pages themselves are identical whatever the
+#'   order; only the sequence differs. See *Page order*.
 #' @param ... Unused.
 #'
 #' @section Columns named `<group>__<item>`:
@@ -504,24 +556,37 @@
 #' ```
 #'
 #' @section Page order:
-#' `page_order` orders the pages this verb returns. `"across"` (the default)
-#' advances the **column block** first and runs the row pages inside it;
-#' `"down"` advances the **row page** first and lets its column blocks follow.
+#' A table can be split on three axes, and `page_order` names them in the order
+#' they should nest, **outermost first**:
 #'
-#' A **group** sits above both. When the row pagination made a page per group
-#' value -- `as_rtftables(split = "by_value", group_col = )`, with `page_by`
-#' running inside it -- the column split happens **within** one group, so a
-#' group's pages always stay together. With a group `G`, a `page_by` value `P`
-#' and column blocks `C`:
+#' | axis | what it is |
+#' |---|---|
+#' | `"group"` | the pages a value-based split made -- `as_rtftables(split = "by_value", group_col = )` |
+#' | `"rows"`  | the row pages: `page_by`, and every other row split (`max_rows` continuation pages, `split = "rows"`) |
+#' | `"cols"`  | the column blocks this verb cuts |
+#'
+#' With a group `G`, two row pages `P1` / `P2` and two column blocks `C1` /
+#' `C2`, all six orders are expressible; the two usual ones have shorthands:
 #'
 #' | `page_order` | page sequence |
 #' |---|---|
-#' | `"across"` | `G` / `C` / `P` |
-#' | `"down"`   | `G` / `P` / `C` |
+#' | `"across"` = `c("group", "cols", "rows")` | `G1 C1 P1`, `G1 C1 P2`, `G1 C2 P1`, ... |
+#' | `"down"` = `c("group", "rows", "cols")`   | `G1 P1 C1`, `G1 P1 C2`, `G1 P2 C1`, ... |
+#' | `c("cols", "group", "rows")`              | `C1 G1 P1`, `C1 G1 P2`, `C1 G2 P1`, ... |
+#'
+#' An axis left out of the vector is appended in the default order
+#' (`"group"`, `"rows"`, `"cols"`), so `page_order = "cols"` means "column
+#' blocks outermost, everything else as usual".
 #'
 #' Each page records its own group in `rtf_paginate_meta$page_group` (and its
 #' `page_by` value beside it), so none of this depends on reading a page name
 #' -- which carries the group alone.
+#'
+#' One consequence worth knowing: `rtf_tables(auto_section = TRUE)` opens a
+#' section where the page **name** changes, and a page is named by its group.
+#' So a group's pages land in one section only while `"group"` comes first; put
+#' `"cols"` outside it and each column block starts the groups again, giving a
+#' section per block and group.
 #'
 #' @section Page names:
 #' A column page inherits the name of the row page it was cut from, whatever
@@ -584,8 +649,8 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
                                width = c("fill", "keep"),
                                page_order = c("across", "down"), ...) {
   .check_own_dots(list(...), paginate_cols.list, "paginate_cols")
-  width      <- match.arg(width)
-  page_order <- match.arg(page_order)
+  width <- match.arg(width)
+  axes  <- .resolve_page_axes(page_order)
   if (length(x) == 0L) return(list())
   ok <- vapply(x, inherits, logical(1L), "rtftable")
   if (!all(ok)) {
@@ -669,25 +734,22 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
   # along first -- "across" the columns (the column block advances, then the
   # row pages inside it) or "down" the rows (the row page advances, and its
   # column blocks follow it).
-  across <- identical(page_order, "across")
-  for (run in .page_group_runs(x)) {
-    if (across) {
-      for (bi in seq_along(keeps)) for (i in run) {
-        k <- k + 1L
-        out[[k]]  <- .page_with_header(
-          .rtftable_keep_cols(x[[i]], keeps[[bi]], scales[[bi]]),
-          keeps[[bi]], ref, carry_idx, col_header, hdr_names, by)
-        onames[k] <- if (!is.null(in_names)) in_names[i] else ""
-      }
-    } else {
-      for (i in run) for (bi in seq_along(keeps)) {
-        k <- k + 1L
-        out[[k]]  <- .page_with_header(
-          .rtftable_keep_cols(x[[i]], keeps[[bi]], scales[[bi]]),
-          keeps[[bi]], ref, carry_idx, col_header, hdr_names, by)
-        onames[k] <- if (!is.null(in_names)) in_names[i] else ""
-      }
-    }
+  # Every (row page, column block) pair, ordered by the axes `page_order`
+  # names -- outermost first.  The pages are the same whatever the order; only
+  # the sequence differs, so this is a sort, not a different build.
+  rk   <- .page_row_keys(x)
+  pair <- expand.grid(cols = seq_along(keeps), i = seq_along(x))
+  key  <- list(group = rk$group[pair$i], rows = rk$rows[pair$i],
+               cols  = pair$cols)
+  ord  <- do.call(order, c(unname(key[axes]), list(seq_len(nrow(pair)))))
+
+  for (p in ord) {
+    i <- pair$i[p]; bi <- pair$cols[p]
+    k <- k + 1L
+    out[[k]]  <- .page_with_header(
+      .rtftable_keep_cols(x[[i]], keeps[[bi]], scales[[bi]]),
+      keeps[[bi]], ref, carry_idx, col_header, hdr_names, by)
+    onames[k] <- if (!is.null(in_names)) in_names[i] else ""
   }
   if (!is.null(in_names)) names(out) <- .uniquify_page_names(onames)
   out

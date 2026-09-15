@@ -272,6 +272,32 @@
 
 ### New features
 
+- **`page_order` names the three split axes, outermost first** (#444).  A
+  paginated table can be split three ways — the pages a value-based split makes
+  (`group_col`), the row pages (`page_by` and every other row split), and the
+  column blocks (`paginate_cols()`) — and the group was always outermost, with
+  `page_order` choosing only between the other two.
+
+  ```r
+  paginate_cols(pages, by = "____", page_order = c("group", "cols", "rows"))
+  paginate_cols(pages, at = 6,      page_order = c("cols", "group", "rows"))
+  paginate_cols(pages, at = 6,      page_order = "cols")   # cols first, rest as usual
+  ```
+
+  All six orders are now expressible.  An axis left out is appended in the
+  default order (`"group"`, `"rows"`, `"cols"`), and an axis the table does not
+  have never varies, so one call works whether or not `group_col` / `page_by`
+  were used.  `"across"` and `"down"` stay as shorthands for
+  `c("group", "cols", "rows")` and `c("group", "rows", "cols")`; an unknown or
+  repeated axis is an error.
+
+  The pages are the same whatever the order — it is a sort, on each page's own
+  `rtf_paginate_meta$page_group` plus its position and its column block, never
+  on a page name.  Worth knowing:
+  `rtf_tables(auto_section = TRUE)` sections on the page name, and a page is
+  named by its group, so a group is one section only while `"group"` comes
+  first.
+
 - **Column headers across a column split: `paginate_cols(by = , col_header = )`
   and a width guard** (#435).  A header written for the whole table and applied
   **after** `paginate_cols()` landed on every page unchanged, so each one
