@@ -20,6 +20,25 @@ no body borders), and a left-aligned footnote.  It is opinionated by
 design rather than a do-everything RTF engine.  The package logo above is
 literally the kind of page `generate_rtfreport()` produces.
 
+## Writing rtfreporter code with an AI assistant
+
+rtfreporter is new, so a chat assistant has never seen it: asked for
+rtfreporter code it reaches for `r2rtf` verbs or invents arguments, and none
+of it is flagged as a guess.  Give it the facts first.
+
+**[⬇ rtfreporter-ai-user-manual.md](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md)**
+-- one self-contained file (~26 KB) sized for a single chat session.  Attach it
+at the **start** of the session and say *"use this manual"*.  It holds the
+whole workflow, every `as_rtftables()` argument, the four clinical table shapes,
+headers and page tokens, listings, figures, borders, and the complete list of
+exported functions.
+
+Every example in it is executed against the package and its function list is
+checked against `NAMESPACE`, both by CI -- so a manual that drifts from the API
+fails the build rather than misleading you.
+
+Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual.
+
 ## Why rtfreporter?
 
 We **deliberately keep the scope small**.  rtfreporter is not a

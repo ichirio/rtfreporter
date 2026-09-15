@@ -1,5 +1,37 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **AI assistant manuals, downloadable from the docs site** (#454).  The
+  package is new enough that a general-purpose chat assistant has never seen
+  it: asked for rtfreporter code it reaches for `r2rtf` verbs or invents
+  arguments, and the reader cannot tell which parts are real.  Two
+  self-contained Markdown briefings now ship as static site assets, each sized
+  to sit in one chat session:
+
+  * [`rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md)
+    -- the workflow, every `as_rtftables()` argument, the four clinical table
+    shapes, headers and page tokens, listings, figures, borders, the complete
+    export list, and the mistakes assistants actually make.
+  * [`rtfreporter-ai-dev-manual.md`](https://ichirio.github.io/rtfreporter/rtfreporter-ai-dev-manual.md)
+    -- the invariants, the S3 object model and rendering pipeline, the
+    `as_rtftables()` kwargs contract, how to add a table-object adapter, the
+    test / lint / docs conventions, and the issue -> PR -> release workflow.
+
+  They are deliberately **two files, attached one at a time**: the user manual
+  forbids touching internals and the developer manual requires it, so handing
+  an assistant both blunts each.  Each opens with a scope declaration.
+
+  A stale manual is worse than none, because an assistant cannot tell one from
+  the other, so both are tested: the user manual's export list must match
+  `NAMESPACE` exactly, no deprecated export may appear in a code block, every
+  idiom it teaches is executed (including the ones it documents as errors), and
+  the developer manual's file map, `Imports:` list and S3-only claim are
+  checked against the tree.  A manual that drifts from the package fails CI.
+
+  Linked from the home page (*Coding with an AI assistant*) and the Articles
+  menu.
+
 ### New features
 
 - **`col_cell(pos = )` accepts a selector function, and `col_key()` builds one**
