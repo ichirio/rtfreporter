@@ -278,7 +278,10 @@ test_that("a name follows its row page whatever the order", {
 
 test_that("`page_order` is validated", {
   expect_error(paginate_cols(rtftable(.df()), at = 4, page_order = "sideways"),
-               "arg")
+               "is not an axis")
+  expect_error(paginate_cols(rtftable(.df()), at = 4,
+                             page_order = c("cols", "cols")),
+               "may appear once")
 })
 
 test_that("page names are carried through, kept addressable", {
