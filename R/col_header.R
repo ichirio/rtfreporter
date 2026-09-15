@@ -59,13 +59,26 @@
 #' column named `g1` to the one named `g3`, and `col_cell("total", "Total")`
 #' targets a single named column.
 #'
+#' `pos` may finally be a **selector function** -- see [col_key()].  It is
+#' called with the data column names when the header is attached to a table
+#' and answers which columns the cell covers, so a spanning cell can be
+#' written in terms of what it labels rather than of column numbers:
+#'
+#' ```r
+#' col_cell(col_key("Placebo"), "Placebo")            # value before "____"
+#' col_cell(function(nm) grepl("^Placebo____", nm), "Placebo")
+#' ```
+#'
 #' @param pos Cell position, one of:
 #'   * a numeric of length 1 (single column) or length 2 (`c(start, end)`,
-#'     inclusive) -- `start <= end` required, values `>= 1`; or
+#'     inclusive) -- `start <= end` required, values `>= 1`;
 #'   * a character of length 1 (single column name) or length 2
-#'     (`c(start_name, end_name)`) referring to data columns by name.
-#'   Name resolution (and the `start <= end` check for named ranges) happens
-#'   when the header is attached to a table.
+#'     (`c(start_name, end_name)`) referring to data columns by name; or
+#'   * a selector **function** of the data column names -- see [col_key()] --
+#'     returning a logical, integer or character vector.  It must match at
+#'     least one column, and the matched columns must be adjacent.
+#'   Name and selector resolution (and the `start <= end` check for named
+#'   ranges) happens when the header is attached to a table.
 #' @param label Character scalar.  Cell text; may be `""`.
 #' @param align Optional `"left"`, `"center"`, or `"right"`.  `NULL`
 #'   (default) inherits the leftmost covered column's `header_align`.
@@ -88,15 +101,22 @@
 #' col_cell(c(2, 3), "Drug A",
 #'          border = rtf_border(bottom = "none"))
 #'
+#' # Select the columns to span by what they hold, not by where they sit:
+#' col_cell(col_key("Drug A"), "Drug A")
+#'
+#' @seealso [col_key()] for selecting columns by a column-name segment.
+#'
 #' @export
 col_cell <- function(pos, label = "", align = NULL,
                      bold = FALSE, italic = FALSE, underline = FALSE,
                      border = NULL) {
-  if (!length(pos) %in% c(1L, 2L) || any(is.na(pos))) {
-    stop("`pos` must be a numeric or character of length 1 or 2.",
-         call. = FALSE)
-  }
-  if (is.character(pos)) {
+  if (is.function(pos)) {
+    # Column selector: called with the data column names when the header is
+    # attached to a table (see `.resolve_col_sel()`).  Nothing to check here
+    # -- the column names are unknown at construction time.
+  } else if (!length(pos) %in% c(1L, 2L) || any(is.na(pos))) {
+    stop(.POS_ERR, call. = FALSE)
+  } else if (is.character(pos)) {
     # Column-name reference; resolved to positions when the header is
     # attached to a table (see `.pos_row_to_spans()`).
     if (!all(nzchar(pos))) {
@@ -109,8 +129,7 @@ col_cell <- function(pos, label = "", align = NULL,
       stop("`pos` start must be <= end.", call. = FALSE)
     }
   } else {
-    stop("`pos` must be a numeric or character of length 1 or 2.",
-         call. = FALSE)
+    stop(.POS_ERR, call. = FALSE)
   }
   if (!is.null(align) && !align %in% c("left", "center", "right")) {
     stop("`align` must be NULL, \"left\", \"center\", or \"right\".",
@@ -134,7 +153,8 @@ col_cell <- function(pos, label = "", align = NULL,
 #' @export
 print.rtf_col_cell <- function(x, ...) {
   fmt <- if (is.character(x$pos)) "%s" else "%d"
-  pos_str <- if (length(x$pos) == 1L) sprintf(fmt, x$pos)
+  pos_str <- if (is.function(x$pos)) .sel_text(x$pos)
+             else if (length(x$pos) == 1L) sprintf(fmt, x$pos)
              else sprintf(paste0(fmt, "..", fmt), x$pos[1L], x$pos[2L])
   deco <- c(if (isTRUE(x$bold)) "b", if (isTRUE(x$italic)) "i",
              if (isTRUE(x$underline)) "u")
@@ -190,6 +210,9 @@ print.rtf_col_header <- function(x, ...) {
     } else if (is.list(row)) {
       cells <- vapply(row, function(c) {
         pos <- c$pos %||% c(c$from %||% NA, c$to %||% NA)
+        if (is.function(pos)) {
+          return(sprintf("%s@%s", c$label %||% "", .sel_text(pos)))
+        }
         fmt <- if (is.character(pos)) "%s" else "%d"
         if (length(pos) == 1L || (length(pos) == 2L && pos[1L] == pos[2L])) {
           sprintf(paste0("%s@", fmt), c$label %||% "", pos[1L])
@@ -242,7 +265,96 @@ add_col_header_row <- function(hdr, row,
 }
 
 
+#' Select header columns by a column-name segment
+#'
+#' Returns a **column selector** for [col_cell()] `pos =`: a function that is
+#' handed the data column names when the header is attached to a table and
+#' answers which columns the cell covers.
+#'
+#' Data columns produced by a wide pivot are usually named by rule, as
+#' `<group><sep><sub-group>` -- for example `"Placebo____Day 1"`.  `col_key()`
+#' splits each name on `sep` and keeps the columns whose `part`-th segment is
+#' one of `key`, so a spanning header cell is written in terms of the *value*
+#' it labels rather than of column numbers that shift whenever a column is
+#' added, dropped or reordered.
+#'
+#' The separator is the one already used to rebuild a spanning header from
+#' delimited column names (see `as_rtftables(header_sep = )`) and to split a
+#' table column-wise (see [paginate_cols()] `by = `), so the three stay in
+#' step.
+#'
+#' A selector may also be written directly as a plain function of the column
+#' names, which covers glob and regular-expression matching without any
+#' further vocabulary:
+#'
+#' ```r
+#' col_cell(function(nm) grepl(glob2rx("Placebo____*"), nm), "Placebo")
+#' col_cell(function(nm) grepl("^Placebo____", nm),          "Placebo")
+#' ```
+#'
+#' Such a function may return a logical vector the length of the column names,
+#' an integer vector of positions, or a character vector of column names.  It
+#' is an error for a selector to match no column, or to match columns that are
+#' not adjacent -- a header cell can only span a contiguous range.
+#'
+#' @param key Character. One or more segment values to match.
+#' @param sep Single string, or `NULL` (default) to auto-detect the separator
+#'   that occurs in the column names (`"____"`, then tfrmt's delimiter).
+#' @param part Integer. Which segment to compare, counting from the left
+#'   (`1`, the default, is the value before the first separator).  A negative
+#'   value counts from the right, so `part = -1` is the last segment.
+#'
+#' @return A function of the column names, tagged for use as `col_cell(pos =)`.
+#'
+#' @seealso [col_cell()], [rtf_col_header()], [paginate_cols()]
+#'
+#' @examples
+#' # Data columns: Placebo____Day 1, Placebo____Day 7, TAK-003____Day 1, ...
+#' col_cell(col_key("Placebo"), "Placebo\n(N=60)")
+#'
+#' # Every "Day 1" column, whichever arm it belongs to:
+#' col_cell(col_key("Day 1", part = 2), "Day 1")
+#'
+#' @export
+col_key <- function(key, sep = NULL, part = 1L) {
+  key <- as.character(key)
+  if (!length(key) || anyNA(key) || !all(nzchar(key))) {
+    stop("`key` must be one or more non-empty strings.", call. = FALSE)
+  }
+  if (!is.null(sep) &&
+        (!is.character(sep) || length(sep) != 1L || is.na(sep) ||
+           !nzchar(sep))) {
+    stop("`sep` must be NULL or a single non-empty string.", call. = FALSE)
+  }
+  part <- as.integer(part)[1L]
+  if (is.na(part) || part == 0L) {
+    stop("`part` must be a non-zero integer.", call. = FALSE)
+  }
+  seg <- function(nm) .name_segment(nm, sep, part)
+  structure(
+    function(nm) {
+      s <- seg(nm)
+      !is.na(s) & s %in% key
+    },
+    rtf_sel_label   = sprintf("col_key(%s)",
+                              paste0('"', key, '"', collapse = ", ")),
+    rtf_sel_choices = function(nm) {
+      s <- seg(nm)
+      unique(s[!is.na(s)])
+    }
+  )
+}
+
+
 # -- Internal helpers --------------------------------------------------------
+
+# Shared message for a malformed `pos`.  A literal position / column name is
+# capped at length 2 ("from, to"); matching many columns at once is the job of
+# a selector function such as `col_key()`.
+.POS_ERR <- paste0(
+  "`pos` must be a number or a column name of length 1 or 2, ",
+  "or a selector function such as col_key()."
+)
 
 # Is `x` a cell spec -- either the new pos form or the legacy from/to form?
 .is_cell_spec <- function(x) {
@@ -254,6 +366,7 @@ add_col_header_row <- function(hdr, row,
 # is character.
 .resolve_cell_pos <- function(pos, col_names) {
   if (is.null(pos)) stop("Cell spec missing `pos` field.", call. = FALSE)
+  if (is.function(pos)) return(.resolve_col_sel(pos, col_names))
   if (!is.character(pos)) return(as.integer(pos))
   if (is.null(col_names)) {
     stop("Column-name `pos` in col_cell() requires the header to be ",
@@ -273,6 +386,84 @@ add_col_header_row <- function(hdr, row,
     }
     as.integer(j)
   }, integer(1L), USE.NAMES = FALSE)
+}
+
+# Human-readable name of a selector function, for messages and print().
+.sel_text <- function(sel) attr(sel, "rtf_sel_label") %||% "<selector>"
+
+# Split each column name on `sep` and return its `part`-th segment (NA when
+# the name has too few segments).  `sep = NULL` auto-detects.
+.name_segment <- function(nm, sep, part) {
+  if (is.null(sep)) sep <- .detect_header_sep(nm)
+  vapply(strsplit(nm, sep, fixed = TRUE), function(x) {
+    i <- if (part > 0L) part else length(x) + 1L + part
+    if (i >= 1L && i <= length(x)) x[[i]] else NA_character_
+  }, character(1L), USE.NAMES = FALSE)
+}
+
+# First of the known header separators that actually occurs in `nm`.
+.detect_header_sep <- function(nm) {
+  seps <- .default_header_seps()
+  hit  <- vapply(seps, function(s) any(grepl(s, nm, fixed = TRUE)), logical(1L))
+  if (any(hit)) seps[[which(hit)[1L]]] else seps[[1L]]
+}
+
+# "2, 4-6, 9" for c(2, 4, 5, 6, 9) -- used in selector error messages.
+.int_runs_text <- function(j) {
+  grp <- cumsum(c(TRUE, diff(j) != 1L))
+  paste(vapply(split(j, grp), function(r) {
+    if (length(r) == 1L) as.character(r) else sprintf("%d-%d", r[1L], r[length(r)])
+  }, character(1L)), collapse = ", ")
+}
+
+# Resolve a selector-function `pos` against the data column names.  The result
+# is always a contiguous range, collapsed to the length-1 / length-2 form the
+# rest of the header machinery expects.
+.resolve_col_sel <- function(sel, col_names) {
+  lab <- attr(sel, "rtf_sel_label") %||% "The `pos` selector"
+  if (is.null(col_names)) {
+    stop("A selector `pos` in col_cell() requires the header to be attached ",
+         "to a table (data column names are unknown here).", call. = FALSE)
+  }
+  hit <- sel(col_names)
+  j <- if (is.logical(hit)) {
+    if (length(hit) != length(col_names)) {
+      stop(sprintf("%s returned %d logical values for %d data columns.",
+                   lab, length(hit), length(col_names)), call. = FALSE)
+    }
+    which(hit & !is.na(hit))
+  } else if (is.character(hit)) {
+    m <- match(hit, col_names)
+    if (anyNA(m)) {
+      stop(sprintf("%s returned unknown column name(s): %s.", lab,
+                   paste0('"', hit[is.na(m)], '"', collapse = ", ")),
+           call. = FALSE)
+    }
+    m
+  } else if (is.numeric(hit)) {
+    as.integer(hit)
+  } else {
+    stop(sprintf("%s must return a logical, integer or character vector.", lab),
+         call. = FALSE)
+  }
+  j <- sort(unique(j[!is.na(j)]))
+  if (!length(j)) {
+    ch    <- attr(sel, "rtf_sel_choices")
+    avail <- if (is.function(ch)) ch(col_names) else col_names
+    stop(sprintf("%s matched no data columns. Available %s: %s.", lab,
+                 if (is.function(ch)) "keys" else "columns",
+                 paste0('"', avail, '"', collapse = ", ")), call. = FALSE)
+  }
+  if (j[1L] < 1L || j[length(j)] > length(col_names)) {
+    stop(sprintf("%s matched positions outside the data column range 1..%d.",
+                 lab, length(col_names)), call. = FALSE)
+  }
+  if (length(j) > 1L && !identical(j, seq.int(j[1L], j[length(j)]))) {
+    stop(sprintf(paste0("%s matched non-adjacent data columns (%s); a header ",
+                        "cell can only span a contiguous range."),
+                 lab, .int_runs_text(j)), call. = FALSE)
+  }
+  if (length(j) == 1L) j else c(j[1L], j[length(j)])
 }
 
 # Convert a pos-style row into the (from, to)-spanning representation the

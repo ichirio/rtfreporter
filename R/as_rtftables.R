@@ -45,8 +45,11 @@
       for (cell in row) {
         if (!is.list(cell)) next
         lab <- as.character(cell$label %||% "")
+        # Only a single-column cell forces a column to be wide; spanning
+        # cells, named and selector positions are ignored here.
         pos <- cell$pos
-        if (is.null(pos)) {
+        if (!is.numeric(pos) || length(pos) != 1L) {
+          pos <- NULL
           f <- cell$from; t <- cell$to
           if (!is.null(f) && !is.null(t) && length(f) && length(t) && f == t)
             pos <- f
