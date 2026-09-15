@@ -643,21 +643,6 @@ add_header_row.list <- function(x, ...) {
 #'   vector of length `ncol` (one per printed column).  `NULL` (default) leaves
 #'   the current header alignment untouched.
 #'
-#' @return An object of the same shape as `x` (rtftable, or list of pages).
-#'
-#' @seealso [rtf_columns()] to list the final column names; [rtf_col_header()]
-#'   / [col_cell()] to build header rows; [add_header_row()] to add a single
-#'   row; [style_header()] to restyle existing header cells.
-#'
-#' @examples
-#' df <- data.frame(row_label = c("A", "B"),
-#'                  g1 = 1:2, g2 = 3:4, Total = 5:6)
-#' tbl <- rtftable(df)
-#' tbl <- set_col_header(
-#'   tbl,
-#'   list(col_cell("row_label", ""), col_cell(c("g1", "g2"), "Treatment")),
-#'   c(row_label = "Category", g1 = "Low", g2 = "High", Total = "Total")
-#' )
 #' @param values Optional table of **per-page values** for the `{tokens}` in
 #'   the header, one row per page key: write the header once and let each page
 #'   take its own numbers.
@@ -669,8 +654,9 @@ add_header_row.list <- function(x, ...) {
 #'   vals <- data.frame(group = periods, n_pbo = c(120, 118, 238))
 #'   pages |> set_col_header(hdr, values = vals)
 #'   ```
-#'   A token is `{name}`, `name` being a column of `values`; `{{` is a literal
-#'   brace; the render-time tokens (`{PAGE}`, `{TOTAL_PAGES}`, `{DATE}`,
+#'   A token is `{name}`, `name` being a column of `values`; doubling a brace
+#'   prints it literally; the render-time tokens (`{PAGE}`,
+#'   `{TOTAL_PAGES}`, `{DATE}`,
 #'   `{BOOK_PAGE}`, `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`) are left for the
 #'   renderer, and any other unfilled token is an error. Every row of `values`
 #'   must be used by some page, and every page must find a row -- a mistyped
@@ -690,6 +676,21 @@ add_header_row.list <- function(x, ...) {
 #'   Several may be given (`by = c("group", "rows")`) to match on the
 #'   combination. The keys live in the page's metadata, so they survive
 #'   `drop_cols` and the column split.
+#' @return An object of the same shape as `x` (rtftable, or list of pages).
+#'
+#' @seealso [rtf_columns()] to list the final column names; [rtf_col_header()]
+#'   / [col_cell()] to build header rows; [add_header_row()] to add a single
+#'   row; [style_header()] to restyle existing header cells.
+#'
+#' @examples
+#' df <- data.frame(row_label = c("A", "B"),
+#'                  g1 = 1:2, g2 = 3:4, Total = 5:6)
+#' tbl <- rtftable(df)
+#' tbl <- set_col_header(
+#'   tbl,
+#'   list(col_cell("row_label", ""), col_cell(c("g1", "g2"), "Treatment")),
+#'   c(row_label = "Category", g1 = "Low", g2 = "High", Total = "Total")
+#' )
 #' @export
 set_col_header <- function(x, ...) UseMethod("set_col_header")
 
