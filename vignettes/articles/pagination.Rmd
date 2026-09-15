@@ -402,7 +402,66 @@ show_pages(as_rtftables(df, split = by_four_cont))
 ```
 
 
-## 3. Pre-splitting the data yourself
+## 3. Two levels at once -- `page_by`
+
+`group_col` says where a **group** boundary is; `page_by` says where a **page**
+boundary is, and what the page is called. Different jobs, so different
+arguments -- and together they express the layout a clinical table usually
+wants: a BY variable (period, cohort, analysis set) owns the page, while an
+inner group (a parameter block) is kept whole *inside* it.
+
+```{r pageby, eval = FALSE}
+as_rtftables(
+  lab,
+  page_by   = "period",      # new page when it changes; the value is the name
+  split     = "group_safe",  # from here on: inside one period only
+  group_by  = "indent",
+  max_rows  = 20,
+  drop_cols = "period"       # page_by does not imply dropping the column
+)
+#>  "Period 1.1"  "Period 1.2"  "Period 2.1"  "Period 2.2"  "Period 3"
+```
+
+The body is partitioned on runs of the `page_by` value first; **every other
+pagination setting then applies within one partition** -- `split`, `max_rows`,
+`group_col`, `group_by`, `min_group_rows`, `cont_label`, `blank_rows`,
+`collapse_repeats`. `split = "by_value"` on its own cannot do this: the group
+it protects is the BY column itself, so a parameter block inside a period is
+cut wherever `max_rows` happens to fall.
+
+Page names are `"<value>"` for a partition that makes one page and
+`"<value>.1"`, `"<value>.2"`, ... when it makes several -- the convention
+`"by_value"` already uses -- so they feed
+`rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` directly. A section
+opens at every **named** page; to give one partition a single section, blank
+the names of its continuation pages:
+
+```{r pageby_sections, eval = FALSE}
+lbl <- sub("[.][0-9]+$", "", names(pages))
+names(pages) <- ifelse(c(FALSE, lbl[-1] == lbl[-length(lbl)]), "", lbl)
+```
+
+Two details worth knowing:
+
+* `group_col` left `NULL` defaults to the first column **not** named in
+  `page_by`. Without that it would be column 1 -- the BY column, where every
+  row of a partition carries the same value and `group_by = "indent"` finds no
+  structure at all.
+* `na` and `cell_format` run **body-wide, before** the partition, so one column
+  width is shared by every page; `split_rows`, `blank_rows` positions and
+  `count_blank_rows` are resolved **inside** each partition.
+
+The three axes compose in one pipeline -- pages by BY value, then rows, then
+columns:
+
+```{r pageby_cols, eval = FALSE}
+as_rtftables(lab, page_by = "period", split = "group_safe",
+             group_by = "indent", max_rows = 20, drop_cols = "period") |>
+  paginate_cols(at = 6, page_order = "down")
+```
+
+
+## 4. Pre-splitting the data yourself
 
 Sometimes the simplest thing is to split the data.frame *before* calling
 `as_rtftables()` and hand it a list. `as_rtftables()` flattens a list input into
@@ -422,7 +481,7 @@ example `split(df, df$SOC)` for a list of adverse-event tables), or when each
 page comes from a different source entirely.
 
 
-## 4. Advanced: post-processing a built-in split
+## 5. Advanced: post-processing a built-in split
 
 A custom `split =` function can run the built-in machinery first and then
 adjust its output -- a hybrid of approaches 1 and 2. The simplest way is to
@@ -732,6 +791,7 @@ needs.
 | As many rows as fit, groups may split (with a continuation label) | `split = "group_force"` + `max_rows` |
 | As many *whole groups* as fit, never split a group | `split = "group_safe"` + `max_rows` |
 | One page per group, named | `split = "by_value"` |
+| One page per BY value, **and** an inner group kept whole | `page_by` + `split = "group_safe"` + `max_rows` |
 | A bespoke rule | a custom `split =` function (+ `add_cont_label()`) |
 | The split already done upstream | pass a (named) list to `as_rtftables()` |
 | A built-in rule plus a tweak | split with a built-in, then post-process the pages |

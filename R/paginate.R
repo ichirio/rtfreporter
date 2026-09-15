@@ -307,6 +307,7 @@ paginate.data.frame <- function(x, ...) {
                                  group_col   = NULL,
                                  group_by    = c("auto", "indent", "value",
                                                  "filled"),
+                                 page_by     = NULL,
                                  cont_label  = " (Cont.)",
                                  min_group_rows   = 2L,
                                  blank_rows       = NULL,
@@ -361,6 +362,18 @@ paginate.data.frame <- function(x, ...) {
     arg <- if (!is.null(cell_format)) "cell_format" else "align_count_pct"
     fl  <- .resolve_cell_format(fmt, ncol(x), arg)
     if (!is.null(fl)) x <- .apply_cell_format(x, fl, na = na)
+  }
+
+  # `page_by`: the OUTER level.  The body is partitioned on the BY column(s)
+  # first -- a new page whenever the value changes -- and every setting below
+  # (the split, max_rows, group_col/group_by, blank rows, collapse_repeats)
+  # then applies WITHIN one partition.  This is done by recursing on this same
+  # function, so there is no second pagination engine to keep in step: each
+  # partition goes through the identical machinery, one level down, with the
+  # body-wide passes above already applied (hence cell_format = NULL, na = "").
+  if (!is.null(page_by)) {
+    args <- mget(setdiff(names(formals(sys.function())), "..."))
+    return(.paginate_by_page(args, list(...)))
   }
 
   # count_blank_rows: materialise the resolved blank positions as empty marker
@@ -553,6 +566,95 @@ paginate.data.frame <- function(x, ...) {
 # -- Internal: group identification ------------------------------------------
 
 # Resolve a user-supplied group_col (name, integer, or NULL) to an integer
+
+# ---------------------------------------------------------------------------
+#  page_by: the OUTER page partition
+# ---------------------------------------------------------------------------
+#  `group_col` says where a GROUP boundary is; `page_by` says where a PAGE
+#  boundary is, and what the page is called.  The two are different jobs, which
+#  is why they are different arguments: the BY column starts a page and names
+#  it, and the group column protects a block INSIDE that page.
+
+# Resolve `page_by` to column indices in the body's own coordinates -- the same
+# space as `group_col`, `sort_by`, `collapse_repeats` and `drop_cols`.
+.resolve_page_by <- function(page_by, df) {
+  if (is.null(page_by) || length(page_by) == 0L) return(integer(0))
+  unique(as.integer(.resolve_col_indices(as.list(page_by), df, "page_by")))
+}
+
+# The partitions `page_by` implies: RUNS of the BY value(s) (the same run-based
+# reading `split = "by_value"` uses, so a value that comes back later is a new
+# page rather than being merged into the earlier one -- sort first if that is
+# not what you want), each with the label its pages are named by.
+.page_by_runs <- function(df, idx) {
+  keys <- lapply(idx, function(j) as.character(df[[j]]))
+  key  <- do.call(paste, c(keys, list(sep = "\r")))
+  lab  <- do.call(paste, c(keys, list(sep = ", ")))
+  rl     <- rle(key)
+  ends   <- cumsum(rl$lengths)
+  starts <- ends - rl$lengths + 1L
+  lapply(seq_along(starts), function(i)
+    list(rows = seq.int(starts[i], ends[i]), label = lab[starts[i]]))
+}
+
+# Paginate one partition at a time and concatenate, naming the pages.  `args`
+# is .paginate_df()'s own argument list, captured AFTER the body-wide passes
+# (`na`, `cell_format`) have run -- which is why they are switched off on the
+# way down: they must see the whole body, so that one column width is shared by
+# every page, not recomputed per partition.
+.paginate_by_page <- function(args, dots) {
+  x   <- args$x
+  idx <- .resolve_page_by(args$page_by, x)
+  args$page_by <- NULL
+  if (length(idx) == 0L || nrow(x) == 0L) {
+    return(do.call(.paginate_df, c(args, dots)))
+  }
+
+  # The group column defaults to the first column the BY key does NOT occupy.
+  # Left at column 1 it would be the BY column itself, where every row of a
+  # partition carries the same value and `group_by = "indent"` finds no
+  # structure at all -- the trap the by-hand recipe had to know about.
+  if (is.null(args$group_col)) {
+    rest <- setdiff(seq_len(ncol(x)), idx)
+    if (length(rest)) args$group_col <- rest[1L]
+  }
+
+  # A blank-row attribute already on the input is in FULL-body coordinates:
+  # slice it into each partition's own.  The page edges (0 = before the first
+  # row, -1 = after the last) belong to every partition.
+  in_attr <- attr(x, "rtf_blank_rows", exact = TRUE)
+  in_attr <- if (is.numeric(in_attr)) as.integer(in_attr) else integer(0)
+  edges   <- in_attr[in_attr <= 0L]
+  inner   <- in_attr[in_attr > 0L]
+
+  out <- list()
+  for (r in .page_by_runs(x, idx)) {
+    part <- x[r$rows, , drop = FALSE]
+    rownames(part) <- NULL
+    loc <- match(inner, r$rows)
+    pos <- c(edges, loc[!is.na(loc)])
+    attr(part, "rtf_blank_rows") <- if (length(pos)) pos else NULL
+
+    a <- args
+    a$x               <- part
+    a$cell_format     <- NULL      # both already applied, body-wide
+    a$align_count_pct <- FALSE
+    a$na              <- ""
+    chunks <- do.call(.paginate_df, c(a, dots))
+
+    nm <- names(chunks)
+    names(chunks) <- if (length(chunks) == 1L) {
+      r$label                                   # one page: the value itself
+    } else if (is.null(nm) || all(!nzchar(nm))) {
+      paste0(r$label, ".", seq_along(chunks))   # several: .1 .2 ...
+    } else {
+      paste0(r$label, ".", nm)                  # inner by_value: compose
+    }
+    out <- c(out, chunks)
+  }
+  out
+}
+
 # column index -- or NULL for "auto-detect from leading whitespace".
 .resolve_group_col <- function(group_col, df) {
   if (is.null(group_col)) return(NULL)
