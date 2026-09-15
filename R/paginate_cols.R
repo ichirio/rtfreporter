@@ -25,9 +25,12 @@
 #
 #  A page's NAME follows the row page it came from either way (that is the only
 #  name there is), so under "down" pages that share a name are no longer
-#  adjacent -- and `rtf_tables(auto_section = TRUE)` opens a section per RUN of
-#  equal names, so a table whose row pages are named per group lands in as many
-#  sections as it has pages.  Name-per-table (the usual case) is unaffected.
+#  adjacent.  That is a display question, not a sectioning one:
+#  `rtf_tables(auto_section = TRUE)` opens a section at every NAMED page and an
+#  unnamed page joins the section before it -- equal names are NOT merged into
+#  one section.  So a named page list yields a section per page under either
+#  order, and an unnamed one (what as_rtftables() returns for a single table)
+#  yields none at all.  To group a run, blank the continuation names.
 #
 #  Why a post-hoc verb on BUILT tables
 #  -----------------------------------
@@ -347,24 +350,38 @@
 #'   block is read all the way down before the next starts. The pages
 #'   themselves are identical; only their order differs. A page's name follows
 #'   its row page either way, so under `"down"` pages sharing a name are no
-#'   longer adjacent -- see *Page names*.
+#'   longer adjacent. That does not change the sectioning -- see *Page names*.
 #' @param ... Unused.
 #'
 #' @section Page names:
 #' A column page inherits the name of the row page it was cut from, whatever
-#' `page_order` is. `rtf_tables(auto_section = TRUE)` opens a section per
-#' **run** of equal names, so with one name per table -- the usual case --
-#' every page of that table stays in one section under either order. Only when
-#' the row pages carry *different* names (e.g. `split = "by_value"`, which
-#' names a page per group) does `"down"` interleave them, giving a section per
-#' page.
+#' `page_order` is -- that is the only name there is. Under `"down"` pages that
+#' share a name are therefore no longer adjacent.
 #'
-#' @return A list of [rtftable()] pages. Names are carried through unchanged,
-#'   so `rtf_tables(auto_section = TRUE)` keeps a table's column pages in one
-#'   section.
+#' What that does *not* change is the sectioning:
+#' `rtf_tables(auto_section = TRUE)` opens a section at every **named** page,
+#' and a page whose name is `""` joins the section before it. Equal names are
+#' **not** merged, so a named page list gives a section per page under either
+#' order, and an **unnamed** list -- what [as_rtftables()] returns for a single
+#' table, and what `paginate_cols()` then passes through -- gives none at all,
+#' leaving every page in the document's own section.
+#'
+#' To put a run of pages in one section, name its first page and blank the
+#' rest -- [combine_sections()] does that bookkeeping when you are assembling
+#' whole tables, and when the names come from the pages themselves (a
+#' `page_by` / `"by_value"` run) the same thing is two lines:
+#'
+#' ```r
+#' lbl <- sub("[.][0-9]+$", "", names(pages))
+#' names(pages) <- ifelse(c(FALSE, lbl[-1] == lbl[-length(lbl)]), "", lbl)
+#' ```
+#'
+#' @return A list of [rtftable()] pages. Names are carried through unchanged --
+#'   each column page keeps its row page's name (see *Page names*).
 #'
 #' @seealso [as_rtftables()] for row pagination; [set_col_header()] for the
-#'   same final-column addressing.
+#'   same final-column addressing; [combine_sections()] for the page names
+#'   `rtf_tables(auto_section = TRUE)` reads.
 #'
 #' @examples
 #' df <- data.frame(Parameter = c("Mean", "SD"),

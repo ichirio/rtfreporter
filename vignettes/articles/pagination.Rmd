@@ -659,12 +659,20 @@ differs -- so pick the one your deliverable reads in: `"across"` (the default)
 when a reader follows a row band across the sheet, `"down"` when each column
 block is a self-contained table of its own.
 
-One thing to check before switching: a page's **name** follows the row page it
-was cut from, and `rtf_tables(auto_section = TRUE)` opens a section per *run*
-of equal names. With one name per table -- the usual case -- every page stays
-in one section either way. But when the row pages carry different names (a
-`split = "by_value"` table names a page per group), `"down"` interleaves them
-and each page lands in a section of its own.
+One thing to know about the names: a page's **name** follows the row page it
+was cut from, so under `"down"` pages that share a name are no longer adjacent.
+That is a display question rather than a sectioning one, because
+`rtf_tables(auto_section = TRUE)` opens a section at every **named** page --
+equal names are not merged -- and a page whose name is `""` joins the section
+before it. A *named* page list therefore gives a section per page under either
+order; an **unnamed** one (what `as_rtftables()` returns for a single table)
+gives none at all. To group a run into one section, name its first page and
+blank the rest:
+
+```{r pagcols_sections, eval = FALSE}
+lbl <- sub("[.][0-9]+$", "", names(pages))
+names(pages) <- ifelse(c(FALSE, lbl[-1] == lbl[-length(lbl)]), "", lbl)
+```
 
 The columns repeated on each page default to the table's `row_title` (column 1
 unless you set it); `carry =` overrides that, and `carry = integer(0)` repeats
@@ -716,8 +724,9 @@ fall inside a spanning group, and that group's label is repeated over its
 remaining columns on both pages; pass `allow_span_break = FALSE` to reject such
 a cut instead and be told which cell it would break.
 
-Page names are carried through unchanged, so a table's column pages stay in the
-same section under `rtf_tables(auto_section = TRUE)`.
+Page names are carried through unchanged: each column page keeps the name of
+the row page it was cut from (see *Which axis is the outer level* above for
+what `auto_section` then does with them).
 
 ### Worked example: a PK concentration summary
 

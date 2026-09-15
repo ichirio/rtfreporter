@@ -195,10 +195,11 @@
 
   The pages themselves are identical; only their order differs.  A page's name
   still follows the row page it was cut from, so under `"down"` pages sharing a
-  name are no longer adjacent — worth knowing because
-  `rtf_tables(auto_section = TRUE)` opens a section per *run* of equal names.
-  With one name per table, the usual case, every page stays in one section
-  either way.
+  name are no longer adjacent — a display question, not a sectioning one:
+  `rtf_tables(auto_section = TRUE)` opens a section at every **named** page
+  (equal names are not merged) and a page named `""` joins the section before
+  it, so an unnamed page list — what `as_rtftables()` returns for a single
+  table — is unaffected by either order.
 
 - **A built-in cell format can be NAMED, and `fmt_value_paren()` aligns text
   values** (#418).  Two related gaps in the cell formatters.
@@ -765,6 +766,28 @@ Diagnosis")
   is called exactly as before.
 
 ### Documentation
+
+- **What `auto_section` actually groups** (#425).  `?paginate_cols` and the
+  pagination article said `rtf_tables(auto_section = TRUE)` opens a section per
+  *run of equal names*, so a table's column pages "stay in one section" — a
+  claim carried since `paginate_cols()` landed (#275) and repeated by the
+  `page_order` docs (#417).  It is wrong: `rtf_tables()` wraps **every named
+  element** and a section opens at each one, so equal consecutive names give a
+  section **per page**; only a page named `""` joins the section before it
+  (which `?rtf_tables` has always stated correctly).  The old claim held only
+  for an **unnamed** page list — what `as_rtftables()` returns for a single
+  table — where there are no names for `auto_section` to act on.
+
+  Nothing rendered wrongly (each page carries its own correct label, and page
+  numbering is continuous), but the docs pointed at the wrong lever.  They now
+  state the rule and show the rename that groups a run:
+
+  ```r
+  lbl <- sub("[.][0-9]+$", "", names(pages))
+  names(pages) <- ifelse(c(FALSE, lbl[-1] == lbl[-length(lbl)]), "", lbl)
+  ```
+
+  Tests pin the behaviour so the documentation cannot drift from it again.
 
 - **An article for figures** (#396).  Figures had one section of "Adding
   content" and nothing of their own, and that section still told the reader
