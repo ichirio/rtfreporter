@@ -14,6 +14,10 @@
 > (`https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md`).
 > Attach **one** of the two, not both: the user manual forbids touching
 > internals, this one requires it.
+>
+> This file serves **both access levels** — outside contributors working from
+> a fork, and repository collaborators pushing branches directly. The work is
+> the same for both; only §10 differs, and it says which row applies to you.
 
 ---
 
@@ -64,7 +68,7 @@ Authoritative prose, in order of usefulness:
 |---|---|
 | Architecture, object model, pipeline | `vignettes/articles/architecture.Rmd` |
 | Adding a table-object adapter | `vignettes/articles/extending-adapters.Rmd` |
-| Workflow, branching, versioning, releases | `CONTRIBUTING.md` |
+| Workflow, branching, versioning, releases | `CONTRIBUTING.md` — its *Contributor vs Collaborator* table is the authority on the fork/direct split. Note its line saying branch protection on `main` is off is stale: `main` now requires 7 green checks and one approving review. |
 | Orientation + invariants | `AGENTS.md` |
 | Why S3 and not R6 | `LEARNING.md` — **partly stale**: its "one R6 class" section describes `rtf_theme`, which no longer exists. The reasoning for choosing S3 is still sound; the inventory is not. |
 | Public API surface | `vignettes/articles/external-api.Rmd` |
@@ -292,8 +296,32 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
 ## 10. Workflow
 
 ```
-issue ──▶ agree approach ──▶ branch off main ──▶ PR ──▶ green CI ──▶ merge
+issue ─▶ agree approach ─▶ topic branch ─▶ PR ─▶ green CI ─▶ review ─▶ merge
 ```
+
+Everyone follows the same lifecycle, the same branch names and the same
+version rule. **One thing differs — where the branch lives — and it follows
+from write access.** Check it before generating any `git push` or
+`gh pr create`:
+
+```bash
+gh api repos/ichirio/rtfreporter --jq .permissions.push   # true = Collaborator
+```
+
+| | **Contributor** (`push: false`) | **Collaborator** (`push: true`) |
+|---|---|---|
+| Push the branch to | **your fork** (`git remote add upstream` the canonical repo, keep your `main` pristine and fast-forward it from upstream) | `ichirio/rtfreporter` directly |
+| Open the PR | `gh pr create --repo ichirio/rtfreporter --base main --head <you>:<branch>` | `gh pr create --base main` |
+| Apply labels | a Collaborator does it for you | yourself |
+| Releases — minor/major bump, tag, GitHub Release | not available | Collaborators only |
+
+**Stop at "the PR is open."** Reviewing, approving and merging are human
+decisions: `main` requires an approving review, and GitHub does not accept a
+self-approval, so an agent cannot complete a merge legitimately on its own.
+Report that the PR is ready and green, and wait to be asked — never merge on
+your own initiative, and never reach for an administrative override to get
+past a protection rule unless the repository owner has told you to in this
+session.
 
 * **Every change starts as an issue.** `exec:agent` on an issue means an
   agent may implement it; `exec:human` / `exec:hold` / no label mean it may
