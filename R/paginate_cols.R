@@ -274,6 +274,10 @@
     for (cell in row) {
       if (!is.list(cell)) next
       p <- if (!is.null(cell$pos)) cell$pos else c(cell$from, cell$to)
+      if (is.function(p)) {
+        p <- tryCatch(.resolve_cell_pos(p, names(tbl$data)),
+                      error = function(e) integer())
+      }
       p <- suppressWarnings(as.integer(p))
       p <- p[!is.na(p)]
       if (length(p) < 2L) next

@@ -18,11 +18,14 @@ col_cell(
 \item{pos}{Cell position, one of:
 \itemize{
 \item a numeric of length 1 (single column) or length 2 (\code{c(start, end)},
-inclusive) -- \code{start <= end} required, values \verb{>= 1}; or
+inclusive) -- \code{start <= end} required, values \verb{>= 1};
 \item a character of length 1 (single column name) or length 2
-(\code{c(start_name, end_name)}) referring to data columns by name.
-Name resolution (and the \code{start <= end} check for named ranges) happens
-when the header is attached to a table.
+(\code{c(start_name, end_name)}) referring to data columns by name; or
+\item a selector \strong{function} of the data column names -- see \code{\link[=col_key]{col_key()}} --
+returning a logical, integer or character vector.  It must match at
+least one column, and the matched columns must be adjacent.
+Name and selector resolution (and the \code{start <= end} check for named
+ranges) happens when the header is attached to a table.
 }}
 
 \item{label}{Character scalar.  Cell text; may be \code{""}.}
@@ -58,6 +61,15 @@ spanning cell robust to column reordering and errors out on an unknown
 name -- for example \code{col_cell(c("g1", "g3"), "Drug A")} spans from the
 column named \code{g1} to the one named \code{g3}, and \code{col_cell("total", "Total")}
 targets a single named column.
+
+\code{pos} may finally be a \strong{selector function} -- see \code{\link[=col_key]{col_key()}}.  It is
+called with the data column names when the header is attached to a table
+and answers which columns the cell covers, so a spanning cell can be
+written in terms of what it labels rather than of column numbers:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{col_cell(col_key("Placebo"), "Placebo")            # value before "____"
+col_cell(function(nm) grepl("^Placebo____", nm), "Placebo")
+}\if{html}{\out{</div>}}
 }
 \examples{
 col_cell(1, "Item")
@@ -67,4 +79,10 @@ col_cell(c(2, 5), "Treatment", align = "center", underline = TRUE)
 col_cell(c(2, 3), "Drug A",
          border = rtf_border(bottom = "none"))
 
+# Select the columns to span by what they hold, not by where they sit:
+col_cell(col_key("Drug A"), "Drug A")
+
+}
+\seealso{
+\code{\link[=col_key]{col_key()}} for selecting columns by a column-name segment.
 }

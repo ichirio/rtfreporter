@@ -120,7 +120,9 @@
       if (is.character(row)) return(c(lab, row))
       if (is.list(row)) {
         shifted <- lapply(row, function(cell) {
-          if (!is.null(cell$pos)) cell$pos <- as.integer(cell$pos) + 1L
+          if (!is.null(cell$pos) && !is.function(cell$pos)) {
+            cell$pos <- as.integer(cell$pos) + 1L   # selectors resolve later
+          }
           if (!is.null(cell$from)) {
             cell$from <- as.integer(cell$from) + 1L
             cell$to   <- as.integer(cell$to) + 1L

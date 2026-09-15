@@ -1,5 +1,38 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`col_cell(pos = )` accepts a selector function, and `col_key()` builds one**
+  (#451).  Data columns of a wide table are usually named by rule, as
+  `<group>____<sub-group>`; writing a spanning header cell as `c(2, 9)` is
+  exactly where a label gets attached to the wrong group, silently.  A cell may
+  now say *what* it covers instead:
+
+  ```r
+  rtf_col_header(list(
+    col_cell(1L,                 ""),
+    col_cell(col_key("Placebo"), "Placebo\n(N=60)"),
+    col_cell(col_key("Total"),   "Total\n(N=180)")
+  ))
+  ```
+
+  `col_key(key, sep = NULL, part = 1L)` keeps the columns whose `part`-th
+  separator-delimited segment is one of `key`.  `sep = NULL` auto-detects the
+  separator already understood elsewhere in the package (`as_rtftables(header_sep
+  = )`, `paginate_cols(by = )`); `part` may be negative to count from the right.
+
+  Because `col_key()` simply *returns* a function of the column names, glob and
+  regular-expression selection need no further vocabulary:
+
+  ```r
+  col_cell(function(nm) grepl(glob2rx("Placebo____*"), nm), "Placebo")
+  ```
+
+  A selector is resolved when the header is attached to a table, and it is an
+  error for one to match **no** column or to match **non-adjacent** columns
+  (a header cell can only span a contiguous range) -- so a misspelt key or an
+  interleaved column layout stops the run instead of mislabelling it.
+
 ### Breaking changes
 
 - **Page names are unique in the list and headings where they are printed**

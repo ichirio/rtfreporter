@@ -130,6 +130,12 @@
     np <- match(inside, keep)
     if (length(np) == 1L) np else c(min(np), max(np))
   }
+  if (is.function(cell$pos)) {
+    # A selector `pos` is resolved against the column names of the table it
+    # is finally attached to -- which are already the post-drop ones -- so it
+    # needs no remapping here.
+    return(cell)
+  }
   if (!is.null(cell$pos)) {
     np <- remap(cell$pos)
     if (is.null(np)) return(NULL)
