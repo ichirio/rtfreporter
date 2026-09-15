@@ -135,6 +135,31 @@
 
 ### Bug fixes
 
+- **`split = "by_value"` + a stub accepts the pre-stub `group_col` its own docs
+  promise** (#429).
+
+  ```r
+  as_rtftables(ae, split = "by_value", group_col = "soc",
+               stub_vars = c("soc", "pt"))
+  #> Error: `group_col` 'soc' not found in the table.
+  ```
+
+  That combination takes a dedicated branch — the body is split by `group_col`
+  **first** and the stub is built per page — and `?as_rtftables` says so:
+  "`group_col` here refers to the **pre-stub** columns".  The split itself did
+  exactly that, but `group_col` was then *also* forwarded into the per-group
+  build, where the stub had just consumed the column it names; the eager
+  resolution inside `set_blank_rows()` raised on an argument nothing was going
+  to use.
+
+  `group_col` is **spent** by the time that branch builds a page — the body was
+  split by it and each sub-body is one group — so it is no longer forwarded,
+  the same treatment `page_by` gets there (#427).  One consequence worth
+  knowing: inside such a page, a `blank_rows = "between_groups"` spec now
+  detects groups on the **stub column** rather than on the (constant) split
+  column, so it separates the stub's own groups — which is what a stub page
+  wants and what it previously failed to do.
+
 - **`page_by` no longer splits one row per page when a stub is built** (#427).
   `stub_cols()` inserts a **label row** per hierarchy level — the stub column
   carries the label text and every other column is `NA`, the `page_by` column
