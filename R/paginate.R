@@ -582,12 +582,40 @@ paginate.data.frame <- function(x, ...) {
   unique(as.integer(.resolve_col_indices(as.list(page_by), df, "page_by")))
 }
 
+# Last / next non-missing value carried onto the missing rows.
+.carry_forward <- function(v) {
+  i <- cumsum(!is.na(v))
+  i[i == 0L] <- NA_integer_
+  v[!is.na(v)][i]
+}
+.carry_back <- function(v) rev(.carry_forward(rev(v)))
+
+# A row with no BY value of its own is a CONTINUATION, not a new page.
+#
+# The body reaching pagination is not always the source data: `stub_vars`
+# inserts a LABEL ROW per hierarchy level, and such a row carries the stub text
+# and nothing else -- every other column, the BY column included, is NA.  Keyed
+# literally, each of those rows became its own partition: a one-row page
+# holding only the stub label, splitting the run it was introducing in two.
+#
+# So a missing BY value takes the value of the row it introduces (the next real
+# one) and, at the foot of the body where there is none, of the row it follows.
+.fill_page_by_gaps <- function(v) {
+  miss <- is.na(v) | !nzchar(trimws(v))
+  if (!any(miss)) return(v)
+  v[miss] <- NA_character_
+  out <- .carry_back(v)
+  prv <- .carry_forward(v)
+  out <- ifelse(is.na(out), prv, out)
+  ifelse(is.na(out), "", out)
+}
+
 # The partitions `page_by` implies: RUNS of the BY value(s) (the same run-based
 # reading `split = "by_value"` uses, so a value that comes back later is a new
 # page rather than being merged into the earlier one -- sort first if that is
 # not what you want), each with the label its pages are named by.
 .page_by_runs <- function(df, idx) {
-  keys <- lapply(idx, function(j) as.character(df[[j]]))
+  keys <- lapply(idx, function(j) .fill_page_by_gaps(as.character(df[[j]])))
   key  <- do.call(paste, c(keys, list(sep = "\r")))
   lab  <- do.call(paste, c(keys, list(sep = ", ")))
   rl     <- rle(key)
