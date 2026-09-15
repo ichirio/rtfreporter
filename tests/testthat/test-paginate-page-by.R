@@ -32,8 +32,9 @@ test_that("the inner split runs INSIDE each partition, group protected", {
   # third starts a new page instead of being cut.
   pg <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
                      group_by = "indent", max_rows = 8, drop_cols = "period")
+  # every page of one partition carries the same heading -- no ".1" / ".2"
   expect_identical(.names(pg),
-                   c("Period 1.1", "Period 1.2", "Period 2.1", "Period 2.2"))
+                   c("Period 1", "Period 1", "Period 2", "Period 2"))
   expect_identical(unname(.rows(pg)), c(8L, 4L, 8L, 4L))
   # every page starts on a block label, never mid-block
   expect_identical(unname(.first(pg)),
@@ -112,8 +113,8 @@ test_that("blank_rows positions are resolved per partition", {
 test_that("page_by composes with paginate_cols() and page_order", {
   rows <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
                        group_by = "indent", max_rows = 8, drop_cols = "period")
-  expect_identical(.names(rows), c("Period 1.1", "Period 1.2",
-                                   "Period 2.1", "Period 2.2"))
+  expect_identical(.names(rows), c("Period 1", "Period 1",
+                                   "Period 2", "Period 2"))
   blocks <- function(p) unname(vapply(p, function(q) names(q$data)[2L],
                                       character(1L)))
   # no group axis here (group_safe names no page), so the two orders are the
@@ -123,13 +124,12 @@ test_that("page_by composes with paginate_cols() and page_order", {
   expect_length(a, 8L)                        # 4 row pages x 2 column blocks
   expect_identical(blocks(a), rep(c("V1", "V3"), each = 4L))
   expect_identical(unname(.names(a)),
-                   rep(c("Period 1.1", "Period 1.2",
-                         "Period 2.1", "Period 2.2"), 2L))
+                   rep(c("Period 1", "Period 1", "Period 2", "Period 2"), 2L))
   d <- paginate_cols(rows, at = 4, page_order = "down")
   expect_identical(blocks(d), rep(c("V1", "V3"), 4L))
   expect_identical(unname(.names(d)),
-                   rep(c("Period 1.1", "Period 1.2",
-                         "Period 2.1", "Period 2.2"), each = 2L))
+                   rep(c("Period 1", "Period 1", "Period 2", "Period 2"),
+                       each = 2L))
 })
 
 test_that("an unknown page_by column is an error", {

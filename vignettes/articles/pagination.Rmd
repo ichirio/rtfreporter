@@ -419,7 +419,7 @@ as_rtftables(
   max_rows  = 20,
   drop_cols = "period"       # page_by does not imply dropping the column
 )
-#>  "Period 1.1"  "Period 1.2"  "Period 2.1"  "Period 2.2"  "Period 3"
+#>  "Period 1"  "Period 1"  "Period 2"  "Period 2"  "Period 3"
 ```
 
 The body is partitioned on runs of the `page_by` value first; **every other
@@ -429,16 +429,19 @@ pagination setting then applies within one partition** -- `split`, `max_rows`,
 it protects is the BY column itself, so a parameter block inside a period is
 cut wherever `max_rows` happens to fall.
 
-Page names are `"<value>"` for a partition that makes one page and
-`"<value>.1"`, `"<value>.2"`, ... when it makes several -- the convention
-`"by_value"` already uses -- so they feed
-`rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` directly. A section
-opens at every **named** page; to give one partition a single section, blank
-the names of its continuation pages:
+Every page a partition makes carries the **same** name -- the `page_by` value
+-- because a page name is the heading
+`rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` prints, not an
+identifier. A section opens where the name **changes**, so one partition is one
+section of however many pages it needed, with nothing to clean up:
 
 ```{r pageby_sections, eval = FALSE}
-lbl <- sub("[.][0-9]+$", "", names(pages))
-names(pages) <- ifelse(c(FALSE, lbl[-1] == lbl[-length(lbl)]), "", lbl)
+pages <- as_rtftables(lab, page_by = "period", split = "group_safe",
+                      group_by = "indent", max_rows = 20, drop_cols = "period")
+names(pages)
+#>  "Period 1"  "Period 1"  "Period 2"  "Period 2"
+
+doc |> rtf_tables(pages, auto_section = TRUE)   # 2 sections, 2 pages each
 ```
 
 Two details worth knowing:
@@ -693,19 +696,13 @@ column split never has to read a page name to know where a group ends.
 
 One thing to know about the names: a page's **name** follows the row page it
 was cut from, so under `"across"` pages that share a name are no longer
-adjacent.
-That is a display question rather than a sectioning one, because
-`rtf_tables(auto_section = TRUE)` opens a section at every **named** page --
-equal names are not merged -- and a page whose name is `""` joins the section
-before it. A *named* page list therefore gives a section per page under either
-order; an **unnamed** one (what `as_rtftables()` returns for a single table)
-gives none at all. To group a run into one section, name its first page and
-blank the rest:
-
-```{r pagcols_sections, eval = FALSE}
-lbl <- sub("[.][0-9]+$", "", names(pages))
-names(pages) <- ifelse(c(FALSE, lbl[-1] == lbl[-length(lbl)]), "", lbl)
-```
+adjacent -- and that *does* reach the sections, because
+`rtf_tables(auto_section = TRUE)` opens a section where the name **changes**.
+`"down"` therefore keeps a table's column pages in one section, while
+`"across"` interleaves the names and gives a section per page. An **unnamed**
+page list (what `as_rtftables()` returns for a single table) opens none at all.
+To put pages whose names *differ* in one section, blank the ones that should
+not open a new one -- `combine_sections()` does that bookkeeping.
 
 The columns repeated on each page default to the table's `row_title` (column 1
 unless you set it); `carry =` overrides that, and `carry = integer(0)` repeats

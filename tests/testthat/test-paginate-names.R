@@ -10,11 +10,12 @@ test_that("paginate(named list) preserves input names when each input → 1 page
   expect_identical(names(res), c("safety", "efficacy"))
 })
 
-test_that("paginate(named list) suffixes when an input → many pages", {
+test_that("paginate(named list) repeats the name when an input → many pages", {
   df  <- data.frame(label = LETTERS[1:8], v = 1:8, stringsAsFactors = FALSE)
   res <- paginate(list(demog = df), max_rows = 3L, split = "group_force")
   expect_gte(length(res), 2L)
-  expect_true(all(grepl("^demog\\.", names(res))))
+  # a page name is a HEADING, so the pages of one table share it
+  expect_true(all(names(res) == "demog"))
 })
 
 test_that("paginate(named list) handles unnamed elements (NULL name passes through)", {
@@ -59,7 +60,7 @@ test_that("by_value with indent-based detection names chunks by the group label"
                    c("Demographics", "Vital signs", "Lab values"))
 })
 
-test_that("by_value force-splits groups that exceed max_rows and suffixes the names", {
+test_that("by_value force-splits groups that exceed max_rows, keeping the name", {
   df <- data.frame(
     visit = rep("Wk1", 8L),
     val   = 1:8
@@ -67,8 +68,7 @@ test_that("by_value force-splits groups that exceed max_rows and suffixes the na
   res <- paginate(df, split = "by_value", group_col = "visit",
                    max_rows = 3L)
   expect_gte(length(res), 2L)
-  expect_true(all(grepl("^Wk1", names(res))))
-  expect_true(any(grepl("\\.[0-9]+$", names(res))))   # suffixed
+  expect_true(all(names(res) == "Wk1"))              # every page, one heading
 })
 
 test_that("by_value page_name lands in rtf_paginate_meta as well", {

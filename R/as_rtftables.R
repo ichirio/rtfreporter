@@ -134,7 +134,7 @@
 #' tables, rlistings `listing_df` listings,
 #' `flextable` tables, `huxtable` tables, plain `data.frame` / tibble,
 #' or a `list` of any of these (the list is flattened, names propagated as
-#' `name`, `name.1`, `name.2`, ...).  Figures are out of scope -- use
+#' `name`, repeated on every page it makes).  Figures are out of scope -- use
 #' [rtf_figures()] for those.
 #'
 #' @section What is carried, by source:
@@ -290,15 +290,14 @@
 #'                drop_cols = "period")
 #'   ```
 #'   \describe{
-#'     \item{Page names}{`"<value>"` when a partition makes one page;
-#'       `"<value>.1"`, `"<value>.2"`, ... when it makes several -- the
-#'       convention `split = "by_value"` already uses.  When the split names
-#'       its own pages (`"by_value"`) the two compose **outer first**:
-#'       `"<group>.<BY value>"`, matching the nesting.  These names are what
-#'       `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` print, and a
-#'       section opens at every **named** page -- to give a partition one
-#'       section, blank the names of its continuation pages
-#'       (`names(pages)[-1] <- ""` for that run).}
+#'     \item{Page names}{the `page_by` value, carried by **every** page the
+#'       partition makes -- a page name is the heading
+#'       `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` prints, not an
+#'       identifier, so the pages of one partition share it rather than being
+#'       numbered apart.  When the split names its own pages (`"by_value"`)
+#'       the two compose **outer first**: `"<group>.<BY value>"`, matching the
+#'       nesting.  A section opens where the name **changes**, so a partition
+#'       lands in one section of several pages.}
 #'     \item{`group_col`}{when left `NULL`, defaults to the first column **not**
 #'       named in `page_by`, so `group_by = "indent"` (which reads the group
 #'       column) never lands on the BY column -- where every row of a partition
@@ -805,7 +804,9 @@ as_rtftables <- function(x,
           names(chunks) <- base
         } else if (is.null(names(chunks)) ||
                    all(!nzchar(names(chunks) %||% ""))) {
-          names(chunks) <- paste0(base, ".", seq_along(chunks))
+          # Every page of one input keeps its name: a page name is the
+          # heading auto_section prints, not an identifier.
+          names(chunks) <- rep(base, length(chunks))
         } else {
           names(chunks) <- paste0(base, ".", names(chunks))
         }
@@ -1271,9 +1272,8 @@ as_rtftables <- function(x,
 #' "by_value", group_col = ...)` (or `page_by = ...`) already names each page by
 #' the group value, so `auto_section = TRUE` gives one section per group
 #' directly -- as long as each group fits on **one** page.  A group that needs
-#' several comes back as `"<value>.1"`, `"<value>.2"`, ..., which are different
-#' names and so different sections; blank the continuation names to fold them
-#' back into one.
+#' several comes back with that same name on each of them, and a section opens
+#' where the name **changes**, so the group is one section of several pages.
 #'
 #' @param ... Named arguments, each either an `rtftable` or a list of
 #'   `rtftable`s (e.g. the result of [as_rtftables()]).  Each argument **name**

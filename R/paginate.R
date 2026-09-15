@@ -82,7 +82,7 @@
 #'   A supported table object: a `gt_tbl` (from [gt::gt()]), a plain
 #'   `data.frame` / tibble, or a `list` of either.  List names are
 #'   propagated to the output (one input -> one page keeps the input
-#'   name; one input -> many pages produces `name.1`, `name.2`, ...).
+#'   name; one input -> many pages gives every page that same name).
 #'
 #' @param ...
 #'   Pagination controls, forwarded to the internal splitter and shared
@@ -271,8 +271,10 @@ paginate.list <- function(x, ...) {
         names(chunks) <- base
       } else if (is.null(names(chunks)) ||
                   all(!nzchar(names(chunks) %||% ""))) {
-        # Real split (group_force, group_safe, rows) — suffix .1 .2 ...
-        names(chunks) <- paste0(base, ".", seq_along(chunks))
+        # Real split (group_force, group_safe, rows): every page keeps the
+        # input's name.  A page name is a HEADING, not an identifier, so the
+        # pages of one table share it rather than being numbered apart.
+        names(chunks) <- rep(base, length(chunks))
       } else {
         # Inner split already named chunks (e.g. by_value) — namespace
         # them under the input list name: "doc.group1", "doc.group2".
@@ -643,18 +645,11 @@ paginate.data.frame <- function(x, ...) {
     ord   <- order(match(grp, unique(grp)), match(by, unique(by)), seq_len(n))
     pages <- pages[ord]; grp <- grp[ord]; by <- by[ord]
   }
-  key <- if (has_grp) paste0(grp, ".", by) else by
-  # Several pages can share one cell (a group that outgrew `max_rows`): they
-  # are contiguous after the ordering, and take the ".1" / ".2" suffix the
-  # value-based splits already use.
-  nm  <- key
-  run <- rle(key)
-  pos <- 1L
-  for (i in seq_along(run$lengths)) {
-    len <- run$lengths[i]
-    if (len > 1L) nm[pos:(pos + len - 1L)] <- paste0(key[pos], ".", seq_len(len))
-    pos <- pos + len
-  }
+  # Several pages can share one cell (a group that outgrew `max_rows`), and
+  # they simply share its name: a page name is a HEADING -- what
+  # `rtf_tables(auto_section = TRUE)` prints -- not an identifier, so pages of
+  # one group are not numbered apart.
+  nm <- if (has_grp) paste0(grp, ".", by) else by
   for (i in seq_len(n)) {
     meta <- attr(pages[[i]], "rtf_paginate_meta", exact = TRUE)
     if (!is.list(meta)) meta <- list()
@@ -1192,8 +1187,9 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
 # One chunk per detected group, NEVER packed.  Each chunk is named by
 # the group's label (col-1 indent text when group_col = NULL, else the
 # value of df[[group_col]]).  When a group exceeds `max_rows` (and
-# max_rows is set) it is force-split with .split_group_force() and the
-# resulting sub-chunks get suffixed names "<label>.1", "<label>.2", ...
+# max_rows is set) it is force-split with .split_group_force() and every
+# resulting sub-chunk keeps the SAME label -- the pages of one group share
+# their heading rather than being numbered apart.
 .split_by_value <- function(df, info, max_rows, cont_label, group_idx,
                             min_group_rows = 2L) {
   if (nrow(df) == 0L) return(list(df))
@@ -1214,9 +1210,7 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
                        headers = info$headers[rows])
       sub <- .split_group_force(chunk, sub_info, max_rows,
                                  cont_label, group_idx, min_group_rows)
-      sub_names <- if (length(sub) == 1L) label
-                   else paste0(label, ".", seq_along(sub))
-      names(sub) <- sub_names
+      names(sub) <- rep(label, length(sub))
       result <- c(result, sub)
     } else {
       one <- list(chunk)

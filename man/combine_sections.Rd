@@ -42,9 +42,8 @@ For a \emph{single} table whose grouping variable is a real \strong{column} of t
 body, you usually do not need this at all: \code{as_rtftables(x, split = "by_value", group_col = ...)} (or \code{page_by = ...}) already names each page by
 the group value, so \code{auto_section = TRUE} gives one section per group
 directly -- as long as each group fits on \strong{one} page.  A group that needs
-several comes back as \code{"<value>.1"}, \code{"<value>.2"}, ..., which are different
-names and so different sections; blank the continuation names to fold them
-back into one.
+several comes back with that same name on each of them, and a section opens
+where the name \strong{changes}, so the group is one section of several pages.
 }
 \examples{
 df <- data.frame(

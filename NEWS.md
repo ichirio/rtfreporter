@@ -2,6 +2,37 @@
 
 ### Breaking changes
 
+- **A page name is a heading, not an identifier** (#433).  Two changes that go
+  together.
+
+  **No `".1"` / `".2"` suffix.**  When one logical table became several pages,
+  the splitters numbered the pages apart — `"Period 1.1"`, `"Period 1.2"` — and
+  that suffix went straight into the deliverable, because the name is what
+  `rtf_tables(auto_section = TRUE)` prints as the section heading.  Every page
+  of one partition, group or list element now carries the **same** name:
+
+  ```r
+  as_rtftables(lab, page_by = "period", split = "group_safe", max_rows = 8)
+  #> "Period 1"  "Period 1"  "Period 2"  "Period 2"
+  ```
+
+  It applies wherever pages were numbered apart: a `"by_value"` group that
+  outgrew `max_rows`, a `page_by` cell, and a named list element that split
+  (`as_rtftables()` and the deprecated `paginate()`).  A **composite** name
+  (`"<group>.<BY value>"`) is not a suffix and is unchanged.
+
+  **Equal consecutive names are one section.**  `auto_section` opened a section
+  at every *named* element, so repeated names gave a section per page.  A
+  section now opens where the name **changes**: a run of pages sharing a
+  heading is one section of several pages.  An empty name still falls through
+  into the open section — so `combine_sections()` and the blank-the-name recipe
+  are unchanged, and `A B A` still opens three sections.
+
+  Nothing renders differently (each page already carried the right heading
+  text), but the RTF structure now matches what the names say, and the
+  strip-the-suffix / blank-the-name bookkeeping that callers had to do to get
+  one section per group is no longer needed.
+
 - **`{SECTION_PAGES}` is removed** (#410).  The token wrote an RTF
   `SECTIONPAGES` field — the page count of one `rtf_section`.  It was either
   redundant or wrong, with nothing in between:
@@ -192,7 +223,7 @@
                group_by  = "indent",
                max_rows  = 20,
                drop_cols = "period")
-  #>  "Period 1.1"  "Period 1.2"  "Period 2.1"  "Period 2.2"  "Period 3"
+  #>  "Period 1"  "Period 1"  "Period 2"  "Period 2"  "Period 3"
   ```
 
   The body is partitioned on runs of the `page_by` value(s) **first**, and every
@@ -206,9 +237,9 @@
   defaults to the first column **not** named in `page_by`, never the BY column
   whose value is constant within a page.
 
-  Page names follow `"by_value"`'s convention: `"<value>"` for a partition that
-  makes one page and `"<value>.1"`, `"<value>.2"`, … when it makes several — so
-  they feed `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` directly.
+  Every page a partition makes carries the same name — the `page_by` value —
+  which feeds `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE`
+  directly, one partition to one section.
   When the split itself names pages (`"by_value"`), the **group is the outer
   axis** and `page_by` the inner one: a group's pages stay together, the BY
   values running in order inside it, and the name reads outer-first,
@@ -251,12 +282,12 @@
   `rtf_paginate_meta$page_group`, so this never depends on reading a page name.
 
   The pages themselves are identical; only their order differs.  A page's name
-  still follows the row page it was cut from, so under `"down"` pages sharing a
-  name are no longer adjacent — a display question, not a sectioning one:
-  `rtf_tables(auto_section = TRUE)` opens a section at every **named** page
-  (equal names are not merged) and a page named `""` joins the section before
-  it, so an unnamed page list — what `as_rtftables()` returns for a single
-  table — is unaffected by either order.
+  still follows the row page it was cut from, so under `"across"` pages sharing
+  a name are no longer adjacent, which reaches the sections:
+  `rtf_tables(auto_section = TRUE)` opens a section where the name **changes**,
+  so `"down"` keeps a table's column pages in one section while `"across"`
+  gives a section per page.  An unnamed page list — what `as_rtftables()`
+  returns for a single table — is unaffected by either order.
 
 - **A built-in cell format can be NAMED, and `fmt_value_paren()` aligns text
   values** (#418).  Two related gaps in the cell formatters.
@@ -824,7 +855,8 @@ Diagnosis")
 
 ### Documentation
 
-- **What `auto_section` actually groups** (#425).  `?paginate_cols` and the
+- **What `auto_section` actually groups** (#425; the rule itself then changed
+  in #433).  `?paginate_cols` and the
   pagination article said `rtf_tables(auto_section = TRUE)` opens a section per
   *run of equal names*, so a table's column pages "stay in one section" — a
   claim carried since `paginate_cols()` landed (#275) and repeated by the

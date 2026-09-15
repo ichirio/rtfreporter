@@ -116,9 +116,11 @@ row carries a top rule (the separator) unless that row sets its own
 \item{auto_section}{Logical. When \code{TRUE} and \code{tables} is a \strong{named} list,
 each name is used as a per-section heading appended to the common header
 defined by \code{rtf_section(secinfo = ...)} (called without a \code{page} argument).
-The document is then automatically split into one RTF section per named
-element. Unnamed items fall through to the previous section.
-Default \code{FALSE}.}
+A section opens where the name \strong{changes}, so a run of pages carrying the
+same name -- the pages of one split table, which all share its heading --
+is \strong{one} section of several pages. An item with an empty name falls
+through into the open section, which is how pages whose names \emph{differ} are
+put in one section (see \code{\link[=combine_sections]{combine_sections()}}). Default \code{FALSE}.}
 
 \item{section_label_align}{Alignment for the auto-appended section label row.
 One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}

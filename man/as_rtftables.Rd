@@ -143,15 +143,14 @@ parameter block) is kept whole inside it.
 }\if{html}{\out{</div>}}
 
 \describe{
-\item{Page names}{\code{"<value>"} when a partition makes one page;
-\code{"<value>.1"}, \code{"<value>.2"}, ... when it makes several -- the
-convention \code{split = "by_value"} already uses.  When the split names
-its own pages (\code{"by_value"}) the two compose \strong{outer first}:
-\code{"<group>.<BY value>"}, matching the nesting.  These names are what
-\code{rtf_tables(auto_section = TRUE)} / \code{auto_title = TRUE} print, and a
-section opens at every \strong{named} page -- to give a partition one
-section, blank the names of its continuation pages
-(\code{names(pages)[-1] <- ""} for that run).}
+\item{Page names}{the \code{page_by} value, carried by \strong{every} page the
+partition makes -- a page name is the heading
+\code{rtf_tables(auto_section = TRUE)} / \code{auto_title = TRUE} prints, not an
+identifier, so the pages of one partition share it rather than being
+numbered apart.  When the split names its own pages (\code{"by_value"})
+the two compose \strong{outer first}: \code{"<group>.<BY value>"}, matching the
+nesting.  A section opens where the name \strong{changes}, so a partition
+lands in one section of several pages.}
 \item{\code{group_col}}{when left \code{NULL}, defaults to the first column \strong{not}
 named in \code{page_by}, so \code{group_by = "indent"} (which reads the group
 column) never lands on the BY column -- where every row of a partition
@@ -546,7 +545,7 @@ expanded member by member), rtables/tern \code{VTableTree}
 tables, rlistings \code{listing_df} listings,
 \code{flextable} tables, \code{huxtable} tables, plain \code{data.frame} / tibble,
 or a \code{list} of any of these (the list is flattened, names propagated as
-\code{name}, \code{name.1}, \code{name.2}, ...).  Figures are out of scope -- use
+\code{name}, repeated on every page it makes).  Figures are out of scope -- use
 \code{\link[=rtf_figures]{rtf_figures()}} for those.
 }
 \section{What is carried, by source}{

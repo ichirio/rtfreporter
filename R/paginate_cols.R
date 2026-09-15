@@ -35,12 +35,11 @@
 #
 #  A page's NAME follows the row page it came from either way (that is the only
 #  name there is), so under "across" pages that share a name are no longer
-#  adjacent.  That is a display question, not a sectioning one:
-#  `rtf_tables(auto_section = TRUE)` opens a section at every NAMED page and an
-#  unnamed page joins the section before it -- equal names are NOT merged into
-#  one section.  So a named page list yields a section per page under either
-#  order, and an unnamed one (what as_rtftables() returns for a single table)
-#  yields none at all.  To group a run, blank the continuation names.
+#  adjacent, which does change the sectioning:
+#  `rtf_tables(auto_section = TRUE)` opens a section where the NAME CHANGES, so
+#  "down" keeps a table's column pages in one section while "across"
+#  interleaves them into one section per page.  An unnamed page list (what
+#  as_rtftables() returns for a single table) opens none at all.
 #
 #  Why a post-hoc verb on BUILT tables
 #  -----------------------------------
@@ -407,23 +406,18 @@
 #' `page_order` is -- that is the only name there is. Under `"down"` pages that
 #' share a name are therefore no longer adjacent.
 #'
-#' What that does *not* change is the sectioning:
-#' `rtf_tables(auto_section = TRUE)` opens a section at every **named** page,
-#' and a page whose name is `""` joins the section before it. Equal names are
-#' **not** merged, so a named page list gives a section per page under either
-#' order, and an **unnamed** list -- what [as_rtftables()] returns for a single
-#' table, and what `paginate_cols()` then passes through -- gives none at all,
-#' leaving every page in the document's own section.
+#' That is worth knowing because `rtf_tables(auto_section = TRUE)` opens a
+#' section where the name **changes**: a run of pages sharing a name is one
+#' section, and a page whose name is `""` joins the section before it. So
+#' `"down"` keeps a table's column pages in one section, while `"across"`
+#' interleaves the names and gives a section per page. An **unnamed** list --
+#' what [as_rtftables()] returns for a single table, and what
+#' `paginate_cols()` then passes through -- opens none at all, leaving every
+#' page in the document's own section.
 #'
-#' To put a run of pages in one section, name its first page and blank the
-#' rest -- [combine_sections()] does that bookkeeping when you are assembling
-#' whole tables, and when the names come from the pages themselves (a
-#' `page_by` / `"by_value"` run) the same thing is two lines:
-#'
-#' ```r
-#' lbl <- sub("[.][0-9]+$", "", names(pages))
-#' names(pages) <- ifelse(c(FALSE, lbl[-1] == lbl[-length(lbl)]), "", lbl)
-#' ```
+#' To put pages with *different* names in one section, blank the ones that
+#' should not open a new one ([combine_sections()] does that bookkeeping when
+#' you are assembling whole tables).
 #'
 #' @return A list of [rtftable()] pages. Names are carried through unchanged --
 #'   each column page keeps its row page's name (see *Page names*).
