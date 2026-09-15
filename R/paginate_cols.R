@@ -282,11 +282,16 @@
     stop("A column page must keep at least one column.", call. = FALSE)
   }
 
-  # -- body (the blank-row attribute does not survive a column subset) -----
+  # -- body (custom attributes do not survive a column subset) -------------
+  # The blank-row positions and the page's own pagination meta -- which group /
+  # BY value it came from, which `paginate_cols()` nests by and a caller can
+  # read -- are re-attached; everything else about the subset is plain `[`.
   sub_df <- function(d) {
     ba <- attr(d, "rtf_blank_rows", exact = TRUE)
+    pm <- attr(d, "rtf_paginate_meta", exact = TRUE)
     d2 <- d[keep]
-    if (!is.null(ba)) attr(d2, "rtf_blank_rows") <- ba
+    if (!is.null(ba)) attr(d2, "rtf_blank_rows")    <- ba
+    if (!is.null(pm)) attr(d2, "rtf_paginate_meta") <- pm
     d2
   }
   if (!is.null(tbl$data))      tbl$data      <- sub_df(tbl$data)
@@ -514,8 +519,9 @@
 #' | `"across"` | `G` / `C` / `P` |
 #' | `"down"`   | `G` / `P` / `C` |
 #'
-#' Each page records its own group in `rtf_paginate_meta$page_group`, so none
-#' of this depends on reading a page name.
+#' Each page records its own group in `rtf_paginate_meta$page_group` (and its
+#' `page_by` value beside it), so none of this depends on reading a page name
+#' -- which carries the group alone.
 #'
 #' @section Page names:
 #' A column page inherits the name of the row page it was cut from, whatever
