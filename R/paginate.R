@@ -625,11 +625,57 @@ paginate.data.frame <- function(x, ...) {
     list(rows = seq.int(starts[i], ends[i]), label = lab[starts[i]]))
 }
 
-# Paginate one partition at a time and concatenate, naming the pages.  `args`
-# is .paginate_df()'s own argument list, captured AFTER the body-wide passes
+# `group_col` is the OUTER page axis, `page_by` the inner one.
+#
+# Only a value-based split ("by_value") turns a group into a page of its own,
+# so only then is there a second page axis to order against.  When there is,
+# a group's pages stay together and the BY values run in order inside it:
+#
+#     G1.P1  G1.P2  G2.P1  G2.P2
+#
+# The pages are built BY partition (that is how the body is cut) and ordered
+# afterwards -- pages are independent, so this is a reordering, not a rebuild.
+.order_and_name_pages <- function(pages, grp, by) {
+  n <- length(pages)
+  if (n == 0L) return(pages)
+  has_grp <- length(grp) == n && !any(is.na(grp))
+  if (has_grp) {
+    ord   <- order(match(grp, unique(grp)), match(by, unique(by)), seq_len(n))
+    pages <- pages[ord]; grp <- grp[ord]; by <- by[ord]
+  }
+  key <- if (has_grp) paste0(grp, ".", by) else by
+  # Several pages can share one cell (a group that outgrew `max_rows`): they
+  # are contiguous after the ordering, and take the ".1" / ".2" suffix the
+  # value-based splits already use.
+  nm  <- key
+  run <- rle(key)
+  pos <- 1L
+  for (i in seq_along(run$lengths)) {
+    len <- run$lengths[i]
+    if (len > 1L) nm[pos:(pos + len - 1L)] <- paste0(key[pos], ".", seq_len(len))
+    pos <- pos + len
+  }
+  for (i in seq_len(n)) {
+    meta <- attr(pages[[i]], "rtf_paginate_meta", exact = TRUE)
+    if (!is.list(meta)) meta <- list()
+    meta$page_group <- if (has_grp) grp[i] else NULL
+    meta$page_by    <- by[i]
+    meta$page_name  <- nm[i]
+    attr(pages[[i]], "rtf_paginate_meta") <- meta
+  }
+  names(pages) <- nm
+  pages
+}
+
+# Paginate one `page_by` partition at a time and concatenate.  `args` is
+# .paginate_df()'s own argument list, captured AFTER the body-wide passes
 # (`na`, `cell_format`) have run -- which is why they are switched off on the
 # way down: they must see the whole body, so that one column width is shared by
 # every page, not recomputed per partition.
+#
+# What comes back per partition is ordered by .order_and_name_pages(), which
+# puts the group axis outside the BY axis when the inner split named its
+# chunks (a "by_value" split does; the others do not).
 .paginate_by_page <- function(args, dots) {
   x   <- args$x
   idx <- .resolve_page_by(args$page_by, x)
@@ -655,7 +701,7 @@ paginate.data.frame <- function(x, ...) {
   edges   <- in_attr[in_attr <= 0L]
   inner   <- in_attr[in_attr > 0L]
 
-  out <- list()
+  out <- list(); by_lab <- character(0); grp_lab <- character(0)
   for (r in .page_by_runs(x, idx)) {
     part <- x[r$rows, , drop = FALSE]
     rownames(part) <- NULL
@@ -671,16 +717,14 @@ paginate.data.frame <- function(x, ...) {
     chunks <- do.call(.paginate_df, c(a, dots))
 
     nm <- names(chunks)
-    names(chunks) <- if (length(chunks) == 1L) {
-      r$label                                   # one page: the value itself
-    } else if (is.null(nm) || all(!nzchar(nm))) {
-      paste0(r$label, ".", seq_along(chunks))   # several: .1 .2 ...
-    } else {
-      paste0(r$label, ".", nm)                  # inner by_value: compose
+    for (k in seq_along(chunks)) {
+      out[[length(out) + 1L]] <- chunks[[k]]
+      by_lab  <- c(by_lab, r$label)
+      grp_lab <- c(grp_lab,
+                   if (!is.null(nm) && nzchar(nm[k] %||% "")) nm[k] else NA_character_)
     }
-    out <- c(out, chunks)
   }
-  out
+  .order_and_name_pages(out, grp_lab, by_lab)
 }
 
 # column index -- or NULL for "auto-detect from leading whitespace".

@@ -57,14 +57,15 @@ throughout; \code{"keep"} gives each kept column exactly the width it had
 before the split. No effect under \code{column_widths_twips}. See
 \emph{Column widths}.}
 
-\item{page_order}{Which axis is the outer level when a table is split both
-ways. \code{"across"} (default) keeps the \strong{row page} outside -- a row band
-sweeps every column block, then the next band -- so the table is read
-across and then down. \code{"down"} puts the \strong{column block} outside, so one
-block is read all the way down before the next starts. The pages
-themselves are identical; only their order differs. A page's name follows
-its row page either way, so under \code{"down"} pages sharing a name are no
-longer adjacent. That does not change the sectioning -- see \emph{Page names}.}
+\item{page_order}{Which axis the page number advances along first when a
+table is split both ways. \code{"across"} (default) advances \strong{across the
+columns} -- the column block first, the row pages running inside it;
+\code{"down"} advances \strong{down the rows} -- the row page first, its column
+blocks following it. A group is above both and is never broken up (see
+\emph{Page order}). The pages themselves are identical; only their order
+differs. A page's name follows its row page either way, so under
+\code{"across"} pages sharing a name are no longer adjacent -- which does not
+change the sectioning, see \emph{Page names}.}
 }
 \value{
 A list of \code{\link[=rtftable]{rtftable()}} pages. Names are carried through unchanged --
@@ -76,14 +77,13 @@ the row pagination \code{\link[=as_rtftables]{as_rtftables()}} performs -- repea
 column(s) on every page so each one can be read on its own.
 
 Row splitting happens first; this verb then splits the resulting pages, and
-\code{page_order} says which axis is the \strong{outer} level. By default it is the row
-page: a row band sweeps every column block before the next band starts, so
-the reader goes across the table first and then down it. Two row pages by three
-column blocks come out as \code{row1/col1}, \code{row1/col2}, \code{row1/col3},
-\code{row2/col1}, \code{row2/col2}, \code{row2/col3} -- and as \code{row1/col1}, \code{row2/col1},
-\code{row1/col2}, \code{row2/col2}, \code{row1/col3}, \code{row2/col3} under
-\code{page_order = "down"}, which reads one column block all the way down before
-starting the next.
+\code{page_order} says which axis the \strong{page number advances along first} --
+\code{"across"} the columns (the default: the column block advances, the row
+pages running inside it) or \code{"down"} the rows (the row page advances, its
+column blocks following it). Two row pages by three column blocks come out
+as \code{col1/row1}, \code{col1/row2}, \code{col2/row1}, ... under \code{"across"} and
+\code{row1/col1}, \code{row1/col2}, \code{row1/col3}, \code{row2/col1}, ... under \code{"down"}.
+A \strong{group} is above both: see \emph{Page order}.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{as_rtftables(x, max_rows = 20) |> paginate_cols(at = c(4, 6))
 }\if{html}{\out{</div>}}
@@ -126,6 +126,27 @@ Spanning cells are clipped to each page's columns. By default a cut may
 fall inside a spanning group, and the group's label is repeated over its
 remaining columns on each page; \code{allow_span_break = FALSE} rejects such a
 cut instead.
+}
+
+\section{Page order}{
+
+\code{page_order} orders the pages this verb returns. \code{"across"} (the default)
+advances the \strong{column block} first and runs the row pages inside it;
+\code{"down"} advances the \strong{row page} first and lets its column blocks follow.
+
+A \strong{group} sits above both. When the row pagination made a page per group
+value -- \code{as_rtftables(split = "by_value", group_col = )}, with \code{page_by}
+running inside it -- the column split happens \strong{within} one group, so a
+group's pages always stay together. With a group \code{G}, a \code{page_by} value \code{P}
+and column blocks \code{C}:\tabular{ll}{
+   \code{page_order} \tab page sequence \cr
+   \code{"across"} \tab \code{G} / \code{C} / \code{P} \cr
+   \code{"down"} \tab \code{G} / \code{P} / \code{C} \cr
+}
+
+
+Each page records its own group in \code{rtf_paginate_meta$page_group}, so none
+of this depends on reading a page name.
 }
 
 \section{Page names}{

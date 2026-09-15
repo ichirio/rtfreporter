@@ -67,12 +67,16 @@ test_that("page_by partitions on RUNS, like by_value", {
 
 # ──────── naming ───────────────────────────────────────────────────────────
 
-test_that("an inner by_value composes its label onto the page name", {
+test_that("an inner by_value is the OUTER axis: <group>.<BY value>", {
+  # The group a value-based split makes into a page owns the page; `page_by`
+  # runs inside it.  So the pages of one group stay together, and the name
+  # reads outer-first.
   pg <- as_rtftables(.lab(), page_by = "period", split = "by_value",
                      group_by = "indent", drop_cols = "period")
   expect_identical(.names(pg),
-                   c("Period 1.ALT", "Period 1.Bilirubin", "Period 1.Haemoglobin",
-                     "Period 2.ALT", "Period 2.Bilirubin", "Period 2.Haemoglobin"))
+                   c("ALT.Period 1", "ALT.Period 2",
+                     "Bilirubin.Period 1", "Bilirubin.Period 2",
+                     "Haemoglobin.Period 1", "Haemoglobin.Period 2"))
 })
 
 test_that("page_by = NULL changes nothing: by_value still names from group_col", {
@@ -106,16 +110,26 @@ test_that("blank_rows positions are resolved per partition", {
 })
 
 test_that("page_by composes with paginate_cols() and page_order", {
-  pg <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
-                     group_by = "indent", max_rows = 8, drop_cols = "period") |>
-    paginate_cols(at = 4, page_order = "down")
-  expect_length(pg, 8L)                       # 4 row pages x 2 column blocks
-  expect_identical(unname(vapply(pg, function(p) names(p$data)[2L],
-                                 character(1L))),
-                   rep(c("V1", "V3"), each = 4L))
-  expect_identical(unname(.names(pg)),
+  rows <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
+                       group_by = "indent", max_rows = 8, drop_cols = "period")
+  expect_identical(.names(rows), c("Period 1.1", "Period 1.2",
+                                   "Period 2.1", "Period 2.2"))
+  blocks <- function(p) unname(vapply(p, function(q) names(q$data)[2L],
+                                      character(1L)))
+  # no group axis here (group_safe names no page), so the two orders are the
+  # plain two-level ones: "across" advances the column block first, "down" the
+  # row page.
+  a <- paginate_cols(rows, at = 4)
+  expect_length(a, 8L)                        # 4 row pages x 2 column blocks
+  expect_identical(blocks(a), rep(c("V1", "V3"), each = 4L))
+  expect_identical(unname(.names(a)),
                    rep(c("Period 1.1", "Period 1.2",
                          "Period 2.1", "Period 2.2"), 2L))
+  d <- paginate_cols(rows, at = 4, page_order = "down")
+  expect_identical(blocks(d), rep(c("V1", "V3"), 4L))
+  expect_identical(unname(.names(d)),
+                   rep(c("Period 1.1", "Period 1.2",
+                         "Period 2.1", "Period 2.2"), each = 2L))
 })
 
 test_that("an unknown page_by column is an error", {
@@ -161,10 +175,11 @@ test_that("the filler keeps a trailing gap with the page above it", {
                    c("", ""))
 })
 
-test_that("page_by stays the OUTER level under split = by_value + a stub", {
-  # That branch splits the body by group_col and builds the stub per page;
-  # page_by must partition BEFORE it, or the two inverted and the page names
-  # lost the BY value.
+test_that("group_col is the OUTER level under split = by_value + a stub", {
+  # That branch splits the body by group_col and builds the stub per page.
+  # The group owns the page and `page_by` runs inside it, so a group's pages
+  # stay together and the name reads "<group>.<BY value>" -- and the BY value
+  # must survive the per-group naming, which once overwrote it.
   ae <- do.call(rbind, lapply(c("P1", "P2"), function(per)
     do.call(rbind, lapply(c("Cohort A", "Cohort B"), function(co) {
       d <- .ae(periods = per)
@@ -174,8 +189,8 @@ test_that("page_by stays the OUTER level under split = by_value + a stub", {
   pg <- as_rtftables(ae, page_by = "period", split = "by_value",
                      group_col = "cohort", stub_vars = c("soc", "pt"),
                      drop_cols = c("period", "cohort"))
-  expect_identical(names(pg), c("P1.Cohort A", "P1.Cohort B",
-                                "P2.Cohort A", "P2.Cohort B"))
+  expect_identical(names(pg), c("Cohort A.P1", "Cohort A.P2",
+                                "Cohort B.P1", "Cohort B.P2"))
   expect_identical(unname(.rows(pg)), rep(6L, 4L))
 })
 
@@ -184,4 +199,59 @@ test_that("split = by_value + a stub is unchanged without page_by", {
                      stub_vars = c("soc", "pt"), drop_cols = "period")
   expect_identical(names(pg), c("Period 1", "Period 2"))
   expect_identical(unname(.rows(pg)), c(6L, 6L))
+})
+
+# ──────── three axes at once: group_col / page_by / column blocks ───────────
+
+.gpc <- function() {
+  rows <- list()
+  for (g in c("G1", "G2")) for (p in c("P1", "P2"))
+    rows[[length(rows) + 1L]] <- data.frame(
+      cohort = g, period = p, lab = c("n", "Mean"),
+      V1 = "1", V2 = "2", V3 = "3", V4 = "4", stringsAsFactors = FALSE)
+  do.call(rbind, rows)
+}
+
+.seq_of <- function(pages) {
+  paste0(names(pages), "/", vapply(pages, function(p) names(p$data)[2L],
+                                   character(1L)))
+}
+
+test_that("the group is the outer axis and page_by the inner one", {
+  pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
+                     page_by = "period", drop_cols = c("cohort", "period"))
+  expect_identical(.names(pg), c("G1.P1", "G1.P2", "G2.P1", "G2.P2"))
+  # each page records the two coordinates it was cut at
+  m <- attr(pg[[2L]]$data, "rtf_paginate_meta", exact = TRUE)
+  expect_identical(m$page_group, "G1")
+  expect_identical(m$page_by,    "P2")
+})
+
+test_that("across = group / column block / page_by", {
+  pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
+                     page_by = "period", drop_cols = c("cohort", "period")) |>
+    paginate_cols(at = 4, carry = 1, width = "keep")
+  expect_identical(unname(.seq_of(pg)),
+                   c("G1.P1/V1", "G1.P2/V1", "G1.P1/V3", "G1.P2/V3",
+                     "G2.P1/V1", "G2.P2/V1", "G2.P1/V3", "G2.P2/V3"))
+})
+
+test_that("down = group / page_by / column block", {
+  pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
+                     page_by = "period", drop_cols = c("cohort", "period")) |>
+    paginate_cols(at = 4, carry = 1, width = "keep", page_order = "down")
+  expect_identical(unname(.seq_of(pg)),
+                   c("G1.P1/V1", "G1.P1/V3", "G1.P2/V1", "G1.P2/V3",
+                     "G2.P1/V1", "G2.P1/V3", "G2.P2/V1", "G2.P2/V3"))
+})
+
+test_that("a group is never broken up by the column split", {
+  pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
+                     page_by = "period", drop_cols = c("cohort", "period"))
+  for (po in c("across", "down")) {
+    out <- paginate_cols(pg, at = 4, carry = 1, width = "keep",
+                         page_order = po)
+    grp <- sub("[.].*$", "", names(out))
+    expect_identical(rle(grp)$values, c("G1", "G2"), info = po)
+  }
 })

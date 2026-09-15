@@ -145,9 +145,9 @@ parameter block) is kept whole inside it.
 \describe{
 \item{Page names}{\code{"<value>"} when a partition makes one page;
 \code{"<value>.1"}, \code{"<value>.2"}, ... when it makes several -- the
-convention \code{split = "by_value"} already uses.  When the inner split
-names its own pages (an inner \code{"by_value"}) the two compose:
-\code{"<value>.<inner label>"}.  These names are what
+convention \code{split = "by_value"} already uses.  When the split names
+its own pages (\code{"by_value"}) the two compose \strong{outer first}:
+\code{"<group>.<BY value>"}, matching the nesting.  These names are what
 \code{rtf_tables(auto_section = TRUE)} / \code{auto_title = TRUE} print, and a
 section opens at every \strong{named} page -- to give a partition one
 section, blank the names of its continuation pages
@@ -158,8 +158,11 @@ column) never lands on the BY column -- where every row of a partition
 carries the same value and there is no structure to find.}
 \item{Order of operations}{\code{page_by} cuts pages, then \code{split} cuts rows
 inside each one, then \code{\link[=paginate_cols]{paginate_cols()}} cuts columns on the result
-(its \code{page_order} decides the final page sequence).  The three are
-independent and compose in that order.}
+(its \code{page_order} decides the final page sequence).  With
+\code{split = "by_value"} the \strong{group is the outer axis} and \code{page_by}
+the inner one -- a group's pages stay together, the BY values running
+in order inside it -- so the three come out as \code{G} / \code{C} / \code{P} under
+\code{page_order = "across"} and \code{G} / \code{P} / \code{C} under \code{"down"}.}
 \item{Per partition}{\code{split_rows} positions, \code{blank_rows} positions
 (\code{0} / \code{-1} included), \code{count_blank_rows} accounting and any
 \code{rtf_blank_rows} attribute on the input are all resolved inside the

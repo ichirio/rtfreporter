@@ -292,9 +292,9 @@
 #'   \describe{
 #'     \item{Page names}{`"<value>"` when a partition makes one page;
 #'       `"<value>.1"`, `"<value>.2"`, ... when it makes several -- the
-#'       convention `split = "by_value"` already uses.  When the inner split
-#'       names its own pages (an inner `"by_value"`) the two compose:
-#'       `"<value>.<inner label>"`.  These names are what
+#'       convention `split = "by_value"` already uses.  When the split names
+#'       its own pages (`"by_value"`) the two compose **outer first**:
+#'       `"<group>.<BY value>"`, matching the nesting.  These names are what
 #'       `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` print, and a
 #'       section opens at every **named** page -- to give a partition one
 #'       section, blank the names of its continuation pages
@@ -305,8 +305,11 @@
 #'       carries the same value and there is no structure to find.}
 #'     \item{Order of operations}{`page_by` cuts pages, then `split` cuts rows
 #'       inside each one, then [paginate_cols()] cuts columns on the result
-#'       (its `page_order` decides the final page sequence).  The three are
-#'       independent and compose in that order.}
+#'       (its `page_order` decides the final page sequence).  With
+#'       `split = "by_value"` the **group is the outer axis** and `page_by`
+#'       the inner one -- a group's pages stay together, the BY values running
+#'       in order inside it -- so the three come out as `G` / `C` / `P` under
+#'       `page_order = "across"` and `G` / `P` / `C` under `"down"`.}
 #'     \item{Per partition}{`split_rows` positions, `blank_rows` positions
 #'       (`0` / `-1` included), `count_blank_rows` accounting and any
 #'       `rtf_blank_rows` attribute on the input are all resolved inside the
@@ -1084,6 +1087,14 @@ as_rtftables <- function(x,
 
       rt <- .assemble_page_rtftable(pg, kw, cs_slice, user_args,
                                      border, style, blank_attr, drop_idx)
+      # The page's pagination meta -- which group / BY value it belongs to --
+      # is what paginate_cols() nests by, and dropping columns rebuilds the
+      # body and its attributes.  Carry it onto the built page, as the
+      # blank-row attribute is carried.
+      pmeta <- attr(pg, "rtf_paginate_meta", exact = TRUE)
+      if (!is.null(pmeta) && !is.null(rt$data)) {
+        attr(rt$data, "rtf_paginate_meta") <- pmeta
+      }
       if (!is.null(titles_block))    attr(rt, "rtf_titles")    <- titles_block
       if (!is.null(footnotes_block)) attr(rt, "rtf_footnotes") <- footnotes_block
       rt
@@ -1109,37 +1120,49 @@ as_rtftables <- function(x,
     # the per-group build_pages() call would invert the two (the group outside,
     # the BY value inside) and then overwrite the page names with the group
     # label, losing the BY value altogether.
-    parts <- if (is.null(page_by)) {
-      list(list(rows = seq_len(nrow(body)), label = ""))
-    } else {
-      .page_by_runs(body, .resolve_page_by(page_by, body))
-    }
-    out <- list()
-    for (pt in parts) {
-      p_body <- body[pt$rows, , drop = FALSE]
-      rownames(p_body) <- NULL
-      p_cs   <- if (!is.null(cell_styles)) cell_styles[pt$rows] else NULL
-      gidx <- if (is.null(group_col)) 1L
-              else .resolve_col_indices(list(group_col), p_body, "group_col")
-      gval <- as.character(p_body[[gidx]])
-      gval[is.na(gval)] <- ""
-      lv   <- unique(gval)                  # one section per value, in order
-      for (k in seq_along(lv)) {
-        rows     <- which(gval == lv[k])
-        sub_body <- p_body[rows, , drop = FALSE]
+    gidx <- if (is.null(group_col)) 1L
+            else .resolve_col_indices(list(group_col), body, "group_col")
+    gval <- as.character(body[[gidx]])
+    gval[is.na(gval)] <- ""
+    lv   <- unique(gval)                    # one section per value, in order
+    out  <- list()
+    # `group_col` is the OUTER page axis and `page_by` the inner one, so the
+    # group loop is outside: a group's pages stay together and the BY values
+    # run in order inside it (G1.P1, G1.P2, G2.P1, ...).
+    for (k in seq_along(lv)) {
+      rows   <- which(gval == lv[k])
+      g_body <- body[rows, , drop = FALSE]
+      rownames(g_body) <- NULL
+      g_cs   <- if (!is.null(cell_styles)) cell_styles[rows] else NULL
+      g_nm   <- if (nzchar(lv[k])) lv[k] else paste0("group_", k)
+
+      parts <- if (is.null(page_by)) {
+        list(list(rows = seq_len(nrow(g_body)), label = ""))
+      } else {
+        .page_by_runs(g_body, .resolve_page_by(page_by, g_body))
+      }
+      for (pt in parts) {
+        sub_body <- g_body[pt$rows, , drop = FALSE]
         rownames(sub_body) <- NULL
-        sub_cs   <- if (!is.null(p_cs)) p_cs[rows] else NULL
+        sub_cs   <- if (!is.null(g_cs)) g_cs[pt$rows] else NULL
         # `page_by` and `group_col` are both SPENT by the time we get here --
-        # they are what `parts` and `lv` were cut by, and each sub-body is one
-        # group of one partition.  Forwarding them would partition each group a
-        # second time, and `group_col` would be resolved against the post-stub
-        # body, where the column it names has just been folded into the stub --
-        # the error #429 reported, raised on an argument nothing would use.
-        pgs      <- build_pages(sub_body, kw, sub_cs, split_mode = "none",
-                                page_by_arg = NULL, group_col_arg = NULL)
-        nm       <- if (nzchar(lv[k])) lv[k] else paste0("group_", k)
-        if (nzchar(pt$label)) nm <- paste0(pt$label, ".", nm)
+        # they are what `lv` and `parts` were cut by, and each sub-body is one
+        # BY value of one group.  Forwarding them would partition it a second
+        # time, and `group_col` would be resolved against the post-stub body,
+        # where the column it names has just been folded into the stub -- the
+        # error #429 reported, raised on an argument nothing would use.
+        pgs <- build_pages(sub_body, kw, sub_cs, split_mode = "none",
+                           page_by_arg = NULL, group_col_arg = NULL)
+        nm  <- if (nzchar(pt$label)) paste0(g_nm, ".", pt$label) else g_nm
         names(pgs) <- rep(nm, length(pgs))  # split_mode "none" => one page
+        for (q in seq_along(pgs)) {
+          meta <- attr(pgs[[q]]$data, "rtf_paginate_meta", exact = TRUE)
+          if (!is.list(meta)) meta <- list()
+          meta$page_group <- g_nm
+          meta$page_by    <- if (nzchar(pt$label)) pt$label else NULL
+          meta$page_name  <- nm
+          attr(pgs[[q]]$data, "rtf_paginate_meta") <- meta
+        }
         out <- c(out, pgs)
       }
     }

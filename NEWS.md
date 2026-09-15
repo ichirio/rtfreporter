@@ -207,9 +207,12 @@
   whose value is constant within a page.
 
   Page names follow `"by_value"`'s convention: `"<value>"` for a partition that
-  makes one page, `"<value>.1"`, `"<value>.2"`, … when it makes several, and
-  `"<value>.<inner label>"` when the inner split names its own pages — so they
-  feed `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` directly.
+  makes one page and `"<value>.1"`, `"<value>.2"`, … when it makes several — so
+  they feed `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` directly.
+  When the split itself names pages (`"by_value"`), the **group is the outer
+  axis** and `page_by` the inner one: a group's pages stay together, the BY
+  values running in order inside it, and the name reads outer-first,
+  `"<group>.<BY value>"`.
 
   `page_by` cuts pages, `split` then cuts rows inside each one, and
   `paginate_cols()` then cuts columns on the result: three independent axes in
@@ -218,26 +221,34 @@
   `page_by = NULL` nothing changes anywhere — `"by_value"` still takes its page
   names from `group_col`.
 
-- **`paginate_cols(page_order = )` chooses which axis is the outer level**
-  (#417).  When a table is split both ways — rows by `as_rtftables()`, columns
-  by `paginate_cols()` — the page order was fixed: the row page was always
-  outside, so a row band swept every column block before the next band started.
+- **`paginate_cols(page_order = )` chooses which axis the page number advances
+  along** (#417).  When a table is split both ways — rows by `as_rtftables()`,
+  columns by `paginate_cols()` — the page order was fixed: the row page was
+  always outside, so a row band swept every column block before the next band
+  started.
 
   ```r
   as_rtftables(df, split = "group_safe", max_rows = 20) |>
     paginate_cols(at = c(4, 6), page_order = "down")
   ```
 
-  `"across"` (the default, the old behaviour) reads across the table and then
-  down it; `"down"` puts the **column block** outside, so one block is read all
-  the way down before the next starts:
+  `"across"` (the default) advances **across the columns** — the column block
+  first, the row pages running inside it; `"down"` advances **down the rows**
+  — the row page first, its column blocks following it (the old behaviour):
 
   | | `"across"` | `"down"` |
   |---|---|---|
-  | page 1 | row 1 / cols 1 | row 1 / cols 1 |
-  | page 2 | row 1 / cols 2 | row 2 / cols 1 |
-  | page 3 | row 2 / cols 1 | row 1 / cols 2 |
-  | page 4 | row 2 / cols 2 | row 2 / cols 2 |
+  | page 1 | cols 1 / row 1 | row 1 / cols 1 |
+  | page 2 | cols 1 / row 2 | row 1 / cols 2 |
+  | page 3 | cols 2 / row 1 | row 2 / cols 1 |
+  | page 4 | cols 2 / row 2 | row 2 / cols 2 |
+
+  A **group** sits above both: when the row pagination made a page per group
+  value (`split = "by_value"`, with `page_by` inside it), the column split
+  happens **within** one group, so a group's pages stay together — giving
+  group / column block / `page_by` under `"across"` and group / `page_by` /
+  column block under `"down"`.  Each page records its own group in
+  `rtf_paginate_meta$page_group`, so this never depends on reading a page name.
 
   The pages themselves are identical; only their order differs.  A page's name
   still follows the row page it was cut from, so under `"down"` pages sharing a
