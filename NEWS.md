@@ -272,6 +272,44 @@
 
 ### New features
 
+- **`set_col_header(values = )` fills `{tokens}` per page** (#449).  A header
+  is usually one shape with a few values that change page to page — `(N=120)`
+  for one period, `(N=118)` for the next — and building it per page meant
+  rebuilding the whole header in a loop and hoping the labels lined up with
+  the columns.
+
+  ```r
+  hdr <- rtf_col_header(
+    list(col_cell(1L, ""),
+         col_cell(c(2L, 9L), "Placebo
+(N={n_pbo})
+n(%)"),
+         col_cell(c(10L, 17L), "TAK-003
+(N={n_trt})
+n(%)")),
+    c("Parameter", rep(VISITS, 2)))
+
+  vals <- data.frame(group = periods, n_pbo = c(120, 118, 238),
+                     n_trt = c(115, 112, 227))
+
+  pages |> set_col_header(hdr, values = vals) |> paginate_cols(by = "____")
+  ```
+
+  The key column is named after the **axis** it matches — `group` (default),
+  `rows`, `name`, or a combination — the same vocabulary
+  `paginate_cols(page_order = )` uses, and the keys live in the page's metadata
+  so they survive `drop_cols` and the column split.  Nothing is matched by
+  position.
+
+  A token is `{name}`; `{{` is a literal brace; the render-time tokens
+  (`{PAGE}`, `{TOTAL_PAGES}`, `{DATE}`, `{BOOK_PAGE}`, `{AUTO_*}`) are left for
+  the renderer.  Every other mistake stops the call rather than printing a
+  wrong header: a page with no row, a row no page used, a token with no value.
+
+- **`header_map()` shows what each page's header became** — one row per header
+  cell, with the page's keys, the columns the cell covers and its final text.
+  For eyeballing a `values` mapping, and for asserting it in a test.
+
 - **`fmt_value_paren()` prints 100% without decimals** (#447).  The formatter
   pads a parenthetical but never rewrote it, so a percentage of 100 kept the
   decimals it was given — while `format_count_pct()`, what

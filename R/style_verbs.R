@@ -658,12 +658,45 @@ add_header_row.list <- function(x, ...) {
 #'   list(col_cell("row_label", ""), col_cell(c("g1", "g2"), "Treatment")),
 #'   c(row_label = "Category", g1 = "Low", g2 = "High", Total = "Total")
 #' )
+#' @param values Optional table of **per-page values** for the `{tokens}` in
+#'   the header, one row per page key: write the header once and let each page
+#'   take its own numbers.
+#'   ```r
+#'   hdr  <- rtf_col_header(
+#'     list(col_cell(1L, ""),
+#'          col_cell(c(2L, 9L), "Placebo\n(N={n_pbo})\nn(%)")),
+#'     c("Parameter", visits))
+#'   vals <- data.frame(group = periods, n_pbo = c(120, 118, 238))
+#'   pages |> set_col_header(hdr, values = vals)
+#'   ```
+#'   A token is `{name}`, `name` being a column of `values`; `{{` is a literal
+#'   brace; the render-time tokens (`{PAGE}`, `{TOTAL_PAGES}`, `{DATE}`,
+#'   `{BOOK_PAGE}`, `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`) are left for the
+#'   renderer, and any other unfilled token is an error. Every row of `values`
+#'   must be used by some page, and every page must find a row -- a mistyped
+#'   level is an error, not a silently wrong header. [header_map()] shows what
+#'   each page ended up with.
+#' @param by Which page key `values` is matched on, named after the axis it
+#'   matches -- the same vocabulary `paginate_cols(page_order = )` uses. The
+#'   key column of `values` carries that name.
+#'   \describe{
+#'     \item{`"group"`}{(default) the value a `split = "by_value"` page was cut
+#'       for (`rtf_paginate_meta$page_group`); with no group axis it falls back
+#'       to the page's name without its `"...n"` tail, and says so once.}
+#'     \item{`"rows"`}{the page's `page_by` value.}
+#'     \item{`"name"`}{the page's name, `"...n"` included -- always unique, so
+#'       this addresses one page exactly.}
+#'   }
+#'   Several may be given (`by = c("group", "rows")`) to match on the
+#'   combination. The keys live in the page's metadata, so they survive
+#'   `drop_cols` and the column split.
 #' @export
 set_col_header <- function(x, ...) UseMethod("set_col_header")
 
 #' @rdname set_col_header
 #' @export
-set_col_header.rtftable <- function(x, ..., align = NULL) {
+set_col_header.rtftable <- function(x, ..., values = NULL, by = NULL,
+                                    align = NULL) {
   rows <- list(...)
   # One argument is treated as a complete col_header spec in any shape
   # `.normalize_col_header_rows()` accepts (an rtf_col_header object, a
@@ -673,6 +706,14 @@ set_col_header.rtftable <- function(x, ..., align = NULL) {
     if (length(rows) == 0L) NULL
     else if (length(rows) == 1L) rows[[1L]]
     else do.call(rtf_col_header, rows)
+
+  # `values`: fill the {tokens} for THIS page before the header is resolved.
+  # One table, one row per page key -- see .match_value_rows().
+  if (!is.null(values)) {
+    m      <- .match_value_rows(list(x), values, by)
+    header <- .fill_header_tokens(header, .value_row(values, m$row[1L], m$by),
+                                  "set_col_header(values = )")
+  }
 
   ref <- .style_ref_df(x)
   nc  <- ncol(ref)
@@ -735,8 +776,28 @@ set_col_header.rtftable <- function(x, ..., align = NULL) {
 
 #' @rdname set_col_header
 #' @export
-set_col_header.list <- function(x, ...) {
-  .style_map_pages(x, set_col_header, ..., verb = "set_col_header")
+set_col_header.list <- function(x, ..., values = NULL, by = NULL) {
+  if (is.null(values)) {
+    return(.style_map_pages(x, set_col_header, ..., verb = "set_col_header"))
+  }
+  # With `values` the header is no longer one object for every page: each page
+  # takes its own row, matched on its own key, and the tokens are filled from
+  # it.  The pages keep their names, as .style_map_pages() leaves them.
+  dots  <- list(...)
+  align <- dots$align
+  dots$align <- NULL
+  spec <- if (length(dots) == 0L) NULL
+          else if (length(dots) == 1L) dots[[1L]]
+          else do.call(rtf_col_header, dots)
+
+  m   <- .match_value_rows(x, values, by)
+  out <- lapply(seq_along(x), function(i) {
+    filled <- .fill_header_tokens(spec, .value_row(values, m$row[i], m$by),
+                                  "set_col_header(values = )")
+    set_col_header(x[[i]], filled, align = align)
+  })
+  names(out) <- names(x)
+  out
 }
 
 
