@@ -307,3 +307,72 @@ test_that("list methods reject non-rtftable elements", {
                           bold = TRUE),
                "element 2")
 })
+
+# ──────── #453: a named label row is a patch, not a full header ─────────────
+
+.sv_names <- function() c("Item", "A", "B", "C")
+
+.sv_labels <- function(x) {
+  m <- header_map(x)
+  m$text[m$row == max(m$row)]
+}
+
+test_that("a fully named label row places by name at any length", {
+  tbl <- rtftable(.sv_df(), col_header = .sv_names(), border = "tfl")
+
+  # one name -- the length that used to slip through the guard by accident
+  expect_identical(.sv_labels(set_col_header(tbl, c(A = "Low"))),
+                   c("Item", "Low", "B", "C"))
+  # two and three -- the lengths #453 rejected
+  expect_identical(.sv_labels(set_col_header(tbl, c(A = "Low", B = "High"))),
+                   c("Item", "Low", "High", "C"))
+  expect_identical(
+    .sv_labels(set_col_header(tbl, c(A = "Low", B = "High", C = "Tot"))),
+    c("Item", "Low", "High", "Tot"))
+  # and the full row, which always worked
+  expect_identical(
+    .sv_labels(set_col_header(tbl, c(Item = "Category", A = "Low",
+                                     B = "High", C = "Tot"))),
+    c("Category", "Low", "High", "Tot"))
+})
+
+test_that("a named label row still refuses a name that is not a column", {
+  tbl <- rtftable(.sv_df(), col_header = .sv_names(), border = "tfl")
+  expect_error(set_col_header(tbl, c(A = "Low", nope = "X")),
+               "unknown column name")
+})
+
+test_that("a PARTLY named label row is still refused", {
+  tbl <- rtftable(.sv_df(), col_header = .sv_names(), border = "tfl")
+  # Only a FULLY named row is a patch.  A row with some bare entries is
+  # positional, so it is length-checked exactly as before.
+  expect_error(set_col_header(tbl, c(A = "Low", "High")),
+               "the label row has 2 labels")
+  # At the right length such a row still resolves the pre-existing way --
+  # names place, bare entries fall in positionally -- so this fix does not
+  # touch the mixed form.
+  expect_identical(
+    .sv_labels(set_col_header(tbl, c("Cat", A = "Low", "High", "Tot"))),
+    c("Cat", "Low", "High", "Tot"))
+})
+
+test_that("an unnamed label row of the wrong length is still refused", {
+  tbl <- rtftable(.sv_df(), col_header = .sv_names(), border = "tfl")
+  expect_error(set_col_header(tbl, c("Low", "High")),
+               "the label row has 2 labels")
+})
+
+test_that("the named patch form reaches rtftable(col_header = ) too", {
+  tbl <- rtftable(.sv_df(), col_header = c(A = "Low", B = "High"),
+                  border = "tfl")
+  expect_identical(.sv_labels(tbl), c("Item", "Low", "High", "C"))
+})
+
+test_that("a named patch applies to every page of a list", {
+  pages <- as_rtftables(.sv_df(), border = "tfl") |>
+    set_col_header(.sv_names()) |>
+    set_col_header(c(A = "Low", B = "High"))
+  for (p in pages) {
+    expect_identical(.sv_labels(p), c("Item", "Low", "High", "C"))
+  }
+})

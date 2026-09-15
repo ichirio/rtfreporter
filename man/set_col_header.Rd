@@ -19,7 +19,11 @@ set_col_header(x, ...)
 vector (a label row, optionally named to place labels by column name) or a
 list of \code{\link[=col_cell]{col_cell()}} cells (a spanning / cell row, whose \code{pos} may be
 column names or final positions).  Alternatively a single pre-built
-\code{\link[=rtf_col_header]{rtf_col_header()}} object.  Passing nothing clears the header.}
+\code{\link[=rtf_col_header]{rtf_col_header()}} object.  Passing nothing clears the header.
+
+A \strong{fully named} label row need not have one entry per column; an
+unnamed one must.  An unknown name, or a row that is only partly named,
+is an error either way.}
 
 \item{values}{Optional table of \strong{per-page values} for the \code{{tokens}} in
 the header, one row per page key: write the header once and let each page
@@ -85,6 +89,19 @@ coordinates.
 Like the other post-hoc verbs it is an S3 generic with an \code{rtftable} method
 and a \strong{list} method (every page of an \code{\link[=as_rtftables]{as_rtftables()}} result), and it
 chains with the native pipe.
+
+A label row that \strong{names every entry} is a \emph{patch}: it says which column
+each label belongs to, so it may be shorter than the table and the columns
+it does not mention keep their own name.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{rtf_columns(tbl)                              # row_label  g1  g2  Total
+tbl |> set_col_header(c(g1 = "Low", g2 = "High"))
+#>                                            # row_label Low High Total
+}\if{html}{\out{</div>}}
+
+An \strong{unnamed} row is positional and must carry one label per printed
+column -- the check that catches a header written for the whole table and
+applied after \code{\link[=paginate_cols]{paginate_cols()}}.
 }
 \examples{
 df <- data.frame(row_label = c("A", "B"),

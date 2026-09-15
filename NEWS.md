@@ -239,6 +239,31 @@
 
 ### Bug fixes
 
+- **A named column-header label row may be shorter than the table** (#453).
+  A label row that names its entries says which column each label belongs to,
+  so it does not need one entry per column -- the columns it does not mention
+  keep their own name.  That patch form worked for a single name and for a
+  full-length row, but a row of any length in between was refused:
+
+  ```r
+  tbl <- rtftable(df, col_header = names(df))   # row_label | g1 | g2 | Total
+
+  set_col_header(tbl, c(g1 = "Low"))                    # worked
+  set_col_header(tbl, c(g1 = "Low", g2 = "High"))       # Error
+  set_col_header(tbl, c(row_label = "Category", g1 = "Low",
+                        g2 = "High", Total = "Total"))   # worked
+  ```
+
+  The width check that refuses a header written for the whole table and
+  applied after `paginate_cols()` decided on **length alone** and never looked
+  at `names()`; length 1 rode through the escape hatch kept for the
+  `"a | b | c"` pipe-string form.  It now steps aside for a fully named row,
+  which cannot misalign because every label is resolved against a printed
+  column name -- and an unknown name or a partly named row is still an error,
+  from the resolver, naming the offending column.  The guard on **unnamed**
+  rows is unchanged.  Applies to `set_col_header()`, `rtftable(col_header = )`
+  and `as_rtftables(col_header = )` alike.
+
 - **`paginate_cols(col_header = )` resolves `col_cell()` rows before slicing
   them** (#442).  A header written with spanning cells was stored as given and
   only re-indexed, so the renderer met a `col_cell()`'s `pos` where it expects
