@@ -512,3 +512,35 @@ test_that("a right-width header still applies to every page", {
   expect_identical(unlist(out[[1L]]$col_header), c("Lab", "A", "B", "C"))
   expect_identical(unlist(out[[2L]]$col_header), c("Lab", "A", "B", "C"))
 })
+
+test_that("a col_header with col_cell() rows is resolved before it is sliced", {
+  # A `col_cell()` carries a `pos`; the renderer reads {from, to}.  Storing the
+  # raw spec per page made generate_rtfreport() fail on it (#442).
+  d <- .wide()
+  top <- list(col_cell(c(2, 4), "Placebo\n(N=86)\nn (%)"),
+              col_cell(c(5, 7), "HOGE-001\n(N=84)\nn (%)"))
+  hdr <- list(top, c("Parameter", rep(c("Day 1", "Day 2", "Day 8"), 2L)))
+
+  pg <- paginate_cols(rtftable(d), by = "____", carry = 1,
+                      col_header = hdr, width = "keep")
+  span <- function(p) Filter(function(c1) nzchar(c1$label %||% ""),
+                             p$col_header[[1L]])[[1L]]
+  expect_identical(span(pg[[1L]])$label, "Placebo\n(N=86)\nn (%)")
+  expect_identical(c(span(pg[[1L]])$from, span(pg[[1L]])$to), c(2L, 4L))
+  expect_identical(span(pg[[2L]])$label, "HOGE-001\n(N=84)\nn (%)")
+  expect_identical(c(span(pg[[2L]])$from, span(pg[[2L]])$to), c(2L, 4L))
+  expect_identical(pg[[2L]]$col_header[[2L]],
+                   c("Parameter", "Day 1", "Day 2", "Day 8"))
+
+  # ... and it renders: a newline in a header label becomes RTF \line
+  doc <- rtf_document() |>
+    rtf_section(secinfo = list(header = NULL, footer = NULL)) |>
+    rtf_tables(pg)
+  f <- file.path(tempdir(), "hdr-cells.rtf")
+  on.exit(unlink(f), add = TRUE)
+  expect_silent(generate_rtfreport(doc, f, overwrite = TRUE))
+  txt <- paste(readLines(f, warn = FALSE), collapse = "")
+  expect_true(grepl("(N=86)", txt, fixed = TRUE))
+  expect_true(grepl("(N=84)", txt, fixed = TRUE))
+  expect_gte(lengths(gregexpr(paste0(intToUtf8(92), "line"), txt, fixed = TRUE)), 4L)
+})

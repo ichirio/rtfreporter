@@ -620,6 +620,11 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
     }
   } else if (!is.null(col_header)) {
     .check_col_header_width(col_header, ncol(ref), "paginate_cols(col_header)")
+    # Resolve it ONCE, against the whole table: a `col_cell()` carries a `pos`
+    # (names or positions) that has to become the {from, to} the renderer
+    # reads, and the full table is the coordinate space the caller wrote in.
+    # Each page then takes its slice of the resolved header.
+    col_header <- .normalize_col_header_rows(col_header, ncol(ref), names(ref))
   }
 
   if (!isTRUE(allow_span_break)) {

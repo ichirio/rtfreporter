@@ -206,6 +206,26 @@
 
 ### Bug fixes
 
+- **`paginate_cols(col_header = )` resolves `col_cell()` rows before slicing
+  them** (#442).  A header written with spanning cells was stored as given and
+  only re-indexed, so the renderer met a `col_cell()`'s `pos` where it expects
+  a resolved `{from, to}`, and `generate_rtfreport()` failed with
+  `'length = 2' in coercion to 'logical(1)'`.  It is now resolved once against
+  the whole table — the coordinates the caller wrote it in — and each page takes
+  its slice, which is what every other entry point (`rtftable()`,
+  `set_col_header()`) has always done.  A plain label row, the case the tests
+  covered, needed no resolution and worked.
+
+- **`paginate_cols(col_header = )` resolves `col_cell()` rows before slicing
+  them** (#442).  A header written with spanning cells was stored as given and
+  only re-indexed, so the renderer met a `col_cell()`'s `pos` where it expects
+  a resolved `{from, to}` and `generate_rtfreport()` failed with
+  `'length = 2' in coercion to 'logical(1)'`.  It is now resolved once against
+  the whole table -- the coordinates the caller wrote it in -- and each page
+  takes its slice, which is what every other entry point
+  (`rtftable()`, `set_col_header()`) has always done.  A plain label row, the
+  case the tests covered, needed no resolution and worked.
+
 - **`split = "by_value"` + a stub accepts the pre-stub `group_col` its own docs
   promise** (#429).
 
