@@ -57,10 +57,10 @@ test_that("the result drives auto_section: one section per argument", {
   expect_equal(length(rep$sections), 2L)            # not 5 (one per page)
 })
 
-# ──────── what auto_section actually groups (#425) ─────────────────────────
+# ──────── what auto_section groups (#425, #433) ────────────────────────────
 #
-# The rule is per NAMED element, not per run of equal names -- the claim
-# `?paginate_cols` and the pagination article used to make.  These pin it.
+# A section opens where the NAME CHANGES: consecutive pages carrying the same
+# name are one section, and an empty name falls through into the open one.
 
 .sections_of <- function(tabs) {
   doc <- rtf_document() |>
@@ -69,10 +69,22 @@ test_that("the result drives auto_section: one section per argument", {
   length(rtfreporter:::.pipe_doc_to_rtfreport(doc)$sections)
 }
 
-test_that("equal consecutive names do NOT merge: a section per named page", {
+test_that("a run of equal names is ONE section", {
   p <- .pages(4L)
   names(p) <- c("A", "A", "B", "B")
+  expect_equal(.sections_of(p), 2L)
+})
+
+test_that("a name that comes back after another opens a new section", {
+  p <- .pages(4L)
+  names(p) <- c("A", "B", "A", "B")
   expect_equal(.sections_of(p), 4L)
+})
+
+test_that("an empty name continues the open section, even between equals", {
+  p <- .pages(3L)
+  names(p) <- c("A", "", "A")
+  expect_equal(.sections_of(p), 1L)
 })
 
 test_that("a blank name falls through into the section before it", {
@@ -93,10 +105,11 @@ test_that("paginate_cols() copies the row page's name onto every column page", {
   pg <- list(one = rtftable(df), two = rtftable(df))
   out <- paginate_cols(pg, at = 4, width = "keep", page_order = "down")
   expect_identical(names(out), c("one", "one", "two", "two"))
-  # ... so a named list gives a section per page, whatever page_order says
-  expect_equal(.sections_of(out), 4L)
+  # "down" keeps a table's column pages adjacent, so each table is one section
+  expect_equal(.sections_of(out), 2L)
+  # "across" interleaves them, so the name changes on every page
   expect_equal(.sections_of(paginate_cols(pg, at = 4, width = "keep")), 4L)
-  # blanking the continuation names is what groups them
+  # blanking a name always continues the open section
   nm <- names(out); nm[c(2L, 4L)] <- ""; names(out) <- nm
   expect_equal(.sections_of(out), 2L)
 })

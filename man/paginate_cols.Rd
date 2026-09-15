@@ -155,22 +155,18 @@ A column page inherits the name of the row page it was cut from, whatever
 \code{page_order} is -- that is the only name there is. Under \code{"down"} pages that
 share a name are therefore no longer adjacent.
 
-What that does \emph{not} change is the sectioning:
-\code{rtf_tables(auto_section = TRUE)} opens a section at every \strong{named} page,
-and a page whose name is \code{""} joins the section before it. Equal names are
-\strong{not} merged, so a named page list gives a section per page under either
-order, and an \strong{unnamed} list -- what \code{\link[=as_rtftables]{as_rtftables()}} returns for a single
-table, and what \code{paginate_cols()} then passes through -- gives none at all,
-leaving every page in the document's own section.
+That is worth knowing because \code{rtf_tables(auto_section = TRUE)} opens a
+section where the name \strong{changes}: a run of pages sharing a name is one
+section, and a page whose name is \code{""} joins the section before it. So
+\code{"down"} keeps a table's column pages in one section, while \code{"across"}
+interleaves the names and gives a section per page. An \strong{unnamed} list --
+what \code{\link[=as_rtftables]{as_rtftables()}} returns for a single table, and what
+\code{paginate_cols()} then passes through -- opens none at all, leaving every
+page in the document's own section.
 
-To put a run of pages in one section, name its first page and blank the
-rest -- \code{\link[=combine_sections]{combine_sections()}} does that bookkeeping when you are assembling
-whole tables, and when the names come from the pages themselves (a
-\code{page_by} / \code{"by_value"} run) the same thing is two lines:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{lbl <- sub("[.][0-9]+$", "", names(pages))
-names(pages) <- ifelse(c(FALSE, lbl[-1] == lbl[-length(lbl)]), "", lbl)
-}\if{html}{\out{</div>}}
+To put pages with \emph{different} names in one section, blank the ones that
+should not open a new one (\code{\link[=combine_sections]{combine_sections()}} does that bookkeeping when
+you are assembling whole tables).
 }
 
 \examples{

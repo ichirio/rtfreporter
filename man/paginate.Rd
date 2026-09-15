@@ -22,7 +22,7 @@ paginate(x, ...)
 \item{x}{A supported table object: a \code{gt_tbl} (from \code{\link[gt:gt]{gt::gt()}}), a plain
 \code{data.frame} / tibble, or a \code{list} of either.  List names are
 propagated to the output (one input -> one page keeps the input
-name; one input -> many pages produces \code{name.1}, \code{name.2}, ...).}
+name; one input -> many pages gives every page that same name).}
 
 \item{...}{Pagination controls, forwarded to the internal splitter and shared
 with \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows},
