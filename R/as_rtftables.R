@@ -971,7 +971,8 @@ as_rtftables <- function(x,
   # where the stub must be built after the split (see the branch below).
   # `split_mode` defaults to the requested `split`; the per-group calls override
   # it to "none" so each group's sub-body is not split again.
-  build_pages <- function(body, kw, cell_styles, split_mode = split) {
+  build_pages <- function(body, kw, cell_styles, split_mode = split,
+                          page_by_arg = page_by) {
     # ---- build the indented stub (stub_cols) on this body ---------------
     # Merge the `stub_vars` hierarchy columns into one indented stub column
     # BEFORE pagination, so any source that exposes the hierarchy as separate
@@ -1055,7 +1056,7 @@ as_rtftables <- function(x,
 
     pages <- .paginate_df(
       body, max_rows = max_rows, split = split_mode, split_rows = split_rows,
-      group_col = group_col, group_by = group_by, page_by = page_by,
+      group_col = group_col, group_by = group_by, page_by = page_by_arg,
       cont_label = cont_label,
       min_group_rows = min_group_rows, blank_rows = blank_rows,
       blank_row_first = blank_row_first, blank_row_end = blank_row_end,
@@ -1103,21 +1104,40 @@ as_rtftables <- function(x,
   # built once on the full body (the plain build_pages() call below).
   if (!is.function(split) && identical(split, "by_value") &&
       !is.null(stub_spec_obj)) {
-    gidx <- if (is.null(group_col)) 1L
-            else .resolve_col_indices(list(group_col), body, "group_col")
-    gval <- as.character(body[[gidx]])
-    gval[is.na(gval)] <- ""
-    lv   <- unique(gval)                    # one section per value, in order
-    out  <- list()
-    for (k in seq_along(lv)) {
-      rows     <- which(gval == lv[k])
-      sub_body <- body[rows, , drop = FALSE]
-      rownames(sub_body) <- NULL
-      sub_cs   <- if (!is.null(cell_styles)) cell_styles[rows] else NULL
-      pgs      <- build_pages(sub_body, kw, sub_cs, split_mode = "none")
-      nm       <- if (nzchar(lv[k])) lv[k] else paste0("group_", k)
-      names(pgs) <- rep(nm, length(pgs))    # split_mode "none" => one page
-      out <- c(out, pgs)
+    # `page_by` stays the OUTER level here too: partition the raw body by it
+    # FIRST, then take the group values inside each partition.  Leaving it to
+    # the per-group build_pages() call would invert the two (the group outside,
+    # the BY value inside) and then overwrite the page names with the group
+    # label, losing the BY value altogether.
+    parts <- if (is.null(page_by)) {
+      list(list(rows = seq_len(nrow(body)), label = ""))
+    } else {
+      .page_by_runs(body, .resolve_page_by(page_by, body))
+    }
+    out <- list()
+    for (pt in parts) {
+      p_body <- body[pt$rows, , drop = FALSE]
+      rownames(p_body) <- NULL
+      p_cs   <- if (!is.null(cell_styles)) cell_styles[pt$rows] else NULL
+      gidx <- if (is.null(group_col)) 1L
+              else .resolve_col_indices(list(group_col), p_body, "group_col")
+      gval <- as.character(p_body[[gidx]])
+      gval[is.na(gval)] <- ""
+      lv   <- unique(gval)                  # one section per value, in order
+      for (k in seq_along(lv)) {
+        rows     <- which(gval == lv[k])
+        sub_body <- p_body[rows, , drop = FALSE]
+        rownames(sub_body) <- NULL
+        sub_cs   <- if (!is.null(p_cs)) p_cs[rows] else NULL
+        # page_by is already spent on `parts`; applying it again inside would
+        # partition each group a second time.
+        pgs      <- build_pages(sub_body, kw, sub_cs, split_mode = "none",
+                                page_by_arg = NULL)
+        nm       <- if (nzchar(lv[k])) lv[k] else paste0("group_", k)
+        if (nzchar(pt$label)) nm <- paste0(pt$label, ".", nm)
+        names(pgs) <- rep(nm, length(pgs))  # split_mode "none" => one page
+        out <- c(out, pgs)
+      }
     }
     return(out)
   }

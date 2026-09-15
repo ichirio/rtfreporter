@@ -133,6 +133,27 @@
   | 8 rows | 4 | 5 | 4 |
   | 10 rows | 3 | 4 | 3 |
 
+### Bug fixes
+
+- **`page_by` no longer splits one row per page when a stub is built** (#427).
+  `stub_cols()` inserts a **label row** per hierarchy level — the stub column
+  carries the label text and every other column is `NA`, the `page_by` column
+  among them.  Keyed literally, each of those rows read as a new BY value,
+  became a page of its own (holding just the label) and split the run it was
+  introducing in two.  A missing BY value is now a **continuation**: it takes
+  the value of the row it introduces, and at the foot of the body of the row it
+  follows.
+
+  In the same interaction, `split = "by_value"` + a stub takes a dedicated
+  branch — it splits by `group_col` first and builds the stub per page — which
+  did not know about `page_by`, so with both set the nesting inverted (the group
+  outside, the BY value inside) and the per-group naming overwrote the page
+  names, losing the BY value.  That branch now partitions by `page_by` first,
+  so it stays the outer level and the names compose as `"<BY>.<group>"`.
+
+  Both are regressions in `page_by` itself, which is new and unreleased
+  (#423), so nothing that ever worked changes.
+
 ### New features
 
 - **`as_rtftables(page_by = )`: one page per BY value, with the inner grouping

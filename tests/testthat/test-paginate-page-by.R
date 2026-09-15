@@ -121,3 +121,67 @@ test_that("page_by composes with paginate_cols() and page_order", {
 test_that("an unknown page_by column is an error", {
   expect_error(as_rtftables(.lab(), page_by = "nope"), "page_by")
 })
+
+# ──────── page_by with a stub: label rows are continuations (#427) ──────────
+#
+# stub_cols() inserts a LABEL ROW per hierarchy level, carrying the stub text
+# and NA everywhere else -- the BY column included.  Keyed literally, each of
+# those rows became its own one-row partition holding just the label.
+
+.ae <- function(periods = c("Period 1", "Period 2"), extra = NULL) {
+  out <- list()
+  for (per in periods) for (soc in c("CARDIAC", "GI")) {
+    d <- data.frame(period = per, soc = soc,
+                    pt  = c("Palpitations", "Tachycardia"),
+                    n_A = c("5 (5.8)", "3 (3.5)"),
+                    stringsAsFactors = FALSE)
+    if (!is.null(extra)) d[[names(extra)]] <- extra[[1L]]
+    out[[length(out) + 1L]] <- d
+  }
+  do.call(rbind, out)
+}
+
+test_that("a stub label row does not start a page of its own", {
+  pg <- as_rtftables(.ae(), page_by = "period", stub_vars = c("soc", "pt"),
+                     drop_cols = "period")
+  expect_length(pg, 2L)                       # not 8 (a page per label row)
+  expect_identical(names(pg), c("Period 1", "Period 2"))
+  expect_identical(unname(.rows(pg)), c(6L, 6L))   # 2 labels + 4 PT rows each
+  # the label row sits with the rows it introduces, at the top of its page
+  expect_identical(as.character(pg[[1L]]$data[[1L]][1L]), "CARDIAC")
+})
+
+test_that("the filler keeps a trailing gap with the page above it", {
+  v <- c("A", NA, "A", NA, "B", NA)
+  expect_identical(rtfreporter:::.fill_page_by_gaps(v),
+                   c("A", "A", "A", "B", "B", "B"))
+  expect_identical(rtfreporter:::.fill_page_by_gaps(c(NA, "A", NA)),
+                   c("A", "A", "A"))
+  expect_identical(rtfreporter:::.fill_page_by_gaps(c(NA_character_, NA)),
+                   c("", ""))
+})
+
+test_that("page_by stays the OUTER level under split = by_value + a stub", {
+  # That branch splits the body by group_col and builds the stub per page;
+  # page_by must partition BEFORE it, or the two inverted and the page names
+  # lost the BY value.
+  ae <- do.call(rbind, lapply(c("P1", "P2"), function(per)
+    do.call(rbind, lapply(c("Cohort A", "Cohort B"), function(co) {
+      d <- .ae(periods = per)
+      d$cohort <- co
+      d
+    }))))
+  pg <- as_rtftables(ae, page_by = "period", split = "by_value",
+                     group_col = "cohort", stub_vars = c("soc", "pt"),
+                     drop_cols = c("period", "cohort"))
+  expect_identical(names(pg), c("P1.Cohort A", "P1.Cohort B",
+                                "P2.Cohort A", "P2.Cohort B"))
+  expect_identical(unname(.rows(pg)), rep(6L, 4L))
+})
+
+test_that("split = by_value + a stub is unchanged without page_by", {
+  pg <- as_rtftables(.ae(), split = "by_value", group_col = "period",
+                     stub_vars = c("soc", "pt"), drop_cols = "period")
+  expect_identical(names(pg), c("Period 1", "Period 2"))
+  expect_identical(unname(.rows(pg)), c(6L, 6L))
+})
