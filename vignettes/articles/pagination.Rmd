@@ -709,6 +709,42 @@ unless you set it); `carry =` overrides that, and `carry = integer(0)` repeats
 nothing. A carry column is removed from the blocks automatically, so it is
 never printed twice on one page.
 
+### Where to cut, and what the header says -- `by` / `col_header`
+
+`at` and `cols` are positions. When the grouping is already **in the column
+names** -- the common wide layout, one column per treatment x visit -- `by`
+reads it from there: give it the separator, and the part **before** it becomes
+the block key.
+
+```{r pagcols_by, eval = FALSE}
+as_rtftables(df, split = "by_value", group_col = "period",
+             stub_vars = c("row_grp1", "label")) |>
+  paginate_cols(by = "____", carry = 1, col_header = "names")
+```
+
+`col_header = "names"` then builds the two-level header those names already
+carry -- the key on top, the rest of the name below:
+
+```
+page 1                            page 2
+|            |   Placebo     |    |            |   HOGE-001    |
+| Group      | D1 | D2 | D8  |    | Group      | D1 | D2 | D8  |
+```
+
+`by` also takes one **key per column** when the grouping is not in the names.
+
+A header written for the *whole* table goes in the same argument and is sliced
+per page (spanning cells clipped):
+
+```{r pagcols_header, eval = FALSE}
+paginate_cols(pages, at = c(11, 19), carry = 1, col_header = HDR)   # HDR = every label
+```
+
+Write the header **before or at** the split, never after it: a page keeps only
+its own columns, so a full-table header no longer fits it, and
+`set_col_header()` / `rtf_tables(col_header = )` say so rather than printing
+the first labels on every page.
+
 ### Column widths after the split -- `width`
 
 `column_widths_twips` is absolute: a subset already carries the right widths

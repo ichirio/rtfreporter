@@ -212,6 +212,39 @@
 
 ### New features
 
+- **Column headers across a column split: `paginate_cols(by = , col_header = )`
+  and a width guard** (#435).  A header written for the whole table and applied
+  **after** `paginate_cols()` landed on every page unchanged, so each one
+  printed the first page's labels over its own columns — silently.
+
+  A plain label row is one label per printed column, so a mismatch is now an
+  error, from `set_col_header()` and from the `rtf_tables(col_header = )`
+  override, naming both widths and the fix.
+
+  The fix being: write the header once, **at** the split.
+
+  ```r
+  paginate_cols(pages, at = c(11, 19), carry = 1, col_header = HDR)
+  ```
+
+  `col_header` takes a header in the **full table's** coordinates and slices it
+  per page, spanning cells clipped — the same treatment a header already on the
+  table gets.
+
+  **`by = `** cuts where the column names say, instead of at positions: give it
+  the separator of a `<group>____<visit>` layout and each run of one group
+  becomes a block (or give one key per column).  With
+  **`col_header = "names"`** the two-level header those names already carry is
+  built per page — the group spanning its columns, the visit below:
+
+  ```r
+  as_rtftables(df, split = "by_value", group_col = "period",
+               stub_vars = c("row_grp1", "label")) |>
+    paginate_cols(by = "____", carry = 1, col_header = "names")
+  #>  |            |   Placebo    |     |            |   HOGE-001   |
+  #>  | Group      | D1 | D2 | D8 |     | Group      | D1 | D2 | D8 |
+  ```
+
 - **`as_rtftables(page_by = )`: one page per BY value, with the inner grouping
   still protected** (#423).  `group_col` says where a *group* boundary is;
   `page_by` says where a *page* boundary is, and what the page is called.

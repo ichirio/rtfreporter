@@ -113,15 +113,71 @@
   sort(unique(.resolve_col_indices(carry, ref, "paginate_cols(carry)")))
 }
 
+# `by`: the block key per column, from a SEPARATOR in the column names (the
+# part before it -- "Placebo____Day 1" -> "Placebo") or from a vector the
+# caller supplies.  Carry columns get NA: they are on every page and belong to
+# no block.
+.resolve_by_key <- function(by, ref, carry) {
+  nm <- names(ref)
+  n  <- length(nm)
+  key <- if (length(by) == n && n != 1L) {
+    as.character(by)
+  } else if (is.character(by) && length(by) == 1L) {
+    vapply(strsplit(nm, by, fixed = TRUE), `[`, character(1L), 1L)
+  } else {
+    stop(sprintf(paste0("`by` must be a single separator found in the column ",
+                        "names, or one key per column (%d)."), n), call. = FALSE)
+  }
+  key[carry] <- NA_character_
+  key
+}
+
+# The blocks a key implies: each RUN of one key, in column order.
+.blocks_from_key <- function(key) {
+  keep <- which(!is.na(key) & nzchar(key))
+  if (length(keep) == 0L) {
+    stop("`by` left no columns to split: every column is a carry column.",
+         call. = FALSE)
+  }
+  k   <- key[keep]
+  brk <- c(TRUE, k[-1L] != k[-length(k)])
+  split(keep, cumsum(brk))
+}
+
+# The two-level header `col_header = "names"` builds for ONE page: the key
+# above (the group), the remainder below (the visit).  A carry column keeps
+# its own name and sits under no spanning cell.
+.two_level_header <- function(nm, sep, carry_pos) {
+  parts <- strsplit(nm, sep, fixed = TRUE)
+  top   <- vapply(parts, `[`, character(1L), 1L)
+  bot   <- vapply(parts, function(u) u[length(u)], character(1L))
+  bot[carry_pos] <- nm[carry_pos]          # the stub keeps its own label
+  data_pos <- setdiff(seq_along(nm), carry_pos)
+  cells <- list()
+  if (length(data_pos)) {
+    g   <- top[data_pos]
+    brk <- c(TRUE, g[-1L] != g[-length(g)])
+    for (run in split(data_pos, cumsum(brk))) {
+      cells[[length(cells) + 1L]] <-
+        col_cell(c(min(run), max(run)), top[run][1L])
+    }
+  }
+  list(cells, bot)
+}
+
 # Resolve `at` (cut BEFORE these columns) / `cols` (explicit blocks) into a
 # list of integer column vectors, each excluding the carry columns.
-.resolve_col_blocks <- function(at, cols, ref, carry) {
+.resolve_col_blocks <- function(at, cols, ref, carry, by = NULL) {
   n0 <- ncol(ref)
-  if (!is.null(at) && !is.null(cols)) {
-    stop("Give either `at` or `cols`, not both.", call. = FALSE)
+  given <- c(at = !is.null(at), cols = !is.null(cols), by = !is.null(by))
+  if (sum(given) > 1L) {
+    stop(sprintf("Give one of `at`, `cols` or `by`, not %s.",
+                 paste(names(given)[given], collapse = " and ")), call. = FALSE)
   }
 
-  if (!is.null(cols)) {
+  if (!is.null(by)) {
+    blocks <- unname(.blocks_from_key(.resolve_by_key(by, ref, carry)))
+  } else if (!is.null(cols)) {
     if (!is.list(cols)) {
       stop("`cols` must be a list of column blocks (names or positions).",
            call. = FALSE)
@@ -130,7 +186,7 @@
       sort(unique(.resolve_col_indices(b, ref, "paginate_cols(cols)"))))
   } else {
     if (is.null(at) || length(at) == 0L) {
-      stop("`at` (the columns to cut before) or `cols` is required.",
+      stop("One of `at` (the columns to cut before), `cols` or `by` is required.",
            call. = FALSE)
     }
     idx <- sort(unique(.resolve_col_indices(at, ref, "paginate_cols(at)")))
@@ -297,6 +353,25 @@
 }
 
 
+# Put the page's own header on it: the caller's full-table header sliced to the
+# columns this page kept (the same reindexer the table's own header goes
+# through), or the two-level header built from the names.  NULL leaves the
+# table's header exactly as .rtftable_keep_cols() left it.
+.page_with_header <- function(tbl, keep, ref, carry, col_header, hdr_names, by) {
+  if (isTRUE(hdr_names)) {
+    pos <- match(intersect(keep, carry), keep)
+    hdr <- .two_level_header(names(ref)[keep], by, pos)
+    return(set_col_header(tbl, hdr[[1L]], hdr[[2L]]))
+  }
+  if (is.null(col_header)) return(tbl)
+  tbl$col_header <- .reindex_col_header(col_header, keep, ncol(ref))
+  if (!is.null(tbl$col_header_list)) {
+    tbl$col_header_list <- lapply(seq_along(tbl$col_header_list),
+                                  function(i) tbl$col_header)
+  }
+  tbl
+}
+
 #' Paginate a table horizontally, by columns
 #'
 #' @description
@@ -359,6 +434,30 @@
 #'   `split_rows`). `at = c(4, 6)` yields blocks `1:3`, `4:5`, `6:ncol`.
 #' @param cols Explicit column blocks as a list, e.g. `list(2:3, 4:5)`. Give
 #'   either `at` or `cols`.
+#' @param by Where to cut, taken from the **columns themselves** instead of
+#'   positions: either a **separator** found in the column names (a single
+#'   string -- `"Placebo____Day 1"` with `by = "____"` keys on `"Placebo"`), or
+#'   one **key per column**. Each run of one key becomes a block, so a wide
+#'   table laid out as `<group>____<visit>` splits per group with no positions
+#'   to count. Carry columns belong to no block. Give one of `at`, `cols` or
+#'   `by`.
+#' @param col_header The header each page should carry, written **once** for
+#'   the whole table:
+#'   \describe{
+#'     \item{a header}{in the **full table's** coordinates -- a label row, or
+#'       rows of [col_cell()] -- sliced to each page's columns, spanning cells
+#'       clipped, exactly as a header already on the table is.}
+#'     \item{`"names"`}{build the **two-level** header the column names
+#'       already carry: the `by` key on top (the group), the rest of the name
+#'       below (the visit). Needs `by` to be a separator. A carry column keeps
+#'       its own label and sits under no spanning cell.}
+#'     \item{`NULL`}{(default) leave the table's own header, which is sliced
+#'       per page either way.}
+#'   }
+#'   This is the place to put it: a header written for the whole table does
+#'   **not** fit a page that kept only some of its columns, so applying one
+#'   after the split (`set_col_header()` on the page list,
+#'   `rtf_tables(col_header = )`) is an error.
 #' @param carry Row-heading columns repeated on every page. Defaults to the
 #'   table's `row_title` (column 1 unless set). `carry = integer(0)` repeats
 #'   nothing. Carry columns are removed from the blocks automatically, so they
@@ -381,6 +480,23 @@
 #'   `"across"` pages sharing a name are no longer adjacent -- which does not
 #'   change the sectioning, see *Page names*.
 #' @param ... Unused.
+#'
+#' @section Columns named `<group>__<item>`:
+#' The common wide layout -- one column per treatment x visit -- splits per
+#' group and wants a two-level header, group over visit. `by` and
+#' `col_header = "names"` do both from the names:
+#'
+#' ```r
+#' as_rtftables(df, split = "by_value", group_col = "period",
+#'              stub_vars = c("row_grp1", "label")) |>
+#'   paginate_cols(by = "____", carry = 1, col_header = "names")
+#' ```
+#'
+#' ```
+#' page 1                        page 2
+#' |            | Placebo      | |            | HOGE-001     |
+#' | Group      | D1 | D2 | D8 | | Group      | D1 | D2 | D8 |
+#' ```
 #'
 #' @section Page order:
 #' `page_order` orders the pages this verb returns. `"across"` (the default)
@@ -439,18 +555,21 @@ paginate_cols <- function(x, ...) UseMethod("paginate_cols")
 
 #' @rdname paginate_cols
 #' @export
-paginate_cols.rtftable <- function(x, at = NULL, cols = NULL, carry = NULL,
+paginate_cols.rtftable <- function(x, at = NULL, cols = NULL, by = NULL,
+                                   carry = NULL, col_header = NULL,
                                    allow_span_break = TRUE,
                                    width = c("fill", "keep"),
                                    page_order = c("across", "down"), ...) {
-  paginate_cols(list(x), at = at, cols = cols, carry = carry,
+  paginate_cols(list(x), at = at, cols = cols, by = by, carry = carry,
+                col_header = col_header,
                 allow_span_break = allow_span_break, width = width,
                 page_order = page_order, ...)
 }
 
 #' @rdname paginate_cols
 #' @export
-paginate_cols.list <- function(x, at = NULL, cols = NULL, carry = NULL,
+paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
+                               carry = NULL, col_header = NULL,
                                allow_span_break = TRUE,
                                width = c("fill", "keep"),
                                page_order = c("across", "down"), ...) {
@@ -477,7 +596,21 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, carry = NULL,
   }
 
   carry_idx <- .resolve_carry_cols(carry, x[[1L]], ref)
-  blocks    <- .resolve_col_blocks(at, cols, ref, carry_idx)
+  blocks    <- .resolve_col_blocks(at, cols, ref, carry_idx, by = by)
+
+  # `col_header`: a header written for the WHOLE table, sliced per page -- or
+  # "names", which builds the two-level header the column names already carry
+  # (the `by` key above, the rest below).  Either way the caller writes the
+  # header once, in the coordinates of the table they can see.
+  hdr_names <- identical(col_header, "names")
+  if (hdr_names) {
+    if (!(is.character(by) && length(by) == 1L)) {
+      stop("`col_header = \"names\"` needs `by` to be the separator in the ",
+           "column names (e.g. by = \"____\").", call. = FALSE)
+    }
+  } else if (!is.null(col_header)) {
+    .check_col_header_width(col_header, ncol(ref), "paginate_cols(col_header)")
+  }
 
   if (!isTRUE(allow_span_break)) {
     bounds <- .col_block_boundaries(blocks)
@@ -526,13 +659,17 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, carry = NULL,
     if (across) {
       for (bi in seq_along(keeps)) for (i in run) {
         k <- k + 1L
-        out[[k]]  <- .rtftable_keep_cols(x[[i]], keeps[[bi]], scales[[bi]])
+        out[[k]]  <- .page_with_header(
+          .rtftable_keep_cols(x[[i]], keeps[[bi]], scales[[bi]]),
+          keeps[[bi]], ref, carry_idx, col_header, hdr_names, by)
         onames[k] <- if (!is.null(in_names)) in_names[i] else ""
       }
     } else {
       for (i in run) for (bi in seq_along(keeps)) {
         k <- k + 1L
-        out[[k]]  <- .rtftable_keep_cols(x[[i]], keeps[[bi]], scales[[bi]])
+        out[[k]]  <- .page_with_header(
+          .rtftable_keep_cols(x[[i]], keeps[[bi]], scales[[bi]]),
+          keeps[[bi]], ref, carry_idx, col_header, hdr_names, by)
         onames[k] <- if (!is.null(in_names)) in_names[i] else ""
       }
     }
