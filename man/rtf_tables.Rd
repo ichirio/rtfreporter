@@ -118,9 +118,13 @@ each name is used as a per-section heading appended to the common header
 defined by \code{rtf_section(secinfo = ...)} (called without a \code{page} argument).
 A section opens where the name \strong{changes}, so a run of pages carrying the
 same name -- the pages of one split table, which all share its heading --
-is \strong{one} section of several pages. An item with an empty name falls
-through into the open section, which is how pages whose names \emph{differ} are
-put in one section (see \code{\link[=combine_sections]{combine_sections()}}). Default \code{FALSE}.}
+is \strong{one} section of several pages. A \code{"...n"} tail (the serial
+\code{\link[=as_rtftables]{as_rtftables()}} adds so a page list with repeated headings stays
+addressable by name) is \strong{not} part of the name here: it is stripped
+before both the comparison and the printed heading. An item with an empty
+name falls through into the open section, which is how pages whose
+headings \emph{differ} are put in one section (see \code{\link[=combine_sections]{combine_sections()}}).
+Default \code{FALSE}.}
 
 \item{section_label_align}{Alignment for the auto-appended section label row.
 One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}

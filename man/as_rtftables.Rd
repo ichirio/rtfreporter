@@ -150,7 +150,14 @@ group's.  The two are never joined.  A page name is the heading
 \code{rtf_tables(auto_section = TRUE)} / \code{auto_title = TRUE} prints and the
 line a section breaks on, so joining them would cut one group into a
 section per BY value; both values stay readable in the page's
-\code{rtf_paginate_meta} (\code{page_group} / \code{page_by}).}
+\code{rtf_paginate_meta} (\code{page_group} / \code{page_by}).  Pages that share a
+heading are numbered with a \strong{\code{"...n"} tail} -- \code{"Period 1...1"},
+\code{"Period 1...2"} -- so the list stays addressable, R returning the
+\emph{first} match for a repeated list name (which is what
+\code{pages[["Period 1"]]} and RStudio's \code{View()} would show).  The tail is
+not part of the heading: \code{auto_section} / \code{auto_title} strip it, so
+the printed heading is \code{"Period 1"} and its pages are one section.  A
+heading used once carries no tail.}
 \item{\code{group_col}}{when left \code{NULL}, defaults to the first column \strong{not}
 named in \code{page_by}, so \code{group_by = "indent"} (which reads the group
 column) never lands on the BY column -- where every row of a partition

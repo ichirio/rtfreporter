@@ -200,8 +200,12 @@ Each page records its own group in \code{rtf_paginate_meta$page_group} (and its
 \section{Page names}{
 
 A column page inherits the name of the row page it was cut from, whatever
-\code{page_order} is -- that is the only name there is. Under \code{"down"} pages that
-share a name are therefore no longer adjacent.
+\code{page_order} is -- that is the only name there is. Under \code{"across"} pages
+that share a name are therefore no longer adjacent.
+
+Pages sharing a heading are numbered with a \code{"...n"} tail
+(\code{"Period 1...1"}, \code{"Period 1...2"}) so the returned list stays addressable
+by name; the tail is stripped wherever the name is used as a heading.
 
 That is worth knowing because \code{rtf_tables(auto_section = TRUE)} opens a
 section where the name \strong{changes}: a run of pages sharing a name is one

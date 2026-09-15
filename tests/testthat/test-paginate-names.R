@@ -68,7 +68,9 @@ test_that("by_value force-splits groups that exceed max_rows, keeping the name",
   res <- paginate(df, split = "by_value", group_col = "visit",
                    max_rows = 3L)
   expect_gte(length(res), 2L)
-  expect_true(all(names(res) == "Wk1"))              # every page, one heading
+  # every page carries the one heading; the "...n" tail keeps them addressable
+  expect_true(all(rtfreporter:::.page_name_base(names(res)) == "Wk1"))
+  expect_false(anyDuplicated(names(res)) > 0L)
 })
 
 test_that("by_value page_name lands in rtf_paginate_meta as well", {

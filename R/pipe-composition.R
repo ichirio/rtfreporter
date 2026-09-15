@@ -306,9 +306,13 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   defined by `rtf_section(secinfo = ...)` (called without a `page` argument).
 #'   A section opens where the name **changes**, so a run of pages carrying the
 #'   same name -- the pages of one split table, which all share its heading --
-#'   is **one** section of several pages. An item with an empty name falls
-#'   through into the open section, which is how pages whose names *differ* are
-#'   put in one section (see [combine_sections()]). Default `FALSE`.
+#'   is **one** section of several pages. A `"...n"` tail (the serial
+#'   [as_rtftables()] adds so a page list with repeated headings stays
+#'   addressable by name) is **not** part of the name here: it is stripped
+#'   before both the comparison and the printed heading. An item with an empty
+#'   name falls through into the open section, which is how pages whose
+#'   headings *differ* are put in one section (see [combine_sections()]).
+#'   Default `FALSE`.
 #' @param section_label_align Alignment for the auto-appended section label row.
 #'   One of `"left"` (default), `"center"`, or `"right"`.
 #' @param auto_title Logical. When `TRUE` and `tables` is a **named** list,
@@ -557,15 +561,18 @@ rtf_tables <- function(doc, tables,
   if (isTRUE(auto_section)) {
     tbl_names <- names(tables)
     if (!is.null(tbl_names) && any(nzchar(tbl_names))) {
-      # A section opens where the NAME CHANGES, not at every named element: a
-      # page name is a heading, so consecutive pages that carry the same one
-      # are one section of several pages.  An empty name falls through into
-      # the open section, as it always has -- which is still how a caller
-      # groups pages whose names differ (combine_sections() blanks them).
+      # A section opens where the HEADING CHANGES, not at every named element:
+      # a page name is a heading, so consecutive pages that carry the same one
+      # are one section of several pages.  The uniquifying "...n" tail a page
+      # list carries so its names stay addressable is not part of the heading
+      # -- it is stripped here, for the comparison and for what is printed.
+      # An empty name falls through into the open section, as it always has --
+      # which is still how a caller groups pages whose headings differ
+      # (combine_sections() blanks them).
       open <- NULL
       tables <- lapply(seq_along(tables), function(i) {
-        nm <- tbl_names[[i]]
-        if (!is.null(nm) && nzchar(nm) && !identical(nm, open)) {
+        nm <- .page_name_base(tbl_names[[i]])
+        if (!is.null(nm) && !is.na(nm) && nzchar(nm) && !identical(nm, open)) {
           open <<- nm
           structure(
             list(content = tables[[i]], label = nm,
@@ -631,7 +638,7 @@ rtf_tables <- function(doc, tables,
            call. = FALSE)
     }
     for (i in seq_along(tables)) {
-      nm <- auto_labels[[i]]
+      nm <- .page_name_base(auto_labels[[i]])   # the heading, without "...n"
       if (is.na(nm) || !nzchar(nm)) next
       existing <- titles[[i]]
       rows <- if (is.null(existing)) list() else if (is.list(existing)) existing
