@@ -77,22 +77,54 @@ test_that("the two manuals point at each other", {
   expect_true(any(grepl("^> \\*\\*Scope", usr)))
 })
 
-test_that("the README links both manuals", {
-  readme <- test_path("..", "..", "README.md")
-  skip_if_not(file.exists(readme), "README not available")
-  L <- readLines(readme, encoding = "UTF-8", warn = FALSE)
-  for (f in c("rtfreporter-ai-user-manual.md", "rtfreporter-ai-dev-manual.md")) {
-    expect_true(any(grepl(f, L, fixed = TRUE)),
-                info = paste(f, "is not linked from the README (the site home page)"))
-  }
+test_that("each manual is reachable from the page written for its reader", {
+  readme  <- test_path("..", "..", "README.md")
+  article <- test_path("..", "..", "vignettes", "articles", "ai-development.Rmd")
+  skip_if_not(file.exists(readme) && file.exists(article),
+              "README / contributor article not available")
+
+  # The home page is written for people USING the package: it links the user
+  # manual, and points contributors at the article rather than carrying the
+  # developer manual itself.
+  rl <- readLines(readme, encoding = "UTF-8", warn = FALSE)
+  expect_true(any(grepl("rtfreporter-ai-user-manual.md", rl, fixed = TRUE)),
+              info = "the user manual is not linked from the home page")
+  expect_true(any(grepl("articles/ai-development.html", rl, fixed = TRUE)),
+              info = "the home page does not point contributors at the article")
+
+  # That article is written for people working ON the package: it links the
+  # developer manual, and warns against attaching both.
+  al <- readLines(article, encoding = "UTF-8", warn = FALSE)
+  expect_true(any(grepl("rtfreporter-ai-dev-manual.md", al, fixed = TRUE)),
+              info = "the developer manual is not linked from its article")
+  expect_true(any(grepl("rtfreporter-ai-user-manual.md", al, fixed = TRUE)),
+              info = "the article should name the other manual to warn against attaching both")
 })
 
-test_that("both manuals are declared in _pkgdown.yml", {
+test_that("the contributor article has its Japanese twin, each linking the other", {
+  en <- test_path("..", "..", "vignettes", "articles", "ai-development.Rmd")
+  ja <- test_path("..", "..", "vignettes", "articles", "ai-development-ja.Rmd")
+  skip_if_not(file.exists(en), "contributor article not available")
+  expect_true(file.exists(ja),
+              info = "the For-contributors group's convention is an -ja twin per article")
+  expect_true(any(grepl("ai-development-ja.html",
+                        readLines(en, encoding = "UTF-8", warn = FALSE), fixed = TRUE)))
+  expect_true(any(grepl("ai-development.html",
+                        readLines(ja, encoding = "UTF-8", warn = FALSE), fixed = TRUE)))
+})
+
+test_that("both manuals and the article are declared in _pkgdown.yml", {
   yml <- test_path("..", "..", "_pkgdown.yml")
   skip_if_not(file.exists(yml), "_pkgdown.yml not available")
   L <- readLines(yml, encoding = "UTF-8", warn = FALSE)
   for (f in c("rtfreporter-ai-user-manual.md", "rtfreporter-ai-dev-manual.md")) {
     expect_true(any(grepl(f, L, fixed = TRUE)),
                 info = paste(f, "has no navbar entry"))
+  }
+  # pkgdown fails the build on an article that is not in the index, so both
+  # the article and its Japanese twin must be listed.
+  for (a in c("articles/ai-development", "articles/ai-development-ja")) {
+    expect_true(any(grepl(paste0("- ", a, "$"), L)),
+                info = paste(a, "is not in the articles index"))
   }
 })

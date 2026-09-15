@@ -135,6 +135,8 @@ navbar:
         # no `articles/` prefix and no `.html` extension.
         - text: -------
         - text: "For AI assistants"
+        - text: "Developing with an AI assistant"
+          href: articles/ai-development.html
         - text: "AI user manual (download .md)"
           href: rtfreporter-ai-user-manual.md
         - text: "AI developer manual (download .md)"
@@ -546,11 +548,14 @@ articles:
 
   - title: For contributors
     desc: >
-      How rtfreporter is built and how to extend it.  Start with the
-      architecture overview, then the adapter how-to.  Each article opens
-      in English with an "In Japanese" toggle at the top.
+      How rtfreporter is built and how to extend it.  Most work now happens
+      with a chat assistant in the loop, so that article comes first; the
+      architecture overview and the adapter how-to behind it are the
+      authority either way, and the route to follow when working by hand.
+      Each article opens in English with an "In Japanese" toggle at the top.
     navbar: ~
     contents:
+      - articles/ai-development
       - articles/architecture
       - articles/extending-adapters
       - articles/external-api
@@ -562,6 +567,7 @@ articles:
       日本語のコントリビューター向け資料です。
     navbar: ~
     contents:
+      - articles/ai-development-ja
       - articles/architecture-ja
       - articles/extending-adapters-ja
       - articles/external-api-ja

@@ -20,6 +20,25 @@ no body borders), and a left-aligned footnote.  It is opinionated by
 design rather than a do-everything RTF engine.  The package logo above is
 literally the kind of page `generate_rtfreport()` produces.
 
+## Writing rtfreporter code with an AI assistant
+
+rtfreporter is new, so a chat assistant has never seen it: asked for
+rtfreporter code it reaches for `r2rtf` verbs or invents arguments, and none
+of it is flagged as a guess.  Give it the facts first.
+
+**[⬇ rtfreporter-ai-user-manual.md](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md)**
+-- one self-contained file (~26 KB) sized for a single chat session.  Attach it
+at the **start** of the session and say *"use this manual"*.  It holds the
+whole workflow, every `as_rtftables()` argument, the four clinical table shapes,
+headers and page tokens, listings, figures, borders, and the complete list of
+exported functions.
+
+Every example in it is executed against the package and its function list is
+checked against `NAMESPACE`, both by CI -- so a manual that drifts from the API
+fails the build rather than misleading you.
+
+Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual.
+
 ## Why rtfreporter?
 
 We **deliberately keep the scope small**.  rtfreporter is not a
@@ -185,33 +204,6 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 - **Worked clinical examples** — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
   and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html)
 - **External API spec** — [the public API surface](https://ichirio.github.io/rtfreporter/articles/external-api.html)
-
-## Coding with an AI assistant
-
-rtfreporter is new, so a general-purpose chat assistant has never seen it.
-Asked for rtfreporter code it reaches for `r2rtf` verbs, or invents arguments
-that look right -- and you cannot tell which parts are real without checking
-every name against the reference.
-
-Two briefings fix that. Each is one self-contained Markdown file, sized to sit
-in a single chat session alongside the conversation:
-
-| | For | Holds |
-|---|---|---|
-| **[⬇ AI user manual](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md)** | *using* the package | the workflow, every `as_rtftables()` argument, the four clinical table shapes (DM / AE / PK / LB), headers and page tokens, listings, figures, borders, the complete list of exported functions, and the mistakes assistants actually make |
-| **[⬇ AI developer manual](https://ichirio.github.io/rtfreporter/rtfreporter-ai-dev-manual.md)** | *working on* the package | the invariants, the S3 object model and rendering pipeline, the `as_rtftables()` kwargs contract, how to add a table-object adapter, the test / lint / docs conventions, and the issue -> PR -> release workflow |
-
-Download the one that matches the task, attach it at the **start** of the
-session, and say *"use this manual"*.
-
-**Attach one, not both.** They carry opposite instructions -- the user manual
-says never to touch internals, the developer manual requires it -- so handing
-over both blunts each. Each opens with a scope line saying which it is.
-
-Every code example in the user manual is executed against the package, and its
-function list is checked against `NAMESPACE`, by the test suite. A manual that
-drifts from the API fails CI, because an assistant cannot tell a stale manual
-from a fresh one.
 
 ## Status & roadmap
 
