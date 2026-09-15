@@ -491,9 +491,21 @@
     col[is.na(col)] <- ""
     col
   })
-  # Safe, unique data.frame names (display labels come from col_header).
+  # Keep the source names VERBATIM (#458).  The frame is built with
+  # `check.names = FALSE` above precisely so a column called "Drug A (N=60)"
+  # keeps that name, and callers address columns by name -- `set_col_header()`,
+  # `col_key()`, `drop_cols` -- because a name survives a reordering where a
+  # position does not.  Passing them through `make.names()` turned that name
+  # into `Drug.A..N.60.`, which nothing documents and no caller would guess.
+  # A data.frame does not need syntactic names, and nothing downstream needs
+  # them either: columns are resolved by name string or by position, never by
+  # `$` or by NSE that a backtick would trip up.
+  #
+  # `make.unique()` stays, for a collision that has nothing to do with syntax:
+  # the stub is renamed to "rowname", so a source column literally called
+  # `rowname` would otherwise duplicate it.
   raw <- ifelse(body_vars == "::rowname::", "rowname", body_vars)
-  names(df) <- make.unique(make.names(raw))
+  names(df) <- make.unique(raw)
   rownames(df) <- NULL
 
   # Clean the HTML extract_body emits: footnote marks -> ^{N}, then strip.

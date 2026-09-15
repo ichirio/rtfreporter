@@ -271,6 +271,39 @@
 
 ### Bug fixes
 
+- **The gt adapter keeps the source column names verbatim** (#458).  A gt
+  table whose columns are not syntactic R names came out renamed, because the
+  extracted body was passed through `make.names()`:
+
+  ```r
+  src <- data.frame(`Drug A (N=60)` = "54.2 (11.3)", `2024 total` = "112",
+                    check.names = FALSE)
+  names(as_rtftables(gt::gt(src))[[1]]$data)
+  #> before: "Drug.A..N.60."  "X2024.total"
+  #> now:    "Drug A (N=60)"  "2024 total"
+  ```
+
+  The rendering was never wrong -- display labels come from `col_header`, so
+  the header still read `Drug A (N=60)`.  What broke was addressing a column
+  **by name**, which is the style the package recommends because a name
+  survives a reordering where a position does not: `set_col_header(name = )`,
+  `col_key()` and `drop_cols =` all rejected the name the caller had written,
+  and the caller had to discover and use `Drug.A..N.60.` instead.  That also
+  contradicted the *Importing tables* article, which has always promised that
+  gt-based sources keep their id names.
+
+  A `data.frame` does not need syntactic names -- the frame is built with
+  `check.names = FALSE` two lines earlier for exactly that reason -- and
+  nothing downstream needs them either, since columns are resolved by name
+  string or by position.  `make.unique()` stays, for a collision that has
+  nothing to do with syntax: the stub is renamed to `"rowname"`, so a source
+  column literally called `rowname` still becomes `rowname` / `rowname.1`.
+
+  `make.names()` is a no-op for ordinary identifiers, so gtsummary
+  (`label`, `stat_1`, ...) and most gt tables are unaffected.  Code written
+  against a mangled name will need the real one.  tfrmt reaches the same code
+  path, so `column` levels containing a space or a parenthesis are fixed too.
+
 - **A named column-header label row may be shorter than the table** (#453).
   A label row that names its entries says which column each label belongs to,
   so it does not need one entry per column -- the columns it does not mention
