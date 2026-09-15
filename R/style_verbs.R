@@ -632,12 +632,30 @@ add_header_row.list <- function(x, ...) {
 #' and a **list** method (every page of an [as_rtftables()] result), and it
 #' chains with the native pipe.
 #'
+#' A label row that **names every entry** is a *patch*: it says which column
+#' each label belongs to, so it may be shorter than the table and the columns
+#' it does not mention keep their own name.
+#'
+#' ```r
+#' rtf_columns(tbl)                              # row_label  g1  g2  Total
+#' tbl |> set_col_header(c(g1 = "Low", g2 = "High"))
+#' #>                                            # row_label Low High Total
+#' ```
+#'
+#' An **unnamed** row is positional and must carry one label per printed
+#' column -- the check that catches a header written for the whole table and
+#' applied after [paginate_cols()].
+#'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
 #' @param ... The header rows, in render order (top first) -- each a character
 #'   vector (a label row, optionally named to place labels by column name) or a
 #'   list of [col_cell()] cells (a spanning / cell row, whose `pos` may be
 #'   column names or final positions).  Alternatively a single pre-built
 #'   [rtf_col_header()] object.  Passing nothing clears the header.
+#'
+#'   A **fully named** label row need not have one entry per column; an
+#'   unnamed one must.  An unknown name, or a row that is only partly named,
+#'   is an error either way.
 #' @param align Optional column-header text alignment for the final columns:
 #'   `"left"`/`"center"`/`"right"` (applied to every column) or a character
 #'   vector of length `ncol` (one per printed column).  `NULL` (default) leaves
@@ -744,13 +762,22 @@ set_col_header.rtftable <- function(x, ..., values = NULL, by = NULL,
   x
 }
 
-# A plain label row is one label per printed column, so a length that does not
-# match the table is a mistake rather than something to render.  It is worth an
-# error because of one case in particular: a header written for the WHOLE table
-# and applied after `paginate_cols()`, where every page keeps only its own
+# An UNNAMED label row is one label per printed column, so a length that does
+# not match the table is a mistake rather than something to render.  It is worth
+# an error because of one case in particular: a header written for the WHOLE
+# table and applied after `paginate_cols()`, where every page keeps only its own
 # columns -- each page then printed the first N labels of the full header, and
 # nothing said so.  Rows built from `col_cell()` are positional and carry their
 # own coordinates, so they are not checked here.
+#
+# A NAMED row is a different thing and is not length-checked (#453): it says
+# which column each label belongs to, so it can be shorter than the table --
+# the columns it does not mention keep their own name.  That is the patch form,
+# `set_col_header(tbl, c(g1 = "Low", g2 = "High"))`.  Nothing can silently
+# misalign, which is the accident the length check exists to prevent, and
+# `.normalize_col_header_rows()` already rejects an unknown name and a row that
+# is only partly named -- so a bad named row still stops the run, with a message
+# that names the offending column instead of counting labels.
 .check_col_header_width <- function(header, nc, arg = "col_header") {
   rows <- if (is.null(header)) list()
           else if (is.list(header) && !inherits(header, "rtf_col_cell")) header
@@ -761,6 +788,8 @@ set_col_header.rtftable <- function(x, ..., values = NULL, by = NULL,
     if (length(labels) == 1L && grepl("|", labels, fixed = TRUE)) {
       labels <- trimws(strsplit(labels, "|", fixed = TRUE)[[1L]])
     }
+    nm <- names(labels)
+    if (!is.null(nm) && all(nzchar(nm))) next
     if (length(labels) <= 1L || length(labels) == nc) next
     stop(sprintf(paste0(
       "`%s`: the label row has %d labels but the table has %d printed ",
