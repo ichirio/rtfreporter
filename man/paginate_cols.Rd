@@ -87,15 +87,18 @@ throughout; \code{"keep"} gives each kept column exactly the width it had
 before the split. No effect under \code{column_widths_twips}. See
 \emph{Column widths}.}
 
-\item{page_order}{Which axis the page number advances along first when a
-table is split both ways. \code{"across"} (default) advances \strong{across the
-columns} -- the column block first, the row pages running inside it;
-\code{"down"} advances \strong{down the rows} -- the row page first, its column
-blocks following it. A group is above both and is never broken up (see
-\emph{Page order}). The pages themselves are identical; only their order
-differs. A page's name follows its row page either way, so under
-\code{"across"} pages sharing a name are no longer adjacent -- which does not
-change the sectioning, see \emph{Page names}.}
+\item{page_order}{The order the pages come out in, as the \strong{axes} of the
+split, outermost first: any of \code{"group"} (the pages a value-based split
+made, \code{as_rtftables(split = "by_value", group_col = )}), \code{"rows"} (the row
+pages -- \code{page_by} and every other row split) and \code{"cols"} (the column
+blocks this verb cuts). Axes left out are appended in that default order,
+and an axis the table does not have never varies.
+
+\code{"across"} and \code{"down"} are the two usual orders, kept as shorthands:
+\code{"across"} is \code{c("group", "cols", "rows")} -- the page number advances
+across the columns first -- and \code{"down"} is \code{c("group", "rows", "cols")},
+advancing down the rows. The pages themselves are identical whatever the
+order; only the sequence differs. See \emph{Page order}.}
 }
 \value{
 A list of \code{\link[=rtftable]{rtftable()}} pages. Names are carried through unchanged --
@@ -177,24 +180,37 @@ group and wants a two-level header, group over visit. \code{by} and
 
 \section{Page order}{
 
-\code{page_order} orders the pages this verb returns. \code{"across"} (the default)
-advances the \strong{column block} first and runs the row pages inside it;
-\code{"down"} advances the \strong{row page} first and lets its column blocks follow.
-
-A \strong{group} sits above both. When the row pagination made a page per group
-value -- \code{as_rtftables(split = "by_value", group_col = )}, with \code{page_by}
-running inside it -- the column split happens \strong{within} one group, so a
-group's pages always stay together. With a group \code{G}, a \code{page_by} value \code{P}
-and column blocks \code{C}:\tabular{ll}{
-   \code{page_order} \tab page sequence \cr
-   \code{"across"} \tab \code{G} / \code{C} / \code{P} \cr
-   \code{"down"} \tab \code{G} / \code{P} / \code{C} \cr
+A table can be split on three axes, and \code{page_order} names them in the order
+they should nest, \strong{outermost first}:\tabular{ll}{
+   axis \tab what it is \cr
+   \code{"group"} \tab the pages a value-based split made -- \code{as_rtftables(split = "by_value", group_col = )} \cr
+   \code{"rows"} \tab the row pages: \code{page_by}, and every other row split (\code{max_rows} continuation pages, \code{split = "rows"}) \cr
+   \code{"cols"} \tab the column blocks this verb cuts \cr
 }
 
+
+With a group \code{G}, two row pages \code{P1} / \code{P2} and two column blocks \code{C1} /
+\code{C2}, all six orders are expressible; the two usual ones have shorthands:\tabular{ll}{
+   \code{page_order} \tab page sequence \cr
+   \code{"across"} = \code{c("group", "cols", "rows")} \tab \verb{G1 C1 P1}, \verb{G1 C1 P2}, \verb{G1 C2 P1}, ... \cr
+   \code{"down"} = \code{c("group", "rows", "cols")} \tab \verb{G1 P1 C1}, \verb{G1 P1 C2}, \verb{G1 P2 C1}, ... \cr
+   \code{c("cols", "group", "rows")} \tab \verb{C1 G1 P1}, \verb{C1 G1 P2}, \verb{C1 G2 P1}, ... \cr
+}
+
+
+An axis left out of the vector is appended in the default order
+(\code{"group"}, \code{"rows"}, \code{"cols"}), so \code{page_order = "cols"} means "column
+blocks outermost, everything else as usual".
 
 Each page records its own group in \code{rtf_paginate_meta$page_group} (and its
 \code{page_by} value beside it), so none of this depends on reading a page name
 -- which carries the group alone.
+
+One consequence worth knowing: \code{rtf_tables(auto_section = TRUE)} opens a
+section where the page \strong{name} changes, and a page is named by its group.
+So a group's pages land in one section only while \code{"group"} comes first; put
+\code{"cols"} outside it and each column block starts the groups again, giving a
+section per block and group.
 }
 
 \section{Page names}{
