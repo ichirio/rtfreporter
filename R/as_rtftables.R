@@ -297,7 +297,14 @@
 #'       `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` prints and the
 #'       line a section breaks on, so joining them would cut one group into a
 #'       section per BY value; both values stay readable in the page's
-#'       `rtf_paginate_meta` (`page_group` / `page_by`).}
+#'       `rtf_paginate_meta` (`page_group` / `page_by`).  Pages that share a
+#'       heading are numbered with a **`"...n"` tail** -- `"Period 1...1"`,
+#'       `"Period 1...2"` -- so the list stays addressable, R returning the
+#'       *first* match for a repeated list name (which is what
+#'       `pages[["Period 1"]]` and RStudio's `View()` would show).  The tail is
+#'       not part of the heading: `auto_section` / `auto_title` strip it, so
+#'       the printed heading is `"Period 1"` and its pages are one section.  A
+#'       heading used once carries no tail.}
 #'     \item{`group_col`}{when left `NULL`, defaults to the first column **not**
 #'       named in `page_by`, so `group_by = "indent"` (which reads the group
 #'       column) never lands on the BY column -- where every row of a partition
@@ -814,7 +821,7 @@ as_rtftables <- function(x,
       }
       out <- c(out, chunks)
     }
-    return(out)
+    return(.name_pages_uniquely(out))
   }
 
   # ---- listing preparation (#241) ---------------------------------------
@@ -1172,10 +1179,10 @@ as_rtftables <- function(x,
         out <- c(out, pgs)
       }
     }
-    return(out)
+    return(.name_pages_uniquely(out))
   }
 
-  build_pages(body, kw, cell_styles)
+  .name_pages_uniquely(build_pages(body, kw, cell_styles))
 }
 
 
@@ -1249,6 +1256,16 @@ as_rtftables <- function(x,
   tbl
 }
 
+
+# Keep a page list's names unique: pages of one group share a HEADING, and a
+# repeated list name is silently collapsed by everything that addresses a list
+# by name (`pages[["Period 1"]]`, RStudio's View()).  The "...n" tail is
+# stripped again wherever the name is USED as a heading.
+.name_pages_uniquely <- function(pages) {
+  nm <- names(pages)
+  if (!is.null(nm)) names(pages) <- .uniquify_page_names(nm)
+  pages
+}
 
 #' Combine table page lists into one auto-sectioned list
 #'

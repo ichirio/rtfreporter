@@ -32,8 +32,12 @@ test_that("the inner split runs INSIDE each partition, group protected", {
   # third starts a new page instead of being cut.
   pg <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
                      group_by = "indent", max_rows = 8, drop_cols = "period")
-  # every page of one partition carries the same heading -- no ".1" / ".2"
+  # every page of one partition carries the same HEADING; the "...n" tail only
+  # keeps the list addressable (`pages[["Period 1...2"]]`, View())
   expect_identical(.names(pg),
+                   c("Period 1...1", "Period 1...2",
+                     "Period 2...1", "Period 2...2"))
+  expect_identical(rtfreporter:::.page_name_base(.names(pg)),
                    c("Period 1", "Period 1", "Period 2", "Period 2"))
   expect_identical(unname(.rows(pg)), c(8L, 4L, 8L, 4L))
   # every page starts on a block label, never mid-block
@@ -63,7 +67,7 @@ test_that("page_by partitions on RUNS, like by_value", {
   d <- .lab(periods = "Period 1", params = "ALT")
   d2 <- rbind(d, .lab(periods = "Period 2", params = "ALT"), d)
   pg <- as_rtftables(d2, page_by = "period", drop_cols = "period")
-  expect_identical(.names(pg), c("Period 1", "Period 2", "Period 1"))
+  expect_identical(.names(pg), c("Period 1...1", "Period 2", "Period 1...2"))
 })
 
 # ──────── naming ───────────────────────────────────────────────────────────
@@ -76,8 +80,8 @@ test_that("an inner by_value is the OUTER axis, and names the pages alone", {
   pg <- as_rtftables(.lab(), page_by = "period", split = "by_value",
                      group_by = "indent", drop_cols = "period")
   expect_identical(.names(pg),
-                   c("ALT", "ALT", "Bilirubin", "Bilirubin",
-                     "Haemoglobin", "Haemoglobin"))
+                   c("ALT...1", "ALT...2", "Bilirubin...1", "Bilirubin...2",
+                     "Haemoglobin...1", "Haemoglobin...2"))
   m <- attr(pg[[2L]]$data, "rtf_paginate_meta", exact = TRUE)
   expect_identical(m$page_group, "ALT")
   expect_identical(m$page_by,    "Period 2")
@@ -116,8 +120,8 @@ test_that("blank_rows positions are resolved per partition", {
 test_that("page_by composes with paginate_cols() and page_order", {
   rows <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
                        group_by = "indent", max_rows = 8, drop_cols = "period")
-  expect_identical(.names(rows), c("Period 1", "Period 1",
-                                   "Period 2", "Period 2"))
+  expect_identical(.names(rows), c("Period 1...1", "Period 1...2",
+                                   "Period 2...1", "Period 2...2"))
   blocks <- function(p) unname(vapply(p, function(q) names(q$data)[2L],
                                       character(1L)))
   # no group axis here (group_safe names no page), so the two orders are the
@@ -126,11 +130,12 @@ test_that("page_by composes with paginate_cols() and page_order", {
   a <- paginate_cols(rows, at = 4)
   expect_length(a, 8L)                        # 4 row pages x 2 column blocks
   expect_identical(blocks(a), rep(c("V1", "V3"), each = 4L))
-  expect_identical(unname(.names(a)),
+  expect_identical(rtfreporter:::.page_name_base(unname(.names(a))),
                    rep(c("Period 1", "Period 1", "Period 2", "Period 2"), 2L))
+  expect_false(anyDuplicated(.names(a)) > 0L)   # still addressable by name
   d <- paginate_cols(rows, at = 4, page_order = "down")
   expect_identical(blocks(d), rep(c("V1", "V3"), 4L))
-  expect_identical(unname(.names(d)),
+  expect_identical(rtfreporter:::.page_name_base(unname(.names(d))),
                    rep(c("Period 1", "Period 1", "Period 2", "Period 2"),
                        each = 2L))
 })
@@ -192,7 +197,8 @@ test_that("group_col is the OUTER level under split = by_value + a stub", {
   pg <- as_rtftables(ae, page_by = "period", split = "by_value",
                      group_col = "cohort", stub_vars = c("soc", "pt"),
                      drop_cols = c("period", "cohort"))
-  expect_identical(names(pg), c("Cohort A", "Cohort A", "Cohort B", "Cohort B"))
+  expect_identical(rtfreporter:::.page_name_base(names(pg)),
+                   c("Cohort A", "Cohort A", "Cohort B", "Cohort B"))
   expect_identical(unname(.rows(pg)), rep(6L, 4L))
 })
 
@@ -227,7 +233,8 @@ test_that("split = by_value + a stub is unchanged without page_by", {
 test_that("the group is the outer axis and page_by the inner one", {
   pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
                      page_by = "period", drop_cols = c("cohort", "period"))
-  expect_identical(.names(pg), c("G1", "G1", "G2", "G2"))
+  expect_identical(rtfreporter:::.page_name_base(.names(pg)),
+                   c("G1", "G1", "G2", "G2"))
   # each page records the two coordinates it was cut at
   m <- attr(pg[[2L]]$data, "rtf_paginate_meta", exact = TRUE)
   expect_identical(m$page_group, "G1")
@@ -258,7 +265,55 @@ test_that("a group is never broken up by the column split", {
   for (po in c("across", "down")) {
     out <- paginate_cols(pg, at = 4, carry = 1, width = "keep",
                          page_order = po)
-    grp <- names(out)
+    grp <- rtfreporter:::.page_name_base(names(out))
     expect_identical(rle(grp)$values, c("G1", "G2"), info = po)
   }
+})
+
+# ──────── page names stay addressable (#440) ───────────────────────────────
+
+test_that("a repeated heading is numbered so the list stays addressable", {
+  pg <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
+                     group_by = "indent", max_rows = 8, drop_cols = "period")
+  expect_identical(.names(pg), c("Period 1...1", "Period 1...2",
+                                 "Period 2...1", "Period 2...2"))
+  expect_false(anyDuplicated(.names(pg)) > 0L)
+  # by name -- which R collapses onto the first match when names repeat
+  expect_identical(pg[["Period 1...2"]]$data, pg[[2L]]$data)
+})
+
+test_that("a heading used once carries no tail", {
+  pg <- as_rtftables(.lab(), page_by = "period", drop_cols = "period")
+  expect_identical(.names(pg), c("Period 1", "Period 2"))
+})
+
+test_that("the tail is not part of the heading auto_section prints", {
+  pg <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
+                     group_by = "indent", max_rows = 8, drop_cols = "period")
+  doc <- rtf_document() |>
+    rtf_section(secinfo = list(header = rtf_header(rows = list(c(l = "S"))))) |>
+    rtf_tables(pg, auto_section = TRUE)
+  rep0 <- rtfreporter:::.pipe_doc_to_rtfreport(doc)
+  expect_equal(length(rep0$sections), 2L)          # one per heading, not per page
+  labels <- vapply(rep0$sections, function(s) {
+    rows <- s$header$rows
+    paste(unlist(rows[[length(rows)]]), collapse = "")
+  }, character(1L))
+  expect_identical(unname(labels), c("Period 1", "Period 2"))
+})
+
+test_that("auto_title prints the heading without the tail", {
+  pg <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
+                     group_by = "indent", max_rows = 8, drop_cols = "period")
+  doc <- rtf_document() |>
+    rtf_section(secinfo = list(header = NULL, footer = NULL)) |>
+    rtf_tables(pg, auto_title = TRUE)
+  ttl <- doc$titles[[2L]]
+  expect_identical(ttl[[length(ttl)]]$text, "Period 1")
+})
+
+test_that("a heading that already ends in ...n is renumbered, not doubled", {
+  expect_identical(rtfreporter:::.uniquify_page_names(c("A...1", "A...2", "B")),
+                   c("A...1", "A...2", "B"))
+  expect_identical(rtfreporter:::.page_name_base("A...12"), "A")
 })

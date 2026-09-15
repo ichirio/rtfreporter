@@ -429,19 +429,24 @@ pagination setting then applies within one partition** -- `split`, `max_rows`,
 it protects is the BY column itself, so a parameter block inside a period is
 cut wherever `max_rows` happens to fall.
 
-Every page a partition makes carries the **same** name -- the `page_by` value
--- because a page name is the heading
-`rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` prints, not an
-identifier. A section opens where the name **changes**, so one partition is one
-section of however many pages it needed, with nothing to clean up:
+Every page a partition makes carries the same **heading** -- the `page_by`
+value -- because a page name is what
+`rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` prints. A section opens
+where the heading **changes**, so one partition is one section of however many
+pages it needed, with nothing to clean up.
+
+The names themselves stay **unique**: a heading used by several pages carries a
+`"...n"` tail, so the list can still be addressed by name (R returns the *first*
+match for a repeated name -- which is what `pages[["Period 1"]]` and RStudio's
+`View()` would otherwise show you). The tail is not part of the heading.
 
 ```{r pageby_sections, eval = FALSE}
 pages <- as_rtftables(lab, page_by = "period", split = "group_safe",
                       group_by = "indent", max_rows = 20, drop_cols = "period")
 names(pages)
-#>  "Period 1"  "Period 1"  "Period 2"  "Period 2"
+#>  "Period 1...1"  "Period 1...2"  "Period 2...1"  "Period 2...2"
 
-doc |> rtf_tables(pages, auto_section = TRUE)   # 2 sections, 2 pages each
+doc |> rtf_tables(pages, auto_section = TRUE)   # 2 sections headed "Period 1" / "Period 2"
 ```
 
 Two details worth knowing:

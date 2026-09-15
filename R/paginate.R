@@ -560,7 +560,7 @@ paginate.data.frame <- function(x, ...) {
     chunk
   })
   # Carry chunk names through `lapply` (which otherwise drops them).
-  if (!is.null(chunk_names)) names(out) <- chunk_names
+  if (!is.null(chunk_names)) names(out) <- .uniquify_page_names(chunk_names)
   out
 }
 
@@ -627,6 +627,40 @@ paginate.data.frame <- function(x, ...) {
     list(rows = seq.int(starts[i], ends[i]), label = lab[starts[i]]))
 }
 
+# ---------------------------------------------------------------------------
+#  Page names: a HEADING, kept unique with a "...n" tail
+# ---------------------------------------------------------------------------
+#  Pages of one group / partition share a heading, so page names repeat -- and
+#  a repeated name is a bad list name: `pages[["Period 1"]]`, RStudio's View()
+#  and anything else that addresses a list BY NAME silently sees the first
+#  match only.
+#
+#  So a repeated name carries a serial: "Period 1...1", "Period 1...2".  The
+#  tail is "..." + digits, a spelling a real heading is unlikely to end in, and
+#  everything that USES a page name as a heading -- `rtf_tables()`'s
+#  auto_section / auto_title -- strips it first, so the printed heading is
+#  "Period 1" and a run of them is still one section.  A name that occurs once
+#  keeps no tail.
+.PAGE_NAME_TAIL <- "[.][.][.][0-9]+$"
+
+# The heading a page name carries, without its uniquifying tail.
+.page_name_base <- function(nm) {
+  if (is.null(nm)) return(nm)
+  sub(.PAGE_NAME_TAIL, "", nm)
+}
+
+# Number the pages that share a heading, leaving a heading used once alone.
+.uniquify_page_names <- function(nm) {
+  if (is.null(nm)) return(nm)
+  base <- .page_name_base(nm)
+  out  <- base
+  for (b in unique(base[nzchar(base) & !is.na(base)])) {
+    i <- which(base == b)
+    if (length(i) > 1L) out[i] <- paste0(b, "...", seq_along(i))
+  }
+  out
+}
+
 # `group_col` is the OUTER page axis, `page_by` the inner one.
 #
 # Only a value-based split ("by_value") turns a group into a page of its own,
@@ -663,7 +697,7 @@ paginate.data.frame <- function(x, ...) {
     meta$page_name  <- nm[i]
     attr(pages[[i]], "rtf_paginate_meta") <- meta
   }
-  names(pages) <- nm
+  names(pages) <- .uniquify_page_names(nm)
   pages
 }
 

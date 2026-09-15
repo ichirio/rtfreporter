@@ -266,12 +266,13 @@ test_that("a name follows its row page whatever the order", {
   d  <- .df()
   pg <- list(g1 = rtftable(d[1:3, , drop = FALSE]),
              g2 = rtftable(d[4:6, , drop = FALSE]))
+  base <- rtfreporter:::.page_name_base
   # "down": the row page advances first, so its two column pages are adjacent
-  expect_equal(names(paginate_cols(pg, at = 4, width = "keep",
-                                   page_order = "down")),
+  expect_equal(base(names(paginate_cols(pg, at = 4, width = "keep",
+                                        page_order = "down"))),
                c("g1", "g1", "g2", "g2"))
-  # "across": the column block advances first, so equal names interleave
-  expect_equal(names(paginate_cols(pg, at = 4, width = "keep")),
+  # "across": the column block advances first, so equal headings interleave
+  expect_equal(base(names(paginate_cols(pg, at = 4, width = "keep"))),
                c("g1", "g2", "g1", "g2"))
 })
 
@@ -280,12 +281,16 @@ test_that("`page_order` is validated", {
                "arg")
 })
 
-test_that("page names are carried through unchanged", {
+test_that("page names are carried through, kept addressable", {
   d  <- .df()
   pg <- list(one = rtftable(d[1:3, , drop = FALSE]),
              one = rtftable(d[4:6, , drop = FALSE]))
   out <- paginate_cols(pg, at = 4, width = "keep")
-  expect_equal(names(out), rep("one", 4L))
+  # the HEADING is carried onto every column page ...
+  expect_equal(rtfreporter:::.page_name_base(names(out)), rep("one", 4L))
+  # ... and the list stays addressable by name
+  expect_equal(names(out), paste0("one...", 1:4))
+  expect_false(is.null(out[["one...3"]]))
 })
 
 test_that("an unnamed page list stays unnamed", {

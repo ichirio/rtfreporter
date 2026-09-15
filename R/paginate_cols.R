@@ -525,8 +525,12 @@
 #'
 #' @section Page names:
 #' A column page inherits the name of the row page it was cut from, whatever
-#' `page_order` is -- that is the only name there is. Under `"down"` pages that
-#' share a name are therefore no longer adjacent.
+#' `page_order` is -- that is the only name there is. Under `"across"` pages
+#' that share a name are therefore no longer adjacent.
+#'
+#' Pages sharing a heading are numbered with a `"...n"` tail
+#' (`"Period 1...1"`, `"Period 1...2"`) so the returned list stays addressable
+#' by name; the tail is stripped wherever the name is used as a heading.
 #'
 #' That is worth knowing because `rtf_tables(auto_section = TRUE)` opens a
 #' section where the name **changes**: a run of pages sharing a name is one
@@ -680,6 +684,6 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
       }
     }
   }
-  if (!is.null(in_names)) names(out) <- onames
+  if (!is.null(in_names)) names(out) <- .uniquify_page_names(onames)
   out
 }

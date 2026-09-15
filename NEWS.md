@@ -2,6 +2,31 @@
 
 ### Breaking changes
 
+- **Page names are unique in the list and headings where they are printed**
+  (#440).  Since a page name became a heading (#433, #437), the pages of one
+  group carry the same one — and a repeated **list name** is a bad key, because
+  R returns the *first* match for it:
+
+  ```r
+  l <- list(a = "PAGE-1", a = "PAGE-2");  l[["a"]]   #> "PAGE-1"
+  ```
+
+  RStudio's `View()` and object inspector address elements by name, so a
+  paginated list looked as though every page held page 1's columns and page 1's
+  stub (#439) — the pages were right all along.
+
+  A heading used by several pages now carries a **`"...n"` tail**:
+
+  ```r
+  as_rtftables(lab, page_by = "period", split = "group_safe", max_rows = 8)
+  #> "Period 1...1"  "Period 1...2"  "Period 2...1"  "Period 2...2"
+  ```
+
+  and everything that *uses* the name as a heading strips it first —
+  `auto_section` (both the comparison and the printed label) and `auto_title`
+  — so those four pages are still **two** sections, headed `"Period 1"` and
+  `"Period 2"`.  A heading used once carries no tail.
+
 - **A page split on two axes is named by the outer one alone** (#437).  With
   `group_col` **and** `page_by` the name joined the two — `"Period 1.1"` for
   the group `"Period 1"` and the BY value `"1"`, which reads exactly like the

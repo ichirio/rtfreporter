@@ -104,7 +104,8 @@ test_that("paginate_cols() copies the row page's name onto every column page", {
                    stringsAsFactors = FALSE)
   pg <- list(one = rtftable(df), two = rtftable(df))
   out <- paginate_cols(pg, at = 4, width = "keep", page_order = "down")
-  expect_identical(names(out), c("one", "one", "two", "two"))
+  expect_identical(rtfreporter:::.page_name_base(names(out)),
+                   c("one", "one", "two", "two"))
   # "down" keeps a table's column pages adjacent, so each table is one section
   expect_equal(.sections_of(out), 2L)
   # "across" interleaves them, so the name changes on every page
