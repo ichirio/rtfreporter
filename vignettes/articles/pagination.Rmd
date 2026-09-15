@@ -460,6 +460,21 @@ as_rtftables(lab, page_by = "period", split = "group_safe",
   paginate_cols(at = 6, page_order = "down")
 ```
 
+With `split = "by_value"` the split makes a page per **group** value, and then
+the group is the **outer** axis with `page_by` inside it -- a group's pages
+stay together, the BY values running in order, and the name reads outer-first:
+
+```{r pageby_byvalue, eval = FALSE}
+as_rtftables(ae, split = "by_value", group_col = "cohort", page_by = "period",
+             drop_cols = c("cohort", "period"))
+#>  "Cohort A.P1"  "Cohort A.P2"  "Cohort B.P1"  "Cohort B.P2"
+```
+
+Add `paginate_cols()` and the column block takes its place between them or
+under them, as `page_order` says (see *Which axis the page number advances
+along*): `"across"` gives group / column block / `page_by`, `"down"` gives
+group / `page_by` / column block.
+
 
 ## 4. Pre-splitting the data yourself
 
@@ -638,10 +653,12 @@ page 2  row 1 / cols 2    page 5  row 2 / cols 2
 page 3  row 1 / cols 3    page 6  row 2 / cols 3
 ```
 
-### Which axis is the outer level -- `page_order`
+### Which axis the page number advances along -- `page_order`
 
-`page_order = "down"` turns that around: the **column block** becomes the outer
-level, so one block is read all the way down before the next block starts.
+`page_order` says which axis the **page number advances along first**:
+`"across"` (the default) advances **across the columns** -- the column block
+first, the row pages running inside it -- and `"down"` advances **down the
+rows** -- the row page first, its column blocks following it.
 
 ```{r pagcols_order, eval = FALSE}
 as_rtftables(df, split = "group_safe", max_rows = 20) |>
@@ -649,18 +666,34 @@ as_rtftables(df, split = "group_safe", max_rows = 20) |>
 ```
 
 ```
-page 1  row 1 / cols 1    page 4  row 1 / cols 2
-page 2  row 2 / cols 1    page 5  row 2 / cols 2
-page 3  row 3 / cols 1    page 6  row 3 / cols 2
+"across"                         "down"
+page 1  cols 1 / row 1           page 1  row 1 / cols 1
+page 2  cols 1 / row 2           page 2  row 1 / cols 2
+page 3  cols 2 / row 1           page 3  row 2 / cols 1
+page 4  cols 2 / row 2           page 4  row 2 / cols 2
 ```
 
 The pages themselves are identical under either setting -- only their order
-differs -- so pick the one your deliverable reads in: `"across"` (the default)
-when a reader follows a row band across the sheet, `"down"` when each column
-block is a self-contained table of its own.
+differs -- so pick the one your deliverable reads in: `"down"` when a reader
+follows a row band across the sheet, `"across"` when each column block is a
+self-contained table read on its own.
+
+A **group** sits above both. When the row pagination made a page per group
+value -- `as_rtftables(split = "by_value", group_col = )`, with `page_by`
+running inside it -- the column split happens **within** one group, so a
+group's pages always stay together:
+
+| `page_order` | page sequence |
+|---|---|
+| `"across"` | group / column block / `page_by` |
+| `"down"`   | group / `page_by` / column block |
+
+Each page records its own group (in `rtf_paginate_meta$page_group`), so the
+column split never has to read a page name to know where a group ends.
 
 One thing to know about the names: a page's **name** follows the row page it
-was cut from, so under `"down"` pages that share a name are no longer adjacent.
+was cut from, so under `"across"` pages that share a name are no longer
+adjacent.
 That is a display question rather than a sectioning one, because
 `rtf_tables(auto_section = TRUE)` opens a section at every **named** page --
 equal names are not merged -- and a page whose name is `""` joins the section

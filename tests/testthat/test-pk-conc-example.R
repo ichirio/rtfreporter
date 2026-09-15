@@ -81,7 +81,8 @@ HALF   <- length(VISITS) / 2L
     border = "tfl"
   ) |>
     set_decimal_split(cols = VISITS) |>
-    paginate_cols(at = HALF + 2L)  # cut the visits down the middle
+    paginate_cols(at = HALF + 2L,   # cut the visits down the middle
+                  page_order = "down")
 }
 
 # The two column blocks the example produces.

@@ -138,7 +138,9 @@ pages <- as_rtftables(
   # then cut the visits in half, repeating the time-point stub on both pages.
   # A column keeps its width whatever page it lands on, so each block is the
   # stub plus six visits = 12845 twips, 94% of the sheet.
-  paginate_cols(at = HALF + 2L)
+  # "down": the row band advances first, so its two column blocks are
+  # adjacent -- the reader follows one time point across the sheet.
+  paginate_cols(at = HALF + 2L, page_order = "down")
 
 # ── running header ─────────────────────────────────────────────────────────
 #

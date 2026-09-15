@@ -91,12 +91,11 @@ test_that("paginate_cols() copies the row page's name onto every column page", {
                    B_n = c("84", "84"), B_mean = c("44.8", "11.9"),
                    stringsAsFactors = FALSE)
   pg <- list(one = rtftable(df), two = rtftable(df))
-  out <- paginate_cols(pg, at = 4, width = "keep")
+  out <- paginate_cols(pg, at = 4, width = "keep", page_order = "down")
   expect_identical(names(out), c("one", "one", "two", "two"))
   # ... so a named list gives a section per page, whatever page_order says
   expect_equal(.sections_of(out), 4L)
-  expect_equal(.sections_of(paginate_cols(pg, at = 4, width = "keep",
-                                          page_order = "down")), 4L)
+  expect_equal(.sections_of(paginate_cols(pg, at = 4, width = "keep")), 4L)
   # blanking the continuation names is what groups them
   nm <- names(out); nm[c(2L, 4L)] <- ""; names(out) <- nm
   expect_equal(.sections_of(out), 2L)
