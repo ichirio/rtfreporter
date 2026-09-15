@@ -734,6 +734,57 @@ unless you set it); `carry =` overrides that, and `carry = integer(0)` repeats
 nothing. A carry column is removed from the blocks automatically, so it is
 never printed twice on one page.
 
+### A header whose values change per page -- `set_col_header(values = )`
+
+A header is usually one shape with a few values that change page to page --
+`(N=120)` for one period, `(N=118)` for the next. Write it **once**, with a
+`{token}` where a value belongs, and give `set_col_header()` a table of values
+keyed by the page:
+
+```{r hdr_values, eval = FALSE}
+hdr <- rtf_col_header(
+  list(col_cell(1L, ""),
+       col_cell(c( 2L,  9L), "Placebo
+(N={n_pbo})
+n(%)"),
+       col_cell(c(10L, 17L), "TAK-003
+(N={n_trt})
+n(%)")),
+  c("Parameter", rep(VISITS, 2))
+)
+
+vals <- data.frame(
+  group = c("Period 1", "Period 2", "Period 3"),
+  n_pbo = c(120, 118, 238),
+  n_trt = c(115, 112, 227)
+)
+
+as_rtftables(lab, split = "by_value", group_col = "period", ...) |>
+  set_col_header(hdr, values = vals) |>
+  paginate_cols(by = "____", carry = 1)
+```
+
+The key column is named after the **axis** it matches, the vocabulary
+`page_order` uses: `group` (default -- the value a `"by_value"` page was cut
+for), `rows` (the `page_by` value) or `name` (the page's unique name); several
+may be combined. The keys live in the page's metadata, so they survive
+`drop_cols` and the column split.
+
+Mistakes are errors, not silently wrong headers: a page with no row, a row no
+page used, or a token with no value all stop the call and name what is
+missing. `header_map()` shows what every page ended up with:
+
+```{r hdr_map, eval = FALSE}
+header_map(pages)
+#>  page name          group    rows row cell from to text
+#>  1    Period 1...1  Period 1 1    1   2    2    9  "Placebo
+(N=120)
+n(%)"
+#>  1    Period 1...1  Period 1 1    1   3    10   17 "TAK-003
+(N=115)
+n(%)"
+```
+
 ### Where to cut, and what the header says -- `by` / `col_header`
 
 `at` and `cols` are positions. When the grouping is already **in the column

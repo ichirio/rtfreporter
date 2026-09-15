@@ -8,9 +8,9 @@
 \usage{
 set_col_header(x, ...)
 
-\method{set_col_header}{rtftable}(x, ..., align = NULL)
+\method{set_col_header}{rtftable}(x, ..., values = NULL, by = NULL, align = NULL)
 
-\method{set_col_header}{list}(x, ...)
+\method{set_col_header}{list}(x, ..., values = NULL, by = NULL)
 }
 \arguments{
 \item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}}).}
@@ -20,6 +20,42 @@ vector (a label row, optionally named to place labels by column name) or a
 list of \code{\link[=col_cell]{col_cell()}} cells (a spanning / cell row, whose \code{pos} may be
 column names or final positions).  Alternatively a single pre-built
 \code{\link[=rtf_col_header]{rtf_col_header()}} object.  Passing nothing clears the header.}
+
+\item{values}{Optional table of \strong{per-page values} for the \code{{tokens}} in
+the header, one row per page key: write the header once and let each page
+take its own numbers.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{hdr  <- rtf_col_header(
+  list(col_cell(1L, ""),
+       col_cell(c(2L, 9L), "Placebo\\n(N=\{n_pbo\})\\nn(\%)")),
+  c("Parameter", visits))
+vals <- data.frame(group = periods, n_pbo = c(120, 118, 238))
+pages |> set_col_header(hdr, values = vals)
+}\if{html}{\out{</div>}}
+
+A token is \code{{name}}, \code{name} being a column of \code{values}; doubling a brace
+prints it literally; the render-time tokens (\code{{PAGE}},
+\code{{TOTAL_PAGES}}, \code{{DATE}},
+\code{{BOOK_PAGE}}, \code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}) are left for the
+renderer, and any other unfilled token is an error. Every row of \code{values}
+must be used by some page, and every page must find a row -- a mistyped
+level is an error, not a silently wrong header. \code{\link[=header_map]{header_map()}} shows what
+each page ended up with.}
+
+\item{by}{Which page key \code{values} is matched on, named after the axis it
+matches -- the same vocabulary \code{paginate_cols(page_order = )} uses. The
+key column of \code{values} carries that name.
+\describe{
+\item{\code{"group"}}{(default) the value a \code{split = "by_value"} page was cut
+for (\code{rtf_paginate_meta$page_group}); with no group axis it falls back
+to the page's name without its \code{"...n"} tail, and says so once.}
+\item{\code{"rows"}}{the page's \code{page_by} value.}
+\item{\code{"name"}}{the page's name, \code{"...n"} included -- always unique, so
+this addresses one page exactly.}
+}
+Several may be given (\code{by = c("group", "rows")}) to match on the
+combination. The keys live in the page's metadata, so they survive
+\code{drop_cols} and the column split.}
 
 \item{align}{Optional column-header text alignment for the final columns:
 \code{"left"}/\code{"center"}/\code{"right"} (applied to every column) or a character
