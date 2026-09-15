@@ -246,3 +246,28 @@ test_that("align_count_pct rejects what is neither a switch nor a format", {
   expect_error(as_rtftables(df, align_count_pct = "nope"),
                "not a built-in cell format")
 })
+
+test_that("fmt_value_paren prints 100% without decimals", {
+  # format_count_pct()'s `pct >= 100` branch formats that one as an integer;
+  # the string-side formatter follows it (#447).
+  out <- unbsp(fmt_value_paren(c("12 (100.0)", "6 (50.0)", "1 (8.3)")))
+  expect_identical(out, c("12  (100)", " 6 (50.0)", " 1  (8.3)"))
+  # the "%" is kept
+  expect_identical(unbsp(fmt_value_paren(c("12 (100.0%)", "6 (50.0%)"))),
+                   c("12  (100%)", " 6 (50.0%)"))
+  # already an integer, and a value above 100
+  expect_identical(unbsp(fmt_value_paren(c("12 (100)", "13 (105.0)"))),
+                   c("12 (100)", "13 (105)"))
+})
+
+test_that("fmt_value_paren leaves a non-numeric parenthetical alone", {
+  out <- unbsp(fmt_value_paren(c("12 (<100.0)", "6 (50.0)", "5 (BLQ)")))
+  expect_identical(out, c("12 (<100.0)", " 6   (50.0)", " 5    (BLQ)"))
+})
+
+test_that("fmt_value_paren agrees with realign_count_pct on the 100 branch", {
+  x <- c("12 (100.0)", "6 (50.0)")
+  # same convention: 100 as an integer, the rest keeping one decimal
+  expect_identical(trimws(unbsp(fmt_value_paren(x))),
+                   trimws(unbsp(realign_count_pct(x))))
+})
