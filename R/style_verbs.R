@@ -677,6 +677,7 @@ set_col_header.rtftable <- function(x, ..., align = NULL) {
   ref <- .style_ref_df(x)
   nc  <- ncol(ref)
   cn  <- names(ref)
+  .check_col_header_width(header, nc, "set_col_header")
 
   if (!is.null(x$data_list)) {
     x$col_header_list <-
@@ -699,6 +700,37 @@ set_col_header.rtftable <- function(x, ..., align = NULL) {
     for (j in seq_len(nc)) x$col_spec[[j]]$header_align <- a[[j]]
   }
   x
+}
+
+# A plain label row is one label per printed column, so a length that does not
+# match the table is a mistake rather than something to render.  It is worth an
+# error because of one case in particular: a header written for the WHOLE table
+# and applied after `paginate_cols()`, where every page keeps only its own
+# columns -- each page then printed the first N labels of the full header, and
+# nothing said so.  Rows built from `col_cell()` are positional and carry their
+# own coordinates, so they are not checked here.
+.check_col_header_width <- function(header, nc, arg = "col_header") {
+  rows <- if (is.null(header)) list()
+          else if (is.list(header) && !inherits(header, "rtf_col_cell")) header
+          else list(header)
+  for (row in rows) {
+    if (!is.character(row)) next
+    labels <- row
+    if (length(labels) == 1L && grepl("|", labels, fixed = TRUE)) {
+      labels <- trimws(strsplit(labels, "|", fixed = TRUE)[[1L]])
+    }
+    if (length(labels) <= 1L || length(labels) == nc) next
+    stop(sprintf(paste0(
+      "`%s`: the label row has %d labels but the table has %d printed ",
+      "column%s.
+  A header row carries one label per column.  After ",
+      "`paginate_cols()` each page keeps only its own columns, so a header ",
+      "written for the whole table no longer fits: set it BEFORE the column ",
+      "split (it is then sliced per page, spanning cells included), pass it ",
+      "as `paginate_cols(col_header = )`, or give each page its own header."),
+      arg, length(labels), nc, if (nc == 1L) "" else "s"), call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 #' @rdname set_col_header

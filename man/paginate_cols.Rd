@@ -12,7 +12,9 @@ paginate_cols(x, ...)
   x,
   at = NULL,
   cols = NULL,
+  by = NULL,
   carry = NULL,
+  col_header = NULL,
   allow_span_break = TRUE,
   width = c("fill", "keep"),
   page_order = c("across", "down"),
@@ -23,7 +25,9 @@ paginate_cols(x, ...)
   x,
   at = NULL,
   cols = NULL,
+  by = NULL,
   carry = NULL,
+  col_header = NULL,
   allow_span_break = TRUE,
   width = c("fill", "keep"),
   page_order = c("across", "down"),
@@ -42,10 +46,36 @@ Every page in a list must have the same columns.}
 \item{cols}{Explicit column blocks as a list, e.g. \code{list(2:3, 4:5)}. Give
 either \code{at} or \code{cols}.}
 
+\item{by}{Where to cut, taken from the \strong{columns themselves} instead of
+positions: either a \strong{separator} found in the column names (a single
+string -- \code{"Placebo____Day 1"} with \code{by = "____"} keys on \code{"Placebo"}), or
+one \strong{key per column}. Each run of one key becomes a block, so a wide
+table laid out as \verb{<group>____<visit>} splits per group with no positions
+to count. Carry columns belong to no block. Give one of \code{at}, \code{cols} or
+\code{by}.}
+
 \item{carry}{Row-heading columns repeated on every page. Defaults to the
 table's \code{row_title} (column 1 unless set). \code{carry = integer(0)} repeats
 nothing. Carry columns are removed from the blocks automatically, so they
 are never printed twice on a page.}
+
+\item{col_header}{The header each page should carry, written \strong{once} for
+the whole table:
+\describe{
+\item{a header}{in the \strong{full table's} coordinates -- a label row, or
+rows of \code{\link[=col_cell]{col_cell()}} -- sliced to each page's columns, spanning cells
+clipped, exactly as a header already on the table is.}
+\item{\code{"names"}}{build the \strong{two-level} header the column names
+already carry: the \code{by} key on top (the group), the rest of the name
+below (the visit). Needs \code{by} to be a separator. A carry column keeps
+its own label and sits under no spanning cell.}
+\item{\code{NULL}}{(default) leave the table's own header, which is sliced
+per page either way.}
+}
+This is the place to put it: a header written for the whole table does
+\strong{not} fit a page that kept only some of its columns, so applying one
+after the split (\code{set_col_header()} on the page list,
+\code{rtf_tables(col_header = )}) is an error.}
 
 \item{allow_span_break}{Allow a cut inside a spanning header cell. Default
 \code{TRUE}.}
@@ -126,6 +156,23 @@ Spanning cells are clipped to each page's columns. By default a cut may
 fall inside a spanning group, and the group's label is repeated over its
 remaining columns on each page; \code{allow_span_break = FALSE} rejects such a
 cut instead.
+}
+
+\section{Columns named \verb{<group>__<item>}}{
+
+The common wide layout -- one column per treatment x visit -- splits per
+group and wants a two-level header, group over visit. \code{by} and
+\code{col_header = "names"} do both from the names:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{as_rtftables(df, split = "by_value", group_col = "period",
+             stub_vars = c("row_grp1", "label")) |>
+  paginate_cols(by = "____", carry = 1, col_header = "names")
+}\if{html}{\out{</div>}}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{page 1                        page 2
+|            | Placebo      | |            | HOGE-001     |
+| Group      | D1 | D2 | D8 | | Group      | D1 | D2 | D8 |
+}\if{html}{\out{</div>}}
 }
 
 \section{Page order}{

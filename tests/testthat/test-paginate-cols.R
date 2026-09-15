@@ -76,7 +76,7 @@ test_that("carry = integer(0) repeats nothing", {
 test_that("paginate_cols() validates its arguments", {
   tbl <- rtftable(.df())
   expect_error(paginate_cols(tbl), "`at`")
-  expect_error(paginate_cols(tbl, at = 4, cols = list(2:3)), "not both")
+  expect_error(paginate_cols(tbl, at = 4, cols = list(2:3)), "not at and cols")
   expect_error(paginate_cols(tbl, at = 1), "nothing before column 1")
   expect_error(paginate_cols(tbl, at = 99), "at")
   expect_error(paginate_cols(tbl, cols = 2:3), "list of column blocks")
@@ -411,4 +411,99 @@ test_that("absolute widths ignore `width` entirely", {
 
 test_that("`width` is validated", {
   expect_error(paginate_cols(.rel_tbl(), at = 6L, width = "nope"), "arg")
+})
+
+# ──────── by = : blocks from the column names (#435) ───────────────────────
+
+.wide <- function() {
+  d <- data.frame(Parameter = c("n", "Mean (SD)"), stringsAsFactors = FALSE)
+  for (a in c("Placebo", "HOGE-001")) for (v in c("Day 1", "Day 2", "Day 8")) {
+    d[[paste0(a, "____", v)]] <- "1"
+  }
+  d
+}
+
+test_that("by = a separator cuts on the part before it", {
+  pg <- paginate_cols(rtftable(.wide()), by = "____", carry = 1, width = "keep")
+  expect_length(pg, 2L)
+  expect_identical(names(pg[[1L]]$data),
+                   c("Parameter", paste0("Placebo____Day ", c(1, 2, 8))))
+  expect_identical(names(pg[[2L]]$data),
+                   c("Parameter", paste0("HOGE-001____Day ", c(1, 2, 8))))
+})
+
+test_that("by = a key vector cuts on a grouping that is not in the names", {
+  pg <- paginate_cols(rtftable(.wide()), by = c(NA, rep(c("A", "B"), each = 3L)),
+                      carry = 1, width = "keep")
+  expect_length(pg, 2L)
+  expect_identical(vapply(pg, function(p) ncol(p$data), integer(1L)),
+                   c(4L, 4L))
+})
+
+test_that("at / cols / by are mutually exclusive", {
+  expect_error(paginate_cols(rtftable(.wide()), at = 3, by = "____"),
+               "not at and by")
+})
+
+# ──────── col_header = : written once, for the whole table ─────────────────
+
+test_that("col_header = \"names\" builds the two-level header per page", {
+  pg <- paginate_cols(rtftable(.wide()), by = "____", carry = 1,
+                      col_header = "names", width = "keep")
+  h1 <- pg[[1L]]$col_header
+  # the label row: the stub keeps its name, the rest keep the visit
+  expect_identical(h1[[2L]], c("Parameter", "Day 1", "Day 2", "Day 8"))
+  # the spanning row: one cell over the group's columns
+  span <- Filter(function(c1) nzchar(c1$label %||% ""), h1[[1L]])
+  expect_length(span, 1L)
+  expect_identical(span[[1L]]$label, "Placebo")
+  expect_identical(c(span[[1L]]$from, span[[1L]]$to), c(2L, 4L))
+  expect_identical(Filter(function(c1) nzchar(c1$label %||% ""),
+                          pg[[2L]]$col_header[[1L]])[[1L]]$label, "HOGE-001")
+})
+
+test_that("col_header = \"names\" needs a separator `by`", {
+  expect_error(paginate_cols(rtftable(.wide()), at = 5, col_header = "names"),
+               "needs `by`")
+})
+
+test_that("a full-table col_header is sliced to each page", {
+  hdr <- c("Label", paste("Visit", 1:6))
+  pg  <- paginate_cols(rtftable(.wide()), at = 5, carry = 1,
+                       col_header = hdr, width = "keep")
+  expect_identical(unlist(pg[[1L]]$col_header),
+                   c("Label", "Visit 1", "Visit 2", "Visit 3"))
+  expect_identical(unlist(pg[[2L]]$col_header),
+                   c("Label", "Visit 4", "Visit 5", "Visit 6"))
+})
+
+test_that("a col_header of the wrong width is refused", {
+  expect_error(paginate_cols(rtftable(.wide()), at = 5, col_header = c("a", "b")),
+               "label row has 2 labels")
+})
+
+# ──────── the width guard on the after-the-split paths ─────────────────────
+
+test_that("set_col_header() refuses a header wider than the page", {
+  pg <- paginate_cols(rtftable(.wide()), at = 5, carry = 1, width = "keep")
+  expect_error(set_col_header(pg, c("Label", paste("Visit", 1:6))),
+               "the table has 4 printed columns")
+  # ... and points at the fix
+  expect_error(set_col_header(pg, c("Label", paste("Visit", 1:6))),
+               "BEFORE the column split")
+})
+
+test_that("rtf_tables(col_header = ) refuses it too", {
+  pg  <- paginate_cols(rtftable(.wide()), at = 5, carry = 1, width = "keep")
+  doc <- rtf_document() |>
+    rtf_section(secinfo = list(header = NULL, footer = NULL))
+  expect_error(rtf_tables(doc, pg, col_header = c("Label", paste("Visit", 1:6))),
+               "rtf_tables(col_header)", fixed = TRUE)
+})
+
+test_that("a right-width header still applies to every page", {
+  pg <- paginate_cols(rtftable(.wide()), at = 5, carry = 1, width = "keep")
+  out <- set_col_header(pg, c("Lab", "A", "B", "C"))
+  expect_identical(unlist(out[[1L]]$col_header), c("Lab", "A", "B", "C"))
+  expect_identical(unlist(out[[2L]]$col_header), c("Lab", "A", "B", "C"))
 })

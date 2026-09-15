@@ -898,6 +898,10 @@ rtftable <- function(
 
   # -- column header (single- vs multi-DF) --------------------------------
   if (has("col_header")) {
+    # One label per printed column -- and a page cut out by paginate_cols()
+    # keeps only its own, so a header written for the whole table does not fit
+    # it (#435).
+    .check_col_header_width(ov$col_header, ncol_df, "rtf_tables(col_header)")
     if (!is.null(tbl$data_list)) {
       tbl$col_header_list <- .normalize_multi_col_header(
         ov$col_header, length(tbl$data_list), ncol_df = ncol_df,
