@@ -186,6 +186,33 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
   and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html)
 - **External API spec** — [the public API surface](https://ichirio.github.io/rtfreporter/articles/external-api.html)
 
+## Coding with an AI assistant
+
+rtfreporter is new, so a general-purpose chat assistant has never seen it.
+Asked for rtfreporter code it reaches for `r2rtf` verbs, or invents arguments
+that look right -- and you cannot tell which parts are real without checking
+every name against the reference.
+
+Two briefings fix that. Each is one self-contained Markdown file, sized to sit
+in a single chat session alongside the conversation:
+
+| | For | Holds |
+|---|---|---|
+| **[⬇ AI user manual](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md)** | *using* the package | the workflow, every `as_rtftables()` argument, the four clinical table shapes (DM / AE / PK / LB), headers and page tokens, listings, figures, borders, the complete list of exported functions, and the mistakes assistants actually make |
+| **[⬇ AI developer manual](https://ichirio.github.io/rtfreporter/rtfreporter-ai-dev-manual.md)** | *working on* the package | the invariants, the S3 object model and rendering pipeline, the `as_rtftables()` kwargs contract, how to add a table-object adapter, the test / lint / docs conventions, and the issue -> PR -> release workflow |
+
+Download the one that matches the task, attach it at the **start** of the
+session, and say *"use this manual"*.
+
+**Attach one, not both.** They carry opposite instructions -- the user manual
+says never to touch internals, the developer manual requires it -- so handing
+over both blunts each. Each opens with a scope line saying which it is.
+
+Every code example in the user manual is executed against the package, and its
+function list is checked against `NAMESPACE`, by the test suite. A manual that
+drifts from the API fails CI, because an assistant cannot tell a stale manual
+from a fresh one.
+
 ## Status & roadmap
 
 `rtfreporter` is in active **pre-1.0 development** and carries the

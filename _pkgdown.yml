@@ -127,6 +127,18 @@ navbar:
           href: articles/multistub-section-split.html
         - text: "Rendering, post-processing & assembly"
           href: articles/output.html
+        # ── For AI assistants ───────────────────────────────────────────
+        # Self-contained Markdown briefings, sized to be attached at the start
+        # of a chat session -- one per audience, and only ever ONE per session
+        # (they carry opposite instructions about touching internals).  They
+        # are static assets (pkgdown/assets/), NOT articles, so the hrefs have
+        # no `articles/` prefix and no `.html` extension.
+        - text: -------
+        - text: "For AI assistants"
+        - text: "AI user manual (download .md)"
+          href: rtfreporter-ai-user-manual.md
+        - text: "AI developer manual (download .md)"
+          href: rtfreporter-ai-dev-manual.md
         # ── Worked clinical examples ────────────────────────────────────
         - text: -------
         - text: "Worked clinical examples"
