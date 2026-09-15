@@ -1221,8 +1221,12 @@ as_rtftables <- function(x,
 #'
 #' For a *single* table whose grouping variable is a real **column** of the
 #' body, you usually do not need this at all: `as_rtftables(x, split =
-#' "by_value", group_col = ...)` already names each page by the group value, so
-#' `auto_section = TRUE` gives one section per group directly.
+#' "by_value", group_col = ...)` (or `page_by = ...`) already names each page by
+#' the group value, so `auto_section = TRUE` gives one section per group
+#' directly -- as long as each group fits on **one** page.  A group that needs
+#' several comes back as `"<value>.1"`, `"<value>.2"`, ..., which are different
+#' names and so different sections; blank the continuation names to fold them
+#' back into one.
 #'
 #' @param ... Named arguments, each either an `rtftable` or a list of
 #'   `rtftable`s (e.g. the result of [as_rtftables()]).  Each argument **name**

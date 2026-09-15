@@ -56,3 +56,48 @@ test_that("the result drives auto_section: one section per argument", {
   rep <- rtfreporter:::.pipe_doc_to_rtfreport(doc)
   expect_equal(length(rep$sections), 2L)            # not 5 (one per page)
 })
+
+# ──────── what auto_section actually groups (#425) ─────────────────────────
+#
+# The rule is per NAMED element, not per run of equal names -- the claim
+# `?paginate_cols` and the pagination article used to make.  These pin it.
+
+.sections_of <- function(tabs) {
+  doc <- rtf_document() |>
+    rtf_section(secinfo = list(header = rtf_header(rows = list(c(l = "Study"))))) |>
+    rtf_tables(tabs, auto_section = TRUE)
+  length(rtfreporter:::.pipe_doc_to_rtfreport(doc)$sections)
+}
+
+test_that("equal consecutive names do NOT merge: a section per named page", {
+  p <- .pages(4L)
+  names(p) <- c("A", "A", "B", "B")
+  expect_equal(.sections_of(p), 4L)
+})
+
+test_that("a blank name falls through into the section before it", {
+  p <- .pages(4L)
+  names(p) <- c("A", "", "B", "")
+  expect_equal(.sections_of(p), 2L)
+})
+
+test_that("an unnamed page list opens no auto sections at all", {
+  expect_equal(.sections_of(.pages(3L)), 1L)   # the document's own section
+})
+
+test_that("paginate_cols() copies the row page's name onto every column page", {
+  df <- data.frame(Parameter = c("Mean", "SD"),
+                   A_n = c("86", "86"), A_mean = c("45.2", "12.3"),
+                   B_n = c("84", "84"), B_mean = c("44.8", "11.9"),
+                   stringsAsFactors = FALSE)
+  pg <- list(one = rtftable(df), two = rtftable(df))
+  out <- paginate_cols(pg, at = 4, width = "keep")
+  expect_identical(names(out), c("one", "one", "two", "two"))
+  # ... so a named list gives a section per page, whatever page_order says
+  expect_equal(.sections_of(out), 4L)
+  expect_equal(.sections_of(paginate_cols(pg, at = 4, width = "keep",
+                                          page_order = "down")), 4L)
+  # blanking the continuation names is what groups them
+  nm <- names(out); nm[c(2L, 4L)] <- ""; names(out) <- nm
+  expect_equal(.sections_of(out), 2L)
+})

@@ -39,8 +39,12 @@ convention); \code{combine_sections()} is for the tidier one-section-per-table
 layout.
 
 For a \emph{single} table whose grouping variable is a real \strong{column} of the
-body, you usually do not need this at all: \code{as_rtftables(x, split = "by_value", group_col = ...)} already names each page by the group value, so
-\code{auto_section = TRUE} gives one section per group directly.
+body, you usually do not need this at all: \code{as_rtftables(x, split = "by_value", group_col = ...)} (or \code{page_by = ...}) already names each page by
+the group value, so \code{auto_section = TRUE} gives one section per group
+directly -- as long as each group fits on \strong{one} page.  A group that needs
+several comes back as \code{"<value>.1"}, \code{"<value>.2"}, ..., which are different
+names and so different sections; blank the continuation names to fold them
+back into one.
 }
 \examples{
 df <- data.frame(
