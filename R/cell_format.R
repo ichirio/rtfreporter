@@ -274,7 +274,11 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 #'   with the decimal cells;
 #' * a **zero count drops its parenthetical**: `"0 (0.0)"` prints as `"0"`,
 #'   again as [format_count_pct()] does. Only an all-zero parenthetical is
-#'   dropped, so `"0 (BLQ)"` keeps what it says.
+#'   dropped, so `"0 (BLQ)"` keeps what it says;
+#' * **100% loses its decimals**: `"(100.0)"` prints as `"(100)"` and
+#'   `"(100.0%)"` as `"(100%)"` -- [format_count_pct()]'s `pct >= 100` branch,
+#'   which formats that one as an integer. Only a plain number is rewritten;
+#'   `"<100.0"` and any other notation is left exactly as written.
 #'
 #' ```
 #' 12  (100)          <- no decimals: flush against the ")", digits not aligned
@@ -346,6 +350,19 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
   zero <- !is.na(inner) & grepl("^0+$", value) &
           grepl("[0-9]", inner) & !grepl("[1-9]", inner)
   inner[zero] <- NA_character_
+
+  # 100% prints without decimals -- "(100.0)" -> "(100)", "(100.0%)" -> "(100%)"
+  # -- format_count_pct()'s `pct >= 100` branch, which formats that one with
+  # "%3d".  Only a plain number is rewritten; "<100.0" and any other notation
+  # is left exactly as written.
+  pc  <- sub("%$", "", inner)
+  num <- suppressWarnings(as.numeric(pc))
+  big <- !is.na(inner) & grepl("^[0-9]+([.][0-9]+)?$", pc) &
+         !is.na(num) & num >= 100
+  if (any(big)) {
+    inner[big] <- paste0(format(round(num[big]), trim = TRUE, scientific = FALSE),
+                         ifelse(endsWith(inner[big], "%"), "%", ""))
+  }
 
   do <- !is.na(value)
   if (!any(do)) return(x)

@@ -272,6 +272,21 @@
 
 ### New features
 
+- **`fmt_value_paren()` prints 100% without decimals** (#447).  The formatter
+  pads a parenthetical but never rewrote it, so a percentage of 100 kept the
+  decimals it was given — while `format_count_pct()`, what
+  `align_count_pct = TRUE` applies, has always formatted that branch as an
+  integer:
+
+  ```r
+  fmt_value_paren(c("12 (100.0)", "6 (50.0)", "1 (8.3)"))
+  #> "12  (100)"  " 6 (50.0)"  " 1  (8.3)"
+  ```
+
+  The `%` is kept (`"(100.0%)"` → `"(100%)"`) and a value above 100 rounds the
+  same way.  Only a **plain number** is rewritten: `"<100.0"`, `"BLQ"` and any
+  other notation stay exactly as written — which is what the formatter is for.
+
 - **`page_order` names the three split axes, outermost first** (#444).  A
   paginated table can be split three ways — the pages a value-based split makes
   (`group_col`), the row pages (`page_by` and every other row split), and the

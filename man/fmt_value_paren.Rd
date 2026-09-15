@@ -41,7 +41,11 @@ on the decimal point and the ones digit -- the rule
 with the decimal cells;
 \item a \strong{zero count drops its parenthetical}: \code{"0 (0.0)"} prints as \code{"0"},
 again as \code{\link[=format_count_pct]{format_count_pct()}} does. Only an all-zero parenthetical is
-dropped, so \code{"0 (BLQ)"} keeps what it says.
+dropped, so \code{"0 (BLQ)"} keeps what it says;
+\item \strong{100\% loses its decimals}: \code{"(100.0)"} prints as \code{"(100)"} and
+\code{"(100.0\%)"} as \code{"(100\%)"} -- \code{\link[=format_count_pct]{format_count_pct()}}'s \code{pct >= 100} branch,
+which formats that one as an integer. Only a plain number is rewritten;
+\code{"<100.0"} and any other notation is left exactly as written.
 }
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{12  (100)          <- no decimals: flush against the ")", digits not aligned
