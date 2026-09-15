@@ -972,7 +972,7 @@ as_rtftables <- function(x,
   # `split_mode` defaults to the requested `split`; the per-group calls override
   # it to "none" so each group's sub-body is not split again.
   build_pages <- function(body, kw, cell_styles, split_mode = split,
-                          page_by_arg = page_by) {
+                          page_by_arg = page_by, group_col_arg = group_col) {
     # ---- build the indented stub (stub_cols) on this body ---------------
     # Merge the `stub_vars` hierarchy columns into one indented stub column
     # BEFORE pagination, so any source that exposes the hierarchy as separate
@@ -1056,7 +1056,7 @@ as_rtftables <- function(x,
 
     pages <- .paginate_df(
       body, max_rows = max_rows, split = split_mode, split_rows = split_rows,
-      group_col = group_col, group_by = group_by, page_by = page_by_arg,
+      group_col = group_col_arg, group_by = group_by, page_by = page_by_arg,
       cont_label = cont_label,
       min_group_rows = min_group_rows, blank_rows = blank_rows,
       blank_row_first = blank_row_first, blank_row_end = blank_row_end,
@@ -1129,10 +1129,14 @@ as_rtftables <- function(x,
         sub_body <- p_body[rows, , drop = FALSE]
         rownames(sub_body) <- NULL
         sub_cs   <- if (!is.null(p_cs)) p_cs[rows] else NULL
-        # page_by is already spent on `parts`; applying it again inside would
-        # partition each group a second time.
+        # `page_by` and `group_col` are both SPENT by the time we get here --
+        # they are what `parts` and `lv` were cut by, and each sub-body is one
+        # group of one partition.  Forwarding them would partition each group a
+        # second time, and `group_col` would be resolved against the post-stub
+        # body, where the column it names has just been folded into the stub --
+        # the error #429 reported, raised on an argument nothing would use.
         pgs      <- build_pages(sub_body, kw, sub_cs, split_mode = "none",
-                                page_by_arg = NULL)
+                                page_by_arg = NULL, group_col_arg = NULL)
         nm       <- if (nzchar(lv[k])) lv[k] else paste0("group_", k)
         if (nzchar(pt$label)) nm <- paste0(pt$label, ".", nm)
         names(pgs) <- rep(nm, length(pgs))  # split_mode "none" => one page

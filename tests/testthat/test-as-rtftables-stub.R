@@ -168,3 +168,45 @@ test_that("by_value + stub_vars handles a constant intermediate hierarchy level 
     expect_true(startsWith(pg$data[[1L]][2L], nbsp))    # leaves indented
   }
 })
+
+# ──────── by_value + a stub: group_col keeps its pre-stub meaning (#429) ────
+
+.ae429 <- function() {
+  do.call(rbind, lapply(c("Period 1", "Period 2"), function(per)
+    do.call(rbind, lapply(c("CARDIAC", "GI"), function(soc)
+      data.frame(period = per, soc = soc,
+                 pt  = c("Palpitations", "Tachycardia"),
+                 n_A = c("5 (5.8)", "3 (3.5)"),
+                 stringsAsFactors = FALSE)))))
+}
+
+test_that("a group_col the stub consumes is accepted, as the docs promise", {
+  # `soc` is folded into the stub, but this branch splits BEFORE the stub is
+  # built, so naming it is correct -- it used to error on an argument that was
+  # only ever forwarded, never used (#429).
+  pg <- as_rtftables(.ae429(), split = "by_value", group_col = "soc",
+                     stub_vars = c("soc", "pt"), drop_cols = "period")
+  expect_identical(names(pg), c("CARDIAC", "GI"))
+  # each page: the stub label row plus that SOC's PT rows from both periods
+  expect_identical(vapply(pg, function(p) nrow(p$data), integer(1L)),
+                   c(CARDIAC = 5L, GI = 5L))
+  expect_identical(as.character(pg[[1L]]$data[[1L]][1L]), "CARDIAC")
+})
+
+test_that("inside a page, group detection falls to the stub column", {
+  # group_col is spent on the split, so a "between_groups" spec inside a page
+  # detects on column 1 -- the stub, which is where the hierarchy now lives.
+  pg <- as_rtftables(.ae429(), split = "by_value", group_col = "period",
+                     stub_vars = c("soc", "pt"), drop_cols = "period",
+                     blank_rows = "between_groups")
+  expect_identical(names(pg), c("Period 1", "Period 2"))
+  expect_identical(attr(pg[[1L]]$data, "rtf_blank_rows", exact = TRUE), 3L)
+})
+
+test_that("a group_col that survives the stub still works", {
+  pg <- as_rtftables(.ae429(), split = "by_value", group_col = "period",
+                     stub_vars = c("soc", "pt"), drop_cols = "period")
+  expect_identical(names(pg), c("Period 1", "Period 2"))
+  expect_identical(unname(vapply(pg, function(p) nrow(p$data), integer(1L))),
+                   c(6L, 6L))
+})
