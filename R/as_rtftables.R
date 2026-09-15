@@ -290,14 +290,14 @@
 #'                drop_cols = "period")
 #'   ```
 #'   \describe{
-#'     \item{Page names}{the `page_by` value, carried by **every** page the
-#'       partition makes -- a page name is the heading
-#'       `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` prints, not an
-#'       identifier, so the pages of one partition share it rather than being
-#'       numbered apart.  When the split names its own pages (`"by_value"`)
-#'       the two compose **outer first**: `"<group>.<BY value>"`, matching the
-#'       nesting.  A section opens where the name **changes**, so a partition
-#'       lands in one section of several pages.}
+#'     \item{Page names}{the **outermost** value alone, carried by every page
+#'       it makes: the `page_by` value, or -- when the split names its own
+#'       pages (`"by_value"`) and the group is therefore the outer axis -- the
+#'       group's.  The two are never joined.  A page name is the heading
+#'       `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` prints and the
+#'       line a section breaks on, so joining them would cut one group into a
+#'       section per BY value; both values stay readable in the page's
+#'       `rtf_paginate_meta` (`page_group` / `page_by`).}
 #'     \item{`group_col`}{when left `NULL`, defaults to the first column **not**
 #'       named in `page_by`, so `group_by = "indent"` (which reads the group
 #'       column) never lands on the BY column -- where every row of a partition
@@ -306,9 +306,10 @@
 #'       inside each one, then [paginate_cols()] cuts columns on the result
 #'       (its `page_order` decides the final page sequence).  With
 #'       `split = "by_value"` the **group is the outer axis** and `page_by`
-#'       the inner one -- a group's pages stay together, the BY values running
-#'       in order inside it -- so the three come out as `G` / `C` / `P` under
-#'       `page_order = "across"` and `G` / `P` / `C` under `"down"`.}
+#'       the inner one -- a group's pages stay together (and share its name),
+#'       the BY values running in order inside it -- so the three come out as
+#'       `G` / `C` / `P` under `page_order = "across"` and `G` / `P` / `C`
+#'       under `"down"`.}
 #'     \item{Per partition}{`split_rows` positions, `blank_rows` positions
 #'       (`0` / `-1` included), `count_blank_rows` accounting and any
 #'       `rtf_blank_rows` attribute on the input are all resolved inside the
@@ -1154,7 +1155,11 @@ as_rtftables <- function(x,
         # error #429 reported, raised on an argument nothing would use.
         pgs <- build_pages(sub_body, kw, sub_cs, split_mode = "none",
                            page_by_arg = NULL, group_col_arg = NULL)
-        nm  <- if (nzchar(pt$label)) paste0(g_nm, ".", pt$label) else g_nm
+        # The name is the GROUP alone -- the outermost value -- never the
+        # group and the BY value joined: it is the section heading, so joining
+        # them would break one group into a section per BY value.  The BY value
+        # stays in the page's `rtf_paginate_meta$page_by`.
+        nm  <- g_nm
         names(pgs) <- rep(nm, length(pgs))  # split_mode "none" => one page
         for (q in seq_along(pgs)) {
           meta <- attr(pgs[[q]]$data, "rtf_paginate_meta", exact = TRUE)

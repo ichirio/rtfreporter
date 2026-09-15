@@ -2,6 +2,19 @@
 
 ### Breaking changes
 
+- **A page split on two axes is named by the outer one alone** (#437).  With
+  `group_col` **and** `page_by` the name joined the two — `"Period 1.1"` for
+  the group `"Period 1"` and the BY value `"1"`, which reads exactly like the
+  page numbering #433 had just removed.  More than cosmetic: a name is the
+  section heading and the line `auto_section` breaks on, so joining them cut
+  one group into a section per BY value.
+
+  The name is now the **outermost** value: the group when a value-based split
+  made one, the `page_by` value otherwise.  Both are readable per page in
+  `attr(page$data, "rtf_paginate_meta")` (`page_group`, `page_by`), which
+  `paginate_cols()` also nests by — and that meta now survives the column
+  split, where subsetting the body used to drop it.
+
 - **A page name is a heading, not an identifier** (#433).  Two changes that go
   together.
 
@@ -18,8 +31,10 @@
 
   It applies wherever pages were numbered apart: a `"by_value"` group that
   outgrew `max_rows`, a `page_by` cell, and a named list element that split
-  (`as_rtftables()` and the deprecated `paginate()`).  A **composite** name
-  (`"<group>.<BY value>"`) is not a suffix and is unchanged.
+  (`as_rtftables()` and the deprecated `paginate()`).  A page split on **two**
+  axes (`group_col` and `page_by`) is named by the **outer** one alone — the
+  two values are never joined, and both stay readable in the page's
+  `rtf_paginate_meta`.
 
   **Equal consecutive names are one section.**  `auto_section` opened a section
   at every *named* element, so repeated names gave a section per page.  A
@@ -275,8 +290,9 @@
   directly, one partition to one section.
   When the split itself names pages (`"by_value"`), the **group is the outer
   axis** and `page_by` the inner one: a group's pages stay together, the BY
-  values running in order inside it, and the name reads outer-first,
-  `"<group>.<BY value>"`.
+  values running in order inside it, and every one of them carries the
+  **group's** name — the section heading is the group, and the BY value is in
+  the page's `rtf_paginate_meta$page_by`.
 
   `page_by` cuts pages, `split` then cuts rows inside each one, and
   `paginate_cols()` then cuts columns on the result: three independent axes in

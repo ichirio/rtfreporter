@@ -192,8 +192,9 @@ and column blocks \code{C}:\tabular{ll}{
 }
 
 
-Each page records its own group in \code{rtf_paginate_meta$page_group}, so none
-of this depends on reading a page name.
+Each page records its own group in \code{rtf_paginate_meta$page_group} (and its
+\code{page_by} value beside it), so none of this depends on reading a page name
+-- which carries the group alone.
 }
 
 \section{Page names}{

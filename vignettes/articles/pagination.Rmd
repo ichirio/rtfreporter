@@ -465,13 +465,19 @@ as_rtftables(lab, page_by = "period", split = "group_safe",
 
 With `split = "by_value"` the split makes a page per **group** value, and then
 the group is the **outer** axis with `page_by` inside it -- a group's pages
-stay together, the BY values running in order, and the name reads outer-first:
+stay together, the BY values running in order, and every page of the group
+carries the group's name:
 
 ```{r pageby_byvalue, eval = FALSE}
 as_rtftables(ae, split = "by_value", group_col = "cohort", page_by = "period",
              drop_cols = c("cohort", "period"))
-#>  "Cohort A.P1"  "Cohort A.P2"  "Cohort B.P1"  "Cohort B.P2"
+#>  "Cohort A"  "Cohort A"  "Cohort B"  "Cohort B"
 ```
+
+The two values are never joined into one name: the name is the section
+heading, so `"Cohort A / P1"` would cut each cohort into a section per period.
+Both stay readable per page in `attr(page$data, "rtf_paginate_meta")`
+(`page_group`, `page_by`).
 
 Add `paginate_cols()` and the column block takes its place between them or
 under them, as `page_order` says (see *Which axis the page number advances

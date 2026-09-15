@@ -143,14 +143,14 @@ parameter block) is kept whole inside it.
 }\if{html}{\out{</div>}}
 
 \describe{
-\item{Page names}{the \code{page_by} value, carried by \strong{every} page the
-partition makes -- a page name is the heading
-\code{rtf_tables(auto_section = TRUE)} / \code{auto_title = TRUE} prints, not an
-identifier, so the pages of one partition share it rather than being
-numbered apart.  When the split names its own pages (\code{"by_value"})
-the two compose \strong{outer first}: \code{"<group>.<BY value>"}, matching the
-nesting.  A section opens where the name \strong{changes}, so a partition
-lands in one section of several pages.}
+\item{Page names}{the \strong{outermost} value alone, carried by every page
+it makes: the \code{page_by} value, or -- when the split names its own
+pages (\code{"by_value"}) and the group is therefore the outer axis -- the
+group's.  The two are never joined.  A page name is the heading
+\code{rtf_tables(auto_section = TRUE)} / \code{auto_title = TRUE} prints and the
+line a section breaks on, so joining them would cut one group into a
+section per BY value; both values stay readable in the page's
+\code{rtf_paginate_meta} (\code{page_group} / \code{page_by}).}
 \item{\code{group_col}}{when left \code{NULL}, defaults to the first column \strong{not}
 named in \code{page_by}, so \code{group_by = "indent"} (which reads the group
 column) never lands on the BY column -- where every row of a partition
@@ -159,9 +159,10 @@ carries the same value and there is no structure to find.}
 inside each one, then \code{\link[=paginate_cols]{paginate_cols()}} cuts columns on the result
 (its \code{page_order} decides the final page sequence).  With
 \code{split = "by_value"} the \strong{group is the outer axis} and \code{page_by}
-the inner one -- a group's pages stay together, the BY values running
-in order inside it -- so the three come out as \code{G} / \code{C} / \code{P} under
-\code{page_order = "across"} and \code{G} / \code{P} / \code{C} under \code{"down"}.}
+the inner one -- a group's pages stay together (and share its name),
+the BY values running in order inside it -- so the three come out as
+\code{G} / \code{C} / \code{P} under \code{page_order = "across"} and \code{G} / \code{P} / \code{C}
+under \code{"down"}.}
 \item{Per partition}{\code{split_rows} positions, \code{blank_rows} positions
 (\code{0} / \code{-1} included), \code{count_blank_rows} accounting and any
 \code{rtf_blank_rows} attribute on the input are all resolved inside the

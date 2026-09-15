@@ -633,7 +633,13 @@ paginate.data.frame <- function(x, ...) {
 # so only then is there a second page axis to order against.  When there is,
 # a group's pages stay together and the BY values run in order inside it:
 #
-#     G1.P1  G1.P2  G2.P1  G2.P2
+#     G1  G1  G2  G2      (BY values P1, P2 inside each group)
+#
+# The NAME is the outermost value alone -- the group when there is one, the BY
+# value otherwise -- never the two joined.  A name is the heading
+# `rtf_tables(auto_section = TRUE)` prints and the line a section breaks on, so
+# joining them would split a group into a section per BY value.  Both values
+# stay readable in `rtf_paginate_meta` (`page_group` / `page_by`).
 #
 # The pages are built BY partition (that is how the body is cut) and ordered
 # afterwards -- pages are independent, so this is a reordering, not a rebuild.
@@ -645,11 +651,10 @@ paginate.data.frame <- function(x, ...) {
     ord   <- order(match(grp, unique(grp)), match(by, unique(by)), seq_len(n))
     pages <- pages[ord]; grp <- grp[ord]; by <- by[ord]
   }
-  # Several pages can share one cell (a group that outgrew `max_rows`), and
-  # they simply share its name: a page name is a HEADING -- what
-  # `rtf_tables(auto_section = TRUE)` prints -- not an identifier, so pages of
-  # one group are not numbered apart.
-  nm <- if (has_grp) paste0(grp, ".", by) else by
+  # Several pages can share one name (a group that outgrew `max_rows`, or the
+  # BY values inside a group), and they simply do: a page name is a HEADING --
+  # what `rtf_tables(auto_section = TRUE)` prints -- not an identifier.
+  nm <- if (has_grp) grp else by
   for (i in seq_len(n)) {
     meta <- attr(pages[[i]], "rtf_paginate_meta", exact = TRUE)
     if (!is.list(meta)) meta <- list()
