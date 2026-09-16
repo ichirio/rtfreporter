@@ -462,124 +462,151 @@ devtools::load_all()           # load the package for interactive work
 
 ## Versioning & releases
 
-Versions follow `MAJOR.MINOR.PATCH`.  **All of the rules below apply from
-v0.1.0 onward.**  (The pre-v0.1.0 `0.0.x` history and its `*-alpha`
-releases are throw-away experiments — see *First release* below.)
+rtfreporter follows the **standard R versioning scheme**: a released version
+has three components, a development version has a fourth.
+
+| | Form | Example | Who changes it |
+|---|---|---|---|
+| **Release** | `MAJOR.MINOR.PATCH` | `0.8.0` | a release action — Collaborators, `release` label |
+| **Development** | `MAJOR.MINOR.PATCH.9000` | `0.8.0.9000` | any PR, freely |
+
+The three-component part always names **the last release**, so `0.8.0.9000`
+reads as *"in development, after 0.8.0"*.  `packageVersion("rtfreporter")`
+therefore answers a question worth asking — which release am I on, and am I
+ahead of it — and an ordinary PR never touches it.
+
+This is what `usethis::use_dev_version()` produces and what
+[r-pkgs.org](https://r-pkgs.org/lifecycle.html) describes; it is chosen so that
+contributors, CRAN and the tooling all read our numbers the same way.
 
 > **Gotcha:** the `DESCRIPTION` `Version:` field must be **digits and dots
-> only** (e.g. `0.1.0`).  A suffix such as `0.1.0-alpha` makes R raise a
-> `Malformed package version` error.  Use the suffix-free number in
-> `DESCRIPTION`; the `-alpha`/`-rc` style, if ever needed, belongs only on
-> the git tag / GitHub Release name.
+> only**.  A suffix such as `0.8.0-rc` makes R raise a `Malformed package
+> version` error.  The `-rc` style, if ever needed, belongs only on the git tag
+> / GitHub Release name.
+
+> **Versions only ever increase.**  R compares them field by field, so
+> `0.4.0.9000 < 0.7.56`; going backwards silently stops
+> `install_github()` from seeing updates.  `version-guard` refuses it.
 
 ### What each position means
 
-- **Development version — `vX.Y.Z` (Z ≥ 1).**  The rolling, in-progress
-  version that lives on `main` between releases.  Bug fixes, internal
-  refactors, documentation, and new work all land here first.  A
-  development version is installable **only from GitHub**
-  (`remotes::install_github("ichirio/rtfreporter")`); it is **never**
+- **Development version — `vX.Y.Z.9000`.**  The rolling, in-progress version
+  that lives on `main` between releases.  Bug fixes, internal refactors,
+  documentation and new work all land here first.  Installable **only from
+  GitHub** (`remotes::install_github("ichirio/rtfreporter")`); **never**
   submitted to CRAN.
-- **Minor release — `vX.Y.0` (Y ≥ 1).**  A published release adding
-  features that are **backward compatible with the same major version**.
-  A minor release may *deprecate* a function (it keeps working and emits a
-  deprecation warning) but must **never remove or break** existing public
-  behaviour.  Documented in `NEWS.md` and `CHANGELOG.md`, tagged, given a
-  GitHub Release, and (once the package is on CRAN) submitted to CRAN.
+- **Patch release — `vX.Y.Z` (Z ≥ 1).**  A published release containing fixes
+  only, no new API.
+- **Minor release — `vX.Y.0` (Y ≥ 1).**  A published release adding features
+  that are **backward compatible within the same major version**.  A minor may
+  *deprecate* a function (it keeps working and warns) but must **never remove
+  or break** existing public behaviour.  Documented in `NEWS.md` and
+  `CHANGELOG.md`, tagged, given a GitHub Release, and (once the package is on
+  CRAN) submitted to CRAN.
 - **Major release — `vX.0.0`.**  A published release that **may contain
-  breaking changes**.  This is the **only** place where functions
-  deprecated in earlier minors **may be removed**.  Every breaking change
-  is documented under a "Breaking changes" heading in `NEWS.md`.
-  - **`v1.0.0` specifically** is cut **only after CRAN registration has
-    been achieved** and the public API is considered stable.  At v1.0.0
-    the **`lifecycle: experimental` badge is removed** (the package
-    graduates to *stable*) and any "the API may change" wording is
-    dropped.
+  breaking changes**, and the **only** place where functions deprecated in
+  earlier minors may be removed.  Every breaking change is documented under a
+  "Breaking changes" heading in `NEWS.md`.
+  - **`v1.0.0` specifically** is cut **only after CRAN registration has been
+    achieved** and the public API is considered stable.  At v1.0.0 the
+    **`lifecycle: experimental` badge is removed** and any "the API may change"
+    wording is dropped.
 
 ### Backward-compatibility contract
 
-- Within one major version, **no minor or patch release breaks user
-  code.**
-- Deprecation lifecycle: *deprecate in a minor* (function still works +
-  warns) → *remove only in the next major*.
+- Within one major version, **no minor or patch release breaks user code.**
+- Deprecation lifecycle: *deprecate in a minor* (function still works + warns)
+  → *remove only in the next major*.
 
-### Procedure — routine development bump (`vX.Y.Z`)
+### Procedure — an ordinary development PR
 
-**Each pull request raises the development version by exactly one PATCH.**
+**An ordinary PR does not have to touch `Version:` at all.**
 
-> **Enforced by CI.**  The `version-guard` workflow fails any PR that raises the
-> MINOR or MAJOR position without the `release` label, so an ordinary
-> development PR can only bump the PATCH (or leave the version unchanged).  A
-> MINOR/MAJOR bump is therefore a deliberate, labelled release action — never an
-> accident.
+The development counter — the fourth position — exists to signal *"depend on
+this"*: bump it when your change is something another branch, a downstream
+user or a bug report needs to name.  A typo fix, a test, a refactor with no
+visible effect: leave it alone.
 
-1. As the **last step before you request review**, bump the `DESCRIPTION`
-   `Version:` PATCH by one (e.g. `0.1.3` → `0.1.4`).
+1. If the change is worth naming, raise the **fourth** position by one
+   (`0.8.0.9000` → `0.8.0.9001`).  Otherwise leave `Version:` unchanged.
 2. Add a bullet under the `# rtfreporter (development version)` heading in
-   `NEWS.md`.
-3. Run `devtools::document()`, `devtools::test()`, `devtools::check()`.
+   `NEWS.md`.  **This is not optional** — `NEWS.md`, not the version number,
+   is the record of what changed.
+3. Run `devtools::document()`, `devtools::test()`, `lintr::lint_package()`,
+   `devtools::check()`.
 4. No git tag, no GitHub Release, no CRAN submission for a development bump.
-   (A pure typo / comment fix may skip the bump; when in doubt, bump.)
 
-**Avoiding version collisions across overlapping PRs.**  Because every PR
-edits the same `Version:` field, two open PRs can choose the same number.
-Keep the version on `main` strictly increasing:
+> **Enforced by CI.**  `version-guard` fails any PR that changes `X`, `Y` or
+> `Z` without the `release` label, and any PR that lowers the version.  A
+> release is therefore a deliberate, labelled action — never an accident of a
+> merge.
 
-- Bump **as late as possible** — just before review / merge — not when you
-  open the branch.
-- Before merging, **rebase (or merge `main`) into your branch**.  If `main`'s
-  `Version:` is now equal to or ahead of yours, reset yours to *that* version
-  **+ 1** and re-run the checks.
-- If two PRs still race, the **second one to merge re-bumps** after rebasing;
-  a maintainer may also adjust the number at merge time.
+Because an ordinary PR usually leaves the version alone, **two open PRs no
+longer collide over the same field** — the problem the old "bump exactly one
+PATCH per PR" rule created for itself.  If two PRs do both bump the counter,
+the second to merge rebases and re-bumps.
 
-### Minor / major bumps are release actions (Collaborators only)
+### Releases are Collaborator actions
 
-Raising the **MINOR** (`vX.Y.0`) or **MAJOR** (`vX.0.0`) number is *not* part
-of an ordinary contribution PR.  It is a release, started from a dedicated
-**release Issue** and carried out with the procedures below.  **At present
-only repository Collaborators may open a release Issue and perform a
-minor/major bump.**  An ordinary PR should never change the MINOR or MAJOR
-position.
+Raising `MAJOR`, `MINOR` or `PATCH` is *not* part of an ordinary contribution
+PR.  It is a release, started from a dedicated **release Issue** and carried
+out with the procedure below.  **At present only repository Collaborators may
+open a release Issue and perform a release.**
 
-### Procedure — minor release (`vX.Y.0`)
+### Procedure — cutting a release (`vX.Y.Z`)
 
 1. Confirm `main` is green on all CI workflows and `devtools::check()` is
    `0 errors / 0 warnings`.
-2. In `NEWS.md`, rename the `(development version)` section to
-   `# rtfreporter X.Y.0` and tidy the notes.  Update `CHANGELOG.md`.
-3. Set `DESCRIPTION` → `Version: X.Y.0`.
-4. Refresh docs (`devtools::document()`), update the README roadmap/badges
+2. In `NEWS.md`, rename the `(development version)` heading to
+   `# rtfreporter X.Y.Z` and tidy the notes.  Update `CHANGELOG.md` for a
+   minor or major release.
+3. Set `DESCRIPTION` → `Version: X.Y.Z` — dropping the `.9000`.
+4. Refresh docs (`devtools::document()`), update the README roadmap / badges
    if needed, and confirm the pkgdown site builds.
-5. Commit as `release: vX.Y.0`, open a PR, and merge once CI is green.
+5. Commit as `release: vX.Y.Z`, open a PR **with the `release` label**, and
+   merge once CI is green.
 6. Tag and publish from the merge commit:
 
    ```bash
-   git tag vX.Y.0
-   git push origin vX.Y.0
-   gh release create vX.Y.0 --title "rtfreporter X.Y.0" \
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   gh release create vX.Y.Z --title "rtfreporter X.Y.Z" \
      --notes-file <notes-from-NEWS> --latest
    ```
 
 7. **(Once on CRAN)** run the CRAN pre-checks and submit —
    `devtools::check_win_devel()`, `urlchecker::url_check()`,
    `devtools::release()`.
-8. Open the next development cycle: bump `DESCRIPTION` to the next
-   development version (e.g. `X.Y.1`) and add a fresh
-   `# rtfreporter (development version)` heading to `NEWS.md`.
+8. **Open the next development cycle** in a follow-up PR: set `DESCRIPTION` to
+   `X.Y.Z.9000` and add a fresh `# rtfreporter (development version)` heading
+   to `NEWS.md`.  (`usethis::use_dev_version()` does both.)
 
 ### Procedure — major release (`vX.0.0`)
 
-Everything in the minor-release procedure, **plus**:
+Everything in the release procedure, **plus**:
 
-1. **Remove** functions that were deprecated in earlier minors, and
-   describe each removal + its migration path under "Breaking changes" in
-   `NEWS.md`.
+1. **Remove** functions deprecated in earlier minors, and describe each removal
+   and its migration path under "Breaking changes" in `NEWS.md`.
 2. Audit for and document any other breaking change.
 3. For **v1.0.0**: confirm CRAN registration is in place, then remove the
    `lifecycle: experimental` badge (set the lifecycle to *stable*) in the
    README and `DESCRIPTION`, and drop any "experimental / API may change"
    wording.
+
+### History — how the numbering got here
+
+Until v0.8.0 the rule was *"each pull request raises the development version by
+exactly one PATCH"*.  That made the PATCH position a build counter rather than
+a patch-release number, and it ran away: 146 PRs after v0.4.0 the development
+version read `0.7.56`, having passed through `0.4.84`, `0.5.0`, `0.5.1` and
+`0.6.0` — consuming the very numbers the roadmap had reserved for
+*CRAN-submission preparation* and *CRAN registration*, without ever releasing
+them.
+
+`v0.8.0` is the release that closes that line.  From it, development continues
+at `0.8.0.9000` under the rule above.  The numbers before v0.8.0 are left as
+they are: R versions must increase, so the history cannot be renumbered, and
+rewriting it would only invalidate the tags and installs that already exist.
 
 ### First release (`v0.1.0`) — one-time cleanup
 

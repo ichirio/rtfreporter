@@ -39,6 +39,13 @@ is wrong (open an issue if the design itself is in question).
 4. Update `NEWS.md` (and `CHANGELOG.md` for a minor/major release).
 5. Open a pull request against `main`.
 
+**Versioning.**  Standard R scheme: a release is `X.Y.Z`, development is
+`X.Y.Z.9000`, and the three-component part names the last release.  An
+ordinary PR changes only the fourth position and usually leaves `Version:`
+alone -- `NEWS.md` is the record of what changed, not the number.  Touching
+`X`, `Y` or `Z` is a release action and fails `version-guard` without the
+`release` label.  See *Versioning & releases* in `CONTRIBUTING.md`.
+
 ## Layout (standard R-package set)
 
 ```

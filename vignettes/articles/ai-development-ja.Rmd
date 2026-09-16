@@ -78,11 +78,17 @@ gh api repos/ichirio/rtfreporter --jq .permissions.push   # true = Collaborator
 方針が固まってから、
 
 > 実装してください。ブランチは `feat/123-slug`。`R/`、テスト、roxygen をまとめて更新し、
-> `devtools::document()`、`devtools::test()`、`lintr::lint_package()` を実行、PATCH
-> バージョンを上げ、`NEWS.md` に追記し、`Closes #123` を入れて PR を作成してください。
+> `devtools::document()`、`devtools::test()`、`lintr::lint_package()` を実行、
+> `NEWS.md` に追記し、`Closes #123` を入れて PR を作成してください。
 
 この一覧はすべてマニュアルに書いてあります。それでも明示的に並べておくと手間がかからず、
 レビュー時に抜けが目に付きやすくなります。
+
+入っていないものに注目してください — **バージョンの引き上げです**。R 標準のスキーム
+（リリースは `X.Y.Z`、開発版は `X.Y.Z.9000`）のもとでは、通常の PR は `DESCRIPTION` を
+触りません。他が名前で参照する必要のある変更のときだけ第4要素を上げます。`X.Y.Z` を
+触れば `release` ラベルが無い限り `version-guard` が落とします。“親切に”バージョンを
+上げるアシスタントはリリースをしていることになり、CI からそう告げられます。
 
 ## 信用してよいこと、自分で確認すべきこと
 

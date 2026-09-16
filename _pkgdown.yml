@@ -61,15 +61,16 @@ home:
       devnotes:
         title: Dev stage
         text: |
-          v0.4.0 released (current stable); pre-1.0, the API may still change
-          before v1.0.0.
+          v0.8.0 released (current stable); pre-1.0, the API may still change
+          before v1.0.0.  Development continues at `0.8.0.9000` — the standard
+          R scheme, where the three-component part names the last release.
 
           Roadmap:
 
-          - **v0.5.0** — CRAN-submission preparation (`R CMD check --as-cran`
+          - **v0.9.0** — CRAN-submission preparation (`R CMD check --as-cran`
             clean, lifted coverage, docs/metadata polish).
-          - **v0.6.0** — CRAN registration.
-          - **v1.0.0** — stable API; `lifecycle: experimental` removed.
+          - **v1.0.0** — CRAN registration, stable API; `lifecycle:
+            experimental` removed.
       community:
         title: Community
         text: |
@@ -140,10 +141,10 @@ navbar:
         - text: "For AI assistants"
         - text: "Developing with an AI assistant"
           href: articles/ai-development.html
-        - text: "AI user manual (0.7.56)"
-          href: ai/rtfreporter-ai-user-manual-0.7.56.md
-        - text: "AI developer manual (0.7.56)"
-          href: ai/rtfreporter-ai-dev-manual-0.7.56.md
+        - text: "AI user manual (0.8.0)"
+          href: ai/rtfreporter-ai-user-manual-0.8.0.md
+        - text: "AI developer manual (0.8.0)"
+          href: ai/rtfreporter-ai-dev-manual-0.8.0.md
         # ── Worked clinical examples ────────────────────────────────────
         - text: -------
         - text: "Worked clinical examples"

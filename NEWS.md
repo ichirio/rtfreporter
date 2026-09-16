@@ -1,4 +1,4 @@
-# rtfreporter (development version)
+# rtfreporter 0.8.0
 
 ### Documentation
 
