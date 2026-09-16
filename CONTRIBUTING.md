@@ -507,16 +507,38 @@ contributors, CRAN and the tooling all read our numbers the same way.
   breaking changes**, and the **only** place where functions deprecated in
   earlier minors may be removed.  Every breaking change is documented under a
   "Breaking changes" heading in `NEWS.md`.
-  - **`v1.0.0` specifically** is cut **only after CRAN registration has been
-    achieved** and the public API is considered stable.  At v1.0.0 the
-    **`lifecycle: experimental` badge is removed** and any "the API may change"
-    wording is dropped.
+  - **`v1.0.0` specifically** is *not* the CRAN debut.  It is cut **after**
+    CRAN registration, once downloads, user feedback and any resulting spec
+    changes have settled and the public API is worth declaring stable.  At
+    v1.0.0 the **`lifecycle: experimental` badge is removed** and any "the API
+    may change" wording is dropped.  See *Pre-1.0 is different* below.
 
 ### Backward-compatibility contract
 
 - Within one major version, **no minor or patch release breaks user code.**
 - Deprecation lifecycle: *deprecate in a minor* (function still works + warns)
   → *remove only in the next major*.
+- **Except while `MAJOR` is 0** — see below.
+
+### Pre-1.0 is different
+
+**`MAJOR 0` means the package is not formally released.**  This is semver's
+own reading of a zero major, and it is the one rtfreporter takes: within
+`0.y.z` the contract above does not bind, and a MINOR may remove or change
+public API.  Every such change is still documented under *Breaking changes*
+in `NEWS.md` — the exemption is from the version-number rule, not from telling
+people.
+
+That is what makes the plan below legal:
+
+| | |
+|---|---|
+| **v0.9.0** | Removes the seven deprecated border exports, and is the **first CRAN submission**.  Under a 1.x contract removing them would require a major; at `0.y.z` a minor may. |
+| **v1.0.0** | Cut **after** CRAN registration, once downloads, feedback and any resulting spec changes have settled.  From here the contract binds for real: no minor or patch may break user code again. |
+
+The order is deliberate.  Registering on CRAN is what produces the users whose
+feedback tells you whether the API is worth freezing; declaring 1.0.0 first
+would be promising stability before anyone had tried it.
 
 ### Procedure — an ordinary development PR
 
@@ -580,6 +602,65 @@ open a release Issue and perform a release.**
 8. **Open the next development cycle** in a follow-up PR: set `DESCRIPTION` to
    `X.Y.Z.9000` and add a fresh `# rtfreporter (development version)` heading
    to `NEWS.md`.  (`usethis::use_dev_version()` does both.)
+
+### Procedure — an urgent fix while `main` carries a feature
+
+The awkward case: `main` sits at `X.Y.Z.9000` with a finished feature on it,
+and a bug needs a release **now**.
+
+**There is no such thing as a patch that contains a feature.**  Releasing
+`main` releases the feature too, and that is a MINOR.  So the question is not
+"how do I get a patch out" but:
+
+> **Is the feature's API ready to freeze?**
+
+Once it is on CRAN you owe it backward compatibility, so an argument name or a
+default that is still under discussion is a reason to hold it back — not the
+size of the change, and not how finished the code is.  `main` is green by
+definition; that was never the risk.
+
+| | |
+|---|---|
+| **API settled** | Release `main` as a **MINOR**.  Ship both, say so in `NEWS.md`.  This is the normal answer: CRAN wants at most a release every month or two, so batching a fix with a feature is what the cadence is *for*. |
+| **API not settled** | Cut a **hotfix** from the release tag, below. |
+
+A hotfix also costs downstream less, which matters here more than in most
+packages: a validated clinical pipeline re-validates on every upgrade, and
+"this release changed one file" is a far cheaper conversation than "this
+release changed forty".
+
+```bash
+git checkout -b hotfix/0.8.1 v0.8.0     # from the TAG, not from main
+git cherry-pick <the fix>
+#   DESCRIPTION -> 0.8.1
+#   NEWS.md     -> `# rtfreporter 0.8.1`, that one fix and nothing else
+#   open the PR WITH the `release` label, merge, then:
+git tag v0.8.1 && git push origin v0.8.1
+gh release create v0.8.1 --title "rtfreporter 0.8.1" --notes-file <notes> --latest
+```
+
+Then — **and this step is not optional**:
+
+```bash
+# merge the hotfix back into main and re-open the cycle on top of it
+git checkout main && git merge hotfix/0.8.1
+#   DESCRIPTION -> 0.8.1.9000
+```
+
+Skip it and `main` still reads `0.8.0.9000`, which is **lower than the version
+you just released**:
+
+```r
+package_version("0.8.1") > package_version("0.8.0.9000")   # TRUE
+```
+
+`update.packages()` would then replace a development install with the release
+build, silently removing the unreleased feature from that user's library, and
+the "three-component part names the last release" invariant stays broken until
+someone notices.  Moving `main` to `0.8.1.9000` restores both.
+
+An out-of-cycle CRAN submission is acceptable when it is a genuine user-facing
+fix; say so in `cran-comments.md` rather than letting the maintainers wonder.
 
 ### Procedure — major release (`vX.0.0`)
 

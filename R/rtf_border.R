@@ -19,8 +19,13 @@
 # Deprecation warnings fire once per session: a table-building loop would
 # otherwise repeat the same paragraph for every table.  The environment is
 # package-local, so the state dies with the session.
-# Exported functions that are deprecated and scheduled for bulk removal before
-# the CRAN submission.  They still work, and each warns once per session.
+# Exported functions that are deprecated and scheduled for bulk removal in
+# v0.9.0, which is also the first CRAN submission.  They still work, and each
+# warns once per session.
+#
+# Removing them in a MINOR is legal only because `MAJOR 0` means the package is
+# not formally released (see "Pre-1.0 is different" in CONTRIBUTING.md).  From
+# v1.0.0 the same removal would require a major.
 #
 # The API-review measure is deliberately the export count EXCLUDING these: a
 # function you are being told to stop using is not part of what a reader has to
