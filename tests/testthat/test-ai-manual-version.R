@@ -90,16 +90,19 @@ test_that("the version-stamped file the links point at is the one published", {
   p <- test_path("..", "..", ".github", "workflows", "pkgdown.yaml")
   skip_if_not(file.exists(p), "workflow not available (installed package)")
   L <- readLines(p, encoding = "UTF-8", warn = FALSE)
-  expect_true(any(grepl('cp "$f" "docs/ai/${name}-${version}.md"', L, fixed = TRUE)),
-              info = "the workflow no longer publishes a version-stamped copy")
-  expect_true(any(grepl('cp "$f" "docs/ai/${name}.md"', L, fixed = TRUE)),
-              info = "the workflow no longer publishes the stable alias")
+  expect_true(any(grepl('cp "inst/ai/${name}.md" "docs/ai/${name}-${version}.md"',
+                        L, fixed = TRUE)),
+              info = "the workflow no longer publishes the development build under its own version")
   # released copies are regenerated from the tags, not left on the branch --
   # gh-pages is rewritten on every deploy (force_orphan)
   expect_true(any(grepl("git tag -l 'v*' --sort=v:refname", L, fixed = TRUE)),
               info = "the workflow no longer republishes the released manuals from their tags")
   expect_true(any(grepl("fetch-depth: 0", L, fixed = TRUE)),
               info = "reading the tags needs full history in the checkout")
+  # the unversioned alias tracks the newest RELEASE, not this build
+  expect_true(any(grepl('git show "${latest}:inst/ai/${name}.md" > "docs/ai/${name}.md"',
+                        L, fixed = TRUE)),
+              info = "the alias no longer tracks the newest release")
   expect_true(any(grepl("grep '^Version:' DESCRIPTION", L, fixed = TRUE)),
               info = "the workflow no longer reads the version from DESCRIPTION")
   expect_true(nzchar(v))

@@ -101,7 +101,7 @@ rtfreporter_ai_manual()                     # path to the user manual
 rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
 ```
 
-Or download it -- **[AI user manual (v0.8.0)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.0.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  That link is the **released** manual; the site also serves the development copy at [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md).
+Or download it -- **[AI user manual (v0.8.0)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.0.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
 
 It holds the whole workflow, the program structure a report program should
 have, every `as_rtftables()` argument, the four clinical table shapes, headers

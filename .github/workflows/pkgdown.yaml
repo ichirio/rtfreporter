@@ -55,33 +55,54 @@ jobs:
       # cannot disagree with packageVersion() (#463).  pkgdown does not know
       # about inst/, so publish them here.
       #
+      # What the folder holds: every RELEASE that shipped the manuals, plus
+      # the CURRENT development build -- nothing else.  Superseded development
+      # copies are not kept; only the newest one is of any use, and a stale
+      # one is a trap for anyone who finds it.
+      #
+      # The unversioned alias is the newest RELEASE, not this build: someone
+      # following a bare link has installed a release, and a bookmark should
+      # not start describing unreleased API behind their back.  The current
+      # development copy is reachable at its own stamped name.
+      #
       # gh-pages is rewritten on every deploy (force_orphan), so nothing
-      # accumulates on the branch by itself.  Rather than depend on branch
-      # state, every published copy is regenerated from a source of truth on
-      # each build: the working tree for the current (development) build, and
-      # the tags for each release that contains the files.  The result is the
-      # same whichever commit builds it.
+      # accumulates on the branch by itself.  Everything published here is
+      # therefore regenerated from a source of truth on each build -- the tags
+      # for the releases, the working tree for the development copy -- and the
+      # result is identical whichever commit builds it.
       - name: Publish the AI manuals
         run: |
           set -euo pipefail
           version=$(grep '^Version:' DESCRIPTION | awk '{print $2}')
+          names="rtfreporter-ai-user-manual rtfreporter-ai-dev-manual"
           mkdir -p docs/ai
 
-          # this build -- version-stamped, plus the always-latest alias
-          for f in inst/ai/*.md; do
-            name=$(basename "$f" .md)
-            cp "$f" "docs/ai/${name}-${version}.md"
-            cp "$f" "docs/ai/${name}.md"
+          # the current development build, at its own stamped name
+          for name in $names; do
+            cp "inst/ai/${name}.md" "docs/ai/${name}-${version}.md"
           done
 
           # every release that shipped the manuals, read out of its tag
+          latest=""
           for tag in $(git tag -l 'v*' --sort=v:refname); do
-            for name in rtfreporter-ai-user-manual rtfreporter-ai-dev-manual; do
+            for name in $names; do
               if git cat-file -e "${tag}:inst/ai/${name}.md" 2>/dev/null; then
                 git show "${tag}:inst/ai/${name}.md" > "docs/ai/${name}-${tag#v}.md"
+                latest="$tag"
               fi
             done
           done
+
+          # the alias tracks the newest release
+          if [ -n "$latest" ]; then
+            for name in $names; do
+              git show "${latest}:inst/ai/${name}.md" > "docs/ai/${name}.md"
+            done
+            echo "alias -> ${latest}"
+          else
+            echo "no release ships the manuals yet; alias points at this build"
+            for name in $names; do cp "inst/ai/${name}.md" "docs/ai/${name}.md"; done
+          fi
 
           ls -l docs/ai
         shell: bash
