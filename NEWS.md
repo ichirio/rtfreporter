@@ -1,3 +1,20 @@
+# rtfreporter (development version)
+
+### Documentation
+
+- **Development reopens at `0.8.0.9000`** (#465) -- the first cycle under the
+  standard R scheme, where the three-component part names the last release.
+
+  The AI manuals are stamped with the **development** version they describe,
+  while the home-page and navbar links name the newest **release** -- the copy
+  that matches what `install_github()` gives a reader.  So the links change
+  once per release rather than every time the development counter moves.
+
+  The pkgdown workflow now regenerates every released manual from its own tag
+  on each build (`git show <tag>:inst/ai/...`), so the version-stamped copies
+  on the site are reproducible rather than dependent on `gh-pages` branch
+  state -- which is rewritten on every deploy (`force_orphan`).
+
 # rtfreporter 0.8.0
 
 ### Documentation

@@ -135,15 +135,17 @@ navbar:
         # ship in inst/ai/ and are copied to docs/ai/ by the pkgdown workflow
         # (#463), version-stamped, so the link says which package it matches.
         # They are NOT articles: no `articles/` prefix, no `.html` extension.
-        # Bump the version in BOTH the text and the href each release; a test
-        # fails the build if they fall behind DESCRIPTION.
+        # These name the RELEASED manual -- the one that matches what
+        # `install_github()` gives -- so they change once per release, not
+        # every time the development counter moves.  A test fails the build if
+        # they fall behind the newest tag.
         - text: -------
         - text: "For AI assistants"
         - text: "Developing with an AI assistant"
           href: articles/ai-development.html
-        - text: "AI user manual (0.8.0)"
+        - text: "AI user manual (v0.8.0)"
           href: ai/rtfreporter-ai-user-manual-0.8.0.md
-        - text: "AI developer manual (0.8.0)"
+        - text: "AI developer manual (v0.8.0)"
           href: ai/rtfreporter-ai-dev-manual-0.8.0.md
         # ── Worked clinical examples ────────────────────────────────────
         - text: -------

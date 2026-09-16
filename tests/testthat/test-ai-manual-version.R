@@ -57,18 +57,28 @@ test_that("rtfreporter_ai_manual(file = ) copies it out", {
                    "rtfreporter-ai-dev-manual.md")
 })
 
-test_that("the links that name a version agree with DESCRIPTION", {
-  v <- .pkg_version()
+test_that("the public links name the newest RELEASE, not the dev version", {
+  # A reader following a link from the home page has installed a release, so
+  # the link must name the released manual -- which also means it changes once
+  # per release rather than every time the development counter moves.
+  repo <- test_path("..", "..")
+  skip_if_not(dir.exists(file.path(repo, ".git")), "not a source checkout")
+  tags <- suppressWarnings(system2("git", c("-C", repo, "tag", "-l", "v*",
+                                            "--sort=-v:refname"),
+                                   stdout = TRUE, stderr = FALSE))
+  skip_if(length(tags) == 0L, "no release tags")
+  rel <- sub("^v", "", tags[[1L]])
+
   for (f in c("README.md", "_pkgdown.yml")) {
-    p <- test_path("..", "..", f)
-    skip_if_not(file.exists(p), paste(f, "not available (installed package)"))
+    p <- file.path(repo, f)
+    skip_if_not(file.exists(p), paste(f, "not available"))
     L <- readLines(p, encoding = "UTF-8", warn = FALSE)
     hit <- grep("rtfreporter-ai-(user|dev)-manual-[0-9]", L, value = TRUE)
     expect_gt(length(hit), 0L)
-    stale <- hit[!grepl(v, hit, fixed = TRUE)]
+    stale <- hit[!grepl(rel, hit, fixed = TRUE)]
     expect_identical(stale, character(0),
-      info = paste0(f, " links a version that is not ", v,
-                    " -- bump it with the release: ",
+      info = paste0(f, " links a version that is not the newest release (",
+                    rel, ") -- update it when you cut one: ",
                     paste(trimws(stale), collapse = " | ")))
   }
 })
@@ -84,6 +94,12 @@ test_that("the version-stamped file the links point at is the one published", {
               info = "the workflow no longer publishes a version-stamped copy")
   expect_true(any(grepl('cp "$f" "docs/ai/${name}.md"', L, fixed = TRUE)),
               info = "the workflow no longer publishes the stable alias")
+  # released copies are regenerated from the tags, not left on the branch --
+  # gh-pages is rewritten on every deploy (force_orphan)
+  expect_true(any(grepl("git tag -l 'v*' --sort=v:refname", L, fixed = TRUE)),
+              info = "the workflow no longer republishes the released manuals from their tags")
+  expect_true(any(grepl("fetch-depth: 0", L, fixed = TRUE)),
+              info = "reading the tags needs full history in the checkout")
   expect_true(any(grepl("grep '^Version:' DESCRIPTION", L, fixed = TRUE)),
               info = "the workflow no longer reads the version from DESCRIPTION")
   expect_true(nzchar(v))

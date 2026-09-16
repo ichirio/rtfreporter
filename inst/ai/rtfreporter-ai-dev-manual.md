@@ -1,6 +1,7 @@
 # rtfreporter — AI developer manual
 
-**This manual documents the rtfreporter 0.8.0 codebase.**
+**This manual documents the rtfreporter 0.8.0.9000 codebase** (the
+development version, after release 0.8.0).
 Check it matches the tree you are working in — `DESCRIPTION`'s `Version:`.
 If they differ, trust the tree, not this file.
 
