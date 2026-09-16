@@ -2,6 +2,32 @@
 
 ### Documentation
 
+- **The AI user manual gains a program-structure section** (#461).  The manual
+  said which function to call but nothing about how to arrange a report
+  program, so an assistant produced one long script that computed, formatted
+  and wrote the file in a single pass -- fine for one table, unmaintainable
+  for a fifty-output deliverable.
+
+  Section 3 now states the six stages (setup / data / body / present / pages /
+  render) and the four rules that make them generalize: the **body** stage
+  returns a plain `data.frame` and knows no RTF; the **pages** stage returns
+  pages and writes nothing, so `generate_rtfreport()` is the only side effect
+  and it comes last; a per-page denominator goes through
+  `set_col_header(values = )` rather than into a `sprintf()`; and widths follow
+  the layout (`rep(2, length(days) * length(arms))`) instead of a hard-coded
+  count.
+
+  It also splits column headers into two tiers -- a named row inline in
+  `set_col_header()` for the simple case, a separately built
+  `rtf_col_header()` with `col_cell()` / `col_key()` when there are spanning
+  cells or per-page values -- and composes the running header from a function,
+  so the study block is stated once across the deliverable rather than in every
+  program.
+
+  Generalized from a real production template (discussion #460).  The skeleton
+  is executed by `test-ai-user-manual.R` like every other example in the
+  manual.  Sections 3..17 shifted to 4..18.
+
 - **AI assistant manuals, downloadable from the docs site** (#454).  The
   package is new enough that a general-purpose chat assistant has never seen
   it: asked for rtfreporter code it reaches for `r2rtf` verbs or invents
