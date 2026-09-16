@@ -25,6 +25,10 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # tags + history: the AI-manual step reads released copies out of
+          # the tags (see "Publish the AI manuals").
+          fetch-depth: 0
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -49,23 +53,36 @@ jobs:
 
       # The AI manuals live in inst/ai/ so they install WITH the package and
       # cannot disagree with packageVersion() (#463).  pkgdown does not know
-      # about inst/, so publish them here: a version-stamped copy, which is
-      # the artefact a reader can point at, plus a stable alias for the link
-      # that should always resolve.
+      # about inst/, so publish them here.
       #
-      # gh-pages is deployed with force_orphan, so older version-stamped files
-      # do NOT accumulate by themselves.  When a release containing these
-      # files is cut, regenerate the released copies here from their tags
-      # (`git show <tag>:inst/ai/<name>`) rather than relying on branch state.
+      # gh-pages is rewritten on every deploy (force_orphan), so nothing
+      # accumulates on the branch by itself.  Rather than depend on branch
+      # state, every published copy is regenerated from a source of truth on
+      # each build: the working tree for the current (development) build, and
+      # the tags for each release that contains the files.  The result is the
+      # same whichever commit builds it.
       - name: Publish the AI manuals
         run: |
+          set -euo pipefail
           version=$(grep '^Version:' DESCRIPTION | awk '{print $2}')
           mkdir -p docs/ai
+
+          # this build -- version-stamped, plus the always-latest alias
           for f in inst/ai/*.md; do
             name=$(basename "$f" .md)
             cp "$f" "docs/ai/${name}-${version}.md"
             cp "$f" "docs/ai/${name}.md"
           done
+
+          # every release that shipped the manuals, read out of its tag
+          for tag in $(git tag -l 'v*' --sort=v:refname); do
+            for name in rtfreporter-ai-user-manual rtfreporter-ai-dev-manual; do
+              if git cat-file -e "${tag}:inst/ai/${name}.md" 2>/dev/null; then
+                git show "${tag}:inst/ai/${name}.md" > "docs/ai/${name}-${tag#v}.md"
+              fi
+            done
+          done
+
           ls -l docs/ai
         shell: bash
 
