@@ -23,9 +23,11 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 * **全面 S3。** すべてのオブジェクトは素の S3 リストで、外部 OOP フレームワークは
   使いません。そのため `dput()` 可能で、`saveRDS()` でも素直にシリアライズ
   できます。
-* **ハード依存ゼロ。** `Imports:` は `methods`（R 同梱）だけです。任意連携
-  （gt, gtsummary, rtables/tern, ggplot2 …）はすべて `Suggests:` に置き、
-  `requireNamespace()` で確認し、未インストール時は親切なエラーを出します。
+* **サードパーティ依存ゼロ。** `Imports:` には R 同梱のパッケージ
+  （`grDevices`, `grid`, `methods`, `utils`）だけを置きます。任意連携
+  （gt, gtsummary, rtables/tern, flextable, huxtable, ggplot2 …）はすべて
+  `Suggests:` に置き、`.need_pkg()` 経由で参照します。未インストール時は
+  親切なエラー、バージョンが古いときは警告を出します。
 * **長さの単位は twips のみ**（1 inch = 1440 twips）。
 * **不変・関数型のヘルパー。** 内部の更新処理は、その場で書き換えるのではなく
   *新しいコピー*を返します。
