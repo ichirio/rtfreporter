@@ -15,6 +15,29 @@
   current development build, and nothing else: a superseded development copy
   has no use, and a stale one found by search is a trap.
 
+- **`LEARNING.md` and the architecture article describe the code that exists**
+  (#456).  Both had drifted far enough to mislead: `LEARNING.md` presented
+  `rtf_theme` as a live R6 class with a worked example, pointed at a
+  `R/rtf_theme.R` that is not there, claimed R6 was in `Suggests:` (it is in
+  no field of `DESCRIPTION`), recommended two deprecated border helpers and
+  linked a vignette that does not exist; `architecture.Rmd` and its `-ja` twin
+  still said `Imports:` was `methods` only.
+
+  `LEARNING.md` is rewritten rather than deleted.  Its post-mortem -- why the
+  R6 scaffolds, the chained border builders and the shared mutable theme each
+  failed to pay -- is recorded nowhere else, and without it the S3-only
+  invariant is a rule with no reason attached, which is the kind a later
+  contributor overturns.  The document now ends where the code did: the one
+  class that *did* look justified was deleted too, because the argument for it
+  was sound in the abstract and worth nothing in a workflow where a report
+  script runs once, top to bottom.
+
+  The architecture articles now state the real `Imports:` set (`grDevices`,
+  `grid`, `methods`, `utils` -- all shipped with R, so the no-third-party-
+  dependency invariant is intact) and name `.need_pkg()` as the guard.  The
+  AI developer manual's warnings about both documents are removed, being no
+  longer true.
+
 - **Development reopens at `0.8.0.9000`** (#465) -- the first cycle under the
   standard R scheme, where the three-component part names the last release.
 

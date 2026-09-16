@@ -23,10 +23,11 @@ documents are linked below (each opens in English with a Japanese toggle).
 * **S3 throughout.** Every object is a plain S3 list, with no external OOP
   framework. Objects are therefore `dput()`-able and serialise cleanly with
   `saveRDS()`.
-* **Zero hard runtime dependencies.** `Imports:` is only `methods` (ships
-  with R). Every optional integration (gt, gtsummary, rtables/tern,
-  ggplot2, ...) lives in `Suggests:` and is reached through
-  `requireNamespace()` with a helpful error if absent.
+* **Zero third-party runtime dependencies.** `Imports:` holds only packages
+  that ship with R (`grDevices`, `grid`, `methods`, `utils`). Every optional
+  integration (gt, gtsummary, rtables/tern, flextable, huxtable, ggplot2, ...)
+  lives in `Suggests:` and is reached through `.need_pkg()`, which errors
+  helpfully when the package is absent and warns when it is too old.
 * **twips are the only length unit** used internally (1 inch = 1440 twips).
 * **Immutable, functional helpers.** Internal mutators return a *new* copy
   of the object rather than mutating in place.

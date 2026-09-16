@@ -74,7 +74,7 @@ Authoritative prose, in order of usefulness:
 | Adding a table-object adapter | `vignettes/articles/extending-adapters.Rmd` |
 | Workflow, branching, versioning, releases | `CONTRIBUTING.md` — its *Contributor vs Collaborator* table is the authority on the fork/direct split. Note its line saying branch protection on `main` is off is stale: `main` now requires 7 green checks and one approving review. |
 | Orientation + invariants | `AGENTS.md` |
-| Why S3 and not R6 | `LEARNING.md` — **partly stale**: its "one R6 class" section describes `rtf_theme`, which no longer exists. The reasoning for choosing S3 is still sound; the inventory is not. |
+| Why S3 and not R6 | `LEARNING.md` — the post-mortem: why the R6 scaffolds, the chained border builders and the shared mutable theme each failed to pay, including the one class that looked justified and still did not survive. |
 | Public API surface | `vignettes/articles/external-api.Rmd` |
 
 If a document and the code disagree, fix whichever is wrong — do not paper
@@ -383,7 +383,7 @@ session.
 | A new export missing from `_pkgdown.yml` `reference:` | the pkgdown workflow fails on an unlisted topic |
 | Moving an optional package to `Imports:` "just to simplify" | it breaks invariant 2; use `.need_pkg()` |
 | Fixing a doc without its `-ja` twin | the Japanese article silently goes stale |
-| Trusting a prose document over the code | `LEARNING.md` still documents `rtf_theme`; `architecture.Rmd` still says `Imports:` is only `methods`. Check `R/` and `DESCRIPTION`. |
+| Trusting a prose document over the code | prose drifts; `R/`, `NAMESPACE` and `DESCRIPTION` do not. When they disagree, fix the document. |
 | Non-ASCII slipping into R code | `R CMD check` flags it; use `\uXXXX` |
 
 **When something is not covered here:** read the article named in §1 rather
