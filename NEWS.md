@@ -2,6 +2,19 @@
 
 ### Documentation
 
+- **The bare manual link tracks the release, and the folder keeps only what
+  is useful** (#468).  `ai/rtfreporter-ai-user-manual.md` was written from the
+  current build, so on `main` it served the *development* version -- and a
+  bookmark of the unversioned name quietly started describing API that is in
+  no release, which is the failure #463 existed to stop.
+
+  It now resolves to the newest **release**, which is what
+  `install_github()` gives whoever follows it; the development copy is
+  published beside it under its own stamped version for anyone who wants
+  `main`.  The folder holds every release that shipped the manuals plus the
+  current development build, and nothing else: a superseded development copy
+  has no use, and a stale one found by search is a trap.
+
 - **Development reopens at `0.8.0.9000`** (#465) -- the first cycle under the
   standard R scheme, where the three-component part names the last release.
 
