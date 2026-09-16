@@ -14,6 +14,11 @@ name: version-guard
 on:
   pull_request:
     branches: [main]
+    # `labeled` / `unlabeled` matter: the guard reads the `release` label from
+    # the event payload, and `gh pr create --label` attaches labels AFTER the
+    # PR is opened -- so without these a release PR is judged before its label
+    # exists, and re-running replays the same label-less payload.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
