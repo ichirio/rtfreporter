@@ -1,6 +1,10 @@
 # rtfreporter — AI user manual
 
-**Package:** `rtfreporter` (R) · **Covers the API as of:** v0.7.x ·
+**This manual documents rtfreporter 0.7.56.**
+Check it matches what you have — `packageVersion("rtfreporter")`. If they
+differ, trust the package, not this file, and fetch the matching copy with
+`rtfreporter_ai_manual()`.
+
 **Docs:** <https://ichirio.github.io/rtfreporter/> ·
 **Source:** <https://github.com/ichirio/rtfreporter>
 
@@ -724,7 +728,7 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
 `rtf_default_format` `rtf_watermark` `generate_rtfreport`
-`rtfreporter_options` `rtfreporter_reset_defaults`
+`rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
 
 **Sections / bands:** `rtf_section` `combine_sections` `rtf_header` `rtf_footer`
 `update_header_row` `update_footer_row` `rtf_header_source` `rtf_titles`

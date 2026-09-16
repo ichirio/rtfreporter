@@ -20,25 +20,6 @@ no body borders), and a left-aligned footnote.  It is opinionated by
 design rather than a do-everything RTF engine.  The package logo above is
 literally the kind of page `generate_rtfreport()` produces.
 
-## Writing rtfreporter code with an AI assistant
-
-rtfreporter is new, so a chat assistant has never seen it: asked for
-rtfreporter code it reaches for `r2rtf` verbs or invents arguments, and none
-of it is flagged as a guess.  Give it the facts first.
-
-**[⬇ rtfreporter-ai-user-manual.md](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md)**
--- one self-contained file (~26 KB) sized for a single chat session.  Attach it
-at the **start** of the session and say *"use this manual"*.  It holds the
-whole workflow, every `as_rtftables()` argument, the four clinical table shapes,
-headers and page tokens, listings, figures, borders, and the complete list of
-exported functions.
-
-Every example in it is executed against the package and its function list is
-checked against `NAMESPACE`, both by CI -- so a manual that drifts from the API
-fails the build rather than misleading you.
-
-Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual.
-
 ## Why rtfreporter?
 
 We **deliberately keep the scope small**.  rtfreporter is not a
@@ -105,6 +86,31 @@ generate_rtfreport(doc, "T_14_1_1.rtf", overwrite = TRUE)
 </p>
 
 <p align="center"><sub><em>The generated <code>T_14_1_1.rtf</code>, opened in a word processor.</em></sub></p>
+
+## Writing rtfreporter code with an AI assistant
+
+rtfreporter is too new to be in any chat model's training data: asked for
+rtfreporter code it reaches for `r2rtf`'s verbs or invents arguments, and
+flags neither as a guess.  Give it the facts first.
+
+The manuals **ship with the package**, so the one you attach describes the
+version you actually have:
+
+``` r
+rtfreporter_ai_manual()                     # path to the user manual
+rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
+```
+
+Or download the copy this site was built from -- **[AI user manual (0.7.56)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.7.56.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.
+
+It holds the whole workflow, the program structure a report program should
+have, every `as_rtftables()` argument, the four clinical table shapes, headers
+and page tokens, listings, figures, borders, and the complete list of exported
+functions.  Every example in it is executed against the package and its
+function list is checked against `NAMESPACE`, both by CI -- so a manual that
+drifts from the API fails the build rather than misleading you.
+
+Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual (`rtfreporter_ai_manual("dev")`).
 
 ## A focused tool, on purpose
 

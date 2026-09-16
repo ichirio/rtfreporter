@@ -1,4 +1,5 @@
 # Package defaults / configuration
+export(rtfreporter_ai_manual)
 export(rtfreporter_options)
 export(rtfreporter_reset_defaults)
 

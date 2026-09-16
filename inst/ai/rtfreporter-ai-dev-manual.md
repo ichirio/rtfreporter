@@ -1,6 +1,9 @@
 # rtfreporter — AI developer manual
 
-**Package:** `rtfreporter` (R) · **Covers the codebase as of:** v0.7.x ·
+**This manual documents the rtfreporter 0.7.56 codebase.**
+Check it matches the tree you are working in — `DESCRIPTION`'s `Version:`.
+If they differ, trust the tree, not this file.
+
 **Repo:** <https://github.com/ichirio/rtfreporter> ·
 **Docs:** <https://ichirio.github.io/rtfreporter/>
 
@@ -11,7 +14,7 @@
 > **Scope: working *on* the package** — changing `R/`, adding an adapter,
 > writing tests, opening a PR. *Using* rtfreporter to produce reports is the
 > companion **AI user manual**
-> (`https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md`).
+> (`https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md`).
 > Attach **one** of the two, not both: the user manual forbids touching
 > internals, this one requires it.
 >

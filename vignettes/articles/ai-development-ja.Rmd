@@ -31,7 +31,7 @@ rtfreporter は新しく、どのモデルの学習データにも入ってい�
 
 ダウンロードして、セッションの**最初**に添付してください。
 
-> **[⬇ rtfreporter-ai-dev-manual.md](https://ichirio.github.io/rtfreporter/rtfreporter-ai-dev-manual.md)**
+> **[⬇ rtfreporter-ai-dev-manual.md](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual.md)**
 
 そのうえで、こう伝えます。
 
@@ -46,7 +46,7 @@ rtfreporter は新しく、どのモデルの学習データにも入ってい�
 ### 添付するのは 1 つだけ
 
 もう 1 つ、パッケージを**使って**帳票を作る人向けの
-[AI **ユーザー**マニュアル](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md)
+[AI **ユーザー**マニュアル](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md)
 があります。**両方を同時に添付しないでください。**
 
 両者は正反対の指示を持っています。ユーザーマニュアルの第一の規則は「公開 API だけを
