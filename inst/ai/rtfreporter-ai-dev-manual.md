@@ -1,6 +1,6 @@
 # rtfreporter — AI developer manual
 
-**This manual documents the rtfreporter 0.7.56 codebase.**
+**This manual documents the rtfreporter 0.8.0 codebase.**
 Check it matches the tree you are working in — `DESCRIPTION`'s `Version:`.
 If they differ, trust the tree, not this file.
 
@@ -334,10 +334,14 @@ session.
   Example: `fix/453-named-label-row-guard`.
 * **PR body** carries `Closes #N` (or `Refs #N` for one cut of an umbrella
   issue, which stays open as a tracker with a checklist).
-* **Version:** each PR raises `DESCRIPTION` `Version:` by **exactly one
-  PATCH**. A MINOR or MAJOR bump fails `version-guard` unless the PR carries
-  the `release` label. Digits and dots only — `0.1.0-alpha` is a malformed R
-  version.
+* **Version:** the standard R scheme — a release is `X.Y.Z`, development is
+  `X.Y.Z.9000`, and the three-component part names the **last release**. An
+  ordinary PR changes only the fourth position, and usually **not at all**:
+  bump it when the change is something another branch or a bug report needs to
+  name, otherwise leave `Version:` alone. `NEWS.md`, not the number, is the
+  record of what changed. Touching `X`, `Y` or `Z`, or lowering the version,
+  fails `version-guard` unless the PR carries the `release` label. Digits and
+  dots only — `0.8.0-rc` is a malformed R version.
 * **CI (all must be green):** `R-CMD-check` (matrix, 0 errors / 0 warnings),
   `test-coverage`, `pkgdown`, `version-guard`, `lint`.
 * **Before pushing:** `devtools::document()`, `devtools::test()`,

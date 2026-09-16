@@ -36,8 +36,8 @@ The package is not on CRAN yet. Install from GitHub:
 ``` r
 # install.packages("remotes")
 
-# Latest release (v0.4.0)
-remotes::install_github("ichirio/rtfreporter@v0.4.0")
+# Latest release (v0.8.0)
+remotes::install_github("ichirio/rtfreporter@v0.8.0")
 
 # Development version (latest main)
 remotes::install_github("ichirio/rtfreporter")
@@ -101,7 +101,7 @@ rtfreporter_ai_manual()                     # path to the user manual
 rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
 ```
 
-Or download the copy this site was built from -- **[AI user manual (0.7.56)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.7.56.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.
+Or download the copy this site was built from -- **[AI user manual (0.8.0)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.0.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.
 
 It holds the whole workflow, the program structure a report program should
 have, every `as_rtftables()` argument, the four clinical table shapes, headers
@@ -217,31 +217,31 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 `lifecycle: experimental` badge; the API may still change in
 backward-incompatible ways before v1.0.0.
 
-- **Latest release: `v0.4.0`** (2026-06-16) -- installable from GitHub
-  (`remotes::install_github("ichirio/rtfreporter@v0.4.0")`); not yet on CRAN.
-  It added the flextable & huxtable adapters, `group_by` group-detection
-  modes, document-wide style defaults, configurable `rtfreporter.*` options,
-  `collapse_repeats`, `blank_row_normalize` and a corrected multi-page page
-  break.
-- **Development version on `main`** has moved a long way since: **listings**
-  end to end (`listing_col()` / `listing_spec()` / `build_listing()`, the
-  column-width estimator `fit_listing_widths()`, and an editable wrapping
-  rule), the **merged stub** (`stub_cols()` / `stub_spec()`), a rewritten
-  **border** vocabulary, a table-width vocabulary shared by `rtftable()` and
-  `as_rtftables()`, and **figures from plot objects** rather than saved files.
+- **Latest release: `v0.8.0`** (2026-09-16) -- installable from GitHub
+  (`remotes::install_github("ichirio/rtfreporter@v0.8.0")`); not yet on CRAN.
+  It rolls up everything since v0.4.0: **listings** end to end
+  (`listing_col()` / `listing_spec()` / `build_listing()`, the column-width
+  estimator `fit_listing_widths()`, and an editable wrapping rule), the
+  **merged stub** (`stub_cols()` / `stub_spec()`), a rewritten **border**
+  vocabulary, post-hoc **styling verbs**, column pagination
+  (`paginate_cols()`), per-page header values
+  (`set_col_header(values = )`), **figures from plot objects**, and the
+  **AI assistant manuals** that now ship inside the package.  59 exported
+  functions at v0.4.0; 91 here.
+- **Development version on `main`: `0.8.0.9000`.**  rtfreporter follows the
+  standard R versioning scheme -- a release is `X.Y.Z`, development is
+  `X.Y.Z.9000`, and the three-component part always names the last release.
+  An ordinary pull request leaves `DESCRIPTION` alone unless the change is
+  one somebody needs to name; changing `X`, `Y` or `Z` is a deliberate,
+  labelled release action, enforced by the `version-guard` CI.
   See [`NEWS.md`](NEWS.md).
-- Each pull request advances only the development *patch* number. A
-  MINOR/MAJOR bump is a deliberate, labelled release action (enforced by the
-  `version-guard` CI), not an accident -- which is why the development
-  version has run past the milestone numbers below without releasing them.
 
 Planned release milestones:
 
 | Version | Goal |
 |---------|------|
-| **v0.8.0** | CRAN-submission **preparation** -- full `R CMD check --as-cran` clean, increased test coverage, documentation/metadata polish. |
-| **v0.9.0** | **CRAN registration** -- initial CRAN release. |
-| **v1.0.0** | **Stable API** -- the `lifecycle: experimental` badge is removed; "the API may change" wording is dropped. |
+| **v0.9.0** | CRAN-submission **preparation** -- full `R CMD check --as-cran` clean, increased test coverage, documentation/metadata polish. |
+| **v1.0.0** | **CRAN registration** and a **stable API** -- the `lifecycle: experimental` badge is removed; "the API may change" wording is dropped. |
 
 See [`NEWS.md`](NEWS.md) for the user-facing changelog and
 [`CHANGELOG.md`](CHANGELOG.md) for detailed per-version notes.

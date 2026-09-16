@@ -77,11 +77,18 @@ Then, once you agree on the approach:
 
 > Implement it. Branch `feat/123-slug`, update `R/`, the tests and the
 > roxygen together, run `devtools::document()`, `devtools::test()` and
-> `lintr::lint_package()`, bump the PATCH version, add a `NEWS.md` entry, and
-> open the PR with `Closes #123`.
+> `lintr::lint_package()`, add a `NEWS.md` entry, and open the PR with
+> `Closes #123`.
 
 Every item in that list is in the manual; naming them anyway is cheap and
 makes the omissions obvious when you review.
+
+Note what is *not* in it: a version bump.  Under the standard R scheme
+(`X.Y.Z` released, `X.Y.Z.9000` in development) an ordinary PR leaves
+`DESCRIPTION` alone unless the change is one somebody needs to name, and
+`version-guard` rejects a PR that touches `X.Y.Z` without the `release` label.
+An assistant that "helpfully" bumps the version is making a release, and will
+be told so by CI.
 
 ## What to trust, and what to check yourself
 

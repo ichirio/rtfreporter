@@ -4,6 +4,51 @@ All notable changes to rtfreporter are documented in this file. Changes are reco
 
 ---
 
+## v0.8.0
+
+> **Status**: Published as the current stable version -- a MINOR feature
+> release rolling up all development since v0.4.0 (146 pull requests).  It is
+> also the release that **adopts the standard R versioning scheme**: a release
+> is `X.Y.Z`, development is `X.Y.Z.9000`, and the three-component part names
+> the last release.  Development continues at `0.8.0.9000`.
+
+Highlights since v0.4.0:
+
+* **Listings, end to end** -- `listing_col()` / `listing_spec()` /
+  `build_listing()`, the font- and page-aware column-width estimator
+  `fit_listing_widths()`, an editable wrapping rule (`listing_wrap()`,
+  `listing_code()`), and `as_rtftables(listing = )` which keeps a subject's
+  block whole across a page break.
+* **The merged stub** -- `stub_cols()` and `stub_spec()` fold a SOC / PT
+  hierarchy into one indented stub column, as a hook inside the
+  `as_rtftables()` pipeline.
+* **Column pagination** -- `paginate_cols()` splits a table too wide for the
+  page by column, repeating the stub, with the page order expressed as axes
+  (`page_order = c("cols", "group", "rows")`).
+* **Post-hoc styling verbs** -- `style_header()`, `style_cols()`,
+  `style_body()`, `style_zone()` and `add_header_row()`, each working on one
+  table or on every page of an `as_rtftables()` result.
+* **Headers in final-table coordinates** -- `set_col_header()` and
+  `rtf_columns()`, with `col_cell()` / `col_key()` selecting columns by name
+  or by key rather than by position, and `set_col_header(values = )` filling
+  `{token}` denominators per page.
+* **A rewritten border vocabulary** -- `rtf_border()` and `rtf_border_side()`
+  replace the per-shape constructors, which are deprecated and scheduled for
+  removal before CRAN.
+* **Figures from plot objects** -- `rtfplot()` renders a ggplot / base plot
+  directly, rather than requiring a saved file.
+* **Sorting, `page_by`, and `drop_cols`** in `as_rtftables()`: a column can
+  decide the page breaks and never be printed.
+* **AI assistant manuals ship inside the package** -- `rtfreporter_ai_manual()`
+  returns the user or developer briefing installed alongside your version, so
+  what an assistant reads matches what you have.
+* Adapters for **flextable** and **huxtable** join gt, gtsummary, tfrmt and
+  rtables/tern; gt column names are now carried verbatim.
+
+59 exported functions at v0.4.0; **91** here.
+
+---
+
 ## v0.4.0
 
 > **Status**: Published as the current stable version — a MINOR feature release

@@ -1,10 +1,14 @@
-# Blocks a pull request that raises the MINOR or MAJOR position of the
-# DESCRIPTION Version unless the PR carries the `release` label.
+# Enforces rtfreporter's versioning scheme (see CONTRIBUTING.md
+# "Versioning & releases").
 #
-# Rationale: ordinary development PRs may bump only the PATCH position; MINOR /
-# MAJOR bumps are maintainer-directed release actions (see CONTRIBUTING.md
-# "Versioning & releases"). This makes that rule machine-enforced rather than
-# relying on reviewer memory.
+#   released     X.Y.Z          a release action -- needs the `release` label
+#   development  X.Y.Z.9000     ordinary PRs, freely
+#
+# The three-component part names the LAST RELEASE, so an ordinary development
+# PR must never touch it; only the fourth position is a development counter.
+# This makes that rule machine-enforced rather than reliant on reviewer memory,
+# and additionally refuses a version that goes backwards -- R versions must
+# increase monotonically or `install_github()` stops seeing updates.
 name: version-guard
 
 on:
@@ -23,7 +27,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Guard against unintended MINOR/MAJOR bumps
+      - name: Guard the release positions of DESCRIPTION Version
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HAS_RELEASE_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'release') }}
@@ -38,43 +42,43 @@ jobs:
           echo "Head version : ${head_ver}"
           echo "release label: ${HAS_RELEASE_LABEL}"
 
-          # Version must be digits-and-dots only (R rejects e.g. 0.3.0-alpha).
+          # R rejects anything but digits and dots (e.g. 0.8.0-rc).
           if ! printf '%s' "$head_ver" | grep -qE '^[0-9]+(\.[0-9]+)*$'; then
             echo "::error::DESCRIPTION Version '${head_ver}' must be digits and dots only."
             exit 1
           fi
 
           if [ "$head_ver" = "$base_ver" ]; then
-            echo "No version change — OK."
+            echo "No version change -- OK."
             exit 0
           fi
 
-          # Parse MAJOR / MINOR with parameter expansion (no heredocs).
-          first_field() { printf '%s' "${1%%.*}"; }
-          second_field() {
-            case "$1" in
-              *.*) local rest="${1#*.}"; printf '%s' "${rest%%.*}";;
-              *)   printf '0';;
-            esac
+          # field <version> <n>  -- the n-th dot-separated field, 0 when absent.
+          field() {
+            printf '%s' "$1" | awk -F. -v n="$2" '{print ($n == "" ? 0 : $n + 0)}'
           }
-          hmaj="$(first_field "$head_ver")";  hmin="$(second_field "$head_ver")"
-          bmaj="$(first_field "$base_ver")";  bmin="$(second_field "$base_ver")"
-          hmaj=${hmaj:-0}; hmin=${hmin:-0}; bmaj=${bmaj:-0}; bmin=${bmin:-0}
 
-          raises_minor_major=false
-          if [ "$hmaj" -gt "$bmaj" ]; then
-            raises_minor_major=true
-          elif [ "$hmaj" -eq "$bmaj" ] && [ "$hmin" -gt "$bmin" ]; then
-            raises_minor_major=true
-          fi
-
-          if [ "$raises_minor_major" = "true" ]; then
-            if [ "$HAS_RELEASE_LABEL" = "true" ]; then
-              echo "MINOR/MAJOR bump ${base_ver} -> ${head_ver} with 'release' label — OK."
-              exit 0
+          # The release positions are X.Y.Z; the 4th is the development counter.
+          for i in 1 2 3; do
+            h="$(field "$head_ver" "$i")"; b="$(field "$base_ver" "$i")"
+            if [ "$h" -lt "$b" ]; then
+              echo "::error::Version ${base_ver} -> ${head_ver} goes backwards. R versions must increase monotonically."
+              exit 1
             fi
-            echo "::error::Version ${base_ver} -> ${head_ver} raises the MINOR/MAJOR position without a 'release' label. Development PRs may bump the PATCH only; MINOR/MAJOR bumps are maintainer-directed releases. Add the 'release' label if this is intentional."
+            if [ "$h" -gt "$b" ]; then
+              if [ "$HAS_RELEASE_LABEL" = "true" ]; then
+                echo "Release bump ${base_ver} -> ${head_ver} with the 'release' label -- OK."
+                exit 0
+              fi
+              echo "::error::Version ${base_ver} -> ${head_ver} changes a RELEASE position (X.Y.Z) without a 'release' label. An ordinary development PR may change only the fourth position (X.Y.Z.9000 -> .9001). Cutting a release is a maintainer action: add the 'release' label if that is what this is."
+              exit 1
+            fi
+          done
+
+          # X.Y.Z unchanged: the 4th position is the development counter.
+          h4="$(field "$head_ver" 4)"; b4="$(field "$base_ver" 4)"
+          if [ "$h4" -lt "$b4" ]; then
+            echo "::error::Version ${base_ver} -> ${head_ver} lowers the development counter."
             exit 1
           fi
-
-          echo "PATCH-level change ${base_ver} -> ${head_ver} — OK."
+          echo "Development bump ${base_ver} -> ${head_ver} -- OK."
