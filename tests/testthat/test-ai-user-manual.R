@@ -1,6 +1,6 @@
 ## tests/testthat/test-ai-user-manual.R
 ##
-## `pkgdown/assets/rtfreporter-ai-user-manual.md` is the briefing users attach to an
+## `inst/ai/rtfreporter-ai-user-manual.md` is the briefing users attach to an
 ## AI chat session so the assistant can write rtfreporter code.  Its whole value
 ## is that it is TRUE: an assistant cannot tell a stale manual from a fresh one,
 ## so every claim in it has to be checked here rather than reviewed by eye.
@@ -10,14 +10,14 @@
 ##   2. it never puts a deprecated export in code a reader would copy,
 ##   3. every idiom it teaches actually runs.
 ##
-## The manual lives under `pkgdown/`, which is .Rbuildignore'd, so these tests
-## skip on an installed package and run from the source tree (devtools::test(),
-## and the R-CMD-check job that checks the source directory).
+## The manuals ship in inst/ai/ (#463), so they are installed with the package
+## and these run everywhere.  The checks that read the SOURCE TREE (README,
+## _pkgdown.yml, the articles) still skip when it is not there.
 
 library(testthat)
 
 .manual_path <- function() {
-  test_path("..", "..", "pkgdown", "assets", "rtfreporter-ai-user-manual.md")
+  test_path("..", "..", "inst", "ai", "rtfreporter-ai-user-manual.md")
 }
 
 .manual_lines <- function() {

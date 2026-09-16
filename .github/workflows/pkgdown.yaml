@@ -47,6 +47,28 @@ jobs:
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
 
+      # The AI manuals live in inst/ai/ so they install WITH the package and
+      # cannot disagree with packageVersion() (#463).  pkgdown does not know
+      # about inst/, so publish them here: a version-stamped copy, which is
+      # the artefact a reader can point at, plus a stable alias for the link
+      # that should always resolve.
+      #
+      # gh-pages is deployed with force_orphan, so older version-stamped files
+      # do NOT accumulate by themselves.  When a release containing these
+      # files is cut, regenerate the released copies here from their tags
+      # (`git show <tag>:inst/ai/<name>`) rather than relying on branch state.
+      - name: Publish the AI manuals
+        run: |
+          version=$(grep '^Version:' DESCRIPTION | awk '{print $2}')
+          mkdir -p docs/ai
+          for f in inst/ai/*.md; do
+            name=$(basename "$f" .md)
+            cp "$f" "docs/ai/${name}-${version}.md"
+            cp "$f" "docs/ai/${name}.md"
+          done
+          ls -l docs/ai
+        shell: bash
+
       - name: Deploy to GitHub Pages
         if: github.event_name != 'pull_request'
         uses: peaceiris/actions-gh-pages@v4

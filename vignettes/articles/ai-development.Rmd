@@ -30,7 +30,7 @@ the reference, which is slower than writing the code yourself.
 
 Download it and attach it as the **first** thing in the session:
 
-> **[⬇ rtfreporter-ai-dev-manual.md](https://ichirio.github.io/rtfreporter/rtfreporter-ai-dev-manual.md)**
+> **[⬇ rtfreporter-ai-dev-manual.md](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual.md)**
 
 Then say, in as many words:
 
@@ -45,7 +45,7 @@ conventions, a source-file map, and the traps that have actually bitten.
 ### Attach one manual, not two
 
 There is a second file, the
-[AI **user** manual](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md),
+[AI **user** manual](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md),
 for people *using* the package to build reports. Do not attach both.
 
 They carry opposite instructions: the user manual's first rule is "only the

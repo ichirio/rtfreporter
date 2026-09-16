@@ -131,16 +131,19 @@ navbar:
         # Self-contained Markdown briefings, sized to be attached at the start
         # of a chat session -- one per audience, and only ever ONE per session
         # (they carry opposite instructions about touching internals).  They
-        # are static assets (pkgdown/assets/), NOT articles, so the hrefs have
-        # no `articles/` prefix and no `.html` extension.
+        # ship in inst/ai/ and are copied to docs/ai/ by the pkgdown workflow
+        # (#463), version-stamped, so the link says which package it matches.
+        # They are NOT articles: no `articles/` prefix, no `.html` extension.
+        # Bump the version in BOTH the text and the href each release; a test
+        # fails the build if they fall behind DESCRIPTION.
         - text: -------
         - text: "For AI assistants"
         - text: "Developing with an AI assistant"
           href: articles/ai-development.html
-        - text: "AI user manual (download .md)"
-          href: rtfreporter-ai-user-manual.md
-        - text: "AI developer manual (download .md)"
-          href: rtfreporter-ai-dev-manual.md
+        - text: "AI user manual (0.7.56)"
+          href: ai/rtfreporter-ai-user-manual-0.7.56.md
+        - text: "AI developer manual (0.7.56)"
+          href: ai/rtfreporter-ai-dev-manual-0.7.56.md
         # ── Worked clinical examples ────────────────────────────────────
         - text: -------
         - text: "Worked clinical examples"
@@ -222,6 +225,17 @@ reference:
     contents:
       - rtfreporter_options
       - rtfreporter_reset_defaults
+
+  # ── 1c. Writing rtfreporter code with an AI assistant ───────────────
+  - title: Working with an AI assistant
+    desc: >
+      The package is too new to be in a chat model's training data, so an
+      assistant has to be told the API before it writes any.  Two briefings
+      ship inside the package for that -- one for *using* rtfreporter, one for
+      working *on* it -- and this returns the copy installed alongside your
+      version, which is the one that matches what you actually have.
+    contents:
+      - rtfreporter_ai_manual
 
   # ── 2. Sections: headers & footers ─────────────────────────────────────
   - title: Sections — headers & footers

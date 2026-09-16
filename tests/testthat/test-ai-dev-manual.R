@@ -1,17 +1,18 @@
 ## tests/testthat/test-ai-dev-manual.R
 ##
-## `pkgdown/assets/rtfreporter-ai-dev-manual.md` is the briefing a contributor
+## `inst/ai/rtfreporter-ai-dev-manual.md` is the briefing a contributor
 ## attaches to an AI chat session before working ON the package.  Like its
 ## user-facing twin it is only worth having while it is true, and an assistant
 ## cannot tell a stale manual from a fresh one -- so the claims that can be
 ## checked mechanically are checked here.
 ##
-## `pkgdown/` is .Rbuildignore'd, so these skip on an installed package.
+## They now ship in inst/ai/ (#463), so they are present in an installed
+## package too -- no skip needed for the file itself.
 
 library(testthat)
 
 .dev_manual_path <- function() {
-  test_path("..", "..", "pkgdown", "assets", "rtfreporter-ai-dev-manual.md")
+  test_path("..", "..", "inst", "ai", "rtfreporter-ai-dev-manual.md")
 }
 
 .dev_manual_lines <- function() {
@@ -65,7 +66,7 @@ test_that("the S3-only invariant still holds in R/", {
 
 test_that("the two manuals point at each other", {
   dev <- .dev_manual_lines()
-  user_path <- test_path("..", "..", "pkgdown", "assets",
+  user_path <- test_path("..", "..", "inst", "ai",
                          "rtfreporter-ai-user-manual.md")
   skip_if_not(file.exists(user_path), "AI user manual not present")
   usr <- readLines(user_path, encoding = "UTF-8", warn = FALSE)
@@ -87,8 +88,11 @@ test_that("each manual is reachable from the page written for its reader", {
   # manual, and points contributors at the article rather than carrying the
   # developer manual itself.
   rl <- readLines(readme, encoding = "UTF-8", warn = FALSE)
-  expect_true(any(grepl("rtfreporter-ai-user-manual.md", rl, fixed = TRUE)),
+  # the link carries the version, so match the stem rather than the file name
+  expect_true(any(grepl("rtfreporter-ai-user-manual", rl, fixed = TRUE)),
               info = "the user manual is not linked from the home page")
+  expect_true(any(grepl("rtfreporter_ai_manual(", rl, fixed = TRUE)),
+              info = "the home page should show the accessor, not only a download")
   expect_true(any(grepl("articles/ai-development.html", rl, fixed = TRUE)),
               info = "the home page does not point contributors at the article")
 
@@ -117,7 +121,7 @@ test_that("both manuals and the article are declared in _pkgdown.yml", {
   yml <- test_path("..", "..", "_pkgdown.yml")
   skip_if_not(file.exists(yml), "_pkgdown.yml not available")
   L <- readLines(yml, encoding = "UTF-8", warn = FALSE)
-  for (f in c("rtfreporter-ai-user-manual.md", "rtfreporter-ai-dev-manual.md")) {
+  for (f in c("rtfreporter-ai-user-manual", "rtfreporter-ai-dev-manual")) {
     expect_true(any(grepl(f, L, fixed = TRUE)),
                 info = paste(f, "has no navbar entry"))
   }

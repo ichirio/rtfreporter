@@ -2,6 +2,43 @@
 
 ### Documentation
 
+- **The AI manuals ship with the package, and say which version they
+  document** (#463).  They were published from `main` only, at a fixed URL,
+  with no version on them -- and `development: mode: unreleased` means the
+  site root is overwritten on every push.  So the manual described `main`
+  while the reader was on whichever release they had installed:
+
+  ```
+  v0.4.0  -- the release the README points at : 59 exports
+  main    -- what the published manual covers : 90 exports
+  ```
+
+  `col_key()`, `stub_spec()`, `set_col_header()` and `rtf_columns()` were
+  among the 31 functions the published manual described that a v0.4.0 user
+  did not have, and an assistant cannot tell: it quotes a function that will
+  not resolve exactly as confidently as one that will.
+
+  The manuals now live in `inst/ai/`, so they install with the package and
+  are the same artefact as the code they document.  New
+  `rtfreporter_ai_manual()` hands them back:
+
+  ```r
+  rtfreporter_ai_manual()                     # path to the user manual
+  rtfreporter_ai_manual("dev")                # the developer manual
+  rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
+  ```
+
+  Each manual states the version it was built from in its first lines, and a
+  test asserts that against `packageVersion()`, so a stale copy announces
+  itself instead of being followed.  The site still publishes them -- now
+  under `ai/`, both version-stamped
+  (`ai/rtfreporter-ai-user-manual-0.7.56.md`) and as a stable alias -- and the
+  home-page and navbar links name the version, which a test keeps in step with
+  `DESCRIPTION`.
+
+  The home-page section also moves below the 30-second example: *Why
+  rtfreporter?*, *Installation* and a worked example should come first.
+
 - **The AI user manual gains a program-structure section** (#461).  The manual
   said which function to call but nothing about how to arrange a report
   program, so an assistant produced one long script that computed, formatted
