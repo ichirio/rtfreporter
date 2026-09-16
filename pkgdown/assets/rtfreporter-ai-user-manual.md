@@ -502,8 +502,17 @@ pages <- as_rtftables(tbl, max_rows = 25, border = "tfl")
 Column *ids* differ by source: gt keeps the data names, gtsummary gives
 `label` / `stat_1` / `stat_2`, tfrmt gives `rowname` plus your column levels,
 while rtables / flextable / huxtable expose only positional `V1`, `V2`, ….
-Check with `names(as_rtftables(x)[[1]]$data)`; **integer indices are the most
-portable** way to address columns in source-agnostic code.
+Check with `rtf_columns(pages)`; **integer indices are the most portable** way
+to address columns in source-agnostic code.
+
+Names are carried **verbatim**, non-syntactic ones included — a gt column
+called `Drug A (N=60)` is selected with exactly that string, backticked where
+R needs a name rather than a string:
+
+```r
+pages |> set_col_header(c(`Drug A (N=60)` = "Drug A"))
+as_rtftables(g, drop_cols = "2024 total")
+```
 
 Anything else: convert it to a plain `data.frame` and re-specify `col_header`,
 `col_spec` and friends yourself.

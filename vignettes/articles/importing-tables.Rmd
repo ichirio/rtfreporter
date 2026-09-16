@@ -123,6 +123,20 @@ Source packages also offer their own inspectors: **gtsummary**'s
 you pass here, and **gt**'s `gt::extract_body()` shows the rendered body with its
 ids.
 
+Names are carried **verbatim**, including ones that are not syntactic R names.
+A gt column called `Drug A (N=60)` arrives as `Drug A (N=60)` -- spaces,
+parentheses and a leading digit and all -- so select it with that string, and
+backtick it where R needs a name rather than a string:
+
+```r
+pages |> set_col_header(c(`Drug A (N=60)` = "Drug A"))
+as_rtftables(g, drop_cols = "2024 total")
+```
+
+(Before v0.7.54 these were passed through `make.names()` and arrived as
+`Drug.A..N.60.` / `X2024.total`, which is what this section always said they
+did not do; see #458.)
+
 ### Two practical rules
 
 1. **Use the *id*, not the visible header.** A gtsummary `stat_1` column may

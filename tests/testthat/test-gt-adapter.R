@@ -219,3 +219,55 @@ test_that("the multi-stub fallback does not disturb single-stub tables", {
   eb <- rtfreporter:::.gt_extract_body_safe(g)
   expect_identical(eb, gt::extract_body(g, output = "html"))
 })
+
+# ──────── #458: source column names survive the adapter verbatim ────────────
+
+.gt_odd_names <- function() {
+  data.frame(
+    Characteristic  = c("Age, Mean (SD)", "Sex, n (%)"),
+    `Drug A (N=60)` = c("54.2 (11.3)", "31 (51.7)"),
+    `Drug B (N=58)` = c("56.8 (10.1)", "27 (46.6)"),
+    `2024 total`    = c("112", "58"),
+    check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+test_that("non-syntactic gt column names reach the pages unchanged", {
+  skip_if_not_installed("gt")
+  src   <- .gt_odd_names()
+  pages <- as_rtftables(gt::gt(src))
+  # spaces, parentheses, '=' and a leading digit all survive
+  expect_identical(names(pages[[1]]$data), names(src))
+  expect_identical(rtf_columns(pages), names(src))
+})
+
+test_that("a non-syntactic name can be addressed by name", {
+  skip_if_not_installed("gt")
+  pages <- as_rtftables(gt::gt(.gt_odd_names()))
+
+  out <- set_col_header(pages, c(`Drug A (N=60)` = "Drug A"))
+  m   <- header_map(out[[1]])
+  expect_true("Drug A" %in% m$text)
+
+  expect_no_error(
+    set_col_header(pages, list(col_cell(col_key("Drug A (N=60)"), "A"))))
+
+  dropped <- as_rtftables(gt::gt(.gt_odd_names()), drop_cols = "2024 total")
+  expect_false("2024 total" %in% rtf_columns(dropped))
+})
+
+test_that("the rendered header is unaffected either way", {
+  skip_if_not_installed("gt")
+  pages <- as_rtftables(gt::gt(.gt_odd_names()))
+  # display labels come from col_header, not from the data names
+  expect_true(all(names(.gt_odd_names()) %in% header_map(pages[[1]])$text))
+})
+
+test_that("make.unique() still separates a stub from a real `rowname` column", {
+  skip_if_not_installed("gt")
+  src <- data.frame(grp = c("A", "B"), rowname = c("x", "y"),
+                    v = c("1", "2"), stringsAsFactors = FALSE)
+  pages <- as_rtftables(gt::gt(src, rowname_col = "grp"))
+  nm <- names(pages[[1]]$data)
+  expect_identical(anyDuplicated(nm), 0L)
+  expect_true(all(c("rowname", "rowname.1") %in% nm))
+})
