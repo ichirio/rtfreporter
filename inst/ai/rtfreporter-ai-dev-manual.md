@@ -343,6 +343,14 @@ session.
   record of what changed. Touching `X`, `Y` or `Z`, or lowering the version,
   fails `version-guard` unless the PR carries the `release` label. Digits and
   dots only — `0.8.0-rc` is a malformed R version.
+* **Releases.** A release ships whatever is on `main`, so a release carrying a
+  feature is a MINOR — there is no patch that contains a feature. When a fix
+  must ship but the feature on `main` is not ready to freeze, the answer is a
+  hotfix cut from the release **tag**, after which `main` must be moved to
+  `X.Y.(Z+1).9000` or it is left lower than the version just released. While
+  `MAJOR` is 0 the package is not formally released, so a MINOR may remove
+  public API; from v1.0.0 that needs a major. `CONTRIBUTING.md` has both
+  procedures — follow them rather than improvising a number.
 * **CI (all must be green):** `R-CMD-check` (matrix, 0 errors / 0 warnings),
   `test-coverage`, `pkgdown`, `version-guard`, `lint`.
 * **Before pushing:** `devtools::document()`, `devtools::test()`,

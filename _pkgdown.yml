@@ -19,9 +19,12 @@ template:
       site: "@ichirio"
       card: summary
 
-# Development-version banner: the package is pre-v0.1.0, so every push
-# overwrites the published docs at the root (no version subdir).
-# Versioned history will start once v0.1.0 is tagged.
+# Development-version banner: every push overwrites the published docs at the
+# root (no version subdir), so the site always shows `main`.  That is why the
+# AI manuals are version-stamped and shipped in the package instead (#463) --
+# the site cannot tell a reader which release it is describing, and they can.
+# Whether to move to `mode: auto` (released docs at the root, development docs
+# under /dev/) is a decision for the CRAN submission, since it moves every URL.
 #
 # `mode: unreleased` is deliberate (NOT "release"):
 #   * pages are still published at the root (no /dev/ subdirectory),
@@ -67,10 +70,13 @@ home:
 
           Roadmap:
 
-          - **v0.9.0** — CRAN-submission preparation (`R CMD check --as-cran`
-            clean, lifted coverage, docs/metadata polish).
-          - **v1.0.0** — CRAN registration, stable API; `lifecycle:
-            experimental` removed.
+          - **v0.9.0** — the **first CRAN submission**: the deprecated border
+            exports removed, `R CMD check --as-cran` clean, lifted coverage,
+            docs/metadata polish.  Removing them is a MINOR only because
+            `MAJOR 0` means "not formally released" — see CONTRIBUTING.
+          - **v1.0.0** — **after** CRAN registration, once downloads and
+            feedback have settled the API: stable, `lifecycle: experimental`
+            removed, and the no-breaking-change contract binding for real.
       community:
         title: Community
         text: |

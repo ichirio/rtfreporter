@@ -2,6 +2,32 @@
 
 ### Documentation
 
+- **The pre-1.0 exception and the hotfix procedure are written down** (#471).
+
+  `MAJOR 0` means the package is **not formally released**, so within `0.y.z`
+  a MINOR may remove or change public API -- semver's own reading of a zero
+  major.  That is what makes the plan legal: **v0.9.0** removes the seven
+  deprecated border exports *and* is the first CRAN submission, while
+  **v1.0.0** is cut *after* CRAN registration, once downloads and feedback
+  have settled the API.  Registering is what produces the users whose feedback
+  tells you whether the API is worth freezing; declaring 1.0.0 first would
+  promise stability before anyone had tried it.
+
+  `CONTRIBUTING.md`, `_pkgdown.yml`, `README.md` and `R/rtf_border.R`
+  previously disagreed about which of 0.9.0 / 1.0.0 was the CRAN debut; they
+  now say the same thing, and the backward-compatibility contract carries the
+  `0.y.z` carve-out instead of forbidding what 0.9.0 will do.
+
+  The new *urgent fix while `main` carries a feature* procedure answers the
+  case the release steps did not: there is no patch that contains a feature,
+  so the question is whether the feature's API is ready to **freeze**, not how
+  urgent the fix is.  If it is, release `main` as a MINOR; if not, cut a
+  hotfix from the release **tag**.  It also records the step that is easy to
+  miss -- after tagging `0.8.1`, `main` still reads `0.8.0.9000`, which is
+  *lower* than the version just released, so `update.packages()` would replace
+  a development install with the release build and silently drop the
+  unreleased feature.  `main` must move to `0.8.1.9000`.
+
 - **The bare manual link tracks the release, and the folder keeps only what
   is useful** (#468).  `ai/rtfreporter-ai-user-manual.md` was written from the
   current build, so on `main` it served the *development* version -- and a

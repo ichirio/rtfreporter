@@ -240,8 +240,8 @@ Planned release milestones:
 
 | Version | Goal |
 |---------|------|
-| **v0.9.0** | CRAN-submission **preparation** -- full `R CMD check --as-cran` clean, increased test coverage, documentation/metadata polish. |
-| **v1.0.0** | **CRAN registration** and a **stable API** -- the `lifecycle: experimental` badge is removed; "the API may change" wording is dropped. |
+| **v0.9.0** | The **first CRAN submission** -- the deprecated border exports removed, full `R CMD check --as-cran` clean, increased test coverage, documentation/metadata polish. |
+| **v1.0.0** | **After** CRAN registration, once downloads and feedback have settled the API -- declared **stable**, the `lifecycle: experimental` badge removed, and no minor or patch may break user code again. |
 
 See [`NEWS.md`](NEWS.md) for the user-facing changelog and
 [`CHANGELOG.md`](CHANGELOG.md) for detailed per-version notes.
