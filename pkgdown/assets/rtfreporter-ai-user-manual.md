@@ -18,9 +18,9 @@
 
 ## 0. Ground rules for the assistant
 
-1. **Only call functions listed in §16.** rtfreporter is a young package and is
+1. **Only call functions listed in §17.** rtfreporter is a young package and is
    almost certainly *not* in your training data. If a requested feature has no
-   function in §16, say so plainly instead of inventing a plausible name or
+   function in §17, say so plainly instead of inventing a plausible name or
    argument.
 2. **It is not `r2rtf` and not `reporter`.** Do not mix their verbs
    (`rtf_body()`, `rtf_colheader()`, `create_table()`, …) into rtfreporter code.
@@ -91,7 +91,167 @@ generate_rtfreport(doc, "T_14_1_1.rtf", overwrite = TRUE)
 
 ---
 
-## 3. Function map — what to call for what
+## 3. Program structure — one output, and fifty
+
+A report program is six stages. Keeping them apart is what lets the same
+program produce one table today and a fifty-output deliverable next month.
+
+```r
+# 1  SETUP    study-level constants, paths
+# 2  DATA     read ADaM / ARD -- no formatting here
+# 3  BODY     shape the numbers into a plain data.frame
+# 4  PRESENT  titles, footnotes, column header, per-page denominators
+# 5  PAGES    as_rtftables() |> set_col_header() |> paginate_cols()
+# 6  RENDER   rtf_document() |> rtf_section() |> rtf_tables() |> generate_rtfreport()
+```
+
+Four rules make it generalize:
+
+1. **Stage 3 returns a plain `data.frame`** and knows nothing about RTF. It is
+   the part with the clinical logic in it, so it must stay printable,
+   diffable and testable on its own.
+2. **Stage 5 returns pages and writes nothing.** `generate_rtfreport()` is the
+   only line with a side effect and it comes last, so you can build the pages
+   in the console and look at `pages[[1]]` before anything reaches disk.
+3. **No number is pasted into a label.** A denominator that differs per page
+   belongs in `set_col_header(values = )`, not in a `sprintf()` that has to be
+   rebuilt for every page.
+4. **Widths follow the layout.** `rep(2, length(days) * length(arms))`, never
+   `rep(2, 24)` — the day you add an arm, the hard-coded count is a silent
+   mis-render.
+
+### The skeleton
+
+```r
+# 1  SETUP ------------------------------------------------------------------
+STUDY <- "XYZ-001"
+
+# 4  PRESENT (shared by every output in the deliverable) --------------------
+study_header <- function(title_lines) {
+  rtf_header(rows = c(
+    list(c(l = paste("Protocol", STUDY), r = "Confidential"),
+         c(l = "Phase III Safety Study",
+           r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")),
+    lapply(title_lines, function(t) c(c = t))))       # title block, centred
+}
+study_footer <- function(notes = character()) {
+  rtf_footer(rows = c(lapply(notes, function(t) c(l = t)),
+                      list(c(l = "ACME Pharma", r = "CONFIDENTIAL"))))
+}
+
+# 3  BODY -------------------------------------------------------------------
+body_ae <- function(arms, days) {
+  # ... compute counts; return a data.frame whose data columns are named
+  #     "<arm>____<day>" so col_key() and paginate_cols(by = "____") can
+  #     find them.  No RTF vocabulary in here.
+}
+
+# 5  PAGES ------------------------------------------------------------------
+pages_ae <- function(arms, days) {
+  df   <- body_ae(arms, days)
+  vals <- denominators(arms)          # one row per page key, one column per token
+
+  hdr <- rtf_col_header(
+    c(list(col_cell(1L, "")),
+      lapply(arms, function(a)
+        col_cell(col_key(a), sprintf("%s\n(N={%s})\nn(%%)", a, make.names(a))))),
+    c("System Organ Class\n  Preferred Term", rep(days, length(arms))))
+
+  as_rtftables(
+    df,
+    read_meta   = FALSE,
+    split       = "by_value",
+    group_col   = "period",
+    drop_cols   = "period",
+    stub        = stub_spec(c("SOC", "PT"), label = "row_label", indent = 2L),
+    blank_rows  = "between_groups",
+    blank_row_first = TRUE, blank_row_end = TRUE,
+    cell_format = fmt_value_paren,
+    col_rel_width = c(5.5, rep(2, length(days) * length(arms)))
+  ) |>
+    set_col_header(hdr, values = vals) |>
+    paginate_cols(by = "____", carry = 1,
+                  page_order = c("cols", "group", "rows"))
+}
+
+# 6  RENDER -----------------------------------------------------------------
+render <- function(pages, titles, notes, file) {
+  doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
+    rtf_section(secinfo = list(header = study_header(titles),
+                               footer = study_footer(notes))) |>
+    rtf_tables(pages, auto_section = TRUE)
+  generate_rtfreport(doc, file, overwrite = TRUE)
+}
+
+render(pages_ae(ARMS, DAYS),
+       titles = c("Table 14.3.1", "Solicited Local Adverse Events",
+                  "Safety Analysis Set"),
+       notes  = c("Percentages use the number of treated subjects.",
+                  "AE = Adverse Event."),
+       file   = "t_14_3_1.rtf")
+```
+
+### Column headers: two tiers
+
+Match the effort to the header.
+
+```r
+# Simple -- name each printed column, inline, no separate object:
+pages |> set_col_header(c(Statistic = "Statistic", A = "Drug A", B = "Drug B"))
+
+# Complex -- spanning cells, per-page denominators, selection by key:
+hdr <- rtf_col_header(
+  c(list(col_cell(1L, "")),
+    lapply(arms, function(a)
+      col_cell(col_key(a), sprintf("%s\n(N={%s})\nn(%%)", a, make.names(a))))),
+  c("Severity", rep(days, length(arms))))
+pages |> set_col_header(hdr, values = vals)
+```
+
+`col_key(a)` picks the columns whose first `____`-delimited segment is `a`, so
+the header never names a position and cannot drift when a column moves.
+
+Token names must be **syntactic** (`[A-Za-z._][A-Za-z0-9._]*`), so an arm
+called `HOGE-001` needs `make.names()` — `{HOGE.001}` — on both sides: the
+token in the label and the column name in `values`. Build both from the same
+expression so they cannot disagree.
+
+### Section composition
+
+The study block is identical across the whole deliverable; only the title
+block changes. Composing the header from a function (above) keeps that split,
+so a fifty-output program states the protocol line once.
+
+Give `rtf_section()` one section per header that must *change* mid-document —
+one per analyte, per period, per subgroup. Within a section, `rtf_tables(...,
+auto_section = TRUE)` labels each page from its own page name, which is what
+a `split = "by_value"` or `page_by` pagination already carries.
+
+### Fifty outputs
+
+One `pages_*()` function and one `render()` call per output, driven by a
+table of specs, then bound into one document:
+
+```r
+outputs <- list(
+  list(f = "t_14_3_1.rtf", pages = pages_ae(ARMS, DAYS),
+       titles = c("Table 14.3.1", "Solicited Local Adverse Events")),
+  list(f = "t_14_3_2.rtf", pages = pages_lb(ARMS),
+       titles = c("Table 14.3.2", "Laboratory Shift"))
+)
+for (o in outputs) render(o$pages, o$titles, character(), o$f)
+
+assemble_rtf(vapply(outputs, `[[`, "", "f"), "book.rtf", overwrite = TRUE,
+             toc = "auto",
+             book_page = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
+```
+
+Because stage 5 has no side effect, each `pages_*()` is a unit you can test:
+assert on `rtf_columns()`, on `header_map()`, on `nrow(pages[[1]]$data)` —
+without writing a file.
+
+---
+## 4. Function map — what to call for what
 
 | Need | Call |
 |---|---|
@@ -101,7 +261,7 @@ generate_rtfreport(doc, "T_14_1_1.rtf", overwrite = TRUE)
 | Edit an already-built document | `rtf_config(doc, page =, default_format =, ...)` |
 | Running header / footer | `rtf_section(doc, page =, secinfo = list(header =, footer =))` |
 | Build those bands | `rtf_header(rows =)`, `rtf_footer(rows =)` |
-| data.frame → paginated pages | `as_rtftables(x, ...)` **(the workhorse — §4)** |
+| data.frame → paginated pages | `as_rtftables(x, ...)` **(the workhorse — §5)** |
 | One table object by hand | `rtftable(data, col_header =, col_spec =, ...)` |
 | Place tables on pages | `rtf_tables(doc, tables, titles =, footnotes =, ...)` |
 | Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)` |
@@ -118,7 +278,7 @@ generate_rtfreport(doc, "T_14_1_1.rtf", overwrite = TRUE)
 
 ---
 
-## 4. `as_rtftables()` — the workhorse
+## 5. `as_rtftables()` — the workhorse
 
 Converts a `data.frame` **or a gt / gtsummary / rtables / tern / tfrmt /
 flextable / huxtable object** into a list of `rtftable` pages, reading the
@@ -140,7 +300,7 @@ The arguments you will actually use:
 | `page_by` | start a new page whenever this column changes |
 | `cont_label` | continuation suffix, default `" (Cont.)"` |
 | `collapse_repeats` | blank out repeated values in the named columns |
-| `listing` | a `listing_spec()`; renders the data as a listing (§10) |
+| `listing` | a `listing_spec()`; renders the data as a listing (§11) |
 | `border` | `"tfl"` (default) or an `rtf_border()` object |
 | `na` | text used for `NA`, default `""` |
 | `column_widths_twips` / `auto_width` | absolute widths / font-aware estimation |
@@ -151,7 +311,7 @@ that has no hierarchy, or omitting it on one that does.
 
 ---
 
-## 5. The four table shapes
+## 6. The four table shapes
 
 Their arguments barely overlap — choose by the shape of the table, not by habit.
 
@@ -235,7 +395,7 @@ as_rtftables(lb,
 
 ---
 
-## 6. Headers, footers and page numbers
+## 7. Headers, footers and page numbers
 
 `rows` is a **list of named character vectors**; the names choose the columns:
 
@@ -288,7 +448,7 @@ for (i in seq_along(lab_data)) {
 
 ---
 
-## 7. Column headers and spanning headers
+## 8. Column headers and spanning headers
 
 ```r
 tbl <- rtftable(
@@ -347,7 +507,7 @@ col_header_from_names(df)                     # a label row from the data names
 
 ---
 
-## 8. Widths and sizing
+## 9. Widths and sizing
 
 | Goal | Argument |
 |---|---|
@@ -365,7 +525,7 @@ widths can never be "too wide" — `paginate_cols()` needs **absolute** widths.
 
 ---
 
-## 9. Titles and footnotes
+## 10. Titles and footnotes
 
 `titles` / `footnotes` are lists **parallel to the pages**: one entry per page,
 each a character vector whose elements become individual lines (`""` = a blank
@@ -388,7 +548,7 @@ rule above the first line.
 
 ---
 
-## 10. Listings
+## 11. Listings
 
 ```r
 spec <- listing_spec(list(
@@ -419,7 +579,7 @@ font (`font = "courier_new"`).
 
 ---
 
-## 11. Figures
+## 12. Figures
 
 ```r
 png_path <- tempfile(fileext = ".png")
@@ -437,7 +597,7 @@ same `rtf_tables()` list.
 
 ---
 
-## 12. Borders and styling
+## 13. Borders and styling
 
 ```r
 rtftable(df, border = "tfl")            # the clinical default: top + bottom rules
@@ -487,7 +647,7 @@ Reusable theme: `rtf_table_style_tfl()` / `rtf_table_style()` /
 
 ---
 
-## 13. Bring your own table builder
+## 14. Bring your own table builder
 
 `as_rtftables()` reads **gt**, **gtsummary** (`tbl_summary()`, …), **tfrmt**
 (`print_to_gt()`), **rtables / tern** (`VTableTree`), **flextable** and
@@ -519,7 +679,7 @@ Anything else: convert it to a plain `data.frame` and re-specify `col_header`,
 
 ---
 
-## 14. Many deliverables, one document
+## 15. Many deliverables, one document
 
 ```r
 assemble_rtf(c("t14_1_1.rtf", "t14_3_1.rtf"), "book.rtf",
@@ -534,7 +694,7 @@ Also: `assemble_files()`, `assemble_folder()`, `assemble_spec()` /
 
 ---
 
-## 15. Formatting helpers (run on the data, before building)
+## 16. Formatting helpers (run on the data, before building)
 
 | Helper | What it does |
 |---|---|
@@ -560,7 +720,7 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 
 ---
 
-## 16. Complete public API (nothing outside this list exists)
+## 17. Complete public API (nothing outside this list exists)
 
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
 `rtf_default_format` `rtf_watermark` `generate_rtfreport`
@@ -592,7 +752,7 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 **Borders:** `rtf_border` `rtf_border_side`
 *(deprecated, still exported: `rtf_border_none` `rtf_border_top`
 `rtf_border_bottom` `rtf_border_box` `rtf_table_border` `rtf_border_tfl`
-`rtf_border_with` — see §12)*
+`rtf_border_with` — see §13)*
 
 **Formatting:** `fmt_count_paren` `fmt_count_paren_bare` `fmt_value_paren`
 `fmt_right_align` `format_count_pct` `realign_count_pct` `fmt_signif`
@@ -605,11 +765,11 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 
 ---
 
-## 17. Troubleshooting
+## 18. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
-| `could not find function "rtf_body"` etc. | that is `r2rtf`, not rtfreporter — see §16 |
+| `could not find function "rtf_body"` etc. | that is `r2rtf`, not rtfreporter — see §17 |
 | The file is not written | add `overwrite = TRUE` to `generate_rtfreport()` |
 | Everything lands on one page | pagination needs `max_rows` (and usually `split = "group_safe"`) |
 | A group is split across pages | `split = "group_safe"` plus `group_col` / `group_by` |

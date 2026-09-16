@@ -27,7 +27,7 @@ library(testthat)
 }
 
 ## Code fences are `r ... ` blocks; the API list is the run of bold-led
-## paragraphs under the "Complete public API" heading.
+## paragraphs under the "Complete public API" heading (section 17).
 .manual_code <- function(lines) {
   fence <- grepl("^```", lines)
   inside <- cumsum(fence) %% 2L == 1L & !fence
@@ -35,8 +35,8 @@ library(testthat)
 }
 
 .manual_api_names <- function(lines) {
-  from <- grep("^## 16\\. Complete public API", lines)
-  to   <- grep("^## 17\\.", lines)
+  from <- grep("^## 17\\. Complete public API", lines)
+  to   <- grep("^## 18\\.", lines)
   expect_length(from, 1L)
   expect_length(to, 1L)
   block <- lines[seq(from + 1L, to - 1L)]
@@ -107,6 +107,74 @@ test_that("every idiom the manual teaches runs", {
                titles    = list(c("Subject Summary", "Safety Population")),
                footnotes = list(c("Source: ADaM ADSL")))
   expect_no_error(generate_rtfreport(doc, f, overwrite = TRUE))
+
+  ## S3 -- the program skeleton: body -> pages -> render, as six stages
+  ARMS <- c("Placebo", "HOGE-001", "Total"); DAYS <- paste("Day", 1:3)
+  study_header <- function(title_lines) {
+    rtf_header(rows = c(
+      list(c(l = "Protocol XYZ-001", r = "Confidential"),
+           c(l = "Phase III", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")),
+      lapply(title_lines, function(t) c(c = t))))
+  }
+  study_footer <- function(notes = character()) {
+    rtf_footer(rows = c(lapply(notes, function(t) c(l = t)),
+                        list(c(l = "ACME Pharma", r = "CONFIDENTIAL"))))
+  }
+  body_ae <- function(arms, days) {
+    stub <- data.frame(period = rep(c("P1", "P2"), each = 4),
+                       SOC = rep(c("Pain", "Rash"), each = 2, times = 2),
+                       PT  = rep(c("Mild", "Severe"), times = 4),
+                       stringsAsFactors = FALSE)
+    g <- expand.grid(day = days, arm = arms, stringsAsFactors = FALSE)
+    num <- as.data.frame(matrix("3 (5.0)", nrow = nrow(stub), ncol = nrow(g)),
+                         stringsAsFactors = FALSE)
+    names(num) <- paste(g$arm, g$day, sep = "____")
+    cbind(stub, num, stringsAsFactors = FALSE)
+  }
+  denominators <- function(arms) {
+    d <- data.frame(group = c("P1", "P2"), stringsAsFactors = FALSE)
+    for (a in arms) d[[make.names(a)]] <- c(120L, 118L)
+    d
+  }
+  pages_ae <- function(arms, days) {
+    hdr <- rtf_col_header(
+      c(list(col_cell(1L, "")),
+        lapply(arms, function(a)
+          col_cell(col_key(a),
+                   sprintf("%s\n(N={%s})\nn(%%)", a, make.names(a))))),
+      c("SOC\n  PT", rep(days, length(arms))))
+    as_rtftables(
+      body_ae(arms, days), read_meta = FALSE, split = "by_value",
+      group_col = "period", drop_cols = "period",
+      stub = stub_spec(c("SOC", "PT"), label = "row_label", indent = 2L),
+      blank_rows = "between_groups",
+      blank_row_first = TRUE, blank_row_end = TRUE,
+      cell_format = fmt_value_paren,
+      col_rel_width = c(5.5, rep(2, length(days) * length(arms)))) |>
+      set_col_header(hdr, values = denominators(arms)) |>
+      paginate_cols(by = "____", carry = 1,
+                    page_order = c("cols", "group", "rows"))
+  }
+  render <- function(pages, titles, notes, file) {
+    doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
+      rtf_section(secinfo = list(header = study_header(titles),
+                                 footer = study_footer(notes))) |>
+      rtf_tables(pages, auto_section = TRUE)
+    generate_rtfreport(doc, file, overwrite = TRUE)
+  }
+  sk <- pages_ae(ARMS, DAYS)
+  expect_gt(length(sk), 1L)
+  # the per-page denominator token was filled, not left as "{...}"
+  expect_true(any(grepl("(N=120)", header_map(sk[[1]])$text, fixed = TRUE)))
+  expect_false(any(grepl("{", header_map(sk[[1]])$text, fixed = TRUE)))
+  skf <- tempfile(fileext = ".rtf"); on.exit(unlink(skf), add = TRUE)
+  expect_no_error(render(sk, c("Table 14.3.1", "AE"), "Note.", skf))
+  expect_true(file.exists(skf))
+  # the simple tier: a named row, inline, no separate header object
+  expect_no_error(
+    as_rtftables(data.frame(Statistic = "n", A = "60", B = "58",
+                            stringsAsFactors = FALSE), border = "tfl") |>
+      set_col_header(c(Statistic = "Statistic", A = "Drug A", B = "Drug B")))
 
   ## S5a -- DM
   dm <- data.frame(
