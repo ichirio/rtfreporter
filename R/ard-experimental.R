@@ -309,6 +309,35 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
   paste(msg, collapse = "\n")
 }
 
+# The label column's level order, assembled variable by variable: an explicit
+# `levels[[<variable>]]` where the caller gave one, else the row names of that
+# variable's `cells` entry (the `Mean (SD)` / `Min, Max` lines), else its labels
+# as first seen.  Rows are sorted by the row keys before the label, so a
+# variable's labels only ever compete with labels of the same variable and one
+# concatenated order serves them all.
+.ard_label_order <- function(d, cells, levels, labels) {
+  vars <- .ard_first_seen(d$variable)
+  if (!is.null(labels)) {              # `labels` also fixes the variable order
+    named <- intersect(names(labels), vars)
+    vars  <- c(named, setdiff(vars, named))
+  }
+  out <- character(0)
+  for (v in vars) {
+    lv <- if (is.null(levels)) NULL else levels[[v]]
+    if (is.null(lv)) {
+      sub   <- d[d$variable == v, , drop = FALSE]
+      if (!nrow(sub)) next
+      entry <- .ard_lookup_cells(
+        cells, v, sub$context[1L],
+        if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_)
+      lv <- if (!is.null(entry) && !is.null(entry$labels)) entry$labels
+            else .ard_first_seen(sub$.label)
+    }
+    out <- c(out, lv)
+  }
+  unique(as.character(out))
+}
+
 .ard_lookup_cells <- function(cells, variable, context, kind = NA_character_) {
   if (is.character(cells) && is.null(names(cells))) {
     return(.ard_cell_entry(cells))
@@ -629,10 +658,15 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   with `stat_label`, carrying the raw numeric `stat` -- the shape a PK
 #'   concentration table wants.
 #' @param levels Named list of level orders, e.g.
-#'   `list(variable = c("AGE", "SEX"), TRT01P = c("Placebo", "Drug"))`.  Names
-#'   may be either the source column or the renamed output column.  Row keys
-#'   listed here become ordered factors and drive the row sort; column keys
-#'   listed here drive the order of the spread columns.
+#'   `list(TRT01P = c("Placebo", "Drug"), AGEGR = c("<65", ">=65"))`.  A name
+#'   may be
+#'   * a **column key** -- it then fixes the order of the spread columns, which
+#'     is what keeps a hand-written `col_header` over the arm it names;
+#'   * a **row key**, by either its source column or its renamed output column
+#'     -- it becomes an ordered factor and drives the row sort;
+#'   * an **analysis variable** -- it orders that variable's rows in the label
+#'     column, without your having to know what the label column is called.
+#'     Variables you leave out keep their `cells` templates' order.
 #' @param labels Named character vector recoding key *values* to display text,
 #'   e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.  When a column is
 #'   recoded and has no explicit `levels`, the order of `labels` becomes its
@@ -829,6 +863,13 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   if (!is.null(label_out)) {
     lv <- if (is.null(levels)) NULL else
       (levels[[label_out]] %||% levels[[labref[[1]]$ref]])
+    # `levels` may instead name the ANALYSIS VARIABLES -- the natural way to
+    # write "AGEGR1 runs <65, 65-74, >=75" without knowing what the label
+    # column ends up being called.  Assemble one order out of those.
+    if (is.null(lv) && !is.null(levels) &&
+        any(names(levels) %in% .ard_first_seen(d$variable))) {
+      lv <- .ard_label_order(d, cells, levels, labels)
+    }
     if (!is.null(lv)) long[[label_out]] <- .ard_as_factor(long[[label_out]], lv, ordered)
   }
 

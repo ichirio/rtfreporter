@@ -77,10 +77,17 @@ with \code{stat_label}, carrying the raw numeric \code{stat} -- the shape a PK
 concentration table wants.}
 
 \item{levels}{Named list of level orders, e.g.
-\code{list(variable = c("AGE", "SEX"), TRT01P = c("Placebo", "Drug"))}.  Names
-may be either the source column or the renamed output column.  Row keys
-listed here become ordered factors and drive the row sort; column keys
-listed here drive the order of the spread columns.}
+\code{list(TRT01P = c("Placebo", "Drug"), AGEGR = c("<65", ">=65"))}.  A name
+may be
+\itemize{
+\item a \strong{column key} -- it then fixes the order of the spread columns, which
+is what keeps a hand-written \code{col_header} over the arm it names;
+\item a \strong{row key}, by either its source column or its renamed output column
+-- it becomes an ordered factor and drives the row sort;
+\item an \strong{analysis variable} -- it orders that variable's rows in the label
+column, without your having to know what the label column is called.
+Variables you leave out keep their \code{cells} templates' order.
+}}
 
 \item{labels}{Named character vector recoding key \emph{values} to display text,
 e.g. \code{c(AGE = "Age (years)", SEX = "Sex [n (\\\%)]")}.  When a column is

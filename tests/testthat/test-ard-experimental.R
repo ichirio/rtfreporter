@@ -157,6 +157,37 @@ test_that("several column keys make one spanning-ready column name", {
   expect_identical(names(tbl2)[3:4], c("Placebo____M", "Placebo____F"))
 })
 
+test_that("levels may name the analysis variables, not the label column", {
+  skip_if_no_cards()
+  cells <- list(
+    continuous  = c("n"         = "{N:.0f}",
+                    "Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+    categorical = "{n:.0f} ({p:.1f%})")
+  labels <- c(AGE = "Age", AGEGR = "Age group", SEX = "Sex")
+
+  tbl <- ard_table(
+    make_ard(), cols = "TRT", rows = c(group = "variable"),
+    labels = labels, cells = cells,
+    levels = list(TRT   = c("Xanomeline Low Dose", "Placebo",
+                            "Xanomeline High Dose"),
+                  AGEGR = c("<65", "65-74", ">=75"),
+                  SEX   = c("M", "F")))
+
+  # a column key entry orders the SPREAD columns ...
+  expect_identical(names(tbl)[-(1:2)],
+                   c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose"))
+  # ... and a variable entry orders that variable's rows
+  expect_identical(as.character(tbl$label[tbl$group == "Age group"]),
+                   c("<65", "65-74", ">=75"))
+  expect_identical(as.character(tbl$label[tbl$group == "Sex"]), c("M", "F"))
+  # a variable with no entry keeps its templates' order
+  expect_identical(as.character(tbl$label[tbl$group == "Age"]),
+                   c("n", "Mean (SD)"))
+  # and the variables themselves stay in `labels` order
+  expect_identical(as.character(unique(tbl$group)),
+                   c("Age", "Age group", "Sex"))
+})
+
 test_that("a fallback chain picks the first template that resolves", {
   skip_if_no_cards()
   tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),

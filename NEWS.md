@@ -33,6 +33,14 @@
   then that structural kind, then `"default"`.  The kind is the same on every
   cards version, past and future; `ard_keys()` prints both, labelled.
 
+  **`levels` accepts an analysis variable's name**, not only a row or column
+  key, and then orders that variable's rows in the label column --- so a
+  demographics display can say `AGEGR1 = c("<65", "65-74", ">=75")` without
+  knowing what the label column ends up being called.  A variable left out
+  keeps its `cells` templates' order.  A **column** key listed in `levels`
+  fixes the order of the spread columns, which is what keeps a hand-written
+  `col_header` over the arm it names.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and
