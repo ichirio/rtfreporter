@@ -53,7 +53,7 @@
 # directly by `cols` / `rows` / `label`.
 .ard_structural <- function() {
   c("variable", "variable_level", "context", "stat_name", "stat_label",
-    "stat", "stat_fmt", ".depth", ".label", ".overall")
+    "stat", "stat_fmt", ".kind", ".depth", ".label", ".overall")
 }
 
 # Flatten one list-column.  An element that is NULL, or longer than one, or a
@@ -223,11 +223,100 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
   list(labels = nms, chains = chains)
 }
 
-.ard_lookup_cells <- function(cells, variable, context) {
+# ---------------------------------------------------------------------------
+#  Classifying a summary WITHOUT trusting the `context` string
+# ---------------------------------------------------------------------------
+#  `context` is a cards implementation detail and it moves: ard_continuous()
+#  stamps "continuous" but the 0.9 rename, ard_summary(), stamps "summary";
+#  ard_categorical() stamps "categorical" but ard_tabulate() stamps "tabulate".
+#  Keying `cells` on it alone therefore ties a script to one cards generation,
+#  and silently produces no cells at all against another.
+#
+#  So each variable is *also* classified from what its rows actually contain --
+#  `.kind`, which is "categorical" when the variable has levels to enumerate
+#  (any non-missing `variable_level`: a factor, a dichotomous value of
+#  interest, a hierarchy term) and "continuous" when it does not (one row per
+#  statistic of one numeric variable).  That reading is structural, so it holds
+#  across every cards version, past and future.
+#
+#  `cells` is then matched in this order:
+#     1. the analysis variable's own name
+#     2. `context` -- with the known spellings treated as equivalent
+#     3. `.kind`   -- likewise
+#     4. "default"
+#  Step 2 keeps a context-specific entry (cardx's "proportion_ci", "survival",
+#  "stats_t_test", ...) winning where the caller wrote one; step 3 is what
+#  makes `continuous` / `categorical` keep working when cards renames a verb
+#  again.
+.ard_kind <- function(d) {
+  if (!nrow(d)) return(character(0))
+  v <- as.character(d$variable)
+  has_lv <- tapply(!is.na(d$variable_level), v, any)
+  out <- ifelse(as.logical(has_lv[v]), "categorical", "continuous")
+  out[is.na(out)] <- "continuous"
+  unname(out)
+}
+
+# The spellings cards has used for the same idea, in both directions.  A name
+# it has never used is returned unchanged.
+.ard_context_aliases <- function(x) {
+  switch(x,
+         summary     = ,
+         continuous  = c("continuous", "summary"),
+         tabulate    = ,
+         categorical = c("categorical", "tabulate"),
+         x)
+}
+
+# Why no cell was produced.  The bare "no cell matched" that this replaces was
+# useless: the two causes look identical from the outside, and the commonest
+# one -- a `cells` list keyed on `continuous` / `categorical` against an ARD
+# built with cards 0.9's ard_summary() / ard_tabulate() -- is invisible unless
+# the message says which contexts the ARD actually carries.
+.ard_no_cell_message <- function(d, cells, stats) {
+  ctx  <- .ard_first_seen(d$context)
+  vars <- .ard_first_seen(d$variable)
+  keys <- if (is.character(cells) && is.null(names(cells))) character(0)
+          else names(cells)
+  msg <- c(
+    "No cell was produced, so there is nothing to spread.",
+    sprintf("  `cells` is keyed on : %s",
+            if (!length(keys)) "(one template for everything)"
+            else paste(sQuote(keys), collapse = ", ")),
+    sprintf("  ARD contexts        : %s",
+            if (!length(ctx)) "(none -- every row was filtered out)"
+            else paste(sQuote(ctx), collapse = ", ")),
+    sprintf("  ARD variables       : %s",
+            paste(sQuote(utils::head(vars, 8)), collapse = ", ")),
+    sprintf("  structural kinds    : %s",
+            if (!".kind" %in% names(d)) "(not computed)"
+            else paste(sQuote(.ard_first_seen(d$.kind)), collapse = ", ")))
+  if (!nrow(d)) {
+    msg <- c(msg,
+      "Every row was dropped before the cells were built: check `cols` (a key",
+      "whose value is missing on every row removes the row).")
+  } else if (length(keys)) {
+    kinds <- if (".kind" %in% names(d)) .ard_first_seen(d$.kind) else character(0)
+    msg <- c(msg,
+      "None of the `cells` names matched. A name is matched against the",
+      "analysis variable, then the context, then the structural kind",
+      "('continuous' / 'categorical', read from the rows rather than from the",
+      "context string), then 'default'.  Use one of the names listed above,",
+      sprintf("one of %s, or add a `default` entry.",
+              if (!length(kinds)) "'continuous' / 'categorical'"
+              else paste(sQuote(kinds), collapse = " / ")))
+  }
+  paste(msg, collapse = "\n")
+}
+
+.ard_lookup_cells <- function(cells, variable, context, kind = NA_character_) {
   if (is.character(cells) && is.null(names(cells))) {
     return(.ard_cell_entry(cells))
   }
-  for (k in c(variable, context, "default")) {
+  keys <- variable
+  if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
+  if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
+  for (k in c(unique(keys), "default")) {
     if (!is.na(k) && !is.null(cells[[k]])) return(.ard_cell_entry(cells[[k]]))
   }
   NULL
@@ -271,12 +360,32 @@ ard_keys <- function(ard) {
   stats <- stats[order(stats$context), , drop = FALSE]
   rownames(stats) <- NULL
 
+  # The structural classification -- what `cells` should normally be keyed on,
+  # because unlike `context` it does not move when cards renames a verb.
+  norm  <- try(ard_normalize(ard, drop_key_variables = FALSE), silent = TRUE)
+  kinds <- NULL
+  if (!inherits(norm, "try-error")) {
+    kinds <- unique(data.frame(variable = as.character(norm$variable),
+                               kind     = as.character(norm$.kind),
+                               context  = as.character(norm$context),
+                               stringsAsFactors = FALSE))
+    kinds <- kinds[!duplicated(kinds$variable), , drop = FALSE]
+    rownames(kinds) <- NULL
+  }
+
   cat("ARD keys (group1..groupN values) :", paste(keys, collapse = ", "), "\n")
   cat("Analysis variables               :", paste(vars, collapse = ", "), "\n")
-  cat("Contexts                         :", paste(ctx, collapse = ", "), "\n")
+  cat("Contexts (cards-version specific):", paste(ctx, collapse = ", "), "\n")
+  if (!is.null(kinds)) {
+    cat("Structural kinds (stable)        :",
+        paste(.ard_first_seen(kinds$kind), collapse = ", "), "\n")
+    cat("\nPer variable -- key `cells` on `kind` unless you need the context:\n")
+    print(kinds, row.names = FALSE)
+  }
   cat("\nStatistics per context:\n")
   print(stats, row.names = FALSE)
-  invisible(list(keys = keys, variables = vars, contexts = ctx, stats = stats))
+  invisible(list(keys = keys, variables = vars, contexts = ctx,
+                 kinds = kinds, stats = stats))
 }
 
 
@@ -318,9 +427,10 @@ ard_keys <- function(ard) {
 #'
 #' @return A data frame with one row per ARD statistic: the key columns, the
 #'   ARD's own `variable` / `variable_level` / `context` / `stat_name` /
-#'   `stat_label` / `stat` / `stat_fmt`, and, when `hierarchy` is given,
-#'   `.depth` (1 = outermost) and `.label` (the deepest non-missing hierarchy
-#'   value).
+#'   `stat_label` / `stat` / `stat_fmt`, the structural classification `.kind`
+#'   (`"continuous"` / `"categorical"`, see [rtfreporter-ard]), and, when
+#'   `hierarchy` is given, `.depth` (1 = outermost) and `.label` (the deepest
+#'   non-missing hierarchy value).
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
@@ -446,9 +556,12 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
     d <- d[!(d$variable %in% kill), , drop = FALSE]
   }
 
+  d$.kind <- .ard_kind(d)
+
   rownames(d) <- NULL
   front <- c(keys, "variable", "variable_level", "context", "stat_name",
-             "stat_label", "stat", "stat_fmt", ".depth", ".label", ".overall")
+             "stat_label", "stat", "stat_fmt", ".kind", ".depth", ".label",
+             ".overall")
   front <- intersect(front, names(d))
   d[, c(front, setdiff(names(d), front)), drop = FALSE]
 }
@@ -574,6 +687,10 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     }
   }
 
+  if (!".kind" %in% names(d) && all(c("variable", "variable_level") %in% names(d))) {
+    d$.kind <- .ard_kind(d)
+  }
+
   colrefs <- .ard_refs(cols, d, "cols")
   rowrefs <- .ard_refs(rows, d, "rows")
   labref  <- if (is.null(label)) list() else .ard_refs(label, d, "label")
@@ -611,7 +728,8 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   col_levels <- unique(colkey[ord_idx])
 
   # ---- group the long rows into cells -------------------------------------
-  grp_cols <- c(vapply(rowrefs, function(r) r$ref, ""), "variable", "context")
+  grp_cols <- c(vapply(rowrefs, function(r) r$ref, ""), "variable", "context",
+                ".kind")
   grp_cols <- unique(grp_cols[grp_cols %in% names(d)])
   gid <- do.call(paste, c(lapply(grp_cols, function(k) as.character(d[[k]])),
                           list(colkey), list(sep = "\r")))
@@ -641,7 +759,9 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       next
     }
 
-    entry <- .ard_lookup_cells(cells, sub$variable[1L], sub$context[1L])
+    entry <- .ard_lookup_cells(
+      cells, sub$variable[1L], sub$context[1L],
+      if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_)
     if (is.null(entry)) next
 
     if (!is.null(entry$labels)) {
@@ -674,7 +794,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       }
     }
   }
-  if (!length(pieces)) .ard_stop("No cell matched. Check `cells` and `cols`.")
+  if (!length(pieces)) .ard_stop(.ard_no_cell_message(d, cells, stats))
   long <- do.call(rbind, pieces)
 
   # ---- explode the stashed key values into columns ------------------------
@@ -1248,6 +1368,39 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
 #' lets `c("{n} ({p})", "{n}")` act as a fallback chain.  A **named** vector of
 #' templates produces one table row per element, the name being the row label:
 #' that is how `Min` and `Max` become a single `Min, Max` line.
+#'
+#' @section How a `cells` entry is chosen (and why it survives a cards upgrade):
+#' `context` is a \pkg{cards} implementation detail and it moves.
+#' `ard_continuous()` stamps `"continuous"`, but its 0.9 rename
+#' `ard_summary()` stamps `"summary"`; `ard_categorical()` stamps
+#' `"categorical"`, but `ard_tabulate()` stamps `"tabulate"`.  Keying `cells`
+#' on the context alone would tie your script to one \pkg{cards} generation and
+#' produce **no cells at all** against another.
+#'
+#' So every variable is also classified from what its rows actually contain --
+#' its **kind**:
+#' \describe{
+#'   \item{`"categorical"`}{the variable has levels to enumerate (some
+#'     `variable_level` is present): a factor, a dichotomous value of interest,
+#'     a hierarchy term.}
+#'   \item{`"continuous"`}{it does not -- one row per statistic of one numeric
+#'     variable.}
+#' }
+#' That reading is structural, so it is the same on every \pkg{cards} version,
+#' past and future.  A `cells` entry is then matched in this order:
+#' \enumerate{
+#'   \item the analysis variable's own name;
+#'   \item `context`, with the known spellings treated as equivalent;
+#'   \item the kind, likewise;
+#'   \item `"default"`.
+#' }
+#' Step 2 lets a context-specific entry win where you wrote one -- cardx's
+#' `"proportion_ci"`, `"survival"`, `"stats_t_test"` and friends.  Step 3 is
+#' what keeps `continuous` / `categorical` (or `summary` / `tabulate`, either
+#' spelling) working when \pkg{cards} renames a verb again.
+#'
+#' [ard_keys()] prints both: the contexts, which are version-specific, and the
+#' kinds, which are not.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  These functions are newer than the rest of the package

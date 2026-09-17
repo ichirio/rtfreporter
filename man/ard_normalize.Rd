@@ -41,9 +41,10 @@ by-variable -- which no table cell uses.}
 \value{
 A data frame with one row per ARD statistic: the key columns, the
 ARD's own \code{variable} / \code{variable_level} / \code{context} / \code{stat_name} /
-\code{stat_label} / \code{stat} / \code{stat_fmt}, and, when \code{hierarchy} is given,
-\code{.depth} (1 = outermost) and \code{.label} (the deepest non-missing hierarchy
-value).
+\code{stat_label} / \code{stat} / \code{stat_fmt}, the structural classification \code{.kind}
+(\code{"continuous"} / \code{"categorical"}, see \link{rtfreporter-ard}), and, when
+\code{hierarchy} is given, \code{.depth} (1 = outermost) and \code{.label} (the deepest
+non-missing hierarchy value).
 }
 \description{
 Step one of the ARD conversion: turn the \code{group1 / group1_level} \emph{positional}

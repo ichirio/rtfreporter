@@ -168,6 +168,99 @@ test_that("a fallback chain picks the first template that resolves", {
   expect_match(sex$Placebo[1], "[(]")
 })
 
+test_that("cells match whichever cards verb generation built the ARD", {
+  skip_if_no_cards()
+  skip_if_not(all(c("ard_summary", "ard_tabulate") %in%
+                    getNamespaceExports("cards")))
+  adsl <- cards::ADSL
+  adsl$SEX <- as.character(adsl$SEX)
+  adsl$TRT <- as.character(adsl$ARM)
+
+  # cards 0.9 renamed the verbs, and the new ones stamp a different `context`
+  new_ard <- cards::ard_stack(
+    adsl, .by = TRT,
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = SEX, statistic = ~ c("n", "p")))
+  old_ard <- cards::ard_stack(
+    adsl, .by = TRT,
+    cards::ard_continuous(variables = AGE),
+    cards::ard_categorical(variables = SEX, statistic = ~ c("n", "p")))
+  expect_true(all(c("summary", "tabulate") %in% new_ard$context))
+  expect_true(all(c("continuous", "categorical") %in% old_ard$context))
+
+  cells_old <- list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+                    categorical = "{n:.0f} ({p:.1f%})")
+  cells_new <- list(summary  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+                    tabulate = "{n:.0f} ({p:.1f%})")
+  run <- function(ard, cells) {
+    ard_table(ard, cols = "TRT", rows = c(group = "variable"), cells = cells)
+  }
+  # either spelling of `cells` against either spelling of ARD
+  expect_equal(run(new_ard, cells_old), run(old_ard, cells_old))
+  expect_equal(run(new_ard, cells_new), run(old_ard, cells_old))
+  expect_equal(run(old_ard, cells_new), run(old_ard, cells_old))
+  expect_match(run(new_ard, cells_old)$Placebo[1],
+               "^[0-9]+[.][0-9] [(][0-9]+[.][0-9]{2}[)]$")
+})
+
+test_that("cells match an ARD whose context cards has never used", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  # stand-in for a future cards rename: same rows, a context string that
+  # matches neither the pre-0.9 nor the 0.9 spelling
+  future <- as.data.frame(ard)
+  future$context <- ifelse(future$context == "continuous", "univariate_stats",
+                    ifelse(future$context == "categorical", "freq_table",
+                           future$context))
+  cells <- list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+                categorical = "{n:.0f} ({p:.1f%})")
+  run <- function(a) {
+    ard_table(a, cols = "TRT", rows = c(group = "variable"), cells = cells)
+  }
+  expect_equal(run(future), run(ard))
+  expect_match(run(future)$Placebo[1],
+               "^[0-9]+[.][0-9] [(][0-9]+[.][0-9]{2}[)]$")
+})
+
+test_that("the structural kind is read from the rows, not from the context", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  expect_true(".kind" %in% names(d))
+  # a variable with levels to enumerate is categorical; one without is not
+  expect_identical(unique(d$.kind[d$variable == "AGE"]), "continuous")
+  expect_identical(unique(d$.kind[d$variable == "SEX"]), "categorical")
+  expect_identical(unique(d$.kind[d$variable == "AGEGR"]), "categorical")
+  # and it survives a context the package has never seen
+  scrambled <- as.data.frame(make_ard())
+  scrambled$context[!scrambled$context %in% c("attributes", "total_n")] <-
+    "who knows"
+  d2 <- ard_normalize(scrambled)
+  expect_identical(d2$.kind, d$.kind)
+})
+
+test_that("ard_keys() reports the stable kind next to the context", {
+  skip_if_no_cards()
+  out <- utils::capture.output(k <- ard_keys(make_ard()))
+  expect_true(any(grepl("Structural kinds", out)))
+  expect_false(is.null(k$kinds))
+  expect_identical(k$kinds$kind[k$kinds$variable == "AGE"], "continuous")
+  expect_identical(k$kinds$kind[k$kinds$variable == "SEX"], "categorical")
+})
+
+test_that("a `cells` list that matches nothing says what the ARD holds", {
+  skip_if_no_cards()
+  err <- tryCatch(
+    ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+              cells = list(nonsense = "{n} ({p})")),
+    error = function(e) conditionMessage(e))
+  expect_match(err, "No cell was produced")
+  expect_match(err, "cells` is keyed on")
+  expect_match(err, "nonsense")
+  expect_match(err, "ARD contexts")
+  expect_match(err, "continuous")          # what the ARD actually carries
+  expect_match(err, "structural kind")     # the stable key, named
+})
+
 test_that("a template naming a missing statistic yields NA, not an error", {
   skip_if_no_cards()
   tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),

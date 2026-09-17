@@ -21,6 +21,18 @@
   `bind_rows()` with a differently shaped ARD, so dispatching on it is no
   safer.  Every structural fact is an explicit argument.
 
+  **A `cells` entry is not keyed on the ARD's `context` alone.**  `context` is
+  a cards implementation detail and it moves: `ard_continuous()` stamps
+  `"continuous"` but its 0.9 rename `ard_summary()` stamps `"summary"`, and
+  `ard_categorical()` stamps `"categorical"` where `ard_tabulate()` stamps
+  `"tabulate"`.  Keying on it alone would tie a script to one cards generation
+  and silently produce no cells against another.  Each variable is therefore
+  also classified from what its rows contain --- `"categorical"` when it has
+  levels to enumerate, `"continuous"` when it does not --- and `cells` is
+  matched by variable, then context (known spellings treated as equivalent),
+  then that structural kind, then `"default"`.  The kind is the same on every
+  cards version, past and future; `ard_keys()` prints both, labelled.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

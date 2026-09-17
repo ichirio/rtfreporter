@@ -55,6 +55,41 @@ templates produces one table row per element, the name being the row label:
 that is how \code{Min} and \code{Max} become a single \verb{Min, Max} line.
 }
 
+\section{How a \code{cells} entry is chosen (and why it survives a cards upgrade)}{
+
+\code{context} is a \pkg{cards} implementation detail and it moves.
+\code{ard_continuous()} stamps \code{"continuous"}, but its 0.9 rename
+\code{ard_summary()} stamps \code{"summary"}; \code{ard_categorical()} stamps
+\code{"categorical"}, but \code{ard_tabulate()} stamps \code{"tabulate"}.  Keying \code{cells}
+on the context alone would tie your script to one \pkg{cards} generation and
+produce \strong{no cells at all} against another.
+
+So every variable is also classified from what its rows actually contain --
+its \strong{kind}:
+\describe{
+\item{\code{"categorical"}}{the variable has levels to enumerate (some
+\code{variable_level} is present): a factor, a dichotomous value of interest,
+a hierarchy term.}
+\item{\code{"continuous"}}{it does not -- one row per statistic of one numeric
+variable.}
+}
+That reading is structural, so it is the same on every \pkg{cards} version,
+past and future.  A \code{cells} entry is then matched in this order:
+\enumerate{
+\item the analysis variable's own name;
+\item \code{context}, with the known spellings treated as equivalent;
+\item the kind, likewise;
+\item \code{"default"}.
+}
+Step 2 lets a context-specific entry win where you wrote one -- cardx's
+\code{"proportion_ci"}, \code{"survival"}, \code{"stats_t_test"} and friends.  Step 3 is
+what keeps \code{continuous} / \code{categorical} (or \code{summary} / \code{tabulate}, either
+spelling) working when \pkg{cards} renames a verb again.
+
+\code{\link[=ard_keys]{ard_keys()}} prints both: the contexts, which are version-specific, and the
+kinds, which are not.
+}
+
 \section{Lifecycle}{
 
 \strong{Experimental.}  These functions are newer than the rest of the package
