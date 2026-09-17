@@ -535,6 +535,32 @@ reference:
       - rtf_table_border
       - rtf_border_tfl
 
+  # ── experimental: ARD ─────────────────────────────────────
+  # Belongs to R/ard-experimental.R and is deleted with it; see that file's
+  # header for the full removal procedure.
+  - title: Experimental -- cards/cardx ARD to a table data.frame
+    desc: >
+      Turning an **ARD** (Analysis Results Data, from `cards` / `cardx`) into
+      the table `data.frame` that `as_rtftables()` consumes, at the "one ARD
+      record, one table row" level.  A spreadsheet definition file carries the
+      variable labels, row templates, rounding family and digits.
+      **Experimental**: newer than the rest of the package, not covered by its
+      stability expectations, and may be withdrawn.  Nothing else in the
+      package depends on them.
+      cards/cardx の ARD をテーブル data.frame に変換します（実験的機能）。
+    contents:
+      - rtfreporter-ard
+      - ard_keys
+      - ard_normalize
+      - ard_spread
+      - ard_table
+      - ard_template
+      - ard_spec
+      - ard_spec_template
+      - read_ard_spec
+      - write_ard_spec
+      - ard_round
+
 # Articles index page (/articles/).  Grouped so users land on the
 # tutorial first; learner-focused material sits at the bottom.
 articles:
