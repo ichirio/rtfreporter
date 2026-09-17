@@ -27,6 +27,7 @@ Imports:
     grDevices,
     grid,
     methods,
+    stats,
     utils
 Suggests:
     knitr,

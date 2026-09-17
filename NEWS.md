@@ -1,5 +1,31 @@
 # rtfreporter (development version)
 
+### Experimental ARD helpers
+
+- **A cards/cardx ARD can be turned into a table `data.frame` directly**
+  (#474, Discussion #473).  `ard_normalize()` flattens an ARD into an
+  explicitly keyed long table; `ard_spread()` applies cell templates and
+  pivots the column keys across; `ard_table()` is both in one call.
+  `ard_keys()` reports what an ARD holds and `ard_template()` writes the
+  conversion call for you.  A spreadsheet definition file --- `ard_spec()`,
+  `read_ard_spec()`, `write_ard_spec()`, `ard_spec_template()` --- carries
+  variable labels, row templates (so `Min` and `Max` print as one
+  `Min, Max` line), the rounding family and the decimal or significant
+  digits.  `ard_round()` exposes the SAS half-away-from-zero rule that
+  base R's `round()` does not implement.
+
+  **Nothing is read from the ARD's object attributes.**  `attr(ard, "args")`
+  orders `by` and `variables` differently per generator and cannot tell them
+  apart, keeps only the first operand's value after `dplyr::bind_rows()`, and
+  is not updated when the ARD is filtered; the ARD class survives
+  `bind_rows()` with a differently shaped ARD, so dispatching on it is no
+  safer.  Every structural fact is an explicit argument.
+
+  These functions are **experimental**: they are newer than the rest of the
+  package, are not covered by its stability expectations, and may be
+  withdrawn.  Nothing else in the package depends on them, and
+  `R/ard-experimental.R` documents how to remove the family in one step.
+
 ### Documentation
 
 - **The pre-1.0 exception and the hotfix procedure are written down** (#471).

@@ -768,6 +768,12 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 `assemble_from_spec` `assemble_folder` `toc_heading` `toc_entry`
 `rtf_replace_text`
 
+**Experimental -- cards/cardx ARD to a table data.frame (may change or be
+withdrawn; nothing else in the package depends on them, see
+`?rtfreporter-ard`):** `ard_keys` `ard_normalize` `ard_spread` `ard_table`
+`ard_template` `ard_spec` `ard_spec_template` `read_ard_spec`
+`write_ard_spec` `ard_round`
+
 ---
 
 ## 18. Troubleshooting

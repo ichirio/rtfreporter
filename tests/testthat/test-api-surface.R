@@ -9,6 +9,7 @@
 library(testthat)
 
 .dep <- rtfreporter:::.deprecated_exports
+.exp <- rtfreporter:::.experimental_exports   # #474, withdrawable
 
 .exports <- function() {
   ns <- asNamespace("rtfreporter")
@@ -68,8 +69,11 @@ test_that("one border constructor is left once the deprecated ones are set aside
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 91 exports, 7 of them deprecated and slated for removal before CRAN.
-  # (91 since #463 added rtfreporter_ai_manual().)
-  expect_length(.exports(), 91L)
-  expect_length(setdiff(.exports(), .dep), 84L)
+  # 101 exports: 7 deprecated and slated for removal before CRAN, and 10
+  # experimental (the ARD family, #474) that are not part of the reviewed
+  # surface either.  The number that matters is what is left: 84.
+  expect_length(.exports(), 101L)
+  expect_true(all(.exp %in% .exports()),
+              info = paste(setdiff(.exp, .exports()), collapse = ", "))
+  expect_length(setdiff(.exports(), c(.dep, .exp)), 84L)
 })

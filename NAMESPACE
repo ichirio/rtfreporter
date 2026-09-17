@@ -188,3 +188,18 @@ export(auto_col_widths)
 
 # Post-processing: text replacement in a rendered RTF file
 export(rtf_replace_text)
+
+# ---- experimental: ARD ----
+# Everything between these two markers belongs to R/ard-experimental.R and can
+# be deleted in one step; see the header of that file.
+export(ard_keys)
+export(ard_normalize)
+export(ard_spread)
+export(ard_table)
+export(ard_template)
+export(ard_spec)
+export(ard_spec_template)
+export(read_ard_spec)
+export(write_ard_spec)
+export(ard_round)
+# ---- experimental: ARD ----

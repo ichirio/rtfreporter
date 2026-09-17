@@ -34,7 +34,7 @@ the tests pass.
    R7/S7. The last R6 path was deleted in v0.0.41; nothing in `R/` mentions
    R6 today. Objects stay `dput()`-able and `saveRDS()`-clean.
 2. **No third-party runtime dependency.** `Imports:` holds only packages that
-   ship with R (`grDevices`, `grid`, `methods`, `utils`). Every integration —
+   ship with R (`grDevices`, `grid`, `methods`, `stats`, `utils`). Every integration —
    gt, gtsummary, rtables/tern, flextable, huxtable, ggplot2 — lives in
    `Suggests:` and is reached through `.need_pkg()`. Never move one to
    `Imports:`.
@@ -377,6 +377,7 @@ session.
 | Formatting | `format_count_pct.R`, `num_format.R`, `cell_format.R`, `catx.R`, `collapse_repeats.R` |
 | Assembly | `assemble_rtf.R`, `assemble_spec.R`, `rtf_replace_text.R` |
 | Infrastructure | `defaults.R`, `zzz.R`, `need_pkg.R`, `dots_check.R`, `font_table.R` |
+| Experimental (ARD) | `ard-experimental.R` — self-contained, deletable in one step; see its header |
 
 ---
 
