@@ -188,6 +188,29 @@ test_that("levels may name the analysis variables, not the label column", {
                    c("Age", "Age group", "Sex"))
 })
 
+test_that("an unnamed labels / levels element is refused, not ignored", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  run <- function(...) {
+    ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+              cells = "{n:.0f} ({p:.1f%})", ...)
+  }
+  # the two-parallel-vector idiom with vectors of different lengths: setNames()
+  # gives the surplus label an NA name instead of complaining
+  vars   <- c("AGE", "AGEGR")
+  labs   <- c("Age", "Age group", "Sex")
+  broken <- stats::setNames(labs, vars)
+  expect_true(any(is.na(names(broken))))
+  expect_error(run(labels = broken), "must name every element")
+
+  expect_error(run(labels = c("Age", "Age group")), "must name every element")
+  expect_error(run(levels = list(c("M", "F"))), "must name every element")
+  expect_error(run(labels = c(AGE = "Age", AGE = "Age again")),
+               "names must be unique")
+  # the correct spelling still works
+  expect_s3_class(run(labels = stats::setNames(labs[1:2], vars)), "data.frame")
+})
+
 test_that("a fallback chain picks the first template that resolves", {
   skip_if_no_cards()
   tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),

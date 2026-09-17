@@ -78,6 +78,34 @@
   all(is.na(x) | !is.na(y))
 }
 
+# `labels` and `levels` are looked up BY NAME, so an unnamed element is not a
+# no-op you would notice -- it is a label or an order that silently never
+# applies.  The classic way to produce one is the two-parallel-vector idiom,
+# `setNames(group_labels, group_vars)`: when `group_vars` is the shorter of the
+# two, setNames() gives the extra elements an NA name rather than complaining,
+# and that characteristic quietly keeps its raw variable name in the table.
+.ard_check_named <- function(x, arg) {
+  if (is.null(x) || !length(x)) return(invisible(TRUE))
+  nms <- names(x)
+  if (is.null(nms) || any(is.na(nms)) || !all(nzchar(nms))) {
+    bad <- if (is.null(nms)) seq_along(x) else
+      which(is.na(nms) | !nzchar(nms))
+    .ard_stop(sprintf(
+      paste0("`%s` must name every element; element(s) %s have no name.\n",
+             "  A `%s` entry is matched by its name, so an unnamed one never ",
+             "applies.\n",
+             "  With `setNames(labels, vars)`, check that the two vectors are ",
+             "the same length."),
+      arg, paste(utils::head(bad, 5), collapse = ", "), arg))
+  }
+  dup <- unique(nms[duplicated(nms)])
+  if (length(dup)) {
+    .ard_stop(sprintf("`%s` names must be unique; %s is repeated.",
+                      arg, paste(sQuote(dup), collapse = ", ")))
+  }
+  invisible(TRUE)
+}
+
 # stable order of first appearance
 .ard_first_seen <- function(x) {
   u <- unique(as.character(x))
@@ -670,7 +698,12 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #' @param labels Named character vector recoding key *values* to display text,
 #'   e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.  When a column is
 #'   recoded and has no explicit `levels`, the order of `labels` becomes its
-#'   level order.
+#'   level order.  The two-parallel-vector spelling works just as well --
+#'   `stats::setNames(group_labels, group_vars)` -- but note that `setNames()`
+#'   gives an element an `NA` name rather than complaining when the two vectors
+#'   are different lengths, so that entry would never apply; every element must
+#'   be named, and an unnamed one is an error here rather than a silent
+#'   omission.
 #' @param sort Sort the output rows by the row keys.  The label column is used
 #'   as a sort key only when `levels` gives it an explicit order.
 #' @param ordered Make the factors built from `levels` / `labels` ordered.
@@ -724,6 +757,9 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   if (!".kind" %in% names(d) && all(c("variable", "variable_level") %in% names(d))) {
     d$.kind <- .ard_kind(d)
   }
+
+  .ard_check_named(labels, "labels")
+  .ard_check_named(levels, "levels")
 
   colrefs <- .ard_refs(cols, d, "cols")
   rowrefs <- .ard_refs(rows, d, "rows")

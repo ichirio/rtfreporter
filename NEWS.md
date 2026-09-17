@@ -41,6 +41,14 @@
   fixes the order of the spread columns, which is what keeps a hand-written
   `col_header` over the arm it names.
 
+  **`labels` and `levels` must name every element.**  Both are looked up by
+  name, so an unnamed entry is not a no-op you would notice --- it is a label
+  or an order that silently never applies.  The classic way to produce one is
+  `setNames(group_labels, group_vars)` with vectors of different lengths:
+  `setNames()` gives the surplus element an `NA` name rather than complaining,
+  and that characteristic then quietly keeps its raw variable name in the
+  table.  That is now an error.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

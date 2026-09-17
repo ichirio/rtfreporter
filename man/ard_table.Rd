@@ -92,7 +92,12 @@ Variables you leave out keep their \code{cells} templates' order.
 \item{labels}{Named character vector recoding key \emph{values} to display text,
 e.g. \code{c(AGE = "Age (years)", SEX = "Sex [n (\\\%)]")}.  When a column is
 recoded and has no explicit \code{levels}, the order of \code{labels} becomes its
-level order.}
+level order.  The two-parallel-vector spelling works just as well --
+\code{stats::setNames(group_labels, group_vars)} -- but note that \code{setNames()}
+gives an element an \code{NA} name rather than complaining when the two vectors
+are different lengths, so that entry would never apply; every element must
+be named, and an unnamed one is an error here rather than a silent
+omission.}
 
 \item{sort}{Sort the output rows by the row keys.  The label column is used
 as a sort key only when \code{levels} gives it an explicit order.}
