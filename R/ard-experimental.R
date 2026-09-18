@@ -1043,6 +1043,18 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
     # default output column is `label`, not `.label`
     nm  <- if (!is.null(nms) && nzchar(nms[i])) nms[i] else sub("^[.]", "", ref)
     if (!ref %in% names(d)) {
+      # the commonest slip: naming the analysed variable, whose levels
+      # ard_normalize() puts in `.label` rather than in a column of its own.
+      # `levels` does take that name, so the two arguments look inconsistent
+      # unless the message says why.
+      if ("variable" %in% names(d) && ref %in% d$variable) {
+        .ard_stop(sprintf(paste0(
+          "`%s`: '%s' is an analysis variable, not a key, so ard_normalize() ",
+          "puts its levels in `.label`, not in a column named '%s'. Write ",
+          "`.label` here. (`levels` does take '%s' -- it keys on the analysis ",
+          "variable to order that variable's rows in the label column.)"),
+          what, ref, ref, ref))
+      }
       .ard_stop(sprintf("`%s`: no column '%s' in the normalized ARD. Available: %s",
                         what, ref,
                         paste(setdiff(names(d), c(".overall")), collapse = ", ")))

@@ -166,6 +166,13 @@
   `ard_spread()` still accepts any data frame of the right shape, because
   rebuilding the middle is the point.
 
+  Naming the **analysed** variable where a key is wanted --- `label =
+  c(label = "WORSTGR")` when `WORSTGR` is what was tabulated --- now says
+  that its levels are in `.label`, rather than only listing the columns
+  that do exist.  `levels` accepts that same name (it orders the label
+  column by it), so the two arguments look inconsistent until the message
+  explains why.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

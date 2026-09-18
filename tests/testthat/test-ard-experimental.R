@@ -856,6 +856,20 @@ test_that("ard_table() refuses an input that is not an ARD", {
   expect_error(ard_table(make_ard(), cols = "NOPE"), "no column 'NOPE'")
 })
 
+test_that("naming the analysed variable says where its levels went", {
+  skip_if_no_cards()
+  # `levels` keys on the analysis variable, `label` cannot -- so the error has
+  # to explain the asymmetry rather than just listing the columns.
+  expect_error(ard_table(make_ard(), cols = "TRT", label = c(row = "AGEGR")),
+               "analysis variable")
+  expect_error(ard_table(make_ard(), cols = "TRT", label = c(row = "AGEGR")),
+               "[.]label")
+  # a name that is neither a column nor an analysed variable keeps the
+  # original message
+  expect_error(ard_table(make_ard(), cols = "TRT", label = c(row = "NOPE")),
+               "no column 'NOPE'")
+})
+
 # ----------------------------------------------------------------- the spec
 
 test_that("a spec round-trips through CSV and drives the conversion", {
