@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.0.9003** (the development
+**This manual documents rtfreporter 0.8.0.9004** (the development
 version, after release 0.8.0).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -771,7 +771,7 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 **Experimental -- cards/cardx ARD to a table data.frame (may change or be
 withdrawn; nothing else in the package depends on them, see
 `?rtfreporter-ard`):** `ard_keys` `ard_normalize` `ard_spread` `ard_table`
-`ard_template` `ard_spec` `ard_spec_template` `read_ard_spec`
+`ard_template` `ard_big_n` `ard_spec` `ard_spec_template` `read_ard_spec`
 `write_ard_spec` `ard_round`
 
 ---

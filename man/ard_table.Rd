@@ -59,15 +59,24 @@ produced by \code{cards::ard_stack_hierarchical(over_variables = TRUE)}, e.g.
 columns.  \code{NULL} (default) uses every name found in the \verb{group*} columns.
 This reads the tibble's rows, not its attributes.}
 
-\item{cells}{The cell recipes.  Either one template string used everywhere,
-or a named list looked up by analysis variable, then by \code{context}, then
-by \code{"default"}.  Each entry is
+\item{cells}{The cell recipes.  A \strong{character vector} is one recipe, used
+for every variable:
 \itemize{
 \item \code{"{n} ({p})"} -- one row, labelled from \code{label};
-\item \code{c("{n} ({p})", "{n}")} -- one row, first template that resolves wins;
+\item \code{c("{n} ({p})", "{n}")} -- one row, the first template that resolves;
 \item \code{c("Mean (SD)" = "{mean} ({sd})", "Min, Max" = "{min}, {max}")} -- one
 row per element, the name being the row label.
 }
+
+A \strong{list} is instead a map, looked up by analysis variable, then by
+\code{context}, then by the structural kind, then by \code{"default"}; each of its
+elements is a recipe of the three shapes above.  The container decides:
+\code{c("Mean (SD)" = ..., "Min, Max" = ...)} is a two-row recipe, while
+\code{list(continuous = ..., categorical = ...)} is a map.
+
+Statistics no template names are simply not read, which is how an ARD
+that also carries \code{method}, \code{alternative}, \code{conf.level} or a p-value
+converts without any filtering.
 
 See \link{rtfreporter-ard} for the \code{{token:spec}} grammar.}
 

@@ -192,6 +192,7 @@ export(rtf_replace_text)
 # ---- experimental: ARD ----
 # Everything between these two markers belongs to R/ard-experimental.R and can
 # be deleted in one step; see the header of that file.
+export(ard_big_n)
 export(ard_keys)
 export(ard_normalize)
 export(ard_spread)

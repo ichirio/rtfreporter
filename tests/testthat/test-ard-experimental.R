@@ -315,6 +315,111 @@ test_that("a `cells` list that matches nothing says what the ARD holds", {
   expect_match(err, "structural kind")     # the stable key, named
 })
 
+# --------------------------------------------- positional vs named key ---
+
+test_that("a positional key warns when that position holds several variables", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT    <- as.character(adsl$ARM)
+  adsl$SEX    <- as.character(adsl$SEX)
+  adsl$AGEGR  <- as.character(cut(adsl$AGE, c(0, 74, 200),
+                                  labels = c("<75", ">=75")))
+  # stacked: TRT is group1 in one block and group2 in the other
+  stacked <- cards::bind_ard(
+    cards::ard_tabulate(adsl, by = TRT, variables = AGEGR,
+                        statistic = ~ c("n", "p")),
+    cards::ard_tabulate(adsl, by = c(SEX, TRT), variables = AGEGR,
+                        statistic = ~ c("n", "p")))
+
+  expect_warning(
+    bad <- ard_table(stacked, cols = "group1_level",
+                     rows = c(group = "variable"),
+                     cells = "{n:.0f} ({p:.1f%})"),
+    "reads a POSITION")
+  # the warning is earned: the position invented columns from the other block
+  expect_true(all(c("F", "M") %in% names(bad)))
+
+  # naming the variable is correct and silent
+  expect_silent(
+    good <- ard_table(stacked, cols = "TRT", rows = c(group = "variable"),
+                      cells = "{n:.0f} ({p:.1f%})"))
+  expect_setequal(names(good)[-(1:2)],
+                  c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
+
+  # a single-block ARD keeps quiet
+  expect_silent(ard_table(make_ard(), cols = "group1_level",
+                          rows = c(group = "variable"),
+                          cells = "{n:.0f} ({p:.1f%})"))
+})
+
+# ------------------------------------------------------------- ard_big_n ---
+
+test_that("ard_big_n() reads the header denominators, keyed like the columns", {
+  skip_if_no_cards()
+  n <- ard_big_n(make_ard(), cols = "TRT")
+  expect_named(n)
+  expect_setequal(names(n), c("Placebo", "Xanomeline High Dose",
+                              "Xanomeline Low Dose"))
+  expect_equal(unname(n[["Placebo"]]), 86)
+  expect_equal(sum(n), 254)
+
+  # the order can be made to match the table's columns
+  lv <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
+  expect_identical(names(ard_big_n(make_ard(), cols = "TRT",
+                                  levels = list(TRT = lv))), lv)
+})
+
+test_that("ard_big_n() keys a crossed header exactly like the spread columns", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT   <- as.character(adsl$ARM)
+  adsl$SEX   <- as.character(adsl$SEX)
+  adsl$AGEGR <- as.character(cut(adsl$AGE, c(0, 74, 200),
+                                 labels = c("<75", ">=75")))
+  ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
+                          cards::ard_tabulate(variables = AGEGR,
+                                              statistic = ~ c("n", "N", "p")))
+  n   <- ard_big_n(ard, cols = c("TRT", "SEX"))
+  tbl <- ard_table(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
+                   cells = "{n:.0f} ({p:.1f%})")
+  # every spread column has a denominator, under the identical name
+  expect_true(all(names(tbl)[-(1:2)] %in% names(n)))
+  expect_equal(sum(n), 254)
+})
+
+test_that("ard_big_n() says what to do when the statistic is not there", {
+  skip_if_no_cards()
+  expect_error(ard_big_n(make_ard(), cols = "NOPE"), "no key 'NOPE'")
+  expect_error(ard_big_n(make_ard(), cols = "TRT", stat = "nonesuch"),
+               "No 'nonesuch' found")
+})
+
+# ------------------------------------ statistics the table never prints ---
+
+test_that("statistics no template names are simply not read", {
+  skip_if_no_cards()
+  skip_if_not_installed("cardx")
+  adsl <- cards::ADSL
+  adsl$TRT  <- as.character(adsl$ARM)
+  adsl$RESP <- adsl$AGE > 75
+  ard <- cardx::ard_categorical_ci(
+    dplyr::group_by(adsl, TRT), variables = RESP, method = "wilson")
+
+  # the ARD carries plenty the table will never show
+  expect_true(all(c("method", "alternative", "conf.level", "p.value") %in%
+                    ard$stat_name))
+
+  # a NAMED character vector is one recipe of two rows, not a context map
+  tbl <- ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+                   cells = c("n (%)"  = "{n:.0f} ({estimate:.1f%})",
+                             "95% CI" = "{conf.low:.1f%}, {conf.high:.1f%}"))
+  expect_identical(as.character(unique(tbl$label)), c("n (%)", "95% CI"))
+  expect_match(tbl$Placebo[1], "^[0-9]+ [(][0-9.]+[)]$")
+  expect_match(tbl$Placebo[2], "^[0-9.]+, [0-9.]+$")
+  # nothing leaked in from method / alternative
+  expect_false(any(grepl("Wilson|two.sided", unlist(tbl))))
+})
+
 test_that("a template naming a missing statistic yields NA, not an error", {
   skip_if_no_cards()
   tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),

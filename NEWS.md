@@ -49,6 +49,29 @@
   and that characteristic then quietly keeps its raw variable name in the
   table.  That is now an error.
 
+  **`ard_big_n()`** reads the per-column statistics that belong in the column
+  header rather than in a row --- the denominator behind every percentage, the
+  subject count per arm --- keyed exactly like the spread columns, ready to
+  paste into a `col_header`.  Taking it from the ARD rather than counting the
+  data again makes it, by construction, the number the percentages used.
+
+  **A positional key now warns when the position is ambiguous.**
+  `group1_level` is a position, not a variable: cards fills the group columns
+  in the order each summary was requested, so once several summaries are
+  stacked the same treatment variable can sit at `group1` in one block and
+  `group2` in another.  Reading the position then splits one arm across two
+  table columns and invents columns for whatever else landed there.  Naming the
+  variable (`cols = "TRT01P"`) is immune, and a positional reference is now
+  warned about when that group position really does hold more than one
+  variable --- so a single-block ARD stays quiet.
+
+  **A `cells` that is not a list is one recipe**, used for every variable, and
+  its names are row labels; a list is a map keyed by variable / context / kind
+  / `"default"`.  The container decides, because
+  `c("Mean (SD)" = ..., "Min, Max" = ...)` cannot otherwise be told from a map.
+  Passing such a named vector at the top level previously failed with
+  "subscript out of bounds".
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

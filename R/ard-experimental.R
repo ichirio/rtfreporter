@@ -32,7 +32,7 @@
 # is part of the surface a reader has to learn, and this family may be
 # withdrawn outright.  Keep it in step with the NAMESPACE marker block.
 .experimental_exports <- c(
-  "ard_keys", "ard_normalize", "ard_spread", "ard_table", "ard_template",
+  "ard_big_n", "ard_keys", "ard_normalize", "ard_spread", "ard_table", "ard_template",
   "ard_spec", "ard_spec_template", "read_ard_spec", "write_ard_spec",
   "ard_round")
 
@@ -366,15 +366,20 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
   unique(as.character(out))
 }
 
+# A `cells` that is not a list is ONE entry, used for everything; its names, if
+# any, are row labels.  A `cells` that IS a list is a map keyed by variable /
+# context / kind / "default", and each of its elements is such an entry.  The
+# two cannot be told apart by looking for names -- `c("Mean (SD)" = ...)` is a
+# named vector meaning two rows -- so the container type decides.
 .ard_lookup_cells <- function(cells, variable, context, kind = NA_character_) {
-  if (is.character(cells) && is.null(names(cells))) {
-    return(.ard_cell_entry(cells))
-  }
+  if (!is.list(cells)) return(.ard_cell_entry(cells))
   keys <- variable
   if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
   if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
   for (k in c(unique(keys), "default")) {
-    if (!is.na(k) && !is.null(cells[[k]])) return(.ard_cell_entry(cells[[k]]))
+    if (!is.na(k) && k %in% names(cells) && !is.null(cells[[k]])) {
+      return(.ard_cell_entry(cells[[k]]))
+    }
   }
   NULL
 }
@@ -443,6 +448,108 @@ ard_keys <- function(ard) {
   print(stats, row.names = FALSE)
   invisible(list(keys = keys, variables = vars, contexts = ctx,
                  kinds = kinds, stats = stats))
+}
+
+
+# ============================================================================
+#  ard_big_n()
+# ============================================================================
+
+#' The big N: per-column statistics that belong in the column header
+#'
+#' An ARD carries more than the table's body: the denominator behind every
+#' percentage, the subject count per arm, the total N.  Those belong in the
+#' **column header** (`Placebo\\nN = 86`), not in a row, so [ard_table()] does
+#' not put them anywhere.  `ard_big_n()` reads them out, keyed exactly like the
+#' spread columns, ready to paste into a `col_header`.
+#'
+#' Taking the denominator from the ARD rather than counting the data again is
+#' the point: it is by construction the same number the percentages used.
+#'
+#' @param ard A cards/cardx ARD.
+#' @param cols The column key(s), named the same way as in [ard_table()] --
+#'   the grouping variable's own name, not its `group*` position.
+#' @param stat Statistic to read.  `"N"` (the default) is the denominator.
+#' @param variable Read the statistic from this analysis variable only.
+#'   `NULL` (default) prefers the by-variable's own count rows -- the
+#'   `variable == <a `cols` key>` rows that `ard_stack(.by = )` writes -- and
+#'   falls back to the denominator carried on the summary rows.
+#' @param sep Separator between multiple `cols` keys; match [ard_table()].
+#' @param levels Optional level order for the keys, so the result lines up with
+#'   the table's columns.
+#'
+#' @return A named vector, one element per column key.
+#'
+#' @section Lifecycle:
+#' **Experimental.**  See [rtfreporter-ard].
+#'
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   adsl <- cards::ADSL
+#'   adsl$TRT <- as.character(adsl$ARM)
+#'   ard <- cards::ard_stack(adsl, .by = TRT,
+#'                           cards::ard_continuous(variables = AGE))
+#'   n <- ard_big_n(ard, cols = "TRT")
+#'   paste0(names(n), "\nN = ", n)
+#' }
+#' @seealso [ard_table()], [ard_keys()]
+#' @export
+ard_big_n <- function(ard, cols, stat = "N", variable = NULL,
+                     sep = "____", levels = NULL) {
+  # ard_normalize() materialises every requested key, so a typo would survive
+  # as an all-missing column: check the keys against the ARD's own group values.
+  raw    <- as.data.frame(ard, stringsAsFactors = FALSE)
+  gcols  <- grep("^group[0-9]+$", names(raw), value = TRUE)
+  have   <- unique(unlist(lapply(gcols, function(g) .ard_first_seen(raw[[g]]))))
+  unknown <- setdiff(cols, have)
+  if (length(unknown)) {
+    .ard_stop(sprintf(
+      "`cols`: no key %s in this ARD.  It has: %s.  ard_keys() lists them.",
+      paste(sQuote(unknown), collapse = ", "),
+      if (length(have)) paste(sQuote(have), collapse = ", ") else "(none)"))
+  }
+
+  d <- ard_normalize(ard, keys = cols, drop_key_variables = FALSE,
+                     drop_contexts = "attributes")
+  key <- do.call(paste, c(lapply(cols, function(k) as.character(d[[k]])),
+                          list(sep = sep)))
+  ok <- Reduce(`&`, lapply(cols, function(k) !is.na(d[[k]])))
+  d <- d[ok, , drop = FALSE]; key <- key[ok]
+
+  pick <- function(rows) {
+    if (!any(rows)) return(NULL)
+    v <- d$stat[rows]
+    k <- key[rows]
+    num <- suppressWarnings(as.numeric(as.character(v)))
+    out <- if (all(is.na(v) | !is.na(num)))
+      vapply(split(num, k), function(z) suppressWarnings(max(z, na.rm = TRUE)),
+             numeric(1))
+    else vapply(split(as.character(v), k), function(z) z[1L], "")
+    out[is.finite(suppressWarnings(as.numeric(out))) |
+          !is.numeric(out)]
+  }
+
+  out <- NULL
+  if (!is.null(variable)) {
+    out <- pick(d$variable %in% variable & d$stat_name == stat)
+  } else {
+    # the by-variable's own tabulation: `variable` IS one of the column keys
+    out <- pick(d$variable %in% cols & d$stat_name %in% c("n", stat))
+    if (is.null(out) || !length(out)) {
+      out <- pick(!d$variable %in% cols & d$stat_name == stat)
+    }
+  }
+  if (is.null(out) || !length(out)) {
+    .ard_stop(sprintf(
+      paste0("No '%s' found for these columns.  ard_keys() lists the ",
+             "statistics this ARD carries; name one with `stat =`, or the ",
+             "variable to read it from with `variable =`."), stat))
+  }
+  ord <- if (is.null(levels)) .ard_first_seen(key) else {
+    lv <- levels[[cols[1L]]] %||% levels[[1L]]
+    c(intersect(lv, names(out)), setdiff(names(out), lv))
+  }
+  out[intersect(ord, names(out))]
 }
 
 
@@ -644,9 +751,37 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
                         what, ref,
                         paste(setdiff(names(d), c(".overall")), collapse = ", ")))
     }
+    .ard_warn_positional(ref, d, what)
     out[[i]] <- list(out = nm, ref = ref)
   }
   out
+}
+
+# `group1_level` is a POSITION, not a variable.  cards fills the group columns
+# in the order each summary was asked for, so once several summaries are
+# stacked the same analysis variable can sit at `group1` in one block and
+# `group2` in another -- and a different variable can sit at `group1` in that
+# other block.  Reading the position then splits one treatment arm across two
+# table columns and invents columns for whatever else landed there.  Naming the
+# variable (`cols = "TRT01P"`) is immune: ard_normalize() materialises that name
+# from whichever group position holds it, block by block.
+#
+# Warn only when it actually bites -- when that position really does hold more
+# than one variable in this ARD -- so a single-block ARD stays quiet.
+.ard_warn_positional <- function(ref, d, what) {
+  g <- regmatches(ref, regexpr("^group[0-9]+", ref))
+  if (!length(g) || !g %in% names(d)) return(invisible(FALSE))
+  vars <- .ard_first_seen(d[[g]])
+  if (length(vars) < 2L) return(invisible(FALSE))
+  warning(sprintf(
+    paste0("`%s = \"%s\"` reads a POSITION, and `%s` holds %d different ",
+           "variables in this ARD (%s).\n",
+           "  Stacked summaries do not keep a variable at the same group ",
+           "depth, so the position mixes them.  Name the variable instead, ",
+           "e.g. `%s = \"%s\"`; see ard_keys()."),
+    what, ref, g, length(vars), paste(sQuote(vars), collapse = ", "),
+    what, vars[1L]), call. = FALSE)
+  invisible(TRUE)
 }
 
 #' Turn a normalized ARD into a wide table data.frame
@@ -672,13 +807,22 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   deepest hierarchy value, or to `variable_level` when there is no
 #'   hierarchy.  `NULL` drops the label column, which is what you want when
 #'   every `cells` entry is named.
-#' @param cells The cell recipes.  Either one template string used everywhere,
-#'   or a named list looked up by analysis variable, then by `context`, then
-#'   by `"default"`.  Each entry is
+#' @param cells The cell recipes.  A **character vector** is one recipe, used
+#'   for every variable:
 #'   * `"{n} ({p})"` -- one row, labelled from `label`;
-#'   * `c("{n} ({p})", "{n}")` -- one row, first template that resolves wins;
+#'   * `c("{n} ({p})", "{n}")` -- one row, the first template that resolves;
 #'   * `c("Mean (SD)" = "{mean} ({sd})", "Min, Max" = "{min}, {max}")` -- one
 #'     row per element, the name being the row label.
+#'
+#'   A **list** is instead a map, looked up by analysis variable, then by
+#'   `context`, then by the structural kind, then by `"default"`; each of its
+#'   elements is a recipe of the three shapes above.  The container decides:
+#'   `c("Mean (SD)" = ..., "Min, Max" = ...)` is a two-row recipe, while
+#'   `list(continuous = ..., categorical = ...)` is a map.
+#'
+#'   Statistics no template names are simply not read, which is how an ARD
+#'   that also carries `method`, `alternative`, `conf.level` or a p-value
+#'   converts without any filtering.
 #'
 #'   See [rtfreporter-ard] for the `{token:spec}` grammar.
 #' @param stats `"cells"` (default) builds character cells from `cells`.
