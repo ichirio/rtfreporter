@@ -59,6 +59,15 @@ or dplyr before handing it to \code{\link[=ard_spread]{ard_spread()}}.  That is 
 for anything \code{\link[=ard_table]{ard_table()}} does not do by itself: marginal totals, derived
 rows, custom sorting.
 }
+\section{Factor levels}{
+
+\pkg{cards} stores the level of a factor variable as a one-element factor,
+so the flattening has to take the label: a level comes back as \code{"<65"}, not
+as the integer code \code{1}.  The order the factor declared is kept too, on the
+\code{"ard_factor_levels"} attribute, and \code{\link[=ard_spread]{ard_spread()}} uses it as that
+variable's row order unless \code{levels} says otherwise.
+}
+
 \section{Lifecycle}{
 
 \strong{Experimental.}  See \link{rtfreporter-ard}.

@@ -47,8 +47,14 @@ A template is a string with \code{{...}} tokens naming statistics:
 \verb{\{p:.1f\\\%\}}   \tab multiplied by 100 first, then 1 decimal \cr
 \verb{\{mean:.3s\}}  \tab 3 significant digits \cr
 \code{{n:d}}       \tab integer \cr
-\code{{n:raw}}     \tab the raw \code{stat}, \code{as.character()}, untouched
+\code{{n:raw}}     \tab the raw \code{stat}, \code{as.character()}, untouched \cr
+\code{{mean:fmt}}  \tab the same as \code{{mean}}, said out loud
 }
+An ARD carries two values per statistic and both are reachable: a token
+with no format spec (or \verb{:fmt}) takes \code{stat_fmt}, the string \pkg{cards}
+formatted; any other spec formats the raw \code{stat} here, and \verb{:raw} takes it
+untouched.  For \code{stats = "rows"}, where a value goes into the cell without
+a template, \code{ard_spread(value = )} makes the same choice.
 A template whose statistics are not all present yields \code{NA}, which is what
 lets \code{c("{n} ({p})", "{n}")} act as a fallback chain.  A \strong{named} vector of
 templates produces one table row per element, the name being the row label:

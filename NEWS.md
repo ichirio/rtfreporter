@@ -87,6 +87,29 @@
   adverse-events row order, replacing `sort_stat` plus a `dplyr::arrange()`
   plus dropping the helper column.
 
+  **A factor level keeps its label.**  cards stores the level of a factor
+  variable as a one-element factor, and flattening those with `unlist()`
+  yields the integer codes --- so a demographics table came out reading `1`,
+  `2`, `3` where it should read `<65`, `65-74`, `>=75`.  The label was in the
+  ARD all along; only the flattening lost it.  The order the factor declared
+  is now kept as well, and becomes that variable's row order unless `levels`
+  says otherwise.
+
+  **Either of the ARD's two values is reachable.**  `stats = "rows"` gained
+  `value =`, choosing the raw numeric `"stat"` (the default, so the table can
+  still be aligned with `set_decimal_split()`) or `"stat_fmt"`, the string
+  cards already formatted.  In a template the choice was always there but
+  unnamed; `{x:fmt}` now says "cards' formatted value" out loud, beside
+  `{x:raw}` for the untouched `stat` and `{x:.1f}` for formatting it here.
+
+  **A row identity that does not separate two summaries is an error.**  Four
+  continuous variables each produce a `Mean (SD)` line; with nothing but the
+  label to tell them apart they landed in the same cell and overwrote each
+  other, leaving a table with a quarter of its rows carrying the last
+  variable's numbers, and no diagnostic at all.  Two different values arriving
+  at one cell now stop with the cell, both values, and the two variables
+  named.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

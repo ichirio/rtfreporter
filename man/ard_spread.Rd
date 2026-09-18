@@ -11,6 +11,7 @@ ard_spread(
   label = ".label",
   cells = "{n} ({p})",
   stats = c("cells", "rows"),
+  value = c("stat", "stat_fmt"),
   levels = NULL,
   labels = NULL,
   sort = TRUE,
@@ -72,8 +73,13 @@ See \link{rtfreporter-ard} for the \code{{token:spec}} grammar.}
 
 \item{stats}{\code{"cells"} (default) builds character cells from \code{cells}.
 \code{"rows"} ignores \code{cells} and gives every statistic its own row, labelled
-with \code{stat_label}, carrying the raw numeric \code{stat} -- the shape a PK
-concentration table wants.}
+with \code{stat_label} -- the shape a PK concentration table wants.}
+
+\item{value}{Which of the ARD's two values \code{stats = "rows"} puts in the
+cell: the raw numeric \code{"stat"} (the default, so the table can still be
+aligned with \code{\link[=set_decimal_split]{set_decimal_split()}}) or \code{"stat_fmt"}, the string
+\pkg{cards} already formatted.  Ignored when \code{stats = "cells"}, where the
+template says which it wants, token by token.}
 
 \item{levels}{Named list of level orders, e.g.
 \code{list(TRT01P = c("Placebo", "Drug"), AGEGR = c("<65", ">=65"))}.  A name

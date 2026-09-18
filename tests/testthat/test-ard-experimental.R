@@ -509,6 +509,93 @@ test_that("`sort` names a column, a statistic, or the computed keys", {
                "neither a column of the result nor a statistic")
 })
 
+# ------------------------------------------------------ factor variables ---
+
+make_factor_ard <- function() {
+  adsl <- cards::ADSL
+  adsl$TRT    <- as.character(adsl$ARM)
+  adsl$AGEGR  <- cut(adsl$AGE, c(0, 64, 74, Inf),
+                     labels = c("<65", "65-74", ">=75"))
+  adsl$SEX    <- factor(adsl$SEX, levels = c("F", "M"),
+                        labels = c("Female", "Male"))
+  cards::ard_stack(
+    adsl, .by = TRT,
+    cards::ard_continuous(variables = AGE,
+                          statistic = ~ cards::continuous_summary_fns("mean")),
+    cards::ard_categorical(variables = c(AGEGR, SEX),
+                           statistic = ~ c("n", "p")))
+}
+
+test_that("a factor level keeps its label, not its integer code", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_factor_ard())
+  expect_setequal(stats::na.omit(unique(d$variable_level[d$variable == "AGEGR"])),
+                  c("<65", "65-74", ">=75"))
+  expect_setequal(stats::na.omit(unique(d$variable_level[d$variable == "SEX"])),
+                  c("Female", "Male"))
+  # nothing became "1" / "2" / "3"
+  expect_false(any(stats::na.omit(d$variable_level) %in% c("1", "2", "3")))
+})
+
+test_that("a factor's declared level order becomes the row order", {
+  skip_if_no_cards()
+  tbl <- ard_table(make_factor_ard(), cols = "TRT",
+                   cells = list(continuous  = c("Mean" = "{mean:.1f}"),
+                                categorical = "{n:.0f} ({p:.1f%})"))
+  gr <- tbl[tbl$group == "AGEGR", ]
+  expect_identical(as.character(gr$label), c("<65", "65-74", ">=75"))
+  sx <- tbl[tbl$group == "SEX", ]
+  expect_identical(as.character(sx$label), c("Female", "Male"))
+
+  # an explicit `levels` still wins over what the factor declared
+  tbl2 <- ard_table(make_factor_ard(), cols = "TRT",
+                    cells = list(continuous  = c("Mean" = "{mean:.1f}"),
+                                 categorical = "{n:.0f} ({p:.1f%})"),
+                    levels = list(SEX = c("Male", "Female")))
+  sx2 <- tbl2[tbl2$group == "SEX", ]
+  expect_identical(as.character(sx2$label), c("Male", "Female"))
+})
+
+# ------------------------------------------------- stat versus stat_fmt ---
+
+test_that("stats = 'rows' can carry either of the ARD's two values", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::ard_stack(adsl, .by = TRT,
+                          cards::ard_continuous(variables = AGE))
+  args <- list(ard = ard, cols = "TRT", rows = c(group = "variable"),
+               label = c(Statistic = "stat_label"), stats = "rows")
+
+  raw <- do.call(ard_table, args)
+  expect_true(is.numeric(raw$Placebo))
+  expect_equal(raw$Placebo[raw$Statistic == "Mean"],
+               mean(adsl$AGE[adsl$TRT == "Placebo"]))
+
+  fmt <- do.call(ard_table, c(args, list(value = "stat_fmt")))
+  expect_true(is.character(fmt$Placebo))
+  # cards' own formatting, not ours
+  expect_match(fmt$Placebo[fmt$Statistic == "Mean"], "^[0-9]+[.][0-9]$")
+  expect_identical(fmt$Statistic, raw$Statistic)
+})
+
+test_that("{x:fmt} names cards' formatted value inside a template", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::ard_stack(adsl, .by = TRT,
+                          cards::ard_continuous(variables = AGE))
+  tbl <- ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+                   cells = c("bare" = "{mean}",
+                             "fmt"  = "{mean:fmt}",
+                             "raw"  = "{mean:raw}",
+                             "ours" = "{mean:.3f}"))
+  v <- function(lab) tbl$Placebo[tbl$label == lab]
+  expect_identical(v("fmt"), v("bare"))          # "" and "fmt" are the same
+  expect_false(identical(v("raw"), v("fmt")))    # raw is unrounded
+  expect_match(v("ours"), "^[0-9]+[.][0-9]{3}$")
+})
+
 test_that("a template naming a missing statistic yields NA, not an error", {
   skip_if_no_cards()
   tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
@@ -518,11 +605,33 @@ test_that("a template naming a missing statistic yields NA, not an error", {
 
 test_that("stats = 'rows' gives one numeric row per statistic", {
   skip_if_no_cards()
-  tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+  # the shape this mode is for: continuous variables, one row per statistic
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::ard_stack(adsl, .by = TRT,
+                          cards::ard_continuous(variables = AGE))
+  tbl <- ard_table(ard, cols = "TRT", rows = c(group = "variable"),
                    label = c(Statistic = "stat_label"), stats = "rows")
   expect_true(is.numeric(tbl$Placebo))
-  age <- tbl[tbl$group == "AGE", ]
-  expect_true(all(c("N", "Mean", "SD") %in% as.character(age$Statistic)))
+  expect_true(all(c("N", "Mean", "SD") %in% as.character(tbl$Statistic)))
+})
+
+test_that("stats = 'rows' on a variable with levels needs the level as a key", {
+  skip_if_no_cards()
+  # every level of AGEGR carries an `n`, so labelling rows by the statistic
+  # alone cannot separate them -- previously the last level silently won
+  expect_error(
+    ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+              label = c(Statistic = "stat_label"), stats = "rows"),
+    "telling themselves apart")
+
+  # naming the level as well is what the message asks for, and it works
+  tbl <- ard_table(make_ard(), cols = "TRT",
+                   rows = c(group = "variable", level = "variable_level"),
+                   label = c(Statistic = "stat_label"), stats = "rows")
+  gr <- tbl[tbl$group == "AGEGR", ]
+  expect_setequal(stats::na.omit(unique(gr$level)), c("<65", "65-74", ">=75"))
+  expect_true(is.numeric(tbl$Placebo))
 })
 
 test_that("sort_stat totals a statistic across the spread columns", {
