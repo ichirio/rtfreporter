@@ -47,6 +47,7 @@ Suggests:
     tfrmt,
     tidyr,
     cards,
+    cardx,
     forcats,
     labelled,
     random.cdisc.data,

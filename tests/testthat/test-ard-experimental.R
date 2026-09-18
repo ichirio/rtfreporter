@@ -402,8 +402,8 @@ test_that("statistics no template names are simply not read", {
   adsl <- cards::ADSL
   adsl$TRT  <- as.character(adsl$ARM)
   adsl$RESP <- adsl$AGE > 75
-  ard <- cardx::ard_categorical_ci(
-    dplyr::group_by(adsl, TRT), variables = RESP, method = "wilson")
+  ard <- cardx::ard_categorical_ci(adsl, variables = RESP, by = TRT,
+                                   method = "wilson")
 
   # the ARD carries plenty the table will never show
   expect_true(all(c("method", "alternative", "conf.level", "p.value") %in%
