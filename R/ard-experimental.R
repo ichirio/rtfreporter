@@ -799,9 +799,18 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   `sep`, producing the `"Placebo____Day 1"` names that
 #'   [rtftable()]'s `col_header` already reads as a spanning header.  May be
 #'   named, in which case the name is ignored for the column text.
-#' @param rows Row keys, in output order.  A named vector renames them:
-#'   `rows = c(group = "variable")` puts `variable` into a column called
-#'   `group`.
+#' @param rows Row keys, in output order -- **any** column of the normalized
+#'   frame, not a fixed one: the ARD's own `variable` when the row groups are
+#'   the analysis variables (a demographics table), or a grouping variable's
+#'   name when they are not (`"AEBODSYS"`).  A named vector renames them, and
+#'   the name is only the output column's name: `rows = c(group = "variable")`
+#'   and `rows = c(group1 = "AEBODSYS")` differ in *what* they group by, not in
+#'   kind.
+#'
+#'   Left `NULL` on a flat ARD carrying more than one analysis variable, it
+#'   defaults to `c(group = "variable")`, since that is the only thing left to
+#'   group those rows by.  One analysis variable, or any `hierarchy`, leaves it
+#'   empty.
 #' @param label Source of the row label, as a single (optionally named)
 #'   reference.  Default `".label"`, which [ard_normalize()] sets to the
 #'   deepest hierarchy value, or to `variable_level` when there is no
@@ -848,8 +857,22 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   are different lengths, so that entry would never apply; every element must
 #'   be named, and an unnamed one is an error here rather than a silent
 #'   omission.
-#' @param sort Sort the output rows by the row keys.  The label column is used
-#'   as a sort key only when `levels` gives it an explicit order.
+#' @param sort `TRUE` (default) sorts by the row keys, using the label column
+#'   too when `levels` gave it an explicit order; `FALSE` leaves the rows as
+#'   they were built.  A **character vector** names the keys instead, in
+#'   priority order, each optionally prefixed `-` for descending:
+#'   \describe{
+#'     \item{`".overall"`}{the hierarchical-overall rows (an `Any TEAE` block)
+#'       first.}
+#'     \item{`".depth"`}{a level's own summary row before the rows nested
+#'       under it.}
+#'     \item{a column}{any row key or the label column, by its output name.}
+#'     \item{a statistic}{that statistic totalled across the spread columns --
+#'       what a descending-frequency AE table sorts on.}
+#'   }
+#'   So `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of
+#'   an AE table's row order, and needs neither `sort_stat` nor an `arrange()`
+#'   afterwards.
 #' @param ordered Make the factors built from `levels` / `labels` ordered.
 #' @param sep Separator pasted between multiple `cols` keys.
 #' @param round Tie-breaking rule for `{x:.1f}`-style tokens, `"sas"` or
@@ -906,6 +929,16 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   .ard_check_named(levels, "levels")
 
   colrefs <- .ard_refs(cols, d, "cols")
+
+  # With no `rows` and no hierarchy, the only thing left to group the rows by is
+  # the analysis variable, and a table of several variables always wants that
+  # column.  Fill it in rather than making every flat summary spell it out.
+  # One variable needs no grouping column at all, so the default stays empty.
+  if (is.null(rows) && !".depth_given" %in% names(d) &&
+      length(.ard_first_seen(d$variable)) > 1L &&
+      all(is.na(d$.depth) | d$.depth == 1L)) {
+    rows <- c(group = "variable")
+  }
   rowrefs <- .ard_refs(rows, d, "rows")
   labref  <- if (is.null(label)) list() else .ard_refs(label, d, "label")
   if (!length(colrefs)) .ard_stop("`cols` is required: name the key that goes across.")
@@ -968,6 +1001,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
         .valn = suppressWarnings(as.numeric(sub$stat)),
         .valc = NA_character_,
         .depth = if (".depth" %in% names(sub)) sub$.depth else 1L,
+        .overall = if (".overall" %in% names(sub)) sub$.overall else FALSE,
         .keys = I(rep(list(key_vals), nrow(sub))),
         stringsAsFactors = FALSE)
       next
@@ -989,6 +1023,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       pieces[[length(pieces) + 1L]] <- data.frame(
         .lab = entry$labels, .col = ckey, .valn = NA_real_, .valc = vals,
         .depth = if (".depth" %in% names(sub)) sub$.depth[1L] else 1L,
+        .overall = if (".overall" %in% names(sub)) sub$.overall[1L] else FALSE,
         .keys = I(rep(list(key_vals), length(vals))),
         stringsAsFactors = FALSE)
     } else {
@@ -1004,6 +1039,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
         pieces[[length(pieces) + 1L]] <- data.frame(
           .lab = lv, .col = ckey, .valn = NA_real_, .valc = v,
           .depth = if (".depth" %in% names(s2)) s2$.depth[1L] else 1L,
+          .overall = if (".overall" %in% names(s2)) s2$.overall[1L] else FALSE,
           .keys = I(list(key_vals)), stringsAsFactors = FALSE)
       }
     }
@@ -1056,7 +1092,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   rid <- do.call(paste, c(lapply(id_cols, function(k) as.character(long[[k]])),
                           list(sep = "\r")))
   row_first <- !duplicated(rid)
-  base <- long[row_first, c(id_cols, ".depth"), drop = FALSE]
+  base <- long[row_first, c(id_cols, ".depth", ".overall"), drop = FALSE]
   base$.rid <- rid[row_first]
 
   mat <- matrix(na, nrow = nrow(base), ncol = length(col_levels),
@@ -1086,7 +1122,10 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     out$.sort_stat <- as.numeric(tot[match(base$.rid, names(tot))])
   }
 
-  if (isTRUE(sort) && length(rowname_cols)) {
+  if (is.character(sort) && length(sort)) {
+    out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref), ,
+               drop = FALSE]
+  } else if (isTRUE(sort) && length(rowname_cols)) {
     keys <- lapply(rowname_cols, function(k) out[[k]])
     if (!is.null(label_out) && is.factor(out[[label_out]])) {
       keys <- c(keys, list(out[[label_out]]))
@@ -1095,6 +1134,43 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   }
   rownames(out) <- NULL
   out
+}
+
+# Resolve an explicit `sort` spec into a row order.  Each element names one
+# key, optionally prefixed with "-" for descending:
+#
+#   ".overall"  the hierarchical-overall rows (an "Any TEAE" block) first
+#   ".depth"    a level's own summary row before the rows nested under it
+#   <column>    any row key or the label column, by its output name
+#   <statistic> a statistic's total across the spread columns -- what a
+#               descending-frequency AE table sorts on
+#
+# A statistic is recognised last, so a column of that name wins; that is the
+# safe way round, since the column is what the caller can see in the result.
+.ard_sort_order <- function(spec, out, base, d, rowrefs, labref) {
+  keys <- list()
+  for (s in spec) {
+    desc <- substr(s, 1L, 1L) == "-"
+    nm   <- if (desc) substring(s, 2L) else s
+    v <- if (nm %in% names(out)) out[[nm]]
+         else if (nm %in% c(".overall", ".depth")) base[[nm]]
+         else if (nm %in% d$stat_name) {
+           tot <- tapply(suppressWarnings(as.numeric(d$stat[d$stat_name == nm])),
+                         rid_for_stat(d, rowrefs, labref, nm), sum, na.rm = TRUE)
+           as.numeric(tot[match(base$.rid, names(tot))])
+         } else {
+           .ard_stop(sprintf(
+             paste0("`sort`: '%s' is neither a column of the result nor a ",
+                    "statistic of this ARD.\n  Columns: %s\n  Also allowed: ",
+                    "'.overall', '.depth', and a leading '-' for descending."),
+             nm, paste(sQuote(names(out)), collapse = ", ")))
+         }
+    if (is.logical(v)) v <- !v            # TRUE first reads better than TRUE last
+    keys[[length(keys) + 1L]] <- if (desc) {
+      if (is.numeric(v)) -v else -xtfrm(v)
+    } else v
+  }
+  do.call(order, keys)
 }
 
 # helper for sort_stat: rebuild the row identity on the long normalized frame

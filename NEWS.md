@@ -72,6 +72,21 @@
   Passing such a named vector at the top level previously failed with
   "subscript out of bounds".
 
+  **`rows` defaults to the analysis variable** on a flat ARD carrying more
+  than one, since that is the only thing left to group those rows by; one
+  variable, or any `hierarchy`, leaves it empty, and an explicit `rows` always
+  wins.  `rows` is not tied to `variable` --- it takes any column of the
+  normalized frame, and the name on the left is only the output column's name.
+
+  **`sort` can name its keys** instead of being arranged afterwards: a
+  character vector, in priority order, each element optionally prefixed `-`
+  for descending, naming a result column, a statistic (totalled across the
+  spread columns), `".overall"` (the hierarchical-overall block first) or
+  `".depth"` (a level's own summary row before the rows nested under it).  So
+  `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of an
+  adverse-events row order, replacing `sort_stat` plus a `dplyr::arrange()`
+  plus dropping the helper column.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

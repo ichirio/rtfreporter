@@ -420,6 +420,95 @@ test_that("statistics no template names are simply not read", {
   expect_false(any(grepl("Wilson|two.sided", unlist(tbl))))
 })
 
+# ------------------------------------------------- the `rows` default ----
+
+test_that("`rows` defaults to the analysis variable for a flat ARD", {
+  skip_if_no_cards()
+  cells <- list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+                categorical = "{n:.0f} ({p:.1f%})")
+  explicit <- ard_table(make_ard(), cols = "TRT",
+                        rows = c(group = "variable"), cells = cells)
+  omitted  <- ard_table(make_ard(), cols = "TRT", cells = cells)
+  expect_equal(omitted, explicit)
+  expect_identical(names(omitted)[1:2], c("group", "label"))
+})
+
+test_that("a single-variable ARD gets no grouping column by default", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  ard <- cards::ard_stack(adsl, .by = TRT,
+                          cards::ard_categorical(variables = SEX,
+                                                 statistic = ~ c("n", "p")))
+  tbl <- ard_table(ard, cols = "TRT", cells = "{n:.0f} ({p:.1f%})")
+  expect_identical(names(tbl)[1], "label")
+  expect_false("group" %in% names(tbl))
+})
+
+test_that("an explicit `rows` always wins over the default", {
+  skip_if_no_cards()
+  tbl <- ard_table(make_ard(), cols = "TRT",
+                   rows = c(characteristic = "variable"),
+                   cells = "{n:.0f} ({p:.1f%})")
+  expect_identical(names(tbl)[1], "characteristic")
+})
+
+# ------------------------------------------------- the declarative sort ---
+
+test_that("`sort` can be declared instead of arranged afterwards", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adae <- merge(cards::ADAE[, c("USUBJID", "AESOC", "AETERM")],
+                adsl[, c("USUBJID", "TRT")], by = "USUBJID")
+  ard <- cards::ard_stack_hierarchical(
+    adae, variables = c(AESOC, AETERM), by = TRT,
+    denominator = adsl, id = USUBJID, over_variables = TRUE)
+
+  args <- list(ard = ard, cols = "TRT",
+               hierarchy = c("AESOC", "AETERM"), overall = "Any TEAE",
+               rows = c(soc = "AESOC"), label = c(term = "AETERM"),
+               cells = "{n:.0f} ({p:.1f%})")
+
+  # sorted by hand, the way the snippet does it
+  by_hand <- do.call(ard_table, c(args, list(sort = FALSE, sort_stat = "n")))
+  by_hand <- by_hand[order(by_hand$soc != "Any TEAE", by_hand$soc,
+                           !is.na(by_hand$term), -by_hand$.sort_stat,
+                           by_hand$term), ]
+  by_hand$.sort_stat <- NULL
+  rownames(by_hand) <- NULL
+
+  declared <- do.call(ard_table,
+    c(args, list(sort = c(".overall", "soc", ".depth", "-n", "term"))))
+  expect_equal(declared, by_hand)
+
+  # a level's own summary row comes before the rows nested under it
+  first_soc <- declared[declared$soc == declared$soc[2], ]
+  expect_true(is.na(first_soc$term[1]))
+  expect_false(any(is.na(first_soc$term[-1])))
+  # ... and the overall block is at the top
+  expect_identical(declared$soc[1], "Any TEAE")
+})
+
+test_that("`sort` names a column, a statistic, or the computed keys", {
+  skip_if_no_cards()
+  run <- function(sort) {
+    ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+              cells = "{n:.0f} ({p:.1f%})", sort = sort)
+  }
+  # descending by a statistic's total across the columns
+  desc <- run(c("group", "-n"))
+  sex  <- desc[desc$group == "SEX", ]
+  expect_identical(as.character(sex$label), c("F", "M"))   # 143 then 111
+  asc  <- run(c("group", "n"))
+  sex2 <- asc[asc$group == "SEX", ]
+  expect_identical(as.character(sex2$label), c("M", "F"))
+
+  expect_error(run(c("group", "nonesuch")),
+               "neither a column of the result nor a statistic")
+})
+
 test_that("a template naming a missing statistic yields NA, not an error", {
   skip_if_no_cards()
   tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),

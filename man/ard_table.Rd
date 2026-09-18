@@ -35,9 +35,18 @@ ard_table(
 \code{\link[=rtftable]{rtftable()}}'s \code{col_header} already reads as a spanning header.  May be
 named, in which case the name is ignored for the column text.}
 
-\item{rows}{Row keys, in output order.  A named vector renames them:
-\code{rows = c(group = "variable")} puts \code{variable} into a column called
-\code{group}.}
+\item{rows}{Row keys, in output order -- \strong{any} column of the normalized
+frame, not a fixed one: the ARD's own \code{variable} when the row groups are
+the analysis variables (a demographics table), or a grouping variable's
+name when they are not (\code{"AEBODSYS"}).  A named vector renames them, and
+the name is only the output column's name: \code{rows = c(group = "variable")}
+and \code{rows = c(group1 = "AEBODSYS")} differ in \emph{what} they group by, not in
+kind.
+
+Left \code{NULL} on a flat ARD carrying more than one analysis variable, it
+defaults to \code{c(group = "variable")}, since that is the only thing left to
+group those rows by.  One analysis variable, or any \code{hierarchy}, leaves it
+empty.}
 
 \item{label}{Source of the row label, as a single (optionally named)
 reference.  Default \code{".label"}, which \code{\link[=ard_normalize]{ard_normalize()}} sets to the
@@ -108,8 +117,22 @@ are different lengths, so that entry would never apply; every element must
 be named, and an unnamed one is an error here rather than a silent
 omission.}
 
-\item{sort}{Sort the output rows by the row keys.  The label column is used
-as a sort key only when \code{levels} gives it an explicit order.}
+\item{sort}{\code{TRUE} (default) sorts by the row keys, using the label column
+too when \code{levels} gave it an explicit order; \code{FALSE} leaves the rows as
+they were built.  A \strong{character vector} names the keys instead, in
+priority order, each optionally prefixed \code{-} for descending:
+\describe{
+\item{\code{".overall"}}{the hierarchical-overall rows (an \verb{Any TEAE} block)
+first.}
+\item{\code{".depth"}}{a level's own summary row before the rows nested
+under it.}
+\item{a column}{any row key or the label column, by its output name.}
+\item{a statistic}{that statistic totalled across the spread columns --
+what a descending-frequency AE table sorts on.}
+}
+So \code{sort = c(".overall", "soc", ".depth", "-n", "term")} is the whole of
+an AE table's row order, and needs neither \code{sort_stat} nor an \code{arrange()}
+afterwards.}
 
 \item{ordered}{Make the factors built from \code{levels} / \code{labels} ordered.}
 
