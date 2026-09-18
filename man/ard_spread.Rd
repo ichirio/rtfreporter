@@ -20,7 +20,8 @@ ard_spread(
   round = c("sas", "r"),
   spec = NULL,
   sort_stat = NULL,
-  na = NA_character_
+  na = NA_character_,
+  notes = TRUE
 )
 }
 \arguments{
@@ -137,6 +138,17 @@ attach as a numeric \code{.sort_stat} column -- what a descending-frequency AE
 table sorts on.  \code{NULL} (default) adds nothing.}
 
 \item{na}{Value to put in a cell no template could fill.}
+
+\item{notes}{Report what was \strong{not} used.  Every stage discards ARD rows
+-- the \code{attributes} and \code{total_n} rows, the key variables' own
+tabulations, rows with no value for a \code{cols} key, and every statistic no
+template named -- and discarding them in silence is how a mis-typed
+\code{cells} looks exactly like a correct one.  \code{TRUE} (default) prints a
+summary, \code{FALSE} says nothing, and \code{"attr"} also attaches the per-variable
+detail as the \code{"ard_ignored"} attribute.  It is not attached by default
+because the result is a plain data frame that you will compare against
+whatever you built before, and an extra attribute makes \code{all.equal()}
+report a difference that is not in the table.}
 }
 \value{
 A data frame: the \code{rows} columns, the label column, then one column

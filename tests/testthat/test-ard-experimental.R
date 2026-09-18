@@ -340,23 +340,23 @@ test_that("a positional key warns when that position holds several variables", {
   expect_true(all(c("F", "M") %in% names(bad)))
 
   # naming the variable is correct and silent
-  expect_silent(
+  expect_no_warning(
     good <- ard_table(stacked, cols = "TRT", rows = c(group = "variable"),
-                      cells = "{n:.0f} ({p:.1f%})"))
+                      cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
   expect_setequal(names(good)[-(1:2)],
                   c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
 
   # a single-block ARD keeps quiet
-  expect_silent(ard_table(make_ard(), cols = "group1_level",
-                          rows = c(group = "variable"),
-                          cells = "{n:.0f} ({p:.1f%})"))
+  expect_no_warning(ard_table(make_ard(), cols = "group1_level",
+                              rows = c(group = "variable"),
+                              cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
 })
 
-# ------------------------------------------------------------- ard_big_n ---
+# ------------------------------------------------------------- ard_pull ---
 
-test_that("ard_big_n() reads the header denominators, keyed like the columns", {
+test_that("ard_pull() reads the header denominators, keyed like the columns", {
   skip_if_no_cards()
-  n <- ard_big_n(make_ard(), cols = "TRT")
+  n <- ard_pull(make_ard(), cols = "TRT")
   expect_named(n)
   expect_setequal(names(n), c("Placebo", "Xanomeline High Dose",
                               "Xanomeline Low Dose"))
@@ -365,11 +365,11 @@ test_that("ard_big_n() reads the header denominators, keyed like the columns", {
 
   # the order can be made to match the table's columns
   lv <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
-  expect_identical(names(ard_big_n(make_ard(), cols = "TRT",
+  expect_identical(names(ard_pull(make_ard(), cols = "TRT",
                                   levels = list(TRT = lv))), lv)
 })
 
-test_that("ard_big_n() keys a crossed header exactly like the spread columns", {
+test_that("ard_pull() keys a crossed header exactly like the spread columns", {
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT   <- as.character(adsl$ARM)
@@ -379,7 +379,7 @@ test_that("ard_big_n() keys a crossed header exactly like the spread columns", {
   ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
                           cards::ard_tabulate(variables = AGEGR,
                                               statistic = ~ c("n", "N", "p")))
-  n   <- ard_big_n(ard, cols = c("TRT", "SEX"))
+  n   <- ard_pull(ard, cols = c("TRT", "SEX"))
   tbl <- ard_table(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
                    cells = "{n:.0f} ({p:.1f%})")
   # every spread column has a denominator, under the identical name
@@ -387,10 +387,10 @@ test_that("ard_big_n() keys a crossed header exactly like the spread columns", {
   expect_equal(sum(n), 254)
 })
 
-test_that("ard_big_n() says what to do when the statistic is not there", {
+test_that("ard_pull() says what to do when the statistic is not there", {
   skip_if_no_cards()
-  expect_error(ard_big_n(make_ard(), cols = "NOPE"), "no key 'NOPE'")
-  expect_error(ard_big_n(make_ard(), cols = "TRT", stat = "nonesuch"),
+  expect_error(ard_pull(make_ard(), cols = "NOPE"), "no key 'NOPE'")
+  expect_error(ard_pull(make_ard(), cols = "TRT", stat = "nonesuch"),
                "No 'nonesuch' found")
 })
 
@@ -594,6 +594,113 @@ test_that("{x:fmt} names cards' formatted value inside a template", {
   expect_identical(v("fmt"), v("bare"))          # "" and "fmt" are the same
   expect_false(identical(v("raw"), v("fmt")))    # raw is unrounded
   expect_match(v("ours"), "^[0-9]+[.][0-9]{3}$")
+})
+
+# ------------------------------------------------------- ard_overall(from) ---
+
+make_bound_ae <- function() {
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adae <- merge(cards::ADAE[, c("USUBJID", "AESOC")],
+                adsl[, c("USUBJID", "TRT")], by = "USUBJID")
+  adae <- adae[adae$AESOC %in% c("CARDIAC DISORDERS",
+                                 "GASTROINTESTINAL DISORDERS"), ]
+  # the treatment IS the analysed variable in the overall block
+  overall <- cards::ard_tabulate(adsl[adsl$USUBJID %in% adae$USUBJID, ],
+                                 variables = TRT, denominator = adsl,
+                                 statistic = ~ c("n", "p"))
+  soc <- cards::ard_tabulate(unique(adae[, c("USUBJID", "TRT", "AESOC")]),
+                             by = TRT, variables = AESOC,
+                             denominator = adsl,
+                             statistic = ~ c("n", "N", "p"))
+  cards::bind_ard(overall, soc)
+}
+
+test_that("an overall block built by binding is found when named", {
+  skip_if_no_cards()
+  ard <- make_bound_ae()
+  # no cards sentinel in an ARD built this way
+  expect_false(any(ard$variable == "..ard_hierarchical_overall.."))
+  expect_true(any(ard$variable == "TRT"))
+
+  # unnamed, the block is a key variable's own tabulation and is dropped
+  without <- ard_table(ard, cols = "TRT", hierarchy = "AESOC",
+                       label = c(soc = "AESOC"), cells = "{n:.0f} ({p:.1f%})",
+                       notes = FALSE)
+  expect_false("Any TEAE" %in% as.character(without$soc))
+
+  # named, it becomes the overall row, with the key read from variable_level
+  with <- ard_table(ard, cols = "TRT", hierarchy = "AESOC",
+                    overall = ard_overall("Any TEAE", from = "TRT"),
+                    label = c(soc = "AESOC"), cells = "{n:.0f} ({p:.1f%})",
+                    sort = c(".overall", "soc"), notes = FALSE)
+  expect_identical(as.character(with$soc)[1], "Any TEAE")
+  expect_setequal(names(with)[-1],
+                  c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
+  expect_false(anyNA(with$Placebo[1]))
+})
+
+test_that("a bare string still means the cards sentinel", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adae <- merge(cards::ADAE[, c("USUBJID", "AESOC", "AETERM")],
+                adsl[, c("USUBJID", "TRT")], by = "USUBJID")
+  ard <- cards::ard_stack_hierarchical(
+    adae, variables = c(AESOC, AETERM), by = TRT,
+    denominator = adsl, id = USUBJID, over_variables = TRUE)
+  a <- ard_table(ard, cols = "TRT", hierarchy = c("AESOC", "AETERM"),
+                 overall = "Any TEAE", rows = c(soc = "AESOC"),
+                 label = c(term = "AETERM"), cells = "{n:.0f} ({p:.1f%})",
+                 notes = FALSE)
+  b <- ard_table(ard, cols = "TRT", hierarchy = c("AESOC", "AETERM"),
+                 overall = ard_overall("Any TEAE"), rows = c(soc = "AESOC"),
+                 label = c(term = "AETERM"), cells = "{n:.0f} ({p:.1f%})",
+                 notes = FALSE)
+  expect_equal(a, b)
+  expect_true("Any TEAE" %in% as.character(a$soc))
+})
+
+test_that("ard_overall() refuses a missing label", {
+  expect_error(ard_overall(), "`label` is required")
+  expect_error(ard_overall(c("a", "b")), "one string")
+})
+
+# ------------------------------------------------------------ the notes ----
+
+test_that("what was not used is reported, and not attached by default", {
+  skip_if_no_cards()
+  args <- list(make_ard(), cols = "TRT",
+               cells = list(continuous  = c("Mean" = "{mean:.1f}"),
+                            categorical = "{n:.0f} ({p:.1f%})"))
+
+  expect_message(do.call(ard_table, args), "ARD rows? (were|was) not used")
+  expect_message(do.call(ard_table, args), "no template named it")
+  expect_message(do.call(ard_table, args), "a key variable's own tabulation")
+
+  # silenced
+  expect_no_message(do.call(ard_table, c(args, list(notes = FALSE))))
+
+  # the result stays a plain data frame, so a comparison against the table the
+  # caller built before is not disturbed by an extra attribute
+  quiet <- do.call(ard_table, c(args, list(notes = FALSE)))
+  expect_null(attr(quiet, "ard_ignored", exact = TRUE))
+  expect_identical(class(quiet), "data.frame")
+
+  # ... unless asked for
+  kept <- suppressMessages(do.call(ard_table, c(args, list(notes = "attr"))))
+  ig <- attr(kept, "ard_ignored", exact = TRUE)
+  expect_s3_class(ig, "data.frame")
+  expect_setequal(names(ig),
+                  c("variable", "context", "stat_name", "rows", "reason"))
+  expect_true(all(ig$rows > 0))
+  # the statistics no template named are in there
+  expect_true(any(ig$stat_name == "median" &
+                    ig$reason == "no template named it"))
+  # and the body is identical either way
+  bare <- kept
+  attr(bare, "ard_ignored") <- NULL
+  expect_equal(quiet, bare)
 })
 
 test_that("a template naming a missing statistic yields NA, not an error", {

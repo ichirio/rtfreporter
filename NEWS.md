@@ -49,7 +49,7 @@
   and that characteristic then quietly keeps its raw variable name in the
   table.  That is now an error.
 
-  **`ard_big_n()`** reads the per-column statistics that belong in the column
+  **`ard_pull()`** reads the per-column statistics that belong in the column
   header rather than in a row --- the denominator behind every percentage, the
   subject count per arm --- keyed exactly like the spread columns, ready to
   paste into a `col_header`.  Taking it from the ARD rather than counting the
@@ -109,6 +109,37 @@
   variable's numbers, and no diagnostic at all.  Two different values arriving
   at one cell now stop with the cell, both values, and the two variables
   named.
+
+  **Where a value lives depends on how the ARD was built, so neither of the
+  two movable ones is guessed.**  `ard_overall()` says where the overall row
+  comes from: the `..ard_hierarchical_overall..` sentinel that
+  `ard_stack_hierarchical(over_variables = TRUE)` writes, or --
+  `ard_overall(label, from = )` -- a block that was summarised separately and
+  bound, where the treatment is the analysed variable and sits in `variable`
+  rather than in a group pair.  A key column is filled from `variable` /
+  `variable_level` as well as from the group pairs, so such a block is no
+  longer discarded.
+
+  `ard_pull()` replaces `ard_big_n()`, which guessed and was wrong.  "bigN" is
+  tfrmt's word, not cards', and the value has no fixed home: measured across
+  eight ways of building the same table, the per-arm denominator turned up as
+  `N` on a categorical, continuous or hierarchical summary, as `n` on the by
+  variable's own rows, and as a statistic the author wrote themselves --- while
+  in the same ARD `stat_name == "N"` is the **study** total on the by
+  variable's own rows.  The old heuristic returned a plausible wrong number in
+  five of the eight.  `ard_pull()` names the statistic, excludes the key
+  variables' own tabulations by default, and when the ARD still offers more
+  than one answer it **stops and lists the candidates with their values**
+  rather than choosing.  Column headers stay rtfreporter's job; `ard_table()`
+  builds the body, and `ard_pull()` is there when the header needs a number
+  that must agree with the percentages.
+
+  **What was not used is reported.**  Every stage discards ARD rows, and doing
+  it in silence is how a mis-typed `cells` looks exactly like a correct one.
+  `notes = TRUE` (the default) summarises them by context, statistic and
+  reason; `notes = "attr"` also attaches the per-variable detail.  It is not
+  attached by default, because the result is a plain data frame that you will
+  compare against whatever you built before.
 
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be

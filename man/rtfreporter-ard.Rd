@@ -21,6 +21,9 @@ actually holds.}
 \item{\code{\link[=ard_spread]{ard_spread()}}}{Long table to the wide table data.frame.}
 \item{\code{\link[=ard_table]{ard_table()}}}{Both of the above in one call.}
 \item{\code{\link[=ard_template]{ard_template()}}}{Emit runnable conversion code for a given ARD.}
+\item{\code{\link[=ard_overall]{ard_overall()}}}{Where the table's overall row comes from.}
+\item{\code{\link[=ard_pull]{ard_pull()}}}{A statistic keyed like the spread columns, for a
+column header or an overall row.}
 \item{\code{\link[=ard_spec]{ard_spec()}}, \code{\link[=read_ard_spec]{read_ard_spec()}}, \code{\link[=write_ard_spec]{write_ard_spec()}},
 \code{\link[=ard_spec_template]{ard_spec_template()}}}{The spreadsheet definition file.}
 \item{\code{\link[=ard_round]{ard_round()}}}{SAS-style versus R-style rounding.}
@@ -94,6 +97,29 @@ spelling) working when \pkg{cards} renames a verb again.
 
 \code{\link[=ard_keys]{ard_keys()}} prints both: the contexts, which are version-specific, and the
 kinds, which are not.
+}
+
+\section{Where a value lives depends on how the ARD was built}{
+
+Two things a table needs have no fixed home in an ARD, because cards offers
+more than one way to produce them.  Neither is guessed:
+\describe{
+\item{the overall row}{\code{ard_stack_hierarchical(over_variables = TRUE)}
+writes an "any event" row as the sentinel variable
+\code{..ard_hierarchical_overall..}; summarise each level separately and bind
+the results and there is no sentinel -- that block counts the treatment
+itself, so the arm sits in \code{variable} / \code{variable_level}.
+\code{\link[=ard_overall]{ard_overall()}} says which.}
+\item{the denominator}{in one ARD \code{stat_name == "N"} is the per-arm
+denominator on the summary rows and the \strong{study} total on the by
+variable's own rows, where the per-arm count is \code{n} instead; and an
+author may compute their own.  \code{\link[=ard_pull]{ard_pull()}} names the statistic and
+lists the candidates when the choice is ambiguous.}
+}
+Column headers are rtfreporter's own job -- \code{col_header} takes a plain
+character vector -- so \code{\link[=ard_table]{ard_table()}} builds the body only, and
+\code{\link[=ard_pull]{ard_pull()}} is there when the header needs a number that must agree with
+the percentages.
 }
 
 \section{Lifecycle}{
