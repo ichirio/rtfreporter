@@ -141,6 +141,16 @@
   attached by default, because the result is a plain data frame that you will
   compare against whatever you built before.
 
+  **The positional-key warning no longer fires on a subgroup table.**
+  Reading a group position is not wrong by itself: a subgroup display's rows
+  *are* "which subgroup variable" by "which level of it", so
+  `rows = c(grp1 = "group2", grp2 = "group2_level")` is the table rather than a
+  mistake, and `group2` holding ten variables is the point.  What is ambiguous
+  is taking the level column **without** its name column, since then levels of
+  different variables land in one key with nothing to tell them apart --- so
+  that is all the warning now covers, and it says how to make the pair explicit
+  instead of suggesting a variable name that would break the display.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

@@ -1023,37 +1023,49 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
                         what, ref,
                         paste(setdiff(names(d), c(".overall")), collapse = ", ")))
     }
-    .ard_warn_positional(ref, d, what)
     out[[i]] <- list(out = nm, ref = ref)
   }
+  .ard_warn_positional(vapply(out, function(z) z$ref, ""), d, what)
   out
 }
 
 # `group1_level` is a POSITION, not a variable.  cards fills the group columns
 # in the order each summary was asked for, so once several summaries are
 # stacked the same analysis variable can sit at `group1` in one block and
-# `group2` in another -- and a different variable can sit at `group1` in that
-# other block.  Reading the position then splits one treatment arm across two
-# table columns and invents columns for whatever else landed there.  Naming the
-# variable (`cols = "TRT01P"`) is immune: ard_normalize() materialises that name
-# from whichever group position holds it, block by block.
+# `group2` in another.  Reading the position then splits one treatment arm
+# across two table columns and invents columns for whatever else landed there.
 #
-# Warn only when it actually bites -- when that position really does hold more
-# than one variable in this ARD -- so a single-block ARD stays quiet.
-.ard_warn_positional <- function(ref, d, what) {
-  g <- regmatches(ref, regexpr("^group[0-9]+", ref))
-  if (!length(g) || !g %in% names(d)) return(invisible(FALSE))
-  vars <- .ard_first_seen(d[[g]])
-  if (length(vars) < 2L) return(invisible(FALSE))
-  warning(sprintf(
-    paste0("`%s = \"%s\"` reads a POSITION, and `%s` holds %d different ",
-           "variables in this ARD (%s).\n",
-           "  Stacked summaries do not keep a variable at the same group ",
-           "depth, so the position mixes them.  Name the variable instead, ",
-           "e.g. `%s = \"%s\"`; see ard_keys()."),
-    what, ref, g, length(vars), paste(sQuote(vars), collapse = ", "),
-    what, vars[1L]), call. = FALSE)
-  invisible(TRUE)
+# But reading a position is not wrong by itself, and a subgroup table shows
+# why: its rows are "which subgroup variable" by "which level of it", so
+# `rows = c(grp1 = "group2", grp2 = "group2_level")` is the *point* -- `group2`
+# holding ten variables is the table, not a mistake.  What is dangerous is
+# taking the LEVEL without the NAME, because then levels of different variables
+# land in one key with nothing to tell them apart.
+#
+# So warn only when the level column is read and its name column is not, and
+# only when that position really does hold more than one variable.
+.ard_warn_positional <- function(refs, d, what) {
+  fired <- FALSE
+  for (ref in unique(refs)) {
+    if (!grepl("^group[0-9]+_level$", ref)) next
+    g <- sub("_level$", "", ref)
+    if (!g %in% names(d) || g %in% refs) next
+    vars <- .ard_first_seen(d[[g]])
+    if (length(vars) < 2L) next
+    warning(sprintf(
+      paste0("`%s = \"%s\"` reads a POSITION: `%s` holds %d different ",
+             "variables in this ARD (%s),\n",
+             "so levels of different variables end up in the same key.\n",
+             "  If that is deliberate -- a row group of \"which variable\" and ",
+             "\"which level\" -- name the\n",
+             "  variable column too, e.g. `%s = c(..., \"%s\", \"%s\")`.\n",
+             "  Otherwise name the variable you mean; see ard_keys()."),
+      what, ref, g, length(vars),
+      paste(sQuote(utils::head(vars, 6)), collapse = ", "),
+      what, g, ref), call. = FALSE)
+    fired <- TRUE
+  }
+  invisible(fired)
 }
 
 #' Turn a normalized ARD into a wide table data.frame

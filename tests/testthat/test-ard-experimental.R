@@ -352,6 +352,43 @@ test_that("a positional key warns when that position holds several variables", {
                               cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
 })
 
+test_that("reading a position deliberately, with its name column, is quiet", {
+  skip_if_no_cards()
+  # A subgroup table's rows ARE "which variable" by "which level of it", so
+  # group2 holding many variables is the table rather than a mistake.  Only
+  # taking the level WITHOUT the name is ambiguous.
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  adsl$AGEGR <- as.character(cut(adsl$AGE, c(0, 74, 200),
+                                 labels = c("<75", ">=75")))
+  stacked <- cards::bind_ard(
+    cards::ard_tabulate(adsl, by = TRT, variables = AGEGR,
+                        statistic = ~ c("n", "p")),
+    cards::ard_tabulate(adsl, by = c(SEX, TRT), variables = AGEGR,
+                        statistic = ~ c("n", "p")))
+
+  # the name column alone, or with its level: deliberate, so quiet
+  expect_no_warning(ard_table(stacked, cols = "TRT", rows = c(v = "group1"),
+                              cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
+  expect_no_warning(
+    both <- ard_table(stacked, cols = "TRT",
+                      rows = c(v = "group1", lv = "group1_level"),
+                      cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
+  # and the pair really does identify the row
+  expect_true(all(c("TRT", "SEX") %in% as.character(both$v)))
+
+  # the level alone still warns, and says how to make it unambiguous
+  expect_warning(
+    ard_table(stacked, cols = "group1_level", rows = c(g = "variable"),
+              cells = "{n:.0f} ({p:.1f%})", notes = FALSE),
+    "reads a POSITION")
+  expect_warning(
+    ard_table(stacked, cols = "group1_level", rows = c(g = "variable"),
+              cells = "{n:.0f} ({p:.1f%})", notes = FALSE),
+    "variable column too")
+})
+
 # ------------------------------------------------------------- ard_pull ---
 
 test_that("ard_pull() reads the header denominators, keyed like the columns", {
