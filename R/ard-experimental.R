@@ -827,6 +827,20 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #'   describe a key variable itself -- the `context == "tabulate"` counts of the
 #'   by-variable -- which no table cell uses.
 #'
+#' @section Working on the result before [ard_spread()]:
+#' The result is a plain data frame; reshaping it in between is the point of
+#' the two-stage split.  Everything it needs is in its **columns**, so
+#' `dplyr::mutate()`, `filter()`, `bind_rows()` and base `[` are all safe.
+#'
+#' Two conveniences ride on attributes and are lost by anything that drops
+#' them -- base `transform()` is the one to avoid.  **Neither is required:**
+#' losing them leaves the label column a character vector instead of an
+#' ordered factor (the row order falls back to first appearance; `levels =`
+#' fixes it for good), and makes `notes` report only the discards from
+#' [ard_spread()].  Values are unaffected, and a manipulation that really does
+#' break the rows is caught -- two values arriving in one cell is an error,
+#' not a silent overwrite.
+#'
 #' @section Factor levels:
 #' \pkg{cards} stores the level of a factor variable as a one-element factor,
 #' so the flattening has to take the label: a level comes back as `"<65"`, not
@@ -837,9 +851,10 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #' @return A data frame with one row per ARD statistic: the key columns, the
 #'   ARD's own `variable` / `variable_level` / `context` / `stat_name` /
 #'   `stat_label` / `stat` / `stat_fmt`, the structural classification `.kind`
-#'   (`"continuous"` / `"categorical"`, see [rtfreporter-ard]), and, when
-#'   `hierarchy` is given, `.depth` (1 = outermost) and `.label` (the deepest
-#'   non-missing hierarchy value).
+#'   (`"continuous"` / `"categorical"`, see [rtfreporter-ard]), `.label` (the
+#'   deepest non-missing hierarchy value, or `variable_level`), `.overall`, and
+#'   `.depth` --- 1 = outermost within a `hierarchy`, and `NA` when there is
+#'   none, since depth only means something inside one.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
@@ -976,7 +991,11 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
     }
     d$.depth[d$.overall] <- 1L
   } else {
-    d$.depth <- 1L
+    # NA, not 1: depth only means something inside a hierarchy, and a column
+    # that says "there is no hierarchy here" survives every manipulation the
+    # caller may do between ard_normalize() and ard_spread(), where an
+    # attribute does not.
+    d$.depth <- NA_integer_
     d$.label <- d$variable_level
   }
 
@@ -999,6 +1018,11 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
   attr(out, "ard_factor_levels") <- fct_levels
   attr(out, "ard_ignored") <- ignored
   attr(out, "ard_hierarchy") <- if (length(hierarchy)) hierarchy else NULL
+  # The class is a hint, not a requirement: ard_spread() accepts any data frame
+  # of the right shape, because the whole point of the two-stage split is that
+  # you may rebuild the middle however you like.  It is here so that passing a
+  # raw ARD by mistake says so, rather than failing on a missing column.
+  class(out) <- c("ard_long", "data.frame")
   out
 }
 
@@ -1233,6 +1257,14 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   .ard_check_named(labels, "labels")
   .ard_check_named(levels, "levels")
 
+  if (!inherits(x, "ard_long") &&
+      !any(c(".label", ".kind", "stat_name") %in% names(d))) {
+    .ard_stop(paste0(
+      "`x` does not look like an ard_normalize() result: it has none of\n",
+      "  `.label`, `.kind`, `stat_name`.  Pass the ARD through\n",
+      "  ard_normalize() first, or use ard_table(), which does both."))
+  }
+
   colrefs <- .ard_refs(cols, d, "cols")
 
   # With no `rows` and no hierarchy, the only thing left to group the rows by is
@@ -1240,10 +1272,10 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   # column.  Fill it in rather than making every flat summary spell it out.
   # One variable needs no grouping column at all, so the default stays empty --
   # and neither does a hierarchy, where the hierarchy columns do the grouping.
-  if (is.null(rows) &&
-      is.null(attr(x, "ard_hierarchy", exact = TRUE)) &&
-      length(.ard_first_seen(d$variable)) > 1L &&
-      all(is.na(d$.depth) | d$.depth == 1L)) {
+  has_hier <- any(!is.na(d$.depth)) ||
+    !is.null(attr(x, "ard_hierarchy", exact = TRUE))
+  if (is.null(rows) && !has_hier &&
+      length(.ard_first_seen(d$variable)) > 1L) {
     rows <- c(group = "variable")
   }
   rowrefs <- .ard_refs(rows, d, "rows")

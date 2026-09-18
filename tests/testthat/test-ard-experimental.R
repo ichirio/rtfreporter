@@ -740,6 +740,56 @@ test_that("what was not used is reported, and not attached by default", {
   expect_equal(quiet, bare)
 })
 
+test_that("the middle stage survives being rebuilt", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  cells <- list(continuous  = c("Mean" = "{mean:.1f}"),
+                categorical = "{n:.0f} ({p:.1f%})")
+  ref <- ard_table(ard, cols = "TRT", cells = cells, notes = FALSE)
+
+  d <- ard_normalize(ard)
+  # the attributes are conveniences, not requirements
+  bare <- d
+  for (a in c("ard_factor_levels", "ard_ignored", "ard_hierarchy")) {
+    attr(bare, a) <- NULL
+  }
+  got <- ard_spread(bare, cols = "TRT", cells = cells, notes = FALSE)
+  expect_identical(lapply(got, as.character), lapply(ref, as.character))
+
+  # dplyr and base keep what matters, so a piped middle stage works
+  piped <- ard |>
+    ard_normalize() |>
+    dplyr::filter(!is.na(.data$stat)) |>
+    dplyr::mutate(.marker = 1L) |>
+    ard_spread(cols = "TRT", cells = cells, notes = FALSE)
+  expect_identical(lapply(piped, as.character), lapply(ref, as.character))
+
+  # "is there a hierarchy?" is a column question now, so it survives too
+  expect_true(all(is.na(ard_normalize(ard)$.depth)))
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adae <- merge(cards::ADAE[, c("USUBJID", "AESOC")],
+                adsl[, c("USUBJID", "TRT")], by = "USUBJID")
+  h <- ard_normalize(
+    cards::ard_stack_hierarchical(adae, variables = AESOC, by = TRT,
+                                  denominator = adsl, id = USUBJID),
+    hierarchy = "AESOC")
+  expect_true(all(h$.depth == 1L))
+})
+
+test_that("passing the raw ARD says so", {
+  skip_if_no_cards()
+  err <- tryCatch(ard_spread(cards::ADSL, cols = "ARM"),
+                  error = function(e) conditionMessage(e))
+  expect_match(err, "does not look like an ard_normalize")
+  expect_match(err, "ard_table")
+  # but a rebuilt frame without the class is still accepted
+  d <- ard_normalize(make_ard())
+  class(d) <- "data.frame"
+  expect_s3_class(ard_spread(d, cols = "TRT", cells = "{n:.0f} ({p:.1f%})",
+                             notes = FALSE), "data.frame")
+})
+
 test_that("a template naming a missing statistic yields NA, not an error", {
   skip_if_no_cards()
   tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),

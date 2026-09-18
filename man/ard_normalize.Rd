@@ -42,9 +42,10 @@ by-variable -- which no table cell uses.}
 A data frame with one row per ARD statistic: the key columns, the
 ARD's own \code{variable} / \code{variable_level} / \code{context} / \code{stat_name} /
 \code{stat_label} / \code{stat} / \code{stat_fmt}, the structural classification \code{.kind}
-(\code{"continuous"} / \code{"categorical"}, see \link{rtfreporter-ard}), and, when
-\code{hierarchy} is given, \code{.depth} (1 = outermost) and \code{.label} (the deepest
-non-missing hierarchy value).
+(\code{"continuous"} / \code{"categorical"}, see \link{rtfreporter-ard}), \code{.label} (the
+deepest non-missing hierarchy value, or \code{variable_level}), \code{.overall}, and
+\code{.depth} --- 1 = outermost within a \code{hierarchy}, and \code{NA} when there is
+none, since depth only means something inside one.
 }
 \description{
 Step one of the ARD conversion: turn the \code{group1 / group1_level} \emph{positional}
@@ -59,6 +60,22 @@ or dplyr before handing it to \code{\link[=ard_spread]{ard_spread()}}.  That is 
 for anything \code{\link[=ard_table]{ard_table()}} does not do by itself: marginal totals, derived
 rows, custom sorting.
 }
+\section{Working on the result before \code{\link[=ard_spread]{ard_spread()}}}{
+
+The result is a plain data frame; reshaping it in between is the point of
+the two-stage split.  Everything it needs is in its \strong{columns}, so
+\code{dplyr::mutate()}, \code{filter()}, \code{bind_rows()} and base \code{[} are all safe.
+
+Two conveniences ride on attributes and are lost by anything that drops
+them -- base \code{transform()} is the one to avoid.  \strong{Neither is required:}
+losing them leaves the label column a character vector instead of an
+ordered factor (the row order falls back to first appearance; \verb{levels =}
+fixes it for good), and makes \code{notes} report only the discards from
+\code{\link[=ard_spread]{ard_spread()}}.  Values are unaffected, and a manipulation that really does
+break the rows is caught -- two values arriving in one cell is an error,
+not a silent overwrite.
+}
+
 \section{Factor levels}{
 
 \pkg{cards} stores the level of a factor variable as a one-element factor,

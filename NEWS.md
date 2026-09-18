@@ -151,6 +151,21 @@
   that is all the warning now covers, and it says how to make the pair explicit
   instead of suggesting a variable name that would break the display.
 
+  **Reshaping the middle stage no longer depends on attributes.**  The
+  two-stage split exists so you can rebuild the frame between
+  `ard_normalize()` and `ard_spread()`, and "is there a hierarchy?" was asked
+  of an attribute, which `transform()` and friends drop.  `.depth` is now `NA`
+  when there is no hierarchy --- depth only means something inside one --- so
+  it is a **column** question, and survives anything.  The two remaining
+  attributes are conveniences: losing them leaves the label column a character
+  vector rather than an ordered factor and makes `notes` report only
+  `ard_spread()`'s discards.  `?ard_normalize` says which operations are safe.
+
+  `ard_normalize()` also gives its result the class `ard_long`, used **only**
+  to recognise a raw ARD passed by mistake and say so.  It is not required:
+  `ard_spread()` still accepts any data frame of the right shape, because
+  rebuilding the middle is the point.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and
