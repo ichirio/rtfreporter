@@ -4,12 +4,21 @@
 \alias{read_ard_spec}
 \title{Read an ARD table definition from a spreadsheet}
 \usage{
-read_ard_spec(path, sheet = 1)
+read_ard_spec(path, sheet = 1, output_id = NULL)
 }
 \arguments{
 \item{path}{Path to an \code{.xlsx} (needs \pkg{readxl}) or \code{.csv} file.}
 
 \item{sheet}{Sheet name or index, for Excel input.}
+
+\item{output_id}{Optional report identifier.  When the file carries an
+\code{output_id} column --- one shared workbook defining every table in a
+study --- this narrows it to that report \strong{before} any variable is
+looked up, so two reports may format the same variable differently.
+Rows with a blank \code{output_id} are the file's defaults and stay; a row
+naming this report beats a default for the same cell.  Supplying it
+for a file with no such column, or naming a report the file does not
+define, is an error rather than a silent no-op.}
 }
 \value{
 An \code{\link[=ard_spec]{ard_spec()}} data frame.

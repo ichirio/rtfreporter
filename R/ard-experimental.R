@@ -1855,8 +1855,44 @@ ard_table <- function(ard, cols, rows = NULL, label = ".label",
 # ============================================================================
 
 .ard_spec_cols <- function() {
-  c("variable", "label", "order", "context", "row", "template", "levels",
-    "round", "digits", "signif")
+  c("output_id", "variable", "label", "order", "context", "row", "template",
+    "levels", "round", "digits", "signif")
+}
+
+# The key a spec row is looked up by, once it has been scoped to one output.
+.ard_spec_key <- function(s) {
+  paste(s$variable, s$context, s$row, sep = "")
+}
+
+# Two rows that claim the same key would both render into the same cell, and
+# the caller would meet the row-collision error much later, pointing at the
+# ARD rather than at the file.  Say it here, naming the file's own rows.
+.ard_spec_dupes <- function(s, scoped) {
+  k <- .ard_spec_key(s)
+  bad <- unique(k[duplicated(k)])
+  if (!length(bad)) return(invisible(NULL))
+  first <- bad[1L]
+  hit <- s[k == first, , drop = FALSE]
+  .ard_stop(paste(c(
+    "This ARD spec defines the same cell twice.",
+    sprintf("  variable: %s%s%s", sQuote(hit$variable[1L]),
+            if (!is.na(hit$context[1L])) paste0(", context ",
+              sQuote(hit$context[1L])) else "",
+            if (!is.na(hit$row[1L])) paste0(", row ", sQuote(hit$row[1L]))
+              else ""),
+    paste0("  templates: ",
+           paste(sQuote(ifelse(is.na(hit$template), "<none>", hit$template)),
+                 collapse = " and ")),
+    if (scoped)
+      "Give the rows different `output_id` values, or delete one."
+    else
+      paste0("Add an `output_id` column so each report has its own row, and ",
+             "read the file with read_ard_spec(output_id = )."),
+    if (length(bad) > 1L)
+      sprintf("  %d cells clash in this spec; this is the first.",
+              length(bad))),
+    collapse = "
+"))
 }
 
 #' A spreadsheet-shaped definition of how an ARD becomes a table
@@ -1872,6 +1908,11 @@ ard_table <- function(ard, cols, rows = NULL, label = ".label",
 #'
 #' @section Columns:
 #' \describe{
+#'   \item{`output_id`}{Optional; the report this row belongs to, so one
+#'     shared file can define every table in a study.  Blank means the row is
+#'     a default for all of them.  [read_ard_spec()] narrows the file with
+#'     its own `output_id` argument, and a row naming the report beats a
+#'     blank one for the same cell.}
 #'   \item{`variable`}{Analysis variable the row applies to.  `"default"`, or
 #'     a `context` value such as `"categorical"`, acts as a fallback.}
 #'   \item{`label`}{Display label for the variable (the row-group text).}
@@ -1908,16 +1949,62 @@ ard_spec <- function(x) {
   for (cn in .ard_spec_cols()) if (!cn %in% names(d)) d[[cn]] <- NA
   d <- d[, c(.ard_spec_cols(), setdiff(names(d), .ard_spec_cols())),
          drop = FALSE]
-  for (cn in c("variable", "label", "context", "row", "template", "levels",
-               "round")) {
+  for (cn in c("output_id", "variable", "label", "context", "row", "template",
+               "levels", "round")) {
     d[[cn]] <- as.character(d[[cn]])
     d[[cn]][!is.na(d[[cn]]) & !nzchar(trimws(d[[cn]]))] <- NA
   }
   d$order <- suppressWarnings(as.numeric(d$order))
   bad <- !is.na(d$round) & !d$round %in% c("sas", "r")
   if (any(bad)) .ard_stop("`round` must be \"sas\" or \"r\".")
+  # A file that names no output at all is already scoped: two rows for one
+  # cell can only be a mistake.  A file that does name outputs is checked
+  # once it has been narrowed to one, in .ard_spec_scope().
+  if (all(is.na(d$output_id))) .ard_spec_dupes(d, scoped = FALSE)
   class(d) <- c("ard_spec", "data.frame")
   d
+}
+
+# Narrow a shared spec to one report.  Rows with no `output_id` are the
+# file's defaults and stay; a row naming this output beats a default for the
+# same cell, so a common file can carry house-wide rules and let one report
+# override them.
+.ard_spec_scope <- function(sp, output_id) {
+  if (is.null(output_id)) return(sp)
+  if (!is.character(output_id) || length(output_id) != 1L) {
+    .ard_stop("`output_id` must be a single string.")
+  }
+  if (!"output_id" %in% names(sp) || all(is.na(sp$output_id))) {
+    .ard_stop(paste0("`output_id` was given but this spec has no `output_id` ",
+                     "column to filter on. Add the column, or drop the ",
+                     "argument."))
+  }
+  ids <- .ard_first_seen(stats::na.omit(sp$output_id))
+  if (!output_id %in% ids) {
+    # Most reports in a shared file are covered by its blank-`output_id`
+    # defaults, so this is normal and must not stop the run.  It is still
+    # worth saying, because the other reading -- a mistyped id -- looks
+    # exactly the same from here and would otherwise be invisible.
+    if (!any(is.na(sp$output_id))) {
+      .ard_stop(sprintf(paste0(
+        "`output_id`: this spec has no row for %s and no default rows ",
+        "either, so nothing would apply.
+  It defines: %s"),
+        sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
+    }
+    message(sprintf(paste0(
+      "read_ard_spec(): no row names %s, so its default rows are used.",
+      "
+  The file defines: %s"),
+      sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
+  }
+  keep <- is.na(sp$output_id) | sp$output_id == output_id
+  s <- sp[keep, , drop = FALSE]
+  mine <- !is.na(s$output_id)
+  k <- .ard_spec_key(s)
+  s <- s[mine | !(k %in% k[mine]), , drop = FALSE]   # specific beats default
+  .ard_spec_dupes(s, scoped = TRUE)
+  s
 }
 
 .ard_spec_labels <- function(sp) {
@@ -2008,6 +2095,14 @@ ard_spec <- function(x) {
 #'
 #' @param path Path to an `.xlsx` (needs \pkg{readxl}) or `.csv` file.
 #' @param sheet Sheet name or index, for Excel input.
+#' @param output_id Optional report identifier.  When the file carries an
+#'   `output_id` column --- one shared workbook defining every table in a
+#'   study --- this narrows it to that report **before** any variable is
+#'   looked up, so two reports may format the same variable differently.
+#'   Rows with a blank `output_id` are the file's defaults and stay; a row
+#'   naming this report beats a default for the same cell.  Supplying it
+#'   for a file with no such column, or naming a report the file does not
+#'   define, is an error rather than a silent no-op.
 #'
 #' @return An [ard_spec()] data frame.
 #'
@@ -2016,14 +2111,16 @@ ard_spec <- function(x) {
 #'
 #' @seealso [ard_spec()], [write_ard_spec()]
 #' @export
-read_ard_spec <- function(path, sheet = 1) {
+read_ard_spec <- function(path, sheet = 1, output_id = NULL) {
   if (grepl("[.]csv$", path, ignore.case = TRUE)) {
-    return(ard_spec(utils::read.csv(path, stringsAsFactors = FALSE,
-                                    check.names = FALSE)))
+    sp <- ard_spec(utils::read.csv(path, stringsAsFactors = FALSE,
+                                   check.names = FALSE))
+  } else {
+    .ard_need("readxl", "read_ard_spec() on an Excel file")
+    sp <- ard_spec(as.data.frame(readxl::read_excel(path, sheet = sheet),
+                                 stringsAsFactors = FALSE))
   }
-  .ard_need("readxl", "read_ard_spec() on an Excel file")
-  ard_spec(as.data.frame(readxl::read_excel(path, sheet = sheet),
-                         stringsAsFactors = FALSE))
+  .ard_spec_scope(sp, output_id)
 }
 
 #' Write an ARD table definition to a spreadsheet

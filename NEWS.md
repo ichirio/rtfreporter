@@ -216,6 +216,22 @@
   variable, `ard_cells()` for which row, `c()` for which template to try
   first.
 
+  **One definition file can cover a whole study.**  An `ard_spec()` may
+  carry an `output_id` column, and `read_ard_spec(output_id = )` narrows the
+  file to that report *before* any variable is looked up --- which is what
+  makes a shared workbook safe when two tables format the same variable
+  differently, as they must in a BDS study where every analysis variable is
+  called `AVAL`.  Rows with a blank `output_id` are the file's defaults and
+  still apply; a row naming the report beats a default for the same cell.
+  Supplying `output_id` for a file that has no such column is an error, and
+  naming a report the file does not mention reports that its defaults were
+  used, rather than quietly behaving as if nothing had been asked.
+
+  A spec that defines the same cell twice now stops when it is read, naming
+  the variable, the row and both templates.  Before, the two definitions both
+  rendered and the caller met the row-collision error much later, pointing at
+  the ARD rather than at the file.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

@@ -1077,3 +1077,54 @@ test_that("a one-sided guard says what is missing", {
                cells = c(~ "{n:.0f}"), notes = FALSE),
     "both sides")
 })
+
+# --------------------------------------------- one shared spec, many reports
+
+spec_rows <- function(output_id, variable, row, template, digits = NA,
+                      label = NA) {
+  data.frame(output_id, variable, label, order = 1, context = NA, row,
+             template, levels = NA, round = "sas", digits, signif = NA,
+             stringsAsFactors = FALSE)
+}
+
+test_that("output_id narrows a shared spec, and a named row beats a default", {
+  sp <- ard_spec(rbind(
+    spec_rows(NA,        "AGE", "Mean (SD)", "{mean} ({sd})", "1,2", "Age"),
+    spec_rows("T14-3-1", "AGE", "Mean (SD)", "{mean} ({sd})", "3,4", "Age PK")))
+  a <- rtfreporter:::.ard_spec_scope(sp, "T14-1-1")
+  b <- rtfreporter:::.ard_spec_scope(sp, "T14-3-1")
+  expect_identical(nrow(a), 1L)
+  expect_identical(a$digits, "1,2")
+  expect_identical(nrow(b), 1L)
+  expect_identical(b$digits, "3,4")      # the report's own row wins
+})
+
+test_that("a spec that defines one cell twice stops, naming the cell", {
+  expect_error(
+    ard_spec(rbind(spec_rows(NA, "AGE", "Mean (SD)", "{mean}"),
+                   spec_rows(NA, "AGE", "Mean (SD)", "{median}"))),
+    "same cell twice")
+  # the same two rows are fine once they name different reports
+  sp <- ard_spec(rbind(spec_rows("T1", "AGE", "Mean (SD)", "{mean}"),
+                       spec_rows("T2", "AGE", "Mean (SD)", "{median}")))
+  expect_s3_class(sp, "ard_spec")
+  expect_error(rtfreporter:::.ard_spec_scope(
+    ard_spec(rbind(spec_rows("T1", "AGE", "Mean (SD)", "{mean}"),
+                   spec_rows("T1", "AGE", "Mean (SD)", "{median}"))), "T1"),
+    "same cell twice")
+})
+
+test_that("output_id against a spec that cannot honour it is an error", {
+  sp <- ard_spec(spec_rows(NA, "AGE", "Mean (SD)", "{mean}"))
+  expect_error(rtfreporter:::.ard_spec_scope(sp, "T1"), "no `output_id` column")
+  only <- ard_spec(spec_rows("T1", "AGE", "Mean (SD)", "{mean}"))
+  expect_error(rtfreporter:::.ard_spec_scope(only, "T9"), "nothing would apply")
+})
+
+test_that("an unnamed report falls back to the defaults, and says so", {
+  sp <- ard_spec(rbind(spec_rows(NA,   "AGE", "Mean (SD)", "{mean}"),
+                       spec_rows("T1", "SEX", NA,          "{n}")))
+  expect_message(rtfreporter:::.ard_spec_scope(sp, "T9"), "default rows are used")
+  expect_identical(nrow(suppressMessages(
+    rtfreporter:::.ard_spec_scope(sp, "T9"))), 1L)
+})

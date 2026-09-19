@@ -27,6 +27,11 @@ blank, one row per level of that variable.
 \section{Columns}{
 
 \describe{
+\item{\code{output_id}}{Optional; the report this row belongs to, so one
+shared file can define every table in a study.  Blank means the row is
+a default for all of them.  \code{\link[=read_ard_spec]{read_ard_spec()}} narrows the file with
+its own \code{output_id} argument, and a row naming the report beats a
+blank one for the same cell.}
 \item{\code{variable}}{Analysis variable the row applies to.  \code{"default"}, or
 a \code{context} value such as \code{"categorical"}, acts as a fallback.}
 \item{\code{label}}{Display label for the variable (the row-group text).}
