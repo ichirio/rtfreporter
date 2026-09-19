@@ -158,7 +158,7 @@
   when there is no hierarchy --- depth only means something inside one --- so
   it is a **column** question, and survives anything.  The two remaining
   attributes are conveniences: losing them leaves the label column a character
-  vector rather than an ordered factor and makes `notes` report only
+  vector rather than a factor and makes `notes` report only
   `ard_spread()`'s discards.  `?ard_normalize` says which operations are safe.
 
   `ard_normalize()` also gives its result the class `ard_long`, used **only**
@@ -172,6 +172,19 @@
   that do exist.  `levels` accepts that same name (it orders the label
   column by it), so the two arguments look inconsistent until the message
   explains why.
+
+  The keyed columns are now plain factors, and the `ordered` argument of
+  `ard_table()` / `ard_spread()` is **gone**.  `levels =` states a display
+  order, which is the whole of what the caller said; an ordered factor went
+  on to claim that `N < Mean < SD` is a magnitude, which is false, and
+  nothing could tell which columns were genuinely ordinal.  Nothing read the
+  class either --- `order()` sorts on the level codes either way, so the row
+  order and the rendered RTF are unchanged --- while a plain factor survives
+  `dplyr::bind_rows()` across differing level sets and `relevel()`, both of
+  which an ordered factor refuses.  Callers who want the ordered class can
+  ask for it explicitly:
+  `dplyr::mutate(tbl, dplyr::across(where(is.factor), ~ factor(.x, levels(.x),
+  ordered = TRUE)))`.
 
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be

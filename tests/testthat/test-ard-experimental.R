@@ -593,6 +593,28 @@ test_that("a factor's declared level order becomes the row order", {
   expect_identical(as.character(sx2$label), c("Male", "Female"))
 })
 
+test_that("the keyed columns are plain factors, not ordered ones", {
+  skip_if_no_cards()
+  tbl <- ard_table(make_factor_ard(), cols = "TRT",
+                   cells = list(continuous  = c("Mean" = "{mean:.1f}"),
+                                categorical = "{n:.0f} ({p:.1f%})"),
+                   levels = list(group = c("SEX", "AGEGR", "AGE"),
+                                 SEX   = c("Male", "Female")))
+  # `levels` fixes the DISPLAY order, which is all the caller said.  An
+  # ordered factor would go on to claim `Male > Female` and `SEX > AGEGR`.
+  expect_s3_class(tbl$group, "factor")
+  expect_s3_class(tbl$label, "factor")
+  expect_false(is.ordered(tbl$group))
+  expect_false(is.ordered(tbl$label))
+  # and the order is exactly what it was when they were ordered factors
+  expect_identical(as.character(unique(tbl$group)), c("SEX", "AGEGR", "AGE"))
+  expect_identical(as.character(tbl$label[tbl$group == "SEX"]),
+                   c("Male", "Female"))
+  # the argument that used to ask for the ordered class is gone
+  expect_false("ordered" %in% names(formals(ard_table)))
+  expect_false("ordered" %in% names(formals(ard_spread)))
+})
+
 # ------------------------------------------------- stat versus stat_fmt ---
 
 test_that("stats = 'rows' can carry either of the ARD's two values", {

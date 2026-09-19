@@ -143,7 +143,14 @@
 
 # Build a factor whose levels are `lv` (padding with anything unseen so no
 # value is silently dropped).
-.ard_as_factor <- function(x, lv, ordered = TRUE) {
+#
+# Plain, not ordered, by default.  `levels =` fixes the DISPLAY order, and
+# that is all the caller told us: "N, Mean, SD, Median" is a row order, not a
+# magnitude.  An ordered factor would assert `N < Mean`, which is false, and
+# nothing downstream reads the ordered class anyway -- `order()` sorts on the
+# level codes either way, so the RTF is byte-identical.  The column keys ask
+# for `ordered = TRUE` explicitly, but only to sort the column names.
+.ard_as_factor <- function(x, lv, ordered = FALSE) {
   x <- as.character(x)
   extra <- setdiff(.ard_first_seen(x), lv)
   factor(x, levels = c(lv, extra), ordered = ordered)
@@ -834,8 +841,8 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #'
 #' Two conveniences ride on attributes and are lost by anything that drops
 #' them -- base `transform()` is the one to avoid.  **Neither is required:**
-#' losing them leaves the label column a character vector instead of an
-#' ordered factor (the row order falls back to first appearance; `levels =`
+#' losing them leaves the label column a character vector instead of a
+#' factor (the row order falls back to first appearance; `levels =`
 #' fixes it for good), and makes `notes` report only the discards from
 #' [ard_spread()].  Values are unaffected, and a manipulation that really does
 #' break the rows is caught -- two values arriving in one cell is an error,
@@ -1168,7 +1175,7 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   * a **column key** -- it then fixes the order of the spread columns, which
 #'     is what keeps a hand-written `col_header` over the arm it names;
 #'   * a **row key**, by either its source column or its renamed output column
-#'     -- it becomes an ordered factor and drives the row sort;
+#'     -- it becomes a factor and drives the row sort;
 #'   * an **analysis variable** -- it orders that variable's rows in the label
 #'     column, without your having to know what the label column is called.
 #'     Variables you leave out keep their `cells` templates' order.
@@ -1197,7 +1204,6 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   So `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of
 #'   an AE table's row order, and needs neither `sort_stat` nor an `arrange()`
 #'   afterwards.
-#' @param ordered Make the factors built from `levels` / `labels` ordered.
 #' @param sep Separator pasted between multiple `cols` keys.
 #' @param round Tie-breaking rule for `{x:.1f}`-style tokens, `"sas"` or
 #'   `"r"`.  See [ard_round()].
@@ -1231,7 +1237,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
                        cells = "{n} ({p})", stats = c("cells", "rows"),
                        value = c("stat", "stat_fmt"),
                        levels = NULL, labels = NULL, sort = TRUE,
-                       ordered = TRUE, sep = "____",
+                       sep = "____",
                        round = c("sas", "r"), spec = NULL,
                        sort_stat = NULL, na = NA_character_, notes = TRUE) {
   stats <- match.arg(stats)
@@ -1444,10 +1450,10 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     v <- recode(long[[r$out]])
     lv <- lev_for(r)
     if (!is.null(lv)) {
-      long[[r$out]] <- .ard_as_factor(v, recode(lv), ordered = ordered)
+      long[[r$out]] <- .ard_as_factor(v, recode(lv))
     } else if (!is.null(labels) && any(as.character(long[[r$out]]) != v)) {
       long[[r$out]] <- .ard_as_factor(v, unname(labels[names(labels) %in%
-        .ard_first_seen(long[[r$out]])]), ordered = ordered)
+        .ard_first_seen(long[[r$out]])]))
     } else {
       long[[r$out]] <- v
     }
@@ -1466,7 +1472,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
                                                             names(levels))]),
                              labels)
     }
-    if (!is.null(lv)) long[[label_out]] <- .ard_as_factor(long[[label_out]], lv, ordered)
+    if (!is.null(lv)) long[[label_out]] <- .ard_as_factor(long[[label_out]], lv)
   }
 
   rid <- do.call(paste, c(lapply(id_cols, function(k) as.character(long[[k]])),
@@ -1639,7 +1645,7 @@ ard_table <- function(ard, cols, rows = NULL, label = ".label",
                       cells = "{n} ({p})", stats = c("cells", "rows"),
                       value = c("stat", "stat_fmt"),
                       levels = NULL, labels = NULL, sort = TRUE,
-                      ordered = TRUE, sep = "____", round = c("sas", "r"),
+                      sep = "____", round = c("sas", "r"),
                       spec = NULL, sort_stat = NULL, na = NA_character_,
                       notes = TRUE,
                       drop_contexts = c("attributes", "total_n"),
@@ -1650,7 +1656,7 @@ ard_table <- function(ard, cols, rows = NULL, label = ".label",
   args <- list(x = x, cols = cols, rows = rows, label = label,
                stats = match.arg(stats), value = match.arg(value),
                levels = levels, labels = labels,
-               sort = sort, ordered = ordered, sep = sep,
+               sort = sort, sep = sep,
                round = match.arg(round), spec = spec, sort_stat = sort_stat,
                na = na, notes = notes)
   if (!missing(cells)) args$cells <- cells

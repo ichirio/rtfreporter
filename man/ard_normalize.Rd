@@ -68,8 +68,8 @@ the two-stage split.  Everything it needs is in its \strong{columns}, so
 
 Two conveniences ride on attributes and are lost by anything that drops
 them -- base \code{transform()} is the one to avoid.  \strong{Neither is required:}
-losing them leaves the label column a character vector instead of an
-ordered factor (the row order falls back to first appearance; \verb{levels =}
+losing them leaves the label column a character vector instead of a
+factor (the row order falls back to first appearance; \verb{levels =}
 fixes it for good), and makes \code{notes} report only the discards from
 \code{\link[=ard_spread]{ard_spread()}}.  Values are unaffected, and a manipulation that really does
 break the rows is caught -- two values arriving in one cell is an error,

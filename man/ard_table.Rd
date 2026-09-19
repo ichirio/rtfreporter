@@ -18,7 +18,6 @@ ard_table(
   levels = NULL,
   labels = NULL,
   sort = TRUE,
-  ordered = TRUE,
   sep = "____",
   round = c("sas", "r"),
   spec = NULL,
@@ -108,7 +107,7 @@ may be
 \item a \strong{column key} -- it then fixes the order of the spread columns, which
 is what keeps a hand-written \code{col_header} over the arm it names;
 \item a \strong{row key}, by either its source column or its renamed output column
--- it becomes an ordered factor and drives the row sort;
+-- it becomes a factor and drives the row sort;
 \item an \strong{analysis variable} -- it orders that variable's rows in the label
 column, without your having to know what the label column is called.
 Variables you leave out keep their \code{cells} templates' order.
@@ -140,8 +139,6 @@ what a descending-frequency AE table sorts on.}
 So \code{sort = c(".overall", "soc", ".depth", "-n", "term")} is the whole of
 an AE table's row order, and needs neither \code{sort_stat} nor an \code{arrange()}
 afterwards.}
-
-\item{ordered}{Make the factors built from \code{levels} / \code{labels} ordered.}
 
 \item{sep}{Separator pasted between multiple \code{cols} keys.}
 
