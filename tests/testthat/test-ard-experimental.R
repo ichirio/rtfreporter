@@ -1115,10 +1115,18 @@ test_that("a spec that defines one cell twice stops, naming the cell", {
 })
 
 test_that("output_id against a spec that cannot honour it is an error", {
-  sp <- ard_spec(spec_rows(NA, "AGE", "Mean (SD)", "{mean}"))
-  expect_error(rtfreporter:::.ard_spec_scope(sp, "T1"), "no `output_id` column")
   only <- ard_spec(spec_rows("T1", "AGE", "Mean (SD)", "{mean}"))
   expect_error(rtfreporter:::.ard_spec_scope(only, "T9"), "nothing would apply")
+  # the column has to be in the FILE; a scaffold whose column is still blank
+  # is fine, and every row is simply a default
+  f <- tempfile(fileext = ".csv")
+  on.exit(unlink(f), add = TRUE)
+  d <- as.data.frame(ard_spec(spec_rows(NA, "AGE", "Mean (SD)", "{mean}")))
+  utils::write.csv(d[, setdiff(names(d), "output_id")], f, row.names = FALSE,
+                   na = "")
+  expect_error(read_ard_spec(f, output_id = "T1"), "no `output_id` column")
+  utils::write.csv(d, f, row.names = FALSE, na = "")
+  expect_identical(nrow(read_ard_spec(f, output_id = "T1")), 1L)
 })
 
 test_that("an unnamed report falls back to the defaults, and says so", {

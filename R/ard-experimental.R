@@ -1974,12 +1974,8 @@ ard_spec <- function(x) {
   if (!is.character(output_id) || length(output_id) != 1L) {
     .ard_stop("`output_id` must be a single string.")
   }
-  if (!"output_id" %in% names(sp) || all(is.na(sp$output_id))) {
-    .ard_stop(paste0("`output_id` was given but this spec has no `output_id` ",
-                     "column to filter on. Add the column, or drop the ",
-                     "argument."))
-  }
   ids <- .ard_first_seen(stats::na.omit(sp$output_id))
+  if (!length(ids)) return(sp)     # every row is a default; nothing to narrow
   if (!output_id %in% ids) {
     # Most reports in a shared file are covered by its blank-`output_id`
     # defaults, so this is normal and must not stop the run.  It is still
@@ -2113,14 +2109,20 @@ ard_spec <- function(x) {
 #' @export
 read_ard_spec <- function(path, sheet = 1, output_id = NULL) {
   if (grepl("[.]csv$", path, ignore.case = TRUE)) {
-    sp <- ard_spec(utils::read.csv(path, stringsAsFactors = FALSE,
-                                   check.names = FALSE))
+    d <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
   } else {
     .ard_need("readxl", "read_ard_spec() on an Excel file")
-    sp <- ard_spec(as.data.frame(readxl::read_excel(path, sheet = sheet),
-                                 stringsAsFactors = FALSE))
+    d <- as.data.frame(readxl::read_excel(path, sheet = sheet),
+                       stringsAsFactors = FALSE)
   }
-  .ard_spec_scope(sp, output_id)
+  # ard_spec() fills every column in, so ask the FILE, not the object: an
+  # `output_id` that nothing could ever act on is a mistake worth naming.
+  if (!is.null(output_id) && !"output_id" %in% names(d)) {
+    .ard_stop(paste0("`output_id` was given but ", sQuote(basename(path)),
+                     " has no `output_id` column to filter on. Add the ",
+                     "column, or drop the argument."))
+  }
+  .ard_spec_scope(ard_spec(d), output_id)
 }
 
 #' Write an ARD table definition to a spreadsheet
