@@ -33,6 +33,7 @@
 # withdrawn outright.  Keep it in step with the NAMESPACE marker block.
 .experimental_exports <- c(
   "ard_pull", "ard_keys", "ard_normalize", "ard_overall", "ard_spread", "ard_table", "ard_template",
+  "ard_cells",
   "ard_spec", "ard_spec_template", "read_ard_spec", "write_ard_spec",
   "ard_round")
 
@@ -358,20 +359,88 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
   out
 }
 
+# One element of a fallback chain: a bare template, or `condition ~ template`.
+# The condition is kept unevaluated, together with the formula's own
+# environment, so a guard may name the caller's variables as well as the
+# record's.
+.ard_chain_el <- function(x) {
+  if (inherits(x, "formula")) {
+    if (length(x) != 3L) {
+      .ard_stop(paste0("A `cells` guard needs both sides: ",
+                       "`condition ~ template`. This one has only a right."))
+    }
+    e <- environment(x)
+    if (is.null(e)) e <- baseenv()
+    tpl <- tryCatch(eval(x[[3L]], e), error = function(err) NULL)
+    if (!is.character(tpl) || length(tpl) != 1L) {
+      .ard_stop(paste0("The right of a `cells` guard must be one template ",
+                       "string, e.g. `n == 0 ~ \"0\"`."))
+    }
+    return(list(cond = x[[2L]], env = e, tpl = tpl))
+  }
+  list(cond = NULL, env = NULL, tpl = as.character(x))
+}
+
+# A chain is whatever c() or list() produced: strings, guards, or both.
+.ard_chain <- function(x) lapply(as.list(x), .ard_chain_el)
+
+# What a guard sees: every statistic of the record by name, plus the record's
+# own columns -- the keys, `.label`, `.depth`, `.kind`, `variable`.  A guard
+# naming something absent, or erroring, is FALSE and the chain moves on, which
+# is the same rule as "a token of this template has no value".  That is why
+# guards need no new concept: they are one more way for an element not to
+# apply.
+.ard_guard_data <- function(s) {
+  out <- as.list(stats::setNames(s$stat, s$stat_name))
+  skip <- c("stat", "stat_name", "stat_label", "stat_fmt", "fmt_fun",
+            "warning", "error")
+  for (cn in setdiff(names(s), skip)) {
+    v <- s[[cn]]
+    if (is.list(v)) next
+    out[[cn]] <- v[[1L]]
+  }
+  out
+}
+
+.ard_guard_ok <- function(el, gd) {
+  if (is.null(el$cond)) return(TRUE)
+  isTRUE(tryCatch(all(eval(el$cond, gd, el$env)), error = function(e) FALSE))
+}
+
+# Walk a chain: the first element whose guard holds and whose template
+# resolves wins.
+.ard_chain_value <- function(chain, s, round_type) {
+  gd <- NULL
+  for (el in chain) {
+    if (!is.null(el$cond)) {
+      if (is.null(gd)) gd <- .ard_guard_data(s)
+      if (!.ard_guard_ok(el, gd)) next
+    }
+    v <- .ard_fill(el$tpl, s$stat_name, s$stat, s$stat_fmt, round_type)
+    if (!is.na(v)) return(v)
+  }
+  NA_character_
+}
+
 # A `cells` entry is one of
 #   "n ({p})"                      one row, label taken from `label`
 #   c("a", "b")                    one row, first template that resolves wins
+#   c(n == 0 ~ "0", "{n} ({p})")   the same chain, its first element guarded
 #   c("Mean (SD)" = "...", ...)    one row per element, label = the name
-#   list("Mean (SD)" = c(...))     same, each element a fallback chain
-# Returns list(labels = <chr|NULL>, chains = <list of chr>).
+#   ard_cells("1" = c(...), ...)   the same, each element a chain of its own
+# Returns list(labels = <chr|NULL>, chains = <list of chains>).
 .ard_cell_entry <- function(entry) {
   if (is.null(entry)) return(NULL)
+  if (inherits(entry, "ard_cells")) {
+    return(list(labels = names(entry),
+                chains = lapply(unclass(entry), .ard_chain)))
+  }
   nms <- names(entry)
   if (is.null(nms) || !any(nzchar(nms))) {
-    return(list(labels = NULL, chains = list(as.character(unlist(entry)))))
+    return(list(labels = NULL, chains = list(.ard_chain(entry))))
   }
-  chains <- lapply(seq_along(entry), function(i) as.character(entry[[i]]))
-  list(labels = nms, chains = chains)
+  list(labels = nms,
+       chains = lapply(seq_along(entry), function(i) .ard_chain(entry[[i]])))
 }
 
 # ---------------------------------------------------------------------------
@@ -524,7 +593,12 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
 }
 
 .ard_lookup_cells <- function(cells, variable, context, kind = NA_character_) {
-  if (!is.list(cells)) return(.ard_cell_entry(cells))
+  # A list is a map only when its elements are NAMED: `c()` over guards
+  # returns an unnamed list, and that is one chain, not a map.
+  if (inherits(cells, "ard_cells")) return(.ard_cell_entry(cells))
+  if (!is.list(cells) || !any(nzchar(names(cells) %||% ""))) {
+    return(.ard_cell_entry(cells))
+  }
   keys <- variable
   if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
   if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
@@ -654,6 +728,67 @@ ard_overall <- function(label, from = NULL) {
   }
   .ard_stop(paste0("`overall` must be a single string or ard_overall(); see ",
                    "?ard_overall."))
+}
+
+
+# ============================================================================
+#  ard_cells()
+# ============================================================================
+
+#' Several rows in one cell recipe, each with its own fallback chain
+#'
+#' `cells` already reads three containers: one template is one row, a *named*
+#' character vector is one row per element, and a `list()` is a map looked up
+#' by analysis variable.  The one shape those cannot spell is a **named row
+#' whose value is itself a chain** -- `c("1" = c(a, b))` is flattened by `c()`
+#' before `ard_spread()` ever sees it.  `ard_cells()` is that shape, and only
+#' that shape.
+#'
+#' Each argument is one output row: its name is the row label, its value is a
+#' template, a chain of templates, or a chain with guards.  Reading a recipe
+#' then goes `list()` for *which variable*, `ard_cells()` for *which row*,
+#' `c()` for *which template to try first*.
+#'
+#' @param ... One argument per output row.  Names become row labels; an
+#'   unnamed argument takes its label from `label`, as a bare template does.
+#'
+#' @return An object of class `ard_cells`, for `cells` in [ard_spread()] and
+#'   [ard_table()].
+#'
+#' @section Lifecycle:
+#' **Experimental.**  See [rtfreporter-ard].
+#'
+#' @examples
+#' # an estimate line and a confidence-interval line, the first guarded so a
+#' # count of zero prints as "0" rather than "0 (0.0)"
+#' ard_cells(
+#'   "1" = c(n == 0 ~ "0", "{n:.0f} ({estimate:.1f%})"),
+#'   "2" = "{conf.low:.1f%}, {conf.high:.1f%}")
+#' @seealso [ard_spread()], [rtfreporter-ard]
+#' @export
+ard_cells <- function(...) {
+  x <- list(...)
+  if (!length(x)) .ard_stop("`ard_cells()` needs at least one row.")
+  nms <- names(x)
+  if (is.null(nms)) nms <- rep("", length(x))
+  structure(stats::setNames(x, nms), class = "ard_cells")
+}
+
+#' @export
+print.ard_cells <- function(x, ...) {
+  cat("<ard_cells>", length(x), "row(s)
+")
+  nms <- names(x)
+  for (i in seq_along(x)) {
+    lab <- if (nzchar(nms[i])) nms[i] else "(from `label`)"
+    tpl <- vapply(.ard_chain(x[[i]]), function(el)
+      if (is.null(el$cond)) el$tpl
+      else paste(deparse(el$cond), "~", encodeString(el$tpl, quote = "\"")),
+      "")
+    cat(sprintf("  %-14s %s
+", lab, paste(tpl, collapse = "  |  ")))
+  }
+  invisible(x)
 }
 
 
@@ -1198,6 +1333,14 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   for every variable:
 #'   * `"{n} ({p})"` -- one row, labelled from `label`;
 #'   * `c("{n} ({p})", "{n}")` -- one row, the first template that resolves;
+#'   * `c(n == 0 ~ "0", "{n} ({p})")` -- the same chain, its first element
+#'     **guarded**: a `condition ~ template` element applies only when the
+#'     condition holds, so a guard that is false and a template that has no
+#'     value for one of its tokens fail the same way, and the chain moves on.
+#'     The condition is ordinary R, evaluated with the record's statistics
+#'     by name (`n`, `p`, `mean`, ...) plus its own columns (`variable`,
+#'     `.label`, `.depth`, `.kind` and the keys), and it may name the
+#'     caller's variables too;
 #'   * `c("Mean (SD)" = "{mean} ({sd})", "Min, Max" = "{min}, {max}")` -- one
 #'     row per element, the name being the row label.
 #'
@@ -1205,7 +1348,9 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   `context`, then by the structural kind, then by `"default"`; each of its
 #'   elements is a recipe of the three shapes above.  The container decides:
 #'   `c("Mean (SD)" = ..., "Min, Max" = ...)` is a two-row recipe, while
-#'   `list(continuous = ..., categorical = ...)` is a map.
+#'   `list(continuous = ..., categorical = ...)` is a map.  A list with no
+#'   names is a chain, which is what `c()` returns once a guard is in it.
+#'   For a named row whose value is itself a chain, use [ard_cells()].
 #'
 #'   Statistics no template names are simply not read, which is how an ARD
 #'   that also carries `method`, `alternative`, `conf.level` or a p-value
@@ -1427,18 +1572,13 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     named[[paste(sub$variable[1L], sub$context[1L], sep = "\r")]] <-
       unique(c(named[[paste(sub$variable[1L], sub$context[1L], sep = "\r")]],
                unlist(lapply(entry$chains, function(ch)
-                 unlist(lapply(ch, function(t)
-                   vapply(.ard_tokens(t),
+                 unlist(lapply(ch, function(el)
+                   vapply(.ard_tokens(el$tpl),
                           function(z) .ard_token_parts(z)$name, "")))))))
 
     if (!is.null(entry$labels)) {
-      vals <- vapply(entry$chains, function(chain) {
-        for (tpl in chain) {
-          v <- .ard_fill(tpl, sub$stat_name, sub$stat, sub$stat_fmt, round)
-          if (!is.na(v)) return(v)
-        }
-        NA_character_
-      }, "")
+      vals <- vapply(entry$chains, .ard_chain_value, "", s = sub,
+                     round_type = round)
       pieces[[length(pieces) + 1L]] <- data.frame(
         .lab = entry$labels, .col = ckey, .valn = NA_real_, .valc = vals,
         .depth = if (".depth" %in% names(sub)) sub$.depth[1L] else 1L,
@@ -1451,11 +1591,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       for (lv in unique(labs)) {
         sel <- if (is.na(lv)) is.na(labs) else (!is.na(labs) & labs == lv)
         s2 <- sub[sel, , drop = FALSE]
-        v <- NA_character_
-        for (tpl in entry$chains[[1L]]) {
-          v <- .ard_fill(tpl, s2$stat_name, s2$stat, s2$stat_fmt, round)
-          if (!is.na(v)) break
-        }
+        v <- .ard_chain_value(entry$chains[[1L]], s2, round)
         pieces[[length(pieces) + 1L]] <- data.frame(
           .lab = lv, .col = ckey, .valn = NA_real_, .valc = v,
           .depth = if (".depth" %in% names(s2)) s2$.depth[1L] else 1L,

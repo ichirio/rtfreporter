@@ -1004,3 +1004,76 @@ test_that("ard_template() emits code that actually runs", {
     gen2 <- ard_template(ard, cols = "TRT", spec = TRUE))
   expect_true(any(grepl("read_ard_spec", gen2)))
 })
+
+# ------------------------------------------------------------- guarded cells
+
+test_that("a guard picks the template and a false guard falls through", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                  cells = c(n == 0 ~ "none", "{n:.0f} ({p:.1f%})"),
+                  notes = FALSE)
+  # SEX has no empty cell here, so every guard is false and the chain falls
+  # through to the bare template
+  sex <- z[z$group == "SEX", ]
+  expect_true(all(grepl(") ", paste0(stats::na.omit(sex[[3]]), " "), fixed = TRUE)))
+  expect_false(any(stats::na.omit(sex[[3]]) == "none"))
+})
+
+test_that("a guard fires when its condition holds", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  d$stat[d$stat_name == "n" & d$variable == "SEX"] <- 0
+  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                  cells = c(n == 0 ~ "none", "{n:.0f} ({p:.1f%})"),
+                  notes = FALSE)
+  expect_true(all(z[z$group == "SEX", 3] == "none"))
+})
+
+test_that("a guard may read a key column, not only a statistic", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                  cells = c(variable == "SEX" ~ "sex:{n:.0f}", "{n:.0f}"),
+                  notes = FALSE)
+  expect_true(all(grepl("^sex:", stats::na.omit(z[z$group == "SEX", 3]))))
+  expect_false(any(grepl("^sex:", stats::na.omit(z[z$group == "AGEGR", 3]))))
+})
+
+test_that("a guard naming a statistic that is not there is simply false", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                  cells = c(no_such_stat > 1 ~ "never", "{n:.0f}"),
+                  notes = FALSE)
+  expect_false(any(stats::na.omit(unlist(z[, -(1:2)])) == "never"))
+})
+
+test_that("a guard can read the caller's own variables", {
+  skip_if_no_cards()
+  cutoff <- 1e6
+  d <- ard_normalize(make_ard())
+  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                  cells = c(n < cutoff ~ "small", "{n:.0f}"), notes = FALSE)
+  expect_true(all(stats::na.omit(unlist(z[, -(1:2)])) == "small"))
+})
+
+test_that("ard_cells() gives a named row a chain of its own", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                  cells = ard_cells("first"  = c(n == 0 ~ "-", "{n:.0f}"),
+                                    "second" = "{p:.2f}"),
+                  notes = FALSE)
+  expect_setequal(unique(as.character(z$label)), c("first", "second"))
+  expect_s3_class(ard_cells(a = "{n}"), "ard_cells")
+})
+
+test_that("a one-sided guard says what is missing", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  expect_error(
+    ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+               cells = c(~ "{n:.0f}"), notes = FALSE),
+    "both sides")
+})

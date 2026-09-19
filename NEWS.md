@@ -199,6 +199,23 @@
   `dplyr::mutate(tbl, dplyr::across(where(is.factor), ~ factor(.x, levels(.x),
   ordered = TRUE)))`.
 
+  A `cells` element may be **guarded**: `c(n == 0 ~ "0", "{n} ({p})")` uses
+  the first element whose condition holds *and* whose template resolves, so a
+  guard that is false and a token with no value fail the same way and the
+  chain simply moves on.  The condition is ordinary R, evaluated with the
+  record's statistics by name plus its own columns --- `variable`, `.label`,
+  `.depth`, `.kind` and the keys --- and it may name the caller's variables
+  too.  This is what a table needs when the cell depends on the *value*
+  rather than on which statistics are present: an overall-response table
+  prints `0` instead of `0 (0.0)` and `(100)` instead of `(100.0)` from the
+  recipe, with no `mutate()` afterwards.
+
+  `ard_cells()` spells the one recipe shape the existing containers cannot:
+  a **named row whose value is itself a chain**, which `c()` flattens before
+  `ard_spread()` can see it.  Reading a recipe is then `list()` for which
+  variable, `ard_cells()` for which row, `c()` for which template to try
+  first.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

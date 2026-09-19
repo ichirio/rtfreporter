@@ -74,6 +74,14 @@ for every variable:
 \itemize{
 \item \code{"{n} ({p})"} -- one row, labelled from \code{label};
 \item \code{c("{n} ({p})", "{n}")} -- one row, the first template that resolves;
+\item \code{c(n == 0 ~ "0", "{n} ({p})")} -- the same chain, its first element
+\strong{guarded}: a \code{condition ~ template} element applies only when the
+condition holds, so a guard that is false and a template that has no
+value for one of its tokens fail the same way, and the chain moves on.
+The condition is ordinary R, evaluated with the record's statistics
+by name (\code{n}, \code{p}, \code{mean}, ...) plus its own columns (\code{variable},
+\code{.label}, \code{.depth}, \code{.kind} and the keys), and it may name the
+caller's variables too;
 \item \code{c("Mean (SD)" = "{mean} ({sd})", "Min, Max" = "{min}, {max}")} -- one
 row per element, the name being the row label.
 }
@@ -82,7 +90,9 @@ A \strong{list} is instead a map, looked up by analysis variable, then by
 \code{context}, then by the structural kind, then by \code{"default"}; each of its
 elements is a recipe of the three shapes above.  The container decides:
 \code{c("Mean (SD)" = ..., "Min, Max" = ...)} is a two-row recipe, while
-\code{list(continuous = ..., categorical = ...)} is a map.
+\code{list(continuous = ..., categorical = ...)} is a map.  A list with no
+names is a chain, which is what \code{c()} returns once a guard is in it.
+For a named row whose value is itself a chain, use \code{\link[=ard_cells]{ard_cells()}}.
 
 Statistics no template names are simply not read, which is how an ARD
 that also carries \code{method}, \code{alternative}, \code{conf.level} or a p-value
