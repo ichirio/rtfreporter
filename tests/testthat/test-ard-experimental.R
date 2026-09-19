@@ -778,13 +778,35 @@ test_that("the middle stage survives being rebuilt", {
   got <- ard_spread(bare, cols = "TRT", cells = cells, notes = FALSE)
   expect_identical(lapply(got, as.character), lapply(ref, as.character))
 
-  # dplyr and base keep what matters, so a piped middle stage works
+  # a one-pipe middle stage works, `mutate()` and all
   piped <- ard |>
     ard_normalize() |>
     dplyr::filter(!is.na(.data$stat)) |>
     dplyr::mutate(.marker = 1L) |>
     ard_spread(cols = "TRT", cells = cells, notes = FALSE)
   expect_identical(lapply(piped, as.character), lapply(ref, as.character))
+
+  # ... but only the values survive it.  `filter()` carries the attributes,
+  # `mutate()` rebuilds the frame and drops them, which is why the label
+  # column comes back as a character vector rather than an ordered-by-levels
+  # factor.  Documented in ?ard_normalize; `levels =` is the fix.
+  attrs <- function(x) {
+    intersect(c("ard_factor_levels", "ard_ignored", "ard_hierarchy"),
+              names(attributes(x)))
+  }
+  expect_true(length(attrs(d)) > 0L)
+  expect_identical(attrs(dplyr::filter(d, !is.na(.data$stat))), attrs(d))
+  expect_identical(attrs(dplyr::mutate(d, .marker = 1L)), character())
+
+  # an ARD whose variables really were factors shows what that costs: the
+  # declared level order reaches the label column through the attribute, so
+  # `mutate()` hands back a character column instead
+  fd <- ard_normalize(make_factor_ard())
+  fc <- list(continuous = c("Mean" = "{mean:.1f}"), categorical = "{n:.0f}")
+  expect_s3_class(ard_spread(fd, cols = "TRT", cells = fc,
+                             notes = FALSE)$label, "factor")
+  expect_type(ard_spread(dplyr::mutate(fd, .marker = 1L), cols = "TRT",
+                         cells = fc, notes = FALSE)$label, "character")
 
   # "is there a hierarchy?" is a column question now, so it survives too
   expect_true(all(is.na(ard_normalize(ard)$.depth)))

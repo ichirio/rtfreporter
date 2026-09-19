@@ -839,14 +839,20 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #' the two-stage split.  Everything it needs is in its **columns**, so
 #' `dplyr::mutate()`, `filter()`, `bind_rows()` and base `[` are all safe.
 #'
-#' Two conveniences ride on attributes and are lost by anything that drops
-#' them -- base `transform()` is the one to avoid.  **Neither is required:**
-#' losing them leaves the label column a character vector instead of a
-#' factor (the row order falls back to first appearance; `levels =`
-#' fixes it for good), and makes `notes` report only the discards from
-#' [ard_spread()].  Values are unaffected, and a manipulation that really does
-#' break the rows is caught -- two values arriving in one cell is an error,
-#' not a silent overwrite.
+#' Two conveniences ride on attributes, and only some manipulations carry
+#' them across.  `dplyr::filter()`, `slice()`, `arrange()`, `bind_rows()` and
+#' base `[` / `$<-` keep them; `dplyr::mutate()` and `select()`, base
+#' `transform()` and `subset()` drop them.  **Neither is required:** losing
+#' them leaves the label column a character vector instead of a factor (the
+#' row order falls back to first appearance; `levels =` fixes it for good),
+#' and makes `notes` report only the discards from [ard_spread()].  Values
+#' are unaffected, and a manipulation that really does break the rows is
+#' caught -- two values arriving in one cell is an error, not a silent
+#' overwrite.
+#'
+#' `mutate()` is the one to watch, because it is the natural verb for a
+#' one-pipe `ard_normalize() |> ... |> ard_spread()`.  Name the label
+#' column's order in `levels =` and nothing is lost.
 #'
 #' @section Factor levels:
 #' \pkg{cards} stores the level of a factor variable as a one-element factor,

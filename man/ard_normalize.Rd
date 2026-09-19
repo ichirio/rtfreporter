@@ -66,14 +66,20 @@ The result is a plain data frame; reshaping it in between is the point of
 the two-stage split.  Everything it needs is in its \strong{columns}, so
 \code{dplyr::mutate()}, \code{filter()}, \code{bind_rows()} and base \code{[} are all safe.
 
-Two conveniences ride on attributes and are lost by anything that drops
-them -- base \code{transform()} is the one to avoid.  \strong{Neither is required:}
-losing them leaves the label column a character vector instead of a
-factor (the row order falls back to first appearance; \verb{levels =}
-fixes it for good), and makes \code{notes} report only the discards from
-\code{\link[=ard_spread]{ard_spread()}}.  Values are unaffected, and a manipulation that really does
-break the rows is caught -- two values arriving in one cell is an error,
-not a silent overwrite.
+Two conveniences ride on attributes, and only some manipulations carry
+them across.  \code{dplyr::filter()}, \code{slice()}, \code{arrange()}, \code{bind_rows()} and
+base \code{[} / \verb{$<-} keep them; \code{dplyr::mutate()} and \code{select()}, base
+\code{transform()} and \code{subset()} drop them.  \strong{Neither is required:} losing
+them leaves the label column a character vector instead of a factor (the
+row order falls back to first appearance; \verb{levels =} fixes it for good),
+and makes \code{notes} report only the discards from \code{\link[=ard_spread]{ard_spread()}}.  Values
+are unaffected, and a manipulation that really does break the rows is
+caught -- two values arriving in one cell is an error, not a silent
+overwrite.
+
+\code{mutate()} is the one to watch, because it is the natural verb for a
+one-pipe \verb{ard_normalize() |> ... |> ard_spread()}.  Name the label
+column's order in \verb{levels =} and nothing is lost.
 }
 
 \section{Factor levels}{

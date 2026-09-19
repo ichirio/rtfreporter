@@ -159,7 +159,14 @@
   it is a **column** question, and survives anything.  The two remaining
   attributes are conveniences: losing them leaves the label column a character
   vector rather than a factor and makes `notes` report only
-  `ard_spread()`'s discards.  `?ard_normalize` says which operations are safe.
+  `ard_spread()`'s discards.  `?ard_normalize` now says exactly which
+  manipulations carry them: `dplyr::filter()`, `slice()`, `arrange()`,
+  `bind_rows()` and base `[` / `$<-` keep them, while `dplyr::mutate()` and
+  `select()`, base `transform()` and `subset()` drop them.  `mutate()` is
+  the one to watch, since it is the natural verb for a one-pipe
+  `ard_normalize() |> ... |> ard_spread()`; naming the label column's order
+  in `levels =` makes the loss irrelevant.  The documentation previously
+  listed `mutate()` as safe.
 
   `ard_normalize()` also gives its result the class `ard_long`, used **only**
   to recognise a raw ARD passed by mistake and say so.  It is not required:
