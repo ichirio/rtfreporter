@@ -1136,3 +1136,42 @@ test_that("an unnamed report falls back to the defaults, and says so", {
   expect_identical(nrow(suppressMessages(
     rtfreporter:::.ard_spec_scope(sp, "T9"))), 1L)
 })
+
+# -------------------------------------------- which template made each cell
+
+test_that("notes = 'applied' names the template and its guard", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  d$stat[d$stat_name == "n" & d$variable == "SEX"] <- 0
+  expect_message(
+    ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+               cells = c(n == 0 ~ "none", "{n:.0f}"), notes = "applied"),
+    "templates produced")
+  msgs <- capture_messages(
+    ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+               cells = c(n == 0 ~ "none", "{n:.0f}"), notes = "applied"))
+  joined <- paste(msgs, collapse = "")
+  expect_match(joined, "when n == 0", fixed = TRUE)
+  expect_match(joined, "none", fixed = TRUE)
+  expect_match(joined, "{n:.0f}", fixed = TRUE)
+})
+
+test_that("an unguarded recipe reports its template with no guard", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  joined <- paste(capture_messages(
+    ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+               cells = "{n:.0f}", notes = "applied")), collapse = "")
+  expect_match(joined, "{n:.0f}", fixed = TRUE)
+  expect_false(grepl("when", joined, fixed = TRUE))
+})
+
+test_that("notes = 'applied' stays quiet for stats = 'rows'", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  d <- d[d$variable == "AGE", , drop = FALSE]
+  joined <- paste(capture_messages(
+    ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+               stats = "rows", notes = "applied")), collapse = "")
+  expect_false(grepl("templates produced", joined, fixed = TRUE))
+})

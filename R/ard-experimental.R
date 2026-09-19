@@ -218,6 +218,40 @@
 # One compact line per (context, statistic, reason) -- the per-variable detail
 # stays on the attribute, because an adverse-events table has hundreds of
 # variables and three reasons.
+# Which template produced each cell.  `notes` already says what was NOT
+# read; once a chain can carry guards, the other half of the question --
+# "of these three, which one did I get?" -- stops being answerable by
+# looking at the finished cell, so it has to be reportable too.
+.ard_applied_message <- function(long, what) {
+  if (is.null(long) || !nrow(long) || !".tpl" %in% names(long)) {
+    return(invisible(FALSE))
+  }
+  keep <- !is.na(long$.tpl)
+  if (!any(keep)) return(invisible(FALSE))
+  x <- long[keep, , drop = FALSE]
+  key <- paste(x$.var, x$.lab, x$.tpl, x$.guard, sep = "")
+  agg <- x[!duplicated(key), c(".var", ".lab", ".tpl", ".guard"), drop = FALSE]
+  agg$cells <- as.integer(table(key)[unique(key)])
+  agg <- agg[order(agg$.var, -agg$cells), , drop = FALSE]
+  message(sprintf("%s: %d template%s produced %s cell%s.", what, nrow(agg),
+                  if (nrow(agg) == 1L) "" else "s",
+                  format(sum(agg$cells), big.mark = ","),
+                  if (sum(agg$cells) == 1L) "" else "s"))
+  show <- utils::head(agg, 12L)
+  for (i in seq_len(nrow(show))) {
+    lab <- if (is.na(show$.lab[i])) "<levels>" else show$.lab[i]
+    message(sprintf("  %-12s %-12s %7s  %s%s",
+                    show$.var[i], lab, format(show$cells[i], big.mark = ","),
+                    show$.tpl[i],
+                    if (is.na(show$.guard[i])) ""
+                    else paste0("   <- when ", show$.guard[i])))
+  }
+  if (nrow(agg) > nrow(show)) {
+    message(sprintf("  ... and %d more", nrow(agg) - nrow(show)))
+  }
+  invisible(TRUE)
+}
+
 .ard_notes_message <- function(ig, what) {
   if (is.null(ig) || !nrow(ig)) return(invisible(FALSE))
   key <- paste(ig$context, ig$stat_name, ig$reason, sep = "\r")
@@ -408,8 +442,10 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
 }
 
 # Walk a chain: the first element whose guard holds and whose template
-# resolves wins.
-.ard_chain_value <- function(chain, s, round_type) {
+# resolves wins.  The winner's own text comes back with the value, because
+# "which of these three did I get?" is the question a guarded chain invites
+# and the finished cell cannot answer it.
+.ard_chain_pick <- function(chain, s, round_type) {
   gd <- NULL
   for (el in chain) {
     if (!is.null(el$cond)) {
@@ -417,9 +453,17 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
       if (!.ard_guard_ok(el, gd)) next
     }
     v <- .ard_fill(el$tpl, s$stat_name, s$stat, s$stat_fmt, round_type)
-    if (!is.na(v)) return(v)
+    if (!is.na(v)) {
+      return(list(v = v, tpl = el$tpl,
+                  guard = if (is.null(el$cond)) NA_character_
+                          else paste(deparse(el$cond), collapse = " ")))
+    }
   }
-  NA_character_
+  list(v = NA_character_, tpl = NA_character_, guard = NA_character_)
+}
+
+.ard_chain_value <- function(chain, s, round_type) {
+  .ard_chain_pick(chain, s, round_type)$v
 }
 
 # A `cells` entry is one of
@@ -1421,6 +1465,12 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   whatever you built before, and an extra attribute makes `all.equal()`
 #'   report a difference that is not in the table.
 #'
+#'   `"applied"` adds the other half: **which template produced each cell**,
+#'   with the guard that let it through when it had one.  A bare template is
+#'   its own explanation, but a guarded chain is not --- the finished cell
+#'   cannot tell you which of its three candidates you got --- so this is the
+#'   companion to `cells` guards rather than a general-purpose log.
+#'
 #' @return A data frame: the `rows` columns, the label column, then one column
 #'   per column key.
 #'
@@ -1557,6 +1607,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
         .valn = if (rows_numeric) suppressWarnings(as.numeric(sub$stat))
                 else NA_real_,
         .valc = if (rows_numeric) NA_character_ else as.character(sub$stat_fmt),
+        .tpl = NA_character_, .guard = NA_character_,
         .depth = if (".depth" %in% names(sub)) sub$.depth else 1L,
         .overall = if (".overall" %in% names(sub)) sub$.overall else FALSE,
         .var = sub$variable[1L],
@@ -1577,10 +1628,13 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
                           function(z) .ard_token_parts(z)$name, "")))))))
 
     if (!is.null(entry$labels)) {
-      vals <- vapply(entry$chains, .ard_chain_value, "", s = sub,
-                     round_type = round)
+      picks <- lapply(entry$chains, .ard_chain_pick, s = sub,
+                      round_type = round)
+      vals <- vapply(picks, function(z) z$v, "")
       pieces[[length(pieces) + 1L]] <- data.frame(
         .lab = entry$labels, .col = ckey, .valn = NA_real_, .valc = vals,
+        .tpl = vapply(picks, function(z) z$tpl, ""),
+        .guard = vapply(picks, function(z) z$guard, ""),
         .depth = if (".depth" %in% names(sub)) sub$.depth[1L] else 1L,
         .overall = if (".overall" %in% names(sub)) sub$.overall[1L] else FALSE,
         .var = sub$variable[1L],
@@ -1591,9 +1645,11 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       for (lv in unique(labs)) {
         sel <- if (is.na(lv)) is.na(labs) else (!is.na(labs) & labs == lv)
         s2 <- sub[sel, , drop = FALSE]
-        v <- .ard_chain_value(entry$chains[[1L]], s2, round)
+        pk <- .ard_chain_pick(entry$chains[[1L]], s2, round)
+        v <- pk$v
         pieces[[length(pieces) + 1L]] <- data.frame(
           .lab = lv, .col = ckey, .valn = NA_real_, .valc = v,
+          .tpl = pk$tpl, .guard = pk$guard,
           .depth = if (".depth" %in% names(s2)) s2$.depth[1L] else 1L,
           .overall = if (".overall" %in% names(s2)) s2$.overall[1L] else FALSE,
           .var = s2$variable[1L],
@@ -1740,6 +1796,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   # makes all.equal() report a difference that is not in the table.
   if (identical(notes, "attr")) attr(out, "ard_ignored") <- ignored
   if (!isFALSE(notes)) .ard_notes_message(ignored, "ard_table()")
+  if (identical(notes, "applied")) .ard_applied_message(long, "ard_table()")
   out
 }
 

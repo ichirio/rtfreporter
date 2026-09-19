@@ -232,6 +232,15 @@
   rendered and the caller met the row-collision error much later, pointing at
   the ARD rather than at the file.
 
+  `notes = "applied"` answers the other half of the question.  `notes` has
+  always said what was *not* read; once a chain can carry guards, "of these
+  three candidates, which one did I get?" stops being answerable by looking
+  at the finished cell, so `ard_spread()` can now report the template behind
+  each cell together with the guard that let it through.  It also shows what
+  never fired --- an overall-response table whose every cell is 0% or 100%
+  reports its two guards and no sign of the general template, which is the
+  kind of thing worth knowing before the numbers change.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

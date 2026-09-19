@@ -174,7 +174,13 @@ summary, \code{FALSE} says nothing, and \code{"attr"} also attaches the per-vari
 detail as the \code{"ard_ignored"} attribute.  It is not attached by default
 because the result is a plain data frame that you will compare against
 whatever you built before, and an extra attribute makes \code{all.equal()}
-report a difference that is not in the table.}
+report a difference that is not in the table.
+
+\code{"applied"} adds the other half: \strong{which template produced each cell},
+with the guard that let it through when it had one.  A bare template is
+its own explanation, but a guarded chain is not --- the finished cell
+cannot tell you which of its three candidates you got --- so this is the
+companion to \code{cells} guards rather than a general-purpose log.}
 
 \item{drop_contexts}{\code{context} values to discard.  The default drops the
 \code{attributes} rows (whose \code{stat} is a vector and cannot be flattened) and
