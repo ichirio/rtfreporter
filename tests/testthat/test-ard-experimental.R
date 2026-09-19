@@ -786,27 +786,34 @@ test_that("the middle stage survives being rebuilt", {
     ard_spread(cols = "TRT", cells = cells, notes = FALSE)
   expect_identical(lapply(piped, as.character), lapply(ref, as.character))
 
-  # ... but only the values survive it.  `filter()` carries the attributes,
-  # `mutate()` rebuilds the frame and drops them, which is why the label
-  # column comes back as a character vector rather than an ordered-by-levels
-  # factor.  Documented in ?ard_normalize; `levels =` is the fix.
-  attrs <- function(x) {
-    intersect(c("ard_factor_levels", "ard_ignored", "ard_hierarchy"),
-              names(attributes(x)))
-  }
-  expect_true(length(attrs(d)) > 0L)
-  expect_identical(attrs(dplyr::filter(d, !is.na(.data$stat))), attrs(d))
-  expect_identical(attrs(dplyr::mutate(d, .marker = 1L)), character())
-
-  # an ARD whose variables really were factors shows what that costs: the
-  # declared level order reaches the label column through the attribute, so
-  # `mutate()` hands back a character column instead
+  # ... and the label column's declared order survives it too, because the
+  # order rides in the `.label_order` column rather than an attribute.
   fd <- ard_normalize(make_factor_ard())
   fc <- list(continuous = c("Mean" = "{mean:.1f}"), categorical = "{n:.0f}")
-  expect_s3_class(ard_spread(fd, cols = "TRT", cells = fc,
-                             notes = FALSE)$label, "factor")
-  expect_type(ard_spread(dplyr::mutate(fd, .marker = 1L), cols = "TRT",
-                         cells = fc, notes = FALSE)$label, "character")
+  expect_true(".label_order" %in% names(fd))
+  expect_true(any(!is.na(fd$.label_order)))
+  ref_lab <- ard_spread(fd, cols = "TRT", cells = fc, notes = FALSE)$label
+  expect_s3_class(ref_lab, "factor")
+  for (rebuilt in list(dplyr::mutate(fd, .marker = 1L),
+                       dplyr::filter(fd, !is.na(.data$stat)),
+                       fd[!is.na(fd$stat), , drop = FALSE])) {
+    got <- ard_spread(rebuilt, cols = "TRT", cells = fc, notes = FALSE)$label
+    expect_s3_class(got, "factor")
+    expect_identical(levels(got), levels(ref_lab))
+  }
+
+  # a caller who relabels a level keeps that level's position
+  indented <- dplyr::mutate(fd, .label = ifelse(.data$.label == "Female",
+                                                "  Female", .data$.label))
+  lab <- ard_spread(indented, cols = "TRT", cells = fc, notes = FALSE)$label
+  expect_true("  Female" %in% levels(lab))
+  expect_lt(match("  Female", levels(lab)), match("Male", levels(lab)))
+
+  # the one attribute left is a report, and nothing reads it to build a table
+  expect_identical(
+    intersect(c("ard_factor_levels", "ard_hierarchy"), names(attributes(d))),
+    character())
+  expect_false(is.null(attr(d, "ard_ignored", exact = TRUE)))
 
   # "is there a hierarchy?" is a column question now, so it survives too
   expect_true(all(is.na(ard_normalize(ard)$.depth)))

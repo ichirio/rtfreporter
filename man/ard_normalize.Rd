@@ -43,9 +43,12 @@ A data frame with one row per ARD statistic: the key columns, the
 ARD's own \code{variable} / \code{variable_level} / \code{context} / \code{stat_name} /
 \code{stat_label} / \code{stat} / \code{stat_fmt}, the structural classification \code{.kind}
 (\code{"continuous"} / \code{"categorical"}, see \link{rtfreporter-ard}), \code{.label} (the
-deepest non-missing hierarchy value, or \code{variable_level}), \code{.overall}, and
-\code{.depth} --- 1 = outermost within a \code{hierarchy}, and \code{NA} when there is
-none, since depth only means something inside one.
+deepest non-missing hierarchy value, or \code{variable_level}), \code{.label_order}
+(that label's position in the level order its factor declared, \code{NA} when
+it declared none), \code{.overall}, and \code{.depth} --- 1 = outermost within a
+\code{hierarchy}, 0 = a row of one that is not one of its levels, and \code{NA}
+throughout when no \code{hierarchy} was given, since depth only means
+something inside one.
 }
 \description{
 Step one of the ARD conversion: turn the \code{group1 / group1_level} \emph{positional}
@@ -63,32 +66,30 @@ rows, custom sorting.
 \section{Working on the result before \code{\link[=ard_spread]{ard_spread()}}}{
 
 The result is a plain data frame; reshaping it in between is the point of
-the two-stage split.  Everything it needs is in its \strong{columns}, so
-\code{dplyr::mutate()}, \code{filter()}, \code{bind_rows()} and base \code{[} are all safe.
+the two-stage split.  \strong{Everything \code{\link[=ard_spread]{ard_spread()}} reads is in the
+columns}, so \code{dplyr::mutate()}, \code{filter()}, \code{arrange()}, \code{bind_rows()},
+\code{select()} and base \code{[} are all safe, and so is a one-pipe
+\verb{ard_normalize() |> ... |> ard_spread()}.  A manipulation that really does
+break the rows is still caught -- two values arriving in one cell is an
+error, not a silent overwrite.
 
-Two conveniences ride on attributes, and only some manipulations carry
-them across.  \code{dplyr::filter()}, \code{slice()}, \code{arrange()}, \code{bind_rows()} and
-base \code{[} / \verb{$<-} keep them; \code{dplyr::mutate()} and \code{select()}, base
-\code{transform()} and \code{subset()} drop them.  \strong{Neither is required:} losing
-them leaves the label column a character vector instead of a factor (the
-row order falls back to first appearance; \verb{levels =} fixes it for good),
-and makes \code{notes} report only the discards from \code{\link[=ard_spread]{ard_spread()}}.  Values
-are unaffected, and a manipulation that really does break the rows is
-caught -- two values arriving in one cell is an error, not a silent
-overwrite.
-
-\code{mutate()} is the one to watch, because it is the natural verb for a
-one-pipe \verb{ard_normalize() |> ... |> ard_spread()}.  Name the label
-column's order in \verb{levels =} and nothing is lost.
+One attribute is left, \code{"ard_ignored"}, and nothing reads it to build the
+table: it is a report about rows that are no longer in the frame, so there
+is no column it could be.  Dropping it (\code{mutate()} and \code{select()}, base
+\code{transform()} and \code{subset()} do) only makes \code{notes} report the discards
+from \code{\link[=ard_spread]{ard_spread()}} alone.
 }
 
 \section{Factor levels}{
 
 \pkg{cards} stores the level of a factor variable as a one-element factor,
 so the flattening has to take the label: a level comes back as \code{"<65"}, not
-as the integer code \code{1}.  The order the factor declared is kept too, on the
-\code{"ard_factor_levels"} attribute, and \code{\link[=ard_spread]{ard_spread()}} uses it as that
-variable's row order unless \code{levels} says otherwise.
+as the integer code \code{1}.  The order the factor declared is kept too, as the
+\code{.label_order} column -- each row's position within its variable's declared
+levels -- and \code{\link[=ard_spread]{ard_spread()}} rebuilds that variable's row order from it
+unless \code{levels} says otherwise.  Relabelling a level keeps its position,
+so indenting \code{"Mild"} to \code{"  Mild"} with \code{mutate()} still sorts where
+\code{"Mild"} was declared.
 }
 
 \section{Lifecycle}{

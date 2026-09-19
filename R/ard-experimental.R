@@ -100,6 +100,29 @@
   if (length(out)) out else NULL
 }
 
+# Read that order back off the normalized frame's `.label_order` column: for
+# each variable, its labels in the position the factor gave them.  A COLUMN,
+# not an attribute, because the caller is invited to rework the frame between
+# ard_normalize() and ard_spread() and `dplyr::mutate()` -- the natural verb
+# for a one-pipe conversion -- rebuilds it and drops attributes.  Reading the
+# label as it stands now is also what we want: a caller who indented a level
+# to "  Mild" gets "  Mild" in the order "Mild" declared.
+.ard_levels_from_order <- function(d) {
+  need <- c(".label_order", ".label", "variable")
+  if (!all(need %in% names(d))) return(NULL)
+  ok <- !is.na(d$.label_order) & !is.na(d$.label)
+  if (!any(ok)) return(NULL)
+  v   <- as.character(d$variable)[ok]
+  lab <- as.character(d$.label)[ok]
+  ord <- as.integer(d$.label_order)[ok]
+  out <- list()
+  for (k in .ard_first_seen(v)) {
+    hit <- v == k
+    out[[k]] <- unique(lab[hit][order(ord[hit])])
+  }
+  if (length(out)) out else NULL
+}
+
 # TRUE when every non-NA element of a flattened column is numeric-like.
 .ard_is_numericish <- function(x) {
   if (is.numeric(x) || is.logical(x)) return(TRUE)
@@ -836,38 +859,39 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #'
 #' @section Working on the result before [ard_spread()]:
 #' The result is a plain data frame; reshaping it in between is the point of
-#' the two-stage split.  Everything it needs is in its **columns**, so
-#' `dplyr::mutate()`, `filter()`, `bind_rows()` and base `[` are all safe.
+#' the two-stage split.  **Everything [ard_spread()] reads is in the
+#' columns**, so `dplyr::mutate()`, `filter()`, `arrange()`, `bind_rows()`,
+#' `select()` and base `[` are all safe, and so is a one-pipe
+#' `ard_normalize() |> ... |> ard_spread()`.  A manipulation that really does
+#' break the rows is still caught -- two values arriving in one cell is an
+#' error, not a silent overwrite.
 #'
-#' Two conveniences ride on attributes, and only some manipulations carry
-#' them across.  `dplyr::filter()`, `slice()`, `arrange()`, `bind_rows()` and
-#' base `[` / `$<-` keep them; `dplyr::mutate()` and `select()`, base
-#' `transform()` and `subset()` drop them.  **Neither is required:** losing
-#' them leaves the label column a character vector instead of a factor (the
-#' row order falls back to first appearance; `levels =` fixes it for good),
-#' and makes `notes` report only the discards from [ard_spread()].  Values
-#' are unaffected, and a manipulation that really does break the rows is
-#' caught -- two values arriving in one cell is an error, not a silent
-#' overwrite.
-#'
-#' `mutate()` is the one to watch, because it is the natural verb for a
-#' one-pipe `ard_normalize() |> ... |> ard_spread()`.  Name the label
-#' column's order in `levels =` and nothing is lost.
+#' One attribute is left, `"ard_ignored"`, and nothing reads it to build the
+#' table: it is a report about rows that are no longer in the frame, so there
+#' is no column it could be.  Dropping it (`mutate()` and `select()`, base
+#' `transform()` and `subset()` do) only makes `notes` report the discards
+#' from [ard_spread()] alone.
 #'
 #' @section Factor levels:
 #' \pkg{cards} stores the level of a factor variable as a one-element factor,
 #' so the flattening has to take the label: a level comes back as `"<65"`, not
-#' as the integer code `1`.  The order the factor declared is kept too, on the
-#' `"ard_factor_levels"` attribute, and [ard_spread()] uses it as that
-#' variable's row order unless `levels` says otherwise.
+#' as the integer code `1`.  The order the factor declared is kept too, as the
+#' `.label_order` column -- each row's position within its variable's declared
+#' levels -- and [ard_spread()] rebuilds that variable's row order from it
+#' unless `levels` says otherwise.  Relabelling a level keeps its position,
+#' so indenting `"Mild"` to `"  Mild"` with `mutate()` still sorts where
+#' `"Mild"` was declared.
 #'
 #' @return A data frame with one row per ARD statistic: the key columns, the
 #'   ARD's own `variable` / `variable_level` / `context` / `stat_name` /
 #'   `stat_label` / `stat` / `stat_fmt`, the structural classification `.kind`
 #'   (`"continuous"` / `"categorical"`, see [rtfreporter-ard]), `.label` (the
-#'   deepest non-missing hierarchy value, or `variable_level`), `.overall`, and
-#'   `.depth` --- 1 = outermost within a `hierarchy`, and `NA` when there is
-#'   none, since depth only means something inside one.
+#'   deepest non-missing hierarchy value, or `variable_level`), `.label_order`
+#'   (that label's position in the level order its factor declared, `NA` when
+#'   it declared none), `.overall`, and `.depth` --- 1 = outermost within a
+#'   `hierarchy`, 0 = a row of one that is not one of its levels, and `NA`
+#'   throughout when no `hierarchy` was given, since depth only means
+#'   something inside one.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
@@ -1003,6 +1027,11 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
       d$.depth[hit] <- i
     }
     d$.depth[d$.overall] <- 1L
+    # 0, not NA: inside a declared hierarchy every row has an answer, even
+    # "not one of its levels".  That keeps "is there a hierarchy here?" a
+    # question about this column, which survives any manipulation, rather
+    # than about an attribute, which does not.
+    d$.depth[is.na(d$.depth)] <- 0L
   } else {
     # NA, not 1: depth only means something inside a hierarchy, and a column
     # that says "there is no hierarchy here" survives every manipulation the
@@ -1022,15 +1051,31 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 
   d$.kind <- .ard_kind(d)
 
+  # The order each factor variable declared, as a POSITION per row.  It rides
+  # in a column so that every manipulation the caller may make in between
+  # carries it; the levels themselves are rebuilt from it by
+  # .ard_levels_from_order().
+  d$.label_order <- NA_integer_
+  if (length(fct_levels)) {
+    lv <- as.character(d$variable)
+    for (k in names(fct_levels)) {
+      hit <- !is.na(lv) & lv == k
+      if (any(hit)) {
+        d$.label_order[hit] <- match(d$.label[hit], fct_levels[[k]])
+      }
+    }
+  }
+
   rownames(d) <- NULL
   front <- c(keys, "variable", "variable_level", "context", "stat_name",
              "stat_label", "stat", "stat_fmt", ".kind", ".depth", ".label",
-             ".overall")
+             ".label_order", ".overall")
   front <- intersect(front, names(d))
   out <- d[, c(front, setdiff(names(d), front)), drop = FALSE]
-  attr(out, "ard_factor_levels") <- fct_levels
+  # `ard_ignored` is the one attribute left, and nothing reads it to build the
+  # table: it is a report about rows that are no longer here, so there is no
+  # column it could be.  Losing it only shortens a message.
   attr(out, "ard_ignored") <- ignored
-  attr(out, "ard_hierarchy") <- if (length(hierarchy)) hierarchy else NULL
   # The class is a hint, not a requirement: ard_spread() accepts any data frame
   # of the right shape, because the whole point of the two-stage split is that
   # you may rebuild the middle however you like.  It is here so that passing a
@@ -1296,8 +1341,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   # column.  Fill it in rather than making every flat summary spell it out.
   # One variable needs no grouping column at all, so the default stays empty --
   # and neither does a hierarchy, where the hierarchy columns do the grouping.
-  has_hier <- any(!is.na(d$.depth)) ||
-    !is.null(attr(x, "ard_hierarchy", exact = TRUE))
+  has_hier <- any(!is.na(d$.depth))
   if (is.null(rows) && !has_hier &&
       length(.ard_first_seen(d$variable)) > 1L) {
     rows <- c(group = "variable")
@@ -1471,7 +1515,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     # write "AGEGR1 runs <65, 65-74, >=75" without knowing what the label
     # column ends up being called.  Assemble one order out of those, falling
     # back to whatever order each factor variable declared for itself.
-    fl <- attr(d, "ard_factor_levels", exact = TRUE)
+    fl <- .ard_levels_from_order(d)
     if (is.null(lv) && (!is.null(fl) ||
         (!is.null(levels) && any(names(levels) %in% .ard_first_seen(d$variable))))) {
       lv <- .ard_label_order(d, cells, c(levels, fl[setdiff(names(fl),

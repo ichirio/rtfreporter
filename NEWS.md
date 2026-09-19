@@ -157,16 +157,22 @@
   of an attribute, which `transform()` and friends drop.  `.depth` is now `NA`
   when there is no hierarchy --- depth only means something inside one --- so
   it is a **column** question, and survives anything.  The two remaining
-  attributes are conveniences: losing them leaves the label column a character
-  vector rather than a factor and makes `notes` report only
-  `ard_spread()`'s discards.  `?ard_normalize` now says exactly which
-  manipulations carry them: `dplyr::filter()`, `slice()`, `arrange()`,
-  `bind_rows()` and base `[` / `$<-` keep them, while `dplyr::mutate()` and
-  `select()`, base `transform()` and `subset()` drop them.  `mutate()` is
-  the one to watch, since it is the natural verb for a one-pipe
-  `ard_normalize() |> ... |> ard_spread()`; naming the label column's order
-  in `levels =` makes the loss irrelevant.  The documentation previously
-  listed `mutate()` as safe.
+  **everything [ard_spread()] reads is in the columns.**  The level order a
+  factor variable declared now rides in a `.label_order` column (each row's
+  position within its own variable's levels) rather than on an
+  `"ard_factor_levels"` attribute, and "is there a hierarchy here?" is
+  answered by `.depth` alone --- 0 now means "inside a declared hierarchy,
+  but not one of its levels" where it used to be `NA` --- rather than by an
+  `"ard_hierarchy"` attribute.  Attributes do not survive `dplyr::mutate()`,
+  which is the natural verb for a one-pipe
+  `ard_normalize() |> ... |> ard_spread()`, so anything the conversion
+  depends on had no business living on one.  Reading the label as it stands
+  is the better behaviour anyway: indent `"Mild"` to `"  Mild"` in between
+  and it still sorts where `"Mild"` was declared.
+
+  One attribute is left, `"ard_ignored"`, and nothing reads it to build the
+  table --- it reports rows that are no longer in the frame, so there is no
+  column it could be.  Losing it only shortens the `notes` message.
 
   `ard_normalize()` also gives its result the class `ard_long`, used **only**
   to recognise a raw ARD passed by mistake and say so.  It is not required:
