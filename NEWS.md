@@ -1,5 +1,242 @@
 # rtfreporter (development version)
 
+### Experimental ARD helpers
+
+- **A cards/cardx ARD can be turned into a table `data.frame` directly**
+  (#474, Discussion #473).  `ard_normalize()` flattens an ARD into an
+  explicitly keyed long table; `ard_spread()` applies cell templates and
+  pivots the column keys across; `ard_table()` is both in one call.
+  `ard_keys()` reports what an ARD holds and `ard_template()` writes the
+  conversion call for you.  A spreadsheet definition file --- `ard_spec()`,
+  `read_ard_spec()`, `write_ard_spec()`, `ard_spec_template()` --- carries
+  variable labels, row templates (so `Min` and `Max` print as one
+  `Min, Max` line), the rounding family and the decimal or significant
+  digits.  `ard_round()` exposes the SAS half-away-from-zero rule that
+  base R's `round()` does not implement.
+
+  **Nothing is read from the ARD's object attributes.**  `attr(ard, "args")`
+  orders `by` and `variables` differently per generator and cannot tell them
+  apart, keeps only the first operand's value after `dplyr::bind_rows()`, and
+  is not updated when the ARD is filtered; the ARD class survives
+  `bind_rows()` with a differently shaped ARD, so dispatching on it is no
+  safer.  Every structural fact is an explicit argument.
+
+  **A `cells` entry is not keyed on the ARD's `context` alone.**  `context` is
+  a cards implementation detail and it moves: `ard_continuous()` stamps
+  `"continuous"` but its 0.9 rename `ard_summary()` stamps `"summary"`, and
+  `ard_categorical()` stamps `"categorical"` where `ard_tabulate()` stamps
+  `"tabulate"`.  Keying on it alone would tie a script to one cards generation
+  and silently produce no cells against another.  Each variable is therefore
+  also classified from what its rows contain --- `"categorical"` when it has
+  levels to enumerate, `"continuous"` when it does not --- and `cells` is
+  matched by variable, then context (known spellings treated as equivalent),
+  then that structural kind, then `"default"`.  The kind is the same on every
+  cards version, past and future; `ard_keys()` prints both, labelled.
+
+  **`levels` accepts an analysis variable's name**, not only a row or column
+  key, and then orders that variable's rows in the label column --- so a
+  demographics display can say `AGEGR1 = c("<65", "65-74", ">=75")` without
+  knowing what the label column ends up being called.  A variable left out
+  keeps its `cells` templates' order.  A **column** key listed in `levels`
+  fixes the order of the spread columns, which is what keeps a hand-written
+  `col_header` over the arm it names.
+
+  **`labels` and `levels` must name every element.**  Both are looked up by
+  name, so an unnamed entry is not a no-op you would notice --- it is a label
+  or an order that silently never applies.  The classic way to produce one is
+  `setNames(group_labels, group_vars)` with vectors of different lengths:
+  `setNames()` gives the surplus element an `NA` name rather than complaining,
+  and that characteristic then quietly keeps its raw variable name in the
+  table.  That is now an error.
+
+  **`ard_pull()`** reads the per-column statistics that belong in the column
+  header rather than in a row --- the denominator behind every percentage, the
+  subject count per arm --- keyed exactly like the spread columns, ready to
+  paste into a `col_header`.  Taking it from the ARD rather than counting the
+  data again makes it, by construction, the number the percentages used.
+
+  **A positional key now warns when the position is ambiguous.**
+  `group1_level` is a position, not a variable: cards fills the group columns
+  in the order each summary was requested, so once several summaries are
+  stacked the same treatment variable can sit at `group1` in one block and
+  `group2` in another.  Reading the position then splits one arm across two
+  table columns and invents columns for whatever else landed there.  Naming the
+  variable (`cols = "TRT01P"`) is immune, and a positional reference is now
+  warned about when that group position really does hold more than one
+  variable --- so a single-block ARD stays quiet.
+
+  **A `cells` that is not a list is one recipe**, used for every variable, and
+  its names are row labels; a list is a map keyed by variable / context / kind
+  / `"default"`.  The container decides, because
+  `c("Mean (SD)" = ..., "Min, Max" = ...)` cannot otherwise be told from a map.
+  Passing such a named vector at the top level previously failed with
+  "subscript out of bounds".
+
+  **`rows` defaults to the analysis variable** on a flat ARD carrying more
+  than one, since that is the only thing left to group those rows by; one
+  variable, or any `hierarchy`, leaves it empty, and an explicit `rows` always
+  wins.  `rows` is not tied to `variable` --- it takes any column of the
+  normalized frame, and the name on the left is only the output column's name.
+
+  **`sort` can name its keys** instead of being arranged afterwards: a
+  character vector, in priority order, each element optionally prefixed `-`
+  for descending, naming a result column, a statistic (totalled across the
+  spread columns), `".overall"` (the hierarchical-overall block first) or
+  `".depth"` (a level's own summary row before the rows nested under it).  So
+  `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of an
+  adverse-events row order, replacing `sort_stat` plus a `dplyr::arrange()`
+  plus dropping the helper column.
+
+  **A factor level keeps its label.**  cards stores the level of a factor
+  variable as a one-element factor, and flattening those with `unlist()`
+  yields the integer codes --- so a demographics table came out reading `1`,
+  `2`, `3` where it should read `<65`, `65-74`, `>=75`.  The label was in the
+  ARD all along; only the flattening lost it.  The order the factor declared
+  is now kept as well, and becomes that variable's row order unless `levels`
+  says otherwise.
+
+  **Either of the ARD's two values is reachable.**  `stats = "rows"` gained
+  `value =`, choosing the raw numeric `"stat"` (the default, so the table can
+  still be aligned with `set_decimal_split()`) or `"stat_fmt"`, the string
+  cards already formatted.  In a template the choice was always there but
+  unnamed; `{x:fmt}` now says "cards' formatted value" out loud, beside
+  `{x:raw}` for the untouched `stat` and `{x:.1f}` for formatting it here.
+
+  **A row identity that does not separate two summaries is an error.**  Four
+  continuous variables each produce a `Mean (SD)` line; with nothing but the
+  label to tell them apart they landed in the same cell and overwrote each
+  other, leaving a table with a quarter of its rows carrying the last
+  variable's numbers, and no diagnostic at all.  Two different values arriving
+  at one cell now stop with the cell, both values, and the two variables
+  named.
+
+  **Where a value lives depends on how the ARD was built, so neither of the
+  two movable ones is guessed.**  `ard_overall()` says where the overall row
+  comes from: the `..ard_hierarchical_overall..` sentinel that
+  `ard_stack_hierarchical(over_variables = TRUE)` writes, or --
+  `ard_overall(label, from = )` -- a block that was summarised separately and
+  bound, where the treatment is the analysed variable and sits in `variable`
+  rather than in a group pair.  A key column is filled from `variable` /
+  `variable_level` as well as from the group pairs, so such a block is no
+  longer discarded.
+
+  `ard_pull()` replaces `ard_big_n()`, which guessed and was wrong.  "bigN" is
+  tfrmt's word, not cards', and the value has no fixed home: measured across
+  eight ways of building the same table, the per-arm denominator turned up as
+  `N` on a categorical, continuous or hierarchical summary, as `n` on the by
+  variable's own rows, and as a statistic the author wrote themselves --- while
+  in the same ARD `stat_name == "N"` is the **study** total on the by
+  variable's own rows.  The old heuristic returned a plausible wrong number in
+  five of the eight.  `ard_pull()` names the statistic, excludes the key
+  variables' own tabulations by default, and when the ARD still offers more
+  than one answer it **stops and lists the candidates with their values**
+  rather than choosing.  Column headers stay rtfreporter's job; `ard_table()`
+  builds the body, and `ard_pull()` is there when the header needs a number
+  that must agree with the percentages.
+
+  **What was not used is reported.**  Every stage discards ARD rows, and doing
+  it in silence is how a mis-typed `cells` looks exactly like a correct one.
+  `notes = TRUE` (the default) summarises them by context, statistic and
+  reason; `notes = "attr"` also attaches the per-variable detail.  It is not
+  attached by default, because the result is a plain data frame that you will
+  compare against whatever you built before.
+
+  **The positional-key warning no longer fires on a subgroup table.**
+  Reading a group position is not wrong by itself: a subgroup display's rows
+  *are* "which subgroup variable" by "which level of it", so
+  `rows = c(grp1 = "group2", grp2 = "group2_level")` is the table rather than a
+  mistake, and `group2` holding ten variables is the point.  What is ambiguous
+  is taking the level column **without** its name column, since then levels of
+  different variables land in one key with nothing to tell them apart --- so
+  that is all the warning now covers, and it says how to make the pair explicit
+  instead of suggesting a variable name that would break the display.
+
+  **Reshaping the middle stage no longer depends on attributes.**  The
+  two-stage split exists so you can rebuild the frame between
+  `ard_normalize()` and `ard_spread()`, and "is there a hierarchy?" was asked
+  of an attribute, which `transform()` and friends drop.  `.depth` is now `NA`
+  when there is no hierarchy --- depth only means something inside one --- so
+  it is a **column** question, and survives anything.  The two remaining
+  **everything [ard_spread()] reads is in the columns.**  The level order a
+  factor variable declared now rides in a `.label_order` column (each row's
+  position within its own variable's levels) rather than on an
+  `"ard_factor_levels"` attribute, and "is there a hierarchy here?" is
+  answered by `.depth` alone --- 0 now means "inside a declared hierarchy,
+  but not one of its levels" where it used to be `NA` --- rather than by an
+  `"ard_hierarchy"` attribute.  Attributes do not survive `dplyr::mutate()`,
+  which is the natural verb for a one-pipe
+  `ard_normalize() |> ... |> ard_spread()`, so anything the conversion
+  depends on had no business living on one.  Reading the label as it stands
+  is the better behaviour anyway: indent `"Mild"` to `"  Mild"` in between
+  and it still sorts where `"Mild"` was declared.
+
+  One attribute is left, `"ard_ignored"`, and nothing reads it to build the
+  table --- it reports rows that are no longer in the frame, so there is no
+  column it could be.  Losing it only shortens the `notes` message.
+
+  `ard_normalize()` also gives its result the class `ard_long`, used **only**
+  to recognise a raw ARD passed by mistake and say so.  It is not required:
+  `ard_spread()` still accepts any data frame of the right shape, because
+  rebuilding the middle is the point.
+
+  Naming the **analysed** variable where a key is wanted --- `label =
+  c(label = "WORSTGR")` when `WORSTGR` is what was tabulated --- now says
+  that its levels are in `.label`, rather than only listing the columns
+  that do exist.  `levels` accepts that same name (it orders the label
+  column by it), so the two arguments look inconsistent until the message
+  explains why.
+
+  The keyed columns are now plain factors, and the `ordered` argument of
+  `ard_table()` / `ard_spread()` is **gone**.  `levels =` states a display
+  order, which is the whole of what the caller said; an ordered factor went
+  on to claim that `N < Mean < SD` is a magnitude, which is false, and
+  nothing could tell which columns were genuinely ordinal.  Nothing read the
+  class either --- `order()` sorts on the level codes either way, so the row
+  order and the rendered RTF are unchanged --- while a plain factor survives
+  `dplyr::bind_rows()` across differing level sets and `relevel()`, both of
+  which an ordered factor refuses.  Callers who want the ordered class can
+  ask for it explicitly:
+  `dplyr::mutate(tbl, dplyr::across(where(is.factor), ~ factor(.x, levels(.x),
+  ordered = TRUE)))`.
+
+  A `cells` element may be **guarded**: `c(n == 0 ~ "0", "{n} ({p})")` uses
+  the first element whose condition holds *and* whose template resolves, so a
+  guard that is false and a token with no value fail the same way and the
+  chain simply moves on.  The condition is ordinary R, evaluated with the
+  record's statistics by name plus its own columns --- `variable`, `.label`,
+  `.depth`, `.kind` and the keys --- and it may name the caller's variables
+  too.  This is what a table needs when the cell depends on the *value*
+  rather than on which statistics are present: an overall-response table
+  prints `0` instead of `0 (0.0)` and `(100)` instead of `(100.0)` from the
+  recipe, with no `mutate()` afterwards.
+
+  `ard_cells()` spells the one recipe shape the existing containers cannot:
+  a **named row whose value is itself a chain**, which `c()` flattens before
+  `ard_spread()` can see it.  Reading a recipe is then `list()` for which
+  variable, `ard_cells()` for which row, `c()` for which template to try
+  first.
+
+  **One definition file can cover a whole study.**  An `ard_spec()` may
+  carry an `output_id` column, and `read_ard_spec(output_id = )` narrows the
+  file to that report *before* any variable is looked up --- which is what
+  makes a shared workbook safe when two tables format the same variable
+  differently, as they must in a BDS study where every analysis variable is
+  called `AVAL`.  Rows with a blank `output_id` are the file's defaults and
+  still apply; a row naming the report beats a default for the same cell.
+  Supplying `output_id` for a file that has no such column is an error, and
+  naming a report the file does not mention reports that its defaults were
+  used, rather than quietly behaving as if nothing had been asked.
+
+  A spec that defines the same cell twice now stops when it is read, naming
+  the variable, the row and both templates.  Before, the two definitions both
+  rendered and the caller met the row-collision error much later, pointing at
+  the ARD rather than at the file.
+
+  These functions are **experimental**: they are newer than the rest of the
+  package, are not covered by its stability expectations, and may be
+  withdrawn.  Nothing else in the package depends on them, and
+  `R/ard-experimental.R` documents how to remove the family in one step.
+
 ### Documentation
 
 - **The pre-1.0 exception and the hotfix procedure are written down** (#471).
