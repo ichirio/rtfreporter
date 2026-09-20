@@ -1207,3 +1207,45 @@ test_that("notes = 'applied' stays quiet for stats = 'rows'", {
                stats = "rows", notes = "applied")), collapse = "")
   expect_false(grepl("templates produced", joined, fixed = TRUE))
 })
+
+test_that("the rounding family: argument > spec > option > R's own", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  d <- d[d$variable == "AGE" & d$stat_name == "mean", ]
+  d$stat <- 0.25
+  cell <- function(...) {
+    ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+               cells = "{mean:.1f}", notes = FALSE, ...)$Placebo[1]
+  }
+  sp <- ard_spec(data.frame(variable = "AGE", template = "{mean:.1f}",
+                            round = "sas", stringsAsFactors = FALSE))
+
+  expect_identical(cell(), "0.2")                      # R's own, the default
+  expect_identical(cell(round = "sas"), "0.3")         # the argument
+  expect_identical(cell(spec = sp), "0.3")             # the spec file
+  expect_identical(cell(spec = sp, round = "r"), "0.2")# argument beats spec
+
+  old <- options(rtfreporter.ard_round = "sas")
+  on.exit(options(old), add = TRUE)
+  expect_identical(cell(), "0.3")                      # the option
+  expect_identical(cell(round = "r"), "0.2")           # argument beats option
+  options(old)
+})
+
+test_that("ard_table() passes a named round on and leaves the spec alone", {
+  skip_if_no_cards()
+  a <- make_ard()
+  cell <- function(...) {
+    ard_table(a, cols = "TRT", rows = c(group = "variable"),
+              cells = "{mean:.0f}", notes = FALSE, ...)$Placebo[1]
+  }
+  # AGE's mean is not a tie here, so compare the two families on one that is
+  d <- ard_normalize(a)
+  d <- d[d$variable == "AGE" & d$stat_name == "mean", ]
+  d$stat <- 0.5
+  f <- function(...) ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                                cells = "{mean:.0f}", notes = FALSE, ...)$Placebo[1]
+  expect_identical(f(round = "sas"), "1")
+  expect_identical(f(round = "r"), "0")
+  expect_type(cell(round = "sas"), "character")
+})

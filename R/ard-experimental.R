@@ -1547,7 +1547,11 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
                        sort_stat = NULL, na = NA_character_, notes = TRUE) {
   stats <- match.arg(stats)
   value <- match.arg(value)
-  round <- .ard_round_type(round)
+  # Remember whether the caller named a rounding family BEFORE anything
+  # assigns to `round`: resolving it here would make `missing(round)` false
+  # below and hide a spec file's own `round` column.  It is resolved once the
+  # spec has had its say.
+  round_given <- !is.null(round)
   # `stats = "rows"` lays the statistic out as a row and puts a value straight
   # in the cell, so which of the ARD's two values that is has to be sayable:
   # the raw numeric `stat` (the default -- a PK table is formatted later, by
@@ -1568,10 +1572,12 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       if (length(ro) && !is.null(lo)) levels[[lo]] <- ro
     }
     if (missing(cells))  cells  <- .ard_spec_cells(sp)
-    if (missing(round) && !is.null(sp$round) && any(!is.na(sp$round))) {
+    if (!round_given && !is.null(sp$round) && any(!is.na(sp$round))) {
       round <- as.character(stats::na.omit(sp$round))[1L]
     }
   }
+  # explicit argument > spec file > option > R's own
+  round <- .ard_round_type(round)
 
   if (!".kind" %in% names(d) && all(c("variable", "variable_level") %in% names(d))) {
     d$.kind <- .ard_kind(d)

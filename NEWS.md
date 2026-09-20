@@ -259,8 +259,14 @@
   `getOption("rtfreporter.ard_round")`, which is `"r"` unless a study sets
   `options(rtfreporter.ard_round = "sas")` once.  An explicit argument still
   wins over the option, and a spec file's `round` column wins over both for
-  the rows it names --- which `ard_table()` now honours, having previously
-  passed its own default down and hidden the file's.
+  the rows it names.  The full order is **argument, then spec file, then
+  option, then R's own**, and all four are tested against one tie.
+
+  A spec file's `round` column had in fact never reached anything.
+  `ard_spread()` resolved the argument at the top of the function, which
+  made `missing(round)` false by the time the spec was read, and
+  `ard_table()` passed its own default down on top of that.  Both are
+  fixed: the family is now resolved once, after the spec has had its say.
 
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
