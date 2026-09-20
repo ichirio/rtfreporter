@@ -280,18 +280,42 @@
 #  ard_round()
 # ============================================================================
 
-#' Round the way SAS rounds, or the way R rounds
+# The rounding family, resolved once.  R's own half-to-even is the default
+# because this is an R package and that is what `round()` does; a study that
+# has to match SAS says so ONCE --
+#     options(rtfreporter.ard_round = "sas")
+# -- instead of repeating `round =` at every call.  An explicit argument
+# still wins over the option, and a spec file's `round` column wins over
+# both for the rows it names.
+.ard_round_type <- function(x = NULL) {
+  if (is.null(x)) x <- getOption("rtfreporter.ard_round", "r")
+  if (!is.character(x) || length(x) != 1L || !x %in% c("r", "sas")) {
+    .ard_stop(paste0("`round` must be \"r\" (half to even, what R's own ",
+                     "round() does) or \"sas\" (half away from zero)."))
+  }
+  x
+}
+
+#' Round the way R rounds, or the way SAS rounds
 #'
 #' `ard_round()` exists because the two families disagree on a tie.  Base R
 #' uses IEEE "round half to even" (`round(0.5)` is `0`, `round(2.5)` is `2`),
 #' while SAS's `ROUND()` rounds a half **away from zero** (`0.5` becomes `1`,
-#' `2.5` becomes `3`).  A clinical table that must match a SAS-produced one
-#' needs the SAS rule, which is why it is the default here.
+#' `2.5` becomes `3`).  R's own rule is the default, this being an R package;
+#' a study that has to match a SAS-produced table says so once, with
+#' `options(rtfreporter.ard_round = "sas")`, rather than at every call.
+#'
+#' Note that cards already rounds a half away from zero when it writes
+#' `stat_fmt`, so a table built from `{x}` tokens follows SAS whatever this
+#' option says --- the option reaches `{x:.1f}`-style tokens, which round
+#' here.
 #'
 #' @param x Numeric vector.
 #' @param digits Number of decimal places.
-#' @param type `"sas"` (half away from zero, the default) or `"r"` (base R's
-#'   half-to-even).
+#' @param type `"r"` (base R's half-to-even) or `"sas"` (half away from zero).
+#'   `NULL`, the default, reads `getOption("rtfreporter.ard_round")`, which is
+#'   `"r"` unless the study set it --- **one line, once**:
+#'   `options(rtfreporter.ard_round = "sas")`.  An explicit `type` still wins.
 #'
 #' @return A numeric vector.
 #'
@@ -299,11 +323,11 @@
 #' **Experimental.**  See [rtfreporter-ard].
 #'
 #' @examples
-#' ard_round(c(0.5, 1.5, 2.5, -0.5), 0)            # SAS: 1 2 3 -1
-#' ard_round(c(0.5, 1.5, 2.5, -0.5), 0, type = "r") # R:   0 2 2  0
+#' ard_round(c(0.5, 1.5, 2.5, -0.5), 0)              # R:   0 2 2  0
+#' ard_round(c(0.5, 1.5, 2.5, -0.5), 0, type = "sas") # SAS: 1 2 3 -1
 #' @export
-ard_round <- function(x, digits = 0, type = c("sas", "r")) {
-  type <- match.arg(type)
+ard_round <- function(x, digits = 0, type = NULL) {
+  type <- .ard_round_type(type)
   x <- as.numeric(x)
   if (identical(type, "r")) return(round(x, digits))
   m <- 10^digits
@@ -323,7 +347,13 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
 #   {p:.1f%}          multiply by 100 first, then 1 decimal
 #   {mean:.3s}        3 significant digits
 #   {n:d}             integer
-#   {n:raw}           the raw `stat`, as.character(), untouched
+#   {n:stat}          the `stat` column, as.character(), untouched
+#   {n:stat_fmt}      the `stat_fmt` column, and an error if it is empty
+#
+# The two specs that name a column are spelled as the ARD spells them, so
+# there is no mapping to learn.  A bare {n} is the forgiving one: it prefers
+# stat_fmt and falls back to stat, because stat_fmt is optional and an ARD
+# built without fmt_fun would otherwise produce nothing at all.
 #
 # A template that references a statistic the row group does not have yields NA
 # for that row, which is what makes a fallback chain work.
@@ -343,16 +373,41 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
 }
 
 .ard_format_value <- function(stat, stat_fmt, spec, round_type) {
-  if (identical(spec, "raw")) {
+  # `stat` takes the column as it stands, whether it holds a number or a
+  # string: `method` and `alternative` reach a cell the way `n` does.
+  if (identical(spec, "stat")) {
     if (is.na(stat)) return(NA_character_)
     return(as.character(stat))
   }
-  # "" and "fmt" both mean cards' own formatted value; "fmt" is the spelling
-  # that says so out loud, next to a "{x:raw}" that asks for the unformatted
-  # `stat` and a "{x:.1f}" that formats `stat` here.
-  if (!nzchar(spec) || identical(spec, "fmt")) {
+  # `stat_fmt` is a demand, so an empty one with a value beside it is an
+  # error rather than a blank cell -- the caller asked for cards' formatting
+  # and this ARD has none.
+  if (identical(spec, "stat_fmt")) {
+    if (is.na(stat_fmt) && !is.na(stat)) {
+      .ard_stop(paste0(
+        "`{x:stat_fmt}` was asked for, but this ARD has no `stat_fmt` value ",
+        "here (`stat` is ", sQuote(as.character(stat)), ").
+",
+        "  cards writes `stat_fmt` from `fmt_fun`; an ARD built without one ",
+        "has nothing to read.
+",
+        "  Use `{x}` to take whichever is there, or `{x:.1f}` to format ",
+        "`stat` yourself."))
+    }
     if (is.na(stat_fmt)) return(NA_character_)
     return(as.character(stat_fmt))
+  }
+  # A bare token prefers cards' formatted value and falls back to the raw
+  # one, so a template keeps working against an ARD that carries no fmt_fun.
+  if (!nzchar(spec)) {
+    if (!is.na(stat_fmt)) return(as.character(stat_fmt))
+    if (is.na(stat)) return(NA_character_)
+    return(as.character(stat))
+  }
+  if (spec %in% c("raw", "fmt")) {
+    .ard_stop(sprintf(paste0(
+      "Format spec '%s' has been renamed: write '%s', which is the ARD ",
+      "column it reads."), spec, if (spec == "raw") "stat" else "stat_fmt"))
   }
   pct <- grepl("%$", spec)
   spec <- sub("%$", "", spec)
@@ -370,8 +425,8 @@ ard_round <- function(x, digits = 0, type = c("sas", "r")) {
   if (identical(spec, "d")) {
     return(sprintf("%.0f", ard_round(x, 0, round_type)))
   }
-  .ard_stop(sprintf("Unknown format spec '%s'. Use .Nf, .Ns, d, raw, or a %s suffix.",
-                    spec, "%"))
+  .ard_stop(sprintf(paste0("Unknown format spec '%s'. Use .Nf, .Ns, d, ",
+                           "stat, stat_fmt, or a %s suffix."), spec, "%"))
 }
 
 # Resolve one template against one group of ARD rows.  A token naming a
@@ -1445,8 +1500,12 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   an AE table's row order, and needs neither `sort_stat` nor an `arrange()`
 #'   afterwards.
 #' @param sep Separator pasted between multiple `cols` keys.
-#' @param round Tie-breaking rule for `{x:.1f}`-style tokens, `"sas"` or
-#'   `"r"`.  See [ard_round()].
+#' @param round Tie-breaking rule for `{x:.1f}`-style tokens.  `NULL`, the
+#'   default, reads `getOption("rtfreporter.ard_round")` --- base R's
+#'   half-to-even unless the study set `"sas"` once, which is the single
+#'   place to change it.  It does **not** reach `{x}` or `{x:stat_fmt}`,
+#'   which take a string \pkg{cards} already rounded (half away from zero, as
+#'   it happens).  See [ard_round()].
 #' @param spec An [ard_spec()] definition (or the path to one) supplying
 #'   labels, level orders, row templates and digits.  Arguments given
 #'   explicitly win over the spec.
@@ -1484,11 +1543,11 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
                        value = c("stat", "stat_fmt"),
                        levels = NULL, labels = NULL, sort = TRUE,
                        sep = "____",
-                       round = c("sas", "r"), spec = NULL,
+                       round = NULL, spec = NULL,
                        sort_stat = NULL, na = NA_character_, notes = TRUE) {
   stats <- match.arg(stats)
   value <- match.arg(value)
-  round <- match.arg(round)
+  round <- .ard_round_type(round)
   # `stats = "rows"` lays the statistic out as a row and puts a value straight
   # in the cell, so which of the ARD's two values that is has to be sayable:
   # the raw numeric `stat` (the default -- a PK table is formatted later, by
@@ -1888,7 +1947,7 @@ ard_table <- function(ard, cols, rows = NULL, label = ".label",
                       cells = "{n} ({p})", stats = c("cells", "rows"),
                       value = c("stat", "stat_fmt"),
                       levels = NULL, labels = NULL, sort = TRUE,
-                      sep = "____", round = c("sas", "r"),
+                      sep = "____", round = NULL,
                       spec = NULL, sort_stat = NULL, na = NA_character_,
                       notes = TRUE,
                       drop_contexts = c("attributes", "total_n"),
@@ -1900,9 +1959,12 @@ ard_table <- function(ard, cols, rows = NULL, label = ".label",
                stats = match.arg(stats), value = match.arg(value),
                levels = levels, labels = labels,
                sort = sort, sep = sep,
-               round = match.arg(round), spec = spec, sort_stat = sort_stat,
+               spec = spec, sort_stat = sort_stat,
                na = na, notes = notes)
   if (!missing(cells)) args$cells <- cells
+  # Pass `round` on only when the caller named it, so a spec file's `round`
+  # column still reaches ard_spread()'s `missing(round)` test.
+  if (!is.null(round)) args$round <- round
   do.call(ard_spread, args)
 }
 
@@ -1981,7 +2043,8 @@ ard_table <- function(ard, cols, rows = NULL, label = ".label",
 #'     `{min}, {max}`.  Several templates separated by `|` form a fallback
 #'     chain: the first that resolves wins.}
 #'   \item{`levels`}{`|`-separated level order for that variable.}
-#'   \item{`round`}{`sas` (half away from zero) or `r` (half to even).}
+#'   \item{`round`}{`r` (half to even) or `sas` (half away from zero); wins
+#'     over `getOption("rtfreporter.ard_round")` for the rows it names.}
 #'   \item{`digits`}{Decimal places used for tokens with no inline spec.  A
 #'     comma-separated list applies per token, e.g. `1,2` for
 #'     `{mean} ({sd})`.}
@@ -2428,13 +2491,20 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
 #'   `{p:.1f\%}`   \tab multiplied by 100 first, then 1 decimal \cr
 #'   `{mean:.3s}`  \tab 3 significant digits \cr
 #'   `{n:d}`       \tab integer \cr
-#'   `{n:raw}`     \tab the raw `stat`, `as.character()`, untouched \cr
-#'   `{mean:fmt}`  \tab the same as `{mean}`, said out loud
+#'   `{n:stat}`    \tab the `stat` column, `as.character()`, untouched \cr
+#'   `{mean:stat_fmt}` \tab the `stat_fmt` column, demanded
 #' }
 #' An ARD carries two values per statistic and both are reachable: a token
-#' with no format spec (or `:fmt`) takes `stat_fmt`, the string \pkg{cards}
-#' formatted; any other spec formats the raw `stat` here, and `:raw` takes it
-#' untouched.  For `stats = "rows"`, where a value goes into the cell without
+#' the two specs that reach them are spelled as the ARD spells them, so there
+#' is no mapping to learn.  `:stat_fmt` takes the string \pkg{cards} formatted
+#' and **errors** when this ARD has none, because that is a demand; `:stat`
+#' takes the value untouched, character statistics such as `method` included;
+#' any other spec formats `stat` here.  A **bare** token is the forgiving one
+#' --- it prefers `stat_fmt` and falls back to `stat` --- since `stat_fmt` is
+#' optional and an ARD built without `fmt_fun` would otherwise produce
+#' nothing.  The two differ for a proportion: \pkg{cards} writes `61.6` into
+#' `stat_fmt` while `stat` holds `0.616`, so `{p}` and `{p:.1f\%}` agree and
+#' `{p:.1f}` does not.  For `stats = "rows"`, where a value goes into the cell without
 #' a template, `ard_spread(value = )` makes the same choice.
 #' A template whose statistics are not all present yields `NA`, which is what
 #' lets `c("{n} ({p})", "{n}")` act as a fallback chain.  A **named** vector of

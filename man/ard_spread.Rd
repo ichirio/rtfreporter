@@ -16,7 +16,7 @@ ard_spread(
   labels = NULL,
   sort = TRUE,
   sep = "____",
-  round = c("sas", "r"),
+  round = NULL,
   spec = NULL,
   sort_stat = NULL,
   na = NA_character_,
@@ -133,8 +133,12 @@ afterwards.}
 
 \item{sep}{Separator pasted between multiple \code{cols} keys.}
 
-\item{round}{Tie-breaking rule for \verb{\{x:.1f\}}-style tokens, \code{"sas"} or
-\code{"r"}.  See \code{\link[=ard_round]{ard_round()}}.}
+\item{round}{Tie-breaking rule for \verb{\{x:.1f\}}-style tokens.  \code{NULL}, the
+default, reads \code{getOption("rtfreporter.ard_round")} --- base R's
+half-to-even unless the study set \code{"sas"} once, which is the single
+place to change it.  It does \strong{not} reach \code{{x}} or \code{{x:stat_fmt}},
+which take a string \pkg{cards} already rounded (half away from zero, as
+it happens).  See \code{\link[=ard_round]{ard_round()}}.}
 
 \item{spec}{An \code{\link[=ard_spec]{ard_spec()}} definition (or the path to one) supplying
 labels, level orders, row templates and digits.  Arguments given

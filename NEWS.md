@@ -241,6 +241,27 @@
   reports its two guards and no sign of the general template, which is the
   kind of thing worth knowing before the numbers change.
 
+  **A template's two column specs are now spelled as the ARD spells them.**
+  `{x:stat}` and `{x:stat_fmt}` replace `{x:raw}` and `{x:fmt}`, so there is
+  no mapping to learn --- the spec names the column it reads.  The old
+  spellings say what to write instead.
+
+  The two are no longer symmetric, because the columns are not.  `stat_fmt`
+  is optional: cards writes it from `fmt_fun`, and an ARD built without
+  one has none.  So a **bare** `{x}` prefers `stat_fmt` and falls back to
+  `stat`, where before it produced an empty cell; `{x:stat_fmt}` is a demand
+  and **errors** when there is nothing to read.  Note that the two differ for
+  a proportion --- cards writes `61.6` into `stat_fmt` while `stat`
+  holds `0.616` --- so `{p}` and `{p:.1f\%}` agree and `{p:.1f}` does not.
+
+  **The rounding family now defaults to base R's, and moves in one place.**
+  `round` and `ard_round(type = )` read
+  `getOption("rtfreporter.ard_round")`, which is `"r"` unless a study sets
+  `options(rtfreporter.ard_round = "sas")` once.  An explicit argument still
+  wins over the option, and a spec file's `round` column wins over both for
+  the rows it names --- which `ard_table()` now honours, having previously
+  passed its own default down and hidden the file's.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

@@ -43,7 +43,8 @@ a \code{context} value such as \code{"categorical"}, acts as a fallback.}
 \verb{\{min\}, \{max\}}.  Several templates separated by \code{|} form a fallback
 chain: the first that resolves wins.}
 \item{\code{levels}}{\code{|}-separated level order for that variable.}
-\item{\code{round}}{\code{sas} (half away from zero) or \code{r} (half to even).}
+\item{\code{round}}{\code{r} (half to even) or \code{sas} (half away from zero); wins
+over \code{getOption("rtfreporter.ard_round")} for the rows it names.}
 \item{\code{digits}}{Decimal places used for tokens with no inline spec.  A
 comma-separated list applies per token, e.g. \verb{1,2} for
 \code{{mean} ({sd})}.}

@@ -50,13 +50,20 @@ A template is a string with \code{{...}} tokens naming statistics:
 \verb{\{p:.1f\\\%\}}   \tab multiplied by 100 first, then 1 decimal \cr
 \verb{\{mean:.3s\}}  \tab 3 significant digits \cr
 \code{{n:d}}       \tab integer \cr
-\code{{n:raw}}     \tab the raw \code{stat}, \code{as.character()}, untouched \cr
-\code{{mean:fmt}}  \tab the same as \code{{mean}}, said out loud
+\code{{n:stat}}    \tab the \code{stat} column, \code{as.character()}, untouched \cr
+\code{{mean:stat_fmt}} \tab the \code{stat_fmt} column, demanded
 }
 An ARD carries two values per statistic and both are reachable: a token
-with no format spec (or \verb{:fmt}) takes \code{stat_fmt}, the string \pkg{cards}
-formatted; any other spec formats the raw \code{stat} here, and \verb{:raw} takes it
-untouched.  For \code{stats = "rows"}, where a value goes into the cell without
+the two specs that reach them are spelled as the ARD spells them, so there
+is no mapping to learn.  \verb{:stat_fmt} takes the string \pkg{cards} formatted
+and \strong{errors} when this ARD has none, because that is a demand; \verb{:stat}
+takes the value untouched, character statistics such as \code{method} included;
+any other spec formats \code{stat} here.  A \strong{bare} token is the forgiving one
+--- it prefers \code{stat_fmt} and falls back to \code{stat} --- since \code{stat_fmt} is
+optional and an ARD built without \code{fmt_fun} would otherwise produce
+nothing.  The two differ for a proportion: \pkg{cards} writes \code{61.6} into
+\code{stat_fmt} while \code{stat} holds \code{0.616}, so \code{{p}} and \verb{\{p:.1f\\\%\}} agree and
+\verb{\{p:.1f\}} does not.  For \code{stats = "rows"}, where a value goes into the cell without
 a template, \code{ard_spread(value = )} makes the same choice.
 A template whose statistics are not all present yields \code{NA}, which is what
 lets \code{c("{n} ({p})", "{n}")} act as a fallback chain.  A \strong{named} vector of

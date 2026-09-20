@@ -2,17 +2,19 @@
 % Please edit documentation in R/ard-experimental.R
 \name{ard_round}
 \alias{ard_round}
-\title{Round the way SAS rounds, or the way R rounds}
+\title{Round the way R rounds, or the way SAS rounds}
 \usage{
-ard_round(x, digits = 0, type = c("sas", "r"))
+ard_round(x, digits = 0, type = NULL)
 }
 \arguments{
 \item{x}{Numeric vector.}
 
 \item{digits}{Number of decimal places.}
 
-\item{type}{\code{"sas"} (half away from zero, the default) or \code{"r"} (base R's
-half-to-even).}
+\item{type}{\code{"r"} (base R's half-to-even) or \code{"sas"} (half away from zero).
+\code{NULL}, the default, reads \code{getOption("rtfreporter.ard_round")}, which is
+\code{"r"} unless the study set it --- \strong{one line, once}:
+\code{options(rtfreporter.ard_round = "sas")}.  An explicit \code{type} still wins.}
 }
 \value{
 A numeric vector.
@@ -21,8 +23,15 @@ A numeric vector.
 \code{ard_round()} exists because the two families disagree on a tie.  Base R
 uses IEEE "round half to even" (\code{round(0.5)} is \code{0}, \code{round(2.5)} is \code{2}),
 while SAS's \code{ROUND()} rounds a half \strong{away from zero} (\code{0.5} becomes \code{1},
-\code{2.5} becomes \code{3}).  A clinical table that must match a SAS-produced one
-needs the SAS rule, which is why it is the default here.
+\code{2.5} becomes \code{3}).  R's own rule is the default, this being an R package;
+a study that has to match a SAS-produced table says so once, with
+\code{options(rtfreporter.ard_round = "sas")}, rather than at every call.
+}
+\details{
+Note that cards already rounds a half away from zero when it writes
+\code{stat_fmt}, so a table built from \code{{x}} tokens follows SAS whatever this
+option says --- the option reaches \verb{\{x:.1f\}}-style tokens, which round
+here.
 }
 \section{Lifecycle}{
 
@@ -30,6 +39,6 @@ needs the SAS rule, which is why it is the default here.
 }
 
 \examples{
-ard_round(c(0.5, 1.5, 2.5, -0.5), 0)            # SAS: 1 2 3 -1
-ard_round(c(0.5, 1.5, 2.5, -0.5), 0, type = "r") # R:   0 2 2  0
+ard_round(c(0.5, 1.5, 2.5, -0.5), 0)              # R:   0 2 2  0
+ard_round(c(0.5, 1.5, 2.5, -0.5), 0, type = "sas") # SAS: 1 2 3 -1
 }

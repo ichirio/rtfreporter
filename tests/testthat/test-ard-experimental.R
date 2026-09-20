@@ -24,14 +24,14 @@ make_ard <- function() {
 
 # ---------------------------------------------------------------- ard_round
 
-test_that("ard_round() follows SAS on a tie and base R on request", {
+test_that("ard_round() follows base R by default and SAS on request", {
   expect_equal(ard_round(c(0.5, 1.5, 2.5, -0.5, -2.5), 0),
-               c(1, 2, 3, -1, -3))
-  expect_equal(ard_round(c(0.5, 1.5, 2.5, -0.5, -2.5), 0, type = "r"),
                c(0, 2, 2, 0, -2))
-  expect_equal(ard_round(2.345, 2), 2.35)
-  expect_equal(ard_round(123.456, 1), 123.5)
-  expect_equal(ard_round(c(NA, 1.25), 1), c(NA, 1.3))
+  expect_equal(ard_round(c(0.5, 1.5, 2.5, -0.5, -2.5), 0, type = "sas"),
+               c(1, 2, 3, -1, -3))
+  expect_equal(ard_round(2.345, 2, "sas"), 2.35)
+  expect_equal(ard_round(123.456, 1, "sas"), 123.5)
+  expect_equal(ard_round(c(NA, 1.25), 1, "sas"), c(NA, 1.3))
 })
 
 # ------------------------------------------------------------ ard_normalize
@@ -638,7 +638,7 @@ test_that("stats = 'rows' can carry either of the ARD's two values", {
   expect_identical(fmt$Statistic, raw$Statistic)
 })
 
-test_that("{x:fmt} names cards' formatted value inside a template", {
+test_that("{x:stat_fmt} and {x:stat} name the ARD's own columns", {
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -646,13 +646,45 @@ test_that("{x:fmt} names cards' formatted value inside a template", {
                           cards::ard_continuous(variables = AGE))
   tbl <- ard_table(ard, cols = "TRT", rows = c(group = "variable"),
                    cells = c("bare" = "{mean}",
-                             "fmt"  = "{mean:fmt}",
-                             "raw"  = "{mean:raw}",
+                             "fmt"  = "{mean:stat_fmt}",
+                             "raw"  = "{mean:stat}",
                              "ours" = "{mean:.3f}"))
   v <- function(lab) tbl$Placebo[tbl$label == lab]
-  expect_identical(v("fmt"), v("bare"))          # "" and "fmt" are the same
-  expect_false(identical(v("raw"), v("fmt")))    # raw is unrounded
+  expect_identical(v("fmt"), v("bare"))       # bare prefers stat_fmt
+  expect_false(identical(v("raw"), v("fmt"))) # stat is unrounded
   expect_match(v("ours"), "^[0-9]+[.][0-9]{3}$")
+  # the old spellings say what to write instead
+  expect_error(ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+                         cells = "{mean:raw}"), "write 'stat'")
+  expect_error(ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+                         cells = "{mean:fmt}"), "write 'stat_fmt'")
+})
+
+test_that("a bare token falls back to stat, but stat_fmt demanded is an error", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::ard_stack(adsl, .by = TRT,
+                          cards::ard_continuous(variables = AGE))
+  ard$fmt_fun <- NULL                       # an ARD carrying no formatting
+  d <- ard_normalize(ard)
+  expect_true(all(is.na(d$stat_fmt)))
+  bare <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                     cells = "{mean}", notes = FALSE)
+  expect_false(is.na(bare$Placebo[1]))       # fell back to `stat`
+  expect_error(ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                          cells = "{mean:stat_fmt}", notes = FALSE),
+               "no `stat_fmt` value")
+})
+
+test_that("the rounding family is one option away", {
+  expect_identical(ard_round(0.25, 1), 0.2)          # R's own, the default
+  old <- options(rtfreporter.ard_round = "sas")
+  on.exit(options(old), add = TRUE)
+  expect_identical(ard_round(0.25, 1), 0.3)
+  options(old)
+  expect_identical(ard_round(0.25, 1, "sas"), 0.3)   # explicit beats the option
+  expect_error(ard_round(1, 1, "nope"), "must be")
 })
 
 # ------------------------------------------------------- ard_overall(from) ---
