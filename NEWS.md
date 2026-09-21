@@ -268,6 +268,14 @@
   `ard_table()` passed its own default down on top of that.  Both are
   fixed: the family is now resolved once, after the spec has had its say.
 
+  **A hierarchy no longer blanks the variables it does not cover.** Declare
+  `hierarchy = c("ARACE", "ASRACE")` for the one characteristic that gains a
+  third level, and `SEX` beside it came back with `.label` `NA` --- it is
+  depth 0, which is right, but it still has a level and that was the only
+  label it had. It now falls back to `variable_level`, so a demographics
+  table where exactly one row block is three deep converts in a single
+  `ard_normalize()` instead of two plus an `rbind()`.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

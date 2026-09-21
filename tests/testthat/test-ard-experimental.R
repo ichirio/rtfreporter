@@ -1249,3 +1249,27 @@ test_that("ard_table() passes a named round on and leaves the spec alone", {
   expect_identical(f(round = "r"), "0")
   expect_type(cell(round = "sas"), "character")
 })
+
+test_that("a variable the hierarchy does not cover keeps its own level", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  adsl$R1  <- rep(c("A", "B"), length.out = nrow(adsl))
+  adsl$R2  <- ifelse(adsl$R1 == "A", rep(c("A1", "A2"), length.out = nrow(adsl)),
+                     NA_character_)
+  ard <- dplyr::bind_rows(
+    cards::ard_categorical(adsl, by = TRT, variables = c(SEX, R1)),
+    cards::ard_categorical(adsl[adsl$R1 == "A", ], by = c(TRT, R1),
+                           variables = R2))
+  d <- ard_normalize(ard, hierarchy = c("R1", "R2"))
+  # the nested pair keeps its depths ...
+  expect_setequal(unique(d$.depth[d$variable == "R1"]), 1L)
+  expect_setequal(unique(d$.depth[d$variable == "R2"]), 2L)
+  # ... and SEX, which the hierarchy says nothing about, is depth 0 but still
+  # labelled: before, it came back NA and the caller had to normalize twice
+  sex <- d[d$variable == "SEX", , drop = FALSE]
+  expect_setequal(unique(sex$.depth), 0L)
+  expect_false(any(is.na(sex$.label)))
+  expect_setequal(unique(sex$.label), c("F", "M"))
+})

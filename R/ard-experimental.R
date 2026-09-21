@@ -1266,6 +1266,13 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
     # question about this column, which survives any manipulation, rather
     # than about an attribute, which does not.
     d$.depth[is.na(d$.depth)] <- 0L
+    # A depth-0 row is a variable the hierarchy does not cover -- `SEX` beside
+    # a nested `ARACE`/`ASRACE`, which is what a demographics table looks like
+    # once one characteristic gains a third level.  Its own level is still the
+    # only label it has, so fall back to it rather than leaving the row
+    # unlabelled and forcing the caller to normalize twice and rbind.
+    flat <- d$.depth == 0L & is.na(d$.label)
+    if (any(flat)) d$.label[flat] <- d$variable_level[flat]
   } else {
     # NA, not 1: depth only means something inside a hierarchy, and a column
     # that says "there is no hierarchy here" survives every manipulation the
