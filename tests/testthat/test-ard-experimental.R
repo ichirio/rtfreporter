@@ -1027,10 +1027,15 @@ test_that("ard_template() emits code that actually runs", {
   code <- utils::capture.output(gen <- ard_template(ard, cols = "TRT"))
   expect_true(any(grepl("ard_table", gen)))
   expect_true(any(grepl("cols  = \"TRT\"", gen)))
-  # the generated call evaluates against the same ARD
-  tbl <- eval(parse(text = paste(gen, collapse = "\n")))
+  # the generated script evaluates against the same ARD, and now runs past
+  # the table data.frame to the pages
+  e <- new.env(); assign("ard", ard, e)
+  suppressMessages(eval(parse(text = paste(gen, collapse = "
+")), e))
+  tbl <- get("tbl_df", e)
   expect_true(is.data.frame(tbl))
   expect_true("Placebo" %in% names(tbl))
+  expect_true(exists("pages", e))
 
   spec_code <- utils::capture.output(
     gen2 <- ard_template(ard, cols = "TRT", spec = TRUE))
@@ -1352,7 +1357,7 @@ test_that("ard_template() offers the full row set and trims what is absent", {
   expect_false(grepl("Min, Max", t, fixed = TRUE))
 })
 
-test_that("ard_template(rtf = TRUE) writes a script that reaches rtftables", {
+test_that("ard_template() writes a script that reaches rtftables", {
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1363,7 +1368,7 @@ test_that("ard_template(rtf = TRUE) writes a script that reaches rtftables", {
       variables = AGE,
       statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd"))),
     cards::ard_categorical(variables = SEX), .total_n = TRUE)
-  txt <- capture.output(ard_template(ard, cols = "TRT", rtf = TRUE))
+  txt <- capture.output(ard_template(ard, cols = "TRT"))
   code <- paste(txt, collapse = "
 ")
   expect_match(code, "as_rtftables(", fixed = TRUE)
@@ -1386,7 +1391,7 @@ test_that("with more than one column key the header is left to header_sep", {
   adsl$GRP <- rep(c("X", "Y"), length.out = nrow(adsl))
   ard <- cards::ard_categorical(adsl, by = c(TRT, GRP), variables = SEX)
   code <- paste(capture.output(
-    ard_template(ard, cols = c("TRT", "GRP"), rtf = TRUE)), collapse = "
+    ard_template(ard, cols = c("TRT", "GRP"))), collapse = "
 ")
   expect_match(code, "header_sep", fixed = TRUE)
   expect_false(grepl("col_header = col_header", code, fixed = TRUE))

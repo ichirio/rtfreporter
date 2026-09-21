@@ -9,7 +9,6 @@ ard_template(
   cols = NULL,
   hierarchy = character(),
   spec = FALSE,
-  rtf = FALSE,
   file = NULL
 )
 }
@@ -23,17 +22,6 @@ found and says so in a comment.}
 
 \item{spec}{When \code{TRUE}, the generated code reads a definition file made by
 \code{\link[=ard_spec_template]{ard_spec_template()}} instead of inlining the \code{cells} list.}
-
-\item{rtf}{When \code{TRUE}, the script continues past the table \code{data.frame}:
-it adds the \code{\link[=as_rtftables]{as_rtftables()}} call that turns it into pages, with
-\code{stub_vars} derived (the row keys plus the label column) and the rest a
-house default to delete down to what the report wants.  With one column
-key it also drafts \code{col_header}, trying \code{\link[=ard_pull]{ard_pull()}} for the denominator
-each percentage used and writing that call out; when the ARD cannot
-settle it, the draft says so and points at \code{ard_pull()}'s own list of
-candidates instead of guessing.  With more than one column key it writes
-no header at all, because \code{as_rtftables(header_sep = )} rebuilds the
-spanning one from the \code{"____"} in the column names.}
 
 \item{file}{Optional path to write the code to.}
 }
@@ -51,6 +39,16 @@ The emitted code is a starting point, not a finished table: in particular
 it does \strong{not} invent a row order, because the level order of a factor is
 not recoverable from an ARD that was not built with \code{.attributes = TRUE}.
 }
+\section{What it writes}{
+
+Always three blocks, so the author deletes rather than remembers:
+the \code{\link[=ard_table]{ard_table()}} call, the \code{col_header} (drafted from \code{\link[=ard_pull]{ard_pull()}}
+when one column key makes that decidable, and skipped entirely when
+several do, since \code{as_rtftables(header_sep = )} rebuilds the spanning
+header from the \code{"____"} in the names), and the \code{\link[=as_rtftables]{as_rtftables()}}
+call with \code{stub_vars} derived from the row keys and the label column.
+}
+
 \section{Lifecycle}{
 
 \strong{Experimental.}  See \link{rtfreporter-ard}.

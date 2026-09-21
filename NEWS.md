@@ -299,16 +299,17 @@
   this ARD carries, on the grounds that deleting a line is easier than
   remembering the one that was missing.
 
-  **`ard_template(rtf = TRUE)` writes the whole script**, not just the table
-  `data.frame`: the [as_rtftables()] call follows, with `stub_vars` derived
-  from the row keys and the label column.  With one column key it drafts
-  `col_header` too, running `ard_pull()` for the denominator each percentage
-  used and reporting what it found; where the ARD cannot settle that, the
-  draft says so and points at `ard_pull()`'s candidate list rather than
-  guessing.  With more than one column key it writes no header, because
-  `as_rtftables(header_sep = )` already rebuilds the spanning one from the
-  `"____"` in the column names.  The generated scripts for the demographics
-  and adverse-event reports run unedited to a paginated result.
+  **`ard_template()` writes the whole script**, always in three blocks: the
+  [ard_table()] call, the column header, and the [as_rtftables()] call.
+  There is no flag to ask for them, because deleting a block you can see is
+  easier than remembering one you cannot.  `stub_vars` is derived from the
+  row keys and the label column.  The header block drafts `col_header` from
+  `ard_pull()` when one column key makes the denominator decidable, says so
+  and points at `ard_pull()`'s candidate list when it does not, and writes
+  nothing at all when several column keys mean
+  `as_rtftables(header_sep = )` will rebuild the spanning header from the
+  `"____"` in the names.  The generated scripts for the demographics and
+  adverse-event reports run unedited to a paginated result.
 
   There is deliberately no function that returns the object instead. Only
   `stub_vars` out of the nine arguments a real report passes to

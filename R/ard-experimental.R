@@ -2344,55 +2344,20 @@ ard_spec_template <- function(ard, path = NULL) {
 # ============================================================================
 
 # The second half of a generated script: the as_rtftables() call, plus the
-# column header when it has to be written by hand.  `stub_vars` is derived --
-# it is the row keys and the label column, which the first half already
-# decided -- but nothing else here is in the ARD, so the rest is a house
-# default the author deletes down to what the report wants.
-.ard_template_rtf <- function(ard, cols, row_parts, label_out_name) {
-  stub <- c(sub(" =.*$", "", row_parts), label_out_name)
-  q <- function(v) paste0("\"", v, "\"")
-  vecq <- function(v) if (length(v) == 1L) q(v) else
-    paste0("c(", paste(q(v), collapse = ", "), ")")
+# One banner line padded to a constant width, so the generated script reads
+# as a script rather than as a dump.
+.ard_bar <- function(text = "", char = "-", width = 70L) {
+  if (!nzchar(text)) return(paste0("# ", strrep(char, width - 2L)))
+  pad <- width - 5L - nchar(text)
+  paste0("# ", strrep(char, 2L), " ", text, " ", strrep(char, max(pad, 3L)))
+}
 
-  hdr <- character(0)
-  if (length(cols) > 1L) {
-    hdr <- c(
-      "# The spanning header is rebuilt from the \"____\" in the column names",
-      "# by as_rtftables(header_sep = ), so no col_header is needed here.")
-  } else {
-    n <- tryCatch(ard_pull(ard, cols = cols), error = function(e) NULL)
-    if (!is.null(n)) {
-      hdr <- c(
-        paste0("# ard_pull() found ", paste0(names(n), " = ",
-                                             as.integer(n), collapse = ", ")),
-        paste0("arm_n      <- rtfreporter::ard_pull(ard, cols = ",
-               vecq(cols), ")"),
-        paste0("col_header <- c(\"Characteristic\","),
-        paste0("                paste0(names(arm_n), \"\\nN = \",",
-               " as.integer(arm_n)))"))
-    } else {
-      hdr <- c(
-        "# The header denominator is not decidable from this ARD alone.",
-        paste0("# Run rtfreporter::ard_pull(ard, cols = ", vecq(cols), ")",
-               " and read its list of candidates."),
-        paste0("# arm_n <- rtfreporter::ard_pull(ard, cols = ", vecq(cols),
-               ", variable = \"<pick one>\")"))
-    }
-  }
-
-  c("# --- to rtftables ------------------------------------------------",
-    hdr,
-    "",
-    "pages <- rtfreporter::as_rtftables(",
-    "  tbl_df,",
-    paste0("  stub_vars  = ", vecq(stub), ",",
-           "   # the row keys and the label column"),
-    if (length(cols) == 1L && length(hdr)) "  col_header = col_header," else NULL,
-    "  group_by   = \"indent\",",
-    "  blank_rows = \"between_groups\",",
-    "  split      = \"group_safe\",",
-    "  max_rows   = 22,",
-    "  border     = \"tfl\")")
+# `"name" = "value"` lines with the names padded to one width, so the reader
+# sees the templates lined up and can delete whole rows cleanly.
+.ard_aligned <- function(nms, vals, indent) {
+  qn <- encodeString(nms, quote = "\"")
+  paste0(indent, formatC(qn, width = max(nchar(qn)), flag = "-"),
+         " = ", encodeString(vals, quote = "\""))
 }
 
 #' Write the conversion code for you
@@ -2410,16 +2375,14 @@ ard_spec_template <- function(ard, path = NULL) {
 #' @param cols Key(s) that go across.  `NULL` (default) uses the first key
 #'   found and says so in a comment.
 #' @param hierarchy Optional nested hierarchy, outermost first.
-#' @param rtf When `TRUE`, the script continues past the table `data.frame`:
-#'   it adds the [as_rtftables()] call that turns it into pages, with
-#'   `stub_vars` derived (the row keys plus the label column) and the rest a
-#'   house default to delete down to what the report wants.  With one column
-#'   key it also drafts `col_header`, trying [ard_pull()] for the denominator
-#'   each percentage used and writing that call out; when the ARD cannot
-#'   settle it, the draft says so and points at `ard_pull()`'s own list of
-#'   candidates instead of guessing.  With more than one column key it writes
-#'   no header at all, because `as_rtftables(header_sep = )` rebuilds the
-#'   spanning one from the `"____"` in the column names.
+#' @section What it writes:
+#' Always three blocks, so the author deletes rather than remembers:
+#' the [ard_table()] call, the `col_header` (drafted from [ard_pull()]
+#' when one column key makes that decidable, and skipped entirely when
+#' several do, since `as_rtftables(header_sep = )` rebuilds the spanning
+#' header from the `"____"` in the names), and the [as_rtftables()]
+#' call with `stub_vars` derived from the row keys and the label column.
+#'
 #' @param spec When `TRUE`, the generated code reads a definition file made by
 #'   [ard_spec_template()] instead of inlining the `cells` list.
 #' @param file Optional path to write the code to.
@@ -2432,11 +2395,11 @@ ard_spec_template <- function(ard, path = NULL) {
 #' @seealso [ard_table()], [ard_spec_template()]
 #' @export
 ard_template <- function(ard, cols = NULL, hierarchy = character(),
-                         spec = FALSE, rtf = FALSE, file = NULL) {
-  d <- ard_normalize(ard, hierarchy = hierarchy, drop_key_variables = FALSE)
-  gcols <- grep("^group[0-9]+$", names(as.data.frame(ard)), value = TRUE)
-  keys <- unique(unlist(lapply(gcols, function(g)
-    .ard_first_seen(as.data.frame(ard)[[g]]))))
+                         spec = FALSE, file = NULL) {
+  d  <- ard_normalize(ard, hierarchy = hierarchy, drop_key_variables = FALSE)
+  ra <- as.data.frame(ard)
+  gcols <- grep("^group[0-9]+$", names(ra), value = TRUE)
+  keys  <- unique(unlist(lapply(gcols, function(g) .ard_first_seen(ra[[g]]))))
   guessed <- is.null(cols)
   if (guessed) cols <- utils::head(keys, 1L)
   rest <- setdiff(keys, c(cols, hierarchy))
@@ -2447,20 +2410,11 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
   if (!length(kinds)) kinds <- .ard_first_seen(d$.kind)
   # Ask the RAW ard: ard_normalize() drops the sentinel rows when no
   # `overall =` was given, so looking at `d` would never find them.
-  overall <- any(as.character(unlist(as.data.frame(ard)$variable)) ==
+  overall <- any(as.character(unlist(ra$variable)) ==
                    "..ard_hierarchical_overall..", na.rm = TRUE)
-
-  q <- function(v) paste0("\"", v, "\"")
-  vec <- function(v) if (length(v) == 1L) q(v) else
-    paste0("c(", paste(q(v), collapse = ", "), ")")
 
   # The decimal places are IN the ARD: cards stores `fmt_fun` per statistic,
   # and a study that sets its own ("mean to 2, SD to 3") records exactly that.
-  # So the generated template should read them rather than guess a house
-  # default that the study may not share.  A `fmt_fun` that is a function
-  # rather than a count is honoured by leaving the token bare, which takes
-  # cards' own formatted value.
-  ra <- as.data.frame(ard)
   dig <- list()
   if ("fmt_fun" %in% names(ra)) {
     sn <- as.character(unlist(ra$stat_name))
@@ -2473,13 +2427,16 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
   }
   tok <- function(stat) {
     dd <- dig[[stat]]
-    if (is.null(dd)) paste0("{", stat, "}") else
-      paste0("{", stat, ":.", dd, "f}")
+    if (is.null(dd)) paste0("{", stat, "}") else paste0("{", stat, ":.", dd, "f}")
   }
 
-  # `rows` is derived, not merely reported: an unused key that stays out of the
-  # call is a column of the table that silently goes missing, and the caller
-  # cannot see that from the result.
+  q <- function(v) paste0("\"", v, "\"")
+  vecq <- function(v) {
+    if (length(v) == 1L) q(v) else paste0("c(", paste(q(v), collapse = ", "), ")")
+  }
+
+  # `rows` is derived, not merely reported: a key left out of the call is a
+  # column of the table that silently goes missing.
   row_parts <- character(0)
   if (length(rest)) row_parts <- paste0(rest, " = ", q(rest))
   if (length(hierarchy)) {
@@ -2487,94 +2444,144 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
   } else if (length(vars) > 1L) {
     row_parts <- c(row_parts, "group = \"variable\"")
   }
-  rows_line <- if (length(row_parts))
-    paste0("  rows  = c(", paste(row_parts, collapse = ", "), "),") else NULL
-  label_line <- if (length(hierarchy) > 1L)
-    paste0("  label = c(label = ", q(utils::tail(hierarchy, 1L)), "),") else NULL
-  label_out_name <- "label"
-  overall_line <- if (overall)
-    "  overall = \"Any event\",   # <- the label for the sentinel rows" else NULL
+  stub <- c(sub(" =.*$", "", row_parts), "label")
 
+  # -- banner -----------------------------------------------------------
   L <- c(
-    "# ---------------------------------------------------------------",
-    "# generated by rtfreporter::ard_template()  --  EXPERIMENTAL",
-    paste0("# keys found      : ", paste(keys, collapse = ", ")),
-    paste0("# variables       : ",
+    .ard_bar("", "="),
+    "#  generated by rtfreporter::ard_template()  --  EXPERIMENTAL",
+    "#",
+    paste0("#  keys       : ", paste(keys, collapse = ", ")),
+    paste0("#  variables  : ",
            if (length(vars)) paste(utils::head(vars, 12), collapse = ", ")
-           else "(none -- the rows come from `hierarchy`)",
-           if (length(vars) > 12) " ..." else ""),
-    paste0("# kinds           : ", paste(kinds, collapse = ", ")),
+           else "(none -- the rows come from `hierarchy`)"),
+    paste0("#  kinds      : ", paste(kinds, collapse = ", ")),
+    "#",
+    "#  Three blocks follow.  Delete the ones this report does not need.",
+    "#  Two things are NOT in the ARD and have to be added by hand:",
+    "#    * row and column ORDER  ->  `levels = `",
+    "#    * display labels        ->  `labels = ` or `spec = `",
     if (guessed)
-      "# NOTE: `cols` was not supplied; the first key found is used. Check it."
+      "#  NOTE: `cols` was not given; the first key is used.  Check it."
     else NULL,
     if (length(rest))
-      paste0("# NOTE: keys not in `cols` became row keys: ",
+      paste0("#  NOTE: keys outside `cols` became row keys: ",
              paste(rest, collapse = ", "))
     else NULL,
     if (overall)
-      "# NOTE: an overall sentinel is present; edit the `overall` label."
+      "#  NOTE: an overall sentinel is present; edit the `overall` label."
     else NULL,
-    "# NOTE: row/column ORDER is not derived from the ARD. Add `levels = `.",
-    "# ---------------------------------------------------------------")
+    .ard_bar("", "="),
+    "")
+
+  # -- 1. ARD -> table data.frame ---------------------------------------
+  head1 <- c(
+    .ard_bar("1. ARD -> table data.frame"),
+    "tbl_df <- rtfreporter::ard_table(",
+    "  ard,",
+    paste0("  cols  = ", vecq(cols), ","),
+    if (length(hierarchy)) paste0("  hierarchy = ", vecq(hierarchy), ",")
+    else NULL,
+    if (length(row_parts))
+      paste0("  rows  = c(", paste(row_parts, collapse = ", "), "),")
+    else NULL,
+    if (length(hierarchy) > 1L)
+      paste0("  label = c(label = ", q(utils::tail(hierarchy, 1L)), "),")
+    else NULL,
+    if (overall) "  overall = \"Any event\",       # <- label for the sentinel"
+    else NULL)
 
   if (isTRUE(spec)) {
     L <- c(L,
-      "spec <- read_ard_spec(\"ard-spec.xlsx\")",
-      "",
-      "tbl_df <- rtfreporter::ard_table(",
-      "  ard,",
-      paste0("  cols  = ", vec(cols), ","),
-      if (length(hierarchy)) paste0("  hierarchy = ", vec(hierarchy), ",") else NULL,
-      rows_line, label_line, overall_line,
-      "  spec  = spec)")
+           "spec <- rtfreporter::read_ard_spec(\"ard-spec.xlsx\")",
+           "",
+           head1,
+           "  spec  = spec",
+           ")")
   } else {
     cell_lines <- character(0)
     for (kd in kinds) {
       s <- d[!is.na(d$.kind) & d$.kind == kd, , drop = FALSE]
       have <- .ard_first_seen(s$stat_name)
       if (identical(kd, "continuous")) {
-        # A full set, trimmed to what this ARD actually carries: it is far
-        # easier to delete a line than to remember the one that was missing.
         cand <- c(
-          "n"            = tok("N"),
-          "Mean (SD)"    = paste0(tok("mean"), " (", tok("sd"), ")"),
-          "Median"       = tok("median"),
-          "Q1, Q3"       = paste0(tok("p25"), ", ", tok("p75")),
-          "Min, Max"     = paste0(tok("min"), ", ", tok("max")),
-          "CV (%)"       = tok("cv"),
+          "n"              = tok("N"),
+          "Mean (SD)"      = paste0(tok("mean"), " (", tok("sd"), ")"),
+          "Median"         = tok("median"),
+          "Q1, Q3"         = paste0(tok("p25"), ", ", tok("p75")),
+          "Min, Max"       = paste0(tok("min"), ", ", tok("max")),
+          "CV (%)"         = tok("cv"),
           "Geometric Mean" = tok("geom_mean"),
-          "95% CI"       = paste0(tok("conf.low"), ", ", tok("conf.high")))
+          "95% CI"         = paste0(tok("conf.low"), ", ", tok("conf.high")))
         keepc <- vapply(cand, function(t)
           all(gsub("[{}]", "", gsub(":[^}]*", "", .ard_tokens(t))) %in% have),
           logical(1))
         cand <- cand[keepc]
         if (!length(cand)) next
-        cell_lines <- c(cell_lines, paste0(
-          "    ", kd, " = c(",
-          paste0("\"", names(cand), "\" = \"", unname(cand), "\"",
-                 collapse = ",\n                     "), ")"))
+        rows_txt <- .ard_aligned(names(cand), unname(cand), "      ")
+        cell_lines <- c(cell_lines,
+                        paste0("    ", kd, " = c("),
+                        paste0(rows_txt, c(rep(",", length(rows_txt) - 1L), "")),
+                        "    )")
       } else {
-        tpl <- if (all(c("n", "p") %in% have))
-          paste0(tok("n"), " ({p:.1f%})") else
-          if ("n" %in% have) tok("n") else paste0("{", have[1], "}")
-        cell_lines <- c(cell_lines, paste0("    ", kd, " = \"", tpl, "\""))
+        tpl <- if (all(c("n", "p") %in% have)) paste0(tok("n"), " ({p:.1f%})")
+               else if ("n" %in% have) tok("n") else paste0("{", have[1], "}")
+        cell_lines <- c(cell_lines, paste0("    ", kd, " = ", q(tpl)))
       }
     }
-    L <- c(L,
-      "tbl_df <- rtfreporter::ard_table(",
-      "  ard,",
-      paste0("  cols  = ", vec(cols), ","),
-      if (length(hierarchy)) paste0("  hierarchy = ", vec(hierarchy), ",") else NULL,
-      rows_line, label_line, overall_line,
-      "  cells = list(",
-      paste0(paste(cell_lines, collapse = ",\n")),
-      "  ))")
+    # a comma after every block but the last
+    ends <- which(cell_lines == "    )" |
+                    grepl("^    [a-z]+ = \"", cell_lines))
+    if (length(ends) > 1L) {
+      cell_lines[utils::head(ends, -1L)] <-
+        paste0(cell_lines[utils::head(ends, -1L)], ",")
+    }
+    L <- c(L, head1, "  cells = list(", cell_lines, "  )", ")")
   }
 
-  if (isTRUE(rtf)) {
-    L <- c(L, "", .ard_template_rtf(ard, cols, row_parts,
-                                    label_out_name))
+  # -- 2. column header --------------------------------------------------
+  L <- c(L, "", .ard_bar("2. column header"))
+  hdr_arg <- NULL
+  if (length(cols) > 1L) {
+    L <- c(L,
+      "# Nothing to write here: as_rtftables(header_sep = ) rebuilds the",
+      "# spanning header from the \"____\" in the column names.")
+  } else {
+    n <- tryCatch(ard_pull(ard, cols = cols), error = function(e) NULL)
+    if (!is.null(n)) {
+      L <- c(L,
+        "# The denominator each percentage used, straight out of the ARD.",
+        paste0("#   ard_pull() found  ",
+               paste0(names(n), " = ", as.integer(n), collapse = ",  ")),
+        paste0("arm_n      <- rtfreporter::ard_pull(ard, cols = ", vecq(cols), ")"),
+        "col_header <- c(",
+        "  \"Characteristic\",",
+        paste0("  paste0(names(arm_n), \"\\nN = \", as.integer(arm_n))"),
+        ")")
+      hdr_arg <- "  col_header = col_header,"
+    } else {
+      L <- c(L,
+        "# The header denominator is not decidable from this ARD alone.",
+        paste0("# Run  rtfreporter::ard_pull(ard, cols = ", vecq(cols), ")"),
+        "# read the list of candidates it prints, then name the one you want:",
+        paste0("#   arm_n <- rtfreporter::ard_pull(ard, cols = ", vecq(cols),
+               ", variable = \"<pick one>\")"))
+    }
   }
+
+  # -- 3. table data.frame -> RTF pages ----------------------------------
+  L <- c(L, "",
+    .ard_bar("3. table data.frame -> RTF pages"),
+    "pages <- rtfreporter::as_rtftables(",
+    "  tbl_df,",
+    paste0("  stub_vars  = ", vecq(stub), ",   # row keys plus the label column"),
+    hdr_arg,
+    "  group_by   = \"indent\",",
+    "  blank_rows = \"between_groups\",",
+    "  split      = \"group_safe\",",
+    "  max_rows   = 22,",
+    "  border     = \"tfl\"",
+    ")")
 
   code <- L[!vapply(L, is.null, logical(1))]
   cat(paste(code, collapse = "\n"), "\n")
