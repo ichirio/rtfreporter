@@ -276,6 +276,18 @@
   table where exactly one row block is three deep converts in a single
   `ard_normalize()` instead of two plus an `rbind()`.
 
+  **`ard_template()` now writes code that runs.** It reported unused keys in
+  a comment and left them out of the call, so a table quietly lost a column
+  the caller could not see was missing; it spelled the hierarchical case as
+  `hierarchy = c(group1 = , label = )`, which is not that argument's shape;
+  it never noticed an overall sentinel; and it keyed `cells` on `context`,
+  which moves between cards versions. Keys outside `cols` now become `rows`,
+  the hierarchical case emits `hierarchy` / `rows` / `label` / `overall`
+  separately, the sentinel is looked for in the raw ARD (normalizing drops it
+  when no `overall =` was given), and `cells` is keyed on the structural
+  `.kind`. Generated calls for the demographics and adverse-event reports on
+  Discussion #473 now reproduce their verified dimensions unedited.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

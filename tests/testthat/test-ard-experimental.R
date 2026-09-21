@@ -1273,3 +1273,45 @@ test_that("a variable the hierarchy does not cover keeps its own level", {
   expect_false(any(is.na(sex$.label)))
   expect_setequal(unique(sex$.label), c("F", "M"))
 })
+
+test_that("ard_template() puts keys outside `cols` into `rows`", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  adsl$GRP <- rep(c("X", "Y"), length.out = nrow(adsl))
+  ard <- cards::ard_categorical(adsl, by = c(TRT, GRP), variables = SEX)
+  code <- paste(capture.output(ard_template(ard, cols = "TRT")), collapse = "
+")
+  expect_match(code, 'rows  = c(GRP = "GRP")', fixed = TRUE)
+  # and the generated call runs, keeping GRP as a column of the result
+  txt <- ard_template(ard, cols = "TRT")
+  e <- new.env(); assign("ard", ard, e)
+  invisible(capture.output(
+    eval(parse(text = paste(txt[!startsWith(txt, "#")], collapse = "
+")), e)))
+  expect_true("GRP" %in% names(get("tbl_df", e)))
+})
+
+test_that("ard_template() spells the hierarchical case so that it runs", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adae <- merge(cards::ADAE[, c("USUBJID", "AESOC", "AEDECOD")],
+                adsl[, c("USUBJID", "TRT")], by = "USUBJID")
+  ard <- cards::ard_stack_hierarchical(
+    adae, variables = c(AESOC, AEDECOD), by = TRT, denominator = adsl,
+    id = USUBJID, over_variables = TRUE)
+  txt <- ard_template(ard, cols = "TRT", hierarchy = c("AESOC", "AEDECOD"))
+  code <- paste(txt, collapse = "
+")
+  expect_match(code, 'hierarchy = c("AESOC", "AEDECOD")', fixed = TRUE)
+  expect_match(code, 'label = c(label = "AEDECOD")', fixed = TRUE)
+  expect_match(code, "overall", fixed = TRUE)     # the sentinel was noticed
+  e <- new.env(); assign("ard", ard, e)
+  invisible(capture.output(
+    eval(parse(text = paste(txt[!startsWith(txt, "#")], collapse = "
+")), e)))
+  out <- get("tbl_df", e)
+  expect_true(any(out[[1]] == "Any event"))       # the overall block is there
+})
