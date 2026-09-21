@@ -1435,6 +1435,13 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   deepest hierarchy value, or to `variable_level` when there is no
 #'   hierarchy.  `NULL` drops the label column, which is what you want when
 #'   every `cells` entry is named.
+#'
+#'   `NA` builds the column, uses it to tell the rows apart, and then
+#'   **drops it**: a recipe whose names are a row index --- `"1"` for an
+#'   estimate line and `"2"` for the confidence interval under it --- needs
+#'   them to separate two rows of one record, and does not want a column of
+#'   1s and 2s in the result.  `NULL` leaves the label out of the row
+#'   identity altogether, so those two rows collide.
 #' @param cells The cell recipes.  A **character vector** is one recipe, used
 #'   for every variable:
 #'   * `"{n} ({p})"` -- one row, labelled from `label`;
@@ -1614,6 +1621,14 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     rows <- c(group = "variable")
   }
   rowrefs <- .ard_refs(rows, d, "rows")
+  # `label = NA` means "these names separate the rows but are not printed".
+  # A recipe whose names are a row INDEX -- "1" and "2" for the estimate line
+  # and the confidence-interval line under it -- needs them to tell the two
+  # rows apart, and does not want a column of 1s and 2s in the result.  The
+  # column is built either way, because the row identity is made of it, and
+  # dropped at the end.
+  drop_label <- length(label) == 1L && is.na(label)
+  if (drop_label) label <- ".label"
   labref  <- if (is.null(label)) list() else .ard_refs(label, d, "label")
   if (!length(colrefs)) .ard_stop("`cols` is required: name the key that goes across.")
 
@@ -1861,6 +1876,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     }
     out <- out[do.call(order, keys), , drop = FALSE]
   }
+  if (drop_label && !is.null(label_out)) out[[label_out]] <- NULL
   rownames(out) <- NULL
   # The tally is NOT attached by default.  The result is a plain data frame
   # that the caller will compare against whatever they built before -- that

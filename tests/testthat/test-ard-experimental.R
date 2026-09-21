@@ -1399,3 +1399,23 @@ test_that("with more than one column key the header is left to header_sep", {
   expect_match(code, "header_sep", fixed = TRUE)
   expect_false(grepl("col_header = col_header", code, fixed = TRUE))
 })
+
+test_that("label = NA separates the rows without printing them", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  d <- d[d$variable == "AGE", , drop = FALSE]
+  cells <- c("1" = "{mean:.1f}", "2" = "{sd:.2f}")
+  shown <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                      label = c(row = ".label"), cells = cells, notes = FALSE)
+  hidden <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                       label = NA, cells = cells, notes = FALSE)
+  expect_true("row" %in% names(shown))
+  expect_false("row" %in% names(hidden))
+  # the rows still tell themselves apart -- two of them, same values
+  expect_identical(nrow(hidden), nrow(shown))
+  expect_identical(hidden$Placebo, shown$Placebo)
+  # and dropping the column outright still collides, which is why NA exists
+  expect_error(ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                          label = NULL, cells = cells, notes = FALSE),
+               "same cell")
+})

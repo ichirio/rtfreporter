@@ -324,6 +324,15 @@
   style, so folding the two calls into one would have saved a single
   argument while adding a third way to do the same thing.
 
+  **`label = NA` separates the rows without printing them.** A recipe whose
+  names are a row index --- `"1"` for an estimate line and `"2"` for the
+  confidence interval under it --- needs those names to tell two rows of one
+  record apart, but the report does not want a column of 1s and 2s. Until
+  now the only way was to name the column and delete it afterwards
+  (`label = c(row = ".label")` then `select(-row)`), because `label = NULL`
+  drops the label out of the row identity and the two rows collide. `NA`
+  builds the column, uses it, and drops it.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

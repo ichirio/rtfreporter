@@ -53,7 +53,14 @@ empty.}
 reference.  Default \code{".label"}, which \code{\link[=ard_normalize]{ard_normalize()}} sets to the
 deepest hierarchy value, or to \code{variable_level} when there is no
 hierarchy.  \code{NULL} drops the label column, which is what you want when
-every \code{cells} entry is named.}
+every \code{cells} entry is named.
+
+\code{NA} builds the column, uses it to tell the rows apart, and then
+\strong{drops it}: a recipe whose names are a row index --- \code{"1"} for an
+estimate line and \code{"2"} for the confidence interval under it --- needs
+them to separate two rows of one record, and does not want a column of
+1s and 2s in the result.  \code{NULL} leaves the label out of the row
+identity altogether, so those two rows collide.}
 
 \item{hierarchy}{Character vector naming a nested hierarchy, outermost
 first -- e.g. \code{c("AEBODSYS", "AEDECOD")}.  For these variables the rows
