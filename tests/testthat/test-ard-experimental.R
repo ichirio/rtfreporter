@@ -1315,3 +1315,39 @@ test_that("ard_template() spells the hierarchical case so that it runs", {
   out <- get("tbl_df", e)
   expect_true(any(out[[1]] == "Any event"))       # the overall block is there
 })
+
+test_that("ard_template() takes its decimal places from the ARD", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  house <- cards::ard_continuous(
+    adsl, by = TRT, variables = AGE,
+    statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd")))
+  study <- cards::ard_continuous(
+    adsl, by = TRT, variables = AGE,
+    statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd")),
+    fmt_fun = AGE ~ list(mean = 2, sd = 3))
+  h <- paste(capture.output(ard_template(house, cols = "TRT")), collapse = "")
+  s <- paste(capture.output(ard_template(study, cols = "TRT")), collapse = "")
+  expect_match(h, "{mean:.1f} ({sd:.1f})", fixed = TRUE)   # cards' own default
+  expect_match(s, "{mean:.2f} ({sd:.3f})", fixed = TRUE)   # the study's
+})
+
+test_that("ard_template() offers the full row set and trims what is absent", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  full <- cards::ard_continuous(
+    adsl, by = TRT, variables = AGE,
+    statistic = ~ cards::continuous_summary_fns(
+      c("N", "mean", "sd", "median", "p25", "p75", "min", "max")))
+  thin <- cards::ard_continuous(
+    adsl, by = TRT, variables = AGE,
+    statistic = ~ cards::continuous_summary_fns(c("mean")))
+  f <- paste(capture.output(ard_template(full, cols = "TRT")), collapse = "")
+  t <- paste(capture.output(ard_template(thin, cols = "TRT")), collapse = "")
+  expect_match(f, "Q1, Q3", fixed = TRUE)
+  expect_match(f, "Min, Max", fixed = TRUE)
+  expect_false(grepl("Q1, Q3", t, fixed = TRUE))   # no p25/p75 in this ARD
+  expect_false(grepl("Min, Max", t, fixed = TRUE))
+})

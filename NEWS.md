@@ -288,6 +288,17 @@
   `.kind`. Generated calls for the demographics and adverse-event reports on
   Discussion #473 now reproduce their verified dimensions unedited.
 
+  It also stops guessing the decimal places. cards records them per
+  statistic in `fmt_fun`, so a study that asked for "mean to 2, SD to 3"
+  has said so in the ARD; the generated template now reads that and writes
+  `{mean:.2f} ({sd:.3f})` instead of a house default the study may not
+  share. A `fmt_fun` that is a function rather than a count leaves the token
+  bare, which takes cards' own formatted value. And the continuous row set
+  it offers is now the full one --- `n`, `Mean (SD)`, `Median`, `Q1, Q3`,
+  `Min, Max`, `CV`, geometric mean, `95% CI` --- trimmed to the statistics
+  this ARD carries, on the grounds that deleting a line is easier than
+  remembering the one that was missing.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

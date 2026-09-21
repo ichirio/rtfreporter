@@ -2391,8 +2391,29 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
   q <- function(v) paste0("\"", v, "\"")
   vec <- function(v) if (length(v) == 1L) q(v) else
     paste0("c(", paste(q(v), collapse = ", "), ")")
-  named <- function(v) paste0("c(", paste(paste0(v, " = ", q(v)),
-                                          collapse = ", "), ")")
+
+  # The decimal places are IN the ARD: cards stores `fmt_fun` per statistic,
+  # and a study that sets its own ("mean to 2, SD to 3") records exactly that.
+  # So the generated template should read them rather than guess a house
+  # default that the study may not share.  A `fmt_fun` that is a function
+  # rather than a count is honoured by leaving the token bare, which takes
+  # cards' own formatted value.
+  ra <- as.data.frame(ard)
+  dig <- list()
+  if ("fmt_fun" %in% names(ra)) {
+    sn <- as.character(unlist(ra$stat_name))
+    for (j in seq_len(nrow(ra))) {
+      f <- ra$fmt_fun[[j]]
+      if (is.null(dig[[sn[j]]]) && is.numeric(f) && length(f) == 1L) {
+        dig[[sn[j]]] <- as.integer(f)
+      }
+    }
+  }
+  tok <- function(stat) {
+    dd <- dig[[stat]]
+    if (is.null(dd)) paste0("{", stat, "}") else
+      paste0("{", stat, ":.", dd, "f}")
+  }
 
   # `rows` is derived, not merely reported: an unused key that stays out of the
   # call is a column of the table that silently goes missing, and the caller
@@ -2449,8 +2470,17 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
       s <- d[!is.na(d$.kind) & d$.kind == kd, , drop = FALSE]
       have <- .ard_first_seen(s$stat_name)
       if (identical(kd, "continuous")) {
-        cand <- c("n" = "{N:d}", "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
-                  "Median" = "{median:.1f}", "Min, Max" = "{min:.1f}, {max:.1f}")
+        # A full set, trimmed to what this ARD actually carries: it is far
+        # easier to delete a line than to remember the one that was missing.
+        cand <- c(
+          "n"            = tok("N"),
+          "Mean (SD)"    = paste0(tok("mean"), " (", tok("sd"), ")"),
+          "Median"       = tok("median"),
+          "Q1, Q3"       = paste0(tok("p25"), ", ", tok("p75")),
+          "Min, Max"     = paste0(tok("min"), ", ", tok("max")),
+          "CV (%)"       = tok("cv"),
+          "Geometric Mean" = tok("geom_mean"),
+          "95% CI"       = paste0(tok("conf.low"), ", ", tok("conf.high")))
         keepc <- vapply(cand, function(t)
           all(gsub("[{}]", "", gsub(":[^}]*", "", .ard_tokens(t))) %in% have),
           logical(1))
@@ -2461,8 +2491,9 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
           paste0("\"", names(cand), "\" = \"", unname(cand), "\"",
                  collapse = ",\n                     "), ")"))
       } else {
-        tpl <- if (all(c("n", "p") %in% have)) "{n:d} ({p:.1f%})" else
-          if ("n" %in% have) "{n:d}" else paste0("{", have[1], "}")
+        tpl <- if (all(c("n", "p") %in% have))
+          paste0(tok("n"), " ({p:.1f%})") else
+          if ("n" %in% have) tok("n") else paste0("{", have[1], "}")
         cell_lines <- c(cell_lines, paste0("    ", kd, " = \"", tpl, "\""))
       }
     }
