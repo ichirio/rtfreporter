@@ -42,7 +42,12 @@ not recoverable from an ARD that was not built with \code{.attributes = TRUE}.
 \section{What it writes}{
 
 Always three blocks, so the author deletes rather than remembers:
-the \code{\link[=ard_table]{ard_table()}} call, the \code{col_header} (drafted from \code{\link[=ard_pull]{ard_pull()}}
+the conversion written as the \strong{pipe} --- \code{ard_normalize()}, a
+commented \code{dplyr::mutate()} and \code{ard_spread()} --- because
+\code{\link[=ard_table]{ard_table()}} is exactly that pipe collapsed, and half the reports on
+Discussion #473 have to reach between the two halves (to derive a key
+from a statistic, to add a constant column, to indent a label);
+then the \code{col_header} (drafted from \code{\link[=ard_pull]{ard_pull()}}
 when one column key makes that decidable, and skipped entirely when
 several do, since \code{as_rtftables(header_sep = )} rebuilds the spanning
 header from the \code{"____"} in the names), and the \code{\link[=as_rtftables]{as_rtftables()}}

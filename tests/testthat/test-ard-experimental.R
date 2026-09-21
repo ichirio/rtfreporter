@@ -1025,7 +1025,10 @@ test_that("ard_template() emits code that actually runs", {
   skip_if_no_cards()
   ard <- make_ard()
   code <- utils::capture.output(gen <- ard_template(ard, cols = "TRT"))
-  expect_true(any(grepl("ard_table", gen)))
+  expect_true(any(grepl("ard_normalize", gen)))
+  expect_true(any(grepl("ard_spread", gen)))
+  # the seam between the two is offered, commented out
+  expect_true(any(grepl("dplyr::mutate", gen, fixed = TRUE)))
   expect_true(any(grepl("cols  = \"TRT\"", gen)))
   # the generated script evaluates against the same ARD, and now runs past
   # the table data.frame to the pages

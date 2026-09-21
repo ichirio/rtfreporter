@@ -300,7 +300,14 @@
   remembering the one that was missing.
 
   **`ard_template()` writes the whole script**, always in three blocks: the
-  [ard_table()] call, the column header, and the [as_rtftables()] call.
+  conversion, the column header, and the [as_rtftables()] call.  The
+  conversion is written as the **pipe** --- `ard_normalize()`, a commented
+  `dplyr::mutate()`, `ard_spread()` --- rather than as `ard_table()`, because
+  `ard_table()` is exactly that pipe collapsed and half the reports on
+  Discussion #473 have to reach between its two halves: to derive a
+  sub-column key from a statistic, to add a constant row-group column, to
+  indent a severity label.  Showing the seam turns "you had to know this call
+  could be split" into "delete the line you do not need".
   There is no flag to ask for them, because deleting a block you can see is
   easier than remembering one you cannot.  `stub_vars` is derived from the
   row keys and the label column.  The header block drafts `col_header` from

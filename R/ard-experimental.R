@@ -2377,7 +2377,12 @@ ard_spec_template <- function(ard, path = NULL) {
 #' @param hierarchy Optional nested hierarchy, outermost first.
 #' @section What it writes:
 #' Always three blocks, so the author deletes rather than remembers:
-#' the [ard_table()] call, the `col_header` (drafted from [ard_pull()]
+#' the conversion written as the **pipe** --- `ard_normalize()`, a
+#' commented `dplyr::mutate()` and `ard_spread()` --- because
+#' [ard_table()] is exactly that pipe collapsed, and half the reports on
+#' Discussion #473 have to reach between the two halves (to derive a key
+#' from a statistic, to add a constant column, to indent a label);
+#' then the `col_header` (drafted from [ard_pull()]
 #' when one column key makes that decidable, and skipped entirely when
 #' several do, since `as_rtftables(header_sep = )` rebuilds the spanning
 #' header from the `"____"` in the names), and the [as_rtftables()]
@@ -2475,20 +2480,32 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
     "")
 
   # -- 1. ARD -> table data.frame ---------------------------------------
+  # The pipe, not ard_table(): ard_table() IS ard_normalize() |> ard_spread(),
+  # and half the real reports need to reach between them -- to derive a key
+  # from a statistic, to add a constant column, to indent a label.  Showing
+  # the seam with an empty `mutate()` turns "you had to know to split this"
+  # into "delete the line you do not need".
+  norm_args <- c(
+    if (length(hierarchy)) paste0("    hierarchy = ", vecq(hierarchy)) else NULL,
+    if (overall) "    overall   = \"Any event\"        # <- label for the sentinel"
+    else NULL)
+  if (length(norm_args) > 1L) {
+    norm_args[-length(norm_args)] <- paste0(norm_args[-length(norm_args)], ",")
+  }
   head1 <- c(
     .ard_bar("1. ARD -> table data.frame"),
-    "tbl_df <- rtfreporter::ard_table(",
-    "  ard,",
-    paste0("  cols  = ", vecq(cols), ","),
-    if (length(hierarchy)) paste0("  hierarchy = ", vecq(hierarchy), ",")
-    else NULL,
+    "tbl_df <- ard |>",
+    if (length(norm_args))
+      c("  rtfreporter::ard_normalize(", norm_args, "  ) |>")
+    else "  rtfreporter::ard_normalize() |>",
+    "  # dplyr::mutate() |>            # <- derived keys, constants, labels",
+    "  rtfreporter::ard_spread(",
+    paste0("    cols  = ", vecq(cols), ","),
     if (length(row_parts))
-      paste0("  rows  = c(", paste(row_parts, collapse = ", "), "),")
+      paste0("    rows  = c(", paste(row_parts, collapse = ", "), "),")
     else NULL,
     if (length(hierarchy) > 1L)
-      paste0("  label = c(label = ", q(utils::tail(hierarchy, 1L)), "),")
-    else NULL,
-    if (overall) "  overall = \"Any event\",       # <- label for the sentinel"
+      paste0("    label = c(label = ", q(utils::tail(hierarchy, 1L)), "),")
     else NULL)
 
   if (isTRUE(spec)) {
@@ -2496,8 +2513,8 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
            "spec <- rtfreporter::read_ard_spec(\"ard-spec.xlsx\")",
            "",
            head1,
-           "  spec  = spec",
-           ")")
+           "    spec  = spec",
+           "  )")
   } else {
     cell_lines <- character(0)
     for (kd in kinds) {
@@ -2518,25 +2535,25 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
           logical(1))
         cand <- cand[keepc]
         if (!length(cand)) next
-        rows_txt <- .ard_aligned(names(cand), unname(cand), "      ")
+        rows_txt <- .ard_aligned(names(cand), unname(cand), "        ")
         cell_lines <- c(cell_lines,
-                        paste0("    ", kd, " = c("),
+                        paste0("      ", kd, " = c("),
                         paste0(rows_txt, c(rep(",", length(rows_txt) - 1L), "")),
-                        "    )")
+                        "      )")
       } else {
         tpl <- if (all(c("n", "p") %in% have)) paste0(tok("n"), " ({p:.1f%})")
                else if ("n" %in% have) tok("n") else paste0("{", have[1], "}")
-        cell_lines <- c(cell_lines, paste0("    ", kd, " = ", q(tpl)))
+        cell_lines <- c(cell_lines, paste0("      ", kd, " = ", q(tpl)))
       }
     }
     # a comma after every block but the last
-    ends <- which(cell_lines == "    )" |
-                    grepl("^    [a-z]+ = \"", cell_lines))
+    ends <- which(cell_lines == "      )" |
+                    grepl("^      [a-z]+ = \"", cell_lines))
     if (length(ends) > 1L) {
       cell_lines[utils::head(ends, -1L)] <-
         paste0(cell_lines[utils::head(ends, -1L)], ",")
     }
-    L <- c(L, head1, "  cells = list(", cell_lines, "  )", ")")
+    L <- c(L, head1, "    cells = list(", cell_lines, "    )", "  )")
   }
 
   # -- 2. column header --------------------------------------------------
