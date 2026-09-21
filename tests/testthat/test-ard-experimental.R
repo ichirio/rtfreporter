@@ -1351,3 +1351,43 @@ test_that("ard_template() offers the full row set and trims what is absent", {
   expect_false(grepl("Q1, Q3", t, fixed = TRUE))   # no p25/p75 in this ARD
   expect_false(grepl("Min, Max", t, fixed = TRUE))
 })
+
+test_that("ard_template(rtf = TRUE) writes a script that reaches rtftables", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  ard <- cards::ard_stack(
+    adsl, .by = TRT,
+    cards::ard_continuous(
+      variables = AGE,
+      statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd"))),
+    cards::ard_categorical(variables = SEX), .total_n = TRUE)
+  txt <- capture.output(ard_template(ard, cols = "TRT", rtf = TRUE))
+  code <- paste(txt, collapse = "
+")
+  expect_match(code, "as_rtftables(", fixed = TRUE)
+  expect_match(code, 'stub_vars  = c("group", "label")', fixed = TRUE)
+  expect_match(code, "ard_pull(ard, cols =", fixed = TRUE)
+  # the whole script runs, and ends in an rtftables object
+  e <- new.env(); assign("ard", ard, e)
+  suppressMessages(
+    eval(parse(text = paste(txt[!startsWith(txt, "#")], collapse = "
+")), e))
+  expect_true(exists("pages", e))
+  expect_gte(length(get("pages", e)), 1L)
+})
+
+test_that("with more than one column key the header is left to header_sep", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  adsl$GRP <- rep(c("X", "Y"), length.out = nrow(adsl))
+  ard <- cards::ard_categorical(adsl, by = c(TRT, GRP), variables = SEX)
+  code <- paste(capture.output(
+    ard_template(ard, cols = c("TRT", "GRP"), rtf = TRUE)), collapse = "
+")
+  expect_match(code, "header_sep", fixed = TRUE)
+  expect_false(grepl("col_header = col_header", code, fixed = TRUE))
+})

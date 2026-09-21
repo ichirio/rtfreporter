@@ -299,6 +299,23 @@
   this ARD carries, on the grounds that deleting a line is easier than
   remembering the one that was missing.
 
+  **`ard_template(rtf = TRUE)` writes the whole script**, not just the table
+  `data.frame`: the [as_rtftables()] call follows, with `stub_vars` derived
+  from the row keys and the label column.  With one column key it drafts
+  `col_header` too, running `ard_pull()` for the denominator each percentage
+  used and reporting what it found; where the ARD cannot settle that, the
+  draft says so and points at `ard_pull()`'s candidate list rather than
+  guessing.  With more than one column key it writes no header, because
+  `as_rtftables(header_sep = )` already rebuilds the spanning one from the
+  `"____"` in the column names.  The generated scripts for the demographics
+  and adverse-event reports run unedited to a paginated result.
+
+  There is deliberately no function that returns the object instead. Only
+  `stub_vars` out of the nine arguments a real report passes to
+  `as_rtftables()` is derivable from an ARD; the rest are layout and house
+  style, so folding the two calls into one would have saved a single
+  argument while adding a third way to do the same thing.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and
