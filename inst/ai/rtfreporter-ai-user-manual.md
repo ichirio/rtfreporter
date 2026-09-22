@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.0.9035** (the development
+**This manual documents rtfreporter 0.8.0.9037** (the development
 version, after release 0.8.0).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -780,7 +780,7 @@ prototype beside the verbs above, may be withdrawn wholesale):**
 `ard_plan` `plan_normalize` `plan_spread` `plan_cells` `plan_digits`
 `plan_round` `plan_n` `plan_derive` `plan_fmt` `plan_stub` `plan_rtf`
 `plan_styles` `plan_header`
-`plan_after` `apply_plan`
+`plan_after` `apply_plan` `plan_template`
 
 ---
 

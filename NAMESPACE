@@ -224,4 +224,5 @@ export(plan_rtf)
 export(plan_header)
 export(plan_after)
 export(apply_plan)
+export(plan_template)
 # ---- spike: ARD plan ----

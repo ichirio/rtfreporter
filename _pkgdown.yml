@@ -571,6 +571,7 @@ reference:
       - ard_plan
       - plan_verbs
       - apply_plan
+      - plan_template
 
 # Articles index page (/articles/).  Grouped so users land on the
 # tutorial first; learner-focused material sits at the bottom.

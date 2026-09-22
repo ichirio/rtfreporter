@@ -2479,6 +2479,67 @@ ard_spec_template <- function(ard, path = NULL) {
   x
 }
 
+# What a template needs to know about an ARD, gathered once.  Two emitters
+# read it -- ard_template() writes the verbs, plan_template() writes the
+# plan -- and neither should be re-deriving the same facts from the same
+# tibble in two places.
+.ard_template_facts <- function(ard, cols = NULL, hierarchy = character()) {
+  d  <- ard_normalize(ard, hierarchy = hierarchy, drop_key_variables = FALSE)
+  ra <- as.data.frame(ard)
+  gcols <- grep("^group[0-9]+$", names(ra), value = TRUE)
+  keys  <- unique(unlist(lapply(gcols, function(g) .ard_first_seen(ra[[g]]))))
+  guessed <- is.null(cols)
+  if (guessed) cols <- utils::head(keys, 1L)
+  rest <- setdiff(keys, c(cols, hierarchy))
+
+  vars <- setdiff(.ard_first_seen(d$variable), c(keys, hierarchy))
+  vars <- setdiff(vars, c("..ard_total_n..", "..ard_hierarchical_overall.."))
+  kinds <- .ard_first_seen(d$.kind[d$variable %in% vars])
+  if (!length(kinds)) kinds <- .ard_first_seen(d$.kind)
+  # Ask the RAW ard: ard_normalize() drops the sentinel rows when no
+  # `overall =` was given, so looking at `d` would never find them.
+  overall <- any(as.character(unlist(ra$variable)) ==
+                   "..ard_hierarchical_overall..", na.rm = TRUE)
+
+  # The decimal places are IN the ARD: cards stores `fmt_fun` per statistic,
+  # and a study that sets its own ("mean to 2, SD to 3") records exactly that.
+  dig <- list()
+  if ("fmt_fun" %in% names(ra)) {
+    sn <- as.character(unlist(ra$stat_name))
+    for (j in seq_len(nrow(ra))) {
+      f <- ra$fmt_fun[[j]]
+      if (is.null(dig[[sn[j]]]) && is.numeric(f) && length(f) == 1L) {
+        dig[[sn[j]]] <- as.integer(f)
+      }
+    }
+  }
+  tok <- function(stat) {
+    dd <- dig[[stat]]
+    if (is.null(dd)) paste0("{", stat, "}") else paste0("{", stat, ":.", dd, "f}")
+  }
+
+  q <- function(v) paste0("\"", v, "\"")
+  vecq <- function(v) {
+    if (length(v) == 1L) q(v) else paste0("c(", paste(q(v), collapse = ", "), ")")
+  }
+
+  # `rows` is derived, not merely reported: a key left out of the call is a
+  # column of the table that silently goes missing.
+  row_parts <- character(0)
+  if (length(rest)) row_parts <- paste0(rest, " = ", q(rest))
+  if (length(hierarchy)) {
+    row_parts <- c(row_parts, paste0("group1 = ", q(hierarchy[1L])))
+  } else if (length(vars) > 1L) {
+    row_parts <- c(row_parts, "group = \"variable\"")
+  }
+  stub <- c(sub(" =.*$", "", row_parts), "label")
+
+  list(d = d, ra = ra, keys = keys, cols = cols, guessed = guessed,
+       rest = rest, vars = vars, kinds = kinds, overall = overall,
+       dig = dig, tok = tok, q = q, vecq = vecq,
+       row_parts = row_parts, stub = stub)
+}
+
 # ============================================================================
 #  ard_template()
 # ============================================================================
@@ -2563,55 +2624,12 @@ ard_spec_template <- function(ard, path = NULL) {
 ard_template <- function(ard, cols = NULL, hierarchy = character(),
                          spec = FALSE, file = NULL, pipe = NULL) {
   op <- .ard_pipe_op(pipe)
-  d  <- ard_normalize(ard, hierarchy = hierarchy, drop_key_variables = FALSE)
-  ra <- as.data.frame(ard)
-  gcols <- grep("^group[0-9]+$", names(ra), value = TRUE)
-  keys  <- unique(unlist(lapply(gcols, function(g) .ard_first_seen(ra[[g]]))))
-  guessed <- is.null(cols)
-  if (guessed) cols <- utils::head(keys, 1L)
-  rest <- setdiff(keys, c(cols, hierarchy))
-
-  vars <- setdiff(.ard_first_seen(d$variable), c(keys, hierarchy))
-  vars <- setdiff(vars, c("..ard_total_n..", "..ard_hierarchical_overall.."))
-  kinds <- .ard_first_seen(d$.kind[d$variable %in% vars])
-  if (!length(kinds)) kinds <- .ard_first_seen(d$.kind)
-  # Ask the RAW ard: ard_normalize() drops the sentinel rows when no
-  # `overall =` was given, so looking at `d` would never find them.
-  overall <- any(as.character(unlist(ra$variable)) ==
-                   "..ard_hierarchical_overall..", na.rm = TRUE)
-
-  # The decimal places are IN the ARD: cards stores `fmt_fun` per statistic,
-  # and a study that sets its own ("mean to 2, SD to 3") records exactly that.
-  dig <- list()
-  if ("fmt_fun" %in% names(ra)) {
-    sn <- as.character(unlist(ra$stat_name))
-    for (j in seq_len(nrow(ra))) {
-      f <- ra$fmt_fun[[j]]
-      if (is.null(dig[[sn[j]]]) && is.numeric(f) && length(f) == 1L) {
-        dig[[sn[j]]] <- as.integer(f)
-      }
-    }
-  }
-  tok <- function(stat) {
-    dd <- dig[[stat]]
-    if (is.null(dd)) paste0("{", stat, "}") else paste0("{", stat, ":.", dd, "f}")
-  }
-
-  q <- function(v) paste0("\"", v, "\"")
-  vecq <- function(v) {
-    if (length(v) == 1L) q(v) else paste0("c(", paste(q(v), collapse = ", "), ")")
-  }
-
-  # `rows` is derived, not merely reported: a key left out of the call is a
-  # column of the table that silently goes missing.
-  row_parts <- character(0)
-  if (length(rest)) row_parts <- paste0(rest, " = ", q(rest))
-  if (length(hierarchy)) {
-    row_parts <- c(row_parts, paste0("group1 = ", q(hierarchy[1L])))
-  } else if (length(vars) > 1L) {
-    row_parts <- c(row_parts, "group = \"variable\"")
-  }
-  stub <- c(sub(" =.*$", "", row_parts), "label")
+  f <- .ard_template_facts(ard, cols, hierarchy)
+  d <- f$d; ra <- f$ra; keys <- f$keys; cols <- f$cols
+  guessed <- f$guessed; rest <- f$rest; vars <- f$vars
+  kinds <- f$kinds; overall <- f$overall; dig <- f$dig
+  tok <- f$tok; q <- f$q; vecq <- f$vecq
+  row_parts <- f$row_parts; stub <- f$stub
 
   # -- banner -----------------------------------------------------------
   L <- c(

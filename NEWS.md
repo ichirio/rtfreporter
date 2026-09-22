@@ -28,6 +28,28 @@
   reimplements `as_rtftables()`; the plan resolves to its arguments and
   calls it.
 
+  **How far a plan goes is read off what it declares.**  `apply_plan()`
+  used to take a `stage`, so a plan carrying `plan_rtf()` and
+  `plan_header()` still handed back a `data.frame` unless you knew to ask
+  for `"pages"`.  It now infers: anything that only makes sense once there
+  are pages means pages, and `print(p)` says which --- `-> table
+  data.frame` or `-> RTF pages` --- without computing anything.  Calling a
+  verb is the declaration, so `plan_rtf()` with nothing in it still means
+  "make pages".
+
+  **`rtf_tables(doc, p)` takes a plan directly**, which is the one line the
+  spike needs outside its own file, and leaves `apply_plan()` for looking
+  inside: `"normalize"`, `"args"`, `"table"`, `"pages"`.  `print()`
+  deliberately does **not** resolve: a conversion can be slow, and a plan
+  that errors must still be printable or there is nothing to debug with.
+
+  **`plan_template()`** is [ard_template()] for the deferred form: it reads
+  an ARD and writes the whole pipeline, both halves, ending in
+  `apply_plan(p)`.  The two share `.ard_template_facts()`, so they cannot
+  read the same ARD differently.  Where the ARD cannot answer --- a
+  denominator that several variables disagree about --- it writes no
+  `plan_header()` rather than inventing one, and says what to do instead.
+
   **`plan_styles()` is SAS's `call define(_col_, 'style', ...)`**: a cell
   looks at its own row and decides how it is printed.  The condition is a
   one-sided formula over the finished table and its value is used

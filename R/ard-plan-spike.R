@@ -83,7 +83,7 @@
   "plan_n", "plan_derive", "plan_fmt", "plan_stub", "plan_styles",
   "plan_rtf",
   "plan_header",
-  "plan_after", "apply_plan")
+  "plan_after", "apply_plan", "plan_template")
 
 
 # -- layer plumbing ----------------------------------------------------------
@@ -96,14 +96,25 @@
     .ard_stop("Expected an ard_plan; pipe from ard_plan(ard).")
   }
   fields <- fields[!vapply(fields, is.null, logical(1L))]
-  if (length(fields)) {
-    plan$layers[[length(plan$layers) + 1L]] <-
-      list(kind = kind, fields = fields)
-  }
+  # Recorded even when empty: calling the verb is the declaration, and
+  # `plan_rtf()` with nothing in it still means "make pages".
+  plan$layers[[length(plan$layers) + 1L]] <-
+    list(kind = kind, fields = fields)
   plan
 }
 
 # The layers of one kind, in the order they were declared.
+# How far the plan goes is a fact about what it DECLARES, not something
+# the caller should have to repeat.  Anything that only makes sense once
+# there are pages -- the as_rtftables() settings, the header, the cell
+# styles, the steps after -- means the answer is pages; otherwise the
+# plan stops at the table data.frame.
+.plan_reach <- function(plan) {
+  kinds <- vapply(plan$layers, `[[`, "", "kind")
+  if (any(kinds %in% c("rtf", "header", "styles", "after"))) "pages"
+  else "table"
+}
+
 .plan_of <- function(plan, kind) {
   keep <- vapply(plan$layers, function(l) identical(l$kind, kind), logical(1L))
   lapply(plan$layers[keep], `[[`, "fields")
@@ -303,7 +314,10 @@ print.ard_plan <- function(x, ...) {
              ""),
       length(x$layers), " layer",
       if (length(x$layers) == 1L) "" else "s",
-      ", nothing computed yet\n", sep = "")
+      "  ->  ",
+      if (identical(.plan_reach(x), "pages")) "RTF pages"
+      else "table data.frame",
+      " (nothing computed yet)\n", sep = "")
   if (!length(x$layers)) {
     cat("  (empty -- add plan_spread() / plan_cells() / plan_digits())\n")
     return(invisible(x))
@@ -315,7 +329,10 @@ print.ard_plan <- function(x, ...) {
     cat(sprintf("  %2d. %-10s %s\n", i, l$kind,
                 paste(nms, collapse = ", ")))
   }
-  cat("  apply_plan(x) to run it; apply_plan(x, \"args\") to see the call\n")
+  cat(if (identical(.plan_reach(x), "pages"))
+        "  rtf_tables(doc, x) renders it"
+      else "  apply_plan(x) returns it",
+      ";  apply_plan(x, \"args\") shows the call\n", sep = "")
   invisible(x)
 }
 
@@ -585,7 +602,15 @@ plan_after <- function(plan, ...) {
 #' do" --- there is no second code path that could disagree with the first.
 #'
 #' @param plan An [ard_plan()].
-#' @param stage How far to go.  `"table"` (default) returns the table
+#' @param stage How far to go.  `"auto"`, the default, is **as far as the
+#'   plan declares**: a plan that says nothing about the display stops at
+#'   the table `data.frame`; one that carries `plan_rtf()`, `plan_header()`,
+#'   `plan_styles()` or `plan_after()` goes on to the RTF pages.  You rarely
+#'   need this function at all --- [rtf_tables()] takes a plan directly ---
+#'   and naming a stage is for looking inside: `"normalize"`, `"args"`,
+#'   `"table"`, `"pages"`.
+#'
+#'   The named stages: `"table"` returns the table
 #'   `data.frame`, the same object [ard_spread()] returns.  `"normalize"`
 #'   returns the long frame [ard_normalize()] returns, which is where you
 #'   reach in with dplyr if you have to.  `"args"` returns the resolved
@@ -616,12 +641,13 @@ plan_after <- function(plan, ...) {
 #' }
 #' @seealso [ard_plan()], [plan_verbs]
 #' @export
-apply_plan <- function(plan,
-                       stage = c("table", "normalize", "args", "pages")) {
+apply_plan <- function(plan, stage = c("auto", "normalize", "args",
+                                       "table", "pages")) {
   if (!inherits(plan, "ard_plan")) {
     .ard_stop("Expected an ard_plan; start from ard_plan(ard).")
   }
   stage <- match.arg(stage)
+  if (identical(stage, "auto")) stage <- .plan_reach(plan)
 
   # 1. the normalize half, last wins
   n_args <- .plan_merge(.plan_of(plan, "normalize"))
@@ -812,4 +838,210 @@ apply_plan <- function(plan,
     if (!is.na(k) && k %in% names(map)) return(map[[k]])
   }
   NULL
+}
+
+
+# ============================================================================
+#  plan_template()
+# ============================================================================
+
+# One `verb(` line, its arguments indented under it, and the pipe on the
+# close.  Written here rather than pasted six times below.
+.plan_call <- function(verb, args, op, last = FALSE) {
+  if (!length(args)) {
+    return(paste0("  rtfreporter::", verb, "()", if (last) "" else
+                  paste0(" ", op)))
+  }
+  args[-length(args)] <- paste0(args[-length(args)], ",")
+  c(paste0("  rtfreporter::", verb, "("),
+    paste0("    ", args),
+    paste0("  )", if (last) "" else paste0(" ", op)))
+}
+
+#' Write the plan for you (SPIKE)
+#'
+#' The counterpart of [ard_template()] for the deferred form: reads an ARD
+#' and prints a runnable [ard_plan()] pipeline, filled in with the keys,
+#' hierarchy, contexts and statistics it actually found.
+#'
+#' It writes **both halves** --- the ARD to the table, and the table to the
+#' RTF pages --- because a plan that stops at the table is a plan that made
+#' you look up `stub_vars` and the header somewhere else.  The display half
+#' is a starting point and is meant to be edited: only `plan_stub()` is
+#' derivable from the ARD, and the rest are display decisions nothing can
+#' guess.
+#'
+#' @inheritParams ard_template
+#'
+#' @return The generated code, as a character vector, invisibly.
+#'
+#' @section Lifecycle:
+#' **Spike.**  See [ard_plan()].
+#'
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- cards::ard_stack(
+#'     cards::ADSL, .by = ARM,
+#'     cards::ard_continuous(variables = AGE),
+#'     cards::ard_categorical(variables = SEX))
+#'   plan_template(ard, cols = "ARM")
+#' }
+#' @seealso [ard_plan()], [apply_plan()], [ard_template()]
+#' @export
+plan_template <- function(ard, cols = NULL, hierarchy = character(),
+                          spec = FALSE, file = NULL, pipe = NULL) {
+  op <- .ard_pipe_op(pipe)
+  f  <- .ard_template_facts(ard, cols, hierarchy)
+  q <- f$q; vecq <- f$vecq; tok <- f$tok
+
+  L <- c(
+    .ard_bar("", "="),
+    "#  generated by rtfreporter::plan_template()  --  SPIKE",
+    "#",
+    paste0("#  keys       : ", paste(f$keys, collapse = ", ")),
+    paste0("#  variables  : ",
+           if (length(f$vars)) paste(utils::head(f$vars, 12), collapse = ", ")
+           else "(none -- the rows come from `hierarchy`)"),
+    paste0("#  kinds      : ", paste(f$kinds, collapse = ", ")),
+    "#",
+    "#  Nothing runs until apply_plan(); print(p) says how far it will go.",
+    "#  A later layer wins, so tune one variable by ADDING a line.",
+    if (f$guessed)
+      "#  NOTE: `cols` was not given; the first key is used.  Check it."
+    else NULL,
+    if (length(f$rest))
+      paste0("#  NOTE: keys outside `cols` became row keys: ",
+             paste(f$rest, collapse = ", "))
+    else NULL,
+    if (f$overall)
+      "#  NOTE: an overall sentinel is present; edit the `overall` label."
+    else NULL,
+    .ard_bar("", "="),
+    "",
+    if (identical(op, "%>%"))
+      c("library(magrittr)   # for %>% ; dplyr re-exports it too", "")
+    else NULL)
+
+  # -- 1. the ARD half ---------------------------------------------------
+  norm <- c(
+    if (length(hierarchy)) paste0("hierarchy = ", vecq(hierarchy)) else NULL,
+    if (f$overall) "overall   = \"Any event\"" else NULL)
+
+  spread <- c(
+    paste0("cols = ", vecq(f$cols)),
+    if (length(f$row_parts))
+      paste0("rows = c(", paste(f$row_parts, collapse = ", "), ")")
+    else NULL,
+    if (length(hierarchy) > 1L)
+      paste0("label = c(label = ", q(utils::tail(hierarchy, 1L)), ")")
+    else NULL)
+
+  L <- c(L,
+         .ard_bar("1. the ARD half"),
+         paste0("p <- rtfreporter::ard_plan(ard) ", op))
+  if (length(norm)) L <- c(L, .plan_call("plan_normalize", norm, op))
+  L <- c(L, .plan_call("plan_spread", spread, op))
+
+  if (isTRUE(spec)) {
+    L <- c(L, .plan_call("plan_spread",
+                         "spec = rtfreporter::read_ard_spec(\"ard-spec.xlsx\")",
+                         op))
+  } else {
+    # already indented and comma-ed: a `c(` entry spans several lines, so
+    # it cannot go through .plan_call(), which commas every argument.
+    L <- c(L, "  rtfreporter::plan_cells(", .plan_cell_lines(f),
+           paste0("  ) ", op))
+  }
+
+  # -- 2. the display half -----------------------------------------------
+  L <- c(L, "", .ard_bar("2. the display half -- edit this"))
+  n_ok <- !is.null(tryCatch(ard_pull(ard, cols = f$cols),
+                            error = function(e) NULL))
+  if (n_ok && length(f$cols) == 1L) {
+    L <- c(L, .plan_call(
+      "plan_n",
+      paste0("arm = function(ard) rtfreporter::ard_pull(ard, cols = ",
+             vecq(f$cols), ")"), op))
+  }
+  # `plan_stub()` rather than plan_rtf(stub_vars = ): the plan then sees the
+  # rows that will be printed, which plan_styles() needs.
+  L <- c(L, .plan_call("plan_stub",
+                       c(paste0("vars  = ", vecq(f$stub)),
+                         "label = \"row_label\""), op))
+  L <- c(L, .plan_call("plan_rtf",
+                       c("group_by   = \"indent\"",
+                         "blank_rows = \"between_groups\"",
+                         "split      = \"group_safe\"",
+                         "max_rows   = 22",
+                         "border     = \"tfl\""), op))
+  if (n_ok && length(f$cols) == 1L) {
+    L <- c(L, .plan_call(
+      "plan_header",
+      paste0("function(n) c(\"Characteristic\", ",
+             "paste0(names(n$arm), \"\\nN = \", ",
+             "as.integer(n$arm)))"), op, last = TRUE))
+  } else {
+    # fixed: the base pipe is " |>", and "|" is alternation in a regex
+    L[length(L)] <- sub(paste0(" ", op), "", L[length(L)], fixed = TRUE)
+    L <- c(L,
+           "# Several column keys: as_rtftables(header_sep = ) rebuilds the",
+           "# spanning header from the \"____\" in the names, so plan_header()",
+           "# is only needed for text the data does not carry.")
+  }
+
+  L <- c(L, "",
+         "# print(p) says whether this gives a table or RTF pages",
+         "pages <- rtfreporter::apply_plan(p)",
+         "#  ... or hand it straight to a document:",
+         "#  doc <- rtf_document() |> rtf_section(...) |> rtf_tables(p)")
+
+  code <- L[!vapply(L, is.null, logical(1))]
+  cat(paste(code, collapse = "\n"), "\n")
+  if (!is.null(file)) writeLines(code, file)
+  invisible(code)
+}
+
+# The `cells` entries, one per kind, with the digits the ARD already knows.
+.plan_cell_lines <- function(f) {
+  blocks <- list()
+  for (kd in f$kinds) {
+    d <- f$d[!is.na(f$d$.kind) & f$d$.kind == kd, , drop = FALSE]
+    have <- .ard_first_seen(d$stat_name)
+    if (identical(kd, "continuous")) {
+      cand <- c(
+        "n"              = f$tok("N"),
+        "Mean (SD)"      = paste0(f$tok("mean"), " (", f$tok("sd"), ")"),
+        "Median"         = f$tok("median"),
+        "Q1, Q3"         = paste0(f$tok("p25"), ", ", f$tok("p75")),
+        "Min, Max"       = paste0(f$tok("min"), ", ", f$tok("max")),
+        "CV (%)"         = f$tok("cv"),
+        "Geometric Mean" = f$tok("geom_mean"),
+        "95% CI"         = paste0(f$tok("conf.low"), ", ",
+                                  f$tok("conf.high")))
+      keep <- vapply(cand, function(t)
+        all(gsub("[{}]", "", gsub(":[^}]*", "", .ard_tokens(t))) %in% have),
+        logical(1))
+      cand <- cand[keep]
+      if (!length(cand)) next
+      rows <- .ard_aligned(names(cand), unname(cand), "      ")
+      rows[-length(rows)] <- paste0(rows[-length(rows)], ",")
+      blocks[[length(blocks) + 1L]] <-
+        c(paste0("    ", kd, " = c("), rows, "    )")
+    } else {
+      tpl <- if (all(c("n", "p") %in% have))
+        paste0(f$tok("n"), " ({p:.1f%})")
+      else if ("n" %in% have) f$tok("n") else paste0("{", have[1], "}")
+      blocks[[length(blocks) + 1L]] <-
+        paste0("    ", kd, " = ", encodeString(tpl, quote = "\""))
+    }
+  }
+  # a comma after every block but the last
+  for (i in seq_along(blocks)) {
+    if (i < length(blocks)) {
+      b <- blocks[[i]]
+      b[length(b)] <- paste0(b[length(b)], ",")
+      blocks[[i]] <- b
+    }
+  }
+  unlist(blocks, use.names = FALSE)
 }

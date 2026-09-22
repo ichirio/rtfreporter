@@ -395,10 +395,54 @@ test_that("the display verbs are last-wins too", {
   expect_identical(rtf$border, "tfl")
 })
 
-test_that("stage = \"table\" still stops before any of this", {
+test_that("how far a plan goes is read off what it declares", {
+  skip_if_no_cards2()
+  # nothing about the display: the answer is the table data.frame
+  expect_identical(.plan_reach(disp_plan()), "table")
+  expect_true(is.data.frame(suppressMessages(apply_plan(disp_plan()))))
+
+  # anything that only makes sense once there are pages moves the answer
+  for (v in list(function(p) plan_rtf(p, border = "tfl"),
+                 function(p) plan_header(p, c("a", "b", "c", "d")),
+                 function(p) plan_styles(p, bold = ~ TRUE),
+                 function(p) plan_after(p, identity))) {
+    expect_identical(.plan_reach(v(disp_plan())), "pages")
+  }
+
+  # calling the verb IS the declaration, even with nothing in it
+  expect_identical(.plan_reach(plan_rtf(disp_plan())), "pages")
+})
+
+test_that("a named stage still stops where it is told, for looking inside", {
   skip_if_no_cards2()
   p <- disp_plan() |> plan_rtf(stub_vars = c("group", "label"))
-  expect_true(is.data.frame(suppressMessages(apply_plan(p))))
+  expect_true(is.data.frame(suppressMessages(apply_plan(p, "table"))))
+  expect_s3_class(suppressMessages(apply_plan(p, "normalize")), "data.frame")
+  expect_setequal(names(apply_plan(p, "args")), c("normalize", "spread"))
+  expect_type(suppressMessages(apply_plan(p)), "list")
+})
+
+test_that("the plan says which of the two it will give", {
+  skip_if_no_cards2()
+  expect_true(any(grepl("table data.frame",
+                        utils::capture.output(print(disp_plan())),
+                        fixed = TRUE)))
+  expect_true(any(grepl("RTF pages",
+    utils::capture.output(print(plan_rtf(disp_plan(), border = "tfl"))),
+    fixed = TRUE)))
+})
+
+test_that("rtf_tables() takes a plan, so apply_plan() is for looking", {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_rtf(stub_vars = c("group", "label"), border = "tfl")
+  doc <- rtf_document() |>
+    rtf_section(page = 1, secinfo = list(
+      header = rtf_header(rows = list(c(c = "T"))),
+      footer = rtf_footer(rows = list(c(l = "F")))))
+  direct <- suppressMessages(rtf_tables(doc, p))
+  byhand <- suppressMessages(rtf_tables(doc, apply_plan(p, "pages")))
+  expect_equal(direct, byhand)
 })
 # ------------------------------------------------- conditional cell styles
 
@@ -500,6 +544,84 @@ test_that("plan_styles() and plan_rtf(cell_styles=) do not both apply", {
     plan_rtf(cell_styles = list(NULL))
   expect_error(apply_plan(p, "pages"), "both set the same")
 })
+# --------------------------------------------------------- plan_template()
+
+test_that("plan_template() writes a plan that runs to the pages", {
+  skip_if_no_cards2()
+  ard <- plan_ard()
+  gen <- utils::capture.output(code <- plan_template(ard, cols = "TRT",
+                                                     pipe = "|>"))
+  expect_true(any(grepl("ard_plan(ard)", code, fixed = TRUE)))
+  expect_true(any(grepl("plan_spread(", code, fixed = TRUE)))
+  expect_true(any(grepl("plan_cells(", code, fixed = TRUE)))
+  # both halves, because a plan that stops at the table is half a plan
+  expect_true(any(grepl("plan_rtf(", code, fixed = TRUE)))
+  expect_true(any(grepl("plan_stub(", code, fixed = TRUE)))
+  expect_true(any(grepl("apply_plan(p)", code, fixed = TRUE)))
+
+  e <- new.env(); assign("ard", ard, e)
+  suppressMessages(eval(parse(text = paste(code, collapse = "
+")), e))
+  pg <- get("pages", e)
+  expect_type(pg, "list")
+  expect_s3_class(pg[[1]], "rtftable")
+})
+
+test_that("plan_template() derives the stub and leaves the rest to be edited", {
+  skip_if_no_cards2()
+  code <- utils::capture.output(
+    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+  # stub_vars is the one as_rtftables() setting the ARD can answer
+  expect_true(any(grepl('vars  = c("group", "label")', code, fixed = TRUE)))
+  expect_true(any(grepl("edit this", code, fixed = TRUE)))
+})
+
+test_that("plan_template() takes the pipe like ard_template() does", {
+  skip_if_no_cards2()
+  base <- utils::capture.output(
+    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+  mag <- utils::capture.output(
+    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "%>%")))
+  expect_false(any(grepl("%>%", base, fixed = TRUE)))
+  expect_true(any(grepl("library(magrittr)", mag, fixed = TRUE)))
+})
+
+test_that("plan_template(spec = ) reads the definition file instead", {
+  skip_if_no_cards2()
+  code <- utils::capture.output(
+    invisible(plan_template(plan_ard(), cols = "TRT", spec = TRUE,
+                            pipe = "|>")))
+  expect_true(any(grepl("read_ard_spec", code, fixed = TRUE)))
+  expect_false(any(grepl("plan_cells(", code, fixed = TRUE)))
+})
+
+test_that("the generated header writes a real newline escape", {
+  skip_if_no_cards2()
+  # one unambiguous denominator, so a header block is written at all
+  ard <- cards::ard_stack(
+    cards::ADSL, .by = ARM,
+    cards::ard_continuous(variables = AGE,
+                          statistic = ~ list(N = function(x) length(x))))
+  code <- utils::capture.output(
+    invisible(plan_template(ard, cols = "ARM", pipe = "|>")))
+  expect_true(any(grepl("plan_header", code, fixed = TRUE)))
+  # ONE backslash, not two: the generated file is R source
+  one <- paste0('"', '\\', 'nN = "')
+  two <- paste0('"', '\\\\', 'nN = "')
+  expect_true(any(grepl(one, code, fixed = TRUE)))
+  expect_false(any(grepl(two, code, fixed = TRUE)))
+})
+
+test_that("plan_template() invents no header when the N is ambiguous", {
+  skip_if_no_cards2()
+  # two continuous variables disagree about N, so nothing is guessed
+  code <- utils::capture.output(
+    invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
+  expect_false(any(grepl("rtfreporter::plan_header(", code, fixed = TRUE)))
+  # and the pipeline still parses: the trailing pipe must have been removed
+  expect_silent(parse(text = paste(code, collapse = "\n")))
+})
+
 test_that("the verbs refuse anything that is not a plan", {
   expect_error(plan_cells(data.frame(a = 1), "x"), "Expected an ard_plan")
   expect_error(apply_plan(data.frame(a = 1)), "Expected an ard_plan")

@@ -4,12 +4,20 @@
 \alias{apply_plan}
 \title{Run a plan, or look inside it (SPIKE)}
 \usage{
-apply_plan(plan, stage = c("table", "normalize", "args", "pages"))
+apply_plan(plan, stage = c("auto", "normalize", "args", "table", "pages"))
 }
 \arguments{
 \item{plan}{An \code{\link[=ard_plan]{ard_plan()}}.}
 
-\item{stage}{How far to go.  \code{"table"} (default) returns the table
+\item{stage}{How far to go.  \code{"auto"}, the default, is \strong{as far as the
+plan declares}: a plan that says nothing about the display stops at
+the table \code{data.frame}; one that carries \code{plan_rtf()}, \code{plan_header()},
+\code{plan_styles()} or \code{plan_after()} goes on to the RTF pages.  You rarely
+need this function at all --- \code{\link[=rtf_tables]{rtf_tables()}} takes a plan directly ---
+and naming a stage is for looking inside: \code{"normalize"}, \code{"args"},
+\code{"table"}, \code{"pages"}.
+
+The named stages: \code{"table"} returns the table
 \code{data.frame}, the same object \code{\link[=ard_spread]{ard_spread()}} returns.  \code{"normalize"}
 returns the long frame \code{\link[=ard_normalize]{ard_normalize()}} returns, which is where you
 reach in with dplyr if you have to.  \code{"args"} returns the resolved
