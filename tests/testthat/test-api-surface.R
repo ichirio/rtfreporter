@@ -70,11 +70,11 @@ test_that("one border constructor is left once the deprecated ones are set aside
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 126 exports: 7 deprecated and slated for removal before CRAN, 12
+  # 124 exports: 7 deprecated and slated for removal before CRAN, 12
   # experimental (the ARD family, #474) and 7 more in the deferred-plan
-  # spike beside it (23 verbs) -- none of them part of the reviewed surface.  The
+  # spike beside it (21 verbs) -- none of them part of the reviewed surface.  The
   # number that matters is what is left: 84.
-  expect_length(.exports(), 126L)
+  expect_length(.exports(), 124L)
   expect_true(all(.exp %in% .exports()),
               info = paste(setdiff(.exp, .exports()), collapse = ", "))
   expect_true(all(.spk %in% .exports()),

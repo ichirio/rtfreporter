@@ -201,16 +201,15 @@ test_that("two unnamed values are refused", {
   expect_error(plan_digits(ard_plan(plan_ard()), 1, 2), "at most one unnamed")
 })
 
-test_that("two rounding families are refused rather than guessed", {
+test_that("the rounding family is last-wins, like every other layer", {
   skip_if_no_cards2()
-  p <- base_plan() |> plan_digits(1) |>
-    plan_round("sas") |> plan_round(AGE = "r")
-  expect_error(apply_plan(p, "args"), "more than one family")
+  p <- base_plan() |> plan_digits(1, round = "sas") |> plan_digits(2, round = "r")
+  expect_identical(apply_plan(p, "args")$spread$round, "r")
 })
 
 test_that("one rounding family reaches ard_spread()", {
   skip_if_no_cards2()
-  p <- base_plan() |> plan_digits(1) |> plan_round("sas")
+  p <- base_plan() |> plan_digits(1) |> plan_digits(1, round = "sas")
   expect_identical(apply_plan(p, "args")$spread$round, "sas")
 })
 
@@ -406,7 +405,7 @@ test_that("how far a plan goes is read off what it declares", {
   # anything that only makes sense once there are pages moves the answer
   for (v in list(function(p) plan_style(p, border = "tfl"),
                  function(p) plan_header(p, c("a", "b", "c", "d")),
-                 function(p) plan_styles(p, bold = ~ TRUE),
+                 function(p) plan_cell_style(p, bold = ~ TRUE),
                  function(p) plan_after(p, identity))) {
     expect_identical(.plan_reach(v(disp_plan())), "pages")
   }
@@ -453,7 +452,7 @@ styled <- function(...) {
     disp_plan() |>
       plan_stub(vars = c("group", "label"), label = "row_label",
                 before = TRUE) |>
-      plan_styles(...) |>
+      plan_cell_style(...) |>
       plan_style(border = "tfl"),
     "pages"))
 }
@@ -501,8 +500,8 @@ test_that("styles are last-wins like every other layer", {
     disp_plan() |>
       plan_stub(vars = c("group", "label"), label = "row_label",
                 before = TRUE) |>
-      plan_styles(bold = ~ TRUE) |>
-      plan_styles(bold = ~ FALSE) |>          # a later LAYER wins
+      plan_cell_style(bold = ~ TRUE) |>
+      plan_cell_style(bold = ~ FALSE) |>          # a later LAYER wins
       plan_style(border = "tfl"),
     "pages"))[[1]]
   expect_true(all(vapply(pg$cell_styles,
@@ -534,18 +533,18 @@ test_that("a condition of the wrong length is refused", {
 test_that("folding the stub inside as_rtftables() is refused with a reason", {
   skip_if_no_cards2()
   # the heading rows it adds were never seen by the conditions
-  p <- disp_plan() |> plan_styles(bold = ~ TRUE) |>
+  p <- disp_plan() |> plan_cell_style(bold = ~ TRUE) |>
     plan_stub(vars = c("group", "label"))        # folded inside, not before
   expect_error(apply_plan(p, "pages"), "before = TRUE")
   expect_error(apply_plan(p, "pages"), "wrong row")
 })
 
-test_that("plan_styles() and plan_style(cell_styles=) do not both apply", {
+test_that("plan_cell_style() and plan_style(cell_styles=) do not both apply", {
   skip_if_no_cards2()
   p <- disp_plan() |>
     plan_stub(vars = c("group", "label"), label = "row_label",
               before = TRUE) |>
-    plan_styles(bold = ~ TRUE) |>
+    plan_cell_style(bold = ~ TRUE) |>
     plan_style(cell_styles = list(NULL))
   expect_error(apply_plan(p, "pages"), "use one")
 })
@@ -660,25 +659,25 @@ test_that("the seams run in the order they were declared", {
   expect_true(".tag2" %in% names(drop))
 })
 
-test_that("plan_derive() takes an expression, like mutate() does", {
+test_that("plan_mutate() takes an expression, like mutate() does", {
   skip_if_no_cards2()
   out <- suppressMessages(apply_plan(
-    disp_plan() |> plan_derive(flag = ifelse(group == "SEX", "y", "n"))))
+    disp_plan() |> plan_mutate(flag = ifelse(group == "SEX", "y", "n"))))
   expect_true("flag" %in% names(out))
   expect_setequal(unique(out$flag), c("y", "n"))
 })
 
-test_that("plan_derive() still takes a function for what an expression cannot", {
+test_that("plan_mutate() still takes a function for what an expression cannot", {
   skip_if_no_cards2()
   out <- suppressMessages(apply_plan(
-    disp_plan() |> plan_derive(function(d) d[order(d$label), , drop = FALSE])))
+    disp_plan() |> plan_mutate(function(d) d[order(d$label), , drop = FALSE])))
   expect_true(is.data.frame(out))
 })
 
 test_that("an unnamed argument that is not a function is refused", {
   skip_if_no_cards2()
   expect_error(
-    suppressMessages(apply_plan(disp_plan() |> plan_derive(group))),
+    suppressMessages(apply_plan(disp_plan() |> plan_mutate(group))),
     "has to be a function")
 })
 
@@ -707,7 +706,7 @@ test_that("a derived plan does not inherit its parent's column cache", {
   p <- disp_plan()
   invisible(suppressMessages(apply_plan(p)))
   expect_false(is.null(p$cache$table))
-  p2 <- p |> plan_derive(extra = "x")
+  p2 <- p |> plan_mutate(extra = "x")
   expect_null(p2$cache$table)
 })
 

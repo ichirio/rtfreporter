@@ -6,14 +6,12 @@
 \alias{plan_spread}
 \alias{plan_cells}
 \alias{plan_digits}
-\alias{plan_round}
 \alias{plan_n}
 \alias{plan_mutate}
 \alias{plan_filter}
-\alias{plan_derive}
 \alias{plan_fmt}
 \alias{plan_stub}
-\alias{plan_styles}
+\alias{plan_cell_style}
 \alias{plan_group}
 \alias{plan_hide}
 \alias{plan_sort}
@@ -52,17 +50,13 @@ plan_spread(
 
 plan_cells(plan, ...)
 
-plan_digits(plan, ...)
-
-plan_round(plan, ...)
+plan_digits(plan, ..., round = NULL)
 
 plan_n(plan, ...)
 
 plan_mutate(plan, ...)
 
 plan_filter(plan, ...)
-
-plan_derive(plan, ...)
 
 plan_fmt(plan, ...)
 
@@ -75,7 +69,7 @@ plan_stub(
   before = FALSE
 )
 
-plan_styles(plan, ...)
+plan_cell_style(plan, ...)
 
 plan_group(plan, col = NULL, mode = NULL, collapse = NULL)
 
@@ -232,8 +226,15 @@ explicitly win over the spec.}
 \item{...}{For \code{plan_cells()}, exactly what \code{ard_spread(cells = )} takes:
 one bare entry, or entries named by variable, \code{context}, kind
 (\code{continuous} / \code{categorical}) or \code{default}.  For \code{plan_digits()} and
-\code{plan_round()}, the same keys with a number (or \code{"r"} / \code{"sas"}) as the
+\code{plan_digits()}, the same keys with a number as the
 value; one unnamed value sets the plan-wide default.}
+
+\item{round}{Tie-breaking rule for \verb{\{x:.1f\}}-style tokens.  \code{NULL}, the
+default, reads \code{getOption("rtfreporter.ard_round")} --- base R's
+half-to-even unless the study set \code{"sas"} once, which is the single
+place to change it.  It does \strong{not} reach \code{{x}} or \code{{x:stat_fmt}},
+which take a string \pkg{cards} already rounded (half away from zero, as
+it happens).  See \code{\link[=ard_round]{ard_round()}}.}
 
 \item{vars, label, indent, group_summary}{For \code{plan_stub()}: the row keys to
 fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} takes them.}
@@ -241,7 +242,7 @@ fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} take
 \item{before}{For \code{plan_stub()}: \code{FALSE} (default) folds the stub inside
 \code{\link[=as_rtftables]{as_rtftables()}}, after grouping and pagination have had their say.
 \code{TRUE} folds it first, with \code{\link[=stub_cols]{stub_cols()}}, which is what
-\code{plan_styles()} needs --- only then can a condition see the rows that
+\code{plan_cell_style()} needs --- only then can a condition see the rows that
 will be printed.  The two do \strong{not} always give the same table.}
 
 \item{col, mode, collapse}{For \code{plan_group()}: \code{as_rtftables()}'s

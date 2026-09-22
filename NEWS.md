@@ -28,6 +28,24 @@
   reimplements `as_rtftables()`; the plan resolves to its arguments and
   calls it.
 
+  **An error names the statement that caused it.**  A plan is one
+  statement, so a failure at the end had no line to point at --- the one
+  clear advantage the immediate form still had.  Each verb now records the
+  call the author wrote, and a stage that fails lists the statements that
+  built it.  `|>` is syntax, so `sys.call()` sees the desugared nesting;
+  the first argument (the whole pipeline so far) is dropped, leaving the
+  verb with its own arguments.
+
+  **Three verbs fewer, and one renamed.**  `plan_round()` is gone into
+  `plan_digits(round = )`: one family per run was never a layer of its own,
+  and it is now last-wins like everything else rather than an error when
+  two disagree.  `plan_derive()` is gone into `plan_mutate()` and
+  `plan_filter()`, which now act **where they are written** --- before
+  `plan_spread()` on the long frame, after it on the table --- so the pipe
+  order answers the question instead of a second verb name.
+  `plan_styles()` is `plan_cell_style()`: one letter from `plan_style()`
+  was a trap.
+
   **The seams are inside the plan now, written the way dplyr writes
   them.**  `plan_mutate()` and `plan_filter()` act on the long frame,
   between normalising and spreading; `plan_derive()` acts on the finished

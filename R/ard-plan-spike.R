@@ -79,9 +79,9 @@
 #  Deleting this file removes:
 .ard_plan_exports <- c(
   "ard_plan", "plan_normalize", "plan_spread", "plan_cells",
-  "plan_digits", "plan_round",
-  "plan_n", "plan_mutate", "plan_filter", "plan_derive", "plan_fmt",
-  "plan_stub", "plan_styles",
+  "plan_digits",
+  "plan_n", "plan_mutate", "plan_filter", "plan_fmt",
+  "plan_stub", "plan_cell_style",
   "plan_group", "plan_hide", "plan_sort", "plan_blanks", "plan_pages",
   "plan_style", "plan_header",
   "plan_after", "apply_plan", "plan_template")
@@ -92,6 +92,49 @@
 # A plan is the ARD, untouched, plus an ordered list of declarations.  The ARD
 # is held rather than transformed, so a plan can be printed, inspected and
 # re-pointed at a new data cut without anything having been computed yet.
+# The call the author actually wrote.  A plan is ONE statement, so when
+# the resolver fails at the end there is no line number to go on -- and
+# that was the one clear advantage the immediate form still had.  Walk out
+# to the nearest frame whose function is a plan verb and keep its call.
+.plan_site <- function() {
+  for (i in seq_len(sys.nframe())) {
+    cl <- sys.call(-i)
+    if (is.null(cl) || !is.call(cl)) next
+    f <- cl[[1L]]
+    nm <- if (is.name(f)) as.character(f)
+          else if (is.call(f) && identical(as.character(f[[1L]]), "::"))
+            as.character(f[[3L]]) else ""
+    if (startsWith(nm, "plan_") || identical(nm, "ard_plan")) return(cl)
+  }
+  NULL
+}
+
+# Which statements built the call that has just failed.  With one layer
+# per kind this is exact; with several it is the short list to look at.
+.plan_blame <- function(plan, kinds) {
+  cl <- Filter(Negate(is.null),
+               lapply(plan$layers, function(l)
+                 if (l$kind %in% kinds) l$site else NULL))
+  if (!length(cl)) return("")
+  # `|>` is syntax: sys.call() sees the desugared nesting, so the first
+  # argument is the whole pipeline so far.  Drop it and show the verb with
+  # its OWN arguments, which is what the author wrote on that line.
+  txt <- vapply(cl, function(z) {
+    if (length(z) > 1L) z <- z[-2L]
+    paste(deparse(z), collapse = " ")
+  }, "")
+  txt <- ifelse(nchar(txt) > 64L, paste0(substr(txt, 1L, 61L), "..."), txt)
+  paste0("\n  declared by:\n",
+         paste0("    ", txt, collapse = "\n"))
+}
+
+# Run a stage and, if it fails, say which statements set it up.
+.plan_stage <- function(expr, plan, kinds) {
+  withCallingHandlers(expr, error = function(e) {
+    .ard_stop(paste0(conditionMessage(e), .plan_blame(plan, kinds)))
+  })
+}
+
 .plan_layer <- function(plan, kind, fields) {
   if (!inherits(plan, "ard_plan")) {
     .ard_stop("Expected an ard_plan; pipe from ard_plan(ard).")
@@ -100,7 +143,7 @@
   # Recorded even when empty: calling the verb is the declaration, and
   # `plan_rtf()` with nothing in it still means "make pages".
   plan$layers[[length(plan$layers) + 1L]] <-
-    list(kind = kind, fields = fields)
+    list(kind = kind, fields = fields, site = .plan_site())
   # A fresh cache per plan VALUE.  The environment is shared by reference
   # between copies, so a derived plan must not inherit its parent's --
   # that is how a stale column list would outlive the layer that changed
@@ -138,8 +181,9 @@
   # plan_mutate() / plan_filter() are part of this stage, so what they
   # add has to be part of the answer
   if (!is.null(v)) {
-    v <- tryCatch(.plan_reshape(plan, v, c("mutate", "filter")),
-                  error = function(e) v)
+    v <- tryCatch(
+      .plan_reshape(plan, v, c("mutate", "filter"), before = TRUE),
+      error = function(e) v)
   }
   if (!is.null(v)) plan$cache$norm <- v
   v
@@ -400,7 +444,7 @@ print.ard_plan <- function(x, ...) {
       .plan_norm(x), "")
   say("after spread     -- for plan_stub / plan_group / plan_hide / sort:",
       x$cache$table, "")
-  say("as printed       -- for plan_styles / plan_style(widths) / header:",
+  say("as printed       -- for plan_cell_style / plan_style(widths) / hdr:",
       x$cache$printed, "")
   if (is.null(x$cache$table)) {
     cat("  after spread     -- not computed yet; run it once and this",
@@ -426,14 +470,14 @@ print.ard_plan <- function(x, ...) {
 #' @param ... For `plan_cells()`, exactly what `ard_spread(cells = )` takes:
 #'   one bare entry, or entries named by variable, `context`, kind
 #'   (`continuous` / `categorical`) or `default`.  For `plan_digits()` and
-#'   `plan_round()`, the same keys with a number (or `"r"` / `"sas"`) as the
+#'   `plan_digits()`, the same keys with a number as the
 #'   value; one unnamed value sets the plan-wide default.
 #' @param vars,label,indent,group_summary For `plan_stub()`: the row keys to
 #'   fold into one stub column and how, as [stub_cols()] takes them.
 #' @param before For `plan_stub()`: `FALSE` (default) folds the stub inside
 #'   [as_rtftables()], after grouping and pagination have had their say.
 #'   `TRUE` folds it first, with [stub_cols()], which is what
-#'   `plan_styles()` needs --- only then can a condition see the rows that
+#'   `plan_cell_style()` needs --- only then can a condition see the rows that
 #'   will be printed.  The two do **not** always give the same table.
 #' @param col,mode,collapse For `plan_group()`: `as_rtftables()`'s
 #'   `group_col`, `group_by` and `collapse_repeats`.
@@ -519,13 +563,16 @@ plan_spread <- function(plan, cols = NULL, rows = NULL, label = NULL,
 #' @export
 plan_cells <- function(plan, ...) .plan_keyed(plan, "cells", list(...))
 
-#' @rdname plan_verbs
-#' @export
-plan_digits <- function(plan, ...) .plan_keyed(plan, "digits", list(...))
 
+# `round` used to be a verb of its own, and it never earned one: the whole
+# run takes ONE rounding family, so it is a setting of the digits rather
+# than a layer beside them.
 #' @rdname plan_verbs
 #' @export
-plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
+plan_digits <- function(plan, ..., round = NULL) {
+  p <- .plan_keyed(plan, "digits", list(...))
+  if (is.null(round)) p else .plan_layer(p, "round", list(round = round))
+}
 
 
 # -- the display half --------------------------------------------------------
@@ -541,12 +588,12 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #  built:
 #
 #      plan_n()       numbers read out of the ARD, by name
-#      plan_mutate()  a column derived on the LONG frame, before spreading
-#      plan_filter()  rows dropped on the long frame
-#      plan_derive()  a column derived FROM the finished table
+#      plan_mutate()  a derived column; plan_filter() drops rows.  WHERE they
+#      plan_filter()  act is where they are written -- before plan_spread()
+#                     the long frame, after it the finished table
 #      plan_fmt()     fmt_numeric()      on the table data.frame
 #      plan_stub()    stub_cols()        fold the row keys into one stub
-#      plan_styles()  cell_styles        bold / colour / align, by condition
+#      plan_cell_style()  cell_styles    bold / colour / align, by condition
 #      plan_group()   which column groups the rows, and how it shows
 #      plan_hide()    columns that do their work without being printed
 #      plan_sort()    the printed order
@@ -584,9 +631,22 @@ plan_filter <- function(plan, ...) {
 
 # Applied in DECLARATION order, so a filter and a mutate that depend on
 # each other behave the way they were written.
-.plan_reshape <- function(plan, d, kinds) {
-  for (l in plan$layers) {
+# WHERE a mutate acts is where it is written: before plan_spread() it is
+# the long frame, after it the table.  There is nothing to remember and
+# nothing to name -- the pipe already says it, and a reader following the
+# line sees the same thing the resolver does.
+.plan_side <- function(plan) {
+  sp <- which(vapply(plan$layers, function(l)
+    identical(l$kind, "spread"), TRUE))
+  if (!length(sp)) length(plan$layers) + 1L else sp[1L]
+}
+
+.plan_reshape <- function(plan, d, kinds, before = NA) {
+  cut <- .plan_side(plan)
+  for (i in seq_along(plan$layers)) {
+    l <- plan$layers[[i]]
     if (!l$kind %in% kinds) next
+    if (!is.na(before) && (i < cut) != before) next
     ex <- l$fields$exprs
     if (!length(ex)) next
     if (identical(l$kind, "filter")) {
@@ -616,16 +676,6 @@ plan_filter <- function(plan, ...) {
   d
 }
 
-# A column the table can only know about once it exists -- the page key in
-# the solicited-AE report is `row_grp1 %in% <two categories>`, which nothing
-# upstream can state.  Declared here, the seam between the table and the
-# display stays open without the plan having to be broken in half.
-#' @rdname plan_verbs
-#' @export
-plan_derive <- function(plan, ...) {
-  .plan_exprs(plan, "derive", as.list(substitute(list(...)))[-1L],
-              parent.frame())
-}
 
 #' @rdname plan_verbs
 #' @export
@@ -635,7 +685,7 @@ plan_fmt <- function(plan, ...) .plan_layer(plan, "fmt", list(...))
 # than a detail.  as_rtftables() folds it inside its own resolution, after
 # grouping and pagination have had their say, and that is what a report
 # grouped by a carrier column needs.  Folding it FIRST, with stub_cols(),
-# is what plan_styles() needs, because only then can a condition see the
+# is what plan_cell_style() needs, because only then can a condition see the
 # rows that will be printed.
 #' @rdname plan_verbs
 #' @export
@@ -653,7 +703,7 @@ plan_stub <- function(plan, vars = NULL, label = NULL, indent = NULL,
 # logical attribute takes a logical vector and a valued one takes the
 # value (or NA for "leave the column default alone").
 #
-#     plan_styles(bold  = ~ is.na(term),
+#     plan_cell_style(bold  = ~ is.na(term),
 #                 color = list(Placebo = ~ ifelse(n > 50, "#CC0000", NA)))
 #
 # A bare formula covers the whole row; a NAMED list scopes it to columns,
@@ -661,7 +711,7 @@ plan_stub <- function(plan, vars = NULL, label = NULL, indent = NULL,
 # and `col_spec`, whose numbers move when the stub does.
 #' @rdname plan_verbs
 #' @export
-plan_styles <- function(plan, ...) .plan_keyed(plan, "styles", list(...))
+plan_cell_style <- function(plan, ...) .plan_keyed(plan, "styles", list(...))
 
 # Build the `cell_styles` list rtftable() wants: one element per row, each
 # NULL or a named list of per-column vectors.
@@ -697,21 +747,21 @@ plan_styles <- function(plan, ...) .plan_keyed(plan, "styles", list(...))
       f <- parts[[i]]
       if (!inherits(f, "formula") || length(f) != 2L) {
         .ard_stop(paste0(
-          "plan_styles(", att, "): each entry is a one-sided formula ",
+          "plan_cell_style(", att, "): each entry is a one-sided formula ",
           "over the table's columns,\n  for example ",
-          "`plan_styles(bold = ~ is.na(label))`."))
+          "`plan_cell_style(bold = ~ is.na(label))`."))
       }
       cols <- if (is.na(keys[i])) seq_len(m) else match(keys[i], nms)
       if (anyNA(cols)) {
         .ard_stop(paste0(
-          "plan_styles(", att, "): no printed column ", sQuote(keys[i]),
+          "plan_cell_style(", att, "): no printed column ", sQuote(keys[i]),
           ".\n  Available: ", paste(nms, collapse = ", ")))
       }
       val <- eval(f[[2L]], frame, environment(f))
       if (length(val) == 1L) val <- rep(val, n)
       if (length(val) != n) {
         .ard_stop(paste0(
-          "plan_styles(", att, "): the condition gave ", length(val),
+          "plan_cell_style(", att, "): the condition gave ", length(val),
           " values for ", n, " rows."))
       }
       for (r in seq_len(n)) {
@@ -833,7 +883,7 @@ plan_after <- function(plan, ...) {
 #' @param stage How far to go.  `"auto"`, the default, is **as far as the
 #'   plan declares**: a plan that says nothing about the display stops at
 #'   the table `data.frame`; one that carries `plan_rtf()`, `plan_header()`,
-#'   `plan_styles()` or `plan_after()` goes on to the RTF pages.  You rarely
+#'   `plan_cell_style()` or `plan_after()` goes on to the RTF pages.  You rarely
 #'   need this function at all --- [rtf_tables()] takes a plan directly ---
 #'   and naming a stage is for looking inside: `"normalize"`, `"args"`,
 #'   `"table"`, `"pages"`.
@@ -889,10 +939,14 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
     }
     x <- plan$ard
   } else {
-    x <- do.call(ard_normalize, c(list(ard = plan$ard), n_args))
+    x <- .plan_stage(
+      do.call(ard_normalize, c(list(ard = plan$ard), n_args)),
+      plan, "normalize")
   }
   # the long-frame seam, inside the plan
-  x <- .plan_reshape(plan, x, c("mutate", "filter"))
+  x <- .plan_stage(
+    .plan_reshape(plan, x, c("mutate", "filter"), before = TRUE),
+    plan, c("mutate", "filter"))
   .plan_remember(plan, "norm", x)
   if (identical(stage, "normalize")) return(x)
 
@@ -964,24 +1018,18 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   # 5. one rounding family for the run; a per-variable one would have to reach
   #    into `ard_spread()`, which a spike does not do.  Named keys are read so
   #    the shape is there, and a disagreement is reported rather than guessed.
-  if (length(rnd)) {
-    u <- unique(unlist(rnd, use.names = FALSE))
-    if (length(u) > 1L) {
-      .ard_stop(paste0(
-        "plan_round() was given more than one family (",
-        paste(sQuote(u), collapse = ", "), ").\n",
-        "  The spike resolves ONE rounding family per run; declare it once, ",
-        "or use\n  a spec file, which carries `round` per variable."))
-    }
-    s_args$round <- u
-  }
+  # One rounding family for the run, last wins like every other layer.
+  if (length(rnd)) s_args$round <- rnd$round
 
   if (identical(stage, "args")) {
     return(list(normalize = n_args, spread = s_args))
   }
-  tbl <- do.call(ard_spread, c(list(x = x), s_args))
+  tbl <- .plan_stage(do.call(ard_spread, c(list(x = x), s_args)),
+                     plan, c("spread", "cells", "digits", "round"))
   # the table-side seam: a column the table can only know once it exists
-  tbl <- .plan_reshape(plan, tbl, "derive")
+  tbl <- .plan_stage(
+    .plan_reshape(plan, tbl, c("mutate", "filter"), before = FALSE),
+    plan, c("mutate", "filter"))
   .plan_remember(plan, "table", tbl)
   if (identical(stage, "table")) return(tbl)
 
@@ -1044,17 +1092,20 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
     # rtftable() would reject the length with nothing to say about why.
     if (!is.null(rtf$stub_vars)) {
       .ard_stop(paste0(
-        "plan_styles() needs plan_stub(before = TRUE).\n",
+        "plan_cell_style() needs plan_stub(before = TRUE).\n",
         "  Folded inside as_rtftables(), the stub adds group heading rows ",
         "the conditions\n  never saw, so a style would land on the ",
         "wrong row."))
     }
     if (!is.null(rtf$cell_styles)) {
-      .ard_stop("plan_styles() and a cell_styles = of your own: use one.")
+      .ard_stop("plan_cell_style() and a cell_styles = of your own: use one.")
     }
     rtf$cell_styles <- .plan_cell_styles(st, tbl, pre)
   }
-  out <- do.call(as_rtftables, c(list(x = tbl), rtf))
+  out <- .plan_stage(
+    do.call(as_rtftables, c(list(x = tbl), rtf)), plan,
+    c("group", "hide", "sort", "blanks", "pages", "style", "stub",
+      "styles"))
 
   hdr <- .plan_merge(.plan_of(plan, "header"))
   if (!is.null(hdr$header)) {
@@ -1074,7 +1125,7 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   for (l in .plan_of(plan, "after")) {
     for (f in l$steps) out <- f(out)
   }
-  # the names plan_styles() / plan_style(widths = ) / plan_header() use:
+  # the names plan_cell_style() / plan_style(widths = ) / plan_header() use:
   # read off the finished page rather than predicted
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   if (!is.null(first$data)) .plan_remember(plan, "printed", first$data)
@@ -1231,7 +1282,7 @@ plan_template <- function(ard, cols = NULL, hierarchy = character(),
              vecq(f$cols), ")"), op))
   }
   # `plan_stub()` rather than plan_rtf(stub_vars = ): the plan then sees the
-  # rows that will be printed, which plan_styles() needs.
+  # rows that will be printed, which plan_cell_style() needs.
   L <- c(L, .plan_call("plan_stub",
                        c(paste0("vars  = ", vecq(f$stub)),
                          "label = \"row_label\""), op))
