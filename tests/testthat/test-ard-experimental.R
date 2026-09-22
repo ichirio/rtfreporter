@@ -1055,6 +1055,126 @@ test_that("ard_template() emits code that actually runs", {
   expect_true(any(grepl("read_ard_spec", gen2)))
 })
 
+test_that("ard_template() writes the pipe the caller asked for", {
+  skip_if_no_cards()
+  ard <- make_ard()
+
+  # magrittr is the default because the two are not interchangeable in
+  # general: base R's `_` may still appear only once per call and only as a
+  # named argument (or the head of a $ / [ / [[ / @ chain), while `%>%`'s
+  # `.` is positional and may appear twice.  The generated pipeline uses no
+  # placeholder, so here they differ only in what the reader may add.
+  mag <- utils::capture.output(g_mag <- ard_template(ard, cols = "TRT"))
+  base <- utils::capture.output(
+    g_base <- ard_template(ard, cols = "TRT", pipe = "|>"))
+
+  expect_true(any(grepl("ard %>%", g_mag, fixed = TRUE)))
+  expect_false(any(grepl("|>", g_mag, fixed = TRUE)))
+  expect_true(any(grepl("ard |>", g_base, fixed = TRUE)))
+  expect_false(any(grepl("%>%", g_base, fixed = TRUE)))
+
+  # only the magrittr script needs a library() line: everything else the
+  # template writes is rtfreporter::-qualified on purpose
+  expect_true(any(grepl("library(magrittr)", g_mag, fixed = TRUE)))
+  expect_false(any(grepl("library(", g_base, fixed = TRUE)))
+
+  # the seam comment keeps its column whichever operator it is
+  seam <- function(g) grep("dplyr::mutate", g, value = TRUE)
+  expect_identical(regexpr("# <-", seam(g_mag), fixed = TRUE)[[1]],
+                   regexpr("# <-", seam(g_base), fixed = TRUE)[[1]])
+
+  # and both are valid R
+  expect_silent(parse(text = paste(g_mag, collapse = "\n")))
+  expect_silent(parse(text = paste(g_base, collapse = "\n")))
+})
+
+test_that("both pipes generate scripts that run, and agree", {
+  skip_if_no_cards()
+  skip_if_not_installed("magrittr")
+  ard <- make_ard()
+  run <- function(op) {
+    utils::capture.output(gen <- ard_template(ard, cols = "TRT", pipe = op))
+    e <- new.env(); assign("ard", ard, e)
+    suppressMessages(eval(parse(text = paste(gen, collapse = "\n")), e))
+    get("tbl_df", e)
+  }
+  expect_identical(run("|>"), run("%>%"))
+})
+
+test_that("the pipe is settable once with an option, and the argument wins", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  old <- options(rtfreporter.ard_pipe = "|>")
+  on.exit(options(old), add = TRUE)
+
+  utils::capture.output(g <- ard_template(ard, cols = "TRT"))
+  expect_true(any(grepl("ard |>", g, fixed = TRUE)))
+
+  utils::capture.output(g2 <- ard_template(ard, cols = "TRT", pipe = "%>%"))
+  expect_true(any(grepl("ard %>%", g2, fixed = TRUE)))
+})
+
+test_that("an unknown pipe is refused by name", {
+  skip_if_no_cards()
+  expect_error(ard_template(make_ard(), cols = "TRT", pipe = "|>|"),
+               "%>%")
+  expect_error(ard_template(make_ard(), cols = "TRT", pipe = "|>|"),
+               "base R")
+  # the third value is named too, so the message is the whole menu
+  expect_error(ard_template(make_ard(), cols = "TRT", pipe = "|>|"),
+               "rstudio")
+  expect_error(ard_template(make_ard(), cols = "TRT", pipe = c("|>", "%>%")),
+               "`pipe` must be")
+})
+
+test_that("RStudio's own preference maps to an operator", {
+  # `insert_native_pipe_operator` is the boolean behind Ctrl+Shift+M;
+  # RStudio's factory default is FALSE.  The mapping is split out so it is
+  # testable without an RStudio to run in.
+  expect_identical(.ard_pipe_rstudio(TRUE), "|>")
+  expect_identical(.ard_pipe_rstudio(FALSE), "%>%")
+  # anything that is not one usable flag means "no answer"
+  expect_null(.ard_pipe_rstudio(NULL))
+  expect_null(.ard_pipe_rstudio(NA))
+  expect_null(.ard_pipe_rstudio(c(TRUE, FALSE)))
+  expect_null(.ard_pipe_rstudio("|>"))
+})
+
+test_that("the pipe resolves argument, then option, then RStudio, then %>%", {
+  # these tests do not run inside RStudio, so the RStudio step has no
+  # answer and the floor shows through
+  expect_null(.ard_rstudio_pref())
+  expect_identical(.ard_pipe_op(), "%>%")
+
+  old <- options(rtfreporter.ard_pipe = "|>")
+  on.exit(options(old), add = TRUE)
+  expect_identical(.ard_pipe_op(), "|>")          # option beats the floor
+  expect_identical(.ard_pipe_op("%>%"), "%>%")    # argument beats the option
+})
+
+test_that("naming \"rstudio\" says so when there is nothing to read", {
+  # a caller who NAMED it asked a question and is owed the answer ...
+  expect_message(expect_identical(.ard_pipe_op("rstudio"), "%>%"),
+                 "no RStudio preference to read")
+  old <- options(rtfreporter.ard_pipe = "rstudio")
+  on.exit(options(old), add = TRUE)
+  expect_message(.ard_pipe_op(), "no RStudio preference to read")
+  options(old)
+  # ... while the same fallback reached by default stays quiet
+  expect_silent(.ard_pipe_op())
+})
+
+test_that("ard_template() takes the pipe through the same door", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  expect_message(
+    utils::capture.output(g <- ard_template(ard, cols = "TRT",
+                                            pipe = "rstudio")),
+    "no RStudio preference to read")
+  expect_true(any(grepl("ard %>%", g, fixed = TRUE)))
+})
+
+
 # ------------------------------------------------------------- guarded cells
 
 test_that("a guard picks the template and a false guard falls through", {

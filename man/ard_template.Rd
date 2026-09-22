@@ -9,7 +9,8 @@ ard_template(
   cols = NULL,
   hierarchy = character(),
   spec = FALSE,
-  file = NULL
+  file = NULL,
+  pipe = NULL
 )
 }
 \arguments{
@@ -24,6 +25,29 @@ found and says so in a comment.}
 \code{\link[=ard_spec_template]{ard_spec_template()}} instead of inlining the \code{cells} list.}
 
 \item{file}{Optional path to write the code to.}
+
+\item{pipe}{Which pipe to write the conversion with: \code{"\%>\%"} (magrittr),
+\code{"|>"} (base R, which needs no package), or \code{"rstudio"} --- whichever
+RStudio's own \strong{Insert Pipe Operator} inserts, read from the
+\code{insert_native_pipe_operator} preference (Tools > Global Options >
+Code).  \code{NULL}, the default, reads \code{getOption("rtfreporter.ard_pipe")},
+then asks RStudio, then falls back to \code{"\%>\%"}, so the generated script
+is written in the pipe you already write.  Pin it for everybody with
+\code{options(rtfreporter.ard_pipe = "|>")} --- worth doing if two people
+should get identical code from the same call, since the RStudio answer
+is per-installation.  Outside RStudio (\code{Rscript}, CI, Positron) there
+is nothing to read and the answer is \code{"\%>\%"}; naming \code{"rstudio"}
+explicitly says so in a message, while the default stays quiet.
+
+The fallback is magrittr's rather than base R's because the two are not
+interchangeable in general: as of R 4.6 the placeholder \verb{_} may still
+appear only once per call and only as a named argument (or as the head
+of a \code{$}/\code{[}/\code{[[}/\code{@} chain), while \verb{\%>\%}'s \code{.} is positional and may
+appear twice.  The generated pipeline uses no placeholder, so the two
+are interchangeable \emph{here} --- the choice decides what you may add at
+the seam.  A \code{"\%>\%"} script opens with \code{library(magrittr)}; a \code{"|>"}
+one needs no \code{library()} at all, because everything else is written
+\verb{rtfreporter::}-qualified.}
 }
 \value{
 The generated code, as a character vector, invisibly.

@@ -1,7 +1,7 @@
 Package: rtfreporter
 Type: Package
 Title: Clinical RTF Reporting Toolkit for Tables, Listings and Figures
-Version: 0.8.0.9029
+Version: 0.8.0.9030
 Authors@R:
     person(given  = "Yoichi",
            family = "Masui",
@@ -35,6 +35,7 @@ Suggests:
     rmarkdown,
     ggplot2,
     magrittr,
+    rstudioapi,
     testthat (>= 3.0.0),
     covr,
     tibble,

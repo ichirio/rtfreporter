@@ -2389,6 +2389,71 @@ ard_spec_template <- function(ard, path = NULL) {
 }
 
 
+# RStudio's own answer to "which pipe does this person write", read from the
+# preference behind Ctrl+Shift+M: `insert_native_pipe_operator`, a boolean
+# whose factory default is FALSE.  Asking the IDE beats guessing, and it is
+# the same setting the author sees in Tools > Global Options > Code.
+# Split in two so the mapping is testable without an RStudio to run in.
+.ard_rstudio_pref <- function() {
+  if (!requireNamespace("rstudioapi", quietly = TRUE)) return(NULL)
+  ok <- tryCatch(rstudioapi::isAvailable(), error = function(e) FALSE)
+  if (!isTRUE(ok)) return(NULL)
+  tryCatch(
+    rstudioapi::readRStudioPreference("insert_native_pipe_operator", NULL),
+    error = function(e) NULL)
+}
+
+# NULL means "no answer" -- not RStudio, no rstudioapi, or the read failed --
+# and the caller decides what to do about that.
+.ard_pipe_rstudio <- function(pref = .ard_rstudio_pref()) {
+  if (!is.logical(pref) || length(pref) != 1L || is.na(pref)) return(NULL)
+  if (pref) "|>" else "%>%"
+}
+
+# The pipe operator the generated script is written with, resolved once:
+# an explicit `pipe =`, then `getOption("rtfreporter.ard_pipe")`, then
+# RStudio's own setting, then `%>%`.
+#
+# `%>%` is the floor rather than `|>` because the two are NOT
+# interchangeable, and base R has not closed the gap: as of R 4.6 the
+# placeholder `_` may still appear only once in a call and only as a named
+# argument (or as the head of a `$`/`[`/`[[`/`@` chain), while magrittr's
+# `.` is positional and may appear twice.  The generated pipeline itself
+# uses no placeholder, so the choice only decides what the author may add
+# at the seam -- which is why following the IDE is safe here, and why a
+# study that wants one answer for everybody pins it ONCE --
+#     options(rtfreporter.ard_pipe = "|>")
+.ard_pipe_op <- function(x = NULL) {
+  asked <- !is.null(x)
+  if (is.null(x)) {
+    x <- getOption("rtfreporter.ard_pipe")
+    asked <- !is.null(x)
+  }
+  if (is.null(x)) x <- "rstudio"
+  if (!is.character(x) || length(x) != 1L ||
+        !x %in% c("%>%", "|>", "rstudio")) {
+    .ard_stop(paste0(
+      "`pipe` must be \"%>%\" (magrittr), \"|>\" (base R, needs no ",
+      "package)\n  or \"rstudio\" (whichever RStudio's Insert Pipe ",
+      "Operator inserts)."))
+  }
+  if (identical(x, "rstudio")) {
+    got <- .ard_pipe_rstudio()
+    if (is.null(got)) {
+      # Silent when this was merely the default; a caller who NAMED
+      # "rstudio" asked a question and is owed the answer.
+      if (asked) {
+        message("`pipe = \"rstudio\"`: no RStudio preference to read -- ",
+                "not running in\n  RStudio, or rstudioapi is not ",
+                "installed.  Writing \"%>%\".")
+      }
+      got <- "%>%"
+    }
+    x <- got
+  }
+  x
+}
+
 # ============================================================================
 #  ard_template()
 # ============================================================================
@@ -2439,6 +2504,28 @@ ard_spec_template <- function(ard, path = NULL) {
 #'
 #' @param spec When `TRUE`, the generated code reads a definition file made by
 #'   [ard_spec_template()] instead of inlining the `cells` list.
+#' @param pipe Which pipe to write the conversion with: `"%>%"` (magrittr),
+#'   `"|>"` (base R, which needs no package), or `"rstudio"` --- whichever
+#'   RStudio's own **Insert Pipe Operator** inserts, read from the
+#'   `insert_native_pipe_operator` preference (Tools > Global Options >
+#'   Code).  `NULL`, the default, reads `getOption("rtfreporter.ard_pipe")`,
+#'   then asks RStudio, then falls back to `"%>%"`, so the generated script
+#'   is written in the pipe you already write.  Pin it for everybody with
+#'   `options(rtfreporter.ard_pipe = "|>")` --- worth doing if two people
+#'   should get identical code from the same call, since the RStudio answer
+#'   is per-installation.  Outside RStudio (`Rscript`, CI, Positron) there
+#'   is nothing to read and the answer is `"%>%"`; naming `"rstudio"`
+#'   explicitly says so in a message, while the default stays quiet.
+#'
+#'   The fallback is magrittr's rather than base R's because the two are not
+#'   interchangeable in general: as of R 4.6 the placeholder `_` may still
+#'   appear only once per call and only as a named argument (or as the head
+#'   of a `$`/`[`/`[[`/`@` chain), while `%>%`'s `.` is positional and may
+#'   appear twice.  The generated pipeline uses no placeholder, so the two
+#'   are interchangeable *here* --- the choice decides what you may add at
+#'   the seam.  A `"%>%"` script opens with `library(magrittr)`; a `"|>"`
+#'   one needs no `library()` at all, because everything else is written
+#'   `rtfreporter::`-qualified.
 #' @param file Optional path to write the code to.
 #'
 #' @return The generated code, as a character vector, invisibly.
@@ -2449,7 +2536,8 @@ ard_spec_template <- function(ard, path = NULL) {
 #' @seealso [ard_normalize()], [ard_spread()], [ard_spec_template()]
 #' @export
 ard_template <- function(ard, cols = NULL, hierarchy = character(),
-                         spec = FALSE, file = NULL) {
+                         spec = FALSE, file = NULL, pipe = NULL) {
+  op <- .ard_pipe_op(pipe)
   d  <- ard_normalize(ard, hierarchy = hierarchy, drop_key_variables = FALSE)
   ra <- as.data.frame(ard)
   gcols <- grep("^group[0-9]+$", names(ra), value = TRUE)
@@ -2526,7 +2614,12 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
       "#  NOTE: an overall sentinel is present; edit the `overall` label."
     else NULL,
     .ard_bar("", "="),
-    "")
+    "",
+    # Everything else is `rtfreporter::`-qualified on purpose, so this is
+    # the only line the script needs, and only for `%>%`.
+    if (identical(op, "%>%"))
+      c("library(magrittr)   # for %>% ; dplyr re-exports it too", "")
+    else NULL)
 
   # -- 1. ARD -> table data.frame ---------------------------------------
   # Half the real reports need to reach between the two steps -- to derive a
@@ -2542,11 +2635,13 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
   }
   head1 <- c(
     .ard_bar("1. ARD -> table data.frame"),
-    "tbl_df <- ard |>",
+    paste0("tbl_df <- ard ", op),
     if (length(norm_args))
-      c("  rtfreporter::ard_normalize(", norm_args, "  ) |>")
-    else "  rtfreporter::ard_normalize() |>",
-    "  # dplyr::mutate() |>            # <- a key derived from a statistic.",
+      c("  rtfreporter::ard_normalize(", norm_args, paste0("  ) ", op))
+    else paste0("  rtfreporter::ard_normalize() ", op),
+    # the trailing comment stays in one column whichever operator it is
+    paste0("  # dplyr::mutate() ", op, strrep(" ", 34L - 20L - nchar(op)),
+           "# <- a key derived from a statistic."),
     "  #                                  A constant heading or a label rule",
     "  #                                  goes in `rows` / `label` below.",
     "  rtfreporter::ard_spread(",

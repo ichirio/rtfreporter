@@ -2,6 +2,35 @@
 
 ### Experimental ARD helpers
 
+- **`ard_template(pipe = )` chooses the pipe the generated script is
+  written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
+  no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
+  Operator** inserts.  Left alone it reads
+  `getOption("rtfreporter.ard_pipe")`, then **asks RStudio**
+  (`insert_native_pipe_operator`, the checkbox in Tools > Global Options >
+  Code, via `rstudioapi`), then falls back to `"%>%"` --- so the script it
+  writes is in the pipe you already write, without being told.  Outside
+  RStudio there is nothing to read and the answer is `"%>%"`; naming
+  `"rstudio"` explicitly says so in a message, while the same fallback
+  reached by default stays quiet.  Pin it for everybody with
+  `options(rtfreporter.ard_pipe = "|>")`, which is worth doing when two
+  people should get identical code out of the same call, since the RStudio
+  answer is per-installation.
+
+  The fallback is magrittr's rather than base R's because
+  the two are **not** interchangeable, and base R's placeholder has not
+  closed the gap: as of R 4.6 `_` may still appear **only once** in a call
+  and only as a **named** argument, or as the head of a `$` / `[` / `[[` /
+  `@` chain (R 4.3 added the extraction case; nothing has changed since).
+  magrittr's `.` is positional and may appear twice, and `%>%` also takes a
+  bare symbol or a `{ }` block on its right, which `|>` rejects outright.
+  The generated pipeline itself uses no placeholder, so the two are
+  interchangeable *there* --- both scripts run and return identical tables
+  --- and the choice is about the seam left open for your own
+  `dplyr::mutate()`.  A `"%>%"` script opens with `library(magrittr)`; a
+  `"|>"` one needs no `library()` at all, because everything else the
+  template writes is `rtfreporter::`-qualified.
+
 - **`ard_table()` is withdrawn; the conversion has one entry point**
   (#474).  It is `ard_normalize() |> ard_spread()`, which is what
   `ard_table()` did.  Of its 21 arguments not one was its own: six were
