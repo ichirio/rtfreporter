@@ -8,6 +8,8 @@
 \alias{plan_digits}
 \alias{plan_round}
 \alias{plan_n}
+\alias{plan_mutate}
+\alias{plan_filter}
 \alias{plan_derive}
 \alias{plan_fmt}
 \alias{plan_stub}
@@ -55,6 +57,10 @@ plan_digits(plan, ...)
 plan_round(plan, ...)
 
 plan_n(plan, ...)
+
+plan_mutate(plan, ...)
+
+plan_filter(plan, ...)
 
 plan_derive(plan, ...)
 

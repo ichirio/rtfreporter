@@ -28,6 +28,27 @@
   reimplements `as_rtftables()`; the plan resolves to its arguments and
   calls it.
 
+  **The seams are inside the plan now, written the way dplyr writes
+  them.**  `plan_mutate()` and `plan_filter()` act on the long frame,
+  between normalising and spreading; `plan_derive()` acts on the finished
+  table.  All three take **expressions**, not functions ---
+  `plan_mutate(variable = if_else(stat_name == "N", "n", "orr_ci"))` ---
+  captured unevaluated and evaluated against whichever frame the stage
+  has, and applied in declaration order.  `plan_derive()` still takes a
+  function for what an expression cannot say.  Two of the six Discussion
+  #473 reports had to leave the plan for this; now none do, and every
+  report is a single pipe.
+
+  **`print()` names the columns of every stage it has.**  The column names
+  change three times --- `ard_normalize()` builds them, `ard_spread()`
+  replaces them, folding the stub replaces them again --- and different
+  verbs name different ones, which is most of what made this hard to
+  write.  `print()` now lists each set beside the verbs that use it.
+  Normalising is computed if it has not been (it is the cheap half:
+  40--1300 ms against 250--3650 ms for spreading); the later two are shown
+  once anything has run them and are free thereafter.  The cache belongs to
+  the plan **value**, so adding a layer invalidates it by construction.
+
   **How far a plan goes is read off what it declares.**  `apply_plan()`
   used to take a `stage`, so a plan carrying `plan_rtf()` and
   `plan_header()` still handed back a `data.frame` unless you knew to ask

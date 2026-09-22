@@ -122,7 +122,7 @@ test_that("the ARD is held, not transformed, and nothing is computed", {
 test_that("the plan prints its layers in the order that decides the result", {
   skip_if_no_cards2()
   out <- utils::capture.output(print(base_plan() |> plan_digits(1)))
-  expect_true(any(grepl("nothing computed yet", out)))
+  expect_true(any(grepl("after normalize", out)))
   expect_true(any(grepl("1\\. spread", out)))
   expect_true(any(grepl("3\\. digits", out)))
   expect_true(any(grepl("apply_plan", out)))
@@ -625,6 +625,90 @@ test_that("plan_template() invents no header when the N is ambiguous", {
   expect_false(any(grepl("rtfreporter::plan_header(", code, fixed = TRUE)))
   # and the pipeline still parses: the trailing pipe must have been removed
   expect_silent(parse(text = paste(code, collapse = "\n")))
+})
+
+# ------------------------------------------------- the seams, as expressions
+
+test_that("plan_mutate() and plan_filter() work on the long frame", {
+  skip_if_no_cards2()
+  p <- ard_plan(plan_ard()) |>
+    plan_filter(stat_name != "sd") |>
+    plan_mutate(variable = toupper(variable)) |>
+    plan_spread(cols = "TRT", rows = c(group = "variable"), notes = FALSE) |>
+    plan_cells(continuous = c("Mean" = "{mean:.1f}"), categorical = "{n:.0f}")
+  d <- suppressMessages(apply_plan(p, "normalize"))
+  expect_false(any(d$stat_name == "sd"))
+  expect_true(all(d$variable == toupper(d$variable)))
+  # and the whole thing is still one sentence: nothing left the plan
+  expect_true(is.data.frame(suppressMessages(apply_plan(p))))
+})
+
+test_that("the seams run in the order they were declared", {
+  skip_if_no_cards2()
+  # mutate-then-filter keeps what the mutate made; the other order does not
+  keep <- suppressMessages(apply_plan(
+    ard_plan(plan_ard()) |>
+      plan_mutate(.tag = "z") |> plan_filter(.tag == "z"),
+    "normalize"))
+  drop <- suppressMessages(apply_plan(
+    ard_plan(plan_ard()) |>
+      plan_mutate(.tag = "z") |> plan_filter(stat_name == "sd") |>
+      plan_mutate(.tag2 = "y"),
+    "normalize"))
+  expect_gt(nrow(keep), 0L)
+  expect_true(all(drop$stat_name == "sd"))
+  expect_true(".tag2" %in% names(drop))
+})
+
+test_that("plan_derive() takes an expression, like mutate() does", {
+  skip_if_no_cards2()
+  out <- suppressMessages(apply_plan(
+    disp_plan() |> plan_derive(flag = ifelse(group == "SEX", "y", "n"))))
+  expect_true("flag" %in% names(out))
+  expect_setequal(unique(out$flag), c("y", "n"))
+})
+
+test_that("plan_derive() still takes a function for what an expression cannot", {
+  skip_if_no_cards2()
+  out <- suppressMessages(apply_plan(
+    disp_plan() |> plan_derive(function(d) d[order(d$label), , drop = FALSE])))
+  expect_true(is.data.frame(out))
+})
+
+test_that("an unnamed argument that is not a function is refused", {
+  skip_if_no_cards2()
+  expect_error(
+    suppressMessages(apply_plan(disp_plan() |> plan_derive(group))),
+    "has to be a function")
+})
+
+test_that("print() names the columns of every stage it has", {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_stub(vars = c("group", "label"), label = "row_label") |>
+    plan_style(border = "tfl")
+
+  out <- utils::capture.output(print(p))
+  # normalising is the cheap half, so it is always answered
+  expect_true(any(grepl("after normalize", out, fixed = TRUE)))
+  expect_true(any(grepl("stat_name", out, fixed = TRUE)))
+  # spreading is not, so it says so rather than costing a run
+  expect_true(any(grepl("not computed yet", out, fixed = TRUE)))
+
+  invisible(suppressMessages(apply_plan(p)))
+  out2 <- utils::capture.output(print(p))
+  expect_true(any(grepl("after spread", out2, fixed = TRUE)))
+  expect_true(any(grepl("as printed", out2, fixed = TRUE)))
+  expect_true(any(grepl("row_label", out2, fixed = TRUE)))
+})
+
+test_that("a derived plan does not inherit its parent's column cache", {
+  skip_if_no_cards2()
+  p <- disp_plan()
+  invisible(suppressMessages(apply_plan(p)))
+  expect_false(is.null(p$cache$table))
+  p2 <- p |> plan_derive(extra = "x")
+  expect_null(p2$cache$table)
 })
 
 test_that("the verbs refuse anything that is not a plan", {

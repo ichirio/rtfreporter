@@ -80,7 +80,8 @@
 .ard_plan_exports <- c(
   "ard_plan", "plan_normalize", "plan_spread", "plan_cells",
   "plan_digits", "plan_round",
-  "plan_n", "plan_derive", "plan_fmt", "plan_stub", "plan_styles",
+  "plan_n", "plan_mutate", "plan_filter", "plan_derive", "plan_fmt",
+  "plan_stub", "plan_styles",
   "plan_group", "plan_hide", "plan_sort", "plan_blanks", "plan_pages",
   "plan_style", "plan_header",
   "plan_after", "apply_plan", "plan_template")
@@ -100,6 +101,11 @@
   # `plan_rtf()` with nothing in it still means "make pages".
   plan$layers[[length(plan$layers) + 1L]] <-
     list(kind = kind, fields = fields)
+  # A fresh cache per plan VALUE.  The environment is shared by reference
+  # between copies, so a derived plan must not inherit its parent's --
+  # that is how a stale column list would outlive the layer that changed
+  # it.  Replacing it here makes staleness impossible by construction.
+  plan$cache <- new.env(parent = emptyenv())
   plan
 }
 
@@ -114,6 +120,36 @@
   if (any(kinds %in% c("group", "hide", "sort", "blanks", "pages",
                        "style", "header", "styles", "after"))) "pages"
   else "table"
+}
+
+# `cols`, `rows` and `label` name columns of the NORMALIZED frame, and
+# until now the only way to find out what those are was to run the plan.
+# Normalising is the cheap half -- a flatten, not a spread -- so print()
+# can afford to do it and say.  The answer is cached in an environment
+# because a plan is copied by value and the cache must not be.
+.plan_norm <- function(plan) {
+  if (!is.null(plan$cache$norm)) return(plan$cache$norm)
+  v <- tryCatch({
+    n_args <- .plan_merge(.plan_of(plan, "normalize"))
+    if (isTRUE(plan$normalized)) plan$ard
+    else suppressMessages(
+      do.call(ard_normalize, c(list(ard = plan$ard), n_args)))
+  }, error = function(e) NULL)
+  # plan_mutate() / plan_filter() are part of this stage, so what they
+  # add has to be part of the answer
+  if (!is.null(v)) {
+    v <- tryCatch(.plan_reshape(plan, v, c("mutate", "filter")),
+                  error = function(e) v)
+  }
+  if (!is.null(v)) plan$cache$norm <- v
+  v
+}
+
+# What a stage left behind, remembered as it goes.  apply_plan() fills
+# these in, so a print() after a run costs nothing and shows everything.
+.plan_remember <- function(plan, what, x) {
+  plan$cache[[what]] <- x
+  invisible(NULL)
 }
 
 .plan_of <- function(plan, kind) {
@@ -301,8 +337,23 @@ ard_plan <- function(ard) {
                                 collapse = ", ")))
   }
   structure(list(ard = ard, kind = kind,
-                 normalized = !identical(kind, "ard"), layers = list()),
+                 normalized = !identical(kind, "ard"), layers = list(),
+                 cache = new.env(parent = emptyenv())),
             class = "ard_plan")
+}
+
+# A seam layer carries expressions, and "exprs, env" says nothing.  Show
+# what it will do: the columns it writes, or the condition it keeps.
+.plan_expr_text <- function(l) {
+  ex <- l$fields$exprs
+  if (!length(ex)) return("(nothing)")
+  nms <- names(ex) %||% rep("", length(ex))
+  txt <- vapply(seq_along(ex), function(i) {
+    one <- paste(deparse(ex[[i]]), collapse = " ")
+    if (nzchar(nms[i])) paste0(nms[i], " = ", one) else one
+  }, "")
+  txt <- ifelse(nchar(txt) > 46L, paste0(substr(txt, 1L, 43L), "..."), txt)
+  paste(txt, collapse = "; ")
 }
 
 #' @export
@@ -318,7 +369,7 @@ print.ard_plan <- function(x, ...) {
       "  ->  ",
       if (identical(.plan_reach(x), "pages")) "RTF pages"
       else "table data.frame",
-      " (nothing computed yet)\n", sep = "")
+      "\n", sep = "")
   if (!length(x$layers)) {
     cat("  (empty -- add plan_spread() / plan_cells() / plan_digits())\n")
     return(invisible(x))
@@ -326,9 +377,34 @@ print.ard_plan <- function(x, ...) {
   # In declaration order, because that is the order that decides the result.
   for (i in seq_along(x$layers)) {
     l <- x$layers[[i]]
-    nms <- names(l$fields)
-    cat(sprintf("  %2d. %-10s %s\n", i, l$kind,
-                paste(nms, collapse = ", ")))
+    what <- if (!is.null(l$fields$exprs)) .plan_expr_text(l) else
+      paste(names(l$fields), collapse = ", ")
+    cat(sprintf("  %2d. %-10s %s\n", i, l$kind, what))
+  }
+  # What `cols` / `rows` / `label` may name.  Normalising is the cheap
+  # half, so this costs a flatten and answers the question that otherwise
+  # needs a run.
+  # The column names change three times -- ard_normalize() builds them,
+  # ard_spread() replaces them, and folding the stub replaces them again
+  # -- and different verbs name different ones.  Show every list that is
+  # to hand.  Normalising is computed if it has not been; spreading is
+  # not, because it is the expensive half.
+  say <- function(lbl, d, note) {
+    if (is.null(d)) return(invisible(NULL))
+    cat("  ", lbl, "\n", sep = "")
+    cat(strwrap(paste(setdiff(names(d), ".overall"), collapse = ", "),
+                width = 72, prefix = "      "), sep = "\n")
+    if (nzchar(note)) cat("      ", note, "\n", sep = "")
+  }
+  say("after normalize  -- for cols / rows / label / plan_mutate:",
+      .plan_norm(x), "")
+  say("after spread     -- for plan_stub / plan_group / plan_hide / sort:",
+      x$cache$table, "")
+  say("as printed       -- for plan_styles / plan_style(widths) / header:",
+      x$cache$printed, "")
+  if (is.null(x$cache$table)) {
+    cat("  after spread     -- not computed yet; run it once and this",
+        " print fills in\n", sep = "")
   }
   cat(if (identical(.plan_reach(x), "pages"))
         "  rtf_tables(doc, x) renders it"
@@ -465,6 +541,8 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #  built:
 #
 #      plan_n()       numbers read out of the ARD, by name
+#      plan_mutate()  a column derived on the LONG frame, before spreading
+#      plan_filter()  rows dropped on the long frame
 #      plan_derive()  a column derived FROM the finished table
 #      plan_fmt()     fmt_numeric()      on the table data.frame
 #      plan_stub()    stub_cols()        fold the row keys into one stub
@@ -482,6 +560,62 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #' @export
 plan_n <- function(plan, ...) .plan_keyed(plan, "n", list(...))
 
+# The two seams, written the way dplyr writes them.  `...` is captured
+# UNEVALUATED and evaluated later against whichever frame the stage has,
+# so `plan_mutate(variable = if_else(stat_name == "N", ...))` reads like
+# the mutate() it replaces and nothing has to leave the plan to do it.
+.plan_exprs <- function(plan, kind, dots, env) {
+  .plan_layer(plan, kind, list(exprs = dots, env = env))
+}
+
+#' @rdname plan_verbs
+#' @export
+plan_mutate <- function(plan, ...) {
+  .plan_exprs(plan, "mutate", as.list(substitute(list(...)))[-1L],
+              parent.frame())
+}
+
+#' @rdname plan_verbs
+#' @export
+plan_filter <- function(plan, ...) {
+  .plan_exprs(plan, "filter", as.list(substitute(list(...)))[-1L],
+              parent.frame())
+}
+
+# Applied in DECLARATION order, so a filter and a mutate that depend on
+# each other behave the way they were written.
+.plan_reshape <- function(plan, d, kinds) {
+  for (l in plan$layers) {
+    if (!l$kind %in% kinds) next
+    ex <- l$fields$exprs
+    if (!length(ex)) next
+    if (identical(l$kind, "filter")) {
+      for (e in ex) {
+        keep <- eval(e, d, l$fields$env)
+        d <- d[!is.na(keep) & keep, , drop = FALSE]
+      }
+    } else {
+      nms <- names(ex) %||% rep("", length(ex))
+      for (i in seq_along(ex)) {
+        if (!nzchar(nms[i])) {
+          f <- tryCatch(eval(ex[[i]], l$fields$env),
+                        error = function(e) NULL)
+          if (!is.function(f)) {
+            .ard_stop(paste0(
+              "plan_", l$kind, "(): an unnamed argument has to be a ",
+              "function of the frame.\n  Name it to make it a column: ",
+              "plan_", l$kind, "(<name> = <expression>)."))
+          }
+          d <- f(d)
+        } else {
+          d[[nms[i]]] <- eval(ex[[i]], d, l$fields$env)
+        }
+      }
+    }
+  }
+  d
+}
+
 # A column the table can only know about once it exists -- the page key in
 # the solicited-AE report is `row_grp1 %in% <two categories>`, which nothing
 # upstream can state.  Declared here, the seam between the table and the
@@ -489,13 +623,8 @@ plan_n <- function(plan, ...) .plan_keyed(plan, "n", list(...))
 #' @rdname plan_verbs
 #' @export
 plan_derive <- function(plan, ...) {
-  fs <- list(...)
-  if (!all(vapply(fs, is.function, logical(1L)))) {
-    .ard_stop(paste0(
-      "plan_derive() takes functions of the table data.frame, one per ",
-      "step -- for example\n    plan_derive(\\(d) transform(d, page = ...))"))
-  }
-  .plan_layer(plan, "derive", list(steps = fs))
+  .plan_exprs(plan, "derive", as.list(substitute(list(...)))[-1L],
+              parent.frame())
 }
 
 #' @rdname plan_verbs
@@ -762,6 +891,9 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   } else {
     x <- do.call(ard_normalize, c(list(ard = plan$ard), n_args))
   }
+  # the long-frame seam, inside the plan
+  x <- .plan_reshape(plan, x, c("mutate", "filter"))
+  .plan_remember(plan, "norm", x)
   if (identical(stage, "normalize")) return(x)
 
   # 2. the spread half, last wins; `levels` and `labels` merge per name so a
@@ -848,6 +980,9 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
     return(list(normalize = n_args, spread = s_args))
   }
   tbl <- do.call(ard_spread, c(list(x = x), s_args))
+  # the table-side seam: a column the table can only know once it exists
+  tbl <- .plan_reshape(plan, tbl, "derive")
+  .plan_remember(plan, "table", tbl)
   if (identical(stage, "table")) return(tbl)
 
   .plan_to_pages(plan, tbl)
@@ -878,12 +1013,10 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   nvals <- lapply(.plan_merge(.plan_of(plan, "n")), function(v)
     if (is.function(v)) v(plan$ard) else v)
 
-  for (l in .plan_of(plan, "derive")) {
-    for (f in l$steps) tbl <- f(tbl)
-  }
-
   fmt <- .plan_merge(.plan_of(plan, "fmt"))
   if (length(fmt)) tbl <- do.call(fmt_numeric, c(list(data = tbl), fmt))
+
+  .plan_remember(plan, "table", tbl)
 
   stub <- .plan_merge(.plan_of(plan, "stub"))
   before <- isTRUE(stub$before)
@@ -941,6 +1074,10 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   for (l in .plan_of(plan, "after")) {
     for (f in l$steps) out <- f(out)
   }
+  # the names plan_styles() / plan_style(widths = ) / plan_header() use:
+  # read off the finished page rather than predicted
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  if (!is.null(first$data)) .plan_remember(plan, "printed", first$data)
   out
 }
 
