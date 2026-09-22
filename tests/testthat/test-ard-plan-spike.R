@@ -17,7 +17,7 @@ plan_ard <- function() {
 }
 
 base_plan <- function(ard = plan_ard()) {
-  ard_plan(ard) |>
+  rtf_plan(ard) |>
     plan_spread(cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(continuous  = c("n"         = "{N:d}",
                                "Mean (SD)" = "{mean} ({sd})"),
@@ -74,7 +74,7 @@ test_that("a scalar field is replaced wholesale", {
 
 test_that("a token that states its own digits keeps them", {
   skip_if_no_cards2()
-  p <- ard_plan(plan_ard()) |>
+  p <- rtf_plan(plan_ard()) |>
     plan_spread(cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(continuous = c("Mean (SD)" = "{mean:.4f} ({sd})")) |>
     plan_digits(1)
@@ -84,7 +84,7 @@ test_that("a token that states its own digits keeps them", {
 
 test_that("`{p:%}` with no digits declared says what to do about it", {
   skip_if_no_cards2()
-  p <- ard_plan(plan_ard()) |>
+  p <- rtf_plan(plan_ard()) |>
     plan_spread(cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(categorical = "{n:d} ({p:%})")
   expect_error(apply_plan(p, "args"), "asks the plan for its digits")
@@ -94,7 +94,7 @@ test_that("`{p:%}` with no digits declared says what to do about it", {
 test_that("digits pick by specificity once last-wins has had its say", {
   skip_if_no_cards2()
   # `continuous` is a kind, `AGE` is a variable: the variable is narrower
-  p <- ard_plan(plan_ard()) |>
+  p <- rtf_plan(plan_ard()) |>
     plan_spread(cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})"),
                categorical = "{n:d} ({p:%})") |>
@@ -130,7 +130,7 @@ test_that("the plan prints its layers in the order that decides the result", {
 
 test_that("an empty plan says so rather than printing nothing", {
   skip_if_no_cards2()
-  out <- utils::capture.output(print(ard_plan(plan_ard())))
+  out <- utils::capture.output(print(rtf_plan(plan_ard())))
   expect_true(any(grepl("empty", out)))
 })
 
@@ -146,7 +146,7 @@ test_that("a plan and the immediate form agree", {
     ard |> ard_normalize() |>
       ard_spread(cols = "TRT", rows = c(group = "variable"), cells = cells))
   planned <- suppressMessages(apply_plan(
-    ard_plan(ard) |>
+    rtf_plan(ard) |>
       plan_spread(cols = "TRT", rows = c(group = "variable")) |>
       plan_cells(continuous = cells$continuous,
                  categorical = cells$categorical)))
@@ -167,7 +167,7 @@ test_that("a plan can start from an already-normalized frame", {
   d <- ard_normalize(ard)
   d$variable <- ifelse(d$variable == "BMIBL", "AGE", d$variable)  # a seam edit
 
-  p <- ard_plan(d)
+  p <- rtf_plan(d)
   expect_true(p$normalized)
   expect_true(any(grepl("normalized frame",
                         utils::capture.output(print(p)))))
@@ -182,12 +182,12 @@ test_that("a raw ARD is NOT mistaken for a normalized one", {
   skip_if_no_cards2()
   # `stat_name` is in a raw cards ARD too; only ard_normalize()'s own
   # columns may be used to tell them apart
-  expect_false(isTRUE(ard_plan(plan_ard())$normalized))
+  expect_false(isTRUE(rtf_plan(plan_ard())$normalized))
 })
 
 test_that("plan_normalize() on a normalized frame is refused, not ignored", {
   skip_if_no_cards2()
-  p <- ard_plan(ard_normalize(plan_ard())) |>
+  p <- rtf_plan(ard_normalize(plan_ard())) |>
     plan_normalize(hierarchy = "SEX") |>
     plan_spread(cols = "TRT")
   expect_error(apply_plan(p), "does not need flattening")
@@ -198,7 +198,7 @@ test_that("plan_normalize() on a normalized frame is refused, not ignored", {
 
 test_that("two unnamed values are refused", {
   skip_if_no_cards2()
-  expect_error(plan_digits(ard_plan(plan_ard()), 1, 2), "at most one unnamed")
+  expect_error(plan_digits(rtf_plan(plan_ard()), 1, 2), "at most one unnamed")
 })
 
 test_that("the rounding family is last-wins, like every other layer", {
@@ -240,7 +240,7 @@ test_that("the four kinds of source are told apart by their columns", {
 
 test_that("a long frame nobody built with cards makes a table", {
   out <- suppressMessages(apply_plan(
-    ard_plan(hand_long()) |>
+    rtf_plan(hand_long()) |>
       plan_spread(cols = "TRT", rows = c(param = "PARAM"),
                   label = c(row = "stat_name"), notes = FALSE) |>
       plan_cells(c("n" = "{n:.0f}", "Mean (SD)" = "{mean} ({sd})")) |>
@@ -253,7 +253,7 @@ test_that("a long frame nobody built with cards makes a table", {
 
 test_that("per-variable keys work once the column is called `variable`", {
   out <- suppressMessages(apply_plan(
-    ard_plan(hand_long("variable")) |>
+    rtf_plan(hand_long("variable")) |>
       plan_spread(cols = "TRT", rows = c(param = "variable"),
                   label = c(row = "stat_name"), notes = FALSE) |>
       plan_cells(c("Mean (SD)" = "{mean} ({sd})")) |>
@@ -263,7 +263,7 @@ test_that("per-variable keys work once the column is called `variable`", {
 })
 
 test_that("a digits key that reached nothing is refused, not ignored", {
-  p <- ard_plan(hand_long()) |>
+  p <- rtf_plan(hand_long()) |>
     plan_spread(cols = "TRT", rows = c(param = "PARAM"),
                 label = c(row = "stat_name"), notes = FALSE) |>
     plan_cells(c("Mean (SD)" = "{mean} ({sd})")) |>
@@ -274,12 +274,13 @@ test_that("a digits key that reached nothing is refused, not ignored", {
 })
 
 test_that("a frame that is already the table is refused at the door", {
-  # the point of deferring: this is caught at ard_plan(), not three stages
+  # the point of deferring: this is caught at rtf_plan(), not three stages
   # later inside the resolver
-  expect_error(ard_plan(data.frame(group = "ALT", A = "31.2 (4.1)")),
-               "already the table")
-  expect_error(ard_plan(data.frame(group = "ALT", A = "31.2 (4.1)")),
-               "as_rtftables")
+  # the refusal moved to resolution: a listing's source is an ordinary frame
+  # too, and only plan_listing() can say which this is
+  p <- rtf_plan(data.frame(group = "ALT", A = "31.2 (4.1)"))
+  expect_error(apply_plan(p), "plan_listing")
+  expect_error(apply_plan(p), "as_rtftables")
 })
 
 test_that("ard_spread() tolerates a frame with no variable/context", {
@@ -304,7 +305,7 @@ test_that("a missing .label says what to do instead of naming the ARD", {
 # --------------------------------------------------------- the display half
 
 disp_plan <- function(ard = plan_ard()) {
-  ard_plan(ard) |>
+  rtf_plan(ard) |>
     plan_spread(cols = "TRT", rows = c(group = "variable"),
                 notes = FALSE) |>
     plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
@@ -555,7 +556,7 @@ test_that("plan_template() writes a plan that runs to the pages", {
   ard <- plan_ard()
   gen <- utils::capture.output(code <- plan_template(ard, cols = "TRT",
                                                      pipe = "|>"))
-  expect_true(any(grepl("ard_plan(ard)", code, fixed = TRUE)))
+  expect_true(any(grepl("rtf_plan(ard)", code, fixed = TRUE)))
   expect_true(any(grepl("plan_spread(", code, fixed = TRUE)))
   expect_true(any(grepl("plan_cells(", code, fixed = TRUE)))
   # both halves, because a plan that stops at the table is half a plan
@@ -630,7 +631,7 @@ test_that("plan_template() invents no header when the N is ambiguous", {
 
 test_that("plan_mutate() and plan_filter() work on the long frame", {
   skip_if_no_cards2()
-  p <- ard_plan(plan_ard()) |>
+  p <- rtf_plan(plan_ard()) |>
     plan_filter(stat_name != "sd") |>
     plan_mutate(variable = toupper(variable)) |>
     plan_spread(cols = "TRT", rows = c(group = "variable"), notes = FALSE) |>
@@ -646,11 +647,11 @@ test_that("the seams run in the order they were declared", {
   skip_if_no_cards2()
   # mutate-then-filter keeps what the mutate made; the other order does not
   keep <- suppressMessages(apply_plan(
-    ard_plan(plan_ard()) |>
+    rtf_plan(plan_ard()) |>
       plan_mutate(.tag = "z") |> plan_filter(.tag == "z"),
     "normalize"))
   drop <- suppressMessages(apply_plan(
-    ard_plan(plan_ard()) |>
+    rtf_plan(plan_ard()) |>
       plan_mutate(.tag = "z") |> plan_filter(stat_name == "sd") |>
       plan_mutate(.tag2 = "y"),
     "normalize"))
@@ -710,8 +711,103 @@ test_that("a derived plan does not inherit its parent's column cache", {
   expect_null(p2$cache$table)
 })
 
+# ------------------------------------------------ titles, footnotes, listings
+
+# a listing splits on max_rows alone, which keeps these tests about the
+# blocks rather than about pagination strategies
+.pages_src <- function(n = 12L) {
+  data.frame(USUBJID = sprintf("S-%03d", seq_len(n)),
+             ARM = rep(c("A", "B"), length.out = n),
+             stringsAsFactors = FALSE)
+}
+.pages_plan <- function(max_rows = 4L) {
+  rtf_plan(.pages_src()) |>
+    plan_listing(listing_col("USUBJID", width = 12)) |>
+    plan_pages(max_rows = max_rows)
+}
+
+test_that("plan_titles() / plan_footnotes() ride on every page", {
+  pg <- suppressMessages(apply_plan(
+    .pages_plan() |>
+      plan_titles("Table 14.1.1", "Demographics") |>
+      plan_footnotes("Source: ADSL")))
+  expect_gt(length(pg), 1L)
+  for (i in seq_along(pg)) {
+    expect_identical(attr(pg[[i]], "rtf_titles"),
+                     c("Table 14.1.1", "Demographics"))
+    expect_identical(attr(pg[[i]], "rtf_footnotes"), "Source: ADSL")
+  }
+})
+
+test_that("plan_titles(pages = ) gives each page its own block", {
+  base <- .pages_plan()
+  n <- length(suppressMessages(apply_plan(base)))
+  expect_gt(n, 1L)
+  pg <- suppressMessages(apply_plan(
+    base |> plan_titles(pages = as.list(paste("Part", seq_len(n))))))
+  expect_identical(attr(pg[[1]], "rtf_titles"), "Part 1")
+  expect_identical(attr(pg[[n]], "rtf_titles"), paste("Part", n))
+})
+
+test_that("a page count that does not match is refused, and named", {
+  p <- .pages_plan() |> plan_titles(pages = list("only one"))
+  expect_error(apply_plan(p), "block for")
+  expect_error(apply_plan(p), "plan_titles")
+})
+
+test_that("rows and per-page blocks are not both accepted", {
+  skip_if_no_cards2()
+  expect_error(plan_titles(disp_plan(), "a", pages = list("b")),
+               "Not both")
+})
+
+test_that("a listing goes nowhere near an ARD", {
+  skip_if_no_cards2()
+  d <- data.frame(USUBJID = sprintf("S-%03d", 1:12),
+                  ARM = rep(c("A", "B"), 6), AGE = 40:51,
+                  stringsAsFactors = FALSE)
+  pg <- suppressMessages(apply_plan(
+    rtf_plan(d) |>
+      plan_filter(AGE >= 45) |>
+      plan_listing(listing_col("USUBJID", width = 12),
+                   listing_col("ARM", width = 10)) |>
+      plan_pages(max_rows = 20) |>
+      plan_style(border = "tfl") |>
+      plan_titles("Listing 16.2.1")))
+  expect_s3_class(pg[[1]], "rtftable")
+  expect_identical(attr(pg[[1]], "rtf_titles"), "Listing 16.2.1")
+  # the filter reached the records, and nothing was normalised or spread
+  tb <- suppressMessages(apply_plan(
+    rtf_plan(d) |> plan_filter(AGE >= 45) |>
+      plan_listing(listing_col("USUBJID")), "table"))
+  expect_identical(nrow(tb), 7L)
+})
+
+test_that("a listing matches the same call written by hand", {
+  skip_if_no_cards2()
+  d <- data.frame(USUBJID = sprintf("S-%03d", 1:12),
+                  ARM = rep(c("A", "B"), 6), stringsAsFactors = FALSE)
+  spec <- listing_spec(list(listing_col("USUBJID", width = 12),
+                            listing_col("ARM", width = 10)))
+  ref <- as_rtftables(d, listing = spec, max_rows = 20, border = "tfl")
+  new <- suppressMessages(apply_plan(
+    rtf_plan(d) |>
+      plan_listing(listing_col("USUBJID", width = 12),
+                   listing_col("ARM", width = 10)) |>
+      plan_pages(max_rows = 20) |>
+      plan_style(border = "tfl")))
+  expect_equal(new, ref)
+})
+
+test_that("a frame that is neither an ARD nor a listing says which to add", {
+  expect_error(apply_plan(rtf_plan(data.frame(a = "x", b = "y"))),
+               "plan_listing")
+  expect_error(apply_plan(rtf_plan(data.frame(a = "x", b = "y"))),
+               "as_rtftables")
+})
+
 test_that("the verbs refuse anything that is not a plan", {
-  expect_error(plan_cells(data.frame(a = 1), "x"), "Expected an ard_plan")
-  expect_error(apply_plan(data.frame(a = 1)), "Expected an ard_plan")
-  expect_error(ard_plan(NULL), "required")
+  expect_error(plan_cells(data.frame(a = 1), "x"), "Expected an rtf_plan")
+  expect_error(apply_plan(data.frame(a = 1)), "Expected an rtf_plan")
+  expect_error(rtf_plan(NULL), "required")
 })

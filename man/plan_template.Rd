@@ -54,7 +54,7 @@ The generated code, as a character vector, invisibly.
 }
 \description{
 The counterpart of \code{\link[=ard_template]{ard_template()}} for the deferred form: reads an ARD
-and prints a runnable \code{\link[=ard_plan]{ard_plan()}} pipeline, filled in with the keys,
+and prints a runnable \code{\link[=rtf_plan]{rtf_plan()}} pipeline, filled in with the keys,
 hierarchy, contexts and statistics it actually found.
 }
 \details{
@@ -67,7 +67,7 @@ guess.
 }
 \section{Lifecycle}{
 
-\strong{Spike.}  See \code{\link[=ard_plan]{ard_plan()}}.
+\strong{Spike.}  See \code{\link[=rtf_plan]{rtf_plan()}}.
 }
 
 \examples{
@@ -80,5 +80,5 @@ if (requireNamespace("cards", quietly = TRUE)) {
 }
 }
 \seealso{
-\code{\link[=ard_plan]{ard_plan()}}, \code{\link[=apply_plan]{apply_plan()}}, \code{\link[=ard_template]{ard_template()}}
+\code{\link[=rtf_plan]{rtf_plan()}}, \code{\link[=apply_plan]{apply_plan()}}, \code{\link[=ard_template]{ard_template()}}
 }

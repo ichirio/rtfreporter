@@ -409,10 +409,10 @@ rtf_tables <- function(doc, tables,
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
 
-  # An ard_plan (the #474 spike) is a declaration, not a table: resolve it
+  # An rtf_plan (the #474 spike) is a declaration, not a table: resolve it
   # here so `rtf_tables(doc, p)` reads like every other source.  This is the
   # ONLY line outside R/ard-plan-spike.R that the spike needs.
-  if (inherits(tables, "ard_plan")) tables <- apply_plan(tables, "pages")
+  if (inherits(tables, "rtf_plan")) tables <- apply_plan(tables, "pages")
 
   # Auto-wrap a single content item so callers can write rtf_tables(tbl)
   # instead of rtf_tables(list(tbl)).  data.frame is IS a list in R, so it

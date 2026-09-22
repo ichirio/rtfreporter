@@ -28,6 +28,27 @@
   reimplements `as_rtftables()`; the plan resolves to its arguments and
   calls it.
 
+  **`ard_plan()` is `rtf_plan()`, because a listing has no ARD in it.**
+  A listing is built from SDTM or ADaM --- an ordinary frame of subject
+  records --- and nothing about it is an analysis result.  `plan_listing()`
+  takes [listing_col()]s and [listing_spec()]'s own arguments, and its
+  presence is what says the plan is building one: a plain data frame
+  cannot say so by its columns, so nothing is guessed.  Normalising and
+  spreading are skipped; `plan_mutate()` and `plan_filter()` act on the
+  records.  A source that is neither says which verb is missing.
+
+  **`plan_titles()` and `plan_footnotes()`.**  These are not the section
+  header and footer --- those are RTF's own page furniture, one per
+  section.  These are blocks in the **body** of each page: the title above
+  the table, the footnote a blank line below it, both rendered as tables
+  the width of the content.  rtfreporter already carries them page by page
+  through the `rtf_titles` / `rtf_footnotes` attributes that `rtf_tables()`
+  reads, so the plan attaches them there and needs nothing downstream.
+  `...` is the rows of one block used on every page; `pages = ` is a list
+  with one block per page.  Which of the two is never inferred --- a
+  three-row title on a three-page table cannot be told from three one-row
+  titles --- and a count that does not match names the statement.
+
   **An error names the statement that caused it.**  A plan is one
   statement, so a failure at the end had no line to point at --- the one
   clear advantage the immediate form still had.  Each verb now records the

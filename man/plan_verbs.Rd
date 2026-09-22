@@ -19,6 +19,9 @@
 \alias{plan_pages}
 \alias{plan_style}
 \alias{plan_header}
+\alias{plan_listing}
+\alias{plan_titles}
+\alias{plan_footnotes}
 \alias{plan_after}
 \title{Declare the ARD conversion, one layer at a time (SPIKE)}
 \usage{
@@ -93,10 +96,29 @@ plan_style(plan, border = NULL, widths = NULL, ...)
 
 plan_header(plan, header = NULL, values = NULL)
 
+plan_listing(
+  plan,
+  ...,
+  type = NULL,
+  sep = NULL,
+  spacer = NULL,
+  spacer_rel_width = NULL,
+  blank_row = NULL,
+  blank_row_first = NULL,
+  align = NULL,
+  layout = NULL,
+  wrap = NULL,
+  record = NULL
+)
+
+plan_titles(plan, ..., pages = NULL)
+
+plan_footnotes(plan, ..., pages = NULL)
+
 plan_after(plan, ...)
 }
 \arguments{
-\item{plan}{An \code{\link[=ard_plan]{ard_plan()}}.}
+\item{plan}{An \code{\link[=rtf_plan]{rtf_plan()}}.}
 
 \item{keys}{Character vector of grouping-variable names to materialise as
 columns.  \code{NULL} (default) uses every name found in the \verb{group*} columns.
@@ -194,8 +216,6 @@ So \code{sort = c(".overall", "soc", ".depth", "-n", "term")} is the whole of
 an AE table's row order, and needs neither \code{sort_stat} nor an \code{arrange()}
 afterwards.}
 
-\item{sep}{Separator pasted between multiple \code{cols} keys.}
-
 \item{sort_stat}{Name of a statistic to total across the spread columns and
 attach as a numeric \code{.sort_stat} column -- what a descending-frequency AE
 table sorts on.  \code{NULL} (default) adds nothing.}
@@ -270,20 +290,29 @@ without being written down a second time.}
 
 \item{values}{For \code{plan_header()}: passed to \code{\link[=set_col_header]{set_col_header()}} as
 \verb{values =}, for a header whose cells carry \code{{token}} placeholders.}
+
+\item{type, sep, spacer, spacer_rel_width, blank_row, blank_row_first, align, layout, wrap, record}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged.
+\code{...} there takes the \code{\link[=listing_col]{listing_col()}}s.}
+
+\item{pages}{For \code{plan_titles()} / \code{plan_footnotes()}: a list with one
+block per page, when the pages do not share a block.  \code{...} is the rows
+of a single block used on every page; give one or the other, never
+both, because a three-row title on a three-page table cannot be told
+apart from three one-row titles.}
 }
 \value{
 The plan, with one more layer.
 }
 \description{
-Each verb adds a layer to an \code{\link[=ard_plan]{ard_plan()}}.  \strong{A later layer wins.}  The
+Each verb adds a layer to an \code{\link[=rtf_plan]{rtf_plan()}}.  \strong{A later layer wins.}  The
 arguments are the ones \code{\link[=ard_normalize]{ard_normalize()}} and \code{\link[=ard_spread]{ard_spread()}} already take,
 so the layering is the only new idea.
 }
 \section{Lifecycle}{
 
-\strong{Spike.}  See \code{\link[=ard_plan]{ard_plan()}}.
+\strong{Spike.}  See \code{\link[=rtf_plan]{rtf_plan()}}.
 }
 
 \seealso{
-\code{\link[=ard_plan]{ard_plan()}}, \code{\link[=apply_plan]{apply_plan()}}
+\code{\link[=rtf_plan]{rtf_plan()}}, \code{\link[=apply_plan]{apply_plan()}}
 }

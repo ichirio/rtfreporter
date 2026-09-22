@@ -568,7 +568,7 @@ reference:
       declarations that are resolved once, where a later layer wins.
       May be withdrawn wholesale.
     contents:
-      - ard_plan
+      - rtf_plan
       - plan_verbs
       - apply_plan
       - plan_template

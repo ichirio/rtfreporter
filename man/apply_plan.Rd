@@ -7,7 +7,7 @@
 apply_plan(plan, stage = c("auto", "normalize", "args", "table", "pages"))
 }
 \arguments{
-\item{plan}{An \code{\link[=ard_plan]{ard_plan()}}.}
+\item{plan}{An \code{\link[=rtf_plan]{rtf_plan()}}.}
 
 \item{stage}{How far to go.  \code{"auto"}, the default, is \strong{as far as the
 plan declares}: a plan that says nothing about the display stops at
@@ -32,18 +32,18 @@ for \code{stage = "pages"} what \code{\link[=as_rtftables]{as_rtftables()}} and 
 return.
 }
 \description{
-Resolves an \code{\link[=ard_plan]{ard_plan()}}'s layers and runs the conversion.  \code{stage} stops
+Resolves an \code{\link[=rtf_plan]{rtf_plan()}}'s layers and runs the conversion.  \code{stage} stops
 it early, so the same one pass answers "what does this do" and "what did it
 do" --- there is no second code path that could disagree with the first.
 }
 \section{Lifecycle}{
 
-\strong{Spike.}  See \code{\link[=ard_plan]{ard_plan()}}.
+\strong{Spike.}  See \code{\link[=rtf_plan]{rtf_plan()}}.
 }
 
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
-  p <- ard_plan(cards::ard_stack(
+  p <- rtf_plan(cards::ard_stack(
          cards::ADSL, .by = ARM,
          cards::ard_continuous(variables = AGE))) |>
     plan_spread(cols = "ARM", rows = c(group = "variable")) |>
@@ -56,5 +56,5 @@ if (requireNamespace("cards", quietly = TRUE)) {
 }
 }
 \seealso{
-\code{\link[=ard_plan]{ard_plan()}}, \link{plan_verbs}
+\code{\link[=rtf_plan]{rtf_plan()}}, \link{plan_verbs}
 }

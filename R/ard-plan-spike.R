@@ -16,7 +16,7 @@
 #  called.  This is the same conversion written as DECLARATIONS that are
 #  resolved once at the end:
 #
-#      ard_plan(ard) |>
+#      rtf_plan(ard) |>
 #        plan_spread(cols = "TRT01P", rows = c(group = "variable")) |>
 #        plan_cells(continuous = c("n"         = "{N:d}",
 #                                  "Mean (SD)" = "{mean} ({sd})"),
@@ -78,12 +78,13 @@
 #
 #  Deleting this file removes:
 .ard_plan_exports <- c(
-  "ard_plan", "plan_normalize", "plan_spread", "plan_cells",
+  "rtf_plan", "plan_normalize", "plan_spread", "plan_cells",
   "plan_digits",
   "plan_n", "plan_mutate", "plan_filter", "plan_fmt",
   "plan_stub", "plan_cell_style",
   "plan_group", "plan_hide", "plan_sort", "plan_blanks", "plan_pages",
-  "plan_style", "plan_header",
+  "plan_style", "plan_header", "plan_titles", "plan_footnotes",
+  "plan_listing",
   "plan_after", "apply_plan", "plan_template")
 
 
@@ -104,7 +105,7 @@
     nm <- if (is.name(f)) as.character(f)
           else if (is.call(f) && identical(as.character(f[[1L]]), "::"))
             as.character(f[[3L]]) else ""
-    if (startsWith(nm, "plan_") || identical(nm, "ard_plan")) return(cl)
+    if (startsWith(nm, "plan_") || identical(nm, "rtf_plan")) return(cl)
   }
   NULL
 }
@@ -136,8 +137,8 @@
 }
 
 .plan_layer <- function(plan, kind, fields) {
-  if (!inherits(plan, "ard_plan")) {
-    .ard_stop("Expected an ard_plan; pipe from ard_plan(ard).")
+  if (!inherits(plan, "rtf_plan")) {
+    .ard_stop("Expected an rtf_plan; pipe from rtf_plan(ard).")
   }
   fields <- fields[!vapply(fields, is.null, logical(1L))]
   # Recorded even when empty: calling the verb is the declaration, and
@@ -161,7 +162,8 @@
 .plan_reach <- function(plan) {
   kinds <- vapply(plan$layers, `[[`, "", "kind")
   if (any(kinds %in% c("group", "hide", "sort", "blanks", "pages",
-                       "style", "header", "styles", "after"))) "pages"
+                       "style", "header", "styles", "after",
+                       "titles", "footnotes", "listing"))) "pages"
   else "table"
 }
 
@@ -313,7 +315,7 @@
 
 #' A deferred, last-wins plan for an ARD (SPIKE)
 #'
-#' `ard_plan()` starts a plan.  The ARD is **held, not transformed**: every
+#' `rtf_plan()` starts a plan.  The ARD is **held, not transformed**: every
 #' `plan_*()` verb adds a declaration, and nothing runs until [apply_plan()].
 #'
 #' The rule is **last wins** --- a later layer overwrites what an earlier one
@@ -340,7 +342,7 @@
 #'   A frame that is already the table is refused, with a message saying to
 #'   use [as_rtftables()] instead.
 #'
-#' @return An object of class `ard_plan`.
+#' @return An object of class `rtf_plan`.
 #'
 #' @section Lifecycle:
 #' **Spike.**  A prototype for #474, kept in one deletable file.  It may be
@@ -353,7 +355,7 @@
 #'     cards::ard_continuous(variables = c(AGE, BMIBL)),
 #'     cards::ard_categorical(variables = SEX))
 #'
-#'   ard_plan(ard) |>
+#'   rtf_plan(ard) |>
 #'     plan_spread(cols = "ARM", rows = c(group = "variable")) |>
 #'     plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})"),
 #'                categorical = "{n} ({p:%})") |>
@@ -363,27 +365,13 @@
 #' }
 #' @seealso [apply_plan()], [ard_normalize()], [ard_spread()]
 #' @export
-ard_plan <- function(ard) {
+rtf_plan <- function(ard) {
   if (is.null(ard)) .ard_stop("`ard` is required.")
   kind <- .plan_source_kind(ard)
-  # A wide frame is refused HERE rather than three stages later, which is
-  # the one thing deferring is supposed to buy.
-  if (identical(kind, "wide")) {
-    .ard_stop(paste0(
-      "This looks like a table, not something to build one from: it has ",
-      "no `stat_name`/`stat`\n  to read and none of the columns ",
-      "ard_normalize() adds.\n",
-      "  A plan converts an ARD, or any long frame of statistics, into a ",
-      "table.\n",
-      "  A frame that is already the table goes straight to ",
-      "as_rtftables().\n",
-      "  Columns seen: ", paste(utils::head(names(ard), 8L),
-                                collapse = ", ")))
-  }
   structure(list(ard = ard, kind = kind,
                  normalized = !identical(kind, "ard"), layers = list(),
                  cache = new.env(parent = emptyenv())),
-            class = "ard_plan")
+            class = "rtf_plan")
 }
 
 # A seam layer carries expressions, and "exprs, env" says nothing.  Show
@@ -401,8 +389,8 @@ ard_plan <- function(ard) {
 }
 
 #' @export
-print.ard_plan <- function(x, ...) {
-  cat("<ard_plan>  ",
+print.rtf_plan <- function(x, ...) {
+  cat("<rtf_plan>  ",
       switch(x$kind %||% "ard",
              ard        = "from an ARD, ",
              normalized = "from a normalized frame, ",
@@ -462,11 +450,11 @@ print.ard_plan <- function(x, ...) {
 
 #' Declare the ARD conversion, one layer at a time (SPIKE)
 #'
-#' Each verb adds a layer to an [ard_plan()].  **A later layer wins.**  The
+#' Each verb adds a layer to an [rtf_plan()].  **A later layer wins.**  The
 #' arguments are the ones [ard_normalize()] and [ard_spread()] already take,
 #' so the layering is the only new idea.
 #'
-#' @param plan An [ard_plan()].
+#' @param plan An [rtf_plan()].
 #' @param ... For `plan_cells()`, exactly what `ard_spread(cells = )` takes:
 #'   one bare entry, or entries named by variable, `context`, kind
 #'   (`continuous` / `categorical`) or `default`.  For `plan_digits()` and
@@ -492,6 +480,14 @@ print.ard_plan <- function(x, ...) {
 #' @param border,widths For `plan_style()`: the border set and the relative
 #'   column widths (`col_rel_width`).  Anything else [rtftable()]
 #'   understands goes through `...`.
+#' @param type,sep,spacer,spacer_rel_width,blank_row,blank_row_first,align,layout,wrap,record
+#'   For `plan_listing()`: [listing_spec()]'s own arguments, unchanged.
+#'   `...` there takes the [listing_col()]s.
+#' @param pages For `plan_titles()` / `plan_footnotes()`: a list with one
+#'   block per page, when the pages do not share a block.  `...` is the rows
+#'   of a single block used on every page; give one or the other, never
+#'   both, because a three-row title on a three-page table cannot be told
+#'   apart from three one-row titles.
 #' @param header For `plan_header()`: what [set_col_header()] should be
 #'   given --- an [rtf_col_header()] object, or a **function** of the
 #'   `plan_n()` values, which is how a denominator reaches the header
@@ -504,10 +500,10 @@ print.ard_plan <- function(x, ...) {
 #' @return The plan, with one more layer.
 #'
 #' @section Lifecycle:
-#' **Spike.**  See [ard_plan()].
+#' **Spike.**  See [rtf_plan()].
 #'
 #' @name plan_verbs
-#' @seealso [ard_plan()], [apply_plan()]
+#' @seealso [rtf_plan()], [apply_plan()]
 NULL
 
 #' @rdname plan_verbs
@@ -601,6 +597,8 @@ plan_digits <- function(plan, ..., round = NULL) {
 #      plan_pages()   the row budget and what a page break may cut
 #      plan_style()   borders, widths, alignment
 #      plan_header()  set_col_header()   with the plan_n() values in scope
+#      plan_titles()  the block ABOVE the table, on each page
+#      plan_footnotes()  the block BELOW it
 #      plan_after()   set_decimal_split() / paginate_cols() / anything else
 
 #' @rdname plan_verbs
@@ -853,6 +851,62 @@ plan_header <- function(plan, header = NULL, values = NULL) {
   .plan_layer(plan, "header", list(header = header, values = values))
 }
 
+# Titles and footnotes are NOT the section header and footer: those are
+# RTF's own page furniture, one per section.  These are blocks in the
+# BODY of each page -- the title above the table, the footnote a blank
+# line below it, both rendered as tables the width of the content.
+# rtfreporter already carries them page by page through the `rtf_titles`
+# and `rtf_footnotes` attributes, which rtf_tables() reads, so the plan
+# attaches them there and needs nothing new downstream.
+#
+# `...` is the rows of ONE block, used on every page.  `pages =` is a
+# list of blocks, one per page, for a table whose pages differ.  Nothing
+# is guessed from the shape: a three-row title and a three-page table
+# would be ambiguous, and guessing there is how the wrong title ships.
+.plan_block <- function(plan, kind, dots, pages) {
+  if (length(dots) && !is.null(pages)) {
+    .ard_stop(paste0(
+      "plan_", kind, "(): give the rows of one block, or `pages = ` ",
+      "with one block per page.\n  Not both."))
+  }
+  .plan_layer(plan, kind,
+              list(block = if (length(dots)) dots else NULL,
+                   pages = pages))
+}
+
+# A listing has no ARD anywhere near it: the source is SDTM or ADaM, an
+# ordinary data frame of subject records, and nothing is summarised.  Its
+# presence is what says the plan is building one -- a plain data frame
+# cannot say so by its columns, and guessing would be the wrong kind of
+# clever.  `...` takes listing_col()s; the rest are listing_spec()'s own
+# arguments, unchanged.
+#' @rdname plan_verbs
+#' @export
+plan_listing <- function(plan, ..., type = NULL, sep = NULL,
+                         spacer = NULL, spacer_rel_width = NULL,
+                         blank_row = NULL, blank_row_first = NULL,
+                         align = NULL, layout = NULL, wrap = NULL,
+                         record = NULL) {
+  .plan_layer(plan, "listing",
+              list(cols = list(...), type = type, sep = sep,
+                   spacer = spacer, spacer_rel_width = spacer_rel_width,
+                   blank_row = blank_row,
+                   blank_row_first = blank_row_first, align = align,
+                   layout = layout, wrap = wrap, record = record))
+}
+
+#' @rdname plan_verbs
+#' @export
+plan_titles <- function(plan, ..., pages = NULL) {
+  .plan_block(plan, "titles", list(...), pages)
+}
+
+#' @rdname plan_verbs
+#' @export
+plan_footnotes <- function(plan, ..., pages = NULL) {
+  .plan_block(plan, "footnotes", list(...), pages)
+}
+
 # Steps that run on the finished pages.  They are functions rather than
 # fields because that is what they are -- set_decimal_split() and
 # paginate_cols() take the object and give it back -- and a plan that
@@ -875,11 +929,11 @@ plan_after <- function(plan, ...) {
 
 #' Run a plan, or look inside it (SPIKE)
 #'
-#' Resolves an [ard_plan()]'s layers and runs the conversion.  `stage` stops
+#' Resolves an [rtf_plan()]'s layers and runs the conversion.  `stage` stops
 #' it early, so the same one pass answers "what does this do" and "what did it
 #' do" --- there is no second code path that could disagree with the first.
 #'
-#' @param plan An [ard_plan()].
+#' @param plan An [rtf_plan()].
 #' @param stage How far to go.  `"auto"`, the default, is **as far as the
 #'   plan declares**: a plan that says nothing about the display stops at
 #'   the table `data.frame`; one that carries `plan_rtf()`, `plan_header()`,
@@ -902,11 +956,11 @@ plan_after <- function(plan, ...) {
 #'   return.
 #'
 #' @section Lifecycle:
-#' **Spike.**  See [ard_plan()].
+#' **Spike.**  See [rtf_plan()].
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
-#'   p <- ard_plan(cards::ard_stack(
+#'   p <- rtf_plan(cards::ard_stack(
 #'          cards::ADSL, .by = ARM,
 #'          cards::ard_continuous(variables = AGE))) |>
 #'     plan_spread(cols = "ARM", rows = c(group = "variable")) |>
@@ -917,15 +971,39 @@ plan_after <- function(plan, ...) {
 #'   str(apply_plan(p, "args")$spread$cells)   # AGE won
 #'   apply_plan(p)
 #' }
-#' @seealso [ard_plan()], [plan_verbs]
+#' @seealso [rtf_plan()], [plan_verbs]
 #' @export
 apply_plan <- function(plan, stage = c("auto", "normalize", "args",
                                        "table", "pages")) {
-  if (!inherits(plan, "ard_plan")) {
-    .ard_stop("Expected an ard_plan; start from ard_plan(ard).")
+  if (!inherits(plan, "rtf_plan")) {
+    .ard_stop("Expected an rtf_plan; start from rtf_plan(ard).")
   }
   stage <- match.arg(stage)
   if (identical(stage, "auto")) stage <- .plan_reach(plan)
+
+  # A LISTING never goes near an ARD.  Its source is SDTM or ADaM -- an
+  # ordinary frame of subject records -- and plan_listing() is what says
+  # so, because the columns cannot.  Nothing is normalised or spread; the
+  # rows are the rows.
+  if (length(.plan_of(plan, "listing"))) {
+    d <- .plan_stage(
+      .plan_reshape(plan, plan$ard, c("mutate", "filter")),
+      plan, c("mutate", "filter"))
+    .plan_remember(plan, "table", d)
+    if (stage %in% c("table", "normalize")) return(d)
+    return(.plan_to_pages(plan, d))
+  }
+  if (identical(plan$kind, "wide")) {
+    .ard_stop(paste0(
+      "This source has no statistics to read -- no `stat_name` / `stat`, ",
+      "and none of\n  the columns ard_normalize() adds -- and no ",
+      "plan_listing() to say it is a\n  listing of records.\n",
+      "  For a table  : an ARD, or a long frame of statistics.\n",
+      "  For a listing: add plan_listing(listing_col(...), ...).\n",
+      "  Already a table: as_rtftables().\n",
+      "  Columns seen : ", paste(utils::head(names(plan$ard), 8L),
+                                 collapse = ", ")))
+  }
 
   # 1. the normalize half, last wins
   n_args <- .plan_merge(.plan_of(plan, "normalize"))
@@ -1055,6 +1133,32 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   out
 }
 
+# Attach the title / footnote blocks to each page.  One block goes on
+# every page; `pages =` is taken in order and must be as long as the
+# pages there turned out to be -- a mismatch is a mistake, not something
+# to recycle.
+.plan_blocks <- function(plan, out) {
+  one <- inherits(out, "rtftable")
+  pg  <- if (one) list(out) else out
+  for (kind in c("titles", "footnotes")) {
+    l <- .plan_merge(.plan_of(plan, kind))
+    if (!length(l)) next
+    blocks <- if (!is.null(l$pages)) l$pages else
+      rep(list(unlist(l$block, use.names = FALSE)), length(pg))
+    if (length(blocks) != length(pg)) {
+      .ard_stop(paste0(
+        "plan_", kind, "(pages = ) has ", length(blocks), " block",
+        if (length(blocks) == 1L) "" else "s", " for ", length(pg),
+        " page", if (length(pg) == 1L) "" else "s", ".\n",
+        "  The page count is decided by plan_pages(); print(x) after a ",
+        "run shows it.", .plan_blame(plan, kind)))
+    }
+    at <- if (identical(kind, "titles")) "rtf_titles" else "rtf_footnotes"
+    for (i in seq_along(pg)) attr(pg[[i]], at) <- blocks[[i]]
+  }
+  if (one) pg[[1L]] else pg
+}
+
 .plan_to_pages <- function(plan, tbl) {
   #  the numbers the header needs, read out of the ARD the plan is holding.
   #  A function is called with the ARD; anything else is taken as it is.
@@ -1077,7 +1181,13 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
     tbl <- do.call(stub_cols, c(list(data = tbl), a))
   }
 
+  lst <- .plan_merge(.plan_of(plan, "listing"))
   rtf <- .plan_rtf_args(plan)
+  if (length(lst)) {
+    cols <- lst$cols; lst$cols <- NULL
+    lst <- lst[!vapply(lst, is.null, logical(1L))]
+    rtf$listing <- do.call(listing_spec, c(list(cols = cols), lst))
+  }
   if (length(stub) && !before) {
     rtf$stub_vars         <- stub$vars
     rtf$stub_label        <- stub$label
@@ -1125,6 +1235,9 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   for (l in .plan_of(plan, "after")) {
     for (f in l$steps) out <- f(out)
   }
+  # the blocks that sit above and below the table on each page
+  out <- .plan_blocks(plan, out)
+
   # the names plan_cell_style() / plan_style(widths = ) / plan_header() use:
   # read off the finished page rather than predicted
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
@@ -1179,7 +1292,7 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
 #' Write the plan for you (SPIKE)
 #'
 #' The counterpart of [ard_template()] for the deferred form: reads an ARD
-#' and prints a runnable [ard_plan()] pipeline, filled in with the keys,
+#' and prints a runnable [rtf_plan()] pipeline, filled in with the keys,
 #' hierarchy, contexts and statistics it actually found.
 #'
 #' It writes **both halves** --- the ARD to the table, and the table to the
@@ -1194,7 +1307,7 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
 #' @return The generated code, as a character vector, invisibly.
 #'
 #' @section Lifecycle:
-#' **Spike.**  See [ard_plan()].
+#' **Spike.**  See [rtf_plan()].
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -1204,7 +1317,7 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
 #'     cards::ard_categorical(variables = SEX))
 #'   plan_template(ard, cols = "ARM")
 #' }
-#' @seealso [ard_plan()], [apply_plan()], [ard_template()]
+#' @seealso [rtf_plan()], [apply_plan()], [ard_template()]
 #' @export
 plan_template <- function(ard, cols = NULL, hierarchy = character(),
                           spec = FALSE, file = NULL, pipe = NULL) {
@@ -1256,7 +1369,7 @@ plan_template <- function(ard, cols = NULL, hierarchy = character(),
 
   L <- c(L,
          .ard_bar("1. the ARD half"),
-         paste0("p <- rtfreporter::ard_plan(ard) ", op))
+         paste0("p <- rtfreporter::rtf_plan(ard) ", op))
   if (length(norm)) L <- c(L, .plan_call("plan_normalize", norm, op))
   L <- c(L, .plan_call("plan_spread", spread, op))
 
