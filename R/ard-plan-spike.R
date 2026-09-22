@@ -79,7 +79,9 @@
 #  Deleting this file removes:
 .ard_plan_exports <- c(
   "ard_plan", "plan_normalize", "plan_spread", "plan_cells",
-  "plan_digits", "plan_round", "apply_plan")
+  "plan_digits", "plan_round",
+  "plan_n", "plan_fmt", "plan_stub", "plan_rtf", "plan_header",
+  "plan_after", "apply_plan")
 
 
 # -- layer plumbing ----------------------------------------------------------
@@ -330,6 +332,12 @@ print.ard_plan <- function(x, ...) {
 #'   (`continuous` / `categorical`) or `default`.  For `plan_digits()` and
 #'   `plan_round()`, the same keys with a number (or `"r"` / `"sas"`) as the
 #'   value; one unnamed value sets the plan-wide default.
+#' @param header For `plan_header()`: what [set_col_header()] should be
+#'   given --- an [rtf_col_header()] object, or a **function** of the
+#'   `plan_n()` values, which is how a denominator reaches the header
+#'   without being written down a second time.
+#' @param values For `plan_header()`: passed to [set_col_header()] as
+#'   `values =`, for a header whose cells carry `{token}` placeholders.
 #' @inheritParams ard_normalize
 #' @inheritParams ard_spread
 #'
@@ -395,6 +403,69 @@ plan_digits <- function(plan, ...) .plan_keyed(plan, "digits", list(...))
 plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 
 
+# -- the display half --------------------------------------------------------
+#
+#  Everything above turns an ARD into a table data.frame.  These five turn
+#  that into RTF pages, and they are declarations for the same reason: the
+#  column header has to agree with the columns, and the denominators in it
+#  have to agree with the percentages underneath.  Resolving them together
+#  is the only way that agreement is structural rather than remembered.
+#
+#  Each verb carries the arguments of the function it stands for, unchanged,
+#  and `apply_plan(stage = "pages")` calls them in the order a report is
+#  built:
+#
+#      plan_n()       numbers read out of the ARD, by name
+#      plan_fmt()     fmt_numeric()      on the table data.frame
+#      plan_stub()    stub_cols()        fold the row keys into one stub
+#      plan_rtf()     as_rtftables()     structure, pagination, style
+#      plan_header()  set_col_header()   with the plan_n() values in scope
+#      plan_after()   set_decimal_split() / paginate_cols() / anything else
+
+#' @rdname plan_verbs
+#' @export
+plan_n <- function(plan, ...) .plan_keyed(plan, "n", list(...))
+
+#' @rdname plan_verbs
+#' @export
+plan_fmt <- function(plan, ...) .plan_layer(plan, "fmt", list(...))
+
+#' @rdname plan_verbs
+#' @export
+plan_stub <- function(plan, ...) .plan_layer(plan, "stub", list(...))
+
+#' @rdname plan_verbs
+#' @export
+plan_rtf <- function(plan, ...) .plan_layer(plan, "rtf", list(...))
+
+# The header is a VALUE, not a set of fields: `rtf_col_header()` builds a
+# whole object and there is nothing useful to merge field-wise.  A function
+# is accepted too, and is called with the resolved plan_n() list, which is
+# how "(N=86)" reaches the header without being written down twice.
+#' @rdname plan_verbs
+#' @export
+plan_header <- function(plan, header = NULL, values = NULL) {
+  .plan_layer(plan, "header", list(header = header, values = values))
+}
+
+# Steps that run on the finished pages.  They are functions rather than
+# fields because that is what they are -- set_decimal_split() and
+# paginate_cols() take the object and give it back -- and a plan that
+# pretended otherwise would need a field per argument of each.
+#' @rdname plan_verbs
+#' @export
+plan_after <- function(plan, ...) {
+  fs <- list(...)
+  bad <- !vapply(fs, is.function, logical(1L))
+  if (any(bad)) {
+    .ard_stop(paste0(
+      "plan_after() takes functions of the pages, one per step -- for ",
+      "example\n    plan_after(\\(x) set_decimal_split(x, cols = 3:5))"))
+  }
+  .plan_layer(plan, "after", list(steps = fs))
+}
+
+
 # -- the resolver ------------------------------------------------------------
 
 #' Run a plan, or look inside it (SPIKE)
@@ -408,9 +479,14 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #'   `data.frame`, the same object [ard_spread()] returns.  `"normalize"`
 #'   returns the long frame [ard_normalize()] returns, which is where you
 #'   reach in with dplyr if you have to.  `"args"` returns the resolved
-#'   argument lists without running anything --- the call the plan amounts to.
+#'   argument lists without running anything --- the call the plan amounts
+#'   to.  `"pages"` goes all the way: [fmt_numeric()], [stub_cols()],
+#'   [as_rtftables()], [set_col_header()] and whatever `plan_after()`
+#'   declared, giving the RTF pages.
 #'
-#' @return A data frame, or for `stage = "args"` a list of two argument lists.
+#' @return A data frame; for `stage = "args"` a list of two argument lists;
+#'   for `stage = "pages"` what [as_rtftables()] and the steps after it
+#'   return.
 #'
 #' @section Lifecycle:
 #' **Spike.**  See [ard_plan()].
@@ -430,7 +506,8 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #' }
 #' @seealso [ard_plan()], [plan_verbs]
 #' @export
-apply_plan <- function(plan, stage = c("table", "normalize", "args")) {
+apply_plan <- function(plan,
+                       stage = c("table", "normalize", "args", "pages")) {
   if (!inherits(plan, "ard_plan")) {
     .ard_stop("Expected an ard_plan; start from ard_plan(ard).")
   }
@@ -535,7 +612,45 @@ apply_plan <- function(plan, stage = c("table", "normalize", "args")) {
   if (identical(stage, "args")) {
     return(list(normalize = n_args, spread = s_args))
   }
-  do.call(ard_spread, c(list(x = x), s_args))
+  tbl <- do.call(ard_spread, c(list(x = x), s_args))
+  if (identical(stage, "table")) return(tbl)
+
+  .plan_to_pages(plan, tbl)
+}
+
+
+# The display half, in the order a report is built.  Each step calls the
+# function it stands for with the arguments the caller declared, so nothing
+# here reimplements as_rtftables() or anything around it.
+.plan_to_pages <- function(plan, tbl) {
+  #  the numbers the header needs, read out of the ARD the plan is holding.
+  #  A function is called with the ARD; anything else is taken as it is.
+  nvals <- lapply(.plan_merge(.plan_of(plan, "n")), function(v)
+    if (is.function(v)) v(plan$ard) else v)
+
+  fmt <- .plan_merge(.plan_of(plan, "fmt"))
+  if (length(fmt)) tbl <- do.call(fmt_numeric, c(list(data = tbl), fmt))
+
+  stub <- .plan_merge(.plan_of(plan, "stub"))
+  if (length(stub)) tbl <- do.call(stub_cols, c(list(data = tbl), stub))
+
+  out <- do.call(as_rtftables,
+                 c(list(x = tbl), .plan_merge(.plan_of(plan, "rtf"))))
+
+  hdr <- .plan_merge(.plan_of(plan, "header"))
+  if (!is.null(hdr$header)) {
+    #  a function of the plan_n() values, so "(N=86)" is written once and
+    #  the number comes from the ARD rather than from memory
+    h <- if (is.function(hdr$header)) hdr$header(nvals) else hdr$header
+    args <- list(x = out, h)
+    if (!is.null(hdr$values)) args$values <- hdr$values
+    out <- do.call(set_col_header, args)
+  }
+
+  for (l in .plan_of(plan, "after")) {
+    for (f in l$steps) out <- f(out)
+  }
+  out
 }
 
 # The cells map, looked up WITHOUT parsing: `.ard_lookup_cells()` returns the

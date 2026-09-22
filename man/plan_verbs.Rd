@@ -7,6 +7,12 @@
 \alias{plan_cells}
 \alias{plan_digits}
 \alias{plan_round}
+\alias{plan_n}
+\alias{plan_fmt}
+\alias{plan_stub}
+\alias{plan_rtf}
+\alias{plan_header}
+\alias{plan_after}
 \title{Declare the ARD conversion, one layer at a time (SPIKE)}
 \usage{
 plan_normalize(
@@ -40,6 +46,18 @@ plan_cells(plan, ...)
 plan_digits(plan, ...)
 
 plan_round(plan, ...)
+
+plan_n(plan, ...)
+
+plan_fmt(plan, ...)
+
+plan_stub(plan, ...)
+
+plan_rtf(plan, ...)
+
+plan_header(plan, header = NULL, values = NULL)
+
+plan_after(plan, ...)
 }
 \arguments{
 \item{plan}{An \code{\link[=ard_plan]{ard_plan()}}.}
@@ -195,6 +213,14 @@ one bare entry, or entries named by variable, \code{context}, kind
 (\code{continuous} / \code{categorical}) or \code{default}.  For \code{plan_digits()} and
 \code{plan_round()}, the same keys with a number (or \code{"r"} / \code{"sas"}) as the
 value; one unnamed value sets the plan-wide default.}
+
+\item{header}{For \code{plan_header()}: what \code{\link[=set_col_header]{set_col_header()}} should be
+given --- an \code{\link[=rtf_col_header]{rtf_col_header()}} object, or a \strong{function} of the
+\code{plan_n()} values, which is how a denominator reaches the header
+without being written down a second time.}
+
+\item{values}{For \code{plan_header()}: passed to \code{\link[=set_col_header]{set_col_header()}} as
+\verb{values =}, for a header whose cells carry \code{{token}} placeholders.}
 }
 \value{
 The plan, with one more layer.

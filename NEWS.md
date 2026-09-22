@@ -17,6 +17,27 @@
   call the plan amounts to, while `stage = "normalize"` stops at the long
   frame.  Both are the one pass stopped early, not a second code path.
 
+  **The plan reaches the RTF pages, not just the table `data.frame`.**
+  Six more verbs carry the display half, each holding the arguments of the
+  function it stands for: `plan_n()` (numbers read out of the ARD, by
+  name), `plan_fmt()` (`fmt_numeric()`), `plan_stub()` (`stub_cols()`),
+  `plan_rtf()` (`as_rtftables()`), `plan_header()` (`set_col_header()`)
+  and `plan_after()` (`set_decimal_split()`, `paginate_cols()`, anything
+  else that takes the pages and gives them back).  `apply_plan(stage =
+  "pages")` runs them in the order a report is built.  Nothing here
+  reimplements `as_rtftables()`; the plan resolves to its arguments and
+  calls it.
+
+  `plan_n()` is the one that earns the deferral.  A header's denominator
+  has to agree with the columns underneath it, and today the arm order is
+  written three times --- in `levels =`, in `ard_pull(levels = )` and in
+  the hand-built `col_header`.  Declared, it is read once: `plan_header()`
+  takes a function of the resolved `plan_n()` values, so
+  `paste0(names(n$arm), "
+N = ", n$arm)` cannot drift from the columns
+  it sits over.  Measured against the appendix DM program on Discussion
+  #473, the plan produces an `rtftable` identical to the hand-written one.
+
   **A plan does not need an ARD.**  `ard_plan()` works out what it was
   given from the columns and takes four answers: a cards ARD, a frame
   already through `ard_normalize()`, **any long frame of statistics**

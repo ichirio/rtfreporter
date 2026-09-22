@@ -4,7 +4,7 @@
 \alias{apply_plan}
 \title{Run a plan, or look inside it (SPIKE)}
 \usage{
-apply_plan(plan, stage = c("table", "normalize", "args"))
+apply_plan(plan, stage = c("table", "normalize", "args", "pages"))
 }
 \arguments{
 \item{plan}{An \code{\link[=ard_plan]{ard_plan()}}.}
@@ -13,10 +13,15 @@ apply_plan(plan, stage = c("table", "normalize", "args"))
 \code{data.frame}, the same object \code{\link[=ard_spread]{ard_spread()}} returns.  \code{"normalize"}
 returns the long frame \code{\link[=ard_normalize]{ard_normalize()}} returns, which is where you
 reach in with dplyr if you have to.  \code{"args"} returns the resolved
-argument lists without running anything --- the call the plan amounts to.}
+argument lists without running anything --- the call the plan amounts
+to.  \code{"pages"} goes all the way: \code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=stub_cols]{stub_cols()}},
+\code{\link[=as_rtftables]{as_rtftables()}}, \code{\link[=set_col_header]{set_col_header()}} and whatever \code{plan_after()}
+declared, giving the RTF pages.}
 }
 \value{
-A data frame, or for \code{stage = "args"} a list of two argument lists.
+A data frame; for \code{stage = "args"} a list of two argument lists;
+for \code{stage = "pages"} what \code{\link[=as_rtftables]{as_rtftables()}} and the steps after it
+return.
 }
 \description{
 Resolves an \code{\link[=ard_plan]{ard_plan()}}'s layers and runs the conversion.  \code{stage} stops

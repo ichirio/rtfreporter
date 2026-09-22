@@ -302,6 +302,104 @@ test_that("a missing .label says what to do instead of naming the ARD", {
                cells = "{mean:.1f}"),
     "carries the row identity")
 })
+# --------------------------------------------------------- the display half
+
+disp_plan <- function(ard = plan_ard()) {
+  ard_plan(ard) |>
+    plan_spread(cols = "TRT", rows = c(group = "variable"),
+                notes = FALSE) |>
+    plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+               categorical = "{n:.0f} ({p:.1f%})")
+}
+
+test_that("stage = \"pages\" reaches the same rtftable as the code does", {
+  skip_if_no_cards2()
+  ard <- plan_ard()
+  tbl <- suppressMessages(apply_plan(disp_plan(ard)))
+
+  ref <- as_rtftables(tbl, stub_vars = c("group", "label"),
+                      group_by = "indent", split = "group_safe",
+                      max_rows = 22, border = "tfl")
+  new <- suppressMessages(apply_plan(
+    disp_plan(ard) |>
+      plan_rtf(stub_vars = c("group", "label"), group_by = "indent",
+               split = "group_safe", max_rows = 22, border = "tfl"),
+    "pages"))
+  expect_equal(new, ref)
+})
+
+test_that("plan_n() reads the ARD and plan_header() spends it", {
+  skip_if_no_cards2()
+  # the point of resolving them together: the denominator in the header and
+  # the percentages under it come from one reading of one ARD
+  new <- suppressMessages(apply_plan(
+    disp_plan() |>
+      plan_n(arm = function(a) ard_pull(a, cols = "TRT", variable = "AGE")) |>
+      plan_rtf(stub_vars = c("group", "label"), border = "tfl") |>
+      plan_header(function(n) c("Characteristic",
+                                paste0(names(n$arm), " N=",
+                                       as.integer(n$arm)))),
+    "pages"))
+  hdr <- unlist(new[[1]]$col_header)
+  expect_true(any(grepl("Placebo N=86", hdr, fixed = TRUE)))
+})
+
+test_that("a literal plan_n() value is taken as it is", {
+  skip_if_no_cards2()
+  new <- suppressMessages(apply_plan(
+    disp_plan() |>
+      plan_n(total = 254L) |>
+      plan_rtf(stub_vars = c("group", "label")) |>
+      plan_header(function(n) c(paste0("All (N=", n$total, ")"),
+                                "A", "B", "C")),
+    "pages"))
+  expect_true(any(grepl("All (N=254)", unlist(new[[1]]$col_header),
+                        fixed = TRUE)))
+})
+
+test_that("plan_stub() folds the row keys before as_rtftables() sees them", {
+  skip_if_no_cards2()
+  new <- suppressMessages(apply_plan(
+    disp_plan() |>
+      plan_stub(vars = c("group", "label"), label = "row_label") |>
+      plan_rtf(border = "tfl"),
+    "pages"))
+  expect_true("row_label" %in% names(new[[1]]$data))
+})
+
+test_that("plan_after() runs its steps on the pages, in order", {
+  skip_if_no_cards2()
+  seen <- character(0)
+  new <- suppressMessages(apply_plan(
+    disp_plan() |>
+      plan_rtf(stub_vars = c("group", "label")) |>
+      plan_after(function(x) { seen <<- c(seen, "one"); x },
+                 function(x) { seen <<- c(seen, "two"); x }),
+    "pages"))
+  expect_identical(seen, c("one", "two"))
+})
+
+test_that("plan_after() refuses anything that is not a function", {
+  skip_if_no_cards2()
+  expect_error(plan_after(disp_plan(), "set_decimal_split"),
+               "takes functions")
+})
+
+test_that("the display verbs are last-wins too", {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_rtf(max_rows = 10, border = "tfl") |>
+    plan_rtf(max_rows = 40)          # later wins, `border` is kept
+  rtf <- rtfreporter:::.plan_merge(rtfreporter:::.plan_of(p, "rtf"))
+  expect_identical(rtf$max_rows, 40)
+  expect_identical(rtf$border, "tfl")
+})
+
+test_that("stage = \"table\" still stops before any of this", {
+  skip_if_no_cards2()
+  p <- disp_plan() |> plan_rtf(stub_vars = c("group", "label"))
+  expect_true(is.data.frame(suppressMessages(apply_plan(p))))
+})
 test_that("the verbs refuse anything that is not a plan", {
   expect_error(plan_cells(data.frame(a = 1), "x"), "Expected an ard_plan")
   expect_error(apply_plan(data.frame(a = 1)), "Expected an ard_plan")
