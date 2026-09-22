@@ -80,7 +80,8 @@
 .ard_plan_exports <- c(
   "ard_plan", "plan_normalize", "plan_spread", "plan_cells",
   "plan_digits", "plan_round",
-  "plan_n", "plan_fmt", "plan_stub", "plan_rtf", "plan_header",
+  "plan_n", "plan_derive", "plan_fmt", "plan_stub", "plan_rtf",
+  "plan_header",
   "plan_after", "apply_plan")
 
 
@@ -416,6 +417,7 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #  built:
 #
 #      plan_n()       numbers read out of the ARD, by name
+#      plan_derive()  a column derived FROM the finished table
 #      plan_fmt()     fmt_numeric()      on the table data.frame
 #      plan_stub()    stub_cols()        fold the row keys into one stub
 #      plan_rtf()     as_rtftables()     structure, pagination, style
@@ -425,6 +427,22 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #' @rdname plan_verbs
 #' @export
 plan_n <- function(plan, ...) .plan_keyed(plan, "n", list(...))
+
+# A column the table can only know about once it exists -- the page key in
+# the solicited-AE report is `row_grp1 %in% <two categories>`, which nothing
+# upstream can state.  Declared here, the seam between the table and the
+# display stays open without the plan having to be broken in half.
+#' @rdname plan_verbs
+#' @export
+plan_derive <- function(plan, ...) {
+  fs <- list(...)
+  if (!all(vapply(fs, is.function, logical(1L)))) {
+    .ard_stop(paste0(
+      "plan_derive() takes functions of the table data.frame, one per ",
+      "step -- for example\n    plan_derive(\\(d) transform(d, page = ...))"))
+  }
+  .plan_layer(plan, "derive", list(steps = fs))
+}
 
 #' @rdname plan_verbs
 #' @export
@@ -627,6 +645,10 @@ apply_plan <- function(plan,
   #  A function is called with the ARD; anything else is taken as it is.
   nvals <- lapply(.plan_merge(.plan_of(plan, "n")), function(v)
     if (is.function(v)) v(plan$ard) else v)
+
+  for (l in .plan_of(plan, "derive")) {
+    for (f in l$steps) tbl <- f(tbl)
+  }
 
   fmt <- .plan_merge(.plan_of(plan, "fmt"))
   if (length(fmt)) tbl <- do.call(fmt_numeric, c(list(data = tbl), fmt))

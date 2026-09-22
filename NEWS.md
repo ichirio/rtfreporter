@@ -28,6 +28,16 @@
   reimplements `as_rtftables()`; the plan resolves to its arguments and
   calls it.
 
+  `plan_derive()` is the fourteenth verb and the one the six reports
+  demanded: the solicited-AE page key is `row_grp1 %in% <two categories>`,
+  a fact about the finished table that nothing upstream can state, and it
+  is applied by a `mutate()` between the table and the display.  The plan
+  had a seam on the ARD side and none on the table side, so that report
+  could not be written at all until this was added.
+
+  All six Discussion #473 reports now run ARD to RTF pages through a plan
+  and produce `rtftable`s identical to the hand-written code.
+
   `plan_n()` is the one that earns the deferral.  A header's denominator
   has to agree with the columns underneath it, and today the arm order is
   written three times --- in `levels =`, in `ard_pull(levels = )` and in

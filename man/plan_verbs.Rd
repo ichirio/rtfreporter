@@ -8,6 +8,7 @@
 \alias{plan_digits}
 \alias{plan_round}
 \alias{plan_n}
+\alias{plan_derive}
 \alias{plan_fmt}
 \alias{plan_stub}
 \alias{plan_rtf}
@@ -48,6 +49,8 @@ plan_digits(plan, ...)
 plan_round(plan, ...)
 
 plan_n(plan, ...)
+
+plan_derive(plan, ...)
 
 plan_fmt(plan, ...)
 
