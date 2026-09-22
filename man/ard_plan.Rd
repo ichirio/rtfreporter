@@ -7,7 +7,19 @@
 ard_plan(ard)
 }
 \arguments{
-\item{ard}{A cards/cardx ARD.}
+\item{ard}{What to build the table from.  Three things are accepted, and
+the plan works out which it is from the columns:
+\itemize{
+\item a \strong{cards/cardx ARD}, which is flattened and spread;
+\item a frame already through \code{\link[=ard_normalize]{ard_normalize()}} --- how a report that has
+to reach in with dplyr gets back into a plan;
+\item \strong{any long frame of statistics}: keys, a \code{stat_name} and a \code{stat},
+built with dplyr and no cards anywhere.  \code{plan_normalize()} is then
+skipped and \code{plan_cells()} does the work.
+}
+
+A frame that is already the table is refused, with a message saying to
+use \code{\link[=as_rtftables]{as_rtftables()}} instead.}
 }
 \value{
 An object of class \code{ard_plan}.

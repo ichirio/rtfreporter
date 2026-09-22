@@ -103,4 +103,24 @@ reentered <- ard_plan(d) |>                # a normalized frame is accepted
   apply_plan()
 print(as.data.frame(reentered))
 
+bar("5. no cards at all -- a long frame somebody built with dplyr")
+
+# keys, a statistic name, a value.  That is everything ard_spread() reads, so
+# the cell templates and the last-wins digits work with no ARD in sight.
+own <- data.frame(
+  TRT       = rep(c("A", "B"), each = 6),
+  variable  = rep(rep(c("ALT", "AST"), each = 3), 2),
+  stat_name = rep(c("n", "mean", "sd"), 4),
+  stat      = c(20, 31.245, 4.1, 20, 28.7, 3.92,
+                18, 33.108, 5.3, 18, 30.2, 4.44),
+  stringsAsFactors = FALSE)
+
+print(as.data.frame(apply_plan(
+  ard_plan(own) |>                       # "long": plan_normalize() is skipped
+    plan_spread(cols = "TRT", rows = c(param = "variable"),
+                label = c(row = "stat_name"), notes = FALSE) |>
+    plan_cells(c("n" = "{n:.0f}", "Mean (SD)" = "{mean} ({sd})")) |>
+    plan_digits(2) |>
+    plan_digits(AST = 3))))               # still last wins
+
 bar("done")

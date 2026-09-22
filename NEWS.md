@@ -17,6 +17,30 @@
   call the plan amounts to, while `stage = "normalize"` stops at the long
   frame.  Both are the one pass stopped early, not a second code path.
 
+  **A plan does not need an ARD.**  `ard_plan()` works out what it was
+  given from the columns and takes four answers: a cards ARD, a frame
+  already through `ard_normalize()`, **any long frame of statistics**
+  (keys, a `stat_name` and a `stat` --- somebody's own dplyr summary, with
+  no cards anywhere), and a frame that is already the table, which is
+  refused **at `ard_plan()`** with a message pointing at `as_rtftables()`.
+  For the third, `plan_normalize()` is skipped and `plan_cells()` does the
+  work, so the cell templates, the row templates and the last-wins digits
+  are usable by anyone who can build a long summary.
+
+  That case needed one fix outside the spike: `ard_spread()` read
+  `variable` and `context` without checking they existed, so a frame that
+  never came from cards failed with an internal R error ("attempt to
+  select less than one element") rather than a message.  They are now
+  supplied as `NA` when absent, which costs a cards ARD nothing and lets
+  the cell lookup fall through to the kind or default entry.  A missing
+  `.label` also says what to do --- name the column that carries the row
+  identity --- instead of reporting a column absent from "the normalized
+  ARD" that was never normalized.
+
+  A `plan_digits()` key that matched nothing is an error rather than a
+  silent no-op: `plan_digits(AST = 3)` on a frame whose analysis variable
+  column is called `PARAM` does nothing, and says so.
+
   The seam survives: `ard_plan()` also accepts an **already-normalized**
   frame, so the reports that have to reach in with dplyr do it on the long
   frame and start a plan from the result.  All six Discussion #473 reports

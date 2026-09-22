@@ -190,7 +190,7 @@ test_that("plan_normalize() on a normalized frame is refused, not ignored", {
   p <- ard_plan(ard_normalize(plan_ard())) |>
     plan_normalize(hierarchy = "SEX") |>
     plan_spread(cols = "TRT")
-  expect_error(apply_plan(p), "already normalized")
+  expect_error(apply_plan(p), "does not need flattening")
   expect_error(apply_plan(p), "hierarchy")
 })
 
@@ -214,6 +214,94 @@ test_that("one rounding family reaches ard_spread()", {
   expect_identical(apply_plan(p, "args")$spread$round, "sas")
 })
 
+# ------------------------------------------------- what a plan starts from
+
+# A long summary somebody built with dplyr: keys, a statistic name and a
+# value, and nothing cards ever touched.
+hand_long <- function(var_col = "PARAM") {
+  d <- data.frame(
+    TRT       = rep(c("A", "B"), each = 6),
+    PARAM     = rep(rep(c("ALT", "AST"), each = 3), 2),
+    stat_name = rep(c("n", "mean", "sd"), 4),
+    stat      = c(20, 31.245, 4.1, 20, 28.7, 3.92,
+                  18, 33.108, 5.3, 18, 30.2, 4.44),
+    stringsAsFactors = FALSE)
+  names(d)[names(d) == "PARAM"] <- var_col
+  d
+}
+
+test_that("the four kinds of source are told apart by their columns", {
+  skip_if_no_cards2()
+  kind <- rtfreporter:::.plan_source_kind
+  expect_identical(kind(plan_ard()), "ard")
+  expect_identical(kind(ard_normalize(plan_ard())), "normalized")
+  expect_identical(kind(hand_long()), "long")
+  expect_identical(kind(data.frame(group = "ALT", A = "31.2")), "wide")
+})
+
+test_that("a long frame nobody built with cards makes a table", {
+  out <- suppressMessages(apply_plan(
+    ard_plan(hand_long()) |>
+      plan_spread(cols = "TRT", rows = c(param = "PARAM"),
+                  label = c(row = "stat_name"), notes = FALSE) |>
+      plan_cells(c("n" = "{n:.0f}", "Mean (SD)" = "{mean} ({sd})")) |>
+      plan_digits(2)))
+  expect_identical(names(out), c("param", "row", "A", "B"))
+  # the plan-wide digits reached a frame with no `variable` column at all
+  expect_identical(out$A[out$param == "ALT" & out$row == "Mean (SD)"],
+                   "31.25 (4.10)")
+})
+
+test_that("per-variable keys work once the column is called `variable`", {
+  out <- suppressMessages(apply_plan(
+    ard_plan(hand_long("variable")) |>
+      plan_spread(cols = "TRT", rows = c(param = "variable"),
+                  label = c(row = "stat_name"), notes = FALSE) |>
+      plan_cells(c("Mean (SD)" = "{mean} ({sd})")) |>
+      plan_digits(2) |> plan_digits(AST = 3)))
+  expect_identical(out$A[out$param == "ALT"], "31.25 (4.10)")
+  expect_identical(out$A[out$param == "AST"], "28.700 (3.920)")
+})
+
+test_that("a digits key that reached nothing is refused, not ignored", {
+  p <- ard_plan(hand_long()) |>
+    plan_spread(cols = "TRT", rows = c(param = "PARAM"),
+                label = c(row = "stat_name"), notes = FALSE) |>
+    plan_cells(c("Mean (SD)" = "{mean} ({sd})")) |>
+    plan_digits(2) |>
+    plan_digits(AST = 3)          # AST is a PARAM value, not a variable
+  expect_error(apply_plan(p, "args"), "matched nothing")
+  expect_error(apply_plan(p, "args"), "AST")
+})
+
+test_that("a frame that is already the table is refused at the door", {
+  # the point of deferring: this is caught at ard_plan(), not three stages
+  # later inside the resolver
+  expect_error(ard_plan(data.frame(group = "ALT", A = "31.2 (4.1)")),
+               "already the table")
+  expect_error(ard_plan(data.frame(group = "ALT", A = "31.2 (4.1)")),
+               "as_rtftables")
+})
+
+test_that("ard_spread() tolerates a frame with no variable/context", {
+  # it used to fail with an internal R error rather than a message
+  out <- suppressMessages(ard_spread(
+    hand_long(), cols = "TRT", rows = c(param = "PARAM"),
+    label = c(row = "stat_name"),
+    cells = c("Mean (SD)" = "{mean:.1f} ({sd:.1f})"), notes = FALSE))
+  expect_identical(out$A[out$param == "ALT"], "31.2 (4.1)")
+})
+
+test_that("a missing .label says what to do instead of naming the ARD", {
+  expect_error(
+    ard_spread(hand_long(), cols = "TRT", rows = c(param = "PARAM"),
+               cells = "{mean:.1f}"),
+    "has no `.label`")
+  expect_error(
+    ard_spread(hand_long(), cols = "TRT", rows = c(param = "PARAM"),
+               cells = "{mean:.1f}"),
+    "carries the row identity")
+})
 test_that("the verbs refuse anything that is not a plan", {
   expect_error(plan_cells(data.frame(a = 1), "x"), "Expected an ard_plan")
   expect_error(apply_plan(data.frame(a = 1)), "Expected an ard_plan")

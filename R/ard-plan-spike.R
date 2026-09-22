@@ -183,6 +183,36 @@
 }
 
 
+# -- what kind of thing is this? ---------------------------------------------
+
+# Four answers, decided by the columns and nothing else -- no class, no
+# attribute, because an ARD keeps its class through a bind_rows() with a
+# frame of a different shape and so cannot be trusted to say what it is.
+#
+#   "ard"        a cards/cardx ARD: needs flattening first
+#   "normalized" already through ard_normalize(): our own .label / .kind
+#   "long"       somebody's OWN long summary: stat_name + stat and no more
+#   "wide"       one row per printed row: the ARD half has nothing to do
+#
+# The "long" case is the point of the classifier.  A statistician who
+# summarised with dplyr has a frame with keys, a statistic name and a
+# value, which is everything `ard_spread()` reads -- so the cell template
+# language, the row templates and the last-wins digits are all usable with
+# no cards anywhere.
+.plan_source_kind <- function(x) {
+  if (!is.data.frame(x)) return("ard")
+  nm <- names(x)
+  if (any(c(".label", ".kind") %in% nm)) return("normalized")
+  if (all(c("stat_name", "stat") %in% nm)) {
+    # cards' own shape still needs flattening: it says so with `context`
+    # or with the group pairs.  A frame carrying neither was built by hand.
+    if ("context" %in% nm || any(grepl("^group[0-9]+$", nm))) return("ard")
+    return("long")
+  }
+  "wide"
+}
+
+
 # -- the constructor ---------------------------------------------------------
 
 #' A deferred, last-wins plan for an ARD (SPIKE)
@@ -202,7 +232,17 @@
 #' from [ard_spread()]'s `cells`, which picks by specificity and ignores
 #' order; the spike exists to find out which is nicer to write.
 #'
-#' @param ard A cards/cardx ARD.
+#' @param ard What to build the table from.  Three things are accepted, and
+#'   the plan works out which it is from the columns:
+#'   * a **cards/cardx ARD**, which is flattened and spread;
+#'   * a frame already through [ard_normalize()] --- how a report that has
+#'     to reach in with dplyr gets back into a plan;
+#'   * **any long frame of statistics**: keys, a `stat_name` and a `stat`,
+#'     built with dplyr and no cards anywhere.  `plan_normalize()` is then
+#'     skipped and `plan_cells()` does the work.
+#'
+#'   A frame that is already the table is refused, with a message saying to
+#'   use [as_rtftables()] instead.
 #'
 #' @return An object of class `ard_plan`.
 #'
@@ -229,21 +269,34 @@
 #' @export
 ard_plan <- function(ard) {
   if (is.null(ard)) .ard_stop("`ard` is required.")
-  # An ALREADY-normalized frame is accepted, so the seam survives: the
-  # reports that have to reach in with dplyr do it on the long frame and
-  # then start a plan from the result.  The test is the one ard_spread()
-  # already makes, but read the other way round: the test has to be on the
-  # columns ard_normalize() ADDS.  `stat_name` is in a raw cards ARD too,
-  # so including it silently skipped normalisation for every report.
-  done <- is.data.frame(ard) && any(c(".label", ".kind") %in% names(ard))
-  structure(list(ard = ard, normalized = done, layers = list()),
+  kind <- .plan_source_kind(ard)
+  # A wide frame is refused HERE rather than three stages later, which is
+  # the one thing deferring is supposed to buy.
+  if (identical(kind, "wide")) {
+    .ard_stop(paste0(
+      "This looks like a table, not something to build one from: it has ",
+      "no `stat_name`/`stat`\n  to read and none of the columns ",
+      "ard_normalize() adds.\n",
+      "  A plan converts an ARD, or any long frame of statistics, into a ",
+      "table.\n",
+      "  A frame that is already the table goes straight to ",
+      "as_rtftables().\n",
+      "  Columns seen: ", paste(utils::head(names(ard), 8L),
+                                collapse = ", ")))
+  }
+  structure(list(ard = ard, kind = kind,
+                 normalized = !identical(kind, "ard"), layers = list()),
             class = "ard_plan")
 }
 
 #' @export
 print.ard_plan <- function(x, ...) {
   cat("<ard_plan>  ",
-      if (isTRUE(x$normalized)) "from a normalized frame, " else "",
+      switch(x$kind %||% "ard",
+             ard        = "from an ARD, ",
+             normalized = "from a normalized frame, ",
+             long       = "from a long frame of statistics, ",
+             ""),
       length(x$layers), " layer",
       if (length(x$layers) == 1L) "" else "s",
       ", nothing computed yet\n", sep = "")
@@ -388,11 +441,9 @@ apply_plan <- function(plan, stage = c("table", "normalize", "args")) {
   if (isTRUE(plan$normalized)) {
     if (length(n_args)) {
       .ard_stop(paste0(
-        "This plan started from a frame that is already normalized, so ",
-        "plan_normalize()
-  has nothing to do.  Give those arguments to ",
-        "ard_normalize() instead:
-    ",
+        "This plan started from a frame that does not need flattening (",
+        plan$kind %||% "normalized", "), so plan_normalize()\n",
+        "  has nothing to do.  Drop it, or start the plan from the ARD:\n    ",
         paste(names(n_args), collapse = ", ")))
     }
     x <- plan$ard
@@ -414,19 +465,56 @@ apply_plan <- function(plan, stage = c("table", "normalize", "args")) {
   #    and the reason the plan holds it: `plan_digits(AGE = 0)` cannot be
   #    turned into a template until we know which entry AGE would have got.
   if (length(cells)) {
-    vars <- .ard_first_seen(x$variable)
+    #  a) one entry per analysis variable, where a variable-specific layer
+    #     can win.  A frame with no `variable` column -- somebody's own long
+    #     summary -- has nothing to expand, and (b) still applies.
+    vars <- if ("variable" %in% names(x)) .ard_first_seen(x$variable) else
+      character(0)
+    vars <- vars[!is.na(vars)]
+    filled <- list()
     for (v in vars) {
       sel <- x$variable == v
       ctx <- .ard_first_seen(x$context[sel])[1L]
       knd <- .ard_first_seen(x$.kind[sel])[1L]
       entry <- .plan_lookup_raw(cells, v, ctx, knd)
       if (is.null(entry)) next
-      d <- .plan_pick(dig, v, ctx, knd)
-      entry <- .plan_fill_entry(entry, d)
+      entry <- .plan_fill_entry(entry, .plan_pick(dig, v, ctx, knd))
       .plan_check_open(entry, v)
-      cells[[v]] <- entry
+      filled[[v]] <- entry
     }
+    #  b) every key the caller actually wrote, filled with the digits THAT
+    #     key resolves to.  Without this a plan-wide `plan_digits()` reached
+    #     nothing at all when there were no variables to expand.
+    for (k in names(cells)) {
+      if (k %in% names(filled)) next
+      cells[[k]] <- .plan_fill_entry(cells[[k]],
+                                     .plan_pick(dig, k, NA_character_,
+                                                NA_character_))
+      # Only worth complaining about a key that can still be REACHED.  With
+      # variables present every lookup goes through (a), so a `categorical`
+      # entry that every variable has overridden is dead and its unanswered
+      # tokens are nobody's problem.
+      if (!length(vars)) .plan_check_open(cells[[k]], k)
+    }
+    for (k in names(filled)) cells[[k]] <- filled[[k]]
     s_args$cells <- cells
+
+    #  c) a digits key that reached nothing is a typo, and silence is how a
+    #     typo survives review.  "AST = 3" on a frame whose analysis
+    #     variable column is called PARAM does nothing, and says so.
+    reached <- c("default", names(cells), vars)
+    miss <- setdiff(names(dig), reached)
+    if (length(miss)) {
+      .ard_stop(paste0(
+        "plan_digits() names ", paste(sQuote(miss), collapse = ", "),
+        ", which matched nothing.\n",
+        "  A key is an analysis variable, a context, a kind ",
+        "(continuous / categorical)\n  or \"default\".  ",
+        "Variables here: ",
+        if (length(vars)) paste(utils::head(vars, 8L), collapse = ", ")
+        else "(none -- this frame has no `variable` column, so per-variable",
+        if (length(vars)) "" else " keys cannot be used)"))
+    }
   }
 
   # 5. one rounding family for the run; a per-variable one would have to reach

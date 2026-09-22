@@ -1393,9 +1393,22 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
           "variable to order that variable's rows in the label column.)"),
           what, ref, ref, ref))
       }
+      avail <- paste(setdiff(names(d), c(".overall")), collapse = ", ")
+      # `.label` is ard_normalize()'s own column.  Asking a frame that never
+      # went through it to produce one is a different mistake from naming a
+      # column that is simply misspelt, and the fix is different too: say
+      # which column carries the row identity.  Nothing can guess that.
+      if (identical(ref, ".label") && !".label" %in% names(d)) {
+        .ard_stop(paste0(
+          "`", what, "`: this frame has no `.label`, which is the column ",
+          "ard_normalize() adds.\n",
+          "  A long frame of statistics built any other way has to say which ",
+          "column\n  carries the row identity:\n",
+          "    ", what, " = c(row = \"<column>\")\n",
+          "  Available: ", avail))
+      }
       .ard_stop(sprintf("`%s`: no column '%s' in the normalized ARD. Available: %s",
-                        what, ref,
-                        paste(setdiff(names(d), c(".overall")), collapse = ", ")))
+                        what, ref, avail))
     }
     out[[i]] <- list(out = nm, ref = ref)
   }
@@ -1659,6 +1672,18 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       "`x` does not look like an ard_normalize() result: it has none of\n",
       "  `.label`, `.kind`, `stat_name`.  Pass the ARD through\n",
       "  ard_normalize() first."))
+  }
+
+  # A long frame that nobody built with cards -- a statistician's own
+  # summary, keyed how they liked -- carries `stat_name` and `stat` and
+  # nothing else this function names.  Reading a column that is not there
+  # gave an internal R error ("attempt to select less than one element")
+  # rather than a message, because `d$variable` is NULL and `NULL[1L]` is
+  # not a value the cell lookup can key on.  Supplying the optional ones as
+  # NA makes that lookup fall through to the kind or default entry, which
+  # is exactly what such a frame wants, and costs a cards ARD nothing.
+  for (cn in c("variable", "context", "stat_fmt", "stat_label")) {
+    if (!cn %in% names(d)) d[[cn]] <- NA_character_
   }
 
   colrefs <- .ard_refs(cols, d, "cols")
