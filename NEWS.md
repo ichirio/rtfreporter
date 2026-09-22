@@ -28,6 +28,25 @@
   reimplements `as_rtftables()`; the plan resolves to its arguments and
   calls it.
 
+  **`plan_styles()` is SAS's `call define(_col_, 'style', ...)`**: a cell
+  looks at its own row and decides how it is printed.  The condition is a
+  one-sided formula over the finished table and its value is used
+  directly, so `bold = ~ is.na(group)` takes a logical and
+  `color = list(Placebo = ~ ifelse(p > 50, "#CC0000", NA))` takes the
+  colour, with `NA` meaning "leave the column default alone".  A bare
+  formula covers the row; a **named** list scopes it to columns **by
+  name**, never by the position that moves when the stub does.
+
+  Folding the stub destroys the row keys, and a condition wants them ---
+  SAS's `compute` sees every variable in the report, including the ones it
+  does not print.  `stub_cols()` leaves `rtf_stub_src` behind, so they are
+  put back, which also makes `is.na(<a row key>)` the test for "this is a
+  heading row".
+
+  Giving the same key twice in **one** call is now an error rather than a
+  silent first-wins: `list(a = x, a = y)` keeps the first, and last-wins is
+  a rule about layers, not about arguments.
+
   `plan_derive()` is the fourteenth verb and the one the six reports
   demanded: the solicited-AE page key is `row_grp1 %in% <two categories>`,
   a fact about the finished table that nothing upstream can state, and it

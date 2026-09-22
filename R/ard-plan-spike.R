@@ -80,7 +80,8 @@
 .ard_plan_exports <- c(
   "ard_plan", "plan_normalize", "plan_spread", "plan_cells",
   "plan_digits", "plan_round",
-  "plan_n", "plan_derive", "plan_fmt", "plan_stub", "plan_rtf",
+  "plan_n", "plan_derive", "plan_fmt", "plan_stub", "plan_styles",
+  "plan_rtf",
   "plan_header",
   "plan_after", "apply_plan")
 
@@ -388,6 +389,15 @@ plan_spread <- function(plan, cols = NULL, rows = NULL, label = NULL,
     nms[!nzchar(nms)] <- "default"
   }
   names(dots) <- nms
+  # Last wins ACROSS layers, which is the rule.  Twice in ONE call is not a
+  # layering, it is a typo: `list(a = x, a = y)` silently keeps the first.
+  if (anyDuplicated(nms)) {
+    .ard_stop(paste0(
+      "the same key is given twice in one call: ",
+      paste(sQuote(unique(nms[duplicated(nms)])), collapse = ", "), ".\n",
+      "  A later LAYER wins, so make it a second call if that is what you ",
+      "meant."))
+  }
   .plan_layer(plan, kind, dots)
 }
 
@@ -420,6 +430,7 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #      plan_derive()  a column derived FROM the finished table
 #      plan_fmt()     fmt_numeric()      on the table data.frame
 #      plan_stub()    stub_cols()        fold the row keys into one stub
+#      plan_styles()  cell_styles        bold / colour / align, by condition
 #      plan_rtf()     as_rtftables()     structure, pagination, style
 #      plan_header()  set_col_header()   with the plan_n() values in scope
 #      plan_after()   set_decimal_split() / paginate_cols() / anything else
@@ -451,6 +462,87 @@ plan_fmt <- function(plan, ...) .plan_layer(plan, "fmt", list(...))
 #' @rdname plan_verbs
 #' @export
 plan_stub <- function(plan, ...) .plan_layer(plan, "stub", list(...))
+
+# SAS's `call define(_col_, 'style', ...)` inside a `compute` block: a cell
+# looks at its own row and decides how it is printed.  The condition is a
+# one-sided formula over the FINISHED table -- the same columns
+# as_rtftables() is about to see -- and its value is used directly, so a
+# logical attribute takes a logical vector and a valued one takes the
+# value (or NA for "leave the column default alone").
+#
+#     plan_styles(bold  = ~ is.na(term),
+#                 color = list(Placebo = ~ ifelse(n > 50, "#CC0000", NA)))
+#
+# A bare formula covers the whole row; a NAMED list scopes it to columns,
+# by name rather than by position -- which is the difference between this
+# and `col_spec`, whose numbers move when the stub does.
+#' @rdname plan_verbs
+#' @export
+plan_styles <- function(plan, ...) .plan_keyed(plan, "styles", list(...))
+
+# Build the `cell_styles` list rtftable() wants: one element per row, each
+# NULL or a named list of per-column vectors.
+# Folding the stub destroys the row keys, and a condition wants them: SAS's
+# `compute` sees every variable in the report, including the ones it does
+# not print.  `stub_cols()` leaves `rtf_stub_src` behind -- output row to
+# source row, NA for a heading row -- so they can be put back, which also
+# makes `is.na(<a row key>)` the test for "this is a heading row".
+.plan_style_frame <- function(tbl, pre) {
+  env <- as.list(tbl)
+  if (is.null(pre) || identical(nrow(pre), nrow(tbl))) {
+    for (nm in setdiff(names(pre), names(env))) env[[nm]] <- pre[[nm]]
+    return(env)
+  }
+  src <- attr(tbl, "rtf_stub_src", exact = TRUE)
+  if (is.null(src) || length(src) != nrow(tbl)) return(env)
+  for (nm in setdiff(names(pre), names(env))) {
+    env[[nm]] <- pre[[nm]][src]
+  }
+  env
+}
+
+.plan_cell_styles <- function(spec, tbl, pre = NULL) {
+  n <- nrow(tbl); m <- ncol(tbl); nms <- names(tbl)
+  frame <- .plan_style_frame(tbl, pre)
+  out <- vector("list", n)
+  for (att in names(spec)) {
+    v <- spec[[att]]
+    parts <- if (inherits(v, "formula")) list(v) else as.list(v)
+    keys  <- if (inherits(v, "formula")) NA_character_ else
+      (names(parts) %||% rep(NA_character_, length(parts)))
+    for (i in seq_along(parts)) {
+      f <- parts[[i]]
+      if (!inherits(f, "formula") || length(f) != 2L) {
+        .ard_stop(paste0(
+          "plan_styles(", att, "): each entry is a one-sided formula ",
+          "over the table's columns,\n  for example ",
+          "`plan_styles(bold = ~ is.na(label))`."))
+      }
+      cols <- if (is.na(keys[i])) seq_len(m) else match(keys[i], nms)
+      if (anyNA(cols)) {
+        .ard_stop(paste0(
+          "plan_styles(", att, "): no printed column ", sQuote(keys[i]),
+          ".\n  Available: ", paste(nms, collapse = ", ")))
+      }
+      val <- eval(f[[2L]], frame, environment(f))
+      if (length(val) == 1L) val <- rep(val, n)
+      if (length(val) != n) {
+        .ard_stop(paste0(
+          "plan_styles(", att, "): the condition gave ", length(val),
+          " values for ", n, " rows."))
+      }
+      for (r in seq_len(n)) {
+        if (is.na(val[[r]])) next
+        cur <- out[[r]]
+        if (is.null(cur)) cur <- list()
+        if (is.null(cur[[att]])) cur[[att]] <- rep(val[[r]][NA], m)
+        cur[[att]][cols] <- val[[r]]
+        out[[r]] <- cur
+      }
+    }
+  }
+  out
+}
 
 #' @rdname plan_verbs
 #' @export
@@ -653,11 +745,32 @@ apply_plan <- function(plan,
   fmt <- .plan_merge(.plan_of(plan, "fmt"))
   if (length(fmt)) tbl <- do.call(fmt_numeric, c(list(data = tbl), fmt))
 
-  stub <- .plan_merge(.plan_of(plan, "stub"))
+  stub  <- .plan_merge(.plan_of(plan, "stub"))
+  pre   <- tbl
   if (length(stub)) tbl <- do.call(stub_cols, c(list(data = tbl), stub))
 
-  out <- do.call(as_rtftables,
-                 c(list(x = tbl), .plan_merge(.plan_of(plan, "rtf"))))
+  rtf <- .plan_merge(.plan_of(plan, "rtf"))
+  st  <- .plan_merge(.plan_of(plan, "styles"))
+  if (length(st)) {
+    # The styles are built against the rows the plan can SEE.  Folding the
+    # stub inside as_rtftables() adds heading rows the plan never saw, and
+    # rtftable() would reject the length with nothing to say about why.
+    if (!is.null(rtf$stub_vars)) {
+      .ard_stop(paste0(
+        "plan_styles() needs the stub folded by plan_stub(), not by ",
+        "plan_rtf(stub_vars = ).\n",
+        "  as_rtftables() adds group heading rows that the conditions never ",
+        "saw, so a\n  style would land on the wrong row.  Move it:\n",
+        "    plan_stub(vars = c(...), label = \"row_label\")"))
+    }
+    if (!is.null(rtf$cell_styles)) {
+      .ard_stop(paste0(
+        "plan_styles() and plan_rtf(cell_styles = ) both set the same ",
+        "thing.  Use one."))
+    }
+    rtf$cell_styles <- .plan_cell_styles(st, tbl, pre)
+  }
+  out <- do.call(as_rtftables, c(list(x = tbl), rtf))
 
   hdr <- .plan_merge(.plan_of(plan, "header"))
   if (!is.null(hdr$header)) {

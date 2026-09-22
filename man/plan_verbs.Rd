@@ -11,6 +11,7 @@
 \alias{plan_derive}
 \alias{plan_fmt}
 \alias{plan_stub}
+\alias{plan_styles}
 \alias{plan_rtf}
 \alias{plan_header}
 \alias{plan_after}
@@ -55,6 +56,8 @@ plan_derive(plan, ...)
 plan_fmt(plan, ...)
 
 plan_stub(plan, ...)
+
+plan_styles(plan, ...)
 
 plan_rtf(plan, ...)
 

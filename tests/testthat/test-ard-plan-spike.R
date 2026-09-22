@@ -400,6 +400,106 @@ test_that("stage = \"table\" still stops before any of this", {
   p <- disp_plan() |> plan_rtf(stub_vars = c("group", "label"))
   expect_true(is.data.frame(suppressMessages(apply_plan(p))))
 })
+# ------------------------------------------------- conditional cell styles
+
+styled <- function(...) {
+  suppressMessages(apply_plan(
+    disp_plan() |>
+      plan_stub(vars = c("group", "label"), label = "row_label") |>
+      plan_styles(...) |>
+      plan_rtf(border = "tfl"),
+    "pages"))
+}
+
+test_that("a bare formula styles the whole row", {
+  skip_if_no_cards2()
+  # `group` is folded away by stub_cols(); it is put back through the
+  # rtf_stub_src map so a condition can still ask about it, the way SAS's
+  # compute block sees variables the report does not print
+  pg <- styled(bold = ~ !is.na(group) & group == "SEX")[[1]]
+  cs <- pg$cell_styles
+  on <- vapply(cs, function(z) !is.null(z) && isTRUE(z$bold[[1]]), TRUE)
+  expect_true(any(on))
+  expect_false(all(on))
+  # every column of a styled row is styled, since the formula was bare
+  expect_true(all(vapply(cs[on], function(z) all(z$bold), TRUE)))
+})
+
+test_that("a heading row has no source row, so its keys read NA", {
+  skip_if_no_cards2()
+  pg <- styled(bold = ~ is.na(group))[[1]]
+  on <- vapply(pg$cell_styles,
+               function(z) !is.null(z) && isTRUE(z$bold[[1]]), TRUE)
+  expect_true(any(on))
+})
+
+test_that("a named list scopes a style to one column, by NAME", {
+  skip_if_no_cards2()
+  pg <- styled(align = list(Placebo = ~ "right"))[[1]]
+  j <- match("Placebo", names(pg$data))
+  expect_false(is.na(j))
+  expect_identical(pg$cell_styles[[1]]$align[[j]], "right")
+  expect_true(all(is.na(pg$cell_styles[[1]]$align[-j])))
+})
+
+test_that("NA means \"leave the column default alone\"", {
+  skip_if_no_cards2()
+  cs <- styled(bold = ~ NA)[[1]]$cell_styles
+  expect_true(all(vapply(cs, is.null, TRUE)))
+})
+
+test_that("styles are last-wins like every other layer", {
+  skip_if_no_cards2()
+  pg <- suppressMessages(apply_plan(
+    disp_plan() |>
+      plan_stub(vars = c("group", "label"), label = "row_label") |>
+      plan_styles(bold = ~ TRUE) |>
+      plan_styles(bold = ~ FALSE) |>          # a later LAYER wins
+      plan_rtf(border = "tfl"),
+    "pages"))[[1]]
+  expect_true(all(vapply(pg$cell_styles,
+                         function(z) !any(z$bold), TRUE)))
+})
+
+test_that("the same key twice in ONE call is a typo, not a layering", {
+  skip_if_no_cards2()
+  expect_error(styled(bold = ~ TRUE, bold = ~ FALSE), "twice in one call")
+  expect_error(plan_digits(disp_plan(), AGE = 1, AGE = 2), "twice in one call")
+})
+
+test_that("a column that is not there is named, not ignored", {
+  skip_if_no_cards2()
+  expect_error(styled(bold = list(NOPE = ~ TRUE)), "no printed column")
+  expect_error(styled(bold = list(NOPE = ~ TRUE)), "Available")
+})
+
+test_that("a style that is not a one-sided formula is refused", {
+  skip_if_no_cards2()
+  expect_error(styled(bold = "yes"), "one-sided formula")
+})
+
+test_that("a condition of the wrong length is refused", {
+  skip_if_no_cards2()
+  expect_error(styled(bold = ~ c(TRUE, FALSE)), "values for")
+})
+
+test_that("folding the stub inside as_rtftables() is refused with a reason", {
+  skip_if_no_cards2()
+  # the heading rows it adds were never seen by the conditions
+  p <- disp_plan() |> plan_styles(bold = ~ TRUE) |>
+    plan_rtf(stub_vars = c("group", "label"))
+  expect_error(apply_plan(p, "pages"), "plan_stub\\(\\)")
+  expect_error(apply_plan(p, "pages"), "wrong row")
+})
+
+test_that("plan_styles() and plan_rtf(cell_styles=) do not both apply", {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_stub(vars = c("group", "label"), label = "row_label") |>
+    plan_styles(bold = ~ TRUE) |>
+    plan_rtf(cell_styles = list(NULL))
+  expect_error(apply_plan(p, "pages"), "both set the same")
+})
 test_that("the verbs refuse anything that is not a plan", {
   expect_error(plan_cells(data.frame(a = 1), "x"), "Expected an ard_plan")
   expect_error(apply_plan(data.frame(a = 1)), "Expected an ard_plan")
