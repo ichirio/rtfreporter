@@ -322,8 +322,10 @@ test_that("stage = \"pages\" reaches the same rtftable as the code does", {
                       max_rows = 22, border = "tfl")
   new <- suppressMessages(apply_plan(
     disp_plan(ard) |>
-      plan_rtf(stub_vars = c("group", "label"), group_by = "indent",
-               split = "group_safe", max_rows = 22, border = "tfl"),
+      plan_stub(vars = c("group", "label")) |>
+      plan_group(mode = "indent") |>
+      plan_pages(split = "group_safe", max_rows = 22) |>
+      plan_style(border = "tfl"),
     "pages"))
   expect_equal(new, ref)
 })
@@ -335,7 +337,7 @@ test_that("plan_n() reads the ARD and plan_header() spends it", {
   new <- suppressMessages(apply_plan(
     disp_plan() |>
       plan_n(arm = function(a) ard_pull(a, cols = "TRT", variable = "AGE")) |>
-      plan_rtf(stub_vars = c("group", "label"), border = "tfl") |>
+      plan_stub(vars = c("group", "label")) |> plan_style(border = "tfl") |>
       plan_header(function(n) c("Characteristic",
                                 paste0(names(n$arm), " N=",
                                        as.integer(n$arm)))),
@@ -349,7 +351,7 @@ test_that("a literal plan_n() value is taken as it is", {
   new <- suppressMessages(apply_plan(
     disp_plan() |>
       plan_n(total = 254L) |>
-      plan_rtf(stub_vars = c("group", "label")) |>
+      plan_stub(vars = c("group", "label")) |>
       plan_header(function(n) c(paste0("All (N=", n$total, ")"),
                                 "A", "B", "C")),
     "pages"))
@@ -362,7 +364,7 @@ test_that("plan_stub() folds the row keys before as_rtftables() sees them", {
   new <- suppressMessages(apply_plan(
     disp_plan() |>
       plan_stub(vars = c("group", "label"), label = "row_label") |>
-      plan_rtf(border = "tfl"),
+      plan_style(border = "tfl"),
     "pages"))
   expect_true("row_label" %in% names(new[[1]]$data))
 })
@@ -372,7 +374,7 @@ test_that("plan_after() runs its steps on the pages, in order", {
   seen <- character(0)
   new <- suppressMessages(apply_plan(
     disp_plan() |>
-      plan_rtf(stub_vars = c("group", "label")) |>
+      plan_stub(vars = c("group", "label")) |>
       plan_after(function(x) { seen <<- c(seen, "one"); x },
                  function(x) { seen <<- c(seen, "two"); x }),
     "pages"))
@@ -388,9 +390,9 @@ test_that("plan_after() refuses anything that is not a function", {
 test_that("the display verbs are last-wins too", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_rtf(max_rows = 10, border = "tfl") |>
-    plan_rtf(max_rows = 40)          # later wins, `border` is kept
-  rtf <- rtfreporter:::.plan_merge(rtfreporter:::.plan_of(p, "rtf"))
+    plan_pages(max_rows = 10) |> plan_style(border = "tfl") |>
+    plan_pages(max_rows = 40)          # later wins, `border` is kept
+  rtf <- rtfreporter:::.plan_rtf_args(p)
   expect_identical(rtf$max_rows, 40)
   expect_identical(rtf$border, "tfl")
 })
@@ -402,7 +404,7 @@ test_that("how far a plan goes is read off what it declares", {
   expect_true(is.data.frame(suppressMessages(apply_plan(disp_plan()))))
 
   # anything that only makes sense once there are pages moves the answer
-  for (v in list(function(p) plan_rtf(p, border = "tfl"),
+  for (v in list(function(p) plan_style(p, border = "tfl"),
                  function(p) plan_header(p, c("a", "b", "c", "d")),
                  function(p) plan_styles(p, bold = ~ TRUE),
                  function(p) plan_after(p, identity))) {
@@ -410,12 +412,12 @@ test_that("how far a plan goes is read off what it declares", {
   }
 
   # calling the verb IS the declaration, even with nothing in it
-  expect_identical(.plan_reach(plan_rtf(disp_plan())), "pages")
+  expect_identical(.plan_reach(plan_style(disp_plan())), "pages")
 })
 
 test_that("a named stage still stops where it is told, for looking inside", {
   skip_if_no_cards2()
-  p <- disp_plan() |> plan_rtf(stub_vars = c("group", "label"))
+  p <- disp_plan() |> plan_stub(vars = c("group", "label"))
   expect_true(is.data.frame(suppressMessages(apply_plan(p, "table"))))
   expect_s3_class(suppressMessages(apply_plan(p, "normalize")), "data.frame")
   expect_setequal(names(apply_plan(p, "args")), c("normalize", "spread"))
@@ -428,14 +430,14 @@ test_that("the plan says which of the two it will give", {
                         utils::capture.output(print(disp_plan())),
                         fixed = TRUE)))
   expect_true(any(grepl("RTF pages",
-    utils::capture.output(print(plan_rtf(disp_plan(), border = "tfl"))),
+    utils::capture.output(print(plan_style(disp_plan(), border = "tfl"))),
     fixed = TRUE)))
 })
 
 test_that("rtf_tables() takes a plan, so apply_plan() is for looking", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_rtf(stub_vars = c("group", "label"), border = "tfl")
+    plan_stub(vars = c("group", "label")) |> plan_style(border = "tfl")
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(
       header = rtf_header(rows = list(c(c = "T"))),
@@ -449,9 +451,10 @@ test_that("rtf_tables() takes a plan, so apply_plan() is for looking", {
 styled <- function(...) {
   suppressMessages(apply_plan(
     disp_plan() |>
-      plan_stub(vars = c("group", "label"), label = "row_label") |>
+      plan_stub(vars = c("group", "label"), label = "row_label",
+                before = TRUE) |>
       plan_styles(...) |>
-      plan_rtf(border = "tfl"),
+      plan_style(border = "tfl"),
     "pages"))
 }
 
@@ -496,10 +499,11 @@ test_that("styles are last-wins like every other layer", {
   skip_if_no_cards2()
   pg <- suppressMessages(apply_plan(
     disp_plan() |>
-      plan_stub(vars = c("group", "label"), label = "row_label") |>
+      plan_stub(vars = c("group", "label"), label = "row_label",
+                before = TRUE) |>
       plan_styles(bold = ~ TRUE) |>
       plan_styles(bold = ~ FALSE) |>          # a later LAYER wins
-      plan_rtf(border = "tfl"),
+      plan_style(border = "tfl"),
     "pages"))[[1]]
   expect_true(all(vapply(pg$cell_styles,
                          function(z) !any(z$bold), TRUE)))
@@ -531,18 +535,19 @@ test_that("folding the stub inside as_rtftables() is refused with a reason", {
   skip_if_no_cards2()
   # the heading rows it adds were never seen by the conditions
   p <- disp_plan() |> plan_styles(bold = ~ TRUE) |>
-    plan_rtf(stub_vars = c("group", "label"))
-  expect_error(apply_plan(p, "pages"), "plan_stub\\(\\)")
+    plan_stub(vars = c("group", "label"))        # folded inside, not before
+  expect_error(apply_plan(p, "pages"), "before = TRUE")
   expect_error(apply_plan(p, "pages"), "wrong row")
 })
 
-test_that("plan_styles() and plan_rtf(cell_styles=) do not both apply", {
+test_that("plan_styles() and plan_style(cell_styles=) do not both apply", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_stub(vars = c("group", "label"), label = "row_label") |>
+    plan_stub(vars = c("group", "label"), label = "row_label",
+              before = TRUE) |>
     plan_styles(bold = ~ TRUE) |>
-    plan_rtf(cell_styles = list(NULL))
-  expect_error(apply_plan(p, "pages"), "both set the same")
+    plan_style(cell_styles = list(NULL))
+  expect_error(apply_plan(p, "pages"), "use one")
 })
 # --------------------------------------------------------- plan_template()
 
@@ -555,7 +560,7 @@ test_that("plan_template() writes a plan that runs to the pages", {
   expect_true(any(grepl("plan_spread(", code, fixed = TRUE)))
   expect_true(any(grepl("plan_cells(", code, fixed = TRUE)))
   # both halves, because a plan that stops at the table is half a plan
-  expect_true(any(grepl("plan_rtf(", code, fixed = TRUE)))
+  expect_true(any(grepl("plan_style(", code, fixed = TRUE)))
   expect_true(any(grepl("plan_stub(", code, fixed = TRUE)))
   expect_true(any(grepl("apply_plan(p)", code, fixed = TRUE)))
 

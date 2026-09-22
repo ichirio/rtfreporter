@@ -81,8 +81,8 @@
   "ard_plan", "plan_normalize", "plan_spread", "plan_cells",
   "plan_digits", "plan_round",
   "plan_n", "plan_derive", "plan_fmt", "plan_stub", "plan_styles",
-  "plan_rtf",
-  "plan_header",
+  "plan_group", "plan_hide", "plan_sort", "plan_blanks", "plan_pages",
+  "plan_style", "plan_header",
   "plan_after", "apply_plan", "plan_template")
 
 
@@ -111,7 +111,8 @@
 # plan stops at the table data.frame.
 .plan_reach <- function(plan) {
   kinds <- vapply(plan$layers, `[[`, "", "kind")
-  if (any(kinds %in% c("rtf", "header", "styles", "after"))) "pages"
+  if (any(kinds %in% c("group", "hide", "sort", "blanks", "pages",
+                       "style", "header", "styles", "after"))) "pages"
   else "table"
 }
 
@@ -351,6 +352,26 @@ print.ard_plan <- function(x, ...) {
 #'   (`continuous` / `categorical`) or `default`.  For `plan_digits()` and
 #'   `plan_round()`, the same keys with a number (or `"r"` / `"sas"`) as the
 #'   value; one unnamed value sets the plan-wide default.
+#' @param vars,label,indent,group_summary For `plan_stub()`: the row keys to
+#'   fold into one stub column and how, as [stub_cols()] takes them.
+#' @param before For `plan_stub()`: `FALSE` (default) folds the stub inside
+#'   [as_rtftables()], after grouping and pagination have had their say.
+#'   `TRUE` folds it first, with [stub_cols()], which is what
+#'   `plan_styles()` needs --- only then can a condition see the rows that
+#'   will be printed.  The two do **not** always give the same table.
+#' @param col,mode,collapse For `plan_group()`: `as_rtftables()`'s
+#'   `group_col`, `group_by` and `collapse_repeats`.
+#' @param desc For `plan_sort()`: `as_rtftables()`'s `sort_desc`.
+#' @param where,first,last,counted For `plan_blanks()`: `as_rtftables()`'s
+#'   `blank_rows`, `blank_row_first`, `blank_row_end` and
+#'   `count_blank_rows`.
+#' @param max_rows,split,break_before,by,min_group_rows,cont_label For
+#'   `plan_pages()`: the row budget and what a page break may cut ---
+#'   `as_rtftables()`'s `max_rows`, `split`, `split_rows`, `page_by`,
+#'   `min_group_rows` and `cont_label`.
+#' @param border,widths For `plan_style()`: the border set and the relative
+#'   column widths (`col_rel_width`).  Anything else [rtftable()]
+#'   understands goes through `...`.
 #' @param header For `plan_header()`: what [set_col_header()] should be
 #'   given --- an [rtf_col_header()] object, or a **function** of the
 #'   `plan_n()` values, which is how a denominator reaches the header
@@ -448,7 +469,12 @@ plan_round <- function(plan, ...) .plan_keyed(plan, "round", list(...))
 #      plan_fmt()     fmt_numeric()      on the table data.frame
 #      plan_stub()    stub_cols()        fold the row keys into one stub
 #      plan_styles()  cell_styles        bold / colour / align, by condition
-#      plan_rtf()     as_rtftables()     structure, pagination, style
+#      plan_group()   which column groups the rows, and how it shows
+#      plan_hide()    columns that do their work without being printed
+#      plan_sort()    the printed order
+#      plan_blanks()  where the blank rows go
+#      plan_pages()   the row budget and what a page break may cut
+#      plan_style()   borders, widths, alignment
 #      plan_header()  set_col_header()   with the plan_n() values in scope
 #      plan_after()   set_decimal_split() / paginate_cols() / anything else
 
@@ -476,9 +502,20 @@ plan_derive <- function(plan, ...) {
 #' @export
 plan_fmt <- function(plan, ...) .plan_layer(plan, "fmt", list(...))
 
+# WHERE the stub is folded changes the answer, so it is a setting rather
+# than a detail.  as_rtftables() folds it inside its own resolution, after
+# grouping and pagination have had their say, and that is what a report
+# grouped by a carrier column needs.  Folding it FIRST, with stub_cols(),
+# is what plan_styles() needs, because only then can a condition see the
+# rows that will be printed.
 #' @rdname plan_verbs
 #' @export
-plan_stub <- function(plan, ...) .plan_layer(plan, "stub", list(...))
+plan_stub <- function(plan, vars = NULL, label = NULL, indent = NULL,
+                      group_summary = NULL, before = FALSE) {
+  .plan_layer(plan, "stub",
+              list(vars = vars, label = label, indent = indent,
+                   group_summary = group_summary, before = before))
+}
 
 # SAS's `call define(_col_, 'style', ...)` inside a `compute` block: a cell
 # looks at its own row and decides how it is printed.  The condition is a
@@ -561,9 +598,71 @@ plan_styles <- function(plan, ...) .plan_keyed(plan, "styles", list(...))
   out
 }
 
+# as_rtftables() takes thirty-three arguments, and being able to pass all
+# thirty-three through one verb is not a plan -- it is the same wall with
+# a different door.  These six each own ONE concern, the way a ggplot
+# layer does, and the resolver assembles the call from them.  The engine
+# is still as_rtftables(); what changes is that nothing has to be read
+# whole in order to write a little.
+#
+# The argument names are as_rtftables()'s own, so nothing new is learned.
+
 #' @rdname plan_verbs
 #' @export
-plan_rtf <- function(plan, ...) .plan_layer(plan, "rtf", list(...))
+plan_group <- function(plan, col = NULL, mode = NULL, collapse = NULL) {
+  .plan_layer(plan, "group",
+              list(group_col = col, group_by = mode,
+                   collapse_repeats = collapse))
+}
+
+# A column can be needed and not wanted: a sort carrier, the key a page
+# break reads.  Naming them here says which, instead of `drop_cols` being
+# read as "columns I regret".
+#' @rdname plan_verbs
+#' @export
+plan_hide <- function(plan, ...) {
+  cols <- unlist(list(...), use.names = FALSE)
+  .plan_layer(plan, "hide", list(drop_cols = cols))
+}
+
+#' @rdname plan_verbs
+#' @export
+plan_sort <- function(plan, ..., desc = NULL) {
+  cols <- unlist(list(...), use.names = FALSE)
+  .plan_layer(plan, "sort", list(sort_by = cols, sort_desc = desc))
+}
+
+#' @rdname plan_verbs
+#' @export
+plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL,
+                        counted = NULL) {
+  .plan_layer(plan, "blanks",
+              list(blank_rows = where, blank_row_first = first,
+                   blank_row_end = last, count_blank_rows = counted))
+}
+
+#' @rdname plan_verbs
+#' @export
+plan_pages <- function(plan, max_rows = NULL, split = NULL,
+                       break_before = NULL, by = NULL,
+                       min_group_rows = NULL, cont_label = NULL) {
+  .plan_layer(plan, "pages",
+              list(max_rows = max_rows, split = split,
+                   split_rows = break_before, page_by = by,
+                   min_group_rows = min_group_rows,
+                   cont_label = cont_label))
+}
+
+# `...` is open on purpose: everything rtftable() understands about how a
+# table looks reaches it, without this verb having to list twenty-eight
+# arguments in order to be complete.
+#' @rdname plan_verbs
+#' @export
+plan_style <- function(plan, border = NULL, widths = NULL, ...) {
+  .plan_layer(plan, "style",
+              c(list(border = border, col_rel_width = widths),
+                list(...)))
+}
 
 # The header is a VALUE, not a set of fields: `rtf_col_header()` builds a
 # whole object and there is nothing useful to merge field-wise.  A function
@@ -758,6 +857,21 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
 # The display half, in the order a report is built.  Each step calls the
 # function it stands for with the arguments the caller declared, so nothing
 # here reimplements as_rtftables() or anything around it.
+# One call built from the layers.  Each verb owns its own arguments, so
+# this is a merge, not a translation -- the names never change.
+.plan_rtf_args <- function(plan) {
+  out <- list()
+  for (kind in c("group", "hide", "sort", "blanks", "pages", "style")) {
+    for (nm in names(l <- .plan_merge(.plan_of(plan, kind)))) {
+      out[[nm]] <- l[[nm]]
+    }
+  }
+  # A table built from an ARD is a plain data.frame: there is no adapter
+  # metadata to read, and every report was saying so by hand.
+  if (is.null(out$read_meta)) out$read_meta <- FALSE
+  out
+}
+
 .plan_to_pages <- function(plan, tbl) {
   #  the numbers the header needs, read out of the ARD the plan is holding.
   #  A function is called with the ARD; anything else is taken as it is.
@@ -771,11 +885,25 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   fmt <- .plan_merge(.plan_of(plan, "fmt"))
   if (length(fmt)) tbl <- do.call(fmt_numeric, c(list(data = tbl), fmt))
 
-  stub  <- .plan_merge(.plan_of(plan, "stub"))
-  pre   <- tbl
-  if (length(stub)) tbl <- do.call(stub_cols, c(list(data = tbl), stub))
+  stub <- .plan_merge(.plan_of(plan, "stub"))
+  before <- isTRUE(stub$before)
+  stub$before <- NULL
+  pre <- tbl
+  if (length(stub) && before) {
+    # only what the caller named: stub_cols() has its own defaults, and
+    # handing it NULL is not the same as leaving it alone
+    a <- stub[!vapply(stub, is.null, logical(1L))]
+    tbl <- do.call(stub_cols, c(list(data = tbl), a))
+  }
 
-  rtf <- .plan_merge(.plan_of(plan, "rtf"))
+  rtf <- .plan_rtf_args(plan)
+  if (length(stub) && !before) {
+    rtf$stub_vars         <- stub$vars
+    rtf$stub_label        <- stub$label
+    rtf$stub_indent       <- stub$indent
+    rtf$stub_group_summary <- stub$group_summary
+    rtf <- rtf[!vapply(rtf, is.null, logical(1L))]
+  }
   st  <- .plan_merge(.plan_of(plan, "styles"))
   if (length(st)) {
     # The styles are built against the rows the plan can SEE.  Folding the
@@ -783,16 +911,13 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
     # rtftable() would reject the length with nothing to say about why.
     if (!is.null(rtf$stub_vars)) {
       .ard_stop(paste0(
-        "plan_styles() needs the stub folded by plan_stub(), not by ",
-        "plan_rtf(stub_vars = ).\n",
-        "  as_rtftables() adds group heading rows that the conditions never ",
-        "saw, so a\n  style would land on the wrong row.  Move it:\n",
-        "    plan_stub(vars = c(...), label = \"row_label\")"))
+        "plan_styles() needs plan_stub(before = TRUE).\n",
+        "  Folded inside as_rtftables(), the stub adds group heading rows ",
+        "the conditions\n  never saw, so a style would land on the ",
+        "wrong row."))
     }
     if (!is.null(rtf$cell_styles)) {
-      .ard_stop(paste0(
-        "plan_styles() and plan_rtf(cell_styles = ) both set the same ",
-        "thing.  Use one."))
+      .ard_stop("plan_styles() and a cell_styles = of your own: use one.")
     }
     rtf$cell_styles <- .plan_cell_styles(st, tbl, pre)
   }
@@ -802,7 +927,12 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   if (!is.null(hdr$header)) {
     #  a function of the plan_n() values, so "(N=86)" is written once and
     #  the number comes from the ARD rather than from memory
-    h <- if (is.function(hdr$header)) hdr$header(nvals) else hdr$header
+    # The header may need the finished table -- "a spanner over columns 3 to
+    # the last" is a fact about the table, not about the ARD -- so a function
+    # of two arguments is given (values, table).
+    h <- if (!is.function(hdr$header)) hdr$header
+         else if (length(formals(hdr$header)) >= 2L) hdr$header(nvals, tbl)
+         else hdr$header(nvals)
     args <- list(x = out, h)
     if (!is.null(hdr$values)) args$values <- hdr$values
     out <- do.call(set_col_header, args)
@@ -968,12 +1098,14 @@ plan_template <- function(ard, cols = NULL, hierarchy = character(),
   L <- c(L, .plan_call("plan_stub",
                        c(paste0("vars  = ", vecq(f$stub)),
                          "label = \"row_label\""), op))
-  L <- c(L, .plan_call("plan_rtf",
-                       c("group_by   = \"indent\"",
-                         "blank_rows = \"between_groups\"",
-                         "split      = \"group_safe\"",
-                         "max_rows   = 22",
-                         "border     = \"tfl\""), op))
+  # One concern per line.  Delete the ones this report does not want;
+  # none of them has to be read in order to change another.
+  L <- c(L,
+         paste0("  rtfreporter::plan_group(mode = \"indent\") ", op),
+         paste0("  rtfreporter::plan_blanks(\"between_groups\") ", op),
+         paste0("  rtfreporter::plan_pages(max_rows = 22, ",
+                "split = \"group_safe\") ", op),
+         paste0("  rtfreporter::plan_style(border = \"tfl\") ", op))
   if (n_ok && length(f$cols) == 1L) {
     L <- c(L, .plan_call(
       "plan_header",

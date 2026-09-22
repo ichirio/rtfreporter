@@ -12,7 +12,12 @@
 \alias{plan_fmt}
 \alias{plan_stub}
 \alias{plan_styles}
-\alias{plan_rtf}
+\alias{plan_group}
+\alias{plan_hide}
+\alias{plan_sort}
+\alias{plan_blanks}
+\alias{plan_pages}
+\alias{plan_style}
 \alias{plan_header}
 \alias{plan_after}
 \title{Declare the ARD conversion, one layer at a time (SPIKE)}
@@ -55,11 +60,36 @@ plan_derive(plan, ...)
 
 plan_fmt(plan, ...)
 
-plan_stub(plan, ...)
+plan_stub(
+  plan,
+  vars = NULL,
+  label = NULL,
+  indent = NULL,
+  group_summary = NULL,
+  before = FALSE
+)
 
 plan_styles(plan, ...)
 
-plan_rtf(plan, ...)
+plan_group(plan, col = NULL, mode = NULL, collapse = NULL)
+
+plan_hide(plan, ...)
+
+plan_sort(plan, ..., desc = NULL)
+
+plan_blanks(plan, where = NULL, first = NULL, last = NULL, counted = NULL)
+
+plan_pages(
+  plan,
+  max_rows = NULL,
+  split = NULL,
+  break_before = NULL,
+  by = NULL,
+  min_group_rows = NULL,
+  cont_label = NULL
+)
+
+plan_style(plan, border = NULL, widths = NULL, ...)
 
 plan_header(plan, header = NULL, values = NULL)
 
@@ -113,27 +143,6 @@ row-group heading stops needing a \code{mutate()} of its own:
 \code{rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline Values")}.
 A bare string is still a column name, so nothing already written
 changes meaning.}
-
-\item{label}{Source of the row label, as a single (optionally named)
-reference.  Default \code{".label"}, which \code{\link[=ard_normalize]{ard_normalize()}} sets to the
-deepest hierarchy value, or to \code{variable_level} when there is no
-hierarchy.  \code{NULL} drops the label column, which is what you want when
-every \code{cells} entry is named.
-
-\code{NA} builds the column, uses it to tell the rows apart, and then
-\strong{drops it}: a recipe whose names are a row index --- \code{"1"} for an
-estimate line and \code{"2"} for the confidence interval under it --- needs
-them to separate two rows of one record, and does not want a column of
-1s and 2s in the result.  \code{NULL} leaves the label out of the row
-identity altogether, so those two rows collide.
-
-An element that is a \strong{formula} is a template over the record rather
-than a column name, and the chain works as \code{cells} does: the first
-element whose guard holds wins, and \code{~ "..."} is the unguarded one.
-Inside a template \code{{column}} interpolates, and \code{{.label}} is the label
-this row would otherwise carry.  So indenting the severities under
-\code{Any} is a rule rather than a \code{paste0()} on \code{.label}:
-\code{label = c(.label \%in\% c("Mild", "Severe") ~ "  {.label}", ~ "{.label}")}.}
 
 \item{stats}{\code{"cells"} (default) builds character cells from \code{cells}.
 \code{"rows"} ignores \code{cells} and gives every statistic its own row, labelled
@@ -219,6 +228,33 @@ one bare entry, or entries named by variable, \code{context}, kind
 (\code{continuous} / \code{categorical}) or \code{default}.  For \code{plan_digits()} and
 \code{plan_round()}, the same keys with a number (or \code{"r"} / \code{"sas"}) as the
 value; one unnamed value sets the plan-wide default.}
+
+\item{vars, label, indent, group_summary}{For \code{plan_stub()}: the row keys to
+fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} takes them.}
+
+\item{before}{For \code{plan_stub()}: \code{FALSE} (default) folds the stub inside
+\code{\link[=as_rtftables]{as_rtftables()}}, after grouping and pagination have had their say.
+\code{TRUE} folds it first, with \code{\link[=stub_cols]{stub_cols()}}, which is what
+\code{plan_styles()} needs --- only then can a condition see the rows that
+will be printed.  The two do \strong{not} always give the same table.}
+
+\item{col, mode, collapse}{For \code{plan_group()}: \code{as_rtftables()}'s
+\code{group_col}, \code{group_by} and \code{collapse_repeats}.}
+
+\item{desc}{For \code{plan_sort()}: \code{as_rtftables()}'s \code{sort_desc}.}
+
+\item{where, first, last, counted}{For \code{plan_blanks()}: \code{as_rtftables()}'s
+\code{blank_rows}, \code{blank_row_first}, \code{blank_row_end} and
+\code{count_blank_rows}.}
+
+\item{max_rows, split, break_before, by, min_group_rows, cont_label}{For
+\code{plan_pages()}: the row budget and what a page break may cut ---
+\code{as_rtftables()}'s \code{max_rows}, \code{split}, \code{split_rows}, \code{page_by},
+\code{min_group_rows} and \code{cont_label}.}
+
+\item{border, widths}{For \code{plan_style()}: the border set and the relative
+column widths (\code{col_rel_width}).  Anything else \code{\link[=rtftable]{rtftable()}}
+understands goes through \code{...}.}
 
 \item{header}{For \code{plan_header()}: what \code{\link[=set_col_header]{set_col_header()}} should be
 given --- an \code{\link[=rtf_col_header]{rtf_col_header()}} object, or a \strong{function} of the
