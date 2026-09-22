@@ -2613,7 +2613,9 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
     if (length(norm_args))
       c("  rtfreporter::ard_normalize(", norm_args, "  ) |>")
     else "  rtfreporter::ard_normalize() |>",
-    "  # dplyr::mutate() |>            # <- derived keys, constants, labels",
+    "  # dplyr::mutate() |>            # <- a key derived from a statistic.",
+    "  #                                  A constant heading or a label rule",
+    "  #                                  goes in `rows` / `label` below.",
     "  rtfreporter::ard_spread(",
     paste0("    cols  = ", vecq(cols), ","),
     if (length(row_parts))
