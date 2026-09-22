@@ -452,14 +452,24 @@ ard_round <- function(x, digits = 0, type = NULL) {
 # The condition is kept unevaluated, together with the formula's own
 # environment, so a guard may name the caller's variables as well as the
 # record's.
-.ard_chain_el <- function(x) {
+.ard_chain_el <- function(x, one_sided = FALSE) {
   if (inherits(x, "formula")) {
-    if (length(x) != 3L) {
+    if (length(x) != 3L && !one_sided) {
       .ard_stop(paste0("A `cells` guard needs both sides: ",
                        "`condition ~ template`. This one has only a right."))
     }
     e <- environment(x)
     if (is.null(e)) e <- baseenv()
+    # `~ "..."` in a label is the unconditional element of the chain: there is
+    # no bare-string spelling for it there, because a bare string is a column
+    # name.
+    if (length(x) == 2L) {
+      tpl <- tryCatch(eval(x[[2L]], e), error = function(err) NULL)
+      if (!is.character(tpl) || length(tpl) != 1L) {
+        .ard_stop("A one-sided `~` must hold one template string.")
+      }
+      return(list(cond = NULL, env = e, tpl = tpl))
+    }
     tpl <- tryCatch(eval(x[[3L]], e), error = function(err) NULL)
     if (!is.character(tpl) || length(tpl) != 1L) {
       .ard_stop(paste0("The right of a `cells` guard must be one template ",
@@ -471,7 +481,9 @@ ard_round <- function(x, digits = 0, type = NULL) {
 }
 
 # A chain is whatever c() or list() produced: strings, guards, or both.
-.ard_chain <- function(x) lapply(as.list(x), .ard_chain_el)
+.ard_chain <- function(x, one_sided = FALSE) {
+  lapply(as.list(x), .ard_chain_el, one_sided = one_sided)
+}
 
 # What a guard sees: every statistic of the record by name, plus the record's
 # own columns -- the keys, `.label`, `.depth`, `.kind`, `variable`.  A guard
@@ -519,6 +531,34 @@ ard_round <- function(x, digits = 0, type = NULL) {
 
 .ard_chain_value <- function(chain, s, round_type) {
   .ard_chain_pick(chain, s, round_type)$v
+}
+
+# The stub's own small language.  `cells` has had guarded templates since
+# the overall-response table needed a cell to depend on a value; the stub had
+# nothing, so "indent the severities under Any" was done by rewriting `.label`
+# with paste0(), which is string surgery on a column that means something and
+# which doubles its own indent if it runs twice.  A label template reads the
+# record's columns, plus `.label` bound to the label this row would otherwise
+# carry, so the rule is a declaration instead.
+.ard_label_text <- function(chain, s, lab) {
+  gd <- .ard_guard_data(s)
+  gd[[".label"]] <- lab
+  for (el in chain) {
+    if (!is.null(el$cond)) {
+      ok <- isTRUE(tryCatch(all(eval(el$cond, gd, el$env)),
+                            error = function(e) FALSE))
+      if (!ok) next
+    }
+    out <- el$tpl
+    for (tk in .ard_tokens(el$tpl)) {
+      nm <- gsub("^[{]|[}]$", "", tk)
+      v <- gd[[nm]]
+      if (is.null(v)) return(NA_character_)
+      out <- sub(tk, as.character(v)[1L], out, fixed = TRUE)
+    }
+    return(out)
+  }
+  NA_character_
 }
 
 # A `cells` entry is one of
@@ -1430,6 +1470,12 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   defaults to `c(group = "variable")`, since that is the only thing left to
 #'   group those rows by.  One analysis variable, or any `hierarchy`, leaves it
 #'   empty.
+#'
+#'   A **formula** element is a template here too, which is how a constant
+#'   row-group heading stops needing a `mutate()` of its own:
+#'   `rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline Values")`.
+#'   A bare string is still a column name, so nothing already written
+#'   changes meaning.
 #' @param label Source of the row label, as a single (optionally named)
 #'   reference.  Default `".label"`, which [ard_normalize()] sets to the
 #'   deepest hierarchy value, or to `variable_level` when there is no
@@ -1442,6 +1488,14 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   them to separate two rows of one record, and does not want a column of
 #'   1s and 2s in the result.  `NULL` leaves the label out of the row
 #'   identity altogether, so those two rows collide.
+#'
+#'   An element that is a **formula** is a template over the record rather
+#'   than a column name, and the chain works as `cells` does: the first
+#'   element whose guard holds wins, and `~ "..."` is the unguarded one.
+#'   Inside a template `{column}` interpolates, and `{.label}` is the label
+#'   this row would otherwise carry.  So indenting the severities under
+#'   `Any` is a rule rather than a `paste0()` on `.label`:
+#'   `label = c(.label %in% c("Mild", "Severe") ~ "  {.label}", ~ "{.label}")`.
 #' @param cells The cell recipes.  A **character vector** is one recipe, used
 #'   for every variable:
 #'   * `"{n} ({p})"` -- one row, labelled from `label`;
@@ -1620,6 +1674,25 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       length(.ard_first_seen(d$variable)) > 1L) {
     rows <- c(group = "variable")
   }
+  # A `rows` element that is a formula is a template over the record, not a
+  # column name -- which is how a constant row-group heading ("Worst
+  # Post-Baseline Values") stops needing a mutate() of its own.  A bare string
+  # stays a column name, so nothing already written changes meaning.
+  if (is.list(rows) || inherits(rows, "formula")) {
+    parts <- as.list(rows)
+    nms <- names(parts)
+    if (is.null(nms)) nms <- rep("", length(parts))
+    for (i in seq_along(parts)) {
+      if (!inherits(parts[[i]], "formula")) next
+      ch <- .ard_chain(parts[i], one_sided = TRUE)
+      cn <- if (nzchar(nms[i])) nms[i] else paste0(".rowtpl", i)
+      d[[cn]] <- vapply(seq_len(nrow(d)), function(j)
+        .ard_label_text(ch, d[j, , drop = FALSE], d$.label[j]), "")
+      parts[[i]] <- cn
+      nms[i] <- cn
+    }
+    rows <- stats::setNames(as.character(unlist(parts)), nms)
+  }
   rowrefs <- .ard_refs(rows, d, "rows")
   # `label = NA` means "these names separate the rows but are not printed".
   # A recipe whose names are a row INDEX -- "1" and "2" for the estimate line
@@ -1627,8 +1700,28 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   # rows apart, and does not want a column of 1s and 2s in the result.  The
   # column is built either way, because the row identity is made of it, and
   # dropped at the end.
-  drop_label <- length(label) == 1L && is.na(label)
+  drop_label <- length(label) == 1L && !inherits(label, "formula") &&
+    is.na(label[[1L]])
   if (drop_label) label <- ".label"
+  # A `label` carrying a formula is a template over the record, not a column
+  # name.  Strip the templated part out, keep any plain string as the column
+  # the label still comes from, and apply the template to whatever label that
+  # column (or the `cells` names) produced.
+  lab_chain <- NULL
+  if (is.list(label) || inherits(label, "formula")) {
+    parts <- as.list(label)
+    is_f <- vapply(parts, inherits, logical(1), "formula")
+    if (any(is_f)) {
+      lab_chain <- .ard_chain(parts, one_sided = TRUE)
+      plain <- parts[!is_f]
+      label <- if (length(plain)) stats::setNames(
+        as.character(unlist(plain)),
+        names(parts)[!is_f]) else ".label"
+      if (is.null(names(label)) || !nzchar(names(label)[1L])) {
+        names(label) <- "label"
+      }
+    }
+  }
   labref  <- if (is.null(label)) list() else .ard_refs(label, d, "label")
   if (!length(colrefs)) .ard_stop("`cols` is required: name the key that goes across.")
 
@@ -1718,8 +1811,13 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       picks <- lapply(entry$chains, .ard_chain_pick, s = sub,
                       round_type = round)
       vals <- vapply(picks, function(z) z$v, "")
+      labs_out <- entry$labels
+      if (!is.null(lab_chain)) {
+        labs_out <- vapply(labs_out, function(z)
+          .ard_label_text(lab_chain, sub, z), "")
+      }
       pieces[[length(pieces) + 1L]] <- data.frame(
-        .lab = entry$labels, .col = ckey, .valn = NA_real_, .valc = vals,
+        .lab = labs_out, .col = ckey, .valn = NA_real_, .valc = vals,
         .tpl = vapply(picks, function(z) z$tpl, ""),
         .guard = vapply(picks, function(z) z$guard, ""),
         .depth = if (".depth" %in% names(sub)) sub$.depth[1L] else 1L,
@@ -1734,6 +1832,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
         s2 <- sub[sel, , drop = FALSE]
         pk <- .ard_chain_pick(entry$chains[[1L]], s2, round)
         v <- pk$v
+        if (!is.null(lab_chain)) lv <- .ard_label_text(lab_chain, s2, lv)
         pieces[[length(pieces) + 1L]] <- data.frame(
           .lab = lv, .col = ckey, .valn = NA_real_, .valc = v,
           .tpl = pk$tpl, .guard = pk$guard,

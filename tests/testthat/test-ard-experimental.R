@@ -1419,3 +1419,35 @@ test_that("label = NA separates the rows without printing them", {
                           label = NULL, cells = cells, notes = FALSE),
                "same cell")
 })
+
+test_that("a label template indents by rule instead of by paste0()", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  d <- d[d$variable == "AGEGR", , drop = FALSE]
+  plain <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                      cells = "{n:.0f}", notes = FALSE)
+  tpl <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                    label = c(.label == "65-74" ~ "  {.label}", ~ "{.label}"),
+                    cells = "{n:.0f}", notes = FALSE)
+  expect_true("  65-74" %in% as.character(tpl$label))
+  expect_false("  65-74" %in% as.character(plain$label))
+  # every other label is untouched, and the numbers do not move
+  expect_setequal(sub("^ +", "", as.character(tpl$label)),
+                  as.character(plain$label))
+  expect_setequal(tpl$Placebo, plain$Placebo)
+})
+
+test_that("a rows template writes a constant heading without a mutate", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  z <- ard_spread(d, cols = "TRT",
+                  rows = c(grp = ~ "Baseline Characteristics",
+                           group = "variable"),
+                  cells = "{n:.0f}", notes = FALSE)
+  expect_true("grp" %in% names(z))
+  expect_setequal(unique(as.character(z$grp)), "Baseline Characteristics")
+  # a bare string still means a column, so nothing already written changes
+  y <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
+                  cells = "{n:.0f}", notes = FALSE)
+  expect_identical(z$Placebo, y$Placebo)
+})

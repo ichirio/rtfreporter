@@ -333,6 +333,23 @@
   drops the label out of the row identity and the two rows collide. `NA`
   builds the column, uses it, and drops it.
 
+  **The stub gets the same small language the cells have.** `cells` has
+  carried guarded templates since a cell had to depend on a value; the stub
+  had nothing, so "indent the severities under Any" was a `paste0()` on
+  `.label` --- string surgery on a column that means something, and which
+  doubles its own indent if it runs twice. A `label` or `rows` element that
+  is a **formula** is now a template over the record instead. `{column}`
+  interpolates, `{.label}` is the label the row would otherwise carry, the
+  chain picks the first element whose guard holds, and `~ "..."` is the
+  unguarded one. A bare string is still a column name, so nothing already
+  written changes meaning.
+
+  That covers the two places on Discussion #473 where display had to be
+  written into the data: the solicited-AE indentation, and the shift table's
+  constant row-group heading, which was a `mutate()` only so that `rows`
+  would have a column to point at. Both reports reproduce their references
+  exactly with the mutate gone.
+
   These functions are **experimental**: they are newer than the rest of the
   package, are not covered by its stability expectations, and may be
   withdrawn.  Nothing else in the package depends on them, and

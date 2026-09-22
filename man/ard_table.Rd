@@ -47,7 +47,13 @@ kind.
 Left \code{NULL} on a flat ARD carrying more than one analysis variable, it
 defaults to \code{c(group = "variable")}, since that is the only thing left to
 group those rows by.  One analysis variable, or any \code{hierarchy}, leaves it
-empty.}
+empty.
+
+A \strong{formula} element is a template here too, which is how a constant
+row-group heading stops needing a \code{mutate()} of its own:
+\code{rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline Values")}.
+A bare string is still a column name, so nothing already written
+changes meaning.}
 
 \item{label}{Source of the row label, as a single (optionally named)
 reference.  Default \code{".label"}, which \code{\link[=ard_normalize]{ard_normalize()}} sets to the
@@ -60,7 +66,15 @@ every \code{cells} entry is named.
 estimate line and \code{"2"} for the confidence interval under it --- needs
 them to separate two rows of one record, and does not want a column of
 1s and 2s in the result.  \code{NULL} leaves the label out of the row
-identity altogether, so those two rows collide.}
+identity altogether, so those two rows collide.
+
+An element that is a \strong{formula} is a template over the record rather
+than a column name, and the chain works as \code{cells} does: the first
+element whose guard holds wins, and \code{~ "..."} is the unguarded one.
+Inside a template \code{{column}} interpolates, and \code{{.label}} is the label
+this row would otherwise carry.  So indenting the severities under
+\code{Any} is a rule rather than a \code{paste0()} on \code{.label}:
+\code{label = c(.label \%in\% c("Mild", "Severe") ~ "  {.label}", ~ "{.label}")}.}
 
 \item{hierarchy}{Character vector naming a nested hierarchy, outermost
 first -- e.g. \code{c("AEBODSYS", "AEDECOD")}.  For these variables the rows
