@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.0.9030** (the development
+**This manual documents rtfreporter 0.8.0.9031** (the development
 version, after release 0.8.0).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -774,6 +774,11 @@ withdrawn; nothing else in the package depends on them, see
 `ard_template` `ard_cells` `ard_overall` `ard_pull` `ard_spec` `ard_spec_template`
 `read_ard_spec`
 `write_ard_spec` `ard_round`
+
+**Spike -- the same ARD conversion as a deferred, LAST-WINS plan (#474; a
+prototype beside the verbs above, may be withdrawn wholesale):**
+`ard_plan` `plan_normalize` `plan_spread` `plan_cells` `plan_digits`
+`plan_round` `apply_plan`
 
 ---
 

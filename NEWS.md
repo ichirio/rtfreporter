@@ -2,6 +2,29 @@
 
 ### Experimental ARD helpers
 
+- **A spike: the ARD conversion as a deferred, last-wins plan** (#474, in
+  `R/ard-plan-spike.R`, deletable in one step).  `ard_plan()` holds the ARD
+  **untouched** and each `plan_*()` verb adds a declaration; nothing runs
+  until `apply_plan()`.  **A later layer wins**, which is tfrmt's
+  `frmt_structure` rule and the reason to want this: set the decimals for
+  everything, then fix one variable, and that is a one-line edit ---
+  `plan_digits(2) |> plan_digits(AGE = 0)`.  `ard_normalize()` and
+  `ard_spread()` are unchanged and remain the immediate form.
+
+  Nothing about the conversion is duplicated: the plan resolves its layers
+  into `ard_normalize()`'s and `ard_spread()`'s argument lists and calls
+  them, so it cannot drift --- and `apply_plan(stage = "args")` shows the
+  call the plan amounts to, while `stage = "normalize"` stops at the long
+  frame.  Both are the one pass stopped early, not a second code path.
+
+  The seam survives: `ard_plan()` also accepts an **already-normalized**
+  frame, so the reports that have to reach in with dplyr do it on the long
+  frame and start a plan from the result.  All six Discussion #473 reports
+  reproduce identically through the plan --- three of them using that
+  re-entry.  The gaps are listed in the file header; the one that matters
+  is that a layer records no call site, so an error still points at the
+  resolver rather than at the verb that caused it.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

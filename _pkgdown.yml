@@ -562,6 +562,15 @@ reference:
       - read_ard_spec
       - write_ard_spec
       - ard_round
+  - title: "Experimental spike: a deferred, last-wins ARD plan (#474)"
+    desc: >
+      A prototype beside the ard_*() verbs: the same conversion written as
+      declarations that are resolved once, where a later layer wins.
+      May be withdrawn wholesale.
+    contents:
+      - ard_plan
+      - plan_verbs
+      - apply_plan
 
 # Articles index page (/articles/).  Grouped so users land on the
 # tutorial first; learner-focused material sits at the bottom.

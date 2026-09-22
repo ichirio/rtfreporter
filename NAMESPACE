@@ -206,3 +206,14 @@ export(read_ard_spec)
 export(write_ard_spec)
 export(ard_round)
 # ---- experimental: ARD ----
+
+# ---- spike: ARD plan (#474, deletable with R/ard-plan-spike.R) ----
+export(ard_plan)
+S3method(print,ard_plan)
+export(plan_normalize)
+export(plan_spread)
+export(plan_cells)
+export(plan_digits)
+export(plan_round)
+export(apply_plan)
+# ---- spike: ARD plan ----
