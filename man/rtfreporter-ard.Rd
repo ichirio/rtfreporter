@@ -19,7 +19,6 @@ or on the long frame from \code{\link[=ard_normalize]{ard_normalize()}}.
 actually holds.}
 \item{\code{\link[=ard_normalize]{ard_normalize()}}}{ARD to a flat, explicitly keyed long table.}
 \item{\code{\link[=ard_spread]{ard_spread()}}}{Long table to the wide table data.frame.}
-\item{\code{\link[=ard_table]{ard_table()}}}{Both of the above in one call.}
 \item{\code{\link[=ard_template]{ard_template()}}}{Emit runnable conversion code for a given ARD.}
 \item{\code{\link[=ard_overall]{ard_overall()}}}{Where the table's overall row comes from.}
 \item{\code{\link[=ard_pull]{ard_pull()}}}{A statistic keyed like the spread columns, for a
@@ -124,7 +123,7 @@ author may compute their own.  \code{\link[=ard_pull]{ard_pull()}} names the sta
 lists the candidates when the choice is ambiguous.}
 }
 Column headers are rtfreporter's own job -- \code{col_header} takes a plain
-character vector -- so \code{\link[=ard_table]{ard_table()}} builds the body only, and
+character vector -- so \code{\link[=ard_spread]{ard_spread()}} builds the body only, and
 \code{\link[=ard_pull]{ard_pull()}} is there when the header needs a number that must agree with
 the percentages.
 }

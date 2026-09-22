@@ -15,9 +15,9 @@ beside the other outermost rows.}
 variable, usually.  \code{NULL} (default) means the cards sentinel.}
 }
 \value{
-An object of class \code{ard_overall}, for \code{\link[=ard_normalize]{ard_normalize()}} and
-\code{\link[=ard_table]{ard_table()}}'s \code{overall} argument.  That argument also takes a bare
-string, which is \code{ard_overall(label)}.
+An object of class \code{ard_overall}, for \code{\link[=ard_normalize]{ard_normalize()}}'s
+\code{overall} argument.  That argument also takes a bare string, which is
+\code{ard_overall(label)}.
 }
 \description{
 An adverse-events table opens with a "subjects with at least one event"
@@ -40,5 +40,5 @@ ard_overall("Any TEAE")                      # the cards sentinel rows
 ard_overall("Any TEAE", from = "TRT01P")     # a separately-built block
 }
 \seealso{
-\code{\link[=ard_normalize]{ard_normalize()}}, \code{\link[=ard_table]{ard_table()}}
+\code{\link[=ard_normalize]{ard_normalize()}}, \code{\link[=ard_spread]{ard_spread()}}
 }

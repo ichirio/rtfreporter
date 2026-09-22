@@ -2,12 +2,26 @@
 
 ### Experimental ARD helpers
 
+- **`ard_table()` is withdrawn; the conversion has one entry point**
+  (#474).  It is `ard_normalize() |> ard_spread()`, which is what
+  `ard_table()` did.  Of its 21 arguments not one was its own: six were
+  `ard_normalize()`'s and fifteen were `ard_spread()`'s, so the collapsed
+  form asked the reader to know which half each argument belonged to, and
+  gave nothing back for it --- half the reports on Discussion #473 have to
+  reach between the two steps anyway (to derive a key from a statistic, to
+  add a constant column, to indent a label), at which point the collapsed
+  call has to be unpicked into the pipe it always was.  One way to write
+  the conversion is one thing to learn.  The family is experimental, so
+  there is no deprecation cycle: replace `ard_table(ard, ...)` with
+  `ard_normalize(ard, <its keys/hierarchy/overall args>) |>
+  ard_spread(<the rest>)`.
+
 - **A cards/cardx ARD can be turned into a table `data.frame` directly**
   (#474, Discussion #473).  `ard_normalize()` flattens an ARD into an
   explicitly keyed long table; `ard_spread()` applies cell templates and
-  pivots the column keys across; `ard_table()` is both in one call.
-  `ard_keys()` reports what an ARD holds and `ard_template()` writes the
-  conversion call for you.  A spreadsheet definition file --- `ard_spec()`,
+  pivots the column keys across; the conversion is that one pipe and
+  nothing else.  `ard_keys()` reports what an ARD holds and
+  `ard_template()` writes the conversion code for you.  A spreadsheet definition file --- `ard_spec()`,
   `read_ard_spec()`, `write_ard_spec()`, `ard_spec_template()` --- carries
   variable labels, row templates (so `Min` and `Max` print as one
   `Min, Max` line), the rounding family and the decimal or significant
@@ -130,9 +144,9 @@
   five of the eight.  `ard_pull()` names the statistic, excludes the key
   variables' own tabulations by default, and when the ARD still offers more
   than one answer it **stops and lists the candidates with their values**
-  rather than choosing.  Column headers stay rtfreporter's job; `ard_table()`
-  builds the body, and `ard_pull()` is there when the header needs a number
-  that must agree with the percentages.
+  rather than choosing.  Column headers stay rtfreporter's job;
+  `ard_spread()` builds the body, and `ard_pull()` is there when the header
+  needs a number that must agree with the percentages.
 
   **What was not used is reported.**  Every stage discards ARD rows, and doing
   it in silence is how a mis-typed `cells` looks exactly like a correct one.
@@ -187,7 +201,7 @@
   explains why.
 
   The keyed columns are now plain factors, and the `ordered` argument of
-  `ard_table()` / `ard_spread()` is **gone**.  `levels =` states a display
+  `ard_spread()` is **gone**.  `levels =` states a display
   order, which is the whole of what the caller said; an ordered factor went
   on to claim that `N < Mean < SD` is a magnitude, which is false, and
   nothing could tell which columns were genuinely ordinal.  Nothing read the
@@ -264,9 +278,8 @@
 
   A spec file's `round` column had in fact never reached anything.
   `ard_spread()` resolved the argument at the top of the function, which
-  made `missing(round)` false by the time the spec was read, and
-  `ard_table()` passed its own default down on top of that.  Both are
-  fixed: the family is now resolved once, after the spec has had its say.
+  made `missing(round)` false by the time the spec was read.  It is fixed:
+  the family is now resolved once, after the spec has had its say.
 
   **A hierarchy no longer blanks the variables it does not cover.** Declare
   `hierarchy = c("ARACE", "ASRACE")` for the one characteristic that gains a
@@ -302,12 +315,12 @@
   **`ard_template()` writes the whole script**, always in three blocks: the
   conversion, the column header, and the [as_rtftables()] call.  The
   conversion is written as the **pipe** --- `ard_normalize()`, a commented
-  `dplyr::mutate()`, `ard_spread()` --- rather than as `ard_table()`, because
-  `ard_table()` is exactly that pipe collapsed and half the reports on
-  Discussion #473 have to reach between its two halves: to derive a
-  sub-column key from a statistic, to add a constant row-group column, to
-  indent a severity label.  Showing the seam turns "you had to know this call
-  could be split" into "delete the line you do not need".
+  `dplyr::mutate()`, `ard_spread()` --- with the seam left open, because
+  half the reports on Discussion #473 have to reach between the two steps:
+  to derive a sub-column key from a statistic, to add a constant row-group
+  column, to indent a severity label.  Showing the seam turns "you had to
+  know these two calls could be split" into "delete the line you do not
+  need".
   There is no flag to ask for them, because deleting a block you can see is
   easier than remembering one you cannot.  `stub_vars` is derived from the
   row keys and the label column.  The header block drafts `col_header` from

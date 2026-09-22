@@ -22,6 +22,17 @@ make_ard <- function() {
     .total_n = TRUE)
 }
 
+# ard_table() was withdrawn (#474): the one entry point is
+# ard_normalize() |> ard_spread().  These tests were written against the
+# collapsed call, so this helper does the split, routing each argument to the
+# step that owns it -- which also keeps them honest about where each belongs.
+ard_pipe <- function(ard, ...) {
+  args <- list(...)
+  keep <- intersect(names(args), setdiff(names(formals(ard_normalize)), "ard"))
+  x <- do.call(ard_normalize, c(list(ard = ard), args[keep]))
+  do.call(ard_spread, c(list(x = x), args[setdiff(names(args), keep)]))
+}
+
 # ---------------------------------------------------------------- ard_round
 
 test_that("ard_round() follows base R by default and SAS on request", {
@@ -107,11 +118,11 @@ test_that("ard_normalize() labels the hierarchical overall rows on request", {
   expect_false(any(d2$variable == "..ard_hierarchical_overall.."))
 })
 
-# ---------------------------------------------------------------- ard_table
+# ------------------------------------- ard_normalize() |> ard_spread()
 
-test_that("ard_table() builds the demographics shape", {
+test_that("the pipe builds the demographics shape", {
   skip_if_no_cards()
-  tbl <- ard_table(
+  tbl <- ard_pipe(
     make_ard(),
     cols   = "TRT",
     rows   = c(group = "variable"),
@@ -146,12 +157,12 @@ test_that("several column keys make one spanning-ready column name", {
   ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
                           cards::ard_categorical(variables = AGEGR,
                                                  statistic = ~ c("n", "p")))
-  tbl <- ard_table(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
+  tbl <- ard_pipe(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
                    cells = "{n:.0f} ({p:.1f%})")
   expect_true(all(grepl("____", names(tbl)[-(1:2)])))
   expect_true("Placebo____F" %in% names(tbl))
   # column order follows `levels` when given
-  tbl2 <- ard_table(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
+  tbl2 <- ard_pipe(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
                     cells = "{n:.0f} ({p:.1f%})",
                     levels = list(SEX = c("M", "F")))
   expect_identical(names(tbl2)[3:4], c("Placebo____M", "Placebo____F"))
@@ -165,7 +176,7 @@ test_that("levels may name the analysis variables, not the label column", {
     categorical = "{n:.0f} ({p:.1f%})")
   labels <- c(AGE = "Age", AGEGR = "Age group", SEX = "Sex")
 
-  tbl <- ard_table(
+  tbl <- ard_pipe(
     make_ard(), cols = "TRT", rows = c(group = "variable"),
     labels = labels, cells = cells,
     levels = list(TRT   = c("Xanomeline Low Dose", "Placebo",
@@ -192,7 +203,7 @@ test_that("an unnamed labels / levels element is refused, not ignored", {
   skip_if_no_cards()
   ard <- make_ard()
   run <- function(...) {
-    ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+    ard_pipe(ard, cols = "TRT", rows = c(group = "variable"),
               cells = "{n:.0f} ({p:.1f%})", ...)
   }
   # the two-parallel-vector idiom with vectors of different lengths: setNames()
@@ -213,7 +224,7 @@ test_that("an unnamed labels / levels element is refused, not ignored", {
 
 test_that("a fallback chain picks the first template that resolves", {
   skip_if_no_cards()
-  tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+  tbl <- ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
                    cells = c("{n:.0f} ({p:.1f%})", "{mean:.1f}"))
   age <- tbl[tbl$group == "AGE", ]
   # AGE has no n/p, so the chain falls through to the mean
@@ -247,7 +258,7 @@ test_that("cells match whichever cards verb generation built the ARD", {
   cells_new <- list(summary  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
                     tabulate = "{n:.0f} ({p:.1f%})")
   run <- function(ard, cells) {
-    ard_table(ard, cols = "TRT", rows = c(group = "variable"), cells = cells)
+    ard_pipe(ard, cols = "TRT", rows = c(group = "variable"), cells = cells)
   }
   # either spelling of `cells` against either spelling of ARD
   expect_equal(run(new_ard, cells_old), run(old_ard, cells_old))
@@ -269,7 +280,7 @@ test_that("cells match an ARD whose context cards has never used", {
   cells <- list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
                 categorical = "{n:.0f} ({p:.1f%})")
   run <- function(a) {
-    ard_table(a, cols = "TRT", rows = c(group = "variable"), cells = cells)
+    ard_pipe(a, cols = "TRT", rows = c(group = "variable"), cells = cells)
   }
   expect_equal(run(future), run(ard))
   expect_match(run(future)$Placebo[1],
@@ -304,7 +315,7 @@ test_that("ard_keys() reports the stable kind next to the context", {
 test_that("a `cells` list that matches nothing says what the ARD holds", {
   skip_if_no_cards()
   err <- tryCatch(
-    ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+    ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
               cells = list(nonsense = "{n} ({p})")),
     error = function(e) conditionMessage(e))
   expect_match(err, "No cell was produced")
@@ -332,7 +343,7 @@ test_that("a positional key warns when that position holds several variables", {
                         statistic = ~ c("n", "p")))
 
   expect_warning(
-    bad <- ard_table(stacked, cols = "group1_level",
+    bad <- ard_pipe(stacked, cols = "group1_level",
                      rows = c(group = "variable"),
                      cells = "{n:.0f} ({p:.1f%})"),
     "reads a POSITION")
@@ -341,13 +352,13 @@ test_that("a positional key warns when that position holds several variables", {
 
   # naming the variable is correct and silent
   expect_no_warning(
-    good <- ard_table(stacked, cols = "TRT", rows = c(group = "variable"),
+    good <- ard_pipe(stacked, cols = "TRT", rows = c(group = "variable"),
                       cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
   expect_setequal(names(good)[-(1:2)],
                   c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
 
   # a single-block ARD keeps quiet
-  expect_no_warning(ard_table(make_ard(), cols = "group1_level",
+  expect_no_warning(ard_pipe(make_ard(), cols = "group1_level",
                               rows = c(group = "variable"),
                               cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
 })
@@ -369,10 +380,10 @@ test_that("reading a position deliberately, with its name column, is quiet", {
                         statistic = ~ c("n", "p")))
 
   # the name column alone, or with its level: deliberate, so quiet
-  expect_no_warning(ard_table(stacked, cols = "TRT", rows = c(v = "group1"),
+  expect_no_warning(ard_pipe(stacked, cols = "TRT", rows = c(v = "group1"),
                               cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
   expect_no_warning(
-    both <- ard_table(stacked, cols = "TRT",
+    both <- ard_pipe(stacked, cols = "TRT",
                       rows = c(v = "group1", lv = "group1_level"),
                       cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
   # and the pair really does identify the row
@@ -380,11 +391,11 @@ test_that("reading a position deliberately, with its name column, is quiet", {
 
   # the level alone still warns, and says how to make it unambiguous
   expect_warning(
-    ard_table(stacked, cols = "group1_level", rows = c(g = "variable"),
+    ard_pipe(stacked, cols = "group1_level", rows = c(g = "variable"),
               cells = "{n:.0f} ({p:.1f%})", notes = FALSE),
     "reads a POSITION")
   expect_warning(
-    ard_table(stacked, cols = "group1_level", rows = c(g = "variable"),
+    ard_pipe(stacked, cols = "group1_level", rows = c(g = "variable"),
               cells = "{n:.0f} ({p:.1f%})", notes = FALSE),
     "variable column too")
 })
@@ -417,7 +428,7 @@ test_that("ard_pull() keys a crossed header exactly like the spread columns", {
                           cards::ard_tabulate(variables = AGEGR,
                                               statistic = ~ c("n", "N", "p")))
   n   <- ard_pull(ard, cols = c("TRT", "SEX"))
-  tbl <- ard_table(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
+  tbl <- ard_pipe(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
                    cells = "{n:.0f} ({p:.1f%})")
   # every spread column has a denominator, under the identical name
   expect_true(all(names(tbl)[-(1:2)] %in% names(n)))
@@ -447,7 +458,7 @@ test_that("statistics no template names are simply not read", {
                     ard$stat_name))
 
   # a NAMED character vector is one recipe of two rows, not a context map
-  tbl <- ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+  tbl <- ard_pipe(ard, cols = "TRT", rows = c(group = "variable"),
                    cells = c("n (%)"  = "{n:.0f} ({estimate:.1f%})",
                              "95% CI" = "{conf.low:.1f%}, {conf.high:.1f%}"))
   expect_identical(as.character(unique(tbl$label)), c("n (%)", "95% CI"))
@@ -463,9 +474,9 @@ test_that("`rows` defaults to the analysis variable for a flat ARD", {
   skip_if_no_cards()
   cells <- list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
                 categorical = "{n:.0f} ({p:.1f%})")
-  explicit <- ard_table(make_ard(), cols = "TRT",
+  explicit <- ard_pipe(make_ard(), cols = "TRT",
                         rows = c(group = "variable"), cells = cells)
-  omitted  <- ard_table(make_ard(), cols = "TRT", cells = cells)
+  omitted  <- ard_pipe(make_ard(), cols = "TRT", cells = cells)
   expect_equal(omitted, explicit)
   expect_identical(names(omitted)[1:2], c("group", "label"))
 })
@@ -478,14 +489,14 @@ test_that("a single-variable ARD gets no grouping column by default", {
   ard <- cards::ard_stack(adsl, .by = TRT,
                           cards::ard_categorical(variables = SEX,
                                                  statistic = ~ c("n", "p")))
-  tbl <- ard_table(ard, cols = "TRT", cells = "{n:.0f} ({p:.1f%})")
+  tbl <- ard_pipe(ard, cols = "TRT", cells = "{n:.0f} ({p:.1f%})")
   expect_identical(names(tbl)[1], "label")
   expect_false("group" %in% names(tbl))
 })
 
 test_that("an explicit `rows` always wins over the default", {
   skip_if_no_cards()
-  tbl <- ard_table(make_ard(), cols = "TRT",
+  tbl <- ard_pipe(make_ard(), cols = "TRT",
                    rows = c(characteristic = "variable"),
                    cells = "{n:.0f} ({p:.1f%})")
   expect_identical(names(tbl)[1], "characteristic")
@@ -509,14 +520,14 @@ test_that("`sort` can be declared instead of arranged afterwards", {
                cells = "{n:.0f} ({p:.1f%})")
 
   # sorted by hand, the way the snippet does it
-  by_hand <- do.call(ard_table, c(args, list(sort = FALSE, sort_stat = "n")))
+  by_hand <- do.call(ard_pipe, c(args, list(sort = FALSE, sort_stat = "n")))
   by_hand <- by_hand[order(by_hand$soc != "Any TEAE", by_hand$soc,
                            !is.na(by_hand$term), -by_hand$.sort_stat,
                            by_hand$term), ]
   by_hand$.sort_stat <- NULL
   rownames(by_hand) <- NULL
 
-  declared <- do.call(ard_table,
+  declared <- do.call(ard_pipe,
     c(args, list(sort = c(".overall", "soc", ".depth", "-n", "term"))))
   expect_equal(declared, by_hand)
 
@@ -531,7 +542,7 @@ test_that("`sort` can be declared instead of arranged afterwards", {
 test_that("`sort` names a column, a statistic, or the computed keys", {
   skip_if_no_cards()
   run <- function(sort) {
-    ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+    ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
               cells = "{n:.0f} ({p:.1f%})", sort = sort)
   }
   # descending by a statistic's total across the columns
@@ -576,7 +587,7 @@ test_that("a factor level keeps its label, not its integer code", {
 
 test_that("a factor's declared level order becomes the row order", {
   skip_if_no_cards()
-  tbl <- ard_table(make_factor_ard(), cols = "TRT",
+  tbl <- ard_pipe(make_factor_ard(), cols = "TRT",
                    cells = list(continuous  = c("Mean" = "{mean:.1f}"),
                                 categorical = "{n:.0f} ({p:.1f%})"))
   gr <- tbl[tbl$group == "AGEGR", ]
@@ -585,7 +596,7 @@ test_that("a factor's declared level order becomes the row order", {
   expect_identical(as.character(sx$label), c("Female", "Male"))
 
   # an explicit `levels` still wins over what the factor declared
-  tbl2 <- ard_table(make_factor_ard(), cols = "TRT",
+  tbl2 <- ard_pipe(make_factor_ard(), cols = "TRT",
                     cells = list(continuous  = c("Mean" = "{mean:.1f}"),
                                  categorical = "{n:.0f} ({p:.1f%})"),
                     levels = list(SEX = c("Male", "Female")))
@@ -595,7 +606,7 @@ test_that("a factor's declared level order becomes the row order", {
 
 test_that("the keyed columns are plain factors, not ordered ones", {
   skip_if_no_cards()
-  tbl <- ard_table(make_factor_ard(), cols = "TRT",
+  tbl <- ard_pipe(make_factor_ard(), cols = "TRT",
                    cells = list(continuous  = c("Mean" = "{mean:.1f}"),
                                 categorical = "{n:.0f} ({p:.1f%})"),
                    levels = list(group = c("SEX", "AGEGR", "AGE"),
@@ -611,7 +622,6 @@ test_that("the keyed columns are plain factors, not ordered ones", {
   expect_identical(as.character(tbl$label[tbl$group == "SEX"]),
                    c("Male", "Female"))
   # the argument that used to ask for the ordered class is gone
-  expect_false("ordered" %in% names(formals(ard_table)))
   expect_false("ordered" %in% names(formals(ard_spread)))
 })
 
@@ -626,12 +636,12 @@ test_that("stats = 'rows' can carry either of the ARD's two values", {
   args <- list(ard = ard, cols = "TRT", rows = c(group = "variable"),
                label = c(Statistic = "stat_label"), stats = "rows")
 
-  raw <- do.call(ard_table, args)
+  raw <- do.call(ard_pipe, args)
   expect_true(is.numeric(raw$Placebo))
   expect_equal(raw$Placebo[raw$Statistic == "Mean"],
                mean(adsl$AGE[adsl$TRT == "Placebo"]))
 
-  fmt <- do.call(ard_table, c(args, list(value = "stat_fmt")))
+  fmt <- do.call(ard_pipe, c(args, list(value = "stat_fmt")))
   expect_true(is.character(fmt$Placebo))
   # cards' own formatting, not ours
   expect_match(fmt$Placebo[fmt$Statistic == "Mean"], "^[0-9]+[.][0-9]$")
@@ -644,7 +654,7 @@ test_that("{x:stat_fmt} and {x:stat} name the ARD's own columns", {
   adsl$TRT <- as.character(adsl$ARM)
   ard <- cards::ard_stack(adsl, .by = TRT,
                           cards::ard_continuous(variables = AGE))
-  tbl <- ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+  tbl <- ard_pipe(ard, cols = "TRT", rows = c(group = "variable"),
                    cells = c("bare" = "{mean}",
                              "fmt"  = "{mean:stat_fmt}",
                              "raw"  = "{mean:stat}",
@@ -654,9 +664,9 @@ test_that("{x:stat_fmt} and {x:stat} name the ARD's own columns", {
   expect_false(identical(v("raw"), v("fmt"))) # stat is unrounded
   expect_match(v("ours"), "^[0-9]+[.][0-9]{3}$")
   # the old spellings say what to write instead
-  expect_error(ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+  expect_error(ard_pipe(ard, cols = "TRT", rows = c(group = "variable"),
                          cells = "{mean:raw}"), "write 'stat'")
-  expect_error(ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+  expect_error(ard_pipe(ard, cols = "TRT", rows = c(group = "variable"),
                          cells = "{mean:fmt}"), "write 'stat_fmt'")
 })
 
@@ -715,13 +725,13 @@ test_that("an overall block built by binding is found when named", {
   expect_true(any(ard$variable == "TRT"))
 
   # unnamed, the block is a key variable's own tabulation and is dropped
-  without <- ard_table(ard, cols = "TRT", hierarchy = "AESOC",
+  without <- ard_pipe(ard, cols = "TRT", hierarchy = "AESOC",
                        label = c(soc = "AESOC"), cells = "{n:.0f} ({p:.1f%})",
                        notes = FALSE)
   expect_false("Any TEAE" %in% as.character(without$soc))
 
   # named, it becomes the overall row, with the key read from variable_level
-  with <- ard_table(ard, cols = "TRT", hierarchy = "AESOC",
+  with <- ard_pipe(ard, cols = "TRT", hierarchy = "AESOC",
                     overall = ard_overall("Any TEAE", from = "TRT"),
                     label = c(soc = "AESOC"), cells = "{n:.0f} ({p:.1f%})",
                     sort = c(".overall", "soc"), notes = FALSE)
@@ -740,11 +750,11 @@ test_that("a bare string still means the cards sentinel", {
   ard <- cards::ard_stack_hierarchical(
     adae, variables = c(AESOC, AETERM), by = TRT,
     denominator = adsl, id = USUBJID, over_variables = TRUE)
-  a <- ard_table(ard, cols = "TRT", hierarchy = c("AESOC", "AETERM"),
+  a <- ard_pipe(ard, cols = "TRT", hierarchy = c("AESOC", "AETERM"),
                  overall = "Any TEAE", rows = c(soc = "AESOC"),
                  label = c(term = "AETERM"), cells = "{n:.0f} ({p:.1f%})",
                  notes = FALSE)
-  b <- ard_table(ard, cols = "TRT", hierarchy = c("AESOC", "AETERM"),
+  b <- ard_pipe(ard, cols = "TRT", hierarchy = c("AESOC", "AETERM"),
                  overall = ard_overall("Any TEAE"), rows = c(soc = "AESOC"),
                  label = c(term = "AETERM"), cells = "{n:.0f} ({p:.1f%})",
                  notes = FALSE)
@@ -765,21 +775,21 @@ test_that("what was not used is reported, and not attached by default", {
                cells = list(continuous  = c("Mean" = "{mean:.1f}"),
                             categorical = "{n:.0f} ({p:.1f%})"))
 
-  expect_message(do.call(ard_table, args), "ARD rows? (were|was) not used")
-  expect_message(do.call(ard_table, args), "no template named it")
-  expect_message(do.call(ard_table, args), "a key variable's own tabulation")
+  expect_message(do.call(ard_pipe, args), "ARD rows? (were|was) not used")
+  expect_message(do.call(ard_pipe, args), "no template named it")
+  expect_message(do.call(ard_pipe, args), "a key variable's own tabulation")
 
   # silenced
-  expect_no_message(do.call(ard_table, c(args, list(notes = FALSE))))
+  expect_no_message(do.call(ard_pipe, c(args, list(notes = FALSE))))
 
   # the result stays a plain data frame, so a comparison against the table the
   # caller built before is not disturbed by an extra attribute
-  quiet <- do.call(ard_table, c(args, list(notes = FALSE)))
+  quiet <- do.call(ard_pipe, c(args, list(notes = FALSE)))
   expect_null(attr(quiet, "ard_ignored", exact = TRUE))
   expect_identical(class(quiet), "data.frame")
 
   # ... unless asked for
-  kept <- suppressMessages(do.call(ard_table, c(args, list(notes = "attr"))))
+  kept <- suppressMessages(do.call(ard_pipe, c(args, list(notes = "attr"))))
   ig <- attr(kept, "ard_ignored", exact = TRUE)
   expect_s3_class(ig, "data.frame")
   expect_setequal(names(ig),
@@ -799,7 +809,7 @@ test_that("the middle stage survives being rebuilt", {
   ard <- make_ard()
   cells <- list(continuous  = c("Mean" = "{mean:.1f}"),
                 categorical = "{n:.0f} ({p:.1f%})")
-  ref <- ard_table(ard, cols = "TRT", cells = cells, notes = FALSE)
+  ref <- ard_pipe(ard, cols = "TRT", cells = cells, notes = FALSE)
 
   d <- ard_normalize(ard)
   # the attributes are conveniences, not requirements
@@ -865,7 +875,7 @@ test_that("passing the raw ARD says so", {
   err <- tryCatch(ard_spread(cards::ADSL, cols = "ARM"),
                   error = function(e) conditionMessage(e))
   expect_match(err, "does not look like an ard_normalize")
-  expect_match(err, "ard_table")
+  expect_match(err, "Pass the ARD through")
   # but a rebuilt frame without the class is still accepted
   d <- ard_normalize(make_ard())
   class(d) <- "data.frame"
@@ -875,7 +885,7 @@ test_that("passing the raw ARD says so", {
 
 test_that("a template naming a missing statistic yields NA, not an error", {
   skip_if_no_cards()
-  tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+  tbl <- ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
                    cells = "{nope}")
   expect_true(all(is.na(tbl$Placebo)))
 })
@@ -887,7 +897,7 @@ test_that("stats = 'rows' gives one numeric row per statistic", {
   adsl$TRT <- as.character(adsl$ARM)
   ard <- cards::ard_stack(adsl, .by = TRT,
                           cards::ard_continuous(variables = AGE))
-  tbl <- ard_table(ard, cols = "TRT", rows = c(group = "variable"),
+  tbl <- ard_pipe(ard, cols = "TRT", rows = c(group = "variable"),
                    label = c(Statistic = "stat_label"), stats = "rows")
   expect_true(is.numeric(tbl$Placebo))
   expect_true(all(c("N", "Mean", "SD") %in% as.character(tbl$Statistic)))
@@ -898,12 +908,12 @@ test_that("stats = 'rows' on a variable with levels needs the level as a key", {
   # every level of AGEGR carries an `n`, so labelling rows by the statistic
   # alone cannot separate them -- previously the last level silently won
   expect_error(
-    ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+    ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
               label = c(Statistic = "stat_label"), stats = "rows"),
     "telling themselves apart")
 
   # naming the level as well is what the message asks for, and it works
-  tbl <- ard_table(make_ard(), cols = "TRT",
+  tbl <- ard_pipe(make_ard(), cols = "TRT",
                    rows = c(group = "variable", level = "variable_level"),
                    label = c(Statistic = "stat_label"), stats = "rows")
   gr <- tbl[tbl$group == "AGEGR", ]
@@ -913,7 +923,7 @@ test_that("stats = 'rows' on a variable with levels needs the level as a key", {
 
 test_that("sort_stat totals a statistic across the spread columns", {
   skip_if_no_cards()
-  tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+  tbl <- ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
                    cells = "{n:.0f} ({p:.1f%})", sort_stat = "n")
   expect_true(".sort_stat" %in% names(tbl))
   sex <- tbl[tbl$group == "SEX", ]
@@ -933,23 +943,23 @@ test_that("round = 'r' reaches the cells", {
   expect_identical(r$Placebo, "0")
 })
 
-test_that("ard_table() refuses an input that is not an ARD", {
+test_that("the pipe refuses an input that is not an ARD", {
   expect_error(ard_normalize(data.frame(a = 1)), "cards ARD")
   skip_if_no_cards()
-  expect_error(ard_table(make_ard(), cols = "NOPE"), "no column 'NOPE'")
+  expect_error(ard_pipe(make_ard(), cols = "NOPE"), "no column 'NOPE'")
 })
 
 test_that("naming the analysed variable says where its levels went", {
   skip_if_no_cards()
   # `levels` keys on the analysis variable, `label` cannot -- so the error has
   # to explain the asymmetry rather than just listing the columns.
-  expect_error(ard_table(make_ard(), cols = "TRT", label = c(row = "AGEGR")),
+  expect_error(ard_pipe(make_ard(), cols = "TRT", label = c(row = "AGEGR")),
                "analysis variable")
-  expect_error(ard_table(make_ard(), cols = "TRT", label = c(row = "AGEGR")),
+  expect_error(ard_pipe(make_ard(), cols = "TRT", label = c(row = "AGEGR")),
                "[.]label")
   # a name that is neither a column nor an analysed variable keeps the
   # original message
-  expect_error(ard_table(make_ard(), cols = "TRT", label = c(row = "NOPE")),
+  expect_error(ard_pipe(make_ard(), cols = "TRT", label = c(row = "NOPE")),
                "no column 'NOPE'")
 })
 
@@ -976,7 +986,7 @@ test_that("a spec round-trips through CSV and drives the conversion", {
   expect_equal(back$variable, sp$variable)
   unlink(path)
 
-  tbl <- ard_table(make_ard(), cols = "TRT", rows = c(group = "variable"),
+  tbl <- ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
                    spec = sp)
   expect_identical(as.character(unique(tbl$group)),
                    c("Age (years)", "Age group", "Sex"))
@@ -1240,11 +1250,11 @@ test_that("the rounding family: argument > spec > option > R's own", {
   options(old)
 })
 
-test_that("ard_table() passes a named round on and leaves the spec alone", {
+test_that("a named round is passed on and leaves the spec alone", {
   skip_if_no_cards()
   a <- make_ard()
   cell <- function(...) {
-    ard_table(a, cols = "TRT", rows = c(group = "variable"),
+    ard_pipe(a, cols = "TRT", rows = c(group = "variable"),
               cells = "{mean:.0f}", notes = FALSE, ...)$Placebo[1]
   }
   # AGE's mean is not a tie here, so compare the two families on one that is

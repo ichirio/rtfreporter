@@ -32,7 +32,7 @@
 # is part of the surface a reader has to learn, and this family may be
 # withdrawn outright.  Keep it in step with the NAMESPACE marker block.
 .experimental_exports <- c(
-  "ard_pull", "ard_keys", "ard_normalize", "ard_overall", "ard_spread", "ard_table", "ard_template",
+  "ard_pull", "ard_keys", "ard_normalize", "ard_overall", "ard_spread", "ard_template",
   "ard_cells",
   "ard_spec", "ard_spec_template", "read_ard_spec", "write_ard_spec",
   "ard_round")
@@ -757,9 +757,9 @@ ard_round <- function(x, digits = 0, type = NULL) {
 #' What is actually inside an ARD
 #'
 #' Prints, and returns invisibly, the structural facts you need in order to
-#' call [ard_table()]: the grouping-variable names that appear in the
-#' `group1..groupN` columns, the analysis variables, the `context` values and
-#' the statistics each context carries.  All of it is read from the tibble's
+#' call [ard_normalize()] and [ard_spread()]: the grouping-variable names
+#' that appear in the `group1..groupN` columns, the analysis variables, the
+#' `context` values and the statistics each context carries.  All of it is read from the tibble's
 #' rows -- never from the object's attributes.
 #'
 #' @param ard A cards/cardx ARD (any data frame with the ARD columns).
@@ -770,7 +770,7 @@ ard_round <- function(x, digits = 0, type = NULL) {
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [ard_table()], [ard_template()]
+#' @seealso [ard_normalize()], [ard_spread()], [ard_template()]
 #' @export
 ard_keys <- function(ard) {
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
@@ -838,9 +838,9 @@ ard_keys <- function(ard) {
 #' @param from The analysis variable that block summarised -- the treatment
 #'   variable, usually.  `NULL` (default) means the cards sentinel.
 #'
-#' @return An object of class `ard_overall`, for [ard_normalize()] and
-#'   [ard_table()]'s `overall` argument.  That argument also takes a bare
-#'   string, which is `ard_overall(label)`.
+#' @return An object of class `ard_overall`, for [ard_normalize()]'s
+#'   `overall` argument.  That argument also takes a bare string, which is
+#'   `ard_overall(label)`.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
@@ -848,7 +848,7 @@ ard_keys <- function(ard) {
 #' @examples
 #' ard_overall("Any TEAE")                      # the cards sentinel rows
 #' ard_overall("Any TEAE", from = "TRT01P")     # a separately-built block
-#' @seealso [ard_normalize()], [ard_table()]
+#' @seealso [ard_normalize()], [ard_spread()]
 #' @export
 ard_overall <- function(label, from = NULL) {
   if (missing(label) || !is.character(label) || length(label) != 1L) {
@@ -891,8 +891,7 @@ ard_overall <- function(label, from = NULL) {
 #' @param ... One argument per output row.  Names become row labels; an
 #'   unnamed argument takes its label from `label`, as a bare template does.
 #'
-#' @return An object of class `ard_cells`, for `cells` in [ard_spread()] and
-#'   [ard_table()].
+#' @return An object of class `ard_cells`, for `cells` in [ard_spread()].
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
@@ -960,7 +959,7 @@ print.ard_cells <- function(x, ...) {
 #' An ARD carries more than the table's body: the denominator behind every
 #' percentage, the subject count per arm, a total the author computed
 #' themselves.  Those belong in the **column header** (`Placebo\\nN = 86`) or in
-#' an overall row, not in a body cell, so [ard_table()] puts them nowhere.
+#' an overall row, not in a body cell, so [ard_spread()] puts them nowhere.
 #' `ard_pull()` reads one out, keyed exactly like the spread columns --
 #' `"Placebo____F"` for a crossed header -- ready to paste into a `col_header`.
 #'
@@ -984,7 +983,7 @@ print.ard_cells <- function(x, ...) {
 #'   the candidates listed**, so you can pin it with `variable` / `context`.
 #'
 #' @param ard A cards/cardx ARD.
-#' @param cols The column key(s), named as in [ard_table()] -- the grouping
+#' @param cols The column key(s), named as in [ard_spread()] -- the grouping
 #'   variable's own name, not its `group*` position.
 #' @param stat Statistic to read; `"N"` by default.
 #' @param variable,context Restrict to this analysis variable and/or this
@@ -992,7 +991,7 @@ print.ard_cells <- function(x, ...) {
 #'   or to ask for the key variable's own rows.
 #' @param levels Optional level order for the keys, so the result lines up
 #'   with the table's columns.
-#' @param sep Separator between multiple `cols` keys; match [ard_table()].
+#' @param sep Separator between multiple `cols` keys; match [ard_spread()].
 #'
 #' @return A named vector, one element per column key.
 #'
@@ -1009,7 +1008,7 @@ print.ard_cells <- function(x, ...) {
 #'   paste0(names(n), "\\nN = ", n)
 #' }
 #' @seealso [ard_keys()], which lists every statistic an ARD carries;
-#'   [ard_table()]
+#'   [ard_spread()]
 #' @export
 ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
                      levels = NULL, sep = "____") {
@@ -1109,7 +1108,7 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #'
 #' The result is a plain data frame that you can keep manipulating with base R
 #' or dplyr before handing it to [ard_spread()].  That is the intended route
-#' for anything [ard_table()] does not do by itself: marginal totals, derived
+#' for anything [ard_spread()] does not do by itself: marginal totals, derived
 #' rows, custom sorting.
 #'
 #' @param ard A cards/cardx ARD.
@@ -1170,7 +1169,7 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [ard_spread()], [ard_table()], [ard_keys()]
+#' @seealso [ard_spread()], [ard_keys()]
 #' @export
 ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
                           overall = NULL,
@@ -1604,7 +1603,7 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [ard_normalize()], [ard_table()]
+#' @seealso [ard_normalize()], [ard_template()]
 #' @export
 ard_spread <- function(x, cols, rows = NULL, label = ".label",
                        cells = "{n} ({p})", stats = c("cells", "rows"),
@@ -1659,7 +1658,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     .ard_stop(paste0(
       "`x` does not look like an ard_normalize() result: it has none of\n",
       "  `.label`, `.kind`, `stat_name`.  Pass the ARD through\n",
-      "  ard_normalize() first, or use ard_table(), which does both."))
+      "  ard_normalize() first."))
   }
 
   colrefs <- .ard_refs(cols, d, "cols")
@@ -1982,8 +1981,8 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   # comparison is how anyone decides to adopt this -- and an extra attribute
   # makes all.equal() report a difference that is not in the table.
   if (identical(notes, "attr")) attr(out, "ard_ignored") <- ignored
-  if (!isFALSE(notes)) .ard_notes_message(ignored, "ard_table()")
-  if (identical(notes, "applied")) .ard_applied_message(long, "ard_table()")
+  if (!isFALSE(notes)) .ard_notes_message(ignored, "ard_spread()")
+  if (identical(notes, "applied")) .ard_applied_message(long, "ard_spread()")
   out
 }
 
@@ -2030,70 +2029,6 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
   parts <- lapply(rowrefs, function(r) as.character(d[[r$ref]][sel]))
   if (length(labref)) parts <- c(parts, list(as.character(d[[labref[[1]]$ref]][sel])))
   do.call(paste, c(parts, list(sep = "\r")))
-}
-
-
-# ============================================================================
-#  ard_table()
-# ============================================================================
-
-#' Convert a cards/cardx ARD straight into a table data.frame
-#'
-#' The one-call form: [ard_normalize()] followed by [ard_spread()].  Use it
-#' when the table is the ordinary "one ARD record, one table row" shape; when
-#' it is not, call the two steps separately and do your own work in between.
-#'
-#' @inheritParams ard_normalize
-#' @inheritParams ard_spread
-#'
-#' @return A data frame ready for [as_rtftables()].
-#'
-#' @section Lifecycle:
-#' **Experimental.**  See [rtfreporter-ard].
-#'
-#' @examples
-#' if (requireNamespace("cards", quietly = TRUE)) {
-#'   ard <- cards::ard_stack(
-#'     cards::ADSL, .by = ARM,
-#'     cards::ard_continuous(variables = AGE),
-#'     cards::ard_categorical(variables = SEX))
-#'
-#'   ard_table(
-#'     ard,
-#'     cols  = "ARM",
-#'     rows  = c(group = "variable"),
-#'     cells = list(
-#'       continuous  = c("n"         = "{N:d}",
-#'                       "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
-#'                       "Min, Max"  = "{min:.1f}, {max:.1f}"),
-#'       categorical = "{n:d} ({p:.1f%})"))
-#' }
-#' @seealso [ard_normalize()], [ard_spread()], [ard_template()], [rtfreporter-ard]
-#' @export
-ard_table <- function(ard, cols, rows = NULL, label = ".label",
-                      hierarchy = character(), overall = NULL, keys = NULL,
-                      cells = "{n} ({p})", stats = c("cells", "rows"),
-                      value = c("stat", "stat_fmt"),
-                      levels = NULL, labels = NULL, sort = TRUE,
-                      sep = "____", round = NULL,
-                      spec = NULL, sort_stat = NULL, na = NA_character_,
-                      notes = TRUE,
-                      drop_contexts = c("attributes", "total_n"),
-                      drop_key_variables = TRUE) {
-  x <- ard_normalize(ard, keys = keys, hierarchy = hierarchy,
-                     overall = overall, drop_contexts = drop_contexts,
-                     drop_key_variables = drop_key_variables)
-  args <- list(x = x, cols = cols, rows = rows, label = label,
-               stats = match.arg(stats), value = match.arg(value),
-               levels = levels, labels = labels,
-               sort = sort, sep = sep,
-               spec = spec, sort_stat = sort_stat,
-               na = na, notes = notes)
-  if (!missing(cells)) args$cells <- cells
-  # Pass `round` on only when the caller named it, so a spec file's `round`
-  # column still reaches ard_spread()'s `missing(round)` test.
-  if (!is.null(round)) args$round <- round
-  do.call(ard_spread, args)
 }
 
 
@@ -2145,7 +2080,7 @@ ard_table <- function(ard, cols, rows = NULL, label = ".label",
 #' A spreadsheet-shaped definition of how an ARD becomes a table
 #'
 #' `ard_spec()` validates (and fills out) the definition table that
-#' [ard_table()] and [ard_spread()] accept as `spec =`.  It carries the four
+#' [ard_spread()] accepts as `spec =`.  It carries the four
 #' things that otherwise have to be repeated in every script: the display
 #' label of each variable, the row templates, the rounding family, and the
 #' number of decimal or significant digits.
@@ -2477,10 +2412,10 @@ ard_spec_template <- function(ard, path = NULL) {
 
 #' Write the conversion code for you
 #'
-#' Reads an ARD and prints a runnable [ard_table()] call, filled in with the
+#' Reads an ARD and prints the runnable conversion code, filled in with the
 #' keys, hierarchy, contexts and statistics it actually found.  Because none
 #' of the structure is guessed from the object's attributes, the generated
-#' call is also a readable record of what the ARD contains.
+#' code is also a readable record of what the ARD contains.
 #'
 #' The emitted code is a starting point, not a finished table: in particular
 #' it does **not** invent a row order, because the level order of a factor is
@@ -2492,13 +2427,12 @@ ard_spec_template <- function(ard, path = NULL) {
 #' @param hierarchy Optional nested hierarchy, outermost first.
 #' @section What it writes:
 #' Always three blocks, so the author deletes rather than remembers:
-#' the conversion written as the **pipe** --- `ard_normalize()`, a
-#' commented `dplyr::mutate()` and `ard_spread()` --- because
-#' [ard_table()] is exactly that pipe collapsed, and half the reports on
-#' Discussion #473 have to reach between the two halves (to derive a key
-#' from a statistic, to add a constant column, to indent a label);
-#' then the `col_header` (drafted from [ard_pull()]
-#' when one column key makes that decidable, and skipped entirely when
+#' the conversion written as the **pipe** --- `ard_normalize()`, a commented
+#' `dplyr::mutate()` and `ard_spread()` --- with the seam left open, because
+#' half the reports on Discussion #473 have to reach between the two steps
+#' (to derive a key from a statistic, to add a constant column, to indent a
+#' label); then the `col_header` (drafted from [ard_pull()] when one column
+#' key makes that decidable, and skipped entirely when
 #' several do, since `as_rtftables(header_sep = )` rebuilds the spanning
 #' header from the `"____"` in the names), and the [as_rtftables()]
 #' call with `stub_vars` derived from the row keys and the label column.
@@ -2512,7 +2446,7 @@ ard_spec_template <- function(ard, path = NULL) {
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [ard_table()], [ard_spec_template()]
+#' @seealso [ard_normalize()], [ard_spread()], [ard_spec_template()]
 #' @export
 ard_template <- function(ard, cols = NULL, hierarchy = character(),
                          spec = FALSE, file = NULL) {
@@ -2595,11 +2529,10 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
     "")
 
   # -- 1. ARD -> table data.frame ---------------------------------------
-  # The pipe, not ard_table(): ard_table() IS ard_normalize() |> ard_spread(),
-  # and half the real reports need to reach between them -- to derive a key
-  # from a statistic, to add a constant column, to indent a label.  Showing
-  # the seam with an empty `mutate()` turns "you had to know to split this"
-  # into "delete the line you do not need".
+  # Half the real reports need to reach between the two steps -- to derive a
+  # key from a statistic, to add a constant column, to indent a label.
+  # Showing the seam with an empty `mutate()` turns "you had to know to
+  # split this" into "delete the line you do not need".
   norm_args <- c(
     if (length(hierarchy)) paste0("    hierarchy = ", vecq(hierarchy)) else NULL,
     if (overall) "    overall   = \"Any event\"        # <- label for the sentinel"
@@ -2744,7 +2677,6 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
 #'     actually holds.}
 #'   \item{[ard_normalize()]}{ARD to a flat, explicitly keyed long table.}
 #'   \item{[ard_spread()]}{Long table to the wide table data.frame.}
-#'   \item{[ard_table()]}{Both of the above in one call.}
 #'   \item{[ard_template()]}{Emit runnable conversion code for a given ARD.}
 #'   \item{[ard_overall()]}{Where the table's overall row comes from.}
 #'   \item{[ard_pull()]}{A statistic keyed like the spread columns, for a
@@ -2841,7 +2773,7 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
 #'     lists the candidates when the choice is ambiguous.}
 #' }
 #' Column headers are rtfreporter's own job -- `col_header` takes a plain
-#' character vector -- so [ard_table()] builds the body only, and
+#' character vector -- so [ard_spread()] builds the body only, and
 #' [ard_pull()] is there when the header needs a number that must agree with
 #' the percentages.
 #'

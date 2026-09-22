@@ -60,7 +60,7 @@ column and record the nesting depth.
 \details{
 The result is a plain data frame that you can keep manipulating with base R
 or dplyr before handing it to \code{\link[=ard_spread]{ard_spread()}}.  That is the intended route
-for anything \code{\link[=ard_table]{ard_table()}} does not do by itself: marginal totals, derived
+for anything \code{\link[=ard_spread]{ard_spread()}} does not do by itself: marginal totals, derived
 rows, custom sorting.
 }
 \section{Working on the result before \code{\link[=ard_spread]{ard_spread()}}}{
@@ -98,5 +98,5 @@ so indenting \code{"Mild"} to \code{"  Mild"} with \code{mutate()} still sorts w
 }
 
 \seealso{
-\code{\link[=ard_spread]{ard_spread()}}, \code{\link[=ard_table]{ard_table()}}, \code{\link[=ard_keys]{ard_keys()}}
+\code{\link[=ard_spread]{ard_spread()}}, \code{\link[=ard_keys]{ard_keys()}}
 }

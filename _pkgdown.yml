@@ -556,7 +556,6 @@ reference:
       - ard_overall
       - ard_normalize
       - ard_spread
-      - ard_table
       - ard_template
       - ard_spec
       - ard_spec_template

@@ -208,5 +208,5 @@ the returned data frame.
 }
 
 \seealso{
-\code{\link[=ard_normalize]{ard_normalize()}}, \code{\link[=ard_table]{ard_table()}}
+\code{\link[=ard_normalize]{ard_normalize()}}, \code{\link[=ard_template]{ard_template()}}
 }

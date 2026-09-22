@@ -15,7 +15,7 @@ A data frame of class \code{ard_spec}.
 }
 \description{
 \code{ard_spec()} validates (and fills out) the definition table that
-\code{\link[=ard_table]{ard_table()}} and \code{\link[=ard_spread]{ard_spread()}} accept as \verb{spec =}.  It carries the four
+\code{\link[=ard_spread]{ard_spread()}} accepts as \verb{spec =}.  It carries the four
 things that otherwise have to be repeated in every script: the display
 label of each variable, the row templates, the rounding family, and the
 number of decimal or significant digits.

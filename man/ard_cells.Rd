@@ -11,8 +11,7 @@ ard_cells(...)
 unnamed argument takes its label from \code{label}, as a bare template does.}
 }
 \value{
-An object of class \code{ard_cells}, for \code{cells} in \code{\link[=ard_spread]{ard_spread()}} and
-\code{\link[=ard_table]{ard_table()}}.
+An object of class \code{ard_cells}, for \code{cells} in \code{\link[=ard_spread]{ard_spread()}}.
 }
 \description{
 \code{cells} already reads three containers: one template is one row, a \emph{named}
