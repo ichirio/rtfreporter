@@ -655,8 +655,15 @@ print.rtf_plan <- function(x, ...) {
 #'   has to be computed.  The plan adds two things to a header it is
 #'   given, both of which used to need a function:
 #'
-#'   * its cells may carry `{col}` (that column's name) and `{n}` (that
-#'     column's denominator, or the single one there is);
+#'   * its cells may carry `{col}` and `{n}` --- the column and its
+#'     denominator (or the single one there is).  Several `cols` keys
+#'     make a name like "Placebo____Negative", which nobody wants
+#'     printed, so `{col}` is the **leaf** and `{col1}`, `{col2}`, ... are
+#'     the levels in order; with one key the leaf is the whole name.
+#'     The hierarchy itself needs no header --- [as_rtftables()] builds
+#'     the spanning rows from the same separator, merging the cells.
+#'     What each level READS is [plan_labels()]'s business, since it
+#'     recodes the values the name is made of;
 #'   * a row **shorter** than the table has its last cell repeated over
 #'     the spread columns, whose names are not known until the table
 #'     exists.
@@ -1717,7 +1724,8 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     # the tokens and the short-row rule, on whatever came back
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
     sc <- intersect(.plan_spread_cols(plan, pre), names(first_d))
-    h <- .plan_header_fill(h, nvals, sc, length(first_d) - length(sc))
+    h <- .plan_header_fill(h, nvals, sc, length(first_d) - length(sc),
+                           plan$roles$sep)
     args <- list(x = out, h)
     if (!is.null(hdr$values)) args$values <- hdr$values
     out <- do.call(set_col_header, args)
@@ -1761,8 +1769,21 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 # Fill `{col}` / `{n}` in a header, and repeat a short row's last
 # cell over the spread columns.  `cols` are the spread columns and
 # `n_lead` the ones to the left of them.
-.plan_header_fill <- function(h, nvals, cols, n_lead) {
+#
+# Several `cols` keys make a name like "Placebo____Negative", which
+# nobody wants printed.  `{col}` is therefore the LEAF -- the last
+# level, which is what a single header row over those columns says --
+# and `{col1}`, `{col2}`, ... are the levels in order.  With one key
+# the leaf is the whole name, so nothing changes there.  The hierarchy
+# itself needs no header at all: as_rtftables(header_sep = ) builds
+# the spanning rows from the same separator.
+.plan_header_fill <- function(h, nvals, cols, n_lead, sep = NULL) {
   if (is.null(h) || !length(cols)) return(h)
+  sep <- sep %||% "____"
+  parts <- function(col) {
+    if (is.null(col)) character(0) else
+      strsplit(col, sep, fixed = TRUE)[[1L]]
+  }
   one <- function(tpl, col) {
     if (!is.character(tpl) || !length(tpl) ||
         !grepl("{", tpl, fixed = TRUE)) {
@@ -1774,7 +1795,13 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       match(col, names(nvals) %||% character(0))
     v <- if (!is.na(i)) nvals[[i]]
          else if (length(nvals) == 1L) nvals[[1L]] else NA
-    out <- gsub("{col}", col %||% "", tpl, fixed = TRUE)
+    pp <- parts(col)
+    out <- tpl
+    for (i in seq_along(pp)) {
+      out <- gsub(paste0("{col", i, "}"), pp[i], out, fixed = TRUE)
+    }
+    leaf <- if (length(pp)) pp[length(pp)] else (col %||% "")
+    out <- gsub("{col}", leaf, out, fixed = TRUE)
     gsub("{n}", if (is.null(v) || all(is.na(v))) "" else
                   format(v, trim = TRUE), out, fixed = TRUE)
   }

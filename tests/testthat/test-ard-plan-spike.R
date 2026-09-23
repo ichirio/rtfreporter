@@ -1070,3 +1070,33 @@ test_that("{n} in a spanner takes the one value there is", {
   expect_true(any(grepl("Placebo", txt, fixed = TRUE)))
 })
 
+
+test_that("{col} is the LEAF, and {col1}/{col2} are the levels", {
+  skip_if_no_cards2()
+  # two `cols` keys make a name like "Placebo____F", which nobody wants
+  # printed; the hierarchy itself is built by as_rtftables(header_sep = )
+  d <- nz(plan_ard())
+  p <- rtf_plan(d, cols = c("TRT", "variable"),
+                rows = c(group = "variable"), notes = FALSE) |>
+    plan_cells(continuous = c(n = "{N:d}"), categorical = "{n:d}") |>
+    plan_paginate_rows(max_rows = 40) |>
+    plan_col_header(n = 42, rtf_col_header(
+      c("", "{col1}"),
+      c("Characteristic", "{col2} (N={n})")))
+  out <- suppressMessages(apply_plan(p))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  txt <- unlist(first$col_header)
+  expect_false(any(grepl("____", txt, fixed = TRUE)))
+  expect_true(any(grepl("Placebo", txt, fixed = TRUE)))
+  expect_true(any(grepl("(N=42)", txt, fixed = TRUE)))
+})
+
+test_that("with one key the leaf is the whole name", {
+  skip_if_no_cards2()
+  out <- suppressMessages(apply_plan(
+    disp_plan() |> plan_col_header(rtf_col_header(c("Term", "{col}")))))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  expect_true(any(grepl("Placebo", unlist(first$col_header),
+                        fixed = TRUE)))
+})
+

@@ -199,8 +199,15 @@ resolved \code{n} (and, with two arguments, the finished table) when it
 has to be computed.  The plan adds two things to a header it is
 given, both of which used to need a function:
 \itemize{
-\item its cells may carry \code{{col}} (that column's name) and \code{{n}} (that
-column's denominator, or the single one there is);
+\item its cells may carry \code{{col}} and \code{{n}} --- the column and its
+denominator (or the single one there is).  Several \code{cols} keys
+make a name like "Placebo____Negative", which nobody wants
+printed, so \code{{col}} is the \strong{leaf} and \code{{col1}}, \code{{col2}}, ... are
+the levels in order; with one key the leaf is the whole name.
+The hierarchy itself needs no header --- \code{\link[=as_rtftables]{as_rtftables()}} builds
+the spanning rows from the same separator, merging the cells.
+What each level READS is \code{\link[=plan_labels]{plan_labels()}}'s business, since it
+recodes the values the name is made of;
 \item a row \strong{shorter} than the table has its last cell repeated over
 the spread columns, whose names are not known until the table
 exists.

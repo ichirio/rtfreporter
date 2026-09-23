@@ -471,6 +471,18 @@ N = ", n$arm)` cannot drift from the columns
   from column arithmetic and keep one, which is construction rather than
   repetition.
 
+  Several `cols` keys make a column called `"Placebo____Negative"`, and
+  `{col}` was printing it whole -- which nobody wants in a header.  It is
+  now the **leaf**, with `{col1}`, `{col2}`, ... for the levels in order;
+  with one key the leaf is the whole name, so nothing changes there.
+  Worth saying plainly: the hierarchy itself needs no header at all.
+  `as_rtftables(header_sep = )` already builds the spanning rows from the
+  same `"____"` and merges adjacent cells, which a hand-written row
+  cannot do -- so the reason to write a header over those columns is the
+  `(N=)` or a border, not the nesting.  And what each level reads is
+  `plan_labels()`'s business, since it recodes the values the name is
+  made of.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
