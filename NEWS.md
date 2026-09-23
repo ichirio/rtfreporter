@@ -393,6 +393,22 @@ N = ", n$arm)` cannot drift from the columns
   dropped a second time (it is gone, not hidden), which used to fail with
   `drop_cols` complaining about a column that is not there.
 
+  **`plan_paginate_group()` is the group axis; `plan_row_group()` is the
+  body.**  Folding both into one verb was wrong, and the name said so:
+  the group axis is the OUTERMOST division -- one page per value, named
+  after it, which is what `auto_section` cuts on -- and has nothing to do
+  with rows, while `group_by` / `collapse_repeats` are about how a
+  repeated value looks down the body.  Measured across the six reports,
+  the two halves were never used together: two reports use the body half
+  alone, two the page half alone.  So they are two verbs, each truthfully
+  named, and the three page axes read `plan_paginate_group()` /
+  `plan_paginate_rows()` / `plan_paginate_cols()`.
+
+  There is still only one grouping column, so naming a different one in
+  each is an error rather than last-wins.
+
+  23 verbs.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

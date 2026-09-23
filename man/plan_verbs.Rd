@@ -9,6 +9,7 @@
 \alias{plan_fmt}
 \alias{plan_stub}
 \alias{plan_cell_style}
+\alias{plan_paginate_group}
 \alias{plan_row_group}
 \alias{plan_hide}
 \alias{plan_sort}
@@ -44,14 +45,9 @@ plan_stub(
 
 plan_cell_style(plan, ...)
 
-plan_row_group(
-  plan,
-  col = NULL,
-  mode = NULL,
-  collapse = NULL,
-  show = TRUE,
-  page = FALSE
-)
+plan_paginate_group(plan, col = NULL, show = TRUE)
+
+plan_row_group(plan, mode = NULL, collapse = NULL, col = NULL)
 
 plan_hide(plan, ...)
 
@@ -150,8 +146,13 @@ VALUES are the row text.  \code{vars} is derived when left out.}
 \code{plan_cell_style()} needs --- only then can a condition see the rows that
 will be printed.  The two do \strong{not} always give the same table.}
 
-\item{col, mode, collapse}{For \code{plan_row_group()}: \code{as_rtftables()}'s
-\code{group_col}, \code{group_by} and \code{collapse_repeats}.}
+\item{col}{For \code{plan_paginate_group()}: the column whose value starts a
+new page, \code{as_rtftables()}'s \code{group_col} with \code{split = "by_value"}.  Left
+out, it is the outermost row key.  The page is \strong{named} after
+the value, which is the line \code{rtf_tables(auto_section = TRUE)}
+cuts a section on --- so this verb decides what a section is.
+\code{plan_row_group(col = )} may name it instead when there is no page
+break; naming different columns in the two is an error.}
 
 \item{show}{\code{FALSE} also hides the column the verb names: the
 grouping carrier for \code{plan_row_group()}, the \code{by} key for \code{plan_paginate_rows()}, the
@@ -162,10 +163,9 @@ so it says so there instead of the name being written again in a
 \code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
 are ignored rather than refused.}
 
-\item{page}{For \code{plan_row_group()}: \code{TRUE} starts a new page at each group
-(\code{as_rtftables(split = "by_value")}).  This is the \strong{group} axis of
-pagination, and it lives here because the column it splits on is
-the one this verb already names.}
+\item{mode, collapse}{For \code{plan_row_group()}: how a \strong{repeated} value
+looks down the body --- \code{as_rtftables()}'s \code{group_by} (a heading row, an
+indent) and \code{collapse_repeats} (printed once, then blank).}
 
 \item{desc}{For \code{plan_sort()} over a table that is
 already built: \code{as_rtftables()}'s \code{sort_desc}.  A plan with an ARD
@@ -179,7 +179,7 @@ half writes the direction into the keys instead (\code{-n}).}
 \code{plan_paginate_rows()}: the row budget and what a page break may cut ---
 \code{as_rtftables()}'s \code{max_rows}, \code{split}, \code{split_rows}, \code{page_by},
 \code{min_group_rows} and \code{cont_label}.  This is the \strong{row} axis; a
-value split (the \strong{group} axis) is \code{plan_row_group(page = TRUE)},
+value split (the \strong{group} axis) is \code{plan_paginate_group()},
 and the \strong{column} axis is \code{plan_paginate_cols()}.}
 
 \item{border, widths}{For \code{plan_style()}: the border set and the relative

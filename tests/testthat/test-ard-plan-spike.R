@@ -791,9 +791,9 @@ test_that("asking for the ARD half of a finished table says what to drop", {
   expect_error(apply_plan(p), "keep the display")
 })
 
-test_that("plan_row_group(show = FALSE) hides the carrier it groups by", {
+test_that("plan_paginate_group(show = FALSE) hides the carrier it groups by", {
   skip_if_no_cards2()
-  p <- disp_plan() |> plan_row_group(col = "group", show = FALSE)
+  p <- disp_plan() |> plan_paginate_group(col = "group", show = FALSE)
   expect_identical(rtfreporter:::.plan_rtf_args(p)$group_col, "group")
   expect_identical(rtfreporter:::.plan_rtf_args(p)$drop_cols, "group")
 })
@@ -802,7 +802,7 @@ test_that("hiding ADDS rather than replaces", {
   skip_if_no_cards2()
   # last-wins here would silently un-hide the first column named
   p <- disp_plan() |> plan_hide("a") |> plan_hide("b") |>
-    plan_row_group(col = "c", show = FALSE)
+    plan_paginate_group(col = "c", show = FALSE)
   expect_setequal(rtfreporter:::.plan_rtf_args(p)$drop_cols, c("a", "b", "c"))
 })
 
@@ -976,9 +976,9 @@ test_that("a house style is an ordinary function, not a plan without data", {
 })
 
 
-test_that("plan_row_group(page = TRUE) is the group axis, in one verb", {
+test_that("plan_paginate_group() is the group axis", {
   skip_if_no_cards2()
-  p <- disp_plan() |> plan_row_group(col = "group", page = TRUE)
+  p <- disp_plan() |> plan_paginate_group(col = "group")
   r <- rtfreporter:::.plan_rtf_args(p)
   expect_identical(r$split, "by_value")
   expect_identical(r$group_col, "group")
@@ -988,18 +988,18 @@ test_that("plan_row_group(page = TRUE) is the group axis, in one verb", {
 
 test_that("two verbs asking for different splits is a mistake", {
   skip_if_no_cards2()
-  p <- disp_plan() |> plan_row_group(col = "group", page = TRUE) |>
+  p <- disp_plan() |> plan_paginate_group(col = "group") |>
     plan_paginate_rows(split = "group_safe", max_rows = 5)
   expect_error(suppressMessages(apply_plan(p)), "Use one", fixed = TRUE)
 })
 
 
-test_that("plan_row_group(page = TRUE) is what auto_section cuts on", {
+test_that("plan_paginate_group() is what auto_section cuts on", {
   skip_if_no_cards2()
   # a value split NAMES each page by its group value, and
   # rtf_tables(auto_section = TRUE) opens a section where the name changes
   p <- disp_plan() |>
-    plan_row_group(col = "group", page = TRUE, show = FALSE)
+    plan_paginate_group(col = "group", show = FALSE)
   pg <- suppressMessages(apply_plan(p))
   expect_setequal(names(pg), c("AGE", "BMIBL", "SEX"))
 

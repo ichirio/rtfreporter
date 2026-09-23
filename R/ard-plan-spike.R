@@ -92,7 +92,8 @@
   "rtf_plan", "plan_cells", "plan_levels", "plan_labels",
   "plan_digits", "plan_fmt",
   "plan_stub", "plan_cell_style",
-  "plan_row_group", "plan_hide", "plan_sort", "plan_blanks",
+  "plan_paginate_group", "plan_row_group",
+  "plan_hide", "plan_sort", "plan_blanks",
   "plan_paginate_rows",
   "plan_style", "plan_col_header", "plan_paginate_cols",
   "plan_titles", "plan_footnotes",
@@ -599,12 +600,16 @@ print.rtf_plan <- function(x, ...) {
 #'   so it says so there instead of the name being written again in a
 #'   `plan_hide()`.  Names that are not columns (a statistic, `".depth"`)
 #'   are ignored rather than refused.
-#' @param page For `plan_row_group()`: `TRUE` starts a new page at each group
-#'   (`as_rtftables(split = "by_value")`).  This is the **group** axis of
-#'   pagination, and it lives here because the column it splits on is
-#'   the one this verb already names.
-#' @param col,mode,collapse For `plan_row_group()`: `as_rtftables()`'s
-#'   `group_col`, `group_by` and `collapse_repeats`.
+#' @param mode,collapse For `plan_row_group()`: how a **repeated** value
+#'   looks down the body --- `as_rtftables()`'s `group_by` (a heading row, an
+#'   indent) and `collapse_repeats` (printed once, then blank).
+#' @param col For `plan_paginate_group()`: the column whose value starts a
+#'   new page, `as_rtftables()`'s `group_col` with `split = "by_value"`.  Left
+#'   out, it is the outermost row key.  The page is **named** after
+#'   the value, which is the line `rtf_tables(auto_section = TRUE)`
+#'   cuts a section on --- so this verb decides what a section is.
+#'   `plan_row_group(col = )` may name it instead when there is no page
+#'   break; naming different columns in the two is an error.
 #' @param desc For `plan_sort()` over a table that is
 #'   already built: `as_rtftables()`'s `sort_desc`.  A plan with an ARD
 #'   half writes the direction into the keys instead (`-n`).
@@ -615,7 +620,7 @@ print.rtf_plan <- function(x, ...) {
 #'   `plan_paginate_rows()`: the row budget and what a page break may cut ---
 #'   `as_rtftables()`'s `max_rows`, `split`, `split_rows`, `page_by`,
 #'   `min_group_rows` and `cont_label`.  This is the **row** axis; a
-#'   value split (the **group** axis) is `plan_row_group(page = TRUE)`,
+#'   value split (the **group** axis) is `plan_paginate_group()`,
 #'   and the **column** axis is `plan_paginate_cols()`.
 #' @param at,cols,carry,col_header,width,allow_span_break,order For
 #'   `plan_paginate_cols()`: [paginate_cols()]'s own arguments --- where to
@@ -762,8 +767,10 @@ plan_digits <- function(plan, ..., round = NULL) {
 #      plan_fmt()     fmt_numeric()      on the table data.frame
 #      plan_stub()    stub_cols()        fold the row keys into one stub
 #      plan_cell_style()  cell_styles    bold / colour / align, by condition
-#      plan_row_group()  which column groups the rows, how it shows,
-#                     and whether a new group starts a new page
+#      plan_paginate_group()  one page per value of a column, named
+#                     after it -- what auto_section cuts a section on
+#      plan_row_group()  how a repeated value looks down the body:
+#                     a heading row, an indent, or printed once
 #      plan_hide()    columns that do their work without being printed
 #      plan_sort()    the printed order
 #      plan_blanks()  where the blank rows go
@@ -900,22 +907,33 @@ plan_cell_style <- function(plan, ...) .plan_keyed(plan, "styles", list(...))
 # a column had to be named twice.
 #' @rdname plan_verbs
 #' @export
-plan_row_group <- function(plan, col = NULL, mode = NULL,
-                           collapse = NULL, show = TRUE,
-                           page = FALSE) {
-  # Everything about the grouping COLUMN is here, including whether a
-  # new group starts a new page (`as_rtftables(split = "by_value")`).
-  # It used to take two verbs -- plan_row_group(col = ) for the column and
-  # plan_pages(split = ) for the break -- and the column is the one
-  # thing they had to agree about.
-  #
-  # `col` may be left out and read off rtf_plan(rows = ), so which
-  # column to hide is not known here.  Record the answer and let
-  # .plan_rtf_args() do it once the roles are in hand.
+# The GROUP axis of pagination: each value of one column becomes its
+# own page, and the page is NAMED after it, which is the line
+# rtf_tables(auto_section = TRUE) cuts a section on.  It is the
+# outermost division there is and has nothing to do with rows -- which
+# is why it is not plan_row_group(), whose subject is how repeated
+# values look down the body.
+#
+# `col` may be left out and read off rtf_plan(rows = ), so which column
+# to hide is not known here.  Record the answer and let
+# .plan_rtf_args() do it once the roles are in hand.
+#' @rdname plan_verbs
+#' @export
+plan_paginate_group <- function(plan, col = NULL, show = TRUE) {
+  .plan_layer(plan, "group",
+              list(group_col = col, .show = show, .page = TRUE))
+}
+
+# How a REPEATED value looks down the body: a heading row, an indent,
+# or printed once and then blank.  This is the row grouping, and in
+# six reports it and the page group were never used together.
+#' @rdname plan_verbs
+#' @export
+plan_row_group <- function(plan, mode = NULL, collapse = NULL,
+                           col = NULL) {
   .plan_layer(plan, "group",
               list(group_col = col, group_by = mode,
-                   collapse_repeats = collapse, .show = show,
-                   .page = isTRUE(page)))
+                   collapse_repeats = collapse))
 }
 
 # A column can be needed and not wanted: a sort carrier, the key a page
@@ -1382,17 +1400,27 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   # plan_row_group() may leave `col` out and have it read off the roles.
   gcol <- .plan_group_col(plan)
   if (!is.null(gcol)) out$group_col <- gcol
-  # plan_row_group(page = TRUE) is as_rtftables(split = "by_value").
-  # Two verbs asking for different splits is a mistake, not something
-  # to resolve by order.
+  # plan_paginate_group() is as_rtftables(split = "by_value").  Two
+  # verbs asking for different splits is a mistake, not something to
+  # resolve by order.
   if (isTRUE(.plan_merge(.plan_of(plan, "group"))$.page)) {
     if (!is.null(out$split) && !identical(out$split, "by_value")) {
       .ard_stop(paste0(
-        "plan_row_group(page = TRUE) splits the pages by the group ",
-        "value, and\n  plan_paginate_rows(split = ",
+        "plan_paginate_group() splits the pages by the group value, ",
+        "and\n  plan_paginate_rows(split = ",
         sQuote(out$split), ") splits them another way.  Use one."))
     }
     out$split <- "by_value"
+  }
+  # ... and the two may not name different columns either.
+  named <- unique(unlist(lapply(.plan_of(plan, "group"),
+                                function(f) f$group_col),
+                         use.names = FALSE))
+  if (length(named) > 1L) {
+    .ard_stop(paste0(
+      "plan_paginate_group() and plan_row_group() name different ",
+      "columns:\n  ", paste(sQuote(named), collapse = ", "),
+      ".  There is one grouping column."))
   }
   # Hiding is the one thing that ADDS rather than replaces: two plan_hide()s
   # mean both columns go, and plan_row_group(show = FALSE) writes one of its own.
