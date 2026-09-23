@@ -74,7 +74,7 @@ plan_stub(
 
 plan_cell_style(plan, ...)
 
-plan_group(plan, col = NULL, mode = NULL, collapse = NULL)
+plan_group(plan, col = NULL, mode = NULL, collapse = NULL, show = TRUE)
 
 plan_hide(plan, ...)
 
@@ -267,6 +267,11 @@ will be printed.  The two do \strong{not} always give the same table.}
 
 \item{col, mode, collapse}{For \code{plan_group()}: \code{as_rtftables()}'s
 \code{group_col}, \code{group_by} and \code{collapse_repeats}.}
+
+\item{show}{For \code{plan_group()}: \code{FALSE} also hides the grouping column.
+A carrier that groups the rows without being printed is the ordinary
+shape of a grouped table, and it was the only place in six reports
+where a column had to be named by two verbs.}
 
 \item{desc}{For \code{plan_sort()}: \code{as_rtftables()}'s \code{sort_desc}.}
 

@@ -28,6 +28,25 @@
   reimplements `as_rtftables()`; the plan resolves to its arguments and
   calls it.
 
+  **A table somebody already built is a source on its own.**  `rtf_plan()`
+  now takes a finished table and does only the display half, which is what
+  makes "ard_*() for the data, the plan for the display" a real option
+  rather than a description of something that did not work.  Nothing is
+  declared to say so: `plan_spread()` and `plan_cells()` need statistics,
+  and a plan without them, on a frame that has none, is laying out a table
+  that already exists.  A plan that declares nothing at all on such a
+  frame says which verb is missing.  The same report written all three
+  ways --- verbs throughout, verbs then plan, plan throughout --- gives
+  identical pages.
+
+  **`plan_group(show = FALSE)` hides the column it groups by.**  Counted
+  across the six reports, the only place a column had to be named by two
+  verbs was `plan_group(col = X)` beside `plan_hide(X)` --- twice, both
+  the same idiom --- which is an argument, not a reason to fold three
+  clear verbs into one `plan_roles()` and a vocabulary of role names.
+  Hiding also **accumulates** now: last-wins there would silently unhide
+  whatever was named first.
+
   **`ard_plan()` is `rtf_plan()`, because a listing has no ARD in it.**
   A listing is built from SDTM or ADaM --- an ordinary frame of subject
   records --- and nothing about it is an analysis result.  `plan_listing()`

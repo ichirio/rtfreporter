@@ -279,8 +279,8 @@ test_that("a frame that is already the table is refused at the door", {
   # the refusal moved to resolution: a listing's source is an ordinary frame
   # too, and only plan_listing() can say which this is
   p <- rtf_plan(data.frame(group = "ALT", A = "31.2 (4.1)"))
+  expect_error(apply_plan(p), "declares nothing")
   expect_error(apply_plan(p), "plan_listing")
-  expect_error(apply_plan(p), "as_rtftables")
 })
 
 test_that("ard_spread() tolerates a frame with no variable/context", {
@@ -803,7 +803,49 @@ test_that("a frame that is neither an ARD nor a listing says which to add", {
   expect_error(apply_plan(rtf_plan(data.frame(a = "x", b = "y"))),
                "plan_listing")
   expect_error(apply_plan(rtf_plan(data.frame(a = "x", b = "y"))),
-               "as_rtftables")
+               "display verbs")
+})
+
+# ------------------------------------------- the three ways in, one system
+
+test_that("a finished table is a source for the display half alone", {
+  skip_if_no_cards2()
+  # pattern 2: ard_*() built the table, the plan does the rest
+  ard <- plan_ard()
+  tbl <- suppressMessages(
+    ard |> ard_normalize() |>
+      ard_spread(cols = "TRT", rows = c(group = "variable"),
+                 cells = "{n:.0f}", notes = FALSE))
+  ref <- as_rtftables(tbl, read_meta = FALSE,
+                      stub_vars = c("group", "label"), border = "tfl")
+  new <- suppressMessages(apply_plan(
+    rtf_plan(tbl) |>
+      plan_stub(vars = c("group", "label")) |>
+      plan_style(border = "tfl")))
+  expect_equal(new, ref)
+})
+
+test_that("asking for the ARD half of a finished table says what to drop", {
+  skip_if_no_cards2()
+  p <- rtf_plan(data.frame(group = "A", x = "1")) |>
+    plan_spread(cols = "x") |> plan_cells("{n}")
+  expect_error(apply_plan(p), "plan_spread")
+  expect_error(apply_plan(p), "keep the display")
+})
+
+test_that("plan_group(show = FALSE) hides the carrier it groups by", {
+  skip_if_no_cards2()
+  p <- disp_plan() |> plan_group(col = "group", show = FALSE)
+  expect_identical(rtfreporter:::.plan_rtf_args(p)$group_col, "group")
+  expect_identical(rtfreporter:::.plan_rtf_args(p)$drop_cols, "group")
+})
+
+test_that("hiding ADDS rather than replaces", {
+  skip_if_no_cards2()
+  # last-wins here would silently un-hide the first column named
+  p <- disp_plan() |> plan_hide("a") |> plan_hide("b") |>
+    plan_group(col = "c", show = FALSE)
+  expect_setequal(rtfreporter:::.plan_rtf_args(p)$drop_cols, c("a", "b", "c"))
 })
 
 test_that("the verbs refuse anything that is not a plan", {

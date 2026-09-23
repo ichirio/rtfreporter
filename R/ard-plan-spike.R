@@ -467,6 +467,10 @@ print.rtf_plan <- function(x, ...) {
 #'   `TRUE` folds it first, with [stub_cols()], which is what
 #'   `plan_cell_style()` needs --- only then can a condition see the rows that
 #'   will be printed.  The two do **not** always give the same table.
+#' @param show For `plan_group()`: `FALSE` also hides the grouping column.
+#'   A carrier that groups the rows without being printed is the ordinary
+#'   shape of a grouped table, and it was the only place in six reports
+#'   where a column had to be named by two verbs.
 #' @param col,mode,collapse For `plan_group()`: `as_rtftables()`'s
 #'   `group_col`, `group_by` and `collapse_repeats`.
 #' @param desc For `plan_sort()`: `as_rtftables()`'s `sort_desc`.
@@ -784,12 +788,18 @@ plan_cell_style <- function(plan, ...) .plan_keyed(plan, "styles", list(...))
 #
 # The argument names are as_rtftables()'s own, so nothing new is learned.
 
+# `show = FALSE` because the same column being BOTH the grouping carrier
+# and one nobody wants printed is not two decisions -- it is the ordinary
+# shape of a grouped table, and it was the only place in six reports where
+# a column had to be named twice.
 #' @rdname plan_verbs
 #' @export
-plan_group <- function(plan, col = NULL, mode = NULL, collapse = NULL) {
-  .plan_layer(plan, "group",
-              list(group_col = col, group_by = mode,
-                   collapse_repeats = collapse))
+plan_group <- function(plan, col = NULL, mode = NULL, collapse = NULL,
+                       show = TRUE) {
+  p <- .plan_layer(plan, "group",
+                   list(group_col = col, group_by = mode,
+                        collapse_repeats = collapse))
+  if (isTRUE(show) || is.null(col)) p else plan_hide(p, col)
 }
 
 # A column can be needed and not wanted: a sort carrier, the key a page
@@ -993,14 +1003,41 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
     if (stage %in% c("table", "normalize")) return(d)
     return(.plan_to_pages(plan, d))
   }
+  # A table somebody already built -- with ard_spread(), with dplyr, with
+  # anything -- is a legitimate source for the display half on its own.
+  # Asking for the ARD half is what says otherwise: plan_spread() and
+  # plan_cells() need statistics, and a finished table has none.
   if (identical(plan$kind, "wide")) {
+    ard_half <- vapply(plan$layers, function(l)
+      l$kind %in% c("normalize", "spread", "cells", "digits", "round"),
+      TRUE)
+    if (!length(plan$layers)) {
+      .ard_stop(paste0(
+        "This source has no statistics to read -- no `stat_name` / `stat`, ",
+        "and none of\n  the columns ard_normalize() adds -- and the ",
+        "plan declares nothing.\n",
+        "  A table to lay out : keep the display verbs (plan_stub, ",
+        "plan_pages, ...).\n",
+        "  A listing of records: add plan_listing(listing_col(...), ...).\n",
+        "  An ARD to convert  : add plan_spread() and plan_cells().\n",
+        "  Columns seen       : ", paste(utils::head(names(plan$ard), 8L),
+                                         collapse = ", ")))
+    }
+    if (!any(ard_half)) {
+      d <- .plan_stage(
+        .plan_reshape(plan, plan$ard, c("mutate", "filter")),
+        plan, c("mutate", "filter"))
+      .plan_remember(plan, "table", d)
+      if (stage %in% c("table", "normalize")) return(d)
+      return(.plan_to_pages(plan, d))
+    }
     .ard_stop(paste0(
       "This source has no statistics to read -- no `stat_name` / `stat`, ",
-      "and none of\n  the columns ard_normalize() adds -- and no ",
-      "plan_listing() to say it is a\n  listing of records.\n",
-      "  For a table  : an ARD, or a long frame of statistics.\n",
-      "  For a listing: add plan_listing(listing_col(...), ...).\n",
-      "  Already a table: as_rtftables().\n",
+      "and none of\n  the columns ard_normalize() adds -- but ",
+      "plan_spread() / plan_cells() need them.\n",
+      "  If it is already the table, drop those and keep the display ",
+      "verbs.\n",
+      "  If it is a listing of records, add plan_listing(...).\n",
       "  Columns seen : ", paste(utils::head(names(plan$ard), 8L),
                                  collapse = ", ")))
   }
@@ -1127,6 +1164,12 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
       out[[nm]] <- l[[nm]]
     }
   }
+  # Hiding is the one thing that ADDS rather than replaces: two plan_hide()s
+  # mean both columns go, and plan_group(show = FALSE) writes one of its own.
+  # Last-wins there would silently un-hide whatever was named first.
+  hid <- unique(unlist(lapply(.plan_of(plan, "hide"), `[[`, "drop_cols"),
+                       use.names = FALSE))
+  if (length(hid)) out$drop_cols <- hid
   # A table built from an ARD is a plain data.frame: there is no adapter
   # metadata to read, and every report was saying so by hand.
   if (is.null(out$read_meta)) out$read_meta <- FALSE
