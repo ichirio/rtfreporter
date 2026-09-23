@@ -330,30 +330,30 @@ test_that("stage = \"pages\" reaches the same rtftable as the code does", {
   expect_equal(new, ref)
 })
 
-test_that("plan_n() reads the ARD and plan_header() spends it", {
+test_that("plan_col_header(n = ) reads the ARD and spends it", {
   skip_if_no_cards2()
   # the point of resolving them together: the denominator in the header and
   # the percentages under it come from one reading of one ARD
   new <- suppressMessages(apply_plan(
     disp_plan() |>
-      plan_n(arm = function(a) ard_pull(a, cols = "TRT", variable = "AGE")) |>
       plan_stub(vars = c("group", "label")) |> plan_style(border = "tfl") |>
-      plan_header(function(n) c("Characteristic",
-                                paste0(names(n$arm), " N=",
-                                       as.integer(n$arm)))),
+      plan_col_header(n = function(a) ard_pull(a, cols = "TRT", variable = "AGE"),
+                      header = function(n) c("Characteristic",
+                                             paste0(names(n), " N=",
+                                                    as.integer(n)))),
     "pages"))
   hdr <- unlist(new[[1]]$col_header)
   expect_true(any(grepl("Placebo N=86", hdr, fixed = TRUE)))
 })
 
-test_that("a literal plan_n() value is taken as it is", {
+test_that("a literal n is taken as it is", {
   skip_if_no_cards2()
   new <- suppressMessages(apply_plan(
     disp_plan() |>
-      plan_n(total = 254L) |>
       plan_stub(vars = c("group", "label")) |>
-      plan_header(function(n) c(paste0("All (N=", n$total, ")"),
-                                "A", "B", "C")),
+      plan_col_header(n = 254L,
+                      header = function(n) c(paste0("All (N=", n, ")"),
+                                             "A", "B", "C")),
     "pages"))
   expect_true(any(grepl("All (N=254)", unlist(new[[1]]$col_header),
                         fixed = TRUE)))
@@ -405,7 +405,7 @@ test_that("how far a plan goes is read off what it declares", {
 
   # anything that only makes sense once there are pages moves the answer
   for (v in list(function(p) plan_style(p, border = "tfl"),
-                 function(p) plan_header(p, c("a", "b", "c", "d")),
+                 function(p) plan_col_header(p, c("a", "b", "c", "d")),
                  function(p) plan_cell_style(p, bold = ~ TRUE),
                  function(p) plan_after(p, identity))) {
     expect_identical(.plan_reach(v(disp_plan())), "pages")
@@ -567,8 +567,10 @@ test_that("plan_template() writes a plan that runs to the pages", {
   e <- new.env(); assign("ard", ard, e)
   suppressMessages(eval(parse(text = paste(code, collapse = "
 ")), e))
-  pg <- get("pages", e)
-  expect_type(pg, "list")
+  # the template stops at the plan: rtf_tables() takes it from there
+  p <- get("p", e)
+  expect_s3_class(p, "rtf_plan")
+  pg <- suppressMessages(apply_plan(p, "pages"))
   expect_s3_class(pg[[1]], "rtftable")
 })
 
@@ -576,8 +578,10 @@ test_that("plan_template() derives the stub and leaves the rest to be edited", {
   skip_if_no_cards2()
   code <- utils::capture.output(
     invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
-  # stub_vars is the one as_rtftables() setting the ARD can answer
-  expect_true(any(grepl('vars  = c("group", "label")', code, fixed = TRUE)))
+  # the stub is not written at all: plan_stub() works it out from what
+  # plan_spread() and plan_group() already declared
+  expect_false(any(grepl("vars", code, fixed = TRUE)))
+  expect_true(any(grepl("plan_stub(", code, fixed = TRUE)))
   expect_true(any(grepl("edit this", code, fixed = TRUE)))
 })
 
@@ -609,7 +613,7 @@ test_that("the generated header writes a real newline escape", {
                           statistic = ~ list(N = function(x) length(x))))
   code <- utils::capture.output(
     invisible(plan_template(ard, cols = "ARM", pipe = "|>")))
-  expect_true(any(grepl("plan_header", code, fixed = TRUE)))
+  expect_true(any(grepl("plan_col_header", code, fixed = TRUE)))
   # ONE backslash, not two: the generated file is R source
   one <- paste0('"', '\\', 'nN = "')
   two <- paste0('"', '\\\\', 'nN = "')
@@ -622,7 +626,7 @@ test_that("plan_template() invents no header when the N is ambiguous", {
   # two continuous variables disagree about N, so nothing is guessed
   code <- utils::capture.output(
     invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
-  expect_false(any(grepl("rtfreporter::plan_header(", code, fixed = TRUE)))
+  expect_false(any(grepl("rtfreporter::plan_col_header(", code, fixed = TRUE)))
   # and the pipeline still parses: the trailing pipe must have been removed
   expect_silent(parse(text = paste(code, collapse = "\n")))
 })

@@ -200,6 +200,23 @@ N = ", n$arm)` cannot drift from the columns
   is that a layer records no call site, so an error still points at the
   resolver rather than at the verb that caused it.
 
+  **Said once, read everywhere.**  Four things were written twice and
+  could disagree.  `plan_n()` is gone: the denominator was declared with
+  the same `cols` / `levels` `plan_spread()` already had, and a
+  denominator exists to sit in a header, so it is now
+  `plan_col_header(n = )` --- `TRUE` reads it with those keys, a function
+  of the ARD covers what `ard_pull()` cannot find, a named list supplies
+  several, and `header =` is called with the result.  `plan_stub(vars = )`
+  is derived the same way (the row keys plus the label column, less any
+  `plan_group(col = )`), and is still accepted for a stub that is neither.
+  `plan_header()` is **`plan_col_header()`**, a page header being the
+  other thing that name could mean.  And the samples end at the plan,
+  with `rtf_tables(p)` in a comment, because `apply_plan()` in a sample
+  reads as a step you have to take.
+
+  `plan_spread()` carries both `label` (the row-identity column) and
+  `labels` (value recoding), so reading it with `$` partially matched
+  `label` to `labels` and the derived stub came out one column short.
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

@@ -80,10 +80,10 @@
 .ard_plan_exports <- c(
   "rtf_plan", "plan_normalize", "plan_spread", "plan_cells",
   "plan_digits",
-  "plan_n", "plan_mutate", "plan_filter", "plan_fmt",
+  "plan_mutate", "plan_filter", "plan_fmt",
   "plan_stub", "plan_cell_style",
   "plan_group", "plan_hide", "plan_sort", "plan_blanks", "plan_pages",
-  "plan_style", "plan_header", "plan_titles", "plan_footnotes",
+  "plan_style", "plan_col_header", "plan_titles", "plan_footnotes",
   "plan_listing",
   "plan_after", "apply_plan", "plan_template")
 
@@ -492,11 +492,17 @@ print.rtf_plan <- function(x, ...) {
 #'   of a single block used on every page; give one or the other, never
 #'   both, because a three-row title on a three-page table cannot be told
 #'   apart from three one-row titles.
-#' @param header For `plan_header()`: what [set_col_header()] should be
+#' @param header For `plan_col_header()`: what [set_col_header()] should be
 #'   given --- an [rtf_col_header()] object, or a **function** of the
-#'   `plan_n()` values, which is how a denominator reaches the header
+#'   resolved `n`, which is how a denominator reaches the header
 #'   without being written down a second time.
-#' @param values For `plan_header()`: passed to [set_col_header()] as
+#' @param n For `plan_col_header()`: the denominator the header needs.
+#'   `TRUE` reads it from the ARD with the same `cols` / `levels`
+#'   `plan_spread()` was given; a **function** of the ARD computes it when
+#'   it lives somewhere `ard_pull()` cannot find; a **named list** of
+#'   either supplies several.  The resolved value is what `header =`
+#'   is called with.
+#' @param values For `plan_col_header()`: passed to [set_col_header()] as
 #'   `values =`, for a header whose cells carry `{token}` placeholders.
 #' @inheritParams ard_normalize
 #' @inheritParams ard_spread
@@ -587,7 +593,6 @@ plan_digits <- function(plan, ..., round = NULL) {
 #  and `apply_plan(stage = "pages")` calls them in the order a report is
 #  built:
 #
-#      plan_n()       numbers read out of the ARD, by name
 #      plan_mutate()  a derived column; plan_filter() drops rows.  WHERE they
 #      plan_filter()  act is where they are written -- before plan_spread()
 #                     the long frame, after it the finished table
@@ -600,14 +605,11 @@ plan_digits <- function(plan, ..., round = NULL) {
 #      plan_blanks()  where the blank rows go
 #      plan_pages()   the row budget and what a page break may cut
 #      plan_style()   borders, widths, alignment
-#      plan_header()  set_col_header()   with the plan_n() values in scope
+#      plan_col_header()  set_col_header(), and the denominator `n` it needs
 #      plan_titles()  the block ABOVE the table, on each page
 #      plan_footnotes()  the block BELOW it
 #      plan_after()   set_decimal_split() / paginate_cols() / anything else
 
-#' @rdname plan_verbs
-#' @export
-plan_n <- function(plan, ...) .plan_keyed(plan, "n", list(...))
 
 # The two seams, written the way dplyr writes them.  `...` is captured
 # UNEVALUATED and evaluated later against whichever frame the stage has,
@@ -691,6 +693,10 @@ plan_fmt <- function(plan, ...) .plan_layer(plan, "fmt", list(...))
 # rows that will be printed.
 #' @rdname plan_verbs
 #' @export
+# `vars` is derivable and was being written twice: the row keys are the
+# names of plan_spread(rows = ), the label column is the name of its
+# `label = `, and a grouping carrier is not part of the stub.  Left out,
+# it is worked out from what has already been declared.
 plan_stub <- function(plan, vars = NULL, label = NULL, indent = NULL,
                       group_summary = NULL, before = FALSE) {
   .plan_layer(plan, "stub",
@@ -853,12 +859,20 @@ plan_style <- function(plan, border = NULL, widths = NULL, ...) {
 
 # The header is a VALUE, not a set of fields: `rtf_col_header()` builds a
 # whole object and there is nothing useful to merge field-wise.  A function
-# is accepted too, and is called with the resolved plan_n() list, which is
+# is accepted too, and is called with the resolved `n`, which is
 # how "(N=86)" reaches the header without being written down twice.
 #' @rdname plan_verbs
 #' @export
-plan_header <- function(plan, header = NULL, values = NULL) {
-  .plan_layer(plan, "header", list(header = header, values = values))
+# `n` lives here because the header is the only thing that uses it, and
+# because it already knows which columns there are: `TRUE` means "the
+# denominator each percentage used", read with the SAME `cols` and
+# `levels` plan_spread() was given, so nothing is written twice.  A
+# function of the ARD covers a denominator ard_pull() cannot find; a
+# named list covers a header that needs more than one.
+plan_col_header <- function(plan, header = NULL, n = NULL,
+                            values = NULL) {
+  .plan_layer(plan, "header",
+              list(header = header, n = n, values = values))
 }
 
 # Titles and footnotes are NOT the section header and footer: those are
@@ -946,7 +960,7 @@ plan_after <- function(plan, ...) {
 #' @param plan An [rtf_plan()].
 #' @param stage How far to go.  `"auto"`, the default, is **as far as the
 #'   plan declares**: a plan that says nothing about the display stops at
-#'   the table `data.frame`; one that carries `plan_rtf()`, `plan_header()`,
+#'   the table `data.frame`; one that carries `plan_rtf()`, `plan_col_header()`,
 #'   `plan_cell_style()` or `plan_after()` goes on to the RTF pages.  You rarely
 #'   need this function at all --- [rtf_tables()] takes a plan directly ---
 #'   and naming a stage is for looking inside: `"normalize"`, `"args"`,
@@ -1202,11 +1216,63 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   if (one) pg[[1L]] else pg
 }
 
+# The stub is the row keys plus the label column, minus any column that is
+# only there to group by.  Everything in that sentence has already been
+# said by plan_spread() and plan_group(), so saying it again is a place
+# for the two to disagree.
+.plan_stub_vars <- function(plan, tbl) {
+  sp <- .plan_merge(.plan_of(plan, "spread"), deep = c("levels", "labels"))
+  rn <- if (is.null(sp[["rows"]])) "group" else names(sp[["rows"]])
+  # `[[` not `$`: plan_spread() has BOTH `label` and `labels`, and partial
+  # matching would hand back the variable labels for the label column.
+  lb <- sp[["label"]]
+  ln <- if (is.null(lb)) "label"
+        else if (length(lb) == 1L && !is.list(lb) && is.na(lb))
+          character(0)
+        else if (!is.null(names(lb)) && nzchar(names(lb)[1L]))
+          names(lb)[1L]
+        else "label"
+  g <- .plan_merge(.plan_of(plan, "group"))$group_col
+  v <- setdiff(c(rn, ln), g)
+  v <- intersect(v, names(tbl))
+  if (!length(v)) {
+    .ard_stop(paste0(
+      "plan_stub(): nothing to fold.  The row keys and label column are ",
+      "worked out from\n  plan_spread(rows = , label = ) less any ",
+      "plan_group(col = ), and none of them\n  is in the table.  ",
+      "Name them with `vars = `.\n  Columns: ",
+      paste(utils::head(names(tbl), 8L), collapse = ", ")))
+  }
+  v
+}
+
+# The denominator, read once, with the keys plan_spread() already has.
+.plan_n_values <- function(plan, n) {
+  if (is.null(n)) return(NULL)
+  sp <- .plan_merge(.plan_of(plan, "spread"), deep = c("levels", "labels"))
+  one <- function(v) {
+    if (isTRUE(v)) {
+      if (is.null(sp$cols)) {
+        .ard_stop(paste0(
+          "plan_col_header(n = TRUE) reads the denominator with the ",
+          "same `cols` plan_spread()\n  was given, and this plan ",
+          "has none.  Give a function of the ARD instead."))
+      }
+      a <- list(ard = plan$ard, cols = sp$cols)
+      if (!is.null(sp$levels)) a$levels <- sp$levels
+      return(do.call(ard_pull, a))
+    }
+    if (is.function(v)) v(plan$ard) else v
+  }
+  if (is.list(n) && !is.null(names(n)) && any(nzchar(names(n)))) {
+    return(lapply(n, one))
+  }
+  one(n)
+}
+
 .plan_to_pages <- function(plan, tbl) {
-  #  the numbers the header needs, read out of the ARD the plan is holding.
-  #  A function is called with the ARD; anything else is taken as it is.
-  nvals <- lapply(.plan_merge(.plan_of(plan, "n")), function(v)
-    if (is.function(v)) v(plan$ard) else v)
+  hdr <- .plan_merge(.plan_of(plan, "header"))
+  nvals <- .plan_n_values(plan, hdr$n)
 
   fmt <- .plan_merge(.plan_of(plan, "fmt"))
   if (length(fmt)) tbl <- do.call(fmt_numeric, c(list(data = tbl), fmt))
@@ -1214,6 +1280,9 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   .plan_remember(plan, "table", tbl)
 
   stub <- .plan_merge(.plan_of(plan, "stub"))
+  if (length(stub) && is.null(stub$vars)) {
+    stub$vars <- .plan_stub_vars(plan, tbl)
+  }
   before <- isTRUE(stub$before)
   stub$before <- NULL
   pre <- tbl
@@ -1260,9 +1329,8 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
       "styles"))
 
-  hdr <- .plan_merge(.plan_of(plan, "header"))
   if (!is.null(hdr$header)) {
-    #  a function of the plan_n() values, so "(N=86)" is written once and
+    #  a function of the resolved `n`, so "(N=86)" is written once and
     #  the number comes from the ARD rather than from memory
     # The header may need the finished table -- "a spanner over columns 3 to
     # the last" is a fact about the table, not about the ARD -- so a function
@@ -1281,7 +1349,7 @@ apply_plan <- function(plan, stage = c("auto", "normalize", "args",
   # the blocks that sit above and below the table on each page
   out <- .plan_blocks(plan, out)
 
-  # the names plan_cell_style() / plan_style(widths = ) / plan_header() use:
+  # the names plan_cell_style() / plan_style(widths = ) / plan_col_header() use:
   # read off the finished page rather than predicted
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   if (!is.null(first$data)) .plan_remember(plan, "printed", first$data)
@@ -1431,17 +1499,12 @@ plan_template <- function(ard, cols = NULL, hierarchy = character(),
   L <- c(L, "", .ard_bar("2. the display half -- edit this"))
   n_ok <- !is.null(tryCatch(ard_pull(ard, cols = f$cols),
                             error = function(e) NULL))
-  if (n_ok && length(f$cols) == 1L) {
-    L <- c(L, .plan_call(
-      "plan_n",
-      paste0("arm = function(ard) rtfreporter::ard_pull(ard, cols = ",
-             vecq(f$cols), ")"), op))
-  }
   # `plan_stub()` rather than plan_rtf(stub_vars = ): the plan then sees the
   # rows that will be printed, which plan_cell_style() needs.
+  # `vars` is left out on purpose: plan_stub() works it out from
+  # plan_spread(rows = , label = ) less any plan_group(col = ).
   L <- c(L, .plan_call("plan_stub",
-                       c(paste0("vars  = ", vecq(f$stub)),
-                         "label = \"row_label\""), op))
+                       "label = \"row_label\"", op))
   # One concern per line.  Delete the ones this report does not want;
   # none of them has to be read in order to change another.
   L <- c(L,
@@ -1452,24 +1515,30 @@ plan_template <- function(ard, cols = NULL, hierarchy = character(),
          paste0("  rtfreporter::plan_style(border = \"tfl\") ", op))
   if (n_ok && length(f$cols) == 1L) {
     L <- c(L, .plan_call(
-      "plan_header",
-      paste0("function(n) c(\"Characteristic\", ",
-             "paste0(names(n$arm), \"\\nN = \", ",
-             "as.integer(n$arm)))"), op, last = TRUE))
+      "plan_col_header",
+      c("n      = TRUE",
+        paste0("header = function(n) c(\"Characteristic\", ",
+               "paste0(names(n), \"\\nN = \", ",
+               "as.integer(n)))")), op, last = TRUE))
   } else {
     # fixed: the base pipe is " |>", and "|" is alternation in a regex
     L[length(L)] <- sub(paste0(" ", op), "", L[length(L)], fixed = TRUE)
     L <- c(L,
            "# Several column keys: as_rtftables(header_sep = ) rebuilds the",
-           "# spanning header from the \"____\" in the names, so plan_header()",
+           "# spanning header from the \"____\" in the names, so plan_col_header()",
            "# is only needed for text the data does not carry.")
   }
 
   L <- c(L, "",
-         "# print(p) says whether this gives a table or RTF pages",
-         "pages <- rtfreporter::apply_plan(p)",
-         "#  ... or hand it straight to a document:",
-         "#  doc <- rtf_document() |> rtf_section(...) |> rtf_tables(p)")
+         "# rtf_tables() takes the plan directly -- apply_plan() is only for",
+         "# looking inside:",
+         "#",
+         "#   doc <- rtf_document() |>",
+         "#     rtf_section(page = 1, secinfo = <your header / footer>) |>",
+         "#     rtf_tables(p)",
+         "#",
+         "#   print(p)        what it declares, and how far it goes",
+         "#   apply_plan(p)   the object itself")
 
   code <- L[!vapply(L, is.null, logical(1))]
   cat(paste(code, collapse = "\n"), "\n")

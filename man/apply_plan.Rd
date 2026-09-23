@@ -11,7 +11,7 @@ apply_plan(plan, stage = c("auto", "normalize", "args", "table", "pages"))
 
 \item{stage}{How far to go.  \code{"auto"}, the default, is \strong{as far as the
 plan declares}: a plan that says nothing about the display stops at
-the table \code{data.frame}; one that carries \code{plan_rtf()}, \code{plan_header()},
+the table \code{data.frame}; one that carries \code{plan_rtf()}, \code{plan_col_header()},
 \code{plan_cell_style()} or \code{plan_after()} goes on to the RTF pages.  You rarely
 need this function at all --- \code{\link[=rtf_tables]{rtf_tables()}} takes a plan directly ---
 and naming a stage is for looking inside: \code{"normalize"}, \code{"args"},

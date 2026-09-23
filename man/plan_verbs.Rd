@@ -6,7 +6,6 @@
 \alias{plan_spread}
 \alias{plan_cells}
 \alias{plan_digits}
-\alias{plan_n}
 \alias{plan_mutate}
 \alias{plan_filter}
 \alias{plan_fmt}
@@ -18,7 +17,7 @@
 \alias{plan_blanks}
 \alias{plan_pages}
 \alias{plan_style}
-\alias{plan_header}
+\alias{plan_col_header}
 \alias{plan_listing}
 \alias{plan_titles}
 \alias{plan_footnotes}
@@ -54,8 +53,6 @@ plan_spread(
 plan_cells(plan, ...)
 
 plan_digits(plan, ..., round = NULL)
-
-plan_n(plan, ...)
 
 plan_mutate(plan, ...)
 
@@ -94,7 +91,7 @@ plan_pages(
 
 plan_style(plan, border = NULL, widths = NULL, ...)
 
-plan_header(plan, header = NULL, values = NULL)
+plan_col_header(plan, header = NULL, n = NULL, values = NULL)
 
 plan_listing(
   plan,
@@ -288,12 +285,19 @@ where a column had to be named by two verbs.}
 column widths (\code{col_rel_width}).  Anything else \code{\link[=rtftable]{rtftable()}}
 understands goes through \code{...}.}
 
-\item{header}{For \code{plan_header()}: what \code{\link[=set_col_header]{set_col_header()}} should be
+\item{header}{For \code{plan_col_header()}: what \code{\link[=set_col_header]{set_col_header()}} should be
 given --- an \code{\link[=rtf_col_header]{rtf_col_header()}} object, or a \strong{function} of the
-\code{plan_n()} values, which is how a denominator reaches the header
+resolved \code{n}, which is how a denominator reaches the header
 without being written down a second time.}
 
-\item{values}{For \code{plan_header()}: passed to \code{\link[=set_col_header]{set_col_header()}} as
+\item{n}{For \code{plan_col_header()}: the denominator the header needs.
+\code{TRUE} reads it from the ARD with the same \code{cols} / \code{levels}
+\code{plan_spread()} was given; a \strong{function} of the ARD computes it when
+it lives somewhere \code{ard_pull()} cannot find; a \strong{named list} of
+either supplies several.  The resolved value is what \verb{header =}
+is called with.}
+
+\item{values}{For \code{plan_col_header()}: passed to \code{\link[=set_col_header]{set_col_header()}} as
 \verb{values =}, for a header whose cells carry \code{{token}} placeholders.}
 
 \item{type, sep, spacer, spacer_rel_width, blank_row, blank_row_first, align, layout, wrap, record}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged.
