@@ -137,6 +137,50 @@
 # `setNames(group_labels, group_vars)`: when `group_vars` is the shorter of the
 # two, setNames() gives the extra elements an NA name rather than complaining,
 # and that characteristic quietly keeps its raw variable name in the table.
+# `labels` recodes a VALUE to the text it prints as.  One dictionary for
+# the whole table is the usual thing and stays what it was.  But the same
+# value can mean two things on the two axes -- a shift table's "0" is
+# "Grade 0" down the side and "Baseline 0" across the top -- so an entry
+# whose value is itself a NAMED vector is a dictionary for that COLUMN,
+# matched on the output name then the source name:
+#
+#     labels = list(AGE    = "Age (years)",          # a value, anywhere
+#                   BASEGR = c("0" = "Baseline 0"),  # only in BASEGR
+#                   WORST  = c("0" = "Grade 0"))     # only in WORST
+#
+# The two can be mixed because they are told apart by shape, not by a
+# switch: a value has text, a column has a dictionary.
+.ard_labels_split <- function(labels) {
+  if (is.null(labels)) return(NULL)
+  if (!is.list(labels)) return(list(flat = labels, scopes = list()))
+  scoped <- vapply(labels, function(z)
+    !is.null(names(z)) && any(nzchar(names(z))), logical(1L))
+  scoped <- scoped & names(labels) != ".default"
+  flat <- labels[!scoped]
+  dots <- names(flat) == ".default"
+  flat <- c(unlist(unname(flat[dots])), unlist(flat[!dots]))
+  list(flat = flat, scopes = labels[scoped])
+}
+
+.ard_labels_for <- function(labels, ref = NULL, out = NULL) {
+  sp <- .ard_labels_split(labels)
+  if (is.null(sp)) return(NULL)
+  pick <- function(k) {
+    if (is.null(k) || length(k) != 1L || is.na(k)) return(NULL)
+    sp$scopes[[k]]
+  }
+  pick(out) %||% pick(ref) %||% sp$flat
+}
+
+# One view of every dictionary, for the places that only read the NAMES --
+# the variable order `labels` also fixes.
+.ard_labels_flat <- function(labels) {
+  sp <- .ard_labels_split(labels)
+  if (is.null(sp)) return(NULL)
+  out <- c(sp$flat, unlist(unname(sp$scopes)))
+  if (is.null(out)) NULL else out[!duplicated(names(out))]
+}
+
 .ard_check_named <- function(x, arg) {
   if (is.null(x) || !length(x)) return(invisible(TRUE))
   nms <- names(x)
@@ -1563,6 +1607,18 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   are different lengths, so that entry would never apply; every element must
 #'   be named, and an unnamed one is an error here rather than a silent
 #'   omission.
+#'
+#'   One vector is one dictionary for the **whole table**, and the same
+#'   value can mean two things on the two axes --- a shift table's `"0"`
+#'   is `"Grade 0"` down the side and `"Baseline 0"` across the top.
+#'   Scope it the way `levels` already is, with a **list keyed by
+#'   column**, matched on the output name then the source name, with
+#'   `.default` covering the rest:
+#'
+#'   ```r
+#'   labels = list(BASEGR = c("0" = "Baseline 0"),
+#'                 WORST  = c("0" = "Grade 0"))
+#'   ```
 #' @param sort `TRUE` (default) sorts by the row keys, using the label column
 #'   too when `levels` gave it an explicit order; `FALSE` leaves the rows as
 #'   they were built.  A **character vector** names the keys instead, in
@@ -1664,6 +1720,11 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   }
 
   .ard_check_named(labels, "labels")
+  if (is.list(labels)) {
+    for (k in names(.ard_labels_split(labels)$scopes)) {
+      .ard_check_named(labels[[k]], paste0("labels$", k))
+    }
+  }
   .ard_check_named(levels, "levels")
 
   if (!inherits(x, "ard_long") &&
@@ -1754,16 +1815,17 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     if (is.null(levels)) return(NULL)
     levels[[r$out]] %||% levels[[r$ref]]
   }
-  recode <- function(v) {
-    if (is.null(labels)) return(as.character(v))
+  recode <- function(v, ref = NULL, out = NULL) {
+    lab <- .ard_labels_for(labels, ref, out)
+    if (is.null(lab)) return(as.character(v))
     v <- as.character(v)
-    hit <- !is.na(v) & v %in% names(labels)
-    v[hit] <- unname(labels[v[hit]])
+    hit <- !is.na(v) & v %in% names(lab)
+    v[hit] <- unname(lab[v[hit]])
     v
   }
 
   # ---- the column key -----------------------------------------------------
-  colparts <- lapply(colrefs, function(r) recode(d[[r$ref]]))
+  colparts <- lapply(colrefs, function(r) recode(d[[r$ref]], r$ref, r$out))
   ok <- Reduce(`&`, lapply(colparts, function(v) !is.na(v)))
   ignored <- .ard_ignored_bind(
     attr(x, "ard_ignored", exact = TRUE),
@@ -1775,7 +1837,8 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   # column order: lexicographic on the ordered col keys
   ord_parts <- lapply(seq_along(colrefs), function(i) {
     lv <- lev_for(colrefs[[i]])
-    lv <- if (is.null(lv)) .ard_first_seen(colparts[[i]]) else recode(lv)
+    lv <- if (is.null(lv)) .ard_first_seen(colparts[[i]]) else
+      recode(lv, colrefs[[i]]$ref, colrefs[[i]]$out)
     .ard_as_factor(colparts[[i]], lv, ordered = TRUE)
   })
   colord <- unique(data.frame(key = colkey,
@@ -1899,12 +1962,13 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
 
   # recode + factorise the row keys
   for (r in rowrefs) {
-    v <- recode(long[[r$out]])
+    v <- recode(long[[r$out]], r$ref, r$out)
+    lab <- .ard_labels_for(labels, r$ref, r$out)
     lv <- lev_for(r)
     if (!is.null(lv)) {
-      long[[r$out]] <- .ard_as_factor(v, recode(lv))
-    } else if (!is.null(labels) && any(as.character(long[[r$out]]) != v)) {
-      long[[r$out]] <- .ard_as_factor(v, unname(labels[names(labels) %in%
+      long[[r$out]] <- .ard_as_factor(v, recode(lv, r$ref, r$out))
+    } else if (!is.null(lab) && any(as.character(long[[r$out]]) != v)) {
+      long[[r$out]] <- .ard_as_factor(v, unname(lab[names(lab) %in%
         .ard_first_seen(long[[r$out]])]))
     } else {
       long[[r$out]] <- v
@@ -1922,7 +1986,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
         (!is.null(levels) && any(names(levels) %in% .ard_first_seen(d$variable))))) {
       lv <- .ard_label_order(d, cells, c(levels, fl[setdiff(names(fl),
                                                             names(levels))]),
-                             labels)
+                             .ard_labels_flat(labels))
     }
     if (!is.null(lv)) long[[label_out]] <- .ard_as_factor(long[[label_out]], lv)
   }

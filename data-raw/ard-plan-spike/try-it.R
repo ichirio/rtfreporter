@@ -6,10 +6,15 @@
 #
 #      Rscript data-raw/ard-plan-spike/try-it.R
 #
-#  Left:  ard_normalize() |> ard_spread()   -- runs as it is called
-#  Right: ard_plan() |> plan_*() |> apply_plan()  -- declarations, LAST WINS
+#  Left:  ard_normalize() |> ard_spread()          -- runs as it is called
+#  Right: rtf_plan() |> plan_*() |> apply_plan()   -- declarations, LAST WINS
 #
-#  The point of the spike is the third block: changing the decimals for ONE
+#  Flattening is NOT deferred either way.  rtf_plan() takes the normalized
+#  frame and the ROLES -- which column goes across, which go down, which
+#  carries the row identity -- so the names it is given are names you can
+#  see, the way ggplot(data, aes(x, y)) works.
+#
+#  The point of the spike is block 3: changing the decimals for ONE
 #  variable.  With the immediate form the templates are the only place digits
 #  live, so a per-variable change means writing that variable's whole `cells`
 #  entry.  With a plan it is one more line that wins over the earlier one.
@@ -58,17 +63,19 @@ direct <- ard |>
 print(as.data.frame(direct))
 
 # -- 2. the same thing as a plan ---------------------------------------------
-bar("2. ard_plan() |> plan_*() |> apply_plan()   (nothing runs until the end)")
+bar("2. rtf_plan() |> plan_*() |> apply_plan()   (the roles, said once)")
 
-p <- ard_plan(ard) |>
-  plan_spread(cols = "TRT01P", rows = c(group = "variable"), notes = FALSE) |>
+nz <- ard_normalize(ard)        # run it, and look at it if you like
+
+p <- nz |>
+  rtf_plan(cols = "TRT01P", rows = c(group = "variable"), notes = FALSE) |>
   plan_cells(continuous  = c("n"         = "{N:d}",
                              "Mean (SD)" = "{mean} ({sd})"),
              categorical = "{n:d} ({p:%})") |>   # `{p:%}`: digits from the plan
   plan_digits(2) |>
   plan_digits(SEX = 1)          # same declarations as block 1
 
-print(p)                                   # a plan is inspectable before it runs
+print(p)                            # the roles, the layers, and the columns
 planned <- apply_plan(p)
 print(as.data.frame(planned))
 
@@ -84,43 +91,60 @@ tuned <- p |>
 
 # what the layers resolved to, before anything is computed
 cat("\nresolved `cells` (this is the argument ard_spread() will be given):\n")
-str(apply_plan(tuned, "args")$spread$cells, max.level = 1, give.attr = FALSE)
+str(apply_plan(tuned, "args")$cells, max.level = 1, give.attr = FALSE)
 
 cat("\n")
 print(as.data.frame(apply_plan(tuned)))
 
-# -- 4. the seam still works -------------------------------------------------
-bar("4. reaching in with dplyr, then starting a plan from the result")
+# -- 4. dplyr, wherever it is needed -----------------------------------------
+bar("4. reaching in with dplyr -- before the plan, or inside it")
 
-d <- ard_normalize(ard)
-d <- d[d$variable != "BMIBL", ]            # the kind of edit no plan can declare
+d <- nz[nz$variable != "BMIBL", ]      # the kind of edit no plan can declare
 
-reentered <- ard_plan(d) |>                # a normalized frame is accepted
-  plan_spread(cols = "TRT01P", rows = c(group = "variable"), notes = FALSE) |>
+reentered <- d |>
+  rtf_plan(cols = "TRT01P", rows = c(group = "variable"), notes = FALSE) |>
   plan_cells(continuous = c("n" = "{N:d}", "Mean (SD)" = "{mean} ({sd})"),
              categorical = "{n:d} ({p:%})") |>
   plan_digits(1) |>
   apply_plan()
 print(as.data.frame(reentered))
 
-bar("5. no cards at all -- a long frame somebody built with dplyr")
+# -- 5. a frame that never went near cards -----------------------------------
+bar("5. no cards at all -- a study's own summary, with its own names")
 
-# keys, a statistic name, a value.  That is everything ard_spread() reads, so
-# the cell templates and the last-wins digits work with no ARD in sight.
+# Nothing here is called `variable`, `stat_name` or `stat`, and the row label
+# lives in two different columns depending on the kind of row.  Say so, once.
 own <- data.frame(
-  TRT       = rep(c("A", "B"), each = 6),
-  variable  = rep(rep(c("ALT", "AST"), each = 3), 2),
-  stat_name = rep(c("n", "mean", "sd"), 4),
-  stat      = c(20, 31.245, 4.1, 20, 28.7, 3.92,
-                18, 33.108, 5.3, 18, 30.2, 4.44),
+  TRT    = rep(c("A", "B"), each = 5),
+  PARAM  = rep(c("ALT", "ALT", "ALT", "GRADE", "GRADE"), 2),
+  CAT    = c(NA, NA, NA, "Grade 1", "Grade 2",
+             NA, NA, NA, "Grade 1", "Grade 2"),
+  STAT   = c("n", "mean", "sd", "n", "n"),
+  VALUE  = c(20, 31.245, 4.1, 6, 4, 18, 33.108, 5.3, 7, 5),
   stringsAsFactors = FALSE)
 
 print(as.data.frame(apply_plan(
-  ard_plan(own) |>                       # "long": plan_normalize() is skipped
-    plan_spread(cols = "TRT", rows = c(param = "variable"),
-                label = c(row = "stat_name"), notes = FALSE) |>
-    plan_cells(c("n" = "{n:.0f}", "Mean (SD)" = "{mean} ({sd})")) |>
-    plan_digits(2) |>
-    plan_digits(AST = 3))))               # still last wins
+  own |>
+    rtf_plan(cols = "TRT", rows = c(param = "PARAM"),
+             # every statistic is a row of its own, and WHICH COLUMN names
+             # the row depends on the kind of row: a level for the
+             # categorical ones, the statistic for the continuous ones.
+             # Coalesce them -- first non-missing wins.
+             stats    = "rows",
+             label    = list(row = c("CAT", "STAT")),
+             variable = "PARAM", stat_name = "STAT", stat = "VALUE",
+             notes    = FALSE))))
+
+# -- 6. a plan with no data is a template ------------------------------------
+bar("6. the roles without the data: one house style, every study")
+
+house <- rtf_plan(cols = "TRT01P", rows = c(group = "variable"),
+                  notes = FALSE) |>
+  plan_cells(continuous  = c("n" = "{N:d}", "Mean (SD)" = "{mean} ({sd})"),
+             categorical = "{n:d} ({p:%})") |>
+  plan_digits(1)
+
+print(house)                            # it prints, it just cannot run
+print(as.data.frame(apply_plan(plan_data(house, nz))))
 
 bar("done")

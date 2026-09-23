@@ -4,30 +4,29 @@
 \alias{apply_plan}
 \title{Run a plan, or look inside it (SPIKE)}
 \usage{
-apply_plan(plan, stage = c("auto", "normalize", "args", "table", "pages"))
+apply_plan(plan, stage = c("auto", "long", "args", "table", "pages"))
 }
 \arguments{
 \item{plan}{An \code{\link[=rtf_plan]{rtf_plan()}}.}
 
 \item{stage}{How far to go.  \code{"auto"}, the default, is \strong{as far as the
 plan declares}: a plan that says nothing about the display stops at
-the table \code{data.frame}; one that carries \code{plan_rtf()}, \code{plan_col_header()},
-\code{plan_cell_style()} or \code{plan_after()} goes on to the RTF pages.  You rarely
-need this function at all --- \code{\link[=rtf_tables]{rtf_tables()}} takes a plan directly ---
-and naming a stage is for looking inside: \code{"normalize"}, \code{"args"},
-\code{"table"}, \code{"pages"}.
+the table \code{data.frame}; one that carries a display verb goes on
+to the RTF pages.  You rarely need this function at all ---
+\code{\link[=rtf_tables]{rtf_tables()}} takes a plan directly --- and naming a stage is
+for looking inside: \code{"long"}, \code{"args"}, \code{"table"}, \code{"pages"}.
 
 The named stages: \code{"table"} returns the table
-\code{data.frame}, the same object \code{\link[=ard_spread]{ard_spread()}} returns.  \code{"normalize"}
-returns the long frame \code{\link[=ard_normalize]{ard_normalize()}} returns, which is where you
-reach in with dplyr if you have to.  \code{"args"} returns the resolved
+\code{data.frame}, the same object \code{\link[=ard_spread]{ard_spread()}} returns.  \code{"long"}
+returns the frame going in, with \code{plan_mutate()} and
+\code{plan_filter()} applied.  \code{"args"} returns the resolved
 argument lists without running anything --- the call the plan amounts
 to.  \code{"pages"} goes all the way: \code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=stub_cols]{stub_cols()}},
 \code{\link[=as_rtftables]{as_rtftables()}}, \code{\link[=set_col_header]{set_col_header()}} and whatever \code{plan_after()}
 declared, giving the RTF pages.}
 }
 \value{
-A data frame; for \code{stage = "args"} a list of two argument lists;
+A data frame; for \code{stage = "args"} the resolved argument list;
 for \code{stage = "pages"} what \code{\link[=as_rtftables]{as_rtftables()}} and the steps after it
 return.
 }
@@ -43,15 +42,16 @@ do" --- there is no second code path that could disagree with the first.
 
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
-  p <- rtf_plan(cards::ard_stack(
+  p <- cards::ard_stack(
          cards::ADSL, .by = ARM,
-         cards::ard_continuous(variables = AGE))) |>
-    plan_spread(cols = "ARM", rows = c(group = "variable")) |>
+         cards::ard_continuous(variables = AGE)) |>
+    ard_normalize() |>
+    rtf_plan(cols = "ARM", rows = c(group = "variable")) |>
     plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})")) |>
     plan_digits(2) |>
     plan_digits(AGE = 0)
 
-  str(apply_plan(p, "args")$spread$cells)   # AGE won
+  str(apply_plan(p, "args")$cells)   # AGE won
   apply_plan(p)
 }
 }

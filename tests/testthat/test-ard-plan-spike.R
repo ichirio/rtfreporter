@@ -3,6 +3,13 @@
 
 skip_if_no_cards2 <- function() testthat::skip_if_not_installed("cards")
 
+# Flattening is RUN before the plan now, so that rtf_plan()'s roles
+# name columns that exist.  This keeps the tests to one line.
+nz <- function(x) {
+  if (identical(rtfreporter:::.plan_source_kind(x), "ard"))
+    suppressMessages(ard_normalize(x)) else x
+}
+
 plan_ard <- function() {
   adsl <- cards::ADSL
   adsl$SEX <- as.character(adsl$SEX)
@@ -17,8 +24,7 @@ plan_ard <- function() {
 }
 
 base_plan <- function(ard = plan_ard()) {
-  rtf_plan(ard) |>
-    plan_spread(cols = "TRT", rows = c(group = "variable")) |>
+  rtf_plan(nz(ard), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(continuous  = c("n"         = "{N:d}",
                                "Mean (SD)" = "{mean} ({sd})"),
                categorical = "{n:d} ({p:.1f%})")
@@ -29,7 +35,7 @@ base_plan <- function(ard = plan_ard()) {
 test_that("a later layer wins, which is the whole point", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_digits(2) |> plan_digits(AGE = 0)
-  cells <- apply_plan(p, "args")$spread$cells
+  cells <- apply_plan(p, "args")$cells
 
   # set everything, then fix one variable -- a two-line edit
   expect_match(cells$AGE[["Mean (SD)"]], "{mean:.0f} ({sd:.0f})", fixed = TRUE)
@@ -41,14 +47,14 @@ test_that("last wins for the same key too, not just for a narrower one", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_digits(2) |> plan_digits(AGE = 0) |>
     plan_digits(AGE = 3)
-  expect_match(apply_plan(p, "args")$spread$cells$AGE[["Mean (SD)"]],
+  expect_match(apply_plan(p, "args")$cells$AGE[["Mean (SD)"]],
                "{mean:.3f}", fixed = TRUE)
 })
 
 test_that("a later plan_cells() replaces an earlier entry for that key", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_cells(continuous = c("n" = "{N:d}"))
-  ent <- apply_plan(p, "args")$spread$cells$continuous
+  ent <- apply_plan(p, "args")$cells$continuous
   expect_length(ent, 1L)
   expect_identical(unname(ent), "{N:d}")
 })
@@ -56,36 +62,42 @@ test_that("a later plan_cells() replaces an earlier entry for that key", {
 test_that("levels and labels merge one name at a time", {
   skip_if_no_cards2()
   p <- base_plan() |>
-    plan_spread(levels = list(TRT = c("Placebo", "Xanomeline Low Dose",
-                                      "Xanomeline High Dose"))) |>
-    plan_spread(levels = list(SEX = c("M", "F")))     # adds, does not replace
-  lv <- apply_plan(p, "args")$spread$levels
+    plan_levels(TRT = c("Placebo", "Xanomeline Low Dose",
+                        "Xanomeline High Dose")) |>
+    plan_levels(SEX = c("M", "F"))          # adds, does not replace
+  lv <- apply_plan(p, "args")$levels
   expect_setequal(names(lv), c("TRT", "SEX"))
   expect_identical(lv$SEX, c("M", "F"))
 })
 
-test_that("a scalar field is replaced wholesale", {
+test_that("one key restated is replaced, not merged into", {
   skip_if_no_cards2()
-  p <- base_plan() |> plan_spread(sep = "__") |> plan_spread(sep = "____")
-  expect_identical(apply_plan(p, "args")$spread$sep, "____")
+  p <- base_plan() |> plan_levels(SEX = c("M", "F")) |>
+    plan_levels(SEX = c("F", "M"))
+  expect_identical(apply_plan(p, "args")$levels$SEX, c("F", "M"))
+})
+
+test_that("a map can be handed over whole, not taken apart", {
+  skip_if_no_cards2()
+  lab <- c(AGE = "Age (years)", SEX = "Sex")
+  p <- base_plan() |> plan_labels(lab)
+  expect_identical(unlist(apply_plan(p, "args")$labels), lab)
 })
 
 # ------------------------------------------------------------ the digits
 
 test_that("a token that states its own digits keeps them", {
   skip_if_no_cards2()
-  p <- rtf_plan(plan_ard()) |>
-    plan_spread(cols = "TRT", rows = c(group = "variable")) |>
+  p <- rtf_plan(nz(plan_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(continuous = c("Mean (SD)" = "{mean:.4f} ({sd})")) |>
     plan_digits(1)
-  ent <- apply_plan(p, "args")$spread$cells$AGE
+  ent <- apply_plan(p, "args")$cells$AGE
   expect_match(ent[["Mean (SD)"]], "{mean:.4f} ({sd:.1f})", fixed = TRUE)
 })
 
 test_that("`{p:%}` with no digits declared says what to do about it", {
   skip_if_no_cards2()
-  p <- rtf_plan(plan_ard()) |>
-    plan_spread(cols = "TRT", rows = c(group = "variable")) |>
+  p <- rtf_plan(nz(plan_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(categorical = "{n:d} ({p:%})")
   expect_error(apply_plan(p, "args"), "asks the plan for its digits")
   expect_error(apply_plan(p, "args"), "plan_digits")
@@ -94,13 +106,12 @@ test_that("`{p:%}` with no digits declared says what to do about it", {
 test_that("digits pick by specificity once last-wins has had its say", {
   skip_if_no_cards2()
   # `continuous` is a kind, `AGE` is a variable: the variable is narrower
-  p <- rtf_plan(plan_ard()) |>
-    plan_spread(cols = "TRT", rows = c(group = "variable")) |>
+  p <- rtf_plan(nz(plan_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})"),
                categorical = "{n:d} ({p:%})") |>
     plan_digits(continuous = 2) |> plan_digits(AGE = 0) |>
     plan_digits(SEX = 1)
-  cells <- apply_plan(p, "args")$spread$cells
+  cells <- apply_plan(p, "args")$cells
   expect_match(cells$BMIBL[["Mean (SD)"]], "{mean:.2f}", fixed = TRUE)
   expect_match(cells$AGE[["Mean (SD)"]], "{mean:.0f}", fixed = TRUE)
   expect_match(cells$SEX, "{p:.1f%}", fixed = TRUE)
@@ -108,30 +119,31 @@ test_that("digits pick by specificity once last-wins has had its say", {
 
 # ----------------------------------------------------- nothing runs early
 
-test_that("the ARD is held, not transformed, and nothing is computed", {
+test_that("the data is held, not transformed, and nothing is run", {
   skip_if_no_cards2()
   ard <- plan_ard()
   p <- base_plan(ard) |> plan_digits(1)
-  expect_identical(p$ard, ard)
+  expect_identical(p$data, nz(ard))
   expect_false(is.data.frame(p$layers))
   # `args` resolves without running the conversion
   a <- apply_plan(p, "args")
-  expect_setequal(names(a), c("normalize", "spread"))
+  expect_true(all(c("cols", "rows", "cells") %in% names(a)))
 })
 
 test_that("the plan prints its layers in the order that decides the result", {
   skip_if_no_cards2()
   out <- utils::capture.output(print(base_plan() |> plan_digits(1)))
-  expect_true(any(grepl("after normalize", out)))
-  expect_true(any(grepl("1\\. spread", out)))
-  expect_true(any(grepl("3\\. digits", out)))
+  expect_true(any(grepl("what cols / rows / label may name", out)))
+  expect_true(any(grepl("cols ", out)))
+  expect_true(any(grepl("1\\. cells", out)))
+  expect_true(any(grepl("2\\. digits", out)))
   expect_true(any(grepl("apply_plan", out)))
 })
 
-test_that("an empty plan says so rather than printing nothing", {
+test_that("a plan with no layers says so rather than printing nothing", {
   skip_if_no_cards2()
-  out <- utils::capture.output(print(rtf_plan(plan_ard())))
-  expect_true(any(grepl("empty", out)))
+  out <- utils::capture.output(print(rtf_plan(nz(plan_ard()))))
+  expect_true(any(grepl("no layers", out)))
 })
 
 # ------------------------------------------- the same answer as the verbs
@@ -146,17 +158,16 @@ test_that("a plan and the immediate form agree", {
     ard |> ard_normalize() |>
       ard_spread(cols = "TRT", rows = c(group = "variable"), cells = cells))
   planned <- suppressMessages(apply_plan(
-    rtf_plan(ard) |>
-      plan_spread(cols = "TRT", rows = c(group = "variable")) |>
+    rtf_plan(nz(ard), cols = "TRT", rows = c(group = "variable")) |>
       plan_cells(continuous = cells$continuous,
                  categorical = cells$categorical)))
   expect_equal(planned, direct)
 })
 
-test_that("stage = 'normalize' is what ard_normalize() returns", {
+test_that("stage = 'long' is the frame going in", {
   skip_if_no_cards2()
   ard <- plan_ard()
-  expect_equal(apply_plan(base_plan(ard), "normalize"), ard_normalize(ard))
+  expect_equal(apply_plan(base_plan(ard), "long"), ard_normalize(ard))
 })
 
 # ----------------------------------------------------------- the seam
@@ -167,31 +178,41 @@ test_that("a plan can start from an already-normalized frame", {
   d <- ard_normalize(ard)
   d$variable <- ifelse(d$variable == "BMIBL", "AGE", d$variable)  # a seam edit
 
-  p <- rtf_plan(d)
-  expect_true(p$normalized)
+  p <- rtf_plan(d, cols = "TRT", rows = c(group = "variable"))
+  expect_identical(p$kind, "normalized")
   expect_true(any(grepl("normalized frame",
                         utils::capture.output(print(p)))))
 
   out <- suppressMessages(apply_plan(
-    p |> plan_spread(cols = "TRT", rows = c(group = "variable")) |>
-      plan_cells(continuous = c("n" = "{N:d}"), categorical = "{n:d}")))
+    p |> plan_cells(continuous = c("n" = "{N:d}"), categorical = "{n:d}")))
   expect_true(is.data.frame(out))
 })
 
-test_that("a raw ARD is NOT mistaken for a normalized one", {
+test_that("a raw ARD is refused, with the line to write", {
   skip_if_no_cards2()
-  # `stat_name` is in a raw cards ARD too; only ard_normalize()'s own
-  # columns may be used to tell them apart
-  expect_false(isTRUE(rtf_plan(plan_ard())$normalized))
+  # the roles name columns of what is handed in, so a frame that has
+  # not been flattened cannot be one of them
+  expect_error(rtf_plan(plan_ard()), "NORMALIZED frame")
+  expect_error(rtf_plan(plan_ard()), "ard_normalize()", fixed = TRUE)
 })
 
-test_that("plan_normalize() on a normalized frame is refused, not ignored", {
+test_that("a role that names no column blames rtf_plan()", {
   skip_if_no_cards2()
-  p <- rtf_plan(ard_normalize(plan_ard())) |>
-    plan_normalize(hierarchy = "SEX") |>
-    plan_spread(cols = "TRT")
-  expect_error(apply_plan(p), "does not need flattening")
-  expect_error(apply_plan(p), "hierarchy")
+  expect_error(rtf_plan(nz(plan_ard()), cols = "ARM"),
+               "no column .ARM. in the data")
+  expect_error(rtf_plan(nz(plan_ard()), cols = "TRT",
+                        rows = c(g = "nope")),
+               "rtf_plan(rows = )", fixed = TRUE)
+})
+
+test_that("a plan with no data is a template until it is given one", {
+  skip_if_no_cards2()
+  p <- rtf_plan(cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(continuous = c("n" = "{N:d}"), categorical = "{n:d}")
+  expect_null(p$data)
+  expect_error(apply_plan(p), "TEMPLATE")
+  out <- suppressMessages(apply_plan(plan_data(p, nz(plan_ard()))))
+  expect_true(is.data.frame(out))
 })
 
 # --------------------------------------------------------------- refusals
@@ -204,13 +225,13 @@ test_that("two unnamed values are refused", {
 test_that("the rounding family is last-wins, like every other layer", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_digits(1, round = "sas") |> plan_digits(2, round = "r")
-  expect_identical(apply_plan(p, "args")$spread$round, "r")
+  expect_identical(apply_plan(p, "args")$round, "r")
 })
 
 test_that("one rounding family reaches ard_spread()", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_digits(1) |> plan_digits(1, round = "sas")
-  expect_identical(apply_plan(p, "args")$spread$round, "sas")
+  expect_identical(apply_plan(p, "args")$round, "sas")
 })
 
 # ------------------------------------------------- what a plan starts from
@@ -240,8 +261,7 @@ test_that("the four kinds of source are told apart by their columns", {
 
 test_that("a long frame nobody built with cards makes a table", {
   out <- suppressMessages(apply_plan(
-    rtf_plan(hand_long()) |>
-      plan_spread(cols = "TRT", rows = c(param = "PARAM"),
+    rtf_plan(nz(hand_long()), cols = "TRT", rows = c(param = "PARAM"),
                   label = c(row = "stat_name"), notes = FALSE) |>
       plan_cells(c("n" = "{n:.0f}", "Mean (SD)" = "{mean} ({sd})")) |>
       plan_digits(2)))
@@ -253,8 +273,7 @@ test_that("a long frame nobody built with cards makes a table", {
 
 test_that("per-variable keys work once the column is called `variable`", {
   out <- suppressMessages(apply_plan(
-    rtf_plan(hand_long("variable")) |>
-      plan_spread(cols = "TRT", rows = c(param = "variable"),
+    rtf_plan(nz(hand_long("variable")), cols = "TRT", rows = c(param = "variable"),
                   label = c(row = "stat_name"), notes = FALSE) |>
       plan_cells(c("Mean (SD)" = "{mean} ({sd})")) |>
       plan_digits(2) |> plan_digits(AST = 3)))
@@ -263,8 +282,7 @@ test_that("per-variable keys work once the column is called `variable`", {
 })
 
 test_that("a digits key that reached nothing is refused, not ignored", {
-  p <- rtf_plan(hand_long()) |>
-    plan_spread(cols = "TRT", rows = c(param = "PARAM"),
+  p <- rtf_plan(nz(hand_long()), cols = "TRT", rows = c(param = "PARAM"),
                 label = c(row = "stat_name"), notes = FALSE) |>
     plan_cells(c("Mean (SD)" = "{mean} ({sd})")) |>
     plan_digits(2) |>
@@ -305,8 +323,7 @@ test_that("a missing .label says what to do instead of naming the ARD", {
 # --------------------------------------------------------- the display half
 
 disp_plan <- function(ard = plan_ard()) {
-  rtf_plan(ard) |>
-    plan_spread(cols = "TRT", rows = c(group = "variable"),
+  rtf_plan(nz(ard), cols = "TRT", rows = c(group = "variable"),
                 notes = FALSE) |>
     plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
                categorical = "{n:.0f} ({p:.1f%})")
@@ -419,8 +436,8 @@ test_that("a named stage still stops where it is told, for looking inside", {
   skip_if_no_cards2()
   p <- disp_plan() |> plan_stub(vars = c("group", "label"))
   expect_true(is.data.frame(suppressMessages(apply_plan(p, "table"))))
-  expect_s3_class(suppressMessages(apply_plan(p, "normalize")), "data.frame")
-  expect_setequal(names(apply_plan(p, "args")), c("normalize", "spread"))
+  expect_s3_class(suppressMessages(apply_plan(p, "long")), "data.frame")
+  expect_true(all(c("cols", "cells") %in% names(apply_plan(p, "args"))))
   expect_type(suppressMessages(apply_plan(p)), "list")
 })
 
@@ -556,8 +573,8 @@ test_that("plan_template() writes a plan that runs to the pages", {
   ard <- plan_ard()
   gen <- utils::capture.output(code <- plan_template(ard, cols = "TRT",
                                                      pipe = "|>"))
-  expect_true(any(grepl("rtf_plan(ard)", code, fixed = TRUE)))
-  expect_true(any(grepl("plan_spread(", code, fixed = TRUE)))
+  expect_true(any(grepl("ard_normalize()", code, fixed = TRUE)))
+  expect_true(any(grepl("rtf_plan(", code, fixed = TRUE)))
   expect_true(any(grepl("plan_cells(", code, fixed = TRUE)))
   # both halves, because a plan that stops at the table is half a plan
   expect_true(any(grepl("plan_style(", code, fixed = TRUE)))
@@ -579,7 +596,7 @@ test_that("plan_template() derives the stub and leaves the rest to be edited", {
   code <- utils::capture.output(
     invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
   # the stub is not written at all: plan_stub() works it out from what
-  # plan_spread() and plan_group() already declared
+  # rtf_plan(rows = ) and plan_group() already declared
   expect_false(any(grepl("vars", code, fixed = TRUE)))
   expect_true(any(grepl("plan_stub(", code, fixed = TRUE)))
   expect_true(any(grepl("edit this", code, fixed = TRUE)))
@@ -635,12 +652,12 @@ test_that("plan_template() invents no header when the N is ambiguous", {
 
 test_that("plan_mutate() and plan_filter() work on the long frame", {
   skip_if_no_cards2()
-  p <- rtf_plan(plan_ard()) |>
+  p <- rtf_plan(nz(plan_ard()), cols = "TRT",
+                rows = c(group = "variable"), notes = FALSE) |>
     plan_filter(stat_name != "sd") |>
     plan_mutate(variable = toupper(variable)) |>
-    plan_spread(cols = "TRT", rows = c(group = "variable"), notes = FALSE) |>
     plan_cells(continuous = c("Mean" = "{mean:.1f}"), categorical = "{n:.0f}")
-  d <- suppressMessages(apply_plan(p, "normalize"))
+  d <- suppressMessages(apply_plan(p, "long"))
   expect_false(any(d$stat_name == "sd"))
   expect_true(all(d$variable == toupper(d$variable)))
   # and the whole thing is still one sentence: nothing left the plan
@@ -651,31 +668,32 @@ test_that("the seams run in the order they were declared", {
   skip_if_no_cards2()
   # mutate-then-filter keeps what the mutate made; the other order does not
   keep <- suppressMessages(apply_plan(
-    rtf_plan(plan_ard()) |>
+    rtf_plan(nz(plan_ard())) |>
       plan_mutate(.tag = "z") |> plan_filter(.tag == "z"),
-    "normalize"))
+    "long"))
   drop <- suppressMessages(apply_plan(
-    rtf_plan(plan_ard()) |>
+    rtf_plan(nz(plan_ard())) |>
       plan_mutate(.tag = "z") |> plan_filter(stat_name == "sd") |>
       plan_mutate(.tag2 = "y"),
-    "normalize"))
+    "long"))
   expect_gt(nrow(keep), 0L)
   expect_true(all(drop$stat_name == "sd"))
   expect_true(".tag2" %in% names(drop))
 })
 
-test_that("plan_mutate() takes an expression, like mutate() does", {
+test_that("plan_derive() takes an expression, like mutate() does", {
   skip_if_no_cards2()
+  # `group` is a column of the TABLE, which is what plan_derive() sees
   out <- suppressMessages(apply_plan(
-    disp_plan() |> plan_mutate(flag = ifelse(group == "SEX", "y", "n"))))
+    disp_plan() |> plan_derive(flag = ifelse(group == "SEX", "y", "n"))))
   expect_true("flag" %in% names(out))
   expect_setequal(unique(out$flag), c("y", "n"))
 })
 
-test_that("plan_mutate() still takes a function for what an expression cannot", {
+test_that("a seam still takes a function for what an expression cannot", {
   skip_if_no_cards2()
   out <- suppressMessages(apply_plan(
-    disp_plan() |> plan_mutate(function(d) d[order(d$label), , drop = FALSE])))
+    disp_plan() |> plan_derive(function(d) d[order(d$label), , drop = FALSE])))
   expect_true(is.data.frame(out))
 })
 
@@ -693,8 +711,9 @@ test_that("print() names the columns of every stage it has", {
     plan_style(border = "tfl")
 
   out <- utils::capture.output(print(p))
-  # normalising is the cheap half, so it is always answered
-  expect_true(any(grepl("after normalize", out, fixed = TRUE)))
+  # the frame going in is to hand, so it is always answered
+  expect_true(any(grepl("cols / rows / label may name", out,
+                        fixed = TRUE)))
   expect_true(any(grepl("stat_name", out, fixed = TRUE)))
   # spreading is not, so it says so rather than costing a run
   expect_true(any(grepl("not computed yet", out, fixed = TRUE)))
@@ -831,9 +850,9 @@ test_that("a finished table is a source for the display half alone", {
 
 test_that("asking for the ARD half of a finished table says what to drop", {
   skip_if_no_cards2()
-  p <- rtf_plan(data.frame(group = "A", x = "1")) |>
-    plan_spread(cols = "x") |> plan_cells("{n}")
-  expect_error(apply_plan(p), "plan_spread")
+  p <- rtf_plan(nz(data.frame(group = "A", x = "1")), cols = "x") |>
+    plan_cells("{n}")
+  expect_error(apply_plan(p), "plan_cells() need them", fixed = TRUE)
   expect_error(apply_plan(p), "keep the display")
 })
 
@@ -855,5 +874,75 @@ test_that("hiding ADDS rather than replaces", {
 test_that("the verbs refuse anything that is not a plan", {
   expect_error(plan_cells(data.frame(a = 1), "x"), "Expected an rtf_plan")
   expect_error(apply_plan(data.frame(a = 1)), "Expected an rtf_plan")
-  expect_error(rtf_plan(NULL), "required")
+  expect_error(plan_data(data.frame(a = 1), data.frame(b = 2)),
+               "Expected an rtf_plan")
+  expect_error(plan_data(rtf_plan(), NULL), "required")
 })
+
+# ------------------------------- a frame that never went near cards
+
+# Columns named the way a study names them: no `variable`, no
+# `stat_name`, no `stat`, and the row label in two different places
+# depending on what kind of row it is.
+own_frame <- function() {
+  data.frame(
+    TRT   = rep(c("A", "B"), each = 5L),
+    PARAM = rep(c("AGE", "AGE", "AGE", "SEX", "SEX"), 2L),
+    CAT   = c(NA, NA, NA, "F", "M", NA, NA, NA, "F", "M"),
+    STAT  = c("N", "mean", "sd", "n", "n", "N", "mean", "sd", "n", "n"),
+    VALUE = c(10, 55.5, 4.25, 6, 4, 12, 57.25, 3.5, 7, 5),
+    stringsAsFactors = FALSE)
+}
+
+test_that("a frame keeps its own names, and says which plays what", {
+  p <- rtf_plan(own_frame(), cols = "TRT", rows = c(group = "PARAM"),
+                label = c(label = "CAT"),
+                variable = "PARAM", stat_name = "STAT", stat = "VALUE",
+                notes = FALSE) |>
+    plan_cells(AGE = c("Mean (SD)" = "{mean} ({sd})"),
+               SEX = "{n}") |>
+    plan_digits(1)
+  out <- suppressMessages(apply_plan(p))
+  expect_true(all(c("group", "label", "A", "B") %in% names(out)))
+  expect_true(any(grepl("55.5 (4.2)", out$A, fixed = TRUE)))
+})
+
+test_that("a column that is not there blames the role that named it", {
+  expect_error(
+    rtf_plan(own_frame(), cols = "TRT", stat_name = "PARAMCD"),
+    "no column .PARAMCD. in the data")
+})
+
+test_that("`label` naming two columns coalesces them", {
+  # tfrmt has the same problem: a continuous row is labelled by its
+  # statistic and a categorical one by its level, and they are not the
+  # same column.  First non-missing wins.
+  p <- rtf_plan(own_frame(), cols = "TRT", rows = c(group = "PARAM"),
+                label = list(row = c("CAT", "STAT")),
+                variable = "PARAM", stat_name = "STAT", stat = "VALUE",
+                notes = FALSE) |>
+    plan_cells("{n}", AGE = "{mean}") |>
+    plan_digits(1)
+  out <- suppressMessages(apply_plan(p, "table"))
+  expect_true("row" %in% names(out))
+  # the categorical rows took CAT, the continuous ones fell back to STAT
+  expect_true(all(c("F", "M") %in% out$row))
+  expect_true(any(c("N", "mean", "sd") %in% out$row))
+})
+
+test_that("the same plan serves a second study, data and all", {
+  tmpl <- rtf_plan(cols = "TRT", rows = c(group = "PARAM"),
+                   label = c(label = "CAT"),
+                   variable = "PARAM", stat_name = "STAT",
+                   stat = "VALUE", notes = FALSE) |>
+    plan_cells(AGE = c("Mean" = "{mean}"), SEX = "{n}") |>
+    plan_digits(1)
+
+  d2 <- own_frame()
+  d2$VALUE <- d2$VALUE + 1
+  a <- suppressMessages(apply_plan(plan_data(tmpl, own_frame())))
+  b <- suppressMessages(apply_plan(plan_data(tmpl, d2)))
+  expect_identical(names(a), names(b))
+  expect_false(identical(a$A, b$A))
+})
+

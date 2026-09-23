@@ -1581,3 +1581,70 @@ test_that("a rows template writes a constant heading without a mutate", {
                   cells = "{n:.0f}", notes = FALSE)
   expect_identical(z$Placebo, y$Placebo)
 })
+
+test_that("`labels` can be scoped to one column, like `levels`", {
+  skip_if_no_cards()
+  # the same value means two things on the two axes: a shift table's "0"
+  # is "Grade 0" down the side and "Baseline 0" across the top
+  set.seed(1)
+  d <- data.frame(USUBJID = sprintf("S%03d", 1:60),
+                  BASE = sample(c("0", "1", "2"), 60, TRUE),
+                  POST = sample(c("0", "1", "2"), 60, TRUE),
+                  stringsAsFactors = FALSE)
+  ard <- cards::ard_stack(
+    d, .by = BASE,
+    cards::ard_categorical(variables = POST, statistic = ~ c("n")))
+
+  one <- function(labels) {
+    suppressMessages(
+      ard |> ard_normalize() |>
+        ard_spread(cols = "BASE", rows = c(WORST = "variable_level"),
+                   label = NA, labels = labels, cells = "{n:d}"))
+  }
+
+  flat <- one(c("0" = "Grade 0", "1" = "Grade 1", "2" = "Grade 2"))
+  # one dictionary recodes BOTH axes, which is what it has always done
+  expect_identical(names(flat)[-1L],
+                   c("Grade 0", "Grade 1", "Grade 2"))
+  expect_identical(as.character(flat$WORST)[1L], "Grade 0")
+
+  scoped <- one(list(
+    BASE  = c("0" = "Baseline 0", "1" = "Baseline 1", "2" = "Baseline 2"),
+    WORST = c("0" = "Grade 0", "1" = "Grade 1", "2" = "Grade 2")))
+  expect_identical(names(scoped)[-1L],
+                   c("Baseline 0", "Baseline 1", "Baseline 2"))
+  expect_identical(as.character(scoped$WORST)[1L], "Grade 0")
+  # the numbers are the same table either way
+  expect_equal(unname(as.matrix(flat[-1L])),
+               unname(as.matrix(scoped[-1L])))
+})
+
+test_that("a scope and a plain value can be mixed, and are told apart", {
+  skip_if_no_cards()
+  # AGE = "Age (years)" is a VALUE; BASE = c("0" = ...) is a COLUMN
+  set.seed(2)
+  d <- data.frame(USUBJID = sprintf("S%03d", 1:40),
+                  BASE = sample(c("0", "1"), 40, TRUE),
+                  SEX  = sample(c("F", "M"), 40, TRUE),
+                  RACE = sample(c("A", "B"), 40, TRUE),
+                  stringsAsFactors = FALSE)
+  ard <- cards::ard_stack(
+    d, .by = BASE,
+    cards::ard_categorical(variables = c(SEX, RACE),
+                           statistic = ~ c("n")))
+  out <- suppressMessages(
+    ard |> ard_normalize() |>
+      ard_spread(cols = "BASE", cells = "{n:d}",
+                 labels = list(SEX  = "Sex [n]",
+                               BASE = c("0" = "Baseline 0",
+                                        "1" = "Baseline 1"))))
+  expect_identical(names(out)[-(1:2)], c("Baseline 0", "Baseline 1"))
+  expect_identical(as.character(out$group)[1L], "Sex [n]")
+})
+
+test_that("an unnamed entry in a scope is refused, not ignored", {
+  skip_if_no_cards()
+  expect_error(
+    .ard_check_named(c("a", b = "c"), "labels$BASE"),
+    "labels\\$BASE")
+})

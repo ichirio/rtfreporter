@@ -217,6 +217,69 @@ N = ", n$arm)` cannot drift from the columns
   `plan_spread()` carries both `label` (the row-identity column) and
   `labels` (value recoding), so reading it with `$` partially matched
   `label` to `labels` and the derived stub came out one column short.
+  **The roles are said once, where the data is --- and flattening is not
+  deferred.**  `plan_spread()` had quietly become the role declaration:
+  three other verbs read its `cols` / `rows` / `label` (the stub derives
+  its columns from them, the header its denominator, the resolver its
+  sort), while its own name says "go wide".  They now sit on
+  `rtf_plan()`, which is `ggplot(data, aes(x, y))`: the names must be
+  columns of the frame handed in, so a typo is caught **there**, naming
+  the verb and listing the columns, rather than three stages later.
+
+  That only works if the columns exist, so `ard_normalize()` runs before
+  the plan and `plan_normalize()` is gone.  Deferring it bought nothing
+  --- no layer fed it, nothing overrode it later, and five of the six
+  reports never called it --- while costing a guess about whether what
+  the plan held still needed flattening, a guess that had already
+  skipped the step silently for every report once.  A raw cards ARD is
+  now refused by `rtf_plan()`, with the line to write.
+
+  `levels` and `labels` become `plan_levels()` and `plan_labels()`,
+  which is where they belong: an order or a label for everything and
+  then one variable's own is exactly the last-wins case, and they merge
+  one **key** at a time.  Either takes its entries written out or a
+  named vector handed over whole, so a study that keeps its labels in
+  one does not have to take it apart.
+
+  Which frame a seam acts on is now its **name**: `plan_mutate()` and
+  `plan_filter()` act on the long frame, `plan_derive()` on the table.
+  It used to be position --- before or after `plan_spread()` --- and
+  that boundary left with the roles.  Position would also have made
+  last-wins dangerous, since writing `plan_digits()` last is exactly
+  what the rule invites and would have moved the line under a seam that
+  never changed.
+
+  **`labels` can be scoped to a column, the way `levels` already was.**
+  One dictionary for the whole table is still the usual thing, but the
+  same value means two things on the two axes --- a shift table's `"0"`
+  is `"Grade 0"` down the side and `"Baseline 0"` across the top --- and
+  there was no way to say so.  An entry whose value is itself a *named*
+  vector is a dictionary for that column; one whose value is text is a
+  value, as before.  The two are told apart by shape and can be mixed.
+  This is in `ard_spread()`, so the immediate form has it too.
+
+  **A frame that never went near cards says which columns play which
+  parts.**  `variable`, `stat_name` and `stat` are read by name, and a
+  study's own summary calls them something else; `rtf_plan(variable =
+  "PARAM", stat_name = "STAT", stat = "VALUE")` says so once instead of
+  every verb asking again.  `label` naming **several** columns coalesces
+  them, first non-missing winning --- tfrmt has the same problem, a
+  continuous row being labelled by its statistic and a categorical one
+  by its level, and those are not the same column.
+
+  **A plan with no data is a template.**  `rtf_plan()` no longer needs
+  the frame: the roles name columns, `plan_data()` supplies the columns
+  later, and one house style then serves every study.  Handing the data
+  over is when the names are checked.
+
+  25 verbs now, two more than before: `plan_normalize()` and
+  `plan_spread()` went, `plan_data()`, `plan_levels()`, `plan_labels()`
+  and `plan_derive()` arrived.  All six Discussion #473 reports still
+  produce `rtftable`s identical to the hand-written code, and two of
+  them got shorter --- `plan_group(show = FALSE)` reads its column off
+  the roles, and the denominator no longer has to be computed twice now
+  that the ARD is in scope.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

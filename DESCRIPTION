@@ -1,7 +1,7 @@
 Package: rtfreporter
 Type: Package
 Title: Clinical RTF Reporting Toolkit for Tables, Listings and Figures
-Version: 0.8.0.9043
+Version: 0.8.0.9044
 Authors@R:
     person(given  = "Yoichi",
            family = "Masui",

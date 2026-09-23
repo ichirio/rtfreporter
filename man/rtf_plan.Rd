@@ -2,31 +2,83 @@
 % Please edit documentation in R/ard-plan-spike.R
 \name{rtf_plan}
 \alias{rtf_plan}
-\title{A deferred, last-wins plan for an ARD (SPIKE)}
+\title{A deferred, last-wins plan for a table (SPIKE)}
 \usage{
-rtf_plan(ard)
+rtf_plan(
+  data = NULL,
+  cols = NULL,
+  rows = NULL,
+  label = NULL,
+  sort = NULL,
+  variable = NULL,
+  stat_name = NULL,
+  stat = NULL,
+  stats = NULL,
+  sep = NULL,
+  value = NULL,
+  na = NULL,
+  spec = NULL,
+  notes = NULL
+)
 }
 \arguments{
-\item{ard}{What to build the table from.  Three things are accepted, and
-the plan works out which it is from the columns:
+\item{data}{What the table is built from.  A plan does \strong{not} flatten:
+\code{cols} / \code{rows} / \code{label} name columns of what you hand it, so
+flatten first and look at the result.
 \itemize{
-\item a \strong{cards/cardx ARD}, which is flattened and spread;
-\item a frame already through \code{\link[=ard_normalize]{ard_normalize()}} --- how a report that has
-to reach in with dplyr gets back into a plan;
+\item a frame through \code{\link[=ard_normalize]{ard_normalize()}} --- the ordinary case;
 \item \strong{any long frame of statistics}: keys, a \code{stat_name} and a \code{stat},
-built with dplyr and no cards anywhere.  \code{plan_normalize()} is then
-skipped and \code{plan_cells()} does the work.
+built with dplyr and no cards anywhere.  \code{\link[=plan_cells]{plan_cells()}} does the
+work;
+\item a frame that is already the table, for the display half on its own;
+\item a frame of subject records, with \code{\link[=plan_listing]{plan_listing()}}.
 }
 
-A frame that is already the table is refused, with a message saying to
-use \code{\link[=as_rtftables]{as_rtftables()}} instead.}
+A raw cards ARD is refused, with the line to write.}
+
+\item{cols}{The key that goes \strong{across} the table, as
+\code{ard_spread(cols = )} takes it: one or more columns, optionally
+renamed \code{c(new = old)}.}
+
+\item{rows}{The keys that go \strong{down} it, likewise.  Left out, the
+analysis variable is used (as \code{group}).}
+
+\item{label}{The column carrying the \strong{row identity} --- the text in
+the label column.  \code{".label"} by default (what \code{\link[=ard_normalize]{ard_normalize()}}
+builds), \code{NA} for a table that has none, or a guarded template.}
+
+\item{sort}{The row order, as \code{ard_spread(sort = )} takes it: \code{TRUE},
+\code{FALSE}, or the keys in priority order (\code{".overall"}, \code{".depth"}, a
+column, a statistic, each optionally \code{-} for descending).  It names
+the same keys \code{rows} does, which is why it is declared beside them.}
+
+\item{variable, stat_name, stat}{Which of \strong{your} columns play the
+three parts \code{\link[=ard_spread]{ard_spread()}} reads by name: the analysis variable
+(what \code{\link[=plan_cells]{plan_cells()}} and \code{\link[=plan_digits]{plan_digits()}} key on), which statistic
+a row is, and what it is worth.  A frame from \pkg{cards} already
+calls them that and needs none of them; a summary somebody built
+with dplyr says so here, once, instead of being asked again by
+every verb.}
+
+\item{stats}{\code{"cells"} (default) fills a template per cell; \code{"rows"}
+makes each statistic a row of its own.}
+
+\item{sep}{Separator pasted between multiple \code{cols} keys.}
+
+\item{value, na, spec, notes}{The remaining \code{\link[=ard_spread]{ard_spread()}} options,
+unchanged: which of \code{stat} / \code{stat_fmt} a \code{{x}} reads, what fills a
+cell no template could, an \code{\link[=ard_spec]{ard_spec()}} definition, and whether to
+report what was not used.}
 }
 \value{
 An object of class \code{rtf_plan}.
 }
 \description{
-\code{rtf_plan()} starts a plan.  The ARD is \strong{held, not transformed}: every
-\verb{plan_*()} verb adds a declaration, and nothing runs until \code{\link[=apply_plan]{apply_plan()}}.
+\code{rtf_plan()} starts a plan, and takes the \strong{roles}: which column goes
+across the table, which go down it, which carries the row identity.
+This is \code{ggplot(data, aes(x, y))} --- the names must be columns of the
+data you hand it, so you can check them by looking.  Every \verb{plan_*()}
+verb after it adds a declaration, and nothing runs until \code{\link[=apply_plan]{apply_plan()}}.
 }
 \details{
 The rule is \strong{last wins} --- a later layer overwrites what an earlier one
@@ -53,8 +105,9 @@ if (requireNamespace("cards", quietly = TRUE)) {
     cards::ard_continuous(variables = c(AGE, BMIBL)),
     cards::ard_categorical(variables = SEX))
 
-  rtf_plan(ard) |>
-    plan_spread(cols = "ARM", rows = c(group = "variable")) |>
+  ard |>
+    ard_normalize() |>
+    rtf_plan(cols = "ARM", rows = c(group = "variable")) |>
     plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})"),
                categorical = "{n} ({p:\%})") |>
     plan_digits(2) |>

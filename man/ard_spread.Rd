@@ -133,7 +133,18 @@ level order.  The two-parallel-vector spelling works just as well --
 gives an element an \code{NA} name rather than complaining when the two vectors
 are different lengths, so that entry would never apply; every element must
 be named, and an unnamed one is an error here rather than a silent
-omission.}
+omission.
+
+One vector is one dictionary for the \strong{whole table}, and the same
+value can mean two things on the two axes --- a shift table's \code{"0"}
+is \code{"Grade 0"} down the side and \code{"Baseline 0"} across the top.
+Scope it the way \code{levels} already is, with a \strong{list keyed by
+column}, matched on the output name then the source name, with
+\code{.default} covering the rest:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{labels = list(BASEGR = c("0" = "Baseline 0"),
+              WORST  = c("0" = "Grade 0"))
+}\if{html}{\out{</div>}}}
 
 \item{sort}{\code{TRUE} (default) sorts by the row keys, using the label column
 too when \code{levels} gave it an explicit order; \code{FALSE} leaves the rows as
