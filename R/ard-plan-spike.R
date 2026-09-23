@@ -649,26 +649,26 @@ print.rtf_plan <- function(x, ...) {
 #'   apart from three one-row titles.
 #' @param cols For `plan_paginate_cols()`: which columns each block keeps, when
 #'   the cut is by name rather than by position.
-#'
-#'   For `plan_col_header()`: the header written as ONE
-#'   template per header **row** instead of as a function.  It is used
-#'   over every spread column, with `{col}` for its name and `{n}` for its
-#'   denominator.  So the commonest
-#'   header in clinical work ---
+#' @param ... For `plan_col_header()`: ONE ARGUMENT PER HEADER ROW, left to
+#'   right, exactly as [rtf_col_header()] takes them --- so the code is
+#'   laid out the way the header is.  In a row the **last** entry is the
+#'   template used over every spread column (`{col}` its name, `{n}` its
+#'   denominator) and the ones before it fill the leading columns:
 #'
 #'   ```r
-#'   plan_col_header(n = TRUE, stub = c("", "Characteristic"),
-#'                   cols = c("{col}", "(N={n})"))
+#'   plan_col_header(n = TRUE,
+#'                   c("",               "{col}"),
+#'                   c("Characteristic", "(N={n})"))
 #'   ```
 #'
-#'   --- needs no function and no `setNames()`.  Give these or `header`,
-#'   never both; a header with spanners or borders is one you build.
-#' @param stub For `plan_col_header(cols = )`: what fills the leading columns,
-#'   one entry per header row.
-#' @param header For `plan_col_header()`: what [set_col_header()] should be
-#'   given --- an [rtf_col_header()] object, or a **function** of the
-#'   resolved `n`, which is how a denominator reaches the header
-#'   without being written down a second time.
+#'   A character vector is therefore a template row.  Anything else ---
+#'   an [rtf_col_header()], a list of [col_cell()]s, a function --- is a
+#'   header you built and goes through untouched, so a spanner, a border
+#'   or a cell that reads the finished table is written exactly as it
+#'   always was.  Templates repeat; construction is construction.
+#' @param header For `plan_col_header()`: the same built header, named rather
+#'   than positional --- an [rtf_col_header()] object, or a **function**
+#'   of the resolved `n` (and, with two arguments, the finished table).
 #' @param n For `plan_col_header()`: the denominator the header needs.
 #'   `TRUE` reads it from the ARD with the same `cols` / `levels`
 #'   `rtf_plan()` was given; a **function** of the data computes it when
@@ -1045,11 +1045,38 @@ plan_style <- function(plan, border = NULL, widths = NULL, ...) {
 # `levels` rtf_plan() was given, so nothing is written twice.  A
 # function of the ARD covers a denominator ard_pull() cannot find; a
 # named list covers a header that needs more than one.
-plan_col_header <- function(plan, header = NULL, n = NULL,
-                            cols = NULL, stub = NULL,
+plan_col_header <- function(plan, ..., header = NULL, n = NULL,
                             values = NULL) {
+  # ONE ARGUMENT PER HEADER ROW, left to right, exactly as
+  # rtf_col_header() takes them -- so the code is laid out like the
+  # header is.  In a row the last entry is the template used over
+  # every spread column (`{col}` its name, `{n}` its denominator) and
+  # the ones before it fill the leading columns:
+  #
+  #     plan_col_header(n = TRUE,
+  #                     c("",               "{col}"),
+  #                     c("Characteristic", "(N={n})"))
+  #
+  # A character vector is therefore a TEMPLATE row.  Anything else --
+  # an rtf_col_header(), a list of col_cell()s, a function -- is a
+  # header you built yourself and goes through untouched.
+  rows <- list(...)
+  built <- !vapply(rows, is.character, logical(1L))
+  if (any(built)) {
+    if (length(rows) != 1L) {
+      .ard_stop(paste0(
+        "plan_col_header(): a header you built is ONE argument.  ",
+        "Several arguments are\n  template rows, and a ",
+        "template row is a character vector."))
+    }
+    if (!is.null(header)) {
+      .ard_stop("plan_col_header(): `header` was given twice.")
+    }
+    header <- rows[[1L]]
+    rows <- list()
+  }
   .plan_layer(plan, "header",
-              list(header = header, n = n, cols = cols, stub = stub,
+              list(header = header, n = n, rows = rows,
                    values = values))
 }
 
@@ -1693,8 +1720,7 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
       "styles"))
 
-  if (!is.null(hdr$header) || !is.null(hdr$cols) ||
-      !is.null(hdr$stub)) {
+  if (!is.null(hdr$header) || length(hdr$rows)) {
     #  a function of the resolved `n`, so "(N=86)" is written once and
     #  the number comes from the ARD rather than from memory.  The
     #  header may need the finished table -- "a spanner over columns 3
@@ -1703,21 +1729,18 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     #
     #  `cols` / `stub` are the same thing without the function, for
     #  the header that only repeats itself over the columns.
-    if (!is.null(hdr$cols) || !is.null(hdr$stub)) {
+    if (length(hdr$rows)) {
       if (!is.null(hdr$header)) {
         .ard_stop(paste0(
-          "plan_col_header(): give `header` or `cols` / `stub`, ",
-          "not both.\n  `cols` builds the header from one ",
-          "template per row; `header` is one you built yourself."))
+          "plan_col_header(): give template rows or a header you ",
+          "built, not both."))
       }
       sc <- .plan_spread_cols(plan, pre)
       first_d <- if (inherits(out, "rtftable")) out$data
                  else out[[1L]]$data
-      h <- .plan_header_from_cols(hdr, nvals,
-                                  intersect(sc, names(first_d)),
-                                  length(first_d) -
-                                    length(intersect(sc,
-                                                     names(first_d))))
+      sc <- intersect(sc, names(first_d))
+      h <- .plan_header_from_rows(hdr$rows, nvals, sc,
+                                  length(first_d) - length(sc))
       out <- do.call(set_col_header, c(list(x = out), h))
     } else {
       h <- if (!is.function(hdr$header)) hdr$header
@@ -1765,8 +1788,7 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 # writing it needed a function only because the arms are not known
 # until the table exists.  The plan knows them, so a template per
 # HEADER ROW is enough: `{col}` is the column, `{n}` its denominator.
-.plan_header_from_cols <- function(spec, nvals, cols, n_stub) {
-  rows <- max(length(spec$cols), length(spec$stub))
+.plan_header_from_rows <- function(rows, nvals, cols, n_stub) {
   fill <- function(tpl, col) {
     # `[[` on a named VECTOR errors for a name it does not have, so the
     # lookup is by match; one unnamed value covers every column
@@ -1777,10 +1799,19 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     gsub("{n}", if (is.null(v) || all(is.na(v))) "" else
                   format(v, trim = TRUE), out, fixed = TRUE)
   }
-  lapply(seq_len(rows), function(i) {
-    st <- if (i <= length(spec$stub)) spec$stub[[i]] else ""
-    ct <- if (i <= length(spec$cols)) spec$cols[[i]] else ""
-    c(rep(as.character(st), n_stub),
+  lapply(rows, function(r) {
+    r <- as.character(r)
+    # the last entry is the one repeated over the spread columns;
+    # what comes before it fills the leading columns, in order
+    lead <- if (length(r) > 1L) r[-length(r)] else character(0)
+    if (length(lead) > n_stub) {
+      .ard_stop(sprintf(paste0(
+        "plan_col_header(): a row gives %d cells before the column ",
+        "template, but there\n  are only %d columns to the ",
+        "left of the data."), length(lead), n_stub))
+    }
+    ct <- r[length(r)]
+    c(lead, rep("", n_stub - length(lead)),
       vapply(cols, function(cc) fill(ct, cc), ""))
   })
 }

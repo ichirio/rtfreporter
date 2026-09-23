@@ -426,6 +426,24 @@ N = ", n$arm)` cannot drift from the columns
   with spanners or borders, which is construction rather than repetition,
   and giving both is an error.
 
+  The template rows are written **one argument per header row**, left to
+  right, exactly as `rtf_col_header()` takes them, so the code is laid
+  out the way the header is rather than transposed:
+
+  ```r
+  plan_col_header(n = TRUE,
+                  c("",               "{col}"),
+                  c("Characteristic", "(N={n})"))
+  ```
+
+  In a row the last entry is the template used over every spread column
+  and the ones before it fill the leading columns, so a character vector
+  is a template row.  **Anything else is a header you built** --- an
+  `rtf_col_header()`, a list of `col_cell()`s, a function --- and goes
+  through untouched, positionally or as `header = `.  A spanner, a
+  border or a cell that reads the finished table is written exactly as
+  it always was: templates repeat, construction is construction.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

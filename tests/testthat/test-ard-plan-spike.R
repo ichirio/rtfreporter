@@ -1019,8 +1019,9 @@ test_that("plan_paginate_group() is what auto_section cuts on", {
 test_that("plan_col_header(cols = ) writes the commonest header", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_col_header(n = c(Placebo = 86), stub = c("", "Characteristic"),
-                    cols = c("{col}", "(N={n})"))
+    plan_col_header(n = c(Placebo = 86),
+                    c("",               "{col}"),
+                    c("Characteristic", "(N={n})"))
   out <- suppressMessages(apply_plan(p))
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   rows <- first$col_header$rows %||% first$col_header
@@ -1036,8 +1037,24 @@ test_that("plan_col_header(cols = ) writes the commonest header", {
 test_that("a built header and a templated one are not both given", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_col_header(header = rtf_col_header(c("a", "b", "c", "d", "e")),
-                    cols = "{col}")
+    plan_col_header(c("", "{col}"),
+                    header = rtf_col_header(c("a", "b", "c", "d", "e")))
   expect_error(suppressMessages(apply_plan(p)), "not both", fixed = TRUE)
+})
+
+test_that("an rtf_col_header() goes through untouched, positionally", {
+  skip_if_no_cards2()
+  h <- rtf_col_header(c("Group", "Characteristic", "A", "B", "C"))
+  a <- suppressMessages(apply_plan(disp_plan() |> plan_col_header(h)))
+  b <- suppressMessages(apply_plan(disp_plan() |>
+                                     plan_col_header(header = h)))
+  expect_equal(a, b)
+})
+
+test_that("a row cannot claim more leading cells than there are", {
+  skip_if_no_cards2()
+  p <- disp_plan() |> plan_col_header(c("a", "b", "c", "{col}"))
+  expect_error(suppressMessages(apply_plan(p)),
+               "cells before the column template")
 })
 
