@@ -9,18 +9,18 @@
 \alias{plan_fmt}
 \alias{plan_stub}
 \alias{plan_cell_style}
-\alias{plan_group}
+\alias{plan_row_group}
 \alias{plan_hide}
 \alias{plan_sort}
 \alias{plan_blanks}
-\alias{plan_pages}
+\alias{plan_paginate_rows}
 \alias{plan_style}
 \alias{plan_col_header}
 \alias{plan_listing}
 \alias{plan_titles}
 \alias{plan_footnotes}
 \alias{plan_after}
-\alias{plan_col_pages}
+\alias{plan_paginate_cols}
 \title{Declare the table, one layer at a time (SPIKE)}
 \usage{
 plan_levels(plan, ...)
@@ -44,7 +44,14 @@ plan_stub(
 
 plan_cell_style(plan, ...)
 
-plan_group(plan, col = NULL, mode = NULL, collapse = NULL, show = TRUE)
+plan_row_group(
+  plan,
+  col = NULL,
+  mode = NULL,
+  collapse = NULL,
+  show = TRUE,
+  page = FALSE
+)
 
 plan_hide(plan, ...)
 
@@ -52,7 +59,7 @@ plan_sort(plan, ..., desc = NULL, show = TRUE)
 
 plan_blanks(plan, where = NULL, first = NULL, last = NULL, counted = NULL)
 
-plan_pages(
+plan_paginate_rows(
   plan,
   max_rows = NULL,
   split = NULL,
@@ -88,7 +95,7 @@ plan_footnotes(plan, ..., pages = NULL)
 
 plan_after(plan, ...)
 
-plan_col_pages(
+plan_paginate_cols(
   plan,
   at = NULL,
   cols = NULL,
@@ -143,17 +150,22 @@ VALUES are the row text.  \code{vars} is derived when left out.}
 \code{plan_cell_style()} needs --- only then can a condition see the rows that
 will be printed.  The two do \strong{not} always give the same table.}
 
-\item{col, mode, collapse}{For \code{plan_group()}: \code{as_rtftables()}'s
+\item{col, mode, collapse}{For \code{plan_row_group()}: \code{as_rtftables()}'s
 \code{group_col}, \code{group_by} and \code{collapse_repeats}.}
 
 \item{show}{\code{FALSE} also hides the column the verb names: the
-grouping carrier for \code{plan_group()}, the \code{by} key for \code{plan_pages()}, the
+grouping carrier for \code{plan_row_group()}, the \code{by} key for \code{plan_paginate_rows()}, the
 sort keys for \code{plan_sort()}.  A column can be \strong{needed and not
 wanted} --- a carrier that groups the rows, the key a page break
 reads --- and the verb that needs it is the one place that knows,
 so it says so there instead of the name being written again in a
 \code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
 are ignored rather than refused.}
+
+\item{page}{For \code{plan_row_group()}: \code{TRUE} starts a new page at each group
+(\code{as_rtftables(split = "by_value")}).  This is the \strong{group} axis of
+pagination, and it lives here because the column it splits on is
+the one this verb already names.}
 
 \item{desc}{For \code{plan_sort()} over a table that is
 already built: \code{as_rtftables()}'s \code{sort_desc}.  A plan with an ARD
@@ -164,11 +176,11 @@ half writes the direction into the keys instead (\code{-n}).}
 \code{count_blank_rows}.}
 
 \item{max_rows, split, break_before, by, min_group_rows, cont_label}{For
-\code{plan_pages()}: the row budget and what a page break may cut ---
+\code{plan_paginate_rows()}: the row budget and what a page break may cut ---
 \code{as_rtftables()}'s \code{max_rows}, \code{split}, \code{split_rows}, \code{page_by},
 \code{min_group_rows} and \code{cont_label}.  This is the \strong{row} axis; a
-value split (the \strong{group} axis) is \code{plan_group()} with
-\code{split = "by_value"}, and the \strong{column} axis is \code{plan_col_pages()}.}
+value split (the \strong{group} axis) is \code{plan_row_group(page = TRUE)},
+and the \strong{column} axis is \code{plan_paginate_cols()}.}
 
 \item{border, widths}{For \code{plan_style()}: the border set and the relative
 column widths (\code{col_rel_width}).  Anything else \code{\link[=rtftable]{rtftable()}}
@@ -199,7 +211,7 @@ both, because a three-row title on a three-page table cannot be told
 apart from three one-row titles.}
 
 \item{at, cols, carry, col_header, width, allow_span_break, order}{For
-\code{plan_col_pages()}: \code{\link[=paginate_cols]{paginate_cols()}}'s own arguments --- where to
+\code{plan_paginate_cols()}: \code{\link[=paginate_cols]{paginate_cols()}}'s own arguments --- where to
 cut (\code{at}, \code{cols} or \code{by}), which columns every block repeats (\code{carry}),
 what the header becomes, how the widths are rescaled, and \code{order} ---
 \code{paginate_cols(page_order = )}, the order the three axes nest in,

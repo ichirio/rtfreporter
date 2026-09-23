@@ -330,8 +330,8 @@ test_that("stage = \"pages\" reaches the same rtftable as the code does", {
   new <- suppressMessages(apply_plan(
     disp_plan(ard) |>
       plan_stub(vars = c("group", "label")) |>
-      plan_group(mode = "indent") |>
-      plan_pages(split = "group_safe", max_rows = 22) |>
+      plan_row_group(mode = "indent") |>
+      plan_paginate_rows(split = "group_safe", max_rows = 22) |>
       plan_style(border = "tfl"),
     "pages"))
   expect_equal(new, ref)
@@ -397,8 +397,8 @@ test_that("plan_after() refuses anything that is not a function", {
 test_that("the display verbs are last-wins too", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_pages(max_rows = 10) |> plan_style(border = "tfl") |>
-    plan_pages(max_rows = 40)          # later wins, `border` is kept
+    plan_paginate_rows(max_rows = 10) |> plan_style(border = "tfl") |>
+    plan_paginate_rows(max_rows = 40)          # later wins, `border` is kept
   rtf <- rtfreporter:::.plan_rtf_args(p)
   expect_identical(rtf$max_rows, 40)
   expect_identical(rtf$border, "tfl")
@@ -586,7 +586,7 @@ test_that("plan_template() derives the stub and leaves the rest to be edited", {
   code <- utils::capture.output(
     invisible(plan_template(plan_ard(), cols = "TRT", pipe = "|>")))
   # the stub is not written at all: plan_stub() works it out from what
-  # rtf_plan(rows = ) and plan_group() already declared
+  # rtf_plan(rows = ) and plan_row_group() already declared
   expect_false(any(grepl("vars", code, fixed = TRUE)))
   expect_true(any(grepl("plan_stub(", code, fixed = TRUE)))
   expect_true(any(grepl("edit this", code, fixed = TRUE)))
@@ -682,7 +682,7 @@ test_that("a derived plan does not inherit its parent's column cache", {
 .pages_plan <- function(max_rows = 4L) {
   rtf_plan(.pages_src()) |>
     plan_listing(listing_col("USUBJID", width = 12)) |>
-    plan_pages(max_rows = max_rows)
+    plan_paginate_rows(max_rows = max_rows)
 }
 
 test_that("plan_titles() / plan_footnotes() ride on every page", {
@@ -729,7 +729,7 @@ test_that("a listing goes nowhere near an ARD", {
     rtf_plan(d[d$AGE >= 45, , drop = FALSE]) |>
       plan_listing(listing_col("USUBJID", width = 12),
                    listing_col("ARM", width = 10)) |>
-      plan_pages(max_rows = 20) |>
+      plan_paginate_rows(max_rows = 20) |>
       plan_style(border = "tfl") |>
       plan_titles("Listing 16.2.1")))
   expect_s3_class(pg[[1]], "rtftable")
@@ -752,7 +752,7 @@ test_that("a listing matches the same call written by hand", {
     rtf_plan(d) |>
       plan_listing(listing_col("USUBJID", width = 12),
                    listing_col("ARM", width = 10)) |>
-      plan_pages(max_rows = 20) |>
+      plan_paginate_rows(max_rows = 20) |>
       plan_style(border = "tfl")))
   expect_equal(new, ref)
 })
@@ -791,9 +791,9 @@ test_that("asking for the ARD half of a finished table says what to drop", {
   expect_error(apply_plan(p), "keep the display")
 })
 
-test_that("plan_group(show = FALSE) hides the carrier it groups by", {
+test_that("plan_row_group(show = FALSE) hides the carrier it groups by", {
   skip_if_no_cards2()
-  p <- disp_plan() |> plan_group(col = "group", show = FALSE)
+  p <- disp_plan() |> plan_row_group(col = "group", show = FALSE)
   expect_identical(rtfreporter:::.plan_rtf_args(p)$group_col, "group")
   expect_identical(rtfreporter:::.plan_rtf_args(p)$drop_cols, "group")
 })
@@ -802,7 +802,7 @@ test_that("hiding ADDS rather than replaces", {
   skip_if_no_cards2()
   # last-wins here would silently un-hide the first column named
   p <- disp_plan() |> plan_hide("a") |> plan_hide("b") |>
-    plan_group(col = "c", show = FALSE)
+    plan_row_group(col = "c", show = FALSE)
   expect_setequal(rtfreporter:::.plan_rtf_args(p)$drop_cols, c("a", "b", "c"))
 })
 
@@ -879,7 +879,7 @@ test_that("plan_sort() goes to the ARD half, where the statistics are", {
 test_that("plan_sort() over a finished table sorts the table", {
   d <- data.frame(group = c("B", "A"), x = c("1", "2"),
                   stringsAsFactors = FALSE)
-  p <- rtf_plan(d) |> plan_sort("group") |> plan_pages(max_rows = 10)
+  p <- rtf_plan(d) |> plan_sort("group") |> plan_paginate_rows(max_rows = 10)
   r <- rtfreporter:::.plan_rtf_args(p)
   expect_identical(r$sort_by, "group")
   out <- suppressMessages(apply_plan(p))
@@ -907,7 +907,7 @@ test_that("the spread builds only what the roles named", {
   expect_true(all(grepl("Placebo|Xanomeline", arms)))
 })
 
-test_that("plan_pages(show = FALSE) hides the key the break reads", {
+test_that("plan_paginate_rows(show = FALSE) hides the key the break reads", {
   skip_if_no_cards2()
   d <- nz(plan_ard())
   d$pg <- ifelse(d$variable == "SEX", "1", "2")
@@ -916,7 +916,7 @@ test_that("plan_pages(show = FALSE) hides the key the break reads", {
                          pg = "pg")) |>
     plan_cells(continuous = c(n = "{N:d}"),
                categorical = "{n:d}") |>
-    plan_pages(split = "by_value", by = "pg", show = FALSE)
+    plan_paginate_rows(split = "by_value", by = "pg", show = FALSE)
   out <- suppressMessages(apply_plan(p))
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   expect_false("pg" %in% names(first$data))
@@ -927,7 +927,7 @@ test_that("plan_sort(show = FALSE) hides a sort carrier, and only it", {
   d <- data.frame(ord = c("2", "1"), label = c("B", "A"),
                   x = c("9", "8"), stringsAsFactors = FALSE)
   p <- rtf_plan(d) |> plan_sort("ord", show = FALSE) |>
-    plan_pages(max_rows = 10)
+    plan_paginate_rows(max_rows = 10)
   out <- suppressMessages(apply_plan(p))
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   expect_false("ord" %in% names(first$data))
@@ -939,17 +939,17 @@ test_that("a sort key that is not a column is not mistaken for one", {
   # ".overall" and "-n" are instructions, not columns: hiding must not
   # try to drop them
   p <- base_plan() |> plan_sort(".overall", "group", "-n", show = FALSE) |>
-    plan_pages(max_rows = 40)
+    plan_paginate_rows(max_rows = 40)
   out <- suppressMessages(apply_plan(p))
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   expect_false("group" %in% names(first$data))
   expect_true("label" %in% names(first$data))
 })
 
-test_that("plan_col_pages() is the column axis, without a lambda", {
+test_that("plan_paginate_cols() is the column axis, without a lambda", {
   skip_if_no_cards2()
-  p <- disp_plan() |> plan_pages(max_rows = 40) |>
-    plan_col_pages(at = 4L, carry = 1:2, width = "keep")
+  p <- disp_plan() |> plan_paginate_rows(max_rows = 40) |>
+    plan_paginate_cols(at = 4L, carry = 1:2, width = "keep")
   out <- suppressMessages(apply_plan(p))
   expect_gt(length(out), 1L)
   # every block repeats the carried column
@@ -973,5 +973,23 @@ test_that("a house style is an ordinary function, not a plan without data", {
   # and a plan cannot be built without the data the roles name
   expect_error(rtf_plan(cols = "TRT"), "`data` is required")
   expect_error(rtf_plan(cols = "TRT"), "ordinary function")
+})
+
+
+test_that("plan_row_group(page = TRUE) is the group axis, in one verb", {
+  skip_if_no_cards2()
+  p <- disp_plan() |> plan_row_group(col = "group", page = TRUE)
+  r <- rtfreporter:::.plan_rtf_args(p)
+  expect_identical(r$split, "by_value")
+  expect_identical(r$group_col, "group")
+  out <- suppressMessages(apply_plan(p))
+  expect_gt(length(out), 1L)          # one page per group value
+})
+
+test_that("two verbs asking for different splits is a mistake", {
+  skip_if_no_cards2()
+  p <- disp_plan() |> plan_row_group(col = "group", page = TRUE) |>
+    plan_paginate_rows(split = "group_safe", max_rows = 5)
+  expect_error(suppressMessages(apply_plan(p)), "Use one", fixed = TRUE)
 })
 

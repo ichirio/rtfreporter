@@ -368,6 +368,21 @@ N = ", n$arm)` cannot drift from the columns
 
   **22 verbs**, down from 25.
 
+  **`plan_row_group()`, `plan_paginate_rows()`, `plan_paginate_cols()`.**
+  `plan_group()` could not be told apart from a page group by its name,
+  and the group axis of pagination was split across two verbs ---
+  `plan_group(col = )` named the column, `plan_pages(split =
+  "by_value")` asked for the break --- which made the column the one
+  thing they had to agree about.  It is one verb now:
+  `plan_row_group(col =, mode =, collapse =, show =, page =)`, where
+  `page = TRUE` starts a new page at each group.  The shift and
+  solicited-AE reports each lost a line.
+
+  So the three axes read as three subjects: the rows' grouping and its
+  break, how tall a page is, how wide a page is.  Two verbs asking for
+  different splits is now an error rather than last-wins, because that
+  is a mistake and not a preference.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
