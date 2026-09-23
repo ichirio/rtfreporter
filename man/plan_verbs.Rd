@@ -68,7 +68,7 @@ plan_paginate_rows(
 
 plan_style(plan, border = NULL, widths = NULL, ...)
 
-plan_col_header(plan, ..., header = NULL, n = NULL, values = NULL)
+plan_col_header(plan, header = NULL, n = NULL, values = NULL)
 
 plan_listing(
   plan,
@@ -106,22 +106,29 @@ plan_paginate_cols(
 \arguments{
 \item{plan}{An \code{\link[=rtf_plan]{rtf_plan()}}.}
 
-\item{...}{For \code{plan_col_header()}: ONE ARGUMENT PER HEADER ROW, left to
-right, exactly as \code{\link[=rtf_col_header]{rtf_col_header()}} takes them --- so the code is
-laid out the way the header is.  In a row the \strong{last} entry is the
-template used over every spread column (\code{{col}} its name, \code{{n}} its
-denominator) and the ones before it fill the leading columns:
+\item{...}{For \code{plan_cells()}, exactly what \code{ard_spread(cells = )}
+takes: one bare entry, or entries named by variable, \code{context},
+kind (\code{continuous} / \code{categorical}) or \code{default}.  For
+\code{plan_digits()}, the same keys with a number as the value; one
+unnamed value sets the plan-wide default.
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(n = TRUE,
-                c("",               "\{col\}"),
-                c("Characteristic", "(N=\{n\})"))
-}\if{html}{\out{</div>}}
+For \code{plan_levels()} and \code{plan_labels()}, one entry per column or
+analysis variable: an order (\code{AGEGR1 = c("<65", "65-74")}), or
+the text values are printed as (\code{AGE = "Age (years)"}).  Both
+merge one \strong{key} at a time, so a later layer adds a variable
+without restating the rest --- which is the whole reason these
+two are layers and the roles are not.  A \code{plan_labels()} entry
+whose value is itself a named vector applies to that \strong{column}
+only: a shift table's \code{"0"} is \code{"Grade 0"} down the side and
+\code{"Baseline 0"} across the top.
 
-A character vector is therefore a template row.  Anything else ---
-an \code{\link[=rtf_col_header]{rtf_col_header()}}, a list of \code{\link[=col_cell]{col_cell()}}s, a function --- is a
-header you built and goes through untouched, so a spanner, a border
-or a cell that reads the finished table is written exactly as it
-always was.  Templates repeat; construction is construction.}
+For \code{plan_sort()}, the row order: the keys in
+priority order, each optionally prefixed \code{-} for descending, plus
+\code{".overall"} (an \verb{Any TEAE} block first), \code{".depth"} (a level's own
+summary before the rows under it) and any statistic totalled
+across the spread columns --- which is the whole of a
+descending-frequency AE table's order.  A single \code{TRUE} / \code{FALSE}
+is \code{ard_spread(sort = )}'s own answer.}
 
 \item{round}{For \code{plan_digits()}: the tie-breaking family for the
 run, as \code{ard_spread(round = )} takes it.  Last wins, like every
@@ -186,9 +193,27 @@ and the \strong{column} axis is \code{plan_paginate_cols()}.}
 column widths (\code{col_rel_width}).  Anything else \code{\link[=rtftable]{rtftable()}}
 understands goes through \code{...}.}
 
-\item{header}{For \code{plan_col_header()}: the same built header, named rather
-than positional --- an \code{\link[=rtf_col_header]{rtf_col_header()}} object, or a \strong{function}
-of the resolved \code{n} (and, with two arguments, the finished table).}
+\item{header}{For \code{plan_col_header()}: the header, built with the same
+\code{\link[=rtf_col_header]{rtf_col_header()}} as everywhere else --- or a \strong{function} of the
+resolved \code{n} (and, with two arguments, the finished table) when it
+has to be computed.  The plan adds two things to a header it is
+given, both of which used to need a function:
+\itemize{
+\item its cells may carry \code{{col}} (that column's name) and \code{{n}} (that
+column's denominator, or the single one there is);
+\item a row \strong{shorter} than the table has its last cell repeated over
+the spread columns, whose names are not known until the table
+exists.
+}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(n = TRUE, rtf_col_header(
+  c("",               "\{col\}"),
+  c("Characteristic", "(N=\{n\})")))
+}\if{html}{\out{</div>}}
+
+A row already the right length, and a cell with no token in it, are
+untouched --- so a spanner, a border or a cell that reads the
+finished table is written exactly as it always was.}
 
 \item{n}{For \code{plan_col_header()}: the denominator the header needs.
 \code{TRUE} reads it from the ARD with the same \code{cols} / \code{levels}

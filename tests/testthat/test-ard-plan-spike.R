@@ -1016,12 +1016,12 @@ test_that("plan_paginate_group() is what auto_section cuts on", {
 
 # ------------------------------------ the header without a function
 
-test_that("plan_col_header(cols = ) writes the commonest header", {
+test_that("a header cell may carry {col} and {n}", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_col_header(n = c(Placebo = 86),
-                    c("",               "{col}"),
-                    c("Characteristic", "(N={n})"))
+    plan_col_header(n = c(Placebo = 86), rtf_col_header(
+      c("",               "{col}"),
+      c("Characteristic", "(N={n})")))
   out <- suppressMessages(apply_plan(p))
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   rows <- first$col_header$rows %||% first$col_header
@@ -1034,14 +1034,6 @@ test_that("plan_col_header(cols = ) writes the commonest header", {
   expect_true(any(grepl("Placebo", txt, fixed = TRUE)))
 })
 
-test_that("a built header and a templated one are not both given", {
-  skip_if_no_cards2()
-  p <- disp_plan() |>
-    plan_col_header(c("", "{col}"),
-                    header = rtf_col_header(c("a", "b", "c", "d", "e")))
-  expect_error(suppressMessages(apply_plan(p)), "not both", fixed = TRUE)
-})
-
 test_that("an rtf_col_header() goes through untouched, positionally", {
   skip_if_no_cards2()
   h <- rtf_col_header(c("Group", "Characteristic", "A", "B", "C"))
@@ -1051,10 +1043,30 @@ test_that("an rtf_col_header() goes through untouched, positionally", {
   expect_equal(a, b)
 })
 
-test_that("a row cannot claim more leading cells than there are", {
+test_that("a row already the right length is left alone", {
   skip_if_no_cards2()
-  p <- disp_plan() |> plan_col_header(c("a", "b", "c", "{col}"))
-  expect_error(suppressMessages(apply_plan(p)),
-               "cells before the column template")
+  # five columns, five cells: nothing to repeat and no token to fill
+  h <- rtf_col_header(c("Group", "Characteristic", "A", "B", "C"))
+  out <- suppressMessages(apply_plan(disp_plan() |>
+                                       plan_col_header(h)))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  expect_true(any(grepl("Characteristic", unlist(first$col_header),
+                        fixed = TRUE)))
+})
+
+test_that("{n} in a spanner takes the one value there is", {
+  skip_if_no_cards2()
+  h <- rtf_col_header(
+    list(col_cell(1L, "Group"), col_cell(2L, "Characteristic"),
+         col_cell(c(3L, 5L), "All arms (N={n})")),
+    c("", "", "{col}"))
+  out <- suppressMessages(apply_plan(
+    disp_plan() |> plan_col_header(n = 254, h)))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  txt <- unlist(lapply(first$col_header, function(r)
+    vapply(r, function(z) if (is.list(z)) as.character(z$label) else
+      as.character(z), "")))
+  expect_true(any(grepl("All arms (N=254)", txt, fixed = TRUE)))
+  expect_true(any(grepl("Placebo", txt, fixed = TRUE)))
 })
 

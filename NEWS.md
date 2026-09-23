@@ -444,6 +444,33 @@ N = ", n$arm)` cannot drift from the columns
   border or a cell that reads the finished table is written exactly as
   it always was: templates repeat, construction is construction.
 
+  ...and then the two shapes became one.  A second way to write a header
+  was not worth its weight: the header is `rtf_col_header()`, the same
+  constructor as everywhere else, and what the **plan** adds is that it
+  fills tokens in the cells it is handed --- `{col}` for the column,
+  `{n}` for its denominator --- and repeats a row's last cell over the
+  spread columns when the row is shorter than the table.  Those two
+  things are the whole of what a function was ever needed for, since the
+  columns are not known until the table exists.
+
+  ```r
+  plan_col_header(n = TRUE, rtf_col_header(
+    c("",               "{col}"),
+    c("Characteristic", "(N={n})")))
+  ```
+
+  A row already the right length, and a cell with no token, are
+  untouched, so nothing that works today changes meaning (a short row is
+  an error today).  This freed the **lab shift** report too, whose
+  function existed only to paste a number into a spanner --- it is now
+  `col_cell(c(2L, 5L), "MIRV
+(N={n})
+ n (%)
+<Baseline>")`.  Two of
+  the six reports need no header function; the other four build spanners
+  from column arithmetic and keep one, which is construction rather than
+  repetition.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
