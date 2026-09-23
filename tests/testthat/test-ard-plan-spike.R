@@ -977,3 +977,51 @@ test_that("sorting alone does not turn a table into RTF pages", {
   expect_true(is.data.frame(suppressMessages(apply_plan(p))))
 })
 
+
+# ------------------------------------ needed and not wanted, said once
+
+test_that("the spread builds only what the roles named", {
+  skip_if_no_cards2()
+  # there is nothing to drop, because nothing unasked-for is built: a
+  # column is a row key, the label, or a spread column
+  out <- suppressMessages(apply_plan(base_plan(), "table"))
+  keys <- c("group", "label")
+  arms <- setdiff(names(out), keys)
+  expect_setequal(intersect(names(out), keys), keys)
+  expect_true(all(grepl("Placebo|Xanomeline", arms)))
+})
+
+test_that("plan_pages(show = FALSE) hides the key the break reads", {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_derive(pg = ifelse(group == "SEX", "1", "2")) |>
+    plan_pages(split = "by_value", by = "pg", show = FALSE)
+  out <- suppressMessages(apply_plan(p))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  expect_false("pg" %in% names(first$data))
+  expect_gt(length(out), 1L)          # it really did break on it
+})
+
+test_that("plan_sort(show = FALSE) hides a sort carrier, and only it", {
+  d <- data.frame(ord = c("2", "1"), label = c("B", "A"),
+                  x = c("9", "8"), stringsAsFactors = FALSE)
+  p <- rtf_plan(d) |> plan_sort("ord", show = FALSE) |>
+    plan_pages(max_rows = 10)
+  out <- suppressMessages(apply_plan(p))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  expect_false("ord" %in% names(first$data))
+  expect_identical(first$data$label[1L], "A")
+})
+
+test_that("a sort key that is not a column is not mistaken for one", {
+  skip_if_no_cards2()
+  # ".overall" and "-n" are instructions, not columns: hiding must not
+  # try to drop them
+  p <- base_plan() |> plan_sort(".overall", "group", "-n", show = FALSE) |>
+    plan_pages(max_rows = 40)
+  out <- suppressMessages(apply_plan(p))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  expect_false("group" %in% names(first$data))
+  expect_true("label" %in% names(first$data))
+})
+

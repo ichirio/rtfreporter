@@ -59,7 +59,7 @@ plan_group(plan, col = NULL, mode = NULL, collapse = NULL, show = TRUE)
 
 plan_hide(plan, ...)
 
-plan_sort(plan, ..., desc = NULL)
+plan_sort(plan, ..., desc = NULL, show = TRUE)
 
 plan_blanks(plan, where = NULL, first = NULL, last = NULL, counted = NULL)
 
@@ -70,7 +70,8 @@ plan_pages(
   break_before = NULL,
   by = NULL,
   min_group_rows = NULL,
-  cont_label = NULL
+  cont_label = NULL,
+  show = TRUE
 )
 
 plan_style(plan, border = NULL, widths = NULL, ...)
@@ -156,10 +157,14 @@ will be printed.  The two do \strong{not} always give the same table.}
 \item{col, mode, collapse}{For \code{plan_group()}: \code{as_rtftables()}'s
 \code{group_col}, \code{group_by} and \code{collapse_repeats}.}
 
-\item{show}{For \code{plan_group()}: \code{FALSE} also hides the grouping column.
-A carrier that groups the rows without being printed is the ordinary
-shape of a grouped table, and it was the only place in six reports
-where a column had to be named by two verbs.}
+\item{show}{\code{FALSE} also hides the column the verb names: the
+grouping carrier for \code{plan_group()}, the \code{by} key for \code{plan_pages()}, the
+sort keys for \code{plan_sort()}.  A column can be \strong{needed and not
+wanted} --- a carrier that groups the rows, the key a page break
+reads --- and the verb that needs it is the one place that knows,
+so it says so there instead of the name being written again in a
+\code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
+are ignored rather than refused.}
 
 \item{desc}{For \code{plan_sort()} over a table that is
 already built: \code{as_rtftables()}'s \code{sort_desc}.  A plan with an ARD

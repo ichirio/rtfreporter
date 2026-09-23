@@ -620,10 +620,14 @@ print.rtf_plan <- function(x, ...) {
 #'   `TRUE` folds it first, with [stub_cols()], which is what
 #'   `plan_cell_style()` needs --- only then can a condition see the rows that
 #'   will be printed.  The two do **not** always give the same table.
-#' @param show For `plan_group()`: `FALSE` also hides the grouping column.
-#'   A carrier that groups the rows without being printed is the ordinary
-#'   shape of a grouped table, and it was the only place in six reports
-#'   where a column had to be named by two verbs.
+#' @param show `FALSE` also hides the column the verb names: the
+#'   grouping carrier for `plan_group()`, the `by` key for `plan_pages()`, the
+#'   sort keys for `plan_sort()`.  A column can be **needed and not
+#'   wanted** --- a carrier that groups the rows, the key a page break
+#'   reads --- and the verb that needs it is the one place that knows,
+#'   so it says so there instead of the name being written again in a
+#'   `plan_hide()`.  Names that are not columns (a statistic, `".depth"`)
+#'   are ignored rather than refused.
 #' @param col,mode,collapse For `plan_group()`: `as_rtftables()`'s
 #'   `group_col`, `group_by` and `collapse_repeats`.
 #' @param desc For `plan_sort()` over a table that is
@@ -1011,11 +1015,12 @@ plan_hide <- function(plan, ...) {
 # that would be the same duplication the roles just lost.
 #' @rdname plan_verbs
 #' @export
-plan_sort <- function(plan, ..., desc = NULL) {
+plan_sort <- function(plan, ..., desc = NULL, show = TRUE) {
   v <- list(...)
   keys <- if (length(v) == 1L && is.logical(v[[1L]])) v[[1L]]
           else unlist(v, use.names = FALSE)
-  .plan_layer(plan, "sort", list(sort = keys, sort_desc = desc))
+  .plan_layer(plan, "sort",
+              list(sort = keys, sort_desc = desc, .show = show))
 }
 
 # Is there anything to spread?  A finished table and a listing have no
@@ -1035,14 +1040,20 @@ plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL,
 
 #' @rdname plan_verbs
 #' @export
+# `show = FALSE` wherever a verb NAMES a column it needs: the page key,
+# the grouping carrier, a sort carrier.  A column can be needed and not
+# wanted, and the verb that needs it is the one place that knows -- so
+# it says so there, rather than the name being written a second time in
+# a plan_hide().
 plan_pages <- function(plan, max_rows = NULL, split = NULL,
                        break_before = NULL, by = NULL,
-                       min_group_rows = NULL, cont_label = NULL) {
+                       min_group_rows = NULL, cont_label = NULL,
+                       show = TRUE) {
   .plan_layer(plan, "pages",
               list(max_rows = max_rows, split = split,
                    split_rows = break_before, page_by = by,
                    min_group_rows = min_group_rows,
-                   cont_label = cont_label))
+                   cont_label = cont_label, .show = show))
 }
 
 # `...` is open on purpose: everything rtftable() understands about how a
@@ -1443,7 +1454,7 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
 # here reimplements as_rtftables() or anything around it.
 # One call built from the layers.  Each verb owns its own arguments, so
 # this is a merge, not a translation -- the names never change.
-.plan_rtf_args <- function(plan) {
+.plan_rtf_args <- function(plan, tbl = NULL) {
   out <- list()
   for (kind in c("group", "hide", "blanks", "pages", "style")) {
     for (nm in names(l <- .plan_merge(.plan_of(plan, kind)))) {
@@ -1477,11 +1488,33 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   if (length(g) && isFALSE(g$.show) && !is.null(gcol)) {
     hid <- unique(c(hid, gcol))
   }
+  # plan_pages(show = FALSE) / plan_sort(show = FALSE): the same for a
+  # page key and a sort carrier.  A derived name is intersected with
+  # the table, because a sort may also name a statistic or ".depth",
+  # which are not columns; a plan_hide() is NOT, because a name that
+  # matches nothing there is a typo and should say so.
+  pg <- .plan_merge(.plan_of(plan, "pages"))
+  if (length(pg) && isFALSE(pg$.show) && !is.null(pg$page_by)) {
+    hid <- unique(c(hid, .plan_present(pg$page_by, tbl)))
+  }
+  if (length(srt) && isFALSE(srt$.show) && !is.null(srt$sort) &&
+      !is.logical(srt$sort)) {
+    hid <- unique(c(hid, .plan_present(sub("^-", "", srt$sort), tbl)))
+  }
   if (length(hid)) out$drop_cols <- hid
   # A table built from an ARD is a plain data.frame: there is no adapter
   # metadata to read, and every report was saying so by hand.
   if (is.null(out$read_meta)) out$read_meta <- FALSE
   out
+}
+
+# Which of these names are actually columns.  Without the table in
+# hand nothing is dropped, which is the safe way round: the caller
+# gets the column rather than an error about a column that is not
+# there.
+.plan_present <- function(x, tbl) {
+  if (is.null(tbl)) return(character(0))
+  intersect(as.character(x), names(tbl))
 }
 
 # Attach the title / footnote blocks to each page.  One block goes on
@@ -1610,7 +1643,7 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   }
 
   lst <- .plan_merge(.plan_of(plan, "listing"))
-  rtf <- .plan_rtf_args(plan)
+  rtf <- .plan_rtf_args(plan, tbl)
   if (length(lst)) {
     cols <- lst$cols; lst$cols <- NULL
     lst <- lst[!vapply(lst, is.null, logical(1L))]

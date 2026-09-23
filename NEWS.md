@@ -298,6 +298,20 @@ N = ", n$arm)` cannot drift from the columns
   same thing, and `cols` / `rows` / `label` line up with tfrmt's
   `column` / `group` / `label`.
 
+  **A column can be needed and not wanted, and the verb that needs it
+  says so.**  There is nothing to hide by default --- the spread builds
+  a row key, the label column and the spread columns, which is exactly
+  what the roles named, so an unnamed column is not dropped, it is never
+  made.  What is left is a column that IS named and should not print: a
+  grouping carrier, the key a page break reads, a sort carrier.
+  `show = FALSE` now says that on `plan_group()`, `plan_pages()` and
+  `plan_sort()` alike, instead of the name being written a second time
+  in a `plan_hide()`.  Names that are not columns (a statistic,
+  `".depth"`) are ignored there, while a `plan_hide()` that matches
+  nothing still says so, because that one is a typo.  The solicited-AE
+  report lost its `plan_hide("page")`, and `plan_hide()` is now used by
+  none of the six --- it stays as the way to hide anything else.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
