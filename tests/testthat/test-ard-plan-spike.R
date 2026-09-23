@@ -380,7 +380,7 @@ test_that("plan_stub() folds the row keys before as_rtftables() sees them", {
   skip_if_no_cards2()
   new <- suppressMessages(apply_plan(
     disp_plan() |>
-      plan_stub(vars = c("group", "label"), label = "row_label") |>
+      plan_stub(vars = c("group", "label"), into = "row_label") |>
       plan_style(border = "tfl"),
     "pages"))
   expect_true("row_label" %in% names(new[[1]]$data))
@@ -468,7 +468,7 @@ test_that("rtf_tables() takes a plan, so apply_plan() is for looking", {
 styled <- function(...) {
   suppressMessages(apply_plan(
     disp_plan() |>
-      plan_stub(vars = c("group", "label"), label = "row_label",
+      plan_stub(vars = c("group", "label"), into = "row_label",
                 before = TRUE) |>
       plan_cell_style(...) |>
       plan_style(border = "tfl"),
@@ -516,7 +516,7 @@ test_that("styles are last-wins like every other layer", {
   skip_if_no_cards2()
   pg <- suppressMessages(apply_plan(
     disp_plan() |>
-      plan_stub(vars = c("group", "label"), label = "row_label",
+      plan_stub(vars = c("group", "label"), into = "row_label",
                 before = TRUE) |>
       plan_cell_style(bold = ~ TRUE) |>
       plan_cell_style(bold = ~ FALSE) |>          # a later LAYER wins
@@ -560,7 +560,7 @@ test_that("folding the stub inside as_rtftables() is refused with a reason", {
 test_that("plan_cell_style() and plan_style(cell_styles=) do not both apply", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_stub(vars = c("group", "label"), label = "row_label",
+    plan_stub(vars = c("group", "label"), into = "row_label",
               before = TRUE) |>
     plan_cell_style(bold = ~ TRUE) |>
     plan_style(cell_styles = list(NULL))
@@ -707,7 +707,7 @@ test_that("an unnamed argument that is not a function is refused", {
 test_that("print() names the columns of every stage it has", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_stub(vars = c("group", "label"), label = "row_label") |>
+    plan_stub(vars = c("group", "label"), into = "row_label") |>
     plan_style(border = "tfl")
 
   out <- utils::capture.output(print(p))
@@ -944,5 +944,36 @@ test_that("the same plan serves a second study, data and all", {
   b <- suppressMessages(apply_plan(plan_data(tmpl, d2)))
   expect_identical(names(a), names(b))
   expect_false(identical(a$A, b$A))
+})
+
+
+# -------------------------------------------------------- the row order
+
+test_that("plan_sort() goes to the ARD half, where the statistics are", {
+  skip_if_no_cards2()
+  p <- base_plan() |> plan_sort(".overall", "group", "-n")
+  a <- apply_plan(p, "args")
+  expect_identical(a$sort, c(".overall", "group", "-n"))
+  # and nothing reaches as_rtftables(), which could not sort on `-n`:
+  # by then the statistic is a formatted cell, not a number
+  r <- rtfreporter:::.plan_rtf_args(p)
+  expect_null(r$sort_by)
+})
+
+test_that("plan_sort() over a finished table sorts the table", {
+  d <- data.frame(group = c("B", "A"), x = c("1", "2"),
+                  stringsAsFactors = FALSE)
+  p <- rtf_plan(d) |> plan_sort("group") |> plan_pages(max_rows = 10)
+  r <- rtfreporter:::.plan_rtf_args(p)
+  expect_identical(r$sort_by, "group")
+  out <- suppressMessages(apply_plan(p))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  expect_identical(first$data$group[1L], "A")
+})
+
+test_that("sorting alone does not turn a table into RTF pages", {
+  skip_if_no_cards2()
+  p <- base_plan() |> plan_sort("group")
+  expect_true(is.data.frame(suppressMessages(apply_plan(p))))
 })
 

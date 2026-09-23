@@ -172,7 +172,7 @@
 # plan stops at the table data.frame.
 .plan_reach <- function(plan) {
   kinds <- vapply(plan$layers, `[[`, "", "kind")
-  if (any(kinds %in% c("group", "hide", "sort", "blanks", "pages",
+  if (any(kinds %in% c("group", "hide", "blanks", "pages",
                        "style", "header", "styles", "after",
                        "titles", "footnotes", "listing"))) "pages"
   else "table"
@@ -367,10 +367,7 @@
 #'   calls them that and needs none of them; a summary somebody built
 #'   with dplyr says so here, once, instead of being asked again by
 #'   every verb.
-#' @param sort The row order, as `ard_spread(sort = )` takes it: `TRUE`,
-#'   `FALSE`, or the keys in priority order (`".overall"`, `".depth"`, a
-#'   column, a statistic, each optionally `-` for descending).  It names
-#'   the same keys `rows` does, which is why it is declared beside them.
+
 #' @param stats `"cells"` (default) fills a template per cell; `"rows"`
 #'   makes each statistic a row of its own.
 #' @param sep Separator pasted between multiple `cols` keys.
@@ -404,11 +401,11 @@
 #' @seealso [apply_plan()], [ard_normalize()], [ard_spread()]
 #' @export
 rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
-                     label = NULL, sort = NULL,
+                     label = NULL,
                      variable = NULL, stat_name = NULL, stat = NULL,
                      stats = NULL, sep = NULL, value = NULL,
                      na = NULL, spec = NULL, notes = NULL) {
-  roles <- list(cols = cols, rows = rows, label = label, sort = sort,
+  roles <- list(cols = cols, rows = rows, label = label,
                 variable = variable, stat_name = stat_name,
                 stat = stat, stats = stats, sep = sep, value = value,
                 na = na, spec = spec, notes = notes)
@@ -507,7 +504,7 @@ print.rtf_plan <- function(x, ...) {
       else "table data.frame",
       "\n", sep = "")
   # The roles first: every other verb is read against them.
-  for (r in c("cols", "rows", "label", "sort")) {
+  for (r in c("cols", "rows", "label")) {
     v <- x$roles[[r]]
     if (is.null(v)) next
     one <- function(i) {
@@ -600,13 +597,24 @@ print.rtf_plan <- function(x, ...) {
 #'   only: a shift table's `"0"` is `"Grade 0"` down the side and
 #'   `"Baseline 0"` across the top.
 #'
+#'   For `plan_sort()`, the row order: the keys in
+#'   priority order, each optionally prefixed `-` for descending, plus
+#'   `".overall"` (an `Any TEAE` block first), `".depth"` (a level's own
+#'   summary before the rows under it) and any statistic totalled
+#'   across the spread columns --- which is the whole of a
+#'   descending-frequency AE table's order.  A single `TRUE` / `FALSE`
+#'   is `ard_spread(sort = )`'s own answer.
+#'
 #'   For `plan_mutate()` / `plan_filter()` / `plan_derive()`, dplyr
 #'   expressions.  `plan_mutate()` and `plan_filter()` act on the
 #'   **long frame**, before the spread; `plan_derive()` acts on the
 #'   **table**, after it, which is where a column like a page key can
 #'   only be worked out.
-#' @param vars,label,indent,group_summary For `plan_stub()`: the row keys to
+#' @param vars,into,indent,group_summary For `plan_stub()`: the row keys to
 #'   fold into one stub column and how, as [stub_cols()] takes them.
+#'   `into` is the NAME the folded column gets (`stub_cols(label = )`), which
+#'   is a different thing from `rtf_plan(label = )` --- the column whose
+#'   VALUES are the row text.  `vars` is derived when left out.
 #' @param before For `plan_stub()`: `FALSE` (default) folds the stub inside
 #'   [as_rtftables()], after grouping and pagination have had their say.
 #'   `TRUE` folds it first, with [stub_cols()], which is what
@@ -618,7 +626,9 @@ print.rtf_plan <- function(x, ...) {
 #'   where a column had to be named by two verbs.
 #' @param col,mode,collapse For `plan_group()`: `as_rtftables()`'s
 #'   `group_col`, `group_by` and `collapse_repeats`.
-#' @param desc For `plan_sort()`: `as_rtftables()`'s `sort_desc`.
+#' @param desc For `plan_sort()` over a table that is
+#'   already built: `as_rtftables()`'s `sort_desc`.  A plan with an ARD
+#'   half writes the direction into the keys instead (`-n`).
 #' @param where,first,last,counted For `plan_blanks()`: `as_rtftables()`'s
 #'   `blank_rows`, `blank_row_first`, `blank_row_end` and
 #'   `count_blank_rows`.
@@ -866,10 +876,14 @@ plan_fmt <- function(plan, ...) .plan_layer(plan, "fmt", list(...))
 # names of rtf_plan(rows = ), the label column is the name of its
 # `label = `, and a grouping carrier is not part of the stub.  Left out,
 # it is worked out from what has already been declared.
-plan_stub <- function(plan, vars = NULL, label = NULL, indent = NULL,
+plan_stub <- function(plan, vars = NULL, into = NULL, indent = NULL,
                       group_summary = NULL, before = FALSE) {
+  # `into` rather than `label`: rtf_plan(label = ) is the column whose
+  # VALUES are the row text, and this is the NAME of the column the
+  # row keys are folded into.  One letter of difference is not worth
+  # the two of them being confusable.
   .plan_layer(plan, "stub",
-              list(vars = vars, label = label, indent = indent,
+              list(vars = vars, label = into, indent = indent,
                    group_summary = group_summary, before = before))
 }
 
@@ -989,11 +1003,25 @@ plan_hide <- function(plan, ...) {
   .plan_layer(plan, "hide", list(drop_cols = cols))
 }
 
+# ONE sort, because there is only one question: what order are the
+# rows in.  Which machinery answers it is not the author's problem --
+# a plan with an ARD half sorts before the cells are filled, where the
+# statistics are still there to sort ON (`-n`, `.overall`, `.depth`),
+# and a plan over a finished table sorts the table.  Two verbs for
+# that would be the same duplication the roles just lost.
 #' @rdname plan_verbs
 #' @export
 plan_sort <- function(plan, ..., desc = NULL) {
-  cols <- unlist(list(...), use.names = FALSE)
-  .plan_layer(plan, "sort", list(sort_by = cols, sort_desc = desc))
+  v <- list(...)
+  keys <- if (length(v) == 1L && is.logical(v[[1L]])) v[[1L]]
+          else unlist(v, use.names = FALSE)
+  .plan_layer(plan, "sort", list(sort = keys, sort_desc = desc))
+}
+
+# Is there anything to spread?  A finished table and a listing have no
+# statistics, so the ARD-side arguments have nowhere to go.
+.plan_ard_half <- function(plan) {
+  !identical(plan$kind, "wide") && !length(.plan_of(plan, "listing"))
 }
 
 #' @rdname plan_verbs
@@ -1397,6 +1425,8 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
 # layers, which merge one key at a time.
 .plan_spread_args <- function(plan) {
   out <- plan$roles
+  srt <- .plan_merge(.plan_of(plan, "sort"))
+  if (length(srt) && !is.null(srt$sort)) out$sort <- srt$sort
   # renames, not arguments: .plan_prepare() has already done them
   out[c("variable", "stat_name", "stat")] <- NULL
   lb <- .plan_label_spec(plan)
@@ -1415,12 +1445,22 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
 # this is a merge, not a translation -- the names never change.
 .plan_rtf_args <- function(plan) {
   out <- list()
-  for (kind in c("group", "hide", "sort", "blanks", "pages", "style")) {
+  for (kind in c("group", "hide", "blanks", "pages", "style")) {
     for (nm in names(l <- .plan_merge(.plan_of(plan, kind)))) {
       # a dot-name is the plan's own bookkeeping, not an argument
       if (startsWith(nm, ".")) next
       out[[nm]] <- l[[nm]]
     }
+  }
+  # The row order goes to whichever half can do it: ard_spread() when
+  # there are statistics to sort on, as_rtftables() when the source is
+  # already the table.
+  srt <- .plan_merge(.plan_of(plan, "sort"))
+  if (length(srt) && !.plan_ard_half(plan)) {
+    if (!is.null(srt$sort) && !is.logical(srt$sort)) {
+      out$sort_by <- srt$sort
+    }
+    if (!is.null(srt$sort_desc)) out$sort_desc <- srt$sort_desc
   }
   # Grouping by the outermost row key is the ordinary case, so
   # plan_group() may leave `col` out and have it read off the roles.
@@ -1786,7 +1826,7 @@ plan_template <- function(ard, cols = NULL, hierarchy = character(),
   # `vars` is left out on purpose: plan_stub() works it out from
   # rtf_plan(rows = , label = ) less any plan_group(col = ).
   L <- c(L, .plan_call("plan_stub",
-                       "label = \"row_label\"", op))
+                       "into = \"row_label\"", op))
   # One concern per line.  Delete the ones this report does not want;
   # none of them has to be read in order to change another.
   L <- c(L,

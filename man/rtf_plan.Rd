@@ -9,7 +9,6 @@ rtf_plan(
   cols = NULL,
   rows = NULL,
   label = NULL,
-  sort = NULL,
   variable = NULL,
   stat_name = NULL,
   stat = NULL,
@@ -46,11 +45,6 @@ analysis variable is used (as \code{group}).}
 \item{label}{The column carrying the \strong{row identity} --- the text in
 the label column.  \code{".label"} by default (what \code{\link[=ard_normalize]{ard_normalize()}}
 builds), \code{NA} for a table that has none, or a guarded template.}
-
-\item{sort}{The row order, as \code{ard_spread(sort = )} takes it: \code{TRUE},
-\code{FALSE}, or the keys in priority order (\code{".overall"}, \code{".depth"}, a
-column, a statistic, each optionally \code{-} for descending).  It names
-the same keys \code{rows} does, which is why it is declared beside them.}
 
 \item{variable, stat_name, stat}{Which of \strong{your} columns play the
 three parts \code{\link[=ard_spread]{ard_spread()}} reads by name: the analysis variable

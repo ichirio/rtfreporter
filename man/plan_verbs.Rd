@@ -47,7 +47,7 @@ plan_fmt(plan, ...)
 plan_stub(
   plan,
   vars = NULL,
-  label = NULL,
+  into = NULL,
   indent = NULL,
   group_summary = NULL,
   before = FALSE
@@ -123,6 +123,14 @@ whose value is itself a named vector applies to that \strong{column}
 only: a shift table's \code{"0"} is \code{"Grade 0"} down the side and
 \code{"Baseline 0"} across the top.
 
+For \code{plan_sort()}, the row order: the keys in
+priority order, each optionally prefixed \code{-} for descending, plus
+\code{".overall"} (an \verb{Any TEAE} block first), \code{".depth"} (a level's own
+summary before the rows under it) and any statistic totalled
+across the spread columns --- which is the whole of a
+descending-frequency AE table's order.  A single \code{TRUE} / \code{FALSE}
+is \code{ard_spread(sort = )}'s own answer.
+
 For \code{plan_mutate()} / \code{plan_filter()} / \code{plan_derive()}, dplyr
 expressions.  \code{plan_mutate()} and \code{plan_filter()} act on the
 \strong{long frame}, before the spread; \code{plan_derive()} acts on the
@@ -133,8 +141,11 @@ only be worked out.}
 run, as \code{ard_spread(round = )} takes it.  Last wins, like every
 other layer.}
 
-\item{vars, label, indent, group_summary}{For \code{plan_stub()}: the row keys to
-fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} takes them.}
+\item{vars, into, indent, group_summary}{For \code{plan_stub()}: the row keys to
+fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} takes them.
+\code{into} is the NAME the folded column gets (\code{stub_cols(label = )}), which
+is a different thing from \code{rtf_plan(label = )} --- the column whose
+VALUES are the row text.  \code{vars} is derived when left out.}
 
 \item{before}{For \code{plan_stub()}: \code{FALSE} (default) folds the stub inside
 \code{\link[=as_rtftables]{as_rtftables()}}, after grouping and pagination have had their say.
@@ -150,7 +161,9 @@ A carrier that groups the rows without being printed is the ordinary
 shape of a grouped table, and it was the only place in six reports
 where a column had to be named by two verbs.}
 
-\item{desc}{For \code{plan_sort()}: \code{as_rtftables()}'s \code{sort_desc}.}
+\item{desc}{For \code{plan_sort()} over a table that is
+already built: \code{as_rtftables()}'s \code{sort_desc}.  A plan with an ARD
+half writes the direction into the keys instead (\code{-n}).}
 
 \item{where, first, last, counted}{For \code{plan_blanks()}: \code{as_rtftables()}'s
 \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end} and

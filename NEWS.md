@@ -280,6 +280,24 @@ N = ", n$arm)` cannot drift from the columns
   the roles, and the denominator no longer has to be computed twice now
   that the ARD is in scope.
 
+  **`rtf_plan()` is the roles and nothing else, so the sort left it.**
+  `sort` names the same keys `rows` does, which is why it was declared
+  beside them --- but an order is not a role, and there were already two
+  verbs for one question: `ard_spread(sort = )` on the way in and
+  `plan_sort()` on the way out.  There is now one `plan_sort()`, meaning
+  "what order are the rows in".  It resolves to the ARD half when there
+  is one, which is the only place `-n` and `".overall"` can be sorted on
+  (by the table they are formatted cells), and to `as_rtftables()` when
+  the source is already a table.  Sorting alone no longer makes a plan
+  mean RTF pages.
+
+  `plan_stub(label = )` is **`plan_stub(into = )`**: it is the NAME the
+  folded column gets, while `rtf_plan(label = )` is the column whose
+  VALUES are the row text.  Two different things one letter apart.
+  `rtf_plan(label = )` keeps its name --- it is tfrmt's word for the
+  same thing, and `cols` / `rows` / `label` line up with tfrmt's
+  `column` / `group` / `label`.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
