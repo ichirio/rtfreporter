@@ -18,8 +18,8 @@ for looking inside: \code{"long"}, \code{"args"}, \code{"table"}, \code{"pages"}
 
 The named stages: \code{"table"} returns the table
 \code{data.frame}, the same object \code{\link[=ard_spread]{ard_spread()}} returns.  \code{"long"}
-returns the frame going in, with \code{plan_mutate()} and
-\code{plan_filter()} applied.  \code{"args"} returns the resolved
+returns the frame going in, with the ARD column names the roles
+renamed.  \code{"args"} returns the resolved
 argument lists without running anything --- the call the plan amounts
 to.  \code{"pages"} goes all the way: \code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=stub_cols]{stub_cols()}},
 \code{\link[=as_rtftables]{as_rtftables()}}, \code{\link[=set_col_header]{set_col_header()}} and whatever \code{plan_after()}

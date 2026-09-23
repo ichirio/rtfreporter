@@ -89,9 +89,8 @@
 #
 #  Deleting this file removes:
 .ard_plan_exports <- c(
-  "rtf_plan", "plan_data", "plan_cells", "plan_levels", "plan_labels",
-  "plan_digits",
-  "plan_mutate", "plan_filter", "plan_fmt",
+  "rtf_plan", "plan_cells", "plan_levels", "plan_labels",
+  "plan_digits", "plan_fmt",
   "plan_stub", "plan_cell_style",
   "plan_group", "plan_hide", "plan_sort", "plan_blanks", "plan_pages",
   "plan_style", "plan_col_header", "plan_col_pages",
@@ -179,15 +178,14 @@
   else "table"
 }
 
-# The long frame the roles are named against: the data as handed in, plus
-# whatever plan_mutate() / plan_filter() add to it.  There is nothing to
-# compute -- flattening happens before the plan now -- so this is cheap,
-# and print() can always answer what `cols` / `rows` / `label` may name.
+# The long frame the roles are named against: the data as handed in,
+# with the ARD column names it was told about.  There is nothing to
+# compute -- flattening and any dplyr happen before the plan -- so
+# print() can always answer what the roles may name.
 .plan_long <- function(plan) {
   if (!is.null(plan$cache$long)) return(plan$cache$long)
   if (is.null(plan$data)) return(NULL)
-  v <- tryCatch(.plan_reshape(plan, .plan_prepare(plan, plan$data),
-                              c("mutate", "filter")),
+  v <- tryCatch(.plan_prepare(plan, plan$data),
                 error = function(e) plan$data)
   if (!is.null(v)) plan$cache$long <- v
   v
@@ -411,24 +409,16 @@ rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
                 stat = stat, stats = stats, sep = sep, value = value,
                 na = na, spec = spec, notes = notes)
   roles <- roles[!vapply(roles, is.null, logical(1L))]
-  p <- structure(list(data = NULL, kind = NA_character_, roles = roles,
-                      layers = list(),
-                      cache = new.env(parent = emptyenv())),
-                 class = "rtf_plan")
-  # A plan with no data is a TEMPLATE: the roles name columns, and the
-  # columns arrive later, which is how one house style serves every
-  # study.  Given the data here, the names are checked here.
-  if (is.null(data)) p else plan_data(p, data)
-}
-
-#' @rdname plan_verbs
-#' @export
-plan_data <- function(plan, data) {
-  if (!inherits(plan, "rtf_plan")) {
-    .ard_stop("Expected an rtf_plan; start from rtf_plan().")
+  if (is.null(data)) {
+    .ard_stop(paste0(
+      "`data` is required.  The roles name its columns, and that ",
+      "is what lets a typo\n  be caught here rather than three stages later.\n",
+      "  A house style that serves every study is an ordinary ",
+      "function:\n",
+      "    my_dm <- function(d) rtf_plan(d, cols = ...) |> ",
+      "plan_cells(...)"))
   }
-  if (is.null(data)) .ard_stop("`data` is required.")
-  kind <- .plan_source_kind(data, plan$roles)
+  kind <- .plan_source_kind(data, roles)
   if (identical(kind, "ard")) {
     .ard_stop(paste0(
       "rtf_plan() takes the NORMALIZED frame, not a raw ARD, so that ",
@@ -441,11 +431,11 @@ plan_data <- function(plan, data) {
       "and names the\n  hierarchy levels -- which is what `rows` ",
       "and `label` then point at."))
   }
-  .plan_check_roles(data, plan$roles, plan)
-  plan$data  <- data
-  plan$kind  <- kind
-  plan$cache <- new.env(parent = emptyenv())
-  plan
+  .plan_check_roles(data, roles)
+  structure(list(data = data, kind = kind, roles = roles,
+                 layers = list(),
+                 cache = new.env(parent = emptyenv())),
+            class = "rtf_plan")
 }
 
 # The whole point of naming the roles beside the data is that the names can
@@ -453,16 +443,9 @@ plan_data <- function(plan, data) {
 # Only plain strings are checked: a constant (`~ "Worst Post-Baseline"`) and
 # a guarded template (`.label %in% x ~ "  {.label}"`) are not column names,
 # and `label = NA` says there is no label column at all.
-.plan_check_roles <- function(data, roles, plan = NULL) {
+.plan_check_roles <- function(data, roles) {
   if (!is.data.frame(data)) return(invisible(TRUE))
-  # a plan_mutate() already declared is going to make its columns, so
-  # they count as present.  It can only be known when the data comes
-  # LAST -- rtf_plan(roles) |> plan_mutate() |> plan_data() -- which is
-  # the order to write it in if a role names something derived.
-  made <- unlist(lapply(.plan_of(plan %||% list(layers = list()),
-                                 "mutate"),
-                        function(f) names(f$exprs)), use.names = FALSE)
-  nm <- c(names(data), made)
+  nm <- names(data)
   for (r in c("cols", "rows", "label", "variable", "stat_name", "stat")) {
     v <- roles[[r]]
     if (is.null(v) || inherits(v, "formula")) next
@@ -475,29 +458,14 @@ plan_data <- function(plan, data) {
       .ard_stop(sprintf(paste0(
         "rtf_plan(%s = ): no column %s in the data.\n",
         "  Columns: %s%s\n",
-        "  A column you derive has to exist first: make it with ",
-        "dplyr before rtf_plan(),\n  or declare the plan, then ",
-        "plan_mutate(), then plan_data()."),
+        "  A column you derive has to exist first: dplyr::mutate() ",
+        "it before rtf_plan()."),
         r, paste(sQuote(miss), collapse = ", "),
         paste(utils::head(nm, 12L), collapse = ", "),
         if (length(nm) > 12L) ", ..." else ""))
     }
   }
   invisible(TRUE)
-}
-
-# A seam layer carries expressions, and "exprs, env" says nothing.  Show
-# what it will do: the columns it writes, or the condition it keeps.
-.plan_expr_text <- function(l) {
-  ex <- l$fields$exprs
-  if (!length(ex)) return("(nothing)")
-  nms <- names(ex) %||% rep("", length(ex))
-  txt <- vapply(seq_along(ex), function(i) {
-    one <- paste(deparse(ex[[i]]), collapse = " ")
-    if (nzchar(nms[i])) paste0(nms[i], " = ", one) else one
-  }, "")
-  txt <- ifelse(nchar(txt) > 46L, paste0(substr(txt, 1L, 43L), "..."), txt)
-  paste(txt, collapse = "; ")
 }
 
 #' @export
@@ -538,8 +506,7 @@ print.rtf_plan <- function(x, ...) {
   # In declaration order, because that is the order that decides the result.
   for (i in seq_along(x$layers)) {
     l <- x$layers[[i]]
-    what <- if (!is.null(l$fields$exprs)) .plan_expr_text(l) else
-      paste(names(l$fields), collapse = ", ")
+    what <- paste(names(l$fields), collapse = ", ")
     cat(sprintf("  %2d. %-10s %s\n", i, l$kind, what))
   }
   # What `cols` / `rows` / `label` may name.  Normalising is the cheap
@@ -587,11 +554,7 @@ print.rtf_plan <- function(x, ...) {
 #' layering is the only new idea.
 #'
 #' @param plan An [rtf_plan()].
-#' @param data For `plan_data()`: the frame the plan is pointed at.  A
-#'   plan built without one is a **template** --- the roles name
-#'   columns, the columns arrive later --- which is how one house style
-#'   serves every study.  Handing it over is also when the role names
-#'   are checked.
+
 #' @param ... For `plan_cells()`, exactly what `ard_spread(cells = )`
 #'   takes: one bare entry, or entries named by variable, `context`,
 #'   kind (`continuous` / `categorical`) or `default`.  For
@@ -616,11 +579,7 @@ print.rtf_plan <- function(x, ...) {
 #'   descending-frequency AE table's order.  A single `TRUE` / `FALSE`
 #'   is `ard_spread(sort = )`'s own answer.
 #'
-#'   For `plan_mutate()` / `plan_filter()`, dplyr expressions over the
-#'   **long frame**, applied in declaration order.  They exist for a
-#'   plan carrying no data --- a template's own filter, applied to
-#'   whatever arrives --- since a concrete pipeline can simply call
-#'   `dplyr::mutate()` before `rtf_plan()` and be the same one sentence.
+
 #' @param vars,into,indent,group_summary For `plan_stub()`: the row keys to
 #'   fold into one stub column and how, as [stub_cols()] takes them.
 #'   `into` is the NAME the folded column gets (`stub_cols(label = )`), which
@@ -793,8 +752,8 @@ plan_digits <- function(plan, ..., round = NULL) {
 #  and `apply_plan(stage = "pages")` calls them in the order a report is
 #  built:
 #
-#      plan_mutate()  a derived column; plan_filter() drops rows.  WHERE they
-#      plan_filter()  the long frame, before the spread
+#      (dplyr)        a derived column or a filter is written before
+#                     rtf_plan(), in the same sentence
 #      plan_fmt()     fmt_numeric()      on the table data.frame
 #      plan_stub()    stub_cols()        fold the row keys into one stub
 #      plan_cell_style()  cell_styles    bold / colour / align, by condition
@@ -808,74 +767,6 @@ plan_digits <- function(plan, ..., round = NULL) {
 #      plan_titles()  the block ABOVE the table, on each page
 #      plan_footnotes()  the block BELOW it
 #      plan_after()   set_decimal_split() / paginate_cols() / anything else
-
-
-# The two seams, written the way dplyr writes them.  `...` is captured
-# UNEVALUATED and evaluated later against whichever frame the stage has,
-# so `plan_mutate(variable = if_else(stat_name == "N", ...))` reads like
-# the mutate() it replaces and nothing has to leave the plan to do it.
-.plan_exprs <- function(plan, kind, dots, env) {
-  .plan_layer(plan, kind, list(exprs = dots, env = env))
-}
-
-#' @rdname plan_verbs
-#' @export
-plan_mutate <- function(plan, ...) {
-  .plan_exprs(plan, "mutate", as.list(substitute(list(...)))[-1L],
-              parent.frame())
-}
-
-#' @rdname plan_verbs
-#' @export
-plan_filter <- function(plan, ...) {
-  .plan_exprs(plan, "filter", as.list(substitute(list(...)))[-1L],
-              parent.frame())
-}
-
-
-# Applied in DECLARATION order, so a filter and a mutate that depend on
-# each other behave the way they were written.
-#
-# The seams act on the LONG FRAME, before the spread.  There is no
-# table-side seam any more: it was used by none of the six reports once
-# flattening moved out of the plan, because a control column like a
-# page key is derived from the long frame anyway -- and a column that
-# really does need the spread COLUMNS is a table, which rtf_plan()
-# accepts as a source.  A concrete pipeline can also just call
-# dplyr::mutate() before rtf_plan() and stay one sentence; these two
-# are what a plan carrying NO data uses to say the same thing.
-.plan_reshape <- function(plan, d, kinds) {
-  for (i in seq_along(plan$layers)) {
-    l <- plan$layers[[i]]
-    if (!l$kind %in% kinds) next
-    ex <- l$fields$exprs
-    if (!length(ex)) next
-    if (identical(l$kind, "filter")) {
-      for (e in ex) {
-        keep <- eval(e, d, l$fields$env)
-        d <- d[!is.na(keep) & keep, , drop = FALSE]
-      }
-    } else {
-      nms <- names(ex) %||% rep("", length(ex))
-      for (i in seq_along(ex)) {
-        if (!nzchar(nms[i])) {
-          f <- tryCatch(eval(ex[[i]], l$fields$env),
-                        error = function(e) NULL)
-          if (!is.function(f)) {
-            .ard_stop(paste0(
-              "plan_", l$kind, "(): an unnamed argument has to be a ",
-              "function of the frame.\n  Name it to make it a column: ",
-              "plan_", l$kind, "(<name> = <expression>)."))
-          }
-          d <- f(d)
-        } else {
-          d[[nms[i]]] <- eval(ex[[i]], d, l$fields$env)
-        }
-      }
-    }
-  }
-  d
-}
 
 
 #' @rdname plan_verbs
@@ -1191,8 +1082,8 @@ plan_after <- function(plan, ...) {
 #'
 #'   The named stages: `"table"` returns the table
 #'   `data.frame`, the same object [ard_spread()] returns.  `"long"`
-#'   returns the frame going in, with `plan_mutate()` and
-#'   `plan_filter()` applied.  `"args"` returns the resolved
+#'   returns the frame going in, with the ARD column names the roles
+#'   renamed.  `"args"` returns the resolved
 #'   argument lists without running anything --- the call the plan amounts
 #'   to.  `"pages"` goes all the way: [fmt_numeric()], [stub_cols()],
 #'   [as_rtftables()], [set_col_header()] and whatever `plan_after()`
@@ -1226,12 +1117,6 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   if (!inherits(plan, "rtf_plan")) {
     .ard_stop("Expected an rtf_plan; start from rtf_plan(ard).")
   }
-  if (is.null(plan$data)) {
-    .ard_stop(paste0(
-      "This plan has no data: it is a TEMPLATE, which is a fine thing ",
-      "to be.\n  Point it at a frame and run that:\n",
-      "    p |> plan_data(adsl_ard) |> apply_plan()"))
-  }
   stage <- match.arg(stage)
   if (identical(stage, "auto")) stage <- .plan_reach(plan)
 
@@ -1240,9 +1125,7 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   # so, because the columns cannot.  Nothing is normalised or spread; the
   # rows are the rows.
   if (length(.plan_of(plan, "listing"))) {
-    d <- .plan_stage(
-      .plan_reshape(plan, plan$data, c("mutate", "filter")),
-      plan, c("mutate", "filter"))
+    d <- plan$data
     .plan_remember(plan, "table", d)
     if (stage %in% c("table", "long")) return(d)
     return(.plan_to_pages(plan, d))
@@ -1270,10 +1153,7 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
                                          collapse = ", ")))
     }
     if (!ard_half) {
-      d <- .plan_stage(
-        .plan_reshape(plan, plan$data,
-                      c("mutate", "filter")),
-        plan, c("mutate", "filter"))
+      d <- plan$data
       .plan_remember(plan, "table", d)
       if (stage %in% c("table", "long")) return(d)
       return(.plan_to_pages(plan, d))
@@ -1292,10 +1172,7 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   # 1. the long-frame seam.  Nothing is flattened here: ard_normalize()
   #    ran before the plan, which is why the roles could be checked
   #    against real column names when they were declared.
-  x <- .plan_stage(
-    .plan_reshape(plan, .plan_prepare(plan, plan$data),
-                  c("mutate", "filter")),
-    plan, c("mutate", "filter"))
+  x <- .plan_prepare(plan, plan$data)
   .plan_remember(plan, "long", x)
   if (identical(stage, "long")) return(x)
 

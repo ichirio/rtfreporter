@@ -343,6 +343,31 @@ N = ", n$arm)` cannot drift from the columns
 
   25 verbs still: `plan_derive()` out, `plan_col_pages()` in.
 
+  **A plan always holds its data, and a house style is a function.**
+  `plan_data()` allowed the two to be separated, which meant two ways to
+  write the same thing and --- worse --- that `rtf_plan()`'s check of the
+  role names could not run, since it is the data that says whether a name
+  is a column.  That check was the point of moving the roles there.  Data
+  is required again, and a style shared between studies is an ordinary
+  function, which is plain R and takes parameters:
+
+  ```r
+  my_dm <- function(d, digits = 1) {
+    rtf_plan(d, cols = "TRT01P", rows = c(group = "variable")) |>
+      plan_cells(...) |> plan_digits(digits)
+  }
+  ```
+
+  `plan_mutate()` and `plan_filter()` went with it.  Their last
+  justification was a plan that had no data yet; with the data always
+  there, `dplyr::mutate()` and `dplyr::filter()` before `rtf_plan()` do
+  the same work in the same sentence, with no second vocabulary.  Both
+  reports that used them reproduce identically that way --- measured, not
+  assumed.  The spike is smaller for it: the expression layers, the
+  reshape pass and the printing of expression layers are all gone.
+
+  **22 verbs**, down from 25.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

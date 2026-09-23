@@ -205,16 +205,6 @@ test_that("a role that names no column blames rtf_plan()", {
                "rtf_plan(rows = )", fixed = TRUE)
 })
 
-test_that("a plan with no data is a template until it is given one", {
-  skip_if_no_cards2()
-  p <- rtf_plan(cols = "TRT", rows = c(group = "variable")) |>
-    plan_cells(continuous = c("n" = "{N:d}"), categorical = "{n:d}")
-  expect_null(p$data)
-  expect_error(apply_plan(p), "TEMPLATE")
-  out <- suppressMessages(apply_plan(plan_data(p, nz(plan_ard()))))
-  expect_true(is.data.frame(out))
-})
-
 # --------------------------------------------------------------- refusals
 
 test_that("two unnamed values are refused", {
@@ -650,67 +640,6 @@ test_that("plan_template() invents no header when the N is ambiguous", {
 
 # ------------------------------------------------- the seams, as expressions
 
-test_that("plan_mutate() and plan_filter() work on the long frame", {
-  skip_if_no_cards2()
-  p <- rtf_plan(nz(plan_ard()), cols = "TRT",
-                rows = c(group = "variable"), notes = FALSE) |>
-    plan_filter(stat_name != "sd") |>
-    plan_mutate(variable = toupper(variable)) |>
-    plan_cells(continuous = c("Mean" = "{mean:.1f}"), categorical = "{n:.0f}")
-  d <- suppressMessages(apply_plan(p, "long"))
-  expect_false(any(d$stat_name == "sd"))
-  expect_true(all(d$variable == toupper(d$variable)))
-  # and the whole thing is still one sentence: nothing left the plan
-  expect_true(is.data.frame(suppressMessages(apply_plan(p))))
-})
-
-test_that("the seams run in the order they were declared", {
-  skip_if_no_cards2()
-  # mutate-then-filter keeps what the mutate made; the other order does not
-  keep <- suppressMessages(apply_plan(
-    rtf_plan(nz(plan_ard())) |>
-      plan_mutate(.tag = "z") |> plan_filter(.tag == "z"),
-    "long"))
-  drop <- suppressMessages(apply_plan(
-    rtf_plan(nz(plan_ard())) |>
-      plan_mutate(.tag = "z") |> plan_filter(stat_name == "sd") |>
-      plan_mutate(.tag2 = "y"),
-    "long"))
-  expect_gt(nrow(keep), 0L)
-  expect_true(all(drop$stat_name == "sd"))
-  expect_true(".tag2" %in% names(drop))
-})
-
-test_that("plan_mutate() takes an expression, like mutate() does", {
-  skip_if_no_cards2()
-  # a derived column is a column of the LONG frame; to survive the
-  # spread it has to be a row key, which is what makes it a role
-  p <- rtf_plan(cols = "TRT",
-                rows = c(group = "variable",
-                         flag = "flag")) |>
-    plan_mutate(flag = ifelse(variable == "SEX", "y", "n")) |>
-    plan_cells(continuous = c(n = "{N:d}"),
-               categorical = "{n:d}") |>
-    plan_data(nz(plan_ard()))
-  out <- suppressMessages(apply_plan(p, "table"))
-  expect_true("flag" %in% names(out))
-  expect_setequal(unique(out$flag), c("y", "n"))
-})
-
-test_that("a seam still takes a function for what an expression cannot", {
-  skip_if_no_cards2()
-  out <- suppressMessages(apply_plan(
-    disp_plan() |> plan_mutate(function(d) d[order(d$variable), , drop = FALSE])))
-  expect_true(is.data.frame(out))
-})
-
-test_that("an unnamed argument that is not a function is refused", {
-  skip_if_no_cards2()
-  expect_error(
-    suppressMessages(apply_plan(disp_plan() |> plan_mutate(group))),
-    "has to be a function")
-})
-
 test_that("print() names the columns of every stage it has", {
   skip_if_no_cards2()
   p <- disp_plan() |>
@@ -737,7 +666,7 @@ test_that("a derived plan does not inherit its parent's column cache", {
   p <- disp_plan()
   invisible(suppressMessages(apply_plan(p)))
   expect_false(is.null(p$cache$table))
-  p2 <- p |> plan_mutate(extra = "x")
+  p2 <- p |> plan_digits(3)
   expect_null(p2$cache$table)
 })
 
@@ -797,8 +726,7 @@ test_that("a listing goes nowhere near an ARD", {
                   ARM = rep(c("A", "B"), 6), AGE = 40:51,
                   stringsAsFactors = FALSE)
   pg <- suppressMessages(apply_plan(
-    rtf_plan(d) |>
-      plan_filter(AGE >= 45) |>
+    rtf_plan(d[d$AGE >= 45, , drop = FALSE]) |>
       plan_listing(listing_col("USUBJID", width = 12),
                    listing_col("ARM", width = 10)) |>
       plan_pages(max_rows = 20) |>
@@ -806,9 +734,9 @@ test_that("a listing goes nowhere near an ARD", {
       plan_titles("Listing 16.2.1")))
   expect_s3_class(pg[[1]], "rtftable")
   expect_identical(attr(pg[[1]], "rtf_titles"), "Listing 16.2.1")
-  # the filter reached the records, and nothing was normalised or spread
+  # the records went straight through: nothing normalised or spread
   tb <- suppressMessages(apply_plan(
-    rtf_plan(d) |> plan_filter(AGE >= 45) |>
+    rtf_plan(d[d$AGE >= 45, , drop = FALSE]) |>
       plan_listing(listing_col("USUBJID")), "table"))
   expect_identical(nrow(tb), 7L)
 })
@@ -881,9 +809,7 @@ test_that("hiding ADDS rather than replaces", {
 test_that("the verbs refuse anything that is not a plan", {
   expect_error(plan_cells(data.frame(a = 1), "x"), "Expected an rtf_plan")
   expect_error(apply_plan(data.frame(a = 1)), "Expected an rtf_plan")
-  expect_error(plan_data(data.frame(a = 1), data.frame(b = 2)),
-               "Expected an rtf_plan")
-  expect_error(plan_data(rtf_plan(), NULL), "required")
+  expect_error(rtf_plan(), "required")
 })
 
 # ------------------------------- a frame that never went near cards
@@ -937,23 +863,6 @@ test_that("`label` naming two columns coalesces them", {
   expect_true(any(c("N", "mean", "sd") %in% out$row))
 })
 
-test_that("the same plan serves a second study, data and all", {
-  tmpl <- rtf_plan(cols = "TRT", rows = c(group = "PARAM"),
-                   label = c(label = "CAT"),
-                   variable = "PARAM", stat_name = "STAT",
-                   stat = "VALUE", notes = FALSE) |>
-    plan_cells(AGE = c("Mean" = "{mean}"), SEX = "{n}") |>
-    plan_digits(1)
-
-  d2 <- own_frame()
-  d2$VALUE <- d2$VALUE + 1
-  a <- suppressMessages(apply_plan(plan_data(tmpl, own_frame())))
-  b <- suppressMessages(apply_plan(plan_data(tmpl, d2)))
-  expect_identical(names(a), names(b))
-  expect_false(identical(a$A, b$A))
-})
-
-
 # -------------------------------------------------------- the row order
 
 test_that("plan_sort() goes to the ARD half, where the statistics are", {
@@ -1000,14 +909,14 @@ test_that("the spread builds only what the roles named", {
 
 test_that("plan_pages(show = FALSE) hides the key the break reads", {
   skip_if_no_cards2()
-  p <- rtf_plan(cols = "TRT",
+  d <- nz(plan_ard())
+  d$pg <- ifelse(d$variable == "SEX", "1", "2")
+  p <- rtf_plan(d, cols = "TRT",
                 rows = c(group = "variable",
                          pg = "pg")) |>
-    plan_mutate(pg = ifelse(variable == "SEX", "1", "2")) |>
     plan_cells(continuous = c(n = "{N:d}"),
                categorical = "{n:d}") |>
-    plan_pages(split = "by_value", by = "pg", show = FALSE) |>
-    plan_data(nz(plan_ard()))
+    plan_pages(split = "by_value", by = "pg", show = FALSE)
   out <- suppressMessages(apply_plan(p))
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   expect_false("pg" %in% names(first$data))
@@ -1046,5 +955,23 @@ test_that("plan_col_pages() is the column axis, without a lambda", {
   # every block repeats the carried column
   expect_true(all(vapply(out, function(z) names(z$data)[1L], "") ==
                   names(out[[1L]]$data)[1L]))
+})
+
+test_that("a house style is an ordinary function, not a plan without data", {
+  skip_if_no_cards2()
+  house <- function(d) {
+    rtf_plan(d, cols = "TRT", rows = c(group = "variable"),
+             notes = FALSE) |>
+      plan_cells(continuous = c(n = "{N:d}"), categorical = "{n:d}") |>
+      plan_digits(1)
+  }
+  a <- suppressMessages(apply_plan(house(nz(plan_ard()))))
+  b <- suppressMessages(apply_plan(house(nz(plan_ard())) |>
+                                     plan_digits(3)))
+  expect_identical(names(a), names(b))
+  expect_true(is.data.frame(a))
+  # and a plan cannot be built without the data the roles name
+  expect_error(rtf_plan(cols = "TRT"), "`data` is required")
+  expect_error(rtf_plan(cols = "TRT"), "ordinary function")
 })
 

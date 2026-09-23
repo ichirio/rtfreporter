@@ -135,16 +135,25 @@ print(as.data.frame(apply_plan(
              variable = "PARAM", stat_name = "STAT", stat = "VALUE",
              notes    = FALSE))))
 
-# -- 6. a plan with no data is a template ------------------------------------
-bar("6. the roles without the data: one house style, every study")
+# -- 6. one house style, every study ----------------------------------------
+bar("6. a house style is an ordinary function")
 
-house <- rtf_plan(cols = "TRT01P", rows = c(group = "variable"),
-                  notes = FALSE) |>
-  plan_cells(continuous  = c("n" = "{N:d}", "Mean (SD)" = "{mean} ({sd})"),
-             categorical = "{n:d} ({p:%})") |>
-  plan_digits(1)
+# The plan always holds its data -- that is what lets rtf_plan() check the
+# role names where they are written.  A style shared between studies is
+# therefore a function, which is plain R and takes parameters.
+house <- function(d, digits = 1) {
+  d |>
+    rtf_plan(cols = "TRT01P", rows = c(group = "variable"), notes = FALSE) |>
+    plan_cells(continuous  = c("n" = "{N:d}", "Mean (SD)" = "{mean} ({sd})"),
+               categorical = "{n:d} ({p:%})") |>
+    plan_digits(digits)
+}
 
-print(house)                            # it prints, it just cannot run
-print(as.data.frame(apply_plan(plan_data(house, nz))))
+p6 <- house(nz)
+print(p6)
+print(as.data.frame(apply_plan(p6)))
+
+# and a layer still wins over the style, because it is just another layer
+print(as.data.frame(apply_plan(house(nz) |> plan_digits(AGE = 0))))
 
 bar("done")
