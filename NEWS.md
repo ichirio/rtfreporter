@@ -409,6 +409,23 @@ N = ", n$arm)` cannot drift from the columns
 
   23 verbs.
 
+  **The commonest column header needs no function.**  "Arm name over
+  (N=86)" had to be written as `function(n) rtf_col_header(...)` with two
+  `setNames(names(n), names(n))`, for one reason: the arms are not known
+  until the table exists.  The plan knows them, so one template per
+  header **row** is enough --- `{col}` is the column, `{n}` its
+  denominator:
+
+  ```r
+  plan_col_header(n = TRUE, stub = c("", "Characteristic"),
+                  cols = c("{col}", "(N={n})"))
+  ```
+
+  The demographics report's five-line header is those three, and the
+  `rtftable` it produces is identical.  `header = ` stays for a header
+  with spanners or borders, which is construction rather than repetition,
+  and giving both is an error.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

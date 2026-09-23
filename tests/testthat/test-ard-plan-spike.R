@@ -1013,3 +1013,31 @@ test_that("plan_paginate_group() is what auto_section cuts on", {
                   c("AGE", "BMIBL", "SEX"))
 })
 
+
+# ------------------------------------ the header without a function
+
+test_that("plan_col_header(cols = ) writes the commonest header", {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_col_header(n = c(Placebo = 86), stub = c("", "Characteristic"),
+                    cols = c("{col}", "(N={n})"))
+  out <- suppressMessages(apply_plan(p))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  rows <- first$col_header$rows %||% first$col_header
+  txt <- unlist(lapply(rows, function(r)
+    vapply(r, function(z) if (is.list(z)) z$text %||% "" else
+      as.character(z), "")))
+  expect_true(any(grepl("Characteristic", txt, fixed = TRUE)))
+  expect_true(any(grepl("(N=", txt, fixed = TRUE)))
+  # the arm name came from the table, not from the author
+  expect_true(any(grepl("Placebo", txt, fixed = TRUE)))
+})
+
+test_that("a built header and a templated one are not both given", {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_col_header(header = rtf_col_header(c("a", "b", "c", "d", "e")),
+                    cols = "{col}")
+  expect_error(suppressMessages(apply_plan(p)), "not both", fixed = TRUE)
+})
+

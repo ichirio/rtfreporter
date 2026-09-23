@@ -68,7 +68,14 @@ plan_paginate_rows(
 
 plan_style(plan, border = NULL, widths = NULL, ...)
 
-plan_col_header(plan, header = NULL, n = NULL, values = NULL)
+plan_col_header(
+  plan,
+  header = NULL,
+  n = NULL,
+  cols = NULL,
+  stub = NULL,
+  values = NULL
+)
 
 plan_listing(
   plan,
@@ -205,6 +212,25 @@ it lives somewhere \code{ard_pull()} cannot find; a \strong{named list} of
 either supplies several.  The resolved value is what \verb{header =}
 is called with.}
 
+\item{cols}{For \code{plan_paginate_cols()}: which columns each block keeps, when
+the cut is by name rather than by position.
+
+For \code{plan_col_header()}: the header written as ONE
+template per header \strong{row} instead of as a function.  It is used
+over every spread column, with \code{{col}} for its name and \code{{n}} for its
+denominator.  So the commonest
+header in clinical work ---
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(n = TRUE, stub = c("", "Characteristic"),
+                cols = c("\{col\}", "(N=\{n\})"))
+}\if{html}{\out{</div>}}
+
+--- needs no function and no \code{setNames()}.  Give these or \code{header},
+never both; a header with spanners or borders is one you build.}
+
+\item{stub}{For \code{plan_col_header(cols = )}: what fills the leading columns,
+one entry per header row.}
+
 \item{values}{For \code{plan_col_header()}: passed to \code{\link[=set_col_header]{set_col_header()}} as
 \verb{values =}, for a header whose cells carry \code{{token}} placeholders.}
 
@@ -217,7 +243,7 @@ of a single block used on every page; give one or the other, never
 both, because a three-row title on a three-page table cannot be told
 apart from three one-row titles.}
 
-\item{at, cols, carry, col_header, width, allow_span_break, order}{For
+\item{at, carry, col_header, width, allow_span_break, order}{For
 \code{plan_paginate_cols()}: \code{\link[=paginate_cols]{paginate_cols()}}'s own arguments --- where to
 cut (\code{at}, \code{cols} or \code{by}), which columns every block repeats (\code{carry}),
 what the header becomes, how the widths are rescaled, and \code{order} ---

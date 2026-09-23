@@ -629,7 +629,7 @@ print.rtf_plan <- function(x, ...) {
 #'   `min_group_rows` and `cont_label`.  This is the **row** axis; a
 #'   value split (the **group** axis) is `plan_paginate_group()`,
 #'   and the **column** axis is `plan_paginate_cols()`.
-#' @param at,cols,carry,col_header,width,allow_span_break,order For
+#' @param at,carry,col_header,width,allow_span_break,order For
 #'   `plan_paginate_cols()`: [paginate_cols()]'s own arguments --- where to
 #'   cut (`at`, `cols` or `by`), which columns every block repeats (`carry`),
 #'   what the header becomes, how the widths are rescaled, and `order` ---
@@ -647,6 +647,24 @@ print.rtf_plan <- function(x, ...) {
 #'   of a single block used on every page; give one or the other, never
 #'   both, because a three-row title on a three-page table cannot be told
 #'   apart from three one-row titles.
+#' @param cols For `plan_paginate_cols()`: which columns each block keeps, when
+#'   the cut is by name rather than by position.
+#'
+#'   For `plan_col_header()`: the header written as ONE
+#'   template per header **row** instead of as a function.  It is used
+#'   over every spread column, with `{col}` for its name and `{n}` for its
+#'   denominator.  So the commonest
+#'   header in clinical work ---
+#'
+#'   ```r
+#'   plan_col_header(n = TRUE, stub = c("", "Characteristic"),
+#'                   cols = c("{col}", "(N={n})"))
+#'   ```
+#'
+#'   --- needs no function and no `setNames()`.  Give these or `header`,
+#'   never both; a header with spanners or borders is one you build.
+#' @param stub For `plan_col_header(cols = )`: what fills the leading columns,
+#'   one entry per header row.
 #' @param header For `plan_col_header()`: what [set_col_header()] should be
 #'   given --- an [rtf_col_header()] object, or a **function** of the
 #'   resolved `n`, which is how a denominator reaches the header
@@ -1028,9 +1046,11 @@ plan_style <- function(plan, border = NULL, widths = NULL, ...) {
 # function of the ARD covers a denominator ard_pull() cannot find; a
 # named list covers a header that needs more than one.
 plan_col_header <- function(plan, header = NULL, n = NULL,
+                            cols = NULL, stub = NULL,
                             values = NULL) {
   .plan_layer(plan, "header",
-              list(header = header, n = n, values = values))
+              list(header = header, n = n, cols = cols, stub = stub,
+                   values = values))
 }
 
 # Titles and footnotes are NOT the section header and footer: those are
@@ -1509,15 +1529,22 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
 # The stub is the row keys plus the label column, minus any column that is
 # only there to group by.  All of that was said on rtf_plan(), so saying it
 # again is a place for the two to disagree.
+# What the label column is called in the spread table.
+.plan_label_name <- function(plan) {
+  lb <- plan$roles[["label"]]
+  if (is.null(lb)) return("label")
+  if (length(lb) == 1L && !is.list(lb) && is.na(lb)) {
+    return(character(0))
+  }
+  sp <- .plan_label_spec(plan)
+  if (!is.null(sp)) return(sp$name)
+  if (!is.null(names(lb)) && nzchar(names(lb)[1L])) names(lb)[1L]
+  else "label"
+}
+
 .plan_stub_vars <- function(plan, tbl) {
   rn <- .plan_row_keys(plan)
-  lb <- plan$roles[["label"]]
-  ln <- if (is.null(lb)) "label"
-        else if (length(lb) == 1L && !is.list(lb) && is.na(lb))
-          character(0)
-        else if (!is.null(names(lb)) && nzchar(names(lb)[1L]))
-          names(lb)[1L]
-        else "label"
+  ln <- .plan_label_name(plan)
   # a column that is not printed is not part of the stub either: the
   # page key and the grouping carrier are row keys that do their work
   # without being read
@@ -1666,18 +1693,41 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
       "styles"))
 
-  if (!is.null(hdr$header)) {
+  if (!is.null(hdr$header) || !is.null(hdr$cols) ||
+      !is.null(hdr$stub)) {
     #  a function of the resolved `n`, so "(N=86)" is written once and
-    #  the number comes from the ARD rather than from memory
-    # The header may need the finished table -- "a spanner over columns 3 to
-    # the last" is a fact about the table, not about the ARD -- so a function
-    # of two arguments is given (values, table).
-    h <- if (!is.function(hdr$header)) hdr$header
-         else if (length(formals(hdr$header)) >= 2L) hdr$header(nvals, tbl)
-         else hdr$header(nvals)
-    args <- list(x = out, h)
-    if (!is.null(hdr$values)) args$values <- hdr$values
-    out <- do.call(set_col_header, args)
+    #  the number comes from the ARD rather than from memory.  The
+    #  header may need the finished table -- "a spanner over columns 3
+    #  to the last" is a fact about the table, not about the ARD -- so
+    #  a function of two arguments is given (values, table).
+    #
+    #  `cols` / `stub` are the same thing without the function, for
+    #  the header that only repeats itself over the columns.
+    if (!is.null(hdr$cols) || !is.null(hdr$stub)) {
+      if (!is.null(hdr$header)) {
+        .ard_stop(paste0(
+          "plan_col_header(): give `header` or `cols` / `stub`, ",
+          "not both.\n  `cols` builds the header from one ",
+          "template per row; `header` is one you built yourself."))
+      }
+      sc <- .plan_spread_cols(plan, pre)
+      first_d <- if (inherits(out, "rtftable")) out$data
+                 else out[[1L]]$data
+      h <- .plan_header_from_cols(hdr, nvals,
+                                  intersect(sc, names(first_d)),
+                                  length(first_d) -
+                                    length(intersect(sc,
+                                                     names(first_d))))
+      out <- do.call(set_col_header, c(list(x = out), h))
+    } else {
+      h <- if (!is.function(hdr$header)) hdr$header
+           else if (length(formals(hdr$header)) >= 2L)
+             hdr$header(nvals, tbl)
+           else hdr$header(nvals)
+      args <- list(x = out, h)
+      if (!is.null(hdr$values)) args$values <- hdr$values
+      out <- do.call(set_col_header, args)
+    }
   }
 
   for (l in .plan_of(plan, "after")) {
@@ -1701,6 +1751,38 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   if (!is.null(first$data)) .plan_remember(plan, "printed", first$data)
   out
+}
+
+# The columns the spread made: everything that is not a row key or the
+# label.  Knowing them is what lets a header be written as ONE cell
+# template instead of a function that reassembles the names.
+.plan_spread_cols <- function(plan, tbl) {
+  lb <- .plan_label_name(plan)
+  setdiff(names(tbl), c(.plan_row_keys(plan), lb))
+}
+
+# "arm name over (N=86)" is the commonest header in clinical work, and
+# writing it needed a function only because the arms are not known
+# until the table exists.  The plan knows them, so a template per
+# HEADER ROW is enough: `{col}` is the column, `{n}` its denominator.
+.plan_header_from_cols <- function(spec, nvals, cols, n_stub) {
+  rows <- max(length(spec$cols), length(spec$stub))
+  fill <- function(tpl, col) {
+    # `[[` on a named VECTOR errors for a name it does not have, so the
+    # lookup is by match; one unnamed value covers every column
+    i <- match(col, names(nvals) %||% character(0))
+    v <- if (!is.na(i)) nvals[[i]]
+         else if (length(nvals) == 1L) nvals[[1L]] else NA
+    out <- gsub("{col}", col, tpl, fixed = TRUE)
+    gsub("{n}", if (is.null(v) || all(is.na(v))) "" else
+                  format(v, trim = TRUE), out, fixed = TRUE)
+  }
+  lapply(seq_len(rows), function(i) {
+    st <- if (i <= length(spec$stub)) spec$stub[[i]] else ""
+    ct <- if (i <= length(spec$cols)) spec$cols[[i]] else ""
+    c(rep(as.character(st), n_stub),
+      vapply(cols, function(cc) fill(ct, cc), ""))
+  })
 }
 
 # The cells map, looked up WITHOUT parsing: `.ard_lookup_cells()` returns the
