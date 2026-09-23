@@ -993,3 +993,23 @@ test_that("two verbs asking for different splits is a mistake", {
   expect_error(suppressMessages(apply_plan(p)), "Use one", fixed = TRUE)
 })
 
+
+test_that("plan_row_group(page = TRUE) is what auto_section cuts on", {
+  skip_if_no_cards2()
+  # a value split NAMES each page by its group value, and
+  # rtf_tables(auto_section = TRUE) opens a section where the name changes
+  p <- disp_plan() |>
+    plan_row_group(col = "group", page = TRUE, show = FALSE)
+  pg <- suppressMessages(apply_plan(p))
+  expect_setequal(names(pg), c("AGE", "BMIBL", "SEX"))
+
+  doc <- rtf_document() |>
+    rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
+    rtf_tables(p, auto_section = TRUE)
+  items <- Filter(function(x) inherits(x, "rtf_auto_section_item"),
+                  doc$contents)
+  expect_length(items, 3L)
+  expect_setequal(vapply(items, function(x) x$label, ""),
+                  c("AGE", "BMIBL", "SEX"))
+})
+

@@ -1426,7 +1426,10 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   out <- character(0)
   g <- .plan_merge(.plan_of(plan, "group"))
   if (length(g) && isFALSE(g$.show)) {
-    out <- c(out, .plan_group_col(plan))
+    # folded into the stub already?  then it is gone, not hidden.  With
+    # no table to look at, keep it: the carrier is normally there.
+    gc <- .plan_group_col(plan)
+    out <- c(out, if (is.null(tbl)) gc else .plan_present(gc, tbl))
   }
   pg <- .plan_merge(.plan_of(plan, "pages"))
   if (length(pg) && isFALSE(pg$.show) && !is.null(pg$page_by)) {

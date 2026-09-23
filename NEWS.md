@@ -383,6 +383,16 @@ N = ", n$arm)` cannot drift from the columns
   different splits is now an error rather than last-wins, because that
   is a mistake and not a preference.
 
+  `rtf_tables(auto_section = TRUE)` cuts a section where the page NAME
+  changes, and a value split is what names a page after its group --- so
+  `plan_row_group(page = TRUE)` is also the verb that decides what a
+  section is.  Verified end to end: plan to `rtf_document()`, one
+  section per group, each labelled with the group value.
+
+  A grouping carrier that the stub has already folded away is no longer
+  dropped a second time (it is gone, not hidden), which used to fail with
+  `drop_cols` complaining about a column that is not there.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
