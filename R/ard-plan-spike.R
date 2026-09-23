@@ -91,10 +91,11 @@
 .ard_plan_exports <- c(
   "rtf_plan", "plan_data", "plan_cells", "plan_levels", "plan_labels",
   "plan_digits",
-  "plan_mutate", "plan_filter", "plan_derive", "plan_fmt",
+  "plan_mutate", "plan_filter", "plan_fmt",
   "plan_stub", "plan_cell_style",
   "plan_group", "plan_hide", "plan_sort", "plan_blanks", "plan_pages",
-  "plan_style", "plan_col_header", "plan_titles", "plan_footnotes",
+  "plan_style", "plan_col_header", "plan_col_pages",
+  "plan_titles", "plan_footnotes",
   "plan_listing",
   "plan_after", "apply_plan", "plan_template")
 
@@ -172,7 +173,7 @@
 # plan stops at the table data.frame.
 .plan_reach <- function(plan) {
   kinds <- vapply(plan$layers, `[[`, "", "kind")
-  if (any(kinds %in% c("group", "hide", "blanks", "pages",
+  if (any(kinds %in% c("group", "hide", "blanks", "pages", "colpages",
                        "style", "header", "styles", "after",
                        "titles", "footnotes", "listing"))) "pages"
   else "table"
@@ -440,7 +441,7 @@ plan_data <- function(plan, data) {
       "and names the\n  hierarchy levels -- which is what `rows` ",
       "and `label` then point at."))
   }
-  .plan_check_roles(data, plan$roles)
+  .plan_check_roles(data, plan$roles, plan)
   plan$data  <- data
   plan$kind  <- kind
   plan$cache <- new.env(parent = emptyenv())
@@ -452,9 +453,16 @@ plan_data <- function(plan, data) {
 # Only plain strings are checked: a constant (`~ "Worst Post-Baseline"`) and
 # a guarded template (`.label %in% x ~ "  {.label}"`) are not column names,
 # and `label = NA` says there is no label column at all.
-.plan_check_roles <- function(data, roles) {
+.plan_check_roles <- function(data, roles, plan = NULL) {
   if (!is.data.frame(data)) return(invisible(TRUE))
-  nm <- names(data)
+  # a plan_mutate() already declared is going to make its columns, so
+  # they count as present.  It can only be known when the data comes
+  # LAST -- rtf_plan(roles) |> plan_mutate() |> plan_data() -- which is
+  # the order to write it in if a role names something derived.
+  made <- unlist(lapply(.plan_of(plan %||% list(layers = list()),
+                                 "mutate"),
+                        function(f) names(f$exprs)), use.names = FALSE)
+  nm <- c(names(data), made)
   for (r in c("cols", "rows", "label", "variable", "stat_name", "stat")) {
     v <- roles[[r]]
     if (is.null(v) || inherits(v, "formula")) next
@@ -466,7 +474,10 @@ plan_data <- function(plan, data) {
     if (length(miss)) {
       .ard_stop(sprintf(paste0(
         "rtf_plan(%s = ): no column %s in the data.\n",
-        "  Columns: %s%s"),
+        "  Columns: %s%s\n",
+        "  A column you derive has to exist first: make it with ",
+        "dplyr before rtf_plan(),\n  or declare the plan, then ",
+        "plan_mutate(), then plan_data()."),
         r, paste(sQuote(miss), collapse = ", "),
         paste(utils::head(nm, 12L), collapse = ", "),
         if (length(nm) > 12L) ", ..." else ""))
@@ -605,11 +616,11 @@ print.rtf_plan <- function(x, ...) {
 #'   descending-frequency AE table's order.  A single `TRUE` / `FALSE`
 #'   is `ard_spread(sort = )`'s own answer.
 #'
-#'   For `plan_mutate()` / `plan_filter()` / `plan_derive()`, dplyr
-#'   expressions.  `plan_mutate()` and `plan_filter()` act on the
-#'   **long frame**, before the spread; `plan_derive()` acts on the
-#'   **table**, after it, which is where a column like a page key can
-#'   only be worked out.
+#'   For `plan_mutate()` / `plan_filter()`, dplyr expressions over the
+#'   **long frame**, applied in declaration order.  They exist for a
+#'   plan carrying no data --- a template's own filter, applied to
+#'   whatever arrives --- since a concrete pipeline can simply call
+#'   `dplyr::mutate()` before `rtf_plan()` and be the same one sentence.
 #' @param vars,into,indent,group_summary For `plan_stub()`: the row keys to
 #'   fold into one stub column and how, as [stub_cols()] takes them.
 #'   `into` is the NAME the folded column gets (`stub_cols(label = )`), which
@@ -639,7 +650,16 @@ print.rtf_plan <- function(x, ...) {
 #' @param max_rows,split,break_before,by,min_group_rows,cont_label For
 #'   `plan_pages()`: the row budget and what a page break may cut ---
 #'   `as_rtftables()`'s `max_rows`, `split`, `split_rows`, `page_by`,
-#'   `min_group_rows` and `cont_label`.
+#'   `min_group_rows` and `cont_label`.  This is the **row** axis; a
+#'   value split (the **group** axis) is `plan_group()` with
+#'   `split = "by_value"`, and the **column** axis is `plan_col_pages()`.
+#' @param at,cols,carry,col_header,width,allow_span_break,order For
+#'   `plan_col_pages()`: [paginate_cols()]'s own arguments --- where to
+#'   cut (`at`, `cols` or `by`), which columns every block repeats (`carry`),
+#'   what the header becomes, how the widths are rescaled, and `order` ---
+#'   `paginate_cols(page_order = )`, the order the three axes nest in,
+#'   outermost first: `"group"`, `"rows"`, `"cols"`, or the shorthands
+#'   `"across"` and `"down"`.
 #' @param border,widths For `plan_style()`: the border set and the relative
 #'   column widths (`col_rel_width`).  Anything else [rtftable()]
 #'   understands goes through `...`.
@@ -775,7 +795,6 @@ plan_digits <- function(plan, ..., round = NULL) {
 #
 #      plan_mutate()  a derived column; plan_filter() drops rows.  WHERE they
 #      plan_filter()  the long frame, before the spread
-#      plan_derive()  a column only the finished table can work out
 #      plan_fmt()     fmt_numeric()      on the table data.frame
 #      plan_stub()    stub_cols()        fold the row keys into one stub
 #      plan_cell_style()  cell_styles    bold / colour / align, by condition
@@ -813,23 +832,18 @@ plan_filter <- function(plan, ...) {
               parent.frame())
 }
 
-#' @rdname plan_verbs
-#' @export
-plan_derive <- function(plan, ...) {
-  .plan_exprs(plan, "derive", as.list(substitute(list(...)))[-1L],
-              parent.frame())
-}
 
 # Applied in DECLARATION order, so a filter and a mutate that depend on
 # each other behave the way they were written.
 #
-# WHICH FRAME a seam acts on is its name.  plan_mutate() and plan_filter()
-# act on the long frame, before the spread; plan_derive() acts on the
-# table, after it.  Position used to say so -- before or after
-# plan_spread() -- but the roles moved to rtf_plan() and that boundary
-# went with them, and an invisible boundary is exactly what this design
-# is trying to get rid of.  Last-wins also invites writing plan_digits()
-# last, which would have moved the line under a seam that never changed.
+# The seams act on the LONG FRAME, before the spread.  There is no
+# table-side seam any more: it was used by none of the six reports once
+# flattening moved out of the plan, because a control column like a
+# page key is derived from the long frame anyway -- and a column that
+# really does need the spread COLUMNS is a table, which rtf_plan()
+# accepts as a source.  A concrete pipeline can also just call
+# dplyr::mutate() before rtf_plan() and stay one sentence; these two
+# are what a plan carrying NO data uses to say the same thing.
 .plan_reshape <- function(plan, d, kinds) {
   for (i in seq_along(plan$layers)) {
     l <- plan$layers[[i]]
@@ -1227,8 +1241,8 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   # rows are the rows.
   if (length(.plan_of(plan, "listing"))) {
     d <- .plan_stage(
-      .plan_reshape(plan, plan$data, c("mutate", "filter", "derive")),
-      plan, c("mutate", "filter", "derive"))
+      .plan_reshape(plan, plan$data, c("mutate", "filter")),
+      plan, c("mutate", "filter"))
     .plan_remember(plan, "table", d)
     if (stage %in% c("table", "long")) return(d)
     return(.plan_to_pages(plan, d))
@@ -1258,8 +1272,8 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
     if (!ard_half) {
       d <- .plan_stage(
         .plan_reshape(plan, plan$data,
-                      c("mutate", "filter", "derive")),
-        plan, c("mutate", "filter", "derive"))
+                      c("mutate", "filter")),
+        plan, c("mutate", "filter"))
       .plan_remember(plan, "table", d)
       if (stage %in% c("table", "long")) return(d)
       return(.plan_to_pages(plan, d))
@@ -1361,8 +1375,6 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   tbl <- .plan_stage(do.call(ard_spread, c(list(x = x), s_args)),
                      plan, c("spread", "cells", "digits", "round", "levels", "labels"))
   # the table-side seam: a column the table can only know once it exists
-  tbl <- .plan_stage(
-    .plan_reshape(plan, tbl, "derive"), plan, "derive")
   .plan_remember(plan, "table", tbl)
   if (identical(stage, "table")) return(tbl)
 
@@ -1482,25 +1494,8 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   # Last-wins there would silently un-hide whatever was named first.
   hid <- unique(unlist(lapply(.plan_of(plan, "hide"), `[[`, "drop_cols"),
                        use.names = FALSE))
-  # plan_group(show = FALSE): a carrier that groups without being
-  # printed is the ordinary shape of a grouped table.
-  g <- .plan_merge(.plan_of(plan, "group"))
-  if (length(g) && isFALSE(g$.show) && !is.null(gcol)) {
-    hid <- unique(c(hid, gcol))
-  }
-  # plan_pages(show = FALSE) / plan_sort(show = FALSE): the same for a
-  # page key and a sort carrier.  A derived name is intersected with
-  # the table, because a sort may also name a statistic or ".depth",
-  # which are not columns; a plan_hide() is NOT, because a name that
-  # matches nothing there is a typo and should say so.
-  pg <- .plan_merge(.plan_of(plan, "pages"))
-  if (length(pg) && isFALSE(pg$.show) && !is.null(pg$page_by)) {
-    hid <- unique(c(hid, .plan_present(pg$page_by, tbl)))
-  }
-  if (length(srt) && isFALSE(srt$.show) && !is.null(srt$sort) &&
-      !is.logical(srt$sort)) {
-    hid <- unique(c(hid, .plan_present(sub("^-", "", srt$sort), tbl)))
-  }
+
+  hid <- unique(c(hid, .plan_hidden(plan, tbl)))
   if (length(hid)) out$drop_cols <- hid
   # A table built from an ARD is a plain data.frame: there is no adapter
   # metadata to read, and every report was saying so by hand.
@@ -1515,6 +1510,29 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
 .plan_present <- function(x, tbl) {
   if (is.null(tbl)) return(character(0))
   intersect(as.character(x), names(tbl))
+}
+
+# The columns the plan needs but does not print, from the verbs that
+# name them.  ONE answer, because two would drift: the stub asks it to
+# know what not to fold in, and as_rtftables() asks it to know what to
+# drop.  A derived name is intersected with the table, since a sort
+# may also name a statistic or ".depth", which are not columns.
+.plan_hidden <- function(plan, tbl = NULL) {
+  out <- character(0)
+  g <- .plan_merge(.plan_of(plan, "group"))
+  if (length(g) && isFALSE(g$.show)) {
+    out <- c(out, .plan_group_col(plan))
+  }
+  pg <- .plan_merge(.plan_of(plan, "pages"))
+  if (length(pg) && isFALSE(pg$.show) && !is.null(pg$page_by)) {
+    out <- c(out, .plan_present(pg$page_by, tbl))
+  }
+  srt <- .plan_merge(.plan_of(plan, "sort"))
+  if (length(srt) && isFALSE(srt$.show) && !is.null(srt$sort) &&
+      !is.logical(srt$sort)) {
+    out <- c(out, .plan_present(sub("^-", "", srt$sort), tbl))
+  }
+  unique(out[!is.na(out)])
 }
 
 # Attach the title / footnote blocks to each page.  One block goes on
@@ -1555,14 +1573,17 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
         else if (!is.null(names(lb)) && nzchar(names(lb)[1L]))
           names(lb)[1L]
         else "label"
-  g <- .plan_group_col(plan)
-  v <- setdiff(c(rn, ln), g)
+  # a column that is not printed is not part of the stub either: the
+  # page key and the grouping carrier are row keys that do their work
+  # without being read
+  v <- setdiff(c(rn, ln), .plan_hidden(plan, tbl))
   v <- intersect(v, names(tbl))
   if (!length(v)) {
     .ard_stop(paste0(
       "plan_stub(): nothing to fold.  The row keys and label column are ",
-      "worked out from\n  rtf_plan(rows = , label = ) less any ",
-      "plan_group(col = ), and none of them\n  is in the table.  ",
+      "worked out from\n  rtf_plan(rows = , label = ) less ",
+      "whatever `show = FALSE` hides, and none\n  of them is in ",
+      "the table.  ",
       "Name them with `vars = `.\n  Columns: ",
       paste(utils::head(names(tbl), 8L), collapse = ", ")))
   }
@@ -1593,6 +1614,27 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   if (!isFALSE(m$.show)) return(NULL)
   k <- .plan_row_keys(plan)
   if (length(k)) k[1L] else NULL
+}
+
+# A table splits on THREE axes and plan_pages() only ever covered one.
+# The column blocks were reachable only through
+# plan_after(paginate_cols(...)) -- a lambda around the very call the
+# plan exists to take apart, and two of the six reports wrote one.
+# This is that axis, with paginate_cols()'s own arguments, and
+# `order` is where the three nest: "group" (a value split), "rows"
+# (page_by and every row split) and "cols" (these blocks), outermost
+# first, or the shorthands "across" / "down".
+#' @rdname plan_verbs
+#' @export
+plan_col_pages <- function(plan, at = NULL, cols = NULL, by = NULL,
+                           carry = NULL, col_header = NULL,
+                           width = NULL, allow_span_break = NULL,
+                           order = NULL) {
+  .plan_layer(plan, "colpages",
+              list(at = at, cols = cols, by = by, carry = carry,
+                   col_header = col_header, width = width,
+                   allow_span_break = allow_span_break,
+                   page_order = order))
 }
 
 # The denominator, read once, with the keys rtf_plan() already has.
@@ -1694,6 +1736,16 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
 
   for (l in .plan_of(plan, "after")) {
     for (f in l$steps) out <- f(out)
+  }
+  # The column axis comes LAST: cutting the table into blocks renumbers
+  # its columns, and everything that names a column by position -- a
+  # plan_after() step like set_decimal_split(cols = 3:31) -- means the
+  # table as it was written, not the first block of it.
+  cp <- .plan_merge(.plan_of(plan, "colpages"))
+  cp <- cp[!vapply(cp, is.null, logical(1L))]
+  if (length(cp)) {
+    out <- .plan_stage(do.call(paginate_cols, c(list(x = out), cp)),
+                       plan, "colpages")
   }
   # the blocks that sit above and below the table on each page
   out <- .plan_blocks(plan, out)

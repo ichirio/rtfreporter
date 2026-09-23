@@ -681,11 +681,18 @@ test_that("the seams run in the order they were declared", {
   expect_true(".tag2" %in% names(drop))
 })
 
-test_that("plan_derive() takes an expression, like mutate() does", {
+test_that("plan_mutate() takes an expression, like mutate() does", {
   skip_if_no_cards2()
-  # `group` is a column of the TABLE, which is what plan_derive() sees
-  out <- suppressMessages(apply_plan(
-    disp_plan() |> plan_derive(flag = ifelse(group == "SEX", "y", "n"))))
+  # a derived column is a column of the LONG frame; to survive the
+  # spread it has to be a row key, which is what makes it a role
+  p <- rtf_plan(cols = "TRT",
+                rows = c(group = "variable",
+                         flag = "flag")) |>
+    plan_mutate(flag = ifelse(variable == "SEX", "y", "n")) |>
+    plan_cells(continuous = c(n = "{N:d}"),
+               categorical = "{n:d}") |>
+    plan_data(nz(plan_ard()))
+  out <- suppressMessages(apply_plan(p, "table"))
   expect_true("flag" %in% names(out))
   expect_setequal(unique(out$flag), c("y", "n"))
 })
@@ -693,7 +700,7 @@ test_that("plan_derive() takes an expression, like mutate() does", {
 test_that("a seam still takes a function for what an expression cannot", {
   skip_if_no_cards2()
   out <- suppressMessages(apply_plan(
-    disp_plan() |> plan_derive(function(d) d[order(d$label), , drop = FALSE])))
+    disp_plan() |> plan_mutate(function(d) d[order(d$variable), , drop = FALSE])))
   expect_true(is.data.frame(out))
 })
 
@@ -993,9 +1000,14 @@ test_that("the spread builds only what the roles named", {
 
 test_that("plan_pages(show = FALSE) hides the key the break reads", {
   skip_if_no_cards2()
-  p <- disp_plan() |>
-    plan_derive(pg = ifelse(group == "SEX", "1", "2")) |>
-    plan_pages(split = "by_value", by = "pg", show = FALSE)
+  p <- rtf_plan(cols = "TRT",
+                rows = c(group = "variable",
+                         pg = "pg")) |>
+    plan_mutate(pg = ifelse(variable == "SEX", "1", "2")) |>
+    plan_cells(continuous = c(n = "{N:d}"),
+               categorical = "{n:d}") |>
+    plan_pages(split = "by_value", by = "pg", show = FALSE) |>
+    plan_data(nz(plan_ard()))
   out <- suppressMessages(apply_plan(p))
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   expect_false("pg" %in% names(first$data))
@@ -1023,5 +1035,16 @@ test_that("a sort key that is not a column is not mistaken for one", {
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   expect_false("group" %in% names(first$data))
   expect_true("label" %in% names(first$data))
+})
+
+test_that("plan_col_pages() is the column axis, without a lambda", {
+  skip_if_no_cards2()
+  p <- disp_plan() |> plan_pages(max_rows = 40) |>
+    plan_col_pages(at = 4L, carry = 1:2, width = "keep")
+  out <- suppressMessages(apply_plan(p))
+  expect_gt(length(out), 1L)
+  # every block repeats the carried column
+  expect_true(all(vapply(out, function(z) names(z$data)[1L], "") ==
+                  names(out[[1L]]$data)[1L]))
 })
 

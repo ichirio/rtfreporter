@@ -312,6 +312,37 @@ N = ", n$arm)` cannot drift from the columns
   report lost its `plan_hide("page")`, and `plan_hide()` is now used by
   none of the six --- it stays as the way to hide anything else.
 
+  **`plan_derive()` is gone, and the column axis of pagination arrived.**
+  Once flattening moved out of the plan, the table-side seam had nothing
+  left to do: the one report that used it derives its page key from
+  `group4_level`, which is in the long frame, so `dplyr::mutate()` before
+  `rtf_plan()` makes it and `rows = c(..., page = "page")` carries it
+  through --- still one sentence, and now made with real dplyr.  The
+  solicited-AE report reproduces identically that way.  A column that
+  genuinely needs the spread COLUMNS is a table, which `rtf_plan()`
+  accepts as a source, so the seam is still there; it is outside.
+  `plan_stub()` learnt the matching rule --- a column that is not printed
+  is not folded into the stub either --- which is what lets a control
+  column be an ordinary row key.
+
+  A table splits on **three** axes and `plan_pages()` only ever covered
+  one.  The group axis is `plan_group()` with `split = "by_value"`, the
+  row axis is `plan_pages()`, and the column axis was reachable only
+  through `plan_after(paginate_cols(...))` --- a lambda wrapped round the
+  very call the plan exists to take apart, which two of the six reports
+  wrote.  **`plan_col_pages()`** is that axis, with `paginate_cols()`'s
+  own arguments, and `order =` is where the three nest (`"group"`,
+  `"rows"`, `"cols"`, outermost first, or the `"across"` / `"down"`
+  shorthands).  It runs **last**, after `plan_after()`: cutting the table
+  into blocks renumbers its columns, and a step like
+  `set_decimal_split(cols = 3:31)` means the table as it was written.
+
+  A role may name a column a `plan_mutate()` is going to make, which can
+  only be known when the data comes last --- `rtf_plan(roles) |>
+  plan_mutate() |> plan_data(d)`.  The refusal says so.
+
+  25 verbs still: `plan_derive()` out, `plan_col_pages()` in.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

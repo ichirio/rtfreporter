@@ -9,7 +9,6 @@
 \alias{plan_digits}
 \alias{plan_mutate}
 \alias{plan_filter}
-\alias{plan_derive}
 \alias{plan_fmt}
 \alias{plan_stub}
 \alias{plan_cell_style}
@@ -24,6 +23,7 @@
 \alias{plan_titles}
 \alias{plan_footnotes}
 \alias{plan_after}
+\alias{plan_col_pages}
 \title{Declare the table, one layer at a time (SPIKE)}
 \usage{
 plan_data(plan, data)
@@ -39,8 +39,6 @@ plan_digits(plan, ..., round = NULL)
 plan_mutate(plan, ...)
 
 plan_filter(plan, ...)
-
-plan_derive(plan, ...)
 
 plan_fmt(plan, ...)
 
@@ -98,6 +96,18 @@ plan_titles(plan, ..., pages = NULL)
 plan_footnotes(plan, ..., pages = NULL)
 
 plan_after(plan, ...)
+
+plan_col_pages(
+  plan,
+  at = NULL,
+  cols = NULL,
+  by = NULL,
+  carry = NULL,
+  col_header = NULL,
+  width = NULL,
+  allow_span_break = NULL,
+  order = NULL
+)
 }
 \arguments{
 \item{plan}{An \code{\link[=rtf_plan]{rtf_plan()}}.}
@@ -132,11 +142,11 @@ across the spread columns --- which is the whole of a
 descending-frequency AE table's order.  A single \code{TRUE} / \code{FALSE}
 is \code{ard_spread(sort = )}'s own answer.
 
-For \code{plan_mutate()} / \code{plan_filter()} / \code{plan_derive()}, dplyr
-expressions.  \code{plan_mutate()} and \code{plan_filter()} act on the
-\strong{long frame}, before the spread; \code{plan_derive()} acts on the
-\strong{table}, after it, which is where a column like a page key can
-only be worked out.}
+For \code{plan_mutate()} / \code{plan_filter()}, dplyr expressions over the
+\strong{long frame}, applied in declaration order.  They exist for a
+plan carrying no data --- a template's own filter, applied to
+whatever arrives --- since a concrete pipeline can simply call
+\code{dplyr::mutate()} before \code{rtf_plan()} and be the same one sentence.}
 
 \item{round}{For \code{plan_digits()}: the tie-breaking family for the
 run, as \code{ard_spread(round = )} takes it.  Last wins, like every
@@ -177,7 +187,9 @@ half writes the direction into the keys instead (\code{-n}).}
 \item{max_rows, split, break_before, by, min_group_rows, cont_label}{For
 \code{plan_pages()}: the row budget and what a page break may cut ---
 \code{as_rtftables()}'s \code{max_rows}, \code{split}, \code{split_rows}, \code{page_by},
-\code{min_group_rows} and \code{cont_label}.}
+\code{min_group_rows} and \code{cont_label}.  This is the \strong{row} axis; a
+value split (the \strong{group} axis) is \code{plan_group()} with
+\code{split = "by_value"}, and the \strong{column} axis is \code{plan_col_pages()}.}
 
 \item{border, widths}{For \code{plan_style()}: the border set and the relative
 column widths (\code{col_rel_width}).  Anything else \code{\link[=rtftable]{rtftable()}}
@@ -206,6 +218,14 @@ block per page, when the pages do not share a block.  \code{...} is the rows
 of a single block used on every page; give one or the other, never
 both, because a three-row title on a three-page table cannot be told
 apart from three one-row titles.}
+
+\item{at, cols, carry, col_header, width, allow_span_break, order}{For
+\code{plan_col_pages()}: \code{\link[=paginate_cols]{paginate_cols()}}'s own arguments --- where to
+cut (\code{at}, \code{cols} or \code{by}), which columns every block repeats (\code{carry}),
+what the header becomes, how the widths are rescaled, and \code{order} ---
+\code{paginate_cols(page_order = )}, the order the three axes nest in,
+outermost first: \code{"group"}, \code{"rows"}, \code{"cols"}, or the shorthands
+\code{"across"} and \code{"down"}.}
 }
 \value{
 The plan, with one more layer.
