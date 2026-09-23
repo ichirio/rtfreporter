@@ -600,9 +600,16 @@ print.rtf_plan <- function(x, ...) {
 #'   so it says so there instead of the name being written again in a
 #'   `plan_hide()`.  Names that are not columns (a statistic, `".depth"`)
 #'   are ignored rather than refused.
-#' @param mode,collapse For `plan_row_group()`: how a **repeated** value
-#'   looks down the body --- `as_rtftables()`'s `group_by` (a heading row, an
-#'   indent) and `collapse_repeats` (printed once, then blank).
+#' @param mode,collapse For `plan_row_group()`: what a run of rows sharing a
+#'   value is, and how the repeat shows.  `mode` is `as_rtftables(group_by = )`,
+#'   which is how a group BOUNDARY is found --- `"value"` (each run of equal
+#'   values), `"indent`" (a row starts a group when its cell is not indented),
+#'   `"filled"` (when its cell is not empty), or `"auto"`.  `collapse` is
+#'   `collapse_repeats`: a repeated value printed once and then blank.
+#'
+#'   `mode = "indent"` **reads** indentation to find the boundary;
+#'   `plan_stub(indent = )` **writes** it.  They are not the same knob, and
+#'   a stub written with `indent` is exactly what that mode then reads.
 #' @param col For `plan_paginate_group()`: the column whose value starts a
 #'   new page, `as_rtftables()`'s `group_col` with `split = "by_value"`.  Left
 #'   out, it is the outermost row key.  The page is **named** after
@@ -924,9 +931,11 @@ plan_paginate_group <- function(plan, col = NULL, show = TRUE) {
               list(group_col = col, .show = show, .page = TRUE))
 }
 
-# How a REPEATED value looks down the body: a heading row, an indent,
-# or printed once and then blank.  This is the row grouping, and in
-# six reports it and the page group were never used together.
+# What a row GROUP is inside the body -- where one run of equal values
+# ends and the next begins -- and whether the repeat is printed.  It
+# does NOT make the row headings; folding the keys into one heading
+# column, indenting them and adding a summary row is plan_stub().
+# In six reports this and the page group were never used together.
 #' @rdname plan_verbs
 #' @export
 plan_row_group <- function(plan, mode = NULL, collapse = NULL,

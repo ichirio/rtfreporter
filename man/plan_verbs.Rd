@@ -163,9 +163,16 @@ so it says so there instead of the name being written again in a
 \code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
 are ignored rather than refused.}
 
-\item{mode, collapse}{For \code{plan_row_group()}: how a \strong{repeated} value
-looks down the body --- \code{as_rtftables()}'s \code{group_by} (a heading row, an
-indent) and \code{collapse_repeats} (printed once, then blank).}
+\item{mode, collapse}{For \code{plan_row_group()}: what a run of rows sharing a
+value is, and how the repeat shows.  \code{mode} is \code{as_rtftables(group_by = )},
+which is how a group BOUNDARY is found --- \code{"value"} (each run of equal
+values), \verb{"indent}" (a row starts a group when its cell is not indented),
+\code{"filled"} (when its cell is not empty), or \code{"auto"}.  \code{collapse} is
+\code{collapse_repeats}: a repeated value printed once and then blank.
+
+\code{mode = "indent"} \strong{reads} indentation to find the boundary;
+\code{plan_stub(indent = )} \strong{writes} it.  They are not the same knob, and
+a stub written with \code{indent} is exactly what that mode then reads.}
 
 \item{desc}{For \code{plan_sort()} over a table that is
 already built: \code{as_rtftables()}'s \code{sort_desc}.  A plan with an ARD
