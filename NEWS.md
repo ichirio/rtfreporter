@@ -514,6 +514,35 @@ N = ", n$arm)` cannot drift from the columns
   plan_digits(AGE = c(mean = 1))` is a lab table's rule with one variable
   reported to one decimal.
 
+  **`{x:.Ns}` follows the rounding family, like `{x:.Nf}` always did.**
+  Significant digits went through base `signif()`, which is half-to-even
+  whatever `round = ` said -- so the same "4 significant digits" rounded
+  differently through a cell template and through `fmt_numeric()`, which
+  converts to decimals and honours the family.  Measured: `0.125` to two
+  significant digits was `0.12` under `round = "sas"`, and is now `0.13`.
+  Under the default nothing changes, and no report used the token.
+
+  **`plan_col_header(n = TRUE)` reads a cards sentinel.**  A row whose
+  `variable` is `..ard_total_n..` or `..ard_hierarchical_overall..` is a
+  number the ARD states outright, so reading it is not a guess -- and it
+  is taken only when its keys ARE the `cols`, and only when there is one
+  such row set; two would be a choice, and a denominator is not something
+  to choose for the author.  Otherwise `ard_pull()` answers as before,
+  listing its candidates and stopping.
+
+  The adverse-event report therefore has no `n_subjs` block: the plan
+  reads the same `..ard_hierarchical_overall..` counts itself, to the same
+  numbers.  Its header keeps a function, because the spanners' extent is
+  arithmetic (`c(2i, 1+2i)`) and the arm-level N is a sum across each
+  arm's two columns, which this ARD does not carry as a row -- but the
+  leaf row is now one template, `"{col2}
+(N={n})"`.
+
+  `plan_style(widths = )` shorter than the table repeats its **last**
+  value over the remaining columns, the same rule a header row follows, so
+  `c(40, 10)` is "the stub is 40, every column 10" and the number of
+  columns need not be written down.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

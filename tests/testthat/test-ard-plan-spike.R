@@ -1173,3 +1173,43 @@ test_that("a digits value may ask for significant digits", {
   expect_true(any(grepl("8.5902", out[[3L]], fixed = TRUE)))
 })
 
+
+# --------------------------------- the denominator the ARD states
+
+test_that("n = TRUE reads a cards sentinel keyed by the cols", {
+  skip_if_no_cards2()
+  # a sentinel row is a number the ARD states outright, so reading it is
+  # not a guess -- and it is taken only when its keys ARE the `cols`
+  d <- data.frame(
+    TRT = rep(c("A", "B"), each = 2L),
+    variable = c("..ard_total_n..", "X", "..ard_total_n..", "X"),
+    stat_name = c("n", "n", "n", "n"),
+    stat = c(40, 7, 50, 9),
+    .label = c("all", "x", "all", "x"),
+    stringsAsFactors = FALSE)
+  p <- rtf_plan(d, cols = "TRT", notes = FALSE)
+  expect_identical(rtfreporter:::.plan_n_sentinel(p, p$roles),
+                   c(A = 40, B = 50))
+})
+
+test_that("two sentinels are a choice, so neither is made", {
+  skip_if_no_cards2()
+  d <- data.frame(
+    TRT = c("A", "A"),
+    variable = c("..ard_total_n..", "..ard_hierarchical_overall.."),
+    stat_name = c("n", "n"), stat = c(40, 12),
+    .label = c("all", "any"), stringsAsFactors = FALSE)
+  p <- rtf_plan(d, cols = "TRT", notes = FALSE)
+  expect_null(rtfreporter:::.plan_n_sentinel(p, p$roles))
+})
+
+test_that("a short widths vector repeats its last value", {
+  skip_if_no_cards2()
+  a <- suppressMessages(apply_plan(disp_plan() |>
+    plan_paginate_rows(max_rows = 40) |> plan_style(widths = c(5, 2))))
+  b <- suppressMessages(apply_plan(disp_plan() |>
+    plan_paginate_rows(max_rows = 40) |>
+    plan_style(widths = c(5, 2, 2, 2, 2))))
+  expect_equal(a, b)
+})
+

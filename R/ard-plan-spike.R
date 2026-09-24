@@ -718,11 +718,19 @@ print.rtf_plan <- function(x, ...) {
 #'   untouched --- so a spanner, a border or a cell that reads the
 #'   finished table is written exactly as it always was.
 #' @param n For `plan_col_header()`: the denominator the header needs.
-#'   `TRUE` reads it from the ARD with the same `cols` / `levels`
-#'   `rtf_plan()` was given; a **function** of the data computes it when
-#'   it lives somewhere `ard_pull()` cannot find; a **named list** of
-#'   either supplies several.  The resolved value is what `header =`
-#'   is called with.
+#'   `TRUE` reads it from the data, keyed by the same `cols` / `levels`
+#'   `rtf_plan()` was given.  Two things are read, in this order:
+#'
+#'   1. a **cards sentinel** --- a row whose `variable` is `..ard_total_n..`,
+#'      `..ard_hierarchical_overall..` or another `..name..` --- taken only when
+#'      its keys ARE the `cols`, and only when there is one such row set.
+#'      A number the ARD states outright is not a guess;
+#'   2. otherwise [ard_pull()], which lists its candidates and stops
+#'      rather than choosing between them.
+#'
+#'   A **function** of the data covers what neither can find, and a
+#'   **named list** of either supplies several.  The resolved value is
+#'   what `header =` is called with, and what `{n}` in a cell reads.
 #' @param round For `plan_digits()`: the tie-breaking family for the
 #'   run, as `ard_spread(round = )` takes it.  Last wins, like every
 #'   other layer.
@@ -1665,6 +1673,40 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
                    page_order = order))
 }
 
+# A cards sentinel keyed by exactly the `cols`, or NULL.  `stat_name`
+# "n" is the count of subjects the sentinel is about; the rows also
+# carry "N" and "p", which are the denominator and the percentage and
+# not what a header says `(N=)` about here -- the sentinel row IS the
+# numerator line ("Any TEAE").
+.plan_n_sentinel <- function(plan, sp) {
+  d <- plan$data
+  if (!is.data.frame(d) || !all(c("variable", "stat_name", "stat") %in%
+                                names(d))) {
+    return(NULL)
+  }
+  cols <- as.character(unlist(sp$cols, use.names = FALSE))
+  if (!length(cols) || !all(cols %in% names(d))) return(NULL)
+  v <- as.character(d$variable)
+  keep <- !is.na(v) & grepl("^\\.\\.", v) &
+    !is.na(d$stat_name) & d$stat_name == "n"
+  for (k in cols) keep <- keep & !is.na(d[[k]])
+  if (!any(keep)) return(NULL)
+  sub <- d[keep, , drop = FALSE]
+  # one sentinel only: two would be a choice, and choosing is what
+  # this design refuses to do for a denominator
+  if (length(unique(sub$variable)) != 1L) return(NULL)
+  key <- do.call(paste, c(lapply(cols, function(k)
+                            as.character(sub[[k]])),
+                          list(sep = sp$sep %||% "____")))
+  val <- suppressWarnings(as.numeric(as.character(sub$stat)))
+  out <- vapply(split(val, key), function(z) z[1L], numeric(1))
+  ord <- if (is.null(sp$levels)) .ard_first_seen(key) else {
+    lv <- sp$levels[[cols[1L]]] %||% sp$levels[[1L]]
+    c(intersect(lv, names(out)), setdiff(names(out), lv))
+  }
+  out[intersect(ord, names(out))]
+}
+
 # The denominator, read once, with the keys rtf_plan() already has.
 .plan_n_values <- function(plan, n) {
   if (is.null(n)) return(NULL)
@@ -1677,6 +1719,15 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
           "same `cols` rtf_plan()\n  was given, and this plan ",
           "has none.  Give a function of the data instead."))
       }
+      # A cards SENTINEL is a number the ARD states outright -- the
+      # subjects with any event (`..ard_hierarchical_overall..`), the
+      # study total (`..ard_total_n..`) -- and it is what a header
+      # asks for.  Reading it is not a guess: the row says so by name,
+      # and it is taken only when its keys ARE the `cols`.  Otherwise
+      # ard_pull() answers, which lists its candidates and stops
+      # rather than choosing for you.
+      hit <- .plan_n_sentinel(plan, sp)
+      if (!is.null(hit)) return(hit)
       a <- list(ard = plan$data, cols = sp$cols)
       if (!is.null(sp$levels)) a$levels <- sp$levels
       return(do.call(ard_pull, a))
@@ -1726,6 +1777,17 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     rtf$stub_group_summary <- stub$group_summary
     rtf <- rtf[!vapply(rtf, is.null, logical(1L))]
   }
+  # done here, where the final column count is known
+  if (!is.null(rtf$col_rel_width)) {
+    w <- rtf$col_rel_width
+    nfinal <- ncol(tbl) -
+      (if (!is.null(rtf$stub_vars)) length(rtf$stub_vars) - 1L else 0L) -
+      length(intersect(rtf$drop_cols %||% character(0), names(tbl)))
+    if (length(w) >= 1L && length(w) < nfinal) {
+      rtf$col_rel_width <- c(w, rep(w[length(w)], nfinal - length(w)))
+    }
+  }
+
   st  <- .plan_merge(.plan_of(plan, "styles"))
   if (length(st)) {
     # The styles are built against the rows the plan can SEE.  Folding the

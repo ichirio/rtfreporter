@@ -236,11 +236,20 @@ untouched --- so a spanner, a border or a cell that reads the
 finished table is written exactly as it always was.}
 
 \item{n}{For \code{plan_col_header()}: the denominator the header needs.
-\code{TRUE} reads it from the ARD with the same \code{cols} / \code{levels}
-\code{rtf_plan()} was given; a \strong{function} of the data computes it when
-it lives somewhere \code{ard_pull()} cannot find; a \strong{named list} of
-either supplies several.  The resolved value is what \verb{header =}
-is called with.}
+\code{TRUE} reads it from the data, keyed by the same \code{cols} / \code{levels}
+\code{rtf_plan()} was given.  Two things are read, in this order:
+\enumerate{
+\item a \strong{cards sentinel} --- a row whose \code{variable} is \code{..ard_total_n..},
+\code{..ard_hierarchical_overall..} or another \code{..name..} --- taken only when
+its keys ARE the \code{cols}, and only when there is one such row set.
+A number the ARD states outright is not a guess;
+\item otherwise \code{\link[=ard_pull]{ard_pull()}}, which lists its candidates and stops
+rather than choosing between them.
+}
+
+A \strong{function} of the data covers what neither can find, and a
+\strong{named list} of either supplies several.  The resolved value is
+what \verb{header =} is called with, and what \code{{n}} in a cell reads.}
 
 \item{values}{For \code{plan_col_header()}: passed to \code{\link[=set_col_header]{set_col_header()}} as
 \verb{values =}, for a header whose cells carry \code{{token}} placeholders.}

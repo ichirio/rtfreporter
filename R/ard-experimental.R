@@ -340,6 +340,30 @@
   x
 }
 
+# Format to `d` significant digits with the caller's rounding family.
+# The decimals a significant-digit request implies depend on the value,
+# so each element is handled on its own; trailing zeros are dropped, as
+# signif() + format() did, so only the HALF cases change.
+.ard_signif_fmt <- function(x, d, round_type = NULL) {
+  out <- character(length(x))
+  for (i in seq_along(x)) {
+    v <- x[[i]]
+    if (is.na(v)) {
+      out[i] <- NA_character_
+      next
+    }
+    dec <- if (v == 0) max(0L, d - 1L) else
+      max(0L, d - 1L - as.integer(floor(log10(abs(v)))))
+    r <- ard_round(v, dec, round_type)
+    # rounding can carry into the next decade (99.95 -> 100.0)
+    dec2 <- if (r == 0) max(0L, d - 1L) else
+      max(0L, d - 1L - as.integer(floor(log10(abs(r)))))
+    if (!identical(dec2, dec)) r <- ard_round(v, dec2, round_type)
+    out[i] <- format(r, trim = TRUE, scientific = FALSE)
+  }
+  out
+}
+
 #' Round the way R rounds, or the way SAS rounds
 #'
 #' `ard_round()` exists because the two families disagree on a tie.  Base R
@@ -464,7 +488,12 @@ ard_round <- function(x, digits = 0, type = NULL) {
   }
   if (grepl("^[.][0-9]+s$", spec)) {
     d <- as.integer(gsub("[.s]", "", spec))
-    return(format(signif(x, d), trim = TRUE, scientific = FALSE))
+    # Significant digits are decimal places once you know the
+    # magnitude, so the rounding FAMILY applies to them exactly as it
+    # does to `.2f` -- which base signif() cannot honour, being
+    # half-to-even always.  fmt_numeric() already works this way; this
+    # is the same arithmetic, so the two agree on a half.
+    return(.ard_signif_fmt(x, d, round_type))
   }
   if (identical(spec, "d")) {
     return(sprintf("%.0f", ard_round(x, 0, round_type)))
