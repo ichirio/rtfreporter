@@ -543,6 +543,29 @@ N = ", n$arm)` cannot drift from the columns
   `c(40, 10)` is "the stub is 40, every column 10" and the number of
   columns need not be written down.
 
+- **The dropped total is still a number, and `print()` says when `{n}`
+  is not** (#474).  `ard_normalize()` discards the `..ard_total_n..` row
+  by default -- it is not a table statistic -- and the denominator went
+  with it, so `plan_col_header(n = TRUE)` on an ARD whose only `N` was
+  that row failed with `ard_pull()`'s "No `N` found for these columns",
+  which names neither the total nor the drop.
+
+  The row still goes; the **number stays**, on the result's
+  `"ard_total_n"` attribute.  `n = TRUE` reads it **last** -- after the
+  sentinel in the frame and after `ard_pull()` -- and only when the ARD
+  holds no `N` at all to pull, so a per-column `N` is never quietly
+  replaced by one number for every column.  That question is asked of
+  the data rather than by catching `ard_pull()`'s error, because a
+  mistyped `cols` raises one too and must not come back as a number.
+
+  **`print()` now says why a token is missing.**  It resolved `{n}`
+  inside a `tryCatch()` and listed nothing when that failed, so the one
+  case worth printing printed as silence:
+
+  ```
+    header tokens     -- what a plan_col_header() cell may carry:
+        {n}  -- NOT resolved: `cols`: no key 'TRT' in this ARD.  It has: 'X'.
+  ```
 - **`n = TRUE` reads the study total, not only a per-column count**
   (#474).  A cards ARD states its denominator outright in
   `..ard_total_n..`, and a Lab Shift header saying `(N=254)` over every

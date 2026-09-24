@@ -250,6 +250,23 @@
              stringsAsFactors = FALSE)
 }
 
+# The study total the ARD states outright, as ONE number, or NULL.
+# Read from the rows ard_normalize() drops so that a header can still
+# ask for it.  A total that is not one number is not a study total, and
+# guessing which of several it meant is exactly what this refuses to do.
+.ard_total_n_value <- function(x) {
+  if (is.null(x) || !nrow(x)) return(NULL)
+  v <- as.character(.ard_unlist_col(x[["variable"]]))
+  st <- as.character(.ard_unlist_col(x[["stat_name"]]))
+  keep <- !is.na(v) & v == "..ard_total_n.." &
+    !is.na(st) & st == "N"
+  if (!any(keep)) return(NULL)
+  val <- suppressWarnings(as.numeric(as.character(
+    .ard_unlist_col(x[["stat"]])[keep])))
+  val <- unique(val[!is.na(val)])
+  if (length(val) == 1L) val else NULL
+}
+
 .ard_ignored_bind <- function(...) {
   parts <- Filter(function(z) !is.null(z) && nrow(z), list(...))
   if (!length(parts)) return(NULL)
@@ -1198,7 +1215,11 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #'   (default) leaves them alone.
 #' @param drop_contexts `context` values to discard.  The default drops the
 #'   `attributes` rows (whose `stat` is a vector and cannot be flattened) and
-#'   the `total_n` row.
+#'   the `total_n` row.  Dropping the total does not lose the NUMBER: when
+#'   `..ard_total_n..` states one, it is kept on the `"ard_total_n"`
+#'   attribute, because it is a denominator a column header asks for even
+#'   though it is not a table statistic.  Name only `"attributes"` to keep
+#'   the row itself.
 #' @param drop_key_variables When `TRUE` (default), drops the rows that merely
 #'   describe a key variable itself -- the `context == "tabulate"` counts of the
 #'   by-variable -- which no table cell uses.
@@ -1253,10 +1274,15 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
     .ard_stop("`ard` does not look like a cards ARD (no `context`/`stat_name`).")
   }
   ignored <- NULL
+  total_n <- NULL
   if (length(drop_contexts)) {
     gone <- d[d$context %in% drop_contexts, , drop = FALSE]
     ignored <- .ard_ignored_bind(
       ignored, .ard_tally(gone, "not a table statistic"))
+    # The row goes, the NUMBER stays: `..ard_total_n..` is not a table
+    # statistic, but it is the denominator a column header asks for,
+    # and dropping it is no reason to lose it.
+    total_n <- .ard_total_n_value(gone)
     d <- d[!d$context %in% drop_contexts, , drop = FALSE]
   }
 
@@ -1429,6 +1455,7 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
   # table: it is a report about rows that are no longer here, so there is no
   # column it could be.  Losing it only shortens a message.
   attr(out, "ard_ignored") <- ignored
+  attr(out, "ard_total_n") <- total_n
   # The class is a hint, not a requirement: ard_spread() accepts any data frame
   # of the right shape, because the whole point of the two-stage split is that
   # you may rebuild the middle however you like.  It is here so that passing a

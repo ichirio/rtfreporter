@@ -265,7 +265,11 @@ what \code{..ard_total_n..} is.  Note that \code{\link[=ard_normalize]{ard_norma
 the total by default --- keep it with
 \code{ard_normalize(drop_contexts = "attributes")};
 \item otherwise \code{\link[=ard_pull]{ard_pull()}}, which lists its candidates and stops
-rather than choosing between them.
+rather than choosing between them;
+\item and when the ARD holds no \code{N} at all to pull, the study total
+\code{\link[=ard_normalize]{ard_normalize()}} remembered as it dropped the row.  Last, not
+first: a per-column \code{N} is what a header usually wants, and one
+number for every column would quietly replace it.
 }
 
 A \strong{function} of the data covers what neither can find, and a

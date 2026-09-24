@@ -1372,3 +1372,77 @@ test_that("a sentinel carrying both n and N prefers n", {
                    c(A = 42, B = 27))
 })
 
+
+test_that("ard_normalize() keeps the total it drops, as a number", {
+  skip_if_no_cards2()
+  # the row is not a table statistic and goes; the NUMBER is a
+  # denominator and stays, because a header still asks for it
+  d <- data.frame(
+    TRT = c(NA, "A", "B"),
+    variable = c("..ard_total_n..", "X", "X"),
+    variable_level = NA_character_,
+    context = c("total_n", "categorical", "categorical"),
+    stat_name = c("N", "n", "n"),
+    stat_label = c("N", "n", "n"),
+    stat = c(254, 7, 9),
+    stringsAsFactors = FALSE)
+  nz <- ard_normalize(d, keys = "TRT")
+  expect_false(any(nz$variable == "..ard_total_n.."))
+  expect_identical(attr(nz, "ard_total_n", exact = TRUE), 254)
+})
+
+test_that("a total that is not one number is not remembered", {
+  skip_if_no_cards2()
+  # two totals is a question, and answering it would be a guess
+  d <- data.frame(
+    variable = c("..ard_total_n..", "..ard_total_n..", "X"),
+    variable_level = NA_character_,
+    context = c("total_n", "total_n", "categorical"),
+    stat_name = c("N", "N", "n"),
+    stat_label = c("N", "N", "n"),
+    stat = c(254, 86, 7),
+    stringsAsFactors = FALSE)
+  expect_null(attr(ard_normalize(d), "ard_total_n", exact = TRUE))
+})
+
+test_that("n = TRUE reads the remembered total only when nothing else can", {
+  skip_if_no_cards2()
+  base <- data.frame(
+    group1 = c(NA, rep("TRT", 4L)),
+    group1_level = c(NA, "A", "A", "B", "B"),
+    variable = c("..ard_total_n..", rep("X", 4L)),
+    variable_level = "x",
+    context = c("total_n", rep("categorical", 4L)),
+    stat_name = c("N", "N", "n", "N", "n"),
+    stat_label = c("N", "N", "n", "N", "n"),
+    stat = c(254, 86, 7, 84, 9),
+    stringsAsFactors = FALSE)
+
+  # ard_pull() can answer, so it does: a per-column N is what a column
+  # header wants, and the study total would quietly replace it
+  p <- rtf_plan(ard_normalize(base, keys = "TRT"), cols = "TRT",
+                notes = FALSE)
+  expect_identical(rtfreporter:::.plan_n_values(p, TRUE),
+                   c(A = 86, B = 84))
+
+  # the same ARD without a per-column N: now the total answers
+  no_n <- base[!(base$stat_name == "N" & base$context != "total_n"), ,
+               drop = FALSE]
+  q <- rtf_plan(ard_normalize(no_n, keys = "TRT"), cols = "TRT",
+                notes = FALSE)
+  expect_identical(rtfreporter:::.plan_n_values(q, TRUE), 254)
+})
+
+test_that("print() says why {n} could not be resolved", {
+  skip_if_no_cards2()
+  # saying nothing is what sent the reader here
+  d <- data.frame(TRT = c("A", "B"), variable = "X",
+                  stat_name = "mean", stat = c(1, 2),
+                  .label = "x", stringsAsFactors = FALSE)
+  p <- rtf_plan(d, cols = "TRT", notes = FALSE)
+  p <- plan_col_header(p, n = TRUE,
+                       rtf_col_header(c("", "(N={n})")))
+  out <- paste(capture.output(print(p)), collapse = "|")
+  expect_match(out, "NOT resolved", fixed = TRUE)
+})
+

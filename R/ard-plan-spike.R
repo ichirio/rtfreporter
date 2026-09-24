@@ -758,7 +758,11 @@ print.rtf_plan <- function(x, ...) {
 #'      the total by default --- keep it with
 #'      `ard_normalize(drop_contexts = "attributes")`;
 #'   2. otherwise [ard_pull()], which lists its candidates and stops
-#'      rather than choosing between them.
+#'      rather than choosing between them;
+#'   3. and when the ARD holds no `N` at all to pull, the study total
+#'      [ard_normalize()] remembered as it dropped the row.  Last, not
+#'      first: a per-column `N` is what a header usually wants, and one
+#'      number for every column would quietly replace it.
 #'
 #'   A **function** of the data covers what neither can find, and a
 #'   **named list** of either supplies several --- and then **each
@@ -1819,13 +1823,23 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 .plan_header_tokens <- function(plan) {
   tbl <- plan$cache$table
   hdr <- .plan_merge(.plan_of(plan, "header"))
-  nvals <- tryCatch(.plan_n_values(plan, hdr$n), error = function(e) NULL)
+  why <- NULL
+  nvals <- tryCatch(.plan_n_values(plan, hdr$n), error = function(e) {
+    why <<- conditionMessage(e)
+    NULL
+  })
   toks <- if (is.list(nvals) && !is.null(names(nvals)) &&
               any(nzchar(names(nvals)))) nvals
           else if (is.null(nvals)) list() else list(n = nvals)
   cols <- if (is.null(tbl)) NULL else .plan_spread_cols(plan, tbl)
   sep <- plan$roles$sep %||% "____"
   out <- list()
+  # A token that cannot be resolved is the one worth printing: saying
+  # nothing is what sent you here.
+  if (!is.null(why) && !is.null(hdr$n)) {
+    out[["{n}"]] <- paste0("-- NOT resolved: ",
+                           strsplit(why, "\n", fixed = TRUE)[[1L]][1L])
+  }
   # Show the values, not a description of them: a denominator, and the
   # text a level prints as, are the things you came to check.
   show <- function(v) {
@@ -1902,6 +1916,16 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       if (!is.null(hit)) return(hit)
       a <- list(ard = plan$data, cols = sp$cols)
       if (!is.null(sp$levels)) a$levels <- sp$levels
+      # LAST, not first: a per-column `N` is what a column header
+      # usually wants, and the study total would quietly replace it.
+      # The total answers only when there is no `N` at all to pull --
+      # which is the ARD whose `..ard_total_n..` ard_normalize()
+      # dropped.  Asked THIS way rather than by catching ard_pull()'s
+      # error, because a mistyped `cols` also raises one and must not
+      # come back as a number.
+      tot <- attr(plan$data, "ard_total_n", exact = TRUE)
+      sn <- plan$data[["stat_name"]]
+      if (!is.null(tot) && !any(!is.na(sn) & sn == "N")) return(tot)
       return(do.call(ard_pull, a))
     }
     if (is.function(v)) v(plan$data) else v

@@ -32,7 +32,11 @@ produced by \code{cards::ard_stack_hierarchical(over_variables = TRUE)}, e.g.
 
 \item{drop_contexts}{\code{context} values to discard.  The default drops the
 \code{attributes} rows (whose \code{stat} is a vector and cannot be flattened) and
-the \code{total_n} row.}
+the \code{total_n} row.  Dropping the total does not lose the NUMBER: when
+\code{..ard_total_n..} states one, it is kept on the \code{"ard_total_n"}
+attribute, because it is a denominator a column header asks for even
+though it is not a table statistic.  Name only \code{"attributes"} to keep
+the row itself.}
 
 \item{drop_key_variables}{When \code{TRUE} (default), drops the rows that merely
 describe a key variable itself -- the \code{context == "tabulate"} counts of the
