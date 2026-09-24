@@ -617,6 +617,18 @@ N = ", n$arm)` cannot drift from the columns
   `hdr()`, no glue.  Only the spanner POSITIONS are arithmetic, and
   with a single treatment column there is no `lapply` either.
 
+- **A header row built with `c()` now says so.**  An `rtf_col_cell` is a
+  list underneath, so `c(list(col_cell(1, "")), col_cell(c(2, 4), "S"))`
+  **splices** the second cell into its own fields: the row becomes
+  `list(cell, 2:4, "S")` -- three elements, not two.  The first `$pos`
+  then failed with R's `$ operator is invalid for atomic vectors`, which
+  names neither the row nor the `c()`.
+
+  It now names both, and the fix: `list(col_cell(1, ""), col_cell(c(2, 4),
+  "S"))`.  A list without a `pos` is a different mistake and keeps its own
+  `missing \`pos\`` message.  `c(list(...), lapply(...))` is still fine,
+  because `lapply()` returns a list.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

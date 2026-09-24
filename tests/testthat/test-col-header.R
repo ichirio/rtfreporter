@@ -454,3 +454,22 @@ test_that(".pos_row_to_spans fills cells whose label is NULL", {
   )
   expect_identical(res[[2L]]$label, "")
 })
+
+test_that("a header row built with c() says so, naming the c()", {
+  # an rtf_col_cell is a list underneath, so c(list(a), b) SPLICES b and
+  # the row becomes list(cell, pos, label) -- which used to fail with
+  # "$ operator is invalid for atomic vectors", naming nothing
+  d <- data.frame(row_label = c("A", "B"), x = c("1", "2"),
+                  y = c("3", "4"), z = c("5", "6"),
+                  stringsAsFactors = FALSE)
+  tb <- as_rtftables(d, read_meta = FALSE)
+  bad <- rtf_col_header(c(list(col_cell(1, "")), col_cell(c(2, 4), "S")),
+                        c("Term", "x", "y", "z"))
+  expect_error(set_col_header(tb, bad), "not a cell")
+  expect_error(set_col_header(tb, bad), "list(), not c()", fixed = TRUE)
+
+  good <- rtf_col_header(list(col_cell(1, ""), col_cell(c(2, 4), "S")),
+                         c("Term", "x", "y", "z"))
+  expect_no_error(set_col_header(tb, good))
+})
+
