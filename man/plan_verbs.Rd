@@ -96,6 +96,7 @@ plan_paginate_cols(
   at = NULL,
   cols = NULL,
   by = NULL,
+  every = NULL,
   carry = NULL,
   col_header = NULL,
   width = NULL,
@@ -313,6 +314,12 @@ outermost first: \code{"group"}, \code{"rows"}, \code{"cols"}, or the shorthands
 
 \item{cols}{For \code{plan_paginate_cols()}: which columns each block keeps, when
 the cut is by name rather than by position.}
+
+\item{every}{For \code{plan_paginate_cols()}: cut a block every this many
+columns, counting only the ones a block does not carry.  This is
+\code{at} without writing down how many columns one study had --- the
+plan is deferred, so it counts them when the table exists.  Give one
+of \code{at}, \code{cols}, \code{by} or \code{every}.}
 }
 \value{
 The plan, with one more layer.

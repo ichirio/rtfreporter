@@ -680,6 +680,11 @@ print.rtf_plan <- function(x, ...) {
 #'   `min_group_rows` and `cont_label`.  This is the **row** axis; a
 #'   value split (the **group** axis) is `plan_paginate_group()`,
 #'   and the **column** axis is `plan_paginate_cols()`.
+#' @param every For `plan_paginate_cols()`: cut a block every this many
+#'   columns, counting only the ones a block does not carry.  This is
+#'   `at` without writing down how many columns one study had --- the
+#'   plan is deferred, so it counts them when the table exists.  Give one
+#'   of `at`, `cols`, `by` or `every`.
 #' @param at,carry,col_header,width,allow_span_break,order For
 #'   `plan_paginate_cols()`: [paginate_cols()]'s own arguments --- where to
 #'   cut (`at`, `cols` or `by`), which columns every block repeats (`carry`),
@@ -1749,15 +1754,36 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
 #' @rdname plan_verbs
 #' @export
 plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
-                               by = NULL, carry = NULL,
+                               by = NULL, every = NULL, carry = NULL,
                                col_header = NULL, width = NULL,
                                allow_span_break = NULL,
                                order = NULL) {
   .plan_layer(plan, "colpages",
-              list(at = at, cols = cols, by = by, carry = carry,
+              list(at = at, cols = cols, by = by, every = every,
+                   carry = carry,
                    col_header = col_header, width = width,
                    allow_span_break = allow_span_break,
                    page_order = order))
+}
+
+# `every` in the columns the table actually has.  A plan is deferred, so
+# it can count them; `at = c(16, 29)` is that count written out for one
+# study, and a study with a different number of timepoints needs it
+# rewritten.  Carried headings belong to every block, so they are not
+# counted.
+.plan_colpages_every <- function(cp, out) {
+  k <- as.integer(cp$every)
+  cp$every <- NULL
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  nm <- names(first$data)
+  car <- cp$carry %||% first$row_title %||% 1L
+  ci <- if (is.character(car)) match(car, nm) else as.integer(car)
+  rest <- setdiff(seq_along(nm), ci[!is.na(ci)])
+  # A table narrower than one block is not an error and not a one-block
+  # split: it is a table that needs no column pages at all.
+  if (length(rest) <= k) return(NULL)
+  cp$at <- rest[seq(k + 1L, length(rest), by = k)]
+  cp
 }
 
 # The one cards sentinel's numbers, or NULL.  Keyed by the `cols` it is
@@ -1941,7 +1967,13 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   nvals <- .plan_n_values(plan, hdr$n)
 
   fmt <- .plan_merge(.plan_of(plan, "fmt"))
-  if (length(fmt)) tbl <- do.call(fmt_numeric, c(list(data = tbl), fmt))
+  if (length(fmt)) {
+    # `cols` left out means the VALUE cells -- the spread columns.  The
+    # plan knows which they are, and writing `3:31` instead is a count
+    # of the columns one particular study happened to have.
+    if (is.null(fmt$cols)) fmt$cols <- .plan_spread_cols(plan, tbl)
+    tbl <- do.call(fmt_numeric, c(list(data = tbl), fmt))
+  }
 
   .plan_remember(plan, "table", tbl)
 
@@ -2038,6 +2070,7 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   # table as it was written, not the first block of it.
   cp <- .plan_merge(.plan_of(plan, "colpages"))
   cp <- cp[!vapply(cp, is.null, logical(1L))]
+  if (!is.null(cp$every)) cp <- .plan_colpages_every(cp, out) %||% list()
   if (length(cp)) {
     out <- .plan_stage(do.call(paginate_cols, c(list(x = out), cp)),
                        plan, "colpages")

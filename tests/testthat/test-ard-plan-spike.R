@@ -1446,3 +1446,55 @@ test_that("print() says why {n} could not be resolved", {
   expect_match(out, "NOT resolved", fixed = TRUE)
 })
 
+
+test_that("plan_fmt() without `cols` formats the value cells", {
+  skip_if_no_cards2()
+  # `cols = 3:31` is a count of the columns one study happened to have;
+  # the plan knows which columns hold values
+  d <- data.frame(
+    group1 = "PARAM", group1_level = "Drug X",
+    group2 = "TP", group2_level = c("t1", "t1", "t2", "t2"),
+    variable = "AVAL", variable_level = NA_character_,
+    context = "continuous",
+    stat_name = c("N", "mean", "N", "mean"),
+    stat_label = c("N", "Mean", "N", "Mean"),
+    stat = c(12, 1.23456, 12, 2.34567),
+    .kind = "continuous", stringsAsFactors = FALSE)
+  p <- rtf_plan(ard_normalize(d, keys = c("PARAM", "TP")), cols = "TP",
+                rows = c(Analyte = "PARAM"),
+                label = c(Statistics = "stat_label"), stats = "rows",
+                notes = FALSE) |>
+    plan_fmt(by = "Statistics",
+             formats = list(N = list(digits = 0),
+                            Mean = list(signif = 3)))
+  tbl <- apply_plan(p, "pages")[[1L]]$data
+  expect_identical(tbl$t1, c("12", "1.23"))
+  expect_identical(tbl$t2, c("12", "2.35"))
+  # the label column is untouched -- it was never a value cell
+  expect_identical(as.character(tbl$Statistics), c("N", "Mean"))
+})
+
+test_that("plan_paginate_cols(every = ) counts the columns for you", {
+  skip_if_no_cards2()
+  d <- data.frame(
+    group1 = "PARAM", group1_level = "Drug X",
+    group2 = "TP", group2_level = rep(paste0("t", 1:5), each = 2L),
+    variable = "AVAL", variable_level = NA_character_,
+    context = "continuous",
+    stat_name = rep(c("N", "mean"), 5L),
+    stat_label = rep(c("N", "Mean"), 5L),
+    stat = seq_len(10L),
+    .kind = "continuous", stringsAsFactors = FALSE)
+  p <- rtf_plan(ard_normalize(d, keys = c("PARAM", "TP")), cols = "TP",
+                rows = c(Analyte = "PARAM"),
+                label = c(Statistics = "stat_label"), stats = "rows",
+                notes = FALSE)
+  # 5 value columns, 2 carried: blocks of 2, 2, 1
+  pg <- apply_plan(plan_paginate_cols(p, every = 2L, carry = 1:2))
+  expect_identical(vapply(pg, function(z) ncol(z$data), 0L),
+                   c(4L, 4L, 3L))
+  # a block wide enough for everything cuts nothing
+  one <- apply_plan(plan_paginate_cols(p, every = 99L, carry = 1:2))
+  expect_length(one, 1L)
+})
+

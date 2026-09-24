@@ -565,6 +565,37 @@ N = ", n$arm)` cannot drift from the columns
   An **indent** or **filled** group is untouched: there the group is a
   position in the body rather than a key, so there is nothing to gather by.
   `sort_by` is for choosing an order, not for making the pages whole.
+- **A plan no longer writes down how many columns the study had** (#474).
+  The PK sample counted them four times -- `plan_fmt(cols = 3:31)`,
+  `plan_style(widths = c(3, 3, rep(2, 29)))`,
+  `set_decimal_split(cols = 3:31)` and
+  `plan_paginate_cols(at = c(16, 29))` -- so the same report on a study
+  with a different number of timepoints needed all four rewritten, and got
+  an out-of-range error rather than a wider table.  A plan is deferred: it
+  can count the columns itself.
+
+  * **`plan_fmt()` without `cols` formats the value cells.**  Those are
+    the spread columns, which the plan already knows -- `3:31` was that
+    fact written out for one study.  The row keys and the label column
+    are left alone, as `cols = 3:31` meant them to be.
+  * **`plan_paginate_cols(every = )`** cuts a block every N columns,
+    counting only the ones a block does not carry.  `every = 13` is
+    `at = c(16, 29)` on the sample and still 13 timepoints a page on a
+    study with 18 of them.  A table narrower than one block gets no
+    column pages rather than an error.
+
+  `plan_style(widths = )` already repeated its last value, so
+  `c(3, 3, 2)` was always enough, and a `plan_after()` step can read the
+  names off the pages it is handed:
+
+  ```r
+  plan_after(function(x) {
+    d <- if (inherits(x, "rtftable")) x$data else x[[1L]]$data
+    set_decimal_split(x, cols = setdiff(names(d), c("Analyte", "Statistics")))
+  })
+  ```
+
+  The PK sample is written this way now and reproduces byte-identically.
 - **`ard_spread(sort = )` defaults to `FALSE`, and `FALSE` still obeys an
   order you declared** (#474).  The default was `TRUE`, which sorted on
   every row key with `order()`: a character key came out A-Z although
