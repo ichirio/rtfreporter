@@ -248,8 +248,23 @@ rather than choosing between them.
 }
 
 A \strong{function} of the data covers what neither can find, and a
-\strong{named list} of either supplies several.  The resolved value is
-what \verb{header =} is called with, and what \code{{n}} in a cell reads.}
+\strong{named list} of either supplies several --- and then \strong{each
+name is a token}, which is how one header says two numbers with
+no function at all: the study total in a spanner and each
+column's own underneath it.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(
+  n = list(n = TRUE, total = 254),
+  rtf_col_header(
+    list(col_cell(1, ""), col_cell(c(2, 4), "All (N=\{total\})")),
+    c("",               "\{col\}"),
+    c("Characteristic", "(N=\{n\})")))
+}\if{html}{\out{</div>}}
+
+An entry keyed by column fills each column with its own; a single
+number fills every cell.  \code{{n}} is the entry called \code{n}, or the
+only entry when there is one.  The resolved value is also what
+\verb{header =} is called with when it is a function.}
 
 \item{values}{For \code{plan_col_header()}: passed to \code{\link[=set_col_header]{set_col_header()}} as
 \verb{values =}, for a header whose cells carry \code{{token}} placeholders.}

@@ -35,7 +35,7 @@ base_plan <- function(ard = plan_ard()) {
 test_that("a later layer wins, which is the whole point", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_digits(2) |> plan_digits(AGE = 0)
-  cells <- apply_plan(p, "args")$cells
+  cells <- apply_plan(p, "args")$spread$cells
 
   # set everything, then fix one variable -- a two-line edit
   expect_match(cells$AGE[["Mean (SD)"]], "{mean:.0f} ({sd:.0f})", fixed = TRUE)
@@ -47,14 +47,14 @@ test_that("last wins for the same key too, not just for a narrower one", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_digits(2) |> plan_digits(AGE = 0) |>
     plan_digits(AGE = 3)
-  expect_match(apply_plan(p, "args")$cells$AGE[["Mean (SD)"]],
+  expect_match(apply_plan(p, "args")$spread$cells$AGE[["Mean (SD)"]],
                "{mean:.3f}", fixed = TRUE)
 })
 
 test_that("a later plan_cells() replaces an earlier entry for that key", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_cells(continuous = c("n" = "{N:d}"))
-  ent <- apply_plan(p, "args")$cells$continuous
+  ent <- apply_plan(p, "args")$spread$cells$continuous
   expect_length(ent, 1L)
   expect_identical(unname(ent), "{N:d}")
 })
@@ -65,7 +65,7 @@ test_that("levels and labels merge one name at a time", {
     plan_levels(TRT = c("Placebo", "Xanomeline Low Dose",
                         "Xanomeline High Dose")) |>
     plan_levels(SEX = c("M", "F"))          # adds, does not replace
-  lv <- apply_plan(p, "args")$levels
+  lv <- apply_plan(p, "args")$spread$levels
   expect_setequal(names(lv), c("TRT", "SEX"))
   expect_identical(lv$SEX, c("M", "F"))
 })
@@ -74,14 +74,14 @@ test_that("one key restated is replaced, not merged into", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_levels(SEX = c("M", "F")) |>
     plan_levels(SEX = c("F", "M"))
-  expect_identical(apply_plan(p, "args")$levels$SEX, c("F", "M"))
+  expect_identical(apply_plan(p, "args")$spread$levels$SEX, c("F", "M"))
 })
 
 test_that("a map can be handed over whole, not taken apart", {
   skip_if_no_cards2()
   lab <- c(AGE = "Age (years)", SEX = "Sex")
   p <- base_plan() |> plan_labels(lab)
-  expect_identical(unlist(apply_plan(p, "args")$labels), lab)
+  expect_identical(unlist(apply_plan(p, "args")$spread$labels), lab)
 })
 
 # ------------------------------------------------------------ the digits
@@ -91,7 +91,7 @@ test_that("a token that states its own digits keeps them", {
   p <- rtf_plan(nz(plan_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(continuous = c("Mean (SD)" = "{mean:.4f} ({sd})")) |>
     plan_digits(1)
-  ent <- apply_plan(p, "args")$cells$AGE
+  ent <- apply_plan(p, "args")$spread$cells$AGE
   expect_match(ent[["Mean (SD)"]], "{mean:.4f} ({sd:.1f})", fixed = TRUE)
 })
 
@@ -111,7 +111,7 @@ test_that("digits pick by specificity once last-wins has had its say", {
                categorical = "{n:d} ({p:%})") |>
     plan_digits(continuous = 2) |> plan_digits(AGE = 0) |>
     plan_digits(SEX = 1)
-  cells <- apply_plan(p, "args")$cells
+  cells <- apply_plan(p, "args")$spread$cells
   expect_match(cells$BMIBL[["Mean (SD)"]], "{mean:.2f}", fixed = TRUE)
   expect_match(cells$AGE[["Mean (SD)"]], "{mean:.0f}", fixed = TRUE)
   expect_match(cells$SEX, "{p:.1f%}", fixed = TRUE)
@@ -126,7 +126,7 @@ test_that("the data is held, not transformed, and nothing is run", {
   expect_identical(p$data, nz(ard))
   expect_false(is.data.frame(p$layers))
   # `args` resolves without running the conversion
-  a <- apply_plan(p, "args")
+  a <- apply_plan(p, "args")$spread
   expect_true(all(c("cols", "rows", "cells") %in% names(a)))
 })
 
@@ -215,13 +215,13 @@ test_that("two unnamed values are refused", {
 test_that("the rounding family is last-wins, like every other layer", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_digits(1, round = "sas") |> plan_digits(2, round = "r")
-  expect_identical(apply_plan(p, "args")$round, "r")
+  expect_identical(apply_plan(p, "args")$spread$round, "r")
 })
 
 test_that("one rounding family reaches ard_spread()", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_digits(1) |> plan_digits(1, round = "sas")
-  expect_identical(apply_plan(p, "args")$round, "sas")
+  expect_identical(apply_plan(p, "args")$spread$round, "sas")
 })
 
 # ------------------------------------------------- what a plan starts from
@@ -427,7 +427,7 @@ test_that("a named stage still stops where it is told, for looking inside", {
   p <- disp_plan() |> plan_stub(vars = c("group", "label"))
   expect_true(is.data.frame(suppressMessages(apply_plan(p, "table"))))
   expect_s3_class(suppressMessages(apply_plan(p, "long")), "data.frame")
-  expect_true(all(c("cols", "cells") %in% names(apply_plan(p, "args"))))
+  expect_true(all(c("cols", "cells") %in% names(apply_plan(p, "args")$spread)))
   expect_type(suppressMessages(apply_plan(p)), "list")
 })
 
@@ -868,7 +868,7 @@ test_that("`label` naming two columns coalesces them", {
 test_that("plan_sort() goes to the ARD half, where the statistics are", {
   skip_if_no_cards2()
   p <- base_plan() |> plan_sort(".overall", "group", "-n")
-  a <- apply_plan(p, "args")
+  a <- apply_plan(p, "args")$spread
   expect_identical(a$sort, c(".overall", "group", "-n"))
   # and nothing reaches as_rtftables(), which could not sort on `-n`:
   # by then the statistic is a formatted cell, not a number
@@ -1116,7 +1116,7 @@ test_that("digits can be stated per statistic, not just per variable", {
   p <- open_plan() |>
     plan_digits(c(mean = 2, sd = 3, p = 1)) |>
     plan_digits(AGE = c(mean = 1, sd = 2))
-  cells <- apply_plan(p, "args")$cells
+  cells <- apply_plan(p, "args")$spread$cells
   expect_match(cells$AGE[["Mean (SD)"]], "{mean:.1f} ({sd:.2f})",
                fixed = TRUE)
   expect_match(cells$BMIBL[["Mean (SD)"]], "{mean:.2f} ({sd:.3f})",
@@ -1129,7 +1129,7 @@ test_that("a statistic the narrower rule skips falls through", {
   p <- open_plan() |>
     plan_digits(c(mean = 2, sd = 3, p = 1)) |>
     plan_digits(AGE = c(mean = 0))
-  expect_match(apply_plan(p, "args")$cells$AGE[["Mean (SD)"]],
+  expect_match(apply_plan(p, "args")$spread$cells$AGE[["Mean (SD)"]],
                "{mean:.0f} ({sd:.3f})", fixed = TRUE)
 })
 
@@ -1137,7 +1137,7 @@ test_that("one number still means every token", {
   skip_if_no_cards2()
   p <- open_plan() |> plan_digits(c(mean = 2, sd = 3, p = 1)) |>
     plan_digits(AGE = 1)
-  expect_match(apply_plan(p, "args")$cells$AGE[["Mean (SD)"]],
+  expect_match(apply_plan(p, "args")$spread$cells$AGE[["Mean (SD)"]],
                "{mean:.1f} ({sd:.1f})", fixed = TRUE)
 })
 
@@ -1148,7 +1148,7 @@ test_that("kind x statistic and variable x statistic combine", {
     plan_digits(continuous = c(mean = 2, sd = 3),
                 categorical = c(p = 1)) |>
     plan_digits(AGE = c(mean = 1, sd = 2))
-  cells <- apply_plan(p, "args")$cells
+  cells <- apply_plan(p, "args")$spread$cells
   expect_match(cells$AGE[["Mean (SD)"]], "{mean:.1f} ({sd:.2f})",
                fixed = TRUE)
   expect_match(cells$BMIBL[["Mean (SD)"]], "{mean:.2f} ({sd:.3f})",
@@ -1163,7 +1163,7 @@ test_that("a digits value may ask for significant digits", {
     plan_digits(continuous = c(mean = "4s", sd = "5s"),
                 categorical = c(p = 1)) |>
     plan_digits(AGE = c(mean = 1))
-  cells <- apply_plan(p, "args")$cells
+  cells <- apply_plan(p, "args")$spread$cells
   # decimals and significant digits mix, per statistic
   expect_match(cells$AGE[["Mean (SD)"]], "{mean:.1f} ({sd:.5s})",
                fixed = TRUE)
@@ -1211,5 +1211,61 @@ test_that("a short widths vector repeats its last value", {
     plan_paginate_rows(max_rows = 40) |>
     plan_style(widths = c(5, 2, 2, 2, 2))))
   expect_equal(a, b)
+})
+
+
+test_that("a row budget that the split ignores is refused, not dropped", {
+  skip_if_no_cards2()
+  # raising max_rows and watching nothing change is how an afternoon goes
+  p <- disp_plan() |> plan_paginate_group() |>
+    plan_paginate_rows(max_rows = 28)
+  expect_error(suppressMessages(apply_plan(p)), "has no effect with split")
+  expect_error(suppressMessages(apply_plan(p)), "group_safe", fixed = TRUE)
+})
+
+
+test_that("a row budget that the split ignores is refused, not dropped", {
+  skip_if_no_cards2()
+  # raising max_rows and watching nothing change is how an afternoon goes
+  p <- disp_plan() |> plan_paginate_group() |>
+    plan_paginate_rows(max_rows = 28)
+  expect_error(suppressMessages(apply_plan(p)), "has no effect with split")
+  expect_error(suppressMessages(apply_plan(p)), "group_safe", fixed = TRUE)
+})
+
+test_that("apply_plan(args) shows the display half, so last-wins is "
+          |> paste0("visible"), {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_paginate_rows(max_rows = 25, split = "group_force") |>
+    plan_paginate_rows(max_rows = 15)
+  a <- apply_plan(p, "args")
+  expect_setequal(names(a), c("spread", "rtf"))
+  # the call you edit last is the one that decides, and you can see it
+  expect_identical(a$rtf$max_rows, 15)
+  expect_identical(a$rtf$split, "group_force")
+})
+
+
+test_that("a named list of n makes each name a token", {
+  skip_if_no_cards2()
+  # both numbers in one header, no function: the study total in a spanner
+  # and each column's own underneath it
+  p <- disp_plan() |> plan_paginate_rows(max_rows = 40) |>
+    plan_col_header(
+      n = list(n = c("Placebo" = 86, "Xanomeline High Dose" = 84,
+                     "Xanomeline Low Dose" = 84),
+               total = 254),
+      rtf_col_header(
+        list(col_cell(1, ""), col_cell(2, ""),
+             col_cell(c(3, 5), "All (N={total})")),
+        c("", "", "{col}"),
+        c("Group", "Characteristic", "(N={n})")))
+  out <- suppressMessages(apply_plan(p))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  r1 <- vapply(first$col_header[[1L]], function(z) as.character(z$label), "")
+  expect_true(any(grepl("All (N=254)", r1, fixed = TRUE)))
+  expect_true(any(grepl("(N=86)", first$col_header[[3L]], fixed = TRUE)))
+  expect_true(any(grepl("(N=84)", first$col_header[[3L]], fixed = TRUE)))
 })
 

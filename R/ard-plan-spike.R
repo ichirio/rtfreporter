@@ -729,8 +729,24 @@ print.rtf_plan <- function(x, ...) {
 #'      rather than choosing between them.
 #'
 #'   A **function** of the data covers what neither can find, and a
-#'   **named list** of either supplies several.  The resolved value is
-#'   what `header =` is called with, and what `{n}` in a cell reads.
+#'   **named list** of either supplies several --- and then **each
+#'   name is a token**, which is how one header says two numbers with
+#'   no function at all: the study total in a spanner and each
+#'   column's own underneath it.
+#'
+#'   ```r
+#'   plan_col_header(
+#'     n = list(n = TRUE, total = 254),
+#'     rtf_col_header(
+#'       list(col_cell(1, ""), col_cell(c(2, 4), "All (N={total})")),
+#'       c("",               "{col}"),
+#'       c("Characteristic", "(N={n})")))
+#'   ```
+#'
+#'   An entry keyed by column fills each column with its own; a single
+#'   number fills every cell.  `{n}` is the entry called `n`, or the
+#'   only entry when there is one.  The resolved value is also what
+#'   `header =` is called with when it is a function.
 #' @param round For `plan_digits()`: the tie-breaking family for the
 #'   run, as `ard_spread(round = )` takes it.  Last wins, like every
 #'   other layer.
@@ -1209,9 +1225,14 @@ plan_after <- function(plan, ...) {
 #'   The named stages: `"table"` returns the table
 #'   `data.frame`, the same object [ard_spread()] returns.  `"long"`
 #'   returns the frame going in, with the ARD column names the roles
-#'   renamed.  `"args"` returns the resolved
-#'   argument lists without running anything --- the call the plan amounts
-#'   to.  `"pages"` goes all the way: [fmt_numeric()], [stub_cols()],
+#'   renamed.  `"args"` returns the resolved argument lists
+#'   without running anything --- the call the plan amounts to, as
+#'   `$spread` ([ard_spread()]'s) and `$rtf` ([as_rtftables()]'s).  Both
+#'   are resolved from layers and either can be the one that
+#'   surprises: a page budget declared twice is last-wins, and the
+#'   call you are editing may not be the one that decides, so
+#'   `apply_plan(p, "args")$rtf$max_rows` is the way to ask.
+#'   `"pages"` goes all the way: [fmt_numeric()], [stub_cols()],
 #'   [as_rtftables()], [set_col_header()] and whatever `plan_after()`
 #'   declared, giving the RTF pages.
 #'
@@ -1374,7 +1395,13 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   # One rounding family for the run, last wins like every other layer.
   if (length(rnd)) s_args$round <- rnd$round
 
-  if (identical(stage, "args")) return(s_args)
+  if (identical(stage, "args")) {
+    # Both halves, because both are resolved from layers and either can
+    # be the one that surprises you.  A page budget declared twice is the
+    # obvious case: last wins, and the call you are editing may not be
+    # the one that decides.
+    return(list(spread = s_args, rtf = .plan_rtf_args(plan)))
+  }
   tbl <- .plan_stage(do.call(ard_spread, c(list(x = x), s_args)),
                      plan, c("spread", "cells", "digits", "round", "levels", "labels"))
   # the table-side seam: a column the table can only know once it exists
@@ -1503,6 +1530,30 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
         sQuote(out$split), ") splits them another way.  Use one."))
     }
     out$split <- "by_value"
+  }
+  # `max_rows` is the row budget, and three of the splits do not have
+  # one: a value split makes a page per value, "rows" cuts at the
+  # positions given, "none" makes one page.  Declaring a budget that
+  # is then dropped is how someone spends an afternoon raising it and
+  # watching nothing change.
+  if (!is.null(out$max_rows) &&
+      !is.null(out$split) &&
+      out$split %in% c("by_value", "rows", "none")) {
+    .ard_stop(paste0(
+      "plan_paginate_rows(max_rows = ", out$max_rows, ") has no ",
+      "effect with split = ", sQuote(out$split), ".\n",
+      if (identical(out$split, "by_value"))
+        paste0("  A value split makes one page per group value, ",
+               "however long it is --\n  it comes from ",
+               "plan_paginate_group().  For a row budget as well, ",
+               "page\n  the rows and hide the group key ",
+               "instead:\n",
+               "    plan_paginate_rows(max_rows = ", out$max_rows,
+               ", split = \"group_safe\")\n",
+               "  or drop the budget and keep the value split.")
+      else paste0("  That split cuts where it is told, not by a ",
+                  "count.  Drop `max_rows`,\n  or use ",
+                  "split = \"group_safe\" / \"group_force\".")))
   }
   # ... and the two may not name different columns either.
   named <- unique(unlist(lapply(.plan_of(plan, "group"),
@@ -1886,17 +1937,28 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     if (is.null(col)) character(0) else
       strsplit(col, sep, fixed = TRUE)[[1L]]
   }
+  # `n` may be one value, a vector named by column, or a NAMED LIST of
+  # either -- and then each name is its own token.  That is how a
+  # header says both numbers at once: the study total in a spanner
+  # (`{total}`) and each column's own underneath it (`{n}`), with no
+  # function to carry them.  `{n}` is the entry called `n`, or the
+  # only entry when there is one.
+  toks <- if (is.list(nvals) && !is.null(names(nvals)) &&
+              any(nzchar(names(nvals)))) nvals else list(n = nvals)
+  if (is.null(toks[["n"]]) && length(toks) == 1L) names(toks) <- "n"
+  # a value for THIS column: by name if the entry is keyed by column,
+  # otherwise the single number it is
+  pick <- function(v, col) {
+    if (is.null(v)) return(NA)
+    i <- if (is.null(col)) NA_integer_ else
+      match(col, names(v) %||% character(0))
+    if (!is.na(i)) v[[i]] else if (length(v) == 1L) v[[1L]] else NA
+  }
   one <- function(tpl, col) {
     if (!is.character(tpl) || !length(tpl) ||
         !grepl("{", tpl, fixed = TRUE)) {
       return(tpl)
     }
-    # `[[` on a named VECTOR errors for a name it does not have, so
-    # the lookup is by match; one unnamed value covers every column
-    i <- if (is.null(col)) NA_integer_ else
-      match(col, names(nvals) %||% character(0))
-    v <- if (!is.na(i)) nvals[[i]]
-         else if (length(nvals) == 1L) nvals[[1L]] else NA
     pp <- parts(col)
     out <- tpl
     for (i in seq_along(pp)) {
@@ -1904,8 +1966,13 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     }
     leaf <- if (length(pp)) pp[length(pp)] else (col %||% "")
     out <- gsub("{col}", leaf, out, fixed = TRUE)
-    gsub("{n}", if (is.null(v) || all(is.na(v))) "" else
-                  format(v, trim = TRUE), out, fixed = TRUE)
+    for (nm in names(toks)) {
+      v <- pick(toks[[nm]], col)
+      out <- gsub(paste0("{", nm, "}"),
+                  if (is.null(v) || all(is.na(v))) "" else
+                    format(v, trim = TRUE), out, fixed = TRUE)
+    }
+    out
   }
   # which spread column a cell sits over, when it sits over just one
   cell_col <- function(pos) {

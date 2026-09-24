@@ -563,6 +563,35 @@ N = ", n$arm)` cannot drift from the columns
   group cut in half.  Only the help changed; no report's pagination
   moves.
 
+  **Each name in `n` is a token**, so one header can say two numbers with
+  no function at all -- the study total in a spanner and each column's own
+  underneath it:
+
+  ```r
+  plan_col_header(
+    n = list(n = TRUE, total = 254),
+    rtf_col_header(
+      list(col_cell(1, ""), col_cell(c(2, 4), "All (N={total})")),
+      c("",               "{col}"),
+      c("Characteristic", "(N={n})")))
+  ```
+
+  An entry keyed by column fills each column with its own, a single number
+  fills every cell, and `{n}` is the entry called `n` (or the only one).
+
+  **`apply_plan(p, "args")` shows both halves again**, `$spread` and
+  `$rtf`, now that there are two: the display arguments are resolved from
+  layers too, and either half can be the one that surprises.  A page
+  budget declared twice is last-wins, and the call being edited may not be
+  the one that decides, so `apply_plan(p, "args")$rtf$max_rows` is how to
+  ask which value is in force.
+
+  And a budget the split cannot use is refused rather than dropped:
+  `plan_paginate_rows(max_rows = )` with a value split (which makes one
+  page per group value, however long) now says so and names the
+  alternative, instead of being silently ignored while the number is
+  raised and nothing changes.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

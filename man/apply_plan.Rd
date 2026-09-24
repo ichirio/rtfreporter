@@ -19,9 +19,14 @@ for looking inside: \code{"long"}, \code{"args"}, \code{"table"}, \code{"pages"}
 The named stages: \code{"table"} returns the table
 \code{data.frame}, the same object \code{\link[=ard_spread]{ard_spread()}} returns.  \code{"long"}
 returns the frame going in, with the ARD column names the roles
-renamed.  \code{"args"} returns the resolved
-argument lists without running anything --- the call the plan amounts
-to.  \code{"pages"} goes all the way: \code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=stub_cols]{stub_cols()}},
+renamed.  \code{"args"} returns the resolved argument lists
+without running anything --- the call the plan amounts to, as
+\verb{$spread} (\code{\link[=ard_spread]{ard_spread()}}'s) and \verb{$rtf} (\code{\link[=as_rtftables]{as_rtftables()}}'s).  Both
+are resolved from layers and either can be the one that
+surprises: a page budget declared twice is last-wins, and the
+call you are editing may not be the one that decides, so
+\code{apply_plan(p, "args")$rtf$max_rows} is the way to ask.
+\code{"pages"} goes all the way: \code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=stub_cols]{stub_cols()}},
 \code{\link[=as_rtftables]{as_rtftables()}}, \code{\link[=set_col_header]{set_col_header()}} and whatever \code{plan_after()}
 declared, giving the RTF pages.}
 }
