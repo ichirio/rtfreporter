@@ -120,6 +120,13 @@ The two keys combine, which is the point of the verb:
   plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
 }\if{html}{\out{</div>}}
 
+A value is the \strong{decimals}, or \code{"4s"} for \strong{4 significant digits} ---
+the token grammar's own distinction (\verb{\{mean:.4f\}} / \verb{\{mean:.4s\}}), not a
+second argument to learn:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_digits(continuous = c(mean = "4s", sd = "5s", n = 0))
+}\if{html}{\out{</div>}}
+
 A statistic the narrower entry says nothing about falls through to
 the wider one, so AGE's \code{median} stays at 2 above.  Digits only
 reach a token that left the question open (\code{{mean}}, or \verb{\{p:\\\%\}}):

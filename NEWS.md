@@ -507,6 +507,13 @@ N = ", n$arm)` cannot drift from the columns
   the tag still in the source.  It is `` `{p:\%}` ``, and the rest of
   R/ was checked for the same trap.
 
+  A digits value may also be `"4s"`, meaning **4 significant digits** --
+  the token grammar's own distinction (`{mean:.4f}` / `{mean:.4s}`)
+  rather than a second argument.  Decimals and significant digits mix per
+  statistic, so `plan_digits(continuous = c(mean = "4s", sd = "5s")) |>
+  plan_digits(AGE = c(mean = 1))` is a lab table's rule with one variable
+  reported to one decimal.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

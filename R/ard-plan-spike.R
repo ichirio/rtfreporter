@@ -255,8 +255,14 @@
       pt <- .ard_token_parts(tok)
       if (identical(pt$spec, "") || identical(pt$spec, "%")) {
         d <- .plan_digits_for(cands, pt$name)
-        if (is.null(d) || is.na(d)) next
-        new <- paste0("{", pt$name, ":.", as.integer(d), "f",
+        if (is.null(d) || all(is.na(d))) next
+        # a number is decimals; "4s" is significant digits, which is
+        # the token grammar's own distinction (`.4f` / `.4s`) rather
+        # than a second argument to learn
+        sg <- is.character(d) && grepl("^[0-9]+s$", trimws(d))
+        fmt <- if (sg) paste0(".", sub("s$", "", trimws(d)), "s")
+               else paste0(".", as.integer(d), "f")
+        new <- paste0("{", pt$name, ":", fmt,
                       if (identical(pt$spec, "%")) "%" else "", "}")
         tpl[i] <- gsub(tok, new, tpl[i], fixed = TRUE)
       }
@@ -591,6 +597,14 @@ print.rtf_plan <- function(x, ...) {
 #'   plan_digits(continuous  = c(mean = 2, sd = 3, median = 2),
 #'               categorical = c(p = 1)) |>      # the house rule
 #'     plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
+#'   ```
+#'
+#'   A value is the **decimals**, or `"4s"` for **4 significant digits** ---
+#'   the token grammar's own distinction (`{mean:.4f}` / `{mean:.4s}`), not a
+#'   second argument to learn:
+#'
+#'   ```r
+#'   plan_digits(continuous = c(mean = "4s", sd = "5s", n = 0))
 #'   ```
 #'
 #'   A statistic the narrower entry says nothing about falls through to

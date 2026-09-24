@@ -1156,3 +1156,20 @@ test_that("kind x statistic and variable x statistic combine", {
   expect_match(cells$SEX, "{p:.1f%}", fixed = TRUE)
 })
 
+
+test_that("a digits value may ask for significant digits", {
+  skip_if_no_cards2()
+  p <- open_plan() |>
+    plan_digits(continuous = c(mean = "4s", sd = "5s"),
+                categorical = c(p = 1)) |>
+    plan_digits(AGE = c(mean = 1))
+  cells <- apply_plan(p, "args")$cells
+  # decimals and significant digits mix, per statistic
+  expect_match(cells$AGE[["Mean (SD)"]], "{mean:.1f} ({sd:.5s})",
+               fixed = TRUE)
+  expect_match(cells$BMIBL[["Mean (SD)"]], "{mean:.4s} ({sd:.5s})",
+               fixed = TRUE)
+  out <- suppressMessages(apply_plan(p, "table"))
+  expect_true(any(grepl("8.5902", out[[3L]], fixed = TRUE)))
+})
+
