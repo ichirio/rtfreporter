@@ -749,9 +749,14 @@ print.rtf_plan <- function(x, ...) {
 #'   `rtf_plan()` was given.  Two things are read, in this order:
 #'
 #'   1. a **cards sentinel** --- a row whose `variable` is `..ard_total_n..`,
-#'      `..ard_hierarchical_overall..` or another `..name..` --- taken only when
-#'      its keys ARE the `cols`, and only when there is one such row set.
-#'      A number the ARD states outright is not a guess;
+#'      `..ard_hierarchical_overall..` or another `..name..`, taken only
+#'      when there is one such row set.  A number the ARD states outright
+#'      is not a guess.  Keyed by the `cols`, it is one number per column
+#'      (`..ard_hierarchical_overall..`: the subjects with any event);
+#'      keyed by nothing, it is one number for the whole table, which is
+#'      what `..ard_total_n..` is.  Note that [ard_normalize()] drops
+#'      the total by default --- keep it with
+#'      `ard_normalize(drop_contexts = "attributes")`;
 #'   2. otherwise [ard_pull()], which lists its candidates and stops
 #'      rather than choosing between them.
 #'
@@ -1751,11 +1756,12 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
                    page_order = order))
 }
 
-# A cards sentinel keyed by exactly the `cols`, or NULL.  `stat_name`
-# "n" is the count of subjects the sentinel is about; the rows also
-# carry "N" and "p", which are the denominator and the percentage and
-# not what a header says `(N=)` about here -- the sentinel row IS the
-# numerator line ("Any TEAE").
+# The one cards sentinel's numbers, or NULL.  Keyed by the `cols` it is
+# a number per column; keyed by nothing it is one number for the whole
+# table.  `stat_name` "n" is the count of subjects the sentinel is about
+# -- the rows also carry "N" and "p", the denominator and the percentage
+# -- but ..ard_total_n.. has only "N", so "n" is preferred and "N"
+# taken when there is no "n".
 .plan_n_sentinel <- function(plan, sp) {
   d <- plan$data
   if (!is.data.frame(d) || !all(c("variable", "stat_name", "stat") %in%
@@ -1765,14 +1771,35 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
   if (!length(cols) || !all(cols %in% names(d))) return(NULL)
   v <- as.character(d$variable)
-  keep <- !is.na(v) & grepl("^\\.\\.", v) &
-    !is.na(d$stat_name) & d$stat_name == "n"
-  for (k in cols) keep <- keep & !is.na(d[[k]])
-  if (!any(keep)) return(NULL)
-  sub <- d[keep, , drop = FALSE]
+  is_sent <- !is.na(v) & grepl("^\\.\\.", v)
+  if (!any(is_sent)) return(NULL)
   # one sentinel only: two would be a choice, and choosing is what
   # this design refuses to do for a denominator
-  if (length(unique(sub$variable)) != 1L) return(NULL)
+  if (length(unique(v[is_sent])) != 1L) return(NULL)
+  # `n` first, then `N`: the hierarchical-overall rows carry both and
+  # `n` is the count the sentinel is about, while ..ard_total_n..
+  # carries only `N`, the study total.
+  stat_of <- NULL
+  for (st in c("n", "N")) {
+    if (any(is_sent & !is.na(d$stat_name) & d$stat_name == st)) {
+      stat_of <- st
+      break
+    }
+  }
+  if (is.null(stat_of)) return(NULL)
+  keep <- is_sent & !is.na(d$stat_name) & d$stat_name == stat_of
+  # A sentinel with no value for the `cols` keys is ONE number for the
+  # whole table -- ..ard_total_n.. is exactly that -- so it is taken
+  # as a scalar rather than keyed.
+  keyed <- keep
+  for (k in cols) keyed <- keyed & !is.na(d[[k]])
+  if (!any(keyed)) {
+    val <- suppressWarnings(as.numeric(as.character(d$stat[keep])))
+    val <- unique(val[!is.na(val)])
+    return(if (length(val) == 1L) val else NULL)
+  }
+  keep <- keyed
+  sub <- d[keep, , drop = FALSE]
   key <- do.call(paste, c(lapply(cols, function(k)
                             as.character(sub[[k]])),
                           list(sep = sp$sep %||% "____")))

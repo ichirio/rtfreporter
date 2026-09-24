@@ -543,6 +543,36 @@ N = ", n$arm)` cannot drift from the columns
   `c(40, 10)` is "the stub is 40, every column 10" and the number of
   columns need not be written down.
 
+- **`n = TRUE` reads the study total, not only a per-column count**
+  (#474).  A cards ARD states its denominator outright in
+  `..ard_total_n..`, and a Lab Shift header saying `(N=254)` over every
+  column wants exactly that number.  The sentinel reader took only rows
+  keyed by the `cols` and carrying `stat_name == "n"`, and
+  `..ard_total_n..` is keyed by nothing and carries `"N"` -- so it was
+  passed over, and the header had to be written with a `dplyr::filter()`
+  block above the plan.
+
+  It is now read.  `"n"` is still preferred -- the hierarchical-overall
+  rows carry both, and there `"n"` is the count the sentinel is about --
+  with `"N"` taken when there is no `"n"`.  A sentinel with **no value**
+  for the `cols` keys is one number for the WHOLE table, so `{n}` is that
+  number in every cell, rather than nothing at all.
+
+  ```r
+  ard |>
+    ard_normalize(drop_contexts = "attributes") |>   # keep the total
+    rtf_plan(cols = "BASEGR", ...) |>
+    plan_col_header(n = TRUE, rtf_col_header(
+      list(col_cell(1, "Timepoint"),
+           col_cell(c(2, 5), "MIRV
+(N={n})
+ n (%)
+<Baseline>")),
+      c("  Category", "Grade 0", "Grade 1", "Grade 2", "Total")))
+  ```
+
+  Note the `drop_contexts`: `ard_normalize()` drops the total by default,
+  and a header reading from it must keep it.
 - **The help for `as_rtftables(split = )` described `"group_force"`
   wrongly**, which is how a report ends up with a group cut in half when
   the page looked as though it had room.  It said `"group_force"` was

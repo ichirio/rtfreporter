@@ -1341,3 +1341,34 @@ test_that("print() lists the header tokens and what they resolve to", {
   expect_true(any(grepl("= 254 over every column", out, fixed = TRUE)))
 })
 
+
+test_that("..ard_total_n.. is read as one number, from its `N`", {
+  skip_if_no_cards2()
+  # the total carries `N`, not `n`, and has no value for the `cols` keys:
+  # it is one number for the whole table, which is what a spanner wants
+  d <- data.frame(
+    TRT = c(NA, "A", "B"),
+    variable = c("..ard_total_n..", "X", "X"),
+    stat_name = c("N", "n", "n"),
+    stat = c(254, 7, 9),
+    .label = c("all", "x", "x"),
+    stringsAsFactors = FALSE)
+  p <- rtf_plan(d, cols = "TRT", notes = FALSE)
+  expect_identical(rtfreporter:::.plan_n_sentinel(p, p$roles), 254)
+})
+
+test_that("a sentinel carrying both n and N prefers n", {
+  skip_if_no_cards2()
+  # ..ard_hierarchical_overall.. carries n (had an event) and N (the
+  # denominator); the count the sentinel is about is `n`
+  d <- data.frame(
+    TRT = c("A", "A", "B", "B"),
+    variable = "..ard_hierarchical_overall..",
+    stat_name = c("n", "N", "n", "N"),
+    stat = c(42, 86, 27, 84),
+    .label = "any", stringsAsFactors = FALSE)
+  p <- rtf_plan(d, cols = "TRT", notes = FALSE)
+  expect_identical(rtfreporter:::.plan_n_sentinel(p, p$roles),
+                   c(A = 42, B = 27))
+})
+

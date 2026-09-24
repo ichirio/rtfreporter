@@ -256,9 +256,14 @@ finished table is written exactly as it always was.}
 \code{rtf_plan()} was given.  Two things are read, in this order:
 \enumerate{
 \item a \strong{cards sentinel} --- a row whose \code{variable} is \code{..ard_total_n..},
-\code{..ard_hierarchical_overall..} or another \code{..name..} --- taken only when
-its keys ARE the \code{cols}, and only when there is one such row set.
-A number the ARD states outright is not a guess;
+\code{..ard_hierarchical_overall..} or another \code{..name..}, taken only
+when there is one such row set.  A number the ARD states outright
+is not a guess.  Keyed by the \code{cols}, it is one number per column
+(\code{..ard_hierarchical_overall..}: the subjects with any event);
+keyed by nothing, it is one number for the whole table, which is
+what \code{..ard_total_n..} is.  Note that \code{\link[=ard_normalize]{ard_normalize()}} drops
+the total by default --- keep it with
+\code{ard_normalize(drop_contexts = "attributes")};
 \item otherwise \code{\link[=ard_pull]{ard_pull()}}, which lists its candidates and stops
 rather than choosing between them.
 }
