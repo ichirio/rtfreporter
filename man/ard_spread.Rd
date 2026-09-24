@@ -14,7 +14,7 @@ ard_spread(
   value = c("stat", "stat_fmt"),
   levels = NULL,
   labels = NULL,
-  sort = TRUE,
+  sort = FALSE,
   sep = "____",
   round = NULL,
   spec = NULL,
@@ -146,14 +146,23 @@ column}, matched on the output name then the source name, with
               WORST  = c("0" = "Grade 0"))
 }\if{html}{\out{</div>}}}
 
-\item{sort}{\code{TRUE} (default) groups by the row keys, \strong{in the order the
-data lists them} --- a key is put in a declared order only when
-\code{levels} (or \code{labels}) declared one, which is also when the label
-column takes part.  Nothing is alphabetised behind your back: a key
-nobody ordered keeps the order it arrived in, as everywhere else in
-R.  \code{FALSE} leaves the rows exactly as they were built, grouping
-included.  A \strong{character vector} names the keys to sort on instead,
-in priority order, each optionally prefixed \code{-} for descending:
+\item{sort}{\code{FALSE} (default) moves a row only where somebody
+\strong{declared} an order.  A key is a factor exactly when \code{levels},
+\code{labels} or the data itself made it one --- and making a column a
+factor is how a table says what its order is --- so a factor key is
+sorted on, and so is the label column when \code{levels} gave it an
+order.  Everything else stays where the data put it, and a declared
+order nested inside a plain key's block sorts within that block.
+Nothing is ever alphabetised behind your back.  (The cells are
+gathered by their key before this, so a block is whole either way;
+what is left is where the blocks sit.)
+
+\strong{Usually you write nothing here, or you name the keys.}  A
+\strong{character vector} names them, in priority order, each optionally
+prefixed \code{-} for descending.  \code{TRUE} is the third, rarer answer: it
+\strong{groups}, bringing a plain key's separate blocks together in the
+order they first appear, which no list of keys says without also
+choosing an order for them:
 \describe{
 \item{\code{".overall"}}{the hierarchical-overall rows (an \verb{Any TEAE} block)
 first.}

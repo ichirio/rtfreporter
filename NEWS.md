@@ -565,27 +565,32 @@ N = ", n$arm)` cannot drift from the columns
   An **indent** or **filled** group is untouched: there the group is a
   position in the body rather than a key, so there is nothing to gather by.
   `sort_by` is for choosing an order, not for making the pages whole.
-- **`ard_spread()` no longer alphabetises a row key nobody ordered**
-  (#474).  `sort = TRUE`, the default, sorted on every row key with
-  `order()`, so a character key came out A-Z although nothing had asked
-  for it -- a Lab Shift table listing `Hemoglobin` first got
-  `Alanine Aminotransferase` first.  R does not reorder data nobody told
-  it to reorder, and neither should this.
+- **`ard_spread(sort = )` defaults to `FALSE`, and `FALSE` still obeys an
+  order you declared** (#474).  The default was `TRUE`, which sorted on
+  every row key with `order()`: a character key came out A-Z although
+  nothing had asked for it, and a Lab Shift table listing `Hemoglobin`
+  first got `Alanine Aminotransferase` first.  R does not reorder data
+  nobody told it to reorder.
 
-  The default now **groups** by the row keys in the order the data lists
-  them, and sorts a key only where somebody declared an order for it --
-  which is exactly when it is a factor, because `levels` (or `labels`)
-  made it one.  Ties keep the order they arrived in.  `sort = FALSE`
-  still leaves the rows exactly as built, grouping included, and a
-  character vector still names the keys to sort on.
+  Two things changed together, because either alone is wrong:
 
-  `FALSE` was considered as the default and measured instead of argued:
-  of the six reports it changes two.  A DM table stops following the
-  `group_vars` order it declared and follows `ard_stack()`'s instead
-  (every continuous block, then every categorical one), and a Solicited
-  AE page loses half its rows.  A declared order is an instruction, so
-  the default keeps obeying it; what it stops doing is inventing one.
-  All six reports are byte-identical under the new default.
+  * **the default is `FALSE`** -- write nothing and nothing is sorted;
+  * **`FALSE` still applies an order somebody DECLARED.**  A key is a
+    factor exactly when `levels`, `labels` or the data itself made it
+    one, and making a column a factor in a table is how you say what its
+    order is.  Refusing to use it would not be leaving the data alone --
+    it would be ignoring an instruction.  The label column takes part on
+    the same terms, and a declared order nested inside a plain key's
+    block sorts within that block.
+
+  So `sort` is now **write nothing, or name the keys** (a character
+  vector, `-` for descending).  `TRUE` stays as the third, rarer answer:
+  it **groups**, bringing a plain key's separate blocks together in the
+  order they first appear, which no list of keys says without also
+  choosing an order for them.
+
+  All six sample reports are byte-identical, and the `sort = FALSE` the
+  Summary-of-Overall-Response sample carried is now what it gets for free.
 - **The dropped total is still a number, and `print()` says when `{n}`
   is not** (#474).  `ard_normalize()` discards the `..ard_total_n..` row
   by default -- it is not a table statistic -- and the denominator went

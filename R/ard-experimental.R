@@ -1675,14 +1675,23 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   labels = list(BASEGR = c("0" = "Baseline 0"),
 #'                 WORST  = c("0" = "Grade 0"))
 #'   ```
-#' @param sort `TRUE` (default) groups by the row keys, **in the order the
-#'   data lists them** --- a key is put in a declared order only when
-#'   `levels` (or `labels`) declared one, which is also when the label
-#'   column takes part.  Nothing is alphabetised behind your back: a key
-#'   nobody ordered keeps the order it arrived in, as everywhere else in
-#'   R.  `FALSE` leaves the rows exactly as they were built, grouping
-#'   included.  A **character vector** names the keys to sort on instead,
-#'   in priority order, each optionally prefixed `-` for descending:
+#' @param sort `FALSE` (default) moves a row only where somebody
+#'   **declared** an order.  A key is a factor exactly when `levels`,
+#'   `labels` or the data itself made it one --- and making a column a
+#'   factor is how a table says what its order is --- so a factor key is
+#'   sorted on, and so is the label column when `levels` gave it an
+#'   order.  Everything else stays where the data put it, and a declared
+#'   order nested inside a plain key's block sorts within that block.
+#'   Nothing is ever alphabetised behind your back.  (The cells are
+#'   gathered by their key before this, so a block is whole either way;
+#'   what is left is where the blocks sit.)
+#'
+#'   **Usually you write nothing here, or you name the keys.**  A
+#'   **character vector** names them, in priority order, each optionally
+#'   prefixed `-` for descending.  `TRUE` is the third, rarer answer: it
+#'   **groups**, bringing a plain key's separate blocks together in the
+#'   order they first appear, which no list of keys says without also
+#'   choosing an order for them:
 #'   \describe{
 #'     \item{`".overall"`}{the hierarchical-overall rows (an `Any TEAE` block)
 #'       first.}
@@ -1737,7 +1746,7 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 ard_spread <- function(x, cols, rows = NULL, label = ".label",
                        cells = "{n} ({p})", stats = c("cells", "rows"),
                        value = c("stat", "stat_fmt"),
-                       levels = NULL, labels = NULL, sort = TRUE,
+                       levels = NULL, labels = NULL, sort = FALSE,
                        sep = "____",
                        round = NULL, spec = NULL,
                        sort_stat = NULL, na = NA_character_, notes = TRUE) {
@@ -2116,16 +2125,24 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   if (is.character(sort) && length(sort)) {
     out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref), ,
                drop = FALSE]
-  } else if (isTRUE(sort) && length(rowname_cols)) {
-    # Only orders somebody DECLARED are sorted on.  A row key is a
-    # factor exactly when `levels` (or `labels`) gave it an order; a
-    # plain character key was ordered by nobody, so it keeps the order
-    # the data listed it in rather than being alphabetised behind the
-    # caller's back -- which is what R does everywhere else.
+  } else if (length(rowname_cols) && nrow(out) > 1L) {
+    # Only an order somebody DECLARED moves a row.  A key is a factor
+    # exactly when `levels`, `labels` or the data itself gave it one --
+    # and making a column a factor is how a table says what its order
+    # is -- so a factor key is sorted on even with `sort = FALSE`.
+    # Nothing is alphabetised behind the caller's back.
+    #
+    # A plain key is different under the two.  `FALSE` (the default)
+    # leaves its blocks exactly where they are and lets a declared order
+    # nested inside one sort WITHIN it; `TRUE` also GROUPS, clustering a
+    # plain key's equal values wherever they are, first-seen first.
     keys <- lapply(rowname_cols, function(k) {
       v <- out[[k]]
-      if (is.factor(v)) v else
-        factor(as.character(v), levels = .ard_first_seen(v))
+      if (is.factor(v)) return(v)
+      ch <- as.character(v)
+      ch[is.na(ch)] <- ""
+      if (isTRUE(sort)) factor(ch, levels = unique(ch))
+      else cumsum(c(TRUE, ch[-1L] != ch[-length(ch)]))
     })
     if (!is.null(label_out) && is.factor(out[[label_out]])) {
       keys <- c(keys, list(out[[label_out]]))

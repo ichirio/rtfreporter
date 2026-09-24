@@ -1649,7 +1649,7 @@ test_that("an unnamed entry in a scope is refused, not ignored", {
     "labels\\$BASE")
 })
 
-test_that("the default sort does not alphabetise a key nobody ordered", {
+test_that("the default moves no row a declared order did not move", {
   skip_if_no_cards()
   # `sort = TRUE` groups by the row keys; it does not decide what their
   # order is.  Here B comes first in the data, and B comes first out.
@@ -1667,7 +1667,7 @@ test_that("the default sort does not alphabetise a key nobody ordered", {
   expect_identical(as.character(out$PARAM), c("B", "A"))
 })
 
-test_that("a declared order still wins over the order the data lists", {
+test_that("a declared order applies even though nothing asked to sort", {
   skip_if_no_cards()
   # `levels` IS somebody ordering the key, so it is sorted on
   d <- data.frame(
@@ -1682,5 +1682,48 @@ test_that("a declared order still wins over the order the data lists", {
                     label = c(label = ".label"), cells = "{n:.0f}",
                     levels = list(PARAM = c("A", "B")), notes = FALSE)
   expect_identical(as.character(out$PARAM), c("A", "B"))
+})
+
+
+test_that("a plain key keeps its blocks; TRUE clusters them", {
+  skip_if_no_cards()
+  # The cells are gathered by their key already, so a block is whole
+  # either way.  What differs is whether SEPARATE blocks of one key are
+  # brought together: the default leaves them where the data put them,
+  # `TRUE` is the verb that groups.
+  d <- data.frame(
+    GRP = c("B", "A", "B"),
+    SUB = c("x", "x", "y"),
+    TRT = "t",
+    variable = "V", variable_level = "L",
+    context = "categorical",
+    stat_name = "n", stat_label = "n", stat = 1:3,
+    .label = "L", .kind = "categorical",
+    stringsAsFactors = FALSE)
+  run <- function(...) ard_spread(d, cols = "TRT",
+                                  rows = c(GRP = "GRP", SUB = "SUB"),
+                                  label = c(label = ".label"),
+                                  cells = "{n:.0f}", notes = FALSE, ...)
+  expect_identical(as.character(run()$GRP), c("B", "A", "B"))
+  expect_identical(as.character(run(sort = TRUE)$GRP),
+                   c("B", "B", "A"))
+})
+
+test_that("a declared order sorts WITHIN a plain key's block", {
+  skip_if_no_cards()
+  # the outer key stays put; the label, which `levels` ordered, does not
+  d <- data.frame(
+    PARAM = rep(c("B", "A"), each = 2L),
+    TRT = "x",
+    variable = "V", variable_level = c("hi", "lo", "hi", "lo"),
+    context = "categorical",
+    stat_name = "n", stat_label = "n", stat = 1:4,
+    .label = c("hi", "lo", "hi", "lo"), .kind = "categorical",
+    stringsAsFactors = FALSE)
+  out <- ard_spread(d, cols = "TRT", rows = c(PARAM = "PARAM"),
+                    label = c(label = ".label"), cells = "{n:.0f}",
+                    levels = list(label = c("lo", "hi")), notes = FALSE)
+  expect_identical(as.character(out$PARAM), c("B", "B", "A", "A"))
+  expect_identical(as.character(out$label), c("lo", "hi", "lo", "hi"))
 })
 
