@@ -219,6 +219,14 @@ neither written down.  A cell outside the data (the stub)
 totals every column.  A spanner's \code{{col1}}, \code{{col2}}, ... are
 the levels its columns \strong{agree} on, which is the arm name a
 spanning cell wants;
+\item \verb{\{n:<column>\}} names \strong{one} of the values, for a cell that has
+to say a number belonging to a column it does not sit over ---
+\code{"A={n:Placebo} B={n:Xanomeline High Dose}"};
+\item \strong{\code{print()} lists every token this plan offers} and what each
+resolves to, under \verb{header tokens}, because the values come
+from the ARD and the columns from the spread and neither is
+visible in the call.  The \code{{col...}} ones appear once the
+table has been built at least once;
 \item its cells may carry \code{{col}} and \code{{n}} --- the column and its
 denominator (or the single one there is).  Several \code{cols} keys
 make a name like "Placebo____Negative", which nobody wants

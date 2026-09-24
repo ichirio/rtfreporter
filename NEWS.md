@@ -629,6 +629,29 @@ N = ", n$arm)` cannot drift from the columns
   `missing \`pos\`` message.  `c(list(...), lapply(...))` is still fine,
   because `lapply()` returns a list.
 
+  **`print()` lists the header tokens**, because the answer was otherwise
+  invisible: the values come from the ARD and the columns from the spread,
+  and neither is written in the call.
+
+  ```
+    header tokens     -- what a plan_col_header() cell may carry:
+        {col}                     the column (its last level)
+        {col1}                    level 1 of the column name
+        {col2}                    level 2 of the column name
+        {n}                       the value for this column
+        {n:sum}                   the total over the columns a cell covers
+        {n:Placebo____Negative}   = 42
+        {n:Placebo____Positive}   = 27
+  ```
+
+  The `{n}` entries appear straight away; the `{col...}` ones once the
+  table has been built once, which is the same rule the column listings
+  above them follow.
+
+  And **`{n:<column>}` names one of the values**, for a cell that has to
+  say a number belonging to a column it does not sit over:
+  `"A={n:Placebo} B={n:Xanomeline High Dose}"`.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

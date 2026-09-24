@@ -1305,3 +1305,33 @@ test_that("{n:sum} needs no n_subjs: the ARD and the cell say it all", {
   expect_true(any(grepl("All (N=254)", r1, fixed = TRUE)))
 })
 
+
+test_that("{n:<column>} names one of the values", {
+  f <- rtfreporter:::.plan_header_fill
+  nv <- c("A" = 10, "B" = 20, "C" = 30)
+  h <- rtf_col_header(
+    list(col_cell(1, "A={n:A} B={n:B} C={n:C} all={n:sum}"),
+         col_cell(c(2, 4), "{n:sum}")),
+    c("Term", "{col} ({n})"))
+  out <- f(h, nv, c("A", "B", "C"), 1L, "____")
+  r1 <- vapply(out[[1L]], function(z) as.character(z$label), "")
+  expect_identical(r1[[1L]], "A=10 B=20 C=30 all=60")
+  expect_identical(r1[[2L]], "60")
+  expect_identical(out[[2L]], c("Term", "A (10)", "B (20)", "C (30)"))
+})
+
+test_that("print() lists the header tokens and what they resolve to", {
+  skip_if_no_cards2()
+  p <- disp_plan() |> plan_paginate_rows(max_rows = 40) |>
+    plan_col_header(n = c("Placebo" = 86, "Xanomeline High Dose" = 84,
+                          "Xanomeline Low Dose" = 84),
+                    rtf_col_header(c("Group", "Characteristic", "{col}")))
+  invisible(suppressMessages(apply_plan(p)))
+  out <- utils::capture.output(print(p))
+  expect_true(any(grepl("header tokens", out, fixed = TRUE)))
+  expect_true(any(grepl("{n:sum}", out, fixed = TRUE)))
+  expect_true(any(grepl("{n:Placebo}", out, fixed = TRUE)))
+  expect_true(any(grepl("= 86", out, fixed = TRUE)))
+  expect_true(any(grepl("{col}", out, fixed = TRUE)))
+})
+

@@ -564,6 +564,17 @@ print.rtf_plan <- function(x, ...) {
     cat("  after spread      -- not computed yet; run it once and this",
         " print fills in\n", sep = "")
   }
+  # What a header cell may say.  The values come from the ARD and the
+  # columns from the spread, so neither is visible in the call.
+  tk <- tryCatch(.plan_header_tokens(x), error = function(e) list())
+  if (length(tk)) {
+    cat("  header tokens     -- what a plan_col_header() cell may ",
+        "carry:\n", sep = "")
+    w <- max(nchar(names(tk)))
+    for (k in names(tk)) {
+      cat(sprintf("      %-*s  %s\n", w, k, tk[[k]]))
+    }
+  }
   cat(if (identical(.plan_reach(x), "pages"))
         "  rtf_tables(doc, x) renders it"
       else "  apply_plan(x) returns it",
@@ -702,6 +713,14 @@ print.rtf_plan <- function(x, ...) {
 #'     totals every column.  A spanner's `{col1}`, `{col2}`, ... are
 #'     the levels its columns **agree** on, which is the arm name a
 #'     spanning cell wants;
+#'   * `{n:<column>}` names **one** of the values, for a cell that has
+#'     to say a number belonging to a column it does not sit over ---
+#'     `"A={n:Placebo} B={n:Xanomeline High Dose}"`;
+#'   * **`print()` lists every token this plan offers** and what each
+#'     resolves to, under `header tokens`, because the values come
+#'     from the ARD and the columns from the spread and neither is
+#'     visible in the call.  The `{col...}` ones appear once the
+#'     table has been built at least once;
 #'   * its cells may carry `{col}` and `{n}` --- the column and its
 #'     denominator (or the single one there is).  Several `cols` keys
 #'     make a name like "Placebo____Negative", which nobody wants
@@ -1765,6 +1784,45 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   out[intersect(ord, names(out))]
 }
 
+# Every token a header cell may carry, with what it resolves to.
+# `print()` shows this because the answer is otherwise invisible:
+# the values come from the ARD and the columns from the spread, and
+# neither is written in the call.
+.plan_header_tokens <- function(plan) {
+  tbl <- plan$cache$table
+  hdr <- .plan_merge(.plan_of(plan, "header"))
+  nvals <- tryCatch(.plan_n_values(plan, hdr$n), error = function(e) NULL)
+  toks <- if (is.list(nvals) && !is.null(names(nvals)) &&
+              any(nzchar(names(nvals)))) nvals
+          else if (is.null(nvals)) list() else list(n = nvals)
+  cols <- if (is.null(tbl)) NULL else .plan_spread_cols(plan, tbl)
+  sep <- plan$roles$sep %||% "____"
+  out <- list()
+  if (!is.null(cols) && length(cols)) {
+    lv <- max(vapply(strsplit(cols, sep, fixed = TRUE), length, 1L))
+    out[["{col}"]] <- "the column (its last level)"
+    if (lv > 1L) {
+      for (i in seq_len(lv)) {
+        out[[paste0("{col", i, "}")]] <- paste0("level ", i,
+          " of the column name")
+      }
+    }
+  }
+  for (nm in names(toks)) {
+    v <- toks[[nm]]
+    out[[paste0("{", nm, "}")]] <-
+      if (length(v) == 1L) paste0("= ", format(v, trim = TRUE))
+      else "the value for this column"
+    out[[paste0("{", nm, ":sum}")]] <-
+      "the total over the columns a cell covers"
+    for (k in names(v) %||% character(0)) {
+      out[[paste0("{", nm, ":", k, "}")]] <-
+        paste0("= ", format(v[[k]], trim = TRUE))
+    }
+  }
+  out
+}
+
 # The denominator, read once, with the keys rtf_plan() already has.
 .plan_n_values <- function(plan, n) {
   if (is.null(n)) return(NULL)
@@ -2006,6 +2064,13 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     for (nm in names(toks)) {
       out <- gsub(paste0("{", nm, ":sum}"),
                   say(summed(toks[[nm]], over)), out, fixed = TRUE)
+      # `{n:<column>}` names ONE of the values, for a cell that has to
+      # say a number belonging to a column it does not sit over.
+      v <- toks[[nm]]
+      for (k in names(v) %||% character(0)) {
+        out <- gsub(paste0("{", nm, ":", k, "}"), say(v[[k]]),
+                    out, fixed = TRUE)
+      }
       out <- gsub(paste0("{", nm, "}"), say(pick(toks[[nm]], col)),
                   out, fixed = TRUE)
     }
