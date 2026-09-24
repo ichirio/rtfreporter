@@ -1333,5 +1333,11 @@ test_that("print() lists the header tokens and what they resolve to", {
   expect_true(any(grepl("{n:Placebo}", out, fixed = TRUE)))
   expect_true(any(grepl("= 86", out, fixed = TRUE)))
   expect_true(any(grepl("{col}", out, fixed = TRUE)))
+  # a level shows the text it prints as, not a description of itself
+  expect_true(any(grepl("= c(AGE, BMIBL, SEX)", out, fixed = TRUE)) ||
+              any(grepl("= c(Placebo", out, fixed = TRUE)))
+  # the numbers themselves, not a description of them
+  expect_true(any(grepl("= c(Placebo = 86", out, fixed = TRUE)))
+  expect_true(any(grepl("= 254 over every column", out, fixed = TRUE)))
 })
 

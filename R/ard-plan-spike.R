@@ -716,11 +716,12 @@ print.rtf_plan <- function(x, ...) {
 #'   * `{n:<column>}` names **one** of the values, for a cell that has
 #'     to say a number belonging to a column it does not sit over ---
 #'     `"A={n:Placebo} B={n:Xanomeline High Dose}"`;
-#'   * **`print()` lists every token this plan offers** and what each
-#'     resolves to, under `header tokens`, because the values come
-#'     from the ARD and the columns from the spread and neither is
-#'     visible in the call.  The `{col...}` ones appear once the
-#'     table has been built at least once;
+#'   * **`print()` lists every token this plan offers, with its
+#'     VALUES**, under `header tokens` --- the numbers a `{n}` holds and
+#'     the text a `{col1}` prints as --- because they come from the ARD
+#'     and from the spread, and neither is visible in the call.  The
+#'     `{col...}` ones appear once the table has been built at least
+#'     once;
 #'   * its cells may carry `{col}` and `{n}` --- the column and its
 #'     denominator (or the single one there is).  Several `cols` keys
 #'     make a name like "Placebo____Negative", which nobody wants
@@ -1798,23 +1799,51 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   cols <- if (is.null(tbl)) NULL else .plan_spread_cols(plan, tbl)
   sep <- plan$roles$sep %||% "____"
   out <- list()
+  # Show the values, not a description of them: a denominator, and the
+  # text a level prints as, are the things you came to check.
+  show <- function(v) {
+    if (length(v) == 1L && is.null(names(v))) {
+      return(paste0("= ", format(v, trim = TRUE)))
+    }
+    nm <- names(v) %||% rep("", length(v))
+    one <- paste0(ifelse(nzchar(nm), paste0(nm, " = "), ""),
+                  vapply(v, function(z) format(z, trim = TRUE), ""))
+    txt <- paste0("= c(", paste(one, collapse = ", "), ")")
+    if (nchar(txt) > 96L) {
+      keep <- 0L
+      w <- 0L
+      for (i in seq_along(one)) {
+        w <- w + nchar(one[i]) + 2L
+        if (w > 80L) break
+        keep <- i
+      }
+      keep <- max(keep, 1L)
+      txt <- paste0("= c(", paste(one[seq_len(keep)], collapse = ", "),
+                    ", ... ", length(one) - keep, " more)")
+    }
+    txt
+  }
   if (!is.null(cols) && length(cols)) {
-    lv <- max(vapply(strsplit(cols, sep, fixed = TRUE), length, 1L))
-    out[["{col}"]] <- "the column (its last level)"
+    pp <- strsplit(cols, sep, fixed = TRUE)
+    lv <- max(vapply(pp, length, 1L))
+    lvl <- function(i) unique(vapply(pp, function(z)
+      if (i <= length(z)) z[i] else NA_character_, ""))
+    leaf <- unique(vapply(pp, function(z) z[length(z)], ""))
+    out[["{col}"]] <- show(leaf[!is.na(leaf)])
     if (lv > 1L) {
       for (i in seq_len(lv)) {
-        out[[paste0("{col", i, "}")]] <- paste0("level ", i,
-          " of the column name")
+        v <- lvl(i)
+        out[[paste0("{col", i, "}")]] <- show(v[!is.na(v)])
       }
     }
   }
   for (nm in names(toks)) {
     v <- toks[[nm]]
-    out[[paste0("{", nm, "}")]] <-
-      if (length(v) == 1L) paste0("= ", format(v, trim = TRUE))
-      else "the value for this column"
-    out[[paste0("{", nm, ":sum}")]] <-
-      "the total over the columns a cell covers"
+    out[[paste0("{", nm, "}")]] <- show(v)
+    tot <- suppressWarnings(sum(as.numeric(unlist(v)), na.rm = TRUE))
+    out[[paste0("{", nm, ":sum}")]] <- paste0(
+      "= ", format(tot, trim = TRUE),
+      " over every column (less over a spanner: its own columns)")
     for (k in names(v) %||% character(0)) {
       out[[paste0("{", nm, ":", k, "}")]] <-
         paste0("= ", format(v[[k]], trim = TRUE))

@@ -635,16 +635,18 @@ N = ", n$arm)` cannot drift from the columns
 
   ```
     header tokens     -- what a plan_col_header() cell may carry:
-        {col}                     the column (its last level)
-        {col1}                    level 1 of the column name
-        {col2}                    level 2 of the column name
-        {n}                       the value for this column
-        {n:sum}                   the total over the columns a cell covers
+        {col}                     = c(Negative, Positive)
+        {col1}                    = c(Placebo, Xanomeline High Dose, ...)
+        {col2}                    = c(Negative, Positive)
+        {n}                       = c(Placebo____Negative = 42, ... 5 more)
+        {n:sum}                   = 225 over every column
         {n:Placebo____Negative}   = 42
         {n:Placebo____Positive}   = 27
   ```
 
-  The `{n}` entries appear straight away; the `{col...}` ones once the
+  Every token shows its VALUE -- the numbers an `{n}` holds, the text a
+  `{col1}` prints as.  The `{n}` entries appear straight away; the
+  `{col...}` ones once the
   table has been built once, which is the same rule the column listings
   above them follow.
 
