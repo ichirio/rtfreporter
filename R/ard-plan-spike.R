@@ -695,6 +695,13 @@ print.rtf_plan <- function(x, ...) {
 #'   has to be computed.  The plan adds two things to a header it is
 #'   given, both of which used to need a function:
 #'
+#'   * `{n:sum}` is that number **totalled over the columns the cell
+#'     covers**, so a spanner over one arm's two columns shows that
+#'     arm's N and one over all of them shows the study total ---
+#'     neither written down.  A cell outside the data (the stub)
+#'     totals every column.  A spanner's `{col1}`, `{col2}`, ... are
+#'     the levels its columns **agree** on, which is the arm name a
+#'     spanning cell wants;
 #'   * its cells may carry `{col}` and `{n}` --- the column and its
 #'     denominator (or the single one there is).  Several `cols` keys
 #'     make a name like "Placebo____Negative", which nobody wants
@@ -1954,23 +1961,53 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       match(col, names(v) %||% character(0))
     if (!is.na(i)) v[[i]] else if (length(v) == 1L) v[[1L]] else NA
   }
-  one <- function(tpl, col) {
+  # `{n:sum}` is the total over the columns THIS CELL COVERS -- so a
+  # spanner over an arm's two columns shows that arm's N, and one over
+  # all of them shows the study total, without the header being told
+  # either.  A cell covering one column sums to that column; a cell
+  # outside the data (the stub) sums over every column.
+  summed <- function(v, over) {
+    if (is.null(v)) return(NA)
+    nm <- names(v) %||% character(0)
+    if (!length(nm)) return(if (length(v) == 1L) v[[1L]] else NA)
+    keep <- if (!length(over)) nm else intersect(over, nm)
+    if (!length(keep)) return(NA)
+    sum(suppressWarnings(as.numeric(unlist(v[keep]))), na.rm = TRUE)
+  }
+  one <- function(tpl, col, over = character(0)) {
     if (!is.character(tpl) || !length(tpl) ||
         !grepl("{", tpl, fixed = TRUE)) {
       return(tpl)
     }
-    pp <- parts(col)
+    # A SPANNER has no single column, but it does have the levels its
+    # columns agree on: over "Placebo____Negative" and
+    # "Placebo____Positive", `{col1}` is "Placebo" and `{col2}` is empty.
+    # That is the arm name a spanning cell wants, and it comes from the
+    # columns rather than from the author.
+    pp <- if (!is.null(col)) parts(col) else if (length(over)) {
+      lv <- lapply(over, parts)
+      k <- max(vapply(lv, length, 1L))
+      vapply(seq_len(k), function(i) {
+        v <- unique(vapply(lv, function(z)
+          if (i <= length(z)) z[i] else NA_character_, ""))
+        if (length(v) == 1L && !is.na(v)) v else ""
+      }, "")
+    } else character(0)
     out <- tpl
     for (i in seq_along(pp)) {
       out <- gsub(paste0("{col", i, "}"), pp[i], out, fixed = TRUE)
     }
-    leaf <- if (length(pp)) pp[length(pp)] else (col %||% "")
+    leaf <- if (!is.null(col) && length(pp)) pp[length(pp)]
+            else if (is.null(col) && length(pp)) pp[length(pp)]
+            else (col %||% "")
     out <- gsub("{col}", leaf, out, fixed = TRUE)
+    say <- function(v) if (is.null(v) || all(is.na(v))) "" else
+      format(v, trim = TRUE)
     for (nm in names(toks)) {
-      v <- pick(toks[[nm]], col)
-      out <- gsub(paste0("{", nm, "}"),
-                  if (is.null(v) || all(is.na(v))) "" else
-                    format(v, trim = TRUE), out, fixed = TRUE)
+      out <- gsub(paste0("{", nm, ":sum}"),
+                  say(summed(toks[[nm]], over)), out, fixed = TRUE)
+      out <- gsub(paste0("{", nm, "}"), say(pick(toks[[nm]], col)),
+                  out, fixed = TRUE)
     }
     out
   }
@@ -1979,6 +2016,15 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     if (!is.numeric(pos) || length(pos) != 1L) return(NULL)
     i <- as.integer(pos) - n_lead
     if (i >= 1L && i <= length(cols)) cols[i] else NULL
+  }
+  # every spread column a cell covers, for `{n:sum}`
+  cell_cols <- function(pos) {
+    if (is.character(pos)) return(intersect(pos, cols))
+    if (!is.numeric(pos) || !length(pos)) return(character(0))
+    p <- as.integer(pos)
+    rng <- if (length(p) >= 2L) seq(p[1L], p[2L]) else p[1L]
+    i <- rng - n_lead
+    cols[i[i >= 1L & i <= length(cols)]]
   }
   total <- n_lead + length(cols)
   fix <- function(r) {
@@ -1996,7 +2042,8 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     if (is.list(r)) {
       return(lapply(r, function(cc) {
         if (inherits(cc, "rtf_col_cell")) {
-          cc$label <- one(cc$label, cell_col(cc$pos))
+          cc$label <- one(cc$label, cell_col(cc$pos),
+                          cell_cols(cc$pos))
         }
         cc
       }))

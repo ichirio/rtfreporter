@@ -212,6 +212,13 @@ resolved \code{n} (and, with two arguments, the finished table) when it
 has to be computed.  The plan adds two things to a header it is
 given, both of which used to need a function:
 \itemize{
+\item \code{{n:sum}} is that number \strong{totalled over the columns the cell
+covers}, so a spanner over one arm's two columns shows that
+arm's N and one over all of them shows the study total ---
+neither written down.  A cell outside the data (the stub)
+totals every column.  A spanner's \code{{col1}}, \code{{col2}}, ... are
+the levels its columns \strong{agree} on, which is the arm name a
+spanning cell wants;
 \item its cells may carry \code{{col}} and \code{{n}} --- the column and its
 denominator (or the single one there is).  Several \code{cols} keys
 make a name like "Placebo____Negative", which nobody wants

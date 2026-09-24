@@ -592,6 +592,33 @@ N = ", n$arm)` cannot drift from the columns
   alternative, instead of being silently ignored while the number is
   raised and nothing changes.
 
+  **`{n:sum}` is the total over the columns a cell covers**, which is the
+  other half of a header's arithmetic and the last reason the
+  adverse-event report had a function.  A spanner over one arm's two
+  columns shows that arm's N; one over all of them shows the study total;
+  a cell outside the data totals every column.  Neither number is written
+  down.  A spanner's `{col1}` / `{col2}` are the levels its columns
+  **agree** on, which is the arm name a spanning cell wants.
+
+  So the report's whole header is now templates:
+
+  ```r
+  plan_col_header(n = TRUE, rtf_col_header(
+    c(list(col_cell(1, "")),
+      lapply(1:3, function(i)
+        col_cell(c(2 * i, 1 + 2 * i), "{col1}
+(N={n:sum})
+ n (%)"))),
+    ...,
+    c("System Organ Class
+   Preferred Term", "{col2}
+(N={n})")))
+  ```
+
+  and the published sample is one sentence: no `n_subjs` block, no
+  `hdr()`, no \pkg{glue}.  Only the spanner POSITIONS are arithmetic, and
+  with a single treatment column there is no `lapply` either.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

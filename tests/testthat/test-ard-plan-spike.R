@@ -1269,3 +1269,39 @@ test_that("a named list of n makes each name a token", {
   expect_true(any(grepl("(N=84)", first$col_header[[3L]], fixed = TRUE)))
 })
 
+
+test_that("{n:sum} totals over the columns the cell covers", {
+  skip_if_no_cards2()
+  f <- rtfreporter:::.plan_header_fill
+  nv <- c("A____x" = 10, "A____y" = 20, "B____x" = 30, "B____y" = 40)
+  cols <- names(nv)
+  h <- rtf_col_header(
+    list(col_cell(1, "all {n:sum}"),
+         col_cell(c(2, 3), "{col1} {n:sum}"),
+         col_cell(c(4, 5), "{col1} {n:sum}")),
+    c("Term", "{col2} {n}"))
+  out <- f(h, nv, cols, 1L, "____")
+  r1 <- vapply(out[[1L]], function(z) as.character(z$label), "")
+  # a cell outside the data totals every column; a spanner totals its own
+  expect_identical(r1, c("all 100", "A 30", "B 70"))
+  # and a spanner takes the level its columns agree on
+  expect_identical(out[[2L]], c("Term", "x 10", "y 20", "x 30", "y 40"))
+})
+
+test_that("{n:sum} needs no n_subjs: the ARD and the cell say it all", {
+  skip_if_no_cards2()
+  # one column per arm, a spanner over all of them
+  p <- disp_plan() |> plan_paginate_rows(max_rows = 40) |>
+    plan_col_header(
+      n = c("Placebo" = 86, "Xanomeline High Dose" = 84,
+            "Xanomeline Low Dose" = 84),
+      rtf_col_header(
+        list(col_cell(1, ""), col_cell(2, ""),
+             col_cell(c(3, 5), "All (N={n:sum})")),
+        c("Group", "Characteristic", "{col} (N={n})")))
+  out <- suppressMessages(apply_plan(p))
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  r1 <- vapply(first$col_header[[1L]], function(z) as.character(z$label), "")
+  expect_true(any(grepl("All (N=254)", r1, fixed = TRUE)))
+})
+
