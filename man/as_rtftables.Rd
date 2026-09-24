@@ -75,12 +75,27 @@ Ignored by \code{"none"}, \code{"rows"} (which cuts at the positions in
 \item{\code{"rows"}}{cut before each row position given in \code{split_rows};
 requires \code{split_rows}.  For fixed-size pages use \code{"group_safe"} /
 \code{"group_force"} with \code{max_rows}.}
-\item{\code{"group_safe"}}{fill up to \code{max_rows} but never split a group
-(defined by \code{group_col}) across a page; requires \code{max_rows}.}
-\item{\code{"group_force"}}{like \code{"group_safe"}, but a single group larger than
-\code{max_rows} may span pages with a continuation label; requires \code{max_rows}.}
-\item{\code{"by_value"}}{one page per distinct value of \code{group_col}; the pages
-are named by that value.}
+\item{\code{"group_safe"}}{pack \strong{whole groups} onto a page: a group
+that does not fit in what is left starts the next page instead.  A
+group that on its own exceeds \code{max_rows} has to be split, and is,
+with a continuation label.  Requires \code{max_rows}.  \strong{This is the one
+that keeps a group together.}}
+\item{\code{"group_force"}}{cut \strong{every} \code{max_rows} rows, wherever that
+falls: a group straddling the cut is split and the next page
+opens with a continuation label repeating its heading.  Pages come
+out the same height, which is why a report asks for it --- but it
+will split a group that would have fitted whole on the next
+page, so it is not \code{"group_safe"} with an escape hatch.  Only
+\code{min_group_rows} pulls a cut back, and only to avoid a widow or an
+orphan.  Requires \code{max_rows}.}
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{  Ten groups of four rows with `max_rows = 30` and the blanks counted:
+  `"group_safe"` gives 26 and 26 rows, `"group_force"` gives 30 and 24 with the
+  sixth group cut in half.
+\\item\{`"by_value"`\}\{one page per distinct value of `group_col`; the pages
+  are named by that value.\}
+}\if{html}{\out{</div>}}
+
 }
 \code{split} may also be a \strong{custom function} for bespoke page-break rules.
 It is called as

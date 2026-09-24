@@ -225,10 +225,23 @@
 #'     \item{`"rows"`}{cut before each row position given in `split_rows`;
 #'       requires `split_rows`.  For fixed-size pages use `"group_safe"` /
 #'       `"group_force"` with `max_rows`.}
-#'     \item{`"group_safe"`}{fill up to `max_rows` but never split a group
-#'       (defined by `group_col`) across a page; requires `max_rows`.}
-#'     \item{`"group_force"`}{like `"group_safe"`, but a single group larger than
-#'       `max_rows` may span pages with a continuation label; requires `max_rows`.}
+#'     \item{`"group_safe"`}{pack **whole groups** onto a page: a group
+#'       that does not fit in what is left starts the next page instead.  A
+#'       group that on its own exceeds `max_rows` has to be split, and is,
+#'       with a continuation label.  Requires `max_rows`.  **This is the one
+#'       that keeps a group together.**}
+#'     \item{`"group_force"`}{cut **every** `max_rows` rows, wherever that
+#'       falls: a group straddling the cut is split and the next page
+#'       opens with a continuation label repeating its heading.  Pages come
+#'       out the same height, which is why a report asks for it --- but it
+#'       will split a group that would have fitted whole on the next
+#'       page, so it is not `"group_safe"` with an escape hatch.  Only
+#'       `min_group_rows` pulls a cut back, and only to avoid a widow or an
+#'       orphan.  Requires `max_rows`.}
+#'
+#'       Ten groups of four rows with `max_rows = 30` and the blanks counted:
+#'       `"group_safe"` gives 26 and 26 rows, `"group_force"` gives 30 and 24 with the
+#'       sixth group cut in half.
 #'     \item{`"by_value"`}{one page per distinct value of `group_col`; the pages
 #'       are named by that value.}
 #'   }

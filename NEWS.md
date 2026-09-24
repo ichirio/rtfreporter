@@ -543,6 +543,26 @@ N = ", n$arm)` cannot drift from the columns
   `c(40, 10)` is "the stub is 40, every column 10" and the number of
   columns need not be written down.
 
+- **The help for `as_rtftables(split = )` described `"group_force"`
+  wrongly**, which is how a report ends up with a group cut in half when
+  the page looked as though it had room.  It said `"group_force"` was
+  `"group_safe"` with an escape hatch for a group too big to fit.  It is
+  not: it **cuts every `max_rows` rows wherever that falls**, which is
+  what the implementation has always done and what makes the pages come
+  out the same height.  A group straddling the cut is split and the next
+  page opens with a continuation label.
+
+  `"group_safe"` is the one that keeps a group together -- a group that
+  does not fit in what is left starts the next page -- and it still
+  splits a group that on its own exceeds `max_rows`, because that one has
+  to be split.
+
+  Measured, and now in the help and a test: ten groups of four rows with
+  `max_rows = 30` and the blanks counted give **26 and 26** rows under
+  `"group_safe"`, and **30 and 24** under `"group_force"` with the sixth
+  group cut in half.  Only the help changed; no report's pagination
+  moves.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe

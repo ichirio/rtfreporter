@@ -148,3 +148,50 @@ test_that("group_force honours the edges too", {
                         count_blank_rows = TRUE)
   for (p in pages) expect_lte(.printed(p), 10L)
 })
+
+# The two group strategies differ in a way the help used to get wrong:
+# "group_safe" packs WHOLE groups, "group_force" cuts every `max_rows`
+# wherever that falls.  A reader who expects a group to be kept together
+# wants the first one.
+
+.soc_pt <- function(sizes) {
+  nb <- "\u00a0"
+  lab <- unlist(lapply(seq_along(sizes), function(i)
+    c(sprintf("SOC %d", i),
+      sprintf("%s%sPT %d-%d", nb, nb, i, seq_len(sizes[i])))))
+  data.frame(row_label = lab, A = as.character(seq_along(lab)),
+             stringsAsFactors = FALSE)
+}
+
+.pages_of <- function(split, max_rows, sizes = rep(3L, 10L)) {
+  out <- as_rtftables(.soc_pt(sizes), read_meta = FALSE, split = split,
+                      max_rows = max_rows, blank_rows = "between_groups",
+                      blank_row_first = TRUE, blank_row_end = TRUE,
+                      count_blank_rows = TRUE)
+  if (inherits(out, "rtftable")) list(out) else out
+}
+
+test_that("group_safe keeps a group whole; group_force cuts at max_rows", {
+  # ten groups of 1 heading + 3 children; a group costs 4 rows + 1 blank
+  safe  <- .pages_of("group_safe", 30)
+  force <- .pages_of("group_force", 30)
+
+  # safe: five whole groups a page (20 data + 6 blanks = 26 of the 30)
+  expect_identical(vapply(safe, function(z) nrow(z$data), 1L), c(20L, 20L))
+  # force: exactly 30 counted rows, so the sixth group is cut in half
+  expect_identical(vapply(force, function(z) nrow(z$data), 1L), c(23L, 18L))
+
+  has_cont <- function(pg) vapply(pg, function(z)
+    any(grepl("Cont", z$data[[1L]], fixed = TRUE)), TRUE)
+  expect_false(any(has_cont(safe)))
+  expect_true(any(has_cont(force)))
+})
+
+test_that("group_safe still splits a group that alone cannot fit", {
+  # one group of 30 children cannot go on a 28-row page whatever happens
+  pg <- .pages_of("group_safe", 28, sizes = c(3L, 30L, 3L))
+  expect_gt(length(pg), 2L)
+  expect_true(any(vapply(pg, function(z)
+    any(grepl("Cont", z$data[[1L]], fixed = TRUE)), TRUE)))
+})
+
