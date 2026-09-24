@@ -1100,3 +1100,59 @@ test_that("with one key the leaf is the whole name", {
                         fixed = TRUE)))
 })
 
+
+# ------------------------------------------ digits, per statistic
+
+open_plan <- function() {
+  rtf_plan(nz(plan_ard()), cols = "TRT", rows = c(group = "variable"),
+           notes = FALSE) |>
+    plan_cells(continuous  = c("n"         = "{N:.0f}",
+                               "Mean (SD)" = "{mean} ({sd})"),
+               categorical = "{n:.0f} ({p:%})")
+}
+
+test_that("digits can be stated per statistic, not just per variable", {
+  skip_if_no_cards2()
+  p <- open_plan() |>
+    plan_digits(c(mean = 2, sd = 3, p = 1)) |>
+    plan_digits(AGE = c(mean = 1, sd = 2))
+  cells <- apply_plan(p, "args")$cells
+  expect_match(cells$AGE[["Mean (SD)"]], "{mean:.1f} ({sd:.2f})",
+               fixed = TRUE)
+  expect_match(cells$BMIBL[["Mean (SD)"]], "{mean:.2f} ({sd:.3f})",
+               fixed = TRUE)
+})
+
+test_that("a statistic the narrower rule skips falls through", {
+  skip_if_no_cards2()
+  # AGE says nothing about `sd`, so the house rule answers for it
+  p <- open_plan() |>
+    plan_digits(c(mean = 2, sd = 3, p = 1)) |>
+    plan_digits(AGE = c(mean = 0))
+  expect_match(apply_plan(p, "args")$cells$AGE[["Mean (SD)"]],
+               "{mean:.0f} ({sd:.3f})", fixed = TRUE)
+})
+
+test_that("one number still means every token", {
+  skip_if_no_cards2()
+  p <- open_plan() |> plan_digits(c(mean = 2, sd = 3, p = 1)) |>
+    plan_digits(AGE = 1)
+  expect_match(apply_plan(p, "args")$cells$AGE[["Mean (SD)"]],
+               "{mean:.1f} ({sd:.1f})", fixed = TRUE)
+})
+
+
+test_that("kind x statistic and variable x statistic combine", {
+  skip_if_no_cards2()
+  p <- open_plan() |>
+    plan_digits(continuous = c(mean = 2, sd = 3),
+                categorical = c(p = 1)) |>
+    plan_digits(AGE = c(mean = 1, sd = 2))
+  cells <- apply_plan(p, "args")$cells
+  expect_match(cells$AGE[["Mean (SD)"]], "{mean:.1f} ({sd:.2f})",
+               fixed = TRUE)
+  expect_match(cells$BMIBL[["Mean (SD)"]], "{mean:.2f} ({sd:.3f})",
+               fixed = TRUE)
+  expect_match(cells$SEX, "{p:.1f%}", fixed = TRUE)
+})
+

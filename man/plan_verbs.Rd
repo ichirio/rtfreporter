@@ -108,9 +108,23 @@ plan_paginate_cols(
 
 \item{...}{For \code{plan_cells()}, exactly what \code{ard_spread(cells = )}
 takes: one bare entry, or entries named by variable, \code{context},
-kind (\code{continuous} / \code{categorical}) or \code{default}.  For
-\code{plan_digits()}, the same keys with a number as the value; one
-unnamed value sets the plan-wide default.
+kind (\code{continuous} / \code{categorical}) or \code{default}.
+
+\code{plan_digits()} takes the same keys, with the digits as the value.
+A value is \strong{one number}, for every token in that entry, or a
+vector \strong{named by statistic} --- a house rule is rarely one number.
+The two keys combine, which is the point of the verb:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_digits(continuous  = c(mean = 2, sd = 3, median = 2),
+            categorical = c(p = 1)) |>      # the house rule
+  plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
+}\if{html}{\out{</div>}}
+
+A statistic the narrower entry says nothing about falls through to
+the wider one, so AGE's \code{median} stays at 2 above.  Digits only
+reach a token that left the question open (\code{{mean}}, or \verb{\{p:\\\%\}}):
+one that answered it (\verb{\{mean:.2f\}}) keeps its answer, so a template
+meant to be tuned is written open.
 
 For \code{plan_levels()} and \code{plan_labels()}, one entry per column or
 analysis variable: an order (\code{AGEGR1 = c("<65", "65-74")}), or
@@ -120,15 +134,7 @@ without restating the rest --- which is the whole reason these
 two are layers and the roles are not.  A \code{plan_labels()} entry
 whose value is itself a named vector applies to that \strong{column}
 only: a shift table's \code{"0"} is \code{"Grade 0"} down the side and
-\code{"Baseline 0"} across the top.
-
-For \code{plan_sort()}, the row order: the keys in
-priority order, each optionally prefixed \code{-} for descending, plus
-\code{".overall"} (an \verb{Any TEAE} block first), \code{".depth"} (a level's own
-summary before the rows under it) and any statistic totalled
-across the spread columns --- which is the whole of a
-descending-frequency AE table's order.  A single \code{TRUE} / \code{FALSE}
-is \code{ard_spread(sort = )}'s own answer.}
+\code{"Baseline 0"} across the top.}
 
 \item{round}{For \code{plan_digits()}: the tie-breaking family for the
 run, as \code{ard_spread(round = )} takes it.  Last wins, like every

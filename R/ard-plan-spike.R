@@ -228,13 +228,35 @@
 # Fill the tokens that left their format open.  `{mean}` becomes `{mean:.2f}`
 # and `{p:%}` becomes `{p:.1f%}`; `{N:d}` and `{mean:.3f}` are left alone
 # because they already answered the question.
-.plan_fill_one <- function(tpl, digits) {
+# How many digits a STATISTIC gets.  `cands` are the declarations that
+# could apply, most specific first; the first that names the statistic
+# wins, and a declaration that names nothing (one number for every
+# token) wins at its own level.  So `plan_digits(c(mean = 2, sd = 3))`
+# as the house rule and `plan_digits(AGE = c(mean = 1, sd = 2))` for
+# one variable is two lines, and `plan_digits(AGE = c(mean = 1))`
+# leaves that variable's `sd` to the house rule.
+.plan_digits_for <- function(cands, stat) {
+  for (d in cands) {
+    if (is.null(d) || !length(d)) next
+    nm <- names(d)
+    if (is.null(nm)) return(d[[1L]])
+    i <- match(stat, nm)
+    if (!is.na(i)) return(d[[i]])
+    j <- which(!nzchar(nm))
+    if (length(j)) return(d[[j[1L]]])
+  }
+  NULL
+}
+
+.plan_fill_one <- function(tpl, cands) {
   if (!is.character(tpl) || !length(tpl)) return(tpl)
   for (i in seq_along(tpl)) {
     for (tok in unique(.ard_tokens(tpl[i]))) {
       pt <- .ard_token_parts(tok)
       if (identical(pt$spec, "") || identical(pt$spec, "%")) {
-        new <- paste0("{", pt$name, ":.", as.integer(digits), "f",
+        d <- .plan_digits_for(cands, pt$name)
+        if (is.null(d) || is.na(d)) next
+        new <- paste0("{", pt$name, ":.", as.integer(d), "f",
                       if (identical(pt$spec, "%")) "%" else "", "}")
         tpl[i] <- gsub(tok, new, tpl[i], fixed = TRUE)
       }
@@ -247,13 +269,13 @@
 # (an unnamed list, possibly holding formulas) or an ard_cells object.  Only
 # the character parts can be rewritten; a formula carries its own environment
 # and is carried through untouched.
-.plan_fill_entry <- function(entry, digits) {
-  if (is.null(entry) || is.null(digits) || is.na(digits)) return(entry)
-  if (is.character(entry)) return(.plan_fill_one(entry, digits))
+.plan_fill_entry <- function(entry, cands) {
+  if (is.null(entry) || !length(cands)) return(entry)
+  if (is.character(entry)) return(.plan_fill_one(entry, cands))
   if (is.list(entry)) {
     for (i in seq_along(entry)) {
       if (is.character(entry[[i]])) {
-        entry[[i]] <- .plan_fill_one(entry[[i]], digits)
+        entry[[i]] <- .plan_fill_one(entry[[i]], cands)
       }
     }
   }
@@ -556,12 +578,26 @@ print.rtf_plan <- function(x, ...) {
 #' layering is the only new idea.
 #'
 #' @param plan An [rtf_plan()].
-
 #' @param ... For `plan_cells()`, exactly what `ard_spread(cells = )`
 #'   takes: one bare entry, or entries named by variable, `context`,
-#'   kind (`continuous` / `categorical`) or `default`.  For
-#'   `plan_digits()`, the same keys with a number as the value; one
-#'   unnamed value sets the plan-wide default.
+#'   kind (`continuous` / `categorical`) or `default`.
+#'
+#'   `plan_digits()` takes the same keys, with the digits as the value.
+#'   A value is **one number**, for every token in that entry, or a
+#'   vector **named by statistic** --- a house rule is rarely one number.
+#'   The two keys combine, which is the point of the verb:
+#'
+#'   ```r
+#'   plan_digits(continuous  = c(mean = 2, sd = 3, median = 2),
+#'               categorical = c(p = 1)) |>      # the house rule
+#'     plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
+#'   ```
+#'
+#'   A statistic the narrower entry says nothing about falls through to
+#'   the wider one, so AGE's `median` stays at 2 above.  Digits only
+#'   reach a token that left the question open (`{mean}`, or `{p:\%}`):
+#'   one that answered it (`{mean:.2f}`) keeps its answer, so a template
+#'   meant to be tuned is written open.
 #'
 #'   For `plan_levels()` and `plan_labels()`, one entry per column or
 #'   analysis variable: an order (`AGEGR1 = c("<65", "65-74")`), or
@@ -572,16 +608,6 @@ print.rtf_plan <- function(x, ...) {
 #'   whose value is itself a named vector applies to that **column**
 #'   only: a shift table's `"0"` is `"Grade 0"` down the side and
 #'   `"Baseline 0"` across the top.
-#'
-#'   For `plan_sort()`, the row order: the keys in
-#'   priority order, each optionally prefixed `-` for descending, plus
-#'   `".overall"` (an `Any TEAE` block first), `".depth"` (a level's own
-#'   summary before the rows under it) and any statistic totalled
-#'   across the spread columns --- which is the whole of a
-#'   descending-frequency AE table's order.  A single `TRUE` / `FALSE`
-#'   is `ard_spread(sort = )`'s own answer.
-#'
-
 #' @param vars,into,indent,group_summary For `plan_stub()`: the row keys to
 #'   fold into one stub column and how, as [stub_cols()] takes them.
 #'   `into` is the NAME the folded column gets (`stub_cols(label = )`), which
@@ -1844,14 +1870,21 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 # ever sees it.
 .plan_lookup_raw <- function(cells, variable, context, kind) {
   if (!is.list(cells) || !any(nzchar(names(cells) %||% ""))) return(NULL)
-  .plan_pick(cells, variable, context, kind)
+  # the cells map wants the FIRST match, not every candidate: a template
+  # is one recipe, and specificity picks it outright
+  hit <- .plan_pick(cells, variable, context, kind)
+  if (length(hit)) hit[[1L]] else NULL
 }
 
 # Last-wins across layers has already happened; what is left is specificity,
 # the same order `.ard_lookup_cells()` uses, so a key set for a variable beats
 # one set for its kind.
+# Every declaration that could apply, MOST SPECIFIC FIRST.  It used to
+# return only the first, which was enough when a declaration was one
+# number; now that it can name statistics, a narrower one may answer
+# for `mean` and a wider one for `sd`.
 .plan_pick <- function(map, variable, context, kind) {
-  if (!length(map)) return(NULL)
+  if (!length(map)) return(list())
   keys <- variable
   if (!is.null(context) && !is.na(context)) {
     keys <- c(keys, .ard_context_aliases(context))
@@ -1859,10 +1892,11 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   if (!is.null(kind) && !is.na(kind)) {
     keys <- c(keys, .ard_context_aliases(kind))
   }
+  out <- list()
   for (k in c(unique(keys), "default")) {
-    if (!is.na(k) && k %in% names(map)) return(map[[k]])
+    if (!is.na(k) && k %in% names(map)) out[[length(out) + 1L]] <- map[[k]]
   }
-  NULL
+  out
 }
 
 

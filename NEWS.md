@@ -483,6 +483,30 @@ N = ", n$arm)` cannot drift from the columns
   `plan_labels()`'s business, since it recodes the values the name is
   made of.
 
+  **`plan_digits()` takes variable x statistic, which is the only
+  granularity a house rule has.**  One number per variable could not say
+  the ordinary thing --- `mean` to 2 dp and `sd` to 3, and AGE one less
+  of each --- so the verb was not usable and the variable's whole
+  template had to be restated, which is exactly what the plan exists to
+  avoid.  A value may now be a vector **named by statistic**, and the
+  keys combine:
+
+  ```r
+  plan_digits(continuous  = c(mean = 2, sd = 3, median = 2),
+              categorical = c(p = 1)) |>      # the house rule
+    plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
+  ```
+
+  A statistic the narrower entry says nothing about falls through to the
+  wider one, so AGE's `median` stays at 2.  One number still means every
+  token, so `plan_digits(2) |> plan_digits(AGE = 0)` is unchanged.
+
+  Found while documenting it: a bare `%` in a roxygen block starts an Rd
+  comment, so `` `{p:%}` `` in the text swallowed the rest of the
+  `\item{}` and **deleted the argument from the help** -- silently, with
+  the tag still in the source.  It is `` `{p:\%}` ``, and the rest of
+  R/ was checked for the same trap.
+
 - **`ard_template(pipe = )` chooses the pipe the generated script is
   written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
   no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
