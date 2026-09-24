@@ -79,15 +79,17 @@ that is how \code{Min} and \code{Max} become a single \verb{Min, Max} line.
 on the context alone would tie your script to one \pkg{cards} generation and
 produce \strong{no cells at all} against another.
 
-So every variable is also classified from what its rows actually contain --
-its \strong{kind}:
+So every summary -- a variable under one context -- is also classified
+from what its rows actually contain, its \strong{kind}:
 \describe{
-\item{\code{"categorical"}}{the variable has levels to enumerate (some
+\item{\code{"categorical"}}{the summary has levels to enumerate (some
 \code{variable_level} is present): a factor, a dichotomous value of interest,
 a hierarchy term.}
 \item{\code{"continuous"}}{it does not -- one row per statistic of one numeric
 variable.}
 }
+A variable both summarised and tabulated in one ARD is two summaries, and
+gets one kind for each.
 That reading is structural, so it is the same on every \pkg{cards} version,
 past and future.  A \code{cells} entry is then matched in this order:
 \enumerate{

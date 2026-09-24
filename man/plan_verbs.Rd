@@ -265,6 +265,12 @@ keyed by nothing, it is one number for the whole table, which is
 what \code{..ard_total_n..} is.  Note that \code{\link[=ard_normalize]{ard_normalize()}} drops
 the total by default --- keep it with
 \code{ard_normalize(drop_contexts = "attributes")};
+\item the column variable's \strong{own tabulation} --- the per-arm \code{n} of
+\code{cards::ard_stack(.by = )}, which \code{\link[=ard_normalize]{ard_normalize()}} keeps as
+\code{.key_own} rows.  Taken only when its counts add up to the \code{N}
+its rows state (the population split by arm, not the treatment
+counted as an event) and it covers every column; one \code{cols}
+variable only;
 \item otherwise \code{\link[=ard_pull]{ard_pull()}}, which lists its candidates and stops
 rather than choosing between them;
 \item and when the ARD holds no \code{N} at all to pull, the study total

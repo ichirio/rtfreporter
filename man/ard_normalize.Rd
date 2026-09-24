@@ -10,7 +10,7 @@ ard_normalize(
   hierarchy = character(),
   overall = NULL,
   drop_contexts = c("attributes", "total_n"),
-  drop_key_variables = TRUE
+  drop_key_variables = FALSE
 )
 }
 \arguments{
@@ -38,9 +38,12 @@ attribute, because it is a denominator a column header asks for even
 though it is not a table statistic.  Name only \code{"attributes"} to keep
 the row itself.}
 
-\item{drop_key_variables}{When \code{TRUE} (default), drops the rows that merely
-describe a key variable itself -- the \code{context == "tabulate"} counts of the
-by-variable -- which no table cell uses.}
+\item{drop_key_variables}{The rows that describe a key variable itself --
+the \code{context == "tabulate"} counts of the by-variable -- are no table
+cell, but they are often the only place an ARD states each column's
+size.  \code{FALSE} (default) keeps them and marks them \code{.key_own = TRUE}, so
+\code{\link[=ard_spread]{ard_spread()}} leaves them out of the body while a column header can
+still read them.  \code{TRUE} removes them outright.}
 }
 \value{
 A data frame with one row per ARD statistic: the key columns, the
@@ -49,7 +52,9 @@ ARD's own \code{variable} / \code{variable_level} / \code{context} / \code{stat_
 (\code{"continuous"} / \code{"categorical"}, see \link{rtfreporter-ard}), \code{.label} (the
 deepest non-missing hierarchy value, or \code{variable_level}), \code{.label_order}
 (that label's position in the level order its factor declared, \code{NA} when
-it declared none), \code{.overall}, and \code{.depth} --- 1 = outermost within a
+it declared none), \code{.overall}, \code{.key_own} (\code{TRUE} on a key variable's
+own tabulation, see \code{drop_key_variables}), and \code{.depth} --- 1 =
+outermost within a
 \code{hierarchy}, 0 = a row of one that is not one of its levels, and \code{NA}
 throughout when no \code{hierarchy} was given, since depth only means
 something inside one.
@@ -94,6 +99,14 @@ levels -- and \code{\link[=ard_spread]{ard_spread()}} rebuilds that variable's r
 unless \code{levels} says otherwise.  Relabelling a level keeps its position,
 so indenting \code{"Mild"} to \code{"  Mild"} with \code{mutate()} still sorts where
 \code{"Mild"} was declared.
+
+A \strong{key} column holds one variable, so it can carry its order itself: a
+key that was a factor in the data (a treatment variable declared
+\code{factor(levels = c("Low", "Placebo", "High"))}) comes back a factor with
+those levels, unused ones included, and \code{\link[=ard_spread]{ard_spread()}} lays the columns --
+or the rows, for a row key -- out in that order however the frame was
+reordered in between.  \code{levels} still overrides it.  A key that was
+character stays character.
 }
 
 \section{Lifecycle}{

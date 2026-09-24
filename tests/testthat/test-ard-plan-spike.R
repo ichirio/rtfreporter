@@ -1498,3 +1498,68 @@ test_that("plan_paginate_cols(every = ) counts the columns for you", {
   expect_length(one, 1L)
 })
 
+
+# ------------------------------------------ the header n, key rows, .kind --
+
+test_that("plan_col_header(n = TRUE) reads the key's own tabulation", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- factor(as.character(adsl$ARM),
+                     c("Xanomeline Low Dose", "Placebo",
+                       "Xanomeline High Dose"))
+  adsl$AGE[1:5] <- NA          # so the summary's N is NOT the arm size
+  ard <- cards::ard_stack(adsl, .by = TRT,
+                          cards::ard_continuous(variables = AGE))
+  p <- rtf_plan(ard_normalize(ard), cols = "TRT")
+  arm <- table(adsl$TRT)
+  expect_equal(.plan_n_values(p, TRUE),
+               stats::setNames(as.numeric(arm), names(arm)))
+})
+
+test_that("a key tabulation that is not the population split is not taken", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adae <- merge(cards::ADAE[, c("USUBJID", "AESOC")],
+                adsl[, c("USUBJID", "TRT")], by = "USUBJID")
+  # the treatment counted as an EVENT: n per arm does not add up to one N
+  ard <- cards::bind_ard(
+    cards::ard_categorical(adae[!duplicated(adae$USUBJID), ],
+                           variables = TRT, denominator = adsl),
+    cards::ard_hierarchical(adae[!duplicated(adae[c("USUBJID", "AESOC")]), ],
+                            variables = AESOC, by = TRT,
+                            id = USUBJID, denominator = adsl))
+  p <- rtf_plan(ard_normalize(ard, hierarchy = "AESOC"), cols = "TRT")
+  expect_null(.plan_n_key_own(p, .plan_spread_args(p)))
+})
+
+test_that("a Total column the key cannot speak for is left to ard_pull()", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  d <- ard_normalize(cards::ard_stack(
+    adsl, .by = TRT, cards::ard_categorical(variables = SEX),
+    .overall = TRUE))
+  d$TRT[is.na(d$TRT) & !d$.key_own] <- "Total"
+  p <- rtf_plan(d, cols = "TRT")
+  expect_null(.plan_n_key_own(p, .plan_spread_args(p)))
+})
+
+test_that("a variable summarised and tabulated gets both recipes in a plan", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$DEC <- round(adsl$AGE / 10)
+  d <- ard_normalize(cards::ard_stack(
+    adsl, .by = TRT,
+    cards::ard_continuous(variables = DEC),
+    cards::ard_categorical(variables = DEC)))
+  direct <- ard_spread(d, cols = "TRT", notes = FALSE,
+                       cells = list(continuous  = "{mean:.1f}",
+                                    categorical = "{n}"))
+  planned <- suppressMessages(rtf_plan(d, cols = "TRT") |>
+    plan_cells(continuous = "{mean:.1f}", categorical = "{n}") |>
+    apply_plan("table"))
+  expect_equal(as.data.frame(planned), as.data.frame(direct))
+  expect_false(anyNA(direct[!is.na(direct$label), -(1:2)]))
+})

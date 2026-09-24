@@ -550,7 +550,7 @@ print.rtf_plan <- function(x, ...) {
   say <- function(lbl, d, note) {
     if (is.null(d)) return(invisible(NULL))
     cat("  ", lbl, "\n", sep = "")
-    cat(strwrap(paste(setdiff(names(d), ".overall"), collapse = ", "),
+    cat(strwrap(paste(setdiff(names(d), c(".overall", ".key_own")), collapse = ", "),
                 width = 72, prefix = "      "), sep = "\n")
     if (nzchar(note)) cat("      ", note, "\n", sep = "")
   }
@@ -762,9 +762,15 @@ print.rtf_plan <- function(x, ...) {
 #'      what `..ard_total_n..` is.  Note that [ard_normalize()] drops
 #'      the total by default --- keep it with
 #'      `ard_normalize(drop_contexts = "attributes")`;
-#'   2. otherwise [ard_pull()], which lists its candidates and stops
+#'   2. the column variable's **own tabulation** --- the per-arm `n` of
+#'      `cards::ard_stack(.by = )`, which [ard_normalize()] keeps as
+#'      `.key_own` rows.  Taken only when its counts add up to the `N`
+#'      its rows state (the population split by arm, not the treatment
+#'      counted as an event) and it covers every column; one `cols`
+#'      variable only;
+#'   3. otherwise [ard_pull()], which lists its candidates and stops
 #'      rather than choosing between them;
-#'   3. and when the ARD holds no `N` at all to pull, the study total
+#'   4. and when the ARD holds no `N` at all to pull, the study total
 #'      [ard_normalize()] remembered as it dropped the row.  Last, not
 #'      first: a per-column `N` is what a header usually wants, and one
 #'      number for every column would quietly replace it.
@@ -1381,19 +1387,38 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
     #  a) one entry per analysis variable, where a variable-specific layer
     #     can win.  A frame with no `variable` column -- somebody's own long
     #     summary -- has nothing to expand, and (b) still applies.
-    vars <- if ("variable" %in% names(x)) .ard_first_seen(x$variable) else
-      character(0)
+    # a key variable's own tabulation is no cell (ard_spread() leaves it
+    # out), so it asks for no template either
+    body <- if (".key_own" %in% names(x)) !(x$.key_own %in% TRUE) else
+      rep(TRUE, nrow(x))
+    vars <- if ("variable" %in% names(x)) .ard_first_seen(x$variable[body])
+            else character(0)
     vars <- vars[!is.na(vars)]
     filled <- list()
     for (v in vars) {
-      sel <- x$variable == v
-      ctx <- .ard_first_seen(x$context[sel])[1L]
-      knd <- .ard_first_seen(x$.kind[sel])[1L]
-      entry <- .plan_lookup_raw(cells, v, ctx, knd)
-      if (is.null(entry)) next
-      entry <- .plan_fill_entry(entry, .plan_pick(dig, v, ctx, knd))
-      .plan_check_open(entry, v)
-      filled[[v]] <- entry
+      sel <- body & x$variable == v
+      # One entry per SUMMARY -- a variable under one context.  A variable
+      # both summarised and tabulated is two summaries, and pinning the
+      # first one's template to the variable name would hand the mean
+      # recipe to the counts.
+      ctxs <- .ard_first_seen(x$context[sel])
+      if (!length(ctxs)) ctxs <- NA_character_
+      got <- list()
+      for (ctx in ctxs) {
+        s2  <- sel & (if (is.na(ctx)) is.na(x$context) else
+                        (!is.na(x$context) & x$context == ctx))
+        knd <- .ard_first_seen(x$.kind[s2])[1L]
+        entry <- .plan_lookup_raw(cells, v, ctx, knd)
+        if (is.null(entry)) next
+        entry <- .plan_fill_entry(entry, .plan_pick(dig, v, ctx, knd))
+        .plan_check_open(entry, v)
+        got[[.ard_summary_key(v, ctx)]] <- entry
+      }
+      if (!length(got)) next
+      # the usual case -- one summary, or several sharing one recipe --
+      # stays keyed by the variable, exactly as before
+      if (length(unique(got)) == 1L) filled[[v]] <- got[[1L]]
+      else for (k in names(got)) filled[[k]] <- got[[k]]
     }
     #  b) every key the caller actually wrote, filled with the digits THAT
     #     key resolves to.  Without this a plan-wide `plan_digits()` reached
@@ -1835,8 +1860,46 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
                           list(sep = sp$sep %||% "____")))
   val <- suppressWarnings(as.numeric(as.character(sub$stat)))
   out <- vapply(split(val, key), function(z) z[1L], numeric(1))
-  ord <- if (is.null(sp$levels)) .ard_first_seen(key) else {
+  ord <- if (is.null(sp$levels)) .ard_key_order(sub, cols, key) else {
     lv <- sp$levels[[cols[1L]]] %||% sp$levels[[1L]]
+    c(intersect(lv, names(out)), setdiff(names(out), lv))
+  }
+  out[intersect(ord, names(out))]
+}
+
+# The column variable's own tabulation, as a header's `n`.  A key variable's
+# tabulation is not always the population split by arm -- bind separately
+# built AE blocks and the treatment arrives in `variable` counting subjects
+# WITH an event -- so it is taken only when the ARD itself says it is a
+# partition: its `n` add up to the `N` every one of its rows states.  And
+# only when it covers every column the body has; a `Total` column it cannot
+# speak for means the answer is somebody else's.
+.plan_n_key_own <- function(plan, sp) {
+  d <- plan$data
+  if (!is.data.frame(d) ||
+      !all(c(".key_own", "variable", "stat_name", "stat") %in% names(d))) {
+    return(NULL)
+  }
+  cols <- as.character(unlist(sp$cols, use.names = FALSE))
+  if (length(cols) != 1L || !cols %in% names(d)) return(NULL)
+  mine <- d$.key_own %in% TRUE & !is.na(d$variable) & d$variable == cols &
+    !is.na(d[[cols]])
+  sel <- mine & !is.na(d$stat_name) & d$stat_name == "n"
+  if (!any(sel)) return(NULL)
+  sub <- d[sel, , drop = FALSE]
+  n   <- suppressWarnings(as.numeric(as.character(sub$stat)))
+  key <- as.character(sub[[cols]])
+  if (anyNA(n) || anyDuplicated(key)) return(NULL)
+  big <- mine & !is.na(d$stat_name) & d$stat_name == "N"
+  big <- unique(suppressWarnings(as.numeric(as.character(d$stat[big]))))
+  if (length(big) != 1L || is.na(big) || !isTRUE(all.equal(sum(n), big))) {
+    return(NULL)
+  }
+  body <- .ard_first_seen(d[[cols]][!(d$.key_own %in% TRUE)])
+  if (length(setdiff(body, key))) return(NULL)
+  out <- stats::setNames(n, key)
+  ord <- if (is.null(sp$levels)) .ard_key_order(sub, cols, key) else {
+    lv <- sp$levels[[cols]] %||% sp$levels[[1L]]
     c(intersect(lv, names(out)), setdiff(names(out), lv))
   }
   out[intersect(ord, names(out))]
@@ -1940,6 +2003,12 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       # rather than choosing for you.
       hit <- .plan_n_sentinel(plan, sp)
       if (!is.null(hit)) return(hit)
+      # Next, the column variable's OWN tabulation -- the per-arm `n`
+      # that ard_stack(.by = ) writes for exactly this purpose, kept by
+      # ard_normalize() as `.key_own` rows.  Taken only when it is a
+      # partition of the population and covers every column.
+      hit <- .plan_n_key_own(plan, sp)
+      if (!is.null(hit)) return(hit)
       a <- list(ard = plan$data, cols = sp$cols)
       if (!is.null(sp$levels)) a$levels <- sp$levels
       # LAST, not first: a per-column `N` is what a column header
@@ -1951,6 +2020,9 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       # come back as a number.
       tot <- attr(plan$data, "ard_total_n", exact = TRUE)
       sn <- plan$data[["stat_name"]]
+      # a key variable's own `N` is the study total, not a column's
+      own <- plan$data[[".key_own"]] %in% TRUE
+      if (length(own) == length(sn)) sn[own] <- NA
       if (!is.null(tot) && !any(!is.na(sn) & sn == "N")) return(tot)
       return(do.call(ard_pull, a))
     }

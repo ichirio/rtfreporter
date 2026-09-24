@@ -54,7 +54,8 @@
 # directly by `cols` / `rows` / `label`.
 .ard_structural <- function() {
   c("variable", "variable_level", "context", "stat_name", "stat_label",
-    "stat", "stat_fmt", ".kind", ".depth", ".label", ".overall")
+    "stat", "stat_fmt", ".kind", ".depth", ".label", ".overall",
+    ".key_own")
 }
 
 # Flatten one list-column.  An element that is NULL, or longer than one, or a
@@ -97,6 +98,26 @@
     e <- lv[[i]]
     if (!is.factor(e) || is.na(vars[i]) || vars[i] %in% names(out)) next
     out[[vars[i]]] <- levels(e)
+  }
+  if (length(out)) out else NULL
+}
+
+# The same for the GROUPING variables: `groupN_level` holds the level of
+# `groupN` as a one-element factor too, and that one element still carries
+# the whole `levels()` -- unused levels included, and through bind_ard() /
+# dplyr::bind_rows() -- so the order a treatment variable was declared in is
+# in the ARD for the reading.  Returns a named list: variable -> levels.
+.ard_group_factor_levels <- function(x) {
+  out <- list()
+  for (g in grep("^group[0-9]+$", names(x), value = TRUE)) {
+    lv <- x[[paste0(g, "_level")]]
+    if (!is.list(lv)) next
+    vars <- as.character(.ard_unlist_col(x[[g]]))
+    for (i in seq_along(lv)) {
+      e <- lv[[i]]
+      if (!is.factor(e) || is.na(vars[i]) || vars[i] %in% names(out)) next
+      out[[vars[i]]] <- levels(e)
+    }
   }
   if (length(out)) out else NULL
 }
@@ -218,6 +239,20 @@
 # nothing downstream reads the ordered class anyway -- `order()` sorts on the
 # level codes either way, so the RTF is byte-identical.  The column keys ask
 # for `ordered = TRUE` explicitly, but only to sort the column names.
+# The column keys (one string per row, the `cols` values pasted together) in
+# the order the frame declares: a factor key's levels where there is one,
+# first-seen otherwise.  With no factor key at all this IS first-seen, so a
+# character key orders exactly as it always did.
+.ard_key_order <- function(d, cols, key) {
+  fac <- vapply(cols, function(k) is.factor(d[[k]]), logical(1))
+  if (!any(fac)) return(.ard_first_seen(key))
+  parts <- lapply(cols, function(k) {
+    v <- d[[k]]
+    if (is.factor(v)) v else factor(as.character(v), .ard_first_seen(v))
+  })
+  .ard_first_seen(key[do.call(order, c(parts, list(seq_along(key))))])
+}
+
 .ard_as_factor <- function(x, lv, ordered = FALSE) {
   x <- as.character(x)
   extra <- setdiff(.ard_first_seen(x), lv)
@@ -681,12 +716,18 @@ ard_round <- function(x, digits = 0, type = NULL) {
 #  Keying `cells` on it alone therefore ties a script to one cards generation,
 #  and silently produces no cells at all against another.
 #
-#  So each variable is *also* classified from what its rows actually contain --
-#  `.kind`, which is "categorical" when the variable has levels to enumerate
+#  So each summary is *also* classified from what its rows actually contain --
+#  `.kind`, which is "categorical" when the summary has levels to enumerate
 #  (any non-missing `variable_level`: a factor, a dichotomous value of
 #  interest, a hierarchy term) and "continuous" when it does not (one row per
 #  statistic of one numeric variable).  That reading is structural, so it holds
 #  across every cards version, past and future.
+#
+#  A summary is one variable under one `context`, not the variable alone: the
+#  same variable may be summarised AND tabulated in one ARD (a visit count,
+#  a score), and asking "does the variable have levels" once would call its
+#  mean and SD rows categorical as well.  The context string is used only to
+#  tell the summaries apart -- never read for what it says.
 #
 #  `cells` is then matched in this order:
 #     1. the analysis variable's own name
@@ -699,7 +740,9 @@ ard_round <- function(x, digits = 0, type = NULL) {
 #  again.
 .ard_kind <- function(d) {
   if (!nrow(d)) return(character(0))
-  v <- as.character(d$variable)
+  ctx <- if ("context" %in% names(d)) as.character(d$context)
+         else rep(NA_character_, nrow(d))
+  v <- paste(as.character(d$variable), ctx, sep = "\r")
   has_lv <- tapply(!is.na(d$variable_level), v, any)
   out <- ifelse(as.logical(has_lv[v]), "categorical", "continuous")
   out[is.na(out)] <- "continuous"
@@ -828,7 +871,7 @@ ard_round <- function(x, digits = 0, type = NULL) {
   if (!is.list(cells) || !any(nzchar(names(cells) %||% ""))) {
     return(.ard_cell_entry(cells))
   }
-  keys <- variable
+  keys <- c(.ard_summary_key(variable, context), variable)
   if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
   if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
   for (k in c(unique(keys), "default")) {
@@ -837,6 +880,15 @@ ard_round <- function(x, digits = 0, type = NULL) {
     }
   }
   NULL
+}
+
+# The key of one summary -- a variable under one context -- in a cells map.
+# Written only by the plan, when one variable is two summaries that need two
+# recipes; the carriage return keeps it from ever meeting a name somebody
+# typed.
+.ard_summary_key <- function(variable, context) {
+  if (is.na(variable) || is.na(context)) return(NA_character_)
+  paste(variable, context, sep = "\r")
 }
 
 
@@ -1145,7 +1197,7 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
     }
   }
   out <- cand[[1L]]
-  ord <- if (is.null(levels)) .ard_first_seen(key) else {
+  ord <- if (is.null(levels)) .ard_key_order(d, cols, key) else {
     lv <- levels[[cols[1L]]] %||% levels[[1L]]
     c(intersect(lv, names(out)), setdiff(names(out), lv))
   }
@@ -1220,9 +1272,12 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #'   attribute, because it is a denominator a column header asks for even
 #'   though it is not a table statistic.  Name only `"attributes"` to keep
 #'   the row itself.
-#' @param drop_key_variables When `TRUE` (default), drops the rows that merely
-#'   describe a key variable itself -- the `context == "tabulate"` counts of the
-#'   by-variable -- which no table cell uses.
+#' @param drop_key_variables The rows that describe a key variable itself --
+#'   the `context == "tabulate"` counts of the by-variable -- are no table
+#'   cell, but they are often the only place an ARD states each column's
+#'   size.  `FALSE` (default) keeps them and marks them `.key_own = TRUE`, so
+#'   [ard_spread()] leaves them out of the body while a column header can
+#'   still read them.  `TRUE` removes them outright.
 #'
 #' @section Working on the result before [ard_spread()]:
 #' The result is a plain data frame; reshaping it in between is the point of
@@ -1249,13 +1304,23 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 #' so indenting `"Mild"` to `"  Mild"` with `mutate()` still sorts where
 #' `"Mild"` was declared.
 #'
+#' A **key** column holds one variable, so it can carry its order itself: a
+#' key that was a factor in the data (a treatment variable declared
+#' `factor(levels = c("Low", "Placebo", "High"))`) comes back a factor with
+#' those levels, unused ones included, and [ard_spread()] lays the columns --
+#' or the rows, for a row key -- out in that order however the frame was
+#' reordered in between.  `levels` still overrides it.  A key that was
+#' character stays character.
+#'
 #' @return A data frame with one row per ARD statistic: the key columns, the
 #'   ARD's own `variable` / `variable_level` / `context` / `stat_name` /
 #'   `stat_label` / `stat` / `stat_fmt`, the structural classification `.kind`
 #'   (`"continuous"` / `"categorical"`, see [rtfreporter-ard]), `.label` (the
 #'   deepest non-missing hierarchy value, or `variable_level`), `.label_order`
 #'   (that label's position in the level order its factor declared, `NA` when
-#'   it declared none), `.overall`, and `.depth` --- 1 = outermost within a
+#'   it declared none), `.overall`, `.key_own` (`TRUE` on a key variable's
+#'   own tabulation, see `drop_key_variables`), and `.depth` --- 1 =
+#'   outermost within a
 #'   `hierarchy`, 0 = a row of one that is not one of its levels, and `NA`
 #'   throughout when no `hierarchy` was given, since depth only means
 #'   something inside one.
@@ -1268,7 +1333,7 @@ ard_pull <- function(ard, cols, stat = "N", variable = NULL, context = NULL,
 ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
                           overall = NULL,
                           drop_contexts = c("attributes", "total_n"),
-                          drop_key_variables = TRUE) {
+                          drop_key_variables = FALSE) {
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
     .ard_stop("`ard` does not look like a cards ARD (no `context`/`stat_name`).")
@@ -1328,6 +1393,7 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
   }
 
   fct_levels <- .ard_factor_levels(d)
+  key_levels <- .ard_group_factor_levels(d) %||% list()
 
   for (nm in names(d)) {
     if (is.list(d[[nm]])) d[[nm]] <- .ard_unlist_col(d[[nm]])
@@ -1349,6 +1415,13 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
   }
   keys <- setdiff(unique(c(keys, hierarchy)), .ard_structural())
 
+  # A frame that has been through here already has flat `groupN_level`
+  # strings; its declared order is on the key column itself.
+  for (k in keys) {
+    if (is.null(key_levels[[k]]) && is.factor(d[[k]])) {
+      key_levels[[k]] <- base::levels(d[[k]])
+    }
+  }
   for (k in keys) d[[k]] <- NA_character_
   for (g in gcols) {
     lv <- paste0(g, "_level")
@@ -1420,12 +1493,31 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
     d$.label <- d$variable_level
   }
 
+  # A key variable's own tabulation is no table cell, but it is often the
+  # only place the ARD states each column's size -- the per-arm `n` of
+  # ard_stack(.by = ) -- so it is MARKED, not removed: ard_spread() leaves
+  # it out of the body and a column header can still read it.  A column,
+  # like every other mark, so it survives whatever happens in between.
+  own <- d$variable %in% setdiff(keys, c(hierarchy, ovs$from))
   if (drop_key_variables) {
-    kill <- setdiff(keys, c(hierarchy, ovs$from))
     ignored <- .ard_ignored_bind(
-      ignored, .ard_tally(d[d$variable %in% kill, , drop = FALSE],
+      ignored, .ard_tally(d[own, , drop = FALSE],
                           "a key variable's own tabulation"))
-    d <- d[!(d$variable %in% kill), , drop = FALSE]
+    d <- d[!own, , drop = FALSE]
+    own <- rep(FALSE, nrow(d))
+  }
+  d$.key_own <- own
+
+  # A key column holds ONE variable, so the order its factor declared can
+  # ride on the column itself -- unlike `variable_level`, where every
+  # variable's levels share a column and the order needs `.label_order`.
+  # Done last, once every fill above has written its plain strings.
+  for (k in keys) {
+    lv <- key_levels[[k]] %||% fct_levels[[k]]
+    if (is.null(lv)) next
+    front <- if (!is.null(ovs$label) && length(hierarchy) &&
+                 identical(k, hierarchy[1L])) ovs$label
+    d[[k]] <- .ard_as_factor(d[[k]], unique(c(front, lv)))
   }
 
   d$.kind <- .ard_kind(d)
@@ -1448,7 +1540,7 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
   rownames(d) <- NULL
   front <- c(keys, "variable", "variable_level", "context", "stat_name",
              "stat_label", "stat", "stat_fmt", ".kind", ".depth", ".label",
-             ".label_order", ".overall")
+             ".label_order", ".overall", ".key_own")
   front <- intersect(front, names(d))
   out <- d[, c(front, setdiff(names(d), front)), drop = FALSE]
   # `ard_ignored` is the one attribute left, and nothing reads it to build the
@@ -1493,7 +1585,7 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
           "variable to order that variable's rows in the label column.)"),
           what, ref, ref, ref))
       }
-      avail <- paste(setdiff(names(d), c(".overall")), collapse = ", ")
+      avail <- paste(setdiff(names(d), c(".overall", ".key_own")), collapse = ", ")
       # `.label` is ard_normalize()'s own column.  Asking a frame that never
       # went through it to produce one is a different mistake from naming a
       # column that is simply misspelt, and the fix is different too: say
@@ -1816,6 +1908,17 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     if (!cn %in% names(d)) d[[cn]] <- NA_character_
   }
 
+  # A key variable's own tabulation is kept by ard_normalize() for the
+  # column header to read, and is no cell of the body.  Flip `.key_own` to
+  # FALSE to have it spread after all.
+  own_ignored <- NULL
+  if (".key_own" %in% names(d)) {
+    own <- d$.key_own %in% TRUE
+    own_ignored <- .ard_tally(d[own, , drop = FALSE],
+                              "a key variable's own tabulation")
+    d <- d[!own, , drop = FALSE]
+  }
+
   colrefs <- .ard_refs(cols, d, "cols")
 
   # With no `rows` and no hierarchy, the only thing left to group the rows by is
@@ -1880,9 +1983,12 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   if (!length(colrefs)) .ard_stop("`cols` is required: name the key that goes across.")
 
   # ---- recode key values and build the ordering factors -------------------
+  # An explicit `levels` entry first; otherwise the order the key's own
+  # factor declared, which ard_normalize() carried over from the data.
   lev_for <- function(r) {
-    if (is.null(levels)) return(NULL)
-    levels[[r$out]] %||% levels[[r$ref]]
+    lv <- if (is.null(levels)) NULL else levels[[r$out]] %||% levels[[r$ref]]
+    if (is.null(lv) && is.factor(d[[r$ref]])) lv <- base::levels(d[[r$ref]])
+    lv
   }
   recode <- function(v, ref = NULL, out = NULL) {
     lab <- .ard_labels_for(labels, ref, out)
@@ -1897,7 +2003,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
   colparts <- lapply(colrefs, function(r) recode(d[[r$ref]], r$ref, r$out))
   ok <- Reduce(`&`, lapply(colparts, function(v) !is.na(v)))
   ignored <- .ard_ignored_bind(
-    attr(x, "ard_ignored", exact = TRUE),
+    .ard_ignored_bind(attr(x, "ard_ignored", exact = TRUE), own_ignored),
     .ard_tally(d[!ok, , drop = FALSE], "no value for a `cols` key"))
   d <- d[ok, , drop = FALSE]
   colparts <- lapply(colparts, function(v) v[ok])
@@ -3022,15 +3128,17 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
 #' on the context alone would tie your script to one \pkg{cards} generation and
 #' produce **no cells at all** against another.
 #'
-#' So every variable is also classified from what its rows actually contain --
-#' its **kind**:
+#' So every summary -- a variable under one context -- is also classified
+#' from what its rows actually contain, its **kind**:
 #' \describe{
-#'   \item{`"categorical"`}{the variable has levels to enumerate (some
+#'   \item{`"categorical"`}{the summary has levels to enumerate (some
 #'     `variable_level` is present): a factor, a dichotomous value of interest,
 #'     a hierarchy term.}
 #'   \item{`"continuous"`}{it does not -- one row per statistic of one numeric
 #'     variable.}
 #' }
+#' A variable both summarised and tabulated in one ARD is two summaries, and
+#' gets one kind for each.
 #' That reading is structural, so it is the same on every \pkg{cards} version,
 #' past and future.  A `cells` entry is then matched in this order:
 #' \enumerate{

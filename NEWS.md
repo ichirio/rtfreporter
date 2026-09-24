@@ -2,6 +2,42 @@
 
 ### Experimental ARD helpers
 
+- **A factor key keeps the order it declared; a key variable's own rows are
+  kept for the header; `.kind` is decided per summary** (#474).
+
+  *Key order.*  cards stores each `groupN_level` as a one-element factor,
+  and that one element still carries the whole `levels()` --- unused
+  levels included, and through `bind_ard()` / `dplyr::bind_rows()`.  It
+  used to be flattened to a string and the order lost, so the columns
+  followed the rows' order and an `rbind()` in between could move them
+  under a hand-written header.  `ard_normalize()` now returns a key that
+  was a factor as a factor with those levels (a key holds one variable,
+  so the column can carry its own order; `variable_level` mixes variables
+  and keeps using `.label_order`).  `ard_spread()`, `ard_pull()` and the
+  plan's header all read it, so body and header agree without `levels`.
+  An explicit `levels` still wins; a character key stays character.
+
+  *Key rows.*  `drop_key_variables` now defaults to `FALSE`: the by
+  variable's own tabulation is kept and marked `.key_own = TRUE`.
+  `ard_spread()` leaves it out of the body (and says so in `notes`, as
+  before), so no table changes.  `plan_col_header(n = TRUE)` reads it
+  after the cards sentinels and before `ard_pull()` --- it is the per-arm
+  `n` that `ard_stack(.by = )` writes for exactly this purpose.  It is
+  taken only when its counts add up to the `N` its rows state (the
+  population split by arm, not the treatment counted as an event in a
+  bound AE ARD) and it covers every column.  Measured: a continuous-only
+  ARD with missing values used to give the header the non-missing `N`
+  (83 / 84 / 82); it now gives the arm sizes (84 / 86 / 84).
+
+  *`.kind`.*  Decided per variable **and** context rather than per
+  variable, so a variable both summarised and tabulated no longer has
+  its mean and SD rows called categorical.  The plan had the same flaw
+  one level up --- it pinned the first context's recipe to the variable
+  name, and the tabulated rows came out blank --- and now expands one
+  entry per summary.
+
+  The six Discussion #473 reports are identical before and after.
+
 - **A spike: the ARD conversion as a deferred, last-wins plan** (#474, in
   `R/ard-plan-spike.R`, deletable in one step).  `ard_plan()` holds the ARD
   **untouched** and each `plan_*()` verb adds a declaration; nothing runs

@@ -56,9 +56,11 @@ test_that("ard_normalize() keys the group pairs by name and flattens list-cols",
   expect_false(any(vapply(d, is.list, logical(1))))
   expect_setequal(stats::na.omit(unique(d$TRT)),
                   c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
-  # attributes / total_n rows are gone, and so are the by-variable's own counts
+  # attributes / total_n rows are gone; the by-variable's own counts stay,
+  # marked, because a column header reads them
   expect_false(any(d$context %in% c("attributes", "total_n")))
-  expect_false("TRT" %in% d$variable)
+  expect_true(all(d$.key_own[d$variable %in% "TRT"]))
+  expect_false(any(d$.key_own[!d$variable %in% "TRT"]))
   # cards' own formatter came through
   expect_true("stat_fmt" %in% names(d))
   expect_true(any(!is.na(d$stat_fmt)))
@@ -867,7 +869,7 @@ test_that("the middle stage survives being rebuilt", {
     cards::ard_stack_hierarchical(adae, variables = AESOC, by = TRT,
                                   denominator = adsl, id = USUBJID),
     hierarchy = "AESOC")
-  expect_true(all(h$.depth == 1L))
+  expect_true(all(h$.depth[!h$.key_own] == 1L))
 })
 
 test_that("passing the raw ARD says so", {
@@ -1727,3 +1729,102 @@ test_that("a declared order sorts WITHIN a plain key's block", {
   expect_identical(as.character(out$label), c("lo", "hi", "lo", "hi"))
 })
 
+
+# ------------------------------------------- key order, key rows, .kind ----
+
+make_fct_ard <- function() {
+  adsl <- cards::ADSL
+  adsl$TRT <- factor(as.character(adsl$ARM),
+                     c("Xanomeline Low Dose", "Placebo",
+                       "Xanomeline High Dose"))
+  adsl$SEX <- as.character(adsl$SEX)
+  cards::ard_stack(adsl, .by = TRT,
+                   cards::ard_continuous(variables = AGE),
+                   cards::ard_categorical(variables = SEX))
+}
+fct_cells <- list(continuous = "{mean:.1f}", categorical = "{n}")
+fct_order <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
+
+test_that("a factor key keeps the order it declared, however the rows move", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_fct_ard())
+  expect_true(is.factor(d$TRT))
+  expect_identical(levels(d$TRT), fct_order)
+
+  moved <- rbind(d[d$TRT %in% "Placebo", ], d[!d$TRT %in% "Placebo", ])
+  expect_identical(
+    names(ard_spread(moved, cols = "TRT", cells = fct_cells,
+                     notes = FALSE))[-(1:2)], fct_order)
+  bound <- dplyr::bind_rows(d[d$TRT %in% "Placebo", ],
+                            d[!d$TRT %in% "Placebo", ])
+  expect_identical(
+    names(ard_spread(bound, cols = "TRT", cells = fct_cells,
+                     notes = FALSE))[-(1:2)], fct_order)
+  # the header agrees with the body
+  expect_identical(names(ard_pull(moved, cols = "TRT")), fct_order)
+  # an explicit `levels` still wins
+  rev_order <- rev(fct_order)
+  expect_identical(
+    names(ard_spread(moved, cols = "TRT", cells = fct_cells,
+                     levels = list(TRT = rev_order), notes = FALSE))[-(1:2)],
+    rev_order)
+})
+
+test_that("the declared order is read off the ARD, unused levels included", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- factor(as.character(adsl$ARM),
+                     c("Xanomeline Low Dose", "Placebo",
+                       "Xanomeline High Dose", "Not Dosed"))
+  ard <- cards::ard_categorical(adsl, by = TRT, variables = SEX)
+  expect_identical(levels(ard_normalize(ard)$TRT),
+                   c("Xanomeline Low Dose", "Placebo",
+                     "Xanomeline High Dose", "Not Dosed"))
+  # normalizing twice (what ard_pull() does to a plan's frame) keeps it
+  expect_identical(levels(ard_normalize(ard_normalize(ard))$TRT),
+                   levels(ard_normalize(ard)$TRT))
+})
+
+test_that("a character key stays character", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  expect_type(d$TRT, "character")
+})
+
+test_that("a key variable's own rows are kept, marked, and left out of the body", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_fct_ard())
+  expect_true(any(d$.key_own))
+  expect_true(all(d$variable[d$.key_own] == "TRT"))
+  tbl <- ard_spread(d, cols = "TRT", cells = fct_cells, notes = FALSE)
+  expect_false("TRT" %in% tbl$group)
+
+  # flipping the mark spreads them after all
+  d2 <- d
+  d2$.key_own <- FALSE
+  tbl2 <- ard_spread(d2, cols = "TRT", cells = fct_cells, notes = FALSE)
+  expect_true("TRT" %in% tbl2$group)
+
+  # drop_key_variables = TRUE removes them outright, and still reports it
+  gone <- ard_normalize(make_fct_ard(), drop_key_variables = TRUE)
+  expect_false("TRT" %in% gone$variable)
+  expect_false(any(gone$.key_own))
+  expect_equal(ard_spread(gone, cols = "TRT", cells = fct_cells,
+                          notes = FALSE), tbl)
+})
+
+test_that(".kind is decided per summary, not per variable", {
+  skip_if_no_cards()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$DEC <- round(adsl$AGE / 10)
+  d <- ard_normalize(cards::ard_stack(
+    adsl, .by = TRT,
+    cards::ard_continuous(variables = DEC),
+    cards::ard_categorical(variables = DEC)))
+  body <- !d$.key_own
+  expect_identical(unique(d$.kind[body & d$context == "continuous"]),
+                   "continuous")
+  expect_identical(unique(d$.kind[body & d$context == "categorical"]),
+                   "categorical")
+})
