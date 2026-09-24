@@ -606,17 +606,15 @@ N = ", n$arm)` cannot drift from the columns
   plan_col_header(n = TRUE, rtf_col_header(
     c(list(col_cell(1, "")),
       lapply(1:3, function(i)
-        col_cell(c(2 * i, 1 + 2 * i), "{col1}
-(N={n:sum})
- n (%)"))),
+        col_cell(c(2 * i, 1 + 2 * i),
+                 "{col1}\n(N={n:sum})\n n (%)"))),
     ...,
-    c("System Organ Class
-   Preferred Term", "{col2}
-(N={n})")))
+    c("System Organ Class\n   Preferred Term",
+      "{col2}\n(N={n})")))
   ```
 
   and the published sample is one sentence: no `n_subjs` block, no
-  `hdr()`, no \pkg{glue}.  Only the spanner POSITIONS are arithmetic, and
+  `hdr()`, no glue.  Only the spanner POSITIONS are arithmetic, and
   with a single treatment column there is no `lapply` either.
 
 - **`ard_template(pipe = )` chooses the pipe the generated script is
