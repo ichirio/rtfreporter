@@ -1648,3 +1648,39 @@ test_that("an unnamed entry in a scope is refused, not ignored", {
     .ard_check_named(c("a", b = "c"), "labels$BASE"),
     "labels\\$BASE")
 })
+
+test_that("the default sort does not alphabetise a key nobody ordered", {
+  skip_if_no_cards()
+  # `sort = TRUE` groups by the row keys; it does not decide what their
+  # order is.  Here B comes first in the data, and B comes first out.
+  d <- data.frame(
+    PARAM = c("B", "B", "A", "A"),
+    TRT = c("x", "y", "x", "y"),
+    variable = "V", variable_level = c("L", "L", "L", "L"),
+    context = "categorical",
+    stat_name = "n", stat_label = "n", stat = c(1, 2, 3, 4),
+    .label = "L", .kind = "categorical",
+    stringsAsFactors = FALSE)
+  out <- ard_spread(d, cols = "TRT", rows = c(PARAM = "PARAM"),
+                    label = c(label = ".label"), cells = "{n:.0f}",
+                    notes = FALSE)
+  expect_identical(as.character(out$PARAM), c("B", "A"))
+})
+
+test_that("a declared order still wins over the order the data lists", {
+  skip_if_no_cards()
+  # `levels` IS somebody ordering the key, so it is sorted on
+  d <- data.frame(
+    PARAM = c("B", "B", "A", "A"),
+    TRT = c("x", "y", "x", "y"),
+    variable = "V", variable_level = "L",
+    context = "categorical",
+    stat_name = "n", stat_label = "n", stat = c(1, 2, 3, 4),
+    .label = "L", .kind = "categorical",
+    stringsAsFactors = FALSE)
+  out <- ard_spread(d, cols = "TRT", rows = c(PARAM = "PARAM"),
+                    label = c(label = ".label"), cells = "{n:.0f}",
+                    levels = list(PARAM = c("A", "B")), notes = FALSE)
+  expect_identical(as.character(out$PARAM), c("A", "B"))
+})
+

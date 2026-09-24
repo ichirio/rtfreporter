@@ -146,10 +146,14 @@ column}, matched on the output name then the source name, with
               WORST  = c("0" = "Grade 0"))
 }\if{html}{\out{</div>}}}
 
-\item{sort}{\code{TRUE} (default) sorts by the row keys, using the label column
-too when \code{levels} gave it an explicit order; \code{FALSE} leaves the rows as
-they were built.  A \strong{character vector} names the keys instead, in
-priority order, each optionally prefixed \code{-} for descending:
+\item{sort}{\code{TRUE} (default) groups by the row keys, \strong{in the order the
+data lists them} --- a key is put in a declared order only when
+\code{levels} (or \code{labels}) declared one, which is also when the label
+column takes part.  Nothing is alphabetised behind your back: a key
+nobody ordered keeps the order it arrived in, as everywhere else in
+R.  \code{FALSE} leaves the rows exactly as they were built, grouping
+included.  A \strong{character vector} names the keys to sort on instead,
+in priority order, each optionally prefixed \code{-} for descending:
 \describe{
 \item{\code{".overall"}}{the hierarchical-overall rows (an \verb{Any TEAE} block)
 first.}

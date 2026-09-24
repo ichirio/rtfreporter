@@ -1675,10 +1675,14 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   labels = list(BASEGR = c("0" = "Baseline 0"),
 #'                 WORST  = c("0" = "Grade 0"))
 #'   ```
-#' @param sort `TRUE` (default) sorts by the row keys, using the label column
-#'   too when `levels` gave it an explicit order; `FALSE` leaves the rows as
-#'   they were built.  A **character vector** names the keys instead, in
-#'   priority order, each optionally prefixed `-` for descending:
+#' @param sort `TRUE` (default) groups by the row keys, **in the order the
+#'   data lists them** --- a key is put in a declared order only when
+#'   `levels` (or `labels`) declared one, which is also when the label
+#'   column takes part.  Nothing is alphabetised behind your back: a key
+#'   nobody ordered keeps the order it arrived in, as everywhere else in
+#'   R.  `FALSE` leaves the rows exactly as they were built, grouping
+#'   included.  A **character vector** names the keys to sort on instead,
+#'   in priority order, each optionally prefixed `-` for descending:
 #'   \describe{
 #'     \item{`".overall"`}{the hierarchical-overall rows (an `Any TEAE` block)
 #'       first.}
@@ -2113,11 +2117,23 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
     out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref), ,
                drop = FALSE]
   } else if (isTRUE(sort) && length(rowname_cols)) {
-    keys <- lapply(rowname_cols, function(k) out[[k]])
+    # Only orders somebody DECLARED are sorted on.  A row key is a
+    # factor exactly when `levels` (or `labels`) gave it an order; a
+    # plain character key was ordered by nobody, so it keeps the order
+    # the data listed it in rather than being alphabetised behind the
+    # caller's back -- which is what R does everywhere else.
+    keys <- lapply(rowname_cols, function(k) {
+      v <- out[[k]]
+      if (is.factor(v)) v else
+        factor(as.character(v), levels = .ard_first_seen(v))
+    })
     if (!is.null(label_out) && is.factor(out[[label_out]])) {
       keys <- c(keys, list(out[[label_out]]))
     }
-    out <- out[do.call(order, keys), , drop = FALSE]
+    # the row number breaks ties, so equal keys keep the order they
+    # arrived in rather than whatever order() happens to produce
+    out <- out[do.call(order, c(keys, list(seq_len(nrow(out))))), ,
+               drop = FALSE]
   }
   if (drop_label && !is.null(label_out)) out[[label_out]] <- NULL
   rownames(out) <- NULL
