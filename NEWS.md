@@ -543,6 +543,28 @@ N = ", n$arm)` cannot drift from the columns
   `c(40, 10)` is "the stub is 40, every column 10" and the number of
   columns need not be written down.
 
+- **A page gathers its rows; it does not require the body sorted first.**
+  `page_by` and `split = "by_value"` partitioned the body on RUNS of the
+  key, so a value that came back later started another page.  On an
+  interleaved body that is not a different page order -- it is half a page:
+  a Solicited AE report built from an unsorted table came out as twelve
+  7-row pages instead of six 14-row ones, with nothing said about it.
+
+  Needing the rows pre-sorted is SAS's contract, not R's.  R subsets by
+  value and leaves the order alone, so a page now **gathers** every row
+  that has its value, scattered or not, and the body's own order stands --
+  inside a page and between pages.  On an already-grouped body, the usual
+  one, this is exactly what the runs were, and all six sample reports are
+  byte-identical.
+
+  The two splits had also disagreed with each other: `by_value` combined
+  with `stub_vars` has always gathered (it partitions the raw body by the
+  value before building the stub), while the plain `by_value` path cut the
+  same table into one page per block.  They now read the key the same way.
+
+  An **indent** or **filled** group is untouched: there the group is a
+  position in the body rather than a key, so there is nothing to gather by.
+  `sort_by` is for choosing an order, not for making the pages whole.
 - **`ard_spread()` no longer alphabetises a row key nobody ordered**
   (#474).  `sort = TRUE`, the default, sorted on every row key with
   `order()`, so a character key came out A-Z although nothing had asked

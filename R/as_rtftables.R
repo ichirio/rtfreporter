@@ -243,7 +243,8 @@
 #'       `"group_safe"` gives 26 and 26 rows, `"group_force"` gives 30 and 24 with the
 #'       sixth group cut in half.
 #'     \item{`"by_value"`}{one page per distinct value of `group_col`; the pages
-#'       are named by that value.}
+#'       are named by that value.  A page gathers every row with its value,
+#'       scattered or not, in the body's own order.}
 #'   }
 #'   `split` may also be a **custom function** for bespoke page-break rules.
 #'   It is called as
@@ -291,8 +292,8 @@
 #'       non-empty; only `NA` / `""` cells are members (the label appears once,
 #'       on the group's first row).}
 #'   }
-#' @param page_by Column(s) whose value starts a **new page** and **names** it,
-#'   or `NULL` (default, off).  The body is partitioned on runs of the
+#' @param page_by Column(s) whose value makes a **page** and **names** it,
+#'   or `NULL` (default, off).  The body is partitioned by the
 #'   `page_by` value(s) **first**, and every other pagination setting --
 #'   `split`, `max_rows`, `group_col`, `group_by`, `min_group_rows`,
 #'   `cont_label`, `blank_rows`, `collapse_repeats` -- then applies **within**
@@ -338,10 +339,13 @@
 #'       `rtf_blank_rows` attribute on the input are all resolved inside the
 #'       partition.  `na` and `cell_format`, by contrast, run **body-wide**
 #'       before the partition, so one column width is shared by every page.}
-#'     \item{Partitions are runs}{a value that comes back later in the body is
-#'       a new page rather than being merged with the earlier one -- the same
-#'       run-based reading `"by_value"` uses.  `sort_by` first if that is not
-#'       what you want.}
+#'     \item{A page gathers its rows}{a value that comes back later in the
+#'       body belongs to the page it names, not to a new one, and the rows
+#'       keep the order the body had -- inside a page and between pages.
+#'       `split = "by_value"` reads `group_col` the same way.  Needing the
+#'       body sorted first would be SAS's contract, not R's, so a merely
+#'       interleaved body loses nothing; use `sort_by` when you want an
+#'       order, not to make the pages whole.}
 #'   }
 #'   `page_by` does **not** imply `drop_cols`: name the column there too to
 #'   keep it out of the printed table.  Like `group_col` / `sort_by` /
