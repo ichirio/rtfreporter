@@ -2,6 +2,22 @@
 
 ### New features
 
+- **Run tokens: `{PROGRAM}`, `{PROGRAM_NAME}`, `{PROGRAM_DIR}`,
+  `{DATETIME}`** (#478).  Any header, footer, title or footnote cell can
+  say which program wrote the file and when, filled as the file is
+  written, like `{PAGE}`.  The program is `generate_rtfreport(program = )`,
+  else `options(rtfreporter.program = )`, else the script `Rscript` runs;
+  `{DATETIME}` is `%d%b%Y  %H:%M` in the C locale
+  (`options(rtfreporter.datetime_format = )`), and `{DATETIME:<format>}`
+  takes any other.  The time is taken once per file, and
+  `options(rtfreporter.render_time = )` fixes it for reproducible output.
+  The run-information footer every study writes a helper for -- switch
+  the locale, format the time, paste the path, append the row -- is one
+  row: `c(l = "{PROGRAM}      Generated on: {DATETIME}")`, and it now
+  stamps the time the file was generated rather than the time its footer
+  was built.  A document can carry its own program, `rtf_document(program = )`,
+  which `generate_rtfreport()` reads before the option.
+
 - **One rounding rule for the whole package: `round_num()` and
   `options(rtfreporter.rounding = )`** (#476).
 

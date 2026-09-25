@@ -55,6 +55,10 @@
 #'   defaults), or `NULL` (default) for none. A section can override it by
 #'   passing `watermark` in its `rtf_section(secinfo = )` -- including
 #'   `watermark = NA` to switch it off for that section alone.
+#' @param program The path of the program the document belongs to, for the
+#'   `{PROGRAM}` run tokens (see [generate_rtfreport()]).  `NULL` (default)
+#'   leaves it to `generate_rtfreport(program = )`, the option, or the
+#'   running script.
 #'
 #' @return An `rtf_document` S3 object: a list with `document`
 #'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
@@ -92,7 +96,13 @@
 #'
 #' @export
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
-                         default_format = NULL, watermark = NULL) {
+                         default_format = NULL, watermark = NULL,
+                         program = NULL) {
+  if (!is.null(program) &&
+      (!is.character(program) || length(program) != 1L || is.na(program))) {
+    stop("`program` must be a single string: the program's path.",
+         call. = FALSE)
+  }
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
   # resolved to its default at render time -- including inferring the
@@ -124,7 +134,8 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         color_table = color_table,
         page = page,
         default_format = default_format,
-        watermark = .normalize_watermark(watermark)
+        watermark = .normalize_watermark(watermark),
+        program = program
       ),
       contents  = list(),
       titles    = list(),

@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.0.9079** (the development
+**This manual documents rtfreporter 0.8.0.9080** (the development
 version, after release 0.8.0).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -432,6 +432,11 @@ rtf_footer(rows = list(c(l = "Source: ADSL.", r = "CONFIDENTIAL")))
 | `{AUTO_TOTAL_PAGES}` | dynamic total (a NUMPAGES field) — **recommended** |
 | `{PAGE}` / `{TOTAL_PAGES}` | static, computed at render time; `assemble_rtf()` leaves them alone |
 | `{BOOK_PAGE}` | an empty slot, filled later by `assemble_rtf(book_page =)` |
+| `{PROGRAM}` / `{PROGRAM_NAME}` / `{PROGRAM_DIR}` | the program writing the file (`generate_rtfreport(program =)`, else `options(rtfreporter.program)`, else the `Rscript` script), its file name, its folder |
+| `{DATETIME}` / `{DATETIME:<fmt>}` | when the file is written, `%d%b%Y  %H:%M` in the C locale (`options(rtfreporter.datetime_format)`); `options(rtfreporter.render_time)` fixes it |
+
+A run-information footer line is then one row, with no helper:
+`c(l = "{PROGRAM}      Generated on: {DATETIME}")`.
 
 Convention: the **per-table** number goes in the header and should be static
 (`"Page {PAGE} of {TOTAL_PAGES}"`), so that binding the table into a book does
