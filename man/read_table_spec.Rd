@@ -14,8 +14,10 @@ so it is an Excel workbook and nothing else.}
 
 \item{output_id}{The report to narrow the workbook to.  Rows with a blank
 \code{output_id} are the study's defaults and stay; a row naming this
-report replaces the default with the same key.  May be left \code{NULL}
-for a workbook that defines one report; for several it must be given.}
+report replaces the default with the same key.  \code{NULL} (default)
+reads the whole workbook; what needs one report --- \code{\link[=rtf_plan]{rtf_plan()}},
+\code{\link[=rtf_report]{rtf_report()}} --- then takes a workbook of one report as it is and
+asks which of several.}
 }
 \value{
 An \code{\link[=table_spec]{table_spec()}}.

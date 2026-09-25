@@ -568,6 +568,9 @@ reference:
       - table_spec_template
       - read_table_spec
       - write_table_spec
+      - read_report_spec
+      - rtf_report
+      - report_path
 
   - title: "Experimental spike: a deferred, last-wins ARD plan (#474)"
     desc: >

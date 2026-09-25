@@ -12,7 +12,13 @@ table_spec(
   layout = NULL,
   columns = NULL,
   style = NULL,
-  col_header = NULL
+  col_header = NULL,
+  report = NULL,
+  page = NULL,
+  header = NULL,
+  footer = NULL,
+  titles = NULL,
+  footnotes = NULL
 )
 }
 \arguments{

@@ -50,5 +50,13 @@ col_header,cols,セルが乗る列。列名 / .values（値の列すべて）/ �
 col_header,span,空欄 = cols 全体で 1 セル。each = 列ごとに 1 セル。キー名 = そのキーの値ごとに 1 セル（群のスパナー）。,TR01AG1
 col_header,text,表示文字。改行は Alt+Enter か \n。{col} {col1} {col2} {n} {n:sum} が使える。{n} を使うと N は ARD から取る。先頭の空白は引用符で囲む。,{col1}\n(N={n:sum})
 col_header,align / bold / border_top / border_bottom,col_cell() / rtf_border() と同じ（single / none など）。,single
+(帳票全体),（読み方）,以下は表の周りの定義。read_report_spec(c("report.xlsx"; "tables.xlsx"); output_id = ) で 1 冊でも分冊でも読める。同じシートに行があるのは 1 冊だけにする（空のシートと study は重なってよい）。rtf_report(spec; plan) で rtf_document、report_path(spec) で出力先。,
+study,output_path / program_dir,出力先フォルダ / プログラムのフォルダ（{PROGRAM} に使う）。,../tables / C:\study\tfl
+report,,1 行 = 1 帳票（空欄 = 試験の既定）。type（table / listing / figure）、file（既定 {output_id}.rtf）、program（既定 {output_id}）、auto_section、section_align、auto_title、title_align、table_font_size / title_font_size / footnote_font_size（半ポイント）、page_header / page_footer（FALSE でその帳票だけ付けない）。,auto_section = TRUE
+page,,1 行 = 1 帳票（空欄 = 試験の既定）。paper_size、orientation、width_in、height_in、margin_*_in、header_dist_in、footer_dist_in、font_size_half_points、title_format、footnote_format、title_width、footnote_width、markup。,A4 / landscape / 0.5
+header,,ページヘッダーの 1 行 = 1 行。line がキー：試験共通を空欄 output_id の 1・2 行目に、帳票のタイトルをその帳票の 3 行目以降に。left / center / right。文字のない行は空行。,1 / TAKEDA / / Interim Analysis
+footer,,ページフッターの 1 行 = 1 行。帳票の脚注を 1 行目から、実行情報を空欄 output_id の 99 行目に 1 回だけ書けば全帳票の最後に付く。,99 / {PROGRAM}       Generated on: {DATETIME}
+titles / footnotes,,本文（表の上 / 下）のタイトル・脚注。書き方は header と同じ。,1 / CV = Coefficient of variation
+（差し込み記号）,,{PAGE} {TOTAL_PAGES} {AUTO_PAGE} {AUTO_TOTAL_PAGES}（ページ番号）、{PROGRAM} {PROGRAM_NAME} {PROGRAM_DIR}（プログラム）、{DATETIME} {DATETIME:%Y-%m-%d}（作成日時）。,
 about,,key / value。spec_version を記録（新しい版のファイルを古いパッケージで読むとエラー）。,spec_version = 1
-(予約),,次の版で読む予定のシート名。今は置いても読まれず、その旨のメッセージが出る。,titles / footnotes / page / header / footer / cell_styles
+(予約),,次の版で読む予定のシート名。今は置いても読まれず、その旨のメッセージが出る。,cell_styles / listing / listing_cols / figures

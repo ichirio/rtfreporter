@@ -611,3 +611,116 @@ write_book(study, study_path)
 cat("\nThe same five from one study workbook (study.xlsx):\n")
 run_checks(function(id) study_path)
 cat("\nwritten to", normalizePath(out_dir), "\n")
+
+# ============================================================================
+#  The report half: report.xlsx beside study.xlsx
+# ============================================================================
+#
+#  A separate workbook for what surrounds the table -- the list of outputs,
+#  the page, the running header and footer, titles and footnotes -- read
+#  together with the table workbook: read_report_spec(c(report, study)).
+#  Each report is checked against the same document written as code, as
+#  RTF text, with the run time fixed.
+
+options(rtfreporter.render_time = as.POSIXct("2026-01-01 09:00:00"))
+prog_dir <- "C:\\study\\tfl"
+page_header <- list(c("SPONSOR", "Interim Analysis"),
+                    c("PROTOCOL: XXX-0000", "Page {PAGE} of {TOTAL_PAGES}"))
+run_line <- "{PROGRAM}       Generated on: {DATETIME}"
+rpt_titles <- list(
+  DM  = c("", "Table 14.1.1", "Demographic Characteristics", "<Safety Analysis Set>"),
+  AE  = c("", "Table 14.3.1", "Treatment-Emergent Adverse Events by System Organ Class and Preferred Term", "<Safety Analysis Set>"),
+  ORR = c("", "Table 14.2.1", "Summary of Overall Response by Subgroup", "<Full Analysis Set>"),
+  LB  = c("", "Table 14.3.2", "Shift from Baseline to Worst Post-Baseline Grade", "<Safety Analysis Set>", ""),
+  PK  = c("", "Table 14.4.1", "Summary of Plasma Concentrations", "<PK Analysis Set>"))
+rpt_notes <- list(
+  DM  = c("SD = Standard Deviation."),
+  AE  = c("Subjects were counted once per system organ class and once per preferred term.", "MedDRA version 27.1."),
+  ORR = c("Objective response rate: proportion of subjects with complete or partial response.", "CI = Confidence Interval."),
+  LB  = c("Columns are the baseline grade, rows the worst post-baseline grade."),
+  PK  = c("CV = Coefficient of variation", "SD = Standard deviation"))
+
+# ---- the same five documents written as code
+code_doc <- function(id, plan) {
+  prog <- paste(prog_dir, id, sep = "\\")
+  hdr <- rtf_header(c(page_header, as.list(rpt_titles[[id]])))
+  if (id == "PK") {
+    return(rtf_document(
+      page = list(orientation = "landscape", paper_size = "A4",
+                  margin_top_in = 0.5, margin_left_in = 0.5,
+                  margin_right_in = 0.5, margin_bottom_in = 0.5),
+      default_format = rtf_default_format(footnote_width = "page"),
+      program = prog) |>
+      rtf_section(secinfo = list(header = hdr)) |>
+      rtf_tables(plan, font_size_half_points = 14) |>
+      rtf_footnotes(list(c(rpt_notes$PK, run_line)),
+                    font_size_half_points = 14))
+  }
+  rtf_document(program = prog) |>
+    rtf_section(secinfo = list(
+      header = hdr,
+      footer = rtf_footer(c(lapply(rpt_notes[[id]], function(t) c(l = t)),
+                            list(c(l = run_line)))))) |>
+    rtf_tables(plan, auto_section = id == "LB")
+}
+
+# ---- report.xlsx
+lnrow <- function(id, line, left = "", center = "", right = "")
+  list(output_id = id, line = as.character(line), left = left,
+       center = center, right = right)
+hdr_rows <- list(lnrow("", 1, "SPONSOR", right = "Interim Analysis"),
+                 lnrow("", 2, "PROTOCOL: XXX-0000",
+                       right = "Page {PAGE} of {TOTAL_PAGES}"))
+ftr_rows <- list(lnrow("", 99, run_line))
+fn_rows <- list()
+for (id in names(rpt_titles)) {
+  tl <- rpt_titles[[id]]
+  for (i in seq_along(tl)) hdr_rows[[length(hdr_rows) + 1L]] <- lnrow(id, i + 2, center = tl[i])
+  nt <- rpt_notes[[id]]
+  if (id == "PK") {
+    for (i in seq_along(nt)) fn_rows[[length(fn_rows) + 1L]] <- lnrow(id, i, nt[i])
+    fn_rows[[length(fn_rows) + 1L]] <- lnrow(id, length(nt) + 1, run_line)
+  } else {
+    for (i in seq_along(nt)) ftr_rows[[length(ftr_rows) + 1L]] <- lnrow(id, i, nt[i])
+  }
+}
+report_spec <- table_spec(
+  study = c(output_path = "output", program_dir = prog_dir),
+  report = tbl(
+    list(output_id = "",   type = "table", file = "{output_id}.rtf",
+         program = "{output_id}", auto_section = "", table_font_size = "",
+         footnote_font_size = "", page_footer = "",
+         note = "the study's defaults"),
+    list(output_id = "LB", type = "", file = "", program = "",
+         auto_section = "TRUE", table_font_size = "", footnote_font_size = "",
+         page_footer = "", note = "one section per parameter"),
+    list(output_id = "PK", type = "", file = "", program = "",
+         auto_section = "", table_font_size = "14", footnote_font_size = "14",
+         page_footer = "FALSE", note = "the run line goes under the table")),
+  page = tbl(list(output_id = "PK", orientation = "landscape",
+                  paper_size = "A4", margin_top_in = "0.5",
+                  margin_bottom_in = "0.5", margin_left_in = "0.5",
+                  margin_right_in = "0.5", footnote_width = "page")),
+  header = do.call(tbl, hdr_rows),
+  footer = do.call(tbl, ftr_rows),
+  footnotes = do.call(tbl, fn_rows))
+report_book <- file.path(out_dir, "report.xlsx")
+write_book(report_spec, report_book)
+
+cat("\nThe report half: report.xlsx + study.xlsx -> rtf_report():\n")
+code_plans <- list(DM = dm_plan, AE = ae_plan, ORR = orr_plan, LB = lb_plan,
+                   PK = pk_plan)
+pages_n <- list(DM = ard_normalize(ard_dm), AE = ae_n, ORR = orr_n,
+                LB = lb_pages_n, PK = ard_normalize(ard_pk))
+tmp <- tempfile("rtf"); dir.create(tmp)
+for (id in names(code_plans)) {
+  sp <- read_report_spec(c(report_book, study_path), output_id = id)
+  p <- rtf_plan(pages_n[[id]], spec = sp, notes = FALSE)
+  a <- file.path(tmp, "code.rtf"); b <- file.path(tmp, "spec.rtf")
+  generate_rtfreport(code_doc(id, code_plans[[id]]), a, overwrite = TRUE)
+  generate_rtfreport(rtf_report(sp, p), b, overwrite = TRUE)
+  same <- identical(readLines(a, warn = FALSE), readLines(b, warn = FALSE))
+  cat(sprintf("  %-4s -> %-14s identical RTF to the code: %s\n", id,
+              report_path(sp), if (same) "TRUE" else "FALSE  <-- MISMATCH"))
+}
+options(rtfreporter.render_time = NULL)

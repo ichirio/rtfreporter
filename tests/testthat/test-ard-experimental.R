@@ -980,7 +980,9 @@ test_that("a three-sheet spec supplies the roles as well as the cells", {
   sp <- dm_spec()
   expect_s3_class(sp, "table_spec")
   expect_identical(names(sp), c("study", "tables", "variables", "cells",
-                                "layout", "columns", "style", "col_header"))
+                                "layout", "columns", "style", "col_header",
+                                "report", "page", "header", "footer",
+                                "titles", "footnotes"))
 
   # no cols / rows in the call: the `tables` sheet says them
   tbl <- spec_table(ard_normalize(make_ard()), sp)
@@ -1178,7 +1180,7 @@ test_that("an unnamed report falls back to the defaults, and says so", {
 test_that("the workbook's sheets: reserved ones are reported, unknown refused", {
   mk <- function(...) rtfreporter:::.ard_spec_from_sheets(list(...), "x.xlsx")
   t <- data.frame(cols = "TRT")
-  expect_message(mk(tables = t, titles = data.frame(text = "Table 1")),
+  expect_message(mk(tables = t, cell_styles = data.frame(when = "n == 0")),
                  "reserved for a later version")
   expect_error(mk(tables = t, Sheet2 = data.frame(a = 1)), "nobody reads")
   expect_silent(mk(tables = t, `_notes` = data.frame(a = 1),
@@ -1726,9 +1728,91 @@ test_that("the example workbooks shipped with the package still read and run", {
   skip_if(!nzchar(dir), "examples not installed")
   for (id in c("DM", "AE", "ORR", "LB", "PK")) {
     sp <- read_table_spec(file.path(dir, paste0(id, ".xlsx")))
-    expect_identical(attr(sp, "output_id"), id)
+    expect_identical(attr(rtfreporter:::.ard_spec_scope(sp), "output_id"), id)
     expect_s3_class(read_table_spec(file.path(dir, "study.xlsx"),
                                   output_id = id), "table_spec")
   }
-  expect_error(read_table_spec(file.path(dir, "study.xlsx")), "defines 5 reports")
+  whole <- read_table_spec(file.path(dir, "study.xlsx"))     # the study, whole
+  expect_setequal(unique(whole$tables$output_id), c("DM", "AE", "ORR", "LB", "PK"))
+  expect_error(rtfreporter:::.ard_spec_scope(whole), "defines 5 reports")
+})
+
+# ------------------------------------------------ the report half
+
+rep_spec <- function() table_spec(
+  study = c(output_path = "out", program_dir = "C:\\tfl"),
+  report = data.frame(output_id = c(NA, "T2"), page_footer = c(NA, "FALSE")),
+  page = data.frame(output_id = "T2", orientation = "portrait",
+                    margin_left_in = "0.5"),
+  header = data.frame(output_id = c(NA, NA, "T1", "T1"), line = c(1, 2, 3, 4),
+                      left = c("SPONSOR", "PROTOCOL", NA, NA),
+                      center = c(NA, NA, NA, "Table 1"),
+                      right = c(NA, "Page {PAGE} of {TOTAL_PAGES}", NA, NA)),
+  footer = data.frame(output_id = c(NA, "T1"), line = c(99, 1),
+                      left = c("{PROGRAM}  {DATETIME}", "A footnote.")),
+  footnotes = data.frame(output_id = "T2", line = 1, left = "Below the table."))
+
+render_lines <- function(doc) {
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(doc, f, overwrite = TRUE)
+  readLines(f, warn = FALSE)
+}
+
+test_that("rtf_report() is the document the same code would build", {
+  old <- options(rtfreporter.render_time = as.POSIXct("2026-01-01 09:00"))
+  on.exit(options(old), add = TRUE)
+  pages <- as_rtftables(data.frame(A = "a", B = "b"))
+  sp <- rtfreporter:::.ard_spec_scope(rep_spec(), "T1")
+  by_spec <- rtf_report(sp, pages)
+  by_code <- rtf_document(program = "C:\\tfl\\T1") |>
+    rtf_section(secinfo = list(
+      header = rtf_header(list(c("SPONSOR"), c("PROTOCOL", "Page {PAGE} of {TOTAL_PAGES}"),
+                               c(""), c("Table 1"))),
+      footer = rtf_footer(list(c(l = "A footnote."), c(l = "{PROGRAM}  {DATETIME}"))))) |>
+    rtf_tables(pages)
+  # the unnamed c("SPONSOR") is centred; the workbook said left
+  by_code$sections[[1L]]$header$rows[[1L]] <- c(l = "SPONSOR")
+  expect_identical(render_lines(by_spec), render_lines(by_code))
+  expect_true(any(grepl("C:\\\\tfl\\\\T1  01Jan2026  09:00", render_lines(by_spec),
+                        fixed = TRUE)))
+  expect_identical(report_path(sp), file.path("out", "T1.rtf"))
+})
+
+test_that("a report can drop the running footer and use the page sheet", {
+  pages <- as_rtftables(data.frame(A = "a"))
+  sp <- suppressMessages(rtfreporter:::.ard_spec_scope(rep_spec(), "T2"))
+  doc <- rtf_report(sp, pages)
+  expect_null(doc$sections[[1L]]$footer)
+  expect_identical(doc$document$page$orientation, "portrait")
+  expect_identical(doc$document$page$margin_left_in, 0.5)
+  expect_length(doc$footnotes, 1L)
+})
+
+test_that("a definition can be split over workbooks, and a sheet said once", {
+  skip_if_not_installed("writexl"); skip_if_not_installed("readxl")
+  a <- tempfile(fileext = ".xlsx"); b <- tempfile(fileext = ".xlsx")
+  on.exit(unlink(c(a, b)), add = TRUE)
+  write_table_spec(rep_spec(), a)
+  write_table_spec(table_spec(study = c(rounding = "sas"),
+                              tables = data.frame(output_id = "T1",
+                                                  cols = "TRT")), b)
+  sp <- read_report_spec(c(a, b), output_id = "T1")
+  expect_identical(rtfreporter:::.ard_spec_study_value(sp, "rounding"), "sas")
+  expect_identical(rtfreporter:::.ard_spec_study_value(sp, "output_path"), "out")
+  expect_identical(sp$tables$cols, "TRT")
+  expect_identical(nrow(sp$header), 4L)
+  # the same sheet with rows in both is refused
+  write_table_spec(table_spec(header = data.frame(line = 1, left = "x")), b)
+  expect_error(read_report_spec(c(a, b)), "has rows in both")
+})
+
+test_that("the line is the key: a report's line replaces the default one", {
+  sp <- table_spec(footer = data.frame(output_id = c(NA, NA, "T1"),
+                                       line = c(1, 99, 99),
+                                       left = c("house", "run", "mine")))
+  t1 <- rtfreporter:::.ard_spec_scope(sp, "T1")
+  expect_identical(t1$footer$left[order(as.numeric(t1$footer$line))],
+                   c("house", "mine"))
+  expect_error(table_spec(header = data.frame(line = c(1, 1), left = "x")),
+               "two rows")
 })

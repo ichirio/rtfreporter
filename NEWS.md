@@ -40,6 +40,32 @@
 
 ### Experimental ARD helpers
 
+- **The report around the table is a definition too:
+  `read_report_spec()`, `rtf_report()`, `report_path()`** (#474).  Six
+  sheets join the workbook rules: `report` (one row per output: `type`,
+  `file`, `program`, `auto_section`, font sizes, `page_header` /
+  `page_footer` switches), `page` (paper, margins, the document's text
+  defaults), and `header`, `footer`, `titles`, `footnotes`, whose rows are
+  **lines**, with the line as the key -- the study's running header is
+  written once as default lines 1-2, each report's titles follow on its
+  own lines 3.., and one default footer line 99
+  (`{PROGRAM}       Generated on: {DATETIME}`, the new run tokens)
+  closes every report's footnotes.  `study` gains `output_path` and
+  `program_dir`.  `rtf_report(spec, plan)` is the `rtf_document()` with
+  the page, bands, titles, footnotes and the plan's pages, carrying its
+  program; `report_path(spec)` is where it goes.
+
+  **One workbook or several**: `read_report_spec(c("report.xlsx",
+  "tables.xlsx"), output_id = )` reads the sheets together -- a report
+  workbook a lead keeps (outputs, titles, footnotes; also for figures and
+  listings to come) and content workbooks per kind.  An empty sheet and
+  `study` keys may appear in several; a sheet with rows in two is refused.
+  Without `output_id =` a reader returns the whole study; what needs one
+  report (`rtf_plan()`, `rtf_report()`, `report_path()`) narrows it, and
+  asks which when there are several.
+  Five sample reports ship as `report.xlsx` beside `study.xlsx`, each
+  giving the identical RTF to the same document written as code.
+
 - **A plan written as code becomes a workbook: `as_table_spec()`**
   (#474).  It is how an existing report becomes the template for a new
   study.  Everything is read from what the plan *resolves to* against its

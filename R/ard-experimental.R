@@ -36,7 +36,8 @@
 .experimental_exports <- c(
   "ard_pull", "ard_keys", "ard_normalize", "ard_overall", "ard_spread", "ard_template",
   "ard_cells",
-  "table_spec", "table_spec_template", "read_table_spec", "write_table_spec")
+  "table_spec", "table_spec_template", "read_table_spec", "write_table_spec",
+  "read_report_spec", "rtf_report", "report_path")
 
 
 # ---------------------------------------------------------------- utilities
@@ -2298,7 +2299,25 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
   col_header = c(
     line = "int", cols = "text", span = "text", text = "text",
     align = "text", bold = "bool", border_top = "text",
-    border_bottom = "text"))
+    border_bottom = "text"),
+  # the report half
+  report = c(
+    type = "text", file = "text", program = "text", auto_section = "bool",
+    section_align = "text", auto_title = "bool", title_align = "text",
+    table_font_size = "int", title_font_size = "int",
+    footnote_font_size = "int", page_header = "bool", page_footer = "bool"),
+  page = c(
+    paper_size = "text", orientation = "text", width_in = "num",
+    height_in = "num", margin_top_in = "num", margin_bottom_in = "num",
+    margin_left_in = "num", margin_right_in = "num",
+    header_dist_in = "num", footer_dist_in = "num",
+    font_size_half_points = "int", title_format = "text",
+    footnote_format = "text", title_width = "text",
+    footnote_width = "text", markup = "text"),
+  header    = c(line = "int", left = "text", center = "text", right = "text"),
+  footer    = c(line = "int", left = "text", center = "text", right = "text"),
+  titles    = c(line = "int", left = "text", center = "text", right = "text"),
+  footnotes = c(line = "int", left = "text", center = "text", right = "text"))
 
 .ard_spec_unquote <- function(x) {
   q <- regmatches(x, regexec("^([\"'])(.*)\\1$", x))[[1L]]
@@ -2376,12 +2395,22 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
     layout    = c("output_id", names(.ard_spec_types$layout)),
     columns   = c("output_id", names(.ard_spec_types$columns)),
     style     = c("output_id", names(.ard_spec_types$style)),
-    col_header = c("output_id", names(.ard_spec_types$col_header)))
+    col_header = c("output_id", names(.ard_spec_types$col_header)),
+    # the report half: read_report_spec() / rtf_report()
+    report    = c("output_id", names(.ard_spec_types$report)),
+    page      = c("output_id", names(.ard_spec_types$page)),
+    header    = c("output_id", names(.ard_spec_types$header)),
+    footer    = c("output_id", names(.ard_spec_types$footer)),
+    titles    = c("output_id", names(.ard_spec_types$titles)),
+    footnotes = c("output_id", names(.ard_spec_types$footnotes)))
 }
 
 # The facts the `study` sheet may state, one value each for the whole
 # study, and what each accepts.
-.ard_spec_study_keys <- list(rounding = c("r", "sas"))
+.ard_spec_study_keys <- list(rounding = c("r", "sas"),
+                             # any text: where the files go, where the
+                             # programs are (for {PROGRAM})
+                             output_path = NULL, program_dir = NULL)
 
 # What a report's own row replaces a default row by.  `tables` has one row
 # per report, so its key is the report itself.
@@ -2393,13 +2422,19 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
                        style     = character(),
                        # a header is one thing: a report's own cells replace
                        # the default header whole (see .ard_spec_scope)
-                       col_header = NA_character_)
+                       col_header = NA_character_,
+                       report    = character(),
+                       page      = character(),
+                       # the line sheets: the line is the key
+                       header    = "line",
+                       footer    = "line",
+                       titles    = "line",
+                       footnotes = "line")
 
 # Sheets a later version will read (the rest of the RTF deliverable).  A
 # workbook that already carries one is told so, not refused: the file can be
 # written ahead of the reader.
-.ard_spec_reserved <- c("titles", "footnotes", "page", "header", "footer",
-                        "cell_styles")
+.ard_spec_reserved <- c("cell_styles", "listing", "listing_cols", "figures")
 
 # A sheet in the shape the schema says: every column present, text trimmed,
 # blank cells NA, wholly blank rows gone.  A column the sheet does not read is
@@ -2455,7 +2490,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 # are tried in sheet order), so only `tables` and `variables` can clash.
 .ard_spec_dupes <- function(sp) {
   # one row per report on the sheets keyed by the report alone
-  for (sh in c("tables", "layout", "style")) {
+  for (sh in c("tables", "layout", "style", "report", "page")) {
     t <- sp[[sh]]
     dup <- duplicated(t$output_id)
     if (any(dup)) {
@@ -2466,7 +2501,8 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
         ".\n  One row per report; merge them."))
     }
   }
-  for (sh in c("variables", "columns")) {
+  for (sh in c("variables", "columns", "header", "footer", "titles",
+                "footnotes")) {
     v <- sp[[sh]]
     key <- .ard_spec_keys[[sh]]
     k <- paste(v$output_id, v[[key]], sep = "\r")
@@ -2514,6 +2550,11 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
                       paste(sQuote(bad), collapse = ", "),
                       paste(names(.ard_spec_study_keys), collapse = ", ")))
   }
+  # a key left blank states nothing: drop it where another row states it
+  # (two workbooks both list every key, one of them blank)
+  said <- out$key[!is.na(out$value)]
+  out <- out[!is.na(out$value) | !out$key %in% said, , drop = FALSE]
+  out <- out[!(is.na(out$value) & duplicated(out$key)), , drop = FALSE]
   if (any(duplicated(out$key))) {
     .ard_stop(sprintf(paste0("The `study` sheet states %s twice; a study ",
                              "has one."), sQuote(out$key[duplicated(out$key)][1L])))
@@ -2521,7 +2562,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
   for (k in out$key) {
     v <- out$value[out$key == k]
     ok <- .ard_spec_study_keys[[k]]
-    if (!is.na(v) && !v %in% ok) {
+    if (!is.na(v) && !is.null(ok) && !v %in% ok) {
       .ard_stop(sprintf("`study` %s must be %s; got %s.", sQuote(k),
                         paste(sQuote(ok), collapse = " or "), sQuote(v)))
     }
@@ -2733,33 +2774,34 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' @seealso [read_table_spec()], [write_table_spec()], [table_spec_template()]
 #' @export
 table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
-                     study = NULL, layout = NULL, columns = NULL,
-                     style = NULL, col_header = NULL) {
+                       study = NULL, layout = NULL, columns = NULL,
+                       style = NULL, col_header = NULL, report = NULL,
+                       page = NULL, header = NULL, footer = NULL,
+                       titles = NULL, footnotes = NULL) {
   if (inherits(tables, "table_spec")) return(tables)
   if (is.data.frame(tables) && "template" %in% names(tables) &&
       is.null(variables) && is.null(cells)) {
     .ard_spec_old_layout(tables)
   }
+  args <- list(study = study, tables = tables, variables = variables,
+               cells = cells, layout = layout, columns = columns,
+               style = style, col_header = col_header, report = report,
+               page = page, header = header, footer = footer,
+               titles = titles, footnotes = footnotes)
   if (is.list(tables) && !is.data.frame(tables)) {
     x <- tables
     bad <- setdiff(names(x), c("study", names(.ard_spec_schema())))
     if (length(bad) || is.null(names(x))) {
-      .ard_stop(paste0("A spec list holds `study`, `tables`, `variables` ",
-                       "and `cells`; it also had: ",
+      .ard_stop(paste0("A spec list holds the sheets ",
+                       paste(c("study", names(.ard_spec_schema())),
+                             collapse = ", "), "; it also had: ",
                        paste(sQuote(bad), collapse = ", ")))
     }
-    tables <- x$tables; variables <- x$variables; cells <- x$cells
-    study <- x$study; layout <- x$layout; columns <- x$columns
-    style <- x$style; col_header <- x$col_header
+    args <- x
   }
-  sp <- list(study     = .ard_spec_study(study),
-             tables    = .ard_spec_sheet(tables,    "tables"),
-             variables = .ard_spec_sheet(variables, "variables"),
-             cells     = .ard_spec_sheet(cells,     "cells"),
-             layout    = .ard_spec_sheet(layout,    "layout"),
-             columns   = .ard_spec_sheet(columns,   "columns"),
-             style     = .ard_spec_sheet(style,     "style"),
-             col_header = .ard_spec_sheet(col_header, "col_header"))
+  sp <- c(list(study = .ard_spec_study(args$study)),
+          stats::setNames(lapply(names(.ard_spec_schema()), function(sh)
+            .ard_spec_sheet(args[[sh]], sh)), names(.ard_spec_schema())))
   t <- sp$tables
   chk <- function(v, ok, what) {
     bad <- !is.na(v) & !v %in% ok
@@ -3096,10 +3138,9 @@ print.table_spec <- function(x, ...) {
     i <- which(low == s)
     if (length(i)) sheets[[i[1L]]] else NULL
   }
-  table_spec(get("tables"), get("variables"), get("cells"),
-           study = get("study"), layout = get("layout"),
-           columns = get("columns"), style = get("style"),
-           col_header = get("col_header"))
+  table_spec(stats::setNames(lapply(c("study", names(.ard_spec_schema())),
+                                    get),
+                             c("study", names(.ard_spec_schema()))))
 }
 
 # A definition is ONE file holding several sheets, which is what a workbook
@@ -3124,8 +3165,10 @@ print.table_spec <- function(x, ...) {
 #'   so it is an Excel workbook and nothing else.
 #' @param output_id The report to narrow the workbook to.  Rows with a blank
 #'   `output_id` are the study's defaults and stay; a row naming this
-#'   report replaces the default with the same key.  May be left `NULL`
-#'   for a workbook that defines one report; for several it must be given.
+#'   report replaces the default with the same key.  `NULL` (default)
+#'   reads the whole workbook; what needs one report --- [rtf_plan()],
+#'   [rtf_report()] --- then takes a workbook of one report as it is and
+#'   asks which of several.
 #'
 #' @return An [table_spec()].
 #'
@@ -3135,15 +3178,59 @@ print.table_spec <- function(x, ...) {
 #' @seealso [table_spec()], [write_table_spec()]
 #' @export
 read_table_spec <- function(path, output_id = NULL) {
-  .ard_spec_xlsx_path(path, "read_table_spec")
-  if (!file.exists(path)) .ard_stop(sprintf("No such file: %s", path))
+  if (!is.character(path) || !length(path)) {
+    .ard_stop("`path` must name one or more .xlsx workbooks.")
+  }
+  for (f in path) .ard_spec_xlsx_path(f, "read_table_spec")
   .ard_need("readxl", "read_table_spec()")
-  nms <- readxl::excel_sheets(path)
-  sheets <- stats::setNames(lapply(nms, function(s) as.data.frame(
-    readxl::read_excel(path, sheet = s, col_types = "text"),
-    stringsAsFactors = FALSE)), nms)
-  sp <- .ard_spec_from_sheets(sheets, basename(path))
-  .ard_spec_scope(sp, output_id)
+  sheets <- list()
+  from <- character()
+  for (f in path) {
+    if (!file.exists(f)) .ard_stop(sprintf("No such file: %s", f))
+    nms <- readxl::excel_sheets(f)
+    for (sh in nms) {
+      low <- tolower(sh)
+      # notes and the version stamp may repeat; a sheet that says something
+      # may be said once
+      if (startsWith(sh, "_") || low == "about") {
+        if (!low %in% tolower(names(sheets))) {
+          sheets[[sh]] <- as.data.frame(readxl::read_excel(
+            f, sheet = sh, col_types = "text"), stringsAsFactors = FALSE)
+        }
+        next
+      }
+      d <- as.data.frame(readxl::read_excel(f, sheet = sh, col_types = "text"),
+                         stringsAsFactors = FALSE)
+      hit <- match(low, tolower(names(sheets)))
+      if (!is.na(hit)) {
+        old <- names(sheets)[hit]
+        # an empty sheet says nothing, and `study` is facts: one workbook's
+        # keys and another's are the study's (a key said twice still errs)
+        if (!nrow(d)) next
+        if (!nrow(sheets[[old]])) {
+          sheets[[old]] <- d
+          from[[old]] <- basename(f)
+          next
+        }
+        if (identical(low, "study")) {
+          keep <- intersect(names(sheets[[old]]), names(d))
+          sheets[[old]] <- rbind(sheets[[old]][keep], d[keep])
+          next
+        }
+        .ard_stop(sprintf(paste0(
+          "The sheet %s has rows in both %s and %s.\n  One workbook says ",
+          "each thing: keep its rows in one of them."), sQuote(sh),
+          sQuote(from[[old]]), sQuote(basename(f))))
+      }
+      sheets[[sh]] <- d
+      from[[sh]] <- basename(f)
+    }
+  }
+  sp <- .ard_spec_from_sheets(sheets, paste(basename(path), collapse = " + "))
+  # the whole study, unless one report is asked for: a workbook is edited,
+  # combined and compared whole, and whatever needs ONE report
+  # (rtf_plan(), rtf_report(), report_path()) narrows it and says so
+  if (is.null(output_id)) sp else .ard_spec_scope(sp, output_id)
 }
 
 #' Write an ARD table definition to a workbook
@@ -3255,6 +3342,227 @@ table_spec_template <- function(ard, path = NULL, cols = NULL,
   invisible(sp)
 }
 
+
+
+# ============================================================================
+#  the report half: from the table's pages to an RTF document
+# ============================================================================
+#
+#  The same workbook rules, one level up.  `report` and `page` have one row
+#  per report (blank output_id = the study's default); `header`, `footer`,
+#  `titles` and `footnotes` have one row per LINE, and the line number is
+#  the key -- so the study's page header is written once, on lines 1-2 of
+#  the defaults, a report's titles follow on its own lines 3.., and a
+#  run-information footer on line 99 closes every report's footnotes.
+
+# One band of rows (header, footer, titles, footnotes) as the rows its
+# constructor takes: c(l = , c = , r = ), in line order.  A line with no
+# text is a blank line, which is how a title block gets its spacing.
+.ard_spec_band <- function(sp, sheet) {
+  d <- sp[[sheet]]
+  if (is.null(d) || !nrow(d)) return(NULL)
+  d <- d[order(suppressWarnings(as.numeric(d$line))), , drop = FALSE]
+  lapply(seq_len(nrow(d)), function(i) {
+    r <- .ard_spec_typed(d[i, , drop = FALSE], sheet)
+    cells <- c(l = r[["left"]] %||% NA, c = r[["center"]] %||% NA,
+               r = r[["right"]] %||% NA)
+    cells <- cells[!is.na(cells)]
+    # a blank line is centred, as an unnamed c("") is
+    if (!length(cells)) c(c = "") else cells
+  })
+}
+
+# `{output_id}` in a report's file or program name.
+.ard_spec_fill_id <- function(x, id) {
+  if (is.null(x) || is.na(id)) return(x)
+  gsub("{output_id}", id, x, fixed = TRUE)
+}
+
+.ard_spec_report_row <- function(sp) {
+  r <- if (nrow(sp$report)) .ard_spec_typed(sp$report[1L, ], "report") else list()
+  id <- attr(sp, "output_id") %||% NA_character_
+  r$file <- .ard_spec_fill_id(r$file %||% "{output_id}.rtf", id)
+  r$program <- .ard_spec_fill_id(r$program %||% "{output_id}", id)
+  r
+}
+
+#' Read a report definition: the table and everything around it
+#'
+#' @description
+#' A **report definition** is the [table_spec()] sheets plus the ones that
+#' say how a report's pages are dressed:
+#'
+#' | sheet | one row per | holds |
+#' |---|---|---|
+#' | `report` | report | `type`, `file`, `program`, `auto_section`, font sizes |
+#' | `page` | report | paper, orientation, margins, the document's text defaults |
+#' | `header` | line of the page header | `line`, `left`, `center`, `right` |
+#' | `footer` | line of the page footer | the same |
+#' | `titles` | line above the table | the same |
+#' | `footnotes` | line below the table | the same |
+#'
+#' plus `study` keys `output_path` (where the RTF files go) and
+#' `program_dir` (where the programs are, for `{PROGRAM}`).
+#'
+#' The one `output_id` rule applies, and on the line sheets **the line is
+#' the key**: the study's page header is written once, as default lines 1
+#' and 2, a report's titles follow on its own lines 3, 4, ..., and a
+#' run-information line 99 in the default footer
+#' (`{PROGRAM}      Generated on: {DATETIME}`) closes every report's
+#' footnotes.  A line with no text is a blank line.  The page tokens
+#' (`{PAGE}`, `{TOTAL_PAGES}`, ...) and the run tokens ([generate_rtfreport()])
+#' work in every cell.
+#'
+#' The sheets may be in **one workbook or several** --- a `report.xlsx` a
+#' lead keeps (the list of outputs, titles, footnotes) and a `tables.xlsx`
+#' the programmers keep: give `path` as a vector and the sheets are read
+#' together.  A sheet found in two of them is an error.
+#'
+#' @param path One or more `.xlsx` workbooks.
+#' @param output_id The report to narrow the definition to.
+#'
+#' @return A [table_spec()] carrying the report sheets as well; it serves
+#'   `rtf_plan(spec = )` and [rtf_report()] alike.
+#'
+#' @section `report`:
+#' `type` (`table`, `listing`, `figure`; default `table`), `file` (default
+#' `{output_id}.rtf`), `program` (default `{output_id}`, joined to
+#' `study$program_dir` for `{PROGRAM}`), `auto_section`, `section_align`,
+#' `auto_title`, `title_align` (as [rtf_tables()] takes them), and
+#' `table_font_size`, `title_font_size`, `footnote_font_size` (half-points),
+#' and `page_header` / `page_footer` (`FALSE` drops that running band for
+#' the report, the study's default lines included).
+#'
+#' @section `page`:
+#' `paper_size`, `orientation`, `width_in`, `height_in`, `margin_top_in`,
+#' `margin_bottom_in`, `margin_left_in`, `margin_right_in`,
+#' `header_dist_in`, `footer_dist_in` (the page, as [rtf_document()] takes
+#' it), and `font_size_half_points`, `title_format`, `footnote_format`,
+#' `title_width`, `footnote_width`, `markup` ([rtf_default_format()]).
+#'
+#' @section Lifecycle:
+#' **Experimental.**  See [rtfreporter-ard].
+#'
+#' @seealso [rtf_report()], [report_path()], [read_table_spec()]
+#' @export
+read_report_spec <- function(path, output_id = NULL) {
+  read_table_spec(path, output_id)
+}
+
+#' Build a report's RTF document from its definition
+#'
+#' `rtf_report()` is the document half of a report definition: the page,
+#' the running header and footer, the titles and footnotes, and the
+#' table's pages --- an [rtf_plan()] or anything [rtf_tables()] takes ---
+#' in one [rtf_document()] ready for [generate_rtfreport()].  The document
+#' carries its program, so `{PROGRAM}` needs nothing more.
+#'
+#' ```r
+#' spec <- read_report_spec(c("report.xlsx", "tables.xlsx"), output_id = id)
+#' plan <- ard |> ard_normalize() |> rtf_plan(spec = spec)
+#' generate_rtfreport(rtf_report(spec, plan), report_path(spec),
+#'                    overwrite = TRUE)
+#' ```
+#'
+#' @param spec A report definition ([read_report_spec()]) narrowed to one
+#'   report, or the path(s) to read it from.
+#' @param content The report's content: an [rtf_plan()] or `rtftable`
+#'   pages for a table or listing, figures for a `type = figure` report.
+#' @param output_id The report, when `spec` is a path or still defines
+#'   several.
+#'
+#' @return An [rtf_document()].
+#'
+#' @section Lifecycle:
+#' **Experimental.**  See [rtfreporter-ard].
+#'
+#' @seealso [read_report_spec()], [report_path()]
+#' @export
+rtf_report <- function(spec, content, output_id = NULL) {
+  sp <- .ard_spec_scope(if (is.character(spec))
+                          read_report_spec(spec, output_id)
+                        else table_spec(spec), output_id)
+  r <- .ard_spec_report_row(sp)
+  pg <- if (nrow(sp$page)) .ard_spec_typed(sp$page[1L, ], "page") else list()
+
+  geo <- c("paper_size", "orientation", "width_in", "height_in",
+           "margin_top_in", "margin_bottom_in", "margin_left_in",
+           "margin_right_in", "header_dist_in", "footer_dist_in")
+  page <- pg[intersect(geo, names(pg))]
+  fmt <- pg[intersect(c("font_size_half_points", "title_format",
+                        "footnote_format", "title_width", "footnote_width",
+                        "markup"), names(pg))]
+  for (w in intersect(c("title_width", "footnote_width"), names(fmt))) {
+    v <- suppressWarnings(as.numeric(fmt[[w]]))
+    if (!is.na(v)) fmt[[w]] <- v
+  }
+  dir <- .ard_spec_study_value(sp, "program_dir")
+  prog <- r$program
+  if (!is.na(dir)) {
+    sep <- if (grepl("\\", dir, fixed = TRUE)) "\\" else "/"
+    prog <- paste(sub("[\\\\/]+$", "", dir), prog, sep = sep)
+  }
+  doc <- rtf_document(page = if (length(page)) page,
+                      default_format = if (length(fmt))
+                        do.call(rtf_default_format, fmt),
+                      program = prog)
+
+  # a report may go without the study's running header or footer -- one
+  # that puts its run line under the table instead, say
+  hdr <- if (!identical(r$page_header, FALSE)) .ard_spec_band(sp, "header")
+  ftr <- if (!identical(r$page_footer, FALSE)) .ard_spec_band(sp, "footer")
+  if (length(hdr) || length(ftr)) {
+    si <- list()
+    if (length(hdr)) si$header <- rtf_header(hdr)
+    if (length(ftr)) si$footer <- rtf_footer(ftr)
+    doc <- rtf_section(doc, secinfo = si)
+  }
+
+  type <- r$type %||% "table"
+  if (identical(type, "figure")) {
+    doc <- rtf_figures(doc, content)
+  } else {
+    a <- list(doc = doc, tables = content)
+    if (!is.null(r$auto_section)) a$auto_section <- r$auto_section
+    if (!is.null(r$section_align)) a$section_label_align <- r$section_align
+    if (!is.null(r$auto_title)) a$auto_title <- r$auto_title
+    if (!is.null(r$title_align)) a$title_label_align <- r$title_align
+    if (!is.null(r$table_font_size)) a$font_size_half_points <- r$table_font_size
+    doc <- do.call(rtf_tables, a)
+  }
+  tt <- .ard_spec_band(sp, "titles")
+  if (length(tt)) {
+    doc <- rtf_titles(doc, list(tt), font_size_half_points = r$title_font_size)
+  }
+  fn <- .ard_spec_band(sp, "footnotes")
+  if (length(fn)) {
+    doc <- rtf_footnotes(doc, list(fn),
+                         font_size_half_points = r$footnote_font_size)
+  }
+  doc
+}
+
+#' Where a report's RTF file goes
+#'
+#' `file.path(study$output_path, report$file)`, with `{output_id}` filled:
+#' the path [generate_rtfreport()] writes to.
+#'
+#' @inheritParams rtf_report
+#' @return A single path.
+#'
+#' @section Lifecycle:
+#' **Experimental.**  See [rtfreporter-ard].
+#'
+#' @seealso [rtf_report()]
+#' @export
+report_path <- function(spec, output_id = NULL) {
+  sp <- .ard_spec_scope(if (is.character(spec))
+                          read_report_spec(spec, output_id)
+                        else table_spec(spec), output_id)
+  r <- .ard_spec_report_row(sp)
+  out <- .ard_spec_study_value(sp, "output_path")
+  if (is.na(out)) r$file else file.path(out, r$file)
+}
 
 # RStudio's own answer to "which pipe does this person write", read from the
 # preference behind Ctrl+Shift+M: `insert_native_pipe_operator`, a boolean

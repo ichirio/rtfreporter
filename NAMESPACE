@@ -206,6 +206,9 @@ S3method(print,table_spec)
 export(table_spec_template)
 export(read_table_spec)
 export(write_table_spec)
+export(read_report_spec)
+export(rtf_report)
+export(report_path)
 # ---- experimental: ARD ----
 
 # ---- spike: ARD plan (#474, deletable with R/ard-plan-spike.R) ----
