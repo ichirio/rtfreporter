@@ -9,8 +9,8 @@ write_ard_spec(spec, path)
 \arguments{
 \item{spec}{An \code{\link[=ard_spec]{ard_spec()}} (or what it accepts).}
 
-\item{path}{Destination \code{.xlsx} (needs \pkg{writexl}), or a folder, which
-receives \code{tables.csv}, \code{variables.csv} and \code{cells.csv}.}
+\item{path}{Destination \code{.xlsx} (needs \pkg{writexl}).  The workbook
+gets the three sheets and an \code{about} sheet stating \code{spec_version}.}
 }
 \value{
 \code{path}, invisibly.

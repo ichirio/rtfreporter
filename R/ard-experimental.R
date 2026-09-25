@@ -2821,12 +2821,26 @@ print.ard_spec <- function(x, ...) {
   ard_spec(get("tables"), get("variables"), get("cells"))
 }
 
+# A definition is ONE file holding several sheets, which is what a workbook
+# is; a CSV holds one table, so it cannot be one.  Say so by extension
+# rather than letting readxl fail on a file it cannot open.
+.ard_spec_xlsx_path <- function(path, fn) {
+  if (!is.character(path) || length(path) != 1L ||
+      !grepl("[.]xlsx$", path, ignore.case = TRUE)) {
+    .ard_stop(paste0(
+      "`", fn, "()` takes an .xlsx workbook: a definition is one file ",
+      "with the sheets\n  `tables`, `variables` and `cells`, which a CSV ",
+      "(one table per file) cannot hold."))
+  }
+  invisible(path)
+}
+
 #' Read an ARD table definition from a workbook
 #'
 #' @param path An `.xlsx` workbook (needs \pkg{readxl}) with the sheets
-#'   `tables`, `variables` and `cells` (see [ard_spec()]), or a **folder**
-#'   holding `tables.csv`, `variables.csv` and `cells.csv`.  Any of the
-#'   three may be absent.
+#'   `tables`, `variables` and `cells` (see [ard_spec()]).  Any of the
+#'   three may be absent.  A definition is one file with several sheets,
+#'   so it is an Excel workbook and nothing else.
 #' @param output_id The report to narrow the workbook to.  Rows with a blank
 #'   `output_id` are the study's defaults and stay; a row naming this
 #'   report replaces the default with the same key.  May be left `NULL`
@@ -2840,30 +2854,13 @@ print.ard_spec <- function(x, ...) {
 #' @seealso [ard_spec()], [write_ard_spec()]
 #' @export
 read_ard_spec <- function(path, output_id = NULL) {
-  if (dir.exists(path)) {
-    sheets <- list()
-    for (s in c(names(.ard_spec_schema()), .ard_spec_reserved, "about")) {
-      f <- file.path(path, paste0(s, ".csv"))
-      if (file.exists(f)) {
-        sheets[[s]] <- utils::read.csv(f, stringsAsFactors = FALSE,
-                                       check.names = FALSE,
-                                       colClasses = "character",
-                                       na.strings = "")
-      }
-    }
-  } else if (grepl("[.]csv$", path, ignore.case = TRUE)) {
-    .ard_stop(paste0(
-      "A definition is three sheets, which one CSV file cannot hold.  ",
-      "Give an .xlsx workbook,\n  or a folder with tables.csv, ",
-      "variables.csv and cells.csv."))
-  } else {
-    if (!file.exists(path)) .ard_stop(sprintf("No such file: %s", path))
-    .ard_need("readxl", "read_ard_spec() on an Excel workbook")
-    nms <- readxl::excel_sheets(path)
-    sheets <- stats::setNames(lapply(nms, function(s) as.data.frame(
-      readxl::read_excel(path, sheet = s, col_types = "text"),
-      stringsAsFactors = FALSE)), nms)
-  }
+  .ard_spec_xlsx_path(path, "read_ard_spec")
+  if (!file.exists(path)) .ard_stop(sprintf("No such file: %s", path))
+  .ard_need("readxl", "read_ard_spec()")
+  nms <- readxl::excel_sheets(path)
+  sheets <- stats::setNames(lapply(nms, function(s) as.data.frame(
+    readxl::read_excel(path, sheet = s, col_types = "text"),
+    stringsAsFactors = FALSE)), nms)
   sp <- .ard_spec_from_sheets(sheets, basename(path))
   .ard_spec_scope(sp, output_id)
 }
@@ -2871,8 +2868,8 @@ read_ard_spec <- function(path, output_id = NULL) {
 #' Write an ARD table definition to a workbook
 #'
 #' @param spec An [ard_spec()] (or what it accepts).
-#' @param path Destination `.xlsx` (needs \pkg{writexl}), or a folder, which
-#'   receives `tables.csv`, `variables.csv` and `cells.csv`.
+#' @param path Destination `.xlsx` (needs \pkg{writexl}).  The workbook
+#'   gets the three sheets and an `about` sheet stating `spec_version`.
 #'
 #' @return `path`, invisibly.
 #'
@@ -2889,15 +2886,8 @@ write_ard_spec <- function(spec, path) {
     d
   })
   names(sheets) <- names(.ard_spec_schema())
-  if (!grepl("[.]xlsx$", path, ignore.case = TRUE)) {
-    dir.create(path, showWarnings = FALSE, recursive = TRUE)
-    for (s in names(sheets)) {
-      utils::write.csv(sheets[[s]], file.path(path, paste0(s, ".csv")),
-                       row.names = FALSE, na = "")
-    }
-    return(invisible(path))
-  }
-  .ard_need("writexl", "write_ard_spec() to an Excel workbook")
+  .ard_spec_xlsx_path(path, "write_ard_spec")
+  .ard_need("writexl", "write_ard_spec()")
   about <- data.frame(key = "spec_version",
                       value = as.character(.ard_spec_version),
                       stringsAsFactors = FALSE)

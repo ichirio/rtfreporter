@@ -55,10 +55,11 @@
   Rows sharing variable / context / row on `cells` are one fallback chain,
   tried in sheet order, and the new `when` column guards one
   (`n == 0` -> `0`), which is what an ORR table's special cases need.
-  `read_ard_spec()` reads an `.xlsx` or a folder of `tables.csv` /
-  `variables.csv` / `cells.csv` (one CSV cannot hold three sheets), and
-  refuses a workbook that defines several reports unless `output_id =`
-  says which.  `ard_spec_template()` gains `cols =` and `output_id =`.
+  The definition is an `.xlsx` workbook and nothing else: a CSV holds one
+  table, so it cannot be one, and `read_ard_spec()` / `write_ard_spec()`
+  say so rather than half-supporting it.  `read_ard_spec()` also refuses
+  a workbook that defines several reports unless `output_id =` says
+  which.  `ard_spec_template()` gains `cols =` and `output_id =`.
 
   Five example workbooks -- DM, AE, ORR, LB shift, PK, plus `study.xlsx`
   with all five and their shared defaults -- ship in

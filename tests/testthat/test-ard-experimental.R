@@ -1005,17 +1005,12 @@ test_that("an argument given in the call wins over the spec", {
   expect_false("group" %in% names(tbl))
 })
 
-test_that("the workbook round-trips, as xlsx and as a folder of CSVs", {
+test_that("the workbook round-trips, and nothing but a workbook is one", {
   skip_if_no_cards()
   sp <- dm_spec("DM")
-  dir <- tempfile()
-  write_ard_spec(sp, dir)
-  expect_true(all(file.exists(file.path(dir, c("tables.csv", "variables.csv",
-                                               "cells.csv")))))
-  back <- read_ard_spec(dir)
-  expect_identical(attr(back, "output_id"), "DM")
-  expect_equal(back$cells$template, sp$cells$template)
-  unlink(dir, recursive = TRUE)
+  expect_error(write_ard_spec(sp, tempfile(fileext = ".csv")), ".xlsx workbook")
+  expect_error(write_ard_spec(sp, tempfile()), ".xlsx workbook")
+  expect_error(read_ard_spec("spec.csv"), ".xlsx workbook")
 
   skip_if_not_installed("writexl")
   skip_if_not_installed("readxl")
@@ -1024,6 +1019,8 @@ test_that("the workbook round-trips, as xlsx and as a folder of CSVs", {
   write_ard_spec(sp, f)
   expect_true("about" %in% readxl::excel_sheets(f))
   back <- read_ard_spec(f, output_id = "DM")
+  expect_identical(attr(back, "output_id"), "DM")
+  expect_equal(back$cells$template, sp$cells$template)
   expect_equal(back$variables$levels, sp$variables$levels)
   a <- ard_spread(ard_normalize(make_ard()), spec = f, notes = FALSE)
   b <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)

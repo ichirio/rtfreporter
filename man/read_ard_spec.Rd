@@ -8,9 +8,9 @@ read_ard_spec(path, output_id = NULL)
 }
 \arguments{
 \item{path}{An \code{.xlsx} workbook (needs \pkg{readxl}) with the sheets
-\code{tables}, \code{variables} and \code{cells} (see \code{\link[=ard_spec]{ard_spec()}}), or a \strong{folder}
-holding \code{tables.csv}, \code{variables.csv} and \code{cells.csv}.  Any of the
-three may be absent.}
+\code{tables}, \code{variables} and \code{cells} (see \code{\link[=ard_spec]{ard_spec()}}).  Any of the
+three may be absent.  A definition is one file with several sheets,
+so it is an Excel workbook and nothing else.}
 
 \item{output_id}{The report to narrow the workbook to.  Rows with a blank
 \code{output_id} are the study's defaults and stay; a row naming this
