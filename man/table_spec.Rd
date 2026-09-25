@@ -23,11 +23,14 @@ table_spec(
 }
 \arguments{
 \item{tables, variables, cells, layout, columns, style, col_header}{Data
-frames with the columns above; missing columns are added as \code{NA}.  \code{tables} may instead be a named list of the
-sheets, or an \code{table_spec} (returned as it is).}
+frames with the columns above; missing columns are added as \code{NA}.}
 
 \item{study}{The \code{study} sheet: a \code{key} / \code{value} frame, or a named
 vector such as \code{c(rounding = "sas")}.}
+
+\item{report, page, header, footer, titles, footnotes}{The report sheets, as
+data frames with the columns \code{\link[=read_report_spec]{read_report_spec()}} describes.  \code{tables} may instead be a named list of the
+sheets, or an \code{table_spec} (returned as it is).}
 }
 \value{
 An object of class \code{table_spec}: a list of the sheets' data

@@ -2760,7 +2760,9 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' name starts with `_` are ignored.
 #'
 #' @param tables,variables,cells,layout,columns,style,col_header Data
-#'   frames with the columns above; missing columns are added as `NA`.  `tables` may instead be a named list of the
+#'   frames with the columns above; missing columns are added as `NA`.
+#' @param report,page,header,footer,titles,footnotes The report sheets, as
+#'   data frames with the columns [read_report_spec()] describes.  `tables` may instead be a named list of the
 #'   sheets, or an `table_spec` (returned as it is).
 #' @param study The `study` sheet: a `key` / `value` frame, or a named
 #'   vector such as `c(rounding = "sas")`.
