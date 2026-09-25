@@ -300,16 +300,22 @@ check("PK",  ard_normalize(ard_pk), file.path(out_dir, "PK.xlsx"),  pk_code)
 # ------------------------------------------ one study workbook, all five
 # The rounding family is one per study, on the `study` sheet.  What the
 # reports share is written ONCE, on a row with a blank output_id -- here the
-# n (%) template on `cells`.  A report's own row replaces the default with
-# the same key, so AE and LB need no `cells` row of their own any more.
+# n (%) template on `cells`.  A lookup that finds nothing more specific
+# falls through to it, so a report's row that only restates it -- AE's and
+# LB's catch-all, DM's `categorical` -- is dropped rather than kept twice.
 all_sheet <- function(s) do.call(rbind, lapply(specs, function(x) x[[s]]))
 study_tables <- all_sheet("tables")
 study_cells <- all_sheet("cells")
-shared <- is.na(study_cells$variable) & study_cells$output_id %in% c("AE", "LB")
+default_tpl <- "{n:.0f} ({p:.1f%})"
+restates <- study_cells$template == default_tpl &
+  is.na(study_cells$row) & is.na(study_cells$when) &
+  is.na(study_cells$digits) & is.na(study_cells$signif) &
+  is.na(study_cells$context) &
+  (is.na(study_cells$variable) | study_cells$variable == "categorical")
 study_cells <- rbind(
   tbl(list(output_id = "", variable = "", context = "", row = "", when = "",
-           template = "{n:.0f} ({p:.1f%})", digits = "", signif = "")),
-  study_cells[!shared, , drop = FALSE])
+           template = default_tpl, digits = "", signif = "")),
+  study_cells[!restates, , drop = FALSE])
 study <- ard_spec(study_tables, all_sheet("variables"), study_cells,
                   study = c(rounding = "sas"))
 study_path <- file.path(out_dir, "study.xlsx")
