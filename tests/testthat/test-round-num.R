@@ -10,9 +10,10 @@ test_that("round_num() rounds half to even under 'r' and away from zero under 's
 })
 
 test_that("rounding = NULL reads rtfreporter.rounding, and an explicit value wins", {
-  withr::local_options(rtfreporter.rounding = NULL)
+  old <- options(rtfreporter.rounding = NULL)
+  on.exit(options(old), add = TRUE)
   expect_equal(round_num(2.5), 2)                       # factory default "r"
-  withr::local_options(rtfreporter.rounding = "sas")
+  options(rtfreporter.rounding = "sas")
   expect_equal(round_num(2.5), 3)
   expect_equal(round_num(2.5, rounding = "r"), 2)
   expect_identical(rtfreporter_options()$rtfreporter.rounding, "sas")
@@ -22,18 +23,20 @@ test_that("round_num() refuses a bad family, bad digits and non-numeric input", 
   expect_error(round_num(1, rounding = "excel"), "must be \"r\"")
   expect_error(round_num(1, digits = -1), "non-negative")
   expect_error(round_num("1"), "numeric input")
-  withr::local_options(rtfreporter.rounding = "SAS")
+  old <- options(rtfreporter.rounding = "SAS")
+  on.exit(options(old), add = TRUE)
   expect_error(round_num(1), "must be \"r\"")
 })
 
 test_that("every formatter follows the option", {
-  withr::local_options(rtfreporter.rounding = "sas")
+  old <- options(rtfreporter.rounding = "sas")
+  on.exit(options(old), add = TRUE)
   expect_identical(fmt_round(23.445, 2), "23.45")
   expect_identical(fmt_signif(23.445, 4), "23.45")
   expect_identical(fmt_numeric(data.frame(a = 23.445), "a", digits = 2)$a,
                    "23.45")
   expect_identical(format_count_pct(1L, 1 / 16, nbsp = " "), "  1  (6.3)")
-  withr::local_options(rtfreporter.rounding = "r")
+  options(rtfreporter.rounding = "r")
   expect_identical(fmt_round(23.445, 2), "23.44")
   expect_identical(format_count_pct(1L, 1 / 16, nbsp = " "), "  1  (6.2)")
   expect_identical(format_count_pct(1L, 1 / 16, nbsp = " ", rounding = "sas"),
