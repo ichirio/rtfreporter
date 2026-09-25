@@ -38,16 +38,31 @@
   levels on every one of its rows and read only the first, and its `round`
   column claimed to apply per row while one value served the whole table.
 
-  `ard_spread(spec = )` can now supply **every** argument but `x`, so
-  `ard_normalize() |> ard_spread(spec = read_ard_spec("study.xlsx",
-  output_id = "AE"))` is a whole conversion; an argument written in the
-  call still wins.  `rtf_plan(spec = )` takes its roles from the same
-  `tables` row, checked against the data like any other role.
+  Three more sheets carry the table half, so a workbook goes all the way
+  to `rtftable` pages: `layout` (one row per report; `pages_*`,
+  `group_*`, `blank_*`, `stub_*`, `colpages_*` -- each prefix the plan
+  verb it stands for), `columns` (one row per printed column, **by
+  name**, with `.values` for every spread column however many there are:
+  `width`, `row_title`, `decimal_split`, `hide`) and `style` (`border`,
+  `align_count_pct`, row heights, font ...).  A `cells` row with no
+  template is, on a `stats = rows` table, one statistic's display format
+  (`row = Mean`, `signif = 4`), as `fmt_numeric(by = )` takes it.  Every
+  value is checked where it is written (a number, `TRUE` / `FALSE`, a
+  `|`-list); quote a text value to keep its spaces.
 
-  The other three follow one rule: a blank `output_id` is a study-wide
-  default and a report's own row replaces the default with the same key,
-  so a later sheet can join without a new rule.  The names `titles`,
-  `footnotes`, `page`, `header`, `footer`, `columns`, `layout` and `style`
+  **One entry point: `rtf_plan(data, spec = )`**, which reads the workbook
+  as the plan's first layers -- the roles from `tables`, then everything
+  else as if the matching verbs had been written -- so a verb written
+  after it still wins, and `rtf_tables()` / `apply_plan()` take the plan
+  as before.  `ard_spread(spec = )` is withdrawn: it could only ever
+  supply `ard_spread()`'s own arguments, and two ways in was one too
+  many.  `ard_template(spec = )` goes with it (`plan_template(spec = )`
+  remains).  The column header stays in code for now.
+
+  The sheets but `study` follow one rule: a blank `output_id` is a
+  study-wide default and a report's own row replaces the default with the
+  same key, so a later sheet can join without a new rule.  The names
+  `titles`, `footnotes`, `page`, `header`, `footer` and `cell_styles`
   are reserved for the rest of the RTF deliverable and reported, not
   refused, when present; an `about` sheet records `spec_version`, and
   sheets starting with `_` are ignored.  A column a sheet does not read is
@@ -67,7 +82,8 @@
   with all five and their shared defaults -- ship in
   `system.file("extdata", "ard-spec", package = "rtfreporter")`;
   `data-raw/ard-spec-examples/make-examples.R` rebuilds them and checks
-  each gives the identical table to the same conversion written as code.
+  each gives the identical table to `ard_spread()` written out **and the
+  identical `rtftable` pages to the report's plan code**.
 
 - **`ard_round()` is withdrawn in favour of the package's one rule,
   `round_num()`** (#476).  `ard_spread(round = )` and `plan_digits(round = )`

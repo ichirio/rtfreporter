@@ -4,18 +4,27 @@
 \alias{ard_spec}
 \title{A workbook-shaped definition of how an ARD becomes a table}
 \usage{
-ard_spec(tables = NULL, variables = NULL, cells = NULL, study = NULL)
+ard_spec(
+  tables = NULL,
+  variables = NULL,
+  cells = NULL,
+  study = NULL,
+  layout = NULL,
+  columns = NULL,
+  style = NULL
+)
 }
 \arguments{
-\item{tables, variables, cells}{Data frames with the columns above; missing
-columns are added as \code{NA}.  \code{tables} may instead be a named list of the
+\item{tables, variables, cells, layout, columns, style}{Data frames with the
+columns above; missing columns are added as \code{NA}.  \code{tables} may instead be a named list of the
 sheets, or an \code{ard_spec} (returned as it is).}
 
 \item{study}{The \code{study} sheet: a \code{key} / \code{value} frame, or a named
 vector such as \code{c(rounding = "sas")}.}
 }
 \value{
-An object of class \code{ard_spec}: a list of the four data frames.
+An object of class \code{ard_spec}: a list of the sheets' data
+frames.
 }
 \description{
 \code{ard_spec()} validates the definition that \code{\link[=ard_spread]{ard_spread()}} accepts as
@@ -29,7 +38,16 @@ that each fact is written once:\tabular{lll}{
    \code{tables} \tab report \tab the roles and the table-wide options \cr
    \code{variables} \tab variable \tab display label, order, level order \cr
    \code{cells} \tab line of a cell \tab template, guard, digits \cr
+   \code{layout} \tab report \tab pages, groups, blank rows, stub \cr
+   \code{columns} \tab printed column \tab width, row title, decimal split, hidden \cr
+   \code{style} \tab report \tab border, row heights, font \cr
 }
+
+
+The first four say how the ARD becomes a table data frame; the last
+three how that becomes \code{rtftable} pages.  \code{\link[=rtf_plan]{rtf_plan()}} reads them all
+(\code{rtf_plan(data, spec = )}), as the first layers of a plan, so a verb
+written after it still wins.
 }
 \section{\code{study}}{
 
@@ -42,7 +60,7 @@ study can round differently.  Blank leaves it to
 
 \section{One rule on the other sheets}{
 
-\code{tables}, \code{variables} and \code{cells} start with \code{output_id}.  \strong{Blank means a study-wide
+Every sheet but \code{study} starts with \code{output_id}.  \strong{Blank means a study-wide
 default; a row naming the report replaces the default row with the same
 key} --- the whole \code{tables} row for that report, the \code{variables} row
 for that variable, the \code{cells} rows for that variable / context / row.
@@ -104,14 +122,65 @@ whose template resolves wins.}
 when comma-separated: \verb{1,2} for \code{{mean} ({sd})}.}
 \item{\code{signif}}{Significant digits; wins over \code{digits}.}
 }
+For a \code{stats = rows} table (one statistic per row, the raw value in the
+cell) a row with \strong{no template} is instead that statistic's display
+format: \code{row} names the statistic as the label column prints it (\code{N},
+\code{Mean}) and \code{digits} / \code{signif} say how many, as \code{\link[=fmt_numeric]{fmt_numeric()}} takes
+them (\verb{fmt_numeric(by = <label column>, formats = )}).
+}
+
+\section{\code{layout}}{
+
+One row per report, each column one argument of the plan verb its
+prefix names:
+\describe{
+\item{\verb{pages_*}}{\code{\link[=plan_paginate_rows]{plan_paginate_rows()}}: \code{max_rows}, \code{split}, \code{by},
+\code{min_group_rows}, \code{cont_label}.}
+\item{\verb{group_*}}{\code{col}, \code{mode} and \code{collapse} of \code{\link[=plan_row_group]{plan_row_group()}};
+\code{group_page = TRUE} is \code{\link[=plan_paginate_group]{plan_paginate_group()}}, one page per value
+of \code{group_col}, and \code{group_show = FALSE} hides that column.}
+\item{\verb{blank_*}}{\code{\link[=plan_blanks]{plan_blanks()}}: \code{where}, \code{first}, \code{last},
+\code{counted}.}
+\item{\verb{stub_*}}{\code{\link[=plan_stub]{plan_stub()}}: \code{vars}, \code{into}, \code{indent}, \code{summary},
+\code{before}.}
+\item{\verb{colpages_*}}{\code{\link[=plan_paginate_cols]{plan_paginate_cols()}}: \code{every}, \code{at}, \code{carry},
+\code{order}.}
+}
+}
+
+\section{\code{columns}}{
+
+One row per printed column, by \strong{name} --- the finished table's, so
+a folded stub is the name given to \code{stub_into}.  \code{.values} stands for
+every spread column, however many the data turned out to have.
+\describe{
+\item{\code{width}}{Relative width.  Named columns win over \code{.values};
+when widths are given, every printed column needs one.}
+\item{\code{row_title}}{\code{TRUE} for a row-heading column.}
+\item{\code{decimal_split}}{\code{TRUE} to line up the decimal points
+(\code{\link[=set_decimal_split]{set_decimal_split()}}).}
+\item{\code{hide}}{\code{TRUE} to use the column without printing it.}
+}
+}
+
+\section{\code{style}}{
+
+One row per report: \code{border}, \code{align_count_pct}, \code{auto_width},
+\code{row_height_twips}, \code{header_row_height_twips},
+\code{blank_row_height_twips}, \code{font}, \code{font_size_half_points},
+\code{table_align}, \code{cell_valign}, as \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} take
+them.
+
+Values are checked where they are written: a number, \code{TRUE} / \code{FALSE}
+or a \code{|}-list, as the column needs.  Quote a text value (\code{" (Cont.)"})
+to keep its leading or trailing spaces.
 }
 
 \section{Reserved for the rest of the report}{
 
 A later version will read the sheets \code{titles}, \code{footnotes}, \code{page},
-\code{header}, \code{footer}, \code{columns}, \code{layout} and \code{style} under the same
-\code{output_id} rule, so the whole RTF deliverable can be defined in one
-workbook.  They are reported, not refused, when present today.  An
+\code{header}, \code{footer} and \code{cell_styles} under the same \code{output_id} rule,
+so the whole RTF deliverable can be defined in one workbook.  They are reported, not refused, when present today.  An
 \code{about} sheet (\code{key} / \code{value}) may state \code{spec_version}; sheets whose
 name starts with \verb{_} are ignored.
 }

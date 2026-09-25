@@ -21,9 +21,6 @@ found and says so in a comment.}
 
 \item{hierarchy}{Optional nested hierarchy, outermost first.}
 
-\item{spec}{When \code{TRUE}, the generated code reads a definition file made by
-\code{\link[=ard_spec_template]{ard_spec_template()}} instead of inlining the \code{cells} list.}
-
 \item{file}{Optional path to write the code to.}
 
 \item{pipe}{Which pipe to write the conversion with: \code{"\%>\%"} (magrittr),

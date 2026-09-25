@@ -1,5 +1,5 @@
 sheet,column,説明,例
-(全体),,rtfreporter の ARD 定義ファイル（spec_version 1）。ard_spread(spec = read_ard_spec(path; output_id = )) で読む。名前が _ で始まるシートは読まれない（このシート）。,
+(全体),,rtfreporter の ARD 定義ファイル（spec_version 1）。rtf_plan(data; spec = read_ard_spec(path; output_id = )) で読む。名前が _ で始まるシートは読まれない（このシート）。,
 (全体),output_id,tables / variables / cells の先頭列。空欄 = 試験全体のデフォルト。帳票名を書いた行は、同じキーのデフォルト行を置き換える。,DM
 (全体),note,どのシートにも置けるメモ列。読まれない。上記以外の未知の列はエラー（見出しの打ち間違い防止）。,
 (全体),（リスト）,1 セルに複数書くときは | で区切る。,TR01AG1 | SEROSTAT
@@ -28,5 +28,21 @@ cells,when,条件（R の式）。成り立つときだけこの行を使う。�
 cells,template,セルの書き方。{統計量:書式} を埋め込む。,{mean} ({sd})
 cells,digits,書式のないトークンの小数桁。カンマ区切りでトークンごと。,"2,3"
 cells,signif,有効桁（digits より優先）。,4
+cells,（template 空欄の行）,stats = rows の帳票だけ：統計量ごとの表示桁。row = 統計量名（ラベル列の値）、digits / signif を書く（fmt_numeric と同じ）。variable / context は空欄。,row = Mean / signif = 4
+(全体),（読み方）,ここまでの 4 シートで table data.frame、以下の 3 シートで rtftable のページまで。rtf_plan(data; spec = read_ard_spec(path; output_id = )) で読む。後に書いた plan_*() が勝つ。,
+layout,,1 行 = 1 帳票。ページ・グループ・空行・スタブ。列名の接頭辞が対応する plan_*() を表す。,
+layout,pages_max_rows / pages_split / pages_by / pages_min_group_rows / pages_cont_label,plan_paginate_rows() の max_rows / split / by / min_group_rows / cont_label。先頭・末尾の空白を残すときは引用符で囲む。,"26 / group_force / "" (Cont.)"""
+layout,group_col / group_mode / group_collapse,plan_row_group() の col / mode / collapse。collapse は TRUE か列（名前・位置）の | 区切り。,value / 1 | 2
+layout,group_page / group_show,group_page = TRUE で group_col の値ごとに改ページ（plan_paginate_group）。group_show = FALSE でその列を表示しない。,TRUE / FALSE
+layout,blank_where / blank_first / blank_last / blank_counted,plan_blanks() の where / first / last / counted。,between_groups / TRUE
+layout,stub_vars / stub_into / stub_indent / stub_summary / stub_before,plan_stub() の vars / into / indent / group_summary / before。,row_label / TRUE
+layout,colpages_every / colpages_at / colpages_carry / colpages_order,plan_paginate_cols() の every / at / carry / order（列方向のページ分割）。,16 | 29 / 1 | 2
+columns,,1 行 = 印字される列 1 つ。列は名前で指定（畳んだスタブは stub_into の名前）。.values = 展開された値の列すべて。,
+columns,column,列名、または .values。,row_label
+columns,width,相対幅。幅を書くなら印字される全列に必要（.values でまとめて指定できる）。,5
+columns,row_title,TRUE で行見出しの列。,TRUE
+columns,decimal_split,TRUE で小数点を揃える（set_decimal_split）。,TRUE
+columns,hide,TRUE で処理には使うが印字しない。,TRUE
+style,,1 行 = 1 帳票。border / align_count_pct / auto_width / row_height_twips / header_row_height_twips / blank_row_height_twips / font / font_size_half_points / table_align / cell_valign（rtftable と同じ引数）。,align_count_pct = TRUE
 about,,key / value。spec_version を記録（新しい版のファイルを古いパッケージで読むとエラー）。,spec_version = 1
-(予約),,次の版で読む予定のシート名。今は置いても読まれず、その旨のメッセージが出る。,titles / footnotes / page / header / footer / columns / layout / style
+(予約),,次の版で読む予定のシート名。今は置いても読まれず、その旨のメッセージが出る。,titles / footnotes / page / header / footer / cell_styles

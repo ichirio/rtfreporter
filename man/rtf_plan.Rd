@@ -59,10 +59,19 @@ makes each statistic a row of its own.}
 
 \item{sep}{Separator pasted between multiple \code{cols} keys.}
 
-\item{value, na, spec, notes}{The remaining \code{\link[=ard_spread]{ard_spread()}} options,
+\item{value, na, notes}{The remaining \code{\link[=ard_spread]{ard_spread()}} options,
 unchanged: which of \code{stat} / \code{stat_fmt} a \code{{x}} reads, what fills a
-cell no template could, an \code{\link[=ard_spec]{ard_spec()}} definition, and whether to
-report what was not used.}
+cell no template could, and whether to report what was not used.}
+
+\item{spec}{An \code{\link[=ard_spec]{ard_spec()}} definition, or the path to a workbook as
+\code{\link[=read_ard_spec]{read_ard_spec()}} reads it (a workbook defining several reports must
+be narrowed first, with \code{read_ard_spec(path, output_id = )}).  It is
+the plan's \strong{first layers}: the roles from its \code{tables} sheet (a role
+given here wins), then everything else --- levels, labels, cells,
+rounding, and the \code{layout} / \code{columns} / \code{style} of the pages --- as
+if the matching verbs had been written first.  A verb written after
+\code{rtf_plan()} therefore still wins, which is how one report departs
+from the study's workbook in a line of code.}
 }
 \value{
 An object of class \code{rtf_plan}.

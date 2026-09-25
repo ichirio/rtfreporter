@@ -10,8 +10,8 @@ write_ard_spec(spec, path)
 \item{spec}{An \code{\link[=ard_spec]{ard_spec()}} (or what it accepts).}
 
 \item{path}{Destination \code{.xlsx} (needs \pkg{writexl}).  The workbook
-gets the \code{study}, \code{tables}, \code{variables} and \code{cells} sheets and an
-\code{about} sheet stating \code{spec_version}.}
+gets every sheet of \code{\link[=ard_spec]{ard_spec()}}, empty ones included so their columns
+are there to fill in, and an \code{about} sheet stating \code{spec_version}.}
 }
 \value{
 \code{path}, invisibly.

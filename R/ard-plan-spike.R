@@ -400,10 +400,18 @@
 #' @param stats `"cells"` (default) fills a template per cell; `"rows"`
 #'   makes each statistic a row of its own.
 #' @param sep Separator pasted between multiple `cols` keys.
-#' @param value,na,spec,notes The remaining [ard_spread()] options,
+#' @param value,na,notes The remaining [ard_spread()] options,
 #'   unchanged: which of `stat` / `stat_fmt` a `{x}` reads, what fills a
-#'   cell no template could, an [ard_spec()] definition, and whether to
-#'   report what was not used.
+#'   cell no template could, and whether to report what was not used.
+#' @param spec An [ard_spec()] definition, or the path to a workbook as
+#'   [read_ard_spec()] reads it (a workbook defining several reports must
+#'   be narrowed first, with `read_ard_spec(path, output_id = )`).  It is
+#'   the plan's **first layers**: the roles from its `tables` sheet (a role
+#'   given here wins), then everything else --- levels, labels, cells,
+#'   rounding, and the `layout` / `columns` / `style` of the pages --- as
+#'   if the matching verbs had been written first.  A verb written after
+#'   `rtf_plan()` therefore still wins, which is how one report departs
+#'   from the study's workbook in a line of code.
 #'
 #' @return An object of class `rtf_plan`.
 #'
@@ -443,12 +451,14 @@ rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
   # it HERE, so they are the plan's roles like any other -- checked against
   # the data below, printed, and read by every verb -- and a role written in
   # the call still wins.
+  sp <- NULL
   if (!is.null(spec)) {
     sp <- .ard_spec_scope(if (is.character(spec)) read_ard_spec(spec)
                           else ard_spec(spec))
-    roles$spec <- sp
+    roles$spec <- NULL
     sa <- .ard_spec_table_args(sp)
-    for (r in c("cols", "rows", "label", "stats", "sep", "value", "na")) {
+    for (r in c("cols", "rows", "label", "stats", "sep", "value", "na",
+                "sort_stat")) {
       if (is.null(roles[[r]]) && !is.null(sa[[r]])) roles[[r]] <- sa[[r]]
     }
   }
@@ -475,10 +485,149 @@ rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
       "and `label` then point at."))
   }
   .plan_check_roles(data, roles)
-  structure(list(data = data, kind = kind, roles = roles,
-                 layers = list(),
-                 cache = new.env(parent = emptyenv())),
-            class = "rtf_plan")
+  p <- structure(list(data = data, kind = kind, roles = roles,
+                      layers = list(),
+                      cache = new.env(parent = emptyenv())),
+                 class = "rtf_plan")
+  if (!is.null(sp)) p <- .plan_from_spec(p, sp)
+  p
+}
+
+# ---------------------------------------------------------------------------
+#  A definition workbook as the plan's first layers
+# ---------------------------------------------------------------------------
+#
+#  Every sheet becomes the layer its verb would have written, in the order a
+#  report is built, so nothing downstream knows a workbook was involved:
+#  the same resolver, the same checks, and a verb written afterwards wins.
+
+.plan_from_spec <- function(p, sp) {
+  sa <- .ard_spec_table_args(sp)
+  if (!is.null(sa[["sort"]])) p <- .plan_layer(p, "sort", list(sort = sa[["sort"]]))
+  if (!is.null(sa[["rounding"]])) {
+    p <- .plan_layer(p, "round", list(rounding = sa[["rounding"]]))
+  }
+  lv <- .ard_spec_levels(sp)
+  if (length(lv)) p <- plan_levels(p, lv)
+  lb <- .ard_spec_labels(sp)
+  if (length(lb)) p <- plan_labels(p, lb)
+  cm <- .ard_spec_cells(sp)
+  if (length(cm)) p <- do.call(plan_cells, c(list(p), cm))
+
+  # rows with no template: the display format of one statistic, for a
+  # table that lays the statistics out as rows
+  f <- sp$cells[is.na(sp$cells$template), , drop = FALSE]
+  if (nrow(f)) {
+    if (!identical(p$roles$stats, "rows")) {
+      .ard_stop(paste0(
+        "The `cells` sheet has rows with no `template` -- a statistic's ",
+        "display format --
+  but the table is not `stats = rows`.  ",
+        "Give those rows a template, or set
+  `tables$stats` to `rows`."))
+    }
+    if (any(!is.na(f$variable) | !is.na(f$context))) {
+      .ard_stop(paste0(
+        "A `cells` row with no template formats one statistic across the ",
+        "table;
+  leave its `variable` and `context` blank."))
+    }
+    if (any(is.na(f$row))) {
+      .ard_stop(paste0("A `cells` row with no template needs `row`: the ",
+                       "statistic it formats, as the label column prints it."))
+    }
+    fm <- lapply(seq_len(nrow(f)), function(i) {
+      if (!is.na(f$signif[i])) list(signif = as.integer(f$signif[i]))
+      else list(digits = as.integer(f$digits[i]))
+    })
+    p <- plan_fmt(p, by = .plan_label_name(p),
+                  formats = stats::setNames(fm, f$row))
+  }
+
+  lay <- if (nrow(sp$layout)) .ard_spec_typed(sp$layout[1L, ], "layout")
+         else list()
+  pick <- function(prefix, map) {
+    out <- list()
+    for (k in names(map)) {
+      v <- lay[[paste0(prefix, k)]]
+      if (!is.null(v)) out[[map[[k]]]] <- v
+    }
+    out
+  }
+  a <- pick("stub_", c(vars = "vars", into = "into", indent = "indent",
+                       summary = "group_summary", before = "before"))
+  if (length(a)) p <- do.call(plan_stub, c(list(p), a))
+  if (isTRUE(lay[["group_page"]])) {
+    p <- plan_paginate_group(p, col = lay[["group_col"]],
+                             show = !identical(lay[["group_show"]], FALSE))
+  }
+  a <- pick("group_", c(mode = "mode", collapse = "collapse"))
+  if (length(a) || (!is.null(lay[["group_col"]]) && !isTRUE(lay[["group_page"]]))) {
+    a$col <- lay[["group_col"]]
+    p <- do.call(plan_row_group, c(list(p), a))
+  }
+  a <- pick("blank_", c(where = "where", first = "first", last = "last",
+                        counted = "counted"))
+  if (length(a)) p <- do.call(plan_blanks, c(list(p), a))
+  a <- pick("pages_", c(max_rows = "max_rows", split = "split", by = "by",
+                        min_group_rows = "min_group_rows",
+                        cont_label = "cont_label"))
+  if (length(a)) p <- do.call(plan_paginate_rows, c(list(p), a))
+  a <- pick("colpages_", c(every = "every", at = "at", carry = "carry",
+                           order = "order"))
+  if (length(a)) p <- do.call(plan_paginate_cols, c(list(p), a))
+
+  st <- if (nrow(sp$style)) .ard_spec_typed(sp$style[1L, ], "style")
+        else list()
+  cl <- sp$columns
+  ct <- lapply(seq_len(nrow(cl)), function(i)
+    .ard_spec_typed(cl[i, , drop = FALSE], "columns"))
+  flag <- function(k) vapply(ct, function(r) isTRUE(r[[k]]), NA)
+  if (any(flag("row_title"))) st$row_title <- cl$column[flag("row_title")]
+  if (length(st)) p <- do.call(plan_style, c(list(p), st))
+  if (any(flag("hide"))) p <- plan_hide(p, cl$column[flag("hide")])
+  w <- vapply(ct, function(r) r[["width"]] %||% NA_real_, NA_real_)
+  if (any(!is.na(w)) || any(flag("decimal_split"))) {
+    p <- .plan_layer(p, "columns", list(
+      widths  = stats::setNames(w[!is.na(w)], cl$column[!is.na(w)]),
+      decimal = cl$column[flag("decimal_split")]))
+  }
+  p
+}
+
+# `.values` is every spread column; a name is itself.  What a page prints
+# is read off the page, so the answer holds however many columns the data
+# turned out to have.
+.plan_col_names <- function(want, page_names, spread) {
+  out <- character()
+  for (w in want) {
+    out <- c(out, if (identical(w, ".values")) intersect(page_names, spread)
+                  else intersect(w, page_names))
+  }
+  unique(out)
+}
+
+.plan_col_widths <- function(pages, widths, spread) {
+  one <- function(tb) {
+    nm <- names(tb$data)
+    w <- rep(NA_real_, length(nm))
+    if (".values" %in% names(widths)) w[nm %in% spread] <- widths[[".values"]]
+    own <- intersect(names(widths), nm)
+    w[match(own, nm)] <- widths[own]
+    if (anyNA(w)) {
+      .ard_stop(paste0(
+        "The `columns` sheet gives widths, but not for: ",
+        paste(sQuote(nm[is.na(w)]), collapse = ", "), ".
+",
+        "  Give every printed column a width (`.values` covers the spread ",
+        "columns)."))
+    }
+    tb$col_rel_width <- w
+    tb
+  }
+  if (inherits(pages, "rtftable")) return(one(pages))
+  pages[] <- lapply(pages, one)
+  pages
 }
 
 # The whole point of naming the roles beside the data is that the names can
@@ -2124,6 +2273,14 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
       "styles"))
 
+  # the `columns` sheet names the columns, so it is applied to the pages,
+  # where the names are the ones printed (a folded stub, a hidden carrier)
+  colset <- .plan_merge(.plan_of(plan, "columns"))
+  spread <- .plan_spread_cols(plan, pre)
+  if (length(colset$widths) && is.null(rtf$col_rel_width)) {
+    out <- .plan_col_widths(out, colset$widths, spread)
+  }
+
   if (!is.null(hdr$header)) {
     #  a function of the resolved `n`, so "(N=86)" is written once and
     #  the number comes from the ARD rather than from memory.  The
@@ -2147,6 +2304,11 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     out <- do.call(set_col_header, args)
   }
 
+  if (length(colset$decimal)) {
+    first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
+    dc <- .plan_col_names(colset$decimal, names(first_d), spread)
+    if (length(dc)) out <- set_decimal_split(out, cols = dc)
+  }
   for (l in .plan_of(plan, "after")) {
     for (f in l$steps) out <- f(out)
   }

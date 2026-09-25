@@ -945,6 +945,14 @@ test_that("naming the analysed variable says where its levels went", {
 
 # ----------------------------------------------------------------- the spec
 
+# A definition is read by rtf_plan(spec = ), which lives in the plan spike;
+# these tests skip once that file is deleted.
+spec_table <- function(d, spec, ...) {
+  testthat::skip_if_not(exists("rtf_plan", mode = "function"),
+                        "the plan spike is not here")
+  apply_plan(rtf_plan(d, spec = spec, notes = FALSE, ...), "table")
+}
+
 dm_spec <- function(output_id = NA) {
   ard_spec(
     study = c(rounding = "sas"),
@@ -971,10 +979,11 @@ test_that("a three-sheet spec supplies the roles as well as the cells", {
   skip_if_no_cards()
   sp <- dm_spec()
   expect_s3_class(sp, "ard_spec")
-  expect_identical(names(sp), c("study", "tables", "variables", "cells"))
+  expect_identical(names(sp), c("study", "tables", "variables", "cells",
+                                "layout", "columns", "style"))
 
   # no cols / rows in the call: the `tables` sheet says them
-  tbl <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)
+  tbl <- spec_table(ard_normalize(make_ard()), sp)
   expect_identical(as.character(unique(tbl$group)),
                    c("Age (years)", "Age group", "Sex"))
   age <- tbl[tbl$group == "Age (years)", ]
@@ -1000,8 +1009,7 @@ test_that("a three-sheet spec supplies the roles as well as the cells", {
 test_that("an argument given in the call wins over the spec", {
   skip_if_no_cards()
   d <- ard_normalize(make_ard())
-  tbl <- ard_spread(d, spec = dm_spec(), rows = c(block = "variable"),
-                    notes = FALSE)
+  tbl <- spec_table(d, dm_spec(), rows = c(block = "variable"))
   expect_true("block" %in% names(tbl))
   expect_false("group" %in% names(tbl))
 })
@@ -1024,8 +1032,8 @@ test_that("the workbook round-trips, and nothing but a workbook is one", {
   expect_identical(rtfreporter:::.ard_spec_study_value(back, "rounding"), "sas")
   expect_equal(back$cells$template, sp$cells$template)
   expect_equal(back$variables$levels, sp$variables$levels)
-  a <- ard_spread(ard_normalize(make_ard()), spec = f, notes = FALSE)
-  b <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)
+  a <- spec_table(ard_normalize(make_ard()), f)
+  b <- spec_table(ard_normalize(make_ard()), sp)
   expect_equal(a, b)
 })
 
@@ -1038,7 +1046,7 @@ test_that("rows with the same key are one chain, and `when` guards one", {
     cells = data.frame(variable = c("SEX", "SEX"),
                        when     = c("n == 0", NA),
                        template = c("none", "{n} ({p})")))
-  tbl <- ard_spread(d, spec = sp, notes = FALSE)
+  tbl <- spec_table(d, sp)
   sex <- tbl[tbl$group == "SEX", ]
   expect_identical(unname(unlist(sex[sex$label == "F", "Placebo"])), "none")
   expect_false(any(sex$Placebo[sex$label == "M"] == "none"))
@@ -1093,8 +1101,8 @@ test_that("ard_spec() refuses what it would otherwise quietly ignore", {
 
 test_that("`cols` has to come from somewhere", {
   skip_if_no_cards()
-  expect_error(ard_spread(ard_normalize(make_ard()),
-                          spec = ard_spec(cells = data.frame(
+  expect_error(spec_table(ard_normalize(make_ard()),
+                          ard_spec(cells = data.frame(
                             variable = "AGE", template = "{mean}"))),
                "`cols` is required")
 })
@@ -1112,7 +1120,7 @@ test_that("ard_spec_template() scaffolds the three sheets", {
   lv <- sp$variables$levels[sp$variables$variable == "AGEGR"]
   expect_setequal(strsplit(lv, " | ", fixed = TRUE)[[1]], c("<65", "65-74", ">=75"))
   # and it runs as written
-  tbl <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)
+  tbl <- spec_table(ard_normalize(make_ard()), sp)
   expect_true(all(c("Placebo") %in% names(tbl)))
 })
 
@@ -1238,8 +1246,15 @@ test_that("the rounding family: argument > spec > option > R's own", {
 
   expect_identical(cell(), "0.2")                         # R's own, the default
   expect_identical(cell(rounding = "sas"), "0.3")         # the argument
-  expect_identical(cell(spec = sp), "0.3")                # the spec file
-  expect_identical(cell(spec = sp, rounding = "r"), "0.2")# argument beats spec
+  from_spec <- function(p) {
+    apply_plan(p, "table")$Placebo[1]
+  }
+  if (exists("rtf_plan", mode = "function")) {
+    p <- rtf_plan(d, spec = sp, cols = "TRT", rows = c(group = "variable"),
+                  notes = FALSE)
+    expect_identical(from_spec(p), "0.3")                        # the spec
+    expect_identical(from_spec(p |> plan_digits(rounding = "r")), "0.2")
+  }
 
   old <- options(rtfreporter.rounding = "sas")            # the package's one
   on.exit(options(old), add = TRUE)

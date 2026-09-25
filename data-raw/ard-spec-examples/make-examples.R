@@ -9,8 +9,9 @@
 #  For each report this script
 #    1. builds the example ARD (the same code as Discussion #473),
 #    2. writes its definition workbook to inst/extdata/ard-spec/<id>.xlsx,
-#    3. reads the workbook back and runs ard_spread(spec = ) on the ARD,
-#    4. checks the result is IDENTICAL to the same table written as code.
+#    3. reads the workbook back and runs rtf_plan(spec = ) on the ARD,
+#    4. checks the table data frame is IDENTICAL to ard_spread() written
+#       out, and the finished rtftable pages to the report's plan code.
 #
 #  It also writes study.xlsx: all five in one workbook, keyed by output_id,
 #  with the study's rounding on its `study` sheet, and the shared n (%)
@@ -40,15 +41,34 @@ tbl <- function(...) {
   d
 }
 
-check <- function(id, ard_n, spec_path, code_tbl) {
+# Two checks per report: the table data frame against ard_spread() written
+# out, and the finished rtftable pages against the report's plan code.  The
+# column header is not in the workbook yet, so both sides add the same one.
+check <- function(id, ard_n, spec_path, code_tbl, code_plan, header,
+                  pages_n = ard_n) {
   sp <- read_ard_spec(spec_path, output_id = id)
-  from_spec <- ard_spread(ard_n, spec = sp, notes = FALSE)
+  from_spec <- apply_plan(rtf_plan(ard_n, spec = sp, notes = FALSE), "table")
   ok <- isTRUE(all.equal(as.data.frame(from_spec), as.data.frame(code_tbl)))
-  cat(sprintf("  %-4s %-28s %3d rows x %2d cols   spec == code: %s\n",
-              id, basename(spec_path), nrow(from_spec), ncol(from_spec),
-              if (ok) "TRUE" else "FALSE  <-- MISMATCH"))
+  pg_spec <- apply_plan(header(rtf_plan(pages_n, spec = sp, notes = FALSE)),
+                        "pages")
+  pg_code <- apply_plan(code_plan, "pages")
+  ok_pg <- isTRUE(all.equal(pg_spec, pg_code))
+  np <- if (inherits(pg_spec, "rtftable")) 1L else length(pg_spec)
+  cat(sprintf(
+    "  %-4s %-11s table %3d x %2d == code: %-5s  pages %2d == plan code: %s\n",
+    id, basename(spec_path), nrow(from_spec), ncol(from_spec),
+    if (ok) "TRUE" else "FALSE", np,
+    if (ok_pg) "TRUE" else "FALSE  <-- MISMATCH"))
   if (!ok) print(all.equal(as.data.frame(from_spec), as.data.frame(code_tbl)))
-  invisible(from_spec)
+  if (!ok_pg) print(utils::head(all.equal(pg_spec, pg_code), 10))
+  invisible(pg_spec)
+}
+
+# add the table-half sheets to a spec built above
+with_pages <- function(sp, layout = NULL, columns = NULL, style = NULL) {
+  x <- unclass(sp)
+  x$layout <- layout; x$columns <- columns; x$style <- style
+  ard_spec(x)
 }
 
 specs <- list()
@@ -270,6 +290,212 @@ pk_code <- ard_pk |>
     levels = list(Statistics = stat_levels, ATPT = TIMEPOINTS),
     rounding = "sas", notes = FALSE)
 
+
+# ============================================================================
+#  The table half: layout / columns / style, and each report's plan code
+# ============================================================================
+#
+#  The plan code is the one in Discussion #473, for these example ARDs.  The
+#  workbook says everything in it but the column header, which both sides add.
+
+# ---------------------------------------------------------------- DM
+dm_header <- function(p) plan_col_header(p, n = TRUE, rtf_col_header(
+  c("",               "{col}"),
+  c("Characteristic", "(N={n})")))
+specs$DM <- with_pages(specs$DM,
+  layout = tbl(list(output_id = "DM", stub_into = "row_label",
+                    stub_before = "TRUE", blank_where = "between_groups",
+                    blank_first = "TRUE", blank_last = "TRUE",
+                    pages_max_rows = "21", pages_split = "group_safe")),
+  columns = tbl(list(output_id = "DM", column = "row_label", width = "5"),
+                list(output_id = "DM", column = ".values",   width = "2")),
+  style = tbl(list(output_id = "DM", align_count_pct = "TRUE")))
+dm_plan <- ard_dm |>
+  ard_normalize() |>
+  rtf_plan(cols = "TRT01P", rows = c(group = "variable"), notes = FALSE) |>
+  plan_labels(c(AGE    = "Age (years) [a]",
+                AGEGR1 = "Age (group1) (years) [n (%)] [a]",
+                SEX    = "Sex [n (%)]",
+                ETHNIC = "Ethnicity [n (%)]",
+                HTBL   = "Baseline Height (cm)")) |>
+  plan_levels(AGEGR1 = c("<65", "65-80", ">80"), SEX = c("F", "M")) |>
+  plan_cells(continuous  = c("n"         = "{N:.0f}",
+                             "Mean (SD)" = "{mean:.2f} ({sd:.3f})",
+                             "Median"    = "{median:.2f}",
+                             "Min, Max"  = "{min:.1f}, {max:.1f}"),
+             categorical = "{n:.0f} ({p:.1f%})") |>
+  plan_digits(rounding = "sas") |>
+  plan_stub(into = "row_label", before = TRUE) |>
+  plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+  plan_paginate_rows(max_rows = 21, split = "group_safe") |>
+  plan_style(widths = c(5, 2), align_count_pct = TRUE) |>
+  dm_header()
+
+# ---------------------------------------------------------------- AE
+ae_header <- function(p) plan_col_header(p, n = TRUE, rtf_col_header(
+  c(list(col_cell(1, "")),
+    lapply(1:3, function(i)
+      col_cell(c(2 * i, 1 + 2 * i), "{col1}\n(N={n:sum})\n n (%)"))),
+  c(list(col_cell(1, "")),
+    lapply(1:3, function(i)
+      col_cell(c(2 * i, 1 + 2 * i), "",
+               border = rtf_border(top = "single", bottom = "none")))),
+  c("System Organ Class\n   Preferred Term", "{col2}\n(N={n})")))
+specs$AE <- with_pages(specs$AE,
+  layout = tbl(list(output_id = "AE", stub_into = "row_label",
+                    stub_before = "TRUE", blank_where = "between_groups",
+                    blank_first = "TRUE", blank_last = "TRUE",
+                    blank_counted = "TRUE", pages_max_rows = "25",
+                    pages_split = "group_force")),
+  columns = tbl(list(output_id = "AE", column = "row_label", width = "40"),
+                list(output_id = "AE", column = ".values",   width = "10")),
+  style = tbl(list(output_id = "AE", align_count_pct = "TRUE",
+                   row_height_twips = "210")))
+ae_plan <- ae_n |>
+  rtf_plan(cols  = c("TR01AG1", "SEROSTAT"),
+           rows  = c(group1 = "AEBODSYS"),
+           label = c(label  = "AEDECOD"), notes = FALSE) |>
+  plan_levels(TR01AG1  = c("Placebo", "Xanomeline Low Dose",
+                           "Xanomeline High Dose"),
+              SEROSTAT = c("Positive", "Negative")) |>
+  plan_sort(".overall", "group1", ".depth", "-n", "label") |>
+  plan_cells("{n:.0f} ({p:.1f%})") |>
+  plan_digits(rounding = "sas") |>
+  plan_stub(into = "row_label", before = TRUE) |>
+  plan_blanks(where = "between_groups", first = TRUE, last = TRUE,
+              counted = TRUE) |>
+  plan_paginate_rows(max_rows = 25, split = "group_force") |>
+  plan_style(widths = c(40, 10), align_count_pct = TRUE,
+             row_height_twips = 210L) |>
+  ae_header()
+
+# ---------------------------------------------------------------- ORR
+orr_header <- function(p) plan_col_header(p, function(n, tbl) {
+  arms <- unique(sub("_(n|orr_ci)$", "", names(tbl)[-(1:2)]))
+  rtf_col_header(
+    c(list(col_cell(c(1, 2), "")),
+      lapply(seq_along(arms), function(i)
+        col_cell(c(1 + 2 * i, 2 + 2 * i), arms[i]))),
+    c(list(col_cell(c(1, 2), "Subgroup")),
+      unlist(lapply(seq_along(arms), function(i)
+        list(col_cell(1 + 2 * i, "N"),
+             col_cell(2 + 2 * i, "ORR(%) 90%CI"))), recursive = FALSE)))
+})
+orr_arms <- c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose")
+orr_cols <- list(
+  list(output_id = "ORR", column = "grp1", width = "42", row_title = "TRUE"),
+  list(output_id = "ORR", column = "grp2", width = "28", row_title = "TRUE"))
+for (a in orr_arms) {
+  orr_cols <- c(orr_cols, list(
+    list(output_id = "ORR", column = paste0(a, "_n"),      width = "10",
+         row_title = ""),
+    list(output_id = "ORR", column = paste0(a, "_orr_ci"), width = "14",
+         row_title = "")))
+}
+specs$ORR <- with_pages(specs$ORR,
+  layout = tbl(list(output_id = "ORR", group_mode = "value",
+                    group_collapse = "1 | 2",
+                    blank_where = "between_groups", blank_first = "TRUE",
+                    blank_last = "TRUE", pages_max_rows = "20",
+                    pages_split = "group_safe")),
+  columns = do.call(tbl, orr_cols),
+  style = tbl(list(output_id = "ORR", align_count_pct = "FALSE")))
+orr_plan <- orr_n |>
+  rtf_plan(cols  = c("TRT01P", "variable"), sep = "_",
+           rows  = c(grp1 = "group2", grp2 = "group2_level"),
+           label = NA, notes = FALSE) |>
+  plan_sort(FALSE) |>
+  plan_cells(
+    n      = c("1" = "{N:.0f}"),
+    orr_ci = ard_cells(
+      "1" = c(n == 0        ~ "0",
+              estimate == 1 ~ "{n:.0f} (100)",
+                              "{n:.0f} ({estimate:.1f%})"),
+      "2" = "{conf.low:.1f%}, {conf.high:.1f%}")) |>
+  plan_digits(rounding = "sas") |>
+  plan_row_group(mode = "value", collapse = c(1L, 2L)) |>
+  plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+  plan_paginate_rows(max_rows = 20, split = "group_safe") |>
+  plan_style(widths = c(42, 28, rep(c(10, 14), 3)),
+             align_count_pct = FALSE, row_title = c(1, 2)) |>
+  orr_header()
+
+# ---------------------------------------------------------------- LB
+lb_header <- function(p) plan_col_header(p, n = TRUE, rtf_col_header(
+  list(col_cell(1L, "Timepoint"),
+       col_cell(c(2L, 5L), "Treatment\n(N={n})\n n (%)\n<Baseline>")),
+  c("  Category", "Grade 0", "Grade 1", "Grade 2", "Total")))
+specs$LB <- with_pages(specs$LB,
+  layout = tbl(list(output_id = "LB", stub_into = "row_label",
+                    group_page = "TRUE", group_show = "FALSE",
+                    blank_first = "TRUE", blank_last = "TRUE")),
+  columns = tbl(list(output_id = "LB", column = "row_label", width = "5"),
+                list(output_id = "LB", column = ".values",   width = "1")),
+  style = tbl(list(output_id = "LB", align_count_pct = "TRUE")))
+lb_pages_n <- ard_normalize(ard_lb, drop_contexts = "attributes")
+lb_plan <- lb_pages_n |>
+  rtf_plan(cols  = "BASEGR",
+           rows  = c(LBTOX_LBL = "LBTOX_LBL",
+                     group1    = ~ "Worst Post-Baseline Values"),
+           label = c(label = ".label"), notes = FALSE) |>
+  plan_levels(BASEGR  = c("Grade 0", "Grade 1", "Grade 2", "Total"),
+              WORSTGR = c("Grade 0", "Grade 1", "Grade 2", "Grade 3",
+                          "Total")) |>
+  plan_cells("{n:.0f} ({p:.1f%})") |>
+  plan_digits(rounding = "sas") |>
+  plan_stub(into = "row_label") |>
+  plan_paginate_group(show = FALSE) |>
+  plan_blanks(first = TRUE, last = TRUE) |>
+  plan_style(widths = c(5, rep(1, 4)), align_count_pct = TRUE) |>
+  lb_header()
+
+# ---------------------------------------------------------------- PK
+pk_header <- function(p) plan_col_header(p, function(n, tbl) list(
+  list(col_cell(1, ""), col_cell(2, ""),
+       col_cell(c(3, length(tbl)), "Scheduled Timepoint")),
+  names(tbl)))
+pk_formats <- list(N = list(digits = 0), Mean = list(signif = 4),
+                   SD = list(signif = 5), Median = list(signif = 4),
+                   Min = list(signif = 3), Max = list(signif = 3))
+# the statistics' formats: rows of `cells` with no template
+pk_cells <- do.call(tbl, lapply(names(pk_formats), function(st) list(
+  output_id = "PK", variable = "", context = "", row = st, when = "",
+  template = "",
+  digits = if (!is.null(pk_formats[[st]]$digits))
+             as.character(pk_formats[[st]]$digits) else "",
+  signif = if (!is.null(pk_formats[[st]]$signif))
+             as.character(pk_formats[[st]]$signif) else "")))
+x <- unclass(specs$PK); x$cells <- pk_cells; specs$PK <- ard_spec(x)
+specs$PK <- with_pages(specs$PK,
+  layout = tbl(list(output_id = "PK", group_collapse = "TRUE",
+                    blank_where = "between_groups", blank_first = "TRUE",
+                    blank_last = "TRUE", pages_max_rows = "21",
+                    colpages_every = "13", colpages_carry = "1 | 2")),
+  columns = tbl(
+    list(output_id = "PK", column = "Analyte",    width = "3",
+         row_title = "TRUE", decimal_split = ""),
+    list(output_id = "PK", column = "Statistics", width = "3",
+         row_title = "TRUE", decimal_split = ""),
+    list(output_id = "PK", column = ".values",    width = "2",
+         row_title = "",     decimal_split = "TRUE")))
+pk_plan <- ard_normalize(ard_pk) |>
+  rtf_plan(cols  = "ATPT", rows = c(Analyte = "ANALYTE"),
+           label = c(Statistics = "stat_label"), stats = "rows",
+           notes = FALSE) |>
+  plan_levels(Statistics = stat_levels, ATPT = TIMEPOINTS) |>
+  plan_digits(rounding = "sas") |>
+  plan_fmt(by = "Statistics", formats = pk_formats) |>
+  plan_row_group(collapse = TRUE) |>
+  plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+  plan_paginate_rows(max_rows = 21) |>
+  plan_style(widths = c(3, 3, 2), row_title = 1:2) |>
+  pk_header() |>
+  plan_after(function(x) {
+    d <- if (inherits(x, "rtftable")) x$data else x[[1L]]$data
+    set_decimal_split(x, cols = setdiff(names(d), c("Analyte", "Statistics")))
+  }) |>
+  plan_paginate_cols(every = 13, carry = 1:2)
+
 # ------------------------------------------------------ write and check
 # A `_README` sheet explains the columns to whoever opens the file.  The
 # reader ignores every sheet whose name starts with `_`, so it is safe to
@@ -287,15 +513,24 @@ write_book <- function(spec, path) {
   writexl::write_xlsx(c(list(`_README` = readme), sheets), path)
 }
 
+run_checks <- function(path_of) {
+  check("DM",  ard_normalize(ard_dm), path_of("DM"),  dm_code,  dm_plan,
+        dm_header)
+  check("AE",  ae_n,                  path_of("AE"),  ae_code,  ae_plan,
+        ae_header)
+  check("ORR", orr_n,                 path_of("ORR"), orr_code, orr_plan,
+        orr_header)
+  check("LB",  ard_normalize(ard_lb), path_of("LB"),  lb_code,  lb_plan,
+        lb_header, pages_n = lb_pages_n)
+  check("PK",  ard_normalize(ard_pk), path_of("PK"),  pk_code,  pk_plan,
+        pk_header)
+}
+
 cat("\nOne workbook per report:\n")
 for (id in names(specs)) {
   write_book(specs[[id]], file.path(out_dir, paste0(id, ".xlsx")))
 }
-check("DM",  ard_normalize(ard_dm), file.path(out_dir, "DM.xlsx"),  dm_code)
-check("AE",  ae_n,                  file.path(out_dir, "AE.xlsx"),  ae_code)
-check("ORR", orr_n,                 file.path(out_dir, "ORR.xlsx"), orr_code)
-check("LB",  ard_normalize(ard_lb), file.path(out_dir, "LB.xlsx"),  lb_code)
-check("PK",  ard_normalize(ard_pk), file.path(out_dir, "PK.xlsx"),  pk_code)
+run_checks(function(id) file.path(out_dir, paste0(id, ".xlsx")))
 
 # ------------------------------------------ one study workbook, all five
 # The rounding family is one per study, on the `study` sheet.  What the
@@ -304,10 +539,10 @@ check("PK",  ard_normalize(ard_pk), file.path(out_dir, "PK.xlsx"),  pk_code)
 # falls through to it, so a report's row that only restates it -- AE's and
 # LB's catch-all, DM's `categorical` -- is dropped rather than kept twice.
 all_sheet <- function(s) do.call(rbind, lapply(specs, function(x) x[[s]]))
-study_tables <- all_sheet("tables")
 study_cells <- all_sheet("cells")
 default_tpl <- "{n:.0f} ({p:.1f%})"
-restates <- study_cells$template == default_tpl &
+restates <- !is.na(study_cells$template) &
+  study_cells$template == default_tpl &
   is.na(study_cells$row) & is.na(study_cells$when) &
   is.na(study_cells$digits) & is.na(study_cells$signif) &
   is.na(study_cells$context) &
@@ -316,15 +551,12 @@ study_cells <- rbind(
   tbl(list(output_id = "", variable = "", context = "", row = "", when = "",
            template = default_tpl, digits = "", signif = "")),
   study_cells[!restates, , drop = FALSE])
-study <- ard_spec(study_tables, all_sheet("variables"), study_cells,
-                  study = c(rounding = "sas"))
+study <- ard_spec(all_sheet("tables"), all_sheet("variables"), study_cells,
+                  study = c(rounding = "sas"), layout = all_sheet("layout"),
+                  columns = all_sheet("columns"), style = all_sheet("style"))
 study_path <- file.path(out_dir, "study.xlsx")
 write_book(study, study_path)
 
 cat("\nThe same five from one study workbook (study.xlsx):\n")
-check("DM",  ard_normalize(ard_dm), study_path, dm_code)
-check("AE",  ae_n,                  study_path, ae_code)
-check("ORR", orr_n,                 study_path, orr_code)
-check("LB",  ard_normalize(ard_lb), study_path, lb_code)
-check("PK",  ard_normalize(ard_pk), study_path, pk_code)
+run_checks(function(id) study_path)
 cat("\nwritten to", normalizePath(out_dir), "\n")

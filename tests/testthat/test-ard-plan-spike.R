@@ -1579,10 +1579,140 @@ test_that("rtf_plan(spec = ) takes the roles from the spec's tables sheet", {
   expect_identical(p$roles$cols, "TRT")
   expect_identical(p$roles$rows, c(group = "variable"))
   expect_equal(as.data.frame(apply_plan(p, "table")),
-               as.data.frame(ard_spread(d, spec = sp, notes = FALSE)))
+               as.data.frame(ard_spread(d, cols = "TRT",
+                 rows = c(group = "variable"),
+                 cells = list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+                              categorical = "{n:.0f} ({p:.0f})"),
+                 notes = FALSE)))
   # a role in the call still wins, and is checked against the data
   p2 <- rtf_plan(d, spec = sp, rows = c(block = "variable"), notes = FALSE)
   expect_identical(p2$roles$rows, c(block = "variable"))
   bad <- ard_spec(tables = data.frame(cols = "NOPE"))
   expect_error(rtf_plan(d, spec = bad), "no column 'NOPE'|NOPE")
+})
+
+# ------------------------------------------- the table half of a workbook
+
+spec_pages_ard <- function() nz(plan_ard())
+
+test_that("layout / columns / style give the pages the verbs give", {
+  skip_if_no_cards2()
+  d <- spec_pages_ard()
+  sp <- ard_spec(
+    tables  = data.frame(cols = "TRT", rows = "group = variable"),
+    cells   = data.frame(variable = c("continuous", "continuous", "categorical"),
+                         row = c("n", "Mean (SD)", NA),
+                         template = c("{N:d}", "{mean} ({sd})", "{n:d} ({p:.1f%})"),
+                         digits = c(NA, "1,2", NA)),
+    layout  = data.frame(stub_into = "row_label", stub_before = "TRUE",
+                         blank_where = "between_groups", blank_first = "TRUE",
+                         pages_max_rows = "6", pages_split = "group_safe"),
+    columns = data.frame(column = c("row_label", ".values"),
+                         width = c("4", "2")),
+    style   = data.frame(align_count_pct = "TRUE", row_height_twips = "220"))
+  by_spec <- apply_plan(rtf_plan(d, spec = sp, notes = FALSE), "pages")
+  by_code <- rtf_plan(d, cols = "TRT", rows = c(group = "variable"),
+                      notes = FALSE) |>
+    plan_cells(continuous  = c("n" = "{N:d}",
+                               "Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+               categorical = "{n:d} ({p:.1f%})") |>
+    plan_stub(into = "row_label", before = TRUE) |>
+    plan_blanks(where = "between_groups", first = TRUE) |>
+    plan_paginate_rows(max_rows = 6, split = "group_safe") |>
+    plan_style(widths = c(4, 2), align_count_pct = TRUE,
+               row_height_twips = 220L) |>
+    apply_plan("pages")
+  expect_true(length(by_spec) > 1L)
+  expect_equal(by_spec, by_code)
+  # and the comparison is not vacuous: one changed setting shows
+  sp2 <- sp
+  sp2$style$row_height_twips <- "240"
+  expect_false(isTRUE(all.equal(
+    apply_plan(rtf_plan(d, spec = sp2, notes = FALSE), "pages"), by_code)))
+})
+
+test_that("a verb written after rtf_plan(spec = ) still wins", {
+  skip_if_no_cards2()
+  d <- spec_pages_ard()
+  sp <- ard_spec(tables = data.frame(cols = "TRT", rows = "group = variable"),
+                 layout = data.frame(pages_max_rows = "6",
+                                     pages_split = "group_safe"))
+  p <- rtf_plan(d, spec = sp, notes = FALSE) |> plan_paginate_rows(max_rows = 40)
+  expect_s3_class(apply_plan(p, "pages")[[1L]], "rtftable")
+  expect_length(apply_plan(p, "pages"), 1L)
+})
+
+test_that("`.values` widths follow the data; a column left out is named", {
+  skip_if_no_cards2()
+  d <- spec_pages_ard()
+  base <- function(columns) ard_spec(
+    tables = data.frame(cols = "TRT", rows = "group = variable"),
+    layout = data.frame(stub_into = "row_label", stub_before = "TRUE"),
+    columns = columns)
+  pg <- apply_plan(rtf_plan(d, spec = base(data.frame(
+    column = c("row_label", ".values"), width = c("5", "2"))), notes = FALSE),
+    "pages")
+  first <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
+  expect_identical(first$col_rel_width,
+                   c(5, rep(2, ncol(first$data) - 1L)))
+  expect_error(apply_plan(rtf_plan(d, spec = base(data.frame(
+    column = "row_label", width = "5")), notes = FALSE), "pages"),
+    "not for")
+})
+
+test_that("group_collapse alone does not become the grouping column", {
+  # `lay$group_col` would partially match `group_collapse`
+  skip_if_no_cards2()
+  sp <- ard_spec(tables = data.frame(cols = "TRT", rows = "group = variable"),
+                 layout = data.frame(group_collapse = "1"))
+  p <- rtf_plan(spec_pages_ard(), spec = sp, notes = FALSE)
+  g <- rtfreporter:::.plan_merge(rtfreporter:::.plan_of(p, "group"))
+  expect_null(g$group_col)
+  expect_identical(g$collapse_repeats, 1L)
+})
+
+test_that("stats = rows formats come from `cells` rows with no template", {
+  skip_if_no_cards2()
+  d <- spec_pages_ard()
+  d <- d[d$variable == "AGE", , drop = FALSE]
+  sp <- ard_spec(
+    tables = data.frame(cols = "TRT", rows = "Analyte = variable",
+                        label = "Statistics = stat_label", stats = "rows"),
+    cells = data.frame(row = c("N", "Mean", "SD"), digits = c("0", NA, NA),
+                       signif = c(NA, "4", "5")))
+  by_spec <- apply_plan(rtf_plan(d, spec = sp, notes = FALSE), "pages")
+  by_code <- rtf_plan(d, cols = "TRT", rows = c(Analyte = "variable"),
+                      label = c(Statistics = "stat_label"), stats = "rows",
+                      notes = FALSE) |>
+    plan_fmt(by = "Statistics",
+             formats = list(N = list(digits = 0), Mean = list(signif = 4),
+                            SD = list(signif = 5))) |>
+    apply_plan("pages")
+  expect_equal(by_spec, by_code)
+  # the same rows on a stats = cells table are a mistake, and said to be
+  bad <- sp
+  bad$tables$stats <- NA
+  expect_error(rtf_plan(nz(plan_ard()), spec = bad, notes = FALSE),
+               "not `stats = rows`")
+})
+
+test_that("display values are checked where they are written", {
+  expect_error(ard_spec(layout = data.frame(pages_max_rows = "twenty")),
+               "`layout\\$pages_max_rows` must be a whole number")
+  expect_error(ard_spec(style = data.frame(align_count_pct = "maybe")),
+               "TRUE or FALSE")
+  expect_error(ard_spec(columns = data.frame(width = "2")),
+               "needs a `column`")
+  expect_error(ard_spec(columns = data.frame(column = c("a", "a"))),
+               "two rows")
+  expect_error(ard_spec(layout = data.frame(output_id = c("T1", "T1"),
+                                            pages_max_rows = "5")),
+               "two rows")
+  lay <- rtfreporter:::.ard_spec_typed(
+    ard_spec(layout = data.frame(pages_cont_label = '" (Cont.)"',
+                                 colpages_carry = "1 | 2",
+                                 stub_vars = "a | b"))$layout, "layout")
+  expect_identical(lay$pages_cont_label, " (Cont.)")   # quotes keep spaces
+  expect_identical(lay$colpages_carry, 1:2)
+  expect_identical(lay$stub_vars, c("a", "b"))
 })

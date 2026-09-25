@@ -17,7 +17,6 @@ ard_spread(
   sort = FALSE,
   sep = "____",
   rounding = NULL,
-  spec = NULL,
   sort_stat = NULL,
   na = NA_character_,
   notes = TRUE
@@ -184,14 +183,6 @@ afterwards.}
 \code{"sas"} once.  It does \strong{not} reach \code{{x}} or \code{{x:stat_fmt}}, which take
 a string \pkg{cards} already rounded (half away from zero, as it
 happens).  See \code{\link[=round_num]{round_num()}}.}
-
-\item{spec}{An \code{\link[=ard_spec]{ard_spec()}} definition, or the path to a workbook, as
-\code{\link[=read_ard_spec]{read_ard_spec()}} reads it.  It can supply every argument above except
-\code{x} --- the roles (\code{cols}, \code{rows}, \code{label}) and the table-wide options
-from its \code{tables} sheet, \code{rounding} from \code{study}, \code{labels} and
-\code{levels} from \code{variables}, and \code{cells} from \code{cells}.  An argument given here wins over the spec.  A
-workbook defining several reports must be narrowed first, with
-\code{read_ard_spec(path, output_id = )}.}
 
 \item{sort_stat}{Name of a statistic to total across the spread columns and
 attach as a numeric \code{.sort_stat} column -- what a descending-frequency AE
