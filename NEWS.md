@@ -1,5 +1,27 @@
 # rtfreporter (development version)
 
+### New features
+
+- **One rounding rule for the whole package: `round_num()` and
+  `options(rtfreporter.rounding = )`** (#476).
+
+  `"r"` (the default) rounds an exact half to the even digit, as
+  `base::round()` does; `"sas"` rounds it away from zero, as SAS `ROUND()`
+  does, and absorbs a binary representation error the way SAS's fuzz does
+  (`2.675` -> `2.68`).  A study that has to match a SAS-produced table now
+  says so **once**, and `fmt_signif()`, `fmt_round()`, `fmt_numeric()` and
+  `format_count_pct()` all follow it; an explicit `rounding =` still wins.
+  `round_num()` is the same rule on a numeric vector, and the option is
+  reported by `rtfreporter_options()`.
+
+### Bug fixes
+
+- **`format_count_pct()` rounds the percent with the package rule** (#476).
+  It used `sprintf()`'s own rounding, so `6.25%` printed `6.2` even for a
+  study that rounds like SAS; it now takes `rounding =` like every other
+  formatter.  Rounding first also fixes the width: `9.96` used to take the
+  "< 10" branch and print a misaligned `10.0`, and `99.96` now prints `(100)`.
+
 ### Documentation
 
 - **The pre-1.0 exception and the hotfix procedure are written down** (#471).
