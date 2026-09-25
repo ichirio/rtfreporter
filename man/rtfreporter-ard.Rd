@@ -25,7 +25,6 @@ actually holds.}
 column header or an overall row.}
 \item{\code{\link[=ard_spec]{ard_spec()}}, \code{\link[=read_ard_spec]{read_ard_spec()}}, \code{\link[=write_ard_spec]{write_ard_spec()}},
 \code{\link[=ard_spec_template]{ard_spec_template()}}}{The spreadsheet definition file.}
-\item{\code{\link[=ard_round]{ard_round()}}}{SAS-style versus R-style rounding.}
 }
 }
 
@@ -45,7 +44,7 @@ from an explicit argument instead; only the tibble's rows are inspected.
 A template is a string with \code{{...}} tokens naming statistics:
 \tabular{ll}{
 \code{{mean}}      \tab the value \pkg{cards} itself formatted (\code{fmt_fun}) \cr
-\verb{\{mean:.1f\}}  \tab 1 decimal place, rounded per \code{round} \cr
+\verb{\{mean:.1f\}}  \tab 1 decimal place, rounded per \code{rounding} \cr
 \verb{\{p:.1f\\\%\}}   \tab multiplied by 100 first, then 1 decimal \cr
 \verb{\{mean:.3s\}}  \tab 3 significant digits \cr
 \code{{n:d}}       \tab integer \cr

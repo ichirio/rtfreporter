@@ -21,7 +21,55 @@
   study that rounds like SAS; it now takes `rounding =` like every other
   formatter.  Rounding first also fixes the width: `9.96` used to take the
   "< 10" branch and print a misaligned `10.0`, and `99.96` now prints `(100)`.
+
 ### Experimental ARD helpers
+
+- **The definition file is a three-sheet workbook, and it can say the
+  roles too** (#474).
+
+  One sheet per grain, so each fact is written once where it belongs:
+  `tables` (one row per report: `cols`, `rows`, `label`, `stats`, `value`,
+  `sep`, `sort`, `sort_stat`, `na`, `rounding`), `variables` (one row per
+  variable: `label`, `order`, `levels`) and `cells` (one row per line of a
+  cell: `variable`, `context`, `row`, `when`, `template`, `digits`,
+  `signif`).  The old single sheet repeated a variable's label, order and
+  levels on every one of its rows and read only the first, and its `round`
+  column claimed to apply per row while one value served the whole table.
+
+  `ard_spread(spec = )` can now supply **every** argument but `x`, so
+  `ard_normalize() |> ard_spread(spec = read_ard_spec("study.xlsx",
+  output_id = "AE"))` is a whole conversion; an argument written in the
+  call still wins.  `rtf_plan(spec = )` takes its roles from the same
+  `tables` row, checked against the data like any other role.
+
+  Every sheet follows one rule: a blank `output_id` is a study-wide
+  default and a report's own row replaces the default with the same key,
+  so a later sheet can join without a new rule.  The names `titles`,
+  `footnotes`, `page`, `header`, `footer`, `columns`, `layout` and `style`
+  are reserved for the rest of the RTF deliverable and reported, not
+  refused, when present; an `about` sheet records `spec_version`, and
+  sheets starting with `_` are ignored.  A column a sheet does not read is
+  an error (except `note`), so a mistyped header cannot become a setting
+  that silently never applies.
+
+  Rows sharing variable / context / row on `cells` are one fallback chain,
+  tried in sheet order, and the new `when` column guards one
+  (`n == 0` -> `0`), which is what an ORR table's special cases need.
+  `read_ard_spec()` reads an `.xlsx` or a folder of `tables.csv` /
+  `variables.csv` / `cells.csv` (one CSV cannot hold three sheets), and
+  refuses a workbook that defines several reports unless `output_id =`
+  says which.  `ard_spec_template()` gains `cols =` and `output_id =`.
+
+  Five example workbooks -- DM, AE, ORR, LB shift, PK, plus `study.xlsx`
+  with all five and their shared defaults -- ship in
+  `system.file("extdata", "ard-spec", package = "rtfreporter")`;
+  `data-raw/ard-spec-examples/make-examples.R` rebuilds them and checks
+  each gives the identical table to the same conversion written as code.
+
+- **`ard_round()` is withdrawn in favour of the package's one rule,
+  `round_num()`** (#476).  `ard_spread(round = )` and `plan_digits(round = )`
+  are now `rounding = `, and the option is `rtfreporter.rounding`, which
+  every formatter in the package reads.
 
 - **A factor key keeps the order it declared; a key variable's own rows are
   kept for the header; `.kind` is decided per summary** (#474).

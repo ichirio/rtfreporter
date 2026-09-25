@@ -2,20 +2,21 @@
 % Please edit documentation in R/ard-experimental.R
 \name{write_ard_spec}
 \alias{write_ard_spec}
-\title{Write an ARD table definition to a spreadsheet}
+\title{Write an ARD table definition to a workbook}
 \usage{
 write_ard_spec(spec, path)
 }
 \arguments{
-\item{spec}{An \code{\link[=ard_spec]{ard_spec()}}.}
+\item{spec}{An \code{\link[=ard_spec]{ard_spec()}} (or what it accepts).}
 
-\item{path}{Destination \code{.xlsx} (needs \pkg{writexl}) or \code{.csv}.}
+\item{path}{Destination \code{.xlsx} (needs \pkg{writexl}), or a folder, which
+receives \code{tables.csv}, \code{variables.csv} and \code{cells.csv}.}
 }
 \value{
 \code{path}, invisibly.
 }
 \description{
-Write an ARD table definition to a spreadsheet
+Write an ARD table definition to a workbook
 }
 \section{Lifecycle}{
 

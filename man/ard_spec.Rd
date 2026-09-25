@@ -2,54 +2,106 @@
 % Please edit documentation in R/ard-experimental.R
 \name{ard_spec}
 \alias{ard_spec}
-\title{A spreadsheet-shaped definition of how an ARD becomes a table}
+\title{A workbook-shaped definition of how an ARD becomes a table}
 \usage{
-ard_spec(x)
+ard_spec(tables = NULL, variables = NULL, cells = NULL)
 }
 \arguments{
-\item{x}{A data frame (or anything coercible) with the columns above.
-Missing optional columns are added as \code{NA}.}
+\item{tables, variables, cells}{Data frames with the columns above; missing
+columns are added as \code{NA}.  \code{tables} may instead be a named list of the
+three, or an \code{ard_spec} (returned as it is).}
 }
 \value{
-A data frame of class \code{ard_spec}.
+An object of class \code{ard_spec}: a list of the three data frames.
 }
 \description{
-\code{ard_spec()} validates (and fills out) the definition table that
-\code{\link[=ard_spread]{ard_spread()}} accepts as \verb{spec =}.  It carries the four
-things that otherwise have to be repeated in every script: the display
-label of each variable, the row templates, the rounding family, and the
-number of decimal or significant digits.
+\code{ard_spec()} validates the definition that \code{\link[=ard_spread]{ard_spread()}} accepts as
+\verb{spec =}, and \code{\link[=read_ard_spec]{read_ard_spec()}} builds one from a workbook.  It holds
+what would otherwise be repeated in every script --- which keys go
+across and down, the display label and order of each variable, and the
+template and digits of every row --- in \strong{three sheets, one per grain},
+so that each fact is written once:\tabular{lll}{
+   sheet \tab one row per \tab holds \cr
+   \code{tables} \tab report \tab the roles and the table-wide options \cr
+   \code{variables} \tab variable \tab display label, order, level order \cr
+   \code{cells} \tab line of a cell \tab template, guard, digits \cr
 }
-\details{
-One row of the spec is one row of the finished table -- or, when \code{row} is
-blank, one row per level of that variable.
 }
-\section{Columns}{
+\section{One rule on every sheet}{
+
+Every sheet starts with \code{output_id}.  \strong{Blank means a study-wide
+default; a row naming the report replaces the default row with the same
+key} --- the whole \code{tables} row for that report, the \code{variables} row
+for that variable, the \code{cells} rows for that variable / context / row.
+So one workbook can hold a house style and every report's own changes to
+it.  \code{\link[=read_ard_spec]{read_ard_spec()}} narrows it to one report with \verb{output_id =}.
+
+Explicit \code{\link[=ard_spread]{ard_spread()}} arguments win over the spec, and the spec wins
+over the defaults.
+
+Lists inside a cell are \code{|}-separated (\code{TR01AG1 | SEROSTAT}).  A column
+called \code{note} is allowed on any sheet and never read; any other column a
+sheet does not know is an error, so a mistyped header cannot become a
+setting that silently never applies.
+}
+
+\section{\code{tables}}{
 
 \describe{
-\item{\code{output_id}}{Optional; the report this row belongs to, so one
-shared file can define every table in a study.  Blank means the row is
-a default for all of them.  \code{\link[=read_ard_spec]{read_ard_spec()}} narrows the file with
-its own \code{output_id} argument, and a row naming the report beats a
-blank one for the same cell.}
-\item{\code{variable}}{Analysis variable the row applies to.  \code{"default"}, or
-a \code{context} value such as \code{"categorical"}, acts as a fallback.}
-\item{\code{label}}{Display label for the variable (the row-group text).}
-\item{\code{order}}{Integer; the order variables appear in the table.}
-\item{\code{context}}{Optional; restrict the row to one ARD \code{context}.}
-\item{\code{row}}{Row label within the variable, e.g. \code{Mean (SD)} or
-\verb{Min, Max}.  Blank means one row per \code{variable_level}.}
-\item{\code{template}}{The cell recipe, e.g. \code{{mean} ({sd})} or
-\verb{\{min\}, \{max\}}.  Several templates separated by \code{|} form a fallback
-chain: the first that resolves wins.}
-\item{\code{levels}}{\code{|}-separated level order for that variable.}
-\item{\code{round}}{\code{r} (half to even) or \code{sas} (half away from zero); wins
-over \code{getOption("rtfreporter.ard_round")} for the rows it names.}
-\item{\code{digits}}{Decimal places used for tokens with no inline spec.  A
-comma-separated list applies per token, e.g. \verb{1,2} for
-\code{{mean} ({sd})}.}
+\item{\code{cols}}{Column keys, outermost first: \code{TR01AG1 | SEROSTAT}.}
+\item{\code{rows}}{Row keys, in output order.  \code{name = column} renames
+(\code{group1 = AEBODSYS}); a quoted value is a constant heading
+(\code{group1 = "Worst Post-Baseline Values"}).}
+\item{\code{label}}{The row-label source, in the same notation
+(\code{label = AEDECOD}).  Blank keeps \code{.label}; \code{NA} builds it to tell
+rows apart and then drops it; \code{NULL} leaves it out.}
+\item{\code{stats}, \code{value}, \code{sep}, \code{sort_stat}, \code{na}}{As the
+\code{\link[=ard_spread]{ard_spread()}} arguments of the same name.}
+\item{\code{sort}}{\code{TRUE}, \code{FALSE}, or the keys in order:
+\code{.overall | group1 | .depth | -n | label}.}
+\item{\code{rounding}}{\code{r} or \code{sas}; see \code{\link[=round_num]{round_num()}}.}
+}
+}
+
+\section{\code{variables}}{
+
+\describe{
+\item{\code{variable}}{An analysis variable, or any column key (\code{BASEGR},
+\code{ATPT}, or the label column's own name).}
+\item{\code{label}}{Display text replacing the variable's name.}
+\item{\code{order}}{Number; the order the variables appear in.}
+\item{\code{levels}}{The order of its values: \verb{Grade 0 | Grade 1 | Total}.}
+}
+}
+
+\section{\code{cells}}{
+
+\describe{
+\item{\code{variable}, \code{context}}{What the row applies to.  Either may be
+blank; both blank is the default for everything.  \code{variable} may
+also be a context or kind (\code{continuous}, \code{categorical}), as a
+\code{cells} map key may.}
+\item{\code{row}}{The row label (\code{Mean (SD)}).  Blank means one row per
+level, labelled by the level.}
+\item{\code{when}}{Optional guard, ordinary R over the statistics:
+\code{n == 0}.  \strong{Several rows with the same variable / context / row are
+one chain}, tried in sheet order; the first whose guard holds and
+whose template resolves wins.}
+\item{\code{template}}{The cell recipe: \code{{mean} ({sd})}.}
+\item{\code{digits}}{Decimal places for tokens that name none, per token
+when comma-separated: \verb{1,2} for \code{{mean} ({sd})}.}
 \item{\code{signif}}{Significant digits; wins over \code{digits}.}
 }
+}
+
+\section{Reserved for the rest of the report}{
+
+A later version will read the sheets \code{titles}, \code{footnotes}, \code{page},
+\code{header}, \code{footer}, \code{columns}, \code{layout} and \code{style} under the same
+\code{output_id} rule, so the whole RTF deliverable can be defined in one
+workbook.  They are reported, not refused, when present today.  An
+\code{about} sheet (\code{key} / \code{value}) may state \code{spec_version}; sheets whose
+name starts with \verb{_} are ignored.
 }
 
 \section{Lifecycle}{

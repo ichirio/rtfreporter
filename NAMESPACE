@@ -202,10 +202,10 @@ export(ard_overall)
 export(ard_spread)
 export(ard_template)
 export(ard_spec)
+S3method(print,ard_spec)
 export(ard_spec_template)
 export(read_ard_spec)
 export(write_ard_spec)
-export(ard_round)
 # ---- experimental: ARD ----
 
 # ---- spike: ARD plan (#474, deletable with R/ard-plan-spike.R) ----

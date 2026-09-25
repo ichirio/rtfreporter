@@ -16,7 +16,7 @@ ard_spread(
   labels = NULL,
   sort = FALSE,
   sep = "____",
-  round = NULL,
+  rounding = NULL,
   spec = NULL,
   sort_stat = NULL,
   na = NA_character_,
@@ -178,16 +178,20 @@ afterwards.}
 
 \item{sep}{Separator pasted between multiple \code{cols} keys.}
 
-\item{round}{Tie-breaking rule for \verb{\{x:.1f\}}-style tokens.  \code{NULL}, the
-default, reads \code{getOption("rtfreporter.ard_round")} --- base R's
-half-to-even unless the study set \code{"sas"} once, which is the single
-place to change it.  It does \strong{not} reach \code{{x}} or \code{{x:stat_fmt}},
-which take a string \pkg{cards} already rounded (half away from zero, as
-it happens).  See \code{\link[=ard_round]{ard_round()}}.}
+\item{rounding}{Tie-breaking rule for \verb{\{x:.1f\}}-style tokens: \code{"r"} or
+\code{"sas"}.  \code{NULL}, the default, reads \code{getOption("rtfreporter.rounding")}
+--- the package's one rule, base R's half-to-even unless the study set
+\code{"sas"} once.  It does \strong{not} reach \code{{x}} or \code{{x:stat_fmt}}, which take
+a string \pkg{cards} already rounded (half away from zero, as it
+happens).  See \code{\link[=round_num]{round_num()}}.}
 
-\item{spec}{An \code{\link[=ard_spec]{ard_spec()}} definition (or the path to one) supplying
-labels, level orders, row templates and digits.  Arguments given
-explicitly win over the spec.}
+\item{spec}{An \code{\link[=ard_spec]{ard_spec()}} definition, or the path to a workbook, as
+\code{\link[=read_ard_spec]{read_ard_spec()}} reads it.  It can supply every argument above except
+\code{x} --- the roles (\code{cols}, \code{rows}, \code{label}) and the table-wide options
+from its \code{tables} sheet, \code{labels} and \code{levels} from \code{variables}, and
+\code{cells} from \code{cells}.  An argument given here wins over the spec.  A
+workbook defining several reports must be narrowed first, with
+\code{read_ard_spec(path, output_id = )}.}
 
 \item{sort_stat}{Name of a statistic to total across the spread columns and
 attach as a numeric \code{.sort_stat} column -- what a descending-frequency AE

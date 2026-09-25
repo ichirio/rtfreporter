@@ -33,18 +33,6 @@ ard_pipe <- function(ard, ...) {
   do.call(ard_spread, c(list(x = x), args[setdiff(names(args), keep)]))
 }
 
-# ---------------------------------------------------------------- ard_round
-
-test_that("ard_round() follows base R by default and SAS on request", {
-  expect_equal(ard_round(c(0.5, 1.5, 2.5, -0.5, -2.5), 0),
-               c(0, 2, 2, 0, -2))
-  expect_equal(ard_round(c(0.5, 1.5, 2.5, -0.5, -2.5), 0, type = "sas"),
-               c(1, 2, 3, -1, -3))
-  expect_equal(ard_round(2.345, 2, "sas"), 2.35)
-  expect_equal(ard_round(123.456, 1, "sas"), 123.5)
-  expect_equal(ard_round(c(NA, 1.25), 1, "sas"), c(NA, 1.3))
-})
-
 # ------------------------------------------------------------ ard_normalize
 
 test_that("ard_normalize() keys the group pairs by name and flattens list-cols", {
@@ -689,16 +677,6 @@ test_that("a bare token falls back to stat, but stat_fmt demanded is an error", 
                "no `stat_fmt` value")
 })
 
-test_that("the rounding family is one option away", {
-  expect_identical(ard_round(0.25, 1), 0.2)          # R's own, the default
-  old <- options(rtfreporter.ard_round = "sas")
-  on.exit(options(old), add = TRUE)
-  expect_identical(ard_round(0.25, 1), 0.3)
-  options(old)
-  expect_identical(ard_round(0.25, 1, "sas"), 0.3)   # explicit beats the option
-  expect_error(ard_round(1, 1, "nope"), "must be")
-})
-
 # ------------------------------------------------------- ard_overall(from) ---
 
 make_bound_ae <- function() {
@@ -932,15 +910,15 @@ test_that("sort_stat totals a statistic across the spread columns", {
   expect_equal(sum(sex$.sort_stat), 254)
 })
 
-test_that("round = 'r' reaches the cells", {
+test_that("rounding = 'r' reaches the cells", {
   skip_if_no_cards()
   d <- ard_normalize(make_ard())
   d <- d[d$variable == "AGE" & d$stat_name == "mean", ]
   d$stat <- 0.5
   sas <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-                    cells = "{mean:.0f}", round = "sas")
+                    cells = "{mean:.0f}", rounding = "sas")
   r   <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-                    cells = "{mean:.0f}", round = "r")
+                    cells = "{mean:.0f}", rounding = "r")
   expect_identical(sas$Placebo, "1")
   expect_identical(r$Placebo, "0")
 })
@@ -967,346 +945,170 @@ test_that("naming the analysed variable says where its levels went", {
 
 # ----------------------------------------------------------------- the spec
 
-test_that("a spec round-trips through CSV and drives the conversion", {
+dm_spec <- function(output_id = NA) {
+  ard_spec(
+    tables = data.frame(output_id = output_id, cols = "TRT",
+                        rows = "group = variable", rounding = "sas",
+                        stringsAsFactors = FALSE),
+    variables = data.frame(
+      output_id = output_id,
+      variable = c("AGE", "AGEGR", "SEX"),
+      label    = c("Age (years)", "Age group", "Sex"),
+      order    = 1:3,
+      levels   = c(NA, "<65 | 65-74 | >=75", NA),
+      stringsAsFactors = FALSE),
+    cells = data.frame(
+      output_id = output_id,
+      variable = c("AGE", "AGE", "categorical"),
+      row      = c("n", "Mean (SD)", NA),
+      template = c("{N}", "{mean} ({sd})", "{n} ({p})"),
+      digits   = c("0", "1,2", NA),
+      stringsAsFactors = FALSE))
+}
+
+test_that("a three-sheet spec supplies the roles as well as the cells", {
   skip_if_no_cards()
-  sp <- ard_spec(data.frame(
-    variable = c("AGE", "AGE", "AGEGR", "SEX"),
-    label    = c("Age (years)", NA, "Age group", "Sex"),
-    order    = c(1, 1, 2, 3),
-    row      = c("n", "Mean (SD)", NA, NA),
-    template = c("{N}", "{mean} ({sd})", "{n} ({p})", "{n} ({p})"),
-    levels   = c(NA, NA, "<65 | 65-74 | >=75", NA),
-    round    = "sas",
-    digits   = c("0", "1,2", NA, NA),
-    stringsAsFactors = FALSE))
+  sp <- dm_spec()
   expect_s3_class(sp, "ard_spec")
+  expect_identical(names(sp), c("tables", "variables", "cells"))
 
-  path <- tempfile(fileext = ".csv")
-  write_ard_spec(sp, path)
-  back <- read_ard_spec(path)
-  expect_equal(back$template, sp$template)
-  expect_equal(back$variable, sp$variable)
-  unlink(path)
-
-  tbl <- ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
-                   spec = sp)
+  # no cols / rows in the call: the `tables` sheet says them
+  tbl <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)
   expect_identical(as.character(unique(tbl$group)),
                    c("Age (years)", "Age group", "Sex"))
   age <- tbl[tbl$group == "Age (years)", ]
-  # the spec's row order becomes the label column's level order
-  expect_s3_class(tbl$label, "factor")
   expect_identical(as.character(age$label), c("n", "Mean (SD)"))
-  # digits = "1,2" applied per token, with no inline spec in the template
+  # digits = "1,2" per token, with no inline spec in the template
   expect_match(age$Placebo[2], "^[0-9]+[.][0-9] [(][0-9]+[.][0-9]{2}[)]$")
-  # levels from the spec ordered the categories
   gr <- tbl[tbl$group == "Age group", ]
   expect_identical(as.character(gr$label), c("<65", "65-74", ">=75"))
+
+  # the same table as the arguments written out
+  ref <- ard_spread(ard_normalize(make_ard()), cols = "TRT",
+                    rows = c(group = "variable"), rounding = "sas",
+                    labels = c(AGE = "Age (years)", AGEGR = "Age group",
+                               SEX = "Sex"),
+                    levels = list(AGEGR = c("<65", "65-74", ">=75")),
+                    cells = list(AGE = c("n" = "{N:.0f}",
+                                         "Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+                                 categorical = "{n} ({p})"),
+                    notes = FALSE)
+  expect_equal(as.data.frame(tbl), as.data.frame(ref))
 })
 
-test_that("ard_spec() validates and fills in the optional columns", {
-  sp <- ard_spec(data.frame(variable = "AGE", template = "{mean}"))
-  expect_true(all(c("label", "order", "context", "row", "levels", "round",
-                    "digits", "signif") %in% names(sp)))
-  expect_error(ard_spec(data.frame(x = 1)), "`variable` column")
-  expect_error(ard_spec(data.frame(variable = "AGE", round = "banker")),
-               "must be")
-})
-
-test_that("ard_spec_template() scaffolds one row per output row", {
-  skip_if_no_cards()
-  sp <- ard_spec_template(make_ard())
-  expect_s3_class(sp, "ard_spec")
-  expect_true(all(c("AGE", "AGEGR", "SEX") %in% sp$variable))
-  age <- sp[sp$variable == "AGE", ]
-  expect_true(all(c("n", "Mean (SD)", "Min, Max") %in% age$row))
-  expect_true(all(!is.na(sp$template)))
-})
-
-# ------------------------------------------------------- inspect / generate
-
-test_that("ard_keys() reports what the ARD holds", {
-  skip_if_no_cards()
-  out <- utils::capture.output(k <- ard_keys(make_ard()))
-  expect_true(any(grepl("TRT", out)))
-  expect_true("TRT" %in% k$keys)
-  expect_true(all(c("AGE", "SEX") %in% k$variables))
-  expect_true("continuous" %in% k$contexts)
-})
-
-test_that("ard_template() emits code that actually runs", {
-  skip_if_no_cards()
-  ard <- make_ard()
-  code <- utils::capture.output(gen <- ard_template(ard, cols = "TRT"))
-  expect_true(any(grepl("ard_normalize", gen)))
-  expect_true(any(grepl("ard_spread", gen)))
-  # the seam between the two is offered, commented out
-  expect_true(any(grepl("dplyr::mutate", gen, fixed = TRUE)))
-  expect_true(any(grepl("cols  = \"TRT\"", gen)))
-  # the generated script evaluates against the same ARD, and now runs past
-  # the table data.frame to the pages
-  e <- new.env(); assign("ard", ard, e)
-  suppressMessages(eval(parse(text = paste(gen, collapse = "
-")), e))
-  tbl <- get("tbl_df", e)
-  expect_true(is.data.frame(tbl))
-  expect_true("Placebo" %in% names(tbl))
-  expect_true(exists("pages", e))
-
-  spec_code <- utils::capture.output(
-    gen2 <- ard_template(ard, cols = "TRT", spec = TRUE))
-  expect_true(any(grepl("read_ard_spec", gen2)))
-})
-
-test_that("ard_template() writes the pipe the caller asked for", {
-  skip_if_no_cards()
-  ard <- make_ard()
-
-  # magrittr is the default because the two are not interchangeable in
-  # general: base R's `_` may still appear only once per call and only as a
-  # named argument (or the head of a $ / [ / [[ / @ chain), while `%>%`'s
-  # `.` is positional and may appear twice.  The generated pipeline uses no
-  # placeholder, so here they differ only in what the reader may add.
-  mag <- utils::capture.output(g_mag <- ard_template(ard, cols = "TRT"))
-  base <- utils::capture.output(
-    g_base <- ard_template(ard, cols = "TRT", pipe = "|>"))
-
-  expect_true(any(grepl("ard %>%", g_mag, fixed = TRUE)))
-  expect_false(any(grepl("|>", g_mag, fixed = TRUE)))
-  expect_true(any(grepl("ard |>", g_base, fixed = TRUE)))
-  expect_false(any(grepl("%>%", g_base, fixed = TRUE)))
-
-  # only the magrittr script needs a library() line: everything else the
-  # template writes is rtfreporter::-qualified on purpose
-  expect_true(any(grepl("library(magrittr)", g_mag, fixed = TRUE)))
-  expect_false(any(grepl("library(", g_base, fixed = TRUE)))
-
-  # the seam comment keeps its column whichever operator it is
-  seam <- function(g) grep("dplyr::mutate", g, value = TRUE)
-  expect_identical(regexpr("# <-", seam(g_mag), fixed = TRUE)[[1]],
-                   regexpr("# <-", seam(g_base), fixed = TRUE)[[1]])
-
-  # and both are valid R
-  expect_silent(parse(text = paste(g_mag, collapse = "\n")))
-  expect_silent(parse(text = paste(g_base, collapse = "\n")))
-})
-
-test_that("both pipes generate scripts that run, and agree", {
-  skip_if_no_cards()
-  skip_if_not_installed("magrittr")
-  ard <- make_ard()
-  run <- function(op) {
-    utils::capture.output(gen <- ard_template(ard, cols = "TRT", pipe = op))
-    e <- new.env(); assign("ard", ard, e)
-    suppressMessages(eval(parse(text = paste(gen, collapse = "\n")), e))
-    get("tbl_df", e)
-  }
-  expect_identical(run("|>"), run("%>%"))
-})
-
-test_that("the pipe is settable once with an option, and the argument wins", {
-  skip_if_no_cards()
-  ard <- make_ard()
-  old <- options(rtfreporter.ard_pipe = "|>")
-  on.exit(options(old), add = TRUE)
-
-  utils::capture.output(g <- ard_template(ard, cols = "TRT"))
-  expect_true(any(grepl("ard |>", g, fixed = TRUE)))
-
-  utils::capture.output(g2 <- ard_template(ard, cols = "TRT", pipe = "%>%"))
-  expect_true(any(grepl("ard %>%", g2, fixed = TRUE)))
-})
-
-test_that("an unknown pipe is refused by name", {
-  skip_if_no_cards()
-  expect_error(ard_template(make_ard(), cols = "TRT", pipe = "|>|"),
-               "%>%")
-  expect_error(ard_template(make_ard(), cols = "TRT", pipe = "|>|"),
-               "base R")
-  # the third value is named too, so the message is the whole menu
-  expect_error(ard_template(make_ard(), cols = "TRT", pipe = "|>|"),
-               "rstudio")
-  expect_error(ard_template(make_ard(), cols = "TRT", pipe = c("|>", "%>%")),
-               "`pipe` must be")
-})
-
-test_that("RStudio's own preference maps to an operator", {
-  # `insert_native_pipe_operator` is the boolean behind Ctrl+Shift+M;
-  # RStudio's factory default is FALSE.  The mapping is split out so it is
-  # testable without an RStudio to run in.
-  expect_identical(.ard_pipe_rstudio(TRUE), "|>")
-  expect_identical(.ard_pipe_rstudio(FALSE), "%>%")
-  # anything that is not one usable flag means "no answer"
-  expect_null(.ard_pipe_rstudio(NULL))
-  expect_null(.ard_pipe_rstudio(NA))
-  expect_null(.ard_pipe_rstudio(c(TRUE, FALSE)))
-  expect_null(.ard_pipe_rstudio("|>"))
-})
-
-test_that("the pipe resolves argument, then option, then RStudio, then %>%", {
-  # these tests do not run inside RStudio, so the RStudio step has no
-  # answer and the floor shows through
-  expect_null(.ard_rstudio_pref())
-  expect_identical(.ard_pipe_op(), "%>%")
-
-  old <- options(rtfreporter.ard_pipe = "|>")
-  on.exit(options(old), add = TRUE)
-  expect_identical(.ard_pipe_op(), "|>")          # option beats the floor
-  expect_identical(.ard_pipe_op("%>%"), "%>%")    # argument beats the option
-})
-
-test_that("naming \"rstudio\" says so when there is nothing to read", {
-  # a caller who NAMED it asked a question and is owed the answer ...
-  expect_message(expect_identical(.ard_pipe_op("rstudio"), "%>%"),
-                 "no RStudio preference to read")
-  old <- options(rtfreporter.ard_pipe = "rstudio")
-  on.exit(options(old), add = TRUE)
-  expect_message(.ard_pipe_op(), "no RStudio preference to read")
-  options(old)
-  # ... while the same fallback reached by default stays quiet
-  expect_silent(.ard_pipe_op())
-})
-
-test_that("ard_template() takes the pipe through the same door", {
-  skip_if_no_cards()
-  ard <- make_ard()
-  expect_message(
-    utils::capture.output(g <- ard_template(ard, cols = "TRT",
-                                            pipe = "rstudio")),
-    "no RStudio preference to read")
-  expect_true(any(grepl("ard %>%", g, fixed = TRUE)))
-})
-
-
-# ------------------------------------------------------------- guarded cells
-
-test_that("a guard picks the template and a false guard falls through", {
+test_that("an argument given in the call wins over the spec", {
   skip_if_no_cards()
   d <- ard_normalize(make_ard())
-  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-                  cells = c(n == 0 ~ "none", "{n:.0f} ({p:.1f%})"),
-                  notes = FALSE)
-  # SEX has no empty cell here, so every guard is false and the chain falls
-  # through to the bare template
-  sex <- z[z$group == "SEX", ]
-  expect_true(all(grepl(") ", paste0(stats::na.omit(sex[[3]]), " "), fixed = TRUE)))
-  expect_false(any(stats::na.omit(sex[[3]]) == "none"))
+  tbl <- ard_spread(d, spec = dm_spec(), rows = c(block = "variable"),
+                    notes = FALSE)
+  expect_true("block" %in% names(tbl))
+  expect_false("group" %in% names(tbl))
 })
 
-test_that("a guard fires when its condition holds", {
+test_that("the workbook round-trips, as xlsx and as a folder of CSVs", {
   skip_if_no_cards()
-  d <- ard_normalize(make_ard())
-  d$stat[d$stat_name == "n" & d$variable == "SEX"] <- 0
-  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-                  cells = c(n == 0 ~ "none", "{n:.0f} ({p:.1f%})"),
-                  notes = FALSE)
-  expect_true(all(z[z$group == "SEX", 3] == "none"))
-})
+  sp <- dm_spec("DM")
+  dir <- tempfile()
+  write_ard_spec(sp, dir)
+  expect_true(all(file.exists(file.path(dir, c("tables.csv", "variables.csv",
+                                               "cells.csv")))))
+  back <- read_ard_spec(dir)
+  expect_identical(attr(back, "output_id"), "DM")
+  expect_equal(back$cells$template, sp$cells$template)
+  unlink(dir, recursive = TRUE)
 
-test_that("a guard may read a key column, not only a statistic", {
-  skip_if_no_cards()
-  d <- ard_normalize(make_ard())
-  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-                  cells = c(variable == "SEX" ~ "sex:{n:.0f}", "{n:.0f}"),
-                  notes = FALSE)
-  expect_true(all(grepl("^sex:", stats::na.omit(z[z$group == "SEX", 3]))))
-  expect_false(any(grepl("^sex:", stats::na.omit(z[z$group == "AGEGR", 3]))))
-})
-
-test_that("a guard naming a statistic that is not there is simply false", {
-  skip_if_no_cards()
-  d <- ard_normalize(make_ard())
-  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-                  cells = c(no_such_stat > 1 ~ "never", "{n:.0f}"),
-                  notes = FALSE)
-  expect_false(any(stats::na.omit(unlist(z[, -(1:2)])) == "never"))
-})
-
-test_that("a guard can read the caller's own variables", {
-  skip_if_no_cards()
-  cutoff <- 1e6
-  d <- ard_normalize(make_ard())
-  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-                  cells = c(n < cutoff ~ "small", "{n:.0f}"), notes = FALSE)
-  expect_true(all(stats::na.omit(unlist(z[, -(1:2)])) == "small"))
-})
-
-test_that("ard_cells() gives a named row a chain of its own", {
-  skip_if_no_cards()
-  d <- ard_normalize(make_ard())
-  z <- ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-                  cells = ard_cells("first"  = c(n == 0 ~ "-", "{n:.0f}"),
-                                    "second" = "{p:.2f}"),
-                  notes = FALSE)
-  expect_setequal(unique(as.character(z$label)), c("first", "second"))
-  expect_s3_class(ard_cells(a = "{n}"), "ard_cells")
-})
-
-test_that("a one-sided guard says what is missing", {
-  skip_if_no_cards()
-  d <- ard_normalize(make_ard())
-  expect_error(
-    ard_spread(d, cols = "TRT", rows = c(group = "variable"),
-               cells = c(~ "{n:.0f}"), notes = FALSE),
-    "both sides")
-})
-
-# --------------------------------------------- one shared spec, many reports
-
-spec_rows <- function(output_id, variable, row, template, digits = NA,
-                      label = NA) {
-  data.frame(output_id, variable, label, order = 1, context = NA, row,
-             template, levels = NA, round = "sas", digits, signif = NA,
-             stringsAsFactors = FALSE)
-}
-
-test_that("output_id narrows a shared spec, and a named row beats a default", {
-  sp <- ard_spec(rbind(
-    spec_rows(NA,        "AGE", "Mean (SD)", "{mean} ({sd})", "1,2", "Age"),
-    spec_rows("T14-3-1", "AGE", "Mean (SD)", "{mean} ({sd})", "3,4", "Age PK")))
-  a <- rtfreporter:::.ard_spec_scope(sp, "T14-1-1")
-  b <- rtfreporter:::.ard_spec_scope(sp, "T14-3-1")
-  expect_identical(nrow(a), 1L)
-  expect_identical(a$digits, "1,2")
-  expect_identical(nrow(b), 1L)
-  expect_identical(b$digits, "3,4")      # the report's own row wins
-})
-
-test_that("a spec that defines one cell twice stops, naming the cell", {
-  expect_error(
-    ard_spec(rbind(spec_rows(NA, "AGE", "Mean (SD)", "{mean}"),
-                   spec_rows(NA, "AGE", "Mean (SD)", "{median}"))),
-    "same cell twice")
-  # the same two rows are fine once they name different reports
-  sp <- ard_spec(rbind(spec_rows("T1", "AGE", "Mean (SD)", "{mean}"),
-                       spec_rows("T2", "AGE", "Mean (SD)", "{median}")))
-  expect_s3_class(sp, "ard_spec")
-  expect_error(rtfreporter:::.ard_spec_scope(
-    ard_spec(rbind(spec_rows("T1", "AGE", "Mean (SD)", "{mean}"),
-                   spec_rows("T1", "AGE", "Mean (SD)", "{median}"))), "T1"),
-    "same cell twice")
-})
-
-test_that("output_id against a spec that cannot honour it is an error", {
-  only <- ard_spec(spec_rows("T1", "AGE", "Mean (SD)", "{mean}"))
-  expect_error(rtfreporter:::.ard_spec_scope(only, "T9"), "nothing would apply")
-  # the column has to be in the FILE; a scaffold whose column is still blank
-  # is fine, and every row is simply a default
-  f <- tempfile(fileext = ".csv")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("readxl")
+  f <- tempfile(fileext = ".xlsx")
   on.exit(unlink(f), add = TRUE)
-  d <- as.data.frame(ard_spec(spec_rows(NA, "AGE", "Mean (SD)", "{mean}")))
-  utils::write.csv(d[, setdiff(names(d), "output_id")], f, row.names = FALSE,
-                   na = "")
-  expect_error(read_ard_spec(f, output_id = "T1"), "no `output_id` column")
-  utils::write.csv(d, f, row.names = FALSE, na = "")
-  expect_identical(nrow(read_ard_spec(f, output_id = "T1")), 1L)
+  write_ard_spec(sp, f)
+  expect_true("about" %in% readxl::excel_sheets(f))
+  back <- read_ard_spec(f, output_id = "DM")
+  expect_equal(back$variables$levels, sp$variables$levels)
+  a <- ard_spread(ard_normalize(make_ard()), spec = f, notes = FALSE)
+  b <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)
+  expect_equal(a, b)
 })
 
-test_that("an unnamed report falls back to the defaults, and says so", {
-  sp <- ard_spec(rbind(spec_rows(NA,   "AGE", "Mean (SD)", "{mean}"),
-                       spec_rows("T1", "SEX", NA,          "{n}")))
-  expect_message(rtfreporter:::.ard_spec_scope(sp, "T9"), "default rows are used")
-  expect_identical(nrow(suppressMessages(
-    rtfreporter:::.ard_spec_scope(sp, "T9"))), 1L)
+test_that("rows with the same key are one chain, and `when` guards one", {
+  skip_if_no_cards()
+  d <- ard_normalize(make_ard())
+  d$stat[d$stat_name == "n" & d$variable == "SEX" & d$.label == "F"] <- 0
+  sp <- ard_spec(
+    tables = data.frame(cols = "TRT", rows = "group = variable"),
+    cells = data.frame(variable = c("SEX", "SEX"),
+                       when     = c("n == 0", NA),
+                       template = c("none", "{n} ({p})")))
+  tbl <- ard_spread(d, spec = sp, notes = FALSE)
+  sex <- tbl[tbl$group == "SEX", ]
+  expect_identical(unname(unlist(sex[sex$label == "F", "Placebo"])), "none")
+  expect_false(any(sex$Placebo[sex$label == "M"] == "none"))
+  expect_error(rtfreporter:::.ard_spec_cells(ard_spec(cells = data.frame(
+    variable = "SEX", when = "n ==", template = "x"))), "not valid R")
+})
+
+test_that("quoted values in `rows` are constant headings; NA drops the label", {
+  a <- rtfreporter:::.ard_spec_table_args(ard_spec(tables = data.frame(
+    cols = "BASEGR", rows = 'LBTOX_LBL | group1 = "Worst Post-Baseline"',
+    label = "NA", sort = ".overall | group1 | -n")))
+  expect_identical(a$cols, "BASEGR")
+  expect_true(is.list(a$rows))
+  expect_identical(names(a$rows), c("", "group1"))
+  expect_identical(a$rows[[1L]], "LBTOX_LBL")
+  expect_s3_class(a$rows[[2L]], "formula")
+  expect_true(is.na(a$label))
+  expect_identical(a$sort, c(".overall", "group1", "-n"))
+  b <- rtfreporter:::.ard_spec_table_args(ard_spec(tables = data.frame(
+    cols = "TR01AG1 | SEROSTAT", label = "label = AEDECOD", sort = "false")))
+  expect_identical(b$cols, c("TR01AG1", "SEROSTAT"))
+  expect_identical(b$label, c(label = "AEDECOD"))
+  expect_false(b$sort)
+})
+
+test_that("ard_spec() refuses what it would otherwise quietly ignore", {
+  expect_error(ard_spec(tables = data.frame(cols = "TRT", colz = "x")),
+               "does not read")
+  # a column that belongs on another sheet says which
+  expect_error(ard_spec(tables = data.frame(cols = "TRT", levels = "a | b")),
+               "a `variables` column")
+  expect_error(ard_spec(tables = data.frame(rounding = "banker")), "must be")
+  expect_error(ard_spec(cells = data.frame(variable = "AGE", row = "n")),
+               "no `template`")
+  expect_error(ard_spec(tables = data.frame(output_id = c("T1", "T1"),
+                                            cols = "TRT")), "two rows")
+  expect_error(ard_spec(variables = data.frame(variable = c("AGE", "AGE"))),
+               "two rows")
+  # `note` is for people and always allowed
+  expect_s3_class(ard_spec(tables = data.frame(cols = "TRT", note = "hi")),
+                  "ard_spec")
+  # the one-sheet layout names where its columns went
+  expect_error(ard_spec(data.frame(variable = "AGE", template = "{mean}")),
+               "one-sheet layout")
+})
+
+test_that("`cols` has to come from somewhere", {
+  skip_if_no_cards()
+  expect_error(ard_spread(ard_normalize(make_ard()),
+                          spec = ard_spec(cells = data.frame(
+                            variable = "AGE", template = "{mean}"))),
+               "`cols` is required")
+})
+
+test_that("ard_spec_template() scaffolds the three sheets", {
+  skip_if_no_cards()
+  sp <- ard_spec_template(make_ard(), cols = "TRT", output_id = "DM")
+  expect_s3_class(sp, "ard_spec")
+  expect_identical(sp$tables$cols, "TRT")
+  expect_identical(sp$tables$output_id, "DM")
+  expect_true(all(c("AGE", "AGEGR", "SEX") %in% sp$variables$variable))
+  expect_false("TRT" %in% sp$variables$variable)   # a key, not a variable
+  age <- sp$cells[sp$cells$variable == "AGE", ]
+  expect_true(all(c("n", "Mean (SD)", "Min, Max") %in% age$row))
+  lv <- sp$variables$levels[sp$variables$variable == "AGEGR"]
+  expect_setequal(strsplit(lv, " | ", fixed = TRUE)[[1]], c("<65", "65-74", ">=75"))
+  # and it runs as written
+  tbl <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)
+  expect_true(all(c("Placebo") %in% names(tbl)))
 })
 
 # -------------------------------------------- which template made each cell
@@ -1357,22 +1159,22 @@ test_that("the rounding family: argument > spec > option > R's own", {
     ard_spread(d, cols = "TRT", rows = c(group = "variable"),
                cells = "{mean:.1f}", notes = FALSE, ...)$Placebo[1]
   }
-  sp <- ard_spec(data.frame(variable = "AGE", template = "{mean:.1f}",
-                            round = "sas", stringsAsFactors = FALSE))
+  sp <- ard_spec(tables = data.frame(rounding = "sas"),
+                 cells = data.frame(variable = "AGE", template = "{mean:.1f}"))
 
-  expect_identical(cell(), "0.2")                      # R's own, the default
-  expect_identical(cell(round = "sas"), "0.3")         # the argument
-  expect_identical(cell(spec = sp), "0.3")             # the spec file
-  expect_identical(cell(spec = sp, round = "r"), "0.2")# argument beats spec
+  expect_identical(cell(), "0.2")                         # R's own, the default
+  expect_identical(cell(rounding = "sas"), "0.3")         # the argument
+  expect_identical(cell(spec = sp), "0.3")                # the spec file
+  expect_identical(cell(spec = sp, rounding = "r"), "0.2")# argument beats spec
 
-  old <- options(rtfreporter.ard_round = "sas")
+  old <- options(rtfreporter.rounding = "sas")            # the package's one
   on.exit(options(old), add = TRUE)
-  expect_identical(cell(), "0.3")                      # the option
-  expect_identical(cell(round = "r"), "0.2")           # argument beats option
+  expect_identical(cell(), "0.3")                         # the option
+  expect_identical(cell(rounding = "r"), "0.2")           # argument beats option
   options(old)
 })
 
-test_that("a named round is passed on and leaves the spec alone", {
+test_that("a named rounding is passed on and leaves the spec alone", {
   skip_if_no_cards()
   a <- make_ard()
   cell <- function(...) {
@@ -1385,9 +1187,9 @@ test_that("a named round is passed on and leaves the spec alone", {
   d$stat <- 0.5
   f <- function(...) ard_spread(d, cols = "TRT", rows = c(group = "variable"),
                                 cells = "{mean:.0f}", notes = FALSE, ...)$Placebo[1]
-  expect_identical(f(round = "sas"), "1")
-  expect_identical(f(round = "r"), "0")
-  expect_type(cell(round = "sas"), "character")
+  expect_identical(f(rounding = "sas"), "1")
+  expect_identical(f(rounding = "r"), "0")
+  expect_type(cell(rounding = "sas"), "character")
 })
 
 test_that("a variable the hierarchy does not cover keeps its own level", {
@@ -1827,4 +1629,17 @@ test_that(".kind is decided per summary, not per variable", {
                    "continuous")
   expect_identical(unique(d$.kind[body & d$context == "categorical"]),
                    "categorical")
+})
+
+test_that("the example workbooks shipped with the package still read and run", {
+  skip_if_not_installed("readxl")
+  dir <- system.file("extdata", "ard-spec", package = "rtfreporter")
+  skip_if(!nzchar(dir), "examples not installed")
+  for (id in c("DM", "AE", "ORR", "LB", "PK")) {
+    sp <- read_ard_spec(file.path(dir, paste0(id, ".xlsx")))
+    expect_identical(attr(sp, "output_id"), id)
+    expect_s3_class(read_ard_spec(file.path(dir, "study.xlsx"),
+                                  output_id = id), "ard_spec")
+  }
+  expect_error(read_ard_spec(file.path(dir, "study.xlsx")), "defines 5 reports")
 })

@@ -2,24 +2,31 @@
 % Please edit documentation in R/ard-experimental.R
 \name{ard_spec_template}
 \alias{ard_spec_template}
-\title{Scaffold a definition file from an ARD}
+\title{Scaffold a definition workbook from an ARD}
 \usage{
-ard_spec_template(ard, path = NULL)
+ard_spec_template(ard, path = NULL, cols = NULL, output_id = NULL)
 }
 \arguments{
 \item{ard}{A cards/cardx ARD.}
 
 \item{path}{Optional destination; when given the spec is also written there
 with \code{\link[=write_ard_spec]{write_ard_spec()}}.}
+
+\item{cols}{The column keys for the \code{tables} row, if known.}
+
+\item{output_id}{The report the rows belong to; \code{NULL} writes them as
+defaults.}
 }
 \value{
-An \code{\link[=ard_spec]{ard_spec()}} data frame, invisibly when \code{path} is given.
+An \code{\link[=ard_spec]{ard_spec()}}, invisibly when \code{path} is given.
 }
 \description{
-Walks the ARD and emits one \code{\link[=ard_spec]{ard_spec()}} row per analysis variable (per row
-template, for a continuous one), pre-filled with the statistics that
-variable actually carries.  Edit the labels and templates, save it, and hand
-it back through \verb{spec =}.
+Walks the ARD and writes the three \code{\link[=ard_spec]{ard_spec()}} sheets: one \code{tables} row,
+one \code{variables} row per analysis variable (its levels filled in for a
+categorical one), and one \code{cells} row per row template --- a continuous
+variable gets the templates its statistics can fill, a categorical one
+\code{{n} ({p})}.  Edit the labels, templates and digits, and hand it back
+through \verb{spec =}.
 }
 \section{Lifecycle}{
 

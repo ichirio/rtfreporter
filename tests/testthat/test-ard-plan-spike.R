@@ -214,14 +214,14 @@ test_that("two unnamed values are refused", {
 
 test_that("the rounding family is last-wins, like every other layer", {
   skip_if_no_cards2()
-  p <- base_plan() |> plan_digits(1, round = "sas") |> plan_digits(2, round = "r")
-  expect_identical(apply_plan(p, "args")$spread$round, "r")
+  p <- base_plan() |> plan_digits(1, rounding = "sas") |> plan_digits(2, rounding = "r")
+  expect_identical(apply_plan(p, "args")$spread$rounding, "r")
 })
 
 test_that("one rounding family reaches ard_spread()", {
   skip_if_no_cards2()
-  p <- base_plan() |> plan_digits(1) |> plan_digits(1, round = "sas")
-  expect_identical(apply_plan(p, "args")$spread$round, "sas")
+  p <- base_plan() |> plan_digits(1) |> plan_digits(1, rounding = "sas")
+  expect_identical(apply_plan(p, "args")$spread$rounding, "sas")
 })
 
 # ------------------------------------------------- what a plan starts from
@@ -1562,4 +1562,27 @@ test_that("a variable summarised and tabulated gets both recipes in a plan", {
     apply_plan("table"))
   expect_equal(as.data.frame(planned), as.data.frame(direct))
   expect_false(anyNA(direct[!is.na(direct$label), -(1:2)]))
+})
+
+# ------------------------------------------------ roles from a definition file
+
+test_that("rtf_plan(spec = ) takes the roles from the spec's tables sheet", {
+  skip_if_no_cards2()
+  sp <- ard_spec(
+    tables = data.frame(cols = "TRT", rows = "group = variable"),
+    cells  = data.frame(variable = c("continuous", "categorical"),
+                        row      = c("Mean (SD)", NA),
+                        template = c("{mean} ({sd})", "{n} ({p})"),
+                        digits   = c("1,2", "0")))
+  d <- nz(plan_ard())
+  p <- rtf_plan(d, spec = sp, notes = FALSE)
+  expect_identical(p$roles$cols, "TRT")
+  expect_identical(p$roles$rows, c(group = "variable"))
+  expect_equal(as.data.frame(apply_plan(p, "table")),
+               as.data.frame(ard_spread(d, spec = sp, notes = FALSE)))
+  # a role in the call still wins, and is checked against the data
+  p2 <- rtf_plan(d, spec = sp, rows = c(block = "variable"), notes = FALSE)
+  expect_identical(p2$roles$rows, c(block = "variable"))
+  bad <- ard_spec(tables = data.frame(cols = "NOPE"))
+  expect_error(rtf_plan(d, spec = bad), "no column 'NOPE'|NOPE")
 })

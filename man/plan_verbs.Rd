@@ -30,7 +30,7 @@ plan_labels(plan, ...)
 
 plan_cells(plan, ...)
 
-plan_digits(plan, ..., round = NULL)
+plan_digits(plan, ..., rounding = NULL)
 
 plan_fmt(plan, ...)
 
@@ -144,8 +144,8 @@ whose value is itself a named vector applies to that \strong{column}
 only: a shift table's \code{"0"} is \code{"Grade 0"} down the side and
 \code{"Baseline 0"} across the top.}
 
-\item{round}{For \code{plan_digits()}: the tie-breaking family for the
-run, as \code{ard_spread(round = )} takes it.  Last wins, like every
+\item{rounding}{For \code{plan_digits()}: the tie-breaking family for the
+run, as \code{ard_spread(rounding = )} takes it.  Last wins, like every
 other layer.}
 
 \item{vars, into, indent, group_summary}{For \code{plan_stub()}: the row keys to

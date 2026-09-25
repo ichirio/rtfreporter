@@ -10,6 +10,8 @@
 #    4. delete the block in NAMESPACE between the two
 #               "# ---- experimental: ARD ----" marker comments
 #    5. drop the "Experimental ARD helpers" section from NEWS.md
+#    6. delete  inst/extdata/ard-spec/  and  data-raw/ard-spec-examples/
+#               (the example definition workbooks and their builder)
 #
 #  No other source file in the package refers to any of these functions, and
 #  nothing here is used by as_rtftables() or the renderer.
@@ -34,8 +36,7 @@
 .experimental_exports <- c(
   "ard_pull", "ard_keys", "ard_normalize", "ard_overall", "ard_spread", "ard_template",
   "ard_cells",
-  "ard_spec", "ard_spec_template", "read_ard_spec", "write_ard_spec",
-  "ard_round")
+  "ard_spec", "ard_spec_template", "read_ard_spec", "write_ard_spec")
 
 
 # ---------------------------------------------------------------- utilities
@@ -373,30 +374,18 @@
 }
 
 # ============================================================================
-#  ard_round()
+#  rounding
 # ============================================================================
 
-# The rounding family, resolved once.  R's own half-to-even is the default
-# because this is an R package and that is what `round()` does; a study that
-# has to match SAS says so ONCE --
-#     options(rtfreporter.ard_round = "sas")
-# -- instead of repeating `round =` at every call.  An explicit argument
-# still wins over the option, and a spec file's `round` column wins over
-# both for the rows it names.
-.ard_round_type <- function(x = NULL) {
-  if (is.null(x)) x <- getOption("rtfreporter.ard_round", "r")
-  if (!is.character(x) || length(x) != 1L || !x %in% c("r", "sas")) {
-    .ard_stop(paste0("`round` must be \"r\" (half to even, what R's own ",
-                     "round() does) or \"sas\" (half away from zero)."))
-  }
-  x
-}
+# The rounding family is the package's one rule (round_num(), option
+# `rtfreporter.rounding`); an ARD table does not get a second one.
 
 # Format to `d` significant digits with the caller's rounding family.
 # The decimals a significant-digit request implies depend on the value,
 # so each element is handled on its own; trailing zeros are dropped, as
 # signif() + format() did, so only the HALF cases change.
 .ard_signif_fmt <- function(x, d, round_type = NULL) {
+  rnd <- .rounder(round_type)
   out <- character(length(x))
   for (i in seq_along(x)) {
     v <- x[[i]]
@@ -406,55 +395,14 @@
     }
     dec <- if (v == 0) max(0L, d - 1L) else
       max(0L, d - 1L - as.integer(floor(log10(abs(v)))))
-    r <- ard_round(v, dec, round_type)
+    r <- rnd(v, dec)
     # rounding can carry into the next decade (99.95 -> 100.0)
     dec2 <- if (r == 0) max(0L, d - 1L) else
       max(0L, d - 1L - as.integer(floor(log10(abs(r)))))
-    if (!identical(dec2, dec)) r <- ard_round(v, dec2, round_type)
+    if (!identical(dec2, dec)) r <- rnd(v, dec2)
     out[i] <- format(r, trim = TRUE, scientific = FALSE)
   }
   out
-}
-
-#' Round the way R rounds, or the way SAS rounds
-#'
-#' `ard_round()` exists because the two families disagree on a tie.  Base R
-#' uses IEEE "round half to even" (`round(0.5)` is `0`, `round(2.5)` is `2`),
-#' while SAS's `ROUND()` rounds a half **away from zero** (`0.5` becomes `1`,
-#' `2.5` becomes `3`).  R's own rule is the default, this being an R package;
-#' a study that has to match a SAS-produced table says so once, with
-#' `options(rtfreporter.ard_round = "sas")`, rather than at every call.
-#'
-#' Note that cards already rounds a half away from zero when it writes
-#' `stat_fmt`, so a table built from `{x}` tokens follows SAS whatever this
-#' option says --- the option reaches `{x:.1f}`-style tokens, which round
-#' here.
-#'
-#' @param x Numeric vector.
-#' @param digits Number of decimal places.
-#' @param type `"r"` (base R's half-to-even) or `"sas"` (half away from zero).
-#'   `NULL`, the default, reads `getOption("rtfreporter.ard_round")`, which is
-#'   `"r"` unless the study set it --- **one line, once**:
-#'   `options(rtfreporter.ard_round = "sas")`.  An explicit `type` still wins.
-#'
-#' @return A numeric vector.
-#'
-#' @section Lifecycle:
-#' **Experimental.**  See [rtfreporter-ard].
-#'
-#' @examples
-#' ard_round(c(0.5, 1.5, 2.5, -0.5), 0)              # R:   0 2 2  0
-#' ard_round(c(0.5, 1.5, 2.5, -0.5), 0, type = "sas") # SAS: 1 2 3 -1
-#' @export
-ard_round <- function(x, digits = 0, type = NULL) {
-  type <- .ard_round_type(type)
-  x <- as.numeric(x)
-  if (identical(type, "r")) return(round(x, digits))
-  m <- 10^digits
-  # scale, nudge off a representation error, then truncate towards zero
-  z <- abs(x) * m
-  z <- floor(z + 0.5 + sqrt(.Machine$double.eps) * abs(z))
-  sign(x) * z / m
 }
 
 
@@ -463,7 +411,7 @@ ard_round <- function(x, digits = 0, type = NULL) {
 # ============================================================================
 #
 #   {mean}            the value cards itself formatted (its fmt_fun output)
-#   {mean:.1f}        1 decimal, rounded with `round`
+#   {mean:.1f}        1 decimal, rounded with `rounding`
 #   {p:.1f%}          multiply by 100 first, then 1 decimal
 #   {mean:.3s}        3 significant digits
 #   {n:d}             integer
@@ -536,7 +484,7 @@ ard_round <- function(x, digits = 0, type = NULL) {
   if (pct) x <- x * 100
   if (grepl("^[.][0-9]+f$", spec)) {
     d <- as.integer(gsub("[.f]", "", spec))
-    return(sprintf(paste0("%.", d, "f"), ard_round(x, d, round_type)))
+    return(sprintf(paste0("%.", d, "f"), .rounder(round_type)(x, d)))
   }
   if (grepl("^[.][0-9]+s$", spec)) {
     d <- as.integer(gsub("[.s]", "", spec))
@@ -548,7 +496,7 @@ ard_round <- function(x, digits = 0, type = NULL) {
     return(.ard_signif_fmt(x, d, round_type))
   }
   if (identical(spec, "d")) {
-    return(sprintf("%.0f", ard_round(x, 0, round_type)))
+    return(sprintf("%.0f", .rounder(round_type)(x, 0)))
   }
   .ard_stop(sprintf(paste0("Unknown format spec '%s'. Use .Nf, .Ns, d, ",
                            "stat, stat_fmt, or a %s suffix."), spec, "%"))
@@ -1797,15 +1745,19 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #'   an AE table's row order, and needs neither `sort_stat` nor an `arrange()`
 #'   afterwards.
 #' @param sep Separator pasted between multiple `cols` keys.
-#' @param round Tie-breaking rule for `{x:.1f}`-style tokens.  `NULL`, the
-#'   default, reads `getOption("rtfreporter.ard_round")` --- base R's
-#'   half-to-even unless the study set `"sas"` once, which is the single
-#'   place to change it.  It does **not** reach `{x}` or `{x:stat_fmt}`,
-#'   which take a string \pkg{cards} already rounded (half away from zero, as
-#'   it happens).  See [ard_round()].
-#' @param spec An [ard_spec()] definition (or the path to one) supplying
-#'   labels, level orders, row templates and digits.  Arguments given
-#'   explicitly win over the spec.
+#' @param rounding Tie-breaking rule for `{x:.1f}`-style tokens: `"r"` or
+#'   `"sas"`.  `NULL`, the default, reads `getOption("rtfreporter.rounding")`
+#'   --- the package's one rule, base R's half-to-even unless the study set
+#'   `"sas"` once.  It does **not** reach `{x}` or `{x:stat_fmt}`, which take
+#'   a string \pkg{cards} already rounded (half away from zero, as it
+#'   happens).  See [round_num()].
+#' @param spec An [ard_spec()] definition, or the path to a workbook, as
+#'   [read_ard_spec()] reads it.  It can supply every argument above except
+#'   `x` --- the roles (`cols`, `rows`, `label`) and the table-wide options
+#'   from its `tables` sheet, `labels` and `levels` from `variables`, and
+#'   `cells` from `cells`.  An argument given here wins over the spec.  A
+#'   workbook defining several reports must be narrowed first, with
+#'   `read_ard_spec(path, output_id = )`.
 #' @param sort_stat Name of a statistic to total across the spread columns and
 #'   attach as a numeric `.sort_stat` column -- what a descending-frequency AE
 #'   table sorts on.  `NULL` (default) adds nothing.
@@ -1840,41 +1792,46 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
                        value = c("stat", "stat_fmt"),
                        levels = NULL, labels = NULL, sort = FALSE,
                        sep = "____",
-                       round = NULL, spec = NULL,
+                       rounding = NULL, spec = NULL,
                        sort_stat = NULL, na = NA_character_, notes = TRUE) {
+  # The spec first: it can supply any argument, and `missing()` is the only
+  # honest way to tell "not given" from "given as the default".  Explicit
+  # argument > spec > the default in the signature.
+  sp <- NULL
+  if (!is.null(spec)) {
+    sp <- .ard_spec_scope(if (is.character(spec)) read_ard_spec(spec)
+                          else ard_spec(spec))
+    sa <- .ard_spec_table_args(sp)
+    if (missing(cols)      && !is.null(sa$cols))      cols      <- sa$cols
+    if (missing(rows)      && !is.null(sa$rows))      rows      <- sa$rows
+    if (missing(label)     && "label" %in% names(sa)) label     <- sa[["label"]]
+    if (missing(stats)     && !is.null(sa$stats))     stats     <- sa$stats
+    if (missing(value)     && !is.null(sa$value))     value     <- sa$value
+    if (missing(sep)       && !is.null(sa$sep))       sep       <- sa$sep
+    if (missing(sort)      && !is.null(sa$sort))      sort      <- sa$sort
+    if (missing(sort_stat) && !is.null(sa$sort_stat)) sort_stat <- sa$sort_stat
+    if (missing(na)        && !is.null(sa$na))        na        <- sa$na
+    if (is.null(rounding)  && !is.null(sa$rounding))  rounding  <- sa$rounding
+    if (is.null(labels)) labels <- .ard_spec_labels(sp)
+    # A variable's `levels` order its rows, and named `cells` rows keep
+    # their sheet order, both as the arguments do -- so nothing is derived.
+    if (is.null(levels)) levels <- .ard_spec_levels(sp)
+    spec_cells <- .ard_spec_cells(sp)
+    if (missing(cells) && !is.null(spec_cells)) cells <- spec_cells
+  }
+  if (missing(cols)) {
+    .ard_stop(paste0("`cols` is required: name the column keys here, or in ",
+                     "the spec's `tables` sheet."))
+  }
   stats <- match.arg(stats)
   value <- match.arg(value)
-  # Remember whether the caller named a rounding family BEFORE anything
-  # assigns to `round`: resolving it here would make `missing(round)` false
-  # below and hide a spec file's own `round` column.  It is resolved once the
-  # spec has had its say.
-  round_given <- !is.null(round)
+  rounding <- .rounding_type(rounding)
   # `stats = "rows"` lays the statistic out as a row and puts a value straight
   # in the cell, so which of the ARD's two values that is has to be sayable:
   # the raw numeric `stat` (the default -- a PK table is formatted later, by
   # set_decimal_split()) or cards' already-formatted `stat_fmt`.
   rows_numeric <- identical(stats, "rows") && identical(value, "stat")
   d <- as.data.frame(x, stringsAsFactors = FALSE)
-
-  sp <- NULL
-  if (!is.null(spec)) {
-    sp <- if (is.character(spec)) read_ard_spec(spec) else ard_spec(spec)
-    if (is.null(labels)) labels <- .ard_spec_labels(sp)
-    if (is.null(levels)) {
-      levels <- .ard_spec_levels(sp)
-      ro <- .ard_spec_row_order(sp)
-      lo <- if (is.null(label)) NULL else
-        (if (!is.null(names(label)) && nzchar(names(label)[1])) names(label)[1]
-         else sub("^[.]", "", as.character(label)[1]))
-      if (length(ro) && !is.null(lo)) levels[[lo]] <- ro
-    }
-    if (missing(cells))  cells  <- .ard_spec_cells(sp)
-    if (!round_given && !is.null(sp$round) && any(!is.na(sp$round))) {
-      round <- as.character(stats::na.omit(sp$round))[1L]
-    }
-  }
-  # explicit argument > spec file > option > R's own
-  round <- .ard_round_type(round)
 
   if (!".kind" %in% names(d) && all(c("variable", "variable_level") %in% names(d))) {
     d$.kind <- .ard_kind(d)
@@ -2071,7 +2028,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
 
     if (!is.null(entry$labels)) {
       picks <- lapply(entry$chains, .ard_chain_pick, s = sub,
-                      round_type = round)
+                      round_type = rounding)
       vals <- vapply(picks, function(z) z$v, "")
       labs_out <- entry$labels
       if (!is.null(lab_chain)) {
@@ -2092,7 +2049,7 @@ ard_spread <- function(x, cols, rows = NULL, label = ".label",
       for (lv in unique(labs)) {
         sel <- if (is.na(lv)) is.na(labs) else (!is.na(labs) & labs == lv)
         s2 <- sub[sel, , drop = FALSE]
-        pk <- .ard_chain_pick(entry$chains[[1L]], s2, round)
+        pk <- .ard_chain_pick(entry$chains[[1L]], s2, rounding)
         v <- pk$v
         if (!is.null(lab_chain)) lv <- .ard_label_text(lab_chain, s2, lv)
         pieces[[length(pieces) + 1L]] <- data.frame(
@@ -2319,171 +2276,425 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 # ============================================================================
 #  the definition file
 # ============================================================================
+#
+#  A definition file is a WORKBOOK with one sheet per grain, so that each
+#  fact is written once, at the grain it belongs to:
+#
+#      tables     one row per report          cols, rows, label, rounding ...
+#      variables  one row per variable        display label, order, levels
+#      cells      one row per line of a cell  template, guard, digits
+#
+#  Every sheet starts with `output_id`, and every sheet follows ONE rule: a
+#  blank `output_id` is a study-wide default, and a row naming the report
+#  replaces the default row with the same key.  A sheet added later -- the
+#  titles, the footnotes, the page header -- joins under the same rule, so
+#  the names it will take are reserved now (`.ard_spec_reserved`).
 
-.ard_spec_cols <- function() {
-  c("output_id", "variable", "label", "order", "context", "row", "template",
-    "levels", "round", "digits", "signif")
+.ard_spec_version <- 1L
+
+.ard_spec_schema <- function() {
+  list(
+    tables    = c("output_id", "cols", "rows", "label", "stats", "value",
+                  "sep", "sort", "sort_stat", "na", "rounding"),
+    variables = c("output_id", "variable", "label", "order", "levels"),
+    cells     = c("output_id", "variable", "context", "row", "when",
+                  "template", "digits", "signif"))
 }
 
-# The key a spec row is looked up by, once it has been scoped to one output.
-.ard_spec_key <- function(s) {
-  paste(s$variable, s$context, s$row, sep = "")
+# What a report's own row replaces a default row by.  `tables` has one row
+# per report, so its key is the report itself.
+.ard_spec_keys <- list(tables    = character(),
+                       variables = "variable",
+                       cells     = c("variable", "context", "row"))
+
+# Sheets a later version will read (the rest of the RTF deliverable).  A
+# workbook that already carries one is told so, not refused: the file can be
+# written ahead of the reader.
+.ard_spec_reserved <- c("titles", "footnotes", "page", "header", "footer",
+                        "columns", "layout", "style")
+
+# A sheet in the shape the schema says: every column present, text trimmed,
+# blank cells NA, wholly blank rows gone.  A column the sheet does not read is
+# an error -- a typo in a header would otherwise be a setting that silently
+# never applies -- except `note`, which is there for people.
+.ard_spec_sheet <- function(d, sheet) {
+  allowed <- .ard_spec_schema()[[sheet]]
+  if (is.null(d)) d <- data.frame()
+  d <- as.data.frame(d, stringsAsFactors = FALSE, check.names = FALSE)
+  names(d) <- trimws(names(d))
+  extra <- setdiff(names(d), c(allowed, "note"))
+  if (length(extra)) {
+    home <- vapply(extra, function(cn) {
+      hit <- names(Filter(function(s) cn %in% s, .ard_spec_schema()))
+      if (length(hit)) paste0(" (a `", hit[1L], "` column)") else ""
+    }, "")
+    .ard_stop(paste0(
+      "The `", sheet, "` sheet has ",
+      if (length(extra) == 1L) "a column" else "columns",
+      " it does not read: ",
+      paste0(sQuote(extra), home, collapse = ", "), ".\n",
+      "  Its columns are: ", paste(allowed, collapse = ", "), ".\n",
+      "  Free text goes in a `note` column."))
+  }
+  n <- nrow(d)
+  out <- lapply(allowed, function(cn) {
+    v <- if (cn %in% names(d)) d[[cn]] else rep(NA, n)
+    if (identical(cn, "order")) return(suppressWarnings(as.numeric(v)))
+    v <- trimws(as.character(v))
+    v[!is.na(v) & !nzchar(v)] <- NA_character_
+    v
+  })
+  out <- as.data.frame(stats::setNames(out, allowed),
+                       stringsAsFactors = FALSE)
+  if ("note" %in% names(d)) out$note <- as.character(d$note)
+  body <- setdiff(allowed, "output_id")
+  keep <- rowSums(!is.na(out[body])) > 0L
+  out[keep, , drop = FALSE]
 }
 
-# Two rows that claim the same key would both render into the same cell, and
-# the caller would meet the row-collision error much later, pointing at the
-# ARD rather than at the file.  Say it here, naming the file's own rows.
-.ard_spec_dupes <- function(s, scoped) {
-  k <- .ard_spec_key(s)
-  bad <- unique(k[duplicated(k)])
-  if (!length(bad)) return(invisible(NULL))
-  first <- bad[1L]
-  hit <- s[k == first, , drop = FALSE]
-  .ard_stop(paste(c(
-    "This ARD spec defines the same cell twice.",
-    sprintf("  variable: %s%s%s", sQuote(hit$variable[1L]),
-            if (!is.na(hit$context[1L])) paste0(", context ",
-              sQuote(hit$context[1L])) else "",
-            if (!is.na(hit$row[1L])) paste0(", row ", sQuote(hit$row[1L]))
-              else ""),
-    paste0("  templates: ",
-           paste(sQuote(ifelse(is.na(hit$template), "<none>", hit$template)),
-                 collapse = " and ")),
-    if (scoped)
-      "Give the rows different `output_id` values, or delete one."
-    else
-      paste0("Add an `output_id` column so each report has its own row, and ",
-             "read the file with read_ard_spec(output_id = )."),
-    if (length(bad) > 1L)
-      sprintf("  %d cells clash in this spec; this is the first.",
-              length(bad))),
-    collapse = "
-"))
+# One key per row, as a string, for the "same key" of the scoping rule.
+.ard_spec_rowkey <- function(d, sheet) {
+  cols <- .ard_spec_keys[[sheet]]
+  if (!length(cols) || !nrow(d)) return(rep("", nrow(d)))
+  do.call(paste, c(lapply(d[cols], function(v) ifelse(is.na(v), "", v)),
+                   sep = "\r"))
 }
 
-#' A spreadsheet-shaped definition of how an ARD becomes a table
+# Two rows for one key in one scope.  In `cells` that is a chain (the rows
+# are tried in sheet order), so only `tables` and `variables` can clash.
+.ard_spec_dupes <- function(sp) {
+  t <- sp$tables
+  dup <- duplicated(t$output_id)
+  if (any(dup)) {
+    id <- t$output_id[dup][1L]
+    .ard_stop(paste0(
+      "The `tables` sheet has two rows for ",
+      if (is.na(id)) "the default (blank `output_id`)" else sQuote(id),
+      ".\n  One row per report; merge them."))
+  }
+  v <- sp$variables
+  k <- paste(v$output_id, v$variable, sep = "\r")
+  if (any(duplicated(k))) {
+    i <- which(duplicated(k))[1L]
+    .ard_stop(paste0(
+      "The `variables` sheet has two rows for ", sQuote(v$variable[i]),
+      if (!is.na(v$output_id[i])) paste0(" in ", sQuote(v$output_id[i]))
+      else " among the defaults",
+      ".\n  One row per variable; merge them."))
+  }
+  invisible(NULL)
+}
+
+# The layout before #474's rework was ONE sheet with every column on it.
+# Say what moved where rather than listing columns it does not know.
+.ard_spec_old_layout <- function(d) {
+  .ard_stop(paste0(
+    "This is the one-sheet layout, which is no longer read.  A definition ",
+    "file now has\n  three sheets, one per grain:\n",
+    "    tables     output_id, cols, rows, label, rounding, ...\n",
+    "    variables  output_id, variable, label, order, levels\n",
+    "    cells      output_id, variable, context, row, when, template, ",
+    "digits, signif\n",
+    "  `label` / `order` / `levels` move to `variables` (once per variable), ",
+    "`round` becomes\n  `tables$rounding`, and the rest stays on `cells`.  ",
+    "ard_spec_template() writes the new layout."))
+}
+
+#' A workbook-shaped definition of how an ARD becomes a table
 #'
-#' `ard_spec()` validates (and fills out) the definition table that
-#' [ard_spread()] accepts as `spec =`.  It carries the four
-#' things that otherwise have to be repeated in every script: the display
-#' label of each variable, the row templates, the rounding family, and the
-#' number of decimal or significant digits.
+#' @description
+#' `ard_spec()` validates the definition that [ard_spread()] accepts as
+#' `spec =`, and [read_ard_spec()] builds one from a workbook.  It holds
+#' what would otherwise be repeated in every script --- which keys go
+#' across and down, the display label and order of each variable, and the
+#' template and digits of every row --- in **three sheets, one per grain**,
+#' so that each fact is written once:
 #'
-#' One row of the spec is one row of the finished table -- or, when `row` is
-#' blank, one row per level of that variable.
+#' | sheet | one row per | holds |
+#' |---|---|---|
+#' | `tables` | report | the roles and the table-wide options |
+#' | `variables` | variable | display label, order, level order |
+#' | `cells` | line of a cell | template, guard, digits |
 #'
-#' @section Columns:
+#' @section One rule on every sheet:
+#' Every sheet starts with `output_id`.  **Blank means a study-wide
+#' default; a row naming the report replaces the default row with the same
+#' key** --- the whole `tables` row for that report, the `variables` row
+#' for that variable, the `cells` rows for that variable / context / row.
+#' So one workbook can hold a house style and every report's own changes to
+#' it.  [read_ard_spec()] narrows it to one report with `output_id =`.
+#'
+#' Explicit [ard_spread()] arguments win over the spec, and the spec wins
+#' over the defaults.
+#'
+#' Lists inside a cell are `|`-separated (`TR01AG1 | SEROSTAT`).  A column
+#' called `note` is allowed on any sheet and never read; any other column a
+#' sheet does not know is an error, so a mistyped header cannot become a
+#' setting that silently never applies.
+#'
+#' @section `tables`:
 #' \describe{
-#'   \item{`output_id`}{Optional; the report this row belongs to, so one
-#'     shared file can define every table in a study.  Blank means the row is
-#'     a default for all of them.  [read_ard_spec()] narrows the file with
-#'     its own `output_id` argument, and a row naming the report beats a
-#'     blank one for the same cell.}
-#'   \item{`variable`}{Analysis variable the row applies to.  `"default"`, or
-#'     a `context` value such as `"categorical"`, acts as a fallback.}
-#'   \item{`label`}{Display label for the variable (the row-group text).}
-#'   \item{`order`}{Integer; the order variables appear in the table.}
-#'   \item{`context`}{Optional; restrict the row to one ARD `context`.}
-#'   \item{`row`}{Row label within the variable, e.g. `Mean (SD)` or
-#'     `Min, Max`.  Blank means one row per `variable_level`.}
-#'   \item{`template`}{The cell recipe, e.g. `{mean} ({sd})` or
-#'     `{min}, {max}`.  Several templates separated by `|` form a fallback
-#'     chain: the first that resolves wins.}
-#'   \item{`levels`}{`|`-separated level order for that variable.}
-#'   \item{`round`}{`r` (half to even) or `sas` (half away from zero); wins
-#'     over `getOption("rtfreporter.ard_round")` for the rows it names.}
-#'   \item{`digits`}{Decimal places used for tokens with no inline spec.  A
-#'     comma-separated list applies per token, e.g. `1,2` for
-#'     `{mean} ({sd})`.}
+#'   \item{`cols`}{Column keys, outermost first: `TR01AG1 | SEROSTAT`.}
+#'   \item{`rows`}{Row keys, in output order.  `name = column` renames
+#'     (`group1 = AEBODSYS`); a quoted value is a constant heading
+#'     (`group1 = "Worst Post-Baseline Values"`).}
+#'   \item{`label`}{The row-label source, in the same notation
+#'     (`label = AEDECOD`).  Blank keeps `.label`; `NA` builds it to tell
+#'     rows apart and then drops it; `NULL` leaves it out.}
+#'   \item{`stats`, `value`, `sep`, `sort_stat`, `na`}{As the
+#'     [ard_spread()] arguments of the same name.}
+#'   \item{`sort`}{`TRUE`, `FALSE`, or the keys in order:
+#'     `.overall | group1 | .depth | -n | label`.}
+#'   \item{`rounding`}{`r` or `sas`; see [round_num()].}
+#' }
+#'
+#' @section `variables`:
+#' \describe{
+#'   \item{`variable`}{An analysis variable, or any column key (`BASEGR`,
+#'     `ATPT`, or the label column's own name).}
+#'   \item{`label`}{Display text replacing the variable's name.}
+#'   \item{`order`}{Number; the order the variables appear in.}
+#'   \item{`levels`}{The order of its values: `Grade 0 | Grade 1 | Total`.}
+#' }
+#'
+#' @section `cells`:
+#' \describe{
+#'   \item{`variable`, `context`}{What the row applies to.  Either may be
+#'     blank; both blank is the default for everything.  `variable` may
+#'     also be a context or kind (`continuous`, `categorical`), as a
+#'     `cells` map key may.}
+#'   \item{`row`}{The row label (`Mean (SD)`).  Blank means one row per
+#'     level, labelled by the level.}
+#'   \item{`when`}{Optional guard, ordinary R over the statistics:
+#'     `n == 0`.  **Several rows with the same variable / context / row are
+#'     one chain**, tried in sheet order; the first whose guard holds and
+#'     whose template resolves wins.}
+#'   \item{`template`}{The cell recipe: `{mean} ({sd})`.}
+#'   \item{`digits`}{Decimal places for tokens that name none, per token
+#'     when comma-separated: `1,2` for `{mean} ({sd})`.}
 #'   \item{`signif`}{Significant digits; wins over `digits`.}
 #' }
 #'
-#' @param x A data frame (or anything coercible) with the columns above.
-#'   Missing optional columns are added as `NA`.
+#' @section Reserved for the rest of the report:
+#' A later version will read the sheets `titles`, `footnotes`, `page`,
+#' `header`, `footer`, `columns`, `layout` and `style` under the same
+#' `output_id` rule, so the whole RTF deliverable can be defined in one
+#' workbook.  They are reported, not refused, when present today.  An
+#' `about` sheet (`key` / `value`) may state `spec_version`; sheets whose
+#' name starts with `_` are ignored.
 #'
-#' @return A data frame of class `ard_spec`.
+#' @param tables,variables,cells Data frames with the columns above; missing
+#'   columns are added as `NA`.  `tables` may instead be a named list of the
+#'   three, or an `ard_spec` (returned as it is).
+#'
+#' @return An object of class `ard_spec`: a list of the three data frames.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
 #' @seealso [read_ard_spec()], [write_ard_spec()], [ard_spec_template()]
 #' @export
-ard_spec <- function(x) {
-  d <- as.data.frame(x, stringsAsFactors = FALSE)
-  if (!"variable" %in% names(d)) {
-    .ard_stop("An ARD spec needs at least a `variable` column.")
+ard_spec <- function(tables = NULL, variables = NULL, cells = NULL) {
+  if (inherits(tables, "ard_spec")) return(tables)
+  if (is.data.frame(tables) && "template" %in% names(tables) &&
+      is.null(variables) && is.null(cells)) {
+    .ard_spec_old_layout(tables)
   }
-  for (cn in .ard_spec_cols()) if (!cn %in% names(d)) d[[cn]] <- NA
-  d <- d[, c(.ard_spec_cols(), setdiff(names(d), .ard_spec_cols())),
-         drop = FALSE]
-  for (cn in c("output_id", "variable", "label", "context", "row", "template",
-               "levels", "round")) {
-    d[[cn]] <- as.character(d[[cn]])
-    d[[cn]][!is.na(d[[cn]]) & !nzchar(trimws(d[[cn]]))] <- NA
+  if (is.list(tables) && !is.data.frame(tables)) {
+    x <- tables
+    bad <- setdiff(names(x), names(.ard_spec_schema()))
+    if (length(bad) || is.null(names(x))) {
+      .ard_stop(paste0("A spec list holds `tables`, `variables` and ",
+                       "`cells`; it also had: ",
+                       paste(sQuote(bad), collapse = ", ")))
+    }
+    tables <- x$tables; variables <- x$variables; cells <- x$cells
   }
-  d$order <- suppressWarnings(as.numeric(d$order))
-  bad <- !is.na(d$round) & !d$round %in% c("sas", "r")
-  if (any(bad)) .ard_stop("`round` must be \"sas\" or \"r\".")
-  # A file that names no output at all is already scoped: two rows for one
-  # cell can only be a mistake.  A file that does name outputs is checked
-  # once it has been narrowed to one, in .ard_spec_scope().
-  if (all(is.na(d$output_id))) .ard_spec_dupes(d, scoped = FALSE)
-  class(d) <- c("ard_spec", "data.frame")
-  d
+  sp <- list(tables    = .ard_spec_sheet(tables,    "tables"),
+             variables = .ard_spec_sheet(variables, "variables"),
+             cells     = .ard_spec_sheet(cells,     "cells"))
+  t <- sp$tables
+  chk <- function(v, ok, what) {
+    bad <- !is.na(v) & !v %in% ok
+    if (any(bad)) {
+      .ard_stop(sprintf("`tables$%s` must be %s; got %s.", what,
+                        paste(sQuote(ok), collapse = " or "),
+                        sQuote(v[bad][1L])))
+    }
+  }
+  chk(t$stats, c("cells", "rows"), "stats")
+  chk(t$value, c("stat", "stat_fmt"), "value")
+  chk(t$rounding, c("r", "sas"), "rounding")
+  if (any(is.na(sp$variables$variable))) {
+    .ard_stop("Every `variables` row needs a `variable`.")
+  }
+  if (any(is.na(sp$cells$template))) {
+    i <- which(is.na(sp$cells$template))[1L]
+    .ard_stop(sprintf(
+      "`cells` row %d has no `template`; every row of that sheet is one.", i))
+  }
+  .ard_spec_dupes(sp)
+  class(sp) <- "ard_spec"
+  sp
 }
 
-# Narrow a shared spec to one report.  Rows with no `output_id` are the
-# file's defaults and stay; a row naming this output beats a default for the
-# same cell, so a common file can carry house-wide rules and let one report
-# override them.
-.ard_spec_scope <- function(sp, output_id) {
-  if (is.null(output_id)) return(sp)
-  if (!is.character(output_id) || length(output_id) != 1L) {
+#' @export
+print.ard_spec <- function(x, ...) {
+  ids <- .ard_first_seen(stats::na.omit(unlist(lapply(x, `[[`, "output_id"))))
+  cat("<ard_spec>",
+      if (!is.null(attr(x, "output_id"))) paste0(" for ",
+        sQuote(attr(x, "output_id")))
+      else if (length(ids)) paste0(" for ", length(ids), " report",
+                                   if (length(ids) > 1L) "s" else "",
+                                   ": ", paste(ids, collapse = ", "))
+      else "", "\n", sep = "")
+  for (s in names(.ard_spec_schema())) {
+    cat(sprintf("  %-10s %3d row%s\n", s, nrow(x[[s]]),
+                if (nrow(x[[s]]) == 1L) "" else "s"))
+  }
+  invisible(x)
+}
+
+# Narrow a workbook to one report, applying the one rule on every sheet.
+# `NULL` is fine for a workbook that defines one report (or none, only
+# defaults); for several it has to be said which.
+.ard_spec_scope <- function(sp, output_id = NULL) {
+  if (!is.null(attr(sp, "output_id"))) {
+    if (is.null(output_id) || identical(output_id, attr(sp, "output_id"))) {
+      return(sp)
+    }
+  }
+  ids <- .ard_first_seen(stats::na.omit(unlist(
+    lapply(sp[names(.ard_spec_schema())], `[[`, "output_id"))))
+  if (is.null(output_id)) {
+    if (length(ids) > 1L) {
+      .ard_stop(paste0(
+        "This spec defines ", length(ids), " reports (",
+        paste(sQuote(ids), collapse = ", "), "); say which one:\n",
+        "    read_ard_spec(path, output_id = ", dQuote(ids[1L], FALSE), ")"))
+    }
+    if (!length(ids)) return(sp)
+    output_id <- ids
+  }
+  if (!length(ids)) return(sp)          # a file of defaults serves any report
+  if (!is.character(output_id) || length(output_id) != 1L ||
+      is.na(output_id)) {
     .ard_stop("`output_id` must be a single string.")
   }
-  ids <- .ard_first_seen(stats::na.omit(sp$output_id))
-  if (!length(ids)) return(sp)     # every row is a default; nothing to narrow
+  has_default <- any(vapply(sp[names(.ard_spec_schema())],
+                            function(d) any(is.na(d$output_id)), NA))
   if (!output_id %in% ids) {
-    # Most reports in a shared file are covered by its blank-`output_id`
-    # defaults, so this is normal and must not stop the run.  It is still
-    # worth saying, because the other reading -- a mistyped id -- looks
-    # exactly the same from here and would otherwise be invisible.
-    if (!any(is.na(sp$output_id))) {
+    if (!has_default) {
       .ard_stop(sprintf(paste0(
         "`output_id`: this spec has no row for %s and no default rows ",
-        "either, so nothing would apply.
-  It defines: %s"),
+        "either, so nothing would apply.\n  It defines: %s"),
         sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
     }
+    # Most reports in a shared file are covered by its defaults, so this is
+    # normal; it is still worth saying, because a mistyped id looks exactly
+    # the same from here.
     message(sprintf(paste0(
-      "read_ard_spec(): no row names %s, so its default rows are used.",
-      "
-  The file defines: %s"),
+      "read_ard_spec(): no row names %s, so the default rows are used.",
+      "\n  The file defines: %s"),
       sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
   }
-  keep <- is.na(sp$output_id) | sp$output_id == output_id
-  s <- sp[keep, , drop = FALSE]
-  mine <- !is.na(s$output_id)
-  k <- .ard_spec_key(s)
-  s <- s[mine | !(k %in% k[mine]), , drop = FALSE]   # specific beats default
-  .ard_spec_dupes(s, scoped = TRUE)
-  s
+  for (s in names(.ard_spec_schema())) {
+    d <- sp[[s]]
+    d <- d[is.na(d$output_id) | d$output_id == output_id, , drop = FALSE]
+    mine <- !is.na(d$output_id)
+    if (identical(s, "tables")) {
+      # one row: the report's own values over the defaults, column by column
+      if (sum(mine) && sum(!mine)) {
+        row <- d[!mine, , drop = FALSE]
+        own <- d[mine, , drop = FALSE]
+        for (cn in names(own)) if (!is.na(own[[cn]])) row[[cn]] <- own[[cn]]
+        d <- row
+      }
+    } else {
+      k <- .ard_spec_rowkey(d, s)
+      d <- d[mine | !(k %in% k[mine]), , drop = FALSE]
+    }
+    d$output_id <- rep(output_id, nrow(d))
+    rownames(d) <- NULL
+    sp[[s]] <- d
+  }
+  attr(sp, "output_id") <- output_id
+  sp
+}
+
+# `a | b | c` -> c("a", "b", "c")
+.ard_spec_split <- function(x) {
+  if (is.null(x) || is.na(x)) return(character())
+  v <- trimws(strsplit(x, "|", fixed = TRUE)[[1L]])
+  v[nzchar(v)]
+}
+
+# One reference, as written in a `tables` cell: `col`, `name = col`, or a
+# quoted constant (`name = "Worst Post-Baseline Values"`), which is the
+# formula-template form of the argument.
+.ard_spec_ref <- function(x) {
+  m <- regmatches(x, regexec("^([A-Za-z.][A-Za-z0-9._]*)\\s*=\\s*(.+)$", x))[[1L]]
+  nm <- if (length(m)) m[2L] else ""
+  v  <- trimws(if (length(m)) m[3L] else x)
+  q <- regmatches(v, regexec("^([\"'])(.*)\\1$", v))[[1L]]
+  val <- if (length(q)) eval(call("~", q[3L]), baseenv()) else v
+  list(name = nm, value = val)
+}
+
+.ard_spec_refs <- function(x) {
+  parts <- lapply(.ard_spec_split(x), .ard_spec_ref)
+  if (!length(parts)) return(NULL)
+  nms  <- vapply(parts, `[[`, "", "name")
+  vals <- lapply(parts, `[[`, "value")
+  if (any(vapply(vals, inherits, NA, "formula"))) {
+    return(stats::setNames(vals, nms))
+  }
+  v <- unlist(vals)
+  if (any(nzchar(nms))) names(v) <- nms
+  v
+}
+
+# The table-wide arguments one `tables` row supplies, as ard_spread() takes
+# them.  Only what the row says is returned: an argument it leaves blank
+# keeps ard_spread()'s own default.
+.ard_spec_table_args <- function(sp) {
+  t <- sp$tables
+  if (!nrow(t)) return(list())
+  t <- t[1L, , drop = FALSE]
+  out <- list()
+  if (!is.na(t$cols)) out$cols <- .ard_spec_split(t$cols)
+  if (!is.na(t$rows)) out$rows <- .ard_spec_refs(t$rows)
+  if (!is.na(t$label)) {
+    out["label"] <- list(switch(t$label, "NA" = NA, "NULL" = NULL,
+                                .ard_spec_refs(t$label)))
+  }
+  for (a in c("stats", "value", "sep", "sort_stat", "na", "rounding")) {
+    if (!is.na(t[[a]])) out[[a]] <- t[[a]]
+  }
+  if (!is.na(t$sort)) {
+    out$sort <- switch(toupper(t$sort), "TRUE" = TRUE, "FALSE" = FALSE,
+                       .ard_spec_split(t$sort))
+  }
+  out
+}
+
+.ard_spec_variables <- function(sp) {
+  v <- sp$variables
+  if (any(!is.na(v$order))) v <- v[order(v$order, na.last = TRUE), , drop = FALSE]
+  v
 }
 
 .ard_spec_labels <- function(sp) {
-  s <- sp[!is.na(sp$label) & !is.na(sp$variable), , drop = FALSE]
-  s <- s[!duplicated(s$variable), , drop = FALSE]
-  if (!nrow(s)) return(NULL)
-  if (any(!is.na(s$order))) s <- s[order(s$order, na.last = TRUE), , drop = FALSE]
-  stats::setNames(s$label, s$variable)
+  v <- .ard_spec_variables(sp)
+  v <- v[!is.na(v$label), , drop = FALSE]
+  if (!nrow(v)) return(NULL)
+  stats::setNames(v$label, v$variable)
 }
 
 .ard_spec_levels <- function(sp) {
-  s <- sp[!is.na(sp$levels) & !is.na(sp$variable), , drop = FALSE]
-  s <- s[!duplicated(s$variable), , drop = FALSE]
-  if (!nrow(s)) return(NULL)
-  out <- lapply(s$levels, function(v) trimws(strsplit(v, "|", fixed = TRUE)[[1]]))
-  stats::setNames(out, s$variable)
+  v <- sp$variables[!is.na(sp$variables$levels), , drop = FALSE]
+  if (!nrow(v)) return(NULL)
+  stats::setNames(lapply(v$levels, .ard_spec_split), v$variable)
 }
 
 # Rewrite "{mean} ({sd})" + digits "1,2" into "{mean:.1f} ({sd:.2f})", so what
@@ -2515,87 +2726,153 @@ ard_spec <- function(x) {
   out
 }
 
+# One `cells` row as one element of a chain: its template with the digits
+# written in, guarded by `when` when there is one.  The guard is parsed
+# here, so a malformed one names its row.
+.ard_spec_chain_el <- function(r, i) {
+  tpl <- .ard_apply_digits(r$template, r$digits, r$signif)
+  if (is.na(r$when)) return(tpl)
+  cond <- tryCatch(str2lang(r$when), error = function(e) {
+    .ard_stop(sprintf("`cells` row %d: `when` is not valid R: %s\n  %s",
+                      i, sQuote(r$when), conditionMessage(e)))
+  })
+  eval(call("~", cond, tpl), baseenv())
+}
+
+# The `cells` sheet as ard_spread()'s `cells` map.  Rows sharing variable /
+# context / row are one chain, in sheet order; the map key is the variable,
+# the context, both (a variable summarised two ways), or `default`.
 .ard_spec_cells <- function(sp) {
-  s <- sp[!is.na(sp$template), , drop = FALSE]
-  if (!nrow(s)) return("{n} ({p})")
-  if (any(!is.na(s$order))) s <- s[order(s$order, na.last = TRUE), , drop = FALSE]
+  s <- sp$cells
+  if (!nrow(s)) return(NULL)
+  ord <- .ard_spec_variables(sp)$variable
+  key <- ifelse(!is.na(s$variable) & !is.na(s$context),
+                paste(s$variable, s$context, sep = "\r"),
+                ifelse(!is.na(s$variable), s$variable,
+                       ifelse(!is.na(s$context), s$context, "default")))
+  first <- .ard_first_seen(key)
+  rank <- match(sub("\r.*$", "", first), ord)
+  first <- first[order(is.na(rank), rank)]
   out <- list()
-  for (v in unique(s$variable)) {
-    ss <- s[s$variable == v, , drop = FALSE]
-    chains <- lapply(seq_len(nrow(ss)), function(i) {
-      tpls <- trimws(strsplit(ss$template[i], "|", fixed = TRUE)[[1]])
-      vapply(tpls, .ard_apply_digits, "", ss$digits[i], ss$signif[i],
-             USE.NAMES = FALSE)
+  for (k in first) {
+    idx  <- which(key == k)
+    rows <- s$row[idx]
+    rows[is.na(rows)] <- ""
+    labs <- .ard_first_seen(rows)
+    chains <- lapply(labs, function(lb) {
+      els <- lapply(idx[rows == lb], function(i)
+        .ard_spec_chain_el(s[i, , drop = FALSE], i))
+      if (all(vapply(els, is.character, NA))) unlist(els) else els
     })
-    if (all(is.na(ss$row))) {
-      out[[v]] <- chains[[1L]]
-    } else {
-      out[[v]] <- stats::setNames(chains, ifelse(is.na(ss$row), "", ss$row))
-    }
+    guarded <- any(vapply(chains, is.list, NA))
+    out[[k]] <- if (identical(labs, "")) chains[[1L]]
+                else if (guarded) do.call(ard_cells, stats::setNames(chains, labs))
+                else stats::setNames(chains, labs)
   }
   out
 }
 
-# The order the finished table's label column should take: each variable's own
-# row labels (or its declared levels), concatenated in spec order.  A label only
-# ever competes with labels from the same variable, so one global order is
-# enough to sort them all.
-.ard_spec_row_order <- function(sp) {
-  s <- sp
-  if (any(!is.na(s$order))) s <- s[order(s$order, na.last = TRUE), , drop = FALSE]
-  out <- character(0)
-  for (v in unique(s$variable)) {
-    ss <- s[s$variable == v, , drop = FALSE]
-    out <- c(out, if (any(!is.na(ss$row))) stats::na.omit(ss$row)
-             else if (!is.na(ss$levels[1L]))
-               trimws(strsplit(ss$levels[1L], "|", fixed = TRUE)[[1]])
-             else character(0))
+# Workbook sheets -> the three frames.  Reserved sheets are reported, `_`
+# sheets and empty ones ignored, `about` checked for the version; anything
+# else is a sheet nobody reads, and says so.
+.ard_spec_from_sheets <- function(sheets, where) {
+  nm <- names(sheets)
+  low <- tolower(nm)
+  if (!any(low %in% names(.ard_spec_schema()))) {
+    one <- sheets[[1L]]
+    if (length(sheets) >= 1L && "template" %in% names(one)) {
+      .ard_spec_old_layout(one)
+    }
+    .ard_stop(paste0(sQuote(where), " has none of the sheets `tables`, ",
+                     "`variables`, `cells`."))
   }
-  unique(as.character(out))
+  if ("about" %in% low) {
+    a <- sheets[[which(low == "about")[1L]]]
+    if (all(c("key", "value") %in% names(a))) {
+      ver <- suppressWarnings(as.integer(a$value[a$key == "spec_version"]))
+      if (length(ver) && !is.na(ver[1L]) && ver[1L] > .ard_spec_version) {
+        .ard_stop(sprintf(paste0(
+          "%s is spec_version %d; this rtfreporter reads up to %d.  ",
+          "Update the package."), sQuote(where), ver[1L], .ard_spec_version))
+      }
+    }
+  }
+  empty <- vapply(sheets, function(d) !nrow(d), NA)
+  skip <- startsWith(nm, "_") | low == "about" | empty
+  res <- low %in% .ard_spec_reserved & !skip
+  if (any(res)) {
+    message(sprintf(paste0(
+      "read_ard_spec(): %s %s reserved for a later version and not read yet."),
+      paste(sQuote(nm[res]), collapse = ", "),
+      if (sum(res) == 1L) "is" else "are"))
+  }
+  other <- !skip & !res & !low %in% names(.ard_spec_schema())
+  if (any(other)) {
+    .ard_stop(paste0(
+      sQuote(where), " has ",
+      if (sum(other) == 1L) "a sheet" else "sheets", " nobody reads: ",
+      paste(sQuote(nm[other]), collapse = ", "), ".\n",
+      "  Rename it to start with `_` to keep it as notes."))
+  }
+  get <- function(s) {
+    i <- which(low == s)
+    if (length(i)) sheets[[i[1L]]] else NULL
+  }
+  ard_spec(get("tables"), get("variables"), get("cells"))
 }
 
-#' Read an ARD table definition from a spreadsheet
+#' Read an ARD table definition from a workbook
 #'
-#' @param path Path to an `.xlsx` (needs \pkg{readxl}) or `.csv` file.
-#' @param sheet Sheet name or index, for Excel input.
-#' @param output_id Optional report identifier.  When the file carries an
-#'   `output_id` column --- one shared workbook defining every table in a
-#'   study --- this narrows it to that report **before** any variable is
-#'   looked up, so two reports may format the same variable differently.
-#'   Rows with a blank `output_id` are the file's defaults and stay; a row
-#'   naming this report beats a default for the same cell.  Supplying it
-#'   for a file with no such column, or naming a report the file does not
-#'   define, is an error rather than a silent no-op.
+#' @param path An `.xlsx` workbook (needs \pkg{readxl}) with the sheets
+#'   `tables`, `variables` and `cells` (see [ard_spec()]), or a **folder**
+#'   holding `tables.csv`, `variables.csv` and `cells.csv`.  Any of the
+#'   three may be absent.
+#' @param output_id The report to narrow the workbook to.  Rows with a blank
+#'   `output_id` are the study's defaults and stay; a row naming this
+#'   report replaces the default with the same key.  May be left `NULL`
+#'   for a workbook that defines one report; for several it must be given.
 #'
-#' @return An [ard_spec()] data frame.
+#' @return An [ard_spec()].
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
 #' @seealso [ard_spec()], [write_ard_spec()]
 #' @export
-read_ard_spec <- function(path, sheet = 1, output_id = NULL) {
-  if (grepl("[.]csv$", path, ignore.case = TRUE)) {
-    d <- utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+read_ard_spec <- function(path, output_id = NULL) {
+  if (dir.exists(path)) {
+    sheets <- list()
+    for (s in c(names(.ard_spec_schema()), .ard_spec_reserved, "about")) {
+      f <- file.path(path, paste0(s, ".csv"))
+      if (file.exists(f)) {
+        sheets[[s]] <- utils::read.csv(f, stringsAsFactors = FALSE,
+                                       check.names = FALSE,
+                                       colClasses = "character",
+                                       na.strings = "")
+      }
+    }
+  } else if (grepl("[.]csv$", path, ignore.case = TRUE)) {
+    .ard_stop(paste0(
+      "A definition is three sheets, which one CSV file cannot hold.  ",
+      "Give an .xlsx workbook,\n  or a folder with tables.csv, ",
+      "variables.csv and cells.csv."))
   } else {
-    .ard_need("readxl", "read_ard_spec() on an Excel file")
-    d <- as.data.frame(readxl::read_excel(path, sheet = sheet),
-                       stringsAsFactors = FALSE)
+    if (!file.exists(path)) .ard_stop(sprintf("No such file: %s", path))
+    .ard_need("readxl", "read_ard_spec() on an Excel workbook")
+    nms <- readxl::excel_sheets(path)
+    sheets <- stats::setNames(lapply(nms, function(s) as.data.frame(
+      readxl::read_excel(path, sheet = s, col_types = "text"),
+      stringsAsFactors = FALSE)), nms)
   }
-  # ard_spec() fills every column in, so ask the FILE, not the object: an
-  # `output_id` that nothing could ever act on is a mistake worth naming.
-  if (!is.null(output_id) && !"output_id" %in% names(d)) {
-    .ard_stop(paste0("`output_id` was given but ", sQuote(basename(path)),
-                     " has no `output_id` column to filter on. Add the ",
-                     "column, or drop the argument."))
-  }
-  .ard_spec_scope(ard_spec(d), output_id)
+  sp <- .ard_spec_from_sheets(sheets, basename(path))
+  .ard_spec_scope(sp, output_id)
 }
 
-#' Write an ARD table definition to a spreadsheet
+#' Write an ARD table definition to a workbook
 #'
-#' @param spec An [ard_spec()].
-#' @param path Destination `.xlsx` (needs \pkg{writexl}) or `.csv`.
+#' @param spec An [ard_spec()] (or what it accepts).
+#' @param path Destination `.xlsx` (needs \pkg{writexl}), or a folder, which
+#'   receives `tables.csv`, `variables.csv` and `cells.csv`.
 #'
 #' @return `path`, invisibly.
 #'
@@ -2606,67 +2883,94 @@ read_ard_spec <- function(path, sheet = 1, output_id = NULL) {
 #' @export
 write_ard_spec <- function(spec, path) {
   sp <- ard_spec(spec)
-  class(sp) <- "data.frame"
-  if (grepl("[.]csv$", path, ignore.case = TRUE)) {
-    utils::write.csv(sp, path, row.names = FALSE, na = "")
+  sheets <- lapply(names(.ard_spec_schema()), function(s) {
+    d <- sp[[s]]
+    rownames(d) <- NULL
+    d
+  })
+  names(sheets) <- names(.ard_spec_schema())
+  if (!grepl("[.]xlsx$", path, ignore.case = TRUE)) {
+    dir.create(path, showWarnings = FALSE, recursive = TRUE)
+    for (s in names(sheets)) {
+      utils::write.csv(sheets[[s]], file.path(path, paste0(s, ".csv")),
+                       row.names = FALSE, na = "")
+    }
     return(invisible(path))
   }
-  .ard_need("writexl", "write_ard_spec() to an Excel file")
-  writexl::write_xlsx(list(ard_spec = sp), path)
+  .ard_need("writexl", "write_ard_spec() to an Excel workbook")
+  about <- data.frame(key = "spec_version",
+                      value = as.character(.ard_spec_version),
+                      stringsAsFactors = FALSE)
+  writexl::write_xlsx(c(sheets, list(about = about)), path)
   invisible(path)
 }
 
-#' Scaffold a definition file from an ARD
+#' Scaffold a definition workbook from an ARD
 #'
-#' Walks the ARD and emits one [ard_spec()] row per analysis variable (per row
-#' template, for a continuous one), pre-filled with the statistics that
-#' variable actually carries.  Edit the labels and templates, save it, and hand
-#' it back through `spec =`.
+#' Walks the ARD and writes the three [ard_spec()] sheets: one `tables` row,
+#' one `variables` row per analysis variable (its levels filled in for a
+#' categorical one), and one `cells` row per row template --- a continuous
+#' variable gets the templates its statistics can fill, a categorical one
+#' `{n} ({p})`.  Edit the labels, templates and digits, and hand it back
+#' through `spec =`.
 #'
 #' @param ard A cards/cardx ARD.
 #' @param path Optional destination; when given the spec is also written there
 #'   with [write_ard_spec()].
+#' @param cols The column keys for the `tables` row, if known.
+#' @param output_id The report the rows belong to; `NULL` writes them as
+#'   defaults.
 #'
-#' @return An [ard_spec()] data frame, invisibly when `path` is given.
+#' @return An [ard_spec()], invisibly when `path` is given.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
 #' @seealso [ard_spec()], [ard_template()]
 #' @export
-ard_spec_template <- function(ard, path = NULL) {
+ard_spec_template <- function(ard, path = NULL, cols = NULL,
+                              output_id = NULL) {
   d <- ard_normalize(ard, drop_key_variables = FALSE)
+  if (".key_own" %in% names(d)) d <- d[!(d$.key_own %in% TRUE), , drop = FALSE]
   vars <- .ard_first_seen(d$variable)
-  rows <- list()
-  i <- 0L
-  for (v in vars) {
+  id <- if (is.null(output_id)) NA_character_ else output_id
+  vrows <- list(); crows <- list()
+  cell <- function(v, ctx, row, tpl) data.frame(
+    output_id = id, variable = v, context = ctx, row = row,
+    when = NA_character_, template = tpl, digits = NA_character_,
+    signif = NA_character_, stringsAsFactors = FALSE)
+  for (i in seq_along(vars)) {
+    v <- vars[i]
     s <- d[d$variable == v, , drop = FALSE]
     ctx <- s$context[1L]
-    i <- i + 1L
-    if (identical(ctx, "continuous")) {
+    lv <- NA_character_
+    if (identical(ctx, "continuous") || identical(ctx, "summary")) {
       have <- .ard_first_seen(s$stat_name)
       cand <- list(c("n", "{N}"), c("Mean (SD)", "{mean} ({sd})"),
                    c("Median", "{median}"), c("Min, Max", "{min}, {max}"))
       for (cc in cand) {
         need <- gsub("[{}]", "", .ard_tokens(cc[2]))
-        if (!all(need %in% have)) next
-        rows[[length(rows) + 1L]] <- data.frame(
-          variable = v, label = v, order = i, context = ctx,
-          row = cc[1], template = cc[2], levels = NA_character_,
-          round = "sas", digits = NA_character_, signif = NA_character_,
-          stringsAsFactors = FALSE)
+        if (all(need %in% have)) {
+          crows[[length(crows) + 1L]] <- cell(v, NA_character_, cc[1], cc[2])
+        }
       }
     } else {
-      lv <- .ard_first_seen(s$variable_level)
-      rows[[length(rows) + 1L]] <- data.frame(
-        variable = v, label = v, order = i, context = ctx,
-        row = NA_character_, template = "{n} ({p})",
-        levels = if (length(lv)) paste(lv, collapse = " | ") else NA_character_,
-        round = "sas", digits = NA_character_, signif = NA_character_,
-        stringsAsFactors = FALSE)
+      l <- .ard_first_seen(stats::na.omit(s$variable_level))
+      if (length(l)) lv <- paste(l, collapse = " | ")
+      crows[[length(crows) + 1L]] <- cell(v, NA_character_, NA_character_,
+                                          "{n} ({p})")
     }
+    vrows[[i]] <- data.frame(output_id = id, variable = v, label = v,
+                             order = i, levels = lv,
+                             stringsAsFactors = FALSE)
   }
-  sp <- ard_spec(do.call(rbind, rows))
+  tables <- data.frame(output_id = id,
+                       cols = if (length(cols)) paste(cols, collapse = " | ")
+                              else NA_character_,
+                       stringsAsFactors = FALSE)
+  sp <- ard_spec(tables,
+                 if (length(vrows)) do.call(rbind, vrows) else NULL,
+                 if (length(crows)) do.call(rbind, crows) else NULL)
   if (is.null(path)) return(sp)
   write_ard_spec(sp, path)
   invisible(sp)
@@ -3080,7 +3384,6 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
 #'     column header or an overall row.}
 #'   \item{[ard_spec()], [read_ard_spec()], [write_ard_spec()],
 #'     [ard_spec_template()]}{The spreadsheet definition file.}
-#'   \item{[ard_round()]}{SAS-style versus R-style rounding.}
 #' }
 #'
 #' @section Nothing is read from the object's attributes:
@@ -3096,7 +3399,7 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
 #' A template is a string with `{...}` tokens naming statistics:
 #' \tabular{ll}{
 #'   `{mean}`      \tab the value \pkg{cards} itself formatted (`fmt_fun`) \cr
-#'   `{mean:.1f}`  \tab 1 decimal place, rounded per `round` \cr
+#'   `{mean:.1f}`  \tab 1 decimal place, rounded per `rounding` \cr
 #'   `{p:.1f\%}`   \tab multiplied by 100 first, then 1 decimal \cr
 #'   `{mean:.3s}`  \tab 3 significant digits \cr
 #'   `{n:d}`       \tab integer \cr

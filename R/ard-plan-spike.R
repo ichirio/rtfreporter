@@ -439,6 +439,19 @@ rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
                 stat = stat, stats = stats, sep = sep, value = value,
                 na = na, spec = spec, notes = notes)
   roles <- roles[!vapply(roles, is.null, logical(1L))]
+  # A definition workbook can say the roles too (its `tables` sheet).  Read
+  # it HERE, so they are the plan's roles like any other -- checked against
+  # the data below, printed, and read by every verb -- and a role written in
+  # the call still wins.
+  if (!is.null(spec)) {
+    sp <- .ard_spec_scope(if (is.character(spec)) read_ard_spec(spec)
+                          else ard_spec(spec))
+    roles$spec <- sp
+    sa <- .ard_spec_table_args(sp)
+    for (r in c("cols", "rows", "label", "stats", "sep", "value", "na")) {
+      if (is.null(roles[[r]]) && !is.null(sa[[r]])) roles[[r]] <- sa[[r]]
+    }
+  }
   if (is.null(data)) {
     .ard_stop(paste0(
       "`data` is required.  The roles name its columns, and that ",
@@ -794,8 +807,8 @@ print.rtf_plan <- function(x, ...) {
 #'   number fills every cell.  `{n}` is the entry called `n`, or the
 #'   only entry when there is one.  The resolved value is also what
 #'   `header =` is called with when it is a function.
-#' @param round For `plan_digits()`: the tie-breaking family for the
-#'   run, as `ard_spread(round = )` takes it.  Last wins, like every
+#' @param rounding For `plan_digits()`: the tie-breaking family for the
+#'   run, as `ard_spread(rounding = )` takes it.  Last wins, like every
 #'   other layer.
 #' @param values For `plan_col_header()`: passed to [set_col_header()] as
 #'   `values =`, for a header whose cells carry `{token}` placeholders.
@@ -888,9 +901,10 @@ plan_cells <- function(plan, ...) .plan_keyed(plan, "cells", list(...))
 # than a layer beside them.
 #' @rdname plan_verbs
 #' @export
-plan_digits <- function(plan, ..., round = NULL) {
+plan_digits <- function(plan, ..., rounding = NULL) {
   p <- .plan_keyed(plan, "digits", list(...))
-  if (is.null(round)) p else .plan_layer(p, "round", list(round = round))
+  if (is.null(rounding)) p
+  else .plan_layer(p, "round", list(rounding = rounding))
 }
 
 
@@ -1459,7 +1473,7 @@ apply_plan <- function(plan, stage = c("auto", "long", "args",
   #    into `ard_spread()`, which a spike does not do.  Named keys are read so
   #    the shape is there, and a disagreement is reported rather than guessed.
   # One rounding family for the run, last wins like every other layer.
-  if (length(rnd)) s_args$round <- rnd$round
+  if (length(rnd)) s_args$rounding <- rnd$rounding
 
   if (identical(stage, "args")) {
     # Both halves, because both are resolved from layers and either can
