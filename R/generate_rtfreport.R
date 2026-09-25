@@ -305,7 +305,82 @@
 # blocks, which run the text through `.format_cell_text()` themselves -- resolve
 # the same four tokens with the same semantics, instead of printing them
 # literally (#398).  Header / footer keep going through `.render_tokens()`.
+# ---------------------------------------------------------------------------
+#  {PROGRAM} / {PROGRAM_NAME} / {PROGRAM_DIR} / {DATETIME}
+# ---------------------------------------------------------------------------
+#
+#  What a footer says about the run: which program wrote the file and when.
+#  They are filled while the file is WRITTEN -- so "Generated on" is the time
+#  the file was generated, not the time a footer list was built -- from a
+#  context generate_rtfreport() sets for the length of one call.  Every page
+#  of a file therefore shows the same time.  The text reaching here is already
+#  RTF-escaped, so a token reads `\{PROGRAM\}`.
+
+.run_ctx <- new.env(parent = emptyenv())
+
+# The program: an argument, else the option, else the script Rscript runs.
+.resolve_program <- function(program = NULL) {
+  if (is.null(program)) program <- getOption("rtfreporter.program")
+  if (is.null(program)) {
+    f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE),
+                                  value = TRUE))
+    if (length(f) == 1L && nzchar(f)) program <- f
+  }
+  if (!is.null(program) &&
+      (!is.character(program) || length(program) != 1L || is.na(program))) {
+    stop("`program` must be a single string: the path of the program ",
+         "that writes the file.", call. = FALSE)
+  }
+  program
+}
+
+.resolve_render_time <- function() {
+  t <- getOption("rtfreporter.render_time")
+  if (is.null(t)) return(Sys.time())
+  if (!inherits(t, "POSIXt")) t <- as.POSIXct(t)
+  t
+}
+
+# strftime in the C locale, so %b is "Sep" wherever the file is written.
+.format_run_time <- function(time, fmt) {
+  old <- Sys.getlocale("LC_TIME")
+  on.exit(Sys.setlocale("LC_TIME", old), add = TRUE)
+  suppressWarnings(Sys.setlocale("LC_TIME", "C"))
+  format(time, fmt)
+}
+
+.substitute_run_tokens <- function(out) {
+  has <- function(tok) grepl(paste0("\\{", tok), out, fixed = TRUE)
+  if (has("PROGRAM")) {
+    prog <- .run_ctx$program
+    if (is.null(prog)) {
+      stop("A header, footer, title or footnote uses {PROGRAM}, ",
+           "{PROGRAM_NAME} or {PROGRAM_DIR}, but no program is known.\n",
+           "  Say which: generate_rtfreport(..., program = \"path/to/prog.R\") ",
+           "or options(rtfreporter.program = ).", call. = FALSE)
+    }
+    out <- .replace_token(out, "\\{PROGRAM_NAME\\}", .rtf_escape(basename(prog)))
+    out <- .replace_token(out, "\\{PROGRAM_DIR\\}", .rtf_escape(dirname(prog)))
+    out <- .replace_token(out, "\\{PROGRAM\\}", .rtf_escape(prog))
+  }
+  if (has("DATETIME")) {
+    time <- .run_ctx$time %||% .resolve_render_time()
+    dflt <- getOption("rtfreporter.datetime_format", "%d%b%Y  %H:%M")
+    # `\{DATETIME\}` or `\{DATETIME:<format>\}`, the format up to the `\}`
+    hits <- regmatches(out, gregexpr("\\\\\\{DATETIME(:.*?)?\\\\\\}", out,
+                                     perl = TRUE))[[1L]]
+    for (h in unique(hits)) {
+      fmt <- substr(h, nchar("\\{DATETIME") + 1L, nchar(h) - 2L)
+      fmt <- sub("^:", "", fmt)
+      if (!nzchar(fmt)) fmt <- dflt
+      out <- .replace_token(out, h, .rtf_escape(.format_run_time(time, fmt)))
+    }
+  }
+  out
+}
+
 .substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
+  out <- .substitute_run_tokens(out)
   # `{SECTION_PAGES}` was removed in 0.7.31 (#410).  An unrecognised token is
   # passed through as literal text, so falling through silently would print
   # "{SECTION_PAGES}" into a rendered deliverable -- error instead, and say
@@ -2065,6 +2140,34 @@
 #' @param file_path Output RTF file path.
 #' @param overwrite Logical; whether to overwrite an existing file.
 #'   Default `FALSE`.
+#' @param program The path of the program writing the file, for the
+#'   `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) reads
+#'   `getOption("rtfreporter.program")`, then the script `Rscript` is
+#'   running.
+#'
+#' @section Run tokens:
+#' Beside the page tokens (`{PAGE}`, `{TOTAL_PAGES}`, ...), any header,
+#' footer, title or footnote cell may say which program wrote the file and
+#' when, filled **as the file is written**:
+#' \describe{
+#'   \item{`{PROGRAM}`}{the program path, as given;}
+#'   \item{`{PROGRAM_NAME}`, `{PROGRAM_DIR}`}{its file name and its folder;}
+#'   \item{`{DATETIME}`}{the time the file is written, as
+#'     `getOption("rtfreporter.datetime_format", "\%d\%b\%Y  \%H:\%M")`
+#'     in the C locale (`25Sep2026  10:05`);}
+#'   \item{`{DATETIME:<format>}`}{the same in another [strftime()] format,
+#'     e.g. `{DATETIME:\%Y-\%m-\%dT\%H:\%M}`.}
+#' }
+#' The time is taken once per file, so every page shows the same one;
+#' `options(rtfreporter.render_time = )` fixes it, for output that has to
+#' be reproducible.  A `{PROGRAM}` token with no program known is an error.
+#'
+#' ```r
+#' footer <- rtf_footer(list(
+#'   c(l = "SD = Standard Deviation."),
+#'   c(l = "{PROGRAM}      Generated on: {DATETIME}")))
+#' generate_rtfreport(doc, "t_dm.rtf", program = file.path(work_dir, "t_dm.R"))
+#' ```
 #'
 #' @return Invisibly returns `file_path`.
 #'
@@ -2081,7 +2184,15 @@
 #' generate_rtfreport(doc, out, overwrite = TRUE)
 #' file.exists(out)
 #' @export
-generate_rtfreport <- function(report, file_path, overwrite = FALSE) {
+generate_rtfreport <- function(report, file_path, overwrite = FALSE,
+                               program = NULL) {
+  # the run tokens' context, for this call only
+  .run_ctx$program <- .resolve_program(program)
+  .run_ctx$time <- .resolve_render_time()
+  on.exit({
+    .run_ctx$program <- NULL
+    .run_ctx$time <- NULL
+  }, add = TRUE)
   if (inherits(report, "rtf_document")) {
     report <- .pipe_doc_to_rtfreport(report)
     if (is.null(report)) {

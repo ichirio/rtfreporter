@@ -4,7 +4,7 @@
 \alias{generate_rtfreport}
 \title{Generate an RTF file from a report object}
 \usage{
-generate_rtfreport(report, file_path, overwrite = FALSE)
+generate_rtfreport(report, file_path, overwrite = FALSE, program = NULL)
 }
 \arguments{
 \item{report}{An \code{rtf_document} object (from \code{\link[=rtf_document]{rtf_document()}}) or an internal
@@ -14,6 +14,11 @@ generate_rtfreport(report, file_path, overwrite = FALSE)
 
 \item{overwrite}{Logical; whether to overwrite an existing file.
 Default \code{FALSE}.}
+
+\item{program}{The path of the program writing the file, for the
+\code{{PROGRAM}} tokens (see \emph{Run tokens}).  \code{NULL} (default) reads
+\code{getOption("rtfreporter.program")}, then the script \code{Rscript} is
+running.}
 }
 \value{
 Invisibly returns \code{file_path}.
@@ -22,6 +27,31 @@ Invisibly returns \code{file_path}.
 Renders an \code{rtf_document} (from the pipe API) or internal \code{rtfreport}
 object to an RTF file.
 }
+\section{Run tokens}{
+
+Beside the page tokens (\code{{PAGE}}, \code{{TOTAL_PAGES}}, ...), any header,
+footer, title or footnote cell may say which program wrote the file and
+when, filled \strong{as the file is written}:
+\describe{
+\item{\code{{PROGRAM}}}{the program path, as given;}
+\item{\code{{PROGRAM_NAME}}, \code{{PROGRAM_DIR}}}{its file name and its folder;}
+\item{\code{{DATETIME}}}{the time the file is written, as
+\code{getOption("rtfreporter.datetime_format", "\\\%d\\\%b\\\%Y  \\\%H:\\\%M")}
+in the C locale (\verb{25Sep2026  10:05});}
+\item{\verb{\{DATETIME:<format>\}}}{the same in another \code{\link[=strftime]{strftime()}} format,
+e.g. \verb{\{DATETIME:\\\%Y-\\\%m-\\\%dT\\\%H:\\\%M\}}.}
+}
+The time is taken once per file, so every page shows the same one;
+\code{options(rtfreporter.render_time = )} fixes it, for output that has to
+be reproducible.  A \code{{PROGRAM}} token with no program known is an error.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{footer <- rtf_footer(list(
+  c(l = "SD = Standard Deviation."),
+  c(l = "\{PROGRAM\}      Generated on: \{DATETIME\}")))
+generate_rtfreport(doc, "t_dm.rtf", program = file.path(work_dir, "t_dm.R"))
+}\if{html}{\out{</div>}}
+}
+
 \examples{
 df  <- data.frame(Parameter = "Age, Mean (SD)", Value = "75.1 (8.2)")
 doc <- rtf_document() |>
