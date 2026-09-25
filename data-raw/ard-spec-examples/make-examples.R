@@ -42,15 +42,15 @@ tbl <- function(...) {
 }
 
 # Two checks per report: the table data frame against ard_spread() written
-# out, and the finished rtftable pages against the report's plan code.  The
-# column header is not in the workbook yet, so both sides add the same one.
+# out, and the finished rtftable pages against the report's plan code --
+# column header included: the workbook's `col_header` sheet has to give
+# what the code's hand-written rtf_col_header() gives.
 check <- function(id, ard_n, spec_path, code_tbl, code_plan, header,
                   pages_n = ard_n) {
   sp <- read_ard_spec(spec_path, output_id = id)
   from_spec <- apply_plan(rtf_plan(ard_n, spec = sp, notes = FALSE), "table")
   ok <- isTRUE(all.equal(as.data.frame(from_spec), as.data.frame(code_tbl)))
-  pg_spec <- apply_plan(header(rtf_plan(pages_n, spec = sp, notes = FALSE)),
-                        "pages")
+  pg_spec <- apply_plan(rtf_plan(pages_n, spec = sp, notes = FALSE), "pages")
   pg_code <- apply_plan(code_plan, "pages")
   ok_pg <- isTRUE(all.equal(pg_spec, pg_code))
   np <- if (inherits(pg_spec, "rtftable")) 1L else length(pg_spec)
@@ -65,10 +65,18 @@ check <- function(id, ard_n, spec_path, code_tbl, code_plan, header,
 }
 
 # add the table-half sheets to a spec built above
-with_pages <- function(sp, layout = NULL, columns = NULL, style = NULL) {
+with_pages <- function(sp, layout = NULL, columns = NULL, style = NULL,
+                       col_header = NULL) {
   x <- unclass(sp)
   x$layout <- layout; x$columns <- columns; x$style <- style
+  x$col_header <- col_header
   ard_spec(x)
+}
+# one header cell per row: tbl() of these
+hc <- function(id, line, cols, text = "", span = "", border_top = "",
+               border_bottom = "") {
+  list(output_id = id, line = as.character(line), cols = cols, span = span,
+       text = text, border_top = border_top, border_bottom = border_bottom)
 }
 
 specs <- list()
@@ -309,7 +317,12 @@ specs$DM <- with_pages(specs$DM,
                     pages_max_rows = "21", pages_split = "group_safe")),
   columns = tbl(list(output_id = "DM", column = "row_label", width = "5"),
                 list(output_id = "DM", column = ".values",   width = "2")),
-  style = tbl(list(output_id = "DM", align_count_pct = "TRUE")))
+  style = tbl(list(output_id = "DM", align_count_pct = "TRUE")),
+  col_header = tbl(
+    hc("DM", 1, "row_label"),
+    hc("DM", 1, ".values", "{col}", span = "each"),
+    hc("DM", 2, "row_label", "Characteristic"),
+    hc("DM", 2, ".values", "(N={n})", span = "each")))
 dm_plan <- ard_dm |>
   ard_normalize() |>
   rtf_plan(cols = "TRT01P", rows = c(group = "variable"), notes = FALSE) |>
@@ -350,7 +363,19 @@ specs$AE <- with_pages(specs$AE,
   columns = tbl(list(output_id = "AE", column = "row_label", width = "40"),
                 list(output_id = "AE", column = ".values",   width = "10")),
   style = tbl(list(output_id = "AE", align_count_pct = "TRUE",
-                   row_height_twips = "210")))
+                   row_height_twips = "210")),
+  col_header = tbl(
+    hc("AE", 1, "row_label"),
+    hc("AE", 1, ".values", "{col1}
+(N={n:sum})
+ n (%)", span = "TR01AG1"),
+    hc("AE", 2, "row_label"),
+    hc("AE", 2, ".values", "", span = "TR01AG1", border_top = "single",
+       border_bottom = "none"),
+    hc("AE", 3, "row_label", "System Organ Class
+   Preferred Term"),
+    hc("AE", 3, ".values", "{col2}
+(N={n})", span = "each")))
 ae_plan <- ae_n |>
   rtf_plan(cols  = c("TR01AG1", "SEROSTAT"),
            rows  = c(group1 = "AEBODSYS"),
@@ -399,7 +424,13 @@ specs$ORR <- with_pages(specs$ORR,
                     blank_last = "TRUE", pages_max_rows = "20",
                     pages_split = "group_safe")),
   columns = do.call(tbl, orr_cols),
-  style = tbl(list(output_id = "ORR", align_count_pct = "FALSE")))
+  style = tbl(list(output_id = "ORR", align_count_pct = "FALSE")),
+  col_header = tbl(
+    hc("ORR", 1, "grp1 | grp2"),
+    hc("ORR", 1, ".values", "{col1}", span = "TRT01P"),
+    hc("ORR", 2, "grp1 | grp2", "Subgroup"),
+    hc("ORR", 2, "variable = n", "N", span = "each"),
+    hc("ORR", 2, "variable = orr_ci", "ORR(%) 90%CI", span = "each")))
 orr_plan <- orr_n |>
   rtf_plan(cols  = c("TRT01P", "variable"), sep = "_",
            rows  = c(grp1 = "group2", grp2 = "group2_level"),
@@ -431,7 +462,15 @@ specs$LB <- with_pages(specs$LB,
                     blank_first = "TRUE", blank_last = "TRUE")),
   columns = tbl(list(output_id = "LB", column = "row_label", width = "5"),
                 list(output_id = "LB", column = ".values",   width = "1")),
-  style = tbl(list(output_id = "LB", align_count_pct = "TRUE")))
+  style = tbl(list(output_id = "LB", align_count_pct = "TRUE")),
+  col_header = tbl(
+    hc("LB", 1, "row_label", "Timepoint"),
+    hc("LB", 1, ".values", "Treatment
+(N={n})
+ n (%)
+<Baseline>"),
+    hc("LB", 2, "row_label", '"  Category"'),
+    hc("LB", 2, ".values", "{col}", span = "each")))
 lb_pages_n <- ard_normalize(ard_lb, drop_contexts = "attributes")
 lb_plan <- lb_pages_n |>
   rtf_plan(cols  = "BASEGR",
@@ -477,7 +516,14 @@ specs$PK <- with_pages(specs$PK,
     list(output_id = "PK", column = "Statistics", width = "3",
          row_title = "TRUE", decimal_split = ""),
     list(output_id = "PK", column = ".values",    width = "2",
-         row_title = "",     decimal_split = "TRUE")))
+         row_title = "",     decimal_split = "TRUE")),
+  col_header = tbl(
+    hc("PK", 1, "Analyte"),
+    hc("PK", 1, "Statistics"),
+    hc("PK", 1, ".values", "Scheduled Timepoint"),
+    hc("PK", 2, "Analyte", "Analyte"),
+    hc("PK", 2, "Statistics", "Statistics"),
+    hc("PK", 2, ".values", "{col}", span = "each")))
 pk_plan <- ard_normalize(ard_pk) |>
   rtf_plan(cols  = "ATPT", rows = c(Analyte = "ANALYTE"),
            label = c(Statistics = "stat_label"), stats = "rows",
@@ -553,7 +599,8 @@ study_cells <- rbind(
   study_cells[!restates, , drop = FALSE])
 study <- ard_spec(all_sheet("tables"), all_sheet("variables"), study_cells,
                   study = c(rounding = "sas"), layout = all_sheet("layout"),
-                  columns = all_sheet("columns"), style = all_sheet("style"))
+                  columns = all_sheet("columns"), style = all_sheet("style"),
+                  col_header = all_sheet("col_header"))
 study_path <- file.path(out_dir, "study.xlsx")
 write_book(study, study_path)
 

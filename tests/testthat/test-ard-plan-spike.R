@@ -1716,3 +1716,89 @@ test_that("display values are checked where they are written", {
   expect_identical(lay$colpages_carry, 1:2)
   expect_identical(lay$stub_vars, c("a", "b"))
 })
+
+# ------------------------------------------------ the col_header sheet
+
+hdr_spec <- function(col_header, ...) ard_spec(
+  tables = data.frame(cols = "TRT", rows = "group = variable"),
+  layout = data.frame(stub_into = "row_label", stub_before = "TRUE"),
+  col_header = col_header, ...)
+first_page <- function(pg) if (inherits(pg, "rtftable")) pg else pg[[1L]]
+
+test_that("a col_header sheet gives the header rtf_col_header() gives", {
+  skip_if_no_cards2()
+  d <- spec_pages_ard()
+  sp <- hdr_spec(data.frame(
+    line = c(1, 1, 2, 2),
+    cols = c("row_label", ".values", "row_label", ".values"),
+    span = c(NA, "each", NA, "each"),
+    text = c(NA, "{col}", "Characteristic", "(N={n})")))
+  by_spec <- apply_plan(rtf_plan(d, spec = sp, notes = FALSE), "pages")
+  by_code <- rtf_plan(d, cols = "TRT", rows = c(group = "variable"),
+                      notes = FALSE) |>
+    plan_stub(into = "row_label", before = TRUE) |>
+    plan_col_header(n = TRUE, rtf_col_header(
+      c("", "{col}"), c("Characteristic", "(N={n})"))) |>
+    apply_plan("pages")
+  expect_equal(by_spec, by_code)
+  # {n} was read from the ARD without being asked for
+  expect_match(first_page(by_spec)$col_header[[2L]][2L], "^\\(N=[0-9]+\\)$")
+})
+
+test_that("span = a key makes one spanner per value; KEY = value selects", {
+  skip_if_no_cards2()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$GRP <- ifelse(adsl$AGE < 70, "Young", "Old")
+  d <- ard_normalize(cards::ard_stack(
+    adsl, .by = c(TRT, GRP),
+    cards::ard_categorical(variables = SEX, statistic = ~ c("n", "p"))))
+  sp <- ard_spec(
+    tables = data.frame(cols = "TRT | GRP", rows = "group = variable"),
+    layout = data.frame(stub_into = "row_label", stub_before = "TRUE"),
+    col_header = data.frame(
+      line = c(1, 1, 2, 2, 2),
+      cols = c("row_label", ".values", "row_label", "GRP = Young", "GRP = Old"),
+      span = c(NA, "TRT", NA, "each", "each"),
+      text = c(NA, "{col1}", "Sex", "<70", ">=70"),
+      border_bottom = c(NA, "single", NA, NA, NA)))
+  h <- first_page(apply_plan(rtf_plan(d, spec = sp, notes = FALSE),
+                             "pages"))$col_header
+  top <- h[[1L]]
+  spanners <- Filter(function(cc) cc$to > cc$from, top)
+  expect_length(spanners, 3L)                          # one per arm
+  expect_setequal(vapply(spanners, `[[`, "", "label"),
+                  unique(adsl$TRT))
+  expect_true(all(vapply(spanners, function(cc) !is.null(cc$border), NA)))
+  lab <- h[[2L]]
+  if (!is.character(lab)) lab <- vapply(lab, `[[`, "", "label")
+  expect_identical(lab[1L], "Sex")
+  expect_setequal(unique(lab[-1L]), c("<70", ">=70"))
+})
+
+test_that("a report's own header replaces the default header whole", {
+  sp <- ard_spec(col_header = data.frame(
+    output_id = c(NA, NA, "T1"), line = c(1, 2, 1),
+    cols = ".values", text = c("a", "b", "mine")))
+  t1 <- rtfreporter:::.ard_spec_scope(sp, "T1")
+  expect_identical(t1$col_header$text, "mine")
+  t2 <- suppressMessages(rtfreporter:::.ard_spec_scope(sp, "T2"))
+  expect_identical(t2$col_header$text, c("a", "b"))
+})
+
+test_that("col_header refuses what it cannot place", {
+  skip_if_no_cards2()
+  d <- spec_pages_ard()
+  expect_error(ard_spec(col_header = data.frame(line = 1, text = "x")),
+               "needs a `line` and `cols`")
+  bad <- function(...) apply_plan(rtf_plan(d, spec = hdr_spec(
+    data.frame(line = 1, ...)), notes = FALSE), "pages")
+  expect_error(bad(cols = "NOPE", text = "x"), "no column 'NOPE'")
+  expect_error(bad(cols = ".values", span = "ARMX", text = "x"),
+               "not a column key")
+  expect_error(bad(cols = "1:99", text = "x"), "outside")
+  # a typed \n is a line break; quotes keep leading spaces
+  v <- rtfreporter:::.ard_spec_typed(ard_spec(col_header = data.frame(
+    line = 1, cols = "a", text = '"  a\\nb"'))$col_header, "col_header")
+  expect_identical(v$text, "  a\nb")
+})

@@ -29,7 +29,7 @@ cells,template,セルの書き方。{統計量:書式} を埋め込む。,{mean}
 cells,digits,書式のないトークンの小数桁。カンマ区切りでトークンごと。,"2,3"
 cells,signif,有効桁（digits より優先）。,4
 cells,（template 空欄の行）,stats = rows の帳票だけ：統計量ごとの表示桁。row = 統計量名（ラベル列の値）、digits / signif を書く（fmt_numeric と同じ）。variable / context は空欄。,row = Mean / signif = 4
-(全体),（読み方）,ここまでの 4 シートで table data.frame、以下の 3 シートで rtftable のページまで。rtf_plan(data; spec = read_ard_spec(path; output_id = )) で読む。後に書いた plan_*() が勝つ。,
+(全体),（読み方）,ここまでの 4 シートで table data.frame、以下の 4 シート（layout / columns / style / col_header）で列ヘッダー付きの rtftable のページまで。rtf_plan(data; spec = read_ard_spec(path; output_id = )) で読む。後に書いた plan_*() が勝つ。,
 layout,,1 行 = 1 帳票。ページ・グループ・空行・スタブ。列名の接頭辞が対応する plan_*() を表す。,
 layout,pages_max_rows / pages_split / pages_by / pages_min_group_rows / pages_cont_label,plan_paginate_rows() の max_rows / split / by / min_group_rows / cont_label。先頭・末尾の空白を残すときは引用符で囲む。,"26 / group_force / "" (Cont.)"""
 layout,group_col / group_mode / group_collapse,plan_row_group() の col / mode / collapse。collapse は TRUE か列（名前・位置）の | 区切り。,value / 1 | 2
@@ -44,5 +44,11 @@ columns,row_title,TRUE で行見出しの列。,TRUE
 columns,decimal_split,TRUE で小数点を揃える（set_decimal_split）。,TRUE
 columns,hide,TRUE で処理には使うが印字しない。,TRUE
 style,,1 行 = 1 帳票。border / align_count_pct / auto_width / row_height_twips / header_row_height_twips / blank_row_height_twips / font / font_size_half_points / table_align / cell_valign（rtftable と同じ引数）。,align_count_pct = TRUE
+col_header,,1 行 = 列ヘッダーのセル 1 つ。帳票の行があればデフォルトのヘッダーを丸ごと置き換える。,
+col_header,line,ヘッダーの行番号（1 = 一番上）。,1
+col_header,cols,セルが乗る列。列名 / .values（値の列すべて）/ 位置（3、3:31、3:last）/ KEY = 値（そのキーがその値の列）を | 区切りで。,.values / grp1 | grp2 / variable = n
+col_header,span,空欄 = cols 全体で 1 セル。each = 列ごとに 1 セル。キー名 = そのキーの値ごとに 1 セル（群のスパナー）。,TR01AG1
+col_header,text,表示文字。改行は Alt+Enter か \n。{col} {col1} {col2} {n} {n:sum} が使える。{n} を使うと N は ARD から取る。先頭の空白は引用符で囲む。,{col1}\n(N={n:sum})
+col_header,align / bold / border_top / border_bottom,col_cell() / rtf_border() と同じ（single / none など）。,single
 about,,key / value。spec_version を記録（新しい版のファイルを古いパッケージで読むとエラー）。,spec_version = 1
 (予約),,次の版で読む予定のシート名。今は置いても読まれず、その旨のメッセージが出る。,titles / footnotes / page / header / footer / cell_styles

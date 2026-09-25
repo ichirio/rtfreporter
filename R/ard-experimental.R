@@ -2254,6 +2254,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #      layout     one row per report          pages, groups, blanks, stub
 #      columns    one row per printed column  width, row title, decimals
 #      style      one row per report          border, heights, font
+#      col_header one row per header cell     line, columns, span, text
 #
 #  `study` holds what is ONE for the whole study by definition -- the
 #  rounding family, so that no two tables of one study can disagree.  The
@@ -2293,7 +2294,11 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
     cell_valign = "text"),
   columns = c(
     column = "text", width = "num", row_title = "bool",
-    decimal_split = "bool", hide = "bool"))
+    decimal_split = "bool", hide = "bool"),
+  col_header = c(
+    line = "int", cols = "text", span = "text", text = "text",
+    align = "text", bold = "bool", border_top = "text",
+    border_bottom = "text"))
 
 .ard_spec_unquote <- function(x) {
   q <- regmatches(x, regexec("^([\"'])(.*)\\1$", x))[[1L]]
@@ -2341,7 +2346,9 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
     },
     list = .ard_spec_split(x),
     ids  = ids(x),
-    text = .ard_spec_unquote(x))
+    text = gsub("\\n", "\n", gsub("\r\n", "\n",
+                                   .ard_spec_unquote(x), fixed = TRUE),
+                fixed = TRUE))
 }
 
 # A row of a display sheet as a named list of typed values (NULLs dropped).
@@ -2368,7 +2375,8 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
     # rtf_plan(spec = ) and resolved like the plan's own verbs
     layout    = c("output_id", names(.ard_spec_types$layout)),
     columns   = c("output_id", names(.ard_spec_types$columns)),
-    style     = c("output_id", names(.ard_spec_types$style)))
+    style     = c("output_id", names(.ard_spec_types$style)),
+    col_header = c("output_id", names(.ard_spec_types$col_header)))
 }
 
 # The facts the `study` sheet may state, one value each for the whole
@@ -2382,7 +2390,10 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
                        cells     = c("variable", "context", "row"),
                        layout    = character(),
                        columns   = "column",
-                       style     = character())
+                       style     = character(),
+                       # a header is one thing: a report's own cells replace
+                       # the default header whole (see .ard_spec_scope)
+                       col_header = NA_character_)
 
 # Sheets a later version will read (the rest of the RTF deliverable).  A
 # workbook that already carries one is told so, not refused: the file can be
@@ -2561,9 +2572,10 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' | `layout` | report | pages, groups, blank rows, stub |
 #' | `columns` | printed column | width, row title, decimal split, hidden |
 #' | `style` | report | border, row heights, font |
+#' | `col_header` | header cell | line, columns, span, text, borders |
 #'
 #' The first four say how the ARD becomes a table data frame; the last
-#' three how that becomes `rtftable` pages.  [rtf_plan()] reads them all
+#' four how that becomes `rtftable` pages.  [rtf_plan()] reads them all
 #' (`rtf_plan(data, spec = )`), as the first layers of a plan, so a verb
 #' written after it still wins.
 #'
@@ -2678,6 +2690,27 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' or a `|`-list, as the column needs.  Quote a text value (`" (Cont.)"`)
 #' to keep its leading or trailing spaces.
 #'
+#' @section `col_header`:
+#' **One row per header cell**; `line` 1 is the top row.  A report's own
+#' cells replace the default header whole.
+#' \describe{
+#'   \item{`cols`}{The columns the cell sits over, `|`-separated: a
+#'     column name, `.values` (every spread column), a position or range
+#'     (`3`, `3:31`, `3:last`), or `KEY = value` --- the spread columns
+#'     whose column key `KEY` has that value (`variable = n`).}
+#'   \item{`span`}{Blank: one cell over all of `cols`.  `each`: one cell
+#'     per column.  A column key (`TR01AG1`): one cell per value of that
+#'     key, over its columns --- an arm's spanner, however many arms.}
+#'   \item{`text`}{The label.  A line break is Alt+Enter or `\\n`.  The
+#'     tokens of [plan_col_header()] work: `{col}` (the column's own
+#'     value), `{col1}`, `{col2}` (its keys, outermost first), `{n}` (its
+#'     denominator) and `{n:sum}` (the total over the cell's columns).
+#'     `{n}` is read from the ARD whenever a text uses it.  Quote a text
+#'     to keep leading spaces: `"  Category"`.}
+#'   \item{`align`, `bold`, `border_top`, `border_bottom`}{As
+#'     [col_cell()] / [rtf_border()] take them (`single`, `none`, ...).}
+#' }
+#'
 #' @section Reserved for the rest of the report:
 #' A later version will read the sheets `titles`, `footnotes`, `page`,
 #' `header`, `footer` and `cell_styles` under the same `output_id` rule,
@@ -2685,8 +2718,8 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' `about` sheet (`key` / `value`) may state `spec_version`; sheets whose
 #' name starts with `_` are ignored.
 #'
-#' @param tables,variables,cells,layout,columns,style Data frames with the
-#'   columns above; missing columns are added as `NA`.  `tables` may instead be a named list of the
+#' @param tables,variables,cells,layout,columns,style,col_header Data
+#'   frames with the columns above; missing columns are added as `NA`.  `tables` may instead be a named list of the
 #'   sheets, or an `ard_spec` (returned as it is).
 #' @param study The `study` sheet: a `key` / `value` frame, or a named
 #'   vector such as `c(rounding = "sas")`.
@@ -2701,7 +2734,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' @export
 ard_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                      study = NULL, layout = NULL, columns = NULL,
-                     style = NULL) {
+                     style = NULL, col_header = NULL) {
   if (inherits(tables, "ard_spec")) return(tables)
   if (is.data.frame(tables) && "template" %in% names(tables) &&
       is.null(variables) && is.null(cells)) {
@@ -2717,7 +2750,7 @@ ard_spec <- function(tables = NULL, variables = NULL, cells = NULL,
     }
     tables <- x$tables; variables <- x$variables; cells <- x$cells
     study <- x$study; layout <- x$layout; columns <- x$columns
-    style <- x$style
+    style <- x$style; col_header <- x$col_header
   }
   sp <- list(study     = .ard_spec_study(study),
              tables    = .ard_spec_sheet(tables,    "tables"),
@@ -2725,7 +2758,8 @@ ard_spec <- function(tables = NULL, variables = NULL, cells = NULL,
              cells     = .ard_spec_sheet(cells,     "cells"),
              layout    = .ard_spec_sheet(layout,    "layout"),
              columns   = .ard_spec_sheet(columns,   "columns"),
-             style     = .ard_spec_sheet(style,     "style"))
+             style     = .ard_spec_sheet(style,     "style"),
+             col_header = .ard_spec_sheet(col_header, "col_header"))
   t <- sp$tables
   chk <- function(v, ok, what) {
     bad <- !is.na(v) & !v %in% ok
@@ -2753,6 +2787,9 @@ ard_spec <- function(tables = NULL, variables = NULL, cells = NULL,
   }
   if (any(is.na(sp$columns$column))) {
     .ard_stop("Every `columns` row needs a `column`.")
+  }
+  if (any(is.na(sp$col_header$line) | is.na(sp$col_header$cols))) {
+    .ard_stop("Every `col_header` row needs a `line` and `cols`.")
   }
   for (sh in names(.ard_spec_types)) {
     for (i in seq_len(nrow(sp[[sh]]))) {
@@ -2842,6 +2879,8 @@ print.ard_spec <- function(x, ...) {
         for (cn in names(own)) if (!is.na(own[[cn]])) row[[cn]] <- own[[cn]]
         d <- row
       }
+    } else if (identical(.ard_spec_keys[[s]], NA_character_)) {
+      if (any(mine)) d <- d[mine, , drop = FALSE]
     } else {
       k <- .ard_spec_rowkey(d, s)
       d <- d[mine | !(k %in% k[mine]), , drop = FALSE]
@@ -3055,7 +3094,8 @@ print.ard_spec <- function(x, ...) {
   }
   ard_spec(get("tables"), get("variables"), get("cells"),
            study = get("study"), layout = get("layout"),
-           columns = get("columns"), style = get("style"))
+           columns = get("columns"), style = get("style"),
+           col_header = get("col_header"))
 }
 
 # A definition is ONE file holding several sheets, which is what a workbook
@@ -3076,7 +3116,7 @@ print.ard_spec <- function(x, ...) {
 #'
 #' @param path An `.xlsx` workbook (needs \pkg{readxl}) with the sheets
 #'   of [ard_spec()] (`study`, `tables`, `variables`, `cells`, `layout`,
-#'   `columns`, `style`).  Any of them may be absent.  A definition is one file with several sheets,
+#'   `columns`, `style`, `col_header`).  Any of them may be absent.  A definition is one file with several sheets,
 #'   so it is an Excel workbook and nothing else.
 #' @param output_id The report to narrow the workbook to.  Rows with a blank
 #'   `output_id` are the study's defaults and stay; a row naming this

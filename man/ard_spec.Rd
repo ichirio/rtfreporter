@@ -11,12 +11,13 @@ ard_spec(
   study = NULL,
   layout = NULL,
   columns = NULL,
-  style = NULL
+  style = NULL,
+  col_header = NULL
 )
 }
 \arguments{
-\item{tables, variables, cells, layout, columns, style}{Data frames with the
-columns above; missing columns are added as \code{NA}.  \code{tables} may instead be a named list of the
+\item{tables, variables, cells, layout, columns, style, col_header}{Data
+frames with the columns above; missing columns are added as \code{NA}.  \code{tables} may instead be a named list of the
 sheets, or an \code{ard_spec} (returned as it is).}
 
 \item{study}{The \code{study} sheet: a \code{key} / \code{value} frame, or a named
@@ -41,11 +42,12 @@ that each fact is written once:\tabular{lll}{
    \code{layout} \tab report \tab pages, groups, blank rows, stub \cr
    \code{columns} \tab printed column \tab width, row title, decimal split, hidden \cr
    \code{style} \tab report \tab border, row heights, font \cr
+   \code{col_header} \tab header cell \tab line, columns, span, text, borders \cr
 }
 
 
 The first four say how the ARD becomes a table data frame; the last
-three how that becomes \code{rtftable} pages.  \code{\link[=rtf_plan]{rtf_plan()}} reads them all
+four how that becomes \code{rtftable} pages.  \code{\link[=rtf_plan]{rtf_plan()}} reads them all
 (\code{rtf_plan(data, spec = )}), as the first layers of a plan, so a verb
 written after it still wins.
 }
@@ -174,6 +176,29 @@ them.
 Values are checked where they are written: a number, \code{TRUE} / \code{FALSE}
 or a \code{|}-list, as the column needs.  Quote a text value (\code{" (Cont.)"})
 to keep its leading or trailing spaces.
+}
+
+\section{\code{col_header}}{
+
+\strong{One row per header cell}; \code{line} 1 is the top row.  A report's own
+cells replace the default header whole.
+\describe{
+\item{\code{cols}}{The columns the cell sits over, \code{|}-separated: a
+column name, \code{.values} (every spread column), a position or range
+(\code{3}, \code{3:31}, \code{3:last}), or \code{KEY = value} --- the spread columns
+whose column key \code{KEY} has that value (\code{variable = n}).}
+\item{\code{span}}{Blank: one cell over all of \code{cols}.  \code{each}: one cell
+per column.  A column key (\code{TR01AG1}): one cell per value of that
+key, over its columns --- an arm's spanner, however many arms.}
+\item{\code{text}}{The label.  A line break is Alt+Enter or \verb{\\\\n}.  The
+tokens of \code{\link[=plan_col_header]{plan_col_header()}} work: \code{{col}} (the column's own
+value), \code{{col1}}, \code{{col2}} (its keys, outermost first), \code{{n}} (its
+denominator) and \code{{n:sum}} (the total over the cell's columns).
+\code{{n}} is read from the ARD whenever a text uses it.  Quote a text
+to keep leading spaces: \code{"  Category"}.}
+\item{\code{align}, \code{bold}, \code{border_top}, \code{border_bottom}}{As
+\code{\link[=col_cell]{col_cell()}} / \code{\link[=rtf_border]{rtf_border()}} take them (\code{single}, \code{none}, ...).}
+}
 }
 
 \section{Reserved for the rest of the report}{

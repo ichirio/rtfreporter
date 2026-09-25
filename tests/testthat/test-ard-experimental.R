@@ -980,7 +980,7 @@ test_that("a three-sheet spec supplies the roles as well as the cells", {
   sp <- dm_spec()
   expect_s3_class(sp, "ard_spec")
   expect_identical(names(sp), c("study", "tables", "variables", "cells",
-                                "layout", "columns", "style"))
+                                "layout", "columns", "style", "col_header"))
 
   # no cols / rows in the call: the `tables` sheet says them
   tbl <- spec_table(ard_normalize(make_ard()), sp)

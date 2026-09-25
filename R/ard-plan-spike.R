@@ -586,6 +586,15 @@ rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
   if (any(flag("row_title"))) st$row_title <- cl$column[flag("row_title")]
   if (length(st)) p <- do.call(plan_style, c(list(p), st))
   if (any(flag("hide"))) p <- plan_hide(p, cl$column[flag("hide")])
+  hd <- sp$col_header
+  if (nrow(hd)) {
+    cells <- lapply(seq_len(nrow(hd)), function(i)
+      .ard_spec_typed(hd[i, , drop = FALSE], "col_header"))
+    txt <- vapply(cells, function(r) r[["text"]] %||% "", "")
+    p <- plan_col_header(p, header = structure(
+      list(cells = cells, n = any(grepl("{n", txt, fixed = TRUE))),
+      class = "plan_spec_col_header"))
+  }
   w <- vapply(ct, function(r) r[["width"]] %||% NA_real_, NA_real_)
   if (any(!is.na(w)) || any(flag("decimal_split"))) {
     p <- .plan_layer(p, "columns", list(
@@ -593,6 +602,111 @@ rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
       decimal = cl$column[flag("decimal_split")]))
   }
   p
+}
+
+# The `col_header` sheet, resolved against the page it heads: `cols` are
+# names / `.values` / positions / `KEY = value`, `span` makes one cell,
+# one per column, or one per value of a key.  What comes back is what a
+# hand-written rtf_col_header() would have been, so the tokens and the
+# rest of the header machinery see nothing new.
+.plan_spec_col_header <- function(sh, page_names, spread, plan) {
+  keys <- unname(as.character(unlist(plan$roles$cols)))
+  sep <- plan$roles$sep %||% "____"
+  # each spread column's key values: from the data where it can be
+  # rebuilt, by splitting the name otherwise
+  d <- plan$data
+  kv <- list()
+  if (length(keys) && all(keys %in% names(d))) {
+    combo <- unique(as.data.frame(lapply(d[keys], as.character),
+                                  stringsAsFactors = FALSE))
+    combo <- combo[stats::complete.cases(combo), , drop = FALSE]
+    nm <- do.call(paste, c(unname(as.list(combo)), sep = sep))
+    for (i in seq_along(nm)) kv[[nm[i]]] <- unlist(combo[i, ], use.names = FALSE)
+  }
+  key_of <- function(col, key) {
+    k <- match(key, keys)
+    if (is.na(k)) {
+      .ard_stop(sprintf(paste0("`col_header`: %s is not a column key; ",
+                               "the keys are %s."), sQuote(key),
+                        paste(sQuote(keys), collapse = ", ")))
+    }
+    v <- kv[[col]] %||% strsplit(col, sep, fixed = TRUE)[[1L]]
+    if (k <= length(v)) v[[k]] else NA_character_
+  }
+  n <- length(page_names)
+  sel <- function(x) {
+    out <- integer()
+    for (it in .ard_spec_split(x)) {
+      m <- regmatches(it, regexec("^(.+?)\\s*=\\s*(.+)$", it))[[1L]]
+      r <- regmatches(it, regexec("^([0-9]+)\\s*:\\s*([0-9]+|last)$", it))[[1L]]
+      if (identical(it, ".values")) {
+        out <- c(out, match(spread, page_names))
+      } else if (length(r)) {
+        to <- if (identical(r[3L], "last")) n else as.integer(r[3L])
+        out <- c(out, seq(as.integer(r[2L]), to))
+      } else if (grepl("^[0-9]+$", it)) {
+        out <- c(out, as.integer(it))
+      } else if (length(m) && !it %in% page_names) {
+        hit <- spread[vapply(spread, function(cc)
+          identical(key_of(cc, trimws(m[2L])), trimws(m[3L])), NA)]
+        out <- c(out, match(hit, page_names))
+      } else if (it %in% page_names) {
+        out <- c(out, match(it, page_names))
+      } else {
+        .ard_stop(sprintf(paste0("`col_header`: no column %s on the page.",
+                                 "\n  Columns: %s"), sQuote(it),
+                          paste(page_names, collapse = ", ")))
+      }
+    }
+    out <- sort(unique(out[!is.na(out)]))
+    if (any(out < 1L | out > n)) {
+      .ard_stop(sprintf("`col_header`: position outside 1..%d in %s.", n,
+                        sQuote(x)))
+    }
+    out
+  }
+  units <- list()
+  for (cl in sh$cells) {
+    pos <- sel(cl[["cols"]])
+    if (!length(pos)) next
+    sp <- cl[["span"]]
+    groups <- if (is.null(sp)) list(pos)
+      else if (identical(sp, "each")) as.list(pos)
+      else {
+        v <- vapply(page_names[pos], function(cc) key_of(cc, sp), "")
+        unname(split(pos, factor(v, levels = unique(v))))
+      }
+    for (g in groups) {
+      units[[length(units) + 1L]] <- list(
+        line = cl[["line"]], pos = range(g), text = cl[["text"]] %||% "",
+        align = cl[["align"]], bold = cl[["bold"]],
+        top = cl[["border_top"]], bottom = cl[["border_bottom"]])
+    }
+  }
+  lines <- sort(unique(vapply(units, `[[`, 1L, "line")))
+  rows <- lapply(lines, function(ln) {
+    u <- Filter(function(x) identical(x$line, ln), units)
+    u <- u[order(vapply(u, function(x) x$pos[1L], 1L))]
+    plain <- all(vapply(u, function(x) x$pos[1L] == x$pos[2L] &&
+      is.null(x$align) && is.null(x$bold) && is.null(x$top) &&
+      is.null(x$bottom), NA))
+    if (plain) {
+      r <- rep("", n)
+      for (x in u) r[x$pos[1L]] <- x$text
+      return(r)
+    }
+    lapply(u, function(x) {
+      a <- list(pos = if (x$pos[1L] == x$pos[2L]) x$pos[1L] else x$pos,
+                label = x$text)
+      if (!is.null(x$align)) a$align <- x$align
+      if (!is.null(x$bold)) a$bold <- x$bold
+      b <- list(top = x$top, bottom = x$bottom)
+      b <- b[!vapply(b, is.null, NA)]
+      if (length(b)) a$border <- do.call(rtf_border, b)
+      do.call(col_cell, a)
+    })
+  })
+  do.call(rtf_col_header, rows)
 }
 
 # `.values` is every spread column; a name is itself.  What a page prints
@@ -2199,7 +2313,14 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 
 .plan_to_pages <- function(plan, tbl) {
   hdr <- .plan_merge(.plan_of(plan, "header"))
-  nvals <- .plan_n_values(plan, hdr$n)
+  # a workbook's header asks for the ARD's N when its text says `{n}`; a
+  # header written in code after it states its own
+  n_req <- hdr$n
+  if (is.null(n_req) && inherits(hdr$header, "plan_spec_col_header") &&
+      isTRUE(hdr$header$n)) {
+    n_req <- TRUE
+  }
+  nvals <- .plan_n_values(plan, n_req)
 
   fmt <- .plan_merge(.plan_of(plan, "fmt"))
   if (length(fmt)) {
@@ -2290,13 +2411,15 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     #
     #  `cols` / `stub` are the same thing without the function, for
     #  the header that only repeats itself over the columns.
-    h <- if (!is.function(hdr$header)) hdr$header
+    first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
+    sc <- intersect(.plan_spread_cols(plan, pre), names(first_d))
+    h <- if (inherits(hdr$header, "plan_spec_col_header"))
+           .plan_spec_col_header(hdr$header, names(first_d), sc, plan)
+         else if (!is.function(hdr$header)) hdr$header
          else if (length(formals(hdr$header)) >= 2L)
            hdr$header(nvals, tbl)
          else hdr$header(nvals)
     # the tokens and the short-row rule, on whatever came back
-    first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
-    sc <- intersect(.plan_spread_cols(plan, pre), names(first_d))
     h <- .plan_header_fill(h, nvals, sc, length(first_d) - length(sc),
                            plan$roles$sep)
     args <- list(x = out, h)

@@ -9,7 +9,7 @@ read_ard_spec(path, output_id = NULL)
 \arguments{
 \item{path}{An \code{.xlsx} workbook (needs \pkg{readxl}) with the sheets
 of \code{\link[=ard_spec]{ard_spec()}} (\code{study}, \code{tables}, \code{variables}, \code{cells}, \code{layout},
-\code{columns}, \code{style}).  Any of them may be absent.  A definition is one file with several sheets,
+\code{columns}, \code{style}, \code{col_header}).  Any of them may be absent.  A definition is one file with several sheets,
 so it is an Excel workbook and nothing else.}
 
 \item{output_id}{The report to narrow the workbook to.  Rows with a blank

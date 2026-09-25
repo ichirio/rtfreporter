@@ -57,12 +57,25 @@
   as before.  `ard_spread(spec = )` is withdrawn: it could only ever
   supply `ard_spread()`'s own arguments, and two ways in was one too
   many.  `ard_template(spec = )` goes with it (`plan_template(spec = )`
-  remains).  The column header stays in code for now.
+  remains).
+
+  **The column header is a sheet too: `col_header`**, one row per header
+  cell -- `line`, `cols`, `span`, `text`, `align`, `bold`,
+  `border_top`, `border_bottom`.  `cols` takes names, `.values`,
+  positions (`3:last`) and `KEY = value` (an ORR's `variable = n`
+  sub-columns, however many arms); `span` is one cell, `each` column, or
+  one spanner per value of a column key (an AE's arm over its strata).
+  The `plan_col_header()` tokens work (`{col}`, `{col1}`, `{n}`,
+  `{n:sum}`), and `{n}` is read from the ARD whenever a text uses it.
+  It resolves to the `rtf_col_header()` a hand-written header would be,
+  on the finished page, so a report's header no longer needs a function
+  of the table to survive a change in the number of columns.  A report's
+  own cells replace the default header whole.
 
   The sheets but `study` follow one rule: a blank `output_id` is a
   study-wide default and a report's own row replaces the default with the
   same key, so a later sheet can join without a new rule.  The names
-  `titles`, `footnotes`, `page`, `header`, `footer` and `cell_styles`
+  `titles`, `footnotes`, `page`, `header` / `footer` (the page's) and `cell_styles`
   are reserved for the rest of the RTF deliverable and reported, not
   refused, when present; an `about` sheet records `spec_version`, and
   sheets starting with `_` are ignored.  A column a sheet does not read is
@@ -83,7 +96,7 @@
   `system.file("extdata", "ard-spec", package = "rtfreporter")`;
   `data-raw/ard-spec-examples/make-examples.R` rebuilds them and checks
   each gives the identical table to `ard_spread()` written out **and the
-  identical `rtftable` pages to the report's plan code**.
+  identical `rtftable` pages, column header included, to the report's plan code**.
 
 - **`ard_round()` is withdrawn in favour of the package's one rule,
   `round_num()`** (#476).  `ard_spread(round = )` and `plan_digits(round = )`
