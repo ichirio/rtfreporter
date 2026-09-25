@@ -134,6 +134,7 @@ export(realign_count_pct)
 # Numeric -> character display formatters (significant digits / decimals)
 export(fmt_signif)
 export(fmt_round)
+export(round_num)
 export(fmt_numeric)
 
 # Blank-row spec constructors

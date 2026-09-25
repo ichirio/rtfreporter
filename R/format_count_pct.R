@@ -61,6 +61,10 @@
 #'   count is not missing data: the count still prints, on its own.  `Inf` /
 #'   `-Inf` counts print as `"Inf"` / `"-Inf"` -- an infinity means a division
 #'   by zero upstream, and hiding it would hide the bug.
+#' @param rounding How the percent is rounded to one decimal: `"r"` (half to
+#'   even) or `"sas"` (half away from zero).  `NULL`, the default, reads
+#'   `getOption("rtfreporter.rounding")`; see [round_num()].  `1/16` is
+#'   `6.25%`, printed `"6.2"` under `"r"` and `"6.3"` under `"sas"`.
 #'
 #' @return Character vector the same length as `count` / `pct`.
 #'
@@ -84,8 +88,10 @@ format_count_pct <- function(count, pct,
                               pct_unit = c("fraction", "percent"),
                               nbsp     = "\u00a0",
                               pct_sign = FALSE,
-                              na       = "") {
+                              na       = "",
+                              rounding = NULL) {
   pct_unit <- match.arg(pct_unit)
+  rnd <- .rounder(rounding)
   na <- .check_na_text(na)
   if (!is.numeric(count) || !is.numeric(pct)) {
     stop("`count` and `pct` must both be numeric.", call. = FALSE)
@@ -98,6 +104,11 @@ format_count_pct <- function(count, pct,
          "be length 1).", call. = FALSE)
   }
   if (pct_unit == "fraction") pct <- pct * 100
+  # Round ONCE, with the package's rule, before any branch reads the value:
+  # sprintf() would otherwise round the binary number its own way (6.25 ->
+  # "6.2" whatever the study wants), and a 9.96 would pick the "< 10" width
+  # and then print as "10.0".
+  pct <- rnd(pct, 1L)
 
   # When pct_sign = TRUE a "%" is added before the closing paren and every
   # branch is one character wider, so the ")" still aligns across cells.
@@ -119,8 +130,8 @@ format_count_pct <- function(count, pct,
     } else if (p >= 100) {
       # Two spaces before '(' so the ')' aligns with the other
       # paren-bearing branches.
-      raw <- if (pct_sign) sprintf("%3d  (%3d%%)", as.integer(c1), round(p))
-             else          sprintf("%3d  (%3d)",   as.integer(c1), round(p))
+      raw <- if (pct_sign) sprintf("%3d  (%3d%%)", as.integer(c1), rnd(p, 0L))
+             else          sprintf("%3d  (%3d)",   as.integer(c1), rnd(p, 0L))
     } else if (p < 10) {
       raw <- if (pct_sign) sprintf("%3d  (%3.1f%%)", as.integer(c1), p)
              else          sprintf("%3d  (%3.1f)",   as.integer(c1), p)

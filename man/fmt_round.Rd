@@ -4,7 +4,7 @@
 \alias{fmt_round}
 \title{Format numbers to a fixed number of decimal places}
 \usage{
-fmt_round(x, digits = 2L, rounding = c("r", "sas"), na = "")
+fmt_round(x, digits = 2L, rounding = NULL, na = "")
 }
 \arguments{
 \item{x}{A numeric vector. Character input is an error -- character columns
@@ -12,10 +12,11 @@ are taken as already formatted.}
 
 \item{digits}{Decimal places. Default \code{2}.}
 
-\item{rounding}{\code{"r"} (default) rounds with \code{\link[base:Round]{base::round()}}, which is
-banker's rounding; \code{"sas"} rounds half away from zero as SAS does. They
-differ on exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"}
-under \code{"sas"}.}
+\item{rounding}{\code{"r"} rounds with \code{\link[base:Round]{base::round()}}, which is banker's
+rounding; \code{"sas"} rounds half away from zero as SAS does. They differ on
+exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"} under
+\code{"sas"}.  \code{NULL}, the default, reads \code{getOption("rtfreporter.rounding")}
+(\code{"r"} unless set); see \code{\link[=round_num]{round_num()}}.}
 
 \item{na}{Text for \code{NA} and \code{NaN}. Default \code{""} (an empty cell, which is how
 rtfreporter renders a missing value anyway).}

@@ -68,7 +68,10 @@
     rtfreporter.footnote_width           = NULL,
     # DPI assumed for an embedded figure (rtfplot) whose file carries no
     # resolution metadata. Figures default to their native size at this DPI.
-    rtfreporter.figure.default_dpi       = 96L
+    rtfreporter.figure.default_dpi       = 96L,
+    # How every formatter rounds an exact half: "r" = base::round() (half to
+    # even), "sas" = half away from zero, as SAS ROUND() does.  See round_num().
+    rtfreporter.rounding                 = "r"
   )
 }
 

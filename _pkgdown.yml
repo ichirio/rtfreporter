@@ -403,6 +403,13 @@ reference:
       - fmt_round
       - fmt_numeric
 
+  - title: Utilities
+    desc: >
+      Small helpers that other functions build on and that are handy on their
+      own.
+    contents:
+      - round_num
+
   # ── 7. Blank rows ──────────────────────────────────────────────────────
   - title: Blank rows
     desc: Insert blank separator rows by position, by value change, or by rule.

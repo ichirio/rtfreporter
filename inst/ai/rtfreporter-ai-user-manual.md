@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.0.9072** (the development
+**This manual documents rtfreporter 0.8.0.9073** (the development
 version, after release 0.8.0).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -710,6 +710,7 @@ Also: `assemble_files()`, `assemble_folder()`, `assemble_spec()` /
 | `fmt_right_align(x)` | right-justify every non-empty cell to the widest — the minimal `cell_format` template |
 | `fmt_numeric(data, cols, digits =, rounding = "sas")` | numeric columns → formatted text (`"sas"` = SAS-style rounding) |
 | `fmt_round(x, digits)` / `fmt_signif(x, digits)` | rounding / significant digits |
+| `round_num(x, digits)` | numeric rounding with the package rule; `options(rtfreporter.rounding = "sas")` makes **every** formatter round a half away from zero, as SAS does (default `"r"` = half to even) |
 | `catx(sep, ...)` | SAS `CATX`: paste, dropping `NA` and `""` pieces |
 | `collapse_repeats(x, cols)` | blank out repeated values in a column |
 | `set_blank_rows()`, `blank_rows_by_change("Group")`, `blank_rows_by_rule("Group", "^Total", where = "before")` | blank separator rows |
@@ -761,8 +762,8 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 
 **Formatting:** `fmt_count_paren` `fmt_count_paren_bare` `fmt_value_paren`
 `fmt_right_align` `format_count_pct` `realign_count_pct` `fmt_signif`
-`fmt_round` `fmt_numeric` `catx` `collapse_repeats` `blank_rows_by_change`
-`blank_rows_by_rule`
+`fmt_round` `fmt_numeric` `round_num` `catx` `collapse_repeats`
+`blank_rows_by_change` `blank_rows_by_rule`
 
 **Assembly:** `assemble_rtf` `assemble_files` `assemble_toc` `assemble_spec`
 `assemble_from_spec` `assemble_folder` `toc_heading` `toc_entry`
