@@ -2670,6 +2670,9 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 #' guess.
 #'
 #' @inheritParams ard_template
+#' @param spec When `TRUE`, the generated plan reads its definition from a
+#'   workbook (`rtf_plan(spec = read_ard_spec(...))`) instead of inlining
+#'   the cells.
 #'
 #' @return The generated code, as a character vector, invisibly.
 #'
