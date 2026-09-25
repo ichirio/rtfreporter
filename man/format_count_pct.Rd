@@ -10,7 +10,8 @@ format_count_pct(
   pct_unit = c("fraction", "percent"),
   nbsp = " ",
   pct_sign = FALSE,
-  na = ""
+  na = "",
+  rounding = NULL
 )
 }
 \arguments{
@@ -42,6 +43,11 @@ default \code{""} returns an empty cell.  A missing \emph{percent} alongside a r
 count is not missing data: the count still prints, on its own.  \code{Inf} /
 \code{-Inf} counts print as \code{"Inf"} / \code{"-Inf"} -- an infinity means a division
 by zero upstream, and hiding it would hide the bug.}
+
+\item{rounding}{How the percent is rounded to one decimal: \code{"r"} (half to
+even) or \code{"sas"} (half away from zero).  \code{NULL}, the default, reads
+\code{getOption("rtfreporter.rounding")}; see \code{\link[=round_num]{round_num()}}.  \code{1/16} is
+\verb{6.25\%}, printed \code{"6.2"} under \code{"r"} and \code{"6.3"} under \code{"sas"}.}
 }
 \value{
 Character vector the same length as \code{count} / \code{pct}.

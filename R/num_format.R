@@ -30,8 +30,67 @@
   sign(x) * floor(z + 0.5 + sqrt(.Machine$double.eps) * abs(z)) / 10^digits
 }
 
-.rounder <- function(rounding) {
-  if (identical(rounding, "sas")) .round_half_up else base::round
+# The rounding family, resolved once for the whole package.  `NULL` reads
+# the `rtfreporter.rounding` option, so a study that has to match SAS says
+# so once instead of at every call; an explicit value still wins.
+.rounding_type <- function(rounding = NULL) {
+  if (is.null(rounding)) rounding <- .opt("rtfreporter.rounding")
+  if (!is.character(rounding) || length(rounding) != 1L ||
+      !rounding %in% c("r", "sas")) {
+    stop("`rounding` must be \"r\" (half to even, as base::round() does) ",
+         "or \"sas\" (half away from zero, as SAS ROUND() does).",
+         call. = FALSE)
+  }
+  rounding
+}
+
+.rounder <- function(rounding = NULL) {
+  if (identical(.rounding_type(rounding), "sas")) .round_half_up
+  else base::round
+}
+
+#' Round the way R rounds, or the way SAS rounds
+#'
+#' @description
+#' The two disagree on an exact half.  Base R rounds a half to the **even**
+#' digit (`round(0.5)` is `0`, `round(2.5)` is `2`); SAS's `ROUND()` rounds
+#' it **away from zero** (`0.5` is `1`, `2.5` is `3`, `-0.5` is `-1`).
+#' Every formatter in the package -- [fmt_signif()], [fmt_round()],
+#' [fmt_numeric()], [format_count_pct()] -- rounds with this same rule, so
+#' a study that has to match a SAS-produced table sets it **once**:
+#'
+#' \preformatted{
+#' options(rtfreporter.rounding = "sas")
+#' }
+#'
+#' An explicit `rounding =` on any call still wins over the option.
+#'
+#' `"sas"` also absorbs a binary representation error the way SAS's own
+#' fuzz does: `2.675` is stored as `2.67499999999999982`, which base R
+#' rounds to `2.67` and SAS to `2.68`.
+#'
+#' @param x A numeric vector.
+#' @param digits Decimal places. Default `0`.
+#' @param rounding `"r"` (base R, half to even) or `"sas"` (half away from
+#'   zero).  `NULL`, the default, reads `getOption("rtfreporter.rounding")`,
+#'   which is `"r"` unless the session or site set it.
+#'
+#' @return A numeric vector the same length as `x`.
+#'
+#' @seealso [fmt_round()] for the same rounding as printed text.
+#'
+#' @examples
+#' round_num(c(0.5, 1.5, 2.5, -0.5))                    # 0 2 2 0
+#' round_num(c(0.5, 1.5, 2.5, -0.5), rounding = "sas")  # 1 2 3 -1
+#' round_num(2.675, 2, rounding = "sas")                # 2.68
+#' @export
+round_num <- function(x, digits = 0, rounding = NULL) {
+  if (!is.numeric(x)) {
+    stop(sprintf("`round_num()` rounds numeric input; got %s.",
+                 paste(class(x), collapse = "/")), call. = FALSE)
+  }
+  digits <- .check_digits(digits, "digits", "round_num")
+  .rounder(rounding)(x, digits)
 }
 
 # Decimal places implied by a significant-digit request for ONE value.
@@ -119,10 +178,11 @@
 #' @param x A numeric vector. Character input is an error -- character columns
 #'   are taken as already formatted.
 #' @param digits Total significant digits. Default `3`.
-#' @param rounding `"r"` (default) rounds with [base::round()], which is
-#'   banker's rounding; `"sas"` rounds half away from zero as SAS does. They
-#'   differ on exact halves -- `23.445` is `"23.44"` under `"r"` and `"23.45"`
-#'   under `"sas"`.
+#' @param rounding `"r"` rounds with [base::round()], which is banker's
+#'   rounding; `"sas"` rounds half away from zero as SAS does. They differ on
+#'   exact halves -- `23.445` is `"23.44"` under `"r"` and `"23.45"` under
+#'   `"sas"`.  `NULL`, the default, reads `getOption("rtfreporter.rounding")`
+#'   (`"r"` unless set); see [round_num()].
 #' @param small `"signif"` (default) or `"fixed"`; see *Values below 1*.
 #' @param na Text for `NA` and `NaN`. Default `""` (an empty cell, which is how
 #'   rtfreporter renders a missing value anyway).
@@ -140,11 +200,10 @@
 #' fmt_signif(0.0004567, digits = 4, small = "fixed")     # "0.000"
 #' fmt_signif(23.445, digits = 4, rounding = "sas")       # "23.45"
 #' @export
-fmt_signif <- function(x, digits = 3L, rounding = c("r", "sas"),
+fmt_signif <- function(x, digits = 3L, rounding = NULL,
                        small = c("signif", "fixed"), na = "") {
   .check_num_input(x, "fmt_signif")
   digits   <- .check_digits(digits, "digits", "fmt_signif")
-  rounding <- match.arg(rounding)
   small    <- match.arg(small)
   rnd      <- .rounder(rounding)
   dec_fun  <- function(v) .signif_decimals(v, digits, small)
@@ -173,10 +232,9 @@ fmt_signif <- function(x, digits = 3L, rounding = c("r", "sas"),
 #' fmt_round(23.445, digits = 2)                   # "23.44" -- banker's
 #' fmt_round(23.445, digits = 2, rounding = "sas") # "23.45"
 #' @export
-fmt_round <- function(x, digits = 2L, rounding = c("r", "sas"), na = "") {
+fmt_round <- function(x, digits = 2L, rounding = NULL, na = "") {
   .check_num_input(x, "fmt_round")
   digits   <- .check_digits(digits, "digits", "fmt_round")
-  rounding <- match.arg(rounding)
   rnd      <- .rounder(rounding)
   vapply(x, .fmt_num_one, character(1L),
          dec_fun = function(v) digits, rnd = rnd, na = na, recompute = FALSE,
@@ -271,12 +329,11 @@ fmt_round <- function(x, digits = 2L, rounding = c("r", "sas"), na = "") {
 #' @export
 fmt_numeric <- function(data, cols, by = NULL, formats = NULL,
                         signif = NULL, digits = NULL,
-                        rounding = c("r", "sas"),
+                        rounding = NULL,
                         small = c("signif", "fixed"), na = "") {
   if (!is.data.frame(data)) {
     stop("`fmt_numeric()` needs a data frame.", call. = FALSE)
   }
-  rounding <- match.arg(rounding)
   small    <- match.arg(small)
   rnd      <- .rounder(rounding)
 

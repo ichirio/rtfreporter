@@ -68,8 +68,9 @@ test_that("one border constructor is left once the deprecated ones are set aside
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 91 exports, 7 of them deprecated and slated for removal before CRAN.
-  # (91 since #463 added rtfreporter_ai_manual().)
-  expect_length(.exports(), 91L)
-  expect_length(setdiff(.exports(), .dep), 84L)
+  # 92 exports, 7 of them deprecated and slated for removal before CRAN.
+  # (91 since #463 added rtfreporter_ai_manual(); 92 since #476 added
+  # round_num().)
+  expect_length(.exports(), 92L)
+  expect_length(setdiff(.exports(), .dep), 85L)
 })

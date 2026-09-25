@@ -7,7 +7,7 @@
 fmt_signif(
   x,
   digits = 3L,
-  rounding = c("r", "sas"),
+  rounding = NULL,
   small = c("signif", "fixed"),
   na = ""
 )
@@ -18,10 +18,11 @@ are taken as already formatted.}
 
 \item{digits}{Total significant digits. Default \code{3}.}
 
-\item{rounding}{\code{"r"} (default) rounds with \code{\link[base:Round]{base::round()}}, which is
-banker's rounding; \code{"sas"} rounds half away from zero as SAS does. They
-differ on exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"}
-under \code{"sas"}.}
+\item{rounding}{\code{"r"} rounds with \code{\link[base:Round]{base::round()}}, which is banker's
+rounding; \code{"sas"} rounds half away from zero as SAS does. They differ on
+exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"} under
+\code{"sas"}.  \code{NULL}, the default, reads \code{getOption("rtfreporter.rounding")}
+(\code{"r"} unless set); see \code{\link[=round_num]{round_num()}}.}
 
 \item{small}{\code{"signif"} (default) or \code{"fixed"}; see \emph{Values below 1}.}
 
