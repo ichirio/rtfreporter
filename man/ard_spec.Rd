@@ -4,32 +4,45 @@
 \alias{ard_spec}
 \title{A workbook-shaped definition of how an ARD becomes a table}
 \usage{
-ard_spec(tables = NULL, variables = NULL, cells = NULL)
+ard_spec(tables = NULL, variables = NULL, cells = NULL, study = NULL)
 }
 \arguments{
 \item{tables, variables, cells}{Data frames with the columns above; missing
 columns are added as \code{NA}.  \code{tables} may instead be a named list of the
-three, or an \code{ard_spec} (returned as it is).}
+sheets, or an \code{ard_spec} (returned as it is).}
+
+\item{study}{The \code{study} sheet: a \code{key} / \code{value} frame, or a named
+vector such as \code{c(rounding = "sas")}.}
 }
 \value{
-An object of class \code{ard_spec}: a list of the three data frames.
+An object of class \code{ard_spec}: a list of the four data frames.
 }
 \description{
 \code{ard_spec()} validates the definition that \code{\link[=ard_spread]{ard_spread()}} accepts as
 \verb{spec =}, and \code{\link[=read_ard_spec]{read_ard_spec()}} builds one from a workbook.  It holds
 what would otherwise be repeated in every script --- which keys go
 across and down, the display label and order of each variable, and the
-template and digits of every row --- in \strong{three sheets, one per grain},
-so that each fact is written once:\tabular{lll}{
+template and digits of every row --- in \strong{one sheet per grain}, so
+that each fact is written once:\tabular{lll}{
    sheet \tab one row per \tab holds \cr
+   \code{study} \tab study fact \tab the rounding family (\code{key} / \code{value}) \cr
    \code{tables} \tab report \tab the roles and the table-wide options \cr
    \code{variables} \tab variable \tab display label, order, level order \cr
    \code{cells} \tab line of a cell \tab template, guard, digits \cr
 }
 }
-\section{One rule on every sheet}{
+\section{\code{study}}{
 
-Every sheet starts with \code{output_id}.  \strong{Blank means a study-wide
+What is \strong{one for the whole study} by definition, as \code{key} / \code{value}
+rows.  Today that is \code{rounding} --- \code{r} (half to even) or \code{sas} (half
+away from zero), see \code{\link[=round_num]{round_num()}} --- so that no two tables of one
+study can round differently.  Blank leaves it to
+\code{getOption("rtfreporter.rounding")}.
+}
+
+\section{One rule on the other sheets}{
+
+\code{tables}, \code{variables} and \code{cells} start with \code{output_id}.  \strong{Blank means a study-wide
 default; a row naming the report replaces the default row with the same
 key} --- the whole \code{tables} row for that report, the \code{variables} row
 for that variable, the \code{cells} rows for that variable / context / row.
@@ -59,7 +72,6 @@ rows apart and then drops it; \code{NULL} leaves it out.}
 \code{\link[=ard_spread]{ard_spread()}} arguments of the same name.}
 \item{\code{sort}}{\code{TRUE}, \code{FALSE}, or the keys in order:
 \code{.overall | group1 | .depth | -n | label}.}
-\item{\code{rounding}}{\code{r} or \code{sas}; see \code{\link[=round_num]{round_num()}}.}
 }
 }
 

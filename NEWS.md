@@ -24,12 +24,14 @@
 
 ### Experimental ARD helpers
 
-- **The definition file is a three-sheet workbook, and it can say the
-  roles too** (#474).
+- **The definition file is a workbook with one sheet per grain, and it can
+  say the roles too** (#474).
 
-  One sheet per grain, so each fact is written once where it belongs:
-  `tables` (one row per report: `cols`, `rows`, `label`, `stats`, `value`,
-  `sep`, `sort`, `sort_stat`, `na`, `rounding`), `variables` (one row per
+  Each fact is written once where it belongs: `study` (`key` / `value`,
+  what is one for the whole study -- today `rounding`, so no two tables of
+  one study can round differently), `tables` (one row per report: `cols`,
+  `rows`, `label`, `stats`, `value`, `sep`, `sort`, `sort_stat`, `na`),
+  `variables` (one row per
   variable: `label`, `order`, `levels`) and `cells` (one row per line of a
   cell: `variable`, `context`, `row`, `when`, `template`, `digits`,
   `signif`).  The old single sheet repeated a variable's label, order and
@@ -42,7 +44,7 @@
   call still wins.  `rtf_plan(spec = )` takes its roles from the same
   `tables` row, checked against the data like any other role.
 
-  Every sheet follows one rule: a blank `output_id` is a study-wide
+  The other three follow one rule: a blank `output_id` is a study-wide
   default and a report's own row replaces the default with the same key,
   so a later sheet can join without a new rule.  The names `titles`,
   `footnotes`, `page`, `header`, `footer`, `columns`, `layout` and `style`

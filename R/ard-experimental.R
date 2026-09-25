@@ -1754,8 +1754,8 @@ ard_normalize <- function(ard, keys = NULL, hierarchy = character(),
 #' @param spec An [ard_spec()] definition, or the path to a workbook, as
 #'   [read_ard_spec()] reads it.  It can supply every argument above except
 #'   `x` --- the roles (`cols`, `rows`, `label`) and the table-wide options
-#'   from its `tables` sheet, `labels` and `levels` from `variables`, and
-#'   `cells` from `cells`.  An argument given here wins over the spec.  A
+#'   from its `tables` sheet, `rounding` from `study`, `labels` and
+#'   `levels` from `variables`, and `cells` from `cells`.  An argument given here wins over the spec.  A
 #'   workbook defining several reports must be narrowed first, with
 #'   `read_ard_spec(path, output_id = )`.
 #' @param sort_stat Name of a statistic to total across the spread columns and
@@ -2280,12 +2280,15 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #  A definition file is a WORKBOOK with one sheet per grain, so that each
 #  fact is written once, at the grain it belongs to:
 #
-#      tables     one row per report          cols, rows, label, rounding ...
+#      study      one row per study fact      rounding (key / value)
+#      tables     one row per report          cols, rows, label, sort ...
 #      variables  one row per variable        display label, order, levels
 #      cells      one row per line of a cell  template, guard, digits
 #
-#  Every sheet starts with `output_id`, and every sheet follows ONE rule: a
-#  blank `output_id` is a study-wide default, and a row naming the report
+#  `study` holds what is ONE for the whole study by definition -- the
+#  rounding family, so that no two tables of one study can disagree.  The
+#  other three start with `output_id` and follow ONE rule: a blank
+#  `output_id` is a study-wide default, and a row naming the report
 #  replaces the default row with the same key.  A sheet added later -- the
 #  titles, the footnotes, the page header -- joins under the same rule, so
 #  the names it will take are reserved now (`.ard_spec_reserved`).
@@ -2295,11 +2298,15 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 .ard_spec_schema <- function() {
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
-                  "sep", "sort", "sort_stat", "na", "rounding"),
+                  "sep", "sort", "sort_stat", "na"),
     variables = c("output_id", "variable", "label", "order", "levels"),
     cells     = c("output_id", "variable", "context", "row", "when",
                   "template", "digits", "signif"))
 }
+
+# The facts the `study` sheet may state, one value each for the whole
+# study, and what each accepts.
+.ard_spec_study_keys <- list(rounding = c("r", "sas"))
 
 # What a report's own row replaces a default row by.  `tables` has one row
 # per report, so its key is the report itself.
@@ -2325,6 +2332,9 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
   extra <- setdiff(names(d), c(allowed, "note"))
   if (length(extra)) {
     home <- vapply(extra, function(cn) {
+      if (cn %in% names(.ard_spec_study_keys)) {
+        return(" (one per study: a key of the `study` sheet)")
+      }
       hit <- names(Filter(function(s) cn %in% s, .ard_spec_schema()))
       if (length(hit)) paste0(" (a `", hit[1L], "` column)") else ""
     }, "")
@@ -2385,18 +2395,74 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
   invisible(NULL)
 }
 
+# The `study` sheet: `key` / `value`, one row per fact.  A named vector or
+# list is taken too, so `study = c(rounding = "sas")` reads as it looks.
+.ard_spec_study <- function(d) {
+  if (is.null(d)) d <- data.frame(key = character(), value = character())
+  if (!is.data.frame(d)) {
+    if (is.null(names(d)) || !all(nzchar(names(d)))) {
+      .ard_stop("`study` must be a key / value frame or a named vector.")
+    }
+    d <- data.frame(key = names(d), value = as.character(unlist(d)),
+                    stringsAsFactors = FALSE)
+  }
+  d <- as.data.frame(d, stringsAsFactors = FALSE, check.names = FALSE)
+  names(d) <- trimws(names(d))
+  extra <- setdiff(names(d), c("key", "value", "note"))
+  if (length(extra) || !all(c("key", "value") %in% names(d))) {
+    .ard_stop(paste0("The `study` sheet has the columns `key` and `value` ",
+                     "(and `note`), one row per study fact."))
+  }
+  out <- data.frame(key = trimws(as.character(d$key)),
+                    value = trimws(as.character(d$value)),
+                    stringsAsFactors = FALSE)
+  out$value[!is.na(out$value) & !nzchar(out$value)] <- NA_character_
+  if ("note" %in% names(d)) out$note <- as.character(d$note)
+  out <- out[!is.na(out$key) & nzchar(out$key), , drop = FALSE]
+  bad <- setdiff(out$key, names(.ard_spec_study_keys))
+  if (length(bad)) {
+    .ard_stop(sprintf("The `study` sheet has %s %s; it reads: %s.",
+                      if (length(bad) == 1L) "a key it does not read:" else
+                        "keys it does not read:",
+                      paste(sQuote(bad), collapse = ", "),
+                      paste(names(.ard_spec_study_keys), collapse = ", ")))
+  }
+  if (any(duplicated(out$key))) {
+    .ard_stop(sprintf(paste0("The `study` sheet states %s twice; a study ",
+                             "has one."), sQuote(out$key[duplicated(out$key)][1L])))
+  }
+  for (k in out$key) {
+    v <- out$value[out$key == k]
+    ok <- .ard_spec_study_keys[[k]]
+    if (!is.na(v) && !v %in% ok) {
+      .ard_stop(sprintf("`study` %s must be %s; got %s.", sQuote(k),
+                        paste(sQuote(ok), collapse = " or "), sQuote(v)))
+    }
+  }
+  rownames(out) <- NULL
+  out
+}
+
+.ard_spec_study_value <- function(sp, key) {
+  st <- sp$study
+  if (is.null(st) || !nrow(st)) return(NA_character_)
+  v <- st$value[st$key == key]
+  if (length(v)) v[1L] else NA_character_
+}
+
 # The layout before #474's rework was ONE sheet with every column on it.
 # Say what moved where rather than listing columns it does not know.
 .ard_spec_old_layout <- function(d) {
   .ard_stop(paste0(
     "This is the one-sheet layout, which is no longer read.  A definition ",
     "file now has\n  three sheets, one per grain:\n",
-    "    tables     output_id, cols, rows, label, rounding, ...\n",
+    "    tables     output_id, cols, rows, label, sort, ...\n",
     "    variables  output_id, variable, label, order, levels\n",
     "    cells      output_id, variable, context, row, when, template, ",
     "digits, signif\n",
     "  `label` / `order` / `levels` move to `variables` (once per variable), ",
-    "`round` becomes\n  `tables$rounding`, and the rest stays on `cells`.  ",
+    "`round` becomes\n  `rounding` on the `study` sheet (one per study), and the ",
+    "rest stays on `cells`.  ",
     "ard_spec_template() writes the new layout."))
 }
 
@@ -2407,17 +2473,25 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' `spec =`, and [read_ard_spec()] builds one from a workbook.  It holds
 #' what would otherwise be repeated in every script --- which keys go
 #' across and down, the display label and order of each variable, and the
-#' template and digits of every row --- in **three sheets, one per grain**,
-#' so that each fact is written once:
+#' template and digits of every row --- in **one sheet per grain**, so
+#' that each fact is written once:
 #'
 #' | sheet | one row per | holds |
 #' |---|---|---|
+#' | `study` | study fact | the rounding family (`key` / `value`) |
 #' | `tables` | report | the roles and the table-wide options |
 #' | `variables` | variable | display label, order, level order |
 #' | `cells` | line of a cell | template, guard, digits |
 #'
-#' @section One rule on every sheet:
-#' Every sheet starts with `output_id`.  **Blank means a study-wide
+#' @section `study`:
+#' What is **one for the whole study** by definition, as `key` / `value`
+#' rows.  Today that is `rounding` --- `r` (half to even) or `sas` (half
+#' away from zero), see [round_num()] --- so that no two tables of one
+#' study can round differently.  Blank leaves it to
+#' `getOption("rtfreporter.rounding")`.
+#'
+#' @section One rule on the other sheets:
+#' `tables`, `variables` and `cells` start with `output_id`.  **Blank means a study-wide
 #' default; a row naming the report replaces the default row with the same
 #' key** --- the whole `tables` row for that report, the `variables` row
 #' for that variable, the `cells` rows for that variable / context / row.
@@ -2445,7 +2519,6 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'     [ard_spread()] arguments of the same name.}
 #'   \item{`sort`}{`TRUE`, `FALSE`, or the keys in order:
 #'     `.overall | group1 | .depth | -n | label`.}
-#'   \item{`rounding`}{`r` or `sas`; see [round_num()].}
 #' }
 #'
 #' @section `variables`:
@@ -2485,16 +2558,19 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'
 #' @param tables,variables,cells Data frames with the columns above; missing
 #'   columns are added as `NA`.  `tables` may instead be a named list of the
-#'   three, or an `ard_spec` (returned as it is).
+#'   sheets, or an `ard_spec` (returned as it is).
+#' @param study The `study` sheet: a `key` / `value` frame, or a named
+#'   vector such as `c(rounding = "sas")`.
 #'
-#' @return An object of class `ard_spec`: a list of the three data frames.
+#' @return An object of class `ard_spec`: a list of the four data frames.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
 #' @seealso [read_ard_spec()], [write_ard_spec()], [ard_spec_template()]
 #' @export
-ard_spec <- function(tables = NULL, variables = NULL, cells = NULL) {
+ard_spec <- function(tables = NULL, variables = NULL, cells = NULL,
+                     study = NULL) {
   if (inherits(tables, "ard_spec")) return(tables)
   if (is.data.frame(tables) && "template" %in% names(tables) &&
       is.null(variables) && is.null(cells)) {
@@ -2502,15 +2578,17 @@ ard_spec <- function(tables = NULL, variables = NULL, cells = NULL) {
   }
   if (is.list(tables) && !is.data.frame(tables)) {
     x <- tables
-    bad <- setdiff(names(x), names(.ard_spec_schema()))
+    bad <- setdiff(names(x), c("study", names(.ard_spec_schema())))
     if (length(bad) || is.null(names(x))) {
-      .ard_stop(paste0("A spec list holds `tables`, `variables` and ",
-                       "`cells`; it also had: ",
+      .ard_stop(paste0("A spec list holds `study`, `tables`, `variables` ",
+                       "and `cells`; it also had: ",
                        paste(sQuote(bad), collapse = ", ")))
     }
     tables <- x$tables; variables <- x$variables; cells <- x$cells
+    study <- x$study
   }
-  sp <- list(tables    = .ard_spec_sheet(tables,    "tables"),
+  sp <- list(study     = .ard_spec_study(study),
+             tables    = .ard_spec_sheet(tables,    "tables"),
              variables = .ard_spec_sheet(variables, "variables"),
              cells     = .ard_spec_sheet(cells,     "cells"))
   t <- sp$tables
@@ -2524,7 +2602,6 @@ ard_spec <- function(tables = NULL, variables = NULL, cells = NULL) {
   }
   chk(t$stats, c("cells", "rows"), "stats")
   chk(t$value, c("stat", "stat_fmt"), "value")
-  chk(t$rounding, c("r", "sas"), "rounding")
   if (any(is.na(sp$variables$variable))) {
     .ard_stop("Every `variables` row needs a `variable`.")
   }
@@ -2548,6 +2625,12 @@ print.ard_spec <- function(x, ...) {
                                    if (length(ids) > 1L) "s" else "",
                                    ": ", paste(ids, collapse = ", "))
       else "", "\n", sep = "")
+  st <- x$study
+  if (!is.null(st) && nrow(st)) {
+    cat("  study      ", paste0(st$key, " = ",
+                                ifelse(is.na(st$value), "(blank)", st$value),
+                                collapse = ", "), "\n", sep = "")
+  }
   for (s in names(.ard_spec_schema())) {
     cat(sprintf("  %-10s %3d row%s\n", s, nrow(x[[s]]),
                 if (nrow(x[[s]]) == 1L) "" else "s"))
@@ -2658,17 +2741,19 @@ print.ard_spec <- function(x, ...) {
 # them.  Only what the row says is returned: an argument it leaves blank
 # keeps ard_spread()'s own default.
 .ard_spec_table_args <- function(sp) {
-  t <- sp$tables
-  if (!nrow(t)) return(list())
-  t <- t[1L, , drop = FALSE]
   out <- list()
+  r <- .ard_spec_study_value(sp, "rounding")
+  if (!is.na(r)) out$rounding <- r
+  t <- sp$tables
+  if (!nrow(t)) return(out)
+  t <- t[1L, , drop = FALSE]
   if (!is.na(t$cols)) out$cols <- .ard_spec_split(t$cols)
   if (!is.na(t$rows)) out$rows <- .ard_spec_refs(t$rows)
   if (!is.na(t$label)) {
     out["label"] <- list(switch(t$label, "NA" = NA, "NULL" = NULL,
                                 .ard_spec_refs(t$label)))
   }
-  for (a in c("stats", "value", "sep", "sort_stat", "na", "rounding")) {
+  for (a in c("stats", "value", "sep", "sort_stat", "na")) {
     if (!is.na(t[[a]])) out[[a]] <- t[[a]]
   }
   if (!is.na(t$sort)) {
@@ -2778,7 +2863,7 @@ print.ard_spec <- function(x, ...) {
 .ard_spec_from_sheets <- function(sheets, where) {
   nm <- names(sheets)
   low <- tolower(nm)
-  if (!any(low %in% names(.ard_spec_schema()))) {
+  if (!any(low %in% c("study", names(.ard_spec_schema())))) {
     one <- sheets[[1L]]
     if (length(sheets) >= 1L && "template" %in% names(one)) {
       .ard_spec_old_layout(one)
@@ -2797,7 +2882,7 @@ print.ard_spec <- function(x, ...) {
       }
     }
   }
-  empty <- vapply(sheets, function(d) !nrow(d), NA)
+  empty <- vapply(sheets, function(d) !nrow(d), NA) & low != "study"
   skip <- startsWith(nm, "_") | low == "about" | empty
   res <- low %in% .ard_spec_reserved & !skip
   if (any(res)) {
@@ -2806,7 +2891,7 @@ print.ard_spec <- function(x, ...) {
       paste(sQuote(nm[res]), collapse = ", "),
       if (sum(res) == 1L) "is" else "are"))
   }
-  other <- !skip & !res & !low %in% names(.ard_spec_schema())
+  other <- !skip & !res & !low %in% c("study", names(.ard_spec_schema()))
   if (any(other)) {
     .ard_stop(paste0(
       sQuote(where), " has ",
@@ -2818,7 +2903,8 @@ print.ard_spec <- function(x, ...) {
     i <- which(low == s)
     if (length(i)) sheets[[i[1L]]] else NULL
   }
-  ard_spec(get("tables"), get("variables"), get("cells"))
+  ard_spec(get("tables"), get("variables"), get("cells"),
+           study = get("study"))
 }
 
 # A definition is ONE file holding several sheets, which is what a workbook
@@ -2838,8 +2924,8 @@ print.ard_spec <- function(x, ...) {
 #' Read an ARD table definition from a workbook
 #'
 #' @param path An `.xlsx` workbook (needs \pkg{readxl}) with the sheets
-#'   `tables`, `variables` and `cells` (see [ard_spec()]).  Any of the
-#'   three may be absent.  A definition is one file with several sheets,
+#'   `study`, `tables`, `variables` and `cells` (see [ard_spec()]).  Any of
+#'   them may be absent.  A definition is one file with several sheets,
 #'   so it is an Excel workbook and nothing else.
 #' @param output_id The report to narrow the workbook to.  Rows with a blank
 #'   `output_id` are the study's defaults and stay; a row naming this
@@ -2869,7 +2955,8 @@ read_ard_spec <- function(path, output_id = NULL) {
 #'
 #' @param spec An [ard_spec()] (or what it accepts).
 #' @param path Destination `.xlsx` (needs \pkg{writexl}).  The workbook
-#'   gets the three sheets and an `about` sheet stating `spec_version`.
+#'   gets the `study`, `tables`, `variables` and `cells` sheets and an
+#'   `about` sheet stating `spec_version`.
 #'
 #' @return `path`, invisibly.
 #'
@@ -2886,6 +2973,13 @@ write_ard_spec <- function(spec, path) {
     d
   })
   names(sheets) <- names(.ard_spec_schema())
+  # the study sheet always shows its keys, blank or not, so the one place
+  # the study's rounding is decided is visible in every workbook
+  st <- sp$study
+  for (k in setdiff(names(.ard_spec_study_keys), st$key)) {
+    st[nrow(st) + 1L, c("key", "value")] <- list(k, NA_character_)
+  }
+  sheets <- c(list(study = st), sheets)
   .ard_spec_xlsx_path(path, "write_ard_spec")
   .ard_need("writexl", "write_ard_spec()")
   about <- data.frame(key = "spec_version",

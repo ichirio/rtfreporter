@@ -13,8 +13,8 @@
 #    4. checks the result is IDENTICAL to the same table written as code.
 #
 #  It also writes study.xlsx: all five in one workbook, keyed by output_id,
-#  with the study-wide defaults (rounding, the n (%) template) written once
-#  on rows whose output_id is blank.
+#  with the study's rounding on its `study` sheet, and the shared n (%)
+#  template written once, on a `cells` row whose output_id is blank.
 # ============================================================================
 
 suppressMessages({
@@ -65,9 +65,10 @@ ard_dm <- ard_stack(
   .total_n = TRUE)
 
 specs$DM <- ard_spec(
+  study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "DM", cols = "TRT01P", rows = "group = variable",
-         label = "", sort = "", rounding = "sas",
+         label = "", sort = "",
          note = "Demographics; one arm")),
   variables = tbl(
     list(output_id = "DM", variable = "AGE",    label = "Age (years) [a]",                  order = 1, levels = ""),
@@ -114,10 +115,11 @@ ard_ae <- ard_stack_hierarchical(
 ard_ae <- ard_ae[ard_ae$context != "tabulate", ]
 
 specs$AE <- ard_spec(
+  study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "AE", cols = "TR01AG1 | SEROSTAT",
          rows = "group1 = AEBODSYS", label = "label = AEDECOD",
-         sort = ".overall | group1 | .depth | -n | label", rounding = "sas",
+         sort = ".overall | group1 | .depth | -n | label",
          note = "TEAE by SOC / PT, frequency descending")),
   variables = tbl(
     list(output_id = "AE", variable = "TR01AG1",  label = "", order = NA,
@@ -157,10 +159,11 @@ ard_orr <- ard_orr[ard_orr$stat_name %in%
                      c("N", "n", "estimate", "conf.low", "conf.high"), ]
 
 specs$ORR <- ard_spec(
+  study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "ORR", cols = "TRT01P | variable",
          rows = "grp1 = group2 | grp2 = group2_level", label = "NA",
-         sort = "FALSE", sep = "_", rounding = "sas",
+         sort = "FALSE", sep = "_",
          note = "`variable` (n / orr_ci) is derived with mutate() before the spread")),
   cells = tbl(
     list(output_id = "ORR", variable = "n",      context = "", row = "1", when = "",              template = "{N:.0f}",                          digits = "", signif = ""),
@@ -203,10 +206,11 @@ ard_lb <- bind_rows(
                   by = c(LBTOX_LBL, BASEGR), variables = WORSTGR))
 
 specs$LB <- ard_spec(
+  study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "LB", cols = "BASEGR",
          rows = 'LBTOX_LBL = LBTOX_LBL | group1 = "Worst Post-Baseline Values"',
-         label = "label = .label", sort = "", rounding = "sas",
+         label = "label = .label", sort = "",
          note = "Shift from baseline grade to worst post-baseline grade")),
   variables = tbl(
     list(output_id = "LB", variable = "BASEGR",  label = "", order = NA,
@@ -245,10 +249,10 @@ ard_pk <- ard_stack(
 stat_levels <- c("N", "Mean", "SD", "Median", "Min", "Max")
 
 specs$PK <- ard_spec(
+  study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "PK", cols = "ATPT", rows = "Analyte = ANALYTE",
          label = "Statistics = stat_label", stats = "rows", sort = "",
-         rounding = "sas",
          note = "One statistic per row, raw values; digits are set on the display side")),
   variables = tbl(
     list(output_id = "PK", variable = "Statistics", label = "", order = NA,
@@ -294,25 +298,20 @@ check("LB",  ard_normalize(ard_lb), file.path(out_dir, "LB.xlsx"),  lb_code)
 check("PK",  ard_normalize(ard_pk), file.path(out_dir, "PK.xlsx"),  pk_code)
 
 # ------------------------------------------ one study workbook, all five
-# What every report shares is written ONCE, on a row with a blank output_id:
-# the rounding family on `tables`, and the n (%) template on `cells`.  A
-# report's own row replaces the default with the same key, so AE and LB need
-# no `cells` row of their own any more.
+# The rounding family is one per study, on the `study` sheet.  What the
+# reports share is written ONCE, on a row with a blank output_id -- here the
+# n (%) template on `cells`.  A report's own row replaces the default with
+# the same key, so AE and LB need no `cells` row of their own any more.
 all_sheet <- function(s) do.call(rbind, lapply(specs, function(x) x[[s]]))
 study_tables <- all_sheet("tables")
-study_tables$rounding <- NA_character_
-study_tables <- rbind(
-  tbl(list(output_id = "", cols = "", rows = "", label = "", stats = "",
-           value = "", sep = "", sort = "", sort_stat = "", na = "",
-           rounding = "sas", note = "study-wide defaults")),
-  study_tables)
 study_cells <- all_sheet("cells")
 shared <- is.na(study_cells$variable) & study_cells$output_id %in% c("AE", "LB")
 study_cells <- rbind(
   tbl(list(output_id = "", variable = "", context = "", row = "", when = "",
            template = "{n:.0f} ({p:.1f%})", digits = "", signif = "")),
   study_cells[!shared, , drop = FALSE])
-study <- ard_spec(study_tables, all_sheet("variables"), study_cells)
+study <- ard_spec(study_tables, all_sheet("variables"), study_cells,
+                  study = c(rounding = "sas"))
 study_path <- file.path(out_dir, "study.xlsx")
 write_book(study, study_path)
 

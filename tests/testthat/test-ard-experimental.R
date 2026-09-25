@@ -947,8 +947,9 @@ test_that("naming the analysed variable says where its levels went", {
 
 dm_spec <- function(output_id = NA) {
   ard_spec(
+    study = c(rounding = "sas"),
     tables = data.frame(output_id = output_id, cols = "TRT",
-                        rows = "group = variable", rounding = "sas",
+                        rows = "group = variable",
                         stringsAsFactors = FALSE),
     variables = data.frame(
       output_id = output_id,
@@ -970,7 +971,7 @@ test_that("a three-sheet spec supplies the roles as well as the cells", {
   skip_if_no_cards()
   sp <- dm_spec()
   expect_s3_class(sp, "ard_spec")
-  expect_identical(names(sp), c("tables", "variables", "cells"))
+  expect_identical(names(sp), c("study", "tables", "variables", "cells"))
 
   # no cols / rows in the call: the `tables` sheet says them
   tbl <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)
@@ -1017,9 +1018,10 @@ test_that("the workbook round-trips, and nothing but a workbook is one", {
   f <- tempfile(fileext = ".xlsx")
   on.exit(unlink(f), add = TRUE)
   write_ard_spec(sp, f)
-  expect_true("about" %in% readxl::excel_sheets(f))
+  expect_true(all(c("study", "about") %in% readxl::excel_sheets(f)))
   back <- read_ard_spec(f, output_id = "DM")
   expect_identical(attr(back, "output_id"), "DM")
+  expect_identical(rtfreporter:::.ard_spec_study_value(back, "rounding"), "sas")
   expect_equal(back$cells$template, sp$cells$template)
   expect_equal(back$variables$levels, sp$variables$levels)
   a <- ard_spread(ard_normalize(make_ard()), spec = f, notes = FALSE)
@@ -1068,7 +1070,13 @@ test_that("ard_spec() refuses what it would otherwise quietly ignore", {
   # a column that belongs on another sheet says which
   expect_error(ard_spec(tables = data.frame(cols = "TRT", levels = "a | b")),
                "a `variables` column")
-  expect_error(ard_spec(tables = data.frame(rounding = "banker")), "must be")
+  expect_error(ard_spec(study = c(rounding = "banker")), "must be")
+  # rounding is one per study: on `tables` it is refused, pointing at `study`
+  expect_error(ard_spec(tables = data.frame(cols = "TRT", rounding = "sas")),
+               "`study` sheet")
+  expect_error(ard_spec(study = c(font = "Arial")), "does not read")
+  expect_error(ard_spec(study = data.frame(key = c("rounding", "rounding"),
+                                           value = c("r", "sas"))), "twice")
   expect_error(ard_spec(cells = data.frame(variable = "AGE", row = "n")),
                "no `template`")
   expect_error(ard_spec(tables = data.frame(output_id = c("T1", "T1"),
@@ -1106,6 +1114,75 @@ test_that("ard_spec_template() scaffolds the three sheets", {
   # and it runs as written
   tbl <- ard_spread(ard_normalize(make_ard()), spec = sp, notes = FALSE)
   expect_true(all(c("Placebo") %in% names(tbl)))
+})
+
+# --------------------------------------------- one shared spec, many reports
+
+test_that("output_id: a report's own row replaces the default, per sheet", {
+  sp <- ard_spec(
+    tables = data.frame(output_id = c(NA, "T14-3-1"),
+                        cols = c("TRT", NA), na = c("-", "NE")),
+    variables = data.frame(output_id = c(NA, "T14-3-1"),
+                           variable = "AGE", label = c("Age", "Age PK")),
+    cells = data.frame(output_id = c(NA, "T14-3-1", "T14-3-1"),
+                       variable = "AGE", row = "Mean (SD)",
+                       template = c("{mean} ({sd})", "{mean}", "{median}"),
+                       digits = c("1,2", "3", "3")))
+  a <- rtfreporter:::.ard_spec_scope(sp, "T14-1-1")
+  b <- rtfreporter:::.ard_spec_scope(sp, "T14-3-1")
+  expect_identical(a$tables$na, "-")
+  expect_identical(b$tables$na, "NE")
+  expect_identical(b$tables$cols, "TRT")         # blank: the default stays
+  expect_identical(a$variables$label, "Age")
+  expect_identical(b$variables$label, "Age PK")
+  expect_identical(a$cells$digits, "1,2")
+  # the report's own chain replaces the default one whole
+  expect_identical(b$cells$template, c("{mean}", "{median}"))
+})
+
+test_that("several reports and no output_id is refused, naming them", {
+  sp <- ard_spec(tables = data.frame(output_id = c("DM", "AE"), cols = "TRT"))
+  expect_error(rtfreporter:::.ard_spec_scope(sp), "defines 2 reports")
+  expect_identical(attr(rtfreporter:::.ard_spec_scope(sp, "AE"), "output_id"),
+                   "AE")
+  one <- ard_spec(tables = data.frame(output_id = "DM", cols = "TRT"))
+  expect_identical(attr(rtfreporter:::.ard_spec_scope(one), "output_id"), "DM")
+})
+
+test_that("output_id against a spec that cannot honour it is an error", {
+  only <- ard_spec(tables = data.frame(output_id = "T1", cols = "TRT"))
+  expect_error(rtfreporter:::.ard_spec_scope(only, "T9"), "nothing would apply")
+  # a file of defaults serves any report, quietly
+  defaults <- ard_spec(tables = data.frame(cols = "TRT"))
+  expect_silent(rtfreporter:::.ard_spec_scope(defaults, "T9"))
+})
+
+test_that("an unnamed report falls back to the defaults, and says so", {
+  sp <- ard_spec(cells = data.frame(output_id = c(NA, "T1"),
+                                    variable = c("AGE", "SEX"),
+                                    template = c("{mean}", "{n}")))
+  expect_message(rtfreporter:::.ard_spec_scope(sp, "T9"),
+                 "default rows are used")
+  expect_identical(nrow(suppressMessages(
+    rtfreporter:::.ard_spec_scope(sp, "T9"))$cells), 1L)
+})
+
+test_that("the workbook's sheets: reserved ones are reported, unknown refused", {
+  mk <- function(...) rtfreporter:::.ard_spec_from_sheets(list(...), "x.xlsx")
+  t <- data.frame(cols = "TRT")
+  expect_message(mk(tables = t, titles = data.frame(text = "Table 1")),
+                 "reserved for a later version")
+  expect_error(mk(tables = t, Sheet2 = data.frame(a = 1)), "nobody reads")
+  expect_silent(mk(tables = t, `_notes` = data.frame(a = 1),
+                   Sheet2 = data.frame()))
+  # the study sheet is read, never "nobody reads"
+  sp <- mk(tables = t, study = data.frame(key = "rounding", value = "sas"))
+  expect_identical(rtfreporter:::.ard_spec_study_value(sp, "rounding"), "sas")
+  expect_error(mk(tables = t, about = data.frame(key = "spec_version",
+                                                 value = "99")),
+               "spec_version 99")
+  expect_error(mk(Sheet1 = data.frame(variable = "AGE", template = "{n}")),
+               "one-sheet layout")
 })
 
 # -------------------------------------------- which template made each cell
@@ -1156,7 +1233,7 @@ test_that("the rounding family: argument > spec > option > R's own", {
     ard_spread(d, cols = "TRT", rows = c(group = "variable"),
                cells = "{mean:.1f}", notes = FALSE, ...)$Placebo[1]
   }
-  sp <- ard_spec(tables = data.frame(rounding = "sas"),
+  sp <- ard_spec(study = c(rounding = "sas"),
                  cells = data.frame(variable = "AGE", template = "{mean:.1f}"))
 
   expect_identical(cell(), "0.2")                         # R's own, the default

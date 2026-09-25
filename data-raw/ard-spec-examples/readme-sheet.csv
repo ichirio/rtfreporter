@@ -1,8 +1,10 @@
 sheet,column,説明,例
 (全体),,rtfreporter の ARD 定義ファイル（spec_version 1）。ard_spread(spec = read_ard_spec(path; output_id = )) で読む。名前が _ で始まるシートは読まれない（このシート）。,
-(全体),output_id,すべてのシートの先頭列。空欄 = 試験全体のデフォルト。帳票名を書いた行は、同じキーのデフォルト行を置き換える。,DM
+(全体),output_id,tables / variables / cells の先頭列。空欄 = 試験全体のデフォルト。帳票名を書いた行は、同じキーのデフォルト行を置き換える。,DM
 (全体),note,どのシートにも置けるメモ列。読まれない。上記以外の未知の列はエラー（見出しの打ち間違い防止）。,
 (全体),（リスト）,1 セルに複数書くときは | で区切る。,TR01AG1 | SEROSTAT
+study,,試験で 1 つに決まる事実。key / value の 2 列、1 行 = 1 項目。output_id は無い（帳票ごとに変えられない）。,
+study,rounding,丸め方。r（偶数丸め）/ sas（四捨五入）。試験内のすべての帳票に効く。空欄 = options(rtfreporter.rounding)。,sas
 tables,,1 行 = 1 帳票。役割と表全体のオプション。コードで同じ引数を書けばそちらが勝つ。,
 tables,cols,横に展開するキー。外側から順に。,TR01AG1 | SEROSTAT
 tables,rows,縦のキー。name = 列名 で列名を付け替え。引用符で囲んだ値は固定の見出し。,"group1 = AEBODSYS | grp = ""Worst Post-Baseline Values"""
@@ -13,7 +15,6 @@ tables,sep,cols が複数のとき列名をつなぐ文字。既定は ____。,_
 tables,sort,TRUE / FALSE / 並べ替えキーの列挙。,.overall | group1 | .depth | -n | label
 tables,sort_stat,列方向に合計して .sort_stat 列にする統計量名。,n
 tables,na,どのテンプレートも埋められなかったセルの値。,-
-tables,rounding,丸め方。r（偶数丸め）/ sas（四捨五入）。空欄 = options(rtfreporter.rounding)。,sas
 variables,,1 行 = 1 変数。解析変数だけでなく列キーやラベル列の名前も書ける。,
 variables,variable,変数名（解析変数・列キー・ラベル列名）。,AGEGR1
 variables,label,変数名の代わりに表示する文字。,Age (years)

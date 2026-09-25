@@ -8,8 +8,8 @@ read_ard_spec(path, output_id = NULL)
 }
 \arguments{
 \item{path}{An \code{.xlsx} workbook (needs \pkg{readxl}) with the sheets
-\code{tables}, \code{variables} and \code{cells} (see \code{\link[=ard_spec]{ard_spec()}}).  Any of the
-three may be absent.  A definition is one file with several sheets,
+\code{study}, \code{tables}, \code{variables} and \code{cells} (see \code{\link[=ard_spec]{ard_spec()}}).  Any of
+them may be absent.  A definition is one file with several sheets,
 so it is an Excel workbook and nothing else.}
 
 \item{output_id}{The report to narrow the workbook to.  Rows with a blank
