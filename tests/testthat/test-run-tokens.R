@@ -34,6 +34,16 @@ test_that("the program comes from the argument, else the option", {
   expect_error(render(run_doc(list(c(l = "{PROGRAM}")))), "no program is known")
 })
 
+test_that("a document can carry its program; the argument still wins", {
+  doc <- rtf_document(program = "doc/own.R") |>
+    rtf_section(page = 1, secinfo = list(header = NULL,
+      footer = rtf_footer(list(c(l = "{PROGRAM_NAME}"))))) |>
+    rtf_tables(as_rtftables(data.frame(A = "a")))
+  expect_match(render(doc), "own.R", fixed = TRUE)
+  expect_match(render(doc, program = "arg.R"), "arg.R", fixed = TRUE)
+  expect_error(rtf_document(program = 1), "single string")
+})
+
 test_that("{DATETIME} is the time the file is written, in the C locale", {
   old <- options(rtfreporter.render_time = as.POSIXct("2026-09-25 10:05:00"))
   on.exit(options(old), add = TRUE)

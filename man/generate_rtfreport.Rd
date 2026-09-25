@@ -16,7 +16,8 @@ generate_rtfreport(report, file_path, overwrite = FALSE, program = NULL)
 Default \code{FALSE}.}
 
 \item{program}{The path of the program writing the file, for the
-\code{{PROGRAM}} tokens (see \emph{Run tokens}).  \code{NULL} (default) reads
+\code{{PROGRAM}} tokens (see \emph{Run tokens}).  \code{NULL} (default) reads the
+document's own (\code{rtf_document(program = )}), then
 \code{getOption("rtfreporter.program")}, then the script \code{Rscript} is
 running.}
 }

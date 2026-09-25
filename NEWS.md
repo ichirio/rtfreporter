@@ -15,7 +15,8 @@
   the locale, format the time, paste the path, append the row -- is one
   row: `c(l = "{PROGRAM}      Generated on: {DATETIME}")`, and it now
   stamps the time the file was generated rather than the time its footer
-  was built.
+  was built.  A document can carry its own program, `rtf_document(program = )`,
+  which `generate_rtfreport()` reads before the option.
 
 - **One rounding rule for the whole package: `round_num()` and
   `options(rtfreporter.rounding = )`** (#476).

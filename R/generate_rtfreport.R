@@ -2141,7 +2141,8 @@
 #' @param overwrite Logical; whether to overwrite an existing file.
 #'   Default `FALSE`.
 #' @param program The path of the program writing the file, for the
-#'   `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) reads
+#'   `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) reads the
+#'   document's own (`rtf_document(program = )`), then
 #'   `getOption("rtfreporter.program")`, then the script `Rscript` is
 #'   running.
 #'
@@ -2187,6 +2188,9 @@
 generate_rtfreport <- function(report, file_path, overwrite = FALSE,
                                program = NULL) {
   # the run tokens' context, for this call only
+  if (is.null(program) && inherits(report, "rtf_document")) {
+    program <- report$document$program
+  }
   .run_ctx$program <- .resolve_program(program)
   .run_ctx$time <- .resolve_render_time()
   on.exit({
