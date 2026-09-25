@@ -24,6 +24,31 @@
 
 ### Experimental ARD helpers
 
+- **A plan written as code becomes a workbook: `as_table_spec()`**
+  (#474).  It is how an existing report becomes the template for a new
+  study.  Everything is read from what the plan *resolves to* against its
+  own data -- roles, levels, labels, templates with their digits, pages,
+  groups, blanks, stub, widths **by name** (`.values` when the value
+  columns share one), and the column header, with a literal that is a
+  column's own key value turned back into `{col}` / `{col1}`, a repeated
+  cell into `span = each`, and an arm's spanner into `span = <key>` even
+  when the study it came from had one arm.  A header written as a
+  function of the table converts too, because it is converted after it
+  ran.  What a sheet cannot say (a `plan_after()` step other than
+  `set_decimal_split()`, a guarded label, `plan_cell_style()`, a literal
+  `n`) is listed, and the workbook is run back through
+  `rtf_plan(spec = )` to report whether it gives the same pages.  A named
+  list of plans is one study workbook.
+
+- **The definition functions are renamed for what they define: a
+  table**.  `ard_spec()` -> `table_spec()`, `read_ard_spec()` ->
+  `read_table_spec()`, `write_ard_spec()` -> `write_table_spec()`,
+  `ard_spec_template()` -> `table_spec_template()`.  The definition is
+  read after `ard_normalize()` and is not about an ARD any more; the
+  report-level definition to come will sit beside it.  No aliases
+  (experimental).  An unnamed row key next to a constant heading in
+  `tables$rows` (`LBTOX_LBL | group1 = "..."`) now keeps its own name.
+
 - **The definition file is a workbook with one sheet per grain, and it can
   say the roles too** (#474).
 

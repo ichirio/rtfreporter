@@ -954,7 +954,7 @@ spec_table <- function(d, spec, ...) {
 }
 
 dm_spec <- function(output_id = NA) {
-  ard_spec(
+  table_spec(
     study = c(rounding = "sas"),
     tables = data.frame(output_id = output_id, cols = "TRT",
                         rows = "group = variable",
@@ -978,7 +978,7 @@ dm_spec <- function(output_id = NA) {
 test_that("a three-sheet spec supplies the roles as well as the cells", {
   skip_if_no_cards()
   sp <- dm_spec()
-  expect_s3_class(sp, "ard_spec")
+  expect_s3_class(sp, "table_spec")
   expect_identical(names(sp), c("study", "tables", "variables", "cells",
                                 "layout", "columns", "style", "col_header"))
 
@@ -1017,17 +1017,17 @@ test_that("an argument given in the call wins over the spec", {
 test_that("the workbook round-trips, and nothing but a workbook is one", {
   skip_if_no_cards()
   sp <- dm_spec("DM")
-  expect_error(write_ard_spec(sp, tempfile(fileext = ".csv")), ".xlsx workbook")
-  expect_error(write_ard_spec(sp, tempfile()), ".xlsx workbook")
-  expect_error(read_ard_spec("spec.csv"), ".xlsx workbook")
+  expect_error(write_table_spec(sp, tempfile(fileext = ".csv")), ".xlsx workbook")
+  expect_error(write_table_spec(sp, tempfile()), ".xlsx workbook")
+  expect_error(read_table_spec("spec.csv"), ".xlsx workbook")
 
   skip_if_not_installed("writexl")
   skip_if_not_installed("readxl")
   f <- tempfile(fileext = ".xlsx")
   on.exit(unlink(f), add = TRUE)
-  write_ard_spec(sp, f)
+  write_table_spec(sp, f)
   expect_true(all(c("study", "about") %in% readxl::excel_sheets(f)))
-  back <- read_ard_spec(f, output_id = "DM")
+  back <- read_table_spec(f, output_id = "DM")
   expect_identical(attr(back, "output_id"), "DM")
   expect_identical(rtfreporter:::.ard_spec_study_value(back, "rounding"), "sas")
   expect_equal(back$cells$template, sp$cells$template)
@@ -1041,7 +1041,7 @@ test_that("rows with the same key are one chain, and `when` guards one", {
   skip_if_no_cards()
   d <- ard_normalize(make_ard())
   d$stat[d$stat_name == "n" & d$variable == "SEX" & d$.label == "F"] <- 0
-  sp <- ard_spec(
+  sp <- table_spec(
     tables = data.frame(cols = "TRT", rows = "group = variable"),
     cells = data.frame(variable = c("SEX", "SEX"),
                        when     = c("n == 0", NA),
@@ -1050,67 +1050,67 @@ test_that("rows with the same key are one chain, and `when` guards one", {
   sex <- tbl[tbl$group == "SEX", ]
   expect_identical(unname(unlist(sex[sex$label == "F", "Placebo"])), "none")
   expect_false(any(sex$Placebo[sex$label == "M"] == "none"))
-  expect_error(rtfreporter:::.ard_spec_cells(ard_spec(cells = data.frame(
+  expect_error(rtfreporter:::.ard_spec_cells(table_spec(cells = data.frame(
     variable = "SEX", when = "n ==", template = "x"))), "not valid R")
 })
 
 test_that("quoted values in `rows` are constant headings; NA drops the label", {
-  a <- rtfreporter:::.ard_spec_table_args(ard_spec(tables = data.frame(
+  a <- rtfreporter:::.ard_spec_table_args(table_spec(tables = data.frame(
     cols = "BASEGR", rows = 'LBTOX_LBL | group1 = "Worst Post-Baseline"',
     label = "NA", sort = ".overall | group1 | -n")))
   expect_identical(a$cols, "BASEGR")
   expect_true(is.list(a$rows))
-  expect_identical(names(a$rows), c("", "group1"))
+  expect_identical(names(a$rows), c("LBTOX_LBL", "group1"))  # its own name
   expect_identical(a$rows[[1L]], "LBTOX_LBL")
   expect_s3_class(a$rows[[2L]], "formula")
   expect_true(is.na(a$label))
   expect_identical(a$sort, c(".overall", "group1", "-n"))
-  b <- rtfreporter:::.ard_spec_table_args(ard_spec(tables = data.frame(
+  b <- rtfreporter:::.ard_spec_table_args(table_spec(tables = data.frame(
     cols = "TR01AG1 | SEROSTAT", label = "label = AEDECOD", sort = "false")))
   expect_identical(b$cols, c("TR01AG1", "SEROSTAT"))
   expect_identical(b$label, c(label = "AEDECOD"))
   expect_false(b$sort)
 })
 
-test_that("ard_spec() refuses what it would otherwise quietly ignore", {
-  expect_error(ard_spec(tables = data.frame(cols = "TRT", colz = "x")),
+test_that("table_spec() refuses what it would otherwise quietly ignore", {
+  expect_error(table_spec(tables = data.frame(cols = "TRT", colz = "x")),
                "does not read")
   # a column that belongs on another sheet says which
-  expect_error(ard_spec(tables = data.frame(cols = "TRT", levels = "a | b")),
+  expect_error(table_spec(tables = data.frame(cols = "TRT", levels = "a | b")),
                "a `variables` column")
-  expect_error(ard_spec(study = c(rounding = "banker")), "must be")
+  expect_error(table_spec(study = c(rounding = "banker")), "must be")
   # rounding is one per study: on `tables` it is refused, pointing at `study`
-  expect_error(ard_spec(tables = data.frame(cols = "TRT", rounding = "sas")),
+  expect_error(table_spec(tables = data.frame(cols = "TRT", rounding = "sas")),
                "`study` sheet")
-  expect_error(ard_spec(study = c(font = "Arial")), "does not read")
-  expect_error(ard_spec(study = data.frame(key = c("rounding", "rounding"),
+  expect_error(table_spec(study = c(font = "Arial")), "does not read")
+  expect_error(table_spec(study = data.frame(key = c("rounding", "rounding"),
                                            value = c("r", "sas"))), "twice")
-  expect_error(ard_spec(cells = data.frame(variable = "AGE", row = "n")),
+  expect_error(table_spec(cells = data.frame(variable = "AGE", row = "n")),
                "no `template`")
-  expect_error(ard_spec(tables = data.frame(output_id = c("T1", "T1"),
+  expect_error(table_spec(tables = data.frame(output_id = c("T1", "T1"),
                                             cols = "TRT")), "two rows")
-  expect_error(ard_spec(variables = data.frame(variable = c("AGE", "AGE"))),
+  expect_error(table_spec(variables = data.frame(variable = c("AGE", "AGE"))),
                "two rows")
   # `note` is for people and always allowed
-  expect_s3_class(ard_spec(tables = data.frame(cols = "TRT", note = "hi")),
-                  "ard_spec")
+  expect_s3_class(table_spec(tables = data.frame(cols = "TRT", note = "hi")),
+                  "table_spec")
   # the one-sheet layout names where its columns went
-  expect_error(ard_spec(data.frame(variable = "AGE", template = "{mean}")),
+  expect_error(table_spec(data.frame(variable = "AGE", template = "{mean}")),
                "one-sheet layout")
 })
 
 test_that("`cols` has to come from somewhere", {
   skip_if_no_cards()
   expect_error(spec_table(ard_normalize(make_ard()),
-                          ard_spec(cells = data.frame(
+                          table_spec(cells = data.frame(
                             variable = "AGE", template = "{mean}"))),
                "`cols` is required")
 })
 
-test_that("ard_spec_template() scaffolds the three sheets", {
+test_that("table_spec_template() scaffolds the three sheets", {
   skip_if_no_cards()
-  sp <- ard_spec_template(make_ard(), cols = "TRT", output_id = "DM")
-  expect_s3_class(sp, "ard_spec")
+  sp <- table_spec_template(make_ard(), cols = "TRT", output_id = "DM")
+  expect_s3_class(sp, "table_spec")
   expect_identical(sp$tables$cols, "TRT")
   expect_identical(sp$tables$output_id, "DM")
   expect_true(all(c("AGE", "AGEGR", "SEX") %in% sp$variables$variable))
@@ -1127,7 +1127,7 @@ test_that("ard_spec_template() scaffolds the three sheets", {
 # --------------------------------------------- one shared spec, many reports
 
 test_that("output_id: a report's own row replaces the default, per sheet", {
-  sp <- ard_spec(
+  sp <- table_spec(
     tables = data.frame(output_id = c(NA, "T14-3-1"),
                         cols = c("TRT", NA), na = c("-", "NE")),
     variables = data.frame(output_id = c(NA, "T14-3-1"),
@@ -1149,24 +1149,24 @@ test_that("output_id: a report's own row replaces the default, per sheet", {
 })
 
 test_that("several reports and no output_id is refused, naming them", {
-  sp <- ard_spec(tables = data.frame(output_id = c("DM", "AE"), cols = "TRT"))
+  sp <- table_spec(tables = data.frame(output_id = c("DM", "AE"), cols = "TRT"))
   expect_error(rtfreporter:::.ard_spec_scope(sp), "defines 2 reports")
   expect_identical(attr(rtfreporter:::.ard_spec_scope(sp, "AE"), "output_id"),
                    "AE")
-  one <- ard_spec(tables = data.frame(output_id = "DM", cols = "TRT"))
+  one <- table_spec(tables = data.frame(output_id = "DM", cols = "TRT"))
   expect_identical(attr(rtfreporter:::.ard_spec_scope(one), "output_id"), "DM")
 })
 
 test_that("output_id against a spec that cannot honour it is an error", {
-  only <- ard_spec(tables = data.frame(output_id = "T1", cols = "TRT"))
+  only <- table_spec(tables = data.frame(output_id = "T1", cols = "TRT"))
   expect_error(rtfreporter:::.ard_spec_scope(only, "T9"), "nothing would apply")
   # a file of defaults serves any report, quietly
-  defaults <- ard_spec(tables = data.frame(cols = "TRT"))
+  defaults <- table_spec(tables = data.frame(cols = "TRT"))
   expect_silent(rtfreporter:::.ard_spec_scope(defaults, "T9"))
 })
 
 test_that("an unnamed report falls back to the defaults, and says so", {
-  sp <- ard_spec(cells = data.frame(output_id = c(NA, "T1"),
+  sp <- table_spec(cells = data.frame(output_id = c(NA, "T1"),
                                     variable = c("AGE", "SEX"),
                                     template = c("{mean}", "{n}")))
   expect_message(rtfreporter:::.ard_spec_scope(sp, "T9"),
@@ -1241,7 +1241,7 @@ test_that("the rounding family: argument > spec > option > R's own", {
     ard_spread(d, cols = "TRT", rows = c(group = "variable"),
                cells = "{mean:.1f}", notes = FALSE, ...)$Placebo[1]
   }
-  sp <- ard_spec(study = c(rounding = "sas"),
+  sp <- table_spec(study = c(rounding = "sas"),
                  cells = data.frame(variable = "AGE", template = "{mean:.1f}"))
 
   expect_identical(cell(), "0.2")                         # R's own, the default
@@ -1725,10 +1725,10 @@ test_that("the example workbooks shipped with the package still read and run", {
   dir <- system.file("extdata", "ard-spec", package = "rtfreporter")
   skip_if(!nzchar(dir), "examples not installed")
   for (id in c("DM", "AE", "ORR", "LB", "PK")) {
-    sp <- read_ard_spec(file.path(dir, paste0(id, ".xlsx")))
+    sp <- read_table_spec(file.path(dir, paste0(id, ".xlsx")))
     expect_identical(attr(sp, "output_id"), id)
-    expect_s3_class(read_ard_spec(file.path(dir, "study.xlsx"),
-                                  output_id = id), "ard_spec")
+    expect_s3_class(read_table_spec(file.path(dir, "study.xlsx"),
+                                  output_id = id), "table_spec")
   }
-  expect_error(read_ard_spec(file.path(dir, "study.xlsx")), "defines 5 reports")
+  expect_error(read_table_spec(file.path(dir, "study.xlsx")), "defines 5 reports")
 })

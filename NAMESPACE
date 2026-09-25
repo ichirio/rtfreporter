@@ -201,11 +201,11 @@ export(ard_cells)
 export(ard_overall)
 export(ard_spread)
 export(ard_template)
-export(ard_spec)
-S3method(print,ard_spec)
-export(ard_spec_template)
-export(read_ard_spec)
-export(write_ard_spec)
+export(table_spec)
+S3method(print,table_spec)
+export(table_spec_template)
+export(read_table_spec)
+export(write_table_spec)
 # ---- experimental: ARD ----
 
 # ---- spike: ARD plan (#474, deletable with R/ard-plan-spike.R) ----
@@ -233,4 +233,5 @@ export(plan_footnotes)
 export(plan_after)
 export(apply_plan)
 export(plan_template)
+export(as_table_spec)
 # ---- spike: ARD plan ----

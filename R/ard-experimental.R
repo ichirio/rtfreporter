@@ -5,7 +5,7 @@
 #
 #    1. delete  R/ard-experimental.R                 (this file)
 #    2. delete  tests/testthat/test-ard-experimental.R
-#    3. delete  man/ard_*.Rd  man/read_ard_spec.Rd  man/write_ard_spec.Rd
+#    3. delete  man/ard_*.Rd  man/read_table_spec.Rd  man/write_table_spec.Rd
 #               man/rtfreporter-ard.Rd
 #    4. delete the block in NAMESPACE between the two
 #               "# ---- experimental: ARD ----" marker comments
@@ -36,7 +36,7 @@
 .experimental_exports <- c(
   "ard_pull", "ard_keys", "ard_normalize", "ard_overall", "ard_spread", "ard_template",
   "ard_cells",
-  "ard_spec", "ard_spec_template", "read_ard_spec", "write_ard_spec")
+  "table_spec", "table_spec_template", "read_table_spec", "write_table_spec")
 
 
 # ---------------------------------------------------------------- utilities
@@ -2550,14 +2550,14 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
     "  `label` / `order` / `levels` move to `variables` (once per variable), ",
     "`round` becomes\n  `rounding` on the `study` sheet (one per study), and the ",
     "rest stays on `cells`.  ",
-    "ard_spec_template() writes the new layout."))
+    "table_spec_template() writes the new layout."))
 }
 
 #' A workbook-shaped definition of how an ARD becomes a table
 #'
 #' @description
-#' `ard_spec()` validates the definition that [ard_spread()] accepts as
-#' `spec =`, and [read_ard_spec()] builds one from a workbook.  It holds
+#' `table_spec()` validates the definition that [ard_spread()] accepts as
+#' `spec =`, and [read_table_spec()] builds one from a workbook.  It holds
 #' what would otherwise be repeated in every script --- which keys go
 #' across and down, the display label and order of each variable, and the
 #' template and digits of every row --- in **one sheet per grain**, so
@@ -2592,7 +2592,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' key** --- the whole `tables` row for that report, the `variables` row
 #' for that variable, the `cells` rows for that variable / context / row.
 #' So one workbook can hold a house style and every report's own changes to
-#' it.  [read_ard_spec()] narrows it to one report with `output_id =`.
+#' it.  [read_table_spec()] narrows it to one report with `output_id =`.
 #'
 #' Explicit [ard_spread()] arguments win over the spec, and the spec wins
 #' over the defaults.
@@ -2720,22 +2720,22 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'
 #' @param tables,variables,cells,layout,columns,style,col_header Data
 #'   frames with the columns above; missing columns are added as `NA`.  `tables` may instead be a named list of the
-#'   sheets, or an `ard_spec` (returned as it is).
+#'   sheets, or an `table_spec` (returned as it is).
 #' @param study The `study` sheet: a `key` / `value` frame, or a named
 #'   vector such as `c(rounding = "sas")`.
 #'
-#' @return An object of class `ard_spec`: a list of the sheets' data
+#' @return An object of class `table_spec`: a list of the sheets' data
 #'   frames.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [read_ard_spec()], [write_ard_spec()], [ard_spec_template()]
+#' @seealso [read_table_spec()], [write_table_spec()], [table_spec_template()]
 #' @export
-ard_spec <- function(tables = NULL, variables = NULL, cells = NULL,
+table_spec <- function(tables = NULL, variables = NULL, cells = NULL,
                      study = NULL, layout = NULL, columns = NULL,
                      style = NULL, col_header = NULL) {
-  if (inherits(tables, "ard_spec")) return(tables)
+  if (inherits(tables, "table_spec")) return(tables)
   if (is.data.frame(tables) && "template" %in% names(tables) &&
       is.null(variables) && is.null(cells)) {
     .ard_spec_old_layout(tables)
@@ -2797,14 +2797,14 @@ ard_spec <- function(tables = NULL, variables = NULL, cells = NULL,
     }
   }
   .ard_spec_dupes(sp)
-  class(sp) <- "ard_spec"
+  class(sp) <- "table_spec"
   sp
 }
 
 #' @export
-print.ard_spec <- function(x, ...) {
+print.table_spec <- function(x, ...) {
   ids <- .ard_first_seen(stats::na.omit(unlist(lapply(x, `[[`, "output_id"))))
-  cat("<ard_spec>",
+  cat("<table_spec>",
       if (!is.null(attr(x, "output_id"))) paste0(" for ",
         sQuote(attr(x, "output_id")))
       else if (length(ids)) paste0(" for ", length(ids), " report",
@@ -2840,7 +2840,7 @@ print.ard_spec <- function(x, ...) {
       .ard_stop(paste0(
         "This spec defines ", length(ids), " reports (",
         paste(sQuote(ids), collapse = ", "), "); say which one:\n",
-        "    read_ard_spec(path, output_id = ", dQuote(ids[1L], FALSE), ")"))
+        "    read_table_spec(path, output_id = ", dQuote(ids[1L], FALSE), ")"))
     }
     if (!length(ids)) return(sp)
     output_id <- ids
@@ -2863,7 +2863,7 @@ print.ard_spec <- function(x, ...) {
     # normal; it is still worth saying, because a mistyped id looks exactly
     # the same from here.
     message(sprintf(paste0(
-      "read_ard_spec(): no row names %s, so the default rows are used.",
+      "read_table_spec(): no row names %s, so the default rows are used.",
       "\n  The file defines: %s"),
       sQuote(output_id), paste(sQuote(ids), collapse = ", ")))
   }
@@ -2918,6 +2918,10 @@ print.ard_spec <- function(x, ...) {
   nms  <- vapply(parts, `[[`, "", "name")
   vals <- lapply(parts, `[[`, "value")
   if (any(vapply(vals, inherits, NA, "formula"))) {
+    # a list keeps no name for an element that had none, and an unnamed
+    # row key then has no output column; its own name is the one it means
+    own <- !nzchar(nms) & !vapply(vals, inherits, NA, "formula")
+    nms[own] <- unlist(vals[own])
     return(stats::setNames(vals, nms))
   }
   v <- unlist(vals)
@@ -3076,7 +3080,7 @@ print.ard_spec <- function(x, ...) {
   res <- low %in% .ard_spec_reserved & !skip
   if (any(res)) {
     message(sprintf(paste0(
-      "read_ard_spec(): %s %s reserved for a later version and not read yet."),
+      "read_table_spec(): %s %s reserved for a later version and not read yet."),
       paste(sQuote(nm[res]), collapse = ", "),
       if (sum(res) == 1L) "is" else "are"))
   }
@@ -3092,7 +3096,7 @@ print.ard_spec <- function(x, ...) {
     i <- which(low == s)
     if (length(i)) sheets[[i[1L]]] else NULL
   }
-  ard_spec(get("tables"), get("variables"), get("cells"),
+  table_spec(get("tables"), get("variables"), get("cells"),
            study = get("study"), layout = get("layout"),
            columns = get("columns"), style = get("style"),
            col_header = get("col_header"))
@@ -3115,7 +3119,7 @@ print.ard_spec <- function(x, ...) {
 #' Read an ARD table definition from a workbook
 #'
 #' @param path An `.xlsx` workbook (needs \pkg{readxl}) with the sheets
-#'   of [ard_spec()] (`study`, `tables`, `variables`, `cells`, `layout`,
+#'   of [table_spec()] (`study`, `tables`, `variables`, `cells`, `layout`,
 #'   `columns`, `style`, `col_header`).  Any of them may be absent.  A definition is one file with several sheets,
 #'   so it is an Excel workbook and nothing else.
 #' @param output_id The report to narrow the workbook to.  Rows with a blank
@@ -3123,17 +3127,17 @@ print.ard_spec <- function(x, ...) {
 #'   report replaces the default with the same key.  May be left `NULL`
 #'   for a workbook that defines one report; for several it must be given.
 #'
-#' @return An [ard_spec()].
+#' @return An [table_spec()].
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [ard_spec()], [write_ard_spec()]
+#' @seealso [table_spec()], [write_table_spec()]
 #' @export
-read_ard_spec <- function(path, output_id = NULL) {
-  .ard_spec_xlsx_path(path, "read_ard_spec")
+read_table_spec <- function(path, output_id = NULL) {
+  .ard_spec_xlsx_path(path, "read_table_spec")
   if (!file.exists(path)) .ard_stop(sprintf("No such file: %s", path))
-  .ard_need("readxl", "read_ard_spec()")
+  .ard_need("readxl", "read_table_spec()")
   nms <- readxl::excel_sheets(path)
   sheets <- stats::setNames(lapply(nms, function(s) as.data.frame(
     readxl::read_excel(path, sheet = s, col_types = "text"),
@@ -3144,9 +3148,9 @@ read_ard_spec <- function(path, output_id = NULL) {
 
 #' Write an ARD table definition to a workbook
 #'
-#' @param spec An [ard_spec()] (or what it accepts).
+#' @param spec An [table_spec()] (or what it accepts).
 #' @param path Destination `.xlsx` (needs \pkg{writexl}).  The workbook
-#'   gets every sheet of [ard_spec()], empty ones included so their columns
+#'   gets every sheet of [table_spec()], empty ones included so their columns
 #'   are there to fill in, and an `about` sheet stating `spec_version`.
 #'
 #' @return `path`, invisibly.
@@ -3154,10 +3158,10 @@ read_ard_spec <- function(path, output_id = NULL) {
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [ard_spec()], [read_ard_spec()]
+#' @seealso [table_spec()], [read_table_spec()]
 #' @export
-write_ard_spec <- function(spec, path) {
-  sp <- ard_spec(spec)
+write_table_spec <- function(spec, path) {
+  sp <- table_spec(spec)
   sheets <- lapply(names(.ard_spec_schema()), function(s) {
     d <- sp[[s]]
     rownames(d) <- NULL
@@ -3171,8 +3175,8 @@ write_ard_spec <- function(spec, path) {
     st[nrow(st) + 1L, c("key", "value")] <- list(k, NA_character_)
   }
   sheets <- c(list(study = st), sheets)
-  .ard_spec_xlsx_path(path, "write_ard_spec")
-  .ard_need("writexl", "write_ard_spec()")
+  .ard_spec_xlsx_path(path, "write_table_spec")
+  .ard_need("writexl", "write_table_spec()")
   about <- data.frame(key = "spec_version",
                       value = as.character(.ard_spec_version),
                       stringsAsFactors = FALSE)
@@ -3182,7 +3186,7 @@ write_ard_spec <- function(spec, path) {
 
 #' Scaffold a definition workbook from an ARD
 #'
-#' Walks the ARD and writes the three [ard_spec()] sheets: one `tables` row,
+#' Walks the ARD and writes the three [table_spec()] sheets: one `tables` row,
 #' one `variables` row per analysis variable (its levels filled in for a
 #' categorical one), and one `cells` row per row template --- a continuous
 #' variable gets the templates its statistics can fill, a categorical one
@@ -3191,19 +3195,19 @@ write_ard_spec <- function(spec, path) {
 #'
 #' @param ard A cards/cardx ARD.
 #' @param path Optional destination; when given the spec is also written there
-#'   with [write_ard_spec()].
+#'   with [write_table_spec()].
 #' @param cols The column keys for the `tables` row, if known.
 #' @param output_id The report the rows belong to; `NULL` writes them as
 #'   defaults.
 #'
-#' @return An [ard_spec()], invisibly when `path` is given.
+#' @return An [table_spec()], invisibly when `path` is given.
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [ard_spec()], [ard_template()]
+#' @seealso [table_spec()], [ard_template()]
 #' @export
-ard_spec_template <- function(ard, path = NULL, cols = NULL,
+table_spec_template <- function(ard, path = NULL, cols = NULL,
                               output_id = NULL) {
   d <- ard_normalize(ard, drop_key_variables = FALSE)
   if (".key_own" %in% names(d)) d <- d[!(d$.key_own %in% TRUE), , drop = FALSE]
@@ -3243,11 +3247,11 @@ ard_spec_template <- function(ard, path = NULL, cols = NULL,
                        cols = if (length(cols)) paste(cols, collapse = " | ")
                               else NA_character_,
                        stringsAsFactors = FALSE)
-  sp <- ard_spec(tables,
+  sp <- table_spec(tables,
                  if (length(vrows)) do.call(rbind, vrows) else NULL,
                  if (length(crows)) do.call(rbind, crows) else NULL)
   if (is.null(path)) return(sp)
-  write_ard_spec(sp, path)
+  write_table_spec(sp, path)
   invisible(sp)
 }
 
@@ -3455,7 +3459,7 @@ ard_spec_template <- function(ard, path = NULL, cols = NULL,
 #' @section Lifecycle:
 #' **Experimental.**  See [rtfreporter-ard].
 #'
-#' @seealso [ard_normalize()], [ard_spread()], [ard_spec_template()]
+#' @seealso [ard_normalize()], [ard_spread()], [table_spec_template()]
 #' @export
 ard_template <- function(ard, cols = NULL, hierarchy = character(),
                          file = NULL, pipe = NULL) {
@@ -3648,8 +3652,8 @@ ard_template <- function(ard, cols = NULL, hierarchy = character(),
 #'   \item{[ard_overall()]}{Where the table's overall row comes from.}
 #'   \item{[ard_pull()]}{A statistic keyed like the spread columns, for a
 #'     column header or an overall row.}
-#'   \item{[ard_spec()], [read_ard_spec()], [write_ard_spec()],
-#'     [ard_spec_template()]}{The spreadsheet definition file.}
+#'   \item{[table_spec()], [read_table_spec()], [write_table_spec()],
+#'     [table_spec_template()]}{The spreadsheet definition file.}
 #' }
 #'
 #' @section Nothing is read from the object's attributes:

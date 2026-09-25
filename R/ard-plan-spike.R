@@ -98,7 +98,7 @@
   "plan_style", "plan_col_header", "plan_paginate_cols",
   "plan_titles", "plan_footnotes",
   "plan_listing",
-  "plan_after", "apply_plan", "plan_template")
+  "plan_after", "apply_plan", "plan_template", "as_table_spec")
 
 
 # -- layer plumbing ----------------------------------------------------------
@@ -403,9 +403,9 @@
 #' @param value,na,notes The remaining [ard_spread()] options,
 #'   unchanged: which of `stat` / `stat_fmt` a `{x}` reads, what fills a
 #'   cell no template could, and whether to report what was not used.
-#' @param spec An [ard_spec()] definition, or the path to a workbook as
-#'   [read_ard_spec()] reads it (a workbook defining several reports must
-#'   be narrowed first, with `read_ard_spec(path, output_id = )`).  It is
+#' @param spec An [table_spec()] definition, or the path to a workbook as
+#'   [read_table_spec()] reads it (a workbook defining several reports must
+#'   be narrowed first, with `read_table_spec(path, output_id = )`).  It is
 #'   the plan's **first layers**: the roles from its `tables` sheet (a role
 #'   given here wins), then everything else --- levels, labels, cells,
 #'   rounding, and the `layout` / `columns` / `style` of the pages --- as
@@ -453,8 +453,8 @@ rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
   # the call still wins.
   sp <- NULL
   if (!is.null(spec)) {
-    sp <- .ard_spec_scope(if (is.character(spec)) read_ard_spec(spec)
-                          else ard_spec(spec))
+    sp <- .ard_spec_scope(if (is.character(spec)) read_table_spec(spec)
+                          else table_spec(spec))
     roles$spec <- NULL
     sa <- .ard_spec_table_args(sp)
     for (r in c("cols", "rows", "label", "stats", "sep", "value", "na",
@@ -2401,6 +2401,12 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   if (length(colset$widths) && is.null(rtf$col_rel_width)) {
     out <- .plan_col_widths(out, colset$widths, spread)
   }
+  # what as_table_spec() reads back: the columns and widths before the
+  # column axis cuts them into blocks
+  fp <- if (inherits(out, "rtftable")) out else out[[1L]]
+  .plan_remember(plan, "pre_cols", list(
+    names = names(fp$data), spread = intersect(spread, names(fp$data)),
+    widths = fp$col_rel_width))
 
   if (!is.null(hdr$header)) {
     #  a function of the resolved `n`, so "(N=86)" is written once and
@@ -2419,6 +2425,7 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
          else if (length(formals(hdr$header)) >= 2L)
            hdr$header(nvals, tbl)
          else hdr$header(nvals)
+    .plan_remember(plan, "header_raw", h)
     # the tokens and the short-row rule, on whatever came back
     h <- .plan_header_fill(h, nvals, sc, length(first_d) - length(sc),
                            plan$roles$sep)
@@ -2671,7 +2678,7 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 #'
 #' @inheritParams ard_template
 #' @param spec When `TRUE`, the generated plan reads its definition from a
-#'   workbook (`rtf_plan(spec = read_ard_spec(...))`) instead of inlining
+#'   workbook (`rtf_plan(spec = read_table_spec(...))`) instead of inlining
 #'   the cells.
 #'
 #' @return The generated code, as a character vector, invisibly.
@@ -2749,7 +2756,7 @@ plan_template <- function(ard, cols = NULL, hierarchy = character(),
   if (isTRUE(spec)) {
     L <- c(L, .plan_call("rtf_plan",
                          c(spread,
-                           paste0("spec = rtfreporter::read_ard_spec(",
+                           paste0("spec = rtfreporter::read_table_spec(",
                                   "\"ard-spec.xlsx\")")),
                          op))
   } else {
@@ -2854,4 +2861,532 @@ plan_template <- function(ard, cols = NULL, hierarchy = character(),
     }
   }
   unlist(blocks, use.names = FALSE)
+}
+
+# ---------------------------------------------------------------------------
+#  A plan written as code, back to a workbook
+# ---------------------------------------------------------------------------
+#
+#  The inverse of .plan_from_spec(): every layer the workbook can say is
+#  written to its sheet, read from what the plan RESOLVES to rather than
+#  from how it was typed, so two plans that mean the same thing give the
+#  same workbook.  What a sheet cannot say -- a function, a guarded label,
+#  a positional list that no name reproduces -- is named, not dropped in
+#  silence, and the workbook is run back through rtf_plan(spec = ) against
+#  the plan's own data to say whether it gives the same pages.
+
+#' Write a plan as a table definition workbook
+#'
+#' @description
+#' `as_table_spec()` turns an [rtf_plan()] --- typically one a report
+#' already has as code --- into a [table_spec()], the definition
+#' [write_table_spec()] writes as an Excel workbook.  It is how an existing
+#' report becomes the **template for a new study**: write the workbook,
+#' edit its labels, levels and output ids, and read it back with
+#' `rtf_plan(data, spec = read_table_spec(path, output_id = ))`.
+#'
+#' Everything is read from what the plan **resolves to**, against its own
+#' data: the roles, levels, labels and cell templates (digits written in),
+#' the pages, groups, blank rows and stub, the column widths **by name**
+#' (`.values` when every value column shares one), and the column header
+#' --- with a literal that is a column's own key value turned back into
+#' `{col}` / `{col1}`, a repeated per-column cell into `span = each`, and
+#' one spanner per arm into `span = <key>`, so the header keeps up with a
+#' study that has a different number of arms or time points.
+#'
+#' What a workbook cannot say is **listed, not dropped**: a `plan_after()`
+#' step (except `set_decimal_split()`, which becomes
+#' `columns$decimal_split` on the value columns), a guarded label, a
+#' column-scoped `labels` entry, `plan_cell_style()`, a literal `n`.  The
+#' result is then run back through `rtf_plan(spec = )` on the plan's data,
+#' and whether it gives **the same pages** is reported.
+#'
+#' @param x An [rtf_plan()], a **named list** of them (the names are the
+#'   output ids; one workbook for the study), or anything [table_spec()]
+#'   takes.
+#' @param output_id The report the rows belong to.  `NULL` writes them as
+#'   defaults (blank `output_id`).
+#' @param check `TRUE` (default) rebuilds the pages from the workbook and
+#'   compares them with the plan's.
+#'
+#' @return A [table_spec()], with attributes `"not_converted"` (what the
+#'   workbook could not carry) and `"same_pages"` (`TRUE` / `FALSE`, or
+#'   `NA` when not checked).
+#'
+#' @section Lifecycle:
+#' **Spike.**  See [rtf_plan()].
+#'
+#' @examples
+#' \dontrun{
+#' p <- ard |> ard_normalize() |> rtf_plan(cols = "TRT01P") |> ...
+#' as_table_spec(p, output_id = "T14-1-1") |> write_table_spec("study.xlsx")
+#'
+#' # a whole study at once
+#' as_table_spec(list(DM = p_dm, AE = p_ae)) |> write_table_spec("study.xlsx")
+#' }
+#' @seealso [table_spec()], [write_table_spec()], [rtf_plan()]
+#' @export
+as_table_spec <- function(x, output_id = NULL, check = TRUE) {
+  if (inherits(x, "table_spec")) return(x)
+  if (is.list(x) && !inherits(x, "rtf_plan") && length(x) &&
+      all(vapply(x, inherits, NA, "rtf_plan"))) {
+    ids <- names(x)
+    if (is.null(ids) || any(!nzchar(ids)) || anyDuplicated(ids)) {
+      .ard_stop(paste0("A list of plans needs unique names: they are the ",
+                       "output ids of the workbook."))
+    }
+    parts <- lapply(ids, function(id) as_table_spec(x[[id]], id, check))
+    rnd <- unique(stats::na.omit(vapply(parts, function(s)
+      .ard_spec_study_value(s, "rounding"), "")))
+    if (length(rnd) > 1L) {
+      .ard_stop(paste0("The plans round differently (",
+                       paste(rnd, collapse = " / "), "); a study has one ",
+                       "rounding.  Make them agree first."))
+    }
+    sheets <- setdiff(names(.ard_spec_schema()), character())
+    out <- lapply(sheets, function(s) do.call(rbind, lapply(parts, `[[`, s)))
+    names(out) <- sheets
+    out$study <- if (length(rnd)) c(rounding = rnd) else NULL
+    sp <- table_spec(out)
+    attr(sp, "not_converted") <- unlist(lapply(seq_along(parts), function(i)
+      if (length(attr(parts[[i]], "not_converted")))
+        paste0(ids[i], ": ", attr(parts[[i]], "not_converted"))))
+    attr(sp, "same_pages") <- stats::setNames(
+      vapply(parts, function(s) attr(s, "same_pages") %||% NA, NA), ids)
+    return(sp)
+  }
+  if (!inherits(x, "rtf_plan")) return(table_spec(x))
+  .plan_to_spec(x, output_id, check)
+}
+
+.plan_to_spec <- function(p, output_id, check) {
+  id <- if (is.null(output_id)) NA_character_ else output_id
+  lost <- character()
+  miss <- function(...) lost <<- c(lost, sprintf(...))
+  q <- function(x) if (grepl("^\\s|\\s$", x)) paste0("\"", x, "\"") else x
+  bar <- function(x) paste(x, collapse = " | ")
+
+  a <- suppressMessages(apply_plan(p, "args"))
+  s <- a$spread
+  pages <- suppressMessages(apply_plan(p, "pages"))
+  seen <- p$cache[["pre_cols"]]
+  first <- if (inherits(pages, "rtftable")) pages else pages[[1L]]
+  pnames <- seen$names %||% names(first$data)
+  spread <- seen$spread %||% intersect(.plan_spread_cols(p, first$data),
+                                       pnames)
+  seen$h <- p$cache[["header_raw"]]
+
+  for (r in intersect(c("variable", "stat_name", "stat"), names(p$roles))) {
+    miss("rtf_plan(%s = ): a column rename stays in code", r)
+  }
+
+  # -- tables ---------------------------------------------------------------
+  ref <- function(v, nm) {
+    if (inherits(v, "formula")) {
+      if (length(v) == 3L) return(NA_character_)
+      v <- paste0("\"", eval(v[[2L]], environment(v)), "\"")
+    } else v <- as.character(v)
+    if (nzchar(nm) && !identical(nm, v)) paste(nm, "=", v) else v
+  }
+  refs <- function(x, what) {
+    if (is.null(x)) return(NA_character_)
+    nms <- names(x) %||% rep("", length(x))
+    out <- vapply(seq_along(x), function(i) ref(x[[i]], nms[i]), "")
+    if (anyNA(out)) {
+      miss("%s: a guarded (condition ~ template) element stays in code", what)
+      out <- out[!is.na(out)]
+    }
+    if (length(out)) bar(out) else NA_character_
+  }
+  lab <- if (!"label" %in% names(s)) NA_character_
+    else if (is.null(s$label)) "NULL"
+    else if (length(s$label) == 1L && !is.list(s$label) && is.na(s$label)) "NA"
+    else if (identical(unname(s$label), ".label") && is.null(names(s$label)))
+      NA_character_
+    else refs(s$label, "label")
+  srt <- s$sort
+  tables <- data.frame(
+    output_id = id,
+    cols = bar(unlist(s$cols)),
+    rows = refs(s$rows, "rows"),
+    label = lab,
+    stats = s$stats %||% NA_character_,
+    value = s$value %||% NA_character_,
+    sep = s$sep %||% NA_character_,
+    sort = if (is.null(srt)) NA_character_
+           else if (is.logical(srt)) as.character(srt) else bar(srt),
+    sort_stat = s$sort_stat %||% NA_character_,
+    na = if (is.null(s$na) || is.na(s$na)) NA_character_ else q(s$na),
+    stringsAsFactors = FALSE)
+
+  # -- variables --------------------------------------------------------------
+  lbl <- s$labels
+  if (is.list(lbl)) {
+    plain <- vapply(lbl, function(v) is.character(v) && length(v) == 1L &&
+                      is.null(names(v)), NA)
+    if (any(!plain)) {
+      miss("labels: a column-scoped entry stays in code (plan_labels())")
+    }
+    lbl <- unlist(lbl[plain])
+  }
+  vars <- unique(c(names(lbl), names(s$levels)))
+  variables <- data.frame(
+    output_id = rep(id, length(vars)), variable = vars,
+    label = unname(ifelse(vars %in% names(lbl), lbl[vars], NA_character_)),
+    order = ifelse(vars %in% names(lbl), match(vars, names(lbl)), NA),
+    levels = vapply(vars, function(v)
+      if (is.null(s$levels[[v]])) NA_character_ else bar(s$levels[[v]]), ""),
+    stringsAsFactors = FALSE)
+
+  # -- cells ------------------------------------------------------------------
+  crow <- function(var, ctx, row, when, tpl, digits = NA, signif = NA)
+    data.frame(output_id = id, variable = var, context = ctx, row = row,
+               when = when, template = tpl, digits = digits,
+               signif = signif, stringsAsFactors = FALSE)
+  cl <- list()
+  cm <- s$cells
+  if (!is.null(cm) && !identical(s$stats, "rows")) {
+    is_map <- is.list(cm) && !inherits(cm, "ard_cells") &&
+      any(nzchar(names(cm) %||% ""))
+    if (!is_map) cm <- list(default = cm)
+    for (k in names(cm)) {
+      var <- if (identical(k, "default")) NA_character_ else
+        sub("\r.*$", "", k)
+      ctx <- if (grepl("\r", k, fixed = TRUE)) sub("^.*\r", "", k) else
+        NA_character_
+      e <- .ard_cell_entry(cm[[k]])
+      for (i in seq_along(e$chains)) {
+        rw <- if (is.null(e$labels) || !nzchar(e$labels[i])) NA_character_
+              else e$labels[i]
+        for (el in e$chains[[i]]) {
+          wh <- if (is.null(el$cond)) NA_character_
+                else paste(deparse(el$cond), collapse = " ")
+          cl[[length(cl) + 1L]] <- crow(var, ctx, rw, wh, el$tpl)
+        }
+      }
+    }
+  }
+  fm <- .plan_merge(.plan_of(p, "fmt"))
+  if (length(fm)) {
+    if (!identical(fm$by, .plan_label_name(p)) || !is.list(fm$formats)) {
+      miss("plan_fmt(): only by = <label column> with formats = converts")
+    } else {
+      if (!is.null(fm$cols) && !identical(sort(as.character(
+          if (is.numeric(fm$cols)) names(first$data)[fm$cols] else fm$cols)),
+          sort(spread))) {
+        miss("plan_fmt(cols = ): taken as the value columns")
+      }
+      for (st in names(fm$formats)) {
+        f <- fm$formats[[st]]
+        cl[[length(cl) + 1L]] <- crow(NA, NA, st, NA, NA,
+          if (!is.null(f$digits)) as.character(f$digits) else NA,
+          if (!is.null(f$signif)) as.character(f$signif) else NA)
+      }
+      for (o in setdiff(names(fm), c("by", "formats", "cols"))) {
+        miss("plan_fmt(%s = ) stays in code", o)
+      }
+    }
+  }
+  cells <- if (length(cl)) do.call(rbind, cl) else NULL
+
+  # -- layout -----------------------------------------------------------------
+  lay <- list(output_id = id)
+  put <- function(nm, v) {
+    if (is.null(v)) return(invisible())
+    lay[[nm]] <<- if (is.logical(v) && length(v) == 1L) as.character(v)
+                  else if (is.character(v) && length(v) == 1L) q(v)
+                  else bar(v)
+  }
+  st <- .plan_merge(.plan_of(p, "stub"))
+  if (length(st)) {
+    put("stub_vars", st$vars); put("stub_into", st$label)
+    put("stub_indent", st$indent); put("stub_summary", st$group_summary)
+    if (isTRUE(st$before)) put("stub_before", TRUE)
+  }
+  g <- .plan_merge(.plan_of(p, "group"))
+  put("group_col", g$group_col); put("group_mode", g$group_by)
+  put("group_collapse", g$collapse_repeats)
+  if (isTRUE(g$.page)) put("group_page", TRUE)
+  if (identical(g$.show, FALSE)) put("group_show", FALSE)
+  b <- .plan_merge(.plan_of(p, "blanks"))
+  if (!is.null(b$blank_rows) && !(is.character(b$blank_rows) &&
+                                   length(b$blank_rows) == 1L)) {
+    miss("plan_blanks(where = ): only a named rule (\"between_groups\") converts")
+  } else put("blank_where", b$blank_rows)
+  put("blank_first", b$blank_row_first); put("blank_last", b$blank_row_end)
+  put("blank_counted", b$count_blank_rows)
+  pg <- .plan_merge(.plan_of(p, "pages"))
+  put("pages_max_rows", pg$max_rows); put("pages_split", pg$split)
+  put("pages_by", pg$page_by); put("pages_min_group_rows", pg$min_group_rows)
+  put("pages_cont_label", pg$cont_label)
+  if (!is.null(pg$split_rows)) miss("plan_paginate_rows(break_before = ) stays in code")
+  cp <- .plan_merge(.plan_of(p, "colpages"))
+  put("colpages_every", cp$every); put("colpages_at", cp$at)
+  put("colpages_carry", cp$carry); put("colpages_order", cp$page_order)
+  for (o in intersect(c("cols", "by", "col_header", "width",
+                        "allow_span_break"), names(cp))) {
+    miss("plan_paginate_cols(%s = ) stays in code", o)
+  }
+  layout <- if (length(lay) > 1L) as.data.frame(lay, stringsAsFactors = FALSE)
+
+  # -- style and columns ------------------------------------------------------
+  sty <- .plan_merge(.plan_of(p, "style"))
+  style <- list(output_id = id)
+  for (nm in names(sty)) {
+    v <- sty[[nm]]
+    if (nm %in% c("col_rel_width", "row_title")) next
+    if (nm %in% names(.ard_spec_types$style)) {
+      style[[nm]] <- if (is.logical(v)) as.character(v) else as.character(v)
+    } else {
+      miss("plan_style(%s = ) stays in code", nm)
+    }
+  }
+  if (length(.plan_of(p, "styles"))) miss("plan_cell_style() stays in code")
+  style <- if (length(style) > 1L) as.data.frame(style, stringsAsFactors = FALSE)
+
+  colw <- rep(NA_real_, length(pnames)); names(colw) <- pnames
+  w <- seen$widths %||% first$col_rel_width
+  if (!is.null(sty$col_rel_width) && length(w) == length(pnames)) colw[] <- w
+  sc <- .plan_merge(.plan_of(p, "columns"))
+  if (length(sc$widths)) {
+    for (k in names(sc$widths)) {
+      if (identical(k, ".values")) colw[spread] <- sc$widths[[k]]
+      else if (k %in% pnames) colw[[k]] <- sc$widths[[k]]
+    }
+  }
+  rt <- sty$row_title
+  rt <- if (is.null(rt)) character() else if (is.numeric(rt)) pnames[rt] else rt
+  hide <- setdiff(a$rtf$drop_cols %||% character(),
+                  if (identical(g$.show, FALSE))
+                    c(g$group_col, .plan_group_col(p)) else NULL)
+  dec <- sc$decimal %||% character()
+  for (l in .plan_of(p, "after")) {
+    for (f in l$steps) {
+      if (any(grepl("set_decimal_split", deparse(f), fixed = TRUE))) {
+        dec <- c(dec, ".values")
+        miss("plan_after(set_decimal_split()): taken as the value columns")
+      } else {
+        miss("a plan_after() step stays in code")
+      }
+    }
+  }
+  one_w <- length(spread) && all(!is.na(colw[spread])) &&
+    length(unique(colw[spread])) == 1L
+  crows <- list()
+  cadd <- function(col, width = NA, title = NA, dsplit = NA, hid = NA)
+    crows[[length(crows) + 1L]] <<- data.frame(
+      output_id = id, column = col, width = as.character(width),
+      row_title = title, decimal_split = dsplit, hide = hid,
+      stringsAsFactors = FALSE)
+  for (nm in setdiff(pnames, if (one_w) spread)) {
+    if (is.na(colw[[nm]]) && !nm %in% c(rt, dec, hide)) next
+    cadd(nm, colw[[nm]], if (nm %in% rt) "TRUE" else NA,
+         if (nm %in% dec) "TRUE" else NA)
+  }
+  if (one_w || ".values" %in% dec) {
+    cadd(".values", if (one_w) colw[[spread[1L]]] else NA, NA,
+         if (".values" %in% dec) "TRUE" else NA)
+  }
+  for (nm in hide) cadd(nm, hid = "TRUE")
+  columns <- if (length(crows)) do.call(rbind, crows)
+
+  # -- col_header -------------------------------------------------------------
+  hd <- .plan_merge(.plan_of(p, "header"))
+  col_header <- NULL
+  if (inherits(hd$header, "plan_spec_col_header")) {
+    col_header <- do.call(rbind, lapply(hd$header$cells, function(cc)
+      data.frame(output_id = id, line = as.character(cc$line),
+                 cols = cc$cols, span = cc$span %||% NA,
+                 text = if (is.null(cc$text)) NA else q(cc$text),
+                 align = cc$align %||% NA,
+                 bold = if (is.null(cc$bold)) NA else as.character(cc$bold),
+                 border_top = cc$border_top %||% NA,
+                 border_bottom = cc$border_bottom %||% NA,
+                 stringsAsFactors = FALSE)))
+  } else if (!is.null(seen$h)) {
+    col_header <- .plan_header_rows(seen$h, pnames, spread, p, id, q)
+    if (!is.null(hd$n) && !isTRUE(hd$n)) {
+      miss("plan_col_header(n = ): a literal N stays in code (use {n})")
+    }
+  }
+
+  study <- if (!is.null(s$rounding)) c(rounding = s$rounding)
+  sp <- table_spec(tables, variables, cells, study = study, layout = layout,
+                   columns = columns, style = style, col_header = col_header)
+
+  same <- NA
+  if (isTRUE(check)) {
+    back <- tryCatch(suppressMessages(apply_plan(
+      rtf_plan(p$data, spec = sp, notes = FALSE), "pages")),
+      error = function(e) e)
+    same <- !inherits(back, "error") && isTRUE(all.equal(back, pages))
+    if (inherits(back, "error")) {
+      miss("the workbook does not run: %s", conditionMessage(back))
+    }
+  }
+  if (length(lost) || isFALSE(same)) {
+    message(sprintf(
+      "as_table_spec()%s: %s\n%s",
+      if (is.na(id)) "" else paste0(" [", id, "]"),
+      if (isTRUE(same)) "the workbook gives the same pages as the plan"
+      else if (isFALSE(same)) "the workbook does NOT give the same pages"
+      else "not checked",
+      if (length(lost)) paste0("  not converted:\n",
+                               paste0("    - ", unique(lost), collapse = "\n"))
+      else ""))
+  }
+  attr(sp, "not_converted") <- unique(lost)
+  attr(sp, "same_pages") <- same
+  sp
+}
+
+# A resolved header, row by row, as `col_header` cells.  Literal text
+# that is a column's own key value becomes the token; a cell repeated on
+# every value column becomes `span = each`; a spanner per value of a key
+# becomes `span = <key>`.
+.plan_header_rows <- function(h, pnames, spread, p, id, q) {
+  keys <- unname(as.character(unlist(p$roles$cols)))
+  sep <- p$roles$sep %||% "____"
+  kv <- list()
+  d <- p$data
+  if (length(keys) && all(keys %in% names(d))) {
+    combo <- unique(as.data.frame(lapply(d[keys], as.character),
+                                  stringsAsFactors = FALSE))
+    combo <- combo[stats::complete.cases(combo), , drop = FALSE]
+    nm <- do.call(paste, c(unname(as.list(combo)), sep = sep))
+    for (i in seq_along(nm)) kv[[nm[i]]] <- unlist(combo[i, ], use.names = FALSE)
+  }
+  kvals <- function(col) kv[[col]] %||% strsplit(col, sep, fixed = TRUE)[[1L]]
+  n <- length(pnames); lead <- n - length(spread)
+  side <- function(b, s) if (is.null(b) || is.null(b[[s]])) NA else b[[s]]$style
+  # the token a literal stands for, over these value columns
+  tokenize <- function(txt, cols) {
+    if (!length(cols) || grepl("{", txt, fixed = TRUE)) return(txt)
+    kvs <- lapply(cols, kvals)
+    if (length(cols) == 1L && identical(txt, cols)) return("{col}")
+    k <- max(vapply(kvs, length, 1L))
+    for (i in seq_len(k)) {
+      v <- unique(vapply(kvs, function(z) if (i <= length(z)) z[i] else NA, ""))
+      if (length(v) == 1L && identical(v, txt)) {
+        return(if (length(cols) == 1L && i == length(kvs[[1L]])) "{col}"
+               else paste0("{col", i, "}"))
+      }
+    }
+    txt
+  }
+  out <- list()
+  spanner <- NULL
+  for (li in seq_along(h)) {
+    r <- h[[li]]
+    units <- list()
+    if (is.character(r)) {
+      if (length(r) < n) {
+        ld <- r[-length(r)]
+        r <- c(ld, rep("", lead - length(ld)), rep(r[length(r)], length(spread)))
+      }
+      for (i in seq_len(n)) units[[i]] <- list(from = i, to = i, label = r[i])
+    } else {
+      for (cc in r) {
+        pos <- cc$pos
+        if (is.character(pos)) pos <- match(pos, pnames)
+        units[[length(units) + 1L]] <- list(
+          from = min(pos), to = max(pos), label = cc$label %||% "",
+          align = cc$align, bold = if (isTRUE(cc$bold)) TRUE else NULL,
+          top = side(cc$border, "top"), bottom = side(cc$border, "bottom"))
+      }
+    }
+    for (u in seq_along(units)) {
+      cols <- intersect(pnames[units[[u]]$from:units[[u]]$to], spread)
+      units[[u]]$label <- tokenize(units[[u]]$label, cols)
+      units[[u]]$cols <- pnames[units[[u]]$from:units[[u]]$to]
+    }
+    sig <- function(u) paste(u$label, u$align %||% "", u$bold %||% "",
+                             u$top %||% "", u$bottom %||% "", sep = "\r")
+    done <- rep(FALSE, length(units))
+    row <- function(cols, span, u) data.frame(
+      output_id = id, line = as.character(li), cols = cols, span = span,
+      text = if (nzchar(u$label)) q(u$label) else NA,
+      align = u$align %||% NA, bold = if (is.null(u$bold)) NA else "TRUE",
+      border_top = u$top %||% NA, border_bottom = u$bottom %||% NA,
+      stringsAsFactors = FALSE)
+    rows <- list()
+    for (u in seq_along(units)) {
+      if (done[u]) next
+      same <- which(!done & vapply(units, sig, "") == sig(units[[u]]))
+      on_values <- vapply(units[same], function(x)
+        all(x$cols %in% spread), NA)
+      grp <- same[on_values]
+      if (u %in% grp && length(grp)) {
+        covered <- unlist(lapply(units[grp], `[[`, "cols"))
+        single <- all(vapply(units[grp], function(x) x$from == x$to, NA))
+        if (setequal(covered, spread) && length(grp) == 1L && !single) {
+          # one arm today is still an arm's spanner: a `{colK}` over a key
+          # with a single value is `span = <key>`, so a study with three
+          # arms gets three
+          k <- suppressWarnings(as.integer(regmatches(units[[u]]$label,
+                 regexec("[{]col([0-9]+)[}]", units[[u]]$label))[[1L]][2L]))
+          sp_k <- if (!is.na(k) && k < length(keys) &&
+                      length(unique(vapply(spread, function(cc)
+                        kvals(cc)[k] %||% NA_character_, ""))) == 1L) keys[k]
+                  else NA
+          if (!is.na(sp_k)) spanner <- sp_k
+          rows[[length(rows) + 1L]] <- row(".values", sp_k, units[[u]])
+          done[grp] <- TRUE; next
+        }
+        if (single && setequal(covered, spread) && length(spread) > 1L) {
+          rows[[length(rows) + 1L]] <- row(".values", "each", units[[u]])
+          done[grp] <- TRUE; next
+        }
+        if (single && length(spread) == 1L && setequal(covered, spread)) {
+          rows[[length(rows) + 1L]] <- row(".values", "each", units[[u]])
+          done[grp] <- TRUE; next
+        }
+        if (setequal(covered, spread) && !single) {
+          # one spanner per value of a key?
+          for (ki in seq_along(keys)) {
+            parts <- split(spread, vapply(spread, function(cc)
+              kvals(cc)[ki] %||% NA_character_, ""))
+            ranges <- lapply(units[grp], `[[`, "cols")
+            if (length(parts) == length(ranges) &&
+                all(vapply(ranges, function(rg) any(vapply(parts, function(pp)
+                  setequal(pp, rg), NA)), NA))) {
+              rows[[length(rows) + 1L]] <- row(".values", keys[ki], units[[u]])
+              done[grp] <- TRUE
+              break
+            }
+          }
+          if (all(done[grp])) next
+        }
+        if (single) {
+          # KEY = value: the columns sharing one key value
+          hit <- NULL
+          for (ki in seq_along(keys)) {
+            vals <- unique(vapply(covered, function(cc) kvals(cc)[ki] %||% NA_character_, ""))
+            if (length(vals) == 1L && !is.na(vals) &&
+                setequal(covered, spread[vapply(spread, function(cc)
+                  identical(kvals(cc)[ki], vals), NA)])) {
+              hit <- paste(keys[ki], "=", vals); break
+            }
+          }
+          if (!is.null(hit)) {
+            rows[[length(rows) + 1L]] <- row(hit, "each", units[[u]])
+            done[grp] <- TRUE; next
+          }
+        }
+      }
+      # otherwise the cell as it is, by name
+      rows[[length(rows) + 1L]] <- row(paste(units[[u]]$cols, collapse = " | "),
+                                       NA, units[[u]])
+      done[u] <- TRUE
+    }
+    out <- c(out, rows)
+  }
+  res <- do.call(rbind, out)
+  # a bordered blank under that spanner is the spanner's rule, per arm
+  if (!is.null(res) && !is.null(spanner)) {
+    rule <- res$cols == ".values" & is.na(res$span) & is.na(res$text) &
+      (!is.na(res$border_top) | !is.na(res$border_bottom))
+    res$span[rule] <- spanner
+  }
+  res
 }

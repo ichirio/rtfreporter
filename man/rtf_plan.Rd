@@ -63,9 +63,9 @@ makes each statistic a row of its own.}
 unchanged: which of \code{stat} / \code{stat_fmt} a \code{{x}} reads, what fills a
 cell no template could, and whether to report what was not used.}
 
-\item{spec}{An \code{\link[=ard_spec]{ard_spec()}} definition, or the path to a workbook as
-\code{\link[=read_ard_spec]{read_ard_spec()}} reads it (a workbook defining several reports must
-be narrowed first, with \code{read_ard_spec(path, output_id = )}).  It is
+\item{spec}{An \code{\link[=table_spec]{table_spec()}} definition, or the path to a workbook as
+\code{\link[=read_table_spec]{read_table_spec()}} reads it (a workbook defining several reports must
+be narrowed first, with \code{read_table_spec(path, output_id = )}).  It is
 the plan's \strong{first layers}: the roles from its \code{tables} sheet (a role
 given here wins), then everything else --- levels, labels, cells,
 rounding, and the \code{layout} / \code{columns} / \code{style} of the pages --- as

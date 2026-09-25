@@ -607,7 +607,7 @@ test_that("plan_template(spec = ) reads the definition file instead", {
   code <- utils::capture.output(
     invisible(plan_template(plan_ard(), cols = "TRT", spec = TRUE,
                             pipe = "|>")))
-  expect_true(any(grepl("read_ard_spec", code, fixed = TRUE)))
+  expect_true(any(grepl("read_table_spec", code, fixed = TRUE)))
   expect_false(any(grepl("plan_cells(", code, fixed = TRUE)))
 })
 
@@ -1568,7 +1568,7 @@ test_that("a variable summarised and tabulated gets both recipes in a plan", {
 
 test_that("rtf_plan(spec = ) takes the roles from the spec's tables sheet", {
   skip_if_no_cards2()
-  sp <- ard_spec(
+  sp <- table_spec(
     tables = data.frame(cols = "TRT", rows = "group = variable"),
     cells  = data.frame(variable = c("continuous", "categorical"),
                         row      = c("Mean (SD)", NA),
@@ -1587,7 +1587,7 @@ test_that("rtf_plan(spec = ) takes the roles from the spec's tables sheet", {
   # a role in the call still wins, and is checked against the data
   p2 <- rtf_plan(d, spec = sp, rows = c(block = "variable"), notes = FALSE)
   expect_identical(p2$roles$rows, c(block = "variable"))
-  bad <- ard_spec(tables = data.frame(cols = "NOPE"))
+  bad <- table_spec(tables = data.frame(cols = "NOPE"))
   expect_error(rtf_plan(d, spec = bad), "no column 'NOPE'|NOPE")
 })
 
@@ -1598,7 +1598,7 @@ spec_pages_ard <- function() nz(plan_ard())
 test_that("layout / columns / style give the pages the verbs give", {
   skip_if_no_cards2()
   d <- spec_pages_ard()
-  sp <- ard_spec(
+  sp <- table_spec(
     tables  = data.frame(cols = "TRT", rows = "group = variable"),
     cells   = data.frame(variable = c("continuous", "continuous", "categorical"),
                          row = c("n", "Mean (SD)", NA),
@@ -1634,7 +1634,7 @@ test_that("layout / columns / style give the pages the verbs give", {
 test_that("a verb written after rtf_plan(spec = ) still wins", {
   skip_if_no_cards2()
   d <- spec_pages_ard()
-  sp <- ard_spec(tables = data.frame(cols = "TRT", rows = "group = variable"),
+  sp <- table_spec(tables = data.frame(cols = "TRT", rows = "group = variable"),
                  layout = data.frame(pages_max_rows = "6",
                                      pages_split = "group_safe"))
   p <- rtf_plan(d, spec = sp, notes = FALSE) |> plan_paginate_rows(max_rows = 40)
@@ -1645,7 +1645,7 @@ test_that("a verb written after rtf_plan(spec = ) still wins", {
 test_that("`.values` widths follow the data; a column left out is named", {
   skip_if_no_cards2()
   d <- spec_pages_ard()
-  base <- function(columns) ard_spec(
+  base <- function(columns) table_spec(
     tables = data.frame(cols = "TRT", rows = "group = variable"),
     layout = data.frame(stub_into = "row_label", stub_before = "TRUE"),
     columns = columns)
@@ -1663,7 +1663,7 @@ test_that("`.values` widths follow the data; a column left out is named", {
 test_that("group_collapse alone does not become the grouping column", {
   # `lay$group_col` would partially match `group_collapse`
   skip_if_no_cards2()
-  sp <- ard_spec(tables = data.frame(cols = "TRT", rows = "group = variable"),
+  sp <- table_spec(tables = data.frame(cols = "TRT", rows = "group = variable"),
                  layout = data.frame(group_collapse = "1"))
   p <- rtf_plan(spec_pages_ard(), spec = sp, notes = FALSE)
   g <- rtfreporter:::.plan_merge(rtfreporter:::.plan_of(p, "group"))
@@ -1675,7 +1675,7 @@ test_that("stats = rows formats come from `cells` rows with no template", {
   skip_if_no_cards2()
   d <- spec_pages_ard()
   d <- d[d$variable == "AGE", , drop = FALSE]
-  sp <- ard_spec(
+  sp <- table_spec(
     tables = data.frame(cols = "TRT", rows = "Analyte = variable",
                         label = "Statistics = stat_label", stats = "rows"),
     cells = data.frame(row = c("N", "Mean", "SD"), digits = c("0", NA, NA),
@@ -1697,19 +1697,19 @@ test_that("stats = rows formats come from `cells` rows with no template", {
 })
 
 test_that("display values are checked where they are written", {
-  expect_error(ard_spec(layout = data.frame(pages_max_rows = "twenty")),
+  expect_error(table_spec(layout = data.frame(pages_max_rows = "twenty")),
                "`layout\\$pages_max_rows` must be a whole number")
-  expect_error(ard_spec(style = data.frame(align_count_pct = "maybe")),
+  expect_error(table_spec(style = data.frame(align_count_pct = "maybe")),
                "TRUE or FALSE")
-  expect_error(ard_spec(columns = data.frame(width = "2")),
+  expect_error(table_spec(columns = data.frame(width = "2")),
                "needs a `column`")
-  expect_error(ard_spec(columns = data.frame(column = c("a", "a"))),
+  expect_error(table_spec(columns = data.frame(column = c("a", "a"))),
                "two rows")
-  expect_error(ard_spec(layout = data.frame(output_id = c("T1", "T1"),
+  expect_error(table_spec(layout = data.frame(output_id = c("T1", "T1"),
                                             pages_max_rows = "5")),
                "two rows")
   lay <- rtfreporter:::.ard_spec_typed(
-    ard_spec(layout = data.frame(pages_cont_label = '" (Cont.)"',
+    table_spec(layout = data.frame(pages_cont_label = '" (Cont.)"',
                                  colpages_carry = "1 | 2",
                                  stub_vars = "a | b"))$layout, "layout")
   expect_identical(lay$pages_cont_label, " (Cont.)")   # quotes keep spaces
@@ -1719,7 +1719,7 @@ test_that("display values are checked where they are written", {
 
 # ------------------------------------------------ the col_header sheet
 
-hdr_spec <- function(col_header, ...) ard_spec(
+hdr_spec <- function(col_header, ...) table_spec(
   tables = data.frame(cols = "TRT", rows = "group = variable"),
   layout = data.frame(stub_into = "row_label", stub_before = "TRUE"),
   col_header = col_header, ...)
@@ -1753,7 +1753,7 @@ test_that("span = a key makes one spanner per value; KEY = value selects", {
   d <- ard_normalize(cards::ard_stack(
     adsl, .by = c(TRT, GRP),
     cards::ard_categorical(variables = SEX, statistic = ~ c("n", "p"))))
-  sp <- ard_spec(
+  sp <- table_spec(
     tables = data.frame(cols = "TRT | GRP", rows = "group = variable"),
     layout = data.frame(stub_into = "row_label", stub_before = "TRUE"),
     col_header = data.frame(
@@ -1777,7 +1777,7 @@ test_that("span = a key makes one spanner per value; KEY = value selects", {
 })
 
 test_that("a report's own header replaces the default header whole", {
-  sp <- ard_spec(col_header = data.frame(
+  sp <- table_spec(col_header = data.frame(
     output_id = c(NA, NA, "T1"), line = c(1, 2, 1),
     cols = ".values", text = c("a", "b", "mine")))
   t1 <- rtfreporter:::.ard_spec_scope(sp, "T1")
@@ -1789,7 +1789,7 @@ test_that("a report's own header replaces the default header whole", {
 test_that("col_header refuses what it cannot place", {
   skip_if_no_cards2()
   d <- spec_pages_ard()
-  expect_error(ard_spec(col_header = data.frame(line = 1, text = "x")),
+  expect_error(table_spec(col_header = data.frame(line = 1, text = "x")),
                "needs a `line` and `cols`")
   bad <- function(...) apply_plan(rtf_plan(d, spec = hdr_spec(
     data.frame(line = 1, ...)), notes = FALSE), "pages")
@@ -1798,7 +1798,87 @@ test_that("col_header refuses what it cannot place", {
                "not a column key")
   expect_error(bad(cols = "1:99", text = "x"), "outside")
   # a typed \n is a line break; quotes keep leading spaces
-  v <- rtfreporter:::.ard_spec_typed(ard_spec(col_header = data.frame(
+  v <- rtfreporter:::.ard_spec_typed(table_spec(col_header = data.frame(
     line = 1, cols = "a", text = '"  a\\nb"'))$col_header, "col_header")
   expect_identical(v$text, "  a\nb")
+})
+
+# ------------------------------------------------ plan -> workbook
+
+code_plan <- function(d = spec_pages_ard()) {
+  rtf_plan(d, cols = "TRT", rows = c(group = "variable"), notes = FALSE) |>
+    plan_labels(AGE = "Age (years)", SEX = "Sex") |>
+    plan_cells(continuous  = c("n" = "{N:d}", "Mean (SD)" = "{mean} ({sd})"),
+               categorical = "{n:d} ({p:.1f%})") |>
+    plan_digits(1, rounding = "sas") |>
+    plan_stub(into = "row_label", before = TRUE) |>
+    plan_blanks(where = "between_groups", first = TRUE) |>
+    plan_paginate_rows(max_rows = 6, split = "group_safe") |>
+    plan_style(widths = c(4, 2), align_count_pct = TRUE) |>
+    plan_col_header(n = TRUE, rtf_col_header(c("", "{col}"),
+                                             c("Characteristic", "(N={n})")))
+}
+
+test_that("as_table_spec() writes a plan as a workbook that gives its pages", {
+  skip_if_no_cards2()
+  p <- code_plan()
+  sp <- as_table_spec(p, output_id = "T1")
+  expect_s3_class(sp, "table_spec")
+  expect_true(attr(sp, "same_pages"))
+  expect_length(attr(sp, "not_converted"), 0L)
+  expect_identical(sp$tables$cols, "TRT")
+  expect_identical(rtfreporter:::.ard_spec_study_value(sp, "rounding"), "sas")
+  expect_identical(sp$layout$pages_max_rows, "6")
+  # widths by name, the value columns as one `.values`
+  expect_identical(sp$columns$column, c("row_label", ".values"))
+  # the header came back as tokens and spans, not as this study's numbers
+  expect_true(any(sp$col_header$text %in% "(N={n})"))
+  expect_true(all(sp$col_header$span[sp$col_header$cols == ".values"] == "each"))
+
+  skip_if_not_installed("writexl"); skip_if_not_installed("readxl")
+  f <- tempfile(fileext = ".xlsx"); on.exit(unlink(f), add = TRUE)
+  write_table_spec(sp, f)
+  back <- apply_plan(rtf_plan(p$data, spec = read_table_spec(f, output_id = "T1"),
+                              notes = FALSE), "pages")
+  expect_equal(back, apply_plan(p, "pages"))
+})
+
+test_that("what a workbook cannot say is listed, and the check says so", {
+  skip_if_no_cards2()
+  p <- code_plan() |> plan_after(function(x) x)
+  expect_message(sp <- as_table_spec(p), "plan_after\\(\\) step stays in code")
+  expect_true(any(grepl("plan_after", attr(sp, "not_converted"))))
+  expect_true(attr(sp, "same_pages"))      # an identity step changed nothing
+  p2 <- code_plan() |> plan_after(function(x) { x[[1L]]$data[1, 1] <- "X"; x })
+  sp2 <- suppressMessages(as_table_spec(p2))
+  expect_false(attr(sp2, "same_pages"))
+})
+
+test_that("a named list of plans is one study workbook", {
+  skip_if_no_cards2()
+  sp <- as_table_spec(list(DM = code_plan(), DM2 = code_plan()))
+  expect_setequal(unique(sp$tables$output_id), c("DM", "DM2"))
+  expect_identical(unname(attr(sp, "same_pages")), c(TRUE, TRUE))
+  expect_error(as_table_spec(list(code_plan(), code_plan())), "unique names")
+})
+
+test_that("a one-arm spanner comes back as one spanner per arm", {
+  skip_if_no_cards2()
+  adsl <- cards::ADSL
+  adsl$TRT <- "ONLY"
+  adsl$GRP <- ifelse(adsl$AGE < 70, "Young", "Old")
+  d <- ard_normalize(cards::ard_stack(
+    adsl, .by = c(TRT, GRP),
+    cards::ard_categorical(variables = SEX, statistic = ~ c("n", "p"))))
+  p <- rtf_plan(d, cols = c("TRT", "GRP"), rows = c(group = "variable"),
+                notes = FALSE) |>
+    plan_stub(into = "row_label", before = TRUE) |>
+    plan_col_header(rtf_col_header(
+      list(col_cell(1, ""), col_cell(c(2, 3), "ONLY")),
+      c("Sex", "{col2}")))
+  sp <- as_table_spec(p)
+  expect_true(attr(sp, "same_pages"))
+  top <- sp$col_header[sp$col_header$line == "1" & sp$col_header$cols == ".values", ]
+  expect_identical(top$text, "{col1}")
+  expect_identical(top$span, "TRT")
 })

@@ -22,7 +22,7 @@ found and says so in a comment.}
 \item{hierarchy}{Optional nested hierarchy, outermost first.}
 
 \item{spec}{When \code{TRUE}, the generated plan reads its definition from a
-workbook (\code{rtf_plan(spec = read_ard_spec(...))}) instead of inlining
+workbook (\code{rtf_plan(spec = read_table_spec(...))}) instead of inlining
 the cells.}
 
 \item{file}{Optional path to write the code to.}

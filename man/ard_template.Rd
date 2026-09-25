@@ -79,5 +79,5 @@ call with \code{stub_vars} derived from the row keys and the label column.
 }
 
 \seealso{
-\code{\link[=ard_normalize]{ard_normalize()}}, \code{\link[=ard_spread]{ard_spread()}}, \code{\link[=ard_spec_template]{ard_spec_template()}}
+\code{\link[=ard_normalize]{ard_normalize()}}, \code{\link[=ard_spread]{ard_spread()}}, \code{\link[=table_spec_template]{table_spec_template()}}
 }

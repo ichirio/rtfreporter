@@ -23,8 +23,8 @@ actually holds.}
 \item{\code{\link[=ard_overall]{ard_overall()}}}{Where the table's overall row comes from.}
 \item{\code{\link[=ard_pull]{ard_pull()}}}{A statistic keyed like the spread columns, for a
 column header or an overall row.}
-\item{\code{\link[=ard_spec]{ard_spec()}}, \code{\link[=read_ard_spec]{read_ard_spec()}}, \code{\link[=write_ard_spec]{write_ard_spec()}},
-\code{\link[=ard_spec_template]{ard_spec_template()}}}{The spreadsheet definition file.}
+\item{\code{\link[=table_spec]{table_spec()}}, \code{\link[=read_table_spec]{read_table_spec()}}, \code{\link[=write_table_spec]{write_table_spec()}},
+\code{\link[=table_spec_template]{table_spec_template()}}}{The spreadsheet definition file.}
 }
 }
 

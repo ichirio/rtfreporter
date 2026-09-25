@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.0.9078** (the development
+**This manual documents rtfreporter 0.8.0.9079** (the development
 version, after release 0.8.0).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -772,9 +772,9 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 **Experimental -- cards/cardx ARD to a table data.frame (may change or be
 withdrawn; nothing else in the package depends on them, see
 `?rtfreporter-ard`):** `ard_keys` `ard_normalize` `ard_spread`
-`ard_template` `ard_cells` `ard_overall` `ard_pull` `ard_spec` `ard_spec_template`
-`read_ard_spec`
-`write_ard_spec`
+`ard_template` `ard_cells` `ard_overall` `ard_pull` `table_spec` `table_spec_template`
+`read_table_spec`
+`write_table_spec`
 
 **Spike -- the same ARD conversion as a deferred, LAST-WINS plan (#474; a
 prototype beside the verbs above, may be withdrawn wholesale):**
@@ -783,7 +783,7 @@ prototype beside the verbs above, may be withdrawn wholesale):**
 `plan_hide` `plan_sort` `plan_blanks` `plan_paginate_rows`
 `plan_style`
 `plan_cell_style` `plan_col_header` `plan_paginate_cols` `plan_titles` `plan_footnotes` `plan_listing`
-`plan_after` `apply_plan` `plan_template`
+`plan_after` `apply_plan` `plan_template` `as_table_spec`
 
 ---
 

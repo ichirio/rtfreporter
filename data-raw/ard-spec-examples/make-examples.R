@@ -11,7 +11,8 @@
 #    2. writes its definition workbook to inst/extdata/ard-spec/<id>.xlsx,
 #    3. reads the workbook back and runs rtf_plan(spec = ) on the ARD,
 #    4. checks the table data frame is IDENTICAL to ard_spread() written
-#       out, and the finished rtftable pages to the report's plan code.
+#       out, and the finished rtftable pages to the report's plan code --
+#       and that as_table_spec(<plan code>) gives those pages back.
 #
 #  It also writes study.xlsx: all five in one workbook, keyed by output_id,
 #  with the study's rounding on its `study` sheet, and the shared n (%)
@@ -47,12 +48,15 @@ tbl <- function(...) {
 # what the code's hand-written rtf_col_header() gives.
 check <- function(id, ard_n, spec_path, code_tbl, code_plan, header,
                   pages_n = ard_n) {
-  sp <- read_ard_spec(spec_path, output_id = id)
+  sp <- read_table_spec(spec_path, output_id = id)
   from_spec <- apply_plan(rtf_plan(ard_n, spec = sp, notes = FALSE), "table")
   ok <- isTRUE(all.equal(as.data.frame(from_spec), as.data.frame(code_tbl)))
   pg_spec <- apply_plan(rtf_plan(pages_n, spec = sp, notes = FALSE), "pages")
   pg_code <- apply_plan(code_plan, "pages")
   ok_pg <- isTRUE(all.equal(pg_spec, pg_code))
+  # and the other way: the plan code written back as a workbook
+  back <- suppressMessages(as_table_spec(code_plan, output_id = id))
+  ok_pg <- ok_pg && isTRUE(attr(back, "same_pages"))
   np <- if (inherits(pg_spec, "rtftable")) 1L else length(pg_spec)
   cat(sprintf(
     "  %-4s %-11s table %3d x %2d == code: %-5s  pages %2d == plan code: %s\n",
@@ -70,7 +74,7 @@ with_pages <- function(sp, layout = NULL, columns = NULL, style = NULL,
   x <- unclass(sp)
   x$layout <- layout; x$columns <- columns; x$style <- style
   x$col_header <- col_header
-  ard_spec(x)
+  table_spec(x)
 }
 # one header cell per row: tbl() of these
 hc <- function(id, line, cols, text = "", span = "", border_top = "",
@@ -92,7 +96,7 @@ ard_dm <- ard_stack(
                   statistic = ~ c("n", "p")),
   .total_n = TRUE)
 
-specs$DM <- ard_spec(
+specs$DM <- table_spec(
   study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "DM", cols = "TRT01P", rows = "group = variable",
@@ -142,7 +146,7 @@ ard_ae <- ard_stack_hierarchical(
   denominator = ADSL2, id = USUBJID, over_variables = TRUE)
 ard_ae <- ard_ae[ard_ae$context != "tabulate", ]
 
-specs$AE <- ard_spec(
+specs$AE <- table_spec(
   study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "AE", cols = "TR01AG1 | SEROSTAT",
@@ -186,7 +190,7 @@ ard_orr <- cards::ADSL |>
 ard_orr <- ard_orr[ard_orr$stat_name %in%
                      c("N", "n", "estimate", "conf.low", "conf.high"), ]
 
-specs$ORR <- ard_spec(
+specs$ORR <- table_spec(
   study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "ORR", cols = "TRT01P | variable",
@@ -233,7 +237,7 @@ ard_lb <- bind_rows(
   ard_categorical(mutate(LB, BASEGR = "Total", WORSTGR = "Total"),
                   by = c(LBTOX_LBL, BASEGR), variables = WORSTGR))
 
-specs$LB <- ard_spec(
+specs$LB <- table_spec(
   study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "LB", cols = "BASEGR",
@@ -276,7 +280,7 @@ ard_pk <- ard_stack(
                    c("N", "mean", "sd", "median", "min", "max"))))
 stat_levels <- c("N", "Mean", "SD", "Median", "Min", "Max")
 
-specs$PK <- ard_spec(
+specs$PK <- table_spec(
   study = c(rounding = "sas"),
   tables = tbl(
     list(output_id = "PK", cols = "ATPT", rows = "Analyte = ANALYTE",
@@ -504,7 +508,7 @@ pk_cells <- do.call(tbl, lapply(names(pk_formats), function(st) list(
              as.character(pk_formats[[st]]$digits) else "",
   signif = if (!is.null(pk_formats[[st]]$signif))
              as.character(pk_formats[[st]]$signif) else "")))
-x <- unclass(specs$PK); x$cells <- pk_cells; specs$PK <- ard_spec(x)
+x <- unclass(specs$PK); x$cells <- pk_cells; specs$PK <- table_spec(x)
 specs$PK <- with_pages(specs$PK,
   layout = tbl(list(output_id = "PK", group_collapse = "TRUE",
                     blank_where = "between_groups", blank_first = "TRUE",
@@ -551,7 +555,7 @@ readme <- utils::read.csv(file.path("data-raw", "ard-spec-examples",
                           stringsAsFactors = FALSE, fileEncoding = "UTF-8",
                           check.names = FALSE)
 write_book <- function(spec, path) {
-  write_ard_spec(spec, path)
+  write_table_spec(spec, path)
   nms <- readxl::excel_sheets(path)
   sheets <- lapply(nms, function(s)
     as.data.frame(readxl::read_excel(path, sheet = s, col_types = "text")))
@@ -597,7 +601,7 @@ study_cells <- rbind(
   tbl(list(output_id = "", variable = "", context = "", row = "", when = "",
            template = default_tpl, digits = "", signif = "")),
   study_cells[!restates, , drop = FALSE])
-study <- ard_spec(all_sheet("tables"), all_sheet("variables"), study_cells,
+study <- table_spec(all_sheet("tables"), all_sheet("variables"), study_cells,
                   study = c(rounding = "sas"), layout = all_sheet("layout"),
                   columns = all_sheet("columns"), style = all_sheet("style"),
                   col_header = all_sheet("col_header"))
