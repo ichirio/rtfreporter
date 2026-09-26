@@ -1179,11 +1179,12 @@ test_that("a digits value may ask for significant digits", {
 test_that("n = TRUE reads a cards sentinel keyed by the cols", {
   skip_if_no_cards2()
   # a sentinel row is a number the ARD states outright, so reading it is
-  # not a guess -- and it is taken only when its keys ARE the `cols`
+  # not a guess -- and it is taken only when its keys ARE the `cols`.
+  # A sentinel's number is its `N`, as cards writes it (#480)
   d <- data.frame(
     TRT = rep(c("A", "B"), each = 2L),
     variable = c("..ard_total_n..", "X", "..ard_total_n..", "X"),
-    stat_name = c("n", "n", "n", "n"),
+    stat_name = c("N", "n", "N", "n"),
     stat = c(40, 7, 50, 9),
     .label = c("all", "x", "all", "x"),
     stringsAsFactors = FALSE)
@@ -1197,7 +1198,7 @@ test_that("two sentinels are a choice, so neither is made", {
   d <- data.frame(
     TRT = c("A", "A"),
     variable = c("..ard_total_n..", "..ard_hierarchical_overall.."),
-    stat_name = c("n", "n"), stat = c(40, 12),
+    stat_name = c("N", "N"), stat = c(40, 12),
     .label = c("all", "any"), stringsAsFactors = FALSE)
   p <- rtf_plan(d, cols = "TRT", notes = FALSE)
   expect_null(rtfreporter:::.plan_n_sentinel(p, p$roles))
@@ -1357,10 +1358,11 @@ test_that("..ard_total_n.. is read as one number, from its `N`", {
   expect_identical(rtfreporter:::.plan_n_sentinel(p, p$roles), 254)
 })
 
-test_that("a sentinel carrying both n and N prefers n", {
+test_that("a sentinel carrying both n and N gives the denominator N", {
   skip_if_no_cards2()
   # ..ard_hierarchical_overall.. carries n (had an event) and N (the
-  # denominator); the count the sentinel is about is `n`
+  # denominator); a header's number is the denominator (#480) -- the
+  # event count is the "Any" row's, a subset of it
   d <- data.frame(
     TRT = c("A", "A", "B", "B"),
     variable = "..ard_hierarchical_overall..",
@@ -1369,7 +1371,35 @@ test_that("a sentinel carrying both n and N prefers n", {
     .label = "any", stringsAsFactors = FALSE)
   p <- rtf_plan(d, cols = "TRT", notes = FALSE)
   expect_identical(rtfreporter:::.plan_n_sentinel(p, p$roles),
-                   c(A = 42, B = 27))
+                   c(A = 86, B = 84))
+})
+
+test_that("a sentinel with only n gives no header number", {
+  skip_if_no_cards2()
+  d <- data.frame(
+    TRT = c("A", "B"),
+    variable = "..ard_hierarchical_overall..",
+    stat_name = "n", stat = c(42, 27), .label = "any",
+    stringsAsFactors = FALSE)
+  p <- rtf_plan(d, cols = "TRT", notes = FALSE)
+  expect_null(rtfreporter:::.plan_n_sentinel(p, p$roles))
+})
+
+test_that("an AE table's header N is the analysis set, not the Any row", {
+  skip_if_no_cards2()
+  adsl <- cards::ADSL
+  adae <- cards::ADAE[cards::ADAE$TRTEMFL == "Y", ]
+  adsl$TRTA <- adsl$TRT01A
+  ard <- cards::ard_stack_hierarchical(
+    adae, variables = c(AEBODSYS, AEDECOD), by = TRTA,
+    denominator = adsl, id = USUBJID, over_variables = TRUE)
+  d <- ard_normalize(ard, hierarchy = c("AEBODSYS", "AEDECOD"),
+                     overall = "Any TEAE")
+  p <- rtf_plan(d, cols = "TRTA", rows = c(group1 = "AEBODSYS"),
+                label = c(label = "AEDECOD"), notes = FALSE)
+  n <- rtfreporter:::.plan_n_values(p, TRUE)
+  expect_equal(unname(n[c("Placebo", "Xanomeline Low Dose",
+                          "Xanomeline High Dose")]), c(86, 84, 84))
 })
 
 

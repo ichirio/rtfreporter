@@ -32,6 +32,15 @@
 
 ### Bug fixes
 
+- **A column header's `{n}` is the denominator, not the Any-event count**
+  (#480).  On an ARD from `cards::ard_stack_hierarchical()` the header
+  read the `..ard_hierarchical_overall..` sentinel's `n` -- the subjects
+  with at least one event, the number the "Any TEAE" row shows -- so an
+  AE table said `Placebo (N=65)` over percentages of 86.  A header's
+  number is the analysis set: from a sentinel it now reads `N` only
+  (86 / 84 / 84), and a sentinel with no `N` leaves the answer to the
+  column variable's own tabulation and `ard_pull()`.
+
 - **`format_count_pct()` rounds the percent with the package rule** (#476).
   It used `sprintf()`'s own rounding, so `6.25%` printed `6.2` even for a
   study that rounds like SAS; it now takes `rounding =` like every other
