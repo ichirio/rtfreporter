@@ -51,7 +51,10 @@
   used to print an empty string; the study total fills only a cell over
   all columns.  Numbers given with `n = c(...)` or a function may be
   keyed at any depth (`"Placebo"`, `"Placebo____F"`) and work over a
-  `col_header` sheet too.
+  `col_header` sheet too.  Pages split by a group value
+  (`plan_paginate_group()`) read each page's numbers from that page's
+  rows, so a shift table's `Treatment (N=...)` is each parameter's
+  population as the ARD states it.
 
 - **A column header's `{n}` is the denominator, not the Any-event count**
   (#480).  On an ARD from `cards::ard_stack_hierarchical()` the header

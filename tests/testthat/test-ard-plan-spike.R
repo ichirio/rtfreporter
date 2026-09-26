@@ -2116,3 +2116,47 @@ test_that("{n:sum} with a column missing is NA, not a smaller total", {
   out <- suppressWarnings(f(h, v, c("A", "B", "C"), 1L))
   expect_identical(vapply(out[[1L]], `[[`, "", "label"), c("", "NA", "60"))
 })
+
+test_that("the key tabulated on its own states the table's total", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  d <- ard_normalize(cards::ard_stack(
+    adsl, .by = TRT, cards::ard_categorical(variables = SEX)))
+  p <- rtf_plan(d, cols = "TRT", notes = FALSE)
+  expect_identical(attr(rtfreporter:::.plan_n_values(p, TRUE), "total"),
+                   nrow(adsl) + 0)
+})
+
+test_that("pages split by a group value each read their own N from the ARD", {
+  skip_if_not_installed("cards")
+  set.seed(1)
+  lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
+                    PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
+  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
+  ard <- cards::bind_ard(
+    cards::ard_categorical(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
+    # the population of each parameter, split by the column variable:
+    # the ARD states every column's N and each page's total
+    cards::ard_categorical(lb, by = PARAM, variables = BASEGR))
+  p <- rtf_plan(ard_normalize(ard), cols = "BASEGR",
+                rows = c(PARAM = "PARAM"), label = c(label = ".label"),
+                notes = FALSE) |>
+    plan_cells("{n}") |>
+    plan_paginate_group(show = FALSE) |>
+    plan_col_header(n = TRUE, rtf_col_header(
+      list(col_cell(1, ""), col_cell(c(2, 3), "All (N={n})")),
+      c("", "{col} (N={n})")))
+  pg <- expect_silent(suppressMessages(apply_plan(p, "pages")))
+  n <- table(lb$PARAM)
+  cell <- table(lb$PARAM, lb$BASEGR)
+  for (i in seq_along(pg)) {
+    prm <- names(pg)[i]
+    h <- hdr_rows(pg[i])
+    expect_identical(h[[1L]][2L], sprintf("All (N=%d)", n[[prm]]))
+    expect_identical(h[[2L]][2:3], sprintf("%s (N=%d)", c("G0", "G1"),
+                                           cell[prm, c("G0", "G1")]))
+  }
+  expect_false(identical(hdr_rows(pg[1])[[1L]], hdr_rows(pg[2])[[1L]]))
+})

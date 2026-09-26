@@ -1055,9 +1055,19 @@ print.rtf_plan <- function(x, ...) {
 #'      missing, which the ARD cannot show --- and an `N` per visit or per
 #'      parameter is not a column's at all.  [ard_pull()] is not asked.
 #'
-#'   The study total (`..ard_total_n..`, or the one [ard_normalize()]
-#'   remembers as it drops that row) is **never put in every column**:
-#'   it answers a one-column table and a cell over all the columns.
+#'   The study total (`..ard_total_n..`, the one [ard_normalize()]
+#'   remembers as it drops that row, or the `N` the column variable's
+#'   own tabulation states) is **never put in every column**: it answers
+#'   a one-column table and a cell over all the columns.
+#'
+#'   **Pages split by a group value** ([plan_paginate_group()]: a lab
+#'   parameter, a visit) each read their numbers from **their own rows**
+#'   of the ARD, then from the rows that belong to no page --- the
+#'   subjects with an ALT result are not those with a haemoglobin one.
+#'   Put that population in the ARD as the column variable tabulated
+#'   within the page key: `cards::ard_categorical(adlb, by = PARAM,
+#'   variables = BASEGR)` states each baseline column's N and the
+#'   page's total.
 #'
 #'   What cannot be read is printed as **`NA`**, and one **warning** lists
 #'   every such cell with the reason (`only AGE states an N (79)`,
@@ -2145,8 +2155,7 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 #  with no stated number is left out, with the reason on attr "why"; the
 #  header prints NA there and warns.  Nothing is guessed.
 
-.plan_n_read <- function(plan, sp) {
-  d <- plan$data
+.plan_n_read <- function(plan, sp, d = plan$data) {
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
   sep <- sp$sep %||% "____"
   total <- attr(d, "ard_total_n", exact = TRUE)
@@ -2189,8 +2198,15 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       got <<- c(got, x)
     }
     if (one_sent) add(.plan_n_unique(st, key, at & sent & sn %in% "N"))
-    add(.plan_n_partition(d, cols, k, key, at & own & v %in% cols[k],
-                          sn, st, sep))
+    part <- .plan_n_partition(d, cols, k, key, at & own & v %in% cols[k],
+                              sn, st, sep)
+    # the key tabulated on its own states the table's population too:
+    # its N is what the columns add up to (ard_stack(.by = ) says 254)
+    if (k == 1L && is.null(total) && length(attr(part, "N")) == 1L) {
+      total <- attr(part, "N")
+    }
+    attr(part, "N") <- NULL
+    add(part)
     s <- .plan_n_summaries(v, ctx, sn, st, key, at & !own & !sent)
     add(s$n)
     miss <- setdiff(names(s$why), names(got))
@@ -2229,6 +2245,7 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     do.call(paste, c(lapply(cols[seq_len(k - 1L)], function(cc)
       as.character(d[[cc]])), list(sep = sep)))
   out <- numeric(0)
+  bigs <- numeric(0)
   for (g in unique(grp[n_sel])) {
     i <- n_sel & grp == g
     n <- st[i]
@@ -2239,8 +2256,10 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       next
     }
     out <- c(out, stats::setNames(n, kk))
+    bigs <- c(bigs, big)
   }
-  out
+  # the population the partition splits -- at depth 1, the whole table's
+  structure(out, N = bigs)
 }
 
 # The analysis summaries' `N`, where it can be trusted to be a column's
@@ -2403,7 +2422,7 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 }
 
 # The denominator, read once, with the keys rtf_plan() already has.
-.plan_n_values <- function(plan, n) {
+.plan_n_values <- function(plan, n, data = plan$data) {
   if (is.null(n)) return(NULL)
   sp <- .plan_spread_args(plan)
   one <- function(v) {
@@ -2419,14 +2438,61 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       # header prints NA there and says why (see .plan_n_read()).
       # ard_pull() is not asked: it reads an analysis variable's `N`,
       # the count of its non-missing values.
-      return(.plan_n_read(plan, sp))
+      return(.plan_n_read(plan, sp, data))
     }
-    if (is.function(v)) v(plan$data) else v
+    if (is.function(v)) v(data) else v
   }
   if (is.list(n) && !is.null(names(n)) && any(nzchar(names(n)))) {
     return(lapply(n, one))
   }
   one(n)
+}
+
+# The data column the pages are split on, and each page's value of it,
+# when the plan splits pages by a group value.  A page whose name is not
+# a value of that column (relabelled, or cut further) gets NULL and falls
+# back to the whole table's numbers: a page never borrows another's.
+.plan_page_group <- function(plan, page_names) {
+  if (!isTRUE(.plan_merge(.plan_of(plan, "group"))$.page)) return(NULL)
+  gcol <- .plan_group_col(plan)
+  if (is.null(gcol) || is.null(page_names)) return(NULL)
+  r <- plan$roles$rows
+  src <- if (!is.null(names(r)) && gcol %in% names(r)) r[[gcol]] else gcol
+  if (!is.character(src) || length(src) != 1L ||
+      !src %in% names(plan$data)) {
+    return(NULL)
+  }
+  raw <- .ard_first_seen(plan$data[[src]])
+  value <- lapply(page_names, function(nm) {
+    if (nm %in% raw) return(nm)
+    hit <- raw[startsWith(nm, raw)]
+    if (length(hit)) hit[which.max(nchar(hit))] else NULL
+  })
+  list(col = src, value = value)
+}
+
+# A page's numbers: its own rows first, then the rows that belong to no
+# page (a study total, a tabulation made without the page key).
+.plan_n_page <- function(plan, n, col, value) {
+  d <- plan$data
+  g <- as.character(d[[col]])
+  mine <- d[!is.na(g) & g == value, , drop = FALSE]
+  rest <- d[is.na(g), , drop = FALSE]
+  attr(rest, "ard_total_n") <- attr(d, "ard_total_n", exact = TRUE)
+  a <- .plan_n_values(plan, n, mine)
+  b <- .plan_n_values(plan, n, rest)
+  join <- function(x, y) {
+    if (!is.numeric(x) || !is.numeric(y)) return(x)
+    keep <- setdiff(names(y) %||% character(0), names(x))
+    out <- c(x, y[keep])
+    tx <- attr(x, "total", exact = TRUE)
+    wx <- attr(x, "why", exact = TRUE)
+    attr(out, "total") <- tx %||% attr(y, "total", exact = TRUE)
+    attr(out, "why") <- wx[!names(wx) %in% names(out)]
+    out
+  }
+  if (is.list(a) && !is.numeric(a)) return(Map(join, a, b))
+  join(a, b)
 }
 
 .plan_to_pages <- function(plan, tbl) {
@@ -2535,21 +2601,42 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     #
     #  `cols` / `stub` are the same thing without the function, for
     #  the header that only repeats itself over the columns.
+    build <- function(page_d, nv) {
+      sc <- intersect(.plan_spread_cols(plan, pre), names(page_d))
+      h <- if (inherits(hdr$header, "plan_spec_col_header"))
+             .plan_spec_col_header(hdr$header, names(page_d), sc, plan)
+           else if (!is.function(hdr$header)) hdr$header
+           else if (length(formals(hdr$header)) >= 2L)
+             hdr$header(nv, tbl)
+           else hdr$header(nv)
+      list(raw = h, filled = .plan_header_fill(
+        h, nv, sc, length(page_d) - length(sc), plan$roles$sep))
+    }
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
-    sc <- intersect(.plan_spread_cols(plan, pre), names(first_d))
-    h <- if (inherits(hdr$header, "plan_spec_col_header"))
-           .plan_spec_col_header(hdr$header, names(first_d), sc, plan)
-         else if (!is.function(hdr$header)) hdr$header
-         else if (length(formals(hdr$header)) >= 2L)
-           hdr$header(nvals, tbl)
-         else hdr$header(nvals)
-    .plan_remember(plan, "header_raw", h)
-    # the tokens and the short-row rule, on whatever came back
-    h <- .plan_header_fill(h, nvals, sc, length(first_d) - length(sc),
-                           plan$roles$sep)
-    args <- list(x = out, h)
-    if (!is.null(hdr$values)) args$values <- hdr$values
-    out <- do.call(set_col_header, args)
+    # Pages split by a group value (a lab parameter, a visit) each
+    # describe their own population, so each page's `{n}` is read from
+    # that page's rows of the ARD -- the subjects with an ALT result are
+    # not the subjects with a haemoglobin one.
+    pg <- if (is.null(n_req) || inherits(out, "rtftable")) NULL
+          else .plan_page_group(plan, names(out))
+    if (!is.null(pg)) {
+      for (i in seq_along(out)) {
+        nv <- if (is.null(pg$value[[i]])) nvals
+              else .plan_n_page(plan, n_req, pg$col, pg$value[[i]])
+        b <- build(out[[i]]$data, nv)
+        if (i == 1L) .plan_remember(plan, "header_raw", b$raw)
+        args <- list(x = out[[i]], b$filled)
+        if (!is.null(hdr$values)) args$values <- hdr$values
+        out[[i]] <- do.call(set_col_header, args)
+      }
+    } else {
+      b <- build(first_d, nvals)
+      .plan_remember(plan, "header_raw", b$raw)
+      # the tokens and the short-row rule, on whatever came back
+      args <- list(x = out, b$filled)
+      if (!is.null(hdr$values)) args$values <- hdr$values
+      out <- do.call(set_col_header, args)
+    }
   }
 
   if (length(colset$decimal)) {

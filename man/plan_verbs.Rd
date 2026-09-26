@@ -282,9 +282,18 @@ missing, which the ARD cannot show --- and an \code{N} per visit or per
 parameter is not a column's at all.  \code{\link[=ard_pull]{ard_pull()}} is not asked.
 }
 
-The study total (\code{..ard_total_n..}, or the one \code{\link[=ard_normalize]{ard_normalize()}}
-remembers as it drops that row) is \strong{never put in every column}:
-it answers a one-column table and a cell over all the columns.
+The study total (\code{..ard_total_n..}, the one \code{\link[=ard_normalize]{ard_normalize()}}
+remembers as it drops that row, or the \code{N} the column variable's
+own tabulation states) is \strong{never put in every column}: it answers
+a one-column table and a cell over all the columns.
+
+\strong{Pages split by a group value} (\code{\link[=plan_paginate_group]{plan_paginate_group()}}: a lab
+parameter, a visit) each read their numbers from \strong{their own rows}
+of the ARD, then from the rows that belong to no page --- the
+subjects with an ALT result are not those with a haemoglobin one.
+Put that population in the ARD as the column variable tabulated
+within the page key: \code{cards::ard_categorical(adlb, by = PARAM, variables = BASEGR)} states each baseline column's N and the
+page's total.
 
 What cannot be read is printed as \strong{\code{NA}}, and one \strong{warning} lists
 every such cell with the reason (\verb{only AGE states an N (79)},

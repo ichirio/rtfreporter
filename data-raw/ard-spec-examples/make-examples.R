@@ -227,7 +227,9 @@ LB <- cards::ADSL |> select(USUBJID) |>
   tidyr::crossing(LBTOX_LBL = c("Alanine Aminotransferase", "Hemoglobin")) |>
   mutate(BASEGR  = sample(c("Grade 0", "Grade 1", "Grade 2"), n(), TRUE),
          WORSTGR = sample(c("Grade 0", "Grade 1", "Grade 2", "Grade 3"),
-                          n(), TRUE))
+                          n(), TRUE)) |>
+  # not every subject has every parameter: each page has its own N
+  filter(!(LBTOX_LBL == "Hemoglobin" & row_number() %% 20 == 0))
 ard_lb <- bind_rows(
   ard_categorical(LB, by = c(LBTOX_LBL, BASEGR), variables = WORSTGR),
   ard_categorical(mutate(LB, WORSTGR = "Total"),
@@ -236,9 +238,10 @@ ard_lb <- bind_rows(
                   by = c(LBTOX_LBL, BASEGR), variables = WORSTGR),
   ard_categorical(mutate(LB, BASEGR = "Total", WORSTGR = "Total"),
                   by = c(LBTOX_LBL, BASEGR), variables = WORSTGR),
-  # the header's "Treatment (N=...)" is the analysis set, which no count
-  # above states (they are per parameter): the ARD says it here (#482)
-  ard_total_n(cards::ADSL))
+  # the header's "Treatment (N=...)": the subjects of each parameter,
+  # split by baseline grade -- the column variable's own tabulation, so
+  # the ARD states every column's N and the page's total itself (#482)
+  ard_categorical(LB, by = LBTOX_LBL, variables = BASEGR))
 
 specs$LB <- table_spec(
   study = c(rounding = "sas"),
