@@ -473,6 +473,33 @@ col_key <- function(key, sep = NULL, part = 1L) {
 .pos_row_to_spans <- function(row, ncol_df, col_names = NULL) {
   if (length(row) == 0L) return(list())
 
+  # Every element has to be a cell.  The way it stops being one is
+  # `c()`: an rtf_col_cell is a list underneath, so c(list(a), b)
+  # SPLICES b into its own fields and the row becomes
+  # list(cell, 2:4, "label").  Without this the first `$pos` says
+  # "$ operator is invalid for atomic vectors", which names neither
+  # the row nor the c().
+  # `!is.list()`, not `!.is_cell_spec()`: a list WITHOUT a `pos` is a
+  # different mistake (a malformed cell) and has its own message below.
+  bad <- !vapply(row, is.list, logical(1L))
+  if (any(bad)) {
+    stop(sprintf(paste0(
+      "A header row of cells has %d element%s that %s not a cell ",
+      "(element%s %s: %s).\n",
+      "  Build the row with list(), not c(): c() takes a col_cell() ",
+      "apart, because it\n  is a list underneath.  ",
+      "c(list(col_cell(1, \"\")), col_cell(2, \"x\")) gives ",
+      "THREE elements,\n  not two; ",
+      "list(col_cell(1, \"\"), col_cell(2, \"x\")) is the row you meant."),
+      sum(bad), if (sum(bad) == 1L) "" else "s",
+      if (sum(bad) == 1L) "is" else "are",
+      if (sum(bad) == 1L) "" else "s",
+      paste(which(bad), collapse = ", "),
+      paste(vapply(row[bad], function(z) class(z)[1L], ""),
+            collapse = ", ")),
+      call. = FALSE)
+  }
+
   # Resolve any column-name positions to integers up front, so downstream
   # sorting / range logic is purely numeric.
   row <- lapply(row, function(c) {

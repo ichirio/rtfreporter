@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.0.9002** (the development
+**This manual documents rtfreporter 0.8.0.9083** (the development
 version, after release 0.8.0).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -773,6 +773,22 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 **Assembly:** `assemble_rtf` `assemble_files` `assemble_toc` `assemble_spec`
 `assemble_from_spec` `assemble_folder` `toc_heading` `toc_entry`
 `rtf_replace_text`
+
+**Experimental -- cards/cardx ARD to a table data.frame (may change or be
+withdrawn; nothing else in the package depends on them, see
+`?rtfreporter-ard`):** `ard_keys` `ard_normalize` `ard_spread`
+`ard_template` `ard_cells` `ard_overall` `ard_pull` `table_spec` `table_spec_template`
+`read_table_spec`
+`write_table_spec` `read_report_spec` `rtf_report` `report_path`
+
+**Spike -- the same ARD conversion as a deferred, LAST-WINS plan (#474; a
+prototype beside the verbs above, may be withdrawn wholesale):**
+`rtf_plan` `plan_cells` `plan_levels` `plan_labels` `plan_digits`
+`plan_fmt` `plan_stub` `plan_paginate_group` `plan_row_group`
+`plan_hide` `plan_sort` `plan_blanks` `plan_paginate_rows`
+`plan_style`
+`plan_cell_style` `plan_col_header` `plan_paginate_cols` `plan_titles` `plan_footnotes` `plan_listing`
+`plan_after` `apply_plan` `plan_template` `as_table_spec`
 
 ---
 

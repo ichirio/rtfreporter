@@ -612,19 +612,24 @@ paginate.data.frame <- function(x, ...) {
   ifelse(is.na(out), "", out)
 }
 
-# The partitions `page_by` implies: RUNS of the BY value(s) (the same run-based
-# reading `split = "by_value"` uses, so a value that comes back later is a new
-# page rather than being merged into the earlier one -- sort first if that is
-# not what you want), each with the label its pages are named by.
+# The partitions `page_by` implies: one per DISTINCT BY value, holding every
+# row that has it.  A page gathers its rows even when they are scattered --
+# a value that comes back later belongs to the page it names, not to a new
+# one -- and inside a page, and between pages, the body's own order stands.
+#
+# This is not the same as requiring the body to be sorted first.  Needing
+# that is SAS's contract, not R's: R subsets by value and leaves the order
+# alone, and a report whose rows are merely interleaved would otherwise lose
+# half of each page without saying so.  On an already-grouped body -- the
+# usual one -- this is exactly what the runs were.
 .page_by_runs <- function(df, idx) {
   keys <- lapply(idx, function(j) .fill_page_by_gaps(as.character(df[[j]])))
   key  <- do.call(paste, c(keys, list(sep = "\r")))
   lab  <- do.call(paste, c(keys, list(sep = ", ")))
-  rl     <- rle(key)
-  ends   <- cumsum(rl$lengths)
-  starts <- ends - rl$lengths + 1L
-  lapply(seq_along(starts), function(i)
-    list(rows = seq.int(starts[i], ends[i]), label = lab[starts[i]]))
+  lapply(unique(key), function(k) {
+    rows <- which(key == k)
+    list(rows = rows, label = lab[rows[1L]])
+  })
 }
 
 # ---------------------------------------------------------------------------
@@ -879,7 +884,8 @@ paginate.data.frame <- function(x, ...) {
     id  <- as.integer(rep(seq_along(rl$lengths), rl$lengths))
     labels <- rep(rl$values, rl$lengths)
     headers <- c(TRUE, id[-1L] != id[-n])
-    return(list(id = id, label = labels, headers = headers))
+    return(list(id = id, label = labels, headers = headers,
+                mode = "value"))
   }
 
   # "indent" / "filled": header-based grouping.  A materialised blank row has an
@@ -905,7 +911,7 @@ paginate.data.frame <- function(x, ...) {
     if (isTRUE(is_header[i])) current <- col[i]
     labels[i] <- current
   }
-  list(id = id, label = labels, headers = is_header)
+  list(id = id, label = labels, headers = is_header, mode = mode)
 }
 
 
@@ -1233,6 +1239,16 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
                             min_group_rows = 2L) {
   if (nrow(df) == 0L) return(list(df))
   gid <- ifelse(is.na(info$id), 0L, info$id)
+  # A VALUE-based group is a key, so its page gathers every row that has
+  # it, scattered or not, and those rows keep the order they were in.  An
+  # indent/filled group is a POSITION in the body -- there is no key to
+  # gather by -- so it stays a run.  Gathering is also what the
+  # by_value + stub_vars path in as_rtftables() has always done.
+  if (identical(info$mode, "value")) {
+    lab <- as.character(info$label)
+    lab[is.na(lab)] <- ""
+    gid <- match(lab, unique(lab))
+  }
   unique_gids <- unique(gid)
 
   result <- list()
@@ -1244,9 +1260,10 @@ add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
     if (!nzchar(label)) label <- paste0("group_", g)
 
     if (!is.null(max_rows) && g_n > max_rows) {
-      sub_info <- list(id      = info$id[rows],
+      sub_info <- list(id      = gid[rows],
                        label   = info$label[rows],
-                       headers = info$headers[rows])
+                       headers = info$headers[rows],
+                       mode    = info$mode)
       sub <- .split_group_force(chunk, sub_info, max_rows,
                                  cont_label, group_idx, min_group_rows)
       names(sub) <- rep(label, length(sub))

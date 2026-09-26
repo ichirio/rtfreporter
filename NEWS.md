@@ -32,11 +32,1396 @@
 
 ### Bug fixes
 
+- **A column header's `{n}` is read only where the ARD states a
+  population size, at every level of the column keys; otherwise it is
+  `NA` with a warning** (#482).  Checked against 26 cards / cardx builds,
+  six gave a plausible wrong number without a word: an analysis
+  variable's `N` is the count of its non-missing values (79 for an arm of
+  86 when AGE has missing values; 151 for AE records tabulated without
+  `denominator =`), an `N` per visit was taken as the column's, and an
+  ARD normalised with its `..ard_total_n..` kept put 254 in every arm.
+  `n = TRUE` now reads a sentinel's `N`, the column variable's own
+  tabulation where it partitions the population, and an analysis `N`
+  only when it is a denominator by construction or two variables agree
+  for every column.  It reads every depth of the keys, so with
+  `cols = c("TRT", "SEX")` a spanner's `{n}` is the arm's (it printed
+  nothing before) and the leaf's is the arm x sex cell's; `{n1}`,
+  `{n2}`, ... name a depth.  What cannot be read prints `NA` and raises
+  one warning naming the cells and the reason, where a missing value
+  used to print an empty string; the study total fills only a cell over
+  all columns.  Numbers given with `n = c(...)` or a function may be
+  keyed at any depth (`"Placebo"`, `"Placebo____F"`) and work over a
+  `col_header` sheet too.  Pages split by a group value
+  (`plan_paginate_group()`) read each page's numbers from that page's
+  rows, so a shift table's `Treatment (N=...)` is each parameter's
+  population as the ARD states it.  Which population is the author's
+  choice: `n = "page"` (the subjects with that test), `n = "table"` (the
+  analysis set, ARD rows without the page key), or both at once with
+  `n = list(n = "page", N = "table")`; the workbook's `tables` sheet
+  takes the same as `header_n`.  Both must be in the ARD; `TRUE` warns
+  when it states both and they differ.
+
+- **A column header's `{n}` is the denominator, not the Any-event count**
+  (#480).  On an ARD from `cards::ard_stack_hierarchical()` the header
+  read the `..ard_hierarchical_overall..` sentinel's `n` -- the subjects
+  with at least one event, the number the "Any TEAE" row shows -- so an
+  AE table said `Placebo (N=65)` over percentages of 86.  A header's
+  number is the analysis set: from a sentinel it now reads `N` only
+  (86 / 84 / 84), and a sentinel with no `N` leaves the answer to the
+  column variable's own tabulation and `ard_pull()`.
+
 - **`format_count_pct()` rounds the percent with the package rule** (#476).
   It used `sprintf()`'s own rounding, so `6.25%` printed `6.2` even for a
   study that rounds like SAS; it now takes `rounding =` like every other
   formatter.  Rounding first also fixes the width: `9.96` used to take the
   "< 10" branch and print a misaligned `10.0`, and `99.96` now prints `(100)`.
+
+### Experimental ARD helpers
+
+- **The report around the table is a definition too:
+  `read_report_spec()`, `rtf_report()`, `report_path()`** (#474).  Six
+  sheets join the workbook rules: `report` (one row per output: `type`,
+  `file`, `program`, `auto_section`, font sizes, `page_header` /
+  `page_footer` switches), `page` (paper, margins, the document's text
+  defaults), and `header`, `footer`, `titles`, `footnotes`, whose rows are
+  **lines**, with the line as the key -- the study's running header is
+  written once as default lines 1-2, each report's titles follow on its
+  own lines 3.., and one default footer line 99
+  (`{PROGRAM}       Generated on: {DATETIME}`, the new run tokens)
+  closes every report's footnotes.  `study` gains `output_path` and
+  `program_dir`.  `rtf_report(spec, plan)` is the `rtf_document()` with
+  the page, bands, titles, footnotes and the plan's pages, carrying its
+  program; `report_path(spec)` is where it goes.
+
+  **One workbook or several**: `read_report_spec(c("report.xlsx",
+  "tables.xlsx"), output_id = )` reads the sheets together -- a report
+  workbook a lead keeps (outputs, titles, footnotes; also for figures and
+  listings to come) and content workbooks per kind.  An empty sheet and
+  `study` keys may appear in several; a sheet with rows in two is refused.
+  Without `output_id =` a reader returns the whole study; what needs one
+  report (`rtf_plan()`, `rtf_report()`, `report_path()`) narrows it, and
+  asks which when there are several.
+  Five sample reports ship as `report.xlsx` beside `study.xlsx`, each
+  giving the identical RTF to the same document written as code.
+
+- **A plan written as code becomes a workbook: `as_table_spec()`**
+  (#474).  It is how an existing report becomes the template for a new
+  study.  Everything is read from what the plan *resolves to* against its
+  own data -- roles, levels, labels, templates with their digits, pages,
+  groups, blanks, stub, widths **by name** (`.values` when the value
+  columns share one), and the column header, with a literal that is a
+  column's own key value turned back into `{col}` / `{col1}`, a repeated
+  cell into `span = each`, and an arm's spanner into `span = <key>` even
+  when the study it came from had one arm.  A header written as a
+  function of the table converts too, because it is converted after it
+  ran.  What a sheet cannot say (a `plan_after()` step other than
+  `set_decimal_split()`, a guarded label, `plan_cell_style()`, a literal
+  `n`) is listed, and the workbook is run back through
+  `rtf_plan(spec = )` to report whether it gives the same pages.  A named
+  list of plans is one study workbook.
+
+- **The definition functions are renamed for what they define: a
+  table**.  `ard_spec()` -> `table_spec()`, `read_ard_spec()` ->
+  `read_table_spec()`, `write_ard_spec()` -> `write_table_spec()`,
+  `ard_spec_template()` -> `table_spec_template()`.  The definition is
+  read after `ard_normalize()` and is not about an ARD any more; the
+  report-level definition to come will sit beside it.  No aliases
+  (experimental).  An unnamed row key next to a constant heading in
+  `tables$rows` (`LBTOX_LBL | group1 = "..."`) now keeps its own name.
+
+- **The definition file is a workbook with one sheet per grain, and it can
+  say the roles too** (#474).
+
+  Each fact is written once where it belongs: `study` (`key` / `value`,
+  what is one for the whole study -- today `rounding`, so no two tables of
+  one study can round differently), `tables` (one row per report: `cols`,
+  `rows`, `label`, `stats`, `value`, `sep`, `sort`, `sort_stat`, `na`),
+  `variables` (one row per
+  variable: `label`, `order`, `levels`) and `cells` (one row per line of a
+  cell: `variable`, `context`, `row`, `when`, `template`, `digits`,
+  `signif`).  The old single sheet repeated a variable's label, order and
+  levels on every one of its rows and read only the first, and its `round`
+  column claimed to apply per row while one value served the whole table.
+
+  Three more sheets carry the table half, so a workbook goes all the way
+  to `rtftable` pages: `layout` (one row per report; `pages_*`,
+  `group_*`, `blank_*`, `stub_*`, `colpages_*` -- each prefix the plan
+  verb it stands for), `columns` (one row per printed column, **by
+  name**, with `.values` for every spread column however many there are:
+  `width`, `row_title`, `decimal_split`, `hide`) and `style` (`border`,
+  `align_count_pct`, row heights, font ...).  A `cells` row with no
+  template is, on a `stats = rows` table, one statistic's display format
+  (`row = Mean`, `signif = 4`), as `fmt_numeric(by = )` takes it.  Every
+  value is checked where it is written (a number, `TRUE` / `FALSE`, a
+  `|`-list); quote a text value to keep its spaces.
+
+  **One entry point: `rtf_plan(data, spec = )`**, which reads the workbook
+  as the plan's first layers -- the roles from `tables`, then everything
+  else as if the matching verbs had been written -- so a verb written
+  after it still wins, and `rtf_tables()` / `apply_plan()` take the plan
+  as before.  `ard_spread(spec = )` is withdrawn: it could only ever
+  supply `ard_spread()`'s own arguments, and two ways in was one too
+  many.  `ard_template(spec = )` goes with it (`plan_template(spec = )`
+  remains).
+
+  **The column header is a sheet too: `col_header`**, one row per header
+  cell -- `line`, `cols`, `span`, `text`, `align`, `bold`,
+  `border_top`, `border_bottom`.  `cols` takes names, `.values`,
+  positions (`3:last`) and `KEY = value` (an ORR's `variable = n`
+  sub-columns, however many arms); `span` is one cell, `each` column, or
+  one spanner per value of a column key (an AE's arm over its strata).
+  The `plan_col_header()` tokens work (`{col}`, `{col1}`, `{n}`,
+  `{n:sum}`), and `{n}` is read from the ARD whenever a text uses it.
+  It resolves to the `rtf_col_header()` a hand-written header would be,
+  on the finished page, so a report's header no longer needs a function
+  of the table to survive a change in the number of columns.  A report's
+  own cells replace the default header whole.
+
+  The sheets but `study` follow one rule: a blank `output_id` is a
+  study-wide default and a report's own row replaces the default with the
+  same key, so a later sheet can join without a new rule.  The names
+  `titles`, `footnotes`, `page`, `header` / `footer` (the page's) and `cell_styles`
+  are reserved for the rest of the RTF deliverable and reported, not
+  refused, when present; an `about` sheet records `spec_version`, and
+  sheets starting with `_` are ignored.  A column a sheet does not read is
+  an error (except `note`), so a mistyped header cannot become a setting
+  that silently never applies.
+
+  Rows sharing variable / context / row on `cells` are one fallback chain,
+  tried in sheet order, and the new `when` column guards one
+  (`n == 0` -> `0`), which is what an ORR table's special cases need.
+  The definition is an `.xlsx` workbook and nothing else: a CSV holds one
+  table, so it cannot be one, and `read_ard_spec()` / `write_ard_spec()`
+  say so rather than half-supporting it.  `read_ard_spec()` also refuses
+  a workbook that defines several reports unless `output_id =` says
+  which.  `ard_spec_template()` gains `cols =` and `output_id =`.
+
+  Five example workbooks -- DM, AE, ORR, LB shift, PK, plus `study.xlsx`
+  with all five and their shared defaults -- ship in
+  `system.file("extdata", "ard-spec", package = "rtfreporter")`;
+  `data-raw/ard-spec-examples/make-examples.R` rebuilds them and checks
+  each gives the identical table to `ard_spread()` written out **and the
+  identical `rtftable` pages, column header included, to the report's plan code**.
+
+- **`ard_round()` is withdrawn in favour of the package's one rule,
+  `round_num()`** (#476).  `ard_spread(round = )` and `plan_digits(round = )`
+  are now `rounding = `, and the option is `rtfreporter.rounding`, which
+  every formatter in the package reads.
+
+- **A factor key keeps the order it declared; a key variable's own rows are
+  kept for the header; `.kind` is decided per summary** (#474).
+
+  *Key order.*  cards stores each `groupN_level` as a one-element factor,
+  and that one element still carries the whole `levels()` --- unused
+  levels included, and through `bind_ard()` / `dplyr::bind_rows()`.  It
+  used to be flattened to a string and the order lost, so the columns
+  followed the rows' order and an `rbind()` in between could move them
+  under a hand-written header.  `ard_normalize()` now returns a key that
+  was a factor as a factor with those levels (a key holds one variable,
+  so the column can carry its own order; `variable_level` mixes variables
+  and keeps using `.label_order`).  `ard_spread()`, `ard_pull()` and the
+  plan's header all read it, so body and header agree without `levels`.
+  An explicit `levels` still wins; a character key stays character.
+
+  *Key rows.*  `drop_key_variables` now defaults to `FALSE`: the by
+  variable's own tabulation is kept and marked `.key_own = TRUE`.
+  `ard_spread()` leaves it out of the body (and says so in `notes`, as
+  before), so no table changes.  `plan_col_header(n = TRUE)` reads it
+  after the cards sentinels and before `ard_pull()` --- it is the per-arm
+  `n` that `ard_stack(.by = )` writes for exactly this purpose.  It is
+  taken only when its counts add up to the `N` its rows state (the
+  population split by arm, not the treatment counted as an event in a
+  bound AE ARD) and it covers every column.  Measured: a continuous-only
+  ARD with missing values used to give the header the non-missing `N`
+  (83 / 84 / 82); it now gives the arm sizes (84 / 86 / 84).
+
+  *`.kind`.*  Decided per variable **and** context rather than per
+  variable, so a variable both summarised and tabulated no longer has
+  its mean and SD rows called categorical.  The plan had the same flaw
+  one level up --- it pinned the first context's recipe to the variable
+  name, and the tabulated rows came out blank --- and now expands one
+  entry per summary.
+
+  The six Discussion #473 reports are identical before and after.
+
+- **A spike: the ARD conversion as a deferred, last-wins plan** (#474, in
+  `R/ard-plan-spike.R`, deletable in one step).  `ard_plan()` holds the ARD
+  **untouched** and each `plan_*()` verb adds a declaration; nothing runs
+  until `apply_plan()`.  **A later layer wins**, which is tfrmt's
+  `frmt_structure` rule and the reason to want this: set the decimals for
+  everything, then fix one variable, and that is a one-line edit ---
+  `plan_digits(2) |> plan_digits(AGE = 0)`.  `ard_normalize()` and
+  `ard_spread()` are unchanged and remain the immediate form.
+
+  Nothing about the conversion is duplicated: the plan resolves its layers
+  into `ard_normalize()`'s and `ard_spread()`'s argument lists and calls
+  them, so it cannot drift --- and `apply_plan(stage = "args")` shows the
+  call the plan amounts to, while `stage = "normalize"` stops at the long
+  frame.  Both are the one pass stopped early, not a second code path.
+
+  **The plan reaches the RTF pages, not just the table `data.frame`.**
+  Six more verbs carry the display half, each holding the arguments of the
+  function it stands for: `plan_n()` (numbers read out of the ARD, by
+  name), `plan_fmt()` (`fmt_numeric()`), `plan_stub()` (`stub_cols()`),
+  `plan_rtf()` (`as_rtftables()`), `plan_header()` (`set_col_header()`)
+  and `plan_after()` (`set_decimal_split()`, `paginate_cols()`, anything
+  else that takes the pages and gives them back).  `apply_plan(stage =
+  "pages")` runs them in the order a report is built.  Nothing here
+  reimplements `as_rtftables()`; the plan resolves to its arguments and
+  calls it.
+
+  **A table somebody already built is a source on its own.**  `rtf_plan()`
+  now takes a finished table and does only the display half, which is what
+  makes "ard_*() for the data, the plan for the display" a real option
+  rather than a description of something that did not work.  Nothing is
+  declared to say so: `plan_spread()` and `plan_cells()` need statistics,
+  and a plan without them, on a frame that has none, is laying out a table
+  that already exists.  A plan that declares nothing at all on such a
+  frame says which verb is missing.  The same report written all three
+  ways --- verbs throughout, verbs then plan, plan throughout --- gives
+  identical pages.
+
+  **`plan_group(show = FALSE)` hides the column it groups by.**  Counted
+  across the six reports, the only place a column had to be named by two
+  verbs was `plan_group(col = X)` beside `plan_hide(X)` --- twice, both
+  the same idiom --- which is an argument, not a reason to fold three
+  clear verbs into one `plan_roles()` and a vocabulary of role names.
+  Hiding also **accumulates** now: last-wins there would silently unhide
+  whatever was named first.
+
+  **`ard_plan()` is `rtf_plan()`, because a listing has no ARD in it.**
+  A listing is built from SDTM or ADaM --- an ordinary frame of subject
+  records --- and nothing about it is an analysis result.  `plan_listing()`
+  takes [listing_col()]s and [listing_spec()]'s own arguments, and its
+  presence is what says the plan is building one: a plain data frame
+  cannot say so by its columns, so nothing is guessed.  Normalising and
+  spreading are skipped; `plan_mutate()` and `plan_filter()` act on the
+  records.  A source that is neither says which verb is missing.
+
+  **`plan_titles()` and `plan_footnotes()`.**  These are not the section
+  header and footer --- those are RTF's own page furniture, one per
+  section.  These are blocks in the **body** of each page: the title above
+  the table, the footnote a blank line below it, both rendered as tables
+  the width of the content.  rtfreporter already carries them page by page
+  through the `rtf_titles` / `rtf_footnotes` attributes that `rtf_tables()`
+  reads, so the plan attaches them there and needs nothing downstream.
+  `...` is the rows of one block used on every page; `pages = ` is a list
+  with one block per page.  Which of the two is never inferred --- a
+  three-row title on a three-page table cannot be told from three one-row
+  titles --- and a count that does not match names the statement.
+
+  **An error names the statement that caused it.**  A plan is one
+  statement, so a failure at the end had no line to point at --- the one
+  clear advantage the immediate form still had.  Each verb now records the
+  call the author wrote, and a stage that fails lists the statements that
+  built it.  `|>` is syntax, so `sys.call()` sees the desugared nesting;
+  the first argument (the whole pipeline so far) is dropped, leaving the
+  verb with its own arguments.
+
+  **Three verbs fewer, and one renamed.**  `plan_round()` is gone into
+  `plan_digits(round = )`: one family per run was never a layer of its own,
+  and it is now last-wins like everything else rather than an error when
+  two disagree.  `plan_derive()` is gone into `plan_mutate()` and
+  `plan_filter()`, which now act **where they are written** --- before
+  `plan_spread()` on the long frame, after it on the table --- so the pipe
+  order answers the question instead of a second verb name.
+  `plan_styles()` is `plan_cell_style()`: one letter from `plan_style()`
+  was a trap.
+
+  **The seams are inside the plan now, written the way dplyr writes
+  them.**  `plan_mutate()` and `plan_filter()` act on the long frame,
+  between normalising and spreading; `plan_derive()` acts on the finished
+  table.  All three take **expressions**, not functions ---
+  `plan_mutate(variable = if_else(stat_name == "N", "n", "orr_ci"))` ---
+  captured unevaluated and evaluated against whichever frame the stage
+  has, and applied in declaration order.  `plan_derive()` still takes a
+  function for what an expression cannot say.  Two of the six Discussion
+  #473 reports had to leave the plan for this; now none do, and every
+  report is a single pipe.
+
+  **`print()` names the columns of every stage it has.**  The column names
+  change three times --- `ard_normalize()` builds them, `ard_spread()`
+  replaces them, folding the stub replaces them again --- and different
+  verbs name different ones, which is most of what made this hard to
+  write.  `print()` now lists each set beside the verbs that use it.
+  Normalising is computed if it has not been (it is the cheap half:
+  40--1300 ms against 250--3650 ms for spreading); the later two are shown
+  once anything has run them and are free thereafter.  The cache belongs to
+  the plan **value**, so adding a layer invalidates it by construction.
+
+  **How far a plan goes is read off what it declares.**  `apply_plan()`
+  used to take a `stage`, so a plan carrying `plan_rtf()` and
+  `plan_header()` still handed back a `data.frame` unless you knew to ask
+  for `"pages"`.  It now infers: anything that only makes sense once there
+  are pages means pages, and `print(p)` says which --- `-> table
+  data.frame` or `-> RTF pages` --- without computing anything.  Calling a
+  verb is the declaration, so `plan_rtf()` with nothing in it still means
+  "make pages".
+
+  **`rtf_tables(doc, p)` takes a plan directly**, which is the one line the
+  spike needs outside its own file, and leaves `apply_plan()` for looking
+  inside: `"normalize"`, `"args"`, `"table"`, `"pages"`.  `print()`
+  deliberately does **not** resolve: a conversion can be slow, and a plan
+  that errors must still be printable or there is nothing to debug with.
+
+  **`plan_template()`** is [ard_template()] for the deferred form: it reads
+  an ARD and writes the whole pipeline, both halves, ending in
+  `apply_plan(p)`.  The two share `.ard_template_facts()`, so they cannot
+  read the same ARD differently.  Where the ARD cannot answer --- a
+  denominator that several variables disagree about --- it writes no
+  `plan_header()` rather than inventing one, and says what to do instead.
+
+  **`plan_styles()` is SAS's `call define(_col_, 'style', ...)`**: a cell
+  looks at its own row and decides how it is printed.  The condition is a
+  one-sided formula over the finished table and its value is used
+  directly, so `bold = ~ is.na(group)` takes a logical and
+  `color = list(Placebo = ~ ifelse(p > 50, "#CC0000", NA))` takes the
+  colour, with `NA` meaning "leave the column default alone".  A bare
+  formula covers the row; a **named** list scopes it to columns **by
+  name**, never by the position that moves when the stub does.
+
+  Folding the stub destroys the row keys, and a condition wants them ---
+  SAS's `compute` sees every variable in the report, including the ones it
+  does not print.  `stub_cols()` leaves `rtf_stub_src` behind, so they are
+  put back, which also makes `is.na(<a row key>)` the test for "this is a
+  heading row".
+
+  Giving the same key twice in **one** call is now an error rather than a
+  silent first-wins: `list(a = x, a = y)` keeps the first, and last-wins is
+  a rule about layers, not about arguments.
+
+  `plan_derive()` is the fourteenth verb and the one the six reports
+  demanded: the solicited-AE page key is `row_grp1 %in% <two categories>`,
+  a fact about the finished table that nothing upstream can state, and it
+  is applied by a `mutate()` between the table and the display.  The plan
+  had a seam on the ARD side and none on the table side, so that report
+  could not be written at all until this was added.
+
+  All six Discussion #473 reports now run ARD to RTF pages through a plan
+  and produce `rtftable`s identical to the hand-written code.
+
+  `plan_n()` is the one that earns the deferral.  A header's denominator
+  has to agree with the columns underneath it, and today the arm order is
+  written three times --- in `levels =`, in `ard_pull(levels = )` and in
+  the hand-built `col_header`.  Declared, it is read once: `plan_header()`
+  takes a function of the resolved `plan_n()` values, so
+  `paste0(names(n$arm), "
+N = ", n$arm)` cannot drift from the columns
+  it sits over.  Measured against the appendix DM program on Discussion
+  #473, the plan produces an `rtftable` identical to the hand-written one.
+
+  **A plan does not need an ARD.**  `ard_plan()` works out what it was
+  given from the columns and takes four answers: a cards ARD, a frame
+  already through `ard_normalize()`, **any long frame of statistics**
+  (keys, a `stat_name` and a `stat` --- somebody's own dplyr summary, with
+  no cards anywhere), and a frame that is already the table, which is
+  refused **at `ard_plan()`** with a message pointing at `as_rtftables()`.
+  For the third, `plan_normalize()` is skipped and `plan_cells()` does the
+  work, so the cell templates, the row templates and the last-wins digits
+  are usable by anyone who can build a long summary.
+
+  That case needed one fix outside the spike: `ard_spread()` read
+  `variable` and `context` without checking they existed, so a frame that
+  never came from cards failed with an internal R error ("attempt to
+  select less than one element") rather than a message.  They are now
+  supplied as `NA` when absent, which costs a cards ARD nothing and lets
+  the cell lookup fall through to the kind or default entry.  A missing
+  `.label` also says what to do --- name the column that carries the row
+  identity --- instead of reporting a column absent from "the normalized
+  ARD" that was never normalized.
+
+  A `plan_digits()` key that matched nothing is an error rather than a
+  silent no-op: `plan_digits(AST = 3)` on a frame whose analysis variable
+  column is called `PARAM` does nothing, and says so.
+
+  The seam survives: `ard_plan()` also accepts an **already-normalized**
+  frame, so the reports that have to reach in with dplyr do it on the long
+  frame and start a plan from the result.  All six Discussion #473 reports
+  reproduce identically through the plan --- three of them using that
+  re-entry.  The gaps are listed in the file header; the one that matters
+  is that a layer records no call site, so an error still points at the
+  resolver rather than at the verb that caused it.
+
+  **Said once, read everywhere.**  Four things were written twice and
+  could disagree.  `plan_n()` is gone: the denominator was declared with
+  the same `cols` / `levels` `plan_spread()` already had, and a
+  denominator exists to sit in a header, so it is now
+  `plan_col_header(n = )` --- `TRUE` reads it with those keys, a function
+  of the ARD covers what `ard_pull()` cannot find, a named list supplies
+  several, and `header =` is called with the result.  `plan_stub(vars = )`
+  is derived the same way (the row keys plus the label column, less any
+  `plan_group(col = )`), and is still accepted for a stub that is neither.
+  `plan_header()` is **`plan_col_header()`**, a page header being the
+  other thing that name could mean.  And the samples end at the plan,
+  with `rtf_tables(p)` in a comment, because `apply_plan()` in a sample
+  reads as a step you have to take.
+
+  `plan_spread()` carries both `label` (the row-identity column) and
+  `labels` (value recoding), so reading it with `$` partially matched
+  `label` to `labels` and the derived stub came out one column short.
+  **The roles are said once, where the data is --- and flattening is not
+  deferred.**  `plan_spread()` had quietly become the role declaration:
+  three other verbs read its `cols` / `rows` / `label` (the stub derives
+  its columns from them, the header its denominator, the resolver its
+  sort), while its own name says "go wide".  They now sit on
+  `rtf_plan()`, which is `ggplot(data, aes(x, y))`: the names must be
+  columns of the frame handed in, so a typo is caught **there**, naming
+  the verb and listing the columns, rather than three stages later.
+
+  That only works if the columns exist, so `ard_normalize()` runs before
+  the plan and `plan_normalize()` is gone.  Deferring it bought nothing
+  --- no layer fed it, nothing overrode it later, and five of the six
+  reports never called it --- while costing a guess about whether what
+  the plan held still needed flattening, a guess that had already
+  skipped the step silently for every report once.  A raw cards ARD is
+  now refused by `rtf_plan()`, with the line to write.
+
+  `levels` and `labels` become `plan_levels()` and `plan_labels()`,
+  which is where they belong: an order or a label for everything and
+  then one variable's own is exactly the last-wins case, and they merge
+  one **key** at a time.  Either takes its entries written out or a
+  named vector handed over whole, so a study that keeps its labels in
+  one does not have to take it apart.
+
+  Which frame a seam acts on is now its **name**: `plan_mutate()` and
+  `plan_filter()` act on the long frame, `plan_derive()` on the table.
+  It used to be position --- before or after `plan_spread()` --- and
+  that boundary left with the roles.  Position would also have made
+  last-wins dangerous, since writing `plan_digits()` last is exactly
+  what the rule invites and would have moved the line under a seam that
+  never changed.
+
+  **`labels` can be scoped to a column, the way `levels` already was.**
+  One dictionary for the whole table is still the usual thing, but the
+  same value means two things on the two axes --- a shift table's `"0"`
+  is `"Grade 0"` down the side and `"Baseline 0"` across the top --- and
+  there was no way to say so.  An entry whose value is itself a *named*
+  vector is a dictionary for that column; one whose value is text is a
+  value, as before.  The two are told apart by shape and can be mixed.
+  This is in `ard_spread()`, so the immediate form has it too.
+
+  **A frame that never went near cards says which columns play which
+  parts.**  `variable`, `stat_name` and `stat` are read by name, and a
+  study's own summary calls them something else; `rtf_plan(variable =
+  "PARAM", stat_name = "STAT", stat = "VALUE")` says so once instead of
+  every verb asking again.  `label` naming **several** columns coalesces
+  them, first non-missing winning --- tfrmt has the same problem, a
+  continuous row being labelled by its statistic and a categorical one
+  by its level, and those are not the same column.
+
+  **A plan with no data is a template.**  `rtf_plan()` no longer needs
+  the frame: the roles name columns, `plan_data()` supplies the columns
+  later, and one house style then serves every study.  Handing the data
+  over is when the names are checked.
+
+  25 verbs now, two more than before: `plan_normalize()` and
+  `plan_spread()` went, `plan_data()`, `plan_levels()`, `plan_labels()`
+  and `plan_derive()` arrived.  All six Discussion #473 reports still
+  produce `rtftable`s identical to the hand-written code, and two of
+  them got shorter --- `plan_group(show = FALSE)` reads its column off
+  the roles, and the denominator no longer has to be computed twice now
+  that the ARD is in scope.
+
+  **`rtf_plan()` is the roles and nothing else, so the sort left it.**
+  `sort` names the same keys `rows` does, which is why it was declared
+  beside them --- but an order is not a role, and there were already two
+  verbs for one question: `ard_spread(sort = )` on the way in and
+  `plan_sort()` on the way out.  There is now one `plan_sort()`, meaning
+  "what order are the rows in".  It resolves to the ARD half when there
+  is one, which is the only place `-n` and `".overall"` can be sorted on
+  (by the table they are formatted cells), and to `as_rtftables()` when
+  the source is already a table.  Sorting alone no longer makes a plan
+  mean RTF pages.
+
+  `plan_stub(label = )` is **`plan_stub(into = )`**: it is the NAME the
+  folded column gets, while `rtf_plan(label = )` is the column whose
+  VALUES are the row text.  Two different things one letter apart.
+  `rtf_plan(label = )` keeps its name --- it is tfrmt's word for the
+  same thing, and `cols` / `rows` / `label` line up with tfrmt's
+  `column` / `group` / `label`.
+
+  **A column can be needed and not wanted, and the verb that needs it
+  says so.**  There is nothing to hide by default --- the spread builds
+  a row key, the label column and the spread columns, which is exactly
+  what the roles named, so an unnamed column is not dropped, it is never
+  made.  What is left is a column that IS named and should not print: a
+  grouping carrier, the key a page break reads, a sort carrier.
+  `show = FALSE` now says that on `plan_group()`, `plan_pages()` and
+  `plan_sort()` alike, instead of the name being written a second time
+  in a `plan_hide()`.  Names that are not columns (a statistic,
+  `".depth"`) are ignored there, while a `plan_hide()` that matches
+  nothing still says so, because that one is a typo.  The solicited-AE
+  report lost its `plan_hide("page")`, and `plan_hide()` is now used by
+  none of the six --- it stays as the way to hide anything else.
+
+  **`plan_derive()` is gone, and the column axis of pagination arrived.**
+  Once flattening moved out of the plan, the table-side seam had nothing
+  left to do: the one report that used it derives its page key from
+  `group4_level`, which is in the long frame, so `dplyr::mutate()` before
+  `rtf_plan()` makes it and `rows = c(..., page = "page")` carries it
+  through --- still one sentence, and now made with real dplyr.  The
+  solicited-AE report reproduces identically that way.  A column that
+  genuinely needs the spread COLUMNS is a table, which `rtf_plan()`
+  accepts as a source, so the seam is still there; it is outside.
+  `plan_stub()` learnt the matching rule --- a column that is not printed
+  is not folded into the stub either --- which is what lets a control
+  column be an ordinary row key.
+
+  A table splits on **three** axes and `plan_pages()` only ever covered
+  one.  The group axis is `plan_group()` with `split = "by_value"`, the
+  row axis is `plan_pages()`, and the column axis was reachable only
+  through `plan_after(paginate_cols(...))` --- a lambda wrapped round the
+  very call the plan exists to take apart, which two of the six reports
+  wrote.  **`plan_col_pages()`** is that axis, with `paginate_cols()`'s
+  own arguments, and `order =` is where the three nest (`"group"`,
+  `"rows"`, `"cols"`, outermost first, or the `"across"` / `"down"`
+  shorthands).  It runs **last**, after `plan_after()`: cutting the table
+  into blocks renumbers its columns, and a step like
+  `set_decimal_split(cols = 3:31)` means the table as it was written.
+
+  A role may name a column a `plan_mutate()` is going to make, which can
+  only be known when the data comes last --- `rtf_plan(roles) |>
+  plan_mutate() |> plan_data(d)`.  The refusal says so.
+
+  25 verbs still: `plan_derive()` out, `plan_col_pages()` in.
+
+  **A plan always holds its data, and a house style is a function.**
+  `plan_data()` allowed the two to be separated, which meant two ways to
+  write the same thing and --- worse --- that `rtf_plan()`'s check of the
+  role names could not run, since it is the data that says whether a name
+  is a column.  That check was the point of moving the roles there.  Data
+  is required again, and a style shared between studies is an ordinary
+  function, which is plain R and takes parameters:
+
+  ```r
+  my_dm <- function(d, digits = 1) {
+    rtf_plan(d, cols = "TRT01P", rows = c(group = "variable")) |>
+      plan_cells(...) |> plan_digits(digits)
+  }
+  ```
+
+  `plan_mutate()` and `plan_filter()` went with it.  Their last
+  justification was a plan that had no data yet; with the data always
+  there, `dplyr::mutate()` and `dplyr::filter()` before `rtf_plan()` do
+  the same work in the same sentence, with no second vocabulary.  Both
+  reports that used them reproduce identically that way --- measured, not
+  assumed.  The spike is smaller for it: the expression layers, the
+  reshape pass and the printing of expression layers are all gone.
+
+  **22 verbs**, down from 25.
+
+  **`plan_row_group()`, `plan_paginate_rows()`, `plan_paginate_cols()`.**
+  `plan_group()` could not be told apart from a page group by its name,
+  and the group axis of pagination was split across two verbs ---
+  `plan_group(col = )` named the column, `plan_pages(split =
+  "by_value")` asked for the break --- which made the column the one
+  thing they had to agree about.  It is one verb now:
+  `plan_row_group(col =, mode =, collapse =, show =, page =)`, where
+  `page = TRUE` starts a new page at each group.  The shift and
+  solicited-AE reports each lost a line.
+
+  So the three axes read as three subjects: the rows' grouping and its
+  break, how tall a page is, how wide a page is.  Two verbs asking for
+  different splits is now an error rather than last-wins, because that
+  is a mistake and not a preference.
+
+  `rtf_tables(auto_section = TRUE)` cuts a section where the page NAME
+  changes, and a value split is what names a page after its group --- so
+  `plan_row_group(page = TRUE)` is also the verb that decides what a
+  section is.  Verified end to end: plan to `rtf_document()`, one
+  section per group, each labelled with the group value.
+
+  A grouping carrier that the stub has already folded away is no longer
+  dropped a second time (it is gone, not hidden), which used to fail with
+  `drop_cols` complaining about a column that is not there.
+
+  **`plan_paginate_group()` is the group axis; `plan_row_group()` is the
+  body.**  Folding both into one verb was wrong, and the name said so:
+  the group axis is the OUTERMOST division -- one page per value, named
+  after it, which is what `auto_section` cuts on -- and has nothing to do
+  with rows, while `group_by` / `collapse_repeats` are about how a
+  repeated value looks down the body.  Measured across the six reports,
+  the two halves were never used together: two reports use the body half
+  alone, two the page half alone.  So they are two verbs, each truthfully
+  named, and the three page axes read `plan_paginate_group()` /
+  `plan_paginate_rows()` / `plan_paginate_cols()`.
+
+  There is still only one grouping column, so naming a different one in
+  each is an error rather than last-wins.
+
+  23 verbs.
+
+  **The commonest column header needs no function.**  "Arm name over
+  (N=86)" had to be written as `function(n) rtf_col_header(...)` with two
+  `setNames(names(n), names(n))`, for one reason: the arms are not known
+  until the table exists.  The plan knows them, so one template per
+  header **row** is enough --- `{col}` is the column, `{n}` its
+  denominator:
+
+  ```r
+  plan_col_header(n = TRUE, stub = c("", "Characteristic"),
+                  cols = c("{col}", "(N={n})"))
+  ```
+
+  The demographics report's five-line header is those three, and the
+  `rtftable` it produces is identical.  `header = ` stays for a header
+  with spanners or borders, which is construction rather than repetition,
+  and giving both is an error.
+
+  The template rows are written **one argument per header row**, left to
+  right, exactly as `rtf_col_header()` takes them, so the code is laid
+  out the way the header is rather than transposed:
+
+  ```r
+  plan_col_header(n = TRUE,
+                  c("",               "{col}"),
+                  c("Characteristic", "(N={n})"))
+  ```
+
+  In a row the last entry is the template used over every spread column
+  and the ones before it fill the leading columns, so a character vector
+  is a template row.  **Anything else is a header you built** --- an
+  `rtf_col_header()`, a list of `col_cell()`s, a function --- and goes
+  through untouched, positionally or as `header = `.  A spanner, a
+  border or a cell that reads the finished table is written exactly as
+  it always was: templates repeat, construction is construction.
+
+  ...and then the two shapes became one.  A second way to write a header
+  was not worth its weight: the header is `rtf_col_header()`, the same
+  constructor as everywhere else, and what the **plan** adds is that it
+  fills tokens in the cells it is handed --- `{col}` for the column,
+  `{n}` for its denominator --- and repeats a row's last cell over the
+  spread columns when the row is shorter than the table.  Those two
+  things are the whole of what a function was ever needed for, since the
+  columns are not known until the table exists.
+
+  ```r
+  plan_col_header(n = TRUE, rtf_col_header(
+    c("",               "{col}"),
+    c("Characteristic", "(N={n})")))
+  ```
+
+  A row already the right length, and a cell with no token, are
+  untouched, so nothing that works today changes meaning (a short row is
+  an error today).  This freed the **lab shift** report too, whose
+  function existed only to paste a number into a spanner --- it is now
+  `col_cell(c(2L, 5L), "MIRV
+(N={n})
+ n (%)
+<Baseline>")`.  Two of
+  the six reports need no header function; the other four build spanners
+  from column arithmetic and keep one, which is construction rather than
+  repetition.
+
+  Several `cols` keys make a column called `"Placebo____Negative"`, and
+  `{col}` was printing it whole -- which nobody wants in a header.  It is
+  now the **leaf**, with `{col1}`, `{col2}`, ... for the levels in order;
+  with one key the leaf is the whole name, so nothing changes there.
+  Worth saying plainly: the hierarchy itself needs no header at all.
+  `as_rtftables(header_sep = )` already builds the spanning rows from the
+  same `"____"` and merges adjacent cells, which a hand-written row
+  cannot do -- so the reason to write a header over those columns is the
+  `(N=)` or a border, not the nesting.  And what each level reads is
+  `plan_labels()`'s business, since it recodes the values the name is
+  made of.
+
+  **`plan_digits()` takes variable x statistic, which is the only
+  granularity a house rule has.**  One number per variable could not say
+  the ordinary thing --- `mean` to 2 dp and `sd` to 3, and AGE one less
+  of each --- so the verb was not usable and the variable's whole
+  template had to be restated, which is exactly what the plan exists to
+  avoid.  A value may now be a vector **named by statistic**, and the
+  keys combine:
+
+  ```r
+  plan_digits(continuous  = c(mean = 2, sd = 3, median = 2),
+              categorical = c(p = 1)) |>      # the house rule
+    plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
+  ```
+
+  A statistic the narrower entry says nothing about falls through to the
+  wider one, so AGE's `median` stays at 2.  One number still means every
+  token, so `plan_digits(2) |> plan_digits(AGE = 0)` is unchanged.
+
+  Found while documenting it: a bare `%` in a roxygen block starts an Rd
+  comment, so `` `{p:%}` `` in the text swallowed the rest of the
+  `\item{}` and **deleted the argument from the help** -- silently, with
+  the tag still in the source.  It is `` `{p:\%}` ``, and the rest of
+  R/ was checked for the same trap.
+
+  A digits value may also be `"4s"`, meaning **4 significant digits** --
+  the token grammar's own distinction (`{mean:.4f}` / `{mean:.4s}`)
+  rather than a second argument.  Decimals and significant digits mix per
+  statistic, so `plan_digits(continuous = c(mean = "4s", sd = "5s")) |>
+  plan_digits(AGE = c(mean = 1))` is a lab table's rule with one variable
+  reported to one decimal.
+
+  **`{x:.Ns}` follows the rounding family, like `{x:.Nf}` always did.**
+  Significant digits went through base `signif()`, which is half-to-even
+  whatever `round = ` said -- so the same "4 significant digits" rounded
+  differently through a cell template and through `fmt_numeric()`, which
+  converts to decimals and honours the family.  Measured: `0.125` to two
+  significant digits was `0.12` under `round = "sas"`, and is now `0.13`.
+  Under the default nothing changes, and no report used the token.
+
+  **`plan_col_header(n = TRUE)` reads a cards sentinel.**  A row whose
+  `variable` is `..ard_total_n..` or `..ard_hierarchical_overall..` is a
+  number the ARD states outright, so reading it is not a guess -- and it
+  is taken only when its keys ARE the `cols`, and only when there is one
+  such row set; two would be a choice, and a denominator is not something
+  to choose for the author.  Otherwise `ard_pull()` answers as before,
+  listing its candidates and stopping.
+
+  The adverse-event report therefore has no `n_subjs` block: the plan
+  reads the same `..ard_hierarchical_overall..` counts itself, to the same
+  numbers.  Its header keeps a function, because the spanners' extent is
+  arithmetic (`c(2i, 1+2i)`) and the arm-level N is a sum across each
+  arm's two columns, which this ARD does not carry as a row -- but the
+  leaf row is now one template, `"{col2}
+(N={n})"`.
+
+  `plan_style(widths = )` shorter than the table repeats its **last**
+  value over the remaining columns, the same rule a header row follows, so
+  `c(40, 10)` is "the stub is 40, every column 10" and the number of
+  columns need not be written down.
+
+- **A page gathers its rows; it does not require the body sorted first.**
+  `page_by` and `split = "by_value"` partitioned the body on RUNS of the
+  key, so a value that came back later started another page.  On an
+  interleaved body that is not a different page order -- it is half a page:
+  a Solicited AE report built from an unsorted table came out as twelve
+  7-row pages instead of six 14-row ones, with nothing said about it.
+
+  Needing the rows pre-sorted is SAS's contract, not R's.  R subsets by
+  value and leaves the order alone, so a page now **gathers** every row
+  that has its value, scattered or not, and the body's own order stands --
+  inside a page and between pages.  On an already-grouped body, the usual
+  one, this is exactly what the runs were, and all six sample reports are
+  byte-identical.
+
+  The two splits had also disagreed with each other: `by_value` combined
+  with `stub_vars` has always gathered (it partitions the raw body by the
+  value before building the stub), while the plain `by_value` path cut the
+  same table into one page per block.  They now read the key the same way.
+
+  An **indent** or **filled** group is untouched: there the group is a
+  position in the body rather than a key, so there is nothing to gather by.
+  `sort_by` is for choosing an order, not for making the pages whole.
+- **A plan no longer writes down how many columns the study had** (#474).
+  The PK sample counted them four times -- `plan_fmt(cols = 3:31)`,
+  `plan_style(widths = c(3, 3, rep(2, 29)))`,
+  `set_decimal_split(cols = 3:31)` and
+  `plan_paginate_cols(at = c(16, 29))` -- so the same report on a study
+  with a different number of timepoints needed all four rewritten, and got
+  an out-of-range error rather than a wider table.  A plan is deferred: it
+  can count the columns itself.
+
+  * **`plan_fmt()` without `cols` formats the value cells.**  Those are
+    the spread columns, which the plan already knows -- `3:31` was that
+    fact written out for one study.  The row keys and the label column
+    are left alone, as `cols = 3:31` meant them to be.
+  * **`plan_paginate_cols(every = )`** cuts a block every N columns,
+    counting only the ones a block does not carry.  `every = 13` is
+    `at = c(16, 29)` on the sample and still 13 timepoints a page on a
+    study with 18 of them.  A table narrower than one block gets no
+    column pages rather than an error.
+
+  `plan_style(widths = )` already repeated its last value, so
+  `c(3, 3, 2)` was always enough, and a `plan_after()` step can read the
+  names off the pages it is handed:
+
+  ```r
+  plan_after(function(x) {
+    d <- if (inherits(x, "rtftable")) x$data else x[[1L]]$data
+    set_decimal_split(x, cols = setdiff(names(d), c("Analyte", "Statistics")))
+  })
+  ```
+
+  The PK sample is written this way now and reproduces byte-identically.
+- **`ard_spread(sort = )` defaults to `FALSE`, and `FALSE` still obeys an
+  order you declared** (#474).  The default was `TRUE`, which sorted on
+  every row key with `order()`: a character key came out A-Z although
+  nothing had asked for it, and a Lab Shift table listing `Hemoglobin`
+  first got `Alanine Aminotransferase` first.  R does not reorder data
+  nobody told it to reorder.
+
+  Two things changed together, because either alone is wrong:
+
+  * **the default is `FALSE`** -- write nothing and nothing is sorted;
+  * **`FALSE` still applies an order somebody DECLARED.**  A key is a
+    factor exactly when `levels`, `labels` or the data itself made it
+    one, and making a column a factor in a table is how you say what its
+    order is.  Refusing to use it would not be leaving the data alone --
+    it would be ignoring an instruction.  The label column takes part on
+    the same terms, and a declared order nested inside a plain key's
+    block sorts within that block.
+
+  So `sort` is now **write nothing, or name the keys** (a character
+  vector, `-` for descending).  `TRUE` stays as the third, rarer answer:
+  it **groups**, bringing a plain key's separate blocks together in the
+  order they first appear, which no list of keys says without also
+  choosing an order for them.
+
+  All six sample reports are byte-identical, and the `sort = FALSE` the
+  Summary-of-Overall-Response sample carried is now what it gets for free.
+- **The dropped total is still a number, and `print()` says when `{n}`
+  is not** (#474).  `ard_normalize()` discards the `..ard_total_n..` row
+  by default -- it is not a table statistic -- and the denominator went
+  with it, so `plan_col_header(n = TRUE)` on an ARD whose only `N` was
+  that row failed with `ard_pull()`'s "No `N` found for these columns",
+  which names neither the total nor the drop.
+
+  The row still goes; the **number stays**, on the result's
+  `"ard_total_n"` attribute.  `n = TRUE` reads it **last** -- after the
+  sentinel in the frame and after `ard_pull()` -- and only when the ARD
+  holds no `N` at all to pull, so a per-column `N` is never quietly
+  replaced by one number for every column.  That question is asked of
+  the data rather than by catching `ard_pull()`'s error, because a
+  mistyped `cols` raises one too and must not come back as a number.
+
+  **`print()` now says why a token is missing.**  It resolved `{n}`
+  inside a `tryCatch()` and listed nothing when that failed, so the one
+  case worth printing printed as silence:
+
+  ```
+    header tokens     -- what a plan_col_header() cell may carry:
+        {n}  -- NOT resolved: `cols`: no key 'TRT' in this ARD.  It has: 'X'.
+  ```
+- **`n = TRUE` reads the study total, not only a per-column count**
+  (#474).  A cards ARD states its denominator outright in
+  `..ard_total_n..`, and a Lab Shift header saying `(N=254)` over every
+  column wants exactly that number.  The sentinel reader took only rows
+  keyed by the `cols` and carrying `stat_name == "n"`, and
+  `..ard_total_n..` is keyed by nothing and carries `"N"` -- so it was
+  passed over, and the header had to be written with a `dplyr::filter()`
+  block above the plan.
+
+  It is now read.  `"n"` is still preferred -- the hierarchical-overall
+  rows carry both, and there `"n"` is the count the sentinel is about --
+  with `"N"` taken when there is no `"n"`.  A sentinel with **no value**
+  for the `cols` keys is one number for the WHOLE table, so `{n}` is that
+  number in every cell, rather than nothing at all.
+
+  ```r
+  ard |>
+    ard_normalize(drop_contexts = "attributes") |>   # keep the total
+    rtf_plan(cols = "BASEGR", ...) |>
+    plan_col_header(n = TRUE, rtf_col_header(
+      list(col_cell(1, "Timepoint"),
+           col_cell(c(2, 5), "MIRV
+(N={n})
+ n (%)
+<Baseline>")),
+      c("  Category", "Grade 0", "Grade 1", "Grade 2", "Total")))
+  ```
+
+  Note the `drop_contexts`: `ard_normalize()` drops the total by default,
+  and a header reading from it must keep it.
+- **The help for `as_rtftables(split = )` described `"group_force"`
+  wrongly**, which is how a report ends up with a group cut in half when
+  the page looked as though it had room.  It said `"group_force"` was
+  `"group_safe"` with an escape hatch for a group too big to fit.  It is
+  not: it **cuts every `max_rows` rows wherever that falls**, which is
+  what the implementation has always done and what makes the pages come
+  out the same height.  A group straddling the cut is split and the next
+  page opens with a continuation label.
+
+  `"group_safe"` is the one that keeps a group together -- a group that
+  does not fit in what is left starts the next page -- and it still
+  splits a group that on its own exceeds `max_rows`, because that one has
+  to be split.
+
+  Measured, and now in the help and a test: ten groups of four rows with
+  `max_rows = 30` and the blanks counted give **26 and 26** rows under
+  `"group_safe"`, and **30 and 24** under `"group_force"` with the sixth
+  group cut in half.  Only the help changed; no report's pagination
+  moves.
+
+  **Each name in `n` is a token**, so one header can say two numbers with
+  no function at all -- the study total in a spanner and each column's own
+  underneath it:
+
+  ```r
+  plan_col_header(
+    n = list(n = TRUE, total = 254),
+    rtf_col_header(
+      list(col_cell(1, ""), col_cell(c(2, 4), "All (N={total})")),
+      c("",               "{col}"),
+      c("Characteristic", "(N={n})")))
+  ```
+
+  An entry keyed by column fills each column with its own, a single number
+  fills every cell, and `{n}` is the entry called `n` (or the only one).
+
+  **`apply_plan(p, "args")` shows both halves again**, `$spread` and
+  `$rtf`, now that there are two: the display arguments are resolved from
+  layers too, and either half can be the one that surprises.  A page
+  budget declared twice is last-wins, and the call being edited may not be
+  the one that decides, so `apply_plan(p, "args")$rtf$max_rows` is how to
+  ask which value is in force.
+
+  And a budget the split cannot use is refused rather than dropped:
+  `plan_paginate_rows(max_rows = )` with a value split (which makes one
+  page per group value, however long) now says so and names the
+  alternative, instead of being silently ignored while the number is
+  raised and nothing changes.
+
+  **`{n:sum}` is the total over the columns a cell covers**, which is the
+  other half of a header's arithmetic and the last reason the
+  adverse-event report had a function.  A spanner over one arm's two
+  columns shows that arm's N; one over all of them shows the study total;
+  a cell outside the data totals every column.  Neither number is written
+  down.  A spanner's `{col1}` / `{col2}` are the levels its columns
+  **agree** on, which is the arm name a spanning cell wants.
+
+  So the report's whole header is now templates:
+
+  ```r
+  plan_col_header(n = TRUE, rtf_col_header(
+    c(list(col_cell(1, "")),
+      lapply(1:3, function(i)
+        col_cell(c(2 * i, 1 + 2 * i),
+                 "{col1}\n(N={n:sum})\n n (%)"))),
+    ...,
+    c("System Organ Class\n   Preferred Term",
+      "{col2}\n(N={n})")))
+  ```
+
+  and the published sample is one sentence: no `n_subjs` block, no
+  `hdr()`, no glue.  Only the spanner POSITIONS are arithmetic, and
+  with a single treatment column there is no `lapply` either.
+
+- **A header row built with `c()` now says so.**  An `rtf_col_cell` is a
+  list underneath, so `c(list(col_cell(1, "")), col_cell(c(2, 4), "S"))`
+  **splices** the second cell into its own fields: the row becomes
+  `list(cell, 2:4, "S")` -- three elements, not two.  The first `$pos`
+  then failed with R's `$ operator is invalid for atomic vectors`, which
+  names neither the row nor the `c()`.
+
+  It now names both, and the fix: `list(col_cell(1, ""), col_cell(c(2, 4),
+  "S"))`.  A list without a `pos` is a different mistake and keeps its own
+  `missing \`pos\`` message.  `c(list(...), lapply(...))` is still fine,
+  because `lapply()` returns a list.
+
+  **`print()` lists the header tokens**, because the answer was otherwise
+  invisible: the values come from the ARD and the columns from the spread,
+  and neither is written in the call.
+
+  ```
+    header tokens     -- what a plan_col_header() cell may carry:
+        {col}                     = c(Negative, Positive)
+        {col1}                    = c(Placebo, Xanomeline High Dose, ...)
+        {col2}                    = c(Negative, Positive)
+        {n}                       = c(Placebo____Negative = 42, ... 5 more)
+        {n:sum}                   = 225 over every column
+        {n:Placebo____Negative}   = 42
+        {n:Placebo____Positive}   = 27
+  ```
+
+  Every token shows its VALUE -- the numbers an `{n}` holds, the text a
+  `{col1}` prints as.  The `{n}` entries appear straight away; the
+  `{col...}` ones once the
+  table has been built once, which is the same rule the column listings
+  above them follow.
+
+  And **`{n:<column>}` names one of the values**, for a cell that has to
+  say a number belonging to a column it does not sit over:
+  `"A={n:Placebo} B={n:Xanomeline High Dose}"`.
+
+- **`ard_template(pipe = )` chooses the pipe the generated script is
+  written with** (#474): `"%>%"` (magrittr), `"|>"` (base R, which needs
+  no package), or `"rstudio"` --- whichever RStudio's own **Insert Pipe
+  Operator** inserts.  Left alone it reads
+  `getOption("rtfreporter.ard_pipe")`, then **asks RStudio**
+  (`insert_native_pipe_operator`, the checkbox in Tools > Global Options >
+  Code, via `rstudioapi`), then falls back to `"%>%"` --- so the script it
+  writes is in the pipe you already write, without being told.  Outside
+  RStudio there is nothing to read and the answer is `"%>%"`; naming
+  `"rstudio"` explicitly says so in a message, while the same fallback
+  reached by default stays quiet.  Pin it for everybody with
+  `options(rtfreporter.ard_pipe = "|>")`, which is worth doing when two
+  people should get identical code out of the same call, since the RStudio
+  answer is per-installation.
+
+  The fallback is magrittr's rather than base R's because
+  the two are **not** interchangeable, and base R's placeholder has not
+  closed the gap: as of R 4.6 `_` may still appear **only once** in a call
+  and only as a **named** argument, or as the head of a `$` / `[` / `[[` /
+  `@` chain (R 4.3 added the extraction case; nothing has changed since).
+  magrittr's `.` is positional and may appear twice, and `%>%` also takes a
+  bare symbol or a `{ }` block on its right, which `|>` rejects outright.
+  The generated pipeline itself uses no placeholder, so the two are
+  interchangeable *there* --- both scripts run and return identical tables
+  --- and the choice is about the seam left open for your own
+  `dplyr::mutate()`.  A `"%>%"` script opens with `library(magrittr)`; a
+  `"|>"` one needs no `library()` at all, because everything else the
+  template writes is `rtfreporter::`-qualified.
+
+- **`ard_table()` is withdrawn; the conversion has one entry point**
+  (#474).  It is `ard_normalize() |> ard_spread()`, which is what
+  `ard_table()` did.  Of its 21 arguments not one was its own: six were
+  `ard_normalize()`'s and fifteen were `ard_spread()`'s, so the collapsed
+  form asked the reader to know which half each argument belonged to, and
+  gave nothing back for it --- half the reports on Discussion #473 have to
+  reach between the two steps anyway (to derive a key from a statistic, to
+  add a constant column, to indent a label), at which point the collapsed
+  call has to be unpicked into the pipe it always was.  One way to write
+  the conversion is one thing to learn.  The family is experimental, so
+  there is no deprecation cycle: replace `ard_table(ard, ...)` with
+  `ard_normalize(ard, <its keys/hierarchy/overall args>) |>
+  ard_spread(<the rest>)`.
+
+- **A cards/cardx ARD can be turned into a table `data.frame` directly**
+  (#474, Discussion #473).  `ard_normalize()` flattens an ARD into an
+  explicitly keyed long table; `ard_spread()` applies cell templates and
+  pivots the column keys across; the conversion is that one pipe and
+  nothing else.  `ard_keys()` reports what an ARD holds and
+  `ard_template()` writes the conversion code for you.  A spreadsheet definition file --- `ard_spec()`,
+  `read_ard_spec()`, `write_ard_spec()`, `ard_spec_template()` --- carries
+  variable labels, row templates (so `Min` and `Max` print as one
+  `Min, Max` line), the rounding family and the decimal or significant
+  digits.  `ard_round()` exposes the SAS half-away-from-zero rule that
+  base R's `round()` does not implement.
+
+  **Nothing is read from the ARD's object attributes.**  `attr(ard, "args")`
+  orders `by` and `variables` differently per generator and cannot tell them
+  apart, keeps only the first operand's value after `dplyr::bind_rows()`, and
+  is not updated when the ARD is filtered; the ARD class survives
+  `bind_rows()` with a differently shaped ARD, so dispatching on it is no
+  safer.  Every structural fact is an explicit argument.
+
+  **A `cells` entry is not keyed on the ARD's `context` alone.**  `context` is
+  a cards implementation detail and it moves: `ard_continuous()` stamps
+  `"continuous"` but its 0.9 rename `ard_summary()` stamps `"summary"`, and
+  `ard_categorical()` stamps `"categorical"` where `ard_tabulate()` stamps
+  `"tabulate"`.  Keying on it alone would tie a script to one cards generation
+  and silently produce no cells against another.  Each variable is therefore
+  also classified from what its rows contain --- `"categorical"` when it has
+  levels to enumerate, `"continuous"` when it does not --- and `cells` is
+  matched by variable, then context (known spellings treated as equivalent),
+  then that structural kind, then `"default"`.  The kind is the same on every
+  cards version, past and future; `ard_keys()` prints both, labelled.
+
+  **`levels` accepts an analysis variable's name**, not only a row or column
+  key, and then orders that variable's rows in the label column --- so a
+  demographics display can say `AGEGR1 = c("<65", "65-74", ">=75")` without
+  knowing what the label column ends up being called.  A variable left out
+  keeps its `cells` templates' order.  A **column** key listed in `levels`
+  fixes the order of the spread columns, which is what keeps a hand-written
+  `col_header` over the arm it names.
+
+  **`labels` and `levels` must name every element.**  Both are looked up by
+  name, so an unnamed entry is not a no-op you would notice --- it is a label
+  or an order that silently never applies.  The classic way to produce one is
+  `setNames(group_labels, group_vars)` with vectors of different lengths:
+  `setNames()` gives the surplus element an `NA` name rather than complaining,
+  and that characteristic then quietly keeps its raw variable name in the
+  table.  That is now an error.
+
+  **`ard_pull()`** reads the per-column statistics that belong in the column
+  header rather than in a row --- the denominator behind every percentage, the
+  subject count per arm --- keyed exactly like the spread columns, ready to
+  paste into a `col_header`.  Taking it from the ARD rather than counting the
+  data again makes it, by construction, the number the percentages used.
+
+  **A positional key now warns when the position is ambiguous.**
+  `group1_level` is a position, not a variable: cards fills the group columns
+  in the order each summary was requested, so once several summaries are
+  stacked the same treatment variable can sit at `group1` in one block and
+  `group2` in another.  Reading the position then splits one arm across two
+  table columns and invents columns for whatever else landed there.  Naming the
+  variable (`cols = "TRT01P"`) is immune, and a positional reference is now
+  warned about when that group position really does hold more than one
+  variable --- so a single-block ARD stays quiet.
+
+  **A `cells` that is not a list is one recipe**, used for every variable, and
+  its names are row labels; a list is a map keyed by variable / context / kind
+  / `"default"`.  The container decides, because
+  `c("Mean (SD)" = ..., "Min, Max" = ...)` cannot otherwise be told from a map.
+  Passing such a named vector at the top level previously failed with
+  "subscript out of bounds".
+
+  **`rows` defaults to the analysis variable** on a flat ARD carrying more
+  than one, since that is the only thing left to group those rows by; one
+  variable, or any `hierarchy`, leaves it empty, and an explicit `rows` always
+  wins.  `rows` is not tied to `variable` --- it takes any column of the
+  normalized frame, and the name on the left is only the output column's name.
+
+  **`sort` can name its keys** instead of being arranged afterwards: a
+  character vector, in priority order, each element optionally prefixed `-`
+  for descending, naming a result column, a statistic (totalled across the
+  spread columns), `".overall"` (the hierarchical-overall block first) or
+  `".depth"` (a level's own summary row before the rows nested under it).  So
+  `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of an
+  adverse-events row order, replacing `sort_stat` plus a `dplyr::arrange()`
+  plus dropping the helper column.
+
+  **A factor level keeps its label.**  cards stores the level of a factor
+  variable as a one-element factor, and flattening those with `unlist()`
+  yields the integer codes --- so a demographics table came out reading `1`,
+  `2`, `3` where it should read `<65`, `65-74`, `>=75`.  The label was in the
+  ARD all along; only the flattening lost it.  The order the factor declared
+  is now kept as well, and becomes that variable's row order unless `levels`
+  says otherwise.
+
+  **Either of the ARD's two values is reachable.**  `stats = "rows"` gained
+  `value =`, choosing the raw numeric `"stat"` (the default, so the table can
+  still be aligned with `set_decimal_split()`) or `"stat_fmt"`, the string
+  cards already formatted.  In a template the choice was always there but
+  unnamed; `{x:fmt}` now says "cards' formatted value" out loud, beside
+  `{x:raw}` for the untouched `stat` and `{x:.1f}` for formatting it here.
+
+  **A row identity that does not separate two summaries is an error.**  Four
+  continuous variables each produce a `Mean (SD)` line; with nothing but the
+  label to tell them apart they landed in the same cell and overwrote each
+  other, leaving a table with a quarter of its rows carrying the last
+  variable's numbers, and no diagnostic at all.  Two different values arriving
+  at one cell now stop with the cell, both values, and the two variables
+  named.
+
+  **Where a value lives depends on how the ARD was built, so neither of the
+  two movable ones is guessed.**  `ard_overall()` says where the overall row
+  comes from: the `..ard_hierarchical_overall..` sentinel that
+  `ard_stack_hierarchical(over_variables = TRUE)` writes, or --
+  `ard_overall(label, from = )` -- a block that was summarised separately and
+  bound, where the treatment is the analysed variable and sits in `variable`
+  rather than in a group pair.  A key column is filled from `variable` /
+  `variable_level` as well as from the group pairs, so such a block is no
+  longer discarded.
+
+  `ard_pull()` replaces `ard_big_n()`, which guessed and was wrong.  "bigN" is
+  tfrmt's word, not cards', and the value has no fixed home: measured across
+  eight ways of building the same table, the per-arm denominator turned up as
+  `N` on a categorical, continuous or hierarchical summary, as `n` on the by
+  variable's own rows, and as a statistic the author wrote themselves --- while
+  in the same ARD `stat_name == "N"` is the **study** total on the by
+  variable's own rows.  The old heuristic returned a plausible wrong number in
+  five of the eight.  `ard_pull()` names the statistic, excludes the key
+  variables' own tabulations by default, and when the ARD still offers more
+  than one answer it **stops and lists the candidates with their values**
+  rather than choosing.  Column headers stay rtfreporter's job;
+  `ard_spread()` builds the body, and `ard_pull()` is there when the header
+  needs a number that must agree with the percentages.
+
+  **What was not used is reported.**  Every stage discards ARD rows, and doing
+  it in silence is how a mis-typed `cells` looks exactly like a correct one.
+  `notes = TRUE` (the default) summarises them by context, statistic and
+  reason; `notes = "attr"` also attaches the per-variable detail.  It is not
+  attached by default, because the result is a plain data frame that you will
+  compare against whatever you built before.
+
+  **The positional-key warning no longer fires on a subgroup table.**
+  Reading a group position is not wrong by itself: a subgroup display's rows
+  *are* "which subgroup variable" by "which level of it", so
+  `rows = c(grp1 = "group2", grp2 = "group2_level")` is the table rather than a
+  mistake, and `group2` holding ten variables is the point.  What is ambiguous
+  is taking the level column **without** its name column, since then levels of
+  different variables land in one key with nothing to tell them apart --- so
+  that is all the warning now covers, and it says how to make the pair explicit
+  instead of suggesting a variable name that would break the display.
+
+  **Reshaping the middle stage no longer depends on attributes.**  The
+  two-stage split exists so you can rebuild the frame between
+  `ard_normalize()` and `ard_spread()`, and "is there a hierarchy?" was asked
+  of an attribute, which `transform()` and friends drop.  `.depth` is now `NA`
+  when there is no hierarchy --- depth only means something inside one --- so
+  it is a **column** question, and survives anything.  The two remaining
+  **everything [ard_spread()] reads is in the columns.**  The level order a
+  factor variable declared now rides in a `.label_order` column (each row's
+  position within its own variable's levels) rather than on an
+  `"ard_factor_levels"` attribute, and "is there a hierarchy here?" is
+  answered by `.depth` alone --- 0 now means "inside a declared hierarchy,
+  but not one of its levels" where it used to be `NA` --- rather than by an
+  `"ard_hierarchy"` attribute.  Attributes do not survive `dplyr::mutate()`,
+  which is the natural verb for a one-pipe
+  `ard_normalize() |> ... |> ard_spread()`, so anything the conversion
+  depends on had no business living on one.  Reading the label as it stands
+  is the better behaviour anyway: indent `"Mild"` to `"  Mild"` in between
+  and it still sorts where `"Mild"` was declared.
+
+  One attribute is left, `"ard_ignored"`, and nothing reads it to build the
+  table --- it reports rows that are no longer in the frame, so there is no
+  column it could be.  Losing it only shortens the `notes` message.
+
+  `ard_normalize()` also gives its result the class `ard_long`, used **only**
+  to recognise a raw ARD passed by mistake and say so.  It is not required:
+  `ard_spread()` still accepts any data frame of the right shape, because
+  rebuilding the middle is the point.
+
+  Naming the **analysed** variable where a key is wanted --- `label =
+  c(label = "WORSTGR")` when `WORSTGR` is what was tabulated --- now says
+  that its levels are in `.label`, rather than only listing the columns
+  that do exist.  `levels` accepts that same name (it orders the label
+  column by it), so the two arguments look inconsistent until the message
+  explains why.
+
+  The keyed columns are now plain factors, and the `ordered` argument of
+  `ard_spread()` is **gone**.  `levels =` states a display
+  order, which is the whole of what the caller said; an ordered factor went
+  on to claim that `N < Mean < SD` is a magnitude, which is false, and
+  nothing could tell which columns were genuinely ordinal.  Nothing read the
+  class either --- `order()` sorts on the level codes either way, so the row
+  order and the rendered RTF are unchanged --- while a plain factor survives
+  `dplyr::bind_rows()` across differing level sets and `relevel()`, both of
+  which an ordered factor refuses.  Callers who want the ordered class can
+  ask for it explicitly:
+  `dplyr::mutate(tbl, dplyr::across(where(is.factor), ~ factor(.x, levels(.x),
+  ordered = TRUE)))`.
+
+  A `cells` element may be **guarded**: `c(n == 0 ~ "0", "{n} ({p})")` uses
+  the first element whose condition holds *and* whose template resolves, so a
+  guard that is false and a token with no value fail the same way and the
+  chain simply moves on.  The condition is ordinary R, evaluated with the
+  record's statistics by name plus its own columns --- `variable`, `.label`,
+  `.depth`, `.kind` and the keys --- and it may name the caller's variables
+  too.  This is what a table needs when the cell depends on the *value*
+  rather than on which statistics are present: an overall-response table
+  prints `0` instead of `0 (0.0)` and `(100)` instead of `(100.0)` from the
+  recipe, with no `mutate()` afterwards.
+
+  `ard_cells()` spells the one recipe shape the existing containers cannot:
+  a **named row whose value is itself a chain**, which `c()` flattens before
+  `ard_spread()` can see it.  Reading a recipe is then `list()` for which
+  variable, `ard_cells()` for which row, `c()` for which template to try
+  first.
+
+  **One definition file can cover a whole study.**  An `ard_spec()` may
+  carry an `output_id` column, and `read_ard_spec(output_id = )` narrows the
+  file to that report *before* any variable is looked up --- which is what
+  makes a shared workbook safe when two tables format the same variable
+  differently, as they must in a BDS study where every analysis variable is
+  called `AVAL`.  Rows with a blank `output_id` are the file's defaults and
+  still apply; a row naming the report beats a default for the same cell.
+  Supplying `output_id` for a file that has no such column is an error, and
+  naming a report the file does not mention reports that its defaults were
+  used, rather than quietly behaving as if nothing had been asked.
+
+  A spec that defines the same cell twice now stops when it is read, naming
+  the variable, the row and both templates.  Before, the two definitions both
+  rendered and the caller met the row-collision error much later, pointing at
+  the ARD rather than at the file.
+
+  `notes = "applied"` answers the other half of the question.  `notes` has
+  always said what was *not* read; once a chain can carry guards, "of these
+  three candidates, which one did I get?" stops being answerable by looking
+  at the finished cell, so `ard_spread()` can now report the template behind
+  each cell together with the guard that let it through.  It also shows what
+  never fired --- an overall-response table whose every cell is 0% or 100%
+  reports its two guards and no sign of the general template, which is the
+  kind of thing worth knowing before the numbers change.
+
+  **A template's two column specs are now spelled as the ARD spells them.**
+  `{x:stat}` and `{x:stat_fmt}` replace `{x:raw}` and `{x:fmt}`, so there is
+  no mapping to learn --- the spec names the column it reads.  The old
+  spellings say what to write instead.
+
+  The two are no longer symmetric, because the columns are not.  `stat_fmt`
+  is optional: cards writes it from `fmt_fun`, and an ARD built without
+  one has none.  So a **bare** `{x}` prefers `stat_fmt` and falls back to
+  `stat`, where before it produced an empty cell; `{x:stat_fmt}` is a demand
+  and **errors** when there is nothing to read.  Note that the two differ for
+  a proportion --- cards writes `61.6` into `stat_fmt` while `stat`
+  holds `0.616` --- so `{p}` and `{p:.1f\%}` agree and `{p:.1f}` does not.
+
+  **The rounding family now defaults to base R's, and moves in one place.**
+  `round` and `ard_round(type = )` read
+  `getOption("rtfreporter.ard_round")`, which is `"r"` unless a study sets
+  `options(rtfreporter.ard_round = "sas")` once.  An explicit argument still
+  wins over the option, and a spec file's `round` column wins over both for
+  the rows it names.  The full order is **argument, then spec file, then
+  option, then R's own**, and all four are tested against one tie.
+
+  A spec file's `round` column had in fact never reached anything.
+  `ard_spread()` resolved the argument at the top of the function, which
+  made `missing(round)` false by the time the spec was read.  It is fixed:
+  the family is now resolved once, after the spec has had its say.
+
+  **A hierarchy no longer blanks the variables it does not cover.** Declare
+  `hierarchy = c("ARACE", "ASRACE")` for the one characteristic that gains a
+  third level, and `SEX` beside it came back with `.label` `NA` --- it is
+  depth 0, which is right, but it still has a level and that was the only
+  label it had. It now falls back to `variable_level`, so a demographics
+  table where exactly one row block is three deep converts in a single
+  `ard_normalize()` instead of two plus an `rbind()`.
+
+  **`ard_template()` now writes code that runs.** It reported unused keys in
+  a comment and left them out of the call, so a table quietly lost a column
+  the caller could not see was missing; it spelled the hierarchical case as
+  `hierarchy = c(group1 = , label = )`, which is not that argument's shape;
+  it never noticed an overall sentinel; and it keyed `cells` on `context`,
+  which moves between cards versions. Keys outside `cols` now become `rows`,
+  the hierarchical case emits `hierarchy` / `rows` / `label` / `overall`
+  separately, the sentinel is looked for in the raw ARD (normalizing drops it
+  when no `overall =` was given), and `cells` is keyed on the structural
+  `.kind`. Generated calls for the demographics and adverse-event reports on
+  Discussion #473 now reproduce their verified dimensions unedited.
+
+  It also stops guessing the decimal places. cards records them per
+  statistic in `fmt_fun`, so a study that asked for "mean to 2, SD to 3"
+  has said so in the ARD; the generated template now reads that and writes
+  `{mean:.2f} ({sd:.3f})` instead of a house default the study may not
+  share. A `fmt_fun` that is a function rather than a count leaves the token
+  bare, which takes cards' own formatted value. And the continuous row set
+  it offers is now the full one --- `n`, `Mean (SD)`, `Median`, `Q1, Q3`,
+  `Min, Max`, `CV`, geometric mean, `95% CI` --- trimmed to the statistics
+  this ARD carries, on the grounds that deleting a line is easier than
+  remembering the one that was missing.
+
+  **`ard_template()` writes the whole script**, always in three blocks: the
+  conversion, the column header, and the [as_rtftables()] call.  The
+  conversion is written as the **pipe** --- `ard_normalize()`, a commented
+  `dplyr::mutate()`, `ard_spread()` --- with the seam left open, because
+  half the reports on Discussion #473 have to reach between the two steps:
+  to derive a sub-column key from a statistic, to add a constant row-group
+  column, to indent a severity label.  Showing the seam turns "you had to
+  know these two calls could be split" into "delete the line you do not
+  need".
+  There is no flag to ask for them, because deleting a block you can see is
+  easier than remembering one you cannot.  `stub_vars` is derived from the
+  row keys and the label column.  The header block drafts `col_header` from
+  `ard_pull()` when one column key makes the denominator decidable, says so
+  and points at `ard_pull()`'s candidate list when it does not, and writes
+  nothing at all when several column keys mean
+  `as_rtftables(header_sep = )` will rebuild the spanning header from the
+  `"____"` in the names.  The generated scripts for the demographics and
+  adverse-event reports run unedited to a paginated result.
+
+  There is deliberately no function that returns the object instead. Only
+  `stub_vars` out of the nine arguments a real report passes to
+  `as_rtftables()` is derivable from an ARD; the rest are layout and house
+  style, so folding the two calls into one would have saved a single
+  argument while adding a third way to do the same thing.
+
+  **`label = NA` separates the rows without printing them.** A recipe whose
+  names are a row index --- `"1"` for an estimate line and `"2"` for the
+  confidence interval under it --- needs those names to tell two rows of one
+  record apart, but the report does not want a column of 1s and 2s. Until
+  now the only way was to name the column and delete it afterwards
+  (`label = c(row = ".label")` then `select(-row)`), because `label = NULL`
+  drops the label out of the row identity and the two rows collide. `NA`
+  builds the column, uses it, and drops it.
+
+  **The stub gets the same small language the cells have.** `cells` has
+  carried guarded templates since a cell had to depend on a value; the stub
+  had nothing, so "indent the severities under Any" was a `paste0()` on
+  `.label` --- string surgery on a column that means something, and which
+  doubles its own indent if it runs twice. A `label` or `rows` element that
+  is a **formula** is now a template over the record instead. `{column}`
+  interpolates, `{.label}` is the label the row would otherwise carry, the
+  chain picks the first element whose guard holds, and `~ "..."` is the
+  unguarded one. A bare string is still a column name, so nothing already
+  written changes meaning.
+
+  That covers the two places on Discussion #473 where display had to be
+  written into the data: the solicited-AE indentation, and the shift table's
+  constant row-group heading, which was a `mutate()` only so that `rows`
+  would have a column to point at. Both reports reproduce their references
+  exactly with the mutate gone.
+
+  These functions are **experimental**: they are newer than the rest of the
+  package, are not covered by its stability expectations, and may be
+  withdrawn.  Nothing else in the package depends on them, and
+  `R/ard-experimental.R` documents how to remove the family in one step.
 
 ### Documentation
 

@@ -189,3 +189,52 @@ export(auto_col_widths)
 
 # Post-processing: text replacement in a rendered RTF file
 export(rtf_replace_text)
+
+# ---- experimental: ARD ----
+# Everything between these two markers belongs to R/ard-experimental.R and can
+# be deleted in one step; see the header of that file.
+export(ard_pull)
+export(ard_keys)
+export(ard_normalize)
+S3method(print,ard_cells)
+export(ard_cells)
+export(ard_overall)
+export(ard_spread)
+export(ard_template)
+export(table_spec)
+S3method(print,table_spec)
+export(table_spec_template)
+export(read_table_spec)
+export(write_table_spec)
+export(read_report_spec)
+export(rtf_report)
+export(report_path)
+# ---- experimental: ARD ----
+
+# ---- spike: ARD plan (#474, deletable with R/ard-plan-spike.R) ----
+export(rtf_plan)
+S3method(print,rtf_plan)
+export(plan_cells)
+export(plan_levels)
+export(plan_labels)
+export(plan_digits)
+export(plan_fmt)
+export(plan_stub)
+export(plan_cell_style)
+export(plan_paginate_group)
+export(plan_row_group)
+export(plan_hide)
+export(plan_sort)
+export(plan_blanks)
+export(plan_paginate_rows)
+export(plan_style)
+export(plan_col_header)
+export(plan_paginate_cols)
+export(plan_listing)
+export(plan_titles)
+export(plan_footnotes)
+export(plan_after)
+export(apply_plan)
+export(plan_template)
+export(as_table_spec)
+# ---- spike: ARD plan ----
