@@ -2386,7 +2386,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 .ard_spec_schema <- function() {
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
-                  "sep", "sort", "sort_stat", "na"),
+                  "sep", "sort", "sort_stat", "na", "header_n"),
     variables = c("output_id", "variable", "label", "order", "levels"),
     cells     = c("output_id", "variable", "context", "row", "when",
                   "template", "digits", "signif"),
@@ -2656,6 +2656,13 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'     [ard_spread()] arguments of the same name.}
 #'   \item{`sort`}{`TRUE`, `FALSE`, or the keys in order:
 #'     `.overall | group1 | .depth | -n | label`.}
+#'   \item{`header_n`}{Which population a `col_header` text's `{n}` is,
+#'     on pages split by a group value: `page` (each page's own --- the
+#'     subjects with that lab test) or `table` (the analysis set, the
+#'     ARD rows without the page key).  Several at once name their
+#'     tokens: `n = page | N = table` gives `{n}` and `{N}`.  Blank: the
+#'     page's, with a warning when the ARD states both.  See
+#'     [plan_col_header()]'s `n`.}
 #' }
 #'
 #' @section `variables`:
@@ -2744,10 +2751,14 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'     key, over its columns --- an arm's spanner, however many arms.}
 #'   \item{`text`}{The label.  A line break is Alt+Enter or `\\n`.  The
 #'     tokens of [plan_col_header()] work: `{col}` (the column's own
-#'     value), `{col1}`, `{col2}` (its keys, outermost first), `{n}` (its
-#'     denominator) and `{n:sum}` (the total over the cell's columns).
-#'     `{n}` is read from the ARD whenever a text uses it.  Quote a text
-#'     to keep leading spaces: `"  Category"`.}
+#'     value), `{col1}`, `{col2}` (its keys, outermost first), `{n}` (the
+#'     population of what the cell stands for: its column, or over an
+#'     arm's spanner the arm), `{n1}`, `{n2}` (the population at that
+#'     depth of the keys) and `{n:sum}` (the total over the cell's
+#'     columns).  `{n}` is read from the ARD whenever a text uses it; a
+#'     number the ARD does not state prints `NA` with a warning, and
+#'     `plan_col_header(n = )` after `rtf_plan(spec = )` supplies it.
+#'     Quote a text to keep leading spaces: `"  Category"`.}
 #'   \item{`align`, `bold`, `border_top`, `border_bottom`}{As
 #'     [col_cell()] / [rtf_border()] take them (`single`, `none`, ...).}
 #' }
@@ -2995,6 +3006,35 @@ print.table_spec <- function(x, ...) {
   if (!is.na(t$sort)) {
     out$sort <- switch(toupper(t$sort), "TRUE" = TRUE, "FALSE" = FALSE,
                        .ard_spec_split(t$sort))
+  }
+  if ("header_n" %in% names(t) && !is.na(t$header_n)) {
+    out$header_n <- .ard_spec_header_n(t$header_n)
+  }
+  out
+}
+
+# `header_n`: which population a header's {n} is -- `page` or `table` --
+# or several tokens at once, `n = page | N = table`.
+.ard_spec_header_n <- function(x) {
+  items <- .ard_spec_split(x)
+  ok <- c("page", "table")
+  bad <- function(v) .ard_stop(sprintf(paste0(
+    "`tables$header_n`: %s is not a population.  Write `page` (each ",
+    "page's own, e.g. the\n  subjects with that lab test), `table` (the ",
+    "analysis set), or several:\n  `n = page | N = table`."), sQuote(v)))
+  named <- grepl("=", items, fixed = TRUE)
+  if (!any(named)) {
+    if (length(items) != 1L || !items %in% ok) bad(x)
+    return(items)
+  }
+  if (!all(named)) bad(x)
+  kv <- regmatches(items, regexec("^\\s*([A-Za-z][A-Za-z0-9_.]*)\\s*=\\s*(\\S+)\\s*$",
+                                  items))
+  out <- list()
+  for (i in seq_along(kv)) {
+    m <- kv[[i]]
+    if (length(m) != 3L || !m[3L] %in% ok) bad(items[i])
+    out[[m[2L]]] <- m[3L]
   }
   out
 }

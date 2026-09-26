@@ -15,6 +15,7 @@ tables,sep,cols が複数のとき列名をつなぐ文字。既定は ____。,_
 tables,sort,TRUE / FALSE / 並べ替えキーの列挙。,.overall | group1 | .depth | -n | label
 tables,sort_stat,列方向に合計して .sort_stat 列にする統計量名。,n
 tables,na,どのテンプレートも埋められなかったセルの値。,-
+tables,header_n,ページ（検査項目など）で分けた表のヘッダー {n} がどの母集団か。page = そのページの母集団（その検査を受けた人）/ table = 解析対象集団（ページキーを持たない ARD 行）。両方なら n = page | N = table で {n} と {N}。空欄 = page（両方あって食い違えば警告）。どちらも ARD に入れておくこと。,n = page | N = table
 variables,,1 行 = 1 変数。解析変数だけでなく列キーやラベル列の名前も書ける。,
 variables,variable,変数名（解析変数・列キー・ラベル列名）。,AGEGR1
 variables,label,変数名の代わりに表示する文字。,Age (years)

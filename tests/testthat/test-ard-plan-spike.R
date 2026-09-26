@@ -1019,7 +1019,8 @@ test_that("plan_paginate_group() is what auto_section cuts on", {
 test_that("a header cell may carry {col} and {n}", {
   skip_if_no_cards2()
   p <- disp_plan() |>
-    plan_col_header(n = c(Placebo = 86), rtf_col_header(
+    plan_col_header(n = c(Placebo = 86, "Xanomeline High Dose" = 84,
+                          "Xanomeline Low Dose" = 84), rtf_col_header(
       c("",               "{col}"),
       c("Characteristic", "(N={n})")))
   out <- suppressMessages(apply_plan(p))
@@ -1176,6 +1177,13 @@ test_that("a digits value may ask for significant digits", {
 
 # --------------------------------- the denominator the ARD states
 
+# the header numbers n = TRUE reads, without the bookkeeping attributes
+nv <- function(p) {
+  v <- rtfreporter:::.plan_n_values(p, TRUE)
+  if (!length(v)) return(numeric(0))
+  stats::setNames(as.numeric(v), names(v))
+}
+
 test_that("n = TRUE reads a cards sentinel keyed by the cols", {
   skip_if_no_cards2()
   # a sentinel row is a number the ARD states outright, so reading it is
@@ -1189,8 +1197,7 @@ test_that("n = TRUE reads a cards sentinel keyed by the cols", {
     .label = c("all", "x", "all", "x"),
     stringsAsFactors = FALSE)
   p <- rtf_plan(d, cols = "TRT", notes = FALSE)
-  expect_identical(rtfreporter:::.plan_n_sentinel(p, p$roles),
-                   c(A = 40, B = 50))
+  expect_identical(nv(p), c(A = 40, B = 50))
 })
 
 test_that("two sentinels are a choice, so neither is made", {
@@ -1201,7 +1208,7 @@ test_that("two sentinels are a choice, so neither is made", {
     stat_name = c("N", "N"), stat = c(40, 12),
     .label = c("all", "any"), stringsAsFactors = FALSE)
   p <- rtf_plan(d, cols = "TRT", notes = FALSE)
-  expect_null(rtfreporter:::.plan_n_sentinel(p, p$roles))
+  expect_length(nv(p), 0L)
 })
 
 test_that("a short widths vector repeats its last value", {
@@ -1343,10 +1350,11 @@ test_that("print() lists the header tokens and what they resolve to", {
 })
 
 
-test_that("..ard_total_n.. is read as one number, from its `N`", {
+test_that("..ard_total_n.. is read as the total, never each column's", {
   skip_if_no_cards2()
   # the total carries `N`, not `n`, and has no value for the `cols` keys:
-  # it is one number for the whole table, which is what a spanner wants
+  # it is one number for the whole table -- a spanner over all of it --
+  # and putting it in every arm's header was #482
   d <- data.frame(
     TRT = c(NA, "A", "B"),
     variable = c("..ard_total_n..", "X", "X"),
@@ -1355,7 +1363,9 @@ test_that("..ard_total_n.. is read as one number, from its `N`", {
     .label = c("all", "x", "x"),
     stringsAsFactors = FALSE)
   p <- rtf_plan(d, cols = "TRT", notes = FALSE)
-  expect_identical(rtfreporter:::.plan_n_sentinel(p, p$roles), 254)
+  v <- rtfreporter:::.plan_n_values(p, TRUE)
+  expect_identical(attr(v, "total"), 254)
+  expect_false(any(c("A", "B") %in% names(v)))
 })
 
 test_that("a sentinel carrying both n and N gives the denominator N", {
@@ -1370,8 +1380,7 @@ test_that("a sentinel carrying both n and N gives the denominator N", {
     stat = c(42, 86, 27, 84),
     .label = "any", stringsAsFactors = FALSE)
   p <- rtf_plan(d, cols = "TRT", notes = FALSE)
-  expect_identical(rtfreporter:::.plan_n_sentinel(p, p$roles),
-                   c(A = 86, B = 84))
+  expect_identical(nv(p), c(A = 86, B = 84))
 })
 
 test_that("a sentinel with only n gives no header number", {
@@ -1382,7 +1391,7 @@ test_that("a sentinel with only n gives no header number", {
     stat_name = "n", stat = c(42, 27), .label = "any",
     stringsAsFactors = FALSE)
   p <- rtf_plan(d, cols = "TRT", notes = FALSE)
-  expect_null(rtfreporter:::.plan_n_sentinel(p, p$roles))
+  expect_length(nv(p), 0L)
 })
 
 test_that("an AE table's header N is the analysis set, not the Any row", {
@@ -1435,7 +1444,7 @@ test_that("a total that is not one number is not remembered", {
   expect_null(attr(ard_normalize(d), "ard_total_n", exact = TRUE))
 })
 
-test_that("n = TRUE reads the remembered total only when nothing else can", {
+test_that("one variable's N is not a column's population (#482)", {
   skip_if_no_cards2()
   base <- data.frame(
     group1 = c(NA, rep("TRT", 4L)),
@@ -1447,20 +1456,21 @@ test_that("n = TRUE reads the remembered total only when nothing else can", {
     stat_label = c("N", "N", "n", "N", "n"),
     stat = c(254, 86, 7, 84, 9),
     stringsAsFactors = FALSE)
-
-  # ard_pull() can answer, so it does: a per-column N is what a column
-  # header wants, and the study total would quietly replace it
+  # X's N is the count of its non-missing values: the arm size only if
+  # nothing is missing, which the ARD cannot show -- so it is not read
   p <- rtf_plan(ard_normalize(base, keys = "TRT"), cols = "TRT",
                 notes = FALSE)
-  expect_identical(rtfreporter:::.plan_n_values(p, TRUE),
-                   c(A = 86, B = 84))
-
-  # the same ARD without a per-column N: now the total answers
-  no_n <- base[!(base$stat_name == "N" & base$context != "total_n"), ,
-               drop = FALSE]
-  q <- rtf_plan(ard_normalize(no_n, keys = "TRT"), cols = "TRT",
-                notes = FALSE)
-  expect_identical(rtfreporter:::.plan_n_values(q, TRUE), 254)
+  v <- rtfreporter:::.plan_n_values(p, TRUE)
+  expect_length(nv(p), 0L)
+  expect_match(attr(v, "why")[["A"]], "only X states an N")
+  # the study total is remembered as the TOTAL, never each column's
+  expect_identical(attr(v, "total"), 254)
+  fill <- function() rtfreporter:::.plan_header_fill(
+    rtf_col_header(c("", "(N={n})")), v, c("A", "B"), 1L)
+  expect_warning(fill(), "printed as NA")
+  expect_warning(fill(), "only X states an N")
+  h <- suppressWarnings(fill())
+  expect_identical(h[[1L]], c("", "(N=NA)", "(N=NA)"))
 })
 
 test_that("print() says why {n} could not be resolved", {
@@ -1542,8 +1552,7 @@ test_that("plan_col_header(n = TRUE) reads the key's own tabulation", {
                           cards::ard_continuous(variables = AGE))
   p <- rtf_plan(ard_normalize(ard), cols = "TRT")
   arm <- table(adsl$TRT)
-  expect_equal(.plan_n_values(p, TRUE),
-               stats::setNames(as.numeric(arm), names(arm)))
+  expect_equal(nv(p), stats::setNames(as.numeric(arm), names(arm)))
 })
 
 test_that("a key tabulation that is not the population split is not taken", {
@@ -1560,10 +1569,13 @@ test_that("a key tabulation that is not the population split is not taken", {
                             variables = AESOC, by = TRT,
                             id = USUBJID, denominator = adsl))
   p <- rtf_plan(ard_normalize(ard, hierarchy = "AESOC"), cols = "TRT")
-  expect_null(.plan_n_key_own(p, .plan_spread_args(p)))
+  # not the event counts: the hierarchical summary's denominator
+  arm <- table(adsl$TRT)
+  expect_equal(nv(p), stats::setNames(as.numeric(arm), names(arm))[names(nv(p))])
+  expect_setequal(names(nv(p)), names(arm))
 })
 
-test_that("a Total column the key cannot speak for is left to ard_pull()", {
+test_that("a Total column the key cannot speak for gets no number", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1572,7 +1584,11 @@ test_that("a Total column the key cannot speak for is left to ard_pull()", {
     .overall = TRUE))
   d$TRT[is.na(d$TRT) & !d$.key_own] <- "Total"
   p <- rtf_plan(d, cols = "TRT")
-  expect_null(.plan_n_key_own(p, .plan_spread_args(p)))
+  # the arms are the key's own partition; "Total" is nobody's
+  arm <- table(adsl$TRT)
+  expect_equal(nv(p)[names(arm)],
+               stats::setNames(as.numeric(arm), names(arm)))
+  expect_false("Total" %in% names(nv(p)))
 })
 
 test_that("a variable summarised and tabulated gets both recipes in a plan", {
@@ -1911,4 +1927,327 @@ test_that("a one-arm spanner comes back as one spanner per arm", {
   top <- sp$col_header[sp$col_header$line == "1" & sp$col_header$cols == ".values", ]
   expect_identical(top$text, "{col1}")
   expect_identical(top$span, "TRT")
+})
+
+
+# ------------------------------- the header N, level by level (#482) --
+
+hdr_rows <- function(out) {
+  first <- if (inherits(out, "rtftable")) out else out[[1L]]
+  lapply(first$col_header, function(r) if (is.character(r)) r else
+    vapply(r, function(z) as.character(z$label), ""))
+}
+
+adsl_trt <- function() {
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  adsl$AGEGRP <- ifelse(adsl$AGE < 70, "<70", ">=70")
+  adsl
+}
+
+test_that("variables that disagree anywhere give no number anywhere", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  adsl$AGE[adsl$TRT == "Placebo"][1:3] <- NA   # Placebo: AGE 83, SEX 86
+  ard <- cards::bind_ard(
+    cards::ard_continuous(adsl, by = TRT, variables = AGE),
+    cards::ard_categorical(adsl, by = TRT, variables = SEX))
+  p <- rtf_plan(ard_normalize(ard), cols = "TRT", notes = FALSE)
+  # the other arms agree (84 = 84) only because nothing is missing there
+  expect_length(nv(p), 0L)
+  expect_match(attr(rtfreporter:::.plan_n_values(p, TRUE), "why")[[1L]],
+               "different N")
+})
+
+test_that("two variables that agree everywhere are read", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  ard <- cards::bind_ard(
+    cards::ard_continuous(adsl, by = TRT, variables = AGE),
+    cards::ard_categorical(adsl, by = TRT, variables = SEX))
+  p <- rtf_plan(ard_normalize(ard), cols = "TRT", notes = FALSE)
+  arm <- table(adsl$TRT)
+  expect_equal(nv(p), stats::setNames(as.numeric(arm), names(arm)))
+})
+
+test_that("an N per visit is not a column's number", {
+  skip_if_not_installed("cards")
+  adlb <- cards::ADLB[cards::ADLB$PARAMCD == "ALT", ]
+  adlb$TRT <- as.character(adlb$TRTA)
+  ard <- cards::ard_continuous(adlb, by = c(TRT, AVISIT), variables = AVAL)
+  p <- rtf_plan(ard_normalize(ard), cols = "TRT", notes = FALSE)
+  expect_length(nv(p), 0L)
+  expect_match(attr(rtfreporter:::.plan_n_values(p, TRUE), "why")[[1L]],
+               "per row")
+})
+
+test_that("two column keys: the arm and the arm x sex cell are both read", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  d <- ard_normalize(cards::ard_stack(
+    adsl, .by = c(TRT, SEX), cards::ard_continuous(variables = AGE),
+    cards::ard_categorical(variables = AGEGRP)))
+  p <- rtf_plan(d, cols = c("TRT", "SEX"), rows = c(group = "variable"),
+                notes = FALSE) |>
+    plan_cells(continuous = "{mean:.1f}", categorical = "{n}")
+  v <- nv(p)
+  expect_identical(v[["Placebo"]], 86)
+  expect_identical(v[["Placebo____F"]], 53)
+  expect_identical(v[["Xanomeline High Dose____M"]], 44)
+  # a spanner's {n} is its level's; a leaf's is its cell's
+  out <- suppressMessages(apply_plan(plan_col_header(p, n = TRUE,
+    rtf_col_header(
+      list(col_cell(1, ""), col_cell(2, ""),
+           col_cell(c(3, 4), "{col1} (N={n})"),
+           col_cell(c(5, 6), "{col1} (N={n})"),
+           col_cell(c(7, 8), "{col1} (N={n})")),
+      c("", "", "{col2} (N={n})"))), "pages"))
+  h <- hdr_rows(out)
+  expect_identical(h[[1L]][3:5], c("Placebo (N=86)",
+                                   "Xanomeline High Dose (N=84)",
+                                   "Xanomeline Low Dose (N=84)"))
+  expect_identical(h[[2L]][3:4], c("F (N=53)", "M (N=33)"))
+  # {n1} / {n2} name a depth from any cell
+  out <- suppressMessages(apply_plan(plan_col_header(p, n = TRUE,
+    rtf_col_header(c("", "", "{col1} {n1}"), c("", "", "{col2} {n2}"))),
+    "pages"))
+  h <- hdr_rows(out)
+  expect_identical(h[[1L]][3:4], c("Placebo 86", "Placebo 86"))
+  expect_identical(h[[2L]][3:4], c("F 53", "M 33"))
+})
+
+test_that("three keys: a depth the ARD does not state is NA, with a warning", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  mk <- function(extra = NULL) {
+    a <- cards::ard_stack(adsl, .by = c(TRT, SEX, AGEGRP),
+                          cards::ard_continuous(variables = AGE),
+                          cards::ard_categorical(variables = RACE))
+    if (!is.null(extra)) a <- cards::bind_ard(a, extra)
+    rtf_plan(ard_normalize(a), cols = c("TRT", "SEX", "AGEGRP"),
+             rows = c(group = "variable"), notes = FALSE) |>
+      plan_cells(continuous = "{mean:.1f}", categorical = "{n}") |>
+      plan_col_header(n = TRUE, rtf_col_header(
+        c("", "", "{col1} N={n1}"), c("", "", "{col2} N={n2}"),
+        c("", "", "{col3} N={n3}")))
+  }
+  # cards tabulates the by variables one at a time: TRT x SEX is nowhere
+  expect_warning(out <- suppressMessages(apply_plan(mk(), "pages")),
+                 "printed as NA")
+  h <- hdr_rows(out)
+  expect_identical(h[[1L]][3L], "Placebo N=86")
+  expect_identical(h[[2L]][3L], "F N=NA")
+  expect_identical(h[[3L]][3:4], c("<70 N=13", ">=70 N=40"))
+  # tabulating SEX within TRT states it
+  out <- suppressMessages(apply_plan(mk(
+    cards::ard_categorical(adsl, by = TRT, variables = SEX)), "pages"))
+  expect_identical(hdr_rows(out)[[2L]][3L], "F N=53")
+})
+
+test_that("a hierarchical ARD by two keys states both levels", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  adae <- cards::ADAE[cards::ADAE$TRTEMFL == "Y", ]
+  adae$TRT <- as.character(adae$TRTA)
+  adae$SEX <- as.character(adae$SEX)
+  d <- ard_normalize(cards::ard_stack_hierarchical(
+    adae, variables = c(AEBODSYS, AEDECOD), by = c(TRT, SEX),
+    denominator = adsl, id = USUBJID, over_variables = TRUE),
+    hierarchy = c("AEBODSYS", "AEDECOD"), overall = "Any TEAE")
+  p <- rtf_plan(d, cols = c("TRT", "SEX"), rows = c(group1 = "AEBODSYS"),
+                label = c(label = "AEDECOD"), notes = FALSE)
+  v <- nv(p)
+  expect_identical(v[["Placebo"]], 86)
+  expect_identical(v[["Placebo____F"]], 53)
+})
+
+test_that("numbers given by the caller may be keyed at any depth", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  adsl$AGE[1:20] <- NA
+  d <- ard_normalize(cards::ard_continuous(adsl, by = c(TRT, SEX),
+                                           variables = AGE))
+  p <- rtf_plan(d, cols = c("TRT", "SEX"), rows = c(group = "variable"),
+                notes = FALSE) |>
+    plan_cells(continuous = "{mean:.1f}")
+  arm <- c(table(adsl$TRT))
+  cell <- table(adsl$TRT, adsl$SEX)
+  cell <- stats::setNames(as.vector(cell), paste(
+    rep(rownames(cell), 2L), rep(colnames(cell), each = 3L), sep = "____"))
+  hdr <- rtf_col_header(c("", "", "{col1} N={n1}"),
+                        c("", "", "{col2} N={n}"))
+  # from the ARD: NA and a warning, not AGE's non-missing count
+  expect_warning(out <- suppressMessages(apply_plan(
+    plan_col_header(p, n = TRUE, hdr), "pages")), "only AGE")
+  expect_identical(hdr_rows(out)[[2L]][3L], "F N=NA")
+  for (n in list(c(arm, cell), function(data) c(arm, cell))) {
+    out <- suppressMessages(apply_plan(plan_col_header(p, n = n, hdr),
+                                       "pages"))
+    expect_identical(hdr_rows(out)[[1L]][3L], "Placebo N=86")
+    expect_identical(hdr_rows(out)[[2L]][3:4], c("F N=53", "M N=33"))
+  }
+  # a workbook's header, its numbers from code
+  sp <- table_spec(
+    tables = data.frame(cols = "TRT | SEX", rows = "group = variable"),
+    cells = data.frame(variable = "AGE", template = "{mean:.1f}"),
+    col_header = data.frame(line = c(1, 2), cols = ".values",
+                            span = c("TRT", "each"),
+                            text = c("{col1} (N={n})", "{col2} (N={n})")))
+  expect_warning(suppressMessages(apply_plan(
+    rtf_plan(d, spec = sp, notes = FALSE), "pages")), "printed as NA")
+  out <- suppressMessages(apply_plan(
+    rtf_plan(d, spec = sp, notes = FALSE) |>
+      plan_col_header(n = c(arm, cell)), "pages"))
+  h <- hdr_rows(out)
+  expect_true("Placebo (N=86)" %in% h[[1L]])
+  expect_identical(h[[2L]][3:4], c("F (N=53)", "M (N=33)"))
+})
+
+test_that("{n:sum} with a column missing is NA, not a smaller total", {
+  f <- rtfreporter:::.plan_header_fill
+  h <- rtf_col_header(list(col_cell(1, ""), col_cell(c(2, 3), "{n:sum}")))
+  expect_warning(out <- f(h, c(A = 10), c("A", "B"), 1L), "printed as NA")
+  expect_identical(out[[1L]][[2L]]$label, "NA")
+  # a spanner over some columns that share no level is not the total
+  v <- structure(c(A = 10, B = 20, C = 30), total = 60)
+  h <- rtf_col_header(list(col_cell(1, ""), col_cell(c(2, 3), "{n}"),
+                           col_cell(c(2, 4), "{n}")))
+  out <- suppressWarnings(f(h, v, c("A", "B", "C"), 1L))
+  expect_identical(vapply(out[[1L]], `[[`, "", "label"), c("", "NA", "60"))
+})
+
+test_that("the key tabulated on its own states the table's total", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  d <- ard_normalize(cards::ard_stack(
+    adsl, .by = TRT, cards::ard_categorical(variables = SEX)))
+  p <- rtf_plan(d, cols = "TRT", notes = FALSE)
+  expect_identical(attr(rtfreporter:::.plan_n_values(p, TRUE), "total"),
+                   nrow(adsl) + 0)
+})
+
+test_that("pages split by a group value each read their own N from the ARD", {
+  skip_if_not_installed("cards")
+  set.seed(1)
+  lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
+                    PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
+  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
+  ard <- cards::bind_ard(
+    cards::ard_categorical(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
+    # the population of each parameter, split by the column variable:
+    # the ARD states every column's N and each page's total
+    cards::ard_categorical(lb, by = PARAM, variables = BASEGR))
+  p <- rtf_plan(ard_normalize(ard), cols = "BASEGR",
+                rows = c(PARAM = "PARAM"), label = c(label = ".label"),
+                notes = FALSE) |>
+    plan_cells("{n}") |>
+    plan_paginate_group(show = FALSE) |>
+    plan_col_header(n = TRUE, rtf_col_header(
+      list(col_cell(1, ""), col_cell(c(2, 3), "All (N={n})")),
+      c("", "{col} (N={n})")))
+  pg <- expect_silent(suppressMessages(apply_plan(p, "pages")))
+  n <- table(lb$PARAM)
+  cell <- table(lb$PARAM, lb$BASEGR)
+  for (i in seq_along(pg)) {
+    prm <- names(pg)[i]
+    h <- hdr_rows(pg[i])
+    expect_identical(h[[1L]][2L], sprintf("All (N=%d)", n[[prm]]))
+    expect_identical(h[[2L]][2:3], sprintf("%s (N=%d)", c("G0", "G1"),
+                                           cell[prm, c("G0", "G1")]))
+  }
+  expect_false(identical(hdr_rows(pg[1])[[1L]], hdr_rows(pg[2])[[1L]]))
+})
+
+# the analysis set and the subjects with the test: both in the ARD
+two_pop <- function() {
+  set.seed(1)
+  lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
+                    PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
+  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
+  d <- ard_normalize(cards::bind_ard(
+    cards::ard_categorical(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
+    cards::ard_categorical(lb, by = PARAM, variables = BASEGR),
+    cards::ard_total_n(cards::ADSL)), drop_contexts = "attributes")
+  list(d = d, tested = table(lb$PARAM), set = nrow(cards::ADSL))
+}
+two_pop_plan <- function(d, n, text = "T (N={n})") {
+  rtf_plan(d, cols = "BASEGR", rows = c(PARAM = "PARAM"),
+           label = c(label = ".label"), notes = FALSE) |>
+    plan_cells("{n}") |>
+    plan_paginate_group(show = FALSE) |>
+    plan_col_header(n = n, rtf_col_header(
+      list(col_cell(1, ""), col_cell(c(2, 3), text)),
+      c("", "{col} (n={n})")))
+}
+spanner <- function(pg) vapply(pg, function(p)
+  p$col_header[[1L]][[2L]]$label, "")
+
+test_that("n = \"page\" / \"table\" choose the population", {
+  skip_if_not_installed("cards")
+  x <- two_pop()
+  pg <- suppressMessages(apply_plan(two_pop_plan(x$d, "page"), "pages"))
+  expect_identical(unname(spanner(pg)),
+                   sprintf("T (N=%d)", as.integer(x$tested[names(pg)])))
+  expect_warning(pg <- suppressMessages(apply_plan(
+    two_pop_plan(x$d, "table"), "pages")), "printed as NA")
+  expect_identical(unname(spanner(pg)), rep(sprintf("T (N=%d)", x$set), 2L))
+  # the analysis set by baseline grade is not in this ARD: NA, not a guess
+  expect_identical(pg[[1L]]$col_header[[2L]][2L], "G0 (n=NA)")
+})
+
+test_that("two populations and no choice: the page's, with a warning", {
+  skip_if_not_installed("cards")
+  x <- two_pop()
+  expect_warning(pg <- suppressMessages(apply_plan(
+    two_pop_plan(x$d, TRUE), "pages")), "two populations")
+  expect_identical(spanner(pg)[["HGB"]],
+                   sprintf("T (N=%d)", as.integer(x$tested[["HGB"]])))
+})
+
+test_that("both populations in one header, from code and from a workbook", {
+  skip_if_not_installed("cards")
+  x <- two_pop()
+  want <- sprintf("T (N=%d), tested n=%d", x$set,
+                  as.integer(x$tested[c("ALT", "HGB")]))
+  pg <- expect_silent(suppressMessages(apply_plan(two_pop_plan(
+    x$d, list(n = "page", N = "table"), "T (N={N}), tested n={n}"),
+    "pages")))
+  expect_identical(unname(spanner(pg)), want)
+  sp <- table_spec(
+    tables = data.frame(cols = "BASEGR", rows = "PARAM = PARAM",
+                        label = "label = .label",
+                        header_n = "n = page | N = table"),
+    cells = data.frame(template = "{n}"),
+    layout = data.frame(group_page = "TRUE", group_show = "FALSE"),
+    col_header = data.frame(
+      line = c(1, 2, 2), cols = c(".values", "1", ".values"),
+      span = c(NA, NA, "each"),
+      text = c("T (N={N}), tested n={n}", NA, "{col} (n={n})")))
+  pg <- expect_silent(suppressMessages(apply_plan(
+    rtf_plan(x$d, spec = sp, notes = FALSE), "pages")))
+  lab <- vapply(pg, function(p) {
+    l <- vapply(p$col_header[[1L]], `[[`, "", "label")
+    l[nzchar(l)][1L]
+  }, "")
+  expect_identical(unname(lab), want)
+  expect_error(table_spec(tables = data.frame(
+    cols = "BASEGR", header_n = "tested")) |>
+      rtfreporter:::.ard_spec_table_args(), "not a population")
+  expect_error(rtfreporter:::.plan_n_values(two_pop_plan(x$d, "x"), "x"),
+               "a population is")
+})
+
+test_that("as_table_spec() writes the population to tables$header_n", {
+  expect_identical(rtfreporter:::.plan_scope_text("table"), "table")
+  expect_identical(rtfreporter:::.plan_scope_text(
+    list(n = "page", N = "table")), "n = page | N = table")
+  expect_null(rtfreporter:::.plan_scope_text(TRUE))
+  expect_null(rtfreporter:::.plan_scope_text(c(A = 86)))
+  expect_identical(rtfreporter:::.ard_spec_header_n("n = page | N = table"),
+                   list(n = "page", N = "table"))
 })
