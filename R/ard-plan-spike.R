@@ -591,8 +591,12 @@ rtf_plan <- function(data = NULL, cols = NULL, rows = NULL,
     cells <- lapply(seq_len(nrow(hd)), function(i)
       .ard_spec_typed(hd[i, , drop = FALSE], "col_header"))
     txt <- vapply(cells, function(r) r[["text"]] %||% "", "")
+    # `tables$header_n` says WHICH population; a `{n` in a text is what
+    # asks for one at all
+    hn <- .ard_spec_table_args(sp)[["header_n"]]
     p <- plan_col_header(p, header = structure(
-      list(cells = cells, n = any(grepl("{n", txt, fixed = TRUE))),
+      list(cells = cells,
+           n = hn %||% any(grepl("{n", txt, fixed = TRUE))),
       class = "plan_spec_col_header"))
   }
   w <- vapply(ct, function(r) r[["width"]] %||% NA_real_, NA_real_)
@@ -1061,13 +1065,25 @@ print.rtf_plan <- function(x, ...) {
 #'   a one-column table and a cell over all the columns.
 #'
 #'   **Pages split by a group value** ([plan_paginate_group()]: a lab
-#'   parameter, a visit) each read their numbers from **their own rows**
-#'   of the ARD, then from the rows that belong to no page --- the
-#'   subjects with an ALT result are not those with a haemoglobin one.
-#'   Put that population in the ARD as the column variable tabulated
-#'   within the page key: `cards::ard_categorical(adlb, by = PARAM,
-#'   variables = BASEGR)` states each baseline column's N and the
-#'   page's total.
+#'   parameter, a visit) have **two populations**, and which one the
+#'   header says is the author's choice:
+#'
+#'   * `n = "page"` --- each page's own, the subjects with that test:
+#'     the ARD rows **carrying** the page key, e.g.
+#'     `cards::ard_categorical(adlb, by = PARAM, variables = BASEGR)`,
+#'     which states each baseline column's N and the page's total;
+#'   * `n = "table"` --- the analysis set: the ARD rows **without** the
+#'     page key, e.g. `cards::ard_total_n(adsl)` or the treatment
+#'     tabulated from ADSL;
+#'   * `n = list(n = "page", N = "table")` --- both, as `{n}` and `{N}`.
+#'
+#'   `TRUE` reads the page's rows, then the table's for what they lack,
+#'   and **warns** when the ARD states both and they differ.  Neither is
+#'   filled in from outside the ARD: a population it does not state is
+#'   `NA`.  Keep the header consistent with the body --- the percentages
+#'   are over the denominator cards used, so a header saying the analysis
+#'   set wants an ARD built with that `denominator =`.  The workbook says
+#'   the same on `tables$header_n`.
 #'
 #'   What cannot be read is printed as **`NA`**, and one **warning** lists
 #'   every such cell with the reason (`only AGE states an N (79)`,
@@ -2422,11 +2438,42 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
 }
 
 # The denominator, read once, with the keys rtf_plan() already has.
-.plan_n_values <- function(plan, n, data = plan$data) {
+.plan_n_values <- function(plan, n, data = plan$data, page = NULL) {
   if (is.null(n)) return(NULL)
   sp <- .plan_spread_args(plan)
+  # A page split by a group value (a lab parameter) has two populations:
+  # its own -- the subjects with that test, the rows carrying the page
+  # key -- and the table's -- the analysis set, rows without it.  Which
+  # one a header says is the author's choice, `"page"` or `"table"`;
+  # both must be in the ARD, and neither is filled in from elsewhere.
+  if (!is.null(page)) {
+    g <- as.character(data[[page$col]])
+    mine <- data[!is.na(g) & g == page$value, , drop = FALSE]
+    rest <- data[is.na(g), , drop = FALSE]
+    attr(rest, "ard_total_n") <- attr(data, "ard_total_n", exact = TRUE)
+  }
+  read <- function(scope) {
+    if (is.null(page)) return(.plan_n_read(plan, sp, data))
+    tbl <- .plan_n_read(plan, sp, rest)
+    if (identical(scope, "table")) return(tbl)
+    own <- .plan_n_read(plan, sp, mine)
+    out <- .plan_n_join(own, tbl)
+    if (identical(scope, "auto") && .plan_n_differ(own, tbl)) {
+      attr(out, "choice") <- TRUE
+    }
+    out
+  }
   one <- function(v) {
-    if (isTRUE(v)) {
+    scope <- if (isTRUE(v)) "auto"
+             else if (is.character(v) && length(v) == 1L &&
+                      v %in% c("page", "table")) v
+    if (is.character(v) && is.null(scope)) {
+      .ard_stop(sprintf(paste0(
+        "plan_col_header(n = %s): a population is \"page\" (each ",
+        "page's own) or \"table\"\n  (the analysis set); numbers are ",
+        "given as numbers, or a function of the data."), sQuote(v[1L])))
+    }
+    if (!is.null(scope)) {
       if (is.null(sp$cols)) {
         .ard_stop(paste0(
           "plan_col_header(n = TRUE) reads the denominator with the ",
@@ -2438,9 +2485,12 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
       # header prints NA there and says why (see .plan_n_read()).
       # ard_pull() is not asked: it reads an analysis variable's `N`,
       # the count of its non-missing values.
-      return(.plan_n_read(plan, sp, data))
+      return(read(scope))
     }
-    if (is.function(v)) v(data) else v
+    if (is.function(v)) {
+      return(v(if (is.null(page)) data else rbind(mine, rest)))
+    }
+    v
   }
   if (is.list(n) && !is.null(names(n)) && any(nzchar(names(n)))) {
     return(lapply(n, one))
@@ -2471,28 +2521,53 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   list(col = src, value = value)
 }
 
-# A page's numbers: its own rows first, then the rows that belong to no
-# page (a study total, a tabulation made without the page key).
-.plan_n_page <- function(plan, n, col, value) {
-  d <- plan$data
-  g <- as.character(d[[col]])
-  mine <- d[!is.na(g) & g == value, , drop = FALSE]
-  rest <- d[is.na(g), , drop = FALSE]
-  attr(rest, "ard_total_n") <- attr(d, "ard_total_n", exact = TRUE)
-  a <- .plan_n_values(plan, n, mine)
-  b <- .plan_n_values(plan, n, rest)
-  join <- function(x, y) {
-    if (!is.numeric(x) || !is.numeric(y)) return(x)
-    keep <- setdiff(names(y) %||% character(0), names(x))
-    out <- c(x, y[keep])
-    tx <- attr(x, "total", exact = TRUE)
-    wx <- attr(x, "why", exact = TRUE)
-    attr(out, "total") <- tx %||% attr(y, "total", exact = TRUE)
-    attr(out, "why") <- wx[!names(wx) %in% names(out)]
-    out
+# A page's own numbers first, then the table's for what the page lacks.
+.plan_n_join <- function(x, y) {
+  keep <- setdiff(names(y) %||% character(0), names(x))
+  out <- c(x, y[keep])
+  wx <- attr(x, "why", exact = TRUE)
+  wy <- attr(y, "why", exact = TRUE)
+  attr(out, "total") <- attr(x, "total", exact = TRUE) %||%
+    attr(y, "total", exact = TRUE)
+  why <- c(wx, wy[!names(wy) %in% names(wx)])
+  attr(out, "why") <- why[!names(why) %in% names(out)]
+  out
+}
+
+# Do the page and the table state DIFFERENT numbers for the same thing?
+# Then "which N" is a choice the author has to make.
+.plan_n_differ <- function(own, tbl) {
+  k <- intersect(names(own), names(tbl))
+  if (length(k) && any(own[k] != tbl[k])) return(TRUE)
+  a <- attr(own, "total", exact = TRUE)
+  b <- attr(tbl, "total", exact = TRUE)
+  !is.null(a) && !is.null(b) && !isTRUE(all.equal(a, b))
+}
+
+# One warning for the pages whose ARD states two populations and whose
+# header did not say which it wants.
+.plan_n_choice_warn <- function(pages) {
+  warning(paste(c(
+    sprintf(paste0("Column header: the ARD states two populations for ",
+                   "page%s %s --"), if (length(pages) > 1L) "s" else "",
+            paste(sQuote(utils::head(pages, 4L)), collapse = ", ")),
+    "  the page's own (e.g. the subjects with that test) and the table's (the analysis set).",
+    "  {n} used the page's.  Say which: plan_col_header(n = \"page\") or n = \"table\"",
+    "  (tables sheet: header_n = page | table), or both: n = list(n = \"page\", N = \"table\")."),
+    collapse = "\n"), call. = FALSE)
+}
+
+# `n = "page"` / `"table"` / list of them, as the tables sheet writes it;
+# NULL for anything else (numbers, a function, TRUE).
+.plan_scope_text <- function(n) {
+  sc <- function(v) is.character(v) && length(v) == 1L &&
+    v %in% c("page", "table")
+  if (sc(n)) return(n)
+  if (is.list(n) && length(n) && !is.null(names(n)) &&
+      all(vapply(n, sc, NA))) {
+    return(paste(paste(names(n), "=", unlist(n)), collapse = " | "))
   }
-  if (is.list(a) && !is.numeric(a)) return(Map(join, a, b))
-  join(a, b)
+  NULL
 }
 
 .plan_to_pages <- function(plan, tbl) {
@@ -2501,8 +2576,8 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   # header written in code after it states its own
   n_req <- hdr$n
   if (is.null(n_req) && inherits(hdr$header, "plan_spec_col_header") &&
-      isTRUE(hdr$header$n)) {
-    n_req <- TRUE
+      !is.null(hdr$header$n) && !isFALSE(hdr$header$n)) {
+    n_req <- hdr$header$n
   }
   nvals <- .plan_n_values(plan, n_req)
 
@@ -2620,15 +2695,30 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
     pg <- if (is.null(n_req) || inherits(out, "rtftable")) NULL
           else .plan_page_group(plan, names(out))
     if (!is.null(pg)) {
+      choice <- character(0)
+      said <- character(0)
       for (i in seq_along(out)) {
         nv <- if (is.null(pg$value[[i]])) nvals
-              else .plan_n_page(plan, n_req, pg$col, pg$value[[i]])
-        b <- build(out[[i]]$data, nv)
+              else .plan_n_values(plan, n_req, page = list(
+                col = pg$col, value = pg$value[[i]]))
+        chose <- if (is.list(nv) && !is.numeric(nv))
+          any(vapply(nv, function(z) isTRUE(attr(z, "choice")), NA))
+          else isTRUE(attr(nv, "choice"))
+        if (chose) choice <- c(choice, names(out)[i])
+        # the same missing number on every page is one warning, not one
+        # per page
+        b <- withCallingHandlers(build(out[[i]]$data, nv),
+          warning = function(w) {
+            said <<- unique(c(said, conditionMessage(w)))
+            invokeRestart("muffleWarning")
+          })
         if (i == 1L) .plan_remember(plan, "header_raw", b$raw)
         args <- list(x = out[[i]], b$filled)
         if (!is.null(hdr$values)) args$values <- hdr$values
         out[[i]] <- do.call(set_col_header, args)
       }
+      for (w in said) warning(w, call. = FALSE)
+      if (length(choice)) .plan_n_choice_warn(choice)
     } else {
       b <- build(first_d, nvals)
       .plan_remember(plan, "header_raw", b$raw)
@@ -3505,10 +3595,11 @@ as_table_spec <- function(x, output_id = NULL, check = TRUE) {
                  stringsAsFactors = FALSE)))
   } else if (!is.null(seen$h)) {
     col_header <- .plan_header_rows(seen$h, pnames, spread, p, id, q)
-    if (!is.null(hd$n) && !isTRUE(hd$n)) {
+    if (!is.null(hd$n) && !isTRUE(hd$n) && is.null(.plan_scope_text(hd$n))) {
       miss("plan_col_header(n = ): a literal N stays in code (use {n})")
     }
   }
+  tables$header_n <- .plan_scope_text(hd$n) %||% NA_character_
 
   study <- if (!is.null(s$rounding)) c(rounding = s$rounding)
   sp <- table_spec(tables, variables, cells, study = study, layout = layout,

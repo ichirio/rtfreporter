@@ -2160,3 +2160,94 @@ test_that("pages split by a group value each read their own N from the ARD", {
   }
   expect_false(identical(hdr_rows(pg[1])[[1L]], hdr_rows(pg[2])[[1L]]))
 })
+
+# the analysis set and the subjects with the test: both in the ARD
+two_pop <- function() {
+  set.seed(1)
+  lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
+                    PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
+  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
+  d <- ard_normalize(cards::bind_ard(
+    cards::ard_categorical(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
+    cards::ard_categorical(lb, by = PARAM, variables = BASEGR),
+    cards::ard_total_n(cards::ADSL)), drop_contexts = "attributes")
+  list(d = d, tested = table(lb$PARAM), set = nrow(cards::ADSL))
+}
+two_pop_plan <- function(d, n, text = "T (N={n})") {
+  rtf_plan(d, cols = "BASEGR", rows = c(PARAM = "PARAM"),
+           label = c(label = ".label"), notes = FALSE) |>
+    plan_cells("{n}") |>
+    plan_paginate_group(show = FALSE) |>
+    plan_col_header(n = n, rtf_col_header(
+      list(col_cell(1, ""), col_cell(c(2, 3), text)),
+      c("", "{col} (n={n})")))
+}
+spanner <- function(pg) vapply(pg, function(p)
+  p$col_header[[1L]][[2L]]$label, "")
+
+test_that("n = \"page\" / \"table\" choose the population", {
+  skip_if_not_installed("cards")
+  x <- two_pop()
+  pg <- suppressMessages(apply_plan(two_pop_plan(x$d, "page"), "pages"))
+  expect_identical(unname(spanner(pg)),
+                   sprintf("T (N=%d)", as.integer(x$tested[names(pg)])))
+  expect_warning(pg <- suppressMessages(apply_plan(
+    two_pop_plan(x$d, "table"), "pages")), "printed as NA")
+  expect_identical(unname(spanner(pg)), rep(sprintf("T (N=%d)", x$set), 2L))
+  # the analysis set by baseline grade is not in this ARD: NA, not a guess
+  expect_identical(pg[[1L]]$col_header[[2L]][2L], "G0 (n=NA)")
+})
+
+test_that("two populations and no choice: the page's, with a warning", {
+  skip_if_not_installed("cards")
+  x <- two_pop()
+  expect_warning(pg <- suppressMessages(apply_plan(
+    two_pop_plan(x$d, TRUE), "pages")), "two populations")
+  expect_identical(spanner(pg)[["HGB"]],
+                   sprintf("T (N=%d)", as.integer(x$tested[["HGB"]])))
+})
+
+test_that("both populations in one header, from code and from a workbook", {
+  skip_if_not_installed("cards")
+  x <- two_pop()
+  want <- sprintf("T (N=%d), tested n=%d", x$set,
+                  as.integer(x$tested[c("ALT", "HGB")]))
+  pg <- expect_silent(suppressMessages(apply_plan(two_pop_plan(
+    x$d, list(n = "page", N = "table"), "T (N={N}), tested n={n}"),
+    "pages")))
+  expect_identical(unname(spanner(pg)), want)
+  sp <- table_spec(
+    tables = data.frame(cols = "BASEGR", rows = "PARAM = PARAM",
+                        label = "label = .label",
+                        header_n = "n = page | N = table"),
+    cells = data.frame(template = "{n}"),
+    layout = data.frame(group_page = "TRUE", group_show = "FALSE"),
+    col_header = data.frame(
+      line = c(1, 2, 2), cols = c(".values", "1", ".values"),
+      span = c(NA, NA, "each"),
+      text = c("T (N={N}), tested n={n}", NA, "{col} (n={n})")))
+  pg <- expect_silent(suppressMessages(apply_plan(
+    rtf_plan(x$d, spec = sp, notes = FALSE), "pages")))
+  lab <- vapply(pg, function(p) {
+    l <- vapply(p$col_header[[1L]], `[[`, "", "label")
+    l[nzchar(l)][1L]
+  }, "")
+  expect_identical(unname(lab), want)
+  expect_error(table_spec(tables = data.frame(
+    cols = "BASEGR", header_n = "tested")) |>
+      rtfreporter:::.ard_spec_table_args(), "not a population")
+  expect_error(rtfreporter:::.plan_n_values(two_pop_plan(x$d, "x"), "x"),
+               "a population is")
+})
+
+test_that("as_table_spec() writes the population to tables$header_n", {
+  expect_identical(rtfreporter:::.plan_scope_text("table"), "table")
+  expect_identical(rtfreporter:::.plan_scope_text(
+    list(n = "page", N = "table")), "n = page | N = table")
+  expect_null(rtfreporter:::.plan_scope_text(TRUE))
+  expect_null(rtfreporter:::.plan_scope_text(c(A = 86)))
+  expect_identical(rtfreporter:::.ard_spec_header_n("n = page | N = table"),
+                   list(n = "page", N = "table"))
+})

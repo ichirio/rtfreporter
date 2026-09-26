@@ -101,6 +101,13 @@ rows apart and then drops it; \code{NULL} leaves it out.}
 \code{\link[=ard_spread]{ard_spread()}} arguments of the same name.}
 \item{\code{sort}}{\code{TRUE}, \code{FALSE}, or the keys in order:
 \code{.overall | group1 | .depth | -n | label}.}
+\item{\code{header_n}}{Which population a \code{col_header} text's \code{{n}} is,
+on pages split by a group value: \code{page} (each page's own --- the
+subjects with that lab test) or \code{table} (the analysis set, the
+ARD rows without the page key).  Several at once name their
+tokens: \code{n = page | N = table} gives \code{{n}} and \code{{N}}.  Blank: the
+page's, with a warning when the ARD states both.  See
+\code{\link[=plan_col_header]{plan_col_header()}}'s \code{n}.}
 }
 }
 

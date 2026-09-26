@@ -54,7 +54,12 @@
   `col_header` sheet too.  Pages split by a group value
   (`plan_paginate_group()`) read each page's numbers from that page's
   rows, so a shift table's `Treatment (N=...)` is each parameter's
-  population as the ARD states it.
+  population as the ARD states it.  Which population is the author's
+  choice: `n = "page"` (the subjects with that test), `n = "table"` (the
+  analysis set, ARD rows without the page key), or both at once with
+  `n = list(n = "page", N = "table")`; the workbook's `tables` sheet
+  takes the same as `header_n`.  Both must be in the ARD; `TRUE` warns
+  when it states both and they differ.
 
 - **A column header's `{n}` is the denominator, not the Any-event count**
   (#480).  On an ARD from `cards::ard_stack_hierarchical()` the header

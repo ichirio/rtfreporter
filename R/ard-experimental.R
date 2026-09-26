@@ -2386,7 +2386,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 .ard_spec_schema <- function() {
   list(
     tables    = c("output_id", "cols", "rows", "label", "stats", "value",
-                  "sep", "sort", "sort_stat", "na"),
+                  "sep", "sort", "sort_stat", "na", "header_n"),
     variables = c("output_id", "variable", "label", "order", "levels"),
     cells     = c("output_id", "variable", "context", "row", "when",
                   "template", "digits", "signif"),
@@ -2656,6 +2656,13 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'     [ard_spread()] arguments of the same name.}
 #'   \item{`sort`}{`TRUE`, `FALSE`, or the keys in order:
 #'     `.overall | group1 | .depth | -n | label`.}
+#'   \item{`header_n`}{Which population a `col_header` text's `{n}` is,
+#'     on pages split by a group value: `page` (each page's own --- the
+#'     subjects with that lab test) or `table` (the analysis set, the
+#'     ARD rows without the page key).  Several at once name their
+#'     tokens: `n = page | N = table` gives `{n}` and `{N}`.  Blank: the
+#'     page's, with a warning when the ARD states both.  See
+#'     [plan_col_header()]'s `n`.}
 #' }
 #'
 #' @section `variables`:
@@ -2999,6 +3006,35 @@ print.table_spec <- function(x, ...) {
   if (!is.na(t$sort)) {
     out$sort <- switch(toupper(t$sort), "TRUE" = TRUE, "FALSE" = FALSE,
                        .ard_spec_split(t$sort))
+  }
+  if ("header_n" %in% names(t) && !is.na(t$header_n)) {
+    out$header_n <- .ard_spec_header_n(t$header_n)
+  }
+  out
+}
+
+# `header_n`: which population a header's {n} is -- `page` or `table` --
+# or several tokens at once, `n = page | N = table`.
+.ard_spec_header_n <- function(x) {
+  items <- .ard_spec_split(x)
+  ok <- c("page", "table")
+  bad <- function(v) .ard_stop(sprintf(paste0(
+    "`tables$header_n`: %s is not a population.  Write `page` (each ",
+    "page's own, e.g. the\n  subjects with that lab test), `table` (the ",
+    "analysis set), or several:\n  `n = page | N = table`."), sQuote(v)))
+  named <- grepl("=", items, fixed = TRUE)
+  if (!any(named)) {
+    if (length(items) != 1L || !items %in% ok) bad(x)
+    return(items)
+  }
+  if (!all(named)) bad(x)
+  kv <- regmatches(items, regexec("^\\s*([A-Za-z][A-Za-z0-9_.]*)\\s*=\\s*(\\S+)\\s*$",
+                                  items))
+  out <- list()
+  for (i in seq_along(kv)) {
+    m <- kv[[i]]
+    if (length(m) != 3L || !m[3L] %in% ok) bad(items[i])
+    out[[m[2L]]] <- m[3L]
   }
   out
 }

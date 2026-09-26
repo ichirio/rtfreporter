@@ -288,12 +288,26 @@ own tabulation states) is \strong{never put in every column}: it answers
 a one-column table and a cell over all the columns.
 
 \strong{Pages split by a group value} (\code{\link[=plan_paginate_group]{plan_paginate_group()}}: a lab
-parameter, a visit) each read their numbers from \strong{their own rows}
-of the ARD, then from the rows that belong to no page --- the
-subjects with an ALT result are not those with a haemoglobin one.
-Put that population in the ARD as the column variable tabulated
-within the page key: \code{cards::ard_categorical(adlb, by = PARAM, variables = BASEGR)} states each baseline column's N and the
-page's total.
+parameter, a visit) have \strong{two populations}, and which one the
+header says is the author's choice:
+\itemize{
+\item \code{n = "page"} --- each page's own, the subjects with that test:
+the ARD rows \strong{carrying} the page key, e.g.
+\code{cards::ard_categorical(adlb, by = PARAM, variables = BASEGR)},
+which states each baseline column's N and the page's total;
+\item \code{n = "table"} --- the analysis set: the ARD rows \strong{without} the
+page key, e.g. \code{cards::ard_total_n(adsl)} or the treatment
+tabulated from ADSL;
+\item \code{n = list(n = "page", N = "table")} --- both, as \code{{n}} and \code{{N}}.
+}
+
+\code{TRUE} reads the page's rows, then the table's for what they lack,
+and \strong{warns} when the ARD states both and they differ.  Neither is
+filled in from outside the ARD: a population it does not state is
+\code{NA}.  Keep the header consistent with the body --- the percentages
+are over the denominator cards used, so a header saying the analysis
+set wants an ARD built with that \verb{denominator =}.  The workbook says
+the same on \code{tables$header_n}.
 
 What cannot be read is printed as \strong{\code{NA}}, and one \strong{warning} lists
 every such cell with the reason (\verb{only AGE states an N (79)},
