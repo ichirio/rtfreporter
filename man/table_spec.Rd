@@ -201,10 +201,14 @@ per column.  A column key (\code{TR01AG1}): one cell per value of that
 key, over its columns --- an arm's spanner, however many arms.}
 \item{\code{text}}{The label.  A line break is Alt+Enter or \verb{\\\\n}.  The
 tokens of \code{\link[=plan_col_header]{plan_col_header()}} work: \code{{col}} (the column's own
-value), \code{{col1}}, \code{{col2}} (its keys, outermost first), \code{{n}} (its
-denominator) and \code{{n:sum}} (the total over the cell's columns).
-\code{{n}} is read from the ARD whenever a text uses it.  Quote a text
-to keep leading spaces: \code{"  Category"}.}
+value), \code{{col1}}, \code{{col2}} (its keys, outermost first), \code{{n}} (the
+population of what the cell stands for: its column, or over an
+arm's spanner the arm), \code{{n1}}, \code{{n2}} (the population at that
+depth of the keys) and \code{{n:sum}} (the total over the cell's
+columns).  \code{{n}} is read from the ARD whenever a text uses it; a
+number the ARD does not state prints \code{NA} with a warning, and
+\code{plan_col_header(n = )} after \code{rtf_plan(spec = )} supplies it.
+Quote a text to keep leading spaces: \code{"  Category"}.}
 \item{\code{align}, \code{bold}, \code{border_top}, \code{border_bottom}}{As
 \code{\link[=col_cell]{col_cell()}} / \code{\link[=rtf_border]{rtf_border()}} take them (\code{single}, \code{none}, ...).}
 }

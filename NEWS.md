@@ -32,6 +32,27 @@
 
 ### Bug fixes
 
+- **A column header's `{n}` is read only where the ARD states a
+  population size, at every level of the column keys; otherwise it is
+  `NA` with a warning** (#482).  Checked against 26 cards / cardx builds,
+  six gave a plausible wrong number without a word: an analysis
+  variable's `N` is the count of its non-missing values (79 for an arm of
+  86 when AGE has missing values; 151 for AE records tabulated without
+  `denominator =`), an `N` per visit was taken as the column's, and an
+  ARD normalised with its `..ard_total_n..` kept put 254 in every arm.
+  `n = TRUE` now reads a sentinel's `N`, the column variable's own
+  tabulation where it partitions the population, and an analysis `N`
+  only when it is a denominator by construction or two variables agree
+  for every column.  It reads every depth of the keys, so with
+  `cols = c("TRT", "SEX")` a spanner's `{n}` is the arm's (it printed
+  nothing before) and the leaf's is the arm x sex cell's; `{n1}`,
+  `{n2}`, ... name a depth.  What cannot be read prints `NA` and raises
+  one warning naming the cells and the reason, where a missing value
+  used to print an empty string; the study total fills only a cell over
+  all columns.  Numbers given with `n = c(...)` or a function may be
+  keyed at any depth (`"Placebo"`, `"Placebo____F"`) and work over a
+  `col_header` sheet too.
+
 - **A column header's `{n}` is the denominator, not the Any-event count**
   (#480).  On an ARD from `cards::ard_stack_hierarchical()` the header
   read the `..ard_hierarchical_overall..` sentinel's `n` -- the subjects

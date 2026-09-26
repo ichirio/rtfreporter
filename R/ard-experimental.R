@@ -2744,10 +2744,14 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'     key, over its columns --- an arm's spanner, however many arms.}
 #'   \item{`text`}{The label.  A line break is Alt+Enter or `\\n`.  The
 #'     tokens of [plan_col_header()] work: `{col}` (the column's own
-#'     value), `{col1}`, `{col2}` (its keys, outermost first), `{n}` (its
-#'     denominator) and `{n:sum}` (the total over the cell's columns).
-#'     `{n}` is read from the ARD whenever a text uses it.  Quote a text
-#'     to keep leading spaces: `"  Category"`.}
+#'     value), `{col1}`, `{col2}` (its keys, outermost first), `{n}` (the
+#'     population of what the cell stands for: its column, or over an
+#'     arm's spanner the arm), `{n1}`, `{n2}` (the population at that
+#'     depth of the keys) and `{n:sum}` (the total over the cell's
+#'     columns).  `{n}` is read from the ARD whenever a text uses it; a
+#'     number the ARD does not state prints `NA` with a warning, and
+#'     `plan_col_header(n = )` after `rtf_plan(spec = )` supplies it.
+#'     Quote a text to keep leading spaces: `"  Category"`.}
 #'   \item{`align`, `bold`, `border_top`, `border_bottom`}{As
 #'     [col_cell()] / [rtf_border()] take them (`single`, `none`, ...).}
 #' }

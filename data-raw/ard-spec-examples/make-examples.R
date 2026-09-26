@@ -235,7 +235,10 @@ ard_lb <- bind_rows(
   ard_categorical(mutate(LB, BASEGR  = "Total"),
                   by = c(LBTOX_LBL, BASEGR), variables = WORSTGR),
   ard_categorical(mutate(LB, BASEGR = "Total", WORSTGR = "Total"),
-                  by = c(LBTOX_LBL, BASEGR), variables = WORSTGR))
+                  by = c(LBTOX_LBL, BASEGR), variables = WORSTGR),
+  # the header's "Treatment (N=...)" is the analysis set, which no count
+  # above states (they are per parameter): the ARD says it here (#482)
+  ard_total_n(cards::ADSL))
 
 specs$LB <- table_spec(
   study = c(rounding = "sas"),

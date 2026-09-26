@@ -252,35 +252,58 @@ A row already the right length, and a cell with no token in it, are
 untouched --- so a spanner, a border or a cell that reads the
 finished table is written exactly as it always was.}
 
-\item{n}{For \code{plan_col_header()}: the denominator the header needs.
+\item{n}{For \code{plan_col_header()}: the population each column describes
+--- its analysis set, the number a header prints as \code{(N=86)}.
 \code{TRUE} reads it from the data, keyed by the same \code{cols} / \code{levels}
-\code{rtf_plan()} was given.  Two things are read, in this order:
+\code{rtf_plan()} was given, \strong{at every depth of the keys}: with
+\code{cols = c("TRT", "SEX")} both the arm (\code{"Placebo"}) and the arm x sex
+cell (\code{"Placebo____F"}) are looked up.  Only a number the ARD
+\strong{states as a population size} is read:
 \enumerate{
-\item a \strong{cards sentinel} --- a row whose \code{variable} is \code{..ard_total_n..},
-\code{..ard_hierarchical_overall..} or another \code{..name..}, taken only
-when there is one such row set.  A number the ARD states outright
-is not a guess.  Its \strong{\code{N}} is read --- the denominator, never
-the \code{n} of the subjects with an event that the "Any" row shows.
-Keyed by the \code{cols}, it is one number per column
-(\code{..ard_hierarchical_overall..}: each arm's analysis set);
-keyed by nothing, it is one number for the whole table, which is
-what \code{..ard_total_n..} is.  Note that \code{\link[=ard_normalize]{ard_normalize()}} drops
-the total by default --- keep it with
-\code{ard_normalize(drop_contexts = "attributes")};
+\item a \strong{cards sentinel}'s \code{N} keyed by exactly those keys ---
+\code{..ard_hierarchical_overall..} from
+\code{cards::ard_stack_hierarchical(over_variables = TRUE)}, each arm's
+denominator; never its \code{n}, the subjects with an event that the
+"Any" row shows.  Taken only when there is one kind of sentinel;
 \item the column variable's \strong{own tabulation} --- the per-arm \code{n} of
 \code{cards::ard_stack(.by = )}, which \code{\link[=ard_normalize]{ard_normalize()}} keeps as
-\code{.key_own} rows.  Taken only when its counts add up to the \code{N}
-its rows state (the population split by arm, not the treatment
-counted as an event) and it covers every column; one \code{cols}
-variable only;
-\item otherwise \code{\link[=ard_pull]{ard_pull()}}, which lists its candidates and stops
-rather than choosing between them;
-\item and when the ARD holds no \code{N} at all to pull, the study total
-\code{\link[=ard_normalize]{ard_normalize()}} remembered as it dropped the row.  Last, not
-first: a per-column \code{N} is what a header usually wants, and one
-number for every column would quietly replace it.
+\code{.key_own} rows --- where its counts add up to the \code{N} those rows
+state (the population split by arm, not the treatment counted as
+an event).  At depth \emph{k} it is \code{cols[k]} tabulated within
+\verb{cols[1..k-1]}: cards tabulates each \code{.by} variable on its own,
+so \code{ard_stack(.by = c(TRT, SEX))} states the arm but not the arm
+x sex cell --- bind \code{cards::ard_categorical(adsl, by = TRT, variables = SEX)} to state that;
+\item an analysis summary's \code{N} only where it is a denominator by
+construction (a hierarchical summary, a percentage of the
+\verb{denominator =} data) or where \strong{two or more different variables
+agree on it for every column}.  One variable's \code{N} is the count
+of its \strong{non-missing} values --- the arm size only if nothing is
+missing, which the ARD cannot show --- and an \code{N} per visit or per
+parameter is not a column's at all.  \code{\link[=ard_pull]{ard_pull()}} is not asked.
 }
 
+The study total (\code{..ard_total_n..}, or the one \code{\link[=ard_normalize]{ard_normalize()}}
+remembers as it drops that row) is \strong{never put in every column}:
+it answers a one-column table and a cell over all the columns.
+
+What cannot be read is printed as \strong{\code{NA}}, and one \strong{warning} lists
+every such cell with the reason (\verb{only AGE states an N (79)},
+\verb{the analysis variables state different N}, ...).  The table is still
+built; a guessed number would look exactly like a right one.
+\code{print()} shows the resolved values and what is not resolved.
+
+In a header cell, \code{{n}} is the number of \strong{what the cell stands
+for}: its column; over a spanner, the level its columns agree on
+(the arm over its F and M); over all columns, the total.
+\code{{n1}}, \code{{n2}}, ... name a depth from any cell --- \code{"{col2} {n2}"}
+under \code{"{col1} {n1}"}.
+
+To \strong{give the numbers yourself}, pass a vector named by column
+key, at any depth --- \code{c(Placebo = 86, "Placebo____F" = 53, ...)} ---
+or a function of the data returning one; a single unnamed number
+fills every cell.  After a workbook (\code{rtf_plan(spec = )}), a later
+\code{plan_col_header(n = ...)} supplies the numbers and keeps the
+workbook's header.
 A \strong{function} of the data covers what neither can find, and a
 \strong{named list} of either supplies several --- and then \strong{each
 name is a token}, which is how one header says two numbers with

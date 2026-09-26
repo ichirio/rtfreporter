@@ -1025,34 +1025,59 @@ print.rtf_plan <- function(x, ...) {
 #'   A row already the right length, and a cell with no token in it, are
 #'   untouched --- so a spanner, a border or a cell that reads the
 #'   finished table is written exactly as it always was.
-#' @param n For `plan_col_header()`: the denominator the header needs.
+#' @param n For `plan_col_header()`: the population each column describes
+#'   --- its analysis set, the number a header prints as `(N=86)`.
 #'   `TRUE` reads it from the data, keyed by the same `cols` / `levels`
-#'   `rtf_plan()` was given.  Two things are read, in this order:
+#'   `rtf_plan()` was given, **at every depth of the keys**: with
+#'   `cols = c("TRT", "SEX")` both the arm (`"Placebo"`) and the arm x sex
+#'   cell (`"Placebo____F"`) are looked up.  Only a number the ARD
+#'   **states as a population size** is read:
 #'
-#'   1. a **cards sentinel** --- a row whose `variable` is `..ard_total_n..`,
-#'      `..ard_hierarchical_overall..` or another `..name..`, taken only
-#'      when there is one such row set.  A number the ARD states outright
-#'      is not a guess.  Its **`N`** is read --- the denominator, never
-#'      the `n` of the subjects with an event that the "Any" row shows.
-#'      Keyed by the `cols`, it is one number per column
-#'      (`..ard_hierarchical_overall..`: each arm's analysis set);
-#'      keyed by nothing, it is one number for the whole table, which is
-#'      what `..ard_total_n..` is.  Note that [ard_normalize()] drops
-#'      the total by default --- keep it with
-#'      `ard_normalize(drop_contexts = "attributes")`;
+#'   1. a **cards sentinel**'s `N` keyed by exactly those keys ---
+#'      `..ard_hierarchical_overall..` from
+#'      `cards::ard_stack_hierarchical(over_variables = TRUE)`, each arm's
+#'      denominator; never its `n`, the subjects with an event that the
+#'      "Any" row shows.  Taken only when there is one kind of sentinel;
 #'   2. the column variable's **own tabulation** --- the per-arm `n` of
 #'      `cards::ard_stack(.by = )`, which [ard_normalize()] keeps as
-#'      `.key_own` rows.  Taken only when its counts add up to the `N`
-#'      its rows state (the population split by arm, not the treatment
-#'      counted as an event) and it covers every column; one `cols`
-#'      variable only;
-#'   3. otherwise [ard_pull()], which lists its candidates and stops
-#'      rather than choosing between them;
-#'   4. and when the ARD holds no `N` at all to pull, the study total
-#'      [ard_normalize()] remembered as it dropped the row.  Last, not
-#'      first: a per-column `N` is what a header usually wants, and one
-#'      number for every column would quietly replace it.
+#'      `.key_own` rows --- where its counts add up to the `N` those rows
+#'      state (the population split by arm, not the treatment counted as
+#'      an event).  At depth *k* it is `cols[k]` tabulated within
+#'      `cols[1..k-1]`: cards tabulates each `.by` variable on its own,
+#'      so `ard_stack(.by = c(TRT, SEX))` states the arm but not the arm
+#'      x sex cell --- bind `cards::ard_categorical(adsl, by = TRT,
+#'      variables = SEX)` to state that;
+#'   3. an analysis summary's `N` only where it is a denominator by
+#'      construction (a hierarchical summary, a percentage of the
+#'      `denominator =` data) or where **two or more different variables
+#'      agree on it for every column**.  One variable's `N` is the count
+#'      of its **non-missing** values --- the arm size only if nothing is
+#'      missing, which the ARD cannot show --- and an `N` per visit or per
+#'      parameter is not a column's at all.  [ard_pull()] is not asked.
 #'
+#'   The study total (`..ard_total_n..`, or the one [ard_normalize()]
+#'   remembers as it drops that row) is **never put in every column**:
+#'   it answers a one-column table and a cell over all the columns.
+#'
+#'   What cannot be read is printed as **`NA`**, and one **warning** lists
+#'   every such cell with the reason (`only AGE states an N (79)`,
+#'   `the analysis variables state different N`, ...).  The table is still
+#'   built; a guessed number would look exactly like a right one.
+#'   `print()` shows the resolved values and what is not resolved.
+#'
+#'   In a header cell, `{n}` is the number of **what the cell stands
+#'   for**: its column; over a spanner, the level its columns agree on
+#'   (the arm over its F and M); over all columns, the total.
+#'   `{n1}`, `{n2}`, ... name a depth from any cell --- `"{col2} {n2}"`
+#'   under `"{col1} {n1}"`.
+#'
+#'   To **give the numbers yourself**, pass a vector named by column
+#'   key, at any depth --- `c(Placebo = 86, "Placebo____F" = 53, ...)` ---
+#'   or a function of the data returning one; a single unnamed number
+#'   fills every cell.  After a workbook (`rtf_plan(spec = )`), a later
+#'   `plan_col_header(n = ...)` supplies the numbers and keeps the
+#'   workbook's header.
+
 #'   A **function** of the data covers what neither can find, and a
 #'   **named list** of either supplies several --- and then **each
 #'   name is a token**, which is how one header says two numbers with
@@ -2090,93 +2115,190 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   cp
 }
 
-# The one cards sentinel's numbers, or NULL.  Keyed by the `cols` it is
-# a number per column; keyed by nothing it is one number for the whole
-# table.  `stat_name` "n" is the count of subjects the sentinel is about
-# -- the rows also carry "N" and "p", the denominator and the percentage
-# -- but ..ard_total_n.. has only "N", so "n" is preferred and "N"
-# taken when there is no "n".
-.plan_n_sentinel <- function(plan, sp) {
+# ---------------------------------------------------------------------------
+#  The header's N (#480, #482)
+# ---------------------------------------------------------------------------
+#  A header's number is the size of the population a column describes --
+#  an arm's analysis set, an arm x sex cell.  An ARD states that number in
+#  only a few places, and an analysis variable's `N` is NOT one of them: it
+#  is the count of that variable's non-missing values, the arm size only
+#  when nothing is missing, which the ARD cannot show.  Over 26 cards /
+#  cardx builds (#482) reading it gave a plausible wrong number in six --
+#  79 over 86 for an AGE with missing values, 151 for AE records counted
+#  without a denominator, the study total in every column.  So a number is
+#  taken only from:
+#
+#   1. a cards sentinel's `N` keyed by exactly these keys
+#      (`..ard_hierarchical_overall..`: each arm's denominator);
+#   2. the key variable's own tabulation (`.key_own`), when its `n` add up
+#      to the `N` it states -- a partition of the population;
+#   3. an analysis summary's `N` when it is a denominator by construction
+#      (a hierarchical summary is a percentage of the denominator data), or
+#      when two or more different variables state the same number.  Two
+#      variables missing for exactly the same subjects is not what an
+#      agreement usually means; one variable alone proves nothing.
+#
+#  It is read at EVERY depth of the column keys -- "Placebo" for the arm,
+#  "Placebo____F" for the arm x sex cell -- because a spanner wants the
+#  first and a leaf the second, and adding up the leaves is right only
+#  when the lower key partitions the upper one (visits do not).  A key
+#  with no stated number is left out, with the reason on attr "why"; the
+#  header prints NA there and warns.  Nothing is guessed.
+
+.plan_n_read <- function(plan, sp) {
   d <- plan$data
-  if (!is.data.frame(d) || !all(c("variable", "stat_name", "stat") %in%
-                                names(d))) {
-    return(NULL)
-  }
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
-  if (!length(cols) || !all(cols %in% names(d))) return(NULL)
-  v <- as.character(d$variable)
-  is_sent <- !is.na(v) & grepl("^\\.\\.", v)
-  if (!any(is_sent)) return(NULL)
-  # one sentinel only: two would be a choice, and choosing is what
-  # this design refuses to do for a denominator
-  if (length(unique(v[is_sent])) != 1L) return(NULL)
-  # `N` only: a header's number is the column's denominator (#480).  The
-  # hierarchical-overall rows carry `n` too -- the subjects with an
-  # event, what the "Any" row shows -- and that is a subset of the
-  # denominator, never the denominator itself; ..ard_total_n.. carries
-  # only `N`, the study total.
-  keep <- is_sent & !is.na(d$stat_name) & d$stat_name == "N"
-  if (!any(keep)) return(NULL)
-  # A sentinel with no value for the `cols` keys is ONE number for the
-  # whole table -- ..ard_total_n.. is exactly that -- so it is taken
-  # as a scalar rather than keyed.
-  keyed <- keep
-  for (k in cols) keyed <- keyed & !is.na(d[[k]])
-  if (!any(keyed)) {
-    val <- suppressWarnings(as.numeric(as.character(d$stat[keep])))
-    val <- unique(val[!is.na(val)])
-    return(if (length(val) == 1L) val else NULL)
+  sep <- sp$sep %||% "____"
+  total <- attr(d, "ard_total_n", exact = TRUE)
+  out <- numeric(0)
+  why <- character(0)
+  done <- function() structure(out, total = total, why = why)
+  if (!is.data.frame(d) || !length(cols) || !all(cols %in% names(d)) ||
+      !all(c("variable", "stat_name", "stat") %in% names(d))) {
+    why <- c(.all = paste0("the data has no `variable` / `stat_name` / ",
+                           "`stat` for these columns"))
+    return(done())
   }
-  keep <- keyed
-  sub <- d[keep, , drop = FALSE]
-  key <- do.call(paste, c(lapply(cols, function(k)
-                            as.character(sub[[k]])),
-                          list(sep = sp$sep %||% "____")))
-  val <- suppressWarnings(as.numeric(as.character(sub$stat)))
-  out <- vapply(split(val, key), function(z) z[1L], numeric(1))
-  ord <- if (is.null(sp$levels)) .ard_key_order(sub, cols, key) else {
-    lv <- sp$levels[[cols[1L]]] %||% sp$levels[[1L]]
-    c(intersect(lv, names(out)), setdiff(names(out), lv))
+  v   <- as.character(d$variable)
+  sn  <- as.character(d$stat_name)
+  st  <- suppressWarnings(as.numeric(as.character(d$stat)))
+  ctx <- if ("context" %in% names(d)) as.character(d$context) else
+    rep(NA_character_, nrow(d))
+  own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
+    rep(FALSE, nrow(d))
+  sent <- !is.na(v) & startsWith(v, "..")
+  has  <- lapply(cols, function(k) !is.na(d[[k]]))
+  # a sentinel keyed by nothing is ONE number for the study
+  # (..ard_total_n..): a total, never every column's number
+  none <- Reduce(`&`, lapply(has, `!`))
+  tt <- unique(st[sent & none & sn %in% "N" & !is.na(st)])
+  if (length(tt) == 1L) total <- tt
+  # two different sentinels are a choice, and choosing is a guess
+  one_sent <- length(unique(v[sent & !none])) <= 1L
+  for (k in seq_along(cols)) {
+    at <- Reduce(`&`, has[seq_len(k)])
+    if (k < length(cols)) {
+      at <- at & Reduce(`&`, lapply(has[-seq_len(k)], `!`))
+    }
+    if (!any(at)) next
+    key <- do.call(paste, c(lapply(cols[seq_len(k)], function(cc)
+      as.character(d[[cc]])), list(sep = sep)))
+    got <- numeric(0)
+    add <- function(x) {
+      x <- x[!names(x) %in% names(got)]
+      got <<- c(got, x)
+    }
+    if (one_sent) add(.plan_n_unique(st, key, at & sent & sn %in% "N"))
+    add(.plan_n_partition(d, cols, k, key, at & own & v %in% cols[k],
+                          sn, st, sep))
+    s <- .plan_n_summaries(v, ctx, sn, st, key, at & !own & !sent)
+    add(s$n)
+    miss <- setdiff(names(s$why), names(got))
+    why <- c(why, s$why[miss])
+    # the columns' order: declared levels first, then the frame's own
+    ord <- .ard_key_order(d[at, , drop = FALSE], cols[seq_len(k)], key[at])
+    lv <- sp$levels[[cols[1L]]]
+    if (!is.null(lv)) {
+      top <- vapply(strsplit(ord, sep, fixed = TRUE), `[`, "", 1L)
+      ord <- ord[order(match(top, lv), seq_along(ord))]
+    }
+    got <- got[c(intersect(ord, names(got)), setdiff(names(got), ord))]
+    out <- c(out, got)
   }
-  out[intersect(ord, names(out))]
+  done()
 }
 
-# The column variable's own tabulation, as a header's `n`.  A key variable's
-# tabulation is not always the population split by arm -- bind separately
-# built AE blocks and the treatment arrives in `variable` counting subjects
-# WITH an event -- so it is taken only when the ARD itself says it is a
-# partition: its `n` add up to the `N` every one of its rows states.  And
-# only when it covers every column the body has; a `Total` column it cannot
-# speak for means the answer is somebody else's.
-.plan_n_key_own <- function(plan, sp) {
-  d <- plan$data
-  if (!is.data.frame(d) ||
-      !all(c(".key_own", "variable", "stat_name", "stat") %in% names(d))) {
-    return(NULL)
+# One number per key from the selected rows, or nothing for that key.
+.plan_n_unique <- function(st, key, sel) {
+  sel <- sel & !is.na(st)
+  if (!any(sel)) return(numeric(0))
+  vals <- lapply(split(st[sel], key[sel]), unique)
+  vals <- vals[lengths(vals) == 1L]
+  unlist(vals)
+}
+
+# The key variable's own tabulation at depth `k`: `cols[k]` counted within
+# each value of `cols[1..k-1]`.  Taken only where it is a partition -- its
+# `n` add up to the one `N` those rows state -- because a key tabulated
+# as an EVENT (the treatment of the subjects with an AE) is not the
+# population split by arm.
+.plan_n_partition <- function(d, cols, k, key, sel, sn, st, sep) {
+  n_sel <- sel & sn %in% "n"
+  if (!any(n_sel)) return(numeric(0))
+  grp <- if (k == 1L) rep("", nrow(d)) else
+    do.call(paste, c(lapply(cols[seq_len(k - 1L)], function(cc)
+      as.character(d[[cc]])), list(sep = sep)))
+  out <- numeric(0)
+  for (g in unique(grp[n_sel])) {
+    i <- n_sel & grp == g
+    n <- st[i]
+    kk <- key[i]
+    if (anyNA(n) || anyDuplicated(kk)) next
+    big <- unique(st[sel & sn %in% "N" & grp == g])
+    if (length(big) != 1L || is.na(big) || !isTRUE(all.equal(sum(n), big))) {
+      next
+    }
+    out <- c(out, stats::setNames(n, kk))
   }
-  cols <- as.character(unlist(sp$cols, use.names = FALSE))
-  if (length(cols) != 1L || !cols %in% names(d)) return(NULL)
-  mine <- d$.key_own %in% TRUE & !is.na(d$variable) & d$variable == cols &
-    !is.na(d[[cols]])
-  sel <- mine & !is.na(d$stat_name) & d$stat_name == "n"
-  if (!any(sel)) return(NULL)
-  sub <- d[sel, , drop = FALSE]
-  n   <- suppressWarnings(as.numeric(as.character(sub$stat)))
-  key <- as.character(sub[[cols]])
-  if (anyNA(n) || anyDuplicated(key)) return(NULL)
-  big <- mine & !is.na(d$stat_name) & d$stat_name == "N"
-  big <- unique(suppressWarnings(as.numeric(as.character(d$stat[big]))))
-  if (length(big) != 1L || is.na(big) || !isTRUE(all.equal(sum(n), big))) {
-    return(NULL)
+  out
+}
+
+# The analysis summaries' `N`, where it can be trusted to be a column's
+# population, and why not where it cannot.
+.plan_n_summaries <- function(v, ctx, sn, st, key, sel) {
+  idx <- which(sel & sn %in% "N" & !is.na(st))
+  none <- list(n = numeric(0), why = character(0))
+  if (!length(idx)) return(none)
+  who <- paste(v[idx], ctx[idx], sep = "\r")
+  tabs <- list()
+  split_up <- character(0)
+  for (s in unique(who)) {
+    j <- idx[who == s]
+    vals <- lapply(split(st[j], key[j]), unique)
+    # more than one N per column is not a column's number -- one per
+    # visit, per parameter, per row
+    if (any(lengths(vals) != 1L)) {
+      split_up <- c(split_up, sub("\r.*$", "", s))
+      next
+    }
+    tabs[[s]] <- unlist(vals)
   }
-  body <- .ard_first_seen(d[[cols]][!(d$.key_own %in% TRUE)])
-  if (length(setdiff(body, key))) return(NULL)
-  out <- stats::setNames(n, key)
-  ord <- if (is.null(sp$levels)) .ard_key_order(sub, cols, key) else {
-    lv <- sp$levels[[cols]] %||% sp$levels[[1L]]
-    c(intersect(lv, names(out)), setdiff(names(out), lv))
+  out <- numeric(0)
+  why <- character(0)
+  # Variables that disagree for ANY column are counting their own
+  # non-missing values, so where they happen to agree it is chance
+  # (80 and 80 for one arm, 79 and 80 for the next), not a population.
+  clash <- character(0)
+  for (kk in unique(key[idx])) {
+    vals <- unlist(lapply(tabs, function(t) if (kk %in% names(t)) t[[kk]]))
+    if (length(unique(vals)) > 1L) {
+      clash <- c(clash, paste0(kk, " -- ", paste0(
+        sub("\r.*$", "", names(vals)), " ", vals, collapse = ", ")))
+    }
   }
-  out[intersect(ord, names(out))]
+  for (kk in unique(key[idx])) {
+    have <- Filter(function(t) kk %in% names(t), tabs)
+    if (!length(have)) {
+      why[[kk]] <- sprintf(paste0(
+        "%s states an N per row (a visit, a parameter), not one per column"),
+        paste(unique(split_up), collapse = ", "))
+      next
+    }
+    vals <- vapply(have, function(t) t[[kk]], 0)
+    vars <- sub("\r.*$", "", names(have))
+    hier <- grepl("hierarch", sub("^[^\r]*\r", "", names(have)))
+    if (length(clash)) {
+      why[[kk]] <- sprintf(
+        "the analysis variables state different N (%s)", clash[[1L]])
+    } else if (any(hier) || length(unique(vars)) >= 2L) {
+      out[[kk]] <- vals[[1L]]
+    } else {
+      why[[kk]] <- sprintf(paste0(
+        "only %s states an N (%s) -- the count of its non-missing ",
+        "values, not necessarily the analysis set"), vars[[1L]], vals[[1L]])
+    }
+  }
+  list(n = out, why = why)
 }
 
 # Every token a header cell may carry, with what it resolves to.
@@ -2243,8 +2365,32 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   }
   for (nm in names(toks)) {
     v <- toks[[nm]]
+    why_n <- attr(v, "why", exact = TRUE)
+    if (!length(v)) {
+      out[[paste0("{", nm, "}")]] <- paste0(
+        "-- NOT resolved: ", if (length(why_n)) why_n[[1L]] else
+          "the ARD states no population size for these columns")
+      next
+    }
     out[[paste0("{", nm, "}")]] <- show(v)
-    tot <- suppressWarnings(sum(as.numeric(unlist(v)), na.rm = TRUE))
+    if (length(why_n)) {
+      out[[paste0("{", nm, "} NOT resolved")]] <- paste0(
+        "-- ", paste0(ifelse(names(why_n) == ".all", "",
+                             paste0(names(why_n), ": ")), why_n)[[1L]],
+        if (length(why_n) > 1L) sprintf(" (+%d more)", length(why_n) - 1L))
+    }
+    # the leaves only: a vector keyed at several depths holds each
+    # subject once per depth
+    nmv <- names(v) %||% character(0)
+    lv <- v
+    if (length(nmv) && !is.null(cols)) {
+      leafy <- intersect(cols, nmv)
+      if (length(leafy)) lv <- v[leafy]
+    } else if (length(nmv)) {
+      dep <- lengths(strsplit(nmv, sep, fixed = TRUE))
+      lv <- v[dep == max(dep)]
+    }
+    tot <- suppressWarnings(sum(as.numeric(unlist(lv)), na.rm = TRUE))
     out[[paste0("{", nm, ":sum}")]] <- paste0(
       "= ", format(tot, trim = TRUE),
       " over every column (less over a spanner: its own columns)")
@@ -2268,37 +2414,12 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
           "same `cols` rtf_plan()\n  was given, and this plan ",
           "has none.  Give a function of the data instead."))
       }
-      # A cards SENTINEL is a number the ARD states outright -- each
-      # arm's denominator (`..ard_hierarchical_overall..` N), the
-      # study total (`..ard_total_n..`) -- and it is what a header
-      # asks for.  Reading it is not a guess: the row says so by name,
-      # and it is taken only when its keys ARE the `cols`.  Otherwise
-      # ard_pull() answers, which lists its candidates and stops
-      # rather than choosing for you.
-      hit <- .plan_n_sentinel(plan, sp)
-      if (!is.null(hit)) return(hit)
-      # Next, the column variable's OWN tabulation -- the per-arm `n`
-      # that ard_stack(.by = ) writes for exactly this purpose, kept by
-      # ard_normalize() as `.key_own` rows.  Taken only when it is a
-      # partition of the population and covers every column.
-      hit <- .plan_n_key_own(plan, sp)
-      if (!is.null(hit)) return(hit)
-      a <- list(ard = plan$data, cols = sp$cols)
-      if (!is.null(sp$levels)) a$levels <- sp$levels
-      # LAST, not first: a per-column `N` is what a column header
-      # usually wants, and the study total would quietly replace it.
-      # The total answers only when there is no `N` at all to pull --
-      # which is the ARD whose `..ard_total_n..` ard_normalize()
-      # dropped.  Asked THIS way rather than by catching ard_pull()'s
-      # error, because a mistyped `cols` also raises one and must not
-      # come back as a number.
-      tot <- attr(plan$data, "ard_total_n", exact = TRUE)
-      sn <- plan$data[["stat_name"]]
-      # a key variable's own `N` is the study total, not a column's
-      own <- plan$data[[".key_own"]] %in% TRUE
-      if (length(own) == length(sn)) sn[own] <- NA
-      if (!is.null(tot) && !any(!is.na(sn) & sn == "N")) return(tot)
-      return(do.call(ard_pull, a))
+      # Only a number the ARD STATES as a population size, at every
+      # depth of the keys; what it does not state is left out, and the
+      # header prints NA there and says why (see .plan_n_read()).
+      # ard_pull() is not asked: it reads an analysis variable's `N`,
+      # the count of its non-missing values.
+      return(.plan_n_read(plan, sp))
     }
     if (is.function(v)) v(plan$data) else v
   }
@@ -2499,25 +2620,54 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   toks <- if (is.list(nvals) && !is.null(names(nvals)) &&
               any(nzchar(names(nvals)))) nvals else list(n = nvals)
   if (is.null(toks[["n"]]) && length(toks) == 1L) names(toks) <- "n"
-  # a value for THIS column: by name if the entry is keyed by column,
-  # otherwise the single number it is
-  pick <- function(v, col) {
+  # A NAMED vector is keyed at any depth of the column keys: "Placebo"
+  # is the arm, "Placebo____F" the arm x sex cell.  An UNNAMED single
+  # number is every cell's.  The study total (attr "total") answers
+  # only for the whole table: a one-column table, or a cell over all
+  # of it -- never each column, which is how 254 got into every arm.
+  whole <- function(v) {
+    t <- attr(v, "total", exact = TRUE)
+    if (is.null(t)) NA else t
+  }
+  lookup <- function(v, key, all_cols = FALSE) {
     if (is.null(v)) return(NA)
-    i <- if (is.null(col)) NA_integer_ else
-      match(col, names(v) %||% character(0))
-    if (!is.na(i)) v[[i]] else if (length(v) == 1L) v[[1L]] else NA
+    nm <- names(v)
+    if (length(v) == 1L && (is.null(nm) || !any(nzchar(nm)))) {
+      return(v[[1L]])
+    }
+    if (!is.null(key) && key %in% nm) return(v[[key]])
+    if (all_cols || length(cols) == 1L) return(whole(v))
+    NA
+  }
+  # Every token that came out NA, so ONE warning can say which and why
+  # -- a header that quietly printed "" was how a missing N went unseen.
+  missed <- character(0)
+  miss <- function(tok, where) {
+    missed[[length(missed) + 1L]] <<- sprintf("{%s} over %s", tok, where)
   }
   # `{n:sum}` is the total over the columns THIS CELL COVERS -- so a
   # spanner over an arm's two columns shows that arm's N, and one over
   # all of them shows the study total, without the header being told
   # either.  A cell covering one column sums to that column; a cell
-  # outside the data (the stub) sums over every column.
+  # outside the data (the stub) sums over every column.  Only the
+  # columns themselves are added: a vector keyed at several depths
+  # would otherwise count each subject twice.
   summed <- function(v, over) {
     if (is.null(v)) return(NA)
     nm <- names(v) %||% character(0)
     if (!length(nm)) return(if (length(v) == 1L) v[[1L]] else NA)
-    keep <- if (!length(over)) nm else intersect(over, nm)
-    if (!length(keep)) return(NA)
+    if (!length(over)) {
+      keep <- intersect(cols, nm)
+      # a vector keyed by something else entirely: every entry
+      if (!length(keep)) keep <- nm
+      else if (length(keep) < length(cols)) return(NA)
+    } else {
+      keep <- intersect(over, nm)
+      # a column with no number makes the sum a wrong number, not a
+      # smaller one
+      if (!length(keep) ||
+          length(keep) < length(intersect(over, cols))) return(NA)
+    }
     sum(suppressWarnings(as.numeric(unlist(v[keep]))), na.rm = TRUE)
   }
   one <- function(tpl, col, over = character(0)) {
@@ -2539,6 +2689,16 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
         if (length(v) == 1L && !is.na(v)) v else ""
       }, "")
     } else character(0)
+    # how many leading levels the cell stands for: all of them over one
+    # column, the agreed ones over a spanner, none over everything
+    depth <- if (!is.null(col)) length(pp) else {
+      a <- which(!nzchar(pp))
+      if (length(a)) a[1L] - 1L else length(pp)
+    }
+    all_cols <- is.null(col) && (!length(over) || setequal(over, cols))
+    where <- if (!is.null(col)) sQuote(col) else if (depth > 0L)
+      sQuote(paste(pp[seq_len(depth)], collapse = sep)) else if (all_cols)
+      "all columns" else paste(sQuote(over), collapse = " + ")
     out <- tpl
     for (i in seq_along(pp)) {
       out <- gsub(paste0("{col", i, "}"), pp[i], out, fixed = TRUE)
@@ -2547,20 +2707,47 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
             else if (is.null(col) && length(pp)) pp[length(pp)]
             else (col %||% "")
     out <- gsub("{col}", leaf, out, fixed = TRUE)
-    say <- function(v) if (is.null(v) || all(is.na(v))) "" else
-      format(v, trim = TRUE)
-    for (nm in names(toks)) {
-      out <- gsub(paste0("{", nm, ":sum}"),
-                  say(summed(toks[[nm]], over)), out, fixed = TRUE)
-      # `{n:<column>}` names ONE of the values, for a cell that has to
-      # say a number belonging to a column it does not sit over.
-      v <- toks[[nm]]
-      for (k in names(v) %||% character(0)) {
-        out <- gsub(paste0("{", nm, ":", k, "}"), say(v[[k]]),
-                    out, fixed = TRUE)
+    say <- function(v, tok) {
+      if (is.null(v) || all(is.na(v))) {
+        miss(tok, where)
+        return("NA")
       }
-      out <- gsub(paste0("{", nm, "}"), say(pick(toks[[nm]], col)),
-                  out, fixed = TRUE)
+      format(v, trim = TRUE)
+    }
+    for (nm in names(toks)) {
+      v <- toks[[nm]]
+      if (grepl(paste0("{", nm, ":sum}"), out, fixed = TRUE)) {
+        out <- gsub(paste0("{", nm, ":sum}"),
+                    say(summed(v, over), paste0(nm, ":sum")), out,
+                    fixed = TRUE)
+      }
+      # `{n:<key>}` names ONE of the values, for a cell that has to say
+      # a number belonging to a column it does not sit over.
+      for (k in names(v) %||% character(0)) {
+        tk <- paste0("{", nm, ":", k, "}")
+        if (grepl(tk, out, fixed = TRUE)) {
+          out <- gsub(tk, say(v[[k]], paste0(nm, ":", k)), out, fixed = TRUE)
+        }
+      }
+      # `{n1}`, `{n2}`, ... the number at that depth of the keys: the
+      # arm over an arm x sex column, whatever cell it is written in
+      for (i in seq_along(pp)) {
+        tk <- paste0("{", nm, i, "}")
+        # a token of the user's own by that name is theirs
+        if (paste0(nm, i) %in% names(toks) ||
+            !grepl(tk, out, fixed = TRUE)) next
+        val <- if (i <= depth) lookup(v, paste(pp[seq_len(i)],
+                                               collapse = sep)) else NA
+        out <- gsub(tk, say(val, paste0(nm, i)), out, fixed = TRUE)
+      }
+      # `{n}`: the number of what the cell stands for -- its column, or
+      # the level a spanner's columns agree on, or the whole table
+      tk <- paste0("{", nm, "}")
+      if (grepl(tk, out, fixed = TRUE)) {
+        key <- if (depth > 0L) paste(pp[seq_len(depth)], collapse = sep)
+        out <- gsub(tk, say(lookup(v, key, all_cols), nm), out,
+                    fixed = TRUE)
+      }
     }
     out
   }
@@ -2605,7 +2792,36 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   }
   out <- lapply(h, fix)
   if (inherits(h, "rtf_col_header")) class(out) <- class(h)
+  if (length(missed)) .plan_n_warn(unique(missed), toks)
   out
+}
+
+# One warning for every header number that could not be had, with the
+# reason the ARD gave and the way to supply it.  The header still gets
+# built -- with NA where the number would be -- so the table can be
+# looked at; a guessed number would look exactly like a right one.
+.plan_n_warn <- function(missed, toks) {
+  why <- unique(unlist(lapply(toks, function(v) {
+    w <- attr(v, "why", exact = TRUE)
+    if (length(w)) paste0(ifelse(names(w) == ".all", "", paste0(names(w), ": ")),
+                          w)
+  })))
+  show <- utils::head(missed, 6L)
+  more <- length(missed) - length(show)
+  msg <- c(
+    "Column header: a number could not be read from the ARD and is printed as NA.",
+    paste0("  ", show),
+    if (more > 0L) sprintf("  ... and %d more", more),
+    if (length(why)) c("  Why:", paste0("    ", utils::head(why, 6L))),
+    paste0("  An ARD states a column's population only as a sentinel's N ",
+           "(ard_stack_hierarchical),"),
+    paste0("  the column variable's own tabulation (ard_stack(.by = )), ",
+           "or a denominator several"),
+    "  variables agree on.  Otherwise give the numbers yourself:",
+    paste0("    plan_col_header(n = c(\"Placebo\" = 86, ...))  -- names at any ",
+           "level (\"Placebo\", \"Placebo____F\"),"),
+    "    or n = function(data) ... , or n = ard_pull(ard, cols, variable = \"AGE\").")
+  warning(paste(msg, collapse = "\n"), call. = FALSE)
 }
 
 # The cells map, looked up WITHOUT parsing: `.ard_lookup_cells()` returns the
