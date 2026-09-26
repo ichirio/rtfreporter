@@ -259,8 +259,10 @@ finished table is written exactly as it always was.}
 \item a \strong{cards sentinel} --- a row whose \code{variable} is \code{..ard_total_n..},
 \code{..ard_hierarchical_overall..} or another \code{..name..}, taken only
 when there is one such row set.  A number the ARD states outright
-is not a guess.  Keyed by the \code{cols}, it is one number per column
-(\code{..ard_hierarchical_overall..}: the subjects with any event);
+is not a guess.  Its \strong{\code{N}} is read --- the denominator, never
+the \code{n} of the subjects with an event that the "Any" row shows.
+Keyed by the \code{cols}, it is one number per column
+(\code{..ard_hierarchical_overall..}: each arm's analysis set);
 keyed by nothing, it is one number for the whole table, which is
 what \code{..ard_total_n..} is.  Note that \code{\link[=ard_normalize]{ard_normalize()}} drops
 the total by default --- keep it with

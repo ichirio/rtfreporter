@@ -1032,8 +1032,10 @@ print.rtf_plan <- function(x, ...) {
 #'   1. a **cards sentinel** --- a row whose `variable` is `..ard_total_n..`,
 #'      `..ard_hierarchical_overall..` or another `..name..`, taken only
 #'      when there is one such row set.  A number the ARD states outright
-#'      is not a guess.  Keyed by the `cols`, it is one number per column
-#'      (`..ard_hierarchical_overall..`: the subjects with any event);
+#'      is not a guess.  Its **`N`** is read --- the denominator, never
+#'      the `n` of the subjects with an event that the "Any" row shows.
+#'      Keyed by the `cols`, it is one number per column
+#'      (`..ard_hierarchical_overall..`: each arm's analysis set);
 #'      keyed by nothing, it is one number for the whole table, which is
 #'      what `..ard_total_n..` is.  Note that [ard_normalize()] drops
 #'      the total by default --- keep it with
@@ -2108,18 +2110,13 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
   # one sentinel only: two would be a choice, and choosing is what
   # this design refuses to do for a denominator
   if (length(unique(v[is_sent])) != 1L) return(NULL)
-  # `n` first, then `N`: the hierarchical-overall rows carry both and
-  # `n` is the count the sentinel is about, while ..ard_total_n..
-  # carries only `N`, the study total.
-  stat_of <- NULL
-  for (st in c("n", "N")) {
-    if (any(is_sent & !is.na(d$stat_name) & d$stat_name == st)) {
-      stat_of <- st
-      break
-    }
-  }
-  if (is.null(stat_of)) return(NULL)
-  keep <- is_sent & !is.na(d$stat_name) & d$stat_name == stat_of
+  # `N` only: a header's number is the column's denominator (#480).  The
+  # hierarchical-overall rows carry `n` too -- the subjects with an
+  # event, what the "Any" row shows -- and that is a subset of the
+  # denominator, never the denominator itself; ..ard_total_n.. carries
+  # only `N`, the study total.
+  keep <- is_sent & !is.na(d$stat_name) & d$stat_name == "N"
+  if (!any(keep)) return(NULL)
   # A sentinel with no value for the `cols` keys is ONE number for the
   # whole table -- ..ard_total_n.. is exactly that -- so it is taken
   # as a scalar rather than keyed.
@@ -2271,8 +2268,8 @@ plan_paginate_cols <- function(plan, at = NULL, cols = NULL,
           "same `cols` rtf_plan()\n  was given, and this plan ",
           "has none.  Give a function of the data instead."))
       }
-      # A cards SENTINEL is a number the ARD states outright -- the
-      # subjects with any event (`..ard_hierarchical_overall..`), the
+      # A cards SENTINEL is a number the ARD states outright -- each
+      # arm's denominator (`..ard_hierarchical_overall..` N), the
       # study total (`..ard_total_n..`) -- and it is what a header
       # asks for.  Reading it is not a guess: the row says so by name,
       # and it is taken only when its keys ARE the `cols`.  Otherwise
