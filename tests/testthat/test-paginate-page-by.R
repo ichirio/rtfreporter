@@ -63,11 +63,29 @@ test_that("page_by accepts several columns and names the page by the pair", {
                                  "Period 2, A", "Period 2, B"))
 })
 
-test_that("page_by partitions on RUNS, like by_value", {
-  d <- .lab(periods = "Period 1", params = "ALT")
+test_that("a page GATHERS its rows, scattered or not, in the body's order", {
+  # Needing the body sorted first is SAS's contract, not R's: R subsets
+  # by value and leaves the order alone.  So Period 1 is ONE page holding
+  # both of its blocks, and the rows inside it stay as they came.
+  d  <- .lab(periods = "Period 1", params = "ALT")
   d2 <- rbind(d, .lab(periods = "Period 2", params = "ALT"), d)
   pg <- as_rtftables(d2, page_by = "period", drop_cols = "period")
-  expect_identical(.names(pg), c("Period 1...1", "Period 2", "Period 1...2"))
+  expect_identical(.names(pg), c("Period 1", "Period 2"))
+  expect_identical(unname(.rows(pg)),
+                   c(2L * nrow(d), nrow(d)))
+})
+
+test_that("a by_value group gathers its rows too", {
+  # the two splits had disagreed: by_value + stub_vars has always
+  # gathered, and this path cut the same table into one page per block
+  d <- data.frame(period = c("P1", "P2", "P1", "P2"),
+                  label  = c("a", "b", "c", "d"),
+                  n      = 1:4, stringsAsFactors = FALSE)
+  pg <- as_rtftables(d, split = "by_value", group_col = "period",
+                     drop_cols = "period")
+  expect_identical(.names(pg), c("P1", "P2"))
+  expect_identical(pg[[1L]]$data[[1L]], c("a", "c"))
+  expect_identical(pg[[2L]]$data[[1L]], c("b", "d"))
 })
 
 # ──────── naming ───────────────────────────────────────────────────────────

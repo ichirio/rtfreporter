@@ -1,5 +1,30 @@
 # rtfreporter (development version)
 
+### Behaviour changes
+
+- **A page gathers its rows; it does not require the body sorted first.**
+  `page_by` and `split = "by_value"` partitioned the body on RUNS of the
+  key, so a value that came back later started another page.  On an
+  interleaved body that is not a different page order -- it is half a page:
+  a Solicited AE report built from an unsorted table came out as twelve
+  7-row pages instead of six 14-row ones, with nothing said about it.
+
+  Needing the rows pre-sorted is SAS's contract, not R's.  R subsets by
+  value and leaves the order alone, so a page now **gathers** every row
+  that has its value, scattered or not, and the body's own order stands --
+  inside a page and between pages.  On an already-grouped body, the usual
+  one, this is exactly what the runs were, and all six sample reports are
+  byte-identical.
+
+  The two splits had also disagreed with each other: `by_value` combined
+  with `stub_vars` has always gathered (it partitions the raw body by the
+  value before building the stub), while the plain `by_value` path cut the
+  same table into one page per block.  They now read the key the same way.
+
+  An **indent** or **filled** group is untouched: there the group is a
+  position in the body rather than a key, so there is nothing to gather by.
+  `sort_by` is for choosing an order, not for making the pages whole.  (#485)
+
 ### New features
 
 - **Run tokens: `{PROGRAM}`, `{PROGRAM_NAME}`, `{PROGRAM_DIR}`,
@@ -32,6 +57,18 @@
 
 ### Bug fixes
 
+- **A header row built with `c()` now says so.**  An `rtf_col_cell` is a
+  list underneath, so `c(list(col_cell(1, "")), col_cell(c(2, 4), "S"))`
+  **splices** the second cell into its own fields: the row becomes
+  `list(cell, 2:4, "S")` -- three elements, not two.  The first `$pos`
+  then failed with R's `$ operator is invalid for atomic vectors`, which
+  names neither the row nor the `c()`.
+
+  It now names both, and the fix: `list(col_cell(1, ""), col_cell(c(2, 4),
+  "S"))`.  A list without a `pos` is a different mistake and keeps its own
+  `missing \`pos\`` message.  `c(list(...), lapply(...))` is still fine,
+  because `lapply()` returns a list.  (#485)
+
 - **`format_count_pct()` rounds the percent with the package rule** (#476).
   It used `sprintf()`'s own rounding, so `6.25%` printed `6.2` even for a
   study that rounds like SAS; it now takes `rounding =` like every other
@@ -39,6 +76,26 @@
   "< 10" branch and print a misaligned `10.0`, and `99.96` now prints `(100)`.
 
 ### Documentation
+
+- **The help for `as_rtftables(split = )` described `"group_force"`
+  wrongly**, which is how a report ends up with a group cut in half when
+  the page looked as though it had room.  It said `"group_force"` was
+  `"group_safe"` with an escape hatch for a group too big to fit.  It is
+  not: it **cuts every `max_rows` rows wherever that falls**, which is
+  what the implementation has always done and what makes the pages come
+  out the same height.  A group straddling the cut is split and the next
+  page opens with a continuation label.
+
+  `"group_safe"` is the one that keeps a group together -- a group that
+  does not fit in what is left starts the next page -- and it still
+  splits a group that on its own exceeds `max_rows`, because that one has
+  to be split.
+
+  Measured, and now in the help and a test: ten groups of four rows with
+  `max_rows = 30` and the blanks counted give **26 and 26** rows under
+  `"group_safe"`, and **30 and 24** under `"group_force"` with the sixth
+  group cut in half.  Only the help changed; no report's pagination
+  moves.  (#485)
 
 - **The pre-1.0 exception and the hotfix procedure are written down** (#471).
 
