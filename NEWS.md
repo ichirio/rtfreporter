@@ -67,6 +67,12 @@
 
 ### Bug fixes
 
+- **`print()` of an rtftable: `n = Inf` shows every row, and a spanning
+  header label with a line break stacks its lines** (#489).  `n = Inf`
+  failed (`as.integer(Inf)` is `NA`); a spanner such as
+  `col_cell(2:3, "Placebo\n(N=86)")` was drawn as one line, breaking the
+  preview.  The RTF was never affected.
+
 - **A header row built with `c()` now says so.**  An `rtf_col_cell` is a
   list underneath, so `c(list(col_cell(1, "")), col_cell(c(2, 4), "S"))`
   **splices** the second cell into its own fields: the row becomes
