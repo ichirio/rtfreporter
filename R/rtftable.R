@@ -1076,8 +1076,11 @@ rtftable <- function(
   if (is.null(leaf)) leaf <- names(body) %||% paste0("V", seq_len(nc))
   leaf <- as.character(leaf)
 
-  # Rows to show, as a character matrix (NA -> "").
-  nshow <- max(0L, min(as.integer(n), nr))
+  # Rows to show, as a character matrix (NA -> "").  `n = Inf` shows them
+  # all (as.integer(Inf) would be NA).
+  n <- suppressWarnings(as.numeric(n)[1L])
+  if (is.na(n)) n <- 10
+  nshow <- as.integer(max(0, min(n, nr)))
   colcells <- lapply(seq_len(nc), function(j) {
     v <- if (nshow > 0L) as.character(body[[j]][seq_len(nshow)]) else character(0)
     v[is.na(v)] <- ""
@@ -1112,7 +1115,8 @@ rtftable <- function(
       from <- cell$from; to <- cell$to
       if (is.null(from) || is.null(to)) next
       cols  <- from:to
-      need  <- .disp_width(as.character(cell$label %||% ""))
+      need  <- max(.disp_width(strsplit(as.character(cell$label %||% ""),
+                                        "\n", fixed = TRUE)[[1L]]), 0L)
       avail <- sum(width[cols]) + sepw * (length(cols) - 1L)
       if (need > avail) {
         deficit <- need - avail
@@ -1143,13 +1147,15 @@ rtftable <- function(
     }, character(1L))
   }
 
-  # Render one spanning-header row -> a label line plus an underline line.
-  # Contiguous columns not covered by a cell become blank single-column units,
-  # so every unit is separated by exactly one column boundary (one `sep`).
+  # Render one spanning-header row -> its label line(s) plus an underline
+  # line.  A label with embedded "\n" stacks its lines, bottom-aligned like
+  # the leaf labels.  Contiguous columns not covered by a cell become blank
+  # single-column units, so every unit is separated by exactly one column
+  # boundary (one `sep`).
   render_span <- function(row) {
     by_from <- list()
     for (cell in row) by_from[[as.character(as.integer(cell$from))]] <- cell
-    units_lab <- character(0); units_ul <- character(0)
+    units <- list(); units_ul <- character(0)
     col <- 1L
     while (col <= nc) {
       cell <- by_from[[as.character(col)]]
@@ -1157,7 +1163,10 @@ rtftable <- function(
         to  <- as.integer(cell$to)
         fw  <- sum(width[col:to]) + sepw * (to - col)
         lab <- as.character(cell$label %||% "")
-        units_lab <- c(units_lab, .pad_cell(lab, fw, cell$align %||% "center"))
+        ln  <- strsplit(lab, "\n", fixed = TRUE)[[1L]]
+        if (length(ln) == 0L) ln <- ""
+        units[[length(units) + 1L]] <- list(
+          lines = ln, width = fw, align = cell$align %||% "center")
         ul_on <- (isTRUE(cell$underline) || !is.null(cell$border) ||
                     !is.null(side("spanning", "bottom"))) && nzchar(lab)
         units_ul <- c(units_ul,
@@ -1165,14 +1174,22 @@ rtftable <- function(
           else strrep(" ", fw))
         col <- to + 1L
       } else {
-        units_lab <- c(units_lab, strrep(" ", width[col]))
+        units[[length(units) + 1L]] <- list(lines = "", width = width[col],
+                                            align = "left")
         units_ul  <- c(units_ul,  strrep(" ", width[col]))
         col <- col + 1L
       }
     }
-    lab_line <- paste(units_lab, collapse = sep)
+    h <- max(vapply(units, function(u) length(u$lines), integer(1L)))
+    lab_lines <- vapply(seq_len(h), function(li) {
+      paste(vapply(units, function(u) {
+        idx <- li - (h - length(u$lines))
+        txt <- if (idx >= 1L) u$lines[[idx]] else ""
+        .pad_cell(txt, u$width, u$align)
+      }, character(1L)), collapse = sep)
+    }, character(1L))
     ul_line  <- paste(units_ul,  collapse = sep)
-    list(label = lab_line, underline = ul_line,
+    list(label = lab_lines, underline = ul_line,
          has_underline = grepl("[^ ]", ul_line))
   }
 

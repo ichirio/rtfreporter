@@ -192,3 +192,25 @@ test_that("print.rtfreport shows page/section counts, geometry and fonts", {
   expect_match(out, "Colors:")
   expect_invisible(print(rep))
 })
+
+test_that("print(n = Inf) shows every row (#489)", {
+  d <- data.frame(Visit = paste("V", 1:15), a = 1:15)
+  out <- utils::capture.output(print(rtftable(d), n = Inf))
+  expect_true(any(grepl("V 15", out, fixed = TRUE)))
+  expect_false(any(grepl("more row", out, fixed = TRUE)))
+})
+
+test_that("a spanning header label stacks its lines (#489)", {
+  d <- data.frame(Visit = "V1", a = 1, b = 2, c = 3, e = 4)
+  tbl <- rtftable(d, col_header = rtf_col_header(
+    list(col_cell(1, ""), col_cell(2:3, paste0("Placebo", "\n", "(N=86)")),
+         col_cell(4:5, paste0("Drug X", "\n", "(N=90)"))),
+    c("Visit", "Value", "Change", "Value", "Change")))
+  out <- utils::capture.output(print(tbl))
+  top <- grep("Placebo", out, fixed = TRUE)
+  expect_length(top, 1L)
+  # the second line of each spanner sits under its first line
+  expect_true(grepl("(N=86)", out[top + 1L], fixed = TRUE))
+  expect_true(grepl("(N=90)", out[top + 1L], fixed = TRUE))
+  expect_false(grepl("(N=86)", out[top], fixed = TRUE))
+})
