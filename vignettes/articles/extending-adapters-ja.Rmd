@@ -157,6 +157,30 @@ if (is.list(x) && !is.data.frame(x) && !isS4(x) &&
 * `NEWS.md` に項目を追加。メジャー/マイナー変更なら `CHANGELOG.md` も更新。
 * `devtools::document()`, `devtools::test()`, `devtools::check()` を実行。
 
+## 自分のパッケージからメソッドを提供する
+
+上の手順は、rtfreporter を**知らない**パッケージのためのものです。gt や rtables
+などは rtfreporter を import しないので、アダプタを rtfreporter 側が持ちます。
+rtfreporter に**依存する**パッケージを書いているなら、ここに分岐を足すのでは
+なく、自分のクラスに対するメソッドを登録してください。`as_rtftables()` は S3
+総称関数なので、rtfreporter があなたのクラスを名指しする必要はありません。
+
+```{r}
+# あなたのパッケージの R/ で（roxygen、rtfreporter は Imports）:
+#' @importFrom rtfreporter as_rtftables
+#' @export
+as_rtftables.my_report <- function(x, ...) {
+  df <- build_the_table(x)          # あなたのパッケージの処理
+  rtfreporter::as_rtftables(df, ...) # rtftable ページのリスト
+}
+```
+
+NAMESPACE には `importFrom(rtfreporter, as_rtftables)` と
+`S3method(as_rtftables, my_report)` が書かれます。メソッドは既定メソッドと同じもの、
+つまり `rtftable` ページのリストを返してください。すると `rtf_tables(doc, x)` が
+あなたのオブジェクトをそのまま受け取り、`gt_tbl` と同じように最初に変換します。
+依存の向きは正しく、あなたのパッケージが rtfreporter に依存し、その逆はありません。
+
 ## 参考になる実装
 
 rtables アダプタ（`R/rtables_adapter.R`）は、契約のすべての要素 —

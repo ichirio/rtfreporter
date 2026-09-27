@@ -273,6 +273,10 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'     Note: cell-level formatting (row indentation, bold group-header
 #'     rows, footnote marks in cells) is **not** transferred to RTF.
 #'     See [as_rtftable()] for details on gtsummary limitations.
+#'
+#'   `tables` may also be a single object of a class another package has
+#'   registered an [as_rtftables()] method for; it is converted to its pages
+#'   first (see "Supplying a source from another package" in [as_rtftables()]).
 #' @param col_rel_width,column_widths_twips,table_width_twips,table_width_pct_of_writable,table_width_pct,table_align Column-width and table-width settings applied to bare `data.frame` elements. See [rtftable()] for details.
 #' @param col_header,col_header_align,spanning_header,col_spec,row_title,border,blank_rows,read_attributes,style Per-table content settings applied to bare `data.frame` elements. `row_title` names the row-heading columns (default: column 1) and sets the per-column default alignment (heading columns left, others centre). See [rtftable()] for details.
 #' @param row_height_twips,row_height_exact,header_row_height_twips,blank_row_height_twips Row-height settings applied to bare `data.frame` elements. See [rtftable()] for details.
@@ -419,6 +423,10 @@ rtf_tables <- function(doc, tables,
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
+
+  # A source whose package registered an as_rtftables() method becomes its
+  # pages here, so rtf_tables(doc, x) reads like every other source.
+  if (.has_rtftables_method(tables)) tables <- as_rtftables(tables)
 
   # Auto-wrap a single content item so callers can write rtf_tables(tbl)
   # instead of rtf_tables(list(tbl)).  data.frame is IS a list in R, so it

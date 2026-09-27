@@ -38,6 +38,8 @@ export(as_rtftable)
 # Unified table-object -> rtftable page converter (v0.0.44; supersedes
 # paginate() + rtf_tables(read_gt=))
 export(as_rtftables)
+# S3 generic (#487): another package registers as_rtftables.<class>()
+S3method(as_rtftables, default)
 export(combine_sections)
 
 # data.frame finishing: merge hierarchy columns into an indented stub column

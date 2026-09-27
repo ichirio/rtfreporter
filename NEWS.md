@@ -27,6 +27,16 @@
 
 ### New features
 
+- **`as_rtftables()` is an S3 generic** (#487).  A package that depends on
+  rtfreporter can make its own class a table source by registering
+  `as_rtftables.<class>()`, and `rtf_tables(doc, x)` then accepts that object
+  directly, converting it up front the way it converts a `gt_tbl`.
+  rtfreporter names no such class: gt, rtables and the others keep their
+  built-in adapters, because they do not know rtfreporter, while a package
+  that does know it supplies the method itself.  The function you call is
+  unchanged; its body is now `as_rtftables.default()`.  See "Supplying a
+  method from your own package" in the adapter article.
+
 - **Run tokens: `{PROGRAM}`, `{PROGRAM_NAME}`, `{PROGRAM_DIR}`,
   `{DATETIME}`** (#478).  Any header, footer, title or footnote cell can
   say which program wrote the file and when, filled as the file is
