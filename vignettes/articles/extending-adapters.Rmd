@@ -156,6 +156,31 @@ missing.
 * Add a `NEWS.md` entry; for a major/minor change update `CHANGELOG.md`.
 * Run `devtools::document()`, `devtools::test()`, `devtools::check()`.
 
+## Supplying a method from your own package
+
+The steps above are for a package that does **not** know rtfreporter: gt,
+rtables and the rest never import it, so rtfreporter carries their adapters.
+If you are writing a package that **depends on** rtfreporter, do not add a
+branch here.  `as_rtftables()` is an S3 generic, so register a method for your
+class instead, and rtfreporter never has to name it:
+
+```{r}
+# In your package's R/ (roxygen), with rtfreporter in Imports:
+#' @importFrom rtfreporter as_rtftables
+#' @export
+as_rtftables.my_report <- function(x, ...) {
+  df <- build_the_table(x)          # your own work
+  rtfreporter::as_rtftables(df, ...) # a list of rtftable pages
+}
+```
+
+This writes `importFrom(rtfreporter, as_rtftables)` and
+`S3method(as_rtftables, my_report)` to your NAMESPACE.  The method must return
+what the default returns: a list of `rtftable` pages.  `rtf_tables(doc, x)`
+then accepts your object directly, converting it up front the way it converts
+a `gt_tbl`.  The dependency points the right way: your package depends on
+rtfreporter, and rtfreporter does not depend on yours.
+
 ## A worked reference
 
 The rtables adapter (`R/rtables_adapter.R`) is a compact, complete example

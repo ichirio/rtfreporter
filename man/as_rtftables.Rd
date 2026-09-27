@@ -2,9 +2,12 @@
 % Please edit documentation in R/as_rtftables.R
 \name{as_rtftables}
 \alias{as_rtftables}
+\alias{as_rtftables.default}
 \title{Convert a table object into rtfreporter table pages}
 \usage{
-as_rtftables(
+as_rtftables(x, ...)
+
+\method{as_rtftables}{default}(
   x,
   read_meta = TRUE,
   max_rows = NULL,
@@ -44,6 +47,21 @@ as_rtftables(
 \item{x}{A \code{gt_tbl}, a \code{gt_group}, a gtsummary table (or \code{tbl_split}
 container), an rtables/tern \code{VTableTree}, an rlistings \code{listing_df}, a
 \code{flextable}, a \code{huxtable}, a \code{data.frame} / tibble, or a \code{list} of these.}
+
+\item{...}{Further arguments forwarded to \code{\link[=rtftable]{rtftable()}} for every page
+(e.g. \code{col_header}, \code{col_spec}, \code{row_title}, \code{col_rel_width},
+\code{row_height_twips}).  \code{row_title} names the row-heading columns (default:
+column 1) and sets the per-column default alignment (heading columns left,
+others centre).  Explicit values always win over the gt-extracted ones.
+
+A user-supplied \code{col_header} is resolved against the \strong{final printed
+columns} -- after \code{stub_vars} folding and \code{drop_cols} removal -- so its
+\code{\link[=col_cell]{col_cell()}} positions and names refer to the columns you actually see
+(position 1 = first printed column; the \code{stub_vars} stub is that column).
+This is equivalent to building the pages and then calling
+\code{\link[=set_col_header]{set_col_header()}}; use \code{\link[=rtf_columns]{rtf_columns()}} to list the final names first.
+(\code{col_spec} / \code{col_rel_width} / \code{row_title} still use the pre-drop input
+coordinates.)}
 
 \item{read_meta}{Controls metadata extraction from the source table:
 \code{TRUE} (default, read everything in the table above), \code{FALSE} (use only
@@ -522,21 +540,6 @@ there.}
 
 \item{border, style}{Passed to \code{\link[=rtftable]{rtftable()}} for every page.  \code{border}
 defaults to \code{"tfl"}.}
-
-\item{...}{Further arguments forwarded to \code{\link[=rtftable]{rtftable()}} for every page
-(e.g. \code{col_header}, \code{col_spec}, \code{row_title}, \code{col_rel_width},
-\code{row_height_twips}).  \code{row_title} names the row-heading columns (default:
-column 1) and sets the per-column default alignment (heading columns left,
-others centre).  Explicit values always win over the gt-extracted ones.
-
-A user-supplied \code{col_header} is resolved against the \strong{final printed
-columns} -- after \code{stub_vars} folding and \code{drop_cols} removal -- so its
-\code{\link[=col_cell]{col_cell()}} positions and names refer to the columns you actually see
-(position 1 = first printed column; the \code{stub_vars} stub is that column).
-This is equivalent to building the pages and then calling
-\code{\link[=set_col_header]{set_col_header()}}; use \code{\link[=rtf_columns]{rtf_columns()}} to list the final names first.
-(\code{col_spec} / \code{col_rel_width} / \code{row_title} still use the pre-drop input
-coordinates.)}
 }
 \value{
 A list of \code{rtftable} objects, one per page.  When the split is
@@ -653,6 +656,19 @@ shows the current header as editable source).
 
 Prefer the verbs for complex headers; the arguments are kept for
 convenience and backward compatibility.
+}
+
+\section{Supplying a source from another package}{
+
+\code{as_rtftables()} is an S3 generic.  Everything listed above is handled by
+the default method, because those packages do not know rtfreporter, so
+rtfreporter carries their adapters.  A package that \emph{does} depend on
+rtfreporter can make its own class a source by registering a method,
+\verb{as_rtftables.<class>(x, ...)}.  The method must return what the default
+returns: a list of \code{rtftable} pages, usually by building a table and calling
+\code{as_rtftables()} on it.  \code{\link[=rtf_tables]{rtf_tables()}} then accepts the object directly,
+converting it the way it converts a \code{gt_tbl}.  rtfreporter itself names no
+such class.
 }
 
 \examples{

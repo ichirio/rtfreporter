@@ -680,6 +680,17 @@
 #' Prefer the verbs for complex headers; the arguments are kept for
 #' convenience and backward compatibility.
 #'
+#' @section Supplying a source from another package:
+#' `as_rtftables()` is an S3 generic.  Everything listed above is handled by
+#' the default method, because those packages do not know rtfreporter, so
+#' rtfreporter carries their adapters.  A package that *does* depend on
+#' rtfreporter can make its own class a source by registering a method,
+#' `as_rtftables.<class>(x, ...)`.  The method must return what the default
+#' returns: a list of `rtftable` pages, usually by building a table and calling
+#' `as_rtftables()` on it.  [rtf_tables()] then accepts the object directly,
+#' converting it the way it converts a `gt_tbl`.  rtfreporter itself names no
+#' such class.
+#'
 #' @return A list of `rtftable` objects, one per page.  When the split is
 #'   value-based (or the input was a named list) the list is named.
 #'
@@ -726,7 +737,23 @@
 #' }
 #'
 #' @export
-as_rtftables <- function(x,
+as_rtftables <- function(x, ...) UseMethod("as_rtftables")
+
+# TRUE when `x` has an as_rtftables() method of its own -- one another package
+# registered for its class.  rtf_tables() converts such an object up front, as
+# it converts a gt_tbl, without rtfreporter naming the class.  The default
+# method is found under "default", never under a class, so it does not count.
+.has_rtftables_method <- function(x) {
+  for (k in class(x)) {
+    if (!is.null(utils::getS3method("as_rtftables", k, optional = TRUE)))
+      return(TRUE)
+  }
+  FALSE
+}
+
+#' @rdname as_rtftables
+#' @export
+as_rtftables.default <- function(x,
                          read_meta       = TRUE,
                          max_rows        = NULL,
                          split           = c("none", "rows", "group_safe",
