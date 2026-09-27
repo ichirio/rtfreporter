@@ -17,8 +17,11 @@
 }
 
 test_that("as_rtftables() dispatches, and the default is the old function", {
+  # Checked by behaviour, not by body(): covr instruments function bodies,
+  # so a body comparison fails under test-coverage only.
   expect_true(is.function(rtfreporter:::as_rtftables.default))
-  expect_identical(body(as_rtftables), quote(UseMethod("as_rtftables")))
+  expect_identical(utils::getS3method("as_rtftables", "default"),
+                   rtfreporter:::as_rtftables.default)
 
   d <- data.frame(x = c("a", "b"), y = c("1", "2"), stringsAsFactors = FALSE)
   expect_identical(as_rtftables(d),
