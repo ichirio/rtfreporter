@@ -284,3 +284,21 @@ test_that("rtf_tables() validates them like everything else", {
   expect_error(rtf_tables(d, rtftable(.ovdf()), font_size_half_points = 0),
                "positive")
 })
+
+
+test_that("a block size without a font registers no font named after it (#496)", {
+  df  <- data.frame(A = c("x", "y"), B = 1:2, stringsAsFactors = FALSE)
+  f   <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  doc <- rtf_document() |>
+    rtf_tables(as_rtftables(df)) |>
+    rtf_titles(list(c("Title")), font_size_half_points = 22L) |>
+    rtf_footnotes(list(c("Note a", "Note b")), font_size_half_points = 16L)
+  generate_rtfreport(doc, f)
+  lines <- readLines(f, warn = FALSE)
+  expect_false(any(grepl("fcharset0 16;", lines, fixed = TRUE)))
+  expect_false(any(grepl("fcharset0 22;", lines, fixed = TRUE)))
+  expect_false(any(grepl("\f1", lines)))
+  # the size itself is still applied
+  expect_true(any(grepl("\fs16 ", lines)))
+  expect_true(any(grepl("\fs22 ", lines)))
+})
