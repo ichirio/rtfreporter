@@ -1,4 +1,10 @@
-# rtfreporter (development version)
+# rtfreporter 0.8.1
+
+A patch release of the fixes and small additions made since 0.8.0.  One
+behaviour change: a page now gathers every row with its `page_by` /
+`split = "by_value"` value instead of cutting on runs (#485); on an
+already-grouped body -- the usual one -- the output is unchanged, and all six
+sample reports are byte-identical.
 
 ### Behaviour changes
 
