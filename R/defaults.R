@@ -71,7 +71,10 @@
     rtfreporter.figure.default_dpi       = 96L,
     # How every formatter rounds an exact half: "r" = base::round() (half to
     # even), "sas" = half away from zero, as SAS ROUND() does.  See round_num().
-    rtfreporter.rounding                 = "r"
+    rtfreporter.rounding                 = "r",
+    # The pipe plan_template() writes: "|>" or "%>%".  NULL asks RStudio's
+    # own preference (insert_native_pipe_operator), then falls back to %>%.
+    rtfreporter.ard_pipe                 = NULL
   )
 }
 

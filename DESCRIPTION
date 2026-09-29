@@ -1,7 +1,7 @@
 Package: rtfreporter
 Type: Package
 Title: Clinical RTF Reporting Toolkit for Tables, Listings and Figures
-Version: 0.8.1.9000
+Version: 0.8.1.9001
 Authors@R:
     person(given  = "Yoichi",
            family = "Masui",
@@ -27,6 +27,7 @@ Imports:
     grDevices,
     grid,
     methods,
+    stats,
     utils
 Suggests:
     knitr,
@@ -53,7 +54,10 @@ Suggests:
     writexl,
     readxl,
     flextable (>= 0.9.0),
-    huxtable (>= 5.0.0)
+    huxtable (>= 5.0.0),
+    rstudioapi,
+    dplyr,
+    cardx
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)

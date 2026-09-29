@@ -24,7 +24,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
   使いません。そのため `dput()` 可能で、`saveRDS()` でも素直にシリアライズ
   できます。
 * **サードパーティ依存ゼロ。** `Imports:` には R 同梱のパッケージ
-  （`grDevices`, `grid`, `methods`, `utils`）だけを置きます。任意連携
+  （`grDevices`, `grid`, `methods`, `stats`, `utils`）だけを置きます。任意連携
   （gt, gtsummary, rtables/tern, flextable, huxtable, ggplot2 …）はすべて
   `Suggests:` に置き、`.need_pkg()` 経由で参照します。未インストール時は
   親切なエラー、バージョンが古いときは警告を出します。
