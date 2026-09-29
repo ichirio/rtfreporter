@@ -2720,7 +2720,9 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' @section Lifecycle:
 #' **Experimental.**  These functions are newer than the rest of the package
 #' and are not covered by its stability expectations: names and arguments may
-#' change.
+#' change.  Whether they stay is decided in the pre-CRAN API review,
+#' [rtfreporter Discussion #316](https://github.com/ichirio/rtfreporter/discussions/316); if they are not adopted they
+#' will be **removed**.  They are in no release yet.
 #'
 #' @name ard-tables
 #' @aliases ard-experimental

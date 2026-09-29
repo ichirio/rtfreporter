@@ -403,7 +403,9 @@
 #' @return An object of class `table_plan`.
 #'
 #' @section Lifecycle:
-#' **Experimental.**  See [ard-tables].
+#' **Experimental.**  Whether the plan engine stays is decided in the
+#' pre-CRAN API review, [rtfreporter Discussion #316](https://github.com/ichirio/rtfreporter/discussions/316); if it is
+#' not adopted it will be **removed**.  See [ard-tables].
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -1098,7 +1100,9 @@ print.table_plan <- function(x, ...) {
 #' reordered table keeps them.
 #'
 #' @section Lifecycle:
-#' **Experimental.**  See [table_plan()].
+#' **Experimental.**  Whether the verbs stay is decided in the pre-CRAN API
+#' review, [rtfreporter Discussion #316](https://github.com/ichirio/rtfreporter/discussions/316); if they are not
+#' adopted they will be **removed**.  See [table_plan()].
 #'
 #' @name plan_verbs
 #' @seealso [table_plan()], [plan_apply()]

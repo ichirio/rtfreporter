@@ -93,7 +93,7 @@ elements is a recipe of the three shapes above.  The container decides:
 \code{c("Mean (SD)" = ..., "Min, Max" = ...)} is a two-row recipe, while
 \code{list(continuous = ..., categorical = ...)} is a map.  A list with no
 names is a chain, which is what \code{c()} returns once a guard is in it.
-For a named row whose value is itself a chain, use \code{\link[cellranger:cell_rows]{cellranger::cell_rows()}}.
+For a named row whose value is itself a chain, use \code{\link[=cell_rows]{cell_rows()}}.
 
 Statistics no template names are simply not read, which is how an ARD
 that also carries \code{method}, \code{alternative}, \code{conf.level} or a p-value
