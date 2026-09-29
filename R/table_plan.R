@@ -365,7 +365,7 @@
 #' from [spread_ard()]'s `cells`, which picks by specificity and ignores
 #' order; the spike exists to find out which is nicer to write.
 #'
-#' @param data What the table is built from.  A plan does **not** flatten:
+#' @param x What the table is built from.  A plan does **not** flatten:
 #'   `cols` / `rows` / `label` name columns of what you hand it, so
 #'   flatten first and look at the result.
 #'   * a frame through [normalize_ard()] --- the ordinary case;

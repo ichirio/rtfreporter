@@ -21,6 +21,20 @@ table_plan(
 )
 }
 \arguments{
+\item{x}{What the table is built from.  A plan does \strong{not} flatten:
+\code{cols} / \code{rows} / \code{label} name columns of what you hand it, so
+flatten first and look at the result.
+\itemize{
+\item a frame through \code{\link[=normalize_ard]{normalize_ard()}} --- the ordinary case;
+\item \strong{any long frame of statistics}: keys, a \code{stat_name} and a \code{stat},
+built with dplyr and no cards anywhere.  \code{\link[=plan_cells]{plan_cells()}} does the
+work;
+\item a frame that is already the table, for the display half on its own;
+\item a frame of subject records, with \code{\link[=plan_listing]{plan_listing()}}.
+}
+
+A raw cards ARD is refused, with the line to write.}
+
 \item{cols}{The key that goes \strong{across} the table, as
 \code{spread_ard(cols = )} takes it: one or more columns, optionally
 renamed \code{c(new = old)}.}
@@ -49,20 +63,6 @@ makes each statistic a row of its own.}
 unchanged: which of \code{stat} / \code{stat_fmt} a \code{{x}} reads, what fills a
 cell no template could, whether to report what was not used, and the
 statistic totalled into \code{.sort_stat} for a frequency order.}
-
-\item{data}{What the table is built from.  A plan does \strong{not} flatten:
-\code{cols} / \code{rows} / \code{label} name columns of what you hand it, so
-flatten first and look at the result.
-\itemize{
-\item a frame through \code{\link[=normalize_ard]{normalize_ard()}} --- the ordinary case;
-\item \strong{any long frame of statistics}: keys, a \code{stat_name} and a \code{stat},
-built with dplyr and no cards anywhere.  \code{\link[=plan_cells]{plan_cells()}} does the
-work;
-\item a frame that is already the table, for the display half on its own;
-\item a frame of subject records, with \code{\link[=plan_listing]{plan_listing()}}.
-}
-
-A raw cards ARD is refused, with the line to write.}
 }
 \value{
 An object of class \code{table_plan}.
