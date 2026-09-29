@@ -1904,3 +1904,16 @@ test_that("two populations and no choice: the page's, with a warning", {
   expect_identical(spanner(pg)[["HGB"]],
                    sprintf("T (N=%d)", as.integer(x$tested[["HGB"]])))
 })
+
+test_that("plan_style() says where widths went, and names what rtftable() does not take", {
+  skip_if_no_cards2()
+  p <- base_plan()
+  expect_error(plan_style(p, widths = c(3, 3, rep(2, 29)), row_title = 1:2),
+               "plan_columns(widths = ) now", fixed = TRUE)
+  expect_error(plan_style(p, colour = "red"),
+               "'colour' is not an argument of rtftable()", fixed = TRUE)
+  expect_error(plan_style(p, "tfl", "x"), "an unnamed value", fixed = TRUE)
+  # the arguments that do go through still do
+  expect_s3_class(plan_style(p, border = "tfl", align_count_pct = TRUE,
+                             row_title = 1:2), "table_plan")
+})

@@ -51,7 +51,10 @@
   widths are `plan_columns(widths = )` only (named by column, or one a
   column in order as `col_rel_width`), no longer `plan_style(widths = )`;
   each verb's help says which `as_rtftables()` / `rtftable()` argument it
-  hands on.  Added to the pre-CRAN API review (#316).
+  hands on.  `plan_style()` checks its arguments where it is written:
+  `widths =` points at `plan_columns(widths = )`, and a name neither
+  `rtftable()` nor `as_rtftables()` takes is an error there, not when
+  the plan runs.  Added to the pre-CRAN API review (#316).
 
 - **`as_rtftables()` is an S3 generic** (#487).  A package that depends on
   rtfreporter can make its own class a table source by registering

@@ -1448,7 +1448,33 @@ plan_paginate_rows <- function(plan, max_rows = NULL, split = NULL,
 #' @rdname plan_verbs
 #' @export
 plan_style <- function(plan, border = NULL, ...) {
-  .plan_layer(plan, "style", c(list(border = border), list(...)))
+  dots <- list(...)
+  if ("widths" %in% names(dots)) {
+    .ard_stop(paste0(
+      "plan_style(widths = ) has moved: column widths are ",
+      "plan_columns(widths = ) now.
+",
+      "  By name, which a reordered table keeps: ",
+      "plan_columns(widths = c(Analyte = 3, Statistics = 3, .values = 2))
+",
+      "  Or one a column in order, as before: ",
+      "plan_columns(widths = c(3, 3, rep(2, 29)))"))
+  }
+  # checked here, where it was written, rather than when the plan runs:
+  # the arguments go to as_rtftables() and on to rtftable()
+  ok <- setdiff(union(names(formals(as_rtftables.default)),
+                      names(formals(rtftable))), c("x", "data", "..."))
+  bad <- setdiff(names(dots), ok)
+  if (length(bad) || (length(dots) && any(!nzchar(names(dots) %||% "")))) {
+    .ard_stop(sprintf(paste0(
+      "plan_style(): %s %s not an argument of rtftable() or ",
+      "as_rtftables().
+  Every argument is named, e.g. ",
+      "plan_style(border = \"tfl\", align_count_pct = TRUE)."),
+      if (length(bad)) paste(sQuote(bad), collapse = ", ") else "an unnamed value",
+      if (length(bad) > 1L) "are" else "is"))
+  }
+  .plan_layer(plan, "style", c(list(border = border), dots))
 }
 
 # The header is a VALUE, not a set of fields: `rtf_col_header()` builds a
