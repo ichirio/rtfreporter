@@ -1,3 +1,9 @@
+# rtfreporter (development version)
+
+### Documentation
+
+- **Development reopens at `0.8.1.9000`** (#493), after the 0.8.1 release.
+
 # rtfreporter 0.8.1
 
 A patch release of the fixes and small additions made since 0.8.0.  One

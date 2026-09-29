@@ -1,6 +1,7 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.1.**
+**This manual documents rtfreporter 0.8.1.9000** (the development
+version, after release 0.8.1).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
 `rtfreporter_ai_manual()`.
