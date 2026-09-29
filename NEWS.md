@@ -1,5 +1,50 @@
 # rtfreporter (development version)
 
+### New features
+
+- **Experimental: tables from a cards / cardx ARD** (#491; plan E of
+  tflspec Discussion #23).  **Experimental** -- whether these functions stay
+  is decided in the pre-CRAN API review, Discussion #316; if they are not
+  adopted they will be **removed**.
+  The engine that turns an analysis results dataset into an `rtftable` moves here from tflspec, so that a plan and the rendering it
+  declares live in one package and a generated table program needs only
+  rtfreporter (and cards).  The immediate form: `normalize_ard()` flattens
+  the ARD (groups and hierarchy as key columns), `spread_ard()` lays the
+  statistics out as cells from templates (`cell_rows()` for a cell of
+  several rows, `overall_row()` for an "Any" row), `pull_ard()` and
+  `list_ard_keys()` read it.  The deferred form: `table_plan()` declares
+  the roles once, the `plan_*()` verbs (levels, labels, cells, digits, fmt,
+  stub, cell_style, paginate_group, row_group, hide, sort, blanks,
+  paginate_rows, paginate_cols, style, columns, col_header, listing,
+  titles, footnotes, header_style, col_style, zone_style, after) add the
+  layers, `plan_apply()` runs it and `plan_layers()` reads it back; a plan
+  is a table source for `rtf_tables()` and `as_rtftables()`.
+  `plan_template(ard)` writes a starting pipeline (`form = "spread"` for
+  the immediate one).  The pipe it writes follows
+  `getOption("rtfreporter.ard_pipe")`, then RStudio's preference.  These
+  are rtfreporter's functions, not cards'; cards stays a suggestion.
+  The Excel definition of a table stays in tflspec (`tfl_table_plan()`).
+  Against tflspec 0.0.19: the first argument is `x` throughout; column
+  widths are `plan_columns(widths = )` only (named by column, or one a
+  column in order as `col_rel_width`), no longer `plan_style(widths = )`;
+  each verb's help says which `as_rtftables()` / `rtftable()` argument it
+  hands on.  `plan_style()` checks its arguments where it is written:
+  `widths =` points at `plan_columns(widths = )`, and a name neither
+  `rtftable()` nor `as_rtftables()` takes is an error there, not when
+  the plan runs.  Added to the pre-CRAN API review (#316).
+
+### Documentation
+
+- **Development reopens at `0.8.1.9000`** (#493), after the 0.8.1 release.
+
+# rtfreporter 0.8.1
+
+A patch release of the fixes and small additions made since 0.8.0.  One
+behaviour change: a page now gathers every row with its `page_by` /
+`split = "by_value"` value instead of cutting on runs (#485); on an
+already-grouped body -- the usual one -- the output is unchanged, and all six
+sample reports are byte-identical.
+
 ### Behaviour changes
 
 - **A page gathers its rows; it does not require the body sorted first.**
@@ -26,35 +71,6 @@
   `sort_by` is for choosing an order, not for making the pages whole.  (#485)
 
 ### New features
-
-- **Tables from a cards / cardx ARD** (#491; plan E of tflspec Discussion
-  #23).  The engine that turns an analysis results dataset into an
-  `rtftable` moves here from tflspec, so that a plan and the rendering it
-  declares live in one package and a generated table program needs only
-  rtfreporter (and cards).  The immediate form: `normalize_ard()` flattens
-  the ARD (groups and hierarchy as key columns), `spread_ard()` lays the
-  statistics out as cells from templates (`cell_rows()` for a cell of
-  several rows, `overall_row()` for an "Any" row), `pull_ard()` and
-  `list_ard_keys()` read it.  The deferred form: `table_plan()` declares
-  the roles once, the `plan_*()` verbs (levels, labels, cells, digits, fmt,
-  stub, cell_style, paginate_group, row_group, hide, sort, blanks,
-  paginate_rows, paginate_cols, style, columns, col_header, listing,
-  titles, footnotes, header_style, col_style, zone_style, after) add the
-  layers, `plan_apply()` runs it and `plan_layers()` reads it back; a plan
-  is a table source for `rtf_tables()` and `as_rtftables()`.
-  `plan_template(ard)` writes a starting pipeline (`form = "spread"` for
-  the immediate one).  The pipe it writes follows
-  `getOption("rtfreporter.ard_pipe")`, then RStudio's preference.  These
-  are rtfreporter's functions, not cards'; cards stays a suggestion.
-  The Excel definition of a table stays in tflspec (`tfl_table_plan()`).
-  Against tflspec 0.0.19: the first argument is `x` throughout; column
-  widths are `plan_columns(widths = )` only (named by column, or one a
-  column in order as `col_rel_width`), no longer `plan_style(widths = )`;
-  each verb's help says which `as_rtftables()` / `rtftable()` argument it
-  hands on.  `plan_style()` checks its arguments where it is written:
-  `widths =` points at `plan_columns(widths = )`, and a name neither
-  `rtftable()` nor `as_rtftables()` takes is an error there, not when
-  the plan runs.  Added to the pre-CRAN API review (#316).
 
 - **`as_rtftables()` is an S3 generic** (#487).  A package that depends on
   rtfreporter can make its own class a table source by registering

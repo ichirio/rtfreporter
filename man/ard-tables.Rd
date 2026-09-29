@@ -133,7 +133,9 @@ the percentages.
 
 \strong{Experimental.}  These functions are newer than the rest of the package
 and are not covered by its stability expectations: names and arguments may
-change.
+change.  Whether they stay is decided in the pre-CRAN API review,
+\href{https://github.com/ichirio/rtfreporter/discussions/316}{rtfreporter Discussion #316}; if they are not adopted they
+will be \strong{removed}.  They are in no release yet.
 }
 
 \seealso{

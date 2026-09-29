@@ -469,7 +469,9 @@ reordered table keeps them.
 
 \section{Lifecycle}{
 
-\strong{Experimental.}  See \code{\link[=table_plan]{table_plan()}}.
+\strong{Experimental.}  Whether the verbs stay is decided in the pre-CRAN API
+review, \href{https://github.com/ichirio/rtfreporter/discussions/316}{rtfreporter Discussion #316}; if they are not
+adopted they will be \strong{removed}.  See \code{\link[=table_plan]{table_plan()}}.
 }
 
 \seealso{

@@ -88,7 +88,9 @@ order; the spike exists to find out which is nicer to write.
 }
 \section{Lifecycle}{
 
-\strong{Experimental.}  See \link{ard-tables}.
+\strong{Experimental.}  Whether the plan engine stays is decided in the
+pre-CRAN API review, \href{https://github.com/ichirio/rtfreporter/discussions/316}{rtfreporter Discussion #316}; if it is
+not adopted it will be \strong{removed}.  See \link{ard-tables}.
 }
 
 \examples{
