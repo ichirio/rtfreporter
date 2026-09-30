@@ -4,6 +4,12 @@
 
 - **Development reopens at `0.8.2.9000`** (#500), after the 0.8.2 release.
 
+- **The plan and ARD route on the site** (#503).  Four new articles:
+  *Tables from an ARD*, *The plan verbs*, *Listings with a plan* and *From
+  as_rtftables() to a plan*, each run on pharmaverseadam with the RTF shown.
+  Get started ends with a short section on tables from an ARD, and the README
+  and the site menus point to the articles.
+
 # rtfreporter 0.8.2
 
 Tables from a cards / cardx analysis results dataset (ARD): the plan engine

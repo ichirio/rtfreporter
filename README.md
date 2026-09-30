@@ -160,6 +160,13 @@ rtfreporter lays it out just the same.  A bare data.frame carries no
 display metadata, so you simply re-specify what you want — column headers,
 alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
 
+**Starting from an ARD instead?**  When the statistics are in a
+[cards](https://insightsengineering.github.io/cards/) / cardx analysis
+results dataset, rtfreporter builds the table from it: `normalize_ard()`
+flattens the ARD, `table_plan()` and the `plan_*()` verbs declare the cells,
+labels, header and pages, and `rtf_tables()` takes the plan directly.  See
+[Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
+
 For worked, tool-by-tool comparisons see the *same report, every framework*
 articles — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
 and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html) —
@@ -202,6 +209,10 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
   huxtable objects in with
   [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html)
 - **Pagination** — [splitting long tables across pages](https://ichirio.github.io/rtfreporter/articles/pagination.html)
+- **Tables from an ARD** — [cards / cardx to RTF with a plan](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
+  [the plan verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.html),
+  [listings with a plan](https://ichirio.github.io/rtfreporter/articles/plan-listings.html) and
+  [from `as_rtftables()` to a plan](https://ichirio.github.io/rtfreporter/articles/plan-and-as-rtftables.html)
 - **Listings** — [source data to the written RTF](https://ichirio.github.io/rtfreporter/articles/listings.html),
   including the column-width estimator and the wrapping rule
 - **Figures** — [a plot object to a page](https://ichirio.github.io/rtfreporter/articles/figures.html)

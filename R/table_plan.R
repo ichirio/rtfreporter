@@ -361,9 +361,9 @@
 #' plan_digits(2) |> plan_digits(AGE = 0)
 #' ```
 #'
-#' This is tfrmt's `frmt_structure` rule.  It is deliberately **different**
-#' from [widen_ard()]'s `cells`, which picks by specificity and ignores
-#' order; the spike exists to find out which is nicer to write.
+#' This is tfrmt's `frmt_structure` rule.  Within one layer the keys are
+#' picked by specificity, as [widen_ard()]'s `cells` are: an analysis
+#' variable before a kind, a kind before the default.
 #'
 #' @param x What the table is built from.  A plan does **not** flatten:
 #'   `cols` / `rows` / `label` name columns of what you hand it, so
@@ -403,7 +403,6 @@
 #' | a template per cell or a row per statistic, `stat` / `stat_fmt`, the empty-cell text | [plan_cells()] (`stats =`, `value =`, `na =`) |
 #' | the statistic a frequency order totals | [plan_sort()] (`stat =`) |
 #' | reporting what the templates did not use | [plan_cells()] (`notes =`) |
-#'
 #' | the separator several `cols` keys are joined with in the column names | [plan_columns()] (`sep =`) |
 #'
 #' @return An object of class `table_plan`.

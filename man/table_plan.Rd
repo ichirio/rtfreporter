@@ -60,9 +60,9 @@ two-line edit:
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_digits(2) |> plan_digits(AGE = 0)
 }\if{html}{\out{</div>}}
 
-This is tfrmt's \code{frmt_structure} rule.  It is deliberately \strong{different}
-from \code{\link[=widen_ard]{widen_ard()}}'s \code{cells}, which picks by specificity and ignores
-order; the spike exists to find out which is nicer to write.
+This is tfrmt's \code{frmt_structure} rule.  Within one layer the keys are
+picked by specificity, as \code{\link[=widen_ard]{widen_ard()}}'s \code{cells} are: an analysis
+variable before a kind, a kind before the default.
 }
 \section{Where the other settings went}{
 
@@ -72,10 +72,8 @@ belongs to the verb whose job it is:\tabular{ll}{
    a template per cell or a row per statistic, \code{stat} / \code{stat_fmt}, the empty-cell text \tab \code{\link[=plan_cells]{plan_cells()}} (\verb{stats =}, \verb{value =}, \verb{na =}) \cr
    the statistic a frequency order totals \tab \code{\link[=plan_sort]{plan_sort()}} (\verb{stat =}) \cr
    reporting what the templates did not use \tab \code{\link[=plan_cells]{plan_cells()}} (\verb{notes =}) \cr
+   the separator several \code{cols} keys are joined with in the column names \tab \code{\link[=plan_columns]{plan_columns()}} (\verb{sep =}) \cr
 }
-
-
-| the separator several \code{cols} keys are joined with in the column names | \code{\link[=plan_columns]{plan_columns()}} (\verb{sep =}) |
 }
 
 \examples{
