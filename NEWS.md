@@ -1,3 +1,9 @@
+# rtfreporter (development version)
+
+### Documentation
+
+- **Development reopens at `0.8.2.9000`** (#500), after the 0.8.2 release.
+
 # rtfreporter 0.8.2
 
 Tables from a cards / cardx analysis results dataset (ARD): the plan engine
