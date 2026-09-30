@@ -1,5 +1,16 @@
 # rtfreporter (development version)
 
+### Bug fixes
+
+- **A title or footnote block given `font_size_half_points` but no `font`
+  registered a font named after the size** (#496).  `rtf_footnotes(list(...),
+  font_size_half_points = 16)` wrote `{1nilcharset0 16;}` into the
+  font table and set the block in `1` -- a family called "16", which Word
+  substitutes.  The style list had no `font` entry, and `$font` partial-matched
+  `font_size_half_points`.  The renderer, the footnote band and the font
+  collector now read the entry by exact name.  Found by the Python port's
+  byte-for-byte cross-check against v0.8.1.
+
 ### New features
 
 - **Experimental: tables from a cards / cardx ARD** (#491; plan E of

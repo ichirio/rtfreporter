@@ -1826,7 +1826,9 @@
                                      style$row_height_twips,
                                      font_half_points, doc_row_height)
   full_h <- m$rh
-  fs_cmd <- paste0(.f_cmd_for(style$font, font_index_map),
+  # `[["font"]]`, not `$font`: a style that sets only `font_size_half_points`
+  # has no `font` entry, and `$` would partial-match the size (#496).
+  fs_cmd <- paste0(.f_cmd_for(style[["font"]], font_index_map),
                    .fs_cmd_for(m$fs, font_half_points))
   if (!is.null(style$markup)) markup <- style$markup
   cellx  <- as.integer(total_width_twips)
@@ -1867,7 +1869,7 @@
   # Honour the document-wide cell padding as left/right paragraph indent, so the
   # "every element inherits the document padding" contract still holds.
   if (!is.null(style$markup)) markup <- style$markup
-  fs_cmd <- paste0(.f_cmd_for(style$font, font_index_map),
+  fs_cmd <- paste0(.f_cmd_for(style[["font"]], font_index_map),   # not `$font` (#496)
                    .fs_cmd_for(style$font_size_half_points %||% font_half_points,
                         font_half_points))
   indent <- paste0("\\li", as.integer(pad_l), "\\ri", as.integer(pad_r), fs_cmd)
