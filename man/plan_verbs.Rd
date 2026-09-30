@@ -554,13 +554,6 @@ written (after the header and the decimal alignment, before any
 stands for every value column, so a reordered table keeps them.
 }
 
-\section{Lifecycle}{
-
-\strong{Experimental.}  Whether the verbs stay is decided in the pre-CRAN API
-review, \href{https://github.com/ichirio/rtfreporter/discussions/316}{rtfreporter Discussion #316}; if they are not
-adopted they will be \strong{removed}.  See \code{\link[=table_plan]{table_plan()}}.
-}
-
 \seealso{
 \code{\link[=table_plan]{table_plan()}}, \code{\link[=plan_apply]{plan_apply()}}
 }

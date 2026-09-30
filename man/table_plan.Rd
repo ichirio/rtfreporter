@@ -78,13 +78,6 @@ belongs to the verb whose job it is:\tabular{ll}{
 | the separator several \code{cols} keys are joined with in the column names | \code{\link[=plan_columns]{plan_columns()}} (\verb{sep =}) |
 }
 
-\section{Lifecycle}{
-
-\strong{Experimental.}  Whether the plan engine stays is decided in the
-pre-CRAN API review, \href{https://github.com/ichirio/rtfreporter/discussions/316}{rtfreporter Discussion #316}; if it is
-not adopted it will be \strong{removed}.  See \link{ard-tables}.
-}
-
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
   ard <- cards::ard_stack(

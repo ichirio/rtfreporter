@@ -1,7 +1,6 @@
 # rtfreporter — AI developer manual
 
-**This manual documents the rtfreporter 0.8.1.9003 codebase** (the
-development version, after release 0.8.1).
+**This manual documents the rtfreporter 0.8.2 codebase.**
 Check it matches the tree you are working in — `DESCRIPTION`'s `Version:`.
 If they differ, trust the tree, not this file.
 
@@ -376,11 +375,91 @@ session.
 | Widths & text metrics | `block_width.R`, `text_width.R`, `decimal_split.R` |
 | Formatting | `format_count_pct.R`, `num_format.R`, `cell_format.R`, `catx.R`, `collapse_repeats.R` |
 | Assembly | `assemble_rtf.R`, `assemble_spec.R`, `rtf_replace_text.R` |
+| Tables from an ARD | `ard_tables.R` (immediate), `table_plan.R` (the plan) |
 | Infrastructure | `defaults.R`, `zzz.R`, `need_pkg.R`, `dots_check.R`, `font_table.R` |
 
 ---
 
-## 12. Traps that have actually bitten
+## 12. The plan engine — tables from an ARD (`ard_tables.R`, `table_plan.R`)
+
+Two layers, and the second one is built on the first:
+
+* **`ard_tables.R`, the immediate functions.** `normalize_ard()` flattens a
+  cards ARD. It turns the group pairs into key columns, adds `.kind`
+  (`continuous` / `categorical`, decided from the row contents), `.label`,
+  `.depth` and `.overall`, and keeps the column variable's own tabulation
+  as `.key_own` rows. `widen_ard()` fills the templates and pivots the
+  columns. `pull_ard()`, `list_ard_keys()`, `cell_rows()` and
+  `overall_row()` are helpers around them.
+* **`table_plan.R`, the deferred form.** `table_plan()` stores the data
+  **untouched** plus `roles`. Each `plan_*()` verb appends one layer,
+  `list(kind, fields, site)`, through `.plan_layer()`. `site` is the
+  author's call, so an error at the end can say which line declared it
+  (`.plan_blame()`). `.plan_layer()` also gives the plan a **fresh cache
+  environment**: a derived plan must never see its parent's cached columns.
+
+**Resolution (`plan_apply()`)**
+
+1. `stage = "auto"` goes as far as the plan declares (`.plan_reach()`): any
+   display layer means pages, otherwise the table data frame.
+2. The source kind (`.plan_source_kind()`) is judged from the **columns**
+   alone, never a class or an attribute: `ard` (refused by `table_plan()`),
+   `normalized`, `long` (keys plus `stat_name` / `stat`, from dplyr) or
+   `wide`. A listing (`plan_listing()`) skips the ARD half entirely.
+3. `"input"` is the long frame with the roles applied. `.plan_spread_args()`
+   and the merged `cells` / `digits` layers become one `widen_ard()` call;
+   `"table"` is its result. `"args"` returns `list(widen =, rtf =)` without
+   running anything.
+4. `.plan_to_pages()` runs the display half in a **fixed order**:
+   `fmt_numeric()` (digits on a finished table) → `stub_cols()` when
+   `plan_stub(before = TRUE)` → `as_rtftables()` → the widths →
+   `set_col_header()` → `set_decimal_split()` → the `plan_cell_style()`
+   styles in the order written → `plan_after()` functions →
+   `paginate_cols()` → the title and footnote blocks.
+
+**Rules to keep**
+
+* **Last wins, per field** (`.plan_merge()`). `levels` and `labels` merge
+  one key at a time. The same key twice in **one** call is an error (a typo),
+  not a layering.
+* **One job per verb, and no new vocabulary.** A verb's arguments are the
+  names of the function that does the job (`widen_ard()`, `as_rtftables()`,
+  `stub_cols()`, `set_col_header()`, `paginate_cols()`, `listing_spec()`).
+  A new capability goes into that function first, then the verb passes it on.
+  `table_plan()` takes the roles and nothing else.
+* **Read nothing the author did not state.** Not the ARD's attributes, and
+  not the `context` strings as meaning. A header population the ARD does not
+  state becomes `NA` plus one warning listing the cells. **Never guess a
+  number**, because a guessed N looks exactly like a right one.
+* **cards stays in Suggests.** Guard with `.need_pkg()`, and in tests with
+  `skip_if_not_installed("cards")`.
+* **Declarations over `plan_after()`.** tflspec turns a plan into an Excel
+  workbook (`tfl_as_table_spec()`) and back (`tfl_table_plan()`). A layer it
+  can read survives that round trip. A `plan_after()` function does not. A
+  new verb or argument should be one tflspec can write down, so tell its
+  maintainer.
+* **No aliases for renamed verbs or arguments** before CRAN. Rename, and fix
+  every caller in the same PR.
+
+**Tests** (`test-ard-tables.R`, `test-table-plan.R`)
+
+* A verb is tested against **the same call written by hand**:
+  `plan_apply(plan)` must `expect_equal()` the `as_rtftables()` /
+  `widen_ard()` call it stands for. That is how "the verb only passes its
+  arguments on" is checked.
+* An error test checks the message says **what to write instead** (the
+  verb or argument to use), not only that it fails.
+* Behaviour that shows in the output is rendered and matched as RTF text.
+  The four tflspec Discussion #3 samples written as plans must stay
+  byte-identical to their hand-written programs. Re-run them after a change
+  to resolution order or defaults.
+* The AI user manual's §17 is executed by `test-ai-user-manual.R`, and
+  every argument named in the manual's code is checked against `formals()`.
+  A renamed argument fails there until the manual is updated.
+
+---
+
+## 13. Traps that have actually bitten
 
 | Trap | What to do |
 |---|---|
@@ -393,6 +472,8 @@ session.
 | Fixing a doc without its `-ja` twin | the Japanese article silently goes stale |
 | Trusting a prose document over the code | prose drifts; `R/`, `NAMESPACE` and `DESCRIPTION` do not. When they disagree, fix the document. |
 | Non-ASCII slipping into R code | `R CMD check` flags it; use `\uXXXX` |
+| A plan verb grew an argument its underlying function lacks | add it to the function first; the verb only passes it on (§12) |
+| A derived plan reused its parent's cached columns | `.plan_layer()` replaces the cache; never share it between plan values |
 
 **When something is not covered here:** read the article named in §1 rather
 than inferring from the code alone — several decisions are recorded only in

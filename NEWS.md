@@ -1,4 +1,45 @@
-# rtfreporter (development version)
+# rtfreporter 0.8.2
+
+Tables from a cards / cardx analysis results dataset (ARD): the plan engine
+and the ARD helpers, adopted in the pre-CRAN API review (Discussion #316).
+Plus two fixes found by the Python port's byte-for-byte cross-check and by
+the plan work.  Nothing that rendered before renders differently: the six
+sample reports are byte-identical.
+
+### New features
+
+- **Tables from a cards / cardx ARD** (#491, #498; plan E of tflspec
+  Discussion #23).  The engine that turns an analysis results dataset into
+  an `rtftable` moves here from tflspec, so that a plan and the rendering
+  it declares live in one package and a generated table program needs only
+  rtfreporter (and cards).
+
+  - **Immediate form.**  `normalize_ard()` flattens the ARD (groups and
+    hierarchy as key columns), `widen_ard()` lays the statistics out as
+    cells from templates (`cell_rows()` for a cell of several rows,
+    `overall_row()` for an "Any" row), `pull_ard()` and `list_ard_keys()`
+    read it.
+  - **Deferred form: a plan.**  `table_plan(x, cols, rows, label, stat)`
+    declares the roles once; the `plan_*()` verbs add the layers, each with
+    one job -- `plan_cells()` (the cell templates, `stats`, `value`, `na`,
+    `notes`), `plan_sort()`, `plan_stub()`, `plan_row_group()`,
+    `plan_blanks()`, `plan_columns()` (`widths`, `decimal`, `row_title`,
+    `auto_width`, `sep`), `plan_col_header()` (`header`, `values` -- the
+    populations the header's tokens take), `plan_digits()` (also by row
+    label, `.rows =`), `plan_style()` (the whole table and the
+    `border_*` rules of each kind of row), `plan_cell_style()` (which cells
+    and how they look; a value or a one-sided formula computed row by row),
+    `plan_paginate_group()`, `plan_paginate_cols()` and `plan_listing()`.
+    `plan_apply()` runs a plan and `plan_layers()` reads it back.  A plan
+    is a table source for `rtf_tables()` and `as_rtftables()`.
+  - `plan_template(ard)` writes a starting pipeline (`form = "widen"` for
+    the immediate one), with the pipe `getOption("rtfreporter.ard_pipe")`
+    or RStudio's preference asks for.
+
+  These are rtfreporter's functions, not cards'; cards stays a suggestion,
+  and the Excel definition of a table stays in tflspec (`tfl_table_plan()`).
+  The four tflspec Discussion #3 samples written as plans render
+  byte-identical RTF to the hand-written programs.
 
 ### Bug fixes
 
@@ -19,77 +60,15 @@
   split -- as an adapter's cell styles always have.  A single page is
   unchanged.
 
-### New features
-
-- **Experimental: tables from a cards / cardx ARD** (#491, #498; plan E of
-  tflspec Discussion #23).  **Experimental** -- whether these functions stay
-  is decided in the pre-CRAN API review, Discussion #316; if they are not
-  adopted they will be **removed**.
-
-  The engine that turns an analysis results dataset into an `rtftable`
-  moves here from tflspec, so that a plan and the rendering it declares
-  live in one package and a generated table program needs only
-  rtfreporter (and cards).  The immediate form: `normalize_ard()` flattens
-  the ARD (groups and hierarchy as key columns), `widen_ard()` lays the
-  statistics out as cells from templates (`cell_rows()` for a cell of
-  several rows, `overall_row()` for an "Any" row), `pull_ard()` and
-  `list_ard_keys()` read it.  The deferred form: `table_plan()` declares
-  the roles once, the `plan_*()` verbs add the layers, `plan_apply()` runs
-  it and `plan_layers()` reads it back; a plan is a table source for
-  `rtf_tables()` and `as_rtftables()`.  `plan_template(ard)` writes a
-  starting pipeline (`form = "widen"` for the immediate one), with the
-  pipe `getOption("rtfreporter.ard_pipe")` or RStudio's preference asks
-  for.  These are rtfreporter's functions, not cards'; cards stays a
-  suggestion, and the Excel definition of a table stays in tflspec
-  (`tfl_table_plan()`).
-
-  Rebuilt before the adoption meeting (#498), so that each verb has **one
-  job** and an argument means the same thing wherever it appears:
-
-  - `table_plan(x, cols, rows, label, stat)` takes the **roles** and
-    nothing else.  The parts of a statistic a frame calls something else
-    are one argument, `stat = c(variable = , name = , value = )`.  The
-    other settings went to the verb whose job they are: `stats`, `value`,
-    `na` and `notes` to `plan_cells()`, the frequency statistic to
-    `plan_sort(stat = )`, the key separator to `plan_columns(sep = )`.
-  - `plan_style()` lists the settings of the whole table and takes nothing
-    else; the rules of one kind of row are `border_header` ...
-    `border_last_row`, the names `rtf_table_style()` gives them.
-  - `plan_cell_style(cols, header, where, bold, italic, align, color,
-    background, border)` says which cells and how they look, replacing
-    `plan_header_style()`, `plan_col_style()` and `plan_zone_style()`.  An
-    attribute is a value, or a one-sided formula computing it row by row.
-  - `plan_digits()` also formats a finished table: a key naming a column,
-    or `.rows` keyed by the row label (`plan_digits(.rows = c(Mean = 1, SD
-    = "3s"))`), replacing `plan_fmt()`.
-  - A page per value is `plan_paginate_group()` alone
-    (`plan_paginate_rows(by = )` is gone); `plan_row_group()` groups by
-    the outermost row key without being told it (`col =` is gone);
-    `plan_sort()` writes a descending key as `-name` (`desc =` is gone).
-  - `plan_listing()` keeps what only a listing has: blank rows are
-    `plan_blanks(where = "records")` / `plan_blanks(first = TRUE)`, and an
-    alignment is `listing_col(align = )`.
-  - `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, ...)`:
-    `cut_by` is the block list or the separator, `keep` the columns every
-    block repeats, `fit = TRUE / FALSE` the width rule.
-  - `plan_col_header(header, values)`: `values` is what the header's
-    tokens take -- the populations the plan reads (`list(n = TRUE)`,
-    `list(n = "page", N = "table")`, numbers, a function) or a data frame
-    of per-page values.
-  - `plan_columns()` also takes `row_title`, `auto_width` and `sep`.
-  - `show =` is `keep =`; `plan_stub(into = )` is `name =`;
-    `spread_ard()` is `widen_ard()`; `plan_apply(stage = "long")` is
-    `"input"`, and its `"args"` list names the widen half `$widen`.
-  - `plan_stub(before = )` stays a choice: folding the stub first takes
-    the row keys into the stub column, so a page split naming one of them
-    would no longer find it.
-
-  The four Discussion #3 samples written with the new verbs render
-  byte-identical RTF.  No aliases are kept for the old names (pre-CRAN).
-
 ### Documentation
 
-- **Development reopens at `0.8.1.9000`** (#493), after the 0.8.1 release.
+- **The AI manuals cover the plan** (`rtfreporter_ai_manual()`, #463).  The
+  user manual has a chapter on tables from an ARD (the flow, every verb and
+  its arguments, which verb says what, the `as_rtftables()` arguments each
+  one takes over, and the names that do not exist); the developer manual one
+  on the plan engine (layers, last wins, resolution, the testing contract).
+  A new test checks every argument named in the user manual's code against
+  the function's `formals()`, and runs the plan examples.
 
 # rtfreporter 0.8.1
 

@@ -40,11 +40,6 @@ Resolves an \code{\link[=table_plan]{table_plan()}}'s layers and runs the conver
 it early, so the same one pass answers "what does this do" and "what did it
 do" --- there is no second code path that could disagree with the first.
 }
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \code{\link[=table_plan]{table_plan()}}.
-}
-
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
   p <- cards::ard_stack(

@@ -36,8 +36,8 @@ The package is not on CRAN yet. Install from GitHub:
 ``` r
 # install.packages("remotes")
 
-# Latest release (v0.8.1)
-remotes::install_github("ichirio/rtfreporter@v0.8.1")
+# Latest release (v0.8.2)
+remotes::install_github("ichirio/rtfreporter@v0.8.2")
 
 # Development version (latest main)
 remotes::install_github("ichirio/rtfreporter")
@@ -101,7 +101,7 @@ rtfreporter_ai_manual()                     # path to the user manual
 rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
 ```
 
-Or download it -- **[AI user manual (v0.8.1)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.1.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
+Or download it -- **[AI user manual (v0.8.2)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
 
 It holds the whole workflow, the program structure a report program should
 have, every `as_rtftables()` argument, the four clinical table shapes, headers
@@ -217,9 +217,12 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 `lifecycle: experimental` badge; the API may still change in
 backward-incompatible ways before v1.0.0.
 
-- **Latest release: `v0.8.1`** (2026-09-29) -- installable from GitHub
-  (`remotes::install_github("ichirio/rtfreporter@v0.8.1")`); not yet on CRAN.
-  A patch release on top of v0.8.0: one rounding rule (`round_num()`), run
+- **Latest release: `v0.8.2`** (2026-09-30) -- installable from GitHub
+  (`remotes::install_github("ichirio/rtfreporter@v0.8.2")`); not yet on CRAN.
+  **Tables from a cards / cardx ARD**: `normalize_ard()` / `widen_ard()`
+  and the plan engine (`table_plan()` and the `plan_*()` verbs), adopted in
+  the pre-CRAN API review; plus two fixes.
+- **v0.8.1** (2026-09-29): a patch release on top of v0.8.0: one rounding rule (`round_num()`), run
   tokens such as `{PROGRAM}` and `{DATETIME}`, `as_rtftables()` as an S3
   generic, and pagination / print fixes.
 - **v0.8.0** (2026-09-16) rolled up everything since v0.4.0: **listings** end to end
@@ -231,7 +234,7 @@ backward-incompatible ways before v1.0.0.
   (`set_col_header(values = )`), **figures from plot objects**, and the
   **AI assistant manuals** that now ship inside the package.  59 exported
   functions at v0.4.0; 91 here.
-- **Development version on `main`: `0.8.1.9000`.**  rtfreporter follows the
+- **Development version on `main`: `0.8.2.9000`.**  rtfreporter follows the
   standard R versioning scheme -- a release is `X.Y.Z`, development is
   `X.Y.Z.9000`, and the three-component part always names the last release.
   An ordinary pull request leaves `DESCRIPTION` alone unless the change is

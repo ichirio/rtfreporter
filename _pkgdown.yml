@@ -64,8 +64,8 @@ home:
       devnotes:
         title: Dev stage
         text: |
-          v0.8.1 released (current stable); pre-1.0, the API may still change
-          before v1.0.0.  Development continues at `0.8.1.9000` — the standard
+          v0.8.2 released (current stable); pre-1.0, the API may still change
+          before v1.0.0.  Development continues at `0.8.2.9000` — the standard
           R scheme, where the three-component part names the last release.
 
           Roadmap:
@@ -149,10 +149,10 @@ navbar:
         - text: "For AI assistants"
         - text: "Developing with an AI assistant"
           href: articles/ai-development.html
-        - text: "AI user manual (v0.8.1)"
-          href: ai/rtfreporter-ai-user-manual-0.8.1.md
-        - text: "AI developer manual (v0.8.1)"
-          href: ai/rtfreporter-ai-dev-manual-0.8.1.md
+        - text: "AI user manual (v0.8.2)"
+          href: ai/rtfreporter-ai-user-manual-0.8.2.md
+        - text: "AI developer manual (v0.8.2)"
+          href: ai/rtfreporter-ai-dev-manual-0.8.2.md
         # ── Worked clinical examples ────────────────────────────────────
         - text: -------
         - text: "Worked clinical examples"
@@ -362,7 +362,7 @@ reference:
       - rtf_header_source
 
   # ── 5b. Post-hoc styling verbs ─────────────────────────────────────────
-  - title: Tables from a cards / cardx ARD (normalize, spread, plan)
+  - title: Tables from an ARD (normalize, widen, plan)
     desc: >
       Turn an analysis results dataset (cards / cardx) into `rtftable` pages.
       **Acts on:** an ARD data frame.  **Produces:** a table data.frame

@@ -109,11 +109,6 @@ reordered in between.  \code{levels} still overrides it.  A key that was
 character stays character.
 }
 
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \link{ard-tables}.
-}
-
 \seealso{
 \code{\link[=widen_ard]{widen_ard()}}, \code{\link[=list_ard_keys]{list_ard_keys()}}
 }

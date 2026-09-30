@@ -27,11 +27,6 @@ template, a chain of templates, or a chain with guards.  Reading a recipe
 then goes \code{list()} for \emph{which variable}, \code{cell_rows()} for \emph{which row},
 \code{c()} for \emph{which template to try first}.
 }
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \link{ard-tables}.
-}
-
 \examples{
 # an estimate line and a confidence-interval line, the first guarded so a
 # count of zero prints as "0" rather than "0 (0.0)"

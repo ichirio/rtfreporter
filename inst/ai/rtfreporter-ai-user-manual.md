@@ -1,7 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.1.9003** (the development
-version, after release 0.8.1).
+**This manual documents rtfreporter 0.8.2.**
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
 `rtfreporter_ai_manual()`.
@@ -23,9 +22,9 @@ differ, trust the package, not this file, and fetch the matching copy with
 
 ## 0. Ground rules for the assistant
 
-1. **Only call functions listed in §17.** rtfreporter is a young package and is
+1. **Only call functions listed in §18.** rtfreporter is a young package and is
    almost certainly *not* in your training data. If a requested feature has no
-   function in §17, say so plainly instead of inventing a plausible name or
+   function in §18, say so plainly instead of inventing a plausible name or
    argument.
 2. **It is not `r2rtf` and not `reporter`.** Do not mix their verbs
    (`rtf_body()`, `rtf_colheader()`, `create_table()`, …) into rtfreporter code.
@@ -280,6 +279,7 @@ without writing a file.
 | Style after the fact | `style_cols()`, `style_body()`, `style_header()`, `style_zone()` |
 | Borders | `border = "tfl"`, `rtf_border()`, `rtf_border_side()` |
 | Column-width help | `auto_col_widths(df, ...)`, `fit_listing_widths(data, spec, page =)` |
+| Table from a cards / cardx ARD | `normalize_ard()` → `table_plan()` → `plan_*()` → `rtf_tables(doc, plan)` **(§17)** |
 
 ---
 
@@ -731,7 +731,194 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 
 ---
 
-## 17. Complete public API (nothing outside this list exists)
+## 17. Tables from a cards / cardx ARD — the plan
+
+Use this when the statistics are already in an **ARD** (the long frame
+`cards` / `cardx` return: one statistic per row). The same route works for
+any long frame of statistics, meaning keys plus a statistic name and a value,
+built with dplyr. If the table already exists as a data frame, `gt`,
+`rtables` and so on, stay with `as_rtftables()` (§5). The two routes produce
+the same `rtftable` pages.
+
+```
+ARD ─ normalize_ard() ─▶ flat frame ─ table_plan() ─▶ plan ─ plan_*() ─▶ plan
+                                                                  │
+                          rtf_tables(doc, plan)  /  plan_apply(plan)
+```
+
+**Rules of the plan (tell the user these when they are confused):**
+
+1. `table_plan()` takes the **roles** only: `cols` (across), `rows` (down),
+   `label` (the row identity) and `stat`. No other argument exists on it.
+2. Each `plan_*()` verb has **one job**. Every other setting belongs to the
+   verb for that job (the table below).
+3. **A later layer wins.** `plan_digits(2) |> plan_digits(AGE = 0)` means 2
+   everywhere and 0 for AGE. Adjust a table by *adding* a line.
+4. Nothing runs until `rtf_tables(doc, plan)` or `plan_apply(plan)`.
+   `rtf_tables()` takes the plan directly, so there is no need to call
+   `plan_apply()` first.
+5. A raw cards ARD is refused by `table_plan()`. Flatten it with
+   `normalize_ard()` first, and look at the result's column names: they are
+   what `cols` / `rows` name.
+
+### A demographics table, end to end
+
+```r
+library(rtfreporter); library(cards)
+adsl <- pharmaverseadam::adsl
+adsl <- adsl[adsl$SAFFL == "Y", ]
+adsl$TRT01A <- factor(adsl$TRT01A,
+                      levels = c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"))
+
+ard <- ard_stack(adsl, .by = TRT01A,              # .by also counts the arms: the header's N
+  ard_continuous(variables = AGE, statistic = ~ continuous_summary_fns(
+    c("N", "mean", "sd", "median", "p25", "p75", "min", "max"))),
+  ard_categorical(variables = c(AGEGR1, SEX)))
+
+p <- ard |>
+  normalize_ard() |>
+  table_plan(cols = "TRT01A", rows = c(group = "variable")) |>
+  plan_cells(
+    continuous  = c("n"               = "{N:.0f}",           # a NAMED vector = one row per name
+                    "Mean (SD)"       = "{mean:.1f} ({sd:.2f})",
+                    "Median (Q1, Q3)" = "{median:.1f} ({p25:.1f}, {p75:.1f})",
+                    "Min, Max"        = "{min:.0f}, {max:.0f}"),
+    categorical = c(n == 0 ~ "0", "{n:.0f} ({p:.1f%})"),     # guarded chain: first that applies
+    notes = FALSE) |>
+  plan_labels(c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)", SEX = "Sex, n (%)")) |>
+  plan_levels(SEX = c("F", "M")) |>
+  plan_stub(name = "row_label") |>
+  plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+  plan_columns(widths = c(4, 2, 2, 2)) |>
+  plan_style(border = "tfl", align_count_pct = TRUE) |>
+  plan_col_header(values = list(n = TRUE), rtf_col_header(   # {n} read from the ARD
+    c("",               "{col}"),
+    c("Characteristic", "(N={n})")))
+
+doc <- rtf_document() |>
+  rtf_section(secinfo = list(header = rtf_header(list(
+    c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
+    c(c = "Table 14.1.1  Demographics"))))) |>
+  rtf_tables(p)
+generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
+```
+
+### AE by SOC / PT, most frequent first
+
+```r
+adae <- pharmaverseadam::adae
+adae <- adae[adae$TRTEMFL %in% "Y" & adae$SAFFL %in% "Y", ]
+adae$TRT01A <- factor(adae$TRT01A, levels = levels(adsl$TRT01A))
+ard_ae <- ard_stack_hierarchical(adae, variables = c(AEBODSYS, AEDECOD),
+  by = TRT01A, denominator = adsl, id = USUBJID, over_variables = TRUE)
+
+p_ae <- ard_ae |>
+  normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"), overall = "Any TEAE") |>
+  table_plan(cols = "TRT01A", rows = c(SOC = "AEBODSYS", PT = "AEDECOD"), label = NA) |>
+  plan_sort(".overall", "SOC", ".depth", "-n", "PT") |>   # Any first; SOC, its own row, PTs by n desc
+  plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
+  plan_stub(name = "System Organ Class\n  Preferred Term", indent = 2) |>
+  plan_paginate_rows(max_rows = 30, split = "group_safe") |>
+  plan_style(border = "tfl") |>
+  plan_col_header(values = list(n = TRUE),
+                  rtf_col_header(c("", "{col}"), c("", "(N={n})")))
+```
+
+### Cell templates
+
+| Token | Means |
+|---|---|
+| `{mean}` | the value cards formatted (`stat_fmt`), else `stat` |
+| `{mean:.1f}` | 1 decimal place (`plan_digits(rounding = "sas")` for SAS-style halves) |
+| `{p:.1f%}` | ×100, then 1 decimal |
+| `{mean:.3s}` | 3 significant digits |
+| `{n:d}` | integer |
+
+* `"{n} ({p})"`: one row. `c("A" = "...", "B" = "...")` (named): one row per
+  name, and the name is the row label. `c(n == 0 ~ "0", "{n} ({p})")`: a
+  chain, where the first element whose guard holds and whose statistics
+  exist wins.
+* Keys of `plan_cells()` / `plan_digits()`: an analysis variable (`AGE =`),
+  then a `context`, then a kind (`continuous =` / `categorical =`), then
+  `default` (one unnamed entry). The narrower key wins.
+* `plan_digits()` fills only *open* tokens (`{mean}`). `{mean:.2f}` keeps its
+  own digits.
+
+### Which verb says what
+
+| Job | Verb (arguments) |
+|---|---|
+| Start; roles | `table_plan(x, cols, rows, label, stat)`: `stat = c(variable =, name =, value =)` renames the three parts for a non-cards frame |
+| Cell text | `plan_cells(..., stats = "cells"/"rows", value = "stat"/"stat_fmt", na, notes)` |
+| Digits / rounding | `plan_digits(..., rounding)`: `plan_digits(continuous = c(mean = 1, sd = 2))`; on a finished table `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
+| Order of values | `plan_levels(VAR = c(...))` |
+| Printed text of values / variables | `plan_labels(c(AGE = "Age (years)"))` |
+| Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone |
+| Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
+| Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse)` |
+| Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
+| Columns not printed | `plan_hide("COL")` |
+| Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep)`: `widths = c(row_label = 5, .values = 2)` |
+| Column header | `plan_col_header(header, values)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits |
+| Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row)` |
+| Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)`: a value, or a formula `bold = ~ is.na(label)` |
+| A page per value | `plan_paginate_group(col, keep)` |
+| Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label)` |
+| Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
+| A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
+| Titles / footnotes | `plan_titles(...)`, `plan_footnotes(...)` (`pages =` for one block per page) |
+| Anything else | `plan_after(function(pages) ...)`: last resort; prefer a verb |
+
+Every verb maps onto an existing call: the ARD half onto `widen_ard()`, the
+display half onto `as_rtftables()`, `stub_cols()`, `set_col_header()`,
+`paginate_cols()` and the `style_*()` verbs. For example, `as_rtftables(max_rows
+=)` becomes `plan_paginate_rows(max_rows =)`, `drop_cols` becomes
+`plan_hide()`, `group_by` becomes `plan_row_group(mode =)`, `blank_rows`
+becomes `plan_blanks(where =)`, and `split = "by_value", group_col` becomes
+`plan_paginate_group(col =)`.
+
+### Looking inside
+
+* `print(p)`: the layers, the column names the roles may name, and the
+  values every header token (`{n}`, `{n:sum}`, `{n:<column>}`) will take.
+* `plan_apply(p, stage = "input")`: the frame going in.
+  `stage = "table"`: the table data frame. `stage = "args"`: the resolved
+  calls (`$widen`, `$rtf`), without running them. `stage = "pages"`: the
+  `rtftable` pages.
+* `plan_layers(p)`: the plan read back, layer by layer.
+* `plan_template(ard, cols = "TRT01A")`: writes a starting program for this
+  ARD (`file =` to save it). `form = "widen"` writes the one-call form
+  instead.
+
+### Without a plan
+
+`widen_ard(nd, cols, rows, label, cells, ...)` does the ARD half at once and
+returns the table data frame, to finish with `as_rtftables()`. Its `cells` is
+a *list* keyed like `plan_cells()`: `list(continuous = c(...), categorical =
+"...")`. `pull_ard(ard, ...)` takes single values out, for a footnote or a
+header. `list_ard_keys(ard)` lists the keys, variables and statistics.
+`cell_rows()` makes one named row whose value is a chain, and `overall_row()`
+adds an "Any" row.
+
+### Names that do NOT exist (do not write them)
+
+| Wrong | Right |
+|---|---|
+| `spread_ard()` | `widen_ard()` |
+| `ard_normalize()`, `ard_spread()`, `ard_table()`, `ard_template()` | `normalize_ard()`, `widen_ard()`, `plan_template()` |
+| `rtf_plan()` | `table_plan()` |
+| `plan_fmt()` | `plan_digits()` |
+| `plan_header_style()`, `plan_col_style()`, `plan_zone_style()` | `plan_cell_style(header = TRUE / cols =)`, `plan_style(border_header = ...)` |
+| `table_plan(cells =, stats =, sort_stat =, sep =, na =)` | `plan_cells()`, `plan_sort(stat =)`, `plan_columns(sep =)` |
+| `plan_paginate_rows(by =)` | `plan_paginate_group()` |
+| `plan_row_group(col =)`, `plan_sort(desc =)` | the outermost row key is used; `plan_sort("-n")` |
+| `show =`, `plan_stub(into =)` | `keep =`, `plan_stub(name =)` |
+| `plan_apply(stage = "long")`, `$spread` | `stage = "input"`, `$widen` |
+| `tfl_table_plan()`, `tfl_*()` | **tflspec**, not rtfreporter: it reads an Excel spec into a plan |
+
+---
+
+## 18. Complete public API (nothing outside this list exists)
 
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
 `rtf_default_format` `rtf_watermark` `generate_rtfreport`
@@ -770,8 +957,7 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 `fmt_round` `fmt_numeric` `round_num` `catx` `collapse_repeats`
 `blank_rows_by_change` `blank_rows_by_rule`
 
-**Tables from a cards / cardx ARD (EXPERIMENTAL — may be removed; decided in
-Discussion #316):** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
+**Tables from a cards / cardx ARD:** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
@@ -785,11 +971,11 @@ Discussion #316):** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
 
 ---
 
-## 18. Troubleshooting
+## 19. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
-| `could not find function "rtf_body"` etc. | that is `r2rtf`, not rtfreporter — see §17 |
+| `could not find function "rtf_body"` etc. | that is `r2rtf`, not rtfreporter — see §18 |
 | The file is not written | add `overwrite = TRUE` to `generate_rtfreport()` |
 | Everything lands on one page | pagination needs `max_rows` (and usually `split = "group_safe"`) |
 | A group is split across pages | `split = "group_safe"` plus `group_col` / `group_by` |
@@ -802,6 +988,11 @@ Discussion #316):** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
 | `the label row has N labels but the table has M printed columns` | an **unnamed** label row needs one entry per printed column; name the entries to patch a subset, check `rtf_columns()`, and set a whole-table header **before** `paginate_cols()` |
 | Header edits hit the wrong column | address by name (`c(TRT01A = "…")`, `col_cell("TRT01A", …)`, `col_key()`), not by position |
 | Decimal points are ragged | `set_decimal_split(cols =)` on the pages |
+| `table_plan()` refuses a cards ARD | flatten it first: `ard |> normalize_ard() |> table_plan(...)` |
+| A header prints `(N=NA)` with a warning | the ARD does not state that population: build it with `ard_stack(.by = TRT)`, or give it: `plan_col_header(values = list(n = c(Placebo = 86, ...)))` |
+| "the same key is given twice in one call" | a later *layer* wins, not a later argument: make it a second `plan_*()` call |
+| "widen_ard(): N ARD rows were not used" | a note, not an error: no template names those statistics; `plan_cells(notes = FALSE)` silences it |
+| A plan verb seems to be ignored | a later layer said the same key: `plan_apply(p, "args")` shows what was resolved |
 
 **When something is not covered here:** consult
 <https://ichirio.github.io/rtfreporter/reference/> (every function),

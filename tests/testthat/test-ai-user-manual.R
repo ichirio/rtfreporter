@@ -27,7 +27,7 @@ library(testthat)
 }
 
 ## Code fences are `r ... ` blocks; the API list is the run of bold-led
-## paragraphs under the "Complete public API" heading (section 17).
+## paragraphs under the "Complete public API" heading (section 18).
 .manual_code <- function(lines) {
   fence <- grepl("^```", lines)
   inside <- cumsum(fence) %% 2L == 1L & !fence
@@ -35,8 +35,8 @@ library(testthat)
 }
 
 .manual_api_names <- function(lines) {
-  from <- grep("^## 17\\. Complete public API", lines)
-  to   <- grep("^## 18\\.", lines)
+  from <- grep("^## 18\\. Complete public API", lines)
+  to   <- grep("^## 19\\.", lines)
   expect_length(from, 1L)
   expect_length(to, 1L)
   block <- lines[seq(from + 1L, to - 1L)]
@@ -346,4 +346,106 @@ test_that("every idiom the manual teaches runs", {
   expect_s3_class(blank_rows_by_change("Characteristic"), "rtf_blank_rows_by_change")
   expect_s3_class(blank_rows_by_rule("Characteristic", "^Total", where = "before"),
                   "rtf_blank_rows_by_rule")
+})
+
+## -- every call in the manual's code names arguments the function has -------
+##
+## A manual that teaches `plan_sort(desc = TRUE)` is worse than none: the
+## assistant writes it with full confidence and the user gets "unused
+## argument".  So every call of an rtfreporter export inside a code block is
+## parsed, and each argument it names is looked up in that function's
+## formals.  A function with `...` accepts any name (plan_cells(AGE = ),
+## plan_labels(...)), so only the others are checked.  A block that is not
+## R (the workflow diagram, a comment-only sketch) does not parse and is
+## skipped; the blocks that teach calls do parse.
+.manual_blocks <- function(lines) {
+  fence <- grepl("^```", lines)
+  id <- cumsum(fence)
+  inside <- id %% 2L == 1L & !fence
+  split(lines[inside], id[inside])
+}
+
+.calls_in <- function(expr) {
+  out <- list()
+  walk <- function(e) {
+    if (is.call(e)) {
+      f <- e[[1L]]
+      nm <- if (is.name(f)) as.character(f)
+            else if (is.call(f) && identical(f[[1L]], as.name("::")))
+              as.character(f[[3L]])
+      if (!is.null(nm)) out[[length(out) + 1L]] <<- list(
+        fn = nm, args = setdiff(names(as.list(e))[-1L], ""))
+      for (a in as.list(e)[-1L]) if (!missing(a)) walk(a)
+    }
+  }
+  for (x in as.list(expr)) walk(x)
+  out
+}
+
+test_that("every call in the manual's code uses arguments the function has", {
+  lines <- .manual_lines()
+  ns <- asNamespace("rtfreporter")
+  exported <- getNamespaceExports(ns)
+  bad <- character(); parsed <- 0L
+  for (b in .manual_blocks(lines)) {
+    ex <- tryCatch(parse(text = b, keep.source = FALSE), error = function(e) NULL)
+    if (is.null(ex)) next
+    parsed <- parsed + 1L
+    for (cl in .calls_in(ex)) {
+      if (!cl$fn %in% exported || !length(cl$args)) next
+      fm <- names(formals(get(cl$fn, envir = ns)))
+      if ("..." %in% fm) next
+      wrong <- setdiff(cl$args, fm)
+      if (length(wrong)) bad <- c(bad, sprintf("%s(%s)", cl$fn,
+                                              paste(wrong, collapse = ", ")))
+    }
+  }
+  expect_gt(parsed, 10L)
+  expect_identical(unique(bad), character(0),
+    info = paste("arguments the function does not have:",
+                 paste(unique(bad), collapse = "; ")))
+})
+
+test_that("the names the manual warns against are not exports", {
+  # The "Names that do NOT exist" table only works while it is true; a name
+  # that comes back as an export makes it a lie.
+  lines <- .manual_lines()
+  from <- grep("^### Names that do NOT exist", lines)
+  expect_length(from, 1L)
+  to <- from + grep("^(---|## )", lines[-seq_len(from)])[1L]
+  rows <- lines[seq(from, to)]
+  wrong <- sub("^\\| *", "", rows[grepl("^\\| `", rows)])
+  wrong <- sub(" *\\|.*$", "", wrong)
+  fns <- unique(unlist(regmatches(wrong,
+                                  gregexpr("[A-Za-z_][A-Za-z0-9_.]*(?=\\()", wrong, perl = TRUE))))
+  fns <- setdiff(fns, c("table_plan", "plan_paginate_rows", "plan_row_group",
+                        "plan_sort", "plan_stub", "plan_apply"))  # real verbs, wrong args
+  fns <- fns[!grepl("^tfl_", fns)]                                 # tflspec's
+  expect_gt(length(fns), 5L)
+  expect_identical(intersect(fns, getNamespaceExports(asNamespace("rtfreporter"))),
+                   character(0))
+  # and none of them appears in a code block
+  code <- .manual_code(lines)
+  used <- fns[vapply(fns, function(f) any(grepl(paste0("\\b", f, "\\("), code)),
+                     logical(1))]
+  expect_identical(used, character(0))
+})
+
+test_that("the ARD / plan examples (section 17) run", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("pharmaverseadam")
+  lines <- .manual_lines()
+  from <- grep("^## 17\\. Tables from a cards", lines)
+  to   <- grep("^## 18\\.", lines)
+  expect_length(from, 1L)
+  blocks <- .manual_blocks(lines[seq(from, to)])
+  code <- unlist(Filter(function(b) any(grepl("<-", b)), blocks))
+  expect_gt(length(code), 20L)
+  old <- setwd(tempdir()); on.exit(setwd(old), add = TRUE)
+  env <- new.env(parent = globalenv())
+  expect_no_error(suppressMessages(eval(parse(text = code), envir = env)))
+  expect_true(file.exists(file.path(tempdir(), "t_dm.rtf")))
+  expect_s3_class(env$p_ae, "table_plan")
+  pages <- suppressMessages(plan_apply(env$p_ae))
+  expect_s3_class(pages[[1L]], "rtftable")
 })
