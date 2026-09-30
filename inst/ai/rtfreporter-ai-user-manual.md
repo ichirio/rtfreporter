@@ -815,7 +815,7 @@ ard_ae <- ard_stack_hierarchical(adae, variables = c(AEBODSYS, AEDECOD),
 p_ae <- ard_ae |>
   normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"), overall = "Any TEAE") |>
   table_plan(cols = "TRT01A", rows = c(SOC = "AEBODSYS", PT = "AEDECOD"), label = NA) |>
-  plan_sort(".overall", "-n") |>                 # overall row first, then n descending
+  plan_sort(".overall", "SOC", ".depth", "-n", "PT") |>   # Any first; SOC, its own row, PTs by n desc
   plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
   plan_stub(name = "System Organ Class\n  Preferred Term", indent = 2) |>
   plan_paginate_rows(max_rows = 30, split = "group_safe") |>
@@ -853,7 +853,7 @@ p_ae <- ard_ae |>
 | Digits / rounding | `plan_digits(..., rounding)`: `plan_digits(continuous = c(mean = 1, sd = 2))`; on a finished table `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
 | Order of values | `plan_levels(VAR = c(...))` |
 | Printed text of values / variables | `plan_labels(c(AGE = "Age (years)"))` |
-| Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending |
+| Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone |
 | Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
 | Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse)` |
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
