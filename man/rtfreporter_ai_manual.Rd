@@ -38,9 +38,11 @@ the one that matches your installation.
 \describe{
 \item{\code{"user"} (default)}{For \emph{using} rtfreporter: the workflow, every
 \code{\link[=as_rtftables]{as_rtftables()}} argument, the four clinical table shapes, headers and
-page tokens, listings, figures, borders, and the complete export list.}
+page tokens, listings, figures, borders, tables from a cards / cardx
+ARD (\code{\link[=table_plan]{table_plan()}} and the \verb{plan_*()} verbs), and the complete export
+list.}
 \item{\code{"dev"}}{For working \emph{on} the package: the invariants, the S3 object
-model, the rendering pipeline, the adapter contract, and the test /
+model, the rendering pipeline, the adapter contract, the plan engine, and the test /
 docs / release conventions.}
 }
 

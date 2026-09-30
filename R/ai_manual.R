@@ -29,9 +29,11 @@
 #' \describe{
 #'   \item{`"user"` (default)}{For *using* rtfreporter: the workflow, every
 #'     [as_rtftables()] argument, the four clinical table shapes, headers and
-#'     page tokens, listings, figures, borders, and the complete export list.}
+#'     page tokens, listings, figures, borders, tables from a cards / cardx
+#'     ARD ([table_plan()] and the `plan_*()` verbs), and the complete export
+#'     list.}
 #'   \item{`"dev"`}{For working *on* the package: the invariants, the S3 object
-#'     model, the rendering pipeline, the adapter contract, and the test /
+#'     model, the rendering pipeline, the adapter contract, the plan engine, and the test /
 #'     docs / release conventions.}
 #' }
 #'

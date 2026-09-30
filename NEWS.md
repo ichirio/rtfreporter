@@ -60,6 +60,16 @@ sample reports are byte-identical.
   split -- as an adapter's cell styles always have.  A single page is
   unchanged.
 
+### Documentation
+
+- **The AI manuals cover the plan** (`rtfreporter_ai_manual()`, #463).  The
+  user manual has a chapter on tables from an ARD (the flow, every verb and
+  its arguments, which verb says what, the `as_rtftables()` arguments each
+  one takes over, and the names that do not exist); the developer manual one
+  on the plan engine (layers, last wins, resolution, the testing contract).
+  A new test checks every argument named in the user manual's code against
+  the function's `formals()`, and runs the plan examples.
+
 # rtfreporter 0.8.1
 
 A patch release of the fixes and small additions made since 0.8.0.  One
