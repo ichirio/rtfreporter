@@ -2,8 +2,7 @@
 % Please edit documentation in R/ard_tables.R
 \name{ard-tables}
 \alias{ard-tables}
-\alias{ard-experimental}
-\title{Experimental: cards/cardx ARD to table data.frame}
+\title{Tables from a cards/cardx ARD}
 \description{
 A small family that turns an \strong{ARD} (Analysis Results Data, as produced by
 \pkg{cards} and \pkg{cardx}) into the table \code{data.frame} that
@@ -127,15 +126,6 @@ Column headers are rtfreporter's own job -- \code{col_header} takes a plain
 character vector -- so \code{\link[=widen_ard]{widen_ard()}} builds the body only, and
 \code{\link[=pull_ard]{pull_ard()}} is there when the header needs a number that must agree with
 the percentages.
-}
-
-\section{Lifecycle}{
-
-\strong{Experimental.}  These functions are newer than the rest of the package
-and are not covered by its stability expectations: names and arguments may
-change.  Whether they stay is decided in the pre-CRAN API review,
-\href{https://github.com/ichirio/rtfreporter/discussions/316}{rtfreporter Discussion #316}; if they are not adopted they
-will be \strong{removed}.  They are in no release yet.
 }
 
 \seealso{

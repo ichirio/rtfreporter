@@ -840,9 +840,6 @@
 #' @return Invisibly, a list with elements `keys`, `variables`, `contexts` and
 #'   `stats` (a data frame of context / stat_name / stat_label).
 #'
-#' @section Lifecycle:
-#' **Experimental.**  See [ard-tables].
-#'
 #' @seealso [normalize_ard()], [widen_ard()], `plan_template(form = "widen")`
 #' @export
 list_ard_keys <- function(x) {
@@ -916,9 +913,6 @@ list_ard_keys <- function(x) {
 #'   `overall` argument.  That argument also takes a bare string, which is
 #'   `overall_row(label)`.
 #'
-#' @section Lifecycle:
-#' **Experimental.**  See [ard-tables].
-#'
 #' @examples
 #' overall_row("Any TEAE")                      # the cards sentinel rows
 #' overall_row("Any TEAE", from = "TRT01P")     # a separately-built block
@@ -966,9 +960,6 @@ overall_row <- function(label, from = NULL) {
 #'   unnamed argument takes its label from `label`, as a bare template does.
 #'
 #' @return An object of class `cell_rows`, for `cells` in [widen_ard()].
-#'
-#' @section Lifecycle:
-#' **Experimental.**  See [ard-tables].
 #'
 #' @examples
 #' # an estimate line and a confidence-interval line, the first guarded so a
@@ -1068,9 +1059,6 @@ print.cell_rows <- function(x, ...) {
 #' @param sep Separator between multiple `cols` keys; match [widen_ard()].
 #'
 #' @return A named vector, one element per column key.
-#'
-#' @section Lifecycle:
-#' **Experimental.**  See [ard-tables].
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -1257,9 +1245,6 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   `hierarchy`, 0 = a row of one that is not one of its levels, and `NA`
 #'   throughout when no `hierarchy` was given, since depth only means
 #'   something inside one.
-#'
-#' @section Lifecycle:
-#' **Experimental.**  See [ard-tables].
 #'
 #' @seealso [widen_ard()], [list_ard_keys()]
 #' @export
@@ -1760,9 +1745,6 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'
 #' @return A data frame: the `rows` columns, the label column, then one column
 #'   per column key.
-#'
-#' @section Lifecycle:
-#' **Experimental.**  See [ard-tables].
 #'
 #' @seealso [normalize_ard()], `plan_template(form = "widen")`
 #' @export
@@ -2426,9 +2408,6 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #
 # @return The generated code, as a character vector, invisibly.
 #
-# @section Lifecycle:
-# **Experimental.**  See [ard-tables].
-#
 .ard_template <- function(ard, cols = NULL, hierarchy = character(),
                          file = NULL, pipe = NULL) {
   op <- .ard_pipe_op(pipe)
@@ -2600,7 +2579,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #  package-level help
 # ============================================================================
 
-#' Experimental: cards/cardx ARD to table data.frame
+#' Tables from a cards/cardx ARD
 #'
 #' @description
 #' A small family that turns an **ARD** (Analysis Results Data, as produced by
@@ -2717,14 +2696,6 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' [pull_ard()] is there when the header needs a number that must agree with
 #' the percentages.
 #'
-#' @section Lifecycle:
-#' **Experimental.**  These functions are newer than the rest of the package
-#' and are not covered by its stability expectations: names and arguments may
-#' change.  Whether they stay is decided in the pre-CRAN API review,
-#' [rtfreporter Discussion #316](https://github.com/ichirio/rtfreporter/discussions/316); if they are not adopted they
-#' will be **removed**.  They are in no release yet.
-#'
 #' @name ard-tables
-#' @aliases ard-experimental
 #' @seealso [as_rtftables()], [stub_cols()]
 NULL

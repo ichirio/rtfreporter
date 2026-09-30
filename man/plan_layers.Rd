@@ -31,11 +31,6 @@ header as cell rows, the pages themselves.  It is the one way another
 package reads a plan: \code{tflspec::tfl_as_table_spec()} writes a workbook from
 nothing but this and \code{\link[=plan_apply]{plan_apply()}}.
 }
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \code{\link[=table_plan]{table_plan()}}.
-}
-
 \seealso{
 \code{\link[=plan_apply]{plan_apply()}}, \code{tflspec::tfl_as_table_spec()}
 }

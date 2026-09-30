@@ -1,7 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.1.9003** (the development
-version, after release 0.8.1).
+**This manual documents rtfreporter 0.8.2.**
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
 `rtfreporter_ai_manual()`.
@@ -770,8 +769,7 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 `fmt_round` `fmt_numeric` `round_num` `catx` `collapse_repeats`
 `blank_rows_by_change` `blank_rows_by_rule`
 
-**Tables from a cards / cardx ARD (EXPERIMENTAL — may be removed; decided in
-Discussion #316):** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
+**Tables from a cards / cardx ARD:** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`

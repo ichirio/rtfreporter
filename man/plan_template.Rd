@@ -47,11 +47,6 @@ is a starting point and is meant to be edited: only \code{plan_stub()} is
 derivable from the ARD, and the rest are display decisions nothing can
 guess.
 }
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \code{\link[=table_plan]{table_plan()}}.
-}
-
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
   ard <- cards::ard_stack(

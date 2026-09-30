@@ -30,11 +30,6 @@ so the arm sits in \code{variable} / \code{variable_level} with no grouping pair
 all.  The two are indistinguishable from the shape of the ARD, so which one
 this is has to be said.
 }
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \link{ard-tables}.
-}
-
 \examples{
 overall_row("Any TEAE")                      # the cards sentinel rows
 overall_row("Any TEAE", from = "TRT01P")     # a separately-built block

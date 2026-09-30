@@ -20,11 +20,6 @@ that appear in the \code{group1..groupN} columns, the analysis variables, the
 \code{context} values and the statistics each context carries.  All of it is read from the tibble's
 rows -- never from the object's attributes.
 }
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \link{ard-tables}.
-}
-
 \seealso{
 \code{\link[=normalize_ard]{normalize_ard()}}, \code{\link[=widen_ard]{widen_ard()}}, \code{plan_template(form = "widen")}
 }

@@ -65,11 +65,6 @@ the candidates listed}, so you can pin it with \code{variable} / \code{context}.
 }
 }
 
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \link{ard-tables}.
-}
-
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
   adsl <- cards::ADSL

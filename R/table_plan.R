@@ -408,11 +408,6 @@
 #'
 #' @return An object of class `table_plan`.
 #'
-#' @section Lifecycle:
-#' **Experimental.**  Whether the plan engine stays is decided in the
-#' pre-CRAN API review, [rtfreporter Discussion #316](https://github.com/ichirio/rtfreporter/discussions/316); if it is
-#' not adopted it will be **removed**.  See [ard-tables].
-#'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   ard <- cards::ard_stack(
@@ -1195,11 +1190,6 @@ print.table_plan <- function(x, ...) {
 #' `plan_after()` step).  Its `cols` may be column names, and `.values`
 #' stands for every value column, so a reordered table keeps them.
 #'
-#' @section Lifecycle:
-#' **Experimental.**  Whether the verbs stay is decided in the pre-CRAN API
-#' review, [rtfreporter Discussion #316](https://github.com/ichirio/rtfreporter/discussions/316); if they are not
-#' adopted they will be **removed**.  See [table_plan()].
-#'
 #' @name plan_verbs
 #' @seealso [table_plan()], [plan_apply()]
 NULL
@@ -1866,9 +1856,6 @@ plan_after <- function(plan, ...) {
 #' @return A data frame; for `stage = "args"` the resolved argument list;
 #'   for `stage = "pages"` what [as_rtftables()] and the steps after it
 #'   return.
-#'
-#' @section Lifecycle:
-#' **Experimental.**  See [table_plan()].
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -3458,9 +3445,6 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
 #'   or `NULL`; `literal_n`: whether `n` was a number written in); and
 #'   `pages`.
 #'
-#' @section Lifecycle:
-#' **Experimental.**  See [table_plan()].
-#'
 #' @seealso [plan_apply()], `tflspec::tfl_as_table_spec()`
 #' @export
 plan_layers <- function(plan) {
@@ -3549,9 +3533,6 @@ plan_layers <- function(plan) {
 #'   `getOption("rtfreporter.ard_pipe")`, then RStudio's own preference,
 #'   then `%>%`.
 #' @return The generated code, as a character vector, invisibly.
-#'
-#' @section Lifecycle:
-#' **Experimental.**  See [table_plan()].
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {

@@ -221,11 +221,6 @@ One ARD record becomes one table row.  Layouts that put a single record on
 two printed lines are deliberately out of scope -- do those afterwards, on
 the returned data frame.
 }
-\section{Lifecycle}{
-
-\strong{Experimental.}  See \link{ard-tables}.
-}
-
 \seealso{
 \code{\link[=normalize_ard]{normalize_ard()}}, \code{plan_template(form = "widen")}
 }

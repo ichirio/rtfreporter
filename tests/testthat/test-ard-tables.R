@@ -1,6 +1,4 @@
 # Tests of normalize_ard() / widen_ard() and friends, moved from tflspec (#491).
-# Tests for the EXPERIMENTAL cards/cardx ARD helpers (issue #474).
-# This whole file belongs to R/ard-experimental.R and is deleted with it.
 
 skip_if_no_cards <- function() {
   testthat::skip_if_not_installed("cards")
