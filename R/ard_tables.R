@@ -108,7 +108,7 @@
 # Read that order back off the normalized frame's `.label_order` column: for
 # each variable, its labels in the position the factor gave them.  A COLUMN,
 # not an attribute, because the caller is invited to rework the frame between
-# normalize_ard() and spread_ard() and `dplyr::mutate()` -- the natural verb
+# normalize_ard() and widen_ard() and `dplyr::mutate()` -- the natural verb
 # for a one-pipe conversion -- rebuilds it and drops attributes.  Reading the
 # label as it stands now is also what we want: a caller who indented a level
 # to "  Mild" gets "  Mild" in the order "Mild" declared.
@@ -830,7 +830,7 @@
 #' What is actually inside an ARD
 #'
 #' Prints, and returns invisibly, the structural facts you need in order to
-#' call [normalize_ard()] and [spread_ard()]: the grouping-variable names
+#' call [normalize_ard()] and [widen_ard()]: the grouping-variable names
 #' that appear in the `group1..groupN` columns, the analysis variables, the
 #' `context` values and the statistics each context carries.  All of it is read from the tibble's
 #' rows -- never from the object's attributes.
@@ -843,7 +843,7 @@
 #' @section Lifecycle:
 #' **Experimental.**  See [ard-tables].
 #'
-#' @seealso [normalize_ard()], [spread_ard()], `plan_template(form = "spread")`
+#' @seealso [normalize_ard()], [widen_ard()], `plan_template(form = "widen")`
 #' @export
 list_ard_keys <- function(x) {
   ard <- x
@@ -922,7 +922,7 @@ list_ard_keys <- function(x) {
 #' @examples
 #' overall_row("Any TEAE")                      # the cards sentinel rows
 #' overall_row("Any TEAE", from = "TRT01P")     # a separately-built block
-#' @seealso [normalize_ard()], [spread_ard()]
+#' @seealso [normalize_ard()], [widen_ard()]
 #' @export
 overall_row <- function(label, from = NULL) {
   if (missing(label) || !is.character(label) || length(label) != 1L) {
@@ -954,7 +954,7 @@ overall_row <- function(label, from = NULL) {
 #' character vector is one row per element, and a `list()` is a map looked up
 #' by analysis variable.  The one shape those cannot spell is a **named row
 #' whose value is itself a chain** -- `c("1" = c(a, b))` is flattened by `c()`
-#' before `spread_ard()` ever sees it.  `cell_rows()` is that shape, and only
+#' before `widen_ard()` ever sees it.  `cell_rows()` is that shape, and only
 #' that shape.
 #'
 #' Each argument is one output row: its name is the row label, its value is a
@@ -965,7 +965,7 @@ overall_row <- function(label, from = NULL) {
 #' @param ... One argument per output row.  Names become row labels; an
 #'   unnamed argument takes its label from `label`, as a bare template does.
 #'
-#' @return An object of class `cell_rows`, for `cells` in [spread_ard()].
+#' @return An object of class `cell_rows`, for `cells` in [widen_ard()].
 #'
 #' @section Lifecycle:
 #' **Experimental.**  See [ard-tables].
@@ -976,7 +976,7 @@ overall_row <- function(label, from = NULL) {
 #' cell_rows(
 #'   "1" = c(n == 0 ~ "0", "{n:.0f} ({estimate:.1f%})"),
 #'   "2" = "{conf.low:.1f%}, {conf.high:.1f%}")
-#' @seealso [spread_ard()], [ard-tables]
+#' @seealso [widen_ard()], [ard-tables]
 #' @export
 cell_rows <- function(...) {
   x <- list(...)
@@ -1033,7 +1033,7 @@ print.cell_rows <- function(x, ...) {
 #' An ARD carries more than the table's body: the denominator behind every
 #' percentage, the subject count per arm, a total the author computed
 #' themselves.  Those belong in the **column header** (`Placebo\\nN = 86`) or in
-#' an overall row, not in a body cell, so [spread_ard()] puts them nowhere.
+#' an overall row, not in a body cell, so [widen_ard()] puts them nowhere.
 #' `pull_ard()` reads one out, keyed exactly like the spread columns --
 #' `"Placebo____F"` for a crossed header -- ready to paste into a `col_header`.
 #'
@@ -1057,7 +1057,7 @@ print.cell_rows <- function(x, ...) {
 #'   the candidates listed**, so you can pin it with `variable` / `context`.
 #'
 #' @param x A cards/cardx ARD.
-#' @param cols The column key(s), named as in [spread_ard()] -- the grouping
+#' @param cols The column key(s), named as in [widen_ard()] -- the grouping
 #'   variable's own name, not its `group*` position.
 #' @param stat Statistic to read; `"N"` by default.
 #' @param variable,context Restrict to this analysis variable and/or this
@@ -1065,7 +1065,7 @@ print.cell_rows <- function(x, ...) {
 #'   or to ask for the key variable's own rows.
 #' @param levels Optional level order for the keys, so the result lines up
 #'   with the table's columns.
-#' @param sep Separator between multiple `cols` keys; match [spread_ard()].
+#' @param sep Separator between multiple `cols` keys; match [widen_ard()].
 #'
 #' @return A named vector, one element per column key.
 #'
@@ -1082,7 +1082,7 @@ print.cell_rows <- function(x, ...) {
 #'   paste0(names(n), "\\nN = ", n)
 #' }
 #' @seealso [list_ard_keys()], which lists every statistic an ARD carries;
-#'   [spread_ard()]
+#'   [widen_ard()]
 #' @export
 pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
                      levels = NULL, sep = "____") {
@@ -1182,8 +1182,8 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #' column and record the nesting depth.
 #'
 #' The result is a plain data frame that you can keep manipulating with base R
-#' or dplyr before handing it to [spread_ard()].  That is the intended route
-#' for anything [spread_ard()] does not do by itself: marginal totals, derived
+#' or dplyr before handing it to [widen_ard()].  That is the intended route
+#' for anything [widen_ard()] does not do by itself: marginal totals, derived
 #' rows, custom sorting.
 #'
 #' @param x A cards/cardx ARD.
@@ -1209,15 +1209,15 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   the `context == "tabulate"` counts of the by-variable -- are no table
 #'   cell, but they are often the only place an ARD states each column's
 #'   size.  `FALSE` (default) keeps them and marks them `.key_own = TRUE`, so
-#'   [spread_ard()] leaves them out of the body while a column header can
+#'   [widen_ard()] leaves them out of the body while a column header can
 #'   still read them.  `TRUE` removes them outright.
 #'
-#' @section Working on the result before [spread_ard()]:
+#' @section Working on the result before [widen_ard()]:
 #' The result is a plain data frame; reshaping it in between is the point of
-#' the two-stage split.  **Everything [spread_ard()] reads is in the
+#' the two-stage split.  **Everything [widen_ard()] reads is in the
 #' columns**, so `dplyr::mutate()`, `filter()`, `arrange()`, `bind_rows()`,
 #' `select()` and base `[` are all safe, and so is a one-pipe
-#' `normalize_ard() |> ... |> spread_ard()`.  A manipulation that really does
+#' `normalize_ard() |> ... |> widen_ard()`.  A manipulation that really does
 #' break the rows is still caught -- two values arriving in one cell is an
 #' error, not a silent overwrite.
 #'
@@ -1225,14 +1225,14 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #' table: it is a report about rows that are no longer in the frame, so there
 #' is no column it could be.  Dropping it (`mutate()` and `select()`, base
 #' `transform()` and `subset()` do) only makes `notes` report the discards
-#' from [spread_ard()] alone.
+#' from [widen_ard()] alone.
 #'
 #' @section Factor levels:
 #' \pkg{cards} stores the level of a factor variable as a one-element factor,
 #' so the flattening has to take the label: a level comes back as `"<65"`, not
 #' as the integer code `1`.  The order the factor declared is kept too, as the
 #' `.label_order` column -- each row's position within its variable's declared
-#' levels -- and [spread_ard()] rebuilds that variable's row order from it
+#' levels -- and [widen_ard()] rebuilds that variable's row order from it
 #' unless `levels` says otherwise.  Relabelling a level keeps its position,
 #' so indenting `"Mild"` to `"  Mild"` with `mutate()` still sorts where
 #' `"Mild"` was declared.
@@ -1240,7 +1240,7 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #' A **key** column holds one variable, so it can carry its order itself: a
 #' key that was a factor in the data (a treatment variable declared
 #' `factor(levels = c("Low", "Placebo", "High"))`) comes back a factor with
-#' those levels, unused ones included, and [spread_ard()] lays the columns --
+#' those levels, unused ones included, and [widen_ard()] lays the columns --
 #' or the rows, for a row key -- out in that order however the frame was
 #' reordered in between.  `levels` still overrides it.  A key that was
 #' character stays character.
@@ -1261,7 +1261,7 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #' @section Lifecycle:
 #' **Experimental.**  See [ard-tables].
 #'
-#' @seealso [spread_ard()], [list_ard_keys()]
+#' @seealso [widen_ard()], [list_ard_keys()]
 #' @export
 normalize_ard <- function(x, keys = NULL, hierarchy = character(),
                           overall = NULL,
@@ -1421,7 +1421,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   } else {
     # NA, not 1: depth only means something inside a hierarchy, and a column
     # that says "there is no hierarchy here" survives every manipulation the
-    # caller may do between normalize_ard() and spread_ard(), where an
+    # caller may do between normalize_ard() and widen_ard(), where an
     # attribute does not.
     d$.depth <- NA_integer_
     d$.label <- d$variable_level
@@ -1429,7 +1429,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 
   # A key variable's own tabulation is no table cell, but it is often the
   # only place the ARD states each column's size -- the per-arm `n` of
-  # ard_stack(.by = ) -- so it is MARKED, not removed: spread_ard() leaves
+  # ard_stack(.by = ) -- so it is MARKED, not removed: widen_ard() leaves
   # it out of the body and a column header can still read it.  A column,
   # like every other mark, so it survives whatever happens in between.
   own <- d$variable %in% setdiff(keys, c(hierarchy, ovs$from))
@@ -1482,7 +1482,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   # column it could be.  Losing it only shortens a message.
   attr(out, "ard_ignored") <- ignored
   attr(out, "ard_total_n") <- total_n
-  # The class is a hint, not a requirement: spread_ard() accepts any data frame
+  # The class is a hint, not a requirement: widen_ard() accepts any data frame
   # of the right shape, because the whole point of the two-stage split is that
   # you may rebuild the middle however you like.  It is here so that passing a
   # raw ARD by mistake says so, rather than failing on a missing column.
@@ -1492,7 +1492,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 
 
 # ============================================================================
-#  spread_ard()
+#  widen_ard()
 # ============================================================================
 
 # Resolve a (possibly named) reference vector into a list of
@@ -1583,7 +1583,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 
 #' Turn a normalized ARD into a wide table data.frame
 #'
-#' Step two of the ARD conversion.  `spread_ard()` takes the long table from
+#' Step two of the ARD conversion.  `widen_ard()` takes the long table from
 #' [normalize_ard()] (possibly after you have added rows of your own), builds
 #' one character cell per template, and pivots the column keys across.
 #'
@@ -1764,9 +1764,9 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #' @section Lifecycle:
 #' **Experimental.**  See [ard-tables].
 #'
-#' @seealso [normalize_ard()], `plan_template(form = "spread")`
+#' @seealso [normalize_ard()], `plan_template(form = "widen")`
 #' @export
-spread_ard <- function(x, cols, rows = NULL, label = ".label",
+widen_ard <- function(x, cols, rows = NULL, label = ".label",
                        cells = "{n} ({p})", stats = c("cells", "rows"),
                        value = c("stat", "stat_fmt"),
                        levels = NULL, labels = NULL, sort = FALSE,
@@ -2175,8 +2175,8 @@ spread_ard <- function(x, cols, rows = NULL, label = ".label",
   # comparison is how anyone decides to adopt this -- and an extra attribute
   # makes all.equal() report a difference that is not in the table.
   if (identical(notes, "attr")) attr(out, "ard_ignored") <- ignored
-  if (!isFALSE(notes)) .ard_notes_message(ignored, "spread_ard()")
-  if (identical(notes, "applied")) .ard_applied_message(long, "spread_ard()")
+  if (!isFALSE(notes)) .ard_notes_message(ignored, "widen_ard()")
+  if (identical(notes, "applied")) .ard_applied_message(long, "widen_ard()")
   out
 }
 
@@ -2391,7 +2391,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 # @section What it writes:
 # Always three blocks, so the author deletes rather than remembers:
 # the conversion written as the **pipe** --- `normalize_ard()`, a commented
-# `dplyr::mutate()` and `spread_ard()` --- with the seam left open, because
+# `dplyr::mutate()` and `widen_ard()` --- with the seam left open, because
 # half the reports on Discussion #473 have to reach between the two steps
 # (to derive a key from a statistic, to add a constant column, to indent a
 # label); then the `col_header` (drafted from [pull_ard()] when one column
@@ -2495,7 +2495,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
            "# <- a key derived from a statistic."),
     "  #                                  A constant heading or a label rule",
     "  #                                  goes in `rows` / `label` below.",
-    "  rtfreporter::spread_ard(",
+    "  rtfreporter::widen_ard(",
     paste0("    cols  = ", vecq(cols), ","),
     if (length(row_parts))
       paste0("    rows  = c(", paste(row_parts, collapse = ", "), "),")
@@ -2615,8 +2615,8 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'   \item{[list_ard_keys()]}{What keys, variables, contexts and statistics an ARD
 #'     actually holds.}
 #'   \item{[normalize_ard()]}{ARD to a flat, explicitly keyed long table.}
-#'   \item{[spread_ard()]}{Long table to the wide table data.frame.}
-#'   \item{`plan_template(form = "spread")`}{Emit runnable conversion code for a given ARD.}
+#'   \item{[widen_ard()]}{Long table to the wide table data.frame.}
+#'   \item{`plan_template(form = "widen")`}{Emit runnable conversion code for a given ARD.}
 #'   \item{[overall_row()]}{Where the table's overall row comes from.}
 #'   \item{[pull_ard()]}{A statistic keyed like the spread columns, for a
 #'     column header or an overall row.}
@@ -2655,7 +2655,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' nothing.  The two differ for a proportion: \pkg{cards} writes `61.6` into
 #' `stat_fmt` while `stat` holds `0.616`, so `{p}` and `{p:.1f\%}` agree and
 #' `{p:.1f}` does not.  For `stats = "rows"`, where a value goes into the cell without
-#' a template, `spread_ard(value = )` makes the same choice.
+#' a template, `widen_ard(value = )` makes the same choice.
 #' A template whose statistics are not all present yields `NA`, which is what
 #' lets `c("{n} ({p})", "{n}")` act as a fallback chain.  A **named** vector of
 #' templates produces one table row per element, the name being the row label:
@@ -2713,7 +2713,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'     lists the candidates when the choice is ambiguous.}
 #' }
 #' Column headers are rtfreporter's own job -- `col_header` takes a plain
-#' character vector -- so [spread_ard()] builds the body only, and
+#' character vector -- so [widen_ard()] builds the body only, and
 #' [pull_ard()] is there when the header needs a number that must agree with
 #' the percentages.
 #'

@@ -1,4 +1,4 @@
-# Tests of normalize_ard() / spread_ard() and friends, moved from tflspec (#491).
+# Tests of normalize_ard() / widen_ard() and friends, moved from tflspec (#491).
 # Tests for the EXPERIMENTAL cards/cardx ARD helpers (issue #474).
 # This whole file belongs to R/ard-experimental.R and is deleted with it.
 
@@ -24,14 +24,14 @@ make_ard <- function() {
 }
 
 # ard_table() was withdrawn (#474): the one entry point is
-# normalize_ard() |> spread_ard().  These tests were written against the
+# normalize_ard() |> widen_ard().  These tests were written against the
 # collapsed call, so this helper does the split, routing each argument to the
 # step that owns it -- which also keeps them honest about where each belongs.
 ard_pipe <- function(ard, ...) {
   args <- list(...)
   keep <- intersect(names(args), setdiff(names(formals(normalize_ard)), "x"))
   x <- do.call(normalize_ard, c(list(x = ard), args[keep]))
-  do.call(spread_ard, c(list(x = x), args[setdiff(names(args), keep)]))
+  do.call(widen_ard, c(list(x = x), args[setdiff(names(args), keep)]))
 }
 
 # ------------------------------------------------------------ normalize_ard
@@ -111,7 +111,7 @@ test_that("normalize_ard() labels the hierarchical overall rows on request", {
 })
 
 
-# ------------------------------------- normalize_ard() |> spread_ard()
+# ------------------------------------- normalize_ard() |> widen_ard()
 
 
 test_that("the pipe builds the demographics shape", {
@@ -628,7 +628,7 @@ test_that("the keyed columns are plain factors, not ordered ones", {
   expect_identical(as.character(tbl$label[tbl$group == "SEX"]),
                    c("Male", "Female"))
   # the argument that used to ask for the ordered class is gone
-  expect_false("ordered" %in% names(formals(spread_ard)))
+  expect_false("ordered" %in% names(formals(widen_ard)))
 })
 
 
@@ -687,10 +687,10 @@ test_that("a bare token falls back to stat, but stat_fmt demanded is an error", 
   ard$fmt_fun <- NULL                       # an ARD carrying no formatting
   d <- normalize_ard(ard)
   expect_true(all(is.na(d$stat_fmt)))
-  bare <- spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  bare <- widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                      cells = "{mean}", notes = FALSE)
   expect_false(is.na(bare$Placebo[1]))       # fell back to `stat`
-  expect_error(spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  expect_error(widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                           cells = "{mean:stat_fmt}", notes = FALSE),
                "no `stat_fmt` value")
 })
@@ -819,7 +819,7 @@ test_that("the middle stage survives being rebuilt", {
   for (a in c("ard_factor_levels", "ard_ignored", "ard_hierarchy")) {
     attr(bare, a) <- NULL
   }
-  got <- spread_ard(bare, cols = "TRT", cells = cells, notes = FALSE)
+  got <- widen_ard(bare, cols = "TRT", cells = cells, notes = FALSE)
   expect_identical(lapply(got, as.character), lapply(ref, as.character))
 
   # a one-pipe middle stage works, `mutate()` and all
@@ -827,7 +827,7 @@ test_that("the middle stage survives being rebuilt", {
     normalize_ard() |>
     dplyr::filter(!is.na(.data$stat)) |>
     dplyr::mutate(.marker = 1L) |>
-    spread_ard(cols = "TRT", cells = cells, notes = FALSE)
+    widen_ard(cols = "TRT", cells = cells, notes = FALSE)
   expect_identical(lapply(piped, as.character), lapply(ref, as.character))
 
   # ... and the label column's declared order survives it too, because the
@@ -836,12 +836,12 @@ test_that("the middle stage survives being rebuilt", {
   fc <- list(continuous = c("Mean" = "{mean:.1f}"), categorical = "{n:.0f}")
   expect_true(".label_order" %in% names(fd))
   expect_true(any(!is.na(fd$.label_order)))
-  ref_lab <- spread_ard(fd, cols = "TRT", cells = fc, notes = FALSE)$label
+  ref_lab <- widen_ard(fd, cols = "TRT", cells = fc, notes = FALSE)$label
   expect_s3_class(ref_lab, "factor")
   for (rebuilt in list(dplyr::mutate(fd, .marker = 1L),
                        dplyr::filter(fd, !is.na(.data$stat)),
                        fd[!is.na(fd$stat), , drop = FALSE])) {
-    got <- spread_ard(rebuilt, cols = "TRT", cells = fc, notes = FALSE)$label
+    got <- widen_ard(rebuilt, cols = "TRT", cells = fc, notes = FALSE)$label
     expect_s3_class(got, "factor")
     expect_identical(levels(got), levels(ref_lab))
   }
@@ -849,7 +849,7 @@ test_that("the middle stage survives being rebuilt", {
   # a caller who relabels a level keeps that level's position
   indented <- dplyr::mutate(fd, .label = ifelse(.data$.label == "Female",
                                                 "  Female", .data$.label))
-  lab <- spread_ard(indented, cols = "TRT", cells = fc, notes = FALSE)$label
+  lab <- widen_ard(indented, cols = "TRT", cells = fc, notes = FALSE)$label
   expect_true("  Female" %in% levels(lab))
   expect_lt(match("  Female", levels(lab)), match("Male", levels(lab)))
 
@@ -874,14 +874,14 @@ test_that("the middle stage survives being rebuilt", {
 
 test_that("passing the raw ARD says so", {
   skip_if_no_cards()
-  err <- tryCatch(spread_ard(cards::ADSL, cols = "ARM"),
+  err <- tryCatch(widen_ard(cards::ADSL, cols = "ARM"),
                   error = function(e) conditionMessage(e))
   expect_match(err, "does not look like an normalize_ard")
   expect_match(err, "Pass the ARD through")
   # but a rebuilt frame without the class is still accepted
   d <- normalize_ard(make_ard())
   class(d) <- "data.frame"
-  expect_s3_class(spread_ard(d, cols = "TRT", cells = "{n:.0f} ({p:.1f%})",
+  expect_s3_class(widen_ard(d, cols = "TRT", cells = "{n:.0f} ({p:.1f%})",
                              notes = FALSE), "data.frame")
 })
 
@@ -937,9 +937,9 @@ test_that("rounding = 'r' reaches the cells", {
   d <- normalize_ard(make_ard())
   d <- d[d$variable == "AGE" & d$stat_name == "mean", ]
   d$stat <- 0.5
-  sas <- spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  sas <- widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                     cells = "{mean:.0f}", rounding = "sas")
-  r   <- spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  r   <- widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                     cells = "{mean:.0f}", rounding = "r")
   expect_identical(sas$Placebo, "1")
   expect_identical(r$Placebo, "0")
@@ -981,11 +981,11 @@ test_that("notes = 'applied' names the template and its guard", {
   d <- normalize_ard(make_ard())
   d$stat[d$stat_name == "n" & d$variable == "SEX"] <- 0
   expect_message(
-    spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+    widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                cells = c(n == 0 ~ "none", "{n:.0f}"), notes = "applied"),
     "templates produced")
   msgs <- capture_messages(
-    spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+    widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                cells = c(n == 0 ~ "none", "{n:.0f}"), notes = "applied"))
   joined <- paste(msgs, collapse = "")
   expect_match(joined, "when n == 0", fixed = TRUE)
@@ -997,7 +997,7 @@ test_that("an unguarded recipe reports its template with no guard", {
   skip_if_no_cards()
   d <- normalize_ard(make_ard())
   joined <- paste(capture_messages(
-    spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+    widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                cells = "{n:.0f}", notes = "applied")), collapse = "")
   expect_match(joined, "{n:.0f}", fixed = TRUE)
   expect_false(grepl("when", joined, fixed = TRUE))
@@ -1008,7 +1008,7 @@ test_that("notes = 'applied' stays quiet for stats = 'rows'", {
   d <- normalize_ard(make_ard())
   d <- d[d$variable == "AGE", , drop = FALSE]
   joined <- paste(capture_messages(
-    spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+    widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                stats = "rows", notes = "applied")), collapse = "")
   expect_false(grepl("templates produced", joined, fixed = TRUE))
 })
@@ -1024,7 +1024,7 @@ test_that("a named rounding is passed on and leaves the spec alone", {
   d <- normalize_ard(a)
   d <- d[d$variable == "AGE" & d$stat_name == "mean", ]
   d$stat <- 0.5
-  f <- function(...) spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  f <- function(...) widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                                 cells = "{mean:.0f}", notes = FALSE, ...)$Placebo[1]
   expect_identical(f(rounding = "sas"), "1")
   expect_identical(f(rounding = "r"), "0")
@@ -1062,11 +1062,11 @@ test_that("plan_template(form = 'spread') puts keys outside `cols` into `rows`",
   adsl$SEX <- as.character(adsl$SEX)
   adsl$GRP <- rep(c("X", "Y"), length.out = nrow(adsl))
   ard <- cards::ard_categorical(adsl, by = c(TRT, GRP), variables = SEX)
-  code <- paste(capture.output(plan_template(form = "spread", ard, cols = "TRT")), collapse = "
+  code <- paste(capture.output(plan_template(form = "widen", ard, cols = "TRT")), collapse = "
 ")
   expect_match(code, 'rows  = c(GRP = "GRP")', fixed = TRUE)
   # and the generated call runs, keeping GRP as a column of the result
-  txt <- plan_template(form = "spread", ard, cols = "TRT")
+  txt <- plan_template(form = "widen", ard, cols = "TRT")
   e <- new.env(); assign("ard", ard, e)
   invisible(capture.output(
     eval(parse(text = paste(txt[!startsWith(txt, "#")], collapse = "
@@ -1083,7 +1083,7 @@ test_that("plan_template(form = 'spread') spells the hierarchical case so that i
   ard <- cards::ard_stack_hierarchical(
     adae, variables = c(AESOC, AEDECOD), by = TRT, denominator = adsl,
     id = USUBJID, over_variables = TRUE)
-  txt <- plan_template(form = "spread", ard, cols = "TRT", hierarchy = c("AESOC", "AEDECOD"))
+  txt <- plan_template(form = "widen", ard, cols = "TRT", hierarchy = c("AESOC", "AEDECOD"))
   code <- paste(txt, collapse = "
 ")
   expect_match(code, 'hierarchy = c("AESOC", "AEDECOD")', fixed = TRUE)
@@ -1108,8 +1108,8 @@ test_that("plan_template(form = 'spread') takes its decimal places from the ARD"
     adsl, by = TRT, variables = AGE,
     statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd")),
     fmt_fun = AGE ~ list(mean = 2, sd = 3))
-  h <- paste(capture.output(plan_template(form = "spread", house, cols = "TRT")), collapse = "")
-  s <- paste(capture.output(plan_template(form = "spread", study, cols = "TRT")), collapse = "")
+  h <- paste(capture.output(plan_template(form = "widen", house, cols = "TRT")), collapse = "")
+  s <- paste(capture.output(plan_template(form = "widen", study, cols = "TRT")), collapse = "")
   expect_match(h, "{mean:.1f} ({sd:.1f})", fixed = TRUE)   # cards' own default
   expect_match(s, "{mean:.2f} ({sd:.3f})", fixed = TRUE)   # the study's
 })
@@ -1125,8 +1125,8 @@ test_that("plan_template(form = 'spread') offers the full row set and trims what
   thin <- cards::ard_continuous(
     adsl, by = TRT, variables = AGE,
     statistic = ~ cards::continuous_summary_fns(c("mean")))
-  f <- paste(capture.output(plan_template(form = "spread", full, cols = "TRT")), collapse = "")
-  t <- paste(capture.output(plan_template(form = "spread", thin, cols = "TRT")), collapse = "")
+  f <- paste(capture.output(plan_template(form = "widen", full, cols = "TRT")), collapse = "")
+  t <- paste(capture.output(plan_template(form = "widen", thin, cols = "TRT")), collapse = "")
   expect_match(f, "Q1, Q3", fixed = TRUE)
   expect_match(f, "Min, Max", fixed = TRUE)
   expect_false(grepl("Q1, Q3", t, fixed = TRUE))   # no p25/p75 in this ARD
@@ -1144,7 +1144,7 @@ test_that("plan_template(form = 'spread') writes a script that reaches rtftables
       variables = AGE,
       statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd"))),
     cards::ard_categorical(variables = SEX), .total_n = TRUE)
-  txt <- capture.output(plan_template(form = "spread", ard, cols = "TRT"))
+  txt <- capture.output(plan_template(form = "widen", ard, cols = "TRT"))
   code <- paste(txt, collapse = "
 ")
   expect_match(code, "as_rtftables(", fixed = TRUE)
@@ -1167,7 +1167,7 @@ test_that("with more than one column key the header is left to header_sep", {
   adsl$GRP <- rep(c("X", "Y"), length.out = nrow(adsl))
   ard <- cards::ard_categorical(adsl, by = c(TRT, GRP), variables = SEX)
   code <- paste(capture.output(
-    plan_template(form = "spread", ard, cols = c("TRT", "GRP"))), collapse = "
+    plan_template(form = "widen", ard, cols = c("TRT", "GRP"))), collapse = "
 ")
   expect_match(code, "header_sep", fixed = TRUE)
   expect_false(grepl("col_header = col_header", code, fixed = TRUE))
@@ -1178,9 +1178,9 @@ test_that("label = NA separates the rows without printing them", {
   d <- normalize_ard(make_ard())
   d <- d[d$variable == "AGE", , drop = FALSE]
   cells <- c("1" = "{mean:.1f}", "2" = "{sd:.2f}")
-  shown <- spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  shown <- widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                       label = c(row = ".label"), cells = cells, notes = FALSE)
-  hidden <- spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  hidden <- widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                        label = NA, cells = cells, notes = FALSE)
   expect_true("row" %in% names(shown))
   expect_false("row" %in% names(hidden))
@@ -1188,7 +1188,7 @@ test_that("label = NA separates the rows without printing them", {
   expect_identical(nrow(hidden), nrow(shown))
   expect_identical(hidden$Placebo, shown$Placebo)
   # and dropping the column outright still collides, which is why NA exists
-  expect_error(spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  expect_error(widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                           label = NULL, cells = cells, notes = FALSE),
                "same cell")
 })
@@ -1197,9 +1197,9 @@ test_that("a label template indents by rule instead of by paste0()", {
   skip_if_no_cards()
   d <- normalize_ard(make_ard())
   d <- d[d$variable == "AGEGR", , drop = FALSE]
-  plain <- spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  plain <- widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                       cells = "{n:.0f}", notes = FALSE)
-  tpl <- spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  tpl <- widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                     label = c(.label == "65-74" ~ "  {.label}", ~ "{.label}"),
                     cells = "{n:.0f}", notes = FALSE)
   expect_true("  65-74" %in% as.character(tpl$label))
@@ -1213,14 +1213,14 @@ test_that("a label template indents by rule instead of by paste0()", {
 test_that("a rows template writes a constant heading without a mutate", {
   skip_if_no_cards()
   d <- normalize_ard(make_ard())
-  z <- spread_ard(d, cols = "TRT",
+  z <- widen_ard(d, cols = "TRT",
                   rows = c(grp = ~ "Baseline Characteristics",
                            group = "variable"),
                   cells = "{n:.0f}", notes = FALSE)
   expect_true("grp" %in% names(z))
   expect_setequal(unique(as.character(z$grp)), "Baseline Characteristics")
   # a bare string still means a column, so nothing already written changes
-  y <- spread_ard(d, cols = "TRT", rows = c(group = "variable"),
+  y <- widen_ard(d, cols = "TRT", rows = c(group = "variable"),
                   cells = "{n:.0f}", notes = FALSE)
   expect_identical(z$Placebo, y$Placebo)
 })
@@ -1241,7 +1241,7 @@ test_that("`labels` can be scoped to one column, like `levels`", {
   one <- function(labels) {
     suppressMessages(
       ard |> normalize_ard() |>
-        spread_ard(cols = "BASE", rows = c(WORST = "variable_level"),
+        widen_ard(cols = "BASE", rows = c(WORST = "variable_level"),
                    label = NA, labels = labels, cells = "{n:d}"))
   }
 
@@ -1277,7 +1277,7 @@ test_that("a scope and a plain value can be mixed, and are told apart", {
                            statistic = ~ c("n")))
   out <- suppressMessages(
     ard |> normalize_ard() |>
-      spread_ard(cols = "BASE", cells = "{n:d}",
+      widen_ard(cols = "BASE", cells = "{n:d}",
                  labels = list(SEX  = "Sex [n]",
                                BASE = c("0" = "Baseline 0",
                                         "1" = "Baseline 1"))))
@@ -1304,7 +1304,7 @@ test_that("the default moves no row a declared order did not move", {
     stat_name = "n", stat_label = "n", stat = c(1, 2, 3, 4),
     .label = "L", .kind = "categorical",
     stringsAsFactors = FALSE)
-  out <- spread_ard(d, cols = "TRT", rows = c(PARAM = "PARAM"),
+  out <- widen_ard(d, cols = "TRT", rows = c(PARAM = "PARAM"),
                     label = c(label = ".label"), cells = "{n:.0f}",
                     notes = FALSE)
   expect_identical(as.character(out$PARAM), c("B", "A"))
@@ -1321,7 +1321,7 @@ test_that("a declared order applies even though nothing asked to sort", {
     stat_name = "n", stat_label = "n", stat = c(1, 2, 3, 4),
     .label = "L", .kind = "categorical",
     stringsAsFactors = FALSE)
-  out <- spread_ard(d, cols = "TRT", rows = c(PARAM = "PARAM"),
+  out <- widen_ard(d, cols = "TRT", rows = c(PARAM = "PARAM"),
                     label = c(label = ".label"), cells = "{n:.0f}",
                     levels = list(PARAM = c("A", "B")), notes = FALSE)
   expect_identical(as.character(out$PARAM), c("A", "B"))
@@ -1342,7 +1342,7 @@ test_that("a plain key keeps its blocks; TRUE clusters them", {
     stat_name = "n", stat_label = "n", stat = 1:3,
     .label = "L", .kind = "categorical",
     stringsAsFactors = FALSE)
-  run <- function(...) spread_ard(d, cols = "TRT",
+  run <- function(...) widen_ard(d, cols = "TRT",
                                   rows = c(GRP = "GRP", SUB = "SUB"),
                                   label = c(label = ".label"),
                                   cells = "{n:.0f}", notes = FALSE, ...)
@@ -1362,7 +1362,7 @@ test_that("a declared order sorts WITHIN a plain key's block", {
     stat_name = "n", stat_label = "n", stat = 1:4,
     .label = c("hi", "lo", "hi", "lo"), .kind = "categorical",
     stringsAsFactors = FALSE)
-  out <- spread_ard(d, cols = "TRT", rows = c(PARAM = "PARAM"),
+  out <- widen_ard(d, cols = "TRT", rows = c(PARAM = "PARAM"),
                     label = c(label = ".label"), cells = "{n:.0f}",
                     levels = list(label = c("lo", "hi")), notes = FALSE)
   expect_identical(as.character(out$PARAM), c("B", "B", "A", "A"))
@@ -1393,19 +1393,19 @@ test_that("a factor key keeps the order it declared, however the rows move", {
 
   moved <- rbind(d[d$TRT %in% "Placebo", ], d[!d$TRT %in% "Placebo", ])
   expect_identical(
-    names(spread_ard(moved, cols = "TRT", cells = fct_cells,
+    names(widen_ard(moved, cols = "TRT", cells = fct_cells,
                      notes = FALSE))[-(1:2)], fct_order)
   bound <- dplyr::bind_rows(d[d$TRT %in% "Placebo", ],
                             d[!d$TRT %in% "Placebo", ])
   expect_identical(
-    names(spread_ard(bound, cols = "TRT", cells = fct_cells,
+    names(widen_ard(bound, cols = "TRT", cells = fct_cells,
                      notes = FALSE))[-(1:2)], fct_order)
   # the header agrees with the body
   expect_identical(names(pull_ard(moved, cols = "TRT")), fct_order)
   # an explicit `levels` still wins
   rev_order <- rev(fct_order)
   expect_identical(
-    names(spread_ard(moved, cols = "TRT", cells = fct_cells,
+    names(widen_ard(moved, cols = "TRT", cells = fct_cells,
                      levels = list(TRT = rev_order), notes = FALSE))[-(1:2)],
     rev_order)
 })
@@ -1436,20 +1436,20 @@ test_that("a key variable's own rows are kept, marked, and left out of the body"
   d <- normalize_ard(make_fct_ard())
   expect_true(any(d$.key_own))
   expect_true(all(d$variable[d$.key_own] == "TRT"))
-  tbl <- spread_ard(d, cols = "TRT", cells = fct_cells, notes = FALSE)
+  tbl <- widen_ard(d, cols = "TRT", cells = fct_cells, notes = FALSE)
   expect_false("TRT" %in% tbl$group)
 
   # flipping the mark spreads them after all
   d2 <- d
   d2$.key_own <- FALSE
-  tbl2 <- spread_ard(d2, cols = "TRT", cells = fct_cells, notes = FALSE)
+  tbl2 <- widen_ard(d2, cols = "TRT", cells = fct_cells, notes = FALSE)
   expect_true("TRT" %in% tbl2$group)
 
   # drop_key_variables = TRUE removes them outright, and still reports it
   gone <- normalize_ard(make_fct_ard(), drop_key_variables = TRUE)
   expect_false("TRT" %in% gone$variable)
   expect_false(any(gone$.key_own))
-  expect_equal(spread_ard(gone, cols = "TRT", cells = fct_cells,
+  expect_equal(widen_ard(gone, cols = "TRT", cells = fct_cells,
                           notes = FALSE), tbl)
 })
 

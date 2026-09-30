@@ -771,7 +771,7 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 `blank_rows_by_change` `blank_rows_by_rule`
 
 **Tables from a cards / cardx ARD (EXPERIMENTAL — may be removed; decided in
-Discussion #316):** `normalize_ard` `spread_ard` `pull_ard` `list_ard_keys`
+Discussion #316):** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_fmt` `plan_stub` `plan_cell_style` `plan_paginate_group`
