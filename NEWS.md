@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+### Bug fixes
+
+- **A listing key column printed on every line of a record when a key
+  column to its left wrapped** (#505).  With `listing_col("TRT", width =
+  12, collapse_repeats = TRUE)` before `listing_col("USUBJID",
+  collapse_repeats = TRUE)`, a treatment that wrapped ("Xanomeline" / "High
+  Dose") made the subject print on both lines.  The repeats of a key are
+  blanked hierarchically, and the wrapped cell changed its text from line to
+  line.  The lines of one record now count as one value, so a key prints on
+  its record's first line (and again at the top of a continuation page)
+  whatever the other keys' wrapping.  Listings with no wrapping key are
+  byte-identical.
+
 ### Documentation
 
 - **Development reopens at `0.8.2.9000`** (#500), after the 0.8.2 release.

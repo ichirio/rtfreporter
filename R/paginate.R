@@ -326,6 +326,9 @@ paginate.data.frame <- function(x, ...) {
                                  cell_format      = NULL,
                                  na               = "",
                                  collapse_repeats = NULL,
+                                 # A listing's record-id column: repeats are
+                                 # judged within a record first (#505).
+                                 collapse_record  = NULL,
                                  ...) {
   # `split` is either one of the built-in strategy names (character) or a
   # user-supplied custom function that cuts the body into per-page chunks.
@@ -548,7 +551,9 @@ paginate.data.frame <- function(x, ...) {
                                group_by        = group_by)
     }
     if (length(collapse_idx)) {
-      chunk <- .collapse_repeats_chunk(chunk, collapse_idx)
+      rec <- if (!is.null(collapse_record) && collapse_record %in% names(chunk))
+        chunk[[collapse_record]]
+      chunk <- .collapse_repeats_chunk(chunk, collapse_idx, record = rec)
     }
     attr(chunk, "rtf_paginate_meta") <- list(
       strategy    = strategy,
@@ -818,13 +823,22 @@ paginate.data.frame <- function(x, ...) {
 # COMBINATION of itself with all earlier listed columns, so a change in any
 # higher column resets the lower column's run (hierarchical repeat
 # suppression).  Keys are built from the original (pre-blanking) values.
-.collapse_repeats_chunk <- function(chunk, cols) {
+.collapse_repeats_chunk <- function(chunk, cols, record = NULL) {
   n <- nrow(chunk)
   if (n <= 1L || length(cols) == 0L) return(chunk)
   orig <- lapply(cols, function(j) as.character(chunk[[j]]))
+  # A listing's lines of ONE record (`record`, the record id per row) are one
+  # value, not several: a key column to the left that wraps ("Xanomeline" /
+  # "High Dose") changes its text from line to line, and must not make the
+  # carried key to its right look like a new value (#505).  Within a record a
+  # column is a repeat when it equals its own previous line.
+  same_rec <- if (is.null(record)) rep(FALSE, n - 1L) else
+    record[-1L] == record[-n] & !is.na(record[-1L]) & !is.na(record[-n])
   for (k in seq_along(cols)) {
     key <- do.call(paste, c(orig[seq_len(k)], list(sep = "\r")))
-    dup <- c(FALSE, key[-1L] == key[-n])
+    own <- orig[[k]]
+    dup <- c(FALSE, key[-1L] == key[-n] |
+                    (same_rec & own[-1L] == own[-n] & nzchar(own[-1L])))
     if (any(dup)) {
       colv      <- chunk[[cols[k]]]
       colv[dup] <- NA

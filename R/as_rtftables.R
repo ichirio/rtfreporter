@@ -888,6 +888,7 @@ as_rtftables.default <- function(x,
   # left alone.
   listing_res  <- .resolve_listing_arg(listing, x)
   listing_meta <- NULL
+  listing_record <- NULL
   if (!is.null(listing_res)) {
     if (.is_rlistings_tbl(x)) {
       stop("`listing` does not apply to an rlistings listing (`listing_df`): ",
@@ -922,6 +923,7 @@ as_rtftables.default <- function(x,
     }
     rec <- lspec$record_col
     if (!is.null(rec) && rec %in% names(x)) {
+      listing_record <- rec
       if (is.null(group_col)) group_col <- rec
       if (!group_by_given)    group_by  <- "value"
       if (!split_given && !is.function(split) && identical(split, "none") &&
@@ -1133,7 +1135,8 @@ as_rtftables.default <- function(x,
       # them is blank as far as the page-edge accounting goes (#362).
       blank_ignore = names(body)[drop_idx],
       align_count_pct = align_count_pct, cell_format = cell_format, na = na,
-      collapse_repeats = collapse_repeats)
+      collapse_repeats = collapse_repeats,
+      collapse_record = listing_record)
     page_names <- names(pages)
 
     out <- lapply(seq_along(pages), function(i) {

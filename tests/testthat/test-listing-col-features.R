@@ -172,6 +172,79 @@ test_that("as_rtftables blanks the repeats the marked column carried", {
   expect_identical(ids[1L], "01-701-1015")
 })
 
+# A key column to the LEFT that wraps must not stop the one to its right from
+# being blanked inside the record (#505): "Xanomeline" / "High Dose" are two
+# lines of one record, not two values.
+.wrap_keys <- function() {
+  data.frame(TRT  = c("Placebo", "Xanomeline High Dose", "Xanomeline High Dose"),
+             SUBJ = c("S-1", "S-2", "S-3"),
+             TERM = c("A", "B", "C"), stringsAsFactors = FALSE)
+}
+.wrap_spec <- function(trt_width = 12, blank_row = TRUE) {
+  listing_spec(list(
+    listing_col("TRT", width = trt_width, collapse_repeats = TRUE),
+    listing_col("SUBJ", width = 8, collapse_repeats = TRUE),
+    listing_col("TERM", width = 8)), blank_row = blank_row)
+}
+.printed <- function(v) { v[is.na(v)] <- ""; v }
+
+test_that("a key prints once per record when a key to its left wraps", {
+  tbl <- as_rtftables(.wrap_keys(), listing = .wrap_spec())[[1L]]
+  subj <- .printed(tbl$data$SUBJ)
+  trt  <- .printed(tbl$data$TRT)
+  # every record's subject once, on the record's first line
+  expect_identical(subj[nzchar(subj)], c("S-1", "S-2", "S-3"))
+  # the wrapped treatment keeps both of its lines
+  expect_identical(trt[nzchar(trt)],
+                   c("Placebo", "Xanomeline", "High Dose",
+                     "Xanomeline", "High Dose"))
+})
+
+test_that("with no wrap the blanking is what it always was", {
+  tbl <- as_rtftables(.wrap_keys(), listing = .wrap_spec(trt_width = 22))[[1L]]
+  expect_identical(.printed(tbl$data$SUBJ)[nzchar(.printed(tbl$data$SUBJ))],
+                   c("S-1", "S-2", "S-3"))
+  # the same treatment on consecutive records is printed per record: the
+  # blank row between records ends the run
+  expect_identical(sum(.printed(tbl$data$TRT) == "Xanomeline High Dose"), 2L)
+})
+
+test_that("without blank rows, a key still collapses across records", {
+  d <- .wrap_keys()
+  d$SUBJ[3L] <- "S-2"                 # records 2 and 3: the same subject
+  tbl <- as_rtftables(d, listing = .wrap_spec(trt_width = 22,
+                                              blank_row = FALSE))[[1L]]
+  expect_identical(.printed(tbl$data$SUBJ), c("S-1", "S-2", ""))
+})
+
+test_that("a record continued on the next page shows its key again", {
+  d <- data.frame(TRT = "Xanomeline High Dose", SUBJ = "S-9",
+                  TERM = "a long term that wraps over several lines",
+                  stringsAsFactors = FALSE)
+  spec <- listing_spec(list(
+    listing_col("TRT", width = 12, collapse_repeats = TRUE),
+    listing_col("SUBJ", width = 8, collapse_repeats = TRUE),
+    listing_col("TERM", width = 8)))
+  pg <- as_rtftables(d, listing = spec, max_rows = 3, split = "rows",
+                     split_rows = 3L)
+  expect_gt(length(pg), 1L)
+  for (p in pg) {
+    s <- .printed(p$data$SUBJ)
+    expect_identical(s[1L], "S-9")
+    expect_identical(sum(nzchar(s)), 1L)
+  }
+})
+
+test_that("a plan listing blanks the same way", {
+  p <- table_plan(.wrap_keys()) |>
+    plan_listing(listing_col("TRT", width = 12, collapse_repeats = TRUE),
+                 listing_col("SUBJ", width = 8, collapse_repeats = TRUE),
+                 listing_col("TERM", width = 8)) |>
+    plan_blanks(where = "records")
+  subj <- .printed(plan_apply(p)[[1L]]$data$SUBJ)
+  expect_identical(subj[nzchar(subj)], c("S-1", "S-2", "S-3"))
+})
+
 test_that("a caller's own collapse_repeats wins over the marked columns", {
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 12, collapse_repeats = TRUE),
