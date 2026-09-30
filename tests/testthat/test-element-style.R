@@ -297,8 +297,8 @@ test_that("a block size without a font registers no font named after it (#496)",
   lines <- readLines(f, warn = FALSE)
   expect_false(any(grepl("fcharset0 16;", lines, fixed = TRUE)))
   expect_false(any(grepl("fcharset0 22;", lines, fixed = TRUE)))
-  expect_false(any(grepl("\f1", lines)))
+  expect_false(any(grepl("\\\\f1\\b", lines, perl = TRUE)))
   # the size itself is still applied
-  expect_true(any(grepl("\fs16 ", lines)))
-  expect_true(any(grepl("\fs22 ", lines)))
+  expect_true(any(grepl("\\fs16 ", lines, fixed = TRUE)))
+  expect_true(any(grepl("\\fs22 ", lines, fixed = TRUE)))
 })
