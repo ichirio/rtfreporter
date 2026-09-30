@@ -83,7 +83,9 @@
 .collect_report_fonts <- function(report) {
   # A header/footer may still be the legacy named character vector rather than
   # an rtf_header() list, so only reach for `$font` where there is one to reach.
-  fld <- function(x) if (is.list(x)) x$font else NULL
+  # `[["font"]]`, not `$font`: a style list that sets only
+  # `font_size_half_points` would otherwise partial-match the size (#496).
+  fld <- function(x) if (is.list(x)) x[["font"]] else NULL
   doc <- report$document
   out <- c(fld(doc$title_style), fld(doc$footnote_style))
   for (p in report$pages) {
