@@ -33,6 +33,14 @@
 
 .ard_stop <- function(...) stop(..., call. = FALSE)
 
+# An argument that was not given at all.  Classed so that a plan does not
+# blame its layers for it: nothing declared it, and the fix is to declare
+# `role` in table_plan().
+.ard_stop_missing <- function(role, ...) {
+  stop(structure(class = c("rtfreporter_missing_role", "error", "condition"),
+                 list(message = paste0(...), call = NULL, role = role)))
+}
+
 # Column names an ARD uses structurally; these can always be referenced
 # directly by `cols` / `rows` / `label`.
 .ard_structural <- function() {
@@ -1756,7 +1764,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                        rounding = NULL,
                        sort_stat = NULL, na = NA_character_, notes = TRUE) {
   if (missing(cols)) {
-    .ard_stop("`cols` is required: name the column keys.")
+    .ard_stop_missing("cols", "`cols` is required: name the column keys.")
   }
   stats <- match.arg(stats)
   value <- match.arg(value)
@@ -1872,7 +1880,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     }
   }
   labref  <- if (is.null(label)) list() else .ard_refs(label, d, "label")
-  if (!length(colrefs)) .ard_stop("`cols` is required: name the key that goes across.")
+  if (!length(colrefs)) .ard_stop_missing("cols", "`cols` is required: name the key that goes across.")
 
   # ---- recode key values and build the ordering factors -------------------
   # An explicit `levels` entry first; otherwise the order the key's own

@@ -2030,3 +2030,16 @@ test_that("a conditional style follows its rows onto every page", {
     expect_true(it[[1L]])               # each page opens on a heading row
   }
 })
+
+test_that("a missing declaration is not blamed on unrelated verbs (#507)", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(plan_ard()), rows = c(group = "variable")) |>
+    plan_cells(notes = FALSE)
+  e <- tryCatch(suppressMessages(plan_apply(p)), error = function(e) e)
+  expect_s3_class(e, "error")
+  msg <- conditionMessage(e)
+  expect_match(msg, "`cols` is required", fixed = TRUE)
+  expect_match(msg, "table_plan(cols = )", fixed = TRUE)
+  expect_no_match(msg, "declared by")
+  expect_no_match(msg, "plan_cells")
+})

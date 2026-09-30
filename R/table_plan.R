@@ -139,6 +139,11 @@
 # Run a stage and, if it fails, say which statements set it up.
 .plan_stage <- function(expr, plan, kinds) {
   withCallingHandlers(expr, error = function(e) {
+    # A role nobody declared has no layer to blame: say where it goes.
+    if (inherits(e, "rtfreporter_missing_role")) {
+      .ard_stop(conditionMessage(e), "\n  Declare it with table_plan(",
+                e$role, " = ).")
+    }
     .ard_stop(paste0(conditionMessage(e), .plan_blame(plan, kinds)))
   })
 }
