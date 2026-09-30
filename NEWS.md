@@ -2,6 +2,13 @@
 
 ### Bug fixes
 
+- **`plan_apply()` blamed a missing `cols` on unrelated verbs** (#507).  A
+  plan with no `cols` role stopped with "`cols` is required" followed by
+  "declared by:" and the widen-stage verbs, such as `plan_cells(notes =
+  FALSE)`, none of which had anything to do with it.  A missing declaration
+  has no layer to blame, so the error now says where to declare it
+  (`table_plan(cols = )`) and lists no verbs.
+
 - **A listing key column printed on every line of a record when a key
   column to its left wrapped** (#505).  With `listing_col("TRT", width =
   12, collapse_repeats = TRUE)` before `listing_col("USUBJID",
