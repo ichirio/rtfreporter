@@ -17,7 +17,7 @@ pull_ard(
 \arguments{
 \item{x}{A cards/cardx ARD.}
 
-\item{cols}{The column key(s), named as in \code{\link[=spread_ard]{spread_ard()}} -- the grouping
+\item{cols}{The column key(s), named as in \code{\link[=widen_ard]{widen_ard()}} -- the grouping
 variable's own name, not its \verb{group*} position.}
 
 \item{stat}{Statistic to read; \code{"N"} by default.}
@@ -29,7 +29,7 @@ or to ask for the key variable's own rows.}
 \item{levels}{Optional level order for the keys, so the result lines up
 with the table's columns.}
 
-\item{sep}{Separator between multiple \code{cols} keys; match \code{\link[=spread_ard]{spread_ard()}}.}
+\item{sep}{Separator between multiple \code{cols} keys; match \code{\link[=widen_ard]{widen_ard()}}.}
 }
 \value{
 A named vector, one element per column key.
@@ -38,7 +38,7 @@ A named vector, one element per column key.
 An ARD carries more than the table's body: the denominator behind every
 percentage, the subject count per arm, a total the author computed
 themselves.  Those belong in the \strong{column header} (\verb{Placebo\\\\nN = 86}) or in
-an overall row, not in a body cell, so \code{\link[=spread_ard]{spread_ard()}} puts them nowhere.
+an overall row, not in a body cell, so \code{\link[=widen_ard]{widen_ard()}} puts them nowhere.
 \code{pull_ard()} reads one out, keyed exactly like the spread columns --
 \code{"Placebo____F"} for a crossed header -- ready to paste into a \code{col_header}.
 }
@@ -82,5 +82,5 @@ if (requireNamespace("cards", quietly = TRUE)) {
 }
 \seealso{
 \code{\link[=list_ard_keys]{list_ard_keys()}}, which lists every statistic an ARD carries;
-\code{\link[=spread_ard]{spread_ard()}}
+\code{\link[=widen_ard]{widen_ard()}}
 }

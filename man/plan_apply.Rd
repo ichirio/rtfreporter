@@ -4,7 +4,7 @@
 \alias{plan_apply}
 \title{Run a plan, or look inside it}
 \usage{
-plan_apply(plan, stage = c("auto", "long", "args", "table", "pages"))
+plan_apply(plan, stage = c("auto", "input", "args", "table", "pages"))
 }
 \arguments{
 \item{plan}{An \code{\link[=table_plan]{table_plan()}}.}
@@ -14,14 +14,14 @@ plan declares}: a plan that says nothing about the display stops at
 the table \code{data.frame}; one that carries a display verb goes on
 to the RTF pages.  You rarely need this function at all ---
 \code{\link[=rtf_tables]{rtf_tables()}} takes a plan directly --- and naming a stage is
-for looking inside: \code{"long"}, \code{"args"}, \code{"table"}, \code{"pages"}.
+for looking inside: \code{"input"}, \code{"args"}, \code{"table"}, \code{"pages"}.
 
 The named stages: \code{"table"} returns the table
-\code{data.frame}, the same object \code{\link[=spread_ard]{spread_ard()}} returns.  \code{"long"}
+\code{data.frame}, the same object \code{\link[=widen_ard]{widen_ard()}} returns.  \code{"input"}
 returns the frame going in, with the ARD column names the roles
 renamed.  \code{"args"} returns the resolved argument lists
 without running anything --- the call the plan amounts to, as
-\verb{$spread} (\code{\link[=spread_ard]{spread_ard()}}'s) and \verb{$rtf} (\code{\link[=as_rtftables]{as_rtftables()}}'s).  Both
+\verb{$widen} (\code{\link[=widen_ard]{widen_ard()}}'s) and \verb{$rtf} (\code{\link[=as_rtftables]{as_rtftables()}}'s).  Both
 are resolved from layers and either can be the one that
 surprises: a page budget declared twice is last-wins, and the
 call you are editing may not be the one that decides, so

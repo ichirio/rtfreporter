@@ -11,14 +11,14 @@ cell_rows(...)
 unnamed argument takes its label from \code{label}, as a bare template does.}
 }
 \value{
-An object of class \code{cell_rows}, for \code{cells} in \code{\link[=spread_ard]{spread_ard()}}.
+An object of class \code{cell_rows}, for \code{cells} in \code{\link[=widen_ard]{widen_ard()}}.
 }
 \description{
 \code{cells} already reads three containers: one template is one row, a \emph{named}
 character vector is one row per element, and a \code{list()} is a map looked up
 by analysis variable.  The one shape those cannot spell is a \strong{named row
 whose value is itself a chain} -- \code{c("1" = c(a, b))} is flattened by \code{c()}
-before \code{spread_ard()} ever sees it.  \code{cell_rows()} is that shape, and only
+before \code{widen_ard()} ever sees it.  \code{cell_rows()} is that shape, and only
 that shape.
 }
 \details{
@@ -40,5 +40,5 @@ cell_rows(
   "2" = "{conf.low:.1f\%}, {conf.high:.1f\%}")
 }
 \seealso{
-\code{\link[=spread_ard]{spread_ard()}}, \link{ard-tables}
+\code{\link[=widen_ard]{widen_ard()}}, \link{ard-tables}
 }
