@@ -40,5 +40,5 @@ overall_row("Any TEAE")                      # the cards sentinel rows
 overall_row("Any TEAE", from = "TRT01P")     # a separately-built block
 }
 \seealso{
-\code{\link[=normalize_ard]{normalize_ard()}}, \code{\link[=spread_ard]{spread_ard()}}
+\code{\link[=normalize_ard]{normalize_ard()}}, \code{\link[=widen_ard]{widen_ard()}}
 }

@@ -6,7 +6,6 @@
 \alias{plan_labels}
 \alias{plan_cells}
 \alias{plan_digits}
-\alias{plan_fmt}
 \alias{plan_stub}
 \alias{plan_cell_style}
 \alias{plan_paginate_group}
@@ -18,9 +17,6 @@
 \alias{plan_style}
 \alias{plan_col_header}
 \alias{plan_columns}
-\alias{plan_header_style}
-\alias{plan_col_style}
-\alias{plan_zone_style}
 \alias{plan_listing}
 \alias{plan_titles}
 \alias{plan_footnotes}
@@ -32,30 +28,39 @@ plan_levels(plan, ...)
 
 plan_labels(plan, ...)
 
-plan_cells(plan, ...)
+plan_cells(plan, ..., stats = NULL, value = NULL, na = NULL, notes = NULL)
 
 plan_digits(plan, ..., rounding = NULL)
-
-plan_fmt(plan, ...)
 
 plan_stub(
   plan,
   vars = NULL,
-  into = NULL,
+  name = NULL,
   indent = NULL,
   group_summary = NULL,
   before = FALSE
 )
 
-plan_cell_style(plan, ...)
+plan_cell_style(
+  plan,
+  cols = NULL,
+  header = FALSE,
+  where = NULL,
+  bold = NULL,
+  italic = NULL,
+  align = NULL,
+  color = NULL,
+  background = NULL,
+  border = NULL
+)
 
-plan_paginate_group(plan, col = NULL, show = TRUE)
+plan_paginate_group(plan, col = NULL, keep = TRUE)
 
-plan_row_group(plan, mode = NULL, collapse = NULL, col = NULL)
+plan_row_group(plan, mode = NULL, collapse = NULL)
 
 plan_hide(plan, ...)
 
-plan_sort(plan, ..., desc = NULL, show = TRUE)
+plan_sort(plan, ..., stat = NULL, keep = TRUE)
 
 plan_blanks(plan, where = NULL, first = NULL, last = NULL, counted = NULL)
 
@@ -64,23 +69,43 @@ plan_paginate_rows(
   max_rows = NULL,
   split = NULL,
   break_before = NULL,
-  by = NULL,
   min_group_rows = NULL,
-  cont_label = NULL,
-  show = TRUE
+  cont_label = NULL
 )
 
-plan_style(plan, border = NULL, ...)
+plan_style(
+  plan,
+  border = NULL,
+  align_count_pct = NULL,
+  font = NULL,
+  font_size_half_points = NULL,
+  row_height_twips = NULL,
+  row_height_exact = NULL,
+  header_row_height_twips = NULL,
+  blank_row_height_twips = NULL,
+  cell_padding_left_twips = NULL,
+  cell_padding_right_twips = NULL,
+  cell_valign = NULL,
+  table_align = NULL,
+  markup = NULL,
+  blank_row_normalize = NULL,
+  border_header = NULL,
+  border_spanning = NULL,
+  border_body = NULL,
+  border_first_row = NULL,
+  border_last_row = NULL
+)
 
-plan_col_header(plan, header = NULL, n = NULL, values = NULL)
+plan_col_header(plan, header = NULL, values = NULL)
 
-plan_columns(plan, widths = NULL, decimal = NULL)
-
-plan_header_style(plan, ...)
-
-plan_col_style(plan, ...)
-
-plan_zone_style(plan, ...)
+plan_columns(
+  plan,
+  widths = NULL,
+  decimal = NULL,
+  row_title = NULL,
+  auto_width = NULL,
+  sep = NULL
+)
 
 plan_listing(
   plan,
@@ -89,12 +114,8 @@ plan_listing(
   sep = NULL,
   spacer = NULL,
   spacer_rel_width = NULL,
-  blank_row = NULL,
-  blank_row_first = NULL,
-  align = NULL,
   layout = NULL,
-  wrap = NULL,
-  record = NULL
+  wrap = NULL
 )
 
 plan_titles(plan, ..., pages = NULL)
@@ -106,12 +127,11 @@ plan_after(plan, ...)
 plan_paginate_cols(
   plan,
   at = NULL,
-  cols = NULL,
-  by = NULL,
+  cut_by = NULL,
   every = NULL,
-  carry = NULL,
+  keep = NULL,
   col_header = NULL,
-  width = NULL,
+  fit = NULL,
   allow_span_break = NULL,
   order = NULL
 )
@@ -119,7 +139,7 @@ plan_paginate_cols(
 \arguments{
 \item{plan}{An \code{\link[=table_plan]{table_plan()}}.}
 
-\item{...}{For \code{plan_cells()}, exactly what \code{spread_ard(cells = )}
+\item{...}{For \code{plan_cells()}, exactly what \code{widen_ard(cells = )}
 takes: one bare entry, or entries named by variable, \code{context},
 kind (\code{continuous} / \code{categorical}) or \code{default}.
 
@@ -146,6 +166,19 @@ reach a token that left the question open (\code{{mean}}, or \verb{\{p:\\\%\}}):
 one that answered it (\verb{\{mean:.2f\}}) keeps its answer, so a template
 meant to be tuned is written open.
 
+A \strong{finished table} has no templates to fill --- a source that is
+already the table, or statistics laid out as rows
+(\code{plan_cells(stats = "rows")}) --- so there \code{plan_digits()} formats
+the numbers themselves, with \code{\link[=fmt_numeric]{fmt_numeric()}}: a key that names a
+\strong{column} formats that column, and \code{.rows} formats the value columns
+by the text of the label column:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_digits(.rows = c(N = 0, Mean = 1, SD = "3s"))
+}\if{html}{\out{</div>}}
+
+A key that reaches neither a variable nor a column is an error, not
+silence.
+
 For \code{plan_levels()} and \code{plan_labels()}, one entry per column or
 analysis variable: an order (\code{AGEGR1 = c("<65", "65-74")}), or
 the text values are printed as (\code{AGE = "Age (years)"}).  Both
@@ -156,69 +189,39 @@ whose value is itself a named vector applies to that \strong{column}
 only: a shift table's \code{"0"} is \code{"Grade 0"} down the side and
 \code{"Baseline 0"} across the top.}
 
+\item{stats, value, na, notes}{For \code{plan_cells()}: how a cell is made,
+as \code{\link[=widen_ard]{widen_ard()}} takes them --- \code{stats = "cells"} (default) fills a
+template per cell and \code{"rows"} makes each statistic a row of its own;
+\code{value} is which of \code{stat} / \code{stat_fmt} a \code{{x}} reads; \code{na} what fills
+a cell no template could; \code{notes = FALSE} stops the report of the
+statistics no template used.  They hold however the plan is run, by
+\code{\link[=plan_apply]{plan_apply()}} or by \code{rtf_tables(doc, plan)}.}
+
 \item{rounding}{For \code{plan_digits()}: the tie-breaking family for the
-run, as \code{spread_ard(rounding = )} takes it.  Last wins, like every
+run, as \code{widen_ard(rounding = )} takes it.  Last wins, like every
 other layer.}
 
-\item{vars, into, indent, group_summary}{For \code{plan_stub()}: the row keys to
+\item{vars, name, indent, group_summary}{For \code{plan_stub()}: the row keys to
 fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} takes them.
-\code{into} is the NAME the folded column gets (\code{stub_cols(label = )}), which
-is a different thing from \code{table_plan(label = )} --- the column whose
-VALUES are the row text.  \code{vars} is derived when left out.}
+\code{name} is the NAME the folded column gets (\code{stub_cols(label = )}),
+which is a different thing from \code{table_plan(label = )} --- the column
+whose VALUES are the row text.  \code{vars} is derived when left out.}
 
 \item{before}{For \code{plan_stub()}: \code{FALSE} (default) folds the stub inside
 \code{\link[=as_rtftables]{as_rtftables()}}, after grouping and pagination have had their say.
 \code{TRUE} folds it first, with \code{\link[=stub_cols]{stub_cols()}}, which is what
 \code{plan_cell_style()} needs --- only then can a condition see the rows that
-will be printed.  The two do \strong{not} always give the same table.}
+will be printed.  The two do \strong{not} always give the same table:
+folded first, the row keys are gone before a page split or a row
+group could read them, so \code{plan_paginate_group(col = )} naming one of
+them no longer finds it.  That is why this is a choice and not
+worked out for you.}
 
-\item{col}{For \code{plan_paginate_group()}: the column whose value starts a
-new page, \code{as_rtftables()}'s \code{group_col} with \code{split = "by_value"}.  Left
-out, it is the outermost row key.  The page is \strong{named} after
-the value, which is the line \code{rtf_tables(auto_section = TRUE)}
-cuts a section on --- so this verb decides what a section is.
-\code{plan_row_group(col = )} may name it instead when there is no page
-break; naming different columns in the two is an error.}
+\item{cols}{For \code{plan_cell_style()}: the columns styled, by name
+(\code{.values} for every value column); left out, every column.}
 
-\item{show}{\code{FALSE} also hides the column the verb names: the
-grouping carrier for \code{plan_row_group()}, the \code{by} key for \code{plan_paginate_rows()}, the
-sort keys for \code{plan_sort()}.  A column can be \strong{needed and not
-wanted} --- a carrier that groups the rows, the key a page break
-reads --- and the verb that needs it is the one place that knows,
-so it says so there instead of the name being written again in a
-\code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
-are ignored rather than refused.}
-
-\item{mode, collapse}{For \code{plan_row_group()}: what a run of rows sharing a
-value is, and how the repeat shows.  \code{mode} is \code{as_rtftables(group_by = )},
-which is how a group BOUNDARY is found --- \code{"value"} (each run of equal
-values), \verb{"indent}" (a row starts a group when its cell is not indented),
-\code{"filled"} (when its cell is not empty), or \code{"auto"}.  \code{collapse} is
-\code{collapse_repeats}: a repeated value printed once and then blank.
-
-\code{mode = "indent"} \strong{reads} indentation to find the boundary;
-\code{plan_stub(indent = )} \strong{writes} it.  They are not the same knob, and
-a stub written with \code{indent} is exactly what that mode then reads.}
-
-\item{desc}{For \code{plan_sort()} over a table that is
-already built: \code{as_rtftables()}'s \code{sort_desc}.  A plan with an ARD
-half writes the direction into the keys instead (\code{-n}).}
-
-\item{where, first, last, counted}{For \code{plan_blanks()}: \code{as_rtftables()}'s
-\code{blank_rows}, \code{blank_row_first}, \code{blank_row_end} and
-\code{count_blank_rows}.}
-
-\item{max_rows, split, break_before, by, min_group_rows, cont_label}{For
-\code{plan_paginate_rows()}: the row budget and what a page break may cut ---
-\code{as_rtftables()}'s \code{max_rows}, \code{split}, \code{split_rows}, \code{page_by},
-\code{min_group_rows} and \code{cont_label}.  This is the \strong{row} axis; a
-value split (the \strong{group} axis) is \code{plan_paginate_group()},
-and the \strong{column} axis is \code{plan_paginate_cols()}.}
-
-\item{border}{For \code{plan_style()}: the border set, \code{rtftable(border = )}.
-Anything else \code{\link[=rtftable]{rtftable()}} understands goes through \code{...}.}
-
-\item{header}{For \code{plan_col_header()}: the header, built with the same
+\item{header}{For \code{plan_cell_style()}: \code{TRUE} styles the column header
+(\code{\link[=style_header]{style_header()}}).  For \code{plan_col_header()}: the header, built with the same
 \code{\link[=rtf_col_header]{rtf_col_header()}} as everywhere else --- or a \strong{function} of the
 resolved \code{n} (and, with two arguments, the finished table) when it
 has to be computed --- or a \strong{data frame of cells}, one row a cell,
@@ -257,7 +260,7 @@ the spread columns, whose names are not known until the table
 exists.
 }
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(n = TRUE, rtf_col_header(
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(values = list(n = TRUE), rtf_col_header(
   c("",               "\{col\}"),
   c("Characteristic", "(N=\{n\})")))
 }\if{html}{\out{</div>}}
@@ -266,10 +269,77 @@ A row already the right length, and a cell with no token in it, are
 untouched --- so a spanner, a border or a cell that reads the
 finished table is written exactly as it always was.}
 
-\item{n}{For \code{plan_col_header()}: the population each column describes
---- its analysis set, the number a header prints as \code{(N=86)}.
-\code{TRUE} reads it from the data, keyed by the same \code{cols} / \code{levels}
-\code{table_plan()} was given, \strong{at every depth of the keys}: with
+\item{where}{For \code{plan_cell_style()}: a one-sided formula over the
+table's columns choosing the rows, e.g. \code{where = ~ is.na(label)}.  For
+\code{plan_blanks()}: \code{as_rtftables(blank_rows = )}, or \code{"records"} for a
+blank row after each record of a listing.}
+
+\item{bold, italic, align, color, background}{For \code{plan_cell_style()}: how
+the cells look.  A \strong{value} (\code{bold = TRUE}, \code{color = "#CC0000"})
+applies to the cells \code{cols} / \code{header} / \code{where} choose.  A
+\strong{one-sided formula} computes the value row by row over the table's
+columns, \code{NA} leaving the column default alone --- \code{bold = ~ is.na(label)}, \code{color = list(Placebo = ~ ifelse(n > 50, "#CC0000", NA))}, a named list scoping it to columns.  Formula styles see the
+printed rows only with \code{plan_stub(before = TRUE)}.}
+
+\item{border, align_count_pct, font, font_size_half_points, row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips, cell_padding_left_twips, cell_padding_right_twips, cell_valign, table_align, markup, blank_row_normalize}{For \code{plan_style()}: the settings of the \strong{whole table}, by
+\code{\link[=rtftable]{rtftable()}}'s and \code{\link[=as_rtftables]{as_rtftables()}}'s names.  What a table has per
+column or per cell is another verb's --- \code{\link[=plan_columns]{plan_columns()}},
+\code{\link[=plan_cell_style]{plan_cell_style()}}, \code{\link[=plan_col_header]{plan_col_header()}}, \code{\link[=plan_blanks]{plan_blanks()}} --- so this
+list is the whole of it.  For \code{plan_cell_style()}, \code{border} is a
+column's border (\code{\link[=rtf_border]{rtf_border()}}).}
+
+\item{col}{For \code{plan_paginate_group()}: the column whose value starts a
+new page, \code{as_rtftables()}'s \code{group_col} with \code{split = "by_value"}.  Left
+out, it is the outermost row key.  The page is \strong{named} after
+the value, which is the line \code{rtf_tables(auto_section = TRUE)}
+cuts a section on --- so this verb decides what a section is.
+It is the only verb that makes a page per value.}
+
+\item{keep}{\code{FALSE} also hides the column the verb names: the page key
+for \code{plan_paginate_group()}, the sort keys for \code{plan_sort()}.  A column
+can be \strong{needed and not wanted} --- the key a page break reads, a sort
+carrier --- and the verb that needs it is the one place that knows, so
+it says so there instead of the name being written again in a
+\code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
+are ignored rather than refused.}
+
+\item{mode, collapse}{For \code{plan_row_group()}: what a run of rows sharing a
+value is, and how the repeat shows.  \code{mode} is \code{as_rtftables(group_by = )},
+which is how a group BOUNDARY is found --- \code{"value"} (each run of equal
+values), \verb{"indent}" (a row starts a group when its cell is not indented),
+\code{"filled"} (when its cell is not empty), or \code{"auto"}.  \code{collapse} is
+\code{collapse_repeats}: a repeated value printed once and then blank.
+
+\code{mode = "indent"} \strong{reads} indentation to find the boundary;
+\code{plan_stub(indent = )} \strong{writes} it.  They are not the same knob, and
+a stub written with \code{indent} is exactly what that mode then reads.
+
+The rows are grouped by the outermost row key (\code{table_plan(rows = )});
+folded into a stub, by the stub's headings.}
+
+\item{stat}{For \code{plan_sort()}: the statistic totalled into \code{.sort_stat}
+for a frequency order (\code{widen_ard(sort_stat = )}), e.g. \code{stat = "n"}.}
+
+\item{first, last, counted}{For \code{plan_blanks()}: \code{as_rtftables()}'s
+\code{blank_row_first}, \code{blank_row_end} and
+\code{count_blank_rows}.}
+
+\item{max_rows, split, break_before, min_group_rows, cont_label}{For
+\code{plan_paginate_rows()}: the row budget and what a page break may cut ---
+\code{as_rtftables()}'s \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}
+and \code{cont_label}.  This is the \strong{row} axis; a page per value (the
+\strong{group} axis) is \code{plan_paginate_group()}, and the \strong{column} axis
+is \code{plan_paginate_cols()}.}
+
+\item{border_header, border_spanning, border_body, border_first_row, border_last_row}{For \code{plan_style()}: the rules of one kind of row, by the names
+\code{\link[=rtf_table_style]{rtf_table_style()}} gives them.  Say the table's rules one way:
+\code{border = "tfl"}, or these.}
+
+\item{values}{For \code{plan_col_header()}: what the header's \code{{tokens}}
+take.  The \strong{population} each column describes --- its analysis set,
+the number a header prints as \code{(N=86)} --- is \code{values = list(n = TRUE)}
+(or just \code{TRUE}), read from the data, keyed by the same \code{cols} /
+\code{levels} \code{table_plan()} was given, \strong{at every depth of the keys}: with
 \code{cols = c("TRT", "SEX")} both the arm (\code{"Placebo"}) and the arm x sex
 cell (\code{"Placebo____F"}) are looked up.  Only a number the ARD
 \strong{states as a population size} is read:
@@ -305,17 +375,17 @@ a one-column table and a cell over all the columns.
 parameter, a visit) have \strong{two populations}, and which one the
 header says is the author's choice:
 \itemize{
-\item \code{n = "page"} --- each page's own, the subjects with that test:
+\item \code{values = list(n = "page")} --- each page's own, the subjects with that test:
 the ARD rows \strong{carrying} the page key, e.g.
 \code{cards::ard_categorical(adlb, by = PARAM, variables = BASEGR)},
 which states each baseline column's N and the page's total;
-\item \code{n = "table"} --- the analysis set: the ARD rows \strong{without} the
+\item \code{list(n = "table")} --- the analysis set: the ARD rows \strong{without} the
 page key, e.g. \code{cards::ard_total_n(adsl)} or the treatment
 tabulated from ADSL;
-\item \code{n = list(n = "page", N = "table")} --- both, as \code{{n}} and \code{{N}}.
+\item \code{list(n = "page", N = "table")} --- both, as \code{{n}} and \code{{N}}.
 }
 
-\code{TRUE} reads the page's rows, then the table's for what they lack,
+\code{n = TRUE} reads the page's rows, then the table's for what they lack,
 and \strong{warns} when the ARD states both and they differ.  Neither is
 filled in from outside the ARD: a population it does not state is
 \code{NA}.  Keep the header consistent with the body --- the percentages
@@ -335,20 +405,23 @@ for}: its column; over a spanner, the level its columns agree on
 \code{{n1}}, \code{{n2}}, ... name a depth from any cell --- \code{"{col2} {n2}"}
 under \code{"{col1} {n1}"}.
 
-To \strong{give the numbers yourself}, pass a vector named by column
+To \strong{give the numbers yourself}, \code{n} is a vector named by column
 key, at any depth --- \code{c(Placebo = 86, "Placebo____F" = 53, ...)} ---
 or a function of the data returning one; a single unnamed number
 fills every cell.  After a workbook (\code{tflspec::tfl_table_plan()}), a later
-\code{plan_col_header(n = ...)} supplies the numbers and keeps the
+\code{plan_col_header(values = ...)} supplies the numbers and keeps the
 workbook's header.
-A \strong{function} of the data covers what neither can find, and a
+
+A \strong{data frame} of per-page values is \code{\link[=set_col_header]{set_col_header()}}'s own
+\verb{values =}: one row per page key, a column per \code{{token}}.
+#'   A \strong{function} of the data covers what neither can find, and a
 \strong{named list} of either supplies several --- and then \strong{each
 name is a token}, which is how one header says two numbers with
 no function at all: the study total in a spanner and each
 column's own underneath it.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(
-  n = list(n = TRUE, total = 254),
+  values = list(n = TRUE, total = 254),
   rtf_col_header(
     list(col_cell(1, ""), col_cell(c(2, 4), "All (N=\{total\})")),
     c("",               "\{col\}"),
@@ -360,9 +433,6 @@ number fills every cell.  \code{{n}} is the entry called \code{n}, or the
 only entry when there is one.  The resolved value is also what
 \verb{header =} is called with when it is a function.}
 
-\item{values}{For \code{plan_col_header()}: passed to \code{\link[=set_col_header]{set_col_header()}} as
-\verb{values =}, for a header whose cells carry \code{{token}} placeholders.}
-
 \item{widths}{For \code{plan_columns()}: the relative column widths,
 \code{rtftable(col_rel_width = )}.  \strong{Named by column} (\code{c(row_label = 5, .values = 2)}, \code{.values} for every value column) a reordered table keeps
 them, and that is what the \code{columns} sheet's \code{width} is; unnamed, they
@@ -372,8 +442,21 @@ are one a column in order, as \code{col_rel_width} itself.}
 up at the decimal point (\code{.values} for every value column) --- the
 \code{columns} sheet's \code{decimal_split}.}
 
-\item{type, sep, spacer, spacer_rel_width, blank_row, blank_row_first, align, layout, wrap, record}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged.
-\code{...} there takes the \code{\link[=listing_col]{listing_col()}}s.}
+\item{row_title, auto_width}{For \code{plan_columns()}: the row-heading
+columns (\code{rtftable(row_title = )}) and whether each column is sized to
+its content (\code{as_rtftables(auto_width = )}).}
+
+\item{sep}{For \code{plan_columns()}: the separator several \code{cols} keys are
+joined with in the value columns' names, \code{"____"} by default ---
+\code{"Placebo____F"}.  The spanning header is built by splitting on it, so
+a key value that contains it is refused.  For \code{plan_listing()},
+\code{\link[=listing_spec]{listing_spec()}}'s \code{sep}.}
+
+\item{type, spacer, spacer_rel_width, layout, wrap}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged.
+\code{...} there takes the \code{\link[=listing_col]{listing_col()}}s.  A blank row between records
+is \code{plan_blanks(where = "records")}, one at the top of each page
+\code{plan_blanks(first = TRUE)}, and a column's alignment is its own
+(\code{listing_col(align = )}).}
 
 \item{pages}{For \code{plan_titles()} / \code{plan_footnotes()}: a list with one
 block per page, when the pages do not share a block.  \code{...} is the rows
@@ -381,22 +464,22 @@ of a single block used on every page; give one or the other, never
 both, because a three-row title on a three-page table cannot be told
 apart from three one-row titles.}
 
-\item{at, carry, col_header, width, allow_span_break, order}{For
-\code{plan_paginate_cols()}: \code{\link[=paginate_cols]{paginate_cols()}}'s own arguments --- where to
-cut (\code{at}, \code{cols} or \code{by}), which columns every block repeats (\code{carry}),
-what the header becomes, how the widths are rescaled, and \code{order} ---
+\item{at, cut_by, col_header, fit, allow_span_break, order}{For
+\code{plan_paginate_cols()}, in \code{\link[=paginate_cols]{paginate_cols()}}'s terms: \code{at} the columns
+to cut before; \code{cut_by} a list of column blocks (\code{paginate_cols(cols = )}), or a separator found in the column names / one key per column
+(\code{paginate_cols(by = )}); \code{col_header} what the header becomes; \code{fit}
+\code{TRUE} (every block's widths on page 1's scale, \code{width = "fill"}) or
+\code{FALSE} (each column keeps its width, \code{"keep"}); \code{order}
 \code{paginate_cols(page_order = )}, the order the three axes nest in,
 outermost first: \code{"group"}, \code{"rows"}, \code{"cols"}, or the shorthands
-\code{"across"} and \code{"down"}.}
-
-\item{cols}{For \code{plan_paginate_cols()}: which columns each block keeps, when
-the cut is by name rather than by position.}
+\code{"across"} and \code{"down"}.  For \code{plan_paginate_cols()} \code{keep} is the
+columns every block repeats (\code{paginate_cols(carry = )}).}
 
 \item{every}{For \code{plan_paginate_cols()}: cut a block every this many
-columns, counting only the ones a block does not carry.  This is
+columns, counting only the ones a block does not keep.  This is
 \code{at} without writing down how many columns one study had --- the
 plan is deferred, so it counts them when the table exists.  Give one
-of \code{at}, \code{cols}, \code{by} or \code{every}.}
+of \code{at}, \code{cut_by} or \code{every}.}
 }
 \value{
 The plan, with one more layer.
@@ -406,32 +489,38 @@ Each verb adds a layer to an \code{\link[=table_plan]{table_plan()}}.  \strong{A
 The roles --- which column goes across, which go down, which carries
 the row identity --- are said once, on \code{\link[=table_plan]{table_plan()}}; these verbs are
 the things a report really does declare twice.  Their arguments are
-the ones \code{\link[=spread_ard]{spread_ard()}} and \code{\link[=as_rtftables]{as_rtftables()}} already take, so the
+the ones \code{\link[=widen_ard]{widen_ard()}} and \code{\link[=as_rtftables]{as_rtftables()}} already take, so the
 layering is the only new idea.
 }
 \section{Where each argument goes}{
 
-The verbs keep their own short names; this is what each one hands on.\tabular{ll}{
-   Verb \tab Goes to \cr
-   \code{plan_levels()}, \code{plan_labels()}, \code{plan_cells()}, \code{plan_digits()} \tab \code{\link[=spread_ard]{spread_ard()}}: \code{levels}, \code{labels}, \code{cells}, \code{digits} / \code{rounding} \cr
-   \code{plan_sort(..., desc)} \tab \code{\link[=spread_ard]{spread_ard()}}: \code{sort}, \code{sort_desc} \cr
-   \code{plan_fmt(by, formats, cols)} \tab \code{\link[=fmt_numeric]{fmt_numeric()}}, the same names \cr
-   \code{plan_stub(vars, into, indent, summary, before)} \tab \code{\link[=stub_spec]{stub_spec()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}; \code{before} = the stub before the drop \cr
-   \code{plan_cell_style(...)} \tab \code{\link[=rtftable]{rtftable()}}: \code{cell_styles} \cr
-   \code{plan_paginate_group(col, show)} \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{page_by = col}; \code{show = FALSE} adds it to \code{drop_cols} \cr
-   \code{plan_row_group(mode, collapse, col)} \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{group_by}, \code{collapse_repeats}, \code{group_col} \cr
-   \code{plan_hide(...)} \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{drop_cols} \cr
-   \code{plan_blanks(where, first, last, counted)} \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows} \cr
-   \code{plan_paginate_rows(max_rows, split, by, min_group_rows, cont_label, break_before)} \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{page_by}, \code{min_group_rows}, \code{cont_label}, \code{split_rows} \cr
-   \code{plan_paginate_cols(every, at, carry, order, ...)} \tab \code{\link[=paginate_cols]{paginate_cols()}}: \code{every}, \code{at}, \code{carry}, \code{page_order}, and the rest by name \cr
-   \code{plan_style(border, ...)} \tab \code{\link[=rtftable]{rtftable()}}: \code{border}, and the rest by name \cr
-   \code{plan_columns(widths, decimal)} \tab \code{\link[=rtftable]{rtftable()}}: \code{col_rel_width}; \code{\link[=set_decimal_split]{set_decimal_split()}}: \code{cols} \cr
-   \code{plan_col_header(header, n, values)} \tab \code{\link[=set_col_header]{set_col_header()}}: the header (an \code{\link[=rtf_col_header]{rtf_col_header()}}) and \code{values}; \code{n} fills its \code{{n}} tokens \cr
-   \code{plan_listing(..., type, sep)} \tab \code{\link[=listing_spec]{listing_spec()}}, the same names \cr
-   \code{plan_titles()}, \code{plan_footnotes()} \tab \code{\link[=rtf_titles]{rtf_titles()}}, \code{\link[=rtf_footnotes]{rtf_footnotes()}} \cr
-   \code{plan_header_style()}, \code{plan_col_style()}, \code{plan_zone_style()} \tab \code{\link[=style_header]{style_header()}}, \code{\link[=style_cols]{style_cols()}}, \code{\link[=style_zone]{style_zone()}}, the same names \cr
-   \code{plan_after(...)} \tab your functions of the pages \cr
+Each verb has \strong{one job}, and its arguments keep the names of the
+function that does it.  This is what each one hands on.\tabular{lll}{
+   Verb \tab Its job \tab Goes to \cr
+   \code{plan_cells(..., stats, value, na, notes)} \tab how a cell is made \tab \code{\link[=widen_ard]{widen_ard()}}: \code{cells}, \code{stats}, \code{value}, \code{na}, \code{notes} \cr
+   \code{plan_digits(..., rounding)} \tab the digits \tab the open tokens of the templates; on a finished table \code{\link[=fmt_numeric]{fmt_numeric()}} \cr
+   \code{plan_levels()}, \code{plan_labels()} \tab the order and text of values \tab \code{\link[=widen_ard]{widen_ard()}}: \code{levels}, \code{labels} \cr
+   \code{plan_sort(..., stat, keep)} \tab the row order \tab \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name} \cr
+   \code{plan_stub(vars, name, indent, group_summary, before)} \tab the row headings \tab \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary} \cr
+   \code{plan_cell_style(cols, header, where, bold, italic, align, color, background, border)} \tab how cells look \tab \code{\link[=style_header]{style_header()}}, \code{\link[=style_cols]{style_cols()}}, or \code{\link[=rtftable]{rtftable()}}'s \code{cell_styles} for a condition \cr
+   \code{plan_paginate_group(col, keep)} \tab a page per value \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{split = "by_value"}, \code{group_col}; \code{keep = FALSE} adds it to \code{drop_cols} \cr
+   \code{plan_row_group(mode, collapse)} \tab groups down the body \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{group_by}, \code{collapse_repeats} \cr
+   \code{plan_hide(...)} \tab columns not printed \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{drop_cols} \cr
+   \code{plan_blanks(where, first, last, counted)} \tab blank rows \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows}; a listing's \code{where = "records"} is \code{\link[=listing_spec]{listing_spec()}}'s \code{blank_row} \cr
+   \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label)} \tab the row budget \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label} \cr
+   \code{plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)} \tab column blocks \tab \code{\link[=paginate_cols]{paginate_cols()}}: \code{at}, \code{cols} / \code{by}, \code{carry}, \code{col_header}, \code{width}, \code{allow_span_break}, \code{page_order} \cr
+   \code{plan_style(border, ..., border_header, ...)} \tab the whole table \tab \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} by the same names; \verb{border_*} via \code{\link[=rtf_table_style]{rtf_table_style()}} \cr
+   \code{plan_columns(widths, decimal, row_title, auto_width, sep)} \tab the columns \tab \code{\link[=rtftable]{rtftable()}}: \code{col_rel_width}, \code{row_title}; \code{\link[=set_decimal_split]{set_decimal_split()}}: \code{cols}; \code{\link[=as_rtftables]{as_rtftables()}}: \code{auto_width}; \code{\link[=widen_ard]{widen_ard()}}: \code{sep} \cr
+   \code{plan_col_header(header, values)} \tab the column header \tab \code{\link[=set_col_header]{set_col_header()}}: the header and a data frame of \code{values}; a population fills its \code{{n}} tokens \cr
+   \code{plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)} \tab a listing \tab \code{\link[=listing_spec]{listing_spec()}}, the same names \cr
+   \code{plan_titles()}, \code{plan_footnotes()} \tab the blocks above and below \tab \code{\link[=rtf_titles]{rtf_titles()}}, \code{\link[=rtf_footnotes]{rtf_footnotes()}} \cr
+   \code{plan_after(...)} \tab anything else \tab your functions of the pages \cr
 }
+
+
+\code{plan_columns()} declares the columns \strong{of this table} --- widths,
+alignment, the key separator --- and is not \code{\link[=rtf_columns]{rtf_columns()}}, which
+addresses the columns of finished pages by their printed names.
 }
 
 \section{plan_after() is the way out, not the way in}{
@@ -446,25 +535,23 @@ reasons to reach for it each have a declaration, which names columns and
 goes into a workbook:\tabular{ll}{
    Instead of \code{plan_after(...)} around \tab declare \cr
    \code{set_decimal_split(x, cols = 3:31)} \tab \code{plan_columns(decimal = ".values")} \cr
-   \code{paginate_cols(x, ...)} \tab \code{plan_paginate_cols(every = , at = , carry = )} \cr
+   \code{paginate_cols(x, ...)} \tab \code{plan_paginate_cols(every = , at = , keep = )} \cr
    \code{rtftable(col_rel_width = )} by position \tab \code{plan_columns(widths = c(Analyte = 3, .values = 2))} \cr
    \code{set_col_header()} / \code{rtf_col_header()} \tab \code{plan_col_header()} \cr
    \code{realign_count_pct()} \tab \code{plan_style(align_count_pct = TRUE)} \cr
+   \code{fmt_numeric()} \tab \verb{plan_digits(<column> = 2)}, \code{plan_digits(.rows = c(Mean = 1))} \cr
    \code{paginate()} \tab \code{plan_paginate_rows()} \cr
-   bold / colour / alignment of body cells, by condition \tab \code{plan_cell_style()} \cr
-   \code{style_header(x, ...)} \tab \code{plan_header_style(...)} \cr
-   \code{style_cols(x, ...)} \tab \code{plan_col_style(...)} \cr
-   \code{style_zone(x, ...)} \tab \code{plan_zone_style(...)} \cr
+   \code{style_header(x, ...)} \tab \code{plan_cell_style(header = TRUE, ...)} \cr
+   \code{style_cols(x, ...)} \tab \code{plan_cell_style(cols = , ...)} \cr
+   bold / colour / alignment of body cells, by condition \tab \code{plan_cell_style(where = ~ ..., ...)} \cr
+   \code{style_zone(x, ...)} \tab \code{plan_style(border_header = , border_body = , ...)} \cr
 }
 
 
-\code{plan_header_style()}, \code{plan_col_style()} and
-\code{plan_zone_style()} take the arguments of rtfreporter's
-\code{\link[=style_header]{style_header()}}, \code{\link[=style_cols]{style_cols()}} and \code{\link[=style_zone]{style_zone()}} unchanged, and run
-them on the pages in the order written (after the header and the
-decimal alignment, before any \code{plan_after()} step).  Their \code{cols}
-may be column names, and \code{.values} stands for every value column, so a
-reordered table keeps them.
+The styles \code{plan_cell_style()} declares run on the pages in the order
+written (after the header and the decimal alignment, before any
+\code{plan_after()} step).  Its \code{cols} may be column names, and \code{.values}
+stands for every value column, so a reordered table keeps them.
 }
 
 \section{Lifecycle}{

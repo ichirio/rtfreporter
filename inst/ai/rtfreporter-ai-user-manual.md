@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.1.9002** (the development
+**This manual documents rtfreporter 0.8.1.9003** (the development
 version, after release 0.8.1).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -774,11 +774,10 @@ alignment; pass `nbsp = " "` if you are comparing the strings in plain text
 Discussion #316):** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
-`plan_fmt` `plan_stub` `plan_cell_style` `plan_paginate_group`
-`plan_row_group` `plan_hide` `plan_sort` `plan_blanks` `plan_paginate_rows`
+`plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
+`plan_hide` `plan_sort` `plan_blanks` `plan_paginate_rows`
 `plan_paginate_cols` `plan_style` `plan_columns` `plan_col_header`
-`plan_listing` `plan_titles` `plan_footnotes` `plan_header_style`
-`plan_col_style` `plan_zone_style` `plan_after`
+`plan_listing` `plan_titles` `plan_footnotes` `plan_after`
 
 **Assembly:** `assemble_rtf` `assemble_files` `assemble_toc` `assemble_spec`
 `assemble_from_spec` `assemble_folder` `toc_heading` `toc_entry`

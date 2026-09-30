@@ -15,7 +15,7 @@ Invisibly, a list with elements \code{keys}, \code{variables}, \code{contexts} a
 }
 \description{
 Prints, and returns invisibly, the structural facts you need in order to
-call \code{\link[=normalize_ard]{normalize_ard()}} and \code{\link[=spread_ard]{spread_ard()}}: the grouping-variable names
+call \code{\link[=normalize_ard]{normalize_ard()}} and \code{\link[=widen_ard]{widen_ard()}}: the grouping-variable names
 that appear in the \code{group1..groupN} columns, the analysis variables, the
 \code{context} values and the statistics each context carries.  All of it is read from the tibble's
 rows -- never from the object's attributes.
@@ -26,5 +26,5 @@ rows -- never from the object's attributes.
 }
 
 \seealso{
-\code{\link[=normalize_ard]{normalize_ard()}}, \code{\link[=spread_ard]{spread_ard()}}, \code{plan_template(form = "spread")}
+\code{\link[=normalize_ard]{normalize_ard()}}, \code{\link[=widen_ard]{widen_ard()}}, \code{plan_template(form = "widen")}
 }

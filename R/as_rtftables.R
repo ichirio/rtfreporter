@@ -1039,6 +1039,15 @@ as_rtftables.default <- function(x,
     # `location = "column"` tables) gains a clinical stub.  Everything
     # downstream (`drop_cols`, `group_col`, `sort_by`, `group_by = "indent"`,
     # the group-aware splits) then operates on the reshaped, post-stub columns.
+    # A `cell_styles` of your own, one element per body row, follows its
+    # rows the way an adapter's does -- through the stub, the sort and the
+    # page split -- instead of being handed whole to every page, where a
+    # second page could not take it.
+    if (is.null(cell_styles) && !is.null(user_args$cell_styles) &&
+        length(user_args$cell_styles) == nrow(body)) {
+      cell_styles <- user_args$cell_styles
+      user_args$cell_styles <- NULL
+    }
     if (!is.null(stub_spec_obj)) {
       st          <- .apply_stub_vars(body, kw, cell_styles, stub_spec_obj)
       body        <- st$body

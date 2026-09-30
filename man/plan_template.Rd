@@ -8,7 +8,7 @@ plan_template(
   x,
   cols = NULL,
   hierarchy = character(),
-  form = c("plan", "spread"),
+  form = c("plan", "widen"),
   file = NULL,
   pipe = NULL
 )
@@ -22,8 +22,8 @@ first key the ARD has.}
 \item{hierarchy}{The hierarchy columns, as \code{\link[=normalize_ard]{normalize_ard()}}'s.}
 
 \item{form}{\code{"plan"} (default) writes the deferred form, a \code{\link[=table_plan]{table_plan()}}
-pipeline; \code{"spread"} writes the immediate form, \code{\link[=normalize_ard]{normalize_ard()}} into
-\code{\link[=spread_ard]{spread_ard()}} with the seam left open for a \code{dplyr::mutate()}.}
+pipeline; \code{"widen"} writes the immediate form, \code{\link[=normalize_ard]{normalize_ard()}} into
+\code{\link[=widen_ard]{widen_ard()}} with the seam left open for a \code{dplyr::mutate()}.}
 
 \item{file}{When given, the code is also written there.}
 
@@ -35,7 +35,7 @@ then \verb{\%>\%}.}
 The generated code, as a character vector, invisibly.
 }
 \description{
-The counterpart of \code{plan_template(form = "spread")} for the deferred form: reads an ARD
+The counterpart of \code{plan_template(form = "widen")} for the deferred form: reads an ARD
 and prints a runnable \code{\link[=table_plan]{table_plan()}} pipeline, filled in with the keys,
 hierarchy, contexts and statistics it actually found.
 }

@@ -4,21 +4,7 @@
 \alias{table_plan}
 \title{A deferred, last-wins plan for a table}
 \usage{
-table_plan(
-  x = NULL,
-  cols = NULL,
-  rows = NULL,
-  label = NULL,
-  variable = NULL,
-  stat_name = NULL,
-  stat = NULL,
-  stats = NULL,
-  sep = NULL,
-  value = NULL,
-  na = NULL,
-  notes = NULL,
-  sort_stat = NULL
-)
+table_plan(x = NULL, cols = NULL, rows = NULL, label = NULL, stat = NULL)
 }
 \arguments{
 \item{x}{What the table is built from.  A plan does \strong{not} flatten:
@@ -36,7 +22,7 @@ work;
 A raw cards ARD is refused, with the line to write.}
 
 \item{cols}{The key that goes \strong{across} the table, as
-\code{spread_ard(cols = )} takes it: one or more columns, optionally
+\code{widen_ard(cols = )} takes it: one or more columns, optionally
 renamed \code{c(new = old)}.}
 
 \item{rows}{The keys that go \strong{down} it, likewise.  Left out, the
@@ -46,23 +32,15 @@ analysis variable is used (as \code{group}).}
 the label column.  \code{".label"} by default (what \code{\link[=normalize_ard]{normalize_ard()}}
 builds), \code{NA} for a table that has none, or a guarded template.}
 
-\item{variable, stat_name, stat}{Which of \strong{your} columns play the
-three parts \code{\link[=spread_ard]{spread_ard()}} reads by name: the analysis variable
-(what \code{\link[=plan_cells]{plan_cells()}} and \code{\link[=plan_digits]{plan_digits()}} key on), which statistic
-a row is, and what it is worth.  A frame from \pkg{cards} already
-calls them that and needs none of them; a summary somebody built
-with dplyr says so here, once, instead of being asked again by
-every verb.}
-
-\item{stats}{\code{"cells"} (default) fills a template per cell; \code{"rows"}
-makes each statistic a row of its own.}
-
-\item{sep}{Separator pasted between multiple \code{cols} keys.}
-
-\item{value, na, notes, sort_stat}{The remaining \code{\link[=spread_ard]{spread_ard()}} options,
-unchanged: which of \code{stat} / \code{stat_fmt} a \code{{x}} reads, what fills a
-cell no template could, whether to report what was not used, and the
-statistic totalled into \code{.sort_stat} for a frequency order.}
+\item{stat}{Which of \strong{your} columns play the three parts \code{\link[=widen_ard]{widen_ard()}}
+reads by name, as a named vector: \code{variable} (the analysis variable,
+what \code{\link[=plan_cells]{plan_cells()}} and \code{\link[=plan_digits]{plan_digits()}} key on), \code{name} (which
+statistic a row is) and \code{value} (what it is worth) ---
+\code{stat = c(variable = "PARAMCD", name = "STAT", value = "AVAL")}.  A
+frame from \pkg{cards} already calls them \code{variable}, \code{stat_name} and
+\code{stat} and needs none of this; a summary somebody built with dplyr says
+so here, once, instead of being asked again by every verb.  Name only
+the parts your frame calls something else.}
 }
 \value{
 An object of class \code{table_plan}.
@@ -83,9 +61,23 @@ two-line edit:
 }\if{html}{\out{</div>}}
 
 This is tfrmt's \code{frmt_structure} rule.  It is deliberately \strong{different}
-from \code{\link[=spread_ard]{spread_ard()}}'s \code{cells}, which picks by specificity and ignores
+from \code{\link[=widen_ard]{widen_ard()}}'s \code{cells}, which picks by specificity and ignores
 order; the spike exists to find out which is nicer to write.
 }
+\section{Where the other settings went}{
+
+\code{table_plan()} takes the \strong{roles} and nothing else.  Every other setting
+belongs to the verb whose job it is:\tabular{ll}{
+   Setting \tab Verb \cr
+   a template per cell or a row per statistic, \code{stat} / \code{stat_fmt}, the empty-cell text \tab \code{\link[=plan_cells]{plan_cells()}} (\verb{stats =}, \verb{value =}, \verb{na =}) \cr
+   the statistic a frequency order totals \tab \code{\link[=plan_sort]{plan_sort()}} (\verb{stat =}) \cr
+   reporting what the templates did not use \tab \code{\link[=plan_cells]{plan_cells()}} (\verb{notes =}) \cr
+}
+
+
+| the separator several \code{cols} keys are joined with in the column names | \code{\link[=plan_columns]{plan_columns()}} (\verb{sep =}) |
+}
+
 \section{Lifecycle}{
 
 \strong{Experimental.}  Whether the plan engine stays is decided in the
@@ -111,5 +103,5 @@ if (requireNamespace("cards", quietly = TRUE)) {
 }
 }
 \seealso{
-\code{\link[=plan_apply]{plan_apply()}}, \code{\link[=normalize_ard]{normalize_ard()}}, \code{\link[=spread_ard]{spread_ard()}}
+\code{\link[=plan_apply]{plan_apply()}}, \code{\link[=normalize_ard]{normalize_ard()}}, \code{\link[=widen_ard]{widen_ard()}}
 }

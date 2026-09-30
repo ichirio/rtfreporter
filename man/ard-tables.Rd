@@ -18,8 +18,8 @@ or on the long frame from \code{\link[=normalize_ard]{normalize_ard()}}.
 \item{\code{\link[=list_ard_keys]{list_ard_keys()}}}{What keys, variables, contexts and statistics an ARD
 actually holds.}
 \item{\code{\link[=normalize_ard]{normalize_ard()}}}{ARD to a flat, explicitly keyed long table.}
-\item{\code{\link[=spread_ard]{spread_ard()}}}{Long table to the wide table data.frame.}
-\item{\code{plan_template(form = "spread")}}{Emit runnable conversion code for a given ARD.}
+\item{\code{\link[=widen_ard]{widen_ard()}}}{Long table to the wide table data.frame.}
+\item{\code{plan_template(form = "widen")}}{Emit runnable conversion code for a given ARD.}
 \item{\code{\link[=overall_row]{overall_row()}}}{Where the table's overall row comes from.}
 \item{\code{\link[=pull_ard]{pull_ard()}}}{A statistic keyed like the spread columns, for a
 column header or an overall row.}
@@ -62,7 +62,7 @@ optional and an ARD built without \code{fmt_fun} would otherwise produce
 nothing.  The two differ for a proportion: \pkg{cards} writes \code{61.6} into
 \code{stat_fmt} while \code{stat} holds \code{0.616}, so \code{{p}} and \verb{\{p:.1f\\\%\}} agree and
 \verb{\{p:.1f\}} does not.  For \code{stats = "rows"}, where a value goes into the cell without
-a template, \code{spread_ard(value = )} makes the same choice.
+a template, \code{widen_ard(value = )} makes the same choice.
 A template whose statistics are not all present yields \code{NA}, which is what
 lets \code{c("{n} ({p})", "{n}")} act as a fallback chain.  A \strong{named} vector of
 templates produces one table row per element, the name being the row label:
@@ -124,7 +124,7 @@ author may compute their own.  \code{\link[=pull_ard]{pull_ard()}} names the sta
 lists the candidates when the choice is ambiguous.}
 }
 Column headers are rtfreporter's own job -- \code{col_header} takes a plain
-character vector -- so \code{\link[=spread_ard]{spread_ard()}} builds the body only, and
+character vector -- so \code{\link[=widen_ard]{widen_ard()}} builds the body only, and
 \code{\link[=pull_ard]{pull_ard()}} is there when the header needs a number that must agree with
 the percentages.
 }

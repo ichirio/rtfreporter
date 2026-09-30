@@ -704,7 +704,7 @@ test_that("print() names the columns of every stage it has", {
 
   invisible(suppressMessages(plan_apply(p)))
   out2 <- utils::capture.output(print(p))
-  expect_true(any(grepl("after spread", out2, fixed = TRUE)))
+  expect_true(any(grepl("after widen", out2, fixed = TRUE)))
   expect_true(any(grepl("as printed", out2, fixed = TRUE)))
   expect_true(any(grepl("row_label", out2, fixed = TRUE)))
 })
@@ -1944,4 +1944,89 @@ test_that("table_plan() takes the roles, and stat = names the parts", {
                "only these three names")
   expect_error(table_plan(data.frame(a = 1), stat = c(value = "b")),
                "stat = c(value", fixed = TRUE)
+})
+
+
+# -- the settings that left table_plan() (#498) --------------------------------
+
+test_that("plan_cells() carries how a cell is made, however the plan is run", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(plan_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n:.0f}", stats = "cells", na = "-",
+               notes = FALSE)
+  a <- plan_apply(p, "args")$widen
+  expect_identical(a$na, "-")
+  expect_identical(a$stats, "cells")
+  expect_false(a$notes)
+  # notes = FALSE holds when rtf_tables() runs the plan, too
+  expect_silent(as_rtftables(p |> plan_stub()))
+  expect_error(plan_cells(p, stats = "columns"), "should be one of")
+  expect_error(plan_cells(p, notes = "no"), "TRUE")
+})
+
+test_that("plan_sort(stat = ) names the statistic a frequency order totals", {
+  skip_if_no_cards2()
+  p <- base_plan() |> plan_sort("-n", stat = "n")
+  expect_identical(plan_apply(p, "args")$widen$sort_stat, "n")
+})
+
+test_that("a finished table sorts descending by -name", {
+  d <- data.frame(term = c("a", "b", "c"), ord = c(2, 3, 1),
+                  stringsAsFactors = FALSE)
+  a <- plan_apply(table_plan(d) |> plan_sort("-ord") |> plan_hide("ord"),
+                  "args")$rtf
+  expect_identical(a$sort_by, "ord")
+  expect_true(a$sort_desc)
+  pg <- plan_apply(table_plan(d) |> plan_sort("-ord") |> plan_hide("ord"))
+  first <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
+  expect_identical(first$data$term, c("b", "a", "c"))
+})
+
+test_that("plan_digits() formats a finished table by column name", {
+  d <- data.frame(term = c("a", "b"), val = c(1.23456, 2.5),
+                  stringsAsFactors = FALSE)
+  pg <- plan_apply(table_plan(d) |> plan_digits(val = 2) |> plan_style(border = "tfl"))
+  first <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
+  expect_identical(first$data$val, c("1.23", "2.50"))
+  expect_error(plan_apply(table_plan(d) |> plan_digits(nope = 2)),
+               "matched nothing")
+})
+
+test_that("plan_blanks(where = \"records\") separates a listing's records", {
+  pg <- suppressMessages(plan_apply(
+    table_plan(.pages_src()) |>
+      plan_listing(listing_col("USUBJID", width = 12)) |>
+      plan_blanks(where = "records")))
+  first <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
+  expect_gt(length(first$blank_rows %||% attr(first$data, "rtf_blank_rows")), 0L)
+  # a table has no records to separate
+  expect_error(plan_apply(disp_plan() |> plan_blanks(where = "records"),
+                          "pages"), "plan_listing")
+})
+
+test_that("plan_paginate_cols() cuts by a block list or a separator", {
+  skip_if_no_cards2()
+  p <- disp_plan() |> plan_paginate_rows(max_rows = 40)
+  a <- plan_apply(plan_paginate_cols(p, cut_by = list(3:4, 5L), keep = 1:2,
+                                     fit = TRUE))
+  expect_length(a, 2L)
+  expect_error(plan_paginate_cols(p, at = 4L, every = 2L), "one way")
+  expect_error(plan_paginate_cols(p, fit = "keep"), "TRUE")
+})
+
+test_that("a conditional style follows its rows onto every page", {
+  skip_if_no_cards2()
+  # the styles are computed for the whole table; the page split cuts them
+  # with the rows, instead of handing each page all of them
+  pg <- suppressMessages(plan_apply(
+    disp_plan() |>
+      plan_stub(vars = c("group", "label"), name = "row_label", before = TRUE) |>
+      plan_paginate_rows(max_rows = 4, split = "group_safe") |>
+      plan_cell_style(where = ~ is.na(label), italic = TRUE)))
+  expect_gt(length(pg), 1L)
+  for (p in pg) {
+    expect_length(p$cell_styles, nrow(p$data))
+    it <- vapply(p$cell_styles, function(r) isTRUE(r$italic[[1L]]), NA)
+    expect_true(it[[1L]])               # each page opens on a heading row
+  }
 })

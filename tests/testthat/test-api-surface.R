@@ -68,10 +68,11 @@ test_that("one border constructor is left once the deprecated ones are set aside
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 126 exports, 7 of them deprecated and slated for removal before CRAN.
+  # 122 exports, 7 of them deprecated and slated for removal before CRAN.
   # (91 since #463 added rtfreporter_ai_manual(); 92 since #476 added
   # round_num(); 126 since #491 brought the ARD table engine --
-  # 34 functions -- over from tflspec.)
-  expect_length(.exports(), 126L)
-  expect_length(setdiff(.exports(), .dep), 119L)
+  # 34 functions -- over from tflspec; 122 since #498 folded plan_fmt()
+  # into plan_digits() and the three style verbs into plan_cell_style().)
+  expect_length(.exports(), 122L)
+  expect_length(setdiff(.exports(), .dep), 115L)
 })

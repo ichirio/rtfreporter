@@ -42,7 +42,7 @@ the row itself.}
 the \code{context == "tabulate"} counts of the by-variable -- are no table
 cell, but they are often the only place an ARD states each column's
 size.  \code{FALSE} (default) keeps them and marks them \code{.key_own = TRUE}, so
-\code{\link[=spread_ard]{spread_ard()}} leaves them out of the body while a column header can
+\code{\link[=widen_ard]{widen_ard()}} leaves them out of the body while a column header can
 still read them.  \code{TRUE} removes them outright.}
 }
 \value{
@@ -68,17 +68,17 @@ column and record the nesting depth.
 }
 \details{
 The result is a plain data frame that you can keep manipulating with base R
-or dplyr before handing it to \code{\link[=spread_ard]{spread_ard()}}.  That is the intended route
-for anything \code{\link[=spread_ard]{spread_ard()}} does not do by itself: marginal totals, derived
+or dplyr before handing it to \code{\link[=widen_ard]{widen_ard()}}.  That is the intended route
+for anything \code{\link[=widen_ard]{widen_ard()}} does not do by itself: marginal totals, derived
 rows, custom sorting.
 }
-\section{Working on the result before \code{\link[=spread_ard]{spread_ard()}}}{
+\section{Working on the result before \code{\link[=widen_ard]{widen_ard()}}}{
 
 The result is a plain data frame; reshaping it in between is the point of
-the two-stage split.  \strong{Everything \code{\link[=spread_ard]{spread_ard()}} reads is in the
+the two-stage split.  \strong{Everything \code{\link[=widen_ard]{widen_ard()}} reads is in the
 columns}, so \code{dplyr::mutate()}, \code{filter()}, \code{arrange()}, \code{bind_rows()},
 \code{select()} and base \code{[} are all safe, and so is a one-pipe
-\verb{normalize_ard() |> ... |> spread_ard()}.  A manipulation that really does
+\verb{normalize_ard() |> ... |> widen_ard()}.  A manipulation that really does
 break the rows is still caught -- two values arriving in one cell is an
 error, not a silent overwrite.
 
@@ -86,7 +86,7 @@ One attribute is left, \code{"ard_ignored"}, and nothing reads it to build the
 table: it is a report about rows that are no longer in the frame, so there
 is no column it could be.  Dropping it (\code{mutate()} and \code{select()}, base
 \code{transform()} and \code{subset()} do) only makes \code{notes} report the discards
-from \code{\link[=spread_ard]{spread_ard()}} alone.
+from \code{\link[=widen_ard]{widen_ard()}} alone.
 }
 
 \section{Factor levels}{
@@ -95,7 +95,7 @@ from \code{\link[=spread_ard]{spread_ard()}} alone.
 so the flattening has to take the label: a level comes back as \code{"<65"}, not
 as the integer code \code{1}.  The order the factor declared is kept too, as the
 \code{.label_order} column -- each row's position within its variable's declared
-levels -- and \code{\link[=spread_ard]{spread_ard()}} rebuilds that variable's row order from it
+levels -- and \code{\link[=widen_ard]{widen_ard()}} rebuilds that variable's row order from it
 unless \code{levels} says otherwise.  Relabelling a level keeps its position,
 so indenting \code{"Mild"} to \code{"  Mild"} with \code{mutate()} still sorts where
 \code{"Mild"} was declared.
@@ -103,7 +103,7 @@ so indenting \code{"Mild"} to \code{"  Mild"} with \code{mutate()} still sorts w
 A \strong{key} column holds one variable, so it can carry its order itself: a
 key that was a factor in the data (a treatment variable declared
 \code{factor(levels = c("Low", "Placebo", "High"))}) comes back a factor with
-those levels, unused ones included, and \code{\link[=spread_ard]{spread_ard()}} lays the columns --
+those levels, unused ones included, and \code{\link[=widen_ard]{widen_ard()}} lays the columns --
 or the rows, for a row key -- out in that order however the frame was
 reordered in between.  \code{levels} still overrides it.  A key that was
 character stays character.
@@ -115,5 +115,5 @@ character stays character.
 }
 
 \seealso{
-\code{\link[=spread_ard]{spread_ard()}}, \code{\link[=list_ard_keys]{list_ard_keys()}}
+\code{\link[=widen_ard]{widen_ard()}}, \code{\link[=list_ard_keys]{list_ard_keys()}}
 }
