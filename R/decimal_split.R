@@ -385,7 +385,7 @@
                                    pad_l, pad_r, valign_cmd, col_spec,
                                    table_align, row_cell_styles,
                                    color_index_map, markup,
-                                   dsplit_row, dsplit) {
+                                   dsplit_row, dsplit, fs_cmd = "") {
   merge_to   <- dsplit_row$merge_to
   merge_spec <- dsplit_row$merge_spec
   interior   <- dsplit$interior
@@ -398,6 +398,23 @@
   pad_r_v <- ifelse(pad_flag == "left",  0L, as.integer(pad_r))
 
   cell_borders <- if (!is.null(row_cell_styles)) row_cell_styles$border
+
+  # The spec each output cell is styled by: a pair merged back into one cell
+  # uses the ORIGINAL column's spec, a split half its own expanded one.
+  cell_spec <- function(j) {
+    if (merge_to[j] != j && !is.null(merge_spec[[j]])) merge_spec[[j]]
+    else col_spec[[j]]
+  }
+  # Cell fill, resolved as in .render_data_row() (#509): the column's
+  # `background`, overridden by a non-NA `cell_styles$background`.
+  cs_bg <- if (!is.null(row_cell_styles)) row_cell_styles$background
+  shade_cmd <- function(j) {
+    bg <- cell_spec(j)$background %||% NULL
+    if (!is.null(cs_bg) && j <= length(cs_bg) && !is.na(cs_bg[j])) {
+      bg <- as.character(cs_bg[j])
+    }
+    .cell_shading_cmd(bg, color_index_map)
+  }
 
   n_cells <- length(starts)
   cell_defs <- vapply(seq_along(starts), function(ci) {
@@ -412,19 +429,19 @@
     if (to == j && !is.null(interior[[j]])) {
       eff <- .effective_row_border(eff, interior[[j]])
     }
-    paste0(.build_border_commands(eff, color_index_map), valign_cmd,
-           "\\cellx", cellx[to])
+    paste0(.build_border_commands(eff, color_index_map), shade_cmd(j),
+           valign_cmd, "\\cellx", cellx[to])
   }, character(1L))
 
   cell_contents <- vapply(starts, function(j) {
     to      <- merge_to[j]
     merged  <- to != j
     is_half <- !merged && !is.null(interior[[j]])
-    spec    <- if (merged && !is.null(merge_spec[[j]])) merge_spec[[j]]
-               else col_spec[[j]]
+    spec    <- cell_spec(j)
     .data_cell_content(spec, vals[[j]], j, row_cell_styles,
                        pad_l_v[j], pad_r_v[to], markup, color_index_map,
-                       force_align = if (is_half) spec$align else NULL)
+                       force_align = if (is_half) spec$align else NULL,
+                       fs_cmd = fs_cmd)
   }, character(1L))
 
   .build_row(cell_defs, cell_contents, row_height_twips, table_align)

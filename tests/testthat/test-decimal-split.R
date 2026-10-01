@@ -315,3 +315,66 @@ test_that("set_decimal_split() rejects a list that is not pages", {
   expect_error(set_decimal_split(list(1, 2), cols = 1),
                "set_decimal_split")
 })
+
+# ──────── table font and cell fill on split rows (#509) ─────────────────────
+
+.ds_render <- function(tbl) {
+  doc <- rtf_tables(rtf_document(), list(tbl))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(doc, f, overwrite = TRUE)
+  readLines(f, warn = FALSE)
+}
+
+# The body rows of the rendered table: the lines with a cell reading `labels`.
+.ds_rows <- function(txt, labels = c("n", "Mean")) {
+  hit <- vapply(txt, function(l) any(vapply(labels, function(s)
+    grepl(paste0(" ", s, "\\cell"), l, fixed = TRUE), logical(1L))),
+    logical(1L))
+  unname(txt[hit])
+}
+
+.ds_count <- function(r, s) {
+  m <- gregexpr(s, r, fixed = TRUE)[[1L]]
+  if (m[1L] == -1L) 0L else length(m)
+}
+
+test_that("a split row writes the table's own font size and font (#509)", {
+  tbl <- rtftable(data.frame(Statistic = c("n", "Mean"),
+                             Value = c("12", "3.45")),
+                  font_size_half_points = 16L, font = "Arial") |>
+    set_decimal_split(cols = "Value")
+  txt  <- .ds_render(tbl)
+  rows <- .ds_rows(txt)
+  expect_length(rows, 2L)
+  # The header row's cells carry the table's switch ...
+  hdr  <- .ds_rows(txt, "Statistic")
+  fsw  <- regmatches(hdr, regexpr("\\\\f[0-9]+\\\\fs16", hdr))
+  expect_length(fsw, 1L)
+  # ... and so does every cell of a split row: the label and both halves of
+  # the number (3 cells each).
+  for (r in rows) {
+    expect_identical(.ds_count(r, "\\cell\\"), 3L)   # not \cellx
+    expect_identical(.ds_count(r, paste0(fsw, " ")), 3L, info = r)
+  }
+})
+
+test_that("a split row keeps the column's and the cell's fill (#509)", {
+  tbl <- rtftable(data.frame(Statistic = c("n", "Mean", "Category"),
+                             Value = c("12", "3.45", "n (%)"))) |>
+    style_cols(cols = "Value", background = "#EFEFEF") |>
+    style_body(rows = 2L, cols = "Value", background = "#F8D7DA") |>
+    set_decimal_split(cols = "Value")
+  txt  <- .ds_render(tbl)
+  rows <- .ds_rows(txt, c("n", "Mean", "Category"))
+  expect_length(rows, 3L)
+  shade <- function(r) regmatches(r, gregexpr("clcbpat[0-9]+", r))[[1L]]
+  # Rows 1-2 are split: both halves of Value are filled.  Row 3 ("n (%)") is
+  # merged back into one cell, filled once.  Statistic is never filled.
+  expect_length(shade(rows[1L]), 2L)
+  expect_length(shade(rows[2L]), 2L)
+  expect_length(shade(rows[3L]), 1L)
+  # Row 2 uses the cell's own colour, not the column's.
+  expect_false(identical(unique(shade(rows[1L])), unique(shade(rows[2L]))))
+  expect_length(unique(shade(rows[2L])), 1L)
+})

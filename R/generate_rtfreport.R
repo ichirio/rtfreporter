@@ -1032,7 +1032,7 @@
     return(.render_data_row_split(
       vals, cellx, border_spec, row_height_twips, pad_l, pad_r, valign_cmd,
       col_spec, table_align, row_cell_styles, color_index_map, markup,
-      dsplit_row, dsplit))
+      dsplit_row, dsplit, fs_cmd))
   }
   ncols <- length(cellx)
 
