@@ -2,6 +2,15 @@
 
 ### Bug fixes
 
+- **A row split by `set_decimal_split()` lost the table's font size and the
+  cell fill** (#509).  The split data rows were written without the table's
+  own font switch (`rtftable(font_size_half_points = , font = )`), so their
+  numbers fell back to the document's size and font, and without the
+  `background` of their column or of `cell_styles`, so a shaded column had
+  unshaded rows wherever a number was split.  Both now reach every cell of a
+  split row -- a pair merged back into one cell takes its original column's
+  fill.  Tables without `set_decimal_split()` are byte-identical.
+
 - **`plan_apply()` blamed a missing `cols` on unrelated verbs** (#507).  A
   plan with no `cols` role stopped with "`cols` is required" followed by
   "declared by:" and the widen-stage verbs, such as `plan_cells(notes =
