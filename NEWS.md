@@ -1,5 +1,21 @@
 # rtfreporter (development version)
 
+### CRAN preparation
+
+- **Every example runs** (#512).  The 23 `\dontrun{}` examples are
+  runnable now: they write to `tempdir()`, make the PNG they place, run a
+  plot preview only in an interactive session and gt / gtsummary only when
+  installed.  The help pages are ASCII but for what LaTeX sets (the PDF
+  manual could not have been made from a Japanese example and an approximately-equal sign).
+- The quickstart vignette uses the base pipe and runs its ggplot2 chunks
+  only when ggplot2 is installed; tests that call dplyr skip without it.
+- The example RTFs' PNG screenshots are left out of the package build
+  (5.3 MB installed to about 3.5 MB); they stay in the repository and on
+  the site.
+- `Language: en-GB` (the text is British) and `inst/WORDLIST`;
+  `cran-comments.md`; `lintr` and `covr` are no longer in Suggests (the CI
+  workflows install them); four URLs that answered 404 fixed.
+
 ### Bug fixes
 
 - **A row split by `set_decimal_split()` lost the table's font size and the
@@ -381,11 +397,11 @@ sample reports are byte-identical.
   self-contained Markdown briefings now ship as static site assets, each sized
   to sit in one chat session:
 
-  * [`rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/rtfreporter-ai-user-manual.md)
+  * [`rtfreporter-ai-user-manual.md`](https://github.com/ichirio/rtfreporter/blob/main/inst/ai/rtfreporter-ai-user-manual.md)
     -- the workflow, every `as_rtftables()` argument, the four clinical table
     shapes, headers and page tokens, listings, figures, borders, the complete
     export list, and the mistakes assistants actually make.
-  * [`rtfreporter-ai-dev-manual.md`](https://ichirio.github.io/rtfreporter/rtfreporter-ai-dev-manual.md)
+  * [`rtfreporter-ai-dev-manual.md`](https://github.com/ichirio/rtfreporter/blob/main/inst/ai/rtfreporter-ai-dev-manual.md)
     -- the invariants, the S3 object model and rendering pipeline, the
     `as_rtftables()` kwargs contract, how to add a table-object adapter, the
     test / lint / docs conventions, and the issue -> PR -> release workflow.

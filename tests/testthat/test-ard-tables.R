@@ -806,6 +806,7 @@ test_that("what was not used is reported, and not attached by default", {
 
 test_that("the middle stage survives being rebuilt", {
   skip_if_no_cards()
+  skip_if_not_installed("dplyr")
   ard <- make_ard()
   cells <- list(continuous  = c("Mean" = "{mean:.1f}"),
                 categorical = "{n:.0f} ({p:.1f%})")
@@ -1031,6 +1032,7 @@ test_that("a named rounding is passed on and leaves the spec alone", {
 
 test_that("a variable the hierarchy does not cover keeps its own level", {
   skip_if_no_cards()
+  skip_if_not_installed("dplyr")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   adsl$SEX <- as.character(adsl$SEX)
@@ -1385,6 +1387,7 @@ fct_order <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
 
 test_that("a factor key keeps the order it declared, however the rows move", {
   skip_if_no_cards()
+  skip_if_not_installed("dplyr")
   d <- normalize_ard(make_fct_ard())
   expect_true(is.factor(d$TRT))
   expect_identical(levels(d$TRT), fct_order)

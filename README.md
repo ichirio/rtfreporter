@@ -141,8 +141,8 @@ You are warmly welcome to use rtfreporter for the styles it supports.
 The clinical-table ecosystem has several excellent builders —
 [tfrmt](https://gsk-biostatistics.github.io/tfrmt/),
 [gtsummary](https://www.danieldsjoberg.com/gtsummary/),
-[rtables](https://insightsengineering.github.io/rtables/) /
-[tern](https://insightsengineering.github.io/tern/),
+[rtables](https://CRAN.R-project.org/package=rtables) /
+[tern](https://CRAN.R-project.org/package=tern),
 [gt](https://gt.rstudio.com),
 [flextable](https://davidgohel.github.io/flextable/) and
 [huxtable](https://hughjonesd.github.io/huxtable/) — and, honestly, no

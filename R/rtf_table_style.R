@@ -40,7 +40,6 @@
 #' @return A list of class `"rtf_table_style"`.
 #'
 #' @examples
-#' \dontrun{
 #' tfl_style <- rtf_table_style(
 #'   border_header   = rtf_border(top = TRUE, bottom = TRUE),
 #'   border_last_row = rtf_border(bottom = TRUE),
@@ -48,8 +47,9 @@
 #'   header_align    = NULL    # inherit data alignment
 #' )
 #'
+#' dfs <- list(data.frame(Parameter = "Age", Value = "75.1"),
+#'             data.frame(Parameter = "Sex", Value = "53%"))
 #' tbls <- lapply(dfs, function(df) rtftable(df, style = tfl_style))
-#' }
 #'
 #' @export
 rtf_table_style <- function(

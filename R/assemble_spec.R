@@ -123,9 +123,17 @@
 #' @seealso [assemble_spec()], [assemble_toc()], [assemble_folder()].
 #'
 #' @examples
-#' \dontrun{
-#' files <- assemble_files("output/tfl")        # every .rtf, in catalog order
+#' # two TFL files in a folder, as a study's output
+#' dir <- file.path(tempdir(), "tfl")
+#' dir.create(dir, showWarnings = FALSE)
+#' for (t in c("14.1.1", "14.2.1")) {
+#'   doc <- rtf_document() |>
+#'     rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+#'     rtf_titles(list(c(paste("Table", t), "Safety Population")))
+#'   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+#'     fixed = TRUE), ".rtf")), overwrite = TRUE)
 #' }
+#' files <- assemble_files(dir)        # every .rtf, in catalog order
 #' @export
 assemble_files <- function(dir, pattern = "[.]rtf$", recursive = FALSE,
                            sort = TRUE) {
@@ -163,11 +171,19 @@ assemble_files <- function(dir, pattern = "[.]rtf$", recursive = FALSE,
 #' @seealso [assemble_from_spec()], [assemble_folder()].
 #'
 #' @examples
-#' \dontrun{
-#' spec <- assemble_spec("output/tfl")   # one editable row per file
-#' spec$heading[spec$table == "14.1.1"] <- "Demographics"   # group entries
-#' assemble_from_spec(spec, "deliverable.rtf")
+#' # two TFL files in a folder, as a study's output
+#' dir <- file.path(tempdir(), "tfl")
+#' dir.create(dir, showWarnings = FALSE)
+#' for (t in c("14.1.1", "14.2.1")) {
+#'   doc <- rtf_document() |>
+#'     rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+#'     rtf_titles(list(c(paste("Table", t), "Safety Population")))
+#'   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+#'     fixed = TRUE), ".rtf")), overwrite = TRUE)
 #' }
+#' spec <- assemble_spec(dir)   # one editable row per file
+#' spec$heading[spec$table == "14.1.1"] <- "Demographics"   # group entries
+#' assemble_from_spec(spec, tempfile(fileext = ".rtf"))
 #' @export
 assemble_spec <- function(dir = NULL, files = NULL, recursive = FALSE) {
   if (is.null(files)) {
@@ -230,10 +246,18 @@ assemble_spec <- function(dir = NULL, files = NULL, recursive = FALSE) {
 #' @seealso [assemble_spec()], [assemble_from_spec()].
 #'
 #' @examples
-#' \dontrun{
-#' toc <- assemble_toc(files = assemble_files("output/tfl"))
-#' assemble_rtf(assemble_files("output/tfl"), "deliverable.rtf", toc = toc)
+#' # two TFL files in a folder, as a study's output
+#' dir <- file.path(tempdir(), "tfl")
+#' dir.create(dir, showWarnings = FALSE)
+#' for (t in c("14.1.1", "14.2.1")) {
+#'   doc <- rtf_document() |>
+#'     rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+#'     rtf_titles(list(c(paste("Table", t), "Safety Population")))
+#'   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+#'     fixed = TRUE), ".rtf")), overwrite = TRUE)
 #' }
+#' toc <- assemble_toc(files = assemble_files(dir))
+#' assemble_rtf(assemble_files(dir), tempfile(fileext = ".rtf"), toc = toc)
 #' @export
 assemble_toc <- function(files = NULL, spec = NULL, ...) {
   if (is.null(spec)) {
@@ -294,10 +318,19 @@ assemble_toc <- function(files = NULL, spec = NULL, ...) {
 #' @seealso [assemble_spec()], [assemble_folder()], [assemble_rtf()].
 #'
 #' @examples
-#' \dontrun{
-#' spec <- assemble_spec("output/tfl")          # review / edit the order
-#' assemble_from_spec(spec, "deliverable.rtf", toc_title = "Table of Contents")
+#' # two TFL files in a folder, as a study's output
+#' dir <- file.path(tempdir(), "tfl")
+#' dir.create(dir, showWarnings = FALSE)
+#' for (t in c("14.1.1", "14.2.1")) {
+#'   doc <- rtf_document() |>
+#'     rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+#'     rtf_titles(list(c(paste("Table", t), "Safety Population")))
+#'   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+#'     fixed = TRUE), ".rtf")), overwrite = TRUE)
 #' }
+#' spec <- assemble_spec(dir)          # review / edit the order
+#' assemble_from_spec(spec, tempfile(fileext = ".rtf"),
+#'                    toc_title = "Table of Contents")
 #' @export
 assemble_from_spec <- function(spec, output_file,
                                toc_title = "Table of Contents",
@@ -344,11 +377,19 @@ assemble_from_spec <- function(spec, output_file,
 #' @seealso [assemble_files()], [assemble_spec()], [assemble_from_spec()].
 #'
 #' @examples
-#' \dontrun{
+#' # two TFL files in a folder, as a study's output
+#' dir <- file.path(tempdir(), "tfl")
+#' dir.create(dir, showWarnings = FALSE)
+#' for (t in c("14.1.1", "14.2.1")) {
+#'   doc <- rtf_document() |>
+#'     rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+#'     rtf_titles(list(c(paste("Table", t), "Safety Population")))
+#'   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+#'     fixed = TRUE), ".rtf")), overwrite = TRUE)
+#' }
 #' # One call: scan a folder of TFL .rtf files and assemble them, in catalog
 #' # order, into a single deliverable with an auto table of contents.
-#' assemble_folder("output/tfl", "deliverable.rtf", toc_title = "Contents")
-#' }
+#' assemble_folder(dir, tempfile(fileext = ".rtf"), toc_title = "Contents")
 #' @export
 assemble_folder <- function(dir, output_file, spec_file = NULL,
                             recursive = FALSE,

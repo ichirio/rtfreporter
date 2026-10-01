@@ -182,7 +182,6 @@ print.rtf_col_cell <- function(x, ...) {
 #' @return A list of class `"rtf_col_header"`.
 #'
 #' @examples
-#' \dontrun{
 #' rtf_col_header(
 #'   list(col_cell(1, ""), col_cell(c(2, 5), "Treatment")),
 #'   list(col_cell(1, ""),
@@ -190,7 +189,6 @@ print.rtf_col_cell <- function(x, ...) {
 #'        col_cell(c(4, 5), "Drug B")),
 #'   c("Item", "N", "Mean", "N", "Mean")
 #' )
-#' }
 #'
 #' @export
 rtf_col_header <- function(...) {
@@ -240,7 +238,6 @@ print.rtf_col_header <- function(x, ...) {
 #' @return A new `rtf_col_header`.
 #'
 #' @examples
-#' \dontrun{
 #' hdr <- rtf_col_header(c("Item", "N", "Mean", "N", "Mean"))   # bottom row
 #' hdr <- add_col_header_row(
 #'   hdr,
@@ -249,7 +246,6 @@ print.rtf_col_header <- function(x, ...) {
 #'        col_cell(c(4, 5), "Drug B")),
 #'   .position = "top"
 #' )
-#' }
 #'
 #' @export
 add_col_header_row <- function(hdr, row,

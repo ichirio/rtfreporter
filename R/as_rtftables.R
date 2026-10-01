@@ -724,16 +724,13 @@
 #' pages <- as_rtftables(df, blank_rows = c(3, -1))
 #' pages[[1]]$blank_rows
 #'
-#' \dontrun{
-#' library(gtsummary)
-#' tbl <- trial |>
-#'   tbl_summary(by = trt) |>
-#'   as_rtftables()                       # list of rtftable pages
-#'
-#' doc <- rtf_document() |>
-#'   rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
-#'   rtf_tables(tbl)                       # titles / footnotes flow through
-#' generate_rtfreport(doc, "out.rtf", overwrite = TRUE)
+#' if (requireNamespace("gtsummary", quietly = TRUE)) {
+#'   tbl <- gtsummary::trial |>
+#'     gtsummary::tbl_summary(by = trt) |>
+#'     as_rtftables()                     # list of rtftable pages
+#'   doc <- rtf_document() |>
+#'     rtf_tables(tbl)                     # titles / footnotes flow through
+#'   generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
 #' }
 #'
 #' @export
@@ -1380,11 +1377,10 @@ as_rtftables.default <- function(x,
 #' sections <- combine_sections(Demographics = dm, `Adverse Events` = ae)
 #' names(sections)            # "Demographics" "Adverse Events" ""
 #'
-#' \dontrun{
+#' my_header <- rtf_header(rows = list(c(l = "Study XYZ-001")))
 #' doc <- rtf_document() |>
 #'   rtf_section(secinfo = list(header = my_header)) |>
 #'   rtf_tables(sections, auto_section = TRUE)
-#' }
 #'
 #' @export
 combine_sections <- function(...) {

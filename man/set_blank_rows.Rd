@@ -36,11 +36,11 @@ adds position \code{nrow(df)} (blank row at the bottom of \code{df}).}
 
 \item{group_col}{Column name or 1-based index identifying the
 group, used only when \code{blank_rows = "between_groups"}.  \code{NULL}
-(default) means detection on column 1 — see \code{\link[=paginate]{paginate()}}.}
+(default) means detection on column 1 -- see \code{\link[=paginate]{paginate()}}.}
 
 \item{group_by}{How groups are recognised when
 \code{blank_rows = "between_groups"}: \code{"auto"} (default), \code{"indent"},
-\code{"value"}, or \code{"filled"} — the same detection as the pagination splits
+\code{"value"}, or \code{"filled"} -- the same detection as the pagination splits
 (see \code{\link[=paginate]{paginate()}}).}
 }
 \value{
@@ -52,7 +52,7 @@ empty.
 Resolves a \code{blank_rows} specification (the same one \code{paginate()}
 accepts) into integer positions and stores them on
 \code{attr(df, "rtf_blank_rows")}.  Use this when you already have a
-page-sized data.frame and only need to add blank rows — no
+page-sized data.frame and only need to add blank rows -- no
 pagination required.
 }
 \details{

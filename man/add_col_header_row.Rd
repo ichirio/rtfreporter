@@ -23,7 +23,6 @@ A new \code{rtf_col_header}.
 Append (or prepend) a row to an \code{rtf_col_header}
 }
 \examples{
-\dontrun{
 hdr <- rtf_col_header(c("Item", "N", "Mean", "N", "Mean"))   # bottom row
 hdr <- add_col_header_row(
   hdr,
@@ -32,6 +31,5 @@ hdr <- add_col_header_row(
        col_cell(c(4, 5), "Drug B")),
   .position = "top"
 )
-}
 
 }

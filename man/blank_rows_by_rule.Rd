@@ -22,10 +22,10 @@ before or after every data row whose value in \code{col} matches the
 regular expression \code{pattern}.
 }
 \examples{
-\dontrun{
+df <- data.frame(Parameter = c("Age", "  Mean", "Sex", "  F"),
+                 Value = c("", "75.1", "", "53\%"))
 # Blank row before every row whose Parameter does NOT start with a space
 rtftable(df, blank_rows = blank_rows_by_rule(
   col = "Parameter", pattern = "^[^ ]", where = "before"))
-}
 
 }

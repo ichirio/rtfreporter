@@ -20,7 +20,7 @@
 #' Resolves a `blank_rows` specification (the same one `paginate()`
 #' accepts) into integer positions and stores them on
 #' `attr(df, "rtf_blank_rows")`.  Use this when you already have a
-#' page-sized data.frame and only need to add blank rows — no
+#' page-sized data.frame and only need to add blank rows -- no
 #' pagination required.
 #'
 #' `paginate()` calls this function on every chunk it produces, so
@@ -47,10 +47,10 @@
 #'   adds position `nrow(df)` (blank row at the bottom of `df`).
 #' @param group_col Column name or 1-based index identifying the
 #'   group, used only when `blank_rows = "between_groups"`.  `NULL`
-#'   (default) means detection on column 1 — see [paginate()].
+#'   (default) means detection on column 1 -- see [paginate()].
 #' @param group_by How groups are recognised when
 #'   `blank_rows = "between_groups"`: `"auto"` (default), `"indent"`,
-#'   `"value"`, or `"filled"` — the same detection as the pagination splits
+#'   `"value"`, or `"filled"` -- the same detection as the pagination splits
 #'   (see [paginate()]).
 #'
 #' @return `df` with `attr(., "rtf_blank_rows")` updated.  The

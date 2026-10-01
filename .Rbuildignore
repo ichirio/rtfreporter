@@ -32,3 +32,4 @@
 ^rtfreporter-tests$
 ^.*\.Rcheck$
 ^\.lintr$
+^inst/rtf-examples/.*\.png$

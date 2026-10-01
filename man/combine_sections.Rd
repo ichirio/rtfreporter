@@ -57,11 +57,10 @@ ae <- as_rtftables(df, split = "rows", split_rows = 2)  # two pages
 sections <- combine_sections(Demographics = dm, `Adverse Events` = ae)
 names(sections)            # "Demographics" "Adverse Events" ""
 
-\dontrun{
+my_header <- rtf_header(rows = list(c(l = "Study XYZ-001")))
 doc <- rtf_document() |>
   rtf_section(secinfo = list(header = my_header)) |>
   rtf_tables(sections, auto_section = TRUE)
-}
 
 }
 \seealso{

@@ -48,20 +48,22 @@
 #' @return The normalised path to the written file, invisibly.
 #'
 #' @examples
-#' \dontrun{
-#' generate_rtfreport(doc, "table.rtf", overwrite = TRUE)
+#' doc <- rtf_document() |>
+#'   rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+#'   rtf_titles(list(c("Table 14.1.1 DRAFT vX.Y", "Saftey Population")))
+#' f <- tempfile(fileext = ".rtf")
+#' generate_rtfreport(doc, f, overwrite = TRUE)
 #'
-#' # Fix a footnote wording in place (keeps table.rtf.bak)
-#' rtf_replace_text("table.rtf", "Saftey Population", "Safety Population")
+#' # Fix a footnote wording in place (keeps a .bak copy)
+#' rtf_replace_text(f, "Saftey Population", "Safety Population")
 #'
 #' # Several replacements at once, writing to a new file
 #' rtf_replace_text(
-#'   "table.rtf",
+#'   f,
 #'   target      = c("DRAFT", "vX.Y"),
 #'   replacement = c("FINAL", "v1.0"),
-#'   output_file = "table_final.rtf"
+#'   output_file = tempfile(fileext = ".rtf")
 #' )
-#' }
 #'
 #' @export
 rtf_replace_text <- function(input_file,
