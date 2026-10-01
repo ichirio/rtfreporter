@@ -67,11 +67,13 @@
 #' @return An object of class `rtf_blank_rows_by_change`.
 #'
 #' @examples
-#' \dontrun{
+#' df <- data.frame(Treatment = c("A", "A", "B", "B"),
+#'                  Visit = c("Week 1", "Week 2", "Week 1", "Week 2"),
+#'                  label = c("Age", "  Mean", "Sex", "  F"),
+#'                  Value = c("", "75.1", "", "53%"))
 #' rtftable(df, blank_rows = blank_rows_by_change(c("Treatment", "Visit")))
 #' # indent-based groups (a stub/label column):
 #' rtftable(df, blank_rows = blank_rows_by_change("label", group_by = "indent"))
-#' }
 #'
 #' @export
 blank_rows_by_change <- function(cols,
@@ -109,11 +111,11 @@ blank_rows_by_change <- function(cols,
 #' @return An object of class `rtf_blank_rows_by_rule`.
 #'
 #' @examples
-#' \dontrun{
+#' df <- data.frame(Parameter = c("Age", "  Mean", "Sex", "  F"),
+#'                  Value = c("", "75.1", "", "53%"))
 #' # Blank row before every row whose Parameter does NOT start with a space
 #' rtftable(df, blank_rows = blank_rows_by_rule(
 #'   col = "Parameter", pattern = "^[^ ]", where = "before"))
-#' }
 #'
 #' @export
 blank_rows_by_rule <- function(col, pattern,

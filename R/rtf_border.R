@@ -134,7 +134,7 @@
 #'   merged on top of another spec.  This is how a per-cell border can
 #'   remove an automatically-drawn rule -- e.g. suppressing the group
 #'   underline under one spanning column-header cell.
-#' @param width Line weight in twips.  Default `15` ≈ 0.5 pt.  Ignored when
+#' @param width Line weight in twips.  Default `15` (about 0.5 pt).  Ignored when
 #'   `style = "none"`.
 #' @param color Line colour.  `NULL` (default) = black.  Or a 6-digit hex
 #'   string such as `"#003366"`.
@@ -576,10 +576,8 @@ rtf_border_box <- function(style = "single", width = 15L, color = NULL) {
 #' rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
 #'                                  inside_h = s, inside_v = s))
 #'
-#' # Deprecated: the same thing written the old way.
-#' \dontrun{
+#' # Deprecated: the same thing written the old way (it says so once).
 #' rtf_table_border(header = rtf_border(top = s, bottom = s))
-#' }
 #' @export
 rtf_table_border <- function(header    = NULL,
                               spanning  = NULL,

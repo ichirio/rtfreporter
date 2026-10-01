@@ -24,9 +24,17 @@ before \code{t10}), ready to hand to \code{\link[=assemble_rtf]{assemble_rtf()}}
 helpers.
 }
 \examples{
-\dontrun{
-files <- assemble_files("output/tfl")        # every .rtf, in catalog order
+# two TFL files in a folder, as a study's output
+dir <- file.path(tempdir(), "tfl")
+dir.create(dir, showWarnings = FALSE)
+for (t in c("14.1.1", "14.2.1")) {
+  doc <- rtf_document() |>
+    rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+    rtf_titles(list(c(paste("Table", t), "Safety Population")))
+  generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+    fixed = TRUE), ".rtf")), overwrite = TRUE)
 }
+files <- assemble_files(dir)        # every .rtf, in catalog order
 }
 \seealso{
 \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_toc]{assemble_toc()}}, \code{\link[=assemble_folder]{assemble_folder()}}.

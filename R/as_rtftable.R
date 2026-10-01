@@ -30,14 +30,12 @@
 #'
 #' @return An `rtftable` S3 object.
 #'
-#' @examples
-#' \dontrun{
+#' @examplesIf requireNamespace("gt", quietly = TRUE)
 #' library(gt)
 #' g <- gt(head(mtcars, 5)) |>
 #'   cols_label(mpg = "MPG", cyl = "Cyl") |>
 #'   cols_align("right", columns = c(mpg, cyl))
 #' tbl <- as_rtftable(g)
-#' }
 #'
 #' @seealso [as_rtftables()] for the paginating, list-returning version and
 #'   the per-source metadata table.

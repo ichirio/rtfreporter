@@ -115,8 +115,8 @@ See [`NEWS.md`](NEWS.md) for the full per-item list.
 rtfreporter can now build RTF tables directly from
 [gt](https://gt.rstudio.com), [gtsummary](https://www.danieldsjoberg.com/gtsummary/),
 (via gt) [tfrmt](https://gsk-biostatistics.github.io/tfrmt/), and the
-[rtables](https://insightsengineering.github.io/rtables/) /
-[tern](https://insightsengineering.github.io/tern/) family.
+[rtables](https://CRAN.R-project.org/package=rtables) /
+[tern](https://CRAN.R-project.org/package=tern) family.
 
 * **rtables / tern** (v0.0.45): any `VTableTree` is read through
   `formatters::matrix_form()` -- leaf + spanning column headers, per-column

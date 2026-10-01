@@ -13,7 +13,6 @@ vignette: >
 # build instead of rotting unnoticed.
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 library(rtfreporter)
-library(magrittr)
 ```
 
 ## Overview
@@ -24,9 +23,9 @@ figures) without depending on r2rtf or any other RTF library.
 **Core workflow:**
 
 ```r
-rtf_document() %>%
-  rtf_section(page = 1, secinfo = list(header = ..., footer = ...)) %>%
-  rtf_tables(list(tbl1, tbl2)) %>%
+rtf_document() |>
+  rtf_section(page = 1, secinfo = list(header = ..., footer = ...)) |>
+  rtf_tables(list(tbl1, tbl2)) |>
   generate_rtfreport("output.rtf", overwrite = TRUE)
 ```
 
@@ -36,7 +35,6 @@ rtf_document() %>%
 
 ```{r minimal}
 library(rtfreporter)
-library(magrittr)
 
 df <- data.frame(
   Subject = c("001", "002", "003"),
@@ -46,7 +44,7 @@ df <- data.frame(
   stringsAsFactors = FALSE
 )
 
-doc <- rtf_document() %>%
+doc <- rtf_document() |>
   rtf_section(page = 1, secinfo = list(
     header = rtf_header(rows = list(
       c(l = "Protocol: RTF-101",         r = "ACME Pharma"),
@@ -55,7 +53,7 @@ doc <- rtf_document() %>%
     footer = rtf_footer(rows = list(
       c(l = "Source: DM domain.", r = "CONFIDENTIAL")
     ))
-  )) %>%
+  )) |>
   rtf_tables(list(
     rtftable(df,
       col_rel_width    = c(2, 2, 1, 1),
@@ -134,8 +132,8 @@ for (i in seq_along(lab_data)) {
     c(l = item$label)
   ))
 
-  doc <- doc %>%
-    rtf_section(page = i, secinfo = list(header = sec_header, footer = common_footer)) %>%
+  doc <- doc |>
+    rtf_section(page = i, secinfo = list(header = sec_header, footer = common_footer)) |>
     rtf_tables(list(tbl))
 }
 
@@ -146,7 +144,7 @@ generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
 
 ## 3  Embedding figures (ggplot2)
 
-```{r figure}
+```{r figure, eval = requireNamespace("ggplot2", quietly = TRUE)}
 library(ggplot2)
 
 p <- ggplot(
@@ -160,14 +158,14 @@ p <- ggplot(
 png_path <- tempfile(fileext = ".png")
 ggsave(png_path, plot = p, width = 7, height = 4.5, dpi = 150)
 
-doc <- rtf_document() %>%
+doc <- rtf_document() |>
   rtf_section(page = 1, secinfo = list(
     header = rtf_header(rows = list(
       c(l = "Protocol: FIG-001",           r = "ACME Pharma"),
       c(l = "Figure 14.1.1  Lab Value vs. Visit (Safety Population)")
     )),
     footer = rtf_footer(rows = list(c(l = "Source: LB domain.")))
-  )) %>%
+  )) |>
   rtf_tables(list(
     rtfplot(png_path, width_twips = 9000L)
   ))
@@ -183,7 +181,7 @@ Each page holds exactly one content item (one table **or** one figure).
 To present a figure together with a summary table, place them on adjacent
 pages — both can share the same section header.
 
-```{r fig-plus-table}
+```{r fig-plus-table, eval = requireNamespace("ggplot2", quietly = TRUE)}
 tbl_summary <- rtftable(
   data.frame(
     Statistic = c("n", "Mean", "SD"),
@@ -195,14 +193,14 @@ tbl_summary <- rtftable(
   row_height_twips = 280L
 )
 
-doc <- rtf_document() %>%
+doc <- rtf_document() |>
   rtf_section(page = 1, secinfo = list(
     header = rtf_header(rows = list(
       c(l = "Protocol: FIG-001", r = "ACME Pharma"),
       c(l = "Figure and Summary Table")
     )),
     footer = rtf_footer(rows = list(c(l = "Source: LB domain.", r = "CONFIDENTIAL")))
-  )) %>%
+  )) |>
   rtf_tables(list(
     rtfplot(png_path, width_twips = 7200L),  # page 1: figure
     tbl_summary                              # page 2: summary table
@@ -396,13 +394,13 @@ hdr_bordered <- rtf_header(
 
 ```{r assemble}
 make_rtf <- function(df, hdr_text, path) {
-  doc <- rtf_document() %>%
+  doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(
       header = rtf_header(rows = list(
         c(l = hdr_text, r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
       )),
       footer = rtf_footer(rows = list(c(l = "CONFIDENTIAL")))
-    )) %>%
+    )) |>
     rtf_tables(list(df))
   generate_rtfreport(doc, path, overwrite = TRUE)
 }
@@ -495,7 +493,7 @@ line; `NULL` falls back to the package defaults (title = one blank
 centred line; no footnote).
 
 ```{r titles-footnotes}
-doc <- rtf_document() %>%
+doc <- rtf_document() |>
   rtf_tables(
     list(df_demog, df_demog),
     titles = list(
@@ -511,9 +509,9 @@ doc <- rtf_document() %>%
   )
 
 # Or set them after content has been added
-doc <- rtf_document() %>%
-  rtf_tables(list(df_demog, df_demog)) %>%
-  rtf_titles(list("Page One", "Page Two")) %>%
+doc <- rtf_document() |>
+  rtf_tables(list(df_demog, df_demog)) |>
+  rtf_titles(list("Page One", "Page Two")) |>
   rtf_footnotes(list(NULL, "Source: ADSL."))
 ```
 
@@ -576,8 +574,8 @@ plan <- ard |>
     c("", "{col}"),
     c("", "(N={n})")))
 
-rtf_document() %>%
-  rtf_tables(plan) %>%
+rtf_document() |>
+  rtf_tables(plan) |>
   generate_rtfreport(tempfile(fileext = ".rtf"))
 ```
 

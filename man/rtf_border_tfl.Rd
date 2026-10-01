@@ -15,7 +15,7 @@ merged on top of another spec.  This is how a per-cell border can
 remove an automatically-drawn rule -- e.g. suppressing the group
 underline under one spanning column-header cell.}
 
-\item{width}{Line weight in twips.  Default \code{15} ≈ 0.5 pt.  Ignored when
+\item{width}{Line weight in twips.  Default \code{15} (about 0.5 pt).  Ignored when
 \code{style = "none"}.}
 
 \item{color}{Line colour.  \code{NULL} (default) = black.  Or a 6-digit hex

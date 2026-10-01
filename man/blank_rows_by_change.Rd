@@ -46,10 +46,12 @@ Pass the result to \code{rtftable(blank_rows = ...)} or
 list.
 }
 \examples{
-\dontrun{
+df <- data.frame(Treatment = c("A", "A", "B", "B"),
+                 Visit = c("Week 1", "Week 2", "Week 1", "Week 2"),
+                 label = c("Age", "  Mean", "Sex", "  F"),
+                 Value = c("", "75.1", "", "53\%"))
 rtftable(df, blank_rows = blank_rows_by_change(c("Treatment", "Visit")))
 # indent-based groups (a stub/label column):
 rtftable(df, blank_rows = blank_rows_by_change("label", group_by = "indent"))
-}
 
 }

@@ -25,7 +25,7 @@ grey.
 \examples{
 doc <- rtf_document() |>
   rtf_tables(data.frame(Parameter = "Age", Value = "75.1"))
-\dontrun{
-plot(doc)        # preview the document's pages on screen
+if (interactive()) {
+  plot(doc)      # preview the document's pages on screen
 }
 }

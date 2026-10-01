@@ -43,7 +43,7 @@ the end of the piece it closes, which is the look a stacked listing column
 is expected to have.
 }
 \examples{
-listing_disp_width(c("ABC", "あいう"))   # 3 and 6
+listing_disp_width(c("ABC", "\u3042\u3044\u3046"))   # 3 and 6 (three wide characters)
 listing_take("ADENOCARCINOMA", 6)
 listing_split_after("COMPLETED/BRCA1", "/")
 }

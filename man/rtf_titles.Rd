@@ -46,13 +46,13 @@ string (\code{""}) is a blank row. The block renders as a single-column table th
 same width as the content; title rows default to centred + bold.
 }
 \examples{
-\dontrun{
-doc <- rtf_document() \%>\%
-  rtf_tables(list(df1, df2)) \%>\%
+df1 <- data.frame(Parameter = "Age", Value = "75.1")
+df2 <- data.frame(Parameter = "Sex", Value = "53\%")
+doc <- rtf_document() |>
+  rtf_tables(list(df1, df2)) |>
   rtf_titles(list(
     c("Table 14.1.1", "{HALF_BLANK_ROW}", "Safety Population"),
     "Table 14.1.2"
   ))
-}
 
 }

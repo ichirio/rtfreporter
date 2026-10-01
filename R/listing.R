@@ -123,7 +123,7 @@
 #' @seealso [listing_wrap()], the rule these build; [listing_wrap_code()] to
 #'   fork that rule.
 #' @examples
-#' listing_disp_width(c("ABC", "あいう"))   # 3 and 6
+#' listing_disp_width(c("ABC", "\u3042\u3044\u3046"))   # 3 and 6 (three wide characters)
 #' listing_take("ADENOCARCINOMA", 6)
 #' listing_split_after("COMPLETED/BRCA1", "/")
 #' @name listing_measures

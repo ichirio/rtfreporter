@@ -25,7 +25,6 @@ spanning cells.}
 }
 }
 \examples{
-\dontrun{
 rtf_col_header(
   list(col_cell(1, ""), col_cell(c(2, 5), "Treatment")),
   list(col_cell(1, ""),
@@ -33,6 +32,5 @@ rtf_col_header(
        col_cell(c(4, 5), "Drug B")),
   c("Item", "N", "Mean", "N", "Mean")
 )
-}
 
 }

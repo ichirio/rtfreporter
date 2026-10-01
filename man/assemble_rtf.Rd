@@ -147,19 +147,30 @@ body pages restart at \code{1}.}
 }
 
 \examples{
-\dontrun{
+# two TFL files in a folder, as a study's output
+dir <- file.path(tempdir(), "tfl")
+dir.create(dir, showWarnings = FALSE)
+for (t in c("14.1.1", "14.2.1")) {
+  doc <- rtf_document() |>
+    rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+    rtf_titles(list(c(paste("Table", t), "Safety Population")))
+  generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+    fixed = TRUE), ".rtf")), overwrite = TRUE)
+}
+a <- file.path(dir, "t14_1_1.rtf")
+b <- file.path(dir, "t14_2_1.rtf")
+out <- tempfile(fileext = ".rtf")
+
 # Plain concatenation (legacy behaviour)
-assemble_rtf(c("a.rtf", "b.rtf"), "out.rtf", overwrite = TRUE)
+assemble_rtf(c(a, b), out, overwrite = TRUE)
 
 # Auto-TOC: one entry per file, label extracted from each title
-assemble_rtf(c("a.rtf", "b.rtf"), "out.rtf",
-             toc       = "auto",
-             overwrite = TRUE)
+assemble_rtf(c(a, b), out, toc = "auto", overwrite = TRUE)
 
 # Multi-level TOC with section headings + cover page + Roman TOC pages
 assemble_rtf(
-  input_files = c("t14_1_1.rtf", "t14_2_1.rtf", "l16_1.rtf"),
-  output_file = "tfl_package.rtf",
+  input_files = c(a, b),
+  output_file = out,
   cover = list(
     title    = "Study XYZ-001",
     subtitle = "Final Statistical Report",
@@ -168,16 +179,13 @@ assemble_rtf(
     meta     = c("Confidential", "Prepared by ACME Pharma")
   ),
   toc = list(
-    toc_heading("EFFICACY ANALYSES"),
-    toc_entry("Table 14.1.1 Demographics", file = "t14_1_1.rtf"),
+    toc_heading("DEMOGRAPHICS"),
+    toc_entry("Table 14.1.1 Demographics", file = a),
     toc_heading("SAFETY ANALYSES"),
-    toc_entry("Table 14.2.1 Adverse Events", file = "t14_2_1.rtf"),
-    toc_heading("LISTINGS"),
-    toc_entry("Listing 16.1 Subject Disposition", file = "l16_1.rtf")
+    toc_entry("Table 14.2.1 Adverse Events", file = b)
   ),
   toc_page_numbering = "roman",
   overwrite           = TRUE
 )
-}
 
 }

@@ -144,10 +144,8 @@ rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
 rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
                                  inside_h = s, inside_v = s))
 
-# Deprecated: the same thing written the old way.
-\dontrun{
+# Deprecated: the same thing written the old way (it says so once).
 rtf_table_border(header = rtf_border(top = s, bottom = s))
-}
 }
 \seealso{
 \code{\link[=rtf_border]{rtf_border()}} for the pieces; pass the result

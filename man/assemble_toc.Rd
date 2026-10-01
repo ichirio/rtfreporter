@@ -23,10 +23,18 @@ the \verb{toc =} list of \code{\link[=toc_heading]{toc_heading()}} / \code{\link
 \code{\link[=assemble_rtf]{assemble_rtf()}}.  Pass a ready-made \code{spec} to convert that instead.
 }
 \examples{
-\dontrun{
-toc <- assemble_toc(files = assemble_files("output/tfl"))
-assemble_rtf(assemble_files("output/tfl"), "deliverable.rtf", toc = toc)
+# two TFL files in a folder, as a study's output
+dir <- file.path(tempdir(), "tfl")
+dir.create(dir, showWarnings = FALSE)
+for (t in c("14.1.1", "14.2.1")) {
+  doc <- rtf_document() |>
+    rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+    rtf_titles(list(c(paste("Table", t), "Safety Population")))
+  generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+    fixed = TRUE), ".rtf")), overwrite = TRUE)
 }
+toc <- assemble_toc(files = assemble_files(dir))
+assemble_rtf(assemble_files(dir), tempfile(fileext = ".rtf"), toc = toc)
 }
 \seealso{
 \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_from_spec]{assemble_from_spec()}}.

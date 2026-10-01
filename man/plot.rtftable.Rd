@@ -26,7 +26,7 @@ default).
 }
 \examples{
 tbl <- rtftable(data.frame(Parameter = "Age", Value = "75.1"), border = "tfl")
-\dontrun{
-plot(tbl)        # a quick on-screen preview of the table layout
+if (interactive()) {
+  plot(tbl)      # a quick on-screen preview of the table layout
 }
 }

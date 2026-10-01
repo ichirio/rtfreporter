@@ -122,8 +122,8 @@ plot.rtf_table_border <- function(x, ...) {
 #'
 #' @examples
 #' tbl <- rtftable(data.frame(Parameter = "Age", Value = "75.1"), border = "tfl")
-#' \dontrun{
-#' plot(tbl)        # a quick on-screen preview of the table layout
+#' if (interactive()) {
+#'   plot(tbl)      # a quick on-screen preview of the table layout
 #' }
 #' @export
 plot.rtftable <- function(x, width = 8, ...) {
@@ -214,8 +214,8 @@ plot.rtftable <- function(x, width = 8, ...) {
 #' @examples
 #' doc <- rtf_document() |>
 #'   rtf_tables(data.frame(Parameter = "Age", Value = "75.1"))
-#' \dontrun{
-#' plot(doc)        # preview the document's pages on screen
+#' if (interactive()) {
+#'   plot(doc)      # preview the document's pages on screen
 #' }
 #' @export
 plot.rtf_document <- function(x, max_pages = 12L, ...) {

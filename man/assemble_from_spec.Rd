@@ -32,10 +32,19 @@ Runs \code{\link[=assemble_rtf]{assemble_rtf()}} with a Table of Contents built 
 \code{.csv} spec).  Rows are ordered by the spec's \code{order} column when present.
 }
 \examples{
-\dontrun{
-spec <- assemble_spec("output/tfl")          # review / edit the order
-assemble_from_spec(spec, "deliverable.rtf", toc_title = "Table of Contents")
+# two TFL files in a folder, as a study's output
+dir <- file.path(tempdir(), "tfl")
+dir.create(dir, showWarnings = FALSE)
+for (t in c("14.1.1", "14.2.1")) {
+  doc <- rtf_document() |>
+    rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+    rtf_titles(list(c(paste("Table", t), "Safety Population")))
+  generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+    fixed = TRUE), ".rtf")), overwrite = TRUE)
 }
+spec <- assemble_spec(dir)          # review / edit the order
+assemble_from_spec(spec, tempfile(fileext = ".rtf"),
+                   toc_title = "Table of Contents")
 }
 \seealso{
 \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_folder]{assemble_folder()}}, \code{\link[=assemble_rtf]{assemble_rtf()}}.

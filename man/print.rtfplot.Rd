@@ -20,8 +20,10 @@ the image's native pixel size and DPI, the display size that will be embedded
 (in inches and twips), and the alignment.
 }
 \examples{
-\dontrun{
-print(rtfplot("scatter.png", width_twips = 9000L))
-}
+png_path <- tempfile(fileext = ".png")
+grDevices::png(png_path, width = 600, height = 400)
+graphics::plot(1:10, main = "A figure")
+grDevices::dev.off()
+print(rtfplot(png_path, width_twips = 9000L))
 
 }

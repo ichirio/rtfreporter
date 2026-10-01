@@ -43,14 +43,13 @@ titles, footnotes, in-cell footnote marks and (for gt/gtsummary) explicit
 theme borders and Markdown are not.
 }
 \examples{
-\dontrun{
+\dontshow{if (requireNamespace("gt", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(gt)
 g <- gt(head(mtcars, 5)) |>
   cols_label(mpg = "MPG", cyl = "Cyl") |>
   cols_align("right", columns = c(mpg, cyl))
 tbl <- as_rtftable(g)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=as_rtftables]{as_rtftables()}} for the paginating, list-returning version and

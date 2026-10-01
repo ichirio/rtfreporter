@@ -240,17 +240,19 @@
 #' @return An `rtfplot` (S3) object suitable for use in `rtf_tables()`.
 #'
 #' @examples
-#' \dontrun{
-#' fig <- rtfplot("scatter.png", width_twips = 9000L)
+#' png_path <- tempfile(fileext = ".png")
+#' grDevices::png(png_path, width = 600, height = 400)
+#' graphics::plot(1:10, main = "A figure")
+#' grDevices::dev.off()
+#' fig <- rtfplot(png_path, width_twips = 9000L)
 #'
-#' doc <- rtf_document() %>%
+#' doc <- rtf_document() |>
 #'   rtf_section(page = 1, secinfo = list(
 #'     header = rtf_header(rows = list(c(l = "Figure 14.1")))
-#'   )) %>%
+#'   )) |>
 #'   rtf_tables(list(fig))
 #'
-#' generate_rtfreport(doc, "output.rtf", overwrite = TRUE)
-#' }
+#' generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
 #'
 #' @export
 rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
@@ -322,9 +324,11 @@ rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
 #' @return `x`, invisibly. Called for the side effect of printing the summary.
 #'
 #' @examples
-#' \dontrun{
-#' print(rtfplot("scatter.png", width_twips = 9000L))
-#' }
+#' png_path <- tempfile(fileext = ".png")
+#' grDevices::png(png_path, width = 600, height = 400)
+#' graphics::plot(1:10, main = "A figure")
+#' grDevices::dev.off()
+#' print(rtfplot(png_path, width_twips = 9000L))
 #'
 #' @export
 print.rtfplot <- function(x, ...) {

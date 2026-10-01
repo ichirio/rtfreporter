@@ -150,31 +150,33 @@
 #' lapply(pages, function(p) p$label)
 #' lapply(pages, attr, "rtf_blank_rows")   # e.g. page 1: c(0, 5)
 #'
-#' \dontrun{
 #' # -------------------------------------------------------------------------
 #' # 2. End-to-end: rtf_tables() picks up the blank-row attribute
 #' # -------------------------------------------------------------------------
+#' my_hdr <- rtf_header(rows = list(c(l = "Study XYZ-001")))
 #' doc <- rtf_document() |>
 #'   rtf_section(page = 1, secinfo = list(header = my_hdr)) |>
 #'   rtf_tables(pages)         # one page per data.frame
-#' generate_rtfreport(doc, "demo.rtf", overwrite = TRUE)
+#' generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
 #'
 #' # -------------------------------------------------------------------------
-#' # 3. gt input — same arguments, just hand a gt_tbl in
+#' # 3. gt input -- same arguments, just hand a gt_tbl in; 4. a list of gt
+#' # tables (e.g. one per table number) recurses and flattens
 #' # -------------------------------------------------------------------------
-#' pages <- paginate(my_gt_tbl, max_rows = 20, split = "group_force")
-#'
-#' # -------------------------------------------------------------------------
-#' # 4. List of gt tables (e.g. one per table number) — recurses and flattens
-#' # -------------------------------------------------------------------------
-#' all_pages <- paginate(list(t1_gt, t2_gt), max_rows = 20,
-#'                       split = "group_force")
+#' if (requireNamespace("gt", quietly = TRUE)) {
+#'   my_gt_tbl <- gt::gt(df)
+#'   pages <- paginate(my_gt_tbl, max_rows = 6, split = "group_force")
+#'   all_pages <- paginate(list(my_gt_tbl, gt::gt(df[1:5, ])), max_rows = 6,
+#'                         split = "group_force")
+#' }
 #'
 #' # -------------------------------------------------------------------------
 #' # 5. Explicit group_col when the grouping signal isn't column 1's indent
 #' # -------------------------------------------------------------------------
-#' pages <- paginate(df, max_rows = 30, split = "group_safe",
-#'                    group_col = "Visit")     # RLE on the Visit column
+#' dv <- data.frame(Visit = rep(c("Week 1", "Week 2", "Week 4"), each = 4),
+#'                  val = 1:12)
+#' pages <- paginate(dv, max_rows = 5, split = "group_safe",
+#'                   group_col = "Visit")     # RLE on the Visit column
 #'
 #' # -------------------------------------------------------------------------
 #' # 6. split = "by_value": one page per group value, named by the value
@@ -186,7 +188,7 @@
 #' pages <- paginate(df, split = "by_value", group_col = "visit")
 #' names(pages)                 # "Week 1", "Week 2", "Week 4"
 #'
-#' # Hand straight to rtf_tables(auto_section = TRUE) — one RTF section
+#' # Hand straight to rtf_tables(auto_section = TRUE) -- one RTF section
 #' # per visit, with the visit name as the section heading.
 #' doc <- rtf_document() |>
 #'   rtf_section(secinfo = list(header = my_hdr)) |>
@@ -196,12 +198,11 @@
 #' # 7. Named list input: names round-trip through paginate()
 #' # -------------------------------------------------------------------------
 #' pages_in <- list(
-#'   "Table 14.1.1" = tibble::tibble(x = 1:3),
-#'   "Table 14.2.1" = tibble::tibble(x = 4:6)
+#'   "Table 14.1.1" = data.frame(x = 1:3),
+#'   "Table 14.2.1" = data.frame(x = 4:6)
 #' )
 #' pages <- paginate(pages_in)              # no split, names preserved
 #' names(pages)                              # "Table 14.1.1" "Table 14.2.1"
-#' }
 #'
 #' @export
 paginate <- function(x, ...) {

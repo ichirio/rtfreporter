@@ -42,11 +42,19 @@ optionally writes the spec to disk, and assembles the deliverable with a
 Table of Contents (\code{\link[=assemble_from_spec]{assemble_from_spec()}}).
 }
 \examples{
-\dontrun{
+# two TFL files in a folder, as a study's output
+dir <- file.path(tempdir(), "tfl")
+dir.create(dir, showWarnings = FALSE)
+for (t in c("14.1.1", "14.2.1")) {
+  doc <- rtf_document() |>
+    rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+    rtf_titles(list(c(paste("Table", t), "Safety Population")))
+  generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
+    fixed = TRUE), ".rtf")), overwrite = TRUE)
+}
 # One call: scan a folder of TFL .rtf files and assemble them, in catalog
 # order, into a single deliverable with an auto table of contents.
-assemble_folder("output/tfl", "deliverable.rtf", toc_title = "Contents")
-}
+assemble_folder(dir, tempfile(fileext = ".rtf"), toc_title = "Contents")
 }
 \seealso{
 \code{\link[=assemble_files]{assemble_files()}}, \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_from_spec]{assemble_from_spec()}}.

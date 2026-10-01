@@ -45,9 +45,11 @@ alignment apply to every path and plot object in \code{figures}; elements
 already constructed via \code{\link[=rtfplot]{rtfplot()}} keep their own settings.
 }
 \examples{
-\dontrun{
+png_path <- tempfile(fileext = ".png")
+grDevices::png(png_path, width = 600, height = 400)
+graphics::plot(1:10, main = "A figure")
+grDevices::dev.off()
 doc <- rtf_document() |>
-  rtf_figures(list("scatter.png"), width_twips = 6000L, align = "center")
-}
+  rtf_figures(list(png_path), width_twips = 6000L, align = "center")
 
 }

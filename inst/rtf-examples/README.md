@@ -37,6 +37,11 @@ its own `figures/` folder at build time and displays it.  For the assembled
 deliverable there are two: `pharmaverse-assembled-toc.png` (the Table of
 Contents page) and `pharmaverse-assembled.png` (a body page).
 
+The screenshots are in the repository
+(<https://github.com/ichirio/rtfreporter/tree/main/inst/rtf-examples>) and on
+the site, not in the installed package: they are left out of the package
+build to keep it small.  The `.rtf` files are installed.
+
 `pk-concentration.rtf` likewise needs two, because the horizontal split is the
 whole point and one page cannot show it:
 
