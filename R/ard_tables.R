@@ -171,6 +171,17 @@
   flat <- labels[!scoped]
   dots <- names(flat) == ".default"
   flat <- c(unlist(unname(flat[dots])), unlist(flat[!dots]))
+  # A scope named after an analysis variable may carry the variable's own
+  # label under its own name -- SEX = c(SEX = "Sex", F = "Female") -- since
+  # one key cannot hold both a text and a dictionary: it labels the name
+  # wherever it appears, as a flat entry would.
+  own <- names(labels)[scoped]
+  own <- own[vapply(own, function(k) k %in% names(labels[[k]]), NA)]
+  own <- own[!own %in% names(flat)]
+  if (length(own)) {
+    flat <- c(flat, stats::setNames(vapply(own, function(k)
+      unname(labels[[k]][[k]]), ""), own))
+  }
   list(flat = flat, scopes = labels[scoped])
 }
 
@@ -1699,6 +1710,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   c(F = "Female", M = "Male"))` recodes that variable's levels in the
 #'   label column, as `levels = list(SEX = c("M", "F"))` orders them (the
 #'   order is written in the values, the label column prints the text).
+#'   Its entry under the variable's own name is the variable's label:
+#'   `SEX = c(SEX = "Sex", F = "Female", M = "Male")`.
 #' @param sort `FALSE` (default) moves a row only where somebody
 #'   **declared** an order.  A key is a factor exactly when `levels`,
 #'   `labels` or the data itself made it one --- and making a column a

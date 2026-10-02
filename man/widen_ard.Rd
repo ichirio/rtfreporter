@@ -147,7 +147,9 @@ column}, matched on the output name then the source name, with
 
 A scope may name an \strong{analysis variable} too: \code{labels = list(SEX = c(F = "Female", M = "Male"))} recodes that variable's levels in the
 label column, as \code{levels = list(SEX = c("M", "F"))} orders them (the
-order is written in the values, the label column prints the text).}
+order is written in the values, the label column prints the text).
+Its entry under the variable's own name is the variable's label:
+\code{SEX = c(SEX = "Sex", F = "Female", M = "Male")}.}
 
 \item{sort}{\code{FALSE} (default) moves a row only where somebody
 \strong{declared} an order.  A key is a factor exactly when \code{levels},

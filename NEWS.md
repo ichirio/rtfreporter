@@ -8,7 +8,9 @@
   levels of the analysis variable `SEX` in the label column, the way
   `plan_levels(SEX = c("M", "F"))` already ordered them (the order stays
   written in the values).  A scope named an output column only before, so
-  no table that printed before prints differently.
+  no table that printed before prints differently.  The dictionary's entry
+  under the variable's own name labels the variable itself:
+  `SEX = c(SEX = "Sex", F = "Female", M = "Male")`.
 
 ### CRAN preparation
 

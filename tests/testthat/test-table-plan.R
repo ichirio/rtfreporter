@@ -2068,6 +2068,10 @@ test_that("plan_labels() scoped by an analysis variable relabels its levels (#51
   num <- function(x, l) unlist(x[as.character(x$label) == l, -(1:2)])
   expect_identical(num(got, "Female"), num(before, "F"))
   expect_identical(num(got, "Male"), num(before, "M"))
+  # its own name labels the variable (its group row) at the same time
+  both <- page(base |> plan_labels(SEX = c(SEX = "Sex", F = "Female", M = "Male")))
+  expect_true("Sex" %in% as.character(both$group))
+  expect_identical(lab(both, "Sex"), c("Female", "Male"))
   # a scope naming no analysis variable changes nothing
   expect_identical(page(base |> plan_labels(NOPE = c(F = "Female"))), before)
 })
