@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9004** (the development
+**This manual documents rtfreporter 0.8.2.9005** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -865,7 +865,7 @@ p_ae <- ard_ae |>
 | Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row)` |
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)`: a value, or a formula `bold = ~ is.na(label)` |
 | A page per value | `plan_paginate_group(col, keep)` |
-| Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label)` |
+| Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
 | Titles / footnotes | `plan_titles(...)`, `plan_footnotes(...)` (`pages =` for one block per page) |
@@ -877,7 +877,7 @@ display half onto `as_rtftables()`, `stub_cols()`, `set_col_header()`,
 =)` becomes `plan_paginate_rows(max_rows =)`, `drop_cols` becomes
 `plan_hide()`, `group_by` becomes `plan_row_group(mode =)`, `blank_rows`
 becomes `plan_blanks(where =)`, and `split = "by_value", group_col` becomes
-`plan_paginate_group(col =)`.
+`plan_paginate_group(col =)`; `page_by` becomes `plan_paginate_rows(page_by =)`.
 
 ### Looking inside
 
@@ -912,7 +912,7 @@ adds an "Any" row.
 | `plan_fmt()` | `plan_digits()` |
 | `plan_header_style()`, `plan_col_style()`, `plan_zone_style()` | `plan_cell_style(header = TRUE / cols =)`, `plan_style(border_header = ...)` |
 | `table_plan(cells =, stats =, sort_stat =, sep =, na =)` | `plan_cells()`, `plan_sort(stat =)`, `plan_columns(sep =)` |
-| `plan_paginate_rows(by =)` | `plan_paginate_group()` |
+| `plan_paginate_rows(by =)` | `plan_paginate_rows(page_by =)` (BY pages, a row budget inside), or `plan_paginate_group()` (a page per value) |
 | `plan_row_group(col =)`, `plan_sort(desc =)` | the outermost row key is used; `plan_sort("-n")` |
 | `show =`, `plan_stub(into =)` | `keep =`, `plan_stub(name =)` |
 | `plan_apply(stage = "long")`, `$spread` | `stage = "input"`, `$widen` |

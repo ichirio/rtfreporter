@@ -70,7 +70,8 @@ plan_paginate_rows(
   split = NULL,
   break_before = NULL,
   min_group_rows = NULL,
-  cont_label = NULL
+  cont_label = NULL,
+  page_by = NULL
 )
 
 plan_style(
@@ -331,6 +332,14 @@ and \code{cont_label}.  This is the \strong{row} axis; a page per value (the
 \strong{group} axis) is \code{plan_paginate_group()}, and the \strong{column} axis
 is \code{plan_paginate_cols()}.}
 
+\item{page_by}{For \code{plan_paginate_rows()}: \code{as_rtftables()}'s \code{page_by}
+-- the column(s) whose value partitions the body \strong{first}, each value
+a page named after it; the row settings then apply \strong{within} one
+partition (a period, a cohort), so a BY page can still be cut by a row
+budget.  \code{plan_paginate_group()} is the other way to page by a value:
+one page per value however long it is, with no row budget.  The BY
+column is printed unless hidden (\code{\link[=plan_hide]{plan_hide()}}).}
+
 \item{border_header, border_spanning, border_body, border_first_row, border_last_row}{For \code{plan_style()}: the rules of one kind of row, by the names
 \code{\link[=rtf_table_style]{rtf_table_style()}} gives them.  Say the table's rules one way:
 \code{border = "tfl"}, or these.}
@@ -507,7 +516,7 @@ function that does it.  This is what each one hands on.\tabular{lll}{
    \code{plan_row_group(mode, collapse)} \tab groups down the body \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{group_by}, \code{collapse_repeats} \cr
    \code{plan_hide(...)} \tab columns not printed \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{drop_cols} \cr
    \code{plan_blanks(where, first, last, counted)} \tab blank rows \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows}; a listing's \code{where = "records"} is \code{\link[=listing_spec]{listing_spec()}}'s \code{blank_row} \cr
-   \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label)} \tab the row budget \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label} \cr
+   \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)} \tab the row budget, inside the BY pages \tab \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label}, \code{page_by} \cr
    \code{plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)} \tab column blocks \tab \code{\link[=paginate_cols]{paginate_cols()}}: \code{at}, \code{cols} / \code{by}, \code{carry}, \code{col_header}, \code{width}, \code{allow_span_break}, \code{page_order} \cr
    \code{plan_style(border, ..., border_header, ...)} \tab the whole table \tab \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} by the same names; \verb{border_*} via \code{\link[=rtf_table_style]{rtf_table_style()}} \cr
    \code{plan_columns(widths, decimal, row_title, auto_width, sep)} \tab the columns \tab \code{\link[=rtftable]{rtftable()}}: \code{col_rel_width}, \code{row_title}; \code{\link[=set_decimal_split]{set_decimal_split()}}: \code{cols}; \code{\link[=as_rtftables]{as_rtftables()}}: \code{auto_width}; \code{\link[=widen_ard]{widen_ard()}}: \code{sep} \cr
