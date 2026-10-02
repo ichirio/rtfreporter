@@ -2,6 +2,15 @@
 
 ### New features
 
+- **`plan_paginate_rows(page_by = )`** (#516): the BY pages of
+  `as_rtftables(page_by = )` in a plan -- the column(s) whose value
+  partitions the body first, each value a page named after it, the row
+  budget (`max_rows`, `split`, ...) then applying within one partition.
+  Before, a plan could page by a value only with `plan_paginate_group()`
+  (one page per value, no row budget), and a report needing both had to be
+  two plans with their pages interleaved by hand.  Added only: a plan
+  without `page_by` gives what it gave.
+
 - **An analysis variable's levels can be relabelled** (#514):
   `plan_labels(SEX = c(F = "Female", M = "Male"))` -- and
   `widen_ard(labels = list(SEX = c(F = "Female")))` -- now recode the

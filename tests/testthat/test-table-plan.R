@@ -2075,3 +2075,35 @@ test_that("plan_labels() scoped by an analysis variable relabels its levels (#51
   # a scope naming no analysis variable changes nothing
   expect_identical(page(base |> plan_labels(NOPE = c(F = "Female"))), before)
 })
+
+test_that("plan_paginate_rows(page_by = ) is as_rtftables(page_by = ): BY pages, rows paged inside", {
+  tbl <- data.frame(
+    period = rep(c("Period 1", "Period 2"), each = 8),
+    param  = rep(rep(c("ALT", "AST"), each = 4), 2),
+    stat   = rep(c("n", "Mean", "SD", "Median"), 4),
+    A = as.character(1:16), B = as.character(16:1), stringsAsFactors = FALSE)
+  p <- table_plan(tbl) |>
+    plan_paginate_rows(page_by = "period", split = "group_safe", max_rows = 5) |>
+    plan_hide("period")
+  a <- plan_apply(p, "args")$rtf
+  expect_identical(a$page_by, "period")
+  pages <- plan_apply(p)
+  direct <- as_rtftables(tbl, page_by = "period", split = "group_safe",
+                         max_rows = 5, drop_cols = "period", read_meta = FALSE)
+  # a page per period, each cut by the row budget inside it, named by it
+  expect_identical(names(pages), names(direct))
+  expect_identical(names(pages), c("Period 1...1", "Period 1...2",
+                                   "Period 2...1", "Period 2...2"))
+  expect_identical(lapply(pages, `[[`, "data"), lapply(direct, `[[`, "data"))
+  # the RTF: byte for byte the direct call's
+  rtf <- function(x) {
+    f <- withr::local_tempfile(fileext = ".rtf")
+    withr::with_options(list(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC")),
+      generate_rtfreport(rtf_tables(rtf_document(), x), f, overwrite = TRUE))
+    readBin(f, "raw", file.info(f)$size)
+  }
+  expect_identical(rtf(pages), rtf(direct))
+  # no page_by: the plan's arguments are as before
+  q <- table_plan(tbl) |> plan_paginate_rows(split = "group_safe", max_rows = 5)
+  expect_null(plan_apply(q, "args")$rtf$page_by)
+})

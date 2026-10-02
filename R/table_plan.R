@@ -922,6 +922,13 @@ print.table_plan <- function(x, ...) {
 #'   and `cont_label`.  This is the **row** axis; a page per value (the
 #'   **group** axis) is `plan_paginate_group()`, and the **column** axis
 #'   is `plan_paginate_cols()`.
+#' @param page_by For `plan_paginate_rows()`: `as_rtftables()`'s `page_by`
+#'   -- the column(s) whose value partitions the body **first**, each value
+#'   a page named after it; the row settings then apply **within** one
+#'   partition (a period, a cohort), so a BY page can still be cut by a row
+#'   budget.  `plan_paginate_group()` is the other way to page by a value:
+#'   one page per value however long it is, with no row budget.  The BY
+#'   column is printed unless hidden ([plan_hide()]).
 #' @param every For `plan_paginate_cols()`: cut a block every this many
 #'   columns, counting only the ones a block does not keep.  This is
 #'   `at` without writing down how many columns one study had --- the
@@ -1152,7 +1159,7 @@ print.table_plan <- function(x, ...) {
 #' | `plan_row_group(mode, collapse)` | groups down the body | [as_rtftables()]: `group_by`, `collapse_repeats` |
 #' | `plan_hide(...)` | columns not printed | [as_rtftables()]: `drop_cols` |
 #' | `plan_blanks(where, first, last, counted)` | blank rows | [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row` |
-#' | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label)` | the row budget | [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label` |
+#' | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)` | the row budget, inside the BY pages | [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by` |
 #' | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` | column blocks | [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order` |
 #' | `plan_style(border, ..., border_header, ...)` | the whole table | [rtftable()] / [as_rtftables()] by the same names; `border_*` via [rtf_table_style()] |
 #' | `plan_columns(widths, decimal, row_title, auto_width, sep)` | the columns | [rtftable()]: `col_rel_width`, `row_title`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`; [widen_ard()]: `sep` |
@@ -1615,16 +1622,23 @@ plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL,
 
 #' @rdname plan_verbs
 #' @export
-# The ROW axis only.  A page per value of a column is the group axis,
-# plan_paginate_group(); there is one verb for it, not two.
+# The ROW axis.  A page per value of a column, with no row budget, is the
+# group axis, plan_paginate_group().  `page_by` is the one thing here that
+# is not a row cut: the BY column(s) that partition the body FIRST, each
+# value a page named after it, the row settings above then applying
+# within one partition (a period, a cohort) -- as_rtftables(page_by = ),
+# where it is also documented with the row pagination it scopes.  It is
+# here, not on plan_paginate_group(), because it is what lets a row budget
+# and a value split live together: a value split alone makes one page per
+# value however long it is.
 plan_paginate_rows <- function(plan, max_rows = NULL, split = NULL,
                                break_before = NULL, min_group_rows = NULL,
-                               cont_label = NULL) {
+                               cont_label = NULL, page_by = NULL) {
   .plan_layer(plan, "pages",
               list(max_rows = max_rows, split = split,
                    split_rows = break_before,
                    min_group_rows = min_group_rows,
-                   cont_label = cont_label))
+                   cont_label = cont_label, page_by = page_by))
 }
 
 # The WHOLE-table settings, listed.  Everything a table has per column or
