@@ -143,7 +143,11 @@ column}, matched on the output name then the source name, with
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{labels = list(BASEGR = c("0" = "Baseline 0"),
               WORST  = c("0" = "Grade 0"))
-}\if{html}{\out{</div>}}}
+}\if{html}{\out{</div>}}
+
+A scope may name an \strong{analysis variable} too: \code{labels = list(SEX = c(F = "Female", M = "Male"))} recodes that variable's levels in the
+label column, as \code{levels = list(SEX = c("M", "F"))} orders them (the
+order is written in the values, the label column prints the text).}
 
 \item{sort}{\code{FALSE} (default) moves a row only where somebody
 \strong{declared} an order.  A key is a factor exactly when \code{levels},

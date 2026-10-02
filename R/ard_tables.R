@@ -1694,6 +1694,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   labels = list(BASEGR = c("0" = "Baseline 0"),
 #'                 WORST  = c("0" = "Grade 0"))
 #'   ```
+#'
+#'   A scope may name an **analysis variable** too: `labels = list(SEX =
+#'   c(F = "Female", M = "Male"))` recodes that variable's levels in the
+#'   label column, as `levels = list(SEX = c("M", "F"))` orders them (the
+#'   order is written in the values, the label column prints the text).
 #' @param sort `FALSE` (default) moves a row only where somebody
 #'   **declared** an order.  A key is a factor exactly when `levels`,
 #'   `labels` or the data itself made it one --- and making a column a
@@ -2033,6 +2038,21 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   rowname_cols <- vapply(rowrefs, function(r) r$out, "")
   label_out <- if (length(labref)) labref[[1]]$out else NULL
   id_cols <- c(rowname_cols, if (!is.null(label_out)) label_out)
+  # An entry of `labels` scoped by an ANALYSIS VARIABLE -- `SEX = c(F =
+  # "Female")` -- recodes that variable's levels in the label column, the
+  # way `levels = list(SEX = )` orders them.  (A scope names a column
+  # otherwise; an analysis variable is not one, so this changes nothing a
+  # scope did before.)
+  lab_var <- .ard_labels_split(labels)$scopes
+  lab_var <- lab_var[names(lab_var) %in% .ard_first_seen(long$.var)]
+  if (!is.null(label_out) && length(lab_var)) {
+    for (vn in names(lab_var)) {
+      dict <- lab_var[[vn]]
+      hit <- !is.na(long$.var) & long$.var == vn & !is.na(long$.lab) &
+        long$.lab %in% names(dict)
+      long$.lab[hit] <- unname(dict[long$.lab[hit]])
+    }
+  }
   if (!is.null(label_out)) long[[label_out]] <- long$.lab
 
   # recode + factorise the row keys
@@ -2062,6 +2082,11 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       lv <- .ard_label_order(d, cells, c(levels, fl[setdiff(names(fl),
                                                             names(levels))]),
                              .ard_labels_flat(labels))
+    }
+    # the order is of the values; the levels recoded above print as their text
+    if (!is.null(lv) && length(lab_var)) {
+      dict <- unlist(unname(lab_var))
+      lv <- unique(ifelse(lv %in% names(dict), unname(dict[lv]), lv))
     }
     if (!is.null(lv)) long[[label_out]] <- .ard_as_factor(long[[label_out]], lv)
   }

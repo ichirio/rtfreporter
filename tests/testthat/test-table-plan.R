@@ -2043,3 +2043,31 @@ test_that("a missing declaration is not blamed on unrelated verbs (#507)", {
   expect_no_match(msg, "declared by")
   expect_no_match(msg, "plan_cells")
 })
+
+test_that("plan_labels() scoped by an analysis variable relabels its levels (#514)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  ard <- cards::ard_stack(adsl, .by = TRT,
+    cards::ard_categorical(variables = c(SEX, AGEGR1), statistic = ~ c("n", "p")))
+  d <- suppressMessages(normalize_ard(ard))
+  base <- table_plan(d, cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(notes = FALSE) |> plan_cells("{n:d} ({p:.1f%})")
+  page <- function(p) {
+    x <- suppressMessages(plan_apply(p))
+    if (is.data.frame(x)) x else if (inherits(x, "rtftable")) x$data else x[[1L]]$data
+  }
+  before <- page(base)
+  got <- page(base |> plan_labels(SEX = c(F = "Female", M = "Male")) |>
+                plan_levels(SEX = c("M", "F")))
+  lab <- function(x, g) as.character(x$label[x$group == g])
+  expect_identical(lab(got, "SEX"), c("Male", "Female"))
+  # the other variable, and the numbers, are as they were
+  expect_identical(lab(got, "AGEGR1"), lab(before, "AGEGR1"))
+  num <- function(x, l) unlist(x[as.character(x$label) == l, -(1:2)])
+  expect_identical(num(got, "Female"), num(before, "F"))
+  expect_identical(num(got, "Male"), num(before, "M"))
+  # a scope naming no analysis variable changes nothing
+  expect_identical(page(base |> plan_labels(NOPE = c(F = "Female"))), before)
+})
