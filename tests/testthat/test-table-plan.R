@@ -1939,6 +1939,38 @@ test_that("plan_columns() declares the stub column, auto width and the key separ
   expect_error(plan_columns(base_plan(), sep = ""), "non-empty")
 })
 
+test_that("plan_columns(sep = ) also drives the ARD plan's own spanning header (#520)", {
+  skip_if_not_installed("cards")
+  adsl <- adsl_trt()
+  d <- normalize_ard(cards::ard_stack(
+    adsl, .by = c(TRT, SEX), cards::ard_continuous(variables = AGE),
+    cards::ard_categorical(variables = AGEGRP)))
+  mk <- function(sep = NULL) {
+    p <- table_plan(d, cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
+      plan_cells(notes = FALSE) |>
+      plan_cells(continuous = "{mean:.1f}", categorical = "{n}")
+    if (!is.null(sep)) p <- plan_columns(p, sep = sep)
+    p
+  }
+  rtf <- function(x) {
+    f <- tempfile(fileext = ".rtf")
+    old <- options(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC"))
+    on.exit({ options(old); unlink(f) })
+    generate_rtfreport(rtf_tables(rtf_document(), x), f, overwrite = TRUE)
+    readBin(f, "raw", file.info(f)$size)
+  }
+  default_out <- suppressMessages(plan_apply(mk(), "pages"))
+  custom_out  <- suppressMessages(plan_apply(mk("--"), "pages"))
+  # same spanning structure -- TRT/SEX values contain no separator, so the
+  # header text itself does not differ between the two separators
+  expect_identical(hdr_rows(default_out), hdr_rows(custom_out))
+  expect_identical(rtf(default_out), rtf(custom_out))
+  # a plan that declares its own header_sep still wins over the plan's sep
+  explicit <- plan_apply(mk("--") |> plan_col_header(header_sep = "--"),
+                         "args")$rtf
+  expect_identical(explicit$header_sep, "--")
+})
+
 test_that("table_plan() takes the roles, and stat = names the parts", {
   expect_error(table_plan(data.frame(a = 1), stat = c(value = "a", nope = "a")),
                "only these three names")

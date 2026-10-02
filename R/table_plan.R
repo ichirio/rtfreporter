@@ -2265,7 +2265,14 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   # how a plain table's names become a spanning header, and how the
   # header text sits: the header's own, so plan_col_header() says them
   hdr <- .plan_merge(.plan_of(plan, "header"))
-  if (!is.null(hdr[["names_sep"]])) out$header_sep <- hdr[["names_sep"]]
+  if (!is.null(hdr[["names_sep"]])) {
+    out$header_sep <- hdr[["names_sep"]]
+  } else if (.plan_ard_half(plan)) {
+    # an ARD half widens its own column names on plan_columns(sep = ), so
+    # that is the separator the header must be split on too -- unset, a
+    # non-default sep would widen the table but never build its header
+    out$header_sep <- .plan_sep(plan)
+  }
   if (!is.null(hdr[["text_align"]])) {
     out$col_header_align <- hdr[["text_align"]]
   }
