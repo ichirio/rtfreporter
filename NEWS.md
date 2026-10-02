@@ -2,6 +2,25 @@
 
 ### New features
 
+- **Every `as_rtftables()` setting now has a plan verb** (#518).  A
+  plan could not say `cell_format`, `column_widths_twips`, `header_sep`,
+  `col_header_align`, the table width, the look fields of
+  `rtf_table_style()`, `col_spec`'s underline and indent, `na` on a
+  finished table, or a grouping column on a finished table without a page
+  per value.  Now: `plan_columns(cell_format =, column_widths_twips =)`,
+  `plan_col_header(header_sep =, col_header_align =)`,
+  `plan_style(table_width_twips =, table_width_pct =,
+  table_width_pct_of_writable =, header_align =, header_bold =,
+  header_italic =, align =, bold =, italic =, underline =)` (folded into
+  one `rtf_table_style()` with the `border_*` zones),
+  `plan_cell_style(underline =, indent_twips =)`, `plan_cells(na =)` on a
+  finished table, and `plan_row_group(group_col =)` on a finished table
+  (an ARD plan refuses it: its grouping column is the outermost row key).
+  Each gives the RTF of the direct call byte for byte.  Not carried over,
+  by design: `read_meta` / `read_attributes`, the superseded `stub_*`
+  arguments (`plan_stub()`), and `spanning_header` (`plan_col_header()`).
+  Added only: a plan without them gives what it gave.
+
 - **`plan_paginate_rows(page_by = )`** (#516): the BY pages of
   `as_rtftables(page_by = )` in a plan -- the column(s) whose value
   partitions the body first, each value a page named after it, the row

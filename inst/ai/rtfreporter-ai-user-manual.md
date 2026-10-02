@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9005** (the development
+**This manual documents rtfreporter 0.8.2.9006** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -850,20 +850,20 @@ p_ae <- ard_ae |>
 | Job | Verb (arguments) |
 |---|---|
 | Start; roles | `table_plan(x, cols, rows, label, stat)`: `stat = c(variable =, name =, value =)` renames the three parts for a non-cards frame |
-| Cell text | `plan_cells(..., stats = "cells"/"rows", value = "stat"/"stat_fmt", na, notes)` |
+| Cell text | `plan_cells(..., stats = "cells"/"rows", value = "stat"/"stat_fmt", na, notes)`; on a finished table `na` alone (`as_rtftables(na =)`) |
 | Digits / rounding | `plan_digits(..., rounding)`: `plan_digits(continuous = c(mean = 1, sd = 2))`; on a finished table `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
 | Order of values | `plan_levels(VAR = c(...))` |
 | Printed text of values / variables | `plan_labels(c(AGE = "Age (years)"))` |
 | Printed text of one analysis variable's levels (and its own name) | `plan_labels(SEX = c(SEX = "Sex", F = "Female", M = "Male"))`; their order: `plan_levels(SEX = c("M", "F"))` |
 | Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone |
 | Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
-| Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse)` |
+| Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse, group_col)`; `group_col` only on a finished table (an ARD plan's is its outermost row key) |
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
 | Columns not printed | `plan_hide("COL")` |
-| Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep)`: `widths = c(row_label = 5, .values = 2)` |
-| Column header | `plan_col_header(header, values)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits |
-| Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row)` |
-| Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)`: a value, or a formula `bold = ~ is.na(label)` |
+| Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: `widths = c(row_label = 5, .values = 2)` |
+| Column header | `plan_col_header(header, values, header_sep, col_header_align)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows |
+| Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
+| Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
 | A page per value | `plan_paginate_group(col, keep)` |
 | Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
@@ -877,7 +877,15 @@ display half onto `as_rtftables()`, `stub_cols()`, `set_col_header()`,
 =)` becomes `plan_paginate_rows(max_rows =)`, `drop_cols` becomes
 `plan_hide()`, `group_by` becomes `plan_row_group(mode =)`, `blank_rows`
 becomes `plan_blanks(where =)`, and `split = "by_value", group_col` becomes
-`plan_paginate_group(col =)`; `page_by` becomes `plan_paginate_rows(page_by =)`.
+`plan_paginate_group(col =)`; `page_by` becomes `plan_paginate_rows(page_by =)`;
+`group_col` alone on a finished table becomes `plan_row_group(group_col =)`;
+`cell_format` becomes `plan_columns(cell_format =)`, `header_sep`
+`plan_col_header(header_sep =)`, `style =` `plan_style(<its fields>)`, and
+`na` `plan_cells(na =)`. Not carried over, by design: `read_meta` /
+`read_attributes` (a plan's input has no adapter metadata; the plan sets
+the attributes itself), the superseded `stub_vars` / `stub_label` /
+`stub_indent` / `stub_group_summary` (`plan_stub()`), and `spanning_header`
+(a row of `plan_col_header()`).
 
 ### Looking inside
 
@@ -913,7 +921,7 @@ adds an "Any" row.
 | `plan_header_style()`, `plan_col_style()`, `plan_zone_style()` | `plan_cell_style(header = TRUE / cols =)`, `plan_style(border_header = ...)` |
 | `table_plan(cells =, stats =, sort_stat =, sep =, na =)` | `plan_cells()`, `plan_sort(stat =)`, `plan_columns(sep =)` |
 | `plan_paginate_rows(by =)` | `plan_paginate_rows(page_by =)` (BY pages, a row budget inside), or `plan_paginate_group()` (a page per value) |
-| `plan_row_group(col =)`, `plan_sort(desc =)` | the outermost row key is used; `plan_sort("-n")` |
+| `plan_row_group(col =)`, `plan_sort(desc =)` | the outermost row key is used (a finished table: `plan_row_group(group_col =)`); `plan_sort("-n")` |
 | `show =`, `plan_stub(into =)` | `keep =`, `plan_stub(name =)` |
 | `plan_apply(stage = "long")`, `$spread` | `stage = "input"`, `$widen` |
 | `tfl_table_plan()`, `tfl_*()` | **tflspec**, not rtfreporter: it reads an Excel spec into a plan |

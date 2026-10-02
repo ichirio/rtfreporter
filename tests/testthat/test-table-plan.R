@@ -606,7 +606,7 @@ test_that("plan_cell_style() says where as well as how", {
   # the two spellings of a condition do not mix in one call
   expect_error(plan_cell_style(base, bold = ~ TRUE, where = ~ TRUE), "two calls")
   expect_error(plan_cell_style(base, header = TRUE, color = "#FF0000"),
-               "bold, italic, align and border")
+               "bold, italic, underline, align and border")
   expect_error(plan_cell_style(base), "nothing to style")
 })
 
@@ -2107,4 +2107,104 @@ test_that("plan_paginate_rows(page_by = ) is as_rtftables(page_by = ): BY pages,
   # no page_by: the plan's arguments are as before
   q <- table_plan(tbl) |> plan_paginate_rows(split = "group_safe", max_rows = 5)
   expect_null(plan_apply(q, "args")$rtf$page_by)
+})
+
+test_that("every as_rtftables() setting has a plan verb, with the direct call's RTF", {
+  tbl <- data.frame(
+    param = rep(c("ALT", "AST"), each = 3),
+    stat  = rep(c("n", "Mean", "SD"), 2),
+    "Drug A__N" = c("1", NA, "3.25", "4", "5", NA),
+    "Drug A__Pct" = c("10", "20", NA, "40", "50", "60"),
+    check.names = FALSE, stringsAsFactors = FALSE)
+  rtf <- function(x) {
+    f <- tempfile(fileext = ".rtf")
+    old <- options(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC"))
+    on.exit({ options(old); unlink(f) })
+    generate_rtfreport(rtf_tables(rtf_document(), x), f, overwrite = TRUE)
+    readBin(f, "raw", file.info(f)$size)
+  }
+  same <- function(p, ...) {
+    direct <- as_rtftables(tbl, read_meta = FALSE, ...)
+    pages <- plan_apply(p)
+    expect_identical(lapply(pages, `[[`, "data"), lapply(direct, `[[`, "data"))
+    expect_identical(rtf(pages), rtf(direct))
+  }
+  fmt <- function(x) ifelse(is.na(x), x, paste0("[", x, "]"))
+  # plan_style(): the table's width and its default look
+  same(table_plan(tbl) |> plan_style(table_width_twips = 8000),
+       table_width_twips = 8000)
+  same(table_plan(tbl) |> plan_style(table_width_pct = 80),
+       table_width_pct = 80)
+  same(table_plan(tbl) |> plan_style(table_width_pct_of_writable = 90),
+       table_width_pct_of_writable = 90)
+  same(table_plan(tbl) |> plan_style(header_bold = TRUE, header_italic = TRUE,
+                                     header_align = "left", align = "right",
+                                     bold = TRUE, italic = TRUE, underline = TRUE),
+       style = rtf_table_style(header_bold = TRUE, header_italic = TRUE,
+                               header_align = "left", align = "right",
+                               bold = TRUE, italic = TRUE, underline = TRUE))
+  # the look and the rules make ONE style object
+  dbl <- rtf_border(top = rtf_border_side("double"),
+                    bottom = rtf_border_side("double"),
+                    inside_h = rtf_border_side("none"))
+  same(table_plan(tbl) |> plan_style(border_header = dbl, header_bold = TRUE),
+       style = rtf_table_style(border_header = dbl, header_bold = TRUE))
+  # plan_columns(): a cell formatter and widths in twips
+  same(table_plan(tbl) |> plan_columns(cell_format = fmt), cell_format = fmt)
+  same(table_plan(tbl) |> plan_columns(cell_format = list(NULL, NULL, fmt)),
+       cell_format = list(NULL, NULL, fmt))
+  same(table_plan(tbl) |> plan_columns(column_widths_twips = c(2000, 2000, 1500, 1500)),
+       column_widths_twips = c(2000, 2000, 1500, 1500))
+  # plan_col_header(): a plain table's names split into a spanning header,
+  # and how the header text sits
+  same(table_plan(tbl) |> plan_col_header(header_sep = "__"), header_sep = "__")
+  same(table_plan(tbl) |> plan_col_header(col_header_align = "left"),
+       col_header_align = "left")
+  # plan_cells(na = ) on a finished table: what a missing value prints as
+  same(table_plan(tbl) |> plan_cells(na = "-"), na = "-")
+  expect_identical(plan_apply(table_plan(tbl) |> plan_cells(na = "-"), "args")$rtf$na, "-")
+  # plan_cell_style(): underline and indent, as style_cols() takes them
+  p <- table_plan(tbl) |> plan_cell_style(cols = "stat", underline = TRUE,
+                                          indent_twips = 200)
+  direct <- style_cols(as_rtftables(tbl, read_meta = FALSE), cols = "stat",
+                       underline = TRUE, indent_twips = 200)
+  expect_identical(rtf(plan_apply(p)), rtf(direct))
+  p <- table_plan(tbl) |> plan_col_header(header_sep = "__") |>
+    plan_cell_style(header = TRUE, underline = TRUE)
+  direct <- style_header(as_rtftables(tbl, read_meta = FALSE, header_sep = "__"),
+                         underline = TRUE)
+  expect_identical(rtf(plan_apply(p)), rtf(direct))
+  expect_error(plan_cell_style(table_plan(tbl), header = TRUE, indent_twips = 200),
+               "header = TRUE")
+  # computed per row, by a condition
+  p <- table_plan(tbl) |> plan_cell_style(where = ~ stat == "n", underline = TRUE)
+  cs <- plan_apply(p)[[1]]$cell_styles
+  expect_true(isTRUE(cs[[1]]$underline[[1]]))
+  expect_null(cs[[2]])
+  # plan_row_group(group_col = ): the grouping column of a finished table,
+  # pages still cut by rows
+  long <- tbl[rep(seq_len(nrow(tbl)), 3), ]
+  long$stat <- paste(long$stat, rep(1:3, each = nrow(tbl)))
+  long <- long[order(long$param), ]
+  long$grp <- long$param
+  long$param <- NULL
+  long <- long[c("stat", "grp", setdiff(names(long), c("stat", "grp")))]
+  tbl <- long
+  same(table_plan(tbl) |> plan_row_group(group_col = "grp") |>
+         plan_paginate_rows(split = "group_safe", max_rows = 7),
+       group_col = "grp", split = "group_safe", max_rows = 7)
+  expect_identical(plan_apply(table_plan(tbl) |> plan_row_group(group_col = "grp"),
+                              "args")$rtf$group_col, "grp")
+  expect_error(table_plan(tbl) |> plan_row_group(group_col = c("a", "b")),
+               "one column name")
+  expect_error(table_plan(tbl) |> plan_row_group(group_col = "grp") |>
+                 plan_paginate_group(col = "stat") |> plan_apply("args"),
+               "name different")
+  # an ARD plan has named it already, as its outermost row key
+  expect_error(disp_plan() |> plan_row_group(group_col = "label"),
+               "name it there")
+  # nothing declared: none of these arguments appear
+  a <- plan_apply(table_plan(tbl) |> plan_hide("param"), "args")$rtf
+  expect_false(any(c("na", "cell_format", "header_sep", "col_header_align",
+                     "column_widths_twips", "table_width_twips", "style") %in% names(a)))
 })
