@@ -58,6 +58,18 @@
 
 ### Bug fixes
 
+- **An ARD plan's non-default `plan_columns(sep = )` built no spanning
+  column header** (#520).  The plan widens the ARD into column names with
+  its own separator ("Placebo--F" for `sep = "--"`), but
+  `as_rtftables()`'s `header_sep` -- what actually splits those names back
+  into header rows -- stayed at the default `"____"` unless
+  `plan_col_header(header_sep = )` was also set, contradicting
+  `plan_columns(sep = )`'s own documentation that the header is split on
+  it.  The plan's separator is now passed through as `header_sep`
+  whenever the user has not set one explicitly.  Table-input (`data.frame`)
+  plans, and ARD plans that keep the default separator, give the same RTF
+  as before.
+
 - **A row split by `set_decimal_split()` lost the table's font size and the
   cell fill** (#509).  The split data rows were written without the table's
   own font switch (`rtftable(font_size_half_points = , font = )`), so their
