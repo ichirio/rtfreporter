@@ -1,5 +1,17 @@
 # rtfreporter (development version)
 
+### New features
+
+- **An analysis variable's levels can be relabelled** (#514):
+  `plan_labels(SEX = c(F = "Female", M = "Male"))` -- and
+  `widen_ard(labels = list(SEX = c(F = "Female")))` -- now recode the
+  levels of the analysis variable `SEX` in the label column, the way
+  `plan_levels(SEX = c("M", "F"))` already ordered them (the order stays
+  written in the values).  A scope named an output column only before, so
+  no table that printed before prints differently.  The dictionary's entry
+  under the variable's own name labels the variable itself:
+  `SEX = c(SEX = "Sex", F = "Female", M = "Male")`.
+
 ### CRAN preparation
 
 - **Every example runs** (#512).  The 23 `\dontrun{}` examples are
