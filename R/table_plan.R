@@ -177,6 +177,9 @@
                        "style", "header", "styles", "after",
                        "columns", "restyle",
                        "titles", "footnotes", "listing"))) "pages"
+  # a finished table has no cells to make: plan_cells(na = ) on it is
+  # what the pages print for a missing value
+  else if (identical(plan$kind, "wide") && "cell_options" %in% kinds) "pages"
   else "table"
 }
 
@@ -866,7 +869,9 @@ print.table_plan <- function(x, ...) {
 #'   `value` is which of `stat` / `stat_fmt` a `{x}` reads; `na` what fills
 #'   a cell no template could; `notes = FALSE` stops the report of the
 #'   statistics no template used.  They hold however the plan is run, by
-#'   [plan_apply()] or by `rtf_tables(doc, plan)`.
+#'   [plan_apply()] or by `rtf_tables(doc, plan)`.  On a plan of a table
+#'   that is already built (no statistics), `na` alone is taken, and is
+#'   [as_rtftables()]'s `na`: what a missing value prints as.
 #' @param vars,name,indent,group_summary For `plan_stub()`: the row keys to
 #'   fold into one stub column and how, as [stub_cols()] takes them.
 #'   `name` is the NAME the folded column gets (`stub_cols(label = )`),
@@ -903,6 +908,12 @@ print.table_plan <- function(x, ...) {
 #'
 #'   The rows are grouped by the outermost row key (`table_plan(rows = )`);
 #'   folded into a stub, by the stub's headings.
+#' @param group_col For `plan_row_group()`, on a plan of a table that is
+#'   already built: `as_rtftables(group_col = )`, the column whose runs are
+#'   the groups (what `split = "group_safe"`, `mode` and the blank rows
+#'   between groups read), with the pages still cut by rows.  An ARD plan
+#'   names it as its outermost row key (`table_plan(rows = )`) and refuses
+#'   this; a page per value is [plan_paginate_group()].
 #' @param col For `plan_paginate_group()`: the column whose value starts a
 #'   new page, `as_rtftables()`'s `group_col` with `split = "by_value"`.  Left
 #'   out, it is the outermost row key.  The page is **named** after
@@ -956,6 +967,27 @@ print.table_plan <- function(x, ...) {
 #'   For `plan_style()`: the rules of one kind of row, by the names
 #'   [rtf_table_style()] gives them.  Say the table's rules one way:
 #'   `border = "tfl"`, or these.
+#' @param table_width_twips,table_width_pct,table_width_pct_of_writable For
+#'   `plan_style()`: the table's width, by [rtftable()]'s names (and
+#'   [as_rtftables()]'s `table_width_twips`).
+#' @param header_align,header_bold,header_italic For `plan_style()`: the
+#'   whole header's default look, [rtf_table_style()]'s fields; with the
+#'   `border_*` zones and `align` ... `underline` they make the
+#'   `as_rtftables(style = )` object.  One column or one cell is
+#'   [plan_cell_style()].
+#' @param underline For `plan_style()`: the body's default, an
+#'   [rtf_table_style()] field like `align`, `bold` and `italic` (which
+#'   are that too in `plan_style()`).  For `plan_cell_style()`: the cells'
+#'   underline, as `bold`.
+#' @param indent_twips For `plan_cell_style()`: the left indent of the
+#'   cells' text, [style_cols()]'s `indent_twips` (not on the header).
+#' @param cell_format,column_widths_twips For `plan_columns()`:
+#'   [as_rtftables()]'s `cell_format` (a formatter, or a list of them one a
+#'   column) and [rtftable()]'s `column_widths_twips`, as they are.
+#' @param header_sep,col_header_align For `plan_col_header()`:
+#'   [as_rtftables()]'s `header_sep` (the separator a plain table's column
+#'   names are split on into spanning header rows) and [rtftable()]'s
+#'   `col_header_align`.
 #' @param widths For `plan_columns()`: the relative column widths,
 #'   `rtftable(col_rel_width = )`.  **Named by column** (`c(row_label = 5,
 #'   .values = 2)`, `.values` for every value column) a reordered table keeps
@@ -992,7 +1024,9 @@ print.table_plan <- function(x, ...) {
 #'   columns, `NA` leaving the column default alone --- `bold = ~
 #'   is.na(label)`, `color = list(Placebo = ~ ifelse(n > 50, "#CC0000",
 #'   NA))`, a named list scoping it to columns.  Formula styles see the
-#'   printed rows only with `plan_stub(before = TRUE)`.
+#'   printed rows only with `plan_stub(before = TRUE)`.  For `plan_style()`,
+#'   `align`, `bold` and `italic` are the body's default look,
+#'   [rtf_table_style()]'s fields.
 #' @param header For `plan_cell_style()`: `TRUE` styles the column header
 #'   ([style_header()]).  For `plan_col_header()`: the header, built with the same
 #'   [rtf_col_header()] as everywhere else --- or a **function** of the
@@ -1149,21 +1183,21 @@ print.table_plan <- function(x, ...) {
 #'
 #' | Verb | Its job | Goes to |
 #' |---|---|---|
-#' | `plan_cells(..., stats, value, na, notes)` | how a cell is made | [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes` |
+#' | `plan_cells(..., stats, value, na, notes)` | how a cell is made | [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes`; a finished table [as_rtftables()]: `na` |
 #' | `plan_digits(..., rounding)` | the digits | the open tokens of the templates; on a finished table [fmt_numeric()] |
 #' | `plan_levels()`, `plan_labels()` | the order and text of values | [widen_ard()]: `levels`, `labels` |
 #' | `plan_sort(..., stat, keep)` | the row order | [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name` |
 #' | `plan_stub(vars, name, indent, group_summary, before)` | the row headings | [stub_cols()]: `vars`, `label`, `indent`, `group_summary` |
-#' | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)` | how cells look | [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition |
+#' | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)` | how cells look | [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition |
 #' | `plan_paginate_group(col, keep)` | a page per value | [as_rtftables()]: `split = "by_value"`, `group_col`; `keep = FALSE` adds it to `drop_cols` |
-#' | `plan_row_group(mode, collapse)` | groups down the body | [as_rtftables()]: `group_by`, `collapse_repeats` |
+#' | `plan_row_group(mode, collapse, group_col)` | groups down the body | [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table) |
 #' | `plan_hide(...)` | columns not printed | [as_rtftables()]: `drop_cols` |
 #' | `plan_blanks(where, first, last, counted)` | blank rows | [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row` |
 #' | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)` | the row budget, inside the BY pages | [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by` |
 #' | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` | column blocks | [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order` |
-#' | `plan_style(border, ..., border_header, ...)` | the whole table | [rtftable()] / [as_rtftables()] by the same names; `border_*` via [rtf_table_style()] |
-#' | `plan_columns(widths, decimal, row_title, auto_width, sep)` | the columns | [rtftable()]: `col_rel_width`, `row_title`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`; [widen_ard()]: `sep` |
-#' | `plan_col_header(header, values)` | the column header | [set_col_header()]: the header and a data frame of `values`; a population fills its `{n}` tokens |
+#' | `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)` | the whole table | [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()] |
+#' | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)` | the columns | [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep` |
+#' | `plan_col_header(header, values, header_sep, col_header_align)` | the column header | [set_col_header()]: the header and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align` |
 #' | `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)` | a listing | [listing_spec()], the same names |
 #' | `plan_titles()`, `plan_footnotes()` | the blocks above and below | [rtf_titles()], [rtf_footnotes()] |
 #' | `plan_after(...)` | anything else | your functions of the pages |
@@ -1397,14 +1431,16 @@ plan_stub <- function(plan, vars = NULL, name = NULL, indent = NULL,
 #' @export
 plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
                             bold = NULL, italic = NULL, align = NULL,
-                            color = NULL, background = NULL, border = NULL) {
+                            color = NULL, background = NULL, border = NULL,
+                            underline = NULL, indent_twips = NULL) {
   attrs <- list(bold = bold, italic = italic, align = align, color = color,
-                background = background, border = border)
+                background = background, border = border,
+                underline = underline, indent_twips = indent_twips)
   attrs <- attrs[!vapply(attrs, is.null, logical(1L))]
   if (!length(attrs)) {
     .ard_stop(paste0(
-      "plan_cell_style(): nothing to style -- give bold, italic, align, ",
-      "color, background or border."))
+      "plan_cell_style(): nothing to style -- give bold, italic, ",
+      "underline, align, indent_twips, color, background or border."))
   }
   if (!is.null(where) && (!inherits(where, "formula") || length(where) != 2L)) {
     .ard_stop(paste0(
@@ -1436,8 +1472,10 @@ plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
       .ard_stop(paste0("plan_cell_style(header = TRUE) styles the column ",
                        "header, which has no rows for `where` to choose."))
     }
-    if (!is.null(attrs$color) || !is.null(attrs$background)) {
-      .ard_stop("plan_cell_style(header = TRUE) takes bold, italic, align and border.")
+    if (!is.null(attrs$color) || !is.null(attrs$background) ||
+        !is.null(attrs$indent_twips)) {
+      .ard_stop(paste0("plan_cell_style(header = TRUE) takes bold, italic, ",
+                       "underline, align and border."))
     }
     return(.plan_layer(plan, "restyle",
                        list(fun = "style_header", args = c(list(cols = cols), attrs))))
@@ -1450,8 +1488,9 @@ plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
   # where the rows match, the column default (NA) elsewhere -- scoped to
   # `cols` when they are given.
   if (!is.null(attrs$border)) {
-    .ard_stop(paste0("plan_cell_style(where = ) takes bold, italic, align, ",
-                     "color and background; a border is set on whole columns."))
+    .ard_stop(paste0("plan_cell_style(where = ) takes bold, italic, ",
+                     "underline, align, indent_twips, color and background;",
+                     " a border is set on whole columns."))
   }
   cond <- where[[2L]]
   spec <- lapply(attrs, function(value) {
@@ -1573,10 +1612,24 @@ plan_paginate_group <- function(plan, col = NULL, keep = TRUE) {
 # The carrier is the outermost row key, which table_plan(rows = ) has
 # already named; naming it again here was a second place for the two to
 # disagree.
-plan_row_group <- function(plan, mode = NULL, collapse = NULL) {
+plan_row_group <- function(plan, mode = NULL, collapse = NULL,
+                           group_col = NULL) {
+  # An ARD plan has said which column groups the rows once already, as
+  # its outermost row key; a second name for it is how the two drift.
+  if (!is.null(group_col) && .plan_ard_half(plan)) {
+    .ard_stop(paste0(
+      "plan_row_group(group_col = ) names the grouping column of a table ",
+      "that is already built.
+  This plan's groups are its outermost row ",
+      "key, table_plan(rows = ) -- name it there."))
+  }
+  if (!is.null(group_col) && (!is.character(group_col) ||
+                              length(group_col) != 1L || is.na(group_col))) {
+    .ard_stop("plan_row_group(group_col = ) is one column name.")
+  }
   .plan_layer(plan, "group",
               list(group_by = mode, collapse_repeats = collapse,
-                   .rows = TRUE))
+                   group_col = group_col, .rows = TRUE))
 }
 
 # A column can be needed and not wanted: a sort carrier, the key a page
@@ -1660,12 +1713,25 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
                        blank_row_normalize = NULL,
                        border_header = NULL, border_spanning = NULL,
                        border_body = NULL, border_first_row = NULL,
-                       border_last_row = NULL) {
+                       border_last_row = NULL, header_align = NULL,
+                       header_bold = NULL, header_italic = NULL,
+                       align = NULL, bold = NULL, italic = NULL,
+                       underline = NULL, table_width_twips = NULL,
+                       table_width_pct = NULL,
+                       table_width_pct_of_writable = NULL) {
   zones <- list(border_header = border_header,
                 border_spanning = border_spanning, border_body = border_body,
                 border_first_row = border_first_row,
                 border_last_row = border_last_row)
   zones <- zones[!vapply(zones, is.null, logical(1L))]
+  # the table's default look, which rtf_table_style() carries by these
+  # names; .plan_rtf_args() folds them into it with the border zones
+  look <- list(.style_header_align = header_align,
+               .style_header_bold = header_bold,
+               .style_header_italic = header_italic, .style_align = align,
+               .style_bold = bold, .style_italic = italic,
+               .style_underline = underline)
+  look <- look[!vapply(look, is.null, logical(1L))]
   if (length(zones) && !is.null(border)) {
     .ard_stop(paste0(
       "plan_style(): `border` is the whole table's rules and `border_*` ",
@@ -1682,8 +1748,11 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
          cell_padding_left_twips = cell_padding_left_twips,
          cell_padding_right_twips = cell_padding_right_twips,
          cell_valign = cell_valign, table_align = table_align,
-         markup = markup, blank_row_normalize = blank_row_normalize),
-    zones))
+         markup = markup, blank_row_normalize = blank_row_normalize,
+         table_width_twips = table_width_twips,
+         table_width_pct = table_width_pct,
+         table_width_pct_of_writable = table_width_pct_of_writable),
+    zones, look))
 }
 
 # The header is a VALUE, not a set of fields: `rtf_col_header()` builds a
@@ -1711,7 +1780,8 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
 # the populations the plan reads from the data (`list(n = TRUE)`,
 # `list(n = "page", N = "table")`, numbers, a function), or a data frame
 # of per-page values handed to set_col_header() as it is.
-plan_col_header <- function(plan, header = NULL, values = NULL) {
+plan_col_header <- function(plan, header = NULL, values = NULL,
+                            header_sep = NULL, col_header_align = NULL) {
   if (is.data.frame(header)) {
     # the `col_header` sheet's cells (one row a cell: `row`, `cols`, `text`,
     # `span` ...), resolved against each page's columns when it is made
@@ -1729,7 +1799,10 @@ plan_col_header <- function(plan, header = NULL, values = NULL) {
     values <- list(n = values)
   }
   if (isTRUE(values)) values <- list(n = TRUE)
-  .plan_layer(plan, "header", list(header = header, values = values))
+  # not `header_sep`: `hdr$header` would match it by partial name
+  .plan_layer(plan, "header", list(header = header, values = values,
+                                   names_sep = header_sep,
+                                   text_align = col_header_align))
 }
 
 # Widths by column NAME (a reordered table keeps them) and the columns
@@ -1737,14 +1810,17 @@ plan_col_header <- function(plan, header = NULL, values = NULL) {
 #' @rdname plan_verbs
 #' @export
 plan_columns <- function(plan, widths = NULL, decimal = NULL,
-                         row_title = NULL, auto_width = NULL, sep = NULL) {
+                         row_title = NULL, auto_width = NULL, sep = NULL,
+                         cell_format = NULL, column_widths_twips = NULL) {
   if (!is.null(sep) && (!is.character(sep) || length(sep) != 1L ||
                         is.na(sep) || !nzchar(sep))) {
     .ard_stop("plan_columns(sep = ) is one non-empty string, \"____\" by default.")
   }
   .plan_layer(plan, "columns",
               list(widths = widths, decimal = decimal, row_title = row_title,
-                   auto_width = auto_width, sep = sep))
+                   auto_width = auto_width, sep = sep,
+                   cell_format = cell_format,
+                   column_widths_twips = column_widths_twips))
 }
 
 # The separator several `cols` keys are joined with in the value columns'
@@ -1914,8 +1990,12 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   # Asking for the ARD half is what says otherwise: the roles and
   # plan_cells() need statistics, and a finished table has none.
   if (identical(plan$kind, "wide")) {
+    # `plan_cells(na = )` alone is what an empty cell prints, which a
+    # finished table has too
     ard_half <- vapply(plan$layers, function(l)
-      l$kind %in% c("cells", "cell_options", "levels", "labels"),
+      l$kind %in% c("cells", "levels", "labels") ||
+        (identical(l$kind, "cell_options") &&
+           length(setdiff(names(Filter(Negate(is.null), l$fields)), "na"))),
       TRUE)
     ard_half <- any(ard_half) || length(plan$roles)
     if (!length(plan$layers)) {
@@ -2160,10 +2240,13 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     }
   }
   # the rules of one kind of row are an rtf_table_style(), the object that
-  # carries them by those names
+  # carries them by those names; so does the table's default look
   zn <- grep("^border_", names(out), value = TRUE)
-  if (length(zn)) {
-    out$style <- do.call(rtf_table_style, out[zn])
+  stl <- .plan_merge(.plan_of(plan, "style"))
+  look <- stl[startsWith(names(stl) %||% character(0), ".style_")]
+  names(look) <- sub(".style_", "", names(look), fixed = TRUE)
+  if (length(zn) || length(look)) {
+    out$style <- do.call(rtf_table_style, c(out[zn], look))
     out[zn] <- NULL
   }
   # plan_columns(widths = ) without names is col_rel_width itself, one a
@@ -2175,6 +2258,23 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   }
   if (!is.null(colset$row_title))  out$row_title  <- colset$row_title
   if (!is.null(colset$auto_width)) out$auto_width <- colset$auto_width
+  if (!is.null(colset$cell_format)) out$cell_format <- colset$cell_format
+  if (!is.null(colset$column_widths_twips)) {
+    out$column_widths_twips <- colset$column_widths_twips
+  }
+  # how a plain table's names become a spanning header, and how the
+  # header text sits: the header's own, so plan_col_header() says them
+  hdr <- .plan_merge(.plan_of(plan, "header"))
+  if (!is.null(hdr[["names_sep"]])) out$header_sep <- hdr[["names_sep"]]
+  if (!is.null(hdr[["text_align"]])) {
+    out$col_header_align <- hdr[["text_align"]]
+  }
+  # what an empty cell prints, on a table that is already built: there is
+  # no widen_ard() to fill it, so as_rtftables() does
+  if (!.plan_ard_half(plan)) {
+    na <- .plan_merge(.plan_of(plan, "cell_options"))$na
+    if (!is.null(na)) out$na <- na
+  }
   # The row order goes to whichever half can do it: widen_ard() when
   # there are statistics to sort on, as_rtftables() when the source is
   # already the table.
