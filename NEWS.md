@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+### Behaviour changes
+
+- **`rtf_table_style()` no longer left-aligns every column unless asked**
+  (#522).  Its `align` defaulted to `"left"`, so any style -- even one that
+  only draws rules (`border_*`, `rtf_table_style_tfl()`,
+  `plan_style(border_header = )`) -- moved the value columns to the left and
+  lost the per-column default (row-title columns left, the others centred).
+  `align` now defaults to `NULL`: unset, each column keeps its default; set,
+  it applies to every column as before.  What changes: a table given a
+  style that does not say `align`, whose non-row-title columns now centre.
+  Write `rtf_table_style(align = "left")` (or `plan_style(align = "left")`)
+  for the old look.
+
 ### New features
 
 - **Every `as_rtftables()` setting now has a plan verb** (#518).  A

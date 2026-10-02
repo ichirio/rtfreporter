@@ -13,7 +13,7 @@ rtf_table_style(
   header_align = NULL,
   header_bold = FALSE,
   header_italic = FALSE,
-  align = "left",
+  align = NULL,
   bold = FALSE,
   italic = FALSE,
   underline = FALSE,
@@ -28,7 +28,10 @@ rtf_table_style(
 \item{header_align, header_bold, header_italic}{Defaults for column-header
 row formatting.  \code{header_align = NULL} means "inherit \code{align}".}
 
-\item{align, bold, italic, underline}{Defaults for data-row formatting.}
+\item{align, bold, italic, underline}{Defaults for data-row formatting.
+\code{align = NULL} (the default) leaves each column's own default alone ---
+row-title columns left, the others centred (see \code{\link[=rtftable]{rtftable()}}'s
+\code{row_title}); \code{"left"} / \code{"center"} / \code{"right"} sets every column.}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Cell padding
 (twips) used by both column-header and data cells.}

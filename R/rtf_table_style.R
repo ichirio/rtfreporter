@@ -33,6 +33,9 @@
 #' @param header_align,header_bold,header_italic Defaults for column-header
 #'   row formatting.  `header_align = NULL` means "inherit `align`".
 #' @param align,bold,italic,underline Defaults for data-row formatting.
+#'   `align = NULL` (the default) leaves each column's own default alone ---
+#'   row-title columns left, the others centred (see [rtftable()]'s
+#'   `row_title`); `"left"` / `"center"` / `"right"` sets every column.
 #' @param cell_padding_left_twips,cell_padding_right_twips Cell padding
 #'   (twips) used by both column-header and data cells.
 #' @param row_height_twips Row height (twips); `NULL` = font-aware default.
@@ -61,7 +64,7 @@ rtf_table_style <- function(
   header_align     = NULL,
   header_bold      = FALSE,
   header_italic    = FALSE,
-  align            = "left",
+  align            = NULL,
   bold             = FALSE,
   italic           = FALSE,
   underline        = FALSE,
@@ -147,7 +150,8 @@ print.rtf_table_style <- function(x, ...) {
   cat(sprintf("  header_align : %s\n",
               if (is.null(x$header_align)) "(inherit align)" else x$header_align))
   cat(sprintf("  header_bold  : %s\n", x$header_bold))
-  cat(sprintf("  align        : %s\n", x$align))
+  cat(sprintf("  align        : %s\n",
+              if (is.null(x$align)) "(per column)" else x$align))
   cat(sprintf("  bold         : %s\n", x$bold))
   cat(sprintf("  cell_padding : L=%s R=%s\n",
               x$cell_padding_left_twips  %||% "(default)",
