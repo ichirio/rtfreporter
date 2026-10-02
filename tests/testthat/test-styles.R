@@ -301,3 +301,30 @@ test_that(".collect_table_border_colors walks every zone", {
   expect_identical(rtfreporter:::.collect_table_border_colors(NULL),
                    character(0))
 })
+
+test_that("a style that does not say align keeps each column's default alignment", {
+  df <- data.frame(Parameter = c("Age", "Sex"), Value = c("75.1", "53%"))
+  aligns <- function(t) vapply(t$col_spec, `[[`, "", "align")
+  # rules only: the row title stays left, the value column centred
+  sty <- rtf_table_style(border_header = rtf_border(top = TRUE, bottom = TRUE))
+  expect_identical(aligns(rtftable(df, style = sty)), c("left", "center"))
+  expect_identical(aligns(rtftable(df, style = rtf_table_style_tfl())),
+                   c("left", "center"))
+  expect_identical(aligns(as_rtftables(df, read_meta = FALSE, style = sty)[[1]]),
+                   c("left", "center"))
+  # a look other than align leaves it alone too
+  expect_identical(aligns(rtftable(df, style = rtf_table_style(bold = TRUE))),
+                   c("left", "center"))
+  # said: every column, as before
+  expect_identical(aligns(rtftable(df, style = rtf_table_style(align = "left"))),
+                   c("left", "left"))
+  expect_identical(
+    aligns(as_rtftables(df, read_meta = FALSE,
+                        style = rtf_table_style(align = "right"))[[1]]),
+    c("right", "right"))
+  # through a plan
+  p <- table_plan(df) |> plan_style(border_header = rtf_border(top = TRUE, bottom = TRUE))
+  expect_identical(aligns(plan_apply(p)[[1]]), c("left", "center"))
+  p <- table_plan(df) |> plan_style(align = "left")
+  expect_identical(aligns(plan_apply(p)[[1]]), c("left", "left"))
+})
