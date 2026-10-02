@@ -2097,9 +2097,10 @@ test_that("plan_paginate_rows(page_by = ) is as_rtftables(page_by = ): BY pages,
   expect_identical(lapply(pages, `[[`, "data"), lapply(direct, `[[`, "data"))
   # the RTF: byte for byte the direct call's
   rtf <- function(x) {
-    f <- withr::local_tempfile(fileext = ".rtf")
-    withr::with_options(list(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC")),
-      generate_rtfreport(rtf_tables(rtf_document(), x), f, overwrite = TRUE))
+    f <- tempfile(fileext = ".rtf")
+    old <- options(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC"))
+    on.exit({ options(old); unlink(f) })
+    generate_rtfreport(rtf_tables(rtf_document(), x), f, overwrite = TRUE)
     readBin(f, "raw", file.info(f)$size)
   }
   expect_identical(rtf(pages), rtf(direct))
