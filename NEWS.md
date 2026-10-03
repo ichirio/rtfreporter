@@ -71,7 +71,7 @@
 - **A first Linux `R CMD check --as-cran` with the PDF manual** (#524).
   `paginate()`'s deprecation warning named the internal helper
   (`'.warn_paginate_deprecated' is deprecated`) and, fired from the
-  example, was the check's one WARNING: it names `paginate()` now and the
+  example, was the one WARNING of that check: it names `paginate()` now and the
   example does not trigger it.  Five wide tables in the help pages
   (`plan_verbs`, `table_plan`, `paginate_cols`) ran off the page of the
   PDF manual -- one of them by 15 cm -- because an Rd `\tabular` cell
@@ -79,6 +79,12 @@
   needed `broom` (through `cardx`), which the package does not declare:
   it now skips without it, as `R CMD check --as-cran` (suggests-only
   library) requires.
+- **Follow-up check on R 4.6.1 with every Suggests, `tern` included**
+  (#526).  The check is clean but for the CRAN-incoming NOTE.  Two
+  `test-num-format.R` tests set `options(scipen = -100)`, which R 4.6
+  clamps with a warning; they use `-9`.  The helper that makes a PNG for
+  `test-print-methods.R` failed with `figure margins too large` on its
+  120 x 80 px device, so its test was skipped everywhere; it passes now.
 
 ### Bug fixes
 
