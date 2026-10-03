@@ -1,0 +1,190 @@
+# From as_rtftables() to a plan
+
+If you already write
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+calls, you already know most of the plan. The display half of a plan
+does not add new settings: each verb passes its arguments on to
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md),
+[`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md),
+[`stub_cols()`](https://ichirio.github.io/rtfreporter/reference/stub_cols.md),
+[`set_col_header()`](https://ichirio.github.io/rtfreporter/reference/set_col_header.md)
+or
+[`paginate_cols()`](https://ichirio.github.io/rtfreporter/reference/paginate_cols.md),
+under the same names. This article lists where each
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+argument went, and shows how to see the call a plan makes.
+
+``` r
+
+library(rtfreporter)
+```
+
+## A plan on a table you already have
+
+A plan does not have to start from an ARD. Given a data frame that is
+already the table,
+[`table_plan()`](https://ichirio.github.io/rtfreporter/reference/table_plan.md)
+keeps it as it is and the plan uses only its display half. This is a
+small laboratory summary in the usual shape: a parameter, a statistic
+label, and one column per arm.
+
+``` r
+
+lab <- data.frame(
+  PARAM   = rep(c("ALT (U/L)", "AST (U/L)", "Creatinine (umol/L)"), each = 4),
+  STAT    = rep(c("n", "Mean (SD)", "Median", "Min, Max"), 3),
+  Placebo = c("86", "17.6 (8.21)", "15.0", "6, 59",
+              "86", "22.4 (6.12)", "21.0", "11, 50",
+              "86", "95.3 (18.9)", "93.0", "58, 159"),
+  Active  = c("168", "18.4 (9.03)", "16.0", "5, 71",
+              "168", "23.1 (7.40)", "22.0", "10, 66",
+              "168", "96.1 (20.2)", "94.0", "53, 177"))
+```
+
+The same pages, written both ways:
+
+``` r
+
+by_hand <- as_rtftables(
+  lab,
+  group_by = "value", collapse_repeats = TRUE,
+  blank_rows = "between_groups", blank_row_end = TRUE,
+  max_rows = 10, split = "group_safe",
+  border = "tfl", read_meta = FALSE)
+
+as_plan <- table_plan(lab) |>
+  plan_row_group(mode = "value", collapse = TRUE) |>
+  plan_blanks(where = "between_groups", last = TRUE) |>
+  plan_paginate_rows(max_rows = 10, split = "group_safe") |>
+  plan_style(border = "tfl") |>
+  plan_apply()
+
+length(as_plan)
+#> [1] 2
+all.equal(by_hand, as_plan)
+#> [1] TRUE
+```
+
+Neither names the group column. With `group_by = "value"`, a run of
+equal values in the first column is a group. A plan built from an ARD
+names it for you: it is the outermost row key of `table_plan(rows = )`.
+
+## The call a plan makes
+
+`plan_apply(plan, stage = "args")` gives the arguments the plan resolves
+to, without running anything. `$rtf` is the
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+call:
+
+``` r
+
+p <- table_plan(lab) |>
+  plan_row_group(mode = "value", collapse = TRUE) |>
+  plan_blanks(where = "between_groups", last = TRUE) |>
+  plan_paginate_rows(max_rows = 10, split = "group_safe") |>
+  plan_style(border = "tfl")
+str(plan_apply(p, "args")$rtf)
+#> List of 8
+#>  $ group_by        : chr "value"
+#>  $ collapse_repeats: logi TRUE
+#>  $ blank_rows      : chr "between_groups"
+#>  $ blank_row_end   : logi TRUE
+#>  $ max_rows        : num 10
+#>  $ split           : chr "group_safe"
+#>  $ border          : chr "tfl"
+#>  $ read_meta       : logi FALSE
+```
+
+This is the quickest way to find which line of a long plan decided a
+setting. Every layer has been merged, so what you see is what runs.
+
+## Where each argument went
+
+**Pages**
+
+| [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md) | Plan |
+|----|----|
+| `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label` | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label)` (`split_rows` is `break_before`) |
+| `split = "by_value"`, `group_col` | `plan_paginate_group(col)`: a page per value |
+| `page_by` | no verb; use [`plan_paginate_group()`](https://ichirio.github.io/rtfreporter/reference/plan_verbs.md) for a page per value |
+| then `paginate_cols(pages, ...)` | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
+
+**Rows**
+
+| [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md) | Plan |
+|----|----|
+| `group_by`, `collapse_repeats` | `plan_row_group(mode, collapse)` |
+| `group_col` | the outermost row key of `table_plan(rows = )`; `plan_paginate_group(col = )` for a page split |
+| `sort_by`, `sort_desc` | `plan_sort("KEY", "-OTHER")`: a minus sign for descending |
+| `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows` | `plan_blanks(where, first, last, counted)` |
+| `drop_cols` | `plan_hide(...)`; also `keep = FALSE` on [`plan_sort()`](https://ichirio.github.io/rtfreporter/reference/plan_verbs.md) / [`plan_paginate_group()`](https://ichirio.github.io/rtfreporter/reference/plan_verbs.md) |
+| `stub_vars`, `stub_label`, `stub_indent`, `stub_group_summary`, `stub` | `plan_stub(vars, name, indent, group_summary)` |
+| `listing` | `plan_listing(listing_col(...), ...)` |
+
+**Columns and header**
+
+| [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md) / other | Plan |
+|----|----|
+| `auto_width` | `plan_columns(auto_width = )` |
+| `rtftable(col_rel_width = )`, `row_title` | `plan_columns(widths = , row_title = )`; named widths follow the columns |
+| `set_decimal_split(pages, cols = )` | `plan_columns(decimal = )` |
+| `set_col_header(pages, header, values = )` | `plan_col_header(header, values)` |
+| `header_sep` | the separator of several `cols` keys: `plan_columns(sep = )` |
+
+**Look**
+
+| [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md) / other | Plan |
+|----|----|
+| `border`, `align_count_pct`, and [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)’s `font`, `font_size_half_points`, `row_height_twips`, `cell_valign`, `markup`, … | [`plan_style()`](https://ichirio.github.io/rtfreporter/reference/plan_verbs.md), same names |
+| `style = rtf_table_style(header = , body = , ...)` | `plan_style(border_header = , border_body = , ...)` |
+| [`style_header()`](https://ichirio.github.io/rtfreporter/reference/style_header.md), [`style_cols()`](https://ichirio.github.io/rtfreporter/reference/style_header.md) | `plan_cell_style(header = TRUE, ...)`, `plan_cell_style(cols = , ...)` |
+| [`style_zone()`](https://ichirio.github.io/rtfreporter/reference/style_header.md) | `plan_style(border_* = )` |
+| `rtftable(cell_styles = )`, [`style_body()`](https://ichirio.github.io/rtfreporter/reference/style_header.md) by condition | `plan_cell_style(where = ~ ..., ...)`, or a formula value |
+| [`realign_count_pct()`](https://ichirio.github.io/rtfreporter/reference/realign_count_pct.md) | `plan_style(align_count_pct = TRUE)` |
+| [`fmt_numeric()`](https://ichirio.github.io/rtfreporter/reference/fmt_numeric.md) on the data | `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
+
+**Handled for you**
+
+| [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md) | In a plan |
+|----|----|
+| `read_meta` | `FALSE`: a table from an ARD is a plain data frame with no adapter metadata |
+| `na`, `cell_format` | the cells are text already: `plan_cells(na = )` for an empty cell |
+
+## Rules that differ from a single call
+
+A few things behave differently because a plan is built from layers:
+
+- **A later layer wins** for every setting except one.
+  [`plan_hide()`](https://ichirio.github.io/rtfreporter/reference/plan_verbs.md)
+  **adds**: two
+  [`plan_hide()`](https://ichirio.github.io/rtfreporter/reference/plan_verbs.md)
+  calls hide both columns, because a later one un-hiding the first would
+  be a surprise.
+- **Contradictions are errors.**
+  [`plan_paginate_group()`](https://ichirio.github.io/rtfreporter/reference/plan_verbs.md)
+  with `plan_paginate_rows(max_rows = )` says both “a page per value”
+  and “this many rows a page”. A single call would quietly ignore
+  `max_rows`. A plan stops and says which to drop.
+- **Declarations name columns, not positions.**
+  `plan_columns(widths = c(row_label = 4, .values = 2))` and
+  `plan_cell_style(cols = "Placebo")` still apply after a column is
+  added or reordered. `.values` stands for every value column.
+
+## When to stay with `as_rtftables()`
+
+Both routes produce the same pages, so choose by what fits the program:
+
+- **A table from gt, rtables, flextable and the like**:
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+  reads the object’s own header, spans and styles. A plan starts from a
+  data frame.
+- **A table from an ARD**: a plan. It fills the cells, reads the header
+  populations from the ARD, and keeps a program short.
+- **A study with many tables in one house style**: a plan. The style is
+  a set of layers written once, and each table adds its own. tflspec can
+  also save a plan to a workbook and build it again from there.
+
+See [Tables from an
+ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.md)
+and [The plan
+verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.md).

@@ -1,0 +1,424 @@
+# Page and document setup
+
+``` r
+
+library(rtfreporter)
+```
+
+Every report starts with
+[`rtf_document()`](https://ichirio.github.io/rtfreporter/reference/rtf_document.md),
+which carries the **document-wide** settings: page geometry, fonts,
+colours, and the default font size. The defaults are tuned for clinical
+TFL output, so you can usually call it with no arguments – but each
+piece is configurable. This article walks through what you can set at
+the document level and how it cascades to the tables.
+
+``` r
+
+df <- data.frame(
+  Parameter = c("Age (years)", "  Mean", "  SD"),
+  Value     = c("", "75.1", "8.2"),
+  stringsAsFactors = FALSE
+)
+
+# All defaults -- landscape Letter, 9pt Courier
+doc <- rtf_document() |>
+  rtf_tables(as_rtftables(df))
+```
+
+## Setting the document config: `rtf_document()` (and `rtf_config()`)
+
+A document has exactly **one** document-level configuration, and you can
+set all of it on
+[`rtf_document()`](https://ichirio.github.io/rtfreporter/reference/rtf_document.md).
+The two calls below are equivalent:
+
+``` r
+
+rtf_document(default_format = list(font_size_half_points = 20L))
+
+rtf_document() |>
+  rtf_config(default_format = list(font_size_half_points = 20L))
+```
+
+For a brand-new document
+[`rtf_config()`](https://ichirio.github.io/rtfreporter/reference/rtf_config.md)
+is **not required** – you can pass the same settings straight to
+[`rtf_document()`](https://ichirio.github.io/rtfreporter/reference/rtf_document.md).
+Where it earns its keep is **after you have composed the report**: build
+the content and sections once, then derive output variants by changing
+only a document-level setting. Because an `rtf_document` is immutable,
+each variant is an independent copy that shares the same content.
+
+``` r
+
+# Compose the report once (content + section).
+base <- rtf_document() |>
+  rtf_tables(as_rtftables(df)) |>
+  rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL))
+
+# Then render the SAME report in two paper sizes by changing only `page`.
+letter <- base                                                  # landscape Letter
+a4      <- base |> rtf_config(page = list(paper_size = "A4"))   # landscape A4
+
+# generate_rtfreport(letter, "report-letter.rtf", overwrite = TRUE)
+# generate_rtfreport(a4,     "report-a4.rtf",     overwrite = TRUE)
+```
+
+`page` and `default_format` are **merged per key**, so the A4 variant
+above keeps `base`’s orientation and margins and only swaps the paper
+size. The same trick produces a large-print copy
+(`rtf_config(default_format = list(font_size_half_points = 24L))`) or a
+client-specific font
+(`rtf_config(font_table = list(list(name = "Arial")))`) from one
+composed report.
+
+Both functions take the same four parameters: `page`, `font_table`,
+`color_table`, and `default_format`, covered below.
+
+## Page geometry – `page`
+
+Pass `page = list(...)`. Dimensions and margins are given in **inches**;
+any key you omit falls back to its default.
+
+| Key | Meaning | Default |
+|----|----|----|
+| `paper_size` | Named preset: `"letter"`, `"legal"`, `"A4"`, `"A3"`, `"A5"` (case-insensitive) | `"letter"` |
+| `orientation` | `"landscape"` or `"portrait"` | `"landscape"` |
+| `width_in` | Paper width (inches) – explicit override | from `paper_size` |
+| `height_in` | Paper height (inches) – explicit override | from `paper_size` |
+| `margin_top_in` | Top margin | `0.75` |
+| `margin_bottom_in` | Bottom margin | `0.75` |
+| `margin_left_in` | Left margin | `0.75` |
+| `margin_right_in` | Right margin | `0.75` |
+| `header_dist_in` | Header band distance from page edge | `margin_top_in` |
+| `footer_dist_in` | Footer band distance from page edge | `margin_bottom_in` |
+
+The default margins follow the FDA eCTD *Portable Document Format (PDF)
+Specifications* minimums (left/binding ≥ 0.75”, other sides ≥ 0.375”,
+landscape top ≥ 0.75”): a uniform **0.75” on all four sides** (the
+bottom leaves room for an overall page-number footer).
+
+The header/footer band distances (`\headery` / `\footery` in the RTF)
+default to the **full top / bottom margin**, so the band sits at the
+margin boundary. Set `header_dist_in` / `footer_dist_in` to pin them
+explicitly.
+
+### Changing the margins
+
+Pass any of the four `margin_*_in` keys to `rtf_document(page = )` (or
+[`rtf_page()`](https://ichirio.github.io/rtfreporter/reference/rtf_page.md))
+to override a margin for one document; an omitted key keeps its default.
+**A wide table (many treatment arms, toxicity-grade shift tables) often
+does not fit inside the 0.75” left/right default.** Narrowing the
+left/right margins to eCTD’s **0.5”** buys an extra inch of horizontal
+room – they still clear the 0.375” floor:
+
+``` r
+
+# Landscape Letter, left/right narrowed to 0.5" for a wide TFL.
+# Writable width = 11 - 2*0.5 = 10 in = 14400 twips (vs 9.5 in / 13680 at 0.75").
+rtf_document(page = list(margin_left_in = 0.5, margin_right_in = 0.5))
+```
+
+To apply the same margins to **every** report in a session or site
+(e.g. in `Rprofile.site`), set the matching options instead of repeating
+them per document:
+
+``` r
+
+options(rtfreporter.page.margin_left_in  = 0.5,
+        rtfreporter.page.margin_right_in = 0.5)
+```
+
+`auto_width` (and
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md))
+size columns to the *default* writable width, so they follow the current
+margins automatically; only **absolute** `column_widths_twips` need to
+be recomputed when you change the margins.
+
+**Pick a paper size by name.** For the common case, `paper_size` +
+`orientation` is easier than remembering inch dimensions. One line gives
+**A4 landscape**:
+
+``` r
+
+rtf_document(page = list(paper_size = "A4"))                          # A4 landscape
+rtf_document(page = list(paper_size = "A4", orientation = "portrait")) # A4 portrait
+```
+
+**Explicit dimensions win and are used as given.** If you pass
+`width_in` / `height_in`, those exact dimensions are used and the
+orientation is *inferred* from them (`width_in >= height_in` means
+landscape). An `orientation` that contradicts the dimensions emits a
+warning and the dimensions are kept (not swapped); a `paper_size` given
+alongside explicit dimensions is ignored (with a warning). So this is A4
+**portrait** (taller than wide), and the `orientation = "landscape"` is
+a contradiction that warns:
+
+``` r
+
+rtf_document(page = list(width_in = 8.27, height_in = 11.69))   # inferred portrait
+rtf_document(page = list(orientation = "landscape",
+                         width_in = 8.27, height_in = 11.69))   # warns; stays portrait
+```
+
+The default is **landscape US Letter** (11 × 8.5 in), the usual clinical
+TFL page. For a portrait A4 page with wider margins:
+
+``` r
+
+doc <- rtf_document(
+  page = list(
+    orientation    = "portrait",
+    width_in       = 8.27, height_in = 11.69,   # A4
+    margin_left_in = 0.75, margin_right_in = 0.75,
+    margin_top_in  = 1.0,  margin_bottom_in = 1.0
+  )
+) |>
+  rtf_tables(as_rtftables(df))
+```
+
+The writable width (paper width minus the left/right margins) is what
+tables are sized against, so changing the margins automatically reflows
+full-width tables.
+
+## Fonts – `font_table`
+
+The report uses a **single** font, given by `font_table`. The default is
+**Courier**, a monospaced font: in clinical listings, monospacing is
+what lets count/percent columns line up by character (see the
+count/percent formatters in the pagination article). Switch to a
+proportional font only if you do not rely on character alignment:
+
+``` r
+
+doc <- rtf_document(font_table = list(list(name = "Arial"))) |>
+  rtf_tables(as_rtftables(df))
+```
+
+`font_table` is written as a list for forward compatibility, but **only
+the first entry is currently used** – any further entries are ignored,
+and there is no way to select a different font for specific cells or
+text. (Multiple fonts and per-text font selection are a planned
+enhancement.) To use one font throughout, set that first entry as above.
+
+## Document font size – `default_format`
+
+The document font size lives in `default_format` and is expressed in
+**half-points** (the unit of the RTF `\fs` command): `18` = 9 pt, `20` =
+10 pt, `24` = 12 pt, and so on. 9 pt is the package default.
+
+``` r
+
+doc <- rtf_document(default_format = list(font_size_half_points = 22L)) |>  # 11pt
+  rtf_tables(as_rtftables(df))
+```
+
+The font size also **drives the default row height**: taller text needs
+taller rows, so rtfreporter picks a sensible default row height for the
+chosen size.
+
+``` r
+
+# Internal lookup, shown here to illustrate the cascade:
+rtfreporter:::.default_row_height_twips(18L)   # 9pt  -> 230 twips
+#> [1] 230
+rtfreporter:::.default_row_height_twips(22L)   # 11pt -> 270 twips
+#> [1] 270
+```
+
+## Default cell / row height
+
+All table-shaped elements – page header/footer rows, column-header rows,
+data rows, blank separator rows, and footnotes – share a
+**font-size-aware default row height** (in twips; 1 twip = 1/1440 inch =
+1/20 point). These defaults live in
+`inst/resources/rtfreporter_defaults.R` (admin-tunable, package-wide):
+
+| Font size    | Default row height    |
+|--------------|-----------------------|
+| 8 pt (`16`)  | 210 twips             |
+| 9 pt (`18`)  | 230 twips *(default)* |
+| 10 pt (`20`) | 250 twips             |
+| 11 pt (`22`) | 270 twips             |
+| 12 pt (`24`) | 290 twips             |
+
+You rarely need to touch these. To change heights for a specific table,
+override them per table on
+[`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)
+/
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+
+``` r
+
+doc <- rtf_document() |>
+  rtf_tables(as_rtftables(
+    df,
+    row_height_twips        = 280L,   # data rows
+    header_row_height_twips = 300L,   # column-header rows
+    blank_row_height_twips  = 140L    # blank separator rows (e.g. half height)
+  ))
+```
+
+Cell padding (the gap between the cell border and its text) defaults to
+`0` (text sits flush against the border, the typical clinical look) and
+is likewise configurable per table via `cell_padding_left_twips` /
+`cell_padding_right_twips`.
+
+### Document-wide row height / padding
+
+To change the row height or cell padding for the **whole report** –
+without editing the resource file – set it on the document via
+`default_format` (or globally as an option). It applies to every
+table-shaped element (content table, page header/footer,
+title/footnote), and a per-module value still overrides it:
+
+``` r
+
+doc <- rtf_document(default_format = list(
+  row_height_twips         = 280L,
+  cell_padding_left_twips  = 72L,
+  cell_padding_right_twips = 72L
+))
+
+# ...or set the house style site-wide (e.g. in Rprofile.site):
+# options(rtfreporter.row_height_twips = 280L,
+#         rtfreporter.cell_padding_left_twips = 72L)
+```
+
+Resolution is highest-wins: **per-module**
+([`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)
+/
+[`rtf_header()`](https://ichirio.github.io/rtfreporter/reference/rtf_header.md)
+/
+[`rtf_footer()`](https://ichirio.github.io/rtfreporter/reference/rtf_header.md)
+/
+[`rtf_table_style()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style.md))
+\> **document** `default_format` \> `rtfreporter.*` **option** \> the
+font-aware / resource baseline.
+
+## Site-wide defaults
+
+The document-level defaults above (paper size, orientation, margins,
+font, font size) are read from `rtfreporter.*` **options**, resolved as:
+an explicit argument you pass wins, otherwise the option value,
+otherwise the built-in factory baseline. So a site or organisation can
+set its house style once – for example in `Rprofile.site` – and every
+report inherits it without changing any script:
+
+``` r
+
+options(
+  rtfreporter.font              = "Arial",
+  rtfreporter.page.paper_size   = "A4",
+  rtfreporter.page.margin_top_in = 1.0
+)
+```
+
+Inspect the values a report will use, and restore the factory baseline,
+with:
+
+``` r
+
+rtfreporter_options()        # snapshot of the resolved defaults (audit trail)
+rtfreporter_reset_defaults() # discard any overrides, back to the factory values
+```
+
+**Reproducibility note.** Because options can change the output of
+identical code, a validated or reproducible run should pin the
+configuration *in the script* (pass the settings explicitly, or call
+[`rtfreporter_reset_defaults()`](https://ichirio.github.io/rtfreporter/reference/rtfreporter_reset_defaults.md)
+first) rather than relying on the environment, and can record
+[`rtfreporter_options()`](https://ichirio.github.io/rtfreporter/reference/rtfreporter_options.md)
+alongside the output as an audit trail.
+
+## Colours
+
+Colours are given as `"#RRGGBB"` hex strings, and rtfreporter collects
+every colour you reference and builds the RTF colour table automatically
+– you never maintain a palette. Two things can be coloured, which
+together cover the usual clinical TFL needs.
+
+**Borders** – `rtf_border_side(color = ...)`, anywhere a border is
+accepted (column-header rules, the body / first-row / last-row zones,
+spanning headers, and the page header/footer band border). For example,
+a navy rule under a header:
+
+``` r
+
+navy_rule <- rtf_border(bottom = rtf_border_side(color = "#1F4E79"))
+
+doc <- rtf_document() |>
+  rtf_section(page = 1, secinfo = list(
+    header = rtf_header(rows = list(c(l = "Protocol XYZ-001")), border = navy_rule),
+    footer = NULL
+  )) |>
+  rtf_tables(as_rtftables(df))
+```
+
+**Body (data-cell) text** – per column via `col_spec`’s `color`, or per
+cell via `cell_styles`’s `color` (which overrides the column colour).
+Useful, for example, to flag an out-of-range value in red:
+
+``` r
+
+doc <- rtf_document() |>
+  rtf_tables(as_rtftables(
+    df,
+    col_spec = list(list(col = 2, color = "#C00000"))   # column 2 text in red
+  ))
+```
+
+**What is not coloured (by design, for now):** cell background / fill,
+and the text of column headers, the page header/footer, titles, and
+footnotes – these render in the default black. The `color_table`
+argument on
+[`rtf_document()`](https://ichirio.github.io/rtfreporter/reference/rtf_document.md)
+only pre-declares colours in the table; it does not style anything by
+itself.
+
+## A complete example
+
+Putting it together – a portrait A4 page, Arial at 11 pt, custom
+margins, and a navy header rule:
+
+``` r
+
+navy_rule <- rtf_border(bottom = rtf_border_side(color = "#1F4E79"))
+
+doc <- rtf_document(
+  page = list(
+    orientation    = "portrait",
+    width_in       = 8.27, height_in = 11.69,
+    margin_left_in = 0.75, margin_right_in = 0.75,
+    margin_top_in  = 1.0,  margin_bottom_in = 1.0
+  ),
+  font_table     = list(list(name = "Arial")),
+  default_format = list(font_size_half_points = 22L)
+) |>
+  rtf_section(page = 1, secinfo = list(
+    header = rtf_header(rows = list(c(l = "Protocol XYZ-001", r = "Confidential")),
+                        border = navy_rule),
+    footer = rtf_footer(c(c = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"))
+  )) |>
+  rtf_tables(as_rtftables(df, row_height_twips = 280L))
+
+generate_rtfreport(doc, "report.rtf", overwrite = TRUE)
+```
+
+See
+[`?rtf_document`](https://ichirio.github.io/rtfreporter/reference/rtf_document.md)
+and
+[`?rtf_config`](https://ichirio.github.io/rtfreporter/reference/rtf_config.md)
+for the full argument reference.
+
+## Where next
+
+- [Headers and
+  footers](https://ichirio.github.io/rtfreporter/articles/headers-footers.md)
+  — what sits in the margins you just set
+
+The four recipes (`?rtfreporter-recipes`) are the same ground covered as
+runnable help-page examples: demographics, adverse events, PK and
+laboratory, each data-in to RTF-out.
