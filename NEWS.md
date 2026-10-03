@@ -68,6 +68,17 @@
 - `Language: en-GB` (the text is British) and `inst/WORDLIST`;
   `cran-comments.md`; `lintr` and `covr` are no longer in Suggests (the CI
   workflows install them); four URLs that answered 404 fixed.
+- **A first Linux `R CMD check --as-cran` with the PDF manual** (#524).
+  `paginate()`'s deprecation warning named the internal helper
+  (`'.warn_paginate_deprecated' is deprecated`) and, fired from the
+  example, was the check's one WARNING: it names `paginate()` now and the
+  example does not trigger it.  Five wide tables in the help pages
+  (`plan_verbs`, `table_plan`, `paginate_cols`) ran off the page of the
+  PDF manual -- one of them by 15 cm -- because an Rd `\tabular` cell
+  cannot wrap; they are bullet lists now.  One `test-ard-tables.R` test
+  needed `broom` (through `cardx`), which the package does not declare:
+  it now skips without it, as `R CMD check --as-cran` (suggests-only
+  library) requires.
 
 ### Bug fixes
 

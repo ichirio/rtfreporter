@@ -67,12 +67,12 @@ variable before a kind, a kind before the default.
 \section{Where the other settings went}{
 
 \code{table_plan()} takes the \strong{roles} and nothing else.  Every other setting
-belongs to the verb whose job it is:\tabular{ll}{
-   Setting \tab Verb \cr
-   a template per cell or a row per statistic, \code{stat} / \code{stat_fmt}, the empty-cell text \tab \code{\link[=plan_cells]{plan_cells()}} (\verb{stats =}, \verb{value =}, \verb{na =}) \cr
-   the statistic a frequency order totals \tab \code{\link[=plan_sort]{plan_sort()}} (\verb{stat =}) \cr
-   reporting what the templates did not use \tab \code{\link[=plan_cells]{plan_cells()}} (\verb{notes =}) \cr
-   the separator several \code{cols} keys are joined with in the column names \tab \code{\link[=plan_columns]{plan_columns()}} (\verb{sep =}) \cr
+belongs to the verb whose job it is:
+\itemize{
+\item a template per cell or a row per statistic, \code{stat} / \code{stat_fmt}, the empty-cell text: \code{\link[=plan_cells]{plan_cells()}} (\verb{stats =}, \verb{value =}, \verb{na =})
+\item the statistic a frequency order totals: \code{\link[=plan_sort]{plan_sort()}} (\verb{stat =})
+\item reporting what the templates did not use: \code{\link[=plan_cells]{plan_cells()}} (\verb{notes =})
+\item the separator several \code{cols} keys are joined with in the column names: \code{\link[=plan_columns]{plan_columns()}} (\verb{sep =})
 }
 }
 

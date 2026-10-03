@@ -406,12 +406,10 @@
 #' `table_plan()` takes the **roles** and nothing else.  Every other setting
 #' belongs to the verb whose job it is:
 #'
-#' | Setting | Verb |
-#' |---|---|
-#' | a template per cell or a row per statistic, `stat` / `stat_fmt`, the empty-cell text | [plan_cells()] (`stats =`, `value =`, `na =`) |
-#' | the statistic a frequency order totals | [plan_sort()] (`stat =`) |
-#' | reporting what the templates did not use | [plan_cells()] (`notes =`) |
-#' | the separator several `cols` keys are joined with in the column names | [plan_columns()] (`sep =`) |
+#' * a template per cell or a row per statistic, `stat` / `stat_fmt`, the empty-cell text: [plan_cells()] (`stats =`, `value =`, `na =`)
+#' * the statistic a frequency order totals: [plan_sort()] (`stat =`)
+#' * reporting what the templates did not use: [plan_cells()] (`notes =`)
+#' * the separator several `cols` keys are joined with in the column names: [plan_columns()] (`sep =`)
 #'
 #' @return An object of class `table_plan`.
 #'
@@ -1181,26 +1179,24 @@ print.table_plan <- function(x, ...) {
 #' Each verb has **one job**, and its arguments keep the names of the
 #' function that does it.  This is what each one hands on.
 #'
-#' | Verb | Its job | Goes to |
-#' |---|---|---|
-#' | `plan_cells(..., stats, value, na, notes)` | how a cell is made | [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes`; a finished table [as_rtftables()]: `na` |
-#' | `plan_digits(..., rounding)` | the digits | the open tokens of the templates; on a finished table [fmt_numeric()] |
-#' | `plan_levels()`, `plan_labels()` | the order and text of values | [widen_ard()]: `levels`, `labels` |
-#' | `plan_sort(..., stat, keep)` | the row order | [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name` |
-#' | `plan_stub(vars, name, indent, group_summary, before)` | the row headings | [stub_cols()]: `vars`, `label`, `indent`, `group_summary` |
-#' | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)` | how cells look | [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition |
-#' | `plan_paginate_group(col, keep)` | a page per value | [as_rtftables()]: `split = "by_value"`, `group_col`; `keep = FALSE` adds it to `drop_cols` |
-#' | `plan_row_group(mode, collapse, group_col)` | groups down the body | [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table) |
-#' | `plan_hide(...)` | columns not printed | [as_rtftables()]: `drop_cols` |
-#' | `plan_blanks(where, first, last, counted)` | blank rows | [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row` |
-#' | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)` | the row budget, inside the BY pages | [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by` |
-#' | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` | column blocks | [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order` |
-#' | `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)` | the whole table | [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()] |
-#' | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)` | the columns | [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep` |
-#' | `plan_col_header(header, values, header_sep, col_header_align)` | the column header | [set_col_header()]: the header and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align` |
-#' | `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)` | a listing | [listing_spec()], the same names |
-#' | `plan_titles()`, `plan_footnotes()` | the blocks above and below | [rtf_titles()], [rtf_footnotes()] |
-#' | `plan_after(...)` | anything else | your functions of the pages |
+#' * `plan_cells(..., stats, value, na, notes)`: how a cell is made. Goes to [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes`; a finished table [as_rtftables()]: `na`.
+#' * `plan_digits(..., rounding)`: the digits. Goes to the open tokens of the templates; on a finished table [fmt_numeric()].
+#' * `plan_levels()`, `plan_labels()`: the order and text of values. Goes to [widen_ard()]: `levels`, `labels`.
+#' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
+#' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
+#' * `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: how cells look. Goes to [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition.
+#' * `plan_paginate_group(col, keep)`: a page per value. Goes to [as_rtftables()]: `split = "by_value"`, `group_col`; `keep = FALSE` adds it to `drop_cols`.
+#' * `plan_row_group(mode, collapse, group_col)`: groups down the body. Goes to [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table).
+#' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
+#' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row`.
+#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`.
+#' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
+#' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
+#' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
+#' * `plan_col_header(header, values, header_sep, col_header_align)`: the column header. Goes to [set_col_header()]: the header and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align`.
+#' * `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)`: a listing. Goes to [listing_spec()], the same names.
+#' * `plan_titles()`, `plan_footnotes()`: the blocks above and below. Goes to [rtf_titles()], [rtf_footnotes()].
+#' * `plan_after(...)`: anything else. Goes to your functions of the pages.
 #'
 #' `plan_columns()` declares the columns **of this table** --- widths,
 #' alignment, the key separator --- and is not [rtf_columns()], which
@@ -1216,19 +1212,17 @@ print.table_plan <- function(x, ...) {
 #' reasons to reach for it each have a declaration, which names columns and
 #' goes into a workbook:
 #'
-#' | Instead of `plan_after(...)` around | declare |
-#' |---|---|
-#' | `set_decimal_split(x, cols = 3:31)` | `plan_columns(decimal = ".values")` |
-#' | `paginate_cols(x, ...)` | `plan_paginate_cols(every = , at = , keep = )` |
-#' | `rtftable(col_rel_width = )` by position | `plan_columns(widths = c(Analyte = 3, .values = 2))` |
-#' | `set_col_header()` / `rtf_col_header()` | `plan_col_header()` |
-#' | `realign_count_pct()` | `plan_style(align_count_pct = TRUE)` |
-#' | `fmt_numeric()` | `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
-#' | `paginate()` | `plan_paginate_rows()` |
-#' | `style_header(x, ...)` | `plan_cell_style(header = TRUE, ...)` |
-#' | `style_cols(x, ...)` | `plan_cell_style(cols = , ...)` |
-#' | bold / colour / alignment of body cells, by condition | `plan_cell_style(where = ~ ..., ...)` |
-#' | `style_zone(x, ...)` | `plan_style(border_header = , border_body = , ...)` |
+#' * `set_decimal_split(x, cols = 3:31)` is declared as `plan_columns(decimal = ".values")`
+#' * `paginate_cols(x, ...)` is declared as `plan_paginate_cols(every = , at = , keep = )`
+#' * `rtftable(col_rel_width = )` by position is declared as `plan_columns(widths = c(Analyte = 3, .values = 2))`
+#' * `set_col_header()` / `rtf_col_header()` is declared as `plan_col_header()`
+#' * `realign_count_pct()` is declared as `plan_style(align_count_pct = TRUE)`
+#' * `fmt_numeric()` is declared as `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))`
+#' * `paginate()` is declared as `plan_paginate_rows()`
+#' * `style_header(x, ...)` is declared as `plan_cell_style(header = TRUE, ...)`
+#' * `style_cols(x, ...)` is declared as `plan_cell_style(cols = , ...)`
+#' * bold / colour / alignment of body cells, by condition is declared as `plan_cell_style(where = ~ ..., ...)`
+#' * `style_zone(x, ...)` is declared as `plan_style(border_header = , border_body = , ...)`
 #'
 #' The styles `plan_cell_style()` declares run on the pages in the order
 #' written (after the header and the decimal alignment, before any

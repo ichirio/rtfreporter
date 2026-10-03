@@ -563,20 +563,16 @@
 #' A table can be split on three axes, and `page_order` names them in the order
 #' they should nest, **outermost first**:
 #'
-#' | axis | what it is |
-#' |---|---|
-#' | `"group"` | the pages a value-based split made -- `as_rtftables(split = "by_value", group_col = )` |
-#' | `"rows"`  | the row pages: `page_by`, and every other row split (`max_rows` continuation pages, `split = "rows"`) |
-#' | `"cols"`  | the column blocks this verb cuts |
+#' * `"group"`: the pages a value-based split made -- `as_rtftables(split = "by_value", group_col = )`
+#' * `"rows"`: the row pages: `page_by`, and every other row split (`max_rows` continuation pages, `split = "rows"`)
+#' * `"cols"`: the column blocks this verb cuts
 #'
 #' With a group `G`, two row pages `P1` / `P2` and two column blocks `C1` /
 #' `C2`, all six orders are expressible; the two usual ones have shorthands:
 #'
-#' | `page_order` | page sequence |
-#' |---|---|
-#' | `"across"` = `c("group", "cols", "rows")` | `G1 C1 P1`, `G1 C1 P2`, `G1 C2 P1`, ... |
-#' | `"down"` = `c("group", "rows", "cols")`   | `G1 P1 C1`, `G1 P1 C2`, `G1 P2 C1`, ... |
-#' | `c("cols", "group", "rows")`              | `C1 G1 P1`, `C1 G1 P2`, `C1 G2 P1`, ... |
+#' * `"across"` = `c("group", "cols", "rows")` gives the page sequence `G1 C1 P1`, `G1 C1 P2`, `G1 C2 P1`, ...
+#' * `"down"` = `c("group", "rows", "cols")` gives the page sequence `G1 P1 C1`, `G1 P1 C2`, `G1 P2 C1`, ...
+#' * `c("cols", "group", "rows")` gives the page sequence `C1 G1 P1`, `C1 G1 P2`, `C1 G2 P1`, ...
 #'
 #' An axis left out of the vector is appended in the default order
 #' (`"group"`, `"rows"`, `"cols"`), so `page_order = "cols"` means "column
