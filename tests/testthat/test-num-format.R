@@ -92,9 +92,9 @@ test_that("Inf passes through", {
 # ──────── independence from session options ────────────────────────────────
 
 test_that("output does not depend on options(scipen) or options(digits)", {
-  # as.character(123456) is "1.23456e+05" under scipen = -100 -- the defect
+  # as.character(123456) is "1.23456e+05" under scipen = -9 (the minimum R 4.6 accepts) -- the defect
   # these functions exist to remove
-  op <- options(scipen = -100, digits = 3)
+  op <- options(scipen = -9, digits = 3)
   on.exit(options(op), add = TRUE)
   expect_equal(fmt_signif(123456, 6), "123456")
   expect_equal(fmt_round(1e5, 1),     "100000.0")
@@ -248,7 +248,7 @@ test_that("fmt_numeric() needs a data frame", {
 # ──────── it composes with the renderer ────────────────────────────────────
 
 test_that("formatting first makes the rendered text deterministic", {
-  op <- options(scipen = -100)
+  op <- options(scipen = -9)
   on.exit(options(op), add = TRUE)
   d <- data.frame(lab = "x", v = 123456)
 

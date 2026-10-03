@@ -159,6 +159,9 @@ test_that("print.rtftable returns its argument invisibly", {
   p  <- tempfile(fileext = ".png")
   ok <- tryCatch({
     grDevices::png(p, width = 120, height = 80)
+    # the default margins do not fit a 120 x 80 px device ("figure margins
+    # too large"), which made this helper skip everywhere
+    graphics::par(mar = c(0, 0, 0, 0))
     graphics::plot.new()
     grDevices::dev.off()
     TRUE
