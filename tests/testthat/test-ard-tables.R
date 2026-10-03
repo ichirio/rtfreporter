@@ -445,6 +445,8 @@ test_that("pull_ard() says what to do when the statistic is not there", {
 test_that("statistics no template names are simply not read", {
   skip_if_no_cards()
   skip_if_not_installed("cardx")
+  # cardx::ard_categorical_ci() needs broom, which is not declared here
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
   adsl <- cards::ADSL
   adsl$TRT  <- as.character(adsl$ARM)
   adsl$RESP <- adsl$AGE > 75

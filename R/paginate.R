@@ -137,14 +137,16 @@
 #'   stringsAsFactors = FALSE
 #' )
 #'
-#' pages <- paginate(
+#' # paginate() is deprecated and says so once per session; the first call
+#' # is wrapped so the example run (R CMD check) stays free of that warning.
+#' pages <- suppressWarnings(paginate(
 #'   df,
 #'   max_rows        = 6,                  # at most 6 body rows / page
 #'   split           = "group_safe",       # never break a group across pages
 #'   blank_rows      = "between_groups",   # blank row between consecutive groups
 #'   blank_row_first = TRUE,               # also a blank at the page top
 #'   blank_row_end   = TRUE                # also a blank at the page bottom
-#' )
+#' ))
 #'
 #' length(pages)                           # 3 pages (Demo / Vital / Lab)
 #' lapply(pages, function(p) p$label)
@@ -216,7 +218,7 @@ paginate <- function(x, ...) {
 .warn_paginate_deprecated <- function() {
   if (isTRUE(.paginate_depr_env$warned)) return(invisible())
   .paginate_depr_env$warned <- TRUE
-  .Deprecated("as_rtftables", package = "rtfreporter")
+  .Deprecated("as_rtftables", package = "rtfreporter", old = "paginate")
   invisible()
 }
 

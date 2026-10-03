@@ -181,22 +181,20 @@ group and wants a two-level header, group over visit. \code{by} and
 \section{Page order}{
 
 A table can be split on three axes, and \code{page_order} names them in the order
-they should nest, \strong{outermost first}:\tabular{ll}{
-   axis \tab what it is \cr
-   \code{"group"} \tab the pages a value-based split made -- \code{as_rtftables(split = "by_value", group_col = )} \cr
-   \code{"rows"} \tab the row pages: \code{page_by}, and every other row split (\code{max_rows} continuation pages, \code{split = "rows"}) \cr
-   \code{"cols"} \tab the column blocks this verb cuts \cr
+they should nest, \strong{outermost first}:
+\itemize{
+\item \code{"group"}: the pages a value-based split made -- \code{as_rtftables(split = "by_value", group_col = )}
+\item \code{"rows"}: the row pages: \code{page_by}, and every other row split (\code{max_rows} continuation pages, \code{split = "rows"})
+\item \code{"cols"}: the column blocks this verb cuts
 }
-
 
 With a group \code{G}, two row pages \code{P1} / \code{P2} and two column blocks \code{C1} /
-\code{C2}, all six orders are expressible; the two usual ones have shorthands:\tabular{ll}{
-   \code{page_order} \tab page sequence \cr
-   \code{"across"} = \code{c("group", "cols", "rows")} \tab \verb{G1 C1 P1}, \verb{G1 C1 P2}, \verb{G1 C2 P1}, ... \cr
-   \code{"down"} = \code{c("group", "rows", "cols")} \tab \verb{G1 P1 C1}, \verb{G1 P1 C2}, \verb{G1 P2 C1}, ... \cr
-   \code{c("cols", "group", "rows")} \tab \verb{C1 G1 P1}, \verb{C1 G1 P2}, \verb{C1 G2 P1}, ... \cr
+\code{C2}, all six orders are expressible; the two usual ones have shorthands:
+\itemize{
+\item \code{"across"} = \code{c("group", "cols", "rows")} gives the page sequence \verb{G1 C1 P1}, \verb{G1 C1 P2}, \verb{G1 C2 P1}, ...
+\item \code{"down"} = \code{c("group", "rows", "cols")} gives the page sequence \verb{G1 P1 C1}, \verb{G1 P1 C2}, \verb{G1 P2 C1}, ...
+\item \code{c("cols", "group", "rows")} gives the page sequence \verb{C1 G1 P1}, \verb{C1 G1 P2}, \verb{C1 G2 P1}, ...
 }
-
 
 An axis left out of the vector is appended in the default order
 (\code{"group"}, \code{"rows"}, \code{"cols"}), so \code{page_order = "cols"} means "column
