@@ -189,6 +189,12 @@ which 20 deprecated -- 105 to learn.  The SAMPLE-01 RTFs are byte-identical.
   clamps with a warning; they use `-9`.  The helper that makes a PNG for
   `test-print-methods.R` failed with `figure margins too large` on its
   120 x 80 px device, so its test was skipped everywhere; it passes now.
+- **Test coverage 90.0 % -> 95.3 %** (#551).  One new file,
+  `test-coverage-edges.R`, pins argument checks and their wording, print
+  methods, the console preview, hand-read image headers, header cell sheets
+  and `plan_layers()`, deprecated arguments warning once, and empty /
+  one-row / one-column data.  Tests only; the five defects it met are
+  #546 - #550.
 
 ### Bug fixes
 
