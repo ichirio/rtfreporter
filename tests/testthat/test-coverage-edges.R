@@ -1563,7 +1563,8 @@ test_that("an explicit rtf_section(page = 1) wins over the first auto section (#
     rtf_section(page = 1,
                 secinfo = list(header = rtf_header(rows = list(c(l = "First"))))) |>
     rtf_tables(list("T1" = d, "T2" = d), auto_section = TRUE)
-  f <- withr::local_tempfile(fileext = ".rtf")
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
   expect_no_error(generate_rtfreport(doc, f, overwrite = TRUE))
   txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
   expect_match(txt, "First", fixed = TRUE)   # page 1: the explicit section
