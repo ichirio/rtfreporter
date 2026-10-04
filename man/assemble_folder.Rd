@@ -6,7 +6,7 @@
 \usage{
 assemble_folder(
   dir,
-  output_file,
+  output_file = NULL,
   spec_file = NULL,
   recursive = FALSE,
   toc_title = "Table of Contents",
@@ -19,7 +19,8 @@ assemble_folder(
 \arguments{
 \item{dir}{Directory of \code{.rtf} files to assemble.}
 
-\item{output_file}{Path of the assembled \code{.rtf} to write.}
+\item{output_file}{Path of the assembled \code{.rtf} to write, or \code{NULL}
+(default): return the table of contents only.}
 
 \item{spec_file}{Optional path (\code{.xlsx} or \code{.csv}).  When given, the
 generated spec is \strong{saved} there (so you can inspect / edit it); when
@@ -29,17 +30,28 @@ generated spec is \strong{saved} there (so you can inspect / edit it); when
 \code{FALSE}.}
 
 \item{toc_title, toc_leader, toc_page_numbering, overwrite, ...}{Passed through
-to \code{\link[=assemble_from_spec]{assemble_from_spec()}} / \code{\link[=assemble_rtf]{assemble_rtf()}}.}
+to \code{\link[=assemble_rtf]{assemble_rtf()}}.}
 }
 \value{
-Invisibly, a list with \code{output} (the assembled file) and \code{spec}
-(the assembly spec used).
+Without \code{output_file}, the table of contents.  With one,
+invisibly, a list with \code{output} (the assembled file) and \code{spec} (the
+table of contents used).
 }
 \description{
-One-call wrapper: scans \code{dir} for \code{.rtf} files (\code{\link[=assemble_files]{assemble_files()}}), builds
-the assembly spec by reading each file's header (\code{\link[=assemble_spec]{assemble_spec()}}),
-optionally writes the spec to disk, and assembles the deliverable with a
-Table of Contents (\code{\link[=assemble_from_spec]{assemble_from_spec()}}).
+Scans \code{dir} for \code{.rtf} files (natural-sorted, so \code{t2} comes before \code{t10})
+and reads each file's table number and title from its running header into
+a \strong{table of contents}: a \code{data.frame} with one row per file.  With an
+\code{output_file} it assembles the deliverable with that table of contents
+(\code{\link[=assemble_rtf]{assemble_rtf()}}); without one it only returns the table, to edit
+(rename labels, fill \code{heading} to group entries, change \code{level}, reorder
+or drop rows) and hand to \code{assemble_rtf(toc = )}.
+}
+\details{
+The table has the columns \code{order} (the assembly order), \code{file}, \code{table}
+(the table number read from the header, or \code{NA}), \code{heading} (a heading
+printed above the entry whenever it changes; \code{NA} = none), \code{label} (the
+entry text, \code{"Table N  <title>"}), \code{level} (the entry's indent, default 2)
+and \code{pages} (informational).
 }
 \examples{
 # two TFL files in a folder, as a study's output
@@ -55,7 +67,12 @@ for (t in c("14.1.1", "14.2.1")) {
 # One call: scan a folder of TFL .rtf files and assemble them, in catalog
 # order, into a single deliverable with an auto table of contents.
 assemble_folder(dir, tempfile(fileext = ".rtf"), toc_title = "Contents")
+
+# Or look at the table of contents first, edit it, then assemble
+spec <- assemble_folder(dir)
+spec$heading <- "Demographics and safety"
+assemble_rtf(toc = spec, output_file = tempfile(fileext = ".rtf"))
 }
 \seealso{
-\code{\link[=assemble_files]{assemble_files()}}, \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_from_spec]{assemble_from_spec()}}.
+\code{\link[=assemble_rtf]{assemble_rtf()}}.
 }

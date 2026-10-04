@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9013** (the development
+**This manual documents rtfreporter 0.8.2.9014** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -298,8 +298,7 @@ The arguments you will actually use:
 | `split` | `"none"`, `"rows"`, `"group_safe"` (fill the page, never split a group), `"group_force"`, `"by_value"` |
 | `group_col` | which column defines a group |
 | `group_by` | how groups are detected: `"auto"`, `"indent"`, `"value"`, `"filled"` |
-| `stub` | `stub_spec(c("SOC", "PT"), label =, indent =, layout =, label_span =)` — the full row-stub settings (**preferred**) |
-| `stub_vars` | shorthand: fold a hierarchy into one indented stub column. Together with `stub_label` / `stub_indent` / `stub_group_summary` it is **superseded** by `stub =` — still supported and not deprecated, but it cannot reach `layout` or `label_span` |
+| `stub` | fold a hierarchy into one indented stub column: `stub = c("SOC", "PT")`, or `stub_spec(c("SOC", "PT"), label =, indent =, layout =, label_span =)` for the settings |
 | `drop_cols` | columns that drive grouping or sorting but are never printed |
 | `blank_rows` | `"between_groups"`, integer positions, or `blank_rows_by_*()` specs |
 | `sort_by` / `sort_desc` | sort before paginating |
@@ -312,7 +311,7 @@ The arguments you will actually use:
 | `column_widths_twips` / `auto_width` | absolute widths / font-aware estimation |
 | `cell_format` | per-column formatting applied to the cells |
 
-**The single most common mistake** is reaching for `stub_vars` on a flat table
+**The single most common mistake** is reaching for `stub` on a flat table
 that has no hierarchy, or omitting it on one that does.
 
 ---
@@ -323,7 +322,7 @@ Their arguments barely overlap — choose by the shape of the table, not by habi
 
 | Setting | DM | AE | PK | LB shift |
 |---|---|---|---|---|
-| `stub_vars` (hierarchy) | – | yes | yes | – |
+| `stub` (hierarchy) | – | yes | yes | – |
 | `group_col` / `group_by` | yes | yes | yes | yes |
 | `blank_rows` | – | yes | yes | yes |
 | `split` / `max_rows` | yes | yes | yes | – |
@@ -354,7 +353,7 @@ generate_rtfreport(dm_doc, "dm.rtf", overwrite = TRUE)
 ae_doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
   rtf_tables(
     as_rtftables(ae,
-      stub_vars  = c("SOC", "PT"),   # the hierarchy DM does not have
+      stub       = c("SOC", "PT"),   # the hierarchy DM does not have
       # equivalently, and with more settings available:
       #   stub = stub_spec(c("SOC", "PT"), label = "SOC / Preferred Term")
       group_by   = "indent",         # groups are found by indentation
@@ -373,7 +372,7 @@ ae_doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
 
 ```r
 pk_pages <- as_rtftables(pk,
-  stub_vars  = c("Time", "Statistic"),
+  stub       = c("Time", "Statistic"),
   group_by   = "indent",
   blank_rows = "between_groups",
   # ABSOLUTE widths: relative ones are normalised to the page, so the table
@@ -482,7 +481,7 @@ tbl <- rtftable(
 ### Editing the header of a finished table
 
 `col_header =` on `rtftable()` / `as_rtftables()` speaks the **source**
-columns (before `drop_cols` / `stub_vars`). `set_col_header()` speaks the
+columns (before `drop_cols` / `stub`). `set_col_header()` speaks the
 **final printed** columns — prefer it on an `as_rtftables()` result.
 
 ```r
@@ -643,6 +642,8 @@ scheduled for removal before CRAN):
 | `update_header_row()` / `update_footer_row()` | `rtf_header(rows = )` / `rtf_footer(rows = )` made again |
 | `paginate()` | `as_rtftables()` |
 | `rtftable(spanning_header = )`, `as_rtftable(gt_obj = )` | a first row of `col_header`; `as_rtftable(x)` |
+| `as_rtftables(stub_vars = , stub_label = , stub_indent = , stub_group_summary = )` | `stub = stub_spec(vars, label = , indent = , group_summary = )` |
+| `assemble_files()`, `assemble_spec()`, `assemble_toc()`, `assemble_from_spec()`, `toc_heading()`, `toc_entry()` | `assemble_folder()` (the table of contents) and `assemble_rtf(toc = <that table or its path>)` |
 
 Post-hoc styling (each accepts one `rtftable` **or** a list of pages):
 
@@ -704,12 +705,13 @@ Anything else: convert it to a plain `data.frame` and re-specify `col_header`,
 ```r
 assemble_rtf(c("t14_1_1.rtf", "t14_3_1.rtf"), "book.rtf",
              overwrite = TRUE,
-             toc       = "auto",   # or a character vector / toc_heading() + toc_entry() list
+             toc       = "auto",   # or labels, or a table (file, label, heading, level)
              book_page = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
 ```
 
-Also: `assemble_files()`, `assemble_folder()`, `assemble_spec()` /
-`assemble_from_spec()`, `assemble_toc()`, `toc_heading()`, `toc_entry()`.
+A whole folder: `assemble_folder(dir, "book.rtf")`; without an output file it
+returns the table of contents (a data.frame) to edit and pass to
+`assemble_rtf(toc = )` (or save with `spec_file =` and pass the path).
 `rtf_replace_text()` patches text in a finished RTF.
 
 ---
@@ -892,8 +894,8 @@ becomes `plan_blanks(where =)`, and `split = "by_value", group_col` becomes
 `plan_col_header(header_sep =)`, `style =` `plan_style(<its fields>)`, and
 `na` `plan_cells(na =)`. Not carried over, by design: `read_meta` /
 `read_attributes` (a plan's input has no adapter metadata; the plan sets
-the attributes itself), the superseded `stub_vars` / `stub_label` /
-`stub_indent` / `stub_group_summary` (`plan_stub()`), and `spanning_header`
+the attributes itself), and the deprecated `stub_vars` / `stub_label` /
+`stub_indent` / `stub_group_summary` (`plan_stub()`) and `spanning_header`
 (a row of `plan_col_header()`).
 
 ### Looking inside
@@ -971,7 +973,8 @@ adds an "Any" row.
 `rtf_border_bottom` `rtf_border_box` `rtf_table_border` `rtf_border_tfl`
 `rtf_border_with` `rtf_border_side` `add_col_header_row`
 `col_header_from_names` `set_header_cell` `update_header_row`
-`update_footer_row` `paginate` — see §13)*
+`update_footer_row` `paginate` `assemble_files` `assemble_spec`
+`assemble_toc` `assemble_from_spec` `toc_heading` `toc_entry` — see §13)*
 
 **Formatting:** `fmt_count_paren` `fmt_count_paren_bare` `fmt_value_paren`
 `fmt_right_align` `format_count_pct` `realign_count_pct` `fmt_signif`
@@ -986,8 +989,7 @@ adds an "Any" row.
 `plan_paginate_cols` `plan_style` `plan_columns` `plan_col_header`
 `plan_listing` `plan_titles` `plan_footnotes` `plan_after`
 
-**Assembly:** `assemble_rtf` `assemble_files` `assemble_toc` `assemble_spec`
-`assemble_from_spec` `assemble_folder` `toc_heading` `toc_entry`
+**Assembly:** `assemble_rtf` `assemble_folder`
 `rtf_replace_text`
 
 ---
@@ -1001,7 +1003,7 @@ adds an "Any" row.
 | Everything lands on one page | pagination needs `max_rows` (and usually `split = "group_safe"`) |
 | A group is split across pages | `split = "group_safe"` plus `group_col` / `group_by` |
 | `paginate_cols()` does nothing | the table has only relative widths — give it `column_widths_twips` |
-| The stub column is not indented | pass `stub_vars` (and `group_by = "indent"` downstream) |
+| The stub column is not indented | pass `stub` (and `group_by = "indent"` downstream) |
 | A grouping column shows up in the output | add it to `drop_cols` |
 | Titles land on the wrong page | `titles` / `footnotes` must be one entry **per page**, in order |
 | The total page count is wrong in a bound book | use `{AUTO_TOTAL_PAGES}`, or `{BOOK_PAGE}` + `assemble_rtf(book_page =)` |

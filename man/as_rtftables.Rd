@@ -422,7 +422,7 @@ no \code{listing} argument.}
 shorthand for \code{stub_spec(vars)}, a bare vector of hierarchy columns
 (parent first, leaf last; at least two).  \code{NULL} (default) builds no
 stub.  This is the \strong{one} argument for everything \code{\link[=stub_cols]{stub_cols()}} can do,
-including \code{layout} and \code{label_span}, which the superseded \code{stub_vars}
+including \code{layout} and \code{label_span}, which the deprecated \code{stub_vars}
 family cannot reach.  Passing both \code{stub} and any of the \code{stub_vars}
 family is an error.
 
@@ -451,9 +451,10 @@ does not apply to them.  Under \code{layout = "merged"} the source column
 widths are \strong{not} carried through the merge -- use \code{auto_width = TRUE} or
 pass explicit widths; \code{layout = "columns"} keeps them.}
 
-\item{stub_vars}{\strong{Superseded} by \code{stub}; still supported and not
-deprecated, but it cannot reach \code{layout} or \code{label_span}, and new stub
-settings are added to \code{\link[=stub_spec]{stub_spec()}} only.
+\item{stub_vars}{\strong{Deprecated} in 0.8.x (warns once a session, still
+works), removed in 0.9.0: write \code{stub = c(...)} (or
+\code{stub = stub_spec(...)}), which does the same and also reaches \code{layout}
+and \code{label_span}.
 Hierarchy columns to merge into a single \strong{indented stub}
 column (parent first, leaf last; at least two), or \code{NULL} (default, no
 stub built).  Applies \code{\link[=stub_cols]{stub_cols()}} to the \strong{extracted body} -- after the
@@ -481,8 +482,8 @@ out pre-merged, so \code{stub_vars} does not apply to them.  Column widths from
 the source are \strong{not} carried through the merge -- use \code{auto_width = TRUE}
 or pass explicit widths.}
 
-\item{stub_label, stub_indent, stub_group_summary}{\strong{Superseded} by \code{stub}
-(see \code{\link[=stub_spec]{stub_spec()}}).  Forwarded to \code{\link[=stub_cols]{stub_cols()}}
+\item{stub_label, stub_indent, stub_group_summary}{\strong{Deprecated} with
+\code{stub_vars} (removed in 0.9.0): they are \code{stub_spec(label = , indent = , group_summary = )}.  Forwarded to \code{\link[=stub_cols]{stub_cols()}}
 when \code{stub_vars} is set: the merged stub column's name / header
 (\code{NULL} joins the merged columns' display names with \code{" / "}), the
 non-breaking spaces per nesting level (default \code{4}), and which leaf values

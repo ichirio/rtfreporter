@@ -108,9 +108,7 @@ share the input body's column coordinates; see
 ## Output helpers
 
 * `rtf_replace_text()` — post-processing find/replace on a rendered `.rtf`.
-* `assemble_rtf()` (and `assemble_files()` / `assemble_folder()` /
-  `assemble_spec()` / `assemble_from_spec()` / `assemble_toc()`,
-  `toc_heading()` / `toc_entry()`) — combine several RTFs into one deliverable
+* `assemble_rtf()` (and `assemble_folder()`) — combine several RTFs into one deliverable
   with a table of contents and bookmarks.
 
 ## S3 generics

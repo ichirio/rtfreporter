@@ -80,7 +80,7 @@ test_that("the manual documents every deprecated export as deprecated", {
   dep <- rtfreporter:::.deprecated_exports
   from <- grep("^\\*\\*Deprecated", lines)
   expect_length(from, 1L)
-  block <- lines[seq(from, min(from + 20L, length(lines)))]
+  block <- lines[seq(from, min(from + 40L, length(lines)))]
   for (f in dep) {
     expect_true(any(grepl(f, block, fixed = TRUE)),
                 info = paste(f, "is deprecated but not in the manual's table"))
@@ -194,7 +194,7 @@ test_that("every idiom the manual teaches runs", {
     `Drug A` = c("3 (5.0%)", "1 (1.7%)", "8 (13.3%)", "4 (6.7%)", "2 (3.3%)"),
     `Drug B` = c("2 (3.4%)", "0", "6 (10.3%)", "3 (5.2%)", "5 (8.6%)"),
     check.names = FALSE, stringsAsFactors = FALSE)
-  expect_no_error(as_rtftables(ae, stub_vars = c("SOC", "PT"),
+  expect_no_error(as_rtftables(ae, stub = c("SOC", "PT"),
                                group_by = "indent", blank_rows = "between_groups",
                                split = "group_safe", max_rows = 20, border = "tfl"))
   expect_no_error(as_rtftables(ae, stub = stub_spec(c("SOC", "PT"),
@@ -211,7 +211,7 @@ test_that("every idiom the manual teaches runs", {
     `Day 14` = c("24", "9.0125", "2.1044"),
     `Day 28` = c("24", "1234.5", "301.22"),
     check.names = FALSE, stringsAsFactors = FALSE)
-  pk_pages <- as_rtftables(pk, stub_vars = c("Time", "Statistic"),
+  pk_pages <- as_rtftables(pk, stub = c("Time", "Statistic"),
                            group_by = "indent", blank_rows = "between_groups",
                            column_widths_twips = c(2000L, rep(1800L, 4)),
                            border = "tfl") |>

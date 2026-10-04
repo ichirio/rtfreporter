@@ -2,6 +2,8 @@
 # Tests for the DEFERRED, LAST-WINS plan spike (#474).
 # This whole file belongs to R/ard-plan-spike.R and is deleted with it.
 
+local_deprecated("stub_vars")  # deprecated in 0.8.x
+
 skip_if_no_cards2 <- function() testthat::skip_if_not_installed("cards")
 
 # Flattening is RUN before the plan now, so that table_plan()'s roles

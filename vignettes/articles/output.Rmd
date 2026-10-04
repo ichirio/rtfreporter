@@ -99,8 +99,9 @@ file.exists(pkg)
 
 ### Manual, multi-level TOC
 
-For sections and explicit labels, pass a list of `toc_heading()` (a section
-heading) and `toc_entry()` (a linked entry). Each entry creates an RTF
+For sections and explicit labels, pass the table of contents as a table: one
+row per file, its `label`, and a `heading` printed above the entry whenever it
+changes (`level` sets the indent). Each entry creates an RTF
 **bookmark**, so the TOC is navigable in the word processor and the entries jump
 to the right table:
 
@@ -109,11 +110,10 @@ pkg2 <- tempfile(fileext = ".rtf")
 assemble_rtf(
   c(f1, f2), pkg2,
   cover = list(title = "Study XYZ-001", subtitle = "Final Tables", version = "v1.0"),
-  toc = list(
-    toc_heading("EFFICACY ANALYSES"),
-    toc_entry("Table 14.1.1 Demographics",  file = f1),
-    toc_heading("SAFETY ANALYSES"),
-    toc_entry("Table 14.2.1 Adverse Events", file = f2)
+  toc = data.frame(
+    file    = c(f1, f2),
+    heading = c("EFFICACY ANALYSES", "SAFETY ANALYSES"),
+    label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events")
   ),
   toc_page_numbering = "roman",
   overwrite = TRUE
@@ -126,10 +126,11 @@ options; see `?assemble_rtf`.
 
 ### Assembling a folder
 
-To combine every RTF in a directory, `assemble_files()` lists them (by pattern)
-and `assemble_folder()` renders a spec-driven package; a spec file
-(`assemble_spec()` / `assemble_from_spec()`) lets you script the order, headings
-and labels. See `?assemble_files` and `?assemble_folder`.
+To combine every RTF in a directory, `assemble_folder(dir, output_file)` reads
+each file's table number and title into a table of contents and assembles them.
+Without `output_file` it returns that table instead: edit the order, headings
+and labels (or save it with `spec_file =` and edit it in Excel), then pass it
+-- or its path -- to `assemble_rtf(toc = )`. See `?assemble_folder`.
 
 > Note: the assembled file is RTF. The TOC entries are RTF bookmarks for
 > word-processor navigation; converting to PDF (and confirming the PDF

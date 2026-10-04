@@ -2,7 +2,7 @@
 % Please edit documentation in R/assemble_spec.R
 \name{assemble_files}
 \alias{assemble_files}
-\title{Collect the RTF files in a folder}
+\title{Collect the RTF files in a folder (deprecated)}
 \usage{
 assemble_files(dir, pattern = "[.]rtf$", recursive = FALSE, sort = TRUE)
 }
@@ -19,6 +19,11 @@ assemble_files(dir, pattern = "[.]rtf$", recursive = FALSE, sort = TRUE)
 A character vector of file paths.
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  Use \code{\link[=assemble_folder]{assemble_folder()}} (its table's \code{file} column), or
+\code{list.files()}.
+}
+\details{
 Lists the \code{.rtf} files in \code{dir}, in natural-sorted order (so \code{t2} comes
 before \code{t10}), ready to hand to \code{\link[=assemble_rtf]{assemble_rtf()}} or the other assembly
 helpers.
@@ -34,7 +39,8 @@ for (t in c("14.1.1", "14.2.1")) {
   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
     fixed = TRUE), ".rtf")), overwrite = TRUE)
 }
-files <- assemble_files(dir)        # every .rtf, in catalog order
+# instead: the table of contents of the folder
+assemble_folder(dir)$file
 }
 \seealso{
 \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_toc]{assemble_toc()}}, \code{\link[=assemble_folder]{assemble_folder()}}.

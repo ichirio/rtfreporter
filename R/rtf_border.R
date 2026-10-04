@@ -45,7 +45,14 @@
   "set_header_cell",       # -> style_header()
   "update_header_row",     # -> rtf_header() made again
   "update_footer_row",     # -> rtf_footer() made again
-  "paginate"               # -> as_rtftables() (deprecated since 0.7.x)
+  "paginate",              # -> as_rtftables() (deprecated since 0.7.x)
+  # 0.8.2.9014: the assembly helpers (N-5)
+  "assemble_files",        # -> assemble_folder()
+  "assemble_spec",         # -> assemble_folder() without output_file
+  "assemble_toc",          # -> assemble_rtf(toc = <table>)
+  "assemble_from_spec",    # -> assemble_rtf(toc = <table or its path>)
+  "toc_heading",           # -> the `heading` column of the table
+  "toc_entry"              # -> a row of the table
 )
 
 .deprecation_state <- new.env(parent = emptyenv())

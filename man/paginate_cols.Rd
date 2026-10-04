@@ -122,7 +122,7 @@ A \strong{group} is above both: see \emph{Page order}.
 }\if{html}{\out{</div>}}
 
 Because it runs on \strong{built} tables, the positions refer to the final
-printed columns -- after \code{drop_cols}, \code{stub_vars} and any user
+printed columns -- after \code{drop_cols}, \code{stub} and any user
 \code{col_header} -- the same convention \code{\link[=set_col_header]{set_col_header()}} uses.
 }
 \section{Column widths}{
@@ -168,7 +168,7 @@ group and wants a two-level header, group over visit. \code{by} and
 \code{col_header = "names"} do both from the names:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{as_rtftables(df, split = "by_value", group_col = "period",
-             stub_vars = c("row_grp1", "label")) |>
+             stub = c("row_grp1", "label")) |>
   paginate_cols(by = "____", carry = 1, col_header = "names")
 }\if{html}{\out{</div>}}
 

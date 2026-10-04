@@ -1,5 +1,7 @@
 # set_col_header(values = ): {tokens} filled per page from a keyed table (#449)
 
+local_deprecated("stub_vars")  # deprecated in 0.8.x
+
 .vt_pages <- function(periods = c("Per 1", "Per 2"), pages = c("1", "2")) {
   arms <- c("Placebo", "TAK-003")
   days <- paste("Day", 1:2)

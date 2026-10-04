@@ -5,7 +5,7 @@
 \title{Assemble multiple RTF files into one}
 \usage{
 assemble_rtf(
-  input_files,
+  input_files = NULL,
   output_file,
   overwrite = FALSE,
   cover = NULL,
@@ -19,7 +19,8 @@ assemble_rtf(
 }
 \arguments{
 \item{input_files}{Character vector of paths to RTF files to combine
-(at least 2).}
+(at least 2).  May be left out when \code{toc} is a table (or its path):
+the table's \code{file} column, in its order.}
 
 \item{output_file}{Path for the assembled output RTF file.}
 
@@ -31,8 +32,9 @@ for a cover page.  \code{NULL} (default) = no cover page.}
 
 \item{toc}{Table-of-Contents specification.  \code{NULL} (default) =
 no TOC, no bookmarks; \code{"auto"} = auto-extract titles; a
-character vector = one label per input file; a \code{list(...)} of
-\code{toc_heading()} / \code{toc_entry()} = multi-level layout.}
+character vector = one label per input file; a table (columns \code{file},
+\code{label}, \code{heading}, \code{level}) or the path of one (\code{.xlsx} / \code{.csv}) =
+multi-level layout.  See \strong{Table of Contents} above.}
 
 \item{toc_title}{Centred bold title rendered on the TOC page.
 Default \code{"Table of Contents"}.}
@@ -118,10 +120,17 @@ TOC entry.  Falls back to the file's basename if no title is
 detected.}
 \item{a character vector of TOC labels}{one per input file -- same as
 \code{"auto"} but with explicit labels.}
-\item{a \code{list(...)} of \code{toc_heading()} and \code{toc_entry()} objects}{for
-multi-level (chapter / table) layouts.  \code{toc_entry(file = ...)}
-selects which \code{input_files} element each row points to;
-omitting \code{file} consumes the next file in order.}
+\item{a table (\code{data.frame})}{one row per file, in order, for
+multi-level (chapter / table) layouts: \code{file} (the path), \code{label} (the
+entry text), and optionally \code{heading} (a heading printed above the
+row's entry whenever it changes; \code{NA} = none), \code{level} (the entry's
+indent, default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
+folder, ready to edit.  \code{input_files} can then be left out: the
+table's \code{file} column is used.}
+\item{the path of such a table}{an \code{.xlsx} or \code{.csv} file, e.g. the one
+\code{assemble_folder(spec_file = )} wrote and you edited.}
+\item{a \code{list(...)} of \code{toc_heading()} and \code{toc_entry()} objects}{the
+older spelling of the table (deprecated).}
 }
 
 Each TOC entry is an RTF \code{HYPERLINK} field; clicking it in
@@ -178,11 +187,10 @@ assemble_rtf(
     version  = "v1.0",
     meta     = c("Confidential", "Prepared by ACME Pharma")
   ),
-  toc = list(
-    toc_heading("DEMOGRAPHICS"),
-    toc_entry("Table 14.1.1 Demographics", file = a),
-    toc_heading("SAFETY ANALYSES"),
-    toc_entry("Table 14.2.1 Adverse Events", file = b)
+  toc = data.frame(
+    file    = c(a, b),
+    heading = c("DEMOGRAPHICS", "SAFETY ANALYSES"),
+    label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events")
   ),
   toc_page_numbering = "roman",
   overwrite           = TRUE

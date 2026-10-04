@@ -170,7 +170,7 @@
 #'   scaffold spanning row grouping the non-`stub` columns (see *Details*).
 #' @param stub Column(s) to keep un-spanned when `add_span_level = TRUE`:
 #'   integer position(s) and/or column name(s).  Default `1` (the first column,
-#'   where `as_rtftables(stub_vars = )` places the stub).
+#'   where `as_rtftables(stub = )` places the stub).
 #'
 #' @return A single character string (the source).  Use `cat()` to print it
 #'   with the line breaks rendered.

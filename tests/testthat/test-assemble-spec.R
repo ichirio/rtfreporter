@@ -2,6 +2,8 @@
 # _folder.
 
 # A minimal rtfreporter RTF whose header carries a "Table N  <title>" line.
+local_deprecated("assemble_files", "assemble_spec", "assemble_toc", "assemble_from_spec", "toc_heading")  # deprecated in 0.8.x
+
 .make_tbl_rtf <- function(dir, file, table_no, title) {
   doc <- rtf_document()
   doc <- rtf_section(doc, page = 1, secinfo = list(
@@ -85,4 +87,47 @@ test_that("assemble_folder does the whole thing and can save a CSV spec", {
   out2 <- tempfile(fileext = ".rtf")
   res2 <- assemble_folder(d, out2, overwrite = TRUE)
   expect_true(file.exists(out2))
+})
+
+test_that("assemble_folder() without an output file gives the table of contents", {
+  dir <- file.path(tempdir(), "toc-table")
+  dir.create(dir, showWarnings = FALSE)
+  for (t in c("14.2.1", "14.1.1")) {
+    doc <- rtf_document() |>
+      rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+      rtf_titles(list(c(paste("Table", t), "Safety Population")))
+    generate_rtfreport(doc, file.path(dir, paste0("t", t, ".rtf")),
+                       overwrite = TRUE)
+  }
+  spec <- assemble_folder(dir)
+  expect_s3_class(spec, "data.frame")
+  expect_identical(basename(spec$file), c("t14.1.1.rtf", "t14.2.1.rtf"))
+  expect_true(all(c("file", "label", "heading", "level") %in% names(spec)))
+
+  # the table is the toc, and its files the input files
+  spec$heading <- c("DEMOGRAPHICS", "SAFETY")
+  out1 <- tempfile(fileext = ".rtf")
+  expect_silent(assemble_rtf(toc = spec, output_file = out1))
+  txt <- paste(readLines(out1, warn = FALSE), collapse = "")
+  expect_match(txt, "DEMOGRAPHICS")
+  expect_match(txt, "SAFETY")
+
+  # the same as the old spelling, byte for byte
+  local_deprecated("assemble_from_spec")
+  out2 <- tempfile(fileext = ".rtf")
+  assemble_from_spec(spec, out2, toc_page_numbering = "none", toc_leader = "dot")
+  expect_identical(readLines(out1, warn = FALSE), readLines(out2, warn = FALSE))
+
+  # or the path of the table, in its `order`
+  csv <- tempfile(fileext = ".csv")
+  spec$order <- c(2L, 1L)
+  utils::write.csv(spec, csv, row.names = FALSE)
+  out3 <- tempfile(fileext = ".rtf")
+  assemble_rtf(toc = csv, output_file = out3)
+  txt3 <- paste(readLines(out3, warn = FALSE), collapse = "")
+  expect_lt(regexpr("SAFETY", txt3), regexpr("DEMOGRAPHICS", txt3))
+
+  expect_error(assemble_rtf(toc = data.frame(file = spec$file),
+                            output_file = tempfile(fileext = ".rtf")),
+               "needs the columns `file` and `label`")
 })

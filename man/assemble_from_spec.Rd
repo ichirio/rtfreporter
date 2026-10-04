@@ -2,7 +2,7 @@
 % Please edit documentation in R/assemble_spec.R
 \name{assemble_from_spec}
 \alias{assemble_from_spec}
-\title{Assemble RTF files from an assembly spec}
+\title{Assemble RTF files from an assembly spec (deprecated)}
 \usage{
 assemble_from_spec(
   spec,
@@ -27,6 +27,11 @@ spec file.}
 Invisibly, \code{output_file}.
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  It is \code{assemble_rtf(toc = spec)}: \code{\link[=assemble_rtf]{assemble_rtf()}} takes the table (or
+its .xlsx / .csv path) as \code{toc}.
+}
+\details{
 Runs \code{\link[=assemble_rtf]{assemble_rtf()}} with a Table of Contents built from an assembly spec
 (a \code{data.frame} from \code{\link[=assemble_spec]{assemble_spec()}}, or the path to a saved \code{.xlsx} /
 \code{.csv} spec).  Rows are ordered by the spec's \code{order} column when present.
@@ -42,9 +47,10 @@ for (t in c("14.1.1", "14.2.1")) {
   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
     fixed = TRUE), ".rtf")), overwrite = TRUE)
 }
-spec <- assemble_spec(dir)          # review / edit the order
-assemble_from_spec(spec, tempfile(fileext = ".rtf"),
-                   toc_title = "Table of Contents")
+# instead
+spec <- assemble_folder(dir)          # review / edit the order
+assemble_rtf(toc = spec, output_file = tempfile(fileext = ".rtf"),
+             toc_page_numbering = "decimal")
 }
 \seealso{
 \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_folder]{assemble_folder()}}, \code{\link[=assemble_rtf]{assemble_rtf()}}.

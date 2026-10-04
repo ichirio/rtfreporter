@@ -2,7 +2,7 @@
 % Please edit documentation in R/assemble_rtf.R
 \name{toc_heading}
 \alias{toc_heading}
-\title{Build a structured TOC heading}
+\title{Build a structured TOC heading (deprecated)}
 \usage{
 toc_heading(label, level = 1L)
 }
@@ -16,11 +16,18 @@ the rendered TOC.}
 A list of class \code{"rtf_toc_heading"}.
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  Give \code{\link[=assemble_rtf]{assemble_rtf()}} the table of contents as a table:
+a row whose \code{heading} column is filled starts a heading.
+}
+\details{
 Use inside \code{\link[=assemble_rtf]{assemble_rtf()}}'s \verb{toc =} list to insert a section
 heading (no clickable link, no page number) above a group of
 \code{\link[=toc_entry]{toc_entry()}}s.
 }
 \examples{
-toc_heading("EFFICACY ANALYSES", level = 1)
+# instead: the heading column of the table of contents
+data.frame(heading = c("EFFICACY ANALYSES", NA), label = c("Table 14.2.1", "Table 14.2.2"),
+           file = c("t14_2_1.rtf", "t14_2_2.rtf"))
 
 }

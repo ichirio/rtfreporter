@@ -1,5 +1,7 @@
 # assemble_rtf.R -- concatenate multiple rtfreporter-generated RTFs.
 
+local_deprecated("toc_heading", "toc_entry")  # deprecated in 0.8.x
+
 .write_demo_rtf <- function(title) {
   doc <- rtf_document()
   doc <- rtf_section(doc, page = 1, secinfo = list(

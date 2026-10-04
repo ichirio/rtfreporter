@@ -536,7 +536,7 @@
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
 #'   (parent first, leaf last; at least two).  `NULL` (default) builds no
 #'   stub.  This is the **one** argument for everything [stub_cols()] can do,
-#'   including `layout` and `label_span`, which the superseded `stub_vars`
+#'   including `layout` and `label_span`, which the deprecated `stub_vars`
 #'   family cannot reach.  Passing both `stub` and any of the `stub_vars`
 #'   family is an error.
 #'
@@ -564,9 +564,10 @@
 #'   does not apply to them.  Under `layout = "merged"` the source column
 #'   widths are **not** carried through the merge -- use `auto_width = TRUE` or
 #'   pass explicit widths; `layout = "columns"` keeps them.
-#' @param stub_vars **Superseded** by `stub`; still supported and not
-#'   deprecated, but it cannot reach `layout` or `label_span`, and new stub
-#'   settings are added to [stub_spec()] only.
+#' @param stub_vars **Deprecated** in 0.8.x (warns once a session, still
+#'   works), removed in 0.9.0: write `stub = c(...)` (or
+#'   `stub = stub_spec(...)`), which does the same and also reaches `layout`
+#'   and `label_span`.
 #'   Hierarchy columns to merge into a single **indented stub**
 #'   column (parent first, leaf last; at least two), or `NULL` (default, no
 #'   stub built).  Applies [stub_cols()] to the **extracted body** -- after the
@@ -593,8 +594,9 @@
 #'   out pre-merged, so `stub_vars` does not apply to them.  Column widths from
 #'   the source are **not** carried through the merge -- use `auto_width = TRUE`
 #'   or pass explicit widths.
-#' @param stub_label,stub_indent,stub_group_summary **Superseded** by `stub`
-#'   (see [stub_spec()]).  Forwarded to [stub_cols()]
+#' @param stub_label,stub_indent,stub_group_summary **Deprecated** with
+#'   `stub_vars` (removed in 0.9.0): they are `stub_spec(label = , indent = ,
+#'   group_summary = )`.  Forwarded to [stub_cols()]
 #'   when `stub_vars` is set: the merged stub column's name / header
 #'   (`NULL` joins the merged columns' display names with `" / "`), the
 #'   non-breaking spaces per nesting level (default `4`), and which leaf values
@@ -807,10 +809,18 @@ as_rtftables.default <- function(x,
   # One spec from `stub =` or the superseded flat family (#314).  `stub_spec`
   # is the only place new stub settings are added, so this signature stops
   # growing with stub_cols().
+  flat_given <- c(!is.null(stub_vars), !is.null(stub_label),
+                  !missing(stub_indent), !missing(stub_group_summary))
+  if (any(flat_given) && is.null(stub)) {
+    .deprecate_once(
+      "stub_vars",
+      paste0("`stub_vars` / `stub_label` / `stub_indent` / ",
+             "`stub_group_summary` are deprecated: write ",
+             "`stub = stub_spec(vars, label = , indent = , group_summary = )` ",
+             "(or `stub = vars`).\n  Removed in 0.9.0."))
+  }
   stub_spec_obj <- .resolve_stub_spec(
-    stub, stub_vars, stub_label, stub_indent, stub_group_summary,
-    c(!is.null(stub_vars), !is.null(stub_label),
-      !missing(stub_indent), !missing(stub_group_summary)))
+    stub, stub_vars, stub_label, stub_indent, stub_group_summary, flat_given)
 
   # ---- gt_group input: expand to its member gt_tbl list -----------------
   # A gt_group (gt::gt_group() / gt::gt_split(); also what tfrmt's

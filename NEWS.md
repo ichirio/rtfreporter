@@ -22,8 +22,19 @@ all are removed in 0.9.0.  `?rtf_border` lists the older border ones.
   -- the RTF is byte-identical.
 - `as_rtftable(gt_obj = )`: the argument is `x`, as in `as_rtftables()`.
 
+- `as_rtftables(stub_vars = , stub_label = , stub_indent = ,
+  stub_group_summary = )`: write `stub = stub_spec(vars, label = , indent = ,
+  group_summary = )` (or just `stub = vars`), which also reaches `layout`
+  and `label_span`.  (A plan's `plan_stub()` already goes through `stub =`.)
+- The assembly helpers `assemble_files()`, `assemble_spec()`,
+  `assemble_toc()`, `assemble_from_spec()`, `toc_heading()` and
+  `toc_entry()`: two functions are left.  `assemble_folder(dir)` without an
+  `output_file` returns the folder's table of contents (a data.frame: file,
+  label, heading, level, ...), and `assemble_rtf(toc = )` takes that table
+  -- or the path of its .xlsx / .csv -- with `input_files` then optional.
+
 The articles and the AI manual use the new spellings.  Exports: 125, of
-which 14 deprecated -- 111 to learn.
+which 20 deprecated -- 105 to learn.  The SAMPLE-01 RTFs are byte-identical.
 
 ### Documentation
 
