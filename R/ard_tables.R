@@ -2169,7 +2169,11 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   if (is.character(sort) && length(sort)) {
     out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref), ,
                drop = FALSE]
-  } else if (length(rowname_cols) && nrow(out) > 1L) {
+  } else if ((length(rowname_cols) ||
+              (!is.null(label_out) && is.factor(out[[label_out]]))) &&
+             nrow(out) > 1L) {
+    # (with no row keys -- one analysis variable, `rows` not given -- the
+    # label's declared order is still an order somebody declared, #534)
     # Only an order somebody DECLARED moves a row.  A key is a factor
     # exactly when `levels`, `labels` or the data itself gave it one --
     # and making a column a factor is how a table says what its order
