@@ -55,10 +55,12 @@
 #'   defaults), or `NULL` (default) for none. A section can override it by
 #'   passing `watermark` in its `rtf_section(secinfo = )` -- including
 #'   `watermark = NA` to switch it off for that section alone.
-#' @param program The path of the program the document belongs to, for the
-#'   `{PROGRAM}` run tokens (see [generate_rtfreport()]).  `NULL` (default)
-#'   leaves it to `generate_rtfreport(program = )`, the option, or the
-#'   running script.
+#' @param program The path of the program that writes this document, for
+#'   the `{PROGRAM}` / `{PROGRAM_FULL}` run tokens (see
+#'   [generate_rtfreport()]): the place to say it, once per program.
+#'   `generate_rtfreport(program = )` overrides it for one call.  `NULL`
+#'   (default) leaves it to that argument, then
+#'   `getOption("rtfreporter.program")`, then the running script.
 #'
 #' @return An `rtf_document` S3 object: a list with `document`
 #'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),

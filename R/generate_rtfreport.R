@@ -306,7 +306,7 @@
 # the same four tokens with the same semantics, instead of printing them
 # literally (#398).  Header / footer keep going through `.render_tokens()`.
 # ---------------------------------------------------------------------------
-#  {PROGRAM} / {PROGRAM_NAME} / {PROGRAM_DIR} / {DATETIME}
+#  {PROGRAM} / {PROGRAM_FULL} / {PROGRAM_NAME} / {PROGRAM_DIR} / {DATETIME}
 # ---------------------------------------------------------------------------
 #
 #  What a footer says about the run: which program wrote the file and when.
@@ -334,6 +334,17 @@
   program
 }
 
+# {PROGRAM_FULL}: the program's path made absolute, `/` between folders.
+# normalizePath() makes a path that does not exist absolute on Windows only;
+# elsewhere it is joined to the working folder here.
+.full_path <- function(path) {
+  p <- normalizePath(path, winslash = "/", mustWork = FALSE)
+  if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) {
+    p <- file.path(normalizePath(getwd(), winslash = "/"), sub("^[.]/", "", p))
+  }
+  p
+}
+
 .resolve_render_time <- function() {
   t <- getOption("rtfreporter.render_time")
   if (is.null(t)) return(Sys.time())
@@ -355,10 +366,14 @@
     prog <- .run_ctx$program
     if (is.null(prog)) {
       stop("A header, footer, title or footnote uses {PROGRAM}, ",
-           "{PROGRAM_NAME} or {PROGRAM_DIR}, but no program is known.\n",
-           "  Say which: generate_rtfreport(..., program = \"path/to/prog.R\") ",
-           "or options(rtfreporter.program = ).", call. = FALSE)
+           "{PROGRAM_FULL}, {PROGRAM_NAME} or {PROGRAM_DIR}, but no program ",
+           "is known.\n",
+           "  Say which: rtf_document(program = \"path/to/prog.R\") (once per ",
+           "program), generate_rtfreport(..., program = ) or ",
+           "options(rtfreporter.program = ).", call. = FALSE)
     }
+    # the longer tokens first: {PROGRAM_FULL} is never read as {PROGRAM}
+    out <- .replace_token(out, "\\{PROGRAM_FULL\\}", .rtf_escape(.full_path(prog)))
     out <- .replace_token(out, "\\{PROGRAM_NAME\\}", .rtf_escape(basename(prog)))
     out <- .replace_token(out, "\\{PROGRAM_DIR\\}", .rtf_escape(dirname(prog)))
     out <- .replace_token(out, "\\{PROGRAM\\}", .rtf_escape(prog))
@@ -2147,11 +2162,11 @@
 #' @param file_path Output RTF file path.
 #' @param overwrite Logical; whether to overwrite an existing file.
 #'   Default `FALSE`.
-#' @param program The path of the program writing the file, for the
-#'   `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) reads the
-#'   document's own (`rtf_document(program = )`), then
-#'   `getOption("rtfreporter.program")`, then the script `Rscript` is
-#'   running.
+#' @param program Overrides, for this one file, the program the document
+#'   names (`rtf_document(program = )`, where a program says it once), for
+#'   the `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) uses the
+#'   document's own, then `getOption("rtfreporter.program")`, then the
+#'   script `Rscript` is running.
 #'
 #' @section Run tokens:
 #' Beside the page tokens (`{PAGE}`, `{TOTAL_PAGES}`, ...), any header,
@@ -2159,6 +2174,9 @@
 #' when, filled **as the file is written**:
 #' \describe{
 #'   \item{`{PROGRAM}`}{the program path, as given;}
+#'   \item{`{PROGRAM_FULL}`}{the same path made absolute
+#'     ([normalizePath()], `/` between folders), from the working folder
+#'     when the file is written;}
 #'   \item{`{PROGRAM_NAME}`, `{PROGRAM_DIR}`}{its file name and its folder;}
 #'   \item{`{DATETIME}`}{the time the file is written, as
 #'     `getOption("rtfreporter.datetime_format", "\%d\%b\%Y  \%H:\%M")`
@@ -2170,11 +2188,18 @@
 #' `options(rtfreporter.render_time = )` fixes it, for output that has to
 #' be reproducible.  A `{PROGRAM}` token with no program known is an error.
 #'
+#' The program is said once, where the document is made --
+#' `rtf_document(program = )` -- since one program writes one file;
+#' `generate_rtfreport(program = )` overrides it for a single call.
+#'
 #' ```r
 #' footer <- rtf_footer(list(
 #'   c(l = "SD = Standard Deviation."),
-#'   c(l = "{PROGRAM}      Generated on: {DATETIME}")))
-#' generate_rtfreport(doc, "t_dm.rtf", program = file.path(work_dir, "t_dm.R"))
+#'   c(l = "{PROGRAM_FULL}      Generated on: {DATETIME}")))
+#' doc <- rtf_document(program = "programs/t_dm.R") |>
+#'   rtf_section(page = 1, secinfo = list(footer = footer)) |>
+#'   rtf_tables(tbl)
+#' generate_rtfreport(doc, "t_dm.rtf")
 #' ```
 #'
 #' @return Invisibly returns `file_path`.

@@ -1,5 +1,17 @@
 # rtfreporter (development version)
 
+### New
+
+- **`{PROGRAM_FULL}`, the program's absolute path** (#560).  A run token
+  beside `{PROGRAM}`: the same path made absolute (`normalizePath()`, `/`
+  between folders, from the working folder when the file is written).
+  `{PROGRAM}` is still the path as given, so existing files are unchanged.
+  `rtf_text_tokens()` lists it and `set_col_header()` leaves it for the
+  renderer; no program known is the same error as for `{PROGRAM}`.  The
+  documentation now names the program where a program says it once,
+  `rtf_document(program = )`; `generate_rtfreport(program = )` overrides it
+  for one call (the order the program is looked up in is unchanged).
+
 ### Documentation
 
 - **NEWS.md: no R comment reads as a version** (#558).  Two code blocks

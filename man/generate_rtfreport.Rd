@@ -15,11 +15,11 @@ generate_rtfreport(report, file_path, overwrite = FALSE, program = NULL)
 \item{overwrite}{Logical; whether to overwrite an existing file.
 Default \code{FALSE}.}
 
-\item{program}{The path of the program writing the file, for the
-\code{{PROGRAM}} tokens (see \emph{Run tokens}).  \code{NULL} (default) reads the
-document's own (\code{rtf_document(program = )}), then
-\code{getOption("rtfreporter.program")}, then the script \code{Rscript} is
-running.}
+\item{program}{Overrides, for this one file, the program the document
+names (\code{rtf_document(program = )}, where a program says it once), for
+the \code{{PROGRAM}} tokens (see \emph{Run tokens}).  \code{NULL} (default) uses the
+document's own, then \code{getOption("rtfreporter.program")}, then the
+script \code{Rscript} is running.}
 }
 \value{
 Invisibly returns \code{file_path}.
@@ -35,6 +35,9 @@ footer, title or footnote cell may say which program wrote the file and
 when, filled \strong{as the file is written}:
 \describe{
 \item{\code{{PROGRAM}}}{the program path, as given;}
+\item{\code{{PROGRAM_FULL}}}{the same path made absolute
+(\code{\link[=normalizePath]{normalizePath()}}, \code{/} between folders), from the working folder
+when the file is written;}
 \item{\code{{PROGRAM_NAME}}, \code{{PROGRAM_DIR}}}{its file name and its folder;}
 \item{\code{{DATETIME}}}{the time the file is written, as
 \code{getOption("rtfreporter.datetime_format", "\\\%d\\\%b\\\%Y  \\\%H:\\\%M")}
@@ -46,10 +49,17 @@ The time is taken once per file, so every page shows the same one;
 \code{options(rtfreporter.render_time = )} fixes it, for output that has to
 be reproducible.  A \code{{PROGRAM}} token with no program known is an error.
 
+The program is said once, where the document is made --
+\code{rtf_document(program = )} -- since one program writes one file;
+\code{generate_rtfreport(program = )} overrides it for a single call.
+
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{footer <- rtf_footer(list(
   c(l = "SD = Standard Deviation."),
-  c(l = "\{PROGRAM\}      Generated on: \{DATETIME\}")))
-generate_rtfreport(doc, "t_dm.rtf", program = file.path(work_dir, "t_dm.R"))
+  c(l = "\{PROGRAM_FULL\}      Generated on: \{DATETIME\}")))
+doc <- rtf_document(program = "programs/t_dm.R") |>
+  rtf_section(page = 1, secinfo = list(footer = footer)) |>
+  rtf_tables(tbl)
+generate_rtfreport(doc, "t_dm.rtf")
 }\if{html}{\out{</div>}}
 }
 

@@ -675,7 +675,8 @@ add_header_row.list <- function(x, ...) {
 #'   A token is `{name}`, `name` being a column of `values`; doubling a brace
 #'   prints it literally; the render-time tokens (`{PAGE}`,
 #'   `{TOTAL_PAGES}`, `{BOOK_PAGE}`, `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`,
-#'   `{PROGRAM}`, `{DATETIME}` ..., [rtf_text_tokens()]) are left for the
+#'   `{PROGRAM}`, `{PROGRAM_FULL}`, `{DATETIME}` ..., [rtf_text_tokens()])
+#'   are left for the
 #'   renderer, and any other unfilled token is an error. Every row of `values`
 #'   must be used by some page, and every page must find a row -- a mistyped
 #'   level is an error, not a silently wrong header. [header_map()] shows what
