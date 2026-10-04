@@ -780,13 +780,13 @@ print.table_plan <- function(x, ...) {
   }
   # What a header cell may say.  The values come from the ARD and the
   # columns from the spread, so neither is visible in the call.
-  tk <- tryCatch(.plan_header_tokens(x), error = function(e) list())
-  if (length(tk)) {
+  tk <- tryCatch(.plan_header_tokens(x), error = function(e) NULL)
+  if (!is.null(tk) && nrow(tk)) {
     cat("  header tokens     -- what a plan_col_header() cell may ",
         "carry:\n", sep = "")
-    w <- max(nchar(names(tk)))
-    for (k in names(tk)) {
-      cat(sprintf("      %-*s  %s\n", w, k, tk[[k]]))
+    w <- max(nchar(tk$token))
+    for (i in seq_len(nrow(tk))) {
+      cat(sprintf("      %-*s  %s\n", w, tk$token[i], tk$text[i]))
     }
   }
   cat(if (identical(.plan_reach(x), "pages"))
@@ -2736,7 +2736,8 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
 # Every token a header cell may carry, with what it resolves to.
 # `print()` shows this because the answer is otherwise invisible:
 # the values come from the ARD and the columns from the spread, and
-# neither is written in the call.
+# neither is written in the call.  One row a token: its values as they
+# are (a list column) and as print() shows them (`text`).
 .plan_header_tokens <- function(plan) {
   tbl <- plan$cache$table
   hdr <- .plan_merge(.plan_of(plan, "header"))
@@ -2751,12 +2752,19 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
           else if (is.null(nvals)) list() else list(n = nvals)
   cols <- if (is.null(tbl)) NULL else .plan_spread_cols(plan, tbl)
   sep <- .plan_sep(plan)
-  out <- list()
+  rows <- list()
+  add <- function(token, kind, values, text, resolved = TRUE,
+                  note = NA_character_) {
+    rows[[length(rows) + 1L]] <<- list(token = token, kind = kind,
+                                       values = list(values), text = text,
+                                       resolved = resolved, note = note)
+  }
   # A token that cannot be resolved is the one worth printing: saying
   # nothing is what sent you here.
   if (!is.null(why) && !is.null(hn)) {
-    out[["{n}"]] <- paste0("-- NOT resolved: ",
-                           strsplit(why, "\n", fixed = TRUE)[[1L]][1L])
+    first <- strsplit(why, "\n", fixed = TRUE)[[1L]][1L]
+    add("{n}", "population", NULL, paste0("-- NOT resolved: ", first),
+        FALSE, first)
   }
   # Show the values, not a description of them: a denominator, and the
   # text a level prints as, are the things you came to check.
@@ -2788,29 +2796,35 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
     lvl <- function(i) unique(vapply(pp, function(z)
       if (i <= length(z)) z[i] else NA_character_, ""))
     leaf <- unique(vapply(pp, function(z) z[length(z)], ""))
-    out[["{col}"]] <- show(leaf[!is.na(leaf)])
+    leaf <- leaf[!is.na(leaf)]
+    add("{col}", "column", leaf, show(leaf))
     if (lv > 1L) {
       for (i in seq_len(lv)) {
         v <- lvl(i)
-        out[[paste0("{col", i, "}")]] <- show(v[!is.na(v)])
+        v <- v[!is.na(v)]
+        add(paste0("{col", i, "}"), "column", v, show(v))
       }
     }
   }
   for (nm in names(toks)) {
     v <- toks[[nm]]
     why_n <- attr(v, "why", exact = TRUE)
+    tok <- paste0("{", nm, "}")
     if (!length(v)) {
-      out[[paste0("{", nm, "}")]] <- paste0(
-        "-- NOT resolved: ", if (length(why_n)) why_n[[1L]] else
-          "the ARD states no population size for these columns")
+      note <- if (length(why_n)) why_n[[1L]] else
+        "the ARD states no population size for these columns"
+      add(tok, "population", NULL, paste0("-- NOT resolved: ", note), FALSE,
+          note)
       next
     }
-    out[[paste0("{", nm, "}")]] <- show(v)
+    add(tok, "population", unlist(v), show(v))
     if (length(why_n)) {
-      out[[paste0("{", nm, "} NOT resolved")]] <- paste0(
-        "-- ", paste0(ifelse(names(why_n) == ".all", "",
-                             paste0(names(why_n), ": ")), why_n)[[1L]],
-        if (length(why_n) > 1L) sprintf(" (+%d more)", length(why_n) - 1L))
+      note <- paste0(paste0(ifelse(names(why_n) == ".all", "",
+                                   paste0(names(why_n), ": ")), why_n)[[1L]],
+                     if (length(why_n) > 1L)
+                       sprintf(" (+%d more)", length(why_n) - 1L))
+      add(paste0(tok, " NOT resolved"), "population", NULL,
+          paste0("-- ", note), FALSE, note)
     }
     # the leaves only: a vector keyed at several depths holds each
     # subject once per depth
@@ -2824,15 +2838,71 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
       lv <- v[dep == max(dep)]
     }
     tot <- suppressWarnings(sum(as.numeric(unlist(lv)), na.rm = TRUE))
-    out[[paste0("{", nm, ":sum}")]] <- paste0(
+    add(paste0("{", nm, ":sum}"), "sum", tot, paste0(
       "= ", format(tot, trim = TRUE),
-      " over every column (less over a spanner: its own columns)")
+      " over every column (less over a spanner: its own columns)"))
     for (k in names(v) %||% character(0)) {
-      out[[paste0("{", nm, ":", k, "}")]] <-
-        paste0("= ", format(v[[k]], trim = TRUE))
+      add(paste0("{", nm, ":", k, "}"), "one", v[[k]],
+          paste0("= ", format(v[[k]], trim = TRUE)))
     }
   }
-  out
+  if (!length(rows)) {
+    return(data.frame(token = character(), kind = character(),
+                      values = I(list()), text = character(),
+                      resolved = logical(), note = character(),
+                      stringsAsFactors = FALSE))
+  }
+  out <- data.frame(
+    token = vapply(rows, `[[`, "", "token"),
+    kind = vapply(rows, `[[`, "", "kind"),
+    text = vapply(rows, `[[`, "", "text"),
+    resolved = vapply(rows, `[[`, NA, "resolved"),
+    note = vapply(rows, function(r) as.character(r$note), ""),
+    stringsAsFactors = FALSE)
+  out$values <- lapply(rows, function(r) r$values[[1L]])
+  out[c("token", "kind", "values", "text", "resolved", "note")]
+}
+
+#' The tokens a plan's column header may carry, with their values
+#'
+#' What `print(plan)` lists under "header tokens", as data: one row per
+#' token a [plan_col_header()] cell may carry, with the values it resolves
+#' to here.  A program that offers them (a GUI's "insert" menu that shows
+#' each token's values) reads this instead of the printed text.
+#'
+#' * `kind = "column"`: `{col}` (the leaf of each spread column's name) and,
+#'   with several `cols` keys, `{col1}`, `{col2}`, ... (each depth's
+#'   values) -- known once the table has been made, which this does.
+#' * `kind = "population"`: `{n}` (and the other names of
+#'   `plan_col_header(values = )`), each column's population from the ARD;
+#'   `resolved = FALSE` with the reason in `note` when the ARD does not state
+#'   it.
+#' * `kind = "sum"`: `{n:sum}`, the total over every column (over a spanner,
+#'   over its own columns).
+#' * `kind = "one"`: `{n:<column>}`, one column's value.
+#'
+#' @param plan A [table_plan()].
+#' @return A data frame: `token`, `kind`, `values` (a list column: the
+#'   values, named by column where they are), `text` (as `print()` shows
+#'   them), `resolved`, `note`.
+#' @seealso [plan_col_header()]
+#' @examples
+#' ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
+#'   cards::ard_summary(variables = AGE)))
+#' p <- table_plan(ard, cols = "ARM") |>
+#'   plan_col_header(values = list(n = TRUE))
+#' plan_header_tokens(p)[, c("token", "text")]
+#' @export
+plan_header_tokens <- function(plan) {
+  if (!inherits(plan, "table_plan")) {
+    .ard_stop("plan_header_tokens(): expected a table_plan.")
+  }
+  # the column tokens need the table: make it once (the cache keeps it)
+  if (is.null(plan$cache$table)) {
+    try(suppressMessages(suppressWarnings(plan_apply(plan, "table"))),
+        silent = TRUE)
+  }
+  .plan_header_tokens(plan)
 }
 
 # The denominator, read once, with the keys table_plan() already has.

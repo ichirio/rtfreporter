@@ -2256,3 +2256,26 @@ test_that("one analysis variable, no row keys: plan_levels() still orders the ro
   expect_identical(as.character(w0$label),
                    unique(vapply(d$variable_level[d$variable == "AGEGR1"], as.character, "")))
 })
+
+test_that("plan_header_tokens() gives the header tokens as data", {
+  skip_if_no_cards2()
+  p <- disp_plan() |>
+    plan_col_header(values = c("Placebo" = 86, "Xanomeline High Dose" = 84,
+                               "Xanomeline Low Dose" = 84),
+                    rtf_col_header(c("Group", "Characteristic", "{col}")))
+  tk <- plan_header_tokens(p)        # makes the table itself for {col}
+  expect_named(tk, c("token", "kind", "values", "text", "resolved", "note"))
+  expect_true(all(c("{col}", "{n}", "{n:sum}", "{n:Placebo}") %in% tk$token))
+  n <- tk$values[[match("{n}", tk$token)]]
+  expect_equal(unname(n[["Placebo"]]), 86)
+  expect_equal(tk$values[[match("{n:sum}", tk$token)]], 254)
+  expect_true(all(c("Placebo", "Xanomeline High Dose") %in%
+                    tk$values[[match("{col}", tk$token)]]))
+  expect_identical(tk$kind[match(c("{col}", "{n}", "{n:sum}", "{n:Placebo}"), tk$token)],
+                   c("column", "population", "sum", "one"))
+  expect_true(all(tk$resolved))
+  # print() shows the same text
+  out <- utils::capture.output(print(p))
+  expect_true(any(grepl(tk$text[match("{n:sum}", tk$token)], out, fixed = TRUE)))
+  expect_error(plan_header_tokens(1), "table_plan")
+})
