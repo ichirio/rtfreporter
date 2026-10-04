@@ -58,8 +58,8 @@ library(testthat)
      envir = rtfreporter:::.deprecation_state)
 }
 
-S    <- rtf_border_side()
-NONE <- rtf_border_side("none")
+S    <- rtf_border_line()
+NONE <- rtf_border_line("none")
 FRAME <- function(...) rtf_border(top = S, bottom = S, left = S, right = S, ...)
 
 
@@ -70,7 +70,7 @@ test_that("rtf_border() carries inside_h / inside_v, defaulting to no rule", {
   expect_null(b$inside_h)
   expect_null(b$inside_v)
 
-  s <- rtf_border_side("double", 30L)
+  s <- rtf_border_line("double", 30L)
   b <- rtf_border(inside_h = s, inside_v = s)
   expect_identical(b$inside_h, s)
   expect_identical(b$inside_v, s)
@@ -94,9 +94,9 @@ test_that("rtf_border() records which inside_* the caller named", {
 })
 
 test_that("inside_h / inside_v take the same values as the edges", {
-  expect_identical(rtf_border(inside_v = TRUE)$inside_v,     rtf_border_side())
-  expect_identical(rtf_border(inside_h = "double")$inside_h, rtf_border_side("double"))
-  expect_identical(rtf_border(inside_v = FALSE)$inside_v,    rtf_border_side("none"))
+  expect_identical(rtf_border(inside_v = TRUE)$inside_v,     rtf_border_line())
+  expect_identical(rtf_border(inside_h = "double")$inside_h, rtf_border_line("double"))
+  expect_identical(rtf_border(inside_v = FALSE)$inside_v,    rtf_border_line("none"))
   expect_identical(rtf_border(inside_v = S)$inside_v,        S)
 })
 
@@ -252,10 +252,10 @@ test_that("a call without `from` builds: unnamed sides are unset", {
 })
 
 test_that("sides can differ in weight and colour within one call", {
-  b <- rtf_border(top    = rtf_border_side("single", 30L, "#C9372C"),
-                  bottom = rtf_border_side("single", 15L, "#1F6FEB"),
-                  left   = rtf_border_side("double", 45L, "#1A7F37"),
-                  right  = rtf_border_side("double", 45L, "#1A7F37"))
+  b <- rtf_border(top    = rtf_border_line("single", 30L, "#C9372C"),
+                  bottom = rtf_border_line("single", 15L, "#1F6FEB"),
+                  left   = rtf_border_line("double", 45L, "#1A7F37"),
+                  right  = rtf_border_line("double", 45L, "#1A7F37"))
   expect_identical(b$top$color,    "#C9372C")
   expect_identical(b$top$width,    30L)
   expect_identical(b$bottom$color, "#1F6FEB")
@@ -267,8 +267,8 @@ test_that("sides can differ in weight and colour within one call", {
 
 test_that("layering happens where the border is attached, side by side", {
   tbl <- .bi_tbl("none") |>
-    style_zone(header = rtf_border(top    = rtf_border_side(color = "#C9372C"))) |>
-    style_zone(header = rtf_border(bottom = rtf_border_side(color = "#1F6FEB")))
+    style_zone(header = rtf_border(top    = rtf_border_line(color = "#C9372C"))) |>
+    style_zone(header = rtf_border(bottom = rtf_border_line(color = "#1F6FEB")))
   h <- tbl$border$header
   expect_identical(h$top$color,    "#C9372C")   # the first layer survives
   expect_identical(h$bottom$color, "#1F6FEB")
@@ -292,7 +292,7 @@ test_that("FALSE and \"none\" are interchangeable", {
 
 test_that("a style name alone means that style at the default weight and colour", {
   b <- rtf_border(top = "double", bottom = "none")
-  expect_identical(b$top,    rtf_border_side("double"))
+  expect_identical(b$top,    rtf_border_line("double"))
   expect_identical(b$top$width, 15L)
   expect_null(b$top$color)
   expect_identical(b$bottom$style, "none")

@@ -4,7 +4,7 @@
 \alias{set_header_cell}
 \alias{set_header_cell.rtftable}
 \alias{set_header_cell.list}
-\title{Set or merge individual column-header cells (spanning, borders, alignment)}
+\title{Set or merge individual column-header cells (deprecated)}
 \usage{
 set_header_cell(x, ...)
 
@@ -27,14 +27,19 @@ a new row with \code{\link[=add_header_row]{add_header_row()}}.}
 An object of the same shape as \code{x}.
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  Restyle a header's cells with \code{\link[=style_header]{style_header()}}, and write a
+spanning cell into the header itself (\code{\link[=rtf_col_header]{rtf_col_header()}} /
+\code{\link[=set_col_header]{set_col_header()}}, or \code{\link[=add_header_row]{add_header_row()}} for a new row).
+}
+\details{
 Edits \strong{specific cells of one header row} of a finished \code{\link[=rtftable]{rtftable()}} (or a
 list of pages) without rebuilding the whole header: place one or more
 \code{\link[=col_cell]{col_cell()}}s -- by column \strong{name or position}, spanning via \code{c(a, b)} --
 into row \code{row}, keeping the other cells of that row intact.  Merging
 currently-separate cells into one spanning cell is the core use.  Borders,
 alignment and text decorations are carried natively by \code{\link[=col_cell]{col_cell()}}.
-}
-\details{
+
 A \strong{label row} is promoted to cells first (as in \code{\link[=style_header]{style_header()}}), so the
 row then renders through the \code{spanning} border zone (which falls back to the
 \code{header} zone when unset).  Merging cells in one row replaces their
@@ -49,10 +54,11 @@ the requested cells must not overlap one another.
 }
 
 \examples{
+# instead: the spanning cell written in the header
 df  <- data.frame(Item = "x", g1 = 1, g2 = 2, g3 = 3, Total = 4)
-tbl <- rtftable(df, col_header = c("Item", "N", "Mean", "SD", "Total"))
-# Merge g1..g3 under one spanning "Statistics" cell on the top row:
-tbl <- set_header_cell(tbl, col_cell(c("g1", "g3"), "Statistics"), row = 1)
+tbl <- rtftable(df, col_header = rtf_col_header(
+  list(col_cell(1, ""), col_cell(c(2, 4), "Statistics"), col_cell(5, "")),
+  c("Item", "N", "Mean", "SD", "Total")))
 }
 \seealso{
 \code{\link[=set_col_header]{set_col_header()}} to set the whole header; \code{\link[=style_header]{style_header()}} to

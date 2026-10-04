@@ -4,6 +4,8 @@
 # setting instead of applying it, because `colS` fell into `...` and the call
 # then ran with `cols = NULL`.
 
+local_deprecated("set_header_cell")  # deprecated in 0.8.x
+
 mk <- function() {
   df <- data.frame(P = c("a", "b"), Q = c("x", "y"),
                    V1 = c("12.5", "3.45"), V2 = c("100.25", "7.5"),

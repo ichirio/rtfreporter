@@ -4,10 +4,10 @@
 \alias{as_rtftable}
 \title{Convert one table object to a single rtftable}
 \usage{
-as_rtftable(gt_obj, read_meta = TRUE, ...)
+as_rtftable(x, read_meta = TRUE, ..., gt_obj)
 }
 \arguments{
-\item{gt_obj}{A \code{gt_tbl}, a gtsummary table, an rtables/tern \code{VTableTree},
+\item{x}{A \code{gt_tbl}, a gtsummary table, an rtables/tern \code{VTableTree},
 an rlistings \code{listing_df}, a \code{flextable}, a \code{huxtable}, or a plain
 \code{data.frame} / tibble.  A
 \code{gt_group} (\code{\link[gt:gt_group]{gt::gt_group()}} / \code{\link[gt:gt_split]{gt::gt_split()}}, or a tfrmt \code{page_plan}
@@ -21,6 +21,9 @@ exactly one table; multi-member containers error -- convert those with
 
 \item{...}{Passed to \code{\link[=rtftable]{rtftable()}} (and on to \code{\link[=as_rtftables]{as_rtftables()}}).  Explicit
 values always win over the values extracted from the source table.}
+
+\item{gt_obj}{The old name of \code{x}: \strong{deprecated} in 0.8.x (warns once a
+session, still works), removed in 0.9.0.}
 }
 \value{
 An \code{rtftable} S3 object.

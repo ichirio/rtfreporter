@@ -62,7 +62,7 @@ test_that("border default width shows only at level default/all", {
   # A plain single rule is just TRUE; the default width appears only when the
   # caller asked to see defaults, and then the side needs its full value.
   expect_true(grepl('rtf_border(bottom = TRUE)', ex, fixed = TRUE))
-  expect_true(grepl('rtf_border(bottom = rtf_border_side("single", 15))', al,
+  expect_true(grepl('rtf_border(bottom = rtf_border_line("single", 15))', al,
                     fixed = TRUE))
 })
 

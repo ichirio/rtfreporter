@@ -416,10 +416,12 @@
 #'   from `col_spec` (i.e. column headers follow the data alignment).
 #'   `"center"` / `"left"` / `"right"` applies a single value to every
 #'   column; a character vector of length `ncol` overrides per-column.
-#' @param spanning_header A standalone spanning row placed **above** the
-#'   `col_header` rows.  Each element: `list(from, to, label, underline)`.
-#'   Kept for backward compatibility -- new code should put spanning rows
-#'   directly inside `col_header`.
+#' @param spanning_header **Deprecated** in 0.8.x (warns once a session,
+#'   still works), removed in 0.9.0.  A standalone spanning row placed
+#'   **above** the `col_header` rows (each element
+#'   `list(from, to, label, underline)`).  Write it as the first row of
+#'   `col_header` instead: `col_header = list(<that row>, <the label row>)`,
+#'   or with [rtf_col_header()] / [col_cell()].
 #' @param col_spec Per-column formatting, as a `list` of per-column specs. Each
 #'   spec is a named list identifying its column with `col`, plus any of:
 #'   \describe{
@@ -632,6 +634,8 @@ rtftable <- function(
       cell_padding_right_twips <- style$cell_padding_right_twips
   }
 
+  if (!is.null(spanning_header)) .deprecate_spanning_header()
+
   data_single  <- NULL
   data_list    <- NULL
   col_hdr_one  <- NULL
@@ -815,6 +819,15 @@ rtftable <- function(
 # list containing ONLY the arguments the caller passed explicitly (see
 # rtf_tables()); fields absent from `ov` are left untouched.  Each value is
 # normalised exactly as the rtftable() constructor would.
+.deprecate_spanning_header <- function() {
+  .deprecate_once(
+    "spanning_header",
+    paste0("`spanning_header =` is deprecated: write the spanning row as the ",
+           "first row of `col_header`\n  (`col_header = list(<spanning row>, ",
+           "<label row>)`, or `rtf_col_header()` / `col_cell()`).\n  ",
+           "Removed in 0.9.0."))
+}
+
 .override_rtftable_fields <- function(tbl, ov) {
   if (length(ov) == 0L) return(tbl)
   has <- function(k) k %in% names(ov)
@@ -894,7 +907,10 @@ rtftable <- function(
   }
 
   # -- spanning header (stored verbatim) ----------------------------------
-  if (has("spanning_header")) tbl$spanning_header <- ov$spanning_header
+  if (has("spanning_header")) {
+    if (!is.null(ov$spanning_header)) .deprecate_spanning_header()
+    tbl$spanning_header <- ov$spanning_header
+  }
 
   # -- column header (single- vs multi-DF) --------------------------------
   if (has("col_header")) {
@@ -1035,7 +1051,7 @@ rtftable <- function(
   isTRUE(info[["UTF-8"]]) || identical(info[["codepage"]], 65001L)
 }
 
-# Horizontal rule glyph for one border side (an rtf_border_side, i.e. a list
+# Horizontal rule glyph for one border side (an rtf_border_line, i.e. a list
 # with `$style`), or NA when the side is absent / "none".
 .rule_char <- function(side, unicode) {
   if (is.null(side)) return(NA_character_)

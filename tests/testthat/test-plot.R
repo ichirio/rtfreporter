@@ -9,8 +9,8 @@
   force(expr)
 }
 
-test_that("plot.rtf_border_side() renders without error", {
-  side <- rtf_border_side("thick", 20L, "#003366")
+test_that("plot.rtf_border_line() renders without error", {
+  side <- rtf_border_line("thick", 20L, "#003366")
   .with_pdf({
     out <- plot(side)
     expect_identical(out, side)
@@ -18,8 +18,8 @@ test_that("plot.rtf_border_side() renders without error", {
 })
 
 test_that("plot.rtf_border() renders without error", {
-  b <- rtf_border(top = rtf_border_side(),
-                  bottom = rtf_border_side("double", 20L))
+  b <- rtf_border(top = rtf_border_line(),
+                  bottom = rtf_border_line("double", 20L))
   .with_pdf({
     out <- plot(b)
     expect_identical(out, b)

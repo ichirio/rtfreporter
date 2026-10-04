@@ -10,7 +10,7 @@
 #  They are also one of the most natural showcases of S3 method dispatch
 #  in the package: each method is just a function named plot.<class>().
 
-#' Visualise an `rtf_border_side`
+#' Visualise an `rtf_border_line`
 #'
 #' Draws a 1cm-wide swatch of the line in the side's own style, width and
 #' colour.  Useful for previewing the exact look of a border before it is
@@ -22,15 +22,15 @@
 #' @return Invisibly returns `x`.
 #'
 #' @examples
-#' plot(rtf_border_side(style = "double", width = 30L, color = "#003366"))
+#' plot(rtf_border_line(style = "double", width = 30L, color = "#003366"))
 #' @export
-plot.rtf_border_side <- function(x, ...) {
+plot.rtf_border_line <- function(x, ...) {
   oldpar <- graphics::par(mar = c(2, 2, 2, 2), xpd = NA)
   on.exit(graphics::par(oldpar), add = TRUE)
   graphics::plot.new()
   graphics::plot.window(xlim = c(0, 10), ylim = c(0, 4),
                         xaxs = "i", yaxs = "i", asp = 1)
-  graphics::title(main = sprintf("<rtf_border_side: %s, %d twips%s>",
+  graphics::title(main = sprintf("<rtf_border_line: %s, %d twips%s>",
                                   x$style, x$width,
                                   if (!is.null(x$color)) paste0(", ", x$color) else ""),
                   cex.main = 0.9)
@@ -49,7 +49,7 @@ plot.rtf_border_side <- function(x, ...) {
 #' @return Invisibly returns `x`.
 #'
 #' @examples
-#' plot(rtf_border(top = TRUE, bottom = rtf_border_side(color = "#003366")))
+#' plot(rtf_border(top = TRUE, bottom = rtf_border_line(color = "#003366")))
 #' @export
 plot.rtf_border <- function(x, ...) {
   oldpar <- graphics::par(mar = c(2, 2, 3, 2), xpd = NA)
@@ -280,7 +280,7 @@ plot.rtf_document <- function(x, max_pages = 12L, ...) {
 
 # -- Internal helpers --------------------------------------------------------
 
-# Map an rtf_border_side `style` to a base-R lty + lwd pair.
+# Map an rtf_border_line `style` to a base-R lty + lwd pair.
 .side_lty_lwd <- function(side) {
   if (is.null(side)) return(list(lty = NA, lwd = NA, col = NA))
   lty <- switch(side$style,

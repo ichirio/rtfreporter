@@ -182,6 +182,7 @@ export(blank_rows_by_change)
 export(blank_rows_by_rule)
 
 # Border utilities
+export(rtf_border_line)
 export(rtf_border_side)
 export(rtf_border)
 export(rtf_border_none)
@@ -200,13 +201,13 @@ export(rtf_table_style_tfl)
 export(rtf_border_with)
 
 # S3 print methods
-S3method(print, rtf_border_side)
+S3method(print, rtf_border_line)
 S3method(print, rtf_border)
 S3method(print, rtf_table_border)
 S3method(print, rtf_table_style)
 
 # S3 plot methods — visual preview before rendering
-S3method(plot, rtf_border_side)
+S3method(plot, rtf_border_line)
 S3method(plot, rtf_border)
 S3method(plot, rtf_table_border)
 S3method(plot, rtftable)

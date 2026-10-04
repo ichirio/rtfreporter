@@ -2,7 +2,7 @@
 % Please edit documentation in R/col_header.R
 \name{col_header_from_names}
 \alias{col_header_from_names}
-\title{Build a spanning column header from delimited column names}
+\title{Build a spanning column header from delimited column names (deprecated)}
 \usage{
 col_header_from_names(names, sep = .default_header_seps())
 }
@@ -21,6 +21,12 @@ An \code{\link[=rtf_col_header]{rtf_col_header()}}.  When no name splits into mo
 segment, a single flat label row of \code{names}.
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  It is what \code{\link[=as_rtftables]{as_rtftables()}} already does with a plain data.frame's
+names (\verb{header_sep =}) and what a plan does with its column keys, so there
+is nothing to call.
+}
+\details{
 Reconstructs a multi-row, spanning \code{\link[=rtf_col_header]{rtf_col_header()}} by parsing the nesting
 encoded in delimited column names -- e.g. \code{"Drug A____N"}, \code{"Drug A____Mean"},
 \code{"Drug B____N"}, \code{"Drug B____Mean"} becomes a \verb{Drug A} / \verb{Drug B} spanning row
@@ -28,16 +34,16 @@ over an \code{N} / \code{Mean} leaf row.  Horizontally adjacent columns that sha
 label \strong{and} the same ancestor path are merged into one spanning cell;
 columns with fewer segments (e.g. an id column with no separator) are
 bottom-aligned so their label sits on the leaf row with blank cells above.
-}
-\details{
+
 This is the same reconstruction \code{\link[=as_rtftables]{as_rtftables()}} applies automatically to a
 plain data.frame; exposing it lets you build the header explicitly and pass
 it to \code{\link[=set_col_header]{set_col_header()}} or \code{rtftable(col_header = )}.
 }
 \examples{
-col_header_from_names(
-  c("Item", "Drug A____N", "Drug A____Mean", "Drug B____N", "Drug B____Mean")
-)
+# instead: as_rtftables() makes the same header from the names
+df <- data.frame(Item = "x", "Drug A____N" = 1, "Drug A____Mean" = 2,
+                 check.names = FALSE)
+as_rtftables(df)[[1]]$col_header
 }
 \seealso{
 \code{\link[=set_col_header]{set_col_header()}} to apply it, \code{\link[=rtf_col_header]{rtf_col_header()}} / \code{\link[=col_cell]{col_cell()}}

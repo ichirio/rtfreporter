@@ -226,7 +226,12 @@ print.rtf_col_header <- function(x, ...) {
   invisible(x)
 }
 
-#' Append (or prepend) a row to an `rtf_col_header`
+#' Append (or prepend) a row to an `rtf_col_header` (deprecated)
+#'
+#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
+#' 0.9.0.  Write the row in [rtf_col_header()] itself -- it takes the rows top
+#' first, cell rows and label rows alike:
+#' `rtf_col_header(list(col_cell(c(2, 3), "Drug A")), c("Item", "N", "Mean"))`.
 #'
 #' @param hdr An [rtf_col_header()], or any value accepted by
 #'   `rtftable(col_header = ...)`.  Non-`rtf_col_header` inputs are
@@ -238,18 +243,19 @@ print.rtf_col_header <- function(x, ...) {
 #' @return A new `rtf_col_header`.
 #'
 #' @examples
-#' hdr <- rtf_col_header(c("Item", "N", "Mean", "N", "Mean"))   # bottom row
-#' hdr <- add_col_header_row(
-#'   hdr,
-#'   list(col_cell(1, ""),
-#'        col_cell(c(2, 3), "Drug A"),
-#'        col_cell(c(4, 5), "Drug B")),
-#'   .position = "top"
-#' )
+#' # instead: the rows top first, in one rtf_col_header()
+#' rtf_col_header(
+#'   list(col_cell(1, ""), col_cell(c(2, 3), "Drug A"), col_cell(c(4, 5), "Drug B")),
+#'   c("Item", "N", "Mean", "N", "Mean"))
 #'
 #' @export
 add_col_header_row <- function(hdr, row,
                                 .position = c("bottom", "top")) {
+  .deprecate_once(
+    "add_col_header_row",
+    paste0("`add_col_header_row()` is deprecated: write the row in ",
+           "`rtf_col_header()` itself (its rows, top first).\n  ",
+           "Removed in 0.9.0."))
   .position <- match.arg(.position)
   if (!inherits(hdr, "rtf_col_header")) {
     hdr <- rtf_col_header(hdr)
@@ -710,7 +716,12 @@ col_key <- function(key, sep = NULL, part = 1L) {
   c(upper_rows, list(bottom))
 }
 
-#' Build a spanning column header from delimited column names
+#' Build a spanning column header from delimited column names (deprecated)
+#'
+#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
+#' 0.9.0.  It is what [as_rtftables()] already does with a plain data.frame's
+#' names (`header_sep =`) and what a plan does with its column keys, so there
+#' is nothing to call.
 #'
 #' Reconstructs a multi-row, spanning [rtf_col_header()] by parsing the nesting
 #' encoded in delimited column names -- e.g. `"Drug A____N"`, `"Drug A____Mean"`,
@@ -739,11 +750,17 @@ col_key <- function(key, sep = NULL, part = 1L) {
 #'   for the pieces.
 #'
 #' @examples
-#' col_header_from_names(
-#'   c("Item", "Drug A____N", "Drug A____Mean", "Drug B____N", "Drug B____Mean")
-#' )
+#' # instead: as_rtftables() makes the same header from the names
+#' df <- data.frame(Item = "x", "Drug A____N" = 1, "Drug A____Mean" = 2,
+#'                  check.names = FALSE)
+#' as_rtftables(df)[[1]]$col_header
 #' @export
 col_header_from_names <- function(names, sep = .default_header_seps()) {
+  .deprecate_once(
+    "col_header_from_names",
+    paste0("`col_header_from_names()` is deprecated: `as_rtftables()` builds ",
+           "this header from a data.frame's names (`header_sep =`), and a ",
+           "plan from its column keys.\n  Removed in 0.9.0."))
   if (is.data.frame(names)) names <- names(names)
   if (!is.character(names)) names <- as.character(names)
   if (length(names) == 0L) {

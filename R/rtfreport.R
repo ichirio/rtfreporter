@@ -183,7 +183,11 @@
   hf
 }
 
-#' Update a specific row in an `rtf_header()` object
+#' Update a specific row in an `rtf_header()` object (deprecated)
+#'
+#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
+#' 0.9.0.  Make the header (or footer) again with [rtf_header()] /
+#' [rtf_footer()]: its rows are a list, and a list is edited with R.
 #'
 #' Adds a new row or replaces an existing row in a header/footer object.
 #' If `row` is beyond the current number of rows, intermediate rows are
@@ -197,17 +201,18 @@
 #' @return A modified `rtf_header()` object.
 #'
 #' @examples
-#' hdr <- rtf_header(rows = list(
-#'   c(l = "Protocol: XXX-001", r = "Company"),
-#'   c(l = "Table 14.1.1",     r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
-#' ))
-#'
-#' hdr <- update_header_row(hdr, row = 2, content = c(l = "Table 14.2.1", r = "Page {AUTO_PAGE}"))
-#' hdr <- update_header_row(hdr, row = 3, content = c(c = "Draft - Confidential"))
-#' hdr <- update_header_row(hdr, row = 5, content = c(l = "Run date: 2026-01-01"))
+#' # instead: the rows as a list, made again
+#' rows <- list(c(l = "Protocol: XXX-001", r = "Company"),
+#'              c(l = "Table 14.1.1", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"))
+#' rows[[3]] <- c(c = "Draft - Confidential")
+#' hdr <- rtf_header(rows = rows)
 #'
 #' @export
 update_header_row <- function(header, row, content) {
+  .deprecate_once(
+    "update_header_row",
+    paste0("`update_header_row()` is deprecated: make the header again with ",
+           "`rtf_header(rows = )` (a list of rows).\n  Removed in 0.9.0."))
   .update_hf_rows(header, row, content)
 }
 
@@ -215,6 +220,10 @@ update_header_row <- function(header, row, content) {
 #' @param footer An `rtf_footer()` object (returned by `rtf_footer()`).
 #' @export
 update_footer_row <- function(footer, row, content) {
+  .deprecate_once(
+    "update_footer_row",
+    paste0("`update_footer_row()` is deprecated: make the footer again with ",
+           "`rtf_footer(rows = )` (a list of rows).\n  Removed in 0.9.0."))
   .update_hf_rows(footer, row, content)
 }
 
@@ -223,8 +232,7 @@ update_footer_row <- function(footer, row, content) {
 #' Create a header or footer object for a section
 #'
 #' `rtf_header()` and `rtf_footer()` create structured header/footer objects
-#' that can be passed to `rtf_section()`. Use [update_header_row()] /
-#' [update_footer_row()] to add or replace individual rows after creation.
+#' that can be passed to `rtf_section()`.
 #'
 #' @param rows The header (or footer) content, row by row: a single named
 #'   character vector for one row, or a `list` of them for several rows. Within
@@ -274,8 +282,6 @@ update_footer_row <- function(footer, row, content) {
 #'   )
 #' )
 #' ftr <- rtf_footer(c(l = "Confidential"))
-#'
-#' hdr <- update_header_row(hdr, row = 3, content = c(c = "Draft"))
 #'
 #' @export
 rtf_header <- function(rows,

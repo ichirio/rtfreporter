@@ -3,6 +3,8 @@
 
 # ──────── col_cell() validation ───────────────────────────────────────────
 
+local_deprecated("add_col_header_row", "spanning_header")  # deprecated in 0.8.x
+
 test_that("col_cell() builds a tagged spec for a single column", {
   c1 <- col_cell(1, "Item")
   expect_s3_class(c1, "rtf_col_cell")

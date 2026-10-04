@@ -69,7 +69,7 @@ See \code{\link[=as_rtftable]{as_rtftable()}} for details on gtsummary limitatio
 registered an \code{\link[=as_rtftables]{as_rtftables()}} method for; it is converted to its pages
 first (see "Supplying a source from another package" in \code{\link[=as_rtftables]{as_rtftables()}}).}
 
-\item{col_header, col_header_align, spanning_header, col_spec, row_title, border, blank_rows, read_attributes, style}{Per-table content settings applied to bare \code{data.frame} elements. \code{row_title} names the row-heading columns (default: column 1) and sets the per-column default alignment (heading columns left, others centre). See \code{\link[=rtftable]{rtftable()}} for details.}
+\item{col_header, col_header_align, spanning_header, col_spec, row_title, border, blank_rows, read_attributes, style}{Per-table content settings applied to bare \code{data.frame} elements (\code{spanning_header} is deprecated, see \code{\link[=rtftable]{rtftable()}}). \code{row_title} names the row-heading columns (default: column 1) and sets the per-column default alignment (heading columns left, others centre). See \code{\link[=rtftable]{rtftable()}} for details.}
 
 \item{col_rel_width, column_widths_twips, table_width_twips, table_width_pct_of_writable, table_width_pct, table_align}{Column-width and table-width settings applied to bare \code{data.frame} elements. See \code{\link[=rtftable]{rtftable()}} for details.}
 

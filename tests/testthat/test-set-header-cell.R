@@ -5,6 +5,8 @@
 
 library(testthat)
 
+local_deprecated("set_header_cell")  # deprecated in 0.8.x
+
 df5 <- function() {
   data.frame(Item = "x", g1 = 1, g2 = 2, g3 = 3, Total = 4,
              stringsAsFactors = FALSE)
@@ -52,7 +54,7 @@ test_that("several cells can be placed at once", {
 test_that("border and alignment on the col_cell are applied", {
   tbl <- set_header_cell(tbl5(),
     col_cell(c("g1", "g3"), "Stat", align = "center",
-             border = rtf_border(bottom = rtf_border_side("none"))),
+             border = rtf_border(bottom = rtf_border_line("none"))),
     row = 1)
   s <- span_of(tbl$col_header[[1L]], "Stat")
   expect_identical(s$align, "center")

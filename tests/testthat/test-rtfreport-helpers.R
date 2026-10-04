@@ -3,6 +3,8 @@
 
 # ──────── rtf_header / rtf_footer construction ────────────────────────────
 
+local_deprecated("update_header_row", "update_footer_row")  # deprecated in 0.8.x
+
 test_that("rtf_header() accepts a single named vector and wraps it in a list", {
   hdr <- rtf_header(c(l = "Left", r = "Right"))
   expect_type(hdr, "list")
@@ -34,7 +36,7 @@ test_that("rtf_header() takes border = rtf_border(top = TRUE) for a header rule"
 test_that("rtf_footer() defaults to a top border", {
   ftr <- rtf_footer(c(c = "Source"))
   expect_s3_class(ftr$border, "rtf_border")
-  expect_s3_class(ftr$border$top, "rtf_border_side")
+  expect_s3_class(ftr$border$top, "rtf_border_line")
 })
 
 test_that("rtf_footer() accepts border = NULL to drop the default rule", {

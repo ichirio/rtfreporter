@@ -102,8 +102,7 @@ cat(sprintf("Total width: %d twips = %.2f inch\n",
 make_shift_tbl <- function(df) {
   rtftable(
     data                = df,
-    col_header          = col_hdr_row,
-    spanning_header     = spanning_hdr,
+    col_header          = list(spanning_hdr, col_hdr_row),   # 上から順
     column_widths_twips = col_widths,
     col_spec            = c(
       list(list(col = 1L, align = "left")),
@@ -132,10 +131,9 @@ common_hdr_rows <- list(
 )
 
 # ── 検査項目別ヘッダー生成 ─────────────────────────────────────────────────────
-# update_header_row() で共通ヘッダーの3行目に検査名を追加
+# 共通ヘッダーの2行に、3行目として検査名を足す
 make_lab_hdr <- function(param_label) {
-  hdr <- rtf_header(rows = common_hdr_rows)
-  update_header_row(hdr, row = 3L, content = c(c = param_label))
+  rtf_header(rows = c(common_hdr_rows, list(c(c = param_label))))
 }
 
 lab_hdrs <- lapply(lab_params, \(p) make_lab_hdr(p$param))
@@ -231,15 +229,16 @@ preview_shift(lab_creat, "Creatinine (umol/L)")
 
 ## 検査項目別セクションヘッダー
 
-`update_header_row()` を使い、共通 2 行に検査名を 3 行目として追加します。
+ヘッダーの行はリストなので、共通 2 行に検査名を 3 行目として足したリストで
+`rtf_header()` を作ります。
 
 ```r
 make_lab_hdr <- function(param_label) {
-  hdr <- rtf_header(rows = list(
+  rtf_header(rows = list(
     c(l = "Protocol: STUDY001",       r = "Company"),
-    c(l = "Table 14.3.x Shift Table", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
+    c(l = "Table 14.3.x Shift Table", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"),
+    c(c = param_label)
   ))
-  update_header_row(hdr, row = 3L, content = c(c = param_label))
 }
 ```
 
@@ -249,15 +248,17 @@ RTF では `\sect` でセクションが切り替わるたびに `{\header}` が
 ## 2 階層ヘッダー（スパニング + 列ヘッダー）
 
 ```r
-# Level 1 (spanning): Drug A / Drug B / Total
-spanning_header = list(
-  list(from = 2L, to = 7L,  label = "Drug A\n(N=30)", underline = TRUE),
-  list(from = 8L, to = 13L, label = "Drug B\n(N=30)", underline = TRUE),
-  list(from = 14L, to = 19L, label = "Total\n(N=60)", underline = TRUE)
+# col_header の行は上から順
+col_header = list(
+  # Level 1 (spanning): Drug A / Drug B / Total
+  list(
+    list(from = 2L, to = 7L,  label = "Drug A\n(N=30)", underline = TRUE),
+    list(from = 8L, to = 13L, label = "Drug B\n(N=30)", underline = TRUE),
+    list(from = 14L, to = 19L, label = "Total\n(N=60)", underline = TRUE)
+  ),
+  # Level 2: Baseline Grade | 0 1 2 3 4 Total × 3
+  c("Baseline\nGrade", rep(c("0","1","2","3","4","Total"), 3L))
 )
-
-# Level 2 (col_header): Baseline Grade | 0 1 2 3 4 Total × 3
-col_header = c("Baseline\nGrade", rep(c("0","1","2","3","4","Total"), 3L))
 ```
 
 ## セル内 2 行テキスト（`\n`）

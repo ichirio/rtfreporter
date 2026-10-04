@@ -31,7 +31,7 @@
   args <- .hs_str(sd$style)
   if (!plain_w) args <- c(args, as.character(sd$width %||% 15L))
   if (!is.null(sd$color)) args <- c(args, paste0("color = ", .hs_str(sd$color)))
-  paste0("rtf_border_side(", paste(args, collapse = ", "), ")")
+  paste0("rtf_border_line(", paste(args, collapse = ", "), ")")
 }
 
 # rtf_border(...) source (only the sides that are set).  Each side carries its

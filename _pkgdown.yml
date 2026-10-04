@@ -264,14 +264,12 @@ reference:
       A section applies a running header / footer to a range of pages.
       **Acts on:** the `rtf_document` object.
       Headers and footers are themselves small tables: build their rows with
-      `rtf_header()` / `rtf_footer()` and edit one row later with
-      `update_header_row()` / `update_footer_row()`.
+      `rtf_header()` / `rtf_footer()` (a list of rows -- to change one, make
+      it again).
     contents:
       - rtf_section
       - rtf_header
       - rtf_footer
-      - update_header_row
-      - update_footer_row
 
   # ── 3. Page content: tables & figures ──────────────────────────────────
   - title: Page content — tables & figures
@@ -354,9 +352,9 @@ reference:
       **Acts on:** an `rtftable` -- there is no header setting at document
       level.
       `col_cell()` describes one header cell and is accepted by
-      `rtf_col_header()`, `rtftable(col_header = )`, `rtf_tables(col_header =
-      )` and `set_header_cell()`.  A whole header built with
-      `rtf_col_header()` goes to the same places plus `set_col_header()`.
+      `rtf_col_header()`, `rtftable(col_header = )` and `rtf_tables(col_header =
+      )`.  A whole header built with `rtf_col_header()` goes to the same
+      places plus `set_col_header()`.
       Coordinates are those of the **finished** table, so a merged stub counts
       as one column.
       `col_key()` lets a cell name the columns it covers by a column-name
@@ -365,11 +363,8 @@ reference:
       - col_cell
       - col_key
       - rtf_col_header
-      - col_header_from_names
-      - add_col_header_row
       - set_col_header
       - header_map
-      - set_header_cell
       - rtf_columns
       - rtf_header_source
 
@@ -474,7 +469,7 @@ reference:
   # ── 8. Borders ─────────────────────────────────────────────────────────
   - title: Borders
     desc: >
-      Two constructors, and only two: `rtf_border_side()` describes one edge --
+      Two constructors, and only two: `rtf_border_line()` describes one edge --
       its line style, width and colour -- and `rtf_border()` collects edges
       into the border of a cell, a row or a zone, including the rules *inside*
       a selection (`inside_h`, `inside_v`).
@@ -487,7 +482,7 @@ reference:
       bottom of this page; `?rtf_border` pairs the old and the new spelling
       for every case.
     contents:
-      - rtf_border_side
+      - rtf_border_line
       - rtf_border
 
   # ── 9. Shared table styles ─────────────────────────────────────────────
@@ -524,7 +519,7 @@ reference:
       for checking work in progress, not for producing output.
     contents:
       - plot.rtf_border
-      - plot.rtf_border_side
+      - plot.rtf_border_line
       - plot.rtf_table_border
       - plot.rtftable
       - plot.rtf_document
@@ -556,28 +551,30 @@ reference:
     contents:
       - rtf_replace_text
 
-  # ── 14. Superseded ─────────────────────────────────────────────────────
-  - title: Superseded
-    desc: >
-      Still working and **not** scheduled for removal: newer work goes into
-      the replacement each page names, but existing code need not change.
-    contents:
-      - paginate
-
   # ── 15. Deprecated ────────────────────────────────────────
   - title: Deprecated -- scheduled for removal
     desc: >
-      The border constructors that `rtf_border_side()` and `rtf_border()`
+      The border constructors that `rtf_border_line()` and `rtf_border()`
       replaced at 0.5.0 / 0.6.0.  They still work and each warns once per
       session, naming its replacement, but they will be **removed in one
       batch before the CRAN submission** -- do not write new code against
       them.  `?rtf_border` pairs the old and the new spelling for every case.
       `rtf_border_none()`, `rtf_border_top()`, `rtf_border_bottom()` and
       `rtf_border_box()` are documented on the `rtf_border()` page itself.
+      Since 0.8.2.9013 (the pre-CRAN API review) also: `rtf_border_side()`
+      (now `rtf_border_line()`, documented on its page), the header editors
+      below (write the header in `rtf_col_header()` / `rtf_header()`
+      instead), `paginate()` (use `as_rtftables()`), and the arguments
+      `rtftable(spanning_header = )` and `as_rtftable(gt_obj = )` (now `x`).
     contents:
       - rtf_border_with
       - rtf_table_border
       - rtf_border_tfl
+      - add_col_header_row
+      - col_header_from_names
+      - set_header_cell
+      - update_header_row
+      - paginate
 
 # Articles index page (/articles/).  Grouped so users land on the
 # tutorial first; learner-focused material sits at the bottom.

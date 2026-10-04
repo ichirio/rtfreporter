@@ -15,7 +15,7 @@
 #' `tab_style()` borders and text styles are carried; cell fills, fonts, gt
 #' theme borders and Markdown are not.
 #'
-#' @param gt_obj A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
+#' @param x A `gt_tbl`, a gtsummary table, an rtables/tern `VTableTree`,
 #'   an rlistings `listing_df`, a `flextable`, a `huxtable`, or a plain
 #'   `data.frame` / tibble.  A
 #'   `gt_group` ([gt::gt_group()] / [gt::gt_split()], or a tfrmt `page_plan`
@@ -27,6 +27,8 @@
 #'   [as_rtftables()].
 #' @param ... Passed to [rtftable()] (and on to [as_rtftables()]).  Explicit
 #'   values always win over the values extracted from the source table.
+#' @param gt_obj The old name of `x`: **deprecated** in 0.8.x (warns once a
+#'   session, still works), removed in 0.9.0.
 #'
 #' @return An `rtftable` S3 object.
 #'
@@ -41,14 +43,22 @@
 #'   the per-source metadata table.
 #'
 #' @export
-as_rtftable <- function(gt_obj, read_meta = TRUE, ...) {
+as_rtftable <- function(x, read_meta = TRUE, ..., gt_obj) {
+  if (!missing(gt_obj)) {
+    .deprecate_once(
+      "as_rtftable_gt_obj",
+      paste0("`as_rtftable(gt_obj = )` is deprecated: the argument is `x` ",
+             "now.\n  The old name is removed in 0.9.0."))
+    x <- gt_obj
+  }
+  gt_obj <- x
   # A gt_group (gt::gt_group() / gt::gt_split(); tfrmt page_plan output) is
   # accepted only when it holds exactly one table -- this is a single-table
   # wrapper.  Multi-member groups belong to as_rtftables().
   if (.is_gt_group(gt_obj)) {
     tbls <- .gt_group_tables(gt_obj)
     if (length(tbls) != 1L) {
-      stop("`gt_obj` is a gt_group holding ", length(tbls), " tables; use ",
+      stop("`x` is a gt_group holding ", length(tbls), " tables; use ",
            "as_rtftables() to convert them all.", call. = FALSE)
     }
     gt_obj <- tbls[[1L]]
@@ -57,7 +67,7 @@ as_rtftable <- function(gt_obj, read_meta = TRUE, ...) {
   if (.is_gtsummary_split(gt_obj)) {
     tbls <- .gtsummary_split_tables(gt_obj)
     if (length(tbls) != 1L) {
-      stop("`gt_obj` is a tbl_split holding ", length(tbls), " tables; use ",
+      stop("`x` is a tbl_split holding ", length(tbls), " tables; use ",
            "as_rtftables() to convert them all.", call. = FALSE)
     }
     gt_obj <- tbls[[1L]]
@@ -75,7 +85,7 @@ as_rtftable <- function(gt_obj, read_meta = TRUE, ...) {
   # test them before `is.data.frame()`.
   is_df  <- is.data.frame(gt_obj) && !is_hux && !is_rls
   if (!is_gt && !is_rtb && !is_rls && !is_ft && !is_hux && !is_df) {
-    stop("`gt_obj` must be a gt_tbl, a gtsummary table, an rtables/tern ",
+    stop("`x` must be a gt_tbl, a gtsummary table, an rtables/tern ",
          "table (VTableTree), an rlistings listing (listing_df), a ",
          "flextable, a huxtable, or a data.frame/tibble.",
          call. = FALSE)

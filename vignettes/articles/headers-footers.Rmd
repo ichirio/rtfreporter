@@ -51,11 +51,16 @@ hdr <- rtf_header(rows = list(
 ftr <- rtf_footer(c(c = "ACME Pharma, Inc."))
 ```
 
-`update_header_row()` / `update_footer_row()` add or replace one row after
-creation (handy when a row depends on logic):
+The rows are a plain list, so a row that depends on logic is added (or
+replaced) with R and the header made again:
 
 ```{r update-row}
-hdr <- update_header_row(hdr, row = 3, content = c(c = "DRAFT"))
+rows <- list(
+  c(l = "Protocol XYZ-001", r = "Confidential"),
+  c(l = "Table 14.1.1",     r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
+)
+rows[[3]] <- c(c = "DRAFT")
+hdr <- rtf_header(rows = rows)
 ```
 
 A header/footer can also take a `border` (e.g. a rule under the footer) -- see
