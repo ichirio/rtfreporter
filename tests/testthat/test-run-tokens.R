@@ -73,3 +73,25 @@ test_that("a text without the tokens is untouched", {
   expect_identical(rtfreporter:::.substitute_run_tokens("plain \\{col\\} text"),
                    "plain \\{col\\} text")
 })
+
+test_that("rtf_text_tokens() lists exactly the tokens a page's text has filled", {
+  tk <- rtf_text_tokens()
+  expect_named(tk, c("token", "kind", "when", "description", "example"))
+  expect_false(anyDuplicated(tk$token) > 0)
+  # every token listed is replaced when the file is written: none is left
+  # in the RTF as its own text
+  old <- options(rtfreporter.render_time = as.POSIXct("2026-09-25 10:05:00"))
+  on.exit(options(old), add = TRUE)
+  out <- render(run_doc(lapply(tk$token, function(x) c(l = paste0("<", x, ">")))),
+                program = "work/tfl/t_dm.R")
+  for (x in tk$token) {
+    esc <- gsub("}", "\\}", gsub("{", "\\{", x, fixed = TRUE), fixed = TRUE)
+    expect_false(grepl(paste0("<", esc, ">"), out, fixed = TRUE), label = x)
+  }
+  # and the list is the renderer's own: the tokens set_col_header() leaves
+  # for it, less the ones that are no longer written ({DATE} is reserved,
+  # {SECTION_PAGES} was removed in 0.7.31)
+  own <- paste0("{", setdiff(rtfreporter:::.RENDER_TOKENS,
+                             c("DATE", "SECTION_PAGES")), "}")
+  expect_setequal(tk$token, own)
+})

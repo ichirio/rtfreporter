@@ -15,6 +15,13 @@
 
 ### New features
 
+- **`rtf_text_tokens()`** (#529): the `{TOKEN}`s a header, footer, title or
+  footnote may carry, as a data frame -- the token, whether it is a page or
+  a run token, when it is filled (written into the file, computed by the word
+  processor, or left for `assemble_rtf()`), what it becomes, and an example
+  value for a preview.  A program offering them (an "insert" menu) reads this
+  list instead of keeping a copy.  Added only.
+
 - **Every `as_rtftables()` setting now has a plan verb** (#518).  A
   plan could not say `cell_format`, `column_widths_twips`, `header_sep`,
   `col_header_align`, the table width, the look fields of
