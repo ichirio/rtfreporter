@@ -22,6 +22,72 @@ test_that("{PROGRAM}, {PROGRAM_NAME}, {PROGRAM_DIR} say which program wrote it",
   expect_match(out, "C:\\\\tfl\\\\t_dm.R", fixed = TRUE)
 })
 
+test_that("{PROGRAM_FULL} is the program's path made absolute; {PROGRAM} stays as given", {
+  wd <- getwd()
+  on.exit(setwd(wd), add = TRUE)
+  setwd(tempdir())
+  # the system's separator; in the RTF a backslash is escaped (\\)
+  sep <- if (.Platform$OS.type == "windows") "\\" else "/"
+  rtf <- function(p) gsub("\\", "\\\\", p, fixed = TRUE)
+  here <- normalizePath(getwd(), winslash = "\\")
+  out <- render(run_doc(list(c(l = "F=<{PROGRAM_FULL}> P=<{PROGRAM}>"))),
+                program = "work/tfl/t_dm.R")
+  want <- paste(here, "work", "tfl", "t_dm.R", sep = sep)
+  expect_match(out, paste0("F=<", rtf(want), ">"), fixed = TRUE)
+  expect_match(out, "P=<work/tfl/t_dm.R>", fixed = TRUE)
+  # never read as {PROGRAM} followed by "_FULL}"
+  expect_false(grepl("_FULL", out, fixed = TRUE))
+  # an absolute path stays where it is, in the system's separator
+  abs <- paste(here, "abs", "t_ae.R", sep = sep)
+  expect_match(render(run_doc(list(c(l = "<{PROGRAM_FULL}>"))), program = abs),
+               paste0("<", rtf(abs), ">"), fixed = TRUE)
+})
+
+test_that("on Windows {PROGRAM_FULL} uses \\ and the RTF escapes it", {
+  skip_on_os(c("mac", "linux", "solaris"))
+  out <- render(run_doc(list(c(l = "<{PROGRAM_FULL}>"))),
+                program = "C:/tfl/t_dm.R")
+  # C:\tfl\t_dm.R, each backslash written \\ in the RTF
+  expect_match(out, "<C:\\\\tfl\\\\t_dm.R>", fixed = TRUE)
+  expect_false(grepl("<C:/tfl", out, fixed = TRUE))
+})
+
+test_that("on Windows a short (8.3) folder name is written out long", {
+  skip_on_os(c("mac", "linux", "solaris"))
+  wd <- getwd()
+  on.exit(setwd(wd), add = TRUE)
+  # the working folder by its short name, as on a CI runner (RUNNER~1);
+  # the program file does not exist (yet)
+  setwd(utils::shortPathName(tempdir()))
+  long <- normalizePath(tempdir(), winslash = "\\")
+  got <- rtfreporter:::.full_path("work/tfl/t_dm.R")
+  expect_identical(got, paste(long, "work", "tfl", "t_dm.R", sep = "\\"))
+  expect_false(grepl("~", got, fixed = TRUE))
+})
+
+test_that("{PROGRAM_FULL} drops . and .. from a path that does not exist", {
+  wd <- getwd()
+  on.exit(setwd(wd), add = TRUE)
+  setwd(tempdir())
+  sep <- if (.Platform$OS.type == "windows") "\\" else "/"
+  here <- normalizePath(getwd(), winslash = "\\")
+  expect_identical(rtfreporter:::.full_path("./work/../work/t.R"),
+                   paste(here, "work", "t.R", sep = sep))
+})
+
+test_that("{PROGRAM_FULL} with no program known is the same error as {PROGRAM}", {
+  # outside generate_rtfreport() no program is set: the substitution itself
+  # (so the test does not depend on running under Rscript)
+  ctx <- rtfreporter:::.run_ctx
+  old <- ctx$program
+  on.exit(assign("program", old, envir = ctx), add = TRUE)
+  ctx$program <- NULL
+  for (tok in c("\\{PROGRAM\\}", "\\{PROGRAM_FULL\\}")) {
+    expect_error(rtfreporter:::.substitute_run_tokens(paste0("x ", tok)),
+                 "no program is known", label = tok)
+  }
+})
+
 test_that("the program comes from the argument, else the option", {
   old <- options(rtfreporter.program = "from/option.R")
   on.exit(options(old), add = TRUE)

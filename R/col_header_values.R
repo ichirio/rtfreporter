@@ -18,7 +18,8 @@
 # Tokens the RENDERER fills, long after this: leave them alone.
 .RENDER_TOKENS <- c("PAGE", "TOTAL_PAGES", "BOOK_PAGE",
                     "AUTO_PAGE", "AUTO_TOTAL_PAGES", "SECTION_PAGES",
-                    "PROGRAM", "PROGRAM_NAME", "PROGRAM_DIR", "DATETIME")
+                    "PROGRAM", "PROGRAM_FULL", "PROGRAM_NAME", "PROGRAM_DIR",
+                    "DATETIME")
 
 # `{{` / `}}` are literal braces.  They are parked on two control characters
 # while the real tokens are replaced, then put back.

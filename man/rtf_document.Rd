@@ -43,10 +43,12 @@ defaults), or \code{NULL} (default) for none. A section can override it by
 passing \code{watermark} in its \code{rtf_section(secinfo = )} -- including
 \code{watermark = NA} to switch it off for that section alone.}
 
-\item{program}{The path of the program the document belongs to, for the
-\code{{PROGRAM}} run tokens (see \code{\link[=generate_rtfreport]{generate_rtfreport()}}).  \code{NULL} (default)
-leaves it to \code{generate_rtfreport(program = )}, the option, or the
-running script.}
+\item{program}{The path of the program that writes this document, for
+the \code{{PROGRAM}} / \code{{PROGRAM_FULL}} run tokens (see
+\code{\link[=generate_rtfreport]{generate_rtfreport()}}): the place to say it, once per program.
+\code{generate_rtfreport(program = )} overrides it for one call.  \code{NULL}
+(default) leaves it to that argument, then
+\code{getOption("rtfreporter.program")}, then the running script.}
 }
 \value{
 An \code{rtf_document} S3 object: a list with \code{document}

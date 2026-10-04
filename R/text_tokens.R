@@ -31,23 +31,25 @@
 rtf_text_tokens <- function() {
   data.frame(
     token = c("{PAGE}", "{TOTAL_PAGES}", "{AUTO_PAGE}", "{AUTO_TOTAL_PAGES}",
-              "{BOOK_PAGE}", "{PROGRAM}", "{PROGRAM_NAME}", "{PROGRAM_DIR}",
-              "{DATETIME}"),
+              "{BOOK_PAGE}", "{PROGRAM}", "{PROGRAM_FULL}", "{PROGRAM_NAME}",
+              "{PROGRAM_DIR}", "{DATETIME}"),
     kind = c("page", "page", "page", "page", "page", "run", "run", "run",
-             "run"),
+             "run", "run"),
     when = c("render", "render", "viewer", "viewer", "assemble", "render",
-             "render", "render", "render"),
+             "render", "render", "render", "render"),
     description = c(
       "Page number, written into the file (the first page of the section)",
       "Total pages of this file, written into the file",
       "Page number the word processor shows (right after assemble_rtf())",
       "Total pages the word processor counts (the whole document)",
       "Page number in the assembled book; empty until assemble_rtf(book_page =)",
-      "Path of the program that wrote the file",
+      "Path of the program that wrote the file, as given",
+      "The same path, absolute (the system's separator)",
       "File name of that program",
       "Folder of that program",
       "Date and time the file was written; {DATETIME:<format>} for another format"),
-    example = c("1", "3", "1", "3", "", "programs/t_14_1_1.R", "t_14_1_1.R",
+    example = c("1", "3", "1", "3", "", "programs/t_14_1_1.R",
+                "C:\\studies\\ABC-101\\programs\\t_14_1_1.R", "t_14_1_1.R",
                 "programs", "04OCT2026  10:05"),
     stringsAsFactors = FALSE)
 }
