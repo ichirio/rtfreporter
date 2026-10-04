@@ -3,8 +3,9 @@
 ### New
 
 - **`{PROGRAM_FULL}`, the program's absolute path** (#560).  A run token
-  beside `{PROGRAM}`: the same path made absolute (`normalizePath()`, `/`
-  between folders, from the working folder when the file is written).
+  beside `{PROGRAM}`: the same path made absolute (`normalizePath()`,
+  from the working folder when the file is written), with the system's
+  separator -- `\` on Windows, `/` elsewhere.
   `{PROGRAM}` is still the path as given, so existing files are unchanged.
   `rtf_text_tokens()` lists it and `set_col_header()` leaves it for the
   renderer; no program known is the same error as for `{PROGRAM}`.  The

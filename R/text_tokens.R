@@ -44,12 +44,12 @@ rtf_text_tokens <- function() {
       "Total pages the word processor counts (the whole document)",
       "Page number in the assembled book; empty until assemble_rtf(book_page =)",
       "Path of the program that wrote the file, as given",
-      "The same path, absolute",
+      "The same path, absolute (the system's separator)",
       "File name of that program",
       "Folder of that program",
       "Date and time the file was written; {DATETIME:<format>} for another format"),
     example = c("1", "3", "1", "3", "", "programs/t_14_1_1.R",
-                "C:/studies/ABC-101/programs/t_14_1_1.R", "t_14_1_1.R",
+                "C:\\studies\\ABC-101\\programs\\t_14_1_1.R", "t_14_1_1.R",
                 "programs", "04OCT2026  10:05"),
     stringsAsFactors = FALSE)
 }

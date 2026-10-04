@@ -334,13 +334,15 @@
   program
 }
 
-# {PROGRAM_FULL}: the program's path made absolute, `/` between folders.
-# normalizePath() makes a path that does not exist absolute on Windows only;
-# elsewhere it is joined to the working folder here.
+# {PROGRAM_FULL}: the program's path made absolute, with the system's own
+# separator (`\` on Windows, `/` elsewhere).  normalizePath() makes a path
+# that does not exist absolute on Windows only; elsewhere it is joined to
+# the working folder here.
 .full_path <- function(path) {
-  p <- normalizePath(path, winslash = "/", mustWork = FALSE)
+  p <- normalizePath(path, winslash = "\\", mustWork = FALSE)
   if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) {
-    p <- file.path(normalizePath(getwd(), winslash = "/"), sub("^[.]/", "", p))
+    p <- file.path(normalizePath(getwd(), winslash = "\\"), sub("^[.]/", "", p),
+                   fsep = .Platform$file.sep)
   }
   p
 }
@@ -2175,8 +2177,8 @@
 #' \describe{
 #'   \item{`{PROGRAM}`}{the program path, as given;}
 #'   \item{`{PROGRAM_FULL}`}{the same path made absolute
-#'     ([normalizePath()], `/` between folders), from the working folder
-#'     when the file is written;}
+#'     ([normalizePath()]), from the working folder when the file is
+#'     written, with the system's separator: `\\` on Windows, `/` elsewhere;}
 #'   \item{`{PROGRAM_NAME}`, `{PROGRAM_DIR}`}{its file name and its folder;}
 #'   \item{`{DATETIME}`}{the time the file is written, as
 #'     `getOption("rtfreporter.datetime_format", "\%d\%b\%Y  \%H:\%M")`

@@ -433,7 +433,7 @@ rtf_footer(rows = list(c(l = "Source: ADSL.", r = "CONFIDENTIAL")))
 | `{PAGE}` / `{TOTAL_PAGES}` | static, computed at render time; `assemble_rtf()` leaves them alone |
 | `{BOOK_PAGE}` | an empty slot, filled later by `assemble_rtf(book_page =)` |
 | `{PROGRAM}` / `{PROGRAM_NAME}` / `{PROGRAM_DIR}` | the program writing the file, as given (`rtf_document(program =)`, once per program; `generate_rtfreport(program =)` overrides it for one call; else `options(rtfreporter.program)`, else the `Rscript` script), its file name, its folder |
-| `{PROGRAM_FULL}` | the same program path made absolute (`normalizePath()`, `/` between folders, from the working folder when the file is written) |
+| `{PROGRAM_FULL}` | the same program path made absolute (`normalizePath()`, from the working folder when the file is written), with the system's separator: `\` on Windows, `/` elsewhere |
 | `{DATETIME}` / `{DATETIME:<fmt>}` | when the file is written, `%d%b%Y  %H:%M` in the C locale (`options(rtfreporter.datetime_format)`); `options(rtfreporter.render_time)` fixes it |
 
 `rtf_text_tokens()` returns this list as data (token, page or run, when it is
