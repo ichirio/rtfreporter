@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9015** (the development
+**This manual documents rtfreporter 0.8.2.9016** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -643,6 +643,7 @@ scheduled for removal before CRAN):
 | `paginate()` | `as_rtftables()` |
 | `rtftable(spanning_header = )`, `as_rtftable(gt_obj = )` | a first row of `col_header`; `as_rtftable(x)` |
 | `as_rtftables(stub_vars = , stub_label = , stub_indent = , stub_group_summary = )` | `stub = stub_spec(vars, label = , indent = , group_summary = )` |
+| `set_blank_rows(df = )`, `add_cont_label(chunk = )` | `data =` (or by position) |
 | `assemble_files()`, `assemble_spec()`, `assemble_toc()`, `assemble_from_spec()`, `toc_heading()`, `toc_entry()` | `assemble_folder()` (the table of contents) and `assemble_rtf(toc = <that table or its path>)` |
 
 Post-hoc styling (each accepts one `rtftable` **or** a list of pages):

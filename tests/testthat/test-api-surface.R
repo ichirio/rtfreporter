@@ -139,3 +139,28 @@ test_that("a border line saved under the old class name still reads", {
                    class = "rtf_border_side")
   expect_silent(rtf_border(top = old))
 })
+
+test_that("the first argument is data; the old names still work, with a warning", {
+  d <- data.frame(g = c("A", "A", "B"), v = 1:3)
+  expect_identical(names(formals(set_blank_rows))[1], "data")
+  expect_identical(names(formals(add_cont_label))[1], "data")
+  .reset_deprecation()
+  expect_warning(a <- set_blank_rows(df = d, blank_rows = 1L), "deprecated")
+  expect_identical(a, set_blank_rows(d, blank_rows = 1L))
+  expect_warning(b <- add_cont_label(chunk = d, label = "A"), "deprecated")
+  expect_identical(b, add_cont_label(data = d, label = "A"))
+  .reset_deprecation()
+})
+
+test_that("the NEWS expression finds every deprecated export", {
+  news <- system.file("NEWS.md", package = "rtfreporter")
+  skip_if(!nzchar(news), "NEWS.md is not installed")
+  txt <- readLines(news, warn = FALSE)
+  i <- grep("^\\\\b\\(rtf_border_", txt)
+  skip_if(!length(i), "the expression is not in this NEWS")
+  re <- txt[i[1]]
+  for (f in rtfreporter:::.deprecated_exports) {
+    expect_true(grepl(re, paste0("x <- ", f, "(1)"), perl = TRUE), info = f)
+  }
+  expect_false(grepl(re, "paginate_cols(x)", perl = TRUE))
+})

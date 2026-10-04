@@ -1,5 +1,28 @@
 # rtfreporter (development version)
 
+### Deprecated
+
+- The first argument of `set_blank_rows()` (was `df`) and `add_cont_label()`
+  (was `chunk`) is `data`, as in the other functions that take a table.
+  A call that gives it by position is unchanged; the old name still works
+  and warns once a session, and is removed in 0.9.0.
+
+### Before 0.9.0: finding what goes
+
+0.9.0 removes everything deprecated in 0.8.x.  To find it in your code
+(R scripts, R Markdown / Quarto), search for this regular expression -- each
+hit warns today and stops working in 0.9.0:
+
+```
+\b(rtf_border_(none|top|bottom|box|with|tfl|side)|rtf_table_border|add_col_header_row|col_header_from_names|set_header_cell|update_(header|footer)_row|paginate|assemble_(files|spec|toc|from_spec)|toc_(heading|entry))\s*\(|\b(spanning_header|gt_obj|stub_vars|stub_label|stub_indent|stub_group_summary)\s*=
+```
+
+For example `grep -rnE '<the expression>' R/ analysis/`, or RStudio's *Find
+in Files* with *Regular expression* ticked.  (`paginate_cols()` is not
+deprecated: the expression stops at `paginate(`.  The two first-argument
+names above are not in it -- they only matter when written as `df =` /
+`chunk =`.)
+
 ### New
 
 - **`plan_levels(.drop_empty = )`**: the levels of these variables that no

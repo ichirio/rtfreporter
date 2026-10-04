@@ -5,16 +5,17 @@
 \title{Attach blank-row positions to a data.frame}
 \usage{
 set_blank_rows(
-  df,
+  data,
   blank_rows = NULL,
   blank_row_first = FALSE,
   blank_row_end = FALSE,
   group_col = NULL,
-  group_by = c("auto", "indent", "value", "filled")
+  group_by = c("auto", "indent", "value", "filled"),
+  df
 )
 }
 \arguments{
-\item{df}{A data.frame (or tibble).}
+\item{data}{A data.frame (or tibble).}
 
 \item{blank_rows}{Blank-row specification. One of -- or a \code{list()} combining
 any of (positions are unioned):
@@ -29,10 +30,10 @@ per page (each carries its own rule / \code{group_by}).}
 }}
 
 \item{blank_row_first}{Logical, default \code{FALSE}.  When \code{TRUE},
-also adds position \code{0} (blank row at the top of \code{df}).}
+also adds position \code{0} (blank row at the top of \code{data}).}
 
 \item{blank_row_end}{Logical, default \code{FALSE}.  When \code{TRUE}, also
-adds position \code{nrow(df)} (blank row at the bottom of \code{df}).}
+adds position \code{nrow(data)} (blank row at the bottom of \code{data}).}
 
 \item{group_col}{Column name or 1-based index identifying the
 group, used only when \code{blank_rows = "between_groups"}.  \code{NULL}
@@ -41,17 +42,20 @@ group, used only when \code{blank_rows = "between_groups"}.  \code{NULL}
 \item{group_by}{How groups are recognised when
 \code{blank_rows = "between_groups"}: \code{"auto"} (default), \code{"indent"},
 \code{"value"}, or \code{"filled"} -- the same detection as the pagination splits
-(see \code{\link[=paginate]{paginate()}}).}
+(see \code{\link[=as_rtftables]{as_rtftables()}}).}
+
+\item{df}{The old name of \code{data}: \strong{deprecated} in 0.8.x (warns once a
+session, still works), removed in 0.9.0.}
 }
 \value{
-\code{df} with \code{attr(., "rtf_blank_rows")} updated.  The
+\code{data} with \code{attr(., "rtf_blank_rows")} updated.  The
 attribute is left absent when the resolved position set is
 empty.
 }
 \description{
 Resolves a \code{blank_rows} specification (the same one \code{paginate()}
 accepts) into integer positions and stores them on
-\code{attr(df, "rtf_blank_rows")}.  Use this when you already have a
+\code{attr(data, "rtf_blank_rows")}.  Use this when you already have a
 page-sized data.frame and only need to add blank rows -- no
 pagination required.
 }
