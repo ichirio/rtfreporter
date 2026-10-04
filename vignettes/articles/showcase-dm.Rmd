@@ -181,10 +181,10 @@ to `rtfreporter` exactly as above.
 library(cards); library(gtsummary)
 ard <- ard_stack(
   data = adsl, .by = TRT01A,
-  ard_continuous(variables = AGE,
+  ard_summary(variables = AGE,
                  statistic = ~ list(N = length, mean = mean, sd = sd,
                                     median = median, min = min, max = max)),
-  ard_categorical(variables = c(AGEGR, SEX, RACE)), .total_n = TRUE)
+  ard_tabulate(variables = c(AGEGR, SEX, RACE)), .total_n = TRUE)
 
 tbl <- tbl_ard_summary(
   ard, by = TRT01A,
@@ -251,10 +251,10 @@ and `print_to_gt()` produces the `gt` that `rtfreporter` reads.
 library(cards); library(tfrmt)
 ard <- ard_stack(
   data = adsl, .by = TRT01A,
-  ard_continuous(variables = AGE,
+  ard_summary(variables = AGE,
                  statistic = ~ list(n = length, Mean = mean, SD = sd,
                                     Median = median, Min = min, Max = max)),
-  ard_categorical(variables = c(AGEGR, SEX, RACE)))
+  ard_tabulate(variables = c(AGEGR, SEX, RACE)))
 
 # Reshape the ARD to tfrmt's long form: group / label / column / param / value.
 # sc1()/nm1() pull the first element of each list-column as character / numeric.

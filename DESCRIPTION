@@ -1,7 +1,7 @@
 Package: rtfreporter
 Type: Package
 Title: Clinical RTF Reporting Toolkit for Tables, Listings and Figures
-Version: 0.8.2.9018
+Version: 0.8.2.9019
 Authors@R:
     person(given  = "Yoichi",
            family = "Masui",
@@ -13,8 +13,11 @@ Description: A standalone toolkit for generating Rich Text Format (RTF)
     documents with multi-section headers and footers, multi-row column
     headers including spanning groups, per-column formatting, automatic
     page-number fields, embedded PNG/JPEG figures, and clinical-style
-    borders. Uses only S3 classes and base R; depends on no other
-    RTF-generation packages such as 'r2rtf' or 'reporter'.
+    borders. Tables can also be made from an analysis results dataset
+    (ARD, as built by 'cards' and 'cardx') with a plan of small verbs:
+    which keys are columns and rows, how the statistics are formatted, and
+    how the table is paged. Uses only S3 classes and base R; depends on no
+    other RTF-generation packages such as 'r2rtf' or 'reporter'.
 License: Apache License (>= 2)
 URL: https://github.com/ichirio/rtfreporter,
     https://ichirio.github.io/rtfreporter/
@@ -44,7 +47,7 @@ Suggests:
     tern,
     tfrmt,
     tidyr,
-    cards,
+    cards (>= 0.7.0),
     forcats,
     labelled,
     random.cdisc.data,

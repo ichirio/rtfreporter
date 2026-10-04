@@ -417,8 +417,8 @@
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   ard <- cards::ard_stack(
 #'     cards::ADSL, .by = ARM,
-#'     cards::ard_continuous(variables = c(AGE, BMIBL)),
-#'     cards::ard_categorical(variables = SEX))
+#'     cards::ard_summary(variables = c(AGE, BMIBL)),
+#'     cards::ard_tabulate(variables = SEX))
 #'
 #'   ard |>
 #'     normalize_ard() |>
@@ -1099,7 +1099,7 @@ print.table_plan <- function(x, ...) {
 #'      an event).  At depth *k* it is `cols[k]` tabulated within
 #'      `cols[1..k-1]`: cards tabulates each `.by` variable on its own,
 #'      so `ard_stack(.by = c(TRT, SEX))` states the arm but not the arm
-#'      x sex cell --- bind `cards::ard_categorical(adsl, by = TRT,
+#'      x sex cell --- bind `cards::ard_tabulate(adsl, by = TRT,
 #'      variables = SEX)` to state that;
 #'   3. an analysis summary's `N` only where it is a denominator by
 #'      construction (a hierarchical summary, a percentage of the
@@ -1120,7 +1120,7 @@ print.table_plan <- function(x, ...) {
 #'
 #'   * `values = list(n = "page")` --- each page's own, the subjects with that test:
 #'     the ARD rows **carrying** the page key, e.g.
-#'     `cards::ard_categorical(adlb, by = PARAM, variables = BASEGR)`,
+#'     `cards::ard_tabulate(adlb, by = PARAM, variables = BASEGR)`,
 #'     which states each baseline column's N and the page's total;
 #'   * `list(n = "table")` --- the analysis set: the ARD rows **without** the
 #'     page key, e.g. `cards::ard_total_n(adsl)` or the treatment
@@ -1962,7 +1962,7 @@ plan_after <- function(plan, ...) {
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   p <- cards::ard_stack(
 #'          cards::ADSL, .by = ARM,
-#'          cards::ard_continuous(variables = AGE)) |>
+#'          cards::ard_summary(variables = AGE)) |>
 #'     normalize_ard() |>
 #'     table_plan(cols = "ARM", rows = c(group = "variable")) |>
 #'     plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})")) |>
@@ -2944,11 +2944,13 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
 #'   them), `resolved`, `note`.
 #' @seealso [plan_col_header()]
 #' @examples
-#' ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
-#'   cards::ard_summary(variables = AGE)))
-#' p <- table_plan(ard, cols = "ARM") |>
-#'   plan_col_header(values = list(n = TRUE))
-#' plan_header_tokens(p)[, c("token", "text")]
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
+#'     cards::ard_summary(variables = AGE)))
+#'   p <- table_plan(ard, cols = "ARM") |>
+#'     plan_col_header(values = list(n = TRUE))
+#'   plan_header_tokens(p)[, c("token", "text")]
+#' }
 #' @export
 plan_header_tokens <- function(plan) {
   if (!inherits(plan, "table_plan")) {
@@ -3784,8 +3786,8 @@ plan_layers <- function(plan) {
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   ard <- cards::ard_stack(
 #'     cards::ADSL, .by = ARM,
-#'     cards::ard_continuous(variables = AGE),
-#'     cards::ard_categorical(variables = SEX))
+#'     cards::ard_summary(variables = AGE),
+#'     cards::ard_tabulate(variables = SEX))
 #'   plan_template(ard, cols = "ARM")
 #' }
 #' @seealso [table_plan()], [plan_apply()]

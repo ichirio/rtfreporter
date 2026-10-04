@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9018** (the development
+**This manual documents rtfreporter 0.8.2.9019** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -784,9 +784,9 @@ adsl$TRT01A <- factor(adsl$TRT01A,
                       levels = c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"))
 
 ard <- ard_stack(adsl, .by = TRT01A,              # .by also counts the arms: the header's N
-  ard_continuous(variables = AGE, statistic = ~ continuous_summary_fns(
+  ard_summary(variables = AGE, statistic = ~ continuous_summary_fns(
     c("N", "mean", "sd", "median", "p25", "p75", "min", "max"))),
-  ard_categorical(variables = c(AGEGR1, SEX)))
+  ard_tabulate(variables = c(AGEGR1, SEX)))
 
 p <- ard |>
   normalize_ard() |>

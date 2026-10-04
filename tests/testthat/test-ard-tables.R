@@ -12,11 +12,11 @@ make_ard <- function() {
   adsl$TRT <- as.character(adsl$ARM)
   cards::ard_stack(
     adsl, .by = TRT,
-    cards::ard_continuous(
+    cards::ard_summary(
       variables = AGE,
       statistic = ~ cards::continuous_summary_fns(
         c("N", "mean", "sd", "median", "min", "max"))),
-    cards::ard_categorical(variables = c(AGEGR, SEX),
+    cards::ard_tabulate(variables = c(AGEGR, SEX),
                            statistic = ~ c("n", "p")),
     .total_n = TRUE)
 }
@@ -147,7 +147,7 @@ test_that("several column keys make one spanning-ready column name", {
   adsl$AGEGR <- as.character(cut(adsl$AGE, c(0, 74, 200),
                                  labels = c("<75", ">=75")))
   ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
-                          cards::ard_categorical(variables = AGEGR,
+                          cards::ard_tabulate(variables = AGEGR,
                                                  statistic = ~ c("n", "p")))
   tbl <- ard_pipe(ard, cols = c("TRT", "SEX"), rows = c(group = "variable"),
                    cells = "{n:.0f} ({p:.1f%})")
@@ -238,10 +238,12 @@ test_that("cells match whichever cards verb generation built the ARD", {
     adsl, .by = TRT,
     cards::ard_summary(variables = AGE),
     cards::ard_tabulate(variables = SEX, statistic = ~ c("n", "p")))
-  old_ard <- cards::ard_stack(
-    adsl, .by = TRT,
-    cards::ard_continuous(variables = AGE),
-    cards::ard_categorical(variables = SEX, statistic = ~ c("n", "p")))
+  # what the old verbs (ard_continuous / ard_categorical) stamp: the same
+  # rows, the old `context`.  Made by hand, so the test outlives the old names.
+  old_ard <- new_ard
+  old_ard$context <- ifelse(old_ard$context == "summary", "continuous",
+                     ifelse(old_ard$context == "tabulate", "categorical",
+                            old_ard$context))
   expect_true(all(c("summary", "tabulate") %in% new_ard$context))
   expect_true(all(c("continuous", "categorical") %in% old_ard$context))
 
@@ -266,8 +268,8 @@ test_that("cells match an ARD whose context cards has never used", {
   # stand-in for a future cards rename: same rows, a context string that
   # matches neither the pre-0.9 nor the 0.9 spelling
   future <- as.data.frame(ard)
-  future$context <- ifelse(future$context == "continuous", "univariate_stats",
-                    ifelse(future$context == "categorical", "freq_table",
+  future$context <- ifelse(future$context == "summary", "univariate_stats",
+                    ifelse(future$context == "tabulate", "freq_table",
                            future$context))
   cells <- list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
                 categorical = "{n:.0f} ({p:.1f%})")
@@ -489,7 +491,7 @@ test_that("a single-variable ARD gets no grouping column by default", {
   adsl$TRT <- as.character(adsl$ARM)
   adsl$SEX <- as.character(adsl$SEX)
   ard <- cards::ard_stack(adsl, .by = TRT,
-                          cards::ard_categorical(variables = SEX,
+                          cards::ard_tabulate(variables = SEX,
                                                  statistic = ~ c("n", "p")))
   tbl <- ard_pipe(ard, cols = "TRT", cells = "{n:.0f} ({p:.1f%})")
   expect_identical(names(tbl)[1], "label")
@@ -573,9 +575,9 @@ make_factor_ard <- function() {
                         labels = c("Female", "Male"))
   cards::ard_stack(
     adsl, .by = TRT,
-    cards::ard_continuous(variables = AGE,
+    cards::ard_summary(variables = AGE,
                           statistic = ~ cards::continuous_summary_fns("mean")),
-    cards::ard_categorical(variables = c(AGEGR, SEX),
+    cards::ard_tabulate(variables = c(AGEGR, SEX),
                            statistic = ~ c("n", "p")))
 }
 
@@ -640,7 +642,7 @@ test_that("stats = 'rows' can carry either of the ARD's two values", {
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   ard <- cards::ard_stack(adsl, .by = TRT,
-                          cards::ard_continuous(variables = AGE))
+                          cards::ard_summary(variables = AGE))
   args <- list(ard = ard, cols = "TRT", rows = c(group = "variable"),
                label = c(Statistic = "stat_label"), stats = "rows")
 
@@ -661,7 +663,7 @@ test_that("{x:stat_fmt} and {x:stat} name the ARD's own columns", {
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   ard <- cards::ard_stack(adsl, .by = TRT,
-                          cards::ard_continuous(variables = AGE))
+                          cards::ard_summary(variables = AGE))
   tbl <- ard_pipe(ard, cols = "TRT", rows = c(group = "variable"),
                    cells = c("bare" = "{mean}",
                              "fmt"  = "{mean:stat_fmt}",
@@ -683,7 +685,7 @@ test_that("a bare token falls back to stat, but stat_fmt demanded is an error", 
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   ard <- cards::ard_stack(adsl, .by = TRT,
-                          cards::ard_continuous(variables = AGE))
+                          cards::ard_summary(variables = AGE))
   ard$fmt_fun <- NULL                       # an ARD carrying no formatting
   d <- normalize_ard(ard)
   expect_true(all(is.na(d$stat_fmt)))
@@ -899,7 +901,7 @@ test_that("stats = 'rows' gives one numeric row per statistic", {
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   ard <- cards::ard_stack(adsl, .by = TRT,
-                          cards::ard_continuous(variables = AGE))
+                          cards::ard_summary(variables = AGE))
   tbl <- ard_pipe(ard, cols = "TRT", rows = c(group = "variable"),
                    label = c(Statistic = "stat_label"), stats = "rows")
   expect_true(is.numeric(tbl$Placebo))
@@ -1042,8 +1044,8 @@ test_that("a variable the hierarchy does not cover keeps its own level", {
   adsl$R2  <- ifelse(adsl$R1 == "A", rep(c("A1", "A2"), length.out = nrow(adsl)),
                      NA_character_)
   ard <- dplyr::bind_rows(
-    cards::ard_categorical(adsl, by = TRT, variables = c(SEX, R1)),
-    cards::ard_categorical(adsl[adsl$R1 == "A", ], by = c(TRT, R1),
+    cards::ard_tabulate(adsl, by = TRT, variables = c(SEX, R1)),
+    cards::ard_tabulate(adsl[adsl$R1 == "A", ], by = c(TRT, R1),
                            variables = R2))
   d <- normalize_ard(ard, hierarchy = c("R1", "R2"))
   # the nested pair keeps its depths ...
@@ -1063,7 +1065,7 @@ test_that("plan_template(form = 'spread') puts keys outside `cols` into `rows`",
   adsl$TRT <- as.character(adsl$ARM)
   adsl$SEX <- as.character(adsl$SEX)
   adsl$GRP <- rep(c("X", "Y"), length.out = nrow(adsl))
-  ard <- cards::ard_categorical(adsl, by = c(TRT, GRP), variables = SEX)
+  ard <- cards::ard_tabulate(adsl, by = c(TRT, GRP), variables = SEX)
   code <- paste(capture.output(plan_template(form = "widen", ard, cols = "TRT")), collapse = "
 ")
   expect_match(code, 'rows  = c(GRP = "GRP")', fixed = TRUE)
@@ -1103,10 +1105,10 @@ test_that("plan_template(form = 'spread') takes its decimal places from the ARD"
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
-  house <- cards::ard_continuous(
+  house <- cards::ard_summary(
     adsl, by = TRT, variables = AGE,
     statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd")))
-  study <- cards::ard_continuous(
+  study <- cards::ard_summary(
     adsl, by = TRT, variables = AGE,
     statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd")),
     fmt_fun = AGE ~ list(mean = 2, sd = 3))
@@ -1120,11 +1122,11 @@ test_that("plan_template(form = 'spread') offers the full row set and trims what
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
-  full <- cards::ard_continuous(
+  full <- cards::ard_summary(
     adsl, by = TRT, variables = AGE,
     statistic = ~ cards::continuous_summary_fns(
       c("N", "mean", "sd", "median", "p25", "p75", "min", "max")))
-  thin <- cards::ard_continuous(
+  thin <- cards::ard_summary(
     adsl, by = TRT, variables = AGE,
     statistic = ~ cards::continuous_summary_fns(c("mean")))
   f <- paste(capture.output(plan_template(form = "widen", full, cols = "TRT")), collapse = "")
@@ -1142,10 +1144,10 @@ test_that("plan_template(form = 'spread') writes a script that reaches rtftables
   adsl$SEX <- as.character(adsl$SEX)
   ard <- cards::ard_stack(
     adsl, .by = TRT,
-    cards::ard_continuous(
+    cards::ard_summary(
       variables = AGE,
       statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd"))),
-    cards::ard_categorical(variables = SEX), .total_n = TRUE)
+    cards::ard_tabulate(variables = SEX), .total_n = TRUE)
   txt <- capture.output(plan_template(form = "widen", ard, cols = "TRT"))
   code <- paste(txt, collapse = "
 ")
@@ -1167,7 +1169,7 @@ test_that("with more than one column key the header is left to header_sep", {
   adsl$TRT <- as.character(adsl$ARM)
   adsl$SEX <- as.character(adsl$SEX)
   adsl$GRP <- rep(c("X", "Y"), length.out = nrow(adsl))
-  ard <- cards::ard_categorical(adsl, by = c(TRT, GRP), variables = SEX)
+  ard <- cards::ard_tabulate(adsl, by = c(TRT, GRP), variables = SEX)
   code <- paste(capture.output(
     plan_template(form = "widen", ard, cols = c("TRT", "GRP"))), collapse = "
 ")
@@ -1238,7 +1240,7 @@ test_that("`labels` can be scoped to one column, like `levels`", {
                   stringsAsFactors = FALSE)
   ard <- cards::ard_stack(
     d, .by = BASE,
-    cards::ard_categorical(variables = POST, statistic = ~ c("n")))
+    cards::ard_tabulate(variables = POST, statistic = ~ c("n")))
 
   one <- function(labels) {
     suppressMessages(
@@ -1275,7 +1277,7 @@ test_that("a scope and a plain value can be mixed, and are told apart", {
                   stringsAsFactors = FALSE)
   ard <- cards::ard_stack(
     d, .by = BASE,
-    cards::ard_categorical(variables = c(SEX, RACE),
+    cards::ard_tabulate(variables = c(SEX, RACE),
                            statistic = ~ c("n")))
   out <- suppressMessages(
     ard |> normalize_ard() |>
@@ -1380,8 +1382,8 @@ make_fct_ard <- function() {
                        "Xanomeline High Dose"))
   adsl$SEX <- as.character(adsl$SEX)
   cards::ard_stack(adsl, .by = TRT,
-                   cards::ard_continuous(variables = AGE),
-                   cards::ard_categorical(variables = SEX))
+                   cards::ard_summary(variables = AGE),
+                   cards::ard_tabulate(variables = SEX))
 }
 fct_cells <- list(continuous = "{mean:.1f}", categorical = "{n}")
 fct_order <- c("Xanomeline Low Dose", "Placebo", "Xanomeline High Dose")
@@ -1419,7 +1421,7 @@ test_that("the declared order is read off the ARD, unused levels included", {
   adsl$TRT <- factor(as.character(adsl$ARM),
                      c("Xanomeline Low Dose", "Placebo",
                        "Xanomeline High Dose", "Not Dosed"))
-  ard <- cards::ard_categorical(adsl, by = TRT, variables = SEX)
+  ard <- cards::ard_tabulate(adsl, by = TRT, variables = SEX)
   expect_identical(levels(normalize_ard(ard)$TRT),
                    c("Xanomeline Low Dose", "Placebo",
                      "Xanomeline High Dose", "Not Dosed"))
@@ -1463,12 +1465,12 @@ test_that(".kind is decided per summary, not per variable", {
   adsl$DEC <- round(adsl$AGE / 10)
   d <- normalize_ard(cards::ard_stack(
     adsl, .by = TRT,
-    cards::ard_continuous(variables = DEC),
-    cards::ard_categorical(variables = DEC)))
+    cards::ard_summary(variables = DEC),
+    cards::ard_tabulate(variables = DEC)))
   body <- !d$.key_own
-  expect_identical(unique(d$.kind[body & d$context == "continuous"]),
+  expect_identical(unique(d$.kind[body & d$context == "summary"]),
                    "continuous")
-  expect_identical(unique(d$.kind[body & d$context == "categorical"]),
+  expect_identical(unique(d$.kind[body & d$context == "tabulate"]),
                    "categorical")
 })
 

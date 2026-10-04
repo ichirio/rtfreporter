@@ -70,7 +70,7 @@ if (requireNamespace("cards", quietly = TRUE)) {
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   ard <- cards::ard_stack(adsl, .by = TRT,
-                          cards::ard_continuous(variables = AGE))
+                          cards::ard_summary(variables = AGE))
   n <- pull_ard(ard, cols = "TRT")            # the denominator, per arm
   paste0(names(n), "\\\\nN = ", n)
 }

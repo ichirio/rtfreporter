@@ -44,7 +44,7 @@ do" --- there is no second code path that could disagree with the first.
 if (requireNamespace("cards", quietly = TRUE)) {
   p <- cards::ard_stack(
          cards::ADSL, .by = ARM,
-         cards::ard_continuous(variables = AGE)) |>
+         cards::ard_summary(variables = AGE)) |>
     normalize_ard() |>
     table_plan(cols = "ARM", rows = c(group = "variable")) |>
     plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})")) |>

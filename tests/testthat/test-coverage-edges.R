@@ -312,7 +312,7 @@ edge_ard <- function(by = "TRT") {
   adsl$TRT <- as.character(adsl$ARM)
   suppressMessages(normalize_ard(cards::ard_stack(
     adsl, .by = all_of(by),
-    cards::ard_continuous(
+    cards::ard_summary(
       variables = AGE,
       statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd"))),
     .total_n = TRUE)))

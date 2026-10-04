@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+### Before CRAN
+
+- **cards' current verb names** (#556).  The examples, the quickstart
+  vignette, the articles, the AI manual and the tests build their ARDs with
+  `cards::ard_summary()` / `cards::ard_tabulate()` (cards 0.7.0 renamed
+  `ard_continuous()` / `ard_categorical()`), so they keep running when
+  cards drops the old names; `Suggests: cards (>= 0.7.0)`.  An ARD made
+  with the old verbs (its `context` is `"continuous"` / `"categorical"`)
+  still reads the same -- a test stamps the old context by hand.  The RTF
+  is unchanged.
+- `plan_header_tokens()`'s example runs only when cards is installed.
+- The Description says what the ARD layer (the plan) does.
+
 ### Bug fixes
 
 - **A group count stated twice is one count** (#554).  A column

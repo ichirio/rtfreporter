@@ -19,10 +19,10 @@ plan_ard <- function() {
   adsl$TRT <- as.character(adsl$ARM)
   cards::ard_stack(
     adsl, .by = TRT,
-    cards::ard_continuous(
+    cards::ard_summary(
       variables = c(AGE, BMIBL),
       statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd"))),
-    cards::ard_categorical(variables = SEX, statistic = ~ c("n", "p")),
+    cards::ard_tabulate(variables = SEX, statistic = ~ c("n", "p")),
     .total_n = TRUE)
 }
 
@@ -664,7 +664,7 @@ test_that("the generated header writes a real newline escape", {
   # one unambiguous denominator, so a header block is written at all
   ard <- cards::ard_stack(
     cards::ADSL, .by = ARM,
-    cards::ard_continuous(variables = AGE,
+    cards::ard_summary(variables = AGE,
                           statistic = ~ list(N = function(x) length(x))))
   code <- utils::capture.output(
     invisible(plan_template(ard, cols = "ARM", pipe = "|>")))
@@ -1583,7 +1583,7 @@ test_that("plan_col_header(values = TRUE) reads the key's own tabulation", {
                        "Xanomeline High Dose"))
   adsl$AGE[1:5] <- NA          # so the summary's N is NOT the arm size
   ard <- cards::ard_stack(adsl, .by = TRT,
-                          cards::ard_continuous(variables = AGE))
+                          cards::ard_summary(variables = AGE))
   p <- table_plan(normalize_ard(ard), cols = "TRT")
   arm <- table(adsl$TRT)
   expect_equal(nv(p), stats::setNames(as.numeric(arm), names(arm)))
@@ -1597,7 +1597,7 @@ test_that("a key tabulation that is not the population split is not taken", {
                 adsl[, c("USUBJID", "TRT")], by = "USUBJID")
   # the treatment counted as an EVENT: n per arm does not add up to one N
   ard <- cards::bind_ard(
-    cards::ard_categorical(adae[!duplicated(adae$USUBJID), ],
+    cards::ard_tabulate(adae[!duplicated(adae$USUBJID), ],
                            variables = TRT, denominator = adsl),
     cards::ard_hierarchical(adae[!duplicated(adae[c("USUBJID", "AESOC")]), ],
                             variables = AESOC, by = TRT,
@@ -1614,7 +1614,7 @@ test_that("a Total column the key cannot speak for gets no number", {
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   d <- normalize_ard(cards::ard_stack(
-    adsl, .by = TRT, cards::ard_categorical(variables = SEX),
+    adsl, .by = TRT, cards::ard_tabulate(variables = SEX),
     .overall = TRUE))
   d$TRT[is.na(d$TRT) & !d$.key_own] <- "Total"
   p <- table_plan(d, cols = "TRT")
@@ -1632,8 +1632,8 @@ test_that("a variable summarised and tabulated gets both recipes in a plan", {
   adsl$DEC <- round(adsl$AGE / 10)
   d <- normalize_ard(cards::ard_stack(
     adsl, .by = TRT,
-    cards::ard_continuous(variables = DEC),
-    cards::ard_categorical(variables = DEC)))
+    cards::ard_summary(variables = DEC),
+    cards::ard_tabulate(variables = DEC)))
   direct <- widen_ard(d, cols = "TRT", notes = FALSE,
                        cells = list(continuous  = "{mean:.1f}",
                                     categorical = "{n}"))
@@ -1698,8 +1698,8 @@ test_that("variables that disagree anywhere give no number anywhere", {
   adsl <- adsl_trt()
   adsl$AGE[adsl$TRT == "Placebo"][1:3] <- NA   # Placebo: AGE 83, SEX 86
   ard <- cards::bind_ard(
-    cards::ard_continuous(adsl, by = TRT, variables = AGE),
-    cards::ard_categorical(adsl, by = TRT, variables = SEX))
+    cards::ard_summary(adsl, by = TRT, variables = AGE),
+    cards::ard_tabulate(adsl, by = TRT, variables = SEX))
   p <- table_plan(normalize_ard(ard), cols = "TRT") |> plan_cells(notes = FALSE)
   # the other arms agree (84 = 84) only because nothing is missing there
   expect_length(nv(p), 0L)
@@ -1711,8 +1711,8 @@ test_that("two variables that agree everywhere are read", {
   skip_if_not_installed("cards")
   adsl <- adsl_trt()
   ard <- cards::bind_ard(
-    cards::ard_continuous(adsl, by = TRT, variables = AGE),
-    cards::ard_categorical(adsl, by = TRT, variables = SEX))
+    cards::ard_summary(adsl, by = TRT, variables = AGE),
+    cards::ard_tabulate(adsl, by = TRT, variables = SEX))
   p <- table_plan(normalize_ard(ard), cols = "TRT") |> plan_cells(notes = FALSE)
   arm <- table(adsl$TRT)
   expect_equal(nv(p), stats::setNames(as.numeric(arm), names(arm)))
@@ -1722,7 +1722,7 @@ test_that("an N per visit is not a column's number", {
   skip_if_not_installed("cards")
   adlb <- cards::ADLB[cards::ADLB$PARAMCD == "ALT", ]
   adlb$TRT <- as.character(adlb$TRTA)
-  ard <- cards::ard_continuous(adlb, by = c(TRT, AVISIT), variables = AVAL)
+  ard <- cards::ard_summary(adlb, by = c(TRT, AVISIT), variables = AVAL)
   p <- table_plan(normalize_ard(ard), cols = "TRT") |> plan_cells(notes = FALSE)
   expect_length(nv(p), 0L)
   expect_match(attr(rtfreporter:::.plan_n_values(p, TRUE), "why")[[1L]],
@@ -1733,8 +1733,8 @@ test_that("two column keys: the arm and the arm x sex cell are both read", {
   skip_if_not_installed("cards")
   adsl <- adsl_trt()
   d <- normalize_ard(cards::ard_stack(
-    adsl, .by = c(TRT, SEX), cards::ard_continuous(variables = AGE),
-    cards::ard_categorical(variables = AGEGRP)))
+    adsl, .by = c(TRT, SEX), cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = AGEGRP)))
   p <- table_plan(d, cols = c("TRT", "SEX"), rows = c(group = "variable")) |> plan_cells(notes = FALSE) |>
     plan_cells(continuous = "{mean:.1f}", categorical = "{n}")
   v <- nv(p)
@@ -1768,8 +1768,8 @@ test_that("three keys: a depth the ARD does not state is NA, with a warning", {
   adsl <- adsl_trt()
   mk <- function(extra = NULL) {
     a <- cards::ard_stack(adsl, .by = c(TRT, SEX, AGEGRP),
-                          cards::ard_continuous(variables = AGE),
-                          cards::ard_categorical(variables = RACE))
+                          cards::ard_summary(variables = AGE),
+                          cards::ard_tabulate(variables = RACE))
     if (!is.null(extra)) a <- cards::bind_ard(a, extra)
     table_plan(normalize_ard(a), cols = c("TRT", "SEX", "AGEGRP"),
              rows = c(group = "variable")) |> plan_cells(notes = FALSE) |>
@@ -1787,7 +1787,7 @@ test_that("three keys: a depth the ARD does not state is NA, with a warning", {
   expect_identical(h[[3L]][3:4], c("<70 N=13", ">=70 N=40"))
   # tabulating SEX within TRT states it
   out <- suppressMessages(plan_apply(mk(
-    cards::ard_categorical(adsl, by = TRT, variables = SEX)), "pages"))
+    cards::ard_tabulate(adsl, by = TRT, variables = SEX)), "pages"))
   expect_identical(hdr_rows(out)[[2L]][3L], "F N=53")
 })
 
@@ -1825,7 +1825,7 @@ test_that("the key tabulated on its own states the table's total", {
   skip_if_not_installed("cards")
   adsl <- adsl_trt()
   d <- normalize_ard(cards::ard_stack(
-    adsl, .by = TRT, cards::ard_categorical(variables = SEX)))
+    adsl, .by = TRT, cards::ard_tabulate(variables = SEX)))
   p <- table_plan(d, cols = "TRT") |> plan_cells(notes = FALSE)
   expect_identical(attr(rtfreporter:::.plan_n_values(p, TRUE), "total"),
                    nrow(adsl) + 0)
@@ -1840,10 +1840,10 @@ test_that("pages split by a group value each read their own N from the ARD", {
   lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
   lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
   ard <- cards::bind_ard(
-    cards::ard_categorical(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
+    cards::ard_tabulate(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
     # the population of each parameter, split by the column variable:
     # the ARD states every column's N and each page's total
-    cards::ard_categorical(lb, by = PARAM, variables = BASEGR))
+    cards::ard_tabulate(lb, by = PARAM, variables = BASEGR))
   p <- table_plan(normalize_ard(ard), cols = "BASEGR",
                 rows = c(PARAM = "PARAM"), label = c(label = ".label")) |> plan_cells(notes = FALSE) |>
     plan_cells("{n}") |>
@@ -1874,8 +1874,8 @@ two_pop <- function() {
   lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
   lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
   d <- normalize_ard(cards::bind_ard(
-    cards::ard_categorical(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
-    cards::ard_categorical(lb, by = PARAM, variables = BASEGR),
+    cards::ard_tabulate(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
+    cards::ard_tabulate(lb, by = PARAM, variables = BASEGR),
     cards::ard_total_n(cards::ADSL)), drop_contexts = "attributes")
   list(d = d, tested = table(lb$PARAM), set = nrow(cards::ADSL))
 }
@@ -1945,8 +1945,8 @@ test_that("plan_columns(sep = ) also drives the ARD plan's own spanning header (
   skip_if_not_installed("cards")
   adsl <- adsl_trt()
   d <- normalize_ard(cards::ard_stack(
-    adsl, .by = c(TRT, SEX), cards::ard_continuous(variables = AGE),
-    cards::ard_categorical(variables = AGEGRP)))
+    adsl, .by = c(TRT, SEX), cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = AGEGRP)))
   mk <- function(sep = NULL) {
     p <- table_plan(d, cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
       plan_cells(notes = FALSE) |>
@@ -2084,7 +2084,7 @@ test_that("plan_labels() scoped by an analysis variable relabels its levels (#51
   adsl$TRT <- as.character(adsl$ARM)
   adsl$SEX <- as.character(adsl$SEX)
   ard <- cards::ard_stack(adsl, .by = TRT,
-    cards::ard_categorical(variables = c(SEX, AGEGR1), statistic = ~ c("n", "p")))
+    cards::ard_tabulate(variables = c(SEX, AGEGR1), statistic = ~ c("n", "p")))
   d <- suppressMessages(normalize_ard(ard))
   base <- table_plan(d, cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(notes = FALSE) |> plan_cells("{n:d} ({p:.1f%})")

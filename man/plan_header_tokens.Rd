@@ -35,11 +35,13 @@ over its own columns).
 }
 }
 \examples{
-ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
-  cards::ard_summary(variables = AGE)))
-p <- table_plan(ard, cols = "ARM") |>
-  plan_col_header(values = list(n = TRUE))
-plan_header_tokens(p)[, c("token", "text")]
+if (requireNamespace("cards", quietly = TRUE)) {
+  ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
+    cards::ard_summary(variables = AGE)))
+  p <- table_plan(ard, cols = "ARM") |>
+    plan_col_header(values = list(n = TRUE))
+  plan_header_tokens(p)[, c("token", "text")]
+}
 }
 \seealso{
 \code{\link[=plan_col_header]{plan_col_header()}}
