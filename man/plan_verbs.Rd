@@ -24,7 +24,7 @@
 \alias{plan_paginate_cols}
 \title{Declare the table, one layer at a time}
 \usage{
-plan_levels(plan, ...)
+plan_levels(plan, ..., .drop_empty = NULL)
 
 plan_labels(plan, ...)
 
@@ -209,6 +209,13 @@ two are layers and the roles are not.  A \code{plan_labels()} entry
 whose value is itself a named vector applies to that \strong{column}
 only: a shift table's \code{"0"} is \code{"Grade 0"} down the side and
 \code{"Baseline 0"} across the top.}
+
+\item{.drop_empty}{For \code{plan_levels()}: variables whose levels \strong{no record
+has} are not shown -- a level whose \code{n} is 0 (or missing) in every
+column, as an ARD made with a code list's full set of levels has
+(a factor's unused level, counted 0).  \code{NULL} (default): every level
+the data has is shown.  A level that some column counts stays; a
+variable summarised without \code{n} is untouched.  Several calls add up.}
 
 \item{stats, value, na, notes}{For \code{plan_cells()}: how a cell is made,
 as \code{\link[=widen_ard]{widen_ard()}} takes them --- \code{stats = "cells"} (default) fills a
@@ -567,6 +574,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_cells(..., stats, value, na, notes)}: how a cell is made. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{cells}, \code{stats}, \code{value}, \code{na}, \code{notes}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{na}.
 \item \code{plan_digits(..., rounding)}: the digits. Goes to the open tokens of the templates; on a finished table \code{\link[=fmt_numeric]{fmt_numeric()}}.
 \item \code{plan_levels()}, \code{plan_labels()}: the order and text of values. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{levels}, \code{labels}.
+\code{plan_levels(.drop_empty = )} leaves out the levels no record has, before the table is made.
 \item \code{plan_sort(..., stat, keep)}: the row order. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name}.
 \item \code{plan_stub(vars, name, indent, group_summary, before)}: the row headings. Goes to \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}.
 \item \code{plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)}: how cells look. Goes to \code{\link[=style_header]{style_header()}}, \code{\link[=style_cols]{style_cols()}}, or \code{\link[=rtftable]{rtftable()}}'s \code{cell_styles} for a condition.

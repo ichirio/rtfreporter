@@ -2281,3 +2281,26 @@ test_that("plan_header_tokens() gives the header tokens as data", {
   expect_true(any(grepl(tk$text[match("{n:sum}", tk$token)], out, fixed = TRUE)))
   expect_error(plan_header_tokens(1), "table_plan")
 })
+
+test_that("plan_levels(.drop_empty = ) leaves out the levels no record has", {
+  skip_if_not_installed("cards")
+  adsl <- data.frame(
+    USUBJID = 1:6, TRT = rep(c("A", "B"), 3),
+    RACE = factor(c("WHITE", "WHITE", "ASIAN", "WHITE", "ASIAN", "WHITE"),
+                  levels = c("WHITE", "ASIAN", "OTHER")))
+  d <- normalize_ard(cards::ard_tabulate(adsl, by = TRT, variables = RACE))
+  p <- table_plan(d, cols = "TRT")
+  all <- suppressMessages(plan_apply(plan_cells(p, notes = FALSE), "table"))
+  expect_identical(as.character(all$label), c("WHITE", "ASIAN", "OTHER"))  # the default
+  dropped <- suppressMessages(plan_apply(
+    plan_cells(p, notes = FALSE) |> plan_levels(.drop_empty = "RACE"), "table"))
+  # ASIAN is 0 in B but counted in A, so it stays
+  expect_identical(as.character(dropped$label), c("WHITE", "ASIAN"))
+  # with an order, and the order naming the dropped level
+  ord <- suppressMessages(plan_apply(
+    plan_cells(p, notes = FALSE) |>
+      plan_levels(RACE = c("OTHER", "ASIAN", "WHITE"), .drop_empty = "RACE"),
+    "table"))
+  expect_identical(as.character(ord$label), c("ASIAN", "WHITE"))
+  expect_error(plan_levels(p, .drop_empty = 1), "takes variable names")
+})

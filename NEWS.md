@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+### New
+
+- **`plan_levels(.drop_empty = )`**: the levels of these variables that no
+  record has -- `n` 0 (or missing) in every column -- are left out of the
+  table.  An ARD made after a code list's full set of levels was applied
+  (tflspec) counts a value no subject has as 0, which is what a table shows
+  by default; this is the switch to leave such rows out, one variable at a
+  time.  A level some column counts stays.  The default is unchanged.
+
 ### Deprecated (the pre-CRAN API review, iteration 1)
 
 Each still works and warns once a session, naming what to write instead;
