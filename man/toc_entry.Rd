@@ -2,7 +2,7 @@
 % Please edit documentation in R/assemble_rtf.R
 \name{toc_entry}
 \alias{toc_entry}
-\title{Build a structured TOC entry}
+\title{Build a structured TOC entry (deprecated)}
 \usage{
 toc_entry(label, file = NULL, level = 2L)
 }
@@ -20,11 +20,16 @@ next file in order).}
 A list of class \code{"rtf_toc_entry"}.
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  Give \code{\link[=assemble_rtf]{assemble_rtf()}} the table of contents as a table:
+one row per file (\code{file}, \code{label}, \code{level}).
+}
+\details{
 Use inside \code{\link[=assemble_rtf]{assemble_rtf()}}'s \verb{toc =} list to add a clickable TOC
 entry pointing at one of the \code{input_files}.
 }
 \examples{
-toc_entry("Table 14.1.1 Demographics",  file = "t14_1_1.rtf", level = 2)
-toc_entry("Listing 16.1 Disposition")   # auto-bound to the next file
+# instead: one row of the table of contents
+data.frame(file = "t14_1_1.rtf", label = "Table 14.1.1 Demographics", level = 2)
 
 }

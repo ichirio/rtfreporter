@@ -2,7 +2,7 @@
 % Please edit documentation in R/assemble_spec.R
 \name{assemble_spec}
 \alias{assemble_spec}
-\title{Build an assembly spec (one editable row per RTF)}
+\title{Build an assembly spec (one editable row per RTF) (deprecated)}
 \usage{
 assemble_spec(dir = NULL, files = NULL, recursive = FALSE)
 }
@@ -27,6 +27,10 @@ A \code{data.frame} with columns:
 }
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  It is \code{\link[=assemble_folder]{assemble_folder()}} without an \code{output_file}.
+}
+\details{
 Reads the table number and title from each RTF's running header (the format
 written by rtfreporter's headers) and returns a \code{data.frame} -- the
 \strong{assembly spec} -- with one row per file.  Edit it (rename labels, add
@@ -44,9 +48,10 @@ for (t in c("14.1.1", "14.2.1")) {
   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
     fixed = TRUE), ".rtf")), overwrite = TRUE)
 }
-spec <- assemble_spec(dir)   # one editable row per file
+# instead: the folder's table of contents, edited, then assembled
+spec <- assemble_folder(dir)
 spec$heading[spec$table == "14.1.1"] <- "Demographics"   # group entries
-assemble_from_spec(spec, tempfile(fileext = ".rtf"))
+assemble_rtf(toc = spec, output_file = tempfile(fileext = ".rtf"))
 }
 \seealso{
 \code{\link[=assemble_from_spec]{assemble_from_spec()}}, \code{\link[=assemble_folder]{assemble_folder()}}.

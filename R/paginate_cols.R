@@ -45,7 +45,7 @@
 #
 #  Why a post-hoc verb on BUILT tables
 #  -----------------------------------
-#  Applied after `drop_cols` / `stub_vars` / a user `col_header`, so the
+#  Applied after `drop_cols` / `stub` / a user `col_header`, so the
 #  column positions the author writes mean the FINAL printed columns -- the
 #  same convention `set_col_header()` follows.  It also works on a table built
 #  by hand with `rtftable()`, not just on an `as_rtftables()` result.
@@ -451,7 +451,7 @@
 #' ```
 #'
 #' Because it runs on **built** tables, the positions refer to the final
-#' printed columns -- after `drop_cols`, `stub_vars` and any user
+#' printed columns -- after `drop_cols`, `stub` and any user
 #' `col_header` -- the same convention [set_col_header()] uses.
 #'
 #' @section Column widths:
@@ -549,7 +549,7 @@
 #'
 #' ```r
 #' as_rtftables(df, split = "by_value", group_col = "period",
-#'              stub_vars = c("row_grp1", "label")) |>
+#'              stub = c("row_grp1", "label")) |>
 #'   paginate_cols(by = "____", carry = 1, col_header = "names")
 #' ```
 #'

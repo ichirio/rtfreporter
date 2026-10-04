@@ -104,7 +104,7 @@ setting. Every layer has been merged, so what you see is what runs.
 | `sort_by`, `sort_desc` | `plan_sort("KEY", "-OTHER")`: a minus sign for descending |
 | `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows` | `plan_blanks(where, first, last, counted)` |
 | `drop_cols` | `plan_hide(...)`; also `keep = FALSE` on `plan_sort()` / `plan_paginate_group()` |
-| `stub_vars`, `stub_label`, `stub_indent`, `stub_group_summary`, `stub` | `plan_stub(vars, name, indent, group_summary)` |
+| `stub` (and the deprecated `stub_vars`, `stub_label`, `stub_indent`, `stub_group_summary`) | `plan_stub(vars, name, indent, group_summary)` |
 | `listing` | `plan_listing(listing_col(...), ...)` |
 
 **Columns and header**

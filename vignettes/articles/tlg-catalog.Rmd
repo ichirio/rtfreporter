@@ -436,10 +436,9 @@ rtf_document() |>
 A real submission bundles many TLGs into one file.  Render each table to its
 own `.rtf` (the recipes above leave the paths in `out_dm_gts` and
 `out_ae_tern`), then concatenate them with
-[`assemble_rtf()`](../reference/assemble_rtf.html).  Passing `toc =` a list of
-[`toc_heading()`](../reference/toc_heading.html) /
-[`toc_entry()`](../reference/toc_entry.html) adds a clickable **Table of
-Contents** at the front, and `toc_page_numbering = "decimal"` numbers its
+[`assemble_rtf()`](../reference/assemble_rtf.html).  Passing `toc =` a table
+(one row per file: its `label`, and a `heading` above it) adds a clickable
+**Table of Contents** at the front, and `toc_page_numbering = "decimal"` numbers its
 pages.
 
 Each table keeps its own baked-in `Page X of Y` footer: the recipes use the
@@ -453,13 +452,12 @@ library(rtfreporter)
 bundle <- tempfile(fileext = ".rtf")
 assemble_rtf(
   c(out_dm_gts, out_ae_tern), bundle, overwrite = TRUE,
-  toc = list(
-    toc_heading("DEMOGRAPHIC DATA", level = 1),
-    toc_entry("Table 14.1.1b  Demographic and Baseline Characteristics (gtsummary)",
-              file = out_dm_gts, level = 2),
-    toc_heading("SAFETY DATA", level = 1),
-    toc_entry("Table 14.3.1a  Adverse Events by SOC and Preferred Term (tern)",
-              file = out_ae_tern, level = 2)),
+  toc = data.frame(
+    file    = c(out_dm_gts, out_ae_tern),
+    heading = c("DEMOGRAPHIC DATA", "SAFETY DATA"),
+    label   = c("Table 14.1.1b  Demographic and Baseline Characteristics (gtsummary)",
+                "Table 14.3.1a  Adverse Events by SOC and Preferred Term (tern)"),
+    level   = 2),
   toc_title = "Table of Contents",
   toc_page_numbering = "decimal")
 ```
@@ -480,16 +478,16 @@ Y` footer):
 
 For a whole folder of `.rtf` files there is a one-call shortcut that reads each
 file's header, builds the Table of Contents and assembles the deliverable --
-optionally saving the editable "assembly spec" (an `.xlsx` / `.csv` you can
-tweak and re-run):
+optionally saving that table of contents (an `.xlsx` / `.csv` you can tweak
+and assemble from again):
 
 ```r
 assemble_folder("path/to/rtf", "deliverable.rtf", spec_file = "spec.xlsx")
+# ... edit spec.xlsx, then
+assemble_rtf(toc = "spec.xlsx", output_file = "deliverable.rtf", overwrite = TRUE)
 ```
 
-See [`assemble_folder()`](../reference/assemble_folder.html),
-[`assemble_spec()`](../reference/assemble_spec.html) and
-[`assemble_from_spec()`](../reference/assemble_from_spec.html).
+See [`assemble_folder()`](../reference/assemble_folder.html).
 
 # Using rtfreporter
 

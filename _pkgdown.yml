@@ -530,17 +530,12 @@ reference:
       Join finished RTF FILES into one, with a table of contents and
       continuous page numbering.
       **Acts on:** files on disk, not R objects -- this is the step after
-      `generate_rtfreport()`.  A spec (`assemble_spec()`, a .csv/.xlsx) names
-      the files and their TOC entries.
+      `generate_rtfreport()`.  The table of contents is a table (file, label,
+      heading, level) -- `assemble_folder()` makes it from a folder -- or the
+      path of one (.xlsx / .csv).
     contents:
       - assemble_rtf
-      - assemble_files
       - assemble_folder
-      - assemble_spec
-      - assemble_from_spec
-      - assemble_toc
-      - toc_heading
-      - toc_entry
 
   # ── 13. Post-processing ────────────────────────────────────────────────
   - title: Post-processing
@@ -565,7 +560,10 @@ reference:
       (now `rtf_border_line()`, documented on its page), the header editors
       below (write the header in `rtf_col_header()` / `rtf_header()`
       instead), `paginate()` (use `as_rtftables()`), and the arguments
-      `rtftable(spanning_header = )` and `as_rtftable(gt_obj = )` (now `x`).
+      `rtftable(spanning_header = )` and `as_rtftable(gt_obj = )` (now `x`),
+      the `as_rtftables()` arguments `stub_vars` / `stub_label` /
+      `stub_indent` / `stub_group_summary` (now `stub = `), and the assembly
+      helpers below (`assemble_folder()` and `assemble_rtf(toc = <a table>)`).
     contents:
       - rtf_border_with
       - rtf_table_border
@@ -575,6 +573,12 @@ reference:
       - set_header_cell
       - update_header_row
       - paginate
+      - assemble_files
+      - assemble_spec
+      - assemble_toc
+      - assemble_from_spec
+      - toc_heading
+      - toc_entry
 
 # Articles index page (/articles/).  Grouped so users land on the
 # tutorial first; learner-focused material sits at the bottom.

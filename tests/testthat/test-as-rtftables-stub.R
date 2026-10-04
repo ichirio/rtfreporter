@@ -1,5 +1,7 @@
 # as_rtftables(stub_vars = ): fold stub_cols() into the extraction pipeline (#242)
 
+local_deprecated("stub_vars")  # deprecated in 0.8.x
+
 nbsp <- intToUtf8(160L)
 
 ae <- data.frame(

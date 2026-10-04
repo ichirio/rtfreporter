@@ -2,7 +2,7 @@
 % Please edit documentation in R/assemble_spec.R
 \name{assemble_toc}
 \alias{assemble_toc}
-\title{Build a TOC definition from a set of RTF files}
+\title{Build a TOC definition from a set of RTF files (deprecated)}
 \usage{
 assemble_toc(files = NULL, spec = NULL, ...)
 }
@@ -18,6 +18,11 @@ assemble_toc(files = NULL, spec = NULL, ...)
 A list suitable for \code{assemble_rtf(toc = )}.
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  Give \code{\link[=assemble_rtf]{assemble_rtf()}} the table of contents itself
+(\verb{toc = } the table from \code{\link[=assemble_folder]{assemble_folder()}}).
+}
+\details{
 Convenience wrapper that reads the files (via \code{\link[=assemble_spec]{assemble_spec()}}) and returns
 the \verb{toc =} list of \code{\link[=toc_heading]{toc_heading()}} / \code{\link[=toc_entry]{toc_entry()}} objects ready for
 \code{\link[=assemble_rtf]{assemble_rtf()}}.  Pass a ready-made \code{spec} to convert that instead.
@@ -33,8 +38,8 @@ for (t in c("14.1.1", "14.2.1")) {
   generate_rtfreport(doc, file.path(dir, paste0("t", gsub(".", "_", t,
     fixed = TRUE), ".rtf")), overwrite = TRUE)
 }
-toc <- assemble_toc(files = assemble_files(dir))
-assemble_rtf(assemble_files(dir), tempfile(fileext = ".rtf"), toc = toc)
+# instead: the table of contents as the `toc`
+assemble_rtf(toc = assemble_folder(dir), output_file = tempfile(fileext = ".rtf"))
 }
 \seealso{
 \code{\link[=assemble_spec]{assemble_spec()}}, \code{\link[=assemble_from_spec]{assemble_from_spec()}}.

@@ -100,8 +100,7 @@ pages <- as_rtftables(
   group_col  = "rowname",
   drop_cols  = "rowname",
   # 2) stub: fold the remaining two stub columns into one indented heading.
-  stub_vars  = c("heading", "Toxgrade"),
-  stub_label = "Toxicity Grade",
+  stub       = stub_spec(c("heading", "Toxgrade"), label = "Toxicity Grade"),
   border     = "tfl"
 )
 
@@ -141,7 +140,7 @@ table stays one logical table paginated across pages, so the stub is built once,
 up front -- see `vignette("pagination")`.)
 
 Consequently, under `split = "by_value"` the `group_col` names a **pre-stub**
-column (here `"rowname"` = LBTESTCD) and is **not** one of the `stub_vars`: the
+column (here `"rowname"` = LBTESTCD) and is **not** one of the `stub` columns: the
 outer level splits, the inner levels merge.
 
 ## See also
@@ -151,7 +150,7 @@ outer level splits, the inner levels merge.
 - `vignette("importing-tables")` -- what `as_rtftables()` reads from a `gt`
   (and why a multi-stub table is read from slots).
 - [`stub_cols()`] -- the same stub merge on a plain `data.frame`, and the
-  `stub_vars` argument of [`as_rtftables()`] that folds it into the pipeline.
+  `stub` argument of [`as_rtftables()`] that folds it into the pipeline.
 ```
 
 <!-- where-next -->

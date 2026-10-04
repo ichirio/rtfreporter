@@ -1,5 +1,7 @@
 # stub_spec(): one argument for every stub setting (#314).
 
+local_deprecated("stub_vars")  # deprecated in 0.8.x
+
 ae <- data.frame(SOC = c("Cardiac", "Cardiac", "GI"),
                  PT  = c("AF", "Brady", "Nausea"),
                  N   = c("3 (2.1%)", "1 (0.7%)", "5 (3.5%)"),

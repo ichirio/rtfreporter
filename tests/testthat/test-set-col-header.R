@@ -8,6 +8,8 @@ library(testthat)
 
 # ── rtf_columns() ──────────────────────────────────────────────────────────
 
+local_deprecated("stub_vars")  # deprecated in 0.8.x
+
 test_that("rtf_columns() returns the final body column names", {
   tbl <- rtftable(data.frame(Item = "x", A = 1, B = 2))
   expect_identical(rtf_columns(tbl), c("Item", "A", "B"))

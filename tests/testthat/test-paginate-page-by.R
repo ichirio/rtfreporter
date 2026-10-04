@@ -1,6 +1,8 @@
 # as_rtftables(page_by = ): the OUTER page partition -- a page per BY value,
 # with the inner grouping still protected inside it (#423).
 
+local_deprecated("stub_vars")  # deprecated in 0.8.x
+
 .lab <- function(periods = c("Period 1", "Period 2"),
                  params  = c("ALT", "Bilirubin", "Haemoglobin")) {
   do.call(rbind, lapply(periods, function(per) {

@@ -15,7 +15,7 @@ events table does not, and vice versa.
 
 \tabular{lllll}{
 \strong{Setting} \tab \strong{DM} \tab \strong{AE} \tab \strong{PK} \tab \strong{LB} \cr
-\code{stub_vars} (hierarchy)      \tab -- \tab yes \tab yes \tab -- \cr
+\code{stub} (hierarchy)           \tab -- \tab yes \tab yes \tab -- \cr
 \code{group_col} / \code{group_by}     \tab yes \tab yes \tab yes \tab yes \cr
 \code{blank_rows}                 \tab -- \tab yes \tab yes \tab yes \cr
 \code{split} / \code{max_rows}         \tab yes \tab yes \tab yes \tab -- \cr
@@ -25,7 +25,7 @@ events table does not, and vice versa.
 \verb{fmt_*()} before building    \tab -- \tab yes \tab yes \tab yes
 }
 
-The single most common mistake is reaching for \code{stub_vars} on a table that
+The single most common mistake is reaching for \code{stub} on a table that
 has no hierarchy (DM), or omitting it on one that does (AE, PK).
 }
 
@@ -74,7 +74,7 @@ ae <- data.frame(
 ae_doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
   rtf_tables(
     as_rtftables(ae,
-                 stub_vars  = c("SOC", "PT"),   # the hierarchy DM does not have
+                 stub       = c("SOC", "PT"),   # the hierarchy DM does not have
                  group_by   = "indent",         # groups are found by indentation
                  blank_rows = "between_groups",
                  split      = "group_safe",
@@ -102,7 +102,7 @@ pk <- data.frame(
 
 pk_pages <- as_rtftables(
   pk,
-  stub_vars  = c("Time", "Statistic"),
+  stub       = c("Time", "Statistic"),
   group_by   = "indent",
   blank_rows = "between_groups",
   # ABSOLUTE widths: relative ones are normalised to the page, so the table

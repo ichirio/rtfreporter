@@ -653,7 +653,7 @@ as_rtftables(df, split = "group_safe", max_rows = 20) |>
 `at` names the columns to cut **before** (so `c(4, 6)` gives blocks `1:3`,
 `4:5`, `6:ncol`), symmetric with `split_rows`; `cols = list(2:3, 4:5)` states
 the blocks outright. Positions refer to the **final printed columns** -- after
-`drop_cols`, `stub_vars` and any `col_header` you supplied -- the same
+`drop_cols`, `stub` and any `col_header` you supplied -- the same
 convention `set_col_header()` follows.
 
 Row splitting happens first and the column split is applied to its result, so
@@ -794,7 +794,7 @@ the block key.
 
 ```{r pagcols_by, eval = FALSE}
 as_rtftables(df, split = "by_value", group_col = "period",
-             stub_vars = c("row_grp1", "label")) |>
+             stub = c("row_grp1", "label")) |>
   paginate_cols(by = "____", carry = 1, col_header = "names")
 ```
 

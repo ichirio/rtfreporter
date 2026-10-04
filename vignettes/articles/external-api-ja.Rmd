@@ -104,9 +104,7 @@ rtf_document() |>                                  # -> rtf_document
 ## 出力ヘルパー
 
 * `rtf_replace_text()` — 生成済み `.rtf` への後処理（検索置換）。
-* `assemble_rtf()`（および `assemble_files()` / `assemble_folder()` /
-  `assemble_spec()` / `assemble_from_spec()` / `assemble_toc()`,
-  `toc_heading()` / `toc_entry()`）— 複数 RTF を目次・ブックマーク付きで 1 つに結合。
+* `assemble_rtf()`（および `assemble_folder()`）— 複数 RTF を目次・ブックマーク付きで 1 つに結合。
 
 ## S3 ジェネリック
 

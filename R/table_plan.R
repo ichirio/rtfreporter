@@ -3081,17 +3081,17 @@ plan_header_tokens <- function(plan) {
       "table is where = \"between_groups\"."))
   }
   if (length(stub) && !before) {
-    rtf$stub_vars         <- stub$vars
-    rtf$stub_label        <- stub$name
-    rtf$stub_indent       <- stub$indent
-    rtf$stub_group_summary <- stub$group_summary
+    rtf$stub <- do.call(stub_spec, c(
+      list(stub$vars),
+      Filter(Negate(is.null), list(label = stub$name, indent = stub$indent,
+                                   group_summary = stub$group_summary))))
     rtf <- rtf[!vapply(rtf, is.null, logical(1L))]
   }
   # done here, where the final column count is known
   if (!is.null(rtf$col_rel_width)) {
     w <- rtf$col_rel_width
     nfinal <- ncol(tbl) -
-      (if (!is.null(rtf$stub_vars)) length(rtf$stub_vars) - 1L else 0L) -
+      (if (!is.null(rtf$stub)) length(rtf$stub$vars) - 1L else 0L) -
       length(intersect(rtf$drop_cols %||% character(0), names(tbl)))
     if (length(w) >= 1L && length(w) < nfinal) {
       rtf$col_rel_width <- c(w, rep(w[length(w)], nfinal - length(w)))
@@ -3103,7 +3103,7 @@ plan_header_tokens <- function(plan) {
     # The styles are built against the rows the plan can SEE.  Folding the
     # stub inside as_rtftables() adds heading rows the plan never saw, and
     # rtftable() would reject the length with nothing to say about why.
-    if (!is.null(rtf$stub_vars)) {
+    if (!is.null(rtf$stub)) {
       .ard_stop(paste0(
         "plan_cell_style() needs plan_stub(before = TRUE).\n",
         "  Folded inside as_rtftables(), the stub adds group heading rows ",

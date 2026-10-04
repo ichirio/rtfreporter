@@ -34,7 +34,7 @@ scaffold spanning row grouping the non-\code{stub} columns (see \emph{Details}).
 
 \item{stub}{Column(s) to keep un-spanned when \code{add_span_level = TRUE}:
 integer position(s) and/or column name(s).  Default \code{1} (the first column,
-where \code{as_rtftables(stub_vars = )} places the stub).}
+where \code{as_rtftables(stub = )} places the stub).}
 }
 \value{
 A single character string (the source).  Use \code{cat()} to print it

@@ -15,6 +15,21 @@ library(testthat)
   sort(getNamespaceExports(ns))
 }
 
+# A folder of two small deliverables, for the assembly helpers.
+.toc_dir <- function() {
+  dir <- file.path(tempdir(), "api-surface-toc")
+  if (!dir.exists(dir)) {
+    dir.create(dir)
+    for (t in c("14.1.1", "14.2.1")) {
+      doc <- rtf_document() |>
+        rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
+        rtf_titles(list(c(paste("Table", t), "Safety Population")))
+      generate_rtfreport(doc, file.path(dir, paste0("t", t, ".rtf")))
+    }
+  }
+  dir
+}
+
 .reset_deprecation <- function() {
   st <- rtfreporter:::.deprecation_state
   rm(list = ls(st), envir = st)
@@ -50,7 +65,15 @@ test_that("every deprecated function still works and warns once", {
       update_header_row(rtf_header(c(l = "x")), 2, c(l = "y")),
     update_footer_row = function()
       update_footer_row(rtf_footer(c(l = "x")), 2, c(l = "y")),
-    paginate          = function() paginate(data.frame(a = 1))
+    paginate          = function() paginate(data.frame(a = 1)),
+    # 0.8.2.9014: the assembly helpers
+    assemble_files    = function() assemble_files(.toc_dir()),
+    assemble_spec     = function() assemble_spec(.toc_dir()),
+    assemble_toc      = function() assemble_toc(spec = assemble_folder(.toc_dir())),
+    assemble_from_spec = function()
+      assemble_from_spec(assemble_folder(.toc_dir()), tempfile(fileext = ".rtf")),
+    toc_heading       = function() toc_heading("A"),
+    toc_entry         = function() toc_entry("A", file = "a.rtf")
   )
   expect_setequal(names(calls), .dep)
 
@@ -84,7 +107,7 @@ test_that("one border constructor is left once the deprecated ones are set aside
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 125 exports, 14 of them deprecated and slated for removal before CRAN.
+  # 125 exports, 20 of them deprecated and slated for removal before CRAN.
   # (91 since #463 added rtfreporter_ai_manual(); 92 since #476 added
   # round_num(); 126 since #491 brought the ARD table engine --
   # 34 functions -- over from tflspec; 122 since #498 folded plan_fmt()
@@ -92,9 +115,10 @@ test_that("the effective export count is the reviewed number", {
   # 123 since #529 added rtf_text_tokens(); 124 since #536 added
   # plan_header_tokens(); 125 since the pre-CRAN API review, iteration 1,
   # renamed rtf_border_side() to rtf_border_line() and deprecated the old
-  # name with six others.)
+  # name with six others; 105 since six assembly helpers gave way to
+  # assemble_folder() and assemble_rtf(toc = <a table>).)
   expect_length(.exports(), 125L)
-  expect_length(setdiff(.exports(), .dep), 111L)
+  expect_length(setdiff(.exports(), .dep), 105L)
 })
 
 test_that("the old argument names still work, with a warning", {

@@ -225,7 +225,11 @@
 
 # ── TOC entry helpers (exported) ───────────────────────────────────────────
 
-#' Build a structured TOC heading
+#' Build a structured TOC heading (deprecated)
+#'
+#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
+#' 0.9.0.  Give [assemble_rtf()] the table of contents as a table:
+#' a row whose `heading` column is filled starts a heading.
 #'
 #' Use inside [assemble_rtf()]'s `toc =` list to insert a section
 #' heading (no clickable link, no page number) above a group of
@@ -238,17 +242,32 @@
 #' @return A list of class `"rtf_toc_heading"`.
 #'
 #' @examples
-#' toc_heading("EFFICACY ANALYSES", level = 1)
+#' # instead: the heading column of the table of contents
+#' data.frame(heading = c("EFFICACY ANALYSES", NA), label = c("Table 14.2.1", "Table 14.2.2"),
+#'            file = c("t14_2_1.rtf", "t14_2_2.rtf"))
 #'
 #' @export
 toc_heading <- function(label, level = 1L) {
+  .deprecate_once(
+    "toc_heading",
+    paste0("`toc_heading()` is deprecated: give `assemble_rtf(toc = )` a ",
+           "table (columns file, label, heading, level).\n  ",
+           "Removed in 0.9.0."))
+  .toc_heading(label, level)
+}
+
+.toc_heading <- function(label, level = 1L) {
   structure(
     list(label = as.character(label)[1L], level = as.integer(level)),
     class = "rtf_toc_heading"
   )
 }
 
-#' Build a structured TOC entry
+#' Build a structured TOC entry (deprecated)
+#'
+#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
+#' 0.9.0.  Give [assemble_rtf()] the table of contents as a table:
+#' one row per file (`file`, `label`, `level`).
 #'
 #' Use inside [assemble_rtf()]'s `toc =` list to add a clickable TOC
 #' entry pointing at one of the `input_files`.
@@ -263,11 +282,20 @@ toc_heading <- function(label, level = 1L) {
 #' @return A list of class `"rtf_toc_entry"`.
 #'
 #' @examples
-#' toc_entry("Table 14.1.1 Demographics",  file = "t14_1_1.rtf", level = 2)
-#' toc_entry("Listing 16.1 Disposition")   # auto-bound to the next file
+#' # instead: one row of the table of contents
+#' data.frame(file = "t14_1_1.rtf", label = "Table 14.1.1 Demographics", level = 2)
 #'
 #' @export
 toc_entry <- function(label, file = NULL, level = 2L) {
+  .deprecate_once(
+    "toc_entry",
+    paste0("`toc_entry()` is deprecated: give `assemble_rtf(toc = )` a ",
+           "table (columns file, label, heading, level).\n  ",
+           "Removed in 0.9.0."))
+  .toc_entry(label, file, level)
+}
+
+.toc_entry <- function(label, file = NULL, level = 2L) {
   structure(
     list(label = as.character(label)[1L],
          file  = file,
@@ -316,6 +344,9 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #   list(label, level, file_idx (NA = heading), type = "heading"|"entry")
 .normalize_toc <- function(toc, input_files) {
   if (is.null(toc)) return(NULL)
+
+  # A table of contents as a table (file, label, heading, level)
+  if (is.data.frame(toc)) toc <- .spec_to_toc(toc)
 
   # "auto" -> extract title from each input file
   if (is.character(toc) && length(toc) == 1L && toc == "auto") {
@@ -380,8 +411,9 @@ toc_entry <- function(label, file = NULL, level = 2L) {
     return(out)
   }
 
-  stop("`toc` must be NULL, \"auto\", a character vector, or a list of ",
-       "toc_heading() / toc_entry().", call. = FALSE)
+  stop("`toc` must be NULL, \"auto\", a character vector, a table ",
+       "(columns file, label, heading, level) or the path of one (.xlsx / ",
+       ".csv).", call. = FALSE)
 }
 
 
@@ -566,10 +598,17 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'     detected.}
 #'   \item{a character vector of TOC labels}{one per input file -- same as
 #'     `"auto"` but with explicit labels.}
-#'   \item{a `list(...)` of `toc_heading()` and `toc_entry()` objects}{for
-#'     multi-level (chapter / table) layouts.  `toc_entry(file = ...)`
-#'     selects which `input_files` element each row points to;
-#'     omitting `file` consumes the next file in order.}
+#'   \item{a table (`data.frame`)}{one row per file, in order, for
+#'     multi-level (chapter / table) layouts: `file` (the path), `label` (the
+#'     entry text), and optionally `heading` (a heading printed above the
+#'     row's entry whenever it changes; `NA` = none), `level` (the entry's
+#'     indent, default 2) and `order`.  [assemble_folder()] makes one from a
+#'     folder, ready to edit.  `input_files` can then be left out: the
+#'     table's `file` column is used.}
+#'   \item{the path of such a table}{an `.xlsx` or `.csv` file, e.g. the one
+#'     `assemble_folder(spec_file = )` wrote and you edited.}
+#'   \item{a `list(...)` of `toc_heading()` and `toc_entry()` objects}{the
+#'     older spelling of the table (deprecated).}
 #' }
 #'
 #' Each TOC entry is an RTF `HYPERLINK` field; clicking it in
@@ -592,7 +631,8 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #' }
 #'
 #' @param input_files Character vector of paths to RTF files to combine
-#'   (at least 2).
+#'   (at least 2).  May be left out when `toc` is a table (or its path):
+#'   the table's `file` column, in its order.
 #' @param output_file Path for the assembled output RTF file.
 #' @param overwrite Logical; whether to overwrite an existing output
 #'   file.  Default `FALSE`.
@@ -600,8 +640,9 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'   for a cover page.  `NULL` (default) = no cover page.
 #' @param toc Table-of-Contents specification.  `NULL` (default) =
 #'   no TOC, no bookmarks; `"auto"` = auto-extract titles; a
-#'   character vector = one label per input file; a `list(...)` of
-#'   `toc_heading()` / `toc_entry()` = multi-level layout.
+#'   character vector = one label per input file; a table (columns `file`,
+#'   `label`, `heading`, `level`) or the path of one (`.xlsx` / `.csv`) =
+#'   multi-level layout.  See **Table of Contents** above.
 #' @param toc_title Centred bold title rendered on the TOC page.
 #'   Default `"Table of Contents"`.
 #' @param toc_leader `"dot"` (default) draws a dotted leader between
@@ -664,18 +705,17 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'     version  = "v1.0",
 #'     meta     = c("Confidential", "Prepared by ACME Pharma")
 #'   ),
-#'   toc = list(
-#'     toc_heading("DEMOGRAPHICS"),
-#'     toc_entry("Table 14.1.1 Demographics", file = a),
-#'     toc_heading("SAFETY ANALYSES"),
-#'     toc_entry("Table 14.2.1 Adverse Events", file = b)
+#'   toc = data.frame(
+#'     file    = c(a, b),
+#'     heading = c("DEMOGRAPHICS", "SAFETY ANALYSES"),
+#'     label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events")
 #'   ),
 #'   toc_page_numbering = "roman",
 #'   overwrite           = TRUE
 #' )
 #'
 #' @export
-assemble_rtf <- function(input_files, output_file, overwrite = FALSE,
+assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
                           cover              = NULL,
                           toc                = NULL,
                           toc_title          = "Table of Contents",
@@ -685,6 +725,17 @@ assemble_rtf <- function(input_files, output_file, overwrite = FALSE,
                           book_page          = NULL) {
   toc_leader         <- match.arg(toc_leader)
   toc_page_numbering <- match.arg(toc_page_numbering)
+
+  # A table of contents given as a table, or as the path of one: its rows in
+  # `order`, and its files when `input_files` is left out.
+  if (is.character(toc) && length(toc) == 1L &&
+      grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE)) {
+    toc <- .read_spec(toc)
+  }
+  if (is.data.frame(toc)) {
+    toc <- .check_toc_table(toc)
+    if (is.null(input_files)) input_files <- toc$file
+  }
 
   if (!is.character(input_files) || length(input_files) < 2L) {
     stop("`input_files` must be a character vector with at least 2 elements.",

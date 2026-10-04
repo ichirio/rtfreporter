@@ -22,7 +22,7 @@
 #'
 #' \tabular{lllll}{
 #'   **Setting** \tab **DM** \tab **AE** \tab **PK** \tab **LB** \cr
-#'   `stub_vars` (hierarchy)      \tab -- \tab yes \tab yes \tab -- \cr
+#'   `stub` (hierarchy)           \tab -- \tab yes \tab yes \tab -- \cr
 #'   `group_col` / `group_by`     \tab yes \tab yes \tab yes \tab yes \cr
 #'   `blank_rows`                 \tab -- \tab yes \tab yes \tab yes \cr
 #'   `split` / `max_rows`         \tab yes \tab yes \tab yes \tab -- \cr
@@ -32,7 +32,7 @@
 #'   `fmt_*()` before building    \tab -- \tab yes \tab yes \tab yes
 #' }
 #'
-#' The single most common mistake is reaching for `stub_vars` on a table that
+#' The single most common mistake is reaching for `stub` on a table that
 #' has no hierarchy (DM), or omitting it on one that does (AE, PK).
 #'
 #' @section 1. DM -- demographics:
@@ -111,7 +111,7 @@
 #' ae_doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
 #'   rtf_tables(
 #'     as_rtftables(ae,
-#'                  stub_vars  = c("SOC", "PT"),   # the hierarchy DM does not have
+#'                  stub       = c("SOC", "PT"),   # the hierarchy DM does not have
 #'                  group_by   = "indent",         # groups are found by indentation
 #'                  blank_rows = "between_groups",
 #'                  split      = "group_safe",
@@ -139,7 +139,7 @@
 #'
 #' pk_pages <- as_rtftables(
 #'   pk,
-#'   stub_vars  = c("Time", "Statistic"),
+#'   stub       = c("Time", "Statistic"),
 #'   group_by   = "indent",
 #'   blank_rows = "between_groups",
 #'   # ABSOLUTE widths: relative ones are normalised to the page, so the table
