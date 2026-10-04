@@ -861,6 +861,12 @@ print.table_plan <- function(x, ...) {
 #'   whose value is itself a named vector applies to that **column**
 #'   only: a shift table's `"0"` is `"Grade 0"` down the side and
 #'   `"Baseline 0"` across the top.
+#' @param .drop_empty For `plan_levels()`: variables whose levels **no record
+#'   has** are not shown -- a level whose `n` is 0 (or missing) in every
+#'   column, as an ARD made with a code list's full set of levels has
+#'   (a factor's unused level, counted 0).  `NULL` (default): every level
+#'   the data has is shown.  A level that some column counts stays; a
+#'   variable summarised without `n` is untouched.  Several calls add up.
 #' @param stats,value,na,notes For `plan_cells()`: how a cell is made,
 #'   as [widen_ard()] takes them --- `stats = "cells"` (default) fills a
 #'   template per cell and `"rows"` makes each statistic a row of its own;
@@ -1182,6 +1188,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_cells(..., stats, value, na, notes)`: how a cell is made. Goes to [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes`; a finished table [as_rtftables()]: `na`.
 #' * `plan_digits(..., rounding)`: the digits. Goes to the open tokens of the templates; on a finished table [fmt_numeric()].
 #' * `plan_levels()`, `plan_labels()`: the order and text of values. Goes to [widen_ard()]: `levels`, `labels`.
+#'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
 #' * `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: how cells look. Goes to [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition.
@@ -1240,9 +1247,15 @@ NULL
 # the rest.  The roles are said once, on table_plan(); these are not roles.
 #' @rdname plan_verbs
 #' @export
-plan_levels <- function(plan, ...) {
-  v <- .plan_map(list(...), "plan_levels")
-  .plan_layer(plan, "levels", list(levels = v))
+plan_levels <- function(plan, ..., .drop_empty = NULL) {
+  v <- if (...length()) .plan_map(list(...), "plan_levels")
+  if (!is.null(.drop_empty) &&
+      (!is.character(.drop_empty) || anyNA(.drop_empty))) {
+    .ard_stop("plan_levels(.drop_empty = ) takes variable names.")
+  }
+  .plan_layer(plan, "levels",
+              c(if (!is.null(v)) list(levels = v),
+                if (!is.null(.drop_empty)) list(drop_empty = .drop_empty)))
 }
 
 #' @rdname plan_verbs
@@ -2171,7 +2184,29 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     }
     d[[lb$name]] <- v
   }
-  d
+  .plan_drop_empty(plan, d)
+}
+
+# plan_levels(.drop_empty = ): a level of these variables that no record
+# has -- its `n` is 0 in every column, as a code list applied before the
+# ARD leaves it -- is not shown.  A level with no `n` (a summary) stays.
+.plan_drop_empty <- function(plan, d) {
+  vars <- unique(unlist(lapply(.plan_of(plan, "levels"), `[[`, "drop_empty")))
+  if (!length(vars) || !all(c("variable", "stat_name", "stat") %in% names(d))) {
+    return(d)
+  }
+  lvl <- if ("variable_level" %in% names(d)) "variable_level" else NULL
+  if (is.null(lvl)) return(d)
+  ctx <- if ("context" %in% names(d)) as.character(d$context) else ""
+  key <- paste(d$variable, ctx, as.character(d[[lvl]]), sep = "\r")
+  n <- d$variable %in% vars & d$stat_name %in% "n" & !is.na(d[[lvl]])
+  if (!any(n)) return(d)
+  st <- d$stat[n]
+  st <- if (is.list(st)) vapply(st, function(x) suppressWarnings(as.numeric(x[1L])), 0) else suppressWarnings(as.numeric(st))
+  empty <- tapply(is.na(st) | st == 0, key[n], all)
+  drop <- names(empty)[empty]
+  if (!length(drop)) return(d)
+  d[!key %in% drop, , drop = FALSE]
 }
 
 # `label` naming SEVERAL columns is a coalesce; one column is a column.
