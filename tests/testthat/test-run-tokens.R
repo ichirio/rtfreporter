@@ -89,9 +89,9 @@ test_that("rtf_text_tokens() lists exactly the tokens a page's text has filled",
     expect_false(grepl(paste0("<", esc, ">"), out, fixed = TRUE), label = x)
   }
   # and the list is the renderer's own: the tokens set_col_header() leaves
-  # for it, less the ones that are no longer written ({DATE} is reserved,
-  # {SECTION_PAGES} was removed in 0.7.31)
+  # for it, less {SECTION_PAGES} (removed in 0.7.31; kept there so that
+  # writing it is an error that says what to use)
   own <- paste0("{", setdiff(rtfreporter:::.RENDER_TOKENS,
-                             c("DATE", "SECTION_PAGES")), "}")
+                             "SECTION_PAGES"), "}")
   expect_setequal(tk$token, own)
 })

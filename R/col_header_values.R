@@ -16,7 +16,7 @@
 # ============================================================================
 
 # Tokens the RENDERER fills, long after this: leave them alone.
-.RENDER_TOKENS <- c("PAGE", "TOTAL_PAGES", "DATE", "BOOK_PAGE",
+.RENDER_TOKENS <- c("PAGE", "TOTAL_PAGES", "BOOK_PAGE",
                     "AUTO_PAGE", "AUTO_TOTAL_PAGES", "SECTION_PAGES",
                     "PROGRAM", "PROGRAM_NAME", "PROGRAM_DIR", "DATETIME")
 
