@@ -52,6 +52,29 @@ test_that("on Windows {PROGRAM_FULL} uses \\ and the RTF escapes it", {
   expect_false(grepl("<C:/tfl", out, fixed = TRUE))
 })
 
+test_that("on Windows a short (8.3) folder name is written out long", {
+  skip_on_os(c("mac", "linux", "solaris"))
+  wd <- getwd()
+  on.exit(setwd(wd), add = TRUE)
+  # the working folder by its short name, as on a CI runner (RUNNER~1);
+  # the program file does not exist (yet)
+  setwd(utils::shortPathName(tempdir()))
+  long <- normalizePath(tempdir(), winslash = "\\")
+  got <- rtfreporter:::.full_path("work/tfl/t_dm.R")
+  expect_identical(got, paste(long, "work", "tfl", "t_dm.R", sep = "\\"))
+  expect_false(grepl("~", got, fixed = TRUE))
+})
+
+test_that("{PROGRAM_FULL} drops . and .. from a path that does not exist", {
+  wd <- getwd()
+  on.exit(setwd(wd), add = TRUE)
+  setwd(tempdir())
+  sep <- if (.Platform$OS.type == "windows") "\\" else "/"
+  here <- normalizePath(getwd(), winslash = "\\")
+  expect_identical(rtfreporter:::.full_path("./work/../work/t.R"),
+                   paste(here, "work", "t.R", sep = sep))
+})
+
 test_that("{PROGRAM_FULL} with no program known is the same error as {PROGRAM}", {
   # outside generate_rtfreport() no program is set: the substitution itself
   # (so the test does not depend on running under Rscript)

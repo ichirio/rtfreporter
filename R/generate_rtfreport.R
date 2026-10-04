@@ -335,16 +335,35 @@
 }
 
 # {PROGRAM_FULL}: the program's path made absolute, with the system's own
-# separator (`\` on Windows, `/` elsewhere).  normalizePath() makes a path
-# that does not exist absolute on Windows only; elsewhere it is joined to
-# the working folder here.
+# separator (`\` on Windows, `/` elsewhere).  normalizePath() alone is not
+# enough for a path that does not exist (yet): elsewhere than on Windows it
+# stays relative, and on Windows an 8.3 short folder name (RUNNER~1) is not
+# expanded.  So the nearest folder that exists is normalised, and the rest
+# of the path is joined to it.
 .full_path <- function(path) {
-  p <- normalizePath(path, winslash = "\\", mustWork = FALSE)
-  if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) {
-    p <- file.path(normalizePath(getwd(), winslash = "\\"), sub("^[.]/", "", p),
-                   fsep = .Platform$file.sep)
+  win <- .Platform$OS.type == "windows"
+  sep <- if (win) "\\" else "/"
+  p <- path
+  if (!grepl("^([A-Za-z]:)?[/\\\\]", p)) p <- file.path(getwd(), p)
+  rest <- character()
+  d <- p
+  while (!file.exists(d) && !identical(dirname(d), d)) {
+    rest <- c(basename(d), rest)
+    d <- dirname(d)
   }
-  p
+  base <- normalizePath(d, winslash = "\\", mustWork = FALSE)
+  # "." and ".." in the part that does not exist
+  parts <- character()
+  for (x in rest) {
+    if (x == ".") next
+    if (x == "..") {
+      if (length(parts)) parts <- parts[-length(parts)] else base <- dirname(base)
+      next
+    }
+    parts <- c(parts, x)
+  }
+  if (!length(parts)) return(base)
+  paste(c(sub("[/\\\\]$", "", base), parts), collapse = sep)
 }
 
 .resolve_render_time <- function() {
