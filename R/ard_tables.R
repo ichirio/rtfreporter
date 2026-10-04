@@ -557,6 +557,9 @@
 
 # A chain is whatever c() or list() produced: strings, guards, or both.
 .ard_chain <- function(x, one_sided = FALSE) {
+  # one guard written bare (`n > 0 ~ "tpl"`, not inside c()) is a chain of
+  # one: as.list() would split the formula into its parts (#549)
+  if (inherits(x, "formula")) x <- list(x)
   lapply(as.list(x), .ard_chain_el, one_sided = one_sided)
 }
 

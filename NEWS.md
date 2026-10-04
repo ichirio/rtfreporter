@@ -1,5 +1,26 @@
 # rtfreporter (development version)
 
+### Bug fixes
+
+Found while raising the test coverage before CRAN (#552).
+
+- `print(rtf_watermark())` shows the watermark's summary: the method was
+  not registered in `NAMESPACE`, so the raw list was printed (#546).
+- `print(rtf_document())` names a preset page by its size and orientation
+  (`letter (landscape)`) instead of `x inches` (#547).
+- `rtf_tables(auto_section = TRUE)` with an explicit `rtf_section(page = n)`
+  on the page an auto section starts: the explicit section wins on that
+  page.  On page 1 this stopped with an internal error; on a later page the
+  pages were rendered twice, once in each section (#548).
+- `cell_rows()`: a row written as one bare guard (`"1" = n > 0 ~ "has"`, not
+  inside `c()`) is a chain of one guard, as inside `c()`; it printed `~` in
+  every cell and broke `print()` (#549).
+- The console preview of a table draws `dash` and `dot` rules with their own
+  glyphs; it looked for `dashed` / `dotted`, names no border has (#550).
+- `NEWS.md` parses again for `news()` and `R CMD check` (a heading with a
+  version number in it made the parser take every `###` heading for a
+  version).
+
 ### Deprecated
 
 - The first argument of `set_blank_rows()` (was `df`) and `add_cont_label()`
@@ -7,7 +28,7 @@
   A call that gives it by position is unchanged; the old name still works
   and warns once a session, and is removed in 0.9.0.
 
-### Before 0.9.0: finding what goes
+### Finding what the next minor release removes
 
 0.9.0 removes everything deprecated in 0.8.x.  To find it in your code
 (R scripts, R Markdown / Quarto), search for this regular expression -- each

@@ -1023,7 +1023,13 @@ print.rtf_document <- function(x, ...) {
   cat("rtf_document object\n")
   cat("  Pages:", length(x$contents), "\n")
   cat("  Sections defined:", length(x$sections), "\n")
-  cat("  Document page size:", x$document$page$width_in, "x",
-      x$document$page$height_in, "inches\n")
+  # a preset page (the default) has no width / height of its own (#547)
+  pg <- x$document$page
+  size <- if (!is.null(pg$width_in) || !is.null(pg$height_in)) {
+    sprintf("%s x %s inches", pg$width_in %||% "?", pg$height_in %||% "?")
+  } else {
+    sprintf("%s (%s)", pg$paper_size %||% "letter", pg$orientation %||% "landscape")
+  }
+  cat("  Document page size:", size, "\n")
   invisible(x)
 }
