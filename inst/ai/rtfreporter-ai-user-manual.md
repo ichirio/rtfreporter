@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9008** (the development
+**This manual documents rtfreporter 0.8.2.9009** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -435,6 +435,9 @@ rtf_footer(rows = list(c(l = "Source: ADSL.", r = "CONFIDENTIAL")))
 | `{BOOK_PAGE}` | an empty slot, filled later by `assemble_rtf(book_page =)` |
 | `{PROGRAM}` / `{PROGRAM_NAME}` / `{PROGRAM_DIR}` | the program writing the file (`generate_rtfreport(program =)`, else `options(rtfreporter.program)`, else the `Rscript` script), its file name, its folder |
 | `{DATETIME}` / `{DATETIME:<fmt>}` | when the file is written, `%d%b%Y  %H:%M` in the C locale (`options(rtfreporter.datetime_format)`); `options(rtfreporter.render_time)` fixes it |
+
+`rtf_text_tokens()` returns this list as data (token, page or run, when it is
+filled, what it becomes, an example) for a program that offers the tokens.
 
 A run-information footer line is then one row, with no helper:
 `c(l = "{PROGRAM}      Generated on: {DATETIME}")`.
@@ -931,7 +934,7 @@ adds an "Any" row.
 ## 18. Complete public API (nothing outside this list exists)
 
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
-`rtf_default_format` `rtf_watermark` `generate_rtfreport`
+`rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
 `rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
 
 **Sections / bands:** `rtf_section` `combine_sections` `rtf_header` `rtf_footer`

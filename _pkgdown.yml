@@ -231,6 +231,7 @@ reference:
       - rtf_default_format
       - rtf_watermark
       - generate_rtfreport
+      - rtf_text_tokens
       - print.rtf_document
       - print.rtfreport
 
