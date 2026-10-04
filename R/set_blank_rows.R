@@ -19,7 +19,7 @@
 #'
 #' Resolves a `blank_rows` specification (the same one `paginate()`
 #' accepts) into integer positions and stores them on
-#' `attr(df, "rtf_blank_rows")`.  Use this when you already have a
+#' `attr(data, "rtf_blank_rows")`.  Use this when you already have a
 #' page-sized data.frame and only need to add blank rows -- no
 #' pagination required.
 #'
@@ -28,7 +28,9 @@
 #' `paginate(blank_row_first = ...)` and `paginate(blank_row_end =
 #' ...)` actually do.
 #'
-#' @param df A data.frame (or tibble).
+#' @param data A data.frame (or tibble).
+#' @param df The old name of `data`: **deprecated** in 0.8.x (warns once a
+#'   session, still works), removed in 0.9.0.
 #' @param blank_rows Blank-row specification. One of -- or a `list()` combining
 #'   any of (positions are unioned):
 #'   \describe{
@@ -42,18 +44,18 @@
 #'   }
 #'
 #' @param blank_row_first Logical, default `FALSE`.  When `TRUE`,
-#'   also adds position `0` (blank row at the top of `df`).
+#'   also adds position `0` (blank row at the top of `data`).
 #' @param blank_row_end Logical, default `FALSE`.  When `TRUE`, also
-#'   adds position `nrow(df)` (blank row at the bottom of `df`).
+#'   adds position `nrow(data)` (blank row at the bottom of `data`).
 #' @param group_col Column name or 1-based index identifying the
 #'   group, used only when `blank_rows = "between_groups"`.  `NULL`
 #'   (default) means detection on column 1 -- see [paginate()].
 #' @param group_by How groups are recognised when
 #'   `blank_rows = "between_groups"`: `"auto"` (default), `"indent"`,
 #'   `"value"`, or `"filled"` -- the same detection as the pagination splits
-#'   (see [paginate()]).
+#'   (see [as_rtftables()]).
 #'
-#' @return `df` with `attr(., "rtf_blank_rows")` updated.  The
+#' @return `data` with `attr(., "rtf_blank_rows")` updated.  The
 #'   attribute is left absent when the resolved position set is
 #'   empty.
 #'
@@ -73,15 +75,24 @@
 #' @seealso [paginate()] for the per-page version; [rtftable()]
 #'   (`read_attributes = TRUE`) which consumes the attribute.
 #' @export
-set_blank_rows <- function(df,
+set_blank_rows <- function(data,
                             blank_rows      = NULL,
                             blank_row_first = FALSE,
                             blank_row_end   = FALSE,
                             group_col       = NULL,
                             group_by        = c("auto", "indent",
-                                                "value", "filled")) {
+                                                "value", "filled"),
+                            df) {
+  if (!missing(df)) {
+    .deprecate_once(
+      "set_blank_rows_df",
+      paste0("`set_blank_rows(df = )` is deprecated: the argument is `data` ",
+             "now.\n  The old name is removed in 0.9.0."))
+    data <- df
+  }
+  df <- data
   if (!is.data.frame(df)) {
-    stop("`df` must be a data.frame (or tibble).", call. = FALSE)
+    stop("`data` must be a data.frame (or tibble).", call. = FALSE)
   }
   group_by  <- match.arg(group_by)
   group_idx <- .resolve_group_col(group_col, df)

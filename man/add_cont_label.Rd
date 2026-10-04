@@ -4,10 +4,10 @@
 \alias{add_cont_label}
 \title{Prepend a continuation label row to a paginated chunk}
 \usage{
-add_cont_label(chunk, label, cont_label = " (Cont.)", col = 1L)
+add_cont_label(data, label, cont_label = " (Cont.)", col = 1L, chunk)
 }
 \arguments{
-\item{chunk}{A data.frame -- a single continuation page produced by your
+\item{data}{A data.frame -- a single continuation page produced by your
 split function.}
 
 \item{label}{Character scalar: the group label to repeat (without the
@@ -18,9 +18,12 @@ continuation suffix).}
 
 \item{col}{Integer or character column where the label is placed. Default
 \code{1} (the row-label column).}
+
+\item{chunk}{The old name of \code{data}: \strong{deprecated} in 0.8.x (warns once
+a session, still works), removed in 0.9.0.}
 }
 \value{
-\code{chunk} with one extra row prepended.
+\code{data} with one extra row prepended.
 }
 \description{
 A small helper for writing custom \verb{split=} functions for \code{\link[=as_rtftables]{as_rtftables()}}.

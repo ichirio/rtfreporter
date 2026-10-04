@@ -942,8 +942,10 @@ paginate.data.frame <- function(x, ...) {
 #' empty (`""` for character columns, `NA` otherwise).  A **factor** `col` is
 #' coerced to character first, so it can hold the suffixed label.
 #'
-#' @param chunk A data.frame -- a single continuation page produced by your
+#' @param data A data.frame -- a single continuation page produced by your
 #'   split function.
+#' @param chunk The old name of `data`: **deprecated** in 0.8.x (warns once
+#'   a session, still works), removed in 0.9.0.
 #' @param label Character scalar: the group label to repeat (without the
 #'   continuation suffix).
 #' @param cont_label Character scalar appended to `label`. Default
@@ -951,7 +953,7 @@ paginate.data.frame <- function(x, ...) {
 #' @param col Integer or character column where the label is placed. Default
 #'   `1` (the row-label column).
 #'
-#' @return `chunk` with one extra row prepended.
+#' @return `data` with one extra row prepended.
 #'
 #' @seealso [as_rtftables()] for the `split=` custom-function contract.
 #'
@@ -960,16 +962,25 @@ paginate.data.frame <- function(x, ...) {
 #' add_cont_label(df, label = "Group B")
 #'
 #' @export
-add_cont_label <- function(chunk, label, cont_label = " (Cont.)", col = 1L) {
+add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L,
+                           chunk) {
+  if (!missing(chunk)) {
+    .deprecate_once(
+      "add_cont_label_chunk",
+      paste0("`add_cont_label(chunk = )` is deprecated: the argument is ",
+             "`data` now.\n  The old name is removed in 0.9.0."))
+    data <- chunk
+  }
+  chunk <- data
   if (!is.data.frame(chunk)) {
-    stop("`chunk` must be a data.frame.", call. = FALSE)
+    stop("`data` must be a data.frame.", call. = FALSE)
   }
   if (!is.character(label) || length(label) != 1L) {
     stop("`label` must be a single string.", call. = FALSE)
   }
   if (is.character(col)) {
     j <- match(col, names(chunk))
-    if (is.na(j)) stop("`col` '", col, "' not found in `chunk`.", call. = FALSE)
+    if (is.na(j)) stop("`col` '", col, "' not found in `data`.", call. = FALSE)
   } else {
     j <- as.integer(col)
     if (is.na(j) || j < 1L || j > ncol(chunk)) {
