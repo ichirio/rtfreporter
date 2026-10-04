@@ -2178,7 +2178,7 @@
 #'   \item{`{PROGRAM}`}{the program path, as given;}
 #'   \item{`{PROGRAM_FULL}`}{the same path made absolute
 #'     ([normalizePath()]), from the working folder when the file is
-#'     written, with the system's separator: `\\` on Windows, `/` elsewhere;}
+#'     written, with the system's separator: `\` on Windows, `/` elsewhere;}
 #'   \item{`{PROGRAM_NAME}`, `{PROGRAM_DIR}`}{its file name and its folder;}
 #'   \item{`{DATETIME}`}{the time the file is written, as
 #'     `getOption("rtfreporter.datetime_format", "\%d\%b\%Y  \%H:\%M")`

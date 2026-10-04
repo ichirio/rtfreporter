@@ -37,7 +37,7 @@ when, filled \strong{as the file is written}:
 \item{\code{{PROGRAM}}}{the program path, as given;}
 \item{\code{{PROGRAM_FULL}}}{the same path made absolute
 (\code{\link[=normalizePath]{normalizePath()}}), from the working folder when the file is
-written, with the system's separator: \verb{\\\\} on Windows, \code{/} elsewhere;}
+written, with the system's separator: \verb{\\} on Windows, \code{/} elsewhere;}
 \item{\code{{PROGRAM_NAME}}, \code{{PROGRAM_DIR}}}{its file name and its folder;}
 \item{\code{{DATETIME}}}{the time the file is written, as
 \code{getOption("rtfreporter.datetime_format", "\\\%d\\\%b\\\%Y  \\\%H:\\\%M")}
