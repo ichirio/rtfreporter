@@ -28,7 +28,7 @@ knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir())
 Most of rtfreporter starts from a table that already exists: a data frame, a
 `gt`, an `rtables` object, and `as_rtftables()` turns it into pages. This
 article starts one step earlier, from an **analysis results dataset** (ARD):
-the long frame of statistics that [cards](https://insightsengineering.github.io/cards/)
+the long frame of statistics that [cards](https://pharmaverse.github.io/cards/)
 and [cardx](https://insightsengineering.github.io/cardx/) produce, one number a
 row.
 

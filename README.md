@@ -161,7 +161,7 @@ display metadata, so you simply re-specify what you want — column headers,
 alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
 
 **Starting from an ARD instead?**  When the statistics are in a
-[cards](https://insightsengineering.github.io/cards/) / cardx analysis
+[cards](https://pharmaverse.github.io/cards/) / cardx analysis
 results dataset, rtfreporter builds the table from it: `normalize_ard()`
 flattens the ARD, `table_plan()` and the `plan_*()` verbs declare the cells,
 labels, header and pages, and `rtf_tables()` takes the plan directly.  See
@@ -262,6 +262,46 @@ Planned release milestones:
 
 See [`NEWS.md`](NEWS.md) for the user-facing changelog and
 [`CHANGELOG.md`](CHANGELOG.md) for detailed per-version notes.
+
+## Citation
+
+If rtfreporter helps your work, please cite it:
+
+```r
+citation("rtfreporter")
+```
+
+If the numbers in your tables come from a [cards](https://pharmaverse.github.io/cards/) /
+[cardx](https://insightsengineering.github.io/cardx/) ARD, please cite those
+packages too (`citation("cards")`, `citation("cardx")`): they compute the
+statistics; rtfreporter only lays them out.
+
+## Acknowledgements
+
+rtfreporter stands on the work of many others, and we are grateful to their
+authors.
+
+- **[cards](https://pharmaverse.github.io/cards/) and
+  [cardx](https://insightsengineering.github.io/cardx/)** — the analysis
+  results data (ARD) that `normalize_ard()` and the `plan_*()` verbs read are
+  their design, an outcome of the [pharmaverse](https://pharmaverse.org/)
+  community's work on analysis results data.
+- **The table builders `as_rtftables()` reads** —
+  [gt](https://gt.rstudio.com), [gtsummary](https://www.danieldsjoberg.com/gtsummary/),
+  [tfrmt](https://gsk-biostatistics.github.io/tfrmt/),
+  [rtables](https://CRAN.R-project.org/package=rtables) /
+  [rlistings](https://CRAN.R-project.org/package=rlistings) /
+  [tern](https://CRAN.R-project.org/package=tern),
+  [flextable](https://davidgohel.github.io/flextable/) and
+  [huxtable](https://hughjonesd.github.io/huxtable/).  rtfreporter reads the
+  objects they build; the tables themselves are their work.
+- **[pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/)** and the
+  [pharmaverse examples](https://pharmaverse.github.io/examples/) — the ADaM
+  data (from the CDISC pilot study) and the example tables behind many of our
+  examples and articles.
+
+rtfreporter is an independent project and is not affiliated with, or endorsed
+by, the authors of these packages.
 
 ## Contributing & bug reports
 

@@ -550,7 +550,7 @@ The S3 architecture is documented in [`LEARNING.md`](https://github.com/ichirio/
 
 Everything above starts from a table that already exists. When the
 statistics are in an **analysis results dataset** (ARD) from
-[cards](https://insightsengineering.github.io/cards/) / cardx instead, write
+[cards](https://pharmaverse.github.io/cards/) / cardx instead, write
 a **plan**: `normalize_ard()` flattens the ARD, `table_plan()` names what goes
 across and down, and `plan_*()` verbs declare the cells, labels and header.
 `rtf_tables()` takes the plan as it takes any table.
