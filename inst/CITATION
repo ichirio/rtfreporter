@@ -1,0 +1,13 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "{rtfreporter}: Clinical RTF Reporting Toolkit for Tables, Listings and Figures",
+  author   = person("Yoichi", "Masui"),
+  year     = "2026",
+  note     = paste("R package version", meta$Version),
+  url      = "https://github.com/ichirio/rtfreporter",
+  textVersion = paste0(
+    "Masui Y (2026). rtfreporter: Clinical RTF Reporting Toolkit for ",
+    "Tables, Listings and Figures. R package version ", meta$Version, ". ",
+    "https://github.com/ichirio/rtfreporter"
+  )
+)

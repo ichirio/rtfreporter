@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **`citation("rtfreporter")` and credits** (#528).  A CITATION file, and
+  README sections that say how to cite rtfreporter (and cards / cardx, for
+  the statistics of a table made from their ARD) and acknowledge the
+  packages it builds on: cards / cardx, the table builders
+  `as_rtftables()` reads, pharmaverseadam and the pharmaverse examples.
+  The cards links now point to its home at pharmaverse.github.io/cards.
+
 ### Behaviour changes
 
 - **`rtf_table_style()` no longer left-aligns every column unless asked**
