@@ -2654,6 +2654,13 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
       total <- attr(part, "N")
     }
     attr(part, "N") <- NULL
+    clash <- setdiff(attr(part, "conflict"), names(got))
+    attr(part, "conflict") <- NULL
+    if (length(clash)) {
+      why <- c(why, stats::setNames(rep(paste0(
+        "the ARD states two different counts for this column (two analyses ",
+        "count the groups: keep one)"), length(clash)), clash))
+    }
     add(part)
     s <- .plan_n_summaries(v, ctx, sn, st, key, at & !own & !sent)
     add(s$n)
@@ -2694,11 +2701,25 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
       as.character(d[[cc]])), list(sep = sep)))
   out <- numeric(0)
   bigs <- numeric(0)
+  conflict <- character(0)
   for (g in unique(grp[n_sel])) {
     i <- n_sel & grp == g
     n <- st[i]
     kk <- key[i]
-    if (anyNA(n) || anyDuplicated(kk)) next
+    if (anyNA(n)) next
+    # the same count stated twice (the groups counted by two analyses: a
+    # BIGN row and an ard_stack(.by_stats = TRUE)) is one count; two
+    # different counts for one column are not a column's number
+    if (anyDuplicated(kk)) {
+      one <- vapply(split(n, kk), function(x) length(unique(x)) == 1L, NA)
+      if (!all(one)) {
+        conflict <- c(conflict, names(one)[!one])
+        next
+      }
+      keep <- !duplicated(kk)
+      n <- n[keep]
+      kk <- kk[keep]
+    }
     big <- unique(st[sel & sn %in% "N" & grp == g])
     if (length(big) != 1L || is.na(big) || !isTRUE(all.equal(sum(n), big))) {
       next
@@ -2706,8 +2727,9 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
     out <- c(out, stats::setNames(n, kk))
     bigs <- c(bigs, big)
   }
-  # the population the partition splits -- at depth 1, the whole table's
-  structure(out, N = bigs)
+  # the population the partition splits -- at depth 1, the whole table's;
+  # and the columns two different counts were stated for
+  structure(out, N = bigs, conflict = unique(conflict))
 }
 
 # The analysis summaries' `N`, where it can be trusted to be a column's

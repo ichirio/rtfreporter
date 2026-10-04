@@ -2,6 +2,15 @@
 
 ### Bug fixes
 
+- **A group count stated twice is one count** (#554).  A column
+  header's `{n}` read nothing (`(N=NA)`) when the ARD counted the groups
+  twice -- a BIGN row next to an `ard_stack(.by = )` that counts them too
+  (`.by_stats = TRUE`, cards' default) -- though both said the same: a
+  column's count was dropped as soon as it appeared twice.  The same count
+  twice is now one count; two different counts for one column are still
+  not a column's number, and `plan_header_tokens()` says why ("the ARD
+  states two different counts for this column").
+
 Found while raising the test coverage before CRAN (#552).
 
 - `print(rtf_watermark())` shows the watermark's summary: the method was
