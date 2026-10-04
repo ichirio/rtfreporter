@@ -5,6 +5,8 @@
 
 library(testthat)
 
+local_deprecated("col_header_from_names")  # deprecated in 0.8.x
+
 test_that("delimited names build a two-row spanning header", {
   hdr <- col_header_from_names(
     c("Item", "Drug A____N", "Drug A____Mean", "Drug B____N", "Drug B____Mean"))

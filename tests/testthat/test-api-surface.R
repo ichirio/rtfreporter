@@ -18,6 +18,9 @@ library(testthat)
 .reset_deprecation <- function() {
   st <- rtfreporter:::.deprecation_state
   rm(list = ls(st), envir = st)
+  # paginate() keeps its own once-a-session flag
+  rm(list = ls(rtfreporter:::.paginate_depr_env),
+     envir = rtfreporter:::.paginate_depr_env)
 }
 
 test_that("every name on the deprecated list is actually exported", {
@@ -34,7 +37,20 @@ test_that("every deprecated function still works and warns once", {
     rtf_border_none   = function() rtf_border_none(),
     rtf_border_with   = function() rtf_border_with(b, bottom = TRUE),
     rtf_border_tfl    = function() rtf_border_tfl(),
-    rtf_table_border  = function() rtf_table_border(header = b)
+    rtf_table_border  = function() rtf_table_border(header = b),
+    # 0.8.2.9013, the pre-CRAN API review (iteration 1)
+    rtf_border_side   = function() rtf_border_side(),
+    add_col_header_row = function()
+      add_col_header_row(rtf_col_header(c("a", "b")), c("A", "B")),
+    col_header_from_names = function() col_header_from_names(c("a", "x__b")),
+    set_header_cell   = function()
+      set_header_cell(rtftable(data.frame(a = 1, b = 2), col_header = c("A", "B")),
+                      col_cell(c(1, 2), "AB"), row = 1),
+    update_header_row = function()
+      update_header_row(rtf_header(c(l = "x")), 2, c(l = "y")),
+    update_footer_row = function()
+      update_footer_row(rtf_footer(c(l = "x")), 2, c(l = "y")),
+    paginate          = function() paginate(data.frame(a = 1))
   )
   expect_setequal(names(calls), .dep)
 
@@ -61,20 +77,41 @@ test_that("the deprecated spellings still produce the new values", {
 
 test_that("one border constructor is left once the deprecated ones are set aside", {
   border_api <- grep("^rtf_border|^rtf_table_border$", .exports(), value = TRUE)
-  expect_length(border_api, 9L)                       # what NAMESPACE still holds
+  expect_length(border_api, 10L)                      # what NAMESPACE still holds
   # Two, doing different jobs: which edges, and what the line is.
   expect_setequal(setdiff(border_api, .dep),
-                  c("rtf_border", "rtf_border_side"))
+                  c("rtf_border", "rtf_border_line"))
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 123 exports, 7 of them deprecated and slated for removal before CRAN.
+  # 125 exports, 14 of them deprecated and slated for removal before CRAN.
   # (91 since #463 added rtfreporter_ai_manual(); 92 since #476 added
   # round_num(); 126 since #491 brought the ARD table engine --
   # 34 functions -- over from tflspec; 122 since #498 folded plan_fmt()
   # into plan_digits() and the three style verbs into plan_cell_style();
   # 123 since #529 added rtf_text_tokens(); 124 since #536 added
-  # plan_header_tokens().)
-  expect_length(.exports(), 124L)
-  expect_length(setdiff(.exports(), .dep), 117L)
+  # plan_header_tokens(); 125 since the pre-CRAN API review, iteration 1,
+  # renamed rtf_border_side() to rtf_border_line() and deprecated the old
+  # name with six others.)
+  expect_length(.exports(), 125L)
+  expect_length(setdiff(.exports(), .dep), 111L)
+})
+
+test_that("the old argument names still work, with a warning", {
+  .reset_deprecation()
+  d <- data.frame(a = 1, b = 2)
+  expect_warning(t1 <- as_rtftable(gt_obj = d), "deprecated")
+  expect_identical(t1, as_rtftable(d))
+  .reset_deprecation()
+  sp <- list(list(from = 1, to = 2, label = "AB"))
+  expect_warning(t2 <- rtftable(d, spanning_header = sp), "deprecated")
+  expect_identical(t2$spanning_header, sp)
+  expect_silent(rtftable(d, spanning_header = sp))     # once a session
+  .reset_deprecation()
+})
+
+test_that("a border line saved under the old class name still reads", {
+  old <- structure(list(style = "single", width = 15L, color = NULL),
+                   class = "rtf_border_side")
+  expect_silent(rtf_border(top = old))
 })

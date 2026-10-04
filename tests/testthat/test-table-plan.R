@@ -2176,9 +2176,9 @@ test_that("every as_rtftables() setting has a plan verb, with the direct call's 
                                header_align = "left", align = "right",
                                bold = TRUE, italic = TRUE, underline = TRUE))
   # the look and the rules make ONE style object
-  dbl <- rtf_border(top = rtf_border_side("double"),
-                    bottom = rtf_border_side("double"),
-                    inside_h = rtf_border_side("none"))
+  dbl <- rtf_border(top = rtf_border_line("double"),
+                    bottom = rtf_border_line("double"),
+                    inside_h = rtf_border_line("none"))
   same(table_plan(tbl) |> plan_style(border_header = dbl, header_bold = TRUE),
        style = rtf_table_style(border_header = dbl, header_bold = TRUE))
   # plan_columns(): a cell formatter and widths in twips

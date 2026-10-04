@@ -117,8 +117,7 @@ for (i in seq_along(lab_data)) {
 
   tbl <- rtftable(
     data                = item$df,
-    col_header          = col_hdr,
-    spanning_header     = spanning_hdr,
+    col_header          = list(spanning_hdr, col_hdr),   # rows top first
     col_spec            = col_spec_shift,
     column_widths_twips = col_widths,
     border              = "tfl",
@@ -328,10 +327,10 @@ df_shift <- data.frame(
 
 tbl_span <- rtftable(
   data = df_shift,
-  col_header = c("Baseline", "Low", "Normal", "High", "Low", "Normal", "High"),
-  spanning_header = list(
-    list(from = 2L, to = 4L, label = "Treatment A  (N=24)", underline = TRUE),
-    list(from = 5L, to = 7L, label = "Treatment B  (N=24)", underline = TRUE)
+  col_header = list(                     # rows top first
+    list(list(from = 2L, to = 4L, label = "Treatment A  (N=24)", underline = TRUE),
+         list(from = 5L, to = 7L, label = "Treatment B  (N=24)", underline = TRUE)),
+    c("Baseline", "Low", "Normal", "High", "Low", "Normal", "High")
   ),
   column_widths_twips = c(2160L, 900L, 900L, 900L, 900L, 900L, 900L),
   col_spec = lapply(seq_len(7L), function(j)
@@ -379,7 +378,7 @@ tbl_framed <- rtftable(df,
 tbl_custom <- rtftable(df, border = "none") |>
   style_zone(
     header   = rtf_border(top = TRUE, bottom = TRUE),
-    last_row = rtf_border(bottom = rtf_border_side("double", 10L))
+    last_row = rtf_border(bottom = rtf_border_line("double", 10L))
   )
 
 hdr_bordered <- rtf_header(
@@ -538,7 +537,7 @@ tables <- lapply(list(df_demog, df_demog, df_demog),
 
 # Non-mutating derivation
 heavy_tfl <- rtf_table_style_with(tfl,
-  border_last_row = rtf_border(bottom = rtf_border_side("double", 20L))
+  border_last_row = rtf_border(bottom = rtf_border_line("double", 20L))
 )
 ```
 

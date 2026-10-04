@@ -463,7 +463,7 @@
   styles   <- cmds$border$style
 
   if (inherits(border_spec, "rtf_border")) {
-    # New-style: rtf_border with rtf_border_side elements.
+    # New-style: rtf_border with rtf_border_line elements.
     .side <- function(side) {
       b <- border_spec[[side]]
       if (is.null(b)) return("")
@@ -1143,7 +1143,7 @@
         hdr_row, cellx, row_b, hdr_h, pad_l, pad_r, valign_cmd,
         col_spec = col_spec, table_align = table_align,
         group_bottom_side = if (idx < n_hdr_rows) {
-          (hdr_border$bottom %||% span_border$bottom %||% rtf_border_side())
+          (hdr_border$bottom %||% span_border$bottom %||% rtf_border_line())
         } else {
           NULL   # last header row's outer frame already supplies the bottom
         },

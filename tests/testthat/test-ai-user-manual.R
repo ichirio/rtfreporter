@@ -235,10 +235,10 @@ test_that("every idiom the manual teaches runs", {
                          B_Low = c(3L, 0L, 0L), B_Norm = c(1L, 14L, 0L))
   expect_no_error(rtftable(
     data = df_shift,
-    col_header = c("Baseline", "Low", "Normal", "Low", "Normal"),
-    spanning_header = list(
-      list(from = 2L, to = 3L, label = "Treatment A  (N=24)", underline = TRUE),
-      list(from = 4L, to = 5L, label = "Treatment B  (N=24)", underline = TRUE)),
+    col_header = list(
+      list(list(from = 2L, to = 3L, label = "Treatment A  (N=24)", underline = TRUE),
+           list(from = 4L, to = 5L, label = "Treatment B  (N=24)", underline = TRUE)),
+      c("Baseline", "Low", "Normal", "Low", "Normal")),
     column_widths_twips = c(2160L, rep(900L, 4)),
     col_spec = lapply(seq_len(5L), function(j)
       list(col = j, align = if (j == 1L) "left" else "center")),
@@ -262,7 +262,6 @@ test_that("every idiom the manual teaches runs", {
   expect_error(set_col_header(hpages, c("Low", "High")),
                "the label row has 2 labels")
   expect_no_error(col_cell(pos = col_key("g1"), label = "Drug A"))
-  expect_no_error(col_header_from_names(dfh))
   expect_s3_class(header_map(hpages[[1]]), "data.frame")
 
   ## S8 -- widths
@@ -316,7 +315,7 @@ test_that("every idiom the manual teaches runs", {
     top = TRUE, bottom = TRUE, left = TRUE, right = TRUE, inside_h = TRUE)))
   expect_no_error(rtftable(df, border = rtf_border()) |>
     style_zone(header   = rtf_border(top = TRUE, bottom = TRUE),
-               last_row = rtf_border(bottom = rtf_border_side("double", 10L))))
+               last_row = rtf_border(bottom = rtf_border_line("double", 10L))))
   expect_no_error(rtftable(df, style = rtf_table_style_tfl()))
   pages <- as_rtftables(df, border = "tfl") |>
     style_cols(cols = 1, align = "left", indent_twips = 120)

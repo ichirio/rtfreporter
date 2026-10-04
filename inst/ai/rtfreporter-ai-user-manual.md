@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9012** (the development
+**This manual documents rtfreporter 0.8.2.9013** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -278,7 +278,7 @@ without writing a file.
 | Split a too-wide table by column | `paginate_cols(pages, at =, carry =)` |
 | Align decimal points | `set_decimal_split(pages, cols =)` |
 | Style after the fact | `style_cols()`, `style_body()`, `style_header()`, `style_zone()` |
-| Borders | `border = "tfl"`, `rtf_border()`, `rtf_border_side()` |
+| Borders | `border = "tfl"`, `rtf_border()`, `rtf_border_line()` |
 | Column-width help | `auto_col_widths(df, ...)`, `fit_listing_widths(data, spec, page =)` |
 | Table from a cards / cardx ARD | `normalize_ard()` → `table_plan()` → `plan_*()` → `rtf_tables(doc, plan)` **(§17)** |
 
@@ -467,10 +467,10 @@ for (i in seq_along(lab_data)) {
 ```r
 tbl <- rtftable(
   data       = df_shift,
-  col_header = c("Baseline", "Low", "Normal", "High", "Low", "Normal", "High"),
-  spanning_header = list(
-    list(from = 2L, to = 4L, label = "Treatment A  (N=24)", underline = TRUE),
-    list(from = 5L, to = 7L, label = "Treatment B  (N=24)", underline = TRUE)
+  col_header = list(                     # rows top first
+    list(list(from = 2L, to = 4L, label = "Treatment A  (N=24)", underline = TRUE),
+         list(from = 5L, to = 7L, label = "Treatment B  (N=24)", underline = TRUE)),
+    c("Baseline", "Low", "Normal", "High", "Low", "Normal", "High")
   ),
   column_widths_twips = c(2160L, rep(900L, 6)),
   col_spec = lapply(seq_len(7L), function(j)
@@ -497,7 +497,6 @@ pages <- pages |> set_col_header(
 header_map(pages[[1]])                        # inspect: which cell landed where
 pages |> add_header_row(c("", "A", "B", ""))  # one extra row (.position = "top"/"bottom")
 pages |> style_header(row = 2, cols = 2:3, bold = TRUE)
-col_header_from_names(df)                     # a label row from the data names
 ```
 
 * A **named** label row is a *patch*: each entry says which column it belongs
@@ -619,10 +618,10 @@ rtftable(df, border = rtf_border(top = TRUE, bottom = TRUE,
                                  left = TRUE, right = TRUE, inside_h = TRUE))
 rtftable(df, border = "none") |>
   style_zone(header   = rtf_border(top = TRUE, bottom = TRUE),
-             last_row = rtf_border(bottom = rtf_border_side("double", 10L)))
+             last_row = rtf_border(bottom = rtf_border_line("double", 10L)))
 ```
 
-`rtf_border()` is the one constructor; `rtf_border_side(style, width, color)`
+`rtf_border()` is the one constructor; `rtf_border_line(style, width, color)`
 builds a single edge (`"single"`, `"double"`, …).
 
 **Deprecated — do not generate these** (they still work but warn, and are
@@ -637,6 +636,13 @@ scheduled for removal before CRAN):
 | `rtf_border_with()` | layer it at the attach point (`style_zone()` etc.) |
 | `rtf_border_tfl()` | `border = "tfl"` or `rtf_table_style_tfl()` |
 | `rtf_table_border()` | `rtftable(border = )` or `style_zone()` |
+| `rtf_border_side()` | `rtf_border_line()` (same arguments) |
+| `add_col_header_row()` | the row inside `rtf_col_header()` (rows top first) |
+| `col_header_from_names()` | nothing: `as_rtftables()` splits the names (`header_sep =`) |
+| `set_header_cell()` | the cell in `rtf_col_header()` / `set_col_header()`; `style_header()` |
+| `update_header_row()` / `update_footer_row()` | `rtf_header(rows = )` / `rtf_footer(rows = )` made again |
+| `paginate()` | `as_rtftables()` |
+| `rtftable(spanning_header = )`, `as_rtftable(gt_obj = )` | a first row of `col_header`; `as_rtftable(x)` |
 
 Post-hoc styling (each accepts one `rtftable` **or** a list of pages):
 
@@ -940,15 +946,13 @@ adds an "Any" row.
 `rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
 
 **Sections / bands:** `rtf_section` `combine_sections` `rtf_header` `rtf_footer`
-`update_header_row` `update_footer_row` `rtf_header_source` `rtf_titles`
-`rtf_footnotes`
+`rtf_header_source` `rtf_titles` `rtf_footnotes`
 
 **Content:** `rtf_tables` `rtf_figures` `rtftable` `rtfplot` `as_rtftable`
 `as_rtftables`
 
-**Column headers:** `col_cell` `col_key` `rtf_col_header` `add_col_header_row`
-`col_header_from_names` `set_col_header` `set_header_cell` `header_map`
-`add_header_row` `rtf_columns`
+**Column headers:** `col_cell` `col_key` `rtf_col_header` `set_col_header`
+`header_map` `add_header_row` `rtf_columns`
 
 **Stub / hierarchy:** `stub_cols` `stub_spec`
 
@@ -956,16 +960,18 @@ adds an "Any" row.
 `listing_code` `listing_wrap` `listing_wrap_code` `listing_disp_width`
 `listing_split_after` `listing_take`
 
-**Pagination / layout:** `paginate` `paginate_cols` `set_decimal_split`
+**Pagination / layout:** `paginate_cols` `set_decimal_split`
 `set_blank_rows` `add_cont_label` `auto_col_widths` `text_width_in`
 
 **Styling:** `style_header` `style_cols` `style_body` `style_zone`
 `rtf_table_style` `rtf_table_style_with` `rtf_table_style_tfl`
 
-**Borders:** `rtf_border` `rtf_border_side`
+**Borders:** `rtf_border` `rtf_border_line`
 *(deprecated, still exported: `rtf_border_none` `rtf_border_top`
 `rtf_border_bottom` `rtf_border_box` `rtf_table_border` `rtf_border_tfl`
-`rtf_border_with` — see §13)*
+`rtf_border_with` `rtf_border_side` `add_col_header_row`
+`col_header_from_names` `set_header_cell` `update_header_row`
+`update_footer_row` `paginate` — see §13)*
 
 **Formatting:** `fmt_count_paren` `fmt_count_paren_bare` `fmt_value_paren`
 `fmt_right_align` `format_count_pct` `realign_count_pct` `fmt_signif`

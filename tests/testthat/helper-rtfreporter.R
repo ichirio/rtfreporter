@@ -20,3 +20,11 @@
   generate_rtfreport(report, f, overwrite = TRUE)
   paste(readLines(f, warn = FALSE), collapse = "\n")
 }
+
+# The tests of a deprecated function (or argument) check what it still does,
+# not its warning (test-api-surface.R checks that): mark it as already warned.
+local_deprecated <- function(...) {
+  st <- rtfreporter:::.deprecation_state
+  for (k in c(...)) assign(k, TRUE, envir = st)
+  invisible()
+}

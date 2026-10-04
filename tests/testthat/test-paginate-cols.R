@@ -1,5 +1,7 @@
 # Tests for paginate_cols() -- horizontal (column-wise) pagination.
 
+local_deprecated("spanning_header")  # deprecated in 0.8.x
+
 W <- 13680L
 
 .df <- function() {

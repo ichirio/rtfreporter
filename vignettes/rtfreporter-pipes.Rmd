@@ -338,8 +338,7 @@ col_hdr <- c("Baseline\nGrade", rep(c("0","1","2","3","4","Total"), 3L))
 make_shift_tbl <- function(df) {
   rtftable(
     df,
-    col_header          = col_hdr,
-    spanning_header     = spanning_hdr,
+    col_header          = list(spanning_hdr, col_hdr),   # rows top first
     column_widths_twips = c(1200L, rep(733L, 18L)),
     col_spec = c(
       list(list(col = 1, align = "left")),
@@ -417,10 +416,7 @@ lab_params <- list(
 )
 
 make_lab_hdr <- function(label) {
-  update_header_row(
-    rtf_header(rows = common_hdr_rows),
-    row = 6L, content = c(l = label)
-  )
+  rtf_header(rows = c(common_hdr_rows, list(c(l = label))))
 }
 
 doc <- rtf_document() |>

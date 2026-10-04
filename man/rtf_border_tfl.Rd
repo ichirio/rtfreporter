@@ -19,7 +19,10 @@ underline under one spanning column-header cell.}
 \code{style = "none"}.}
 
 \item{color}{Line colour.  \code{NULL} (default) = black.  Or a 6-digit hex
-string such as \code{"#003366"}.}
+string such as \code{"#003366"}.
+
+\code{rtf_border_side()} is its old name: \strong{deprecated} in 0.8.x (it warns once
+a session and still works) and removed in 0.9.0.}
 }
 \value{
 An \code{rtf_table_border} object.

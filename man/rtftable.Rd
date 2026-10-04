@@ -67,10 +67,12 @@ from \code{col_spec} (i.e. column headers follow the data alignment).
 \code{"center"} / \code{"left"} / \code{"right"} applies a single value to every
 column; a character vector of length \code{ncol} overrides per-column.}
 
-\item{spanning_header}{A standalone spanning row placed \strong{above} the
-\code{col_header} rows.  Each element: \code{list(from, to, label, underline)}.
-Kept for backward compatibility -- new code should put spanning rows
-directly inside \code{col_header}.}
+\item{spanning_header}{\strong{Deprecated} in 0.8.x (warns once a session,
+still works), removed in 0.9.0.  A standalone spanning row placed
+\strong{above} the \code{col_header} rows (each element
+\code{list(from, to, label, underline)}).  Write it as the first row of
+\code{col_header} instead: \verb{col_header = list(<that row>, <the label row>)},
+or with \code{\link[=rtf_col_header]{rtf_col_header()}} / \code{\link[=col_cell]{col_cell()}}.}
 
 \item{col_spec}{Per-column formatting, as a \code{list} of per-column specs. Each
 spec is a named list identifying its column with \code{col}, plus any of:

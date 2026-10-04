@@ -1,5 +1,7 @@
 # Spanning-row alignment inherits from the level below.
 
+local_deprecated("spanning_header")  # deprecated in 0.8.x
+
 .render_tbl <- function(tbl) {
   doc <- rtf_document()
   doc <- rtf_section(doc, page = 1, secinfo = list(header = NULL, footer = NULL))

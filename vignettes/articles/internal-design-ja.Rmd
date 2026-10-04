@@ -360,7 +360,7 @@ rtf_document（公開・パイプで構築）
 |--------|------|
 | `rtf_document` | ディスパッチ（`print`, `plot`）＋ `inherits()` |
 | `rtftable` | ディスパッチ（`print`, `format`, `summary`, `plot`）＋ `inherits()` |
-| `rtf_border_side`, `rtf_border`, `rtf_table_border` | ディスパッチ（`print`, `plot`）＋ `inherits()` |
+| `rtf_border_line`, `rtf_border`, `rtf_table_border` | ディスパッチ（`print`, `plot`）＋ `inherits()` |
 | `rtf_table_style`, `rtf_col_cell`, `rtf_col_header` | ディスパッチ（`print`）＋ `inherits()` |
 | `rtfplot` | ディスパッチ（`print`）＋ `inherits()` |
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()`（空行リゾルバの分岐） |
@@ -383,6 +383,6 @@ rtf_document（公開・パイプで構築）
   その場で破壊的変更しない。
 * **クラス階層を作らない。** クラスは単一のフラットなタグ。ボーダー族は継承ではなく
   **コンポジション**：`rtf_table_border` が `rtf_border` を含み、それが
-  `rtf_border_side` を含む。
+  `rtf_border_line` を含む。
 * クラスを付ける価値があるのは、**何かがディスパッチするか `inherits()` で判定する**
   場合のみ。そうでなければ素のリストで十分。

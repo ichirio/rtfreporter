@@ -61,15 +61,14 @@ rtf_document() |>                                  # -> rtf_document
 | `rtf_border` | `rtf_border()`, `TRUE`, `rtf_border(top = TRUE)` / `_bottom()` / `_box()` / `_none()`, `rtf_border_with()` | ボーダー指定（辺ごとの線種/太さ/色）。 |
 | `rtf_table_border` | `rtf_table_border()`, `rtf_border_tfl()` — **どちらも非推奨** | 5ゾーンの割り当て表。表全体なら `rtftable(border = rtf_border(...))`、行の種類ごとなら `style_zone()`、TFL 既定は `border = "tfl"` または `rtf_table_style_tfl()` に置き換わりました。 |
 | `rtf_table_style` | `rtf_table_style()`, `rtf_table_style_with()`, `rtf_table_style_tfl()` | 再利用可能なスタイル（ボーダー＋パディング＋行高の既定値）。構築時にスナップショット取得。 |
-| `rtf_col_header` | `rtf_col_header()`, `col_cell()`, `add_col_header_row()` | 複数行／スパニングの列ヘッダー。 |
+| `rtf_col_header` | `rtf_col_header()`, `col_cell()` | 複数行／スパニングの列ヘッダー。 |
 
 公開関数がすべてコンストラクタというわけではありません。`rtf_config()` は
 **コンストラクタではなく設定関数（configurator）**です。`rtf_document` を受け取り、
 非 `NULL` のフィールドだけ更新して、**同じ** `rtf_document` クラスのコピーを返します
 （新しいクラスは設定しません）。他のパイプ動詞（`rtf_tables()`、`rtf_section()` …）
 と同じ位置づけです。同様に `rtf_header()` / `rtf_footer()` はヘッダー／フッターを
-表す素の（クラス無し）リストを返し、`update_header_row()` / `update_footer_row()`
-は更新したコピーを返します。
+表す素の（クラス無し）リストを返します。行を変えるときは作り直します。
 
 > **`rtf_document` と `rtfreport`。** `rtf_document` はパイプで構築・保持する
 > *公開* オブジェクトです。レンダリング時（`generate_rtfreport()`）にのみ、別の

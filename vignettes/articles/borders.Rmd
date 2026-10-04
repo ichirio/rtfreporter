@@ -118,18 +118,18 @@ tbl <- rtftable(df, border = "none") |>
 call draw:
 
 ```{r side}
-rtf_border(top = rtf_border_side("double", 30L, "#003366"))
+rtf_border(top = rtf_border_line("double", 30L, "#003366"))
 ```
 
 `TRUE` and a bare style name are shorthands for the same value, so
-`rtf_border(top = "double")` and `rtf_border(top = rtf_border_side("double"))`
+`rtf_border(top = "double")` and `rtf_border(top = rtf_border_line("double"))`
 agree. `style` is one of `"single"`, `"double"`, `"thick"`, `"dash"`, `"dot"` --
 and `"none"`, which we meet below. Because each side holds its own line, sides
 that differ still fit in one call:
 
 ```{r side-differ}
-rtf_border(top    = rtf_border_side("double", 30L),
-           bottom = rtf_border_side(color = "#C9372C"))
+rtf_border(top    = rtf_border_line("double", 30L),
+           bottom = rtf_border_line(color = "#C9372C"))
 ```
 
 ### Body (data-area) borders

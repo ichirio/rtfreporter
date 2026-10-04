@@ -83,8 +83,7 @@ A named list with elements \code{rows}, \code{border}, \code{width_twips}, and
 }
 \description{
 \code{rtf_header()} and \code{rtf_footer()} create structured header/footer objects
-that can be passed to \code{rtf_section()}. Use \code{\link[=update_header_row]{update_header_row()}} /
-\code{\link[=update_footer_row]{update_footer_row()}} to add or replace individual rows after creation.
+that can be passed to \code{rtf_section()}.
 }
 \examples{
 hdr <- rtf_header(
@@ -94,7 +93,5 @@ hdr <- rtf_header(
   )
 )
 ftr <- rtf_footer(c(l = "Confidential"))
-
-hdr <- update_header_row(hdr, row = 3, content = c(c = "Draft"))
 
 }

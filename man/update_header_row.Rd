@@ -3,7 +3,7 @@
 \name{update_header_row}
 \alias{update_header_row}
 \alias{update_footer_row}
-\title{Update a specific row in an \code{rtf_header()} object}
+\title{Update a specific row in an \code{rtf_header()} object (deprecated)}
 \usage{
 update_header_row(header, row, content)
 
@@ -23,18 +23,20 @@ update_footer_row(footer, row, content)
 A modified \code{rtf_header()} object.
 }
 \description{
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  Make the header (or footer) again with \code{\link[=rtf_header]{rtf_header()}} /
+\code{\link[=rtf_footer]{rtf_footer()}}: its rows are a list, and a list is edited with R.
+}
+\details{
 Adds a new row or replaces an existing row in a header/footer object.
 If \code{row} is beyond the current number of rows, intermediate rows are
 auto-filled with empty center-aligned rows (\code{c(c = "")}).
 }
 \examples{
-hdr <- rtf_header(rows = list(
-  c(l = "Protocol: XXX-001", r = "Company"),
-  c(l = "Table 14.1.1",     r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
-))
-
-hdr <- update_header_row(hdr, row = 2, content = c(l = "Table 14.2.1", r = "Page {AUTO_PAGE}"))
-hdr <- update_header_row(hdr, row = 3, content = c(c = "Draft - Confidential"))
-hdr <- update_header_row(hdr, row = 5, content = c(l = "Run date: 2026-01-01"))
+# instead: the rows as a list, made again
+rows <- list(c(l = "Protocol: XXX-001", r = "Company"),
+             c(l = "Table 14.1.1", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"))
+rows[[3]] <- c(c = "Draft - Confidential")
+hdr <- rtf_header(rows = rows)
 
 }

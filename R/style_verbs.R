@@ -884,7 +884,12 @@ set_col_header.list <- function(x, ..., values = NULL, by = NULL) {
   out[order(vapply(out, function(c) as.integer(c$from), integer(1L)))]
 }
 
-#' Set or merge individual column-header cells (spanning, borders, alignment)
+#' Set or merge individual column-header cells (deprecated)
+#'
+#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
+#' 0.9.0.  Restyle a header's cells with [style_header()], and write a
+#' spanning cell into the header itself ([rtf_col_header()] /
+#' [set_col_header()], or [add_header_row()] for a new row).
 #'
 #' Edits **specific cells of one header row** of a finished [rtftable()] (or a
 #' list of pages) without rebuilding the whole header: place one or more
@@ -918,12 +923,21 @@ set_col_header.list <- function(x, ..., values = NULL, by = NULL) {
 #'   restyle existing cells; [add_header_row()] to add a row; [col_cell()].
 #'
 #' @examples
+#' # instead: the spanning cell written in the header
 #' df  <- data.frame(Item = "x", g1 = 1, g2 = 2, g3 = 3, Total = 4)
-#' tbl <- rtftable(df, col_header = c("Item", "N", "Mean", "SD", "Total"))
-#' # Merge g1..g3 under one spanning "Statistics" cell on the top row:
-#' tbl <- set_header_cell(tbl, col_cell(c("g1", "g3"), "Statistics"), row = 1)
+#' tbl <- rtftable(df, col_header = rtf_col_header(
+#'   list(col_cell(1, ""), col_cell(c(2, 4), "Statistics"), col_cell(5, "")),
+#'   c("Item", "N", "Mean", "SD", "Total")))
 #' @export
-set_header_cell <- function(x, ...) UseMethod("set_header_cell")
+set_header_cell <- function(x, ...) {
+  .deprecate_once(
+    "set_header_cell",
+    paste0("`set_header_cell()` is deprecated: write the spanning cell in the ",
+           "header (`rtf_col_header()` / `set_col_header()`, a new row with ",
+           "`add_header_row()`) and restyle cells with `style_header()`.\n  ",
+           "Removed in 0.9.0."))
+  UseMethod("set_header_cell")
+}
 
 #' @rdname set_header_cell
 #' @export

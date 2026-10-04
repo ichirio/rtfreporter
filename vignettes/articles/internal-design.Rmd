@@ -160,7 +160,7 @@ S3 class plays one of three roles:
 |-------|------|
 | `rtf_document` | dispatch (`print`, `plot`) + `inherits()` |
 | `rtftable` | dispatch (`print`, `format`, `summary`, `plot`) + `inherits()` |
-| `rtf_border_side`, `rtf_border`, `rtf_table_border` | dispatch (`print`, `plot`) + `inherits()` |
+| `rtf_border_line`, `rtf_border`, `rtf_table_border` | dispatch (`print`, `plot`) + `inherits()` |
 | `rtf_table_style`, `rtf_col_cell`, `rtf_col_header` | dispatch (`print`) + `inherits()` |
 | `rtfplot` | dispatch (`print`) + `inherits()` |
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()` (blank-row resolver dispatch) |
@@ -180,6 +180,6 @@ S3 class plays one of three roles:
   object; nothing is mutated in place.
 * **No class hierarchies.** Classes are single, flat tags. The border family is
   *composition*, not inheritance: an `rtf_table_border` contains `rtf_border`
-  objects, each of which contains `rtf_border_side` objects.
+  objects, each of which contains `rtf_border_line` objects.
 * Adding a class only pays off if something will **dispatch on it or
   `inherits()`-check it** -- otherwise a plain list is enough.

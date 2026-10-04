@@ -2,7 +2,7 @@
 % Please edit documentation in R/col_header.R
 \name{add_col_header_row}
 \alias{add_col_header_row}
-\title{Append (or prepend) a row to an \code{rtf_col_header}}
+\title{Append (or prepend) a row to an \code{rtf_col_header} (deprecated)}
 \usage{
 add_col_header_row(hdr, row, .position = c("bottom", "top"))
 }
@@ -20,16 +20,15 @@ promoted automatically.}
 A new \code{rtf_col_header}.
 }
 \description{
-Append (or prepend) a row to an \code{rtf_col_header}
+\strong{Deprecated} in 0.8.x (warns once a session, still works); removed in
+0.9.0.  Write the row in \code{\link[=rtf_col_header]{rtf_col_header()}} itself -- it takes the rows top
+first, cell rows and label rows alike:
+\code{rtf_col_header(list(col_cell(c(2, 3), "Drug A")), c("Item", "N", "Mean"))}.
 }
 \examples{
-hdr <- rtf_col_header(c("Item", "N", "Mean", "N", "Mean"))   # bottom row
-hdr <- add_col_header_row(
-  hdr,
-  list(col_cell(1, ""),
-       col_cell(c(2, 3), "Drug A"),
-       col_cell(c(4, 5), "Drug B")),
-  .position = "top"
-)
+# instead: the rows top first, in one rtf_col_header()
+rtf_col_header(
+  list(col_cell(1, ""), col_cell(c(2, 3), "Drug A"), col_cell(c(4, 5), "Drug B")),
+  c("Item", "N", "Mean", "N", "Mean"))
 
 }

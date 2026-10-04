@@ -1,5 +1,30 @@
 # rtfreporter (development version)
 
+### Deprecated (the pre-CRAN API review, iteration 1)
+
+Each still works and warns once a session, naming what to write instead;
+all are removed in 0.9.0.  `?rtf_border` lists the older border ones.
+
+- `rtf_border_side()` is now **`rtf_border_line()`** (the same arguments):
+  it describes one line, used for any edge, not a side.  An object saved
+  with the old class still reads.
+- `add_col_header_row()`, `col_header_from_names()` and `set_header_cell()`:
+  write the rows (and spanning cells) in `rtf_col_header()` /
+  `set_col_header()`, add a row with `add_header_row()`, restyle cells with
+  `style_header()`; `as_rtftables()` already splits delimited names
+  (`header_sep =`).
+- `update_header_row()` / `update_footer_row()`: a header's rows are a
+  list -- make it again with `rtf_header(rows = )` / `rtf_footer(rows = )`.
+- `paginate()` (deprecated since 0.7.x, use `as_rtftables()`) is now on the
+  list removed in 0.9.0.
+- `rtftable(spanning_header = )` (and `rtf_tables(spanning_header = )`): put
+  the spanning row first in `col_header = list(<spanning row>, <label row>)`
+  -- the RTF is byte-identical.
+- `as_rtftable(gt_obj = )`: the argument is `x`, as in `as_rtftables()`.
+
+The articles and the AI manual use the new spellings.  Exports: 125, of
+which 14 deprecated -- 111 to learn.
+
 ### Documentation
 
 - **`citation("rtfreporter")` and credits** (#528).  A CITATION file, and

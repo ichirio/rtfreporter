@@ -39,7 +39,7 @@ or \code{NULL} to leave it unset. See \emph{Writing a side} below.}
 edges; \code{NULL} (default) means no rule there.}
 
 \item{style, width, color}{Line style, weight in twips and colour, as in
-\code{\link[=rtf_border_side]{rtf_border_side()}}.}
+\code{\link[=rtf_border_line]{rtf_border_line()}}.}
 }
 \value{
 A list of class \code{"rtf_border"}.
@@ -100,15 +100,15 @@ and \code{FALSE} is \code{"none"} -- an explicit \emph{no line}, which erases a 
 selection would otherwise inherit. The style names are \code{"single"},
 \code{"double"}, \code{"thick"}, \code{"dash"}, \code{"dot"} and \code{"none"}.
 
-Both are shorthands for the third spelling, an \code{\link[=rtf_border_side]{rtf_border_side()}}, which is
+Both are shorthands for the third spelling, an \code{\link[=rtf_border_line]{rtf_border_line()}}, which is
 what a side actually holds. Reach for it when a line needs a weight or a
 colour of its own -- and since each side carries its own, one call is always
 enough:
 
 \preformatted{
   rtf_border(all = "double")                              # four edges alike
-  rtf_border(top = rtf_border_side(color = "#C9372C"),    # ... or all four
-             bottom = rtf_border_side("double", 30L))     #     different
+  rtf_border(top = rtf_border_line(color = "#C9372C"),    # ... or all four
+             bottom = rtf_border_line("double", 30L))     #     different
 }
 
 \code{FALSE} and \code{"none"} are always interchangeable.
@@ -142,7 +142,7 @@ rather than replacing it:
 
 \preformatted{
   tbl |>
-    style_zone(header = rtf_border(top = rtf_border_side(color = "#C9372C"))) |>
+    style_zone(header = rtf_border(top = rtf_border_line(color = "#C9372C"))) |>
     style_zone(header = rtf_border(bottom = TRUE))   # the top rule survives
 }
 
@@ -225,7 +225,7 @@ before.  Naming \code{inside_h} / \code{inside_v} says which you mean and silenc
 
 \examples{
 rtf_border(top = TRUE, bottom = TRUE)  # top + bottom
-rtf_border(bottom = rtf_border_side(color = "#003366"))          # blue underline
+rtf_border(bottom = rtf_border_line(color = "#003366"))          # blue underline
 
 # A whole table: frame plus a rule under every row, no vertical rules.
 s <- TRUE
@@ -239,6 +239,6 @@ identical(rtf_border(top = TRUE,     bottom = FALSE),
           rtf_border(top = "single", bottom = "none"))
 
 # A weight or a colour of its own needs the side value.
-rtf_border(top    = rtf_border_side("double", 30L, "#003366"),
-           bottom = rtf_border_side(color = "#C9372C"))
+rtf_border(top    = rtf_border_line("double", 30L, "#003366"),
+           bottom = rtf_border_line(color = "#C9372C"))
 }
