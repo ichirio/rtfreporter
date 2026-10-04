@@ -11,6 +11,14 @@
 
 ### Behaviour changes
 
+- **A declared level order now orders a table with no row keys** (#534).
+  A table of one analysis variable without `rows` --
+  `table_plan(d, cols = "ARM") |> plan_levels(AGEGR1 = c("<65", "65-80",
+  ">80"))`, or `widen_ard(levels = )` -- kept the ARD's order: the sort that
+  applies the label column's order ran only when there were row keys.  Now
+  it runs there too.  What changes: tables of that shape with `levels` (or
+  factor data), whose rows now follow the declared order.
+
 - **`{DATE}` is not a token** (#532).  It was on the list of tokens
   `set_col_header()` leaves for the renderer, and in its documentation, but
   nothing ever replaced it: it printed as `{DATE}`.  It is gone from both; a

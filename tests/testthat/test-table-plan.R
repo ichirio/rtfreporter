@@ -2240,3 +2240,19 @@ test_that("every as_rtftables() setting has a plan verb, with the direct call's 
   expect_false(any(c("na", "cell_format", "header_sep", "col_header_align",
                      "column_widths_twips", "table_width_twips", "style") %in% names(a)))
 })
+
+test_that("one analysis variable, no row keys: plan_levels() still orders the rows (#534)", {
+  skip_if_not_installed("cards")
+  d <- normalize_ard(cards::ard_tabulate(cards::ADSL, by = ARM, variables = AGEGR1))
+  p <- table_plan(d, cols = "ARM") |>
+    plan_levels(AGEGR1 = c("<65", "65-80", ">80")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_identical(as.character(plan_apply(p, "table")$label), c("<65", "65-80", ">80"))
+  w <- widen_ard(d, cols = "ARM", levels = list(AGEGR1 = c(">80", "<65", "65-80")),
+                 cells = list(categorical = "{n}"), notes = FALSE)
+  expect_identical(as.character(w$label), c(">80", "<65", "65-80"))
+  # no order declared: as the ARD has them
+  w0 <- widen_ard(d, cols = "ARM", cells = list(categorical = "{n}"), notes = FALSE)
+  expect_identical(as.character(w0$label),
+                   unique(vapply(d$variable_level[d$variable == "AGEGR1"], as.character, "")))
+})
