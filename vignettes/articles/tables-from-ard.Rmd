@@ -77,11 +77,11 @@ default.
 ```{r ard-dm}
 ard_dm <- ard_stack(
   adsl, .by = TRT01A,
-  ard_continuous(
+  ard_summary(
     variables = AGE,
     statistic = ~ continuous_summary_fns(
       c("N", "mean", "sd", "median", "p25", "p75", "min", "max"))),
-  ard_categorical(variables = c(AGEGR1, SEX, RACE)))
+  ard_tabulate(variables = c(AGEGR1, SEX, RACE)))
 ```
 
 `ard_stack(.by = )` also counts the arms themselves. The plan reads those

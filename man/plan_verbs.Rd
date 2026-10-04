@@ -421,7 +421,7 @@ state (the population split by arm, not the treatment counted as
 an event).  At depth \emph{k} it is \code{cols[k]} tabulated within
 \verb{cols[1..k-1]}: cards tabulates each \code{.by} variable on its own,
 so \code{ard_stack(.by = c(TRT, SEX))} states the arm but not the arm
-x sex cell --- bind \code{cards::ard_categorical(adsl, by = TRT, variables = SEX)} to state that;
+x sex cell --- bind \code{cards::ard_tabulate(adsl, by = TRT, variables = SEX)} to state that;
 \item an analysis summary's \code{N} only where it is a denominator by
 construction (a hierarchical summary, a percentage of the
 \verb{denominator =} data) or where \strong{two or more different variables
@@ -442,7 +442,7 @@ header says is the author's choice:
 \itemize{
 \item \code{values = list(n = "page")} --- each page's own, the subjects with that test:
 the ARD rows \strong{carrying} the page key, e.g.
-\code{cards::ard_categorical(adlb, by = PARAM, variables = BASEGR)},
+\code{cards::ard_tabulate(adlb, by = PARAM, variables = BASEGR)},
 which states each baseline column's N and the page's total;
 \item \code{list(n = "table")} --- the analysis set: the ARD rows \strong{without} the
 page key, e.g. \code{cards::ard_total_n(adsl)} or the treatment

@@ -171,8 +171,8 @@ library(gtsummary); library(cards)
 theme_gtsummary_compact()
 ard <- ard_stack(
   adsl,
-  ard_continuous(variables = AGE),
-  ard_categorical(variables = c(AGEGR1, SEX, RACE)),
+  ard_summary(variables = AGE),
+  ard_tabulate(variables = c(AGEGR1, SEX, RACE)),
   .by = ACTARM, .attributes = TRUE)
 dm_gts <- tbl_ard_summary(
   cards = ard, by = ACTARM,
@@ -215,10 +215,10 @@ rtf_document() |>
 library(tfrmt); library(cards); library(forcats)
 ard <- ard_stack(
   adsl,
-  ard_continuous(
+  ard_summary(
     variables = AGE,
     statistic = ~ continuous_summary_fns(c("N", "mean", "sd", "min", "max"))),
-  ard_categorical(variables = c(AGEGR1, SEX, RACE)),
+  ard_tabulate(variables = c(AGEGR1, SEX, RACE)),
   .by = ACTARM, .overall = TRUE, .total_n = TRUE)
 ard_tbl <- ard |>
   shuffle_card(fill_overall = "Total") |>

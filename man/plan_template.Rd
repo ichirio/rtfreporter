@@ -51,8 +51,8 @@ guess.
 if (requireNamespace("cards", quietly = TRUE)) {
   ard <- cards::ard_stack(
     cards::ADSL, .by = ARM,
-    cards::ard_continuous(variables = AGE),
-    cards::ard_categorical(variables = SEX))
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = SEX))
   plan_template(ard, cols = "ARM")
 }
 }

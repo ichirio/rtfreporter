@@ -80,8 +80,8 @@ belongs to the verb whose job it is:
 if (requireNamespace("cards", quietly = TRUE)) {
   ard <- cards::ard_stack(
     cards::ADSL, .by = ARM,
-    cards::ard_continuous(variables = c(AGE, BMIBL)),
-    cards::ard_categorical(variables = SEX))
+    cards::ard_summary(variables = c(AGE, BMIBL)),
+    cards::ard_tabulate(variables = SEX))
 
   ard |>
     normalize_ard() |>

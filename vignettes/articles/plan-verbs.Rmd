@@ -49,10 +49,10 @@ adsl$TRT01A <- factor(adsl$TRT01A, levels = arms)
 
 ard <- ard_stack(
   adsl, .by = TRT01A,
-  ard_continuous(variables = c(AGE, TRTDURD),
+  ard_summary(variables = c(AGE, TRTDURD),
                  statistic = ~ continuous_summary_fns(
                    c("N", "mean", "sd", "median", "min", "max"))),
-  ard_categorical(variables = c(SEX, RACE)))
+  ard_tabulate(variables = c(SEX, RACE)))
 
 base <- ard |>
   normalize_ard() |>
@@ -329,9 +329,9 @@ advs$AVISIT <- factor(advs$AVISIT, levels = visits)
 
 stats <- ~ continuous_summary_fns(c("N", "mean", "sd"))
 ard_vs <- bind_ard(
-  ard_continuous(advs, by = c(PARAM, AVISIT, TRTA), variables = AVAL,
+  ard_summary(advs, by = c(PARAM, AVISIT, TRTA), variables = AVAL,
                  statistic = stats),
-  ard_continuous(droplevels(advs[advs$AVISIT != "Baseline", ]),
+  ard_summary(droplevels(advs[advs$AVISIT != "Baseline", ]),
                  by = c(PARAM, AVISIT, TRTA), variables = CHG,
                  statistic = stats))
 
