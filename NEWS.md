@@ -38,6 +38,12 @@
 
 ### New features
 
+- **`plan_header_tokens()`** (#536): the tokens `print(plan)` lists under
+  "header tokens" -- `{col}`, `{col1}` ..., `{n}`, `{n:sum}`, `{n:<column>}` --
+  as a data frame, one row a token with its values (a list column), the
+  text print shows, and whether it resolved (and why not).  For a program
+  that offers the tokens with their values.  Added only.
+
 - **`rtf_text_tokens()`** (#529): the `{TOKEN}`s a header, footer, title or
   footnote may carry, as a data frame -- the token, whether it is a page or
   a run token, when it is filled (written into the file, computed by the word

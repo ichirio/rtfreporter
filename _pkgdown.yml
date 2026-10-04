@@ -397,6 +397,7 @@ reference:
       - plan_verbs
       - plan_apply
       - plan_layers
+      - plan_header_tokens
       - plan_template
   - title: Post-hoc styling verbs
     desc: >

@@ -73,7 +73,8 @@ test_that("the effective export count is the reviewed number", {
   # round_num(); 126 since #491 brought the ARD table engine --
   # 34 functions -- over from tflspec; 122 since #498 folded plan_fmt()
   # into plan_digits() and the three style verbs into plan_cell_style();
-  # 123 since #529 added rtf_text_tokens().)
-  expect_length(.exports(), 123L)
-  expect_length(setdiff(.exports(), .dep), 116L)
+  # 123 since #529 added rtf_text_tokens(); 124 since #536 added
+  # plan_header_tokens().)
+  expect_length(.exports(), 124L)
+  expect_length(setdiff(.exports(), .dep), 117L)
 })
