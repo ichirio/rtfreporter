@@ -39,8 +39,8 @@ pages |> set_col_header(hdr, values = vals)
 
 A token is \code{{name}}, \code{name} being a column of \code{values}; doubling a brace
 prints it literally; the render-time tokens (\code{{PAGE}},
-\code{{TOTAL_PAGES}}, \code{{DATE}},
-\code{{BOOK_PAGE}}, \code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}) are left for the
+\code{{TOTAL_PAGES}}, \code{{BOOK_PAGE}}, \code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}},
+\code{{PROGRAM}}, \code{{DATETIME}} ..., \code{\link[=rtf_text_tokens]{rtf_text_tokens()}}) are left for the
 renderer, and any other unfilled token is an error. Every row of \code{values}
 must be used by some page, and every page must find a row -- a mistyped
 level is an error, not a silently wrong header. \code{\link[=header_map]{header_map()}} shows what

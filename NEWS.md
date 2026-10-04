@@ -11,6 +11,12 @@
 
 ### Behaviour changes
 
+- **`{DATE}` is not a token** (#532).  It was on the list of tokens
+  `set_col_header()` leaves for the renderer, and in its documentation, but
+  nothing ever replaced it: it printed as `{DATE}`.  It is gone from both; a
+  date is `{DATETIME:%Y-%m-%d}`.  A header that still writes `{DATE}` is now
+  an unfilled token, which `set_col_header()` reports instead of printing it.
+
 - **`rtf_table_style()` no longer left-aligns every column unless asked**
   (#522).  Its `align` defaulted to `"left"`, so any style -- even one that
   only draws rules (`border_*`, `rtf_table_style_tfl()`,
