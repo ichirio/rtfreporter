@@ -1,5 +1,15 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **NEWS.md: no R comment reads as a version** (#558).  Two code blocks
+  (the R6 -> S3 migration of 0.8.0 and the gt `read_gt` example) began
+  their lines with R comments at column 0, which a markdown reader that
+  does not see the block open takes as level-1 headings -- versions --
+  so `R CMD check` noted "Cannot extract version info".  The comments are
+  in the text around the code now, and a test keeps every level-1 line a
+  version.
+
 ### Before CRAN
 
 - **cards' current verb names** (#556).  The examples, the quickstart
@@ -4122,16 +4132,18 @@ Removed:
 * `vignettes/class-systems.Rmd` (the S3-vs-R6 tour was the only
   remaining R6 user once the class itself was gone).
 
-Migration:
+Migration -- before (R6):
 
 ```r
-# Before (R6)
 theme <- rtf_theme(header_bold = FALSE)
 t1 <- rtftable(df1, theme = theme)
 t2 <- rtftable(df2, theme = theme)
 theme$header_bold <- TRUE      # broadcast: both tables follow
+```
 
-# After (S3, snapshot)
+After (S3, snapshot):
+
+```r
 style <- rtf_table_style(header_bold = TRUE)
 t1 <- rtftable(df1, style = style)
 t2 <- rtftable(df2, style = style)
@@ -4263,14 +4275,13 @@ into `rtf_tables()`, and the package optionally reads four
 
 #### New API
 
+Accept a gt_tbl directly and pull every Phase-A attribute through; opt
+in selectively; or use the standalone wrapper (it returns a plain
+rtftable):
+
 ```r
-# Accept a gt_tbl directly; pull every Phase-A attribute through.
 doc |> rtf_tables(list(my_gt), read_gt = TRUE)
-
-# Selective opt-in.
 doc |> rtf_tables(list(my_gt), read_gt = c("col_header", "titles"))
-
-# Standalone wrapper (returns a plain rtftable).
 as_rtftable(my_gt, read = TRUE)
 ```
 
