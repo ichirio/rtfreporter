@@ -1060,10 +1060,11 @@ rtftable <- function(
   if (!unicode) return(if (style %in% c("double", "thick")) "=" else "-")
   # Box-drawing glyphs are written as \u escapes so the R source stays
   # ASCII-only (R CMD check "non-ASCII characters" WARNING otherwise):
-  # 2500 single, 2550 double, 2501 thick, 2508 dotted, 2504 dashed.
+  # 2500 single, 2550 double, 2501 thick, 2508 dot, 2504 dash -- the
+  # names of .valid_border_styles (#550)
   switch(style,
     double = "\u2550", thick = "\u2501",
-    dotted = "\u2508", dashed = "\u2504",
+    dot = "\u2508", dash = "\u2504",
     "\u2500")                 # single / default
 }
 

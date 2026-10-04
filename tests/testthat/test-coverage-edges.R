@@ -69,8 +69,9 @@ test_that("rtf_watermark() validates every argument and prints a summary", {
   # a missing text becomes the empty string rather than "NA"
   expect_identical(rtf_watermark(NA)$text, "")
 
-  # The method is called directly: it is not registered in NAMESPACE (#546),
-  # so print(w) does not dispatch to it yet.  This pins its body only.
+  # print() dispatches to the method (registered since #546)
+  out_print <- capture.output(print(rtf_watermark("DRAFT", font = "Arial")))
+  expect_identical(out_print[1], "<rtf_watermark>")
   pw <- rtfreporter:::print.rtf_watermark
   w <- rtf_watermark("DRAFT", font = "Arial")
   out <- capture.output(res <- pw(w))
@@ -840,7 +841,10 @@ test_that("section templates, per-page sections and watermarks reach the file", 
   expect_match(txt, "StudyHdr", fixed = TRUE)
   expect_match(txt, "SecondHdr", fixed = TRUE)
   expect_match(txt, "DRAFTMARK", fixed = TRUE)
-  expect_match(txt, "Table B", fixed = TRUE)
+  # the explicit page-2 section wins over the auto section of page 2 (#548):
+  # two sections, one per page (before, a third repeated pages 1 and 2)
+  expect_false(grepl("Table B", txt, fixed = TRUE))
+  expect_identical(lengths(regmatches(txt, gregexpr("sectd", txt, fixed = TRUE))), 2L)
 
   # auto sections without any template, and a template with plain content
   expect_match(edge_render(rtf_document() |>
@@ -1538,4 +1542,58 @@ test_that("plot(rtftable) draws a header with spanning cells and a last-row rule
   graphics::plot.window(c(0, 1), c(0, 1))
   expect_silent(rtfreporter:::.draw_side(rtf_border_line("double"), 0, 1, 0.5))
   expect_null(rtfreporter:::.draw_side(NULL, 0, 1, 0.5))
+})
+
+
+# -- #547-#550: the behaviour found while raising coverage, now fixed ---------
+
+test_that("print(rtf_document()) names a preset page by its size and orientation (#547)", {
+  out <- capture.output(print(rtf_document()))
+  expect_true(any(grepl("Document page size: letter \\(landscape\\)", out)))
+  out2 <- capture.output(print(rtf_document(page = rtf_page(width_in = 8.5,
+                                                            height_in = 11))))
+  expect_true(any(grepl("Document page size: 8.5 x 11 inches", out2)))
+})
+
+test_that("an explicit rtf_section(page = 1) wins over the first auto section (#548)", {
+  d <- data.frame(a = c("x", "y"), b = 1:2)
+  doc <- rtf_document() |>
+    rtf_section(page = NULL,
+                secinfo = list(header = rtf_header(rows = list(c(l = "Study"))))) |>
+    rtf_section(page = 1,
+                secinfo = list(header = rtf_header(rows = list(c(l = "First"))))) |>
+    rtf_tables(list("T1" = d, "T2" = d), auto_section = TRUE)
+  f <- withr::local_tempfile(fileext = ".rtf")
+  expect_no_error(generate_rtfreport(doc, f, overwrite = TRUE))
+  txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+  expect_match(txt, "First", fixed = TRUE)   # page 1: the explicit section
+  expect_match(txt, "T2", fixed = TRUE)      # page 2: its auto section
+})
+
+test_that("a row of cell_rows() may be one bare guard (#549)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::ard_stack(adsl, .by = TRT,
+                          cards::ard_tabulate(variables = SEX,
+                                              statistic = ~ c("n", "p")),
+                          .total_n = TRUE)
+  w <- widen_ard(normalize_ard(ard), cols = "TRT", rows = c(group = "variable"),
+                 cells = cell_rows("1" = n > 0 ~ "has"), notes = FALSE)
+  expect_true(all(unlist(w[, -(1:2)]) == "has"))
+  # the same as the guard inside c()
+  w2 <- widen_ard(normalize_ard(ard), cols = "TRT", rows = c(group = "variable"),
+                  cells = cell_rows("1" = c(n > 0 ~ "has")), notes = FALSE)
+  expect_identical(w, w2)
+  out <- capture.output(print(cell_rows("1" = n == 0 ~ "0")))
+  expect_match(out[2], 'n == 0 ~ "0"', fixed = TRUE)
+})
+
+test_that("the console preview draws dash and dot rules as such (#550)", {
+  rc <- rtfreporter:::.rule_char
+  expect_identical(rc(list(style = "dash"), TRUE), "\u2504")
+  expect_identical(rc(list(style = "dot"), TRUE), "\u2508")
+  expect_identical(rc(list(style = "single"), TRUE), "\u2500")
+  expect_true(all(rtfreporter:::.valid_border_styles %in%
+                    c("single", "double", "thick", "dash", "dot")))
 })

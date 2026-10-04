@@ -2056,16 +2056,21 @@
       page_counter <- page_counter + 1L
 
       if (inherits(content_item, "rtf_auto_section_item")) {
-        label       <- content_item$label
-        label_align <- content_item$label_align %||% "left"
-        sec_header  <- .build_auto_section_header(default_sec, label, label_align)
-        sec_footer  <- if (!is.null(default_sec)) default_sec$footer else NULL
-        report <- .rtfreport_add_section(report, header = sec_header,
-                                         footer = sec_footer,
-                                         from_page = page_counter,
-                                         watermark = default_sec$watermark,
-                                         has_watermark =
-                                           "watermark" %in% names(default_sec))
+        # an explicit rtf_section(page = n) wins over the auto section that
+        # would start on the same page: two sections starting on one page
+        # leave the first with no pages (#548)
+        if (!page_counter %in% explicit_keys) {
+          label       <- content_item$label
+          label_align <- content_item$label_align %||% "left"
+          sec_header  <- .build_auto_section_header(default_sec, label, label_align)
+          sec_footer  <- if (!is.null(default_sec)) default_sec$footer else NULL
+          report <- .rtfreport_add_section(report, header = sec_header,
+                                           footer = sec_footer,
+                                           from_page = page_counter,
+                                           watermark = default_sec$watermark,
+                                           has_watermark =
+                                             "watermark" %in% names(default_sec))
+        }
         ct <- .unwrap_auto_section_item(content_item)
       } else {
         ct <- .normalise_content_item(content_item)
