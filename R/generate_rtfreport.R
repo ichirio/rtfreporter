@@ -2319,8 +2319,10 @@
 #' said and a `{PROGRAM...}` token is used, it is found, in this order: the
 #' file `source()` is running (the innermost), the script `Rscript` runs,
 #' the document knitr is knitting, the file open in RStudio's editor (an
-#' interactive session, with rstudioapi; not an Untitled one).  A program
-#' found is said in a message; one said is not.  For a production run, say
+#' interactive session, with rstudioapi; not an Untitled one).  `source()`
+#' comes before `Rscript`, so a batch (`Rscript run_all.R` that sources each
+#' table's program) names each table's own program.  A program found is
+#' said in a message; one said is not.  For a production run, say
 #' it with `rtf_document(program = )`: a relative path found this way is
 #' joined to the working folder, which `setwd()` may have moved.
 #'
