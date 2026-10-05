@@ -63,6 +63,15 @@
 #'   `getOption("rtfreporter.program")`, then finds it (the file `source()`
 #'   or `Rscript` runs, knitr's document, RStudio's editor; see
 #'   [generate_rtfreport()]).
+#' @param tokens Tokens of one's own for this document's headers, footers,
+#'   titles and footnotes: a named list,
+#'   `list(STUDY = "ABC-123", CUTOFF = "01JUN2026")`, written `{STUDY}`.
+#'   A name is upper case -- a letter, then letters, digits or `_` -- and
+#'   not one of rtfreporter's own ([rtf_text_tokens()]); a value is one
+#'   string or number.  `options(rtfreporter.tokens = )` sets them for a
+#'   session; the document's value wins.  Not in column headers: those take
+#'   their values from [set_col_header()]'s `values`.  `NULL` (default):
+#'   none.
 #'
 #' @return An `rtf_document` S3 object: a list with `document`
 #'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
@@ -101,12 +110,13 @@
 #' @export
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
                          default_format = NULL, watermark = NULL,
-                         program = NULL) {
+                         program = NULL, tokens = NULL) {
   if (!is.null(program) &&
       (!is.character(program) || length(program) != 1L || is.na(program))) {
     stop("`program` must be a single string: the program's path.",
          call. = FALSE)
   }
+  .check_user_tokens(tokens)
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
   # resolved to its default at render time -- including inferring the
@@ -139,7 +149,8 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         page = page,
         default_format = default_format,
         watermark = .normalize_watermark(watermark),
-        program = program
+        program = program,
+        tokens = tokens
       ),
       contents  = list(),
       titles    = list(),

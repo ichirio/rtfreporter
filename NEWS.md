@@ -2,6 +2,16 @@
 
 ### New
 
+- **Tokens of one's own** (#564).  `rtf_document(tokens = list(STUDY =
+  "ABC-123"))` -- or `options(rtfreporter.tokens = )` for a session, the
+  document's value winning -- and a header, footer, title or footnote
+  says `{STUDY}`, filled when the file is written (RTF-escaped).  A name
+  is upper case, a letter then letters, digits or `_`, and not one of
+  rtfreporter's own (`{PAGE}`, `{PROGRAM}`, `{DATETIME}` ...: an error);
+  a value is one string or number.  `rtf_text_tokens(doc)` lists a
+  document's (and the session's) with `kind = "own"`.  A column header
+  still takes its values from `set_col_header(values = )`.
+
 - **The program is found when it is not said** (#562).  With no
   `rtf_document(program = )`, `generate_rtfreport(program = )` or
   `options(rtfreporter.program)`, a `{PROGRAM...}` token takes the file

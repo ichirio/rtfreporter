@@ -4,12 +4,16 @@
 \alias{rtf_text_tokens}
 \title{The tokens a page's text may carry}
 \usage{
-rtf_text_tokens()
+rtf_text_tokens(doc = NULL)
+}
+\arguments{
+\item{doc}{An \code{\link[=rtf_document]{rtf_document()}} whose tokens of one's own are listed too;
+\code{NULL} (default): the session's only.}
 }
 \value{
 A data frame: \code{token} (as written, with its braces), \code{kind}
-(\code{"page"} or \code{"run"}), \code{when}, \code{description}, \code{example} (what it might
-print, for a preview).
+(\code{"page"}, \code{"run"} or \code{"own"}), \code{when}, \code{description}, \code{example} (what
+it might print, for a preview).
 }
 \description{
 The \code{{TOKEN}}s that \code{\link[=generate_rtfreport]{generate_rtfreport()}} fills in headers, footers,
@@ -26,6 +30,10 @@ file is opened, so it stays right after \code{\link[=assemble_rtf]{assemble_rtf(
 
 \code{{DATETIME}} also takes a format, \verb{\{DATETIME:\%Y-\%m-\%d\}}
 (\code{\link[base:strptime]{base::strptime()}} codes); \code{example} shows one.
+
+Tokens of one's own (\code{rtf_document(tokens = )},
+\code{options(rtfreporter.tokens = )}) follow, \code{kind = "own"}, their value as
+the example: the session's, and a document's when \code{doc} is given.
 }
 \examples{
 rtf_text_tokens()[, c("token", "when", "description")]

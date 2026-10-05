@@ -61,6 +61,12 @@ found is said in a message; one said is not.  For a production run, say
 it with \code{rtf_document(program = )}: a relative path found this way is
 joined to the working folder, which \code{setwd()} may have moved.
 
+Tokens of one's own -- \code{{STUDY}}, \code{{CUTOFF}} -- come from
+\code{rtf_document(tokens = list(STUDY = "ABC-123"))} and
+\code{options(rtfreporter.tokens = )} (the document's value wins), and are
+filled the same way, in headers, footers, titles and footnotes.  A column
+header takes its values from \code{\link[=set_col_header]{set_col_header()}}'s \code{values} instead.
+
 The file name is completed to the one on disk, for every \code{{PROGRAM...}}
 token: a file that is there gets its real case (\code{t_dm.R} that is
 \code{T_DM.r} on Windows); a name with no extension becomes the program of

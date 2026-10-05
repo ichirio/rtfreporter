@@ -515,7 +515,8 @@
       out <- .replace_token(out, h, .rtf_escape(.format_run_time(time, fmt)))
     }
   }
-  out
+  # tokens of one's own (rtf_document(tokens = ), the option)
+  .substitute_user_tokens(out)
 }
 
 .substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
@@ -2324,6 +2325,12 @@
 #' it with `rtf_document(program = )`: a relative path found this way is
 #' joined to the working folder, which `setwd()` may have moved.
 #'
+#' Tokens of one's own -- `{STUDY}`, `{CUTOFF}` -- come from
+#' `rtf_document(tokens = list(STUDY = "ABC-123"))` and
+#' `options(rtfreporter.tokens = )` (the document's value wins), and are
+#' filled the same way, in headers, footers, titles and footnotes.  A column
+#' header takes its values from [set_col_header()]'s `values` instead.
+#'
 #' The file name is completed to the one on disk, for every `{PROGRAM...}`
 #' token: a file that is there gets its real case (`t_dm.R` that is
 #' `T_DM.r` on Windows); a name with no extension becomes the program of
@@ -2364,10 +2371,13 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE,
   .run_ctx$program <- .resolve_program(program)
   .run_ctx$program_done <- FALSE
   .run_ctx$time <- .resolve_render_time()
+  .run_ctx$tokens <- .user_tokens(
+    if (inherits(report, "rtf_document")) report$document$tokens)
   on.exit({
     .run_ctx$program <- NULL
     .run_ctx$program_done <- NULL
     .run_ctx$time <- NULL
+    .run_ctx$tokens <- NULL
   }, add = TRUE)
   if (inherits(report, "rtf_document")) {
     report <- .pipe_doc_to_rtfreport(report)
