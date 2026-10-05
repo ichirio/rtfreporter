@@ -56,8 +56,10 @@ The program is said once, where the document is made --
 said and a \code{{PROGRAM...}} token is used, it is found, in this order: the
 file \code{source()} is running (the innermost), the script \code{Rscript} runs,
 the document knitr is knitting, the file open in RStudio's editor (an
-interactive session, with rstudioapi; not an Untitled one).  A program
-found is said in a message; one said is not.  For a production run, say
+interactive session, with rstudioapi; not an Untitled one).  \code{source()}
+comes before \code{Rscript}, so a batch (\verb{Rscript run_all.R} that sources each
+table's program) names each table's own program.  A program found is
+said in a message; one said is not.  For a production run, say
 it with \code{rtf_document(program = )}: a relative path found this way is
 joined to the working folder, which \code{setwd()} may have moved.
 
