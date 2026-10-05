@@ -78,14 +78,87 @@ test_that("{PROGRAM_FULL} drops . and .. from a path that does not exist", {
 test_that("{PROGRAM_FULL} with no program known is the same error as {PROGRAM}", {
   # outside generate_rtfreport() no program is set: the substitution itself
   # (so the test does not depend on running under Rscript)
+  # -- and none found: the search marked done with nothing
   ctx <- rtfreporter:::.run_ctx
-  old <- ctx$program
-  on.exit(assign("program", old, envir = ctx), add = TRUE)
+  old <- mget(c("program", "program_done"), envir = ctx, ifnotfound = list(NULL))
+  on.exit(for (k in names(old)) assign(k, old[[k]], envir = ctx), add = TRUE)
   ctx$program <- NULL
+  ctx$program_done <- TRUE
   for (tok in c("\\{PROGRAM\\}", "\\{PROGRAM_FULL\\}")) {
     expect_error(rtfreporter:::.substitute_run_tokens(paste0("x ", tok)),
                  "no program is known", label = tok)
   }
+  # the way out, rtf_document() first
+  expect_error(rtfreporter:::.substitute_run_tokens("x \\{PROGRAM\\}"),
+               "rtf_document(program = ", fixed = TRUE)
+  expect_error(rtfreporter:::.substitute_run_tokens("x \\{PROGRAM\\}"),
+               "source() or Rscript", fixed = TRUE)
+})
+
+test_that("a program's file name is completed to the one on disk", {
+  d <- tempfile("prog")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  file.create(file.path(d, "Prog.R"), file.path(d, "report.qmd"))
+  cp <- rtfreporter:::.complete_program
+  # no extension: the program of that name in the folder, in its case
+  expect_identical(cp(file.path(d, "prog")), file.path(d, "Prog.R"))
+  expect_identical(cp(file.path(d, "report")), file.path(d, "report.qmd"))
+  # no extension, nothing there: .R added
+  expect_identical(cp(file.path(d, "t_ae")), file.path(d, "t_ae.R"))
+  expect_identical(cp("t_ae"), "t_ae.R")
+  # an extension, not there: as it is
+  expect_identical(cp(file.path(d, "t_ae.r")), file.path(d, "t_ae.r"))
+  # there, as written
+  expect_identical(cp(file.path(d, "Prog.R")), file.path(d, "Prog.R"))
+})
+
+test_that("on Windows a program that is there gets its real case", {
+  skip_on_os(c("mac", "linux", "solaris"))
+  d <- tempfile("prog")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  file.create(file.path(d, "T_DM.r"))
+  expect_identical(rtfreporter:::.complete_program(file.path(d, "t_dm.R")),
+                   file.path(d, "T_DM.r"))
+})
+
+test_that("a program source() runs is found, and said in a message", {
+  d <- tempfile("prog")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  old <- options(rtfreporter.program = NULL)
+  on.exit(options(old), add = TRUE)
+  out <- file.path(d, "t_found.rtf")
+  prog <- file.path(d, "t_found.R")
+  writeLines(c(
+    "doc <- rtf_document() |>",
+    "  rtf_section(page = 1, secinfo = list(header = NULL,",
+    "    footer = rtf_footer(list(c(l = 'N={PROGRAM_NAME}'))))) |>",
+    "  rtf_tables(as_rtftables(data.frame(A = 'a')))",
+    sprintf("generate_rtfreport(doc, '%s', overwrite = TRUE)",
+            gsub("\\", "/", out, fixed = TRUE))), prog)
+  expect_message(source(prog, local = new.env()), "the file source() is running",
+                 fixed = TRUE)
+  expect_match(paste(readLines(out, warn = FALSE), collapse = "\n"),
+               "N=t_found.R", fixed = TRUE)
+  # said: no message
+  doc <- rtf_document(program = "said.R") |>
+    rtf_section(page = 1, secinfo = list(header = NULL,
+      footer = rtf_footer(list(c(l = "{PROGRAM_NAME}"))))) |>
+    rtf_tables(as_rtftables(data.frame(A = "a")))
+  expect_no_message(generate_rtfreport(doc, out, overwrite = TRUE))
+  # no {PROGRAM...} token: nothing is searched, nothing said
+  doc2 <- rtf_document() |> rtf_tables(as_rtftables(data.frame(A = "a")))
+  expect_no_message(generate_rtfreport(doc2, out, overwrite = TRUE))
+})
+
+test_that("knitr and RStudio say nothing when not knitting, not interactive", {
+  old <- options(knitr.in.progress = NULL)
+  on.exit(options(old), add = TRUE)
+  expect_null(rtfreporter:::.program_from_knitr())
+  skip_if(interactive())
+  expect_null(rtfreporter:::.program_from_rstudio())
 })
 
 test_that("the program comes from the argument, else the option", {
