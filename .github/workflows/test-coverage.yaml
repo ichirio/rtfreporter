@@ -56,8 +56,11 @@ jobs:
           fi
         shell: bash
 
+      # The upload alone: cli.codecov.io's TLS has been failing, so it must
+      # not turn the job red (the tests and covr above still do)
       - uses: codecov/codecov-action@v4
         if: steps.codecov_token_check.outputs.has_token == 'true'
+        continue-on-error: true
         with:
           fail_ci_if_error: false
           files: ./cobertura.xml
