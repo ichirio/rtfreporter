@@ -11,7 +11,8 @@ rtf_document(
   default_format = NULL,
   watermark = NULL,
   program = NULL,
-  tokens = NULL
+  tokens = NULL,
+  program_fallback = NULL
 )
 }
 \arguments{
@@ -62,6 +63,12 @@ string or number.  \code{options(rtfreporter.tokens = )} sets them for a
 session; the document's value wins.  Not in column headers: those take
 their values from \code{\link[=set_col_header]{set_col_header()}}'s \code{values}.  \code{NULL} (default):
 none.}
+
+\item{program_fallback}{The program to name when none is said
+(\code{program}, the option) and none is found (the file \code{source()} or
+\code{Rscript} runs, knitr's document, RStudio's editor): the last resort,
+e.g. the program a report is to be written to.  Said in a message when
+used.  \code{NULL} (default): none.}
 }
 \value{
 An \code{rtf_document} S3 object: a list with \code{document}

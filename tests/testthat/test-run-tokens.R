@@ -123,6 +123,47 @@ test_that("on Windows a program that is there gets its real case", {
                    file.path(d, "T_DM.r"))
 })
 
+fb_doc <- function(...) {
+  rtf_document(...) |>
+    rtf_section(page = 1, secinfo = list(header = NULL,
+      footer = rtf_footer(list(c(l = "P={PROGRAM}"))))) |>
+    rtf_tables(as_rtftables(data.frame(A = "a")))
+}
+
+test_that("program_fallback is used last, when no file name is found", {
+  old <- options(rtfreporter.program = NULL)
+  on.exit(options(old), add = TRUE)
+  # nothing found (as in a session with no script, no knit, no editor)
+  local_mocked_bindings(.find_program = function() NULL)
+  expect_message(out <- render(fb_doc(program_fallback = "work/t_fb")),
+                 "no file name was found: program_fallback", fixed = TRUE)
+  # completed like any program: no extension, none there -> .R
+  expect_match(out, "P=work/t_fb.R", fixed = TRUE)
+  # generate_rtfreport(program_fallback = ) overrides the document's
+  expect_match(suppressMessages(render(fb_doc(program_fallback = "work/t_fb"),
+                                       program_fallback = "call.R")),
+               "P=call.R", fixed = TRUE)
+  # said: the fallback is not used, and nothing is said
+  expect_no_message(out <- render(fb_doc(program = "said.R",
+                                         program_fallback = "work/t_fb")))
+  expect_match(out, "P=said.R", fixed = TRUE)
+  # no fallback and nothing found: the error
+  expect_error(render(fb_doc()), "no program is known")
+})
+
+test_that("a file name found wins over program_fallback", {
+  local_mocked_bindings(.find_program = function()
+    list(path = "found/t_run.R", how = "the script Rscript runs"))
+  expect_message(out <- render(fb_doc(program_fallback = "work/t_fb")),
+                 "the script Rscript runs", fixed = TRUE)
+  expect_match(out, "P=found/t_run.R", fixed = TRUE)
+})
+
+test_that("program_fallback is one string", {
+  expect_error(rtf_document(program_fallback = 1), "program_fallback")
+  expect_error(render(fb_doc(), program_fallback = c("a", "b")), "program_fallback")
+})
+
 test_that("a program source() runs is found, and said in a message", {
   d <- tempfile("prog")
   dir.create(d)

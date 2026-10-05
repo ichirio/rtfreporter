@@ -4,7 +4,13 @@
 \alias{generate_rtfreport}
 \title{Generate an RTF file from a report object}
 \usage{
-generate_rtfreport(report, file_path, overwrite = FALSE, program = NULL)
+generate_rtfreport(
+  report,
+  file_path,
+  overwrite = FALSE,
+  program = NULL,
+  program_fallback = NULL
+)
 }
 \arguments{
 \item{report}{An \code{rtf_document} object (from \code{\link[=rtf_document]{rtf_document()}}) or an internal
@@ -20,6 +26,10 @@ names (\code{rtf_document(program = )}, where a program says it once), for
 the \code{{PROGRAM}} tokens (see \emph{Run tokens}).  \code{NULL} (default) uses the
 document's own, then \code{getOption("rtfreporter.program")}, then finds
 it (see \emph{Run tokens}).}
+
+\item{program_fallback}{Overrides, for this one file, the document's
+\code{rtf_document(program_fallback = )}: the program to name when none is
+said and none is found.}
 }
 \value{
 Invisibly returns \code{file_path}.
@@ -59,7 +69,10 @@ the document knitr is knitting, the file open in RStudio's editor (an
 interactive session, with rstudioapi; not an Untitled one).  \code{source()}
 comes before \code{Rscript}, so a batch (\verb{Rscript run_all.R} that sources each
 table's program) names each table's own program.  A program found is
-said in a message; one said is not.  For a production run, say
+said in a message; one said is not.  When nothing is found,
+\code{rtf_document(program_fallback = )} is used -- last, after \code{Rscript}, so
+a program's own file name always wins -- and said in a message too.
+For a production run, say
 it with \code{rtf_document(program = )}: a relative path found this way is
 joined to the working folder, which \code{setwd()} may have moved.
 

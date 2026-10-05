@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9023** (the development
+**This manual documents rtfreporter 0.8.2.9024** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -432,7 +432,7 @@ rtf_footer(rows = list(c(l = "Source: ADSL.", r = "CONFIDENTIAL")))
 | `{AUTO_TOTAL_PAGES}` | dynamic total (a NUMPAGES field) — **recommended** |
 | `{PAGE}` / `{TOTAL_PAGES}` | static, computed at render time; `assemble_rtf()` leaves them alone |
 | `{BOOK_PAGE}` | an empty slot, filled later by `assemble_rtf(book_page =)` |
-| `{PROGRAM}` / `{PROGRAM_NAME}` / `{PROGRAM_DIR}` | the program writing the file, as given (`rtf_document(program =)`, once per program; `generate_rtfreport(program =)` overrides it for one call; else `options(rtfreporter.program)`; else found -- the file `source()` runs, the `Rscript` script, knitr's document, RStudio's editor -- and said in a message; the file name completed to the one on disk: real case, a missing extension found or `.R`), its file name, its folder |
+| `{PROGRAM}` / `{PROGRAM_NAME}` / `{PROGRAM_DIR}` | the program writing the file, as given (`rtf_document(program =)`, once per program; `generate_rtfreport(program =)` overrides it for one call; else `options(rtfreporter.program)`; else found -- the file `source()` runs, the `Rscript` script, knitr's document, RStudio's editor -- and said in a message; last, when nothing is found, `rtf_document(program_fallback =)`; the file name completed to the one on disk: real case, a missing extension found or `.R`), its file name, its folder |
 | `{PROGRAM_FULL}` | the same program path made absolute (`normalizePath()`, from the working folder when the file is written), with the system's separator: `\` on Windows, `/` elsewhere |
 | `{DATETIME}` / `{DATETIME:<fmt>}` | when the file is written, `%d%b%Y  %H:%M` in the C locale (`options(rtfreporter.datetime_format)`); `options(rtfreporter.render_time)` fixes it |
 | `{STUDY}`, `{CUTOFF}` ... (your own) | `rtf_document(tokens = list(STUDY = "ABC-123"))`, or `options(rtfreporter.tokens = list(...))` for the session (the document's value wins); a name is upper case (a letter, then letters, digits, `_`) and not one of the above; headers, footers, titles and footnotes only (a column header takes `set_col_header(values = )`) |
