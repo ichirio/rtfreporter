@@ -18,8 +18,8 @@ Default \code{FALSE}.}
 \item{program}{Overrides, for this one file, the program the document
 names (\code{rtf_document(program = )}, where a program says it once), for
 the \code{{PROGRAM}} tokens (see \emph{Run tokens}).  \code{NULL} (default) uses the
-document's own, then \code{getOption("rtfreporter.program")}, then the
-script \code{Rscript} is running.}
+document's own, then \code{getOption("rtfreporter.program")}, then finds
+it (see \emph{Run tokens}).}
 }
 \value{
 Invisibly returns \code{file_path}.
@@ -51,7 +51,21 @@ be reproducible.  A \code{{PROGRAM}} token with no program known is an error.
 
 The program is said once, where the document is made --
 \code{rtf_document(program = )} -- since one program writes one file;
-\code{generate_rtfreport(program = )} overrides it for a single call.
+\code{generate_rtfreport(program = )} overrides it for a single call;
+\code{options(rtfreporter.program = )} sets one for the session.  When none is
+said and a \code{{PROGRAM...}} token is used, it is found, in this order: the
+file \code{source()} is running (the innermost), the script \code{Rscript} runs,
+the document knitr is knitting, the file open in RStudio's editor (an
+interactive session, with rstudioapi; not an Untitled one).  A program
+found is said in a message; one said is not.  For a production run, say
+it with \code{rtf_document(program = )}: a relative path found this way is
+joined to the working folder, which \code{setwd()} may have moved.
+
+The file name is completed to the one on disk, for every \code{{PROGRAM...}}
+token: a file that is there gets its real case (\code{t_dm.R} that is
+\code{T_DM.r} on Windows); a name with no extension becomes the program of
+that name in its folder (\code{.R}, \code{.r}, \code{.Rmd}, \code{.qmd}), else gets \code{.R}; a
+name with an extension that is not there is kept as it is.
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{footer <- rtf_footer(list(
   c(l = "SD = Standard Deviation."),

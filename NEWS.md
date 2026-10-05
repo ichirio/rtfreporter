@@ -2,6 +2,20 @@
 
 ### New
 
+- **The program is found when it is not said** (#562).  With no
+  `rtf_document(program = )`, `generate_rtfreport(program = )` or
+  `options(rtfreporter.program)`, a `{PROGRAM...}` token takes the file
+  `source()` is running (the innermost), the script `Rscript` runs, the
+  document knitr is knitting, or the file open in RStudio's editor
+  (interactive, with rstudioapi; not an Untitled one) -- and a message
+  says which.  A program said is used quietly, and a file with no
+  `{PROGRAM...}` token searches for nothing.  The file name is completed
+  to the one on disk: its real case (`t_dm.R` that is `T_DM.r` on
+  Windows); with no extension, the program of that name (`.R`, `.r`,
+  `.Rmd`, `.qmd`), else `.R`.  With no program at all, the error says
+  `rtf_document(program = )` first, or to run the program with
+  `source()` or `Rscript`.
+
 - **`{PROGRAM_FULL}`, the program's absolute path** (#560).  A run token
   beside `{PROGRAM}`: the same path made absolute (`normalizePath()`,
   from the working folder when the file is written), with the system's

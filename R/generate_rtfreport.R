@@ -318,20 +318,124 @@
 
 .run_ctx <- new.env(parent = emptyenv())
 
-# The program: an argument, else the option, else the script Rscript runs.
-.resolve_program <- function(program = NULL) {
-  if (is.null(program)) program <- getOption("rtfreporter.program")
-  if (is.null(program)) {
-    f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE),
-                                  value = TRUE))
-    if (length(f) == 1L && nzchar(f)) program <- f
-  }
+# The program the run tokens name.  Said: generate_rtfreport(program = ),
+# else rtf_document(program = ), else options(rtfreporter.program) -- quietly.
+# Else found, when a {PROGRAM...} token first needs it (so a file without
+# one is not searched, and says nothing): the file source() is running (the
+# innermost), the script Rscript runs (--file=), the document knitr is
+# knitting, the file open in RStudio's editor -- said in one message.
+.check_program <- function(program) {
   if (!is.null(program) &&
       (!is.character(program) || length(program) != 1L || is.na(program))) {
     stop("`program` must be a single string: the path of the program ",
          "that writes the file.", call. = FALSE)
   }
   program
+}
+
+.resolve_program <- function(program = NULL) {
+  if (is.null(program)) program <- getOption("rtfreporter.program")
+  .check_program(program)
+}
+
+# the file the innermost source() call is running
+.program_from_source <- function() {
+  n <- sys.nframe()
+  for (i in rev(seq_len(n))) {
+    if (!identical(sys.function(i), base::source)) next
+    f <- sys.frame(i)
+    of <- get0("ofile", envir = f, inherits = FALSE)
+    if (is.character(of) && length(of) == 1L && nzchar(of)) return(of)
+    sf <- get0("srcfile", envir = f, inherits = FALSE)
+    if (inherits(sf, "srcfile") && is.character(sf$filename) &&
+        nzchar(sf$filename)) return(sf$filename)
+  }
+  NULL
+}
+
+.program_from_rscript <- function() {
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))
+  if (length(f) == 1L && nzchar(f)) f else NULL
+}
+
+# knit's input as a full path: knitr's working folder is the document's,
+# not the session's
+.program_from_knitr <- function() {
+  if (!isTRUE(getOption("knitr.in.progress")) ||
+      !requireNamespace("knitr", quietly = TRUE)) return(NULL)
+  f <- tryCatch(knitr::current_input(dir = TRUE), error = function(e) NULL)
+  if (is.character(f) && length(f) == 1L && nzchar(f)) f else NULL
+}
+
+.program_from_rstudio <- function() {
+  if (!interactive() || !requireNamespace("rstudioapi", quietly = TRUE)) {
+    return(NULL)
+  }
+  ok <- tryCatch(rstudioapi::isAvailable(), error = function(e) FALSE)
+  if (!isTRUE(ok)) return(NULL)
+  f <- tryCatch(rstudioapi::getSourceEditorContext()$path,
+                error = function(e) NULL)
+  # an Untitled editor has no path
+  if (is.character(f) && length(f) == 1L && nzchar(f)) f else NULL
+}
+
+.find_program <- function() {
+  ways <- list(
+    "the file source() is running" = .program_from_source,
+    "the script Rscript runs" = .program_from_rscript,
+    "the document knitr is knitting" = .program_from_knitr,
+    "the file open in RStudio's editor" = .program_from_rstudio)
+  for (w in names(ways)) {
+    f <- ways[[w]]()
+    if (!is.null(f)) return(list(path = f, how = w))
+  }
+  NULL
+}
+
+# A program's file name as it is on disk: the real case of a file that is
+# there (t_dm.R that is T_DM.r on Windows); with no extension, the program
+# of that name in the folder (.R, .r, .Rmd, .qmd), else ".R" added; a name
+# with an extension that is not there, as it is.
+.complete_program <- function(path) {
+  dir <- dirname(path)
+  stem <- basename(path)
+  lead <- substr(path, 1L, nchar(path) - nchar(stem))
+  here <- tryCatch(list.files(dir, all.files = TRUE, no.. = TRUE),
+                   error = function(e) character())
+  pick <- function(name) {
+    if (name %in% here) return(name)
+    m <- here[tolower(here) == tolower(name)]
+    if (length(m)) m[1L] else NULL
+  }
+  if (file.exists(path) && !dir.exists(path)) {
+    real <- pick(stem)
+    return(if (is.null(real)) path else paste0(lead, real))
+  }
+  if (nzchar(tools::file_ext(stem))) return(path)
+  for (ext in c(".R", ".r", ".Rmd", ".qmd")) {
+    real <- pick(paste0(stem, ext))
+    if (!is.null(real)) return(paste0(lead, real))
+  }
+  paste0(path, ".R")
+}
+
+# The program for this file: said, else found (once per file, with a
+# message); NULL when there is none.
+.program_now <- function() {
+  if (!isTRUE(.run_ctx$program_done)) {
+    p <- .run_ctx$program
+    if (is.null(p)) {
+      found <- .find_program()
+      if (!is.null(found)) {
+        p <- found$path
+        message("rtfreporter: {PROGRAM} is ", .complete_program(p), " (",
+                found$how, "); rtf_document(program = ) says it for sure.")
+      }
+    }
+    .run_ctx$program <- if (!is.null(p)) .complete_program(p)
+    .run_ctx$program_done <- TRUE
+  }
+  .run_ctx$program
 }
 
 # {PROGRAM_FULL}: the program's path made absolute, with the system's own
@@ -384,14 +488,13 @@
 .substitute_run_tokens <- function(out) {
   has <- function(tok) grepl(paste0("\\{", tok), out, fixed = TRUE)
   if (has("PROGRAM")) {
-    prog <- .run_ctx$program
+    prog <- .program_now()
     if (is.null(prog)) {
       stop("A header, footer, title or footnote uses {PROGRAM}, ",
            "{PROGRAM_FULL}, {PROGRAM_NAME} or {PROGRAM_DIR}, but no program ",
            "is known.\n",
-           "  Say which: rtf_document(program = \"path/to/prog.R\") (once per ",
-           "program), generate_rtfreport(..., program = ) or ",
-           "options(rtfreporter.program = ).", call. = FALSE)
+           "  Say which with rtf_document(program = \"path/to/prog.R\"), or run ",
+           "the program with source() or Rscript.", call. = FALSE)
     }
     # the longer tokens first: {PROGRAM_FULL} is never read as {PROGRAM}
     out <- .replace_token(out, "\\{PROGRAM_FULL\\}", .rtf_escape(.full_path(prog)))
@@ -2186,8 +2289,8 @@
 #' @param program Overrides, for this one file, the program the document
 #'   names (`rtf_document(program = )`, where a program says it once), for
 #'   the `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) uses the
-#'   document's own, then `getOption("rtfreporter.program")`, then the
-#'   script `Rscript` is running.
+#'   document's own, then `getOption("rtfreporter.program")`, then finds
+#'   it (see *Run tokens*).
 #'
 #' @section Run tokens:
 #' Beside the page tokens (`{PAGE}`, `{TOTAL_PAGES}`, ...), any header,
@@ -2211,7 +2314,21 @@
 #'
 #' The program is said once, where the document is made --
 #' `rtf_document(program = )` -- since one program writes one file;
-#' `generate_rtfreport(program = )` overrides it for a single call.
+#' `generate_rtfreport(program = )` overrides it for a single call;
+#' `options(rtfreporter.program = )` sets one for the session.  When none is
+#' said and a `{PROGRAM...}` token is used, it is found, in this order: the
+#' file `source()` is running (the innermost), the script `Rscript` runs,
+#' the document knitr is knitting, the file open in RStudio's editor (an
+#' interactive session, with rstudioapi; not an Untitled one).  A program
+#' found is said in a message; one said is not.  For a production run, say
+#' it with `rtf_document(program = )`: a relative path found this way is
+#' joined to the working folder, which `setwd()` may have moved.
+#'
+#' The file name is completed to the one on disk, for every `{PROGRAM...}`
+#' token: a file that is there gets its real case (`t_dm.R` that is
+#' `T_DM.r` on Windows); a name with no extension becomes the program of
+#' that name in its folder (`.R`, `.r`, `.Rmd`, `.qmd`), else gets `.R`; a
+#' name with an extension that is not there is kept as it is.
 #'
 #' ```r
 #' footer <- rtf_footer(list(
@@ -2245,9 +2362,11 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE,
     program <- report$document$program
   }
   .run_ctx$program <- .resolve_program(program)
+  .run_ctx$program_done <- FALSE
   .run_ctx$time <- .resolve_render_time()
   on.exit({
     .run_ctx$program <- NULL
+    .run_ctx$program_done <- NULL
     .run_ctx$time <- NULL
   }, add = TRUE)
   if (inherits(report, "rtf_document")) {

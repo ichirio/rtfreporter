@@ -48,7 +48,9 @@ the \code{{PROGRAM}} / \code{{PROGRAM_FULL}} run tokens (see
 \code{\link[=generate_rtfreport]{generate_rtfreport()}}): the place to say it, once per program.
 \code{generate_rtfreport(program = )} overrides it for one call.  \code{NULL}
 (default) leaves it to that argument, then
-\code{getOption("rtfreporter.program")}, then the running script.}
+\code{getOption("rtfreporter.program")}, then finds it (the file \code{source()}
+or \code{Rscript} runs, knitr's document, RStudio's editor; see
+\code{\link[=generate_rtfreport]{generate_rtfreport()}}).}
 }
 \value{
 An \code{rtf_document} S3 object: a list with \code{document}

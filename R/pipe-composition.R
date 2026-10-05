@@ -60,7 +60,9 @@
 #'   [generate_rtfreport()]): the place to say it, once per program.
 #'   `generate_rtfreport(program = )` overrides it for one call.  `NULL`
 #'   (default) leaves it to that argument, then
-#'   `getOption("rtfreporter.program")`, then the running script.
+#'   `getOption("rtfreporter.program")`, then finds it (the file `source()`
+#'   or `Rscript` runs, knitr's document, RStudio's editor; see
+#'   [generate_rtfreport()]).
 #'
 #' @return An `rtf_document` S3 object: a list with `document`
 #'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
