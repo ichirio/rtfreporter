@@ -10,7 +10,8 @@ rtf_document(
   page = NULL,
   default_format = NULL,
   watermark = NULL,
-  program = NULL
+  program = NULL,
+  tokens = NULL
 )
 }
 \arguments{
@@ -51,6 +52,16 @@ the \code{{PROGRAM}} / \code{{PROGRAM_FULL}} run tokens (see
 \code{getOption("rtfreporter.program")}, then finds it (the file \code{source()}
 or \code{Rscript} runs, knitr's document, RStudio's editor; see
 \code{\link[=generate_rtfreport]{generate_rtfreport()}}).}
+
+\item{tokens}{Tokens of one's own for this document's headers, footers,
+titles and footnotes: a named list,
+\code{list(STUDY = "ABC-123", CUTOFF = "01JUN2026")}, written \code{{STUDY}}.
+A name is upper case -- a letter, then letters, digits or \verb{_} -- and
+not one of rtfreporter's own (\code{\link[=rtf_text_tokens]{rtf_text_tokens()}}); a value is one
+string or number.  \code{options(rtfreporter.tokens = )} sets them for a
+session; the document's value wins.  Not in column headers: those take
+their values from \code{\link[=set_col_header]{set_col_header()}}'s \code{values}.  \code{NULL} (default):
+none.}
 }
 \value{
 An \code{rtf_document} S3 object: a list with \code{document}

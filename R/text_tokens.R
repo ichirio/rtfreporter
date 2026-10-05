@@ -22,14 +22,24 @@
 #' `{DATETIME}` also takes a format, `{DATETIME:%Y-%m-%d}`
 #' ([base::strptime()] codes); `example` shows one.
 #'
+#' Tokens of one's own (`rtf_document(tokens = )`,
+#' `options(rtfreporter.tokens = )`) follow, `kind = "own"`, their value as
+#' the example: the session's, and a document's when `doc` is given.
+#'
+#' @param doc An [rtf_document()] whose tokens of one's own are listed too;
+#'   `NULL` (default): the session's only.
 #' @return A data frame: `token` (as written, with its braces), `kind`
-#'   (`"page"` or `"run"`), `when`, `description`, `example` (what it might
-#'   print, for a preview).
+#'   (`"page"`, `"run"` or `"own"`), `when`, `description`, `example` (what
+#'   it might print, for a preview).
 #' @examples
 #' rtf_text_tokens()[, c("token", "when", "description")]
 #' @export
-rtf_text_tokens <- function() {
-  data.frame(
+rtf_text_tokens <- function(doc = NULL) {
+  if (!is.null(doc) && !inherits(doc, "rtf_document")) {
+    stop("`doc` is an rtf_document (or NULL).", call. = FALSE)
+  }
+  own <- .user_tokens(if (!is.null(doc)) doc$document$tokens)
+  base <- data.frame(
     token = c("{PAGE}", "{TOTAL_PAGES}", "{AUTO_PAGE}", "{AUTO_TOTAL_PAGES}",
               "{BOOK_PAGE}", "{PROGRAM}", "{PROGRAM_FULL}", "{PROGRAM_NAME}",
               "{PROGRAM_DIR}", "{DATETIME}"),
@@ -52,4 +62,9 @@ rtf_text_tokens <- function() {
                 "C:\\studies\\ABC-101\\programs\\t_14_1_1.R", "t_14_1_1.R",
                 "programs", "04OCT2026  10:05"),
     stringsAsFactors = FALSE)
+  if (!length(own)) return(base)
+  rbind(base, data.frame(
+    token = paste0("{", names(own), "}"), kind = "own", when = "render",
+    description = "A token of one's own (rtf_document(tokens = ) or the option)",
+    example = unname(own), stringsAsFactors = FALSE))
 }
