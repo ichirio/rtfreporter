@@ -324,10 +324,10 @@
 # one is not searched, and says nothing): the file source() is running (the
 # innermost), the script Rscript runs (--file=), the document knitr is
 # knitting, the file open in RStudio's editor -- said in one message.
-.check_program <- function(program) {
+.check_program <- function(program, arg = "program") {
   if (!is.null(program) &&
       (!is.character(program) || length(program) != 1L || is.na(program))) {
-    stop("`program` must be a single string: the path of the program ",
+    stop("`", arg, "` must be a single string: the path of the program ",
          "that writes the file.", call. = FALSE)
   }
   program
@@ -430,6 +430,12 @@
         p <- found$path
         message("rtfreporter: {PROGRAM} is ", .complete_program(p), " (",
                 found$how, "); rtf_document(program = ) says it for sure.")
+      } else if (!is.null(.run_ctx$program_fallback)) {
+        # the last resort: no file name was found
+        p <- .run_ctx$program_fallback
+        message("rtfreporter: {PROGRAM} is ", .complete_program(p),
+                " (no file name was found: program_fallback); ",
+                "rtf_document(program = ) says it for sure.")
       }
     }
     .run_ctx$program <- if (!is.null(p)) .complete_program(p)
@@ -2292,6 +2298,9 @@
 #'   the `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) uses the
 #'   document's own, then `getOption("rtfreporter.program")`, then finds
 #'   it (see *Run tokens*).
+#' @param program_fallback Overrides, for this one file, the document's
+#'   `rtf_document(program_fallback = )`: the program to name when none is
+#'   said and none is found.
 #'
 #' @section Run tokens:
 #' Beside the page tokens (`{PAGE}`, `{TOTAL_PAGES}`, ...), any header,
@@ -2323,7 +2332,10 @@
 #' interactive session, with rstudioapi; not an Untitled one).  `source()`
 #' comes before `Rscript`, so a batch (`Rscript run_all.R` that sources each
 #' table's program) names each table's own program.  A program found is
-#' said in a message; one said is not.  For a production run, say
+#' said in a message; one said is not.  When nothing is found,
+#' `rtf_document(program_fallback = )` is used -- last, after `Rscript`, so
+#' a program's own file name always wins -- and said in a message too.
+#' For a production run, say
 #' it with `rtf_document(program = )`: a relative path found this way is
 #' joined to the working folder, which `setwd()` may have moved.
 #'
@@ -2365,18 +2377,24 @@
 #' file.exists(out)
 #' @export
 generate_rtfreport <- function(report, file_path, overwrite = FALSE,
-                               program = NULL) {
+                               program = NULL, program_fallback = NULL) {
   # the run tokens' context, for this call only
   if (is.null(program) && inherits(report, "rtf_document")) {
     program <- report$document$program
   }
+  if (is.null(program_fallback) && inherits(report, "rtf_document")) {
+    program_fallback <- report$document$program_fallback
+  }
   .run_ctx$program <- .resolve_program(program)
+  .run_ctx$program_fallback <- .check_program(program_fallback,
+                                              "program_fallback")
   .run_ctx$program_done <- FALSE
   .run_ctx$time <- .resolve_render_time()
   .run_ctx$tokens <- .user_tokens(
     if (inherits(report, "rtf_document")) report$document$tokens)
   on.exit({
     .run_ctx$program <- NULL
+    .run_ctx$program_fallback <- NULL
     .run_ctx$program_done <- NULL
     .run_ctx$time <- NULL
     .run_ctx$tokens <- NULL

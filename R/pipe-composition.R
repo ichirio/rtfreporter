@@ -63,6 +63,11 @@
 #'   `getOption("rtfreporter.program")`, then finds it (the file `source()`
 #'   or `Rscript` runs, knitr's document, RStudio's editor; see
 #'   [generate_rtfreport()]).
+#' @param program_fallback The program to name when none is said
+#'   (`program`, the option) and none is found (the file `source()` or
+#'   `Rscript` runs, knitr's document, RStudio's editor): the last resort,
+#'   e.g. the program a report is to be written to.  Said in a message when
+#'   used.  `NULL` (default): none.
 #' @param tokens Tokens of one's own for this document's headers, footers,
 #'   titles and footnotes: a named list,
 #'   `list(STUDY = "ABC-123", CUTOFF = "01JUN2026")`, written `{STUDY}`.
@@ -110,12 +115,14 @@
 #' @export
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
                          default_format = NULL, watermark = NULL,
-                         program = NULL, tokens = NULL) {
+                         program = NULL, tokens = NULL,
+                         program_fallback = NULL) {
   if (!is.null(program) &&
       (!is.character(program) || length(program) != 1L || is.na(program))) {
     stop("`program` must be a single string: the program's path.",
          call. = FALSE)
   }
+  .check_program(program_fallback, "program_fallback")
   .check_user_tokens(tokens)
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
@@ -150,6 +157,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         default_format = default_format,
         watermark = .normalize_watermark(watermark),
         program = program,
+        program_fallback = program_fallback,
         tokens = tokens
       ),
       contents  = list(),

@@ -2,6 +2,14 @@
 
 ### New
 
+- **`program_fallback`: the program when none is said or found** (#566).
+  `rtf_document(program_fallback = )` (and `generate_rtfreport(program_fallback
+  = )` for one call) names the program a `{PROGRAM...}` token uses when no
+  program is said (`program`, the option) and none is found -- last, after
+  the script `Rscript` runs, so a program's own file name always wins.  A
+  message says when it is used; the file name is completed as any
+  program's (`.R` added to a name with no extension).
+
 - **Tokens of one's own** (#564).  `rtf_document(tokens = list(STUDY =
   "ABC-123"))` -- or `options(rtfreporter.tokens = )` for a session, the
   document's value winning -- and a header, footer, title or footnote
