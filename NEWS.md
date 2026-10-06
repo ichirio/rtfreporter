@@ -2,6 +2,15 @@
 
 ### New
 
+- **`rtf_header()` / `rtf_footer()`: `drop_empty_rows`** (#571).  With
+  `drop_empty_rows = TRUE`, a band row whose tokens of one's own
+  (`rtf_document(tokens = )`, `options(rtfreporter.tokens = )`) are all
+  empty when the file is written, and which says nothing else but blanks
+  and brackets (`"<{POPULATION}>"`), is left out: one header can serve
+  every report of a study, a report with no value for a line going without
+  it.  A row with no token, rtfreporter's own (`{PAGE}`) or an unknown one
+  is always written.  The default, `FALSE`, writes every row as before.
+
 - **`program_fallback`: the program when none is said or found** (#566).
   `rtf_document(program_fallback = )` (and `generate_rtfreport(program_fallback
   = )` for one call) names the program a `{PROGRAM...}` token uses when no

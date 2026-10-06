@@ -271,6 +271,12 @@ update_footer_row <- function(footer, row, content) {
 #'   content-table convention. `NULL` (default) reads from
 #'   `inst/resources/rtfreporter_defaults.R` (0L for both since v0.0.21).
 #'
+#' @param drop_empty_rows Logical. `TRUE`: a row whose tokens of one's own
+#'   (`rtf_document(tokens = )`, `options(rtfreporter.tokens = )`) are all
+#'   empty when the file is written, and which says nothing else but blanks
+#'   and brackets (`"<{POPULATION}>"`), is left out.  One header can then
+#'   serve every report of a study, a report with no value for a line going
+#'   without it.  `FALSE` (default): every row is written.
 #' @return A named list with elements `rows`, `border`, `width_twips`, and
 #'   `row_height_twips`.
 #'
@@ -293,7 +299,8 @@ rtf_header <- function(rows,
                         font                     = NULL,
                         markup                   = NULL,
                         cell_padding_left_twips  = NULL,
-                        cell_padding_right_twips = NULL) {
+                        cell_padding_right_twips = NULL,
+                        drop_empty_rows          = FALSE) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
     stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
   }
@@ -308,7 +315,15 @@ rtf_header <- function(rows,
        markup = if (is.null(markup)) NULL else .resolve_markup(markup),
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
-       cell_padding_right_twips = cell_padding_right_twips)
+       cell_padding_right_twips = cell_padding_right_twips,
+       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
+}
+
+.check_drop_empty_rows <- function(x) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    stop("`drop_empty_rows` must be TRUE or FALSE.", call. = FALSE)
+  }
+  x
 }
 
 #' @rdname rtf_header
@@ -322,7 +337,8 @@ rtf_footer <- function(rows,
                         font                     = NULL,
                         markup                   = NULL,
                         cell_padding_left_twips  = NULL,
-                        cell_padding_right_twips = NULL) {
+                        cell_padding_right_twips = NULL,
+                        drop_empty_rows          = FALSE) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
     stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
   }
@@ -337,7 +353,8 @@ rtf_footer <- function(rows,
        markup = if (is.null(markup)) NULL else .resolve_markup(markup),
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
-       cell_padding_right_twips = cell_padding_right_twips)
+       cell_padding_right_twips = cell_padding_right_twips,
+       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
 }
 
 # ============================================================================
