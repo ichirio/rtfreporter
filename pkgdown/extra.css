@@ -20,11 +20,9 @@
 .page-header img.logo {
   float: none !important;       /* override Bootswatch's default */
   margin: 0 !important;
-  max-height: 110px;             /* landscape SVG: ~220px wide @ 2:1  */
+  max-height: 120px;             /* the hex sticker, as in README.md */
   width: auto;
   flex-shrink: 0;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(26, 58, 90, 0.18);
 }
 .page-header h1 {
   margin: 0 !important;

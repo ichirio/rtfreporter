@@ -56,6 +56,10 @@
 
 ### Documentation
 
+- **A new hex logo, shared with tflspec and tflplanner** (#577): one family
+  of stickers (navy hexagon, an accent colour per package, a pictogram on a
+  white page), made with the favicons by `data-raw/logo.R`.
+
 - **NEWS.md: no R comment reads as a version** (#558).  Two code blocks
   (the R6 -> S3 migration of 0.8.0 and the gt `read_gt` example) began
   their lines with R comments at column 0, which a markdown reader that
