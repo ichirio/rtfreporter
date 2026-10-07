@@ -353,8 +353,7 @@ session.
   procedures — follow them rather than improvising a number.
 * **CI (all must be green):** `R-CMD-check` (matrix, 0 errors / 0 warnings),
   `test-coverage`, `pkgdown`, `version-guard`, `lint`.
-* **Before pushing:** `devtools::document()`, `devtools::test()`,
-  `lintr::lint_package()`, `devtools::check()`.
+* **Before pushing:** `devtools::document()`, then the four checks in §14.
 
 ---
 
@@ -479,3 +478,57 @@ Two layers, and the second one is built on the first:
 **When something is not covered here:** read the article named in §1 rather
 than inferring from the code alone — several decisions are recorded only in
 prose, with the reasoning that makes them worth keeping.
+
+---
+
+## 14. Working on the repository: the rules
+
+Each bullet is a summary; the file it names is the authority. Read that file
+for the detail — this section deliberately does not copy it.
+
+* **Code of Conduct** (`CODE_OF_CONDUCT.md`). Contributor Covenant 2.1, for
+  issues, PRs, reviews and discussions alike. Keep every message factual and
+  courteous; reports go to the maintainer address given in that file.
+* **Issue → PR** (`CONTRIBUTING.md`, §10). Issue first, agree the approach,
+  one topic branch off the latest `main`, PR against `main`. Never push to
+  `main`, never merge. Issue, PR and commit text is in English.
+* **PR template** (`.github/PULL_REQUEST_TEMPLATE.md`). Fill every section,
+  do not delete them: *Summary* (what and why), *Related issue*
+  (`Closes #N`), *Type of change* (fix / feature / breaking + migration /
+  docs-tests-internal), the *Checklist* (tests, roxygen + committed
+  `man/*.Rd`, test and check clean, `NEWS.md`, ASCII-only, no new hard
+  dependency) and *Notes for reviewers*. Tick only what you did; name any
+  check you could not run.
+* **Issue templates** (`.github/ISSUE_TEMPLATE/`). *Bug report* (`[Bug] `,
+  label `bug`): expected vs. actual, a minimal reprex with its output, the
+  `.rtf` or a screenshot for rendering problems, `sessionInfo()`. *Feature
+  request* (`[Feature] `, label `enhancement`): the real TFL deliverable,
+  proposed behaviour, alternatives, and the scope note (invariant 8).
+  `config.yml` sends usage questions to Discussions.
+* **Pre-push checks — all four, every push.** Stricter than the
+  `devtools::check()` line in `CONTRIBUTING.md`; the maintainer requires all
+  of them. Report the results in the PR body.
+
+  ```bash
+  R CMD build . && R CMD check --as-cran rtfreporter_*.tar.gz  # 0 errors / 0 warnings
+  NOT_CRAN=true Rscript -e 'devtools::test()'   # full suite, nothing skipped on CRAN grounds
+  Rscript -e 'pkgdown::check_pkgdown()'         # when exports, Rd or _pkgdown.yml change
+  Rscript -e 'lintr::lint_package()'            # must be clean
+  ```
+
+* **Versioning + NEWS** (`CONTRIBUTING.md` *Versioning & releases*, §10). An
+  ordinary PR leaves `Version:` alone or raises only the fourth position, and
+  always adds one bullet under `# rtfreporter (development version)` in
+  `NEWS.md`. The stamp at the top of this manual must equal `DESCRIPTION`
+  (`test-ai-manual-version.R`): bump both together, or leave both to the
+  maintainer, who assigns versions at merge time.
+* **`cran-comments.md`** (root, `.Rbuildignore`d). The note to CRAN's
+  reviewers sent with a submission: check results (and why each NOTE is
+  acceptable), test environments, and reviewer notes (examples write only
+  to `tempdir()`, suggested packages are guarded, nothing reaches the
+  network). It changes with a CRAN release, not an ordinary PR — but if
+  your change adds a NOTE or breaks one of those reviewer notes, say so in
+  the PR so it is updated before the next submission.
+* **Other agent instructions** (`AGENTS.md`,
+  `.github/copilot-instructions.md`). Short pointers to this manual and
+  `CONTRIBUTING.md`; if one disagrees with this manual, fix it in your PR.
