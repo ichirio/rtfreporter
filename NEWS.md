@@ -56,6 +56,15 @@
 
 ### Documentation
 
+- **AI developer manual: the repository rules** (#574).  A new §14
+  summarises, with a pointer to each source file, the Code of Conduct, the
+  issue -> PR workflow and the PR / issue templates, the four pre-push
+  checks (`R CMD check --as-cran`, the full suite with `NOT_CRAN=true`,
+  `pkgdown::check_pkgdown()`, `lintr::lint_package()`), versioning +
+  `NEWS.md`, and `cran-comments.md`.  `.github/copilot-instructions.md`
+  now points at `rtfreporter_ai_manual("dev")` and no longer contradicts
+  it on `Imports:` and optional-package guards.
+
 - **NEWS.md: no R comment reads as a version** (#558).  Two code blocks
   (the R6 -> S3 migration of 0.8.0 and the gt `read_gt` example) began
   their lines with R comments at column 0, which a markdown reader that
