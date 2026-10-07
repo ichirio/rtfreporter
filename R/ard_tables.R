@@ -74,6 +74,33 @@
   vals
 }
 
+# A `stat` list column with text in it (cardx's tests: `method`,
+# `alternative`; `paired` TRUE / FALSE), read value by value: the numbers as
+# numbers (never through their text, which would lose digits) and the rest
+# as text.  NULL when every value is a number (or there is no text), so the
+# column is flattened as before.
+.ard_stat_text <- function(col) {
+  if (!is.list(col)) return(NULL)
+  one <- function(e) length(e) == 1L && is.atomic(e) && !is.list(e)
+  is_txt <- vapply(col, function(e) one(e) && (is.character(e) || is.factor(e)),
+                   logical(1))
+  if (!any(is_txt)) return(NULL)
+  num <- rep(NA_real_, length(col))
+  text <- rep(NA_character_, length(col))
+  for (i in seq_along(col)) {
+    e <- col[[i]]
+    if (!one(e) || is.na(e)) next
+    if (is.numeric(e)) {
+      num[i] <- as.numeric(e)
+    } else {
+      v <- suppressWarnings(as.numeric(as.character(e)))
+      # "0.95" written as text is still a number; "two.sided" is not
+      if (!is.logical(e) && !is.na(v)) num[i] <- v else text[i] <- as.character(e)
+    }
+  }
+  list(num = num, text = text)
+}
+
 # The level order a factor variable declared, read off the ARD's one-element
 # factors before they are flattened.  An analyst who wrote `factor(levels = )`
 # has already said how the rows should run; taking it saves them saying it
@@ -1336,6 +1363,13 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   fct_levels <- .ard_factor_levels(d)
   key_levels <- .ard_group_factor_levels(d) %||% list()
 
+  # A statistic that is text (a test's `method`, `alternative`; a flag such
+  # as `paired`) beside the numbers: `stat` stays numeric -- a guard
+  # (`N < 9`), a sort, a rework compare numbers, not strings -- and the
+  # text goes to `stat_fmt`, which a bare {method} prints.
+  stat_text <- if ("stat" %in% names(d)) .ard_stat_text(d$stat)
+  if (!is.null(stat_text)) d$stat <- stat_text$num
+
   for (nm in names(d)) {
     if (is.list(d[[nm]])) d[[nm]] <- .ard_unlist_col(d[[nm]])
   }
@@ -1343,6 +1377,12 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     d$stat <- suppressWarnings(as.numeric(as.character(d$stat)))
   }
   d$stat_fmt <- as.character(d$stat_fmt)
+  if (!is.null(stat_text)) {
+    # a text statistic is its own formatted value (a number's format
+    # applied to it would print "NA")
+    put <- !is.na(stat_text$text)
+    d$stat_fmt[put] <- stat_text$text[put]
+  }
   d$variable <- as.character(d$variable)
   if ("variable_level" %in% names(d)) {
     d$variable_level <- as.character(d$variable_level)

@@ -1,5 +1,15 @@
 # rtfreporter (development version)
 
+### Fixes
+
+- **`normalize_ard()`: a text statistic no longer turns `stat` into text**
+  (#583).  An ARD with a test's `method` / `alternative` (cardx) or a flag
+  (`paired`) beside the numbers made the whole `stat` column character, so a
+  `cells` guard compared strings (`N < 9` was TRUE for 86) and a rework
+  written for numbers failed.  `stat` stays numeric, each number read as it
+  is (no digits lost); a text value is `NA` there and the row's `stat_fmt`
+  is the text, so `{method}` still prints it.
+
 ### New
 
 - Added a root `CITATION.cff` so GitHub's "Cite this repository" button
