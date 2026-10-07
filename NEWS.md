@@ -64,6 +64,13 @@
   in the text around the code now, and a test keeps every level-1 line a
   version.
 
+- **README: no release/CRAN roadmap** (#579).  "Status & roadmap" is
+  "Status" now, and the planned-milestones table (first CRAN submission,
+  then v1.0.0) is gone, along with the other forward-looking CRAN mention --
+  packages do not announce release plans.  The section keeps the factual
+  status: pre-1.0, `lifecycle: experimental`, the latest release and how to
+  install it, the development-version scheme, and a pointer to `NEWS.md`.
+
 ### Before CRAN
 
 - **cards' current verb names** (#556).  The examples, the quickstart

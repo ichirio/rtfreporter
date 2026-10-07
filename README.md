@@ -125,8 +125,7 @@ What the small scope buys you:
   per-document concatenation via `assemble_rtf()`.  If a feature
   would not appear on a real clinical TFL, we resist adding it.
 - **Maintainability over breadth.**  Saying *no* to scope creep is
-  what keeps the package small, the tests fast, and the API stable
-  enough to bring through to CRAN.
+  what keeps the package small, the tests fast, and the API stable.
 - **Composable pipe API.**  `rtf_document() |> rtf_section() |>
   rtf_tables() |> generate_rtfreport()` — the same vocabulary every
   time, so building a 50-TFL deliverable is a loop.
@@ -222,7 +221,7 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
   and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html)
 - **External API spec** — [the public API surface](https://ichirio.github.io/rtfreporter/articles/external-api.html)
 
-## Status & roadmap
+## Status
 
 `rtfreporter` is in active **pre-1.0 development** and carries the
 `lifecycle: experimental` badge; the API may still change in
@@ -232,33 +231,14 @@ backward-incompatible ways before v1.0.0.
   (`remotes::install_github("ichirio/rtfreporter@v0.8.2")`); not yet on CRAN.
   **Tables from a cards / cardx ARD**: `normalize_ard()` / `widen_ard()`
   and the plan engine (`table_plan()` and the `plan_*()` verbs), adopted in
-  the pre-CRAN API review; plus two fixes.
-- **v0.8.1** (2026-09-29): a patch release on top of v0.8.0: one rounding rule (`round_num()`), run
-  tokens such as `{PROGRAM}` and `{DATETIME}`, `as_rtftables()` as an S3
-  generic, and pagination / print fixes.
-- **v0.8.0** (2026-09-16) rolled up everything since v0.4.0: **listings** end to end
-  (`listing_col()` / `listing_spec()` / `build_listing()`, the column-width
-  estimator `fit_listing_widths()`, and an editable wrapping rule), the
-  **merged stub** (`stub_cols()` / `stub_spec()`), a rewritten **border**
-  vocabulary, post-hoc **styling verbs**, column pagination
-  (`paginate_cols()`), per-page header values
-  (`set_col_header(values = )`), **figures from plot objects**, and the
-  **AI assistant manuals** that now ship inside the package.  59 exported
-  functions at v0.4.0; 91 here.
+  the pre-CRAN API review; plus two fixes.  See [`NEWS.md`](NEWS.md) for
+  the full release history.
 - **Development version on `main`: `0.8.2.9000`.**  rtfreporter follows the
   standard R versioning scheme -- a release is `X.Y.Z`, development is
   `X.Y.Z.9000`, and the three-component part always names the last release.
   An ordinary pull request leaves `DESCRIPTION` alone unless the change is
   one somebody needs to name; changing `X`, `Y` or `Z` is a deliberate,
   labelled release action, enforced by the `version-guard` CI.
-  See [`NEWS.md`](NEWS.md).
-
-Planned release milestones:
-
-| Version | Goal |
-|---------|------|
-| **v0.9.0** | The **first CRAN submission** -- the deprecated border exports removed, full `R CMD check --as-cran` clean, increased test coverage, documentation/metadata polish. |
-| **v1.0.0** | **After** CRAN registration, once downloads and feedback have settled the API -- declared **stable**, the `lifecycle: experimental` badge removed, and no minor or patch may break user code again. |
 
 See [`NEWS.md`](NEWS.md) for the user-facing changelog and
 [`CHANGELOG.md`](CHANGELOG.md) for detailed per-version notes.
