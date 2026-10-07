@@ -14,6 +14,11 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 library(rtfreporter)
 ```
 
+> **The second path.** This article is about bringing a table you already
+> have.  When the statistics are in a cards / cardx ARD, the recommended route
+> is a table plan -- see [Get started](rtfreporter.html) and
+> [Tables from an ARD](tables-from-ard.html).
+
 `as_rtftables()` is the single entry point for turning a **table object** into
 the `rtftable` page objects that `rtf_tables()` consumes. It does two jobs:
 
