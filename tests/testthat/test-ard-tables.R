@@ -1476,3 +1476,55 @@ test_that(".kind is decided per summary, not per variable", {
 
 
 # ------------------------------------------------ the report half
+
+test_that("normalize_ard() keeps `stat` numeric when a statistic is text", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  # a test's result rows, as cardx::ard_stats_t_test() writes them: numbers
+  # beside text (method, alternative) and a flag (paired)
+  tt <- ard[ard$stat_name == "mean", , drop = FALSE][rep(1L, 5L), ]
+  tt$context <- "stats_t_test"
+  tt$group1 <- NA_character_
+  tt$group1_level <- list(NULL)
+  tt$stat_name <- c("estimate", "p.value", "method", "alternative", "paired")
+  tt$stat_label <- tt$stat_name
+  tt$stat <- list(-0.749031007751938, 0.5473881684676,
+                  "Welch Two Sample t-test", "two.sided", FALSE)
+  mixed <- dplyr::bind_rows(ard, tt)
+  d <- normalize_ard(mixed)
+  expect_type(d$stat, "double")
+  # the numbers keep every digit (not read back from their text)
+  expect_identical(d$stat[d$stat_name == "estimate"], -0.749031007751938)
+  mean_all <- normalize_ard(ard)
+  expect_identical(d$stat[d$context == "summary"], mean_all$stat[mean_all$context == "summary"])
+  # the text is the formatted value, the number NA
+  m <- d[d$stat_name == "method", ]
+  expect_true(is.na(m$stat))
+  expect_identical(m$stat_fmt, "Welch Two Sample t-test")
+  expect_identical(d$stat_fmt[d$stat_name == "alternative"], "two.sided")
+  expect_identical(d$stat_fmt[d$stat_name == "paired"], "FALSE")
+})
+
+test_that("a guard compares numbers, not text, when the ARD has a text statistic", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  tt <- ard[ard$stat_name == "mean", , drop = FALSE][rep(1L, 2L), ]
+  tt$context <- "stats_t_test"
+  tt$group1 <- NA_character_
+  tt$group1_level <- list(NULL)
+  tt$stat_name <- c("method", "alternative")
+  tt$stat_label <- tt$stat_name
+  tt$stat <- list("One Sample t-test", "two.sided")
+  cells <- function(ard) {
+    p <- table_plan(normalize_ard(ard), cols = "TRT", rows = c(group = "variable")) |>
+      plan_cells(default = "{n:.0f} ({p:.1f%})",
+                 AGE = list(N < 9 ~ "few", "{mean:.1f} ({sd:.2f})")) |>
+      plan_stub(name = "row_label", before = TRUE)
+    suppressMessages(as_rtftables(p))[[1]]$data
+  }
+  a <- cells(ard)
+  b <- cells(dplyr::bind_rows(ard, tt))
+  # N is 86 and more: never "few" ("86" < "9" is TRUE as text)
+  expect_false(any(unlist(b[b$row_label == "AGE", -1]) == "few"))
+  expect_identical(b, a)
+})
