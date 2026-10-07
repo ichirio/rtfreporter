@@ -29,6 +29,7 @@
 ^LICENSE\.md$
 ^CONTRIBUTING\.md$
 ^CODE_OF_CONDUCT\.md$
+^CITATION\.cff$
 ^rtfreporter-tests$
 ^.*\.Rcheck$
 ^\.lintr$

@@ -2,6 +2,9 @@
 
 ### New
 
+- Added a root `CITATION.cff` so GitHub's "Cite this repository" button
+  works (#573).
+
 - **`rtf_header()` / `rtf_footer()`: `drop_empty_rows`** (#571).  With
   `drop_empty_rows = TRUE`, a band row whose tokens of one's own
   (`rtf_document(tokens = )`, `options(rtfreporter.tokens = )`) are all
