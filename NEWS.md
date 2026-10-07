@@ -59,6 +59,18 @@
 
 ### Documentation
 
+- **The site leads with an ARD and a plan** (#581).  A new *Get started*
+  (`vignette("rtfreporter")`) builds a table from a cards ARD with
+  `table_plan()` and the `plan_*()` verbs, then points to the second path,
+  bringing a table from gt / gtsummary / rtables / tfrmt / flextable /
+  huxtable / a data frame through `as_rtftables()`.  The articles menu and
+  index, the reference index and the README follow that order (ARD + plan,
+  bring your own table, listings, figures, assembling a deliverable, AI
+  assistant); the headers article covers the run tokens, tokens of one's
+  own, `program_fallback` and `drop_empty_rows`.  The pipe-API vignette and
+  the two Quarto examples are gone (redirected), their ground covered by
+  Get started, the document articles and the Demographics showcase.
+
 - **AI developer manual: the repository rules** (#574).  A new §14
   summarises, with a pointer to each source file, the Code of Conduct, the
   issue -> PR workflow and the PR / issue templates, the four pre-push
