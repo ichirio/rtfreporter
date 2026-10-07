@@ -97,7 +97,7 @@ p <- nd |>
   plan_labels(c(AGE    = "Age (years)",
                 AGEGR1 = "Age group, n (%)",
                 SEX    = "Sex, n (%)")) |>
-  plan_levels(SEX = c("F", "M")) |>
+  plan_levels(AGEGR1 = c("<65", "65-80", ">80"), SEX = c("F", "M")) |>
   plan_stub(name = "row_label") |>
   plan_blanks(where = "between_groups", first = TRUE) |>
   plan_columns(widths = c(4, 2, 2, 2)) |>

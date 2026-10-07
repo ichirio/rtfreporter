@@ -68,8 +68,11 @@ library(rtfreporter)
 library(cards)
 
 # 1. The statistics: an ARD, by arm (ard_stack() also counts each arm's N)
+adsl <- ADSL
+adsl$ARM <- factor(adsl$ARM, levels = c("Placebo", "Xanomeline Low Dose",
+                                        "Xanomeline High Dose"))
 ard <- ard_stack(
-  ADSL, .by = ARM,
+  adsl, .by = ARM,
   ard_summary(variables = AGE),
   ard_tabulate(variables = c(AGEGR1, SEX)))
 
@@ -81,9 +84,11 @@ plan <- ard |>
     continuous  = c("n"         = "{N:.0f}",
                     "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
                     "Min, Max"  = "{min:.0f}, {max:.0f}"),
-    categorical = "{n:.0f} ({p:.1f%})") |>
+    categorical = "{n:.0f} ({p:.1f%})",
+    notes = FALSE) |>
   plan_labels(c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
                 SEX = "Sex, n (%)")) |>
+  plan_levels(AGEGR1 = c("<65", "65-80", ">80")) |>
   plan_stub(name = "row_label") |>
   plan_blanks(where = "between_groups", first = TRUE) |>
   plan_style(border = "tfl", align_count_pct = TRUE) |>
