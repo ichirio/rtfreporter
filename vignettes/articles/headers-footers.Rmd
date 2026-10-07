@@ -1,5 +1,5 @@
 ---
-title: "Headers and footers (sections)"
+title: "Headers, footers and tokens"
 ---
 
 ```{r, include = FALSE}
@@ -36,12 +36,13 @@ Two consequences worth remembering:
 
 `rtf_header()` / `rtf_footer()` build the header/footer content. Rows are named
 character vectors using `l` / `c` / `r` for the left / centre / right cell; pass
-a `list` of them for a multi-row header. Page-number tokens are substituted at
-render time:
+a `list` of them for a multi-row header. Page-number tokens are filled in for
+you (the [tokens section](#tokens) below lists them all):
 
-- `{AUTO_PAGE}` -- the current page number (updates in the viewer);
-- `{AUTO_TOTAL_PAGES}` -- the total page count;
-- `{PAGE}` -- the static first-page number of the section.
+- `{PAGE}` / `{TOTAL_PAGES}` -- the page number and page count, written into
+  the file;
+- `{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}` -- the same as RTF fields the word
+  processor computes, so they stay right after `assemble_rtf()` joins files.
 
 ```{r build-hf}
 hdr <- rtf_header(rows = list(
@@ -193,7 +194,58 @@ rtf <- {
 grepl("\\chpgn", rtf, fixed = TRUE)        # {AUTO_PAGE} -> \chpgn field
 ```
 
-See `?rtf_section`, `?rtf_header`, and `?rtf_footer` for the full reference.
+## Tokens: page numbers, the program, the date, and your own {#tokens}
+
+A header, footer, title or footnote can carry `{TOKEN}`s that
+`generate_rtfreport()` fills when it writes the file.  `rtf_text_tokens()`
+lists them:
+
+```{r tokens-list}
+rtf_text_tokens()[, c("token", "when", "description")]
+```
+
+The **run tokens** say where a file came from:
+
+- `{PROGRAM}` -- the program's path as given; `{PROGRAM_FULL}` the same path
+  made absolute (with the system's separator); `{PROGRAM_NAME}` /
+  `{PROGRAM_DIR}` its file name and folder.
+- `{DATETIME}` -- when the file was written; `{DATETIME:%Y-%m-%d}` takes a
+  format.
+
+Say the program once, in `rtf_document(program = )`.  When it is not said,
+rtfreporter finds it -- the file `source()` is running, the script `Rscript`
+runs, or the document knitr is knitting -- and a message says which.
+`program_fallback =` names the program to use when none is said or found:
+
+```{r run-tokens}
+doc <- rtf_document(program_fallback = "programs/t_dm.R") |>
+  rtf_tables(list(df)) |>
+  rtf_section(page = 1, secinfo = list(
+    footer = rtf_footer(list(
+      c(l = "Program: {PROGRAM}", r = "Run: {DATETIME:%Y-%m-%d %H:%M}")))))
+```
+
+**Tokens of your own** are given once, in `rtf_document(tokens = )` (or for a
+session in `options(rtfreporter.tokens = )`; the document's value wins), and
+used anywhere a page token can be.  With `drop_empty_rows = TRUE`, a header or
+footer row whose own tokens are all empty, and which says nothing else, is
+left out -- so one header can serve every report of a study:
+
+```{r own-tokens}
+hdr_study <- rtf_header(list(
+  c(l = "Study {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
+  c(c = "{POPULATION}")),                 # left out when POPULATION is ""
+  drop_empty_rows = TRUE)
+
+doc <- rtf_document(tokens = list(STUDY = "ABC-123", POPULATION = "")) |>
+  rtf_tables(list(df)) |>
+  rtf_section(page = 1, secinfo = list(header = hdr_study))
+generate_rtfreport(doc, tempfile(fileext = ".rtf"))
+rtf_text_tokens(doc)[rtf_text_tokens(doc)$kind == "own", c("token", "example")]
+```
+
+See `?rtf_section`, `?rtf_header`, `?rtf_footer` and `?rtf_text_tokens` for
+the full reference.
 
 <!-- where-next -->
 
