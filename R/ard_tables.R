@@ -195,20 +195,21 @@
   scoped <- vapply(labels, function(z)
     !is.null(names(z)) && any(nzchar(names(z))), logical(1L))
   scoped <- scoped & names(labels) != ".default"
-  flat <- labels[!scoped]
-  dots <- names(flat) == ".default"
-  flat <- c(unlist(unname(flat[dots])), unlist(flat[!dots]))
+  dots <- names(labels) == ".default"
+  dflt <- unlist(unname(labels[dots]))
   # A scope named after an analysis variable may carry the variable's own
   # label under its own name -- SEX = c(SEX = "Sex", F = "Female") -- since
   # one key cannot hold both a text and a dictionary: it labels the name
-  # wherever it appears, as a flat entry would.
-  own <- names(labels)[scoped]
-  own <- own[vapply(own, function(k) k %in% names(labels[[k]]), NA)]
-  own <- own[!own %in% names(flat)]
-  if (length(own)) {
-    flat <- c(flat, stats::setNames(vapply(own, function(k)
-      unname(labels[[k]][[k]]), ""), own))
-  }
+  # wherever it appears, as a flat entry would.  In the order given, among
+  # the flat ones: the names fix the variable order (.ard_label_order()).
+  flat <- c(dflt, unlist(lapply(which(!dots), function(i) {
+    k <- names(labels)[i]
+    if (!scoped[i]) return(labels[i])
+    if (k %in% names(labels[[k]]) && !k %in% names(dflt)) {
+      return(stats::setNames(list(unname(labels[[k]][[k]])), k))
+    }
+    NULL
+  })))
   list(flat = flat, scopes = labels[scoped])
 }
 

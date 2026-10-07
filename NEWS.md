@@ -2,6 +2,11 @@
 
 ### Fixes
 
+- **`plan_labels()`: the variables in the order labelled** (#585).  A
+  variable whose own label is in its dictionary (`SEX = c(SEX = "Sex", F =
+  "Female")`, #514) moved to the end of the variable order, after the ones
+  labelled plainly; it now keeps its place.
+
 - **`normalize_ard()`: a text statistic no longer turns `stat` into text**
   (#583).  An ARD with a test's `method` / `alternative` (cardx) or a flag
   (`paired`) beside the numbers made the whole `stat` column character, so a
