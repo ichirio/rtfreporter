@@ -2781,7 +2781,8 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
     kk <- key[i]
     if (anyNA(n)) next
     # the same count stated twice (the groups counted by two analyses: a
-    # BIGN row and an ard_stack(.by_stats = TRUE)) is one count; two
+    # GROUPN row -- the subjects per group, which clinical reporting calls
+    # big N -- and an ard_stack(.by_stats = TRUE)) is one count; two
     # different counts for one column are not a column's number
     if (anyDuplicated(kk)) {
       one <- vapply(split(n, kk), function(x) length(unique(x)) == 1L, NA)

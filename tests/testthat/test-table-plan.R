@@ -2323,7 +2323,7 @@ test_that("plan_levels(.drop_empty = ) leaves out the levels no record has", {
 test_that("a group count stated twice is one count; two different ones say why", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
-  bign <- cards::ard_tabulate(adsl, variables = ARM)
+  groupn <- cards::ard_tabulate(adsl, variables = ARM)
   st <- cards::ard_stack(adsl, .by = ARM,
                          cards::ard_summary(variables = AGE,
                            statistic = ~ cards::continuous_summary_fns("mean")))
@@ -2335,15 +2335,16 @@ test_that("a group count stated twice is one count; two different ones say why",
     t <- plan_header_tokens(p)
     t[t$token == "{n}", ]
   }
-  # the stack alone, and a BIGN row next to the stack (the same counts):
+  # the stack alone, and a GROUPN row (the subjects per group) next to the
+  # stack (the same counts):
   # the same numbers
   alone <- tok(st)
-  twice <- tok(dplyr::bind_rows(bign, st))
+  twice <- tok(dplyr::bind_rows(groupn, st))
   expect_true(twice$resolved)
   expect_identical(twice$values, alone$values)
   expect_identical(unname(unlist(twice$values)), c(86, 84, 84))
   # two different counts for one column: not a column's number, and why
-  other <- bign
+  other <- groupn
   other$stat[[1]] <- 99L
   clash <- tok(dplyr::bind_rows(other, st))
   expect_false(clash$resolved)
