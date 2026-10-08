@@ -992,6 +992,27 @@ print.table_plan <- function(x, ...) {
 #'   [as_rtftables()]'s `header_sep` (the separator a plain table's column
 #'   names are split on into spanning header rows) and [rtftable()]'s
 #'   `col_header_align`.
+#' @param lines For `plan_col_header()`: the header **a row at a time**,
+#'   as it reads, instead of `header`: a list, one element a header row
+#'   (the top first), each a named character vector -- a cell's name the
+#'   columns it sits on (a column name, `.values` for every value column,
+#'   a position or range such as `3:5`, or `KEY = value`), its value the
+#'   text, with the same tokens (`{col}`, `{n}`, `{n:sum}` ...):
+#'
+#'   ```r
+#'   plan_col_header(lines = list(
+#'     c(row_label = "",               .values = "{col}"),
+#'     c(row_label = "Characteristic", .values = "(N={n})")))
+#'   ```
+#'
+#'   It is the data frame of cells written another way (one row a cell:
+#'   `line`, `cols`, `text`, `span`), so it does all that does.
+#' @param span For `plan_col_header(lines = )`: how a cell over several
+#'   columns is made -- `"each"` (the default: a cell a column), `"one"`
+#'   (one cell over them all) or a key's name (a cell per value of that
+#'   key: a spanner).  One value for every cell, or a list as `lines` is,
+#'   each element the spans of that row's cells, named as its cells are
+#'   (a cell not named there is `"each"`).
 #' @param widths For `plan_columns()`: the relative column widths,
 #'   `rtftable(col_rel_width = )`.  **Named by column** (`c(row_label = 5,
 #'   .values = 2)`, `.values` for every value column) a reordered table keeps
@@ -1200,7 +1221,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
-#' * `plan_col_header(header, values, header_sep, col_header_align)`: the column header. Goes to [set_col_header()]: the header and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align`.
+#' * `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: the column header. Goes to [set_col_header()]: the header (or `lines`, the header a row at a time) and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align`.
 #' * `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)`: a listing. Goes to [listing_spec()], the same names.
 #' * `plan_titles()`, `plan_footnotes()`: the blocks above and below. Goes to [rtf_titles()], [rtf_footnotes()].
 #' * `plan_after(...)`: anything else. Goes to your functions of the pages.
@@ -1762,6 +1783,51 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
     zones, look))
 }
 
+# plan_col_header(lines = ): the header written a row at a time, a cell
+# a name = its text, as one would read it --
+#   list(c(row_label = "", .values = "{col}"),
+#        c(row_label = "Characteristic", .values = "(N={n})"))
+# -- turned into the cells of the data-frame form (the `col_header` sheet),
+# so everything after it is the same.  `span`: "each" (a cell a column),
+# "one" (one cell over the columns named) or a key's name (a cell per value
+# of that key: a spanner); one for every cell, or a list as `lines` is, of
+# a span a cell (named as the line's cells are).
+.plan_header_lines <- function(lines, span = "each") {
+  if (!is.list(lines) || !length(lines)) {
+    .ard_stop("plan_col_header(lines = ) is a list, one element a header row: ",
+              "list(c(row_label = \"\", .values = \"{col}\"), ...).")
+  }
+  if (is.list(span) && length(span) != length(lines)) {
+    .ard_stop(sprintf(paste0(
+      "plan_col_header(span = ) as a list has one element a header row; ",
+      "`lines` has %d, `span` %d."), length(lines), length(span)))
+  }
+  rows <- list()
+  for (i in seq_along(lines)) {
+    ln <- lines[[i]]
+    nm <- names(ln)
+    if (!is.character(ln) || is.null(nm) || anyNA(nm) || !all(nzchar(nm))) {
+      .ard_stop(sprintf(paste0(
+        "plan_col_header(lines = ): row %d is a named character vector, a ",
+        "cell a name (the columns it sits on: a name, .values, 3:5, ",
+        "KEY = value) = its text."), i))
+    }
+    sp <- if (is.list(span)) span[[i]] else span
+    for (j in seq_along(ln)) {
+      s1 <- if (!is.null(names(sp)) && nm[j] %in% names(sp)) sp[[nm[j]]] else
+        if (is.null(names(sp))) sp[[1L]] else "each"
+      if (!is.character(s1) || length(s1) != 1L || is.na(s1)) {
+        .ard_stop("plan_col_header(span = ) is \"each\", \"one\" or a key's name.")
+      }
+      rows[[length(rows) + 1L]] <- data.frame(
+        line = i, cols = nm[j], text = if (is.na(ln[[j]])) "" else ln[[j]],
+        span = if (identical(s1, "one")) NA_character_ else s1,
+        stringsAsFactors = FALSE)
+    }
+  }
+  do.call(rbind, rows)
+}
+
 # The header is a VALUE, not a set of fields: `rtf_col_header()` builds a
 # whole object and there is nothing useful to merge field-wise.  A function
 # is accepted too, and is called with the resolved `n`, which is
@@ -1788,7 +1854,14 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
 # `list(n = "page", N = "table")`, numbers, a function), or a data frame
 # of per-page values handed to set_col_header() as it is.
 plan_col_header <- function(plan, header = NULL, values = NULL,
-                            header_sep = NULL, col_header_align = NULL) {
+                            header_sep = NULL, col_header_align = NULL,
+                            lines = NULL, span = "each") {
+  if (!is.null(lines)) {
+    if (!is.null(header)) {
+      .ard_stop("plan_col_header(): give the header once, as `header` or as `lines`.")
+    }
+    header <- .plan_header_lines(lines, span)
+  }
   if (is.data.frame(header)) {
     # the `col_header` sheet's cells (one row a cell: `row`, `cols`, `text`,
     # `span` ...), resolved against each page's columns when it is made

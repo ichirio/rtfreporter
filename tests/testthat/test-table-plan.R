@@ -2349,3 +2349,46 @@ test_that("a group count stated twice is one count; two different ones say why",
   expect_false(clash$resolved)
   expect_match(clash$note, "two different counts")
 })
+
+test_that("plan_col_header(lines = ): the header a row at a time, the cells' data frame written another way", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
+    cards::ard_tabulate(variables = AGEGR1, statistic = ~ c("n", "p")))
+  d <- suppressMessages(normalize_ard(ard))
+  base <- table_plan(d, cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
+    plan_cells(notes = FALSE) |> plan_cells("{n} ({p:.1f%})") |>
+    plan_stub(name = "row_label", before = TRUE)
+  pages <- function(p) suppressMessages(plan_apply(p))
+  cells <- data.frame(
+    line = c(1, 1, 2, 2, 3, 3),
+    cols = c("row_label", ".values", "row_label", ".values", "row_label", ".values"),
+    span = c(NA, "TRT", NA, "each", NA, NA),
+    text = c("", "{col1}", "", "{col2}", "Characteristic", ""))
+  want <- pages(base |> plan_col_header(header = cells))
+  got <- pages(base |> plan_col_header(
+    lines = list(
+      c(row_label = "", .values = "{col1}"),
+      c(row_label = "", .values = "{col2}"),
+      c(row_label = "Characteristic", .values = "")),
+    span = list(c(row_label = "one", .values = "TRT"),
+                c(row_label = "one"),
+                c(row_label = "one", .values = "one"))))
+  expect_identical(got, want)
+  # one span for every cell: "each", the default
+  each <- data.frame(line = c(1, 1, 2, 2), cols = c("row_label", ".values"),
+                     span = "each", text = c("", "{col}", "Characteristic", "(N={n})"))
+  expect_identical(
+    pages(base |> plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
+                                               c(row_label = "Characteristic",
+                                                 .values = "(N={n})")))),
+    pages(base |> plan_col_header(header = each)))
+  # what it is, and is not
+  expect_error(plan_col_header(base, header = each, lines = list(c(a = "x"))),
+               "once, as `header` or as `lines`")
+  expect_error(plan_col_header(base, lines = list(c("x", "y"))),
+               "row 1 is a named character vector")
+  expect_error(plan_col_header(base, lines = list(c(a = "x")), span = list("each", "one")),
+               "one element a header row")
+})

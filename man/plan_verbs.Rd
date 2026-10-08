@@ -114,7 +114,9 @@ plan_col_header(
   header = NULL,
   values = NULL,
   header_sep = NULL,
-  col_header_align = NULL
+  col_header_align = NULL,
+  lines = NULL,
+  span = "each"
 )
 
 plan_columns(
@@ -503,6 +505,28 @@ only entry when there is one.  The resolved value is also what
 names are split on into spanning header rows) and \code{\link[=rtftable]{rtftable()}}'s
 \code{col_header_align}.}
 
+\item{lines}{For \code{plan_col_header()}: the header \strong{a row at a time},
+as it reads, instead of \code{header}: a list, one element a header row
+(the top first), each a named character vector -- a cell's name the
+columns it sits on (a column name, \code{.values} for every value column,
+a position or range such as \code{3:5}, or \code{KEY = value}), its value the
+text, with the same tokens (\code{{col}}, \code{{n}}, \code{{n:sum}} ...):
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(lines = list(
+  c(row_label = "",               .values = "\{col\}"),
+  c(row_label = "Characteristic", .values = "(N=\{n\})")))
+}\if{html}{\out{</div>}}
+
+It is the data frame of cells written another way (one row a cell:
+\code{line}, \code{cols}, \code{text}, \code{span}), so it does all that does.}
+
+\item{span}{For \code{plan_col_header(lines = )}: how a cell over several
+columns is made -- \code{"each"} (the default: a cell a column), \code{"one"}
+(one cell over them all) or a key's name (a cell per value of that
+key: a spanner).  One value for every cell, or a list as \code{lines} is,
+each element the spans of that row's cells, named as its cells are
+(a cell not named there is \code{"each"}).}
+
 \item{widths}{For \code{plan_columns()}: the relative column widths,
 \code{rtftable(col_rel_width = )}.  \strong{Named by column} (\code{c(row_label = 5, .values = 2)}, \code{.values} for every value column) a reordered table keeps
 them, and that is what the \code{columns} sheet's \code{width} is; unnamed, they
@@ -586,7 +610,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)}: column blocks. Goes to \code{\link[=paginate_cols]{paginate_cols()}}: \code{at}, \code{cols} / \code{by}, \code{carry}, \code{col_header}, \code{width}, \code{allow_span_break}, \code{page_order}.
 \item \code{plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)}: the whole table. Goes to \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} by the same names; \verb{border_*} and the default look (\code{header_align}, \code{header_bold}, \code{header_italic}, \code{align}, \code{bold}, \code{italic}, \code{underline}) via \code{\link[=rtf_table_style]{rtf_table_style()}}.
 \item \code{plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)}: the columns. Goes to \code{\link[=rtftable]{rtftable()}}: \code{col_rel_width}, \code{row_title}, \code{column_widths_twips}; \code{\link[=set_decimal_split]{set_decimal_split()}}: \code{cols}; \code{\link[=as_rtftables]{as_rtftables()}}: \code{auto_width}, \code{cell_format}; \code{\link[=widen_ard]{widen_ard()}}: \code{sep}.
-\item \code{plan_col_header(header, values, header_sep, col_header_align)}: the column header. Goes to \code{\link[=set_col_header]{set_col_header()}}: the header and a data frame of \code{values}; a population fills its \code{{n}} tokens; \code{\link[=as_rtftables]{as_rtftables()}}: \code{header_sep}; \code{\link[=rtftable]{rtftable()}}: \code{col_header_align}.
+\item \code{plan_col_header(header, values, header_sep, col_header_align, lines, span)}: the column header. Goes to \code{\link[=set_col_header]{set_col_header()}}: the header (or \code{lines}, the header a row at a time) and a data frame of \code{values}; a population fills its \code{{n}} tokens; \code{\link[=as_rtftables]{as_rtftables()}}: \code{header_sep}; \code{\link[=rtftable]{rtftable()}}: \code{col_header_align}.
 \item \code{plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)}: a listing. Goes to \code{\link[=listing_spec]{listing_spec()}}, the same names.
 \item \code{plan_titles()}, \code{plan_footnotes()}: the blocks above and below. Goes to \code{\link[=rtf_titles]{rtf_titles()}}, \code{\link[=rtf_footnotes]{rtf_footnotes()}}.
 \item \code{plan_after(...)}: anything else. Goes to your functions of the pages.
