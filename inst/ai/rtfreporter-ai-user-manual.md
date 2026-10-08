@@ -877,7 +877,7 @@ p_ae <- ard_ae |>
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
 | Columns not printed | `plan_hide("COL")` |
 | Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: `widths = c(row_label = 5, .values = 2)` |
-| Column header | `plan_col_header(header, values, header_sep, col_header_align)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows |
+| Column header | `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows; `lines = list(c(row_label = "", .values = "{col}"), c(row_label = "Characteristic", .values = "(N={n})"))` writes the header a row at a time (a cell's name = its columns, its value = the text; `span = "each"` / `"one"` / a key's name for a spanner) |
 | Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
 | A page per value | `plan_paginate_group(col, keep)` |
