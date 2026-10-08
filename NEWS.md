@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+### Documentation
+
+- **GROUPN, not BIGN** (#592).  The subjects per group -- what clinical
+  reporting calls big N -- are a GROUPN analysis in the comments and tests,
+  as in tflspec and tflplanner.  tfrmt's own names (`prep_big_n()`,
+  `big_n_structure()`, `bigN`) are tfrmt's and stay.
+
 ### New features
 
 - **`rtf_figures(doc, plot)`: one figure without `list()`** (#589).  An
