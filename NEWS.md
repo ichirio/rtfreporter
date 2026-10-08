@@ -1,5 +1,17 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`plan_col_header(lines = )`: the column header a row at a time**
+  (#588).  A list, one element a header row, each a named character vector
+  -- a cell's name the columns it sits on (a name, `.values`, `3:5`,
+  `KEY = value`), its value the text:
+  `plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
+  c(row_label = "Characteristic", .values = "(N={n})")))`.  `span` says how
+  a cell over several columns is made (`"each"`, `"one"` or a key's name).
+  It is the data frame of cells written another way, so it does all that
+  does; `header` (an `rtf_col_header()` or the data frame) stays.
+
 ### Fixes
 
 - **`plan_labels()`: the variables in the order labelled** (#585).  A
