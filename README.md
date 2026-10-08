@@ -22,6 +22,24 @@ literally the kind of page `generate_rtfreport()` produces.
 
 ## Why rtfreporter?
 
+**From the analysis results to the RTF page, with one vocabulary.**  The
+recommended way to make a table is from an analysis results dataset (ARD)
+built with [cards](https://pharmaverse.github.io/cards/) /
+[cardx](https://insightsengineering.github.io/cardx/): the statistics stay
+in the ARD, and a short **plan** says how they are laid out -- which key goes
+across and which down, how a mean and an SD become one cell, what the rows
+are called, what the header says and where the pages break.  The column
+header's `(N=xx)` is read from the same ARD, so the header and the numbers
+under it agree by construction.
+
+**Bring your own table, too.**  A table already built with gt, gtsummary,
+rtables / tern, tfrmt, flextable, huxtable -- or a plain data frame -- goes in
+through `as_rtftables()`, with its labels, spanning headers and footnotes.
+
+Either way the document around it is the same: running headers and footers
+with page numbers, the program name and the run date, titles and footnotes,
+listings and figures, and the finished files joined into one deliverable.
+
 We **deliberately keep the scope small**.  rtfreporter is not a
 general-purpose RTF library; it is a focused tool for the one clinical
 TFL style we want to ship.  That scope cap is the point — it keeps the
@@ -43,49 +61,65 @@ remotes::install_github("ichirio/rtfreporter@v0.8.2")
 remotes::install_github("ichirio/rtfreporter")
 ```
 
-## A 30-second example
+## A 30-second example: a table from an ARD
 
 ``` r
 library(rtfreporter)
-library(magrittr)
+library(cards)
 
-df <- data.frame(
-  USUBJID = c("001-001", "001-002", "001-003"),
-  TRT     = c("Placebo", "Active",  "Active"),
-  AVAL    = c(12.3, 14.1, 11.7)
-)
+# 1. The statistics: an ARD, by arm (ard_stack() also counts each arm's N)
+adsl <- ADSL
+adsl$ARM <- factor(adsl$ARM, levels = c("Placebo", "Xanomeline Low Dose",
+                                        "Xanomeline High Dose"))
+ard <- ard_stack(
+  adsl, .by = ARM,
+  ard_summary(variables = AGE),
+  ard_tabulate(variables = c(AGEGR1, SEX)))
 
-doc <- rtf_document() %>%
-  rtf_section(
-    page    = 1,
-    secinfo = list(
-      header = rtf_header(rows = list(
-        c(l = "Protocol XYZ-001", r = "Confidential"),
-        c(l = "Table 14.1.1",     r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
-      )),
-      footer = rtf_footer(c(c = "ACME Pharma, Inc."))
-    )
-  ) %>%
-  rtf_tables(
-    # as_rtftables() turns the data into rtftable page objects -- the kind of
-    # object rtf_tables() is designed to consume (a bare data.frame also works,
-    # as a convenience). It is also the same entry point for gt / gtsummary /
-    # rtables tables.
-    as_rtftables(df, border = "tfl", row_height_twips = 280L),
-    titles    = list(c("Subject Summary", "Safety Population")),
-    footnotes = list(c("Source: ADaM ADSL"))
-  )
+# 2. The plan: roles first, then one verb per declaration
+plan <- ard |>
+  normalize_ard() |>
+  table_plan(cols = "ARM", rows = c(group = "variable")) |>
+  plan_cells(
+    continuous  = c("n"         = "{N:.0f}",
+                    "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
+                    "Min, Max"  = "{min:.0f}, {max:.0f}"),
+    categorical = "{n:.0f} ({p:.1f%})",
+    notes = FALSE) |>
+  plan_labels(c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
+                SEX = "Sex, n (%)")) |>
+  plan_levels(AGEGR1 = c("<65", "65-80", ">80")) |>
+  plan_stub(name = "row_label") |>
+  plan_blanks(where = "between_groups", first = TRUE) |>
+  plan_style(border = "tfl", align_count_pct = TRUE) |>
+  plan_col_header(values = list(n = TRUE), rtf_col_header(
+    c("",               "{col}"),
+    c("Characteristic", "(N={n})")))
 
-generate_rtfreport(doc, "T_14_1_1.rtf", overwrite = TRUE)
+# 3. The document: running header and footer, the plan, the file
+doc <- rtf_document(tokens = list(STUDY = "CDISCPILOT01")) |>
+  rtf_section(secinfo = list(
+    header = rtf_header(list(
+      c(l = "Protocol: {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = "Table 14.1.1  Demographic Characteristics"),
+      c(c = "Safety Analysis Set"))),
+    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
+  rtf_tables(plan)
+
+generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R", overwrite = TRUE)
 ```
 
 <p align="center">
-  <img src="man/figures/readme-30s-example.png"
-       alt="The generated T_14_1_1.rtf opened in a word processor: a clinical TFL-style table with running header, title block, column headers, three subject rows, a source-note footnote, and a page footer."
+  <img src="man/figures/readme-ard-example.png"
+       alt="A demographics table rendered by rtfreporter from a cards ARD with a plan: a running header with the protocol and page number, a centred title, arm columns with (N=xx) read from the ARD, age statistics and n (%) rows for the categorical variables, and a footnote."
        width="600" />
 </p>
 
-<p align="center"><sub><em>The generated <code>T_14_1_1.rtf</code>, opened in a word processor.</em></sub></p>
+<p align="center"><sub><em>A demographics table made this way -- the full example, with quartiles and race, is in
+<a href="https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html">Tables from an ARD</a>.</em></sub></p>
+
+[Get started](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
+walks through these three steps.
 
 ## Writing rtfreporter code with an AI assistant
 
@@ -159,12 +193,49 @@ rtfreporter lays it out just the same.  A bare data.frame carries no
 display metadata, so you simply re-specify what you want — column headers,
 alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
 
-**Starting from an ARD instead?**  When the statistics are in a
-[cards](https://pharmaverse.github.io/cards/) / cardx analysis
-results dataset, rtfreporter builds the table from it: `normalize_ard()`
-flattens the ARD, `table_plan()` and the `plan_*()` verbs declare the cells,
-labels, header and pages, and `rtf_tables()` takes the plan directly.  See
-[Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
+A table brought as a data frame looks like this:
+
+``` r
+library(rtfreporter)
+library(magrittr)
+
+df <- data.frame(
+  USUBJID = c("001-001", "001-002", "001-003"),
+  TRT     = c("Placebo", "Active",  "Active"),
+  AVAL    = c(12.3, 14.1, 11.7)
+)
+
+doc <- rtf_document() %>%
+  rtf_section(
+    page    = 1,
+    secinfo = list(
+      header = rtf_header(rows = list(
+        c(l = "Protocol XYZ-001", r = "Confidential"),
+        c(l = "Table 14.1.1",     r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
+      )),
+      footer = rtf_footer(c(c = "ACME Pharma, Inc."))
+    )
+  ) %>%
+  rtf_tables(
+    # as_rtftables() turns the data into rtftable page objects -- the kind of
+    # object rtf_tables() is designed to consume (a bare data.frame also works,
+    # as a convenience). It is also the same entry point for gt / gtsummary /
+    # rtables tables.
+    as_rtftables(df, border = "tfl", row_height_twips = 280L),
+    titles    = list(c("Subject Summary", "Safety Population")),
+    footnotes = list(c("Source: ADaM ADSL"))
+  )
+
+generate_rtfreport(doc, "T_14_1_1.rtf", overwrite = TRUE)
+```
+
+<p align="center">
+  <img src="man/figures/readme-30s-example.png"
+       alt="The generated T_14_1_1.rtf opened in a word processor: a clinical TFL-style table with running header, title block, column headers, three subject rows, a source-note footnote, and a page footer."
+       width="600" />
+</p>
+
+<p align="center"><sub><em>The generated <code>T_14_1_1.rtf</code>, opened in a word processor.</em></sub></p>
 
 For worked, tool-by-tool comparisons see the *same report, every framework*
 articles — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
@@ -202,23 +273,24 @@ specific, and well-defined — RTF remains the easiest path that is
 
 The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
-- **Get started** — `vignette("rtfreporter-quickstart")`
-- **Pipe API** — `vignette("rtfreporter-pipes")`
-- **Importing tables** — bringing gt / gtsummary / rtables / flextable /
-  huxtable objects in with
-  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html)
-- **Pagination** — [splitting long tables across pages](https://ichirio.github.io/rtfreporter/articles/pagination.html)
-- **Tables from an ARD** — [cards / cardx to RTF with a plan](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
-  [the plan verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.html),
-  [listings with a plan](https://ichirio.github.io/rtfreporter/articles/plan-listings.html) and
+- **Get started** — [an ARD, a plan, and the RTF file](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
+  (`vignette("rtfreporter")`)
+- **Tables from an ARD** (recommended) — [cards / cardx to RTF with a plan](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
+  [the plan verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.html) and
   [from `as_rtftables()` to a plan](https://ichirio.github.io/rtfreporter/articles/plan-and-as-rtftables.html)
-- **Listings** — [source data to the written RTF](https://ichirio.github.io/rtfreporter/articles/listings.html),
+- **Bring your own table** — gt / gtsummary / rtables / tfrmt / flextable /
+  huxtable objects and data frames through
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html),
+  [pagination](https://ichirio.github.io/rtfreporter/articles/pagination.html), and the
+  *same report, every framework* articles ([Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html),
+  [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html))
+- **Listings** — [with a plan](https://ichirio.github.io/rtfreporter/articles/plan-listings.html)
+  or [from source data](https://ichirio.github.io/rtfreporter/articles/listings.html),
   including the column-width estimator and the wrapping rule
 - **Figures** — [a plot object to a page](https://ichirio.github.io/rtfreporter/articles/figures.html)
-- **Headers & footers** — [section-based running headers](https://ichirio.github.io/rtfreporter/articles/headers-footers.html)
-- **Borders and rules** — [the clinical TFL frame](https://ichirio.github.io/rtfreporter/articles/borders.html)
-- **Worked clinical examples** — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
-  and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html)
+- **Assembling a deliverable** — [headers, footers and tokens](https://ichirio.github.io/rtfreporter/articles/headers-footers.html),
+  [borders and rules](https://ichirio.github.io/rtfreporter/articles/borders.html), and
+  [joining files with a table of contents](https://ichirio.github.io/rtfreporter/articles/output.html)
 - **External API spec** — [the public API surface](https://ichirio.github.io/rtfreporter/articles/external-api.html)
 
 ## Status

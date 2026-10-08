@@ -142,7 +142,14 @@ plan_apply(p, "table")[1:6, ]
 
 A token that sets its own format (`{mean:.2f}`) keeps it.
 `plan_digits(rounding = "sas")` rounds halves away from zero as SAS does. The
-default rounds as R does.
+default rounds as R does -- or as `options(rtfreporter.rounding = )` says, the
+one rule every formatter in the package shares. `round_num()` is that rule on
+its own, for numbers you round yourself:
+
+```{r round-num}
+round_num(c(0.5, 1.5, 2.5))                    # R: half to even
+round_num(c(0.5, 1.5, 2.5), rounding = "sas")  # SAS: half away from zero
+```
 
 ### `plan_levels()` and `plan_labels()`
 
@@ -164,6 +171,11 @@ plan_apply(p, "table")[, 1:3]
 When no `plan_levels()` gives an order for the `group` column, the order of
 `plan_labels()` becomes its order. So label every variable, in the order you
 want them. A variable left out moves to the end.
+
+`plan_levels(.drop_empty = )` names variables whose levels no subject has --
+`n` 0 in every column -- and leaves those rows out; a level some column counts
+stays.  An ARD made after a code list's full set of levels was applied counts
+an unused value as 0, which a table shows by default.
 
 The text of a **category level** (`F`, `M`) is the data's. Recode it where the
 ARD is made, for example as a factor's labels, and the table prints what the

@@ -24,6 +24,11 @@ library(rtfreporter)
 cat("This vignette renders only when the `gt` package is installed.\n")
 ```
 
+> **The second path.** This article is about bringing a table you already
+> have.  When the statistics are in a cards / cardx ARD, the recommended route
+> is a table plan -- see [Get started](rtfreporter.html) and
+> [Tables from an ARD](tables-from-ard.html).
+
 The [gt](https://gt.rstudio.com) package by Posit gives users a
 friendly grammar for *display tables* -- `cols_label()`,
 `tab_header()`, `tab_spanner()`, `cols_align()`,
@@ -162,9 +167,8 @@ The rtables `read` tokens are `"col_header"`, `"alignment"`, `"spanning"`,
 
 ## Splitting a long table across pages
 
-`as_rtftables()` inherits the splitting controls of the (now
-deprecated) `paginate()`.  For a table that is too tall for one page,
-pass `split` and `max_rows`:
+`as_rtftables()` splits a table that is too tall for one page; pass
+`split` and `max_rows`:
 
 ```{r}
 long <- data.frame(
