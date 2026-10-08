@@ -29,6 +29,49 @@ package small enough to read end-to-end, thorough to test, and realistic
 to maintain.  If the supported layout matches your team's house style,
 you get publication-ready deliverables with almost no configuration.
 
+## Two ways in
+
+**1. An ARD becomes a table almost as-is.**  A correctly built analysis
+results dataset (ARD) from [cards](https://pharmaverse.github.io/cards/) /
+[cardx](https://insightsengineering.github.io/cardx/) goes straight to RTF:
+`normalize_ard()` flattens it, `table_plan()` names the column and row
+keys, and a few `plan_*()` verbs say how each cell reads.  No reshaping
+by hand: the keys and statistics the ARD already has are the vocabulary.
+`list_ard_keys()` shows what is inside an ARD, `pull_ard()` pulls a
+statistic out (the arm counts for an `(N=86)` header), and `widen_ard()`
+gives the wide data.frame if you want it.
+
+``` r
+library(cards)
+ard <- ard_stack(ADSL, .by = ARM,
+                 ard_summary(variables = AGE),
+                 ard_tabulate(variables = SEX))
+
+plan <- ard |>
+  normalize_ard() |>
+  table_plan(cols = "ARM", rows = c(group = "variable")) |>
+  plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+             categorical = "{n:.0f} ({p:.1f%})", notes = FALSE)
+
+rtf_document() |> rtf_tables(plan) |> generate_rtfreport("t_dm.rtf")
+```
+
+See [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
+
+**2. It reads the table objects you already have.**  `as_rtftables()`
+takes a gt table, a gtsummary table (a `tbl_split` too), an rtables / tern
+table, an rlistings listing, a flextable, a huxtable or a plain
+data.frame, keeps the labels, spanners, titles and footnotes it carries,
+and gives rtftable pages.
+
+``` r
+tbl <- gt::gt(head(mtcars), rownames_to_stub = TRUE)
+rtf_document() |> rtf_tables(as_rtftables(tbl)) |> generate_rtfreport("t_gt.rtf")
+```
+
+See [Importing tables](https://ichirio.github.io/rtfreporter/articles/importing-tables.html)
+and [gt integration](https://ichirio.github.io/rtfreporter/articles/gt-integration.html).
+
 ## Installation
 
 The package is not on CRAN yet. Install from GitHub:
@@ -159,11 +202,8 @@ rtfreporter lays it out just the same.  A bare data.frame carries no
 display metadata, so you simply re-specify what you want — column headers,
 alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
 
-**Starting from an ARD instead?**  When the statistics are in a
-[cards](https://pharmaverse.github.io/cards/) / cardx analysis
-results dataset, rtfreporter builds the table from it: `normalize_ard()`
-flattens the ARD, `table_plan()` and the `plan_*()` verbs declare the cells,
-labels, header and pages, and `rtf_tables()` takes the plan directly.  See
+The other way in, from a cards / cardx ARD through a plan, is
+[Two ways in](#two-ways-in) above and
 [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
 
 For worked, tool-by-tool comparisons see the *same report, every framework*
@@ -204,14 +244,14 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
 - **Get started** — `vignette("rtfreporter-quickstart")`
 - **Pipe API** — `vignette("rtfreporter-pipes")`
-- **Importing tables** — bringing gt / gtsummary / rtables / flextable /
-  huxtable objects in with
-  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html)
-- **Pagination** — [splitting long tables across pages](https://ichirio.github.io/rtfreporter/articles/pagination.html)
 - **Tables from an ARD** — [cards / cardx to RTF with a plan](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
   [the plan verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.html),
   [listings with a plan](https://ichirio.github.io/rtfreporter/articles/plan-listings.html) and
   [from `as_rtftables()` to a plan](https://ichirio.github.io/rtfreporter/articles/plan-and-as-rtftables.html)
+- **Importing tables** — bringing gt / gtsummary / rtables / flextable /
+  huxtable objects in with
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html)
+- **Pagination** — [splitting long tables across pages](https://ichirio.github.io/rtfreporter/articles/pagination.html)
 - **Listings** — [source data to the written RTF](https://ichirio.github.io/rtfreporter/articles/listings.html),
   including the column-width estimator and the wrapping rule
 - **Figures** — [a plot object to a page](https://ichirio.github.io/rtfreporter/articles/figures.html)

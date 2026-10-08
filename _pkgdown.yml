@@ -106,34 +106,14 @@ navbar:
     articles:
       text: Articles
       menu:
-        # ── For package users (primary) ────────────────────────────────
-        - text: "For package users"
+        # ── Getting started ─────────────────────────────────────────────
+        # Same story as the articles index: the ARD route first, then the
+        # table objects as_rtftables() reads, then building the report.
+        - text: "Getting started"
         - text: "Quickstart"
           href: articles/rtfreporter-quickstart.html
         - text: "Pipe API guide"
           href: articles/rtfreporter-pipes.html
-        - text: "Page & document setup"
-          href: articles/page-setup.html
-        - text: "Adding tables and figures"
-          href: articles/adding-content.html
-        - text: "Figures: plot objects to pages"
-          href: articles/figures.html
-        - text: "Listings: source data to RTF"
-          href: articles/listings.html
-        - text: "Borders and rules"
-          href: articles/borders.html
-        - text: "Importing tables with as_rtftables()"
-          href: articles/importing-tables.html
-        - text: "Paginating with as_rtftables()"
-          href: articles/pagination.html
-        - text: "Headers and footers (sections)"
-          href: articles/headers-footers.html
-        - text: "Splitting a report into sections"
-          href: articles/section-splitting.html
-        - text: "Multi-stub tfrmt: sections + merged stub"
-          href: articles/multistub-section-split.html
-        - text: "Rendering, post-processing & assembly"
-          href: articles/output.html
         # ── Tables from an ARD ──────────────────────────────────────────
         - text: -------
         - text: "Tables from an ARD"
@@ -145,6 +125,36 @@ navbar:
           href: articles/plan-listings.html
         - text: "From as_rtftables() to a plan"
           href: articles/plan-and-as-rtftables.html
+        # ── Tables from objects you already have ────────────────────────
+        - text: -------
+        - text: "Tables from objects you already have"
+        - text: "Importing tables with as_rtftables()"
+          href: articles/importing-tables.html
+        - text: "gt / gtsummary / rtables integration"
+          href: articles/gt-integration.html
+        - text: "Paginating with as_rtftables()"
+          href: articles/pagination.html
+        - text: "Multi-stub tfrmt: sections + merged stub"
+          href: articles/multistub-section-split.html
+        # ── Building the report ─────────────────────────────────────────
+        - text: -------
+        - text: "Building the report"
+        - text: "Page & document setup"
+          href: articles/page-setup.html
+        - text: "Adding tables and figures"
+          href: articles/adding-content.html
+        - text: "Figures: plot objects to pages"
+          href: articles/figures.html
+        - text: "Listings: source data to RTF"
+          href: articles/listings.html
+        - text: "Borders and rules"
+          href: articles/borders.html
+        - text: "Headers and footers (sections)"
+          href: articles/headers-footers.html
+        - text: "Splitting a report into sections"
+          href: articles/section-splitting.html
+        - text: "Rendering, post-processing & assembly"
+          href: articles/output.html
         # ── For AI assistants ───────────────────────────────────────────
         # Self-contained Markdown briefings, sized to be attached at the start
         # of a chat session -- one per audience, and only ever ONE per session
@@ -583,26 +593,15 @@ reference:
 # Articles index page (/articles/).  Grouped so users land on the
 # tutorial first; learner-focused material sits at the bottom.
 articles:
-  - title: For package users
+  - title: Getting started
     desc: >
-      Practical guides for generating RTF deliverables.  Start with the
-      Quickstart, then dive into the Pipe API guide.
+      Start with the Quickstart, then the Pipe API guide.  Tables come in by
+      two routes, in the next two groups: an ARD through a plan, or a table
+      object you already have through as_rtftables().
     navbar: ~
     contents:
       - rtfreporter-quickstart
       - rtfreporter-pipes
-      - articles/page-setup
-      - articles/adding-content
-      - articles/figures
-      - articles/borders
-      - gt-integration
-      - articles/importing-tables
-      - articles/listings
-      - articles/pagination
-      - articles/headers-footers
-      - articles/section-splitting
-      - articles/multistub-section-split
-      - articles/output
 
   - title: Tables from an ARD
     desc: >
@@ -615,6 +614,33 @@ articles:
       - articles/plan-verbs
       - articles/plan-listings
       - articles/plan-and-as-rtftables
+
+  - title: Tables from objects you already have
+    desc: >
+      as_rtftables() reads gt, gtsummary, rtables / tern, rlistings,
+      flextable, huxtable and plain data.frames, and paginates the pages it
+      makes.
+    navbar: ~
+    contents:
+      - gt-integration
+      - articles/importing-tables
+      - articles/pagination
+      - articles/multistub-section-split
+
+  - title: Building the report
+    desc: >
+      Page setup, figures, listings, borders, headers and footers, sections,
+      and writing the file.
+    navbar: ~
+    contents:
+      - articles/page-setup
+      - articles/adding-content
+      - articles/figures
+      - articles/borders
+      - articles/listings
+      - articles/headers-footers
+      - articles/section-splitting
+      - articles/output
 
   - title: Worked clinical examples
     desc: End-to-end recipes for typical clinical TFL deliverables.

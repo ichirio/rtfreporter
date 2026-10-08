@@ -29,6 +29,19 @@ rtf_document() |>
   generate_rtfreport("output.rtf", overwrite = TRUE)
 ```
 
+**Two ways in.**  The tables in `rtf_tables()` come by one of two routes:
+
+1. **From an ARD, almost as-is.**  An analysis results dataset from cards /
+   cardx becomes a table through a plan: `normalize_ard()`, `table_plan()`
+   and the `plan_*()` verbs.  `rtf_tables()` takes the plan directly.
+   Section [17](#tables-from-an-ard) below is a runnable example;
+   [Tables from an ARD](tables-from-ard.html) is the whole route.
+2. **From a table object you already have.**  `as_rtftables()` reads gt,
+   gtsummary (a `tbl_split` too), rtables / tern, rlistings, flextable,
+   huxtable and plain data.frames, and gives `rtftable` pages.  Sections 1
+   to 16 build tables from plain data.frames; [Importing tables](importing-tables.html)
+   and [gt, gtsummary & rtables](gt-integration.html) cover the others.
+
 ---
 
 ## 1  Minimal one-page report
@@ -639,6 +652,8 @@ and [The plan verbs](plan-verbs.html) for what each verb declares.
 ## Where next
 
 - [The pipe API in depth](rtfreporter-pipes.html) --- every verb, in the order you call them
+- [Tables from an ARD](tables-from-ard.html) --- a cards / cardx ARD to RTF with a plan
+- [Importing tables](importing-tables.html) --- gt / gtsummary / rtables / flextable objects through `as_rtftables()`
 - [Page setup](page-setup.html) --- paper size, orientation, margins
 - [Output options](output.html) --- where the file goes and what it contains
 
