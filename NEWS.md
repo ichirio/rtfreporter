@@ -2,6 +2,12 @@
 
 ### New features
 
+- **`rtf_figures(doc, plot)`: one figure without `list()`** (#589).  An
+  `rtfplot`, one file path, a function that draws or a plot object (a
+  ggplot, a patchwork, a grob, a recorded plot) is taken as it is; a list
+  is still several figures.  A ggplot was a list of its own parts before,
+  so `rtf_figures(doc, plot)` failed on its first part.
+
 - **`plan_col_header(lines = )`: the column header a row at a time**
   (#588).  A list, one element a header row, each a named character vector
   -- a cell's name the columns it sits on (a name, `.values`, `3:5`,

@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9028** (the development
+**This manual documents rtfreporter 0.8.2.9029** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -269,7 +269,7 @@ without writing a file.
 | data.frame → paginated pages | `as_rtftables(x, ...)` **(the workhorse — §5)** |
 | One table object by hand | `rtftable(data, col_header =, col_spec =, ...)` |
 | Place tables on pages | `rtf_tables(doc, tables, titles =, footnotes =, ...)` |
-| Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)` |
+| Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)`; one figure as it is: `rtf_figures(doc, plot)` (a ggplot, a path), several as a list |
 | Set titles / footnotes later | `rtf_titles(doc, list)`, `rtf_footnotes(doc, list)` |
 | Write the RTF | `generate_rtfreport(report, file_path, overwrite = FALSE)` |
 | Concatenate finished RTFs | `assemble_rtf(input_files, output_file, toc =, book_page =)` |
