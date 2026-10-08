@@ -4,6 +4,12 @@ url: https://ichirio.github.io/rtfreporter/
 # article; keep the old single-page URL working.
 redirects:
   - ["articles/showcase.html", "articles/showcase-dm.html"]
+  # Articles removed in the ARD-first refresh (#581): the pipe-API guide was
+  # folded into Get started and the document articles; the two Quarto
+  # examples duplicated the Demographics showcase and the feature tour.
+  - ["articles/rtfreporter-pipes.html", "articles/rtfreporter.html"]
+  - ["articles/example-demog.html", "articles/showcase-dm.html"]
+  - ["articles/example-lab.html", "articles/rtfreporter-quickstart.html"]
 
 template:
   bootstrap: 5
@@ -99,63 +105,73 @@ navbar:
   components:
     intro:
       text: Get started
-      href: articles/rtfreporter-quickstart.html
+      href: articles/rtfreporter.html
     reference:
       text: Reference
       href: reference/index.html
     articles:
       text: Articles
       menu:
-        # ── Getting started ─────────────────────────────────────────────
-        # Same story as the articles index: the ARD route first, then the
-        # table objects as_rtftables() reads, then building the report.
-        - text: "Getting started"
-        - text: "Quickstart"
-          href: articles/rtfreporter-quickstart.html
-        - text: "Pipe API guide"
-          href: articles/rtfreporter-pipes.html
-        # ── Tables from an ARD ──────────────────────────────────────────
-        - text: -------
-        - text: "Tables from an ARD"
+        # The order is the recommended order of use: a table from an ARD with
+        # a plan first, a table brought from another package second, then
+        # listings, figures, the document around them, and the AI briefings.
+        # ── 1. Tables from an ARD (recommended) ─────────────────────────
+        - text: "Tables from an ARD (recommended)"
+        - text: "Get started: ARD + plan to RTF"
+          href: articles/rtfreporter.html
         - text: "Tables from an ARD: the plan"
           href: articles/tables-from-ard.html
         - text: "The plan verbs"
           href: articles/plan-verbs.html
-        - text: "Listings with a plan"
-          href: articles/plan-listings.html
         - text: "From as_rtftables() to a plan"
           href: articles/plan-and-as-rtftables.html
-        # ── Tables from objects you already have ────────────────────────
+        # ── 2. Bring your own table ─────────────────────────────────────
         - text: -------
-        - text: "Tables from objects you already have"
+        - text: "Bring your own table"
         - text: "Importing tables with as_rtftables()"
           href: articles/importing-tables.html
-        - text: "gt / gtsummary / rtables integration"
+        - text: "gt, gtsummary & rtables"
           href: articles/gt-integration.html
+        - text: "Tables from data frames: a feature tour"
+          href: articles/rtfreporter-quickstart.html
         - text: "Paginating with as_rtftables()"
           href: articles/pagination.html
         - text: "Multi-stub tfrmt: sections + merged stub"
           href: articles/multistub-section-split.html
-        # ── Building the report ─────────────────────────────────────────
+        - text: "Same report, every framework: Demographics"
+          href: articles/showcase-dm.html
+        - text: "Same report, every framework: Adverse events"
+          href: articles/showcase-ae.html
+        - text: "Pharmaverse example tables to RTF"
+          href: articles/tlg-catalog.html
+        # ── 3. Listings ─────────────────────────────────────────────────
         - text: -------
-        - text: "Building the report"
-        - text: "Page & document setup"
-          href: articles/page-setup.html
-        - text: "Adding tables and figures"
-          href: articles/adding-content.html
+        - text: "Listings"
+        - text: "Listings with a plan"
+          href: articles/plan-listings.html
+        - text: "Listings end to end"
+          href: articles/listings.html
+        # ── 4. Figures ──────────────────────────────────────────────────
+        - text: -------
+        - text: "Figures"
         - text: "Figures: plot objects to pages"
           href: articles/figures.html
-        - text: "Listings: source data to RTF"
-          href: articles/listings.html
-        - text: "Borders and rules"
-          href: articles/borders.html
-        - text: "Headers and footers (sections)"
+        # ── 5. Assembling a deliverable ─────────────────────────────────
+        - text: -------
+        - text: "Assembling a deliverable"
+        - text: "Page & document setup"
+          href: articles/page-setup.html
+        - text: "Headers, footers and tokens"
           href: articles/headers-footers.html
         - text: "Splitting a report into sections"
           href: articles/section-splitting.html
+        - text: "Titles, footnotes and several tables"
+          href: articles/adding-content.html
+        - text: "Borders and rules"
+          href: articles/borders.html
         - text: "Rendering, post-processing & assembly"
           href: articles/output.html
-        # ── For AI assistants ───────────────────────────────────────────
+        # ── 6. For AI assistants ────────────────────────────────────────
         # Self-contained Markdown briefings, sized to be attached at the start
         # of a chat session -- one per audience, and only ever ONE per session
         # (they carry opposite instructions about touching internals).  They
@@ -174,19 +190,6 @@ navbar:
           href: ai/rtfreporter-ai-user-manual-0.8.2.md
         - text: "AI developer manual (v0.8.2)"
           href: ai/rtfreporter-ai-dev-manual-0.8.2.md
-        # ── Worked clinical examples ────────────────────────────────────
-        - text: -------
-        - text: "Worked clinical examples"
-        - text: "Same report, every framework: Demographics"
-          href: articles/showcase-dm.html
-        - text: "Same report, every framework: Adverse events"
-          href: articles/showcase-ae.html
-        - text: "Pharmaverse Example tables to RTF"
-          href: articles/tlg-catalog.html
-        - text: "Demographics table"
-          href: articles/example-demog.html
-        - text: "Lab summary"
-          href: articles/example-lab.html
         # ── Specification / internals (advanced) ────────────────────────
         - text: -------
         - text: "Specification & internals"
@@ -213,27 +216,62 @@ footer:
     license: "[Apache 2.0 licensed](https://github.com/ichirio/rtfreporter/blob/main/LICENSE.md)"
 
 reference:
-  # ── 0. Recipes ─────────────────────────────────────────────────────────
-  - title: Start here — four complete recipes
-    desc: >
-      Copy-and-run examples for the four table shapes a clinical report is
-      mostly made of: demographics, adverse events, PK concentrations and a
-      laboratory shift table.  Each runs end to end, data in and RTF out, and
-      they are shown together because **their arguments barely overlap** --
-      what a demographics table needs, an adverse-events table does not.
-    contents:
-      - rtfreporter-recipes
+  # Ordered as the site recommends using the package: a table from an ARD
+  # with a plan first; then the document, pages, headers, footers and tokens
+  # around it; tables brought from other packages; listings; figures;
+  # assembly; borders and styles; deprecated last.
 
-  # ── 1. Document & rendering ────────────────────────────────────────────
-  - title: Document & rendering
+  # ── 1. Tables from an ARD ──────────────────────────────────────────────
+  - title: Tables from an ARD — reading the ARD
     desc: >
-      Start here.  `rtf_document()` creates the document; the section and
+      The recommended start: an analysis results dataset (cards / cardx) made
+      ready for a table.  **Acts on:** an ARD data frame.
+      `normalize_ard()` flattens it -- groups and hierarchy become ordinary
+      key columns -- and `widen_ard()` does the whole ARD half in one call,
+      giving a table data frame now.  `list_ard_keys()`, `pull_ard()`,
+      `overall_row()` and `cell_rows()` look inside an ARD and shape its rows.
+      Start with the *Get started* article.
+    contents:
+      - ard-tables
+      - normalize_ard
+      - widen_ard
+      - list_ard_keys
+      - pull_ard
+      - overall_row
+      - cell_rows
+
+  - title: Tables from an ARD — the plan
+    desc: >
+      `table_plan()` names the roles (what goes across, what goes down) and
+      each `plan_*()` verb adds one declaration -- cells, labels, levels,
+      stub, blank rows, pages, widths, header, titles.  Nothing runs until the
+      plan is handed to `rtf_tables()` or `plan_apply()`, which give
+      `rtftable` pages; a later layer wins over an earlier one.
+      The header and the denominators in it agree with the columns by
+      construction.  The Excel definition of a table lives in tflspec, which
+      builds a plan from it (`tflspec::tfl_table_plan()`).
+    contents:
+      - table_plan
+      - plan_verbs
+      - plan_apply
+      - plan_layers
+      - plan_header_tokens
+      - plan_template
+
+  # ── 2. The document ─────────────────────────────────────────────────
+  - title: Document, rendering & tokens
+    desc: >
+      `rtf_document()` creates the document -- with the program, the
+      `program_fallback` and tokens of your own (`tokens =`) for its
+      headers and footers; the section and
       content calls below add to it; `generate_rtfreport()` writes the file.
       **Acts on:** the `rtf_document` object.
       `rtf_page()` and `rtf_default_format()` are the only settings that are
       document-only -- everything else in this reference acts on a table.
       `rtf_config()` edits an already-composed document; `rtf_document()`
-      starts a new one.
+      starts a new one.  `rtf_text_tokens()` lists every `{TOKEN}` a header,
+      footer, title or footnote can carry (`{PAGE}`, `{PROGRAM}`,
+      `{PROGRAM_FULL}`, `{DATETIME}`, your own).
     contents:
       - rtf_document
       - rtf_config
@@ -245,30 +283,6 @@ reference:
       - print.rtf_document
       - print.rtfreport
 
-  # ── 1b. Package defaults / configuration ───────────────────────────────
-  - title: Package defaults
-    desc: >
-      Inspect and reset the `rtfreporter.*` option defaults (paper size,
-      orientation, margins, font, font size).
-      **Acts on:** nothing -- these set the fallbacks every other function
-      uses when you do not pass a value.  A site can set its own in
-      `Rprofile.site`; see the page-setup article.
-    contents:
-      - rtfreporter_options
-      - rtfreporter_reset_defaults
-
-  # ── 1c. Writing rtfreporter code with an AI assistant ───────────────
-  - title: Working with an AI assistant
-    desc: >
-      The package is too new to be in a chat model's training data, so an
-      assistant has to be told the API before it writes any.  Two briefings
-      ship inside the package for that -- one for *using* rtfreporter, one for
-      working *on* it -- and this returns the copy installed alongside your
-      version, which is the one that matches what you actually have.
-    contents:
-      - rtfreporter_ai_manual
-
-  # ── 2. Sections: headers & footers ─────────────────────────────────────
   - title: Sections — headers & footers
     desc: >
       A section applies a running header / footer to a range of pages.
@@ -281,10 +295,9 @@ reference:
       - rtf_header
       - rtf_footer
 
-  # ── 3. Page content: tables & figures ──────────────────────────────────
-  - title: Page content — tables & figures
+  - title: Page content — tables, titles & footnotes
     desc: >
-      Place a table or a figure on the page, with its titles and footnotes.
+      Place a table on the page, with its titles and footnotes.
       **Acts on:** the `rtf_document` object -- `rtf_tables()` takes the
       `rtftable` objects the sections below produce.
       **Note the two levels:** `rtftable()` sets how a table looks; passing
@@ -292,22 +305,31 @@ reference:
       only*, leaving the table object untouched.
     contents:
       - rtf_tables
-      - rtf_figures
       - rtf_titles
       - rtf_footnotes
       - rtftable
-      - rtfplot
       - print.rtftable
       - format.rtftable
       - summary.rtftable
-      - print.rtfplot
 
-  # ── 4. Importing external table objects ────────────────────────────────
-  - title: Importing tables (gt / gtsummary / rtables / rlistings → rtftable)
+  - title: Package defaults
     desc: >
-      Turn a table object -- a `gt::gt()` table, a gtsummary table, an
-      rtables/tern `VTableTree`, an rlistings `listing_df`, or a plain
-      data.frame -- into `rtftable`
+      Inspect and reset the `rtfreporter.*` option defaults (paper size,
+      orientation, margins, font, font size).
+      **Acts on:** nothing -- these set the fallbacks every other function
+      uses when you do not pass a value.  A site can set its own in
+      `Rprofile.site`; see the page-setup article.
+    contents:
+      - rtfreporter_options
+      - rtfreporter_reset_defaults
+
+  # ── 3. Bring your own table; table building blocks ──────────────────
+  - title: Bring your own table — as_rtftables()
+    desc: >
+      The second path: a table already built elsewhere -- a `gt::gt()`
+      table, a gtsummary table, an rtables/tern `VTableTree`, a tfrmt,
+      flextable or huxtable table, an rlistings `listing_df`, or a plain
+      data.frame -- turned into `rtftable`
       objects, reading the source's metadata and paginating in one call.
       **Acts on:** the source object.  **Produces:** `rtftable` objects.
       `as_rtftables()` returns one per page (a list); `as_rtftable()` returns
@@ -321,7 +343,116 @@ reference:
       - stub_cols
       - stub_spec
 
-  # ── 4b. Listings ───────────────────────────────────────────────
+  - title: Recipes — four complete tables from data frames
+    desc: >
+      Copy-and-run examples for the four table shapes a clinical report is
+      mostly made of: demographics, adverse events, PK concentrations and a
+      laboratory shift table.  Each runs end to end, data in and RTF out, and
+      they are shown together because **their arguments barely overlap** --
+      what a demographics table needs, an adverse-events table does not.
+    contents:
+      - rtfreporter-recipes
+
+  - title: Column headers
+    desc: >
+      Build and edit the column-header block.
+      **Acts on:** an `rtftable` -- there is no header setting at document
+      level.
+      `col_cell()` describes one header cell and is accepted by
+      `rtf_col_header()`, `rtftable(col_header = )` and `rtf_tables(col_header =
+      )`.  A whole header built with `rtf_col_header()` goes to the same
+      places plus `set_col_header()`.
+      Coordinates are those of the **finished** table, so a merged stub counts
+      as one column.
+      `col_key()` lets a cell name the columns it covers by a column-name
+      segment instead of by position.
+    contents:
+      - col_cell
+      - col_key
+      - rtf_col_header
+      - set_col_header
+      - header_map
+      - rtf_columns
+      - rtf_header_source
+
+  - title: Post-hoc styling verbs
+    desc: >
+      Restyle a table you have already built, without rebuilding it.
+      **Acts on:** an `rtftable`, or a list of them -- every verb here has a
+      list method, so one call styles every page.
+      These are the last word: they override whatever `rtftable()` or the
+      source adapter set.  `set_decimal_split()` is the exception in kind --
+      it does not change the data, only how a numeric column is rendered.
+    contents:
+      - style_header
+      - collapse_repeats
+      - set_decimal_split
+
+  - title: Built-in cell-format functions
+    desc: >
+      Re-shape the TEXT of cells so counts and percentages line up.
+      **Acts on:** a data.frame or a character vector, **before** it becomes a
+      table.  Pass one to `rtftable(cell_format = )` /
+      `as_rtftables(cell_format = )` to apply it during the build instead.
+    contents:
+      - format_count_pct
+      - realign_count_pct
+      - fmt_count_paren
+      - fmt_count_paren_bare
+      - fmt_value_paren
+      - fmt_right_align
+
+  - title: Numeric display formatters & rounding
+    desc: >
+      Turn numbers into the strings a clinical table prints -- significant
+      digits, rounding, alignment.
+      **Acts on:** a data.frame or a numeric vector, **before** it becomes a
+      table.  Numbers reaching `rtftable()` unformatted are converted with
+      `as.character()`, which is rarely what a report wants, so format first.
+      `round_num()` is the rounding rule every formatter (and a plan's
+      templates) uses -- R's half-to-even, or SAS's half-away-from-zero with
+      `options(rtfreporter.rounding = "sas")`.
+    contents:
+      - fmt_signif
+      - fmt_round
+      - fmt_numeric
+      - round_num
+
+  - title: Blank rows
+    desc: Insert blank separator rows by position, by value change, or by rule.
+    contents:
+      - set_blank_rows
+      - blank_rows_by_change
+      - blank_rows_by_rule
+
+  - title: Pagination strategies & helpers
+    desc: >
+      Split a table across pages.
+      **Acts on:** the body of a table being built.
+      Vertical splitting is chosen with `as_rtftables(split = )` -- a strategy
+      name (`"group_safe"`, `"group_force"`, `"by_value"`, `"rows"`, `"none"`)
+      with its settings given as ordinary arguments alongside it, or a function
+      of your own for a bespoke rule.
+      `paginate_cols()` is the horizontal counterpart: it acts on a FINISHED
+      `rtftable`, splitting a too-wide table by column and repeating the row
+      headings on every page.
+    contents:
+      - paginate_cols
+      - add_cont_label
+
+  - title: Column-width utilities
+    desc: >
+      Measure text and size columns to their content.
+      **Acts on:** a data.frame; returns widths in twips for
+      `rtftable(column_widths_twips = )`.
+      Use `auto_col_widths()` when long labels wrap; `as_rtftables(auto_width
+      = TRUE)` does the same during the build, clamped to the writable page
+      width.
+    contents:
+      - text_width_in
+      - auto_col_widths
+
+  # ── 4. Listings ─────────────────────────────────────────────────────
   - title: Listings (source data → listing body)
     desc: >
       Reshape source data into what a listing prints, before any of it is
@@ -355,128 +486,34 @@ reference:
       - listing_measures
       - catx
 
-  # ── 5. Column headers ──────────────────────────────────────────────────
-  - title: Column headers
+  # ── 5. Figures ──────────────────────────────────────────────────────
+  - title: Figures
     desc: >
-      Build and edit the column-header block.
-      **Acts on:** an `rtftable` -- there is no header setting at document
-      level.
-      `col_cell()` describes one header cell and is accepted by
-      `rtf_col_header()`, `rtftable(col_header = )` and `rtf_tables(col_header =
-      )`.  A whole header built with `rtf_col_header()` goes to the same
-      places plus `set_col_header()`.
-      Coordinates are those of the **finished** table, so a merged stub counts
-      as one column.
-      `col_key()` lets a cell name the columns it covers by a column-name
-      segment instead of by position.
+      Place a plot or an image file on a page.  `rtfplot()` wraps a PNG / JPEG
+      (or a plot object, saved for you); `rtf_figures()` adds figures to the
+      document, with titles and footnotes, as `rtf_tables()` does for tables.
+      **Acts on:** the `rtf_document` object.
     contents:
-      - col_cell
-      - col_key
-      - rtf_col_header
-      - set_col_header
-      - header_map
-      - rtf_columns
-      - rtf_header_source
+      - rtf_figures
+      - rtfplot
+      - print.rtfplot
 
-  # ── 5b. Post-hoc styling verbs ─────────────────────────────────────────
-  - title: Tables from an ARD (normalize, widen, plan)
+  # ── 6. Assembly ─────────────────────────────────────────────────────
+  - title: Assembling a deliverable & post-processing
     desc: >
-      Turn an analysis results dataset (cards / cardx) into `rtftable` pages.
-      **Acts on:** an ARD data frame.  **Produces:** a table data.frame
-      (`widen_ard()`), or `rtftable` pages (a plan run by `plan_apply()`,
-      or handed to `rtf_tables()` as it is).  `normalize_ard()` flattens the
-      ARD first; the `plan_*()` verbs declare what `rtftable()`,
-      `set_col_header()` and the styling verbs are told, so the header and
-      the denominators in it agree with the columns by construction.
-      The Excel definition of a table lives in tflspec, which builds a plan
-      from it (`tflspec::tfl_table_plan()`).
+      Join finished RTF FILES into one, with a table of contents and
+      continuous page numbering.
+      **Acts on:** files on disk, not R objects -- this is the step after
+      `generate_rtfreport()`.  The table of contents is a table (file, label,
+      heading, level) -- `assemble_folder()` makes it from a folder -- or the
+      path of one (.xlsx / .csv).  `rtf_replace_text()` edits a rendered
+      file in place -- text a report needs only at delivery time.
     contents:
-      - ard-tables
-      - list_ard_keys
-      - overall_row
-      - cell_rows
-      - pull_ard
-      - normalize_ard
-      - widen_ard
-      - table_plan
-      - plan_verbs
-      - plan_apply
-      - plan_layers
-      - plan_header_tokens
-      - plan_template
-  - title: Post-hoc styling verbs
-    desc: >
-      Restyle a table you have already built, without rebuilding it.
-      **Acts on:** an `rtftable`, or a list of them -- every verb here has a
-      list method, so one call styles every page.
-      These are the last word: they override whatever `rtftable()` or the
-      source adapter set.  `set_decimal_split()` is the exception in kind --
-      it does not change the data, only how a numeric column is rendered.
-    contents:
-      - style_header
-      - collapse_repeats
-      - set_decimal_split
+      - assemble_rtf
+      - assemble_folder
+      - rtf_replace_text
 
-  # ── 6. Built-in cell-format functions ──────────────────────────────────
-  - title: Built-in cell-format functions
-    desc: >
-      Re-shape the TEXT of cells so counts and percentages line up.
-      **Acts on:** a data.frame or a character vector, **before** it becomes a
-      table.  Pass one to `rtftable(cell_format = )` /
-      `as_rtftables(cell_format = )` to apply it during the build instead.
-    contents:
-      - format_count_pct
-      - realign_count_pct
-      - fmt_count_paren
-      - fmt_count_paren_bare
-      - fmt_value_paren
-      - fmt_right_align
-
-  # ── 6b. Numeric display formatters ─────────────────────────────────────
-  - title: Numeric display formatters
-    desc: >
-      Turn numbers into the strings a clinical table prints -- significant
-      digits, rounding, alignment.
-      **Acts on:** a data.frame or a numeric vector, **before** it becomes a
-      table.  Numbers reaching `rtftable()` unformatted are converted with
-      `as.character()`, which is rarely what a report wants, so format first.
-    contents:
-      - fmt_signif
-      - fmt_round
-      - fmt_numeric
-
-  - title: Utilities
-    desc: >
-      Small helpers that other functions build on and that are handy on their
-      own.
-    contents:
-      - round_num
-
-  # ── 7. Blank rows ──────────────────────────────────────────────────────
-  - title: Blank rows
-    desc: Insert blank separator rows by position, by value change, or by rule.
-    contents:
-      - set_blank_rows
-      - blank_rows_by_change
-      - blank_rows_by_rule
-
-  # ── 7b. Pagination strategies & helpers ────────────────────────────────
-  - title: Pagination strategies & helpers
-    desc: >
-      Split a table across pages.
-      **Acts on:** the body of a table being built.
-      Vertical splitting is chosen with `as_rtftables(split = )` -- a strategy
-      name (`"group_safe"`, `"group_force"`, `"by_value"`, `"rows"`, `"none"`)
-      with its settings given as ordinary arguments alongside it, or a function
-      of your own for a bespoke rule.
-      `paginate_cols()` is the horizontal counterpart: it acts on a FINISHED
-      `rtftable`, splitting a too-wide table by column and repeating the row
-      headings on every page.
-    contents:
-      - paginate_cols
-      - add_cont_label
-
-  # ── 8. Borders ─────────────────────────────────────────────────────────
+  # ── 7. Borders, styles, preview ─────────────────────────────────────
   - title: Borders
     desc: >
       Two constructors, and only two: `rtf_border_line()` describes one edge --
@@ -495,7 +532,6 @@ reference:
       - rtf_border_line
       - rtf_border
 
-  # ── 9. Shared table styles ─────────────────────────────────────────────
   - title: Shared table styles (S3, snapshot)
     desc: >
       One object carrying borders, alignment, padding and row height, so a set
@@ -508,20 +544,6 @@ reference:
       - rtf_table_style_with
       - rtf_table_style_tfl
 
-  # ── 10. Column-width utilities ─────────────────────────────────────────
-  - title: Column-width utilities
-    desc: >
-      Measure text and size columns to their content.
-      **Acts on:** a data.frame; returns widths in twips for
-      `rtftable(column_widths_twips = )`.
-      Use `auto_col_widths()` when long labels wrap; `as_rtftables(auto_width
-      = TRUE)` does the same during the build, clamped to the writable page
-      width.
-    contents:
-      - text_width_in
-      - auto_col_widths
-
-  # ── 11. Visual preview (S3 plot methods) ───────────────────────────────
   - title: Visual preview (S3 plot methods)
     desc: >
       Look at a table, a border or a document without writing a file.
@@ -534,29 +556,18 @@ reference:
       - plot.rtftable
       - plot.rtf_document
 
-  # ── 12. Assembling multiple RTF files ──────────────────────────────────
-  - title: Assembling multiple RTF files
+  # ── 8. AI assistant ─────────────────────────────────────────────────
+  - title: Working with an AI assistant
     desc: >
-      Join finished RTF FILES into one, with a table of contents and
-      continuous page numbering.
-      **Acts on:** files on disk, not R objects -- this is the step after
-      `generate_rtfreport()`.  The table of contents is a table (file, label,
-      heading, level) -- `assemble_folder()` makes it from a folder -- or the
-      path of one (.xlsx / .csv).
+      The package is too new to be in a chat model's training data, so an
+      assistant has to be told the API before it writes any.  Two briefings
+      ship inside the package for that -- one for *using* rtfreporter, one for
+      working *on* it -- and this returns the copy installed alongside your
+      version, which is the one that matches what you actually have.
     contents:
-      - assemble_rtf
-      - assemble_folder
+      - rtfreporter_ai_manual
 
-  # ── 13. Post-processing ────────────────────────────────────────────────
-  - title: Post-processing
-    desc: >
-      Edit a rendered RTF file in place -- substituting text a report needs
-      only at delivery time, such as a run date or a draft watermark.
-      **Acts on:** a file on disk.
-    contents:
-      - rtf_replace_text
-
-  # ── 15. Deprecated ────────────────────────────────────────
+  # ── 9. Deprecated ───────────────────────────────────────────────────
   - title: Deprecated -- scheduled for removal
     desc: >
       The border constructors that `rtf_border_line()` and `rtf_border()`
@@ -590,67 +601,64 @@ reference:
       - toc_heading
       - toc_entry
 
-# Articles index page (/articles/).  Grouped so users land on the
-# tutorial first; learner-focused material sits at the bottom.
+# Articles index page (/articles/).  Same order as the navbar menu: the ARD +
+# plan workflow first, a table from another package second, then listings,
+# figures and the document around them; contributor material at the bottom.
 articles:
-  - title: Getting started
+  - title: Tables from an ARD (recommended)
     desc: >
-      Start with the Quickstart, then the Pipe API guide.  Tables come in by
-      two routes, in the next two groups: an ARD through a plan, or a table
-      object you already have through as_rtftables().
+      From a cards / cardx analysis results dataset to RTF pages with a plan:
+      normalize_ard(), table_plan() and the plan_*() verbs, rtf_tables() and
+      generate_rtfreport().  Start with Get started.
     navbar: ~
     contents:
-      - rtfreporter-quickstart
-      - rtfreporter-pipes
-
-  - title: Tables from an ARD
-    desc: >
-      From a cards / cardx analysis results dataset to RTF pages: the plan
-      (table_plan() and the plan_*() verbs), the verbs by job, a listing
-      written as a plan, and how the verbs map onto as_rtftables().
-    navbar: ~
-    contents:
+      - rtfreporter
       - articles/tables-from-ard
       - articles/plan-verbs
-      - articles/plan-listings
       - articles/plan-and-as-rtftables
 
-  - title: Tables from objects you already have
+  - title: Bring your own table
     desc: >
-      as_rtftables() reads gt, gtsummary, rtables / tern, rlistings,
-      flextable, huxtable and plain data.frames, and paginates the pages it
-      makes.
+      A table already built with gt, gtsummary, rtables / tern, tfrmt,
+      flextable, huxtable or as a data frame, read by as_rtftables() --
+      labels, spanning headers and footnotes included -- and paginated.
     navbar: ~
     contents:
-      - gt-integration
       - articles/importing-tables
+      - gt-integration
+      - rtfreporter-quickstart
       - articles/pagination
       - articles/multistub-section-split
-
-  - title: Building the report
-    desc: >
-      Page setup, figures, listings, borders, headers and footers, sections,
-      and writing the file.
-    navbar: ~
-    contents:
-      - articles/page-setup
-      - articles/adding-content
-      - articles/figures
-      - articles/borders
-      - articles/listings
-      - articles/headers-footers
-      - articles/section-splitting
-      - articles/output
-
-  - title: Worked clinical examples
-    desc: End-to-end recipes for typical clinical TFL deliverables.
-    navbar: ~
-    contents:
       - articles/showcase-dm
       - articles/showcase-ae
       - articles/tlg-catalog
-      - articles/example-demog
-      - articles/example-lab
+
+  - title: Listings
+    desc: Subject listings, written as a plan or from a listing spec.
+    navbar: ~
+    contents:
+      - articles/plan-listings
+      - articles/listings
+
+  - title: Figures
+    desc: A plot object, or an image file, placed on a page.
+    navbar: ~
+    contents:
+      - articles/figures
+
+  - title: Assembling a deliverable
+    desc: >
+      The document around the tables, listings and figures -- page setup,
+      running headers and footers with their tokens, sections, titles and
+      footnotes, borders -- and joining finished files into one deliverable.
+    navbar: ~
+    contents:
+      - articles/page-setup
+      - articles/headers-footers
+      - articles/section-splitting
+      - articles/adding-content
+      - articles/borders
+      - articles/output
 
   - title: For contributors
     desc: >

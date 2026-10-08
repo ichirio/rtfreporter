@@ -586,7 +586,7 @@ in the *What is carried, by source* table in
 
 ## Where next
 
-- [Worked example: demographics](example-demog.html) --- one table, start to finish
-- [Worked example: laboratory](example-lab.html) --- a shift table, start to finish
+- [Get started](rtfreporter.html) --- the same demographics table built from an ARD with a plan
+- [Showcase: demographics](showcase-dm.html) --- one table, every framework
 
 The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

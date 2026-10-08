@@ -1,8 +1,8 @@
 ---
-title: "Clinical RTF Reporting with rtfreporter"
+title: "Tables from data frames: a feature tour"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Clinical RTF Reporting with rtfreporter}
+  %\VignetteIndexEntry{Tables from data frames: a feature tour}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -17,8 +17,11 @@ library(rtfreporter)
 
 ## Overview
 
-`rtfreporter` produces clinical-trial–style RTF reports (tables, listings,
-figures) without depending on r2rtf or any other RTF library.
+This is a tour of what `rtftable()` and the document verbs can do with a
+table you already have as a data frame -- the **bring your own table** path.
+When the statistics are in an analysis results dataset (cards / cardx), the
+recommended route is a table plan instead: start with
+[Get started](rtfreporter.html) and [Tables from an ARD](tables-from-ard.html).
 
 **Core workflow:**
 
@@ -28,19 +31,6 @@ rtf_document() |>
   rtf_tables(list(tbl1, tbl2)) |>
   generate_rtfreport("output.rtf", overwrite = TRUE)
 ```
-
-**Two ways in.**  The tables in `rtf_tables()` come by one of two routes:
-
-1. **From an ARD, almost as-is.**  An analysis results dataset from cards /
-   cardx becomes a table through a plan: `normalize_ard()`, `table_plan()`
-   and the `plan_*()` verbs.  `rtf_tables()` takes the plan directly.
-   Section [17](#tables-from-an-ard) below is a runnable example;
-   [Tables from an ARD](tables-from-ard.html) is the whole route.
-2. **From a table object you already have.**  `as_rtftables()` reads gt,
-   gtsummary (a `tbl_split` too), rtables / tern, rlistings, flextable,
-   huxtable and plain data.frames, and gives `rtftable` pages.  Sections 1
-   to 16 build tables from plain data.frames; [Importing tables](importing-tables.html)
-   and [gt, gtsummary & rtables](gt-integration.html) cover the others.
 
 ---
 
@@ -558,44 +548,6 @@ The S3 architecture is documented in [`LEARNING.md`](https://github.com/ichirio/
 
 ---
 
-## 17  Tables from an ARD
-
-Everything above starts from a table that already exists. When the
-statistics are in an **analysis results dataset** (ARD) from
-[cards](https://pharmaverse.github.io/cards/) / cardx instead, write
-a **plan**: `normalize_ard()` flattens the ARD, `table_plan()` names what goes
-across and down, and `plan_*()` verbs declare the cells, labels and header.
-`rtf_tables()` takes the plan as it takes any table.
-
-```{r ard-plan, eval = requireNamespace("cards", quietly = TRUE)}
-ard <- cards::ard_stack(
-  cards::ADSL, .by = ARM,
-  cards::ard_summary(variables = AGE),
-  cards::ard_tabulate(variables = SEX))
-
-plan <- ard |>
-  normalize_ard() |>
-  table_plan(cols = "ARM", rows = c(group = "variable")) |>
-  plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})",
-                             "Median"    = "{median:.1f}"),
-             categorical = "{n:.0f} ({p:.1f%})", notes = FALSE) |>
-  plan_labels(c(AGE = "Age (years)", SEX = "Sex, n (%)")) |>
-  plan_stub(name = "row_label") |>
-  plan_style(border = "tfl") |>
-  plan_col_header(values = list(n = TRUE), rtf_col_header(
-    c("", "{col}"),
-    c("", "(N={n})")))
-
-rtf_document() |>
-  rtf_tables(plan) |>
-  generate_rtfreport(tempfile(fileext = ".rtf"))
-```
-
-See [Tables from an ARD](tables-from-ard.html) for the whole route,
-and [The plan verbs](plan-verbs.html) for what each verb declares.
-
----
-
 ## Quick-reference
 
 ### rtftable parameters
@@ -603,9 +555,8 @@ and [The plan verbs](plan-verbs.html) for what each verb declares.
 | Parameter | Type | Purpose |
 |---|---|---|
 | `data` | data.frame or list | Content rows |
-| `col_header` | chr / list | Column header text; list elements may be label rows (char) or spanning rows |
+| `col_header` | chr / list | Column header text; a list holds several rows, spanning rows first |
 | `col_header_align` | NULL / scalar / chr(ncol) | Column-header alignment override (default: inherit `align`) |
-| `spanning_header` | list | Spanning row placed above `col_header` (legacy; can mix into `col_header` instead) |
 | `col_spec` | list | Per-column align / bold / italic / indent / **border** (`rtf_border`) / header_* |
 | `border` | `"tfl"` / object | Outer-frame borders (now: top on first header row, bottom on last) |
 | `blank_rows` | int / spec / list | Integer positions, `blank_rows_by_change()`, `blank_rows_by_rule()`, or a list thereof |
@@ -651,9 +602,8 @@ and [The plan verbs](plan-verbs.html) for what each verb declares.
 
 ## Where next
 
-- [The pipe API in depth](rtfreporter-pipes.html) --- every verb, in the order you call them
-- [Tables from an ARD](tables-from-ard.html) --- a cards / cardx ARD to RTF with a plan
-- [Importing tables](importing-tables.html) --- gt / gtsummary / rtables / flextable objects through `as_rtftables()`
+- [Get started](rtfreporter.html) --- the recommended ARD + plan workflow
+- [Importing tables](importing-tables.html) --- gt, gtsummary, rtables, tfrmt, flextable and huxtable through `as_rtftables()`
 - [Page setup](page-setup.html) --- paper size, orientation, margins
 - [Output options](output.html) --- where the file goes and what it contains
 

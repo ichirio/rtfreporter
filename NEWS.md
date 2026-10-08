@@ -74,15 +74,19 @@
 
 ### Documentation
 
-- **Two ways in, ARD first.**  The README has a new *Two ways in* section
-  that names the package's two strengths, each with a short sketch and a
-  link: a cards / cardx ARD becomes a table almost as-is through
-  `table_plan()` and the `plan_*()` verbs (first), and `as_rtftables()` reads
-  the gt / gtsummary / rtables / flextable / huxtable / data.frame objects
-  you already have (second).  The quickstart's overview points to both, and
-  the pkgdown articles index and navbar now go Getting started -> Tables
-  from an ARD -> Tables from objects you already have -> Building the
-  report.
+- **The site leads with an ARD and a plan** (#581).  A new *Get started*
+  (`vignette("rtfreporter")`) builds a table from a cards ARD with
+  `table_plan()` and the `plan_*()` verbs, then points to the second path,
+  bringing a table from gt / gtsummary / rtables / tfrmt / flextable /
+  huxtable / a data frame through `as_rtftables()`.  The articles menu and
+  index, the reference index and the README follow that order (ARD + plan,
+  bring your own table, listings, figures, assembling a deliverable, AI
+  assistant); the headers article covers the run tokens, tokens of one's
+  own, `program_fallback` and `drop_empty_rows`.  The pipe-API vignette and
+  the two Quarto examples are gone (redirected), their ground covered by
+  Get started, the document articles and the Demographics showcase.
+  The README's "Why rtfreporter?" and Get started name these two paths as
+  the package's two strengths (#587).
 
 - **AI developer manual: the repository rules** (#574).  A new §14
   summarises, with a pointer to each source file, the Code of Conduct, the
