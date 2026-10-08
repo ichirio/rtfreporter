@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+### New features
+
+- **`rtf_figures(doc, plot)`: one figure without `list()`** (#589).  An
+  `rtfplot`, one file path, a function that draws or a plot object (a
+  ggplot, a patchwork, a grob, a recorded plot) is taken as it is; a list
+  is still several figures.  A ggplot was a list of its own parts before,
+  so `rtf_figures(doc, plot)` failed on its first part.
+
 ### Fixes
 
 - **`plan_labels()`: the variables in the order labelled** (#585).  A

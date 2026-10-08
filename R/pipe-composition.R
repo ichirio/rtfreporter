@@ -705,10 +705,11 @@ rtf_tables <- function(doc, tables,
 #' already constructed via [rtfplot()] keep their own settings.
 #'
 #' @param doc An rtf_document object.
-#' @param figures A list whose elements are character file paths to image
-#'   files (PNG/JPEG), plot objects (a ggplot2 plot, a grob, a recorded base
-#'   plot, a function that draws -- see [rtfplot()]), or pre-built `rtfplot`
-#'   objects.
+#' @param figures A figure, or a list of them: a character file path to an
+#'   image file (PNG/JPEG), a plot object (a ggplot2 plot, a patchwork, a
+#'   grob, a recorded base plot, a function that draws -- see [rtfplot()]),
+#'   or a pre-built `rtfplot`.  One figure is given as it is --
+#'   `rtf_figures(doc, plot)` -- and several as a list.
 #' @param width_twips Display width in twips for bare paths.  `NULL` = full
 #'   writable width.
 #' @param height_twips Display height in twips for bare paths.  `NULL` =
@@ -729,6 +730,15 @@ rtf_tables <- function(doc, tables,
 #' doc <- rtf_document() |>
 #'   rtf_figures(list(png_path), width_twips = 6000L, align = "center")
 #'
+#' # one figure, as it is: a path, or a plot object
+#' doc <- rtf_document() |> rtf_figures(png_path)
+#' \donttest{
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+#'   doc <- rtf_document() |> rtf_figures(p)
+#' }
+#' }
+#'
 #' @export
 rtf_figures <- function(doc, figures,
                          width_twips = NULL, height_twips = NULL,
@@ -738,8 +748,11 @@ rtf_figures <- function(doc, figures,
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
 
+  # one figure, given as it is (a ggplot is a list too: it is not a list of
+  # figures)
+  if (.rtf_one_figure(figures)) figures <- list(figures)
   if (!is.list(figures)) {
-    stop("`figures` must be a list of file paths, plot objects or ",
+    stop("`figures` must be a figure or a list of file paths, plot objects or ",
          "rtfplot() objects",
          call. = FALSE)
   }
@@ -777,6 +790,19 @@ rtf_figures <- function(doc, figures,
   doc_copy$titles    <- c(doc_copy$titles,    titles)
   doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
   doc_copy
+}
+
+# Is `x` one figure rather than a list of them?  An rtfplot, one path, a
+# function that draws, an object that is not a list (ggplot2 4's plots), or
+# a plot that is one (ggplot2 3's, a patchwork, a grob, a recorded plot, a
+# lattice trellis).
+.rtf_one_figure <- function(x) {
+  inherits(x, "rtfplot") ||
+    (is.character(x) && length(x) == 1L) ||
+    is.function(x) ||
+    (!is.list(x) && !is.atomic(x) && !is.null(x)) ||
+    inherits(x, c("gg", "ggplot", "patchwork", "grob", "gTree", "gtable",
+                  "recordedplot", "trellis"))
 }
 
 # ============================================================================
