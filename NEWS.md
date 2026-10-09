@@ -1,5 +1,9 @@
 # rtfreporter (development version)
 
+### Continuous integration
+
+- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used in tests, needs R >= 4.2). That job leaves tern out (every tern now installable needs R >= 4.4) and lets a suggested package be missing; the tests skip what needs it.
+
 ### Documentation
 
 - **No code copied from a discussion, and no links to discussions that are
