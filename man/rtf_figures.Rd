@@ -17,10 +17,11 @@ rtf_figures(
 \arguments{
 \item{doc}{An rtf_document object.}
 
-\item{figures}{A list whose elements are character file paths to image
-files (PNG/JPEG), plot objects (a ggplot2 plot, a grob, a recorded base
-plot, a function that draws -- see \code{\link[=rtfplot]{rtfplot()}}), or pre-built \code{rtfplot}
-objects.}
+\item{figures}{A figure, or a list of them: a character file path to an
+image file (PNG/JPEG), a plot object (a ggplot2 plot, a patchwork, a
+grob, a recorded base plot, a function that draws -- see \code{\link[=rtfplot]{rtfplot()}}),
+or a pre-built \code{rtfplot}.  One figure is given as it is --
+\code{rtf_figures(doc, plot)} -- and several as a list.}
 
 \item{width_twips}{Display width in twips for bare paths.  \code{NULL} = full
 writable width.}
@@ -51,5 +52,14 @@ graphics::plot(1:10, main = "A figure")
 grDevices::dev.off()
 doc <- rtf_document() |>
   rtf_figures(list(png_path), width_twips = 6000L, align = "center")
+
+# one figure, as it is: a path, or a plot object
+doc <- rtf_document() |> rtf_figures(png_path)
+\donttest{
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
+  doc <- rtf_document() |> rtf_figures(p)
+}
+}
 
 }

@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9024** (the development
+**This manual documents rtfreporter 0.8.2.9030** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -269,7 +269,7 @@ without writing a file.
 | data.frame → paginated pages | `as_rtftables(x, ...)` **(the workhorse — §5)** |
 | One table object by hand | `rtftable(data, col_header =, col_spec =, ...)` |
 | Place tables on pages | `rtf_tables(doc, tables, titles =, footnotes =, ...)` |
-| Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)` |
+| Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)`; one figure as it is: `rtf_figures(doc, plot)` (a ggplot, a path), several as a list |
 | Set titles / footnotes later | `rtf_titles(doc, list)`, `rtf_footnotes(doc, list)` |
 | Write the RTF | `generate_rtfreport(report, file_path, overwrite = FALSE)` |
 | Concatenate finished RTFs | `assemble_rtf(input_files, output_file, toc =, book_page =)` |
@@ -435,7 +435,7 @@ rtf_footer(rows = list(c(l = "Source: ADSL.", r = "CONFIDENTIAL")))
 | `{PROGRAM}` / `{PROGRAM_NAME}` / `{PROGRAM_DIR}` | the program writing the file, as given (`rtf_document(program =)`, once per program; `generate_rtfreport(program =)` overrides it for one call; else `options(rtfreporter.program)`; else found -- the file `source()` runs, the `Rscript` script, knitr's document, RStudio's editor -- and said in a message; last, when nothing is found, `rtf_document(program_fallback =)`; the file name completed to the one on disk: real case, a missing extension found or `.R`), its file name, its folder |
 | `{PROGRAM_FULL}` | the same program path made absolute (`normalizePath()`, from the working folder when the file is written), with the system's separator: `\` on Windows, `/` elsewhere |
 | `{DATETIME}` / `{DATETIME:<fmt>}` | when the file is written, `%d%b%Y  %H:%M` in the C locale (`options(rtfreporter.datetime_format)`); `options(rtfreporter.render_time)` fixes it |
-| `{STUDY}`, `{CUTOFF}` ... (your own) | `rtf_document(tokens = list(STUDY = "ABC-123"))`, or `options(rtfreporter.tokens = list(...))` for the session (the document's value wins); a name is upper case (a letter, then letters, digits, `_`) and not one of the above; headers, footers, titles and footnotes only (a column header takes `set_col_header(values = )`) |
+| `{STUDY}`, `{CUTOFF}` ... (your own) | `rtf_document(tokens = list(STUDY = "ABC-123"))`, or `options(rtfreporter.tokens = list(...))` for the session (the document's value wins); a name is upper case (a letter, then letters, digits, `_`) and not one of the above; headers, footers, titles and footnotes only (a column header takes `set_col_header(values = )`); `rtf_header(drop_empty_rows = TRUE)` / `rtf_footer()` leave out a row whose own tokens are all empty (and the rest blanks or brackets) |
 
 `rtf_text_tokens()` returns this list as data (token, page or run, when it is
 filled, what it becomes, an example) for a program that offers the tokens;
@@ -877,7 +877,7 @@ p_ae <- ard_ae |>
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
 | Columns not printed | `plan_hide("COL")` |
 | Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: `widths = c(row_label = 5, .values = 2)` |
-| Column header | `plan_col_header(header, values, header_sep, col_header_align)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows |
+| Column header | `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows; `lines = list(c(row_label = "", .values = "{col}"), c(row_label = "Characteristic", .values = "(N={n})"))` writes the header a row at a time (a cell's name = its columns, its value = the text; `span = "each"` / `"one"` / a key's name for a spanner) |
 | Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
 | A page per value | `plan_paginate_group(col, keep)` |

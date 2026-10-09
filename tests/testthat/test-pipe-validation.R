@@ -77,9 +77,30 @@ test_that("rtf_figures rejects non-rtf_document `doc`", {
   expect_error(rtf_figures("x", list()), "rtf_document")
 })
 
-test_that("rtf_figures rejects non-list `figures`", {
+test_that("rtf_figures takes one figure as it is, and refuses what draws nothing", {
   d <- rtf_document()
-  expect_error(rtf_figures(d, "x"), "must be a list")
+  # one path, as it is: a figure that is not there says so, as in a list
+  expect_error(rtf_figures(d, "x"), "Item 1: Image file not found")
+  expect_error(rtf_figures(d, 42), "must be a figure or a list")
+  expect_error(rtf_figures(d, c("a.png", "b.png")), "must be a figure or a list")
+})
+
+test_that("rtf_figures(doc, plot): one plot object without list() (#589)", {
+  skip_if_not_installed("ggplot2")
+  p <- ggplot2::ggplot(data.frame(x = 1:3, y = 1:3), ggplot2::aes(x, y)) +
+    ggplot2::geom_point()
+  one <- rtf_figures(rtf_document(), p)
+  two <- rtf_figures(rtf_document(), list(p))
+  expect_length(one$contents, 1L)
+  expect_s3_class(one$contents[[1L]], "rtfplot")
+  # the same page as in a list (the drawn file aside)
+  strip <- function(d) { d$contents[[1L]]$path <- NULL; d }
+  expect_identical(strip(one), strip(two))
+  # an rtfplot, as it is
+  rp <- two$contents[[1L]]
+  expect_identical(rtf_figures(rtf_document(), rp)$contents, list(rp))
+  # a list of plots is still several figures
+  expect_length(rtf_figures(rtf_document(), list(p, p))$contents, 2L)
 })
 
 test_that("rtf_figures rejects elements that are neither rtfplot nor a path", {

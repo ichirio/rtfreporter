@@ -4,7 +4,59 @@
 
 - R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used in tests, needs R >= 4.2).
 
+### Documentation
+
+- **GROUPN, not BIGN** (#592).  The subjects per group -- what clinical
+  reporting calls big N -- are a GROUPN analysis in the comments and tests,
+  as in tflspec and tflplanner.  tfrmt's own names (`prep_big_n()`,
+  `big_n_structure()`, `bigN`) are tfrmt's and stay.
+
+### New features
+
+- **`rtf_figures(doc, plot)`: one figure without `list()`** (#589).  An
+  `rtfplot`, one file path, a function that draws or a plot object (a
+  ggplot, a patchwork, a grob, a recorded plot) is taken as it is; a list
+  is still several figures.  A ggplot was a list of its own parts before,
+  so `rtf_figures(doc, plot)` failed on its first part.
+
+- **`plan_col_header(lines = )`: the column header a row at a time**
+  (#588).  A list, one element a header row, each a named character vector
+  -- a cell's name the columns it sits on (a name, `.values`, `3:5`,
+  `KEY = value`), its value the text:
+  `plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
+  c(row_label = "Characteristic", .values = "(N={n})")))`.  `span` says how
+  a cell over several columns is made (`"each"`, `"one"` or a key's name).
+  It is the data frame of cells written another way, so it does all that
+  does; `header` (an `rtf_col_header()` or the data frame) stays.
+
+### Fixes
+
+- **`plan_labels()`: the variables in the order labelled** (#585).  A
+  variable whose own label is in its dictionary (`SEX = c(SEX = "Sex", F =
+  "Female")`, #514) moved to the end of the variable order, after the ones
+  labelled plainly; it now keeps its place.
+
+- **`normalize_ard()`: a text statistic no longer turns `stat` into text**
+  (#583).  An ARD with a test's `method` / `alternative` (cardx) or a flag
+  (`paired`) beside the numbers made the whole `stat` column character, so a
+  `cells` guard compared strings (`N < 9` was TRUE for 86) and a rework
+  written for numbers failed.  `stat` stays numeric, each number read as it
+  is (no digits lost); a text value is `NA` there and the row's `stat_fmt`
+  is the text, so `{method}` still prints it.
+
 ### New
+
+- Added a root `CITATION.cff` so GitHub's "Cite this repository" button
+  works (#573).
+
+- **`rtf_header()` / `rtf_footer()`: `drop_empty_rows`** (#571).  With
+  `drop_empty_rows = TRUE`, a band row whose tokens of one's own
+  (`rtf_document(tokens = )`, `options(rtfreporter.tokens = )`) are all
+  empty when the file is written, and which says nothing else but blanks
+  and brackets (`"<{POPULATION}>"`), is left out: one header can serve
+  every report of a study, a report with no value for a line going without
+  it.  A row with no token, rtfreporter's own (`{PAGE}`) or an unknown one
+  is always written.  The default, `FALSE`, writes every row as before.
 
 - **`program_fallback`: the program when none is said or found** (#566).
   `rtf_document(program_fallback = )` (and `generate_rtfreport(program_fallback
@@ -51,6 +103,27 @@
 
 ### Documentation
 
+- **The site leads with an ARD and a plan** (#581).  A new *Get started*
+  (`vignette("rtfreporter")`) builds a table from a cards ARD with
+  `table_plan()` and the `plan_*()` verbs, then points to the second path,
+  bringing a table from gt / gtsummary / rtables / tfrmt / flextable /
+  huxtable / a data frame through `as_rtftables()`.  The articles menu and
+  index, the reference index and the README follow that order (ARD + plan,
+  bring your own table, listings, figures, assembling a deliverable, AI
+  assistant); the headers article covers the run tokens, tokens of one's
+  own, `program_fallback` and `drop_empty_rows`.  The pipe-API vignette and
+  the two Quarto examples are gone (redirected), their ground covered by
+  Get started, the document articles and the Demographics showcase.
+
+- **AI developer manual: the repository rules** (#574).  A new §14
+  summarises, with a pointer to each source file, the Code of Conduct, the
+  issue -> PR workflow and the PR / issue templates, the four pre-push
+  checks (`R CMD check --as-cran`, the full suite with `NOT_CRAN=true`,
+  `pkgdown::check_pkgdown()`, `lintr::lint_package()`), versioning +
+  `NEWS.md`, and `cran-comments.md`.  `.github/copilot-instructions.md`
+  now points at `rtfreporter_ai_manual("dev")` and no longer contradicts
+  it on `Imports:` and optional-package guards.
+
 - **NEWS.md: no R comment reads as a version** (#558).  Two code blocks
   (the R6 -> S3 migration of 0.8.0 and the gt `read_gt` example) began
   their lines with R comments at column 0, which a markdown reader that
@@ -58,6 +131,13 @@
   so `R CMD check` noted "Cannot extract version info".  The comments are
   in the text around the code now, and a test keeps every level-1 line a
   version.
+
+- **README: no release/CRAN roadmap** (#579).  "Status & roadmap" is
+  "Status" now, and the planned-milestones table (first CRAN submission,
+  then v1.0.0) is gone, along with the other forward-looking CRAN mention --
+  packages do not announce release plans.  The section keeps the factual
+  status: pre-1.0, `lifecycle: experimental`, the latest release and how to
+  install it, the development-version scheme, and a pointer to `NEWS.md`.
 
 ### Before CRAN
 

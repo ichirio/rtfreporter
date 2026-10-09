@@ -82,3 +82,39 @@ test_that("a column header is not filled: set_col_header() still asks for values
   expect_identical(unname(fill("N={n} {STUDY}", list(n = 3, STUDY = "ABC"), "header")),
                    "N=3 ABC")
 })
+
+test_that("drop_empty_rows leaves out a band row whose tokens are all empty", {
+  band <- function(drop) rtf_header(list(
+    c(l = "{COMPANY}", r = "Page {PAGE}"),
+    c(c = "{LABEL}"),
+    c(c = "<{POP}>"),
+    c(c = "Fixed"),
+    c(c = "")), drop_empty_rows = drop)
+  doc <- function(tokens, drop = TRUE) rtf_document(tokens = tokens) |>
+    rtf_section(page = 1, secinfo = list(header = band(drop))) |>
+    rtf_tables(as_rtftables(data.frame(A = "a")))
+  # the rows of the (first) header
+  rows <- function(out) {
+    h <- regmatches(out, regexpr("\\{\\\\header[^\n]*", out, perl = TRUE))
+    lengths(regmatches(h, gregexpr("\\cell\\row", h, fixed = TRUE)))
+  }
+  full <- render_own(doc(list(COMPANY = "Acme", LABEL = "Table 1", POP = "SAF")))
+  gone <- render_own(doc(list(COMPANY = "Acme", LABEL = "Table 1", POP = "")))
+  expect_match(full, "<SAF>", fixed = TRUE)
+  expect_false(grepl("<>", gone, fixed = TRUE))
+  expect_match(gone, "Fixed", fixed = TRUE)
+  expect_identical(rows(full) - rows(gone), 1L)
+  # every row stays by default; a token not given is not empty
+  kept <- render_own(doc(list(COMPANY = "Acme", LABEL = "Table 1", POP = ""),
+                         drop = FALSE))
+  expect_match(kept, "<>", fixed = TRUE)
+  unknown <- render_own(doc(list(COMPANY = "Acme", LABEL = "Table 1")))
+  expect_match(unknown, "<\\{POP\\}>", fixed = TRUE)
+  expect_identical(rows(full), rows(unknown))
+  # the option's empty value counts too; a row of no tokens ("") stays
+  old <- options(rtfreporter.tokens = list(LABEL = ""))
+  on.exit(options(old), add = TRUE)
+  opt <- render_own(doc(list(COMPANY = "Acme", POP = "SAF")))
+  expect_identical(rows(full) - rows(opt), 1L)
+  expect_error(rtf_footer("x", drop_empty_rows = NA), "TRUE or FALSE")
+})

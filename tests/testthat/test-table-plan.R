@@ -2108,6 +2108,21 @@ test_that("plan_labels() scoped by an analysis variable relabels its levels (#51
   expect_identical(lab(both, "Sex"), c("Female", "Male"))
   # a scope naming no analysis variable changes nothing
   expect_identical(page(base |> plan_labels(NOPE = c(F = "Female"))), before)
+  # the variables in the order labelled, a variable's own label in its
+  # dictionary or not (#585): the dictionary did not move SEX to the end
+  grp <- function(x) unique(as.character(x$group))
+  expect_identical(grp(page(base |> plan_labels(SEX = "Sex", AGEGR1 = "Age group"))),
+                   c("Sex", "Age group"))
+  expect_identical(grp(page(base |> plan_levels(SEX = c("F", "M")) |>
+                              plan_labels(SEX = c(SEX = "Sex", F = "Female", M = "Male"),
+                                          AGEGR1 = "Age group"))),
+                   c("Sex", "Age group"))
+  expect_identical(grp(page(base |> plan_labels(AGEGR1 = "Age group",
+                                                SEX = c(SEX = "Sex", F = "Female")))),
+                   c("Age group", "Sex"))
+  expect_identical(names(.ard_labels_flat(list(SEX = c(SEX = "Sex", F = "Female"),
+                                               AGEGR1 = "Age group")))[1:2],
+                   c("SEX", "AGEGR1"))
 })
 
 test_that("plan_paginate_rows(page_by = ) is as_rtftables(page_by = ): BY pages, rows paged inside", {
@@ -2308,7 +2323,7 @@ test_that("plan_levels(.drop_empty = ) leaves out the levels no record has", {
 test_that("a group count stated twice is one count; two different ones say why", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
-  bign <- cards::ard_tabulate(adsl, variables = ARM)
+  groupn <- cards::ard_tabulate(adsl, variables = ARM)
   st <- cards::ard_stack(adsl, .by = ARM,
                          cards::ard_summary(variables = AGE,
                            statistic = ~ cards::continuous_summary_fns("mean")))
@@ -2320,17 +2335,61 @@ test_that("a group count stated twice is one count; two different ones say why",
     t <- plan_header_tokens(p)
     t[t$token == "{n}", ]
   }
-  # the stack alone, and a BIGN row next to the stack (the same counts):
+  # the stack alone, and a GROUPN row (the subjects per group) next to the
+  # stack (the same counts):
   # the same numbers
   alone <- tok(st)
-  twice <- tok(dplyr::bind_rows(bign, st))
+  twice <- tok(dplyr::bind_rows(groupn, st))
   expect_true(twice$resolved)
   expect_identical(twice$values, alone$values)
   expect_identical(unname(unlist(twice$values)), c(86, 84, 84))
   # two different counts for one column: not a column's number, and why
-  other <- bign
+  other <- groupn
   other$stat[[1]] <- 99L
   clash <- tok(dplyr::bind_rows(other, st))
   expect_false(clash$resolved)
   expect_match(clash$note, "two different counts")
+})
+
+test_that("plan_col_header(lines = ): the header a row at a time, the cells' data frame written another way", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
+    cards::ard_tabulate(variables = AGEGR1, statistic = ~ c("n", "p")))
+  d <- suppressMessages(normalize_ard(ard))
+  base <- table_plan(d, cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
+    plan_cells(notes = FALSE) |> plan_cells("{n} ({p:.1f%})") |>
+    plan_stub(name = "row_label", before = TRUE)
+  pages <- function(p) suppressMessages(plan_apply(p))
+  cells <- data.frame(
+    line = c(1, 1, 2, 2, 3, 3),
+    cols = c("row_label", ".values", "row_label", ".values", "row_label", ".values"),
+    span = c(NA, "TRT", NA, "each", NA, NA),
+    text = c("", "{col1}", "", "{col2}", "Characteristic", ""))
+  want <- pages(base |> plan_col_header(header = cells))
+  got <- pages(base |> plan_col_header(
+    lines = list(
+      c(row_label = "", .values = "{col1}"),
+      c(row_label = "", .values = "{col2}"),
+      c(row_label = "Characteristic", .values = "")),
+    span = list(c(row_label = "one", .values = "TRT"),
+                c(row_label = "one"),
+                c(row_label = "one", .values = "one"))))
+  expect_identical(got, want)
+  # one span for every cell: "each", the default
+  each <- data.frame(line = c(1, 1, 2, 2), cols = c("row_label", ".values"),
+                     span = "each", text = c("", "{col}", "Characteristic", "(N={n})"))
+  expect_identical(
+    pages(base |> plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
+                                               c(row_label = "Characteristic",
+                                                 .values = "(N={n})")))),
+    pages(base |> plan_col_header(header = each)))
+  # what it is, and is not
+  expect_error(plan_col_header(base, header = each, lines = list(c(a = "x"))),
+               "once, as `header` or as `lines`")
+  expect_error(plan_col_header(base, lines = list(c("x", "y"))),
+               "row 1 is a named character vector")
+  expect_error(plan_col_header(base, lines = list(c(a = "x")), span = list("each", "one")),
+               "one element a header row")
 })

@@ -22,6 +22,24 @@ literally the kind of page `generate_rtfreport()` produces.
 
 ## Why rtfreporter?
 
+**From the analysis results to the RTF page, with one vocabulary.**  The
+recommended way to make a table is from an analysis results dataset (ARD)
+built with [cards](https://pharmaverse.github.io/cards/) /
+[cardx](https://insightsengineering.github.io/cardx/): the statistics stay
+in the ARD, and a short **plan** says how they are laid out -- which key goes
+across and which down, how a mean and an SD become one cell, what the rows
+are called, what the header says and where the pages break.  The column
+header's `(N=xx)` is read from the same ARD, so the header and the numbers
+under it agree by construction.
+
+**Bring your own table, too.**  A table already built with gt, gtsummary,
+rtables / tern, tfrmt, flextable, huxtable -- or a plain data frame -- goes in
+through `as_rtftables()`, with its labels, spanning headers and footnotes.
+
+Either way the document around it is the same: running headers and footers
+with page numbers, the program name and the run date, titles and footnotes,
+listings and figures, and the finished files joined into one deliverable.
+
 We **deliberately keep the scope small**.  rtfreporter is not a
 general-purpose RTF library; it is a focused tool for the one clinical
 TFL style we want to ship.  That scope cap is the point — it keeps the
@@ -43,7 +61,139 @@ remotes::install_github("ichirio/rtfreporter@v0.8.2")
 remotes::install_github("ichirio/rtfreporter")
 ```
 
-## A 30-second example
+## A 30-second example: a table from an ARD
+
+``` r
+library(rtfreporter)
+library(cards)
+
+# 1. The statistics: an ARD, by arm (ard_stack() also counts each arm's N)
+adsl <- ADSL
+adsl$ARM <- factor(adsl$ARM, levels = c("Placebo", "Xanomeline Low Dose",
+                                        "Xanomeline High Dose"))
+ard <- ard_stack(
+  adsl, .by = ARM,
+  ard_summary(variables = AGE),
+  ard_tabulate(variables = c(AGEGR1, SEX)))
+
+# 2. The plan: roles first, then one verb per declaration
+plan <- ard |>
+  normalize_ard() |>
+  table_plan(cols = "ARM", rows = c(group = "variable")) |>
+  plan_cells(
+    continuous  = c("n"         = "{N:.0f}",
+                    "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
+                    "Min, Max"  = "{min:.0f}, {max:.0f}"),
+    categorical = "{n:.0f} ({p:.1f%})",
+    notes = FALSE) |>
+  plan_labels(c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)",
+                SEX = "Sex, n (%)")) |>
+  plan_levels(AGEGR1 = c("<65", "65-80", ">80")) |>
+  plan_stub(name = "row_label") |>
+  plan_blanks(where = "between_groups", first = TRUE) |>
+  plan_style(border = "tfl", align_count_pct = TRUE) |>
+  plan_col_header(values = list(n = TRUE), rtf_col_header(
+    c("",               "{col}"),
+    c("Characteristic", "(N={n})")))
+
+# 3. The document: running header and footer, the plan, the file
+doc <- rtf_document(tokens = list(STUDY = "CDISCPILOT01")) |>
+  rtf_section(secinfo = list(
+    header = rtf_header(list(
+      c(l = "Protocol: {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = "Table 14.1.1  Demographic Characteristics"),
+      c(c = "Safety Analysis Set"))),
+    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
+  rtf_tables(plan)
+
+generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R", overwrite = TRUE)
+```
+
+<p align="center">
+  <img src="man/figures/readme-ard-example.png"
+       alt="A demographics table rendered by rtfreporter from a cards ARD with a plan: a running header with the protocol and page number, a centred title, arm columns with (N=xx) read from the ARD, age statistics and n (%) rows for the categorical variables, and a footnote."
+       width="600" />
+</p>
+
+<p align="center"><sub><em>A demographics table made this way -- the full example, with quartiles and race, is in
+<a href="https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html">Tables from an ARD</a>.</em></sub></p>
+
+[Get started](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
+walks through these three steps.
+
+## Writing rtfreporter code with an AI assistant
+
+rtfreporter is too new to be in any chat model's training data: asked for
+rtfreporter code it reaches for `r2rtf`'s verbs or invents arguments, and
+flags neither as a guess.  Give it the facts first.
+
+The manuals **ship with the package**, so the one you attach describes the
+version you actually have:
+
+``` r
+rtfreporter_ai_manual()                     # path to the user manual
+rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
+```
+
+Or download it -- **[AI user manual (v0.8.2)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
+
+It holds the whole workflow, the program structure a report program should
+have, every `as_rtftables()` argument, the four clinical table shapes, headers
+and page tokens, listings, figures, borders, and the complete list of exported
+functions.  Every example in it is executed against the package and its
+function list is checked against `NAMESPACE`, both by CI -- so a manual that
+drifts from the API fails the build rather than misleading you.
+
+Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual (`rtfreporter_ai_manual("dev")`).
+
+## A focused tool, on purpose
+
+What the small scope buys you:
+
+- **One output style, opinionated defaults.**  No theme zoo, no
+  "render anything" pipeline.  The defaults match the conventional
+  clinical TFL look out of the box; you do not have to assemble it.
+- **Only the features TFL → RTF needs.**  Multi-section headers /
+  footers, spanning column headers, automatic page-number fields
+  (`{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}`), embedded figures, and
+  per-document concatenation via `assemble_rtf()`.  If a feature
+  would not appear on a real clinical TFL, we resist adding it.
+- **Maintainability over breadth.**  Saying *no* to scope creep is
+  what keeps the package small, the tests fast, and the API stable.
+- **Composable pipe API.**  `rtf_document() |> rtf_section() |>
+  rtf_tables() |> generate_rtfreport()` — the same vocabulary every
+  time, so building a 50-TFL deliverable is a loop.
+
+If your deliverables need a substantially different layout, another tool
+may serve you better — and that trade-off is intentional.  We would
+rather do one well-defined style really well than do everything passably.
+You are warmly welcome to use rtfreporter for the styles it supports.
+
+## Bring your own table tool
+
+The clinical-table ecosystem has several excellent builders —
+[tfrmt](https://gsk-biostatistics.github.io/tfrmt/),
+[gtsummary](https://www.danieldsjoberg.com/gtsummary/),
+[rtables](https://CRAN.R-project.org/package=rtables) /
+[tern](https://CRAN.R-project.org/package=tern),
+[gt](https://gt.rstudio.com),
+[flextable](https://davidgohel.github.io/flextable/) and
+[huxtable](https://hughjonesd.github.io/huxtable/) — and, honestly, no
+single de-facto standard has emerged yet.  rtfreporter does not ask you to pick one, to
+switch, or to re-state your table in yet another vocabulary.  Whatever
+your team already uses to compute and format the numbers,
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.html)
+reads that object — its column labels, alignment, spanning headers,
+titles, footnotes and per-cell styling — and carries the metadata through
+to RTF.
+
+And even if you use a tool we do **not** read directly, you are still
+covered: convert its result to a plain `data.frame` / tibble and
+rtfreporter lays it out just the same.  A bare data.frame carries no
+display metadata, so you simply re-specify what you want — column headers,
+alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
+
+A table brought as a data frame looks like this:
 
 ``` r
 library(rtfreporter)
@@ -87,86 +237,6 @@ generate_rtfreport(doc, "T_14_1_1.rtf", overwrite = TRUE)
 
 <p align="center"><sub><em>The generated <code>T_14_1_1.rtf</code>, opened in a word processor.</em></sub></p>
 
-## Writing rtfreporter code with an AI assistant
-
-rtfreporter is too new to be in any chat model's training data: asked for
-rtfreporter code it reaches for `r2rtf`'s verbs or invents arguments, and
-flags neither as a guess.  Give it the facts first.
-
-The manuals **ship with the package**, so the one you attach describes the
-version you actually have:
-
-``` r
-rtfreporter_ai_manual()                     # path to the user manual
-rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
-```
-
-Or download it -- **[AI user manual (v0.8.2)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
-
-It holds the whole workflow, the program structure a report program should
-have, every `as_rtftables()` argument, the four clinical table shapes, headers
-and page tokens, listings, figures, borders, and the complete list of exported
-functions.  Every example in it is executed against the package and its
-function list is checked against `NAMESPACE`, both by CI -- so a manual that
-drifts from the API fails the build rather than misleading you.
-
-Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual (`rtfreporter_ai_manual("dev")`).
-
-## A focused tool, on purpose
-
-What the small scope buys you:
-
-- **One output style, opinionated defaults.**  No theme zoo, no
-  "render anything" pipeline.  The defaults match the conventional
-  clinical TFL look out of the box; you do not have to assemble it.
-- **Only the features TFL → RTF needs.**  Multi-section headers /
-  footers, spanning column headers, automatic page-number fields
-  (`{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}`), embedded figures, and
-  per-document concatenation via `assemble_rtf()`.  If a feature
-  would not appear on a real clinical TFL, we resist adding it.
-- **Maintainability over breadth.**  Saying *no* to scope creep is
-  what keeps the package small, the tests fast, and the API stable
-  enough to bring through to CRAN.
-- **Composable pipe API.**  `rtf_document() |> rtf_section() |>
-  rtf_tables() |> generate_rtfreport()` — the same vocabulary every
-  time, so building a 50-TFL deliverable is a loop.
-
-If your deliverables need a substantially different layout, another tool
-may serve you better — and that trade-off is intentional.  We would
-rather do one well-defined style really well than do everything passably.
-You are warmly welcome to use rtfreporter for the styles it supports.
-
-## Bring your own table tool
-
-The clinical-table ecosystem has several excellent builders —
-[tfrmt](https://gsk-biostatistics.github.io/tfrmt/),
-[gtsummary](https://www.danieldsjoberg.com/gtsummary/),
-[rtables](https://CRAN.R-project.org/package=rtables) /
-[tern](https://CRAN.R-project.org/package=tern),
-[gt](https://gt.rstudio.com),
-[flextable](https://davidgohel.github.io/flextable/) and
-[huxtable](https://hughjonesd.github.io/huxtable/) — and, honestly, no
-single de-facto standard has emerged yet.  rtfreporter does not ask you to pick one, to
-switch, or to re-state your table in yet another vocabulary.  Whatever
-your team already uses to compute and format the numbers,
-[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.html)
-reads that object — its column labels, alignment, spanning headers,
-titles, footnotes and per-cell styling — and carries the metadata through
-to RTF.
-
-And even if you use a tool we do **not** read directly, you are still
-covered: convert its result to a plain `data.frame` / tibble and
-rtfreporter lays it out just the same.  A bare data.frame carries no
-display metadata, so you simply re-specify what you want — column headers,
-alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
-
-**Starting from an ARD instead?**  When the statistics are in a
-[cards](https://pharmaverse.github.io/cards/) / cardx analysis
-results dataset, rtfreporter builds the table from it: `normalize_ard()`
-flattens the ARD, `table_plan()` and the `plan_*()` verbs declare the cells,
-labels, header and pages, and `rtf_tables()` takes the plan directly.  See
-[Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html).
-
 For worked, tool-by-tool comparisons see the *same report, every framework*
 articles — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
 and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html) —
@@ -203,26 +273,27 @@ specific, and well-defined — RTF remains the easiest path that is
 
 The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
-- **Get started** — `vignette("rtfreporter-quickstart")`
-- **Pipe API** — `vignette("rtfreporter-pipes")`
-- **Importing tables** — bringing gt / gtsummary / rtables / flextable /
-  huxtable objects in with
-  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html)
-- **Pagination** — [splitting long tables across pages](https://ichirio.github.io/rtfreporter/articles/pagination.html)
-- **Tables from an ARD** — [cards / cardx to RTF with a plan](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
-  [the plan verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.html),
-  [listings with a plan](https://ichirio.github.io/rtfreporter/articles/plan-listings.html) and
+- **Get started** — [an ARD, a plan, and the RTF file](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
+  (`vignette("rtfreporter")`)
+- **Tables from an ARD** (recommended) — [cards / cardx to RTF with a plan](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
+  [the plan verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.html) and
   [from `as_rtftables()` to a plan](https://ichirio.github.io/rtfreporter/articles/plan-and-as-rtftables.html)
-- **Listings** — [source data to the written RTF](https://ichirio.github.io/rtfreporter/articles/listings.html),
+- **Bring your own table** — gt / gtsummary / rtables / tfrmt / flextable /
+  huxtable objects and data frames through
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/articles/importing-tables.html),
+  [pagination](https://ichirio.github.io/rtfreporter/articles/pagination.html), and the
+  *same report, every framework* articles ([Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html),
+  [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html))
+- **Listings** — [with a plan](https://ichirio.github.io/rtfreporter/articles/plan-listings.html)
+  or [from source data](https://ichirio.github.io/rtfreporter/articles/listings.html),
   including the column-width estimator and the wrapping rule
 - **Figures** — [a plot object to a page](https://ichirio.github.io/rtfreporter/articles/figures.html)
-- **Headers & footers** — [section-based running headers](https://ichirio.github.io/rtfreporter/articles/headers-footers.html)
-- **Borders and rules** — [the clinical TFL frame](https://ichirio.github.io/rtfreporter/articles/borders.html)
-- **Worked clinical examples** — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
-  and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html)
+- **Assembling a deliverable** — [headers, footers and tokens](https://ichirio.github.io/rtfreporter/articles/headers-footers.html),
+  [borders and rules](https://ichirio.github.io/rtfreporter/articles/borders.html), and
+  [joining files with a table of contents](https://ichirio.github.io/rtfreporter/articles/output.html)
 - **External API spec** — [the public API surface](https://ichirio.github.io/rtfreporter/articles/external-api.html)
 
-## Status & roadmap
+## Status
 
 `rtfreporter` is in active **pre-1.0 development** and carries the
 `lifecycle: experimental` badge; the API may still change in
@@ -232,33 +303,14 @@ backward-incompatible ways before v1.0.0.
   (`remotes::install_github("ichirio/rtfreporter@v0.8.2")`); not yet on CRAN.
   **Tables from a cards / cardx ARD**: `normalize_ard()` / `widen_ard()`
   and the plan engine (`table_plan()` and the `plan_*()` verbs), adopted in
-  the pre-CRAN API review; plus two fixes.
-- **v0.8.1** (2026-09-29): a patch release on top of v0.8.0: one rounding rule (`round_num()`), run
-  tokens such as `{PROGRAM}` and `{DATETIME}`, `as_rtftables()` as an S3
-  generic, and pagination / print fixes.
-- **v0.8.0** (2026-09-16) rolled up everything since v0.4.0: **listings** end to end
-  (`listing_col()` / `listing_spec()` / `build_listing()`, the column-width
-  estimator `fit_listing_widths()`, and an editable wrapping rule), the
-  **merged stub** (`stub_cols()` / `stub_spec()`), a rewritten **border**
-  vocabulary, post-hoc **styling verbs**, column pagination
-  (`paginate_cols()`), per-page header values
-  (`set_col_header(values = )`), **figures from plot objects**, and the
-  **AI assistant manuals** that now ship inside the package.  59 exported
-  functions at v0.4.0; 91 here.
+  the pre-CRAN API review; plus two fixes.  See [`NEWS.md`](NEWS.md) for
+  the full release history.
 - **Development version on `main`: `0.8.2.9000`.**  rtfreporter follows the
   standard R versioning scheme -- a release is `X.Y.Z`, development is
   `X.Y.Z.9000`, and the three-component part always names the last release.
   An ordinary pull request leaves `DESCRIPTION` alone unless the change is
   one somebody needs to name; changing `X`, `Y` or `Z` is a deliberate,
   labelled release action, enforced by the `version-guard` CI.
-  See [`NEWS.md`](NEWS.md).
-
-Planned release milestones:
-
-| Version | Goal |
-|---------|------|
-| **v0.9.0** | The **first CRAN submission** -- the deprecated border exports removed, full `R CMD check --as-cran` clean, increased test coverage, documentation/metadata polish. |
-| **v1.0.0** | **After** CRAN registration, once downloads and feedback have settled the API -- declared **stable**, the `lifecycle: experimental` badge removed, and no minor or patch may break user code again. |
 
 See [`NEWS.md`](NEWS.md) for the user-facing changelog and
 [`CHANGELOG.md`](CHANGELOG.md) for detailed per-version notes.

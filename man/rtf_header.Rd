@@ -15,7 +15,8 @@ rtf_header(
   font = NULL,
   markup = NULL,
   cell_padding_left_twips = NULL,
-  cell_padding_right_twips = NULL
+  cell_padding_right_twips = NULL,
+  drop_empty_rows = FALSE
 )
 
 rtf_footer(
@@ -28,7 +29,8 @@ rtf_footer(
   font = NULL,
   markup = NULL,
   cell_padding_left_twips = NULL,
-  cell_padding_right_twips = NULL
+  cell_padding_right_twips = NULL,
+  drop_empty_rows = FALSE
 )
 }
 \arguments{
@@ -76,6 +78,13 @@ document setting. See \code{\link[=rtftable]{rtftable()}}.}
 on the left / right side of each header (or footer) cell, matching the
 content-table convention. \code{NULL} (default) reads from
 \code{inst/resources/rtfreporter_defaults.R} (0L for both since v0.0.21).}
+
+\item{drop_empty_rows}{Logical. \code{TRUE}: a row whose tokens of one's own
+(\code{rtf_document(tokens = )}, \code{options(rtfreporter.tokens = )}) are all
+empty when the file is written, and which says nothing else but blanks
+and brackets (\code{"<{POPULATION}>"}), is left out.  One header can then
+serve every report of a study, a report with no value for a line going
+without it.  \code{FALSE} (default): every row is written.}
 }
 \value{
 A named list with elements \code{rows}, \code{border}, \code{width_twips}, and

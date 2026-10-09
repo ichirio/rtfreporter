@@ -1,0 +1,26 @@
+# ------------------------------------------------
+# CITATION.cff file created with {cffr} R package
+# See also: https://docs.ropensci.org/cffr/
+# ------------------------------------------------
+ 
+cff-version: 1.2.0
+message: 'To cite package "rtfreporter" in publications use:'
+type: software
+license: Apache-2.0
+title: 'rtfreporter: Clinical RTF Reporting Toolkit for Tables, Listings and Figures'
+abstract: A standalone toolkit for generating Rich Text Format (RTF) reports used
+  in clinical trial deliverables -- Tables, Listings and Figures (TFLs) -- with a
+  functional, pipe-friendly API, multi-section headers and footers, and clinical-style
+  borders. Depends on no other RTF-generation package.
+authors:
+- family-names: Masui
+  given-names: Yoichi
+  email: ichi.r.pro@gmail.com
+repository-code: https://github.com/ichirio/rtfreporter
+url: https://ichirio.github.io/rtfreporter/
+keywords:
+- clinical trials
+- RTF
+- tables listings and figures
+- R package
+

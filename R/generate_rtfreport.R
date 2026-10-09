@@ -1590,6 +1590,23 @@
   FALSE
 }
 
+# A header/footer row left with nothing to say (rtf_header(drop_empty_rows =
+# TRUE)): it has tokens of one's own, every one empty, and the rest is blanks
+# and brackets ("<{POPULATION}>").  A row with no token, or one of
+# rtfreporter's own ({PAGE}) or an unknown one, is never empty.
+.hf_row_empty <- function(row, tokens) {
+  txt <- if (is.list(row) && !is.null(row$columns)) row$columns else row
+  txt <- as.character(unlist(txt))
+  txt <- paste(txt[!is.na(txt)], collapse = " ")
+  rx <- "\\{[A-Z][A-Z0-9_]*\\}"
+  m <- regmatches(txt, gregexpr(rx, txt))[[1L]]
+  if (!length(m)) return(FALSE)
+  nm <- substr(m, 2L, nchar(m) - 1L)
+  if (!all(nm %in% names(tokens))) return(FALSE)
+  if (any(nzchar(trimws(tokens[nm])))) return(FALSE)
+  !nzchar(gsub("[][[:space:]<>():;,.|/-]", "", gsub(rx, "", txt)))
+}
+
 # Normalize a section header/footer value to list(rows=list(...), width_twips=NULL).
 # Accepts: NULL | plain named vector (single row) | list(rows=list(...)) | list(columns=c(...)) (legacy).
 .normalize_hf <- function(hf) {
@@ -1615,6 +1632,10 @@
   }
 
   rows        <- hf$rows
+  if (isTRUE(hf$drop_empty_rows)) {
+    rows <- Filter(function(r) !.hf_row_empty(r, .run_ctx$tokens), rows)
+    if (!length(rows)) return(character())
+  }
   hf_markup   <- hf$markup %||% doc_markup
   hf_border   <- hf$border   # rtf_border or NULL
   # Width: the absolute `width_twips` wins (the legacy form), then the shared

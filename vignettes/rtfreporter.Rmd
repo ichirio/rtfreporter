@@ -1,0 +1,196 @@
+---
+title: "Get started with rtfreporter"
+description: >
+  The recommended workflow end to end: an ARD from cards, a table plan,
+  a document with running headers, and the RTF file.  Then the second path:
+  bringing a table you already have.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Get started with rtfreporter}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+# The chunks below RUN.  Every file goes to a temporary folder, so building
+# this vignette writes nothing outside the session, and a broken example fails
+# the build instead of rotting unnoticed.  The ARD chunks need cards.
+has_cards <- requireNamespace("cards", quietly = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      message = FALSE, warning = FALSE, eval = has_cards)
+knitr::opts_knit$set(root.dir = tempdir())
+options(width = 100)
+```
+
+rtfreporter writes clinical **tables, listings and figures** (TFLs) as RTF
+files.  There are two ways to get a table into a report:
+
+1. **From an analysis results dataset (ARD)** -- the recommended path.  The
+   statistics come from [cards](https://pharmaverse.github.io/cards/) /
+   [cardx](https://insightsengineering.github.io/cardx/); a **plan** says how
+   they are laid out.  This is what the rest of this page shows.
+2. **Bring your own table** -- a table already built with gt, gtsummary,
+   rtables / tern, tfrmt, flextable, huxtable or a plain data frame goes in
+   through `as_rtftables()`.  See [the end of this page](#bring-your-own-table).
+
+Either way the document around the table is the same: `rtf_document()`, a
+running header and footer, `rtf_tables()`, and `generate_rtfreport()` to
+write the file.
+
+```
+ADSL ──cards──▶ ARD ──normalize_ard()──▶ flat frame ──table_plan() + plan_*()──▶ plan
+                                                                                   │
+            generate_rtfreport() ◀── rtf_document() |> rtf_section() |> rtf_tables(plan)
+```
+
+```{r setup}
+library(rtfreporter)
+library(cards)
+```
+
+## 1. The statistics: an ARD
+
+The example data is the CDISC pilot `ADSL` that cards ships.  The ARD
+summarises age, tabulates age group and sex, and does both by arm.
+`ard_stack(.by = )` also counts the subjects in each arm -- the plan reads
+those counts for the `(N=xx)` in the column header, so nobody types them.
+
+```{r ard}
+adsl <- cards::ADSL
+adsl$ARM <- factor(adsl$ARM,
+                   levels = c("Placebo", "Xanomeline Low Dose",
+                              "Xanomeline High Dose"))
+
+ard <- ard_stack(
+  adsl, .by = ARM,
+  ard_summary(variables = AGE),
+  ard_tabulate(variables = c(AGEGR1, SEX)))
+```
+
+## 2. Flatten it: `normalize_ard()`
+
+`normalize_ard()` turns the ARD's group columns into ordinary key columns,
+named after their variables, and adds what a table needs: the kind of each
+row (`.kind`) and its label.  Its column names are the ones the plan uses.
+
+```{r normalize}
+nd <- normalize_ard(ard)
+nd[1:4, c("ARM", "variable", "variable_level", "stat_name", "stat", ".kind")]
+```
+
+## 3. The plan: `table_plan()` and the `plan_*()` verbs
+
+`table_plan()` names the **roles** -- the key that goes across (`cols`) and
+the keys that go down (`rows`).  Each `plan_*()` verb then adds one
+declaration; nothing runs until the plan is used.
+
+```{r plan}
+p <- nd |>
+  table_plan(cols = "ARM", rows = c(group = "variable")) |>
+  plan_cells(
+    continuous  = c("n"         = "{N:.0f}",
+                    "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
+                    "Median"    = "{median:.1f}",
+                    "Min, Max"  = "{min:.0f}, {max:.0f}"),
+    categorical = "{n:.0f} ({p:.1f%})",
+    notes = FALSE) |>
+  plan_labels(c(AGE    = "Age (years)",
+                AGEGR1 = "Age group, n (%)",
+                SEX    = "Sex, n (%)")) |>
+  plan_levels(AGEGR1 = c("<65", "65-80", ">80"), SEX = c("F", "M")) |>
+  plan_stub(name = "row_label") |>
+  plan_blanks(where = "between_groups", first = TRUE) |>
+  plan_columns(widths = c(4, 2, 2, 2)) |>
+  plan_style(border = "tfl", align_count_pct = TRUE) |>
+  plan_col_header(values = list(n = TRUE), rtf_col_header(
+    c("",               "{col}"),
+    c("Characteristic", "(N={n})")))
+```
+
+* `plan_cells()` turns statistics into text with templates: `{mean:.1f}` is
+  the mean to one decimal, `{p:.1f%}` a proportion shown as a percentage.  A
+  continuous variable gets one printed row per name.
+* `plan_labels()` / `plan_levels()` name the variables and order their levels.
+* `plan_stub()` folds the variable and its rows into one indented column.
+* `plan_col_header()` writes the column header; `{col}` is the arm and `{n}`
+  its population, read from the ARD.
+
+Before writing any RTF, look at the table the plan makes:
+
+```{r look}
+plan_apply(p, stage = "table")
+```
+
+## 4. The document: `rtf_document()` to `generate_rtfreport()`
+
+The running header and footer are small tables of rows, each with a left,
+centre and right cell.  `{PAGE}` / `{TOTAL_PAGES}`, `{PROGRAM}` and
+`{DATETIME}` are filled in when the file is written; `{STUDY}` is a token of
+our own, given once to `rtf_document(tokens = )`.
+
+```{r doc}
+doc <- rtf_document(
+    program = "programs/t_dm.R",
+    tokens  = list(STUDY = "CDISCPILOT01")) |>
+  rtf_section(secinfo = list(
+    header = rtf_header(list(
+      c(l = "Protocol: {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = "Table 14.1.1  Demographic Characteristics"),
+      c(c = "Safety Analysis Set"))),
+    footer = rtf_footer(list(
+      c(l = "SD = standard deviation."),
+      c(l = "Program: {PROGRAM}", r = "{DATETIME}"))))) |>
+  rtf_tables(p)
+
+generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
+```
+
+`rtf_tables()` takes the plan as it takes any table and runs it.  Long tables
+are paged by the plan (`plan_paginate_rows()`), and the header repeats on
+every page.
+
+## 5. Where next on this path
+
+* [Tables from an ARD](tables-from-ard.html) -- the same steps in
+  more depth, quartiles, and an adverse-events table sorted by frequency
+  within a SOC / PT hierarchy.
+* [The plan verbs](plan-verbs.html) -- every `plan_*()` verb,
+  grouped by job, and the rule that a later layer wins.
+* `widen_ard()` -- the ARD half of a plan in one call, giving a data frame
+  now instead of a plan to run later.
+* `plan_template()` -- reads an ARD and writes a starting plan to edit.
+* [Headers, footers and tokens](headers-footers.html) --
+  `{PROGRAM_FULL}`, `program_fallback`, `drop_empty_rows` and tokens of your
+  own.
+
+## Bring your own table {#bring-your-own-table}
+
+When the table is already built -- by gt, gtsummary, rtables / tern, tfrmt,
+flextable, huxtable, or as a data frame -- `as_rtftables()` reads it,
+including its labels, spanning headers and footnotes where the source has
+them, and gives `rtftable` pages for the same `rtf_tables()`:
+
+```{r byo, eval = TRUE}
+df <- data.frame(
+  Parameter = c("Subjects", "Age, mean (SD)"),
+  Placebo   = c("86", "75.2 (8.59)"),
+  Active    = c("84", "75.7 (8.29)"))
+
+doc2 <- rtf_document() |>
+  rtf_tables(as_rtftables(df, border = "tfl"),
+             titles = list(c("Table 1", "A table brought as a data frame")))
+generate_rtfreport(doc2, "t_byo.rtf", overwrite = TRUE)
+```
+
+See [Importing tables with as_rtftables()](importing-tables.html),
+[gt, gtsummary & rtables](gt-integration.html), and the *same report, every
+framework* articles for [demographics](showcase-dm.html) and
+[adverse events](showcase-ae.html).
+
+## Listings and figures
+
+* Listings: [Listings with a plan](plan-listings.html) and
+  [Listings end to end](listings.html).
+* Figures: [From a plot object to a page](figures.html).
+* Joining finished files into one deliverable with a table of contents:
+  [Rendering, post-processing and assembly](output.html).
