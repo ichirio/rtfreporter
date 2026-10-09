@@ -37,21 +37,21 @@ and the missing ones:
 
 ```{r data}
 adsl <- data.frame(
-  USUBJID  = c("63016-204-1015", "63016-204-1023", "63016-205-100028",
-               "63016-206-1034", "63016-206-1045"),
-  DISPTPD  = c("COMPLETED", "COMPLETED", "DISCONTINUED",
+  USUBJID  = c("PILOT-204-1015", "PILOT-204-1023", "PILOT-205-100028",
+               "PILOT-206-1034", "PILOT-206-1045"),
+  DCDECOD  = c("COMPLETED", "COMPLETED", "DISCONTINUED",
                "ONGOING", "COMPLETED"),
-  BRCA     = c("BRCA1", NA, "BRCA2", "BRCA1", NA),
-  HIST     = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA OF THE LUNG",
-               "SMALL CELL", "HIGH GRADE SEROUS CARCINOMA", "ADENOCARCINOMA"),
-  STAGE    = c("IIIB", "IV", "IIIA", "IV", "IIB"),
-  HISTGRD  = c("GRADE 3", "GRADE 2", "GRADE 3", "GRADE 1", NA),
-  PRRAD    = c("Y", "N", "Y", "N", "Y"),
-  CMBRFST  = c("PARTIAL RESPONSE", "STABLE DISEASE", "COMPLETE RESPONSE",
-               "PROGRESSIVE DISEASE", "PARTIAL RESPONSE"),
-  CMBRLST  = c("STABLE DISEASE", "PROGRESSIVE DISEASE", "STABLE DISEASE",
-               NA, "STABLE DISEASE"),
-  ECOGPS   = c("0", "1", "1", "0", "2"),
+  AELOC    = c("UPPER", NA, "LOWER", "UPPER", NA),
+  AEDECOD  = c("HYPERGLYCAEMIA", "UPPER RESPIRATORY TRACT INFECTION",
+               "SKIN ULCER", "INJECTION SITE REACTION", "HYPERGLYCAEMIA"),
+  AETOXGR  = c("3", "4", "3", "4", "2"),
+  AESEV    = c("GRADE 3", "GRADE 2", "GRADE 3", "GRADE 1", NA),
+  AESER    = c("Y", "N", "Y", "N", "Y"),
+  AEACN    = c("DOSE REDUCED", "DOSE NOT CHANGED", "DRUG INTERRUPTED",
+               "DRUG WITHDRAWN", "DOSE REDUCED"),
+  AEACNOTH = c("DOSE NOT CHANGED", "DRUG WITHDRAWN", "DOSE NOT CHANGED",
+               NA, "DOSE NOT CHANGED"),
+  ECOGBL   = c("0", "1", "1", "0", "2"),
   stringsAsFactors = FALSE
 )
 str(adsl)
@@ -63,22 +63,22 @@ str(adsl)
 built from, how wide it may be before its text wraps, and what its header says.
 
 ```{r listing-col}
-listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
-            label = "Disposition/\nAny (BRCA) Mutations/\nHistology")
+listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 22,
+            label = "Disposition/\nLocation/\nPreferred Term")
 ```
 
 Four things are worth reading twice.
 
 **`vars` may name several columns.** Their values are joined with the
 listing's separator (`/` by default), and **missing and empty values are
-skipped** -- a subject with no `BRCA` prints `COMPLETED/SQUAMOUS...`, not
-`COMPLETED//SQUAMOUS...`.
+skipped** -- a subject with no `AELOC` prints `COMPLETED/UPPER RES...`, not
+`COMPLETED//UPPER RES...`.
 
 That join is `catx()`, which the package exports for the columns you build
 yourself -- so a listing needs nothing outside rtfreporter:
 
 ```{r catx}
-catx("/", "COMPLETED", NA, "ADENOCARCINOMA")
+catx("/", "COMPLETED", NA, "HYPERGLYCAEMIA")
 ```
 
 **`width` is a number of characters, not a rendered width.** It decides where
@@ -86,8 +86,8 @@ the text breaks onto another physical row, and therefore how tall the subject's
 block is. What the column *measures* in the table is `rel_width`, which
 defaults to `width`.
 
-**The output column takes the first variable's name** -- `DISPTPD` above --
-which is why the reshaped data below has a `DISPTPD` column holding the joined
+**The output column takes the first variable's name** -- `DCDECOD` above --
+which is why the reshaped data below has a `DCDECOD` column holding the joined
 text. It is an internal name, not a header; pass `name = "COL01"` if you
 would rather read the columns positionally.
 
@@ -111,14 +111,14 @@ settings that apply to all of them:
 ```{r listing-spec}
 spec <- listing_spec(list(
   listing_col("USUBJID", width = 15, label = "Unique\nSubject ID"),
-  listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
-              label = "Disposition/\nAny (BRCA) Mutations/\nHistology"),
-  listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis"),
-  listing_col(c("HISTGRD", "PRRAD"), width = 18,
+  listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 22,
+              label = "Disposition/\nLocation/\nPreferred Term"),
+  listing_col("AETOXGR", label = "Grade at\nInitial\nDiagnosis"),
+  listing_col(c("AESEV", "AESER"), width = 18,
               label = "Histologic Grade/\nPrior Radiation\nTherapy"),
-  listing_col(c("CMBRFST", "CMBRLST"), width = 20,
+  listing_col(c("AEACN", "AEACNOTH"), width = 20,
               label = "Best Response to\nthe 1st Line/\nthe Last Line"),
-  listing_col("ECOGPS", label = "ECOG\nPerformance\nStatus")
+  listing_col("ECOGBL", label = "ECOG\nPerformance\nat Baseline")
 ))
 spec
 ```
@@ -135,11 +135,11 @@ follows from the paper, the margins, the font and the data.
 ```{r fit-spec}
 bare <- listing_spec(list(
   listing_col("USUBJID", collapse_repeats = TRUE),
-  listing_col(c("DISPTPD", "BRCA", "HIST")),
-  listing_col("STAGE"),
-  listing_col(c("HISTGRD", "PRRAD")),
-  listing_col(c("CMBRFST", "CMBRLST")),
-  listing_col("ECOGPS")
+  listing_col(c("DCDECOD", "AELOC", "AEDECOD")),
+  listing_col("AETOXGR"),
+  listing_col(c("AESEV", "AESER")),
+  listing_col(c("AEACN", "AEACNOTH")),
+  listing_col("ECOGBL")
 ))
 
 fitted <- fit_listing_widths(
@@ -168,8 +168,8 @@ and the rest fit around it:
 ```{r fit-fixed}
 pinned <- listing_spec(list(
   listing_col("USUBJID", width = 15),          # this one is a decision
-  listing_col(c("DISPTPD", "BRCA", "HIST")),
-  listing_col("STAGE")
+  listing_col(c("DCDECOD", "AELOC", "AEDECOD")),
+  listing_col("AETOXGR")
 ))
 vapply(fit_listing_widths(adsl, pinned, total_width = 60)$cols,
        function(cl) cl$width, integer(1))
@@ -199,14 +199,14 @@ body
 
 Read that against the source data:
 
-* **`USUBJID` wrapped.** `63016-205-100028` is 16 characters and the column
+* **`USUBJID` wrapped.** `PILOT-205-100028` is 16 characters and the column
   takes 15, so it breaks after a hyphen -- `build_listing()` breaks at word
   boundaries (a space, a comma, a hyphen) and takes the break *after* the
   character, so the reader can see why the line ended.
 * **The joined column breaks at the separator first.** Each source variable
   starts its own line, which is what makes a listing of this shape readable at
   all. Only a piece that is *still* too long breaks again at a word boundary --
-  `SQUAMOUS CELL CARCINOMA OF THE LUNG` becomes two lines under a 22-character
+  `UPPER RESPIRATORY TRACT INFECTION` becomes two lines under a 22-character
   column.
 * **Every column of one subject is padded to the tallest**, so the block stays
   aligned across columns, and **a blank row closes each block**.
@@ -331,7 +331,7 @@ Any argument you pass explicitly overrides the template, the same relationship
 `rtftable(border = "tfl")` has with its preset:
 
 ```{r overrides}
-listing_spec(c("USUBJID", "STAGE"),
+listing_spec(c("USUBJID", "AETOXGR"),
              sep       = " | ",   # join with something else
              spacer    = FALSE,   # no gutter columns
              blank_row = FALSE)   # no blank row between records
@@ -361,7 +361,7 @@ cap_two <- function(text, width, sep, layout) {
   }
   out
 }
-cap_two("SQUAMOUS CELL CARCINOMA OF THE LUNG", 12, "/", "stack")
+cap_two("UPPER RESPIRATORY TRACT INFECTION", 12, "/", "stack")
 ```
 
 **Change the rule from inside.** When the break logic itself has to differ --

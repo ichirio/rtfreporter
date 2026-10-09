@@ -283,21 +283,21 @@ test_that("every idiom the manual teaches runs", {
 
   ## S10 -- listings
   adsl <- data.frame(
-    USUBJID = c("63016-204-1015", "63016-204-1023", "63016-205-100028"),
-    DISPTPD = c("COMPLETED", "COMPLETED", "DISCONTINUED"),
-    BRCA    = c("BRCA1", NA, "BRCA2"),
-    HIST    = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA OF THE LUNG", "SMALL CELL"),
-    STAGE   = c("IIIB", "IV", "IIIA"), stringsAsFactors = FALSE)
+    USUBJID = c("PILOT-204-1015", "PILOT-204-1023", "PILOT-205-100028"),
+    DCDECOD = c("COMPLETED", "COMPLETED", "DISCONTINUED"),
+    AELOC   = c("UPPER", NA, "LOWER"),
+    AEDECOD = c("HYPERGLYCAEMIA", "UPPER RESPIRATORY TRACT INFECTION", "SKIN ULCER"),
+    AETOXGR = c("3", "4", "3"), stringsAsFactors = FALSE)
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 15, label = "Unique\nSubject ID",
                 collapse_repeats = TRUE),
-    listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
-                label = "Disposition/\nAny (BRCA) Mutations/\nHistology"),
-    listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis")))
+    listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 22,
+                label = "Disposition/\nLocation/\nPreferred Term"),
+    listing_col("AETOXGR", label = "Grade at\nInitial\nDiagnosis")))
   expect_no_error(as_rtftables(adsl, listing = spec, max_rows = 8))
   expect_s3_class(build_listing(adsl, spec), "data.frame")
   fitted <- fit_listing_widths(adsl,
-    listing_spec(list(listing_col("USUBJID"), listing_col("STAGE"))),
+    listing_spec(list(listing_col("USUBJID"), listing_col("AETOXGR"))),
     page = rtf_page(paper_size = "A4", orientation = "landscape"),
     size_half_points = 16L)
   expect_no_error(listing_code(fitted, name = "listing"))

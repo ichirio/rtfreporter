@@ -553,7 +553,7 @@
 #'   split by `group_col` *first* and the stub is built per page afterwards** --
 #'   each value becomes an independent section, so `group_col` here refers to
 #'   the **pre-stub** columns and is not folded into the stub.  This keeps a
-#'   fixed intermediate hierarchy level (e.g. `LBTOX_LBL / group1 / label` with
+#'   fixed intermediate hierarchy level (e.g. `LBCAT / group1 / label` with
 #'   a constant `group1`) from collapsing into a single stub label row that
 #'   spans every group; put the inner levels in the stub and the outer level in
 #'   `group_col`.  Position-indexed metadata (`col_spec`, `col_header_align`,
@@ -583,7 +583,7 @@
 #'   stub is built per page afterwards** -- each value becomes an independent
 #'   section, so `group_col` here refers to the **pre-stub** columns and is not
 #'   folded into the stub.  This keeps a fixed intermediate hierarchy level
-#'   (e.g. `LBTOX_LBL / group1 / label` with a constant `group1`) from
+#'   (e.g. `LBCAT / group1 / label` with a constant `group1`) from
 #'   collapsing into a single stub label row that spans every group; put the
 #'   inner levels in `stub_vars` and the outer level in `group_col`.  Position-indexed
 #'   metadata (`col_spec`, `col_header_align`, per-cell `cell_styles`) is
@@ -1181,7 +1181,7 @@ as_rtftables.default <- function(x,
   # ---- by_value + stub_vars: split first, build the stub per page --------
   # A `by_value` split makes each group its own independent section, so the
   # indented stub must be built AFTER the split -- once per page.  Otherwise a
-  # constant intermediate hierarchy level (e.g. LBTOX_LBL / group1 / label with
+  # constant intermediate hierarchy level (e.g. LBCAT / group1 / label with
   # a fixed group1) collapses into a single stub label row that spans every
   # group and cannot be divided, and the outer value grouping fragments to one
   # page per row.  So here we split the raw body by the `group_col` value first,

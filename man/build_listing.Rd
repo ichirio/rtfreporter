@@ -60,16 +60,16 @@ stay aligned across columns.
 \examples{
 adsl <- data.frame(
   USUBJID = c("01-701-1015", "01-701-1023"),
-  HIST    = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA"),
-  BRCA    = c("BRCA1", NA),
+  AEDECOD = c("HYPERGLYCAEMIA", "ACUTE KIDNEY INJURY"),
+  AELOC   = c("UPPER", NA),
   ARM     = c("Placebo", "Xanomeline High Dose"),
   stringsAsFactors = FALSE
 )
 
 spec <- listing_spec(list(
   listing_col("USUBJID", width = 11, label = "Unique\nSubject ID"),
-  listing_col(c("HIST", "BRCA"), width = 16,
-              label = "Histology/\nMutation"),
+  listing_col(c("AEDECOD", "AELOC"), width = 16,
+              label = "Preferred Term/\nLocation"),
   listing_col("ARM", width = 12, label = "Treatment Arm")
 ))
 

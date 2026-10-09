@@ -52,8 +52,8 @@ There is no one place an ARD keeps "the N".  \code{cards::ard_stack(.by = TRT)}
 writes the per-arm count as \code{n} on the by-variable's own rows and the
 \strong{study} total as \code{N} on those same rows, while every summary row carries
 its own denominator as \code{N}; \code{ard_total_n()} adds \code{..ard_total_n..}; and an
-author may compute their own, as the \code{bigN} statistic in the solicited-AE
-example on Discussion #473.  Guessing between them produces a plausible
+author may compute their own, as a \code{bigN} statistic in a solicited-AE
+table.  Guessing between them produces a plausible
 wrong number in a column header, so this function does not guess:
 \itemize{
 \item \code{stat} names the statistic, and defaults to \code{"N"}.

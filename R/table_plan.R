@@ -1,7 +1,7 @@
 # ============================================================================
 #  Tables from a cards / cardx ARD: the plan (deferred form)
 # ----------------------------------------------------------------------------
-#  Moved here from tflspec (plan E of tflspec Discussion #23, #491).  See
+#  Moved here from tflspec (plan E of the design discussion, #491).  See
 #  R/ard_tables.R for the immediate form the plan resolves to.
 # ============================================================================
 
@@ -1141,7 +1141,7 @@ print.table_plan <- function(x, ...) {
 #'
 #'   * `values = list(n = "page")` --- each page's own, the subjects with that test:
 #'     the ARD rows **carrying** the page key, e.g.
-#'     `cards::ard_tabulate(adlb, by = PARAM, variables = BASEGR)`,
+#'     `cards::ard_tabulate(adlb, by = PARAM, variables = BGRADE)`,
 #'     which states each baseline column's N and the page's total;
 #'   * `list(n = "table")` --- the analysis set: the ARD rows **without** the
 #'     page key, e.g. `cards::ard_total_n(adsl)` or the treatment

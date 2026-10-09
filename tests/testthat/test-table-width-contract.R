@@ -138,10 +138,10 @@ test_that("an explicit per-column width still beats auto_width", {
 
 test_that("a listing reaches the same contract", {
   d <- data.frame(USUBJID = c("01-701-1015", "01-701-1023"),
-                  HIST = c("ADENOCARCINOMA", "SMALL CELL"),
+                  AEDECOD = c("HYPERGLYCAEMIA", "SKIN ULCER"),
                   stringsAsFactors = FALSE)
   spec <- listing_spec(list(listing_col("USUBJID", width = 11),
-                            listing_col("HIST", width = 16)),
+                            listing_col("AEDECOD", width = 16)),
                        spacer = FALSE)
   expect_identical(.total(as_rtftables(d, listing = spec,
                                        table_width_twips = 6000L)[[1L]]),

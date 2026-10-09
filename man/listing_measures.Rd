@@ -44,8 +44,8 @@ is expected to have.
 }
 \examples{
 listing_disp_width(c("ABC", "\u3042\u3044\u3046"))   # 3 and 6 (three wide characters)
-listing_take("ADENOCARCINOMA", 6)
-listing_split_after("COMPLETED/BRCA1", "/")
+listing_take("HYPERGLYCAEMIA", 6)
+listing_split_after("COMPLETED/UPPER", "/")
 }
 \seealso{
 \code{\link[=listing_wrap]{listing_wrap()}}, the rule these build; \code{\link[=listing_wrap_code]{listing_wrap_code()}} to

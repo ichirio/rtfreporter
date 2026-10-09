@@ -124,8 +124,8 @@
 #'   fork that rule.
 #' @examples
 #' listing_disp_width(c("ABC", "\u3042\u3044\u3046"))   # 3 and 6 (three wide characters)
-#' listing_take("ADENOCARCINOMA", 6)
-#' listing_split_after("COMPLETED/BRCA1", "/")
+#' listing_take("HYPERGLYCAEMIA", 6)
+#' listing_split_after("COMPLETED/UPPER", "/")
 #' @name listing_measures
 NULL
 
@@ -268,8 +268,8 @@ listing_split_after <- function(text, sep) {
 #'
 #' `vars` may name **several** columns: their values are joined with `sep`,
 #' missing and empty values dropped, so a column reading
-#' `"ADENOCARCINOMA/BRCA1/GRADE 3"` is written `listing_col(c("HIST", "BRCA",
-#' "HISTGRD"))` rather than pasted by hand upstream.
+#' `"HYPERGLYCAEMIA/UPPER/GRADE 3"` is written `listing_col(c("AEDECOD", "AELOC",
+#' "AESEV"))` rather than pasted by hand upstream.
 #'
 #' `width` is a **display width in characters** (a full-width CJK glyph
 #' counts as two), not a rendered width: it decides
@@ -328,11 +328,11 @@ listing_split_after <- function(text, sep) {
 #' listing_col("USUBJID", width = 15, label = "Unique\nSubject ID")
 #'
 #' # Three source columns in one printed column, joined with "/".
-#' listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
-#'             label = "Primary Diagnosis/\nAny (BRCA) Mutations/\nHistology")
+#' listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 22,
+#'             label = "Disposition/\nLocation/\nPreferred Term")
 #'
 #' # No wrapping, and a header only.
-#' listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis")
+#' listing_col("AETOXGR", label = "Grade at\nInitial\nDiagnosis")
 #'
 #' # Header left to the data's own labels; short parts kept side by side.
 #' listing_col(c("AGE", "SEX"), width = 12, layout = "flow")
@@ -341,7 +341,7 @@ listing_split_after <- function(text, sep) {
 #' listing_col("USUBJID", width = 15, label = c("Unique", "Subject ID"))
 #'
 #' # One string and a width: the package lays it out.
-#' listing_col("HIST", width = 16, label = "Histology of the tumour")
+#' listing_col("AEDECOD", width = 16, label = "Preferred term of the event")
 #'
 #' # A key column: printed once per record, again atop the next page.
 #' listing_col("USUBJID", width = 15, collapse_repeats = TRUE)
@@ -899,16 +899,16 @@ print.rtf_listing_spec <- function(x, ...) {
 #' @examples
 #' adsl <- data.frame(
 #'   USUBJID = c("01-701-1015", "01-701-1023"),
-#'   HIST    = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA"),
-#'   BRCA    = c("BRCA1", NA),
+#'   AEDECOD = c("HYPERGLYCAEMIA", "ACUTE KIDNEY INJURY"),
+#'   AELOC   = c("UPPER", NA),
 #'   ARM     = c("Placebo", "Xanomeline High Dose"),
 #'   stringsAsFactors = FALSE
 #' )
 #'
 #' spec <- listing_spec(list(
 #'   listing_col("USUBJID", width = 11, label = "Unique\nSubject ID"),
-#'   listing_col(c("HIST", "BRCA"), width = 16,
-#'               label = "Histology/\nMutation"),
+#'   listing_col(c("AEDECOD", "AELOC"), width = 16,
+#'               label = "Preferred Term/\nLocation"),
 #'   listing_col("ARM", width = 12, label = "Treatment Arm")
 #' ))
 #'
@@ -1064,7 +1064,7 @@ build_listing <- function(data, spec) {
 #'
 #' @section The rule:
 #'
-#' 1. **After the separator.**  `"COMPLETED/BRCA1"` prefers to break between
+#' 1. **After the separator.**  `"COMPLETED/UPPER"` prefers to break between
 #'    its parts, and the separator stays at the end of the line it closes --
 #'    the look a stacked listing column is expected to have.
 #' 2. **At a word boundary** -- after a space, a comma or a hyphen -- filling
@@ -1093,14 +1093,14 @@ build_listing <- function(data, spec) {
 #'   whose `label` accepts the result as header lines.
 #'
 #' @examples
-#' listing_wrap("COMPLETED/BRCA1/ADENOCARCINOMA", 22)
+#' listing_wrap("COMPLETED/UPPER/HYPERGLYCAEMIA", 22)
 #'
 #' # A token with nowhere to break is split, so every line fits.
 #' listing_wrap("Immunohistochemistry", 8)
 #'
 #' # Lay a header out by hand, then hand the lines to listing_col().
-#' listing_col("HIST", width = 16,
-#'             label = listing_wrap("Histology of the tumour", 16))
+#' listing_col("AEDECOD", width = 16,
+#'             label = listing_wrap("Preferred term of the event", 16))
 #'
 #' # "flow" keeps short parts side by side.
 #' listing_wrap("40/F", 20)
@@ -1205,8 +1205,8 @@ listing_wrap <- function(text, width, sep = "/",
 #' src <- listing_wrap_code("my_wrap")
 #' env <- new.env(parent = globalenv())
 #' eval(parse(text = src), envir = env)
-#' identical(env$my_wrap("COMPLETED/BRCA1", 12, "/", "stack"),
-#'           listing_wrap("COMPLETED/BRCA1", 12))
+#' identical(env$my_wrap("COMPLETED/UPPER", 12, "/", "stack"),
+#'           listing_wrap("COMPLETED/UPPER", 12))
 #' @export
 listing_wrap_code <- function(name = "my_wrap") {
   if (!is.character(name) || length(name) != 1L || is.na(name) ||

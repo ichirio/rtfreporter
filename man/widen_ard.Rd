@@ -141,7 +141,7 @@ Scope it the way \code{levels} already is, with a \strong{list keyed by
 column}, matched on the output name then the source name, with
 \code{.default} covering the rest:
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{labels = list(BASEGR = c("0" = "Baseline 0"),
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{labels = list(BGRADE = c("0" = "Baseline 0"),
               WORST  = c("0" = "Grade 0"))
 }\if{html}{\out{</div>}}
 

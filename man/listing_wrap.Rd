@@ -39,7 +39,7 @@ for this rule's own source when the change belongs INSIDE it.
 \section{The rule}{
 
 \enumerate{
-\item \strong{After the separator.}  \code{"COMPLETED/BRCA1"} prefers to break between
+\item \strong{After the separator.}  \code{"COMPLETED/UPPER"} prefers to break between
 its parts, and the separator stays at the end of the line it closes --
 the look a stacked listing column is expected to have.
 \item \strong{At a word boundary} -- after a space, a comma or a hyphen -- filling
@@ -56,14 +56,14 @@ stands.
 }
 
 \examples{
-listing_wrap("COMPLETED/BRCA1/ADENOCARCINOMA", 22)
+listing_wrap("COMPLETED/UPPER/HYPERGLYCAEMIA", 22)
 
 # A token with nowhere to break is split, so every line fits.
 listing_wrap("Immunohistochemistry", 8)
 
 # Lay a header out by hand, then hand the lines to listing_col().
-listing_col("HIST", width = 16,
-            label = listing_wrap("Histology of the tumour", 16))
+listing_col("AEDECOD", width = 16,
+            label = listing_wrap("Preferred term of the event", 16))
 
 # "flow" keeps short parts side by side.
 listing_wrap("40/F", 20)
