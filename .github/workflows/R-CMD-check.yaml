@@ -24,7 +24,9 @@ jobs:
           - {os: ubuntu-latest,  r: 'devel',     http-user-agent: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}
-          - {os: ubuntu-latest,  r: '4.2'}
+          # the oldest R tested; a package whose current version needs a
+          # newer R is pinned to its last version for 4.2 (`pin`)
+          - {os: ubuntu-latest,  r: '4.2', pin: 'tern@0.9.7'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
 
@@ -45,7 +47,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: any::rcmdcheck ${{ matrix.config.pin }}
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2

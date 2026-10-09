@@ -2,7 +2,7 @@
 
 ### Continuous integration
 
-- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used in tests, needs R >= 4.2).
+- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used in tests, needs R >= 4.2). That job installs tern 0.9.7, the last tern for R < 4.4.
 
 ### Documentation
 
