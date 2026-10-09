@@ -42,8 +42,8 @@ listing_wrap_code("my_wrap")
 src <- listing_wrap_code("my_wrap")
 env <- new.env(parent = globalenv())
 eval(parse(text = src), envir = env)
-identical(env$my_wrap("COMPLETED/BRCA1", 12, "/", "stack"),
-          listing_wrap("COMPLETED/BRCA1", 12))
+identical(env$my_wrap("COMPLETED/UPPER", 12, "/", "stack"),
+          listing_wrap("COMPLETED/UPPER", 12))
 }
 \seealso{
 \code{\link[=listing_wrap]{listing_wrap()}} to delegate to the rule instead of editing it,

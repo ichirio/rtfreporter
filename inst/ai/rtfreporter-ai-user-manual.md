@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9030** (the development
+**This manual documents rtfreporter 0.8.2.9031** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -569,9 +569,9 @@ rule above the first line.
 spec <- listing_spec(list(
   listing_col("USUBJID", width = 15, label = "Unique\nSubject ID",
               collapse_repeats = TRUE),
-  listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
-              label = "Disposition/\nAny (BRCA) Mutations/\nHistology"),
-  listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis")
+  listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 22,
+              label = "Disposition/\nLocation/\nPreferred Term"),
+  listing_col("AETOXGR", label = "Grade at\nInitial\nDiagnosis")
 ))
 
 pages <- as_rtftables(adsl, listing = spec, max_rows = 8)  # never splits a subject

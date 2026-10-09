@@ -6,6 +6,12 @@
 
 ### Documentation
 
+- **No code copied from a discussion, and no links to discussions that are
+  moving** (#596).  The test that checks `build_listing()` against a listing
+  laid out by hand now lays it out with its own code, on made-up
+  adverse-event data, and checks the same things; the comments, docs and
+  NEWS describe their sources without the numbers.
+
 - **GROUPN, not BIGN** (#592).  The subjects per group -- what clinical
   reporting calls big N -- are a GROUPN analysis in the comments and tests,
   as in tflspec and tflplanner.  tfrmt's own names (`prep_big_n()`,
@@ -432,15 +438,15 @@ which 20 deprecated -- 105 to learn.  The SAMPLE-01 RTFs are byte-identical.
 # rtfreporter 0.8.2
 
 Tables from a cards / cardx analysis results dataset (ARD): the plan engine
-and the ARD helpers, adopted in the pre-CRAN API review (Discussion #316).
+and the ARD helpers, adopted in the pre-CRAN API review.
 Plus two fixes found by the Python port's byte-for-byte cross-check and by
 the plan work.  Nothing that rendered before renders differently: the six
 sample reports are byte-identical.
 
 ### New features
 
-- **Tables from a cards / cardx ARD** (#491, #498; plan E of tflspec
-  Discussion #23).  The engine that turns an analysis results dataset into
+- **Tables from a cards / cardx ARD** (#491, #498; plan E of the
+  maintainer's design discussion).  The engine that turns an analysis results dataset into
   an `rtftable` moves here from tflspec, so that a plan and the rendering
   it declares live in one package and a generated table program needs only
   rtfreporter (and cards).
@@ -469,8 +475,8 @@ sample reports are byte-identical.
 
   These are rtfreporter's functions, not cards'; cards stays a suggestion,
   and the Excel definition of a table stays in tflspec (`tfl_table_plan()`).
-  The four tflspec Discussion #3 samples written as plans render
-  byte-identical RTF to the hand-written programs.
+  Four users' sample reports written as plans render byte-identical RTF
+  to their hand-written programs.
 
 ### Bug fixes
 
@@ -760,7 +766,7 @@ sample reports are byte-identical.
   so the study block is stated once across the deliverable rather than in every
   program.
 
-  Generalized from a real production template (discussion #460).  The skeleton
+  Generalized from a real production template.  The skeleton
   is executed by `test-ai-user-manual.R` like every other example in the
   manual.  Sections 3..17 shifted to 4..18.
 
@@ -840,7 +846,7 @@ sample reports are byte-identical.
 
   RStudio's `View()` and object inspector address elements by name, so a
   paginated list looked as though every page held page 1's columns and page 1's
-  stub (#439) — the pages were right all along.
+  stub — the pages were right all along.
 
   A heading used by several pages now carries a **`"...n"` tail**:
 
@@ -1019,7 +1025,7 @@ sample reports are byte-identical.
   hold fewer rows, which is the point.  Nothing else moves.
 
   It is also what makes a listing paginate like the hand-written pipeline it
-  replaces (Discussion #356).  That code carried the page's leading blank row
+  replaces.  That code carried the page's leading blank row
   **inside** its 40, so `k` records fitted while `1 + k x block <= 40`;
   `split = "group_safe"` had one row more of budget and took one record more
   per page -- enough to push the page past what Word could fit:
@@ -1572,8 +1578,8 @@ n(%)")),
   listing_col("USUBJID", width = 15, label = c("Unique", "Subject ID"))
   #> the lines, exactly as given -- not re-wrapped, even if one is too wide
 
-  listing_col("HIST", width = 16, label = "Histology of the tumour")
-  #> the words; laid out at the width -> "Histology of" / "the tumour"
+  listing_col("AEDECOD", width = 16, label = "Preferred term of the event")
+  #> the words; laid out at the width -> "Preferred term" / "of the event"
   ```
 
   A vector, or a string carrying its own line breaks, says "I laid this out"
@@ -1594,8 +1600,8 @@ n(%)")),
   lines:
 
   ```r
-  listing_col("HIST", width = 16,
-              label = listing_wrap("Histology of the tumour", 16))
+  listing_col("AEDECOD", width = 16,
+              label = listing_wrap("Preferred term of the event", 16))
   ```
 
   `width` itself stays, and is not replaceable by this function: its main job
@@ -1604,8 +1610,7 @@ n(%)")),
   the same data, a column wrapped at 16 paginates 10,8,10,8 where the same
   column with no `width` gives 10,10,4 -- the body says one row, Word prints
   two.  A column whose cells always fit its rendered width needs no `width`,
-  which is why the hand-written listing of Discussion #356 omitted it for
-  `STAGE` and `ECOGPS`.
+  which is why a hand-written listing leaves it out for such columns.
 
 - **The width fit now accounts for how tall a header will be**
   (`fit_listing_widths(header_lines = )`, #378).  The demand was data-driven,
@@ -1618,8 +1623,7 @@ n(%)")),
   A column is now also asked to be wide enough for its header to fit in
   `header_lines` lines (default `4`), so a long label buys width in
   proportion to how tall it would otherwise make the header.  Measured
-  against the hand-tuned widths of a real 19-column listing (Discussion
-  #356), the mean error per column falls from 5.7 characters to 3.6 and the
+  against the hand-tuned widths of a real 19-column listing, the mean error per column falls from 5.7 characters to 3.6 and the
   header block from ten lines to eight; `header_lines = 3` takes it to 2.8
   and five lines.  `Inf` restores the previous, purely data-driven fit.
 
@@ -1638,13 +1642,13 @@ n(%)")),
 
   ```r
   # before
-  listing_col(c("DISPTPD", "BRCA", "HIST"), width = 44)
+  listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 44)
 
   # now
-  listing_col(c("DISPTPD", "BRCA", "HIST"), width = 44, rel_width = 44,
-    label = "Primary Diagnosis/
-Any (BRCA) Mutations/
-Histology")
+  listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 44, rel_width = 44,
+    label = "Disposition/
+Location of the Event/
+Preferred Term")
   ```
 
   Alongside the fitted `width`, each column that does not already set them
@@ -1672,9 +1676,9 @@ Histology")
     adsl, draft,
     page   = rtf_page(paper_size = "A4", orientation = "landscape"),
     labels = c(USUBJID = "Unique Subject ID",
-               DISPTPD = "Primary Diagnosis",
-               BRCA    = "Any (BRCA) Mutations",
-               HIST    = "Histology")
+               DCDECOD = "Disposition",
+               AELOC   = "Location of the Event",
+               AEDECOD = "Preferred Term")
   )
   ```
 
@@ -1695,7 +1699,7 @@ Histology")
   home in `listing_col(label = )`.)
 - **A header is no longer cut mid-word by the width fit** (#373).  Scaling the
   demands to the page could take a column below the widest token its header
-  cannot break -- `"Stage at Initial Diagnosis"` in a nine-character column
+  cannot break -- `"Grade at Initial Diagnosis"` in a nine-character column
   printed as `Diagnosi` / `s`.  A column that falls under that floor is now
   raised back to it and the characters come from the columns with room to
   spare; only if the headers alone cannot fit the page does the guarantee give
@@ -1710,8 +1714,8 @@ Histology")
   ```r
   spec <- listing_spec(list(
     listing_col("USUBJID", collapse_repeats = TRUE),
-    listing_col(c("DISPTPD", "BRCA", "HIST")),
-    listing_col("STAGE")
+    listing_col(c("DCDECOD", "AELOC", "AEDECOD")),
+    listing_col("AETOXGR")
   ))
 
   fitted <- fit_listing_widths(
@@ -1723,8 +1727,8 @@ Histology")
   listing_code(fitted, name = "listing")
   #> listing <- listing_spec(list(
   #>   listing_col("USUBJID", width = 24, collapse_repeats = TRUE),
-  #>   listing_col(c("DISPTPD", "BRCA", "HIST"), width = 82),
-  #>   listing_col("STAGE", width = 15)
+  #>   listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 82),
+  #>   listing_col("AETOXGR", width = 15)
   #> ))
   ```
 
@@ -1735,7 +1739,7 @@ Histology")
   (default 0.9) of the display widths of its cells, so one unusually long
   value wraps instead of pushing every other column narrow, floored by the
   widest token its header cannot break.  That floor matters: a header wraps,
-  so a label like `"Stage at Initial Diagnosis"` asks for nine characters
+  so a label like `"Grade at Initial Diagnosis"` asks for nine characters
   (`"Diagnosis"`), not twenty-six.
 
   `listing_code()` writes out only what differs from the listing's defaults,
@@ -1786,12 +1790,12 @@ Histology")
   made internally:
 
   ```r
-  catx("/", "COMPLETED", NA, "ADENOCARCINOMA")
-  #> "COMPLETED/ADENOCARCINOMA"      # never "COMPLETED//ADENOCARCINOMA"
+  catx("/", "COMPLETED", NA, "HYPERGLYCAEMIA")
+  #> "COMPLETED/HYPERGLYCAEMIA"      # never "COMPLETED//HYPERGLYCAEMIA"
   ```
 
   Exporting it is what lets a listing be prepared with **rtfreporter alone**:
-  auditing the pipeline in Discussion #356, this join was its only call to
+  auditing a hand-written listing pipeline, this join was its only call to
   another package.  `build_listing()` now goes through the same function, so
   a listing column and a column you join by hand cannot drift apart.
 
@@ -1812,11 +1816,11 @@ Histology")
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 15, label = "Unique
 Subject ID"),
-    listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
-                label = "Primary Diagnosis/
-Any (BRCA) Mutations/
-Histology"),
-    listing_col("STAGE", label = "Stage at
+    listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 22,
+                label = "Disposition/
+Location of the Event/
+Preferred Term"),
+    listing_col("AETOXGR", label = "Stage at
 Initial
 Diagnosis")
   ))
@@ -1855,11 +1859,10 @@ Diagnosis")
   long breaks again at a word boundary.  A token longer than the width keeps
   its own line rather than being cut mid-word.
 
-  The reshaping is checked **against the hand-written pipeline it replaces**
-  (Discussion #356), not just against itself: that pipeline -- its
-  `split_string()`, `get_max_element_counts()` and `pad_list_elements()`
-  verbatim -- runs beside `build_listing()` on the same ADSL-shaped data and
-  the two are compared cell for cell.  Three differences are deliberate and
+  The reshaping is checked **against the hand-written pipeline it replaces**,
+  not just against itself: a listing laid out by hand runs beside
+  `build_listing()` on the same data and the two are compared cell for
+  cell.  Three differences are deliberate and
   pinned by tests: a token longer than the width keeps its own line instead
   of being preceded by an empty one; a newline already in the data is
   honoured; and an **empty cell still occupies its row**, so a record whose
@@ -2121,7 +2124,7 @@ Diagnosis")
 ### Breaking changes
 
 - **One border constructor.** `rtf_border()` absorbs the rest of the family
-  (#346), finishing the #324 decision that #342 only half delivered. A side is
+  (#346), finishing the API review's decision that #342 only half delivered. A side is
   now written as a value rather than built:
 
   | deprecated | write instead |
@@ -2986,7 +2989,7 @@ Diagnosis")
   split. Previously the stub was built once on the whole body, which (a)
   fragmented the split to one page per row and produced nameless `group_0` pages
   when the outer `group_col` was blanked on the inserted label rows, and (b)
-  collapsed a constant intermediate hierarchy level (e.g. `LBTOX_LBL / group1 /
+  collapsed a constant intermediate hierarchy level (e.g. `LBCAT / group1 /
   label` with a fixed `group1`) into a single stub label row that spanned every
   group. Put the inner hierarchy in `stub_vars` and the outer level in
   `group_col`. Every other split keeps the previous stub-then-paginate order.

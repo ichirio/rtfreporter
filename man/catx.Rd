@@ -22,8 +22,8 @@ arguments, \code{character(0)}.
 Concatenates its arguments element by element, separated by \code{sep}, leaving
 out every value that is missing (\code{NA}) or empty (\code{""}).  This is the SAS
 \code{CATX} rule, and it is what \code{\link[=listing_col]{listing_col()}} applies to its \code{vars}: a record
-whose middle value is missing prints \code{"COMPLETED/ADENOCARCINOMA"}, never
-\code{"COMPLETED//ADENOCARCINOMA"}.
+whose middle value is missing prints \code{"COMPLETED/HYPERGLYCAEMIA"}, never
+\code{"COMPLETED//HYPERGLYCAEMIA"}.
 }
 \details{
 Arguments are vectorised together.  A length-1 argument is recycled to the
@@ -38,18 +38,18 @@ the one place the function differs from \code{ydisctools::catx()}, which keeps
 the padding.)
 }
 \examples{
-catx("/", "COMPLETED", "BRCA1", "ADENOCARCINOMA")
+catx("/", "COMPLETED", "UPPER", "HYPERGLYCAEMIA")
 
 # A missing value is skipped, not printed as a doubled separator.
-catx("/", "COMPLETED", NA, "ADENOCARCINOMA")
+catx("/", "COMPLETED", NA, "HYPERGLYCAEMIA")
 
 # Vectorised, with length-1 arguments recycled.
 adsl <- data.frame(
-  HIST = c("ADENOCARCINOMA", "SMALL CELL"),
-  BRCA = c("BRCA1", NA),
+  AEDECOD = c("HYPERGLYCAEMIA", "SKIN ULCER"),
+  AELOC   = c("UPPER", NA),
   stringsAsFactors = FALSE
 )
-catx("/", adsl$HIST, adsl$BRCA)
+catx("/", adsl$AEDECOD, adsl$AELOC)
 catx(" ", "Cohort", c("A", "B"))
 
 # Any separator, including none at all.

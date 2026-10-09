@@ -78,7 +78,7 @@ further physical row, and what its header says.  A list of these is what
 \details{
 \code{vars} may name \strong{several} columns: their values are joined with \code{sep},
 missing and empty values dropped, so a column reading
-\code{"ADENOCARCINOMA/BRCA1/GRADE 3"} is written \code{listing_col(c("HIST", "BRCA", "HISTGRD"))} rather than pasted by hand upstream.
+\code{"HYPERGLYCAEMIA/UPPER/GRADE 3"} is written \code{listing_col(c("AEDECOD", "AELOC", "AESEV"))} rather than pasted by hand upstream.
 
 \code{width} is a \strong{display width in characters} (a full-width CJK glyph
 counts as two), not a rendered width: it decides
@@ -91,11 +91,11 @@ table -- that is \code{rel_width}, which defaults to \code{width} when you give 
 listing_col("USUBJID", width = 15, label = "Unique\nSubject ID")
 
 # Three source columns in one printed column, joined with "/".
-listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
-            label = "Primary Diagnosis/\nAny (BRCA) Mutations/\nHistology")
+listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 22,
+            label = "Disposition/\nLocation/\nPreferred Term")
 
 # No wrapping, and a header only.
-listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis")
+listing_col("AETOXGR", label = "Grade at\nInitial\nDiagnosis")
 
 # Header left to the data's own labels; short parts kept side by side.
 listing_col(c("AGE", "SEX"), width = 12, layout = "flow")
@@ -104,7 +104,7 @@ listing_col(c("AGE", "SEX"), width = 12, layout = "flow")
 listing_col("USUBJID", width = 15, label = c("Unique", "Subject ID"))
 
 # One string and a width: the package lays it out.
-listing_col("HIST", width = 16, label = "Histology of the tumour")
+listing_col("AEDECOD", width = 16, label = "Preferred term of the event")
 
 # A key column: printed once per record, again atop the next page.
 listing_col("USUBJID", width = 15, collapse_repeats = TRUE)

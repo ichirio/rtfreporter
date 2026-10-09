@@ -38,7 +38,7 @@ all three down.  That is the point: it is a template to edit.
 spec <- listing_spec(list(
   listing_col("USUBJID", width = 15, label = "Unique\nSubject ID"),
   listing_col(c("AGE", "SEX"), width = 12, layout = "flow"),
-  listing_col("STAGE", width = 9)
+  listing_col("AETOXGR", width = 9)
 ))
 
 listing_code(spec)

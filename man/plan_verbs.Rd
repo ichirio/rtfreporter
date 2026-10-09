@@ -444,7 +444,7 @@ header says is the author's choice:
 \itemize{
 \item \code{values = list(n = "page")} --- each page's own, the subjects with that test:
 the ARD rows \strong{carrying} the page key, e.g.
-\code{cards::ard_tabulate(adlb, by = PARAM, variables = BASEGR)},
+\code{cards::ard_tabulate(adlb, by = PARAM, variables = BGRADE)},
 which states each baseline column's N and the page's total;
 \item \code{list(n = "table")} --- the analysis set: the ARD rows \strong{without} the
 page key, e.g. \code{cards::ard_total_n(adsl)} or the treatment

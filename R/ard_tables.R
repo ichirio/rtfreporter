@@ -1,7 +1,7 @@
 # ============================================================================
 #  Tables from a cards / cardx ARD: the immediate form
 # ----------------------------------------------------------------------------
-#  Moved here from tflspec (plan E of tflspec Discussion #23, #491), so that
+#  Moved here from tflspec (plan E of the design discussion, #491), so that
 #  a plan and the rendering it declares live in one package and a generated
 #  table program needs only rtfreporter (and cards).  No Excel, no spec:
 #  the definition workbook stays in tflspec, which builds a plan from it
@@ -15,7 +15,7 @@
 #  the ARD / plan work became its own package.  rtfreporter keeps the
 #  renderer; everything here produces what it renders.
 # ----------------------------------------------------------------------------
-#  DESIGN RULE (from Discussion #473): the ARD's *object attributes* are never
+#  DESIGN RULE (from users' report examples): the ARD's *object attributes* are never
 #  read.  attr(ard, "args") is ordered differently per generator, mixes `by`
 #  with `variables`, and is silently dropped for the second operand of
 #  dplyr::bind_rows(); the ARD class survives bind_rows() of a different shape,
@@ -184,7 +184,7 @@
 # matched on the output name then the source name:
 #
 #     labels = list(AGE    = "Age (years)",          # a value, anywhere
-#                   BASEGR = c("0" = "Baseline 0"),  # only in BASEGR
+#                   BGRADE = c("0" = "Baseline 0"),  # only in BGRADE
 #                   WORST  = c("0" = "Grade 0"))     # only in WORST
 #
 # The two can be mixed because they are told apart by shape, not by a
@@ -1086,8 +1086,8 @@ print.cell_rows <- function(x, ...) {
 #' writes the per-arm count as `n` on the by-variable's own rows and the
 #' **study** total as `N` on those same rows, while every summary row carries
 #' its own denominator as `N`; `ard_total_n()` adds `..ard_total_n..`; and an
-#' author may compute their own, as the `bigN` statistic in the solicited-AE
-#' example on Discussion #473.  Guessing between them produces a plausible
+#' author may compute their own, as a `bigN` statistic in a solicited-AE
+#' table.  Guessing between them produces a plausible
 #' wrong number in a column header, so this function does not guess:
 #'
 #' * `stat` names the statistic, and defaults to `"N"`.
@@ -1746,7 +1746,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   `.default` covering the rest:
 #'
 #'   ```r
-#'   labels = list(BASEGR = c("0" = "Baseline 0"),
+#'   labels = list(BGRADE = c("0" = "Baseline 0"),
 #'                 WORST  = c("0" = "Grade 0"))
 #'   ```
 #'
@@ -2468,7 +2468,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 # Always three blocks, so the author deletes rather than remembers:
 # the conversion written as the **pipe** --- `normalize_ard()`, a commented
 # `dplyr::mutate()` and `widen_ard()` --- with the seam left open, because
-# half the reports on Discussion #473 have to reach between the two steps
+# half of the users' report examples have to reach between the two steps
 # (to derive a key from a statistic, to add a constant column, to indent a
 # label); then the `col_header` (drafted from [pull_ard()] when one column
 # key makes that decidable, and skipped entirely when

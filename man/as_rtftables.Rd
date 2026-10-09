@@ -439,7 +439,7 @@ the reshaped body.  \strong{Exception: with \code{split = "by_value"} the body i
 split by \code{group_col} \emph{first} and the stub is built per page afterwards} --
 each value becomes an independent section, so \code{group_col} here refers to
 the \strong{pre-stub} columns and is not folded into the stub.  This keeps a
-fixed intermediate hierarchy level (e.g. \code{LBTOX_LBL / group1 / label} with
+fixed intermediate hierarchy level (e.g. \code{LBCAT / group1 / label} with
 a constant \code{group1}) from collapsing into a single stub label row that
 spans every group; put the inner levels in the stub and the outer level in
 \code{group_col}.  Position-indexed metadata (\code{col_spec}, \code{col_header_align},
@@ -470,7 +470,7 @@ with \code{split = "by_value"} the body is split by \code{group_col} \emph{first
 stub is built per page afterwards} -- each value becomes an independent
 section, so \code{group_col} here refers to the \strong{pre-stub} columns and is not
 folded into the stub.  This keeps a fixed intermediate hierarchy level
-(e.g. \code{LBTOX_LBL / group1 / label} with a constant \code{group1}) from
+(e.g. \code{LBCAT / group1 / label} with a constant \code{group1}) from
 collapsing into a single stub label row that spans every group; put the
 inner levels in \code{stub_vars} and the outer level in \code{group_col}.  Position-indexed
 metadata (\code{col_spec}, \code{col_header_align}, per-cell \code{cell_styles}) is

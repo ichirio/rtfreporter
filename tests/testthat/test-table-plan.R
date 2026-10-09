@@ -1836,15 +1836,15 @@ test_that("pages split by a group value each read their own N from the ARD", {
   set.seed(1)
   lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
                     PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
-  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
-  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb$BGRADE <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WGRADE <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
   lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
   ard <- cards::bind_ard(
-    cards::ard_tabulate(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
+    cards::ard_tabulate(lb, by = c(PARAM, BGRADE), variables = WGRADE),
     # the population of each parameter, split by the column variable:
     # the ARD states every column's N and each page's total
-    cards::ard_tabulate(lb, by = PARAM, variables = BASEGR))
-  p <- table_plan(normalize_ard(ard), cols = "BASEGR",
+    cards::ard_tabulate(lb, by = PARAM, variables = BGRADE))
+  p <- table_plan(normalize_ard(ard), cols = "BGRADE",
                 rows = c(PARAM = "PARAM"), label = c(label = ".label")) |> plan_cells(notes = FALSE) |>
     plan_cells("{n}") |>
     plan_paginate_group(keep = FALSE) |>
@@ -1853,7 +1853,7 @@ test_that("pages split by a group value each read their own N from the ARD", {
       c("", "{col} (N={n})")))
   pg <- expect_silent(suppressMessages(plan_apply(p, "pages")))
   n <- table(lb$PARAM)
-  cell <- table(lb$PARAM, lb$BASEGR)
+  cell <- table(lb$PARAM, lb$BGRADE)
   for (i in seq_along(pg)) {
     prm <- names(pg)[i]
     h <- hdr_rows(pg[i])
@@ -1870,17 +1870,17 @@ two_pop <- function() {
   set.seed(1)
   lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
                     PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
-  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
-  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb$BGRADE <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WGRADE <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
   lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
   d <- normalize_ard(cards::bind_ard(
-    cards::ard_tabulate(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
-    cards::ard_tabulate(lb, by = PARAM, variables = BASEGR),
+    cards::ard_tabulate(lb, by = c(PARAM, BGRADE), variables = WGRADE),
+    cards::ard_tabulate(lb, by = PARAM, variables = BGRADE),
     cards::ard_total_n(cards::ADSL)), drop_contexts = "attributes")
   list(d = d, tested = table(lb$PARAM), set = nrow(cards::ADSL))
 }
 two_pop_plan <- function(d, n, text = "T (N={n})") {
-  table_plan(d, cols = "BASEGR", rows = c(PARAM = "PARAM"),
+  table_plan(d, cols = "BGRADE", rows = c(PARAM = "PARAM"),
            label = c(label = ".label")) |> plan_cells(notes = FALSE) |>
     plan_cells("{n}") |>
     plan_paginate_group(keep = FALSE) |>

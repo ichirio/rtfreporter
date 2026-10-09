@@ -3,12 +3,12 @@
 
 adsl_demo <- function() {
   data.frame(
-    USUBJID  = c("01-701-1015", "01-701-1023", "01-701-1028"),
-    HIST     = c("ADENOCARCINOMA",
-                 "SQUAMOUS CELL CARCINOMA OF THE LUNG",
-                 "SMALL CELL"),
-    BRCA     = c("BRCA1", NA, "BRCA2"),
-    ARM      = c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"),
+    USUBJID = c("01-701-1015", "01-701-1023", "01-701-1028"),
+    AEDECOD = c("HYPERGLYCAEMIA",
+                "UPPER RESPIRATORY TRACT INFECTION",
+                "SKIN ULCER"),
+    AELOC   = c("UPPER", NA, "LOWER"),
+    ARM     = c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"),
     stringsAsFactors = FALSE
   )
 }
@@ -16,7 +16,7 @@ adsl_demo <- function() {
 demo_spec <- function(...) {
   listing_spec(list(
     listing_col("USUBJID", width = 11, label = "Unique\nSubject ID"),
-    listing_col(c("HIST", "BRCA"), width = 16, label = "Histology/\nMutation"),
+    listing_col(c("AEDECOD", "AELOC"), width = 16, label = "Preferred Term/\nLocation"),
     listing_col("ARM", width = 12, label = "Treatment Arm")
   ), ...)
 }
@@ -82,14 +82,14 @@ test_that("listing_spec() accepts bare column names and makes names unique", {
 
 test_that("a cell breaks after the separator first", {
   expect_identical(
-    .listing_wrap_sep_word("STAGE II/GRADE 3", 12, "/"),
-    c("STAGE II/", "GRADE 3"))
+    .listing_wrap_sep_word("GRADE II/GRADE 3", 12, "/"),
+    c("GRADE II/", "GRADE 3"))
 })
 
 test_that("a piece still too long breaks at a word boundary", {
   expect_identical(
-    .listing_wrap_sep_word("SQUAMOUS CELL CARCINOMA OF THE LUNG", 16, "/"),
-    c("SQUAMOUS CELL", "CARCINOMA OF", "THE LUNG"))
+    .listing_wrap_sep_word("UPPER RESPIRATORY TRACT INFECTION", 16, "/"),
+    c("UPPER", "RESPIRATORY", "TRACT INFECTION"))
 })
 
 test_that("a token wider than the column is hard-split, so every line fits", {
@@ -99,7 +99,7 @@ test_that("a token wider than the column is hard-split, so every line fits", {
   expect_identical(.listing_wrap_sep_word("ABCDEFGHIJKLMNOP", 8, "/"),
                    c("ABCDEFGH", "IJKLMNOP"))
   # every returned line fits the column it was measured against
-  lines <- .listing_wrap_sep_word("63016-205-100028", 15, "/")
+  lines <- .listing_wrap_sep_word("PILOT-205-100028", 15, "/")
   expect_true(all(listing_disp_width(lines) <= 15))
 })
 
@@ -120,7 +120,7 @@ test_that("wrapping honours a newline already in the data, and NA is empty", {
 })
 
 test_that("no width means no wrapping", {
-  long <- "SQUAMOUS CELL CARCINOMA OF THE LUNG"
+  long <- "UPPER RESPIRATORY TRACT INFECTION"
   expect_identical(.listing_wrap_sep_word(long, NULL, "/"), long)
 })
 
@@ -137,17 +137,17 @@ test_that("build_listing() joins, wraps, pads and separates records", {
 
   # 3 printed columns + 2 gutters + the record column
   expect_identical(names(body),
-                   c("USUBJID", ".sp1", "HIST", ".sp2", "ARM", ".rtf_record"))
+                   c("USUBJID", ".sp1", "AEDECOD", ".sp2", "ARM", ".rtf_record"))
 
   # record 1 wraps to 2 lines, + 1 blank; record 2 to 3 lines, + 1; record 3
   # to 2 lines, + 1.
   expect_identical(nrow(body), 10L)
   expect_identical(body$.rtf_record, rep(1:3, times = c(3L, 4L, 3L)))
 
-  # the joined column drops the missing BRCA of record 2, so no doubled "/"
-  expect_identical(body$HIST[4:6],
-                   c("SQUAMOUS CELL", "CARCINOMA OF", "THE LUNG"))
-  expect_identical(body$HIST[1:2], c("ADENOCARCINOMA/", "BRCA1"))
+  # the joined column drops the missing AELOC of record 2, so no doubled "/"
+  expect_identical(body$AEDECOD[4:6],
+                   c("UPPER", "RESPIRATORY", "TRACT INFECTION"))
+  expect_identical(body$AEDECOD[1:2], c("HYPERGLYCAEMIA/", "UPPER"))
 
   # every record ends with a blank row, and the gutters are blank throughout
   expect_identical(body$USUBJID[c(3L, 7L, 10L)], rep("", 3L))
@@ -158,7 +158,7 @@ test_that("build_listing() honours spacer / blank_row / record switches", {
   body <- build_listing(adsl_demo(),
                         demo_spec(spacer = FALSE, blank_row = FALSE,
                                   record = FALSE))
-  expect_identical(names(body), c("USUBJID", "HIST", "ARM"))
+  expect_identical(names(body), c("USUBJID", "AEDECOD", "ARM"))
   expect_identical(nrow(body), 7L)          # 2 + 3 + 2 lines, no blank rows
 })
 
@@ -192,7 +192,7 @@ test_that("build_listing() handles zero rows", {
   body  <- build_listing(empty, demo_spec())
   expect_identical(nrow(body), 0L)
   expect_identical(names(body),
-                   c("USUBJID", ".sp1", "HIST", ".sp2", "ARM", ".rtf_record"))
+                   c("USUBJID", ".sp1", "AEDECOD", ".sp2", "ARM", ".rtf_record"))
 })
 
 test_that("a factor source column is joined by its label, not its level code", {

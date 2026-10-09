@@ -87,11 +87,11 @@ test_that("set_col_header() maps over every page of an as_rtftables() list", {
 # ── as_rtftables(col_header =) now resolves in FINAL coordinates ────────────
 
 test_that("as_rtftables(col_header =) with stub_vars + drop_cols uses final coords", {
-  # Input has 9 columns, LBTOX_LBL first.  stub_vars folds group1+label into a
-  # stub at position 1; LBTOX_LBL is dropped.  Final printed columns are:
+  # Input has 9 columns, LBCAT first.  stub_vars folds group1+label into a
+  # stub at position 1; LBCAT is dropped.  Final printed columns are:
   #   row_label, Grade 0..Grade 4, Total  (7 columns)
   tbl_df <- data.frame(
-    LBTOX_LBL = rep(c("Chem", "Hema"), each = 3),
+    LBCAT = rep(c("Chem", "Hema"), each = 3),
     group1    = rep("Any", 6),
     label     = rep(c("A", "B", "C"), 2),
     `Grade 0` = 1:6, `Grade 1` = 7:12, `Grade 2` = 13:18,
@@ -104,7 +104,7 @@ test_that("as_rtftables(col_header =) with stub_vars + drop_cols uses final coor
   )
   out <- as_rtftables(
     tbl_df, read_meta = FALSE, split = "by_value",
-    group_col = "LBTOX_LBL", drop_cols = "LBTOX_LBL",
+    group_col = "LBCAT", drop_cols = "LBCAT",
     stub_vars = c("group1", "label"), stub_label = "row_label",
     col_rel_width = c(5, rep(1, 6)), col_header = hdr
   )

@@ -6,15 +6,15 @@
     USUBJID = c("01-701-1015", "01-701-1015", "01-701-1023"),
     AGE     = c("40", "40", "63"),
     SEX     = c("F", "F", "M"),
-    HIST    = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA OF THE LUNG",
-                "SMALL CELL"),
+    AEDECOD = c("HYPERGLYCAEMIA", "UPPER RESPIRATORY TRACT INFECTION",
+                "SKIN ULCER"),
     VISIT   = c("SCREENING", "WEEK 4", "SCREENING"),
     stringsAsFactors = FALSE
   )
   attr(d$USUBJID, "label") <- "Unique Subject Identifier"
   attr(d$AGE,     "label") <- "Age"
   attr(d$SEX,     "label") <- "Sex"
-  attr(d$HIST,    "label") <- "Histology"
+  attr(d$AEDECOD,    "label") <- "Preferred Term"
   d
 }
 
@@ -28,8 +28,8 @@
 
 test_that("an omitted label is derived from the columns' label attributes", {
   body <- build_listing(.labelled_adsl(),
-                        listing_spec(list(listing_col("HIST", width = 20))))
-  expect_identical(unname(.labels_of(body)), "Histology")
+                        listing_spec(list(listing_col("AEDECOD", width = 20))))
+  expect_identical(unname(.labels_of(body)), "Preferred Term")
 })
 
 test_that("a column with no label attribute falls back to its name", {
@@ -58,7 +58,7 @@ test_that("a label the author laid out is used exactly as written", {
   # even where a line is wider than the column (#380).
   hand <- c("A header the", "author wrote")
   body <- build_listing(.labelled_adsl(),
-                        listing_spec(list(listing_col("HIST", width = 6,
+                        listing_spec(list(listing_col("AEDECOD", width = 6,
                                                       label = hand))))
   expect_identical(unname(.labels_of(body)), "A header the
 author wrote")
@@ -66,17 +66,17 @@ author wrote")
 
 test_that("label = \"\" asks for a deliberately empty header", {
   body <- build_listing(.labelled_adsl(),
-                        listing_spec(list(listing_col("HIST", label = ""))))
+                        listing_spec(list(listing_col("AEDECOD", label = ""))))
   expect_identical(unname(.labels_of(body)), "")
 })
 
 test_that("the derived header reaches the rendered table", {
   tbl <- as_rtftables(.labelled_adsl(),
                       listing = listing_spec(list(
-                        listing_col("HIST", width = 20),
+                        listing_col("AEDECOD", width = 20),
                         listing_col("VISIT", width = 12))))[[1L]]
   expect_identical(unlist(tbl$col_header[[1L]])[c(1L, 3L)],
-                   c("Histology", "VISIT"))
+                   c("Preferred Term", "VISIT"))
 })
 
 
@@ -127,7 +127,7 @@ test_that("layout is validated", {
 test_that("a marked column is carried down its record's rows", {
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 12, collapse_repeats = TRUE),
-    listing_col("HIST", width = 16)))
+    listing_col("AEDECOD", width = 16)))
   body <- build_listing(.labelled_adsl(), spec)
 
   # record 2 wraps to three lines; the id is on all three, not just the first
@@ -142,7 +142,7 @@ test_that("a marked column is carried down its record's rows", {
 
 test_that("an unmarked column is padded with blanks, as before", {
   spec <- listing_spec(list(listing_col("USUBJID", width = 12),
-                            listing_col("HIST", width = 16)))
+                            listing_col("AEDECOD", width = 16)))
   body <- build_listing(.labelled_adsl(), spec)
   rows <- which(body$.rtf_record == 2L)
   expect_identical(body$USUBJID[rows], c("01-701-1015", "", "", ""))
@@ -162,7 +162,7 @@ test_that("a cell that already wraps is not carried down", {
 test_that("as_rtftables blanks the repeats the marked column carried", {
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 12, collapse_repeats = TRUE),
-    listing_col("HIST", width = 16)))
+    listing_col("AEDECOD", width = 16)))
   tbl <- as_rtftables(.labelled_adsl(), listing = spec)[[1L]]
 
   ids <- tbl$data[[1L]]
@@ -248,9 +248,9 @@ test_that("a plan listing blanks the same way", {
 test_that("a caller's own collapse_repeats wins over the marked columns", {
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 12, collapse_repeats = TRUE),
-    listing_col("HIST", width = 16)))
+    listing_col("AEDECOD", width = 16)))
   tbl <- as_rtftables(.labelled_adsl(), listing = spec,
-                      collapse_repeats = "HIST")[[1L]]
+                      collapse_repeats = "AEDECOD")[[1L]]
   ids <- tbl$data[[1L]]
   ids[is.na(ids)] <- ""
   expect_gt(sum(nzchar(ids)), 3L)                 # the id was NOT suppressed
@@ -269,42 +269,42 @@ test_that("collapse_repeats is validated", {
 }
 
 test_that("a character vector is one line per element", {
-  spec <- listing_spec(list(listing_col("HIST", width = 15,
+  spec <- listing_spec(list(listing_col("AEDECOD", width = 15,
                                         label = c("Unique", "Subject ID"))))
   expect_identical(.lab_of(spec), "Unique\nSubject ID")
 })
 
 test_that("a vector is a layout, so it is not re-wrapped", {
   # the second line is wider than the column and stays whole
-  spec <- listing_spec(list(listing_col("HIST", width = 4,
+  spec <- listing_spec(list(listing_col("AEDECOD", width = 4,
                                         label = c("A", "BBBB CCCC"))))
   expect_identical(.lab_of(spec), "A\nBBBB CCCC")
 })
 
 test_that("a single string is laid out at the width", {
-  spec <- listing_spec(list(listing_col("HIST", width = 16,
-                                        label = "Histology of the tumour")))
-  expect_identical(.lab_of(spec), "Histology of\nthe tumour")
+  spec <- listing_spec(list(listing_col("AEDECOD", width = 16,
+                                        label = "Preferred term of the event")))
+  expect_identical(.lab_of(spec), "Preferred term\nof the event")
 })
 
 test_that("a single string with no width is left as one line", {
-  spec <- listing_spec(list(listing_col("HIST",
-                                        label = "Histology of the tumour")))
-  expect_identical(.lab_of(spec), "Histology of the tumour")
+  spec <- listing_spec(list(listing_col("AEDECOD",
+                                        label = "Preferred term of the event")))
+  expect_identical(.lab_of(spec), "Preferred term of the event")
 })
 
 test_that("a string carrying its own breaks is a layout too", {
-  spec <- listing_spec(list(listing_col("HIST", width = 8,
-                                        label = "Histology\nof the tumour")))
-  expect_identical(.lab_of(spec), "Histology\nof the tumour")
+  spec <- listing_spec(list(listing_col("AEDECOD", width = 8,
+                                        label = "Preferred term\nof the event")))
+  expect_identical(.lab_of(spec), "Preferred term\nof the event")
 })
 
 test_that("the layout rule is the cells' rule: separator, words, hard split", {
-  spec <- listing_spec(list(listing_col("HIST", width = 22,
-                                        label = "COMPLETED/BRCA1/ADENOCARCINOMA")))
-  expect_identical(.lab_of(spec), "COMPLETED/\nBRCA1/\nADENOCARCINOMA")
+  spec <- listing_spec(list(listing_col("AEDECOD", width = 22,
+                                        label = "COMPLETED/UPPER/HYPERGLYCAEMIA")))
+  expect_identical(.lab_of(spec), "COMPLETED/\nUPPER/\nHYPERGLYCAEMIA")
 
-  spec2 <- listing_spec(list(listing_col("HIST", width = 8,
+  spec2 <- listing_spec(list(listing_col("AEDECOD", width = 8,
                                          label = "Immunohistochemistry")))
   lines <- strsplit(.lab_of(spec2), "\n", fixed = TRUE)[[1L]]
   expect_true(all(listing_disp_width(lines) <= 8))
@@ -322,8 +322,8 @@ test_that("label is validated", {
 # ── listing_wrap() ───────────────────────────────────────────────────────────
 
 test_that("listing_wrap() applies the rule and returns the lines", {
-  expect_identical(listing_wrap("COMPLETED/BRCA1/ADENOCARCINOMA", 22),
-                   c("COMPLETED/", "BRCA1/", "ADENOCARCINOMA"))
+  expect_identical(listing_wrap("COMPLETED/UPPER/HYPERGLYCAEMIA", 22),
+                   c("COMPLETED/", "UPPER/", "HYPERGLYCAEMIA"))
   expect_identical(listing_wrap("40/F", 20, layout = "flow"), "40/F")
   expect_true(all(listing_disp_width(
     listing_wrap("Immunohistochemistry", 8)) <= 8))
@@ -333,15 +333,15 @@ test_that("listing_wrap() vectorises, and NULL width means no limit", {
   out <- listing_wrap(c("A/B", "C/D"), 20)
   expect_type(out, "list")
   expect_length(out, 2L)
-  expect_identical(listing_wrap("Histology of the tumour", NULL),
-                   "Histology of the tumour")
+  expect_identical(listing_wrap("Preferred term of the event", NULL),
+                   "Preferred term of the event")
 })
 
 test_that("listing_wrap() composes with a vector label", {
   spec <- listing_spec(list(
-    listing_col("HIST", width = 16,
-                label = listing_wrap("Histology of the tumour", 16))))
-  expect_identical(.lab_of(spec), "Histology of\nthe tumour")
+    listing_col("AEDECOD", width = 16,
+                label = listing_wrap("Preferred term of the event", 16))))
+  expect_identical(.lab_of(spec), "Preferred term\nof the event")
 })
 
 test_that("listing_wrap() validates its arguments", {
@@ -508,8 +508,8 @@ test_that("the emitted rule is self-contained and IS the shipped rule", {
 
   # And it cannot have drifted, because it is read off the live functions.
   # Widths, separators, layouts, CJK, an embedded newline, an empty cell.
-  txt <- c("COMPLETED/BRCA1/ADENOCARCINOMA",
-           "SQUAMOUS CELL CARCINOMA OF THE LUNG",
+  txt <- c("COMPLETED/UPPER/HYPERGLYCAEMIA",
+           "UPPER RESPIRATORY TRACT INFECTION",
            "\u65e5\u672c\u8a9e\u306e\u9577\u3044\u8a18\u8ff0/A", "a\nb", "",
            "SUPERCALIFRAGILISTIC")
   for (w in list(NULL, 6, 12, 40)) {
@@ -528,13 +528,13 @@ test_that("what it emits can be handed straight back as `wrap`", {
   env <- new.env(parent = globalenv())
   eval(parse(text = src), envir = env)
 
-  d <- data.frame(HIST = "SQUAMOUS CELL CARCINOMA", stringsAsFactors = FALSE)
-  plain <- listing_spec(list(listing_col("HIST", width = 12, label = "H")),
+  d <- data.frame(AEDECOD = "ACUTE KIDNEY INJURY", stringsAsFactors = FALSE)
+  plain <- listing_spec(list(listing_col("AEDECOD", width = 12, label = "H")),
                         spacer = FALSE, blank_row = FALSE, record = FALSE)
-  edited <- listing_spec(list(listing_col("HIST", width = 12, label = "H")),
+  edited <- listing_spec(list(listing_col("AEDECOD", width = 12, label = "H")),
                          wrap = env$edited, spacer = FALSE, blank_row = FALSE,
                          record = FALSE)
-  expect_identical(build_listing(d, edited)$HIST, build_listing(d, plain)$HIST)
+  expect_identical(build_listing(d, edited)$AEDECOD, build_listing(d, plain)$AEDECOD)
 })
 
 test_that("the source keeps its comments, which is the point of copying it", {
@@ -593,7 +593,7 @@ test_that("listing_disp_width() counts columns, not characters", {
 })
 
 test_that("listing_take() gives the longest prefix that fits", {
-  expect_identical(listing_take("ADENOCARCINOMA", 6), "ADENOC")
+  expect_identical(listing_take("HYPERGLYCAEMIA", 6), "HYPERG")
   expect_identical(listing_take("\u3042\u3044\u3046", 4), "\u3042\u3044")
   expect_identical(listing_take("", 5), "")
   # Never "" for non-empty text: a caller looping on the remainder must be
@@ -602,8 +602,8 @@ test_that("listing_take() gives the longest prefix that fits", {
 })
 
 test_that("listing_split_after() keeps the separator on the line it closes", {
-  expect_identical(listing_split_after("COMPLETED/BRCA1", "/"),
-                   c("COMPLETED/", "BRCA1"))
+  expect_identical(listing_split_after("COMPLETED/UPPER", "/"),
+                   c("COMPLETED/", "UPPER"))
   expect_identical(listing_split_after("a.b", "."), c("a.", "b"))   # literal
   expect_identical(listing_split_after("a/b", ""), "a/b")
   expect_identical(listing_split_after("a/b", NULL), "a/b")
