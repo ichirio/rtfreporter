@@ -1,5 +1,9 @@
 # rtfreporter (development version)
 
+### Continuous integration
+
+- R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used in tests, needs R >= 4.2).
+
 ### New
 
 - **`program_fallback`: the program when none is said or found** (#566).
