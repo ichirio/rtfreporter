@@ -125,16 +125,16 @@ throughout.
 \examples{
 adsl <- data.frame(
   USUBJID = c("01-701-1015", "01-701-1023"),
-  HIST    = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA OF THE LUNG"),
-  BRCA    = c("BRCA1", NA),
-  STAGE   = c("IIIB", "IV"),
+  AEDECOD = c("HYPERGLYCAEMIA", "UPPER RESPIRATORY TRACT INFECTION"),
+  AELOC   = c("UPPER", NA),
+  AETOXGR = c("3", "4"),
   stringsAsFactors = FALSE
 )
 
 spec <- listing_spec(list(
   listing_col("USUBJID"),
-  listing_col(c("HIST", "BRCA")),
-  listing_col("STAGE")
+  listing_col(c("AEDECOD", "AELOC")),
+  listing_col("AETOXGR")
 ))
 
 # Landscape A4, half-inch margins, 8pt Courier.
@@ -149,8 +149,8 @@ fitted
 # A width you set yourself is kept, and the rest fit around it.
 spec2 <- listing_spec(list(
   listing_col("USUBJID", width = 12),
-  listing_col(c("HIST", "BRCA")),
-  listing_col("STAGE")
+  listing_col(c("AEDECOD", "AELOC")),
+  listing_col("AETOXGR")
 ))
 fit_listing_widths(adsl, spec2, total_width = 60)
 

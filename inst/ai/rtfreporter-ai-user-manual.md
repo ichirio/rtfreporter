@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9027** (the development
+**This manual documents rtfreporter 0.8.2.9035** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -269,7 +269,7 @@ without writing a file.
 | data.frame → paginated pages | `as_rtftables(x, ...)` **(the workhorse — §5)** |
 | One table object by hand | `rtftable(data, col_header =, col_spec =, ...)` |
 | Place tables on pages | `rtf_tables(doc, tables, titles =, footnotes =, ...)` |
-| Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)` |
+| Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)`; one figure as it is: `rtf_figures(doc, plot)` (a ggplot, a path), several as a list |
 | Set titles / footnotes later | `rtf_titles(doc, list)`, `rtf_footnotes(doc, list)` |
 | Write the RTF | `generate_rtfreport(report, file_path, overwrite = FALSE)` |
 | Concatenate finished RTFs | `assemble_rtf(input_files, output_file, toc =, book_page =)` |
@@ -569,9 +569,9 @@ rule above the first line.
 spec <- listing_spec(list(
   listing_col("USUBJID", width = 15, label = "Unique\nSubject ID",
               collapse_repeats = TRUE),
-  listing_col(c("DISPTPD", "BRCA", "HIST"), width = 22,
-              label = "Disposition/\nAny (BRCA) Mutations/\nHistology"),
-  listing_col("STAGE", label = "Stage at\nInitial\nDiagnosis")
+  listing_col(c("DCDECOD", "AELOC", "AEDECOD"), width = 22,
+              label = "Disposition/\nLocation/\nPreferred Term"),
+  listing_col("AETOXGR", label = "Grade at\nInitial\nDiagnosis")
 ))
 
 pages <- as_rtftables(adsl, listing = spec, max_rows = 8)  # never splits a subject
@@ -871,13 +871,15 @@ p_ae <- ard_ae |>
 | Leave out the levels no record has (0 in every column, e.g. a code list's unused values) | `plan_levels(.drop_empty = c("RACE"))` |
 | Printed text of values / variables | `plan_labels(c(AGE = "Age (years)"))` |
 | Printed text of one analysis variable's levels (and its own name) | `plan_labels(SEX = c(SEX = "Sex", F = "Female", M = "Male"))`; their order: `plan_levels(SEX = c("M", "F"))` |
+| One variable's rows under one level of another (sub-categories of a race under "Asian") | `plan_nest(RACESUB = c(RACE = "Asian"))`: moved after that row, one stub indent deeper, in its group |
+| A Total column | `plan_total(label = "Total", position = "last")`: cards' overall rows (the analysis again without `by`, bound under it: `bind_rows(ard_tabulate(adsl, by = ARM, variables = SEX), ard_tabulate(adsl, variables = SEX))`, or `ard_stack(.overall = TRUE)`) become the column; its header `{n}` is the study total. Never stack the data with `ARM = "Total"`: the ARD and ARS then carry a value the data does not have |
 | Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone |
 | Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
 | Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse, group_col)`; `group_col` only on a finished table (an ARD plan's is its outermost row key) |
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
 | Columns not printed | `plan_hide("COL")` |
 | Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: `widths = c(row_label = 5, .values = 2)` |
-| Column header | `plan_col_header(header, values, header_sep, col_header_align)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows |
+| Column header | `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows; `lines = list(c(row_label = "", .values = "{col}"), c(row_label = "Characteristic", .values = "(N={n})"))` writes the header a row at a time (a cell's name = its columns, its value = the text; `span = "each"` / `"one"` / a key's name for a spanner) |
 | Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
 | A page per value | `plan_paginate_group(col, keep)` |
@@ -914,6 +916,10 @@ the attributes itself), and the deprecated `stub_vars` / `stub_label` /
 * `plan_layers(p)`: the plan read back, layer by layer.
 * `plan_header_tokens(p)`: the tokens a `plan_col_header()` cell may carry
   (`{col}`, `{n}`, `{n:sum}` ...), with their values, as data.
+* `plan_n_candidates(p)`: the populations `{n}` can say before one is chosen
+  -- `scope` `all`, or on pages split by a group value `page` (each page's
+  own) and `table` (the analysis set) -- with their values per column;
+  attribute `differ` when the two disagree.
 * `plan_template(ard, cols = "TRT01A")`: writes a starting program for this
   ARD (`file =` to save it). `form = "widen"` writes the one-call form
   instead.
@@ -987,10 +993,10 @@ adds an "Any" row.
 `blank_rows_by_change` `blank_rows_by_rule`
 
 **Tables from a cards / cardx ARD:** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
-`cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens`
+`cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens` `plan_n_candidates`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
-`plan_hide` `plan_sort` `plan_blanks` `plan_paginate_rows`
+`plan_hide` `plan_nest` `plan_total` `plan_sort` `plan_blanks` `plan_paginate_rows`
 `plan_paginate_cols` `plan_style` `plan_columns` `plan_col_header`
 `plan_listing` `plan_titles` `plan_footnotes` `plan_after`
 

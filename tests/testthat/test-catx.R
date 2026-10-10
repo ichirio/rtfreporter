@@ -1,20 +1,20 @@
 # catx() -- the SAS CATX join, and the one listing_col() uses (#360).
 
 test_that("values are joined by the separator", {
-  expect_identical(catx("/", "COMPLETED", "BRCA1", "ADENOCARCINOMA"),
-                   "COMPLETED/BRCA1/ADENOCARCINOMA")
+  expect_identical(catx("/", "COMPLETED", "UPPER", "HYPERGLYCAEMIA"),
+                   "COMPLETED/UPPER/HYPERGLYCAEMIA")
   expect_identical(catx(" ", "Hello", "World"), "Hello World")
   expect_identical(catx("", "AE", "0001"), "AE0001")
   expect_identical(catx(", ", "a", "b", "c"), "a, b, c")
 })
 
 test_that("missing and empty values are skipped, never doubled", {
-  expect_identical(catx("/", "COMPLETED", NA, "ADENOCARCINOMA"),
-                   "COMPLETED/ADENOCARCINOMA")
-  expect_identical(catx("/", "COMPLETED", "", "ADENOCARCINOMA"),
-                   "COMPLETED/ADENOCARCINOMA")
+  expect_identical(catx("/", "COMPLETED", NA, "HYPERGLYCAEMIA"),
+                   "COMPLETED/HYPERGLYCAEMIA")
+  expect_identical(catx("/", "COMPLETED", "", "HYPERGLYCAEMIA"),
+                   "COMPLETED/HYPERGLYCAEMIA")
   # the separator never appears at either end
-  expect_identical(catx("/", NA, "STAGE IV", NA), "STAGE IV")
+  expect_identical(catx("/", NA, "GRADE IV", NA), "GRADE IV")
   # everything missing gives an empty string, not "NA"
   expect_identical(catx("/", NA, NA), "")
   expect_identical(catx("/", NA_character_), "")
@@ -56,16 +56,16 @@ test_that("the degenerate inputs behave", {
 
 test_that("listing_col() joins through exactly this function", {
   adsl <- data.frame(
-    DISPTPD = c("COMPLETED", "ONGOING"),
-    BRCA    = c("BRCA1", NA),
-    HIST    = c("ADENOCARCINOMA", "SMALL CELL"),
+    DCDECOD = c("COMPLETED", "ONGOING"),
+    AELOC   = c("UPPER", NA),
+    AEDECOD = c("HYPERGLYCAEMIA", "SKIN ULCER"),
     stringsAsFactors = FALSE
   )
-  spec <- listing_spec(list(listing_col(c("DISPTPD", "BRCA", "HIST"),
+  spec <- listing_spec(list(listing_col(c("DCDECOD", "AELOC", "AEDECOD"),
                                         name = "COL01")),
                        spacer = FALSE, blank_row = FALSE, record = FALSE)
   expect_identical(build_listing(adsl, spec)$COL01,
-                   catx("/", adsl$DISPTPD, adsl$BRCA, adsl$HIST))
+                   catx("/", adsl$DCDECOD, adsl$AELOC, adsl$AEDECOD))
 })
 
 test_that("a listing's own separator reaches catx()", {

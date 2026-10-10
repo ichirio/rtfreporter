@@ -3,24 +3,24 @@
 
 .fit_adsl <- function() {
   d <- data.frame(
-    USUBJID  = sprintf("63016-20%d-10%02d", rep(4:6, each = 4), 1:12),
-    DISPTPD  = rep(c("COMPLETED", "DISCONTINUED", "ONGOING"), 4),
-    BRCA     = rep(c("BRCA1", NA, "BRCA2", NA), 3),
-    HIST     = rep(c("ADENOCARCINOMA",
-                     "SQUAMOUS CELL CARCINOMA OF THE LUNG"), 6),
-    STAGE    = rep(c("IIIB", "IV", "IIIA", "IIB"), 3),
+    USUBJID = sprintf("PILOT-20%d-10%02d", rep(4:6, each = 4), 1:12),
+    DCDECOD = rep(c("COMPLETED", "DISCONTINUED", "ONGOING"), 4),
+    AELOC   = rep(c("UPPER", NA, "LOWER", NA), 3),
+    AEDECOD = rep(c("HYPERGLYCAEMIA",
+                  "UPPER RESPIRATORY TRACT INFECTION"), 6),
+    AETOXGR = rep(c("3", "4", "3", "2"), 3),
     stringsAsFactors = FALSE
   )
   attr(d$USUBJID, "label") <- "Unique Subject ID"
-  attr(d$STAGE,   "label") <- "Stage at Initial Diagnosis"
+  attr(d$AETOXGR,   "label") <- "Grade at Initial Diagnosis"
   d
 }
 
 .plain_spec <- function(...) {
   listing_spec(list(
     listing_col("USUBJID"),
-    listing_col(c("DISPTPD", "BRCA", "HIST")),
-    listing_col("STAGE")
+    listing_col(c("DCDECOD", "AELOC", "AEDECOD")),
+    listing_col("AETOXGR")
   ), ...)
 }
 
@@ -96,26 +96,26 @@ test_that("a column with wider data gets a wider share", {
 })
 
 test_that("a long header does not claim a column the data does not need", {
-  # "Stage at Initial Diagnosis" is 26 characters but wraps; the floor is its
+  # "Grade at Initial Diagnosis" is 26 characters but wraps; the floor is its
   # widest unbreakable token, not its length.
   fitted <- fit_listing_widths(.fit_adsl(), .plain_spec(), total_width = 120)
   demand <- attr(fitted, "rtf_listing_fit", exact = TRUE)$demand
-  expect_lt(unname(demand[["STAGE"]]), 26)
-  expect_gte(unname(demand[["STAGE"]]), 9)   # "Diagnosis" cannot break
+  expect_lt(unname(demand[["AETOXGR"]]), 26)
+  expect_gte(unname(demand[["AETOXGR"]]), 9)   # "Diagnosis" cannot break
 })
 
 test_that("one very long value does not dominate the layout", {
   d <- .fit_adsl()
-  d$STAGE[1L] <- paste(rep("X", 200), collapse = "")
+  d$AETOXGR[1L] <- paste(rep("X", 200), collapse = "")
   demand <- attr(fit_listing_widths(d, .plain_spec(), total_width = 120),
                  "rtf_listing_fit", exact = TRUE)$demand
-  expect_lt(unname(demand[["STAGE"]]), 200)  # the quantile, not the maximum
+  expect_lt(unname(demand[["AETOXGR"]]), 200)  # the quantile, not the maximum
 
   # the maximum IS reachable, by asking for it
   demand_max <- attr(fit_listing_widths(d, .plain_spec(), total_width = 120,
                                         probs = 1), "rtf_listing_fit",
                      exact = TRUE)$demand
-  expect_gte(unname(demand_max[["STAGE"]]), 200)
+  expect_gte(unname(demand_max[["AETOXGR"]]), 200)
 })
 
 test_that("no column is fitted narrower than min_width", {
@@ -130,8 +130,8 @@ test_that("no column is fitted narrower than min_width", {
 test_that("an explicit width is kept, and the rest fit around it", {
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 20),
-    listing_col(c("DISPTPD", "BRCA", "HIST")),
-    listing_col("STAGE")))
+    listing_col(c("DCDECOD", "AELOC", "AEDECOD")),
+    listing_col("AETOXGR")))
   fitted <- fit_listing_widths(.fit_adsl(), spec, total_width = 60)
   w <- .widths_of(fitted)
   expect_identical(w[1L], 20L)
@@ -140,7 +140,7 @@ test_that("an explicit width is kept, and the rest fit around it", {
 
 test_that("a spec whose widths are all set comes back unchanged", {
   spec <- listing_spec(list(listing_col("USUBJID", width = 11),
-                            listing_col("STAGE", width = 8)))
+                            listing_col("AETOXGR", width = 8)))
   fitted <- fit_listing_widths(.fit_adsl(), spec, total_width = 60)
   expect_identical(.widths_of(fitted), c(11L, 8L))
 })
@@ -256,17 +256,17 @@ test_that("a fitted spec renders, and its widths reach the table", {
 .unlabelled <- function() {
   data.frame(
     USUBJID = c("01-701-1015", "01-701-1023"),
-    DISPTPD = c("COMPLETED", "ONGOING"),
-    BRCA    = c("BRCA1", NA),
-    HIST    = c("ADENOCARCINOMA", "SQUAMOUS CELL CARCINOMA OF THE LUNG"),
+    DCDECOD = c("COMPLETED", "ONGOING"),
+    AELOC   = c("UPPER", NA),
+    AEDECOD = c("HYPERGLYCAEMIA", "UPPER RESPIRATORY TRACT INFECTION"),
     stringsAsFactors = FALSE
   )
 }
 
 .spec_labels <- c(USUBJID = "Unique Subject ID",
-                  DISPTPD = "Primary Diagnosis",
-                  BRCA    = "Any (BRCA) Mutations",
-                  HIST    = "Histology")
+                  DCDECOD = "Disposition",
+                  AELOC   = "Location of the Event",
+                  AEDECOD = "Preferred Term")
 
 .label_of <- function(spec, j = 1L) spec$cols[[j]]$label
 
@@ -278,7 +278,7 @@ test_that("labels supply the header when the data carries none", {
 })
 
 test_that("a joined column joins its labels, and the breaks stay automatic", {
-  spec <- listing_spec(list(listing_col(c("DISPTPD", "BRCA", "HIST"),
+  spec <- listing_spec(list(listing_col(c("DCDECOD", "AELOC", "AEDECOD"),
                                         width = 22)))
   fitted <- fit_listing_widths(.unlabelled(), spec, total_width = 22,
                                labels = .spec_labels)
@@ -286,13 +286,13 @@ test_that("a joined column joins its labels, and the breaks stay automatic", {
   # The fit freezes the joined words with no breaks at all (#384), so editing
   # the width in the pasted template re-flows the whole header.
   expect_identical(.label_of(fitted),
-                   "Primary Diagnosis/Any (BRCA) Mutations/Histology")
+                   "Disposition/Location of the Event/Preferred Term")
 
   # build_listing() lays it out at the width, breaking at the separator first.
   built <- attr(build_listing(.unlabelled(), fitted), "rtf_listing",
                 exact = TRUE)$cols[[1L]]$label
   expect_identical(strsplit(built, "\n", fixed = TRUE)[[1L]],
-                   c("Primary Diagnosis/", "Any (BRCA) Mutations/", "Histology"))
+                   c("Disposition/", "Location of the Event/", "Preferred Term"))
 })
 
 test_that("precedence: listing_col(label) > labels > attribute > name", {
@@ -321,29 +321,29 @@ test_that("precedence: listing_col(label) > labels > attribute > name", {
   # and with neither, the variable's name
   expect_identical(
     .label_of(fit_listing_widths(
-      d, listing_spec(list(listing_col("DISPTPD", width = 30))),
+      d, listing_spec(list(listing_col("DCDECOD", width = 30))),
       total_width = 30)),
-    "DISPTPD")
+    "DCDECOD")
 })
 
 test_that("a variable the lookup does not name still falls back", {
   fitted <- fit_listing_widths(
     .unlabelled(),
     listing_spec(list(listing_col("USUBJID", width = 20),
-                      listing_col("DISPTPD", width = 20))),
+                      listing_col("DCDECOD", width = 20))),
     total_width = 41, labels = c(USUBJID = "Unique Subject ID"))
   expect_identical(.label_of(fitted, 1L), "Unique Subject ID")
-  expect_identical(.label_of(fitted, 2L), "DISPTPD")
+  expect_identical(.label_of(fitted, 2L), "DCDECOD")
 })
 
 test_that("the width fit measures the supplied labels", {
-  # "Any (BRCA) Mutations" cannot break below 9 ("Mutations"), so the column
+  # "Location of the Event" cannot break below 8 ("Location"), so the column
   # cannot be fitted narrower than that.
-  spec <- listing_spec(list(listing_col("BRCA"), listing_col("USUBJID")),
+  spec <- listing_spec(list(listing_col("AELOC"), listing_col("USUBJID")),
                        spacer = FALSE)
   fitted <- fit_listing_widths(.unlabelled(), spec, total_width = 30,
                                labels = .spec_labels)
-  expect_gte(fitted$cols[[1L]]$width, 9L)
+  expect_gte(fitted$cols[[1L]]$width, 8L)
 })
 
 test_that("labels are validated", {
@@ -368,13 +368,13 @@ test_that("scaling never takes a column below what its header needs", {
   # "Diagnosis" is nine characters and cannot break; a naive proportional
   # scaling gave this column eight and split the header as "Diagnosi" / "s".
   d <- .unlabelled()
-  d$STAGE <- c("IIIB", "IV")
+  d$AETOXGR <- c("3", "4")
   spec <- listing_spec(list(listing_col("USUBJID"),
-                            listing_col(c("DISPTPD", "BRCA", "HIST")),
-                            listing_col("STAGE")))
+                            listing_col(c("DCDECOD", "AELOC", "AEDECOD")),
+                            listing_col("AETOXGR")))
   fitted <- fit_listing_widths(
     d, spec, total_width = 60,
-    labels = c(.spec_labels, STAGE = "Stage at Initial Diagnosis"))
+    labels = c(.spec_labels, AETOXGR = "Grade at Initial Diagnosis"))
 
   expect_gte(fitted$cols[[3L]]$width, 9L)
   lines <- strsplit(.label_of(fitted, 3L), "\n", fixed = TRUE)[[1L]]
@@ -382,8 +382,8 @@ test_that("scaling never takes a column below what its header needs", {
 })
 
 test_that("the budget is still respected exactly when a floor is raised", {
-  spec <- listing_spec(list(listing_col("USUBJID"), listing_col("HIST"),
-                            listing_col("BRCA")))
+  spec <- listing_spec(list(listing_col("USUBJID"), listing_col("AEDECOD"),
+                            listing_col("AELOC")))
   fitted <- fit_listing_widths(.unlabelled(), spec, total_width = 45,
                                labels = .spec_labels)
   w <- vapply(fitted$cols, function(cl) as.integer(cl$width), integer(1L))
@@ -396,7 +396,7 @@ test_that("the budget is still respected exactly when a floor is raised", {
 test_that("fitting writes rel_width and the label down, not just the width", {
   fitted <- fit_listing_widths(
     .unlabelled(),
-    listing_spec(list(listing_col("USUBJID"), listing_col("HIST"))),
+    listing_spec(list(listing_col("USUBJID"), listing_col("AEDECOD"))),
     total_width = 40, labels = .spec_labels)
 
   for (cl in fitted$cols) {
@@ -418,7 +418,7 @@ test_that("fitting writes rel_width and the label down, not just the width", {
 test_that("a value the author set is still never touched", {
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 12, rel_width = 40, label = "MINE"),
-    listing_col("HIST")))
+    listing_col("AEDECOD")))
   fitted <- fit_listing_widths(.unlabelled(), spec, total_width = 60,
                                labels = .spec_labels)
   expect_identical(fitted$cols[[1L]]$width, 12L)
@@ -429,7 +429,7 @@ test_that("a value the author set is still never touched", {
 test_that("the emitted template carries width, rel_width and label", {
   fitted <- fit_listing_widths(
     .unlabelled(),
-    listing_spec(list(listing_col(c("DISPTPD", "BRCA", "HIST")))),
+    listing_spec(list(listing_col(c("DCDECOD", "AELOC", "AEDECOD")))),
     total_width = 44, labels = .spec_labels)
   code <- paste(listing_code(fitted), collapse = "\n")
 
@@ -442,7 +442,7 @@ test_that("the template round-trips to the same widths and headers", {
   fitted <- fit_listing_widths(
     .unlabelled(),
     listing_spec(list(listing_col("USUBJID"),
-                      listing_col(c("DISPTPD", "BRCA", "HIST")))),
+                      listing_col(c("DCDECOD", "AELOC", "AEDECOD")))),
     total_width = 50, labels = .spec_labels)
   again <- eval(parse(text = paste(listing_code(fitted), collapse = "\n")))
 

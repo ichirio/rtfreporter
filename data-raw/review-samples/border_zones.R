@@ -1,6 +1,6 @@
 # border_zones.R -- Which rule on the page does each border argument draw?
 #
-# Written for the API review (issue #336, discussion #324).  The five zone
+# Written for the API review (issue #336).  The five zone
 # arguments are rendered in five different colours so the mapping
 # "argument -> rule on the page" can be read straight off the output.
 #

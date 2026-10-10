@@ -1,6 +1,6 @@
 # rtfreporter — AI developer manual
 
-**This manual documents the rtfreporter 0.8.2.9027 codebase** (the
+**This manual documents the rtfreporter 0.8.2.9035 codebase** (the
 development version, after release 0.8.2).
 Check it matches the tree you are working in — `DESCRIPTION`'s `Version:`.
 If they differ, trust the tree, not this file.
@@ -450,8 +450,8 @@ Two layers, and the second one is built on the first:
 * An error test checks the message says **what to write instead** (the
   verb or argument to use), not only that it fails.
 * Behaviour that shows in the output is rendered and matched as RTF text.
-  The four tflspec Discussion #3 samples written as plans must stay
-  byte-identical to their hand-written programs. Re-run them after a change
+  The users' sample reports written as plans must stay byte-identical to
+  their hand-written programs. Re-run them after a change
   to resolution order or defaults.
 * The AI user manual's §17 is executed by `test-ai-user-manual.R`, and
   every argument named in the manual's code is checked against `formals()`.

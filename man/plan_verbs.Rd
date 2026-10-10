@@ -10,6 +10,8 @@
 \alias{plan_cell_style}
 \alias{plan_paginate_group}
 \alias{plan_row_group}
+\alias{plan_nest}
+\alias{plan_total}
 \alias{plan_hide}
 \alias{plan_sort}
 \alias{plan_blanks}
@@ -59,6 +61,10 @@ plan_cell_style(
 plan_paginate_group(plan, col = NULL, keep = TRUE)
 
 plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
+
+plan_nest(plan, ...)
+
+plan_total(plan, label = "Total", position = c("last", "first"))
 
 plan_hide(plan, ...)
 
@@ -114,7 +120,9 @@ plan_col_header(
   header = NULL,
   values = NULL,
   header_sep = NULL,
-  col_header_align = NULL
+  col_header_align = NULL,
+  lines = NULL,
+  span = "each"
 )
 
 plan_columns(
@@ -199,6 +207,16 @@ by the text of the label column:
 
 A key that reaches neither a variable nor a column is an error, not
 silence.
+
+For \code{plan_nest()}, one entry per nested variable: its name, and the
+variable and level its rows go under,
+\code{plan_nest(RACESUB = c(RACE = "Asian"))}.  The level is matched as the
+table shows it (the ARD's level: a code list's label).  The nested
+rows follow that level's row, one indent step deeper (the stub's
+\code{indent}, default 4), in the parent's group; their own heading is
+dropped, their order and text stay \code{plan_levels()}' and
+\code{plan_labels()}'.  The rows key that carries the variable
+(\code{table_plan(rows = c(group = "variable"))}) is what is read.
 
 For \code{plan_levels()} and \code{plan_labels()}, one entry per column or
 analysis variable: an order (\code{AGEGR1 = c("<65", "65-74")}), or
@@ -364,6 +382,17 @@ between groups read), with the pages still cut by rows.  An ARD plan
 names it as its outermost row key (\code{table_plan(rows = )}) and refuses
 this; a page per value is \code{\link[=plan_paginate_group]{plan_paginate_group()}}.}
 
+\item{label, position}{For \code{plan_total()}: the heading of the \strong{Total
+column} (\code{"Total"}) and where it goes among the column key's values
+(\code{"last"}, \code{"first"}).  Its cells are cards' own overall rows --- the
+statistics with no value of the column key, from the same analysis
+without its \code{by} (\code{cards::ard_tabulate(adsl, variables = RACE)} bound
+under \code{cards::ard_tabulate(adsl, by = ARM, variables = RACE)}, or
+\code{cards::ard_stack(.overall = TRUE)}) --- so the ARD keeps no \code{ARM}
+value the data does not have.  Its \code{{n}} in the column header is the
+study total the ARD states (the column key tabulated on its own, or
+\code{cards::ard_total_n()}).  One column key only.}
+
 \item{stat}{For \code{plan_sort()}: the statistic totalled into \code{.sort_stat}
 for a frequency order (\code{widen_ard(sort_stat = )}), e.g. \code{stat = "n"}.}
 
@@ -442,7 +471,7 @@ header says is the author's choice:
 \itemize{
 \item \code{values = list(n = "page")} --- each page's own, the subjects with that test:
 the ARD rows \strong{carrying} the page key, e.g.
-\code{cards::ard_tabulate(adlb, by = PARAM, variables = BASEGR)},
+\code{cards::ard_tabulate(adlb, by = PARAM, variables = BGRADE)},
 which states each baseline column's N and the page's total;
 \item \code{list(n = "table")} --- the analysis set: the ARD rows \strong{without} the
 page key, e.g. \code{cards::ard_total_n(adsl)} or the treatment
@@ -502,6 +531,28 @@ only entry when there is one.  The resolved value is also what
 \code{\link[=as_rtftables]{as_rtftables()}}'s \code{header_sep} (the separator a plain table's column
 names are split on into spanning header rows) and \code{\link[=rtftable]{rtftable()}}'s
 \code{col_header_align}.}
+
+\item{lines}{For \code{plan_col_header()}: the header \strong{a row at a time},
+as it reads, instead of \code{header}: a list, one element a header row
+(the top first), each a named character vector -- a cell's name the
+columns it sits on (a column name, \code{.values} for every value column,
+a position or range such as \code{3:5}, or \code{KEY = value}), its value the
+text, with the same tokens (\code{{col}}, \code{{n}}, \code{{n:sum}} ...):
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_col_header(lines = list(
+  c(row_label = "",               .values = "\{col\}"),
+  c(row_label = "Characteristic", .values = "(N=\{n\})")))
+}\if{html}{\out{</div>}}
+
+It is the data frame of cells written another way (one row a cell:
+\code{line}, \code{cols}, \code{text}, \code{span}), so it does all that does.}
+
+\item{span}{For \code{plan_col_header(lines = )}: how a cell over several
+columns is made -- \code{"each"} (the default: a cell a column), \code{"one"}
+(one cell over them all) or a key's name (a cell per value of that
+key: a spanner).  One value for every cell, or a list as \code{lines} is,
+each element the spans of that row's cells, named as its cells are
+(a cell not named there is \code{"each"}).}
 
 \item{widths}{For \code{plan_columns()}: the relative column widths,
 \code{rtftable(col_rel_width = )}.  \strong{Named by column} (\code{c(row_label = 5, .values = 2)}, \code{.values} for every value column) a reordered table keeps
@@ -574,6 +625,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_cells(..., stats, value, na, notes)}: how a cell is made. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{cells}, \code{stats}, \code{value}, \code{na}, \code{notes}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{na}.
 \item \code{plan_digits(..., rounding)}: the digits. Goes to the open tokens of the templates; on a finished table \code{\link[=fmt_numeric]{fmt_numeric()}}.
 \item \code{plan_levels()}, \code{plan_labels()}: the order and text of values. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{levels}, \code{labels}.
+\item \code{plan_total(label, position)}: a Total column from the ARD's overall rows. Goes to \code{\link[=widen_ard]{widen_ard()}}: those rows as one more value of the column key, and its place in \code{levels}; the header's \code{{n}} there is the study total.
 \code{plan_levels(.drop_empty = )} leaves out the levels no record has, before the table is made.
 \item \code{plan_sort(..., stat, keep)}: the row order. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name}.
 \item \code{plan_stub(vars, name, indent, group_summary, before)}: the row headings. Goes to \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}.
@@ -586,7 +638,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)}: column blocks. Goes to \code{\link[=paginate_cols]{paginate_cols()}}: \code{at}, \code{cols} / \code{by}, \code{carry}, \code{col_header}, \code{width}, \code{allow_span_break}, \code{page_order}.
 \item \code{plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)}: the whole table. Goes to \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} by the same names; \verb{border_*} and the default look (\code{header_align}, \code{header_bold}, \code{header_italic}, \code{align}, \code{bold}, \code{italic}, \code{underline}) via \code{\link[=rtf_table_style]{rtf_table_style()}}.
 \item \code{plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)}: the columns. Goes to \code{\link[=rtftable]{rtftable()}}: \code{col_rel_width}, \code{row_title}, \code{column_widths_twips}; \code{\link[=set_decimal_split]{set_decimal_split()}}: \code{cols}; \code{\link[=as_rtftables]{as_rtftables()}}: \code{auto_width}, \code{cell_format}; \code{\link[=widen_ard]{widen_ard()}}: \code{sep}.
-\item \code{plan_col_header(header, values, header_sep, col_header_align)}: the column header. Goes to \code{\link[=set_col_header]{set_col_header()}}: the header and a data frame of \code{values}; a population fills its \code{{n}} tokens; \code{\link[=as_rtftables]{as_rtftables()}}: \code{header_sep}; \code{\link[=rtftable]{rtftable()}}: \code{col_header_align}.
+\item \code{plan_col_header(header, values, header_sep, col_header_align, lines, span)}: the column header. Goes to \code{\link[=set_col_header]{set_col_header()}}: the header (or \code{lines}, the header a row at a time) and a data frame of \code{values}; a population fills its \code{{n}} tokens; \code{\link[=as_rtftables]{as_rtftables()}}: \code{header_sep}; \code{\link[=rtftable]{rtftable()}}: \code{col_header_align}.
 \item \code{plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)}: a listing. Goes to \code{\link[=listing_spec]{listing_spec()}}, the same names.
 \item \code{plan_titles()}, \code{plan_footnotes()}: the blocks above and below. Goes to \code{\link[=rtf_titles]{rtf_titles()}}, \code{\link[=rtf_footnotes]{rtf_footnotes()}}.
 \item \code{plan_after(...)}: anything else. Goes to your functions of the pages.

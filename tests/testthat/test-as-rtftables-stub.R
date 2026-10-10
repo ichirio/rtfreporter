@@ -143,7 +143,7 @@ test_that("by_value + stub_vars splits by group_col first, then stubs each page 
 })
 
 test_that("by_value + stub_vars handles a constant intermediate hierarchy level (#244)", {
-  # The reported case: LBTOX_LBL / group1 / label where group1 is a fixed value
+  # The reported case: LBCAT / group1 / label where group1 is a fixed value
   # shared by every row.  Building the stub before the split would collapse
   # group1 into a single label row spanning both grades; splitting first gives
   # each grade its own group1 header.

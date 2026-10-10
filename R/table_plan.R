@@ -1,7 +1,7 @@
 # ============================================================================
 #  Tables from a cards / cardx ARD: the plan (deferred form)
 # ----------------------------------------------------------------------------
-#  Moved here from tflspec (plan E of tflspec Discussion #23, #491).  See
+#  Moved here from tflspec (plan E of the design discussion, #491).  See
 #  R/ard_tables.R for the immediate form the plan resolves to.
 # ============================================================================
 
@@ -852,6 +852,16 @@ print.table_plan <- function(x, ...) {
 #'   A key that reaches neither a variable nor a column is an error, not
 #'   silence.
 #'
+#'   For `plan_nest()`, one entry per nested variable: its name, and the
+#'   variable and level its rows go under,
+#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.  The level is matched as the
+#'   table shows it (the ARD's level: a code list's label).  The nested
+#'   rows follow that level's row, one indent step deeper (the stub's
+#'   `indent`, default 4), in the parent's group; their own heading is
+#'   dropped, their order and text stay `plan_levels()`' and
+#'   `plan_labels()`'.  The rows key that carries the variable
+#'   (`table_plan(rows = c(group = "variable"))`) is what is read.
+#'
 #'   For `plan_levels()` and `plan_labels()`, one entry per column or
 #'   analysis variable: an order (`AGEGR1 = c("<65", "65-74")`), or
 #'   the text values are printed as (`AGE = "Age (years)"`).  Both
@@ -992,6 +1002,27 @@ print.table_plan <- function(x, ...) {
 #'   [as_rtftables()]'s `header_sep` (the separator a plain table's column
 #'   names are split on into spanning header rows) and [rtftable()]'s
 #'   `col_header_align`.
+#' @param lines For `plan_col_header()`: the header **a row at a time**,
+#'   as it reads, instead of `header`: a list, one element a header row
+#'   (the top first), each a named character vector -- a cell's name the
+#'   columns it sits on (a column name, `.values` for every value column,
+#'   a position or range such as `3:5`, or `KEY = value`), its value the
+#'   text, with the same tokens (`{col}`, `{n}`, `{n:sum}` ...):
+#'
+#'   ```r
+#'   plan_col_header(lines = list(
+#'     c(row_label = "",               .values = "{col}"),
+#'     c(row_label = "Characteristic", .values = "(N={n})")))
+#'   ```
+#'
+#'   It is the data frame of cells written another way (one row a cell:
+#'   `line`, `cols`, `text`, `span`), so it does all that does.
+#' @param span For `plan_col_header(lines = )`: how a cell over several
+#'   columns is made -- `"each"` (the default: a cell a column), `"one"`
+#'   (one cell over them all) or a key's name (a cell per value of that
+#'   key: a spanner).  One value for every cell, or a list as `lines` is,
+#'   each element the spans of that row's cells, named as its cells are
+#'   (a cell not named there is `"each"`).
 #' @param widths For `plan_columns()`: the relative column widths,
 #'   `rtftable(col_rel_width = )`.  **Named by column** (`c(row_label = 5,
 #'   .values = 2)`, `.values` for every value column) a reordered table keeps
@@ -1120,7 +1151,7 @@ print.table_plan <- function(x, ...) {
 #'
 #'   * `values = list(n = "page")` --- each page's own, the subjects with that test:
 #'     the ARD rows **carrying** the page key, e.g.
-#'     `cards::ard_tabulate(adlb, by = PARAM, variables = BASEGR)`,
+#'     `cards::ard_tabulate(adlb, by = PARAM, variables = BGRADE)`,
 #'     which states each baseline column's N and the page's total;
 #'   * `list(n = "table")` --- the analysis set: the ARD rows **without** the
 #'     page key, e.g. `cards::ard_total_n(adsl)` or the treatment
@@ -1178,6 +1209,16 @@ print.table_plan <- function(x, ...) {
 #' @param rounding For `plan_digits()`: the tie-breaking family for the
 #'   run, as `widen_ard(rounding = )` takes it.  Last wins, like every
 #'   other layer.
+#' @param label,position For `plan_total()`: the heading of the **Total
+#'   column** (`"Total"`) and where it goes among the column key's values
+#'   (`"last"`, `"first"`).  Its cells are cards' own overall rows --- the
+#'   statistics with no value of the column key, from the same analysis
+#'   without its `by` (`cards::ard_tabulate(adsl, variables = RACE)` bound
+#'   under `cards::ard_tabulate(adsl, by = ARM, variables = RACE)`, or
+#'   `cards::ard_stack(.overall = TRUE)`) --- so the ARD keeps no `ARM`
+#'   value the data does not have.  Its `{n}` in the column header is the
+#'   study total the ARD states (the column key tabulated on its own, or
+#'   `cards::ard_total_n()`).  One column key only.
 #'
 #' @return The plan, with one more layer.
 #'
@@ -1188,6 +1229,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_cells(..., stats, value, na, notes)`: how a cell is made. Goes to [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes`; a finished table [as_rtftables()]: `na`.
 #' * `plan_digits(..., rounding)`: the digits. Goes to the open tokens of the templates; on a finished table [fmt_numeric()].
 #' * `plan_levels()`, `plan_labels()`: the order and text of values. Goes to [widen_ard()]: `levels`, `labels`.
+#' * `plan_total(label, position)`: a Total column from the ARD's overall rows. Goes to [widen_ard()]: those rows as one more value of the column key, and its place in `levels`; the header's `{n}` there is the study total.
 #'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
@@ -1200,7 +1242,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
-#' * `plan_col_header(header, values, header_sep, col_header_align)`: the column header. Goes to [set_col_header()]: the header and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align`.
+#' * `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: the column header. Goes to [set_col_header()]: the header (or `lines`, the header a row at a time) and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align`.
 #' * `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)`: a listing. Goes to [listing_spec()], the same names.
 #' * `plan_titles()`, `plan_footnotes()`: the blocks above and below. Goes to [rtf_titles()], [rtf_footnotes()].
 #' * `plan_after(...)`: anything else. Goes to your functions of the pages.
@@ -1642,6 +1684,47 @@ plan_row_group <- function(plan, mode = NULL, collapse = NULL,
 # A column can be needed and not wanted: a sort carrier, the key a page
 # break reads.  Naming them here says which, instead of `drop_cols` being
 # read as "columns I regret".
+# A variable whose rows belong under ONE level of another -- the
+# sub-categories of a race under its "Asian" row.  Two analyses on the same
+# data (a hierarchical tabulation would drop every level that has no
+# sub-level), placed by the layout: the rows move, they are not counted
+# again.
+#' @rdname plan_verbs
+#' @export
+plan_nest <- function(plan, ...) {
+  dots <- list(...)
+  nm <- names(dots)
+  if (!length(dots) || is.null(nm) || any(!nzchar(nm))) {
+    .ard_stop("plan_nest(): name the nested variable, e.g. plan_nest(RACESUB = c(RACE = \"Asian\")).")
+  }
+  nest <- lapply(nm, function(v) {
+    u <- dots[[v]]
+    if (!is.character(u) || length(u) != 1L || is.null(names(u)) || !nzchar(names(u))) {
+      .ard_stop(sprintf(paste0(
+        "plan_nest(%s = ): one level of one variable, named by it: ",
+        "c(RACE = \"Asian\")."), v))
+    }
+    list(parent = names(u), level = unname(u))
+  })
+  .plan_layer(plan, "nest", list(nest = stats::setNames(nest, nm)))
+}
+
+# A Total column read from cards' own overall rows -- the same analysis
+# without its `by` (`ard_tabulate(adsl, variables = RACE)` beside
+# `ard_tabulate(adsl, by = ARM, variables = RACE)`, ard_stack(.overall =
+# TRUE)) -- which carry no group.  The ARD keeps no invented ARM value;
+# the label is the table's.
+#' @rdname plan_verbs
+#' @export
+plan_total <- function(plan, label = "Total", position = c("last", "first")) {
+  if (!is.character(label) || length(label) != 1L || is.na(label) ||
+      !nzchar(label)) {
+    .ard_stop("plan_total(label = ) is one text, the column's heading: \"Total\".")
+  }
+  position <- match.arg(position)
+  .plan_layer(plan, "total", list(label = label, position = position))
+}
+
 #' @rdname plan_verbs
 #' @export
 plan_hide <- function(plan, ...) {
@@ -1762,6 +1845,51 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
     zones, look))
 }
 
+# plan_col_header(lines = ): the header written a row at a time, a cell
+# a name = its text, as one would read it --
+#   list(c(row_label = "", .values = "{col}"),
+#        c(row_label = "Characteristic", .values = "(N={n})"))
+# -- turned into the cells of the data-frame form (the `col_header` sheet),
+# so everything after it is the same.  `span`: "each" (a cell a column),
+# "one" (one cell over the columns named) or a key's name (a cell per value
+# of that key: a spanner); one for every cell, or a list as `lines` is, of
+# a span a cell (named as the line's cells are).
+.plan_header_lines <- function(lines, span = "each") {
+  if (!is.list(lines) || !length(lines)) {
+    .ard_stop("plan_col_header(lines = ) is a list, one element a header row: ",
+              "list(c(row_label = \"\", .values = \"{col}\"), ...).")
+  }
+  if (is.list(span) && length(span) != length(lines)) {
+    .ard_stop(sprintf(paste0(
+      "plan_col_header(span = ) as a list has one element a header row; ",
+      "`lines` has %d, `span` %d."), length(lines), length(span)))
+  }
+  rows <- list()
+  for (i in seq_along(lines)) {
+    ln <- lines[[i]]
+    nm <- names(ln)
+    if (!is.character(ln) || is.null(nm) || anyNA(nm) || !all(nzchar(nm))) {
+      .ard_stop(sprintf(paste0(
+        "plan_col_header(lines = ): row %d is a named character vector, a ",
+        "cell a name (the columns it sits on: a name, .values, 3:5, ",
+        "KEY = value) = its text."), i))
+    }
+    sp <- if (is.list(span)) span[[i]] else span
+    for (j in seq_along(ln)) {
+      s1 <- if (!is.null(names(sp)) && nm[j] %in% names(sp)) sp[[nm[j]]] else
+        if (is.null(names(sp))) sp[[1L]] else "each"
+      if (!is.character(s1) || length(s1) != 1L || is.na(s1)) {
+        .ard_stop("plan_col_header(span = ) is \"each\", \"one\" or a key's name.")
+      }
+      rows[[length(rows) + 1L]] <- data.frame(
+        line = i, cols = nm[j], text = if (is.na(ln[[j]])) "" else ln[[j]],
+        span = if (identical(s1, "one")) NA_character_ else s1,
+        stringsAsFactors = FALSE)
+    }
+  }
+  do.call(rbind, rows)
+}
+
 # The header is a VALUE, not a set of fields: `rtf_col_header()` builds a
 # whole object and there is nothing useful to merge field-wise.  A function
 # is accepted too, and is called with the resolved `n`, which is
@@ -1788,7 +1916,14 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
 # `list(n = "page", N = "table")`, numbers, a function), or a data frame
 # of per-page values handed to set_col_header() as it is.
 plan_col_header <- function(plan, header = NULL, values = NULL,
-                            header_sep = NULL, col_header_align = NULL) {
+                            header_sep = NULL, col_header_align = NULL,
+                            lines = NULL, span = "each") {
+  if (!is.null(lines)) {
+    if (!is.null(header)) {
+      .ard_stop("plan_col_header(): give the header once, as `header` or as `lines`.")
+    }
+    header <- .plan_header_lines(lines, span)
+  }
   if (is.data.frame(header)) {
     # the `col_header` sheet's cells (one row a cell: `row`, `cols`, `text`,
     # `span` ...), resolved against each page's columns when it is made
@@ -2139,6 +2274,9 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   tbl <- .plan_stage(do.call(widen_ard, c(list(x = x), s_args)),
                      plan, c("cells", "cell_options", "digits", "round",
                              "levels", "labels"))
+  # a variable's rows under one level of another (plan_nest())
+  nest <- .plan_merge(.plan_of(plan, "nest"), deep = "nest")$nest
+  if (length(nest)) tbl <- .plan_nest_rows(plan, tbl, nest, s_args)
   .plan_check_digit_cols(plan, tbl, plan$cache$digit_cols, vars = TRUE)
   # the table-side seam: a column the table can only know once it exists
   .plan_remember(plan, "table", tbl)
@@ -2147,6 +2285,66 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   .plan_to_pages(plan, tbl)
 }
 
+
+# The rows of each nested variable moved under their level: found by the
+# rows key that carries the variable (its value is the variable's label,
+# as plan_labels() gave it, or its name), indented one stub step deeper.
+.plan_nest_rows <- function(plan, tbl, nest, s_args) {
+  rows <- plan$roles$rows
+  key <- names(rows)[as.character(rows) == "variable"]
+  key <- if (length(key) && nzchar(key[1L])) key[1L] else
+    if ("variable" %in% names(tbl)) "variable" else character()
+  if (!length(key) || !key %in% names(tbl)) {
+    .ard_stop(paste0(
+      "plan_nest() moves a variable's rows, and the rows carry no variable: ",
+      "name it on table_plan(rows = ), e.g. rows = c(group = \"variable\")."))
+  }
+  # a variable's heading as plan_labels() gave it: under `variable`
+  # (plan_labels(variable = c(RACE = "Race"))), its own key
+  # (plan_labels(RACE = "Race")), or its own name among its levels'
+  # (plan_labels(SEX = c(SEX = "Sex", F = "Female"))); else its name
+  shown <- function(v) {
+    lab <- s_args$labels$variable
+    if (!is.null(lab) && v %in% names(lab)) return(lab[[v]])
+    own <- s_args$labels[[v]]
+    if (is.character(own) && length(own) == 1L && is.null(names(own))) return(own)
+    if (is.character(own) && v %in% names(own)) return(own[[v]])
+    v
+  }
+  lcol <- intersect(c(names(s_args$label %||% character()), "label", ".label"), names(tbl))[1L]
+  if (is.na(lcol)) {
+    .ard_stop("plan_nest(): the table has no row label column to match the level in.")
+  }
+  stub <- .plan_merge(.plan_of(plan, "stub"))
+  pad <- strrep(.stub_nbsp(), stub$indent %||% 4L)
+  for (child in names(nest)) {
+    par <- nest[[child]]$parent
+    lv <- nest[[child]]$level
+    g <- as.character(tbl[[key]])
+    kids <- which(g == shown(child))
+    if (!length(kids)) {
+      .ard_stop(sprintf("plan_nest(%s = ): the table has no rows of %s.  Its %s: %s.",
+                        child, child, key, paste(unique(g), collapse = ", ")))
+    }
+    in_par <- g == shown(par)
+    at <- which(in_par & as.character(tbl[[lcol]]) == lv)
+    if (length(at) != 1L) {
+      .ard_stop(sprintf(paste0(
+        "plan_nest(%s = c(%s = \"%s\")): %s has no row \"%s\".  Its rows: %s."),
+        child, par, lv, par, lv, paste(unique(tbl[[lcol]][in_par]), collapse = ", ")))
+    }
+    # (a factor column takes the new values: its levels in the new order)
+    was <- vapply(tbl[c(key, lcol)], is.factor, NA)
+    for (k in c(key, lcol)) tbl[[k]] <- as.character(tbl[[k]])
+    tbl[[key]][kids] <- tbl[[key]][at]
+    tbl[[lcol]][kids] <- paste0(pad, tbl[[lcol]][kids])
+    rest <- setdiff(seq_len(nrow(tbl)), kids)
+    tbl <- tbl[c(rest[rest <= at], kids, rest[rest > at]), , drop = FALSE]
+    for (k in c(key, lcol)[was]) tbl[[k]] <- factor(tbl[[k]], levels = unique(tbl[[k]]))
+    rownames(tbl) <- NULL
+  }
+  tbl
+}
 
 # A frame that did not come from cards has its own names for the three
 # columns widen_ard() reads by name -- which statistic a row is, what
@@ -2184,7 +2382,61 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     }
     d[[lb$name]] <- v
   }
+  d <- .plan_total_rows(plan, d)
   .plan_drop_empty(plan, d)
+}
+
+# plan_total(): its label and position, or NULL
+.plan_total_spec <- function(plan) {
+  t <- .plan_merge(.plan_of(plan, "total"))
+  if (length(t)) t
+}
+
+# The overall rows -- a statistic with no value of the column key, not the
+# key's own tabulation nor the study total -- become the Total column.
+.plan_total_rows <- function(plan, d) {
+  tt <- .plan_total_spec(plan)
+  if (is.null(tt) || !is.data.frame(d)) return(d)
+  cols <- as.character(unlist(plan$roles$cols, use.names = FALSE))
+  if (length(cols) != 1L) {
+    .ard_stop(sprintf(paste0(
+      "plan_total(): a Total column is read for one column key; this ",
+      "table has %s."),
+      if (length(cols)) paste0("cols = c(", paste(cols, collapse = ", "), ")")
+      else "no cols"))
+  }
+  if (!cols %in% names(d)) return(d)
+  k <- d[[cols]]
+  v <- if ("variable" %in% names(d)) as.character(d$variable) else
+    rep(NA_character_, nrow(d))
+  own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
+    rep(FALSE, nrow(d))
+  at <- is.na(k) & !own & !(v %in% "..ard_total_n..")
+  if (!any(at)) {
+    .ard_stop(sprintf(paste0(
+      "plan_total(): the ARD has no overall rows, rows without %s.
+",
+      "  Ask cards for them: the same analysis without `by` bound under it, ",
+      "or ard_stack(.overall = TRUE)."), cols))
+  }
+  if (tt$label %in% as.character(k)) {
+    .ard_stop(sprintf(paste0(
+      "plan_total(label = \"%s\"): %s already has a value \"%s\" ",
+      "(a Total made in the data?).  Keep one of the two."),
+      tt$label, cols, tt$label))
+  }
+  x <- as.character(k)
+  x[at] <- tt$label
+  d[[cols]] <- if (is.factor(k)) {
+    factor(x, levels = .plan_total_levels(levels(k), tt))
+  } else x
+  d
+}
+
+# the column key's order with the Total column in its place
+.plan_total_levels <- function(lv, tt) {
+  lv <- setdiff(lv, tt$label)
+  if (identical(tt$position, "first")) c(tt$label, lv) else c(lv, tt$label)
 }
 
 # plan_levels(.drop_empty = ): a level of these variables that no record
@@ -2250,6 +2502,21 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   for (kind in c("levels", "labels")) {
     v <- .plan_merge(.plan_of(plan, kind), deep = kind)[[kind]]
     if (length(v)) out[[kind]] <- v
+  }
+  # plan_total(): the Total column in the column key's order
+  tt <- .plan_total_spec(plan)
+  cols <- as.character(unlist(out$cols, use.names = FALSE))
+  if (!is.null(tt) && length(cols) == 1L) {
+    lv <- out$levels[[cols]]
+    if (is.null(lv) && identical(tt$position, "first") &&
+        is.data.frame(plan$data) && cols %in% names(plan$data)) {
+      k <- plan$data[[cols]]
+      lv <- if (is.factor(k)) levels(k) else .ard_first_seen(as.character(k[!is.na(k)]))
+    }
+    if (!is.null(lv)) {
+      out$levels <- out$levels %||% list()
+      out$levels[[cols]] <- .plan_total_levels(lv, tt)
+    }
   }
   out
 }
@@ -2676,6 +2943,19 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
     got <- got[c(intersect(ord, names(got)), setdiff(names(got), ord))]
     out <- c(out, got)
   }
+  # plan_total(): the Total column's population is the study total the
+  # ARD states (the key's own tabulation's N, ..ard_total_n..) -- the one
+  # column it is
+  tt <- .plan_total_spec(plan)
+  if (!is.null(tt) && length(cols) == 1L) {
+    if (!is.null(total)) {
+      out[[tt$label]] <- total
+    } else {
+      why[[tt$label]] <- paste0(
+        "the ARD states no study total for the Total column (tabulate the ",
+        "column key on its own, or add cards::ard_total_n())")
+    }
+  }
   done()
 }
 
@@ -2708,7 +2988,8 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
     kk <- key[i]
     if (anyNA(n)) next
     # the same count stated twice (the groups counted by two analyses: a
-    # BIGN row and an ard_stack(.by_stats = TRUE)) is one count; two
+    # GROUPN row -- the subjects per group, which clinical reporting calls
+    # big N -- and an ard_stack(.by_stats = TRUE)) is one count; two
     # different counts for one column are not a column's number
     if (anyDuplicated(kk)) {
       one <- vapply(split(n, kk), function(x) length(unique(x)) == 1L, NA)
@@ -2894,6 +3175,10 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
       dep <- lengths(strsplit(nmv, sep, fixed = TRUE))
       lv <- v[dep == max(dep)]
     }
+    # a Total column (plan_total()) is the sum of the others, not one of
+    # the parts
+    tc <- .plan_total_spec(plan)$label
+    if (!is.null(tc) && length(names(lv))) lv <- lv[names(lv) != tc]
     tot <- suppressWarnings(sum(as.numeric(unlist(lv)), na.rm = TRUE))
     add(paste0("{", nm, ":sum}"), "sum", tot, paste0(
       "= ", format(tot, trim = TRUE),
@@ -3030,15 +3315,8 @@ plan_header_tokens <- function(plan) {
 # a value of that column (relabelled, or cut further) gets NULL and falls
 # back to the whole table's numbers: a page never borrows another's.
 .plan_page_group <- function(plan, page_names) {
-  if (!isTRUE(.plan_merge(.plan_of(plan, "group"))$.page)) return(NULL)
-  gcol <- .plan_group_col(plan)
-  if (is.null(gcol) || is.null(page_names)) return(NULL)
-  r <- plan$roles$rows
-  src <- if (!is.null(names(r)) && gcol %in% names(r)) r[[gcol]] else gcol
-  if (!is.character(src) || length(src) != 1L ||
-      !src %in% names(plan$data)) {
-    return(NULL)
-  }
+  src <- .plan_page_col(plan)
+  if (is.null(src) || is.null(page_names)) return(NULL)
   raw <- .ard_first_seen(plan$data[[src]])
   value <- lapply(page_names, function(nm) {
     if (nm %in% raw) return(nm)
@@ -3046,6 +3324,99 @@ plan_header_tokens <- function(plan) {
     if (length(hit)) hit[which.max(nchar(hit))] else NULL
   })
   list(col = src, value = value)
+}
+
+# The data's column that a page split by a group value is split on
+# (plan_paginate_group()), or NULL when the pages are not split so.
+.plan_page_col <- function(plan) {
+  if (!isTRUE(.plan_merge(.plan_of(plan, "group"))$.page)) return(NULL)
+  gcol <- .plan_group_col(plan)
+  if (is.null(gcol)) return(NULL)
+  r <- plan$roles$rows
+  src <- if (!is.null(names(r)) && gcol %in% names(r)) r[[gcol]] else gcol
+  if (!is.character(src) || length(src) != 1L ||
+      !src %in% names(plan$data)) {
+    return(NULL)
+  }
+  src
+}
+
+#' The populations a column header's `{n}` can say
+#'
+#' Which numbers the ARD states for `{n}`, before choosing one: a GUI that
+#' asks "what does the header's `{n}` count?" shows each choice with its
+#' values.  A table whose pages are split by a group value (a lab
+#' parameter, with [plan_paginate_group()]) has two:
+#'
+#' * `scope = "page"`: each page's own -- the rows carrying the page's key
+#'   (the subjects with that test), what `plan_col_header(values = list(n =
+#'   "page"))` prints;
+#' * `scope = "table"`: the table's -- the rows without the page key (the
+#'   analysis set), the same on every page, what `n = "table"` prints.
+#'
+#' A table not split so has one, `scope = "all"`.  The numbers are the ones
+#' [plan_col_header()] reads with `values = list(n = TRUE)` or a scope: only
+#' a number the ARD states as a population size; a column it does not state
+#' has no row.
+#'
+#' @param plan A [table_plan()] with `cols`.
+#' @return A data frame: `scope` (`"all"`, `"page"` or `"table"`), `page`
+#'   (the page's group value; `NA` but on `"page"` rows), `column` (the
+#'   spread column's key, as `{n:<column>}` names it; `NA` for the
+#'   population over all the columns, what a spanning cell's `{n}` reads),
+#'   `value`.  Attribute `differ`: `TRUE` when a page's numbers and the
+#'   table's are not the same, so which one `{n}` says is a choice (left
+#'   unmade, the pages' are used, with a warning); `page_col`: the column
+#'   the pages are split on (`NULL` when they are not).
+#' @seealso [plan_col_header()], [plan_header_tokens()]
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
+#'     cards::ard_summary(variables = AGE)))
+#'   plan_n_candidates(table_plan(ard, cols = "ARM"))
+#' }
+#' @export
+plan_n_candidates <- function(plan) {
+  if (!inherits(plan, "table_plan")) {
+    .ard_stop("plan_n_candidates(): expected a table_plan.")
+  }
+  rows <- function(n, scope, page) {
+    nm <- names(n) %||% rep("", length(n))
+    tot <- attr(n, "total", exact = TRUE)
+    data.frame(scope = scope, page = page,
+               column = c(nm, if (!is.null(tot)) NA_character_),
+               value = c(unname(as.numeric(n)), if (!is.null(tot)) as.numeric(tot)),
+               stringsAsFactors = FALSE)
+  }
+  none <- rows(numeric(0), character(0), character(0))
+  attr(none, "differ") <- FALSE
+  sp <- .plan_spread_args(plan)
+  if (is.null(sp$cols)) return(none)
+  data <- plan$data
+  src <- .plan_page_col(plan)
+  if (is.null(src)) {
+    out <- rows(.plan_n_read(plan, sp, data), "all", NA_character_)
+    attr(out, "differ") <- FALSE
+    return(out)
+  }
+  # as .plan_n_values() reads them: the table's from the rows without the
+  # page key, a page's from its own rows and the table's for what it lacks
+  g <- as.character(data[[src]])
+  rest <- data[is.na(g), , drop = FALSE]
+  attr(rest, "ard_total_n") <- attr(data, "ard_total_n", exact = TRUE)
+  tbl <- .plan_n_read(plan, sp, rest)
+  parts <- list()
+  differ <- FALSE
+  for (v in setdiff(.ard_first_seen(data[[src]]), NA)) {
+    own <- .plan_n_read(plan, sp, data[!is.na(g) & g == v, , drop = FALSE])
+    differ <- differ || .plan_n_differ(own, tbl)
+    parts[[length(parts) + 1L]] <- rows(.plan_n_join(own, tbl), "page", as.character(v))
+  }
+  out <- do.call(rbind, c(parts, list(rows(tbl, "table", NA_character_))))
+  rownames(out) <- NULL
+  attr(out, "differ") <- differ
+  attr(out, "page_col") <- src
+  out
 }
 
 # A page's own numbers first, then the table's for what the page lacks.
@@ -3208,7 +3579,8 @@ plan_header_tokens <- function(plan) {
              hdr$header(nv, tbl)
            else hdr$header(nv)
       list(raw = h, filled = .plan_header_fill(
-        h, nv, sc, length(page_d) - length(sc), .plan_sep(plan)))
+        h, nv, sc, length(page_d) - length(sc), .plan_sep(plan),
+        total_col = .plan_total_spec(plan)$label))
     }
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
     # Pages split by a group value (a lab parameter, a visit) each
@@ -3398,7 +3770,8 @@ plan_header_tokens <- function(plan) {
 # the leaf is the whole name, so nothing changes there.  The hierarchy
 # itself needs no header at all: as_rtftables(header_sep = ) builds
 # the spanning rows from the same separator.
-.plan_header_fill <- function(h, nvals, cols, n_lead, sep = NULL) {
+.plan_header_fill <- function(h, nvals, cols, n_lead, sep = NULL,
+                              total_col = NULL) {
   if (is.null(h) || !length(cols)) return(h)
   sep <- sep %||% "____"
   parts <- function(col) {
@@ -3450,17 +3823,20 @@ plan_header_tokens <- function(plan) {
     if (is.null(v)) return(NA)
     nm <- names(v) %||% character(0)
     if (!length(nm)) return(if (length(v) == 1L) v[[1L]] else NA)
+    # a Total column (plan_total()) is the sum of the others, not a part
+    parts <- setdiff(cols, total_col)
+    over <- setdiff(over, total_col)
     if (!length(over)) {
-      keep <- intersect(cols, nm)
+      keep <- intersect(parts, nm)
       # a vector keyed by something else entirely: every entry
-      if (!length(keep)) keep <- nm
-      else if (length(keep) < length(cols)) return(NA)
+      if (!length(keep)) keep <- setdiff(nm, total_col)
+      else if (length(keep) < length(parts)) return(NA)
     } else {
       keep <- intersect(over, nm)
       # a column with no number makes the sum a wrong number, not a
       # smaller one
       if (!length(keep) ||
-          length(keep) < length(intersect(over, cols))) return(NA)
+          length(keep) < length(intersect(over, parts))) return(NA)
     }
     sum(suppressWarnings(as.numeric(unlist(v[keep]))), na.rm = TRUE)
   }
@@ -3709,7 +4085,7 @@ plan_layers <- function(plan) {
   layers <- list()
   for (k in unique(kinds)) {
     layers[[k]] <- if (k %in% c("after", "restyle")) .plan_of(plan, k)
-                   else if (k %in% c("levels", "labels"))
+                   else if (k %in% c("levels", "labels", "nest"))
                      .plan_merge(.plan_of(plan, k), deep = k)
                    else .plan_merge(.plan_of(plan, k))
   }

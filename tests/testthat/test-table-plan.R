@@ -1836,15 +1836,15 @@ test_that("pages split by a group value each read their own N from the ARD", {
   set.seed(1)
   lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
                     PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
-  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
-  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb$BGRADE <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WGRADE <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
   lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
   ard <- cards::bind_ard(
-    cards::ard_tabulate(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
+    cards::ard_tabulate(lb, by = c(PARAM, BGRADE), variables = WGRADE),
     # the population of each parameter, split by the column variable:
     # the ARD states every column's N and each page's total
-    cards::ard_tabulate(lb, by = PARAM, variables = BASEGR))
-  p <- table_plan(normalize_ard(ard), cols = "BASEGR",
+    cards::ard_tabulate(lb, by = PARAM, variables = BGRADE))
+  p <- table_plan(normalize_ard(ard), cols = "BGRADE",
                 rows = c(PARAM = "PARAM"), label = c(label = ".label")) |> plan_cells(notes = FALSE) |>
     plan_cells("{n}") |>
     plan_paginate_group(keep = FALSE) |>
@@ -1853,7 +1853,7 @@ test_that("pages split by a group value each read their own N from the ARD", {
       c("", "{col} (N={n})")))
   pg <- expect_silent(suppressMessages(plan_apply(p, "pages")))
   n <- table(lb$PARAM)
-  cell <- table(lb$PARAM, lb$BASEGR)
+  cell <- table(lb$PARAM, lb$BGRADE)
   for (i in seq_along(pg)) {
     prm <- names(pg)[i]
     h <- hdr_rows(pg[i])
@@ -1870,17 +1870,17 @@ two_pop <- function() {
   set.seed(1)
   lb <- expand.grid(USUBJID = cards::ADSL$USUBJID,
                     PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE)
-  lb$BASEGR <- sample(c("G0", "G1"), nrow(lb), TRUE)
-  lb$WORSTGR <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
+  lb$BGRADE <- sample(c("G0", "G1"), nrow(lb), TRUE)
+  lb$WGRADE <- sample(c("G0", "G1", "G2"), nrow(lb), TRUE)
   lb <- lb[!(lb$PARAM == "HGB" & seq_len(nrow(lb)) %% 10 == 0), ]
   d <- normalize_ard(cards::bind_ard(
-    cards::ard_tabulate(lb, by = c(PARAM, BASEGR), variables = WORSTGR),
-    cards::ard_tabulate(lb, by = PARAM, variables = BASEGR),
+    cards::ard_tabulate(lb, by = c(PARAM, BGRADE), variables = WGRADE),
+    cards::ard_tabulate(lb, by = PARAM, variables = BGRADE),
     cards::ard_total_n(cards::ADSL)), drop_contexts = "attributes")
   list(d = d, tested = table(lb$PARAM), set = nrow(cards::ADSL))
 }
 two_pop_plan <- function(d, n, text = "T (N={n})") {
-  table_plan(d, cols = "BASEGR", rows = c(PARAM = "PARAM"),
+  table_plan(d, cols = "BGRADE", rows = c(PARAM = "PARAM"),
            label = c(label = ".label")) |> plan_cells(notes = FALSE) |>
     plan_cells("{n}") |>
     plan_paginate_group(keep = FALSE) |>
@@ -1912,6 +1912,44 @@ test_that("two populations and no choice: the page's, with a warning", {
     two_pop_plan(x$d, TRUE), "pages")), "two populations")
   expect_identical(spanner(pg)[["HGB"]],
                    sprintf("T (N=%d)", as.integer(x$tested[["HGB"]])))
+})
+
+test_that("plan_n_candidates(): each population {n} can say, as {n} prints it", {
+  skip_if_not_installed("cards")
+  x <- two_pop()
+  cand <- plan_n_candidates(two_pop_plan(x$d, "page"))
+  expect_named(cand, c("scope", "page", "column", "value"))
+  expect_true(attr(cand, "differ"))
+  expect_identical(attr(cand, "page_col"), "PARAM")
+  expect_setequal(unique(cand$scope), c("page", "table"))
+  # over all the columns: each page's tested subjects, the analysis set
+  tot <- cand[is.na(cand$column), ]
+  expect_identical(tot$value[tot$scope == "page"],
+                   as.numeric(x$tested[tot$page[tot$scope == "page"]]))
+  expect_identical(tot$value[tot$scope == "table"], as.numeric(x$set))
+  # what the header prints with each choice
+  pg <- suppressMessages(plan_apply(two_pop_plan(x$d, "page"), "pages"))
+  expect_identical(unname(spanner(pg)),
+                   sprintf("T (N=%d)", as.integer(tot$value[match(names(pg), tot$page)])))
+  # a page's columns: its own (the table's for what it lacks)
+  hgb <- cand[cand$scope == "page" & cand$page == "HGB" & !is.na(cand$column), ]
+  expect_setequal(hgb$column, c("G0", "G1"))
+  # a table not split by page: one population, the same the header reads
+  ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
+                                        cards::ard_summary(variables = AGE)))
+  p <- table_plan(ard, cols = "ARM")
+  one <- plan_n_candidates(p)
+  expect_identical(unique(one$scope), "all")
+  expect_false(attr(one, "differ"))
+  arm <- one[!is.na(one$column), ]
+  n <- table(cards::ADSL$ARM)
+  expect_identical(arm$value, as.numeric(n[arm$column]))
+  tk <- plan_header_tokens(plan_col_header(p, values = list(n = TRUE)))
+  v <- unlist(tk$values[[match("{n}", tk$token)]])
+  expect_identical(as.numeric(v[arm$column]), arm$value)
+  # no cols: nothing
+  expect_identical(nrow(plan_n_candidates(table_plan(ard))), 0L)
+  expect_error(plan_n_candidates(ard), "expected a table_plan")
 })
 
 test_that("plan_style() takes the whole table's settings, and only those", {
@@ -2323,7 +2361,7 @@ test_that("plan_levels(.drop_empty = ) leaves out the levels no record has", {
 test_that("a group count stated twice is one count; two different ones say why", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
-  bign <- cards::ard_tabulate(adsl, variables = ARM)
+  groupn <- cards::ard_tabulate(adsl, variables = ARM)
   st <- cards::ard_stack(adsl, .by = ARM,
                          cards::ard_summary(variables = AGE,
                            statistic = ~ cards::continuous_summary_fns("mean")))
@@ -2335,17 +2373,226 @@ test_that("a group count stated twice is one count; two different ones say why",
     t <- plan_header_tokens(p)
     t[t$token == "{n}", ]
   }
-  # the stack alone, and a BIGN row next to the stack (the same counts):
+  # the stack alone, and a GROUPN row (the subjects per group) next to the
+  # stack (the same counts):
   # the same numbers
   alone <- tok(st)
-  twice <- tok(dplyr::bind_rows(bign, st))
+  twice <- tok(dplyr::bind_rows(groupn, st))
   expect_true(twice$resolved)
   expect_identical(twice$values, alone$values)
   expect_identical(unname(unlist(twice$values)), c(86, 84, 84))
   # two different counts for one column: not a column's number, and why
-  other <- bign
+  other <- groupn
   other$stat[[1]] <- 99L
   clash <- tok(dplyr::bind_rows(other, st))
   expect_false(clash$resolved)
   expect_match(clash$note, "two different counts")
+})
+
+test_that("plan_col_header(lines = ): the header a row at a time, the cells' data frame written another way", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::ard_stack(adsl, .by = c(TRT, SEX),
+    cards::ard_tabulate(variables = AGEGR1, statistic = ~ c("n", "p")))
+  d <- suppressMessages(normalize_ard(ard))
+  base <- table_plan(d, cols = c("TRT", "SEX"), rows = c(group = "variable")) |>
+    plan_cells(notes = FALSE) |> plan_cells("{n} ({p:.1f%})") |>
+    plan_stub(name = "row_label", before = TRUE)
+  pages <- function(p) suppressMessages(plan_apply(p))
+  cells <- data.frame(
+    line = c(1, 1, 2, 2, 3, 3),
+    cols = c("row_label", ".values", "row_label", ".values", "row_label", ".values"),
+    span = c(NA, "TRT", NA, "each", NA, NA),
+    text = c("", "{col1}", "", "{col2}", "Characteristic", ""))
+  want <- pages(base |> plan_col_header(header = cells))
+  got <- pages(base |> plan_col_header(
+    lines = list(
+      c(row_label = "", .values = "{col1}"),
+      c(row_label = "", .values = "{col2}"),
+      c(row_label = "Characteristic", .values = "")),
+    span = list(c(row_label = "one", .values = "TRT"),
+                c(row_label = "one"),
+                c(row_label = "one", .values = "one"))))
+  expect_identical(got, want)
+  # one span for every cell: "each", the default
+  each <- data.frame(line = c(1, 1, 2, 2), cols = c("row_label", ".values"),
+                     span = "each", text = c("", "{col}", "Characteristic", "(N={n})"))
+  expect_identical(
+    pages(base |> plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
+                                               c(row_label = "Characteristic",
+                                                 .values = "(N={n})")))),
+    pages(base |> plan_col_header(header = each)))
+  # what it is, and is not
+  expect_error(plan_col_header(base, header = each, lines = list(c(a = "x"))),
+               "once, as `header` or as `lines`")
+  expect_error(plan_col_header(base, lines = list(c("x", "y"))),
+               "row 1 is a named character vector")
+  expect_error(plan_col_header(base, lines = list(c(a = "x")), span = list("each", "one")),
+               "one element a header row")
+})
+
+# ------------------------------------------------- a variable under a level
+# (#598) RACESUB's rows under RACE's "Asian" row, one indent step deeper
+nest_ard <- function() {
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$RACE <- factor(adsl$RACE, levels = c("WHITE", "BLACK OR AFRICAN AMERICAN",
+                                            "AMERICAN INDIAN OR ALASKA NATIVE"),
+                      labels = c("White", "Black", "American Indian"))
+  adsl$RSUB <- factor(ifelse(adsl$RACE %in% "Black", c("A", "B")[1L + adsl$AGE %% 2], NA),
+                      levels = c("A", "B", "C"), labels = c("Sub A", "Sub B", "Sub C"))
+  cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = TRT),
+    cards::ard_tabulate(adsl, by = TRT, variables = c(RACE, RSUB), denominator = adsl))
+}
+
+test_that("plan_nest() puts a variable's rows under one level of another", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_labels(variable = c(RACE = "Race, n (%)", RSUB = "Black sub")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+  plain <- plan_apply(p, "table")
+  nested <- plan_apply(p |> plan_nest(RSUB = c(RACE = "Black")), "table")
+  pad <- strrep(intToUtf8(160L), 4L)
+  expect_identical(as.character(nested$label),
+                   c("White", "Black", paste0(pad, c("Sub A", "Sub B", "Sub C")), "American Indian"))
+  expect_identical(unique(as.character(nested$group)), "Race, n (%)")
+  # the rows themselves are the same, moved: no count changes
+  k <- match(c("Sub A", "Sub B", "Sub C"), as.character(plain$label))
+  expect_identical(nested[3:5, -(1:2)], plain[k, -(1:2)], ignore_attr = TRUE)
+  # the stub's indent is the step
+  n2 <- plan_apply(p |> plan_stub(indent = 2L) |> plan_nest(RSUB = c(RACE = "Black")), "table")
+  expect_identical(as.character(n2$label[3]), paste0(strrep(intToUtf8(160L), 2L), "Sub A"))
+})
+
+test_that("plan_nest() says what is wrong", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+  expect_error(plan_nest(p, RSUB = "Black"), "named by it")
+  expect_error(plan_nest(p), "name the nested variable")
+  expect_error(plan_apply(plan_nest(p, RSUB = c(RACE = "Blue")), "table"),
+               "RACE has no row \"Blue\".  Its rows: White, Black, American Indian")
+  expect_error(plan_apply(plan_nest(p, NOPE = c(RACE = "Black")), "table"),
+               "no rows of NOPE")
+  p2 <- table_plan(nz(nest_ard()), cols = "TRT", rows = ".label") |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+  expect_error(plan_apply(plan_nest(p2, RSUB = c(RACE = "Black")), "table"),
+               "carry no variable")
+})
+
+test_that("plan_layers() shows the nestings, a later one for a variable winning", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE) |>
+    plan_nest(RSUB = c(RACE = "White")) |>
+    plan_nest(RSUB = c(RACE = "Black"))
+  n <- plan_layers(p)$layers$nest$nest
+  expect_identical(names(n), "RSUB")
+  expect_identical(n$RSUB, list(parent = "RACE", level = "Black"))
+  # and plan_apply() reads the same
+  tb <- plan_apply(p, "table")
+  expect_identical(which(grepl("Sub A", tb$label)), 3L)
+})
+
+test_that("plan_nest() finds a variable by any form of its heading", {
+  skip_if_no_cards2()
+  base <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+  forms <- list(
+    plan_labels(base, variable = c(RACE = "Race", RSUB = "Black sub")),
+    plan_labels(base, RACE = "Race", RSUB = "Black sub"),
+    plan_labels(base, RACE = c(RACE = "Race"), RSUB = c(RSUB = "Black sub")))
+  for (p in forms) {
+    tb <- plan_apply(plan_nest(p, RSUB = c(RACE = "Black")), "table")
+    expect_identical(unique(as.character(tb$group)), "Race")
+    expect_identical(which(grepl("Sub A", tb$label)), 3L)
+  }
+})
+
+# ---------------------------------------------- a Total column (plan_total)
+# cards' own overall rows -- the analysis again without its by -- become
+# the Total column; the ARD keeps no invented ARM value
+total_ard <- function(factor_trt = FALSE) {
+  adsl <- cards::ADSL
+  adsl$TRT <- if (factor_trt) factor(adsl$ARM, levels = c("Placebo",
+    "Xanomeline Low Dose", "Xanomeline High Dose")) else as.character(adsl$ARM)
+  cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = TRT),
+    cards::ard_tabulate(adsl, by = TRT, variables = SEX, denominator = adsl),
+    cards::ard_tabulate(adsl, variables = SEX, denominator = adsl))
+}
+
+test_that("plan_total() makes the overall rows a Total column, its N the study total", {
+  skip_if_no_cards2()
+  for (f in c(FALSE, TRUE)) {
+    p <- table_plan(nz(total_ard(f)), cols = "TRT", rows = c(group = "variable")) |>
+      plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+    tb <- plan_apply(plan_total(p), "table")
+    expect_identical(names(tb)[ncol(tb)], "Total")
+    expect_identical(as.character(tb$Total), c("143 (56.3)", "111 (43.7)"))
+    first <- plan_apply(plan_total(p, label = "All", position = "first"), "table")
+    expect_identical(names(first)[3L], "All")
+    # the header's {n}: each arm's own, and the study total over Total
+    n <- rtfreporter:::.plan_n_read(plan_total(p), rtfreporter:::.plan_spread_args(plan_total(p)))
+    expect_equal(unname(n[c("Placebo", "Total")]), c(86, 254))
+  }
+  # with plan_levels(): Total in its place among them
+  p <- table_plan(nz(total_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_levels(TRT = c("Xanomeline High Dose", "Xanomeline Low Dose", "Placebo"))
+  expect_identical(names(plan_apply(plan_total(p, position = "first"), "table"))[-(1:2)],
+                   c("Total", "Xanomeline High Dose", "Xanomeline Low Dose", "Placebo"))
+  # without plan_total(), the table is what it was
+  expect_false("Total" %in% names(plan_apply(p, "table")))
+})
+
+test_that("{n:sum} leaves the Total column out: it is the sum, not a part", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(total_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_total() |>
+    plan_stub(name = "row_label", before = TRUE) |>
+    plan_col_header(values = list(n = TRUE), header = data.frame(
+      line = c("1", "1", "2"), cols = c("row_label", ".values", ".values"),
+      span = c(NA, NA, "each"), text = c(NA, "All (N={n:sum})", "{col} (N={n})")))
+  tk <- plan_header_tokens(p)
+  expect_equal(unlist(tk$values[tk$token == "{n:sum}"]), 254)
+  expect_equal(unlist(tk$values[tk$token == "{n}"])[["Total"]], 254)
+  pg <- plan_apply(p, "pages")
+  h <- if (inherits(pg, "rtftable")) pg$col_header else pg[[1L]]$col_header
+  txt <- paste(unlist(h), collapse = " ")
+  expect_match(txt, "All (N=254)", fixed = TRUE)
+  expect_match(txt, "Total (N=254)", fixed = TRUE)
+})
+
+test_that("plan_total() says what is wrong", {
+  skip_if_no_cards2()
+  adsl <- cards::ADSL
+  no_overall <- cards::ard_tabulate(adsl, by = ARM, variables = SEX)
+  p <- table_plan(nz(no_overall), cols = "ARM", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_error(plan_apply(plan_total(p), "table"), "no overall rows, rows without ARM")
+  expect_error(plan_total(p, label = ""), "one text")
+  expect_error(plan_total(p, position = "middle"))
+  # a Total already in the data: one of the two
+  adsl$ARM2 <- adsl$ARM
+  made <- rbind(adsl, transform(adsl, ARM2 = "Total"))
+  both <- cards::bind_ard(cards::ard_tabulate(made, by = ARM2, variables = SEX),
+                          cards::ard_tabulate(adsl, variables = SEX))
+  p2 <- table_plan(nz(both), cols = "ARM2", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_error(plan_apply(plan_total(p2), "table"), "already has a value \"Total\"")
+  # one column key
+  two <- cards::bind_ard(cards::ard_tabulate(adsl, by = c(ARM, SEX), variables = RACE),
+                         cards::ard_tabulate(adsl, variables = RACE))
+  p3 <- table_plan(nz(two), cols = c("ARM", "SEX"), rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_error(plan_apply(plan_total(p3), "table"), "one column key")
+  # plan_layers() shows it
+  p4 <- table_plan(nz(total_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_identical(plan_layers(plan_total(p4, label = "All"))$layers$total,
+                   list(label = "All", position = "last"))
 })
