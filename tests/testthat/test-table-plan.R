@@ -2393,3 +2393,53 @@ test_that("plan_col_header(lines = ): the header a row at a time, the cells' dat
   expect_error(plan_col_header(base, lines = list(c(a = "x")), span = list("each", "one")),
                "one element a header row")
 })
+
+# ------------------------------------------------- a variable under a level
+# (#598) RACESUB's rows under RACE's "Asian" row, one indent step deeper
+nest_ard <- function() {
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$RACE <- factor(adsl$RACE, levels = c("WHITE", "BLACK OR AFRICAN AMERICAN",
+                                            "AMERICAN INDIAN OR ALASKA NATIVE"),
+                      labels = c("White", "Black", "American Indian"))
+  adsl$RSUB <- factor(ifelse(adsl$RACE %in% "Black", c("A", "B")[1L + adsl$AGE %% 2], NA),
+                      levels = c("A", "B", "C"), labels = c("Sub A", "Sub B", "Sub C"))
+  cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = TRT),
+    cards::ard_tabulate(adsl, by = TRT, variables = c(RACE, RSUB), denominator = adsl))
+}
+
+test_that("plan_nest() puts a variable's rows under one level of another", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_labels(variable = c(RACE = "Race, n (%)", RSUB = "Black sub")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+  plain <- plan_apply(p, "table")
+  nested <- plan_apply(p |> plan_nest(RSUB = c(RACE = "Black")), "table")
+  pad <- strrep(intToUtf8(160L), 4L)
+  expect_identical(as.character(nested$label),
+                   c("White", "Black", paste0(pad, c("Sub A", "Sub B", "Sub C")), "American Indian"))
+  expect_identical(unique(as.character(nested$group)), "Race, n (%)")
+  # the rows themselves are the same, moved: no count changes
+  k <- match(c("Sub A", "Sub B", "Sub C"), as.character(plain$label))
+  expect_identical(nested[3:5, -(1:2)], plain[k, -(1:2)], ignore_attr = TRUE)
+  # the stub's indent is the step
+  n2 <- plan_apply(p |> plan_stub(indent = 2L) |> plan_nest(RSUB = c(RACE = "Black")), "table")
+  expect_identical(as.character(n2$label[3]), paste0(strrep(intToUtf8(160L), 2L), "Sub A"))
+})
+
+test_that("plan_nest() says what is wrong", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+  expect_error(plan_nest(p, RSUB = "Black"), "named by it")
+  expect_error(plan_nest(p), "name the nested variable")
+  expect_error(plan_apply(plan_nest(p, RSUB = c(RACE = "Blue")), "table"),
+               "RACE has no row \"Blue\".  Its rows: White, Black, American Indian")
+  expect_error(plan_apply(plan_nest(p, NOPE = c(RACE = "Black")), "table"),
+               "no rows of NOPE")
+  p2 <- table_plan(nz(nest_ard()), cols = "TRT", rows = ".label") |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+  expect_error(plan_apply(plan_nest(p2, RSUB = c(RACE = "Black")), "table"),
+               "carry no variable")
+})

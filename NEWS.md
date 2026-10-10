@@ -19,6 +19,15 @@
 
 ### New features
 
+- **`plan_nest()`: a variable's rows under one level of another** (#598).
+  `plan_nest(RACESUB = c(RACE = "Asian"))` moves RACESUB's rows right after
+  RACE's "Asian" row, one stub indent step deeper, in RACE's group (its own
+  heading dropped): the sub-categories of a race under it, from two
+  analyses on the same data -- a hierarchical tabulation would drop every
+  level that has no sub-level.  The level is matched as the table shows it;
+  a variable or level not in the table stops with what there is.  Before,
+  only `plan_after()` could do it.
+
 - **`rtf_figures(doc, plot)`: one figure without `list()`** (#589).  An
   `rtfplot`, one file path, a function that draws or a plot object (a
   ggplot, a patchwork, a grob, a recorded plot) is taken as it is; a list

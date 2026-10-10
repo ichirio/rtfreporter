@@ -10,6 +10,7 @@
 \alias{plan_cell_style}
 \alias{plan_paginate_group}
 \alias{plan_row_group}
+\alias{plan_nest}
 \alias{plan_hide}
 \alias{plan_sort}
 \alias{plan_blanks}
@@ -59,6 +60,8 @@ plan_cell_style(
 plan_paginate_group(plan, col = NULL, keep = TRUE)
 
 plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
+
+plan_nest(plan, ...)
 
 plan_hide(plan, ...)
 
@@ -201,6 +204,16 @@ by the text of the label column:
 
 A key that reaches neither a variable nor a column is an error, not
 silence.
+
+For \code{plan_nest()}, one entry per nested variable: its name, and the
+variable and level its rows go under,
+\code{plan_nest(RACESUB = c(RACE = "Asian"))}.  The level is matched as the
+table shows it (the ARD's level: a code list's label).  The nested
+rows follow that level's row, one indent step deeper (the stub's
+\code{indent}, default 4), in the parent's group; their own heading is
+dropped, their order and text stay \code{plan_levels()}' and
+\code{plan_labels()}'.  The rows key that carries the variable
+(\code{table_plan(rows = c(group = "variable"))}) is what is read.
 
 For \code{plan_levels()} and \code{plan_labels()}, one entry per column or
 analysis variable: an order (\code{AGEGR1 = c("<65", "65-74")}), or
