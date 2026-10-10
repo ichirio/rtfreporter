@@ -2444,12 +2444,16 @@ test_that("plan_nest() says what is wrong", {
                "carry no variable")
 })
 
-test_that("plan_layers() shows the nestings, one per variable across calls", {
+test_that("plan_layers() shows the nestings, a later one for a variable winning", {
   skip_if_no_cards2()
   p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
-    plan_nest(RSUB = c(RACE = "Black")) |>
-    plan_nest(OTHER = c(RACE = "White"))
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE) |>
+    plan_nest(RSUB = c(RACE = "White")) |>
+    plan_nest(RSUB = c(RACE = "Black"))
   n <- plan_layers(p)$layers$nest$nest
-  expect_identical(names(n), c("RSUB", "OTHER"))
+  expect_identical(names(n), "RSUB")
   expect_identical(n$RSUB, list(parent = "RACE", level = "Black"))
+  # and plan_apply() reads the same
+  tb <- plan_apply(p, "table")
+  expect_identical(which(grepl("Sub A", tb$label)), 3L)
 })

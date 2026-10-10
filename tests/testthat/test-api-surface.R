@@ -107,7 +107,7 @@ test_that("one border constructor is left once the deprecated ones are set aside
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 125 exports, 20 of them deprecated and slated for removal before CRAN.
+  # 126 exports, 20 of them deprecated and slated for removal before CRAN.
   # (91 since #463 added rtfreporter_ai_manual(); 92 since #476 added
   # round_num(); 126 since #491 brought the ARD table engine --
   # 34 functions -- over from tflspec; 122 since #498 folded plan_fmt()
@@ -116,9 +116,10 @@ test_that("the effective export count is the reviewed number", {
   # plan_header_tokens(); 125 since the pre-CRAN API review, iteration 1,
   # renamed rtf_border_side() to rtf_border_line() and deprecated the old
   # name with six others; 105 since six assembly helpers gave way to
-  # assemble_folder() and assemble_rtf(toc = <a table>).)
-  expect_length(.exports(), 125L)
-  expect_length(setdiff(.exports(), .dep), 105L)
+  # assemble_folder() and assemble_rtf(toc = <a table>); 126 / 106 since
+  # #598 added plan_nest(), a variable's rows under a level of another.)
+  expect_length(.exports(), 126L)
+  expect_length(setdiff(.exports(), .dep), 106L)
 })
 
 test_that("the old argument names still work, with a warning", {
