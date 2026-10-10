@@ -1209,6 +1209,16 @@ print.table_plan <- function(x, ...) {
 #' @param rounding For `plan_digits()`: the tie-breaking family for the
 #'   run, as `widen_ard(rounding = )` takes it.  Last wins, like every
 #'   other layer.
+#' @param label,position For `plan_total()`: the heading of the **Total
+#'   column** (`"Total"`) and where it goes among the column key's values
+#'   (`"last"`, `"first"`).  Its cells are cards' own overall rows --- the
+#'   statistics with no value of the column key, from the same analysis
+#'   without its `by` (`cards::ard_tabulate(adsl, variables = RACE)` bound
+#'   under `cards::ard_tabulate(adsl, by = ARM, variables = RACE)`, or
+#'   `cards::ard_stack(.overall = TRUE)`) --- so the ARD keeps no `ARM`
+#'   value the data does not have.  Its `{n}` in the column header is the
+#'   study total the ARD states (the column key tabulated on its own, or
+#'   `cards::ard_total_n()`).  One column key only.
 #'
 #' @return The plan, with one more layer.
 #'
@@ -1219,6 +1229,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_cells(..., stats, value, na, notes)`: how a cell is made. Goes to [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes`; a finished table [as_rtftables()]: `na`.
 #' * `plan_digits(..., rounding)`: the digits. Goes to the open tokens of the templates; on a finished table [fmt_numeric()].
 #' * `plan_levels()`, `plan_labels()`: the order and text of values. Goes to [widen_ard()]: `levels`, `labels`.
+#' * `plan_total(label, position)`: a Total column from the ARD's overall rows. Goes to [widen_ard()]: those rows as one more value of the column key, and its place in `levels`; the header's `{n}` there is the study total.
 #'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
@@ -1696,6 +1707,22 @@ plan_nest <- function(plan, ...) {
     list(parent = names(u), level = unname(u))
   })
   .plan_layer(plan, "nest", list(nest = stats::setNames(nest, nm)))
+}
+
+# A Total column read from cards' own overall rows -- the same analysis
+# without its `by` (`ard_tabulate(adsl, variables = RACE)` beside
+# `ard_tabulate(adsl, by = ARM, variables = RACE)`, ard_stack(.overall =
+# TRUE)) -- which carry no group.  The ARD keeps no invented ARM value;
+# the label is the table's.
+#' @rdname plan_verbs
+#' @export
+plan_total <- function(plan, label = "Total", position = c("last", "first")) {
+  if (!is.character(label) || length(label) != 1L || is.na(label) ||
+      !nzchar(label)) {
+    .ard_stop("plan_total(label = ) is one text, the column's heading: \"Total\".")
+  }
+  position <- match.arg(position)
+  .plan_layer(plan, "total", list(label = label, position = position))
 }
 
 #' @rdname plan_verbs
@@ -2355,7 +2382,61 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     }
     d[[lb$name]] <- v
   }
+  d <- .plan_total_rows(plan, d)
   .plan_drop_empty(plan, d)
+}
+
+# plan_total(): its label and position, or NULL
+.plan_total_spec <- function(plan) {
+  t <- .plan_merge(.plan_of(plan, "total"))
+  if (length(t)) t
+}
+
+# The overall rows -- a statistic with no value of the column key, not the
+# key's own tabulation nor the study total -- become the Total column.
+.plan_total_rows <- function(plan, d) {
+  tt <- .plan_total_spec(plan)
+  if (is.null(tt) || !is.data.frame(d)) return(d)
+  cols <- as.character(unlist(plan$roles$cols, use.names = FALSE))
+  if (length(cols) != 1L) {
+    .ard_stop(sprintf(paste0(
+      "plan_total(): a Total column is read for one column key; this ",
+      "table has %s."),
+      if (length(cols)) paste0("cols = c(", paste(cols, collapse = ", "), ")")
+      else "no cols"))
+  }
+  if (!cols %in% names(d)) return(d)
+  k <- d[[cols]]
+  v <- if ("variable" %in% names(d)) as.character(d$variable) else
+    rep(NA_character_, nrow(d))
+  own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
+    rep(FALSE, nrow(d))
+  at <- is.na(k) & !own & !(v %in% "..ard_total_n..")
+  if (!any(at)) {
+    .ard_stop(sprintf(paste0(
+      "plan_total(): the ARD has no overall rows, rows without %s.
+",
+      "  Ask cards for them: the same analysis without `by` bound under it, ",
+      "or ard_stack(.overall = TRUE)."), cols))
+  }
+  if (tt$label %in% as.character(k)) {
+    .ard_stop(sprintf(paste0(
+      "plan_total(label = \"%s\"): %s already has a value \"%s\" ",
+      "(a Total made in the data?).  Keep one of the two."),
+      tt$label, cols, tt$label))
+  }
+  x <- as.character(k)
+  x[at] <- tt$label
+  d[[cols]] <- if (is.factor(k)) {
+    factor(x, levels = .plan_total_levels(levels(k), tt))
+  } else x
+  d
+}
+
+# the column key's order with the Total column in its place
+.plan_total_levels <- function(lv, tt) {
+  lv <- setdiff(lv, tt$label)
+  if (identical(tt$position, "first")) c(tt$label, lv) else c(lv, tt$label)
 }
 
 # plan_levels(.drop_empty = ): a level of these variables that no record
@@ -2421,6 +2502,21 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   for (kind in c("levels", "labels")) {
     v <- .plan_merge(.plan_of(plan, kind), deep = kind)[[kind]]
     if (length(v)) out[[kind]] <- v
+  }
+  # plan_total(): the Total column in the column key's order
+  tt <- .plan_total_spec(plan)
+  cols <- as.character(unlist(out$cols, use.names = FALSE))
+  if (!is.null(tt) && length(cols) == 1L) {
+    lv <- out$levels[[cols]]
+    if (is.null(lv) && identical(tt$position, "first") &&
+        is.data.frame(plan$data) && cols %in% names(plan$data)) {
+      k <- plan$data[[cols]]
+      lv <- if (is.factor(k)) levels(k) else .ard_first_seen(as.character(k[!is.na(k)]))
+    }
+    if (!is.null(lv)) {
+      out$levels <- out$levels %||% list()
+      out$levels[[cols]] <- .plan_total_levels(lv, tt)
+    }
   }
   out
 }
@@ -2846,6 +2942,19 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
     }
     got <- got[c(intersect(ord, names(got)), setdiff(names(got), ord))]
     out <- c(out, got)
+  }
+  # plan_total(): the Total column's population is the study total the
+  # ARD states (the key's own tabulation's N, ..ard_total_n..) -- the one
+  # column it is
+  tt <- .plan_total_spec(plan)
+  if (!is.null(tt) && length(cols) == 1L) {
+    if (!is.null(total)) {
+      out[[tt$label]] <- total
+    } else {
+      why[[tt$label]] <- paste0(
+        "the ARD states no study total for the Total column (tabulate the ",
+        "column key on its own, or add cards::ard_total_n())")
+    }
   }
   done()
 }

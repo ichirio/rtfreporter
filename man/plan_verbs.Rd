@@ -11,6 +11,7 @@
 \alias{plan_paginate_group}
 \alias{plan_row_group}
 \alias{plan_nest}
+\alias{plan_total}
 \alias{plan_hide}
 \alias{plan_sort}
 \alias{plan_blanks}
@@ -62,6 +63,8 @@ plan_paginate_group(plan, col = NULL, keep = TRUE)
 plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
 
 plan_nest(plan, ...)
+
+plan_total(plan, label = "Total", position = c("last", "first"))
 
 plan_hide(plan, ...)
 
@@ -379,6 +382,17 @@ between groups read), with the pages still cut by rows.  An ARD plan
 names it as its outermost row key (\code{table_plan(rows = )}) and refuses
 this; a page per value is \code{\link[=plan_paginate_group]{plan_paginate_group()}}.}
 
+\item{label, position}{For \code{plan_total()}: the heading of the \strong{Total
+column} (\code{"Total"}) and where it goes among the column key's values
+(\code{"last"}, \code{"first"}).  Its cells are cards' own overall rows --- the
+statistics with no value of the column key, from the same analysis
+without its \code{by} (\code{cards::ard_tabulate(adsl, variables = RACE)} bound
+under \code{cards::ard_tabulate(adsl, by = ARM, variables = RACE)}, or
+\code{cards::ard_stack(.overall = TRUE)}) --- so the ARD keeps no \code{ARM}
+value the data does not have.  Its \code{{n}} in the column header is the
+study total the ARD states (the column key tabulated on its own, or
+\code{cards::ard_total_n()}).  One column key only.}
+
 \item{stat}{For \code{plan_sort()}: the statistic totalled into \code{.sort_stat}
 for a frequency order (\code{widen_ard(sort_stat = )}), e.g. \code{stat = "n"}.}
 
@@ -611,6 +625,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_cells(..., stats, value, na, notes)}: how a cell is made. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{cells}, \code{stats}, \code{value}, \code{na}, \code{notes}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{na}.
 \item \code{plan_digits(..., rounding)}: the digits. Goes to the open tokens of the templates; on a finished table \code{\link[=fmt_numeric]{fmt_numeric()}}.
 \item \code{plan_levels()}, \code{plan_labels()}: the order and text of values. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{levels}, \code{labels}.
+\item \code{plan_total(label, position)}: a Total column from the ARD's overall rows. Goes to \code{\link[=widen_ard]{widen_ard()}}: those rows as one more value of the column key, and its place in \code{levels}; the header's \code{{n}} there is the study total.
 \code{plan_levels(.drop_empty = )} leaves out the levels no record has, before the table is made.
 \item \code{plan_sort(..., stat, keep)}: the row order. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name}.
 \item \code{plan_stub(vars, name, indent, group_summary, before)}: the row headings. Goes to \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}.
