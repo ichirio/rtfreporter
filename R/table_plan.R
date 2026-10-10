@@ -2272,8 +2272,18 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
       "plan_nest() moves a variable's rows, and the rows carry no variable: ",
       "name it on table_plan(rows = ), e.g. rows = c(group = \"variable\")."))
   }
-  lab <- s_args$labels$variable
-  shown <- function(v) if (!is.null(lab) && v %in% names(lab)) lab[[v]] else v
+  # a variable's heading as plan_labels() gave it: under `variable`
+  # (plan_labels(variable = c(RACE = "Race"))), its own key
+  # (plan_labels(RACE = "Race")), or its own name among its levels'
+  # (plan_labels(SEX = c(SEX = "Sex", F = "Female"))); else its name
+  shown <- function(v) {
+    lab <- s_args$labels$variable
+    if (!is.null(lab) && v %in% names(lab)) return(lab[[v]])
+    own <- s_args$labels[[v]]
+    if (is.character(own) && length(own) == 1L && is.null(names(own))) return(own)
+    if (is.character(own) && v %in% names(own)) return(own[[v]])
+    v
+  }
   lcol <- intersect(c(names(s_args$label %||% character()), "label", ".label"), names(tbl))[1L]
   if (is.na(lcol)) {
     .ard_stop("plan_nest(): the table has no row label column to match the level in.")

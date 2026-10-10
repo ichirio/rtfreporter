@@ -2457,3 +2457,18 @@ test_that("plan_layers() shows the nestings, a later one for a variable winning"
   tb <- plan_apply(p, "table")
   expect_identical(which(grepl("Sub A", tb$label)), 3L)
 })
+
+test_that("plan_nest() finds a variable by any form of its heading", {
+  skip_if_no_cards2()
+  base <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+  forms <- list(
+    plan_labels(base, variable = c(RACE = "Race", RSUB = "Black sub")),
+    plan_labels(base, RACE = "Race", RSUB = "Black sub"),
+    plan_labels(base, RACE = c(RACE = "Race"), RSUB = c(RSUB = "Black sub")))
+  for (p in forms) {
+    tb <- plan_apply(plan_nest(p, RSUB = c(RACE = "Black")), "table")
+    expect_identical(unique(as.character(tb$group)), "Race")
+    expect_identical(which(grepl("Sub A", tb$label)), 3L)
+  }
+})
