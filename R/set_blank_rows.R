@@ -17,16 +17,15 @@
 
 #' Attach blank-row positions to a data.frame
 #'
-#' Resolves a `blank_rows` specification (the same one `paginate()`
+#' Resolves a `blank_rows` specification (the same one [as_rtftables()]
 #' accepts) into integer positions and stores them on
 #' `attr(data, "rtf_blank_rows")`.  Use this when you already have a
 #' page-sized data.frame and only need to add blank rows -- no
 #' pagination required.
 #'
-#' `paginate()` calls this function on every chunk it produces, so
-#' the behaviour here defines what `paginate(blank_rows = ...)`,
-#' `paginate(blank_row_first = ...)` and `paginate(blank_row_end =
-#' ...)` actually do.
+#' [as_rtftables()] calls this function on every page it produces, so
+#' the behaviour here defines what its `blank_rows`, `blank_row_first`
+#' and `blank_row_end` arguments do.
 #'
 #' @param data A data.frame (or tibble).
 #' @param df The old name of `data`: **deprecated** in 0.8.x (warns once a
@@ -49,7 +48,7 @@
 #'   adds position `nrow(data)` (blank row at the bottom of `data`).
 #' @param group_col Column name or 1-based index identifying the
 #'   group, used only when `blank_rows = "between_groups"`.  `NULL`
-#'   (default) means detection on column 1 -- see [paginate()].
+#'   (default) means detection on column 1 -- see [as_rtftables()].
 #' @param group_by How groups are recognised when
 #'   `blank_rows = "between_groups"`: `"auto"` (default), `"indent"`,
 #'   `"value"`, or `"filled"` -- the same detection as the pagination splits
@@ -72,7 +71,7 @@
 #'                       blank_row_end   = TRUE)
 #' attr(out, "rtf_blank_rows")
 #'
-#' @seealso [paginate()] for the per-page version; [rtftable()]
+#' @seealso [as_rtftables()] for the per-page version; [rtftable()]
 #'   (`read_attributes = TRUE`) which consumes the attribute.
 #' @export
 set_blank_rows <- function(data,

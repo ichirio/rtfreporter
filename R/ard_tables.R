@@ -890,6 +890,16 @@
 #' @return Invisibly, a list with elements `keys`, `variables`, `contexts` and
 #'   `stats` (a data frame of context / stat_name / stat_label).
 #'
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- cards::ard_stack(
+#'     cards::ADSL, .by = ARM,
+#'     cards::ard_summary(variables = AGE),
+#'     cards::ard_tabulate(variables = SEX))
+#'   keys <- list_ard_keys(ard)    # prints the keys, variables and statistics
+#'   keys$keys
+#' }
+#'
 #' @seealso [normalize_ard()], [widen_ard()], `plan_template(form = "widen")`
 #' @export
 list_ard_keys <- function(x) {
@@ -1295,6 +1305,16 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   `hierarchy`, 0 = a row of one that is not one of its levels, and `NA`
 #'   throughout when no `hierarchy` was given, since depth only means
 #'   something inside one.
+#'
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- cards::ard_stack(
+#'     cards::ADSL, .by = ARM,
+#'     cards::ard_summary(variables = AGE),
+#'     cards::ard_tabulate(variables = SEX))
+#'   flat <- normalize_ard(ard)    # one row per statistic, keys as columns
+#'   head(flat[, c("ARM", "variable", ".label", "stat_name", "stat", ".kind")])
+#' }
 #'
 #' @seealso [widen_ard()], [list_ard_keys()]
 #' @export
@@ -1815,6 +1835,19 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'
 #' @return A data frame: the `rows` columns, the label column, then one column
 #'   per column key.
+#'
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- cards::ard_stack(
+#'     cards::ADSL, .by = ARM,
+#'     cards::ard_summary(variables = AGE),
+#'     cards::ard_tabulate(variables = SEX))
+#'   normalize_ard(ard) |>
+#'     widen_ard(cols = "ARM", rows = c(group = "variable"),
+#'               cells = list(AGE = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+#'                            SEX = "{n} ({p:.1f%})"),
+#'               notes = FALSE)
+#' }
 #'
 #' @seealso [normalize_ard()], `plan_template(form = "widen")`
 #' @export

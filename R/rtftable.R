@@ -450,8 +450,12 @@
 #'     \item{`"tfl"`}{(default) the clinical TFL preset: header top + bottom
 #'       rules and a bottom rule on the last row.}
 #'     \item{`"none"`}{no borders.}
-#'     \item{an [rtf_table_border()] object}{full per-zone control.}
+#'     \item{an [rtf_border()] object}{its outer edges frame the whole table
+#'       and its `inside_h` / `inside_v` rules fall between the rows / cells;
+#'       [style_zone()] then sets one kind of row.}
 #'     \item{an [rtf_table_style()] object}{its border zones are used.}
+#'     \item{an `rtf_table_border()` object}{**deprecated** (removed in
+#'       0.9.0): the per-zone form; see [rtf_border()] for the new spelling.}
 #'   }
 #' @param style Optional shared `rtf_table_style` (S3).  Provides default
 #'   values for borders, alignment, cell padding, etc.; explicit arguments

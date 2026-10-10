@@ -43,9 +43,18 @@ ADSL ──cards──▶ ARD ──normalize_ard()──▶ flat frame ──ta
             generate_rtfreport() ◀── rtf_document() |> rtf_section() |> rtf_tables(plan)
 ```
 
-```{r setup}
+```{r setup, eval = TRUE}
 library(rtfreporter)
+```
+
+```{r cards}
 library(cards)
+```
+
+```{r, echo = FALSE, results = "asis", eval = !has_cards}
+cat("> The ARD chunks on this page run only when the cards package is",
+    "installed; without it their code is shown but not run.  The last",
+    "example, [Bring your own table](#bring-your-own-table), runs either way.\n")
 ```
 
 ## 1. The statistics: an ARD

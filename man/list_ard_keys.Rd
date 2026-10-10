@@ -20,6 +20,17 @@ that appear in the \code{group1..groupN} columns, the analysis variables, the
 \code{context} values and the statistics each context carries.  All of it is read from the tibble's
 rows -- never from the object's attributes.
 }
+\examples{
+if (requireNamespace("cards", quietly = TRUE)) {
+  ard <- cards::ard_stack(
+    cards::ADSL, .by = ARM,
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = SEX))
+  keys <- list_ard_keys(ard)    # prints the keys, variables and statistics
+  keys$keys
+}
+
+}
 \seealso{
 \code{\link[=normalize_ard]{normalize_ard()}}, \code{\link[=widen_ard]{widen_ard()}}, \code{plan_template(form = "widen")}
 }

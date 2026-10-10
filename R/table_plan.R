@@ -1278,6 +1278,103 @@ print.table_plan <- function(x, ...) {
 #' `plan_after()` step).  Its `cols` may be column names, and `.values`
 #' stands for every value column, so a reordered table keeps them.
 #'
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   # One ARD, normalized once; each block below adds verbs to `base`.
+#'   adsl <- cards::ADSL
+#'   adsl$ARM <- factor(adsl$ARM)
+#'   ard <- cards::ard_stack(
+#'     adsl, .by = ARM,
+#'     cards::ard_summary(variables = AGE),
+#'     cards::ard_tabulate(variables = c(SEX, AGEGR1)),
+#'     .overall = TRUE)
+#'   base <- table_plan(normalize_ard(ard), cols = "ARM",
+#'                      rows = c(group = "variable"))
+#'
+#'   # -- The cells: templates, digits, the order and text of values --------
+#'   p <- base |>
+#'     plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})",
+#'                                "Median"    = "{median}"),
+#'                categorical = "{n} ({p:%})", notes = FALSE) |>
+#'     plan_digits(1) |>                                   # the house rule
+#'     plan_digits(AGE = c(mean = 1, sd = 2)) |>           # one variable
+#'     plan_levels(SEX = c("M", "F")) |>
+#'     plan_labels(c(AGE = "Age (years)", SEX = "Sex", AGEGR1 = "Age group"))
+#'   plan_apply(p, "table")
+#'
+#'   # -- The rows: stub, groups, blank rows, order, hidden columns ---------
+#'   p <- p |>
+#'     plan_stub(name = "Characteristic", before = TRUE) |>
+#'     plan_row_group(mode = "indent") |>
+#'     plan_blanks(where = "between_groups", last = TRUE) |>
+#'     plan_total(label = "Total")
+#'   plan_apply(p, "table")
+#'
+#'   # -- The columns, the header, the look ---------------------------------
+#'   p <- p |>
+#'     plan_columns(widths = c(Characteristic = 3, .values = 2)) |>
+#'     plan_col_header(values = list(n = TRUE),
+#'                     rtf_col_header(c("", "{col}"),
+#'                                    c("Characteristic", "(N={n})"))) |>
+#'     plan_style(border = "tfl", align_count_pct = TRUE) |>
+#'     plan_cell_style(cols = "Characteristic", italic = ~ grepl("^ ", Characteristic))
+#'
+#'   # -- Pages: row budget, column blocks, titles and footnotes ------------
+#'   p <- p |>
+#'     plan_paginate_rows(max_rows = 20) |>
+#'     plan_titles(c("Table 14.1.1", "Demographics")) |>
+#'     plan_footnotes("Percentages are of the subjects in each arm.") |>
+#'     plan_after(function(pages) pages)                   # your own step
+#'   length(plan_apply(p))                                 # the pages
+#'   plan_layers(p)
+#'
+#'   # -- A page per value, a column split, nesting, sort, hide -------------
+#'   ard_bm <- cards::ard_summary(adsl, by = c(SEX, ARM), variables = c(AGE, BMIBL))
+#'   q <- table_plan(normalize_ard(ard_bm), cols = "ARM",
+#'                   rows = c(SEX = "SEX", group = "variable")) |>
+#'     plan_cells(continuous = c("n" = "{N}", "Mean (SD)" = "{mean} ({sd})"),
+#'                notes = FALSE) |>
+#'     plan_digits(1) |>
+#'     plan_stub(name = "Parameter") |>
+#'     plan_paginate_group(col = "SEX") |>                 # a page per sex
+#'     plan_paginate_cols(every = 2, keep = "Parameter")   # two arms a page
+#'   length(plan_apply(q))
+#'
+#'   # -- Rows under one level of another variable; frequency order --------
+#'   ard_r <- cards::ard_tabulate(adsl, by = ARM, variables = c(RACE, ETHNIC))
+#'   table_plan(normalize_ard(ard_r), cols = "ARM",
+#'              rows = c(group = "variable")) |>
+#'     plan_cells(categorical = "{n}", notes = FALSE) |>
+#'     plan_nest(ETHNIC = c(RACE = "WHITE")) |>
+#'     plan_sort("-n") |>
+#'     plan_apply("table")
+#' }
+#'
+#' # The display verbs also lay out a finished data frame -- no ARD needed.
+#' tbl <- data.frame(
+#'   Parameter = c("Subjects", "Age, mean (SD)", "Female, n (%)"),
+#'   Placebo   = c("86", "75.2 (8.59)", "53 (61.6)"),
+#'   Active    = c("84", "75.7 (8.29)", "50 (59.5)"))
+#' pages <- table_plan(tbl) |>
+#'   plan_columns(widths = c(Parameter = 3, .values = 2)) |>
+#'   plan_hide("Active") |>
+#'   plan_style(border = "tfl") |>
+#'   plan_titles("Table 1  Summary") |>
+#'   plan_apply()
+#' pages[[1]]
+#'
+#' # A listing of records.
+#' recs <- data.frame(USUBJID = c("01-001", "01-001", "01-002"),
+#'                    AETERM  = c("Headache", "Nausea", "Fatigue"),
+#'                    AESEV   = c("MILD", "MODERATE", "MILD"))
+#' listing <- table_plan(recs) |>
+#'   plan_sort("USUBJID", "AETERM") |>
+#'   plan_listing(listing_col("USUBJID", label = "Subject"),
+#'                listing_col("AETERM", label = "Adverse event"),
+#'                listing_col("AESEV", label = "Severity")) |>
+#'   plan_apply()
+#' length(listing)
+#'
 #' @name plan_verbs
 #' @seealso [table_plan()], [plan_apply()]
 NULL
@@ -4068,6 +4165,22 @@ plan_n_candidates <- function(plan) {
 #'   header as cell rows, a data frame; `n_text`: the `{n}` scope as text,
 #'   or `NULL`; `literal_n`: whether `n` was a number written in); and
 #'   `pages`.
+#'
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- cards::ard_stack(
+#'     cards::ADSL, .by = ARM,
+#'     cards::ard_summary(variables = AGE),
+#'     cards::ard_tabulate(variables = SEX))
+#'   p <- table_plan(normalize_ard(ard), cols = "ARM",
+#'                   rows = c(group = "variable")) |>
+#'     plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})"),
+#'                categorical = "{n} ({p:%})", notes = FALSE) |>
+#'     plan_digits(1)
+#'   lay <- plan_layers(p)
+#'   lay$declared                  # the kinds of layer, in the order declared
+#'   lay$columns$names             # the columns the pages print
+#' }
 #'
 #' @seealso [plan_apply()], `tflspec::tfl_as_table_spec()`
 #' @export

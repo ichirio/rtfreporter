@@ -37,7 +37,7 @@ adds position \code{nrow(data)} (blank row at the bottom of \code{data}).}
 
 \item{group_col}{Column name or 1-based index identifying the
 group, used only when \code{blank_rows = "between_groups"}.  \code{NULL}
-(default) means detection on column 1 -- see \code{\link[=paginate]{paginate()}}.}
+(default) means detection on column 1 -- see \code{\link[=as_rtftables]{as_rtftables()}}.}
 
 \item{group_by}{How groups are recognised when
 \code{blank_rows = "between_groups"}: \code{"auto"} (default), \code{"indent"},
@@ -53,16 +53,16 @@ attribute is left absent when the resolved position set is
 empty.
 }
 \description{
-Resolves a \code{blank_rows} specification (the same one \code{paginate()}
+Resolves a \code{blank_rows} specification (the same one \code{\link[=as_rtftables]{as_rtftables()}}
 accepts) into integer positions and stores them on
 \code{attr(data, "rtf_blank_rows")}.  Use this when you already have a
 page-sized data.frame and only need to add blank rows -- no
 pagination required.
 }
 \details{
-\code{paginate()} calls this function on every chunk it produces, so
-the behaviour here defines what \code{paginate(blank_rows = ...)},
-\code{paginate(blank_row_first = ...)} and \code{paginate(blank_row_end = ...)} actually do.
+\code{\link[=as_rtftables]{as_rtftables()}} calls this function on every page it produces, so
+the behaviour here defines what its \code{blank_rows}, \code{blank_row_first}
+and \code{blank_row_end} arguments do.
 }
 \examples{
 df <- data.frame(
@@ -79,6 +79,6 @@ attr(out, "rtf_blank_rows")
 
 }
 \seealso{
-\code{\link[=paginate]{paginate()}} for the per-page version; \code{\link[=rtftable]{rtftable()}}
+\code{\link[=as_rtftables]{as_rtftables()}} for the per-page version; \code{\link[=rtftable]{rtftable()}}
 (\code{read_attributes = TRUE}) which consumes the attribute.
 }

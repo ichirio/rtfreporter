@@ -16,9 +16,13 @@ at once (its length must match the number of sections in \code{secinfo}).}
 
 \item{secinfo}{The section definition(s). A single section is a named list:
 \describe{
-\item{\code{header}}{an \code{\link[=rtf_header]{rtf_header()}} object, or \code{NULL} for no header}
-\item{\code{footer}}{an \code{\link[=rtf_footer]{rtf_footer()}} object, or \code{NULL} for no footer}
+\item{\code{header}}{an \code{\link[=rtf_header]{rtf_header()}} object, or \code{NULL}}
+\item{\code{footer}}{an \code{\link[=rtf_footer]{rtf_footer()}} object, or \code{NULL}}
 }
+\code{NULL} means \strong{inherit}: a section with no header (footer) of its own
+keeps the previous section's, so only the first section's \code{NULL} leaves
+the pages without one. For a blank band after a section that has one,
+pass an empty one: \code{rtf_header("")}.
 For several sections, pass a \code{list} of such section lists -- one per entry
 of \code{page}.}
 }

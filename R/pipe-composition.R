@@ -277,25 +277,23 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #' pre-built table.)
 #'
 #' @param doc An rtf_document object.
-#' @param tables A list where each element is one page's content (a single
-#'   content per page). Each element is one of:
+#' @param tables The pages to add. The usual forms are:
 #'   \describe{
-#'     \item{a `data.frame`}{a simple table; the table-format arguments below
-#'       apply to it.}
-#'     \item{an `rtftable` object}{(from [rtftable()]) a table with full
-#'       formatting -- usually the output of [as_rtftables()].}
-#'     \item{an `rtfplot` object}{(from [rtfplot()]) an embedded figure.}
-#'     \item{a `gt_tbl` object}{(from the gt package) treated like a
-#'       `data.frame`; pass `read_gt = TRUE` (or a token vector) to also pull
-#'       through gt's column labels, alignment, title / subtitle and source
-#'       notes (see `read_gt`).}
-#'     \item{a gtsummary table}{(`tbl_summary`, `tbl_regression`, ...)
-#'       auto-converted to a `gt_tbl` first; `read_gt = TRUE` pulls through its
-#'       labels, titles, source notes, footnotes and spanning headers.}
+#'     \item{a `table_plan`}{(from [table_plan()]) the plan of an ARD or a
+#'       data.frame; it becomes its pages, as [plan_apply()] would make them.}
+#'     \item{the output of [as_rtftables()]}{the pages of a gt, gtsummary,
+#'       rtables/tern, rlistings, flextable or huxtable table, or of a
+#'       `data.frame` paged and styled there.}
+#'     \item{a bare `data.frame`}{one simple page; the table-format arguments
+#'       below apply to it.}
 #'   }
-#'     Note: cell-level formatting (row indentation, bold group-header
-#'     rows, footnote marks in cells) is **not** transferred to RTF.
-#'     See [as_rtftable()] for details on gtsummary limitations.
+#'   More generally, `tables` is one page or a list of pages, **each element
+#'   one page** with a single content: a `data.frame`, an `rtftable` (from
+#'   [rtftable()] or [as_rtftables()]), an `rtfplot` (from [rtfplot()]), or a
+#'   `gt_tbl` / gtsummary table. A `gt_tbl` or gtsummary table is best passed
+#'   through [as_rtftables()], which reads its labels, alignment, titles and
+#'   source notes; placed here directly it is treated like a `data.frame`
+#'   unless `read_gt` is set (see `read_gt`).
 #'
 #'   `tables` may also be a single object of a class another package has
 #'   registered an [as_rtftables()] method for; it is converted to its pages
@@ -961,9 +959,13 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
 #'   at once (its length must match the number of sections in `secinfo`).
 #' @param secinfo The section definition(s). A single section is a named list:
 #'   \describe{
-#'     \item{`header`}{an [rtf_header()] object, or `NULL` for no header}
-#'     \item{`footer`}{an [rtf_footer()] object, or `NULL` for no footer}
+#'     \item{`header`}{an [rtf_header()] object, or `NULL`}
+#'     \item{`footer`}{an [rtf_footer()] object, or `NULL`}
 #'   }
+#'   `NULL` means **inherit**: a section with no header (footer) of its own
+#'   keeps the previous section's, so only the first section's `NULL` leaves
+#'   the pages without one. For a blank band after a section that has one,
+#'   pass an empty one: `rtf_header("")`.
 #'   For several sections, pass a `list` of such section lists -- one per entry
 #'   of `page`.
 #'

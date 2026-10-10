@@ -109,6 +109,17 @@ reordered in between.  \code{levels} still overrides it.  A key that was
 character stays character.
 }
 
+\examples{
+if (requireNamespace("cards", quietly = TRUE)) {
+  ard <- cards::ard_stack(
+    cards::ADSL, .by = ARM,
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = SEX))
+  flat <- normalize_ard(ard)    # one row per statistic, keys as columns
+  head(flat[, c("ARM", "variable", ".label", "stat_name", "stat", ".kind")])
+}
+
+}
 \seealso{
 \code{\link[=widen_ard]{widen_ard()}}, \code{\link[=list_ard_keys]{list_ard_keys()}}
 }
