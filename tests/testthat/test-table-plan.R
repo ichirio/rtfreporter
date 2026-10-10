@@ -2443,3 +2443,13 @@ test_that("plan_nest() says what is wrong", {
   expect_error(plan_apply(plan_nest(p2, RSUB = c(RACE = "Black")), "table"),
                "carry no variable")
 })
+
+test_that("plan_layers() shows the nestings, one per variable across calls", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(nest_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_nest(RSUB = c(RACE = "Black")) |>
+    plan_nest(OTHER = c(RACE = "White"))
+  n <- plan_layers(p)$layers$nest$nest
+  expect_identical(names(n), c("RSUB", "OTHER"))
+  expect_identical(n$RSUB, list(parent = "RACE", level = "Black"))
+})

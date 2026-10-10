@@ -3871,7 +3871,7 @@ plan_layers <- function(plan) {
   layers <- list()
   for (k in unique(kinds)) {
     layers[[k]] <- if (k %in% c("after", "restyle")) .plan_of(plan, k)
-                   else if (k %in% c("levels", "labels"))
+                   else if (k %in% c("levels", "labels", "nest"))
                      .plan_merge(.plan_of(plan, k), deep = k)
                    else .plan_merge(.plan_of(plan, k))
   }
