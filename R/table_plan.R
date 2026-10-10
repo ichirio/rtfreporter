@@ -3175,6 +3175,10 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
       dep <- lengths(strsplit(nmv, sep, fixed = TRUE))
       lv <- v[dep == max(dep)]
     }
+    # a Total column (plan_total()) is the sum of the others, not one of
+    # the parts
+    tc <- .plan_total_spec(plan)$label
+    if (!is.null(tc) && length(names(lv))) lv <- lv[names(lv) != tc]
     tot <- suppressWarnings(sum(as.numeric(unlist(lv)), na.rm = TRUE))
     add(paste0("{", nm, ":sum}"), "sum", tot, paste0(
       "= ", format(tot, trim = TRUE),
@@ -3575,7 +3579,8 @@ plan_n_candidates <- function(plan) {
              hdr$header(nv, tbl)
            else hdr$header(nv)
       list(raw = h, filled = .plan_header_fill(
-        h, nv, sc, length(page_d) - length(sc), .plan_sep(plan)))
+        h, nv, sc, length(page_d) - length(sc), .plan_sep(plan),
+        total_col = .plan_total_spec(plan)$label))
     }
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
     # Pages split by a group value (a lab parameter, a visit) each
@@ -3765,7 +3770,8 @@ plan_n_candidates <- function(plan) {
 # the leaf is the whole name, so nothing changes there.  The hierarchy
 # itself needs no header at all: as_rtftables(header_sep = ) builds
 # the spanning rows from the same separator.
-.plan_header_fill <- function(h, nvals, cols, n_lead, sep = NULL) {
+.plan_header_fill <- function(h, nvals, cols, n_lead, sep = NULL,
+                              total_col = NULL) {
   if (is.null(h) || !length(cols)) return(h)
   sep <- sep %||% "____"
   parts <- function(col) {
@@ -3817,17 +3823,20 @@ plan_n_candidates <- function(plan) {
     if (is.null(v)) return(NA)
     nm <- names(v) %||% character(0)
     if (!length(nm)) return(if (length(v) == 1L) v[[1L]] else NA)
+    # a Total column (plan_total()) is the sum of the others, not a part
+    parts <- setdiff(cols, total_col)
+    over <- setdiff(over, total_col)
     if (!length(over)) {
-      keep <- intersect(cols, nm)
+      keep <- intersect(parts, nm)
       # a vector keyed by something else entirely: every entry
-      if (!length(keep)) keep <- nm
-      else if (length(keep) < length(cols)) return(NA)
+      if (!length(keep)) keep <- setdiff(nm, total_col)
+      else if (length(keep) < length(parts)) return(NA)
     } else {
       keep <- intersect(over, nm)
       # a column with no number makes the sum a wrong number, not a
       # smaller one
       if (!length(keep) ||
-          length(keep) < length(intersect(over, cols))) return(NA)
+          length(keep) < length(intersect(over, parts))) return(NA)
     }
     sum(suppressWarnings(as.numeric(unlist(v[keep]))), na.rm = TRUE)
   }
