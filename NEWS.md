@@ -29,6 +29,13 @@
   as in tflspec and tflplanner.  tfrmt's own names (`prep_big_n()`,
   `big_n_structure()`, `bigN`) are tfrmt's and stay.
 
+### Bug fixes
+
+- **`{n:sum}` leaves the Total column out** (#604).  With `plan_total()`,
+  a header's `{n:sum}` (and `plan_header_tokens()`) added the Total
+  column to the arms -- 612 for 306 subjects.  The Total column is the
+  sum of the others, not a part of it.
+
 ### New features
 
 - **`plan_total()`: a Total column from the ARD's overall rows** (#600,

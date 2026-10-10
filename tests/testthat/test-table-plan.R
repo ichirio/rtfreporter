@@ -2548,6 +2548,25 @@ test_that("plan_total() makes the overall rows a Total column, its N the study t
   expect_false("Total" %in% names(plan_apply(p, "table")))
 })
 
+test_that("{n:sum} leaves the Total column out: it is the sum, not a part", {
+  skip_if_no_cards2()
+  p <- table_plan(nz(total_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_total() |>
+    plan_stub(name = "row_label", before = TRUE) |>
+    plan_col_header(values = list(n = TRUE), header = data.frame(
+      line = c("1", "1", "2"), cols = c("row_label", ".values", ".values"),
+      span = c(NA, NA, "each"), text = c(NA, "All (N={n:sum})", "{col} (N={n})")))
+  tk <- plan_header_tokens(p)
+  expect_equal(unlist(tk$values[tk$token == "{n:sum}"]), 254)
+  expect_equal(unlist(tk$values[tk$token == "{n}"])[["Total"]], 254)
+  pg <- plan_apply(p, "pages")
+  h <- if (inherits(pg, "rtftable")) pg$col_header else pg[[1L]]$col_header
+  txt <- paste(unlist(h), collapse = " ")
+  expect_match(txt, "All (N=254)", fixed = TRUE)
+  expect_match(txt, "Total (N=254)", fixed = TRUE)
+})
+
 test_that("plan_total() says what is wrong", {
   skip_if_no_cards2()
   adsl <- cards::ADSL
