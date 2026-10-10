@@ -3231,7 +3231,7 @@ plan_header_tokens <- function(plan) {
 #' The populations a column header's `{n}` can say
 #'
 #' Which numbers the ARD states for `{n}`, before choosing one: a GUI that
-#' asks "what does the header's {n} count?" shows each choice with its
+#' asks "what does the header's `{n}` count?" shows each choice with its
 #' values.  A table whose pages are split by a group value (a lab
 #' parameter, with [plan_paginate_group()]) has two:
 #'

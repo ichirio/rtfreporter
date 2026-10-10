@@ -21,7 +21,7 @@ the pages are split on (\code{NULL} when they are not).
 }
 \description{
 Which numbers the ARD states for \code{{n}}, before choosing one: a GUI that
-asks "what does the header's {n} count?" shows each choice with its
+asks "what does the header's \code{{n}} count?" shows each choice with its
 values.  A table whose pages are split by a group value (a lab
 parameter, with \code{\link[=plan_paginate_group]{plan_paginate_group()}}) has two:
 }
