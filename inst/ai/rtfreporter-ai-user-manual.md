@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9031** (the development
+**This manual documents rtfreporter 0.8.2.9032** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -871,6 +871,7 @@ p_ae <- ard_ae |>
 | Leave out the levels no record has (0 in every column, e.g. a code list's unused values) | `plan_levels(.drop_empty = c("RACE"))` |
 | Printed text of values / variables | `plan_labels(c(AGE = "Age (years)"))` |
 | Printed text of one analysis variable's levels (and its own name) | `plan_labels(SEX = c(SEX = "Sex", F = "Female", M = "Male"))`; their order: `plan_levels(SEX = c("M", "F"))` |
+| One variable's rows under one level of another (sub-categories of a race under "Asian") | `plan_nest(RACESUB = c(RACE = "Asian"))`: moved after that row, one stub indent deeper, in its group |
 | Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone |
 | Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
 | Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse, group_col)`; `group_col` only on a finished table (an ARD plan's is its outermost row key) |
@@ -990,7 +991,7 @@ adds an "Any" row.
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
-`plan_hide` `plan_sort` `plan_blanks` `plan_paginate_rows`
+`plan_hide` `plan_nest` `plan_sort` `plan_blanks` `plan_paginate_rows`
 `plan_paginate_cols` `plan_style` `plan_columns` `plan_col_header`
 `plan_listing` `plan_titles` `plan_footnotes` `plan_after`
 

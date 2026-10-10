@@ -852,6 +852,16 @@ print.table_plan <- function(x, ...) {
 #'   A key that reaches neither a variable nor a column is an error, not
 #'   silence.
 #'
+#'   For `plan_nest()`, one entry per nested variable: its name, and the
+#'   variable and level its rows go under,
+#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.  The level is matched as the
+#'   table shows it (the ARD's level: a code list's label).  The nested
+#'   rows follow that level's row, one indent step deeper (the stub's
+#'   `indent`, default 4), in the parent's group; their own heading is
+#'   dropped, their order and text stay `plan_levels()`' and
+#'   `plan_labels()`'.  The rows key that carries the variable
+#'   (`table_plan(rows = c(group = "variable"))`) is what is read.
+#'
 #'   For `plan_levels()` and `plan_labels()`, one entry per column or
 #'   analysis variable: an order (`AGEGR1 = c("<65", "65-74")`), or
 #'   the text values are printed as (`AGE = "Age (years)"`).  Both
@@ -1663,6 +1673,31 @@ plan_row_group <- function(plan, mode = NULL, collapse = NULL,
 # A column can be needed and not wanted: a sort carrier, the key a page
 # break reads.  Naming them here says which, instead of `drop_cols` being
 # read as "columns I regret".
+# A variable whose rows belong under ONE level of another -- the
+# sub-categories of a race under its "Asian" row.  Two analyses on the same
+# data (a hierarchical tabulation would drop every level that has no
+# sub-level), placed by the layout: the rows move, they are not counted
+# again.
+#' @rdname plan_verbs
+#' @export
+plan_nest <- function(plan, ...) {
+  dots <- list(...)
+  nm <- names(dots)
+  if (!length(dots) || is.null(nm) || any(!nzchar(nm))) {
+    .ard_stop("plan_nest(): name the nested variable, e.g. plan_nest(RACESUB = c(RACE = \"Asian\")).")
+  }
+  nest <- lapply(nm, function(v) {
+    u <- dots[[v]]
+    if (!is.character(u) || length(u) != 1L || is.null(names(u)) || !nzchar(names(u))) {
+      .ard_stop(sprintf(paste0(
+        "plan_nest(%s = ): one level of one variable, named by it: ",
+        "c(RACE = \"Asian\")."), v))
+    }
+    list(parent = names(u), level = unname(u))
+  })
+  .plan_layer(plan, "nest", list(nest = stats::setNames(nest, nm)))
+}
+
 #' @rdname plan_verbs
 #' @export
 plan_hide <- function(plan, ...) {
@@ -2212,6 +2247,9 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   tbl <- .plan_stage(do.call(widen_ard, c(list(x = x), s_args)),
                      plan, c("cells", "cell_options", "digits", "round",
                              "levels", "labels"))
+  # a variable's rows under one level of another (plan_nest())
+  nest <- .plan_merge(.plan_of(plan, "nest"), deep = "nest")$nest
+  if (length(nest)) tbl <- .plan_nest_rows(plan, tbl, nest, s_args)
   .plan_check_digit_cols(plan, tbl, plan$cache$digit_cols, vars = TRUE)
   # the table-side seam: a column the table can only know once it exists
   .plan_remember(plan, "table", tbl)
@@ -2220,6 +2258,66 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   .plan_to_pages(plan, tbl)
 }
 
+
+# The rows of each nested variable moved under their level: found by the
+# rows key that carries the variable (its value is the variable's label,
+# as plan_labels() gave it, or its name), indented one stub step deeper.
+.plan_nest_rows <- function(plan, tbl, nest, s_args) {
+  rows <- plan$roles$rows
+  key <- names(rows)[as.character(rows) == "variable"]
+  key <- if (length(key) && nzchar(key[1L])) key[1L] else
+    if ("variable" %in% names(tbl)) "variable" else character()
+  if (!length(key) || !key %in% names(tbl)) {
+    .ard_stop(paste0(
+      "plan_nest() moves a variable's rows, and the rows carry no variable: ",
+      "name it on table_plan(rows = ), e.g. rows = c(group = \"variable\")."))
+  }
+  # a variable's heading as plan_labels() gave it: under `variable`
+  # (plan_labels(variable = c(RACE = "Race"))), its own key
+  # (plan_labels(RACE = "Race")), or its own name among its levels'
+  # (plan_labels(SEX = c(SEX = "Sex", F = "Female"))); else its name
+  shown <- function(v) {
+    lab <- s_args$labels$variable
+    if (!is.null(lab) && v %in% names(lab)) return(lab[[v]])
+    own <- s_args$labels[[v]]
+    if (is.character(own) && length(own) == 1L && is.null(names(own))) return(own)
+    if (is.character(own) && v %in% names(own)) return(own[[v]])
+    v
+  }
+  lcol <- intersect(c(names(s_args$label %||% character()), "label", ".label"), names(tbl))[1L]
+  if (is.na(lcol)) {
+    .ard_stop("plan_nest(): the table has no row label column to match the level in.")
+  }
+  stub <- .plan_merge(.plan_of(plan, "stub"))
+  pad <- strrep(.stub_nbsp(), stub$indent %||% 4L)
+  for (child in names(nest)) {
+    par <- nest[[child]]$parent
+    lv <- nest[[child]]$level
+    g <- as.character(tbl[[key]])
+    kids <- which(g == shown(child))
+    if (!length(kids)) {
+      .ard_stop(sprintf("plan_nest(%s = ): the table has no rows of %s.  Its %s: %s.",
+                        child, child, key, paste(unique(g), collapse = ", ")))
+    }
+    in_par <- g == shown(par)
+    at <- which(in_par & as.character(tbl[[lcol]]) == lv)
+    if (length(at) != 1L) {
+      .ard_stop(sprintf(paste0(
+        "plan_nest(%s = c(%s = \"%s\")): %s has no row \"%s\".  Its rows: %s."),
+        child, par, lv, par, lv, paste(unique(tbl[[lcol]][in_par]), collapse = ", ")))
+    }
+    # (a factor column takes the new values: its levels in the new order)
+    was <- vapply(tbl[c(key, lcol)], is.factor, NA)
+    for (k in c(key, lcol)) tbl[[k]] <- as.character(tbl[[k]])
+    tbl[[key]][kids] <- tbl[[key]][at]
+    tbl[[lcol]][kids] <- paste0(pad, tbl[[lcol]][kids])
+    rest <- setdiff(seq_len(nrow(tbl)), kids)
+    tbl <- tbl[c(rest[rest <= at], kids, rest[rest > at]), , drop = FALSE]
+    for (k in c(key, lcol)[was]) tbl[[k]] <- factor(tbl[[k]], levels = unique(tbl[[k]]))
+    rownames(tbl) <- NULL
+  }
+  tbl
+}
 
 # A frame that did not come from cards has its own names for the three
 # columns widen_ard() reads by name -- which statistic a row is, what
@@ -3783,7 +3881,7 @@ plan_layers <- function(plan) {
   layers <- list()
   for (k in unique(kinds)) {
     layers[[k]] <- if (k %in% c("after", "restyle")) .plan_of(plan, k)
-                   else if (k %in% c("levels", "labels"))
+                   else if (k %in% c("levels", "labels", "nest"))
                      .plan_merge(.plan_of(plan, k), deep = k)
                    else .plan_merge(.plan_of(plan, k))
   }
