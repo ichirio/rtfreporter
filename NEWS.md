@@ -1,5 +1,17 @@
 # rtfreporter (development version)
 
+### New
+
+- **`plan_n_candidates()`: the populations a header's `{n}` can say**
+  (tflplanner #288).  Before `{n}` is chosen, a GUI can show each choice
+  with its values: one population (`scope = "all"`), or on pages split by
+  a group value two -- each page's own (`"page"`, the subjects with that
+  test) and the table's (`"table"`, the analysis set) -- per column and
+  over all the columns, as `plan_col_header(values = list(n = ))` prints
+  them; attribute `differ` when they disagree.  Nothing else changes: the
+  page split's column is now found by one helper that the header's pages
+  use too.
+
 ### Continuous integration
 
 - R-CMD-check now also runs on R 4.2, the oldest R tested (`Depends: R (>= 4.1)` is kept; cardx, used in tests, needs R >= 4.2). That job leaves tern out (every tern now installable needs R >= 4.4) and lets a suggested package be missing; the tests skip what needs it.

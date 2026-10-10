@@ -3311,15 +3311,8 @@ plan_header_tokens <- function(plan) {
 # a value of that column (relabelled, or cut further) gets NULL and falls
 # back to the whole table's numbers: a page never borrows another's.
 .plan_page_group <- function(plan, page_names) {
-  if (!isTRUE(.plan_merge(.plan_of(plan, "group"))$.page)) return(NULL)
-  gcol <- .plan_group_col(plan)
-  if (is.null(gcol) || is.null(page_names)) return(NULL)
-  r <- plan$roles$rows
-  src <- if (!is.null(names(r)) && gcol %in% names(r)) r[[gcol]] else gcol
-  if (!is.character(src) || length(src) != 1L ||
-      !src %in% names(plan$data)) {
-    return(NULL)
-  }
+  src <- .plan_page_col(plan)
+  if (is.null(src) || is.null(page_names)) return(NULL)
   raw <- .ard_first_seen(plan$data[[src]])
   value <- lapply(page_names, function(nm) {
     if (nm %in% raw) return(nm)
@@ -3327,6 +3320,99 @@ plan_header_tokens <- function(plan) {
     if (length(hit)) hit[which.max(nchar(hit))] else NULL
   })
   list(col = src, value = value)
+}
+
+# The data's column that a page split by a group value is split on
+# (plan_paginate_group()), or NULL when the pages are not split so.
+.plan_page_col <- function(plan) {
+  if (!isTRUE(.plan_merge(.plan_of(plan, "group"))$.page)) return(NULL)
+  gcol <- .plan_group_col(plan)
+  if (is.null(gcol)) return(NULL)
+  r <- plan$roles$rows
+  src <- if (!is.null(names(r)) && gcol %in% names(r)) r[[gcol]] else gcol
+  if (!is.character(src) || length(src) != 1L ||
+      !src %in% names(plan$data)) {
+    return(NULL)
+  }
+  src
+}
+
+#' The populations a column header's `{n}` can say
+#'
+#' Which numbers the ARD states for `{n}`, before choosing one: a GUI that
+#' asks "what does the header's `{n}` count?" shows each choice with its
+#' values.  A table whose pages are split by a group value (a lab
+#' parameter, with [plan_paginate_group()]) has two:
+#'
+#' * `scope = "page"`: each page's own -- the rows carrying the page's key
+#'   (the subjects with that test), what `plan_col_header(values = list(n =
+#'   "page"))` prints;
+#' * `scope = "table"`: the table's -- the rows without the page key (the
+#'   analysis set), the same on every page, what `n = "table"` prints.
+#'
+#' A table not split so has one, `scope = "all"`.  The numbers are the ones
+#' [plan_col_header()] reads with `values = list(n = TRUE)` or a scope: only
+#' a number the ARD states as a population size; a column it does not state
+#' has no row.
+#'
+#' @param plan A [table_plan()] with `cols`.
+#' @return A data frame: `scope` (`"all"`, `"page"` or `"table"`), `page`
+#'   (the page's group value; `NA` but on `"page"` rows), `column` (the
+#'   spread column's key, as `{n:<column>}` names it; `NA` for the
+#'   population over all the columns, what a spanning cell's `{n}` reads),
+#'   `value`.  Attribute `differ`: `TRUE` when a page's numbers and the
+#'   table's are not the same, so which one `{n}` says is a choice (left
+#'   unmade, the pages' are used, with a warning); `page_col`: the column
+#'   the pages are split on (`NULL` when they are not).
+#' @seealso [plan_col_header()], [plan_header_tokens()]
+#' @examples
+#' if (requireNamespace("cards", quietly = TRUE)) {
+#'   ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
+#'     cards::ard_summary(variables = AGE)))
+#'   plan_n_candidates(table_plan(ard, cols = "ARM"))
+#' }
+#' @export
+plan_n_candidates <- function(plan) {
+  if (!inherits(plan, "table_plan")) {
+    .ard_stop("plan_n_candidates(): expected a table_plan.")
+  }
+  rows <- function(n, scope, page) {
+    nm <- names(n) %||% rep("", length(n))
+    tot <- attr(n, "total", exact = TRUE)
+    data.frame(scope = scope, page = page,
+               column = c(nm, if (!is.null(tot)) NA_character_),
+               value = c(unname(as.numeric(n)), if (!is.null(tot)) as.numeric(tot)),
+               stringsAsFactors = FALSE)
+  }
+  none <- rows(numeric(0), character(0), character(0))
+  attr(none, "differ") <- FALSE
+  sp <- .plan_spread_args(plan)
+  if (is.null(sp$cols)) return(none)
+  data <- plan$data
+  src <- .plan_page_col(plan)
+  if (is.null(src)) {
+    out <- rows(.plan_n_read(plan, sp, data), "all", NA_character_)
+    attr(out, "differ") <- FALSE
+    return(out)
+  }
+  # as .plan_n_values() reads them: the table's from the rows without the
+  # page key, a page's from its own rows and the table's for what it lacks
+  g <- as.character(data[[src]])
+  rest <- data[is.na(g), , drop = FALSE]
+  attr(rest, "ard_total_n") <- attr(data, "ard_total_n", exact = TRUE)
+  tbl <- .plan_n_read(plan, sp, rest)
+  parts <- list()
+  differ <- FALSE
+  for (v in setdiff(.ard_first_seen(data[[src]]), NA)) {
+    own <- .plan_n_read(plan, sp, data[!is.na(g) & g == v, , drop = FALSE])
+    differ <- differ || .plan_n_differ(own, tbl)
+    parts[[length(parts) + 1L]] <- rows(.plan_n_join(own, tbl), "page", as.character(v))
+  }
+  out <- do.call(rbind, c(parts, list(rows(tbl, "table", NA_character_))))
+  rownames(out) <- NULL
+  attr(out, "differ") <- differ
+  attr(out, "page_col") <- src
+  out
 }
 
 # A page's own numbers first, then the table's for what the page lacks.
