@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9032** (the development
+**This manual documents rtfreporter 0.8.2.9033** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -915,6 +915,10 @@ the attributes itself), and the deprecated `stub_vars` / `stub_label` /
 * `plan_layers(p)`: the plan read back, layer by layer.
 * `plan_header_tokens(p)`: the tokens a `plan_col_header()` cell may carry
   (`{col}`, `{n}`, `{n:sum}` ...), with their values, as data.
+* `plan_n_candidates(p)`: the populations `{n}` can say before one is chosen
+  -- `scope` `all`, or on pages split by a group value `page` (each page's
+  own) and `table` (the analysis set) -- with their values per column;
+  attribute `differ` when the two disagree.
 * `plan_template(ard, cols = "TRT01A")`: writes a starting program for this
   ARD (`file =` to save it). `form = "widen"` writes the one-call form
   instead.
@@ -988,7 +992,7 @@ adds an "Any" row.
 `blank_rows_by_change` `blank_rows_by_rule`
 
 **Tables from a cards / cardx ARD:** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
-`cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens`
+`cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens` `plan_n_candidates`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
 `plan_hide` `plan_nest` `plan_sort` `plan_blanks` `plan_paginate_rows`

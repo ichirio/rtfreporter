@@ -117,9 +117,11 @@ test_that("the effective export count is the reviewed number", {
   # renamed rtf_border_side() to rtf_border_line() and deprecated the old
   # name with six others; 105 since six assembly helpers gave way to
   # assemble_folder() and assemble_rtf(toc = <a table>); 126 / 106 since
-  # #598 added plan_nest(), a variable's rows under a level of another.)
-  expect_length(.exports(), 126L)
-  expect_length(setdiff(.exports(), .dep), 106L)
+  # #598 added plan_nest(), a variable's rows under a level of another;
+  # 127 / 107 since tflplanner #288 needed plan_n_candidates(), the
+  # populations a header's {n} can say.)
+  expect_length(.exports(), 127L)
+  expect_length(setdiff(.exports(), .dep), 107L)
 })
 
 test_that("the old argument names still work, with a warning", {

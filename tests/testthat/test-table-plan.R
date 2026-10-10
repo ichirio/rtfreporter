@@ -1914,6 +1914,44 @@ test_that("two populations and no choice: the page's, with a warning", {
                    sprintf("T (N=%d)", as.integer(x$tested[["HGB"]])))
 })
 
+test_that("plan_n_candidates(): each population {n} can say, as {n} prints it", {
+  skip_if_not_installed("cards")
+  x <- two_pop()
+  cand <- plan_n_candidates(two_pop_plan(x$d, "page"))
+  expect_named(cand, c("scope", "page", "column", "value"))
+  expect_true(attr(cand, "differ"))
+  expect_identical(attr(cand, "page_col"), "PARAM")
+  expect_setequal(unique(cand$scope), c("page", "table"))
+  # over all the columns: each page's tested subjects, the analysis set
+  tot <- cand[is.na(cand$column), ]
+  expect_identical(tot$value[tot$scope == "page"],
+                   as.numeric(x$tested[tot$page[tot$scope == "page"]]))
+  expect_identical(tot$value[tot$scope == "table"], as.numeric(x$set))
+  # what the header prints with each choice
+  pg <- suppressMessages(plan_apply(two_pop_plan(x$d, "page"), "pages"))
+  expect_identical(unname(spanner(pg)),
+                   sprintf("T (N=%d)", as.integer(tot$value[match(names(pg), tot$page)])))
+  # a page's columns: its own (the table's for what it lacks)
+  hgb <- cand[cand$scope == "page" & cand$page == "HGB" & !is.na(cand$column), ]
+  expect_setequal(hgb$column, c("G0", "G1"))
+  # a table not split by page: one population, the same the header reads
+  ard <- normalize_ard(cards::ard_stack(cards::ADSL, .by = ARM,
+                                        cards::ard_summary(variables = AGE)))
+  p <- table_plan(ard, cols = "ARM")
+  one <- plan_n_candidates(p)
+  expect_identical(unique(one$scope), "all")
+  expect_false(attr(one, "differ"))
+  arm <- one[!is.na(one$column), ]
+  n <- table(cards::ADSL$ARM)
+  expect_identical(arm$value, as.numeric(n[arm$column]))
+  tk <- plan_header_tokens(plan_col_header(p, values = list(n = TRUE)))
+  v <- unlist(tk$values[[match("{n}", tk$token)]])
+  expect_identical(as.numeric(v[arm$column]), arm$value)
+  # no cols: nothing
+  expect_identical(nrow(plan_n_candidates(table_plan(ard))), 0L)
+  expect_error(plan_n_candidates(ard), "expected a table_plan")
+})
+
 test_that("plan_style() takes the whole table's settings, and only those", {
   skip_if_no_cards2()
   p <- base_plan()
