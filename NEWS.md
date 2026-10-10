@@ -19,6 +19,18 @@
 
 ### New features
 
+- **`plan_total()`: a Total column from the ARD's overall rows** (#600,
+  tflspec #212).  cards states the overall itself -- the same analysis
+  without its `by`, bound under it, or `ard_stack(.overall = TRUE)` -- as
+  rows with no value of the column key.  `plan_total(label = "Total",
+  position = "last")` makes them one more column, and its header `{n}` is
+  the study total the ARD states (the column key tabulated on its own, or
+  `..ard_total_n..`), which is still never put in every column.  The ARD
+  keeps no `ARM = "Total"` the data does not have, so an ARS made from the
+  same analyses stays true.  A Total already in the data, or a table of
+  several column keys, stops with why.  Without `plan_total()`, nothing
+  changes.
+
 - **`plan_nest()`: a variable's rows under one level of another** (#598).
   `plan_nest(RACESUB = c(RACE = "Asian"))` moves RACESUB's rows right after
   RACE's "Asian" row, one stub indent step deeper, in RACE's group (its own

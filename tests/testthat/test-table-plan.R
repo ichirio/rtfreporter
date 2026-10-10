@@ -2472,3 +2472,70 @@ test_that("plan_nest() finds a variable by any form of its heading", {
     expect_identical(which(grepl("Sub A", tb$label)), 3L)
   }
 })
+
+# ---------------------------------------------- a Total column (plan_total)
+# cards' own overall rows -- the analysis again without its by -- become
+# the Total column; the ARD keeps no invented ARM value
+total_ard <- function(factor_trt = FALSE) {
+  adsl <- cards::ADSL
+  adsl$TRT <- if (factor_trt) factor(adsl$ARM, levels = c("Placebo",
+    "Xanomeline Low Dose", "Xanomeline High Dose")) else as.character(adsl$ARM)
+  cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = TRT),
+    cards::ard_tabulate(adsl, by = TRT, variables = SEX, denominator = adsl),
+    cards::ard_tabulate(adsl, variables = SEX, denominator = adsl))
+}
+
+test_that("plan_total() makes the overall rows a Total column, its N the study total", {
+  skip_if_no_cards2()
+  for (f in c(FALSE, TRUE)) {
+    p <- table_plan(nz(total_ard(f)), cols = "TRT", rows = c(group = "variable")) |>
+      plan_cells(categorical = "{n} ({p:.1f%})", notes = FALSE)
+    tb <- plan_apply(plan_total(p), "table")
+    expect_identical(names(tb)[ncol(tb)], "Total")
+    expect_identical(as.character(tb$Total), c("143 (56.3)", "111 (43.7)"))
+    first <- plan_apply(plan_total(p, label = "All", position = "first"), "table")
+    expect_identical(names(first)[3L], "All")
+    # the header's {n}: each arm's own, and the study total over Total
+    n <- rtfreporter:::.plan_n_read(plan_total(p), rtfreporter:::.plan_spread_args(plan_total(p)))
+    expect_equal(unname(n[c("Placebo", "Total")]), c(86, 254))
+  }
+  # with plan_levels(): Total in its place among them
+  p <- table_plan(nz(total_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_levels(TRT = c("Xanomeline High Dose", "Xanomeline Low Dose", "Placebo"))
+  expect_identical(names(plan_apply(plan_total(p, position = "first"), "table"))[-(1:2)],
+                   c("Total", "Xanomeline High Dose", "Xanomeline Low Dose", "Placebo"))
+  # without plan_total(), the table is what it was
+  expect_false("Total" %in% names(plan_apply(p, "table")))
+})
+
+test_that("plan_total() says what is wrong", {
+  skip_if_no_cards2()
+  adsl <- cards::ADSL
+  no_overall <- cards::ard_tabulate(adsl, by = ARM, variables = SEX)
+  p <- table_plan(nz(no_overall), cols = "ARM", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_error(plan_apply(plan_total(p), "table"), "no overall rows, rows without ARM")
+  expect_error(plan_total(p, label = ""), "one text")
+  expect_error(plan_total(p, position = "middle"))
+  # a Total already in the data: one of the two
+  adsl$ARM2 <- adsl$ARM
+  made <- rbind(adsl, transform(adsl, ARM2 = "Total"))
+  both <- cards::bind_ard(cards::ard_tabulate(made, by = ARM2, variables = SEX),
+                          cards::ard_tabulate(adsl, variables = SEX))
+  p2 <- table_plan(nz(both), cols = "ARM2", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_error(plan_apply(plan_total(p2), "table"), "already has a value \"Total\"")
+  # one column key
+  two <- cards::bind_ard(cards::ard_tabulate(adsl, by = c(ARM, SEX), variables = RACE),
+                         cards::ard_tabulate(adsl, variables = RACE))
+  p3 <- table_plan(nz(two), cols = c("ARM", "SEX"), rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_error(plan_apply(plan_total(p3), "table"), "one column key")
+  # plan_layers() shows it
+  p4 <- table_plan(nz(total_ard()), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE)
+  expect_identical(plan_layers(plan_total(p4, label = "All"))$layers$total,
+                   list(label = "All", position = "last"))
+})
