@@ -193,6 +193,22 @@ print.rtf_col_cell <- function(x, ...) {
 #' @export
 rtf_col_header <- function(...) {
   rows <- list(...)
+  # Positional label rows (unnamed character vectors) all give one label per
+  # column, so they must be the same length (#594 E5).  Named rows are
+  # matched to the columns by name when the header meets its table, and a
+  # single label is allowed, as set_col_header() allows it.
+  is_lab <- vapply(rows, function(r) {
+    is.character(r) && length(r) > 1L &&
+      (is.null(names(r)) || !any(nzchar(names(r))))
+  }, logical(1L))
+  n_lab <- lengths(rows)[is_lab]
+  if (length(unique(n_lab)) > 1L) {
+    stop(sprintf(paste0("rtf_col_header(): the label rows must have one ",
+                        "label per column, so the same length; rows %s have ",
+                        "%s labels."),
+                 paste(which(is_lab), collapse = ", "),
+                 paste(n_lab, collapse = ", ")), call. = FALSE)
+  }
   structure(rows, class = "rtf_col_header")
 }
 

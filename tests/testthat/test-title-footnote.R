@@ -94,7 +94,7 @@ test_that("rtf_titles()/rtf_footnotes() accept length 1 (common) or length n", {
   expect_identical(d1$titles[[1]], d1$titles[[2]])
   d2 <- rtf_footnotes(base, list("a", "b"))
   expect_identical(d2$footnotes[[2]], "b")
-  expect_error(rtf_titles(base, list("x", "y", "z")), "length 2")
+  expect_error(rtf_titles(base, list("x", "y", "z")), "has 3 blocks but the document has 2 pages")
 })
 
 # -- Per-line styling -------------------------------------------------------

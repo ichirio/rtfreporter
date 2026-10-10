@@ -31,6 +31,29 @@
 
 ### Bug fixes
 
+- **Mistakes that were accepted now stop with a message that says what to
+  write** (#594 E1-E11).  None of these changes the output of code that
+  worked.
+  * `rtf_document(page = "a4")` / `rtf_config(page = )`: `page` must be an
+    `rtf_page()` or a named list; a string used to fail later, in
+    `print()` or the renderer, with "$ operator is invalid for atomic
+    vectors".
+  * `rtf_header()` / `rtf_footer()`: a cell named other than `l` / `c` /
+    `r` (`c(left = "x")`) is an error.  Its text used to be left out of the
+    file without a word.
+  * A positional `col_header` row (`rtftable()`, `rtf_tables()` on a data
+    frame) must give one label per column; one too few left the last
+    header empty.  The labels rows of one `rtf_col_header()` must be the
+    same length.  A named row and a single label are still allowed, as
+    `set_col_header()` allows them.
+  * Clearer texts: `rtf_tables()` on an item it cannot place names its
+    class and where other tables go (`as_rtftables()`); `table_plan()` and
+    `normalize_ard()` name their argument `x`; an empty plan points to
+    `plan_paginate_rows()` (not the non-existent `plan_pages()`);
+    `titles` / `footnotes` of the wrong length say how many blocks and
+    pages there are; `rtf_titles()` / `rtf_footnotes()` before any content
+    say to call them after `rtf_tables()` / `rtf_figures()`.
+
 - **`{n:sum}` leaves the Total column out** (#604).  With `plan_total()`,
   a header's `{n:sum}` (and `plan_header_tokens()`) added the Total
   column to the arms -- 612 for 306 subjects.  The Total column is the
