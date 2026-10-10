@@ -256,6 +256,7 @@ reference:
       - plan_apply
       - plan_layers
       - plan_header_tokens
+      - plan_n_candidates
       - plan_template
 
   # ── 2. The document ─────────────────────────────────────────────────
