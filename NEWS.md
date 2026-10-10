@@ -18,6 +18,14 @@
 
 ### Documentation
 
+- **README first screen and a Gallery article.**  The README opens with one
+  sentence on what the package does and a 30-second example that needs only
+  rtfreporter, with a picture of the RTF it writes.  The new *Gallery*
+  article (in the navbar) shows a demographics table, an adverse-events table,
+  a vital-signs table, a listing and two figures made from the CDISC pilot
+  data, each with the code that wrote it.  `data-raw/gen_gallery.R` renders
+  the article and the README example and turns their RTF into the pictures.
+
 - **No code copied from a discussion, and no links to discussions that are
   moving** (#596).  The test that checks `build_listing()` against a listing
   laid out by hand now lays it out with its own code, on made-up

@@ -100,12 +100,15 @@ home:
 
 navbar:
   structure:
-    left:  [intro, reference, articles, news]
+    left:  [intro, gallery, reference, articles, news]
     right: [search, github]
   components:
     intro:
       text: Get started
       href: articles/rtfreporter.html
+    gallery:
+      text: Gallery
+      href: articles/gallery.html
     reference:
       text: Reference
       href: reference/index.html
@@ -606,6 +609,14 @@ reference:
 # plan workflow first, a table from another package second, then listings,
 # figures and the document around them; contributor material at the bottom.
 articles:
+  - title: Gallery
+    desc: >
+      Clinical tables, a listing and figures made with rtfreporter from the
+      CDISC pilot data, each with the code that wrote it.
+    navbar: ~
+    contents:
+      - articles/gallery
+
   - title: Tables from an ARD (recommended)
     desc: >
       From a cards / cardx analysis results dataset to RTF pages with a plan:
