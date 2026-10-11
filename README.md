@@ -11,14 +11,63 @@
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 <!-- badges: end -->
 
-`rtfreporter` is an R toolkit for generating **Rich Text Format (RTF)
-Tables, Listings and Figures (TFLs)** for clinical trial deliverables —
-geared to **one familiar house style** we reach for every day: the
-conventional clinical layout with a borderless header table, a centred
-title block, a clinical-TFL body table (column-header top + bottom rules,
-no body borders), and a left-aligned footnote.  It is opinionated by
-design rather than a do-everything RTF engine.  The package logo above is
-literally the kind of page `generate_rtfreport()` produces.
+**rtfreporter writes clinical tables, listings and figures (TFLs) as RTF
+files -- running header and footer, page numbers, titles and footnotes
+included -- using base R alone.**
+
+## A 30-second example
+
+``` r
+library(rtfreporter)
+
+# A demographics summary: the CDISC pilot study's numbers, typed in
+dm <- data.frame(
+  row  = c("Age (years)", "  Mean (SD)", "  Min, Max",
+           "Sex, n (%)",  "  Female",    "  Male"),
+  pbo  = c("", "75.2 (8.59)", "52, 89", "", "53 (61.6)", "33 (38.4)"),
+  low  = c("", "75.7 (8.29)", "51, 88", "", "50 (59.5)", "34 (40.5)"),
+  high = c("", "74.4 (7.89)", "56, 88", "", "40 (47.6)", "44 (52.4)"))
+
+doc <- rtf_document() |>
+  rtf_section(secinfo = list(
+    header = rtf_header(list(
+      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"))),
+    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
+  rtf_tables(dm,
+    col_header = rtf_col_header(c("", "Placebo\n(N=86)",
+                                  "Xanomeline\nLow Dose\n(N=84)",
+                                  "Xanomeline\nHigh Dose\n(N=84)")),
+    col_rel_width = c(3, 2, 2, 2),
+    titles    = list(c("Table 14.1.1", "Demographic Characteristics",
+                       "Safety Analysis Set")),
+    footnotes = list("SD = standard deviation."))
+
+generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R")
+```
+
+<p align="center">
+  <img src="man/figures/readme-30s-example.png"
+       alt="The t_dm.rtf written by the example, opened in a word processor: a running header with the protocol and Page 1 of 1, the centred title block, three arm columns with (N=xx), age and sex rows with indented statistics, a footnote, and a running footer with the program name and the run date."
+       width="720" />
+</p>
+
+<p align="center"><sub><em>The <code>t_dm.rtf</code> written by the code above, opened in LibreOffice (the empty middle of the page is cut out of the picture).
+More tables, listings and figures are in the
+<a href="https://ichirio.github.io/rtfreporter/articles/gallery.html">Gallery</a>.</em></sub></p>
+
+## Installation
+
+The package is not on CRAN yet. Install from GitHub:
+
+``` r
+# install.packages("remotes")
+
+# Latest release (v0.8.2)
+remotes::install_github("ichirio/rtfreporter@v0.8.2")
+
+# Development version (latest main)
+remotes::install_github("ichirio/rtfreporter")
+```
 
 ## Why rtfreporter?
 
@@ -47,21 +96,12 @@ package small enough to read end-to-end, thorough to test, and realistic
 to maintain.  If the supported layout matches your team's house style,
 you get publication-ready deliverables with almost no configuration.
 
-## Installation
+## The recommended path: a table from an ARD
 
-The package is not on CRAN yet. Install from GitHub:
-
-``` r
-# install.packages("remotes")
-
-# Latest release (v0.8.2)
-remotes::install_github("ichirio/rtfreporter@v0.8.2")
-
-# Development version (latest main)
-remotes::install_github("ichirio/rtfreporter")
-```
-
-## A 30-second example: a table from an ARD
+The example above typed its numbers in.  In a real program they come from
+an analysis results dataset (ARD) built with
+[cards](https://pharmaverse.github.io/cards/), and a short **plan** lays them
+out -- the column header's `(N=xx)` is read from the same ARD:
 
 ``` r
 library(rtfreporter)
@@ -193,49 +233,8 @@ rtfreporter lays it out just the same.  A bare data.frame carries no
 display metadata, so you simply re-specify what you want — column headers,
 alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
 
-A table brought as a data frame looks like this:
-
-``` r
-library(rtfreporter)
-library(magrittr)
-
-df <- data.frame(
-  USUBJID = c("001-001", "001-002", "001-003"),
-  TRT     = c("Placebo", "Active",  "Active"),
-  AVAL    = c(12.3, 14.1, 11.7)
-)
-
-doc <- rtf_document() %>%
-  rtf_section(
-    page    = 1,
-    secinfo = list(
-      header = rtf_header(rows = list(
-        c(l = "Protocol XYZ-001", r = "Confidential"),
-        c(l = "Table 14.1.1",     r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
-      )),
-      footer = rtf_footer(c(c = "ACME Pharma, Inc."))
-    )
-  ) %>%
-  rtf_tables(
-    # as_rtftables() turns the data into rtftable page objects -- the kind of
-    # object rtf_tables() is designed to consume (a bare data.frame also works,
-    # as a convenience). It is also the same entry point for gt / gtsummary /
-    # rtables tables.
-    as_rtftables(df, border = "tfl", row_height_twips = 280L),
-    titles    = list(c("Subject Summary", "Safety Population")),
-    footnotes = list(c("Source: ADaM ADSL"))
-  )
-
-generate_rtfreport(doc, "T_14_1_1.rtf", overwrite = TRUE)
-```
-
-<p align="center">
-  <img src="man/figures/readme-30s-example.png"
-       alt="The generated T_14_1_1.rtf opened in a word processor: a clinical TFL-style table with running header, title block, column headers, three subject rows, a source-note footnote, and a page footer."
-       width="600" />
-</p>
-
-<p align="center"><sub><em>The generated <code>T_14_1_1.rtf</code>, opened in a word processor.</em></sub></p>
+The [30-second example](#a-30-second-example) at the top of this page is
+exactly that: a data frame, with its column header given to `rtf_tables()`.
 
 For worked, tool-by-tool comparisons see the *same report, every framework*
 articles — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
@@ -273,6 +272,8 @@ specific, and well-defined — RTF remains the easiest path that is
 
 The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
+- **Gallery** — [tables, a listing and figures from the CDISC pilot data](https://ichirio.github.io/rtfreporter/articles/gallery.html),
+  each with the code that wrote it
 - **Get started** — [an ARD, a plan, and the RTF file](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
   (`vignette("rtfreporter")`)
 - **Tables from an ARD** (recommended) — [cards / cardx to RTF with a plan](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
