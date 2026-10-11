@@ -160,6 +160,8 @@
   own, `program_fallback` and `drop_empty_rows`.  The pipe-API vignette and
   the two Quarto examples are gone (redirected), their ground covered by
   Get started, the document articles and the Demographics showcase.
+  The README's "Why rtfreporter?" and Get started name these two paths as
+  the package's two strengths (#587).
 
 - **AI developer manual: the repository rules** (#574).  A new §14
   summarises, with a pointer to each source file, the Code of Conduct, the

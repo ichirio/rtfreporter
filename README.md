@@ -22,7 +22,10 @@ literally the kind of page `generate_rtfreport()` produces.
 
 ## Why rtfreporter?
 
-**From the analysis results to the RTF page, with one vocabulary.**  The
+rtfreporter has **two strengths**, and they are the two ways a table gets
+into a report.
+
+**1. An ARD becomes a table almost as-is.**  The
 recommended way to make a table is from an analysis results dataset (ARD)
 built with [cards](https://pharmaverse.github.io/cards/) /
 [cardx](https://insightsengineering.github.io/cardx/): the statistics stay
@@ -30,10 +33,12 @@ in the ARD, and a short **plan** says how they are laid out -- which key goes
 across and which down, how a mean and an SD become one cell, what the rows
 are called, what the header says and where the pages break.  The column
 header's `(N=xx)` is read from the same ARD, so the header and the numbers
-under it agree by construction.
+under it agree by construction.  `list_ard_keys()`, `pull_ard()` and
+`widen_ard()` help when you want to look inside the ARD or take it wide.
 
-**Bring your own table, too.**  A table already built with gt, gtsummary,
-rtables / tern, tfrmt, flextable, huxtable -- or a plain data frame -- goes in
+**2. Bring your own table: it reads the table objects you already have.**  A
+table already built with gt, gtsummary (a `tbl_split` too), rtables / tern,
+rlistings, tfrmt, flextable, huxtable -- or a plain data frame -- goes in
 through `as_rtftables()`, with its labels, spanning headers and footnotes.
 
 Either way the document around it is the same: running headers and footers
