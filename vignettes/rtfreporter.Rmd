@@ -26,7 +26,8 @@ rtfreporter writes clinical **tables, listings and figures** (TFLs) as RTF
 files.  Its two strengths are the two ways to get a table into a report:
 
 1. **From an analysis results dataset (ARD), almost as-is** -- the
-   recommended path.  The statistics come from [cards](https://pharmaverse.github.io/cards/) /
+   recommended path.  The statistics come from
+   [cards](https://pharmaverse.github.io/cards/) /
    [cardx](https://insightsengineering.github.io/cardx/); a **plan** says how
    they are laid out.  This is what the rest of this page shows.
 2. **Bring your own table** -- it reads the table objects you already
