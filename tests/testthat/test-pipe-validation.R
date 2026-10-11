@@ -147,9 +147,9 @@ test_that("rtf_titles / rtf_footnotes error before content is added", {
 test_that("rtf_titles rejects non-list / wrong-length input", {
   d <- rtf_document() |> rtf_tables(list(data.frame(A = 1L), data.frame(A = 2L)))
   expect_error(rtf_titles(d,    "x"),                  "must be a list")
-  expect_error(rtf_titles(d,    list("a", "b", "c")),  "length 2")  # 3 != 2 and != 1
+  expect_error(rtf_titles(d,    list("a", "b", "c")),  "has 3 blocks but the document has 2 pages")
   expect_error(rtf_footnotes(d, "x"),                  "must be a list")
-  expect_error(rtf_footnotes(d, list("a", "b", "c")),  "length 2")
+  expect_error(rtf_footnotes(d, list("a", "b", "c")),  "has 3 blocks but the document has 2 pages")
   # length 1 is now accepted (common to all pages).
   expect_length(rtf_titles(d, list("common"))$titles, 2L)
 })

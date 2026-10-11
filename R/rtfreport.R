@@ -306,6 +306,7 @@ rtf_header <- function(rows,
   }
   if (is.character(rows)) rows <- list(rows)
   if (!is.list(rows)) stop("`rows` must be a named character vector or list of named vectors.", call. = FALSE)
+  .check_hf_row_names(rows, "rtf_header")
   width <- .check_block_width(width, "width")
   list(rows = rows, border = border, width_twips = width_twips,
        width = width,
@@ -317,6 +318,26 @@ rtf_header <- function(rows,
        cell_padding_left_twips  = cell_padding_left_twips,
        cell_padding_right_twips = cell_padding_right_twips,
        drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
+}
+
+# A row's cells are named l / c / r; the renderer reads only those names, so
+# any other name (`left = `, `center = `) would leave its text out of the
+# file without a word (#594 E2).  Unnamed rows (count-based) stay valid.
+.check_hf_row_names <- function(rows, fn) {
+  for (i in seq_along(rows)) {
+    row <- rows[[i]]
+    if (is.list(row) && !is.null(row$columns)) row <- row$columns
+    nm <- names(row)
+    bad <- setdiff(nm[!is.na(nm) & nzchar(nm)], c("l", "c", "r"))
+    if (length(bad)) {
+      stop(sprintf(paste0("`%s()` row %d: a cell may only be named l, c or r ",
+                          "(left, centre, right); got %s.  e.g. ",
+                          "c(l = \"Protocol\", r = \"Page {AUTO_PAGE}\")."),
+                   fn, i, paste0("'", unique(bad), "'", collapse = ", ")),
+           call. = FALSE)
+    }
+  }
+  invisible(rows)
 }
 
 .check_drop_empty_rows <- function(x) {
@@ -344,6 +365,7 @@ rtf_footer <- function(rows,
   }
   if (is.character(rows)) rows <- list(rows)
   if (!is.list(rows)) stop("`rows` must be a named character vector or list of named vectors.", call. = FALSE)
+  .check_hf_row_names(rows, "rtf_footer")
   width <- .check_block_width(width, "width")
   list(rows = rows, border = border, width_twips = width_twips,
        width = width,

@@ -1024,7 +1024,7 @@ test_that("a house style is an ordinary function, not a plan without data", {
   expect_identical(names(a), names(b))
   expect_true(is.data.frame(a))
   # and a plan cannot be built without the data the roles name
-  expect_error(table_plan(cols = "TRT"), "`data` is required")
+  expect_error(table_plan(cols = "TRT"), "`x` \\(the data\\) is required")
   expect_error(table_plan(cols = "TRT"), "ordinary function")
 })
 
