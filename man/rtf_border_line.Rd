@@ -40,6 +40,7 @@ rtf_border_line(style = "double", width = 30L, color = "#003366")
 "none"   # explicit "no line" that removes an inherited rule
 }
 \seealso{
-\code{\link[=rtf_border]{rtf_border()}} to assemble sides into a cell border, and
-\code{\link[=rtf_table_border]{rtf_table_border()}} for whole-table border zones.
+\code{\link[=rtf_border]{rtf_border()}} to assemble sides into a border, attached to
+\code{rtftable(border = )} for the whole table or to \code{\link[=style_zone]{style_zone()}} for one
+kind of row.
 }

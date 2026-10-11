@@ -113,8 +113,8 @@ as a value rather than built:
   rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
 }
 
-All of them still work and warn once per session; they are scheduled for
-removal before the CRAN submission.
+All of them still work and warn once per session; they are removed in
+0.9.0, the first CRAN release.
 
 \code{border = "tfl"} and \code{\link[=rtf_border_tfl]{rtf_border_tfl()}} are unaffected, as is any border on
 a single cell (\code{\link[=col_cell]{col_cell()}}, \code{cell_styles}): a cell has no inside, so its

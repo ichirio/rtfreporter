@@ -332,8 +332,8 @@ And the constructors that folded into `rtf_border()` itself:
 | `rtf_border_with(b, bottom = x)` | layer at the attach point, e.g. a second `style_zone()` |
 | `rtf_border_tfl()` | `border = "tfl"`, or `rtf_table_style_tfl()` |
 
-All of these still work and warn once per session. They are scheduled for
-removal before the CRAN submission.
+All of these still work and warn once per session. They are removed in
+0.9.0, the first CRAN release.
 
 The first two rows change spelling but not meaning. Rows three to five change
 meaning as well: those are the ones where an edge used to be uniform.

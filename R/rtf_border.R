@@ -159,8 +159,9 @@
 #'
 #' @return A list of class `"rtf_border_line"`.
 #'
-#' @seealso [rtf_border()] to assemble sides into a cell border, and
-#'   [rtf_table_border()] for whole-table border zones.
+#' @seealso [rtf_border()] to assemble sides into a border, attached to
+#'   `rtftable(border = )` for the whole table or to [style_zone()] for one
+#'   kind of row.
 #'
 #' @examples
 #' TRUE                                   # thin black rule (~0.5 pt)
@@ -377,8 +378,8 @@ print.rtf_border_line <- function(x, ...) {
 #'   rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
 #' }
 #'
-#' All of them still work and warn once per session; they are scheduled for
-#' removal before the CRAN submission.
+#' All of them still work and warn once per session; they are removed in
+#' 0.9.0, the first CRAN release.
 #'
 #' `border = "tfl"` and [rtf_border_tfl()] are unaffected, as is any border on
 #' a single cell ([col_cell()], `cell_styles`): a cell has no inside, so its

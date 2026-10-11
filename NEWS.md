@@ -18,6 +18,26 @@
 
 ### Documentation
 
+- **Examples on the ARD / plan path, and Get started without cards**
+  (#594 D1, D2).  `?plan_verbs` now runs every `plan_*` verb -- on a cards
+  ARD when cards is installed, and the display verbs and `plan_listing()`
+  on a plain data frame either way; `normalize_ard()`, `widen_ard()`,
+  `list_ard_keys()` and `plan_layers()` have examples of their own.  The
+  Get started vignette loads rtfreporter in a chunk that always runs, so
+  it builds (its last example included) on a machine without cards.
+
+- **The docs no longer contradict each other** (#594 D3-D6).
+  `?rtf_section` says what the renderer does and the headers article
+  already said: `header = NULL` *inherits* the previous section's header
+  (only the first section's `NULL` means none; `rtf_header("")` is a blank
+  one).  `?rtf_tables` describes `tables` by its usual forms -- a
+  `table_plan`, the pages of `as_rtftables()`, a bare `data.frame` -- and
+  sends a gt table through `as_rtftables()` rather than `read_gt`.
+  `?rtftable`'s `border =`, the public-API article and `?set_blank_rows`
+  no longer present `rtf_table_border()`, the old border constructors or
+  `paginate()` as current.  Every deprecation note now says the same
+  thing: removed in 0.9.0, the first CRAN release.
+
 - **No code copied from a discussion, and no links to discussions that are
   moving** (#596).  The test that checks `build_listing()` against a listing
   laid out by hand now lays it out with its own code, on made-up

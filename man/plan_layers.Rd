@@ -31,6 +31,23 @@ header as cell rows, the pages themselves.  It is the one way another
 package reads a plan: \code{tflspec::tfl_as_table_spec()} writes a workbook from
 nothing but this and \code{\link[=plan_apply]{plan_apply()}}.
 }
+\examples{
+if (requireNamespace("cards", quietly = TRUE)) {
+  ard <- cards::ard_stack(
+    cards::ADSL, .by = ARM,
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = SEX))
+  p <- table_plan(normalize_ard(ard), cols = "ARM",
+                  rows = c(group = "variable")) |>
+    plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})"),
+               categorical = "{n} ({p:\%})", notes = FALSE) |>
+    plan_digits(1)
+  lay <- plan_layers(p)
+  lay$declared                  # the kinds of layer, in the order declared
+  lay$columns$names             # the columns the pages print
+}
+
+}
 \seealso{
 \code{\link[=plan_apply]{plan_apply()}}, \code{tflspec::tfl_as_table_spec()}
 }
