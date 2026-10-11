@@ -442,7 +442,7 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
   roles <- roles[!vapply(roles, is.null, logical(1L))]
   if (is.null(data)) {
     .ard_stop(paste0(
-      "`data` is required.  The roles name its columns, and that ",
+      "`x` (the data) is required.  The roles name its columns, and that ",
       "is what lets a typo\n  be caught here rather than three stages later.\n",
       "  A house style that serves every study is an ordinary ",
       "function:\n",
@@ -2146,7 +2146,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
         "and none of\n  the columns normalize_ard() adds -- and the ",
         "plan declares nothing.\n",
         "  A table to lay out : keep the display verbs (plan_stub, ",
-        "plan_pages, ...).\n",
+        "plan_paginate_rows, ...).\n",
         "  A listing of records: add plan_listing(listing_col(...), ...).\n",
         "  An ARD to convert  : name the roles on table_plan(), add ",
         "plan_cells().\n",
