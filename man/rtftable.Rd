@@ -104,8 +104,12 @@ usual cascade.}
 \item{\code{"tfl"}}{(default) the clinical TFL preset: header top + bottom
 rules and a bottom rule on the last row.}
 \item{\code{"none"}}{no borders.}
-\item{an \code{\link[=rtf_table_border]{rtf_table_border()}} object}{full per-zone control.}
+\item{an \code{\link[=rtf_border]{rtf_border()}} object}{its outer edges frame the whole table
+and its \code{inside_h} / \code{inside_v} rules fall between the rows / cells;
+\code{\link[=style_zone]{style_zone()}} then sets one kind of row.}
 \item{an \code{\link[=rtf_table_style]{rtf_table_style()}} object}{its border zones are used.}
+\item{an \code{rtf_table_border()} object}{\strong{deprecated} (removed in
+0.9.0): the per-zone form; see \code{\link[=rtf_border]{rtf_border()}} for the new spelling.}
 }}
 
 \item{blank_rows}{Where to insert blank separator rows. One of -- or a \code{list}

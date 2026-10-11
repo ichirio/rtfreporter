@@ -576,12 +576,12 @@ reference:
     desc: >
       The border constructors that `rtf_border_line()` and `rtf_border()`
       replaced at 0.5.0 / 0.6.0.  They still work and each warns once per
-      session, naming its replacement, but they will be **removed in one
-      batch before the CRAN submission** -- do not write new code against
-      them.  `?rtf_border` pairs the old and the new spelling for every case.
+      session, naming its replacement, and are **removed in 0.9.0, the first
+      CRAN release** -- do not write new code against them.  `?rtf_border` pairs the old and the new spelling for every case.
       `rtf_border_none()`, `rtf_border_top()`, `rtf_border_bottom()` and
       `rtf_border_box()` are documented on the `rtf_border()` page itself.
-      Since 0.8.2.9013 (the pre-CRAN API review) also: `rtf_border_side()`
+      Deprecated in 0.8.x by the pre-CRAN API review, and removed in 0.9.0
+      too: `rtf_border_side()`
       (now `rtf_border_line()`, documented on its page), the header editors
       below (write the header in `rtf_col_header()` / `rtf_header()`
       instead), `paginate()` (use `as_rtftables()`), and the arguments

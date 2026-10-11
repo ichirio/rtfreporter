@@ -45,25 +45,23 @@ rtf_tables(
 \arguments{
 \item{doc}{An rtf_document object.}
 
-\item{tables}{A list where each element is one page's content (a single
-content per page). Each element is one of:
+\item{tables}{The pages to add. The usual forms are:
 \describe{
-\item{a \code{data.frame}}{a simple table; the table-format arguments below
-apply to it.}
-\item{an \code{rtftable} object}{(from \code{\link[=rtftable]{rtftable()}}) a table with full
-formatting -- usually the output of \code{\link[=as_rtftables]{as_rtftables()}}.}
-\item{an \code{rtfplot} object}{(from \code{\link[=rtfplot]{rtfplot()}}) an embedded figure.}
-\item{a \code{gt_tbl} object}{(from the gt package) treated like a
-\code{data.frame}; pass \code{read_gt = TRUE} (or a token vector) to also pull
-through gt's column labels, alignment, title / subtitle and source
-notes (see \code{read_gt}).}
-\item{a gtsummary table}{(\code{tbl_summary}, \code{tbl_regression}, ...)
-auto-converted to a \code{gt_tbl} first; \code{read_gt = TRUE} pulls through its
-labels, titles, source notes, footnotes and spanning headers.}
+\item{a \code{table_plan}}{(from \code{\link[=table_plan]{table_plan()}}) the plan of an ARD or a
+data.frame; it becomes its pages, as \code{\link[=plan_apply]{plan_apply()}} would make them.}
+\item{the output of \code{\link[=as_rtftables]{as_rtftables()}}}{the pages of a gt, gtsummary,
+rtables/tern, rlistings, flextable or huxtable table, or of a
+\code{data.frame} paged and styled there.}
+\item{a bare \code{data.frame}}{one simple page; the table-format arguments
+below apply to it.}
 }
-Note: cell-level formatting (row indentation, bold group-header
-rows, footnote marks in cells) is \strong{not} transferred to RTF.
-See \code{\link[=as_rtftable]{as_rtftable()}} for details on gtsummary limitations.
+More generally, \code{tables} is one page or a list of pages, \strong{each element
+one page} with a single content: a \code{data.frame}, an \code{rtftable} (from
+\code{\link[=rtftable]{rtftable()}} or \code{\link[=as_rtftables]{as_rtftables()}}), an \code{rtfplot} (from \code{\link[=rtfplot]{rtfplot()}}), or a
+\code{gt_tbl} / gtsummary table. A \code{gt_tbl} or gtsummary table is best passed
+through \code{\link[=as_rtftables]{as_rtftables()}}, which reads its labels, alignment, titles and
+source notes; placed here directly it is treated like a \code{data.frame}
+unless \code{read_gt} is set (see \code{read_gt}).
 
 \code{tables} may also be a single object of a class another package has
 registered an \code{\link[=as_rtftables]{as_rtftables()}} method for; it is converted to its pages

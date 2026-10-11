@@ -227,6 +227,20 @@ One ARD record becomes one table row.  Layouts that put a single record on
 two printed lines are deliberately out of scope -- do those afterwards, on
 the returned data frame.
 }
+\examples{
+if (requireNamespace("cards", quietly = TRUE)) {
+  ard <- cards::ard_stack(
+    cards::ADSL, .by = ARM,
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = SEX))
+  normalize_ard(ard) |>
+    widen_ard(cols = "ARM", rows = c(group = "variable"),
+              cells = list(AGE = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+                           SEX = "{n} ({p:.1f\%})"),
+              notes = FALSE)
+}
+
+}
 \seealso{
 \code{\link[=normalize_ard]{normalize_ard()}}, \code{plan_template(form = "widen")}
 }
