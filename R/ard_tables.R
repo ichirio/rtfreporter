@@ -1325,7 +1325,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   ard <- x
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
-    .ard_stop("`ard` does not look like a cards ARD (no `context`/`stat_name`).")
+    .ard_stop("`x` does not look like a cards ARD (no `context`/`stat_name` columns).")
   }
   ignored <- NULL
   total_n <- NULL

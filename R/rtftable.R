@@ -263,6 +263,7 @@
     col_header <- trimws(strsplit(col_header, "|", fixed = TRUE)[[1L]])
   }
   if (is.character(col_header)) {
+    .check_label_row_length(col_header, 1L, ncol_df, col_names)
     return(list(.resolve_named_label_row(col_header, col_names)))
   }
   if (!is.list(col_header)) {
@@ -276,8 +277,12 @@
     col_header <- list(col_header)
   }
 
-  lapply(col_header, function(row) {
-    if (is.character(row)) return(.resolve_named_label_row(row, col_names))
+  lapply(seq_along(col_header), function(i) {
+    row <- col_header[[i]]
+    if (is.character(row)) {
+      .check_label_row_length(row, i, ncol_df, col_names)
+      return(.resolve_named_label_row(row, col_names))
+    }
     if (!is.list(row) || length(row) == 0L) {
       stop("Each col_header row must be a character vector or a non-empty ",
            "list of cell specs.", call. = FALSE)
@@ -298,6 +303,30 @@
          "col_cell()/pos-spec cells, or a list of spanning specs ",
          "(list(from, to, label, ...)).", call. = FALSE)
   })
+}
+
+# A positional label row (no names) gives one label per data column.  One
+# too few used to leave the last column's header empty, one too many was
+# dropped, both without a word (#594 E4).  The rule is the one
+# .check_col_header_width() applies to set_col_header(): a named row is
+# matched by name (and checked there), and a single label is allowed.
+.check_label_row_length <- function(row, i, ncol_df, col_names) {
+  if (is.null(ncol_df)) return(invisible(NULL))
+  nms <- names(row)
+  if (!is.null(nms) && any(nzchar(nms))) return(invisible(NULL))
+  if (length(row) > 1L && length(row) != ncol_df) {
+    cols <- if (length(col_names)) {
+      sprintf(" (%s)", paste(col_names, collapse = ", "))
+    } else ""
+    stop(sprintf(paste0("`col_header` row %d has %d label%s but the table ",
+                        "has %d column%s%s.  Give one label per column, or ",
+                        "name the ones to change: c(%s = \"...\")."),
+                 i, length(row), if (length(row) == 1L) "" else "s",
+                 ncol_df, if (ncol_df == 1L) "" else "s", cols,
+                 if (length(col_names)) col_names[1L] else "col"),
+         call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 # Predicate: is `x` a canonical "header rows list" -- every element being

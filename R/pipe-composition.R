@@ -124,6 +124,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
   }
   .check_program(program_fallback, "program_fallback")
   .check_user_tokens(tokens)
+  .check_page_arg(page)
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
   # resolved to its default at render time -- including inferring the
@@ -169,6 +170,33 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
   )
 
   doc
+}
+
+# `page =` is an rtf_page() or a named list of its keys.  A bare string
+# ("a4") used to be kept and failed only later, in print() or the renderer,
+# with "$ operator is invalid for atomic vectors" (#594 E1).
+.check_page_arg <- function(page) {
+  if (is.null(page)) return(invisible(NULL))
+  nm <- names(page)
+  if (!is.list(page) ||
+      (length(page) && (is.null(nm) || any(is.na(nm) | !nzchar(nm))))) {
+    hint <- if (is.character(page) && length(page) == 1L) {
+      sprintf("  For a paper size write page = rtf_page(paper_size = \"%s\").",
+              page)
+    } else ""
+    stop(paste0("`page` must be an rtf_page() object or a named list of its ",
+                "settings (e.g. list(paper_size = \"A4\")), not ",
+                .describe_page_arg(page), ".", hint), call. = FALSE)
+  }
+  invisible(page)
+}
+
+.describe_page_arg <- function(x) {
+  if (is.character(x) && length(x) == 1L && !is.na(x)) {
+    return(sprintf("the string \"%s\"", x))
+  }
+  if (is.list(x)) return("an unnamed list")
+  sprintf("a %s", class(x)[1L])
 }
 
 # ============================================================================
@@ -241,6 +269,7 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
     doc_copy$document$color_table <- color_table
   }
   # Per-key merges, so "change only the paper size" keeps the other page keys.
+  .check_page_arg(page)
   if (!is.null(page)) {
     doc_copy$document$page <- .merge_list(doc_copy$document$page, page)
   }
@@ -488,10 +517,13 @@ rtf_tables <- function(doc, tables,
   for (i in seq_along(tables)) {
     item <- tables[[i]]
     if (!.is_content_item(item)) {
-      stop("Item ", i,
-           " must be a data.frame, rtftable(), rtfplot(), gt_tbl, or",
-           " gtsummary table object. ",
-           "Each list element corresponds to exactly one page (one content).",
+      stop("Item ", i, " is a '", paste(class(item), collapse = "/"), "'. ",
+           "Each list element is one page: a data.frame, rtftable(), rtfplot(), ",
+           "gt_tbl or gtsummary table.\n  A table_plan, or a class whose ",
+           "package registered an as_rtftables() method, can be passed as ",
+           "`tables` itself.\n  Other tables (rtables/tern, rlistings, ",
+           "flextable, huxtable, gt_group) become pages with ",
+           "as_rtftables(): rtf_tables(doc, as_rtftables(x)).",
            call. = FALSE)
     }
   }
@@ -634,8 +666,11 @@ rtf_tables <- function(doc, tables,
     }
     if (length(x) == 1L && n > 1L) return(rep(x, n))  # one block = common to all
     if (length(x) != n) {
-      stop(sprintf("`%s` must have length %d (= length(tables)) or 1 (common to all).",
-                   name, n), call. = FALSE)
+      stop(sprintf(paste0("`%s` has %d blocks but there %s %d page%s: give ",
+                          "one block per page, or one block (a list of ",
+                          "length 1) for every page."),
+                   name, length(x), if (n == 1L) "is" else "are", n,
+                   if (n == 1L) "" else "s"), call. = FALSE)
     }
     x
   }
@@ -853,15 +888,21 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
   }
   n <- length(doc$contents)
   if (n == 0L) {
-    stop("Cannot set titles before any content has been added.", call. = FALSE)
+    stop(paste0("Cannot set titles before any content has been added.  ",
+                "Call rtf_titles() after rtf_tables() / rtf_figures(): it ",
+                "sets the titles of the pages already added (one block per ",
+                "page, or one for all).  Or pass `titles =` to rtf_tables() / ",
+                "rtf_figures()."), call. = FALSE)
   }
   if (!is.list(titles)) {
     stop("`titles` must be a list (one element per page).", call. = FALSE)
   }
   if (length(titles) == 1L && n > 1L) titles <- rep(titles, n)  # common to all
   if (length(titles) != n) {
-    stop(sprintf("`titles` must have length %d (= number of pages) or 1 (common to all).",
-                 n), call. = FALSE)
+    stop(sprintf(paste0("`titles` has %d blocks but the document has %d ",
+                        "page%s: give one block per page, or one block (a ",
+                        "list of length 1) for every page."),
+                 length(titles), n, if (n == 1L) "" else "s"), call. = FALSE)
   }
   doc_copy <- doc
   doc_copy$titles <- titles
@@ -917,15 +958,21 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
   }
   n <- length(doc$contents)
   if (n == 0L) {
-    stop("Cannot set footnotes before any content has been added.", call. = FALSE)
+    stop(paste0("Cannot set footnotes before any content has been added.  ",
+                "Call rtf_footnotes() after rtf_tables() / rtf_figures(): it ",
+                "sets the footnotes of the pages already added (one block per ",
+                "page, or one for all).  Or pass `footnotes =` to rtf_tables() / ",
+                "rtf_figures()."), call. = FALSE)
   }
   if (!is.list(footnotes)) {
     stop("`footnotes` must be a list (one element per page).", call. = FALSE)
   }
   if (length(footnotes) == 1L && n > 1L) footnotes <- rep(footnotes, n)  # common to all
   if (length(footnotes) != n) {
-    stop(sprintf("`footnotes` must have length %d (= number of pages) or 1 (common to all).",
-                 n), call. = FALSE)
+    stop(sprintf(paste0("`footnotes` has %d blocks but the document has %d ",
+                        "page%s: give one block per page, or one block (a ",
+                        "list of length 1) for every page."),
+                 length(footnotes), n, if (n == 1L) "" else "s"), call. = FALSE)
   }
   doc_copy <- doc
   doc_copy$footnotes <- footnotes
