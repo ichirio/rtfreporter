@@ -29,10 +29,10 @@ dm <- data.frame(
   high = c("", "74.4 (7.89)", "56, 88", "", "40 (47.6)", "44 (52.4)"))
 
 doc <- rtf_document() |>
-  rtf_section(secinfo = list(
+  rtf_section(
     header = rtf_header(list(
       c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"))),
-    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
+    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}"))) |>
   rtf_tables(
     rtftable(dm,
       col_header = rtf_col_header(c("", "Placebo\n(N=86)",
@@ -139,12 +139,12 @@ plan <- ard |>
 
 # 3. The document: running header and footer, the plan, the file
 doc <- rtf_document(tokens = list(STUDY = "CDISCPILOT01")) |>
-  rtf_section(secinfo = list(
+  rtf_section(
     header = rtf_header(list(
       c(l = "Protocol: {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = "Table 14.1.1  Demographic Characteristics"),
       c(c = "Safety Analysis Set"))),
-    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
+    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}"))) |>
   rtf_tables(plan)
 
 generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R")

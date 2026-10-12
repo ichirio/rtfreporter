@@ -32,24 +32,37 @@
 #' approximation.
 #'
 #' @param text A character vector.  `NA` is treated as `""`.
-#' @param font Font name.  One of `"courier_new"` (default), `"courier"`, or
-#'   `"arial"`.  Unrecognised values fall back to Courier New.
-#' @param size_half_points Font size in **half-points** (the unit used by RTF
-#'   and the document's `default_format$font_size_half_points`).  Default `18` = 9 pt.
+#' @param font Font name: `"Courier New"` / `"courier_new"`, `"Courier"`, or
+#'   `"Arial"` (case and spaces do not matter).  `NULL` (default) is the
+#'   package's font, `getOption("rtfreporter.font")` ("Courier"), as for every
+#'   other `font =`.  Unrecognised values fall back to Courier New.
+#' @param font_size_half_points Font size in **half-points** (the unit used by
+#'   RTF and the document's `default_format$font_size_half_points`).  Default
+#'   `18` = 9 pt.
+#' @param size_half_points *Superseded* by `font_size_half_points` (the name
+#'   every other function uses); documented, still working, not warned.
 #'
 #' @return A numeric vector of estimated widths in inches (same length as
 #'   `text`).
 #'
 #' @examples
 #' text_width_in("Hello, World!")          # ~0.88 inches at 9pt Courier New
-#' text_width_in("abc", size_half_points = 24)   # 12pt
+#' text_width_in("abc", font_size_half_points = 24)   # 12pt
 #'
 #' @export
-text_width_in <- function(text, font = "courier_new", size_half_points = 18L) {
+text_width_in <- function(text, font = NULL, font_size_half_points = 18L,
+                          size_half_points = NULL) {
   text <- ifelse(is.na(text), "", as.character(text))
-  size_pt  <- as.numeric(size_half_points) / 2
-  char_w   <- .char_width_in(tolower(font), size_pt)
+  size_pt  <- as.numeric(size_half_points %||% font_size_half_points) / 2
+  char_w   <- .char_width_in(.font_key(font), size_pt)
   nchar(text, type = "chars") * char_w
+}
+
+# A font as the width tables know it: "Courier New" -> "courier_new"; NULL
+# is the package's font (the option), as for every other `font =` (#594)
+.font_key <- function(font) {
+  f <- font %||% .opt("rtfreporter.font") %||% "courier_new"
+  tolower(gsub("[ -]+", "_", trimws(f)))
 }
 
 
@@ -59,13 +72,17 @@ text_width_in <- function(text, font = "courier_new", size_half_points = 18L) {
 #' suggested column widths in **twips**.  The widths can be passed directly to
 #' [rtftable()]'s `column_widths_twips` argument.
 #'
-#' @param df A `data.frame`.
-#' @param col_header Column header labels.  `NULL` (default) uses `names(df)`.
+#' @param data A `data.frame`.
+#' @param col_header Column header labels.  `NULL` (default) uses `names(data)`.
 #'   Accepts the same formats as `rtftable(col_header = ...)`: a character
 #'   vector, a pipe-delimited string, or a list of character vectors (only the
 #'   first row is used for width estimation).
-#' @param font Font name passed to [text_width_in()].  Default `"courier_new"`.
-#' @param size_half_points Font size in half-points.  Default `18` (= 9 pt).
+#' @param font Font name passed to [text_width_in()].  `NULL` (default) is
+#'   the package's font, `getOption("rtfreporter.font")`.
+#' @param font_size_half_points Font size in half-points.  Default `18` (= 9 pt).
+#' @param df,size_half_points *Superseded* by `data` and
+#'   `font_size_half_points` (the names the other functions use); documented,
+#'   still working, not warned.
 #' @param table_width_twips If not `NULL`, the column widths are scaled so that
 #'   their sum equals this value.  Useful for fitting tables to a fixed page
 #'   width.
@@ -81,7 +98,7 @@ text_width_in <- function(text, font = "courier_new", size_half_points = 18L) {
 #'   scalable columns below `min_col_width_twips`.  Has no effect when scaling
 #'   *up* or when `table_width_twips` is `NULL`.  Default none.
 #'
-#' @return An integer vector of column widths in twips, one per column of `df`.
+#' @return An integer vector of column widths in twips, one per column of `data`.
 #'
 #' @examples
 #' df <- data.frame(
@@ -93,17 +110,20 @@ text_width_in <- function(text, font = "courier_new", size_half_points = 18L) {
 #' tbl <- rtftable(df, column_widths_twips = widths)
 #'
 #' @export
-auto_col_widths <- function(df,
+auto_col_widths <- function(data = NULL,
                              col_header         = NULL,
-                             font               = "courier_new",
-                             size_half_points   = 18L,
+                             font               = NULL,
+                             font_size_half_points = 18L,
                              table_width_twips  = NULL,
                              min_col_width_twips = 720L,
                              col_padding_twips  = 288L,
-                             protect_cols       = integer(0)) {
-  if (!is.data.frame(df)) stop("`df` must be a data.frame.", call. = FALSE)
+                             protect_cols       = integer(0),
+                             df                 = NULL,
+                             size_half_points   = NULL) {
+  df <- data %||% df
+  if (!is.data.frame(df)) stop("`data` must be a data.frame.", call. = FALSE)
   ncols   <- ncol(df)
-  size_pt <- as.numeric(size_half_points) / 2
+  size_pt <- as.numeric(size_half_points %||% font_size_half_points) / 2
 
   # Resolve header labels (use first row when multi-row).
   hdr_labels <- if (is.null(col_header)) {
@@ -133,7 +153,7 @@ auto_col_widths <- function(df,
   }
 
   # Maximum content width per column (header vs data), in inches.
-  char_w <- .char_width_in(tolower(font), size_pt)
+  char_w <- .char_width_in(.font_key(font), size_pt)
   col_max_in <- vapply(seq_len(ncols), function(j) {
     hdr_w  <- max(0L, .max_line_nchar(hdr_labels[j] %||% "")) * char_w
     data_w <- max(0L, .max_line_nchar(df[[j]])) * char_w

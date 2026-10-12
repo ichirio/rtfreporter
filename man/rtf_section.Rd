@@ -4,7 +4,7 @@
 \alias{rtf_section}
 \title{Define sections for pages}
 \usage{
-rtf_section(doc, page = NULL, secinfo)
+rtf_section(doc, page = NULL, secinfo = NULL, header = NULL, footer = NULL)
 }
 \arguments{
 \item{doc}{An \code{rtf_document} object.}
@@ -14,17 +14,20 @@ content order (starting at 1), so this is a \strong{page number}. A single
 integer starts one section at that page; a vector starts several sections
 at once (its length must match the number of sections in \code{secinfo}).}
 
-\item{secinfo}{The section definition(s). A single section is a named list:
-\describe{
-\item{\code{header}}{an \code{\link[=rtf_header]{rtf_header()}} object, or \code{NULL}}
-\item{\code{footer}}{an \code{\link[=rtf_footer]{rtf_footer()}} object, or \code{NULL}}
-}
-\code{NULL} means \strong{inherit}: a section with no header (footer) of its own
-keeps the previous section's, so only the first section's \code{NULL} leaves
-the pages without one. For a blank band after a section that has one,
-pass an empty one: \code{rtf_header("")}.
-For several sections, pass a \code{list} of such section lists -- one per entry
-of \code{page}.}
+\item{secinfo}{\emph{Superseded} by \code{header} / \code{footer} (documented, not
+warned): the same as a named list, \code{list(header = , footer = )}, and the
+way to give several sections at once -- a \code{list} of such lists, one per
+entry of \code{page}.  A name other than \code{header} / \code{footer} / \code{watermark} is
+an error (it used to be ignored, the band it meant left out), and so is
+a header / footer that is neither an \code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}},
+its rows nor its text.}
+
+\item{header, footer}{The section's running header and footer: an
+\code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}}, or \code{NULL}.  \code{NULL} means \strong{inherit}: a
+section with no header (footer) of its own keeps the previous section's,
+so only the first section's \code{NULL} leaves the pages without one.  For a
+blank band after a section that has one, pass an empty one:
+\code{rtf_header("")}.}
 }
 \value{
 The \code{rtf_document} with the section definition(s) added.
@@ -42,13 +45,13 @@ ftr <- rtf_footer(c(l = "Confidential"))
 # One header / footer applied to the whole document:
 doc <- rtf_document() |>
   rtf_tables(list(df, df)) |>
-  rtf_section(page = 1, secinfo = list(header = h1, footer = ftr))
+  rtf_section(header = h1, footer = ftr)
 
 # A second section, with a different header, starting at page 2:
 doc <- rtf_document() |>
   rtf_tables(list(df, df)) |>
-  rtf_section(page = 1, secinfo = list(header = h1, footer = ftr)) |>
-  rtf_section(page = 2, secinfo = list(header = h2, footer = ftr))
+  rtf_section(page = 1, header = h1, footer = ftr) |>
+  rtf_section(page = 2, header = h2)        # the footer is inherited
 
 }
 \seealso{

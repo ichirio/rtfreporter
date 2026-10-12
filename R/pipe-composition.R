@@ -671,6 +671,8 @@ rtf_tables <- function(doc, tables,
   # Validate titles / footnotes lengths
   .validate_parallel <- function(x, n, name) {
     if (is.null(x)) return(rep(list(NULL), n))
+    # a character vector is one block (its lines), for every page (#594)
+    if (is.character(x)) x <- list(x)
     if (!is.list(x)) {
       stop(sprintf("`%s` must be a list (or NULL).", name), call. = FALSE)
     }
@@ -817,12 +819,16 @@ rtf_figures <- function(doc, figures,
 
   .validate_parallel <- function(x, n, name) {
     if (is.null(x)) return(rep(list(NULL), n))
+    # a character vector is one block (its lines), for every page (#594)
+    if (is.character(x)) x <- list(x)
     if (!is.list(x))
       stop(sprintf("`%s` must be a list (or NULL).", name), call. = FALSE)
     if (length(x) == 1L && n > 1L) return(rep(x, n))  # one block = common to all
     if (length(x) != n)
-      stop(sprintf("`%s` must have length %d (= length(figures)) or 1 (common to all).",
-                   name, n), call. = FALSE)
+      stop(sprintf(paste0("`%s` has %d blocks but there %s %d figure%s: give ",
+                          "one block per figure, or one block for every figure."),
+                   name, length(x), if (n == 1L) "is" else "are", n,
+                   if (n == 1L) "" else "s"), call. = FALSE)
     x
   }
   titles    <- .validate_parallel(titles,    length(figures), "titles")
@@ -904,8 +910,11 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
                 "page, or one for all).  Or pass `titles =` to rtf_tables() / ",
                 "rtf_figures()."), call. = FALSE)
   }
+  # a character vector is one block (its lines), for every page (#594)
+  if (is.character(titles)) titles <- list(titles)
   if (!is.list(titles)) {
-    stop("`titles` must be a list (one element per page).", call. = FALSE)
+    stop(paste0("`titles` must be a list (one block per page) or a character ",
+                "vector (one block for every page)."), call. = FALSE)
   }
   if (length(titles) == 1L && n > 1L) titles <- rep(titles, n)  # common to all
   if (length(titles) != n) {
@@ -974,8 +983,11 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
                 "page, or one for all).  Or pass `footnotes =` to rtf_tables() / ",
                 "rtf_figures()."), call. = FALSE)
   }
+  # a character vector is one block (its lines), for every page (#594)
+  if (is.character(footnotes)) footnotes <- list(footnotes)
   if (!is.list(footnotes)) {
-    stop("`footnotes` must be a list (one element per page).", call. = FALSE)
+    stop(paste0("`footnotes` must be a list (one block per page) or a ",
+                "character vector (one block for every page)."), call. = FALSE)
   }
   if (length(footnotes) == 1L && n > 1L) footnotes <- rep(footnotes, n)  # common to all
   if (length(footnotes) != n) {
@@ -1014,17 +1026,19 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
 #'   content order (starting at 1), so this is a **page number**. A single
 #'   integer starts one section at that page; a vector starts several sections
 #'   at once (its length must match the number of sections in `secinfo`).
-#' @param secinfo The section definition(s). A single section is a named list:
-#'   \describe{
-#'     \item{`header`}{an [rtf_header()] object, or `NULL`}
-#'     \item{`footer`}{an [rtf_footer()] object, or `NULL`}
-#'   }
-#'   `NULL` means **inherit**: a section with no header (footer) of its own
-#'   keeps the previous section's, so only the first section's `NULL` leaves
-#'   the pages without one. For a blank band after a section that has one,
-#'   pass an empty one: `rtf_header("")`.
-#'   For several sections, pass a `list` of such section lists -- one per entry
-#'   of `page`.
+#' @param header,footer The section's running header and footer: an
+#'   [rtf_header()] / [rtf_footer()], or `NULL`.  `NULL` means **inherit**: a
+#'   section with no header (footer) of its own keeps the previous section's,
+#'   so only the first section's `NULL` leaves the pages without one.  For a
+#'   blank band after a section that has one, pass an empty one:
+#'   `rtf_header("")`.
+#' @param secinfo *Superseded* by `header` / `footer` (documented, not
+#'   warned): the same as a named list, `list(header = , footer = )`, and the
+#'   way to give several sections at once -- a `list` of such lists, one per
+#'   entry of `page`.  A name other than `header` / `footer` / `watermark` is
+#'   an error (it used to be ignored, the band it meant left out), and so is
+#'   a header / footer that is neither an [rtf_header()] / [rtf_footer()],
+#'   its rows nor its text.
 #'
 #' @return The `rtf_document` with the section definition(s) added.
 #'
@@ -1037,21 +1051,33 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
 #' # One header / footer applied to the whole document:
 #' doc <- rtf_document() |>
 #'   rtf_tables(list(df, df)) |>
-#'   rtf_section(page = 1, secinfo = list(header = h1, footer = ftr))
+#'   rtf_section(header = h1, footer = ftr)
 #'
 #' # A second section, with a different header, starting at page 2:
 #' doc <- rtf_document() |>
 #'   rtf_tables(list(df, df)) |>
-#'   rtf_section(page = 1, secinfo = list(header = h1, footer = ftr)) |>
-#'   rtf_section(page = 2, secinfo = list(header = h2, footer = ftr))
+#'   rtf_section(page = 1, header = h1, footer = ftr) |>
+#'   rtf_section(page = 2, header = h2)        # the footer is inherited
 #'
 #' @seealso [rtf_header()] / [rtf_footer()] to build the header / footer, and
 #'   [rtf_document()] for the document and its `page` geometry.
 #' @export
-rtf_section <- function(doc, page = NULL, secinfo) {
+rtf_section <- function(doc, page = NULL, secinfo = NULL, header = NULL,
+                        footer = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
+  # header = / footer = are the section; secinfo the superseded list form
+  if (!is.null(header) || !is.null(footer)) {
+    if (!is.null(secinfo)) {
+      stop("Give the section as `header =` / `footer =` or as `secinfo =`, not both.",
+           call. = FALSE)
+    }
+    secinfo <- list(header = header, footer = footer)
+  } else if (is.null(secinfo)) {
+    secinfo <- list(header = NULL, footer = NULL)
+  }
+  .check_secinfo(secinfo, length(page))
 
   # Handle page = NULL: store as "_default" template used by auto_section.
   if (is.null(page)) {
@@ -1109,6 +1135,46 @@ rtf_section <- function(doc, page = NULL, secinfo) {
   }
 
   doc_copy
+}
+
+# A section's list: only `header`, `footer` and `watermark`; a header /
+# footer is an rtf_header() / rtf_footer(), its rows (a list, or the text),
+# or NULL.  A misspelled name used to be ignored, so the band it meant was
+# left out without a word (#594 E3).  Several sections: a list of such
+# lists.  A secinfo that is not a list is left to rtf_section()'s own
+# messages.
+.check_secinfo <- function(secinfo, n_page) {
+  one <- function(s, where) {
+    if (is.null(s) || !is.list(s) || inherits(s, c("rtf_header", "rtf_footer"))) {
+      return(invisible())
+    }
+    bad <- setdiff(names(s), c("header", "footer", "watermark"))
+    if (length(bad) || (length(s) && is.null(names(s)))) {
+      stop(sprintf(paste0("%s has %s: a section has `header`, `footer` and ",
+                          "`watermark` only (rtf_section(header = , footer = ))."),
+                   where, if (length(bad)) paste0("`", bad, "`", collapse = ", ")
+                          else "unnamed elements"), call. = FALSE)
+    }
+    for (k in c("header", "footer")) {
+      v <- s[[k]]
+      cls <- paste0("rtf_", k)
+      if (!is.null(v) && !inherits(v, cls) && !is.list(v) && !is.character(v)) {
+        stop(sprintf("%s's `%s` must be an %s() or NULL, not %s.", where, k, cls,
+                     paste0("a ", class(v)[1L])), call. = FALSE)
+      }
+    }
+    invisible()
+  }
+  # a list of sections (unnamed, each a list), or one wrapped section
+  several <- length(secinfo) > 0L && is.null(names(secinfo)) &&
+    all(vapply(secinfo, function(s) is.null(s) || (is.list(s) &&
+      !inherits(s, c("rtf_header", "rtf_footer"))), logical(1L)))
+  if (several) {
+    for (i in seq_along(secinfo)) one(secinfo[[i]], sprintf("`secinfo[[%d]]`", i))
+  } else {
+    one(secinfo, "`secinfo`")
+  }
+  invisible()
 }
 
 # ============================================================================

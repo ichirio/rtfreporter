@@ -4,16 +4,27 @@
 \alias{text_width_in}
 \title{Estimate the display width of a text string}
 \usage{
-text_width_in(text, font = "courier_new", size_half_points = 18L)
+text_width_in(
+  text,
+  font = NULL,
+  font_size_half_points = 18L,
+  size_half_points = NULL
+)
 }
 \arguments{
 \item{text}{A character vector.  \code{NA} is treated as \code{""}.}
 
-\item{font}{Font name.  One of \code{"courier_new"} (default), \code{"courier"}, or
-\code{"arial"}.  Unrecognised values fall back to Courier New.}
+\item{font}{Font name: \code{"Courier New"} / \code{"courier_new"}, \code{"Courier"}, or
+\code{"Arial"} (case and spaces do not matter).  \code{NULL} (default) is the
+package's font, \code{getOption("rtfreporter.font")} ("Courier"), as for every
+other \verb{font =}.  Unrecognised values fall back to Courier New.}
 
-\item{size_half_points}{Font size in \strong{half-points} (the unit used by RTF
-and the document's \code{default_format$font_size_half_points}).  Default \code{18} = 9 pt.}
+\item{font_size_half_points}{Font size in \strong{half-points} (the unit used by
+RTF and the document's \code{default_format$font_size_half_points}).  Default
+\code{18} = 9 pt.}
+
+\item{size_half_points}{\emph{Superseded} by \code{font_size_half_points} (the name
+every other function uses); documented, still working, not warned.}
 }
 \value{
 A numeric vector of estimated widths in inches (same length as
@@ -27,6 +38,6 @@ approximation.
 }
 \examples{
 text_width_in("Hello, World!")          # ~0.88 inches at 9pt Courier New
-text_width_in("abc", size_half_points = 24)   # 12pt
+text_width_in("abc", font_size_half_points = 24)   # 12pt
 
 }

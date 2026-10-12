@@ -8,13 +8,14 @@ fit_listing_widths(
   data,
   spec,
   page = NULL,
-  font = "courier_new",
-  size_half_points = 18L,
+  font = NULL,
+  font_size_half_points = 18L,
   total_width = NULL,
   labels = NULL,
   header_lines = 4L,
   min_width = 6L,
-  probs = 0.9
+  probs = 0.9,
+  size_half_points = NULL
 )
 }
 \arguments{
@@ -27,8 +28,10 @@ same fields) -- the paper size, orientation and margins the listing will
 be rendered on.  \code{NULL} (default) uses rtfreporter's own page defaults.
 Ignored when \code{total_width} is given.}
 
-\item{font, size_half_points}{The font the listing renders in, used to turn
-the page's width into a number of characters.  \code{size_half_points} is
+\item{font, font_size_half_points}{The font the listing renders in, used to
+turn the page's width into a number of characters.  \code{font = NULL}
+(default) is the package's font, \code{getOption("rtfreporter.font")}, as for
+every other \verb{font =}.  \code{font_size_half_points} is
 \strong{half-points}, as everywhere in RTF: 8pt is \code{16L}, 9pt (the default)
 is \code{18L}.  Getting it wrong silently changes the budget -- at 8pt a
 landscape A4 with half-inch margins holds 159 characters, at 9pt only
@@ -36,9 +39,8 @@ landscape A4 with half-inch margins holds 159 characters, at 9pt only
 \code{rtf_document(default_format = )}.}
 
 \item{total_width}{Character budget for the whole listing, gutters included.
-\code{NULL} (default) computes it from \code{page}, \code{font} and \code{size_half_points}.
-Give it directly when you know the budget and would rather not describe
-the page.}
+\code{NULL} (default) computes it from \code{page}, \code{font} and
+\code{font_size_half_points}.}
 
 \item{labels}{Named character vector giving the words for the \strong{source}
 variables, e.g. \code{c(USUBJID = "Unique Subject ID", AGE = "Age")}.  Used
@@ -63,6 +65,11 @@ data-driven fit.}
 
 \item{probs}{Quantile of a column's cell widths taken as its demand
 (default \code{0.9}).}
+
+\item{size_half_points}{\emph{Superseded} by \code{font_size_half_points} (the name
+every other function uses); documented, still working, not warned.
+Give it directly when you know the budget and would rather not describe
+the page.}
 }
 \value{
 The \code{listing_spec}, with a \code{width} on every column.  It carries the

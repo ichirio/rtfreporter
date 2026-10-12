@@ -23,6 +23,36 @@ removes it.  No old name is kept as an alias.
   formatters.  The cell-format name `"realign_count_pct"` says so too
   (`"count_pct"` is the same); `"count_paren_bare"` stays.
 
+### The rest of the review, iteration 0 (#594; nothing breaks)
+
+The names below that are *superseded* still work and do not warn
+(documented on their help pages); nothing is removed.
+
+- **`rtf_section(header = , footer = )`** (#594 1.5): the section is given as
+  two arguments, `rtf_section(doc, header = hdr, footer = ftr)`; `secinfo =
+  list(header = , footer = )` is superseded (it is still how several
+  sections are given at once).  A `secinfo` with another name
+  (`list(hdr = )`) is an error -- it was ignored, and the band it meant was
+  left out without a word (E3) -- and so is a header that is not a header,
+  its rows or its text (`list(header = 1)`).
+- **`paginate_cols()` takes `plan_paginate_cols()`'s names** (#594 1.4):
+  `cut_by` (a list of blocks or a separator), `every` (a block every so many
+  columns, which `paginate_cols()` did not have), `keep`, `fit`
+  (`TRUE`/`FALSE`) and `order`; `cols` / `by`, `carry`, `width` and
+  `page_order` are superseded.
+- **A character vector of titles or footnotes is one block for every page**
+  (#594 §3): `rtf_titles(doc, c("Table 14.1.1", "Demographics"))`, and
+  `titles =` / `footnotes =` of `rtf_tables()` / `rtf_figures()`, as
+  `list(c(...))` was.  It used to be an error.
+- **One name for a thing** (#594 1.4): `text_width_in()`,
+  `auto_col_widths()` and `fit_listing_widths()` take
+  `font_size_half_points` (was `size_half_points`) and default
+  `font = NULL`, the package's font (`getOption("rtfreporter.font")`, as
+  every other `font =`; it was always Courier New -- the same widths under
+  the default option); `auto_col_widths(data = )` (was `df`);
+  `generate_rtfreport(doc = )` (was `report`).  A call by position is
+  unchanged.
+
 ### Changed
 
 - **`generate_rtfreport(overwrite = TRUE)` is the default.**  A report

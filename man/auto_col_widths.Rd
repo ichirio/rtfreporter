@@ -5,27 +5,30 @@
 \title{Automatically calculate column widths for a data.frame}
 \usage{
 auto_col_widths(
-  df,
+  data = NULL,
   col_header = NULL,
-  font = "courier_new",
-  size_half_points = 18L,
+  font = NULL,
+  font_size_half_points = 18L,
   table_width_twips = NULL,
   min_col_width_twips = 720L,
   col_padding_twips = 288L,
-  protect_cols = integer(0)
+  protect_cols = integer(0),
+  df = NULL,
+  size_half_points = NULL
 )
 }
 \arguments{
-\item{df}{A \code{data.frame}.}
+\item{data}{A \code{data.frame}.}
 
-\item{col_header}{Column header labels.  \code{NULL} (default) uses \code{names(df)}.
+\item{col_header}{Column header labels.  \code{NULL} (default) uses \code{names(data)}.
 Accepts the same formats as \code{rtftable(col_header = ...)}: a character
 vector, a pipe-delimited string, or a list of character vectors (only the
 first row is used for width estimation).}
 
-\item{font}{Font name passed to \code{\link[=text_width_in]{text_width_in()}}.  Default \code{"courier_new"}.}
+\item{font}{Font name passed to \code{\link[=text_width_in]{text_width_in()}}.  \code{NULL} (default) is
+the package's font, \code{getOption("rtfreporter.font")}.}
 
-\item{size_half_points}{Font size in half-points.  Default \code{18} (= 9 pt).}
+\item{font_size_half_points}{Font size in half-points.  Default \code{18} (= 9 pt).}
 
 \item{table_width_twips}{If not \code{NULL}, the column widths are scaled so that
 their sum equals this value.  Useful for fitting tables to a fixed page
@@ -44,9 +47,13 @@ a row-label column (\code{protect_cols = 1}) stays readable while the data
 columns absorb the squeeze.  Protection is dropped if it would push the
 scalable columns below \code{min_col_width_twips}.  Has no effect when scaling
 \emph{up} or when \code{table_width_twips} is \code{NULL}.  Default none.}
+
+\item{df, size_half_points}{\emph{Superseded} by \code{data} and
+\code{font_size_half_points} (the names the other functions use); documented,
+still working, not warned.}
 }
 \value{
-An integer vector of column widths in twips, one per column of \code{df}.
+An integer vector of column widths in twips, one per column of \code{data}.
 }
 \description{
 Scans the content of each column (header labels and data values) to derive
