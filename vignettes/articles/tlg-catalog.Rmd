@@ -407,7 +407,8 @@ ae_tfrmt <- tfrmt_n_pct(
 
 This one renders to a `gt_tbl`, so we use `split = "group_force"` pagination,
 two/three-line column headers (so the data columns can be narrow), and
-`fmt_count_paren_bare` (which also lines up the bare `0` counts):
+`fmt_count_paren(bare = TRUE)` (which also lines up the bare `0` counts --
+the built-in cell format `"count_paren_bare"`):
 
 ```{r ae-tfrmt-rtf}
 ae_hdr <- c("System Organ Class /\nPreferred Term", "Placebo\n(N=86)",
@@ -416,7 +417,7 @@ ae_hdr <- c("System Organ Class /\nPreferred Term", "Placebo\n(N=86)",
 ae_tfrmt_pages <- as_rtftables(ae_tfrmt, split = "group_force", max_rows = 36,
                                col_header = ae_hdr,
                                col_rel_width = c(0.50, 0.125, 0.125, 0.125, 0.125),
-                               col_spec = ae_col_spec, cell_format = fmt_count_paren_bare,
+                               col_spec = ae_col_spec, cell_format = "count_paren_bare",
                                row_height_twips = 200)
 out_ae_tfrmt <- tempfile(fileext = ".rtf")
 rtf_document() |>
@@ -538,7 +539,7 @@ just before pagination.  rtfreporter ships a few:
   all share one width and line up on both the count digit and the percentage.
   (It also copes with the 4-digit event totals in the tern table, which the
   fixed-width helper below cannot.)
-* `align_count_pct = TRUE` / `realign_count_pct()` -- the older fixed-width
+* `align_count_pct = TRUE` (the cell format `"count_pct"`) -- the older fixed-width
   helper for plain `"n (xx.x%)"` cells; kept for back-compatibility.
 * `fmt_right_align()` -- the simplest one: right-justify a column to a common
   width.

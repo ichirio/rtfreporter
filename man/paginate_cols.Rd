@@ -74,8 +74,7 @@ per page either way.}
 }
 This is the place to put it: a header written for the whole table does
 \strong{not} fit a page that kept only some of its columns, so applying one
-after the split (\code{set_col_header()} on the page list,
-\code{rtf_tables(col_header = )}) is an error.}
+after the split (\code{set_col_header()} on the page list) is an error.}
 
 \item{allow_span_break}{Allow a cut inside a spanning header cell. Default
 \code{TRUE}.}

@@ -32,27 +32,29 @@ df2 <- data.frame(Parameter = c("Sex", "  F", "  M"),
 
 ## A single table
 
-The quickest way is to hand a data.frame straight to `rtf_tables()` with the
-formatting you want -- a single item needs no `list()`:
+The quickest way is to hand a data.frame straight to `rtf_tables()` -- a
+single item needs no `list()`, and it gets the default look (TFL borders, the
+first column left, the others centred):
 
 ```{r single-bare}
-doc <- rtf_document() |>
-  rtf_tables(df1, border = "tfl", row_height_twips = 280L, col_rel_width = c(2, 1))
+doc <- rtf_document() |> rtf_tables(df1)
 length(doc$contents)        # one page
 ```
 
-For full control, build the table object yourself with `rtftable()` (or
-`as_rtftables()` for gt/rtables sources) and pass that:
+A table's appearance is written on the table: build it with `rtftable()` (or
+`as_rtftables()` for gt/rtables sources, or a plan's `plan_style()`) and pass
+that:
 
 ```{r single-built}
-tbl <- rtftable(df1, border = "tfl", col_rel_width = c(2, 1),
+tbl <- rtftable(df1, border = "tfl", row_height_twips = 280L,
+                col_rel_width = c(2, 1),
                 col_spec = list(list(col = 2, align = "right")))
 doc <- rtf_document() |> rtf_tables(tbl)
 ```
 
-The formatting arguments of `rtf_tables()` (`border`, `col_rel_width`,
-`row_height_twips`, `col_spec`, ...) are documented on `?rtftable`; they are the
-same options either way.
+The options (`border`, `col_rel_width`, `row_height_twips`, `col_spec`, ...)
+are documented on `?rtftable`.  (`rtf_tables()` used to take copies of them;
+those are deprecated and removed in 0.9.0.)
 
 ### Column alignment and `row_title`
 
@@ -68,25 +70,19 @@ tbl <- rtftable(df1, row_title = c(1, 2))
 
 `row_title` only sets the *default* alignment; an explicit `col_spec` `align`,
 an `rtf_table_style`, or alignment read from a gt/rtables source still wins, and
-column headers follow their column's data alignment. `rtf_tables()` and
-`as_rtftables()` take `row_title` too, so the same default applies to a whole
-batch of tables at once.
+column headers follow their column's data alignment. `as_rtftables()` takes
+`row_title` too, so the same default applies to every page of a table.
 
 
 ## The same settings for several tables
 
-Pass a **list** of bare data.frames and the formatting arguments are applied to
-**every** one -- handy for a batch of tables that should look identical. Each
-element still becomes its own page:
+Build every table with the same settings -- `lapply()` over the data.frames
+-- and pass the list.  Each element becomes its own page:
 
 ```{r bulk}
-doc <- rtf_document() |>
-  rtf_tables(
-    list(df1, df2),
-    border           = "tfl",
-    row_height_twips = 280L,
-    col_rel_width    = c(2, 1)
-  )
+pages <- lapply(list(df1, df2), rtftable,
+                border = "tfl", row_height_twips = 280L, col_rel_width = c(2, 1))
+doc <- rtf_document() |> rtf_tables(pages)
 length(doc$contents)        # two pages, same look
 ```
 
@@ -106,22 +102,6 @@ doc$contents[[1]]$row_height_twips   # 280 -- t1 keeps its own
 doc$contents[[2]]$row_height_twips   # 200 -- t2 keeps its own
 ```
 
-### Override semantics
-
-A formatting argument you pass **explicitly** to `rtf_tables()` overrides that
-field on every pre-built table; arguments you leave at their default do not
-touch the tables'' own values. This lets you set a shared override without
-rebuilding the tables:
-
-```{r override}
-doc <- rtf_document() |>
-  rtf_tables(list(t1, t2), row_height_twips = 240L)   # explicit -> overrides both
-doc$contents[[1]]$row_height_twips   # 240
-doc$contents[[2]]$row_height_twips   # 240
-```
-
-(Bare data.frames are always built from the supplied arguments; `rtfplot()`
-figure objects are never modified.)
 
 
 ## Titles and footnotes
@@ -149,7 +129,6 @@ page):
 doc <- rtf_document() |>
   rtf_tables(
     list(df1, df2),
-    border    = "tfl",
     titles    = list(c("Table 14.1.1", "Demographics"),
                      c("Table 14.1.2", "Sex")),
     footnotes = list(c("Source: ADSL"), NULL)

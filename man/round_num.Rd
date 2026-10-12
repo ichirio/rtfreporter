@@ -23,7 +23,7 @@ The two disagree on an exact half.  Base R rounds a half to the \strong{even}
 digit (\code{round(0.5)} is \code{0}, \code{round(2.5)} is \code{2}); SAS's \code{ROUND()} rounds
 it \strong{away from zero} (\code{0.5} is \code{1}, \code{2.5} is \code{3}, \code{-0.5} is \code{-1}).
 Every formatter in the package -- \code{\link[=fmt_signif]{fmt_signif()}}, \code{\link[=fmt_round]{fmt_round()}},
-\code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=format_count_pct]{format_count_pct()}} -- rounds with this same rule, so
+\code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=fmt_count_pct]{fmt_count_pct()}} -- rounds with this same rule, so
 a study that has to match a SAS-produced table sets it \strong{once}:
 
 \preformatted{

@@ -32,6 +32,8 @@ W <- 13680L
 
 # ──────── blocks and carry columns ─────────────────────────────────────────
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that("`at` cuts before the named columns", {
   pages <- paginate_cols(rtftable(.df()), at = c(4, 6))
   expect_length(pages, 3L)

@@ -1,6 +1,8 @@
 # Font-size-aware default row height is applied uniformly across all
 # table-shaped elements (RTF header, footer, table body).
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that(".default_row_height_twips() honors lookup, linear fallback, and clamp", {
   expect_identical(rtfreporter:::.default_row_height_twips(18L), 230L)  # 9pt
   expect_identical(rtfreporter:::.default_row_height_twips(24L), 290L)  # 12pt

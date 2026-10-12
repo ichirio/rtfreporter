@@ -307,8 +307,8 @@ the split and re-attached per page afterwards, with a leading blank
 suppressed at the top of each page.}
 
 \item{align_count_pct}{The cell alignment to apply before pagination.
-\code{FALSE} (default) none; \code{TRUE} the built-in \code{\link[=realign_count_pct]{realign_count_pct()}}, which
-realigns \code{"n (xx.x)"} count/percent cells to a uniform width.  It also
+\code{FALSE} (default) none; \code{TRUE} the built-in cell format \code{"count_pct"},
+which realigns \code{"n (xx.x)"} count/percent cells to a uniform width.  It also
 accepts the \strong{name of any built-in} (\code{"count_paren"}, \code{"value_paren"},
 \code{"right_align"}, ... -- the \code{fmt_} prefix is optional) or a function of
 your own, in which case it behaves exactly like \code{cell_format}.  Ignored

@@ -126,7 +126,7 @@ setting. Every layer has been merged, so what you see is what runs.
 | `style_header()`, `style_cols()` | `plan_cell_style(header = TRUE, ...)`, `plan_cell_style(cols = , ...)` |
 | `style_zone()` | `plan_style(border_* = )` |
 | `rtftable(cell_styles = )`, `style_body()` by condition | `plan_cell_style(where = ~ ..., ...)`, or a formula value |
-| `realign_count_pct()` | `plan_style(align_count_pct = TRUE)` |
+| `as_rtftables(align_count_pct = TRUE)` | `plan_style(align_count_pct = TRUE)` |
 | `fmt_numeric()` on the data | `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
 
 **Handled for you**

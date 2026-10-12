@@ -162,7 +162,7 @@ ae_footer <- rtf_footer(rows = list(
 # "0 (0.0%)", so for them the expansion is a no-op.
 fmt_ae <- function(x, nbsp = " ") {
   x[trimws(x) == "0"] <- "0 (0.0%)"
-  fmt_count_paren_bare(x, nbsp = nbsp)
+  fmt_count_paren(x, nbsp = nbsp, bare = TRUE)
 }
 ```
 

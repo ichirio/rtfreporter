@@ -11,7 +11,7 @@ realign_count_pct(x, nbsp = " ", na = "")
 \verb{^\\\\d+ \\\\(\\\\d+(\\\\.\\\\d+)?\\\\)$} are reformatted; all others are
 returned unchanged.}
 
-\item{nbsp}{Padding character (see \code{\link[=format_count_pct]{format_count_pct()}}).}
+\item{nbsp}{Padding character (see \code{\link[=fmt_count_pct]{fmt_count_pct()}}).}
 
 \item{na}{Text to print for a missing cell -- an \code{NA} in \code{x}, or a cell that
 already holds this token because \code{\link[=as_rtftables]{as_rtftables()}} substituted it.  It is
@@ -24,25 +24,24 @@ still returned unchanged and unpadded.}
 Character vector the same length as \code{x}.
 }
 \description{
-Scans \code{x} for cells matching the clinical-TFL pattern \code{"n (xx.x)"}
-(e.g. \code{"5 (33.3)"}), parses the count and percent, and reformats
-them through \code{\link[=format_count_pct]{format_count_pct()}} so every cell is the same width.
-Cells that do not match are returned unchanged.
+\strong{Deprecated} in 0.8.x (it says so once a session and still works),
+removed in 0.9.0: the same alignment is \code{as_rtftables(align_count_pct = TRUE)}, or the built-in cell format \code{"count_pct"}
+(\code{as_rtftables(cell_format = "count_pct")}).
 }
 \details{
-This is what \code{align_count_pct = TRUE} applies, column by column, to every
-character column but the first (see \code{\link[=as_rtftables]{as_rtftables()}}); it is also the
-built-in named \code{"count_pct"}.  It is exported so it can be applied directly
-to a data.frame column outside of any pagination context.
+Scans \code{x} for cells matching the clinical-TFL pattern \code{"n (xx.x)"}
+(e.g. \code{"5 (33.3)"}), parses the count and percent, and reformats
+them through \code{\link[=fmt_count_pct]{fmt_count_pct()}} so every cell is the same width.
+Cells that do not match are returned unchanged.
 }
 \examples{
-realign_count_pct(c("5 (33.3)", "12 (100.0)", "0 (0.0)",
-                    "not a count", "1 (5.0)", "1 (50.0)"))
-
-# A missing cell, shown as "-" under the ones digit
-realign_count_pct(c("5 (33.3)", NA, "12 (100.0)"), na = "-", nbsp = " ")
+# deprecated: the same as as_rtftables(align_count_pct = TRUE) does
+suppressWarnings(
+  realign_count_pct(c("5 (33.3)", "12 (100.0)", "0 (0.0)",
+                      "not a count", "1 (5.0)", "1 (50.0)")))
 
 }
 \seealso{
-\code{\link[=format_count_pct]{format_count_pct()}} for the numeric -> string variant.
+\code{\link[=fmt_count_pct]{fmt_count_pct()}} for the numeric -> string variant.
 }
+\keyword{internal}

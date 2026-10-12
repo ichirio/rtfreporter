@@ -73,7 +73,11 @@ test_that("every deprecated function still works and warns once", {
     assemble_from_spec = function()
       assemble_from_spec(assemble_folder(.toc_dir()), tempfile(fileext = ".rtf")),
     toc_heading       = function() toc_heading("A"),
-    toc_entry         = function() toc_entry("A", file = "a.rtf")
+    toc_entry         = function() toc_entry("A", file = "a.rtf"),
+    # 0.8.2.9039: the pre-CRAN API review, iteration 0 (#594 O2)
+    fmt_count_paren_bare = function() fmt_count_paren_bare(c("1 (5.0%)", "0")),
+    realign_count_pct = function() realign_count_pct(c("5 (33.3)", "12 (100.0)")),
+    format_count_pct  = function() format_count_pct(5L, 0.05)
   )
   expect_setequal(names(calls), .dep)
 
@@ -120,9 +124,12 @@ test_that("the effective export count is the reviewed number", {
   # #598 added plan_nest(), a variable's rows under a level of another;
   # 127 / 107 since tflplanner #288 needed plan_n_candidates(), the
   # populations a header's {n} can say;
-  # 128 / 108 since plan_total(), a Total column from the overall rows.)
-  expect_length(.exports(), 128L)
-  expect_length(setdiff(.exports(), .dep), 108L)
+  # 128 / 108 since plan_total(), a Total column from the overall rows;
+  # 129 / 106 since the review's iteration 0 (#594) renamed
+  # format_count_pct() to fmt_count_pct() and deprecated the old name with
+  # fmt_count_paren_bare() and realign_count_pct().)
+  expect_length(.exports(), 129L)
+  expect_length(setdiff(.exports(), .dep), 106L)
 })
 
 test_that("the old argument names still work, with a warning", {
@@ -135,6 +142,57 @@ test_that("the old argument names still work, with a warning", {
   expect_warning(t2 <- rtftable(d, spanning_header = sp), "deprecated")
   expect_identical(t2$spanning_header, sp)
   expect_silent(rtftable(d, spanning_header = sp))     # once a session
+  .reset_deprecation()
+})
+
+test_that("rtf_tables()'s table-format arguments warn once each, and still apply (#594)", {
+  .reset_deprecation()
+  d <- data.frame(a = 1, b = 2)
+  expect_warning(doc <- rtf_tables(rtf_document(), d, col_rel_width = c(2, 1)),
+                 "rtf_tables(col_rel_width = )` is deprecated", fixed = TRUE)
+  expect_identical(doc$contents[[1]]$col_rel_width, c(2, 1))   # as before
+  expect_silent(rtf_tables(rtf_document(), d, col_rel_width = c(2, 1)))
+  # each its own once
+  expect_warning(rtf_tables(rtf_document(), d, border = "tfl"), "border")
+  expect_warning(rtf_tables(rtf_document(), d, font = "Arial"), "font")
+  expect_warning(rtf_tables(rtf_document(), d, read_gt = TRUE), "as_rtftables")
+  # the same settings on the table: no warning, the same page
+  expect_silent(doc2 <- rtf_tables(rtf_document(), rtftable(d, col_rel_width = c(2, 1))))
+  expect_identical(doc2$contents[[1]]$col_rel_width, c(2, 1))
+  # the arguments that are not table-format copies say nothing
+  expect_silent(rtf_tables(rtf_document(), d, titles = list("T"), auto_title = FALSE))
+  expect_length(rtfreporter:::.rtf_tables_fmt_args, 27L)
+  .reset_deprecation()
+})
+
+test_that("fmt_count_paren(bare = TRUE) is fmt_count_paren_bare(), byte for byte (#594)", {
+  xs <- list(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)"),
+             c("5 (33.3)", "0", "12 (100.0)", NA, ""),
+             c("86", "5 (5.8)", "10 (11.6)", "0"),
+             c("Mild", "2 (1.0%)", "0"))
+  for (x in xs) for (nb in c(" ", "\u00a0")) for (na in c("", "-")) {
+    expect_identical(fmt_count_paren(x, nbsp = nb, na = na, bare = TRUE),
+                     suppressWarnings(fmt_count_paren_bare(x, nbsp = nb, na = na)))
+  }
+  # bare = FALSE is fmt_count_paren() as it was
+  expect_identical(fmt_count_paren(xs[[1]]), fmt_count_paren(xs[[1]], bare = FALSE))
+})
+
+test_that("generate_rtfreport() writes over a file by default (#594)", {
+  expect_true(formals(generate_rtfreport)$overwrite)
+})
+
+test_that("a deprecated cell-format name still resolves, and says so (#594)", {
+  .reset_deprecation()
+  x <- c("5 (33.3)", "12 (100.0)")
+  expect_warning(f <- rtfreporter:::.builtin_cell_format("realign_count_pct"), "count_pct")
+  expect_identical(f(x), rtfreporter:::.realign_count_pct(x))
+  expect_silent(rtfreporter:::.builtin_cell_format("count_pct"))
+  # "count_paren_bare" stays: fmt_count_paren(bare = TRUE)
+  expect_silent(rtfreporter:::.builtin_cell_format("count_paren_bare"))
+  expect_identical(suppressWarnings(format_count_pct(5L, 0.05)), fmt_count_pct(5L, 0.05))
+  # the align_count_pct switch says nothing
+  expect_silent(rtfreporter:::.resolve_align_count_pct(TRUE))
   .reset_deprecation()
 })
 

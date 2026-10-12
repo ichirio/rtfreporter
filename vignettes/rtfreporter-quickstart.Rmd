@@ -505,9 +505,7 @@ doc <- rtf_document() |>
     footnotes = list(
       c("Source: ADSL.", "", "N = 160 subjects."),
       NULL
-    ),
-    border           = "tfl",
-    row_height_twips = 280L
+    )
   )
 
 # Or set them after content has been added

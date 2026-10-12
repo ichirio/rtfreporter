@@ -37,6 +37,8 @@ library(testthat)
 
 # ── .is_gtsummary_tbl() ───────────────────────────────────────────────────────
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that(".is_gtsummary_tbl() returns TRUE for gtsummary objects", {
   skip_if_not_installed("gtsummary")
   s <- .make_tbl_summary()

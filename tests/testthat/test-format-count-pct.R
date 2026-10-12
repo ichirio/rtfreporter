@@ -1,18 +1,20 @@
-# format_count_pct() / realign_count_pct() — uniform "n (xx.x)" widths.
+# fmt_count_pct() / realign_count_pct() — uniform "n (xx.x)" widths.
 
 NBSP <- intToUtf8(160L)
 unbsp <- function(x) gsub(NBSP, " ", x, fixed = TRUE)
 
 # ──────── format_count_pct: numeric inputs ───────────────────────────────
 
-test_that("format_count_pct() produces 10-char-wide strings (NBSP padded)", {
+silence_deprecation(c("realign_count_pct", "cell_format_realign_count_pct"))   # until 0.9.0 (#594)
+
+test_that("fmt_count_pct() produces 10-char-wide strings (NBSP padded)", {
   # Fractions (default)
-  out <- format_count_pct(c(5L, 14L, 30L), c(0.053, 0.500, 1.000))
+  out <- fmt_count_pct(c(5L, 14L, 30L), c(0.053, 0.500, 1.000))
   expect_identical(nchar(out), c(10L, 10L, 10L))
 })
 
-test_that("format_count_pct() respects pct_unit = 'percent'", {
-  out <- format_count_pct(c(5L, 14L, 30L), c(5, 50, 100),
+test_that("fmt_count_pct() respects pct_unit = 'percent'", {
+  out <- fmt_count_pct(c(5L, 14L, 30L), c(5, 50, 100),
                            pct_unit = "percent")
   expect_identical(nchar(out), c(10L, 10L, 10L))
   expect_match(out[3L], "100")             # 100% rendered without decimals
@@ -21,7 +23,7 @@ test_that("format_count_pct() respects pct_unit = 'percent'", {
 test_that("100% branch right-aligns the closing paren (width 10, ends with ')')", {
   # Use plain spaces so we can eyeball the result; the alignment is
   # independent of nbsp.
-  out <- format_count_pct(c(5L, 14L, 30L), c(5, 50, 100),
+  out <- fmt_count_pct(c(5L, 14L, 30L), c(5, 50, 100),
                            pct_unit = "percent",
                            nbsp     = " ")
   expect_identical(out, c("  5  (5.0)", " 14 (50.0)", " 30  (100)"))
@@ -32,58 +34,58 @@ test_that("100% branch right-aligns the closing paren (width 10, ends with ')')"
                    ignore_attr = TRUE)
 })
 
-test_that("format_count_pct() handles count = 0 (count-only branch)", {
-  out_0 <- format_count_pct(0L, 0.0)
+test_that("fmt_count_pct() handles count = 0 (count-only branch)", {
+  out_0 <- fmt_count_pct(0L, 0.0)
   expect_identical(nchar(out_0), 10L)
   # No parenthesis on the zero branch
   expect_false(grepl("\\(", out_0))
 })
 
-test_that("format_count_pct() prints the na token for a missing count (#350)", {
+test_that("fmt_count_pct() prints the na token for a missing count (#350)", {
   # Was " NA       ", a side effect of sprintf("%3d", NA_integer_) rather than
   # anything anyone asked for.  The default is now an empty cell.
-  expect_identical(format_count_pct(NA_integer_, NA_real_), "")
-  expect_identical(format_count_pct(NaN, NaN), "")
-  out <- unbsp(format_count_pct(NA_integer_, NA_real_, na = "-"))
+  expect_identical(fmt_count_pct(NA_integer_, NA_real_), "")
+  expect_identical(fmt_count_pct(NaN, NaN), "")
+  out <- unbsp(fmt_count_pct(NA_integer_, NA_real_, na = "-"))
   expect_identical(out, "  -       ")      # right edge on the ones digit
   expect_identical(nchar(out), 10L)
-  expect_identical(nchar(unbsp(format_count_pct(NA_integer_, NA_real_,
+  expect_identical(nchar(unbsp(fmt_count_pct(NA_integer_, NA_real_,
                                                 na = "-", pct_sign = TRUE))),
                    11L)
 })
 
-test_that("format_count_pct() keeps a real count whose percent is missing", {
+test_that("fmt_count_pct() keeps a real count whose percent is missing", {
   # A missing percent is not missing data -- the count still prints on its own.
-  expect_identical(unbsp(format_count_pct(5L, NA_real_, na = "-")), "  5       ")
-  expect_identical(unbsp(format_count_pct(5L, Inf,      na = "-")), "  5       ")
+  expect_identical(unbsp(fmt_count_pct(5L, NA_real_, na = "-")), "  5       ")
+  expect_identical(unbsp(fmt_count_pct(5L, Inf,      na = "-")), "  5       ")
 })
 
-test_that("format_count_pct() shows Inf rather than hiding it as missing", {
+test_that("fmt_count_pct() shows Inf rather than hiding it as missing", {
   # An infinite count means a division by zero upstream; "-" would hide it.
-  expect_identical(unbsp(format_count_pct(Inf, 0.5, na = "-")), "Inf       ")
+  expect_identical(unbsp(fmt_count_pct(Inf, 0.5, na = "-")), "Inf       ")
 })
 
-test_that("format_count_pct() picks the < 10 vs >= 10 branch correctly", {
-  small <- format_count_pct(1L, 5,    pct_unit = "percent")
-  big   <- format_count_pct(7L, 33.3, pct_unit = "percent")
+test_that("fmt_count_pct() picks the < 10 vs >= 10 branch correctly", {
+  small <- fmt_count_pct(1L, 5,    pct_unit = "percent")
+  big   <- fmt_count_pct(7L, 33.3, pct_unit = "percent")
   expect_match(small, "\\(5\\.0\\)")        # one-digit pct -> X.Y
   expect_match(big,   "\\(33\\.3\\)")        # two-digit pct -> XX.Y
 })
 
-test_that("format_count_pct() supports plain spaces via nbsp = ' '", {
-  out <- format_count_pct(7L, 0.333, nbsp = " ")
+test_that("fmt_count_pct() supports plain spaces via nbsp = ' '", {
+  out <- fmt_count_pct(7L, 0.333, nbsp = " ")
   expect_match(out, "  7 \\(33\\.3\\)")     # padding is regular spaces
 })
 
-test_that("format_count_pct() recycles length-1 against the other vector", {
-  out <- format_count_pct(c(1L, 2L, 3L), 0.5)        # pct recycled
+test_that("fmt_count_pct() recycles length-1 against the other vector", {
+  out <- fmt_count_pct(c(1L, 2L, 3L), 0.5)        # pct recycled
   expect_length(out, 3L)
-  out <- format_count_pct(2L, c(0.10, 0.50, 0.95))   # count recycled
+  out <- fmt_count_pct(2L, c(0.10, 0.50, 0.95))   # count recycled
   expect_length(out, 3L)
 })
 
-test_that("format_count_pct() rejects mismatched non-recyclable lengths", {
-  expect_error(format_count_pct(1:3, c(0.1, 0.2)), "same length")
+test_that("fmt_count_pct() rejects mismatched non-recyclable lengths", {
+  expect_error(fmt_count_pct(1:3, c(0.1, 0.2)), "same length")
 })
 
 # ──────── realign_count_pct: string inputs ────────────────────────────────
@@ -176,13 +178,13 @@ test_that("realign_count_pct() aligns percent-sign cells, keeping the %", {
   expect_true(any(grepl("8 (28.6%)", out, fixed = TRUE)))
 })
 
-test_that("format_count_pct(pct_sign = TRUE) adds % and stays width-aligned", {
-  a <- format_count_pct(c(5L, 14L, 30L), c(5, 50, 100),
+test_that("fmt_count_pct(pct_sign = TRUE) adds % and stays width-aligned", {
+  a <- fmt_count_pct(c(5L, 14L, 30L), c(5, 50, 100),
                         pct_unit = "percent", nbsp = " ", pct_sign = TRUE)
   expect_true(all(nchar(a) == nchar(a[1L])))
   expect_true(all(endsWith(a, "%)")))
   # pct_sign = FALSE is unchanged (no %).
-  b <- format_count_pct(14L, 50, pct_unit = "percent", nbsp = " ")
+  b <- fmt_count_pct(14L, 50, pct_unit = "percent", nbsp = " ")
   expect_false(grepl("%", b))
 })
 

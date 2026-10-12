@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9038** (the development
+**This manual documents rtfreporter 0.8.2.9039** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -41,8 +41,11 @@ differ, trust the package, not this file, and fetch the matching copy with
    list becomes its own page.
 7. `rtftable()` returns **one** table object; `as_rtftables()` returns a
    **list** of page objects. `rtf_tables()` accepts either.
-8. `generate_rtfreport()` will not replace an existing file unless
-   `overwrite = TRUE`.
+8. `generate_rtfreport()` writes over an existing file (`overwrite = TRUE`
+   is the default since 0.8.2.9039); `overwrite = FALSE` stops instead.
+9. A table's appearance (`border`, `col_rel_width`, `font`, ...) is written on
+   the table -- `rtftable()`, `as_rtftables()`, `plan_style()` -- never on
+   `rtf_tables()` (those arguments are deprecated).
 
 ---
 
@@ -648,6 +651,10 @@ scheduled for removal before CRAN):
 | `as_rtftables(stub_vars = , stub_label = , stub_indent = , stub_group_summary = )` | `stub = stub_spec(vars, label = , indent = , group_summary = )` |
 | `set_blank_rows(df = )`, `add_cont_label(chunk = )` | `data =` (or by position) |
 | `assemble_files()`, `assemble_spec()`, `assemble_toc()`, `assemble_from_spec()`, `toc_heading()`, `toc_entry()` | `assemble_folder()` (the table of contents) and `assemble_rtf(toc = <that table or its path>)` |
+| `rtf_tables(doc, df, border = , col_rel_width = , col_header = , font = , ...)` -- the 26 table-format arguments -- and `rtf_tables(read_gt = )` | the same arguments on the table: `rtf_tables(doc, rtftable(df, border = , col_rel_width = , ...))`, or `as_rtftables()` / `plan_style()`; a gt table through `as_rtftables()` |
+| `fmt_count_paren_bare()` | `fmt_value_paren()` |
+| `realign_count_pct()` | `as_rtftables(align_count_pct = TRUE)` (the cell format `"count_pct"`) |
+| `format_count_pct()` | `fmt_count_pct()` (the same arguments) |
 
 Post-hoc styling (each accepts one `rtftable` **or** a list of pages):
 
@@ -724,10 +731,10 @@ returns the table of contents (a data.frame) to edit and pass to
 
 | Helper | What it does |
 |---|---|
-| `format_count_pct(count, pct, pct_unit = "fraction", pct_sign = FALSE)` | builds the cell from two numeric vectors → `" 31 (51.7)"` (padded to a common width) |
-| `fmt_count_paren(x)` / `fmt_count_paren_bare(x)` | **takes a character column** of `"69 (80.2%)"` cells and right-justifies the count *and* the parenthetical part so both line up |
-| `fmt_value_paren(x)` | same, when the part before the parenthesis is any text (`"54.2 (11.3)"`) |
-| `realign_count_pct(x)` | re-parses `"n (xx.x)"` cells and reformats them to one width; non-matching cells are untouched |
+| `fmt_count_pct(count, pct, pct_unit = "fraction", pct_sign = FALSE)` | builds the cell from two numeric vectors → `" 31 (51.7)"` (padded to a common width); a fraction above 1 warns (pass `pct_unit = "percent"` for 0..100) |
+| `fmt_count_paren(x)` | **takes a character column** of `"69 (80.2%)"` cells and right-justifies the count *and* the parenthetical part so both line up |
+| `fmt_value_paren(x)` | same, when the part before the parenthesis is any text (`"54.2 (11.3)"`), and a bare count (`"0"`) lines up too |
+| `as_rtftables(x, align_count_pct = TRUE)` | re-parses `"n (xx.x)"` cells and reformats them to one width (the built-in cell format `"count_pct"`); non-matching cells are untouched |
 | `fmt_right_align(x)` | right-justify every non-empty cell to the widest — the minimal `cell_format` template |
 | `fmt_numeric(data, cols, digits =, rounding = "sas")` | numeric columns → formatted text (`"sas"` = SAS-style rounding) |
 | `fmt_round(x, digits)` / `fmt_signif(x, digits)` | rounding / significant digits |
@@ -985,10 +992,11 @@ adds an "Any" row.
 `rtf_border_with` `rtf_border_side` `add_col_header_row`
 `col_header_from_names` `set_header_cell` `update_header_row`
 `update_footer_row` `paginate` `assemble_files` `assemble_spec`
-`assemble_toc` `assemble_from_spec` `toc_heading` `toc_entry` — see §13)*
+`assemble_toc` `assemble_from_spec` `toc_heading` `toc_entry`
+`fmt_count_paren_bare` `realign_count_pct` `format_count_pct` — see §13)*
 
-**Formatting:** `fmt_count_paren` `fmt_count_paren_bare` `fmt_value_paren`
-`fmt_right_align` `format_count_pct` `realign_count_pct` `fmt_signif`
+**Formatting:** `fmt_count_paren` `fmt_value_paren`
+`fmt_right_align` `fmt_count_pct` `fmt_signif`
 `fmt_round` `fmt_numeric` `round_num` `catx` `collapse_repeats`
 `blank_rows_by_change` `blank_rows_by_rule`
 

@@ -334,11 +334,12 @@ test_that("every idiom the manual teaches runs", {
   ## S15 -- the formatting helpers, with the shapes the manual states
   ## the cell reads " 31 (51.7)" and the padding is a non-breaking space,
   ## as the manual states
-  expect_identical(format_count_pct(31, 0.517, nbsp = " "), " 31 (51.7)")
-  expect_true(grepl(intToUtf8(160), format_count_pct(31, 0.517), fixed = TRUE))
+  expect_identical(fmt_count_pct(31, 0.517, nbsp = " "), " 31 (51.7)")
+  expect_true(grepl(intToUtf8(160), fmt_count_pct(31, 0.517), fixed = TRUE))
   expect_no_error(fmt_count_paren(c("31 (51.7)", "5 (8.3)")))
   expect_no_error(fmt_value_paren(c("54.2 (11.3)", "9.0 (1.2)")))
-  expect_no_error(realign_count_pct(c("5 (33.3)", "12 (80.0)")))
+  expect_no_error(as_rtftables(data.frame(a = "x", b = c("5 (33.3)", "12 (80.0)")),
+                               align_count_pct = TRUE))
   expect_no_error(fmt_right_align(c("1", "22", "333")))
   expect_identical(catx(" ", "a", "", "b"), "a b")
   expect_no_error(fmt_numeric(data.frame(x = c(1.234, 22.5)), cols = "x", digits = 1))

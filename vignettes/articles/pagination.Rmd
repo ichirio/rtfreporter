@@ -818,8 +818,8 @@ paginate_cols(pages, at = c(11, 19), carry = 1, col_header = HDR)   # HDR = ever
 
 Write the header **before or at** the split, never after it: a page keeps only
 its own columns, so a full-table header no longer fits it, and
-`set_col_header()` / `rtf_tables(col_header = )` say so rather than printing
-the first labels on every page.
+`set_col_header()` says so rather than printing the first labels on every
+page.
 
 ### Column widths after the split -- `width`
 

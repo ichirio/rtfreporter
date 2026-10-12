@@ -1,5 +1,7 @@
 # End-to-end RTF file generation through the pipe API.
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that("generate_rtfreport() writes a valid non-empty RTF file", {
   df_safety <- data.frame(
     Event    = c("Headache", "Nausea", "Dizziness"),
@@ -46,8 +48,10 @@ test_that("generate_rtfreport() refuses to overwrite without overwrite = TRUE", 
   f <- tempfile(fileext = ".rtf")
   on.exit(unlink(f), add = TRUE)
 
-  generate_rtfreport(doc, f, overwrite = TRUE)
-  expect_error(generate_rtfreport(doc, f), "already exists")
+  generate_rtfreport(doc, f)
+  # written over by default (#594): a report program is run again and again
+  expect_no_error(generate_rtfreport(doc, f))
+  expect_error(generate_rtfreport(doc, f, overwrite = FALSE), "already exists")
 })
 
 test_that("generate_rtfreport() rejects unsupported report types", {

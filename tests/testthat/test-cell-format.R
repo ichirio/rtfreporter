@@ -4,6 +4,9 @@
 NBSP <- intToUtf8(160L)
 unbsp <- function(x) gsub(NBSP, " ", x, fixed = TRUE)   # nbsp -> space for asserts
 
+silence_deprecation(c("fmt_count_paren_bare", "realign_count_pct",
+                      "cell_format_realign_count_pct"))   # until 0.9.0 (#594)
+
 test_that("fmt_right_align right-justifies non-empty cells, leaves blanks", {
   out <- fmt_right_align(c("5", "120", "7", ""))
   expect_identical(unbsp(out), c("  5", "120", "  7", ""))
@@ -199,7 +202,7 @@ test_that("cell_format accepts a built-in's name, with or without the prefix", {
   expect_identical(rtfreporter:::.builtin_cell_format("fmt_value_paren"),
                    fmt_value_paren)
   expect_identical(rtfreporter:::.builtin_cell_format("count_pct"),
-                   realign_count_pct)
+                   rtfreporter:::.realign_count_pct)
   df <- data.frame(lab = c("A", "B"), x = x, stringsAsFactors = FALSE)
   expect_identical(as_rtftables(df, cell_format = "value_paren")[[1L]]$data$x,
                    as_rtftables(df, cell_format = fmt_value_paren)[[1L]]$data$x)
@@ -248,7 +251,7 @@ test_that("align_count_pct rejects what is neither a switch nor a format", {
 })
 
 test_that("fmt_value_paren prints 100% without decimals", {
-  # format_count_pct()'s `pct >= 100` branch formats that one as an integer;
+  # fmt_count_pct()'s `pct >= 100` branch formats that one as an integer;
   # the string-side formatter follows it (#447).
   out <- unbsp(fmt_value_paren(c("12 (100.0)", "6 (50.0)", "1 (8.3)")))
   expect_identical(out, c("12  (100)", " 6 (50.0)", " 1  (8.3)"))

@@ -4,6 +4,8 @@
 
 # ── .flatten_col_header_labels(): pick the widest label per column ───────────
 
+silence_deprecation(c("realign_count_pct", "fmt_count_paren_bare", "cell_format_realign_count_pct", "cell_format_count_paren_bare"))   # until 0.9.0 (#594)
+
 test_that(".flatten_col_header_labels handles the empty / degenerate cases", {
   f <- rtfreporter:::.flatten_col_header_labels
   expect_null(f(NULL, 3L))                       # no header
@@ -89,11 +91,11 @@ test_that("an explicit column_widths_twips overrides auto_width", {
   expect_identical(tbl$column_widths_twips, c(1000L, 2000L))
 })
 
-# ── format_count_pct(): input validation (public formatter contract) ─────────
+# ── fmt_count_pct(): input validation (public formatter contract) ─────────
 
 test_that("format_count_pct validates its inputs", {
-  expect_error(format_count_pct("5", 0.5), "must both be numeric")
-  expect_error(format_count_pct(c(1L, 2L), c(0.1, 0.2, 0.3)),
+  expect_error(fmt_count_pct("5", 0.5), "must both be numeric")
+  expect_error(fmt_count_pct(c(1L, 2L), c(0.1, 0.2, 0.3)),
                "same length")
 })
 

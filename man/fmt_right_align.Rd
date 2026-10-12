@@ -33,6 +33,6 @@ fmt_right_align(c("5", "120", "7"))
 
 }
 \seealso{
-\code{\link[=fmt_count_paren]{fmt_count_paren()}}, \code{\link[=realign_count_pct]{realign_count_pct()}}, and the \code{cell_format}
-argument of \code{\link[=as_rtftables]{as_rtftables()}}.
+\code{\link[=fmt_count_paren]{fmt_count_paren()}}, and the \code{cell_format} argument of
+\code{\link[=as_rtftables]{as_rtftables()}}.
 }

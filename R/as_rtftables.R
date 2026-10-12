@@ -403,8 +403,8 @@
 #'   under `FALSE` (the default) they do not, and the printed page can be up
 #'   to two rows taller than `max_rows`.
 #' @param align_count_pct The cell alignment to apply before pagination.
-#'   `FALSE` (default) none; `TRUE` the built-in [realign_count_pct()], which
-#'   realigns `"n (xx.x)"` count/percent cells to a uniform width.  It also
+#'   `FALSE` (default) none; `TRUE` the built-in cell format `"count_pct"`,
+#'   which realigns `"n (xx.x)"` count/percent cells to a uniform width.  It also
 #'   accepts the **name of any built-in** (`"count_paren"`, `"value_paren"`,
 #'   `"right_align"`, ... -- the `fmt_` prefix is optional) or a function of
 #'   your own, in which case it behaves exactly like `cell_format`.  Ignored

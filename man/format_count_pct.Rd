@@ -2,7 +2,7 @@
 % Please edit documentation in R/format_count_pct.R
 \name{format_count_pct}
 \alias{format_count_pct}
-\title{Format count + percent cells to a uniform display width}
+\title{Format count + percent cells (old name)}
 \usage{
 format_count_pct(
   count,
@@ -22,7 +22,8 @@ token instead.}
 \item{pct}{Numeric vector of percentages.  By default expressed
 as a \emph{fraction} in \verb{[0, 1]}; pass \code{pct_unit = "percent"} if your
 values are already in \verb{[0, 100]}.  Recycled against \code{count} if
-one argument is length 1.}
+one argument is length 1.  A fraction above 1 says once a session that
+the values look like percentages (\code{5} prints as \code{500}).}
 
 \item{pct_unit}{Either \code{"fraction"} (default, \verb{0..1}) or
 \code{"percent"} (\verb{0..100}).}
@@ -50,29 +51,14 @@ even) or \code{"sas"} (half away from zero).  \code{NULL}, the default, reads
 \verb{6.25\%}, printed \code{"6.2"} under \code{"r"} and \code{"6.3"} under \code{"sas"}.}
 }
 \value{
-Character vector the same length as \code{count} / \code{pct}.
+As \code{\link[=fmt_count_pct]{fmt_count_pct()}}.
 }
 \description{
-Returns each pair \verb{(count[i], pct[i])} as a padded \code{"n (xx.x)"}
-string suitable for monospaced clinical TFL alignment.  The four
-width branches match the convention in the rtfreporter Issue #2
-reference helper.
+\strong{Deprecated} in 0.8.x (it says so once a session and still works),
+removed in 0.9.0: the function is \code{\link[=fmt_count_pct]{fmt_count_pct()}} now, named like the
+other cell formatters.
 }
 \examples{
-# Fractions (the default)
-format_count_pct(c(5L, 14L, 30L), c(0.05, 0.50, 1.00))
-
-# Percent values
-format_count_pct(c(5L, 14L, 30L), c(5, 50, 100), pct_unit = "percent")
-
-# Plain spaces if the output is going to plain text rather than RTF
-format_count_pct(7L, 0.333, nbsp = " ")
-
-# A missing count, shown as "-" under the ones digit
-format_count_pct(c(5L, NA), c(0.05, NA), na = "-", nbsp = " ")
-
+suppressWarnings(format_count_pct(5L, 0.05))   # fmt_count_pct(5L, 0.05)
 }
-\seealso{
-\code{\link[=realign_count_pct]{realign_count_pct()}} for the same widths starting from
-already-formatted strings.
-}
+\keyword{internal}

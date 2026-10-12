@@ -22,6 +22,11 @@ lines up with theirs.  \code{Inf} / \code{-Inf} are \strong{not} missing and pri
 Character vector the same length as \code{x}.
 }
 \description{
+\strong{Deprecated} in 0.8.x (it says so once a session and still works),
+removed in 0.9.0: it is \code{fmt_count_paren(x, bare = TRUE)}, the same
+output.
+}
+\details{
 Like \code{\link[=fmt_count_paren]{fmt_count_paren()}}, but a \strong{bare integer count} with no parentheses
 (a lone \code{"0"} for a zero count, or a raw event total) is also padded into
 the same count field, so it lines up under the parenthetical cells instead
@@ -29,10 +34,11 @@ of drifting out of line.  Cells that do not start with an integer (text,
 decimals, empty cells) are still returned unchanged.
 }
 \examples{
-# The lone "0" is padded to share the column width.
-fmt_count_paren_bare(c("1 (1.2\%)", "0", "11 (3.6\%)", "108 (35.3\%)"))
+# deprecated: the same as fmt_count_paren(bare = TRUE)
+fmt_count_paren(c("1 (1.2\%)", "0", "11 (3.6\%)", "108 (35.3\%)"), bare = TRUE)
 
 }
 \seealso{
-\code{\link[=fmt_count_paren]{fmt_count_paren()}} (parenthetical cells only).
+\code{\link[=fmt_count_paren]{fmt_count_paren()}}.
 }
+\keyword{internal}

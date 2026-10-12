@@ -514,8 +514,7 @@
 #'   }
 #'   This is the place to put it: a header written for the whole table does
 #'   **not** fit a page that kept only some of its columns, so applying one
-#'   after the split (`set_col_header()` on the page list,
-#'   `rtf_tables(col_header = )`) is an error.
+#'   after the split (`set_col_header()` on the page list) is an error.
 #' @param carry Row-heading columns repeated on every page. Defaults to the
 #'   table's `row_title` (column 1 unless set). `carry = integer(0)` repeats
 #'   nothing. Carry columns are removed from the blocks automatically, so they

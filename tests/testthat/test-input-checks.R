@@ -2,6 +2,8 @@
 # Each of these used to be accepted and fail later (or never), so the
 # valid spellings next to them must keep working unchanged.
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that("rtf_document(page = ) / rtf_config(page = ) take an rtf_page or a named list (E1)", {
   expect_error(rtf_document(page = "a4"),
                "`page` must be an rtf_page\\(\\) object.*rtf_page\\(paper_size = \"a4\"\\)")

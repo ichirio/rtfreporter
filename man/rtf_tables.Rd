@@ -67,30 +67,9 @@ unless \code{read_gt} is set (see \code{read_gt}).
 registered an \code{\link[=as_rtftables]{as_rtftables()}} method for; it is converted to its pages
 first (see "Supplying a source from another package" in \code{\link[=as_rtftables]{as_rtftables()}}).}
 
-\item{col_header, col_header_align, spanning_header, col_spec, row_title, border, blank_rows, read_attributes, style}{Per-table content settings applied to bare \code{data.frame} elements (\code{spanning_header} is deprecated, see \code{\link[=rtftable]{rtftable()}}). \code{row_title} names the row-heading columns (default: column 1) and sets the per-column default alignment (heading columns left, others centre). See \code{\link[=rtftable]{rtftable()}} for details.}
-
-\item{col_rel_width, column_widths_twips, table_width_twips, table_width_pct_of_writable, table_width_pct, table_align}{Column-width and table-width settings applied to bare \code{data.frame} elements. See \code{\link[=rtftable]{rtftable()}} for details.}
-
-\item{row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips}{Row-height settings applied to bare \code{data.frame} elements. See \code{\link[=rtftable]{rtftable()}} for details.}
-
-\item{cell_padding_left_twips, cell_padding_right_twips, cell_valign}{Cell layout settings applied to bare \code{data.frame} elements. See \code{\link[=rtftable]{rtftable()}} for details.}
-
-\item{blank_row_normalize}{Blank-row normalisation applied to bare
-\code{data.frame} elements (default \code{c("detect", "collapse")}): \code{"detect"}
-renders an all-empty data row as a single full-width blank row, \code{"collapse"}
-reduces a run of consecutive blank rows to one. Pre-built \code{rtftable()}
-pages keep their own setting. See \code{\link[=rtftable]{rtftable()}} for details.}
-
-\item{markup}{Cell-text markup applied to bare \code{data.frame} elements
-(\code{"script"} super/subscript, \code{"relational"} \code{>=}/\code{<=} symbols, \code{"all"},
-\code{"none"}). \code{NULL} (default) inherits the document default (\code{"script"}).
-Pre-built \code{rtftable()} pages keep their own setting. See \code{\link[=rtftable]{rtftable()}}.}
-
-\item{font_size_half_points, font}{Typography for these tables, in
-half-points and as a family name. Both \strong{override} whatever a pre-built
-\code{\link[=rtftable]{rtftable()}} carries, so a table can be built once and placed in documents
-of different sizes. Passing a size without \code{row_height_twips} recomputes
-the row height from it, exactly as on \code{\link[=rtftable]{rtftable()}}.}
+\item{col_header, col_header_align, spanning_header, col_spec, row_title, border, blank_rows, read_attributes, style, col_rel_width, column_widths_twips, table_width_twips, table_width_pct_of_writable, table_width_pct, table_align, row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips, cell_padding_left_twips, cell_padding_right_twips, cell_valign, blank_row_normalize, markup, font_size_half_points, font}{\strong{Deprecated} (removed in 0.9.0): the same arguments of \code{\link[=rtftable]{rtftable()}},
+written there (or in \code{\link[=as_rtftables]{as_rtftables()}} / \code{\link[=plan_style]{plan_style()}}) instead.  See
+"Deprecated arguments" below.}
 
 \item{titles}{\code{NULL} (default) or a list of length \code{length(tables)} \strong{or
 length 1} (a single block applied to every page). Each element is a
@@ -144,25 +123,9 @@ the section header instead.  Default \code{FALSE}.}
 \item{title_label_align}{Alignment for the auto-appended title label row.
 One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}
 
-\item{read_gt}{\strong{Legacy.}  Controls metadata extraction when a raw
-\code{gt_tbl} is handed \emph{directly} to \code{rtf_tables()} (no pagination).  For
-new code, prefer converting up front with \code{\link[=as_rtftables]{as_rtftables()}}, which
-paginates \emph{and} reads metadata, then pass the resulting list here --
-the page-level titles / footnotes flow through automatically (via the
-\code{rtf_titles} / \code{rtf_footnotes} attributes) with \code{read_gt} left at its
-default.  Allowed values:
-\describe{
-\item{\code{FALSE} (default)}{treat \code{gt_tbl} items as a rendered body only;
-ignore titles / labels / source notes.}
-\item{\code{TRUE}}{read the render-relevant metadata: column labels,
-per-column alignment, spanning headers, widths, plus the page-level
-title / subtitle and footnote / source notes.  See \code{\link[=as_rtftables]{as_rtftables()}}
-for the full \emph{What is carried, by source} table.}
-\item{a character vector of tokens}{selective opt-in.  See
-\code{\link[=as_rtftables]{as_rtftables()}} for the token list.}
-}
-Explicit \code{rtf_tables()} / \code{rtf_titles()} / \code{rtf_footnotes()}
-values always override gt-extracted ones.}
+\item{read_gt}{\strong{Deprecated} (removed in 0.9.0): pass a gt or gtsummary
+table through \code{\link[=as_rtftables]{as_rtftables()}}, which reads its labels, alignment, titles
+and source notes, and place the pages it returns here.}
 }
 \value{
 Modified rtf_document with appended contents.
@@ -172,20 +135,29 @@ Append one or more content items as pages. \strong{Each element of \code{tables}
 becomes exactly one page}, holding a single table or figure.
 }
 \details{
-Table-formatting arguments (\code{col_rel_width}, \code{border}, \code{row_height_twips},
-...) accepted by this function are used to build any bare \code{data.frame}
-element of \code{tables}, and -- when passed \strong{explicitly} -- also override the
-matching field of any pre-built \code{rtftable()} element (for example the
-output of \code{\link[=as_rtftables]{as_rtftables()}}).  Arguments left at their default are not
-applied to pre-built tables, so those keep their own / gt-derived settings.
-\code{rtfplot()} elements are never modified.  (The \code{style} argument seeds
-construction-time defaults only; it is not applied as an override to a
-pre-built table.)
+A table's appearance is written where the table is made: in \code{\link[=rtftable]{rtftable()}},
+\code{\link[=as_rtftables]{as_rtftables()}} or \code{\link[=plan_style]{plan_style()}}.  A bare \code{data.frame} placed here gets
+their defaults.
 }
+\section{Deprecated arguments}{
+
+The 26 table-format arguments that copy \code{\link[=rtftable]{rtftable()}}'s (\code{col_header},
+\code{border}, \code{col_rel_width}, \code{row_height_twips}, \code{font_size_half_points},
+\code{font}, ... -- see the usage) and \code{read_gt} are \strong{deprecated} in 0.8.x:
+each one passed says so once a session and still works as before, and they
+are removed in 0.9.0, the first CRAN release.  Write the same settings on
+the table: \code{rtftable(df, border = "tfl", col_rel_width = c(2, 1))}, or
+\code{as_rtftables(x, ...)} for a paged or converted table; pass a gt or
+gtsummary table through \code{\link[=as_rtftables]{as_rtftables()}} instead of \code{read_gt}.  Until then
+they behave as they always did: used to build a bare \code{data.frame} element,
+and, when passed explicitly, overriding the matching field of a pre-built
+\code{rtftable()} page (\code{rtfplot()} pages are never modified).
+}
+
 \examples{
 # Two clinical tables in one document, each on its own page with its own
-# title; shared TFL borders and a wide row-label column are applied to both
-# bare data.frames, and a footnote is attached to the first page only.
+# title; each table carries its own appearance (rtftable()), and a footnote
+# is attached to the first page only.
 t1 <- data.frame(Parameter = c("Age (years)", "Sex, n (\%)"),
                  Value = c("75.1 (8.2)", "120 (53\%)"))
 t2 <- data.frame(Parameter = c("Weight (kg)", "Height (cm)"),
@@ -194,14 +166,13 @@ t2 <- data.frame(Parameter = c("Weight (kg)", "Height (cm)"),
 doc <- rtf_document() |>
   rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
   rtf_tables(
-    list(t1, t2),
-    border        = "tfl",
-    col_rel_width = c(2, 1),
+    list(rtftable(t1, border = "tfl", col_rel_width = c(2, 1)),
+         rtftable(t2, border = "tfl", col_rel_width = c(2, 1))),
     titles    = list("Table 14.1.1", "Table 14.1.2"),
     footnotes = list("Source: ADSL", NULL)
   )
 f <- tempfile(fileext = ".rtf")
-generate_rtfreport(doc, f, overwrite = TRUE)
+generate_rtfreport(doc, f)
 unlink(f)
 
 }
