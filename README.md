@@ -15,17 +15,21 @@
 files -- running header and footer, page numbers, titles and footnotes
 included -- using base R alone.**
 
-A table gets there in one of two ways:
+rtfreporter has **two strengths**, and they are the two ways a table gets
+into a report:
 
-1. **From an analysis results dataset (ARD)** built with
+1. **An ARD becomes a table almost as-is.**  The statistics stay in an
+   analysis results dataset built with
    [cards](https://pharmaverse.github.io/cards/) /
-   [cardx](https://insightsengineering.github.io/cardx/): the statistics stay
-   in the ARD, and a short **plan** says how they are laid out.  The column
-   header's `(N=xx)` is read from the same ARD, so the header and the numbers
-   under it agree by construction.
-2. **From a table you already have** -- gtsummary, rtables / tern, gt, tfrmt,
-   flextable, huxtable or a plain data frame: `as_rtftables()` reads it, with
-   its labels, spanning headers and footnotes.
+   [cardx](https://insightsengineering.github.io/cardx/), and a short
+   **plan** says how they are laid out.  The column header's `(N=xx)` is
+   read from the same ARD, so the header and the numbers under it agree by
+   construction.
+2. **Bring your own table: it reads the table objects you already have.**
+   A table built with gtsummary (a `tbl_split` too), rtables / tern,
+   rlistings, gt, tfrmt, flextable, huxtable -- or a plain data frame --
+   goes in through `as_rtftables()`, with its labels, spanning headers and
+   footnotes.
 
 Either way the document around it is the same: running headers and footers
 with page numbers, the program name and the run date, titles and footnotes,
@@ -91,7 +95,9 @@ generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R")
 <p align="center"><sub><em>The <code>t_dm.rtf</code> written by the code above, opened in LibreOffice (the empty middle of the page is cut out of the picture).</em></sub></p>
 
 The same plan pages a long table, sorts an adverse-events table by frequency
-within each system organ class, and can be saved and reused.
+within each system organ class, and can be saved and reused;
+`list_ard_keys()`, `pull_ard()` and `widen_ard()` help when you want to look
+inside the ARD or take it wide.
 [Get started](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
 walks through these three steps and an adverse-events table;
 [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html)
