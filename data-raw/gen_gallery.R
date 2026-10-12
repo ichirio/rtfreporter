@@ -1,14 +1,15 @@
 ## ---------------------------------------------------------------------------
 ##  Pictures for the Gallery article (vignettes/articles/gallery.Rmd), the
-##  README's two first examples (man/figures/readme-ard-example.png and
-##  readme-gtsummary-example.png) and Get started's adverse-events table
+##  README's examples (man/figures/readme-ard-example.png,
+##  readme-tern-example.png, readme-gtsummary-example.png) and Get started's
+##  adverse-events table
 ##  (man/figures/get-started-ae.png).
 ##
 ##  The pictures are made from the code that is shown, not from a copy of it:
 ##    * the Gallery article and Get started are rendered with
 ##      RTFREPORTER_ARTICLE_OUT set, so every RTF they write lands in one
 ##      folder;
-##    * the first two ```r blocks of README.md are run as they stand.
+##    * the ```r blocks of README.md that write a file are run as they stand.
 ##  LibreOffice turns each RTF into a PDF, and the first page of the PDF is
 ##  rendered to a PNG (pdftools) -- sharper text than LibreOffice's own PNG
 ##  export.  The empty band between the table and the running footer is cut
@@ -112,25 +113,31 @@ for (f in list.files(out, pattern = "[.]rtf$", full.names = TRUE)) {
   rtf_to_png(f, file.path(figs, sub("[.]rtf$", ".png", basename(f))))
 }
 
-## 2. The README's first two examples --------------------------------------
-## The ARD example writes t_dm.rtf; the gtsummary one, which uses its `adsl`,
-## writes t_dm_gtsummary.rtf.
+## 2. The README's examples -----------------------------------------------
+## Each ```r block that writes a file, in order, in one session (the tern and
+## gtsummary examples use the ARD example's `adsl`): t_dm.rtf,
+## t_dm_tern.rtf, t_dm_gtsummary.rtf.
 readme <- readLines("README.md", encoding = "UTF-8")
-opens  <- grep("^``` ?r$", readme)[1:2]
-code   <- unlist(lapply(opens, function(open) {
+blocks <- lapply(grep("^``` ?r$", readme), function(open) {
   close <- open + grep("^```$", readme[-seq_len(open)])[1L]
   readme[(open + 1L):(close - 1L)]
-}))
+})
+blocks <- Filter(function(b) any(grepl("generate_rtfreport(", b, fixed = TRUE)),
+                 blocks)
+code   <- unlist(blocks)
 code   <- code[!grepl("^library\\(rtfreporter\\)", code)]   # load_all() above
 wd <- tempfile("readme-")
 dir.create(wd)
 old <- setwd(wd)
 eval(parse(text = code), envir = new.env())
 setwd(old)
-readme_png <- file.path("man", "figures",
-                        c("readme-ard-example.png", "readme-gtsummary-example.png"))
-rtf_to_png(file.path(wd, "t_dm.rtf"), readme_png[1])
-rtf_to_png(file.path(wd, "t_dm_gtsummary.rtf"), readme_png[2])
+# (file.path() drops names: they are put back)
+readme_png <- c(t_dm = "readme-ard-example.png", t_dm_tern = "readme-tern-example.png",
+                t_dm_gtsummary = "readme-gtsummary-example.png")
+readme_png[] <- file.path("man", "figures", readme_png)
+for (f in names(readme_png)) {
+  rtf_to_png(file.path(wd, paste0(f, ".rtf")), readme_png[[f]])
+}
 
 ## 3. Get started's adverse-events table -------------------------------------
 gs <- file.path(tempdir(), "get-started")

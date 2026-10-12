@@ -56,9 +56,9 @@ library(cards)
 ```
 
 ```{r, echo = FALSE, results = "asis", eval = !has_cards}
-cat("> The ARD chunks on this page run only when the cards package is",
-    "installed; without it their code is shown but not run.  The last",
-    "example, [Bring your own table](#bring-your-own-table), runs either way.\n")
+cat("> The chunks on this page run only when the cards package is",
+    "installed (its ADSL is the example data); without it their code is",
+    "shown but not run.\n")
 ```
 
 ## 1. The statistics: an ARD
@@ -238,16 +238,22 @@ flextable, huxtable, or as a data frame -- `as_rtftables()` reads it,
 including its labels, spanning headers and footnotes where the source has
 them, and gives `rtftable` pages for the same `rtf_tables()`:
 
-```{r byo, eval = TRUE}
-df <- data.frame(
-  Parameter = c("Subjects", "Age, mean (SD)"),
-  Placebo   = c("86", "75.2 (8.59)"),
-  Active    = c("84", "75.7 (8.29)"))
+A data frame carries no labels of its own, so they are given on
+`rtftable()`.  Here the numbers -- and the arms' N in the header -- are
+computed from the data, not typed in:
+
+```{r byo}
+adsl <- cards::ADSL
+n   <- table(adsl$ARM)
+age <- tapply(adsl$AGE, adsl$ARM,
+              function(x) sprintf("%.1f (%.2f)", mean(x), sd(x)))
+df  <- data.frame(Parameter = "Age, mean (SD)", t(as.vector(age)))
 
 doc2 <- rtf_document() |>
-  rtf_tables(as_rtftables(df, border = "tfl"),
-             titles = list(c("Table 1", "A table brought as a data frame")))
-generate_rtfreport(doc2, "t_byo.rtf", overwrite = TRUE)
+  rtf_tables(rtftable(df, border = "tfl", col_header = rtf_col_header(
+               c("", sprintf("%s\n(N=%d)", names(n), as.vector(n))))),
+             titles = c("Table 1", "A table brought as a data frame"))
+generate_rtfreport(doc2, "t_byo.rtf")
 ```
 
 See [Importing tables with as_rtftables()](importing-tables.html),
