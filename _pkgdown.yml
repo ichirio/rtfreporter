@@ -30,7 +30,7 @@ template:
 # AI manuals are version-stamped and shipped in the package instead (#463) --
 # the site cannot tell a reader which release it is describing, and they can.
 # Whether to move to `mode: auto` (released docs at the root, development docs
-# under /dev/) is a decision for the CRAN submission, since it moves every URL.
+# under /dev/) is a decision for a later release, since it moves every URL.
 #
 # `mode: unreleased` is deliberate (NOT "release"):
 #   * pages are still published at the root (no /dev/ subdirectory),
@@ -50,10 +50,10 @@ development:
 home:
   title: "rtfreporter — Clinical RTF Reporting Toolkit for R"
   description: >
-    Standalone R toolkit for generating Rich Text Format (RTF) Tables,
-    Listings and Figures (TFLs) for clinical trial deliverables.  Pure
-    S3 architecture; no dependency on r2rtf, reporter, or any other RTF
-    library; works on any modern R out of the box.
+    Clinical tables, listings and figures (TFLs) as RTF files: from a
+    cards / cardx analysis results dataset with a table plan, or from a
+    table you already have -- gtsummary, rtables / tern, gt, tfrmt,
+    flextable, huxtable or a data frame.
   # Keep README's H1 (which contains the logo image) on the home page.
   strip_header: false
   sidebar:
@@ -76,13 +76,29 @@ home:
 
           Roadmap:
 
-          - **v0.9.0** — the **first CRAN submission**: the deprecated border
-            exports removed, `R CMD check --as-cran` clean, lifted coverage,
-            docs/metadata polish.  Removing them is a MINOR only because
-            `MAJOR 0` means "not formally released" — see CONTRIBUTING.
-          - **v1.0.0** — **after** CRAN registration, once downloads and
-            feedback have settled the API: stable, `lifecycle: experimental`
-            removed, and the no-breaking-change contract binding for real.
+          **Next release** (in development on `main`):
+
+          - Tables from an ARD, end to end: every `as_rtftables()` setting
+            has a plan verb, plus a Total column, nested rows, BY pages and
+            a column header written row by row, with `(N=xx)` read from the
+            same ARD.
+          - A cleaner API: one name per thing,
+            `rtf_section(header = , footer = )`, table formats in the plan
+            or the style rather than in `rtf_tables()`, and the old border
+            functions on their way out.
+          - Smaller improvements to headers/footers, figures and gtsummary
+            reading.
+
+          **Later**:
+
+          - Richer styling per part: titles, footnotes and the running
+            header and footer each with their own style and colour; cell
+            padding.
+          - Body rows added by a verb, with border rules per row.
+          - More table sources, and sturdier reading of the ones there are
+            (gt, gtsummary, rtables / tern).
+          - Inline formatting inside a text: bold, italic and superscript
+            spans.
       community:
         title: Community
         text: |
@@ -220,9 +236,10 @@ footer:
 
 reference:
   # Ordered as the site recommends using the package: a table from an ARD
-  # with a plan first; then the document, pages, headers, footers and tokens
-  # around it; tables brought from other packages; listings; figures;
-  # assembly; borders and styles; deprecated last.
+  # with a plan first; tables brought from other packages second (the two
+  # ways in, as on the home page); then the document, pages, headers, footers
+  # and tokens around them; listings; figures; assembly; borders and styles;
+  # deprecated last.
 
   # ── 1. Tables from an ARD ──────────────────────────────────────────────
   - title: Tables from an ARD — reading the ARD
@@ -262,7 +279,27 @@ reference:
       - plan_n_candidates
       - plan_template
 
-  # ── 2. The document ─────────────────────────────────────────────────
+  # ── 2. Bring your own table ─────────────────────────────────────────
+  - title: Bring your own table — as_rtftables()
+    desc: >
+      The second path: a table already built elsewhere -- a `gt::gt()`
+      table, a gtsummary table, an rtables/tern `VTableTree`, a tfrmt,
+      flextable or huxtable table, an rlistings `listing_df`, or a plain
+      data.frame -- turned into `rtftable`
+      objects, reading the source's metadata and paginating in one call.
+      **Acts on:** the source object.  **Produces:** `rtftable` objects.
+      `as_rtftables()` returns one per page (a list); `as_rtftable()` returns
+      a single object.  `stub_cols()` prepares a tidy data.frame beforehand by
+      merging hierarchy columns into one indented stub column; `stub_spec()`
+      carries the same settings into `as_rtftables(stub = )`.
+    contents:
+      - as_rtftables
+      - as_rtftable
+      - combine_sections
+      - stub_cols
+      - stub_spec
+
+  # ── 3. The document ─────────────────────────────────────────────────
   - title: Document, rendering & tokens
     desc: >
       `rtf_document()` creates the document -- with the program, the
@@ -326,26 +363,6 @@ reference:
     contents:
       - rtfreporter_options
       - rtfreporter_reset_defaults
-
-  # ── 3. Bring your own table; table building blocks ──────────────────
-  - title: Bring your own table — as_rtftables()
-    desc: >
-      The second path: a table already built elsewhere -- a `gt::gt()`
-      table, a gtsummary table, an rtables/tern `VTableTree`, a tfrmt,
-      flextable or huxtable table, an rlistings `listing_df`, or a plain
-      data.frame -- turned into `rtftable`
-      objects, reading the source's metadata and paginating in one call.
-      **Acts on:** the source object.  **Produces:** `rtftable` objects.
-      `as_rtftables()` returns one per page (a list); `as_rtftable()` returns
-      a single object.  `stub_cols()` prepares a tidy data.frame beforehand by
-      merging hierarchy columns into one indented stub column; `stub_spec()`
-      carries the same settings into `as_rtftables(stub = )`.
-    contents:
-      - as_rtftables
-      - as_rtftable
-      - combine_sections
-      - stub_cols
-      - stub_spec
 
   - title: Recipes — four complete tables from data frames
     desc: >
@@ -574,8 +591,7 @@ reference:
     desc: >
       The border constructors that `rtf_border_line()` and `rtf_border()`
       replaced at 0.5.0 / 0.6.0.  They still work and each warns once per
-      session, naming its replacement, and are **removed in 0.9.0, the first
-      CRAN release** -- do not write new code against them.  `?rtf_border` pairs the old and the new spelling for every case.
+      session, naming its replacement, and are **removed in 0.9.0** -- do not write new code against them.  `?rtf_border` pairs the old and the new spelling for every case.
       `rtf_border_none()`, `rtf_border_top()`, `rtf_border_bottom()` and
       `rtf_border_box()` are documented on the `rtf_border()` page itself.
       Deprecated in 0.8.x by the pre-CRAN API review, and removed in 0.9.0

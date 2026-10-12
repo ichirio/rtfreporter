@@ -296,9 +296,9 @@ p_style <- base |>
     c("Characteristic", "(N={n})")))
 
 doc <- rtf_document() |>
-  rtf_section(secinfo = list(header = rtf_header(list(
+  rtf_section(header = rtf_header(list(
     c(c = "Table 14.1.2  Demographics and Treatment Duration"),
-    c(c = "Safety Analysis Set"), c(c = ""))))) |>
+    c(c = "Safety Analysis Set"), c(c = "")))) |>
   rtf_tables(p_style)
 generate_rtfreport(doc, "t_style.rtf", overwrite = TRUE)
 ```
@@ -365,9 +365,9 @@ p_vs <- ard_vs |>
     c("Visit", rep(c("Value", "Change from\nbaseline"), 3))))
 
 doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
-  rtf_section(secinfo = list(header = rtf_header(list(
+  rtf_section(header = rtf_header(list(
     c(c = "Table 14.3.5.1  Vital Signs by Visit"),
-    c(c = "Safety Analysis Set"), c(c = ""))))) |>
+    c(c = "Safety Analysis Set"), c(c = "")))) |>
   rtf_tables(p_vs)
 generate_rtfreport(doc, "t_vs.rtf", overwrite = TRUE)
 length(plan_apply(p_vs))

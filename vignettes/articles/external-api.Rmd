@@ -43,8 +43,8 @@ library(rtfreporter)
 
 rtf_document() |>                                  # -> rtf_document
   rtf_tables(as_rtftables(df)) |>                  # add a content page
-  rtf_section(page = 1, secinfo = list(            # assign a header/footer
-    header = rtf_header(...), footer = rtf_footer(...))) |>
+  rtf_section(page = 1,                            # assign a header/footer
+    header = rtf_header(...), footer = rtf_footer(...)) |>
   generate_rtfreport("out.rtf", overwrite = TRUE)  # render to a file
 ```
 
@@ -81,7 +81,7 @@ describing a section's header / footer: to change a row, make it again.
 * **Content** — `rtf_tables(doc, tables, ...)` and `rtf_figures(doc, figures, ...)`
   append content pages (one element = one page); `rtf_titles()` / `rtf_footnotes()`
   attach per-page title/footnote blocks. Each returns the modified `rtf_document`.
-* **Sections** — `rtf_section(doc, page, secinfo)` assigns a header/footer to a
+* **Sections** — `rtf_section(doc, page, header, footer)` assigns a header/footer to a
   page range (an overlay on the flat page list; `NULL` inherits the previous
   section).
 * **Render** — `generate_rtfreport(doc, file, overwrite)` writes the `.rtf` and

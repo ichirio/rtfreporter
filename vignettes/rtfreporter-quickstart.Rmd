@@ -27,7 +27,7 @@ recommended route is a table plan instead: start with
 
 ```r
 rtf_document() |>
-  rtf_section(page = 1, secinfo = list(header = ..., footer = ...)) |>
+  rtf_section(page = 1, header = ..., footer = ...) |>
   rtf_tables(list(tbl1, tbl2)) |>
   generate_rtfreport("output.rtf", overwrite = TRUE)
 ```
@@ -48,15 +48,14 @@ df <- data.frame(
 )
 
 doc <- rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = rtf_header(rows = list(
       c(l = "Protocol: RTF-101",         r = "ACME Pharma"),
       c(l = "Table 14.1.1 Demographics", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
     )),
     footer = rtf_footer(rows = list(
       c(l = "Source: DM domain.", r = "CONFIDENTIAL")
-    ))
-  )) |>
+    ))) |>
   rtf_tables(list(
     rtftable(df,
       col_rel_width    = c(2, 2, 1, 1),
@@ -135,7 +134,7 @@ for (i in seq_along(lab_data)) {
   ))
 
   doc <- doc |>
-    rtf_section(page = i, secinfo = list(header = sec_header, footer = common_footer)) |>
+    rtf_section(page = i, header = sec_header, footer = common_footer) |>
     rtf_tables(list(tbl))
 }
 
@@ -161,13 +160,12 @@ png_path <- tempfile(fileext = ".png")
 ggsave(png_path, plot = p, width = 7, height = 4.5, dpi = 150)
 
 doc <- rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = rtf_header(rows = list(
       c(l = "Protocol: FIG-001",           r = "ACME Pharma"),
       c(l = "Figure 14.1.1  Lab Value vs. Visit (Safety Population)")
     )),
-    footer = rtf_footer(rows = list(c(l = "Source: LB domain.")))
-  )) |>
+    footer = rtf_footer(rows = list(c(l = "Source: LB domain.")))) |>
   rtf_tables(list(
     rtfplot(png_path, width_twips = 9000L)
   ))
@@ -196,13 +194,12 @@ tbl_summary <- rtftable(
 )
 
 doc <- rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = rtf_header(rows = list(
       c(l = "Protocol: FIG-001", r = "ACME Pharma"),
       c(l = "Figure and Summary Table")
     )),
-    footer = rtf_footer(rows = list(c(l = "Source: LB domain.", r = "CONFIDENTIAL")))
-  )) |>
+    footer = rtf_footer(rows = list(c(l = "Source: LB domain.", r = "CONFIDENTIAL")))) |>
   rtf_tables(list(
     rtfplot(png_path, width_twips = 7200L),  # page 1: figure
     tbl_summary                              # page 2: summary table
@@ -397,12 +394,11 @@ hdr_bordered <- rtf_header(
 ```{r assemble}
 make_rtf <- function(df, hdr_text, path) {
   doc <- rtf_document() |>
-    rtf_section(page = 1, secinfo = list(
+    rtf_section(page = 1,
       header = rtf_header(rows = list(
         c(l = hdr_text, r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
       )),
-      footer = rtf_footer(rows = list(c(l = "CONFIDENTIAL")))
-    )) |>
+      footer = rtf_footer(rows = list(c(l = "CONFIDENTIAL")))) |>
     rtf_tables(list(df))
   generate_rtfreport(doc, path, overwrite = TRUE)
 }

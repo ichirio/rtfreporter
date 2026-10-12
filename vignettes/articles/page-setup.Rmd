@@ -53,7 +53,7 @@ same content.
 # Compose the report once (content + section).
 base <- rtf_document() |>
   rtf_tables(as_rtftables(df)) |>
-  rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL))
+  rtf_section(page = 1, header = NULL, footer = NULL)
 
 # Then render the SAME report in two paper sizes by changing only `page`.
 letter <- base                                                  # landscape Letter
@@ -314,10 +314,9 @@ example, a navy rule under a header:
 navy_rule <- rtf_border(bottom = rtf_border_line(color = "#1F4E79"))
 
 doc <- rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = rtf_header(rows = list(c(l = "Protocol XYZ-001")), border = navy_rule),
-    footer = NULL
-  )) |>
+    footer = NULL) |>
   rtf_tables(as_rtftables(df))
 ```
 
@@ -357,11 +356,10 @@ doc <- rtf_document(
   font_table     = list(list(name = "Arial")),
   default_format = list(font_size_half_points = 22L)
 ) |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = rtf_header(rows = list(c(l = "Protocol XYZ-001", r = "Confidential")),
                         border = navy_rule),
-    footer = rtf_footer(c(c = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"))
-  )) |>
+    footer = rtf_footer(c(c = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"))) |>
   rtf_tables(as_rtftables(df, row_height_twips = 280L))
 
 generate_rtfreport(doc, "report.rtf", overwrite = TRUE)

@@ -108,7 +108,7 @@ hdr <- rtf_header(rows = list(
   c(c = "")))
 
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(secinfo = list(header = hdr)) |>     # base header (no `page`)
+  rtf_section(header = hdr) |>     # base header (no `page`)
   rtf_tables(pages, auto_section = TRUE)           # one section per lab test
 ```
 
@@ -160,7 +160,7 @@ one_test <- function(p) {
 sections <- do.call(combine_sections, setNames(lapply(tests, one_test), tests))
 
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(secinfo = list(header = hdr)) |>
+  rtf_section(header = hdr) |>
   rtf_tables(sections, auto_section = TRUE)
 generate_rtfreport(doc, "lab_gtsummary.rtf", overwrite = TRUE)
 ```

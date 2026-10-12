@@ -149,7 +149,7 @@ fitted <- fit_listing_widths(
   adsl, spec,
   page = rtf_page(paper_size = "A4", orientation = "landscape",
                   margin_left_in = 0.5, margin_right_in = 0.5),
-  size_half_points = 16L
+  font_size_half_points = 16L
 )
 fitted
 

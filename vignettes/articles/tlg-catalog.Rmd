@@ -151,9 +151,9 @@ writes the `.rtf`:
 ```{r dm-tern-rtf}
 out_dm_tern <- tempfile(fileext = ".rtf")
 rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = make_header("14.1.1a", "Demographic and Baseline Characteristics (tern)"),
-    footer = make_footer("tern + rtables"))) |>
+    footer = make_footer("tern + rtables")) |>
   rtf_tables(as_rtftables(dm_tern, blank_rows = "between_groups",
                           auto_width = TRUE, cell_format = fmt_count_paren)) |>
   generate_rtfreport(out_dm_tern, overwrite = TRUE)
@@ -196,9 +196,9 @@ The gtsummary object is a `gt_tbl`; rtfreporter reads it exactly the same way
 ```{r dm-gts-rtf}
 out_dm_gts <- tempfile(fileext = ".rtf")
 rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = make_header("14.1.1b", "Demographic and Baseline Characteristics (gtsummary)"),
-    footer = make_footer("gtsummary + cards"))) |>
+    footer = make_footer("gtsummary + cards")) |>
   rtf_tables(as_rtftables(dm_gts, blank_rows = "between_groups",
                           auto_width = TRUE, cell_format = fmt_count_paren)) |>
   generate_rtfreport(out_dm_gts, overwrite = TRUE)
@@ -267,9 +267,9 @@ whatever the object contains):
 ```{r dm-tfrmt-rtf}
 out_dm_tfrmt <- tempfile(fileext = ".rtf")
 rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = make_header("14.1.1c", "Demographic and Baseline Characteristics (tfrmt)"),
-    footer = make_footer("tfrmt + cards"))) |>
+    footer = make_footer("tfrmt + cards")) |>
   rtf_tables(as_rtftables(dm_tfrmt, auto_width = TRUE,
                           cell_format = fmt_count_paren)) |>
   generate_rtfreport(out_dm_tfrmt, overwrite = TRUE)
@@ -341,9 +341,9 @@ ae_tern_pages <- as_rtftables(ae_tern, split = "group_safe", max_rows = 36,
                               col_spec = ae_col_spec, row_height_twips = 200)
 out_ae_tern <- tempfile(fileext = ".rtf")
 rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = make_header("14.3.1a", "Adverse Events by System Organ Class and Preferred Term (tern)"),
-    footer = make_footer("tern + rtables"))) |>
+    footer = make_footer("tern + rtables")) |>
   rtf_tables(ae_tern_pages) |>
   generate_rtfreport(out_ae_tern, overwrite = TRUE)
 ```
@@ -421,9 +421,9 @@ ae_tfrmt_pages <- as_rtftables(ae_tfrmt, split = "group_force", max_rows = 36,
                                row_height_twips = 200)
 out_ae_tfrmt <- tempfile(fileext = ".rtf")
 rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = make_header("14.3.1b", "Adverse Events by System Organ Class and Preferred Term (tfrmt)"),
-    footer = make_footer("tfrmt + cards"))) |>
+    footer = make_footer("tfrmt + cards")) |>
   rtf_tables(ae_tfrmt_pages) |>
   generate_rtfreport(out_ae_tfrmt, overwrite = TRUE)
 ```

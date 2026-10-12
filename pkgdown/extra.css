@@ -76,3 +76,12 @@ aside .section h2 {
 aside > div:first-child h2 {
   margin-top: 0;
 }
+
+/* ----------------------------------------------------------------------------
+   Home page sidebar: its first heading ("Links") started flush with the top
+   of the column and looked cramped against the navbar; one line of air.
+   ---------------------------------------------------------------------------- */
+.template-home aside > div:first-child,
+.template-home aside > .links:first-child {
+  padding-top: 1.5rem;
+}

@@ -82,6 +82,16 @@ The names below that are *superseded* still work and do not warn
 
 ### Documentation
 
+- **The home page leads with the two ways in** (#613): a table from a cards
+  ARD with a plan first, then a gtsummary table brought in with
+  `as_rtftables()`, each with a picture of the RTF it writes; the typed-in
+  data frame follows, without one.  *Get started* adds an adverse-events
+  table, and the reference index puts *Bring your own table* right after
+  *Tables from an ARD*.  The pictures are rendered RTF -> PDF -> PNG by
+  `data-raw/gen_gallery.R`, from the code shown.  The articles use the
+  current names: `rtf_section(header = , footer = )`,
+  `paginate_cols(cut_by = , keep = , fit = , order = )` and
+  `fit_listing_widths(font_size_half_points = )`.
 - **`rtf_figures(width_twips = NULL)` is the image's native size** (#617), as
   `?rtfplot` says: a file at its embedded DPI, a plot object at its
   `render_width`, with no fit to the page.  Its help page said "the full
@@ -128,6 +138,9 @@ The names below that are *superseded* still work and do not warn
 
 ### Bug fixes
 
+- **A gtsummary table's footnote is printed once** (#613), not once per
+  statistic column: gtsummary attaches it to every arm, and gt prints each
+  text once.
 - **`add_header_row()` keeps the column names** (#615) of a table that has no
   column header yet: the new row goes above (or below) them, as documented,
   instead of taking their place.  Tables of several data frames keep each

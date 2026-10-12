@@ -1279,6 +1279,9 @@ test_that("footnote texts are read from the gt footnote slot", {
   expect_null(ft(list(`_footnotes` = data.frame(footnotes = I(list())))))
   one <- list(`_footnotes` = data.frame(footnotes = I(list("a note", NULL, c("two", "**parts**")))))
   expect_identical(ft(one), c("a note", "two parts"))
+  # one text attached to several columns (gtsummary's statistic columns): once
+  same <- list(`_footnotes` = data.frame(footnotes = I(list("n (%)", "n (%)", "b", "n (%)"))))
+  expect_identical(ft(same), c("n (%)", "b"))
   empty <- list(`_footnotes` = data.frame(footnotes = I(list(NULL, list()))))
   expect_null(ft(empty))
   expect_error(rtfreporter:::.gt_body_from_slots(list()),

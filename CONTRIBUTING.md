@@ -507,11 +507,10 @@ contributors, CRAN and the tooling all read our numbers the same way.
   breaking changes**, and the **only** place where functions deprecated in
   earlier minors may be removed.  Every breaking change is documented under a
   "Breaking changes" heading in `NEWS.md`.
-  - **`v1.0.0` specifically** is *not* the CRAN debut.  It is cut **after**
-    CRAN registration, once downloads, user feedback and any resulting spec
-    changes have settled and the public API is worth declaring stable.  At
-    v1.0.0 the **`lifecycle: experimental` badge is removed** and any "the API
-    may change" wording is dropped.  See *Pre-1.0 is different* below.
+  - **`v1.0.0` specifically** is cut once user feedback and any resulting
+    spec changes have settled and the public API is worth declaring stable.
+    At v1.0.0 the **`lifecycle: experimental` badge is removed** and any "the
+    API may change" wording is dropped.  See *Pre-1.0 is different* below.
 
 ### Backward-compatibility contract
 
@@ -533,12 +532,12 @@ That is what makes the plan below legal:
 
 | | |
 |---|---|
-| **v0.9.0** | Removes the seven deprecated border exports, and is the **first CRAN submission**.  Under a 1.x contract removing them would require a major; at `0.y.z` a minor may. |
-| **v1.0.0** | Cut **after** CRAN registration, once downloads, feedback and any resulting spec changes have settled.  From here the contract binds for real: no minor or patch may break user code again. |
+| **v0.9.0** | Removes the deprecated exports (the seven border constructors and the others deprecated in 0.8.x); `R CMD check` clean, coverage, docs polish.  Under a 1.x contract removing them would require a major; at `0.y.z` a minor may. |
+| **v1.0.0** | A stable API, once feedback and any resulting spec changes have settled.  From here the contract binds for real: no minor or patch may break user code again. |
 
-The order is deliberate.  Registering on CRAN is what produces the users whose
-feedback tells you whether the API is worth freezing; declaring 1.0.0 first
-would be promising stability before anyone had tried it.
+The order is deliberate: users' feedback tells you whether the API is worth
+freezing; declaring 1.0.0 first would be promising stability before anyone had
+tried it.
 
 ### Procedure — an ordinary development PR
 
@@ -669,7 +668,7 @@ Everything in the release procedure, **plus**:
 1. **Remove** functions deprecated in earlier minors, and describe each removal
    and its migration path under "Breaking changes" in `NEWS.md`.
 2. Audit for and document any other breaking change.
-3. For **v1.0.0**: confirm CRAN registration is in place, then remove the
+3. For **v1.0.0**: remove the
    `lifecycle: experimental` badge (set the lifecycle to *stable*) in the
    README and `DESCRIPTION`, and drop any "experimental / API may change"
    wording.

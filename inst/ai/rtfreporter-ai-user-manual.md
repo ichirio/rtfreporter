@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9044** (the development
+**This manual documents rtfreporter 0.8.2.9045** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -79,14 +79,12 @@ df <- data.frame(
 
 doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
   rtf_section(
-    page    = 1,
-    secinfo = list(
-      header = rtf_header(rows = list(
-        c(l = "Protocol XYZ-001", r = "Confidential"),
-        c(l = "Table 14.1.1",     r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
-      )),
-      footer = rtf_footer(rows = list(c(c = "ACME Pharma, Inc.")))
-    )
+    page   = 1,
+    header = rtf_header(rows = list(
+      c(l = "Protocol XYZ-001", r = "Confidential"),
+      c(l = "Table 14.1.1",     r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
+    )),
+    footer = rtf_footer(rows = list(c(c = "ACME Pharma, Inc.")))
   ) |>
   rtf_tables(
     as_rtftables(df, border = "tfl", row_height_twips = 280L),
@@ -185,8 +183,8 @@ pages_ae <- function(arms, days) {
 # 6  RENDER -----------------------------------------------------------------
 render <- function(pages, titles, notes, file) {
   doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
-    rtf_section(secinfo = list(header = study_header(titles),
-                               footer = study_footer(notes))) |>
+    rtf_section(header = study_header(titles),
+                               footer = study_footer(notes)) |>
     rtf_tables(pages, auto_section = TRUE)
   generate_rtfreport(doc, file, overwrite = TRUE)
 }
@@ -267,7 +265,7 @@ without writing a file.
 | Paper / orientation / margins | `rtf_page(paper_size = "letter"/"A4", orientation = "landscape", margin_*_in =)` |
 | Document-wide font size etc. | `rtf_default_format(font_size_half_points = 18L, ...)` |
 | Edit an already-built document | `rtf_config(doc, page =, default_format =, ...)` |
-| Running header / footer | `rtf_section(doc, page =, secinfo = list(header =, footer =))` |
+| Running header / footer | `rtf_section(doc, page =, header =, footer =)` |
 | Build those bands | `rtf_header(rows =)`, `rtf_footer(rows =)` |
 | data.frame → paginated pages | `as_rtftables(x, ...)` **(the workhorse — §5)** |
 | One table object by hand | `rtftable(data, col_header =, col_spec =, ...)` |
@@ -460,7 +458,7 @@ doc <- rtf_document()
 for (i in seq_along(lab_data)) {
   hdr <- rtf_header(rows = list(c(l = lab_data[[i]]$label)))
   doc <- doc |>
-    rtf_section(page = i, secinfo = list(header = hdr, footer = common_footer)) |>
+    rtf_section(page = i, header = hdr, footer = common_footer) |>
     rtf_tables(list(rtftable(lab_data[[i]]$df, border = "tfl")))
 }
 ```
@@ -819,9 +817,9 @@ p <- ard |>
     c("Characteristic", "(N={n})")))
 
 doc <- rtf_document() |>
-  rtf_section(secinfo = list(header = rtf_header(list(
+  rtf_section(header = rtf_header(list(
     c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
-    c(c = "Table 14.1.1  Demographics"))))) |>
+    c(c = "Table 14.1.1  Demographics")))) |>
   rtf_tables(p)
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```

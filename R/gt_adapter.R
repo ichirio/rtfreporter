@@ -133,7 +133,9 @@
   out
 }
 
-# Table footnote texts -> character vector for the page footnote block.
+# Table footnote texts -> character vector for the page footnote block.  gt
+# keeps a row per place a footnote is attached (gtsummary attaches the same
+# one to every statistic column) and prints each text once; so does this.
 .extract_footnote_texts <- function(gt_obj) {
   fn <- gt_obj[["_footnotes"]]
   if (is.null(fn) || !nrow(fn)) return(NULL)
@@ -143,7 +145,7 @@
     v <- v[!is.na(v)]
     if (!length(v)) NA_character_ else paste(v, collapse = " ")
   }, character(1L))
-  out <- out[!is.na(out)]
+  out <- unique(out[!is.na(out)])
   if (!length(out)) return(NULL)
   unname(out)
 }

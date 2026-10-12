@@ -162,7 +162,7 @@ pages <- as_rtftables(tbl, read_meta = TRUE, align_count_pct = TRUE,
                       col_header = dm_col_header, col_spec = dm_col_spec,
                       col_rel_width = dm_widths, blank_rows = "between_groups")
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = dm_header, footer = dm_footer)) |>
+  rtf_section(page = 1, header = dm_header, footer = dm_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "dm_gtsummary.rtf", overwrite = TRUE)
 ```
@@ -198,7 +198,7 @@ pages <- as_rtftables(tbl, read_meta = TRUE, align_count_pct = TRUE,
                       col_header = dm_col_header, col_spec = dm_col_spec,
                       col_rel_width = dm_widths, blank_rows = "between_groups")
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = dm_header, footer = dm_footer)) |>
+  rtf_section(page = 1, header = dm_header, footer = dm_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "dm_gtsummary_ard.rtf", overwrite = TRUE)
 ```
@@ -231,7 +231,7 @@ pages <- as_rtftables(tbl, read_meta = TRUE, align_count_pct = TRUE,
                       col_header = dm_col_header, col_spec = dm_col_spec,
                       col_rel_width = dm_widths, blank_rows = "between_groups")
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = dm_header, footer = dm_footer)) |>
+  rtf_section(page = 1, header = dm_header, footer = dm_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "dm_rtables.rtf", overwrite = TRUE)
 ```
@@ -322,7 +322,7 @@ pages <- as_rtftables(g1, read_meta = TRUE,
                       col_header = dm_col_header, col_spec = dm_col_spec,
                       col_rel_width = dm_widths, blank_rows = "between_groups")
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = dm_header, footer = dm_footer)) |>
+  rtf_section(page = 1, header = dm_header, footer = dm_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "dm_tfrmt.rtf", overwrite = TRUE)   # tfrmt's alignment
 ```
@@ -358,7 +358,7 @@ pages <- as_rtftables(g2, read_meta = TRUE, align_count_pct = TRUE,
                       col_header = dm_col_header, col_spec = dm_col_spec,
                       col_rel_width = dm_widths, blank_rows = "between_groups")
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = dm_header, footer = dm_footer)) |>
+  rtf_section(page = 1, header = dm_header, footer = dm_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "dm_tfrmt_rtfreporter.rtf", overwrite = TRUE)  # rtfreporter aligns
 ```
@@ -438,7 +438,7 @@ pages <- as_rtftables(disp, align_count_pct = TRUE,
                       col_header = dm_col_header, col_spec = dm_col_spec,
                       col_rel_width = dm_widths, blank_rows = "between_groups")
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = dm_header, footer = dm_footer)) |>
+  rtf_section(page = 1, header = dm_header, footer = dm_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "dm_tplyr.rtf", overwrite = TRUE)
 ```

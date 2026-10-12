@@ -232,7 +232,7 @@ pages <- as_rtftables(ae, read_meta = FALSE, split = "group_force", max_rows = A
                       col_header = ae_col_header, col_spec = ae_col_spec,
                       col_rel_width = ae_widths, row_height_twips = 200)
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = ae_header, footer = ae_footer)) |>
+  rtf_section(page = 1, header = ae_header, footer = ae_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "ae_tern.rtf", overwrite = TRUE)
 ```
@@ -271,7 +271,7 @@ pages <- as_rtftables(tbl, read_meta = FALSE, split = "group_force", max_rows = 
                       col_header = ae_col_header, col_spec = ae_col_spec,
                       col_rel_width = ae_widths, row_height_twips = 200)
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = ae_header, footer = ae_footer)) |>
+  rtf_section(page = 1, header = ae_header, footer = ae_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "ae_gtsummary.rtf", overwrite = TRUE)
 ```
@@ -365,7 +365,7 @@ pages <- as_rtftables(tbl, read_meta = FALSE, split = "group_force", max_rows = 
                       col_header = ae_col_header, col_spec = ae_col_spec,
                       col_rel_width = ae_widths, row_height_twips = 200)
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = ae_header, footer = ae_footer)) |>
+  rtf_section(page = 1, header = ae_header, footer = ae_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "ae_gtsummary_ard.rtf", overwrite = TRUE)
 ```
@@ -436,7 +436,7 @@ pages <- as_rtftables(disp, col_header = ae_col_header, split = "group_force",
                       cell_format = fmt_ae, col_spec = ae_col_spec,
                       col_rel_width = ae_widths, row_height_twips = 200)
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = ae_header, footer = ae_footer)) |>
+  rtf_section(page = 1, header = ae_header, footer = ae_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "ae_tplyr.rtf", overwrite = TRUE)
 ```
@@ -511,7 +511,7 @@ pages <- as_rtftables(print_to_gt(spec, long), read_meta = FALSE, split = "group
                       col_spec = ae_col_spec, col_rel_width = ae_widths,
                       row_height_twips = 200)
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = ae_header, footer = ae_footer)) |>
+  rtf_section(page = 1, header = ae_header, footer = ae_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "ae_tfrmt.rtf", overwrite = TRUE)
 ```
@@ -561,7 +561,7 @@ pages <- as_rtftables(gtsummary::as_flex_table(bake_indent(g)), read_meta = FALS
                       col_spec = ae_col_spec, col_rel_width = ae_widths,
                       row_height_twips = 200)
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = ae_header, footer = ae_footer)) |>
+  rtf_section(page = 1, header = ae_header, footer = ae_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "ae_flextable.rtf", overwrite = TRUE)
 
@@ -572,7 +572,7 @@ pages <- as_rtftables(gtsummary::as_hux_table(bake_indent(g)), read_meta = FALSE
                       col_spec = ae_col_spec, col_rel_width = ae_widths,
                       row_height_twips = 200)
 doc <- rtf_document(page = list(paper_size = "letter", orientation = "landscape")) |>
-  rtf_section(page = 1, secinfo = list(header = ae_header, footer = ae_footer)) |>
+  rtf_section(page = 1, header = ae_header, footer = ae_footer) |>
   rtf_tables(pages)
 generate_rtfreport(doc, "ae_huxtable.rtf", overwrite = TRUE)
 ```

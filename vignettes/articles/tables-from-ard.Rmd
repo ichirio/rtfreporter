@@ -186,14 +186,14 @@ p
 
 ```{r rtf-dm}
 doc <- rtf_document() |>
-  rtf_section(secinfo = list(
+  rtf_section(
     header = rtf_header(list(
       c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = "Table 14.1.1  Demographic Characteristics"),
       c(c = "Safety Analysis Set"),
       c(c = ""))),
     footer = rtf_footer(list(
-      c(l = "SD = standard deviation; Q1, Q3 = first and third quartiles."))))) |>
+      c(l = "SD = standard deviation; Q1, Q3 = first and third quartiles.")))) |>
   rtf_tables(p)
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```
@@ -278,14 +278,14 @@ p_ae <- ard_ae |>
 
 ```{r rtf-ae}
 doc <- rtf_document() |>
-  rtf_section(secinfo = list(
+  rtf_section(
     header = rtf_header(list(
       c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT"),
       c(c = "Safety Analysis Set"),
       c(c = ""))),
     footer = rtf_footer(list(
-      c(l = "A subject is counted once per SOC and once per PT."))))) |>
+      c(l = "A subject is counted once per SOC and once per PT.")))) |>
   rtf_tables(p_ae)
 generate_rtfreport(doc, "t_ae.rtf", overwrite = TRUE)
 length(plan_apply(p_ae))    # pages

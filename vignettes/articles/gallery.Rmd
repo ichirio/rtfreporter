@@ -48,11 +48,11 @@ adsl$TRT01A <- factor(adsl$TRT01A, levels = arms)
 house_doc <- function(..., orientation = "landscape") {
   rtf_document(page = rtf_page(orientation = orientation),
                tokens = list(STUDY = "CDISCPILOT01")) |>
-    rtf_section(secinfo = list(
+    rtf_section(
       header = rtf_header(list(
         c(l = "Protocol: {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
         ...)),
-      footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}"))))
+      footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))
 }
 ```
 
