@@ -176,6 +176,24 @@ test_that("style_body() renders bold where requested", {
   expect_equal(sum(pat_b) - sum(ctrl_b), 1L)
 })
 
+test_that("style_body() renders underline and indent on the requested cell only", {
+  # the cell's \li of a body cell holding `txt`
+  li_of <- function(rtf, txt) {
+    m <- regmatches(rtf, regexpr(paste0("\\\\li[0-9]+\\\\ri[0-9]+[^ ]* ", txt,
+                                        "\\\\cell"), rtf))
+    as.integer(sub("^\\\\li([0-9]+).*$", "\\1", m))
+  }
+  ctrl <- .sv_rtf(.sv_tbl())
+  out  <- .sv_rtf(.sv_tbl() |>
+                    style_body(rows = 2, cols = 2, underline = TRUE) |>
+                    style_body(rows = 1, cols = 1, indent_twips = 240))
+  expect_true(grepl("\\ul 2\\ulnone \\cell", out, fixed = TRUE))
+  expect_false(grepl("\\ul ", ctrl, fixed = TRUE))
+  expect_identical(lengths(regmatches(out, gregexpr("\\ul ", out, fixed = TRUE))), 1L)
+  expect_identical(li_of(out, "Age") - li_of(ctrl, "Age"), 240L)
+  expect_identical(li_of(out, "Sex"), li_of(ctrl, "Sex"))      # row 2 not indented
+})
+
 test_that("style_body() rejects bad rows", {
   expect_error(style_body(.sv_tbl(), rows = 99), "1\\.\\.2")
   expect_error(style_body(.sv_tbl(), rows = c(TRUE, FALSE, TRUE)), "length 2")
@@ -254,6 +272,34 @@ test_that("style_zone() merges onto the resolved table border", {
 })
 
 # ── add_header_row ────────────────────────────────────────────────────────────
+
+test_that("add_header_row() keeps the column names when the table has no header yet", {
+  d1 <- data.frame(Item = c("Age", "Sex"), A = c("1", "2"), B = c("3", "4"))
+  d2 <- data.frame(Item = c("Wt", "Ht"),   A = c("5", "6"), B = c("7", "8"))
+  top <- add_header_row(rtftable(d1), c("", "Treatment", "Treatment"))
+  expect_identical(top$col_header,
+                   list(c("", "Treatment", "Treatment"), c("Item", "A", "B")))
+  bottom <- add_header_row(rtftable(d1), c("", "n", "n"), .position = "bottom")
+  expect_identical(bottom$col_header, list(c("Item", "A", "B"), c("", "n", "n")))
+  # several data frames: each keeps its own names under the new row
+  m <- add_header_row(rtftable(list(d1, d2)), c("", "Treatment", "Treatment"))
+  expect_identical(lapply(m$col_header_list, `[[`, 2L),
+                   list(c("Item", "A", "B"), c("Item", "A", "B")))
+  rtf <- .sv_rtf(m)
+  expect_identical(lengths(regmatches(rtf, gregexpr("Item", rtf, fixed = TRUE))), 2L)
+})
+
+test_that("set_col_header() on several data frames sets every one's header", {
+  d1 <- data.frame(Item = "Age", A = "1", B = "3")
+  m <- set_col_header(rtftable(list(d1, d1)), c("Item", "Placebo", "Drug"))
+  expect_identical(m$col_header_list,
+                   rep(list(list(c("Item", "Placebo", "Drug"))), 2L))
+  expect_identical(m$col_header, m$col_header_list[[1L]])
+  # one string with `|` is one label per column
+  s <- set_col_header(rtftable(d1), "Item | Placebo | Drug")
+  expect_identical(s$col_header, list(c("Item", "Placebo", "Drug")))
+  expect_error(set_col_header(rtftable(d1), "Item | Placebo"), "3 columns|columns")
+})
 
 test_that("add_header_row() prepends / appends a normalized row", {
   tbl <- add_header_row(.sv_tbl(),

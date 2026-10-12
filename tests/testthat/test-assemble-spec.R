@@ -89,6 +89,26 @@ test_that("assemble_folder does the whole thing and can save a CSV spec", {
   expect_true(file.exists(out2))
 })
 
+test_that("the table of contents reads back a title's non-ASCII characters", {
+  d <- tempfile("asm-u"); dir.create(d)
+  # written as \uN? escapes; read back as the characters (a no-break space as a space)
+  .make_tbl_rtf(d, "t1.rtf", "14.1.1", "Age \u2265 65 years, \u00b5g/L,\u00a0Caf\u00e9")
+  f <- file.path(d, "t1.rtf")
+  expect_match(paste(readLines(f, warn = FALSE), collapse = ""), "\\u8805?", fixed = TRUE)
+  lab <- rtfreporter:::.rtf_table_label(f)
+  expect_identical(lab$title, "Age \u2265 65 years, \u00b5g/L, Caf\u00e9")
+  # the number and the title on one line: the title is the rest of it
+  doc <- rtf_document() |>
+    rtf_section(header = rtf_header(list(c(c = "Table 14.2.1  Vital Signs")))) |>
+    rtf_tables(data.frame(A = 1))
+  f2 <- file.path(d, "t2.rtf")
+  generate_rtfreport(doc, f2)
+  lab2 <- rtfreporter:::.rtf_table_label(f2)
+  expect_identical(lab2$table, "14.2.1")
+  expect_identical(lab2$title, "Vital Signs")
+  expect_identical(lab2$label, "Table 14.2.1  Vital Signs")
+})
+
 test_that("assemble_folder() without an output file gives the table of contents", {
   dir <- file.path(tempdir(), "toc-table")
   dir.create(dir, showWarnings = FALSE)

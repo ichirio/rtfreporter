@@ -511,6 +511,7 @@ test_that("an explicit `rows` always wins over the default", {
 
 
 test_that("`sort` can be declared instead of arranged afterwards", {
+  skip_on_cran()                  # one of the slowest blocks (~4 s); CI runs it
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -744,6 +745,7 @@ test_that("an overall block built by binding is found when named", {
 })
 
 test_that("a bare string still means the cards sentinel", {
+  skip_on_cran()                  # one of the slowest blocks (~4 s); CI runs it
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -1079,6 +1081,7 @@ test_that("plan_template(form = 'spread') puts keys outside `cols` into `rows`",
 })
 
 test_that("plan_template(form = 'spread') spells the hierarchical case so that it runs", {
+  skip_on_cran()                  # one of the slowest blocks (~4 s); CI runs it
   skip_if_no_cards()
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
