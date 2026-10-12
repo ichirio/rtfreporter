@@ -123,6 +123,11 @@ The names below that are *superseded* still work and do not warn
 
 ### Bug fixes
 
+- **`add_header_row()` keeps the column names** (#615) of a table that has no
+  column header yet: the new row goes above (or below) them, as documented,
+  instead of taking their place.  Tables of several data frames keep each
+  one's names.
+
 - **Mistakes that were accepted now stop with a message that says what to
   write** (#594 E1-E11).  None of these changes the output of code that
   worked.

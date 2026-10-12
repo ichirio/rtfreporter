@@ -432,6 +432,7 @@ test_that("the names the manual warns against are not exports", {
 })
 
 test_that("the ARD / plan examples (section 17) run", {
+  skip_on_cran()                  # one of the slowest blocks (~3 s); CI runs it
   skip_if_not_installed("cards")
   skip_if_not_installed("pharmaverseadam")
   lines <- .manual_lines()

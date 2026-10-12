@@ -89,6 +89,7 @@ test_that("gt: nested spanners become a stacked multi-row col_header", {
 # ── gtsummary option matrix ───────────────────────────────────────────────────
 
 test_that("gtsummary: a range of tbl_* layouts read without error", {
+  skip_on_cran()                  # one of the slowest blocks (~4 s); CI runs it
   skip_if_not_installed("gtsummary")
   skip_if_not_installed("gt")
   df <- .opt_df()
