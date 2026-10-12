@@ -92,6 +92,10 @@ The names below that are *superseded* still work and do not warn
   current names: `rtf_section(header = , footer = )`,
   `paginate_cols(cut_by = , keep = , fit = , order = )` and
   `fit_listing_widths(font_size_half_points = )`.
+- **`rtf_figures(width_twips = NULL)` is the image's native size** (#617), as
+  `?rtfplot` says: a file at its embedded DPI, a plot object at its
+  `render_width`, with no fit to the page.  Its help page said "the full
+  writable width"; the figure was never stretched to it.
 
 - **README first screen and a Gallery article.**  The README opens with one
   sentence on what the package does and a 30-second example that needs only
@@ -137,6 +141,10 @@ The names below that are *superseded* still work and do not warn
 - **A gtsummary table's footnote is printed once** (#613), not once per
   statistic column: gtsummary attaches it to every arm, and gt prints each
   text once.
+- **`add_header_row()` keeps the column names** (#615) of a table that has no
+  column header yet: the new row goes above (or below) them, as documented,
+  instead of taking their place.  Tables of several data frames keep each
+  one's names.
 
 - **Mistakes that were accepted now stop with a message that says what to
   write** (#594 E1-E11).  None of these changes the output of code that

@@ -590,13 +590,15 @@ add_header_row.rtftable <- function(x, row, .position = c("top", "bottom"),
   ncol_df   <- ncol(ref)
   new_row   <- .normalize_col_header_rows(list(row), ncol_df, names(ref))[[1L]]
 
-  insert <- function(hdr) {
-    hdr <- hdr %||% list()
+  # No header yet means the column names are the header: the new row goes
+  # above (or below) them, not in their place.
+  insert <- function(hdr, df) {
+    hdr <- hdr %||% list(names(df))
     if (.position == "top") c(list(new_row), hdr) else c(hdr, list(new_row))
   }
-  x$col_header <- insert(x$col_header)
+  x$col_header <- insert(x$col_header, ref)
   if (!is.null(x$col_header_list)) {
-    x$col_header_list <- lapply(x$col_header_list, insert)
+    x$col_header_list <- Map(insert, x$col_header_list, x$data_list)
   }
   x
 }

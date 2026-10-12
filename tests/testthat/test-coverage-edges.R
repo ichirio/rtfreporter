@@ -437,6 +437,37 @@ test_that("plan_layers() describes the cells and the header a plan resolved", {
   expect_identical(h4$span[3], "each")
 })
 
+test_that("a resolved header written back as cells gives the same header", {
+  skip_if_not_installed("cards")
+  # what tfl_as_table_spec() writes to the col_header sheet must read back
+  p2 <- edge_plan(c("TRT", "SEX"))
+  round_trip <- function(plan) {
+    cells <- suppressMessages(plan_layers(plan))$header$cells
+    back <- plan_col_header(p2, cells)
+    list(cells = cells,
+         before = first_page(suppressMessages(plan_apply(plan)))$col_header,
+         after  = first_page(suppressMessages(plan_apply(back)))$col_header)
+  }
+
+  # the same label over each arm's pair: one cell with `span = TRT`
+  arm <- round_trip(plan_col_header(p2, rtf_col_header(
+    list(col_cell(1L, ""), col_cell(2L, ""), col_cell(3:4, "Arm"),
+         col_cell(5:6, "Arm"), col_cell(7:8, "Arm")),
+    c("", "", "F", "M", "F", "M", "F", "M"))))
+  sp <- arm$cells[arm$cells$line == "1" & arm$cells$cols == ".values", ]
+  expect_identical(sp$span, "TRT")
+  expect_identical(sp$text, "Arm")
+  expect_identical(arm$after, arm$before)
+
+  # a label over one arm's columns only: `TRT = Placebo`, each column
+  one <- round_trip(plan_col_header(p2, rtf_col_header(
+    c("", "", "x", "x", "", "", "", ""))))
+  hit <- one$cells[one$cells$cols == "TRT = Placebo", ]
+  expect_identical(hit$span, "each")
+  expect_identical(hit$text, "x")
+  expect_identical(one$after, one$before)
+})
+
 test_that("plan_layers() reads a plan whose cells are a named map", {
   skip_if_not_installed("cards")
   p <- edge_plan()

@@ -1881,22 +1881,6 @@
   })
 }
 
-# Compute the rendered width of a content block in twips.
-.compute_content_width <- function(content, writable_width) {
-  if (is.null(content)) return(writable_width)
-  if (inherits(content, "rtftable")) {
-    if (!is.null(content$column_widths_twips)) return(sum(as.integer(content$column_widths_twips)))
-    if (!is.null(content$table_width_twips))   return(as.integer(content$table_width_twips))
-    if (!is.null(content$table_width_pct_of_writable)) {
-      return(as.integer(round(writable_width * content$table_width_pct_of_writable)))
-    }
-  }
-  if (inherits(content, "rtfplot")) {
-    return(as.integer(.rtfplot_display_twips(content)$w))
-  }
-  writable_width
-}
-
 # -- Title / footnote: content-width tables ----------------------------------
 #
 # Both blocks render as a SINGLE-COLUMN table whose width equals the content's
