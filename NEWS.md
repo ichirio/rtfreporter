@@ -82,6 +82,11 @@ The names below that are *superseded* still work and do not warn
 
 ### Documentation
 
+- **`rtf_figures(width_twips = NULL)` is the image's native size** (#617), as
+  `?rtfplot` says: a file at its embedded DPI, a plot object at its
+  `render_width`, with no fit to the page.  Its help page said "the full
+  writable width"; the figure was never stretched to it.
+
 - **README first screen and a Gallery article.**  The README opens with one
   sentence on what the package does and a 30-second example that needs only
   rtfreporter, with a picture of the RTF it writes.  The new *Gallery*
