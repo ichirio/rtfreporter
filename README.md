@@ -226,7 +226,7 @@ buys you:
   clinical TFL look out of the box; you do not have to assemble it.
 - **Only the features TFL → RTF needs.**  Multi-section headers /
   footers, spanning column headers, automatic page-number fields
-  (`{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}`), embedded figures, and
+  (`{PAGE}` / `{TOTAL_PAGES}`), embedded figures, and
   per-document concatenation via `assemble_rtf()`.  If a feature
   would not appear on a real clinical TFL, we resist adding it.
 - **Maintainability over breadth.**  Saying *no* to scope creep is
