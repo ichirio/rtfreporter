@@ -2312,7 +2312,10 @@
 #' @param report An `rtf_document` object (from [rtf_document()]) or an internal
 #'   `rtfreport` object.
 #' @param file_path Output RTF file path.
-#' @param overwrite Logical; whether to overwrite an existing file.
+#' @param overwrite Logical; whether to write over an existing file.  `TRUE`
+#'   (the default since 0.8.2.9039): a report program is run again and again,
+#'   as `write.csv()` and `ggsave()` write over theirs.  `FALSE` stops when the
+#'   file is there.
 #'   Default `FALSE`.
 #' @param program Overrides, for this one file, the program the document
 #'   names (`rtf_document(program = )`, where a program says it once), for
@@ -2394,10 +2397,10 @@
 #'   rtf_tables(as_rtftables(df), titles = list("Table 14.1.1"))
 #'
 #' out <- tempfile(fileext = ".rtf")     # write to a temporary file
-#' generate_rtfreport(doc, out, overwrite = TRUE)
+#' generate_rtfreport(doc, out)      # written over if it is there
 #' file.exists(out)
 #' @export
-generate_rtfreport <- function(report, file_path, overwrite = FALSE,
+generate_rtfreport <- function(report, file_path, overwrite = TRUE,
                                program = NULL, program_fallback = NULL) {
   # the run tokens' context, for this call only
   if (is.null(program) && inherits(report, "rtf_document")) {
@@ -2430,7 +2433,7 @@ generate_rtfreport <- function(report, file_path, overwrite = FALSE,
          call. = FALSE)
   }
   if (file.exists(file_path) && !isTRUE(overwrite)) {
-    stop("`file_path` already exists. Set overwrite = TRUE.", call. = FALSE)
+    stop("`file_path` already exists and `overwrite = FALSE`.", call. = FALSE)
   }
 
   report <- .rtfreport_validate(report)

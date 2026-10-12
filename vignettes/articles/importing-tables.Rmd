@@ -339,11 +339,11 @@ alone) or a list of them taken positionally. rtfreporter ships a few:
 
 - `fmt_count_paren()` -- right-justify an integer count and the number inside the
   parentheses, e.g. `"10 (11.6%)"` over `" 4 ( 4.7%)"`;
-- `fmt_count_paren_bare()` -- the same, and a bare count with no parentheses
+- `fmt_count_paren(bare = TRUE)` -- the same, and a bare count with no parentheses
   (a lone `"0"`, a raw total) is padded into the same field;
 - `fmt_value_paren()` -- the general form: the value before the parenthesis may
   be **any text** (`"n=3"`, `"3/12"`, a word), the `(...)` block is
-  right-justified the way `format_count_pct()` does it (the padding falls
+  right-justified the way `fmt_count_pct()` does it (the padding falls
   *before* the `(`, never inside the parentheses), and a zero count prints
   without its parentheses;
 - `fmt_right_align()` -- the minimal "right-justify a column" formatter and a

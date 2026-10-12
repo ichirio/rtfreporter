@@ -4,7 +4,7 @@
 \alias{fmt_count_paren}
 \title{Align "count (parenthetical)" cells}
 \usage{
-fmt_count_paren(x, nbsp = " ", na = "")
+fmt_count_paren(x, nbsp = " ", na = "", bare = FALSE)
 }
 \arguments{
 \item{x}{Character vector (one table column).}
@@ -17,6 +17,11 @@ as missing).  The default \code{""} leaves the cell empty, as before.  A
 non-empty token is right-justified with the other cells, so its right edge
 lines up with theirs.  \code{Inf} / \code{-Inf} are \strong{not} missing and print as
 \code{"Inf"} / \code{"-Inf"}.  See the \code{na} argument of \code{\link[=as_rtftables]{as_rtftables()}}.}
+
+\item{bare}{\code{FALSE} (default) leaves a cell with no parentheses as it is;
+\code{TRUE} also pads a \strong{bare integer count} (a lone \code{"0"}, a raw event
+total) into the count field, so it lines up under the parenthetical
+cells.  (It was \code{fmt_count_paren_bare()}, deprecated.)}
 }
 \value{
 Character vector the same length as \code{x}.
@@ -32,11 +37,11 @@ one, so the count digit \strong{and} the percentage line up across rows.
 Only cells that have parentheses are touched; cells \strong{without} them -- a
 lone count such as \code{"0"} or a raw total, a continuous statistic like
 \code{"75.2 (8.6)"} whose "count" is not an integer, free text, or empty
-group-label cells -- are returned \strong{unchanged}.  Use
-\code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}} if you also want bare integer counts padded into
-the same column.
+group-label cells -- are returned \strong{unchanged}.  With \code{bare = TRUE} a bare
+integer count is padded into the same count field too, so it lines up
+under the parenthetical cells.
 
-Unlike the fixed-width \code{\link[=realign_count_pct]{realign_count_pct()}} this adapts to the column's
+Unlike the fixed-width \code{align_count_pct = TRUE} this adapts to the column's
 actual digit counts and does not care what is \emph{inside} the parentheses,
 coping with mixed notations like \code{"(<1\%)"}, \code{"(100\%)"} and \code{"( 2.8\%)"} in
 one column (e.g. tables produced by \code{tfrmt}).
@@ -54,6 +59,6 @@ fmt_count_paren(c("1 (1.2\%)", NA, "108 (35.3\%)"), na = "-", nbsp = " ")
 
 }
 \seealso{
-\code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}}, \code{\link[=fmt_right_align]{fmt_right_align()}},
-\code{\link[=realign_count_pct]{realign_count_pct()}}, and the \code{cell_format} argument of \code{\link[=as_rtftables]{as_rtftables()}}.
+\code{\link[=fmt_value_paren]{fmt_value_paren()}} (any text before the parenthesis),
+\code{\link[=fmt_right_align]{fmt_right_align()}}, and the \code{cell_format} argument of \code{\link[=as_rtftables]{as_rtftables()}}.
 }

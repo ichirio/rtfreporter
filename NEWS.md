@@ -1,5 +1,39 @@
 # rtfreporter (development version)
 
+### Deprecated
+
+Removed in the next minor release, the first CRAN one.  The pre-CRAN API
+review, iteration 0 (#594; decided in the team's review):
+each warns once a session and still works; 0.9.0, the first CRAN release,
+removes it.  No old name is kept as an alias.
+
+- **The 26 table-format arguments of `rtf_tables()`, and `read_gt`** (#511
+  B-1).  A table's appearance is written in one place: `rtftable()`,
+  `as_rtftables()` or `plan_style()`.  `rtf_tables(doc, df, border = "tfl",
+  col_rel_width = c(2, 1))` is `rtf_tables(doc, rtftable(df, border = "tfl",
+  col_rel_width = c(2, 1)))`; a gt or gtsummary table goes through
+  `as_rtftables()` instead of `read_gt`.  Until 0.9.0 they behave as they
+  did, including overriding a pre-built `rtftable()` page when passed.
+- **`fmt_count_paren_bare(x)`** -- it is `fmt_count_paren(x, bare = TRUE)`
+  now, the same output byte for byte (`fmt_count_paren()` gains `bare =`;
+  `fmt_value_paren()` pads differently, so it is not the replacement);
+  **`realign_count_pct()`** -- `as_rtftables(align_count_pct = TRUE)`, the
+  built-in cell format `"count_pct"`; and **`format_count_pct()`, renamed
+  `fmt_count_pct()`** (the same arguments), named like the other cell
+  formatters.  The cell-format name `"realign_count_pct"` says so too
+  (`"count_pct"` is the same); `"count_paren_bare"` stays.
+
+### Changed
+
+- **`generate_rtfreport(overwrite = TRUE)` is the default.**  A report
+  program is run again and again, and every re-run stopped with "already
+  exists" unless the call said `overwrite = TRUE` -- as `write.csv()` and
+  `ggsave()` do, the file is written over now.  `overwrite = FALSE` keeps
+  the old guard.
+- `fmt_count_pct()` with `pct_unit = "fraction"` (the default) warns once a
+  session when a `pct` is above 1: a percentage written as a fraction prints
+  100 times too large (`5` as `500`).
+
 ### New
 
 - **`plan_n_candidates()`: the populations a header's `{n}` can say**
@@ -293,14 +327,16 @@ Found while raising the test coverage before CRAN (#552).
 hit warns today and stops working in 0.9.0:
 
 ```
-\b(rtf_border_(none|top|bottom|box|with|tfl|side)|rtf_table_border|add_col_header_row|col_header_from_names|set_header_cell|update_(header|footer)_row|paginate|assemble_(files|spec|toc|from_spec)|toc_(heading|entry))\s*\(|\b(spanning_header|gt_obj|stub_vars|stub_label|stub_indent|stub_group_summary)\s*=
+\b(rtf_border_(none|top|bottom|box|with|tfl|side)|rtf_table_border|add_col_header_row|col_header_from_names|set_header_cell|update_(header|footer)_row|paginate|assemble_(files|spec|toc|from_spec)|toc_(heading|entry)|fmt_count_paren_bare|realign_count_pct|format_count_pct)\s*\(|\b(spanning_header|gt_obj|stub_vars|stub_label|stub_indent|stub_group_summary|read_gt)\s*=
 ```
 
 For example `grep -rnE '<the expression>' R/ analysis/`, or RStudio's *Find
 in Files* with *Regular expression* ticked.  (`paginate_cols()` is not
 deprecated: the expression stops at `paginate(`.  The two first-argument
 names above are not in it -- they only matter when written as `df =` /
-`chunk =`.)
+`chunk =`.  Nor are the 26 table-format arguments of `rtf_tables()`
+deprecated in 0.8.2.9039: `rtftable()` keeps the same names, so look at each
+`rtf_tables(` call for `border =`, `col_rel_width =`, `font =` ...)
 
 ### New
 

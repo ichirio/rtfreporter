@@ -1,6 +1,8 @@
 # Pipe Composition API — document creation, configuration, content addition,
 # section definition, deprecated formatters, print method, full workflow.
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that("rtf_document() returns the expected S3 structure with defaults", {
   doc <- rtf_document()
   expect_s3_class(doc, "rtf_document")

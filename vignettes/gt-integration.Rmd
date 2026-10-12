@@ -357,14 +357,13 @@ What *is* now supported (and was not in earlier releases): per-cell
 bold / italic / underline / indent via `tab_style(cell_text(...))`, and
 in-cell footnote marks rendered as `^{N}` superscripts.
 
-## Legacy: `rtf_tables(read_gt = ...)`
+## Deprecated: `rtf_tables(read_gt = ...)`
 
 Before `as_rtftables()` existed, a raw `gt_tbl` could be handed
 directly to `rtf_tables()` with `read_gt = TRUE` to read its metadata.
-That path still works for a single, non-paginated table, but
-`as_rtftables()` is preferred: it is the only path that both paginates
-*and* reads metadata, and it keeps `rtf_tables()` free of any gt
-knowledge.
+That argument is deprecated (it warns, and is removed in 0.9.0): pass the
+table through `as_rtftables()`, the one path that both paginates *and*
+reads metadata, and that keeps `rtf_tables()` free of any gt knowledge.
 
 ## See also
 

@@ -7,6 +7,8 @@ df2 <- function() data.frame(a = c("1", "2"), b = c("x", "y"),
 
 # ── Argument validation (equivalence partitioning + boundary values) ─────────
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that('rtftable(border = "none") is accepted and means no borders', {
   none <- rtftable(df2(), border = "none")
   null <- rtftable(df2(), border = NULL)

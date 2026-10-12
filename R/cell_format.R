@@ -108,8 +108,8 @@
 #' @examples
 #' fmt_right_align(c("5", "120", "7"))
 #'
-#' @seealso [fmt_count_paren()], [realign_count_pct()], and the `cell_format`
-#'   argument of [as_rtftables()].
+#' @seealso [fmt_count_paren()], and the `cell_format` argument of
+#'   [as_rtftables()].
 #' @export
 fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
   if (length(x) == 0L) return(x)
@@ -200,11 +200,11 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
 #' Only cells that have parentheses are touched; cells **without** them -- a
 #' lone count such as `"0"` or a raw total, a continuous statistic like
 #' `"75.2 (8.6)"` whose "count" is not an integer, free text, or empty
-#' group-label cells -- are returned **unchanged**.  Use
-#' [fmt_count_paren_bare()] if you also want bare integer counts padded into
-#' the same column.
+#' group-label cells -- are returned **unchanged**.  With `bare = TRUE` a bare
+#' integer count is padded into the same count field too, so it lines up
+#' under the parenthetical cells.
 #'
-#' Unlike the fixed-width [realign_count_pct()] this adapts to the column's
+#' Unlike the fixed-width `align_count_pct = TRUE` this adapts to the column's
 #' actual digit counts and does not care what is *inside* the parentheses,
 #' coping with mixed notations like `"(<1%)"`, `"(100%)"` and `"( 2.8%)"` in
 #' one column (e.g. tables produced by `tfrmt`).
@@ -224,14 +224,23 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
 #' # A missing cell lines up under the counts.
 #' fmt_count_paren(c("1 (1.2%)", NA, "108 (35.3%)"), na = "-", nbsp = " ")
 #'
-#' @seealso [fmt_count_paren_bare()], [fmt_right_align()],
-#'   [realign_count_pct()], and the `cell_format` argument of [as_rtftables()].
+#' @param bare `FALSE` (default) leaves a cell with no parentheses as it is;
+#'   `TRUE` also pads a **bare integer count** (a lone `"0"`, a raw event
+#'   total) into the count field, so it lines up under the parenthetical
+#'   cells.  (It was `fmt_count_paren_bare()`, deprecated.)
+#'
+#' @seealso [fmt_value_paren()] (any text before the parenthesis),
+#'   [fmt_right_align()], and the `cell_format` argument of [as_rtftables()].
 #' @export
-fmt_count_paren <- function(x, nbsp = "\u00a0", na = "") {
-  .fmt_count_core(x, nbsp = nbsp, bare = FALSE, na = na)
+fmt_count_paren <- function(x, nbsp = "\u00a0", na = "", bare = FALSE) {
+  .fmt_count_core(x, nbsp = nbsp, bare = isTRUE(bare), na = na)
 }
 
 #' Align "count (parenthetical)" cells, including bare counts
+#'
+#' **Deprecated** in 0.8.x (it says so once a session and still works),
+#' removed in 0.9.0: it is `fmt_count_paren(x, bare = TRUE)`, the same
+#' output.
 #'
 #' Like [fmt_count_paren()], but a **bare integer count** with no parentheses
 #' (a lone `"0"` for a zero count, or a raw event total) is also padded into
@@ -244,21 +253,25 @@ fmt_count_paren <- function(x, nbsp = "\u00a0", na = "") {
 #' @return Character vector the same length as `x`.
 #'
 #' @examples
-#' # The lone "0" is padded to share the column width.
-#' fmt_count_paren_bare(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)"))
+#' # deprecated: the same as fmt_count_paren(bare = TRUE)
+#' fmt_count_paren(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)"), bare = TRUE)
 #'
-#' @seealso [fmt_count_paren()] (parenthetical cells only).
+#' @seealso [fmt_count_paren()].
+#' @keywords internal
 #' @export
 fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
+  .deprecate_once(
+    "fmt_count_paren_bare",
+    paste0("`fmt_count_paren_bare(x)` is deprecated: it is ",
+           "`fmt_count_paren(x, bare = TRUE)`, the same output.\n  Removed in 0.9.0."))
   .fmt_count_core(x, nbsp = nbsp, bare = TRUE, na = na)
 }
 
 
 #' Align "value (parenthetical)" cells, text values included
 #'
-#' The general form of [fmt_count_paren_bare()]: the value before the
-#' parenthesis may be **any text**, and cells with and without a parenthesis
-#' are both padded into one column.
+#' The value before the parenthesis may be **any text**, and cells with and
+#' without a parenthesis are both padded into one column.
 #'
 #' Three rules, applied to the whole column at once:
 #'
@@ -269,14 +282,14 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 #'   padding falls **before** the `(` and never inside the parentheses. Every
 #'   `)` lands in the same column, and cells sharing a decimal layout line up
 #'   on the decimal point and the ones digit -- the rule
-#'   [format_count_pct()] has always used. A parenthetical with no decimals,
+#'   [fmt_count_pct()] has always used. A parenthetical with no decimals,
 #'   `"(100)"`, therefore sits flush against its `)` and is *not* digit-aligned
 #'   with the decimal cells;
 #' * a **zero count drops its parenthetical**: `"0 (0.0)"` prints as `"0"`,
-#'   again as [format_count_pct()] does. Only an all-zero parenthetical is
+#'   again as [fmt_count_pct()] does. Only an all-zero parenthetical is
 #'   dropped, so `"0 (BLQ)"` keeps what it says;
 #' * **100% loses its decimals**: `"(100.0)"` prints as `"(100)"` and
-#'   `"(100.0%)"` as `"(100%)"` -- [format_count_pct()]'s `pct >= 100` branch,
+#'   `"(100.0%)"` as `"(100%)"` -- [fmt_count_pct()]'s `pct >= 100` branch,
 #'   which formats that one as an integer. Only a plain number is rewritten;
 #'   `"<100.0"` and any other notation is left exactly as written.
 #'
@@ -295,9 +308,9 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 #'
 #' Compared with the other built-ins: [fmt_count_paren()] touches only
 #' parenthetical cells and only when the value is a bare integer, and pads
-#' *inside* the parentheses; [fmt_count_paren_bare()] adds bare integers to the
+#' *inside* the parentheses; `fmt_count_paren(bare = TRUE)` adds bare integers to the
 #' same field; this one drops the integer requirement, pads before the `(` as
-#' [format_count_pct()] does, and prints a zero count on its own.
+#' [fmt_count_pct()] does, and prints a zero count on its own.
 #'
 #' @inheritParams fmt_right_align
 #'
@@ -310,8 +323,8 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 #' # The value may be any text -- its rightmost character is what lines up.
 #' fmt_value_paren(c("86", "12 (14.0)", "n=3 (3.5)"), nbsp = " ")
 #'
-#' @seealso [fmt_count_paren()], [fmt_count_paren_bare()],
-#'   [format_count_pct()] for the same parenthesis rules from numbers, and the
+#' @seealso [fmt_count_paren()],
+#'   [fmt_count_pct()] for the same parenthesis rules from numbers, and the
 #'   `cell_format` argument of [as_rtftables()].
 #' @export
 fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
@@ -345,14 +358,14 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
   }
 
   # A zero count is one fact, not two: "0 (0.0)" prints as "0", the way
-  # format_count_pct()'s `count = 0` branch has always rendered it.  Only an
+  # fmt_count_pct()'s `count = 0` branch has always rendered it.  Only an
   # ALL-ZERO parenthetical is dropped, so "0 (BLQ)" keeps what it says.
   zero <- !is.na(inner) & grepl("^0+$", value) &
           grepl("[0-9]", inner) & !grepl("[1-9]", inner)
   inner[zero] <- NA_character_
 
   # 100% prints without decimals -- "(100.0)" -> "(100)", "(100.0%)" -> "(100%)"
-  # -- format_count_pct()'s `pct >= 100` branch, which formats that one with
+  # -- fmt_count_pct()'s `pct >= 100` branch, which formats that one with
   # "%3d".  Only a plain number is rewritten; "<100.0" and any other notation
   # is left exactly as written.
   pc  <- sub("%$", "", inner)
@@ -373,7 +386,7 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
   # padding falls BEFORE the "(" and never inside the parentheses.  Every ")"
   # then lands in the same column, cells sharing a decimal layout line up on
   # the point and the ones digit, and a "(100)" simply sits flush against its
-  # ")" -- format_count_pct()'s rule, which is what a clinical table expects.
+  # ")" -- fmt_count_pct()'s rule, which is what a clinical table expects.
   wb   <- if (any(hp)) max(nchar(inner[hp])) + 2L else 0L
   full <- wv + if (wb > 0L) 1L + wb else 0L
 
@@ -405,11 +418,18 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
 .CELL_FORMATS <- list(
   right_align       = "fmt_right_align",
   count_paren       = "fmt_count_paren",
-  count_paren_bare  = "fmt_count_paren_bare",
+  count_paren_bare  = ".fmt_count_paren_bare",
   value_paren       = "fmt_value_paren",
-  count_pct         = "realign_count_pct",
-  realign_count_pct = "realign_count_pct"
+  count_pct         = ".realign_count_pct",
+  realign_count_pct = ".realign_count_pct"
 )
+# a name the deprecated realign_count_pct() gave (#594): it still resolves,
+# and says so.  ("count_paren_bare" stays: fmt_count_paren(bare = TRUE).)
+.CELL_FORMATS_DEPRECATED <- c(realign_count_pct = "\"count_pct\"")
+
+.fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
+  .fmt_count_core(x, nbsp = nbsp, bare = TRUE, na = na)
+}
 
 # Internal: one built-in, by name.  Unknown names list what there is.
 .builtin_cell_format <- function(name, arg = "cell_format") {
@@ -419,8 +439,14 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
     stop(sprintf(
       "`%s`: \"%s\" is not a built-in cell format.  The built-ins are %s (the \"fmt_\" prefix is optional), or pass a function of your own.",
       arg, name,
-      paste0("\"", setdiff(names(.CELL_FORMATS), "realign_count_pct"), "\"",
+      paste0("\"", setdiff(names(.CELL_FORMATS), names(.CELL_FORMATS_DEPRECATED)), "\"",
              collapse = ", ")), call. = FALSE)
+  }
+  if (key %in% names(.CELL_FORMATS_DEPRECATED)) {
+    .deprecate_once(
+      paste0("cell_format_", key),
+      sprintf("The cell format \"%s\" is deprecated: use %s.\n  Removed in 0.9.0.",
+              name, .CELL_FORMATS_DEPRECATED[[key]]))
   }
   get(fn, envir = asNamespace("rtfreporter"))
 }
@@ -471,7 +497,7 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
 .resolve_align_count_pct <- function(v) {
   if (is.null(v)) return(NULL)
   if (is.logical(v) && length(v) == 1L && !is.na(v)) {
-    return(if (isTRUE(v)) realign_count_pct else NULL)
+    return(if (isTRUE(v)) .realign_count_pct else NULL)
   }
   if (is.function(v) || (is.character(v) && length(v) == 1L && !is.na(v)) ||
       is.list(v)) {

@@ -1265,7 +1265,7 @@ print.table_plan <- function(x, ...) {
 #' * `paginate_cols(x, ...)` is declared as `plan_paginate_cols(every = , at = , keep = )`
 #' * `rtftable(col_rel_width = )` by position is declared as `plan_columns(widths = c(Analyte = 3, .values = 2))`
 #' * `set_col_header()` / `rtf_col_header()` is declared as `plan_col_header()`
-#' * `realign_count_pct()` is declared as `plan_style(align_count_pct = TRUE)`
+#' * `as_rtftables(align_count_pct = TRUE)` is declared as `plan_style(align_count_pct = TRUE)`
 #' * `fmt_numeric()` is declared as `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))`
 #' * `paginate()` is declared as `plan_paginate_rows()`
 #' * `style_header(x, ...)` is declared as `plan_cell_style(header = TRUE, ...)`

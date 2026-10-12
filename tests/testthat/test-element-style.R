@@ -17,6 +17,8 @@
 
 # ──────── the resolver: size and height move together ──────────────────────
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that("nothing set -> the document size and its implied height", {
   m <- rtfreporter:::.resolve_element_metrics(NULL, NULL, 18L, NULL)
   expect_equal(m$fs, 18L)

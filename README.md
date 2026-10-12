@@ -33,11 +33,12 @@ doc <- rtf_document() |>
     header = rtf_header(list(
       c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"))),
     footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
-  rtf_tables(dm,
-    col_header = rtf_col_header(c("", "Placebo\n(N=86)",
-                                  "Xanomeline\nLow Dose\n(N=84)",
-                                  "Xanomeline\nHigh Dose\n(N=84)")),
-    col_rel_width = c(3, 2, 2, 2),
+  rtf_tables(
+    rtftable(dm,
+      col_header = rtf_col_header(c("", "Placebo\n(N=86)",
+                                    "Xanomeline\nLow Dose\n(N=84)",
+                                    "Xanomeline\nHigh Dose\n(N=84)")),
+      col_rel_width = c(3, 2, 2, 2)),
     titles    = list(c("Table 14.1.1", "Demographic Characteristics",
                        "Safety Analysis Set")),
     footnotes = list("SD = standard deviation."))
@@ -146,7 +147,7 @@ doc <- rtf_document(tokens = list(STUDY = "CDISCPILOT01")) |>
     footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
   rtf_tables(plan)
 
-generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R", overwrite = TRUE)
+generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R")
 ```
 
 <p align="center">

@@ -7,6 +7,8 @@ library(testthat)
 
 # ── data.frame input ──────────────────────────────────────────────────────────
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that("as_rtftables(data.frame) returns a list of one rtftable", {
   df  <- data.frame(a = 1:3, b = c("x", "y", "z"), stringsAsFactors = FALSE)
   res <- as_rtftables(df)

@@ -52,7 +52,11 @@
   "assemble_toc",          # -> assemble_rtf(toc = <table>)
   "assemble_from_spec",    # -> assemble_rtf(toc = <table or its path>)
   "toc_heading",           # -> the `heading` column of the table
-  "toc_entry"              # -> a row of the table
+  "toc_entry",             # -> a row of the table
+  # 0.8.2.9039: the pre-CRAN API review, iteration 0 (#594 O2)
+  "fmt_count_paren_bare",  # -> fmt_value_paren()
+  "realign_count_pct",     # -> as_rtftables(align_count_pct = TRUE) / "count_pct"
+  "format_count_pct"       # -> fmt_count_pct()
 )
 
 .deprecation_state <- new.env(parent = emptyenv())
@@ -63,6 +67,9 @@
   warning(msg, call. = FALSE)
   invisible(TRUE)
 }
+
+# A warning that is not a deprecation, said once a session the same way
+.warn_once <- function(key, msg) .deprecate_once(paste0("warn:", key), msg)
 
 # The pre-0.5 reading of an rtf_border was uniform: `left`/`right` reached every
 # cell of a row and a multi-row zone's `top`/`bottom` reached every one of its

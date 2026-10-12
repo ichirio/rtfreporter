@@ -5,6 +5,8 @@
 
 # ──────── .normalize_table_border ─────────────────────────────────────────
 
+silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
+
 test_that(".normalize_table_border accepts every documented input form", {
   expect_null(rtfreporter:::.normalize_table_border(NULL))
   tb <- rtfreporter:::.rtf_table_border(header = rtf_border(top = TRUE))

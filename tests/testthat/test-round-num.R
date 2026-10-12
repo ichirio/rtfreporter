@@ -1,5 +1,7 @@
 # One rounding rule for the whole package (#476).
 
+silence_deprecation(c("realign_count_pct"))   # until 0.9.0 (#594)
+
 test_that("round_num() rounds half to even under 'r' and away from zero under 'sas'", {
   x <- c(0.5, 1.5, 2.5, -0.5, -2.5)
   expect_equal(round_num(x, rounding = "r"),   c(0, 2, 2, 0, -2))
@@ -35,19 +37,19 @@ test_that("every formatter follows the option", {
   expect_identical(fmt_signif(23.445, 4), "23.45")
   expect_identical(fmt_numeric(data.frame(a = 23.445), "a", digits = 2)$a,
                    "23.45")
-  expect_identical(format_count_pct(1L, 1 / 16, nbsp = " "), "  1  (6.3)")
+  expect_identical(fmt_count_pct(1L, 1 / 16, nbsp = " "), "  1  (6.3)")
   options(rtfreporter.rounding = "r")
   expect_identical(fmt_round(23.445, 2), "23.44")
-  expect_identical(format_count_pct(1L, 1 / 16, nbsp = " "), "  1  (6.2)")
-  expect_identical(format_count_pct(1L, 1 / 16, nbsp = " ", rounding = "sas"),
+  expect_identical(fmt_count_pct(1L, 1 / 16, nbsp = " "), "  1  (6.2)")
+  expect_identical(fmt_count_pct(1L, 1 / 16, nbsp = " ", rounding = "sas"),
                    "  1  (6.3)")
 })
 
-test_that("format_count_pct() picks its width from the ROUNDED percent", {
+test_that("fmt_count_pct() picks its width from the ROUNDED percent", {
   # 9.96 prints as 10.0, so it takes the two-digit width, not the < 10 one
-  expect_identical(format_count_pct(5L, 9.96, pct_unit = "percent", nbsp = " "),
-                   format_count_pct(5L, 10,   pct_unit = "percent", nbsp = " "))
+  expect_identical(fmt_count_pct(5L, 9.96, pct_unit = "percent", nbsp = " "),
+                   fmt_count_pct(5L, 10,   pct_unit = "percent", nbsp = " "))
   # 99.96 prints as 100, the whole-number branch
-  expect_identical(format_count_pct(5L, 99.96, pct_unit = "percent", nbsp = " "),
+  expect_identical(fmt_count_pct(5L, 99.96, pct_unit = "percent", nbsp = " "),
                    "  5  (100)")
 })

@@ -56,7 +56,7 @@
 #' digit (`round(0.5)` is `0`, `round(2.5)` is `2`); SAS's `ROUND()` rounds
 #' it **away from zero** (`0.5` is `1`, `2.5` is `3`, `-0.5` is `-1`).
 #' Every formatter in the package -- [fmt_signif()], [fmt_round()],
-#' [fmt_numeric()], [format_count_pct()] -- rounds with this same rule, so
+#' [fmt_numeric()], [fmt_count_pct()] -- rounds with this same rule, so
 #' a study that has to match a SAS-produced table sets it **once**:
 #'
 #' \preformatted{

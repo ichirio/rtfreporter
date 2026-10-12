@@ -22,9 +22,8 @@ lines up with theirs.  \code{Inf} / \code{-Inf} are \strong{not} missing and pri
 Character vector the same length as \code{x}.
 }
 \description{
-The general form of \code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}}: the value before the
-parenthesis may be \strong{any text}, and cells with and without a parenthesis
-are both padded into one column.
+The value before the parenthesis may be \strong{any text}, and cells with and
+without a parenthesis are both padded into one column.
 }
 \details{
 Three rules, applied to the whole column at once:
@@ -36,14 +35,14 @@ word;
 padding falls \strong{before} the \code{(} and never inside the parentheses. Every
 \verb{)} lands in the same column, and cells sharing a decimal layout line up
 on the decimal point and the ones digit -- the rule
-\code{\link[=format_count_pct]{format_count_pct()}} has always used. A parenthetical with no decimals,
+\code{\link[=fmt_count_pct]{fmt_count_pct()}} has always used. A parenthetical with no decimals,
 \code{"(100)"}, therefore sits flush against its \verb{)} and is \emph{not} digit-aligned
 with the decimal cells;
 \item a \strong{zero count drops its parenthetical}: \code{"0 (0.0)"} prints as \code{"0"},
-again as \code{\link[=format_count_pct]{format_count_pct()}} does. Only an all-zero parenthetical is
+again as \code{\link[=fmt_count_pct]{fmt_count_pct()}} does. Only an all-zero parenthetical is
 dropped, so \code{"0 (BLQ)"} keeps what it says;
 \item \strong{100\% loses its decimals}: \code{"(100.0)"} prints as \code{"(100)"} and
-\code{"(100.0\%)"} as \code{"(100\%)"} -- \code{\link[=format_count_pct]{format_count_pct()}}'s \code{pct >= 100} branch,
+\code{"(100.0\%)"} as \code{"(100\%)"} -- \code{\link[=fmt_count_pct]{fmt_count_pct()}}'s \code{pct >= 100} branch,
 which formats that one as an integer. Only a plain number is rewritten;
 \code{"<100.0"} and any other notation is left exactly as written.
 }
@@ -62,9 +61,9 @@ parentheses are not parsed.
 
 Compared with the other built-ins: \code{\link[=fmt_count_paren]{fmt_count_paren()}} touches only
 parenthetical cells and only when the value is a bare integer, and pads
-\emph{inside} the parentheses; \code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}} adds bare integers to the
+\emph{inside} the parentheses; \code{fmt_count_paren(bare = TRUE)} adds bare integers to the
 same field; this one drops the integer requirement, pads before the \code{(} as
-\code{\link[=format_count_pct]{format_count_pct()}} does, and prints a zero count on its own.
+\code{\link[=fmt_count_pct]{fmt_count_pct()}} does, and prints a zero count on its own.
 }
 \examples{
 # A zero count prints on its own; "(100)" is flush against its ")".
@@ -75,7 +74,7 @@ fmt_value_paren(c("86", "12 (14.0)", "n=3 (3.5)"), nbsp = " ")
 
 }
 \seealso{
-\code{\link[=fmt_count_paren]{fmt_count_paren()}}, \code{\link[=fmt_count_paren_bare]{fmt_count_paren_bare()}},
-\code{\link[=format_count_pct]{format_count_pct()}} for the same parenthesis rules from numbers, and the
+\code{\link[=fmt_count_paren]{fmt_count_paren()}},
+\code{\link[=fmt_count_pct]{fmt_count_pct()}} for the same parenthesis rules from numbers, and the
 \code{cell_format} argument of \code{\link[=as_rtftables]{as_rtftables()}}.
 }

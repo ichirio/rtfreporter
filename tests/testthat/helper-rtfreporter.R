@@ -28,3 +28,19 @@ local_deprecated <- function(...) {
   for (k in c(...)) assign(k, TRUE, envir = st)
   invisible()
 }
+
+# rtf_tables()'s 26 table-format arguments and `read_gt` are deprecated
+# (#594, removed in 0.9.0) but behave as before until then.  A test file that
+# tests that behaviour calls this first, so the once-a-session warnings are
+# taken as said; test-api-surface.R checks the warnings themselves.
+silence_rtf_tables_deprecation <- function() {
+  silence_deprecation(paste0("rtf_tables_", rtfreporter:::.rtf_tables_fmt_args))
+}
+
+# The same for deprecated functions (their keys: the function's name), whose
+# own tests run until 0.9.0 removes them
+silence_deprecation <- function(keys) {
+  st <- rtfreporter:::.deprecation_state
+  for (k in keys) assign(k, TRUE, envir = st)
+  invisible()
+}

@@ -7,7 +7,7 @@
 generate_rtfreport(
   report,
   file_path,
-  overwrite = FALSE,
+  overwrite = TRUE,
   program = NULL,
   program_fallback = NULL
 )
@@ -18,7 +18,10 @@ generate_rtfreport(
 
 \item{file_path}{Output RTF file path.}
 
-\item{overwrite}{Logical; whether to overwrite an existing file.
+\item{overwrite}{Logical; whether to write over an existing file.  \code{TRUE}
+(the default since 0.8.2.9039): a report program is run again and again,
+as \code{write.csv()} and \code{ggsave()} write over theirs.  \code{FALSE} stops when the
+file is there.
 Default \code{FALSE}.}
 
 \item{program}{Overrides, for this one file, the program the document
@@ -105,7 +108,7 @@ doc <- rtf_document() |>
   rtf_tables(as_rtftables(df), titles = list("Table 14.1.1"))
 
 out <- tempfile(fileext = ".rtf")     # write to a temporary file
-generate_rtfreport(doc, out, overwrite = TRUE)
+generate_rtfreport(doc, out)      # written over if it is there
 file.exists(out)
 }
 \seealso{
