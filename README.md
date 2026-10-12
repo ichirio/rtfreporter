@@ -19,13 +19,13 @@ included.**
 ## Why rtfreporter?
 
 - **Objects from the packages you already use, straight to RTF.**
-  `as_rtftables()` reads rtables / tern, rlistings, gtsummary, gt, tfrmt,
-  flextable and huxtable objects -- their labels, spanning headers and
-  footnotes -- and plain data frames.
-- **An ARD is the recommended route.**  A cards / cardx analysis results
-  dataset becomes a table through a short plan (`table_plan()` and the
-  `plan_*()` verbs); the column header's `(N=xx)` is read from the same
-  ARD, so the header and the numbers under it agree.
+  cards / cardx ARDs (through a short plan), rtables / tern, rlistings,
+  gtsummary, gt, tfrmt, flextable, huxtable, and plain data frames --
+  their labels, spanning headers and footnotes kept.
+- **An ARD is the recommended route.**  The plan verbs (`table_plan()` and
+  the `plan_*()` verbs) lay out a cards / cardx analysis results dataset,
+  and the column header's `(N=xx)` is read from the same ARD, so the
+  header and the numbers under it agree.
 - **Pages ready to submit.**  Running headers and footers with page numbers,
   the program and the run date; titles and footnotes; row and column
   pagination; listings and figures; the files joined into one deliverable.
