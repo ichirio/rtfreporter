@@ -15,94 +15,26 @@
 files -- running header and footer, page numbers, titles and footnotes
 included -- using base R alone.**
 
-## A 30-second example
+A table gets there in one of two ways:
 
-``` r
-library(rtfreporter)
-
-# A demographics summary: the CDISC pilot study's numbers, typed in
-dm <- data.frame(
-  row  = c("Age (years)", "  Mean (SD)", "  Min, Max",
-           "Sex, n (%)",  "  Female",    "  Male"),
-  pbo  = c("", "75.2 (8.59)", "52, 89", "", "53 (61.6)", "33 (38.4)"),
-  low  = c("", "75.7 (8.29)", "51, 88", "", "50 (59.5)", "34 (40.5)"),
-  high = c("", "74.4 (7.89)", "56, 88", "", "40 (47.6)", "44 (52.4)"))
-
-doc <- rtf_document() |>
-  rtf_section(
-    header = rtf_header(list(
-      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"))),
-    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}"))) |>
-  rtf_tables(
-    rtftable(dm,
-      col_header = rtf_col_header(c("", "Placebo\n(N=86)",
-                                    "Xanomeline\nLow Dose\n(N=84)",
-                                    "Xanomeline\nHigh Dose\n(N=84)")),
-      col_rel_width = c(3, 2, 2, 2)),
-    titles    = list(c("Table 14.1.1", "Demographic Characteristics",
-                       "Safety Analysis Set")),
-    footnotes = list("SD = standard deviation."))
-
-generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R")
-```
-
-<p align="center">
-  <img src="man/figures/readme-30s-example.png"
-       alt="The t_dm.rtf written by the example, opened in a word processor: a running header with the protocol and Page 1 of 1, the centred title block, three arm columns with (N=xx), age and sex rows with indented statistics, a footnote, and a running footer with the program name and the run date."
-       width="720" />
-</p>
-
-<p align="center"><sub><em>The <code>t_dm.rtf</code> written by the code above, opened in LibreOffice (the empty middle of the page is cut out of the picture).
-More tables, listings and figures are in the
-<a href="https://ichirio.github.io/rtfreporter/articles/gallery.html">Gallery</a>.</em></sub></p>
-
-## Installation
-
-The package is not on CRAN yet. Install from GitHub:
-
-``` r
-# install.packages("remotes")
-
-# Latest release (v0.8.2)
-remotes::install_github("ichirio/rtfreporter@v0.8.2")
-
-# Development version (latest main)
-remotes::install_github("ichirio/rtfreporter")
-```
-
-## Why rtfreporter?
-
-**From the analysis results to the RTF page, with one vocabulary.**  The
-recommended way to make a table is from an analysis results dataset (ARD)
-built with [cards](https://pharmaverse.github.io/cards/) /
-[cardx](https://insightsengineering.github.io/cardx/): the statistics stay
-in the ARD, and a short **plan** says how they are laid out -- which key goes
-across and which down, how a mean and an SD become one cell, what the rows
-are called, what the header says and where the pages break.  The column
-header's `(N=xx)` is read from the same ARD, so the header and the numbers
-under it agree by construction.
-
-**Bring your own table, too.**  A table already built with gt, gtsummary,
-rtables / tern, tfrmt, flextable, huxtable -- or a plain data frame -- goes in
-through `as_rtftables()`, with its labels, spanning headers and footnotes.
+1. **From an analysis results dataset (ARD)** built with
+   [cards](https://pharmaverse.github.io/cards/) /
+   [cardx](https://insightsengineering.github.io/cardx/): the statistics stay
+   in the ARD, and a short **plan** says how they are laid out.  The column
+   header's `(N=xx)` is read from the same ARD, so the header and the numbers
+   under it agree by construction.
+2. **From a table you already have** -- gtsummary, rtables / tern, gt, tfrmt,
+   flextable, huxtable or a plain data frame: `as_rtftables()` reads it, with
+   its labels, spanning headers and footnotes.
 
 Either way the document around it is the same: running headers and footers
 with page numbers, the program name and the run date, titles and footnotes,
 listings and figures, and the finished files joined into one deliverable.
 
-We **deliberately keep the scope small**.  rtfreporter is not a
-general-purpose RTF library; it is a focused tool for the one clinical
-TFL style we want to ship.  That scope cap is the point — it keeps the
-package small enough to read end-to-end, thorough to test, and realistic
-to maintain.  If the supported layout matches your team's house style,
-you get publication-ready deliverables with almost no configuration.
+## From an ARD, with a plan
 
-## The recommended path: a table from an ARD
-
-The example above typed its numbers in.  In a real program they come from
-an analysis results dataset (ARD) built with
-[cards](https://pharmaverse.github.io/cards/), and a short **plan** lays them
-out -- the column header's `(N=xx)` is read from the same ARD:
+The CDISC pilot study's ADSL, which cards ships: an ARD by arm, a plan, and
+the document.
 
 ``` r
 library(rtfreporter)
@@ -152,15 +84,109 @@ generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R")
 
 <p align="center">
   <img src="man/figures/readme-ard-example.png"
-       alt="A demographics table rendered by rtfreporter from a cards ARD with a plan: a running header with the protocol and page number, a centred title, arm columns with (N=xx) read from the ARD, age statistics and n (%) rows for the categorical variables, and a footnote."
-       width="600" />
+       alt="The t_dm.rtf written by the code above, opened in a word processor: a running header with the protocol and Page 1 of 1, the centred title block, three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as n, mean (SD) and min, max, age group and sex as n (%), and a running footer with the program name and the run date."
+       width="720" />
 </p>
 
-<p align="center"><sub><em>A demographics table made this way -- the full example, with quartiles and race, is in
-<a href="https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html">Tables from an ARD</a>.</em></sub></p>
+<p align="center"><sub><em>The <code>t_dm.rtf</code> written by the code above, opened in LibreOffice (the empty middle of the page is cut out of the picture).</em></sub></p>
 
+The same plan pages a long table, sorts an adverse-events table by frequency
+within each system organ class, and can be saved and reused.
 [Get started](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
-walks through these three steps.
+walks through these three steps and an adverse-events table;
+[Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html)
+adds quartiles, race and the plan's other verbs.  More tables, listings and
+figures are in the
+[Gallery](https://ichirio.github.io/rtfreporter/articles/gallery.html).
+
+## A table you already have
+
+A [gtsummary](https://www.danieldsjoberg.com/gtsummary/) table of the same
+data goes in through `as_rtftables()`, its labels and footnote with it:
+
+``` r
+library(gtsummary)
+
+adsl$AGEGR1 <- factor(adsl$AGEGR1, levels = c("<65", "65-80", ">80"))
+tbl <- tbl_summary(adsl, by = ARM, include = c(AGE, AGEGR1, SEX),
+                   label = list(AGE ~ "Age (years)", AGEGR1 ~ "Age group"))
+
+rtf_document() |>
+  rtf_tables(as_rtftables(tbl),
+             titles = c("Table 14.1.1  Demographic Characteristics",
+                        "Safety Analysis Set")) |>
+  generate_rtfreport("t_dm_gtsummary.rtf")
+```
+
+<p align="center">
+  <img src="man/figures/readme-gtsummary-example.png"
+       alt="The t_dm_gtsummary.rtf written by the code above, opened in a word processor: the title block, the gtsummary table's own column headers (N = 86 and so on), age as median (Q1, Q3), age group and sex as n (%), and gtsummary's footnote under the table."
+       width="720" />
+</p>
+
+<p align="center"><sub><em>The <code>t_dm_gtsummary.rtf</code> written by the code above, opened in LibreOffice.</em></sub></p>
+
+`as_rtftables()` reads
+[gtsummary](https://www.danieldsjoberg.com/gtsummary/),
+[rtables](https://CRAN.R-project.org/package=rtables) /
+[tern](https://CRAN.R-project.org/package=tern),
+[gt](https://gt.rstudio.com),
+[tfrmt](https://gsk-biostatistics.github.io/tfrmt/),
+[flextable](https://davidgohel.github.io/flextable/) and
+[huxtable](https://hughjonesd.github.io/huxtable/) objects -- their column
+labels, alignment, spanning headers, titles, footnotes and per-cell styling --
+so the numbers stay where your team already computes them, and you do not
+re-state the table in another vocabulary.  A tool it does not read can hand
+over a plain data frame, with the column header and alignment given to
+`rtftable()`; here with the numbers typed in:
+
+``` r
+library(rtfreporter)
+
+# A demographics summary: the CDISC pilot study's numbers, typed in
+dm <- data.frame(
+  row  = c("Age (years)", "  Mean (SD)", "  Min, Max",
+           "Sex, n (%)",  "  Female",    "  Male"),
+  pbo  = c("", "75.2 (8.59)", "52, 89", "", "53 (61.6)", "33 (38.4)"),
+  low  = c("", "75.7 (8.29)", "51, 88", "", "50 (59.5)", "34 (40.5)"),
+  high = c("", "74.4 (7.89)", "56, 88", "", "40 (47.6)", "44 (52.4)"))
+
+doc <- rtf_document() |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"))),
+    footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}"))) |>
+  rtf_tables(
+    rtftable(dm,
+      col_header = rtf_col_header(c("", "Placebo\n(N=86)",
+                                    "Xanomeline\nLow Dose\n(N=84)",
+                                    "Xanomeline\nHigh Dose\n(N=84)")),
+      col_rel_width = c(3, 2, 2, 2)),
+    titles    = list(c("Table 14.1.1", "Demographic Characteristics",
+                       "Safety Analysis Set")),
+    footnotes = list("SD = standard deviation."))
+
+generate_rtfreport(doc, "t_dm_typed.rtf", program = "t_dm.R")
+```
+
+For worked, tool-by-tool comparisons see the *same report, every framework*
+articles — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
+and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html) —
+plus [Pharmaverse example tables to RTF](https://ichirio.github.io/rtfreporter/articles/tlg-catalog.html).
+
+## Installation
+
+The package is not on CRAN yet. Install from GitHub:
+
+``` r
+# install.packages("remotes")
+
+# Latest release (v0.8.2)
+remotes::install_github("ichirio/rtfreporter@v0.8.2")
+
+# Development version (latest main)
+remotes::install_github("ichirio/rtfreporter")
+```
 
 ## Writing rtfreporter code with an AI assistant
 
@@ -178,18 +204,16 @@ rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
 
 Or download it -- **[AI user manual (v0.8.2)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
 
-It holds the whole workflow, the program structure a report program should
-have, every `as_rtftables()` argument, the four clinical table shapes, headers
-and page tokens, listings, figures, borders, and the complete list of exported
-functions.  Every example in it is executed against the package and its
-function list is checked against `NAMESPACE`, both by CI -- so a manual that
-drifts from the API fails the build rather than misleading you.
+Every example in it is run by CI and its function list is checked against
+`NAMESPACE`, so a manual that drifts from the API fails the build.
 
 Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual (`rtfreporter_ai_manual("dev")`).
 
 ## A focused tool, on purpose
 
-What the small scope buys you:
+We **deliberately keep the scope small**: rtfreporter is a focused tool for
+the one clinical TFL layout, not a general-purpose RTF library.  What that
+buys you:
 
 - **One output style, opinionated defaults.**  No theme zoo, no
   "render anything" pipeline.  The defaults match the conventional
@@ -209,38 +233,6 @@ If your deliverables need a substantially different layout, another tool
 may serve you better — and that trade-off is intentional.  We would
 rather do one well-defined style really well than do everything passably.
 You are warmly welcome to use rtfreporter for the styles it supports.
-
-## Bring your own table tool
-
-The clinical-table ecosystem has several excellent builders —
-[tfrmt](https://gsk-biostatistics.github.io/tfrmt/),
-[gtsummary](https://www.danieldsjoberg.com/gtsummary/),
-[rtables](https://CRAN.R-project.org/package=rtables) /
-[tern](https://CRAN.R-project.org/package=tern),
-[gt](https://gt.rstudio.com),
-[flextable](https://davidgohel.github.io/flextable/) and
-[huxtable](https://hughjonesd.github.io/huxtable/) — and, honestly, no
-single de-facto standard has emerged yet.  rtfreporter does not ask you to pick one, to
-switch, or to re-state your table in yet another vocabulary.  Whatever
-your team already uses to compute and format the numbers,
-[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.html)
-reads that object — its column labels, alignment, spanning headers,
-titles, footnotes and per-cell styling — and carries the metadata through
-to RTF.
-
-And even if you use a tool we do **not** read directly, you are still
-covered: convert its result to a plain `data.frame` / tibble and
-rtfreporter lays it out just the same.  A bare data.frame carries no
-display metadata, so you simply re-specify what you want — column headers,
-alignment, and so on — on `rtf_tables()` / `rtftable()` yourself.
-
-The [30-second example](#a-30-second-example) at the top of this page is
-exactly that: a data frame, with its column header given to `rtf_tables()`.
-
-For worked, tool-by-tool comparisons see the *same report, every framework*
-articles — [Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html)
-and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html) —
-plus [Pharmaverse example tables to RTF](https://ichirio.github.io/rtfreporter/articles/tlg-catalog.html).
 
 ## Why RTF?
 

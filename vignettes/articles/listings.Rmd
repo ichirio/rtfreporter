@@ -146,7 +146,7 @@ fitted <- fit_listing_widths(
   adsl, bare,
   page = rtf_page(paper_size = "A4", orientation = "landscape",
                   margin_left_in = 0.5, margin_right_in = 0.5),
-  size_half_points = 16L
+  font_size_half_points = 16L
 )
 fitted
 ```
@@ -297,7 +297,7 @@ doc <- rtf_document(
               margin_left_in = 0.5, margin_right_in = 0.5),
   default_format = list(font_size_half_points = 16L)
 ) |>
-  rtf_section(secinfo = list(
+  rtf_section(
     header = rtf_header(list(
       c("Listing 16.2.4.2.1.2"),
       c("Baseline Characteristics"),
@@ -305,8 +305,7 @@ doc <- rtf_document(
     )),
     footer = rtf_footer(list(
       c(l = "ECOG: Eastern Cooperative Oncology Group")
-    ))
-  )) |>
+    ))) |>
   rtf_tables(pages)
 
 path <- file.path(tempdir(), "listing-16-2-4-2-1-2.rtf")

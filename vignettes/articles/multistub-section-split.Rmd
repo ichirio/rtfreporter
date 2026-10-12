@@ -122,7 +122,7 @@ section that starts on its own page with the test code in the running header:
 
 ```{r render, eval = FALSE}
 doc <- rtf_document() |>
-  rtf_section(secinfo = list(header = my_header, footer = my_footer)) |>
+  rtf_section(header = my_header, footer = my_footer) |>
   rtf_tables(pages, auto_section = TRUE)
 
 generate_rtfreport(doc, "lab-tox.rtf", overwrite = TRUE)

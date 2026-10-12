@@ -497,7 +497,7 @@ attaches them to each page as the `rtf_titles` / `rtf_footnotes` attributes, and
 
 ```{r titles, eval = FALSE}
 doc <- rtf_document() |>
-  rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
+  rtf_section(page = 1, header = NULL, footer = NULL) |>
   rtf_tables(as_rtftables(my_gt_table))   # gt's title/source notes flow through
 ```
 

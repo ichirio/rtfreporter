@@ -15,10 +15,12 @@ vignette: >
 # The chunks below RUN.  Every file goes to a temporary folder, so building
 # this vignette writes nothing outside the session, and a broken example fails
 # the build instead of rotting unnoticed.  The ARD chunks need cards.
+# data-raw/gen_gallery.R points RTFREPORTER_ARTICLE_OUT at the folder whose
+# t_ae.rtf becomes the picture of the adverse-events table.
 has_cards <- requireNamespace("cards", quietly = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE, eval = has_cards)
-knitr::opts_knit$set(root.dir = tempdir())
+knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir()))
 options(width = 100)
 ```
 
@@ -158,7 +160,62 @@ generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 are paged by the plan (`plan_paginate_rows()`), and the header repeats on
 every page.
 
-## 5. Where next on this path
+## 5. An adverse-events table
+
+The same steps make a table of adverse events by system organ class (SOC) and
+preferred term (PT), from
+[pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/)'s ADAE.
+`ard_stack_hierarchical()` counts subjects at each level, with the safety
+population as the denominator; `plan_sort()` puts the SOCs in order and the
+PTs within each by frequency; `plan_paginate_rows(split = "group_safe")`
+breaks pages between SOCs.
+
+```{r ae, eval = has_cards && requireNamespace("pharmaverseadam", quietly = TRUE)}
+arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
+adsl <- pharmaverseadam::adsl
+adsl <- adsl[adsl$SAFFL == "Y", ]
+adsl$TRT01A <- factor(adsl$TRT01A, levels = arms)
+adae <- pharmaverseadam::adae
+adae <- adae[adae$TRTEMFL %in% "Y" & adae$SAFFL %in% "Y", ]
+adae$TRT01A <- factor(adae$TRT01A, levels = arms)
+
+ard_ae <- ard_stack_hierarchical(
+  adae, variables = c(AEBODSYS, AEDECOD), by = TRT01A,
+  denominator = adsl, id = USUBJID, over_variables = TRUE)
+
+p_ae <- ard_ae |>
+  normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"), overall = "Any TEAE") |>
+  table_plan(cols = "TRT01A", rows = c(SOC = "AEBODSYS", PT = "AEDECOD"),
+             label = NA) |>
+  plan_sort(".overall", "SOC", ".depth", "-n", "PT") |>
+  plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
+  plan_stub(name = "System Organ Class\n  Preferred Term", indent = 2) |>
+  plan_blanks(where = "between_groups", first = TRUE) |>
+  plan_paginate_rows(max_rows = 24, split = "group_safe") |>
+  plan_columns(widths = c(5, 2, 2, 2)) |>
+  plan_style(border = "tfl", align_count_pct = TRUE) |>
+  plan_col_header(values = list(n = TRUE), rtf_col_header(
+    c("", "{col}"),
+    c("", "(N={n})\nn (%)")))
+
+rtf_document() |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT"),
+      c(c = "Safety Analysis Set"))),
+    footer = rtf_footer(list(
+      c(l = "A subject is counted once per SOC and once per PT.")))) |>
+  rtf_tables(p_ae) |>
+  generate_rtfreport("t_ae.rtf")
+```
+
+![The first page of t_ae.rtf: the running header with Page 1 of 14, the title block, "Any TEAE", then Cardiac disorders and its preferred terms, most frequent first, each as n (%) by arm with (N=xx) in the column header.](../man/figures/get-started-ae.png){width=100%}
+
+The [Tables from an ARD](tables-from-ard.html) article goes through this table
+step by step.
+
+## 6. Where next on this path
 
 * [Tables from an ARD](tables-from-ard.html) -- the same steps in
   more depth, quartiles, and an adverse-events table sorted by frequency

@@ -22,7 +22,7 @@ A **section** assigns a header and footer starting at a given page; that
 header/footer applies to every page **from there until the next section**. There
 is no separate "per-page header" mechanism -- a single page''s header is simply
 whatever the section covering that page defines. You create sections with
-`rtf_section(doc, page = , secinfo = list(header = , footer = ))`.
+`rtf_section(doc, page = , header = , footer = )`.
 
 Two consequences worth remembering:
 
@@ -77,7 +77,7 @@ df <- data.frame(A = c("1", "2"), B = c("x", "y"), stringsAsFactors = FALSE)
 
 doc <- rtf_document() |>
   rtf_tables(list(df, df, df)) |>                      # three pages
-  rtf_section(page = 1, secinfo = list(header = hdr, footer = ftr))
+  rtf_section(page = 1, header = hdr, footer = ftr)
 ```
 
 The section at page 1 covers all subsequent pages, so every page gets the same
@@ -94,8 +94,8 @@ hdr_b <- rtf_header(rows = list(c(l = "Protocol XYZ-001", r = "Table 14.2.1")))
 
 doc <- rtf_document() |>
   rtf_tables(list(df, df, df, df)) |>
-  rtf_section(page = 1, secinfo = list(header = hdr,   footer = ftr)) |>
-  rtf_section(page = 3, secinfo = list(header = hdr_b, footer = NULL))
+  rtf_section(page = 1, header = hdr,   footer = ftr) |>
+  rtf_section(page = 3, header = hdr_b, footer = NULL)
 #                                                       ^ NULL = keep ftr
 ```
 
@@ -114,7 +114,7 @@ and each name is appended to it as a per-section line:
 
 ```{r auto-section}
 doc <- rtf_document() |>
-  rtf_section(secinfo = list(header = hdr, footer = ftr)) |>   # base (no page)
+  rtf_section(header = hdr, footer = ftr) |>   # base (no page)
   rtf_tables(
     list("Demographics" = df, "Adverse events" = df),
     auto_section        = TRUE,
@@ -147,7 +147,7 @@ Two ways to get clean sections from converted tables:
   pages <- as_rtftables(lab_df, split = "by_value", group_col = "PARAM",
                         drop_cols = "PARAM")
   doc <- rtf_document() |>
-    rtf_section(secinfo = list(header = hdr)) |>
+    rtf_section(header = hdr) |>
     rtf_tables(pages, auto_section = TRUE)        # one section per parameter
   ```
 
@@ -162,7 +162,7 @@ Two ways to get clean sections from converted tables:
   ae <- as_rtftables(ae_tbl, split = "group_force", max_rows = 30)
 
   doc <- rtf_document() |>
-    rtf_section(secinfo = list(header = hdr)) |>
+    rtf_section(header = hdr) |>
     rtf_tables(
       combine_sections(Demographics = dm, `Adverse Events` = ae),
       auto_section = TRUE)                          # one clean section per table
@@ -182,10 +182,9 @@ word processor even after the document is re-paginated:
 ```{r numbering}
 doc <- rtf_document() |>
   rtf_tables(list(df, df)) |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = NULL,
-    footer = rtf_footer(c(c = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"))
-  ))
+    footer = rtf_footer(c(c = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")))
 
 rtf <- {
   f <- tempfile(fileext = ".rtf"); generate_rtfreport(doc, f, overwrite = TRUE)
@@ -220,9 +219,9 @@ runs, or the document knitr is knitting -- and a message says which.
 ```{r run-tokens}
 doc <- rtf_document(program_fallback = "programs/t_dm.R") |>
   rtf_tables(list(df)) |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     footer = rtf_footer(list(
-      c(l = "Program: {PROGRAM}", r = "Run: {DATETIME:%Y-%m-%d %H:%M}")))))
+      c(l = "Program: {PROGRAM}", r = "Run: {DATETIME:%Y-%m-%d %H:%M}"))))
 ```
 
 **Tokens of your own** are given once, in `rtf_document(tokens = )` (or for a
@@ -239,7 +238,7 @@ hdr_study <- rtf_header(list(
 
 doc <- rtf_document(tokens = list(STUDY = "ABC-123", POPULATION = "")) |>
   rtf_tables(list(df)) |>
-  rtf_section(page = 1, secinfo = list(header = hdr_study))
+  rtf_section(page = 1, header = hdr_study)
 generate_rtfreport(doc, tempfile(fileext = ".rtf"))
 rtf_text_tokens(doc)[rtf_text_tokens(doc)$kind == "own", c("token", "example")]
 ```

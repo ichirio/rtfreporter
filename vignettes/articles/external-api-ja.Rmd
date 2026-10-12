@@ -43,8 +43,8 @@ library(rtfreporter)
 
 rtf_document() |>                                  # -> rtf_document
   rtf_tables(as_rtftables(df)) |>                  # コンテンツページを追加
-  rtf_section(page = 1, secinfo = list(            # ヘッダー/フッターを割当
-    header = rtf_header(...), footer = rtf_footer(...))) |>
+  rtf_section(page = 1,                            # ヘッダー/フッターを割当
+    header = rtf_header(...), footer = rtf_footer(...)) |>
   generate_rtfreport("out.rtf", overwrite = TRUE)  # ファイルへ出力
 ```
 
@@ -80,7 +80,7 @@ rtf_document() |>                                  # -> rtf_document
 * **コンテンツ** — `rtf_tables(doc, tables, ...)` と `rtf_figures(doc, figures, ...)`
   がコンテンツページを追加（1 要素 = 1 ページ）。`rtf_titles()` / `rtf_footnotes()`
   でページ単位のタイトル／脚注を付与。いずれも更新後の `rtf_document` を返す。
-* **セクション** — `rtf_section(doc, page, secinfo)` がページ範囲にヘッダー／
+* **セクション** — `rtf_section(doc, page, header, footer)` がページ範囲にヘッダー／
   フッターを割り当てる（フラットなページ列へのオーバーレイ。`NULL` は前セクション
   を継承）。
 * **レンダリング** — `generate_rtfreport(doc, file, overwrite)` が `.rtf` を書き出し、

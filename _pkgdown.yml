@@ -50,10 +50,10 @@ development:
 home:
   title: "rtfreporter — Clinical RTF Reporting Toolkit for R"
   description: >
-    Standalone R toolkit for generating Rich Text Format (RTF) Tables,
-    Listings and Figures (TFLs) for clinical trial deliverables.  Pure
-    S3 architecture; no dependency on r2rtf, reporter, or any other RTF
-    library; works on any modern R out of the box.
+    Clinical tables, listings and figures (TFLs) as RTF files: from a
+    cards / cardx analysis results dataset with a table plan, or from a
+    table you already have -- gtsummary, rtables / tern, gt, tfrmt,
+    flextable, huxtable or a data frame.
   # Keep README's H1 (which contains the logo image) on the home page.
   strip_header: false
   sidebar:
@@ -220,9 +220,10 @@ footer:
 
 reference:
   # Ordered as the site recommends using the package: a table from an ARD
-  # with a plan first; then the document, pages, headers, footers and tokens
-  # around it; tables brought from other packages; listings; figures;
-  # assembly; borders and styles; deprecated last.
+  # with a plan first; tables brought from other packages second (the two
+  # ways in, as on the home page); then the document, pages, headers, footers
+  # and tokens around them; listings; figures; assembly; borders and styles;
+  # deprecated last.
 
   # ── 1. Tables from an ARD ──────────────────────────────────────────────
   - title: Tables from an ARD — reading the ARD
@@ -262,7 +263,27 @@ reference:
       - plan_n_candidates
       - plan_template
 
-  # ── 2. The document ─────────────────────────────────────────────────
+  # ── 2. Bring your own table ─────────────────────────────────────────
+  - title: Bring your own table — as_rtftables()
+    desc: >
+      The second path: a table already built elsewhere -- a `gt::gt()`
+      table, a gtsummary table, an rtables/tern `VTableTree`, a tfrmt,
+      flextable or huxtable table, an rlistings `listing_df`, or a plain
+      data.frame -- turned into `rtftable`
+      objects, reading the source's metadata and paginating in one call.
+      **Acts on:** the source object.  **Produces:** `rtftable` objects.
+      `as_rtftables()` returns one per page (a list); `as_rtftable()` returns
+      a single object.  `stub_cols()` prepares a tidy data.frame beforehand by
+      merging hierarchy columns into one indented stub column; `stub_spec()`
+      carries the same settings into `as_rtftables(stub = )`.
+    contents:
+      - as_rtftables
+      - as_rtftable
+      - combine_sections
+      - stub_cols
+      - stub_spec
+
+  # ── 3. The document ─────────────────────────────────────────────────
   - title: Document, rendering & tokens
     desc: >
       `rtf_document()` creates the document -- with the program, the
@@ -326,26 +347,6 @@ reference:
     contents:
       - rtfreporter_options
       - rtfreporter_reset_defaults
-
-  # ── 3. Bring your own table; table building blocks ──────────────────
-  - title: Bring your own table — as_rtftables()
-    desc: >
-      The second path: a table already built elsewhere -- a `gt::gt()`
-      table, a gtsummary table, an rtables/tern `VTableTree`, a tfrmt,
-      flextable or huxtable table, an rlistings `listing_df`, or a plain
-      data.frame -- turned into `rtftable`
-      objects, reading the source's metadata and paginating in one call.
-      **Acts on:** the source object.  **Produces:** `rtftable` objects.
-      `as_rtftables()` returns one per page (a list); `as_rtftable()` returns
-      a single object.  `stub_cols()` prepares a tidy data.frame beforehand by
-      merging hierarchy columns into one indented stub column; `stub_spec()`
-      carries the same settings into `as_rtftables(stub = )`.
-    contents:
-      - as_rtftables
-      - as_rtftable
-      - combine_sections
-      - stub_cols
-      - stub_spec
 
   - title: Recipes — four complete tables from data frames
     desc: >

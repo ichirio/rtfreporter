@@ -198,10 +198,9 @@ They share the page model, so a document is a sequence of content pages:
 
 ```{r mixed}
 report <- rtf_document() |>
-  rtf_section(page = 1, secinfo = list(
+  rtf_section(page = 1,
     header = rtf_header(rows = list(c(l = "Protocol XYZ-123",
-                                      r = "Page {AUTO_PAGE}")))
-  )) |>
+                                      r = "Page {AUTO_PAGE}")))) |>
   rtf_tables(list(head(mtcars[, 1:4], 8)),
              titles = list(c("Table 14.1.1", "Vehicle characteristics"))) |>
   rtf_figures(list(p, function() hist(mtcars$mpg, main = NULL, xlab = "MPG")),

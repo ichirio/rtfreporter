@@ -95,8 +95,8 @@ p <- p_body |>
 
 ```{r rtf}
 doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
-  rtf_section(secinfo = list(header = rtf_header(list(
-    c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"))))) |>
+  rtf_section(header = rtf_header(list(
+    c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}")))) |>
   rtf_tables(p)
 generate_rtfreport(doc, "l_sae.rtf", overwrite = TRUE)
 length(plan_apply(p))    # pages

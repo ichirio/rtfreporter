@@ -1,21 +1,26 @@
 ## ---------------------------------------------------------------------------
-##  Pictures for the Gallery article (vignettes/articles/gallery.Rmd) and the
-##  README's 30-second example (man/figures/readme-30s-example.png).
+##  Pictures for the Gallery article (vignettes/articles/gallery.Rmd), the
+##  README's two first examples (man/figures/readme-ard-example.png and
+##  readme-gtsummary-example.png) and Get started's adverse-events table
+##  (man/figures/get-started-ae.png).
 ##
 ##  The pictures are made from the code that is shown, not from a copy of it:
-##    * the Gallery article is rendered with RTFREPORTER_ARTICLE_OUT set, so
-##      every RTF it writes lands in one folder;
-##    * the first ```r block of README.md is run as it stands.
-##  LibreOffice then turns the first page of each RTF into a PNG.  The empty
-##  band between the table and the running footer is cut down so the picture
-##  stays small, and the PNG is quantised (pngquant, when installed).
+##    * the Gallery article and Get started are rendered with
+##      RTFREPORTER_ARTICLE_OUT set, so every RTF they write lands in one
+##      folder;
+##    * the first two ```r blocks of README.md are run as they stand.
+##  LibreOffice turns each RTF into a PDF, and the first page of the PDF is
+##  rendered to a PNG (pdftools) -- sharper text than LibreOffice's own PNG
+##  export.  The empty band between the table and the running footer is cut
+##  down so the picture stays small, and the PNG is quantised (pngquant, when
+##  installed).
 ##
 ##  Run from the package root, after a change to the article or the README
 ##  example:
 ##    Rscript data-raw/gen_gallery.R
 ##
-##  Needs LibreOffice (soffice) and the png package; pngquant / optipng are
-##  used when they are on the PATH.
+##  Needs LibreOffice (soffice), pdftools, png, cards, gtsummary and
+##  pharmaverseadam; pngquant / optipng are used when they are on the PATH.
 ## ---------------------------------------------------------------------------
 pkgload::load_all(".", quiet = TRUE)
 
@@ -29,7 +34,7 @@ if (is.na(soffice)) stop("LibreOffice (soffice) is needed for the pictures.")
 ## the file is converted: LibreOffice 24.2 runs a short page on into the next
 ## section instead of starting a new page, which a picture of page 1 should
 ## not show.
-rtf_to_png <- function(rtf, png) {
+rtf_to_png <- function(rtf, png, dpi = 144) {
   tmp <- tempfile("png-")
   dir.create(tmp)
   txt <- readLines(rtf, warn = FALSE)
@@ -42,11 +47,14 @@ rtf_to_png <- function(rtf, png) {
   # R's LD_LIBRARY_PATH (R's own lib folder first) stops LibreOffice from
   # finding its libraries on Linux, so it is cleared for this one call.
   env <- if (.Platform$OS.type == "unix") "LD_LIBRARY_PATH=" else character()
-  system2(soffice, c("--headless", "--convert-to", "png", "--outdir",
+  system2(soffice, c("--headless", "--convert-to", "pdf", "--outdir",
                      shQuote(tmp), shQuote(normalizePath(rtf))),
           stdout = FALSE, stderr = FALSE, env = env)
-  out <- list.files(tmp, pattern = "[.]png$", full.names = TRUE)
-  if (length(out) != 1L) stop("LibreOffice did not convert ", rtf)
+  pdf <- list.files(tmp, pattern = "[.]pdf$", full.names = TRUE)
+  if (length(pdf) != 1L) stop("LibreOffice did not convert ", rtf)
+  out <- sub("[.]pdf$", ".png", pdf)
+  png::writePNG(pdftools::pdf_render_page(pdf, page = 1, dpi = dpi,
+                                          numeric = TRUE), out)
   squash_blank_band(out, png)
 }
 
@@ -71,7 +79,15 @@ squash_blank_band <- function(src, dest, keep = 36L, pad = 24L) {
   rows <- rows[max(1L, min(ink) - pad):min(length(rows), max(ink) + pad)]
   cols <- which(ink_col)
   cols <- max(1L, min(cols) - pad):min(ncol(lum), max(cols) + pad)
-  png::writePNG(img[rows, cols, , drop = FALSE], dest)
+  img <- img[rows, cols, , drop = FALSE]
+  # A page with no colour (every table and listing) is written as grey, a
+  # third of the size.
+  rgb <- img[, , seq_len(min(3L, dim(img)[3L])), drop = FALSE]
+  if (dim(rgb)[3L] == 3L &&
+      max(abs(rgb[, , 1] - rgb[, , 2]), abs(rgb[, , 2] - rgb[, , 3])) < 0.02) {
+    img <- rgb[, , 1]
+  }
+  png::writePNG(img, dest)
   if (nzchar(Sys.which("pngquant"))) {
     system2("pngquant", c("--force", "--skip-if-larger", "--quality=60-90",
                           "--ext", ".png", shQuote(dest)))
@@ -96,21 +112,37 @@ for (f in list.files(out, pattern = "[.]rtf$", full.names = TRUE)) {
   rtf_to_png(f, file.path(figs, sub("[.]rtf$", ".png", basename(f))))
 }
 
-## 2. The README's 30-second example ----------------------------------------
+## 2. The README's first two examples --------------------------------------
+## The ARD example writes t_dm.rtf; the gtsummary one, which uses its `adsl`,
+## writes t_dm_gtsummary.rtf.
 readme <- readLines("README.md", encoding = "UTF-8")
-open   <- grep("^``` ?r$", readme)[1L]
-close  <- open + grep("^```$", readme[-seq_len(open)])[1L]
-code   <- readme[(open + 1L):(close - 1L)]
+opens  <- grep("^``` ?r$", readme)[1:2]
+code   <- unlist(lapply(opens, function(open) {
+  close <- open + grep("^```$", readme[-seq_len(open)])[1L]
+  readme[(open + 1L):(close - 1L)]
+}))
 code   <- code[!grepl("^library\\(rtfreporter\\)", code)]   # load_all() above
 wd <- tempfile("readme-")
 dir.create(wd)
 old <- setwd(wd)
 eval(parse(text = code), envir = new.env())
 setwd(old)
-rtf_to_png(file.path(wd, "t_dm.rtf"),
-           file.path("man", "figures", "readme-30s-example.png"))
+readme_png <- file.path("man", "figures",
+                        c("readme-ard-example.png", "readme-gtsummary-example.png"))
+rtf_to_png(file.path(wd, "t_dm.rtf"), readme_png[1])
+rtf_to_png(file.path(wd, "t_dm_gtsummary.rtf"), readme_png[2])
+
+## 3. Get started's adverse-events table -------------------------------------
+gs <- file.path(tempdir(), "get-started")
+dir.create(gs, showWarnings = FALSE)
+Sys.setenv(RTFREPORTER_ARTICLE_OUT = normalizePath(gs))
+rmarkdown::render(file.path("vignettes", "rtfreporter.Rmd"),
+                  output_format = rmarkdown::md_document(),
+                  output_dir = tempdir(), quiet = TRUE)
+gs_png <- file.path("man", "figures", "get-started-ae.png")
+rtf_to_png(file.path(gs, "t_ae.rtf"), gs_png)
 
 pngs <- c(list.files(figs, pattern = "[.]png$", full.names = TRUE),
-          file.path("man", "figures", "readme-30s-example.png"))
+          readme_png, gs_png)
 message(paste(sprintf("%-50s %6.1f KB", pngs, file.size(pngs) / 1024),
               collapse = "\n"))
