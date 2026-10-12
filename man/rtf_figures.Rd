@@ -23,11 +23,15 @@ grob, a recorded base plot, a function that draws -- see \code{\link[=rtfplot]{r
 or a pre-built \code{rtfplot}.  One figure is given as it is --
 \code{rtf_figures(doc, plot)} -- and several as a list.}
 
-\item{width_twips}{Display width in twips for bare paths.  \code{NULL} = full
-writable width.}
+\item{width_twips}{Display width in twips of a figure that is not an
+\code{rtfplot} already (a file or a plot object), as \code{\link[=rtfplot]{rtfplot()}} takes it.
+\code{NULL} (default): the image's native size -- a file at its embedded DPI,
+a plot object at its \code{render_width} -- with no fit to the page; give a
+width to shrink a figure wider than the page.}
 
-\item{height_twips}{Display height in twips for bare paths.  \code{NULL} =
-derived from the image's aspect ratio.}
+\item{height_twips}{Display height in twips, as \code{\link[=rtfplot]{rtfplot()}} takes it.
+\code{NULL}: the native height, or -- with \code{width_twips} -- the height the
+image's aspect ratio gives.}
 
 \item{align}{Horizontal alignment for bare paths: \code{"center"} (default),
 \code{"left"}, or \code{"right"}.}
