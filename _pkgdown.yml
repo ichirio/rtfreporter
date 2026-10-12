@@ -30,7 +30,7 @@ template:
 # AI manuals are version-stamped and shipped in the package instead (#463) --
 # the site cannot tell a reader which release it is describing, and they can.
 # Whether to move to `mode: auto` (released docs at the root, development docs
-# under /dev/) is a decision for the CRAN submission, since it moves every URL.
+# under /dev/) is a decision for a later release, since it moves every URL.
 #
 # `mode: unreleased` is deliberate (NOT "release"):
 #   * pages are still published at the root (no /dev/ subdirectory),
@@ -76,13 +76,12 @@ home:
 
           Roadmap:
 
-          - **v0.9.0** — the **first CRAN submission**: the deprecated border
-            exports removed, `R CMD check --as-cran` clean, lifted coverage,
-            docs/metadata polish.  Removing them is a MINOR only because
-            `MAJOR 0` means "not formally released" — see CONTRIBUTING.
-          - **v1.0.0** — **after** CRAN registration, once downloads and
-            feedback have settled the API: stable, `lifecycle: experimental`
-            removed, and the no-breaking-change contract binding for real.
+          - **v0.9.0** — the deprecated exports removed, `R CMD check` clean,
+            lifted coverage, docs/metadata polish.  Removing them is a MINOR
+            only because `MAJOR 0` means "not formally released" — see
+            CONTRIBUTING.
+          - **v1.0.0** — a stable API: `lifecycle: experimental` removed, and
+            the no-breaking-change contract binding for real.
       community:
         title: Community
         text: |
@@ -575,8 +574,7 @@ reference:
     desc: >
       The border constructors that `rtf_border_line()` and `rtf_border()`
       replaced at 0.5.0 / 0.6.0.  They still work and each warns once per
-      session, naming its replacement, and are **removed in 0.9.0, the first
-      CRAN release** -- do not write new code against them.  `?rtf_border` pairs the old and the new spelling for every case.
+      session, naming its replacement, and are **removed in 0.9.0** -- do not write new code against them.  `?rtf_border` pairs the old and the new spelling for every case.
       `rtf_border_none()`, `rtf_border_top()`, `rtf_border_bottom()` and
       `rtf_border_box()` are documented on the `rtf_border()` page itself.
       Deprecated in 0.8.x by the pre-CRAN API review, and removed in 0.9.0
