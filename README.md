@@ -226,25 +226,9 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
 ## Status
 
-`rtfreporter` is in active **pre-1.0 development** and carries the
-`lifecycle: experimental` badge; the API may still change in
-backward-incompatible ways before v1.0.0.
-
-- **Latest release: `v0.8.2`** (2026-09-30) -- installable from GitHub
-  (`remotes::install_github("ichirio/rtfreporter@v0.8.2")`); not yet on CRAN.
-  **Tables from a cards / cardx ARD**: `normalize_ard()` / `widen_ard()`
-  and the plan engine (`table_plan()` and the `plan_*()` verbs), adopted in
-  the pre-CRAN API review; plus two fixes.  See [`NEWS.md`](NEWS.md) for
-  the full release history.
-- **Development version on `main`: `0.8.2.9000`.**  rtfreporter follows the
-  standard R versioning scheme -- a release is `X.Y.Z`, development is
-  `X.Y.Z.9000`, and the three-component part always names the last release.
-  An ordinary pull request leaves `DESCRIPTION` alone unless the change is
-  one somebody needs to name; changing `X`, `Y` or `Z` is a deliberate,
-  labelled release action, enforced by the `version-guard` CI.
-
-See [`NEWS.md`](NEWS.md) for the user-facing changelog and
-[`CHANGELOG.md`](CHANGELOG.md) for detailed per-version notes.
+Pre-1.0 (`lifecycle: experimental`): the latest release is `v0.8.2`, and
+development continues on `main` -- see [`NEWS.md`](NEWS.md); the roadmap is in
+the site's sidebar.
 
 ## Citation
 
