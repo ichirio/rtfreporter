@@ -32,8 +32,9 @@ The names below that are *superseded* still work and do not warn
   two arguments, `rtf_section(doc, header = hdr, footer = ftr)`; `secinfo =
   list(header = , footer = )` is superseded (it is still how several
   sections are given at once).  A `secinfo` with another name
-  (`list(hdr = )`) or a value that is not a header / footer
-  (`list(header = "x")`) is an error -- it used to print nothing (E3).
+  (`list(hdr = )`) is an error -- it was ignored, and the band it meant was
+  left out without a word (E3) -- and so is a header that is not a header,
+  its rows or its text (`list(header = 1)`).
 - **`paginate_cols()` takes `plan_paginate_cols()`'s names** (#594 1.4):
   `cut_by` (a list of blocks or a separator), `every` (a block every so many
   columns, which `paginate_cols()` did not have), `keep`, `fit`

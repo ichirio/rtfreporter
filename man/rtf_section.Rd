@@ -17,8 +17,10 @@ at once (its length must match the number of sections in \code{secinfo}).}
 \item{secinfo}{\emph{Superseded} by \code{header} / \code{footer} (documented, not
 warned): the same as a named list, \code{list(header = , footer = )}, and the
 way to give several sections at once -- a \code{list} of such lists, one per
-entry of \code{page}.  A name other than \code{header} / \code{footer}, or a value that
-is not a header / footer, is an error (it used to print nothing).}
+entry of \code{page}.  A name other than \code{header} / \code{footer} / \code{watermark} is
+an error (it used to be ignored, the band it meant left out), and so is
+a header / footer that is neither an \code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}},
+its rows nor its text.}
 
 \item{header, footer}{The section's running header and footer: an
 \code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}}, or \code{NULL}.  \code{NULL} means \strong{inherit}: a

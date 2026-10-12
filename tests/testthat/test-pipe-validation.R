@@ -40,8 +40,11 @@ test_that("rtf_tables rejects a non-content item", {
 
 test_that("rtf_tables rejects `titles` / `footnotes` of wrong shape", {
   d <- rtf_document()
+  # a character vector is one block for every page (#594)
+  expect_identical(rtf_tables(d, list(data.frame(A = 1L)), titles = "x")$titles,
+                   list("x"))
   expect_error(
-    rtf_tables(d, list(data.frame(A = 1L)), titles = "x"),
+    rtf_tables(d, list(data.frame(A = 1L)), titles = 1),
     "`titles` must be a list"
   )
   expect_error(
@@ -123,10 +126,11 @@ test_that("rtf_figures validates `titles` and `footnotes` shape", {
     0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
     0xAE, 0x42, 0x60, 0x82)), png)
   d <- rtf_document()
-  expect_error(rtf_figures(d, list(png), titles = "x"),
+  expect_identical(rtf_figures(d, list(png), titles = "x")$titles, list("x"))
+  expect_error(rtf_figures(d, list(png), titles = 1),
                "`titles` must be a list")
   expect_error(rtf_figures(d, list(png), titles = list("a", "b")),
-               "length 1")
+               "2 blocks but there is 1 figure")
   expect_error(rtf_figures(d, list(png), footnotes = 1),
                "`footnotes` must be a list")
 })
@@ -146,9 +150,9 @@ test_that("rtf_titles / rtf_footnotes error before content is added", {
 
 test_that("rtf_titles rejects non-list / wrong-length input", {
   d <- rtf_document() |> rtf_tables(list(data.frame(A = 1L), data.frame(A = 2L)))
-  expect_error(rtf_titles(d,    "x"),                  "must be a list")
+  expect_error(rtf_titles(d,    1),                    "must be a list")
   expect_error(rtf_titles(d,    list("a", "b", "c")),  "has 3 blocks but the document has 2 pages")
-  expect_error(rtf_footnotes(d, "x"),                  "must be a list")
+  expect_error(rtf_footnotes(d, 1),                    "must be a list")
   expect_error(rtf_footnotes(d, list("a", "b", "c")),  "has 3 blocks but the document has 2 pages")
   # length 1 is now accepted (common to all pages).
   expect_length(rtf_titles(d, list("common"))$titles, 2L)

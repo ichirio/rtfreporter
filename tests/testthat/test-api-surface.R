@@ -237,7 +237,10 @@ test_that("rtf_section(header = , footer = ) is the section; secinfo is checked 
                    rtf_section(d, secinfo = list(header = h, footer = NULL))$sections)
   expect_error(rtf_section(d, page = 1, header = h, secinfo = list(header = h)), "not both")
   expect_error(rtf_section(d, page = 1, secinfo = list(hdr = h)), "`hdr`")
-  expect_error(rtf_section(d, page = 1, secinfo = list(header = "x")), "rtf_header")
+  expect_error(rtf_section(d, page = 1, secinfo = list(header = 1)), "rtf_header")
+  # the text, the rows, a watermark: as before
+  expect_no_error(rtf_section(d, page = 1, secinfo = list(header = "x")))
+  expect_no_error(rtf_section(d, page = 1, secinfo = list(header = h, watermark = "DRAFT")))
   # several sections, the older list rows form, a wrapped section: as before
   expect_no_error(rtf_section(d, page = c(1, 2),
                               secinfo = list(list(header = h), list(header = h, footer = f))))

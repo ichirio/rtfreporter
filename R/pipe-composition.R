@@ -1035,8 +1035,10 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
 #' @param secinfo *Superseded* by `header` / `footer` (documented, not
 #'   warned): the same as a named list, `list(header = , footer = )`, and the
 #'   way to give several sections at once -- a `list` of such lists, one per
-#'   entry of `page`.  A name other than `header` / `footer`, or a value that
-#'   is not a header / footer, is an error (it used to print nothing).
+#'   entry of `page`.  A name other than `header` / `footer` / `watermark` is
+#'   an error (it used to be ignored, the band it meant left out), and so is
+#'   a header / footer that is neither an [rtf_header()] / [rtf_footer()],
+#'   its rows nor its text.
 #'
 #' @return The `rtf_document` with the section definition(s) added.
 #'
@@ -1135,27 +1137,28 @@ rtf_section <- function(doc, page = NULL, secinfo = NULL, header = NULL,
   doc_copy
 }
 
-# A section's list: only `header` / `footer`, each a header / footer, a
-# list of rows (the older form), or NULL.  A misspelled name or a string
-# used to be taken and print nothing (#594 E3).  Several sections: a list of
-# such lists.
+# A section's list: only `header`, `footer` and `watermark`; a header /
+# footer is an rtf_header() / rtf_footer(), its rows (a list, or the text),
+# or NULL.  A misspelled name used to be ignored, so the band it meant was
+# left out without a word (#594 E3).  Several sections: a list of such
+# lists.  A secinfo that is not a list is left to rtf_section()'s own
+# messages.
 .check_secinfo <- function(secinfo, n_page) {
   one <- function(s, where) {
-    if (is.null(s)) return(invisible())
-    if (!is.list(s) || inherits(s, c("rtf_header", "rtf_footer"))) {
-      stop(sprintf("%s must be a list(header = , footer = ).", where), call. = FALSE)
+    if (is.null(s) || !is.list(s) || inherits(s, c("rtf_header", "rtf_footer"))) {
+      return(invisible())
     }
-    bad <- setdiff(names(s), c("header", "footer"))
+    bad <- setdiff(names(s), c("header", "footer", "watermark"))
     if (length(bad) || (length(s) && is.null(names(s)))) {
-      stop(sprintf(paste0("%s has %s: a section has `header` and `footer` ",
-                          "only (rtf_section(header = , footer = ))."),
+      stop(sprintf(paste0("%s has %s: a section has `header`, `footer` and ",
+                          "`watermark` only (rtf_section(header = , footer = ))."),
                    where, if (length(bad)) paste0("`", bad, "`", collapse = ", ")
                           else "unnamed elements"), call. = FALSE)
     }
     for (k in c("header", "footer")) {
       v <- s[[k]]
       cls <- paste0("rtf_", k)
-      if (!is.null(v) && !inherits(v, cls) && !is.list(v)) {
+      if (!is.null(v) && !inherits(v, cls) && !is.list(v) && !is.character(v)) {
         stop(sprintf("%s's `%s` must be an %s() or NULL, not %s.", where, k, cls,
                      paste0("a ", class(v)[1L])), call. = FALSE)
       }
