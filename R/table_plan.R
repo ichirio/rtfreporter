@@ -2923,18 +2923,29 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
 # rewritten.  Carried headings belong to every block, so they are not
 # counted.
 .plan_colpages_every <- function(cp, out) {
-  k <- as.integer(cp$every)
-  cp$every <- NULL
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
-  nm <- names(first$data)
-  car <- cp$keep %||% first$row_title %||% 1L
+  at <- .every_at(first, cp$every, cp$keep)
+  cp$every <- NULL
+  if (is.null(at)) return(NULL)
+  cp$at <- at
+  cp
+}
+
+# The columns to cut before, every `every` columns that a block does not
+# keep (paginate_cols(every = ), plan_paginate_cols(every = )); NULL for a
+# table narrower than one block -- not an error and not a one-block split:
+# a table that needs no column pages at all.
+.every_at <- function(first, every, keep = NULL) {
+  k <- as.integer(every)
+  if (length(k) != 1L || is.na(k) || k < 1L) {
+    stop("`every` is a positive number of columns.", call. = FALSE)
+  }
+  nm <- names(first$data %||% first$data_list[[1L]])
+  car <- keep %||% first$row_title %||% 1L
   ci <- if (is.character(car)) match(car, nm) else as.integer(car)
   rest <- setdiff(seq_along(nm), ci[!is.na(ci)])
-  # A table narrower than one block is not an error and not a one-block
-  # split: it is a table that needs no column pages at all.
   if (length(rest) <= k) return(NULL)
-  cp$at <- rest[seq(k + 1L, length(rest), by = k)]
-  cp
+  rest[seq(k + 1L, length(rest), by = k)]
 }
 
 # ---------------------------------------------------------------------------

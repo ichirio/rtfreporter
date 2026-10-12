@@ -46,7 +46,7 @@
 # How many characters of the listing's font fit across that width.
 .listing_total_width <- function(page, font, size_half_points) {
   char_in <- text_width_in("0", font = font,
-                           size_half_points = size_half_points)
+                           font_size_half_points = size_half_points)
   if (!is.finite(char_in) || char_in <= 0) {
     stop("Could not measure the width of one character in font \"", font,
          "\".", call. = FALSE)
@@ -113,15 +113,20 @@
 #'   same fields) -- the paper size, orientation and margins the listing will
 #'   be rendered on.  `NULL` (default) uses rtfreporter's own page defaults.
 #'   Ignored when `total_width` is given.
-#' @param font,size_half_points The font the listing renders in, used to turn
-#'   the page's width into a number of characters.  `size_half_points` is
+#' @param font,font_size_half_points The font the listing renders in, used to
+#'   turn the page's width into a number of characters.  `font = NULL`
+#'   (default) is the package's font, `getOption("rtfreporter.font")`, as for
+#'   every other `font =`.  `font_size_half_points` is
 #'   **half-points**, as everywhere in RTF: 8pt is `16L`, 9pt (the default)
 #'   is `18L`.  Getting it wrong silently changes the budget -- at 8pt a
 #'   landscape A4 with half-inch margins holds 159 characters, at 9pt only
 #'   141.  Pass the same values the document uses in
 #'   `rtf_document(default_format = )`.
 #' @param total_width Character budget for the whole listing, gutters included.
-#'   `NULL` (default) computes it from `page`, `font` and `size_half_points`.
+#'   `NULL` (default) computes it from `page`, `font` and
+#'   `font_size_half_points`.
+#' @param size_half_points *Superseded* by `font_size_half_points` (the name
+#'   every other function uses); documented, still working, not warned.
 #'   Give it directly when you know the budget and would rather not describe
 #'   the page.
 #' @param labels Named character vector giving the words for the **source**
@@ -187,13 +192,14 @@
 #' @export
 fit_listing_widths <- function(data, spec,
                                page             = NULL,
-                               font             = "courier_new",
-                               size_half_points = 18L,
+                               font             = NULL,
+                               font_size_half_points = 18L,
                                total_width      = NULL,
                                labels           = NULL,
                                header_lines     = 4L,
                                min_width        = 6L,
-                               probs            = 0.9) {
+                               probs            = 0.9,
+                               size_half_points = NULL) {
   if (!is.data.frame(data)) {
     stop("`data` must be a data.frame or tibble; got '",
          paste(class(data), collapse = "/"), "'.", call. = FALSE)
@@ -231,7 +237,8 @@ fit_listing_widths <- function(data, spec,
     stop("`probs` must be a single number in [0, 1].", call. = FALSE)
   }
   if (is.null(total_width)) {
-    total_width <- .listing_total_width(page, font, size_half_points)
+    total_width <- .listing_total_width(page, font,
+                                        size_half_points %||% font_size_half_points)
   }
   total_width <- as.integer(total_width)
   if (length(total_width) != 1L || is.na(total_width) || total_width < 1L) {

@@ -18,6 +18,11 @@ paginate_cols(x, ...)
   allow_span_break = TRUE,
   width = c("fill", "keep"),
   page_order = c("across", "down"),
+  cut_by = NULL,
+  every = NULL,
+  keep = NULL,
+  fit = NULL,
+  order = NULL,
   ...
 )
 
@@ -31,6 +36,11 @@ paginate_cols(x, ...)
   allow_span_break = TRUE,
   width = c("fill", "keep"),
   page_order = c("across", "down"),
+  cut_by = NULL,
+  every = NULL,
+  keep = NULL,
+  fit = NULL,
+  order = NULL,
   ...
 )
 }
@@ -43,10 +53,10 @@ Every page in a list must have the same columns.}
 \item{at}{Columns to cut \strong{before}, as names or positions (symmetric with
 \code{split_rows}). \code{at = c(4, 6)} yields blocks \code{1:3}, \code{4:5}, \code{6:ncol}.}
 
-\item{cols}{Explicit column blocks as a list, e.g. \code{list(2:3, 4:5)}. Give
-either \code{at} or \code{cols}.}
+\item{cols}{\emph{Superseded} by \code{cut_by}: explicit column blocks as a list,
+e.g. \code{list(2:3, 4:5)}.}
 
-\item{by}{Where to cut, taken from the \strong{columns themselves} instead of
+\item{by}{\emph{Superseded} by \code{cut_by}. Where to cut, taken from the \strong{columns themselves} instead of
 positions: either a \strong{separator} found in the column names (a single
 string -- \code{"Placebo____Day 1"} with \code{by = "____"} keys on \code{"Placebo"}), or
 one \strong{key per column}. Each run of one key becomes a block, so a wide
@@ -54,7 +64,7 @@ table laid out as \verb{<group>____<visit>} splits per group with no positions
 to count. Carry columns belong to no block. Give one of \code{at}, \code{cols} or
 \code{by}.}
 
-\item{carry}{Row-heading columns repeated on every page. Defaults to the
+\item{carry}{\emph{Superseded} by \code{keep}. Row-heading columns repeated on every page. Defaults to the
 table's \code{row_title} (column 1 unless set). \code{carry = integer(0)} repeats
 nothing. Carry columns are removed from the blocks automatically, so they
 are never printed twice on a page.}
@@ -79,14 +89,14 @@ after the split (\code{set_col_header()} on the page list) is an error.}
 \item{allow_span_break}{Allow a cut inside a spanning header cell. Default
 \code{TRUE}.}
 
-\item{width}{How relative widths are rescaled after the split. \code{"fill"}
+\item{width}{\emph{Superseded} by \code{fit}. How relative widths are rescaled after the split. \code{"fill"}
 (default) fixes the twips-per-ratio unit on \strong{page 1} and reuses it on
 every page, so page 1 fills the sheet and a given ratio is the same width
 throughout; \code{"keep"} gives each kept column exactly the width it had
 before the split. No effect under \code{column_widths_twips}. See
 \emph{Column widths}.}
 
-\item{page_order}{The order the pages come out in, as the \strong{axes} of the
+\item{page_order}{\emph{Superseded} by \code{order}. The order the pages come out in, as the \strong{axes} of the
 split, outermost first: any of \code{"group"} (the pages a value-based split
 made, \code{as_rtftables(split = "by_value", group_col = )}), \code{"rows"} (the row
 pages -- \code{page_by} and every other row split) and \code{"cols"} (the column
@@ -98,6 +108,26 @@ and an axis the table does not have never varies.
 across the columns first -- and \code{"down"} is \code{c("group", "rows", "cols")},
 advancing down the rows. The pages themselves are identical whatever the
 order; only the sequence differs. See \emph{Page order}.}
+
+\item{cut_by}{Where to cut other than by position, as
+\code{\link[=plan_paginate_cols]{plan_paginate_cols()}} says it: a \strong{list} of column blocks
+(\code{list(2:3, 4:5)}), or a separator / one key per column (see \code{by}).}
+
+\item{every}{Cut a block every this many columns, counting only the ones a
+block does not keep -- \code{at} without counting the columns yourself.  A
+table no wider than one block is returned as it is.}
+
+\item{keep}{The row-heading columns every block repeats (see \code{carry}).}
+
+\item{fit}{\code{TRUE} (every block's widths on page 1's scale) or \code{FALSE} (each
+column keeps its width) -- \code{width = "fill"} / \code{"keep"}.}
+
+\item{order}{The order the pages come out in (see \code{page_order}).
+
+\code{cut_by}, \code{every}, \code{keep}, \code{fit} and \code{order} are \code{\link[=plan_paginate_cols]{plan_paginate_cols()}}'s
+names, the primary ones here too (#594); \code{cols}, \code{by}, \code{carry}, \code{width}
+and \code{page_order} are \emph{superseded} by them -- documented, still working,
+not warned.  Give one of \code{at}, \code{cut_by} (\code{cols} / \code{by}) or \code{every}.}
 }
 \value{
 A list of \code{\link[=rtftable]{rtftable()}} pages. Names are carried through unchanged --

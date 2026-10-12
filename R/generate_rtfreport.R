@@ -2309,8 +2309,10 @@
 #' Renders an `rtf_document` (from the pipe API) or internal `rtfreport`
 #' object to an RTF file.
 #'
-#' @param report An `rtf_document` object (from [rtf_document()]) or an internal
+#' @param doc An `rtf_document` object (from [rtf_document()]) or an internal
 #'   `rtfreport` object.
+#' @param report *Superseded* by `doc` (the name the other document
+#'   functions use); documented, still working, not warned.
 #' @param file_path Output RTF file path.
 #' @param overwrite Logical; whether to write over an existing file.  `TRUE`
 #'   (the default since 0.8.2.9039): a report program is run again and again,
@@ -2400,8 +2402,16 @@
 #' generate_rtfreport(doc, out)      # written over if it is there
 #' file.exists(out)
 #' @export
-generate_rtfreport <- function(report, file_path, overwrite = TRUE,
-                               program = NULL, program_fallback = NULL) {
+generate_rtfreport <- function(doc, file_path, overwrite = TRUE,
+                               program = NULL, program_fallback = NULL,
+                               report = NULL) {
+  # `report =` is superseded by `doc` (#594); written by name with the file
+  # by position, the file came in as `doc`
+  if (!is.null(report)) {
+    if (!missing(doc) && missing(file_path)) file_path <- doc
+    doc <- report
+  }
+  report <- doc
   # the run tokens' context, for this call only
   if (is.null(program) && inherits(report, "rtf_document")) {
     program <- report$document$program
@@ -2426,10 +2436,10 @@ generate_rtfreport <- function(report, file_path, overwrite = TRUE,
   if (inherits(report, "rtf_document")) {
     report <- .pipe_doc_to_rtfreport(report)
     if (is.null(report)) {
-      stop("`report` must be an rtf_document or rtfreport object.", call. = FALSE)
+      stop("`doc` must be an rtf_document or rtfreport object.", call. = FALSE)
     }
   } else if (!inherits(report, "rtfreport")) {
-    stop("`report` must be an rtf_document (from rtf_document()) or rtfreport object.",
+    stop("`doc` must be an rtf_document (from rtf_document()) or rtfreport object.",
          call. = FALSE)
   }
   if (file.exists(file_path) && !isTRUE(overwrite)) {

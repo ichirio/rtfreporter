@@ -141,14 +141,14 @@ our own, given once to `rtf_document(tokens = )`.
 doc <- rtf_document(
     program = "programs/t_dm.R",
     tokens  = list(STUDY = "CDISCPILOT01")) |>
-  rtf_section(secinfo = list(
+  rtf_section(
     header = rtf_header(list(
       c(l = "Protocol: {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = "Table 14.1.1  Demographic Characteristics"),
       c(c = "Safety Analysis Set"))),
     footer = rtf_footer(list(
       c(l = "SD = standard deviation."),
-      c(l = "Program: {PROGRAM}", r = "{DATETIME}"))))) |>
+      c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
   rtf_tables(p)
 
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)

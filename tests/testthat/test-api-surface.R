@@ -226,3 +226,80 @@ test_that("the NEWS expression finds every deprecated export", {
   }
   expect_false(grepl(re, "paginate_cols(x)", perl = TRUE))
 })
+
+test_that("rtf_section(header = , footer = ) is the section; secinfo is checked (#594 1.5, E3)", {
+  h <- rtf_header(c(l = "H"))
+  f <- rtf_footer(c(l = "F"))
+  d <- rtf_tables(rtf_document(), data.frame(a = 1))
+  expect_identical(rtf_section(d, page = 1, header = h, footer = f)$sections,
+                   rtf_section(d, page = 1, secinfo = list(header = h, footer = f))$sections)
+  expect_identical(rtf_section(d, header = h)$sections,
+                   rtf_section(d, secinfo = list(header = h, footer = NULL))$sections)
+  expect_error(rtf_section(d, page = 1, header = h, secinfo = list(header = h)), "not both")
+  expect_error(rtf_section(d, page = 1, secinfo = list(hdr = h)), "`hdr`")
+  expect_error(rtf_section(d, page = 1, secinfo = list(header = "x")), "rtf_header")
+  # several sections, the older list rows form, a wrapped section: as before
+  expect_no_error(rtf_section(d, page = c(1, 2),
+                              secinfo = list(list(header = h), list(header = h, footer = f))))
+  expect_no_error(rtf_section(d, page = 1, secinfo = list(header = list(l = "x"))))
+  expect_no_error(rtf_section(d, page = 1, secinfo = list(list(header = h))))
+})
+
+test_that("a character vector of titles or footnotes is one block for every page (#594)", {
+  d <- rtf_tables(rtf_document(), list(data.frame(a = 1), data.frame(a = 2)))
+  expect_identical(rtf_titles(d, c("T", "U"))$titles, list(c("T", "U"), c("T", "U")))
+  expect_identical(rtf_footnotes(d, "F")$footnotes, list("F", "F"))
+  d2 <- rtf_tables(rtf_document(), list(data.frame(a = 1), data.frame(a = 2)),
+                   titles = c("T", "U"))
+  expect_identical(d2$titles, list(c("T", "U"), c("T", "U")))
+  expect_error(rtf_titles(d, 1), "character vector")
+})
+
+test_that("paginate_cols() takes the plan's names; the old ones still work (#594 1.4)", {
+  df <- data.frame(id = 1:2, a = 1, b = 2, c = 3, d = 4, e = 5)
+  t <- rtftable(df)
+  cols_of <- function(pages) lapply(pages, function(p) names(p$data))
+  expect_identical(cols_of(paginate_cols(t, cut_by = list(2:4, 5:6))),
+                   cols_of(paginate_cols(t, cols = list(2:4, 5:6))))
+  expect_identical(cols_of(paginate_cols(t, at = 5, keep = 1)),
+                   cols_of(paginate_cols(t, at = 5, carry = 1)))
+  expect_identical(cols_of(paginate_cols(t, at = 5, fit = FALSE)),
+                   cols_of(paginate_cols(t, at = 5, width = "keep")))
+  expect_identical(paginate_cols(t, at = 5, fit = FALSE)[[2]]$col_rel_width,
+                   paginate_cols(t, at = 5, width = "keep")[[2]]$col_rel_width)
+  expect_identical(cols_of(paginate_cols(t, at = 5, order = "down")),
+                   cols_of(paginate_cols(t, at = 5, page_order = "down")))
+  # every: a block every 2 of the columns not kept
+  expect_identical(cols_of(paginate_cols(t, every = 2)),
+                   list(c("id", "a", "b"), c("id", "c", "d"), c("id", "e")))
+  # no wider than one block: the table as it is
+  expect_length(paginate_cols(t, every = 10), 1L)
+  expect_error(paginate_cols(t, cut_by = list(2:3), cols = list(2:3)), "not both")
+  expect_error(paginate_cols(t, at = 3, every = 2), "one way")
+})
+
+test_that("the width helpers: font = NULL is the package's font; the older names work (#594 1.4)", {
+  expect_identical(text_width_in("abc"), text_width_in("abc", font = "courier_new"))
+  expect_identical(text_width_in("abc", font = "Courier New"),
+                   text_width_in("abc", font = "courier_new"))
+  expect_identical(text_width_in("abc", size_half_points = 24),
+                   text_width_in("abc", font_size_half_points = 24))
+  old <- options(rtfreporter.font = "Arial")
+  on.exit(options(old), add = TRUE)
+  expect_identical(text_width_in("abc"), text_width_in("abc", font = "arial"))
+  options(old)
+  df <- data.frame(USUBJID = c("S-001", "S-002"), AGE = c(45L, 62L))
+  expect_identical(auto_col_widths(df = df), auto_col_widths(df))
+  expect_identical(auto_col_widths(df, size_half_points = 20),
+                   auto_col_widths(data = df, font_size_half_points = 20))
+})
+
+test_that("generate_rtfreport(doc = ); report = still works, by name or with the file by position (#594 1.4)", {
+  d <- rtf_tables(rtf_document(), data.frame(a = 1))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  expect_no_error(generate_rtfreport(doc = d, file_path = f))
+  expect_no_error(generate_rtfreport(report = d, file_path = f))
+  expect_no_error(generate_rtfreport(report = d, f))
+  expect_true(file.exists(f))
+})

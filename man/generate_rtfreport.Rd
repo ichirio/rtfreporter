@@ -5,15 +5,16 @@
 \title{Generate an RTF file from a report object}
 \usage{
 generate_rtfreport(
-  report,
+  doc,
   file_path,
   overwrite = TRUE,
   program = NULL,
-  program_fallback = NULL
+  program_fallback = NULL,
+  report = NULL
 )
 }
 \arguments{
-\item{report}{An \code{rtf_document} object (from \code{\link[=rtf_document]{rtf_document()}}) or an internal
+\item{doc}{An \code{rtf_document} object (from \code{\link[=rtf_document]{rtf_document()}}) or an internal
 \code{rtfreport} object.}
 
 \item{file_path}{Output RTF file path.}
@@ -33,6 +34,9 @@ it (see \emph{Run tokens}).}
 \item{program_fallback}{Overrides, for this one file, the document's
 \code{rtf_document(program_fallback = )}: the program to name when none is
 said and none is found.}
+
+\item{report}{\emph{Superseded} by \code{doc} (the name the other document
+functions use); documented, still working, not warned.}
 }
 \value{
 Invisibly returns \code{file_path}.
