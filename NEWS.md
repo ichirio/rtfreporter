@@ -1,8 +1,9 @@
 # rtfreporter (development version)
 
-### Deprecated (removed in 0.9.0)
+### Deprecated
 
-The pre-CRAN API review, iteration 0 (#594; decided in the team's review):
+Removed in the next minor release, the first CRAN one.  The pre-CRAN API
+review, iteration 0 (#594; decided in the team's review):
 each warns once a session and still works; 0.9.0, the first CRAN release,
 removes it.  No old name is kept as an alias.
 
