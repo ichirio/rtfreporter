@@ -127,9 +127,10 @@ test_that("the effective export count is the reviewed number", {
   # 128 / 108 since plan_total(), a Total column from the overall rows;
   # 129 / 106 since the review's iteration 0 (#594) renamed
   # format_count_pct() to fmt_count_pct() and deprecated the old name with
-  # fmt_count_paren_bare() and realign_count_pct().)
-  expect_length(.exports(), 129L)
-  expect_length(setdiff(.exports(), .dep), 106L)
+  # fmt_count_paren_bare() and realign_count_pct(); 130 / 107 since #619
+  # added plan_stat_groups(), a record's statistics in named groups.)
+  expect_length(.exports(), 130L)
+  expect_length(setdiff(.exports(), .dep), 107L)
 })
 
 test_that("the old argument names still work, with a warning", {
