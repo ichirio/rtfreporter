@@ -137,7 +137,8 @@ version you actually have:
 
 ``` r
 rtfreporter_ai_manual()                     # path to the user manual
-rtfreporter_ai_manual(file = "manual.md")   # copy it out, ready to attach
+rtfreporter_ai_manual("ai-kit", ard = ard)  # a folder to attach: the request, the manual,
+                                            # three example programs, your ARD and its shape
 ```
 
 Or download it -- **[AI user manual (v0.8.2)](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md)** -- one self-contained file sized for a single chat session.  Attach it at the **start** of the session and say *"use this manual"*.  [`ai/rtfreporter-ai-user-manual.md`](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual.md) always resolves to the newest release, so it is safe to bookmark; the development copy is published beside it under its own version.
@@ -145,7 +146,7 @@ Or download it -- **[AI user manual (v0.8.2)](https://ichirio.github.io/rtfrepor
 Every example in it is run by CI and its function list is checked against
 `NAMESPACE`, so a manual that drifts from the API fails the build.
 
-Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual (`rtfreporter_ai_manual("dev")`).
+Working *on* rtfreporter rather than with it?  See [Developing with an AI assistant](https://ichirio.github.io/rtfreporter/articles/ai-development.html), which covers the companion **developer** manual (`rtfreporter_ai_manual(which = "dev")`).
 
 ## A focused tool, on purpose
 

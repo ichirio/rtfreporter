@@ -34,27 +34,72 @@ test_that("each manual states the version it was built from", {
 
 test_that("rtfreporter_ai_manual() returns the installed path", {
   expect_identical(rtfreporter_ai_manual(), .ai_file("user"))
-  expect_identical(rtfreporter_ai_manual("dev"), .ai_file("dev"))
-  expect_error(rtfreporter_ai_manual("nope"), "should be one of")
+  expect_identical(rtfreporter_ai_manual(which = "dev"), .ai_file("dev"))
+  expect_error(rtfreporter_ai_manual(which = "nope"), "should be one of")
 })
 
-test_that("rtfreporter_ai_manual(file = ) copies it out", {
-  dest <- tempfile(fileext = ".md"); on.exit(unlink(dest), add = TRUE)
-  out <- rtfreporter_ai_manual(file = dest)
-  expect_identical(out, dest)
-  expect_true(file.exists(dest))
-  expect_identical(readLines(dest, warn = FALSE),
-                   readLines(.ai_file("user"), warn = FALSE))
-
-  # a second copy needs `overwrite`
-  expect_error(rtfreporter_ai_manual(file = dest), "overwrite")
-  expect_no_error(rtfreporter_ai_manual(file = dest, overwrite = TRUE))
-
-  # a directory keeps the manual's own name
-  d <- file.path(tempdir(), "ai-copy"); dir.create(d, showWarnings = FALSE)
+test_that("rtfreporter_ai_manual(dir = ) writes the kit, or the dev manual", {
+  d <- file.path(tempdir(), "ai-kit"); unlink(d, recursive = TRUE)
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  expect_identical(basename(rtfreporter_ai_manual("dev", file = d)),
+  out <- rtfreporter_ai_manual(d)
+  expect_identical(basename(out), c("00_START_HERE.md", "01_rtfreporter-ai-user-manual.md",
+                                    "02_example_orr_subgroups.R", "03_example_ae_soc_pt.R",
+                                    "04_example_demographics.R"))
+  expect_identical(readLines(file.path(d, "01_rtfreporter-ai-user-manual.md"), warn = FALSE),
+                   readLines(.ai_file("user"), warn = FALSE))
+  # no ARD: 00 says how to add one
+  expect_true(any(grepl("rtfreporter_ai_manual(dir, ard = ard)",
+                        readLines(file.path(d, "00_START_HERE.md"), warn = FALSE), fixed = TRUE)))
+  # a second kit needs `overwrite`
+  expect_error(rtfreporter_ai_manual(d), "overwrite")
+  expect_no_error(rtfreporter_ai_manual(d, overwrite = TRUE))
+  # the dev manual alone
+  dd <- file.path(tempdir(), "ai-dev"); unlink(dd, recursive = TRUE)
+  on.exit(unlink(dd, recursive = TRUE), add = TRUE)
+  expect_identical(basename(rtfreporter_ai_manual(dd, which = "dev")),
                    "rtfreporter-ai-dev-manual.md")
+  # a file is not a folder
+  f <- tempfile(); writeLines("x", f); on.exit(unlink(f), add = TRUE)
+  expect_error(rtfreporter_ai_manual(f), "not a folder")
+})
+
+test_that("rtfreporter_ai_manual(dir, ard = ): the ARD's rows and its shape", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$ALL <- "All"
+  ard <- cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = ARM),
+    cards::ard_tabulate(adsl, by = c(ARM, ALL), variables = DISCONFL),
+    cards::ard_tabulate(adsl, by = c(ARM, SEX), variables = DISCONFL),
+    cards::ard_tabulate(adsl, by = c(ARM, AGEGR1, SEX), variables = DISCONFL))
+  d <- file.path(tempdir(), "ai-kit-ard"); unlink(d, recursive = TRUE)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  out <- rtfreporter_ai_manual(d, ard = ard)
+  expect_true(all(c("05_ard.csv", "06_ard_shape.md") %in% basename(out)))
+  csv <- utils::read.csv(file.path(d, "05_ard.csv"))
+  expect_identical(nrow(csv), nrow(normalize_ard(ard)))
+  expect_true(all(c("ARM", "SEX", "AGEGR1", "variable", "stat_name", "stat") %in% names(csv)))
+  shape <- readLines(file.path(d, "06_ard_shape.md"), warn = FALSE)
+  expect_true(any(grepl("| `ARM` |", shape, fixed = TRUE)))
+  expect_true(any(grepl("parallel subgroups", shape, fixed = TRUE)))
+  expect_true(any(grepl('c("SEX", "AGEGR1")', shape, fixed = TRUE)))   # the crossed layer
+  expect_true(any(grepl("table_plan(cols = \"ARM\"", shape, fixed = TRUE)))
+  expect_true(any(grepl("A key's own counts (`ARM`)", shape, fixed = TRUE)))
+})
+
+test_that("the kit's examples are the three-step layout and use only exported functions", {
+  kit <- system.file("ai", "kit", package = "rtfreporter")
+  skip_if(!nzchar(kit), "the kit is not installed")
+  ex <- names(asNamespace("rtfreporter")$.__NAMESPACE__.$exports)
+  for (f in c("02_example_orr_subgroups.R", "03_example_ae_soc_pt.R", "04_example_demographics.R")) {
+    src <- readLines(file.path(kit, f), warn = FALSE)
+    for (step in c("# ---- 1. the table", "# ---- 2. the document", "# ---- 3. the file")) {
+      expect_true(any(startsWith(src, step)), info = paste(f, step))
+    }
+    used <- unique(regmatches(src, gregexpr("\\b(plan_[a-z_]+|rtf_[a-z_]+|normalize_ard|table_plan|generate_rtfreport|cell_rows|col_cell)\\(", src)))
+    used <- sub("[(]$", "", unlist(used))
+    expect_true(all(used %in% ex), info = paste(f, paste(setdiff(used, ex), collapse = ", ")))
+  }
 })
 
 test_that("the public links name the newest RELEASE, not the dev version", {

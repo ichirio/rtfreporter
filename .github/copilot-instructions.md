@@ -6,7 +6,7 @@ language package).
 
 The reference for working on the code is the **AI developer manual**,
 `inst/ai/rtfreporter-ai-dev-manual.md` (from R:
-`rtfreporter::rtfreporter_ai_manual("dev")`).  Follow it rather than
+`rtfreporter::rtfreporter_ai_manual(which = "dev")`).  Follow it rather than
 anything duplicated here; where this file and the manual disagree, the
 manual wins.  Its §14 summarises the repository rules (Code of Conduct,
 PR / issue templates, the four pre-push checks, versioning + `NEWS.md`,
