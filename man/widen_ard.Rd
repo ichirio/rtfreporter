@@ -19,7 +19,8 @@ widen_ard(
   rounding = NULL,
   sort_stat = NULL,
   na = NA_character_,
-  notes = TRUE
+  notes = TRUE,
+  stat_groups = NULL
 )
 }
 \arguments{
@@ -176,10 +177,20 @@ under it.}
 \item{a column}{any row key or the label column, by its output name.}
 \item{a statistic}{that statistic totalled across the spread columns --
 what a descending-frequency AE table sorts on.}
+\item{\code{"<stat>[<col>]"}}{that statistic in \strong{one} spread column:
+\code{"-n[Total]"}, \code{"-n[Placebo]"} (a level of the outer column key
+takes its columns, \code{Placebo____F} and \code{Placebo____M}).}
+\item{\code{"<stat>@<key>"}}{the statistic of the \strong{group's own} row ---
+the row key's summary, its shallowest row --- carried to every row
+of the group: \code{"-n@soc"} orders the SOCs by their own count and
+keeps each SOC's PTs with it.  Both at once: \code{"-n@soc[Total]"}.
+An overall row keeps its own number.}
 }
 So \code{sort = c(".overall", "soc", ".depth", "-n", "term")} is the whole of
 an AE table's row order, and needs neither \code{sort_stat} nor an \code{arrange()}
-afterwards.}
+afterwards; \code{c(".overall", "-n@soc", "soc", ".depth", "-n")} puts the
+SOCs in descending order of their own count.  Ties go to the keys that
+follow.}
 
 \item{sep}{Separator pasted between multiple \code{cols} keys.}
 
@@ -212,6 +223,15 @@ with the guard that let it through when it had one.  A bare template is
 its own explanation, but a guarded chain is not --- the finished cell
 cannot tell you which of its three candidates you got --- so this is the
 companion to \code{cells} guards rather than a general-purpose log.}
+
+\item{stat_groups}{The statistics in named groups, as a named list
+(\code{list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))}):
+each row gets its group in a key \code{.stat_group}, which \code{cols} or \code{rows}
+name like any other (\code{cols = c("ARM", ".stat_group")}: one record's N in
+one column, its rate and interval in the next), and a \code{cells} map may be
+keyed by a group's name (looked up after the analysis variable).  A
+statistic in no group is not read.  \code{\link[=plan_stat_groups]{plan_stat_groups()}} is the plan's
+spelling.  \code{NULL} (default): no groups.}
 }
 \value{
 A data frame: the \code{rows} columns, the label column, then one column

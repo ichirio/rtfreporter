@@ -1,5 +1,52 @@
 # rtfreporter (development version)
 
+- **`plan_stat_groups()`: one record's statistics in two columns, without a
+  `mutate()` before the plan** (#619).  An ORR table with N in one column
+  and the rate and its CI in the next had to relabel `variable` by
+  `stat_name` first.  `plan_stat_groups(n = "N", orr_ci = c("n",
+  "estimate", "conf.low", "conf.high"))` puts each statistic in a named
+  group, the key `.stat_group`, which `table_plan(cols = c("ARM",
+  ".stat_group"))` names like any other; `plan_cells()` keys a template by
+  the group's name.  A statistic in no group is not read.
+  `widen_ard(stat_groups = )` is the same for a call without a plan.  The
+  RTF is byte-identical to the `mutate()` version (a test).  Overwriting
+  `variable` was a workaround: keep the ARD as it is and choose the layout
+  in the plan.  With `cell_rows()` inside each group, one analysis's
+  statistics lay out as n rows x m columns; the groups go across
+  (`cols =`) or down (`rows =`, in the order they are said), within one
+  record (the same analysis and keys).
+
+- **`plan_paginate_group(heading = )`: each page's name from a template**
+  (#619).  `heading = "Treatment: {value} (N={n})"` names each page --- the
+  heading `rtf_tables(auto_section = TRUE)` puts in the section header ---
+  with the page's value and its population as the ARD states it (the page
+  variable's own tabulation, `cards::ard_tabulate(adsl, variables =
+  TRT01A)`).  A section per arm says the arm and its N with neither
+  written by hand; what the ARD does not state is `NA`, with a warning.
+  `plan_paginate_rows(page_by = , heading = )` does the same for BY pages
+  with a row budget inside (a page per value refuses one).
+
+- **Sort keys `<stat>@<key>` and `<stat>[<col>]`** (#619, the tflplanner
+  builder's request).  `-n@soc` orders the SOCs by their own count and keeps
+  each SOC's PTs with it; `-n[Total]` / `-n[Placebo]` read one spread
+  column; `-n@soc[Total]` both.  A plain `-n` sums every spread column, as
+  before; ties go to the keys that follow.
+
+- **`normalize_ard(stack = )`: parallel subgroups as one pair of keys,
+  whatever group slot each came in** (#619).  `stack = list(subgroup =
+  c("ALL", "SEX", "AGEGR1"))` adds `subgroup` (the variable) and
+  `subgroup_level` (its level), so `rows = c(grp1 = "subgroup", grp2 =
+  "subgroup_level")` lays the subgroups one under another in the order
+  written.  Reading `group2` / `group2_level` directly worked only while
+  every subgroup came in that slot.  A layer may be crossed:
+  `list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX"))` gives the row
+  `AGEGR1 / SEX` | `65-80 / F` (`stack_sep =`), three-way the same; a row
+  goes to the layer whose variables are exactly the ones it has, and a
+  combination no layer names is an error that says which to add.  Group
+  slots stand for what the ARD has there: `c("group2", "group3")` finds
+  the layers, single and crossed, in ARD order (refused where the slots
+  also hold the arm).  The variables' own columns stay.
+
 ### Deprecated
 
 Removed in the next minor release, the first CRAN one.  The pre-CRAN API

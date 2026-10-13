@@ -12,6 +12,7 @@
 \alias{plan_row_group}
 \alias{plan_nest}
 \alias{plan_total}
+\alias{plan_stat_groups}
 \alias{plan_hide}
 \alias{plan_sort}
 \alias{plan_blanks}
@@ -58,13 +59,15 @@ plan_cell_style(
   indent_twips = NULL
 )
 
-plan_paginate_group(plan, col = NULL, keep = TRUE)
+plan_paginate_group(plan, col = NULL, keep = TRUE, heading = NULL)
 
 plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
 
 plan_nest(plan, ...)
 
 plan_total(plan, label = "Total", position = c("last", "first"))
+
+plan_stat_groups(plan, ...)
 
 plan_hide(plan, ...)
 
@@ -79,7 +82,8 @@ plan_paginate_rows(
   break_before = NULL,
   min_group_rows = NULL,
   cont_label = NULL,
-  page_by = NULL
+  page_by = NULL,
+  heading = NULL
 )
 
 plan_style(
@@ -170,7 +174,28 @@ plan_paginate_cols(
 
 \item{...}{For \code{plan_cells()}, exactly what \code{widen_ard(cells = )}
 takes: one bare entry, or entries named by variable, \code{context},
-kind (\code{continuous} / \code{categorical}) or \code{default}.
+kind (\code{continuous} / \code{categorical}), a stat group of
+\code{plan_stat_groups()} or \code{default}.
+
+\code{plan_stat_groups()} takes the groups, each a name and the
+statistics in it (\verb{n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")}).  Each row of the ARD gets its group in the key
+\code{.stat_group}, which \code{table_plan(cols = )} or \verb{rows = } names like any
+other: \code{cols = c("TRT01A", ".stat_group")} puts one record's N in one
+column and its rate and interval in the next, and \code{\link[=plan_cells]{plan_cells()}} keys a
+template by the group's name (\code{n = "{N}"}, \code{orr_ci = cell_rows(...)}).
+A statistic in no group is not read.  This is what a \code{mutate()} of
+\code{variable} before \code{\link[=table_plan]{table_plan()}} did --- a workaround: keep the ARD
+as it is (\code{variable} is the analysis variable) and choose the layout
+in the plan.
+
+With \code{cell_rows()} (or named templates) for the rows inside a cell,
+one analysis's statistics lay out as \strong{n rows x m columns}: the
+groups go across (\code{cols = c("TRT01A", ".stat_group")}) or down
+(\code{rows = c(..., stat = ".stat_group")}, in the order the groups are
+said), and each group's template has its own rows; a group with fewer
+rows leaves the rest empty, aligned row by row.  The groups split
+\strong{one record} --- the same analysis and the same keys; statistics of
+two analyses are two records, joined by the keys as always.
 
 \code{plan_digits()} takes the same keys, with the digits as the value.
 A value is \strong{one number}, for every token in that entry, or a
@@ -360,6 +385,20 @@ carrier --- and the verb that needs it is the one place that knows, so
 it says so there instead of the name being written again in a
 \code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
 are ignored rather than refused.}
+
+\item{heading}{For \code{plan_paginate_group()} (and \code{plan_paginate_rows()}
+with one \code{page_by} column, a page per value with a row budget inside):
+the page's name as a template,
+\code{"Treatment: {value} (N={n})"}, in place of the bare value --- so the
+section header \code{rtf_tables(auto_section = TRUE)} prints (or the title
+line of \code{auto_title = TRUE}) says the arm and its N with neither written
+by hand, and a study with three arms gets three.  \code{{value}} is the
+page's value as printed; \code{{n}} its population \strong{as the ARD states it}:
+the page variable's own tabulation, \code{cards::ard_tabulate(adsl, variables = TRT01A)} bound into the ARD (the \code{.key_own} rows
+\code{\link[=normalize_ard]{normalize_ard()}} keeps), never an analysis's \code{N} (the count of its
+non-missing values).  What the ARD does not state is \code{NA}, with a
+warning.  \code{{PROGRAM}}, \code{{DATETIME}} and the page tokens are left for the
+renderer.}
 
 \item{mode, collapse}{For \code{plan_row_group()}: what a run of rows sharing a
 value is, and how the repeat shows.  \code{mode} is \code{as_rtftables(group_by = )},
@@ -627,14 +666,15 @@ function that does it.  This is what each one hands on.
 \item \code{plan_levels()}, \code{plan_labels()}: the order and text of values. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{levels}, \code{labels}.
 \item \code{plan_total(label, position)}: a Total column from the ARD's overall rows. Goes to \code{\link[=widen_ard]{widen_ard()}}: those rows as one more value of the column key, and its place in \code{levels}; the header's \code{{n}} there is the study total.
 \code{plan_levels(.drop_empty = )} leaves out the levels no record has, before the table is made.
+\item \code{plan_stat_groups(...)}: the statistics in named groups. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{stat_groups} (the key \code{.stat_group}).
 \item \code{plan_sort(..., stat, keep)}: the row order. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name}.
 \item \code{plan_stub(vars, name, indent, group_summary, before)}: the row headings. Goes to \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}.
 \item \code{plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)}: how cells look. Goes to \code{\link[=style_header]{style_header()}}, \code{\link[=style_cols]{style_cols()}}, or \code{\link[=rtftable]{rtftable()}}'s \code{cell_styles} for a condition.
-\item \code{plan_paginate_group(col, keep)}: a page per value. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{split = "by_value"}, \code{group_col}; \code{keep = FALSE} adds it to \code{drop_cols}.
+\item \code{plan_paginate_group(col, keep, heading)}: a page per value. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{split = "by_value"}, \code{group_col}; \code{keep = FALSE} adds it to \code{drop_cols}; \code{heading} names each page from a template (\code{{value}}, \code{{n}}), the name \code{rtf_tables(auto_section = TRUE)} prints.
 \item \code{plan_row_group(mode, collapse, group_col)}: groups down the body. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{group_by}, \code{collapse_repeats}, \code{group_col} (a finished table).
 \item \code{plan_hide(...)}: columns not printed. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{drop_cols}.
 \item \code{plan_blanks(where, first, last, counted)}: blank rows. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows}; a listing's \code{where = "records"} is \code{\link[=listing_spec]{listing_spec()}}'s \code{blank_row}.
-\item \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)}: the row budget, inside the BY pages. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label}, \code{page_by}.
+\item \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)}: the row budget, inside the BY pages. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label}, \code{page_by}; \code{heading} names each BY page as \code{plan_paginate_group(heading = )} does.
 \item \code{plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)}: column blocks. Goes to \code{\link[=paginate_cols]{paginate_cols()}}: \code{at}, \code{cols} / \code{by}, \code{carry}, \code{col_header}, \code{width}, \code{allow_span_break}, \code{page_order}.
 \item \code{plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)}: the whole table. Goes to \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} by the same names; \verb{border_*} and the default look (\code{header_align}, \code{header_bold}, \code{header_italic}, \code{align}, \code{bold}, \code{italic}, \code{underline}) via \code{\link[=rtf_table_style]{rtf_table_style()}}.
 \item \code{plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)}: the columns. Goes to \code{\link[=rtftable]{rtftable()}}: \code{col_rel_width}, \code{row_title}, \code{column_widths_twips}; \code{\link[=set_decimal_split]{set_decimal_split()}}: \code{cols}; \code{\link[=as_rtftables]{as_rtftables()}}: \code{auto_width}, \code{cell_format}; \code{\link[=widen_ard]{widen_ard()}}: \code{sep}.

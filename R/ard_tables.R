@@ -845,14 +845,16 @@
     collapse = "\n")
 }
 
-.ard_lookup_cells <- function(cells, variable, context, kind = NA_character_) {
+.ard_lookup_cells <- function(cells, variable, context, kind = NA_character_,
+                              group = NA_character_) {
   # A list is a map only when its elements are NAMED: `c()` over guards
   # returns an unnamed list, and that is one chain, not a map.
   if (inherits(cells, "cell_rows")) return(.ard_cell_entry(cells))
   if (!is.list(cells) || !any(nzchar(names(cells) %||% ""))) {
     return(.ard_cell_entry(cells))
   }
-  keys <- c(.ard_summary_key(variable, context), variable)
+  keys <- c(.ard_summary_key(variable, context), variable,
+            if (!is.na(group)) group)
   if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
   if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
   for (k in c(unique(keys), "default")) {
@@ -861,6 +863,33 @@
     }
   }
   NULL
+}
+
+# `stat_groups` (plan_stat_groups()): a named list, a group's name and the
+# statistics in it, as a vector statistic -> group.  A statistic in two
+# groups, an unnamed group or an empty one is said, not guessed.
+.ard_stat_groups <- function(x) {
+  if (!is.list(x) && !is.character(x)) {
+    .ard_stop("`stat_groups` is a named list: a group's name and its statistics, `n = \"N\"`.")
+  }
+  x <- as.list(x)
+  nm <- names(x) %||% rep("", length(x))
+  if (!length(x) || any(!nzchar(nm)) || anyDuplicated(nm)) {
+    .ard_stop(paste0("`stat_groups`: every group has a name of its own ",
+                     "(`n = \"N\", orr_ci = c(\"n\", \"estimate\")`)."))
+  }
+  st <- lapply(x, function(v) as.character(unlist(v, use.names = FALSE)))
+  empty <- nm[lengths(st) == 0L]
+  if (length(empty)) {
+    .ard_stop(sprintf("`stat_groups`: %s names no statistic.", paste(sQuote(empty), collapse = ", ")))
+  }
+  all <- unlist(st, use.names = FALSE)
+  twice <- unique(all[duplicated(all)])
+  if (length(twice)) {
+    .ard_stop(sprintf("`stat_groups`: %s is in two groups; a statistic is in one.",
+                      paste(sQuote(twice), collapse = ", ")))
+  }
+  stats::setNames(rep(nm, lengths(st)), all)
 }
 
 # The key of one summary -- a variable under one context -- in a cells map.
@@ -1260,6 +1289,36 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   [widen_ard()] leaves them out of the body while a column header can
 #'   still read them.  `TRUE` removes them outright.
 #'
+#' @param stack Subgroups as one pair of keys, a named list of **layers**:
+#'   `stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))`
+#'   adds the columns `subgroup` (the layer: `"SEX"`, or variables crossed,
+#'   `"AGEGR1 / SEX"`) and `subgroup_level` (its level: `"F"`, `"65-80 / F"`)
+#'   --- what `group2` / `group2_level` say in an ARD whose subgroups all
+#'   came in that slot, but **whatever slot** each came in (a subgroup is in
+#'   `group3` as soon as a strata or a `by =` has one variable more, and a
+#'   crossed one, `ard_strata(.strata = c(AGEGR1, SEX))`, is in both).  A
+#'   character vector is layers of one variable each (`c("ALL", "SEX",
+#'   "AGEGR1")`); a crossed layer of three or more is the same rule.  A row
+#'   goes to the layer whose variables are **exactly** the stacked variables
+#'   it has; a row whose combination no layer names is an error that says
+#'   which layer to add.  **Group slots** stand for what the ARD has there:
+#'   `stack = list(subgroup = c("group2", "group3"))` is each combination of
+#'   variables in those slots, in the order first seen (one variable, or
+#'   several crossed in slot order); slots that also hold a variable coming
+#'   in a slot not named (`by = c(AGEGR1, TRT)` puts the arm in `group2`) are
+#'   refused.  The layers written out are the general form.
+#'   `table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))` then
+#'   lays the layers one under another in the order written, each one's
+#'   levels in their own order (crossed: the first variable turning
+#'   slowest); [plan_labels()] names them (`plan_labels(subgroup = c(SEX =
+#'   "Sex", "AGEGR1 / SEX" = "Age Group by Sex"))`).  The variables' own
+#'   columns stay, so a table of crossed rows only can still be
+#'   `rows = c("AGEGR1", "SEX")`; a `hierarchy` does not stack.  A row with
+#'   none of them (an analysis by the arm alone) keeps both `NA`; an overall
+#'   row is a constant stratum (`ALL = "All"`) stacked first, which the ARD
+#'   and the ARS then state.
+#' @param stack_sep What joins a crossed layer's names and levels: `" / "`.
+#'
 #' @section Working on the result before [widen_ard()]:
 #' The result is a plain data frame; reshaping it in between is the point of
 #' the two-stage split.  **Everything [widen_ard()] reads is in the
@@ -1321,7 +1380,8 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 normalize_ard <- function(x, keys = NULL, hierarchy = character(),
                           overall = NULL,
                           drop_contexts = c("attributes", "total_n"),
-                          drop_key_variables = FALSE) {
+                          drop_key_variables = FALSE, stack = NULL,
+                          stack_sep = " / ") {
   ard <- x
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
@@ -1522,6 +1582,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     d[[k]] <- .ard_as_factor(d[[k]], unique(c(front, lv)))
   }
 
+  # Parallel subgroups (SEX; AGEGR1), each its own key column above, as one
+  # pair of keys: the variable's name and its level, whatever group slot
+  # each came in (#619).
+  if (length(stack)) d <- .ard_stack_keys(d, stack, hierarchy, stack_sep)
+
   d$.kind <- .ard_kind(d)
 
   # The order each factor variable declared, as a POSITION per row.  It rides
@@ -1556,6 +1621,137 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   # raw ARD by mistake says so, rather than failing on a missing column.
   class(out) <- c("ard_long", "data.frame")
   out
+}
+
+
+# normalize_ard(stack = ): the layers of one stacked key.  A character
+# vector is one layer a variable (`c("ALL", "SEX")`); a list may hold a
+# crossed layer (`list("SEX", c("AGEGR1", "SEX"))`).  A group slot
+# (`"group2"`, `c("group2", "group3")`) stands for the combinations of
+# variables the ARD has in those slots, in the order first seen -- refused
+# where a slot also holds a variable that comes in a slot not named (the
+# arm, with `by = c(AGEGR1, TRT)`): the slot does not say what the subgroups
+# are.
+.ard_stack_layers <- function(d, spec, nm) {
+  if (is.list(spec)) return(lapply(spec, unique))
+  gcols <- grep("^group[0-9]+$", names(d), value = TRUE)
+  keys <- unique(unlist(lapply(gcols, function(g) as.character(d[[g]]))))
+  slots <- spec[spec %in% gcols & !spec %in% keys]
+  if (!length(slots)) return(as.list(unique(spec)))
+  inside <- unique(unlist(lapply(slots, function(g) as.character(d[[g]]))))
+  inside <- inside[!is.na(inside)]
+  elsewhere <- unique(unlist(lapply(setdiff(gcols, slots), function(g)
+    intersect(inside, as.character(d[[g]])))))
+  if (length(elsewhere)) {
+    .ard_stop(sprintf(paste0(
+      "`stack = list(%s = %s)`: %s comes in %s and in another slot, so the ",
+      "slots do not say\n  which variables are subgroups.  Name the layers: ",
+      "`stack = list(%s = list(\"SEX\", c(\"AGEGR1\", \"SEX\")))`."),
+      nm, .ard_vec_text(slots), paste(sQuote(elsewhere), collapse = ", "),
+      paste(slots, collapse = " / "), nm))
+  }
+  combo <- apply(as.matrix(d[slots]), 1L, function(r) {
+    r <- as.character(r[!is.na(r)])
+    if (length(r)) paste(r, collapse = "\r") else NA_character_
+  })
+  found <- lapply(strsplit(.ard_first_seen(combo[!is.na(combo)]), "\r",
+                           fixed = TRUE), unique)
+  out <- list()
+  for (v in spec) {
+    if (identical(v, slots[1L])) out <- c(out, found)
+    else if (!v %in% slots) out <- c(out, list(v))
+  }
+  out
+}
+
+.ard_vec_text <- function(x) {
+  if (length(x) == 1L) sprintf("\"%s\"", x)
+  else sprintf("c(%s)", paste0("\"", x, "\"", collapse = ", "))
+}
+
+# normalize_ard(stack = ): each name a new pair of key columns, `<name>`
+# (the layer: a variable, or variables crossed, "AGEGR1 / SEX") and
+# `<name>_level` (its level, "65-80 / F").  A row goes to the layer whose
+# variables are exactly the stacked variables it has; the variables' own
+# columns stay.
+.ard_stack_keys <- function(d, stack, hierarchy = character(), sep = " / ") {
+  layer_ok <- function(v) is.character(v) && length(v) >= 1L && !anyNA(v) &&
+    all(nzchar(v))
+  if (!is.list(stack) || is.null(names(stack)) || !all(nzchar(names(stack))) ||
+      anyDuplicated(names(stack)) ||
+      !all(vapply(stack, function(v)
+        layer_ok(v) || (is.list(v) && length(v) &&
+                          all(vapply(v, layer_ok, NA))), NA))) {
+    .ard_stop(paste0(
+      "`stack` is a named list: a new key's name and its layers, a variable ",
+      "each\n  or variables crossed: `stack = list(subgroup = list(\"SEX\", ",
+      "\"AGEGR1\", c(\"AGEGR1\", \"SEX\")))`."))
+  }
+  if (!is.character(sep) || length(sep) != 1L || is.na(sep)) {
+    .ard_stop("`stack_sep` is one text, what joins a crossed layer's names: \" / \".")
+  }
+  for (nm in names(stack)) {
+    layers <- .ard_stack_layers(d, stack[[nm]], nm)
+    vars <- unique(unlist(layers))
+    out <- c(nm, paste0(nm, "_level"))
+    taken <- intersect(out, names(d))
+    if (length(taken)) {
+      .ard_stop(sprintf(paste0(
+        "`stack`: %s is a column already; name the stacked key something ",
+        "else."), paste(sQuote(taken), collapse = ", ")))
+    }
+    bad <- intersect(vars, hierarchy)
+    if (length(bad)) {
+      .ard_stop(sprintf(paste0(
+        "`stack`: %s is in `hierarchy`.  A hierarchy's levels nest; only ",
+        "subgroups stack."), paste(sQuote(bad), collapse = ", ")))
+    }
+    gone <- setdiff(vars, names(d))
+    if (length(gone)) {
+      .ard_stop(sprintf(paste0(
+        "`stack`: no key %s in this ARD.\n  Keys: %s"),
+        paste(sQuote(gone), collapse = ", "),
+        paste(setdiff(names(d), .ard_structural()), collapse = ", ")))
+    }
+    set <- matrix(vapply(vars, function(v) !is.na(d[[v]]), logical(nrow(d))),
+                  nrow = nrow(d), dimnames = list(NULL, vars))
+    has <- apply(set, 1L, function(r) paste(sort(vars[r]), collapse = "\r"))
+    lkey <- vapply(layers, function(l) paste(sort(l), collapse = "\r"), "")
+    which_layer <- match(has, lkey)
+    lost <- nzchar(has) & is.na(which_layer)
+    if (any(lost)) {
+      combo <- strsplit(has[lost][1L], "\r", fixed = TRUE)[[1L]]
+      .ard_stop(sprintf(paste0(
+        "`stack`: rows have %s set together, and no layer says so.\n",
+        "  Add the crossed layer %s to `stack = list(%s = list(...))`, ",
+        "or drop those rows."),
+        paste(sQuote(combo), collapse = " and "), .ard_vec_text(combo), nm))
+    }
+    var <- rep(NA_character_, nrow(d))
+    lvl <- rep(NA_character_, nrow(d))
+    lv_order <- character(0)
+    for (j in seq_along(layers)) {
+      l <- layers[[j]]
+      hit <- !is.na(which_layer) & which_layer == j
+      if (!any(hit)) next
+      var[hit] <- paste(l, collapse = sep)
+      parts <- lapply(l, function(v) as.character(d[[v]][hit]))
+      lvl[hit] <- do.call(paste, c(parts, sep = sep))
+      # each variable's own order, the first variable turning slowest
+      own <- lapply(seq_along(l), function(k) {
+        v <- d[[l[k]]]
+        seen <- unique(parts[[k]])
+        if (is.factor(v)) intersect(levels(v), seen) else .ard_first_seen(seen)
+      })
+      grid <- do.call(expand.grid, c(rev(own), stringsAsFactors = FALSE))
+      prod <- do.call(paste, c(rev(as.list(grid)), sep = sep))
+      lv_order <- c(lv_order, prod[prod %in% lvl[hit]])
+    }
+    names_used <- vapply(layers, paste, "", collapse = sep)
+    d[[out[1L]]] <- .ard_as_factor(var, names_used[names_used %in% var])
+    d[[out[2L]]] <- .ard_as_factor(lvl, unique(lv_order))
+  }
+  d
 }
 
 
@@ -1730,6 +1926,14 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   converts without any filtering.
 #'
 #'   See [ard-tables] for the `{token:spec}` grammar.
+#' @param stat_groups The statistics in named groups, as a named list
+#'   (`list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))`):
+#'   each row gets its group in a key `.stat_group`, which `cols` or `rows`
+#'   name like any other (`cols = c("ARM", ".stat_group")`: one record's N in
+#'   one column, its rate and interval in the next), and a `cells` map may be
+#'   keyed by a group's name (looked up after the analysis variable).  A
+#'   statistic in no group is not read.  [plan_stat_groups()] is the plan's
+#'   spelling.  `NULL` (default): no groups.
 #' @param stats `"cells"` (default) builds character cells from `cells`.
 #'   `"rows"` ignores `cells` and gives every statistic its own row, labelled
 #'   with `stat_label` -- the shape a PK concentration table wants.
@@ -1801,10 +2005,20 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'     \item{a column}{any row key or the label column, by its output name.}
 #'     \item{a statistic}{that statistic totalled across the spread columns --
 #'       what a descending-frequency AE table sorts on.}
+#'     \item{`"<stat>[<col>]"`}{that statistic in **one** spread column:
+#'       `"-n[Total]"`, `"-n[Placebo]"` (a level of the outer column key
+#'       takes its columns, `Placebo____F` and `Placebo____M`).}
+#'     \item{`"<stat>@<key>"`}{the statistic of the **group's own** row ---
+#'       the row key's summary, its shallowest row --- carried to every row
+#'       of the group: `"-n@soc"` orders the SOCs by their own count and
+#'       keeps each SOC's PTs with it.  Both at once: `"-n@soc[Total]"`.
+#'       An overall row keeps its own number.}
 #'   }
 #'   So `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of
 #'   an AE table's row order, and needs neither `sort_stat` nor an `arrange()`
-#'   afterwards.
+#'   afterwards; `c(".overall", "-n@soc", "soc", ".depth", "-n")` puts the
+#'   SOCs in descending order of their own count.  Ties go to the keys that
+#'   follow.
 #' @param sep Separator pasted between multiple `cols` keys.
 #' @param rounding Tie-breaking rule for `{x:.1f}`-style tokens: `"r"` or
 #'   `"sas"`.  `NULL`, the default, reads `getOption("rtfreporter.rounding")`
@@ -1857,7 +2071,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                        levels = NULL, labels = NULL, sort = FALSE,
                        sep = "____",
                        rounding = NULL,
-                       sort_stat = NULL, na = NA_character_, notes = TRUE) {
+                       sort_stat = NULL, na = NA_character_, notes = TRUE,
+                       stat_groups = NULL) {
   if (missing(cols)) {
     .ard_stop_missing("cols", "`cols` is required: name the column keys.")
   }
@@ -1912,6 +2127,19 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     own_ignored <- .ard_tally(d[own, , drop = FALSE],
                               "a key variable's own tabulation")
     d <- d[!own, , drop = FALSE]
+  }
+
+  # The statistics in named groups (plan_stat_groups()): the key
+  # `.stat_group`, which `cols` / `rows` name like any other -- one
+  # record's N in one column and its rate and interval in another, with no
+  # mutate() before the table.  A statistic in no group is not read.
+  sg_ignored <- NULL
+  if (length(stat_groups)) {
+    of <- .ard_stat_groups(stat_groups)
+    g <- unname(of[as.character(d$stat_name)])
+    sg_ignored <- .ard_tally(d[is.na(g), , drop = FALSE], "in no `stat_groups` group")
+    d <- d[!is.na(g), , drop = FALSE]
+    d$.stat_group <- g[!is.na(g)]
   }
 
   colrefs <- .ard_refs(cols, d, "cols")
@@ -1997,8 +2225,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # ---- the column key -----------------------------------------------------
   colparts <- lapply(colrefs, function(r) recode(d[[r$ref]], r$ref, r$out))
   ok <- Reduce(`&`, lapply(colparts, function(v) !is.na(v)))
-  ignored <- .ard_ignored_bind(
+  ignored <- .ard_ignored_bind(.ard_ignored_bind(
     .ard_ignored_bind(attr(x, "ard_ignored", exact = TRUE), own_ignored),
+    sg_ignored),
     .ard_tally(d[!ok, , drop = FALSE], "no value for a `cols` key"))
   d <- d[ok, , drop = FALSE]
   colparts <- lapply(colparts, function(v) v[ok])
@@ -2018,7 +2247,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
   # ---- group the long rows into cells -------------------------------------
   grp_cols <- c(vapply(rowrefs, function(r) r$ref, ""), "variable", "context",
-                ".kind")
+                ".kind", ".stat_group")
   grp_cols <- unique(grp_cols[grp_cols %in% names(d)])
   gid <- do.call(paste, c(lapply(grp_cols, function(k) as.character(d[[k]])),
                           list(colkey), list(sep = "\r")))
@@ -2055,7 +2284,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
     entry <- .ard_lookup_cells(
       cells, sub$variable[1L], sub$context[1L],
-      if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_)
+      if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_,
+      group = if (".stat_group" %in% names(sub)) sub$.stat_group[1L] else NA_character_)
     if (is.null(entry)) next
     named[[paste(sub$variable[1L], sub$context[1L], sep = "\r")]] <-
       unique(c(named[[paste(sub$variable[1L], sub$context[1L], sep = "\r")]],
@@ -2244,7 +2474,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   }
 
   if (is.character(sort) && length(sort)) {
-    out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref), ,
+    out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref,
+                               colkey = colkey, sep = sep), ,
                drop = FALSE]
   } else if ((length(rowname_cols) ||
               (!is.null(label_out) && is.factor(out[[label_out]]))) &&
@@ -2297,15 +2528,24 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 #   <column>    any row key or the label column, by its output name
 #   <statistic> a statistic's total across the spread columns -- what a
 #               descending-frequency AE table sorts on
+#   <stat>[<col>]  that statistic in one spread column only (`-n[Total]`,
+#               `-n[Placebo]`, a level of the outer column key)
+#   <stat>@<key>   the statistic of the group's own summary row, carried to
+#               every row of the group (`-n@group1`: SOCs by their own
+#               count, their PTs with them); both: `-n@group1[Total]`
 #
 # A statistic is recognised last, so a column of that name wins; that is the
 # safe way round, since the column is what the caller can see in the result.
-.ard_sort_order <- function(spec, out, base, d, rowrefs, labref) {
+.ard_sort_order <- function(spec, out, base, d, rowrefs, labref,
+                            colkey = NULL, sep = "____") {
   keys <- list()
   for (s in spec) {
     desc <- substr(s, 1L, 1L) == "-"
     nm   <- if (desc) substring(s, 2L) else s
+    sc <- if (!nm %in% names(out)) .ard_sort_scoped(nm)
     v <- if (nm %in% names(out)) out[[nm]]
+         else if (!is.null(sc)) .ard_sort_scoped_value(sc, s, base, d, rowrefs,
+                                                       labref, colkey, sep)
          else if (nm %in% c(".overall", ".depth")) base[[nm]]
          else if (nm %in% d$stat_name) {
            tot <- tapply(suppressWarnings(as.numeric(d$stat[d$stat_name == nm])),
@@ -2324,6 +2564,65 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     } else v
   }
   do.call(order, keys)
+}
+
+# `-n@group1[Total]`: the statistic, the row key whose group's own row it is
+# read from, the spread column it is read from -- NULL when the text has
+# neither `@` nor `[...]`, so every sort written before reads as it did.
+.ard_sort_scoped <- function(nm) {
+  m <- regmatches(nm, regexec("^([^@[]+)(@([^@[]+))?([[](.+)[]])?$", nm))[[1L]]
+  if (!length(m) || (!nzchar(m[3L]) && !nzchar(m[5L]))) return(NULL)
+  list(stat = m[2L], key = if (nzchar(m[4L])) m[4L], col = if (nzchar(m[6L])) m[6L])
+}
+
+.ard_sort_scoped_value <- function(sc, s, base, d, rowrefs, labref, colkey, sep) {
+  if (!sc$stat %in% d$stat_name) {
+    .ard_stop(sprintf("`sort`: '%s' -- '%s' is not a statistic of this ARD.",
+                      s, sc$stat))
+  }
+  sel <- d$stat_name == sc$stat
+  if (!is.null(sc$col)) {
+    hit <- !is.na(colkey) & (colkey == sc$col |
+                               startsWith(colkey, paste0(sc$col, sep)))
+    if (!any(hit)) {
+      .ard_stop(sprintf(paste0("`sort`: '%s' -- no spread column '%s'.
+",
+                               "  Columns: %s"), s, sc$col,
+                        paste(sQuote(unique(colkey)), collapse = ", ")))
+    }
+    sel <- sel & hit
+  }
+  tot <- tapply(suppressWarnings(as.numeric(d$stat[sel])),
+                rid_for_stat(d[sel, , drop = FALSE], rowrefs, labref, sc$stat),
+                sum, na.rm = TRUE)
+  v <- as.numeric(tot[match(base$.rid, names(tot))])
+  if (is.null(sc$key)) return(v)
+  outs <- vapply(rowrefs, function(r) r$out, "")
+  p <- match(sc$key, outs)
+  if (is.na(p)) {
+    .ard_stop(sprintf(paste0("`sort`: '%s' -- '%s' is not a row key.
+",
+                             "  Row keys: %s"), s, sc$key,
+                      paste(sQuote(outs), collapse = ", ")))
+  }
+  g <- as.character(base[[sc$key]])
+  # the group's own row: its shallowest, or the one whose later keys are empty
+  later <- outs[-seq_len(p)]
+  empty <- if (length(later)) Reduce(`&`, lapply(later, function(k) {
+    x <- as.character(base[[k]]); is.na(x) | !nzchar(x)
+  })) else rep(TRUE, nrow(base))
+  dep <- base$.depth
+  own <- if (!all(is.na(dep))) {
+    m <- tapply(dep, g, function(z) suppressWarnings(min(z, na.rm = TRUE)))
+    !is.na(dep) & dep == m[g]
+  } else empty
+  if (!is.null(base$.overall)) own <- own & !(base$.overall %in% TRUE)
+  ownv <- tapply(v[own], g[own], function(z) z[!is.na(z)][1L])
+  out <- as.numeric(ownv[g])
+  # an overall row ("Any TEAE") keeps its own number
+  ov <- base$.overall %in% TRUE
+  out[ov] <- v[ov]
+  out
 }
 
 # helper for sort_stat: rebuild the row identity on the long normalized frame

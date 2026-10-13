@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9045** (the development
+**This manual documents rtfreporter 0.8.2.9046** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -877,8 +877,9 @@ p_ae <- ard_ae |>
 | Printed text of values / variables | `plan_labels(c(AGE = "Age (years)"))` |
 | Printed text of one analysis variable's levels (and its own name) | `plan_labels(SEX = c(SEX = "Sex", F = "Female", M = "Male"))`; their order: `plan_levels(SEX = c("M", "F"))` |
 | One variable's rows under one level of another (sub-categories of a race under "Asian") | `plan_nest(RACESUB = c(RACE = "Asian"))`: moved after that row, one stub indent deeper, in its group |
+| One record's statistics in two columns (N in one, the rate and CI in the next) | `plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))` with `table_plan(cols = c("ARM", ".stat_group"))`; `plan_cells(n = ..., orr_ci = ...)` keys a template by the group's name. No `mutate()` of `variable` before the plan (keep the ARD as it is). With `cell_rows()` per group: n rows x m columns of one record; groups down with `rows = c(..., stat = ".stat_group")` |
 | A Total column | `plan_total(label = "Total", position = "last")`: cards' overall rows (the analysis again without `by`, bound under it: `bind_rows(ard_tabulate(adsl, by = ARM, variables = SEX), ard_tabulate(adsl, variables = SEX))`, or `ard_stack(.overall = TRUE)`) become the column; its header `{n}` is the study total. Never stack the data with `ARM = "Total"`: the ARD and ARS then carry a value the data does not have |
-| Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone |
+| Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone. SOCs by their own count: `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT")`; one column's count: `"-n[Total]"`, `"-n@SOC[Total]"` |
 | Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
 | Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse, group_col)`; `group_col` only on a finished table (an ARD plan's is its outermost row key) |
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
@@ -888,6 +889,9 @@ p_ae <- ard_ae |>
 | Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
 | A page per value | `plan_paginate_group(col, keep)` |
+| A section per arm with "Treatment: X (N=xx)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})")` + `rtf_tables(auto_section = TRUE)`; `{n}` is the arm's own tabulation in the ARD (`bind_ard(cards::ard_tabulate(adsl, variables = TRT01A), ...)`), never pulled by hand |
+| Subgroups (SEX; AGEGR1; ...) one under another, whatever group slot they came in | `normalize_ard(stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))` + `rows = c(grp1 = "subgroup", grp2 = "subgroup_level")`; `plan_labels(subgroup = c(SEX = "Sex"))`. Never `group2` / `group2_level` as keys. A crossed subgroup is a layer: `stack = list(subgroup = list("SEX", "AGEGR1", c("AGEGR1", "SEX")))` (rows `AGEGR1 / SEX` | `65-80 / F`), or `stack = list(subgroup = c("group2", "group3"))` to take the layers from the strata slots; an overall row is a constant stratum `ALL = "All"` |
+| A section per arm with a row budget inside | `plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe", heading = "Treatment: {value} (N={n})")` + `plan_hide("arm")` |
 | Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
@@ -1002,7 +1006,7 @@ adds an "Any" row.
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens` `plan_n_candidates`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
-`plan_hide` `plan_nest` `plan_total` `plan_sort` `plan_blanks` `plan_paginate_rows`
+`plan_hide` `plan_nest` `plan_total` `plan_stat_groups` `plan_sort` `plan_blanks` `plan_paginate_rows`
 `plan_paginate_cols` `plan_style` `plan_columns` `plan_col_header`
 `plan_listing` `plan_titles` `plan_footnotes` `plan_after`
 

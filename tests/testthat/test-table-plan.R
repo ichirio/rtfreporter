@@ -2596,3 +2596,313 @@ test_that("plan_total() says what is wrong", {
   expect_identical(plan_layers(plan_total(p4, label = "All"))$layers$total,
                    list(label = "All", position = "last"))
 })
+
+test_that("plan_stat_groups(): one record's N in one column, its rate and CI in the next, no mutate() (#619)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  orr <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y",
+                                               method = "clopper-pearson", conf.level = 0.90)
+  ard <- cards::bind_ard(
+    cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr),
+    cards::ard_strata(adsl, .by = TRT, .strata = AGEGR1, .f = orr))
+  cells <- list(n = c("1" = "{N:.0f}"),
+                orr_ci = cell_rows(
+                  "1" = c(n == 0 ~ "0", "{n:.0f} ({estimate:.1f%})"),
+                  "2" = "{conf.low:.1f%}, {conf.high:.1f%}"))
+  finish <- function(p) do.call(plan_cells, c(list(p), cells)) |>
+    plan_sort(FALSE) |>
+    plan_row_group(mode = "value", collapse = c(1L, 2L))
+  d <- normalize_ard(ard)
+  m <- d
+  m$variable <- ifelse(m$stat_name == "N", "n", "orr_ci")
+  by_mutate <- table_plan(m, cols = c("TRT", "variable"),
+                          rows = c(grp1 = "group2", grp2 = "group2_level"), label = NA) |>
+    finish()
+  by_groups <- table_plan(d, cols = c("TRT", ".stat_group"),
+                          rows = c(grp1 = "group2", grp2 = "group2_level"), label = NA) |>
+    plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+    finish()
+  render <- function(p) {
+    f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+    old <- options(rtfreporter.render_time = as.POSIXct("2026-01-01 09:00"))
+    on.exit(options(old), add = TRUE)
+    suppressMessages(generate_rtfreport(rtf_tables(rtf_document(program = "t.R"), p), f,
+                                        overwrite = TRUE))
+    readBin(f, "raw", file.size(f))
+  }
+  expect_identical(render(by_groups), render(by_mutate))
+  tab <- suppressMessages(plan_apply(by_groups, "table"))
+  tab <- as.data.frame(if (is.data.frame(tab)) tab else tab[[1L]])
+  expect_true(all(c("Placebo____n", "Placebo____orr_ci") %in% names(tab)))
+  # widen_ard() takes it directly too
+  w <- suppressMessages(widen_ard(d, cols = c("TRT", ".stat_group"),
+                                  rows = c(grp1 = "group2", grp2 = "group2_level"),
+                                  label = NA, cells = cells,
+                                  stat_groups = list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))))
+  expect_identical(w$Placebo____n[1L], as.character(tab$Placebo____n[1L]))
+  # what is said, not guessed
+  expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), n = "N", "n"), "a name of its own")
+  expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), a = "N", b = c("N", "n")), "in two groups")
+  expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), a = character()), "names no statistic")
+})
+
+test_that("plan_stat_groups() x cell_rows(): n rows x m columns of one record, on cols or rows (#619)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  orr <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y",
+                                               method = "clopper-pearson", conf.level = 0.90)
+  d <- normalize_ard(cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr))
+  tab_of <- function(p) {
+    t <- suppressMessages(plan_apply(p, "table"))
+    as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  }
+  # across: N one row, the rate and CI two; aligned row by row
+  across <- table_plan(d, cols = c("TRT", ".stat_group"),
+                       rows = c(grp = "group2_level"), label = NA) |>
+    plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+    plan_sort(FALSE) |>
+    plan_cells(n = cell_rows("1" = "{N:.0f}"),
+               orr_ci = cell_rows("1" = "{n:.0f} ({estimate:.1f%})",
+                                  "2" = "{conf.low:.1f%}, {conf.high:.1f%}"))
+  a <- tab_of(across)
+  expect_identical(nrow(a), 4L)                       # 2 sexes x 2 rows
+  expect_identical(a$grp, c("F", "F", "M", "M"))
+  expect_false(anyNA(a$Placebo____n[c(1L, 3L)]))
+  expect_true(all(is.na(a$Placebo____n[c(2L, 4L)])))  # the N's second row is empty
+  expect_match(a$Placebo____orr_ci[1L], "^[0-9]+ \\(")
+  expect_match(a$Placebo____orr_ci[2L], "^[0-9.]+, [0-9.]+$")
+  # down: the groups are rows, in the order plan_stat_groups() says them
+  down <- table_plan(d, cols = "TRT",
+                     rows = c(grp = "group2_level", stat = ".stat_group"), label = NA) |>
+    plan_stat_groups(n = "N", rate = c("n", "estimate"), ci = c("conf.low", "conf.high")) |>
+    plan_sort(FALSE) |>
+    plan_cells(n = "{N:.0f}", rate = "{n:.0f} ({estimate:.1f%})",
+               ci = cell_rows("1" = "{conf.low:.1f%}", "2" = "{conf.high:.1f%}"))
+  b <- tab_of(down)
+  expect_identical(b$stat[b$grp == "F"], c("n", "rate", "ci", "ci"))
+  expect_identical(b$Placebo[b$grp == "F" & b$stat == "n"],
+                   a$Placebo____n[1L])
+  expect_identical(b$Placebo[b$grp == "F" & b$stat == "rate"],
+                   a$Placebo____orr_ci[1L])
+})
+
+test_that("plan_paginate_group(heading = ): a section per arm named with the arm and its N from the ARD (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard_body <- cards::ard_tabulate(adsl, by = TRT, variables = SEX)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT), ard_body)
+  plan <- function(a) {
+    table_plan(normalize_ard(a), cols = ".stat_group",
+               rows = c(arm = "TRT", label = "variable_level"), label = NA) |>
+      plan_stat_groups(n = "n", pct = "p") |>
+      plan_cells(n = "{n}", pct = "{p:.1f%}", notes = FALSE) |>
+      plan_paginate_group(col = "arm", keep = FALSE,
+                          heading = "Treatment: {value} (N={n})")
+  }
+  pages <- suppressMessages(plan_apply(plan(ard)))
+  n_arm <- table(adsl$TRT)
+  expect_identical(names(pages),
+                   sprintf("Treatment: %s (N=%d)", names(n_arm), as.integer(n_arm)))
+  # the name is the section heading rtf_tables(auto_section = TRUE) prints
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  doc <- rtf_document() |>
+    rtf_section(header = rtf_header(list("Table 1"))) |>
+    rtf_tables(plan(ard), auto_section = TRUE)
+  suppressMessages(generate_rtfreport(doc, f, overwrite = TRUE))
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "")
+  for (h in names(pages)) expect_true(grepl(h, rtf, fixed = TRUE))
+  # an N the ARD does not state is NA, said, never guessed
+  expect_warning(p2 <- suppressMessages(plan_apply(plan(ard_body))), "states no population")
+  expect_match(names(p2)[1L], "(N=NA)", fixed = TRUE)
+  expect_error(plan_paginate_group(plan(ard), heading = c("a", "b")), "one text")
+})
+
+test_that("normalize_ard(stack = ): parallel subgroups as one pair of keys, whatever slot each came in (#619)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$ALL <- "All"
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  orr <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y",
+                                               method = "clopper-pearson", conf.level = 0.90)
+  # SEX in group2; AGEGR1 in group1, the arm in group2 (another `by =` order)
+  ard <- cards::bind_ard(
+    cards::ard_strata(adsl, .by = TRT, .strata = ALL, .f = orr),
+    cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr),
+    cardx::ard_categorical_ci(adsl, by = c(AGEGR1, TRT), variables = RESP, value = RESP ~ "Y",
+                              method = "clopper-pearson", conf.level = 0.90))
+  d <- normalize_ard(ard, stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))
+  expect_identical(levels(d$subgroup), c("ALL", "SEX", "AGEGR1"))
+  expect_true(all(c("SEX", "AGEGR1") %in% names(d)))          # the own columns stay
+  expect_identical(as.character(d$subgroup_level[!is.na(d$SEX)]), d$SEX[!is.na(d$SEX)])
+  tab <- suppressMessages(plan_apply(
+    table_plan(d, cols = c("TRT", ".stat_group"),
+               rows = c(grp1 = "subgroup", grp2 = "subgroup_level"), label = NA) |>
+      plan_stat_groups(n = "N", orr = c("n", "estimate")) |>
+      plan_sort(FALSE) |>
+      plan_labels(subgroup = c(ALL = "All Subjects", SEX = "Sex", AGEGR1 = "Age Group")) |>
+      plan_cells(n = "{N:.0f}", orr = "{n:.0f} ({estimate:.1f%})", notes = FALSE), "table"))
+  tab <- as.data.frame(if (is.data.frame(tab)) tab else tab[[1L]])
+  expect_identical(as.character(unique(tab$grp1)), c("All Subjects", "Sex", "Age Group"))
+  expect_identical(nrow(tab), 1L + 2L + length(unique(adsl$AGEGR1)))
+  expect_identical(tab$Placebo____n[1L], as.character(sum(adsl$TRT == "Placebo")))
+  # stack = NULL is what it was
+  expect_identical(normalize_ard(ard), normalize_ard(ard, stack = NULL))
+  # what is said, not guessed
+  nested <- cards::ard_strata(adsl, .by = TRT, .strata = c(SEX, AGEGR1), .f = orr)
+  expect_error(normalize_ard(nested, stack = list(s = c("SEX", "AGEGR1"))), "no layer says so")
+  expect_error(normalize_ard(ard, stack = list(s = "BMIGR1")), "no key")
+  expect_error(normalize_ard(ard, stack = list(SEX = "AGEGR1")), "a column already")
+  expect_error(normalize_ard(ard, stack = c("SEX", "AGEGR1")), "named list")
+})
+
+test_that("plan_paginate_rows(page_by = , heading = ): BY pages with a row budget, named with the arm and its N (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT),
+                         cards::ard_tabulate(adsl, by = TRT, variables = c(SEX, AGEGR1, RACE)))
+  p <- table_plan(normalize_ard(ard), cols = ".stat_group",
+                  rows = c(arm = "TRT", grp = "variable", lvl = "variable_level"), label = NA) |>
+    plan_stat_groups(n = "n", pct = "p") |>
+    plan_cells(n = "{n}", pct = "{p:.1f%}", notes = FALSE) |>
+    plan_hide("arm") |>
+    plan_paginate_rows(page_by = "arm", max_rows = 6, split = "group_safe",
+                       heading = "Treatment: {value} (N={n})")
+  pages <- suppressMessages(plan_apply(p))
+  n_arm <- table(adsl$TRT)
+  want <- sprintf("Treatment: %s (N=%d)", names(n_arm), as.integer(n_arm))
+  expect_gt(length(pages), length(want))                       # the budget cut them
+  expect_setequal(unique(sub("[.]{3}[0-9]+$", "", names(pages))), want)
+  expect_error(plan_paginate_rows(p, heading = "{value}"), "one `page_by` column")
+  # a page per value refuses a budget, and says where it lives
+  expect_error(suppressMessages(plan_apply(
+    plan_paginate_group(p, col = "arm") |> plan_paginate_rows(split = "group_safe"))),
+    "plan_paginate_rows(page_by", fixed = TRUE)
+})
+
+test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its variables, refused where ambiguous (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$ALL <- "All"
+  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  # several variables in the slot
+  ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1")))
+  by_slot <- normalize_ard(ard, stack = list(subgroup = "group2"))
+  by_name <- normalize_ard(ard, stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))
+  expect_identical(by_slot, by_name)
+  # one variable in the slot
+  one <- normalize_ard(tab(c("TRT", "SEX")), stack = list(subgroup = "group2"))
+  expect_identical(levels(one$subgroup), "SEX")
+  # a slot beside a named variable
+  mix <- normalize_ard(ard, stack = list(subgroup = c("group2")))
+  expect_identical(levels(mix$subgroup), c("ALL", "SEX", "AGEGR1"))
+  # the slot also holds the arm on some rows: which are subgroups is not said
+  amb <- cards::bind_ard(tab(c("TRT", "SEX")), tab(c("AGEGR1", "TRT")))
+  expect_error(normalize_ard(amb, stack = list(subgroup = "group2")), "another slot")
+  expect_identical(levels(normalize_ard(amb, stack = list(subgroup = c("SEX", "AGEGR1")))$subgroup),
+                   c("SEX", "AGEGR1"))
+})
+
+test_that("normalize_ard(stack = ): crossed layers, three-way too, and the slots finding them (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$ALL <- "All"
+  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1")),
+                         tab(c("TRT", "AGEGR1", "SEX")))
+  layers <- list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX"))
+  d <- normalize_ard(ard, stack = list(subgroup = layers))
+  expect_identical(levels(d$subgroup), c("ALL", "SEX", "AGEGR1", "AGEGR1 / SEX"))
+  x <- d[d$subgroup %in% "AGEGR1 / SEX", ]
+  expect_identical(as.character(x$subgroup_level), paste(x$AGEGR1, x$SEX, sep = " / "))
+  # the first variable turns slowest
+  cl <- levels(droplevels(x$subgroup_level))
+  expect_identical(sub(" / .*$", "", cl), rep(unique(sub(" / .*$", "", cl)), each = 2L))
+  # the slots find the same layers, in the ARD's order
+  expect_identical(normalize_ard(ard, stack = list(subgroup = c("group2", "group3"))), d)
+  # a separator of one's own
+  expect_identical(levels(normalize_ard(ard, stack = list(s = layers), stack_sep = " x ")$s)[4L],
+                   "AGEGR1 x SEX")
+  # a combination no layer names: said, never NA
+  expect_error(normalize_ard(ard, stack = list(subgroup = c("ALL", "SEX", "AGEGR1"))),
+               "no layer says so")
+  # three variables crossed: the same rule
+  three <- cards::bind_ard(tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1", "SEX", "RACE")))
+  t3 <- normalize_ard(three, stack = list(g = list("SEX", c("AGEGR1", "SEX", "RACE"))))
+  expect_identical(levels(t3$g), c("SEX", "AGEGR1 / SEX / RACE"))
+  expect_true(all(lengths(strsplit(as.character(t3$g_level[t3$g %in% "AGEGR1 / SEX / RACE"]), " / ")) == 3L))
+  # the table lays the layers out
+  tab_d <- suppressMessages(plan_apply(
+    table_plan(d, cols = "TRT", rows = c(grp = "subgroup", lvl = "subgroup_level"), label = NA) |>
+      plan_sort(FALSE) |> plan_cells("{n}", notes = FALSE), "table"))
+  tab_d <- as.data.frame(if (is.data.frame(tab_d)) tab_d else tab_d[[1L]])
+  expect_identical(as.character(unique(tab_d$grp)), c("ALL", "SEX", "AGEGR1", "AGEGR1 / SEX"))
+})
+
+test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, crossed too (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  # group1 = the subgroup, the arm last
+  ard <- cards::bind_ard(tab(c("SEX", "TRT")), tab(c("AGEGR1", "TRT")), tab(c("AGEGR1", "SEX", "TRT")))
+  expect_true(all(as.character(as.data.frame(ard)$group2) %in% c("TRT", "SEX")))
+  d <- normalize_ard(ard, stack = list(subgroup = list("SEX", "AGEGR1", c("AGEGR1", "SEX"))))
+  expect_identical(levels(d$subgroup), c("SEX", "AGEGR1", "AGEGR1 / SEX"))
+  expect_false(anyNA(d$subgroup[!is.na(d$TRT) & d$variable == "DISCONFL"]))
+  # the slots there hold the arm too: they do not say what the subgroups are
+  expect_error(normalize_ard(ard, stack = list(subgroup = c("group1", "group2"))), "another slot")
+})
+
+test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its rows, one column's count (#619)", {
+  skip_if_not_installed("cards")
+  adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:4], ]
+  ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,
+                                       denominator = cards::ADSL, id = USUBJID)
+  d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"))
+  tab <- function(...) {
+    t <- suppressMessages(plan_apply(
+      table_plan(d, cols = "TRTA", rows = c(soc = "AESOC", pt = "AEDECOD"), label = NA) |>
+        plan_sort(...) |> plan_cells("{n}", notes = FALSE), "table"))
+    as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  }
+  arms <- unique(as.character(cards::ADSL$TRTA))
+  num <- function(t, cols = arms) rowSums(sapply(t[cols], function(x) as.numeric(x)), na.rm = TRUE)
+  t1 <- tab("-n@soc", "soc", ".depth", "-n")
+  soc_rows <- is.na(t1$pt)
+  # SOCs by their own count, descending; each SOC's PTs right under it, by count
+  expect_true(all(diff(num(t1)[soc_rows]) <= 0))
+  runs <- rle(as.character(t1$soc))$values
+  expect_identical(runs, unique(runs))
+  for (s in unique(t1$soc)) {
+    blk <- t1[t1$soc == s, ]
+    expect_true(is.na(blk$pt[1L]))
+    expect_true(all(diff(num(blk)[-1L]) <= 0))
+  }
+  # one column only
+  t2 <- tab("-n@soc[Placebo]", "soc", ".depth", "-n[Placebo]")
+  expect_true(all(diff(num(t2, "Placebo")[is.na(t2$pt)]) <= 0))
+  for (s in unique(t2$soc)) {
+    blk <- t2[t2$soc == s, ]
+    expect_true(all(diff(num(blk, "Placebo")[-1L]) <= 0))
+  }
+  # what is not there is said
+  expect_error(tab("-n@nope"), "not a row key")
+  expect_error(tab("-n[Nope]"), "no spread column")
+  # a plain -n sorts as it did
+  expect_identical(tab("soc", ".depth", "-n"), tab("soc", ".depth", "-n"))
+})
