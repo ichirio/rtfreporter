@@ -10,7 +10,8 @@ normalize_ard(
   hierarchy = character(),
   overall = NULL,
   drop_contexts = c("attributes", "total_n"),
-  drop_key_variables = FALSE
+  drop_key_variables = FALSE,
+  stack = NULL
 )
 }
 \arguments{
@@ -44,6 +45,23 @@ cell, but they are often the only place an ARD states each column's
 size.  \code{FALSE} (default) keeps them and marks them \code{.key_own = TRUE}, so
 \code{\link[=widen_ard]{widen_ard()}} leaves them out of the body while a column header can
 still read them.  \code{TRUE} removes them outright.}
+
+\item{stack}{Parallel subgroups as one pair of keys, a named list:
+\code{stack = list(subgroup = c("ALL", "SEX", "AGEGR1"))} adds the columns
+\code{subgroup} (the variable, \code{"SEX"}) and \code{subgroup_level} (its level,
+\code{"F"}) --- what \code{group2} / \code{group2_level} say in an ARD whose subgroups
+all came in that slot, but \strong{whatever slot} each came in (a subgroup
+is in \code{group3} as soon as a strata or a \verb{by =} has one variable more).
+\code{table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))}
+then lays them one under another, in the order written, each
+variable's levels in their own order; \code{\link[=plan_labels]{plan_labels()}} names them
+(\code{plan_labels(subgroup = c(SEX = "Sex"))}).  The variables' own columns
+stay.  Only variables never set on the same row stack: a nested
+subgroup (AGEGR1 within SEX) is two keys, \code{rows = c("SEX", "AGEGR1")},
+and a \code{hierarchy} nests by definition.  A row with none of them (an
+analysis by the arm alone) keeps both \code{NA}; an overall row is a
+constant stratum (\code{ALL = "All"}) stacked first, which the ARD and the
+ARS then state.}
 }
 \value{
 A data frame with one row per ARD statistic: the key columns, the

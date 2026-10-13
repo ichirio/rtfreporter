@@ -82,7 +82,8 @@ plan_paginate_rows(
   break_before = NULL,
   min_group_rows = NULL,
   cont_label = NULL,
-  page_by = NULL
+  page_by = NULL,
+  heading = NULL
 )
 
 plan_style(
@@ -385,7 +386,9 @@ it says so there instead of the name being written again in a
 \code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
 are ignored rather than refused.}
 
-\item{heading}{For \code{plan_paginate_group()}: the page's name as a template,
+\item{heading}{For \code{plan_paginate_group()} (and \code{plan_paginate_rows()}
+with one \code{page_by} column, a page per value with a row budget inside):
+the page's name as a template,
 \code{"Treatment: {value} (N={n})"}, in place of the bare value --- so the
 section header \code{rtf_tables(auto_section = TRUE)} prints (or the title
 line of \code{auto_title = TRUE}) says the arm and its N with neither written
@@ -671,7 +674,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_row_group(mode, collapse, group_col)}: groups down the body. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{group_by}, \code{collapse_repeats}, \code{group_col} (a finished table).
 \item \code{plan_hide(...)}: columns not printed. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{drop_cols}.
 \item \code{plan_blanks(where, first, last, counted)}: blank rows. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows}; a listing's \code{where = "records"} is \code{\link[=listing_spec]{listing_spec()}}'s \code{blank_row}.
-\item \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)}: the row budget, inside the BY pages. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label}, \code{page_by}.
+\item \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)}: the row budget, inside the BY pages. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label}, \code{page_by}; \code{heading} names each BY page as \code{plan_paginate_group(heading = )} does.
 \item \code{plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)}: column blocks. Goes to \code{\link[=paginate_cols]{paginate_cols()}}: \code{at}, \code{cols} / \code{by}, \code{carry}, \code{col_header}, \code{width}, \code{allow_span_break}, \code{page_order}.
 \item \code{plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)}: the whole table. Goes to \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} by the same names; \verb{border_*} and the default look (\code{header_align}, \code{header_bold}, \code{header_italic}, \code{align}, \code{bold}, \code{italic}, \code{underline}) via \code{\link[=rtf_table_style]{rtf_table_style()}}.
 \item \code{plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)}: the columns. Goes to \code{\link[=rtftable]{rtftable()}}: \code{col_rel_width}, \code{row_title}, \code{column_widths_twips}; \code{\link[=set_decimal_split]{set_decimal_split()}}: \code{cols}; \code{\link[=as_rtftables]{as_rtftables()}}: \code{auto_width}, \code{cell_format}; \code{\link[=widen_ard]{widen_ard()}}: \code{sep}.

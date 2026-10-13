@@ -1289,6 +1289,23 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   [widen_ard()] leaves them out of the body while a column header can
 #'   still read them.  `TRUE` removes them outright.
 #'
+#' @param stack Parallel subgroups as one pair of keys, a named list:
+#'   `stack = list(subgroup = c("ALL", "SEX", "AGEGR1"))` adds the columns
+#'   `subgroup` (the variable, `"SEX"`) and `subgroup_level` (its level,
+#'   `"F"`) --- what `group2` / `group2_level` say in an ARD whose subgroups
+#'   all came in that slot, but **whatever slot** each came in (a subgroup
+#'   is in `group3` as soon as a strata or a `by =` has one variable more).
+#'   `table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))`
+#'   then lays them one under another, in the order written, each
+#'   variable's levels in their own order; [plan_labels()] names them
+#'   (`plan_labels(subgroup = c(SEX = "Sex"))`).  The variables' own columns
+#'   stay.  Only variables never set on the same row stack: a nested
+#'   subgroup (AGEGR1 within SEX) is two keys, `rows = c("SEX", "AGEGR1")`,
+#'   and a `hierarchy` nests by definition.  A row with none of them (an
+#'   analysis by the arm alone) keeps both `NA`; an overall row is a
+#'   constant stratum (`ALL = "All"`) stacked first, which the ARD and the
+#'   ARS then state.
+#'
 #' @section Working on the result before [widen_ard()]:
 #' The result is a plain data frame; reshaping it in between is the point of
 #' the two-stage split.  **Everything [widen_ard()] reads is in the
@@ -1350,7 +1367,7 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 normalize_ard <- function(x, keys = NULL, hierarchy = character(),
                           overall = NULL,
                           drop_contexts = c("attributes", "total_n"),
-                          drop_key_variables = FALSE) {
+                          drop_key_variables = FALSE, stack = NULL) {
   ard <- x
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
@@ -1551,6 +1568,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     d[[k]] <- .ard_as_factor(d[[k]], unique(c(front, lv)))
   }
 
+  # Parallel subgroups (SEX; AGEGR1), each its own key column above, as one
+  # pair of keys: the variable's name and its level, whatever group slot
+  # each came in (#619).
+  if (length(stack)) d <- .ard_stack_keys(d, stack, hierarchy)
+
   d$.kind <- .ard_kind(d)
 
   # The order each factor variable declared, as a POSITION per row.  It rides
@@ -1585,6 +1607,71 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   # raw ARD by mistake says so, rather than failing on a missing column.
   class(out) <- c("ard_long", "data.frame")
   out
+}
+
+
+# normalize_ard(stack = ): each name a new pair of key columns, `<name>`
+# (which variable) and `<name>_level` (its level), from key columns that
+# are never set on the same row.  The variables' own columns stay.
+.ard_stack_keys <- function(d, stack, hierarchy = character()) {
+  if (!is.list(stack) || is.null(names(stack)) || !all(nzchar(names(stack))) ||
+      anyDuplicated(names(stack)) ||
+      !all(vapply(stack, function(v) is.character(v) && length(v) >= 1L &&
+                                          !anyNA(v), NA))) {
+    .ard_stop(paste0(
+      "`stack` is a named list: a new key's name and the variables stacked ",
+      "in it,
+  `stack = list(subgroup = c(\"SEX\", \"AGEGR1\"))`."))
+  }
+  for (nm in names(stack)) {
+    vars <- unique(stack[[nm]])
+    out <- c(nm, paste0(nm, "_level"))
+    taken <- intersect(out, names(d))
+    if (length(taken)) {
+      .ard_stop(sprintf(paste0(
+        "`stack`: %s is a column already; name the stacked key something ",
+        "else."), paste(sQuote(taken), collapse = ", ")))
+    }
+    bad <- intersect(vars, hierarchy)
+    if (length(bad)) {
+      .ard_stop(sprintf(paste0(
+        "`stack`: %s is in `hierarchy`.  A hierarchy's levels nest; only ",
+        "parallel variables stack."), paste(sQuote(bad), collapse = ", ")))
+    }
+    gone <- setdiff(vars, names(d))
+    if (length(gone)) {
+      .ard_stop(sprintf(paste0(
+        "`stack`: no key %s in this ARD.
+  Keys: %s"),
+        paste(sQuote(gone), collapse = ", "),
+        paste(setdiff(names(d), .ard_structural()), collapse = ", ")))
+    }
+    set <- vapply(vars, function(v) !is.na(d[[v]]), logical(nrow(d)))
+    set <- matrix(set, nrow = nrow(d))
+    both <- rowSums(set) > 1L
+    if (any(both)) {
+      two <- vars[colSums(set[both, , drop = FALSE]) > 0L]
+      .ard_stop(sprintf(paste0(
+        "`stack`: %s are set on the same rows, so they nest rather than ",
+        "stand side by side.
+  A nested subgroup is two keys: ",
+        "`rows = c(\"%s\", \"%s\")`."),
+        paste(sQuote(two), collapse = " and "), two[1L], two[2L]))
+    }
+    var <- rep(NA_character_, nrow(d))
+    lvl <- rep(NA_character_, nrow(d))
+    lv_order <- character(0)
+    for (j in seq_along(vars)) {
+      hit <- set[, j]
+      var[hit] <- vars[j]
+      lvl[hit] <- as.character(d[[vars[j]]][hit])
+      lv_order <- c(lv_order, if (is.factor(d[[vars[j]]])) levels(d[[vars[j]]])
+                        else .ard_first_seen(lvl[hit]))
+    }
+    d[[out[1L]]] <- .ard_as_factor(var, vars)
+    d[[out[2L]]] <- .ard_as_factor(lvl, unique(lv_order))
+  }
+  d
 }
 
 

@@ -2725,3 +2725,69 @@ test_that("plan_paginate_group(heading = ): a section per arm named with the arm
   expect_match(names(p2)[1L], "(N=NA)", fixed = TRUE)
   expect_error(plan_paginate_group(plan(ard), heading = c("a", "b")), "one text")
 })
+
+test_that("normalize_ard(stack = ): parallel subgroups as one pair of keys, whatever slot each came in (#619)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$ALL <- "All"
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  orr <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y",
+                                               method = "clopper-pearson", conf.level = 0.90)
+  # SEX in group2; AGEGR1 in group1, the arm in group2 (another `by =` order)
+  ard <- cards::bind_ard(
+    cards::ard_strata(adsl, .by = TRT, .strata = ALL, .f = orr),
+    cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr),
+    cardx::ard_categorical_ci(adsl, by = c(AGEGR1, TRT), variables = RESP, value = RESP ~ "Y",
+                              method = "clopper-pearson", conf.level = 0.90))
+  d <- normalize_ard(ard, stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))
+  expect_identical(levels(d$subgroup), c("ALL", "SEX", "AGEGR1"))
+  expect_true(all(c("SEX", "AGEGR1") %in% names(d)))          # the own columns stay
+  expect_identical(as.character(d$subgroup_level[!is.na(d$SEX)]), d$SEX[!is.na(d$SEX)])
+  tab <- suppressMessages(plan_apply(
+    table_plan(d, cols = c("TRT", ".stat_group"),
+               rows = c(grp1 = "subgroup", grp2 = "subgroup_level"), label = NA) |>
+      plan_stat_groups(n = "N", orr = c("n", "estimate")) |>
+      plan_sort(FALSE) |>
+      plan_labels(subgroup = c(ALL = "All Subjects", SEX = "Sex", AGEGR1 = "Age Group")) |>
+      plan_cells(n = "{N:.0f}", orr = "{n:.0f} ({estimate:.1f%})", notes = FALSE), "table"))
+  tab <- as.data.frame(if (is.data.frame(tab)) tab else tab[[1L]])
+  expect_identical(as.character(unique(tab$grp1)), c("All Subjects", "Sex", "Age Group"))
+  expect_identical(nrow(tab), 1L + 2L + length(unique(adsl$AGEGR1)))
+  expect_identical(tab$Placebo____n[1L], as.character(sum(adsl$TRT == "Placebo")))
+  # stack = NULL is what it was
+  expect_identical(normalize_ard(ard), normalize_ard(ard, stack = NULL))
+  # what is said, not guessed
+  nested <- cards::ard_strata(adsl, .by = TRT, .strata = c(SEX, AGEGR1), .f = orr)
+  expect_error(normalize_ard(nested, stack = list(s = c("SEX", "AGEGR1"))), "nest rather than")
+  expect_error(normalize_ard(ard, stack = list(s = "BMIGR1")), "no key")
+  expect_error(normalize_ard(ard, stack = list(SEX = "AGEGR1")), "a column already")
+  expect_error(normalize_ard(ard, stack = c("SEX", "AGEGR1")), "named list")
+})
+
+test_that("plan_paginate_rows(page_by = , heading = ): BY pages with a row budget, named with the arm and its N (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT),
+                         cards::ard_tabulate(adsl, by = TRT, variables = c(SEX, AGEGR1, RACE)))
+  p <- table_plan(normalize_ard(ard), cols = ".stat_group",
+                  rows = c(arm = "TRT", grp = "variable", lvl = "variable_level"), label = NA) |>
+    plan_stat_groups(n = "n", pct = "p") |>
+    plan_cells(n = "{n}", pct = "{p:.1f%}", notes = FALSE) |>
+    plan_hide("arm") |>
+    plan_paginate_rows(page_by = "arm", max_rows = 6, split = "group_safe",
+                       heading = "Treatment: {value} (N={n})")
+  pages <- suppressMessages(plan_apply(p))
+  n_arm <- table(adsl$TRT)
+  want <- sprintf("Treatment: %s (N=%d)", names(n_arm), as.integer(n_arm))
+  expect_gt(length(pages), length(want))                       # the budget cut them
+  expect_setequal(unique(sub("[.]{3}[0-9]+$", "", names(pages))), want)
+  expect_error(plan_paginate_rows(p, heading = "{value}"), "one `page_by` column")
+  # a page per value refuses a budget, and says where it lives
+  expect_error(suppressMessages(plan_apply(
+    plan_paginate_group(p, col = "arm") |> plan_paginate_rows(split = "group_safe"))),
+    "plan_paginate_rows(page_by", fixed = TRUE)
+})

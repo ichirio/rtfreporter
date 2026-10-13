@@ -957,7 +957,9 @@ print.table_plan <- function(x, ...) {
 #'   the value, which is the line `rtf_tables(auto_section = TRUE)`
 #'   cuts a section on --- so this verb decides what a section is.
 #'   It is the only verb that makes a page per value.
-#' @param heading For `plan_paginate_group()`: the page's name as a template,
+#' @param heading For `plan_paginate_group()` (and `plan_paginate_rows()`
+#'   with one `page_by` column, a page per value with a row budget inside):
+#'   the page's name as a template,
 #'   `"Treatment: {value} (N={n})"`, in place of the bare value --- so the
 #'   section header `rtf_tables(auto_section = TRUE)` prints (or the title
 #'   line of `auto_title = TRUE`) says the arm and its N with neither written
@@ -1274,7 +1276,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_row_group(mode, collapse, group_col)`: groups down the body. Goes to [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table).
 #' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
 #' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row`.
-#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`.
+#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` names each BY page as `plan_paginate_group(heading = )` does.
 #' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
@@ -1780,11 +1782,7 @@ plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
 #' @rdname plan_verbs
 #' @export
 plan_paginate_group <- function(plan, col = NULL, keep = TRUE, heading = NULL) {
-  if (!is.null(heading) && (!is.character(heading) || length(heading) != 1L ||
-                            is.na(heading) || !nzchar(heading))) {
-    .ard_stop(paste0("plan_paginate_group(heading = ) is one text with ",
-                     "`{value}` and `{n}`: \"Treatment: {value} (N={n})\"."))
-  }
+  .plan_check_heading(heading, "plan_paginate_group")
   .plan_layer(plan, "group",
               list(group_col = col, .keep = keep, .page = TRUE,
                    .heading = heading))
@@ -1926,12 +1924,19 @@ plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL,
 # value however long it is.
 plan_paginate_rows <- function(plan, max_rows = NULL, split = NULL,
                                break_before = NULL, min_group_rows = NULL,
-                               cont_label = NULL, page_by = NULL) {
+                               cont_label = NULL, page_by = NULL,
+                               heading = NULL) {
+  .plan_check_heading(heading, "plan_paginate_rows")
+  if (!is.null(heading) && (length(page_by) != 1L)) {
+    .ard_stop(paste0("plan_paginate_rows(heading = ) names the BY pages: ",
+                     "give one `page_by` column."))
+  }
   .plan_layer(plan, "pages",
               list(max_rows = max_rows, split = split,
                    split_rows = break_before,
                    min_group_rows = min_group_rows,
-                   cont_label = cont_label, page_by = page_by))
+                   cont_label = cont_label, page_by = page_by,
+                   .heading = heading))
 }
 
 # The WHOLE-table settings, listed.  Everything a table has per column or
@@ -2754,7 +2759,12 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
       .ard_stop(paste0(
         "plan_paginate_group() splits the pages by the group value, ",
         "and\n  plan_paginate_rows(split = ",
-        sQuote(out$split), ") splits them another way.  Use one."))
+        sQuote(out$split), ") splits them another way.  Use one.
+",
+        "  A page per value with a row budget inside is ",
+        "plan_paginate_rows(page_by = , max_rows = , split = ),
+",
+        "  which takes `heading =` too."))
     }
     out$split <- "by_value"
   }
@@ -3500,13 +3510,19 @@ plan_header_tokens <- function(plan) {
 # (rtf_paginate_meta) are not touched.
 .plan_page_headings <- function(plan, out) {
   h <- .plan_merge(.plan_of(plan, "group"))$.heading
+  pb <- .plan_merge(.plan_of(plan, "pages"))
+  by_rows <- is.null(h) && !is.null(pb$.heading)
+  if (by_rows) h <- pb$.heading
+  verb <- if (by_rows) "plan_paginate_rows(heading = )"
+          else "plan_paginate_group(heading = )"
   if (is.null(h) || inherits(out, "rtftable") || is.null(names(out))) {
     return(out)
   }
   nm <- names(out)
   base <- .page_name_base(nm)
   tail <- substring(nm, nchar(base) + 1L)
-  pg <- .plan_page_group(plan, base)
+  pg <- if (by_rows) .plan_page_by_values(plan, pb$page_by, base)
+        else .plan_page_group(plan, base)
   wants_n <- "n" %in% .text_tokens(h)
   missed <- character(0)
   filled <- vapply(seq_along(out), function(i) {
@@ -3517,19 +3533,41 @@ plan_header_tokens <- function(plan) {
       if (is.na(n)) missed <<- c(missed, base[[i]])
     }
     .fill_text_tokens(h, list(value = base[[i]], n = if (is.na(n)) "NA" else n),
-                      "plan_paginate_group(heading = )")
+                      verb)
   }, character(1L))
   if (length(missed)) {
     warning(sprintf(paste0(
-      "plan_paginate_group(heading = ): the ARD states no population for %s, ",
+      "%s: the ARD states no population for %s, ",
       "so `{n}` is NA.
   A page's N is its variable's own tabulation: bind ",
       "cards::ard_tabulate(adsl, variables = %s)."),
-      paste(sQuote(unique(missed)), collapse = ", "),
+      verb, paste(sQuote(unique(missed)), collapse = ", "),
       if (is.null(pg)) "<the page variable>" else pg$col), call. = FALSE)
   }
   names(out) <- paste0(filled, tail)
   out
+}
+
+# The BY pages' (plan_paginate_rows(page_by = )) data column and each page's
+# value of it, as .plan_page_group() says them for a page per value.
+.plan_page_by_values <- function(plan, page_by, page_names) {
+  r <- plan$roles$rows
+  src <- if (!is.null(names(r)) && page_by %in% names(r)) r[[page_by]] else page_by
+  if (!is.character(src) || length(src) != 1L || !src %in% names(plan$data)) {
+    return(NULL)
+  }
+  raw <- .ard_first_seen(plan$data[[src]])
+  list(col = src, value = lapply(page_names, function(nm)
+    if (nm %in% raw) nm else NULL))
+}
+
+# A page heading is one template text.
+.plan_check_heading <- function(heading, verb) {
+  if (!is.null(heading) && (!is.character(heading) || length(heading) != 1L ||
+                            is.na(heading) || !nzchar(heading))) {
+    .ard_stop(sprintf(paste0("%s(heading = ) is one text with `{value}` and ",
+                             "`{n}`: \"Treatment: {value} (N={n})\"."), verb))
+  }
 }
 
 # The page variable's own tabulation: the `n` of its `.key_own` row for one

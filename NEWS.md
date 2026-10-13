@@ -23,6 +23,18 @@
   variable's own tabulation, `cards::ard_tabulate(adsl, variables =
   TRT01A)`).  A section per arm says the arm and its N with neither
   written by hand; what the ARD does not state is `NA`, with a warning.
+  `plan_paginate_rows(page_by = , heading = )` does the same for BY pages
+  with a row budget inside (a page per value refuses one).
+
+- **`normalize_ard(stack = )`: parallel subgroups as one pair of keys,
+  whatever group slot each came in** (#619).  `stack = list(subgroup =
+  c("ALL", "SEX", "AGEGR1"))` adds `subgroup` (the variable) and
+  `subgroup_level` (its level), so `rows = c(grp1 = "subgroup", grp2 =
+  "subgroup_level")` lays the subgroups one under another in the order
+  written.  Reading `group2` / `group2_level` directly worked only while
+  every subgroup came in that slot.  The variables' own columns stay;
+  variables set on the same row nest, and stacking them is an error that
+  says to name them as two keys.
 
 ### Deprecated
 
