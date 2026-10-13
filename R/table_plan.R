@@ -695,7 +695,8 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
     v <- v[vapply(v, is.character, logical(1L))]
     v <- as.character(unlist(v, use.names = FALSE))
     v <- v[!is.na(v) & nzchar(v)]
-    miss <- setdiff(v, nm)
+    # `.stat_group` is plan_stat_groups()'s key, made when the plan runs
+    miss <- setdiff(v, c(nm, ".stat_group"))
     if (length(miss)) {
       arg <- switch(r, variable = "stat = c(variable",
                     stat_name = "stat = c(name", stat = "stat = c(value", r)
@@ -811,7 +812,18 @@ print.table_plan <- function(x, ...) {
 #' @param plan An [table_plan()].
 #' @param ... For `plan_cells()`, exactly what `widen_ard(cells = )`
 #'   takes: one bare entry, or entries named by variable, `context`,
-#'   kind (`continuous` / `categorical`) or `default`.
+#'   kind (`continuous` / `categorical`), a stat group of
+#'   `plan_stat_groups()` or `default`.
+#'
+#'   `plan_stat_groups()` takes the groups, each a name and the
+#'   statistics in it (`n = "N", orr_ci = c("n", "estimate", "conf.low",
+#'   "conf.high")`).  Each row of the ARD gets its group in the key
+#'   `.stat_group`, which `table_plan(cols = )` or `rows = ` names like any
+#'   other: `cols = c("TRT01A", ".stat_group")` puts one record's N in one
+#'   column and its rate and interval in the next, and [plan_cells()] keys a
+#'   template by the group's name (`n = "{N}"`, `orr_ci = cell_rows(...)`).
+#'   A statistic in no group is not read.  This is what a `mutate()` of
+#'   `variable` before [table_plan()] did.
 #'
 #'   `plan_digits()` takes the same keys, with the digits as the value.
 #'   A value is **one number**, for every token in that entry, or a
@@ -1231,6 +1243,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_levels()`, `plan_labels()`: the order and text of values. Goes to [widen_ard()]: `levels`, `labels`.
 #' * `plan_total(label, position)`: a Total column from the ARD's overall rows. Goes to [widen_ard()]: those rows as one more value of the column key, and its place in `levels`; the header's `{n}` there is the study total.
 #'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
+#' * `plan_stat_groups(...)`: the statistics in named groups. Goes to [widen_ard()]: `stat_groups` (the key `.stat_group`).
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
 #' * `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: how cells look. Goes to [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition.
@@ -1822,6 +1835,17 @@ plan_total <- function(plan, label = "Total", position = c("last", "first")) {
   .plan_layer(plan, "total", list(label = label, position = position))
 }
 
+# One record's statistics in named groups -- its N in one column, its rate
+# and interval in the next -- which `cols` / `rows` name as `.stat_group`
+# (#619): the mutate() a table needed before table_plan() is a layer.
+#' @rdname plan_verbs
+#' @export
+plan_stat_groups <- function(plan, ...) {
+  g <- list(...)
+  .ard_stat_groups(g)
+  .plan_layer(plan, "stat_groups", list(stat_groups = g))
+}
+
 #' @rdname plan_verbs
 #' @export
 plan_hide <- function(plan, ...) {
@@ -2232,7 +2256,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     # `plan_cells(na = )` alone is what an empty cell prints, which a
     # finished table has too
     ard_half <- vapply(plan$layers, function(l)
-      l$kind %in% c("cells", "levels", "labels") ||
+      l$kind %in% c("cells", "levels", "labels", "stat_groups") ||
         (identical(l$kind, "cell_options") &&
            length(setdiff(names(Filter(Negate(is.null), l$fields)), "na"))),
       TRUE)
@@ -2592,6 +2616,9 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   srt <- .plan_merge(.plan_of(plan, "sort"))
   if (length(srt) && !is.null(srt$sort)) out$sort <- srt$sort
   if (length(srt) && !is.null(srt$sort_stat)) out$sort_stat <- srt$sort_stat
+  # plan_stat_groups(): the last one says them
+  sg <- .plan_of(plan, "stat_groups")
+  if (length(sg)) out$stat_groups <- sg[[length(sg)]]$stat_groups
   # renames, not arguments: .plan_prepare() has already done them
   out[c("variable", "stat_name", "stat")] <- NULL
   lb <- .plan_label_spec(plan)

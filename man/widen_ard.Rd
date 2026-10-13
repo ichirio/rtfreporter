@@ -19,7 +19,8 @@ widen_ard(
   rounding = NULL,
   sort_stat = NULL,
   na = NA_character_,
-  notes = TRUE
+  notes = TRUE,
+  stat_groups = NULL
 )
 }
 \arguments{
@@ -212,6 +213,15 @@ with the guard that let it through when it had one.  A bare template is
 its own explanation, but a guarded chain is not --- the finished cell
 cannot tell you which of its three candidates you got --- so this is the
 companion to \code{cells} guards rather than a general-purpose log.}
+
+\item{stat_groups}{The statistics in named groups, as a named list
+(\code{list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))}):
+each row gets its group in a key \code{.stat_group}, which \code{cols} or \code{rows}
+name like any other (\code{cols = c("ARM", ".stat_group")}: one record's N in
+one column, its rate and interval in the next), and a \code{cells} map may be
+keyed by a group's name (looked up after the analysis variable).  A
+statistic in no group is not read.  \code{\link[=plan_stat_groups]{plan_stat_groups()}} is the plan's
+spelling.  \code{NULL} (default): no groups.}
 }
 \value{
 A data frame: the \code{rows} columns, the label column, then one column

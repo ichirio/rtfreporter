@@ -1,5 +1,16 @@
 # rtfreporter (development version)
 
+- **`plan_stat_groups()`: one record's statistics in two columns, without a
+  `mutate()` before the plan** (#619).  An ORR table with N in one column
+  and the rate and its CI in the next had to relabel `variable` by
+  `stat_name` first.  `plan_stat_groups(n = "N", orr_ci = c("n",
+  "estimate", "conf.low", "conf.high"))` puts each statistic in a named
+  group, the key `.stat_group`, which `table_plan(cols = c("ARM",
+  ".stat_group"))` names like any other; `plan_cells()` keys a template by
+  the group's name.  A statistic in no group is not read.
+  `widen_ard(stat_groups = )` is the same for a call without a plan.  The
+  RTF is byte-identical to the `mutate()` version (a test).
+
 ### Deprecated
 
 Removed in the next minor release, the first CRAN one.  The pre-CRAN API

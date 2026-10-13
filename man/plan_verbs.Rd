@@ -12,6 +12,7 @@
 \alias{plan_row_group}
 \alias{plan_nest}
 \alias{plan_total}
+\alias{plan_stat_groups}
 \alias{plan_hide}
 \alias{plan_sort}
 \alias{plan_blanks}
@@ -65,6 +66,8 @@ plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
 plan_nest(plan, ...)
 
 plan_total(plan, label = "Total", position = c("last", "first"))
+
+plan_stat_groups(plan, ...)
 
 plan_hide(plan, ...)
 
@@ -170,7 +173,17 @@ plan_paginate_cols(
 
 \item{...}{For \code{plan_cells()}, exactly what \code{widen_ard(cells = )}
 takes: one bare entry, or entries named by variable, \code{context},
-kind (\code{continuous} / \code{categorical}) or \code{default}.
+kind (\code{continuous} / \code{categorical}), a stat group of
+\code{plan_stat_groups()} or \code{default}.
+
+\code{plan_stat_groups()} takes the groups, each a name and the
+statistics in it (\verb{n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")}).  Each row of the ARD gets its group in the key
+\code{.stat_group}, which \code{table_plan(cols = )} or \verb{rows = } names like any
+other: \code{cols = c("TRT01A", ".stat_group")} puts one record's N in one
+column and its rate and interval in the next, and \code{\link[=plan_cells]{plan_cells()}} keys a
+template by the group's name (\code{n = "{N}"}, \code{orr_ci = cell_rows(...)}).
+A statistic in no group is not read.  This is what a \code{mutate()} of
+\code{variable} before \code{\link[=table_plan]{table_plan()}} did.
 
 \code{plan_digits()} takes the same keys, with the digits as the value.
 A value is \strong{one number}, for every token in that entry, or a
@@ -627,6 +640,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_levels()}, \code{plan_labels()}: the order and text of values. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{levels}, \code{labels}.
 \item \code{plan_total(label, position)}: a Total column from the ARD's overall rows. Goes to \code{\link[=widen_ard]{widen_ard()}}: those rows as one more value of the column key, and its place in \code{levels}; the header's \code{{n}} there is the study total.
 \code{plan_levels(.drop_empty = )} leaves out the levels no record has, before the table is made.
+\item \code{plan_stat_groups(...)}: the statistics in named groups. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{stat_groups} (the key \code{.stat_group}).
 \item \code{plan_sort(..., stat, keep)}: the row order. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name}.
 \item \code{plan_stub(vars, name, indent, group_summary, before)}: the row headings. Goes to \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}.
 \item \code{plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)}: how cells look. Goes to \code{\link[=style_header]{style_header()}}, \code{\link[=style_cols]{style_cols()}}, or \code{\link[=rtftable]{rtftable()}}'s \code{cell_styles} for a condition.

@@ -2596,3 +2596,56 @@ test_that("plan_total() says what is wrong", {
   expect_identical(plan_layers(plan_total(p4, label = "All"))$layers$total,
                    list(label = "All", position = "last"))
 })
+
+test_that("plan_stat_groups(): one record's N in one column, its rate and CI in the next, no mutate() (#619)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  orr <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y",
+                                               method = "clopper-pearson", conf.level = 0.90)
+  ard <- cards::bind_ard(
+    cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr),
+    cards::ard_strata(adsl, .by = TRT, .strata = AGEGR1, .f = orr))
+  cells <- list(n = c("1" = "{N:.0f}"),
+                orr_ci = cell_rows(
+                  "1" = c(n == 0 ~ "0", "{n:.0f} ({estimate:.1f%})"),
+                  "2" = "{conf.low:.1f%}, {conf.high:.1f%}"))
+  finish <- function(p) do.call(plan_cells, c(list(p), cells)) |>
+    plan_sort(FALSE) |>
+    plan_row_group(mode = "value", collapse = c(1L, 2L))
+  d <- normalize_ard(ard)
+  m <- d
+  m$variable <- ifelse(m$stat_name == "N", "n", "orr_ci")
+  by_mutate <- table_plan(m, cols = c("TRT", "variable"),
+                          rows = c(grp1 = "group2", grp2 = "group2_level"), label = NA) |>
+    finish()
+  by_groups <- table_plan(d, cols = c("TRT", ".stat_group"),
+                          rows = c(grp1 = "group2", grp2 = "group2_level"), label = NA) |>
+    plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+    finish()
+  render <- function(p) {
+    f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+    old <- options(rtfreporter.render_time = as.POSIXct("2026-01-01 09:00"))
+    on.exit(options(old), add = TRUE)
+    suppressMessages(generate_rtfreport(rtf_tables(rtf_document(program = "t.R"), p), f,
+                                        overwrite = TRUE))
+    readBin(f, "raw", file.size(f))
+  }
+  expect_identical(render(by_groups), render(by_mutate))
+  tab <- suppressMessages(plan_apply(by_groups, "table"))
+  tab <- as.data.frame(if (is.data.frame(tab)) tab else tab[[1L]])
+  expect_true(all(c("Placebo____n", "Placebo____orr_ci") %in% names(tab)))
+  # widen_ard() takes it directly too
+  w <- suppressMessages(widen_ard(d, cols = c("TRT", ".stat_group"),
+                                  rows = c(grp1 = "group2", grp2 = "group2_level"),
+                                  label = NA, cells = cells,
+                                  stat_groups = list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))))
+  expect_identical(w$Placebo____n[1L], as.character(tab$Placebo____n[1L]))
+  # what is said, not guessed
+  expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), n = "N", "n"), "a name of its own")
+  expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), a = "N", b = c("N", "n")), "in two groups")
+  expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), a = character()), "names no statistic")
+})

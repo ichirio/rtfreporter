@@ -845,14 +845,16 @@
     collapse = "\n")
 }
 
-.ard_lookup_cells <- function(cells, variable, context, kind = NA_character_) {
+.ard_lookup_cells <- function(cells, variable, context, kind = NA_character_,
+                              group = NA_character_) {
   # A list is a map only when its elements are NAMED: `c()` over guards
   # returns an unnamed list, and that is one chain, not a map.
   if (inherits(cells, "cell_rows")) return(.ard_cell_entry(cells))
   if (!is.list(cells) || !any(nzchar(names(cells) %||% ""))) {
     return(.ard_cell_entry(cells))
   }
-  keys <- c(.ard_summary_key(variable, context), variable)
+  keys <- c(.ard_summary_key(variable, context), variable,
+            if (!is.na(group)) group)
   if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
   if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
   for (k in c(unique(keys), "default")) {
@@ -861,6 +863,33 @@
     }
   }
   NULL
+}
+
+# `stat_groups` (plan_stat_groups()): a named list, a group's name and the
+# statistics in it, as a vector statistic -> group.  A statistic in two
+# groups, an unnamed group or an empty one is said, not guessed.
+.ard_stat_groups <- function(x) {
+  if (!is.list(x) && !is.character(x)) {
+    .ard_stop("`stat_groups` is a named list: a group's name and its statistics, `n = \"N\"`.")
+  }
+  x <- as.list(x)
+  nm <- names(x) %||% rep("", length(x))
+  if (!length(x) || any(!nzchar(nm)) || anyDuplicated(nm)) {
+    .ard_stop(paste0("`stat_groups`: every group has a name of its own ",
+                     "(`n = \"N\", orr_ci = c(\"n\", \"estimate\")`)."))
+  }
+  st <- lapply(x, function(v) as.character(unlist(v, use.names = FALSE)))
+  empty <- nm[lengths(st) == 0L]
+  if (length(empty)) {
+    .ard_stop(sprintf("`stat_groups`: %s names no statistic.", paste(sQuote(empty), collapse = ", ")))
+  }
+  all <- unlist(st, use.names = FALSE)
+  twice <- unique(all[duplicated(all)])
+  if (length(twice)) {
+    .ard_stop(sprintf("`stat_groups`: %s is in two groups; a statistic is in one.",
+                      paste(sQuote(twice), collapse = ", ")))
+  }
+  stats::setNames(rep(nm, lengths(st)), all)
 }
 
 # The key of one summary -- a variable under one context -- in a cells map.
@@ -1730,6 +1759,14 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   converts without any filtering.
 #'
 #'   See [ard-tables] for the `{token:spec}` grammar.
+#' @param stat_groups The statistics in named groups, as a named list
+#'   (`list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))`):
+#'   each row gets its group in a key `.stat_group`, which `cols` or `rows`
+#'   name like any other (`cols = c("ARM", ".stat_group")`: one record's N in
+#'   one column, its rate and interval in the next), and a `cells` map may be
+#'   keyed by a group's name (looked up after the analysis variable).  A
+#'   statistic in no group is not read.  [plan_stat_groups()] is the plan's
+#'   spelling.  `NULL` (default): no groups.
 #' @param stats `"cells"` (default) builds character cells from `cells`.
 #'   `"rows"` ignores `cells` and gives every statistic its own row, labelled
 #'   with `stat_label` -- the shape a PK concentration table wants.
@@ -1857,7 +1894,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                        levels = NULL, labels = NULL, sort = FALSE,
                        sep = "____",
                        rounding = NULL,
-                       sort_stat = NULL, na = NA_character_, notes = TRUE) {
+                       sort_stat = NULL, na = NA_character_, notes = TRUE,
+                       stat_groups = NULL) {
   if (missing(cols)) {
     .ard_stop_missing("cols", "`cols` is required: name the column keys.")
   }
@@ -1912,6 +1950,19 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     own_ignored <- .ard_tally(d[own, , drop = FALSE],
                               "a key variable's own tabulation")
     d <- d[!own, , drop = FALSE]
+  }
+
+  # The statistics in named groups (plan_stat_groups()): the key
+  # `.stat_group`, which `cols` / `rows` name like any other -- one
+  # record's N in one column and its rate and interval in another, with no
+  # mutate() before the table.  A statistic in no group is not read.
+  sg_ignored <- NULL
+  if (length(stat_groups)) {
+    of <- .ard_stat_groups(stat_groups)
+    g <- unname(of[as.character(d$stat_name)])
+    sg_ignored <- .ard_tally(d[is.na(g), , drop = FALSE], "in no `stat_groups` group")
+    d <- d[!is.na(g), , drop = FALSE]
+    d$.stat_group <- g[!is.na(g)]
   }
 
   colrefs <- .ard_refs(cols, d, "cols")
@@ -1997,8 +2048,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # ---- the column key -----------------------------------------------------
   colparts <- lapply(colrefs, function(r) recode(d[[r$ref]], r$ref, r$out))
   ok <- Reduce(`&`, lapply(colparts, function(v) !is.na(v)))
-  ignored <- .ard_ignored_bind(
+  ignored <- .ard_ignored_bind(.ard_ignored_bind(
     .ard_ignored_bind(attr(x, "ard_ignored", exact = TRUE), own_ignored),
+    sg_ignored),
     .ard_tally(d[!ok, , drop = FALSE], "no value for a `cols` key"))
   d <- d[ok, , drop = FALSE]
   colparts <- lapply(colparts, function(v) v[ok])
@@ -2018,7 +2070,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
   # ---- group the long rows into cells -------------------------------------
   grp_cols <- c(vapply(rowrefs, function(r) r$ref, ""), "variable", "context",
-                ".kind")
+                ".kind", ".stat_group")
   grp_cols <- unique(grp_cols[grp_cols %in% names(d)])
   gid <- do.call(paste, c(lapply(grp_cols, function(k) as.character(d[[k]])),
                           list(colkey), list(sep = "\r")))
@@ -2055,7 +2107,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
     entry <- .ard_lookup_cells(
       cells, sub$variable[1L], sub$context[1L],
-      if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_)
+      if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_,
+      group = if (".stat_group" %in% names(sub)) sub$.stat_group[1L] else NA_character_)
     if (is.null(entry)) next
     named[[paste(sub$variable[1L], sub$context[1L], sep = "\r")]] <-
       unique(c(named[[paste(sub$variable[1L], sub$context[1L], sep = "\r")]],
