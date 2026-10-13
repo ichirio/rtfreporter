@@ -1,5 +1,11 @@
 # rtfreporter (development version)
 
+- With a `plan_compare()` column, a column header written with `{col}` /
+  `{n}` (or a short row repeated over the columns) sat one cell to the
+  right, and the comparison column got no cell (#631).  The cells now sit
+  over their columns, and a short row gives the comparison column its name
+  on the first row.
+
 - **`plan_filter()`: rows dropped by a condition over the record** (#620).
   `plan_filter(p >= 0.05)` keeps the PTs with 5% or more in any arm
   (`any = FALSE`: in every arm), in `plan_cells()`' guard language over the
