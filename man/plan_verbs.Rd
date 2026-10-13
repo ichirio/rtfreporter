@@ -12,6 +12,7 @@
 \alias{plan_row_group}
 \alias{plan_nest}
 \alias{plan_total}
+\alias{plan_filter}
 \alias{plan_compare}
 \alias{plan_stat_groups}
 \alias{plan_hide}
@@ -67,6 +68,8 @@ plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
 plan_nest(plan, ...)
 
 plan_total(plan, label = "Total", position = c("last", "first"))
+
+plan_filter(plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL)
 
 plan_compare(.plan, ..., by = NULL, position = c("last", "first"))
 
@@ -494,16 +497,32 @@ and is \code{plan_compare()}'s.  For \code{plan_compare()}, \code{position} is w
 its columns go: after the column key's (\code{"last"}) or before them
 (\code{"first"}).}
 
-\item{.plan}{For \code{plan_compare()}: the plan, as \code{plan} is for the
-others --- named so that a column called \code{p} is not taken for it
-(an argument before \code{...} matches by its first letters).  The pipe
-passes it by position.}
+\item{any, parents}{For \code{plan_filter()}: a row stays when \strong{any} column's
+record meets the conditions (\code{TRUE}, default: "PTs with 5\% or more in
+any arm") or when \strong{every} column's does (\code{FALSE}); a record whose
+statistics do not answer the conditions does not count, and a row no
+column answers stays (the notes say how many).  \code{parents = "keep"}
+(default): a parent row --- a SOC, its PT key empty --- stays exactly
+when one of its children does, so no SOC is left without its PTs and
+none is kept for its own count; \code{"drop"} judges it by its own
+counts.  An overall row (\code{normalize_ard(overall = )}, "Any TEAE")
+always stays.  The conditions in \code{...} are \code{\link[=plan_cells]{plan_cells()}}' guards ---
+R over the record's statistics and keys, unnamed, all of them holding:
+\code{plan_filter(p >= 0.05)}, \code{plan_filter(n >= 3, TRTA != "Placebo")}.
+They run before the cells are made and the rows sorted; the columns
+stay.  Nothing is computed: \code{p} is the ARD's.}
 
-\item{by}{For \code{plan_compare()}: the column that splits the comparison
+\item{by}{For \code{plan_filter()}: a row key whose rows are judged together
+(with the keys outside it). For \code{plan_compare()}: the column that splits the comparison
 records into columns, one a level (\code{by = "COMPARISON"}: each active arm
 against placebo, the ARD made by \code{ard_strata(.strata = COMPARISON)} over
 two-arm subsets).  With several columns in \code{...} they are named
 \verb{<level>____<column>}.  \code{NULL}: one comparison a variable.}
+
+\item{.plan}{For \code{plan_compare()}: the plan, as \code{plan} is for the
+others --- named so that a column called \code{p} is not taken for it
+(an argument before \code{...} matches by its first letters).  The pipe
+passes it by position.}
 
 \item{.variables, .others}{For \code{plan_stat_groups()}: the variables whose
 records are split into the groups (\code{NULL}: all), and the group the
@@ -748,6 +767,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_total(label, position)}: a Total column from the ARD's overall rows. Goes to \code{\link[=widen_ard]{widen_ard()}}: those rows as one more value of the column key, and its place in \code{levels}; the header's \code{{n}} there is the study total.
 \code{plan_levels(.drop_empty = )} leaves out the levels no record has, before the table is made.
 \item \code{plan_stat_groups(...)}: the statistics in named groups. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{stat_groups} (the key \code{.stat_group}).
+\item \code{plan_filter(..., any, parents, by)}: rows dropped by a condition over the record. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{filter}.
 \item \code{plan_compare(..., by, position)}: columns read from comparison records (a test's p-value, a difference and its CI). Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{compare}.
 \item \code{plan_sort(..., stat, keep)}: the row order. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name}.
 \item \code{plan_stub(vars, name, indent, group_summary, before)}: the row headings. Goes to \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}.

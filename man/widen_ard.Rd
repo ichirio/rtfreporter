@@ -22,7 +22,8 @@ widen_ard(
   notes = TRUE,
   stat_groups = NULL,
   compare = NULL,
-  show_keys = NULL
+  show_keys = NULL,
+  filter = NULL
 )
 }
 \arguments{
@@ -246,6 +247,11 @@ the records are left out as rows with no value of the column key.}
 \item{show_keys}{Row keys whose own tabulation stays in the body ---
 their counts as a variable's --- instead of only the header's: what
 \code{\link[=table_plan]{table_plan()}}'s \code{show_keys} says.  \code{NULL} (default): none.}
+
+\item{filter}{Rows dropped by a condition over their records:
+\code{list(conds = list(quote(p >= 0.05)), any = TRUE, parents = "keep")}.
+\code{\link[=plan_filter]{plan_filter()}} is the plan's spelling, and says the rules.  \code{NULL}
+(default): every row.}
 }
 \value{
 A data frame: the \code{rows} columns, the label column, then one column

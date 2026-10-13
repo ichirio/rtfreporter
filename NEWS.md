@@ -1,5 +1,15 @@
 # rtfreporter (development version)
 
+- **`plan_filter()`: rows dropped by a condition over the record** (#620).
+  `plan_filter(p >= 0.05)` keeps the PTs with 5% or more in any arm
+  (`any = FALSE`: in every arm), in `plan_cells()`' guard language over the
+  record's statistics and keys.  A SOC stays exactly when one of its PTs
+  does (`parents = "keep"`; `"drop"` judges it on its own); the overall
+  row always stays; a row no statistic answers stays, noted.  It runs
+  before the cells and the sort, and the RTF is byte-identical to the same
+  plan on an ARD filtered by hand.  `widen_ard(filter = )` is the same
+  without a plan.
+
 - **`table_plan(show_keys = )` and `plan_stat_groups(.variables, .others)`:
   a subgroup's own n (%) beside its ORR** (#621).  Once SEX is a key
   anywhere in the ARD (a subgroup layer), its own tabulation is a key's

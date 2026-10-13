@@ -1324,7 +1324,22 @@ print.table_plan <- function(x, ...) {
 #'   others --- named so that a column called `p` is not taken for it
 #'   (an argument before `...` matches by its first letters).  The pipe
 #'   passes it by position.
-#' @param by For `plan_compare()`: the column that splits the comparison
+#' @param any,parents For `plan_filter()`: a row stays when **any** column's
+#'   record meets the conditions (`TRUE`, default: "PTs with 5% or more in
+#'   any arm") or when **every** column's does (`FALSE`); a record whose
+#'   statistics do not answer the conditions does not count, and a row no
+#'   column answers stays (the notes say how many).  `parents = "keep"`
+#'   (default): a parent row --- a SOC, its PT key empty --- stays exactly
+#'   when one of its children does, so no SOC is left without its PTs and
+#'   none is kept for its own count; `"drop"` judges it by its own
+#'   counts.  An overall row (`normalize_ard(overall = )`, "Any TEAE")
+#'   always stays.  The conditions in `...` are [plan_cells()]' guards ---
+#'   R over the record's statistics and keys, unnamed, all of them holding:
+#'   `plan_filter(p >= 0.05)`, `plan_filter(n >= 3, TRTA != "Placebo")`.
+#'   They run before the cells are made and the rows sorted; the columns
+#'   stay.  Nothing is computed: `p` is the ARD's.
+#' @param by For `plan_filter()`: a row key whose rows are judged together
+#'   (with the keys outside it). For `plan_compare()`: the column that splits the comparison
 #'   records into columns, one a level (`by = "COMPARISON"`: each active arm
 #'   against placebo, the ARD made by `ard_strata(.strata = COMPARISON)` over
 #'   two-arm subsets).  With several columns in `...` they are named
@@ -1356,6 +1371,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_total(label, position)`: a Total column from the ARD's overall rows. Goes to [widen_ard()]: those rows as one more value of the column key, and its place in `levels`; the header's `{n}` there is the study total.
 #'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
 #' * `plan_stat_groups(...)`: the statistics in named groups. Goes to [widen_ard()]: `stat_groups` (the key `.stat_group`).
+#' * `plan_filter(..., any, parents, by)`: rows dropped by a condition over the record. Goes to [widen_ard()]: `filter`.
 #' * `plan_compare(..., by, position)`: columns read from comparison records (a test's p-value, a difference and its CI). Goes to [widen_ard()]: `compare`.
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
@@ -1950,6 +1966,24 @@ plan_total <- function(plan, label = "Total", position = c("last", "first")) {
   .plan_layer(plan, "total", list(label = label, position = position))
 }
 
+# Rows dropped by a condition over the record -- `p >= 0.05` in any arm --
+# in plan_cells()' guard language; a SOC goes with its last PT (#620).
+#' @rdname plan_verbs
+#' @export
+plan_filter <- function(plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL) {
+  conds <- as.list(substitute(list(...)))[-1L]
+  if (!length(conds) || any(nzchar(names(conds) %||% rep("", length(conds))))) {
+    .ard_stop(paste0("plan_filter() takes conditions, unnamed: ",
+                     "`plan_filter(p >= 0.05)`."))
+  }
+  parents <- match.arg(parents)
+  if (!is.logical(any) || length(any) != 1L || is.na(any)) {
+    .ard_stop("plan_filter(any = ) is TRUE (any column) or FALSE (every column).")
+  }
+  .plan_layer(plan, "filter", list(filter = list(conds = conds, env = parent.frame(),
+                                                 any = any, parents = parents, by = by)))
+}
+
 # Columns read from comparison records -- a test's p-value, a difference
 # with its CI -- that carry the column key without a value: placed on the
 # summary's row, never computed (#625).
@@ -2393,7 +2427,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     # `plan_cells(na = )` alone is what an empty cell prints, which a
     # finished table has too
     ard_half <- vapply(plan$layers, function(l)
-      l$kind %in% c("cells", "levels", "labels", "stat_groups", "compare") ||
+      l$kind %in% c("cells", "levels", "labels", "stat_groups", "compare", "filter") ||
         (identical(l$kind, "cell_options") &&
            length(setdiff(names(Filter(Negate(is.null), l$fields)), "na"))),
       TRUE)
@@ -2761,6 +2795,9 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   # plan_stat_groups(): the last one says them
   sg <- .plan_of(plan, "stat_groups")
   if (length(sg)) out$stat_groups <- sg[[length(sg)]]$stat_groups
+  # plan_filter(): the last one says them
+  fl <- .plan_of(plan, "filter")
+  if (length(fl)) out$filter <- fl[[length(fl)]]$filter
   # plan_compare(): the last one says them
   cp <- .plan_of(plan, "compare")
   if (length(cp)) out$compare <- cp[[length(cp)]]$compare
