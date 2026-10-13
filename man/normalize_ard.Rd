@@ -52,6 +52,12 @@ still read them.  \code{TRUE} removes them outright.}
 \code{"F"}) --- what \code{group2} / \code{group2_level} say in an ARD whose subgroups
 all came in that slot, but \strong{whatever slot} each came in (a subgroup
 is in \code{group3} as soon as a strata or a \verb{by =} has one variable more).
+A \strong{group slot} stands for the variables the ARD has there, in the
+order first seen: \code{stack = list(subgroup = "group2")} is
+\code{c("ALL", "SEX", "AGEGR1")} when every subgroup came in \code{group2}; a
+slot that also holds another key on some rows (\code{by = c(AGEGR1, TRT)}
+puts the arm in \code{group2}) is refused, naming the variables to write.
+The list of variables is the general form.
 \code{table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))}
 then lays them one under another, in the order written, each
 variable's levels in their own order; \code{\link[=plan_labels]{plan_labels()}} names them

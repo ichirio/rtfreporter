@@ -2791,3 +2791,27 @@ test_that("plan_paginate_rows(page_by = , heading = ): BY pages with a row budge
     plan_paginate_group(p, col = "arm") |> plan_paginate_rows(split = "group_safe"))),
     "plan_paginate_rows(page_by", fixed = TRUE)
 })
+
+test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its variables, refused where ambiguous (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$ALL <- "All"
+  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  # several variables in the slot
+  ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1")))
+  by_slot <- normalize_ard(ard, stack = list(subgroup = "group2"))
+  by_name <- normalize_ard(ard, stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))
+  expect_identical(by_slot, by_name)
+  # one variable in the slot
+  one <- normalize_ard(tab(c("TRT", "SEX")), stack = list(subgroup = "group2"))
+  expect_identical(levels(one$subgroup), "SEX")
+  # a slot beside a named variable
+  mix <- normalize_ard(ard, stack = list(subgroup = c("group2")))
+  expect_identical(levels(mix$subgroup), c("ALL", "SEX", "AGEGR1"))
+  # the slot also holds the arm on some rows: which are subgroups is not said
+  amb <- cards::bind_ard(tab(c("TRT", "SEX")), tab(c("AGEGR1", "TRT")))
+  expect_error(normalize_ard(amb, stack = list(subgroup = "group2")), "another slot")
+  expect_identical(levels(normalize_ard(amb, stack = list(subgroup = c("SEX", "AGEGR1")))$subgroup),
+                   c("SEX", "AGEGR1"))
+})

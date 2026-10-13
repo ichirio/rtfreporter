@@ -1295,6 +1295,12 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   `"F"`) --- what `group2` / `group2_level` say in an ARD whose subgroups
 #'   all came in that slot, but **whatever slot** each came in (a subgroup
 #'   is in `group3` as soon as a strata or a `by =` has one variable more).
+#'   A **group slot** stands for the variables the ARD has there, in the
+#'   order first seen: `stack = list(subgroup = "group2")` is
+#'   `c("ALL", "SEX", "AGEGR1")` when every subgroup came in `group2`; a
+#'   slot that also holds another key on some rows (`by = c(AGEGR1, TRT)`
+#'   puts the arm in `group2`) is refused, naming the variables to write.
+#'   The list of variables is the general form.
 #'   `table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))`
 #'   then lays them one under another, in the order written, each
 #'   variable's levels in their own order; [plan_labels()] names them
@@ -1610,6 +1616,43 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 }
 
 
+# `stack = list(subgroup = "group2")`: every variable the ARD has in that
+# group slot, in the order first seen -- a shorthand for the list, refused
+# where a slot is ambiguous: a variable of the slot that also comes in
+# another slot (`by = c(AGEGR1, TRT)` puts the arm in group2) is not a
+# subgroup the slot can name.
+.ard_stack_slot <- function(d, vars, nm) {
+  slots <- vars[grepl("^group[0-9]+$", vars) & vars %in% names(d) &
+                  !vars %in% .ard_stack_keys_seen(d)]
+  if (!length(slots)) return(vars)
+  gcols <- grep("^group[0-9]+$", names(d), value = TRUE)
+  out <- character(0)
+  for (v in vars) {
+    if (!v %in% slots) { out <- c(out, v); next }
+    got <- .ard_first_seen(d[[v]])
+    got <- got[!is.na(got)]
+    elsewhere <- unique(unlist(lapply(setdiff(gcols, v), function(g)
+      intersect(got, as.character(d[[g]])))))
+    if (length(elsewhere)) {
+      .ard_stop(sprintf(paste0(
+        "`stack = list(%s = \"%s\")`: %s comes in %s and in another slot, so ",
+        "the slot does not say which
+  variables are subgroups.  Name them: ",
+        "`stack = list(%s = c(%s))`."),
+        nm, v, paste(sQuote(elsewhere), collapse = ", "), v, nm,
+        paste0("\"", setdiff(got, elsewhere), "\"", collapse = ", ")))
+    }
+    out <- c(out, got)
+  }
+  unique(out)
+}
+
+# The key columns a frame has (a name that is also a slot's is a key).
+.ard_stack_keys_seen <- function(d) {
+  gcols <- grep("^group[0-9]+$", names(d), value = TRUE)
+  unique(unlist(lapply(gcols, function(g) as.character(d[[g]]))))
+}
+
 # normalize_ard(stack = ): each name a new pair of key columns, `<name>`
 # (which variable) and `<name>_level` (its level), from key columns that
 # are never set on the same row.  The variables' own columns stay.
@@ -1624,7 +1667,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   `stack = list(subgroup = c(\"SEX\", \"AGEGR1\"))`."))
   }
   for (nm in names(stack)) {
-    vars <- unique(stack[[nm]])
+    vars <- .ard_stack_slot(d, unique(stack[[nm]]), nm)
     out <- c(nm, paste0(nm, "_level"))
     taken <- intersect(out, names(d))
     if (length(taken)) {
