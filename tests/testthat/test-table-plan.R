@@ -3067,3 +3067,57 @@ test_that("plan_compare() with cell_rows(): a difference on line 1 and its CI on
   st <- function(n) unlist(pt$stat[pt$stat_name == n])
   expect_identical(t$diff[1L], sprintf("%.1f", 100 * st("estimate")))
 })
+
+test_that("normalize_ard(stack_nest = TRUE): a crossed layer's outer level as a heading row, single layers as they were (#623)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$ALL <- "All"
+  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1", "SEX")))
+  layers <- list(subgroup = list("ALL", "SEX", c("AGEGR1", "SEX")))
+  d <- normalize_ard(ard, stack = layers, stack_nest = TRUE)
+  x <- d[d$subgroup %in% "AGEGR1 / SEX", ]
+  expect_identical(as.character(x$subgroup_outer), as.character(x$AGEGR1))
+  expect_identical(as.character(x$subgroup_level), as.character(x$SEX))
+  expect_true(all(is.na(d$subgroup_outer[d$subgroup %in% c("ALL", "SEX")])))
+  # FALSE (the default) is the joined form, unchanged
+  expect_identical(normalize_ard(ard, stack = layers), normalize_ard(ard, stack = layers, stack_nest = FALSE))
+  expect_false("subgroup_outer" %in% names(normalize_ard(ard, stack = layers)))
+  # the stub: single layers two levels, the crossed one three, no empty heading
+  pg <- suppressMessages(plan_apply(
+    table_plan(d, cols = "TRT", rows = c(grp = "subgroup", outer = "subgroup_outer", lvl = "subgroup_level"),
+               label = "variable_level") |>
+      plan_sort(FALSE) |> plan_cells("{n}", notes = FALSE) |>
+      plan_stub(indent = 2, before = TRUE), "pages"))
+  pg <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
+  stub <- trimws(as.character(pg$data[[1L]]), whitespace = "[\\h\\v]")
+  expect_identical(stub[1:4], c("ALL", "All", "All", "SEX"))   # no empty outer row under a single layer
+  at <- match("AGEGR1 / SEX", stub)
+  expect_true(stub[at + 1L] %in% as.character(x$AGEGR1))       # the outer level, a heading
+  expect_true(stub[at + 2L] %in% c("F", "M"))                  # the inner level under it
+  expect_error(normalize_ard(transform(as.data.frame(normalize_ard(ard)), subgroup_outer = 1), stack = layers,
+                             stack_nest = TRUE), "a column already")
+})
+
+test_that("plan_col_header(values = list(n = TRUE)) reads stacked keys on the columns: each layer's own tabulation (#622)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = c(SEX, AGEGR1)),
+                         cards::ard_tabulate(adsl, by = SEX, variables = DISCONFL),
+                         cards::ard_tabulate(adsl, by = AGEGR1, variables = DISCONFL))
+  d <- normalize_ard(ard, stack = list(subgroup = c("SEX", "AGEGR1")))
+  p <- table_plan(d, cols = c("subgroup", "subgroup_level"), rows = c(grp = "variable"),
+                  label = "variable_level") |>
+    plan_cells("{n}", notes = FALSE) |>
+    plan_col_header(values = list(n = TRUE),
+                    header = rtf_col_header(c("", "", "{col2}"), c("", "", "(N={n})")))
+  tok <- plan_header_tokens(p)
+  n_of <- function(k) tok$text[tok$token == sprintf("{n:%s}", k)]
+  for (lv in names(table(adsl$SEX))) {
+    expect_identical(n_of(paste0("SEX____", lv)), paste("=", as.integer(table(adsl$SEX)[[lv]])))
+  }
+  for (lv in names(table(adsl$AGEGR1))) {
+    expect_identical(n_of(paste0("AGEGR1____", lv)), paste("=", as.integer(table(adsl$AGEGR1)[[lv]])))
+  }
+})

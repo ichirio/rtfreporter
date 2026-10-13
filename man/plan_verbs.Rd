@@ -556,7 +556,11 @@ state (the population split by arm, not the treatment counted as
 an event).  At depth \emph{k} it is \code{cols[k]} tabulated within
 \verb{cols[1..k-1]}: cards tabulates each \code{.by} variable on its own,
 so \code{ard_stack(.by = c(TRT, SEX))} states the arm but not the arm
-x sex cell --- bind \code{cards::ard_tabulate(adsl, by = TRT, variables = SEX)} to state that;
+x sex cell --- bind \code{cards::ard_tabulate(adsl, by = TRT, variables = SEX)} to state that.  A \strong{stacked key}
+(\code{\link[=normalize_ard]{normalize_ard()}}'s \code{stack}) on the columns, \code{cols = c("subgroup", "subgroup_level")}, is tabulated as its layer's variable: the
+\code{SEX____F} column's population is SEX's own count at F
+(\code{cards::ard_tabulate(adsl, variables = SEX)}); a crossed layer's is
+not read;
 \item an analysis summary's \code{N} only where it is a denominator by
 construction (a hierarchical summary, a percentage of the
 \verb{denominator =} data) or where \strong{two or more different variables
