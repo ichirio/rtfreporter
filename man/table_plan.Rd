@@ -4,7 +4,14 @@
 \alias{table_plan}
 \title{A deferred, last-wins plan for a table}
 \usage{
-table_plan(x = NULL, cols = NULL, rows = NULL, label = NULL, stat = NULL)
+table_plan(
+  x = NULL,
+  cols = NULL,
+  rows = NULL,
+  label = NULL,
+  stat = NULL,
+  show_keys = NULL
+)
 }
 \arguments{
 \item{x}{What the table is built from.  A plan does \strong{not} flatten:
@@ -41,6 +48,15 @@ frame from \pkg{cards} already calls them \code{variable}, \code{stat_name} and
 \code{stat} and needs none of this; a summary somebody built with dplyr says
 so here, once, instead of being asked again by every verb.  Name only
 the parts your frame calls something else.}
+
+\item{show_keys}{Row keys this table also shows \strong{as variables}: their
+own counts (\code{cards::ard_tabulate(adsl, by = TRT, variables = SEX)}),
+which \code{\link[=normalize_ard]{normalize_ard()}} marks as a key's own tabulation once SEX is a
+key anywhere in the ARD (a subgroup layer of another analysis), go to
+the body instead of only to the header's \code{{n}}.  With \code{rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level")} SEX's
+n (\%) is a block of its own beside the ORR's SEX subgroups.  A column
+key is refused (its counts are the columns' populations).  \code{NULL}
+(default): none, as before.}
 }
 \value{
 An object of class \code{table_plan}.

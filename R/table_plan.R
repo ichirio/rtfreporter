@@ -392,6 +392,15 @@
 #' @param label The column carrying the **row identity** --- the text in
 #'   the label column.  `".label"` by default (what [normalize_ard()]
 #'   builds), `NA` for a table that has none, or a guarded template.
+#' @param show_keys Row keys this table also shows **as variables**: their
+#'   own counts (`cards::ard_tabulate(adsl, by = TRT, variables = SEX)`),
+#'   which [normalize_ard()] marks as a key's own tabulation once SEX is a
+#'   key anywhere in the ARD (a subgroup layer of another analysis), go to
+#'   the body instead of only to the header's `{n}`.  With `rows =
+#'   c(block = "variable", grp = "subgroup", lvl = "subgroup_level")` SEX's
+#'   n (%) is a block of its own beside the ORR's SEX subgroups.  A column
+#'   key is refused (its counts are the columns' populations).  `NULL`
+#'   (default): none, as before.
 #' @param stat Which of **your** columns play the three parts [widen_ard()]
 #'   reads by name, as a named vector: `variable` (the analysis variable,
 #'   what [plan_cells()] and [plan_digits()] key on), `name` (which
@@ -432,13 +441,13 @@
 #' @seealso [plan_apply()], [normalize_ard()], [widen_ard()]
 #' @export
 table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
-                       stat = NULL) {
+                       stat = NULL, show_keys = NULL) {
   data <- x
   # Internally the three parts keep the names widen_ard() reads them by.
   parts <- .plan_stat_roles(stat)
   roles <- list(cols = cols, rows = rows, label = label,
                 variable = parts[["variable"]], stat_name = parts[["name"]],
-                stat = parts[["value"]])
+                stat = parts[["value"]], show_keys = show_keys)
   roles <- roles[!vapply(roles, is.null, logical(1L))]
   if (is.null(data)) {
     .ard_stop(paste0(
@@ -865,6 +874,12 @@ print.table_plan <- function(x, ...) {
 #'   The columns have no population: the header's `{col}` / `{n}` and its
 #'   short rows leave them alone, so the header names them
 #'   (`rtf_col_header(c(..., "p-value"))`).
+#'
+#'   `plan_stat_groups(.variables = , .others = )` scopes the groups: only
+#'   the records of `.variables` (`"RESP"`) are split; the other variables'
+#'   records go **whole** to the group `.others` names (`"n"`), every
+#'   statistic with them --- so a block of SEX's n (%) (`show_keys`) is not
+#'   pulled into the ORR's groups by its `n`.  `.others` needs `.variables`.
 #'
 #'   `plan_stat_groups()` takes the groups, each a name and the
 #'   statistics in it (`n = "N", orr_ci = c("n", "estimate", "conf.low",
@@ -1302,6 +1317,9 @@ print.table_plan <- function(x, ...) {
 #' @param rounding For `plan_digits()`: the tie-breaking family for the
 #'   run, as `widen_ard(rounding = )` takes it.  Last wins, like every
 #'   other layer.
+#' @param .variables,.others For `plan_stat_groups()`: the variables whose
+#'   records are split into the groups (`NULL`: all), and the group the
+#'   other variables' records go to whole (`NULL`: none).
 #' @param .plan For `plan_compare()`: the plan, as `plan` is for the
 #'   others --- named so that a column called `p` is not taken for it
 #'   (an argument before `...` matches by its first letters).  The pipe
@@ -1950,9 +1968,11 @@ plan_compare <- function(.plan, ..., by = NULL, position = c("last", "first")) {
 # (#619): the mutate() a table needed before table_plan() is a layer.
 #' @rdname plan_verbs
 #' @export
-plan_stat_groups <- function(plan, ...) {
-  g <- list(...)
+plan_stat_groups <- function(plan, ..., .variables = NULL, .others = NULL) {
+  g <- c(list(...), list(.variables = .variables, .others = .others))
+  g <- g[!vapply(g, is.null, logical(1L))]
   .ard_stat_groups(g)
+  .ard_stat_groups_opts(g)
   .plan_layer(plan, "stat_groups", list(stat_groups = g))
 }
 

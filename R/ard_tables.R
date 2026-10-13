@@ -873,6 +873,8 @@
     .ard_stop("`stat_groups` is a named list: a group's name and its statistics, `n = \"N\"`.")
   }
   x <- as.list(x)
+  # `.variables` / `.others` are options, not groups
+  x <- x[!startsWith(names(x) %||% rep("", length(x)), ".")]
   nm <- names(x) %||% rep("", length(x))
   if (!length(x) || any(!nzchar(nm)) || anyDuplicated(nm)) {
     .ard_stop(paste0("`stat_groups`: every group has a name of its own ",
@@ -890,6 +892,30 @@
                       paste(sQuote(twice), collapse = ", ")))
   }
   stats::setNames(rep(nm, lengths(st)), all)
+}
+
+# `.variables`: the variables whose records are split into the groups (NULL:
+# all); `.others`: the group the other variables' records go to whole, with
+# every statistic (NULL: none, they keep no group) -- a DM-type block beside
+# an ORR split into N and its rate.
+.ard_stat_groups_opts <- function(x) {
+  x <- as.list(x)
+  groups <- names(x)[!startsWith(names(x) %||% "", ".")]
+  vars <- x[[".variables"]]
+  others <- x[[".others"]]
+  if (!is.null(vars) && (!is.character(vars) || !length(vars) || anyNA(vars))) {
+    .ard_stop("`stat_groups`: `.variables` names the variables split into the groups: \"RESP\".")
+  }
+  if (!is.null(others) && (!is.character(others) || length(others) != 1L ||
+                           !others %in% groups)) {
+    .ard_stop(sprintf(paste0(
+      "`stat_groups`: `.others` is one of the groups (%s), where the other ",
+      "variables' records go whole."), paste(sQuote(groups), collapse = ", ")))
+  }
+  if (!is.null(others) && is.null(vars)) {
+    .ard_stop("`stat_groups`: `.others` needs `.variables` (which variables are split).")
+  }
+  list(variables = vars, others = others)
 }
 
 # The key of one summary -- a variable under one context -- in a cells map.
@@ -1964,8 +1990,12 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   name like any other (`cols = c("ARM", ".stat_group")`: one record's N in
 #'   one column, its rate and interval in the next), and a `cells` map may be
 #'   keyed by a group's name (looked up after the analysis variable).  A
-#'   statistic in no group is not read.  [plan_stat_groups()] is the plan's
+#'   statistic in no group is not read.  The options `.variables` and
+#'   `.others` scope it (see [plan_stat_groups()]).  [plan_stat_groups()] is the plan's
 #'   spelling.  `NULL` (default): no groups.
+#' @param show_keys Row keys whose own tabulation stays in the body ---
+#'   their counts as a variable's --- instead of only the header's: what
+#'   [table_plan()]'s `show_keys` says.  `NULL` (default): none.
 #' @param compare Columns read from the ARD's comparison records --- the
 #'   column key with no value, in an analysis the body does not have (a
 #'   test's p-value, a difference and its CI) --- put on the row of the
@@ -2111,7 +2141,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                        sep = "____",
                        rounding = NULL,
                        sort_stat = NULL, na = NA_character_, notes = TRUE,
-                       stat_groups = NULL, compare = NULL) {
+                       stat_groups = NULL, compare = NULL, show_keys = NULL) {
   if (missing(cols)) {
     .ard_stop_missing("cols", "`cols` is required: name the column keys.")
   }
@@ -2161,8 +2191,20 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # column header to read, and is no cell of the body.  Flip `.key_own` to
   # FALSE to have it spread after all.
   own_ignored <- NULL
+  if (length(show_keys)) {
+    ck <- intersect(show_keys, as.character(unlist(cols, use.names = FALSE)))
+    if (length(ck)) {
+      .ard_stop(sprintf(paste0(
+        "`show_keys`: %s is a column key; its own counts are the columns' ",
+        "populations,
+  not rows.  Name the row keys whose distribution the ",
+        "table shows."), paste(sQuote(ck), collapse = ", ")))
+    }
+  }
   if (".key_own" %in% names(d)) {
-    own <- d$.key_own %in% TRUE
+    # show_keys: a key the table also shows as a variable -- SEX's own n (%)
+    # beside the SEX subgroups of another analysis -- stays in the body
+    own <- d$.key_own %in% TRUE & !(d$variable %in% show_keys)
     own_ignored <- .ard_tally(d[own, , drop = FALSE],
                               "a key variable's own tabulation")
     d <- d[!own, , drop = FALSE]
@@ -2195,10 +2237,16 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   sg_ignored <- NULL
   if (length(stat_groups)) {
     of <- .ard_stat_groups(stat_groups)
-    g <- unname(of[as.character(d$stat_name)])
-    sg_ignored <- .ard_tally(d[is.na(g), , drop = FALSE], "in no `stat_groups` group")
-    d <- d[!is.na(g), , drop = FALSE]
-    d$.stat_group <- g[!is.na(g)]
+    op <- .ard_stat_groups_opts(stat_groups)
+    inside <- if (is.null(op$variables)) rep(TRUE, nrow(d)) else
+      d$variable %in% op$variables
+    g <- rep(NA_character_, nrow(d))
+    g[inside] <- unname(of[as.character(d$stat_name[inside])])
+    if (!is.null(op$others)) g[!inside] <- op$others
+    gone <- inside & is.na(g)
+    sg_ignored <- .ard_tally(d[gone, , drop = FALSE], "in no `stat_groups` group")
+    d <- d[!gone, , drop = FALSE]
+    d$.stat_group <- g[!gone]
   }
 
   colrefs <- .ard_refs(cols, d, "cols")

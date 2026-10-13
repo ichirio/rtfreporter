@@ -70,7 +70,7 @@ plan_total(plan, label = "Total", position = c("last", "first"))
 
 plan_compare(.plan, ..., by = NULL, position = c("last", "first"))
 
-plan_stat_groups(plan, ...)
+plan_stat_groups(plan, ..., .variables = NULL, .others = NULL)
 
 plan_hide(plan, ...)
 
@@ -228,6 +228,12 @@ map by context here, not lines):
 The columns have no population: the header's \code{{col}} / \code{{n}} and its
 short rows leave them alone, so the header names them
 (\code{rtf_col_header(c(..., "p-value"))}).
+
+\code{plan_stat_groups(.variables = , .others = )} scopes the groups: only
+the records of \code{.variables} (\code{"RESP"}) are split; the other variables'
+records go \strong{whole} to the group \code{.others} names (\code{"n"}), every
+statistic with them --- so a block of SEX's n (\%) (\code{show_keys}) is not
+pulled into the ORR's groups by its \code{n}.  \code{.others} needs \code{.variables}.
 
 \code{plan_stat_groups()} takes the groups, each a name and the
 statistics in it (\verb{n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")}).  Each row of the ARD gets its group in the key
@@ -498,6 +504,10 @@ records into columns, one a level (\code{by = "COMPARISON"}: each active arm
 against placebo, the ARD made by \code{ard_strata(.strata = COMPARISON)} over
 two-arm subsets).  With several columns in \code{...} they are named
 \verb{<level>____<column>}.  \code{NULL}: one comparison a variable.}
+
+\item{.variables, .others}{For \code{plan_stat_groups()}: the variables whose
+records are split into the groups (\code{NULL}: all), and the group the
+other variables' records go to whole (\code{NULL}: none).}
 
 \item{stat}{For \code{plan_sort()}: the statistic totalled into \code{.sort_stat}
 for a frequency order (\code{widen_ard(sort_stat = )}), e.g. \code{stat = "n"}.}

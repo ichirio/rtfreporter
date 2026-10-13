@@ -21,7 +21,8 @@ widen_ard(
   na = NA_character_,
   notes = TRUE,
   stat_groups = NULL,
-  compare = NULL
+  compare = NULL,
+  show_keys = NULL
 )
 }
 \arguments{
@@ -231,7 +232,8 @@ each row gets its group in a key \code{.stat_group}, which \code{cols} or \code{
 name like any other (\code{cols = c("ARM", ".stat_group")}: one record's N in
 one column, its rate and interval in the next), and a \code{cells} map may be
 keyed by a group's name (looked up after the analysis variable).  A
-statistic in no group is not read.  \code{\link[=plan_stat_groups]{plan_stat_groups()}} is the plan's
+statistic in no group is not read.  The options \code{.variables} and
+\code{.others} scope it (see \code{\link[=plan_stat_groups]{plan_stat_groups()}}).  \code{\link[=plan_stat_groups]{plan_stat_groups()}} is the plan's
 spelling.  \code{NULL} (default): no groups.}
 
 \item{compare}{Columns read from the ARD's comparison records --- the
@@ -240,6 +242,10 @@ test's p-value, a difference and its CI) --- put on the row of the
 record's variable: \code{list(cols = list(p = "{p.value:.3f}"), by = NULL, position = "last")}.  \code{\link[=plan_compare]{plan_compare()}} is the plan's spelling, and its
 documentation says where a record goes.  \code{NULL} (default): none, and
 the records are left out as rows with no value of the column key.}
+
+\item{show_keys}{Row keys whose own tabulation stays in the body ---
+their counts as a variable's --- instead of only the header's: what
+\code{\link[=table_plan]{table_plan()}}'s \code{show_keys} says.  \code{NULL} (default): none.}
 }
 \value{
 A data frame: the \code{rows} columns, the label column, then one column
