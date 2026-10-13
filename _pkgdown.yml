@@ -82,6 +82,14 @@ home:
             has a plan verb, plus a Total column, nested rows, BY pages and
             a column header written row by row, with `(N=xx)` read from the
             same ARD.
+          - The tables a study report has: a test or a difference as a
+            column (`plan_compare()`), several statistics in one column
+            (`plan_stat_groups()`), subgroups one under another
+            (`normalize_ard(stack = )`), rows kept by a rule
+            (`plan_filter()`), sorting by a parent's count (`-n@SOC`) and a
+            section per arm with its N (`heading =`).
+          - A folder for an AI assistant (`rtfreporter_ai_manual()`): the
+            manual, example programs and your ARD's shape.
           - A cleaner API: one name per thing,
             `rtf_section(header = , footer = )`, table formats in the plan
             or the style rather than in `rtf_tables()`, and the old border
@@ -247,7 +255,8 @@ reference:
       The recommended start: an analysis results dataset (cards / cardx) made
       ready for a table.  **Acts on:** an ARD data frame.
       `normalize_ard()` flattens it -- groups and hierarchy become ordinary
-      key columns -- and `widen_ard()` does the whole ARD half in one call,
+      key columns, and `stack =` puts subgroups from different variables one
+      under another -- and `widen_ard()` does the whole ARD half in one call,
       giving a table data frame now.  `list_ard_keys()`, `pull_ard()`,
       `overall_row()` and `cell_rows()` look inside an ARD and shape its rows.
       Start with the *Get started* article.
@@ -261,15 +270,27 @@ reference:
       - cell_rows
 
   - title: Tables from an ARD — the plan
-    desc: >
-      `table_plan()` names the roles (what goes across, what goes down) and
-      each `plan_*()` verb adds one declaration -- cells, labels, levels,
-      stub, blank rows, pages, widths, header, titles.  Nothing runs until the
-      plan is handed to `rtf_tables()` or `plan_apply()`, which give
-      `rtftable` pages; a later layer wins over an earlier one.
-      The header and the denominators in it agree with the columns by
-      construction.  The Excel definition of a table lives in tflspec, which
-      builds a plan from it (`tflspec::tfl_table_plan()`).
+    desc: |
+      `table_plan()` names the roles (what goes across, what goes down;
+      `show_keys =` also shows a subgroup key's own counts as rows) and each
+      `plan_*()` verb adds one declaration.  Nothing runs until the plan is
+      handed to `rtf_tables()` or `plan_apply()`; a later layer wins.  The
+      verbs share one help page, `plan_verbs`; by job:
+
+      * **cells**: `plan_cells()`, `plan_digits()`, `plan_stat_groups()`
+      * **rows**: `plan_filter()`, `plan_sort()` (`-n@SOC`, `-n[Total]`),
+        `plan_levels()`, `plan_labels()`, `plan_nest()`
+      * **more columns**: `plan_total()`, `plan_compare()`
+      * **layout**: `plan_stub()`, `plan_row_group()`, `plan_blanks()`,
+        `plan_hide()`, `plan_columns()`, `plan_cell_style()`, `plan_style()`
+      * **pages**: `plan_paginate_group()`, `plan_paginate_rows()`,
+        `plan_paginate_cols()`
+      * **header and text**: `plan_col_header()`, `plan_titles()`,
+        `plan_footnotes()`
+      * **the rest**: `plan_listing()`, `plan_after()`
+
+      The *plan verbs* article has an at-a-glance table.  The Excel
+      definition of a table lives in tflspec (`tflspec::tfl_table_plan()`).
     contents:
       - table_plan
       - plan_verbs

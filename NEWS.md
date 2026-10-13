@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+- **Docs for the new plan verbs.** *Get started* shows three more tables
+  from the same steps (a Total and a p-value, AEs in 5% or more with the
+  SOCs by frequency, ORR by subgroup with a section per arm); *Tables from
+  an ARD* has them in full, with `plan_total()`, `plan_compare()`,
+  `plan_filter()`, `-n@SOC`, `normalize_ard(stack = )`,
+  `plan_stat_groups()`, `heading =` and `rtfreporter_ai_manual()`; *The plan
+  verbs* lists them, and the reference index groups the verbs by job.  The
+  AI kit's ORR example drops a `plan_sort(FALSE)` that was the default.
+
 - **A plan's column positions count the PRINTED columns, all of them**
   (#635).  Unnamed `plan_columns(widths = )`, the header's `col_cell()`s
   and `plan_paginate_cols()` already counted the columns a page prints;

@@ -295,6 +295,229 @@ length(plan_apply(p_ae))    # pages
 .shot("t_ae.png")
 ```
 
+### Only the common terms, SOCs by frequency
+
+Two more lines turn this into the usual "events in 5% or more" table. A later
+layer wins, so they are added to `p_ae` rather than written into it:
+
+```{r plan-ae-filter}
+p_ae5 <- p_ae |>
+  plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT") |>
+  plan_filter(p >= 0.05)
+```
+
+* `-n@SOC` sorts the SOCs by **their own** count, most first, and keeps each
+  SOC's rows together. `-n` alone would sort every row by its count. The `@`
+  says whose count it is.
+* `plan_filter(p >= 0.05)` keeps the PTs that reach 5% in **any** arm. The
+  condition is on the ARD's statistics, not on the printed text. A SOC row
+  stays exactly when one of its PTs does (`parents = "keep"`, the default).
+
+```{r rtf-ae-filter}
+doc <- rtf_document() |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = "Table 14.3.1.2  TEAEs in 5% or More of Subjects in Any Arm"),
+      c(c = "Safety Analysis Set"),
+      c(c = ""))),
+    footer = rtf_footer(list(
+      c(l = "A subject is counted once per SOC and once per PT.")))) |>
+  rtf_tables(p_ae5)
+generate_rtfreport(doc, "t_ae5.rtf", overwrite = TRUE)
+```
+
+```{r shot-ae-filter, echo = FALSE}
+.shot("t_ae5.png")
+```
+
+## A Total column and a p-value: `plan_total()` and `plan_compare()`
+
+A Total column and a test are rows of the ARD like any other:
+`ard_stack(.overall = TRUE)` adds the overall summaries, and cardx adds the
+tests. Nothing is computed in the plan.
+
+```{r ard-dm-p}
+ard_dm_p <- bind_ard(
+  ard_stack(
+    adsl, .by = TRT01A, .overall = TRUE,
+    ard_summary(
+      variables = AGE,
+      statistic = ~ continuous_summary_fns(
+        c("N", "mean", "sd", "median", "p25", "p75", "min", "max"))),
+    ard_tabulate(variables = c(AGEGR1, SEX, RACE))),
+  cardx::ard_stats_kruskal_test(adsl, by = TRT01A, variables = AGE),
+  cardx::ard_stats_chisq_test(adsl, by = TRT01A, variables = c(AGEGR1, SEX, RACE)))
+```
+
+The plan is the demographics plan from before, with two more verbs:
+
+```{r plan-dm-p}
+p_dm_p <- ard_dm_p |>
+  normalize_ard() |>
+  table_plan(cols = "TRT01A", rows = c(group = "variable")) |>
+  plan_cells(
+    continuous  = c("n"               = "{N:.0f}",
+                    "Mean (SD)"       = "{mean:.1f} ({sd:.2f})",
+                    "Median (Q1, Q3)" = "{median:.1f} ({p25:.1f}, {p75:.1f})",
+                    "Min, Max"        = "{min:.0f}, {max:.0f}"),
+    categorical = c(n == 0 ~ "0", "{n:.0f} ({p:.1f%})"),
+    notes = FALSE) |>
+  plan_total(label = "Total") |>
+  plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}")) |>
+  plan_labels(c(AGE    = "Age (years)",
+                AGEGR1 = "Age group, n (%)",
+                SEX    = "Sex, n (%)",
+                RACE   = "Race, n (%)")) |>
+  plan_levels(AGEGR1 = c("18-64", ">64"), SEX = c("F", "M")) |>
+  plan_stub(name = "Characteristic") |>
+  plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+  plan_columns(widths = c(Characteristic = 4, .values = 2, p = 1.5)) |>
+  plan_style(border = "tfl", align_count_pct = TRUE) |>
+  plan_col_header(values = list(n = TRUE), lines = list(
+    c(Characteristic = "",               .values = "{col}",   p = "p-value"),
+    c(Characteristic = "Characteristic", .values = "(N={n})", p = "")))
+```
+
+* `plan_total()` makes the overall rows a column, after the arms. Its
+  `(N=254)` is the overall count from the same ARD.
+* `plan_compare(p = )` makes a column from the comparison records, the ones
+  with no arm. The cell sits on each variable's first row. A named vector
+  of templates picks the test by its context, and `cell_rows()` gives a
+  cell two lines, for an estimate and its CI.
+* The header and the widths name their columns: `p` is the comparison
+  column, `.values` every arm. A name stays right when columns move.
+
+```{r rtf-dm-p}
+doc <- rtf_document() |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = "Table 14.1.1  Demographic Characteristics"),
+      c(c = "Safety Analysis Set"),
+      c(c = ""))),
+    footer = rtf_footer(list(
+      c(l = "p-values: Kruskal-Wallis test for age, chi-square test otherwise.")))) |>
+  rtf_tables(p_dm_p)
+generate_rtfreport(doc, "t_dm_p.rtf", overwrite = TRUE)
+```
+
+```{r shot-dm-p, echo = FALSE}
+.shot("t_dm_p.png")
+```
+
+## Subgroups, a section per arm: `stack =` and `plan_stat_groups()`
+
+An objective response rate (ORR) by subgroup has three things a plain table
+does not:
+
+* the subgroups come from different variables (sex, age group), shown one
+  under another;
+* one cell has several statistics: the responders, the rate and its CI;
+* each arm is a section of its own, with its N in the heading.
+
+The ARD is cardx's CI for each subgroup, and the arm's own count for the
+heading:
+
+```{r ard-orr}
+bor <- pharmaverseadam::adrs_onco
+bor <- bor[bor$PARAMCD == "BOR", c("USUBJID", "AVALC")]
+anl <- merge(adsl[, c("USUBJID", "TRT01A", "SEX", "AGEGR1")], bor, by = "USUBJID")
+anl$RESPFL <- factor(ifelse(anl$AVALC %in% c("CR", "PR"), "Y", "N"),
+                     levels = c("Y", "N"))
+anl$ALL <- "All"
+
+orr <- function(.x) {
+  cardx::ard_categorical_ci(.x, variables = RESPFL, value = RESPFL ~ "Y",
+                            method = "clopper-pearson", conf.level = 0.90)
+}
+ard_orr <- bind_ard(
+  ard_tabulate(anl, variables = TRT01A),
+  ard_strata(anl, .by = TRT01A, .strata = ALL,    .f = orr),
+  ard_strata(anl, .by = TRT01A, .strata = SEX,    .f = orr),
+  ard_strata(anl, .by = TRT01A, .strata = AGEGR1, .f = orr))
+```
+
+```{r plan-orr}
+p_orr <- ard_orr |>
+  normalize_ard(stack = list(subgroup = "group2")) |>
+  table_plan(cols = ".stat_group",
+             rows = c(arm = "TRT01A", grp1 = "subgroup", grp2 = "subgroup_level"),
+             label = NA) |>
+  plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+  plan_labels(subgroup = c(ALL = "All Subjects", SEX = "Sex", AGEGR1 = "Age Group")) |>
+  plan_cells(
+    n      = c("1" = "{N:.0f}"),
+    orr_ci = cell_rows(
+      "1" = c(n == 0 ~ "0", "{n:.0f} ({estimate:.1f%})"),
+      "2" = "{conf.low:.1f%}, {conf.high:.1f%}")) |>
+  plan_hide("arm") |>
+  plan_row_group(mode = "value", collapse = c("grp1", "grp2")) |>
+  plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+  plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe",
+                     heading = "Treatment: {value} (N={n})") |>
+  plan_columns(widths = c(grp1 = 25, grp2 = 15, .values = 15),
+               row_title = c("grp1", "grp2")) |>
+  plan_style(border = "tfl") |>
+  plan_col_header(header = rtf_col_header(
+    list(col_cell(c("grp1", "grp2"), "Subgroup"),
+         col_cell("n", "N"),
+         col_cell("orr_ci", "Responders (%)\n90% CI"))))
+```
+
+* `normalize_ard(stack = list(subgroup = "group2"))` puts what each analysis
+  holds in `group2` (here `ALL`, `SEX`, `AGEGR1`) into one pair of columns:
+  `subgroup` is the variable and `subgroup_level` its level. A list of
+  variables picks and orders them, and a pair like `c("AGEGR1", "SEX")`
+  makes a crossed subgroup.
+* `plan_stat_groups()` makes the columns from groups of statistics:
+  `cols = ".stat_group"` is one column per group, and each group's template
+  can use all of its statistics.
+* `plan_hide("arm")` with `plan_paginate_rows(page_by = "arm", heading = )`
+  makes one section per arm. The heading's `{n}` is the arm's own count in
+  the ARD. The arm is a **page key**, so the row groups, the blank rows and
+  `collapse` start at `grp1`.
+* The rest is layout: `label = NA` says there is no label column (the
+  subgroup's level is the row text), `collapse` prints a repeated subgroup
+  name once, and `row_title` makes the two subgroup columns the row
+  headings. The rows keep the ARD's order, as `stack` gives it: a plan
+  moves a row only where an order was declared (`plan_levels()`, a factor,
+  `plan_sort()`).
+
+```{r rtf-orr}
+doc <- rtf_document() |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = "Table 14.2.1  Objective Response Rate by Subgroup"),
+      c(c = "Safety Analysis Set"),
+      c(c = ""))),
+    footer = rtf_footer(list(
+      c(l = "CI: Clopper-Pearson.")))) |>
+  rtf_tables(p_orr, auto_section = TRUE)
+generate_rtfreport(doc, "t_orr.rtf", overwrite = TRUE)
+names(plan_apply(p_orr))    # one section per arm
+```
+
+```{r shot-orr, echo = FALSE}
+.shot("t_orr.png")
+```
+
+## Writing a plan with an AI assistant
+
+rtfreporter is newer than what a chat model has learned. Give it the manual
+that matches the version you have installed, in one folder:
+
+```{r ai-kit, eval = FALSE}
+rtfreporter_ai_manual("ai-kit", ard = ard_orr)
+```
+
+The folder has a request to start from, the user manual, three complete
+programs in the same layout as this article (the ORR above, adverse events,
+demographics with a Total and a p-value) and, with `ard =`, your ARD with a
+note of its keys and statistics. Attach it to a chat with a table shell.
+Nothing is sent anywhere by the function.
+
 ## Without a plan: `widen_ard()`
 
 A plan defers everything until it runs, which is what lets a later layer win

@@ -2,8 +2,9 @@
 ##  Pictures for the Gallery article (vignettes/articles/gallery.Rmd), the
 ##  README's examples (man/figures/readme-ard-example.png,
 ##  readme-tern-example.png, readme-gtsummary-example.png) and Get started's
-##  adverse-events table
-##  (man/figures/get-started-ae.png).
+##  adverse-events table and three short examples
+##  (man/figures/get-started-ae.png, get-started-dm-p.png, -ae5.png, -orr.png;
+##  the last three from the Tables from an ARD article).
 ##
 ##  The pictures are made from the code that is shown, not from a copy of it:
 ##    * the Gallery article and Get started are rendered with
@@ -149,7 +150,21 @@ rmarkdown::render(file.path("vignettes", "rtfreporter.Rmd"),
 gs_png <- file.path("man", "figures", "get-started-ae.png")
 rtf_to_png(file.path(gs, "t_ae.rtf"), gs_png)
 
+## 4. Get started's three short examples, from the Tables from an ARD article
+ta <- file.path(tempdir(), "tables-from-ard")
+dir.create(ta, showWarnings = FALSE)
+Sys.setenv(RTFREPORTER_ARTICLE_OUT = normalizePath(ta))
+rmarkdown::render(file.path("vignettes", "articles", "tables-from-ard.Rmd"),
+                  output_format = rmarkdown::md_document(),
+                  output_dir = tempdir(), quiet = TRUE)
+ta_png <- c(t_dm_p = "get-started-dm-p.png", t_ae5 = "get-started-ae5.png",
+            t_orr = "get-started-orr.png")
+ta_png[] <- file.path("man", "figures", ta_png)
+for (f in names(ta_png)) {
+  rtf_to_png(file.path(ta, paste0(f, ".rtf")), ta_png[[f]])
+}
+
 pngs <- c(list.files(figs, pattern = "[.]png$", full.names = TRUE),
-          readme_png, gs_png)
+          readme_png, gs_png, ta_png)
 message(paste(sprintf("%-50s %6.1f KB", pngs, file.size(pngs) / 1024),
               collapse = "\n"))

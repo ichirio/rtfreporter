@@ -217,16 +217,48 @@ rtf_document() |>
 The [Tables from an ARD](tables-from-ard.html) article goes through this table
 step by step.
 
+### More from the same steps
+
+Each of these is one ARD and one plan in the
+[Tables from an ARD](tables-from-ard.html) article. The verbs named are the
+lines that differ from the tables above. Like the adverse-events table, they
+use pharmaverseadam's safety population, so the arms' N differ from those of
+cards' `ADSL` in sections 1 to 4.
+
+* **A Total column and a p-value.** `plan_total()` makes the overall rows a
+  column, and `plan_compare()` puts the ARD's test on each variable's first
+  row.
+
+  ![Demographics with Placebo, the two Xanomeline arms, a Total column and a p-value column; the p-value sits on the first row of each characteristic.](../man/figures/get-started-dm-p.png){width=100%}
+
+* **Only the common terms, SOCs by frequency.** `plan_filter(p >= 0.05)`
+  keeps the PTs with 5% or more in any arm, and `plan_sort("-n@SOC", ...)`
+  orders the SOCs by their own count.
+
+  ![Adverse events in 5% or more of subjects: Any TEAE, then General disorders, Skin and subcutaneous tissue disorders and the other SOCs, most frequent first.](../man/figures/get-started-ae5.png){width=100%}
+
+* **Subgroups, a section per arm.** `normalize_ard(stack = )` puts the
+  subgroups one under another, `plan_stat_groups()` makes a column from a
+  group of statistics (responders, rate and CI), and
+  `plan_paginate_rows(page_by = , heading = )` makes one section per arm with
+  its N.
+
+  ![Objective response rate by subgroup for Placebo (N=86): All Subjects, Sex and Age Group with N and Responders (%) with the 90% CI below.](../man/figures/get-started-orr.png){width=100%}
+
 ## 6. Where next on this path
 
 * [Tables from an ARD](tables-from-ard.html) -- the same steps in
-  more depth, quartiles, and an adverse-events table sorted by frequency
-  within a SOC / PT hierarchy.
+  more depth: quartiles, an adverse-events table sorted by frequency within
+  a SOC / PT hierarchy and filtered, a Total and a p-value column, and
+  subgroups with a section per arm.
 * [The plan verbs](plan-verbs.html) -- every `plan_*()` verb,
   grouped by job, and the rule that a later layer wins.
 * `widen_ard()` -- the ARD half of a plan in one call, giving a data frame
   now instead of a plan to run later.
 * `plan_template()` -- reads an ARD and writes a starting plan to edit.
+* `rtfreporter_ai_manual(dir, ard = )` -- a folder to give an AI assistant:
+  the manual, three complete programs and your ARD's shape, so it writes a
+  plan for the version you have.
 * [Headers, footers and tokens](headers-footers.html) --
   `{PROGRAM_FULL}`, `program_fallback`, `drop_empty_rows` and tokens of your
   own.
