@@ -3987,9 +3987,14 @@ plan_n_candidates <- function(plan) {
            else if (length(formals(hdr$header)) >= 2L)
              hdr$header(nv, tbl)
            else hdr$header(nv)
-      list(raw = h, filled = .plan_header_fill(
-        h, nv, sc, length(page_d) - length(sc), .plan_sep(plan),
-        total_col = .plan_total_spec(plan)$label))
+      # the columns before the spread ones lead; plan_compare()'s, after
+      # them, are no spread column and no lead either (#631)
+      at <- match(sc, names(page_d))
+      n_lead <- if (length(at)) min(at) - 1L else length(page_d) - length(sc)
+      trail <- if (length(at)) names(page_d)[seq_along(page_d) > max(at)] else character(0)
+      filled <- .plan_header_fill(h, nv, sc, n_lead, .plan_sep(plan),
+                                  total_col = .plan_total_spec(plan)$label)
+      list(raw = h, filled = .plan_header_trail(filled, n_lead + length(sc), trail))
     }
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
     # Pages split by a group value (a lab parameter, a visit) each
@@ -4391,6 +4396,25 @@ plan_n_candidates <- function(plan) {
   out <- lapply(h, fix)
   if (inherits(h, "rtf_col_header")) class(out) <- class(h)
   if (length(missed)) .plan_n_warn(unique(missed), toks)
+  out
+}
+
+# A header row written short (lead cells, then one repeated over the spread
+# columns) ends at the last spread column; the columns after it --
+# plan_compare()'s -- get a cell each: its name on the first row, nothing
+# below.  A row of the table's full length, or one of cells, is left alone.
+.plan_header_trail <- function(h, width, trail) {
+  if (!length(trail) || !is.list(h)) return(h)
+  cls <- class(h)
+  first <- TRUE
+  out <- lapply(h, function(r) {
+    if (is.character(r) && is.null(names(r)) && length(r) == width) {
+      r <- c(r, if (first) trail else rep("", length(trail)))
+    }
+    first <<- FALSE
+    r
+  })
+  class(out) <- cls
   out
 }
 

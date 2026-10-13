@@ -3206,3 +3206,44 @@ test_that("plan_filter(): PTs with p >= 5% in any arm, a SOC with its PTs; the R
   expect_error(plan_filter(plan(d), keep = p > 0), "unnamed")
   expect_error(plan_filter(plan(d), p > 0, any = NA), "any column")
 })
+
+test_that("plan_compare(): the column header's {col} / {n} sit over their columns, the comparison column gets its cell (#631)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::bind_ard(
+    cards::ard_stack(adsl, .by = TRT, .overall = TRUE, cards::ard_tabulate(variables = SEX)),
+    cardx::ard_stats_chisq_test(adsl, by = TRT, variables = SEX))
+  base <- table_plan(normalize_ard(ard), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells("{n}", notes = FALSE) |> plan_stub(name = "Characteristic")
+  hdr <- function(p) {
+    pg <- suppressMessages(suppressWarnings(plan_apply(p, "pages")))
+    pg <- if (inherits(pg, "rtftable")) pg else pg[[1L]]
+    list(names = names(pg$data), rows = lapply(pg$col_header, function(r)
+      unname(vapply(r, function(x) if (is.list(x)) x$label else x, ""))))
+  }
+  arms <- sort(unique(adsl$TRT))
+  n_arm <- as.integer(table(adsl$TRT)[arms])
+  # short rows over the spread columns
+  h <- hdr(base |> plan_total() |> plan_compare(p = "{p.value:.3f}") |>
+             plan_col_header(values = list(n = TRUE),
+                             header = rtf_col_header(c("", "{col}"), c("Characteristic", "(N={n})"))))
+  expect_identical(h$names, c("Characteristic", arms, "Total", "p"))
+  expect_identical(h$rows[[1L]], c("", arms, "Total", "p"))
+  expect_identical(h$rows[[2L]], c("Characteristic", sprintf("(N=%d)", n_arm),
+                                   sprintf("(N=%d)", nrow(adsl)), ""))
+  # the header a row at a time, the comparison column named
+  h2 <- hdr(base |> plan_compare(p = "{p.value:.3f}") |>
+              plan_col_header(values = list(n = TRUE), lines = list(
+                c(Characteristic = "", .values = "{col}", p = "p-value"),
+                c(Characteristic = "Characteristic", .values = "(N={n})", p = ""))))
+  expect_identical(h2$rows[[1L]], c("", arms, "p-value"))
+  expect_identical(h2$rows[[2L]], c("Characteristic", sprintf("(N=%d)", n_arm), ""))
+  # without a comparison column: as before
+  h3 <- hdr(base |> plan_total() |>
+              plan_col_header(values = list(n = TRUE),
+                              header = rtf_col_header(c("", "{col}"), c("Characteristic", "(N={n})"))))
+  expect_identical(h3$rows[[1L]], c("", arms, "Total"))
+})
