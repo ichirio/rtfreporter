@@ -437,7 +437,8 @@ test_that("the ARD / plan examples (section 17) run", {
   skip_if_not_installed("pharmaverseadam")
   lines <- .manual_lines()
   from <- grep("^## 17\\. Tables from a cards", lines)
-  to   <- grep("^## 18\\.", lines)
+  # §17a is how to write a program, its skeleton with <placeholders>: not run
+  to   <- grep("^## 17a\\.|^## 18\\.", lines)[1L]
   expect_length(from, 1L)
   blocks <- .manual_blocks(lines[seq(from, to)])
   code <- unlist(Filter(function(b) any(grepl("<-", b)), blocks))

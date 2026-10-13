@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+- **An AI kit: `rtfreporter_ai_manual(dir, ard = )`** writes a folder to
+  attach to a chat, for an assistant to write one table's program from a
+  shell and an ARD: `00_START_HERE.md` (the request: the three-step layout
+  -- the plan over the ARD, the document, the file -- and the rules), the
+  user manual (its new §17a: from a shell and an ARD), three example
+  programs in that layout (an ORR by subgroup with a section per arm; AE by
+  SOC and PT; demographics with a Total and a p-value column), and with
+  `ard` the ARD as CSV and its shape (its keys, which come together, each
+  variable's statistics, a starting `table_plan()`).  Nothing is sent
+  anywhere.  `dir` replaces `file` (no alias, before CRAN):
+  `rtfreporter_ai_manual()` still returns the manual's path, and the
+  developer manual is `which = "dev"`.
+
 - With a `plan_compare()` column, a column header written with `{col}` /
   `{n}` (or a short row repeated over the columns) sat one cell to the
   right, and the comparison column got no cell (#631).  The cells now sit

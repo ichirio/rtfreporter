@@ -4,20 +4,31 @@
 \alias{rtfreporter_ai_manual}
 \title{The AI assistant manuals that ship with this package}
 \usage{
-rtfreporter_ai_manual(which = c("user", "dev"), file = NULL, overwrite = FALSE)
+rtfreporter_ai_manual(
+  dir = NULL,
+  ard = NULL,
+  which = c("user", "dev"),
+  overwrite = FALSE
+)
 }
 \arguments{
+\item{dir}{A folder to write the manual into (created when it does not
+exist).  \code{NULL} (default): nothing is written, and the installed
+manual's path comes back.  For \code{which = "user"} the folder gets the kit
+(see \emph{The kit}); for \code{"dev"}, the developer manual alone.}
+
+\item{ard}{An ARD (a cards ARD, or one \code{\link[=normalize_ard]{normalize_ard()}} has flattened)
+for the kit's \verb{05_ard.csv} and \verb{06_ard_shape.md}.  \code{NULL} (default):
+\verb{00_START_HERE.md} says how to add them.}
+
 \item{which}{\code{"user"} (default) or \code{"dev"} -- see \emph{Which manual}.}
 
-\item{file}{Optional destination.  When given, the manual is copied there
-(ready to attach to a chat session) and the destination is returned
-invisibly.  A directory is accepted, and the file keeps its own name.}
-
-\item{overwrite}{Overwrite \code{file} if it already exists.  Default \code{FALSE}.}
+\item{overwrite}{Replace files of the same names already in \code{dir}.
+Default \code{FALSE}.}
 }
 \value{
-The path to the manual -- the installed file when \code{file} is \code{NULL},
-otherwise the copy, returned invisibly.
+The installed manual's path when \code{dir} is \code{NULL}; otherwise the
+paths written, invisibly.
 }
 \description{
 rtfreporter is too new to be in any chat model's training data: asked for
@@ -51,11 +62,42 @@ internals and the developer manual requires it, so an assistant given both
 follows neither cleanly.
 }
 
+\section{The kit}{
+ \verb{dir =}:
+With \code{dir}, the user manual comes as a \strong{kit}: a flat folder an assistant
+reads in order, to write one table's R program from a shell (the table's
+mock-up) and an ARD.
+\describe{
+\item{\verb{00_START_HERE.md}}{The request: what to attach, the three-step
+layout every program has (the plan over the ARD; the document; the
+file), the rules (only the functions in the manual; the numbers are
+the ARD's; the layout is the plan's).}
+\item{\verb{01_rtfreporter-ai-user-manual.md}}{The manual (its §17a is how to
+write a table's program from a shell and an ARD).}
+\item{\verb{02_example_orr_subgroups.R}, \verb{03_example_ae_soc_pt.R},
+\verb{04_example_demographics.R}}{Programs in that layout: an ORR by
+subgroup with a section per arm, adverse events by SOC and PT, and
+demographics with a Total and a p-value column.}
+\item{\verb{05_ard.csv}, \verb{06_ard_shape.md}}{With \code{ard}: the ARD as
+\code{\link[=normalize_ard]{normalize_ard()}} flattens it (every row when there are 2,000 or
+fewer, else each analysis' first rows), and its shape -- the keys and
+their values, which keys come alone or together, each variable's
+statistics, a key's own counts, and a starting \code{\link[=table_plan]{table_plan()}} -- so
+the program names what the ARD really has.}
+}
+Nothing is sent anywhere: the folder is for the user to attach.
+}
+
 \examples{
 # where the manual lives
 rtfreporter_ai_manual()
-
-# read it here, or copy it out to attach to a chat session
 writeLines(head(readLines(rtfreporter_ai_manual()), 3))
-rtfreporter_ai_manual("dev", file = tempfile(fileext = ".md"))
+
+# the kit, with an ARD's shape
+if (requireNamespace("cards", quietly = TRUE)) {
+  ard <- cards::ard_stack(cards::ADSL, .by = ARM,
+                          cards::ard_tabulate(variables = c(SEX, AGEGR1)))
+  kit <- rtfreporter_ai_manual(file.path(tempdir(), "kit"), ard = ard, overwrite = TRUE)
+  basename(kit)
+}
 }
