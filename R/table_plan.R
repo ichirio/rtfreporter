@@ -1003,7 +1003,10 @@ print.table_plan <- function(x, ...) {
 #'   which is how a group BOUNDARY is found --- `"value"` (each run of equal
 #'   values), `"indent`" (a row starts a group when its cell is not indented),
 #'   `"filled"` (when its cell is not empty), or `"auto"`.  `collapse` is
-#'   `collapse_repeats`: a repeated value printed once and then blank.
+#'   `collapse_repeats`: a repeated value printed once and then blank, in the
+#'   columns named (`collapse = c("grp1", "grp2")`, the row keys' names) or
+#'   counted on the PRINTED columns (a hidden key left out), like every
+#'   column position in a plan.
 #'
 #'   `mode = "indent"` **reads** indentation to find the boundary;
 #'   `plan_stub(indent = )` **writes** it.  They are not the same knob, and
@@ -1018,8 +1021,12 @@ print.table_plan <- function(x, ...) {
 #'   names it as its outermost row key (`table_plan(rows = )`) and refuses
 #'   this; a page per value is [plan_paginate_group()].
 #' @param col For `plan_paginate_group()`: the column whose value starts a
-#'   new page, `as_rtftables()`'s `group_col` with `split = "by_value"`.  Left
-#'   out, it is the outermost row key.  The page is **named** after
+#'   new page (`as_rtftables()`'s `page_by`, or `split = "by_value"` with a
+#'   [plan_stub()]).  Left out, it is the outermost row key.  It is a PAGE
+#'   key, the same on every row of a page, so it is never a row group: blank
+#'   rows between groups, `collapse`, `row_title`, the stub and the column
+#'   positions start at the first printed row key, and `first` / `last`
+#'   apply on every page.  The page is **named** after
 #'   the value, which is the line `rtf_tables(auto_section = TRUE)`
 #'   cuts a section on --- so this verb decides what a section is.
 #'   It is the only verb that makes a page per value.
@@ -1056,7 +1063,8 @@ print.table_plan <- function(x, ...) {
 #'   partition (a period, a cohort), so a BY page can still be cut by a row
 #'   budget.  `plan_paginate_group()` is the other way to page by a value:
 #'   one page per value however long it is, with no row budget.  The BY
-#'   column is printed unless hidden ([plan_hide()]).
+#'   column is printed unless hidden ([plan_hide()]).  Like
+#'   `plan_paginate_group(col = )` it is a page key, never a row group.
 #' @param every For `plan_paginate_cols()`: cut a block every this many
 #'   columns, counting only the ones a block does not keep.  This is
 #'   `at` without writing down how many columns one study had --- the
@@ -1133,7 +1141,11 @@ print.table_plan <- function(x, ...) {
 #'   are one a column in order, as `col_rel_width` itself.
 #' @param row_title,auto_width For `plan_columns()`: the row-heading
 #'   columns (`rtftable(row_title = )`) and whether each column is sized to
-#'   its content (`as_rtftables(auto_width = )`).
+#'   its content (`as_rtftables(auto_width = )`).  Name the columns, as
+#'   `widths` does: a row key's name as `table_plan(rows = )` gives it,
+#'   `.values` for every value column --- `row_title = c("grp1", "grp2")`.
+#'   A position counts the PRINTED columns, as unnamed `widths` do: a key
+#'   hidden with [plan_hide()] or taken out by `page_by` is left out.
 #' @param sep For `plan_columns()`: the separator several `cols` keys are
 #'   joined with in the value columns' names, `"____"` by default ---
 #'   `"Placebo____F"`.  The spanning header is built by splitting on it, so
@@ -2940,6 +2952,20 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
                   "count.  Drop `max_rows`,\n  or use ",
                   "split = \"group_safe\" / \"group_force\".")))
   }
+  # A page per value is then handed over as `page_by`, the pages named by
+  # the value as before, so the rows inside a page are grouped on the first
+  # printed row key and not on the page key, which is the same on all of
+  # them (#635).
+  if (identical(out$split, "by_value") && .plan_group_as_page_by(plan)) {
+    out$page_by <- .plan_page_group_key(plan)
+    out$split <- NULL
+  }
+  # plan_paginate_group(col = ) is recorded as the group layer's
+  # `group_col`; off a value split, a page key is never the row group.
+  if (!identical(out$split, "by_value") &&
+      isTRUE(out$group_col %in% .plan_page_keys(plan))) {
+    out$group_col <- NULL
+  }
   # ... and the two may not name different columns either.
   named <- unique(unlist(lapply(.plan_of(plan, "group"),
                                 function(f) f$group_col),
@@ -2959,6 +2985,48 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
 
   hid <- unique(c(hid, .plan_hidden(plan, tbl)))
   if (length(hid)) out$drop_cols <- hid
+  # A plan's columns are named (a row key's name as table_plan(rows = )
+  # gives it, `.values` for every value column) or counted on the PRINTED
+  # columns, as widths, the header's col_cell()s and plan_paginate_cols()
+  # are; as_rtftables() takes row_title and collapse_repeats in the table's
+  # own positions, before drop_cols.  Read them across, so a hidden key
+  # (plan_hide(), page_by) shifts nothing (#635).
+  if (!is.null(tbl)) {
+    nm <- names(tbl)
+    shown <- which(!nm %in% hid)
+    printed <- function() {
+      paste0("the table prints ", length(shown), " columns (",
+             paste(nm[shown], collapse = ", "), ")",
+             if (length(hid)) paste0("; ", paste(hid, collapse = ", "),
+                                     " hidden") else "")
+    }
+    across <- function(pos, what) {
+      if (!length(pos)) return(pos)
+      if (is.character(pos)) {
+        want <- unique(unlist(lapply(pos, function(w)
+          if (identical(w, ".values")) .plan_spread_cols(plan, tbl) else w)))
+        p <- match(want, nm)
+        bad <- want[is.na(p) | !p %in% shown]
+        if (length(bad)) {
+          .ard_stop(sprintf("%s = ): %s is not a printed column: %s.",
+                            what, paste(sQuote(bad), collapse = ", "),
+                            printed()))
+        }
+        return(sort(p))
+      }
+      if (!is.numeric(pos)) return(pos)
+      p <- as.integer(pos)
+      if (any(is.na(p) | p < 1L | p > length(shown))) {
+        .ard_stop(sprintf(paste0(
+          "%s = %s): %s; positions count those, or name the columns."),
+          what, paste(p, collapse = ", "), printed()))
+      }
+      shown[p]
+    }
+    out$row_title <- across(out$row_title, "plan_columns(row_title")
+    out$collapse_repeats <- across(out$collapse_repeats,
+                                   "plan_row_group(collapse")
+  }
   # A table built from an ARD is a plain data.frame: there is no adapter
   # metadata to read, and every report was saying so by hand.
   if (is.null(out$read_meta)) out$read_meta <- FALSE
@@ -2985,7 +3053,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   if (length(g) && isFALSE(g$.keep)) {
     # folded into the stub already?  then it is gone, not hidden.  With
     # no table to look at, keep it: the carrier is normally there.
-    gc <- .plan_group_col(plan)
+    gc <- .plan_page_group_key(plan)
     out <- c(out, if (is.null(tbl)) gc else .plan_present(gc, tbl))
   }
   srt <- .plan_merge(.plan_of(plan, "sort"))
@@ -3044,7 +3112,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   # a column that is not printed is not part of the stub either: the
   # page key and the grouping carrier are row keys that do their work
   # without being read
-  v <- setdiff(c(rn, ln), .plan_hidden(plan, tbl))
+  v <- setdiff(c(rn, ln), c(.plan_hidden(plan, tbl), .plan_not_row_keys(plan)))
   v <- intersect(v, names(tbl))
   if (!length(v)) {
     .ard_stop(paste0(
@@ -3067,27 +3135,61 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   if (is.null(nm)) as.character(unlist(r, use.names = FALSE)) else nm
 }
 
-# Which column groups the rows.  Nobody names it twice: it is the page key
-# plan_paginate_group(col = ) gave, or the outermost row key, which
-# table_plan(rows = ) has already given.  It is derived when a page key is
-# hidden (`keep = FALSE`: a column has to be named to be hidden) and when
-# plan_row_group() groups by it; otherwise as_rtftables() has its own
-# answer.
+# A page key is a key the PAGES are cut on -- plan_paginate_group(col = )
+# (the outermost row key when it is left out) and plan_paginate_rows(
+# page_by = ).  It is the same on every row of a page, so it is never a row
+# group: blank rows between groups, collapse, row_title, the stub and a
+# column position all start at the first PRINTED row key.  Every verb asks
+# this one function (#635).
+.plan_page_keys <- function(plan) {
+  unique(c(.plan_page_group_key(plan),
+           .plan_merge(.plan_of(plan, "pages"))$page_by))
+}
+
+# plan_paginate_group()'s key: the column it names, or the outermost row
+# key; NULL when the pages are not cut by a group value.
+.plan_page_group_key <- function(plan) {
+  m <- .plan_merge(.plan_of(plan, "group"))
+  if (!isTRUE(m$.page)) return(NULL)
+  m$group_col %||% .plan_row_keys(plan)[1L]
+}
+
+# The row keys the plan names but does not print as a row level: the page
+# keys and what plan_hide() hides.
+.plan_not_row_keys <- function(plan) {
+  unique(c(.plan_page_keys(plan),
+           unlist(lapply(.plan_of(plan, "hide"), `[[`, "drop_cols"),
+                  use.names = FALSE)))
+}
+
+# Whether plan_paginate_group() is handed to as_rtftables() as `page_by`
+# (a page per value, the rows grouped on the first printed key) rather
+# than split = "by_value", which groups the rows on the page key itself.
+# A stub keeps "by_value", which builds the stub per page; so does a
+# second page key, whose pages would be named after both.
+.plan_group_as_page_by <- function(plan) {
+  !is.null(.plan_page_group_key(plan)) && !length(.plan_of(plan, "stub")) &&
+    is.null(.plan_merge(.plan_of(plan, "pages"))$page_by)
+}
+
+# Which column groups the rows (as_rtftables(group_col = )).  Nobody names
+# it twice: on a value split with a stub it is the page key, otherwise the
+# first printed row key -- never a page key (#635) -- when plan_row_group()
+# groups by it; a finished table's plan_row_group(group_col = ) names it;
+# otherwise as_rtftables() has its own answer (the first column that is not
+# a page_by key).
 .plan_group_col <- function(plan, tbl = NULL) {
   g <- .plan_of(plan, "group")
   if (!length(g)) return(NULL)
   m <- .plan_merge(g)
-  if (!is.null(m$group_col)) return(m$group_col)
-  k <- .plan_row_keys(plan)
-  if (!length(k)) return(NULL)
-  # a hidden page key has to be named to be hidden
-  if (isFALSE(m$.keep)) return(k[1L])
-  # plan_row_group() groups by the outermost row key while it is still a
-  # column of its own; folded into a stub, the groups are the stub's
-  # headings, which is what as_rtftables() reads by default
-  if (isTRUE(m$.rows) && !length(.plan_of(plan, "stub")) &&
-      !is.null(tbl) && k[1L] %in% names(tbl)) {
-    return(k[1L])
+  page <- .plan_page_group_key(plan)
+  if (!is.null(page) && !.plan_group_as_page_by(plan)) return(page)
+  if (!is.null(m$group_col) && is.null(page)) return(m$group_col)
+  # folded into a stub, the groups are the stub's headings, which is what
+  # as_rtftables() reads by default
+  if (isTRUE(m$.rows) && !length(.plan_of(plan, "stub")) && !is.null(tbl)) {
+    k <- setdiff(.plan_row_keys(plan), .plan_not_row_keys(plan))
+    if (length(k) && k[1L] %in% names(tbl)) return(k[1L])
   }
   NULL
 }
@@ -3738,8 +3840,7 @@ plan_header_tokens <- function(plan) {
 # The data's column that a page split by a group value is split on
 # (plan_paginate_group()), or NULL when the pages are not split so.
 .plan_page_col <- function(plan) {
-  if (!isTRUE(.plan_merge(.plan_of(plan, "group"))$.page)) return(NULL)
-  gcol <- .plan_group_col(plan)
+  gcol <- .plan_page_group_key(plan)
   if (is.null(gcol)) return(NULL)
   r <- plan$roles$rows
   src <- if (!is.null(names(r)) && gcol %in% names(r)) r[[gcol]] else gcol

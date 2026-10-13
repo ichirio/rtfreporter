@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9052** (the development
+**This manual documents rtfreporter 0.8.2.9053** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -881,10 +881,10 @@ p_ae <- ard_ae |>
 | A Total column | `plan_total(label = "Total", position = "last")`: cards' overall rows (the analysis again without `by`, bound under it: `bind_rows(ard_tabulate(adsl, by = ARM, variables = SEX), ard_tabulate(adsl, variables = SEX))`, or `ard_stack(.overall = TRUE)`) become the column; its header `{n}` is the study total. Never stack the data with `ARM = "Total"`: the ARD and ARS then carry a value the data does not have |
 | Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone. SOCs by their own count: `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT")`; one column's count: `"-n[Total]"`, `"-n@SOC[Total]"` |
 | Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
-| Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse, group_col)`; `group_col` only on a finished table (an ARD plan's is its outermost row key) |
+| Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse, group_col)`: `collapse = c("grp1", "grp2")`; `group_col` only on a finished table (an ARD plan's is its outermost row key) |
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
 | Columns not printed | `plan_hide("COL")` |
-| Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: `widths = c(row_label = 5, .values = 2)` |
+| Widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: `widths = c(row_label = 5, .values = 2)`, `row_title = "row_label"`. Columns are named (a row key's name, `.values`) or counted on the PRINTED columns (a hidden key left out) |
 | Column header | `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows; `lines = list(c(row_label = "", .values = "{col}"), c(row_label = "Characteristic", .values = "(N={n})"))` writes the header a row at a time (a cell's name = its columns, its value = the text; `span = "each"` / `"one"` / a key's name for a spanner) |
 | Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
