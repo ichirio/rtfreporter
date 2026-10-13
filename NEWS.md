@@ -11,7 +11,10 @@
   Nothing is computed: the numbers are the ARD's.  A column keyed by
   context (`p = c(stats_t_test = "{p.value:.3f}")`) picks one test of
   several and leaves the others, noted; two tests one column reads are an
-  error, never one picked.  `widen_ard(compare = )` is the same without a
+  error, never one picked.  A column's lines are `cell_rows()`, each beside
+  the body's line of that label (an ORR difference on line 1, its CI on
+  line 2).  The names are the columns' own: `t = "{statistic:.2f}"`,
+  `df = "{parameter:.0f}"`, an odds ratio.  `widen_ard(compare = )` is the same without a
   plan.
 - `plan_total()` reads only the body's analyses: with a test in the ARD it
   took the test's record for an overall row and left an empty row.

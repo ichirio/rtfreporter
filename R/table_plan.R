@@ -834,10 +834,32 @@ print.table_plan <- function(x, ...) {
 #'   ARD's.  A test whose record names no variable (`ard_stats_aov()`'s
 #'   term) has no row; use `ard_stats_oneway_test()`.
 #'
+#'   The names are **the columns' own** --- any name, as many as the
+#'   table has; `p` and `diff` are only examples.  Each column reads
+#'   whatever statistics its template names from the same record:
+#'
 #'   ```r
 #'   plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))
 #'   plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})",
 #'                p = "{p.value:.3f}")
+#'   plan_compare(t = "{statistic:.2f}", df = "{parameter:.0f}",   # a t-test laid out
+#'                p = "{p.value:.4f}")
+#'   plan_compare(odds_ratio = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})")  # Fisher's OR
+#'   plan_compare(p = c(stats_t_test = "{p.value:.3f}"))              # the t-test of several tests
+#'   plan_compare(p = c(stats_chisq_test  = "{p.value:.3f}",          # each test its own way
+#'                      stats_fisher_test = "{p.value:.4f}"))
+#'   ```
+#'
+#'   **Lines** are [cell_rows()], as in the body: each line goes on the
+#'   variable's row of that label, so a difference and its CI sit beside the
+#'   body's estimate and CI lines (an ORR table's `"1"` / `"2"`), and a
+#'   p-value on line 1 only is `cell_rows("1" = ...)` (a named vector is a
+#'   map by context here, not lines):
+#'
+#'   ```r
+#'   plan_compare(diff = cell_rows("1" = "{estimate:.1f%}",
+#'                                 "2" = "({conf.low:.1f%}, {conf.high:.1f%})"),
+#'                p    = cell_rows("1" = "{p.value:.3f}"))
 #'   ```
 #'
 #'   The columns have no population: the header's `{col}` / `{n}` and its

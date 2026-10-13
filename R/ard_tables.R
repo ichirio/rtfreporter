@@ -2685,25 +2685,36 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       if (any(at_lv)) cand <- at_lv
     }
     if (!any(cand)) { unused[ii] <- TRUE; next }
-    row <- which(cand)[1L]
     took <- FALSE
     for (nm in names(spec$cols)) {
       entry <- .ard_lookup_cells(spec$cols[[nm]], sub$variable[1L], sub$context[1L],
                                  if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_)
       if (is.null(entry)) next
-      v <- .ard_chain_pick(entry$chains[[1L]], sub, rounding)$v
-      if (is.na(v)) next
       cn <- cn_of(byv[ii][1L], nm)
       if (!cn %in% new_cols) next
-      old <- vals[row, cn]
-      if (!is.na(old) && !identical(old, v)) {
-        .ard_stop(sprintf(paste0(
-          "plan_compare(): two comparison records of %s reach the column '%s' ",
-          "on one row (%s, %s).\n  Split them with `by =` (a column naming ",
-          "each comparison)."), sQuote(sub$variable[1L]), cn, old, v))
+      # cell_rows(): each line on the block's row of that label ("1" the
+      # estimate, "2" its CI, as the body's lines are); otherwise one line,
+      # on the block's first row
+      labs <- entry$labels
+      for (j in seq_along(entry$chains)) {
+        at <- cand
+        if (!is.null(labs) && nzchar(labs[j]) && !is.null(label_out)) {
+          at <- cand & as.character(out[[label_out]]) %in% labs[j]
+        }
+        if (!any(at)) next
+        row <- which(at)[1L]
+        v <- .ard_chain_pick(entry$chains[[j]], sub, rounding)$v
+        if (is.na(v)) next
+        old <- vals[row, cn]
+        if (!is.na(old) && !identical(old, v)) {
+          .ard_stop(sprintf(paste0(
+            "plan_compare(): two comparison records of %s reach the column '%s' ",
+            "on one row (%s, %s).\n  Split them with `by =` (a column naming ",
+            "each comparison)."), sQuote(sub$variable[1L]), cn, old, v))
+        }
+        vals[row, cn] <- v
+        took <- TRUE
       }
-      vals[row, cn] <- v
-      took <- TRUE
     }
     if (!took) unused[ii] <- TRUE
   }

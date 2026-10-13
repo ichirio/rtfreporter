@@ -3024,3 +3024,43 @@ test_that("plan_compare(): what a table does not use -- other statistics, a seco
                               wilcoxon = c(stats_wilcox_test = "{p.value:.3f}"))))
   expect_false(anyNA(w2$t)); expect_false(anyNA(w2$wilcoxon))
 })
+
+test_that("plan_compare() with cell_rows(): a difference on line 1 and its CI on line 2, beside the body's two lines (#625)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl <- adsl[adsl$TRT != "Xanomeline Low Dose", ]
+  adsl$RESP <- adsl$AGE > 75
+  adsl$ALL <- "All"
+  orr  <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ TRUE,
+                                                method = "clopper-pearson", conf.level = 0.90)
+  dif  <- function(.x) cardx::ard_stats_prop_test(.x, by = TRT, variables = RESP, conf.level = 0.90)
+  ard <- cards::bind_ard(
+    cards::ard_strata(adsl, .by = TRT, .strata = ALL, .f = orr),
+    cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr),
+    cards::ard_strata(adsl, .strata = ALL, .f = dif),
+    cards::ard_strata(adsl, .strata = SEX, .f = dif))
+  t <- suppressMessages(plan_apply(
+    normalize_ard(ard, stack = list(subgroup = c("ALL", "SEX"))) |>
+      table_plan(cols = c("TRT", ".stat_group"),
+                 rows = c(grp1 = "subgroup", grp2 = "subgroup_level"), label = NA) |>
+      plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+      plan_sort(FALSE) |>
+      plan_cells(n = cell_rows("1" = "{N:.0f}"),
+                 orr_ci = cell_rows("1" = "{n:.0f} ({estimate:.1f%})",
+                                    "2" = "{conf.low:.1f%}, {conf.high:.1f%}"), notes = FALSE) |>
+      plan_compare(diff = cell_rows("1" = "{estimate:.1f%}", "2" = "({conf.low:.1f%}, {conf.high:.1f%})"),
+                   p = cell_rows("1" = "{p.value:.3f}")), "table"))
+  t <- as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  expect_identical(nrow(t), 6L)                                  # 3 subgroups x 2 lines
+  one <- seq(1L, 6L, by = 2L)
+  expect_match(t$diff[one], "^-?[0-9]+[.][0-9]$")                # the difference on line 1
+  expect_match(t$diff[-one], "^[(]-?[0-9.]+, -?[0-9.]+[)]$")     # its CI on line 2
+  expect_false(anyNA(t$p[one]))
+  expect_true(all(is.na(t$p[-one])))                             # the p-value on line 1 only
+  pt <- as.data.frame(dif(adsl))
+  st <- function(n) unlist(pt$stat[pt$stat_name == n])
+  expect_identical(t$diff[1L], sprintf("%.1f", 100 * st("estimate")))
+})
