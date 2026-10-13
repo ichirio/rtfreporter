@@ -3163,3 +3163,46 @@ test_that("table_plan(show_keys = ) and plan_stat_groups(.variables, .others): S
   expect_error(plan_stat_groups(plan(NULL), n = "N", .others = "n"), "needs `.variables`")
   expect_error(plan_stat_groups(plan(NULL), n = "N", .variables = "RESP", .others = "x"), "one of the groups")
 })
+
+test_that("plan_filter(): PTs with p >= 5% in any arm, a SOC with its PTs; the RTF a hand-filtered ARD gives (#620)", {
+  skip_if_not_installed("cards")
+  ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AESOC, AEDECOD), by = TRTA,
+                                       denominator = cards::ADSL, id = USUBJID, over_variables = TRUE)
+  d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"), overall = "Any TEAE")
+  plan <- function(x) table_plan(x, cols = "TRTA", rows = c(soc = "AESOC", pt = "AEDECOD"), label = NA) |>
+    plan_sort(".overall", "soc", ".depth", "-n") |> plan_cells("{n} ({p:.1f%})", notes = FALSE)
+  # by hand: the PTs whose p reaches 5% in an arm, the SOCs they are in, the overall row
+  pv <- d[!is.na(d$AEDECOD) & d$stat_name == "p", ]
+  pts <- names(which(tapply(pv$stat, as.character(pv$AEDECOD), max) >= 0.05))
+  socs <- unique(as.character(d$AESOC[as.character(d$AEDECOD) %in% pts]))
+  hand <- d[d$.overall | as.character(d$AEDECOD) %in% pts |
+              (is.na(d$AEDECOD) & as.character(d$AESOC) %in% socs), ]
+  render <- function(p) {
+    f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+    old <- options(rtfreporter.render_time = as.POSIXct("2026-01-01 09:00"))
+    on.exit(options(old), add = TRUE)
+    suppressMessages(generate_rtfreport(rtf_tables(rtf_document(program = "t.R"), p), f, overwrite = TRUE))
+    readBin(f, "raw", file.size(f))
+  }
+  expect_identical(render(plan(d) |> plan_filter(p >= 0.05)), render(plan(hand)))
+  tab_of <- function(p) {
+    t <- suppressMessages(plan_apply(p, "table"))
+    as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  }
+  # every arm instead of any; parents = "drop" judges a SOC by its own counts
+  all_arms <- tab_of(plan(d) |> plan_filter(p >= 0.05, any = FALSE))
+  expect_true(sum(!is.na(all_arms$pt)) < length(pts))
+  own <- tab_of(plan(d) |> plan_filter(p >= 0.30, parents = "drop"))
+  kids <- tab_of(plan(d) |> plan_filter(p >= 0.30))
+  # a SOC counts at least its PTs' subjects, so judged on its own it stays as
+  # often as when it waits for a PT
+  expect_gte(sum(is.na(own$pt)), sum(is.na(kids$pt)))
+  expect_identical(own$pt[!is.na(own$pt)], kids$pt[!is.na(kids$pt)])
+  # the overall row always stays; nothing passes, it is the only row left
+  none <- tab_of(plan(d) |> plan_filter(p > 1))
+  expect_identical(nrow(none), 1L)
+  expect_identical(as.character(none$soc), "Any TEAE")
+  # what is said
+  expect_error(plan_filter(plan(d), keep = p > 0), "unnamed")
+  expect_error(plan_filter(plan(d), p > 0, any = NA), "any column")
+})

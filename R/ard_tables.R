@@ -1993,6 +1993,10 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   statistic in no group is not read.  The options `.variables` and
 #'   `.others` scope it (see [plan_stat_groups()]).  [plan_stat_groups()] is the plan's
 #'   spelling.  `NULL` (default): no groups.
+#' @param filter Rows dropped by a condition over their records:
+#'   `list(conds = list(quote(p >= 0.05)), any = TRUE, parents = "keep")`.
+#'   [plan_filter()] is the plan's spelling, and says the rules.  `NULL`
+#'   (default): every row.
 #' @param show_keys Row keys whose own tabulation stays in the body ---
 #'   their counts as a variable's --- instead of only the header's: what
 #'   [table_plan()]'s `show_keys` says.  `NULL` (default): none.
@@ -2141,7 +2145,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                        sep = "____",
                        rounding = NULL,
                        sort_stat = NULL, na = NA_character_, notes = TRUE,
-                       stat_groups = NULL, compare = NULL, show_keys = NULL) {
+                       stat_groups = NULL, compare = NULL, show_keys = NULL,
+                       filter = NULL) {
   if (missing(cols)) {
     .ard_stop_missing("cols", "`cols` is required: name the column keys.")
   }
@@ -2353,6 +2358,15 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                               stringsAsFactors = FALSE))
   ord_idx <- do.call(order, ord_parts)
   col_levels <- unique(colkey[ord_idx])
+
+  # plan_filter(): rows a condition drops, judged across the columns.  The
+  # columns are counted first, so a column stays though its rows go.
+  if (!is.null(filter)) {
+    kept <- .ard_filter_keep(d, colkey, filter, rowrefs, labref)
+    ignored <- .ard_ignored_bind(ignored, attr(kept, "ignored"))
+    d <- d[kept, , drop = FALSE]
+    colkey <- colkey[kept]
+  }
 
   # ---- group the long rows into cells -------------------------------------
   grp_cols <- c(vapply(rowrefs, function(r) r$ref, ""), "variable", "context",
@@ -2810,6 +2824,75 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   list(out = res,
        ignored = .ard_tally(cmp[unused, , drop = FALSE],
                             "a comparison record no row or column takes"))
+}
+
+# plan_filter(): which long rows stay.  A record (a row's statistics in one
+# column) passes when every condition holds over its statistics and keys;
+# one whose statistics do not answer it is unknown.  A row stays when any
+# column passes (`any = TRUE`) or all that answer do, and when no column
+# answers at all; rows sharing the key `by` are judged together.  A parent
+# row (a SOC, its PT key empty) stays, with `parents = "keep"`, exactly when
+# one of its children does; an overall row always stays.
+.ard_filter_keep <- function(d, colkey, filter, rowrefs, labref) {
+  conds <- filter$conds
+  env <- filter$env %||% globalenv()
+  any_col <- !isFALSE(filter$any)
+  parents <- filter$parents %||% "keep"
+  refs <- vapply(rowrefs, function(r) r$ref, "")
+  refs <- refs[refs %in% names(d)]
+  lab <- if (length(labref) && labref[[1L]]$ref %in% names(d)) labref[[1L]]$ref
+  part <- function(cols) do.call(paste, c(lapply(cols, function(k)
+    as.character(d[[k]])), list(sep = "\r")))
+  rid <- part(c(refs, lab, "variable"))
+  if (!is.null(filter$by)) {
+    if (!filter$by %in% refs) {
+      .ard_stop(sprintf(paste0(
+        "plan_filter(by = \"%s\"): not a row key.  Row keys: %s"),
+        filter$by, paste(sQuote(refs), collapse = ", ")))
+    }
+    rid <- part(refs[seq_len(match(filter$by, refs))])
+  }
+  rec <- paste(rid, colkey, d$context, sep = "\r")
+  pass <- vapply(split(seq_len(nrow(d)), factor(rec, levels = unique(rec))),
+                 function(ii) {
+    gd <- .ard_guard_data(d[ii, , drop = FALSE])
+    ok <- vapply(conds, function(cnd) {
+      v <- tryCatch(eval(cnd, gd, env), error = function(e) NA)
+      if (!is.logical(v) || length(v) != 1L) NA else v
+    }, NA)
+    if (anyNA(ok)) { if (any(ok %in% FALSE)) FALSE else NA } else all(ok)
+  }, NA)
+  rec_rid <- rid[match(names(pass), rec)]
+  row_keep <- vapply(split(pass, factor(rec_rid, levels = unique(rid))), function(p) {
+    p <- p[!is.na(p)]
+    if (!length(p)) return(TRUE)            # nothing answers: kept
+    if (any_col) any(p) else all(p)
+  }, NA)
+  unknown <- names(row_keep)[vapply(split(pass, factor(rec_rid, levels = unique(rid))),
+                                    function(p) all(is.na(p)), NA)]
+  keep <- unname(row_keep[rid])
+  # a parent: its own keys set, a deeper key empty, and rows below it
+  if (identical(parents, "keep") && length(refs) > 1L) {
+    kv <- lapply(refs, function(k) as.character(d[[k]]))
+    deep <- Reduce(`+`, lapply(kv, function(v) !is.na(v)))
+    for (lvl in sort(unique(deep[deep < length(refs)]), decreasing = TRUE)) {
+      at <- which(deep == lvl)
+      if (!length(at)) next
+      pre <- do.call(paste, c(lapply(kv[seq_len(lvl)], `[`, at), list(sep = "\r")))
+      below <- deep > lvl
+      cpre <- do.call(paste, c(lapply(kv[seq_len(lvl)], `[`, which(below)), list(sep = "\r")))
+      has_kid <- pre %in% cpre
+      kid_kept <- pre %in% cpre[keep[which(below)]]
+      keep[at[has_kid]] <- kid_kept[has_kid]
+    }
+  }
+  if (".overall" %in% names(d)) keep[d$.overall %in% TRUE] <- TRUE
+  out <- keep %in% TRUE
+  attr(out, "ignored") <- .ard_ignored_bind(
+    .ard_tally(d[!out, , drop = FALSE], "dropped by plan_filter()"),
+    .ard_tally(d[out & rid %in% unknown, , drop = FALSE],
+               "kept by plan_filter(): no statistic answered its condition"))
+  out
 }
 
 # `-n@group1[Total]`: the statistic, the row key whose group's own row it is
