@@ -844,7 +844,7 @@ print.table_plan <- function(x, ...) {
 #'                p = "{p.value:.3f}")
 #'   plan_compare(t = "{statistic:.2f}", df = "{parameter:.0f}",   # a t-test laid out
 #'                p = "{p.value:.4f}")
-#'   plan_compare(odds_ratio = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})")  # Fisher's OR
+#'   plan_compare(odds_ratio = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})")  # an odds ratio (Fisher)
 #'   plan_compare(p = c(stats_t_test = "{p.value:.3f}"))              # the t-test of several tests
 #'   plan_compare(p = c(stats_chisq_test  = "{p.value:.3f}",          # each test its own way
 #'                      stats_fisher_test = "{p.value:.4f}"))
@@ -857,8 +857,8 @@ print.table_plan <- function(x, ...) {
 #'   map by context here, not lines):
 #'
 #'   ```r
-#'   plan_compare(diff = cell_rows("1" = "{estimate:.1f%}",
-#'                                 "2" = "({conf.low:.1f%}, {conf.high:.1f%})"),
+#'   plan_compare(diff = cell_rows("1" = "{estimate:.3f}",
+#'                                 "2" = "({conf.low:.3f}, {conf.high:.3f})"),
 #'                p    = cell_rows("1" = "{p.value:.3f}"))
 #'   ```
 #'

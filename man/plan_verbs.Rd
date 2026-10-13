@@ -175,6 +175,136 @@ plan_paginate_cols(
 \arguments{
 \item{plan}{An \code{\link[=table_plan]{table_plan()}}.}
 
+\item{...}{For \code{plan_cells()}, exactly what \code{widen_ard(cells = )}
+takes: one bare entry, or entries named by variable, \code{context},
+kind (\code{continuous} / \code{categorical}), a stat group of
+\code{plan_stat_groups()} or \code{default}.
+
+\code{plan_compare()} takes the \strong{comparison columns}, each named (the
+column's name) and each what \code{plan_cells()} takes for one cell: a
+template with guards, or a map keyed by context / kind / \code{default}
+--- here a named vector is that map, since a column is one cell with
+no rows to label: \code{p = c(stats_t_test = "{p.value:.3f}")} reads the
+t-test and leaves a Wilcoxon of the same variable (noted, as every
+record no column takes); two tests one column reads both of are an
+error, never one picked.  A template reads only the statistics it
+names.  It reads the ARD's comparison records --- the column key with \strong{no
+value}, in an analysis the body does not have: cardx's
+\code{ard_stats_t_test()}, \code{ard_stats_chisq_test()}, \code{ard_stats_fisher_test()},
+\code{ard_stats_kruskal_test()}, \code{ard_stats_oneway_test()},
+\code{ard_stats_prop_test()} --- and puts each on its \strong{variable's block}:
+the row of its level when it has one, else the block's first row as the
+table is sorted (the variable's heading row under \code{plan_stub()}).
+Nothing is computed; the p-value, the difference and its CI are the
+ARD's.  A test whose record names no variable (\code{ard_stats_aov()}'s
+term) has no row; use \code{ard_stats_oneway_test()}.
+
+The names are \strong{the columns' own} --- any name, as many as the
+table has; \code{p} and \code{diff} are only examples.  Each column reads
+whatever statistics its template names from the same record:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_compare(p = c(p.value < 0.001 ~ "<0.001", "\{p.value:.3f\}"))
+plan_compare(diff = "\{estimate:.2f\} (\{conf.low:.2f\}, \{conf.high:.2f\})",
+             p = "\{p.value:.3f\}")
+plan_compare(t = "\{statistic:.2f\}", df = "\{parameter:.0f\}",   # a t-test laid out
+             p = "\{p.value:.4f\}")
+plan_compare(odds_ratio = "\{estimate:.2f\} (\{conf.low:.2f\}, \{conf.high:.2f\})")  # an odds ratio (Fisher)
+plan_compare(p = c(stats_t_test = "\{p.value:.3f\}"))              # the t-test of several tests
+plan_compare(p = c(stats_chisq_test  = "\{p.value:.3f\}",          # each test its own way
+                   stats_fisher_test = "\{p.value:.4f\}"))
+}\if{html}{\out{</div>}}
+
+\strong{Lines} are \code{\link[=cell_rows]{cell_rows()}}, as in the body: each line goes on the
+variable's row of that label, so a difference and its CI sit beside the
+body's estimate and CI lines (an ORR table's \code{"1"} / \code{"2"}), and a
+p-value on line 1 only is \code{cell_rows("1" = ...)} (a named vector is a
+map by context here, not lines):
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_compare(diff = cell_rows("1" = "\{estimate:.3f\}",
+                              "2" = "(\{conf.low:.3f\}, \{conf.high:.3f\})"),
+             p    = cell_rows("1" = "\{p.value:.3f\}"))
+}\if{html}{\out{</div>}}
+
+The columns have no population: the header's \code{{col}} / \code{{n}} and its
+short rows leave them alone, so the header names them
+(\code{rtf_col_header(c(..., "p-value"))}).
+
+\code{plan_stat_groups()} takes the groups, each a name and the
+statistics in it (\verb{n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")}).  Each row of the ARD gets its group in the key
+\code{.stat_group}, which \code{table_plan(cols = )} or \verb{rows = } names like any
+other: \code{cols = c("TRT01A", ".stat_group")} puts one record's N in one
+column and its rate and interval in the next, and \code{\link[=plan_cells]{plan_cells()}} keys a
+template by the group's name (\code{n = "{N}"}, \code{orr_ci = cell_rows(...)}).
+A statistic in no group is not read.  This is what a \code{mutate()} of
+\code{variable} before \code{\link[=table_plan]{table_plan()}} did --- a workaround: keep the ARD
+as it is (\code{variable} is the analysis variable) and choose the layout
+in the plan.
+
+With \code{cell_rows()} (or named templates) for the rows inside a cell,
+one analysis's statistics lay out as \strong{n rows x m columns}: the
+groups go across (\code{cols = c("TRT01A", ".stat_group")}) or down
+(\code{rows = c(..., stat = ".stat_group")}, in the order the groups are
+said), and each group's template has its own rows; a group with fewer
+rows leaves the rest empty, aligned row by row.  The groups split
+\strong{one record} --- the same analysis and the same keys; statistics of
+two analyses are two records, joined by the keys as always.
+
+\code{plan_digits()} takes the same keys, with the digits as the value.
+A value is \strong{one number}, for every token in that entry, or a
+vector \strong{named by statistic} --- a house rule is rarely one number.
+The two keys combine, which is the point of the verb:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_digits(continuous  = c(mean = 2, sd = 3, median = 2),
+            categorical = c(p = 1)) |>      # the house rule
+  plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
+}\if{html}{\out{</div>}}
+
+A value is the \strong{decimals}, or \code{"4s"} for \strong{4 significant digits} ---
+the token grammar's own distinction (\verb{\{mean:.4f\}} / \verb{\{mean:.4s\}}), not a
+second argument to learn:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_digits(continuous = c(mean = "4s", sd = "5s", n = 0))
+}\if{html}{\out{</div>}}
+
+A statistic the narrower entry says nothing about falls through to
+the wider one, so AGE's \code{median} stays at 2 above.  Digits only
+reach a token that left the question open (\code{{mean}}, or \verb{\{p:\\\%\}}):
+one that answered it (\verb{\{mean:.2f\}}) keeps its answer, so a template
+meant to be tuned is written open.
+
+A \strong{finished table} has no templates to fill --- a source that is
+already the table, or statistics laid out as rows
+(\code{plan_cells(stats = "rows")}) --- so there \code{plan_digits()} formats
+the numbers themselves, with \code{\link[=fmt_numeric]{fmt_numeric()}}: a key that names a
+\strong{column} formats that column, and \code{.rows} formats the value columns
+by the text of the label column:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_digits(.rows = c(N = 0, Mean = 1, SD = "3s"))
+}\if{html}{\out{</div>}}
+
+A key that reaches neither a variable nor a column is an error, not
+silence.
+
+For \code{plan_nest()}, one entry per nested variable: its name, and the
+variable and level its rows go under,
+\code{plan_nest(RACESUB = c(RACE = "Asian"))}.  The level is matched as the
+table shows it (the ARD's level: a code list's label).  The nested
+rows follow that level's row, one indent step deeper (the stub's
+\code{indent}, default 4), in the parent's group; their own heading is
+dropped, their order and text stay \code{plan_levels()}' and
+\code{plan_labels()}'.  The rows key that carries the variable
+(\code{table_plan(rows = c(group = "variable"))}) is what is read.
+
+For \code{plan_levels()} and \code{plan_labels()}, one entry per column or
+analysis variable: an order (\code{AGEGR1 = c("<65", "65-74")}), or
+the text values are printed as (\code{AGE = "Age (years)"}).  Both
+merge one \strong{key} at a time, so a later layer adds a variable
+without restating the rest --- which is the whole reason these
+two are layers and the roles are not.  A \code{plan_labels()} entry
+whose value is itself a named vector applies to that \strong{column}
+only: a shift table's \code{"0"} is \code{"Grade 0"} down the side and
+\code{"Baseline 0"} across the top.}
+
 \item{.drop_empty}{For \code{plan_levels()}: variables whose levels \strong{no record
 has} are not shown -- a level whose \code{n} is 0 (or missing) in every
 column, as an ARD made with a code list's full set of levels has
