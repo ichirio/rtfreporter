@@ -3111,8 +3111,12 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   ln <- .plan_label_name(plan)
   # a column that is not printed is not part of the stub either: the
   # page key and the grouping carrier are row keys that do their work
-  # without being read
-  v <- setdiff(c(rn, ln), c(.plan_hidden(plan, tbl), .plan_not_row_keys(plan)))
+  # without being read -- nor a BY page key, which as_rtftables() reads after the stub is built
+  # (#635); a kept plan_paginate_group() key is printed, as the stub's
+  # heading, since the pages are split before the stub
+  v <- setdiff(c(rn, ln), c(.plan_hidden(plan, tbl),
+                            .plan_hidden_by_verb(plan),
+                            .plan_merge(.plan_of(plan, "pages"))$page_by))
   v <- intersect(v, names(tbl))
   if (!length(v)) {
     .ard_stop(paste0(
@@ -3157,9 +3161,12 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
 # The row keys the plan names but does not print as a row level: the page
 # keys and what plan_hide() hides.
 .plan_not_row_keys <- function(plan) {
-  unique(c(.plan_page_keys(plan),
-           unlist(lapply(.plan_of(plan, "hide"), `[[`, "drop_cols"),
-                  use.names = FALSE)))
+  unique(c(.plan_page_keys(plan), .plan_hidden_by_verb(plan)))
+}
+
+# What plan_hide() hides.
+.plan_hidden_by_verb <- function(plan) {
+  unlist(lapply(.plan_of(plan, "hide"), `[[`, "drop_cols"), use.names = FALSE)
 }
 
 # Whether plan_paginate_group() is handed to as_rtftables() as `page_by`
