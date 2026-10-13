@@ -12,7 +12,8 @@ normalize_ard(
   drop_contexts = c("attributes", "total_n"),
   drop_key_variables = FALSE,
   stack = NULL,
-  stack_sep = " / "
+  stack_sep = " / ",
+  stack_nest = FALSE
 )
 }
 \arguments{
@@ -75,6 +76,13 @@ row is a constant stratum (\code{ALL = "All"}) stacked first, which the ARD
 and the ARS then state.}
 
 \item{stack_sep}{What joins a crossed layer's names and levels: \code{" / "}.}
+
+\item{stack_nest}{\code{TRUE} puts a crossed layer's outer levels in a key of
+their own, \verb{<name>_outer} (\code{65-80}), and its innermost in \verb{<name>_level}
+(\code{F}), so \code{rows = c(grp = "subgroup", outer = "subgroup_outer", lvl = "subgroup_level")} with \code{\link[=plan_stub]{plan_stub()}} prints \verb{Age Group by Sex}, \code{65-80}
+under it, \code{F} under that --- while a single layer, whose outer key is
+\code{NA}, keeps its two levels with no empty heading.  \code{FALSE} (default):
+the joined form, \code{65-80 / F}.}
 }
 \value{
 A data frame with one row per ARD statistic: the key columns, the

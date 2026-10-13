@@ -1,5 +1,11 @@
 # rtfreporter (development version)
 
+- **`normalize_ard(stack_nest = TRUE)`: a crossed layer's outer level as a
+  heading row** (#623).  The outer levels go to a key of their own,
+  `<name>_outer`, the innermost to `<name>_level`, so with `plan_stub()` the
+  rows read `Age Group by Sex`, `65-80`, `F`; a single layer keeps its two
+  levels with no empty heading.  `FALSE` (default) is the joined form.
+
 - **`plan_compare()`: a test's p-value, a difference and its CI as columns on
   the summary's row** (#625).  cardx's tests write the column key with no
   value, so `table_plan(cols = )` dropped them.  `plan_compare(p =

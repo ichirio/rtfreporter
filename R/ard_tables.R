@@ -1318,6 +1318,13 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   row is a constant stratum (`ALL = "All"`) stacked first, which the ARD
 #'   and the ARS then state.
 #' @param stack_sep What joins a crossed layer's names and levels: `" / "`.
+#' @param stack_nest `TRUE` puts a crossed layer's outer levels in a key of
+#'   their own, `<name>_outer` (`65-80`), and its innermost in `<name>_level`
+#'   (`F`), so `rows = c(grp = "subgroup", outer = "subgroup_outer", lvl =
+#'   "subgroup_level")` with [plan_stub()] prints `Age Group by Sex`, `65-80`
+#'   under it, `F` under that --- while a single layer, whose outer key is
+#'   `NA`, keeps its two levels with no empty heading.  `FALSE` (default):
+#'   the joined form, `65-80 / F`.
 #'
 #' @section Working on the result before [widen_ard()]:
 #' The result is a plain data frame; reshaping it in between is the point of
@@ -1381,7 +1388,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
                           overall = NULL,
                           drop_contexts = c("attributes", "total_n"),
                           drop_key_variables = FALSE, stack = NULL,
-                          stack_sep = " / ") {
+                          stack_sep = " / ", stack_nest = FALSE) {
   ard <- x
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
@@ -1585,7 +1592,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   # Parallel subgroups (SEX; AGEGR1), each its own key column above, as one
   # pair of keys: the variable's name and its level, whatever group slot
   # each came in (#619).
-  if (length(stack)) d <- .ard_stack_keys(d, stack, hierarchy, stack_sep)
+  if (length(stack)) d <- .ard_stack_keys(d, stack, hierarchy, stack_sep, stack_nest)
 
   d$.kind <- .ard_kind(d)
 
@@ -1674,7 +1681,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 # `<name>_level` (its level, "65-80 / F").  A row goes to the layer whose
 # variables are exactly the stacked variables it has; the variables' own
 # columns stay.
-.ard_stack_keys <- function(d, stack, hierarchy = character(), sep = " / ") {
+.ard_stack_keys <- function(d, stack, hierarchy = character(), sep = " / ",
+                            nest = FALSE) {
   layer_ok <- function(v) is.character(v) && length(v) >= 1L && !anyNA(v) &&
     all(nzchar(v))
   if (!is.list(stack) || is.null(names(stack)) || !all(nzchar(names(stack))) ||
@@ -1730,6 +1738,12 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     var <- rep(NA_character_, nrow(d))
     lvl <- rep(NA_character_, nrow(d))
     lv_order <- character(0)
+    # stack_nest = TRUE: a crossed layer's outer levels in a key of their
+    # own, `<name>_outer`, its innermost in `<name>_level`
+    outer <- rep(NA_character_, nrow(d))
+    inner <- rep(NA_character_, nrow(d))
+    out_order <- character(0)
+    in_order <- character(0)
     for (j in seq_along(layers)) {
       l <- layers[[j]]
       hit <- !is.na(which_layer) & which_layer == j
@@ -1746,10 +1760,28 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
       grid <- do.call(expand.grid, c(rev(own), stringsAsFactors = FALSE))
       prod <- do.call(paste, c(rev(as.list(grid)), sep = sep))
       lv_order <- c(lv_order, prod[prod %in% lvl[hit]])
+      k <- length(l)
+      inner[hit] <- parts[[k]]
+      in_order <- c(in_order, own[[k]])
+      if (k > 1L) {
+        outer[hit] <- do.call(paste, c(parts[-k], sep = sep))
+        og <- do.call(expand.grid, c(rev(own[-k]), stringsAsFactors = FALSE))
+        op <- do.call(paste, c(rev(as.list(og)), sep = sep))
+        out_order <- c(out_order, op[op %in% outer[hit]])
+      }
     }
     names_used <- vapply(layers, paste, "", collapse = sep)
     d[[out[1L]]] <- .ard_as_factor(var, names_used[names_used %in% var])
-    d[[out[2L]]] <- .ard_as_factor(lvl, unique(lv_order))
+    if (isTRUE(nest)) {
+      oc <- paste0(nm, "_outer")
+      if (oc %in% names(d)) {
+        .ard_stop(sprintf("`stack_nest`: '%s' is a column already.", oc))
+      }
+      d[[oc]] <- .ard_as_factor(outer, unique(out_order))
+      d[[out[2L]]] <- .ard_as_factor(inner, unique(in_order))
+    } else {
+      d[[out[2L]]] <- .ard_as_factor(lvl, unique(lv_order))
+    }
   }
   d
 }
