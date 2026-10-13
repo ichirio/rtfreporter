@@ -2987,3 +2987,40 @@ test_that("plan_total() reads the body's analyses only: a test is no Total and l
   expect_identical(tab_of(cards::bind_ard(body, cardx::ard_stats_chisq_test(adsl, by = TRT, variables = SEX))),
                    tab_of(body))
 })
+
+test_that("plan_compare(): what a table does not use -- other statistics, a second test, overall rows (#625)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  two <- adsl[adsl$TRT != "Xanomeline Low Dose", ]
+  skip_if_not_installed("dplyr")
+  # cards::bind_ard() refuses two tests of one variable (their statistic
+  # names repeat); bound as data frames they still can meet here
+  ard <- dplyr::bind_rows(
+    cards::ard_summary(two, by = TRT, variables = AGE),
+    cards::ard_summary(two, variables = AGE),                        # overall rows, no plan_total()
+    cardx::ard_stats_t_test(two, by = TRT, variables = AGE),
+    cardx::ard_stats_wilcox_test(two, by = TRT, variables = AGE))    # a second test of AGE
+  d <- normalize_ard(ard)
+  wide <- function(compare) suppressMessages(widen_ard(
+    d, cols = "TRT", rows = c(grp = "variable"), label = NA,
+    cells = "{mean:.1f}", compare = compare, notes = "attr"))
+  # two tests, one column reading both: said, not one chosen
+  expect_error(wide(list(cols = list(p = "{p.value:.3f}"))), "Split them with `by =`")
+  # the column keyed by context reads the t-test; the Wilcoxon is left, and noted
+  w <- wide(list(cols = list(p = c(stats_t_test = "{p.value:.3f}"))))
+  tt <- as.data.frame(cardx::ard_stats_t_test(two, by = TRT, variables = AGE))
+  expect_identical(w$p, sprintf("%.3f", unlist(tt$stat[tt$stat_name == "p.value"])))
+  ig <- attr(w, "ard_ignored")
+  expect_true(any(ig$context == "stats_wilcox_test" &
+                    grepl("comparison record no row or column", ig$reason)))
+  # the t-test's other statistics (statistic, parameter, method ...) are not read
+  expect_identical(names(w), c("grp", "Placebo", "Xanomeline High Dose", "p"))
+  # the overall rows are no comparison: left out as before, with the same note
+  expect_true(any(ig$context == "summary" & grepl("no value for a `cols` key", ig$reason)))
+  # one column each test, side by side
+  w2 <- wide(list(cols = list(t = c(stats_t_test = "{p.value:.3f}"),
+                              wilcoxon = c(stats_wilcox_test = "{p.value:.3f}"))))
+  expect_false(anyNA(w2$t)); expect_false(anyNA(w2$wilcoxon))
+})

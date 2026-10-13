@@ -8,8 +8,11 @@
   place those records -- an analysis the body does not have -- on their
   variable's block: its level's row, else the block's first row.  `by =`
   gives one column a comparison; `position =` puts them first or last.
-  Nothing is computed: the numbers are the ARD's.  `widen_ard(compare = )`
-  is the same without a plan.
+  Nothing is computed: the numbers are the ARD's.  A column keyed by
+  context (`p = c(stats_t_test = "{p.value:.3f}")`) picks one test of
+  several and leaves the others, noted; two tests one column reads are an
+  error, never one picked.  `widen_ard(compare = )` is the same without a
+  plan.
 - `plan_total()` reads only the body's analyses: with a test in the ARD it
   took the test's record for an overall row and left an empty row.
 

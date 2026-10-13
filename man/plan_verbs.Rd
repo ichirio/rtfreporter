@@ -182,8 +182,13 @@ kind (\code{continuous} / \code{categorical}), a stat group of
 
 \code{plan_compare()} takes the \strong{comparison columns}, each named (the
 column's name) and each what \code{plan_cells()} takes for one cell: a
-template with guards, or a map keyed by context / kind / \code{default}.
-It reads the ARD's comparison records --- the column key with \strong{no
+template with guards, or a map keyed by context / kind / \code{default}
+--- here a named vector is that map, since a column is one cell with
+no rows to label: \code{p = c(stats_t_test = "{p.value:.3f}")} reads the
+t-test and leaves a Wilcoxon of the same variable (noted, as every
+record no column takes); two tests one column reads both of are an
+error, never one picked.  A template reads only the statistics it
+names.  It reads the ARD's comparison records --- the column key with \strong{no
 value}, in an analysis the body does not have: cardx's
 \code{ard_stats_t_test()}, \code{ard_stats_chisq_test()}, \code{ard_stats_fisher_test()},
 \code{ard_stats_kruskal_test()}, \code{ard_stats_oneway_test()},

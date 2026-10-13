@@ -2616,6 +2616,12 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     .ard_stop(paste0("plan_compare(): every column has a name of its own: ",
                      "`plan_compare(p = \"{p.value:.3f}\")`."))
   }
+  # A column is one cell, with no rows to label, so a named vector is a map
+  # (`c(stats_t_test = "{p.value:.3f}", default = ...)`): keyed by context,
+  # kind or `default`, it picks one test of several and leaves the others.
+  cols <- lapply(cols, function(m) {
+    if (is.character(m) && !is.null(names(m)) && all(nzchar(names(m)))) as.list(m) else m
+  })
   pos <- x$position %||% "last"
   if (!is.character(pos) || length(pos) != 1L || !pos %in% c("last", "first")) {
     .ard_stop("plan_compare(position = ) is \"last\" or \"first\".")
