@@ -1934,6 +1934,13 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   keyed by a group's name (looked up after the analysis variable).  A
 #'   statistic in no group is not read.  [plan_stat_groups()] is the plan's
 #'   spelling.  `NULL` (default): no groups.
+#' @param compare Columns read from the ARD's comparison records --- the
+#'   column key with no value, in an analysis the body does not have (a
+#'   test's p-value, a difference and its CI) --- put on the row of the
+#'   record's variable: `list(cols = list(p = "{p.value:.3f}"), by = NULL,
+#'   position = "last")`.  [plan_compare()] is the plan's spelling, and its
+#'   documentation says where a record goes.  `NULL` (default): none, and
+#'   the records are left out as rows with no value of the column key.
 #' @param stats `"cells"` (default) builds character cells from `cells`.
 #'   `"rows"` ignores `cells` and gives every statistic its own row, labelled
 #'   with `stat_label` -- the shape a PK concentration table wants.

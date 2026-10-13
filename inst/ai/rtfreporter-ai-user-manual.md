@@ -889,6 +889,7 @@ p_ae <- ard_ae |>
 | Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
 | A page per value | `plan_paginate_group(col, keep)` |
+| A p-value column; difference and CI columns (the test / difference records in the ARD: `cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_kruskal_test()` ...) | `plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))`, `plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})", p = "{p.value:.3f}")`; `by = "COMPARISON"` for one column a comparison. Placed on the variable's first row (or its level's row). Never compute a p-value in R and paste it in; never `ard_stats_aov()` (no variable to place it on) |
 | A section per arm with "Treatment: X (N=xx)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})")` + `rtf_tables(auto_section = TRUE)`; `{n}` is the arm's own tabulation in the ARD (`bind_ard(cards::ard_tabulate(adsl, variables = TRT01A), ...)`), never pulled by hand |
 | Subgroups (SEX; AGEGR1; ...) one under another, whatever group slot they came in | `normalize_ard(stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))` + `rows = c(grp1 = "subgroup", grp2 = "subgroup_level")`; `plan_labels(subgroup = c(SEX = "Sex"))`. Never `group2` / `group2_level` as keys. A crossed subgroup is a layer: `stack = list(subgroup = list("SEX", "AGEGR1", c("AGEGR1", "SEX")))` (rows `AGEGR1 / SEX` | `65-80 / F`), or `stack = list(subgroup = c("group2", "group3"))` to take the layers from the strata slots; an overall row is a constant stratum `ALL = "All"` |
 | A section per arm with a row budget inside | `plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe", heading = "Treatment: {value} (N={n})")` + `plan_hide("arm")` |
@@ -1006,7 +1007,7 @@ adds an "Any" row.
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens` `plan_n_candidates`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
-`plan_hide` `plan_nest` `plan_total` `plan_stat_groups` `plan_sort` `plan_blanks` `plan_paginate_rows`
+`plan_hide` `plan_nest` `plan_total` `plan_stat_groups` `plan_compare` `plan_sort` `plan_blanks` `plan_paginate_rows`
 `plan_paginate_cols` `plan_style` `plan_columns` `plan_col_header`
 `plan_listing` `plan_titles` `plan_footnotes` `plan_after`
 

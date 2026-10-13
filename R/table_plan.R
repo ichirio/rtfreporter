@@ -815,6 +815,30 @@ print.table_plan <- function(x, ...) {
 #'   kind (`continuous` / `categorical`), a stat group of
 #'   `plan_stat_groups()` or `default`.
 #'
+#'   `plan_compare()` takes the **comparison columns**, each named (the
+#'   column's name) and each what `plan_cells()` takes for one cell: a
+#'   template with guards, or a map keyed by context / kind / `default`.
+#'   It reads the ARD's comparison records --- the column key with **no
+#'   value**, in an analysis the body does not have: cardx's
+#'   `ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_fisher_test()`,
+#'   `ard_stats_kruskal_test()`, `ard_stats_oneway_test()`,
+#'   `ard_stats_prop_test()` --- and puts each on its **variable's block**:
+#'   the row of its level when it has one, else the block's first row as the
+#'   table is sorted (the variable's heading row under `plan_stub()`).
+#'   Nothing is computed; the p-value, the difference and its CI are the
+#'   ARD's.  A test whose record names no variable (`ard_stats_aov()`'s
+#'   term) has no row; use `ard_stats_oneway_test()`.
+#'
+#'   ```r
+#'   plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))
+#'   plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})",
+#'                p = "{p.value:.3f}")
+#'   ```
+#'
+#'   The columns have no population: the header's `{col}` / `{n}` and its
+#'   short rows leave them alone, so the header names them
+#'   (`rtf_col_header(c(..., "p-value"))`).
+#'
 #'   `plan_stat_groups()` takes the groups, each a name and the
 #'   statistics in it (`n = "N", orr_ci = c("n", "estimate", "conf.low",
 #'   "conf.high")`).  Each row of the ARD gets its group in the key
@@ -1246,6 +1270,15 @@ print.table_plan <- function(x, ...) {
 #' @param rounding For `plan_digits()`: the tie-breaking family for the
 #'   run, as `widen_ard(rounding = )` takes it.  Last wins, like every
 #'   other layer.
+#' @param .plan For `plan_compare()`: the plan, as `plan` is for the
+#'   others --- named so that a column called `p` is not taken for it
+#'   (an argument before `...` matches by its first letters).  The pipe
+#'   passes it by position.
+#' @param by For `plan_compare()`: the column that splits the comparison
+#'   records into columns, one a level (`by = "COMPARISON"`: each active arm
+#'   against placebo, the ARD made by `ard_strata(.strata = COMPARISON)` over
+#'   two-arm subsets).  With several columns in `...` they are named
+#'   `<level>____<column>`.  `NULL`: one comparison a variable.
 #' @param label,position For `plan_total()`: the heading of the **Total
 #'   column** (`"Total"`) and where it goes among the column key's values
 #'   (`"last"`, `"first"`).  Its cells are cards' own overall rows --- the
@@ -1255,7 +1288,11 @@ print.table_plan <- function(x, ...) {
 #'   `cards::ard_stack(.overall = TRUE)`) --- so the ARD keeps no `ARM`
 #'   value the data does not have.  Its `{n}` in the column header is the
 #'   study total the ARD states (the column key tabulated on its own, or
-#'   `cards::ard_total_n()`).  One column key only.
+#'   `cards::ard_total_n()`).  One column key only.  Only the body's
+#'   analyses are read: a test or a difference has no column key either,
+#'   and is `plan_compare()`'s.  For `plan_compare()`, `position` is where
+#'   its columns go: after the column key's (`"last"`) or before them
+#'   (`"first"`).
 #'
 #' @return The plan, with one more layer.
 #'
@@ -1269,6 +1306,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_total(label, position)`: a Total column from the ARD's overall rows. Goes to [widen_ard()]: those rows as one more value of the column key, and its place in `levels`; the header's `{n}` there is the study total.
 #'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
 #' * `plan_stat_groups(...)`: the statistics in named groups. Goes to [widen_ard()]: `stat_groups` (the key `.stat_group`).
+#' * `plan_compare(..., by, position)`: columns read from comparison records (a test's p-value, a difference and its CI). Goes to [widen_ard()]: `compare`.
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
 #' * `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: how cells look. Goes to [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition.

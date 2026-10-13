@@ -20,7 +20,8 @@ widen_ard(
   sort_stat = NULL,
   na = NA_character_,
   notes = TRUE,
-  stat_groups = NULL
+  stat_groups = NULL,
+  compare = NULL
 )
 }
 \arguments{
@@ -232,6 +233,13 @@ one column, its rate and interval in the next), and a \code{cells} map may be
 keyed by a group's name (looked up after the analysis variable).  A
 statistic in no group is not read.  \code{\link[=plan_stat_groups]{plan_stat_groups()}} is the plan's
 spelling.  \code{NULL} (default): no groups.}
+
+\item{compare}{Columns read from the ARD's comparison records --- the
+column key with no value, in an analysis the body does not have (a
+test's p-value, a difference and its CI) --- put on the row of the
+record's variable: \code{list(cols = list(p = "{p.value:.3f}"), by = NULL, position = "last")}.  \code{\link[=plan_compare]{plan_compare()}} is the plan's spelling, and its
+documentation says where a record goes.  \code{NULL} (default): none, and
+the records are left out as rows with no value of the column key.}
 }
 \value{
 A data frame: the \code{rows} columns, the label column, then one column
