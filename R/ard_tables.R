@@ -2005,10 +2005,20 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'     \item{a column}{any row key or the label column, by its output name.}
 #'     \item{a statistic}{that statistic totalled across the spread columns --
 #'       what a descending-frequency AE table sorts on.}
+#'     \item{`"<stat>[<col>]"`}{that statistic in **one** spread column:
+#'       `"-n[Total]"`, `"-n[Placebo]"` (a level of the outer column key
+#'       takes its columns, `Placebo____F` and `Placebo____M`).}
+#'     \item{`"<stat>@<key>"`}{the statistic of the **group's own** row ---
+#'       the row key's summary, its shallowest row --- carried to every row
+#'       of the group: `"-n@soc"` orders the SOCs by their own count and
+#'       keeps each SOC's PTs with it.  Both at once: `"-n@soc[Total]"`.
+#'       An overall row keeps its own number.}
 #'   }
 #'   So `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of
 #'   an AE table's row order, and needs neither `sort_stat` nor an `arrange()`
-#'   afterwards.
+#'   afterwards; `c(".overall", "-n@soc", "soc", ".depth", "-n")` puts the
+#'   SOCs in descending order of their own count.  Ties go to the keys that
+#'   follow.
 #' @param sep Separator pasted between multiple `cols` keys.
 #' @param rounding Tie-breaking rule for `{x:.1f}`-style tokens: `"r"` or
 #'   `"sas"`.  `NULL`, the default, reads `getOption("rtfreporter.rounding")`
@@ -2464,7 +2474,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   }
 
   if (is.character(sort) && length(sort)) {
-    out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref), ,
+    out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref,
+                               colkey = colkey, sep = sep), ,
                drop = FALSE]
   } else if ((length(rowname_cols) ||
               (!is.null(label_out) && is.factor(out[[label_out]]))) &&
@@ -2517,15 +2528,24 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 #   <column>    any row key or the label column, by its output name
 #   <statistic> a statistic's total across the spread columns -- what a
 #               descending-frequency AE table sorts on
+#   <stat>[<col>]  that statistic in one spread column only (`-n[Total]`,
+#               `-n[Placebo]`, a level of the outer column key)
+#   <stat>@<key>   the statistic of the group's own summary row, carried to
+#               every row of the group (`-n@group1`: SOCs by their own
+#               count, their PTs with them); both: `-n@group1[Total]`
 #
 # A statistic is recognised last, so a column of that name wins; that is the
 # safe way round, since the column is what the caller can see in the result.
-.ard_sort_order <- function(spec, out, base, d, rowrefs, labref) {
+.ard_sort_order <- function(spec, out, base, d, rowrefs, labref,
+                            colkey = NULL, sep = "____") {
   keys <- list()
   for (s in spec) {
     desc <- substr(s, 1L, 1L) == "-"
     nm   <- if (desc) substring(s, 2L) else s
+    sc <- if (!nm %in% names(out)) .ard_sort_scoped(nm)
     v <- if (nm %in% names(out)) out[[nm]]
+         else if (!is.null(sc)) .ard_sort_scoped_value(sc, s, base, d, rowrefs,
+                                                       labref, colkey, sep)
          else if (nm %in% c(".overall", ".depth")) base[[nm]]
          else if (nm %in% d$stat_name) {
            tot <- tapply(suppressWarnings(as.numeric(d$stat[d$stat_name == nm])),
@@ -2544,6 +2564,65 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     } else v
   }
   do.call(order, keys)
+}
+
+# `-n@group1[Total]`: the statistic, the row key whose group's own row it is
+# read from, the spread column it is read from -- NULL when the text has
+# neither `@` nor `[...]`, so every sort written before reads as it did.
+.ard_sort_scoped <- function(nm) {
+  m <- regmatches(nm, regexec("^([^@[]+)(@([^@[]+))?([[](.+)[]])?$", nm))[[1L]]
+  if (!length(m) || (!nzchar(m[3L]) && !nzchar(m[5L]))) return(NULL)
+  list(stat = m[2L], key = if (nzchar(m[4L])) m[4L], col = if (nzchar(m[6L])) m[6L])
+}
+
+.ard_sort_scoped_value <- function(sc, s, base, d, rowrefs, labref, colkey, sep) {
+  if (!sc$stat %in% d$stat_name) {
+    .ard_stop(sprintf("`sort`: '%s' -- '%s' is not a statistic of this ARD.",
+                      s, sc$stat))
+  }
+  sel <- d$stat_name == sc$stat
+  if (!is.null(sc$col)) {
+    hit <- !is.na(colkey) & (colkey == sc$col |
+                               startsWith(colkey, paste0(sc$col, sep)))
+    if (!any(hit)) {
+      .ard_stop(sprintf(paste0("`sort`: '%s' -- no spread column '%s'.
+",
+                               "  Columns: %s"), s, sc$col,
+                        paste(sQuote(unique(colkey)), collapse = ", ")))
+    }
+    sel <- sel & hit
+  }
+  tot <- tapply(suppressWarnings(as.numeric(d$stat[sel])),
+                rid_for_stat(d[sel, , drop = FALSE], rowrefs, labref, sc$stat),
+                sum, na.rm = TRUE)
+  v <- as.numeric(tot[match(base$.rid, names(tot))])
+  if (is.null(sc$key)) return(v)
+  outs <- vapply(rowrefs, function(r) r$out, "")
+  p <- match(sc$key, outs)
+  if (is.na(p)) {
+    .ard_stop(sprintf(paste0("`sort`: '%s' -- '%s' is not a row key.
+",
+                             "  Row keys: %s"), s, sc$key,
+                      paste(sQuote(outs), collapse = ", ")))
+  }
+  g <- as.character(base[[sc$key]])
+  # the group's own row: its shallowest, or the one whose later keys are empty
+  later <- outs[-seq_len(p)]
+  empty <- if (length(later)) Reduce(`&`, lapply(later, function(k) {
+    x <- as.character(base[[k]]); is.na(x) | !nzchar(x)
+  })) else rep(TRUE, nrow(base))
+  dep <- base$.depth
+  own <- if (!all(is.na(dep))) {
+    m <- tapply(dep, g, function(z) suppressWarnings(min(z, na.rm = TRUE)))
+    !is.na(dep) & dep == m[g]
+  } else empty
+  if (!is.null(base$.overall)) own <- own & !(base$.overall %in% TRUE)
+  ownv <- tapply(v[own], g[own], function(z) z[!is.na(z)][1L])
+  out <- as.numeric(ownv[g])
+  # an overall row ("Any TEAE") keeps its own number
+  ov <- base$.overall %in% TRUE
+  out[ov] <- v[ov]
+  out
 }
 
 # helper for sort_stat: rebuild the row identity on the long normalized frame

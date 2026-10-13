@@ -26,6 +26,12 @@
   `plan_paginate_rows(page_by = , heading = )` does the same for BY pages
   with a row budget inside (a page per value refuses one).
 
+- **Sort keys `<stat>@<key>` and `<stat>[<col>]`** (#619, the tflplanner
+  builder's request).  `-n@soc` orders the SOCs by their own count and keeps
+  each SOC's PTs with it; `-n[Total]` / `-n[Placebo]` read one spread
+  column; `-n@soc[Total]` both.  A plain `-n` sums every spread column, as
+  before; ties go to the keys that follow.
+
 - **`normalize_ard(stack = )`: parallel subgroups as one pair of keys,
   whatever group slot each came in** (#619).  `stack = list(subgroup =
   c("ALL", "SEX", "AGEGR1"))` adds `subgroup` (the variable) and

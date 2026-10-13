@@ -2867,3 +2867,42 @@ test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, c
   # the slots there hold the arm too: they do not say what the subgroups are
   expect_error(normalize_ard(ard, stack = list(subgroup = c("group1", "group2"))), "another slot")
 })
+
+test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its rows, one column's count (#619)", {
+  skip_if_not_installed("cards")
+  adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:4], ]
+  ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,
+                                       denominator = cards::ADSL, id = USUBJID)
+  d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"))
+  tab <- function(...) {
+    t <- suppressMessages(plan_apply(
+      table_plan(d, cols = "TRTA", rows = c(soc = "AESOC", pt = "AEDECOD"), label = NA) |>
+        plan_sort(...) |> plan_cells("{n}", notes = FALSE), "table"))
+    as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  }
+  arms <- unique(as.character(cards::ADSL$TRTA))
+  num <- function(t, cols = arms) rowSums(sapply(t[cols], function(x) as.numeric(x)), na.rm = TRUE)
+  t1 <- tab("-n@soc", "soc", ".depth", "-n")
+  soc_rows <- is.na(t1$pt)
+  # SOCs by their own count, descending; each SOC's PTs right under it, by count
+  expect_true(all(diff(num(t1)[soc_rows]) <= 0))
+  runs <- rle(as.character(t1$soc))$values
+  expect_identical(runs, unique(runs))
+  for (s in unique(t1$soc)) {
+    blk <- t1[t1$soc == s, ]
+    expect_true(is.na(blk$pt[1L]))
+    expect_true(all(diff(num(blk)[-1L]) <= 0))
+  }
+  # one column only
+  t2 <- tab("-n@soc[Placebo]", "soc", ".depth", "-n[Placebo]")
+  expect_true(all(diff(num(t2, "Placebo")[is.na(t2$pt)]) <= 0))
+  for (s in unique(t2$soc)) {
+    blk <- t2[t2$soc == s, ]
+    expect_true(all(diff(num(blk, "Placebo")[-1L]) <= 0))
+  }
+  # what is not there is said
+  expect_error(tab("-n@nope"), "not a row key")
+  expect_error(tab("-n[Nope]"), "no spread column")
+  # a plain -n sorts as it did
+  expect_identical(tab("soc", ".depth", "-n"), tab("soc", ".depth", "-n"))
+})

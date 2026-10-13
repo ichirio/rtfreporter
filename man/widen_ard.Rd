@@ -177,10 +177,20 @@ under it.}
 \item{a column}{any row key or the label column, by its output name.}
 \item{a statistic}{that statistic totalled across the spread columns --
 what a descending-frequency AE table sorts on.}
+\item{\code{"<stat>[<col>]"}}{that statistic in \strong{one} spread column:
+\code{"-n[Total]"}, \code{"-n[Placebo]"} (a level of the outer column key
+takes its columns, \code{Placebo____F} and \code{Placebo____M}).}
+\item{\code{"<stat>@<key>"}}{the statistic of the \strong{group's own} row ---
+the row key's summary, its shallowest row --- carried to every row
+of the group: \code{"-n@soc"} orders the SOCs by their own count and
+keeps each SOC's PTs with it.  Both at once: \code{"-n@soc[Total]"}.
+An overall row keeps its own number.}
 }
 So \code{sort = c(".overall", "soc", ".depth", "-n", "term")} is the whole of
 an AE table's row order, and needs neither \code{sort_stat} nor an \code{arrange()}
-afterwards.}
+afterwards; \code{c(".overall", "-n@soc", "soc", ".depth", "-n")} puts the
+SOCs in descending order of their own count.  Ties go to the keys that
+follow.}
 
 \item{sep}{Separator pasted between multiple \code{cols} keys.}
 
