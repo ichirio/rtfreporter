@@ -3099,3 +3099,25 @@ test_that("normalize_ard(stack_nest = TRUE): a crossed layer's outer level as a 
   expect_error(normalize_ard(transform(as.data.frame(normalize_ard(ard)), subgroup_outer = 1), stack = layers,
                              stack_nest = TRUE), "a column already")
 })
+
+test_that("plan_col_header(values = list(n = TRUE)) reads stacked keys on the columns: each layer's own tabulation (#622)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = c(SEX, AGEGR1)),
+                         cards::ard_tabulate(adsl, by = SEX, variables = DISCONFL),
+                         cards::ard_tabulate(adsl, by = AGEGR1, variables = DISCONFL))
+  d <- normalize_ard(ard, stack = list(subgroup = c("SEX", "AGEGR1")))
+  p <- table_plan(d, cols = c("subgroup", "subgroup_level"), rows = c(grp = "variable"),
+                  label = "variable_level") |>
+    plan_cells("{n}", notes = FALSE) |>
+    plan_col_header(values = list(n = TRUE),
+                    header = rtf_col_header(c("", "", "{col2}"), c("", "", "(N={n})")))
+  tok <- plan_header_tokens(p)
+  n_of <- function(k) tok$text[tok$token == sprintf("{n:%s}", k)]
+  for (lv in names(table(adsl$SEX))) {
+    expect_identical(n_of(paste0("SEX____", lv)), paste("=", as.integer(table(adsl$SEX)[[lv]])))
+  }
+  for (lv in names(table(adsl$AGEGR1))) {
+    expect_identical(n_of(paste0("AGEGR1____", lv)), paste("=", as.integer(table(adsl$AGEGR1)[[lv]])))
+  }
+})

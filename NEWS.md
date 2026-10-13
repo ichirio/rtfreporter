@@ -1,5 +1,11 @@
 # rtfreporter (development version)
 
+- **The header's `{n}` for stacked keys on the columns** (#622).  With
+  `cols = c("subgroup", "subgroup_level")` (`normalize_ard(stack = )`), each
+  column's population is its layer's own tabulation: the `SEX____F` column's
+  is SEX's count at F.  A crossed layer's is not read (NA, with the usual
+  warning).
+
 - **`normalize_ard(stack_nest = TRUE)`: a crossed layer's outer level as a
   heading row** (#623).  The outer levels go to a key of their own,
   `<name>_outer`, the innermost to `<name>_level`, so with `plan_stub()` the

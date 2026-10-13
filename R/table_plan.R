@@ -1219,7 +1219,12 @@ print.table_plan <- function(x, ...) {
 #'      `cols[1..k-1]`: cards tabulates each `.by` variable on its own,
 #'      so `ard_stack(.by = c(TRT, SEX))` states the arm but not the arm
 #'      x sex cell --- bind `cards::ard_tabulate(adsl, by = TRT,
-#'      variables = SEX)` to state that;
+#'      variables = SEX)` to state that.  A **stacked key**
+#'      ([normalize_ard()]'s `stack`) on the columns, `cols = c("subgroup",
+#'      "subgroup_level")`, is tabulated as its layer's variable: the
+#'      `SEX____F` column's population is SEX's own count at F
+#'      (`cards::ard_tabulate(adsl, variables = SEX)`); a crossed layer's is
+#'      not read;
 #'   3. an analysis summary's `N` only where it is a denominator by
 #'      construction (a hierarchical summary, a percentage of the
 #'      `denominator =` data) or where **two or more different variables
@@ -3173,7 +3178,12 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
       got <<- c(got, x)
     }
     if (one_sent) add(.plan_n_unique(st, key, at & sent & sn %in% "N"))
-    part <- .plan_n_partition(d, cols, k, key, at & own & v %in% cols[k],
+    # a stacked key (normalize_ard(stack = )) is tabulated as its layer's
+    # variable: `subgroup_level` F under `subgroup` SEX is SEX's own count
+    kvar <- if (k > 1L && identical(cols[k], paste0(cols[k - 1L], "_level"))) {
+      v == as.character(d[[cols[k - 1L]]])
+    } else v %in% cols[k]
+    part <- .plan_n_partition(d, cols, k, key, at & own & kvar %in% TRUE,
                               sn, st, sep)
     # the key tabulated on its own states the table's population too:
     # its N is what the columns add up to (ard_stack(.by = ) says 254)
