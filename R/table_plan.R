@@ -4396,7 +4396,9 @@ plan_n_candidates <- function(plan) {
 #'   in the order declared); `layers` (by kind, the merged fields; for
 #'   `after` and `restyle` one entry per call); `cells` (the cell
 #'   templates, each parsed into its label rows and template chains ---
-#'   `NULL` when the statistics are rows); `columns` (`names`, `spread`,
+#'   `NULL` when the statistics are rows); `compare` (plan_compare()'s
+#'   columns, each `column`, `context` and its parsed `entry`, with `by`
+#'   and `position`; `NULL` without one); `columns` (`names`, `spread`,
 #'   `page_names`, `widths`); `header` (`source`: `"cells"` for a header
 #'   given as cell rows, `"resolved"` for one the plan built; `cells`: the
 #'   header as cell rows, a data frame; `n_text`: the `{n}` scope as text,
@@ -4453,6 +4455,24 @@ plan_layers <- function(plan) {
         NA_character_,
       entry = .ard_cell_entry(cm[[k]])))
   }
+  # plan_compare(): its columns, parsed as the cells are
+  compare <- NULL
+  cs <- s$compare
+  if (!is.null(cs)) {
+    rows <- list()
+    for (nm in names(cs$cols)) {
+      m <- cs$cols[[nm]]
+      is_map <- is.list(m) && !inherits(m, "cell_rows") &&
+        any(nzchar(names(m) %||% ""))
+      if (!is_map) m <- list(default = m)
+      for (k in names(m)) {
+        rows[[length(rows) + 1L]] <- list(
+          column = nm, context = if (identical(k, "default")) NA_character_ else k,
+          entry = .ard_cell_entry(m[[k]]))
+      }
+    }
+    compare <- list(cols = rows, by = cs$by, position = cs$position)
+  }
   hd <- layers$header
   hn <- .plan_header_n(hd)
   header <- list(source = NULL, cells = NULL, n_text = .plan_scope_text(hn),
@@ -4476,7 +4496,7 @@ plan_layers <- function(plan) {
   }
   list(data = plan$data, roles = plan$roles, label = .plan_label_name(plan),
        group_col = .plan_group_col(plan), declared = kinds, layers = layers,
-       cells = cells,
+       cells = cells, compare = compare,
        columns = list(names = pnames, spread = spread, page_names = page_names,
                       widths = seen$widths %||% first$col_rel_width),
        header = header, pages = pages)
