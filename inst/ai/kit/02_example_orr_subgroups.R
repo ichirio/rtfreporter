@@ -43,9 +43,10 @@ tbl_plan <- ard |>
               estimate == 1 ~ "{n:.0f} (100)",
               "{n:.0f} ({estimate:.1f%})"),
       "2" = "{conf.low:.1f%}, {conf.high:.1f%}")) |>
-  plan_row_group(mode = "value", collapse = c(1L, 2L)) |>
+  plan_row_group(mode = "value", collapse = c("grp1", "grp2")) |>
   plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
-  plan_columns(widths = c(42, 28, 15, 15), row_title = c(1, 2)) |>
+  plan_columns(widths = c(grp1 = 42, grp2 = 28, .values = 15),
+               row_title = c("grp1", "grp2")) |>
   plan_style(align_count_pct = FALSE) |>
   plan_col_header(header = rtf_col_header(
     list(

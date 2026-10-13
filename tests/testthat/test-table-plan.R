@@ -848,7 +848,9 @@ test_that("asking for the ARD half of a finished table says what to drop", {
 test_that("plan_paginate_group(keep = FALSE) hides the carrier it groups by", {
   skip_if_no_cards2()
   p <- disp_plan() |> plan_paginate_group(col = "group", keep = FALSE)
-  expect_identical(rtfreporter:::.plan_rtf_args(p)$group_col, "group")
+  # a page per value, cut by the page key, which is never the row group (#635)
+  expect_identical(rtfreporter:::.plan_rtf_args(p)$page_by, "group")
+  expect_null(rtfreporter:::.plan_rtf_args(p)$group_col)
   expect_identical(rtfreporter:::.plan_rtf_args(p)$drop_cols, "group")
 })
 
@@ -1032,8 +1034,10 @@ test_that("plan_paginate_group() is the group axis", {
   skip_if_no_cards2()
   p <- disp_plan() |> plan_paginate_group(col = "group")
   r <- rtfreporter:::.plan_rtf_args(p)
-  expect_identical(r$split, "by_value")
-  expect_identical(r$group_col, "group")
+  # handed over as page_by: the page key is not the rows' group (#635)
+  expect_null(r$split)
+  expect_identical(r$page_by, "group")
+  expect_null(r$group_col)
   out <- suppressMessages(plan_apply(p))
   expect_gt(length(out), 1L)          # one page per group value
 })
@@ -3246,4 +3250,129 @@ test_that("plan_compare(): the column header's {col} / {n} sit over their column
               plan_col_header(values = list(n = TRUE),
                               header = rtf_col_header(c("", "{col}"), c("Characteristic", "(N={n})"))))
   expect_identical(h3$rows[[1L]], c("", arms, "Total"))
+})
+
+test_that("a plan's column positions count the printed columns, with a hidden key and BY pages (#635)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT),
+                         cards::ard_tabulate(adsl, by = c(TRT, SEX), variables = c(AGEGR1, RACE)))
+  d <- normalize_ard(ard, stack = list(subgroup = "group2"))
+  base <- function() table_plan(d, cols = "variable", rows = c(arm = "TRT", grp1 = "subgroup",
+                                                               grp2 = "subgroup_level", lvl = "variable_level"),
+                                label = NA) |>
+    plan_sort(FALSE) |> plan_cells("{n}", notes = FALSE) |>
+    plan_hide("arm") |>
+    plan_paginate_rows(page_by = "arm", heading = "Treatment: {value} (N={n})")
+  first <- function(p) {
+    pg <- suppressMessages(plan_apply(p, "pages"))
+    if (inherits(pg, "rtftable")) pg else pg[[1L]]
+  }
+  # row_title and collapse: positions 1-2 are the printed grp1 and grp2, not the hidden arm
+  p1 <- first(base() |> plan_columns(row_title = c(1, 2)) |>
+                plan_row_group(mode = "value", collapse = c(1L, 2L)))
+  expect_identical(names(p1$data)[1:3], c("grp1", "grp2", "lvl"))
+  expect_identical(as.integer(p1$row_title), 1:2)
+  g2 <- as.character(p1$data$grp2)
+  expect_false(any(g2[-1L] == g2[-length(g2)], na.rm = TRUE))   # no repeat left in grp2
+  expect_true(anyNA(g2))                                         # the repeats are blanked
+  # widths: one a printed column, in order
+  p2 <- first(base() |> plan_columns(widths = c(3, 2, 2, 1, 1)))
+  expect_identical(length(p2$col_rel_width), ncol(p2$data))
+  expect_identical(as.numeric(p2$col_rel_width), c(3, 2, 2, 1, 1))
+  # a header cell at a printed position sits over that column
+  p3 <- first(base() |> plan_col_header(header = rtf_col_header(
+    list(col_cell(c(1, 3), "Subgroup"), col_cell(4, "Age group"), col_cell(5, "Race")))))
+  cells <- p3$col_header[[1L]]
+  expect_identical(c(cells[[1L]]$from, cells[[1L]]$to), c(1L, 3L))
+  expect_identical(cells[[2L]]$from, 4L)
+  expect_identical(names(p3$data)[4:5], c("AGEGR1", "RACE"))
+  # a position past the printed columns is said, naming them
+  expect_error(suppressMessages(plan_apply(base() |> plan_columns(row_title = 6), "pages")),
+               "prints 5 columns")
+})
+
+test_that("row_title and collapse also take column names: a row key's name, .values (#635)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT),
+                         cards::ard_tabulate(adsl, by = c(TRT, SEX), variables = c(AGEGR1, RACE)))
+  d <- normalize_ard(ard, stack = list(subgroup = "group2"))
+  base <- function() table_plan(d, cols = "variable", rows = c(arm = "TRT", grp1 = "subgroup",
+                                                               grp2 = "subgroup_level", lvl = "variable_level"),
+                                label = NA) |>
+    plan_sort(FALSE) |> plan_cells("{n}", notes = FALSE) |>
+    plan_hide("arm") |>
+    plan_paginate_rows(page_by = "arm", heading = "Treatment: {value} (N={n})")
+  first <- function(p) {
+    pg <- suppressMessages(plan_apply(p, "pages"))
+    if (inherits(pg, "rtftable")) pg else pg[[1L]]
+  }
+  by_pos <- first(base() |> plan_columns(widths = c(grp1 = 3, grp2 = 2, lvl = 2, .values = 1),
+                                         row_title = c(1, 2)) |>
+                    plan_row_group(mode = "value", collapse = c(1L, 2L)))
+  by_name <- first(base() |> plan_columns(widths = c(grp1 = 3, grp2 = 2, lvl = 2, .values = 1),
+                                          row_title = c("grp1", "grp2")) |>
+                     plan_row_group(mode = "value", collapse = c("grp1", "grp2")))
+  expect_identical(as.integer(by_name$row_title), 1:2)
+  expect_identical(by_name$data, by_pos$data)
+  # .values is every value column
+  vals <- first(base() |> plan_columns(row_title = c("grp1", ".values")))
+  expect_identical(as.integer(vals$row_title), c(1L, 4L, 5L))
+  # a hidden or unknown name is said, with the printed columns
+  expect_error(suppressMessages(plan_apply(base() |> plan_columns(row_title = "arm"), "pages")),
+               "not a printed column")
+  expect_error(suppressMessages(plan_apply(base() |> plan_row_group(collapse = "grp9"), "pages")),
+               "not a printed column")
+})
+
+test_that("a page key is never a row group: blanks, collapse, row_title, sort and stub start at the first printed key (#635)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT),
+                         cards::ard_tabulate(adsl, by = c(TRT, SEX), variables = c(AGEGR1, RACE)))
+  d <- normalize_ard(ard, stack = list(subgroup = "group2"))
+  rows <- c(arm = "TRT", grp1 = "subgroup", grp2 = "subgroup_level", lvl = "variable_level")
+  core <- function() table_plan(d, cols = "variable", rows = rows, label = NA) |>
+    plan_cells("{n}", notes = FALSE)
+  # the two ways to a section per arm: page_by + plan_hide, and a page per value
+  by_rows <- function(p) p |> plan_hide("arm") |>
+    plan_paginate_rows(page_by = "arm", heading = "Treatment: {value}")
+  by_group <- function(p) p |>
+    plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value}")
+  pages <- function(p) suppressMessages(plan_apply(p, "pages"))
+  lay <- function(p) p |> plan_sort(FALSE) |>
+    plan_row_group(mode = "value", collapse = c("grp1", "grp2")) |>
+    plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+    plan_columns(row_title = c("grp1", "grp2"))
+  for (form in list(by_rows, by_group)) {
+    pg <- pages(form(lay(core())))
+    expect_length(pg, 3L)
+    expect_identical(sub("[.]{3}[0-9]+$", "", names(pg)),
+                     paste("Treatment:", unique(adsl$TRT)))
+    one <- pg[[1L]]
+    expect_identical(names(one$data)[1:3], c("grp1", "grp2", "lvl"))
+    expect_identical(as.integer(one$row_title), 1:2)
+    # a blank at each grp1 change, and first / last on every page
+    g1 <- as.character(suppressMessages(plan_apply(form(lay(core())), "table"))$grp1)
+    g1 <- g1[seq_len(nrow(one$data))]
+    change <- which(g1[-1L] != g1[-length(g1)])
+    expect_identical(attr(one$data, "rtf_blank_rows"),
+                     as.integer(c(0L, change, nrow(one$data))))
+    for (q in pg) expect_true(all(c(0L, nrow(q$data)) %in% attr(q$data, "rtf_blank_rows")))
+    # collapse blanks repeats in grp1 (not in the page key, which is gone)
+    expect_true(anyNA(one$data$grp1))
+  }
+  # the stub folds the printed row keys, not the page key
+  for (form in list(by_rows, by_group)) {
+    pg <- pages(form(core() |> plan_sort(FALSE) |> plan_stub()))
+    expect_false("arm" %in% names(pg[[1L]]$data))
+    expect_false(any(grepl("Placebo|Xanomeline", pg[[1L]]$data[[1L]])))
+  }
+  # a sort runs inside each page: every page keeps its own arm
+  pg <- pages(by_rows(core() |> plan_sort("-n")))
+  expect_length(pg, 3L)
 })

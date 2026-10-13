@@ -433,8 +433,12 @@ underline, as \code{bold}.}
 cells' text, \code{\link[=style_cols]{style_cols()}}'s \code{indent_twips} (not on the header).}
 
 \item{col}{For \code{plan_paginate_group()}: the column whose value starts a
-new page, \code{as_rtftables()}'s \code{group_col} with \code{split = "by_value"}.  Left
-out, it is the outermost row key.  The page is \strong{named} after
+new page (\code{as_rtftables()}'s \code{page_by}, or \code{split = "by_value"} with a
+\code{\link[=plan_stub]{plan_stub()}}).  Left out, it is the outermost row key.  It is a PAGE
+key, the same on every row of a page, so it is never a row group: blank
+rows between groups, \code{collapse}, \code{row_title}, the stub and the column
+positions start at the first printed row key, and \code{first} / \code{last}
+apply on every page.  The page is \strong{named} after
 the value, which is the line \code{rtf_tables(auto_section = TRUE)}
 cuts a section on --- so this verb decides what a section is.
 It is the only verb that makes a page per value.}
@@ -466,7 +470,10 @@ value is, and how the repeat shows.  \code{mode} is \code{as_rtftables(group_by 
 which is how a group BOUNDARY is found --- \code{"value"} (each run of equal
 values), \verb{"indent}" (a row starts a group when its cell is not indented),
 \code{"filled"} (when its cell is not empty), or \code{"auto"}.  \code{collapse} is
-\code{collapse_repeats}: a repeated value printed once and then blank.
+\code{collapse_repeats}: a repeated value printed once and then blank, in the
+columns named (\code{collapse = c("grp1", "grp2")}, the row keys' names) or
+counted on the PRINTED columns (a hidden key left out), like every
+column position in a plan.
 
 \code{mode = "indent"} \strong{reads} indentation to find the boundary;
 \code{plan_stub(indent = )} \strong{writes} it.  They are not the same knob, and
@@ -548,7 +555,8 @@ a page named after it; the row settings then apply \strong{within} one
 partition (a period, a cohort), so a BY page can still be cut by a row
 budget.  \code{plan_paginate_group()} is the other way to page by a value:
 one page per value however long it is, with no row budget.  The BY
-column is printed unless hidden (\code{\link[=plan_hide]{plan_hide()}}).}
+column is printed unless hidden (\code{\link[=plan_hide]{plan_hide()}}).  Like
+\code{plan_paginate_group(col = )} it is a page key, never a row group.}
 
 \item{border_header, border_spanning, border_body, border_first_row, border_last_row}{For \code{plan_style()}: the rules of one kind of row, by the names
 \code{\link[=rtf_table_style]{rtf_table_style()}} gives them.  Say the table's rules one way:
@@ -704,7 +712,11 @@ up at the decimal point (\code{.values} for every value column) --- the
 
 \item{row_title, auto_width}{For \code{plan_columns()}: the row-heading
 columns (\code{rtftable(row_title = )}) and whether each column is sized to
-its content (\code{as_rtftables(auto_width = )}).}
+its content (\code{as_rtftables(auto_width = )}).  Name the columns, as
+\code{widths} does: a row key's name as \code{table_plan(rows = )} gives it,
+\code{.values} for every value column --- \code{row_title = c("grp1", "grp2")}.
+A position counts the PRINTED columns, as unnamed \code{widths} do: a key
+hidden with \code{\link[=plan_hide]{plan_hide()}} or taken out by \code{page_by} is left out.}
 
 \item{sep}{For \code{plan_columns()}: the separator several \code{cols} keys are
 joined with in the value columns' names, \code{"____"} by default ---

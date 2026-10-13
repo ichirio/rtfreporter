@@ -1,5 +1,34 @@
 # rtfreporter (development version)
 
+- **A plan's column positions count the PRINTED columns, all of them**
+  (#635).  Unnamed `plan_columns(widths = )`, the header's `col_cell()`s
+  and `plan_paginate_cols()` already counted the columns a page prints;
+  `plan_columns(row_title = )` and `plan_row_group(collapse = )` counted
+  the table's own, before a hidden key (`plan_hide()`, `page_by`) was
+  dropped, so with `arm` hidden `row_title = c(1, 2)` landed on the
+  hidden arm and the first printed column, and `collapse = c(1, 2)` never
+  reached the second.  They now count as `widths` does.  The basis
+  changes (no alias, before CRAN): a plan that counted the hidden column
+  in these two moves its positions down by one.  Both also take names,
+  which a reordered or hidden column cannot shift: a row key's name as
+  `table_plan(rows = )` gives it and `.values` --
+  `plan_columns(widths = c(grp1 = 42, grp2 = 28, .values = 15),
+  row_title = c("grp1", "grp2"))`, `plan_row_group(collapse = c("grp1",
+  "grp2"))`.  A hidden or unknown name, or a position past the printed
+  columns, is an error that lists them.
+
+- **A page key is never a row group** (#635).  The key the pages are cut
+  on -- `plan_paginate_rows(page_by = )`, `plan_paginate_group(col = )` --
+  is the same on every row of a page, yet the rows were grouped on it when
+  it was the outermost row key: `plan_blanks(where = "between_groups")`
+  then put no blank between the subgroups of an arm's section.  Row
+  grouping now starts at the first printed row key (`grp1`), for the blank
+  rows (with `first` / `last` on every page), `collapse`, `row_title`, the
+  stub and the column positions; `plan_paginate_group()` is handed to
+  `as_rtftables()` as `page_by` (still a page per value, named after it),
+  and keeps `split = "by_value"` only with a `plan_stub()` or a second
+  page key.
+
 - **An AI kit: `rtfreporter_ai_manual(dir, ard = )`** writes a folder to
   attach to a chat, for an assistant to write one table's program from a
   shell and an ARD: `00_START_HERE.md` (the request: the three-step layout
