@@ -1289,28 +1289,35 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   [widen_ard()] leaves them out of the body while a column header can
 #'   still read them.  `TRUE` removes them outright.
 #'
-#' @param stack Parallel subgroups as one pair of keys, a named list:
-#'   `stack = list(subgroup = c("ALL", "SEX", "AGEGR1"))` adds the columns
-#'   `subgroup` (the variable, `"SEX"`) and `subgroup_level` (its level,
-#'   `"F"`) --- what `group2` / `group2_level` say in an ARD whose subgroups
-#'   all came in that slot, but **whatever slot** each came in (a subgroup
-#'   is in `group3` as soon as a strata or a `by =` has one variable more).
-#'   A **group slot** stands for the variables the ARD has there, in the
-#'   order first seen: `stack = list(subgroup = "group2")` is
-#'   `c("ALL", "SEX", "AGEGR1")` when every subgroup came in `group2`; a
-#'   slot that also holds another key on some rows (`by = c(AGEGR1, TRT)`
-#'   puts the arm in `group2`) is refused, naming the variables to write.
-#'   The list of variables is the general form.
-#'   `table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))`
-#'   then lays them one under another, in the order written, each
-#'   variable's levels in their own order; [plan_labels()] names them
-#'   (`plan_labels(subgroup = c(SEX = "Sex"))`).  The variables' own columns
-#'   stay.  Only variables never set on the same row stack: a nested
-#'   subgroup (AGEGR1 within SEX) is two keys, `rows = c("SEX", "AGEGR1")`,
-#'   and a `hierarchy` nests by definition.  A row with none of them (an
-#'   analysis by the arm alone) keeps both `NA`; an overall row is a
-#'   constant stratum (`ALL = "All"`) stacked first, which the ARD and the
-#'   ARS then state.
+#' @param stack Subgroups as one pair of keys, a named list of **layers**:
+#'   `stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))`
+#'   adds the columns `subgroup` (the layer: `"SEX"`, or variables crossed,
+#'   `"AGEGR1 / SEX"`) and `subgroup_level` (its level: `"F"`, `"65-80 / F"`)
+#'   --- what `group2` / `group2_level` say in an ARD whose subgroups all
+#'   came in that slot, but **whatever slot** each came in (a subgroup is in
+#'   `group3` as soon as a strata or a `by =` has one variable more, and a
+#'   crossed one, `ard_strata(.strata = c(AGEGR1, SEX))`, is in both).  A
+#'   character vector is layers of one variable each (`c("ALL", "SEX",
+#'   "AGEGR1")`); a crossed layer of three or more is the same rule.  A row
+#'   goes to the layer whose variables are **exactly** the stacked variables
+#'   it has; a row whose combination no layer names is an error that says
+#'   which layer to add.  **Group slots** stand for what the ARD has there:
+#'   `stack = list(subgroup = c("group2", "group3"))` is each combination of
+#'   variables in those slots, in the order first seen (one variable, or
+#'   several crossed in slot order); slots that also hold a variable coming
+#'   in a slot not named (`by = c(AGEGR1, TRT)` puts the arm in `group2`) are
+#'   refused.  The layers written out are the general form.
+#'   `table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))` then
+#'   lays the layers one under another in the order written, each one's
+#'   levels in their own order (crossed: the first variable turning
+#'   slowest); [plan_labels()] names them (`plan_labels(subgroup = c(SEX =
+#'   "Sex", "AGEGR1 / SEX" = "Age Group by Sex"))`).  The variables' own
+#'   columns stay, so a table of crossed rows only can still be
+#'   `rows = c("AGEGR1", "SEX")`; a `hierarchy` does not stack.  A row with
+#'   none of them (an analysis by the arm alone) keeps both `NA`; an overall
+#'   row is a constant stratum (`ALL = "All"`) stacked first, which the ARD
+#'   and the ARS then state.
+#' @param stack_sep What joins a crossed layer's names and levels: `" / "`.
 #'
 #' @section Working on the result before [widen_ard()]:
 #' The result is a plain data frame; reshaping it in between is the point of
@@ -1373,7 +1380,8 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 normalize_ard <- function(x, keys = NULL, hierarchy = character(),
                           overall = NULL,
                           drop_contexts = c("attributes", "total_n"),
-                          drop_key_variables = FALSE, stack = NULL) {
+                          drop_key_variables = FALSE, stack = NULL,
+                          stack_sep = " / ") {
   ard <- x
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
@@ -1577,7 +1585,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   # Parallel subgroups (SEX; AGEGR1), each its own key column above, as one
   # pair of keys: the variable's name and its level, whatever group slot
   # each came in (#619).
-  if (length(stack)) d <- .ard_stack_keys(d, stack, hierarchy)
+  if (length(stack)) d <- .ard_stack_keys(d, stack, hierarchy, stack_sep)
 
   d$.kind <- .ard_kind(d)
 
@@ -1616,58 +1624,75 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 }
 
 
-# `stack = list(subgroup = "group2")`: every variable the ARD has in that
-# group slot, in the order first seen -- a shorthand for the list, refused
-# where a slot is ambiguous: a variable of the slot that also comes in
-# another slot (`by = c(AGEGR1, TRT)` puts the arm in group2) is not a
-# subgroup the slot can name.
-.ard_stack_slot <- function(d, vars, nm) {
-  slots <- vars[grepl("^group[0-9]+$", vars) & vars %in% names(d) &
-                  !vars %in% .ard_stack_keys_seen(d)]
-  if (!length(slots)) return(vars)
+# normalize_ard(stack = ): the layers of one stacked key.  A character
+# vector is one layer a variable (`c("ALL", "SEX")`); a list may hold a
+# crossed layer (`list("SEX", c("AGEGR1", "SEX"))`).  A group slot
+# (`"group2"`, `c("group2", "group3")`) stands for the combinations of
+# variables the ARD has in those slots, in the order first seen -- refused
+# where a slot also holds a variable that comes in a slot not named (the
+# arm, with `by = c(AGEGR1, TRT)`): the slot does not say what the subgroups
+# are.
+.ard_stack_layers <- function(d, spec, nm) {
+  if (is.list(spec)) return(lapply(spec, unique))
   gcols <- grep("^group[0-9]+$", names(d), value = TRUE)
-  out <- character(0)
-  for (v in vars) {
-    if (!v %in% slots) { out <- c(out, v); next }
-    got <- .ard_first_seen(d[[v]])
-    got <- got[!is.na(got)]
-    elsewhere <- unique(unlist(lapply(setdiff(gcols, v), function(g)
-      intersect(got, as.character(d[[g]])))))
-    if (length(elsewhere)) {
-      .ard_stop(sprintf(paste0(
-        "`stack = list(%s = \"%s\")`: %s comes in %s and in another slot, so ",
-        "the slot does not say which
-  variables are subgroups.  Name them: ",
-        "`stack = list(%s = c(%s))`."),
-        nm, v, paste(sQuote(elsewhere), collapse = ", "), v, nm,
-        paste0("\"", setdiff(got, elsewhere), "\"", collapse = ", ")))
-    }
-    out <- c(out, got)
+  keys <- unique(unlist(lapply(gcols, function(g) as.character(d[[g]]))))
+  slots <- spec[spec %in% gcols & !spec %in% keys]
+  if (!length(slots)) return(as.list(unique(spec)))
+  inside <- unique(unlist(lapply(slots, function(g) as.character(d[[g]]))))
+  inside <- inside[!is.na(inside)]
+  elsewhere <- unique(unlist(lapply(setdiff(gcols, slots), function(g)
+    intersect(inside, as.character(d[[g]])))))
+  if (length(elsewhere)) {
+    .ard_stop(sprintf(paste0(
+      "`stack = list(%s = %s)`: %s comes in %s and in another slot, so the ",
+      "slots do not say\n  which variables are subgroups.  Name the layers: ",
+      "`stack = list(%s = list(\"SEX\", c(\"AGEGR1\", \"SEX\")))`."),
+      nm, .ard_vec_text(slots), paste(sQuote(elsewhere), collapse = ", "),
+      paste(slots, collapse = " / "), nm))
   }
-  unique(out)
+  combo <- apply(as.matrix(d[slots]), 1L, function(r) {
+    r <- as.character(r[!is.na(r)])
+    if (length(r)) paste(r, collapse = "\r") else NA_character_
+  })
+  found <- lapply(strsplit(.ard_first_seen(combo[!is.na(combo)]), "\r",
+                           fixed = TRUE), unique)
+  out <- list()
+  for (v in spec) {
+    if (identical(v, slots[1L])) out <- c(out, found)
+    else if (!v %in% slots) out <- c(out, list(v))
+  }
+  out
 }
 
-# The key columns a frame has (a name that is also a slot's is a key).
-.ard_stack_keys_seen <- function(d) {
-  gcols <- grep("^group[0-9]+$", names(d), value = TRUE)
-  unique(unlist(lapply(gcols, function(g) as.character(d[[g]]))))
+.ard_vec_text <- function(x) {
+  if (length(x) == 1L) sprintf("\"%s\"", x)
+  else sprintf("c(%s)", paste0("\"", x, "\"", collapse = ", "))
 }
 
 # normalize_ard(stack = ): each name a new pair of key columns, `<name>`
-# (which variable) and `<name>_level` (its level), from key columns that
-# are never set on the same row.  The variables' own columns stay.
-.ard_stack_keys <- function(d, stack, hierarchy = character()) {
+# (the layer: a variable, or variables crossed, "AGEGR1 / SEX") and
+# `<name>_level` (its level, "65-80 / F").  A row goes to the layer whose
+# variables are exactly the stacked variables it has; the variables' own
+# columns stay.
+.ard_stack_keys <- function(d, stack, hierarchy = character(), sep = " / ") {
+  layer_ok <- function(v) is.character(v) && length(v) >= 1L && !anyNA(v) &&
+    all(nzchar(v))
   if (!is.list(stack) || is.null(names(stack)) || !all(nzchar(names(stack))) ||
       anyDuplicated(names(stack)) ||
-      !all(vapply(stack, function(v) is.character(v) && length(v) >= 1L &&
-                                          !anyNA(v), NA))) {
+      !all(vapply(stack, function(v)
+        layer_ok(v) || (is.list(v) && length(v) &&
+                          all(vapply(v, layer_ok, NA))), NA))) {
     .ard_stop(paste0(
-      "`stack` is a named list: a new key's name and the variables stacked ",
-      "in it,
-  `stack = list(subgroup = c(\"SEX\", \"AGEGR1\"))`."))
+      "`stack` is a named list: a new key's name and its layers, a variable ",
+      "each\n  or variables crossed: `stack = list(subgroup = list(\"SEX\", ",
+      "\"AGEGR1\", c(\"AGEGR1\", \"SEX\")))`."))
+  }
+  if (!is.character(sep) || length(sep) != 1L || is.na(sep)) {
+    .ard_stop("`stack_sep` is one text, what joins a crossed layer's names: \" / \".")
   }
   for (nm in names(stack)) {
-    vars <- .ard_stack_slot(d, unique(stack[[nm]]), nm)
+    layers <- .ard_stack_layers(d, stack[[nm]], nm)
+    vars <- unique(unlist(layers))
     out <- c(nm, paste0(nm, "_level"))
     taken <- intersect(out, names(d))
     if (length(taken)) {
@@ -1679,39 +1704,51 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     if (length(bad)) {
       .ard_stop(sprintf(paste0(
         "`stack`: %s is in `hierarchy`.  A hierarchy's levels nest; only ",
-        "parallel variables stack."), paste(sQuote(bad), collapse = ", ")))
+        "subgroups stack."), paste(sQuote(bad), collapse = ", ")))
     }
     gone <- setdiff(vars, names(d))
     if (length(gone)) {
       .ard_stop(sprintf(paste0(
-        "`stack`: no key %s in this ARD.
-  Keys: %s"),
+        "`stack`: no key %s in this ARD.\n  Keys: %s"),
         paste(sQuote(gone), collapse = ", "),
         paste(setdiff(names(d), .ard_structural()), collapse = ", ")))
     }
-    set <- vapply(vars, function(v) !is.na(d[[v]]), logical(nrow(d)))
-    set <- matrix(set, nrow = nrow(d))
-    both <- rowSums(set) > 1L
-    if (any(both)) {
-      two <- vars[colSums(set[both, , drop = FALSE]) > 0L]
+    set <- matrix(vapply(vars, function(v) !is.na(d[[v]]), logical(nrow(d))),
+                  nrow = nrow(d), dimnames = list(NULL, vars))
+    has <- apply(set, 1L, function(r) paste(sort(vars[r]), collapse = "\r"))
+    lkey <- vapply(layers, function(l) paste(sort(l), collapse = "\r"), "")
+    which_layer <- match(has, lkey)
+    lost <- nzchar(has) & is.na(which_layer)
+    if (any(lost)) {
+      combo <- strsplit(has[lost][1L], "\r", fixed = TRUE)[[1L]]
       .ard_stop(sprintf(paste0(
-        "`stack`: %s are set on the same rows, so they nest rather than ",
-        "stand side by side.
-  A nested subgroup is two keys: ",
-        "`rows = c(\"%s\", \"%s\")`."),
-        paste(sQuote(two), collapse = " and "), two[1L], two[2L]))
+        "`stack`: rows have %s set together, and no layer says so.\n",
+        "  Add the crossed layer %s to `stack = list(%s = list(...))`, ",
+        "or drop those rows."),
+        paste(sQuote(combo), collapse = " and "), .ard_vec_text(combo), nm))
     }
     var <- rep(NA_character_, nrow(d))
     lvl <- rep(NA_character_, nrow(d))
     lv_order <- character(0)
-    for (j in seq_along(vars)) {
-      hit <- set[, j]
-      var[hit] <- vars[j]
-      lvl[hit] <- as.character(d[[vars[j]]][hit])
-      lv_order <- c(lv_order, if (is.factor(d[[vars[j]]])) levels(d[[vars[j]]])
-                        else .ard_first_seen(lvl[hit]))
+    for (j in seq_along(layers)) {
+      l <- layers[[j]]
+      hit <- !is.na(which_layer) & which_layer == j
+      if (!any(hit)) next
+      var[hit] <- paste(l, collapse = sep)
+      parts <- lapply(l, function(v) as.character(d[[v]][hit]))
+      lvl[hit] <- do.call(paste, c(parts, sep = sep))
+      # each variable's own order, the first variable turning slowest
+      own <- lapply(seq_along(l), function(k) {
+        v <- d[[l[k]]]
+        seen <- unique(parts[[k]])
+        if (is.factor(v)) intersect(levels(v), seen) else .ard_first_seen(seen)
+      })
+      grid <- do.call(expand.grid, c(rev(own), stringsAsFactors = FALSE))
+      prod <- do.call(paste, c(rev(as.list(grid)), sep = sep))
+      lv_order <- c(lv_order, prod[prod %in% lvl[hit]])
     }
-    d[[out[1L]]] <- .ard_as_factor(var, vars)
+    names_used <- vapply(layers, paste, "", collapse = sep)
+    d[[out[1L]]] <- .ard_as_factor(var, names_used[names_used %in% var])
     d[[out[2L]]] <- .ard_as_factor(lvl, unique(lv_order))
   }
   d

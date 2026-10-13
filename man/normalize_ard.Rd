@@ -11,7 +11,8 @@ normalize_ard(
   overall = NULL,
   drop_contexts = c("attributes", "total_n"),
   drop_key_variables = FALSE,
-  stack = NULL
+  stack = NULL,
+  stack_sep = " / "
 )
 }
 \arguments{
@@ -46,28 +47,34 @@ size.  \code{FALSE} (default) keeps them and marks them \code{.key_own = TRUE}, 
 \code{\link[=widen_ard]{widen_ard()}} leaves them out of the body while a column header can
 still read them.  \code{TRUE} removes them outright.}
 
-\item{stack}{Parallel subgroups as one pair of keys, a named list:
-\code{stack = list(subgroup = c("ALL", "SEX", "AGEGR1"))} adds the columns
-\code{subgroup} (the variable, \code{"SEX"}) and \code{subgroup_level} (its level,
-\code{"F"}) --- what \code{group2} / \code{group2_level} say in an ARD whose subgroups
-all came in that slot, but \strong{whatever slot} each came in (a subgroup
-is in \code{group3} as soon as a strata or a \verb{by =} has one variable more).
-A \strong{group slot} stands for the variables the ARD has there, in the
-order first seen: \code{stack = list(subgroup = "group2")} is
-\code{c("ALL", "SEX", "AGEGR1")} when every subgroup came in \code{group2}; a
-slot that also holds another key on some rows (\code{by = c(AGEGR1, TRT)}
-puts the arm in \code{group2}) is refused, naming the variables to write.
-The list of variables is the general form.
-\code{table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))}
-then lays them one under another, in the order written, each
-variable's levels in their own order; \code{\link[=plan_labels]{plan_labels()}} names them
-(\code{plan_labels(subgroup = c(SEX = "Sex"))}).  The variables' own columns
-stay.  Only variables never set on the same row stack: a nested
-subgroup (AGEGR1 within SEX) is two keys, \code{rows = c("SEX", "AGEGR1")},
-and a \code{hierarchy} nests by definition.  A row with none of them (an
-analysis by the arm alone) keeps both \code{NA}; an overall row is a
-constant stratum (\code{ALL = "All"}) stacked first, which the ARD and the
-ARS then state.}
+\item{stack}{Subgroups as one pair of keys, a named list of \strong{layers}:
+\code{stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))}
+adds the columns \code{subgroup} (the layer: \code{"SEX"}, or variables crossed,
+\code{"AGEGR1 / SEX"}) and \code{subgroup_level} (its level: \code{"F"}, \code{"65-80 / F"})
+--- what \code{group2} / \code{group2_level} say in an ARD whose subgroups all
+came in that slot, but \strong{whatever slot} each came in (a subgroup is in
+\code{group3} as soon as a strata or a \verb{by =} has one variable more, and a
+crossed one, \code{ard_strata(.strata = c(AGEGR1, SEX))}, is in both).  A
+character vector is layers of one variable each (\code{c("ALL", "SEX", "AGEGR1")}); a crossed layer of three or more is the same rule.  A row
+goes to the layer whose variables are \strong{exactly} the stacked variables
+it has; a row whose combination no layer names is an error that says
+which layer to add.  \strong{Group slots} stand for what the ARD has there:
+\code{stack = list(subgroup = c("group2", "group3"))} is each combination of
+variables in those slots, in the order first seen (one variable, or
+several crossed in slot order); slots that also hold a variable coming
+in a slot not named (\code{by = c(AGEGR1, TRT)} puts the arm in \code{group2}) are
+refused.  The layers written out are the general form.
+\code{table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))} then
+lays the layers one under another in the order written, each one's
+levels in their own order (crossed: the first variable turning
+slowest); \code{\link[=plan_labels]{plan_labels()}} names them (\code{plan_labels(subgroup = c(SEX = "Sex", "AGEGR1 / SEX" = "Age Group by Sex"))}).  The variables' own
+columns stay, so a table of crossed rows only can still be
+\code{rows = c("AGEGR1", "SEX")}; a \code{hierarchy} does not stack.  A row with
+none of them (an analysis by the arm alone) keeps both \code{NA}; an overall
+row is a constant stratum (\code{ALL = "All"}) stacked first, which the ARD
+and the ARS then state.}
+
+\item{stack_sep}{What joins a crossed layer's names and levels: \code{" / "}.}
 }
 \value{
 A data frame with one row per ARD statistic: the key columns, the

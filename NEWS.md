@@ -32,9 +32,14 @@
   `subgroup_level` (its level), so `rows = c(grp1 = "subgroup", grp2 =
   "subgroup_level")` lays the subgroups one under another in the order
   written.  Reading `group2` / `group2_level` directly worked only while
-  every subgroup came in that slot.  The variables' own columns stay;
-  variables set on the same row nest, and stacking them is an error that
-  says to name them as two keys.
+  every subgroup came in that slot.  A layer may be crossed:
+  `list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX"))` gives the row
+  `AGEGR1 / SEX` | `65-80 / F` (`stack_sep =`), three-way the same; a row
+  goes to the layer whose variables are exactly the ones it has, and a
+  combination no layer names is an error that says which to add.  Group
+  slots stand for what the ARD has there: `c("group2", "group3")` finds
+  the layers, single and crossed, in ARD order (refused where the slots
+  also hold the arm).  The variables' own columns stay.
 
 ### Deprecated
 

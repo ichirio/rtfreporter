@@ -2761,7 +2761,7 @@ test_that("normalize_ard(stack = ): parallel subgroups as one pair of keys, what
   expect_identical(normalize_ard(ard), normalize_ard(ard, stack = NULL))
   # what is said, not guessed
   nested <- cards::ard_strata(adsl, .by = TRT, .strata = c(SEX, AGEGR1), .f = orr)
-  expect_error(normalize_ard(nested, stack = list(s = c("SEX", "AGEGR1"))), "nest rather than")
+  expect_error(normalize_ard(nested, stack = list(s = c("SEX", "AGEGR1"))), "no layer says so")
   expect_error(normalize_ard(ard, stack = list(s = "BMIGR1")), "no key")
   expect_error(normalize_ard(ard, stack = list(SEX = "AGEGR1")), "a column already")
   expect_error(normalize_ard(ard, stack = c("SEX", "AGEGR1")), "named list")
@@ -2814,4 +2814,56 @@ test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its va
   expect_error(normalize_ard(amb, stack = list(subgroup = "group2")), "another slot")
   expect_identical(levels(normalize_ard(amb, stack = list(subgroup = c("SEX", "AGEGR1")))$subgroup),
                    c("SEX", "AGEGR1"))
+})
+
+test_that("normalize_ard(stack = ): crossed layers, three-way too, and the slots finding them (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$ALL <- "All"
+  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1")),
+                         tab(c("TRT", "AGEGR1", "SEX")))
+  layers <- list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX"))
+  d <- normalize_ard(ard, stack = list(subgroup = layers))
+  expect_identical(levels(d$subgroup), c("ALL", "SEX", "AGEGR1", "AGEGR1 / SEX"))
+  x <- d[d$subgroup %in% "AGEGR1 / SEX", ]
+  expect_identical(as.character(x$subgroup_level), paste(x$AGEGR1, x$SEX, sep = " / "))
+  # the first variable turns slowest
+  cl <- levels(droplevels(x$subgroup_level))
+  expect_identical(sub(" / .*$", "", cl), rep(unique(sub(" / .*$", "", cl)), each = 2L))
+  # the slots find the same layers, in the ARD's order
+  expect_identical(normalize_ard(ard, stack = list(subgroup = c("group2", "group3"))), d)
+  # a separator of one's own
+  expect_identical(levels(normalize_ard(ard, stack = list(s = layers), stack_sep = " x ")$s)[4L],
+                   "AGEGR1 x SEX")
+  # a combination no layer names: said, never NA
+  expect_error(normalize_ard(ard, stack = list(subgroup = c("ALL", "SEX", "AGEGR1"))),
+               "no layer says so")
+  # three variables crossed: the same rule
+  three <- cards::bind_ard(tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1", "SEX", "RACE")))
+  t3 <- normalize_ard(three, stack = list(g = list("SEX", c("AGEGR1", "SEX", "RACE"))))
+  expect_identical(levels(t3$g), c("SEX", "AGEGR1 / SEX / RACE"))
+  expect_true(all(lengths(strsplit(as.character(t3$g_level[t3$g %in% "AGEGR1 / SEX / RACE"]), " / ")) == 3L))
+  # the table lays the layers out
+  tab_d <- suppressMessages(plan_apply(
+    table_plan(d, cols = "TRT", rows = c(grp = "subgroup", lvl = "subgroup_level"), label = NA) |>
+      plan_sort(FALSE) |> plan_cells("{n}", notes = FALSE), "table"))
+  tab_d <- as.data.frame(if (is.data.frame(tab_d)) tab_d else tab_d[[1L]])
+  expect_identical(as.character(unique(tab_d$grp)), c("ALL", "SEX", "AGEGR1", "AGEGR1 / SEX"))
+})
+
+test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, crossed too (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  # group1 = the subgroup, the arm last
+  ard <- cards::bind_ard(tab(c("SEX", "TRT")), tab(c("AGEGR1", "TRT")), tab(c("AGEGR1", "SEX", "TRT")))
+  expect_true(all(as.character(as.data.frame(ard)$group2) %in% c("TRT", "SEX")))
+  d <- normalize_ard(ard, stack = list(subgroup = list("SEX", "AGEGR1", c("AGEGR1", "SEX"))))
+  expect_identical(levels(d$subgroup), c("SEX", "AGEGR1", "AGEGR1 / SEX"))
+  expect_false(anyNA(d$subgroup[!is.na(d$TRT) & d$variable == "DISCONFL"]))
+  # the slots there hold the arm too: they do not say what the subgroups are
+  expect_error(normalize_ard(ard, stack = list(subgroup = c("group1", "group2"))), "another slot")
 })
