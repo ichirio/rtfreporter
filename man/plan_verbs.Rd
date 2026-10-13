@@ -183,7 +183,18 @@ other: \code{cols = c("TRT01A", ".stat_group")} puts one record's N in one
 column and its rate and interval in the next, and \code{\link[=plan_cells]{plan_cells()}} keys a
 template by the group's name (\code{n = "{N}"}, \code{orr_ci = cell_rows(...)}).
 A statistic in no group is not read.  This is what a \code{mutate()} of
-\code{variable} before \code{\link[=table_plan]{table_plan()}} did.
+\code{variable} before \code{\link[=table_plan]{table_plan()}} did --- a workaround: keep the ARD
+as it is (\code{variable} is the analysis variable) and choose the layout
+in the plan.
+
+With \code{cell_rows()} (or named templates) for the rows inside a cell,
+one analysis's statistics lay out as \strong{n rows x m columns}: the
+groups go across (\code{cols = c("TRT01A", ".stat_group")}) or down
+(\code{rows = c(..., stat = ".stat_group")}, in the order the groups are
+said), and each group's template has its own rows; a group with fewer
+rows leaves the rest empty, aligned row by row.  The groups split
+\strong{one record} --- the same analysis and the same keys; statistics of
+two analyses are two records, joined by the keys as always.
 
 \code{plan_digits()} takes the same keys, with the digits as the value.
 A value is \strong{one number}, for every token in that entry, or a

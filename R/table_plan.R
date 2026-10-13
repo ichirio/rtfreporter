@@ -823,7 +823,18 @@ print.table_plan <- function(x, ...) {
 #'   column and its rate and interval in the next, and [plan_cells()] keys a
 #'   template by the group's name (`n = "{N}"`, `orr_ci = cell_rows(...)`).
 #'   A statistic in no group is not read.  This is what a `mutate()` of
-#'   `variable` before [table_plan()] did.
+#'   `variable` before [table_plan()] did --- a workaround: keep the ARD
+#'   as it is (`variable` is the analysis variable) and choose the layout
+#'   in the plan.
+#'
+#'   With `cell_rows()` (or named templates) for the rows inside a cell,
+#'   one analysis's statistics lay out as **n rows x m columns**: the
+#'   groups go across (`cols = c("TRT01A", ".stat_group")`) or down
+#'   (`rows = c(..., stat = ".stat_group")`, in the order the groups are
+#'   said), and each group's template has its own rows; a group with fewer
+#'   rows leaves the rest empty, aligned row by row.  The groups split
+#'   **one record** --- the same analysis and the same keys; statistics of
+#'   two analyses are two records, joined by the keys as always.
 #'
 #'   `plan_digits()` takes the same keys, with the digits as the value.
 #'   A value is **one number**, for every token in that entry, or a

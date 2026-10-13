@@ -2649,3 +2649,47 @@ test_that("plan_stat_groups(): one record's N in one column, its rate and CI in 
   expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), a = "N", b = c("N", "n")), "in two groups")
   expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), a = character()), "names no statistic")
 })
+
+test_that("plan_stat_groups() x cell_rows(): n rows x m columns of one record, on cols or rows (#619)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  orr <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y",
+                                               method = "clopper-pearson", conf.level = 0.90)
+  d <- normalize_ard(cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr))
+  tab_of <- function(p) {
+    t <- suppressMessages(plan_apply(p, "table"))
+    as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  }
+  # across: N one row, the rate and CI two; aligned row by row
+  across <- table_plan(d, cols = c("TRT", ".stat_group"),
+                       rows = c(grp = "group2_level"), label = NA) |>
+    plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+    plan_sort(FALSE) |>
+    plan_cells(n = cell_rows("1" = "{N:.0f}"),
+               orr_ci = cell_rows("1" = "{n:.0f} ({estimate:.1f%})",
+                                  "2" = "{conf.low:.1f%}, {conf.high:.1f%}"))
+  a <- tab_of(across)
+  expect_identical(nrow(a), 4L)                       # 2 sexes x 2 rows
+  expect_identical(a$grp, c("F", "F", "M", "M"))
+  expect_false(anyNA(a$Placebo____n[c(1L, 3L)]))
+  expect_true(all(is.na(a$Placebo____n[c(2L, 4L)])))  # the N's second row is empty
+  expect_match(a$Placebo____orr_ci[1L], "^[0-9]+ \\(")
+  expect_match(a$Placebo____orr_ci[2L], "^[0-9.]+, [0-9.]+$")
+  # down: the groups are rows, in the order plan_stat_groups() says them
+  down <- table_plan(d, cols = "TRT",
+                     rows = c(grp = "group2_level", stat = ".stat_group"), label = NA) |>
+    plan_stat_groups(n = "N", rate = c("n", "estimate"), ci = c("conf.low", "conf.high")) |>
+    plan_sort(FALSE) |>
+    plan_cells(n = "{N:.0f}", rate = "{n:.0f} ({estimate:.1f%})",
+               ci = cell_rows("1" = "{conf.low:.1f%}", "2" = "{conf.high:.1f%}"))
+  b <- tab_of(down)
+  expect_identical(b$stat[b$grp == "F"], c("n", "rate", "ci", "ci"))
+  expect_identical(b$Placebo[b$grp == "F" & b$stat == "n"],
+                   a$Placebo____n[1L])
+  expect_identical(b$Placebo[b$grp == "F" & b$stat == "rate"],
+                   a$Placebo____orr_ci[1L])
+})

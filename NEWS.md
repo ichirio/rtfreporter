@@ -9,7 +9,12 @@
   ".stat_group"))` names like any other; `plan_cells()` keys a template by
   the group's name.  A statistic in no group is not read.
   `widen_ard(stat_groups = )` is the same for a call without a plan.  The
-  RTF is byte-identical to the `mutate()` version (a test).
+  RTF is byte-identical to the `mutate()` version (a test).  Overwriting
+  `variable` was a workaround: keep the ARD as it is and choose the layout
+  in the plan.  With `cell_rows()` inside each group, one analysis's
+  statistics lay out as n rows x m columns; the groups go across
+  (`cols =`) or down (`rows =`, in the order they are said), within one
+  record (the same analysis and keys).
 
 ### Deprecated
 
