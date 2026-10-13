@@ -1862,6 +1862,19 @@ plan_total <- function(plan, label = "Total", position = c("last", "first")) {
   .plan_layer(plan, "total", list(label = label, position = position))
 }
 
+# Columns read from comparison records -- a test's p-value, a difference
+# with its CI -- that carry the column key without a value: placed on the
+# summary's row, never computed (#625).
+#' @rdname plan_verbs
+#' @export
+# `.plan`, not `plan`: an argument before `...` is matched by a prefix, and
+# `p = ` -- the commonest column here -- would be taken for the plan.
+plan_compare <- function(.plan, ..., by = NULL, position = c("last", "first")) {
+  position <- match.arg(position)
+  spec <- .ard_compare_spec(list(cols = list(...), by = by, position = position))
+  .plan_layer(.plan, "compare", list(compare = spec))
+}
+
 # One record's statistics in named groups -- its N in one column, its rate
 # and interval in the next -- which `cols` / `rows` name as `.stat_group`
 # (#619): the mutate() a table needed before table_plan() is a layer.
@@ -2290,7 +2303,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     # `plan_cells(na = )` alone is what an empty cell prints, which a
     # finished table has too
     ard_half <- vapply(plan$layers, function(l)
-      l$kind %in% c("cells", "levels", "labels", "stat_groups") ||
+      l$kind %in% c("cells", "levels", "labels", "stat_groups", "compare") ||
         (identical(l$kind, "cell_options") &&
            length(setdiff(names(Filter(Negate(is.null), l$fields)), "na"))),
       TRUE)
@@ -2566,7 +2579,12 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     rep(NA_character_, nrow(d))
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
     rep(FALSE, nrow(d))
-  at <- is.na(k) & !own & !(v %in% "..ard_total_n..")
+  # only the body's analyses: a test or a difference (plan_compare()) has
+  # no column key either, and is no Total
+  ctx <- if ("context" %in% names(d)) as.character(d$context) else
+    rep(NA_character_, nrow(d))
+  body_ctx <- unique(ctx[!is.na(k)])
+  at <- is.na(k) & !own & !(v %in% "..ard_total_n..") & ctx %in% body_ctx
   if (!any(at)) {
     .ard_stop(sprintf(paste0(
       "plan_total(): the ARD has no overall rows, rows without %s.
@@ -2653,6 +2671,9 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   # plan_stat_groups(): the last one says them
   sg <- .plan_of(plan, "stat_groups")
   if (length(sg)) out$stat_groups <- sg[[length(sg)]]$stat_groups
+  # plan_compare(): the last one says them
+  cp <- .plan_of(plan, "compare")
+  if (length(cp)) out$compare <- cp[[length(cp)]]$compare
   # renames, not arguments: .plan_prepare() has already done them
   out[c("variable", "stat_name", "stat")] <- NULL
   lb <- .plan_label_spec(plan)
@@ -4011,7 +4032,23 @@ plan_n_candidates <- function(plan) {
 # template instead of a function that reassembles the names.
 .plan_spread_cols <- function(plan, tbl) {
   lb <- .plan_label_name(plan)
-  setdiff(names(tbl), c(.plan_row_keys(plan), lb))
+  setdiff(names(tbl), c(.plan_row_keys(plan), lb, .plan_compare_cols(plan, tbl)))
+}
+
+# plan_compare()'s columns, which have no population and no `{col}`: the
+# header leaves them to the author.
+.plan_compare_cols <- function(plan, tbl) {
+  cp <- .plan_of(plan, "compare")
+  if (!length(cp)) return(character(0))
+  spec <- cp[[length(cp)]]$compare
+  nm <- names(spec$cols)
+  if (is.null(spec$by)) return(intersect(nm, names(tbl)))
+  b <- if (is.data.frame(plan$data) && spec$by %in% names(plan$data))
+    .ard_first_seen(as.character(plan$data[[spec$by]])) else character(0)
+  b <- b[!is.na(b)]
+  cand <- if (length(nm) == 1L) b else
+    as.vector(outer(b, nm, paste, sep = .plan_sep(plan)))
+  intersect(cand, names(tbl))
 }
 
 # "arm name over (N=86)" is the commonest header in clinical work, and
