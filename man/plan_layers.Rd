@@ -15,7 +15,9 @@ column's name, or none); \code{group_col}; \code{declared} (the kinds of layer,
 in the order declared); \code{layers} (by kind, the merged fields; for
 \code{after} and \code{restyle} one entry per call); \code{cells} (the cell
 templates, each parsed into its label rows and template chains ---
-\code{NULL} when the statistics are rows); \code{columns} (\code{names}, \code{spread},
+\code{NULL} when the statistics are rows); \code{compare} (plan_compare()'s
+columns, each \code{column}, \code{context} and its parsed \code{entry}, with \code{by}
+and \code{position}; \code{NULL} without one); \code{columns} (\code{names}, \code{spread},
 \code{page_names}, \code{widths}); \code{header} (\code{source}: \code{"cells"} for a header
 given as cell rows, \code{"resolved"} for one the plan built; \code{cells}: the
 header as cell rows, a data frame; \code{n_text}: the \code{{n}} scope as text,

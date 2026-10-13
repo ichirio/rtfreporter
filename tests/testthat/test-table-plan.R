@@ -2906,3 +2906,164 @@ test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its 
   # a plain -n sorts as it did
   expect_identical(tab("soc", ".depth", "-n"), tab("soc", ".depth", "-n"))
 })
+
+test_that("plan_compare(): a test's p-value and a difference with its CI as columns, placed not computed (#625)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's t-test / prop test
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  body <- cards::ard_stack(adsl, .by = TRT, cards::ard_summary(variables = AGE),
+                           cards::ard_tabulate(variables = SEX))
+  tests <- cards::bind_ard(cardx::ard_stats_kruskal_test(adsl, by = TRT, variables = AGE),
+                           cardx::ard_stats_chisq_test(adsl, by = TRT, variables = SEX))
+  plan <- function(a) table_plan(normalize_ard(a), cols = "TRT", rows = c(grp = "variable"),
+                                 label = "variable_level") |>
+    plan_cells(continuous = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})", "Median" = "{median:.1f}"),
+               categorical = "{n} ({p:.1f%})", notes = FALSE)
+  tab_of <- function(p) {
+    t <- suppressMessages(plan_apply(p, "table"))
+    as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  }
+  with_p <- tab_of(plan(cards::bind_ard(body, tests)) |>
+                     plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}")))
+  # by hand: the summary alone, and the p-values put on the first row of each variable
+  by_hand <- tab_of(plan(body))
+  pv <- as.data.frame(tests)
+  pv <- unlist(pv$stat[pv$stat_name == "p.value"])
+  names(pv) <- c("AGE", "SEX")
+  by_hand$p <- NA_character_
+  for (v in names(pv)) {
+    by_hand$p[which(by_hand$grp == v)[1L]] <- if (pv[[v]] < 0.001) "<0.001" else sprintf("%.3f", pv[[v]])
+  }
+  expect_identical(with_p, by_hand)
+  # the RTF is the one a hand-made table gives
+  render <- function(x) {
+    f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+    old <- options(rtfreporter.render_time = as.POSIXct("2026-01-01 09:00"))
+    on.exit(options(old), add = TRUE)
+    suppressMessages(generate_rtfreport(rtf_tables(rtf_document(program = "t.R"), x), f, overwrite = TRUE))
+    readBin(f, "raw", file.size(f))
+  }
+  expect_identical(render(as_rtftables(with_p)), render(as_rtftables(by_hand)))
+  # a difference and its CI, two columns
+  two <- adsl[adsl$TRT != "Xanomeline Low Dose", ]
+  ef <- cards::bind_ard(cards::ard_summary(two, by = TRT, variables = c(AGE, BMIBL)),
+                        cardx::ard_stats_t_test(two, by = TRT, variables = c(AGE, BMIBL)))
+  t2 <- tab_of(table_plan(normalize_ard(ef), cols = "TRT", rows = c(grp = "variable"), label = NA) |>
+                 plan_cells("{mean:.1f} ({sd:.2f})", notes = FALSE) |>
+                 plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})",
+                              p = "{p.value:.3f}"))
+  tt <- as.data.frame(cardx::ard_stats_t_test(two, by = TRT, variables = AGE))
+  st <- function(n) unlist(tt$stat[tt$stat_name == n])
+  expect_identical(t2$diff[t2$grp == "AGE"],
+                   sprintf("%.2f (%.2f, %.2f)", st("estimate"), st("conf.low"), st("conf.high")))
+  expect_identical(names(t2)[4:5], c("diff", "p"))
+  # one column a comparison
+  cmp <- rbind(transform(adsl[adsl$TRT %in% c("Placebo", "Xanomeline Low Dose"), ], CMP = "Low vs Pbo"),
+               transform(adsl[adsl$TRT %in% c("Placebo", "Xanomeline High Dose"), ], CMP = "High vs Pbo"))
+  a3 <- cards::bind_ard(cards::ard_summary(adsl, by = TRT, variables = AGE),
+                        cards::ard_strata(cmp, .strata = CMP, .f = ~ cardx::ard_stats_t_test(.x, by = TRT, variables = AGE)))
+  t3 <- tab_of(table_plan(normalize_ard(a3), cols = "TRT", rows = c(grp = "variable"), label = NA) |>
+                 plan_cells("{mean:.1f}", notes = FALSE) |>
+                 plan_compare(p = "{p.value:.3f}", by = "CMP", position = "first"))
+  expect_setequal(names(t3)[2:3], c("Low vs Pbo", "High vs Pbo"))
+  # what is said, not guessed
+  expect_error(plan_compare(plan(body), "{p.value}"), "a name of its own")
+  expect_error(plan_compare(plan(body), p = "x", position = "middle"))
+})
+
+test_that("plan_total() reads the body's analyses only: a test is no Total and leaves no empty row (#625)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's tests
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  body <- cards::ard_stack(adsl, .by = TRT, cards::ard_tabulate(variables = SEX), .overall = TRUE)
+  tab_of <- function(a) {
+    t <- suppressMessages(plan_apply(
+      table_plan(normalize_ard(a), cols = "TRT", rows = c(grp = "variable"), label = "variable_level") |>
+        plan_total() |> plan_cells("{n}", notes = FALSE), "table"))
+    as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  }
+  expect_identical(tab_of(cards::bind_ard(body, cardx::ard_stats_chisq_test(adsl, by = TRT, variables = SEX))),
+                   tab_of(body))
+})
+
+test_that("plan_compare(): what a table does not use -- other statistics, a second test, overall rows (#625)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's t-test / prop test
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  two <- adsl[adsl$TRT != "Xanomeline Low Dose", ]
+  skip_if_not_installed("dplyr")
+  # cards::bind_ard() refuses two tests of one variable (their statistic
+  # names repeat); bound as data frames they still can meet here
+  ard <- dplyr::bind_rows(
+    cards::ard_summary(two, by = TRT, variables = AGE),
+    cards::ard_summary(two, variables = AGE),                        # overall rows, no plan_total()
+    cardx::ard_stats_t_test(two, by = TRT, variables = AGE),
+    cardx::ard_stats_wilcox_test(two, by = TRT, variables = AGE))    # a second test of AGE
+  d <- normalize_ard(ard)
+  wide <- function(compare) suppressMessages(widen_ard(
+    d, cols = "TRT", rows = c(grp = "variable"), label = NA,
+    cells = "{mean:.1f}", compare = compare, notes = "attr"))
+  # two tests, one column reading both: said, not one chosen
+  expect_error(wide(list(cols = list(p = "{p.value:.3f}"))), "Split them with `by =`")
+  # the column keyed by context reads the t-test; the Wilcoxon is left, and noted
+  w <- wide(list(cols = list(p = c(stats_t_test = "{p.value:.3f}"))))
+  tt <- as.data.frame(cardx::ard_stats_t_test(two, by = TRT, variables = AGE))
+  expect_identical(w$p, sprintf("%.3f", unlist(tt$stat[tt$stat_name == "p.value"])))
+  ig <- attr(w, "ard_ignored")
+  expect_true(any(ig$context == "stats_wilcox_test" &
+                    grepl("comparison record no row or column", ig$reason)))
+  # the t-test's other statistics (statistic, parameter, method ...) are not read
+  expect_identical(names(w), c("grp", "Placebo", "Xanomeline High Dose", "p"))
+  # the overall rows are no comparison: left out as before, with the same note
+  expect_true(any(ig$context == "summary" & grepl("no value for a `cols` key", ig$reason)))
+  # one column each test, side by side
+  w2 <- wide(list(cols = list(t = c(stats_t_test = "{p.value:.3f}"),
+                              wilcoxon = c(stats_wilcox_test = "{p.value:.3f}"))))
+  expect_false(anyNA(w2$t)); expect_false(anyNA(w2$wilcoxon))
+})
+
+test_that("plan_compare() with cell_rows(): a difference on line 1 and its CI on line 2, beside the body's two lines (#625)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl <- adsl[adsl$TRT != "Xanomeline Low Dose", ]
+  adsl$RESP <- adsl$AGE > 75
+  adsl$ALL <- "All"
+  orr  <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ TRUE,
+                                                method = "clopper-pearson", conf.level = 0.90)
+  dif  <- function(.x) cardx::ard_stats_prop_test(.x, by = TRT, variables = RESP, conf.level = 0.90)
+  ard <- cards::bind_ard(
+    cards::ard_strata(adsl, .by = TRT, .strata = ALL, .f = orr),
+    cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr),
+    cards::ard_strata(adsl, .strata = ALL, .f = dif),
+    cards::ard_strata(adsl, .strata = SEX, .f = dif))
+  t <- suppressMessages(plan_apply(
+    normalize_ard(ard, stack = list(subgroup = c("ALL", "SEX"))) |>
+      table_plan(cols = c("TRT", ".stat_group"),
+                 rows = c(grp1 = "subgroup", grp2 = "subgroup_level"), label = NA) |>
+      plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+      plan_sort(FALSE) |>
+      plan_cells(n = cell_rows("1" = "{N:.0f}"),
+                 orr_ci = cell_rows("1" = "{n:.0f} ({estimate:.1f%})",
+                                    "2" = "{conf.low:.1f%}, {conf.high:.1f%}"), notes = FALSE) |>
+      plan_compare(diff = cell_rows("1" = "{estimate:.1f%}", "2" = "({conf.low:.1f%}, {conf.high:.1f%})"),
+                   p = cell_rows("1" = "{p.value:.3f}")), "table"))
+  t <- as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  expect_identical(nrow(t), 6L)                                  # 3 subgroups x 2 lines
+  one <- seq(1L, 6L, by = 2L)
+  expect_match(t$diff[one], "^-?[0-9]+[.][0-9]$")                # the difference on line 1
+  expect_match(t$diff[-one], "^[(]-?[0-9.]+, -?[0-9.]+[)]$")     # its CI on line 2
+  expect_false(anyNA(t$p[one]))
+  expect_true(all(is.na(t$p[-one])))                             # the p-value on line 1 only
+  pt <- as.data.frame(dif(adsl))
+  st <- function(n) unlist(pt$stat[pt$stat_name == n])
+  expect_identical(t$diff[1L], sprintf("%.1f", 100 * st("estimate")))
+})

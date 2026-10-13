@@ -815,6 +815,57 @@ print.table_plan <- function(x, ...) {
 #'   kind (`continuous` / `categorical`), a stat group of
 #'   `plan_stat_groups()` or `default`.
 #'
+#'   `plan_compare()` takes the **comparison columns**, each named (the
+#'   column's name) and each what `plan_cells()` takes for one cell: a
+#'   template with guards, or a map keyed by context / kind / `default`
+#'   --- here a named vector is that map, since a column is one cell with
+#'   no rows to label: `p = c(stats_t_test = "{p.value:.3f}")` reads the
+#'   t-test and leaves a Wilcoxon of the same variable (noted, as every
+#'   record no column takes); two tests one column reads both of are an
+#'   error, never one picked.  A template reads only the statistics it
+#'   names.  It reads the ARD's comparison records --- the column key with **no
+#'   value**, in an analysis the body does not have: cardx's
+#'   `ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_fisher_test()`,
+#'   `ard_stats_kruskal_test()`, `ard_stats_oneway_test()`,
+#'   `ard_stats_prop_test()` --- and puts each on its **variable's block**:
+#'   the row of its level when it has one, else the block's first row as the
+#'   table is sorted (the variable's heading row under `plan_stub()`).
+#'   Nothing is computed; the p-value, the difference and its CI are the
+#'   ARD's.  A test whose record names no variable (`ard_stats_aov()`'s
+#'   term) has no row; use `ard_stats_oneway_test()`.
+#'
+#'   The names are **the columns' own** --- any name, as many as the
+#'   table has; `p` and `diff` are only examples.  Each column reads
+#'   whatever statistics its template names from the same record:
+#'
+#'   ```r
+#'   plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))
+#'   plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})",
+#'                p = "{p.value:.3f}")
+#'   plan_compare(t = "{statistic:.2f}", df = "{parameter:.0f}",   # a t-test laid out
+#'                p = "{p.value:.4f}")
+#'   plan_compare(odds_ratio = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})")  # an odds ratio (Fisher)
+#'   plan_compare(p = c(stats_t_test = "{p.value:.3f}"))              # the t-test of several tests
+#'   plan_compare(p = c(stats_chisq_test  = "{p.value:.3f}",          # each test its own way
+#'                      stats_fisher_test = "{p.value:.4f}"))
+#'   ```
+#'
+#'   **Lines** are [cell_rows()], as in the body: each line goes on the
+#'   variable's row of that label, so a difference and its CI sit beside the
+#'   body's estimate and CI lines (an ORR table's `"1"` / `"2"`), and a
+#'   p-value on line 1 only is `cell_rows("1" = ...)` (a named vector is a
+#'   map by context here, not lines):
+#'
+#'   ```r
+#'   plan_compare(diff = cell_rows("1" = "{estimate:.3f}",
+#'                                 "2" = "({conf.low:.3f}, {conf.high:.3f})"),
+#'                p    = cell_rows("1" = "{p.value:.3f}"))
+#'   ```
+#'
+#'   The columns have no population: the header's `{col}` / `{n}` and its
+#'   short rows leave them alone, so the header names them
+#'   (`rtf_col_header(c(..., "p-value"))`).
+#'
 #'   `plan_stat_groups()` takes the groups, each a name and the
 #'   statistics in it (`n = "N", orr_ci = c("n", "estimate", "conf.low",
 #'   "conf.high")`).  Each row of the ARD gets its group in the key
@@ -1246,6 +1297,15 @@ print.table_plan <- function(x, ...) {
 #' @param rounding For `plan_digits()`: the tie-breaking family for the
 #'   run, as `widen_ard(rounding = )` takes it.  Last wins, like every
 #'   other layer.
+#' @param .plan For `plan_compare()`: the plan, as `plan` is for the
+#'   others --- named so that a column called `p` is not taken for it
+#'   (an argument before `...` matches by its first letters).  The pipe
+#'   passes it by position.
+#' @param by For `plan_compare()`: the column that splits the comparison
+#'   records into columns, one a level (`by = "COMPARISON"`: each active arm
+#'   against placebo, the ARD made by `ard_strata(.strata = COMPARISON)` over
+#'   two-arm subsets).  With several columns in `...` they are named
+#'   `<level>____<column>`.  `NULL`: one comparison a variable.
 #' @param label,position For `plan_total()`: the heading of the **Total
 #'   column** (`"Total"`) and where it goes among the column key's values
 #'   (`"last"`, `"first"`).  Its cells are cards' own overall rows --- the
@@ -1255,7 +1315,11 @@ print.table_plan <- function(x, ...) {
 #'   `cards::ard_stack(.overall = TRUE)`) --- so the ARD keeps no `ARM`
 #'   value the data does not have.  Its `{n}` in the column header is the
 #'   study total the ARD states (the column key tabulated on its own, or
-#'   `cards::ard_total_n()`).  One column key only.
+#'   `cards::ard_total_n()`).  One column key only.  Only the body's
+#'   analyses are read: a test or a difference has no column key either,
+#'   and is `plan_compare()`'s.  For `plan_compare()`, `position` is where
+#'   its columns go: after the column key's (`"last"`) or before them
+#'   (`"first"`).
 #'
 #' @return The plan, with one more layer.
 #'
@@ -1269,6 +1333,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_total(label, position)`: a Total column from the ARD's overall rows. Goes to [widen_ard()]: those rows as one more value of the column key, and its place in `levels`; the header's `{n}` there is the study total.
 #'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
 #' * `plan_stat_groups(...)`: the statistics in named groups. Goes to [widen_ard()]: `stat_groups` (the key `.stat_group`).
+#' * `plan_compare(..., by, position)`: columns read from comparison records (a test's p-value, a difference and its CI). Goes to [widen_ard()]: `compare`.
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
 #' * `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: how cells look. Goes to [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition.
@@ -1862,6 +1927,19 @@ plan_total <- function(plan, label = "Total", position = c("last", "first")) {
   .plan_layer(plan, "total", list(label = label, position = position))
 }
 
+# Columns read from comparison records -- a test's p-value, a difference
+# with its CI -- that carry the column key without a value: placed on the
+# summary's row, never computed (#625).
+#' @rdname plan_verbs
+#' @export
+# `.plan`, not `plan`: an argument before `...` is matched by a prefix, and
+# `p = ` -- the commonest column here -- would be taken for the plan.
+plan_compare <- function(.plan, ..., by = NULL, position = c("last", "first")) {
+  position <- match.arg(position)
+  spec <- .ard_compare_spec(list(cols = list(...), by = by, position = position))
+  .plan_layer(.plan, "compare", list(compare = spec))
+}
+
 # One record's statistics in named groups -- its N in one column, its rate
 # and interval in the next -- which `cols` / `rows` name as `.stat_group`
 # (#619): the mutate() a table needed before table_plan() is a layer.
@@ -2290,7 +2368,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     # `plan_cells(na = )` alone is what an empty cell prints, which a
     # finished table has too
     ard_half <- vapply(plan$layers, function(l)
-      l$kind %in% c("cells", "levels", "labels", "stat_groups") ||
+      l$kind %in% c("cells", "levels", "labels", "stat_groups", "compare") ||
         (identical(l$kind, "cell_options") &&
            length(setdiff(names(Filter(Negate(is.null), l$fields)), "na"))),
       TRUE)
@@ -2566,7 +2644,12 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     rep(NA_character_, nrow(d))
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
     rep(FALSE, nrow(d))
-  at <- is.na(k) & !own & !(v %in% "..ard_total_n..")
+  # only the body's analyses: a test or a difference (plan_compare()) has
+  # no column key either, and is no Total
+  ctx <- if ("context" %in% names(d)) as.character(d$context) else
+    rep(NA_character_, nrow(d))
+  body_ctx <- unique(ctx[!is.na(k)])
+  at <- is.na(k) & !own & !(v %in% "..ard_total_n..") & ctx %in% body_ctx
   if (!any(at)) {
     .ard_stop(sprintf(paste0(
       "plan_total(): the ARD has no overall rows, rows without %s.
@@ -2653,6 +2736,9 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
   # plan_stat_groups(): the last one says them
   sg <- .plan_of(plan, "stat_groups")
   if (length(sg)) out$stat_groups <- sg[[length(sg)]]$stat_groups
+  # plan_compare(): the last one says them
+  cp <- .plan_of(plan, "compare")
+  if (length(cp)) out$compare <- cp[[length(cp)]]$compare
   # renames, not arguments: .plan_prepare() has already done them
   out[c("variable", "stat_name", "stat")] <- NULL
   lb <- .plan_label_spec(plan)
@@ -4011,7 +4097,23 @@ plan_n_candidates <- function(plan) {
 # template instead of a function that reassembles the names.
 .plan_spread_cols <- function(plan, tbl) {
   lb <- .plan_label_name(plan)
-  setdiff(names(tbl), c(.plan_row_keys(plan), lb))
+  setdiff(names(tbl), c(.plan_row_keys(plan), lb, .plan_compare_cols(plan, tbl)))
+}
+
+# plan_compare()'s columns, which have no population and no `{col}`: the
+# header leaves them to the author.
+.plan_compare_cols <- function(plan, tbl) {
+  cp <- .plan_of(plan, "compare")
+  if (!length(cp)) return(character(0))
+  spec <- cp[[length(cp)]]$compare
+  nm <- names(spec$cols)
+  if (is.null(spec$by)) return(intersect(nm, names(tbl)))
+  b <- if (is.data.frame(plan$data) && spec$by %in% names(plan$data))
+    .ard_first_seen(as.character(plan$data[[spec$by]])) else character(0)
+  b <- b[!is.na(b)]
+  cand <- if (length(nm) == 1L) b else
+    as.vector(outer(b, nm, paste, sep = .plan_sep(plan)))
+  intersect(cand, names(tbl))
 }
 
 # "arm name over (N=86)" is the commonest header in clinical work, and
@@ -4321,7 +4423,9 @@ plan_n_candidates <- function(plan) {
 #'   in the order declared); `layers` (by kind, the merged fields; for
 #'   `after` and `restyle` one entry per call); `cells` (the cell
 #'   templates, each parsed into its label rows and template chains ---
-#'   `NULL` when the statistics are rows); `columns` (`names`, `spread`,
+#'   `NULL` when the statistics are rows); `compare` (plan_compare()'s
+#'   columns, each `column`, `context` and its parsed `entry`, with `by`
+#'   and `position`; `NULL` without one); `columns` (`names`, `spread`,
 #'   `page_names`, `widths`); `header` (`source`: `"cells"` for a header
 #'   given as cell rows, `"resolved"` for one the plan built; `cells`: the
 #'   header as cell rows, a data frame; `n_text`: the `{n}` scope as text,
@@ -4378,6 +4482,24 @@ plan_layers <- function(plan) {
         NA_character_,
       entry = .ard_cell_entry(cm[[k]])))
   }
+  # plan_compare(): its columns, parsed as the cells are
+  compare <- NULL
+  cs <- s$compare
+  if (!is.null(cs)) {
+    rows <- list()
+    for (nm in names(cs$cols)) {
+      m <- cs$cols[[nm]]
+      is_map <- is.list(m) && !inherits(m, "cell_rows") &&
+        any(nzchar(names(m) %||% ""))
+      if (!is_map) m <- list(default = m)
+      for (k in names(m)) {
+        rows[[length(rows) + 1L]] <- list(
+          column = nm, context = if (identical(k, "default")) NA_character_ else k,
+          entry = .ard_cell_entry(m[[k]]))
+      }
+    }
+    compare <- list(cols = rows, by = cs$by, position = cs$position)
+  }
   hd <- layers$header
   hn <- .plan_header_n(hd)
   header <- list(source = NULL, cells = NULL, n_text = .plan_scope_text(hn),
@@ -4401,7 +4523,7 @@ plan_layers <- function(plan) {
   }
   list(data = plan$data, roles = plan$roles, label = .plan_label_name(plan),
        group_col = .plan_group_col(plan), declared = kinds, layers = layers,
-       cells = cells,
+       cells = cells, compare = compare,
        columns = list(names = pnames, spread = spread, page_names = page_names,
                       widths = seen$widths %||% first$col_rel_width),
        header = header, pages = pages)

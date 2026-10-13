@@ -1,5 +1,24 @@
 # rtfreporter (development version)
 
+- **`plan_compare()`: a test's p-value, a difference and its CI as columns on
+  the summary's row** (#625).  cardx's tests write the column key with no
+  value, so `table_plan(cols = )` dropped them.  `plan_compare(p =
+  c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))` and `plan_compare(diff =
+  "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})", p = "{p.value:.3f}")`
+  place those records -- an analysis the body does not have -- on their
+  variable's block: its level's row, else the block's first row.  `by =`
+  gives one column a comparison; `position =` puts them first or last.
+  Nothing is computed: the numbers are the ARD's.  A column keyed by
+  context (`p = c(stats_t_test = "{p.value:.3f}")`) picks one test of
+  several and leaves the others, noted; two tests one column reads are an
+  error, never one picked.  A column's lines are `cell_rows()`, each beside
+  the body's line of that label (an ORR difference on line 1, its CI on
+  line 2).  The names are the columns' own: `t = "{statistic:.2f}"`,
+  `df = "{parameter:.0f}"`, an odds ratio.  `widen_ard(compare = )` is the same without a
+  plan.
+- `plan_total()` reads only the body's analyses: with a test in the ARD it
+  took the test's record for an overall row and left an empty row.
+
 - **`plan_stat_groups()`: one record's statistics in two columns, without a
   `mutate()` before the plan** (#619).  An ORR table with N in one column
   and the rate and its CI in the next had to relabel `variable` by

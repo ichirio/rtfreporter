@@ -1934,6 +1934,13 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   keyed by a group's name (looked up after the analysis variable).  A
 #'   statistic in no group is not read.  [plan_stat_groups()] is the plan's
 #'   spelling.  `NULL` (default): no groups.
+#' @param compare Columns read from the ARD's comparison records --- the
+#'   column key with no value, in an analysis the body does not have (a
+#'   test's p-value, a difference and its CI) --- put on the row of the
+#'   record's variable: `list(cols = list(p = "{p.value:.3f}"), by = NULL,
+#'   position = "last")`.  [plan_compare()] is the plan's spelling, and its
+#'   documentation says where a record goes.  `NULL` (default): none, and
+#'   the records are left out as rows with no value of the column key.
 #' @param stats `"cells"` (default) builds character cells from `cells`.
 #'   `"rows"` ignores `cells` and gives every statistic its own row, labelled
 #'   with `stat_label` -- the shape a PK concentration table wants.
@@ -2072,7 +2079,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                        sep = "____",
                        rounding = NULL,
                        sort_stat = NULL, na = NA_character_, notes = TRUE,
-                       stat_groups = NULL) {
+                       stat_groups = NULL, compare = NULL) {
   if (missing(cols)) {
     .ard_stop_missing("cols", "`cols` is required: name the column keys.")
   }
@@ -2127,6 +2134,26 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     own_ignored <- .ard_tally(d[own, , drop = FALSE],
                               "a key variable's own tabulation")
     d <- d[!own, , drop = FALSE]
+  }
+
+  # The comparison records (plan_compare()): the column key without a
+  # value -- a test across the arms, a difference between two -- in a
+  # context the body does not have, so the overall rows a Total column
+  # reads (the same analysis without `by`) stay where they are.  Split off
+  # before anything else reads `d`; placed on the finished rows below.
+  cmp_d <- NULL
+  if (!is.null(compare)) {
+    compare <- .ard_compare_spec(compare)
+    ckeys <- setdiff(as.character(unlist(cols, use.names = FALSE)), ".stat_group")
+    ckeys <- intersect(ckeys, names(d))
+    if (length(ckeys)) {
+      nokey <- Reduce(`|`, lapply(ckeys, function(k) is.na(d[[k]])))
+      body_ctx <- unique(d$context[!nokey])
+      at <- nokey & !(d$context %in% body_ctx) &
+        !(d$variable %in% "..ard_total_n..")
+      cmp_d <- d[at, , drop = FALSE]
+      d <- d[!at, , drop = FALSE]
+    }
   }
 
   # The statistics in named groups (plan_stat_groups()): the key
@@ -2228,7 +2255,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   ignored <- .ard_ignored_bind(.ard_ignored_bind(
     .ard_ignored_bind(attr(x, "ard_ignored", exact = TRUE), own_ignored),
     sg_ignored),
-    .ard_tally(d[!ok, , drop = FALSE], "no value for a `cols` key"))
+    .ard_tally(d[!ok, , drop = FALSE], if (is.null(compare))
+      "no value for a `cols` key (a test or a difference? plan_compare() places it)"
+      else "no value for a `cols` key"))
   d <- d[ok, , drop = FALSE]
   colparts <- lapply(colparts, function(v) v[ok])
   colkey <- do.call(paste, c(colparts, list(sep = sep)))
@@ -2414,7 +2443,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   rid <- do.call(paste, c(lapply(id_cols, function(k) as.character(long[[k]])),
                           list(sep = "\r")))
   row_first <- !duplicated(rid)
-  base <- long[row_first, c(id_cols, ".depth", ".overall"), drop = FALSE]
+  base <- long[row_first, c(id_cols, ".depth", ".overall", ".var"), drop = FALSE]
   base$.rid <- rid[row_first]
 
   mat <- matrix(na, nrow = nrow(base), ncol = length(col_levels),
@@ -2473,6 +2502,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     out$.sort_stat <- as.numeric(tot[match(base$.rid, names(tot))])
   }
 
+  # each row's identity rides through the sort, for plan_compare()
+  if (!is.null(cmp_d) && nrow(cmp_d)) out$.cmp_rid <- base$.rid
   if (is.character(sort) && length(sort)) {
     out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref,
                                colkey = colkey, sep = sep), ,
@@ -2507,6 +2538,15 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     # arrived in rather than whatever order() happens to produce
     out <- out[do.call(order, c(keys, list(seq_len(nrow(out))))), ,
                drop = FALSE]
+  }
+  if (!is.null(cmp_d) && nrow(cmp_d)) {
+    ord_rid <- out$.cmp_rid
+    out$.cmp_rid <- NULL
+    placed <- .ard_compare_place(out, base, ord_rid, cmp_d, compare, rowrefs,
+                                 labref, label_out, recode, rounding, na, sep,
+                                 n_id = length(id_cols))
+    out <- placed$out
+    ignored <- .ard_ignored_bind(ignored, placed$ignored)
   }
   if (drop_label && !is.null(label_out)) out[[label_out]] <- NULL
   rownames(out) <- NULL
@@ -2564,6 +2604,132 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     } else v
   }
   do.call(order, keys)
+}
+
+# plan_compare(): the columns, each a plan_cells()-style map, the key that
+# splits the comparisons into columns, and where they go.
+.ard_compare_spec <- function(x) {
+  if (!is.list(x)) .ard_stop("`compare` is a list: `list(cols = list(p = \"{p.value:.3f}\"))`.")
+  cols <- x$cols %||% x[setdiff(names(x), c("by", "position"))]
+  nm <- names(cols) %||% rep("", length(cols))
+  if (!length(cols) || any(!nzchar(nm)) || anyDuplicated(nm)) {
+    .ard_stop(paste0("plan_compare(): every column has a name of its own: ",
+                     "`plan_compare(p = \"{p.value:.3f}\")`."))
+  }
+  # A column is one cell, with no rows to label, so a named vector is a map
+  # (`c(stats_t_test = "{p.value:.3f}", default = ...)`): keyed by context,
+  # kind or `default`, it picks one test of several and leaves the others.
+  cols <- lapply(cols, function(m) {
+    if (is.character(m) && !is.null(names(m)) && all(nzchar(names(m)))) as.list(m) else m
+  })
+  pos <- x$position %||% "last"
+  if (!is.character(pos) || length(pos) != 1L || !pos %in% c("last", "first")) {
+    .ard_stop("plan_compare(position = ) is \"last\" or \"first\".")
+  }
+  by <- x$by
+  if (!is.null(by) && (!is.character(by) || length(by) != 1L || is.na(by))) {
+    .ard_stop("plan_compare(by = ) is one column, the key that splits the comparisons: \"COMPARISON\".")
+  }
+  list(cols = cols, by = by, position = pos)
+}
+
+# Put each comparison record on its row: the block of its variable (and the
+# row keys it has), the row of its level when it has one, else the block's
+# first row as the table is now sorted.  A cell two records reach is an
+# error; a record no row takes, or no column's map reads, is a note.
+.ard_compare_place <- function(out, base, ord_rid, cmp, spec, rowrefs, labref,
+                               label_out, recode, rounding, na, sep, n_id) {
+  bi <- match(ord_rid, base$.rid)
+  rowvar <- as.character(base$.var[bi])
+  byv <- if (!is.null(spec$by)) {
+    if (!spec$by %in% names(cmp)) {
+      .ard_stop(sprintf(paste0("plan_compare(by = \"%s\"): no such column in ",
+                               "the comparison records."), spec$by))
+    }
+    as.character(cmp[[spec$by]])
+  } else rep(NA_character_, nrow(cmp))
+  by_lv <- if (is.null(spec$by)) NA_character_ else {
+    v <- cmp[[spec$by]]
+    if (is.factor(v)) intersect(levels(v), byv) else .ard_first_seen(byv[!is.na(byv)])
+  }
+  cn_of <- function(b, nm) {
+    if (is.null(spec$by)) nm
+    else if (length(spec$cols) == 1L) b
+    else paste(b, nm, sep = sep)
+  }
+  new_cols <- unlist(lapply(by_lv, function(b)
+    vapply(names(spec$cols), function(nm) cn_of(b, nm), "")), use.names = FALSE)
+  clash <- intersect(new_cols, names(out))
+  if (length(clash)) {
+    .ard_stop(sprintf("plan_compare(): %s is a column of the table already.",
+                      paste(sQuote(clash), collapse = ", ")))
+  }
+  vals <- matrix(NA_character_, nrow(out), length(new_cols),
+                 dimnames = list(NULL, new_cols))
+  keyref <- vapply(rowrefs, function(r) r$ref, "")
+  gid <- do.call(paste, c(lapply(c("variable", "context", intersect(keyref, names(cmp)),
+                                   if (".label" %in% names(cmp)) ".label"),
+                                 function(k) as.character(cmp[[k]])),
+                          list(byv), list(sep = "\r")))
+  unused <- rep(FALSE, nrow(cmp))
+  for (ii in split(seq_len(nrow(cmp)), factor(gid, levels = unique(gid)))) {
+    sub <- cmp[ii, , drop = FALSE]
+    cand <- !is.na(rowvar) & rowvar == sub$variable[1L]
+    for (r in rowrefs) {
+      if (!r$ref %in% names(sub) || is.na(sub[[r$ref]][1L])) next
+      want <- recode(sub[[r$ref]][1L], r$ref, r$out)
+      cand <- cand & as.character(out[[r$out]]) %in% want
+    }
+    if (!is.null(label_out) && ".label" %in% names(sub) && !is.na(sub$.label[1L])) {
+      at_lv <- cand & as.character(out[[label_out]]) %in% sub$.label[1L]
+      if (any(at_lv)) cand <- at_lv
+    }
+    if (!any(cand)) { unused[ii] <- TRUE; next }
+    took <- FALSE
+    for (nm in names(spec$cols)) {
+      entry <- .ard_lookup_cells(spec$cols[[nm]], sub$variable[1L], sub$context[1L],
+                                 if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_)
+      if (is.null(entry)) next
+      cn <- cn_of(byv[ii][1L], nm)
+      if (!cn %in% new_cols) next
+      # cell_rows(): each line on the block's row of that label ("1" the
+      # estimate, "2" its CI, as the body's lines are); otherwise one line,
+      # on the block's first row
+      labs <- entry$labels
+      for (j in seq_along(entry$chains)) {
+        at <- cand
+        if (!is.null(labs) && nzchar(labs[j]) && !is.null(label_out)) {
+          at <- cand & as.character(out[[label_out]]) %in% labs[j]
+        }
+        if (!any(at)) next
+        row <- which(at)[1L]
+        v <- .ard_chain_pick(entry$chains[[j]], sub, rounding)$v
+        if (is.na(v)) next
+        old <- vals[row, cn]
+        if (!is.na(old) && !identical(old, v)) {
+          .ard_stop(sprintf(paste0(
+            "plan_compare(): two comparison records of %s reach the column '%s' ",
+            "on one row (%s, %s).\n  Split them with `by =` (a column naming ",
+            "each comparison)."), sQuote(sub$variable[1L]), cn, old, v))
+        }
+        vals[row, cn] <- v
+        took <- TRUE
+      }
+    }
+    if (!took) unused[ii] <- TRUE
+  }
+  vals[is.na(vals)] <- na
+  vdf <- as.data.frame(vals, stringsAsFactors = FALSE, check.names = FALSE)
+  helper <- intersect(".sort_stat", names(out))
+  body <- out[, setdiff(names(out), helper), drop = FALSE]
+  res <- if (identical(spec$position, "first")) {
+    cbind(body[, seq_len(n_id), drop = FALSE], vdf,
+          body[, setdiff(seq_along(body), seq_len(n_id)), drop = FALSE])
+  } else cbind(body, vdf)
+  if (length(helper)) res[[helper]] <- out[[helper]]
+  list(out = res,
+       ignored = .ard_tally(cmp[unused, , drop = FALSE],
+                            "a comparison record no row or column takes"))
 }
 
 # `-n@group1[Total]`: the statistic, the row key whose group's own row it is

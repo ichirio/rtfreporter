@@ -12,6 +12,7 @@
 \alias{plan_row_group}
 \alias{plan_nest}
 \alias{plan_total}
+\alias{plan_compare}
 \alias{plan_stat_groups}
 \alias{plan_hide}
 \alias{plan_sort}
@@ -66,6 +67,8 @@ plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
 plan_nest(plan, ...)
 
 plan_total(plan, label = "Total", position = c("last", "first"))
+
+plan_compare(.plan, ..., by = NULL, position = c("last", "first"))
 
 plan_stat_groups(plan, ...)
 
@@ -176,6 +179,55 @@ plan_paginate_cols(
 takes: one bare entry, or entries named by variable, \code{context},
 kind (\code{continuous} / \code{categorical}), a stat group of
 \code{plan_stat_groups()} or \code{default}.
+
+\code{plan_compare()} takes the \strong{comparison columns}, each named (the
+column's name) and each what \code{plan_cells()} takes for one cell: a
+template with guards, or a map keyed by context / kind / \code{default}
+--- here a named vector is that map, since a column is one cell with
+no rows to label: \code{p = c(stats_t_test = "{p.value:.3f}")} reads the
+t-test and leaves a Wilcoxon of the same variable (noted, as every
+record no column takes); two tests one column reads both of are an
+error, never one picked.  A template reads only the statistics it
+names.  It reads the ARD's comparison records --- the column key with \strong{no
+value}, in an analysis the body does not have: cardx's
+\code{ard_stats_t_test()}, \code{ard_stats_chisq_test()}, \code{ard_stats_fisher_test()},
+\code{ard_stats_kruskal_test()}, \code{ard_stats_oneway_test()},
+\code{ard_stats_prop_test()} --- and puts each on its \strong{variable's block}:
+the row of its level when it has one, else the block's first row as the
+table is sorted (the variable's heading row under \code{plan_stub()}).
+Nothing is computed; the p-value, the difference and its CI are the
+ARD's.  A test whose record names no variable (\code{ard_stats_aov()}'s
+term) has no row; use \code{ard_stats_oneway_test()}.
+
+The names are \strong{the columns' own} --- any name, as many as the
+table has; \code{p} and \code{diff} are only examples.  Each column reads
+whatever statistics its template names from the same record:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_compare(p = c(p.value < 0.001 ~ "<0.001", "\{p.value:.3f\}"))
+plan_compare(diff = "\{estimate:.2f\} (\{conf.low:.2f\}, \{conf.high:.2f\})",
+             p = "\{p.value:.3f\}")
+plan_compare(t = "\{statistic:.2f\}", df = "\{parameter:.0f\}",   # a t-test laid out
+             p = "\{p.value:.4f\}")
+plan_compare(odds_ratio = "\{estimate:.2f\} (\{conf.low:.2f\}, \{conf.high:.2f\})")  # an odds ratio (Fisher)
+plan_compare(p = c(stats_t_test = "\{p.value:.3f\}"))              # the t-test of several tests
+plan_compare(p = c(stats_chisq_test  = "\{p.value:.3f\}",          # each test its own way
+                   stats_fisher_test = "\{p.value:.4f\}"))
+}\if{html}{\out{</div>}}
+
+\strong{Lines} are \code{\link[=cell_rows]{cell_rows()}}, as in the body: each line goes on the
+variable's row of that label, so a difference and its CI sit beside the
+body's estimate and CI lines (an ORR table's \code{"1"} / \code{"2"}), and a
+p-value on line 1 only is \code{cell_rows("1" = ...)} (a named vector is a
+map by context here, not lines):
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_compare(diff = cell_rows("1" = "\{estimate:.3f\}",
+                              "2" = "(\{conf.low:.3f\}, \{conf.high:.3f\})"),
+             p    = cell_rows("1" = "\{p.value:.3f\}"))
+}\if{html}{\out{</div>}}
+
+The columns have no population: the header's \code{{col}} / \code{{n}} and its
+short rows leave them alone, so the header names them
+(\code{rtf_col_header(c(..., "p-value"))}).
 
 \code{plan_stat_groups()} takes the groups, each a name and the
 statistics in it (\verb{n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")}).  Each row of the ARD gets its group in the key
@@ -430,7 +482,22 @@ under \code{cards::ard_tabulate(adsl, by = ARM, variables = RACE)}, or
 \code{cards::ard_stack(.overall = TRUE)}) --- so the ARD keeps no \code{ARM}
 value the data does not have.  Its \code{{n}} in the column header is the
 study total the ARD states (the column key tabulated on its own, or
-\code{cards::ard_total_n()}).  One column key only.}
+\code{cards::ard_total_n()}).  One column key only.  Only the body's
+analyses are read: a test or a difference has no column key either,
+and is \code{plan_compare()}'s.  For \code{plan_compare()}, \code{position} is where
+its columns go: after the column key's (\code{"last"}) or before them
+(\code{"first"}).}
+
+\item{.plan}{For \code{plan_compare()}: the plan, as \code{plan} is for the
+others --- named so that a column called \code{p} is not taken for it
+(an argument before \code{...} matches by its first letters).  The pipe
+passes it by position.}
+
+\item{by}{For \code{plan_compare()}: the column that splits the comparison
+records into columns, one a level (\code{by = "COMPARISON"}: each active arm
+against placebo, the ARD made by \code{ard_strata(.strata = COMPARISON)} over
+two-arm subsets).  With several columns in \code{...} they are named
+\verb{<level>____<column>}.  \code{NULL}: one comparison a variable.}
 
 \item{stat}{For \code{plan_sort()}: the statistic totalled into \code{.sort_stat}
 for a frequency order (\code{widen_ard(sort_stat = )}), e.g. \code{stat = "n"}.}
@@ -667,6 +734,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_total(label, position)}: a Total column from the ARD's overall rows. Goes to \code{\link[=widen_ard]{widen_ard()}}: those rows as one more value of the column key, and its place in \code{levels}; the header's \code{{n}} there is the study total.
 \code{plan_levels(.drop_empty = )} leaves out the levels no record has, before the table is made.
 \item \code{plan_stat_groups(...)}: the statistics in named groups. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{stat_groups} (the key \code{.stat_group}).
+\item \code{plan_compare(..., by, position)}: columns read from comparison records (a test's p-value, a difference and its CI). Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{compare}.
 \item \code{plan_sort(..., stat, keep)}: the row order. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name}.
 \item \code{plan_stub(vars, name, indent, group_summary, before)}: the row headings. Goes to \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}.
 \item \code{plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)}: how cells look. Goes to \code{\link[=style_header]{style_header()}}, \code{\link[=style_cols]{style_cols()}}, or \code{\link[=rtftable]{rtftable()}}'s \code{cell_styles} for a condition.
