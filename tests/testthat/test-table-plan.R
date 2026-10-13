@@ -2910,6 +2910,7 @@ test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its 
 test_that("plan_compare(): a test's p-value and a difference with its CI as columns, placed not computed (#625)", {
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's t-test / prop test
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   body <- cards::ard_stack(adsl, .by = TRT, cards::ard_summary(variables = AGE),
@@ -2975,6 +2976,7 @@ test_that("plan_compare(): a test's p-value and a difference with its CI as colu
 test_that("plan_total() reads the body's analyses only: a test is no Total and leaves no empty row (#625)", {
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's tests
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   body <- cards::ard_stack(adsl, .by = TRT, cards::ard_tabulate(variables = SEX), .overall = TRUE)
@@ -2991,6 +2993,7 @@ test_that("plan_total() reads the body's analyses only: a test is no Total and l
 test_that("plan_compare(): what a table does not use -- other statistics, a second test, overall rows (#625)", {
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")   # cardx's t-test / prop test
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   two <- adsl[adsl$TRT != "Xanomeline Low Dose", ]
