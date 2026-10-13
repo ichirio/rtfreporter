@@ -59,7 +59,7 @@ plan_cell_style(
   indent_twips = NULL
 )
 
-plan_paginate_group(plan, col = NULL, keep = TRUE)
+plan_paginate_group(plan, col = NULL, keep = TRUE, heading = NULL)
 
 plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
 
@@ -385,6 +385,18 @@ it says so there instead of the name being written again in a
 \code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
 are ignored rather than refused.}
 
+\item{heading}{For \code{plan_paginate_group()}: the page's name as a template,
+\code{"Treatment: {value} (N={n})"}, in place of the bare value --- so the
+section header \code{rtf_tables(auto_section = TRUE)} prints (or the title
+line of \code{auto_title = TRUE}) says the arm and its N with neither written
+by hand, and a study with three arms gets three.  \code{{value}} is the
+page's value as printed; \code{{n}} its population \strong{as the ARD states it}:
+the page variable's own tabulation, \code{cards::ard_tabulate(adsl, variables = TRT01A)} bound into the ARD (the \code{.key_own} rows
+\code{\link[=normalize_ard]{normalize_ard()}} keeps), never an analysis's \code{N} (the count of its
+non-missing values).  What the ARD does not state is \code{NA}, with a
+warning.  \code{{PROGRAM}}, \code{{DATETIME}} and the page tokens are left for the
+renderer.}
+
 \item{mode, collapse}{For \code{plan_row_group()}: what a run of rows sharing a
 value is, and how the repeat shows.  \code{mode} is \code{as_rtftables(group_by = )},
 which is how a group BOUNDARY is found --- \code{"value"} (each run of equal
@@ -655,7 +667,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_sort(..., stat, keep)}: the row order. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{sort}, \code{sort_stat}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{sort_by}, \code{sort_desc} from \code{-name}.
 \item \code{plan_stub(vars, name, indent, group_summary, before)}: the row headings. Goes to \code{\link[=stub_cols]{stub_cols()}}: \code{vars}, \code{label}, \code{indent}, \code{group_summary}.
 \item \code{plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)}: how cells look. Goes to \code{\link[=style_header]{style_header()}}, \code{\link[=style_cols]{style_cols()}}, or \code{\link[=rtftable]{rtftable()}}'s \code{cell_styles} for a condition.
-\item \code{plan_paginate_group(col, keep)}: a page per value. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{split = "by_value"}, \code{group_col}; \code{keep = FALSE} adds it to \code{drop_cols}.
+\item \code{plan_paginate_group(col, keep, heading)}: a page per value. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{split = "by_value"}, \code{group_col}; \code{keep = FALSE} adds it to \code{drop_cols}; \code{heading} names each page from a template (\code{{value}}, \code{{n}}), the name \code{rtf_tables(auto_section = TRUE)} prints.
 \item \code{plan_row_group(mode, collapse, group_col)}: groups down the body. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{group_by}, \code{collapse_repeats}, \code{group_col} (a finished table).
 \item \code{plan_hide(...)}: columns not printed. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{drop_cols}.
 \item \code{plan_blanks(where, first, last, counted)}: blank rows. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows}; a listing's \code{where = "records"} is \code{\link[=listing_spec]{listing_spec()}}'s \code{blank_row}.

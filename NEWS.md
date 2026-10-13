@@ -16,6 +16,14 @@
   (`cols =`) or down (`rows =`, in the order they are said), within one
   record (the same analysis and keys).
 
+- **`plan_paginate_group(heading = )`: each page's name from a template**
+  (#619).  `heading = "Treatment: {value} (N={n})"` names each page --- the
+  heading `rtf_tables(auto_section = TRUE)` puts in the section header ---
+  with the page's value and its population as the ARD states it (the page
+  variable's own tabulation, `cards::ard_tabulate(adsl, variables =
+  TRT01A)`).  A section per arm says the arm and its N with neither
+  written by hand; what the ARD does not state is `NA`, with a warning.
+
 ### Deprecated
 
 Removed in the next minor release, the first CRAN one.  The pre-CRAN API

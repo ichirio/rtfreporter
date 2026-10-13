@@ -2693,3 +2693,35 @@ test_that("plan_stat_groups() x cell_rows(): n rows x m columns of one record, o
   expect_identical(b$Placebo[b$grp == "F" & b$stat == "rate"],
                    a$Placebo____orr_ci[1L])
 })
+
+test_that("plan_paginate_group(heading = ): a section per arm named with the arm and its N from the ARD (#619)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard_body <- cards::ard_tabulate(adsl, by = TRT, variables = SEX)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT), ard_body)
+  plan <- function(a) {
+    table_plan(normalize_ard(a), cols = ".stat_group",
+               rows = c(arm = "TRT", label = "variable_level"), label = NA) |>
+      plan_stat_groups(n = "n", pct = "p") |>
+      plan_cells(n = "{n}", pct = "{p:.1f%}", notes = FALSE) |>
+      plan_paginate_group(col = "arm", keep = FALSE,
+                          heading = "Treatment: {value} (N={n})")
+  }
+  pages <- suppressMessages(plan_apply(plan(ard)))
+  n_arm <- table(adsl$TRT)
+  expect_identical(names(pages),
+                   sprintf("Treatment: %s (N=%d)", names(n_arm), as.integer(n_arm)))
+  # the name is the section heading rtf_tables(auto_section = TRUE) prints
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  doc <- rtf_document() |>
+    rtf_section(header = rtf_header(list("Table 1"))) |>
+    rtf_tables(plan(ard), auto_section = TRUE)
+  suppressMessages(generate_rtfreport(doc, f, overwrite = TRUE))
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "")
+  for (h in names(pages)) expect_true(grepl(h, rtf, fixed = TRUE))
+  # an N the ARD does not state is NA, said, never guessed
+  expect_warning(p2 <- suppressMessages(plan_apply(plan(ard_body))), "states no population")
+  expect_match(names(p2)[1L], "(N=NA)", fixed = TRUE)
+  expect_error(plan_paginate_group(plan(ard), heading = c("a", "b")), "one text")
+})

@@ -957,6 +957,18 @@ print.table_plan <- function(x, ...) {
 #'   the value, which is the line `rtf_tables(auto_section = TRUE)`
 #'   cuts a section on --- so this verb decides what a section is.
 #'   It is the only verb that makes a page per value.
+#' @param heading For `plan_paginate_group()`: the page's name as a template,
+#'   `"Treatment: {value} (N={n})"`, in place of the bare value --- so the
+#'   section header `rtf_tables(auto_section = TRUE)` prints (or the title
+#'   line of `auto_title = TRUE`) says the arm and its N with neither written
+#'   by hand, and a study with three arms gets three.  `{value}` is the
+#'   page's value as printed; `{n}` its population **as the ARD states it**:
+#'   the page variable's own tabulation, `cards::ard_tabulate(adsl,
+#'   variables = TRT01A)` bound into the ARD (the `.key_own` rows
+#'   [normalize_ard()] keeps), never an analysis's `N` (the count of its
+#'   non-missing values).  What the ARD does not state is `NA`, with a
+#'   warning.  `{PROGRAM}`, `{DATETIME}` and the page tokens are left for the
+#'   renderer.
 #' @param where For `plan_cell_style()`: a one-sided formula over the
 #'   table's columns choosing the rows, e.g. `where = ~ is.na(label)`.  For
 #'   `plan_blanks()`: `as_rtftables(blank_rows = )`, or `"records"` for a
@@ -1258,7 +1270,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
 #' * `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: how cells look. Goes to [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition.
-#' * `plan_paginate_group(col, keep)`: a page per value. Goes to [as_rtftables()]: `split = "by_value"`, `group_col`; `keep = FALSE` adds it to `drop_cols`.
+#' * `plan_paginate_group(col, keep, heading)`: a page per value. Goes to [as_rtftables()]: `split = "by_value"`, `group_col`; `keep = FALSE` adds it to `drop_cols`; `heading` names each page from a template (`{value}`, `{n}`), the name `rtf_tables(auto_section = TRUE)` prints.
 #' * `plan_row_group(mode, collapse, group_col)`: groups down the body. Goes to [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table).
 #' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
 #' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row`.
@@ -1767,9 +1779,15 @@ plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
 # .plan_rtf_args() do it once the roles are in hand.
 #' @rdname plan_verbs
 #' @export
-plan_paginate_group <- function(plan, col = NULL, keep = TRUE) {
+plan_paginate_group <- function(plan, col = NULL, keep = TRUE, heading = NULL) {
+  if (!is.null(heading) && (!is.character(heading) || length(heading) != 1L ||
+                            is.na(heading) || !nzchar(heading))) {
+    .ard_stop(paste0("plan_paginate_group(heading = ) is one text with ",
+                     "`{value}` and `{n}`: \"Treatment: {value} (N={n})\"."))
+  }
   .plan_layer(plan, "group",
-              list(group_col = col, .keep = keep, .page = TRUE))
+              list(group_col = col, .keep = keep, .page = TRUE,
+                   .heading = heading))
 }
 
 # What a row GROUP is inside the body -- where one run of equal values
@@ -3472,6 +3490,60 @@ plan_header_tokens <- function(plan) {
   list(col = src, value = value)
 }
 
+# plan_paginate_group(heading = ): each page's name -- the heading
+# rtf_tables(auto_section = TRUE) puts in the section header and
+# `auto_title = TRUE` above the table -- from a template.  `{value}` is the
+# page's value as printed, `{n}` the page's population as the ARD states
+# it: the page variable's own tabulation (cards::ard_tabulate(adsl,
+# variables = TRT01A), the `.key_own` rows), never an analysis's `N`.  The
+# "...n" tail of a page in several parts is kept, and the page's own keys
+# (rtf_paginate_meta) are not touched.
+.plan_page_headings <- function(plan, out) {
+  h <- .plan_merge(.plan_of(plan, "group"))$.heading
+  if (is.null(h) || inherits(out, "rtftable") || is.null(names(out))) {
+    return(out)
+  }
+  nm <- names(out)
+  base <- .page_name_base(nm)
+  tail <- substring(nm, nchar(base) + 1L)
+  pg <- .plan_page_group(plan, base)
+  wants_n <- "n" %in% .text_tokens(h)
+  missed <- character(0)
+  filled <- vapply(seq_along(out), function(i) {
+    n <- NA
+    if (wants_n) {
+      n <- if (is.null(pg) || is.null(pg$value[[i]])) NA
+           else .plan_page_own_n(plan$data, pg$col, pg$value[[i]])
+      if (is.na(n)) missed <<- c(missed, base[[i]])
+    }
+    .fill_text_tokens(h, list(value = base[[i]], n = if (is.na(n)) "NA" else n),
+                      "plan_paginate_group(heading = )")
+  }, character(1L))
+  if (length(missed)) {
+    warning(sprintf(paste0(
+      "plan_paginate_group(heading = ): the ARD states no population for %s, ",
+      "so `{n}` is NA.
+  A page's N is its variable's own tabulation: bind ",
+      "cards::ard_tabulate(adsl, variables = %s)."),
+      paste(sQuote(unique(missed)), collapse = ", "),
+      if (is.null(pg)) "<the page variable>" else pg$col), call. = FALSE)
+  }
+  names(out) <- paste0(filled, tail)
+  out
+}
+
+# The page variable's own tabulation: the `n` of its `.key_own` row for one
+# value, or NA when the ARD has none (or more than one number).
+.plan_page_own_n <- function(d, col, value) {
+  if (!all(c(".key_own", "variable", "stat_name", "stat", col) %in% names(d))) {
+    return(NA)
+  }
+  hit <- d[d$.key_own %in% TRUE & d$variable %in% col & d$stat_name %in% "n" &
+             as.character(d[[col]]) %in% value, , drop = FALSE]
+  v <- unique(suppressWarnings(as.numeric(unlist(hit$stat))))
+  if (length(v) == 1L && !is.na(v)) v else NA
+}
+
 # The data's column that a page split by a group value is split on
 # (plan_paginate_group()), or NULL when the pages are not split so.
 .plan_page_col <- function(plan) {
@@ -3801,6 +3873,9 @@ plan_n_candidates <- function(plan) {
   }
   # the blocks that sit above and below the table on each page
   out <- .plan_blocks(plan, out)
+  # each page's heading (plan_paginate_group(heading = )): last, since the
+  # page names are what the header's page keys were read from
+  out <- .plan_page_headings(plan, out)
 
   # the names plan_cell_style() / plan_style(widths = ) / plan_col_header() use:
   # read off the finished page rather than predicted
