@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+- **`table_plan(show_keys = )` and `plan_stat_groups(.variables, .others)`:
+  a subgroup's own n (%) beside its ORR** (#621).  Once SEX is a key
+  anywhere in the ARD (a subgroup layer), its own tabulation is a key's
+  count and was left out of the body; `show_keys = "SEX"` keeps it, as a
+  block of its own with `rows = c(block = "variable", ...)`.
+  `.variables = "RESP", .others = "n"` splits only the ORR into its groups
+  and puts the other variables' records whole in `n`, so SEX's `n` and `p`
+  stay together.  Defaults change nothing.
+
 - **The header's `{n}` for stacked keys on the columns** (#622).  With
   `cols = c("subgroup", "subgroup_level")` (`normalize_ard(stack = )`), each
   column's population is its layer's own tabulation: the `SEX____F` column's

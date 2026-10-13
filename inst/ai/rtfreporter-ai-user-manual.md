@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9048** (the development
+**This manual documents rtfreporter 0.8.2.9049** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -893,6 +893,7 @@ p_ae <- ard_ae |>
 | A section per arm with "Treatment: X (N=xx)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})")` + `rtf_tables(auto_section = TRUE)`; `{n}` is the arm's own tabulation in the ARD (`bind_ard(cards::ard_tabulate(adsl, variables = TRT01A), ...)`), never pulled by hand |
 | Subgroups (SEX; AGEGR1; ...) one under another, whatever group slot they came in | `normalize_ard(stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))` + `rows = c(grp1 = "subgroup", grp2 = "subgroup_level")`; `plan_labels(subgroup = c(SEX = "Sex"))`. Never `group2` / `group2_level` as keys. A crossed subgroup is a layer: `stack = list(subgroup = list("SEX", "AGEGR1", c("AGEGR1", "SEX")))` (rows `AGEGR1 / SEX` | `65-80 / F`), or `stack = list(subgroup = c("group2", "group3"))` to take the layers from the strata slots; `stack_nest = TRUE` + `rows = c(grp = "subgroup", outer = "subgroup_outer", lvl = "subgroup_level")` + `plan_stub()` to print a crossed layer's outer level as a heading; an overall row is a constant stratum `ALL = "All"` |
 | A section per arm with a row budget inside | `plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe", heading = "Treatment: {value} (N={n})")` + `plan_hide("arm")` |
+| A subgroup's own n (%) beside its ORR (SEX both a variable and a subgroup layer) | `table_plan(..., rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level"), show_keys = "SEX")` + `plan_stat_groups(n = "N", orr_ci = c(...), .variables = "RESP", .others = "n")` + `plan_cells(SEX = "{n} ({p:.1f%})", ...)` |
 | Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap)` |

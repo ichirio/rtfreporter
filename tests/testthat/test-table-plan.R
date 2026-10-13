@@ -3121,3 +3121,45 @@ test_that("plan_col_header(values = list(n = TRUE)) reads stacked keys on the co
     expect_identical(n_of(paste0("AGEGR1____", lv)), paste("=", as.integer(table(adsl$AGEGR1)[[lv]])))
   }
 })
+
+test_that("table_plan(show_keys = ) and plan_stat_groups(.variables, .others): SEX's own n (%) beside the SEX subgroups' ORR (#621)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  orr <- function(.x) cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y",
+                                               method = "clopper-pearson", conf.level = 0.90)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, by = TRT, variables = SEX),
+                         cards::ard_strata(adsl, .by = TRT, .strata = SEX, .f = orr))
+  d <- normalize_ard(ard, stack = list(subgroup = "SEX"))
+  expect_true(any(d$.key_own & d$variable == "SEX"))     # SEX is a key here, so its counts are marked
+  plan <- function(show) table_plan(d, cols = c("TRT", ".stat_group"),
+                                    rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level"),
+                                    label = NA, show_keys = show) |>
+    plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"),
+                     .variables = "RESP", .others = "n") |>
+    plan_sort(FALSE) |>
+    plan_cells(SEX = "{n} ({p:.1f%})", n = cell_rows("1" = "{N:.0f}"),
+               orr_ci = cell_rows("1" = "{n:.0f} ({estimate:.1f%})", "2" = "{conf.low:.1f%}, {conf.high:.1f%}"),
+               notes = FALSE)
+  tab_of <- function(p) {
+    t <- suppressMessages(plan_apply(p, "table"))
+    as.data.frame(if (is.data.frame(t)) t else t[[1L]])
+  }
+  with_keys <- tab_of(plan("SEX"))
+  sx <- with_keys[with_keys$block == "SEX", ]
+  expect_identical(nrow(sx), 2L)
+  n_f <- sum(adsl$TRT == "Placebo" & adsl$SEX == "F")
+  expect_identical(sx$Placebo____n[sx$lvl == "F"],
+                   sprintf("%d (%.1f)", n_f, 100 * n_f / sum(adsl$TRT == "Placebo")))
+  expect_true(all(is.na(sx$Placebo____orr_ci)))                       # not split into ORR's groups
+  expect_identical(nrow(with_keys[with_keys$block == "RESP", ]), 4L)  # 2 sexes x 2 lines
+  # without it: as before, SEX's own counts stay out of the body
+  expect_false("SEX" %in% tab_of(plan(NULL))$block)
+  # what is said, not guessed
+  expect_error(widen_ard(d, cols = "TRT", show_keys = "TRT"), "a column key")
+  expect_error(plan_stat_groups(plan(NULL), n = "N", .others = "n"), "needs `.variables`")
+  expect_error(plan_stat_groups(plan(NULL), n = "N", .variables = "RESP", .others = "x"), "one of the groups")
+})
