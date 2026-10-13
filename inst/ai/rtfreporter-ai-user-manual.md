@@ -973,7 +973,7 @@ The answer is **one R script** in the layout below. Nothing else.
 
 ### The layout: three steps, always
 
-```r
+```text
 library(rtfreporter)
 
 # ---- 1. the table: the plan over the ARD -----------------------------------
