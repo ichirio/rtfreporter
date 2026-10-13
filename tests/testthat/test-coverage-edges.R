@@ -111,17 +111,14 @@ test_that("footnote rows are strings or named vectors, never lists", {
 test_that("rtfreporter_ai_manual() copies, refuses to clobber and names a missing file", {
   p <- rtfreporter_ai_manual()
   expect_true(file.exists(p))
-  dest <- tempfile(fileext = ".md")
-  on.exit(unlink(dest), add = TRUE)
-  expect_identical(rtfreporter_ai_manual("user", file = dest), dest)
-  expect_error(rtfreporter_ai_manual("user", file = dest),
+  d <- tempfile("man"); on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  got <- rtfreporter_ai_manual(d, which = "dev")
+  expect_identical(got, file.path(d, "rtfreporter-ai-dev-manual.md"))
+  expect_error(rtfreporter_ai_manual(d, which = "dev"),
                "already exists; pass `overwrite = TRUE`")
-  expect_silent(rtfreporter_ai_manual("user", file = dest, overwrite = TRUE))
-  # a directory gets the manual under its own name
-  d <- tempfile("man"); dir.create(d); on.exit(unlink(d, recursive = TRUE), add = TRUE)
-  got <- rtfreporter_ai_manual("dev", file = d)
-  expect_identical(basename(got), "rtfreporter-ai-dev-manual.md")
-  expect_error(rtfreporter_ai_manual("other"), "should be one of")
+  expect_silent(rtfreporter_ai_manual(d, which = "dev", overwrite = TRUE))
+  expect_error(rtfreporter_ai_manual(which = "other"), "should be one of")
+  expect_error(rtfreporter_ai_manual(c("a", "b")), "one folder")
 })
 
 # ── drop_cols: the reindexing helpers ──────────────────────────────────────
