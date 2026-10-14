@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+- **The AI kit says what to give the AI.** `00_START_HERE.md` ends with a
+  section for the person attaching the folder: required (the ARD through
+  `rtfreporter_ai_manual(dir, ard = )`, the table's shell), nice to have
+  (the exact titles and footnotes, layout conventions, one house-style
+  program), one table a chat, never patient-level data (and an ARD is still
+  the study's results: the company's rules apply), and what the assistant
+  does when something is missing.  The user manual's §17a says the same to
+  the assistant.
+
 - **Home page**: the three examples (from an ARD, from tern, from gtsummary)
   make the same table: age as Mean (SD), Median and Min, Max, sex as n (%),
   the same digits, labels and footnotes, with N in the column header.

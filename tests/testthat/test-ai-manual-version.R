@@ -50,6 +50,10 @@ test_that("rtfreporter_ai_manual(dir = ) writes the kit, or the dev manual", {
   # no ARD: 00 says how to add one
   expect_true(any(grepl("rtfreporter_ai_manual(dir, ard = ard)",
                         readLines(file.path(d, "00_START_HERE.md"), warn = FALSE), fixed = TRUE)))
+  # 00 also tells the person what to give the AI, and what never
+  start <- readLines(file.path(d, "00_START_HERE.md"), warn = FALSE)
+  expect_true(any(grepl("what to give the AI", start, fixed = TRUE)))
+  expect_true(any(grepl("**Do not give** patient-level data", start, fixed = TRUE)))
   # a second kit needs `overwrite`
   expect_error(rtfreporter_ai_manual(d), "overwrite")
   expect_no_error(rtfreporter_ai_manual(d, overwrite = TRUE))

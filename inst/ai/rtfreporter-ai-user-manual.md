@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9056** (the development
+**This manual documents rtfreporter 0.8.2.9057** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -996,6 +996,19 @@ generate_rtfreport(rep, file.path(output_path, paste0(report_name, ".rtf")), ove
 `ard`, `output_path` and `report_name` are the user's; the program neither
 reads a file nor sets a path. An ARD the user has not supplied is built in a
 step 0 before the plan, with `cards` / `cardx` only (§17's examples).
+
+### What the user gives you, and what to do without it
+
+The user gives you the **ARD** (as `05_ard.csv` and `06_ard_shape.md`) and the
+table's **shell**; sometimes the exact titles and footnotes, the company's
+layout conventions, or one program in the house style, to follow. One table
+a chat. Never ask for patient-level data: the plan needs the ARD only.
+
+* **No ARD**: write the plan against the names the shell suggests, and mark
+  each guessed name with a `# QUESTION:` comment.
+* **No titles**: write placeholders in step 2 and say so.
+* **A number the ARD does not hold** (a p-value, a total): never compute it.
+  Say it is missing, so that it can be added to the ARD.
 
 ### How to read the ARD's shape
 
