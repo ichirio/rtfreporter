@@ -144,9 +144,9 @@ navbar:
         # listings, figures, the document around them, and the AI briefings.
         # ── 1. Tables from an ARD (recommended) ─────────────────────────
         - text: "Tables from an ARD (recommended)"
-        - text: "Get started: ARD + plan to RTF"
+        - text: "Get started: from an ARD to RTF"
           href: articles/rtfreporter.html
-        - text: "Tables from an ARD: the plan"
+        - text: "Tables from an ARD, step by step"
           href: articles/tables-from-ard.html
         - text: "The plan verbs"
           href: articles/plan-verbs.html
@@ -664,7 +664,7 @@ articles:
 
   - title: Tables from an ARD (recommended)
     desc: >
-      From a cards / cardx analysis results dataset to RTF pages with a plan:
+      From a cards / cardx analysis results dataset to RTF pages:
       normalize_ard(), table_plan() and the plan_*() verbs, rtf_tables() and
       generate_rtfreport().  Start with Get started.
     navbar: ~
