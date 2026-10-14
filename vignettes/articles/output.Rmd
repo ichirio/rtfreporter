@@ -5,6 +5,18 @@ title: "Rendering, post-processing and assembly"
 ```{r, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
+# The pictures of an assembled file are made by data-raw/gen_gallery.R (from
+# the Gallery's outputs, through LibreOffice's PDF), committed in
+# inst/rtf-examples/assemble/ and copied next to the article to be served.
+.here <- normalizePath(".")
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "assemble", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "assemble"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "assemble", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "assemble", file), error = FALSE)
+}
 ```
 
 ```{r setup}
@@ -132,6 +144,44 @@ Without `output_file` it returns that table instead: edit the order, headings
 and labels (or save it with `spec_file =` and edit it in Excel), then pass it
 -- or its path -- to `assemble_rtf(toc = )`. See `?assemble_folder`.
 
+### What the result looks like
+
+The Gallery's demographics, adverse events, vital signs and listing, assembled
+into one file with a cover page and a table of contents, then converted to PDF
+with LibreOffice:
+
+```{r shot-asm-toc, echo = FALSE, fig.alt = "The cover page (Study XYZ-001, Tables and Listings, Draft 1) and the table of contents, with headings and one entry per output; the adverse events entry is boxed in red, with a note that clicking it opens the AE table at page 4 of the PDF."}
+.shot("toc.png")
+```
+
+Each entry of the table of contents is a link. Click the adverse events entry
+and the reader opens that table's first page:
+
+```{r shot-asm-target, echo = FALSE, fig.alt = "Page 4 of the PDF: the first page of Table 14.3.1.1, Treatment-Emergent Adverse Events by SOC and PT."}
+.shot("target.png")
+```
+
+<details><summary>Show code</summary>
+
+```r
+files <- c("t_dm.rtf", "t_ae.rtf", "t_vs.rtf", "l_sae.rtf")   # the Gallery's outputs
+assemble_rtf(
+  files, "XYZ-001_tables.rtf", overwrite = TRUE,
+  cover = list(title = "Study XYZ-001", subtitle = "Tables and Listings",
+               version = "Draft 1"),
+  toc = data.frame(
+    file    = files,
+    heading = c("DEMOGRAPHICS", "SAFETY", "SAFETY", "LISTINGS"),
+    label   = c("Table 14.1.1  Demographic Characteristics",
+                "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT",
+                "Table 14.3.5.1  Vital Signs by Visit",
+                "Listing 16.2.7.2  Severe Treatment-Emergent Adverse Events")),
+  toc_page_numbering = "roman")
+system2("soffice", c("--headless", "--convert-to", "pdf", "XYZ-001_tables.rtf"))
+```
+
+</details>
+
 ### Bookmarks in the PDF
 
 The assembled file is RTF. Each table of contents entry is a link to a
@@ -148,7 +198,9 @@ pdftools::pdf_toc(sub("[.]rtf$", ".pdf", pkg2))   # one bookmark a file
 
 The page numbers in the table of contents are fields that already hold the
 page rtfreporter computed for each file; Word and LibreOffice update them
-when they refresh fields.
+when they refresh fields. The links and the bookmarks above were checked in
+the PDF that LibreOffice writes. In Word itself a link follows on Ctrl+click,
+its default setting.
 
 That completes the basic workflow: build a document, render it, post-process if
 needed, and assemble a package. See `?generate_rtfreport`, `?rtf_replace_text`,

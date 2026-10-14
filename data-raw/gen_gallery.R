@@ -4,7 +4,9 @@
 ##  readme-tern-example.png, readme-gtsummary-example.png) and Get started's
 ##  adverse-events table and three short examples
 ##  (man/figures/get-started-ae.png, get-started-dm-p.png, -ae5.png, -orr.png;
-##  the last three from the Tables from an ARD article).
+##  the last three from the Tables from an ARD article), and an assembled
+##  file's table of contents and the page its link opens, for Rendering,
+##  post-processing and assembly (inst/rtf-examples/assemble/).
 ##
 ##  The pictures are made from the code that is shown, not from a copy of it:
 ##    * the Gallery article and Get started are rendered with
@@ -94,7 +96,75 @@ for (f in names(ta_png)) {
   rtf_to_png(file.path(ta, paste0(f, ".rtf")), ta_png[[f]])
 }
 
+## 5. An assembled file, for Rendering, post-processing and assembly ---------
+## The Gallery's outputs assembled with the call the article shows, turned
+## into a PDF by LibreOffice; the cover and the table of contents side by
+## side with one entry boxed, and the page that entry's link opens.
+asm <- file.path(tempdir(), "assemble")
+dir.create(asm, showWarnings = FALSE)
+old <- setwd(out)
+files <- c("t_dm.rtf", "t_ae.rtf", "t_vs.rtf", "l_sae.rtf")   # the Gallery's outputs
+assemble_rtf(
+  files, file.path(asm, "XYZ-001_tables.rtf"), overwrite = TRUE,
+  cover = list(title = "Study XYZ-001", subtitle = "Tables and Listings",
+               version = "Draft 1"),
+  toc = data.frame(
+    file    = files,
+    heading = c("DEMOGRAPHICS", "SAFETY", "SAFETY", "LISTINGS"),
+    label   = c("Table 14.1.1  Demographic Characteristics",
+                "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT",
+                "Table 14.3.5.1  Vital Signs by Visit",
+                "Listing 16.2.7.2  Severe Treatment-Emergent Adverse Events")),
+  toc_page_numbering = "roman")
+setwd(old)
+env <- if (.Platform$OS.type == "unix") "LD_LIBRARY_PATH=" else character()
+system2(soffice, c("--headless", "--convert-to", "pdf", "--outdir", shQuote(asm),
+                   shQuote(file.path(asm, "XYZ-001_tables.rtf"))),
+        stdout = FALSE, stderr = FALSE, env = env)
+pdf <- file.path(asm, "XYZ-001_tables.pdf")
+stopifnot(length(pdftools::pdf_toc(pdf)$children) == length(files))  # a bookmark a file
+
+asm_figs <- file.path("inst", "rtf-examples", "assemble")
+dir.create(asm_figs, showWarnings = FALSE, recursive = TRUE)
+dpi <- 110; k <- dpi / 72
+pg <- function(i) pdftools::pdf_render_page(pdf, page = i, dpi = dpi, numeric = TRUE)[, , 1:3]
+txt <- pdftools::pdf_text(pdf)
+target <- which(grepl("Treatment-Emergent Adverse Events by SOC and PT", txt))
+target <- target[target > 2L][1L]                  # past the cover and the TOC
+cover <- pg(1L); toc <- pg(2L)
+gap <- array(0.85, c(dim(cover)[1L], 24L, 3L))
+img <- array(1, c(dim(cover)[1L], dim(cover)[2L] + dim(gap)[2L] + dim(toc)[2L], 3L))
+img[, seq_len(dim(cover)[2L]), ] <- cover
+img[, dim(cover)[2L] + seq_len(dim(gap)[2L]), ] <- gap
+off <- dim(cover)[2L] + dim(gap)[2L]
+img[, off + seq_len(dim(toc)[2L]), ] <- toc
+d <- pdftools::pdf_data(pdf)[[2L]]                 # the TOC page's words (points)
+row <- d[abs(d$y - d$y[d$text == "14.3.1.1"][1L]) < 3, ]
+x0 <- off + (min(row$x) - 4) * k; x1 <- off + (max(row$x + row$width) + 4) * k
+y0 <- (min(row$y) - 3) * k;       y1 <- (max(row$y + row$height) + 3) * k
+ylab <- (max(d$y[d$text == "Listing"]) + 34) * k
+h <- min(dim(img)[1L], round(ylab + 40)); w <- dim(img)[2L]
+img <- img[seq_len(h), , , drop = FALSE]
+grDevices::png(file.path(asm_figs, "toc.png"), width = w, height = h)
+par(mar = c(0, 0, 0, 0)); plot.new()
+plot.window(c(0, w), c(h, 0), xaxs = "i", yaxs = "i")
+rasterImage(img, 0, h, w, 0)
+rect(x0, y0, x1, y1, border = "#d62728", lwd = 3)
+xa <- off + (min(d$x[d$text %in% c("DEMOGRAPHICS", "SAFETY", "LISTINGS")]) - 10) * k
+segments(xa, ylab - 8, xa, (y0 + y1) / 2, col = "#d62728", lwd = 3)
+arrows(xa, (y0 + y1) / 2, x0 - 3, (y0 + y1) / 2, col = "#d62728", lwd = 3,
+       length = 0.1)
+text(xa, ylab + 4,
+     sprintf("Click the entry: the PDF opens the AE table at page %d.", target),
+     adj = c(0, 0.5), col = "#d62728", font = 2, cex = 1.25)
+grDevices::dev.off()
+body <- tempfile(fileext = ".png")
+png::writePNG(pdftools::pdf_render_page(pdf, page = target, dpi = 144,
+                                        numeric = TRUE), body)
+squash_blank_band(body, file.path(asm_figs, "target.png"))
+asm_png <- file.path(asm_figs, c("toc.png", "target.png"))
+
 pngs <- c(list.files(figs, pattern = "[.]png$", full.names = TRUE),
-          readme_png, gs_png, ta_png)
+          readme_png, gs_png, ta_png, asm_png)
 message(paste(sprintf("%-50s %6.1f KB", pngs, file.size(pngs) / 1024),
               collapse = "\n"))
