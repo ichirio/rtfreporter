@@ -25,14 +25,15 @@ knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir())
 }
 ```
 
-Each output on this page was written by the code shown above it. The data is
-the CDISC pilot study as shipped in
+Each picture is the first page of the RTF file its code writes, opened in
+LibreOffice with the empty part of the page cut out. Click **Show code** under
+a picture to see the code. The data is the CDISC pilot study as shipped in
 [pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/); the
-statistics come from [cards](https://pharmaverse.github.io/cards/). The
-pictures are the first page of each RTF file, opened in LibreOffice, with the
-empty part of the page cut out.
+statistics come from [cards](https://pharmaverse.github.io/cards/).
 
-All the outputs share one running header and footer, so it is written once:
+All the outputs share one running header and footer, written once, in the layout of a study's `report_setup.R`:
+
+<details><summary>Show the shared setup</summary>
 
 ```{r setup}
 library(rtfreporter)
@@ -43,23 +44,43 @@ adsl <- pharmaverseadam::adsl
 adsl <- adsl[adsl$SAFFL == "Y", ]
 adsl$TRT01A <- factor(adsl$TRT01A, levels = arms)
 
-# One house style for every output: protocol and page number at the top,
-# program and run date at the bottom.
-house_doc <- function(..., orientation = "landscape") {
-  rtf_document(page = rtf_page(orientation = orientation),
-               tokens = list(STUDY = "CDISCPILOT01")) |>
+# The study's running header and footer, written once, as a study's
+# report_setup.R would: the study and the page number, then the output's
+# number, title and population at the top; its footnotes, then the program's
+# full path and the run date and time at the bottom.
+study_doc <- function(label, title, population, program, footnotes = NULL,
+                      orientation = "landscape") {
+  rtf_document(
+    page    = rtf_page(orientation = orientation),
+    # {PROGRAM_FULL} prints this path absolute, in the system's own form
+    program = file.path("/studies/XYZ-001/programs/tfl", program),
+    tokens  = list(STUDY = "XYZ-001")) |>
     rtf_section(
       header = rtf_header(list(
-        c(l = "Protocol: {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
-        ...)),
-      footer = rtf_footer(c(l = "Program: {PROGRAM}", r = "{DATETIME}")))
+        c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+        c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+        c(c = ""),
+        c(c = label),
+        c(c = title),
+        c(c = paste0("<", population, ">")))),
+      footer = rtf_footer(c(
+        lapply(footnotes, function(x) c(l = x)),
+        list(c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))))
 }
 ```
 
+</details>
+
+
 ## Demographic characteristics
 
-A table from an ARD: the plan says how the statistics are laid out, and the
-column header's `(N=xx)` is read from the same ARD.
+From an ARD with a plan; the `(N=xx)` comes from the same ARD. Explained step by step in [Get started](rtfreporter.html).
+
+```{r shot-dm, echo = FALSE, fig.alt = "Demographic characteristics by arm: age as n, mean (SD), median (Q1, Q3) and min, max; age group, sex and race as n (%)."}
+.shot("t_dm.png")
+```
+
+<details><summary>Show code</summary>
 
 ```{r t-dm}
 ard_dm <- ard_stack(
@@ -90,22 +111,26 @@ p_dm <- ard_dm |>
     c("",               "{col}"),
     c("Characteristic", "(N={n})")))
 
-doc <- house_doc(c(c = "Table 14.1.1  Demographic Characteristics"),
-                 c(c = "Safety Analysis Set"),
+doc <- study_doc("Table 14.1.1", "Demographic Characteristics",
+                 "Safety Analysis Set", program = "t_dm.R",
+                 footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
+                               "SD = standard deviation; Q1, Q3 = first and third quartiles."),
                  orientation = "portrait") |>
-  rtf_tables(p_dm, footnotes = list(
-    "SD = standard deviation; Q1, Q3 = first and third quartiles."))
-generate_rtfreport(doc, "t_dm.rtf", program = "t_dm.R", overwrite = TRUE)
+  rtf_tables(p_dm)
+generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```
 
-```{r shot-dm, echo = FALSE}
-.shot("t_dm.png")
-```
+</details>
 
 ## Adverse events by system organ class and preferred term
 
-A hierarchical ARD, sorted by frequency within each SOC, with page breaks
-between SOCs rather than inside one.
+A hierarchical ARD sorted by frequency within each SOC, pages broken between SOCs. See [Tables from an ARD](tables-from-ard.html).
+
+```{r shot-ae, echo = FALSE, fig.alt = "Treatment-emergent adverse events by SOC and PT, n (%) by arm, the SOCs with their PTs most frequent first."}
+.shot("t_ae.png")
+```
+
+<details><summary>Show code</summary>
 
 ```{r t-ae}
 adae <- pharmaverseadam::adae
@@ -124,32 +149,35 @@ p_ae <- ard_ae |>
   plan_sort(".overall", "SOC", ".depth", "-n", "PT") |>
   plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
   plan_stub(name = "System Organ Class\n  Preferred Term", indent = 2) |>
-  plan_blanks(where = "between_groups", first = TRUE) |>
-  plan_paginate_rows(max_rows = 30, split = "group_safe") |>
+  plan_blanks(where = "between_groups", first = TRUE, counted = TRUE) |>
+  plan_paginate_rows(max_rows = 25, split = "group_safe") |>
   plan_columns(widths = c(5, 2, 2, 2)) |>
   plan_style(border = "tfl", align_count_pct = TRUE) |>
   plan_col_header(values = list(n = TRUE), rtf_col_header(
-    c("", "{col}"),
-    c("", "(N={n})\nn (%)")))
+    c("System Organ Class", "{col}"),
+    c("  Preferred Term", "(N={n})\nn (%)")))
 
-doc <- house_doc(
-  c(c = "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT"),
-  c(c = "Safety Analysis Set")) |>
-  rtf_tables(p_ae, footnotes = list(
-    "A subject is counted once per SOC and once per PT."))
-generate_rtfreport(doc, "t_ae.rtf", program = "t_ae.R", overwrite = TRUE)
+doc <- study_doc("Table 14.3.1.1",
+                 "Treatment-Emergent Adverse Events by SOC and PT",
+                 "Safety Analysis Set", program = "t_ae.R",
+                 footnotes = c("TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term.",
+                               "A subject is counted once per SOC and once per PT; percentages are based on N.")) |>
+  rtf_tables(p_ae)
+generate_rtfreport(doc, "t_ae.rtf", overwrite = TRUE)
 length(plan_apply(p_ae))    # pages
 ```
 
-```{r shot-ae, echo = FALSE}
-.shot("t_ae.png")
-```
+</details>
 
 ## Vital signs by visit
 
-Two statistics side by side under each arm -- the value and the change from
-baseline -- under a spanning header per arm, and a nested stub of parameter,
-visit and statistic.
+The value and the change from baseline under each arm, with a nested stub. See [The plan verbs](plan-verbs.html).
+
+```{r shot-vs, echo = FALSE, fig.alt = "Systolic and diastolic blood pressure by visit: n and mean (SD) of the value and of the change from baseline under each arm."}
+.shot("t_vs.png")
+```
+
+<details><summary>Show code</summary>
 
 ```{r t-vs}
 visits <- c("Baseline", "Week 8", "Week 16", "Week 24")
@@ -186,21 +214,26 @@ p_vs <- ard_vs |>
       lapply(1:3, function(i) col_cell(c(2 * i, 2 * i + 1), "{col1} (N={n})"))),
     c("Visit", rep(c("Value", "Change from\nbaseline"), 3))))
 
-doc <- house_doc(c(c = "Table 14.3.5.1  Vital Signs by Visit"),
-                 c(c = "Safety Analysis Set")) |>
+doc <- study_doc("Table 14.3.5.1", "Vital Signs by Visit",
+                 "Safety Analysis Set", program = "t_vs.R",
+                 footnotes = c("n = number of subjects with a value at the visit; SD = standard deviation.",
+                               "Change from baseline = value at the visit minus the baseline value.",
+                               "Measured after lying down for 5 minutes.")) |>
   rtf_tables(p_vs)
-generate_rtfreport(doc, "t_vs.rtf", program = "t_vs.R", overwrite = TRUE)
+generate_rtfreport(doc, "t_vs.rtf", overwrite = TRUE)
 ```
 
-```{r shot-vs, echo = FALSE}
-.shot("t_vs.png")
-```
+</details>
 
 ## Listing of severe adverse events
 
-A listing prints records, not statistics. Cells wrap to their column width,
-key columns print on a record's first line only, and a record is never split
-across pages.
+Records, not statistics: cells wrap, keys print once, a record never splits. See [Listings with a plan](plan-listings.html).
+
+```{r shot-sae, echo = FALSE, fig.alt = "A listing of severe adverse events: treatment, subject, age and sex, SOC and PT, start and end dates, seriousness and outcome."}
+.shot("l_sae.png")
+```
+
+<details><summary>Show code</summary>
 
 ```{r l-sae}
 sae <- adae[adae$AESEV %in% "SEVERE", ]
@@ -224,22 +257,26 @@ p_sae <- table_plan(sae) |>
   plan_paginate_rows(max_rows = 30) |>
   plan_style(border = "tfl")
 
-doc <- house_doc(c(c = "Listing 16.2.7.2  Severe Treatment-Emergent Adverse Events"),
-                 c(c = "Safety Analysis Set")) |>
-  rtf_tables(p_sae, footnotes = list(
-    "Age in years at baseline. Ongoing = no end date recorded."))
-generate_rtfreport(doc, "l_sae.rtf", program = "l_sae.R", overwrite = TRUE)
+doc <- study_doc("Listing 16.2.7.2",
+                 "Severe Treatment-Emergent Adverse Events",
+                 "Safety Analysis Set", program = "l_sae.R",
+                 footnotes = c("Severe treatment-emergent adverse events, by treatment and subject.",
+                               "Age in years at baseline. Ongoing = no end date recorded.")) |>
+  rtf_tables(p_sae)
+generate_rtfreport(doc, "l_sae.rtf", overwrite = TRUE)
 ```
 
-```{r shot-sae, echo = FALSE}
-.shot("l_sae.png")
-```
+</details>
 
 ## Kaplan-Meier plot
 
-A figure is a page like any other: the same running header and footer, its own
-titles and footnotes. Here the plot is drawn with base R and the survival
-package; anything that draws -- ggplot2, lattice, grid -- goes in the same way.
+A figure is a page like any other, here drawn with base R and survival. See [Figures](figures.html).
+
+```{r shot-km, echo = FALSE, fig.alt = "Kaplan-Meier curves of the time to the first skin event, one per arm, with censoring marks."}
+.shot("f_km.png")
+```
+
+<details><summary>Show code</summary>
 
 ```{r f-km}
 # Time to the first treatment-emergent skin event, censored at the last dose
@@ -262,20 +299,27 @@ km <- function() {
          lty = c(2, 1, 1), lwd = 2, bty = "n")
 }
 
-doc <- house_doc(c(c = "Figure 14.3.2.1  Time to First Skin and Subcutaneous Tissue Event"),
-                 c(c = "Safety Analysis Set")) |>
+doc <- study_doc("Figure 14.3.2.1",
+                 "Time to First Skin and Subcutaneous Tissue Event",
+                 "Safety Analysis Set", program = "f_km.R",
+                 footnotes = c("Time from the first dose to the first treatment-emergent skin and subcutaneous tissue event.",
+                               "Subjects without one are censored at the last dose (+).")) |>
   rtf_figures(rtfplot(km, render_width = 8, render_height = 4.6,
-                      render_dpi = 150),
-              footnotes = list(
-                "Treatment-emergent events. + = censored at the last dose."))
-generate_rtfreport(doc, "f_km.rtf", program = "f_km.R", overwrite = TRUE)
+                      render_dpi = 150))
+generate_rtfreport(doc, "f_km.rtf", overwrite = TRUE)
 ```
 
-```{r shot-km, echo = FALSE}
-.shot("f_km.png")
-```
+</details>
 
 ## Mean change from baseline over time
+
+A ggplot2 figure on the same page layout. See [Figures](figures.html).
+
+```{r shot-fvs, echo = FALSE, fig.alt = "Mean (SE) change from baseline in systolic blood pressure at weeks 8, 16 and 24, one line per arm."}
+.shot("f_vs.png")
+```
+
+<details><summary>Show code</summary>
 
 ```{r f-vs, eval = requireNamespace("ggplot2", quietly = TRUE)}
 library(ggplot2)
@@ -297,23 +341,22 @@ g <- ggplot(mc, aes(week, CHG.m, colour = TRTA)) +
   theme_bw(base_size = 11) +
   theme(legend.position = "bottom", panel.grid.minor = element_blank())
 
-doc <- house_doc(
-  c(c = "Figure 14.3.5.1  Mean Change from Baseline in Systolic Blood Pressure"),
-  c(c = "Safety Analysis Set")) |>
+doc <- study_doc("Figure 14.3.5.1",
+                 "Mean Change from Baseline in Systolic Blood Pressure",
+                 "Safety Analysis Set", program = "f_vs.R",
+                 footnotes = c("SE = standard error.",
+                               "Systolic blood pressure measured after lying down for 5 minutes.")) |>
   rtf_figures(rtfplot(g, render_width = 8, render_height = 4.6,
-                      render_dpi = 150),
-              footnotes = list("SE = standard error. Measured after lying down for 5 minutes."))
-generate_rtfreport(doc, "f_vs.rtf", program = "f_vs.R", overwrite = TRUE)
+                      render_dpi = 150))
+generate_rtfreport(doc, "f_vs.rtf", overwrite = TRUE)
 ```
 
-```{r shot-fvs, echo = FALSE}
-.shot("f_vs.png")
-```
+</details>
 
 ## Where next
 
 * [Get started](rtfreporter.html) walks through the first table above step by
-  step.
+  step, and [Tables from an ARD](tables-from-ard.html) the others from an ARD.
 * [The plan verbs](plan-verbs.html), [Listings with a plan](plan-listings.html)
   and [Figures](figures.html) explain the pieces used here.
 * [Rendering, post-processing and assembly](output.html) joins finished files

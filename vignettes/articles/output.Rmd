@@ -132,9 +132,23 @@ Without `output_file` it returns that table instead: edit the order, headings
 and labels (or save it with `spec_file =` and edit it in Excel), then pass it
 -- or its path -- to `assemble_rtf(toc = )`. See `?assemble_folder`.
 
-> Note: the assembled file is RTF. The TOC entries are RTF bookmarks for
-> word-processor navigation; converting to PDF (and confirming the PDF
-> bookmarks) is outside the scope of this article.
+### Bookmarks in the PDF
+
+The assembled file is RTF. Each table of contents entry is a link to a
+bookmark at the start of its file, and each file also starts with a heading
+at an outline level, printed invisibly (white, one point high). Word and
+LibreOffice show those headings as the PDF's bookmarks when they export the
+file to PDF, so the PDF can be navigated table by table, as an eCTD
+submission expects. With LibreOffice from R:
+
+```r
+system2("soffice", c("--headless", "--convert-to", "pdf", pkg2))
+pdftools::pdf_toc(sub("[.]rtf$", ".pdf", pkg2))   # one bookmark a file
+```
+
+The page numbers in the table of contents are fields that already hold the
+page rtfreporter computed for each file; Word and LibreOffice update them
+when they refresh fields.
 
 That completes the basic workflow: build a document, render it, post-process if
 needed, and assemble a package. See `?generate_rtfreport`, `?rtf_replace_text`,

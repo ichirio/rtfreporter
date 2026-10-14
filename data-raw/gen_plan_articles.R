@@ -4,9 +4,9 @@
 ##
 ##  Each article writes its RTF into the folder named by the environment
 ##  variable RTFREPORTER_ARTICLE_OUT (a scratch folder when it is unset).  This
-##  script renders the articles with that folder set, then has LibreOffice
-##  turn the first page of every RTF into a PNG under
-##  inst/rtf-examples/plan/, which the articles copy in and include.
+##  script renders the articles with that folder set, then turns the first
+##  page of every RTF into a PNG under inst/rtf-examples/plan/ (cropped, as
+##  the gallery's: data-raw/rtf_png.R), which the articles copy in and include.
 ##
 ##  Run from the package root, after a change to an article's tables:
 ##    Rscript data-raw/gen_plan_articles.R
@@ -26,18 +26,12 @@ for (a in articles) {
                     output_dir = tempdir(), quiet = TRUE)
 }
 
-soffice <- Filter(file.exists, c(
-  "C:/Program Files/LibreOffice/program/soffice.exe",
-  "C:/Program Files (x86)/LibreOffice/program/soffice.exe",
-  Sys.which("soffice")))[1]
-if (is.na(soffice)) stop("LibreOffice (soffice) is needed for the screenshots.")
+source(file.path("data-raw", "rtf_png.R"))   # soffice, rtf_to_png()
 
 figs <- file.path("inst", "rtf-examples", "plan")
 dir.create(figs, showWarnings = FALSE, recursive = TRUE)
 for (f in list.files(out, pattern = "[.]rtf$", full.names = TRUE)) {
-  system2(soffice, c("--headless", "--convert-to", "png", "--outdir",
-                     shQuote(normalizePath(figs)), shQuote(normalizePath(f))),
-          stdout = FALSE, stderr = FALSE)
+  rtf_to_png(f, file.path(figs, sub("[.]rtf$", ".png", basename(f))))
 }
 message("screenshots: ", paste(list.files(figs, pattern = "[.]png$"),
                                collapse = ", "))

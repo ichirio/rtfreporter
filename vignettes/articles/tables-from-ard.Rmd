@@ -38,26 +38,37 @@ cell, what the rows are called and what the header says. In rtfreporter that
 is written as a **plan**:
 
 ```
-ARD ──normalize_ard()──▶ flat frame ──table_plan()──▶ plan ──plan_*() verbs──▶ plan
-                                                                       │
-                                     rtf_tables(doc, plan) ◀───────────┘
+(ARD) ═══▶ 1. table plan ═══▶ 2. report ═══▶ 3. RTF file
+          ard |> normalize_ard() |>       rtf_document() |>        generate_rtfreport()
+            table_plan() |> plan_*()        rtf_section() |>
+                                            rtf_tables(plan)
 ```
 
-* `normalize_ard()` flattens the ARD: groups and hierarchy become ordinary key
-  columns.
-* `table_plan()` names the **roles**: the column that goes across, the ones
-  that go down.
-* each `plan_*()` verb adds one declaration: the cell templates, the labels,
-  the header, the widths. Nothing runs yet.
-* `rtf_tables(doc, plan)` (or `plan_apply(plan)`) runs the plan and gives
-  `rtftable` pages, the same objects `as_rtftables()` makes.
+* **The ARD** is the input. It is made with cards / cardx, before
+  rtfreporter.
+* **1. The table plan** starts from it: `normalize_ard()` makes its groups
+  and hierarchy ordinary key columns, `table_plan()` names the **roles** (the
+  column that goes across, the ones that go down), and each `plan_*()` verb
+  adds one declaration: the cell templates, the labels, the header, the
+  widths. Nothing runs yet.
+* **2. The report** is the document around the table. `rtf_tables(doc,
+  plan)` runs the plan and gives `rtftable` pages, the same objects
+  `as_rtftables()` makes (`plan_apply(plan)` gives them without a document).
+* **3. The RTF file** is written by `generate_rtfreport()`.
 
 ```{r setup}
 library(rtfreporter)
 library(cards)
 ```
 
-## The data and the ARD
+## The input: the data and the ARD
+
+> **The ARD is made before rtfreporter, with
+> [cards](https://pharmaverse.github.io/cards/) and
+> [cardx](https://insightsengineering.github.io/cardx/).** That is data
+> preparation, the analysis itself, and outside rtfreporter: see their
+> documentation for what they compute. rtfreporter starts from the ARD as
+> given and changes no number in it.
 
 The examples use the CDISC pilot study as the
 [pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/) package
@@ -87,7 +98,9 @@ ard_dm <- ard_stack(
 `ard_stack(.by = )` also counts the arms themselves. The plan reads those
 counts for the `(N=86)` in the column header, so nobody types them.
 
-## Step 1: flatten it
+## Step 1: the table plan
+
+### What the plan works on: `normalize_ard()`
 
 A cards ARD keeps its groups as pairs of columns (`group1`, `group1_level`)
 whose values are lists. `normalize_ard()` turns each group into a column of
@@ -100,10 +113,11 @@ nd[1:4, c("TRT01A", "variable", "variable_level", "context",
           "stat_name", "stat", ".kind")]
 ```
 
-This frame is what the plan works on. Its columns are the names you will
-use in `table_plan()`: look at them first.
+The plan below starts from the ARD and runs `normalize_ard()` as its first
+step. This frame is what it then works on, and its columns are the names
+you will use in `table_plan()`: look at them first.
 
-## Step 2: the roles
+### The roles
 
 `table_plan()` takes the roles and nothing else, like `ggplot(aes())`:
 
@@ -112,11 +126,12 @@ use in `table_plan()`: look at them first.
   `group` in the table.
 
 ```{r roles}
-p <- nd |>
+p <- ard_dm |>
+  normalize_ard() |>
   table_plan(cols = "TRT01A", rows = c(group = "variable"))
 ```
 
-## Step 3: the cells
+### The cells
 
 `plan_cells()` says how the statistics become text. A cell is a template:
 `{mean:.1f}` is the mean to one decimal, `{p:.1f%}` a proportion shown as a
@@ -143,7 +158,7 @@ p <- p |>
 used. Leave it on while you write a plan: it is how you notice a statistic
 you forgot.
 
-## Step 4: how it looks
+### How it looks
 
 The rest is display. The variables get readable labels and their levels an
 order, then the stub, blank rows, widths and header are declared:
@@ -180,21 +195,39 @@ values the header tokens will take:
 p
 ```
 
-## Step 5: run it
+## Step 2: the report
 
-`rtf_tables()` takes the plan as it takes any table, and runs it:
+The report is the document around the table: the running header and
+footer, and the table. `rtf_tables()` takes the plan as it takes any table,
+and runs it:
 
 ```{r rtf-dm}
-doc <- rtf_document() |>
+doc <- rtf_document(
+    program = "/studies/XYZ-001/programs/tfl/t_dm.R",
+    tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
-      c(c = "Table 14.1.1  Demographic Characteristics"),
-      c(c = "Safety Analysis Set"),
-      c(c = ""))),
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.1.1"),
+      c(c = "Demographic Characteristics"),
+      c(c = "<Safety Analysis Set>"))),
     footer = rtf_footer(list(
-      c(l = "SD = standard deviation; Q1, Q3 = first and third quartiles.")))) |>
+      c(l = "N = number of subjects in the analysis set; percentages are based on N."),
+      c(l = "SD = standard deviation; Q1, Q3 = first and third quartiles."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p)
+```
+
+The header is the study and the page number, then the table's number,
+title and population; the footer is its footnotes, then the program's full
+path and the run date and time. `{PAGE}`, `{TOTAL_PAGES}`, `{PROGRAM_FULL}` and
+`{DATETIME}` are filled in when the file is written.
+
+## Step 3: the RTF file
+
+```{r file-dm}
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```
 
@@ -209,6 +242,34 @@ into pages, which is often the quickest way to check a cell:
 ```{r apply-table}
 tb <- plan_apply(p, stage = "table")
 tb[1:7, ]
+```
+
+## One header and footer for every table
+
+Every table of a study has the same header and footer; only its number,
+title, population, footnotes and program change. Written once as a
+function, the rest of this article uses it:
+
+```{r study-doc}
+study_doc <- function(label, title, population, program, footnotes = NULL,
+                      orientation = "landscape") {
+  rtf_document(
+    page    = rtf_page(orientation = orientation),
+    # {PROGRAM_FULL} prints this path absolute, in the system's own form
+    program = file.path("/studies/XYZ-001/programs/tfl", program),
+    tokens  = list(STUDY = "XYZ-001")) |>
+    rtf_section(
+      header = rtf_header(list(
+        c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+        c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+        c(c = ""),
+        c(c = label),
+        c(c = title),
+        c(c = paste0("<", population, ">")))),
+      footer = rtf_footer(c(
+        lapply(footnotes, function(x) c(l = x)),
+        list(c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))))
+}
 ```
 
 ## A layer can be overridden
@@ -256,13 +317,13 @@ p_ae <- ard_ae |>
   plan_sort(".overall", "SOC", ".depth", "-n", "PT") |>
   plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
   plan_stub(name = "System Organ Class\n  Preferred Term", indent = 2) |>
-  plan_blanks(where = "between_groups", first = TRUE) |>
-  plan_paginate_rows(max_rows = 30, split = "group_safe") |>
+  plan_blanks(where = "between_groups", first = TRUE, counted = TRUE) |>
+  plan_paginate_rows(max_rows = 25, split = "group_safe") |>
   plan_columns(widths = c(5, 2, 2, 2)) |>
   plan_style(border = "tfl", align_count_pct = TRUE) |>
   plan_col_header(values = list(n = TRUE), rtf_col_header(
-    c("",   "{col}"),
-    c("",   "(N={n})\nn (%)")))
+    c("System Organ Class", "{col}"),
+    c("  Preferred Term", "(N={n})\nn (%)")))
 ```
 
 * `plan_sort(".overall", "SOC", ".depth", "-n", "PT")` is the row order, key
@@ -272,20 +333,17 @@ p_ae <- ard_ae |>
   ties by name. `-n` alone would order every row by its count and take the
   PTs away from their SOC. The keys are what keeps the hierarchy together.
 * `plan_paginate_rows(split = "group_safe")` breaks pages between SOCs, not
-  inside one, when a SOC fits on a page.
+  inside one, when a SOC fits on a page. `plan_blanks(counted = TRUE)`
+  counts the blank rows in `max_rows`, so 25 is the rows a page holds.
 * The header's `{n}` here is the arm's denominator. It comes from the
   hierarchical ARD, not from a count of the adverse events.
 
 ```{r rtf-ae}
-doc <- rtf_document() |>
-  rtf_section(
-    header = rtf_header(list(
-      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
-      c(c = "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT"),
-      c(c = "Safety Analysis Set"),
-      c(c = ""))),
-    footer = rtf_footer(list(
-      c(l = "A subject is counted once per SOC and once per PT.")))) |>
+doc <- study_doc("Table 14.3.1.1",
+                 "Treatment-Emergent Adverse Events by SOC and PT",
+                 "Safety Analysis Set", program = "t_ae.R",
+                 footnotes = c("TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term.",
+                               "A subject is counted once per SOC and once per PT; percentages are based on N.")) |>
   rtf_tables(p_ae)
 generate_rtfreport(doc, "t_ae.rtf", overwrite = TRUE)
 length(plan_apply(p_ae))    # pages
@@ -314,15 +372,12 @@ p_ae5 <- p_ae |>
   stays exactly when one of its PTs does (`parents = "keep"`, the default).
 
 ```{r rtf-ae-filter}
-doc <- rtf_document() |>
-  rtf_section(
-    header = rtf_header(list(
-      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
-      c(c = "Table 14.3.1.2  TEAEs in 5% or More of Subjects in Any Arm"),
-      c(c = "Safety Analysis Set"),
-      c(c = ""))),
-    footer = rtf_footer(list(
-      c(l = "A subject is counted once per SOC and once per PT.")))) |>
+doc <- study_doc("Table 14.3.1.2",
+                 "TEAEs in 5% or More of Subjects in Any Arm",
+                 "Safety Analysis Set", program = "t_ae5.R",
+                 footnotes = c("TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term.",
+                               "A subject is counted once per SOC and once per PT; percentages are based on N.",
+                               "Only PTs with 5% or more of subjects in any arm are shown, under their SOC.")) |>
   rtf_tables(p_ae5)
 generate_rtfreport(doc, "t_ae5.rtf", overwrite = TRUE)
 ```
@@ -372,7 +427,7 @@ p_dm_p <- ard_dm_p |>
   plan_levels(AGEGR1 = c("18-64", ">64"), SEX = c("F", "M")) |>
   plan_stub(name = "Characteristic") |>
   plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
-  plan_columns(widths = c(Characteristic = 4, .values = 2, p = 1.5)) |>
+  plan_columns(widths = c(Characteristic = 5, .values = 2.6, p = 1.4)) |>
   plan_style(border = "tfl", align_count_pct = TRUE) |>
   plan_col_header(values = list(n = TRUE), lines = list(
     c(Characteristic = "",               .values = "{col}",   p = "p-value"),
@@ -389,15 +444,11 @@ p_dm_p <- ard_dm_p |>
   column, `.values` every arm. A name stays right when columns move.
 
 ```{r rtf-dm-p}
-doc <- rtf_document() |>
-  rtf_section(
-    header = rtf_header(list(
-      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
-      c(c = "Table 14.1.1  Demographic Characteristics"),
-      c(c = "Safety Analysis Set"),
-      c(c = ""))),
-    footer = rtf_footer(list(
-      c(l = "p-values: Kruskal-Wallis test for age, chi-square test otherwise.")))) |>
+doc <- study_doc("Table 14.1.1", "Demographic Characteristics",
+                 "Safety Analysis Set", program = "t_dm_p.R",
+                 footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
+                               "SD = standard deviation; Q1, Q3 = first and third quartiles.",
+                               "p-values: Kruskal-Wallis test for age; chi-square test for age group, sex and race.")) |>
   rtf_tables(p_dm_p)
 generate_rtfreport(doc, "t_dm_p.rtf", overwrite = TRUE)
 ```
@@ -485,15 +536,11 @@ p_orr <- ard_orr |>
   `plan_sort()`).
 
 ```{r rtf-orr}
-doc <- rtf_document() |>
-  rtf_section(
-    header = rtf_header(list(
-      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
-      c(c = "Table 14.2.1  Objective Response Rate by Subgroup"),
-      c(c = "Safety Analysis Set"),
-      c(c = ""))),
-    footer = rtf_footer(list(
-      c(l = "CI: Clopper-Pearson.")))) |>
+doc <- study_doc("Table 14.2.1", "Objective Response Rate by Subgroup",
+                 "Safety Analysis Set", program = "t_orr.R",
+                 footnotes = c("N = number of subjects in the subgroup with a best overall response assessment.",
+                               "ORR = objective response rate: subjects with a best overall response of CR or PR.",
+                               "90% CI by the Clopper-Pearson method.")) |>
   rtf_tables(p_orr, auto_section = TRUE)
 generate_rtfreport(doc, "t_orr.rtf", overwrite = TRUE)
 names(plan_apply(p_orr))    # one section per arm

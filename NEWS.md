@@ -8,6 +8,14 @@
   `plan_stat_groups()`, `heading =` and `rtfreporter_ai_manual()`; *The plan
   verbs* lists them, and the reference index groups the verbs by job.  The
   AI kit's ORR example drops a `plan_sort(FALSE)` that was the default.
+  The home page, *Get started* and *Tables from an ARD* present the same
+  three steps after the ARD (made with cards / cardx): the table plan, the
+  report, the RTF file.  The example outputs carry a study's running header
+  and footer (the study and the page, the output's number, title and
+  population; its footnotes, the program's path and the run).  The Gallery
+  shows each picture first, its code folded under it; the navbar is Get
+  started, Reference, Articles, Gallery, Changelog; *Rendering,
+  post-processing and assembly* says how the bookmarks reach a PDF.
 
 - **A plan's column positions count the PRINTED columns, all of them**
   (#635).  Unnamed `plan_columns(widths = )`, the header's `col_cell()`s
