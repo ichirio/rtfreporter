@@ -85,3 +85,18 @@ aside > div:first-child h2 {
 .template-home aside > .links:first-child {
   padding-top: 1.5rem;
 }
+
+/* ----------------------------------------------------------------------------
+   Gallery: the code under each picture is folded in a <details>.
+   ---------------------------------------------------------------------------- */
+details {
+  margin: 0.5rem 0 2rem;
+}
+details > summary {
+  cursor: pointer;
+  color: var(--bs-link-color);
+  font-weight: 500;
+}
+details[open] > summary {
+  margin-bottom: 0.5rem;
+}

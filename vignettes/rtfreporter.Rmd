@@ -12,6 +12,18 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
 # The chunks below RUN.  Every file goes to a temporary folder, so building
 # this vignette writes nothing outside the session, and a broken example fails
 # the build instead of rotting unnoticed.  The ARD chunks need cards.
@@ -37,21 +49,31 @@ files.  Its two strengths are the two ways to get a table into a report:
    tern, rlistings, tfrmt, flextable, huxtable or a plain data frame goes in
    through `as_rtftables()`.  See [the end of this page](#bring-your-own-table).
 
-Either way the document around the table is the same: `rtf_document()`, a
-running header and footer, `rtf_tables()`, and `generate_rtfreport()` to
-write the file.
+From an ARD, rtfreporter takes three steps: a **table plan** over the ARD,
+the **report** around it (the document, its running header and footer),
+and the **RTF file**.
 
 ```
-ADSL ──cards──▶ ARD ──normalize_ard()──▶ flat frame ──table_plan() + plan_*()──▶ plan
-                                                                                   │
-            generate_rtfreport() ◀── rtf_document() |> rtf_section() |> rtf_tables(plan)
+(ARD) ═══▶ 1. table plan ═══▶ 2. report ═══▶ 3. RTF file
+          ard |> normalize_ard() |>       rtf_document() |>        generate_rtfreport()
+            table_plan() |> plan_*()        rtf_section() |>
+                                            rtf_tables(plan)
 ```
 
-```{r setup, eval = TRUE}
+A table brought from another package skips step 1: `rtf_tables()` takes it
+as it is.
+
+The table this page writes:
+
+![The first page of t_dm.rtf: the study's running header, Table 14.1.1 Demographic Characteristics for the Safety Analysis Set, age as n, mean (SD), median and min, max and age group and sex as n (%) under three arms with (N=86), (N=84) and (N=84), then the footnotes, the program's path and the run date.](../man/figures/get-started-dm.png){width=100%}
+
+The code is folded under **Show code** below each step.
+
+```{r setup, eval = TRUE, fold = FALSE}
 library(rtfreporter)
 ```
 
-```{r cards}
+```{r cards, fold = FALSE}
 library(cards)
 ```
 
@@ -61,11 +83,18 @@ cat("> The chunks on this page run only when the cards package is",
     "shown but not run.\n")
 ```
 
-## 1. The statistics: an ARD
+## The input: an ARD
 
-The example data is the CDISC pilot `ADSL` that cards ships.  The ARD
+> **The ARD is made before rtfreporter, with
+> [cards](https://pharmaverse.github.io/cards/) and
+> [cardx](https://insightsengineering.github.io/cardx/).** That is data
+> preparation, the analysis itself, and outside rtfreporter: see their
+> documentation for the statistics they compute. rtfreporter starts from the
+> ARD as given and changes no number in it.
+
+The example data is the CDISC pilot `ADSL` that cards ships. The ARD
 summarises age, tabulates age group and sex, and does both by arm.
-`ard_stack(.by = )` also counts the subjects in each arm -- the plan reads
+`ard_stack(.by = )` also counts the subjects in each arm. The plan reads
 those counts for the `(N=xx)` in the column header, so nobody types them.
 
 ```{r ard}
@@ -80,25 +109,28 @@ ard <- ard_stack(
   ard_tabulate(variables = c(AGEGR1, SEX)))
 ```
 
-## 2. Flatten it: `normalize_ard()`
+A few of its rows, one statistic a row:
 
-`normalize_ard()` turns the ARD's group columns into ordinary key columns,
-named after their variables, and adds what a table needs: the kind of each
-row (`.kind`) and its label.  Its column names are the ones the plan uses.
-
-```{r normalize}
-nd <- normalize_ard(ard)
-nd[1:4, c("ARM", "variable", "variable_level", "stat_name", "stat", ".kind")]
+```{r ard-rows, echo = FALSE}
+a <- as.data.frame(ard)
+a <- a[vapply(a$group1_level, function(v) identical(as.character(v[[1]]), "Placebo"), NA) &
+       ((a$variable == "AGE" & a$stat_name %in% c("N", "mean", "sd")) |
+        (a$variable == "SEX" & a$stat_name %in% c("n", "p"))),
+       c("group1", "group1_level", "variable", "variable_level", "stat_name", "stat")]
+a[] <- lapply(a, function(x) if (is.list(x)) vapply(x, function(v)
+  if (length(v)) format(v[[1]], digits = 3) else "", "") else x)
+knitr::kable(a, row.names = FALSE)
 ```
 
-## 3. The plan: `table_plan()` and the `plan_*()` verbs
+## 1. From the ARD straight to a table
 
-`table_plan()` names the **roles** -- the key that goes across (`cols`) and
-the keys that go down (`rows`).  Each `plan_*()` verb then adds one
-declaration; nothing runs until the plan is used.
+The plan starts from the ARD. `table_plan()` names the **roles**: the key
+that goes across (`cols`) and the keys that go down (`rows`). Each `plan_*()`
+verb then adds one declaration; nothing runs until the plan is used.
 
-```{r plan}
-p <- nd |>
+```{r plan, fold = "open"}
+p <- ard |>
+  normalize_ard() |>
   table_plan(cols = "ARM", rows = c(group = "variable")) |>
   plan_cells(
     continuous  = c("n"         = "{N:.0f}",
@@ -120,13 +152,22 @@ p <- nd |>
     c("Characteristic", "(N={n})")))
 ```
 
+* `normalize_ard()` comes first in the pipe. It turns the ARD's group
+  columns into ordinary key columns, named after their variables (`ARM`),
+  and those names are what `table_plan()` uses. It changes no number.
 * `plan_cells()` turns statistics into text with templates: `{mean:.1f}` is
-  the mean to one decimal, `{p:.1f%}` a proportion shown as a percentage.  A
+  the mean to one decimal, `{p:.1f%}` a proportion shown as a percentage. A
   continuous variable gets one printed row per name.
 * `plan_labels()` / `plan_levels()` name the variables and order their levels.
 * `plan_stub()` folds the variable and its rows into one indented column.
 * `plan_col_header()` writes the column header; `{col}` is the arm and `{n}`
   its population, read from the ARD.
+
+To see the names the plan can use, look at the flattened ARD:
+
+```{r normalize}
+normalize_ard(ard)[1:4, c("ARM", "variable", "variable_level", "stat_name", "stat", ".kind")]
+```
 
 Before writing any RTF, look at the table the plan makes:
 
@@ -134,35 +175,46 @@ Before writing any RTF, look at the table the plan makes:
 plan_apply(p, stage = "table")
 ```
 
-## 4. The document: `rtf_document()` to `generate_rtfreport()`
+## 2. The report: `rtf_document()` to `rtf_tables()`
 
-The running header and footer are small tables of rows, each with a left,
-centre and right cell.  `{PAGE}` / `{TOTAL_PAGES}`, `{PROGRAM}` and
-`{DATETIME}` are filled in when the file is written; `{STUDY}` is a token of
-our own, given once to `rtf_document(tokens = )`.
+The report is the document around the table. The running header and
+footer are small tables of rows, each with a left, centre and right cell:
+the study and the page number, then the table's number, title and
+population at the top; its footnotes, then the program and the run date
+and time at the bottom. `{PAGE}` / `{TOTAL_PAGES}`, `{PROGRAM_FULL}` (the program's full
+path) and `{DATETIME}` are filled in when the file is written; `{STUDY}` is
+a token of our own, given once to `rtf_document(tokens = )`.
 
-```{r doc}
+```{r doc, fold = "open"}
 doc <- rtf_document(
-    program = "programs/t_dm.R",
-    tokens  = list(STUDY = "CDISCPILOT01")) |>
+    program = "/studies/XYZ-001/programs/tfl/t_dm.R",
+    tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Protocol: {STUDY}", r = "Page {PAGE} of {TOTAL_PAGES}"),
-      c(c = "Table 14.1.1  Demographic Characteristics"),
-      c(c = "Safety Analysis Set"))),
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.1.1"),
+      c(c = "Demographic Characteristics"),
+      c(c = "<Safety Analysis Set>"))),
     footer = rtf_footer(list(
+      c(l = "N = number of subjects in the analysis set; percentages are based on N."),
       c(l = "SD = standard deviation."),
-      c(l = "Program: {PROGRAM}", r = "{DATETIME}")))) |>
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p)
-
-generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```
 
-`rtf_tables()` takes the plan as it takes any table and runs it.  Long tables
+`rtf_tables()` takes the plan as it takes any table and runs it. Long tables
 are paged by the plan (`plan_paginate_rows()`), and the header repeats on
 every page.
 
-## 5. An adverse-events table
+## 3. The RTF file: `generate_rtfreport()`
+
+```{r file, fold = "open"}
+generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
+```
+
+## An adverse-events table
 
 The same steps make a table of adverse events by system organ class (SOC) and
 preferred term (PT), from
@@ -192,41 +244,84 @@ p_ae <- ard_ae |>
   plan_sort(".overall", "SOC", ".depth", "-n", "PT") |>
   plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
   plan_stub(name = "System Organ Class\n  Preferred Term", indent = 2) |>
-  plan_blanks(where = "between_groups", first = TRUE) |>
-  plan_paginate_rows(max_rows = 24, split = "group_safe") |>
+  plan_blanks(where = "between_groups", first = TRUE, counted = TRUE) |>
+  plan_paginate_rows(max_rows = 25, split = "group_safe") |>
   plan_columns(widths = c(5, 2, 2, 2)) |>
   plan_style(border = "tfl", align_count_pct = TRUE) |>
   plan_col_header(values = list(n = TRUE), rtf_col_header(
-    c("", "{col}"),
-    c("", "(N={n})\nn (%)")))
+    c("System Organ Class", "{col}"),
+    c("  Preferred Term", "(N={n})\nn (%)")))
 
-rtf_document() |>
+rtf_document(
+    program = "/studies/XYZ-001/programs/tfl/t_ae.R",
+    tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}"),
-      c(c = "Table 14.3.1.1  Treatment-Emergent Adverse Events by SOC and PT"),
-      c(c = "Safety Analysis Set"))),
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.3.1.1"),
+      c(c = "Treatment-Emergent Adverse Events by SOC and PT"),
+      c(c = "<Safety Analysis Set>"))),
     footer = rtf_footer(list(
-      c(l = "A subject is counted once per SOC and once per PT.")))) |>
+      c(l = "TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term."),
+      c(l = "A subject is counted once per SOC and once per PT; percentages are based on N."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_ae) |>
   generate_rtfreport("t_ae.rtf")
 ```
 
-![The first page of t_ae.rtf: the running header with Page 1 of 14, the title block, "Any TEAE", then Cardiac disorders and its preferred terms, most frequent first, each as n (%) by arm with (N=xx) in the column header.](../man/figures/get-started-ae.png){width=100%}
+![The first page of t_ae.rtf: the running header with the study and the page number, the title block, "Any TEAE", then Cardiac disorders and its preferred terms, most frequent first, each as n (%) by arm with (N=xx) in the column header.](../man/figures/get-started-ae.png){width=100%}
 
 The [Tables from an ARD](tables-from-ard.html) article goes through this table
 step by step.
 
-## 6. Where next on this path
+### More from the same steps
+
+Each of these is one ARD and one plan in the
+[Tables from an ARD](tables-from-ard.html) article. The verbs named are the
+lines that differ from the tables above. Like the adverse-events table, they
+use pharmaverseadam's safety population, so the arms' N differ from those of
+cards' `ADSL` in sections 1 to 4.
+
+* **A Total column and a p-value.** `plan_total()` makes the overall rows a
+  column, and `plan_compare()` puts the ARD's test on each variable's first
+  row.
+
+  ![Demographics with Placebo, the two Xanomeline arms, a Total column and a p-value column; the p-value sits on the first row of each characteristic.](../man/figures/get-started-dm-p.png){width=100%}
+
+* **Only the common terms, SOCs by frequency.** `plan_filter(p >= 0.05)`
+  keeps the PTs with 5% or more in any arm, and `plan_sort("-n@SOC", ...)`
+  orders the SOCs by their own count.
+
+  ![Adverse events in 5% or more of subjects: Any TEAE, then General disorders, Skin and subcutaneous tissue disorders and the other SOCs, most frequent first.](../man/figures/get-started-ae5.png){width=100%}
+
+* **Subgroups, a section per arm.** `normalize_ard(stack = )` puts the
+  subgroups one under another, `plan_stat_groups()` makes a column from a
+  group of statistics (responders, rate and CI), and
+  `plan_paginate_rows(page_by = , heading = )` makes one section per arm with
+  its N.
+
+  ![Objective response rate by subgroup for Placebo (N=86): All Subjects, Sex and Age Group with N and Responders (%) with the 90% CI below.](../man/figures/get-started-orr.png){width=100%}
+
+## Where next on this path
 
 * [Tables from an ARD](tables-from-ard.html) -- the same steps in
-  more depth, quartiles, and an adverse-events table sorted by frequency
-  within a SOC / PT hierarchy.
+  more depth: quartiles, an adverse-events table sorted by frequency within
+  a SOC / PT hierarchy and filtered, a Total and a p-value column, and
+  subgroups with a section per arm.
 * [The plan verbs](plan-verbs.html) -- every `plan_*()` verb,
   grouped by job, and the rule that a later layer wins.
 * `widen_ard()` -- the ARD half of a plan in one call, giving a data frame
   now instead of a plan to run later.
 * `plan_template()` -- reads an ARD and writes a starting plan to edit.
+* `rtfreporter_ai_manual(dir, ard = )` -- a folder to give an AI assistant:
+  the manual, three complete programs and your ARD's shape, so it writes a
+  plan for the version you have.
+* [Rendering, post-processing and assembly](output.html) -- the outputs
+  joined into one deliverable: a cover page, a linked table of contents and
+  a bookmark per output, which Word and LibreOffice turn into PDF bookmarks
+  when they export it.
 * [Headers, footers and tokens](headers-footers.html) --
   `{PROGRAM_FULL}`, `program_fallback`, `drop_empty_rows` and tokens of your
   own.
@@ -242,7 +337,7 @@ A data frame carries no labels of its own, so they are given on
 `rtftable()`.  Here the numbers -- and the arms' N in the header -- are
 computed from the data, not typed in:
 
-```{r byo}
+```{r byo, fold = "open"}
 adsl <- cards::ADSL
 n   <- table(adsl$ARM)
 age <- tapply(adsl$AGE, adsl$ARM,

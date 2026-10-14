@@ -3,6 +3,19 @@ title: "Same report, every framework: Adverse events (AE)"
 ---
 
 ```{r, include = FALSE, purl = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE, eval = FALSE)
 
@@ -85,7 +98,7 @@ sort rule and the PT orderings/filters that the framework blocks reuse -- each
 commented with *which* blocks use it -- so that, once this block has run, any one
 framework block below is self-contained.
 
-```{r ae-data}
+```{r ae-data, fold = "closed"}
 library(rtfreporter)
 library(dplyr)
 
@@ -131,7 +144,7 @@ formatter are the same for every framework below. We build them **once here**;
 each framework block then references them. Only the table *body* changes from
 framework to framework.
 
-```{r ae-furniture}
+```{r ae-furniture, fold = "closed"}
 # Shared column header / spec / widths / page budget.
 ae_col_header <- c("System Organ Class /\nPreferred Term",
                    paste0(arm_levels, "\nN = ", as.integer(arm_n)))

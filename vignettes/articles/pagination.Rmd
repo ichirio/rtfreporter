@@ -3,11 +3,24 @@ title: "Paginating tables with as_rtftables()"
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 ```
 
-```{r setup}
+```{r setup, fold = FALSE}
 library(rtfreporter)
 ```
 
@@ -38,7 +51,7 @@ convention, a row whose first column starts with a non-space character opens a
 group label with blank member rows -- are handled by `group_col` / `group_by`,
 covered under [Shared knobs](#shared-knobs) below.
 
-```{r data}
+```{r data, fold = "closed"}
 df <- data.frame(
   Parameter = c("Age (years)", "  Mean", "  SD", "  Min", "  Max",
                 "Sex",         "  F", "  M",

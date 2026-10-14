@@ -6,6 +6,19 @@ description: >
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
@@ -38,7 +51,15 @@ Two rules hold for every verb:
    key, the last call decides, so a house style is written once and one table
    changes it by adding a line.
 
-```{r setup}
+A table made with these verbs: the vital signs example under *Pages*.
+
+```{r shot-vs, echo = FALSE}
+.shot("t_vs.png")
+```
+
+The code is folded under **Show code** below each step.
+
+```{r setup, fold = "closed"}
 library(rtfreporter)
 library(cards)
 
@@ -65,11 +86,15 @@ base <- ard |>
 
 | Job | Verb |
 |---|---|
-| The roles: what goes across, what goes down | `table_plan(x, cols, rows, label, stat)` |
+| The roles: what goes across, what goes down | `table_plan(x, cols, rows, label, stat, show_keys)` |
 | How a cell is made | `plan_cells(..., stats, value, na, notes)` |
 | The digits | `plan_digits(..., rounding)` |
+| A column from a group of statistics | `plan_stat_groups(..., .variables, .others)` |
 | The order and text of values | `plan_levels()`, `plan_labels()` |
 | The row order | `plan_sort(..., stat, keep)` |
+| Which rows stay | `plan_filter(..., any, parents, by)` |
+| A Total column | `plan_total(label, position)` |
+| A test or a difference as a column | `plan_compare(..., by, position)` |
 | The row headings | `plan_stub(vars, name, indent, group_summary, before)` |
 | Groups down the body | `plan_row_group(mode, collapse)` |
 | Blank rows | `plan_blanks(where, first, last, counted)` |
@@ -78,8 +103,8 @@ base <- ard |>
 | The column header | `plan_col_header(header, values)` |
 | The whole table's look | `plan_style(border, align_count_pct, font, ..., border_header, ...)` |
 | Some cells' look | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)` |
-| A page per value | `plan_paginate_group(col, keep)` |
-| How many rows on a page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label)` |
+| A page per value | `plan_paginate_group(col, keep, heading)` |
+| How many rows on a page, BY pages | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)` |
 | A table too wide for the page | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | A listing | `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
 | Titles and footnotes | `plan_titles()`, `plan_footnotes()` |
@@ -197,7 +222,33 @@ plan_sort(".overall", "SOC", ".depth", "-n", "PT")
 Keep a hierarchy's outer key before the statistic. `-n` alone orders every
 row by its count, and the PTs lose their SOC.
 
+Two more forms say **whose** count and **which column**:
+
+* `-n@SOC` is the count of the SOC's own row, carried to its PTs, so the
+  SOCs go in order of frequency and keep their PTs:
+  `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT")`.
+* `-n[Total]` (or `-n[Placebo]`) is the count in one column only, not the
+  sum across the columns. `-n@SOC[Total]` is both.
+
 `keep = FALSE` also hides the columns used only for sorting.
+
+### `plan_filter()`: which rows stay
+
+`plan_filter()` keeps the rows whose records meet the conditions. The
+conditions are R over the ARD's statistics and keys, like the guards of
+`plan_cells()`:
+
+```r
+plan_filter(p >= 0.05)                       # PTs with 5% or more in any arm
+plan_filter(n >= 3, TRT01A != "Placebo")     # 3 or more in an active arm
+```
+
+* `any = TRUE` (default): a row stays when any column meets them; `FALSE`:
+  every column must.
+* `parents = "keep"` (default): a SOC stays exactly when one of its PTs
+  does. An overall row ("Any TEAE") always stays.
+* It runs before the cells are made and the rows sorted, and nothing is
+  computed: `p` is the ARD's.
 
 ## The rows
 
@@ -215,8 +266,8 @@ default) when a page split must still read a row key.
 ### `plan_row_group()`, `plan_blanks()`, `plan_hide()`
 
 * `plan_row_group(mode = "indent")` treats each heading and the rows under it
-  as a group, so pagination keeps them together. `collapse = TRUE` prints a
-  repeated value once.
+  as a group, so pagination keeps them together. `collapse = c("grp1",
+  "grp2")` prints a repeated value once in those columns.
 * `plan_blanks(where = "between_groups", first = TRUE, last = TRUE)` adds a
   blank row between groups and at the top and bottom of the body.
 * `plan_hide("COL")` keeps a column in the data but does not print it.
@@ -232,6 +283,11 @@ decimal point:
 ```r
 plan_columns(widths = c(row_label = 4, .values = 2), decimal = ".values")
 ```
+
+`row_title` (the row-heading columns) and `plan_row_group(collapse = )` take
+names the same way. A column can also be given by position: positions count
+the **printed** columns, so a column hidden with `plan_hide()` or taken out
+by `page_by` is not counted.
 
 ### `plan_col_header()`
 
@@ -262,6 +318,53 @@ Printing the plan lists every token and the value it will take, so you can
 check a header before anything is run. If a population is not in the ARD, the
 header prints `NA` and a warning says which cells. Give the numbers yourself
 with `values = list(n = c(Placebo = 86, ...))`.
+
+## More columns
+
+### `plan_total()` and `plan_compare()`
+
+* `plan_total(label = "Total")` makes cards' overall rows (from
+  `ard_stack(.overall = TRUE)`, or the same analysis without its `by`) a
+  column after the arms. Its `(N=xx)` comes from the same ARD.
+* `plan_compare()` makes a column from the comparison records: cardx's
+  tests (`ard_stats_chisq_test()`, `ard_stats_kruskal_test()`, ...) and
+  differences, the records with no arm. Each sits on its variable's block:
+
+```r
+plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))
+plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})",
+             p = "{p.value:.3f}")
+plan_compare(p = c(stats_chisq_test  = "{p.value:.3f}",   # each test its own way
+                   stats_fisher_test = "{p.value:.4f}"))
+plan_compare(diff = cell_rows("1" = "{estimate:.3f}",      # two lines, beside
+                              "2" = "({conf.low:.3f}, {conf.high:.3f})"))   # the body's
+```
+
+The names are the columns' own. A named vector picks the test by its
+context, and `cell_rows()` gives a cell lines that sit beside the body's
+lines. `by = "COMPARISON"` makes one column a comparison, for each active
+arm against placebo.
+
+### `plan_stat_groups()`: several statistics, one column
+
+When the columns are statistics rather than arms, `plan_stat_groups()` names
+the groups of statistics, and `cols = ".stat_group"` makes one column of
+each:
+
+```r
+table_plan(cols = ".stat_group", rows = c(grp1 = "subgroup", grp2 = "subgroup_level")) |>
+  plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+  plan_cells(n      = c("1" = "{N:.0f}"),
+             orr_ci = cell_rows("1" = "{n:.0f} ({estimate:.1f%})",
+                                "2" = "{conf.low:.1f%}, {conf.high:.1f%}"))
+```
+
+`.variables` limits the split to some variables, and `.others` names the
+group the other variables go to whole. `table_plan(show_keys = "SEX")`
+also prints a subgroup key's own counts as rows of their own, beside the
+analysis of that subgroup. The whole table, with
+`normalize_ard(stack = )` for the subgroups, is in
+[Tables from an ARD](tables-from-ard.html).
 
 ## The look
 
@@ -320,11 +423,20 @@ Three verbs cover the three directions in which a table can split into pages:
   a column (a lab parameter, a visit). Left out, `col` is the outermost row
   key. The page is named after the value, which is what
   `rtf_tables(auto_section = TRUE)` starts a section on.
+  `heading = "Treatment: {value} (N={n})"` names it from a template, with
+  `{n}` the value's own count in the ARD.
 * **by rows**: `plan_paginate_rows(max_rows, split = "group_safe")` sets how
-  many rows fit on a page and keeps groups whole.
+  many rows fit on a page and keeps groups whole. With `page_by = "arm"` it
+  first makes a page for each arm, then applies the row budget inside it,
+  and it takes the same `heading =`.
 * **by columns**: `plan_paginate_cols(every = 4, keep = "row_label")` splits
   a table too wide for the page into blocks. Each block repeats the `keep`
   columns.
+
+The key a page is cut on (`col`, `page_by`) is a **page key**. It is the
+same on every row of a page, so it is never a row group: the blank rows
+between groups, `collapse`, `row_title`, the stub and column positions start
+at the first printed row key, and `first` / `last` apply on every page.
 
 A vital signs table with a page per parameter, and two columns (value and
 change from baseline) under each arm:
@@ -373,9 +485,7 @@ generate_rtfreport(doc, "t_vs.rtf", overwrite = TRUE)
 length(plan_apply(p_vs))
 ```
 
-```{r shot-vs, echo = FALSE}
-.shot("t_vs.png")
-```
+Its first page is the picture at the top of this article.
 
 Here the arm counts come from ADSL (`values = list(n = ...)`), because the
 columns are arm × variable and the vital-signs ARD does not state the arms'

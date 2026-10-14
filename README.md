@@ -18,19 +18,15 @@ included.**
 
 ## Why rtfreporter?
 
-- **Objects from the packages you already use, straight to RTF.**
-  cards / cardx ARDs (through a short plan), rtables / tern, rlistings,
-  gtsummary, gt, tfrmt, flextable, huxtable, and plain data frames --
-  their labels, spanning headers and footnotes kept.
-- **An ARD is the recommended route.**  The plan verbs (`table_plan()` and
-  the `plan_*()` verbs) lay out a cards / cardx analysis results dataset,
-  and the column header's `(N=xx)` is read from the same ARD, so the
-  header and the numbers under it agree.
-- **Pages ready to submit.**  Running headers and footers with page numbers,
-  the program and the run date; titles and footnotes; row and column
-  pagination; listings and figures; the files joined into one deliverable.
-- **Small, on purpose.**  One clinical layout, base R only, nothing to
-  configure for the usual house style.
+- **Your packages' tables, straight to RTF**: cards / cardx ARDs, rtables /
+  tern, rlistings, gtsummary, gt, tfrmt, flextable, huxtable, data frames.
+- **ARD first**: an ARD becomes a table through a short plan, `(N=xx)` included.
+- **Submission-ready pages**: running headers and footers, titles, footnotes,
+  pagination, listings and figures.
+- **One deliverable**: outputs assembled with a cover page, a clickable table
+  of contents and PDF bookmarks
+  ([how](https://ichirio.github.io/rtfreporter/articles/output.html)).
+- **Small, on purpose**: one clinical layout, base R only.
 
 ## Installation
 
@@ -43,17 +39,54 @@ remotes::install_github("ichirio/rtfreporter")          # the development versio
 
 ## From an ARD, with a plan
 
+The ARD is the input, made with
+[cards](https://pharmaverse.github.io/cards/) /
+[cardx](https://insightsengineering.github.io/cardx/) before rtfreporter.
+From there it is three steps: **(ARD) ⇒ table plan ⇒ report ⇒ RTF file**.
+
+<details><summary>The study's running header and footer, used by the examples below</summary>
+
+``` r
+# written once, as a study's report_setup.R would: the study and the page,
+# then the output's number, title and population; its footnotes, then the
+# program's full path and the run date and time
+study_doc <- function(label, title, population, program, footnotes = NULL,
+                      orientation = "landscape") {
+  rtf_document(
+    page    = rtf_page(orientation = orientation),
+    # {PROGRAM_FULL} prints this path absolute, in the system's own form
+    program = file.path("/studies/XYZ-001/programs/tfl", program),
+    tokens  = list(STUDY = "XYZ-001")) |>
+    rtf_section(
+      header = rtf_header(list(
+        c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+        c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+        c(c = ""),
+        c(c = label),
+        c(c = title),
+        c(c = paste0("<", population, ">")))),
+      footer = rtf_footer(c(
+        lapply(footnotes, function(x) c(l = x)),
+        list(c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))))
+}
+```
+
+</details>
+
 ``` r
 library(rtfreporter)
 library(cards)
 
+# (ARD): made with cards / cardx -- data preparation, outside rtfreporter
 adsl <- ADSL
 adsl$ARM <- factor(adsl$ARM, c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"))
 ard <- ard_stack(adsl, .by = ARM,
                  ard_summary(variables = AGE),
                  ard_tabulate(variables = SEX))
 
-plan <- normalize_ard(ard) |>
+# 1. the table plan, straight from the ARD
+plan <- ard |>
+  normalize_ard() |>
   table_plan(cols = "ARM", rows = c(group = "variable")) |>
   plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
              categorical = "{n:.0f} ({p:.1f%})", notes = FALSE) |>
@@ -61,16 +94,20 @@ plan <- normalize_ard(ard) |>
   plan_stub() |>
   plan_col_header(values = list(n = TRUE), rtf_col_header(c("", "{col}\n(N={n})")))
 
-rtf_document() |>
-  rtf_section(header = rtf_header(c(l = "Protocol: CDISCPILOT01",
-                                    r = "Page {PAGE} of {TOTAL_PAGES}"))) |>
-  rtf_tables(plan, titles = c("Table 14.1.1", "Demographic Characteristics")) |>
-  generate_rtfreport("t_dm.rtf")
+# 2. the report: the document around the table
+report <- study_doc("Table 14.1.1", "Demographic Characteristics",
+                    "Safety Analysis Set", program = "t_dm.R",
+                    footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
+                                  "SD = standard deviation.")) |>
+  rtf_tables(plan)
+
+# 3. the RTF file
+generate_rtfreport(report, "t_dm.rtf")
 ```
 
 <p align="center">
   <img src="man/figures/readme-ard-example.png"
-       alt="The t_dm.rtf written by the code above, opened in a word processor: a running header with the protocol and Page 1 of 1, the title, three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as mean (SD) and sex as n (%)."
+       alt="The t_dm.rtf written by the code above, opened in a word processor: a running header with Ichirio Pharma | Study XYZ-001, DRAFT and Page 1 of 1, then Table 14.1.1, the title and the population; three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as mean (SD) and sex as n (%); the footer gives the program's path and the run date."
        width="720" />
 </p>
 
@@ -92,9 +129,10 @@ lyt <- basic_table(show_colcounts = TRUE) |>
   split_cols_by("ARM") |>
   analyze_vars(c("AGE", "SEX"), var_labels = c(AGE = "Age (years)", SEX = "Sex"))
 
-rtf_document() |>
-  rtf_tables(as_rtftables(build_table(lyt, df = adsl)),
-             titles = c("Table 14.1.1", "Demographic Characteristics")) |>
+study_doc("Table 14.1.1", "Demographic Characteristics",
+          "Safety Analysis Set", program = "t_dm_tern.R",
+          footnotes = "SD = standard deviation.") |>
+  rtf_tables(as_rtftables(build_table(lyt, df = adsl))) |>
   generate_rtfreport("t_dm_tern.rtf")
 ```
 
@@ -112,8 +150,9 @@ library(gtsummary)
 tbl <- tbl_summary(adsl, by = ARM, include = c(AGE, SEX),
                    label = list(AGE ~ "Age (years)", SEX ~ "Sex"))
 
-rtf_document() |>
-  rtf_tables(as_rtftables(tbl), titles = c("Table 14.1.1", "Demographic Characteristics")) |>
+study_doc("Table 14.1.1", "Demographic Characteristics",
+          "Safety Analysis Set", program = "t_dm_gtsummary.R") |>
+  rtf_tables(as_rtftables(tbl)) |>
   generate_rtfreport("t_dm_gtsummary.rtf")
 ```
 

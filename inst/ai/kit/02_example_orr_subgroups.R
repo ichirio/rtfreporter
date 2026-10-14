@@ -35,7 +35,6 @@ tbl_plan <- ard |>
                       heading = "Treatment: {value} (N={n})") |>
   plan_labels(subgroup = c(ALL = "All Subjects", SEX = "Sex", AGEGR1 = "Age Group",
                            "AGEGR1 / SEX" = "Age Group by Sex")) |>
-  plan_sort(FALSE) |>
   plan_cells(
     n      = c("1" = "{N:.0f}"),
     orr_ci = cell_rows(
