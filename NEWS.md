@@ -1,5 +1,10 @@
 # rtfreporter (development version)
 
+- **Home page**: "From an ARD to an RTF table in 30 seconds", the page it
+  writes first and its code under it; the word *plan* is kept for the code
+  and the verbs (Get started's steps are the table, the report, the RTF
+  file).
+
 - **Docs for the new plan verbs.** *Get started* shows three more tables
   from the same steps (a Total and a p-value, AEs in 5% or more with the
   SOCs by frequency, ORR by subgroup with a section per arm); *Tables from

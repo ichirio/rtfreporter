@@ -1,7 +1,7 @@
 ---
 title: "Get started with rtfreporter"
 description: >
-  The recommended workflow end to end: an ARD from cards, a table plan,
+  The recommended workflow end to end: an ARD from cards, the table,
   a document with running headers, and the RTF file.  Then the second path:
   bringing a table you already have.
 output: rmarkdown::html_vignette
@@ -42,19 +42,19 @@ files.  Its two strengths are the two ways to get a table into a report:
 1. **From an analysis results dataset (ARD), almost as-is** -- the
    recommended path.  The statistics come from
    [cards](https://pharmaverse.github.io/cards/) /
-   [cardx](https://insightsengineering.github.io/cardx/); a **plan** says how
+   [cardx](https://insightsengineering.github.io/cardx/); a few lines say how
    they are laid out.  This is what the rest of this page shows.
 2. **Bring your own table** -- it reads the table objects you already
    have: a table built with gt, gtsummary (a `tbl_split` too), rtables /
    tern, rlistings, tfrmt, flextable, huxtable or a plain data frame goes in
    through `as_rtftables()`.  See [the end of this page](#bring-your-own-table).
 
-From an ARD, rtfreporter takes three steps: a **table plan** over the ARD,
+From an ARD, rtfreporter takes three steps: the **table**, straight from the ARD,
 the **report** around it (the document, its running header and footer),
 and the **RTF file**.
 
 ```
-(ARD) ═══▶ 1. table plan ═══▶ 2. report ═══▶ 3. RTF file
+(ARD) ═══▶ 1. table ═══════▶ 2. report ═══▶ 3. RTF file
           ard |> normalize_ard() |>       rtf_document() |>        generate_rtfreport()
             table_plan() |> plan_*()        rtf_section() |>
                                             rtf_tables(plan)
@@ -94,7 +94,7 @@ cat("> The chunks on this page run only when the cards package is",
 
 The example data is the CDISC pilot `ADSL` that cards ships. The ARD
 summarises age, tabulates age group and sex, and does both by arm.
-`ard_stack(.by = )` also counts the subjects in each arm. The plan reads
+`ard_stack(.by = )` also counts the subjects in each arm. rtfreporter reads
 those counts for the `(N=xx)` in the column header, so nobody types them.
 
 ```{r ard}
@@ -278,7 +278,7 @@ step by step.
 
 ### More from the same steps
 
-Each of these is one ARD and one plan in the
+Each of these is one ARD and one table's code in the
 [Tables from an ARD](tables-from-ard.html) article. The verbs named are the
 lines that differ from the tables above. Like the adverse-events table, they
 use pharmaverseadam's safety population, so the arms' N differ from those of

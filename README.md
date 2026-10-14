@@ -20,7 +20,7 @@ included.**
 
 - **Your packages' tables, straight to RTF**: cards / cardx ARDs, rtables /
   tern, rlistings, gtsummary, gt, tfrmt, flextable, huxtable, data frames.
-- **ARD first**: an ARD becomes a table through a short plan, `(N=xx)` included.
+- **ARD first**: an ARD becomes a table in a few lines, `(N=xx)` included.
 - **Submission-ready pages**: running headers and footers, titles, footnotes,
   pagination, listings and figures.
 - **One deliverable**: outputs assembled with a cover page, a clickable table
@@ -37,12 +37,21 @@ remotes::install_github("ichirio/rtfreporter@v0.8.2")   # the latest release
 remotes::install_github("ichirio/rtfreporter")          # the development version
 ```
 
-## From an ARD, with a plan
+## From an ARD to an RTF table in 30 seconds
 
 The ARD is the input, made with
 [cards](https://pharmaverse.github.io/cards/) /
 [cardx](https://insightsengineering.github.io/cardx/) before rtfreporter.
-From there it is three steps: **(ARD) ⇒ table plan ⇒ report ⇒ RTF file**.
+From there it is three steps: **(ARD) ⇒ table ⇒ report ⇒ RTF file**.
+The page they write:
+
+<p align="center">
+  <img src="man/figures/readme-ard-example.png"
+       alt="The t_dm.rtf written by the code below, opened in a word processor: a running header with Ichirio Pharma | Study XYZ-001, DRAFT and Page 1 of 1, then Table 14.1.1, the title and the population; three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as mean (SD) and sex as n (%); the footer gives the program's path and the run date."
+       width="720" />
+</p>
+
+The code:
 
 <details><summary>The study's running header and footer, used by the examples below</summary>
 
@@ -84,7 +93,7 @@ ard <- ard_stack(adsl, .by = ARM,
                  ard_summary(variables = AGE),
                  ard_tabulate(variables = SEX))
 
-# 1. the table plan, straight from the ARD
+# 1. the table, straight from the ARD
 plan <- ard |>
   normalize_ard() |>
   table_plan(cols = "ARM", rows = c(group = "variable")) |>
@@ -105,14 +114,9 @@ report <- study_doc("Table 14.1.1", "Demographic Characteristics",
 generate_rtfreport(report, "t_dm.rtf")
 ```
 
-<p align="center">
-  <img src="man/figures/readme-ard-example.png"
-       alt="The t_dm.rtf written by the code above, opened in a word processor: a running header with Ichirio Pharma | Study XYZ-001, DRAFT and Page 1 of 1, then Table 14.1.1, the title and the population; three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as mean (SD) and sex as n (%); the footer gives the program's path and the run date."
-       width="720" />
-</p>
 
 The arms' `(N=xx)` come from the ARD: `ard_stack(.by = )` counts them.  The
-same plan pages a long table, sorts an adverse-events table by frequency,
+same code pages a long table, sorts an adverse-events table by frequency,
 and can be saved and reused:
 [Get started](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html),
 [Tables from an ARD](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
@@ -244,9 +248,9 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
 - **Gallery** — [tables, a listing and figures from the CDISC pilot data](https://ichirio.github.io/rtfreporter/articles/gallery.html),
   each with the code that wrote it
-- **Get started** — [an ARD, a plan, and the RTF file](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
+- **Get started** — [from an ARD to the RTF file](https://ichirio.github.io/rtfreporter/articles/rtfreporter.html)
   (`vignette("rtfreporter")`)
-- **Tables from an ARD** (recommended) — [cards / cardx to RTF with a plan](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
+- **Tables from an ARD** (recommended) — [cards / cardx to RTF, step by step](https://ichirio.github.io/rtfreporter/articles/tables-from-ard.html),
   [the plan verbs](https://ichirio.github.io/rtfreporter/articles/plan-verbs.html) and
   [from `as_rtftables()` to a plan](https://ichirio.github.io/rtfreporter/articles/plan-and-as-rtftables.html)
 - **Bring your own table** — gt / gtsummary / rtables / tfrmt / flextable /
@@ -255,7 +259,7 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
   [pagination](https://ichirio.github.io/rtfreporter/articles/pagination.html), and the
   *same report, every framework* articles ([Demographics](https://ichirio.github.io/rtfreporter/articles/showcase-dm.html),
   [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.html))
-- **Listings** — [with a plan](https://ichirio.github.io/rtfreporter/articles/plan-listings.html)
+- **Listings** — [from the records](https://ichirio.github.io/rtfreporter/articles/plan-listings.html)
   or [from source data](https://ichirio.github.io/rtfreporter/articles/listings.html),
   including the column-width estimator and the wrapping rule
 - **Figures** — [a plot object to a page](https://ichirio.github.io/rtfreporter/articles/figures.html)

@@ -50,7 +50,7 @@ cell, what the rows are called and what the header says. In rtfreporter that
 is written as a **plan**:
 
 ```
-(ARD) ═══▶ 1. table plan ═══▶ 2. report ═══▶ 3. RTF file
+(ARD) ═══▶ 1. table ═══════▶ 2. report ═══▶ 3. RTF file
           ard |> normalize_ard() |>       rtf_document() |>        generate_rtfreport()
             table_plan() |> plan_*()        rtf_section() |>
                                             rtf_tables(plan)
@@ -58,7 +58,7 @@ is written as a **plan**:
 
 * **The ARD** is the input. It is made with cards / cardx, before
   rtfreporter.
-* **1. The table plan** starts from it: `normalize_ard()` makes its groups
+* **1. The table** starts from it: `normalize_ard()` makes its groups
   and hierarchy ordinary key columns, `table_plan()` names the **roles** (the
   column that goes across, the ones that go down), and each `plan_*()` verb
   adds one declaration: the cell templates, the labels, the header, the
