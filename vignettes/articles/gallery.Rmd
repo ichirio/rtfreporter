@@ -6,6 +6,18 @@ description: >
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
@@ -33,9 +45,7 @@ statistics come from [cards](https://pharmaverse.github.io/cards/).
 
 All the outputs share one running header and footer, written once, in the layout of a study's `report_setup.R`:
 
-<details><summary>Show the shared setup</summary>
-
-```{r setup}
+```{r setup, fold = "closed"}
 library(rtfreporter)
 library(cards)
 
@@ -69,8 +79,6 @@ study_doc <- function(label, title, population, program, footnotes = NULL,
 }
 ```
 
-</details>
-
 
 ## Demographic characteristics
 
@@ -79,8 +87,6 @@ From an ARD with a plan; the `(N=xx)` comes from the same ARD. Explained step by
 ```{r shot-dm, echo = FALSE, fig.alt = "Demographic characteristics by arm: age as n, mean (SD), median (Q1, Q3) and min, max; age group, sex and race as n (%)."}
 .shot("t_dm.png")
 ```
-
-<details><summary>Show code</summary>
 
 ```{r t-dm}
 ard_dm <- ard_stack(
@@ -120,8 +126,6 @@ doc <- study_doc("Table 14.1.1", "Demographic Characteristics",
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```
 
-</details>
-
 ## Adverse events by system organ class and preferred term
 
 A hierarchical ARD sorted by frequency within each SOC, pages broken between SOCs. See [Tables from an ARD](tables-from-ard.html).
@@ -129,8 +133,6 @@ A hierarchical ARD sorted by frequency within each SOC, pages broken between SOC
 ```{r shot-ae, echo = FALSE, fig.alt = "Treatment-emergent adverse events by SOC and PT, n (%) by arm, the SOCs with their PTs most frequent first."}
 .shot("t_ae.png")
 ```
-
-<details><summary>Show code</summary>
 
 ```{r t-ae}
 adae <- pharmaverseadam::adae
@@ -167,8 +169,6 @@ generate_rtfreport(doc, "t_ae.rtf", overwrite = TRUE)
 length(plan_apply(p_ae))    # pages
 ```
 
-</details>
-
 ## Vital signs by visit
 
 The value and the change from baseline under each arm, with a nested stub. See [The plan verbs](plan-verbs.html).
@@ -176,8 +176,6 @@ The value and the change from baseline under each arm, with a nested stub. See [
 ```{r shot-vs, echo = FALSE, fig.alt = "Systolic and diastolic blood pressure by visit: n and mean (SD) of the value and of the change from baseline under each arm."}
 .shot("t_vs.png")
 ```
-
-<details><summary>Show code</summary>
 
 ```{r t-vs}
 visits <- c("Baseline", "Week 8", "Week 16", "Week 24")
@@ -223,8 +221,6 @@ doc <- study_doc("Table 14.3.5.1", "Vital Signs by Visit",
 generate_rtfreport(doc, "t_vs.rtf", overwrite = TRUE)
 ```
 
-</details>
-
 ## Listing of severe adverse events
 
 Records, not statistics: cells wrap, keys print once, a record never splits. See [Listings with a plan](plan-listings.html).
@@ -232,8 +228,6 @@ Records, not statistics: cells wrap, keys print once, a record never splits. See
 ```{r shot-sae, echo = FALSE, fig.alt = "A listing of severe adverse events: treatment, subject, age and sex, SOC and PT, start and end dates, seriousness and outcome."}
 .shot("l_sae.png")
 ```
-
-<details><summary>Show code</summary>
 
 ```{r l-sae}
 sae <- adae[adae$AESEV %in% "SEVERE", ]
@@ -266,8 +260,6 @@ doc <- study_doc("Listing 16.2.7.2",
 generate_rtfreport(doc, "l_sae.rtf", overwrite = TRUE)
 ```
 
-</details>
-
 ## Kaplan-Meier plot
 
 A figure is a page like any other, here drawn with base R and survival. See [Figures](figures.html).
@@ -275,8 +267,6 @@ A figure is a page like any other, here drawn with base R and survival. See [Fig
 ```{r shot-km, echo = FALSE, fig.alt = "Kaplan-Meier curves of the time to the first skin event, one per arm, with censoring marks."}
 .shot("f_km.png")
 ```
-
-<details><summary>Show code</summary>
 
 ```{r f-km}
 # Time to the first treatment-emergent skin event, censored at the last dose
@@ -309,8 +299,6 @@ doc <- study_doc("Figure 14.3.2.1",
 generate_rtfreport(doc, "f_km.rtf", overwrite = TRUE)
 ```
 
-</details>
-
 ## Mean change from baseline over time
 
 A ggplot2 figure on the same page layout. See [Figures](figures.html).
@@ -318,8 +306,6 @@ A ggplot2 figure on the same page layout. See [Figures](figures.html).
 ```{r shot-fvs, echo = FALSE, fig.alt = "Mean (SE) change from baseline in systolic blood pressure at weeks 8, 16 and 24, one line per arm."}
 .shot("f_vs.png")
 ```
-
-<details><summary>Show code</summary>
 
 ```{r f-vs, eval = requireNamespace("ggplot2", quietly = TRUE)}
 library(ggplot2)
@@ -350,8 +336,6 @@ doc <- study_doc("Figure 14.3.5.1",
                       render_dpi = 150))
 generate_rtfreport(doc, "f_vs.rtf", overwrite = TRUE)
 ```
-
-</details>
 
 ## Where next
 

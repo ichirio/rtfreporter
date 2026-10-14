@@ -6,6 +6,18 @@ description: >
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
@@ -56,7 +68,15 @@ is written as a **plan**:
   `as_rtftables()` makes (`plan_apply(plan)` gives them without a document).
 * **3. The RTF file** is written by `generate_rtfreport()`.
 
-```{r setup}
+The demographics table this article builds first:
+
+```{r shot-dm, echo = FALSE}
+.shot("t_dm.png")
+```
+
+The code is folded under **Show code** below each step.
+
+```{r setup, fold = FALSE}
 library(rtfreporter)
 library(cards)
 ```
@@ -74,7 +94,7 @@ The examples use the CDISC pilot study as the
 [pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/) package
 ships it. The treatment is made a factor so the arms come out in study order.
 
-```{r data}
+```{r data, fold = "closed"}
 arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
 adsl <- pharmaverseadam::adsl
 adsl <- adsl[adsl$SAFFL == "Y", ]
@@ -98,7 +118,7 @@ ard_dm <- ard_stack(
 `ard_stack(.by = )` also counts the arms themselves. The plan reads those
 counts for the `(N=86)` in the column header, so nobody types them.
 
-## Step 1: the table plan
+## Step 1: from the ARD straight to a table
 
 ### What the plan works on: `normalize_ard()`
 
@@ -125,7 +145,7 @@ you will use in `table_plan()`: look at them first.
 * `rows`: the keys that go **down**, here the analysis variable, called
   `group` in the table.
 
-```{r roles}
+```{r roles, fold = "open"}
 p <- ard_dm |>
   normalize_ard() |>
   table_plan(cols = "TRT01A", rows = c(group = "variable"))
@@ -143,7 +163,7 @@ percentage. Entries can be keyed by the kind of variable:
   first and wins where it applies: `n == 0 ~ "0"` prints a zero count without
   its `(0.0)`.
 
-```{r cells}
+```{r cells, fold = "open"}
 p <- p |>
   plan_cells(
     continuous  = c("n"               = "{N:.0f}",
@@ -163,7 +183,7 @@ you forgot.
 The rest is display. The variables get readable labels and their levels an
 order, then the stub, blank rows, widths and header are declared:
 
-```{r display}
+```{r display, fold = "open"}
 p <- p |>
   plan_labels(c(AGE    = "Age (years)",
                 AGEGR1 = "Age group, n (%)",
@@ -201,7 +221,7 @@ The report is the document around the table: the running header and
 footer, and the table. `rtf_tables()` takes the plan as it takes any table,
 and runs it:
 
-```{r rtf-dm}
+```{r rtf-dm, fold = "open"}
 doc <- rtf_document(
     program = "/studies/XYZ-001/programs/tfl/t_dm.R",
     tokens  = list(STUDY = "XYZ-001")) |>
@@ -227,12 +247,8 @@ path and the run date and time. `{PAGE}`, `{TOTAL_PAGES}`, `{PROGRAM_FULL}` and
 
 ## Step 3: the RTF file
 
-```{r file-dm}
+```{r file-dm, fold = "open"}
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
-```
-
-```{r shot-dm, echo = FALSE}
-.shot("t_dm.png")
 ```
 
 To see a stage without writing RTF, use `plan_apply()`. It gives the pages
@@ -278,7 +294,7 @@ A plan is a list of layers, and **a later layer wins** over what an earlier
 one said about the same key. A house style can be written once and one
 table adjusted by adding a line, not by editing the original:
 
-```{r last-wins}
+```{r last-wins, fold = "open"}
 p2 <- p |>
   plan_labels(AGE = "Age at baseline (years)") |>
   plan_cells(AGE = c("n" = "{N:.0f}", "Mean (SD)" = "{mean:.1f} ({sd:.1f})"))
@@ -308,7 +324,7 @@ ard_ae <- ard_stack_hierarchical(
 `normalize_ard()` is told which variables are the hierarchy, and what to
 call the overall row:
 
-```{r plan-ae}
+```{r plan-ae, fold = "open"}
 p_ae <- ard_ae |>
   normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"),
                 overall = "Any TEAE") |>
@@ -358,7 +374,7 @@ length(plan_apply(p_ae))    # pages
 Two more lines turn this into the usual "events in 5% or more" table. A later
 layer wins, so they are added to `p_ae` rather than written into it:
 
-```{r plan-ae-filter}
+```{r plan-ae-filter, fold = "open"}
 p_ae5 <- p_ae |>
   plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT") |>
   plan_filter(p >= 0.05)
@@ -407,7 +423,7 @@ ard_dm_p <- bind_ard(
 
 The plan is the demographics plan from before, with two more verbs:
 
-```{r plan-dm-p}
+```{r plan-dm-p, fold = "open"}
 p_dm_p <- ard_dm_p |>
   normalize_ard() |>
   table_plan(cols = "TRT01A", rows = c(group = "variable")) |>
@@ -489,7 +505,7 @@ ard_orr <- bind_ard(
   ard_strata(anl, .by = TRT01A, .strata = AGEGR1, .f = orr))
 ```
 
-```{r plan-orr}
+```{r plan-orr, fold = "open"}
 p_orr <- ard_orr |>
   normalize_ard(stack = list(subgroup = "group2")) |>
   table_plan(cols = ".stat_group",
@@ -555,7 +571,7 @@ names(plan_apply(p_orr))    # one section per arm
 rtfreporter is newer than what a chat model has learned. Give it the manual
 that matches the version you have installed, in one folder:
 
-```{r ai-kit, eval = FALSE}
+```{r ai-kit, eval = FALSE, fold = "open"}
 rtfreporter_ai_manual("ai-kit", ard = ard_orr)
 ```
 
@@ -572,7 +588,7 @@ and a plan be saved and reused. When you want the table data frame now,
 `widen_ard()` does the ARD half in one call. It takes the same templates, and
 gives you a frame to finish with `as_rtftables()` as usual:
 
-```{r widen}
+```{r widen, fold = "open"}
 wide <- widen_ard(
   nd, cols = "TRT01A", rows = c(group = "variable"),
   cells = list(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})",
@@ -592,7 +608,7 @@ roles guessed, a template for every kind of variable it finds, and the
 display verbs set to common values. It is meant to be pasted into your program
 and edited:
 
-```{r template, eval = FALSE}
+```{r template, eval = FALSE, fold = "open"}
 plan_template(ard_dm, cols = "TRT01A", file = "t_dm_plan.R")
 ```
 

@@ -6,6 +6,19 @@ description: >
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
@@ -38,7 +51,15 @@ Two rules hold for every verb:
    key, the last call decides, so a house style is written once and one table
    changes it by adding a line.
 
-```{r setup}
+A table made with these verbs: the vital signs example under *Pages*.
+
+```{r shot-vs, echo = FALSE}
+.shot("t_vs.png")
+```
+
+The code is folded under **Show code** below each step.
+
+```{r setup, fold = "closed"}
 library(rtfreporter)
 library(cards)
 
@@ -464,9 +485,7 @@ generate_rtfreport(doc, "t_vs.rtf", overwrite = TRUE)
 length(plan_apply(p_vs))
 ```
 
-```{r shot-vs, echo = FALSE}
-.shot("t_vs.png")
-```
+Its first page is the picture at the top of this article.
 
 Here the arm counts come from ADSL (`values = list(n = ...)`), because the
 columns are arm × variable and the vital-signs ARD does not state the arms'

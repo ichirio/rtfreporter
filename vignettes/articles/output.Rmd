@@ -3,6 +3,18 @@ title: "Rendering, post-processing and assembly"
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 # The pictures of an assembled file are made by data-raw/gen_gallery.R (from
@@ -19,7 +31,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 }
 ```
 
-```{r setup}
+```{r setup, fold = FALSE}
 library(rtfreporter)
 ```
 
@@ -43,7 +55,7 @@ doc <- rtf_document() |>
 `generate_rtfreport()` writes the document to a file you can open in Word or
 LibreOffice. Use `overwrite = TRUE` to replace an existing file.
 
-```{r render}
+```{r render, fold = "open"}
 out <- tempfile(fileext = ".rtf")
 generate_rtfreport(doc, out, overwrite = TRUE)
 file.exists(out)
@@ -62,7 +74,7 @@ non-ASCII character in the data, render with the ASCII token and swap it in the
 finished file. The replacement is the RTF unicode escape for `µ`
 (U+00B5 = 181), i.e. `\u181?`:
 
-```{r postprocess}
+```{r postprocess, fold = "open"}
 final <- tempfile(fileext = ".rtf")
 rtf_replace_text(out, "ug/mL", "\\u181?g/mL", output_file = final)
 
@@ -103,7 +115,7 @@ f2 <- make("Table 14.2.1 Adverse Events",  tempfile(fileext = ".rtf"))
 `toc = "auto"` builds one TOC entry per file, taking each label from the file's
 first title:
 
-```{r assemble-auto}
+```{r assemble-auto, fold = "open"}
 pkg <- tempfile(fileext = ".rtf")
 assemble_rtf(c(f1, f2), pkg, toc = "auto", overwrite = TRUE)
 file.exists(pkg)
@@ -117,7 +129,7 @@ changes (`level` sets the indent). Each entry creates an RTF
 **bookmark**, so the TOC is navigable in the word processor and the entries jump
 to the right table:
 
-```{r assemble-manual}
+```{r assemble-manual, fold = "open"}
 pkg2 <- tempfile(fileext = ".rtf")
 assemble_rtf(
   c(f1, f2), pkg2,

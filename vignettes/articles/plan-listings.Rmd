@@ -6,6 +6,19 @@ description: >
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
@@ -33,7 +46,15 @@ The listing machinery itself (`listing_col()`, `listing_spec()`, wrapping,
 widths) is described in [Listings end to end](listings.html). This article
 shows how it fits into a plan.
 
-```{r setup}
+The listing this article builds:
+
+```{r shot, echo = FALSE}
+.shot("l_sae.png")
+```
+
+The code is folded under **Show code** below each step.
+
+```{r setup, fold = FALSE}
 library(rtfreporter)
 ```
 
@@ -42,7 +63,7 @@ library(rtfreporter)
 Severe treatment-emergent adverse events from the CDISC pilot study, one row
 per event:
 
-```{r data}
+```{r data, fold = "closed"}
 adsl <- pharmaverseadam::adsl
 adae <- pharmaverseadam::adae
 sae <- adae[adae$AESEV %in% "SEVERE" & adae$TRTEMFL %in% "Y" &
@@ -100,10 +121,6 @@ doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
   rtf_tables(p)
 generate_rtfreport(doc, "l_sae.rtf", overwrite = TRUE)
 length(plan_apply(p))    # pages
-```
-
-```{r shot, echo = FALSE}
-.shot("l_sae.png")
 ```
 
 ## The same listing without a plan

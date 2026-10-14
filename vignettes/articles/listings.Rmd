@@ -3,12 +3,25 @@ title: "Listings end to end: from source data to the written RTF"
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
 ```
 
-```{r setup}
+```{r setup, fold = FALSE}
 library(rtfreporter)
 ```
 
@@ -35,7 +48,7 @@ A small ADSL, one row per subject, shaped like a baseline-characteristics
 listing. Note the values that are longer than the column they will print in,
 and the missing ones:
 
-```{r data}
+```{r data, fold = "closed"}
 adsl <- data.frame(
   USUBJID  = c("PILOT-204-1015", "PILOT-204-1023", "PILOT-205-100028",
                "PILOT-206-1034", "PILOT-206-1045"),

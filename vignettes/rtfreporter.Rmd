@@ -12,6 +12,18 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
 # The chunks below RUN.  Every file goes to a temporary folder, so building
 # this vignette writes nothing outside the session, and a broken example fails
 # the build instead of rotting unnoticed.  The ARD chunks need cards.
@@ -51,11 +63,17 @@ and the **RTF file**.
 A table brought from another package skips step 1: `rtf_tables()` takes it
 as it is.
 
-```{r setup, eval = TRUE}
+The table this page writes:
+
+![The first page of t_dm.rtf: the study's running header, Table 14.1.1 Demographic Characteristics for the Safety Analysis Set, age as n, mean (SD), median and min, max and age group and sex as n (%) under three arms with (N=86), (N=84) and (N=84), then the footnotes, the program's path and the run date.](../man/figures/get-started-dm.png){width=100%}
+
+The code is folded under **Show code** below each step.
+
+```{r setup, eval = TRUE, fold = FALSE}
 library(rtfreporter)
 ```
 
-```{r cards}
+```{r cards, fold = FALSE}
 library(cards)
 ```
 
@@ -91,13 +109,26 @@ ard <- ard_stack(
   ard_tabulate(variables = c(AGEGR1, SEX)))
 ```
 
-## 1. The table plan: `ard |> normalize_ard() |> table_plan()`
+A few of its rows, one statistic a row:
+
+```{r ard-rows, echo = FALSE}
+a <- as.data.frame(ard)
+a <- a[vapply(a$group1_level, function(v) identical(as.character(v[[1]]), "Placebo"), NA) &
+       ((a$variable == "AGE" & a$stat_name %in% c("N", "mean", "sd")) |
+        (a$variable == "SEX" & a$stat_name %in% c("n", "p"))),
+       c("group1", "group1_level", "variable", "variable_level", "stat_name", "stat")]
+a[] <- lapply(a, function(x) if (is.list(x)) vapply(x, function(v)
+  if (length(v)) format(v[[1]], digits = 3) else "", "") else x)
+knitr::kable(a, row.names = FALSE)
+```
+
+## 1. From the ARD straight to a table
 
 The plan starts from the ARD. `table_plan()` names the **roles**: the key
 that goes across (`cols`) and the keys that go down (`rows`). Each `plan_*()`
 verb then adds one declaration; nothing runs until the plan is used.
 
-```{r plan}
+```{r plan, fold = "open"}
 p <- ard |>
   normalize_ard() |>
   table_plan(cols = "ARM", rows = c(group = "variable")) |>
@@ -154,7 +185,7 @@ and time at the bottom. `{PAGE}` / `{TOTAL_PAGES}`, `{PROGRAM_FULL}` (the progra
 path) and `{DATETIME}` are filled in when the file is written; `{STUDY}` is
 a token of our own, given once to `rtf_document(tokens = )`.
 
-```{r doc}
+```{r doc, fold = "open"}
 doc <- rtf_document(
     program = "/studies/XYZ-001/programs/tfl/t_dm.R",
     tokens  = list(STUDY = "XYZ-001")) |>
@@ -179,7 +210,7 @@ every page.
 
 ## 3. The RTF file: `generate_rtfreport()`
 
-```{r file}
+```{r file, fold = "open"}
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```
 
@@ -306,7 +337,7 @@ A data frame carries no labels of its own, so they are given on
 `rtftable()`.  Here the numbers -- and the arms' N in the header -- are
 computed from the data, not typed in:
 
-```{r byo}
+```{r byo, fold = "open"}
 adsl <- cards::ADSL
 n   <- table(adsl$ARM)
 age <- tapply(adsl$AGE, adsl$ARM,

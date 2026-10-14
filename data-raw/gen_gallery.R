@@ -3,7 +3,7 @@
 ##  README's examples (man/figures/readme-ard-example.png,
 ##  readme-tern-example.png, readme-gtsummary-example.png) and Get started's
 ##  adverse-events table and three short examples
-##  (man/figures/get-started-ae.png, get-started-dm-p.png, -ae5.png, -orr.png;
+##  (man/figures/get-started-ae.png, -dm.png, -dm-p.png, -ae5.png, -orr.png;
 ##  the last three from the Tables from an ARD article), and an assembled
 ##  file's table of contents and the page its link opens, for Rendering,
 ##  post-processing and assembly (inst/rtf-examples/assemble/).
@@ -79,8 +79,9 @@ Sys.setenv(RTFREPORTER_ARTICLE_OUT = normalizePath(gs))
 rmarkdown::render(file.path("vignettes", "rtfreporter.Rmd"),
                   output_format = rmarkdown::md_document(),
                   output_dir = tempdir(), quiet = TRUE)
-gs_png <- file.path("man", "figures", "get-started-ae.png")
-rtf_to_png(file.path(gs, "t_ae.rtf"), gs_png)
+gs_png <- file.path("man", "figures", c("get-started-ae.png", "get-started-dm.png"))
+rtf_to_png(file.path(gs, "t_ae.rtf"), gs_png[1])
+rtf_to_png(file.path(gs, "t_dm.rtf"), gs_png[2])   # the table at the top of the page
 
 ## 4. Get started's three short examples, from the Tables from an ARD article
 ta <- file.path(tempdir(), "tables-from-ard")

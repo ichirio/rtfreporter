@@ -3,6 +3,19 @@ title: "Same report, every framework: Demographics (DM)"
 ---
 
 ```{r, include = FALSE, purl = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE, eval = FALSE)
 
@@ -62,7 +75,7 @@ We use [`pharmaverseadam`](https://pharmaverse.github.io/pharmaverseadam/)'s
 `Mean (SD)`, `Median`, `Min, Max`), an **age category**, **sex** and **race** by
 treatment -- a production-style Table 14.1 demographics layout.
 
-```{r data}
+```{r data, fold = "closed"}
 library(rtfreporter)
 library(dplyr)
 
@@ -94,7 +107,7 @@ for every framework below. We build them **once here**, as plain rtfreporter
 objects and values, and every framework block then references them. Only the
 table *body* changes from framework to framework.
 
-```{r furniture}
+```{r furniture, fold = "closed"}
 # Running header: sponsor / protocol / page number, then the title block.
 dm_header <- rtf_header(rows = list(
   c(l = "Acme Biopharma, Inc.", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"),

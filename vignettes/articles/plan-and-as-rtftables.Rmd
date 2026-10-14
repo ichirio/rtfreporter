@@ -6,6 +6,19 @@ description: >
 ---
 
 ```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  if (isFALSE(f)) return(.fold_src(x, options))
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
@@ -19,7 +32,7 @@ its arguments on to `as_rtftables()`, `rtftable()`, `stub_cols()`,
 lists where each `as_rtftables()` argument went, and shows how to see the call
 a plan makes.
 
-```{r setup}
+```{r setup, fold = FALSE}
 library(rtfreporter)
 ```
 
@@ -30,7 +43,7 @@ already the table, `table_plan()` keeps it as it is and the plan uses only its
 display half. This is a small laboratory summary in the usual shape: a
 parameter, a statistic label, and one column per arm.
 
-```{r data}
+```{r data, fold = "closed"}
 lab <- data.frame(
   PARAM   = rep(c("ALT (U/L)", "AST (U/L)", "Creatinine (umol/L)"), each = 4),
   STAT    = rep(c("n", "Mean (SD)", "Median", "Min, Max"), 3),
