@@ -88,3 +88,30 @@ Write the script that does what you are sure of, and put the open
 questions as `# QUESTION:` comments at the top: which column holds the
 subgroup, which statistic the shell's "n (%)" reads, whether the Total
 column is in the ARD. The user answers them and runs the script.
+
+## For the person attaching this folder: what to give the AI
+
+| | Input | How | What it improves |
+|---|---|---|---|
+| **Required** | The ARD for the table | through the function: `rtfreporter_ai_manual(dir, ard = ard)` writes `05_ard.csv` and `06_ard_shape.md` | the names the plan must use; every number comes from it |
+| **Required** | The table's shell | attach it | the rows, columns, header and cell formats |
+| Nice to have | The exact titles and footnotes, when the shell does not show them, or the TOC row of this table | attach or paste them | titles and footnotes copied, not composed |
+| Nice to have | The company's layout conventions: widths, header style, decimals, blank rows, page size | attach them | the house look without edits afterwards |
+| Nice to have | One existing program in the house style | attach it | the same document layout (header, footer, tokens) as your other programs |
+
+**One table a chat**: the ARD of one table and its shell. Several tables in
+one chat mix their keys.
+
+**Do not give** patient-level data: the ADaM datasets. The plan works on the
+ARD, which is already the counts and statistics. An ARD is aggregate, but it
+is still the study's results: follow your company's rules on what may be sent
+to an AI service. This kit sends nothing by itself. Other tables' ARDs, or
+programs that are not the house-style example, do not help.
+
+**When something is missing**: without an ARD the assistant writes the plan
+against the names the shell suggests and marks each guessed name in a
+comment; run it against the real ARD, or better, write the kit again with
+`ard =`. Without titles it writes placeholders and says so. It never computes
+a number the ARD does not hold (a p-value, a total); it says the number is
+missing, so that you can add it to the ARD.
+
