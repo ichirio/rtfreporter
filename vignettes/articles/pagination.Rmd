@@ -18,6 +18,27 @@ knitr::knit_hooks$set(source = function(x, options) {
 knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x else
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, fold = FALSE}
@@ -103,6 +124,11 @@ pages <- as_rtftables(df, split = "rows", split_rows = c(6, 9))
 show_pages(pages)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_rows.rtf")
+.shot("pg_rows.png")
+```
+
 ### `"group_force"` -- fill `max_rows`, repeat the group label on a cut
 
 Pack up to `max_rows` rows on each page. When a page boundary falls *inside* a
@@ -134,6 +160,11 @@ group label (which `rtf_tables()` can use, e.g. with `auto_section = TRUE`).
 ```{r by_value}
 pages <- as_rtftables(df, split = "by_value")
 names(pages)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_by_value.rtf")
+.shot("pg_by_value.png")
 ```
 
 ### Reusing a strategy

@@ -20,6 +20,27 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
 set.seed(20260909)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x else
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, fold = FALSE}
@@ -62,6 +83,11 @@ doc <- rtf_document() |>
               footnotes = list("Error bars omitted for clarity."))
 
 length(doc$contents)      # one figure page
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "fg_ggplot.rtf")
+.shot("fg_ggplot.png")
 ```
 
 `rtfplot()` is the same thing one step lower down, for when one figure in a

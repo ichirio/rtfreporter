@@ -19,6 +19,27 @@ knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 options(width = 100)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x else
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, fold = FALSE}
@@ -324,6 +345,11 @@ doc <- rtf_document(
 path <- file.path(tempdir(), "listing-16-2-4-2-1-2.rtf")
 generate_rtfreport(doc, path, overwrite = TRUE)
 file.exists(path)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ls_report.rtf")
+.shot("ls_report.png")
 ```
 
 That is the whole pipeline: `adsl` in, one `.rtf` out, with the column
