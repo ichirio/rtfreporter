@@ -20,6 +20,27 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
 .has <- requireNamespace("tfrmt", quietly = TRUE) &&
         requireNamespace("gt",    quietly = TRUE)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x else
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, fold = FALSE}
@@ -118,6 +139,11 @@ pages <- as_rtftables(
 )
 
 names(pages)          # one page per lab test -> section names
+```
+
+```{r, echo = FALSE, fold = FALSE, eval = .has}
+.keep(pages, "ms_pages.rtf")
+.shot("ms_pages.png")
 ```
 
 Each page carries the fixed `"Toxicity Grade"` heading flush-left, with the

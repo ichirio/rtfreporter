@@ -21,6 +21,27 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .has_gt <- requireNamespace("gt", quietly = TRUE)
 .has_flextable <- requireNamespace("flextable", quietly = TRUE)
 .has_huxtable <- requireNamespace("huxtable", quietly = TRUE)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x else
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, fold = FALSE}
@@ -54,6 +75,11 @@ df <- data.frame(
 pages <- as_rtftables(df)     # a list of rtftable page objects
 length(pages)
 class(pages[[1]])
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "im_df.rtf")
+.shot("im_df.png")
 ```
 
 

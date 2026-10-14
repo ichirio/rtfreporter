@@ -18,6 +18,27 @@ knitr::knit_hooks$set(source = function(x, options) {
 knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x else
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, fold = FALSE}
@@ -73,6 +94,11 @@ df <- data.frame(Parameter = c("Age (years)", "  Mean", "  SD"),
 tbl <- rtftable(df, border = "tfl")   # clinical TFL preset
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "bd_preset.rtf")
+.shot("bd_preset.png")
+```
+
 * `"tfl"` -- the clinical preset: a rule on **top of the first** header row and
   **below the last** header row, a multi-column spanning cell gets an automatic
   group underline where the grouping changes below it (the next row subdivides
@@ -125,6 +151,11 @@ tbl <- rtftable(df, border = "none") |>
     header   = rtf_border(top = line, bottom = line),
     last_row = rtf_border(bottom = line)
   )
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "bd_zones.rtf")
+.shot("bd_zones.png")
 ```
 
 `style`, `width` and `color` describe the line that the sides named in the same
@@ -211,6 +242,11 @@ hdr <- rtf_col_header(
 tbl <- rtftable(df5, col_header = hdr, border = "tfl")
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "bd_header.rtf")
+.shot("bd_header.png")
+```
+
 To **remove** the underline beneath "Drug A" only, give that one cell a `"none"`
 bottom. Unlike `NULL` (which just leaves a side unset and so inherits the
 automatic rule), a `"none"` side is an explicit "no line" that wins on merge:
@@ -276,6 +312,11 @@ tbl <- tbl |>
              border = rtf_border(bottom = TRUE)) |>
   # double rule under the whole table
   style_zone(last_row = rtf_border(bottom = "double"))
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "bd_verbs.rtf")
+.shot("bd_verbs.png")
 ```
 
 Body borders follow the same two-step chain as everything else: the row's

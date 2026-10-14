@@ -1,5 +1,15 @@
 # rtfreporter (development version)
 
+- **Articles: the finished tables.** Eleven guide articles (headers and
+  footers, pagination, borders, figures, listings, importing tables, page
+  setup, the two on sections, adding content, the plan and `as_rtftables()`)
+  show a picture of the table after their key examples, made by
+  `data-raw/gen_article_shots.R` (#644).  *Adding tables and figures*: its
+  styling section now says what works -- a title row may be styled, a
+  footnote is styled as a block (`rtf_footnotes(border = , align = )`), and
+  a footnote row may be `c(l = , r = )`; the per-row footnote list it showed
+  was removed long ago and failed when written.
+
 - **The AI kit says what to give the AI.** `00_START_HERE.md` ends with a
   section for the person attaching the folder: required (the ARD through
   `rtfreporter_ai_manual(dir, ard = )`, the table's shell), nice to have

@@ -18,6 +18,27 @@ knitr::knit_hooks$set(source = function(x, options) {
 knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x else
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, fold = FALSE}
@@ -159,25 +180,33 @@ doc <- rtf_document() |>
              footnotes = list(c("Confidential", "Source: ADSL")))   # on both pages
 ```
 
-### Per-row styling
+### Styling
 
-A block can be a plain character vector (default styling) **or** a list of rows,
-where each row is a string or a styled list with any of `align`, `bold`,
-`italic`, `underline`, `color` (a `"#RRGGBB"` hex), and `border` (an
-[rtf_border()] -- e.g. to recolour or remove the footnote separator):
+A **title** block can be a plain character vector (default styling) **or** a
+list of rows, where each row is a string or a styled list with any of `align`,
+`bold`, `italic`, `underline` and `color` (a `"#RRGGBB"` hex).
+
+A **footnote** is styled as a block, with [rtf_footnotes()]: `align`,
+`font_size_half_points`, `markup`, and `border` (an [rtf_border()], e.g. the
+rule above it). A footnote row may be `c(l = , c = , r = )`, up to three cells
+on one line -- the source on the left and the run date on the right:
 
 ```{r titles-styled}
 doc <- rtf_document() |>
   rtf_tables(
     list(df1),
-    titles    = list(list(
+    titles = list(list(
       "Table 14.1.1",
       list(text = "Provisional", italic = TRUE, color = "#C00000")
-    )),
-    footnotes = list(list(
-      list(text = "Source: ADSL", border = rtf_border(top = TRUE))
     ))
-  )
+  ) |>
+  rtf_footnotes(list(list(c(l = "Source: ADSL", r = "Run: {DATETIME:%Y-%m-%d}"))),
+                border = rtf_border(top = TRUE))
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ac_titles.rtf")
+.shot("ac_titles.png")
 ```
 
 You can also set blocks after the content with `rtf_titles()` /
@@ -243,6 +272,11 @@ doc <- rtf_document() |>
   rtf_figures(list(img), align = "center",           # native size (~8.3 x 4.8 in)
               titles = list(c("Figure 14.2.1", "Mean over time")))
 length(doc$contents)        # one figure page
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ac_figure.rtf")
+.shot("ac_figure.png")
 ```
 
 Pass an explicit `width_twips` (the height then follows the aspect ratio) to

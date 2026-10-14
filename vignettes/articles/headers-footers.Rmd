@@ -18,6 +18,27 @@ knitr::knit_hooks$set(source = function(x, options) {
 knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x else
+    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, fold = FALSE}
@@ -91,6 +112,11 @@ df <- data.frame(A = c("1", "2"), B = c("x", "y"), stringsAsFactors = FALSE)
 doc <- rtf_document() |>
   rtf_tables(list(df, df, df)) |>                      # three pages
   rtf_section(page = 1, header = hdr, footer = ftr)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "hf_whole_doc.rtf")
+.shot("hf_whole_doc.png")
 ```
 
 The section at page 1 covers all subsequent pages, so every page gets the same
@@ -254,6 +280,11 @@ doc <- rtf_document(tokens = list(STUDY = "ABC-123", POPULATION = "")) |>
   rtf_section(page = 1, header = hdr_study)
 generate_rtfreport(doc, tempfile(fileext = ".rtf"))
 rtf_text_tokens(doc)[rtf_text_tokens(doc)$kind == "own", c("token", "example")]
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "hf_own_tokens.rtf")
+.shot("hf_own_tokens.png")
 ```
 
 See `?rtf_section`, `?rtf_header`, `?rtf_footer` and `?rtf_text_tokens` for
