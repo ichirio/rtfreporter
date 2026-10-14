@@ -1344,6 +1344,15 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   row is a constant stratum (`ALL = "All"`) stacked first, which the ARD
 #'   and the ARS then state.
 #' @param stack_sep What joins a crossed layer's names and levels: `" / "`.
+#' @param keep The levels of `hierarchy` whose rows stay, e.g. `keep =
+#'   "AEBODSYS"` for a table of the system organ classes alone from an ARD
+#'   of SOC and PT (`hierarchy = c("AEBODSYS", "AEDECOD")`), or `keep =
+#'   "AEDECOD"` for the preferred terms alone.  The other levels' own rows
+#'   are left out (`ard_ignored` says so), the kept levels' depths are
+#'   counted among themselves (`.depth` 1 for the outermost kept), and the
+#'   overall rows (`overall`) go on the first kept level.  A kept level's
+#'   rows still carry the columns of the levels above it, so a PT that is
+#'   under two SOCs stays two rows.  `NULL` (default): every level.
 #' @param stack_nest `TRUE` puts a crossed layer's outer levels in a key of
 #'   their own, `<name>_outer` (`65-80`), and its innermost in `<name>_level`
 #'   (`F`), so `rows = c(grp = "subgroup", outer = "subgroup_outer", lvl =
@@ -1414,8 +1423,23 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
                           overall = NULL,
                           drop_contexts = c("attributes", "total_n"),
                           drop_key_variables = FALSE, stack = NULL,
-                          stack_sep = " / ", stack_nest = FALSE) {
+                          stack_sep = " / ", stack_nest = FALSE, keep = NULL) {
   ard <- x
+  if (!is.null(keep)) {
+    if (!is.character(keep) || !length(keep) || anyNA(keep)) {
+      .ard_stop("`keep` names the levels of `hierarchy` whose rows stay, e.g. `keep = \"AEBODSYS\"`.")
+    }
+    bad <- setdiff(keep, hierarchy)
+    if (length(bad)) {
+      .ard_stop(sprintf(paste0(
+        "`keep`: %s is not a level of `hierarchy` (%s).  `keep` names the ",
+        "levels whose rows stay; the others' rows are left out."),
+        paste(sQuote(bad, FALSE), collapse = ", "),
+        if (length(hierarchy)) paste(sQuote(hierarchy, FALSE), collapse = ", ") else "none given"))
+    }
+    # the kept levels in the hierarchy's own order, outermost first
+    keep <- hierarchy[hierarchy %in% keep]
+  }
   d <- as.data.frame(ard, stringsAsFactors = FALSE)
   if (!"context" %in% names(d) || !"stat_name" %in% names(d)) {
     .ard_stop("`x` does not look like a cards ARD (no `context`/`stat_name` columns).")
@@ -1547,8 +1571,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   if (length(ovs$from)) {
     ov <- ov | (!is.na(d$variable) & d$variable %in% ovs$from)
   }
+  # the overall rows go on the first level the table has: the hierarchy's
+  # first, or the first one kept
+  first_level <- if (length(keep)) keep[1L] else hierarchy[1L]
   if (!is.null(ovs$label) && any(ov) && length(hierarchy)) {
-    d[[hierarchy[1L]]][ov] <- ovs$label
+    d[[first_level]][ov] <- ovs$label
     d$.overall[ov] <- TRUE
   } else if (any(ov) && is.null(ovs$label)) {
     ignored <- .ard_ignored_bind(
@@ -1567,6 +1594,23 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
       d$.depth[hit] <- i
     }
     d$.depth[d$.overall] <- 1L
+    if (length(keep)) {
+      # a level not kept: its own rows are left out (a SOC-only table from
+      # a SOC / PT ARD), the kept levels' depths counted among themselves
+      lvl <- ifelse(d$.depth >= 1L & !d$.overall, hierarchy[pmax(d$.depth, 1L)], NA_character_)
+      gone <- !is.na(lvl) & !lvl %in% keep
+      if (any(gone)) {
+        ignored <- .ard_ignored_bind(
+          ignored, .ard_tally(d[gone, , drop = FALSE],
+                              "a hierarchy level `keep` leaves out"))
+        d <- d[!gone, , drop = FALSE]
+        lvl <- lvl[!gone]
+      }
+      kept <- !is.na(lvl)
+      d$.depth[kept] <- match(lvl[kept], keep)
+      d$.label[kept] <- vapply(which(kept), function(r) as.character(d[[lvl[r]]][r]), "")
+      d$.depth[d$.overall] <- 1L
+    }
     # 0, not NA: inside a declared hierarchy every row has an answer, even
     # "not one of its levels".  That keeps "is there a hierarchy here?" a
     # question about this column, which survives any manipulation, rather
@@ -1611,7 +1655,7 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     lv <- key_levels[[k]] %||% fct_levels[[k]]
     if (is.null(lv)) next
     front <- if (!is.null(ovs$label) && length(hierarchy) &&
-                 identical(k, hierarchy[1L])) ovs$label
+                 identical(k, first_level)) ovs$label
     d[[k]] <- .ard_as_factor(d[[k]], unique(c(front, lv)))
   }
 

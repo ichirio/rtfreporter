@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9057** (the development
+**This manual documents rtfreporter 0.8.2.9058** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -844,6 +844,11 @@ p_ae <- ard_ae |>
   plan_col_header(values = list(n = TRUE),
                   rtf_col_header(c("", "{col}"), c("", "(N={n})")))
 ```
+
+A table of one level of the hierarchy from the same ARD:
+`normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"), overall = "Any TEAE",
+keep = "AEBODSYS")` (the SOCs alone; `keep = "AEDECOD"`, the PTs alone) --
+the other level's rows are left out, the kept level is depth 1.
 
 ### Cell templates
 

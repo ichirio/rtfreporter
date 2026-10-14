@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **`normalize_ard(keep = )`: the levels of a hierarchy whose rows stay**
+  (#642).  `normalize_ard(hierarchy = c("AEBODSYS", "AEDECOD"), keep =
+  "AEBODSYS")` is a table of the system organ classes alone, `keep =
+  "AEDECOD"` of the preferred terms alone: the other levels' own rows are
+  left out (`ard_ignored` says so), the kept levels' depths are counted
+  among themselves and the overall rows go on the first kept level.
+
 - **The AI kit says what to give the AI.** `00_START_HERE.md` ends with a
   section for the person attaching the folder: required (the ARD through
   `rtfreporter_ai_manual(dir, ard = )`, the table's shell), nice to have

@@ -13,7 +13,8 @@ normalize_ard(
   drop_key_variables = FALSE,
   stack = NULL,
   stack_sep = " / ",
-  stack_nest = FALSE
+  stack_nest = FALSE,
+  keep = NULL
 )
 }
 \arguments{
@@ -83,6 +84,14 @@ their own, \verb{<name>_outer} (\code{65-80}), and its innermost in \verb{<name>
 under it, \code{F} under that --- while a single layer, whose outer key is
 \code{NA}, keeps its two levels with no empty heading.  \code{FALSE} (default):
 the joined form, \code{65-80 / F}.}
+
+\item{keep}{The levels of \code{hierarchy} whose rows stay, e.g. \code{keep = "AEBODSYS"} for a table of the system organ classes alone from an ARD
+of SOC and PT (\code{hierarchy = c("AEBODSYS", "AEDECOD")}), or \code{keep = "AEDECOD"} for the preferred terms alone.  The other levels' own rows
+are left out (\code{ard_ignored} says so), the kept levels' depths are
+counted among themselves (\code{.depth} 1 for the outermost kept), and the
+overall rows (\code{overall}) go on the first kept level.  A kept level's
+rows still carry the columns of the levels above it, so a PT that is
+under two SOCs stays two rows.  \code{NULL} (default): every level.}
 }
 \value{
 A data frame with one row per ARD statistic: the key columns, the
