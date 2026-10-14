@@ -1,5 +1,9 @@
 # rtfreporter (development version)
 
+- **Home page**: the three examples (from an ARD, from tern, from gtsummary)
+  make the same table: age as Mean (SD), Median and Min, Max, sex as n (%),
+  the same digits, labels and footnotes, with N in the column header.
+
 - **Home page**: "From an ARD to an RTF table in 30 seconds", the page it
   writes first and its code under it; the word *plan* is kept for the code
   and the verbs (Get started's steps are the table, the report, the RTF

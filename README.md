@@ -47,7 +47,7 @@ The page they write:
 
 <p align="center">
   <img src="man/figures/readme-ard-example.png"
-       alt="The t_dm.rtf written by the code below, opened in a word processor: a running header with Ichirio Pharma | Study XYZ-001, DRAFT and Page 1 of 1, then Table 14.1.1, the title and the population; three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as mean (SD) and sex as n (%); the footer gives the program's path and the run date."
+       alt="The t_dm.rtf written by the code below, opened in a word processor: a running header with Ichirio Pharma | Study XYZ-001, DRAFT and Page 1 of 1, then Table 14.1.1, the title and the population; three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as Mean (SD), Median and Min, Max and sex as n (%); the footer gives the program's path and the run date."
        width="720" />
 </p>
 
@@ -97,8 +97,10 @@ ard <- ard_stack(adsl, .by = ARM,
 plan <- ard |>
   normalize_ard() |>
   table_plan(cols = "ARM", rows = c(group = "variable")) |>
-  plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
-             categorical = "{n:.0f} ({p:.1f%})", notes = FALSE) |>
+  plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})",
+                             "Median"    = "{median:.1f}",
+                             "Min, Max"  = "{min:.0f}, {max:.0f}"),
+             categorical = "{n:.0f} ({p:.1f%}%)", notes = FALSE) |>
   plan_labels(c(AGE = "Age (years)", SEX = "Sex, n (%)")) |>
   plan_stub() |>
   plan_col_header(values = list(n = TRUE), rtf_col_header(c("", "{col}\n(N={n})")))
@@ -131,18 +133,23 @@ library(tern)
 adsl$SEX <- factor(adsl$SEX)
 lyt <- basic_table(show_colcounts = TRUE) |>
   split_cols_by("ARM") |>
-  analyze_vars(c("AGE", "SEX"), var_labels = c(AGE = "Age (years)", SEX = "Sex"))
+  analyze_vars(c("AGE", "SEX"), var_labels = c(AGE = "Age (years)", SEX = "Sex, n (%)"),
+               .stats   = c("mean_sd", "median", "range", "count_fraction"),
+               .labels  = c(mean_sd = "Mean (SD)", median = "Median", range = "Min, Max"),
+               .formats = c(mean_sd = "xx.x (xx.xx)", median = "xx.x", range = "xx, xx",
+                            count_fraction = "xx (xx.x%)"))
 
 study_doc("Table 14.1.1", "Demographic Characteristics",
           "Safety Analysis Set", program = "t_dm_tern.R",
-          footnotes = "SD = standard deviation.") |>
+          footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
+                        "SD = standard deviation.")) |>
   rtf_tables(as_rtftables(build_table(lyt, df = adsl))) |>
   generate_rtfreport("t_dm_tern.rtf")
 ```
 
 <p align="center">
   <img src="man/figures/readme-tern-example.png"
-       alt="The t_dm_tern.rtf written by the code above: the tern table with its own column counts, age as n, mean (SD), median and min - max, and sex as n and n (%)."
+       alt="The t_dm_tern.rtf written by the code above: the same table from tern, with its own column counts (N=86), (N=84), (N=84), age as Mean (SD), Median and Min, Max and sex as n (%)."
        width="720" />
 </p>
 
@@ -152,15 +159,24 @@ study_doc("Table 14.1.1", "Demographic Characteristics",
 library(gtsummary)
 
 tbl <- tbl_summary(adsl, by = ARM, include = c(AGE, SEX),
-                   label = list(AGE ~ "Age (years)", SEX ~ "Sex"))
+                   type      = AGE ~ "continuous2",
+                   statistic = list(AGE ~ c("{mean} ({sd})", "{median}", "{min}, {max}"),
+                                    SEX ~ "{n} ({p}%)"),
+                   digits    = list(AGE ~ c(1, 2, 1, 0, 0), SEX ~ c(0, 1)),
+                   label     = list(AGE ~ "Age (years)", SEX ~ "Sex")) |>
+  add_stat_label(label = list(AGE ~ c("Mean (SD)", "Median", "Min, Max"), SEX ~ "n (%)")) |>
+  modify_header(label ~ "", all_stat_cols() ~ "{level}\n(N={n})") |>
+  remove_footnote_header(columns = all_stat_cols())
 
 study_doc("Table 14.1.1", "Demographic Characteristics",
-          "Safety Analysis Set", program = "t_dm_gtsummary.R") |>
+          "Safety Analysis Set", program = "t_dm_gtsummary.R",
+          footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
+                        "SD = standard deviation.")) |>
   rtf_tables(as_rtftables(tbl)) |>
   generate_rtfreport("t_dm_gtsummary.rtf")
 ```
 
-Its labels, its `N = 86` headers and its footnote go with it
+The same table again, its labels and headers set in gtsummary
 ([the page it writes](man/figures/readme-gtsummary-example.png)).  gt,
 tfrmt, flextable and huxtable tables, rlistings listings and plain data
 frames go in the same way: see
