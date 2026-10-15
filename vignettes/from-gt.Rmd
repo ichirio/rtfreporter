@@ -293,13 +293,18 @@ doc <- rtf_document() |>
   rtf_tables(as_rtftables(ae_gt))
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "gt_ae.rtf")
+.shot("gt_ae.png")
+```
+
 
 `doc$contents[[1L]]` now has:
 
 ```{r}
 tbl <- doc$contents[[1L]]
 nrow(tbl$data)          # 5 PT rows + 2 SOC group rows
-tbl$data$PT[1:3]        # SOC row + first two PTs (PT 1 is the group label)
+tbl$data$rowname[1:3]   # the SOC's heading row, then its first two PTs, indented
 tbl$col_header          # spanner row + stubhead-labelled bottom row
 ```
 
