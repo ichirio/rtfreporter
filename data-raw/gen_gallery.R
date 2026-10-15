@@ -53,10 +53,8 @@ blocks <- lapply(grep("^``` ?r$", readme), function(open) {
   close <- open + grep("^```$", readme[-seq_len(open)])[1L]
   readme[(open + 1L):(close - 1L)]
 })
-# the blocks that write a file, and the study's header and footer they use
-blocks <- Filter(function(b) any(grepl("generate_rtfreport(", b, fixed = TRUE)) ||
-                   any(grepl("study_doc <- function", b, fixed = TRUE)),
-                 blocks)
+# the blocks that write a file
+blocks <- Filter(function(b) any(grepl("generate_rtfreport(", b, fixed = TRUE)), blocks)
 code   <- unlist(blocks)
 code   <- code[!grepl("^library\\(rtfreporter\\)", code)]   # load_all() above
 wd <- tempfile("readme-")

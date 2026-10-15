@@ -61,30 +61,9 @@ The figures below are written with the study's running header and footer,
 the same as the tables' in the [Gallery](gallery.html): the study and the
 page number, then the output's number, title and population at the top; its
 footnotes, then the program's full path and the run date and time at the
-bottom.
-
-```{r study-doc}
-# The study's running header and footer, written once, as a study's
-# report_setup.R would.  Without a label, only the study's lines: a document
-# of several outputs gives each page its own titles.
-study_doc <- function(label = NULL, title = NULL, population = NULL, program,
-                      footnotes = NULL, orientation = "landscape") {
-  rtf_document(
-    page    = rtf_page(orientation = orientation),
-    # {PROGRAM_FULL} prints this path absolute, in the system's own form
-    program = file.path("/studies/XYZ-001/programs/tfl", program),
-    tokens  = list(STUDY = "XYZ-001")) |>
-    rtf_section(
-      header = rtf_header(c(
-        list(c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
-             c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}")),
-        if (!is.null(label)) list(c(c = ""), c(c = label), c(c = title),
-                                  c(c = paste0("<", population, ">"))))),
-      footer = rtf_footer(c(
-        lapply(footnotes, function(x) c(l = x)),
-        list(c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))))
-}
-```
+bottom.  They are written with rtfreporter's own functions,
+`rtf_document() |> rtf_section(header = rtf_header(), footer = rtf_footer())`,
+then `rtf_figures()`.
 
 A figure is a content page like any other: one figure per page, its own titles
 and footnotes, the section's running header and footer around it. What is
@@ -114,9 +93,20 @@ p <- ggplot(dat, aes(week, mean, colour = arm)) +
   theme_minimal(base_size = 11) +
   theme(legend.position = "bottom")
 
-doc <- study_doc("Figure 14.2.1", "Mean Change from Baseline by Week",
-                 "Full Analysis Set", program = "f_change.R",
-                 footnotes = "Error bars omitted for clarity.") |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/f_change.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Figure 14.2.1"),
+      c(c = "Mean Change from Baseline by Week"),
+      c(c = "<Full Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "Error bars omitted for clarity."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_figures(list(p))
 
 length(doc$contents)      # one figure page
@@ -158,8 +148,19 @@ fig
 ```
 
 ```{r, echo = FALSE, fold = FALSE}
-.keep(study_doc("Figure 14.2.3", "Miles per Gallon by Number of Cylinders",
-                "All Vehicles", program = "f_mpg.R") |> rtf_figures(fig),
+.keep(rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/f_mpg.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Figure 14.2.3"),
+      c(c = "Miles per Gallon by Number of Cylinders"),
+      c(c = "<All Vehicles>"))),
+    footer = rtf_footer(list(
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |> rtf_figures(fig),
       "fg_function.rtf")
 .shot("fg_function.png")
 ```
@@ -280,7 +281,15 @@ machines is worse than one that is 300 dpi.
 They share the page model, so a document is a sequence of content pages:
 
 ```{r mixed}
-report <- study_doc(program = "t_f_vehicles.R") |>
+report <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_f_vehicles.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"))),
+    footer = rtf_footer(list(
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(list(head(mtcars[, 1:4], 8)),
              titles = list(c("Table 14.1.1", "Vehicle characteristics"))) |>
   rtf_figures(list(p, function() hist(mtcars$mpg, main = NULL, xlab = "MPG")),

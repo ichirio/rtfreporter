@@ -279,30 +279,9 @@ tb[1:7, ]
 ## One header and footer for every table
 
 Every table of a study has the same header and footer; only its number,
-title, population, footnotes and program change. Written once as a
-function, the rest of this article uses it:
-
-```{r study-doc}
-study_doc <- function(label, title, population, program, footnotes = NULL,
-                      orientation = "landscape") {
-  rtf_document(
-    page    = rtf_page(orientation = orientation),
-    # {PROGRAM_FULL} prints this path absolute, in the system's own form
-    program = file.path("/studies/XYZ-001/programs/tfl", program),
-    tokens  = list(STUDY = "XYZ-001")) |>
-    rtf_section(
-      header = rtf_header(list(
-        c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
-        c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
-        c(c = ""),
-        c(c = label),
-        c(c = title),
-        c(c = paste0("<", population, ">")))),
-      footer = rtf_footer(c(
-        lapply(footnotes, function(x) c(l = x)),
-        list(c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))))
-}
-```
+title, population, footnotes and program change. The examples below write
+them each time with `rtf_document()`, `rtf_section()`, `rtf_header()` and
+`rtf_footer()`, as a table's program does.
 
 ## A layer can be overridden
 
@@ -371,11 +350,21 @@ p_ae <- ard_ae |>
   hierarchical ARD, not from a count of the adverse events.
 
 ```{r rtf-ae}
-doc <- study_doc("Table 14.3.1.1",
-                 "Treatment-Emergent Adverse Events by SOC and PT",
-                 "Safety Analysis Set", program = "t_ae.R",
-                 footnotes = c("TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term.",
-                               "A subject is counted once per SOC and once per PT; percentages are based on N.")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_ae.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.3.1.1"),
+      c(c = "Treatment-Emergent Adverse Events by SOC and PT"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term."),
+      c(l = "A subject is counted once per SOC and once per PT; percentages are based on N."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_ae)
 generate_rtfreport(doc, "t_ae.rtf", overwrite = TRUE)
 length(plan_apply(p_ae))    # pages
@@ -404,12 +393,22 @@ p_ae5 <- p_ae |>
   stays exactly when one of its PTs does (`parents = "keep"`, the default).
 
 ```{r rtf-ae-filter}
-doc <- study_doc("Table 14.3.1.2",
-                 "TEAEs in 5% or More of Subjects in Any Arm",
-                 "Safety Analysis Set", program = "t_ae5.R",
-                 footnotes = c("TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term.",
-                               "A subject is counted once per SOC and once per PT; percentages are based on N.",
-                               "Only PTs with 5% or more of subjects in any arm are shown, under their SOC.")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_ae5.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.3.1.2"),
+      c(c = "TEAEs in 5% or More of Subjects in Any Arm"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term."),
+      c(l = "A subject is counted once per SOC and once per PT; percentages are based on N."),
+      c(l = "Only PTs with 5% or more of subjects in any arm are shown, under their SOC."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_ae5)
 generate_rtfreport(doc, "t_ae5.rtf", overwrite = TRUE)
 ```
@@ -476,11 +475,22 @@ p_dm_p <- ard_dm_p |>
   column, `.values` every arm. A name stays right when columns move.
 
 ```{r rtf-dm-p}
-doc <- study_doc("Table 14.1.1", "Demographic Characteristics",
-                 "Safety Analysis Set", program = "t_dm_p.R",
-                 footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
-                               "SD = standard deviation; Q1, Q3 = first and third quartiles.",
-                               "p-values: Kruskal-Wallis test for age; chi-square test for age group, sex and race.")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_dm_p.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.1.1"),
+      c(c = "Demographic Characteristics"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "N = number of subjects in the analysis set; percentages are based on N."),
+      c(l = "SD = standard deviation; Q1, Q3 = first and third quartiles."),
+      c(l = "p-values: Kruskal-Wallis test for age; chi-square test for age group, sex and race."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_dm_p)
 generate_rtfreport(doc, "t_dm_p.rtf", overwrite = TRUE)
 ```
@@ -568,11 +578,22 @@ p_orr <- ard_orr |>
   `plan_sort()`).
 
 ```{r rtf-orr}
-doc <- study_doc("Table 14.2.1", "Objective Response Rate by Subgroup",
-                 "Safety Analysis Set", program = "t_orr.R",
-                 footnotes = c("N = number of subjects in the subgroup with a best overall response assessment.",
-                               "ORR = objective response rate: subjects with a best overall response of CR or PR.",
-                               "90% CI by the Clopper-Pearson method.")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_orr.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.2.1"),
+      c(c = "Objective Response Rate by Subgroup"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "N = number of subjects in the subgroup with a best overall response assessment."),
+      c(l = "ORR = objective response rate: subjects with a best overall response of CR or PR."),
+      c(l = "90% CI by the Clopper-Pearson method."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_orr, auto_section = TRUE)
 generate_rtfreport(doc, "t_orr.rtf", overwrite = TRUE)
 names(plan_apply(p_orr))    # one section per arm

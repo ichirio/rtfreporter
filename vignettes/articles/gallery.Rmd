@@ -49,7 +49,7 @@ a picture to see the code. The data is the CDISC pilot study as shipped in
 [pharmaverseadam](https://pharmaverse.github.io/pharmaverseadam/); the
 statistics come from [cards](https://pharmaverse.github.io/cards/).
 
-All the outputs share one running header and footer, written once, in the layout of a study's `report_setup.R`:
+All the outputs share one running header and footer: the study and the page number, then the output's number, title and population at the top; its footnotes, then the program's full path and the run date and time at the bottom. Each output writes them with rtfreporter's own functions: `rtf_document() |> rtf_section(header = rtf_header(), footer = rtf_footer()) |> rtf_tables()`.
 
 ```{r setup, fold = "closed"}
 library(rtfreporter)
@@ -59,30 +59,6 @@ arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
 adsl <- pharmaverseadam::adsl
 adsl <- adsl[adsl$SAFFL == "Y", ]
 adsl$TRT01A <- factor(adsl$TRT01A, levels = arms)
-
-# The study's running header and footer, written once, as a study's
-# report_setup.R would: the study and the page number, then the output's
-# number, title and population at the top; its footnotes, then the program's
-# full path and the run date and time at the bottom.
-study_doc <- function(label, title, population, program, footnotes = NULL,
-                      orientation = "landscape") {
-  rtf_document(
-    page    = rtf_page(orientation = orientation),
-    # {PROGRAM_FULL} prints this path absolute, in the system's own form
-    program = file.path("/studies/XYZ-001/programs/tfl", program),
-    tokens  = list(STUDY = "XYZ-001")) |>
-    rtf_section(
-      header = rtf_header(list(
-        c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
-        c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
-        c(c = ""),
-        c(c = label),
-        c(c = title),
-        c(c = paste0("<", population, ">")))),
-      footer = rtf_footer(c(
-        lapply(footnotes, function(x) c(l = x)),
-        list(c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))))
-}
 ```
 
 
@@ -123,11 +99,22 @@ p_dm <- ard_dm |>
     c("",               "{col}"),
     c("Characteristic", "(N={n})")))
 
-doc <- study_doc("Table 14.1.1", "Demographic Characteristics",
-                 "Safety Analysis Set", program = "t_dm.R",
-                 footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
-                               "SD = standard deviation; Q1, Q3 = first and third quartiles."),
-                 orientation = "portrait") |>
+doc <- rtf_document(
+  page    = rtf_page(orientation = "portrait"),
+  program = "/studies/XYZ-001/programs/tfl/t_dm.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.1.1"),
+      c(c = "Demographic Characteristics"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "N = number of subjects in the analysis set; percentages are based on N."),
+      c(l = "SD = standard deviation; Q1, Q3 = first and third quartiles."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_dm)
 generate_rtfreport(doc, "t_dm.rtf", overwrite = TRUE)
 ```
@@ -165,11 +152,21 @@ p_ae <- ard_ae |>
     c("System Organ Class", "{col}"),
     c("  Preferred Term", "(N={n})\nn (%)")))
 
-doc <- study_doc("Table 14.3.1.1",
-                 "Treatment-Emergent Adverse Events by SOC and PT",
-                 "Safety Analysis Set", program = "t_ae.R",
-                 footnotes = c("TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term.",
-                               "A subject is counted once per SOC and once per PT; percentages are based on N.")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_ae.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.3.1.1"),
+      c(c = "Treatment-Emergent Adverse Events by SOC and PT"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "TEAE = treatment-emergent adverse event; SOC = system organ class; PT = preferred term."),
+      c(l = "A subject is counted once per SOC and once per PT; percentages are based on N."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_ae)
 generate_rtfreport(doc, "t_ae.rtf", overwrite = TRUE)
 length(plan_apply(p_ae))    # pages
@@ -218,11 +215,22 @@ p_vs <- ard_vs |>
       lapply(1:3, function(i) col_cell(c(2 * i, 2 * i + 1), "{col1} (N={n})"))),
     c("Visit", rep(c("Value", "Change from\nbaseline"), 3))))
 
-doc <- study_doc("Table 14.3.5.1", "Vital Signs by Visit",
-                 "Safety Analysis Set", program = "t_vs.R",
-                 footnotes = c("n = number of subjects with a value at the visit; SD = standard deviation.",
-                               "Change from baseline = value at the visit minus the baseline value.",
-                               "Measured after lying down for 5 minutes.")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_vs.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.3.5.1"),
+      c(c = "Vital Signs by Visit"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "n = number of subjects with a value at the visit; SD = standard deviation."),
+      c(l = "Change from baseline = value at the visit minus the baseline value."),
+      c(l = "Measured after lying down for 5 minutes."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_vs)
 generate_rtfreport(doc, "t_vs.rtf", overwrite = TRUE)
 ```
@@ -257,11 +265,21 @@ p_sae <- table_plan(sae) |>
   plan_paginate_rows(max_rows = 30) |>
   plan_style(border = "tfl")
 
-doc <- study_doc("Listing 16.2.7.2",
-                 "Severe Treatment-Emergent Adverse Events",
-                 "Safety Analysis Set", program = "l_sae.R",
-                 footnotes = c("Severe treatment-emergent adverse events, by treatment and subject.",
-                               "Age in years at baseline. Ongoing = no end date recorded.")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/l_sae.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Listing 16.2.7.2"),
+      c(c = "Severe Treatment-Emergent Adverse Events"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "Severe treatment-emergent adverse events, by treatment and subject."),
+      c(l = "Age in years at baseline. Ongoing = no end date recorded."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(p_sae)
 generate_rtfreport(doc, "l_sae.rtf", overwrite = TRUE)
 ```
@@ -295,11 +313,21 @@ km <- function() {
          lty = c(2, 1, 1), lwd = 2, bty = "n")
 }
 
-doc <- study_doc("Figure 14.3.2.1",
-                 "Time to First Skin and Subcutaneous Tissue Event",
-                 "Safety Analysis Set", program = "f_km.R",
-                 footnotes = c("Time from the first dose to the first treatment-emergent skin and subcutaneous tissue event.",
-                               "Subjects without one are censored at the last dose (+).")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/f_km.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Figure 14.3.2.1"),
+      c(c = "Time to First Skin and Subcutaneous Tissue Event"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "Time from the first dose to the first treatment-emergent skin and subcutaneous tissue event."),
+      c(l = "Subjects without one are censored at the last dose (+)."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_figures(rtfplot(km, render_width = 8, render_height = 4.6,
                       render_dpi = 150))
 generate_rtfreport(doc, "f_km.rtf", overwrite = TRUE)
@@ -333,11 +361,21 @@ g <- ggplot(mc, aes(week, CHG.m, colour = TRTA)) +
   theme_bw(base_size = 11) +
   theme(legend.position = "bottom", panel.grid.minor = element_blank())
 
-doc <- study_doc("Figure 14.3.5.1",
-                 "Mean Change from Baseline in Systolic Blood Pressure",
-                 "Safety Analysis Set", program = "f_vs.R",
-                 footnotes = c("SE = standard error.",
-                               "Systolic blood pressure measured after lying down for 5 minutes.")) |>
+doc <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/f_vs.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Figure 14.3.5.1"),
+      c(c = "Mean Change from Baseline in Systolic Blood Pressure"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "SE = standard error."),
+      c(l = "Systolic blood pressure measured after lying down for 5 minutes."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_figures(rtfplot(g, render_width = 8, render_height = 4.6,
                       render_dpi = 150))
 generate_rtfreport(doc, "f_vs.rtf", overwrite = TRUE)

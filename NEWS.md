@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+- **Docs: the examples write rtfreporter's own calls** (#656).  The
+  README, the Gallery, Figures and Tables from an ARD no longer use a
+  helper (`study_doc()`) for the study's running header and footer: each
+  example writes `rtf_document() |> rtf_section(header = rtf_header(),
+  footer = rtf_footer()) |> rtf_tables()` itself, as the flow figure shows.
+  The pages look the same (each document's RTF is byte for byte what it
+  was).
+
 - **A document can say its file: `rtf_document(file = )`** (#654).  The
   RTF file's path (one string) is kept in the document, where the program
   is said, and `generate_rtfreport(doc)` writes there; a `file_path` given
