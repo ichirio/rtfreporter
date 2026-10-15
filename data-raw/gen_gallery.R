@@ -72,26 +72,24 @@ for (f in names(readme_png)) {
   rtf_to_png(file.path(wd, paste0(f, ".rtf")), readme_png[[f]])
 }
 
-## 3. Get started's adverse-events table -------------------------------------
+## 3. Get started's table ----------------------------------------------------
 gs <- file.path(tempdir(), "get-started")
 dir.create(gs, showWarnings = FALSE)
 Sys.setenv(RTFREPORTER_ARTICLE_OUT = normalizePath(gs))
 rmarkdown::render(file.path("vignettes", "rtfreporter.Rmd"),
                   output_format = rmarkdown::md_document(),
                   output_dir = tempdir(), quiet = TRUE)
-gs_png <- file.path("man", "figures", c("get-started-ae.png", "get-started-dm.png"))
-rtf_to_png(file.path(gs, "t_ae.rtf"), gs_png[1])
-rtf_to_png(file.path(gs, "t_dm.rtf"), gs_png[2])   # the table at the top of the page
+rtf_to_png(file.path(gs, "t_dm.rtf"), file.path("man", "figures", "get-started-dm.png"))
 
-## 4. Get started's three short examples, from the Tables from an ARD article
+## 4. Get started's four other tables, from the Tables from an ARD article
 ta <- file.path(tempdir(), "tables-from-ard")
 dir.create(ta, showWarnings = FALSE)
 Sys.setenv(RTFREPORTER_ARTICLE_OUT = normalizePath(ta))
 rmarkdown::render(file.path("vignettes", "articles", "tables-from-ard.Rmd"),
                   output_format = rmarkdown::md_document(),
                   output_dir = tempdir(), quiet = TRUE)
-ta_png <- c(t_dm_p = "get-started-dm-p.png", t_ae5 = "get-started-ae5.png",
-            t_orr = "get-started-orr.png")
+ta_png <- c(t_ae = "get-started-ae.png", t_dm_p = "get-started-dm-p.png",
+            t_ae5 = "get-started-ae5.png", t_orr = "get-started-orr.png")
 ta_png[] <- file.path("man", "figures", ta_png)
 for (f in names(ta_png)) {
   rtf_to_png(file.path(ta, paste0(f, ".rtf")), ta_png[[f]])

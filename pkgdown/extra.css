@@ -100,3 +100,66 @@ details > summary {
 details[open] > summary {
   margin-bottom: 0.5rem;
 }
+
+/* ----------------------------------------------------------------------------
+   The flow from an ARD to an RTF file (README, Get started, Tables from an
+   ARD): one table row of four steps, each cell a box -- its heading on a
+   band, its code a line each.  Side by side with an arrow between them when
+   the column is wide enough for four boxes (a container query, so the page's
+   sidebar counts), one under another otherwise.  Without this sheet
+   (GitHub, the CRAN vignette) it is a plain one-row table.
+   ---------------------------------------------------------------------------- */
+.rtf-flow {
+  container-type: inline-size;
+  margin: 1rem 0 1.5rem;
+}
+.rtf-flow table { display: block; border: 0; width: 100%; margin: 0; }
+.rtf-flow tbody, .rtf-flow tr {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.rtf-flow td {
+  display: block;
+  position: relative;
+  border: 1px solid var(--bs-border-color, #c9d3dd);
+  border-radius: 6px;
+  padding: 0 0.75rem 0.5rem;
+  line-height: 1.55;
+}
+.rtf-flow td strong {
+  display: block;
+  margin: 0 -0.75rem 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px 6px 0 0;
+  background: #e8eef5;
+  color: #1a3a5a;
+}
+.rtf-flow td strong + br { display: none; }   /* (the band is a block already) */
+.rtf-flow td code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+/* the arrow to the next step: down, under the box */
+.rtf-flow td:not(:last-child)::after {
+  content: "\25BC";
+  position: absolute;
+  left: 50%;
+  bottom: -1.35rem;
+  color: #1a3a5a;
+  font-size: 0.85rem;
+}
+@container (min-width: 46rem) {
+  .rtf-flow tr { flex-direction: row; gap: 1.6rem; }
+  .rtf-flow td { flex: 1 1 0; min-width: 0; }
+  /* the arrow: right, beside the heading */
+  .rtf-flow td:not(:last-child)::after {
+    content: "\25B6";
+    left: auto;
+    right: -1.3rem;
+    bottom: auto;
+    top: 0.45rem;
+  }
+}

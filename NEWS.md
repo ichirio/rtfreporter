@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+- **Get started and Tables from an ARD, two roles** (#646).  *Get started*
+  is the shortest way through the three steps (the code of each, one
+  finished table, then the other tables as pictures linking to their
+  sections); *Tables from an ARD* takes each step in detail.  Get started
+  leaves the Articles menu (the top bar links it).  The flow from an ARD to
+  an RTF file is a figure -- four boxes, side by side on a wide page and one
+  under another on a narrow one -- the same in the README and both articles
+  (a test keeps the three copies equal).
+
 - **Articles: the finished tables.** Eleven guide articles (headers and
   footers, pagination, borders, figures, listings, importing tables, page
   setup, the two on sections, adding content, the plan and `as_rtftables()`)

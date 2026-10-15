@@ -37,6 +37,10 @@ knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir())
 }
 ```
 
+[Get started](rtfreporter.html) goes through the three steps in the fewest
+lines; this article takes each of them in turn, then builds more tables the
+same way.
+
 Most of rtfreporter starts from a table that already exists: a data frame, a
 `gt`, an `rtables` object, and `as_rtftables()` turns it into pages. This
 article starts one step earlier, from an **analysis results dataset** (ARD):
@@ -49,12 +53,18 @@ say which key goes across and which goes down, how a mean and an SD become one
 cell, what the rows are called and what the header says. In rtfreporter that
 is written as a **plan**:
 
-```
-(ARD) ═══▶ 1. table ═══════▶ 2. report ═══▶ 3. RTF file
-          ard |> normalize_ard() |>       rtf_document() |>        generate_rtfreport()
-            table_plan() |> plan_*()        rtf_section() |>
-                                            rtf_tables(plan)
-```
+<!-- flow: the same in README.md, vignettes/rtfreporter.Rmd and vignettes/articles/tables-from-ard.Rmd (tests/testthat/test-docs-flow.R) -->
+<div class="rtf-flow">
+<table>
+<tr>
+<td><strong>The ARD</strong><br>made with cards / cardx</td>
+<td><strong>1. The table</strong><br><code>ard |&gt;</code><br><code>normalize_ard() |&gt;</code><br><code>table_plan() |&gt;</code><br><code>plan_*()</code></td>
+<td><strong>2. The report</strong><br><code>rtf_document() |&gt;</code><br><code>rtf_section() |&gt;</code><br><code>rtf_tables(plan)</code></td>
+<td><strong>3. The RTF file</strong><br><code>generate_rtfreport()</code></td>
+</tr>
+</table>
+</div>
+<!-- /flow -->
 
 * **The ARD** is the input. It is made with cards / cardx, before
   rtfreporter.
