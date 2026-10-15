@@ -77,6 +77,11 @@
 #'   session; the document's value wins.  Not in column headers: those take
 #'   their values from [set_col_header()]'s `values`.  `NULL` (default):
 #'   none.
+#' @param file The RTF file the document is written to: one string, a path.
+#'   [generate_rtfreport()] writes there when it is given no `file_path`
+#'   (one given wins), so a program can say its output where it says its
+#'   program.  `NULL` (default): none, and `generate_rtfreport()` needs
+#'   `file_path`.
 #'
 #' @return An `rtf_document` S3 object: a list with `document`
 #'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
@@ -116,10 +121,15 @@
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
                          default_format = NULL, watermark = NULL,
                          program = NULL, tokens = NULL,
-                         program_fallback = NULL) {
+                         program_fallback = NULL, file = NULL) {
   if (!is.null(program) &&
       (!is.character(program) || length(program) != 1L || is.na(program))) {
     stop("`program` must be a single string: the program's path.",
+         call. = FALSE)
+  }
+  if (!is.null(file) &&
+      (!is.character(file) || length(file) != 1L || is.na(file) || !nzchar(file))) {
+    stop("`file` must be a single string: the RTF file's path.",
          call. = FALSE)
   }
   .check_program(program_fallback, "program_fallback")
@@ -159,7 +169,8 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         watermark = .normalize_watermark(watermark),
         program = program,
         program_fallback = program_fallback,
-        tokens = tokens
+        tokens = tokens,
+        file = file
       ),
       contents  = list(),
       titles    = list(),

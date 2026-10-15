@@ -2297,12 +2297,12 @@
 #'   `rtfreport` object.
 #' @param report *Superseded* by `doc` (the name the other document
 #'   functions use); documented, still working, not warned.
-#' @param file_path Output RTF file path.
+#' @param file_path Output RTF file path.  `NULL` (default): the document's
+#'   own, `rtf_document(file = )`; one given here wins.
 #' @param overwrite Logical; whether to write over an existing file.  `TRUE`
 #'   (the default since 0.8.2.9039): a report program is run again and again,
 #'   as `write.csv()` and `ggsave()` write over theirs.  `FALSE` stops when the
 #'   file is there.
-#'   Default `FALSE`.
 #' @param program Overrides, for this one file, the program the document
 #'   names (`rtf_document(program = )`, where a program says it once), for
 #'   the `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) uses the
@@ -2349,6 +2349,10 @@
 #' it with `rtf_document(program = )`: a relative path found this way is
 #' joined to the working folder, which `setwd()` may have moved.
 #'
+#' The file can be said there too: `rtf_document(file = "output/t_dm.rtf")`,
+#' and then `generate_rtfreport(doc)` writes it; a `file_path` given here
+#' wins.
+#'
 #' Tokens of one's own -- `{STUDY}`, `{CUTOFF}` -- come from
 #' `rtf_document(tokens = list(STUDY = "ABC-123"))` and
 #' `options(rtfreporter.tokens = )` (the document's value wins), and are
@@ -2386,7 +2390,7 @@
 #' generate_rtfreport(doc, out)      # written over if it is there
 #' file.exists(out)
 #' @export
-generate_rtfreport <- function(doc, file_path, overwrite = TRUE,
+generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
                                program = NULL, program_fallback = NULL,
                                report = NULL) {
   # `report =` is superseded by `doc` (#594); written by name with the file
@@ -2396,6 +2400,18 @@ generate_rtfreport <- function(doc, file_path, overwrite = TRUE,
     doc <- report
   }
   report <- doc
+  # the file: the one given, else the document's own (rtf_document(file = ))
+  if (is.null(file_path) && inherits(report, "rtf_document")) {
+    file_path <- report$document$file
+  }
+  if (is.null(file_path)) {
+    stop("generate_rtfreport(): no file to write -- give `file_path`, or ",
+         "the document's with `rtf_document(file = )`.", call. = FALSE)
+  }
+  if (!is.character(file_path) || length(file_path) != 1L || is.na(file_path) ||
+      !nzchar(file_path)) {
+    stop("`file_path` must be a single string: the RTF file's path.", call. = FALSE)
+  }
   # the run tokens' context, for this call only
   if (is.null(program) && inherits(report, "rtf_document")) {
     program <- report$document$program

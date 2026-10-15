@@ -12,7 +12,8 @@ rtf_document(
   watermark = NULL,
   program = NULL,
   tokens = NULL,
-  program_fallback = NULL
+  program_fallback = NULL,
+  file = NULL
 )
 }
 \arguments{
@@ -69,6 +70,12 @@ none.}
 \code{Rscript} runs, knitr's document, RStudio's editor): the last resort,
 e.g. the program a report is to be written to.  Said in a message when
 used.  \code{NULL} (default): none.}
+
+\item{file}{The RTF file the document is written to: one string, a path.
+\code{\link[=generate_rtfreport]{generate_rtfreport()}} writes there when it is given no \code{file_path}
+(one given wins), so a program can say its output where it says its
+program.  \code{NULL} (default): none, and \code{generate_rtfreport()} needs
+\code{file_path}.}
 }
 \value{
 An \code{rtf_document} S3 object: a list with \code{document}
