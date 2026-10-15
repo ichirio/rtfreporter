@@ -42,7 +42,7 @@ library(testthat)
 }
 
 
-# ── gt: groupname_col -> repeated group-id column (value style) ───────────────
+# ── gt: groupname_col -> a heading row a group, its rows indented (#650) ─────
 
 .make_gt_grouped <- function() {
   skip_if_not_installed("gt")
@@ -56,8 +56,16 @@ library(testthat)
 }
 
 test_that("as_rtftables(gt): multi-group table paginates across pages (group_safe)", {
-  .expect_multipage_roundtrip(.make_gt_grouped(),
-                              group_col = 1L, group_by = "value", max_rows = 4L)
+  pages <- .expect_multipage_roundtrip(.make_gt_grouped(),
+                                       group_col = 1L, group_by = "auto", max_rows = 4L)
+  # a page starts at a group's heading (a cell that is not indented), and
+  # holds that group whole: the heading and its three rows
+  nb <- intToUtf8(160L)
+  for (p in pages) {
+    first <- p$data[[1L]]
+    expect_false(startsWith(first[1L], nb))
+    expect_identical(nrow(p$data), 4L)
+  }
 })
 
 
@@ -146,13 +154,12 @@ test_that("as_rtftables(huxtable): multi-group table paginates across pages", {
 
 
 # ── Whole pipeline: collapse_repeats + blank_rows through the adapters ────────
-# Value-style group columns (gt groupname / flextable / huxtable) carry the key
+# Value-style group columns (flextable / huxtable) carry the key
 # on every row, so collapse_repeats should blank the repeats per page while
 # pagination still splits on the original values.
 
 test_that("collapse_repeats + blank_rows run through value-style adapters across pages", {
   fixtures <- list(
-    gt        = function() .make_gt_grouped(),
     flextable = function() .make_flextable_grouped(),
     huxtable  = function() .make_huxtable_grouped()
   )

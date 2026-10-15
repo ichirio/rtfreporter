@@ -126,11 +126,15 @@ test_that("grouped tables map _data rownum to the rendered row", {
     gt::tab_style(style = gt::cell_text(weight = "bold"),
                   locations = gt::cells_body(columns = Item, rows = 3))
   tbl <- as_rtftable(g, read_meta = TRUE)
-  # data row 3 ("c", group G1) renders as body row 2 (G1 rows first)
-  expect_equal(as.character(tbl$data$Item), c("a", "c", "b"))
+  # data row 3 ("c", group G1) renders under G1's heading: G1, a, c, G2, b --
+  # its style moves with it, to row 3 (#650)
+  nb2 <- strrep(intToUtf8(160L), 2L)
+  expect_equal(as.character(tbl$data$Item),
+               c("G1", paste0(nb2, "a"), paste0(nb2, "c"), "G2", paste0(nb2, "b")))
   j <- match("Item", names(tbl$data))
-  expect_true(tbl$cell_styles[[2]]$bold[j])
-  expect_null(tbl$cell_styles[[3]])
+  expect_true(tbl$cell_styles[[3]]$bold[j])
+  expect_null(tbl$cell_styles[[2]])
+  expect_null(tbl$cell_styles[[1]])
 })
 
 # ── precedence and tokens ─────────────────────────────────────────────────────

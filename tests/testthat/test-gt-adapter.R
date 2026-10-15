@@ -271,3 +271,24 @@ test_that("make.unique() still separates a stub from a real `rowname` column", {
   expect_identical(anyDuplicated(nm), 0L)
   expect_true(all(c("rowname", "rowname.1") %in% nm))
 })
+
+test_that("gt row groups are heading rows, their rows indented under them (#650)", {
+  skip_if_not_installed("gt")
+  ae <- data.frame(SOC = c("Nervous", "Nervous", "GI"), PT = c("Headache", "Dizziness", "Nausea"),
+                   Placebo = c("1", "2", "3"), Active = c("4", "5", "6"), stringsAsFactors = FALSE)
+  g <- gt::gt(ae, groupname_col = "SOC", rowname_col = "PT") |>
+    gt::tab_spanner(label = "Arm", columns = c(Placebo, Active))
+  tbl <- as_rtftable(g)
+  nb2 <- strrep(intToUtf8(160L), 2L)
+  expect_false("::group_id::" %in% names(tbl$data))
+  expect_identical(tbl$data[[1L]],
+                   c("Nervous", paste0(nb2, c("Headache", "Dizziness")), "GI", paste0(nb2, "Nausea")))
+  expect_identical(tbl$data$Placebo, c("", "1", "2", "", "3"))
+  # the spanner is over the two arm columns, after the stub
+  sp <- tbl$col_header[[1L]]
+  arm <- Filter(function(cell) identical(cell$label, "Arm"), sp)[[1L]]
+  expect_identical(c(arm$from, arm$to), c(2L, 3L))
+  # a table without groups is as it was
+  plain <- as_rtftable(gt::gt(ae[c("PT", "Placebo")]))
+  expect_identical(plain$data$PT, ae$PT)
+})

@@ -1,5 +1,15 @@
 # rtfreporter (development version)
 
+- **A gt table's row groups are heading rows again** (#650).  A table built
+  with `gt(groupname_col = )` came through `as_rtftables()` with its group
+  as a column, `::group_id::`, repeated on every row (since 0.0.46, when the
+  body became `gt::extract_body()`'s).  Each group is now a heading row
+  above its rows, which are indented under it (two non-breaking spaces, as
+  gtsummary and tfrmt tables arrive), so `group_by = "auto"` finds the groups
+  for the page breaks and blank rows; a body cell's `tab_style()` moves with
+  its row.  gt is needed at 0.11.1 or later (was 0.9.0): before it,
+  `extract_body()` is missing or names its columns differently.
+
 - **The guide pages show their tables** (#651).  About fifty pictures, each
   under the example it shows -- the feature tour, pagination, importing
   tables, page setup, borders, headers and footers, adding content, figures,

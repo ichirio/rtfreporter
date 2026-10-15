@@ -484,6 +484,15 @@
 
   # ---- clean rendered body (visible columns only) ----------------------
   eb        <- .gt_extract_body_safe(gt_obj)
+  # A table with row groups (`gt(groupname_col = )`): extract_body() gives
+  # each row's group as a `::group_id::` column, not as the heading rows gt
+  # prints (#650).  The column is taken off here -- everything below sees
+  # the columns as printed -- and the groups come back as rows at the end.
+  group_of_row <- NULL
+  if ("::group_id::" %in% names(eb)) {
+    group_of_row <- as.character(eb[["::group_id::"]])
+    eb <- eb[setdiff(names(eb), "::group_id::")]
+  }
   body_vars <- names(eb)                                  # stub == "::rowname::"
   ncol_t    <- length(body_vars)
 
@@ -705,6 +714,46 @@
     if (length(fn)) out$footnotes_block <- fn
   }
 
+  if (!is.null(group_of_row)) out <- .gt_interleave_groups(out, group_of_row)
+  out
+}
+
+# The row groups as gt prints them: a heading row -- the group's label in
+# the first column, the other cells empty -- above each run of rows of one
+# group (#650).  The body is in gt's render order already (a group's rows
+# together), so a heading goes wherever the group changes; a row of no group
+# (NA) gets none.  The per-row cell styles move with their rows.
+.gt_interleave_groups <- function(out, group_of_row) {
+  df <- out$data
+  n  <- nrow(df)
+  if (!n || length(group_of_row) != n) return(out)
+  g <- group_of_row
+  starts <- which(!is.na(g) & nzchar(g) &
+                  c(TRUE, g[-1L] != g[-n] | is.na(g[-n])))
+  if (!length(starts)) return(out)
+  heading <- df[rep(1L, length(starts)), , drop = FALSE]
+  heading[] <- lapply(heading, function(col) rep("", length(starts)))
+  heading[[1L]] <- g[starts]
+  # each row's place once the headings are in: one more for every heading
+  # at or above it
+  pos <- seq_len(n) + findInterval(seq_len(n), starts)
+  hpos <- starts + seq_along(starts) - 1L
+  new <- df[c(seq_len(n), seq_along(starts)), , drop = FALSE]
+  new[pos, ] <- df
+  # a group's rows indented under its heading, two non-breaking spaces, as
+  # gtsummary and tfrmt bake theirs -- so group_by = "auto" finds the groups
+  # ("indent") for pagination and blank rows
+  member <- pos[!is.na(g) & nzchar(g)]
+  nbsp2 <- strrep(intToUtf8(160L), 2L)
+  new[[1L]][member] <- paste0(nbsp2, new[[1L]][member])
+  new[hpos, ] <- heading
+  rownames(new) <- NULL
+  out$data <- new
+  if (!is.null(out$cell_styles)) {
+    cs <- vector("list", n + length(starts))
+    cs[pos] <- out$cell_styles
+    out$cell_styles <- cs
+  }
   out
 }
 
