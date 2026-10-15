@@ -159,13 +159,13 @@ p <- ard |>
                 AGEGR1 = "Age group, n (%)",
                 SEX    = "Sex, n (%)")) |>
   plan_levels(AGEGR1 = c("<65", "65-80", ">80"), SEX = c("F", "M")) |>
+  plan_col_header(values = list(n = TRUE), rtf_col_header(
+    c("",               "{col}"),
+    c("Characteristic", "(N={n})"))) |>
   plan_stub(name = "row_label") |>
   plan_blanks(where = "between_groups", first = TRUE) |>
   plan_columns(widths = c(4, 2, 2, 2)) |>
-  plan_style(border = "tfl", align_count_pct = TRUE) |>
-  plan_col_header(values = list(n = TRUE), rtf_col_header(
-    c("",               "{col}"),
-    c("Characteristic", "(N={n})")))
+  plan_style(border = "tfl", align_count_pct = TRUE)
 ```
 
 What each verb says, and the names a plan can use: step 1 of

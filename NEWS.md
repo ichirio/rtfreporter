@@ -1,5 +1,15 @@
 # rtfreporter (development version)
 
+- **Docs: the plan verbs in one recommended order** (#660).  *Plan verbs*
+  has a section, *The order to write them in*: first the mapping
+  (`normalize_ard()`, `table_plan()`, `plan_cells()`, `plan_stat_groups()`,
+  `plan_total()`, `plan_compare()`, `plan_filter()`), then the finishing
+  (`plan_labels()`, `plan_levels()`, `plan_nest()`, `plan_digits()`,
+  `plan_sort()`, `plan_col_header()`, `plan_stub()`, `plan_blanks()`, the
+  pages, `plan_columns()`, `plan_style()`, `plan_cell_style()`).  The
+  examples of *Get started* and *Tables from an ARD* are written in that
+  order; their plans give the same tables as before.
+
 - **CRAN format** (#658).  The rtables and tern links of the *From rtables*
   vignette are their CRAN pages (their pkgdown sites answer 404 now); the
   WORDLIST has the nine words the spelling check found in the help and

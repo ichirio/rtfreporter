@@ -149,6 +149,26 @@ study and rarely changed for one table:
 | A table too wide for the page | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | Anything else | `plan_after(...)` |
 
+## The order to write them in
+
+A plan is a list of declarations, so the verbs can come in any order and
+make the same table (a verb said twice: the later one wins). One order reads
+best, though: the order a table is designed in. First the **mapping**, what
+goes where; then the **finishing**, how it looks.
+
+1. **The mapping**: `normalize_ard()`, `table_plan()`, `plan_cells()`,
+   `plan_stat_groups()`, `plan_total()`, `plan_compare()`, `plan_filter()`.
+2. **The finishing**: `plan_labels()`, `plan_levels()`, `plan_nest()`,
+   `plan_digits()`, `plan_sort()`, `plan_col_header()`, `plan_stub()`,
+   `plan_blanks()`, `plan_paginate_*()`, `plan_columns()`, `plan_style()`,
+   `plan_cell_style()`.
+
+A table writes only the verbs it needs, in this order, and skips the rest.
+The three groups above say how often a verb is used; this order says where
+it goes. The examples of [Get started](rtfreporter.html) and
+[Tables from an ARD](tables-from-ard.html) follow it, and so does the code
+tflspec writes from a specification.
+
 ## The cells
 
 ### `plan_cells()`: templates
