@@ -309,3 +309,34 @@ test_that("generate_rtfreport(doc = ); report = still works, by name or with the
   expect_no_error(generate_rtfreport(report = d, f))
   expect_true(file.exists(f))
 })
+
+test_that("rtf_document(file = ): generate_rtfreport(doc) writes there; a file_path given wins", {
+  d <- tempfile("doc-file")
+  dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  own <- file.path(d, "own.rtf")
+  doc <- rtf_tables(rtf_document(file = own), data.frame(a = 1))
+  expect_identical(doc$document$file, own)
+  expect_identical(generate_rtfreport(doc), own)
+  expect_true(file.exists(own))
+  other <- file.path(d, "other.rtf")
+  expect_identical(generate_rtfreport(doc, other), other)
+  expect_identical(generate_rtfreport(doc, file_path = other), other)
+  expect_identical(readLines(other), readLines(own))
+  # the old forms: report = by name, the file by position
+  unlink(own)
+  expect_no_error(generate_rtfreport(report = doc))
+  expect_true(file.exists(own))
+  expect_no_error(generate_rtfreport(report = doc, other))
+  # overwrite = FALSE still stops on the document's file
+  expect_error(generate_rtfreport(doc, overwrite = FALSE), "already exists")
+  # no file anywhere
+  expect_error(generate_rtfreport(rtf_tables(rtf_document(), data.frame(a = 1))),
+               "rtf_document(file = )", fixed = TRUE)
+  expect_error(rtf_document(file = c("a.rtf", "b.rtf")), "single string")
+  expect_error(rtf_document(file = ""), "single string")
+  expect_error(rtf_document(file = 1), "single string")
+  expect_error(generate_rtfreport(doc, file_path = 1), "single string")
+  expect_null(rtf_document()$document$file)
+  expect_identical(names(formals(rtf_document))[length(formals(rtf_document))], "file")
+})

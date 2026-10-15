@@ -85,6 +85,19 @@ generate_rtfreport(doc, out, overwrite = TRUE)
 file.exists(out)
 ```
 
+The file can also be said where the document is made, with the program:
+`rtf_document(file = )` keeps it in the document, and `generate_rtfreport(doc)`
+writes there.  A `file_path` given to `generate_rtfreport()` wins, so the same
+document can still be written somewhere else for a check.
+
+```{r render-file, fold = "open"}
+out2 <- tempfile(fileext = ".rtf")
+doc2 <- rtf_document(file = out2) |>
+  rtf_tables(as_rtftables(df), titles = list(c("Table 14.3.1 Renal Function")))
+generate_rtfreport(doc2)
+file.exists(out2)
+```
+
 
 ## Post-processing -- `rtf_replace_text()`
 

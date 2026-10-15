@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **A document can say its file: `rtf_document(file = )`** (#654).  The
+  RTF file's path (one string) is kept in the document, where the program
+  is said, and `generate_rtfreport(doc)` writes there; a `file_path` given
+  to `generate_rtfreport()` wins, and with neither it stops and says so.
+  `file_path` now defaults to `NULL`; a call that gives the file, by
+  position or by name, and the superseded `report =` work as before.
+
 - **A gt table's row groups are heading rows again** (#650).  A table built
   with `gt(groupname_col = )` came through `as_rtftables()` with its group
   as a column, `::group_id::`, repeated on every row (since 0.0.46, when the

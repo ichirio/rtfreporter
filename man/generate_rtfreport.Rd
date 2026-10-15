@@ -6,7 +6,7 @@
 \usage{
 generate_rtfreport(
   doc,
-  file_path,
+  file_path = NULL,
   overwrite = TRUE,
   program = NULL,
   program_fallback = NULL,
@@ -17,13 +17,13 @@ generate_rtfreport(
 \item{doc}{An \code{rtf_document} object (from \code{\link[=rtf_document]{rtf_document()}}) or an internal
 \code{rtfreport} object.}
 
-\item{file_path}{Output RTF file path.}
+\item{file_path}{Output RTF file path.  \code{NULL} (default): the document's
+own, \code{rtf_document(file = )}; one given here wins.}
 
 \item{overwrite}{Logical; whether to write over an existing file.  \code{TRUE}
 (the default since 0.8.2.9039): a report program is run again and again,
 as \code{write.csv()} and \code{ggsave()} write over theirs.  \code{FALSE} stops when the
-file is there.
-Default \code{FALSE}.}
+file is there.}
 
 \item{program}{Overrides, for this one file, the program the document
 names (\code{rtf_document(program = )}, where a program says it once), for
@@ -82,6 +82,10 @@ a program's own file name always wins -- and said in a message too.
 For a production run, say
 it with \code{rtf_document(program = )}: a relative path found this way is
 joined to the working folder, which \code{setwd()} may have moved.
+
+The file can be said there too: \code{rtf_document(file = "output/t_dm.rtf")},
+and then \code{generate_rtfreport(doc)} writes it; a \code{file_path} given here
+wins.
 
 Tokens of one's own -- \code{{STUDY}}, \code{{CUTOFF}} -- come from
 \code{rtf_document(tokens = list(STUDY = "ABC-123"))} and

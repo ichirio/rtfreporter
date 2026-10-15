@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9062** (the development
+**This manual documents rtfreporter 0.8.2.9063** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -273,7 +273,7 @@ without writing a file.
 | Place tables on pages | `rtf_tables(doc, tables, titles =, footnotes =, ...)` |
 | Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)`; one figure as it is: `rtf_figures(doc, plot)` (a ggplot, a path), several as a list |
 | Set titles / footnotes later | `rtf_titles(doc, list)`, `rtf_footnotes(doc, list)` |
-| Write the RTF | `generate_rtfreport(report, file_path, overwrite = FALSE)` |
+| Write the RTF | `generate_rtfreport(doc, file_path)` (written over by default); or say the file in the document, `rtf_document(file = )`, and `generate_rtfreport(doc)` |
 | Concatenate finished RTFs | `assemble_rtf(input_files, output_file, toc =, book_page =)` |
 | Listings | `listing_col()` → `listing_spec()` → `as_rtftables(data, listing = spec)` |
 | Merge a SOC/PT hierarchy into one stub | `as_rtftables(stub = stub_spec(c("SOC", "PT")))`; `stub_cols()` to do it on the data |
