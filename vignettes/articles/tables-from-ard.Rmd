@@ -197,7 +197,7 @@ you forgot.
 ### How it looks
 
 The rest is display. The variables get readable labels and their levels an
-order, then the stub, blank rows, widths and header are declared:
+order, then the header, the stub, blank rows and widths are declared:
 
 ```{r display, fold = "open"}
 p <- p |>
@@ -206,13 +206,13 @@ p <- p |>
                 SEX    = "Sex, n (%)",
                 RACE   = "Race, n (%)")) |>
   plan_levels(AGEGR1 = c("18-64", ">64"), SEX = c("F", "M")) |>
+  plan_col_header(values = list(n = TRUE), rtf_col_header(
+    c("",               "{col}"),
+    c("Characteristic", "(N={n})"))) |>
   plan_stub(name = "row_label") |>
   plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
   plan_columns(widths = c(4, 2, 2, 2)) |>
-  plan_style(border = "tfl", align_count_pct = TRUE) |>
-  plan_col_header(values = list(n = TRUE), rtf_col_header(
-    c("",               "{col}"),
-    c("Characteristic", "(N={n})")))
+  plan_style(border = "tfl", align_count_pct = TRUE)
 ```
 
 * `plan_stub()` folds the variable and its rows into one indented column, the
@@ -325,16 +325,16 @@ p_ae <- ard_ae |>
                 overall = "Any TEAE") |>
   table_plan(cols = "TRT01A", rows = c(SOC = "AEBODSYS", PT = "AEDECOD"),
              label = NA) |>
-  plan_sort(".overall", "SOC", ".depth", "-n", "PT") |>
   plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
+  plan_sort(".overall", "SOC", ".depth", "-n", "PT") |>
+  plan_col_header(values = list(n = TRUE), rtf_col_header(
+    c("System Organ Class", "{col}"),
+    c("  Preferred Term", "(N={n})\nn (%)"))) |>
   plan_stub(name = "System Organ Class\n  Preferred Term", indent = 2) |>
   plan_blanks(where = "between_groups", first = TRUE, counted = TRUE) |>
   plan_paginate_rows(max_rows = 25, split = "group_safe") |>
   plan_columns(widths = c(5, 2, 2, 2)) |>
-  plan_style(border = "tfl", align_count_pct = TRUE) |>
-  plan_col_header(values = list(n = TRUE), rtf_col_header(
-    c("System Organ Class", "{col}"),
-    c("  Preferred Term", "(N={n})\nn (%)")))
+  plan_style(border = "tfl", align_count_pct = TRUE)
 ```
 
 * `plan_sort(".overall", "SOC", ".depth", "-n", "PT")` is the row order, key
@@ -381,16 +381,16 @@ layer wins, so they are added to `p_ae` rather than written into it:
 
 ```{r plan-ae-filter, fold = "open"}
 p_ae5 <- p_ae |>
-  plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT") |>
-  plan_filter(p >= 0.05)
+  plan_filter(p >= 0.05) |>
+  plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT")
 ```
 
-* `-n@SOC` sorts the SOCs by **their own** count, most first, and keeps each
-  SOC's rows together. `-n` alone would sort every row by its count. The `@`
-  says whose count it is.
 * `plan_filter(p >= 0.05)` keeps the PTs that reach 5% in **any** arm. The
   condition is on the ARD's statistics, not on the printed text. A SOC row
   stays exactly when one of its PTs does (`parents = "keep"`, the default).
+* `-n@SOC` sorts the SOCs by **their own** count, most first, and keeps each
+  SOC's rows together. `-n` alone would sort every row by its count. The `@`
+  says whose count it is.
 
 ```{r rtf-ae-filter}
 doc <- rtf_document(
@@ -456,13 +456,13 @@ p_dm_p <- ard_dm_p |>
                 SEX    = "Sex, n (%)",
                 RACE   = "Race, n (%)")) |>
   plan_levels(AGEGR1 = c("18-64", ">64"), SEX = c("F", "M")) |>
+  plan_col_header(values = list(n = TRUE), lines = list(
+    c(Characteristic = "",               .values = "{col}",   p = "p-value"),
+    c(Characteristic = "Characteristic", .values = "(N={n})", p = ""))) |>
   plan_stub(name = "Characteristic") |>
   plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
   plan_columns(widths = c(Characteristic = 5, .values = 2.6, p = 1.4)) |>
-  plan_style(border = "tfl", align_count_pct = TRUE) |>
-  plan_col_header(values = list(n = TRUE), lines = list(
-    c(Characteristic = "",               .values = "{col}",   p = "p-value"),
-    c(Characteristic = "Characteristic", .values = "(N={n})", p = "")))
+  plan_style(border = "tfl", align_count_pct = TRUE)
 ```
 
 * `plan_total()` makes the overall rows a column, after the arms. Its
@@ -537,25 +537,25 @@ p_orr <- ard_orr |>
   table_plan(cols = ".stat_group",
              rows = c(arm = "TRT01A", grp1 = "subgroup", grp2 = "subgroup_level"),
              label = NA) |>
-  plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
-  plan_labels(subgroup = c(ALL = "All Subjects", SEX = "Sex", AGEGR1 = "Age Group")) |>
   plan_cells(
     n      = c("1" = "{N:.0f}"),
     orr_ci = cell_rows(
       "1" = c(n == 0 ~ "0", "{n:.0f} ({estimate:.1f%})"),
       "2" = "{conf.low:.1f%}, {conf.high:.1f%}")) |>
-  plan_hide("arm") |>
-  plan_row_group(mode = "value", collapse = c("grp1", "grp2")) |>
-  plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
-  plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe",
-                     heading = "Treatment: {value} (N={n})") |>
-  plan_columns(widths = c(grp1 = 25, grp2 = 15, .values = 15),
-               row_title = c("grp1", "grp2")) |>
-  plan_style(border = "tfl") |>
+  plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
+  plan_labels(subgroup = c(ALL = "All Subjects", SEX = "Sex", AGEGR1 = "Age Group")) |>
   plan_col_header(header = rtf_col_header(
     list(col_cell(c("grp1", "grp2"), "Subgroup"),
          col_cell("n", "N"),
-         col_cell("orr_ci", "Responders (%)\n90% CI"))))
+         col_cell("orr_ci", "Responders (%)\n90% CI")))) |>
+  plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+  plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe",
+                     heading = "Treatment: {value} (N={n})") |>
+  plan_row_group(mode = "value", collapse = c("grp1", "grp2")) |>
+  plan_hide("arm") |>
+  plan_columns(widths = c(grp1 = 25, grp2 = 15, .values = 15),
+               row_title = c("grp1", "grp2")) |>
+  plan_style(border = "tfl")
 ```
 
 * `normalize_ard(stack = list(subgroup = "group2"))` puts what each analysis
