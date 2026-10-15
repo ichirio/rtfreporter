@@ -5,12 +5,18 @@ title: "Headers, footers and tokens"
 ```{r, include = FALSE}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")
@@ -26,13 +32,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -138,6 +148,11 @@ doc <- rtf_document() |>
 #                                                       ^ NULL = keep ftr
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "hf_ranges.rtf")
+.shot("hf_ranges.png")
+```
+
 `footer = NULL` on the second section inherits the first section''s footer, so
 only the header changes at page 3. You can also assign several sections in one
 call by passing a vector of `page`s and a list of `secinfo` objects -- see
@@ -159,6 +174,11 @@ doc <- rtf_document() |>
     auto_section        = TRUE,
     section_label_align = "center"
   )
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "hf_auto_section.rtf")
+.shot("hf_auto_section.png")
 ```
 
 This splits the document into one section per named item, each carrying the base
@@ -261,6 +281,11 @@ doc <- rtf_document(program_fallback = "programs/t_dm.R") |>
   rtf_section(page = 1,
     footer = rtf_footer(list(
       c(l = "Program: {PROGRAM}", r = "Run: {DATETIME:%Y-%m-%d %H:%M}"))))
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "hf_run_tokens.rtf")
+.shot("hf_run_tokens.png")
 ```
 
 **Tokens of your own** are given once, in `rtf_document(tokens = )` (or for a

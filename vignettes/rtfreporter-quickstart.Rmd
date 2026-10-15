@@ -10,12 +10,18 @@ vignette: >
 ```{r setup, include=FALSE, fold = "closed"}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")
@@ -26,6 +32,31 @@ knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 # build instead of rotting unnoticed.
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 library(rtfreporter)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ## Overview
@@ -76,6 +107,11 @@ doc <- rtf_document() |>
   ))
 
 generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "qs_minimal.rtf")
+.shot("qs_minimal.png")
 ```
 
 ---
@@ -154,6 +190,11 @@ for (i in seq_along(lab_data)) {
 generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "qs_shift.rtf")
+.shot("qs_shift.png")
+```
+
 ---
 
 ## 3  Embedding figures (ggplot2)
@@ -184,6 +225,11 @@ doc <- rtf_document() |>
   ))
 
 generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
+```
+
+```{r, echo = FALSE, fold = FALSE, eval = requireNamespace("ggplot2", quietly = TRUE)}
+.keep(doc, "qs_figure.rtf")
+.shot("qs_figure.png")
 ```
 
 ---
@@ -221,6 +267,11 @@ doc <- rtf_document() |>
 generate_rtfreport(doc, tempfile(fileext = ".rtf"), overwrite = TRUE)
 ```
 
+```{r, echo = FALSE, fold = FALSE, eval = requireNamespace("ggplot2", quietly = TRUE)}
+.keep(doc, "qs_fig_table.rtf")
+.shot("qs_fig_table.png")
+```
+
 ---
 
 ## 5  Table width and alignment
@@ -242,6 +293,11 @@ tbl_right  <- rtftable(df, table_width_twips = 7200L, table_align = "right",
 tbl_full   <- rtftable(df, table_width_pct = 100)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl_center, "qs_sizing.rtf")
+.shot("qs_sizing.png")
+```
+
 ---
 
 ## 6  Column width control
@@ -258,6 +314,11 @@ tbl_rel <- rtftable(df, col_rel_width = c(2, 1, 1), table_width_twips = 10080L)
 
 w       <- auto_col_widths(df, table_width_twips = 14400L)
 tbl_auto <- rtftable(df, column_widths_twips = w)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl_abs, "qs_widths.rtf")
+.shot("qs_widths.png")
 ```
 
 ---
@@ -353,6 +414,11 @@ tbl_span <- rtftable(
 )
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl_span, "qs_spanning.rtf")
+.shot("qs_spanning.png")
+```
+
 ---
 
 ## 10  Multi data.frame table
@@ -371,6 +437,11 @@ tbl_multi <- rtftable(
   border              = "tfl",
   row_height_twips    = 280L
 )
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl_multi, "qs_multi.rtf")
+.shot("qs_multi.png")
 ```
 
 ---
@@ -398,6 +469,11 @@ hdr_bordered <- rtf_header(
   rows   = list(c(c = "Study Title")),
   border = rtf_border(bottom = TRUE)
 )
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl_custom, "qs_borders.rtf")
+.shot("qs_borders.png")
 ```
 
 ---
@@ -447,6 +523,11 @@ tbl_ae <- rtftable(df_ae,
   row_height_twips    = 280L)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl_ae, "qs_autowidth.rtf")
+.shot("qs_autowidth.png")
+```
+
 ---
 
 ## 14  Blank separator rows
@@ -493,6 +574,11 @@ attr(df_demog, "rtf_blank_rows") <- c(0, 3, 6, -1)
 tbl5 <- rtftable(df_demog)   # read_attributes = TRUE by default
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl1, "qs_blank.rtf")
+.shot("qs_blank.png")
+```
+
 ---
 
 ## 15  Titles & footnotes per page
@@ -522,6 +608,11 @@ doc <- rtf_document() |>
   rtf_tables(list(df_demog, df_demog)) |>
   rtf_titles(list("Page One", "Page Two")) |>
   rtf_footnotes(list(NULL, "Source: ADSL."))
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "qs_titles.rtf")
+.shot("qs_titles.png")
 ```
 
 Titles render as centred bold paragraphs; footnotes render as

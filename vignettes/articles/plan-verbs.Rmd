@@ -8,12 +8,18 @@ description: >
 ```{r, include = FALSE}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")
@@ -33,6 +39,16 @@ knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir())
              recursive = TRUE)
   file.copy(src, file.path(.here, "figures", "plan", file), overwrite = TRUE)
   knitr::include_graphics(file.path("figures", "plan", file), error = FALSE)
+}
+# .keep(): the RTF of a table for its picture, when the generator runs
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
 }
 ```
 
@@ -84,32 +100,54 @@ base <- ard |>
 
 ## At a glance
 
+The verbs in three groups, by how often a clinical table uses them.
+
+### Start here: the verbs of every table
+
+**Learn these first.** Every table of a study writes them.
+
 | Job | Verb |
 |---|---|
 | The roles: what goes across, what goes down | `table_plan(x, cols, rows, label, stat, show_keys)` |
 | How a cell is made | `plan_cells(..., stats, value, na, notes)` |
 | The digits | `plan_digits(..., rounding)` |
-| A column from a group of statistics | `plan_stat_groups(..., .variables, .others)` |
-| The order and text of values | `plan_levels()`, `plan_labels()` |
-| The row order | `plan_sort(..., stat, keep)` |
-| Which rows stay | `plan_filter(..., any, parents, by)` |
+| The text and order of values | `plan_labels()`, `plan_levels()` |
+| The column header | `plan_col_header(header, values)` |
+| Run it, look inside | `plan_apply(plan, stage)`, `plan_layers()`, `print()` |
+
+The study's house style is in every table too, but written once for the
+study and rarely changed for one table:
+
+| Job | Verb |
+|---|---|
+| The row headings | `plan_stub(vars, name, indent, group_summary, before)` |
+| Blank rows | `plan_blanks(where, first, last, counted)` |
+| How many rows on a page, BY pages | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)` |
+| The columns: widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep)` |
+| The whole table's look | `plan_style(border, align_count_pct, font, ..., border_header, ...)` |
+
+### Sometimes: what some tables add
+
+| Job | Verb |
+|---|---|
 | A Total column | `plan_total(label, position)` |
 | A test or a difference as a column | `plan_compare(..., by, position)` |
-| The row headings | `plan_stub(vars, name, indent, group_summary, before)` |
-| Groups down the body | `plan_row_group(mode, collapse)` |
-| Blank rows | `plan_blanks(where, first, last, counted)` |
-| Columns not printed | `plan_hide(...)` |
-| The columns: widths, decimal alignment | `plan_columns(widths, decimal, row_title, auto_width, sep)` |
-| The column header | `plan_col_header(header, values)` |
-| The whole table's look | `plan_style(border, align_count_pct, font, ..., border_header, ...)` |
-| Some cells' look | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)` |
-| A page per value | `plan_paginate_group(col, keep, heading)` |
-| How many rows on a page, BY pages | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)` |
-| A table too wide for the page | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
+| The row order (adverse events by frequency) | `plan_sort(..., stat, keep)` |
+| Which rows stay (common terms only) | `plan_filter(..., any, parents, by)` |
+| A column from a group of statistics | `plan_stat_groups(..., .variables, .others)` |
+| A page per value (a lab parameter) | `plan_paginate_group(col, keep, heading)` |
+| Titles and footnotes, when the plan carries them | `plan_titles()`, `plan_footnotes()` |
 | A listing | `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
-| Titles and footnotes | `plan_titles()`, `plan_footnotes()` |
+
+### Rarely: there when a table needs it
+
+| Job | Verb |
+|---|---|
+| Columns not printed | `plan_hide(...)` |
+| Groups down the body | `plan_row_group(mode, collapse)` |
+| Some cells' look | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border)` |
+| A table too wide for the page | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | Anything else | `plan_after(...)` |
-| Run it, look inside | `plan_apply(plan, stage)`, `plan_layers()`, `print()` |
 
 ## The cells
 
@@ -141,6 +179,11 @@ p <- base |>
 plan_apply(p, "table")[1:7, ]
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(p, "pv_cells.rtf")
+.shot("pv_cells.png")
+```
+
 `AGE` has its own entry, so it shows two rows. `TRTDURD` (treatment
 duration) uses the `continuous` one.
 
@@ -163,6 +206,11 @@ p <- base |>
               categorical = c(p = 1)) |>                    # the house rule
   plan_digits(TRTDURD = c(mean = 0, sd = 1))               # one variable
 plan_apply(p, "table")[1:6, ]
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(p, "pv_digits.rtf")
+.shot("pv_digits.png")
 ```
 
 A token that sets its own format (`{mean:.2f}`) keeps it.
@@ -191,6 +239,11 @@ p <- base |>
   plan_labels(c(SEX = "Sex", RACE = "Race")) |>
   plan_levels(SEX = c("M", "F"))
 plan_apply(p, "table")[, 1:3]
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(p, "pv_labels.rtf")
+.shot("pv_labels.png")
 ```
 
 When no `plan_levels()` gives an order for the `group` column, the order of
@@ -312,6 +365,11 @@ p_hdr <- base |>
     c("",               "{col}"),
     c("Characteristic", "(N={n})")))
 p_hdr
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(p_hdr, "pv_header.rtf")
+.shot("pv_header.png")
 ```
 
 Printing the plan lists every token and the value it will take, so you can

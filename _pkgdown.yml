@@ -4,6 +4,11 @@ url: https://ichirio.github.io/rtfreporter/
 # article; keep the old single-page URL working.
 redirects:
   - ["articles/showcase.html", "articles/showcase-dm.html"]
+  # the External API specification was folded into Architecture & internals
+  - ["articles/external-api.html", "articles/architecture.html"]
+  - ["articles/external-api-ja.html", "articles/architecture-ja.html"]
+  # gt and rtables were one article; now one each
+  - ["articles/gt-integration.html", "articles/from-gt.html"]
   # Articles removed in the ARD-first refresh (#581): the pipe-API guide was
   # folded into Get started and the document articles; the two Quarto
   # examples duplicated the Demographics showcase and the feature tour.
@@ -150,13 +155,20 @@ navbar:
           href: articles/plan-verbs.html
         - text: "From as_rtftables() to a plan"
           href: articles/plan-and-as-rtftables.html
+        # ── One deliverable ─────────────────────────────────────────────
+        - text: -------
+        - text: "One deliverable"
+        - text: "Assembling reports into one document"
+          href: articles/assembling.html
         # ── 2. Bring your own table ─────────────────────────────────────
         - text: -------
         - text: "Bring your own table"
         - text: "Importing tables with as_rtftables()"
           href: articles/importing-tables.html
-        - text: "gt, gtsummary & rtables"
-          href: articles/gt-integration.html
+        - text: "From gt and gtsummary"
+          href: articles/from-gt.html
+        - text: "From rtables and tern"
+          href: articles/from-rtables.html
         - text: "Tables from data frames: a feature tour"
           href: articles/rtfreporter-quickstart.html
         - text: "Paginating with as_rtftables()"
@@ -194,7 +206,7 @@ navbar:
           href: articles/adding-content.html
         - text: "Borders and rules"
           href: articles/borders.html
-        - text: "Rendering, post-processing & assembly"
+        - text: "Rendering and post-processing"
           href: articles/output.html
         # ── 6. For AI assistants ────────────────────────────────────────
         # Self-contained Markdown briefings, sized to be attached at the start
@@ -211,15 +223,15 @@ navbar:
         - text: "For AI assistants"
         - text: "Developing with an AI assistant"
           href: articles/ai-development.html
-        - text: "AI user manual (v0.8.2)"
+        - text: "AI user manual"
           href: ai/rtfreporter-ai-user-manual-0.8.2.md
-        - text: "AI developer manual (v0.8.2)"
+        - text: "AI developer manual"
           href: ai/rtfreporter-ai-dev-manual-0.8.2.md
         # ── Specification / internals (advanced) ────────────────────────
         - text: -------
         - text: "Specification & internals"
-        - text: "External API specification"
-          href: articles/external-api.html
+        - text: "Architecture & internals"
+          href: articles/architecture.html
     news:
       text: Changelog
       href: news/index.html
@@ -680,7 +692,8 @@ articles:
     navbar: ~
     contents:
       - articles/importing-tables
-      - gt-integration
+      - from-gt
+      - from-rtables
       - rtfreporter-quickstart
       - articles/pagination
       - articles/multistub-section-split
@@ -714,6 +727,7 @@ articles:
       - articles/adding-content
       - articles/borders
       - articles/output
+      - articles/assembling
 
   - title: For contributors
     desc: >
@@ -727,7 +741,6 @@ articles:
       - articles/ai-development
       - articles/architecture
       - articles/extending-adapters
-      - articles/external-api
 
   - title: コントリビューター向け資料（日本語 / Japanese）
     desc: >
@@ -739,7 +752,6 @@ articles:
       - articles/ai-development-ja
       - articles/architecture-ja
       - articles/extending-adapters-ja
-      - articles/external-api-ja
 
   # Deep-dive S3 / OOP references. Deliberately kept OUT of the navbar
   # Articles menu -- pkgdown requires every built article to appear in the

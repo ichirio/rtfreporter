@@ -34,3 +34,4 @@
 ^.*\.Rcheck$
 ^\.lintr$
 ^inst/rtf-examples/.*\.png$
+^vignettes/figures$

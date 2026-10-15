@@ -5,12 +5,18 @@ title: "Paginating tables with as_rtftables()"
 ```{r, include = FALSE}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")
@@ -26,13 +32,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -141,6 +151,11 @@ pages <- as_rtftables(df, split = "group_force", max_rows = 6)
 show_pages(pages)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_group_force.rtf")
+.shot("pg_group_force.png")
+```
+
 ### `"group_safe"` -- never break a group across pages
 
 Pack *whole* groups onto a page; a group that would overflow is pushed to the
@@ -150,6 +165,11 @@ still force-split as a fallback.)
 ```{r group_safe}
 pages <- as_rtftables(df, split = "group_safe", max_rows = 6)
 show_pages(pages)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_group_safe.rtf")
+.shot("pg_group_safe.png")
 ```
 
 ### `"by_value"` -- one page per group, named by the group
@@ -243,6 +263,11 @@ df_key <- data.frame(
 pages <- as_rtftables(df_key, split = "group_safe", max_rows = 2,
                       group_col = "Visit", group_by = "value")
 length(pages)                                  # one page per Visit block
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_group_value.rtf")
+.shot("pg_group_value.png")
 ```
 
 ```{r group-by-filled}
@@ -424,6 +449,11 @@ pages <- as_rtftables(df, split = by_four)
 length(pages)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_custom.rtf")
+.shot("pg_custom.png")
+```
+
 Your function only implements the split; the rest of the pipeline (blank rows,
 metadata, per-page assembly, and header/width/style replication) is applied to
 its output unchanged. Write it with a `...` so it tolerates the context
@@ -566,6 +596,11 @@ pages <- Filter(function(p) nrow(p$data) > 0L, pages)   # keep non-empty pages
 length(pages)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_compose.rtf")
+.shot("pg_compose.png")
+```
+
 
 ## Blank separator rows
 
@@ -591,6 +626,11 @@ pages <- as_rtftables(df_g, split = "group_safe", max_rows = 6,
                       blank_rows = "between_groups")
 nrow(pages[[1]]$data)          # 6 data rows -- the max_rows budget
 pages[[1]]$blank_rows          # plus a blank after row 3 (A -> B), not counted
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_blank.rtf")
+.shot("pg_blank.png")
 ```
 
 So page 1 shows six data rows **and** a separator -- seven rows on the page --

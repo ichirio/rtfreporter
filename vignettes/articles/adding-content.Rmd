@@ -5,12 +5,18 @@ title: "Adding tables and figures"
 ```{r, include = FALSE}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")
@@ -26,13 +32,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -86,6 +96,11 @@ tbl <- rtftable(df1, border = "tfl", row_height_twips = 280L,
 doc <- rtf_document() |> rtf_tables(tbl)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ac_single.rtf")
+.shot("ac_single.png")
+```
+
 The options (`border`, `col_rel_width`, `row_height_twips`, `col_spec`, ...)
 are documented on `?rtftable`.  (`rtf_tables()` used to take copies of them;
 those are deprecated and removed in 0.9.0.)
@@ -100,6 +115,11 @@ vector of column names):
 ```{r row-title}
 # Columns 1-2 are row headings (left); columns 3+ are data (centre).
 tbl <- rtftable(df1, row_title = c(1, 2))
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "ac_row_title.rtf")
+.shot("ac_row_title.png")
 ```
 
 `row_title` only sets the *default* alignment; an explicit `col_spec` `align`,
@@ -169,6 +189,11 @@ doc <- rtf_document() |>
   )
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ac_titles_pages.rtf")
+.shot("ac_titles_pages.png")
+```
+
 ### Common (one block for every page)
 
 If you pass a **length-1** list, that single block is applied to every page --
@@ -178,6 +203,11 @@ handy for a footnote that repeats on all pages:
 doc <- rtf_document() |>
   rtf_tables(list(df1, df2),
              footnotes = list(c("Confidential", "Source: ADSL")))   # on both pages
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ac_titles_common.rtf")
+.shot("ac_titles_common.png")
 ```
 
 ### Styling

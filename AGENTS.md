@@ -11,7 +11,7 @@ authoritative docs are linked below.
 | Architecture & internals (the big picture, source-file map) | `vignettes/articles/architecture.Rmd` |
 | Adding a new table-object source (gt / rtables / …) | `vignettes/articles/extending-adapters.Rmd` |
 | Contribution workflow, code style, **branching, versioning & releases** | `CONTRIBUTING.md` |
-| In-depth design specs (English, with `-ja` toggle) | `vignettes/articles/internal-design.Rmd`, `external-api.Rmd` |
+| In-depth design specs (English, with `-ja` toggle) | `vignettes/articles/internal-design.Rmd`, `architecture.Rmd` |
 
 There is no longer a separate `specs/` folder — those documents above are
 the single source of truth.  If a doc and the code disagree, fix whichever

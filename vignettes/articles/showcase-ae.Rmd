@@ -5,12 +5,18 @@ title: "Same report, every framework: Adverse events (AE)"
 ```{r, include = FALSE, purl = FALSE}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")
@@ -19,11 +25,9 @@ knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
                       message = FALSE, warning = FALSE, eval = FALSE)
 
-# Show a screenshot of the rendered RTF if it has been captured.  The PNGs sit
-# next to the .rtf files in inst/rtf-examples/showcase/; we copy the one we need
-# into the article's own figures/ folder (so pkgdown serves it) and include it.
-# If the screenshot does not exist yet, a small placeholder is shown instead so
-# the article still builds.
+# The picture of each framework's RTF: inst/rtf-examples/showcase/, made from
+# the RTF by data-raw/showcase_ae.R; copied into the article's own figures/
+# folder (so pkgdown serves it) and included.
 .snapshot <- function(file, alt = "rendered RTF") {
   src <- file.path("..", "..", "inst", "rtf-examples", "showcase", file)
   if (file.exists(src)) {

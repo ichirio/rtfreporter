@@ -16,9 +16,10 @@
 # Requires every framework the article uses (gtsummary, cards, rtables, tern,
 # tfrmt, Tplyr, ...) to be installed.
 #
-# PNG snapshots are still captured MANUALLY (open each .rtf in Word) and saved
-# next to the .rtf as dm_<framework>.png; see showcase-dm.Rmd / the
-# data-raw/showcase_placeholders.R note.
+# Each RTF's picture, dm_<framework>.png beside it, is made from the RTF
+# here: its first page through LibreOffice, cropped as every picture of the
+# site is (data-raw/rtf_png.R), so the showcase pictures look like the other
+# articles' and cannot drift from the RTF.
 #
 # Run with:  Rscript data-raw/showcase_dm.R
 # ---------------------------------------------------------------------------
@@ -39,5 +40,9 @@ on.exit(setwd(old), add = TRUE)
 source(code, local = new.env())          # data + furniture + framework chunks
 setwd(old)
 
-for (f in sort(list.files(outdir, "^dm_.*\\.rtf$")))
-  cat(sprintf("  wrote %s (%d bytes)\n", f, file.size(file.path(outdir, f))))
+source(file.path("data-raw", "rtf_png.R"))   # soffice, rtf_to_png()
+for (f in sort(list.files(outdir, "^dm_.*\\.rtf$"))) {
+  png <- file.path(outdir, sub("[.]rtf$", ".png", f))
+  rtf_to_png(file.path(outdir, f), png)
+  cat(sprintf("  wrote %s (%d bytes) and its picture\n", f, file.size(file.path(outdir, f))))
+}

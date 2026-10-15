@@ -5,12 +5,18 @@ title: "From Pharmaverse Example tables to RTF reports"
 ```{r, include = FALSE}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")
@@ -445,63 +451,11 @@ rtf_document() |>
 .snapshot("pharmaverse-adverse-events-tfrmt.png")
 ```
 
-## Assembling a deliverable -- with a Table of Contents
+## Assembling a deliverable
 
-A real submission bundles many TLGs into one file.  Render each table to its
-own `.rtf` (the recipes above leave the paths in `out_dm_gts` and
-`out_ae_tern`), then concatenate them with
-[`assemble_rtf()`](../reference/assemble_rtf.html).  Passing `toc =` a table
-(one row per file: its `label`, and a `heading` above it) adds a clickable
-**Table of Contents** at the front, and `toc_page_numbering = "decimal"` numbers its
-pages.
-
-Each table keeps its own baked-in `Page X of Y` footer: the recipes use the
-static `{PAGE}` / `{TOTAL_PAGES}` tokens (resolved to real numbers at render
-time, so every viewer shows them) rather than the dynamic `{AUTO_PAGE}` /
-`{AUTO_TOTAL_PAGES}` fields.
-
-<details><summary>Show the code (assemble + Table of Contents)</summary>
-```{r assemble, results = "hide"}
-library(rtfreporter)
-bundle <- tempfile(fileext = ".rtf")
-assemble_rtf(
-  c(out_dm_gts, out_ae_tern), bundle, overwrite = TRUE,
-  toc = data.frame(
-    file    = c(out_dm_gts, out_ae_tern),
-    heading = c("DEMOGRAPHIC DATA", "SAFETY DATA"),
-    label   = c("Table 14.1.1b  Demographic and Baseline Characteristics (gtsummary)",
-                "Table 14.3.1a  Adverse Events by SOC and Preferred Term (tern)"),
-    level   = 2),
-  toc_title = "Table of Contents",
-  toc_page_numbering = "decimal")
-```
-</details>
-
-The generated Table of Contents:
-
-```{r assemble-toc-snap, echo = FALSE}
-.snapshot("pharmaverse-assembled-toc.png")
-```
-
-and a body page from the assembled deliverable (note the per-table `Page X of
-Y` footer):
-
-```{r assemble-snap, echo = FALSE}
-.snapshot("pharmaverse-assembled.png")
-```
-
-For a whole folder of `.rtf` files there is a one-call shortcut that reads each
-file's header, builds the Table of Contents and assembles the deliverable --
-optionally saving that table of contents (an `.xlsx` / `.csv` you can tweak
-and assemble from again):
-
-```r
-assemble_folder("path/to/rtf", "deliverable.rtf", spec_file = "spec.xlsx")
-# ... edit spec.xlsx, then
-assemble_rtf(toc = "spec.xlsx", output_file = "deliverable.rtf", overwrite = TRUE)
-```
-
-See [`assemble_folder()`](../reference/assemble_folder.html).
+The tables above, each in its own `.rtf`, become one deliverable -- a cover
+page, a clickable table of contents and a bookmark per table -- with
+`assemble_rtf()`: see [Assembling reports into one document](assembling.html).
 
 # Using rtfreporter
 

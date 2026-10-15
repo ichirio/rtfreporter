@@ -1,8 +1,8 @@
 ---
-title: "gt, gtsummary & rtables -> rtfreporter: building RTF tables"
+title: "From gt and gtsummary"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{gt, gtsummary & rtables -> rtfreporter: building RTF tables}
+  %\VignetteIndexEntry{From gt and gtsummary}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -10,12 +10,18 @@ vignette: >
 ```{r, include = FALSE}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")
@@ -27,6 +33,31 @@ knitr::opts_chunk$set(
 )
 gt_ok <- requireNamespace("gt", quietly = TRUE)
 knitr::opts_chunk$set(eval = gt_ok)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, eval = TRUE, fold = FALSE}
@@ -86,6 +117,11 @@ length(pages)                      # one page here
 class(pages[[1]])
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "gt_basic.rtf")
+.shot("gt_basic.png")
+```
+
 Hand the pages straight to [rtf_tables()].  The page-level title and
 source notes travel with each page (as `rtf_titles` / `rtf_footnotes`
 attributes) and are picked up automatically -- no `read_gt` flag
@@ -132,51 +168,16 @@ generate_rtfreport(doc, out, overwrite = TRUE)
 file.exists(out)
 ```
 
+```{r, echo = FALSE, fold = FALSE, eval = gt_ok && requireNamespace("gtsummary", quietly = TRUE)}
+.keep(doc, "gt_summary.rtf")
+.shot("gt_summary.png")
+```
+
 gtsummary applies row indentation and bold group-header rows through
 HTML/CSS styling that RTF cannot reproduce; those visual details are
 dropped (see *Limitations* below).  Everything structural -- column
 labels, spanning headers, the stub / group rows, footnote texts and
 marks -- comes through.
-
-## rtables & tern
-
-`as_rtftables()` also accepts any **rtables** `VTableTree` -- including the
-tables produced by **tern** analysis functions, which are rtables objects.
-They are read through `formatters::matrix_form()`, so nested column splits
-become spanning headers, the row-label stub keeps its indentation, and the
-titles / footers / referential footnotes flow through.  In-cell footnote
-marks `{N}` are rewritten to `^{N}`.
-
-```{r, eval = requireNamespace("rtables", quietly = TRUE) && requireNamespace("formatters", quietly = TRUE)}
-library(rtables)
-
-lyt <- basic_table(title = "Table 2", main_footer = "Source: ADSL") |>
-  split_cols_by("ARM") |>
-  split_rows_by("RACE") |>
-  analyze("AGE", afun = function(x) {
-    in_rows("Mean (SD)" = rcell(c(mean(x), sd(x)), format = "xx.x (xx.x)"))
-  })
-
-set.seed(1)
-adsl <- data.frame(
-  ARM  = rep(c("Placebo", "Active"), each = 30),
-  RACE = rep(c("WHITE", "BLACK", "ASIAN"), 20),
-  AGE  = rnorm(60, 45, 8)
-)
-tern_like <- build_table(lyt, adsl)
-
-doc <- rtf_document() |>
-  rtf_section(page = 1, header = NULL, footer = NULL) |>
-  rtf_tables(as_rtftables(tern_like))
-
-out <- tempfile(fileext = ".rtf")
-generate_rtfreport(doc, out, overwrite = TRUE)
-file.exists(out)
-```
-
-The rtables `read` tokens are `"col_header"`, `"alignment"`, `"spanning"`,
-`"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`; `read = TRUE`
-(default) reads them all.
 
 ## Splitting a long table across pages
 
@@ -292,6 +293,7 @@ doc <- rtf_document() |>
   rtf_tables(as_rtftables(ae_gt))
 ```
 
+
 `doc$contents[[1L]]` now has:
 
 ```{r}
@@ -387,7 +389,8 @@ reads metadata, and that keeps `rtf_tables()` free of any gt knowledge.
 
 ## Where next
 
-- [Importing tables](importing-tables.html) --- the same for rtables, flextable and huxtable
+- [From rtables and tern](from-rtables.html) --- the same for an rtables or tern table
+- [Importing tables](importing-tables.html) --- every source `as_rtftables()` reads, flextable and huxtable included
 - [The pharmaverse catalog](tlg-catalog.html) --- the same tables built five different ways
 
 The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnable help-page examples: demographics, adverse events, PK and laboratory, each data-in to RTF-out.

@@ -25,7 +25,7 @@ included.**
   pagination, listings and figures.
 - **One deliverable**: outputs assembled with a cover page, a clickable table
   of contents and PDF bookmarks
-  ([how](https://ichirio.github.io/rtfreporter/articles/output.html)).
+  ([how](https://ichirio.github.io/rtfreporter/articles/assembling.html)).
 - **Small, on purpose**: one clinical layout, base R only.
 
 ## Installation
@@ -296,7 +296,7 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 - **Assembling a deliverable** — [headers, footers and tokens](https://ichirio.github.io/rtfreporter/articles/headers-footers.html),
   [borders and rules](https://ichirio.github.io/rtfreporter/articles/borders.html), and
   [joining files with a table of contents](https://ichirio.github.io/rtfreporter/articles/output.html)
-- **External API spec** — [the public API surface](https://ichirio.github.io/rtfreporter/articles/external-api.html)
+- **Architecture & internals** — [the object model, the public classes and the rendering pipeline](https://ichirio.github.io/rtfreporter/articles/architecture.html)
 
 ## Status
 
