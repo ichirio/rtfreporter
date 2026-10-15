@@ -1,5 +1,16 @@
 # rtfreporter (development version)
 
+- **The plan verbs, by how often a table uses them** (#648).  *The plan
+  verbs*' At a glance is three groups: the verbs of every table, to learn
+  first (`table_plan()`, `plan_cells()`, `plan_digits()`, `plan_labels()` /
+  `plan_levels()`, `plan_col_header()`, and the study's house style written
+  once), what some tables add (`plan_total()`, `plan_compare()`,
+  `plan_sort()`, `plan_filter()` ...), and what is there when a table needs
+  it (`plan_hide()`, `plan_cell_style()`, `plan_paginate_cols()` ...).
+  Code of three lines or fewer is no longer folded under *Show code* on any
+  page.  *gt, gtsummary & rtables* is two articles, *From gt and gtsummary*
+  and *From rtables and tern*; the old address leads to the first.
+
 - **Get started and Tables from an ARD, two roles** (#646).  *Get started*
   is the shortest way through the three steps (the code of each, one
   finished table, then the other tables as pictures linking to their
