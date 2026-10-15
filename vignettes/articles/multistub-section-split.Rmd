@@ -5,12 +5,18 @@ title: "A tfrmt table with several stub columns: one for sections, the rest as a
 ```{r, include = FALSE}
 # A chunk's code sits under "Show code": open when it is what the page is
 # about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain.
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
 # Its results stay outside, always shown.
 .fold_src <- knitr::knit_hooks$get("source")
 knitr::knit_hooks$set(source = function(x, options) {
   f <- if (is.null(options$fold)) "closed" else options$fold
-  if (isFALSE(f)) return(.fold_src(x, options))
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
   paste0("\n\n<details", if (identical(f, "open")) " open", ">",
          "<summary>Show code</summary>\n\n",
          .fold_src(x, options), "\n\n</details>\n\n")

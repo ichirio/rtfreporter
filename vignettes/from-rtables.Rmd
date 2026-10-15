@@ -1,0 +1,104 @@
+---
+title: "From rtables and tern"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{From rtables and tern}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>"
+)
+rt_ok <- requireNamespace("rtables", quietly = TRUE) &&
+  requireNamespace("formatters", quietly = TRUE)
+knitr::opts_chunk$set(eval = rt_ok)
+```
+
+```{r setup, eval = TRUE, fold = FALSE}
+library(rtfreporter)
+```
+
+> **The second path.** This article is about bringing a table you already
+> have.  When the statistics are in a cards / cardx ARD, the recommended route
+> is a table plan -- see [Get started](rtfreporter.html) and
+> [Tables from an ARD](tables-from-ard.html).
+
+An [rtables](https://insightsengineering.github.io/rtables/) table --
+including the tables [tern](https://insightsengineering.github.io/tern/)'s
+analysis functions build, which are rtables objects -- goes to RTF through
+`as_rtftables()`, as it is.
+
+## From an rtables table to RTF
+
+`as_rtftables()` also accepts any **rtables** `VTableTree` -- including the
+tables produced by **tern** analysis functions, which are rtables objects.
+They are read through `formatters::matrix_form()`, so nested column splits
+become spanning headers, the row-label stub keeps its indentation, and the
+titles / footers / referential footnotes flow through.  In-cell footnote
+marks `{N}` are rewritten to `^{N}`.
+
+```{r rtables}
+library(rtables)
+
+lyt <- basic_table(title = "Table 2", main_footer = "Source: ADSL") |>
+  split_cols_by("ARM") |>
+  split_rows_by("RACE") |>
+  analyze("AGE", afun = function(x) {
+    in_rows("Mean (SD)" = rcell(c(mean(x), sd(x)), format = "xx.x (xx.x)"))
+  })
+
+set.seed(1)
+adsl <- data.frame(
+  ARM  = rep(c("Placebo", "Active"), each = 30),
+  RACE = rep(c("WHITE", "BLACK", "ASIAN"), 20),
+  AGE  = rnorm(60, 45, 8)
+)
+tern_like <- build_table(lyt, adsl)
+
+doc <- rtf_document() |>
+  rtf_section(page = 1, header = NULL, footer = NULL) |>
+  rtf_tables(as_rtftables(tern_like))
+
+out <- tempfile(fileext = ".rtf")
+generate_rtfreport(doc, out, overwrite = TRUE)
+file.exists(out)
+```
+
+The rtables `read` tokens are `"col_header"`, `"alignment"`, `"spanning"`,
+`"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`; `read = TRUE`
+(default) reads them all.
+
+## Splitting a long table across pages
+
+`as_rtftables()` pages the table: `split` and `max_rows` say how, as for any
+source -- see [Paginating with as_rtftables()](pagination.html).
+
+<!-- where-next -->
+
+## Where next
+
+- [From gt and gtsummary](from-gt.html) --- the same for a gt or gtsummary table
+- [Importing tables](importing-tables.html) --- every source `as_rtftables()` reads
+- [The pharmaverse catalog](tlg-catalog.html) --- tern tables and others, to RTF

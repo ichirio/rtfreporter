@@ -4,6 +4,8 @@ url: https://ichirio.github.io/rtfreporter/
 # article; keep the old single-page URL working.
 redirects:
   - ["articles/showcase.html", "articles/showcase-dm.html"]
+  # gt and rtables were one article; now one each
+  - ["articles/gt-integration.html", "articles/from-gt.html"]
   # Articles removed in the ARD-first refresh (#581): the pipe-API guide was
   # folded into Get started and the document articles; the two Quarto
   # examples duplicated the Demographics showcase and the feature tour.
@@ -155,8 +157,10 @@ navbar:
         - text: "Bring your own table"
         - text: "Importing tables with as_rtftables()"
           href: articles/importing-tables.html
-        - text: "gt, gtsummary & rtables"
-          href: articles/gt-integration.html
+        - text: "From gt and gtsummary"
+          href: articles/from-gt.html
+        - text: "From rtables and tern"
+          href: articles/from-rtables.html
         - text: "Tables from data frames: a feature tour"
           href: articles/rtfreporter-quickstart.html
         - text: "Paginating with as_rtftables()"
@@ -680,7 +684,8 @@ articles:
     navbar: ~
     contents:
       - articles/importing-tables
-      - gt-integration
+      - from-gt
+      - from-rtables
       - rtfreporter-quickstart
       - articles/pagination
       - articles/multistub-section-split
