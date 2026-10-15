@@ -33,13 +33,17 @@ options(width = 100)
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -277,6 +281,11 @@ pages <- as_rtftables(body)
 pages[[1]]
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "ls_composed.rtf")
+.shot("ls_composed.png")
+```
+
 The **header, the relative widths and the left alignment all came from the
 spec.** None of the three had to be written out: no vector of header strings
 with an empty entry for every gutter, no `col_rel_width = c(15, 1, 22, 1, ...)`
@@ -304,6 +313,11 @@ pages <- as_rtftables(adsl, listing = spec, max_rows = 8)
 length(pages)
 vapply(pages, function(p) nrow(p$data), integer(1))
 pages[[2]]
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "ls_paginate.rtf")
+.shot("ls_paginate.png")
 ```
 
 Nothing new implements that. `build_listing()` emitted the `.rtf_record`

@@ -33,9 +33,8 @@ This article is the English entry point for people who want to **extend or
 contribute to** rtfreporter. It gives the big picture; the two deep-dive
 documents are linked below (each opens in English with a Japanese toggle).
 
-> 🌐 **Design specifications:**
-> [Internal class design (S3)](internal-design.html) ·
-> [External API specification](external-api.html)
+> 🌐 **Design specification:**
+> [Internal class design (S3)](internal-design.html)
 
 ## Design principles
 
@@ -102,6 +101,35 @@ rtfplot               one embedded PNG/JPEG figure
 converted to an `rtfreport` object by `.pipe_doc_to_rtfreport()`, validated
 by `.rtfreport_validate()`, and handed to the renderer.
 
+## The public classes and their constructors
+
+| Class | Constructor(s) | Role |
+|-------|----------------|------|
+| `rtf_document` | `rtf_document()` | The document being assembled (pages + sections + document-wide settings). |
+| `rtftable` | `rtftable()`, `as_rtftable()`, `as_rtftables()` | One table (or one page of a paginated table). |
+| `rtfplot` | `rtfplot()` | One embedded figure. |
+| `rtf_border` | `rtf_border()`, `TRUE`, `rtf_border(top = TRUE)` (the older `rtf_border_top()` / `_bottom()` / `_box()` / `_none()` / `rtf_border_with()` are **deprecated**) | A border for a selection: its outer edges plus the rules between the rows (`inside_h`) and between the cells (`inside_v`) inside it. What it applies to is decided by where you attach it. |
+| `rtf_table_border` | `rtf_table_border()`, `rtf_border_tfl()` — **both deprecated** | The five-zone map. Superseded: attach an `rtf_border()` to `rtftable(border = )` for the whole table, or to `style_zone()` for one kind of row; the TFL preset is `border = "tfl"` or `rtf_table_style_tfl()`. |
+| `rtf_table_style` | `rtf_table_style()`, `rtf_table_style_with()`, `rtf_table_style_tfl()` | A reusable style (borders + padding + row-height defaults), captured by snapshot at construction. |
+| `rtf_col_header` | `rtf_col_header()`, `col_cell()` | Multi-row / spanning column headers. |
+
+Not every public function is a constructor. `rtf_config()` is a **configurator**,
+not a constructor: it takes an `rtf_document`, updates only the non-`NULL`
+fields, and returns a copy of the **same** `rtf_document` class (it sets no new
+class) -- just like the other pipe verbs (`rtf_tables()`, `rtf_section()`, …).
+Likewise `rtf_header()` / `rtf_footer()` return plain (unclassed) lists
+describing a section's header / footer: to change a row, make it again.
+
+> **`rtf_document` vs `rtfreport`.** `rtf_document` is the *public* object you
+> build and hold via the pipe. It is converted to a separate *internal* class,
+> `rtfreport`, only at render time (by `generate_rtfreport()`); see
+> [Internal class design (S3)](internal-design.html). You do not construct or
+> handle `rtfreport` directly.
+
+`print()` on an `rtftable` previews the laid-out cells in the console
+(`format()` gives those lines, `summary()` the metadata); `plot()` draws a
+wireframe of a table's borders or of the document.
+
 ## The rendering pipeline
 
 ```
@@ -163,8 +191,6 @@ is a small, well-contained job** — see
 ## Where to read more
 
 * Per-function reference: the [Reference](../reference/index.html) index.
-* The exact public S3 contract:
-  [External API specification](external-api.html).
 * The internal class design and helper catalogue:
   [Internal class design (S3)](internal-design.html).
 * Contribution workflow and code style:

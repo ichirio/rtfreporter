@@ -32,13 +32,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -147,6 +151,11 @@ pages <- as_rtftables(df, split = "group_force", max_rows = 6)
 show_pages(pages)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_group_force.rtf")
+.shot("pg_group_force.png")
+```
+
 ### `"group_safe"` -- never break a group across pages
 
 Pack *whole* groups onto a page; a group that would overflow is pushed to the
@@ -156,6 +165,11 @@ still force-split as a fallback.)
 ```{r group_safe}
 pages <- as_rtftables(df, split = "group_safe", max_rows = 6)
 show_pages(pages)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_group_safe.rtf")
+.shot("pg_group_safe.png")
 ```
 
 ### `"by_value"` -- one page per group, named by the group
@@ -249,6 +263,11 @@ df_key <- data.frame(
 pages <- as_rtftables(df_key, split = "group_safe", max_rows = 2,
                       group_col = "Visit", group_by = "value")
 length(pages)                                  # one page per Visit block
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_group_value.rtf")
+.shot("pg_group_value.png")
 ```
 
 ```{r group-by-filled}
@@ -430,6 +449,11 @@ pages <- as_rtftables(df, split = by_four)
 length(pages)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_custom.rtf")
+.shot("pg_custom.png")
+```
+
 Your function only implements the split; the rest of the pipeline (blank rows,
 metadata, per-page assembly, and header/width/style replication) is applied to
 its output unchanged. Write it with a `...` so it tolerates the context
@@ -572,6 +596,11 @@ pages <- Filter(function(p) nrow(p$data) > 0L, pages)   # keep non-empty pages
 length(pages)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_compose.rtf")
+.shot("pg_compose.png")
+```
+
 
 ## Blank separator rows
 
@@ -597,6 +626,11 @@ pages <- as_rtftables(df_g, split = "group_safe", max_rows = 6,
                       blank_rows = "between_groups")
 nrow(pages[[1]]$data)          # 6 data rows -- the max_rows budget
 pages[[1]]$blank_rows          # plus a blank after row 3 (A -> B), not counted
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "pg_blank.rtf")
+.shot("pg_blank.png")
 ```
 
 So page 1 shows six data rows **and** a separator -- seven rows on the page --

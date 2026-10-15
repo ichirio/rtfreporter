@@ -175,7 +175,6 @@ gh api repos/ichirio/rtfreporter --jq .permissions.push   # true = Collaborator
   レンダリングパイプライン、リポジトリ構成。まずはここから。
 * [テーブルオブジェクトアダプタの追加](extending-adapters-ja.html) — 新しいテーブル
   パッケージに対応するための 6 ステップ。
-* [外部インターフェース仕様書](external-api-ja.html) — 公開 API の詳細。
 * [内部クラス設計書（S3）](internal-design-ja.html) — 設計の詳細ドキュメント。
 * `CONTRIBUTING.md` — コントリビューションの流れ、ブランチ、バージョニング、
   リリース。*Contributor / Collaborator* の区別もここにあります。

@@ -1,7 +1,8 @@
 ## ---------------------------------------------------------------------------
-##  Pictures of the tables in the guide articles (headers and footers,
+##  Pictures of the tables in the guide pages (headers and footers,
 ##  pagination, borders, figures, listings, importing tables, page setup,
-##  sections, adding content, the plan and as_rtftables()).
+##  sections, adding content, the plan and as_rtftables(), output, the
+##  feature tour, from gt and gtsummary, from rtables and tern).
 ##
 ##  Each article keeps its code as a reader writes it; a hidden `.keep()`
 ##  after a table writes that table's RTF into the folder named by the
@@ -13,13 +14,22 @@
 ##  (cropped, as the gallery's: data-raw/rtf_png.R).
 ##
 ##  Run from the package root, after a change to an article's tables:
-##    Rscript data-raw/gen_article_shots.R
+##    Rscript data-raw/gen_article_shots.R                    # every page
+##    Rscript data-raw/gen_article_shots.R articles/figures   # some
 ## ---------------------------------------------------------------------------
 pkgload::load_all(".", quiet = TRUE)
 
-articles <- c("headers-footers", "pagination", "borders", "figures", "listings",
-              "importing-tables", "page-setup", "section-splitting",
-              "multistub-section-split", "adding-content", "plan-and-as-rtftables")
+# the pages, under vignettes/ (the articles in articles/); the plan
+# articles' pictures are data-raw/gen_plan_articles.R's
+articles <- c(file.path("articles", c(
+                "headers-footers", "pagination", "borders", "figures", "listings",
+                "importing-tables", "page-setup", "section-splitting",
+                "multistub-section-split", "adding-content", "plan-and-as-rtftables",
+                "output")),
+              "rtfreporter-quickstart", "from-gt", "from-rtables")
+# `Rscript data-raw/gen_article_shots.R articles/figures`: those pages only
+only <- commandArgs(trailingOnly = TRUE)
+if (length(only)) articles <- intersect(articles, only)
 out <- file.path(tempdir(), "article-shots")
 dir.create(out, showWarnings = FALSE)
 out <- normalizePath(out)
@@ -27,7 +37,7 @@ Sys.setenv(RTFREPORTER_ARTICLE_OUT = out)
 
 root <- getwd()
 for (a in articles) {
-  src <- normalizePath(file.path(root, "vignettes", "articles", paste0(a, ".Rmd")))
+  src <- normalizePath(file.path(root, "vignettes", paste0(a, ".Rmd")))
   if (!file.exists(src)) next
   rmarkdown::render(src, output_format = rmarkdown::md_document(),
                     output_dir = out, knit_root_dir = out, quiet = TRUE,
@@ -41,7 +51,7 @@ figs <- file.path(root, "inst", "rtf-examples", "articles")
 dir.create(figs, showWarnings = FALSE, recursive = TRUE)
 # only the pictures the articles ask for (a chunk's own fixed-name file is not one)
 want <- unlist(lapply(articles, function(a) {
-  x <- readLines(file.path(root, "vignettes", "articles", paste0(a, ".Rmd")))
+  x <- readLines(file.path(root, "vignettes", paste0(a, ".Rmd")))
   sub('^\\.keep\\([^,]+, "([^"]+)\\.rtf"\\)$', "\\1", grep('^\\.keep\\(', x, value = TRUE))
 }))
 for (w in want) {

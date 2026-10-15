@@ -32,13 +32,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -185,6 +189,11 @@ ast <- as_rtftables(data.frame(Visit = visits, Placebo = c("23.7", "19.9")))
 
 sections <- combine_sections(`ALT (U/L)` = alt, `AST (U/L)` = ast)
 names(sections)          # first page named, the rest blank (fall-through)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(sections, "ss_combine.rtf")
+.shot("ss_combine.png")
 ```
 
 ### gtsummary

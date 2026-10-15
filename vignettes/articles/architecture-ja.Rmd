@@ -34,8 +34,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 日本語トグルがあります）。
 
 > 🌐 **詳細設計書：**
-> [内部クラス設計書（S3）](internal-design-ja.html) ·
-> [外部インターフェース仕様書](external-api-ja.html)
+> [内部クラス設計書（S3）](internal-design-ja.html)
 
 ## 設計原則
 
@@ -102,6 +101,34 @@ rtfplot               1 つの埋め込み図（PNG/JPEG）
 `.pipe_doc_to_rtfreport()` で `rtfreport` オブジェクトに変換され、
 `.rtfreport_validate()` で検証され、レンダラーに渡されます。
 
+## 公開クラスとコンストラクタ
+
+| クラス | コンストラクタ | 役割 |
+|--------|----------------|------|
+| `rtf_document` | `rtf_document()` | 組み立て中の文書（ページ＋セクション＋文書全体設定）。 |
+| `rtftable` | `rtftable()`, `as_rtftable()`, `as_rtftables()` | 1 つのテーブル（または分割後の 1 ページ）。 |
+| `rtfplot` | `rtfplot()` | 埋め込み図 1 つ。 |
+| `rtf_border` | `rtf_border()`, `TRUE`, `rtf_border(top = TRUE)`（旧 `rtf_border_top()` / `_bottom()` / `_box()` / `_none()` / `rtf_border_with()` は **非推奨**） | ボーダー指定（辺ごとの線種/太さ/色）。 |
+| `rtf_table_border` | `rtf_table_border()`, `rtf_border_tfl()` — **どちらも非推奨** | 5ゾーンの割り当て表。表全体なら `rtftable(border = rtf_border(...))`、行の種類ごとなら `style_zone()`、TFL 既定は `border = "tfl"` または `rtf_table_style_tfl()` に置き換わりました。 |
+| `rtf_table_style` | `rtf_table_style()`, `rtf_table_style_with()`, `rtf_table_style_tfl()` | 再利用可能なスタイル（ボーダー＋パディング＋行高の既定値）。構築時にスナップショット取得。 |
+| `rtf_col_header` | `rtf_col_header()`, `col_cell()` | 複数行／スパニングの列ヘッダー。 |
+
+公開関数がすべてコンストラクタというわけではありません。`rtf_config()` は
+**コンストラクタではなく設定関数（configurator）**です。`rtf_document` を受け取り、
+非 `NULL` のフィールドだけ更新して、**同じ** `rtf_document` クラスのコピーを返します
+（新しいクラスは設定しません）。他のパイプ動詞（`rtf_tables()`、`rtf_section()` …）
+と同じ位置づけです。同様に `rtf_header()` / `rtf_footer()` はヘッダー／フッターを
+表す素の（クラス無し）リストを返します。行を変えるときは作り直します。
+
+> **`rtf_document` と `rtfreport`。** `rtf_document` はパイプで構築・保持する
+> *公開* オブジェクトです。レンダリング時（`generate_rtfreport()`）にのみ、別の
+> *内部* クラス `rtfreport` へ変換されます（[内部クラス設計書（S3）](internal-design-ja.html)
+> 参照）。`rtfreport` を直接構築・操作することはありません。
+
+`rtftable` の `print()` は、レイアウト済みのセルをコンソールに表示します
+（`format()` はその行、`summary()` は要約）。`plot()` は表の罫線や文書全体の
+ワイヤーフレームを描きます。
+
 ## レンダリングパイプライン
 
 ```
@@ -160,7 +187,6 @@ list(
 ## さらに読むには
 
 * 関数ごとのリファレンス：[Reference](../reference/index.html) 索引。
-* 公開 S3 の正確な契約：[外部インターフェース仕様書](external-api-ja.html)。
 * 内部クラス設計とヘルパー一覧：[内部クラス設計書（S3）](internal-design-ja.html)。
 * コントリビュートの流れとコードスタイル：
   [CONTRIBUTING.md](https://github.com/ichirio/rtfreporter/blob/main/CONTRIBUTING.md)。

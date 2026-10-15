@@ -34,6 +34,31 @@ knitr::opts_chunk$set(
 rt_ok <- requireNamespace("rtables", quietly = TRUE) &&
   requireNamespace("formatters", quietly = TRUE)
 knitr::opts_chunk$set(eval = rt_ok)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, eval = TRUE, fold = FALSE}
@@ -84,6 +109,11 @@ doc <- rtf_document() |>
 out <- tempfile(fileext = ".rtf")
 generate_rtfreport(doc, out, overwrite = TRUE)
 file.exists(out)
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "rt_basic.rtf")
+.shot("rt_basic.png")
 ```
 
 The rtables `read` tokens are `"col_header"`, `"alignment"`, `"spanning"`,

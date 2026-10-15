@@ -32,13 +32,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -233,6 +237,11 @@ doc <- rtf_document(font_table = list(list(name = "Arial"))) |>
   rtf_tables(as_rtftables(df))
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ps_font.rtf")
+.shot("ps_font.png")
+```
+
 `font_table` is written as a list for forward compatibility, but **only the
 first entry is currently used** -- any further entries are ignored, and there is
 no way to select a different font for specific cells or text. (Multiple fonts
@@ -249,6 +258,11 @@ The document font size lives in `default_format` and is expressed in
 ```{r fontsize}
 doc <- rtf_document(default_format = list(font_size_half_points = 22L)) |>  # 11pt
   rtf_tables(as_rtftables(df))
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ps_fontsize.rtf")
+.shot("ps_fontsize.png")
 ```
 
 The font size also **drives the default row height**: taller text needs taller
@@ -287,6 +301,11 @@ doc <- rtf_document() |>
     header_row_height_twips = 300L,   # column-header rows
     blank_row_height_twips  = 140L    # blank separator rows (e.g. half height)
   ))
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ps_rowheight.rtf")
+.shot("ps_rowheight.png")
 ```
 
 Cell padding (the gap between the cell border and its text) defaults to `0`
@@ -368,6 +387,11 @@ doc <- rtf_document() |>
     header = rtf_header(rows = list(c(l = "Protocol XYZ-001")), border = navy_rule),
     footer = NULL) |>
   rtf_tables(as_rtftables(df))
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(doc, "ps_colors_border.rtf")
+.shot("ps_colors_border.png")
 ```
 
 **Body (data-cell) text** -- per column via `col_spec`'s `color`, or per cell

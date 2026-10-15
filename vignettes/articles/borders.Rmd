@@ -32,13 +32,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -132,6 +136,11 @@ tbl <- rtftable(df,
                       inside_h = line))
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "bd_whole.rtf")
+.shot("bd_whole.png")
+```
+
 Add `inside_v = line` for a full grid; leave both out for a bare frame.
 
 
@@ -199,6 +208,11 @@ tbl <- rtftable(
                                inside_h = line, inside_v = line))
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "bd_grid.rtf")
+.shot("bd_grid.png")
+```
+
 Before 0.5.0 an edge on a zone was uniform -- `left`/`right` were drawn on every
 cell and `body`'s `top`/`bottom` on every row -- so `rtf_border(all = TRUE)` alone
 produced this grid. See *Before and after 0.5.0* at the end of this article for
@@ -223,6 +237,11 @@ tbl <- rtftable(
          border = rtf_border(bottom = "thick"))
   )
 )
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "bd_colspec.rtf")
+.shot("bd_colspec.png")
 ```
 
 ### A single header cell, with `col_cell(border = )`
@@ -266,6 +285,11 @@ hdr <- rtf_col_header(
   c("Item", "N", "Mean", "N", "Mean")
 )
 tbl <- rtftable(df5, col_header = hdr, border = "tfl")
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "bd_header_suppress.rtf")
+.shot("bd_header_suppress.png")
 ```
 
 The same field can **add** a rule to a single cell (e.g. a thick bottom under

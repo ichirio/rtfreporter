@@ -1,10 +1,11 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9060** (the development
+**This manual documents rtfreporter 0.8.2.9061** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
-`rtfreporter_ai_manual()`.
+`rtfreporter_ai_manual()` (the installed package's own copy).
+The released versions' manuals: [0.8.2](https://github.com/ichirio/rtfreporter/blob/v0.8.2/inst/ai/rtfreporter-ai-user-manual.md), [0.8.1](https://github.com/ichirio/rtfreporter/blob/v0.8.1/inst/ai/rtfreporter-ai-user-manual.md), [0.8.0](https://github.com/ichirio/rtfreporter/blob/v0.8.0/inst/ai/rtfreporter-ai-user-manual.md).
 
 **Docs:** <https://ichirio.github.io/rtfreporter/> ·
 **Source:** <https://github.com/ichirio/rtfreporter>

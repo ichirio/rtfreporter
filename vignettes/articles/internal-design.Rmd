@@ -27,7 +27,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 
 This document describes rtfreporter's **internal data structures** -- the S3
 objects the renderer works with -- for people extending the package. For the
-public API see [External API specification](external-api.html).
+public classes see [Architecture & internals](architecture.html).
 
 > Everything is **pure S3**: plain `list`s with a `class` attribute, no external
 > OOP framework. Public objects use copy-on-modify semantics, so the pipe API

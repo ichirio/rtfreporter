@@ -1,5 +1,23 @@
 # rtfreporter (development version)
 
+- **The guide pages show their tables** (#651).  About fifty pictures, each
+  under the example it shows -- the feature tour, pagination, importing
+  tables, page setup, borders, headers and footers, adding content, figures,
+  listings, sections, the plan verbs, From gt and gtsummary, From rtables and
+  tern -- made from the examples' own RTF by `data-raw/gen_article_shots.R`.
+  The two *Same report, every framework* articles show each framework's
+  table as written, at the size of the other pictures, instead of "Waiting
+  for snapshot" (`data-raw/showcase_dm.R` / `showcase_ae.R` make the
+  pictures; the placeholder script is gone).  *Assembling reports into one
+  document* is an article of its own (cover, table of contents, page
+  numbers, a folder, PDF bookmarks, Word and LibreOffice); *Rendering and
+  post-processing* and the Pharmaverse catalog link to it.  *Figures* writes
+  its pages with the study's running header and footer.  The Articles menu
+  names the AI manuals without a version; the manuals list the released
+  versions.  The *External API specification* is gone: its table of the
+  public classes is in *Architecture & internals*, where the old address
+  leads.
+
 - **The plan verbs, by how often a table uses them** (#648).  *The plan
   verbs*' At a glance is three groups: the verbs of every table, to learn
   first (`table_plan()`, `plan_cells()`, `plan_digits()`, `plan_labels()` /

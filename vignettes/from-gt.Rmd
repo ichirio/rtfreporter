@@ -33,6 +33,31 @@ knitr::opts_chunk$set(
 )
 gt_ok <- requireNamespace("gt", quietly = TRUE)
 knitr::opts_chunk$set(eval = gt_ok)
+# The pictures of this page's tables: committed in inst/rtf-examples/articles/
+# (made by data-raw/gen_article_shots.R, which renders the page with
+# RTFREPORTER_ARTICLE_OUT set, so .keep() writes the RTF) and copied next to
+# the article to be served.
+.here <- normalizePath(".")
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
+.shot <- function(file) {
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
+  if (!file.exists(src)) return(invisible(NULL))
+  dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
+             recursive = TRUE)
+  file.copy(src, file.path(.here, "figures", "articles", file), overwrite = TRUE)
+  knitr::include_graphics(file.path("figures", "articles", file), error = FALSE)
+}
 ```
 
 ```{r setup, eval = TRUE, fold = FALSE}
@@ -92,6 +117,11 @@ length(pages)                      # one page here
 class(pages[[1]])
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(pages, "gt_basic.rtf")
+.shot("gt_basic.png")
+```
+
 Hand the pages straight to [rtf_tables()].  The page-level title and
 source notes travel with each page (as `rtf_titles` / `rtf_footnotes`
 attributes) and are picked up automatically -- no `read_gt` flag
@@ -136,6 +166,11 @@ doc <- rtf_document() |>
 out <- tempfile(fileext = ".rtf")
 generate_rtfreport(doc, out, overwrite = TRUE)
 file.exists(out)
+```
+
+```{r, echo = FALSE, fold = FALSE, eval = gt_ok && requireNamespace("gtsummary", quietly = TRUE)}
+.keep(doc, "gt_summary.rtf")
+.shot("gt_summary.png")
 ```
 
 gtsummary applies row indentation and bold group-header rows through
@@ -257,6 +292,7 @@ doc <- rtf_document() |>
   ) |>
   rtf_tables(as_rtftables(ae_gt))
 ```
+
 
 `doc$contents[[1L]]` now has:
 

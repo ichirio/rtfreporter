@@ -35,13 +35,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -117,6 +121,11 @@ tbl <- as_rtftable(df)        # one rtftable, not a list
 class(tbl)
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(tbl, "im_tbl.rtf")
+.shot("im_tbl.png")
+```
+
 Being a single-table wrapper, `as_rtftable()` accepts a `gt_group` or a
 gtsummary `tbl_split` only when it holds exactly one table; a multi-member
 container errors and points you to `as_rtftables()`.
@@ -166,6 +175,11 @@ names(as_rtftable(df)$data)            # a data.frame keeps its own names
 library(gtsummary)
 tbl <- tbl_summary(trial[c("age", "grade")], by = NULL)
 names(as_rtftables(tbl)[[1]]$data)     # gtsummary -> "label", "stat_0"
+```
+
+```{r, echo = FALSE, fold = FALSE, eval = requireNamespace("gtsummary", quietly = TRUE)}
+.keep(tbl, "im_gtsummary.rtf")
+.shot("im_gtsummary.png")
 ```
 
 Source packages also offer their own inspectors: **gtsummary**'s
@@ -265,6 +279,11 @@ tbl <- as_rtftable(g)               # reads the labels + alignment
 tbl$col_header                       # -> "Miles/gallon", "Cylinders"
 ```
 
+```{r, echo = FALSE, fold = FALSE, eval = .has_gt}
+.keep(tbl, "im_gt.rtf")
+.shot("im_gt.png")
+```
+
 ```{r gt-meta-off, eval = .has_gt}
 # read_meta = FALSE keeps only the rendered body and ignores the labels, so no
 # col_header metadata is extracted (the body's own column names are used).
@@ -292,6 +311,11 @@ tbl$data[[2]]            # -> "75.1", "8.2"  (colformat applied)
 attr(tbl, "rtf_titles") # -> "Table 1: Demographics"  (from the caption)
 ```
 
+```{r, echo = FALSE, fold = FALSE, eval = .has_flextable}
+.keep(tbl, "im_flextable.rtf")
+.shot("im_flextable.png")
+```
+
 A **huxtable** works the same way -- its `number_format` is applied, header
 rows become the column header, and the caption becomes the title:
 
@@ -310,6 +334,11 @@ caption(hx) <- "Table 1: Demographics"
 tbl <- as_rtftable(hx)
 tbl$data[[2]]            # -> "75.1"  (number_format applied)
 attr(tbl, "rtf_titles") # -> "Table 1: Demographics"  (from the caption)
+```
+
+```{r, echo = FALSE, fold = FALSE, eval = .has_huxtable}
+.keep(tbl, "im_huxtable.rtf")
+.shot("im_huxtable.png")
 ```
 
 

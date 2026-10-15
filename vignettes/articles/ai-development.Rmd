@@ -178,8 +178,6 @@ Read these in order:
   model, the rendering pipeline and the repository layout. Start here.
 * [Adding a table-object adapter](extending-adapters.html) — the six-step
   how-to for supporting a new table package.
-* [External API specification](external-api.html) — the public surface in
-  detail.
 * [Internal class design (S3)](internal-design.html) — the deep-dive design
   document.
 * `CONTRIBUTING.md` — the contribution workflow, branching, versioning and

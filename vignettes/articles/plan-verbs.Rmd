@@ -40,6 +40,16 @@ knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir())
   file.copy(src, file.path(.here, "figures", "plan", file), overwrite = TRUE)
   knitr::include_graphics(file.path("figures", "plan", file), error = FALSE)
 }
+# .keep(): the RTF of a table for its picture, when the generator runs
+.keep <- function(x, file) {
+  out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
+  if (!nzchar(out)) return(invisible(NULL))
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
+  invisible(NULL)
+}
 ```
 
 A plan is built from small declarations. [Tables from an ARD](tables-from-ard.html)
@@ -169,6 +179,11 @@ p <- base |>
 plan_apply(p, "table")[1:7, ]
 ```
 
+```{r, echo = FALSE, fold = FALSE}
+.keep(p, "pv_cells.rtf")
+.shot("pv_cells.png")
+```
+
 `AGE` has its own entry, so it shows two rows. `TRTDURD` (treatment
 duration) uses the `continuous` one.
 
@@ -191,6 +206,11 @@ p <- base |>
               categorical = c(p = 1)) |>                    # the house rule
   plan_digits(TRTDURD = c(mean = 0, sd = 1))               # one variable
 plan_apply(p, "table")[1:6, ]
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(p, "pv_digits.rtf")
+.shot("pv_digits.png")
 ```
 
 A token that sets its own format (`{mean:.2f}`) keeps it.
@@ -219,6 +239,11 @@ p <- base |>
   plan_labels(c(SEX = "Sex", RACE = "Race")) |>
   plan_levels(SEX = c("M", "F"))
 plan_apply(p, "table")[, 1:3]
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(p, "pv_labels.rtf")
+.shot("pv_labels.png")
 ```
 
 When no `plan_levels()` gives an order for the `group` column, the order of
@@ -340,6 +365,11 @@ p_hdr <- base |>
     c("",               "{col}"),
     c("Characteristic", "(N={n})")))
 p_hdr
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(p_hdr, "pv_header.rtf")
+.shot("pv_header.png")
 ```
 
 Printing the plan lists every token and the value it will take, so you can

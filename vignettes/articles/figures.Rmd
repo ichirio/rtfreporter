@@ -34,13 +34,17 @@ set.seed(20260909)
 .keep <- function(x, file) {
   out <- Sys.getenv("RTFREPORTER_ARTICLE_OUT")
   if (!nzchar(out)) return(invisible(NULL))
-  doc <- if (inherits(x, "rtf_document")) x else
-    rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
+  doc <- if (inherits(x, "rtf_document")) x
+         else if (inherits(x, "rtfplot")) rtfreporter::rtf_figures(rtfreporter::rtf_document(), x)
+         else rtfreporter::rtf_tables(rtfreporter::rtf_document(), x)
   rtfreporter::generate_rtfreport(doc, file.path(out, file), overwrite = TRUE)
   invisible(NULL)
 }
 .shot <- function(file) {
-  src <- file.path(.here, "..", "..", "inst", "rtf-examples", "articles", file)
+  # the package's folder: the one above this page with a DESCRIPTION
+  root <- .here
+  while (!file.exists(file.path(root, "DESCRIPTION")) && dirname(root) != root) root <- dirname(root)
+  src <- file.path(root, "inst", "rtf-examples", "articles", file)
   if (!file.exists(src)) return(invisible(NULL))
   dir.create(file.path(.here, "figures", "articles"), showWarnings = FALSE,
              recursive = TRUE)
@@ -51,6 +55,35 @@ set.seed(20260909)
 
 ```{r setup, fold = FALSE}
 library(rtfreporter)
+```
+
+The figures below are written with the study's running header and footer,
+the same as the tables' in the [Gallery](gallery.html): the study and the
+page number, then the output's number, title and population at the top; its
+footnotes, then the program's full path and the run date and time at the
+bottom.
+
+```{r study-doc}
+# The study's running header and footer, written once, as a study's
+# report_setup.R would.  Without a label, only the study's lines: a document
+# of several outputs gives each page its own titles.
+study_doc <- function(label = NULL, title = NULL, population = NULL, program,
+                      footnotes = NULL, orientation = "landscape") {
+  rtf_document(
+    page    = rtf_page(orientation = orientation),
+    # {PROGRAM_FULL} prints this path absolute, in the system's own form
+    program = file.path("/studies/XYZ-001/programs/tfl", program),
+    tokens  = list(STUDY = "XYZ-001")) |>
+    rtf_section(
+      header = rtf_header(c(
+        list(c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+             c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}")),
+        if (!is.null(label)) list(c(c = ""), c(c = label), c(c = title),
+                                  c(c = paste0("<", population, ">"))))),
+      footer = rtf_footer(c(
+        lapply(footnotes, function(x) c(l = x)),
+        list(c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))))
+}
 ```
 
 A figure is a content page like any other: one figure per page, its own titles
@@ -81,12 +114,10 @@ p <- ggplot(dat, aes(week, mean, colour = arm)) +
   theme_minimal(base_size = 11) +
   theme(legend.position = "bottom")
 
-doc <- rtf_document() |>
-  rtf_figures(list(p),
-              titles = list(c("Figure 14.2.1",
-                              "Mean Change from Baseline by Week",
-                              "Full Analysis Set")),
-              footnotes = list("Error bars omitted for clarity."))
+doc <- study_doc("Figure 14.2.1", "Mean Change from Baseline by Week",
+                 "Full Analysis Set", program = "f_change.R",
+                 footnotes = "Error bars omitted for clarity.") |>
+  rtf_figures(list(p))
 
 length(doc$contents)      # one figure page
 ```
@@ -124,6 +155,13 @@ fig <- rtfplot(function() {
   boxplot(mpg ~ cyl, data = mtcars, xlab = "Cylinders", ylab = "MPG")
 })
 fig
+```
+
+```{r, echo = FALSE, fold = FALSE}
+.keep(study_doc("Figure 14.2.3", "Miles per Gallon by Number of Cylinders",
+                "All Vehicles", program = "f_mpg.R") |> rtf_figures(fig),
+      "fg_function.rtf")
+.shot("fg_function.png")
 ```
 
 Anything a package can draw, it can draw inside that function.
@@ -242,10 +280,7 @@ machines is worse than one that is 300 dpi.
 They share the page model, so a document is a sequence of content pages:
 
 ```{r mixed}
-report <- rtf_document() |>
-  rtf_section(page = 1,
-    header = rtf_header(rows = list(c(l = "Protocol XYZ-123",
-                                      r = "Page {AUTO_PAGE}")))) |>
+report <- study_doc(program = "t_f_vehicles.R") |>
   rtf_tables(list(head(mtcars[, 1:4], 8)),
              titles = list(c("Table 14.1.1", "Vehicle characteristics"))) |>
   rtf_figures(list(p, function() hist(mtcars$mpg, main = NULL, xlab = "MPG")),
@@ -258,7 +293,13 @@ generate_rtfreport(report, out, overwrite = TRUE)
 c(pages = length(report$contents), bytes = unname(file.info(out)$size))
 ```
 
-Three pages -- one table, two figures -- under one running header. The images
+```{r, echo = FALSE, fold = FALSE}
+.keep(report, "fg_mixed.rtf")
+.shot("fg_mixed.png")
+```
+
+Three pages -- one table, two figures -- under the study's running header
+and footer, each page with its own titles. The images
 are embedded in the `.rtf` itself, so there is no folder of files to keep
 beside it, which is much of the point of the format for a deliverable that
 gets emailed.
