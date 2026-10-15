@@ -3397,7 +3397,7 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #'
 #' @section How a `cells` entry is chosen (and why it survives a cards upgrade):
 #' `context` is a \pkg{cards} implementation detail and it moves.
-#' `ard_continuous()` stamps `"continuous"`, but its 0.9 rename
+#' `ard_continuous()` stamps `"continuous"`, but its rename (cards 0.7.0)
 #' `ard_summary()` stamps `"summary"`; `ard_categorical()` stamps
 #' `"categorical"`, but `ard_tabulate()` stamps `"tabulate"`.  Keying `cells`
 #' on the context alone would tie your script to one \pkg{cards} generation and
