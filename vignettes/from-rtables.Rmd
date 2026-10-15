@@ -70,8 +70,8 @@ library(rtfreporter)
 > is a table plan -- see [Get started](rtfreporter.html) and
 > [Tables from an ARD](tables-from-ard.html).
 
-An [rtables](https://insightsengineering.github.io/rtables/) table --
-including the tables [tern](https://insightsengineering.github.io/tern/)'s
+An [rtables](https://CRAN.R-project.org/package=rtables) table --
+including the tables [tern](https://CRAN.R-project.org/package=tern)'s
 analysis functions build, which are rtables objects -- goes to RTF through
 `as_rtftables()`, as it is.
 

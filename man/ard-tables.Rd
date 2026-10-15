@@ -71,7 +71,7 @@ that is how \code{Min} and \code{Max} become a single \verb{Min, Max} line.
 \section{How a \code{cells} entry is chosen (and why it survives a cards upgrade)}{
 
 \code{context} is a \pkg{cards} implementation detail and it moves.
-\code{ard_continuous()} stamps \code{"continuous"}, but its 0.9 rename
+\code{ard_continuous()} stamps \code{"continuous"}, but its rename (cards 0.7.0)
 \code{ard_summary()} stamps \code{"summary"}; \code{ard_categorical()} stamps
 \code{"categorical"}, but \code{ard_tabulate()} stamps \code{"tabulate"}.  Keying \code{cells}
 on the context alone would tie your script to one \pkg{cards} generation and

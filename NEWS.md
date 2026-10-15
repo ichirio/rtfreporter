@@ -1,5 +1,11 @@
 # rtfreporter (development version)
 
+- **CRAN format** (#658).  The rtables and tern links of the *From rtables*
+  vignette are their CRAN pages (their pkgdown sites answer 404 now); the
+  WORDLIST has the nine words the spelling check found in the help and
+  the shipped vignettes; `?ard-tables` gives cards' rename of
+  `ard_continuous()` its version, 0.7.0.
+
 - **Docs: the examples write rtfreporter's own calls** (#656).  The
   README, the Gallery, Figures and Tables from an ARD no longer use a
   helper (`study_doc()`) for the study's running header and footer: each
