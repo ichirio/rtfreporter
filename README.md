@@ -67,35 +67,6 @@ The page they write:
 
 The code:
 
-<details><summary>The study's running header and footer, used by the examples below</summary>
-
-``` r
-# written once, as a study's report_setup.R would: the study and the page,
-# then the output's number, title and population; its footnotes, then the
-# program's full path and the run date and time
-study_doc <- function(label, title, population, program, footnotes = NULL,
-                      orientation = "landscape") {
-  rtf_document(
-    page    = rtf_page(orientation = orientation),
-    # {PROGRAM_FULL} prints this path absolute, in the system's own form
-    program = file.path("/studies/XYZ-001/programs/tfl", program),
-    tokens  = list(STUDY = "XYZ-001")) |>
-    rtf_section(
-      header = rtf_header(list(
-        c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
-        c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
-        c(c = ""),
-        c(c = label),
-        c(c = title),
-        c(c = paste0("<", population, ">")))),
-      footer = rtf_footer(c(
-        lapply(footnotes, function(x) c(l = x)),
-        list(c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))))
-}
-```
-
-</details>
-
 ``` r
 library(rtfreporter)
 library(cards)
@@ -120,10 +91,21 @@ plan <- ard |>
   plan_col_header(values = list(n = TRUE), rtf_col_header(c("", "{col}\n(N={n})")))
 
 # 2. the report: the document around the table
-report <- study_doc("Table 14.1.1", "Demographic Characteristics",
-                    "Safety Analysis Set", program = "t_dm.R",
-                    footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
-                                  "SD = standard deviation.")) |>
+report <- rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_dm.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.1.1"),
+      c(c = "Demographic Characteristics"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "N = number of subjects in the analysis set; percentages are based on N."),
+      c(l = "SD = standard deviation."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(plan)
 
 # 3. the RTF file
@@ -153,10 +135,21 @@ lyt <- basic_table(show_colcounts = TRUE) |>
                .formats = c(mean_sd = "xx.x (xx.xx)", median = "xx.x", range = "xx, xx",
                             count_fraction = "xx (xx.x%)"))
 
-study_doc("Table 14.1.1", "Demographic Characteristics",
-          "Safety Analysis Set", program = "t_dm_tern.R",
-          footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
-                        "SD = standard deviation.")) |>
+rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_dm_tern.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.1.1"),
+      c(c = "Demographic Characteristics"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "N = number of subjects in the analysis set; percentages are based on N."),
+      c(l = "SD = standard deviation."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(as_rtftables(build_table(lyt, df = adsl))) |>
   generate_rtfreport("t_dm_tern.rtf")
 ```
@@ -182,10 +175,21 @@ tbl <- tbl_summary(adsl, by = ARM, include = c(AGE, SEX),
   modify_header(label ~ "", all_stat_cols() ~ "{level}\n(N={n})") |>
   remove_footnote_header(columns = all_stat_cols())
 
-study_doc("Table 14.1.1", "Demographic Characteristics",
-          "Safety Analysis Set", program = "t_dm_gtsummary.R",
-          footnotes = c("N = number of subjects in the analysis set; percentages are based on N.",
-                        "SD = standard deviation.")) |>
+rtf_document(
+  program = "/studies/XYZ-001/programs/tfl/t_dm_gtsummary.R",
+  tokens  = list(STUDY = "XYZ-001")) |>
+  rtf_section(
+    header = rtf_header(list(
+      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
+      c(c = ""),
+      c(c = "Table 14.1.1"),
+      c(c = "Demographic Characteristics"),
+      c(c = "<Safety Analysis Set>"))),
+    footer = rtf_footer(list(
+      c(l = "N = number of subjects in the analysis set; percentages are based on N."),
+      c(l = "SD = standard deviation."),
+      c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
   rtf_tables(as_rtftables(tbl)) |>
   generate_rtfreport("t_dm_gtsummary.rtf")
 ```
