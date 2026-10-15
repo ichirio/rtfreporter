@@ -144,8 +144,6 @@ navbar:
         # listings, figures, the document around them, and the AI briefings.
         # ── 1. Tables from an ARD (recommended) ─────────────────────────
         - text: "Tables from an ARD (recommended)"
-        - text: "Get started: from an ARD to RTF"
-          href: articles/rtfreporter.html
         - text: "Tables from an ARD, step by step"
           href: articles/tables-from-ard.html
         - text: "The plan verbs"

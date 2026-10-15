@@ -42,7 +42,21 @@ remotes::install_github("ichirio/rtfreporter")          # the development versio
 The ARD is the input, made with
 [cards](https://pharmaverse.github.io/cards/) /
 [cardx](https://insightsengineering.github.io/cardx/) before rtfreporter.
-From there it is three steps: **(ARD) ⇒ table ⇒ report ⇒ RTF file**.
+From there it is three steps:
+
+<!-- flow: the same in README.md, vignettes/rtfreporter.Rmd and vignettes/articles/tables-from-ard.Rmd (tests/testthat/test-docs-flow.R) -->
+<div class="rtf-flow">
+<table>
+<tr>
+<td><strong>The ARD</strong><br>made with cards / cardx</td>
+<td><strong>1. The table</strong><br><code>ard |&gt;</code><br><code>normalize_ard() |&gt;</code><br><code>table_plan() |&gt;</code><br><code>plan_*()</code></td>
+<td><strong>2. The report</strong><br><code>rtf_document() |&gt;</code><br><code>rtf_section() |&gt;</code><br><code>rtf_tables(plan)</code></td>
+<td><strong>3. The RTF file</strong><br><code>generate_rtfreport()</code></td>
+</tr>
+</table>
+</div>
+<!-- /flow -->
+
 The page they write:
 
 <p align="center">
