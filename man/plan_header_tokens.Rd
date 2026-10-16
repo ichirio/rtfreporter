@@ -4,10 +4,10 @@
 \alias{plan_header_tokens}
 \title{The tokens a plan's column header may carry, with their values}
 \usage{
-plan_header_tokens(plan)
+plan_header_tokens(.plan)
 }
 \arguments{
-\item{plan}{A \code{\link[=table_plan]{table_plan()}}.}
+\item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
 }
 \value{
 A data frame: \code{token}, \code{kind}, \code{values} (a list column: the

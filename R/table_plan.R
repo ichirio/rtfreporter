@@ -818,7 +818,9 @@ print.table_plan <- function(x, ...) {
 #' the ones [widen_ard()] and [as_rtftables()] already take, so the
 #' layering is the only new idea.
 #'
-#' @param plan An [table_plan()].
+#' @param .plan A [table_plan()].  The pipe passes it by position; the dot
+#'   keeps a name in `...` such as `p` (cards' percentage) from being taken
+#'   for it (an argument before `...` matches by its first letters).
 #' @param ... For `plan_cells()`, exactly what `widen_ard(cells = )`
 #'   takes: one bare entry, or entries named by variable, `context`,
 #'   kind (`continuous` / `categorical`), a stat group of
@@ -1332,10 +1334,6 @@ print.table_plan <- function(x, ...) {
 #' @param .variables,.others For `plan_stat_groups()`: the variables whose
 #'   records are split into the groups (`NULL`: all), and the group the
 #'   other variables' records go to whole (`NULL`: none).
-#' @param .plan For `plan_compare()`: the plan, as `plan` is for the
-#'   others --- named so that a column called `p` is not taken for it
-#'   (an argument before `...` matches by its first letters).  The pipe
-#'   passes it by position.
 #' @param any,parents For `plan_filter()`: a row stays when **any** column's
 #'   record meets the conditions (`TRUE`, default: "PTs with 5% or more in
 #'   any arm") or when **every** column's does (`FALSE`); a record whose
@@ -1540,22 +1538,22 @@ NULL
 # the rest.  The roles are said once, on table_plan(); these are not roles.
 #' @rdname plan_verbs
 #' @export
-plan_levels <- function(plan, ..., .drop_empty = NULL) {
+plan_levels <- function(.plan, ..., .drop_empty = NULL) {
   v <- if (...length()) .plan_map(list(...), "plan_levels")
   if (!is.null(.drop_empty) &&
       (!is.character(.drop_empty) || anyNA(.drop_empty))) {
     .ard_stop("plan_levels(.drop_empty = ) takes variable names.")
   }
-  .plan_layer(plan, "levels",
+  .plan_layer(.plan, "levels",
               c(if (!is.null(v)) list(levels = v),
                 if (!is.null(.drop_empty)) list(drop_empty = .drop_empty)))
 }
 
 #' @rdname plan_verbs
 #' @export
-plan_labels <- function(plan, ...) {
+plan_labels <- function(.plan, ...) {
   v <- .plan_map(list(...), "plan_labels")
-  .plan_layer(plan, "labels", list(labels = v))
+  .plan_layer(.plan, "labels", list(labels = v))
 }
 
 # One entry per key -- written out, or handed over whole.  A study that
@@ -1616,11 +1614,11 @@ plan_labels <- function(plan, ...) {
 # however the plan is run: plan_apply(), rtf_tables(doc, plan).
 #' @rdname plan_verbs
 #' @export
-plan_cells <- function(plan, ..., stats = NULL, value = NULL, na = NULL,
+plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
                        notes = NULL) {
   # the templates are a layer only when there are some: `plan_cells(notes =
   # FALSE)` alone says nothing about them
-  p <- if (...length()) .plan_keyed(plan, "cells", list(...)) else plan
+  p <- if (...length()) .plan_keyed(.plan, "cells", list(...)) else .plan
   opts <- list(stats = stats, value = value, na = na, notes = notes)
   if (all(vapply(opts, is.null, logical(1L)))) return(p)
   if (!is.null(stats)) stats <- match.arg(stats, c("cells", "rows"))
@@ -1638,10 +1636,10 @@ plan_cells <- function(plan, ..., stats = NULL, value = NULL, na = NULL,
 # than a layer beside them.
 #' @rdname plan_verbs
 #' @export
-plan_digits <- function(plan, ..., rounding = NULL) {
+plan_digits <- function(.plan, ..., rounding = NULL) {
   d <- list(...)
-  p <- if (length(d) || is.null(rounding)) .plan_keyed(plan, "digits", d)
-       else plan
+  p <- if (length(d) || is.null(rounding)) .plan_keyed(.plan, "digits", d)
+       else .plan
   if (is.null(rounding)) p
   else .plan_layer(p, "round", list(rounding = rounding))
 }
@@ -1698,12 +1696,12 @@ plan_digits <- function(plan, ..., rounding = NULL) {
 # names of table_plan(rows = ), the label column is the name of its
 # `label = `, and a grouping carrier is not part of the stub.  Left out,
 # it is worked out from what has already been declared.
-plan_stub <- function(plan, vars = NULL, name = NULL, indent = NULL,
+plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
                       group_summary = NULL, before = FALSE) {
   # `name` rather than `label`: table_plan(label = ) is the column whose
   # VALUES are the row text, and this is the NAME of the column the row
   # keys are folded into.
-  .plan_layer(plan, "stub",
+  .plan_layer(.plan, "stub",
               list(vars = vars, name = name, indent = indent,
                    group_summary = group_summary, before = before))
 }
@@ -1729,7 +1727,7 @@ plan_stub <- function(plan, vars = NULL, name = NULL, indent = NULL,
 # one per place.
 #' @rdname plan_verbs
 #' @export
-plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
+plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
                             bold = NULL, italic = NULL, align = NULL,
                             color = NULL, background = NULL, border = NULL,
                             underline = NULL, indent_twips = NULL) {
@@ -1765,7 +1763,7 @@ plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
     spec <- if (is.null(cols)) attrs else lapply(attrs, function(f)
       if (inherits(f, "formula")) stats::setNames(rep(list(f), length(cols)), cols)
       else f)
-    return(.plan_keyed(plan, "styles", spec))
+    return(.plan_keyed(.plan, "styles", spec))
   }
   if (isTRUE(header)) {
     if (!is.null(where)) {
@@ -1777,11 +1775,11 @@ plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
       .ard_stop(paste0("plan_cell_style(header = TRUE) takes bold, italic, ",
                        "underline, align and border."))
     }
-    return(.plan_layer(plan, "restyle",
+    return(.plan_layer(.plan, "restyle",
                        list(fun = "style_header", args = c(list(cols = cols), attrs))))
   }
   if (is.null(where)) {
-    return(.plan_layer(plan, "restyle",
+    return(.plan_layer(.plan, "restyle",
                        list(fun = "style_cols", args = c(list(cols = cols), attrs))))
   }
   # A condition: each attribute becomes the computed form -- its value
@@ -1798,7 +1796,7 @@ plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
                            env = environment(where))
     if (is.null(cols)) f else stats::setNames(rep(list(f), length(cols)), cols)
   })
-  .plan_keyed(plan, "styles", spec)
+  .plan_keyed(.plan, "styles", spec)
 }
 
 # A computed style: a one-sided formula, or a list of them named by column.
@@ -1897,9 +1895,9 @@ plan_cell_style <- function(plan, cols = NULL, header = FALSE, where = NULL,
 # .plan_rtf_args() do it once the roles are in hand.
 #' @rdname plan_verbs
 #' @export
-plan_paginate_group <- function(plan, col = NULL, keep = TRUE, heading = NULL) {
+plan_paginate_group <- function(.plan, col = NULL, keep = TRUE, heading = NULL) {
   .plan_check_heading(heading, "plan_paginate_group")
-  .plan_layer(plan, "group",
+  .plan_layer(.plan, "group",
               list(group_col = col, .keep = keep, .page = TRUE,
                    .heading = heading))
 }
@@ -1914,11 +1912,11 @@ plan_paginate_group <- function(plan, col = NULL, keep = TRUE, heading = NULL) {
 # The carrier is the outermost row key, which table_plan(rows = ) has
 # already named; naming it again here was a second place for the two to
 # disagree.
-plan_row_group <- function(plan, mode = NULL, collapse = NULL,
+plan_row_group <- function(.plan, mode = NULL, collapse = NULL,
                            group_col = NULL) {
   # An ARD plan has said which column groups the rows once already, as
   # its outermost row key; a second name for it is how the two drift.
-  if (!is.null(group_col) && .plan_ard_half(plan)) {
+  if (!is.null(group_col) && .plan_ard_half(.plan)) {
     .ard_stop(paste0(
       "plan_row_group(group_col = ) names the grouping column of a table ",
       "that is already built.
@@ -1929,7 +1927,7 @@ plan_row_group <- function(plan, mode = NULL, collapse = NULL,
                               length(group_col) != 1L || is.na(group_col))) {
     .ard_stop("plan_row_group(group_col = ) is one column name.")
   }
-  .plan_layer(plan, "group",
+  .plan_layer(.plan, "group",
               list(group_by = mode, collapse_repeats = collapse,
                    group_col = group_col, .rows = TRUE))
 }
@@ -1944,7 +1942,7 @@ plan_row_group <- function(plan, mode = NULL, collapse = NULL,
 # again.
 #' @rdname plan_verbs
 #' @export
-plan_nest <- function(plan, ...) {
+plan_nest <- function(.plan, ...) {
   dots <- list(...)
   nm <- names(dots)
   if (!length(dots) || is.null(nm) || any(!nzchar(nm))) {
@@ -1959,7 +1957,7 @@ plan_nest <- function(plan, ...) {
     }
     list(parent = names(u), level = unname(u))
   })
-  .plan_layer(plan, "nest", list(nest = stats::setNames(nest, nm)))
+  .plan_layer(.plan, "nest", list(nest = stats::setNames(nest, nm)))
 }
 
 # A Total column read from cards' own overall rows -- the same analysis
@@ -1969,20 +1967,20 @@ plan_nest <- function(plan, ...) {
 # the label is the table's.
 #' @rdname plan_verbs
 #' @export
-plan_total <- function(plan, label = "Total", position = c("last", "first")) {
+plan_total <- function(.plan, label = "Total", position = c("last", "first")) {
   if (!is.character(label) || length(label) != 1L || is.na(label) ||
       !nzchar(label)) {
     .ard_stop("plan_total(label = ) is one text, the column's heading: \"Total\".")
   }
   position <- match.arg(position)
-  .plan_layer(plan, "total", list(label = label, position = position))
+  .plan_layer(.plan, "total", list(label = label, position = position))
 }
 
 # Rows dropped by a condition over the record -- `p >= 0.05` in any arm --
 # in plan_cells()' guard language; a SOC goes with its last PT (#620).
 #' @rdname plan_verbs
 #' @export
-plan_filter <- function(plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL) {
+plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL) {
   conds <- as.list(substitute(list(...)))[-1L]
   if (!length(conds) || any(nzchar(names(conds) %||% rep("", length(conds))))) {
     .ard_stop(paste0("plan_filter() takes conditions, unnamed: ",
@@ -1992,7 +1990,7 @@ plan_filter <- function(plan, ..., any = TRUE, parents = c("keep", "drop"), by =
   if (!is.logical(any) || length(any) != 1L || is.na(any)) {
     .ard_stop("plan_filter(any = ) is TRUE (any column) or FALSE (every column).")
   }
-  .plan_layer(plan, "filter", list(filter = list(conds = conds, env = parent.frame(),
+  .plan_layer(.plan, "filter", list(filter = list(conds = conds, env = parent.frame(),
                                                  any = any, parents = parents, by = by)))
 }
 
@@ -2014,19 +2012,19 @@ plan_compare <- function(.plan, ..., by = NULL, position = c("last", "first")) {
 # (#619): the mutate() a table needed before table_plan() is a layer.
 #' @rdname plan_verbs
 #' @export
-plan_stat_groups <- function(plan, ..., .variables = NULL, .others = NULL) {
+plan_stat_groups <- function(.plan, ..., .variables = NULL, .others = NULL) {
   g <- c(list(...), list(.variables = .variables, .others = .others))
   g <- g[!vapply(g, is.null, logical(1L))]
   .ard_stat_groups(g)
   .ard_stat_groups_opts(g)
-  .plan_layer(plan, "stat_groups", list(stat_groups = g))
+  .plan_layer(.plan, "stat_groups", list(stat_groups = g))
 }
 
 #' @rdname plan_verbs
 #' @export
-plan_hide <- function(plan, ...) {
+plan_hide <- function(.plan, ...) {
   cols <- unlist(list(...), use.names = FALSE)
-  .plan_layer(plan, "hide", list(drop_cols = cols))
+  .plan_layer(.plan, "hide", list(drop_cols = cols))
 }
 
 # ONE sort, because there is only one question: what order are the
@@ -2037,11 +2035,11 @@ plan_hide <- function(plan, ...) {
 # that would be the same duplication the roles just lost.
 #' @rdname plan_verbs
 #' @export
-plan_sort <- function(plan, ..., stat = NULL, keep = TRUE) {
+plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
   v <- list(...)
   keys <- if (length(v) == 1L && is.logical(v[[1L]])) v[[1L]]
           else unlist(v, use.names = FALSE)
-  .plan_layer(plan, "sort",
+  .plan_layer(.plan, "sort",
               list(sort = keys, sort_stat = stat, .keep = keep))
 }
 
@@ -2053,9 +2051,9 @@ plan_sort <- function(plan, ..., stat = NULL, keep = TRUE) {
 
 #' @rdname plan_verbs
 #' @export
-plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL,
+plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
                         counted = NULL) {
-  .plan_layer(plan, "blanks",
+  .plan_layer(.plan, "blanks",
               list(blank_rows = where, blank_row_first = first,
                    blank_row_end = last, count_blank_rows = counted))
 }
@@ -2071,7 +2069,7 @@ plan_blanks <- function(plan, where = NULL, first = NULL, last = NULL,
 # here, not on plan_paginate_group(), because it is what lets a row budget
 # and a value split live together: a value split alone makes one page per
 # value however long it is.
-plan_paginate_rows <- function(plan, max_rows = NULL, split = NULL,
+plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
                                break_before = NULL, min_group_rows = NULL,
                                cont_label = NULL, page_by = NULL,
                                heading = NULL) {
@@ -2080,7 +2078,7 @@ plan_paginate_rows <- function(plan, max_rows = NULL, split = NULL,
     .ard_stop(paste0("plan_paginate_rows(heading = ) names the BY pages: ",
                      "give one `page_by` column."))
   }
-  .plan_layer(plan, "pages",
+  .plan_layer(.plan, "pages",
               list(max_rows = max_rows, split = split,
                    split_rows = break_before,
                    min_group_rows = min_group_rows,
@@ -2096,7 +2094,7 @@ plan_paginate_rows <- function(plan, max_rows = NULL, split = NULL,
 # rtf_table_style() gives them.
 #' @rdname plan_verbs
 #' @export
-plan_style <- function(plan, border = NULL, align_count_pct = NULL,
+plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
                        font = NULL, font_size_half_points = NULL,
                        row_height_twips = NULL, row_height_exact = NULL,
                        header_row_height_twips = NULL,
@@ -2132,7 +2130,7 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
       "those of one kind of row.\n  Say it one way: border = \"tfl\", or ",
       "border_header = , border_body = , ..."))
   }
-  .plan_layer(plan, "style", c(
+  .plan_layer(.plan, "style", c(
     list(border = border, align_count_pct = align_count_pct, font = font,
          font_size_half_points = font_size_half_points,
          row_height_twips = row_height_twips,
@@ -2219,7 +2217,7 @@ plan_style <- function(plan, border = NULL, align_count_pct = NULL,
 # the populations the plan reads from the data (`list(n = TRUE)`,
 # `list(n = "page", N = "table")`, numbers, a function), or a data frame
 # of per-page values handed to set_col_header() as it is.
-plan_col_header <- function(plan, header = NULL, values = NULL,
+plan_col_header <- function(.plan, header = NULL, values = NULL,
                             header_sep = NULL, col_header_align = NULL,
                             lines = NULL, span = "each") {
   if (!is.null(lines)) {
@@ -2246,7 +2244,7 @@ plan_col_header <- function(plan, header = NULL, values = NULL,
   }
   if (isTRUE(values)) values <- list(n = TRUE)
   # not `header_sep`: `hdr$header` would match it by partial name
-  .plan_layer(plan, "header", list(header = header, values = values,
+  .plan_layer(.plan, "header", list(header = header, values = values,
                                    names_sep = header_sep,
                                    text_align = col_header_align))
 }
@@ -2255,14 +2253,14 @@ plan_col_header <- function(plan, header = NULL, values = NULL,
 # whose numbers line up at the decimal point: the `columns` sheet.
 #' @rdname plan_verbs
 #' @export
-plan_columns <- function(plan, widths = NULL, decimal = NULL,
+plan_columns <- function(.plan, widths = NULL, decimal = NULL,
                          row_title = NULL, auto_width = NULL, sep = NULL,
                          cell_format = NULL, column_widths_twips = NULL) {
   if (!is.null(sep) && (!is.character(sep) || length(sep) != 1L ||
                         is.na(sep) || !nzchar(sep))) {
     .ard_stop("plan_columns(sep = ) is one non-empty string, \"____\" by default.")
   }
-  .plan_layer(plan, "columns",
+  .plan_layer(.plan, "columns",
               list(widths = widths, decimal = decimal, row_title = row_title,
                    auto_width = auto_width, sep = sep,
                    cell_format = cell_format,
@@ -2321,10 +2319,10 @@ plan_columns <- function(plan, widths = NULL, decimal = NULL,
 # block with one, `first = TRUE` starts each page with one), and an
 # alignment is a column's own (listing_col(align = )), so this verb keeps
 # what only a listing has.
-plan_listing <- function(plan, ..., type = NULL, sep = NULL,
+plan_listing <- function(.plan, ..., type = NULL, sep = NULL,
                          spacer = NULL, spacer_rel_width = NULL,
                          layout = NULL, wrap = NULL) {
-  .plan_layer(plan, "listing",
+  .plan_layer(.plan, "listing",
               list(cols = list(...), type = type, sep = sep,
                    spacer = spacer, spacer_rel_width = spacer_rel_width,
                    layout = layout, wrap = wrap))
@@ -2332,14 +2330,14 @@ plan_listing <- function(plan, ..., type = NULL, sep = NULL,
 
 #' @rdname plan_verbs
 #' @export
-plan_titles <- function(plan, ..., pages = NULL) {
-  .plan_block(plan, "titles", list(...), pages)
+plan_titles <- function(.plan, ..., pages = NULL) {
+  .plan_block(.plan, "titles", list(...), pages)
 }
 
 #' @rdname plan_verbs
 #' @export
-plan_footnotes <- function(plan, ..., pages = NULL) {
-  .plan_block(plan, "footnotes", list(...), pages)
+plan_footnotes <- function(.plan, ..., pages = NULL) {
+  .plan_block(.plan, "footnotes", list(...), pages)
 }
 
 # Steps that run on the finished pages: the way out for what no verb
@@ -2349,7 +2347,7 @@ plan_footnotes <- function(plan, ..., pages = NULL) {
 # (plan_columns(decimal = ), plan_paginate_cols()).
 #' @rdname plan_verbs
 #' @export
-plan_after <- function(plan, ...) {
+plan_after <- function(.plan, ...) {
   fs <- list(...)
   bad <- !vapply(fs, is.function, logical(1L))
   if (any(bad)) {
@@ -2359,7 +2357,7 @@ plan_after <- function(plan, ...) {
       "  Decimal alignment and column pages are declarations: ",
       "plan_columns(decimal = ), plan_paginate_cols()."))
   }
-  .plan_layer(plan, "after", list(steps = fs))
+  .plan_layer(.plan, "after", list(steps = fs))
 }
 
 
@@ -2371,7 +2369,7 @@ plan_after <- function(plan, ...) {
 #' it early, so the same one pass answers "what does this do" and "what did it
 #' do" --- there is no second code path that could disagree with the first.
 #'
-#' @param plan An [table_plan()].
+#' @param .plan An [table_plan()].
 #' @param stage How far to go.  `"auto"`, the default, is **as far as the
 #'   plan declares**: a plan that says nothing about the display stops at
 #'   the table `data.frame`; one that carries a display verb goes on
@@ -2413,38 +2411,38 @@ plan_after <- function(plan, ...) {
 #' }
 #' @seealso [table_plan()], [plan_verbs]
 #' @export
-plan_apply <- function(plan, stage = c("auto", "input", "args",
+plan_apply <- function(.plan, stage = c("auto", "input", "args",
                                        "table", "pages")) {
-  if (!inherits(plan, "table_plan")) {
+  if (!inherits(.plan, "table_plan")) {
     .ard_stop("Expected a table_plan; start from table_plan(ard).")
   }
   stage <- match.arg(stage)
-  if (identical(stage, "auto")) stage <- .plan_reach(plan)
+  if (identical(stage, "auto")) stage <- .plan_reach(.plan)
 
   # A LISTING never goes near an ARD.  Its source is SDTM or ADaM -- an
   # ordinary frame of subject records -- and plan_listing() is what says
   # so, because the columns cannot.  Nothing is normalised or spread; the
   # rows are the rows.
-  if (length(.plan_of(plan, "listing"))) {
-    d <- plan$data
-    .plan_remember(plan, "table", d)
+  if (length(.plan_of(.plan, "listing"))) {
+    d <- .plan$data
+    .plan_remember(.plan, "table", d)
     if (stage %in% c("table", "input")) return(d)
-    return(.plan_to_pages(plan, d))
+    return(.plan_to_pages(.plan, d))
   }
   # A table somebody already built -- with widen_ard(), with dplyr, with
   # anything -- is a legitimate source for the display half on its own.
   # Asking for the ARD half is what says otherwise: the roles and
   # plan_cells() need statistics, and a finished table has none.
-  if (identical(plan$kind, "wide")) {
+  if (identical(.plan$kind, "wide")) {
     # `plan_cells(na = )` alone is what an empty cell prints, which a
     # finished table has too
-    ard_half <- vapply(plan$layers, function(l)
+    ard_half <- vapply(.plan$layers, function(l)
       l$kind %in% c("cells", "levels", "labels", "stat_groups", "compare", "filter") ||
         (identical(l$kind, "cell_options") &&
            length(setdiff(names(Filter(Negate(is.null), l$fields)), "na"))),
       TRUE)
-    ard_half <- any(ard_half) || length(plan$roles)
-    if (!length(plan$layers)) {
+    ard_half <- any(ard_half) || length(.plan$roles)
+    if (!length(.plan$layers)) {
       .ard_stop(paste0(
         "This source has no statistics to read -- no `stat_name` / `stat`, ",
         "and none of\n  the columns normalize_ard() adds -- and the ",
@@ -2454,20 +2452,20 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
         "  A listing of records: add plan_listing(listing_col(...), ...).\n",
         "  An ARD to convert  : name the roles on table_plan(), add ",
         "plan_cells().\n",
-        "  Columns seen       : ", paste(utils::head(names(plan$data), 8L),
+        "  Columns seen       : ", paste(utils::head(names(.plan$data), 8L),
                                          collapse = ", ")))
     }
     if (!ard_half) {
-      d <- plan$data
+      d <- .plan$data
       # every digits key names a column of this table (or is `.rows`)
-      .plan_check_digit_cols(plan, d, setdiff(
-        names(.plan_merge(.plan_of(plan, "digits"))), ".rows"))
-      .plan_remember(plan, "table", d)
+      .plan_check_digit_cols(.plan, d, setdiff(
+        names(.plan_merge(.plan_of(.plan, "digits"))), ".rows"))
+      .plan_remember(.plan, "table", d)
       if (stage %in% c("table", "input")) return(d)
       if (identical(stage, "args")) {
-        return(list(widen = list(), rtf = .plan_rtf_args(plan, d)))
+        return(list(widen = list(), rtf = .plan_rtf_args(.plan, d)))
       }
-      return(.plan_to_pages(plan, d))
+      return(.plan_to_pages(.plan, d))
     }
     .ard_stop(paste0(
       "This source has no statistics to read -- no `stat_name` / `stat`, ",
@@ -2476,27 +2474,27 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
       "  If it is already the table, drop those and keep the display ",
       "verbs.\n",
       "  If it is a listing of records, add plan_listing(...).\n",
-      "  Columns seen : ", paste(utils::head(names(plan$data), 8L),
+      "  Columns seen : ", paste(utils::head(names(.plan$data), 8L),
                                  collapse = ", ")))
   }
 
   # 1. the long-frame seam.  Nothing is flattened here: normalize_ard()
   #    ran before the plan, which is why the roles could be checked
   #    against real column names when they were declared.
-  x <- .plan_prepare(plan, plan$data)
-  .plan_check_key_sep(plan, x)
-  .plan_remember(plan, "long", x)
+  x <- .plan_prepare(.plan, .plan$data)
+  .plan_check_key_sep(.plan, x)
+  .plan_remember(.plan, "long", x)
   if (identical(stage, "input")) return(x)
 
   # 2. the spread arguments.  The roles were said once, on table_plan();
   #    `levels` and `labels` are layers and merge one KEY at a time, so a
   #    later one adds a variable without restating the rest.
-  s_args <- .plan_spread_args(plan)
+  s_args <- .plan_spread_args(.plan)
 
   # 3. the cells map, last wins over the keys the caller used
-  cells <- .plan_merge(.plan_of(plan, "cells"))
-  dig   <- .plan_merge(.plan_of(plan, "digits"))
-  rnd   <- .plan_merge(.plan_of(plan, "round"))
+  cells <- .plan_merge(.plan_of(.plan, "cells"))
+  dig   <- .plan_merge(.plan_of(.plan, "digits"))
+  rnd   <- .plan_merge(.plan_of(.plan, "round"))
 
   # 4. Expand to one entry per variable.  This is the step that NEEDS the ARD,
   #    and the reason the plan holds it: `plan_digits(AGE = 0)` cannot be
@@ -2559,7 +2557,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     #     typo survives review.  "AST = 3" on a frame whose analysis
     #     variable column is called PARAM does nothing, and says so.
     reached <- c("default", ".rows", names(cells), vars)
-    plan$cache$digit_cols <- setdiff(names(dig), reached)
+    .plan$cache$digit_cols <- setdiff(names(dig), reached)
   }
 
   # 5. one rounding family for the run; a per-variable one would have to reach
@@ -2573,20 +2571,20 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
     # be the one that surprises you.  A page budget declared twice is the
     # obvious case: last wins, and the call you are editing may not be
     # the one that decides.
-    return(list(widen = s_args, rtf = .plan_rtf_args(plan)))
+    return(list(widen = s_args, rtf = .plan_rtf_args(.plan)))
   }
   tbl <- .plan_stage(do.call(widen_ard, c(list(x = x), s_args)),
-                     plan, c("cells", "cell_options", "digits", "round",
+                     .plan, c("cells", "cell_options", "digits", "round",
                              "levels", "labels"))
   # a variable's rows under one level of another (plan_nest())
-  nest <- .plan_merge(.plan_of(plan, "nest"), deep = "nest")$nest
-  if (length(nest)) tbl <- .plan_nest_rows(plan, tbl, nest, s_args)
-  .plan_check_digit_cols(plan, tbl, plan$cache$digit_cols, vars = TRUE)
+  nest <- .plan_merge(.plan_of(.plan, "nest"), deep = "nest")$nest
+  if (length(nest)) tbl <- .plan_nest_rows(.plan, tbl, nest, s_args)
+  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = TRUE)
   # the table-side seam: a column the table can only know once it exists
-  .plan_remember(plan, "table", tbl)
+  .plan_remember(.plan, "table", tbl)
   if (identical(stage, "table")) return(tbl)
 
-  .plan_to_pages(plan, tbl)
+  .plan_to_pages(.plan, tbl)
 }
 
 
@@ -3211,7 +3209,7 @@ plan_apply <- function(plan, stage = c("auto", "input", "args",
 # first, or the shorthands "across" / "down".
 #' @rdname plan_verbs
 #' @export
-plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
+plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
                                every = NULL, keep = NULL, col_header = NULL,
                                fit = NULL, allow_span_break = NULL,
                                order = NULL) {
@@ -3222,7 +3220,7 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
   if (!is.null(fit) && !(is.logical(fit) && length(fit) == 1L && !is.na(fit))) {
     .ard_stop("plan_paginate_cols(fit = ) is TRUE (every block fills the sheet as page 1 does) or FALSE (each column keeps its width).")
   }
-  .plan_layer(plan, "colpages",
+  .plan_layer(.plan, "colpages",
               list(at = at, cut_by = cut_by, every = every, keep = keep,
                    col_header = col_header, fit = fit,
                    allow_span_break = allow_span_break, order = order))
@@ -3659,7 +3657,7 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
 #'   over its own columns).
 #' * `kind = "one"`: `{n:<column>}`, one column's value.
 #'
-#' @param plan A [table_plan()].
+#' @param .plan A [table_plan()].
 #' @return A data frame: `token`, `kind`, `values` (a list column: the
 #'   values, named by column where they are), `text` (as `print()` shows
 #'   them), `resolved`, `note`.
@@ -3673,16 +3671,16 @@ plan_paginate_cols <- function(plan, at = NULL, cut_by = NULL,
 #'   plan_header_tokens(p)[, c("token", "text")]
 #' }
 #' @export
-plan_header_tokens <- function(plan) {
-  if (!inherits(plan, "table_plan")) {
+plan_header_tokens <- function(.plan) {
+  if (!inherits(.plan, "table_plan")) {
     .ard_stop("plan_header_tokens(): expected a table_plan.")
   }
   # the column tokens need the table: make it once (the cache keeps it)
-  if (is.null(plan$cache$table)) {
-    try(suppressMessages(suppressWarnings(plan_apply(plan, "table"))),
+  if (is.null(.plan$cache$table)) {
+    try(suppressMessages(suppressWarnings(plan_apply(.plan, "table"))),
         silent = TRUE)
   }
-  .plan_header_tokens(plan)
+  .plan_header_tokens(.plan)
 }
 
 # The denominator, read once, with the keys table_plan() already has.
@@ -3876,7 +3874,7 @@ plan_header_tokens <- function(plan) {
 #' a number the ARD states as a population size; a column it does not state
 #' has no row.
 #'
-#' @param plan A [table_plan()] with `cols`.
+#' @param .plan A [table_plan()] with `cols`.
 #' @return A data frame: `scope` (`"all"`, `"page"` or `"table"`), `page`
 #'   (the page's group value; `NA` but on `"page"` rows), `column` (the
 #'   spread column's key, as `{n:<column>}` names it; `NA` for the
@@ -3893,8 +3891,8 @@ plan_header_tokens <- function(plan) {
 #'   plan_n_candidates(table_plan(ard, cols = "ARM"))
 #' }
 #' @export
-plan_n_candidates <- function(plan) {
-  if (!inherits(plan, "table_plan")) {
+plan_n_candidates <- function(.plan) {
+  if (!inherits(.plan, "table_plan")) {
     .ard_stop("plan_n_candidates(): expected a table_plan.")
   }
   rows <- function(n, scope, page) {
@@ -3907,12 +3905,12 @@ plan_n_candidates <- function(plan) {
   }
   none <- rows(numeric(0), character(0), character(0))
   attr(none, "differ") <- FALSE
-  sp <- .plan_spread_args(plan)
+  sp <- .plan_spread_args(.plan)
   if (is.null(sp$cols)) return(none)
-  data <- plan$data
-  src <- .plan_page_col(plan)
+  data <- .plan$data
+  src <- .plan_page_col(.plan)
   if (is.null(src)) {
-    out <- rows(.plan_n_read(plan, sp, data), "all", NA_character_)
+    out <- rows(.plan_n_read(.plan, sp, data), "all", NA_character_)
     attr(out, "differ") <- FALSE
     return(out)
   }
@@ -3921,11 +3919,11 @@ plan_n_candidates <- function(plan) {
   g <- as.character(data[[src]])
   rest <- data[is.na(g), , drop = FALSE]
   attr(rest, "ard_total_n") <- attr(data, "ard_total_n", exact = TRUE)
-  tbl <- .plan_n_read(plan, sp, rest)
+  tbl <- .plan_n_read(.plan, sp, rest)
   parts <- list()
   differ <- FALSE
   for (v in setdiff(.ard_first_seen(data[[src]]), NA)) {
-    own <- .plan_n_read(plan, sp, data[!is.na(g) & g == v, , drop = FALSE])
+    own <- .plan_n_read(.plan, sp, data[!is.na(g) & g == v, , drop = FALSE])
     differ <- differ || .plan_n_differ(own, tbl)
     parts[[length(parts) + 1L]] <- rows(.plan_n_join(own, tbl), "page", as.character(v))
   }
@@ -4616,7 +4614,7 @@ plan_n_candidates <- function(plan) {
 #' package reads a plan: `tflspec::tfl_as_table_spec()` writes a workbook from
 #' nothing but this and [plan_apply()].
 #'
-#' @param plan An [table_plan()].
+#' @param .plan An [table_plan()].
 #' @return A list: `data` (the plan's data); `roles`; `label` (the label
 #'   column's name, or none); `group_col`; `declared` (the kinds of layer,
 #'   in the order declared); `layers` (by kind, the merged fields; for
@@ -4649,23 +4647,23 @@ plan_n_candidates <- function(plan) {
 #'
 #' @seealso [plan_apply()], `tflspec::tfl_as_table_spec()`
 #' @export
-plan_layers <- function(plan) {
-  if (!inherits(plan, "table_plan")) .ard_stop("Expected a table_plan.")
-  a <- plan_apply(plan, "args")
-  pages <- plan_apply(plan, "pages")
+plan_layers <- function(.plan) {
+  if (!inherits(.plan, "table_plan")) .ard_stop("Expected a table_plan.")
+  a <- plan_apply(.plan, "args")
+  pages <- plan_apply(.plan, "pages")
   first <- if (inherits(pages, "rtftable")) pages else pages[[1L]]
-  seen <- plan$cache[["pre_cols"]]
+  seen <- .plan$cache[["pre_cols"]]
   page_names <- names(first$data)
   pnames <- seen$names %||% page_names
-  spread <- seen$spread %||% intersect(.plan_spread_cols(plan, first$data),
+  spread <- seen$spread %||% intersect(.plan_spread_cols(.plan, first$data),
                                        pnames)
-  kinds <- vapply(plan$layers, `[[`, "", "kind")
+  kinds <- vapply(.plan$layers, `[[`, "", "kind")
   layers <- list()
   for (k in unique(kinds)) {
-    layers[[k]] <- if (k %in% c("after", "restyle")) .plan_of(plan, k)
+    layers[[k]] <- if (k %in% c("after", "restyle")) .plan_of(.plan, k)
                    else if (k %in% c("levels", "labels", "nest"))
-                     .plan_merge(.plan_of(plan, k), deep = k)
-                   else .plan_merge(.plan_of(plan, k))
+                     .plan_merge(.plan_of(.plan, k), deep = k)
+                   else .plan_merge(.plan_of(.plan, k))
   }
   s <- a$widen
   cells <- NULL
@@ -4715,13 +4713,13 @@ plan_layers <- function(plan) {
                  border_top = cc$border_top %||% NA,
                  border_bottom = cc$border_bottom %||% NA,
                  stringsAsFactors = FALSE)))
-  } else if (!is.null(plan$cache[["header_raw"]])) {
+  } else if (!is.null(.plan$cache[["header_raw"]])) {
     header$source <- "resolved"
-    header$cells <- .plan_header_rows(plan$cache[["header_raw"]], pnames,
-                                      spread, plan)
+    header$cells <- .plan_header_rows(.plan$cache[["header_raw"]], pnames,
+                                      spread, .plan)
   }
-  list(data = plan$data, roles = plan$roles, label = .plan_label_name(plan),
-       group_col = .plan_group_col(plan), declared = kinds, layers = layers,
+  list(data = .plan$data, roles = .plan$roles, label = .plan_label_name(.plan),
+       group_col = .plan_group_col(.plan), declared = kinds, layers = layers,
        cells = cells, compare = compare,
        columns = list(names = pnames, spread = spread, page_names = page_names,
                       widths = seen$widths %||% first$col_rel_width),

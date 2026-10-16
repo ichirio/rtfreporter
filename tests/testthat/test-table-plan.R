@@ -3376,3 +3376,30 @@ test_that("a page key is never a row group: blanks, collapse, row_title, sort an
   pg <- pages(by_rows(core() |> plan_sort("-n")))
   expect_length(pg, 3L)
 })
+
+test_that("a verb's first argument is .plan: a name such as p in ... is not taken for it", {
+  skip_if_no_cards2()
+  # every plan verb takes the plan as `.plan` (one name, the pipe passes it)
+  verbs <- grep("^plan_", getNamespaceExports("rtfreporter"), value = TRUE)
+  verbs <- setdiff(verbs, "plan_template")
+  first <- vapply(verbs, function(f) names(formals(getExportedValue("rtfreporter", f)))[1L], "")
+  expect_true(all(first == ".plan"), info = paste(verbs[first != ".plan"], collapse = ", "))
+  # `p` (plan_compare()'s column, cards' percentage), `pl`, `pla`: an
+  # argument before `...` matches by its first letters, so these stopped with
+  # "Expected a table_plan" when the argument was called `plan`
+  b <- base_plan()
+  expect_s3_class(b |> plan_digits(p = 0), "table_plan")
+  # the column p of a comparison, its digits by name
+  cmp <- b |> plan_compare(p = "{p.value}")
+  expect_s3_class(cmp |> plan_digits(p = 3), "table_plan")
+  expect_s3_class(b |> plan_cells(p = "{p:.1f%}"), "table_plan")
+  expect_s3_class(b |> plan_labels(pl = "x"), "table_plan")
+  expect_s3_class(b |> plan_levels(pla = c("a", "b")), "table_plan")
+  expect_s3_class(b |> plan_sort(p = "x"), "table_plan")
+  expect_s3_class(b |> plan_hide(p = "x"), "table_plan")
+  expect_s3_class(b |> plan_nest(p = c(SEX = "F")), "table_plan")
+  expect_s3_class(b |> plan_after(p = identity), "table_plan")
+  expect_s3_class(b |> plan_titles(p = "x"), "table_plan")
+  # by name, it is `.plan`
+  expect_s3_class(plan_digits(.plan = b, p = 0), "table_plan")
+})

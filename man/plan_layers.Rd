@@ -4,10 +4,10 @@
 \alias{plan_layers}
 \title{What a plan declares, and what it resolved to}
 \usage{
-plan_layers(plan)
+plan_layers(.plan)
 }
 \arguments{
-\item{plan}{An \code{\link[=table_plan]{table_plan()}}.}
+\item{.plan}{An \code{\link[=table_plan]{table_plan()}}.}
 }
 \value{
 A list: \code{data} (the plan's data); \code{roles}; \code{label} (the label

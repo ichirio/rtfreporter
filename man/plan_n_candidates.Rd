@@ -4,10 +4,10 @@
 \alias{plan_n_candidates}
 \title{The populations a column header's \code{{n}} can say}
 \usage{
-plan_n_candidates(plan)
+plan_n_candidates(.plan)
 }
 \arguments{
-\item{plan}{A \code{\link[=table_plan]{table_plan()}} with \code{cols}.}
+\item{.plan}{A \code{\link[=table_plan]{table_plan()}} with \code{cols}.}
 }
 \value{
 A data frame: \code{scope} (\code{"all"}, \code{"page"} or \code{"table"}), \code{page}

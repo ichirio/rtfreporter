@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+- **The plan verbs take the plan as `.plan`** (#662).  A name such as `p`
+  in a verb's `...` -- `plan_digits(p = 1)` for `plan_compare()`'s column,
+  `plan_cells(p = )` -- was taken for the first argument `plan` (an
+  argument before `...` matches by its first letters) and stopped with
+  "Expected a table_plan".  Every `plan_*()` function's first argument is
+  now `.plan`, as `plan_compare()`'s already was: the pipe passes it by
+  position, so piped code does not change; a call that named it
+  `plan = ` writes `.plan = `.
+
 - **Docs: the plan verbs in one recommended order** (#660).  *Plan verbs*
   has a section, *The order to write them in*: first the mapping
   (`normalize_ard()`, `table_plan()`, `plan_cells()`, `plan_stat_groups()`,
