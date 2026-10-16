@@ -132,9 +132,9 @@ variables.
 }}
 
 \item{labels}{Named character vector recoding key \emph{values} to display text,
-e.g. \code{c(AGE = "Age (years)", SEX = "Sex [n (\\\%)]")}.  When a column is
-recoded and has no explicit \code{levels}, the order of \code{labels} becomes its
-level order.  The two-parallel-vector spelling works just as well --
+e.g. \code{c(AGE = "Age (years)", SEX = "Sex [n (\\\%)]")}.  Text only: the
+order is \code{levels}' or the data's, never the order the labels are
+written in.  The two-parallel-vector spelling works just as well --
 \code{stats::setNames(group_labels, group_vars)} -- but note that \code{setNames()}
 gives an element an \code{NA} name rather than complaining when the two vectors
 are different lengths, so that entry would never apply; every element must

@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+- **A label sets only the text, never the order** (#666).
+  `plan_labels()` / `widen_ard(labels = )` used to put the labelled
+  variables first, in the order the labels were written, so labelling some
+  of a table's variables reordered its blocks with no message.  The order
+  of values, of variables and of columns is now always `plan_levels()`'s
+  (`plan_levels(variable = c("AGE", "SEX"))` for the variables) or the
+  ARD's.
+
 - **Docs: the plan verbs say what a new user looks for** (#664).
   `table_plan()`: what the names in `rows` are and what `"variable"` and
   `.label` hold, where the order of the columns' values comes from, where

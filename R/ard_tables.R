@@ -200,8 +200,8 @@
   # A scope named after an analysis variable may carry the variable's own
   # label under its own name -- SEX = c(SEX = "Sex", F = "Female") -- since
   # one key cannot hold both a text and a dictionary: it labels the name
-  # wherever it appears, as a flat entry would.  In the order given, among
-  # the flat ones: the names fix the variable order (.ard_label_order()).
+  # wherever it appears, as a flat entry would.  Text only: the order is
+  # `levels`' or the data's, never the labels'.
   flat <- c(dflt, unlist(lapply(which(!dots), function(i) {
     k <- names(labels)[i]
     if (!scoped[i]) return(labels[i])
@@ -221,15 +221,6 @@
     sp$scopes[[k]]
   }
   pick(out) %||% pick(ref) %||% sp$flat
-}
-
-# One view of every dictionary, for the places that only read the NAMES --
-# the variable order `labels` also fixes.
-.ard_labels_flat <- function(labels) {
-  sp <- .ard_labels_split(labels)
-  if (is.null(sp)) return(NULL)
-  out <- c(sp$flat, unlist(unname(sp$scopes)))
-  if (is.null(out)) NULL else out[!duplicated(names(out))]
 }
 
 .ard_check_named <- function(x, arg) {
@@ -788,12 +779,8 @@
 # as first seen.  Rows are sorted by the row keys before the label, so a
 # variable's labels only ever compete with labels of the same variable and one
 # concatenated order serves them all.
-.ard_label_order <- function(d, cells, levels, labels) {
+.ard_label_order <- function(d, cells, levels) {
   vars <- .ard_first_seen(d$variable)
-  if (!is.null(labels)) {              # `labels` also fixes the variable order
-    named <- intersect(names(labels), vars)
-    vars  <- c(named, setdiff(vars, named))
-  }
   out <- character(0)
   for (v in vars) {
     lv <- if (is.null(levels)) NULL else levels[[v]]
@@ -2033,9 +2020,9 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'     `levels = list(variable = c("AGE", "SEX"))` orders the analysis
 #'     variables.
 #' @param labels Named character vector recoding key *values* to display text,
-#'   e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.  When a column is
-#'   recoded and has no explicit `levels`, the order of `labels` becomes its
-#'   level order.  The two-parallel-vector spelling works just as well --
+#'   e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.  Text only: the
+#'   order is `levels`' or the data's, never the order the labels are
+#'   written in.  The two-parallel-vector spelling works just as well --
 #'   `stats::setNames(group_labels, group_vars)` -- but note that `setNames()`
 #'   gives an element an `NA` name rather than complaining when the two vectors
 #'   are different lengths, so that entry would never apply; every element must
@@ -2513,8 +2500,10 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     if (!is.null(lv)) {
       long[[r$out]] <- .ard_as_factor(v, recode(lv, r$ref, r$out))
     } else if (!is.null(lab) && any(as.character(long[[r$out]]) != v)) {
-      long[[r$out]] <- .ard_as_factor(v, unname(lab[names(lab) %in%
-        .ard_first_seen(long[[r$out]])]))
+      # recoded: its values in the data's order, as text (a label sets no
+      # order -- `levels` does)
+      long[[r$out]] <- .ard_as_factor(v, recode(.ard_first_seen(
+        as.character(long[[r$out]])), r$ref, r$out))
     } else {
       long[[r$out]] <- v
     }
@@ -2530,8 +2519,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     if (is.null(lv) && (!is.null(fl) ||
         (!is.null(levels) && any(names(levels) %in% .ard_first_seen(d$variable))))) {
       lv <- .ard_label_order(d, cells, c(levels, fl[setdiff(names(fl),
-                                                            names(levels))]),
-                             .ard_labels_flat(labels))
+                                                            names(levels))]))
     }
     # the order is of the values; the levels recoded above print as their text
     if (!is.null(lv) && length(lab_var)) {

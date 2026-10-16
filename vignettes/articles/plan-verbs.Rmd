@@ -266,9 +266,9 @@ plan_apply(p, "table")[, 1:3]
 .shot("pv_labels.png")
 ```
 
-When no `plan_levels()` gives an order for the `group` column, the order of
-`plan_labels()` becomes its order. So label every variable, in the order you
-want them. A variable left out moves to the end.
+`plan_labels()` sets only the text. The order of the variables is the ARD's,
+or `plan_levels(variable = c("AGE", "SEX", "RACE"))` -- the order of values,
+of variables and of columns is always `plan_levels()`'s or the data's.
 
 `plan_levels(.drop_empty = )` names variables whose levels no subject has --
 `n` 0 in every column -- and leaves those rows out; a level some column counts
