@@ -30,14 +30,28 @@ A raw cards ARD is refused, with the line to write.}
 
 \item{cols}{The key that goes \strong{across} the table, as
 \code{widen_ard(cols = )} takes it: one or more columns, optionally
-renamed \code{c(new = old)}.}
+renamed \code{c(new = old)}.  The order of its values across the table is
+the ARD's (a factor's levels) unless \verb{plan_levels(<key> = c(...))}
+says otherwise.}
 
 \item{rows}{The keys that go \strong{down} it, likewise.  Left out, the
-analysis variable is used (as \code{group}).}
+analysis variable is used (as \code{group}).  Each name is the column the
+finished table gets, and later verbs refer to it by that name
+(\code{\link[=plan_stub]{plan_stub()}}, \code{plan_paginate_group(col = )}, \code{\link[=plan_hide]{plan_hide()}}); left
+unnamed, the first key is called \code{group}.  \code{"variable"} is the column
+that holds the analysis variable's name, so \code{c(group = "variable")}
+makes one block of rows per analysis variable (AGE, SEX, ...).
+Subgroups from different variables laid one under another come from
+\code{normalize_ard(stack = )}; see the article \emph{Tables from an ARD, step by
+step} (\emph{Subgroups}).}
 
 \item{label}{The column carrying the \strong{row identity} --- the text in
 the label column.  \code{".label"} by default (what \code{\link[=normalize_ard]{normalize_ard()}}
-builds), \code{NA} for a table that has none, or a guarded template.}
+builds), \code{NA} for a table that has none, or a guarded template.
+\code{.label} holds, per row: the category (\code{variable_level}) for a
+categorical variable; the deepest level's value in a \code{hierarchy}; and
+\code{NA} for a continuous variable, whose rows are named by the
+\code{\link[=plan_cells]{plan_cells()}} template names (\code{"Mean (SD)"}).}
 
 \item{stat}{Which of \strong{your} columns play the three parts \code{\link[=widen_ard]{widen_ard()}}
 reads by name, as a named vector: \code{variable} (the analysis variable,

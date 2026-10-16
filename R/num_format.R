@@ -69,6 +69,10 @@
 #' fuzz does: `2.675` is stored as `2.67499999999999982`, which base R
 #' rounds to `2.67` and SAS to `2.68`.
 #'
+#' These format numbers in a data frame or vector before a table is
+#' built; the `fmt_*` functions [as_rtftables()]'s `cell_format` takes
+#' ([fmt_count_pct()], ...) format cells as the table is built.
+#'
 #' @param x A numeric vector.
 #' @param digits Decimal places. Default `0`.
 #' @param rounding `"r"` (base R, half to even) or `"sas"` (half away from
@@ -175,6 +179,10 @@ round_num <- function(x, digits = 0, rounding = NULL) {
 #' `"signif"` is the default. Zero itself prints with `digits - 1` decimals
 #' under both (`"0.000"` at 4), having no significant digits to count.
 #'
+#' These format numbers in a data frame or vector before a table is
+#' built; the `fmt_*` functions [as_rtftables()]'s `cell_format` takes
+#' ([fmt_count_pct()], ...) format cells as the table is built.
+#'
 #' @param x A numeric vector. Character input is an error -- character columns
 #'   are taken as already formatted.
 #' @param digits Total significant digits. Default `3`.
@@ -218,6 +226,10 @@ fmt_signif <- function(x, digits = 3L, rounding = NULL,
 #' @description
 #' Rounds to `digits` decimal places and prints them all, trailing zeros
 #' included -- `fmt_round(2.5, 2)` is `"2.50"`, not `"2.5"`.
+#'
+#' These format numbers in a data frame or vector before a table is
+#' built; the `fmt_*` functions [as_rtftables()]'s `cell_format` takes
+#' ([fmt_count_pct()], ...) format cells as the table is built.
 #'
 #' @inheritParams fmt_signif
 #' @param digits Decimal places. Default `2`.
@@ -294,6 +306,10 @@ fmt_round <- function(x, digits = 2L, rounding = NULL, na = "") {
 #' blank rows fall out on their own. A **non-missing** cell whose key matches
 #' nothing and has no `.default` is an error naming the unmatched keys --
 #' quietly printing 15 digits into a submission table is the worse outcome.
+#'
+#' These format numbers in a data frame or vector before a table is
+#' built; the `fmt_*` functions [as_rtftables()]'s `cell_format` takes
+#' ([fmt_count_pct()], ...) format cells as the table is built.
 #'
 #' @param data A data frame.
 #' @param cols Columns to format: names or positions. A selected column that is

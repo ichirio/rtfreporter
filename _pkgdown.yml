@@ -305,10 +305,12 @@ reference:
       - table_plan
       - plan_verbs
       - plan_apply
+      - plan_template
+  - subtitle: Looking inside a plan
+    contents:
       - plan_layers
       - plan_header_tokens
       - plan_n_candidates
-      - plan_template
 
   # ── 2. Bring your own table ─────────────────────────────────────────
   - title: Bring your own table — as_rtftables()

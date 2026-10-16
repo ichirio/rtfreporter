@@ -75,6 +75,10 @@ A row whose selected cells are all missing needs no key, so group-label and
 blank rows fall out on their own. A \strong{non-missing} cell whose key matches
 nothing and has no \code{.default} is an error naming the unmatched keys --
 quietly printing 15 digits into a submission table is the worse outcome.
+
+These format numbers in a data frame or vector before a table is
+built; the \verb{fmt_*} functions \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cell_format} takes
+(\code{\link[=fmt_count_pct]{fmt_count_pct()}}, ...) format cells as the table is built.
 }
 
 \examples{

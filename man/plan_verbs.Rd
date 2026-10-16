@@ -183,7 +183,13 @@ for it (an argument before \code{...} matches by its first letters).}
 \item{...}{For \code{plan_cells()}, exactly what \code{widen_ard(cells = )}
 takes: one bare entry, or entries named by variable, \code{context},
 kind (\code{continuous} / \code{categorical}), a stat group of
-\code{plan_stat_groups()} or \code{default}.
+\code{plan_stat_groups()} or \code{default}.  The names after \code{...} are
+reserved: a variable called \code{stats}, \code{value}, \code{na} or \code{notes} cannot
+be keyed in \code{plan_cells()}; name it so in the ARD.
+
+For \code{plan_levels()}, \code{variable = c("AGE", "SEX", "RACE")} orders the
+analysis variables themselves (the blocks of rows); variables left out
+follow in the ARD's order.
 
 \code{plan_compare()} takes the \strong{comparison columns}, each named (the
 column's name) and each what \code{plan_cells()} takes for one cell: a
@@ -326,7 +332,11 @@ variable summarised without \code{n} is untouched.  Several calls add up.}
 \item{stats, value, na, notes}{For \code{plan_cells()}: how a cell is made,
 as \code{\link[=widen_ard]{widen_ard()}} takes them --- \code{stats = "cells"} (default) fills a
 template per cell and \code{"rows"} makes each statistic a row of its own;
-\code{value} is which of \code{stat} / \code{stat_fmt} a \code{{x}} reads; \code{na} what fills
+\code{value} matters only with \code{stats = "rows"}: the raw number (\code{"stat"})
+or cards' formatted text (\code{"stat_fmt"}) in each row.  With templates
+(\code{stats = "cells"}) an open \code{{x}} takes \code{stat_fmt} when the ARD has it
+and \code{stat} otherwise, and \code{{x:stat_fmt}} / \verb{\{x:.1f\}} say so per
+token; \code{na} what fills
 a cell no template could; \code{notes = FALSE} stops the report of the
 statistics no template used.  They hold however the plan is run, by
 \code{\link[=plan_apply]{plan_apply()}} or by \code{rtf_tables(doc, plan)}.  On a plan of a table
@@ -335,7 +345,9 @@ that is already built (no statistics), \code{na} alone is taken, and is
 
 \item{rounding}{For \code{plan_digits()}: the tie-breaking family for the
 run, as \code{widen_ard(rounding = )} takes it.  Last wins, like every
-other layer.}
+other layer.  A study sets the rule once with
+\code{options(rtfreporter.rounding = )}; give it here only for a table that
+departs from the study's rule.}
 
 \item{vars, name, indent, group_summary}{For \code{plan_stub()}: the row keys to
 fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} takes them.
@@ -493,7 +505,10 @@ this; a page per value is \code{\link[=plan_paginate_group]{plan_paginate_group(
 
 \item{label, position}{For \code{plan_total()}: the heading of the \strong{Total
 column} (\code{"Total"}) and where it goes among the column key's values
-(\code{"last"}, \code{"first"}).  Its cells are cards' own overall rows --- the
+(\code{"last"}, \code{"first"}).  Needed only when the ARD has overall rows (no
+value of the column key): an ARD whose column variable already has a
+\code{"Total"} level needs no \code{plan_total()}, that level being a column like
+any other.  Its cells are cards' own overall rows --- the
 statistics with no value of the column key, from the same analysis
 without its \code{by} (\code{cards::ard_tabulate(adsl, variables = RACE)} bound
 under \code{cards::ard_tabulate(adsl, by = ARM, variables = RACE)}, or
@@ -723,7 +738,9 @@ a key value that contains it is refused.  For \code{plan_listing()},
 
 \item{cell_format, column_widths_twips}{For \code{plan_columns()}:
 \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cell_format} (a formatter, or a list of them one a
-column) and \code{\link[=rtftable]{rtftable()}}'s \code{column_widths_twips}, as they are.}
+column) and \code{\link[=rtftable]{rtftable()}}'s \code{column_widths_twips}, as they are.
+\code{column_widths_twips}, when given, fixes the widths and \code{widths} is not
+used, as in \code{\link[=rtftable]{rtftable()}}.}
 
 \item{type, spacer, spacer_rel_width, layout, wrap}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged.
 \code{...} there takes the \code{\link[=listing_col]{listing_col()}}s.  A blank row between records
@@ -824,6 +841,14 @@ goes into a workbook:
 \item \code{style_zone(x, ...)} is declared as \code{plan_style(border_header = , border_body = , ...)}
 }
 
+Two kinds of names: \code{plan_levels()}, \code{plan_labels()}, \code{plan_filter()},
+\code{plan_nest()}, \code{plan_stat_groups()} and \code{plan_compare()} read the
+normalized ARD's columns (\code{variable}, the keys as the ARD names them);
+\code{plan_hide()}, \code{plan_paginate_group(col = )}, \code{plan_row_group()},
+\code{plan_cell_style()}, \code{plan_columns()} and \code{plan_col_header()} read the
+finished table's columns (the names \code{table_plan(rows = )} gave,
+\code{row_label}, the arms).
+
 The styles \code{plan_cell_style()} declares run on the pages in the order
 written (after the header and the decimal alignment, before any
 \code{plan_after()} step).  Its \code{cols} may be column names, and \code{.values}
@@ -851,8 +876,12 @@ if (requireNamespace("cards", quietly = TRUE)) {
     plan_digits(1) |>                                   # the house rule
     plan_digits(AGE = c(mean = 1, sd = 2)) |>           # one variable
     plan_levels(SEX = c("M", "F")) |>
+    plan_levels(variable = c("AGE", "SEX", "AGEGR1")) |>  # the blocks
     plan_labels(c(AGE = "Age (years)", SEX = "Sex", AGEGR1 = "Age group"))
   plan_apply(p, "table")
+
+  # hide a variable's rows: plan_filter() keeps the rows it holds for
+  plan_apply(p |> plan_filter(!variable \%in\% "AGEGR1"), "table")
 
   # -- The rows: stub, groups, blank rows, order, hidden columns ---------
   p <- p |>

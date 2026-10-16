@@ -126,6 +126,9 @@ is what keeps a hand-written \code{col_header} over the arm it names;
 \item an \strong{analysis variable} -- it orders that variable's rows in the label
 column, without your having to know what the label column is called.
 Variables you leave out keep their \code{cells} templates' order.
+\item \code{variable} itself -- a row key like any other:
+\code{levels = list(variable = c("AGE", "SEX"))} orders the analysis
+variables.
 }}
 
 \item{labels}{Named character vector recoding key \emph{values} to display text,

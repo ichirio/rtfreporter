@@ -48,7 +48,9 @@ size.  \code{FALSE} (default) keeps them and marks them \code{.key_own = TRUE}, 
 \code{\link[=widen_ard]{widen_ard()}} leaves them out of the body while a column header can
 still read them.  \code{TRUE} removes them outright.}
 
-\item{stack}{Subgroups as one pair of keys, a named list of \strong{layers}:
+\item{stack}{Subgroups as one pair of keys (a complete ORR-by-subgroup
+example is in the article \emph{Tables from an ARD, step by step},
+\emph{Subgroups}), a named list of \strong{layers}:
 \code{stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))}
 adds the columns \code{subgroup} (the layer: \code{"SEX"}, or variables crossed,
 \code{"AGEGR1 / SEX"}) and \code{subgroup_level} (its level: \code{"F"}, \code{"65-80 / F"})
@@ -85,7 +87,9 @@ under it, \code{F} under that --- while a single layer, whose outer key is
 the joined form, \code{65-80 / F}.}
 }
 \value{
-A data frame with one row per ARD statistic: the key columns, the
+A data frame with one row per ARD statistic.  The analysis
+variables do not become columns: each stays a value of \code{variable}, with
+its rows beside it.  The columns: the key columns, the
 ARD's own \code{variable} / \code{variable_level} / \code{context} / \code{stat_name} /
 \code{stat_label} / \code{stat} / \code{stat_fmt}, the structural classification \code{.kind}
 (\code{"continuous"} / \code{"categorical"}, see \link{ard-tables}), \code{.label} (the

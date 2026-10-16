@@ -68,6 +68,10 @@ small value entirely:
 \code{0.000} for a concentration near the limit of quantitation is the reason
 \code{"signif"} is the default. Zero itself prints with \code{digits - 1} decimals
 under both (\code{"0.000"} at 4), having no significant digits to count.
+
+These format numbers in a data frame or vector before a table is
+built; the \verb{fmt_*} functions \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cell_format} takes
+(\code{\link[=fmt_count_pct]{fmt_count_pct()}}, ...) format cells as the table is built.
 }
 
 \examples{

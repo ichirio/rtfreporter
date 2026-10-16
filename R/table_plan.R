@@ -386,12 +386,26 @@
 #'   A raw cards ARD is refused, with the line to write.
 #' @param cols The key that goes **across** the table, as
 #'   `widen_ard(cols = )` takes it: one or more columns, optionally
-#'   renamed `c(new = old)`.
+#'   renamed `c(new = old)`.  The order of its values across the table is
+#'   the ARD's (a factor's levels) unless `plan_levels(<key> = c(...))`
+#'   says otherwise.
 #' @param rows The keys that go **down** it, likewise.  Left out, the
-#'   analysis variable is used (as `group`).
+#'   analysis variable is used (as `group`).  Each name is the column the
+#'   finished table gets, and later verbs refer to it by that name
+#'   ([plan_stub()], `plan_paginate_group(col = )`, [plan_hide()]); left
+#'   unnamed, the first key is called `group`.  `"variable"` is the column
+#'   that holds the analysis variable's name, so `c(group = "variable")`
+#'   makes one block of rows per analysis variable (AGE, SEX, ...).
+#'   Subgroups from different variables laid one under another come from
+#'   `normalize_ard(stack = )`; see the article *Tables from an ARD, step by
+#'   step* (*Subgroups*).
 #' @param label The column carrying the **row identity** --- the text in
 #'   the label column.  `".label"` by default (what [normalize_ard()]
 #'   builds), `NA` for a table that has none, or a guarded template.
+#'   `.label` holds, per row: the category (`variable_level`) for a
+#'   categorical variable; the deepest level's value in a `hierarchy`; and
+#'   `NA` for a continuous variable, whose rows are named by the
+#'   [plan_cells()] template names (`"Mean (SD)"`).
 #' @param show_keys Row keys this table also shows **as variables**: their
 #'   own counts (`cards::ard_tabulate(adsl, by = TRT, variables = SEX)`),
 #'   which [normalize_ard()] marks as a key's own tabulation once SEX is a
@@ -824,7 +838,13 @@ print.table_plan <- function(x, ...) {
 #' @param ... For `plan_cells()`, exactly what `widen_ard(cells = )`
 #'   takes: one bare entry, or entries named by variable, `context`,
 #'   kind (`continuous` / `categorical`), a stat group of
-#'   `plan_stat_groups()` or `default`.
+#'   `plan_stat_groups()` or `default`.  The names after `...` are
+#'   reserved: a variable called `stats`, `value`, `na` or `notes` cannot
+#'   be keyed in `plan_cells()`; name it so in the ARD.
+#'
+#'   For `plan_levels()`, `variable = c("AGE", "SEX", "RACE")` orders the
+#'   analysis variables themselves (the blocks of rows); variables left out
+#'   follow in the ARD's order.
 #'
 #'   `plan_compare()` takes the **comparison columns**, each named (the
 #'   column's name) and each what `plan_cells()` takes for one cell: a
@@ -971,7 +991,11 @@ print.table_plan <- function(x, ...) {
 #' @param stats,value,na,notes For `plan_cells()`: how a cell is made,
 #'   as [widen_ard()] takes them --- `stats = "cells"` (default) fills a
 #'   template per cell and `"rows"` makes each statistic a row of its own;
-#'   `value` is which of `stat` / `stat_fmt` a `{x}` reads; `na` what fills
+#'   `value` matters only with `stats = "rows"`: the raw number (`"stat"`)
+#'   or cards' formatted text (`"stat_fmt"`) in each row.  With templates
+#'   (`stats = "cells"`) an open `{x}` takes `stat_fmt` when the ARD has it
+#'   and `stat` otherwise, and `{x:stat_fmt}` / `{x:.1f}` say so per
+#'   token; `na` what fills
 #'   a cell no template could; `notes = FALSE` stops the report of the
 #'   statistics no template used.  They hold however the plan is run, by
 #'   [plan_apply()] or by `rtf_tables(doc, plan)`.  On a plan of a table
@@ -1111,6 +1135,8 @@ print.table_plan <- function(x, ...) {
 #' @param cell_format,column_widths_twips For `plan_columns()`:
 #'   [as_rtftables()]'s `cell_format` (a formatter, or a list of them one a
 #'   column) and [rtftable()]'s `column_widths_twips`, as they are.
+#'   `column_widths_twips`, when given, fixes the widths and `widths` is not
+#'   used, as in [rtftable()].
 #' @param header_sep,col_header_align For `plan_col_header()`:
 #'   [as_rtftables()]'s `header_sep` (the separator a plain table's column
 #'   names are split on into spanning header rows) and [rtftable()]'s
@@ -1330,7 +1356,9 @@ print.table_plan <- function(x, ...) {
 #'   `header =` is called with when it is a function.
 #' @param rounding For `plan_digits()`: the tie-breaking family for the
 #'   run, as `widen_ard(rounding = )` takes it.  Last wins, like every
-#'   other layer.
+#'   other layer.  A study sets the rule once with
+#'   `options(rtfreporter.rounding = )`; give it here only for a table that
+#'   departs from the study's rule.
 #' @param .variables,.others For `plan_stat_groups()`: the variables whose
 #'   records are split into the groups (`NULL`: all), and the group the
 #'   other variables' records go to whole (`NULL`: none).
@@ -1356,7 +1384,10 @@ print.table_plan <- function(x, ...) {
 #'   `<level>____<column>`.  `NULL`: one comparison a variable.
 #' @param label,position For `plan_total()`: the heading of the **Total
 #'   column** (`"Total"`) and where it goes among the column key's values
-#'   (`"last"`, `"first"`).  Its cells are cards' own overall rows --- the
+#'   (`"last"`, `"first"`).  Needed only when the ARD has overall rows (no
+#'   value of the column key): an ARD whose column variable already has a
+#'   `"Total"` level needs no `plan_total()`, that level being a column like
+#'   any other.  Its cells are cards' own overall rows --- the
 #'   statistics with no value of the column key, from the same analysis
 #'   without its `by` (`cards::ard_tabulate(adsl, variables = RACE)` bound
 #'   under `cards::ard_tabulate(adsl, by = ARM, variables = RACE)`, or
@@ -1425,6 +1456,14 @@ print.table_plan <- function(x, ...) {
 #' * bold / colour / alignment of body cells, by condition is declared as `plan_cell_style(where = ~ ..., ...)`
 #' * `style_zone(x, ...)` is declared as `plan_style(border_header = , border_body = , ...)`
 #'
+#' Two kinds of names: `plan_levels()`, `plan_labels()`, `plan_filter()`,
+#' `plan_nest()`, `plan_stat_groups()` and `plan_compare()` read the
+#' normalized ARD's columns (`variable`, the keys as the ARD names them);
+#' `plan_hide()`, `plan_paginate_group(col = )`, `plan_row_group()`,
+#' `plan_cell_style()`, `plan_columns()` and `plan_col_header()` read the
+#' finished table's columns (the names `table_plan(rows = )` gave,
+#' `row_label`, the arms).
+#'
 #' The styles `plan_cell_style()` declares run on the pages in the order
 #' written (after the header and the decimal alignment, before any
 #' `plan_after()` step).  Its `cols` may be column names, and `.values`
@@ -1451,8 +1490,12 @@ print.table_plan <- function(x, ...) {
 #'     plan_digits(1) |>                                   # the house rule
 #'     plan_digits(AGE = c(mean = 1, sd = 2)) |>           # one variable
 #'     plan_levels(SEX = c("M", "F")) |>
+#'     plan_levels(variable = c("AGE", "SEX", "AGEGR1")) |>  # the blocks
 #'     plan_labels(c(AGE = "Age (years)", SEX = "Sex", AGEGR1 = "Age group"))
 #'   plan_apply(p, "table")
+#'
+#'   # hide a variable's rows: plan_filter() keeps the rows it holds for
+#'   plan_apply(p |> plan_filter(!variable %in% "AGEGR1"), "table")
 #'
 #'   # -- The rows: stub, groups, blank rows, order, hidden columns ---------
 #'   p <- p |>
