@@ -128,7 +128,7 @@ test_that("the pipe builds the demographics shape", {
   expect_identical(names(tbl)[1:2], c("group", "label"))
   expect_setequal(names(tbl)[-(1:2)],
                   c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
-  # `labels` recoded the values AND fixed their order
+  # `labels` recoded the values; the order is the ARD's
   expect_identical(as.character(unique(tbl$group)),
                    c("Age (years)", "Age group", "Sex"))
   age <- tbl[tbl$group == "Age (years)", ]
@@ -186,9 +186,36 @@ test_that("levels may name the analysis variables, not the label column", {
   # a variable with no entry keeps its templates' order
   expect_identical(as.character(tbl$label[tbl$group == "Age"]),
                    c("n", "Mean (SD)"))
-  # and the variables themselves stay in `labels` order
+  # and the variables themselves stay in the ARD's order
   expect_identical(as.character(unique(tbl$group)),
                    c("Age", "Age group", "Sex"))
+})
+
+test_that("labels set the text, never the order: levels (or the ARD) do", {
+  skip_if_no_cards()
+  cells <- list(continuous = c("n" = "{N:.0f}"), categorical = "{n:.0f}")
+  run <- function(...) {
+    tbl <- ard_pipe(make_ard(), cols = "TRT", rows = c(group = "variable"),
+                    cells = cells, ...)
+    as.character(unique(tbl$group))
+  }
+  # some variables labelled, in another order: the ARD's order stays
+  expect_identical(run(labels = c(SEX = "Sex", AGE = "Age")),
+                   c("Age", "AGEGR", "Sex"))
+  # every variable labelled, backwards: the same
+  expect_identical(run(labels = c(SEX = "Sex", AGEGR = "Age group", AGE = "Age")),
+                   c("Age", "Age group", "Sex"))
+  # the order is levels' (of `variable`, the analysis variables)
+  expect_identical(run(labels = c(AGE = "Age", SEX = "Sex"),
+                       levels = list(variable = c("SEX", "AGE", "AGEGR"))),
+                   c("Sex", "Age", "AGEGR"))
+  # and the same through the plan verbs
+  p <- table_plan(normalize_ard(make_ard()), cols = "TRT",
+                  rows = c(group = "variable")) |>
+    plan_cells(cells, notes = FALSE) |>
+    plan_labels(SEX = "Sex", AGE = "Age")
+  expect_identical(as.character(unique(plan_apply(p, "table")$group)),
+                   c("Age", "AGEGR", "Sex"))
 })
 
 test_that("an unnamed labels / levels element is refused, not ignored", {

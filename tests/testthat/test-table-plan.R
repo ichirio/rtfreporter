@@ -2150,8 +2150,8 @@ test_that("plan_labels() scoped by an analysis variable relabels its levels (#51
   expect_identical(lab(both, "Sex"), c("Female", "Male"))
   # a scope naming no analysis variable changes nothing
   expect_identical(page(base |> plan_labels(NOPE = c(F = "Female"))), before)
-  # the variables in the order labelled, a variable's own label in its
-  # dictionary or not (#585): the dictionary did not move SEX to the end
+  # the variables in the ARD's order, however labelled -- a variable's own
+  # label in its dictionary or not (#585, #666): a label sets no order
   grp <- function(x) unique(as.character(x$group))
   expect_identical(grp(page(base |> plan_labels(SEX = "Sex", AGEGR1 = "Age group"))),
                    c("Sex", "Age group"))
@@ -2161,10 +2161,11 @@ test_that("plan_labels() scoped by an analysis variable relabels its levels (#51
                    c("Sex", "Age group"))
   expect_identical(grp(page(base |> plan_labels(AGEGR1 = "Age group",
                                                 SEX = c(SEX = "Sex", F = "Female")))),
+                   c("Sex", "Age group"))
+  # the order is plan_levels()'s
+  expect_identical(grp(page(base |> plan_levels(variable = c("AGEGR1", "SEX")) |>
+                              plan_labels(SEX = "Sex", AGEGR1 = "Age group"))),
                    c("Age group", "Sex"))
-  expect_identical(names(.ard_labels_flat(list(SEX = c(SEX = "Sex", F = "Female"),
-                                               AGEGR1 = "Age group")))[1:2],
-                   c("SEX", "AGEGR1"))
 })
 
 test_that("plan_paginate_rows(page_by = ) is as_rtftables(page_by = ): BY pages, rows paged inside", {
