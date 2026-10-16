@@ -35,6 +35,10 @@ An explicit \verb{rounding =} on any call still wins over the option.
 \code{"sas"} also absorbs a binary representation error the way SAS's own
 fuzz does: \code{2.675} is stored as \code{2.67499999999999982}, which base R
 rounds to \code{2.67} and SAS to \code{2.68}.
+
+These format numbers in a data frame or vector before a table is
+built; the \verb{fmt_*} functions \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cell_format} takes
+(\code{\link[=fmt_count_pct]{fmt_count_pct()}}, ...) format cells as the table is built.
 }
 \examples{
 round_num(c(0.5, 1.5, 2.5, -0.5))                    # 0 2 2 0

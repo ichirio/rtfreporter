@@ -28,6 +28,10 @@ through as \code{"Inf"} / \code{"-Inf"}.
 \description{
 Rounds to \code{digits} decimal places and prints them all, trailing zeros
 included -- \code{fmt_round(2.5, 2)} is \code{"2.50"}, not \code{"2.5"}.
+
+These format numbers in a data frame or vector before a table is
+built; the \verb{fmt_*} functions \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cell_format} takes
+(\code{\link[=fmt_count_pct]{fmt_count_pct()}}, ...) format cells as the table is built.
 }
 \examples{
 fmt_round(c(2.5, 20.333, 100), digits = 2)

@@ -256,6 +256,7 @@
 #'   style replication) is applied to its output unchanged.  Write the function
 #'   with a `...` so it tolerates the context arguments it does not use, and see
 #'   [add_cont_label()] for re-creating the `" (Cont.)"` continuation row.
+#'   A plan passes it the same way: `plan_paginate_rows(split = f)`.
 #' @param max_rows Integer or `NULL`.  Maximum body rows per page for the
 #'   `"group_safe"` / `"group_force"` splits (required by them).  **This is the
 #'   setting for fixed-size pages** -- `max_rows = 25` gives pages of 25 rows.
@@ -710,6 +711,10 @@
 #'   stringsAsFactors = FALSE
 #' )
 #' pages <- as_rtftables(df)               # length-1 list of rtftable
+#'
+#' # A custom page-break rule: the first three rows, then the rest.
+#' three <- function(df, ...) list(df[1:3, ], df[-(1:3), ])
+#' length(as_rtftables(df, split = three))  # 2 pages
 #' length(pages)
 #'
 #' # Cut before the given row positions: pages 1:3, 4:5, 6:6.

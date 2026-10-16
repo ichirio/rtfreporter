@@ -1,5 +1,19 @@
 # rtfreporter (development version)
 
+- **Docs: the plan verbs say what a new user looks for** (#664).
+  `table_plan()`: what the names in `rows` are and what `"variable"` and
+  `.label` hold, where the order of the columns' values comes from, where
+  subgroups are made.  `plan_verbs`: `plan_levels(variable = )` orders the
+  analysis variables, which verbs read the ARD's columns and which the
+  finished table's, the names after `...` are reserved, `rounding` is a
+  table's exception to the study's rule, when `plan_total()` is needed,
+  `column_widths_twips` wins over `widths`, hiding a variable with
+  `plan_filter()`; `value` is corrected: it matters only with `stats =
+  "rows"`.  `widen_ard()`, `normalize_ard()`, a custom `split` example in
+  `as_rtftables()`, the layer of `round_num()` / `fmt_round()` /
+  `fmt_signif()` / `fmt_numeric()`, and a "Looking inside a plan"
+  heading in the reference.
+
 - **The plan verbs take the plan as `.plan`** (#662).  A name such as `p`
   in a verb's `...` -- `plan_digits(p = 1)` for `plan_compare()`'s column,
   `plan_cells(p = )` -- was taken for the first argument `plan` (an

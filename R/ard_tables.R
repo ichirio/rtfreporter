@@ -1315,7 +1315,9 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   [widen_ard()] leaves them out of the body while a column header can
 #'   still read them.  `TRUE` removes them outright.
 #'
-#' @param stack Subgroups as one pair of keys, a named list of **layers**:
+#' @param stack Subgroups as one pair of keys (a complete ORR-by-subgroup
+#'   example is in the article *Tables from an ARD, step by step*,
+#'   *Subgroups*), a named list of **layers**:
 #'   `stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))`
 #'   adds the columns `subgroup` (the layer: `"SEX"`, or variables crossed,
 #'   `"AGEGR1 / SEX"`) and `subgroup_level` (its level: `"F"`, `"65-80 / F"`)
@@ -1385,7 +1387,9 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #' reordered in between.  `levels` still overrides it.  A key that was
 #' character stays character.
 #'
-#' @return A data frame with one row per ARD statistic: the key columns, the
+#' @return A data frame with one row per ARD statistic.  The analysis
+#'   variables do not become columns: each stays a value of `variable`, with
+#'   its rows beside it.  The columns: the key columns, the
 #'   ARD's own `variable` / `variable_level` / `context` / `stat_name` /
 #'   `stat_label` / `stat` / `stat_fmt`, the structural classification `.kind`
 #'   (`"continuous"` / `"categorical"`, see [ard-tables]), `.label` (the
@@ -2025,6 +2029,9 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   * an **analysis variable** -- it orders that variable's rows in the label
 #'     column, without your having to know what the label column is called.
 #'     Variables you leave out keep their `cells` templates' order.
+#'   * `variable` itself -- a row key like any other:
+#'     `levels = list(variable = c("AGE", "SEX"))` orders the analysis
+#'     variables.
 #' @param labels Named character vector recoding key *values* to display text,
 #'   e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.  When a column is
 #'   recoded and has no explicit `levels`, the order of `labels` becomes its
