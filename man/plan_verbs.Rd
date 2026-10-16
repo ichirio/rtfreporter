@@ -29,16 +29,16 @@
 \alias{plan_paginate_cols}
 \title{Declare the table, one layer at a time}
 \usage{
-plan_levels(plan, ..., .drop_empty = NULL)
+plan_levels(.plan, ..., .drop_empty = NULL)
 
-plan_labels(plan, ...)
+plan_labels(.plan, ...)
 
-plan_cells(plan, ..., stats = NULL, value = NULL, na = NULL, notes = NULL)
+plan_cells(.plan, ..., stats = NULL, value = NULL, na = NULL, notes = NULL)
 
-plan_digits(plan, ..., rounding = NULL)
+plan_digits(.plan, ..., rounding = NULL)
 
 plan_stub(
-  plan,
+  .plan,
   vars = NULL,
   name = NULL,
   indent = NULL,
@@ -47,7 +47,7 @@ plan_stub(
 )
 
 plan_cell_style(
-  plan,
+  .plan,
   cols = NULL,
   header = FALSE,
   where = NULL,
@@ -61,28 +61,28 @@ plan_cell_style(
   indent_twips = NULL
 )
 
-plan_paginate_group(plan, col = NULL, keep = TRUE, heading = NULL)
+plan_paginate_group(.plan, col = NULL, keep = TRUE, heading = NULL)
 
-plan_row_group(plan, mode = NULL, collapse = NULL, group_col = NULL)
+plan_row_group(.plan, mode = NULL, collapse = NULL, group_col = NULL)
 
-plan_nest(plan, ...)
+plan_nest(.plan, ...)
 
-plan_total(plan, label = "Total", position = c("last", "first"))
+plan_total(.plan, label = "Total", position = c("last", "first"))
 
-plan_filter(plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL)
+plan_filter(.plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL)
 
 plan_compare(.plan, ..., by = NULL, position = c("last", "first"))
 
-plan_stat_groups(plan, ..., .variables = NULL, .others = NULL)
+plan_stat_groups(.plan, ..., .variables = NULL, .others = NULL)
 
-plan_hide(plan, ...)
+plan_hide(.plan, ...)
 
-plan_sort(plan, ..., stat = NULL, keep = TRUE)
+plan_sort(.plan, ..., stat = NULL, keep = TRUE)
 
-plan_blanks(plan, where = NULL, first = NULL, last = NULL, counted = NULL)
+plan_blanks(.plan, where = NULL, first = NULL, last = NULL, counted = NULL)
 
 plan_paginate_rows(
-  plan,
+  .plan,
   max_rows = NULL,
   split = NULL,
   break_before = NULL,
@@ -93,7 +93,7 @@ plan_paginate_rows(
 )
 
 plan_style(
-  plan,
+  .plan,
   border = NULL,
   align_count_pct = NULL,
   font = NULL,
@@ -126,7 +126,7 @@ plan_style(
 )
 
 plan_col_header(
-  plan,
+  .plan,
   header = NULL,
   values = NULL,
   header_sep = NULL,
@@ -136,7 +136,7 @@ plan_col_header(
 )
 
 plan_columns(
-  plan,
+  .plan,
   widths = NULL,
   decimal = NULL,
   row_title = NULL,
@@ -147,7 +147,7 @@ plan_columns(
 )
 
 plan_listing(
-  plan,
+  .plan,
   ...,
   type = NULL,
   sep = NULL,
@@ -157,14 +157,14 @@ plan_listing(
   wrap = NULL
 )
 
-plan_titles(plan, ..., pages = NULL)
+plan_titles(.plan, ..., pages = NULL)
 
-plan_footnotes(plan, ..., pages = NULL)
+plan_footnotes(.plan, ..., pages = NULL)
 
-plan_after(plan, ...)
+plan_after(.plan, ...)
 
 plan_paginate_cols(
-  plan,
+  .plan,
   at = NULL,
   cut_by = NULL,
   every = NULL,
@@ -176,7 +176,9 @@ plan_paginate_cols(
 )
 }
 \arguments{
-\item{plan}{An \code{\link[=table_plan]{table_plan()}}.}
+\item{.plan}{A \code{\link[=table_plan]{table_plan()}}.  The pipe passes it by position; the dot
+keeps a name in \code{...} such as \code{p} (cards' percentage) from being taken
+for it (an argument before \code{...} matches by its first letters).}
 
 \item{...}{For \code{plan_cells()}, exactly what \code{widen_ard(cells = )}
 takes: one bare entry, or entries named by variable, \code{context},
@@ -525,11 +527,6 @@ records into columns, one a level (\code{by = "COMPARISON"}: each active arm
 against placebo, the ARD made by \code{ard_strata(.strata = COMPARISON)} over
 two-arm subsets).  With several columns in \code{...} they are named
 \verb{<level>____<column>}.  \code{NULL}: one comparison a variable.}
-
-\item{.plan}{For \code{plan_compare()}: the plan, as \code{plan} is for the
-others --- named so that a column called \code{p} is not taken for it
-(an argument before \code{...} matches by its first letters).  The pipe
-passes it by position.}
 
 \item{.variables, .others}{For \code{plan_stat_groups()}: the variables whose
 records are split into the groups (\code{NULL}: all), and the group the

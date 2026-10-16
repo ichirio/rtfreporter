@@ -4,10 +4,10 @@
 \alias{plan_apply}
 \title{Run a plan, or look inside it}
 \usage{
-plan_apply(plan, stage = c("auto", "input", "args", "table", "pages"))
+plan_apply(.plan, stage = c("auto", "input", "args", "table", "pages"))
 }
 \arguments{
-\item{plan}{An \code{\link[=table_plan]{table_plan()}}.}
+\item{.plan}{An \code{\link[=table_plan]{table_plan()}}.}
 
 \item{stage}{How far to go.  \code{"auto"}, the default, is \strong{as far as the
 plan declares}: a plan that says nothing about the display stops at
