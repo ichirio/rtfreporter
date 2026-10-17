@@ -5,6 +5,12 @@
   pkgdown rewrites to `.html` -- not published, so 404.  They are absolute
   URLs to the published `.md` now, as the README's are, and a test keeps
   them so.
+- Docs: the examples' running header starts `c(l = "Ichirio Pharma", r = "DRAFT")`
+  -- the study is the second line's `Protocol: {STUDY}` -- in the README,
+  Get started and the figures, gallery and tables-from-ARD articles; their
+  pictures made again (`data-raw/gen_gallery.R`, `gen_article_shots.R`, whose
+  list of pictures now reads `.shot()`, so a `.keep()` call over several
+  lines is no longer missed).
 
 - **A label sets only the text, never the order** (#666).
   `plan_labels()` / `widen_ard(labels = )` used to put the labelled
