@@ -52,7 +52,10 @@ dir.create(figs, showWarnings = FALSE, recursive = TRUE)
 # only the pictures the articles ask for (a chunk's own fixed-name file is not one)
 want <- unlist(lapply(articles, function(a) {
   x <- readLines(file.path(root, "vignettes", paste0(a, ".Rmd")))
-  sub('^\\.keep\\([^,]+, "([^"]+)\\.rtf"\\)$', "\\1", grep('^\\.keep\\(', x, value = TRUE))
+  # the pictures a page shows (.shot("<name>.png")): a .keep() call over
+  # several lines names its file on its last line, which a pattern of the
+  # call's first line missed
+  sub('^\\.shot\\("([^"]+)\\.png"\\)$', "\\1", grep('^\\.shot\\("', trimws(x), value = TRUE))
 }))
 for (w in want) {
   f <- file.path(out, paste0(w, ".rtf"))

@@ -162,6 +162,6 @@ squash_blank_band(body, file.path(asm_figs, "target.png"))
 asm_png <- file.path(asm_figs, c("toc.png", "target.png"))
 
 pngs <- c(list.files(figs, pattern = "[.]png$", full.names = TRUE),
-          readme_png, gs_png, ta_png, asm_png)
+          readme_png, ta_png, asm_png)
 message(paste(sprintf("%-50s %6.1f KB", pngs, file.size(pngs) / 1024),
               collapse = "\n"))
