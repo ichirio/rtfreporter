@@ -221,6 +221,8 @@ navbar:
         # they fall behind the newest tag.
         - text: -------
         - text: "For AI assistants"
+        - text: "Asking an AI chat for a table's plan code"
+          href: articles/ai-plan-code.html
         - text: "Developing with an AI assistant"
           href: articles/ai-development.html
         - text: "AI user manual"
@@ -685,6 +687,7 @@ articles:
       - articles/tables-from-ard
       - articles/plan-verbs
       - articles/plan-and-as-rtftables
+      - articles/ai-plan-code
 
   - title: Bring your own table
     desc: >
@@ -744,13 +747,14 @@ articles:
       - articles/architecture
       - articles/extending-adapters
 
-  - title: コントリビューター向け資料（日本語 / Japanese）
+  - title: 日本語の記事（Japanese）
     desc: >
-      Japanese versions of the contributor articles, reachable from the
-      "In Japanese" toggle at the top of each English page.
-      日本語のコントリビューター向け資料です。
+      Japanese versions of articles, reachable from the "In Japanese"
+      toggle at the top of each English page.
+      英語の記事の頭の切り替えから開く日本語版です。
     navbar: ~
     contents:
+      - articles/ai-plan-code-ja
       - articles/ai-development-ja
       - articles/architecture-ja
       - articles/extending-adapters-ja

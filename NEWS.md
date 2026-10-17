@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **Docs: asking an AI chat for a table's plan code** (#670), a short
+  article in English and Japanese (a toggle between them): make the kit
+  with `rtfreporter_ai_manual(dir, ard = )`, what to give the AI (the kit and
+  this table's shell; never the ADaM; only `06_ard_shape.md` when the ARD may
+  not be sent; one text to paste when the chat takes no attachment), how to
+  ask, and how to try the code it returns.
+
 - **A label sets only the text, never the order** (#666).
   `plan_labels()` / `widen_ard(labels = )` used to put the labelled
   variables first, in the order the labels were written, so labelling some
