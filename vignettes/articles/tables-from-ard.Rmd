@@ -243,7 +243,7 @@ doc <- rtf_document(
     tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Table 14.1.1"),
@@ -355,7 +355,7 @@ doc <- rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Table 14.3.1.1"),
@@ -398,7 +398,7 @@ doc <- rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Table 14.3.1.2"),
@@ -480,7 +480,7 @@ doc <- rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Table 14.1.1"),
@@ -583,7 +583,7 @@ doc <- rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Table 14.2.1"),

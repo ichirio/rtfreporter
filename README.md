@@ -61,7 +61,7 @@ The page they write:
 
 <p align="center">
   <img src="man/figures/readme-ard-example.png"
-       alt="The t_dm.rtf written by the code below, opened in a word processor: a running header with Ichirio Pharma | Study XYZ-001, DRAFT and Page 1 of 1, then Table 14.1.1, the title and the population; three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as Mean (SD), Median and Min, Max and sex as n (%); the footer gives the program's path and the run date."
+       alt="The t_dm.rtf written by the code below, opened in a word processor: a running header with Ichirio Pharma, DRAFT and Page 1 of 1, then Table 14.1.1, the title and the population; three arm columns with (N=86), (N=84), (N=84) read from the ARD, age as Mean (SD), Median and Min, Max and sex as n (%); the footer gives the program's path and the run date."
        width="720" />
 </p>
 
@@ -96,7 +96,7 @@ report <- rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Table 14.1.1"),
@@ -140,7 +140,7 @@ rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Table 14.1.1"),
@@ -180,7 +180,7 @@ rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Table 14.1.1"),

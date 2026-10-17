@@ -98,7 +98,7 @@ doc <- rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Figure 14.2.1"),
@@ -153,7 +153,7 @@ fig
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"),
       c(c = ""),
       c(c = "Figure 14.2.3"),
@@ -286,7 +286,7 @@ report <- rtf_document(
   tokens  = list(STUDY = "XYZ-001")) |>
   rtf_section(
     header = rtf_header(list(
-      c(l = "Ichirio Pharma | Study {STUDY}",      r = "DRAFT"),
+      c(l = "Ichirio Pharma",                      r = "DRAFT"),
       c(l = "Protocol: {STUDY} (CDISC pilot data)", r = "Page {PAGE} of {TOTAL_PAGES}"))),
     footer = rtf_footer(list(
       c(l = "{PROGRAM_FULL}    Generated on: {DATETIME}")))) |>
