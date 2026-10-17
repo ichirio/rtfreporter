@@ -215,6 +215,8 @@ navbar:
         # ship in inst/ai/ and are copied to docs/ai/ by the pkgdown workflow
         # (#463), version-stamped, so the link says which package it matches.
         # They are NOT articles: no `articles/` prefix, no `.html` extension.
+        # The hrefs are ABSOLUTE: pkgdown rewrites a relative `.md` href to
+        # `.html`, which is not published (404).
         # These name the RELEASED manual -- the one that matches what
         # `install_github()` gives -- so they change once per release, not
         # every time the development counter moves.  A test fails the build if
@@ -224,9 +226,9 @@ navbar:
         - text: "Developing with an AI assistant"
           href: articles/ai-development.html
         - text: "AI user manual"
-          href: ai/rtfreporter-ai-user-manual-0.8.2.md
+          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md
         - text: "AI developer manual"
-          href: ai/rtfreporter-ai-dev-manual-0.8.2.md
+          href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.8.2.md
         # ── Specification / internals (advanced) ────────────────────────
         - text: -------
         - text: "Specification & internals"

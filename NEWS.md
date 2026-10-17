@@ -1,5 +1,11 @@
 # rtfreporter (development version)
 
+- **Docs: the navbar's AI manual links open** (#668).  The "AI user
+  manual" / "AI developer manual" links were relative `.md` paths, which
+  pkgdown rewrites to `.html` -- not published, so 404.  They are absolute
+  URLs to the published `.md` now, as the README's are, and a test keeps
+  them so.
+
 - **A label sets only the text, never the order** (#666).
   `plan_labels()` / `widen_ard(labels = )` used to put the labelled
   variables first, in the order the labels were written, so labelling some

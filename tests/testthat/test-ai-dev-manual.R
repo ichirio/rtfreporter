@@ -117,6 +117,19 @@ test_that("the contributor article has its Japanese twin, each linking the other
                         readLines(ja, encoding = "UTF-8", warn = FALSE), fixed = TRUE)))
 })
 
+test_that("the navbar links the manuals by absolute URL, as .md (#668)", {
+  # pkgdown rewrites a relative `.md` href to `.html`, which is not
+  # published: the manuals' links are absolute, so they stay `.md`.
+  yml <- test_path("..", "..", "_pkgdown.yml")
+  skip_if_not(file.exists(yml), "_pkgdown.yml not available")
+  L <- readLines(yml, encoding = "UTF-8", warn = FALSE)
+  href <- grep("href:.*rtfreporter-ai-(user|dev)-manual", L, value = TRUE)
+  expect_length(href, 2L)
+  expect_true(all(grepl(
+    "href: https://ichirio[.]github[.]io/rtfreporter/ai/rtfreporter-ai-(user|dev)-manual-[0-9.]+[.]md$",
+    trimws(href))), info = paste(trimws(href), collapse = " | "))
+})
+
 test_that("both manuals and the article are declared in _pkgdown.yml", {
   yml <- test_path("..", "..", "_pkgdown.yml")
   skip_if_not(file.exists(yml), "_pkgdown.yml not available")
