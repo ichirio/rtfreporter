@@ -1,0 +1,91 @@
+---
+title: "AI チャットに表の plan のコードを書いてもらう"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+<p align="right">
+  <a class="btn btn-outline-secondary btn-sm" href="ai-plan-code.html">In English</a>
+</p>
+
+## 1. 何をする機能か
+
+チャット AI が、表の**シェル**と**ARD**から、**1 つの表**の R プログラム
+（`normalize_ard() |> table_plan() |> plan_*()`、文書、ファイル）を書きます。
+rtfreporter が先に事実をまとめた**キット**を渡すので、AI は実在する関数だけを
+使います。rtfreporter は何も送信しません。
+
+## 2. キットを作る
+
+```r
+library(rtfreporter)
+ard <- readRDS("output/ard/ard.rds")          # 試験の ARD
+ard <- ard[ard$output_id == "T-14-1-1", ]     # この表の行
+rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, overwrite = TRUE)
+```
+
+| ファイル | 中身 |
+|---|---|
+| `00_START_HERE.md` | 依頼文: プログラムの 3 段とルール |
+| `01_rtfreporter-ai-user-manual.md` | マニュアル: 存在する関数（§18）、ARD からの表（§17、§17a） |
+| `02_`〜`04_example_*.R` | 同じ形のプログラム: 部分集団の ORR、SOC/PT の有害事象、人口統計 |
+| `05_ard.csv` | この表の ARD（正規化したもの、`ard =` を渡したとき） |
+| `06_ard_shape.md` | ARD のキー・変数・統計量。数値は入らない（`ard =` を渡したとき） |
+
+## 3. AI に何を渡すか
+
+| 渡すもの | 渡さないもの |
+|---|---|
+| キットのファイル `00`〜`06` | **ADaM** データセット、レコードを含むデータ全般 |
+| **この表のシェルだけ**（SHELL ワークブックのその部分: 行・列・セルの書式・題名・脚注） | 他の表のシェルや ARD |
+
+**ARD を送れないとき**: `06_ard_shape.md` を渡し、`05_ard.csv` は外します。
+形（プログラムに要る名前）は入っていて、数値は入っていません。
+
+**1 つのチャットに 1 つの表**。
+
+**ファイルを添付できないチャット**では、ファイルを 1 つのテキストにまとめて
+貼ります:
+
+```r
+kit <- "kit/T-14-1-1"
+f   <- list.files(kit, full.names = TRUE)
+f   <- f[basename(f) != "05_ard.csv"]           # 数値を外すとき
+txt <- unlist(lapply(f, function(x) c(paste("#####", basename(x)), readLines(x, encoding = "UTF-8"), "")))
+writeLines(txt, file.path(kit, "PASTE.md"), useBytes = TRUE)
+nchar(paste(txt, collapse = "\n"))              # 約 80,000 文字
+```
+
+その下に表のシェル（テキスト）を貼ります。チャットに長すぎるときは、
+`00_START_HERE.md`、`06_ard_shape.md`、表に一番近い見本 1 つ、マニュアルの
+§17・§17a・§18 だけにします。
+
+## 4. 頼み方の例
+
+> 00_START_HERE.md に従って、表 T-14-1-1 の R プログラムを書いてください。
+> シェルは下に貼ります。ARD は `ard`（05_ard.csv、形は 06_ard_shape.md）、
+> `output_path` と `report_name` はあります。
+>
+> *（シェルを貼る）*
+
+## 5. 返ってきたコードの試し方
+
+```r
+library(rtfreporter)
+ard         <- readRDS("output/ard/ard.rds")
+ard         <- ard[ard$output_id == "T-14-1-1", ]
+output_path <- "output"
+report_name <- "T-14-1-1"
+source("T-14-1-1.R")                 # AI のプログラムをファイルに保存して
+```
+
+| 見えたもの | すること |
+|---|---|
+| 関数や引数の名前を言うエラー | 同じチャットにエラーを貼る:「このエラーが出ました。直してください」 |
+| 先頭の `# QUESTION:` の行 | チャットで答える |
+| 行や列が足りない | `06_ard_shape.md` を見る。ARD に無いなら、プログラムでなく ARD に足す |
+| 数値 | ARD の値。plan は計算しない |
+
+RTF の前に `plan_apply(tbl_plan, "table")` で表をデータフレームとして見られます。

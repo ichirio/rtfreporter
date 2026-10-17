@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **Docs: asking an AI chat for a table's plan code** (#670), a short
+  article in English and Japanese (a toggle between them): make the kit
+  with `rtfreporter_ai_manual(dir, ard = )`, what to give the AI (the kit and
+  this table's shell; never the ADaM; only `06_ard_shape.md` when the ARD may
+  not be sent; one text to paste when the chat takes no attachment), how to
+  ask, and how to try the code it returns.
+
 - **Docs: the navbar's AI manual links open** (#668).  The "AI user
   manual" / "AI developer manual" links were relative `.md` paths, which
   pkgdown rewrites to `.html` -- not published, so 404.  They are absolute
