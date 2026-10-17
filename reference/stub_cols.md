@@ -1,0 +1,209 @@
+# Merge hierarchy columns into one indented stub column
+
+`stub_cols()` finishes a tidy data.frame for clinical-table display: the
+given hierarchy columns (parent first, leaf last) are merged into a
+**single stub column**. Each parent value becomes its own full-width
+**label row** (the other columns are `NA`, which renders as an empty
+cell), and the leaf rows below it are **indented** with non-breaking
+spaces – the layout a gt / rtables / tfrmt render bakes into its row
+labels, produced here from plain columns.
+
+## Usage
+
+``` r
+stub_cols(
+  data,
+  vars,
+  label = NULL,
+  indent = 4L,
+  group_summary = c("empty", "parent"),
+  layout = c("merged", "columns"),
+  label_span = FALSE
+)
+```
+
+## Arguments
+
+- data:
+
+  A data.frame (or tibble).
+
+- vars:
+
+  The hierarchy columns to merge, **parent first, leaf last** – at least
+  two. A character / integer vector (or a
+  [`list()`](https://rdrr.io/r/base/list.html) to mix names and
+  indices).
+
+- label:
+
+  Column name for the merged stub column (this is what a default column
+  header shows). `NULL` (default) joins the display names of the merged
+  columns with `" / "` – e.g. `"SOC / PT"` – using a column's `label`
+  attribute when it has one.
+
+- indent:
+
+  Integer (default `4`). Number of non-breaking spaces prepended per
+  nesting level.
+
+- group_summary:
+
+  Which leaf values mark a row as its group's summary, folding that
+  row's statistics onto the group label row instead of an indented leaf
+  row (see *Group-summary rows*). A subset of `c("empty", "parent")` –
+  `"empty"` for an `NA` / `""` leaf, `"parent"` for a leaf equal to its
+  deepest non-empty parent value. Also accepts `"all"` (both, the
+  default) or `"none"` / `NULL` (disable).
+
+- layout:
+
+  How the hierarchy is laid out.
+
+  `"merged"`
+
+  :   (default) the hierarchy columns are replaced by one indented stub
+      column – the historical behaviour.
+
+  `"columns"`
+
+  :   the hierarchy columns are **kept**, in their original positions
+      and with their own headers. A group value moves onto its own row
+      and is blank on that group's member rows, whose leaf is indented
+      in the leaf column. Nothing is merged: the group value is simply
+      displayed in its own column.
+
+- label_span:
+
+  Render each group's label row as **one cell spanning the table**
+  instead of a stub cell followed by empty ones. `FALSE` by default,
+  which is the historical look. Applies to `layout = "merged"` only;
+  `layout = "columns"` keeps the group value in its own column and so
+  has nothing to span. A group-summary row folded onto a label row is
+  never spanned – it carries statistics in the other columns. The span
+  is recorded as `attr(out, "rtf_label_rows")`, which
+  `rtftable(read_attributes = TRUE)` consumes.
+
+## Value
+
+A data.frame: the stub column first, then every column of `data` not
+named in `vars`, in their original order. Label rows hold `NA` in the
+non-stub columns. Row count grows by one per emitted label row.
+
+## Details
+
+The result is an ordinary data.frame, so everything downstream of
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+works unchanged: `group_by = "auto"` detects the indentation, the
+group-aware splits keep a label row with its children (and append the
+`" (Cont.)"` marker on a continued group),
+`blank_rows = "between_groups"` separates the groups, and so on.
+
+A label row is emitted at every **run** of a parent value (consecutive
+rows sharing that value), not once per distinct value – so sort the
+input first if the hierarchy is scattered (see the `sort_by` argument of
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md),
+or sort the data.frame directly). Runs are hierarchical: a change in a
+higher-level column starts a new run in every column below it.
+
+An `NA` or empty (`""`) parent cell contributes **no label row and no
+indentation** for its rows. This is the idiomatic way to keep a summary
+row – e.g. *"Subjects with at least one adverse event"* – flush left at
+the top of the table: leave its parent columns empty.
+
+## Group-summary rows (AE style)
+
+A group can carry its own summary statistic – the SOC-level count of an
+adverse-event table, say – supplied on a row whose **leaf** is either
+`NA` / `""` or a repeat of the parent value:
+
+      SOC1  NA    3 (2.1%)          SOC1  SOC1  3 (2.1%)
+      SOC1  PT1   1 (0.7%)    or    SOC1  PT1   1 (0.7%)
+      SOC1  PT2   2 (1.4%)          SOC1  PT2   2 (1.4%)
+
+With `group_summary` enabled (the default), such a row's statistics are
+placed **on the group's label row** and no separate indented leaf row is
+emitted, giving the standard AE layout:
+
+      SOC1        3 (2.1%)
+          PT1     1 (0.7%)
+          PT2     2 (1.4%)
+
+Demographic-style tables (pattern where the leaf is a statistic name
+such as `"n"` / `"Mean (SD)"`, never `NA` and never equal to the parent)
+are left untouched, so a parent label row keeps its empty cells and the
+stats stay on the indented leaf rows. Set `group_summary = "none"` to
+disable the folding (an `NA` leaf then becomes an empty indented row, as
+before) – note the disable token is `"none"`, distinct from the
+`"empty"` trigger.
+
+With more than two `vars`, each additional level indents one step
+further: level-1 label rows are flush left, level-2 label rows are
+indented once, and so on; a leaf row is indented once per non-empty
+ancestor.
+
+Column `label` attributes (the haven / labelled / xportr convention) on
+the remaining columns are preserved, so
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+can still pick them up as header labels.
+
+## See also
+
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md),
+whose `group_by = "indent"` detection, group-aware splits and
+`blank_rows = "between_groups"` consume this layout directly;
+`collapse_repeats` / `drop_cols` there for the related
+repeat-suppression and hidden-column finishing.
+
+## Examples
+
+``` r
+ae <- data.frame(
+  soc = c("Cardiac disorders", "Cardiac disorders",
+          "Gastrointestinal disorders"),
+  pt  = c("Atrial fibrillation", "Bradycardia", "Nausea"),
+  n   = c("3 (2.1%)", "1 (0.7%)", "5 (3.5%)"),
+  stringsAsFactors = FALSE
+)
+stub_cols(ae, vars = c("soc", "pt"),
+          label = "System Organ Class / Preferred Term")
+#>   System Organ Class / Preferred Term        n
+#> 1                   Cardiac disorders     <NA>
+#> 2                 Atrial fibrillation 3 (2.1%)
+#> 3                         Bradycardia 1 (0.7%)
+#> 4          Gastrointestinal disorders     <NA>
+#> 5                              Nausea 5 (3.5%)
+
+# A summary row stays flush left: leave its parent column empty.
+ae2 <- rbind(
+  data.frame(soc = "", pt = "Any adverse event", n = "9 (6.3%)",
+             stringsAsFactors = FALSE),
+  ae
+)
+tbl <- stub_cols(ae2, vars = c("soc", "pt"))
+tbl
+#>                     soc / pt        n
+#> 1          Any adverse event 9 (6.3%)
+#> 2          Cardiac disorders     <NA>
+#> 3        Atrial fibrillation 3 (2.1%)
+#> 4                Bradycardia 1 (0.7%)
+#> 5 Gastrointestinal disorders     <NA>
+#> 6                     Nausea 5 (3.5%)
+
+# The output feeds straight into the converting / paginating pipeline.
+pages <- as_rtftables(tbl, split = "group_force", max_rows = 4)
+
+# AE style: an NA (or repeated-parent) leaf carries the SOC-level summary,
+# which is folded onto the SOC label row.
+ae_sum <- data.frame(
+  soc = c("Cardiac disorders", "Cardiac disorders", "Cardiac disorders"),
+  pt  = c(NA, "Atrial fibrillation", "Bradycardia"),
+  n   = c("4 (2.8%)", "3 (2.1%)", "1 (0.7%)"),
+  stringsAsFactors = FALSE
+)
+stub_cols(ae_sum, vars = c("soc", "pt"))
+#>                  soc / pt        n
+#> 1       Cardiac disorders 4 (2.8%)
+#> 2     Atrial fibrillation 3 (2.1%)
+#> 3             Bradycardia 1 (0.7%)
+```
