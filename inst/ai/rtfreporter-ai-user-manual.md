@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9071** (the development
+**This manual documents rtfreporter 0.8.2.9073** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -771,7 +771,8 @@ ARD ─ normalize_ard() ─▶ flat frame ─ table_plan() ─▶ plan ─ plan_
 **Rules of the plan (tell the user these when they are confused):**
 
 1. `table_plan()` takes the **roles** only: `cols` (across), `rows` (down),
-   `label` (the row identity) and `stat`. No other argument exists on it.
+   `label` (the row identity), `stat`, and `show_keys` (a key's own counts
+   kept as body rows). No other argument exists on it.
 2. Each `plan_*()` verb has **one job**. Every other setting belongs to the
    verb for that job (the table below).
 3. **A later layer wins.** `plan_digits(2) |> plan_digits(AGE = 0)` means 2
@@ -870,7 +871,8 @@ p_ae <- ard_ae |>
 
 | Job | Verb (arguments) |
 |---|---|
-| Start; roles | `table_plan(x, cols, rows, label, stat)`: `stat = c(variable =, name =, value =)` renames the three parts for a non-cards frame |
+| Flatten the ARD | `normalize_ard(x, keys, hierarchy, overall, drop_contexts, drop_key_variables, stack, stack_sep, stack_nest)`: `keys` = the group variables made columns (default every one); `hierarchy = c("AEBODSYS", "AEDECOD")`; `overall = "Any TEAE"`; `drop_key_variables = TRUE` removes the arm's own counts (default keeps them as `.key_own`, for the header's `{n}`); `stack` / `stack_sep` / `stack_nest`: subgroups (below) |
+| Start; roles | `table_plan(x, cols, rows, label, stat, show_keys)`: `stat = c(variable =, name =, value =)` renames the three parts for a non-cards frame; `show_keys` below |
 | Cell text | `plan_cells(..., stats = "cells"/"rows", value = "stat"/"stat_fmt", na, notes)`; on a finished table `na` alone (`as_rtftables(na =)`) |
 | Digits / rounding | `plan_digits(..., rounding)`: `plan_digits(continuous = c(mean = 1, sd = 2))`; on a finished table `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
 | Order of values | `plan_levels(VAR = c(...))` |
@@ -889,14 +891,14 @@ p_ae <- ard_ae |>
 | Column header | `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: `values = list(n = TRUE)` reads N from the ARD; `list(n = "page", N = "table")` for per-page splits; `header_sep` splits a finished table's names into spanning rows; `lines = list(c(row_label = "", .values = "{col}"), c(row_label = "Characteristic", .values = "(N={n})"))` writes the header a row at a time (a cell's name = its columns, its value = the text; `span = "each"` / `"one"` / a key's name for a spanner) |
 | Whole-table look | `plan_style(border, align_count_pct, font, font_size_half_points, row_height_twips, ..., border_header, border_spanning, border_body, border_first_row, border_last_row, header_align, header_bold, header_italic, align, bold, italic, underline, table_width_twips, table_width_pct, table_width_pct_of_writable)`: the `border_*` and look fields make one `rtf_table_style()` |
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
-| A page per value | `plan_paginate_group(col, keep)` |
-| A p-value column; difference and CI columns (the test / difference records in the ARD: `cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_kruskal_test()` ...) | `plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))`, `plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})", p = "{p.value:.3f}")`; `by = "COMPARISON"` for one column a comparison. Placed on the variable's first row (or its level's row). Never compute a p-value in R and paste it in; never `ard_stats_aov()` (no variable to place it on) |
+| A page per value | `plan_paginate_group(col, keep, heading)` |
+| A p-value column; difference and CI columns (the test / difference records in the ARD: `cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_kruskal_test()` ...) | `plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))`, `plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})", p = "{p.value:.3f}")`; `by = "COMPARISON"` for one column a comparison; `position = "first"` puts its columns before the arms (default `"last"`). Placed on the variable's first row (or its level's row). Never compute a p-value in R and paste it in; never `ard_stats_aov()` (no variable to place it on) |
 | A section per arm with "Treatment: X (N=xx)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})")` + `rtf_tables(auto_section = TRUE)`; `{n}` is the arm's own tabulation in the ARD (`bind_ard(cards::ard_tabulate(adsl, variables = TRT01A), ...)`), never pulled by hand |
 | Subgroups (SEX; AGEGR1; ...) one under another, whatever group slot they came in | `normalize_ard(stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))` + `rows = c(grp1 = "subgroup", grp2 = "subgroup_level")`; `plan_labels(subgroup = c(SEX = "Sex"))`. Never `group2` / `group2_level` as keys. A crossed subgroup is a layer: `stack = list(subgroup = list("SEX", "AGEGR1", c("AGEGR1", "SEX")))` (rows `AGEGR1 / SEX` | `65-80 / F`), or `stack = list(subgroup = c("group2", "group3"))` to take the layers from the strata slots; `stack_nest = TRUE` + `rows = c(grp = "subgroup", outer = "subgroup_outer", lvl = "subgroup_level")` + `plan_stub()` to print a crossed layer's outer level as a heading; an overall row is a constant stratum `ALL = "All"` |
 | A section per arm with a row budget inside | `plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe", heading = "Treatment: {value} (N={n})")` + `plan_hide("arm")` |
-| Only the PTs with 5% or more in any arm (a SOC with its PTs) | `plan_filter(p >= 0.05)` (`any = FALSE` for every arm; `parents = "drop"` to judge a SOC by its own counts). Never filter the ARD by hand for this |
+| Only the PTs with 5% or more in any arm (a SOC with its PTs) | `plan_filter(p >= 0.05)` (`any = FALSE` for every arm; `parents = "drop"` to judge a SOC by its own counts; `by = "SOC"` judges a key's rows together). Never filter the ARD by hand for this |
 | A subgroup's own n (%) beside its ORR (SEX both a variable and a subgroup layer) | `table_plan(..., rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level"), show_keys = "SEX")` + `plan_stat_groups(n = "N", orr_ci = c(...), .variables = "RESP", .others = "n")` + `plan_cells(SEX = "{n} ({p:.1f%})", ...)` |
-| Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
+| Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
 | Titles / footnotes | `plan_titles(...)`, `plan_footnotes(...)` (`pages =` for one block per page) |
@@ -934,8 +936,9 @@ the attributes itself), and the deprecated `stub_vars` / `stub_label` /
   own) and `table` (the analysis set) -- with their values per column;
   attribute `differ` when the two disagree.
 * `plan_template(ard, cols = "TRT01A")`: writes a starting program for this
-  ARD (`file =` to save it). `form = "widen"` writes the one-call form
-  instead.
+  ARD (`file =` to save it; `hierarchy =` as in `normalize_ard()`;
+  `pipe = "|>"` for the native pipe, as the kit's programs use). `form =
+  "widen"` writes the one-call form instead.
 
 ### Without a plan
 
@@ -970,7 +973,10 @@ adds an "Any" row.
 This is the section an assistant follows when the user hands it a **shell**
 (the mock-up of one table) and an **ARD** (the statistics, from
 `rtfreporter_ai_manual(dir, ard = )`: `05_ard.csv` and `06_ard_shape.md`).
-The answer is **one R script** in the layout below. Nothing else.
+The answer is **one R script** in the layout below, as **one** fenced
+```` ```r ```` block with no text around it (the `# QUESTION:` lines first,
+inside it). Nothing else: the user saves the block as a file and runs it
+with `ard`, `output_path` and `report_name` defined.
 
 ### The layout: three steps, always
 
@@ -1054,7 +1060,9 @@ a chat. Never ask for patient-level data: the plan needs the ARD only.
 * `mutate(variable = ...)` or any relabelling of the ARD to steer a template
   — the plan keys templates by variable, context, kind and stat group;
 * `group2` / `group2_level` as row keys (the stacked keys replace them);
-* a function not in §18.
+* a function not in §18;
+* `install.packages()`, `setwd()`, `rm(list = ls())`, or reading the
+  subject-level data (ADaM, SDTM) when the ARD is given.
 
 ### Open questions
 
