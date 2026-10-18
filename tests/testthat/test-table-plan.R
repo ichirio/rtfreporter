@@ -3450,6 +3450,25 @@ test_that("a verb's first argument is .plan: a name such as p in ... is not take
   expect_s3_class(plan_digits(.plan = b, p = 0), "table_plan")
 })
 
+test_that("a value plan_levels() names that the ARD does not have is said (it makes no row), whatever notes says", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- factor(adsl$ARM)
+  adsl$SEXC <- as.character(adsl$SEX)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT),
+                         cards::ard_summary(adsl, by = TRT, variables = AGE),
+                         cards::ard_tabulate(adsl, by = TRT, variables = SEXC))
+  p <- table_plan(normalize_ard(ard), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(continuous = c(n = "{N}"), categorical = "{n} ({p:.1f%})", notes = FALSE)
+  expect_message(t <- plan_apply(plan_levels(p, SEXC = c("F", "M", "U"), variable = c("SEXC", "WEIGHT")), "table"),
+                 'SEXC: "U"')
+  expect_identical(nrow(t), 3L)   # n, F, M: no row of U
+  expect_message(plan_apply(plan_levels(p, variable = c("SEXC", "WEIGHT")), "table"), 'variable: "WEIGHT"')
+  # what is there, by its value or as plan_labels() prints it: nothing said
+  expect_no_message(plan_apply(p |> plan_labels(SEXC = c(F = "Female")) |>
+                                 plan_levels(SEXC = c("M", "Female"), variable = c("SEXC", "AGE")), "table"))
+})
+
 test_that("plan_levels() with names: a value and its text at once (factor(levels, labels)); plan_labels() wins value by value", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
