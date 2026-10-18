@@ -63,6 +63,10 @@
 #'     statistics, a key's own counts, and a starting [table_plan()] -- so
 #'     the program names what the ARD really has.}
 #' }
+#' The files are UTF-8 whatever the session's locale, so Japanese labels in
+#' the ARD survive.  `00_START_HERE.md` also tells the person what to paste
+#' (the kit, `06_ard_shape.md`, `05_ard.csv` when allowed, the shell as text),
+#' what never (subject-level data), and how to run the answer -- one R block.
 #' Nothing is sent anywhere: the folder is for the user to attach.
 #'
 #' @param dir A folder to write the manual into (created when it does not
@@ -130,9 +134,7 @@ rtfreporter_ai_manual <- function(dir = NULL, ard = NULL, which = c("user", "dev
   }
   write <- function(to, lines) {
     dest <- free(to)
-    con <- file(dest, open = "w", encoding = "UTF-8")
-    on.exit(close(con))
-    writeLines(lines, con)
+    .ai_kit_write_utf8(lines, dest)
     dest
   }
   if (identical(which, "dev")) return(invisible(copy(name, src)))
@@ -154,11 +156,45 @@ rtfreporter_ai_manual <- function(dir = NULL, ard = NULL, which = c("user", "dev
   if (!is.null(ard)) {
     d <- if (inherits(ard, "ard_long")) ard else normalize_ard(ard)
     rows <- .ai_kit_ard_rows(d)
-    dest <- free("05_ard.csv")
-    utils::write.csv(rows, dest, row.names = FALSE, na = "", fileEncoding = "UTF-8")
-    out <- c(out, dest, write("06_ard_shape.md", .ai_kit_shape(d, nrow(rows))))
+    out <- c(out, write("05_ard.csv", .ai_kit_csv(rows)),
+             write("06_ard_shape.md", .ai_kit_shape(d, nrow(rows))))
   }
   invisible(unname(out))
+}
+
+# The kit's text files are UTF-8 whatever the session's locale: the bytes are
+# written as they are (`useBytes`), never converted to the native encoding
+# first -- a connection opened with `encoding = "UTF-8"` converts *from*
+# native, so in a non-UTF-8 locale a Japanese label or the manual's dashes
+# would be dropped on the way out.
+.ai_kit_write_utf8 <- function(lines, dest) {
+  con <- file(dest, open = "wb")
+  on.exit(close(con))
+  writeLines(.ai_kit_utf8(lines), con, sep = "\n", useBytes = TRUE)
+}
+
+# Text as UTF-8: a string marked with its encoding is converted; an unmarked
+# one that is already valid UTF-8 keeps its bytes (a label whose mark was lost
+# on the way, in a non-UTF-8 locale); any other is native and converted.
+.ai_kit_utf8 <- function(x) {
+  x <- as.character(x)
+  keep <- !is.na(x) & Encoding(x) == "unknown" & validUTF8(x)
+  x[!keep] <- enc2utf8(x[!keep])
+  x
+}
+
+# `05_ard.csv` as lines, quoted like write.csv() (text quoted, NA empty), but
+# built in UTF-8 rather than through the native encoding.
+.ai_kit_csv <- function(x) {
+  quote <- function(v) paste0("\"", gsub("\"", "\"\"", .ai_kit_utf8(v), fixed = TRUE, useBytes = TRUE), "\"")
+  cols <- lapply(x, function(v) {
+    if (is.list(v)) v <- vapply(v, function(e) paste(format(unlist(e)), collapse = " "), "")
+    out <- if (is.character(v)) quote(v) else as.character(v)
+    out[is.na(v)] <- ""
+    out
+  })
+  body <- if (nrow(x)) do.call(paste, c(unname(cols), sep = ",")) else character(0)
+  c(paste(quote(names(x)), collapse = ","), body)
 }
 
 # The ARD's rows for `05_ard.csv`: the keys, what each row is, its value --

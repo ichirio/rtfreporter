@@ -85,6 +85,10 @@ their values, which keys come alone or together, each variable's
 statistics, a key's own counts, and a starting \code{\link[=table_plan]{table_plan()}} -- so
 the program names what the ARD really has.}
 }
+The files are UTF-8 whatever the session's locale, so Japanese labels in
+the ARD survive.  \verb{00_START_HERE.md} also tells the person what to paste
+(the kit, \verb{06_ard_shape.md}, \verb{05_ard.csv} when allowed, the shell as text),
+what never (subject-level data), and how to run the answer -- one R block.
 Nothing is sent anywhere: the folder is for the user to attach.
 }
 

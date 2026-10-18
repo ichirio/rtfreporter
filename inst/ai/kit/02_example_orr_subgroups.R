@@ -32,7 +32,7 @@ tbl_plan <- ard |>
     label = NA) |>
   plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")) |>
   plan_paginate_group(col = "arm", keep = FALSE,
-                      heading = "Treatment: {value} (N={n})") |>
+                      heading = "Treatment: {value} (N={n})", heading_at = "section") |>
   plan_labels(subgroup = c(ALL = "All Subjects", SEX = "Sex", AGEGR1 = "Age Group",
                            "AGEGR1 / SEX" = "Age Group by Sex")) |>
   plan_cells(
@@ -74,7 +74,7 @@ rep <- rtf_document() |>
   rtf_section(
     header = rtf_header(c(list(c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}")), titles)),
     footer = rtf_footer(footer_texts)) |>
-  rtf_tables(tbl_plan, auto_section = TRUE)
+  rtf_tables(tbl_plan)
 
 # ---- 3. the file ------------------------------------------------------------
 generate_rtfreport(rep, file.path(output_path, paste0(report_name, ".rtf")), overwrite = TRUE)

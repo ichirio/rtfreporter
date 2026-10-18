@@ -63,7 +63,7 @@ must be made in the program, one short block before step 1 builds it with
 3. **Keep the ARD as it is; choose the layout in the plan.** Statistics in
    two columns: `plan_stat_groups()`. A test or a difference as a column:
    `plan_compare()`. Subgroups one under another: `normalize_ard(stack = )`.
-   A section per arm with its N: `plan_paginate_group(heading = )`. Rows
+   A section per arm with its N: `plan_paginate_group(heading = , heading_at = "section")`. Rows
    dropped by a rule: `plan_filter()`. A subgroup's own counts beside its
    analysis: `table_plan(show_keys = )`.
 4. **Read `06_ard_shape.md` first** when it is there. Its keys are what
@@ -82,6 +82,20 @@ must be made in the program, one short block before step 1 builds it with
 7. **Comments in English, short, one per block.** No prose outside the
    script.
 
+## The answer: one R block
+
+Reply with **exactly one** fenced code block, ```` ```r ```` … ```` ``` ````,
+holding the whole program, and no text before or after it:
+
+1. the `# QUESTION:` lines, if any (below);
+2. `library(rtfreporter)` (and `library(cards)` only when there is a step 0);
+3. steps 1, 2 and 3, under their comment lines.
+
+No `install.packages()`, no `setwd()`, no `rm(list = ls())`, no reading or
+writing of any file but the one `generate_rtfreport()` writes. The user
+saves the block as a file and runs it as it is (below); a second block, or
+prose between parts of the program, makes them copy by hand.
+
 ## When you are unsure
 
 Write the script that does what you are sure of, and put the open
@@ -90,6 +104,14 @@ subgroup, which statistic the shell's "n (%)" reads, whether the Total
 column is in the ARD. The user answers them and runs the script.
 
 ## For the person attaching this folder: what to give the AI
+
+**Paste or attach**, in this order: this folder's files (`00` to `04`, and
+`06_ard_shape.md` -- the ARD's summary, keys and statistic names, no
+numbers), `05_ard.csv` when your rules let the ARD's numbers go to the AI
+service, and the **shell of this one table as text** (its rows, columns,
+cell formats, titles and footnotes). **Never paste** subject-level data:
+ADaM or SDTM datasets, listings, anything with a `USUBJID` or one row a
+subject.
 
 | | Input | How | What it improves |
 |---|---|---|---|
@@ -115,3 +137,16 @@ comment; run it against the real ARD, or better, write the kit again with
 a number the ARD does not hold (a p-value, a total); it says the number is
 missing, so that you can add it to the ARD.
 
+**Run the answer**: save the AI's R block as a file (`T-14-1-1.R`), then
+
+```r
+library(rtfreporter)
+ard         <- readRDS("ard.rds")   # the same ARD the kit was written from
+output_path <- "output"             # an existing folder
+report_name <- "T-14-1-1"
+source("T-14-1-1.R", encoding = "UTF-8")
+plan_apply(tbl_plan, "table")       # the table as a data frame, to check
+```
+
+An error naming a function or an argument: paste it into the same chat and
+ask for the corrected program. `# QUESTION:` lines: answer them in the chat.

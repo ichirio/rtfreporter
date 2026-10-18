@@ -1,5 +1,21 @@
 # rtfreporter (development version)
 
+- **The AI kit and its article checked against main** (#673).
+  `rtfreporter_ai_manual(dir, ard = )` writes its files as UTF-8 bytes in
+  any locale: in a non-UTF-8 one a Japanese label in `05_ard.csv` /
+  `06_ard_shape.md`, and the request's own dashes, used to be dropped.
+  `00_START_HERE.md` now says what to paste (the kit, `06_ard_shape.md` --
+  the ARD's summary --, `05_ard.csv` when allowed, the shell as text), what
+  never (subject-level data), the answer's form (one fenced R block, nothing
+  around it) and how to run it.  The manual's section 17 names every
+  argument of `table_plan()` (`show_keys`), `normalize_ard()` (`keys`,
+  `drop_contexts`, `drop_key_variables`, `stack_sep`), `plan_compare()`
+  (`position`), `plan_filter()` (`by`), `plan_paginate_group()` /
+  `plan_paginate_rows()` (`heading`, `heading_at`) and `plan_template()`
+  (`pipe`), and a test keeps it so; the kit's ORR example says
+  `heading_at = "section"`.  The article `ai-plan-code` (en/ja) runs end to
+  end on `cards::ADSL`; a test runs its blocks, and the kit's three examples.
+
 - **`plan_paginate_group(heading_at = )`: where the page name prints, said
   in the plan** (#672).  `"section"` (the section header), `"title"` (the
   last line of the titles) or `"none"`; `plan_paginate_rows()` takes it too,
