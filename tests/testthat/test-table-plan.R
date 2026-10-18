@@ -2815,7 +2815,8 @@ test_that("plan_paginate_group(heading_at = ): where the page name prints, rtf_t
   }
   grp <- function(at = NULL) plan_paginate_group(base, col = "arm", keep = FALSE,
                                                  heading = "Treatment: {value}", heading_at = at)
-  withr::local_options(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC"))
+  old <- options(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC"))
+  on.exit(options(old), add = TRUE)
   # the plan's word is rtf_tables()'s default: the same RTF as saying it there
   expect_identical(rtf(grp("section")), rtf(grp(), auto_section = TRUE))
   expect_identical(rtf(grp("title")), rtf(grp(), auto_title = TRUE))
