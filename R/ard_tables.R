@@ -385,7 +385,8 @@
     lvl <- if (".label" %in% names(d) && k %in% d$variable) as.character(d$.label[d$variable %in% k])
     have <- if (identical(k, "variable")) as.character(d$variable) else c(col, lvl)
     if (!identical(k, "variable") && is.null(col) && is.null(lvl)) next
-    lab <- labels[[k]]
+    # (labels: a list by key, or one named vector of texts for every key)
+    lab <- if (is.list(labels)) { if (k %in% names(labels)) labels[[k]] } else labels
     have <- c(have, if (!is.null(lab) && !is.function(lab)) as.character(unlist(lab, use.names = FALSE)))
     miss <- setdiff(want[!is.na(want)], have)
     if (length(miss)) {
