@@ -35,9 +35,19 @@ library(testthat)
   new.env(parent = imp)
 }
 
-.run_script <- function(lines, env) {
+# Run a script as the tester does, by source() -- so the program its
+# {PROGRAM_FULL} names is known -- into `env`, its library() lines dropped.
+# A source() inside it (the article's run block) sources into `env` too.
+.run_script <- function(lines, env, name = "script.R") {
   lines <- lines[!grepl("^\\s*library\\(", lines)]
-  eval(parse(text = lines, keep.source = FALSE, encoding = "UTF-8"), envir = env)
+  env$source <- function(file, ...) base::source(file, local = env, ...)
+  f <- file.path(tempfile("run"), name)
+  dir.create(dirname(f))
+  on.exit(unlink(dirname(f), recursive = TRUE), add = TRUE)
+  con <- file(f, open = "wb")
+  writeLines(enc2utf8(lines), con, useBytes = TRUE)
+  close(con)
+  base::source(f, local = env, encoding = "UTF-8")
 }
 
 test_that("every kit example runs and writes its RTF", {
@@ -52,7 +62,7 @@ test_that("every kit example runs and writes its RTF", {
     env$output_path <- out
     env$report_name <- sub("\\.R$", "", f)
     src <- readLines(file.path(kit, f), warn = FALSE, encoding = "UTF-8")
-    expect_no_error(suppressWarnings(suppressMessages(.run_script(src, env))),
+    expect_no_error(suppressWarnings(suppressMessages(.run_script(src, env, f))),
                     message = f)
     expect_true(file.exists(file.path(out, paste0(env$report_name, ".rtf"))), info = f)
     expect_s3_class(env$tbl_plan, "table_plan")
