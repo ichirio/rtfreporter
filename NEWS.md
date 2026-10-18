@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+- **`plan_levels()` says a value the ARD does not have** (#680).  The
+  levels order what the ARD has and make no row or column; a value they
+  name that is not there (by its value or as `plan_labels()` prints it)
+  was ignored without a word.  `widen_ard()` now says which, in a message
+  that `notes = FALSE` does not silence: a level shown with no record has
+  to be in the ARD, a factor's level (the study's code list applied when
+  the ARD is made), which cards counts as 0.
+
 - **The rounding's case is not significant** (#676): `"SAS"` is `"sas"`
   and `"R"` is `"r"`, for `options(rtfreporter.rounding = )` and every
   function's `rounding` (`round_num()`, the formatters, `plan_digits()`,

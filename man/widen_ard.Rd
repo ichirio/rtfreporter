@@ -129,7 +129,13 @@ Variables you leave out keep their \code{cells} templates' order.
 \item \code{variable} itself -- a row key like any other:
 \code{levels = list(variable = c("AGE", "SEX"))} orders the analysis
 variables.
-}}
+}
+
+The levels order what the ARD has; they make no row or column.  A value
+they name that the ARD does not have (by its value or as \code{labels} prints
+it) is said in a message, whatever \code{notes} says: a level shown with no
+record has to be in the ARD -- a factor's level, as the study's code
+list applied when the ARD is made gives, which cards counts as 0.}
 
 \item{labels}{Named character vector recoding key \emph{values} to display text,
 e.g. \code{c(AGE = "Age (years)", SEX = "Sex [n (\\\%)]")}.  Text only: the

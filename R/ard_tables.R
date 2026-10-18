@@ -370,6 +370,39 @@
   invisible(TRUE)
 }
 
+# The values `levels` names that the frame does not have, by key: a column's
+# values, an analysis variable's levels (`.label`), the analysis variables
+# themselves (`variable`); a value as `labels` prints it counts as there.
+# A key the frame has nowhere is not this function's to judge.
+.ard_levels_absent_note <- function(d, levels, labels) {
+  out <- character()
+  for (k in names(levels)) {
+    if (!nzchar(k)) next
+    want <- as.character(unlist(levels[[k]], use.names = FALSE))
+    # (a name may be both a column -- a key, a stacked layer -- and an
+    # analysis variable whose levels are in `.label`: either counts)
+    col <- if (k %in% names(d)) as.character(d[[k]])
+    lvl <- if (".label" %in% names(d) && k %in% d$variable) as.character(d$.label[d$variable %in% k])
+    have <- if (identical(k, "variable")) as.character(d$variable) else c(col, lvl)
+    if (!identical(k, "variable") && is.null(col) && is.null(lvl)) next
+    lab <- labels[[k]]
+    have <- c(have, if (!is.null(lab) && !is.function(lab)) as.character(unlist(lab, use.names = FALSE)))
+    miss <- setdiff(want[!is.na(want)], have)
+    if (length(miss)) {
+      out <- c(out, sprintf("  %s: %s", k, paste(encodeString(miss, quote = "\""), collapse = ", ")))
+    }
+  }
+  if (length(out)) {
+    message(paste(c(
+      "widen_ard(): `levels` names values the ARD does not have; they make no row or column:",
+      out,
+      paste0("  A level shown with no record has to be in the ARD: a factor level (the ",
+             "study's code list\n  applied when the ARD is made), which cards counts as 0.")),
+          collapse = "\n"))
+  }
+  invisible(out)
+}
+
 .ard_notes_message <- function(ig, what) {
   if (is.null(ig) || !nrow(ig)) return(invisible(FALSE))
   key <- paste(ig$context, ig$stat_name, ig$reason, sep = "\r")
@@ -2019,6 +2052,12 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   * `variable` itself -- a row key like any other:
 #'     `levels = list(variable = c("AGE", "SEX"))` orders the analysis
 #'     variables.
+#'
+#'   The levels order what the ARD has; they make no row or column.  A value
+#'   they name that the ARD does not have (by its value or as `labels` prints
+#'   it) is said in a message, whatever `notes` says: a level shown with no
+#'   record has to be in the ARD -- a factor's level, as the study's code
+#'   list applied when the ARD is made gives, which cards counts as 0.
 #' @param labels Named character vector recoding key *values* to display text,
 #'   e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.  Text only: the
 #'   order is `levels`' or the data's, never the order the labels are
@@ -2185,6 +2224,13 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   for (cn in c("variable", "context", "stat_fmt", "stat_label")) {
     if (!cn %in% names(d)) d[[cn]] <- NA_character_
   }
+
+  # a value `levels` names that the ARD does not have: said, never made --
+  # the levels order what is there; a level shown with no record has to be
+  # in the ARD (a factor's level: the study's code list applied when it is
+  # made, which cards counts as 0).  Not `notes`: those are the ARD's rows
+  # no cell reads; this is the caller's own word.
+  if (length(levels)) .ard_levels_absent_note(d, levels, labels)
 
   # A key variable's own tabulation is kept by normalize_ard() for the
   # column header to read, and is no cell of the body.  Flip `.key_own` to
