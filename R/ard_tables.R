@@ -2120,7 +2120,13 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'       of the group: `"-n@soc"` orders the SOCs by their own count and
 #'       keeps each SOC's PTs with it.  Both at once: `"-n@soc[Total]"`.
 #'       An overall row keeps its own number.}
+#'     \item{`"max(<stat>)"`, `"min(<stat>)"`}{the statistic's **largest**
+#'       (smallest) value across the spread columns instead of their total:
+#'       `"-max(n)"` puts first the rows most frequent in any arm.  With
+#'       the forms above: `"-max(n)@soc"`, `"-max(n)[Placebo]"`.
+#'       `"sum(n)"` is `"n"`.}
 #'   }
+#'   Without `-` a key is ascending (`"n"`, `"max(n)"`: the fewest first).
 #'   So `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of
 #'   an AE table's row order, and needs neither `sort_stat` nor an `arrange()`
 #'   afterwards; `c(".overall", "-n@soc", "soc", ".depth", "-n")` puts the
@@ -2709,6 +2715,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 #   <stat>@<key>   the statistic of the group's own summary row, carried to
 #               every row of the group (`-n@group1`: SOCs by their own
 #               count, their PTs with them); both: `-n@group1[Total]`
+#   max(<stat>), min(<stat>), sum(<stat>)  its largest / smallest / total
+#               value across the spread columns (`-max(n)`: the most
+#               frequent in any arm); with the forms above: `-max(n)@group1`
 #
 # A statistic is recognised last, so a column of that name wins; that is the
 # safe way round, since the column is what the caller can see in the result.
@@ -2731,7 +2740,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
            .ard_stop(sprintf(
              paste0("`sort`: '%s' is neither a column of the result nor a ",
                     "statistic of this ARD.\n  Columns: %s\n  Also allowed: ",
-                    "'.overall', '.depth', and a leading '-' for descending."),
+                    "'.overall', '.depth', 'max(n)' / 'min(n)' (a row's largest / ",
+                    "smallest across the columns), and a leading '-' for descending."),
              nm, paste(sQuote(names(out)), collapse = ", ")))
          }
     if (is.logical(v)) v <- !v            # TRUE first reads better than TRUE last
@@ -2941,9 +2951,15 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 # read from, the spread column it is read from -- NULL when the text has
 # neither `@` nor `[...]`, so every sort written before reads as it did.
 .ard_sort_scoped <- function(nm) {
+  # max(n), min(n), sum(n): the statistic's largest / smallest / total value
+  # across the spread columns (a bare `n` is the total)
+  a <- regmatches(nm, regexec("^(max|min|sum)[(]([^()@[]+)[)](.*)$", nm))[[1L]]
+  agg <- if (length(a)) a[2L]
+  if (length(a)) nm <- paste0(a[3L], a[4L])
   m <- regmatches(nm, regexec("^([^@[]+)(@([^@[]+))?([[](.+)[]])?$", nm))[[1L]]
-  if (!length(m) || (!nzchar(m[3L]) && !nzchar(m[5L]))) return(NULL)
-  list(stat = m[2L], key = if (nzchar(m[4L])) m[4L], col = if (nzchar(m[6L])) m[6L])
+  if (!length(m) || (is.null(agg) && !nzchar(m[3L]) && !nzchar(m[5L]))) return(NULL)
+  list(stat = m[2L], key = if (nzchar(m[4L])) m[4L], col = if (nzchar(m[6L])) m[6L],
+       agg = agg %||% "sum")
 }
 
 .ard_sort_scoped_value <- function(sc, s, base, d, rowrefs, labref, colkey, sep) {
@@ -2963,9 +2979,12 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     }
     sel <- sel & hit
   }
+  f <- switch(sc$agg %||% "sum",
+              max = function(z) if (any(!is.na(z))) max(z, na.rm = TRUE) else NA_real_,
+              min = function(z) if (any(!is.na(z))) min(z, na.rm = TRUE) else NA_real_,
+              function(z) sum(z, na.rm = TRUE))
   tot <- tapply(suppressWarnings(as.numeric(d$stat[sel])),
-                rid_for_stat(d[sel, , drop = FALSE], rowrefs, labref, sc$stat),
-                sum, na.rm = TRUE)
+                rid_for_stat(d[sel, , drop = FALSE], rowrefs, labref, sc$stat), f)
   v <- as.numeric(tot[match(base$.rid, names(tot))])
   if (is.null(sc$key)) return(v)
   outs <- vapply(rowrefs, function(r) r$out, "")

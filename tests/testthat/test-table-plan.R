@@ -2955,6 +2955,23 @@ test_that("sort keys -n@<key> and -n[<col>]: a group's own count carried to its 
   expect_error(tab("-n[Nope]"), "no spread column")
   # a plain -n sorts as it did
   expect_identical(tab("soc", ".depth", "-n"), tab("soc", ".depth", "-n"))
+  # max(n) / min(n): a row's largest / smallest count across the arms (#683),
+  # both ways; sum(n) is the plain total
+  big <- function(t) apply(sapply(t[arms], function(x) as.numeric(x)), 1L, max, na.rm = TRUE)
+  small <- function(t) apply(sapply(t[arms], function(x) as.numeric(x)), 1L, min, na.rm = TRUE)
+  pts <- function(t, s) t[t$soc == s & !is.na(t$pt), ]
+  s1 <- unique(t1$soc)[1L]
+  expect_true(all(diff(big(pts(tab("soc", ".depth", "-max(n)"), s1))) <= 0))
+  expect_true(all(diff(big(pts(tab("soc", ".depth", "max(n)"), s1))) >= 0))
+  expect_true(all(diff(small(pts(tab("soc", ".depth", "-min(n)"), s1))) <= 0))
+  expect_identical(tab("soc", ".depth", "-sum(n)"), tab("soc", ".depth", "-n"))
+  # not the total's order: a row with one large arm comes first
+  expect_false(identical(tab("-n")$pt, tab("-max(n)")$pt))
+  # with @: the SOCs by their own row's largest count, each with its PTs
+  t3 <- tab("-max(n)@soc", "soc", ".depth", "-max(n)")
+  expect_true(all(diff(big(t3)[is.na(t3$pt)]) <= 0))
+  runs3 <- rle(as.character(t3$soc))$values
+  expect_identical(runs3, unique(runs3))
 })
 
 test_that("plan_compare(): a test's p-value and a difference with its CI as columns, placed not computed (#625)", {

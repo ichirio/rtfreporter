@@ -317,6 +317,8 @@ statistic, or one of the forms above; write them most important first.
 | an order of your own | `plan_levels(PT = c(...))`, its values in the order to show |
 | the most frequent first, by the total | `plan_sort("-n[Total]")` (with `plan_total(label = "Total")`) |
 | the most frequent first in one arm | `plan_sort("-n[Drug X]")` |
+| the most frequent in **any** arm first | `plan_sort("-max(n)")` (`"-max(n)@SOC"` for the SOCs) |
+| the fewest first | the same keys without the minus: `plan_sort("n")`, `"min(n)"` |
 | by a rate when the arms' denominators differ | `plan_sort("-p[Total]")` |
 | SOCs by name, PTs by count | `plan_sort(".overall", "SOC", ".depth", "-n")` |
 | SOCs by count, each with its PTs by count | `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n")` |
@@ -324,8 +326,7 @@ statistic, or one of the forms above; write them most important first.
 | PTs by count, across SOCs (a PT-only table) | `plan_sort("-n")` |
 | a listing by subject, then date | `plan_sort("USUBJID", "ASTDT")` |
 
-Not yet: the largest count in **any** arm (a row's maximum across the
-columns), and the difference between two arms. The difference can be shown
+Not yet: ordering by the difference between two arms. The difference can be shown
 -- make it at the ARD step (`cards::diff_ard_hierarchical()`, bound to the
 counts) and give it a column with `plan_compare(diff = "{estimate:.3f}")` --
 but the rows cannot be ordered by it.
