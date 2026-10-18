@@ -321,15 +321,27 @@ statistic, or one of the forms above; write them most important first.
 | the fewest first | the same keys without the minus: `plan_sort("n")`, `"min(n)"` |
 | by a rate when the arms' denominators differ | `plan_sort("-p[Total]")` |
 | SOCs by name, PTs by count | `plan_sort(".overall", "SOC", ".depth", "-n")` |
+| PTs by the arms' difference (from `plan_compare()`) | `plan_sort("SOC", ".depth", "-estimate")` (example below) |
 | SOCs by count, each with its PTs by count | `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n")` |
 | SOCs by count, PTs by name | `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "PT")` |
 | PTs by count, across SOCs (a PT-only table) | `plan_sort("-n")` |
 | a listing by subject, then date | `plan_sort("USUBJID", "ASTDT")` |
 
-Not yet: ordering by the difference between two arms. The difference can be shown
--- make it at the ARD step (`cards::diff_ard_hierarchical()`, bound to the
-counts) and give it a column with `plan_compare(diff = "{estimate:.3f}")` --
-but the rows cannot be ordered by it.
+The difference between two arms: make it at the ARD step, show it with
+`plan_compare()`, and order the rows by its statistic (`"-estimate"`, the
+largest difference first; without the minus, the smallest):
+
+```r
+ard  <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,
+                                      denominator = adsl, id = USUBJID)
+diff <- cards::diff_ard_hierarchical(ard)        # one arm minus the other
+table_plan(normalize_ard(cards::bind_ard(ard, diff, .update = TRUE),
+                         hierarchy = c("AESOC", "AEDECOD")),
+           cols = "TRTA", rows = c(SOC = "AESOC"), label = c(PT = "AEDECOD")) |>
+  plan_cells(hierarchical = "{n} ({p:.1f%})") |>
+  plan_compare(diff = "{estimate:.3f}") |>
+  plan_sort("SOC", ".depth", "-estimate")   # or "-estimate@SOC" for the SOCs too
+```
 
 ### `plan_filter()`: which rows stay
 
