@@ -1,5 +1,10 @@
 # rtfreporter (development version)
 
+- **The rounding's case is not significant** (#676): `"SAS"` is `"sas"`
+  and `"R"` is `"r"`, for `options(rtfreporter.rounding = )` and every
+  function's `rounding` (`round_num()`, the formatters, `plan_digits()`,
+  `widen_ard()`).  Lower case gives what it always did.
+
 - **The AI kit and its article checked against main** (#673).
   `rtfreporter_ai_manual(dir, ard = )` writes its files as UTF-8 bytes in
   any locale: in a non-UTF-8 one a Japanese label in `05_ard.csv` /

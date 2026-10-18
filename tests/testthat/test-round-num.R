@@ -25,7 +25,7 @@ test_that("round_num() refuses a bad family, bad digits and non-numeric input", 
   expect_error(round_num(1, rounding = "excel"), "must be \"r\"")
   expect_error(round_num(1, digits = -1), "non-negative")
   expect_error(round_num("1"), "numeric input")
-  old <- options(rtfreporter.rounding = "SAS")
+  old <- options(rtfreporter.rounding = "excel")
   on.exit(options(old), add = TRUE)
   expect_error(round_num(1), "must be \"r\"")
 })
@@ -52,4 +52,14 @@ test_that("fmt_count_pct() picks its width from the ROUNDED percent", {
   # 99.96 prints as 100, the whole-number branch
   expect_identical(fmt_count_pct(5L, 99.96, pct_unit = "percent", nbsp = " "),
                    "  5  (100)")
+})
+
+test_that("the rounding's case is not significant: \"SAS\" is \"sas\", \"R\" is \"r\"", {
+  expect_identical(round_num(2.5, rounding = "SAS"), round_num(2.5, rounding = "sas"))
+  expect_identical(round_num(2.5, rounding = "R"), round_num(2.5, rounding = "r"))
+  old <- options(rtfreporter.rounding = "SAS")
+  on.exit(options(old), add = TRUE)
+  expect_identical(fmt_round(23.445, 2), "23.45")
+  expect_identical(rtfreporter:::.rounding_type(NULL), "sas")
+  expect_error(round_num(2.5, rounding = "banker"), "must be")
 })
