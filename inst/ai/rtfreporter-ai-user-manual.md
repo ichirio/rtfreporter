@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9076** (the development
+**This manual documents rtfreporter 0.8.2.9077** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -883,7 +883,7 @@ p_ae <- ard_ae |>
 | One variable's rows under one level of another (sub-categories of a race under "Asian") | `plan_nest(RACESUB = c(RACE = "Asian"))`: moved after that row, one stub indent deeper, in its group |
 | One record's statistics in two columns (N in one, the rate and CI in the next) | `plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))` with `table_plan(cols = c("ARM", ".stat_group"))`; `plan_cells(n = ..., orr_ci = ...)` keys a template by the group's name. No `mutate()` of `variable` before the plan (keep the ARD as it is). With `cell_rows()` per group: n rows x m columns of one record; groups down with `rows = c(..., stat = ".stat_group")` |
 | A Total column | `plan_total(label = "Total", position = "last")`: cards' overall rows (the analysis again without `by`, bound under it: `bind_rows(ard_tabulate(adsl, by = ARM, variables = SEX), ard_tabulate(adsl, variables = SEX))`, or `ard_stack(.overall = TRUE)`) become the column; its header `{n}` is the study total. Never stack the data with `ARM = "Total"`: the ARD and ARS then carry a value the data does not have |
-| Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone. SOCs by their own count: `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT")`; one column's count: `"-n[Total]"`, `"-n@SOC[Total]"` |
+| Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone. SOCs by their own count: `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT")`; one column's count: `"-n[Total]"`, `"-n@SOC[Total]"`; one arm's: `"-n[Drug X]"`; a rate: `"-p[Total]"`; SOCs by count, PTs by name: `".overall", "-n@SOC", "SOC", ".depth", "PT"`. A code list's order, visits in AVISITN order, an order of your own: nothing here -- a factor made when the ARD is made, or `plan_levels()`. Not yet: a row's maximum across the arms, or the arms' difference (show it with `plan_compare()`; it cannot order the rows) |
 | Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
 | Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse, group_col)`: `collapse = c("grp1", "grp2")`; `group_col` only on a finished table (an ARD plan's is its outermost row key) |
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |

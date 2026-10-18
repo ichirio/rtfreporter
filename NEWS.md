@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+- **A cheat sheet of row orders** (#682, docs).  `plan_sort()` writes most
+  clinical row orders -- one arm's count (`"-n[Drug X]"`), a rate
+  (`"-p[Total]"`), SOCs by count with their PTs by name -- and a code
+  list's order or visit order needs nothing here (a factor made with the
+  ARD).  The article "The plan verbs" and the AI user manual list them by
+  table, and say what is not there yet (a row's maximum across the arms,
+  ordering by the arms' difference).
+
 - **`plan_levels()` says a value the ARD does not have** (#680).  The
   levels order what the ARD has and make no row or column; a value they
   name that is not there (by its value or as `plan_labels()` prints it)
