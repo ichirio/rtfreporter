@@ -3449,3 +3449,48 @@ test_that("a verb's first argument is .plan: a name such as p in ... is not take
   # by name, it is `.plan`
   expect_s3_class(plan_digits(.plan = b, p = 0), "table_plan")
 })
+
+test_that("plan_levels() with names: a value and its text at once (factor(levels, labels)); plan_labels() wins value by value", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT),
+                         cards::ard_summary(adsl, by = TRT, variables = AGE),
+                         cards::ard_tabulate(adsl, by = TRT, variables = c(SEX, AGEGR1)))
+  base <- table_plan(normalize_ard(ard), cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(continuous = c(n = "{N}"), categorical = "{n} ({p:.1f%})", notes = FALSE)
+  tab <- function(p) suppressMessages(plan_apply(p, "table"))
+  # a variable's values: the order and the text, as the two verbs say them
+  expect_identical(tab(plan_levels(base, SEX = c(M = "Male", F = "Female"))),
+                   tab(base |> plan_levels(SEX = c("M", "F")) |>
+                         plan_labels(SEX = c(M = "Male", F = "Female"))))
+  # the variables' order and headings; an element without a name: the variable as it is
+  expect_identical(tab(plan_levels(base, variable = c(SEX = "Sex", "AGE", AGEGR1 = "Age group"))),
+                   tab(base |> plan_levels(variable = c("SEX", "AGE", "AGEGR1")) |>
+                         plan_labels(variable = c(SEX = "Sex", AGEGR1 = "Age group"))))
+  # some values named, the others as they are; no names: as before
+  expect_identical(tab(plan_levels(base, AGEGR1 = c(">80", "65-80", "<65" = "Under 65"))),
+                   tab(base |> plan_levels(AGEGR1 = c(">80", "65-80", "<65")) |>
+                         plan_labels(AGEGR1 = c("<65" = "Under 65"))))
+  # plan_labels() wins value by value, before or after
+  want <- tab(base |> plan_levels(SEX = c("M", "F")) |> plan_labels(SEX = c(M = "Men", F = "Female")))
+  expect_identical(tab(base |> plan_levels(SEX = c(M = "Male", F = "Female")) |> plan_labels(SEX = c(M = "Men"))), want)
+  expect_identical(tab(base |> plan_labels(SEX = c(M = "Men")) |> plan_levels(SEX = c(M = "Male", F = "Female"))), want)
+  # a heading of plan_labels() (the variable's own key) beside the values' text
+  expect_identical(tab(base |> plan_labels(SEX = "Sex") |> plan_levels(SEX = c(M = "Male", F = "Female"))),
+                   tab(base |> plan_levels(SEX = c("M", "F")) |>
+                         plan_labels(SEX = c(SEX = "Sex", M = "Male", F = "Female"))))
+  # plan_labels() names a value by the text the order gives it, too
+  expect_identical(tab(base |> plan_levels(SEX = c(M = "Male", F = "Female")) |> plan_labels(SEX = c(Female = "Women"))),
+                   tab(base |> plan_levels(SEX = c("M", "F")) |> plan_labels(SEX = c(M = "Male", F = "Women"))))
+  # the same text a value and another value's text: the value, said
+  expect_message(t2 <- plan_apply(base |> plan_levels(SEX = c(M = "F", F = "Female")) |>
+                                   plan_labels(SEX = c(F = "Women")), "table"),
+                 "is a value and the text")
+  expect_identical(t2, tab(base |> plan_levels(SEX = c("M", "F")) |> plan_labels(SEX = c(M = "F", F = "Women"))))
+  # a dictionary of headings (plan_labels(variable = )) over an order that names one
+  expect_identical(tab(base |> plan_labels(variable = c(AGE = "Age (years)")) |>
+                         plan_levels(variable = c(AGE = "Age", SEX = "Sex"))),
+                   tab(base |> plan_levels(variable = c("AGE", "SEX")) |>
+                         plan_labels(variable = c(AGE = "Age (years)", SEX = "Sex"))))
+})

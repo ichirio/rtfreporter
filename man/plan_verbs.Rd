@@ -321,7 +321,16 @@ dropped, their order and text stay \code{plan_levels()}' and
 
 For \code{plan_levels()} and \code{plan_labels()}, one entry per column or
 analysis variable: an order (\code{AGEGR1 = c("<65", "65-74")}), or
-the text values are printed as (\code{AGE = "Age (years)"}).  Both
+the text values are printed as (\code{AGE = "Age (years)"}).  An order may
+name its values' text, as \code{\link[base:factor]{base::factor()}}'s \code{levels} and \code{labels}:
+\code{plan_levels(SEX = c(F = "Female", M = "Male"))} is the order F, M and
+their text, an element without a name the value as it is, and
+\code{variable = c(AGE = "Age (years)", "SEX")} the variables' order and a
+heading.  \code{plan_labels()} names without ordering, and its text wins
+value by value over a name an order gives, whichever comes first; it
+names a value by itself or by the text the order gives it
+(\code{plan_labels(SEX = c(Female = "Women"))} after the order above), the
+value first when a text is both (said in a message).  Both
 merge one \strong{key} at a time, so a later layer adds a variable
 without restating the rest --- which is the whole reason these
 two are layers and the roles are not.  A \code{plan_labels()} entry
@@ -806,7 +815,7 @@ function that does it.  This is what each one hands on.
 \itemize{
 \item \code{plan_cells(..., stats, value, na, notes)}: how a cell is made. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{cells}, \code{stats}, \code{value}, \code{na}, \code{notes}; a finished table \code{\link[=as_rtftables]{as_rtftables()}}: \code{na}.
 \item \code{plan_digits(..., rounding)}: the digits. Goes to the open tokens of the templates; on a finished table \code{\link[=fmt_numeric]{fmt_numeric()}}.
-\item \code{plan_levels()}, \code{plan_labels()}: the order and text of values. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{levels}, \code{labels}.
+\item \code{plan_levels()}, \code{plan_labels()}: the order and text of values. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{levels}, \code{labels}. A named element of \code{plan_levels()} is a value and its text, as \code{\link[base:factor]{base::factor()}}'s \code{levels} and \code{labels} (\code{plan_levels(SEX = c(F = "Female", M = "Male"))}, \code{variable = c(AGE = "Age (years)", "SEX")}); \code{plan_labels()} names without ordering, and wins value by value over a name \code{plan_levels()} gives.
 \item \code{plan_total(label, position)}: a Total column from the ARD's overall rows. Goes to \code{\link[=widen_ard]{widen_ard()}}: those rows as one more value of the column key, and its place in \code{levels}; the header's \code{{n}} there is the study total.
 \code{plan_levels(.drop_empty = )} leaves out the levels no record has, before the table is made.
 \item \code{plan_stat_groups(...)}: the statistics in named groups. Goes to \code{\link[=widen_ard]{widen_ard()}}: \code{stat_groups} (the key \code{.stat_group}).
