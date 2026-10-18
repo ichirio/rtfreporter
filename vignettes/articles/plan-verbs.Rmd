@@ -502,11 +502,13 @@ Three verbs cover the three directions in which a table can split into pages:
   key. The page is named after the value, which is what
   `rtf_tables(auto_section = TRUE)` starts a section on.
   `heading = "Treatment: {value} (N={n})"` names it from a template, with
-  `{n}` the value's own count in the ARD.
+  `{n}` the value's own count in the ARD, and `heading_at = "section"` (or
+  `"title"`) says where the name prints, so `rtf_tables(plan)` needs no
+  `auto_section = TRUE`.
 * **by rows**: `plan_paginate_rows(max_rows, split = "group_safe")` sets how
   many rows fit on a page and keeps groups whole. With `page_by = "arm"` it
   first makes a page for each arm, then applies the row budget inside it,
-  and it takes the same `heading =`.
+  and it takes the same `heading =` and `heading_at =`.
 * **by columns**: `plan_paginate_cols(every = 4, keep = "row_label")` splits
   a table too wide for the page into blocks. Each block repeats the `keep`
   columns.

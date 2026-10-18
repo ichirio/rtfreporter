@@ -2797,6 +2797,51 @@ test_that("plan_paginate_rows(page_by = , heading = ): BY pages with a row budge
     "plan_paginate_rows(page_by", fixed = TRUE)
 })
 
+test_that("plan_paginate_group(heading_at = ): where the page name prints, rtf_tables()'s default; its own argument wins", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  ard <- cards::bind_ard(cards::ard_tabulate(adsl, variables = TRT),
+                         cards::ard_tabulate(adsl, by = TRT, variables = c(SEX, AGEGR1)))
+  base <- table_plan(normalize_ard(ard), cols = ".stat_group",
+                     rows = c(arm = "TRT", grp = "variable", lvl = "variable_level"), label = NA) |>
+    plan_stat_groups(n = "n", pct = "p") |>
+    plan_cells(n = "{n}", pct = "{p:.1f%}", notes = FALSE)
+  rtf <- function(p, ...) {
+    f <- tempfile(fileext = ".rtf"); on.exit(unlink(f))
+    doc <- rtf_document() |> rtf_section(header = rtf_header(list("Table 1"))) |> rtf_tables(p, ...)
+    suppressMessages(generate_rtfreport(doc, f, overwrite = TRUE))
+    unname(tools::md5sum(f))
+  }
+  grp <- function(at = NULL) plan_paginate_group(base, col = "arm", keep = FALSE,
+                                                 heading = "Treatment: {value}", heading_at = at)
+  old <- options(rtfreporter.render_time = as.POSIXct("2000-01-01", tz = "UTC"))
+  on.exit(options(old), add = TRUE)
+  # the plan's word is rtf_tables()'s default: the same RTF as saying it there
+  expect_identical(rtf(grp("section")), rtf(grp(), auto_section = TRUE))
+  expect_identical(rtf(grp("title")), rtf(grp(), auto_title = TRUE))
+  expect_identical(rtf(grp("none")), rtf(grp()))
+  expect_false(identical(rtf(grp("section")), rtf(grp())))
+  # rtf_tables()'s own argument wins
+  expect_identical(rtf(grp("section"), auto_section = FALSE), rtf(grp()))
+  expect_identical(rtf(grp("title"), auto_section = TRUE, auto_title = FALSE),
+                   rtf(grp(), auto_section = TRUE))
+  # carried on each page, as its titles are
+  pages <- suppressMessages(plan_apply(grp("section")))
+  expect_true(all(vapply(pages, attr, "", "rtf_heading_at") == "section"))
+  expect_null(attr(suppressMessages(plan_apply(grp()))[[1L]], "rtf_heading_at"))
+  # the BY pages of plan_paginate_rows(page_by = )
+  by <- function(at = NULL) plan_hide(base, "arm") |>
+    plan_paginate_rows(page_by = "arm", max_rows = 6, split = "group_safe",
+                       heading = "Treatment: {value}", heading_at = at)
+  expect_identical(rtf(by("section")), rtf(by(), auto_section = TRUE))
+  expect_error(plan_paginate_group(base, heading_at = "header"), "one of")
+  expect_error(plan_paginate_rows(base, heading_at = "section"), "give `page_by`")
+  # no heading: the page's bare value is the name, and prints there too
+  expect_identical(rtf(plan_paginate_group(base, col = "arm", keep = FALSE, heading_at = "section")),
+                   rtf(plan_paginate_group(base, col = "arm", keep = FALSE), auto_section = TRUE))
+})
+
 test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its variables, refused where ambiguous (#619)", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL

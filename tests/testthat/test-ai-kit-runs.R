@@ -58,7 +58,7 @@ test_that("every kit example runs and writes its RTF", {
   on.exit(unlink(out, recursive = TRUE), add = TRUE)
   # 02's confidence intervals: cardx::ard_categorical_ci() needs broom
   orr_ok <- requireNamespace("broom", quietly = TRUE) &&
-    utils::packageVersion("broom") >= "1.0.8"
+    utils::packageVersion("broom") >= "1.0.8"   # Suggests: broom (>= 1.0.8)
   for (f in c(if (orr_ok) "02_example_orr_subgroups.R", "03_example_ae_soc_pt.R",
               "04_example_demographics.R")) {
     env <- .kit_env(c("cards", "dplyr"), environment())

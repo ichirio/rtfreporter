@@ -11,9 +11,20 @@
   argument of `table_plan()` (`show_keys`), `normalize_ard()` (`keys`,
   `drop_contexts`, `drop_key_variables`, `stack_sep`), `plan_compare()`
   (`position`), `plan_filter()` (`by`), `plan_paginate_group()` /
-  `plan_paginate_rows()` (`heading`) and `plan_template()` (`pipe`), and a
-  test keeps it so.  The article `ai-plan-code` (en/ja) runs end to end on
-  `cards::ADSL`; a test runs its blocks, and the kit's three examples.
+  `plan_paginate_rows()` (`heading`, `heading_at`) and `plan_template()`
+  (`pipe`), and a test keeps it so; the kit's ORR example says
+  `heading_at = "section"`.  The article `ai-plan-code` (en/ja) runs end to
+  end on `cards::ADSL`; a test runs its blocks, and the kit's three examples.
+
+- **`plan_paginate_group(heading_at = )`: where the page name prints, said
+  in the plan** (#672).  `"section"` (the section header), `"title"` (the
+  last line of the titles) or `"none"`; `plan_paginate_rows()` takes it too,
+  for its `page_by` pages.  Each page carries it, as it carries its titles,
+  and it is the default of `rtf_tables(auto_section = , auto_title = )`,
+  which are now `NULL` by default: what the pages say, else `FALSE` as
+  before.  An argument given to `rtf_tables()` wins.  So a report's page
+  settings need not say `auto_section`; the plan that names the pages says
+  where the names go.  Nothing changes for a plan that does not say it.
 
 - **Docs: asking an AI chat for a table's plan code** (#670), a short
   article in English and Japanese (a toggle between them): make the kit

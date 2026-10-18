@@ -63,7 +63,7 @@ must be made in the program, one short block before step 1 builds it with
 3. **Keep the ARD as it is; choose the layout in the plan.** Statistics in
    two columns: `plan_stat_groups()`. A test or a difference as a column:
    `plan_compare()`. Subgroups one under another: `normalize_ard(stack = )`.
-   A section per arm with its N: `plan_paginate_group(heading = )`. Rows
+   A section per arm with its N: `plan_paginate_group(heading = , heading_at = "section")`. Rows
    dropped by a rule: `plan_filter()`. A subgroup's own counts beside its
    analysis: `table_plan(show_keys = )`.
 4. **Read `06_ard_shape.md` first** when it is there. Its keys are what
