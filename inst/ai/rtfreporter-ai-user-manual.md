@@ -876,7 +876,7 @@ p_ae <- ard_ae |>
 | Cell text | `plan_cells(..., stats = "cells"/"rows", value = "stat"/"stat_fmt", na, notes)`; on a finished table `na` alone (`as_rtftables(na =)`) |
 | Digits / rounding | `plan_digits(..., rounding)`: `plan_digits(continuous = c(mean = 1, sd = 2))`; on a finished table `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
 | Order of values | `plan_levels(VAR = c(...))` |
-| Order and text of values at once (experimental) | `plan_factor(SEX = c(F = "Female", M = "Male"))`: the written order, a name the value, an element without a name the value as it is; `plan_factor(variable = c(AGE = "Age (years)", SEX = "Sex"))` the variables' order and headings. The same as `plan_levels()` + `plan_labels()` |
+| Order and text of values at once | `plan_levels(SEX = c(F = "Female", M = "Male"))`: the written order, a name the value and the element its text (as `factor(levels, labels)`), an element without a name the value as it is; `plan_levels(variable = c(AGE = "Age (years)", "SEX"))` the variables' order and a heading. `plan_labels()` names without ordering and wins value by value |
 | Leave out the levels no record has (0 in every column, e.g. a code list's unused values) | `plan_levels(.drop_empty = c("RACE"))` |
 | Printed text of values / variables | `plan_labels(c(AGE = "Age (years)"))` |
 | Printed text of one analysis variable's levels (and its own name) | `plan_labels(SEX = c(SEX = "Sex", F = "Female", M = "Male"))`; their order: `plan_levels(SEX = c("M", "F"))` |
@@ -1117,7 +1117,7 @@ reference of a difference.
 
 **Tables from a cards / cardx ARD:** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens` `plan_n_candidates`
-`plan_template` `plan_levels` `plan_labels` `plan_factor` `plan_cells` `plan_digits`
+`plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
 `plan_hide` `plan_nest` `plan_total` `plan_stat_groups` `plan_compare` `plan_filter` `plan_sort` `plan_blanks` `plan_paginate_rows`
 `plan_paginate_cols` `plan_style` `plan_columns` `plan_col_header`

@@ -1,13 +1,14 @@
 # rtfreporter (development version)
 
-- **`plan_factor()` (experimental): the order and the text of values at
-  once** (#678), as base R's `factor(levels, labels)`:
-  `plan_factor(SEX = c(F = "Female", M = "Male"))` is the order F, M and
-  their text, an element without a name the value as it is (the order
-  only), and `plan_factor(variable = c(AGE = "Age (years)", SEX = "Sex"))`
-  the analysis variables' order and headings.  It makes the same layers as
-  `plan_levels()` and `plan_labels()`, which stay: it is here to be tried,
-  and what stays is decided before 0.9.0.
+- **`plan_levels()` takes a value's text with it** (#678), as base R's
+  `factor(levels, labels)`: `plan_levels(SEX = c(F = "Female", M = "Male"))`
+  is the order F, M and their text, an element without a name the value as
+  it is (so an order without names is what it always was), and
+  `plan_levels(variable = c(AGE = "Age (years)", "SEX"))` the variables'
+  order and a heading.  `plan_labels()` names without ordering (a study's
+  dictionary of headings, one variable's heading changed), and its text
+  wins value by value over a name an order gives, whichever is called
+  first.  (Instead of a new `plan_factor()`, the owner's choice.)
 
 - **The rounding's case is not significant** (#676): `"SAS"` is `"sas"`
   and `"R"` is `"r"`, for `options(rtfreporter.rounding = )` and every

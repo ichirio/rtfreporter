@@ -3450,7 +3450,7 @@ test_that("a verb's first argument is .plan: a name such as p in ... is not take
   expect_s3_class(plan_digits(.plan = b, p = 0), "table_plan")
 })
 
-test_that("plan_factor() (experimental): the order and the text of values at once, the same table as plan_levels() + plan_labels()", {
+test_that("plan_levels() with names: a value and its text at once (factor(levels, labels)); plan_labels() wins value by value", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
@@ -3460,22 +3460,29 @@ test_that("plan_factor() (experimental): the order and the text of values at onc
   base <- table_plan(normalize_ard(ard), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(continuous = c(n = "{N}"), categorical = "{n} ({p:.1f%})", notes = FALSE)
   tab <- function(p) suppressMessages(plan_apply(p, "table"))
-  # a variable's values: their order (the names) and their text
-  expect_identical(tab(plan_factor(base, SEX = c(M = "Male", F = "Female"))),
+  # a variable's values: the order and the text, as the two verbs say them
+  expect_identical(tab(plan_levels(base, SEX = c(M = "Male", F = "Female"))),
                    tab(base |> plan_levels(SEX = c("M", "F")) |>
                          plan_labels(SEX = c(M = "Male", F = "Female"))))
-  # the variables' order and headings
-  expect_identical(tab(plan_factor(base, variable = c(SEX = "Sex", AGE = "Age (years)", AGEGR1 = "Age group"))),
+  # the variables' order and headings; an element without a name: the variable as it is
+  expect_identical(tab(plan_levels(base, variable = c(SEX = "Sex", "AGE", AGEGR1 = "Age group"))),
                    tab(base |> plan_levels(variable = c("SEX", "AGE", "AGEGR1")) |>
-                         plan_labels(variable = c(SEX = "Sex", AGE = "Age (years)", AGEGR1 = "Age group"))))
-  # the order only (no names), and some values named
-  expect_identical(tab(plan_factor(base, TRT = c("Xanomeline High Dose", "Placebo", "Xanomeline Low Dose"))),
-                   tab(plan_levels(base, TRT = c("Xanomeline High Dose", "Placebo", "Xanomeline Low Dose"))))
-  expect_identical(tab(plan_factor(base, AGEGR1 = c(">80", "65-80", "<65" = "Under 65"))),
+                         plan_labels(variable = c(SEX = "Sex", AGEGR1 = "Age group"))))
+  # some values named, the others as they are; no names: as before
+  expect_identical(tab(plan_levels(base, AGEGR1 = c(">80", "65-80", "<65" = "Under 65"))),
                    tab(base |> plan_levels(AGEGR1 = c(">80", "65-80", "<65")) |>
                          plan_labels(AGEGR1 = c("<65" = "Under 65"))))
-  # .drop_empty, and a named vector handed over whole
-  p <- plan_factor(base, c(SEX = "x"), .drop_empty = "AGEGR1")
-  expect_identical(rtfreporter:::.plan_of(p, "levels")[[1L]]$drop_empty, "AGEGR1")
-  expect_error(plan_factor(base, SEX = 1:2), "values in order")
+  # plan_labels() wins value by value, before or after
+  want <- tab(base |> plan_levels(SEX = c("M", "F")) |> plan_labels(SEX = c(M = "Men", F = "Female")))
+  expect_identical(tab(base |> plan_levels(SEX = c(M = "Male", F = "Female")) |> plan_labels(SEX = c(M = "Men"))), want)
+  expect_identical(tab(base |> plan_labels(SEX = c(M = "Men")) |> plan_levels(SEX = c(M = "Male", F = "Female"))), want)
+  # a heading of plan_labels() (the variable's own key) beside the values' text
+  expect_identical(tab(base |> plan_labels(SEX = "Sex") |> plan_levels(SEX = c(M = "Male", F = "Female"))),
+                   tab(base |> plan_levels(SEX = c("M", "F")) |>
+                         plan_labels(SEX = c(SEX = "Sex", M = "Male", F = "Female"))))
+  # a dictionary of headings (plan_labels(variable = )) over an order that names one
+  expect_identical(tab(base |> plan_labels(variable = c(AGE = "Age (years)")) |>
+                         plan_levels(variable = c(AGE = "Age", SEX = "Sex"))),
+                   tab(base |> plan_levels(variable = c("AGE", "SEX")) |>
+                         plan_labels(variable = c(AGE = "Age (years)", SEX = "Sex"))))
 })
