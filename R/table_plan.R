@@ -981,7 +981,10 @@ print.table_plan <- function(x, ...) {
 #'   their text, an element without a name the value as it is, and
 #'   `variable = c(AGE = "Age (years)", "SEX")` the variables' order and a
 #'   heading.  `plan_labels()` names without ordering, and its text wins
-#'   value by value over a name an order gives, whichever comes first.  Both
+#'   value by value over a name an order gives, whichever comes first; it
+#'   names a value by itself or by the text the order gives it
+#'   (`plan_labels(SEX = c(Female = "Women"))` after the order above), the
+#'   value first when a text is both (said in a message).  Both
 #'   merge one **key** at a time, so a later layer adds a variable
 #'   without restating the rest --- which is the whole reason these
 #'   two are layers and the roles are not.  A `plan_labels()` entry
@@ -4308,6 +4311,27 @@ plan_n_candidates <- function(.plan) {
     if (identical(k, "variable")) txt <- txt[!vapply(names(txt), own_heading, NA)]
     if (!length(txt)) next
     own <- lb[[k]]
+    # plan_labels() names a value by itself or by the text the order gives
+    # it (plan_labels(SEX = c(Female = "Women")) is F); the same text both a
+    # value and another value's text: the value, said
+    if (is.character(own) && !is.null(names(own))) {
+      vals <- lv[[k]]
+      for (i in seq_along(own)) {
+        n <- names(own)[i]
+        by_txt <- names(txt)[txt == n]
+        if (!length(by_txt)) next
+        if (n %in% vals) {
+          if (!identical(by_txt, n)) {
+            message(sprintf(paste0("plan_labels(%s = ): %s is a value and the text plan_levels() ",
+                                   "gives %s; it names the value %s."),
+                            k, encodeString(n, quote = "\""), encodeString(by_txt[1L], quote = "\""),
+                            encodeString(n, quote = "\"")))
+          }
+          next
+        }
+        names(own)[i] <- by_txt[1L]
+      }
+    }
     lb[[k]] <- if (is.null(own)) txt
       else if (is.null(names(own)) && length(own) == 1L && is.character(own)) c(stats::setNames(own, k), txt)
       else if (is.character(own) && !is.null(names(own))) c(txt[!names(txt) %in% names(own)], own)

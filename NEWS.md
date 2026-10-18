@@ -8,7 +8,9 @@
   order and a heading.  `plan_labels()` names without ordering (a study's
   dictionary of headings, one variable's heading changed), and its text
   wins value by value over a name an order gives, whichever is called
-  first.  (Instead of a new `plan_factor()`, the owner's choice.)
+  first; it names a value by itself or by the text the order gives it
+  (`plan_labels(SEX = c(Female = "Women"))`), the value first when a text
+  is both (said).  (Instead of a new `plan_factor()`, the owner's choice.)
 
 - **The rounding's case is not significant** (#676): `"SAS"` is `"sas"`
   and `"R"` is `"r"`, for `options(rtfreporter.rounding = )` and every

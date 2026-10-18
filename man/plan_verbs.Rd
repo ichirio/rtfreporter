@@ -327,7 +327,10 @@ name its values' text, as \code{\link[base:factor]{base::factor()}}'s \code{leve
 their text, an element without a name the value as it is, and
 \code{variable = c(AGE = "Age (years)", "SEX")} the variables' order and a
 heading.  \code{plan_labels()} names without ordering, and its text wins
-value by value over a name an order gives, whichever comes first.  Both
+value by value over a name an order gives, whichever comes first; it
+names a value by itself or by the text the order gives it
+(\code{plan_labels(SEX = c(Female = "Women"))} after the order above), the
+value first when a text is both (said in a message).  Both
 merge one \strong{key} at a time, so a later layer adds a variable
 without restating the rest --- which is the whole reason these
 two are layers and the roles are not.  A \code{plan_labels()} entry

@@ -3480,6 +3480,14 @@ test_that("plan_levels() with names: a value and its text at once (factor(levels
   expect_identical(tab(base |> plan_labels(SEX = "Sex") |> plan_levels(SEX = c(M = "Male", F = "Female"))),
                    tab(base |> plan_levels(SEX = c("M", "F")) |>
                          plan_labels(SEX = c(SEX = "Sex", M = "Male", F = "Female"))))
+  # plan_labels() names a value by the text the order gives it, too
+  expect_identical(tab(base |> plan_levels(SEX = c(M = "Male", F = "Female")) |> plan_labels(SEX = c(Female = "Women"))),
+                   tab(base |> plan_levels(SEX = c("M", "F")) |> plan_labels(SEX = c(M = "Male", F = "Women"))))
+  # the same text a value and another value's text: the value, said
+  expect_message(t2 <- plan_apply(base |> plan_levels(SEX = c(M = "F", F = "Female")) |>
+                                   plan_labels(SEX = c(F = "Women")), "table"),
+                 "is a value and the text")
+  expect_identical(t2, tab(base |> plan_levels(SEX = c("M", "F")) |> plan_labels(SEX = c(M = "F", F = "Women"))))
   # a dictionary of headings (plan_labels(variable = )) over an order that names one
   expect_identical(tab(base |> plan_labels(variable = c(AGE = "Age (years)")) |>
                          plan_levels(variable = c(AGE = "Age", SEX = "Sex"))),
