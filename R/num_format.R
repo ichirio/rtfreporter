@@ -32,9 +32,11 @@
 
 # The rounding family, resolved once for the whole package.  `NULL` reads
 # the `rtfreporter.rounding` option, so a study that has to match SAS says
-# so once instead of at every call; an explicit value still wins.
+# so once instead of at every call; an explicit value still wins.  Its case
+# is not significant ("SAS" is "sas"): the value comes back in lower case.
 .rounding_type <- function(rounding = NULL) {
   if (is.null(rounding)) rounding <- .opt("rtfreporter.rounding")
+  if (is.character(rounding)) rounding <- tolower(rounding)
   if (!is.character(rounding) || length(rounding) != 1L ||
       !rounding %in% c("r", "sas")) {
     stop("`rounding` must be \"r\" (half to even, as base::round() does) ",
@@ -76,8 +78,10 @@
 #' @param x A numeric vector.
 #' @param digits Decimal places. Default `0`.
 #' @param rounding `"r"` (base R, half to even) or `"sas"` (half away from
-#'   zero).  `NULL`, the default, reads `getOption("rtfreporter.rounding")`,
-#'   which is `"r"` unless the session or site set it.
+#'   zero), in either case (`"SAS"` is `"sas"`; so for the option and every
+#'   function's `rounding`).  `NULL`, the default, reads
+#'   `getOption("rtfreporter.rounding")`, which is `"r"` unless the session
+#'   or site set it.
 #'
 #' @return A numeric vector the same length as `x`.
 #'

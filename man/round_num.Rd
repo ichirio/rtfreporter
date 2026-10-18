@@ -12,8 +12,10 @@ round_num(x, digits = 0, rounding = NULL)
 \item{digits}{Decimal places. Default \code{0}.}
 
 \item{rounding}{\code{"r"} (base R, half to even) or \code{"sas"} (half away from
-zero).  \code{NULL}, the default, reads \code{getOption("rtfreporter.rounding")},
-which is \code{"r"} unless the session or site set it.}
+zero), in either case (\code{"SAS"} is \code{"sas"}; so for the option and every
+function's \code{rounding}).  \code{NULL}, the default, reads
+\code{getOption("rtfreporter.rounding")}, which is \code{"r"} unless the session
+or site set it.}
 }
 \value{
 A numeric vector the same length as \code{x}.
