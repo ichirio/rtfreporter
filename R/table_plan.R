@@ -1070,6 +1070,15 @@ print.table_plan <- function(x, ...) {
 #'   non-missing values).  What the ARD does not state is `NA`, with a
 #'   warning.  `{PROGRAM}`, `{DATETIME}` and the page tokens are left for the
 #'   renderer.
+#' @param heading_at For `plan_paginate_group()` (and `plan_paginate_rows()`
+#'   with `page_by`): where the page's name prints --- `"section"`, in the
+#'   section header (what `rtf_tables(auto_section = TRUE)` does); `"title"`,
+#'   as the last line of the titles above the table (`auto_title = TRUE`);
+#'   `"none"`, nowhere.  It is the default of [rtf_tables()]'s
+#'   `auto_section` / `auto_title` for these pages, so the plan says it with
+#'   the pages it names and `rtf_tables(plan)` needs neither; an
+#'   `auto_section` / `auto_title` given to [rtf_tables()] wins.  `NULL`
+#'   (default): not said ([rtf_tables()]'s own default, nowhere).
 #' @param where For `plan_cell_style()`: a one-sided formula over the
 #'   table's columns choosing the rows, e.g. `where = ~ is.na(label)`.  For
 #'   `plan_blanks()`: `as_rtftables(blank_rows = )`, or `"records"` for a
@@ -1417,11 +1426,11 @@ print.table_plan <- function(x, ...) {
 #' * `plan_sort(..., stat, keep)`: the row order. Goes to [widen_ard()]: `sort`, `sort_stat`; a finished table [as_rtftables()]: `sort_by`, `sort_desc` from `-name`.
 #' * `plan_stub(vars, name, indent, group_summary, before)`: the row headings. Goes to [stub_cols()]: `vars`, `label`, `indent`, `group_summary`.
 #' * `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: how cells look. Goes to [style_header()], [style_cols()], or [rtftable()]'s `cell_styles` for a condition.
-#' * `plan_paginate_group(col, keep, heading)`: a page per value. Goes to [as_rtftables()]: `split = "by_value"`, `group_col`; `keep = FALSE` adds it to `drop_cols`; `heading` names each page from a template (`{value}`, `{n}`), the name `rtf_tables(auto_section = TRUE)` prints.
+#' * `plan_paginate_group(col, keep, heading, heading_at)`: a page per value. Goes to [as_rtftables()]: `split = "by_value"`, `group_col`; `keep = FALSE` adds it to `drop_cols`; `heading` names each page from a template (`{value}`, `{n}`), the name `rtf_tables(auto_section = TRUE)` prints; `heading_at` says where it prints (`"section"`, `"title"`, `"none"`): the default of `rtf_tables(auto_section = , auto_title = )`.
 #' * `plan_row_group(mode, collapse, group_col)`: groups down the body. Goes to [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table).
 #' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
 #' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row`.
-#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` names each BY page as `plan_paginate_group(heading = )` does.
+#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do.
 #' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
@@ -1938,11 +1947,13 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
 # .plan_rtf_args() do it once the roles are in hand.
 #' @rdname plan_verbs
 #' @export
-plan_paginate_group <- function(.plan, col = NULL, keep = TRUE, heading = NULL) {
+plan_paginate_group <- function(.plan, col = NULL, keep = TRUE, heading = NULL,
+                                heading_at = NULL) {
   .plan_check_heading(heading, "plan_paginate_group")
+  heading_at <- .plan_check_heading_at(heading_at, "plan_paginate_group")
   .plan_layer(.plan, "group",
               list(group_col = col, .keep = keep, .page = TRUE,
-                   .heading = heading))
+                   .heading = heading, .heading_at = heading_at))
 }
 
 # What a row GROUP is inside the body -- where one run of equal values
@@ -2115,18 +2126,23 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
                                break_before = NULL, min_group_rows = NULL,
                                cont_label = NULL, page_by = NULL,
-                               heading = NULL) {
+                               heading = NULL, heading_at = NULL) {
   .plan_check_heading(heading, "plan_paginate_rows")
   if (!is.null(heading) && (length(page_by) != 1L)) {
     .ard_stop(paste0("plan_paginate_rows(heading = ) names the BY pages: ",
                      "give one `page_by` column."))
+  }
+  heading_at <- .plan_check_heading_at(heading_at, "plan_paginate_rows")
+  if (!is.null(heading_at) && !length(page_by)) {
+    .ard_stop(paste0("plan_paginate_rows(heading_at = ) says where the BY pages' ",
+                     "names print: give `page_by`."))
   }
   .plan_layer(.plan, "pages",
               list(max_rows = max_rows, split = split,
                    split_rows = break_before,
                    min_group_rows = min_group_rows,
                    cont_label = cont_label, page_by = page_by,
-                   .heading = heading))
+                   .heading = heading, .heading_at = heading_at))
 }
 
 # The WHOLE-table settings, listed.  Everything a table has per column or
@@ -3812,10 +3828,10 @@ plan_header_tokens <- function(.plan) {
 # "...n" tail of a page in several parts is kept, and the page's own keys
 # (rtf_paginate_meta) are not touched.
 .plan_page_headings <- function(plan, out) {
-  h <- .plan_merge(.plan_of(plan, "group"))$.heading
+  h <- .plan_merge(.plan_of(plan, "group"))[[".heading"]]
   pb <- .plan_merge(.plan_of(plan, "pages"))
-  by_rows <- is.null(h) && !is.null(pb$.heading)
-  if (by_rows) h <- pb$.heading
+  by_rows <- is.null(h) && !is.null(pb[[".heading"]])
+  if (by_rows) h <- pb[[".heading"]]
   verb <- if (by_rows) "plan_paginate_rows(heading = )"
           else "plan_paginate_group(heading = )"
   if (is.null(h) || inherits(out, "rtftable") || is.null(names(out))) {
@@ -3849,6 +3865,32 @@ plan_header_tokens <- function(.plan) {
   }
   names(out) <- paste0(filled, tail)
   out
+}
+
+# plan_paginate_group(heading_at = ) (or plan_paginate_rows()'s, for the BY
+# pages): each page carries it as `rtf_heading_at`, the default of
+# rtf_tables(auto_section = , auto_title = ) -- an attribute of the page, as
+# its titles are, so it goes wherever the page goes.
+.plan_heading_at <- function(plan, out) {
+  at <- .plan_merge(.plan_of(plan, "group"))[[".heading_at"]]
+  if (is.null(at)) at <- .plan_merge(.plan_of(plan, "pages"))[[".heading_at"]]
+  if (is.null(at)) return(out)
+  if (inherits(out, "rtftable")) {
+    attr(out, "rtf_heading_at") <- at
+    return(out)
+  }
+  for (i in seq_along(out)) attr(out[[i]], "rtf_heading_at") <- at
+  out
+}
+
+# Where a page's name prints: one of section / title / none, or NULL.
+.plan_check_heading_at <- function(heading_at, verb) {
+  if (is.null(heading_at)) return(NULL)
+  ok <- c("section", "title", "none")
+  if (!is.character(heading_at) || length(heading_at) != 1L || !heading_at %in% ok) {
+    .ard_stop(sprintf('%s(heading_at = ) is one of "section", "title", "none".', verb))
+  }
+  heading_at
 }
 
 # The BY pages' (plan_paginate_rows(page_by = )) data column and each page's
@@ -4221,6 +4263,9 @@ plan_n_candidates <- function(.plan) {
   # each page's heading (plan_paginate_group(heading = )): last, since the
   # page names are what the header's page keys were read from
   out <- .plan_page_headings(plan, out)
+  # and where it prints (plan_paginate_group(heading_at = )): rtf_tables()
+  # reads it off the pages
+  out <- .plan_heading_at(plan, out)
 
   # the names plan_cell_style() / plan_style(widths = ) / plan_col_header() use:
   # read off the finished page rather than predicted

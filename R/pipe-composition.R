@@ -410,7 +410,8 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   before both the comparison and the printed heading. An item with an empty
 #'   name falls through into the open section, which is how pages whose
 #'   headings *differ* are put in one section (see [combine_sections()]).
-#'   Default `FALSE`.
+#'   `NULL` (default): what the pages say --- a plan's
+#'   `plan_paginate_group(heading_at = "section")` --- else `FALSE`.
 #' @param section_label_align Alignment for the auto-appended section label row.
 #'   One of `"left"` (default), `"center"`, or `"right"`.
 #' @param auto_title Logical. When `TRUE` and `tables` is a **named** list,
@@ -421,7 +422,8 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   after them; a table with no titles gets the name as its whole block.
 #'   Unnamed items are untouched.  Behaves identically under either
 #'   `title_format`.  Composes with `auto_section`, which puts the same name in
-#'   the section header instead.  Default `FALSE`.
+#'   the section header instead.  `NULL` (default): what the pages say --- a
+#'   plan's `plan_paginate_group(heading_at = "title")` --- else `FALSE`.
 #' @param title_label_align Alignment for the auto-appended title label row.
 #'   One of `"left"` (default), `"center"`, or `"right"`.
 #' @param read_gt **Deprecated** (removed in 0.9.0): pass a gt or gtsummary
@@ -481,9 +483,9 @@ rtf_tables <- function(doc, tables,
                         font = NULL,
                         titles = NULL,
                         footnotes = NULL,
-                        auto_section = FALSE,
+                        auto_section = NULL,
                         section_label_align = "left",
-                        auto_title = FALSE,
+                        auto_title = NULL,
                         title_label_align = "left",
                         read_gt = FALSE) {
   if (!inherits(doc, "rtf_document")) {
@@ -507,6 +509,15 @@ rtf_tables <- function(doc, tables,
       inherits(tables, "rtftable") || inherits(tables, "rtfplot") ||
       .is_gt_tbl(tables) || .is_gtsummary_tbl(tables)) {
     tables <- list(tables)
+  }
+
+  # Where the page names print, when the call does not say: what the pages
+  # say (a plan's plan_paginate_group(heading_at = ), carried on each page
+  # as `rtf_heading_at`), else nowhere.  An argument given wins.
+  if (is.null(auto_section) || is.null(auto_title)) {
+    at <- unique(unlist(lapply(tables, attr, "rtf_heading_at", exact = TRUE)))
+    if (is.null(auto_section)) auto_section <- identical(at, "section")
+    if (is.null(auto_title)) auto_title <- identical(at, "title")
   }
 
   # Which table-formatting arguments did the caller pass EXPLICITLY?  These

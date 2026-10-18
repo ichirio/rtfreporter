@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9071** (the development
+**This manual documents rtfreporter 0.8.2.9072** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -891,9 +891,9 @@ p_ae <- ard_ae |>
 | Look of some cells | `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`: a value, or a formula `bold = ~ is.na(label)` |
 | A page per value | `plan_paginate_group(col, keep)` |
 | A p-value column; difference and CI columns (the test / difference records in the ARD: `cardx::ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_kruskal_test()` ...) | `plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))`, `plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})", p = "{p.value:.3f}")`; `by = "COMPARISON"` for one column a comparison. Placed on the variable's first row (or its level's row). Never compute a p-value in R and paste it in; never `ard_stats_aov()` (no variable to place it on) |
-| A section per arm with "Treatment: X (N=xx)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})")` + `rtf_tables(auto_section = TRUE)`; `{n}` is the arm's own tabulation in the ARD (`bind_ard(cards::ard_tabulate(adsl, variables = TRT01A), ...)`), never pulled by hand |
+| A section per arm with "Treatment: X (N=xx)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})", heading_at = "section")` (or `rtf_tables(auto_section = TRUE)`; an argument given there wins); `{n}` is the arm's own tabulation in the ARD (`bind_ard(cards::ard_tabulate(adsl, variables = TRT01A), ...)`), never pulled by hand |
 | Subgroups (SEX; AGEGR1; ...) one under another, whatever group slot they came in | `normalize_ard(stack = list(subgroup = c("ALL", "SEX", "AGEGR1")))` + `rows = c(grp1 = "subgroup", grp2 = "subgroup_level")`; `plan_labels(subgroup = c(SEX = "Sex"))`. Never `group2` / `group2_level` as keys. A crossed subgroup is a layer: `stack = list(subgroup = list("SEX", "AGEGR1", c("AGEGR1", "SEX")))` (rows `AGEGR1 / SEX` | `65-80 / F`), or `stack = list(subgroup = c("group2", "group3"))` to take the layers from the strata slots; `stack_nest = TRUE` + `rows = c(grp = "subgroup", outer = "subgroup_outer", lvl = "subgroup_level")` + `plan_stub()` to print a crossed layer's outer level as a heading; an overall row is a constant stratum `ALL = "All"` |
-| A section per arm with a row budget inside | `plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe", heading = "Treatment: {value} (N={n})")` + `plan_hide("arm")` |
+| A section per arm with a row budget inside | `plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe", heading = "Treatment: {value} (N={n})", heading_at = "section")` + `plan_hide("arm")` |
 | Only the PTs with 5% or more in any arm (a SOC with its PTs) | `plan_filter(p >= 0.05)` (`any = FALSE` for every arm; `parents = "drop"` to judge a SOC by its own counts). Never filter the ARD by hand for this |
 | A subgroup's own n (%) beside its ORR (SEX both a variable and a subgroup layer) | `table_plan(..., rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level"), show_keys = "SEX")` + `plan_stat_groups(n = "N", orr_ci = c(...), .variables = "RESP", .others = "n")` + `plan_cells(SEX = "{n} ({p:.1f%})", ...)` |
 | Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
@@ -988,7 +988,7 @@ tbl_plan <- ard |>
 rep <- rtf_document() |>
   rtf_section(header = rtf_header(c(<running header>, <titles>)),
               footer = rtf_footer(<footnotes, "{PROGRAM_FULL}    Generated on: {DATETIME}" last>)) |>
-  rtf_tables(tbl_plan)        # auto_section = TRUE when the plan pages by a value with a heading
+  rtf_tables(tbl_plan)        # the page names print where plan_paginate_group(heading_at = ) says
 
 # ---- 3. the file ------------------------------------------------------------
 generate_rtfreport(rep, file.path(output_path, paste0(report_name, ".rtf")), overwrite = TRUE)
@@ -1038,7 +1038,7 @@ a chat. Never ask for patient-level data: the plan needs the ARD only.
 | statistics of one analysis in two columns (N; rate and CI) | `cols = c("ARM", ".stat_group")` + `plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))`; a template a group (`plan_cells(n = ..., orr_ci = cell_rows("1" = ..., "2" = ...))`) |
 | a p-value column; difference and CI columns | `plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))`; `plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})", p = ...)`; two lines: `cell_rows("1" = ..., "2" = ...)`; one of several tests: `p = c(stats_t_test = "...")` |
 | subgroups one under another | `normalize_ard(stack = ...)` + `rows = c(grp1 = "subgroup", grp2 = "subgroup_level")` + `plan_labels(subgroup = c(SEX = "Sex"))` |
-| a section per arm, "Treatment: X (N=nn)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})")` + `rtf_tables(tbl_plan, auto_section = TRUE)`; with a row budget: `plan_paginate_rows(page_by = "arm", max_rows = 20, heading = ...)` + `plan_hide("arm")` |
+| a section per arm, "Treatment: X (N=nn)" in the header | `plan_paginate_group(col = "arm", keep = FALSE, heading = "Treatment: {value} (N={n})", heading_at = "section")` + `rtf_tables(tbl_plan)`; with a row budget: `plan_paginate_rows(page_by = "arm", max_rows = 20, heading = ..., heading_at = "section")` + `plan_hide("arm")` |
 | only the PTs with ≥ 5% in any arm | `plan_filter(p >= 0.05)` (the SOC goes with its PTs; the overall row stays) |
 | a subgroup's own n (%) beside its ORR | `table_plan(..., rows = c(block = "variable", ...), show_keys = "SEX")` + `plan_stat_groups(..., .variables = "RESP", .others = "n")` |
 | a Total column | `plan_total(label = "Total")` (the ARD's overall rows, `ard_stack(.overall = TRUE)`) |

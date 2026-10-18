@@ -1,5 +1,15 @@
 # rtfreporter (development version)
 
+- **`plan_paginate_group(heading_at = )`: where the page name prints, said
+  in the plan** (#672).  `"section"` (the section header), `"title"` (the
+  last line of the titles) or `"none"`; `plan_paginate_rows()` takes it too,
+  for its `page_by` pages.  Each page carries it, as it carries its titles,
+  and it is the default of `rtf_tables(auto_section = , auto_title = )`,
+  which are now `NULL` by default: what the pages say, else `FALSE` as
+  before.  An argument given to `rtf_tables()` wins.  So a report's page
+  settings need not say `auto_section`; the plan that names the pages says
+  where the names go.  Nothing changes for a plan that does not say it.
+
 - **Docs: asking an AI chat for a table's plan code** (#670), a short
   article in English and Japanese (a toggle between them): make the kit
   with `rtfreporter_ai_manual(dir, ard = )`, what to give the AI (the kit and
