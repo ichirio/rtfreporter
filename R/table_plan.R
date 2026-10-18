@@ -1418,6 +1418,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_cells(..., stats, value, na, notes)`: how a cell is made. Goes to [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes`; a finished table [as_rtftables()]: `na`.
 #' * `plan_digits(..., rounding)`: the digits. Goes to the open tokens of the templates; on a finished table [fmt_numeric()].
 #' * `plan_levels()`, `plan_labels()`: the order and text of values. Goes to [widen_ard()]: `levels`, `labels`.
+#' * `plan_factor(..., .drop_empty)` (experimental): both at once, as [base::factor()]'s `levels` and `labels` -- `plan_factor(SEX = c(F = "Female", M = "Male"))` is the order F, M and their text; an element without a name is the value as it is (`TRT01A = c("Drug X", "Control")`, the order only); `variable = c(AGE = "Age (years)", SEX = "Sex")` the analysis variables' order and headings. It makes the same two layers as `plan_levels()` and `plan_labels()`: a later key's order replaces the earlier order, and its text (its named elements) the earlier text.
 #' * `plan_total(label, position)`: a Total column from the ARD's overall rows. Goes to [widen_ard()]: those rows as one more value of the column key, and its place in `levels`; the header's `{n}` there is the study total.
 #'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
 #' * `plan_stat_groups(...)`: the statistics in named groups. Goes to [widen_ard()]: `stat_groups` (the key `.stat_group`).
@@ -1606,6 +1607,38 @@ plan_levels <- function(.plan, ..., .drop_empty = NULL) {
 plan_labels <- function(.plan, ...) {
   v <- .plan_map(list(...), "plan_labels")
   .plan_layer(.plan, "labels", list(labels = v))
+}
+
+# plan_factor() (experimental, 10/18: the owner evaluates it beside the two):
+# a column's values in order with their text, as base R's factor(levels,
+# labels) -- one named vector a key, its order the order, a name the value
+# and the element its text (an element without a name: the value as it is).
+# `variable =` is the analysis variables' order and their headings.  It is
+# the two layers plan_levels() and plan_labels() make, nothing else.
+#' @rdname plan_verbs
+#' @export
+plan_factor <- function(.plan, ..., .drop_empty = NULL) {
+  v <- if (...length()) .plan_map(list(...), "plan_factor") else list()
+  lv <- list()
+  lb <- list()
+  for (k in names(v)) {
+    x <- v[[k]]
+    if (is.list(x)) x <- unlist(x)
+    if (!is.character(x) || !length(x) || anyNA(x)) {
+      .ard_stop(sprintf(paste0("plan_factor(%s = ) is the values in order: `c(\"a\", \"b\")`, ",
+                               "each named by its value when its text differs: `c(F = \"Female\")`."),
+                        k))
+    }
+    nm <- names(x)
+    named <- if (is.null(nm)) rep(FALSE, length(x)) else !is.na(nm) & nzchar(nm)
+    lv[[k]] <- ifelse(named, nm, unname(x))
+    if (any(named)) lb[[k]] <- x[named]
+  }
+  if (length(lv) || !is.null(.drop_empty)) {
+    .plan <- do.call(plan_levels, c(list(.plan), lv, list(.drop_empty = .drop_empty)))
+  }
+  if (length(lb)) .plan <- do.call(plan_labels, c(list(.plan), lb))
+  .plan
 }
 
 # One entry per key -- written out, or handed over whole.  A study that

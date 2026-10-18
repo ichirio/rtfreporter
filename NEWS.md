@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+- **`plan_factor()` (experimental): the order and the text of values at
+  once** (#678), as base R's `factor(levels, labels)`:
+  `plan_factor(SEX = c(F = "Female", M = "Male"))` is the order F, M and
+  their text, an element without a name the value as it is (the order
+  only), and `plan_factor(variable = c(AGE = "Age (years)", SEX = "Sex"))`
+  the analysis variables' order and headings.  It makes the same layers as
+  `plan_levels()` and `plan_labels()`, which stay: it is here to be tried,
+  and what stays is decided before 0.9.0.
+
 - **The rounding's case is not significant** (#676): `"SAS"` is `"sas"`
   and `"R"` is `"r"`, for `options(rtfreporter.rounding = )` and every
   function's `rounding` (`round_num()`, the formatters, `plan_digits()`,
