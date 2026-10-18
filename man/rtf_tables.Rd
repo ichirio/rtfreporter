@@ -35,9 +35,9 @@ rtf_tables(
   font = NULL,
   titles = NULL,
   footnotes = NULL,
-  auto_section = FALSE,
+  auto_section = NULL,
   section_label_align = "left",
-  auto_title = FALSE,
+  auto_title = NULL,
   title_label_align = "left",
   read_gt = FALSE
 )
@@ -105,7 +105,8 @@ addressable by name) is \strong{not} part of the name here: it is stripped
 before both the comparison and the printed heading. An item with an empty
 name falls through into the open section, which is how pages whose
 headings \emph{differ} are put in one section (see \code{\link[=combine_sections]{combine_sections()}}).
-Default \code{FALSE}.}
+\code{NULL} (default): what the pages say --- a plan's
+\code{plan_paginate_group(heading_at = "section")} --- else \code{FALSE}.}
 
 \item{section_label_align}{Alignment for the auto-appended section label row.
 One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}
@@ -118,7 +119,8 @@ Titles already present -- from \verb{titles =}, or carried on the object as the
 after them; a table with no titles gets the name as its whole block.
 Unnamed items are untouched.  Behaves identically under either
 \code{title_format}.  Composes with \code{auto_section}, which puts the same name in
-the section header instead.  Default \code{FALSE}.}
+the section header instead.  \code{NULL} (default): what the pages say --- a
+plan's \code{plan_paginate_group(heading_at = "title")} --- else \code{FALSE}.}
 
 \item{title_label_align}{Alignment for the auto-appended title label row.
 One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}
