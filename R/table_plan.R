@@ -975,7 +975,16 @@ print.table_plan <- function(x, ...) {
 #'
 #'   For `plan_levels()` and `plan_labels()`, one entry per column or
 #'   analysis variable: an order (`AGEGR1 = c("<65", "65-74")`), or
-#'   the text values are printed as (`AGE = "Age (years)"`).  Both
+#'   the text values are printed as (`AGE = "Age (years)"`).  An order may
+#'   name its values' text, as [base::factor()]'s `levels` and `labels`:
+#'   `plan_levels(SEX = c(F = "Female", M = "Male"))` is the order F, M and
+#'   their text, an element without a name the value as it is, and
+#'   `variable = c(AGE = "Age (years)", "SEX")` the variables' order and a
+#'   heading.  `plan_labels()` names without ordering, and its text wins
+#'   value by value over a name an order gives, whichever comes first; it
+#'   names a value by itself or by the text the order gives it
+#'   (`plan_labels(SEX = c(Female = "Women"))` after the order above), the
+#'   value first when a text is both (said in a message).  Both
 #'   merge one **key** at a time, so a later layer adds a variable
 #'   without restating the rest --- which is the whole reason these
 #'   two are layers and the roles are not.  A `plan_labels()` entry
@@ -1417,7 +1426,7 @@ print.table_plan <- function(x, ...) {
 #'
 #' * `plan_cells(..., stats, value, na, notes)`: how a cell is made. Goes to [widen_ard()]: `cells`, `stats`, `value`, `na`, `notes`; a finished table [as_rtftables()]: `na`.
 #' * `plan_digits(..., rounding)`: the digits. Goes to the open tokens of the templates; on a finished table [fmt_numeric()].
-#' * `plan_levels()`, `plan_labels()`: the order and text of values. Goes to [widen_ard()]: `levels`, `labels`.
+#' * `plan_levels()`, `plan_labels()`: the order and text of values. Goes to [widen_ard()]: `levels`, `labels`. A named element of `plan_levels()` is a value and its text, as [base::factor()]'s `levels` and `labels` (`plan_levels(SEX = c(F = "Female", M = "Male"))`, `variable = c(AGE = "Age (years)", "SEX")`); `plan_labels()` names without ordering, and wins value by value over a name `plan_levels()` gives.
 #' * `plan_total(label, position)`: a Total column from the ARD's overall rows. Goes to [widen_ard()]: those rows as one more value of the column key, and its place in `levels`; the header's `{n}` there is the study total.
 #'   `plan_levels(.drop_empty = )` leaves out the levels no record has, before the table is made.
 #' * `plan_stat_groups(...)`: the statistics in named groups. Goes to [widen_ard()]: `stat_groups` (the key `.stat_group`).
@@ -2878,6 +2887,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     v <- .plan_merge(.plan_of(plan, kind), deep = kind)[[kind]]
     if (length(v)) out[[kind]] <- v
   }
+  out <- .plan_levels_names(out)
   # plan_total(): the Total column in the column key's order
   tt <- .plan_total_spec(plan)
   cols <- as.character(unlist(out$cols, use.names = FALSE))
@@ -4271,6 +4281,64 @@ plan_n_candidates <- function(.plan) {
   # read off the finished page rather than predicted
   first <- if (inherits(out, "rtftable")) out else out[[1L]]
   if (!is.null(first$data)) .plan_remember(plan, "printed", first$data)
+  out
+}
+
+# plan_levels(SEX = c(F = "Female", M = "Male")): a named element is a value
+# and its text, as factor(levels, labels) -- the values go to widen_ard()'s
+# `levels`, their text to its `labels`, under what plan_labels() says: its
+# text wins value by value, whatever the order the two were called in
+# (plan_labels() names without ordering: a study's dictionary of headings,
+# one variable's heading changed).  `variable = c(AGE = "Age (years)")` is a
+# heading, under plan_labels(AGE = ) or plan_labels(variable = c(AGE = )).
+.plan_levels_names <- function(out) {
+  lv <- out$levels
+  if (!length(lv)) return(out)
+  lb <- out$labels %||% list()
+  own_heading <- function(a) {
+    x <- lb[[a]]
+    (!is.null(x) && is.null(names(x)) && length(x) == 1L) ||
+      (!is.null(names(x)) && a %in% names(x))
+  }
+  for (k in names(lv)) {
+    x <- lv[[k]]
+    if (is.list(x)) x <- unlist(x)
+    nm <- names(x)
+    if (!is.character(x) || is.null(nm) || !any(!is.na(nm) & nzchar(nm))) next
+    named <- !is.na(nm) & nzchar(nm)
+    lv[[k]] <- ifelse(named, nm, unname(x))
+    txt <- x[named]
+    if (identical(k, "variable")) txt <- txt[!vapply(names(txt), own_heading, NA)]
+    if (!length(txt)) next
+    own <- lb[[k]]
+    # plan_labels() names a value by itself or by the text the order gives
+    # it (plan_labels(SEX = c(Female = "Women")) is F); the same text both a
+    # value and another value's text: the value, said
+    if (is.character(own) && !is.null(names(own))) {
+      vals <- lv[[k]]
+      for (i in seq_along(own)) {
+        n <- names(own)[i]
+        by_txt <- names(txt)[txt == n]
+        if (!length(by_txt)) next
+        if (n %in% vals) {
+          if (!identical(by_txt, n)) {
+            message(sprintf(paste0("plan_labels(%s = ): %s is a value and the text plan_levels() ",
+                                   "gives %s; it names the value %s."),
+                            k, encodeString(n, quote = "\""), encodeString(by_txt[1L], quote = "\""),
+                            encodeString(n, quote = "\"")))
+          }
+          next
+        }
+        names(own)[i] <- by_txt[1L]
+      }
+    }
+    lb[[k]] <- if (is.null(own)) txt
+      else if (is.null(names(own)) && length(own) == 1L && is.character(own)) c(stats::setNames(own, k), txt)
+      else if (is.character(own) && !is.null(names(own))) c(txt[!names(txt) %in% names(own)], own)
+      else own
+  }
+  out$levels <- lv
+  if (length(lb)) out$labels <- lb
   out
 }
 
