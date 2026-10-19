@@ -1,12 +1,19 @@
 # rtfreporter_ai_manual(): PASTE.md -- the kit as one file, the shell in it,
 # a short size, the ARD's numbers only when asked (#687)
 
+# a fresh folder for one test, removed after it (no withr: not a dependency)
+kit_dir <- function(env = parent.frame()) {
+  d <- tempfile("kit")
+  dir.create(d)
+  do.call(on.exit, list(substitute(unlink(d, recursive = TRUE)), add = TRUE), envir = env)
+  d
+}
 heads_of <- function(f) sub("^##### ", "", grep("^##### ", readLines(f, encoding = "UTF-8"), value = TRUE))
 
 test_that("PASTE.md: every file of the kit in its order; the numbers only with values = TRUE", {
   skip_if_not_installed("cards")
   ard <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = c(SEX, AGEGR1)))
-  d <- withr::local_tempdir()
+  d <- kit_dir()
   out <- rtfreporter_ai_manual(d, ard = ard, overwrite = TRUE)
   expect_true("PASTE.md" %in% basename(out))
   p <- file.path(d, "PASTE.md")
@@ -17,7 +24,7 @@ test_that("PASTE.md: every file of the kit in its order; the numbers only with v
   rtfreporter_ai_manual(d, ard = ard, values = TRUE, overwrite = TRUE)
   expect_true("05_ard.csv" %in% heads_of(p))
   # the dev manual: no kit, no PASTE.md
-  d2 <- withr::local_tempdir()
+  d2 <- kit_dir()
   expect_identical(basename(rtfreporter_ai_manual(d2, which = "dev")), "rtfreporter-ai-dev-manual.md")
 })
 
@@ -25,7 +32,7 @@ test_that("size = \"short\": the rules, the plan sections, the exports and the c
   skip_if_not_installed("cards")
   dm <- cards::ard_stack(cards::ADSL, .by = ARM, cards::ard_tabulate(variables = c(SEX, AGEGR1)),
                          cards::ard_summary(variables = AGE))
-  d <- withr::local_tempdir()
+  d <- kit_dir()
   rtfreporter_ai_manual(d, ard = dm, overwrite = TRUE)
   full <- readLines(file.path(d, "PASTE.md"), encoding = "UTF-8")
   rtfreporter_ai_manual(d, ard = dm, size = "short", overwrite = TRUE)
@@ -62,7 +69,7 @@ test_that("the closest example: AE for a hierarchical ARD, ORR for a confidence 
 })
 
 test_that("shell = : its text or its file, as 07_shell.md and at the end of PASTE.md, in UTF-8", {
-  d <- withr::local_tempdir()
+  d <- kit_dir()
   sh <- c("Table 14.1.1  Demographics", "                Placebo   Drug X", "性別  n (%)")
   rtfreporter_ai_manual(d, shell = sh, overwrite = TRUE)
   p <- file.path(d, "PASTE.md")
