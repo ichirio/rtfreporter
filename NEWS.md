@@ -7,6 +7,11 @@
   ascending or descending; tables of two levels, whose parent was already
   first through `.depth`, are as they were.
 
+- **`plan_total()` with two column keys** (#695): the innermost key is
+  folded -- `cols = c(TRTA, AESEV)` gives each arm a total column (an AE's
+  count at any grade) from its records with no `AESEV`, placed by
+  `position` among that arm's columns.  It stopped before.
+
 - **`rtfreporter_ai_manual(shell = "shell.txt")`: a sheet copied from
   Excel** (#692, 0.8.2.9082).  A shell's sheet copied from Excel, pasted
   into Notepad and saved comes in as it is -- its tabs kept, the empty

@@ -41,3 +41,36 @@ test_that("three levels: the overall rows, then each SOC's own rows, then its PT
   b2 <- td[td$soc %in% td$soc[5L], , drop = FALSE]
   expect_true(is.na(b2$pt[1L]))
 })
+
+test_that("plan_total() with two column keys folds the inner one: each arm's 'Any grade' column (#695)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("dplyr")
+  adsl <- cards::ADSL
+  ae <- cards::ADAE
+  ae$AESEV <- factor(ae$AESEV, levels = c("MILD", "MODERATE", "SEVERE"))
+  top <- dplyr::slice_max(ae, as.integer(AESEV), by = c(USUBJID, AEBODSYS, AEDECOD), n = 1,
+                          with_ties = FALSE)
+  ard <- cards::ard_stack_hierarchical(top, variables = c(AEBODSYS, AEDECOD, AESEV), by = TRTA,
+                                       denominator = adsl, id = USUBJID, over_variables = TRUE)
+  p <- table_plan(normalize_ard(ard, hierarchy = c("AEBODSYS", "AEDECOD", "AESEV"),
+                                overall = "Any TEAE"),
+                  cols = c("TRTA", "AESEV"), rows = c(soc = "AEBODSYS"),
+                  label = list(label = "AEDECOD")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})")
+  t <- as.data.frame(suppressMessages(plan_apply(p |> plan_total(label = "Any grade",
+                                                                  position = "first"), "table")))
+  arms <- levels(factor(adsl$TRTA))
+  grades <- c("Any grade", "MILD", "MODERATE", "SEVERE")
+  want <- unlist(lapply(arms, function(a) paste0(a, "____", grades)))
+  expect_identical(setdiff(names(t), c("soc", "label")), want)
+  # the any-grade count is the PT's subjects; the overall row (no TRTA's
+  # grade) is that arm's any-TEAE count, and no column of all arms
+  pt <- t[!is.na(t$label), , drop = FALSE][1L, ]
+  n_any <- as.integer(sub(" .*", "", pt[[want[1L]]]))
+  n_g <- suppressWarnings(as.integer(sub(" .*", "", unlist(pt[want[2:4]]))))
+  expect_identical(n_any, sum(n_g, na.rm = TRUE))
+  expect_false(any(grepl("^NA____|^Any grade$", names(t))))
+  # last: after each arm's grades
+  t2 <- as.data.frame(suppressMessages(plan_apply(p |> plan_total(label = "Any grade"), "table")))
+  expect_identical(names(t2)[3:6], paste0(arms[1L], "____", c("MILD", "MODERATE", "SEVERE", "Any grade")))
+})

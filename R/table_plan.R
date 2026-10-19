@@ -1424,7 +1424,11 @@ print.table_plan <- function(x, ...) {
 #'   `cards::ard_stack(.overall = TRUE)`) --- so the ARD keeps no `ARM`
 #'   value the data does not have.  Its `{n}` in the column header is the
 #'   study total the ARD states (the column key tabulated on its own, or
-#'   `cards::ard_total_n()`).  One column key only.  Only the body's
+#'   `cards::ard_total_n()`).  With two column keys the innermost is folded:
+#'   `cols = c(TRTA, AESEV)` gives each arm a total column from its records
+#'   with no `AESEV` (an AE's count at any grade, `"Any grade"`), placed
+#'   among that arm's grades; records with no `TRTA` either make no column.
+#'   Only the body's
 #'   analyses are read: a test or a difference has no column key either,
 #'   and is `plan_compare()`'s.  For `plan_compare()`, `position` is where
 #'   its columns go: after the column key's (`"last"`) or before them
@@ -2833,15 +2837,19 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   tt <- .plan_total_spec(plan)
   if (is.null(tt) || !is.data.frame(d)) return(d)
   cols <- as.character(unlist(plan$roles$cols, use.names = FALSE))
-  if (length(cols) != 1L) {
-    .ard_stop(sprintf(paste0(
-      "plan_total(): a Total column is read for one column key; this ",
-      "table has %s."),
-      if (length(cols)) paste0("cols = c(", paste(cols, collapse = ", "), ")")
-      else "no cols"))
+  if (!length(cols)) {
+    .ard_stop("plan_total(): a Total column is read for a column key; this table has no cols.")
   }
+  # the innermost column key is the one folded: with cols = c(TRTA, AESEV),
+  # each arm's records with no AESEV make that arm's total column; records
+  # with no TRTA either are no column of this table
+  outer <- cols[-length(cols)]
+  cols <- cols[length(cols)]
   if (!cols %in% names(d)) return(d)
   k <- d[[cols]]
+  in_outer <- if (length(outer)) {
+    Reduce(`&`, lapply(outer, function(o) if (o %in% names(d)) !is.na(d[[o]]) else FALSE))
+  } else rep(TRUE, nrow(d))
   v <- if ("variable" %in% names(d)) as.character(d$variable) else
     rep(NA_character_, nrow(d))
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
@@ -2851,7 +2859,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   ctx <- if ("context" %in% names(d)) as.character(d$context) else
     rep(NA_character_, nrow(d))
   body_ctx <- unique(ctx[!is.na(k)])
-  at <- is.na(k) & !own & !(v %in% "..ard_total_n..") & ctx %in% body_ctx
+  at <- is.na(k) & in_outer & !own & !(v %in% "..ard_total_n..") & ctx %in% body_ctx
   if (!any(at)) {
     .ard_stop(sprintf(paste0(
       "plan_total(): the ARD has no overall rows, rows without %s.
