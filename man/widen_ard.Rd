@@ -197,7 +197,13 @@ the row key's summary, its shallowest row --- carried to every row
 of the group: \code{"-n@soc"} orders the SOCs by their own count and
 keeps each SOC's PTs with it.  Both at once: \code{"-n@soc[Total]"}.
 An overall row keeps its own number.}
+\item{\code{"max(<stat>)"}, \code{"min(<stat>)"}}{the statistic's \strong{largest}
+(smallest) value across the spread columns instead of their total:
+\code{"-max(n)"} puts first the rows most frequent in any arm.  With
+the forms above: \code{"-max(n)@soc"}, \code{"-max(n)[Placebo]"}.
+\code{"sum(n)"} is \code{"n"}.}
 }
+Without \code{-} a key is ascending (\code{"n"}, \code{"max(n)"}: the fewest first).
 So \code{sort = c(".overall", "soc", ".depth", "-n", "term")} is the whole of
 an AE table's row order, and needs neither \code{sort_stat} nor an \code{arrange()}
 afterwards; \code{c(".overall", "-n@soc", "soc", ".depth", "-n")} puts the
