@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9080** (the development
+**This manual documents rtfreporter 0.8.2.9081** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -884,6 +884,7 @@ p_ae <- ard_ae |>
 | One record's statistics in two columns (N in one, the rate and CI in the next) | `plan_stat_groups(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))` with `table_plan(cols = c("ARM", ".stat_group"))`; `plan_cells(n = ..., orr_ci = ...)` keys a template by the group's name. No `mutate()` of `variable` before the plan (keep the ARD as it is). With `cell_rows()` per group: n rows x m columns of one record; groups down with `rows = c(..., stat = ".stat_group")` |
 | A Total column | `plan_total(label = "Total", position = "last")`: cards' overall rows (the analysis again without `by`, bound under it: `bind_rows(ard_tabulate(adsl, by = ARM, variables = SEX), ard_tabulate(adsl, variables = SEX))`, or `ard_stack(.overall = TRUE)`) become the column; its header `{n}` is the study total. Never stack the data with `ARM = "Total"`: the ARD and ARS then carry a value the data does not have |
 | Row order | `plan_sort(..., stat, keep)`: keys like `".overall"`, `".depth"`, a column, a statistic; `-name` = descending. Keep a hierarchy nested: `plan_sort(".overall", "SOC", ".depth", "-n", "PT")`, never `-n` alone. SOCs by their own count: `plan_sort(".overall", "-n@SOC", "SOC", ".depth", "-n", "PT")`; one column's count: `"-n[Total]"`, `"-n@SOC[Total]"`; one arm's: `"-n[Drug X]"`; the largest in any arm: `"-max(n)"` (smallest `"min(n)"`; with `@SOC`, `[col]` too); a rate: `"-p[Total]"`; no minus = ascending; SOCs by count, PTs by name: `".overall", "-n@SOC", "SOC", ".depth", "PT"`. A code list's order, visits in AVISITN order, an order of your own: nothing here -- a factor made when the ARD is made, or `plan_levels()`. The arms' difference: `cards::diff_ard_hierarchical()` bound to the counts, `plan_compare(diff = "{estimate:.3f}")`, `plan_sort("SOC", ".depth", "-estimate")` (a comparison's statistic is read on the row it lands on; `[<comparison>]` with `plan_compare(by = )`) |
+| A table of no events | `plan_empty(text = "No subjects met the criteria.", when, position, footnote)`: one row saying so when the table has no row but its overall row, or its overall row is 0 (`position = "last"` keeps the overall row's 0, `"replace"` shows the sentence alone); `footnote =` a line only then. Put it in the study's defaults: it acts only on an empty table |
 | Stub (indented row headings) | `plan_stub(vars, name, indent, group_summary, before)` |
 | Groups down the body | `plan_row_group(mode = "value"/"indent"/"filled"/"auto", collapse, group_col)`: `collapse = c("grp1", "grp2")`; `group_col` only on a finished table (an ARD plan's is its outermost row key) |
 | Blank rows | `plan_blanks(where, first, last, counted)`: `where = "between_groups"`; listings `"records"` |
@@ -1120,7 +1121,7 @@ reference of a difference.
 `cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens` `plan_n_candidates`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
-`plan_hide` `plan_nest` `plan_total` `plan_stat_groups` `plan_compare` `plan_filter` `plan_sort` `plan_blanks` `plan_paginate_rows`
+`plan_hide` `plan_nest` `plan_total` `plan_stat_groups` `plan_compare` `plan_filter` `plan_sort` `plan_empty` `plan_blanks` `plan_paginate_rows`
 `plan_paginate_cols` `plan_style` `plan_columns` `plan_col_header`
 `plan_listing` `plan_titles` `plan_footnotes` `plan_after`
 

@@ -3573,6 +3573,59 @@ test_that("plan_sort() by a plan_compare() statistic: the rows by the arms' diff
   expect_error(tab(base |> plan_sort("-estimate")), "neither a column")
 })
 
+test_that("plan_empty(): a table of no events says so, only when it is empty (#691)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  # an ARD of no events: the overall row 0 (as tflspec makes it for no records)
+  stand <- adsl[!duplicated(adsl$TRTA), ]
+  stand$AESOC <- "(none)"
+  stand$AEDECOD <- "(none)"
+  ard0 <- cards::ard_stack_hierarchical(stand, variables = c(AESOC, AEDECOD), by = TRTA,
+                                        denominator = adsl, id = USUBJID, over_variables = TRUE)
+  ard0 <- ard0[ard0$variable %in% c("..ard_hierarchical_overall..", "TRTA"), ]
+  ov <- ard0$variable %in% "..ard_hierarchical_overall.."
+  ard0$stat[ov & ard0$stat_name == "n"] <- list(0L)
+  ard0$stat[ov & ard0$stat_name == "p"] <- list(0)
+  base <- function(a) {
+    table_plan(normalize_ard(a, hierarchy = c("AESOC", "AEDECOD"), overall = "Any TEAE"),
+               cols = "TRTA", rows = c(soc = "AESOC", pt = "AEDECOD")) |>
+      plan_cells(categorical = c(n == 0 ~ "0", "{n} ({p:.1f%})"), notes = FALSE)
+  }
+  tab <- function(p) as.data.frame(suppressMessages(plan_apply(p, "table")))
+  arms <- unique(as.character(adsl$TRTA))
+  # last (the default): the overall row's 0 stays, the sentence after it
+  t <- tab(base(ard0) |> plan_empty())
+  expect_identical(t$label, c("Any TEAE", "No subjects met the criteria."))
+  expect_true(all(unlist(t[2L, arms]) == ""))
+  expect_true(all(unlist(t[1L, arms]) == "0"))
+  expect_identical(tab(base(ard0) |> plan_empty(position = "first"))$label[1L],
+                   "No subjects met the criteria.")
+  expect_identical(tab(base(ard0) |> plan_empty(text = "None.", position = "replace"))$label, "None.")
+  # when = "no_rows": no row but the overall row -- its 0 counts too
+  expect_identical(nrow(tab(base(ard0) |> plan_empty(when = "no_rows"))), 2L)
+  # the footnote, on an empty table only; text = NULL: the footnote alone
+  pg <- function(p) {
+    r <- suppressMessages(plan_apply(p |> plan_stub(name = "row_label")))
+    if (inherits(r, "rtftable")) r else r[[1L]]
+  }
+  e <- pg(base(ard0) |> plan_empty(text = NULL, footnote = "No events were reported."))
+  expect_identical(unlist(attr(e, "rtf_footnotes")), "No events were reported.")
+  expect_false(any(grepl("No subjects", unlist(e$data), fixed = TRUE)))
+  # a table with events: as it was, no footnote
+  adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:2], ]
+  ard1 <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,
+                                        denominator = adsl, id = USUBJID, over_variables = TRUE)
+  expect_identical(tab(base(ard1) |> plan_empty()), tab(base(ard1)))
+  f <- pg(base(ard1) |> plan_empty(footnote = "No events were reported."))
+  expect_null(unlist(attr(f, "rtf_footnotes")))
+  # every row but the overall filtered out: the overall row, then the sentence
+  t2 <- tab(base(ard1) |> plan_filter(n > 1000) |> plan_empty())
+  expect_identical(t2$label, c("Any TEAE", "No subjects met the criteria."))
+  # and only an overall row of 0 counts for when = "overall_zero"
+  expect_identical(nrow(tab(base(ard1) |> plan_filter(n > 1000) |> plan_empty(when = "overall_zero"))), 1L)
+  expect_error(base(ard0) |> plan_empty(text = c("a", "b")), "one string")
+})
+
 test_that("no cols: one column, All, when the ARD has no group; its N the ARD's total (#689)", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL[cards::ADSL$ARM == "Placebo", ]

@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+- **`plan_empty()`: a table of no events says so** (#691).  When the table
+  has no row but its overall row, or its overall row (`normalize_ard(overall
+  = )`) is 0 in every column, one row says so (`"No subjects met the
+  criteria."` by default) -- after the rows (the overall row's 0 stays),
+  before them, or instead of them -- and `footnote =` adds a line to the
+  table's footnotes, on an empty table only.  A table with events is as it
+  was, so the study's defaults can hold it for every table.
+
 - **`table_plan()` without `cols`: one column** (#689).  A one-arm table
   (a single cohort) written with no column key -- as people and AI chats
   write it -- stopped with "`cols` is required".  Now, when the ARD has no
