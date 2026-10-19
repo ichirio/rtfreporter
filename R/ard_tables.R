@@ -2813,6 +2813,12 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       v <- xtfrm(v)
       v[is.na(out[[nm]])] <- -Inf
     }
+    # so too for a group's statistic (`-n@pt`): the rows with no such group
+    # (the SOC's own, above its PTs) come first
+    if (!is.null(sc) && !is.null(sc$key) && sc$key %in% names(out) && anyNA(out[[sc$key]])) {
+      v <- xtfrm(v)
+      v[is.na(out[[sc$key]])] <- -Inf
+    }
     keys[[length(keys) + 1L]] <- v
   }
   do.call(order, keys)

@@ -40,6 +40,12 @@ test_that("three levels: the overall rows, then each SOC's own rows, then its PT
   td <- as.data.frame(suppressMessages(plan_apply(pd, "table")))
   b2 <- td[td$soc %in% td$soc[5L], , drop = FALSE]
   expect_true(is.na(b2$pt[1L]))
+  # by a group's own count (`-n@pt`): the SOC's own rows, with no PT, first
+  pn <- p |> plan_sort(keys = c(".overall", "-n@soc", "soc", "-n@pt", "pt", ".depth"))
+  tn <- as.data.frame(suppressMessages(plan_apply(pn, "table")))
+  b3 <- tn[tn$soc %in% tn$soc[5L], , drop = FALSE]
+  own3 <- which(is.na(b3$pt))
+  expect_identical(own3, seq_along(own3))
 })
 
 test_that("plan_total() with two column keys folds the inner one: each arm's 'Any grade' column (#695)", {

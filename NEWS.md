@@ -4,7 +4,8 @@
   0.8.2.9083).  With a row key among the sort keys, the row of a group
   itself (its lower key empty: a SOC's own counts over its PTs, the overall
   rows) sorted after the group's members.  It comes first now, the key
-  ascending or descending; tables of two levels, whose parent was already
+  ascending or descending, and by a group's statistic (`-n@pt`); tables of
+  two levels, whose parent was already
   first through `.depth`, are as they were.
 
 - **`plan_total()` with two column keys** (#695): the innermost key is
