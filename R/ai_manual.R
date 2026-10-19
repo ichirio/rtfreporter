@@ -91,7 +91,9 @@
 #' @param overwrite Replace files of the same names already in `dir`.
 #'   Default `FALSE`.
 #' @param shell The table's shell (its mock-up) for the kit: its text, or a
-#'   `.txt` / `.md` file of it.  It goes to `07_shell.md` and at the end of
+#'   `.txt` / `.md` file of it in UTF-8 (a sheet copied from Excel into
+#'   Notepad and saved as UTF-8 is one; a Shift-JIS or UTF-16 file stops
+#'   with how to save it).  It goes to `07_shell.md` and at the end of
 #'   `PASTE.md`.  `NULL` (default): the person pastes it after `PASTE.md`.
 #' @param size What `PASTE.md` holds: `"full"` (default) every file of the
 #'   kit, `"short"` what a table's program needs (see *The kit*).  The
@@ -213,9 +215,35 @@ rtfreporter_ai_manual <- function(dir = NULL, ard = NULL, which = c("user", "dev
   }
   if (length(shell) == 1L && grepl("[.](txt|md)$", shell, ignore.case = TRUE) &&
       file.exists(shell)) {
-    return(readLines(shell, warn = FALSE, encoding = "UTF-8"))
+    return(.ai_kit_text_file(shell))
   }
-  unlist(strsplit(shell, "\n", fixed = TRUE), use.names = FALSE)
+  lines <- unlist(strsplit(gsub("\r\n?", "\n", shell), "\n", fixed = TRUE), use.names = FALSE)
+  sub("[ \t]+$", "", lines)
+}
+
+# A shell's text file as lines: UTF-8 with or without a BOM, any line end.
+# A sheet copied from Excel into Notepad is tab-separated, its empty cells
+# trailing tabs (dropped).  Shift-JIS or UTF-16 ("Unicode" in Notepad) stops
+# with how to save it as UTF-8, rather than going to the chat garbled.
+.ai_kit_text_file <- function(path) {
+  raw <- readBin(path, "raw", n = file.size(path))
+  how <- paste0("Open it in Notepad, File > Save As, Encoding: UTF-8, and pass ",
+                "that file (or the text itself).")
+  utf16 <- length(raw) >= 2L && (identical(raw[1:2], as.raw(c(0xff, 0xfe))) ||
+                                   identical(raw[1:2], as.raw(c(0xfe, 0xff))))
+  if (utf16 || any(raw == as.raw(0L))) {
+    stop(sprintf("`rtfreporter_ai_manual(shell = )`: '%s' is UTF-16 (\"Unicode\"), not UTF-8.\n  %s",
+                 basename(path), how), call. = FALSE)
+  }
+  if (length(raw) >= 3L && identical(raw[1:3], as.raw(c(0xef, 0xbb, 0xbf)))) raw <- raw[-(1:3)]
+  x <- rawToChar(raw)
+  Encoding(x) <- "UTF-8"
+  if (!validUTF8(x)) {
+    stop(sprintf(paste0("`rtfreporter_ai_manual(shell = )`: '%s' is not UTF-8 (saved as ",
+                        "Shift-JIS / ANSI?).\n  %s"), basename(path), how), call. = FALSE)
+  }
+  lines <- strsplit(gsub("\r\n?", "\n", x), "\n", fixed = TRUE)[[1L]]
+  sub("[ \t]+$", "", lines)
 }
 
 # The manual's sections a table's program needs: its head (the version),

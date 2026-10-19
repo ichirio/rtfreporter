@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **`rtfreporter_ai_manual(shell = "shell.txt")`: a sheet copied from
+  Excel** (#692, 0.8.2.9082).  A shell's sheet copied from Excel, pasted
+  into Notepad and saved comes in as it is -- its tabs kept, the empty
+  cells' trailing tabs and a UTF-8 BOM dropped, CRLF or LF.  A file saved
+  as Shift-JIS (ANSI on a Japanese Windows) or UTF-16 ("Unicode") stops
+  with how to save it as UTF-8, rather than going to the chat garbled.
+
 - **`plan_empty()`: a table of no events says so** (#691).  When the table
   has no row but its overall row, or its overall row (`normalize_ard(overall
   = )`) is 0 in every column, one row says so (`"No subjects met the
