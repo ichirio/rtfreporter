@@ -2125,6 +2125,13 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'       `"-max(n)"` puts first the rows most frequent in any arm.  With
 #'       the forms above: `"-max(n)@soc"`, `"-max(n)[Placebo]"`.
 #'       `"sum(n)"` is `"n"`.}
+#'     \item{a comparison's statistic}{a statistic of the comparison
+#'       records [plan_compare()] places (a difference between two arms,
+#'       `"-estimate"`), on the row it lands on: the rows by the arms'
+#'       difference.  `"-estimate[<comparison>]"` picks one when
+#'       `plan_compare(by = )` names them; `"-estimate@soc"` carries a SOC's
+#'       own difference to its PTs.  A statistic the body has is the
+#'       body's.}
 #'   }
 #'   Without `-` a key is ascending (`"n"`, `"max(n)"`: the fewest first).
 #'   So `sort = c(".overall", "soc", ".depth", "-n", "term")` is the whole of
@@ -2647,8 +2654,13 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # each row's identity rides through the sort, for plan_compare()
   if (!is.null(cmp_d) && nrow(cmp_d)) out$.cmp_rid <- base$.rid
   if (is.character(sort) && length(sort)) {
+    # (a key may name a comparison's statistic: the value plan_compare()
+    # places on each row, found before the columns are placed)
+    cmp_sort <- if (!is.null(cmp_d) && nrow(cmp_d)) {
+      list(d = cmp_d, spec = compare, label_out = label_out, recode = recode)
+    }
     out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref,
-                               colkey = colkey, sep = sep), ,
+                               colkey = colkey, sep = sep, cmp = cmp_sort), ,
                drop = FALSE]
   } else if ((length(rowname_cols) ||
               (!is.null(label_out) && is.factor(out[[label_out]]))) &&
@@ -2718,11 +2730,14 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 #   max(<stat>), min(<stat>), sum(<stat>)  its largest / smallest / total
 #               value across the spread columns (`-max(n)`: the most
 #               frequent in any arm); with the forms above: `-max(n)@group1`
+#   a comparison's statistic (`-estimate`): plan_compare()'s records, on the
+#               rows they are placed on (`[...]` names a comparison of
+#               plan_compare(by = )) -- the body's statistic wins
 #
 # A statistic is recognised last, so a column of that name wins; that is the
 # safe way round, since the column is what the caller can see in the result.
 .ard_sort_order <- function(spec, out, base, d, rowrefs, labref,
-                            colkey = NULL, sep = "____") {
+                            colkey = NULL, sep = "____", cmp = NULL) {
   keys <- list()
   for (s in spec) {
     desc <- substr(s, 1L, 1L) == "-"
@@ -2730,12 +2745,15 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     sc <- if (!nm %in% names(out)) .ard_sort_scoped(nm)
     v <- if (nm %in% names(out)) out[[nm]]
          else if (!is.null(sc)) .ard_sort_scoped_value(sc, s, base, d, rowrefs,
-                                                       labref, colkey, sep)
+                                                       labref, colkey, sep,
+                                                       out = out, cmp = cmp)
          else if (nm %in% c(".overall", ".depth")) base[[nm]]
          else if (nm %in% d$stat_name) {
            tot <- tapply(suppressWarnings(as.numeric(d$stat[d$stat_name == nm])),
                          rid_for_stat(d, rowrefs, labref, nm), sum, na.rm = TRUE)
            as.numeric(tot[match(base$.rid, names(tot))])
+         } else if (!is.null(cmp) && nm %in% cmp$d$stat_name) {
+           .ard_cmp_sort_values(nm, cmp, out, base, rowrefs)
          } else {
            .ard_stop(sprintf(
              paste0("`sort`: '%s' is neither a column of the result nor a ",
@@ -2783,6 +2801,55 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 # row keys it has), the row of its level when it has one, else the block's
 # first row as the table is now sorted.  A cell two records reach is an
 # error; a record no row takes, or no column's map reads, is a note.
+# A comparison's statistic on the rows plan_compare() places it on (the
+# same match as .ard_compare_place(): the row's variable, its keys, its
+# label), for a sort key: `out` in the base's order, NA where no
+# comparison lands.  `by`: the comparisons of that name (plan_compare(by =
+# )); several on a row are summed, or their max / min (`agg`).
+.ard_cmp_sort_values <- function(stat, cmp, out, base, rowrefs, by = NULL,
+                                 agg = "sum", s = stat) {
+  cd <- cmp$d
+  sel <- cd$stat_name == stat
+  if (!is.null(by)) {
+    bcol <- cmp$spec$by
+    if (is.null(bcol) || !bcol %in% names(cd)) {
+      .ard_stop(sprintf(paste0("`sort`: '%s' -- '[%s]' names a comparison, and ",
+                               "plan_compare() has no `by` to name them."), s, by))
+    }
+    hit <- as.character(cd[[bcol]]) %in% by
+    if (!any(sel & hit)) {
+      .ard_stop(sprintf("`sort`: '%s' -- no comparison '%s'.
+  Comparisons: %s", s, by,
+                        paste(sQuote(unique(as.character(cd[[bcol]]))), collapse = ", ")))
+    }
+    sel <- sel & hit
+  }
+  cd <- cd[sel, , drop = FALSE]
+  rowvar <- as.character(base$.var)
+  label_out <- cmp$label_out
+  vals <- vector("list", nrow(out))
+  for (i in seq_len(nrow(cd))) {
+    sub <- cd[i, , drop = FALSE]
+    cand <- !is.na(rowvar) & rowvar == sub$variable[1L]
+    for (r in rowrefs) {
+      if (!r$ref %in% names(sub) || is.na(sub[[r$ref]][1L])) next
+      cand <- cand & as.character(out[[r$out]]) %in% cmp$recode(sub[[r$ref]][1L], r$ref, r$out)
+    }
+    if (!is.null(label_out) && ".label" %in% names(sub) && !is.na(sub$.label[1L])) {
+      at <- cand & as.character(out[[label_out]]) %in% sub$.label[1L]
+      if (any(at)) cand <- at
+    }
+    if (!any(cand)) next
+    row <- which(cand)[1L]
+    vals[[row]] <- c(vals[[row]], suppressWarnings(as.numeric(unlist(sub$stat)[1L])))
+  }
+  f <- switch(agg, max = max, min = min, sum)
+  vapply(vals, function(z) {
+    z <- z[!is.na(z)]
+    if (length(z)) f(z) else NA_real_
+  }, 0)
+}
+
 .ard_compare_place <- function(out, base, ord_rid, cmp, spec, rowrefs, labref,
                                label_out, recode, rounding, na, sep, n_id) {
   bi <- match(ord_rid, base$.rid)
@@ -2962,7 +3029,14 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
        agg = agg %||% "sum")
 }
 
-.ard_sort_scoped_value <- function(sc, s, base, d, rowrefs, labref, colkey, sep) {
+.ard_sort_scoped_value <- function(sc, s, base, d, rowrefs, labref, colkey, sep,
+                                   out = NULL, cmp = NULL) {
+  if (!sc$stat %in% d$stat_name && !is.null(cmp) && sc$stat %in% cmp$d$stat_name) {
+    # a comparison's statistic: `[...]` names the comparison (plan_compare(by = ))
+    v <- .ard_cmp_sort_values(sc$stat, cmp, out, base, rowrefs, by = sc$col,
+                              agg = sc$agg %||% "sum", s = s)
+    return(.ard_sort_carry(sc, s, v, base, rowrefs))
+  }
   if (!sc$stat %in% d$stat_name) {
     .ard_stop(sprintf("`sort`: '%s' -- '%s' is not a statistic of this ARD.",
                       s, sc$stat))
@@ -2986,6 +3060,12 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   tot <- tapply(suppressWarnings(as.numeric(d$stat[sel])),
                 rid_for_stat(d[sel, , drop = FALSE], rowrefs, labref, sc$stat), f)
   v <- as.numeric(tot[match(base$.rid, names(tot))])
+  .ard_sort_carry(sc, s, v, base, rowrefs)
+}
+
+# `<stat>@<key>`: the group's own row's value carried to every row of the
+# group (no `@`: the rows' own values)
+.ard_sort_carry <- function(sc, s, v, base, rowrefs) {
   if (is.null(sc$key)) return(v)
   outs <- vapply(rowrefs, function(r) r$out, "")
   p <- match(sc$key, outs)

@@ -3530,3 +3530,45 @@ test_that("plan_levels() with names: a value and its text at once (factor(levels
                    tab(base |> plan_levels(variable = c("AGE", "SEX")) |>
                          plan_labels(variable = c(AGE = "Age (years)", SEX = "Sex"))))
 })
+
+test_that("plan_sort() by a plan_compare() statistic: the rows by the arms' difference, either call order (#684)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adae <- cards::ADAE[cards::ADAE$AESOC %in% c("CARDIAC DISORDERS", "SKIN AND SUBCUTANEOUS TISSUE DISORDERS"), ]
+  arms <- c("Placebo", "Xanomeline High Dose")
+  adsl <- adsl[adsl$ARM %in% arms, ]
+  adae <- adae[adae$TRTA %in% arms, ]
+  adae$TRTA <- factor(adae$TRTA, levels = arms)
+  adsl$TRTA <- factor(adsl$ARM, levels = arms)
+  ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD), by = TRTA,
+                                       denominator = adsl, id = USUBJID)
+  d <- normalize_ard(cards::bind_ard(ard, cards::diff_ard_hierarchical(ard), .update = TRUE),
+                     hierarchy = c("AESOC", "AEDECOD"))
+  base <- table_plan(d, cols = "TRTA", rows = c(SOC = "AESOC"), label = c(PT = "AEDECOD")) |>
+    plan_cells(hierarchical = "{n} ({p:.1f%})", notes = FALSE)
+  tab <- function(p) as.data.frame(suppressMessages(plan_apply(p, "table")))
+  p <- base |> plan_compare(diff = "{estimate:.3f}")
+  num <- function(t) as.numeric(t$diff)
+  # within each SOC, its PTs by the difference, descending; ascending without the minus
+  dn <- tab(p |> plan_sort("SOC", ".depth", "-estimate"))
+  up <- tab(p |> plan_sort("SOC", ".depth", "estimate"))
+  for (s in unique(dn$SOC)) {
+    expect_true(all(diff(num(dn[dn$SOC == s & !is.na(dn$PT), ])) <= 0))
+    expect_true(all(diff(num(up[up$SOC == s & !is.na(up$PT), ])) >= 0))
+    expect_true(is.na(dn$PT[dn$SOC == s][1L]))     # the SOC's own row first
+  }
+  # the SOCs by their own difference, each with its PTs
+  t3 <- tab(p |> plan_sort("-estimate@SOC", "SOC", ".depth", "-estimate"))
+  expect_true(all(diff(num(t3)[is.na(t3$PT)]) <= 0))
+  runs <- rle(as.character(t3$SOC))$values
+  expect_identical(runs, unique(runs))
+  # the call order does not matter (one layer each)
+  p2 <- base |> plan_sort("SOC", ".depth", "-estimate") |> plan_compare(diff = "{estimate:.3f}")
+  expect_identical(tab(p2), dn)
+  # a statistic the body has is still the body's; a comparison by name needs `by`
+  expect_identical(tab(p |> plan_sort("SOC", ".depth", "-n")), tab(base |> plan_compare(diff = "{estimate:.3f}") |>
+                                                                    plan_sort("SOC", ".depth", "-n")))
+  expect_error(tab(p |> plan_sort("-estimate[X]")), "names a comparison")
+  # without plan_compare(): no comparison to read
+  expect_error(tab(base |> plan_sort("-estimate")), "neither a column")
+})

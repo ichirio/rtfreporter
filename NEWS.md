@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+- **`plan_sort()` by a `plan_compare()` statistic** (#684): the rows by the
+  arms' difference.  A key that names a statistic of the comparison
+  records (`"-estimate"`, made at the ARD step with
+  `cards::diff_ard_hierarchical()`) reads its value on the row
+  `plan_compare()` places it on; `"-estimate[<comparison>]"` picks one of
+  `plan_compare(by = )`, and `"-estimate@SOC"` carries a SOC's own
+  difference to its PTs.  The order of the two calls does not matter, and
+  a statistic the body has is still the body's.
+
 - **`plan_sort()` by a row's largest or smallest value across the
   columns** (#683): `"-max(n)"` puts first the rows most frequent in any
   arm, `"min(n)"` the smallest; without the minus, ascending.  They go with
@@ -10,8 +19,8 @@
   frequent in any arm (`"-max(n)"`), a rate (`"-p[Total]"`), SOCs by count
   with their PTs by name -- and a code list's order or visit order needs
   nothing here (a factor made with the ARD).  The article "The plan verbs"
-  and the AI user manual list them by table, and say what is not there yet
-  (ordering by the arms' difference).
+  and the AI user manual list them by table, with the arms' difference
+  (#684).
 
 - **`plan_levels()` says a value the ARD does not have** (#680).  The
   levels order what the ARD has and make no row or column; a value they

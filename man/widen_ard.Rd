@@ -202,6 +202,13 @@ An overall row keeps its own number.}
 \code{"-max(n)"} puts first the rows most frequent in any arm.  With
 the forms above: \code{"-max(n)@soc"}, \code{"-max(n)[Placebo]"}.
 \code{"sum(n)"} is \code{"n"}.}
+\item{a comparison's statistic}{a statistic of the comparison
+records \code{\link[=plan_compare]{plan_compare()}} places (a difference between two arms,
+\code{"-estimate"}), on the row it lands on: the rows by the arms'
+difference.  \code{"-estimate[<comparison>]"} picks one when
+\code{plan_compare(by = )} names them; \code{"-estimate@soc"} carries a SOC's
+own difference to its PTs.  A statistic the body has is the
+body's.}
 }
 Without \code{-} a key is ascending (\code{"n"}, \code{"max(n)"}: the fewest first).
 So \code{sort = c(".overall", "soc", ".depth", "-n", "term")} is the whole of
