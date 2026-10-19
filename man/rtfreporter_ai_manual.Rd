@@ -30,7 +30,9 @@ for the kit's \verb{05_ard.csv} and \verb{06_ard_shape.md}.  \code{NULL} (defaul
 Default \code{FALSE}.}
 
 \item{shell}{The table's shell (its mock-up) for the kit: its text, or a
-\code{.txt} / \code{.md} file of it.  It goes to \verb{07_shell.md} and at the end of
+\code{.txt} / \code{.md} file of it in UTF-8 (a sheet copied from Excel into
+Notepad and saved as UTF-8 is one; a Shift-JIS or UTF-16 file stops
+with how to save it).  It goes to \verb{07_shell.md} and at the end of
 \code{PASTE.md}.  \code{NULL} (default): the person pastes it after \code{PASTE.md}.}
 
 \item{size}{What \code{PASTE.md} holds: \code{"full"} (default) every file of the

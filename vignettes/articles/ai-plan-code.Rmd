@@ -74,6 +74,9 @@ rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, shell = shell, size = "short",
                       overwrite = TRUE)          # or shell = "shell.txt", a file
 ```
 
+A shell in Excel: select the whole sheet, copy, paste it into Notepad and
+save it as UTF-8 (`shell.txt`), then `shell = "shell.txt"`.
+
 ## 4. How to ask
 
 > Write the R program for table T-14-1-1, following 00_START_HERE.md.

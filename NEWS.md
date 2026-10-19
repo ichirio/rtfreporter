@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **`rtfreporter_ai_manual(shell = "shell.txt")`: a sheet copied from
+  Excel** (#692, 0.8.2.9082).  A shell's sheet copied from Excel, pasted
+  into Notepad and saved comes in as it is -- its tabs kept, the empty
+  cells' trailing tabs and a UTF-8 BOM dropped, CRLF or LF.  A file saved
+  as Shift-JIS (ANSI on a Japanese Windows) or UTF-16 ("Unicode") stops
+  with how to save it as UTF-8, rather than going to the chat garbled.
+
 - **`rtfreporter_ai_manual()`: one file to paste, the shell in it, a short
   size** (#687).  The kit now comes with `PASTE.md`, its files as one text
   for a chat that takes no attachment (the article's joining code goes).

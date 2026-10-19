@@ -74,6 +74,9 @@ rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, shell = shell, size = "short",
                       overwrite = TRUE)          # shell = "shell.txt"（ファイル）でも
 ```
 
+シェルが Excel にあるとき: シートを全選択してコピーし、メモ帳に貼って
+UTF-8 で保存（`shell.txt`）、`shell = "shell.txt"` で渡します。
+
 ## 4. 頼み方の例
 
 > 00_START_HERE.md に従って、表 T-14-1-1 の R プログラムを書いてください。

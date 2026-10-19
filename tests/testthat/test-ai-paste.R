@@ -84,3 +84,33 @@ test_that("shell = : its text or its file, as 07_shell.md and at the end of PAST
   expect_identical(readLines(file.path(d, "07_shell.md"), encoding = "UTF-8"), sh)
   expect_error(rtfreporter_ai_manual(d, shell = 1, overwrite = TRUE), "shell's text")
 })
+
+test_that("shell = a sheet copied from Excel into Notepad: tabs, CRLF, a BOM; Shift-JIS stops (#692)", {
+  d <- kit_dir()
+  # Excel's copy: a tab between cells, empty cells as trailing tabs, CRLF
+  txt <- paste0("Table 14.1.1  Demographics (背景因子)\t\t\r\n",
+                "\tPlacebo (N=xx)\tDrug X (N=xx)\r\n",
+                "  Mean (SD)\txx.x (xx.xx)\txx.x (xx.xx)\r\n")
+  want <- c("Table 14.1.1  Demographics (背景因子)",
+            "\tPlacebo (N=xx)\tDrug X (N=xx)",
+            "  Mean (SD)\txx.x (xx.xx)\txx.x (xx.xx)")
+  bytes <- charToRaw(enc2utf8(txt))
+  read_as <- function(raw) {
+    f <- file.path(d, "shell.txt")
+    writeBin(raw, f)
+    suppressMessages(rtfreporter_ai_manual(d, shell = f, overwrite = TRUE))
+    readLines(file.path(d, "07_shell.md"), encoding = "UTF-8")
+  }
+  expect_identical(read_as(bytes), want)
+  # with a BOM (Notepad's "UTF-8 with BOM"): the same, no BOM in the kit
+  expect_identical(read_as(c(as.raw(c(0xef, 0xbb, 0xbf)), bytes)), want)
+  # the text itself, as copied
+  suppressMessages(rtfreporter_ai_manual(d, shell = txt, overwrite = TRUE))
+  expect_identical(readLines(file.path(d, "07_shell.md"), encoding = "UTF-8"), want)
+  # Shift-JIS (ANSI on a Japanese Windows) and UTF-16 ("Unicode"): how to save it
+  sjis <- iconv(enc2utf8(txt), "UTF-8", "CP932", toRaw = TRUE)[[1L]]
+  skip_if(is.null(sjis), "no CP932 converter")
+  expect_error(read_as(sjis), "not UTF-8 .*Shift-JIS.*Encoding: UTF-8")
+  utf16 <- c(as.raw(c(0xff, 0xfe)), iconv(enc2utf8(txt), "UTF-8", "UTF-16LE", toRaw = TRUE)[[1L]])
+  expect_error(read_as(utf16), "UTF-16 .*Encoding: UTF-8")
+})
