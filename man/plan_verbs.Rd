@@ -554,7 +554,9 @@ study total the ARD states (the column key tabulated on its own, or
 analyses are read: a test or a difference has no column key either,
 and is \code{plan_compare()}'s.  For \code{plan_compare()}, \code{position} is where
 its columns go: after the column key's (\code{"last"}) or before them
-(\code{"first"}).}
+(\code{"first"}).  For \code{plan_empty()}, \code{position} is where its row goes:
+\code{"last"} (after the rows: the overall row's 0 stays), \code{"first"} or
+\code{"replace"} (the row alone).}
 
 \item{any, parents}{For \code{plan_filter()}: a row stays when \strong{any} column's
 record meets the conditions (\code{TRUE}, default: "PTs with 5\% or more in
@@ -585,14 +587,13 @@ other variables' records go to whole (\code{NULL}: none).}
 \item{stat}{For \code{plan_sort()}: the statistic totalled into \code{.sort_stat}
 for a frequency order (\code{widen_ard(sort_stat = )}), e.g. \code{stat = "n"}.}
 
-\item{text, when, position, footnote}{For \code{plan_empty()}: what an empty
+\item{text, when, footnote}{For \code{plan_empty()}: what an empty
 table says.  \code{text} is one row (in the row label column; \code{NULL} for
 none); \code{when} the table is empty -- \code{"no_rows"} (no body row, after
 \code{\link[=plan_filter]{plan_filter()}}), \code{"overall_zero"} (its overall row, \code{normalize_ard(overall = )}, is 0 in every column), \code{"auto"} (either; the default);
-\code{position} the row goes \code{"last"} (after the rows: the overall row's 0
-stays), \code{"first"} or \code{"replace"} (the row alone); \code{footnote} a line
-added to the table's footnotes when it is empty.  A table that is not
-empty is as it was.}
+\code{footnote} a line added to the table's footnotes when it is empty
+(\code{position} is where the row goes: see \verb{label, position}).  A table
+that is not empty is as it was.}
 
 \item{first, last, counted}{For \code{plan_blanks()}: \code{as_rtftables()}'s
 \code{blank_row_first}, \code{blank_row_end} and

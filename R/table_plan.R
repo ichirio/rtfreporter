@@ -1095,15 +1095,14 @@ print.table_plan <- function(x, ...) {
 #'   table's columns choosing the rows, e.g. `where = ~ is.na(label)`.  For
 #'   `plan_blanks()`: `as_rtftables(blank_rows = )`, or `"records"` for a
 #'   blank row after each record of a listing.
-#' @param text,when,position,footnote For `plan_empty()`: what an empty
+#' @param text,when,footnote For `plan_empty()`: what an empty
 #'   table says.  `text` is one row (in the row label column; `NULL` for
 #'   none); `when` the table is empty -- `"no_rows"` (no body row, after
 #'   [plan_filter()]), `"overall_zero"` (its overall row, `normalize_ard(overall
 #'   = )`, is 0 in every column), `"auto"` (either; the default);
-#'   `position` the row goes `"last"` (after the rows: the overall row's 0
-#'   stays), `"first"` or `"replace"` (the row alone); `footnote` a line
-#'   added to the table's footnotes when it is empty.  A table that is not
-#'   empty is as it was.
+#'   `footnote` a line added to the table's footnotes when it is empty
+#'   (`position` is where the row goes: see `label, position`).  A table
+#'   that is not empty is as it was.
 #' @param first,last,counted For `plan_blanks()`: `as_rtftables()`'s
 #'   `blank_row_first`, `blank_row_end` and
 #'   `count_blank_rows`.
@@ -1428,7 +1427,9 @@ print.table_plan <- function(x, ...) {
 #'   analyses are read: a test or a difference has no column key either,
 #'   and is `plan_compare()`'s.  For `plan_compare()`, `position` is where
 #'   its columns go: after the column key's (`"last"`) or before them
-#'   (`"first"`).
+#'   (`"first"`).  For `plan_empty()`, `position` is where its row goes:
+#'   `"last"` (after the rows: the overall row's 0 stays), `"first"` or
+#'   `"replace"` (the row alone).
 #'
 #' @return The plan, with one more layer.
 #'
