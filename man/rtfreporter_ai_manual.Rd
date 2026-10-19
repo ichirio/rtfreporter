@@ -8,7 +8,10 @@ rtfreporter_ai_manual(
   dir = NULL,
   ard = NULL,
   which = c("user", "dev"),
-  overwrite = FALSE
+  overwrite = FALSE,
+  shell = NULL,
+  size = c("full", "short"),
+  values = FALSE
 )
 }
 \arguments{
@@ -25,6 +28,17 @@ for the kit's \verb{05_ard.csv} and \verb{06_ard_shape.md}.  \code{NULL} (defaul
 
 \item{overwrite}{Replace files of the same names already in \code{dir}.
 Default \code{FALSE}.}
+
+\item{shell}{The table's shell (its mock-up) for the kit: its text, or a
+\code{.txt} / \code{.md} file of it.  It goes to \verb{07_shell.md} and at the end of
+\code{PASTE.md}.  \code{NULL} (default): the person pastes it after \code{PASTE.md}.}
+
+\item{size}{What \code{PASTE.md} holds: \code{"full"} (default) every file of the
+kit, \code{"short"} what a table's program needs (see \emph{The kit}).  The
+folder has every file either way.}
+
+\item{values}{\code{TRUE} to put the ARD's numbers (\verb{05_ard.csv}) into
+\code{PASTE.md} too.  Default \code{FALSE}: its shape alone.}
 }
 \value{
 The installed manual's path when \code{dir} is \code{NULL}; otherwise the
@@ -85,6 +99,17 @@ their values, which keys come alone or together, each variable's
 statistics, a key's own counts, and a starting \code{\link[=table_plan]{table_plan()}} -- so
 the program names what the ARD really has.}
 }
+And \code{PASTE.md}: the kit as \strong{one file} to paste into a chat that takes
+no attachment, each file under \verb{##### <name>}, the shell last when
+\code{shell} gives it.  \code{size = "short"} keeps it to what a table's program
+needs: \verb{00_START_HERE.md}, the ARD's shape, the manual's sections 0, 17,
+17a and 18 (the rules, the plan, writing a program from a shell, the
+exports) and the one example closest to the ARD -- adverse events for a
+hierarchical ARD, the ORR for a confidence interval, else demographics
+(about 40,000 characters; \code{"full"}, every file, about 90,000).  The
+ARD's numbers (\verb{05_ard.csv}) go into it only with \code{values = TRUE}; the
+folder has the file either way.
+
 The files are UTF-8 whatever the session's locale, so Japanese labels in
 the ARD survive.  \verb{00_START_HERE.md} also tells the person what to paste
 (the kit, \verb{06_ard_shape.md}, \verb{05_ard.csv} when allowed, the shell as text),

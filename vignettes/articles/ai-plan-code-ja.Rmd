@@ -59,21 +59,20 @@ rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, overwrite = TRUE)
 
 **1 つのチャットに 1 つの表**。
 
-**ファイルを添付できないチャット**では、ファイルを 1 つのテキストにまとめて
-貼ります:
+**ファイルを添付できないチャット**では、`PASTE.md` を貼ります。キットを作ると
+一緒にでき、キットのファイルを 1 つのテキストにしたものです（約 80,000 文字。
+ARD の数値は `values = TRUE` のときだけ入ります）。その下に表のシェルを貼ります。
+シェルも入れて短くする（マニュアルの §0・§17・§17a・§18 と、ARD に一番近い
+見本 1 つ。約 40,000 文字）:
 
 ```r
-kit <- "kit/T-14-1-1"
-f   <- list.files(kit, pattern = "^0[0-6]_", full.names = TRUE)
-f   <- f[basename(f) != "05_ard.csv"]           # 数値を送れないとき
-txt <- unlist(lapply(f, function(x) c(paste("#####", basename(x)), readLines(x, encoding = "UTF-8"), "")))
-writeLines(txt, file.path(kit, "PASTE.md"), useBytes = TRUE)   # UTF-8 のまま
-nchar(paste(txt, collapse = "\n"))              # 約 90,000 文字
+shell <- c("Table 14.1.1  Demographic and Baseline Characteristics",
+           "                     Placebo   Xanomeline Low   Xanomeline High",
+           "Age (years)  n / Mean (SD) / Median / Min, Max",
+           "Sex, n (%)   F / M")
+rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, shell = shell, size = "short",
+                      overwrite = TRUE)          # shell = "shell.txt"（ファイル）でも
 ```
-
-`PASTE.md` を開いて全体を貼り、その下に表のシェル（テキスト）を貼ります。
-チャットに長すぎるときは、`00_START_HERE.md`、`06_ard_shape.md`、表に一番
-近い見本 1 つ、マニュアルの §17・§17a・§18 だけにします。
 
 ## 4. 頼み方の例
 

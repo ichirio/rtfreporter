@@ -63,6 +63,17 @@
 #'     statistics, a key's own counts, and a starting [table_plan()] -- so
 #'     the program names what the ARD really has.}
 #' }
+#' And `PASTE.md`: the kit as **one file** to paste into a chat that takes
+#' no attachment, each file under `##### <name>`, the shell last when
+#' `shell` gives it.  `size = "short"` keeps it to what a table's program
+#' needs: `00_START_HERE.md`, the ARD's shape, the manual's sections 0, 17,
+#' 17a and 18 (the rules, the plan, writing a program from a shell, the
+#' exports) and the one example closest to the ARD -- adverse events for a
+#' hierarchical ARD, the ORR for a confidence interval, else demographics
+#' (about 40,000 characters; `"full"`, every file, about 90,000).  The
+#' ARD's numbers (`05_ard.csv`) go into it only with `values = TRUE`; the
+#' folder has the file either way.
+#'
 #' The files are UTF-8 whatever the session's locale, so Japanese labels in
 #' the ARD survive.  `00_START_HERE.md` also tells the person what to paste
 #' (the kit, `06_ard_shape.md`, `05_ard.csv` when allowed, the shell as text),
@@ -79,6 +90,14 @@
 #' @param which `"user"` (default) or `"dev"` -- see *Which manual*.
 #' @param overwrite Replace files of the same names already in `dir`.
 #'   Default `FALSE`.
+#' @param shell The table's shell (its mock-up) for the kit: its text, or a
+#'   `.txt` / `.md` file of it.  It goes to `07_shell.md` and at the end of
+#'   `PASTE.md`.  `NULL` (default): the person pastes it after `PASTE.md`.
+#' @param size What `PASTE.md` holds: `"full"` (default) every file of the
+#'   kit, `"short"` what a table's program needs (see *The kit*).  The
+#'   folder has every file either way.
+#' @param values `TRUE` to put the ARD's numbers (`05_ard.csv`) into
+#'   `PASTE.md` too.  Default `FALSE`: its shape alone.
 #'
 #' @return The installed manual's path when `dir` is `NULL`; otherwise the
 #'   paths written, invisibly.
@@ -97,8 +116,11 @@
 #' }
 #' @export
 rtfreporter_ai_manual <- function(dir = NULL, ard = NULL, which = c("user", "dev"),
-                                  overwrite = FALSE) {
+                                  overwrite = FALSE, shell = NULL,
+                                  size = c("full", "short"), values = FALSE) {
   which <- match.arg(which)
+  size <- match.arg(size)
+  shell <- .ai_kit_shell(shell)
   name  <- sprintf("rtfreporter-ai-%s-manual.md", which)
   src   <- system.file("ai", name, package = "rtfreporter")
   if (!nzchar(src) || !file.exists(src)) {
@@ -153,13 +175,75 @@ rtfreporter_ai_manual <- function(dir = NULL, ard = NULL, which = c("user", "dev
   out <- c(write("00_START_HERE.md", start),
            copy("01_rtfreporter-ai-user-manual.md", src),
            vapply(examples, function(f) copy(f, file.path(kit, f)), ""))
+  d <- NULL
   if (!is.null(ard)) {
     d <- if (inherits(ard, "ard_long")) ard else normalize_ard(ard)
     rows <- .ai_kit_ard_rows(d)
     out <- c(out, write("05_ard.csv", .ai_kit_csv(rows)),
              write("06_ard_shape.md", .ai_kit_shape(d, nrow(rows))))
   }
+  if (!is.null(shell)) out <- c(out, write("07_shell.md", shell))
+  # the kit as one file to paste: every file, or what a table's program
+  # needs (size = "short"); the numbers only when asked
+  read <- function(f) readLines(file.path(dir, f), warn = FALSE, encoding = "UTF-8")
+  part <- function(f, lines = read(f), note = "") c(paste0("##### ", f, note), "", lines, "")
+  manual <- read("01_rtfreporter-ai-user-manual.md")
+  ex <- if (identical(size, "short")) .ai_kit_example_for(d) else examples
+  # (in the kit's order: the request, the manual, the examples, the ARD, the shell)
+  paste_lines <- c(
+    part("00_START_HERE.md"),
+    if (identical(size, "short")) {
+      part("01_rtfreporter-ai-user-manual.md", .ai_kit_manual_short(manual),
+           " (sections 0, 17, 17a and 18)")
+    } else part("01_rtfreporter-ai-user-manual.md", manual),
+    unlist(lapply(ex, function(f) part(f, c("```r", read(f), "```"))), use.names = FALSE),
+    if (!is.null(d) && isTRUE(values)) part("05_ard.csv"),
+    if (!is.null(d)) part("06_ard_shape.md"),
+    if (!is.null(shell)) part("07_shell.md"))
+  out <- c(out, write("PASTE.md", paste_lines))
   invisible(unname(out))
+}
+
+# The kit's shell: text as it is, or a .txt / .md file's lines
+.ai_kit_shell <- function(shell) {
+  if (is.null(shell)) return(NULL)
+  if (!is.character(shell) || !length(shell) || anyNA(shell)) {
+    stop("`rtfreporter_ai_manual(shell = )` is the shell's text, or a .txt / .md file.",
+         call. = FALSE)
+  }
+  if (length(shell) == 1L && grepl("[.](txt|md)$", shell, ignore.case = TRUE) &&
+      file.exists(shell)) {
+    return(readLines(shell, warn = FALSE, encoding = "UTF-8"))
+  }
+  unlist(strsplit(shell, "\n", fixed = TRUE), use.names = FALSE)
+}
+
+# The manual's sections a table's program needs: its head (the version),
+# 0 (the rules), and 17 to 18 (the plan; writing a program from a shell and
+# an ARD; the exports)
+.ai_kit_manual_short <- function(lines) {
+  h <- grep("^## [0-9]+[a-z]?[.] ", lines)
+  num <- sub("^## ([0-9]+[a-z]?)[.] .*$", "\\1", lines[h])
+  sec <- function(keep) {
+    unlist(lapply(which(num %in% keep), function(i) {
+      to <- if (i < length(h)) h[i + 1L] - 1L else length(lines)
+      lines[h[i]:to]
+    }), use.names = FALSE)
+  }
+  c(lines[seq_len(h[1L] - 1L)], sec("0"), sec(c("17", "17a", "18")))
+}
+
+# The example closest to the ARD: adverse events for a hierarchical one, the
+# ORR for a confidence interval, else demographics
+.ai_kit_example_for <- function(d) {
+  if (!is.null(d) && any(as.character(d$context) %in% "hierarchical")) {
+    return("03_example_ae_soc_pt.R")
+  }
+  if (!is.null(d) && (any(grepl("_ci$", as.character(d$context))) ||
+                      any(as.character(d$stat_name) %in% c("conf.low", "conf.high")))) {
+    return("02_example_orr_subgroups.R")
+  }
+  "04_example_demographics.R"
 }
 
 # The kit's text files are UTF-8 whatever the session's locale: the bytes are

@@ -59,21 +59,20 @@ Japanese labels survive.
 
 **One table a chat.**
 
-**When the chat takes no attachment**, join the files into one text and
-paste it:
+**When the chat takes no attachment**, paste `PASTE.md`: the kit makes it,
+its files as one text (about 80,000 characters; the ARD's numbers only with
+`values = TRUE`), then the table's shell under it.  Shorter, with the shell
+in it -- the manual's §0, §17, §17a and §18 and the one example closest to
+the ARD, about 40,000 characters:
 
 ```r
-kit <- "kit/T-14-1-1"
-f   <- list.files(kit, pattern = "^0[0-6]_", full.names = TRUE)
-f   <- f[basename(f) != "05_ard.csv"]           # leave out the numbers if you must
-txt <- unlist(lapply(f, function(x) c(paste("#####", basename(x)), readLines(x, encoding = "UTF-8"), "")))
-writeLines(txt, file.path(kit, "PASTE.md"), useBytes = TRUE)   # stays UTF-8
-nchar(paste(txt, collapse = "\n"))              # about 90,000 characters
+shell <- c("Table 14.1.1  Demographic and Baseline Characteristics",
+           "                     Placebo   Xanomeline Low   Xanomeline High",
+           "Age (years)  n / Mean (SD) / Median / Min, Max",
+           "Sex, n (%)   F / M")
+rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, shell = shell, size = "short",
+                      overwrite = TRUE)          # or shell = "shell.txt", a file
 ```
-
-Open `PASTE.md`, paste all of it, then the table's shell (as text) under
-it. Too long for the chat: keep `00_START_HERE.md`, `06_ard_shape.md`, the
-one example closest to your table, and the manual's §17, §17a and §18 only.
 
 ## 4. How to ask
 
