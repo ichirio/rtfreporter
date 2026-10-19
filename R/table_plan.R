@@ -180,6 +180,9 @@
   # a finished table has no cells to make: plan_cells(na = ) on it is
   # what the pages print for a missing value
   else if (identical(plan$kind, "wide") && "cell_options" %in% kinds) "pages"
+  # an empty table's footnote is the pages'
+  else if (any(vapply(plan$layers, function(l) identical(l$kind, "empty") &&
+                        !is.null(l$fields$footnote), NA))) "pages"
   else "table"
 }
 
@@ -388,7 +391,8 @@
 #'   `widen_ard(cols = )` takes it: one or more columns, optionally
 #'   renamed `c(new = old)`.  The order of its values across the table is
 #'   the ARD's (a factor's levels) unless `plan_levels(<key> = c(...))`
-#'   says otherwise.
+#'   says otherwise.  Left out when the ARD has no group to spread (one
+#'   arm): one column, `All` (see [widen_ard()]).
 #' @param rows The keys that go **down** it, likewise.  Left out, the
 #'   analysis variable is used (as `group`).  Each name is the column the
 #'   finished table gets, and later verbs refer to it by that name
@@ -1092,6 +1096,14 @@ print.table_plan <- function(x, ...) {
 #'   table's columns choosing the rows, e.g. `where = ~ is.na(label)`.  For
 #'   `plan_blanks()`: `as_rtftables(blank_rows = )`, or `"records"` for a
 #'   blank row after each record of a listing.
+#' @param text,when,footnote For `plan_empty()`: what an empty
+#'   table says.  `text` is one row (in the row label column; `NULL` for
+#'   none); `when` the table is empty -- `"no_rows"` (no body row, after
+#'   [plan_filter()]), `"overall_zero"` (its overall row, `normalize_ard(overall
+#'   = )`, is 0 in every column), `"auto"` (either; the default);
+#'   `footnote` a line added to the table's footnotes when it is empty
+#'   (`position` is where the row goes: see `label, position`).  A table
+#'   that is not empty is as it was.
 #' @param first,last,counted For `plan_blanks()`: `as_rtftables()`'s
 #'   `blank_row_first`, `blank_row_end` and
 #'   `count_blank_rows`.
@@ -1416,7 +1428,9 @@ print.table_plan <- function(x, ...) {
 #'   analyses are read: a test or a difference has no column key either,
 #'   and is `plan_compare()`'s.  For `plan_compare()`, `position` is where
 #'   its columns go: after the column key's (`"last"`) or before them
-#'   (`"first"`).
+#'   (`"first"`).  For `plan_empty()`, `position` is where its row goes:
+#'   `"last"` (after the rows: the overall row's 0 stays), `"first"` or
+#'   `"replace"` (the row alone).
 #'
 #' @return The plan, with one more layer.
 #'
@@ -1438,6 +1452,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_paginate_group(col, keep, heading, heading_at)`: a page per value. Goes to [as_rtftables()]: `split = "by_value"`, `group_col`; `keep = FALSE` adds it to `drop_cols`; `heading` names each page from a template (`{value}`, `{n}`), the name `rtf_tables(auto_section = TRUE)` prints; `heading_at` says where it prints (`"section"`, `"title"`, `"none"`): the default of `rtf_tables(auto_section = , auto_title = )`.
 #' * `plan_row_group(mode, collapse, group_col)`: groups down the body. Goes to [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table).
 #' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
+#' * `plan_empty(text, when, position, footnote)`: a table of no events: one row saying so (`"No subjects met the criteria."`), and a footnote, only when the table has no row or its overall row is 0.
 #' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row`.
 #' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do.
 #' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
@@ -2114,6 +2129,23 @@ plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
 
 #' @rdname plan_verbs
 #' @export
+plan_empty <- function(.plan, text = "No subjects met the criteria.",
+                       when = c("auto", "no_rows", "overall_zero"),
+                       position = c("last", "first", "replace"), footnote = NULL) {
+  when <- match.arg(when)
+  position <- match.arg(position)
+  if (!is.null(text) && (!is.character(text) || length(text) != 1L || is.na(text))) {
+    .ard_stop("plan_empty(text = ) is one string, or NULL for no row.")
+  }
+  if (!is.null(footnote) && (!is.character(footnote) || !length(footnote))) {
+    .ard_stop("plan_empty(footnote = ) is the footnote's text, or NULL.")
+  }
+  .plan_layer(.plan, "empty", list(text = text, when = when, position = position,
+                                   footnote = footnote, .no_text = is.null(text)))
+}
+
+#' @rdname plan_verbs
+#' @export
 plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
                         counted = NULL) {
   .plan_layer(.plan, "blanks",
@@ -2647,6 +2679,9 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # a variable's rows under one level of another (plan_nest())
   nest <- .plan_merge(.plan_of(.plan, "nest"), deep = "nest")$nest
   if (length(nest)) tbl <- .plan_nest_rows(.plan, tbl, nest, s_args)
+  # a table of no events: its sentence (plan_empty())
+  emp <- .plan_merge(.plan_of(.plan, "empty"))
+  if (length(emp)) tbl <- .plan_empty_rows(.plan, tbl, x, emp, s_args)
   .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = TRUE)
   # the table-side seam: a column the table can only know once it exists
   .plan_remember(.plan, "table", tbl)
@@ -2655,6 +2690,36 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   .plan_to_pages(.plan, tbl)
 }
 
+
+# plan_empty(): is the table empty -- no row but its overall row (`no_rows`), or its overall
+# row's n 0 in every column (`overall_zero`, the ARD's
+# ..ard_hierarchical_overall.. rows) -- and, when it is, its sentence as one
+# row (the label column; the keys NA, the values blank): after the rows,
+# before them, or instead of them.  Remembered for the footnote.
+.plan_empty_rows <- function(plan, tbl, data, e, s_args) {
+  is_ov <- if (".overall" %in% names(data)) data$.overall %in% TRUE else
+    as.character(data$variable) %in% "..ard_hierarchical_overall.."
+  ov <- is_ov & as.character(data$stat_name) %in% "n"
+  zero <- any(ov) && all(suppressWarnings(as.numeric(unlist(data$stat[ov]))) %in% 0)
+  lcol <- intersect(c(names(s_args$label %||% character()), "label", ".label"), names(tbl))[1L]
+  if (is.na(lcol)) lcol <- names(tbl)[1L]
+  # no row but the overall row (plan_filter() keeps it)
+  ov_labels <- unique(as.character(data$.label[is_ov]))
+  none <- !any(!as.character(tbl[[lcol]]) %in% ov_labels)
+  empty <- switch(e$when %||% "auto", no_rows = none, overall_zero = zero, none || zero)
+  plan$cache$empty <- isTRUE(empty)
+  if (!isTRUE(empty) || isTRUE(e$.no_text) || is.null(e$text)) return(tbl)
+  row <- as.data.frame(lapply(tbl, function(v) {
+    if (is.character(v)) "" else v[NA_integer_]
+  }), stringsAsFactors = FALSE, check.names = FALSE)
+  keys <- intersect(names(plan$roles$rows %||% character()), names(tbl))
+  for (k in keys) row[[k]] <- NA
+  row[[lcol]] <- e$text
+  switch(e$position %||% "last",
+         first = rbind(row, tbl),
+         replace = row,
+         rbind(tbl, row))
+}
 
 # The rows of each nested variable moved under their level: found by the
 # rows key that carries the variable (its value is the variable's label,
@@ -3140,9 +3205,15 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   pg  <- if (one) list(out) else out
   for (kind in c("titles", "footnotes")) {
     l <- .plan_merge(.plan_of(plan, kind))
-    if (!length(l)) next
-    blocks <- if (!is.null(l$pages)) l$pages else
+    # plan_empty(footnote = ): a line more, on an empty table only
+    extra <- if (identical(kind, "footnotes") && isTRUE(plan$cache$empty)) {
+      .plan_merge(.plan_of(plan, "empty"))$footnote
+    }
+    if (!length(l) && is.null(extra)) next
+    blocks <- if (!length(l)) rep(list(character()), length(pg)) else
+      if (!is.null(l$pages)) l$pages else
       rep(list(unlist(l$block, use.names = FALSE)), length(pg))
+    if (!is.null(extra)) blocks <- lapply(blocks, function(b) c(unlist(b), extra))
     if (length(blocks) != length(pg)) {
       .ard_stop(paste0(
         "plan_", kind, "(pages = ) has ", length(blocks), " block",
@@ -3367,6 +3438,21 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
 #  when the lower key partitions the upper one (visits do not).  A key
 #  with no stated number is left out, with the reason on attr "why"; the
 #  header prints NA there and warns.  Nothing is guessed.
+
+# A one-column table's N: the study total the ARD states (its
+# ..ard_total_n.. row, or the attribute normalize_ard() keeps); NA when it
+# states none, or two.
+.plan_n_one <- function(d) {
+  if (is.data.frame(d) && all(c("variable", "stat_name", "stat") %in% names(d))) {
+    st <- suppressWarnings(as.numeric(as.character(d$stat)))
+    tt <- unique(st[as.character(d$variable) %in% "..ard_total_n.." &
+                      as.character(d$stat_name) %in% "N" & !is.na(st)])
+    if (length(tt) == 1L) return(tt)
+  }
+  total <- attr(d, "ard_total_n", exact = TRUE)
+  if (is.numeric(total) && length(total) == 1L && !is.na(total)) return(total)
+  NA_real_
+}
 
 .plan_n_read <- function(plan, sp, d = plan$data) {
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
@@ -3790,10 +3876,16 @@ plan_header_tokens <- function(.plan) {
     }
     if (!is.null(scope)) {
       if (is.null(sp$cols)) {
-        .ard_stop(paste0(
-          "plan_col_header(values = list(n = TRUE)) reads the denominator with the ",
-          "same `cols` table_plan()\n  was given, and this plan ",
-          "has none.  Give a function of the data instead."))
+        # one column ("All", no column key): its N is the total the ARD
+        # states (cards::ard_total_n())
+        tot <- .plan_n_one(data)
+        if (is.na(tot)) {
+          .ard_stop(paste0(
+            "plan_col_header(values = list(n = TRUE)): a table of one column (no ",
+            "`cols`) reads its N from\n  the ARD's total -- add ",
+            "cards::ard_total_n() to the ARD -- or give the number."))
+        }
+        return(structure(c(All = tot), total = tot, why = character()))
       }
       # Only a number the ARD STATES as a population size, at every
       # depth of the keys; what it does not state is left out, and the
