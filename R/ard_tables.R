@@ -2113,7 +2113,14 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'       first.}
 #'     \item{`".depth"`}{a level's own summary row before the rows nested
 #'       under it.}
-#'     \item{a column}{any row key or the label column, by its output name.}
+#'     \item{a column}{any row key or the label column, by its output name.
+#'       A group's own row (the lower key empty) comes first in the group,
+#'       the key ascending or descending.}
+#'     \item{`"levels(<key>)"`}{the values [plan_levels()] names for that row
+#'       key first, in its order; the others tie, for the keys that follow
+#'       (all tie when it names none): `plan_levels(soc = "Any TEAE")` with
+#'       `c("levels(soc)", "-n@soc", "soc")` keeps that block first and the
+#'       other SOCs by their count.}
 #'     \item{a statistic}{that statistic totalled across the spread columns --
 #'       what a descending-frequency AE table sorts on.}
 #'     \item{`"<stat>[<col>]"`}{that statistic in **one** spread column:
@@ -2674,7 +2681,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       list(d = cmp_d, spec = compare, label_out = label_out, recode = recode)
     }
     out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref,
-                               colkey = colkey, sep = sep, cmp = cmp_sort), ,
+                               colkey = colkey, sep = sep, cmp = cmp_sort,
+                               levels = levels), ,
                drop = FALSE]
   } else if ((length(rowname_cols) ||
               (!is.null(label_out) && is.factor(out[[label_out]]))) &&
@@ -2751,11 +2759,30 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 # A statistic is recognised last, so a column of that name wins; that is the
 # safe way round, since the column is what the caller can see in the result.
 .ard_sort_order <- function(spec, out, base, d, rowrefs, labref,
-                            colkey = NULL, sep = "____", cmp = NULL) {
+                            colkey = NULL, sep = "____", cmp = NULL, levels = NULL) {
   keys <- list()
   for (s in spec) {
     desc <- substr(s, 1L, 1L) == "-"
     nm   <- if (desc) substring(s, 2L) else s
+    # `levels(soc)`: the values plan_levels() names for the row key, in its
+    # order, first; the others tie, for the next keys (a key plan_levels()
+    # names nothing for: all tie)
+    lk <- regmatches(nm, regexec("^levels[(]([^()]+)[)]$", nm))[[1L]]
+    if (length(lk)) {
+      k <- lk[2L]
+      ref <- Filter(function(r) identical(r$out, k) || identical(r$ref, k), rowrefs)
+      lv <- levels[[k]] %||% if (length(ref)) levels[[ref[[1L]]$out]] %||% levels[[ref[[1L]]$ref]]
+      col <- if (k %in% names(out)) k else if (length(ref)) ref[[1L]]$out
+      if (is.null(col) || !col %in% names(out)) {
+        .ard_stop(sprintf("`sort`: '%s' -- no row key '%s'.\n  Row keys: %s", s, k,
+                          paste(sQuote(vapply(rowrefs, `[[`, "", "out")), collapse = ", ")))
+      }
+      lv <- as.character(unlist(lv, use.names = FALSE))
+      v <- match(as.character(out[[col]]), lv)
+      v[is.na(v)] <- length(lv) + 1L
+      keys[[length(keys) + 1L]] <- if (desc) -v else v
+      next
+    }
     sc <- if (!nm %in% names(out)) .ard_sort_scoped(nm)
     v <- if (nm %in% names(out)) out[[nm]]
          else if (!is.null(sc)) .ard_sort_scoped_value(sc, s, base, d, rowrefs,

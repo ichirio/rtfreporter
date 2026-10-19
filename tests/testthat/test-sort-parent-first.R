@@ -74,3 +74,51 @@ test_that("plan_total() with two column keys folds the inner one: each arm's 'An
   t2 <- as.data.frame(suppressMessages(plan_apply(p |> plan_total(label = "Any grade"), "table")))
   expect_identical(names(t2)[3:6], paste0(arms[1L], "____", c("MILD", "MODERATE", "SEVERE", "Any grade")))
 })
+
+test_that("levels(<key>): plan_levels' values first, the others by the next keys (#695)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  ae <- cards::ADAE
+  ard <- cards::ard_stack_hierarchical(ae, variables = c(AEBODSYS, AEDECOD), by = TRTA,
+                                       denominator = adsl, id = USUBJID)
+  base <- table_plan(normalize_ard(ard, hierarchy = c("AEBODSYS", "AEDECOD")),
+                     cols = "TRTA", rows = c(soc = "AEBODSYS"), label = list(label = "AEDECOD")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})")
+  socs <- function(p) unique(as.character(as.data.frame(suppressMessages(plan_apply(p, "table")))$soc))
+  by_n <- socs(base |> plan_sort(keys = c("-n@soc", "soc", ".depth", "-n", "label")))
+  pin <- "VASCULAR DISORDERS"
+  pinned <- socs(base |> plan_levels(AEBODSYS = pin) |>
+                   plan_sort(keys = c("levels(soc)", "-n@soc", "soc", ".depth", "-n", "label")))
+  # pinned first, the rest in the count's order
+  expect_identical(pinned, c(pin, setdiff(by_n, pin)))
+  # by name: pinned first, the rest by name
+  by_name <- socs(base |> plan_levels(AEBODSYS = pin) |>
+                    plan_sort(keys = c("levels(soc)", "soc", ".depth", "-n", "label")))
+  expect_identical(by_name, c(pin, sort(setdiff(by_name, pin))))
+  # no plan_levels for the key: all tie, as if the key were not there
+  expect_identical(socs(base |> plan_sort(keys = c("levels(soc)", "-n@soc", "soc", ".depth", "-n",
+                                                   "label"))), by_n)
+  expect_error(suppressMessages(plan_apply(base |> plan_sort(keys = "levels(nope)"), "table")),
+               "no row key 'nope'")
+})
+
+test_that("levels(<key>): the pinned block first even when another has its count (a tie)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  # every subject with an AE has one in this SOC: its count is the overall count
+  ae <- cards::ADAE[cards::ADAE$AEBODSYS %in% c("GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS",
+                                                 "CARDIAC DISORDERS"), ]
+  gen <- "GENERAL DISORDERS AND ADMINISTRATION SITE CONDITIONS"
+  ae <- ae[ae$USUBJID %in% ae$USUBJID[ae$AEBODSYS == gen], ]
+  all <- ae[!duplicated(ae$USUBJID), ]
+  all$AEBODSYS <- "ZZ ANY EVENT"          # a name that sorts last
+  ard <- cards::ard_stack_hierarchical(rbind(ae, all), variables = c(AEBODSYS, AEDECOD), by = TRTA,
+                                       denominator = adsl, id = USUBJID)
+  p <- table_plan(normalize_ard(ard, hierarchy = c("AEBODSYS", "AEDECOD")),
+                  cols = "TRTA", rows = c(soc = "AEBODSYS"), label = list(label = "AEDECOD")) |>
+    plan_cells(categorical = "{n} ({p:.1f%})") |>
+    plan_levels(AEBODSYS = "ZZ ANY EVENT") |>
+    plan_sort(keys = c("levels(soc)", "-n@soc", "soc", ".depth", "-n", "label"))
+  t <- as.data.frame(suppressMessages(plan_apply(p, "table")))
+  expect_identical(as.character(t$soc[1L]), "ZZ ANY EVENT")
+})

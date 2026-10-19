@@ -12,6 +12,12 @@
   count at any grade) from its records with no `AESEV`, placed by
   `position` among that arm's columns.  It stopped before.
 
+- **`plan_sort()`'s key `levels(<key>)`** (#695): the values
+  `plan_levels()` names for a row key first, in its order, the others tied
+  for the next keys -- `plan_levels(soc = "Any TEAE")` with
+  `c("levels(soc)", "-n@soc", "soc")` keeps that block first, even when a
+  SOC has its count, and the other SOCs by theirs.
+
 - **`rtfreporter_ai_manual(shell = "shell.txt")`: a sheet copied from
   Excel** (#692, 0.8.2.9082).  A shell's sheet copied from Excel, pasted
   into Notepad and saved comes in as it is -- its tabs kept, the empty
