@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9079** (the development
+**This manual documents rtfreporter 0.8.2.9080** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -872,7 +872,7 @@ p_ae <- ard_ae |>
 | Job | Verb (arguments) |
 |---|---|
 | Flatten the ARD | `normalize_ard(x, keys, hierarchy, overall, drop_contexts, drop_key_variables, stack, stack_sep, stack_nest)`: `keys` = the group variables made columns (default every one); `hierarchy = c("AEBODSYS", "AEDECOD")`; `overall = "Any TEAE"`; `drop_key_variables = TRUE` removes the arm's own counts (default keeps them as `.key_own`, for the header's `{n}`); `stack` / `stack_sep` / `stack_nest`: subgroups (below) |
-| Start; roles | `table_plan(x, cols, rows, label, stat, show_keys)`: `stat = c(variable =, name =, value =)` renames the three parts for a non-cards frame; `show_keys` below |
+| Start; roles | `table_plan(x, cols, rows, label, stat, show_keys)`: `stat = c(variable =, name =, value =)` renames the three parts for a non-cards frame; `show_keys` below. One arm (the ARD has no group): leave `cols` out -- one column, `All`, its `{n}` the ARD's `cards::ard_total_n()` |
 | Cell text | `plan_cells(..., stats = "cells"/"rows", value = "stat"/"stat_fmt", na, notes)`; on a finished table `na` alone (`as_rtftables(na =)`) |
 | Digits / rounding | `plan_digits(..., rounding)`: `plan_digits(continuous = c(mean = 1, sd = 2))`; on a finished table `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))` |
 | Order of values | `plan_levels(VAR = c(...))` |
