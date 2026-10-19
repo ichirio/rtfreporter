@@ -2777,9 +2777,16 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
              nm, paste(sQuote(names(out)), collapse = ", ")))
          }
     if (is.logical(v)) v <- !v            # TRUE first reads better than TRUE last
-    keys[[length(keys) + 1L]] <- if (desc) {
+    v <- if (desc) {
       if (is.numeric(v)) -v else -xtfrm(v)
     } else v
+    # a row key's empty value is its group's own row (a SOC's, over its
+    # PTs'): it comes first in the group, either way the key sorts
+    if (nm %in% names(out) && !is.numeric(out[[nm]]) && anyNA(out[[nm]])) {
+      v <- xtfrm(v)
+      v[is.na(out[[nm]])] <- -Inf
+    }
+    keys[[length(keys) + 1L]] <- v
   }
   do.call(order, keys)
 }

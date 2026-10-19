@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **`plan_sort()`: a group's own row comes before its members** (#695,
+  0.8.2.9083).  With a row key among the sort keys, the row of a group
+  itself (its lower key empty: a SOC's own counts over its PTs, the overall
+  rows) sorted after the group's members.  It comes first now, the key
+  ascending or descending; tables of two levels, whose parent was already
+  first through `.depth`, are as they were.
+
 - **`rtfreporter_ai_manual(shell = "shell.txt")`: a sheet copied from
   Excel** (#692, 0.8.2.9082).  A shell's sheet copied from Excel, pasted
   into Notepad and saved comes in as it is -- its tabs kept, the empty
