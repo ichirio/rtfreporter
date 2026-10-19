@@ -17,6 +17,7 @@
 \alias{plan_stat_groups}
 \alias{plan_hide}
 \alias{plan_sort}
+\alias{plan_empty}
 \alias{plan_blanks}
 \alias{plan_paginate_rows}
 \alias{plan_style}
@@ -84,6 +85,14 @@ plan_stat_groups(.plan, ..., .variables = NULL, .others = NULL)
 plan_hide(.plan, ...)
 
 plan_sort(.plan, ..., stat = NULL, keep = TRUE)
+
+plan_empty(
+  .plan,
+  text = "No subjects met the criteria.",
+  when = c("auto", "no_rows", "overall_zero"),
+  position = c("last", "first", "replace"),
+  footnote = NULL
+)
 
 plan_blanks(.plan, where = NULL, first = NULL, last = NULL, counted = NULL)
 
@@ -576,6 +585,15 @@ other variables' records go to whole (\code{NULL}: none).}
 \item{stat}{For \code{plan_sort()}: the statistic totalled into \code{.sort_stat}
 for a frequency order (\code{widen_ard(sort_stat = )}), e.g. \code{stat = "n"}.}
 
+\item{text, when, position, footnote}{For \code{plan_empty()}: what an empty
+table says.  \code{text} is one row (in the row label column; \code{NULL} for
+none); \code{when} the table is empty -- \code{"no_rows"} (no body row, after
+\code{\link[=plan_filter]{plan_filter()}}), \code{"overall_zero"} (its overall row, \code{normalize_ard(overall = )}, is 0 in every column), \code{"auto"} (either; the default);
+\code{position} the row goes \code{"last"} (after the rows: the overall row's 0
+stays), \code{"first"} or \code{"replace"} (the row alone); \code{footnote} a line
+added to the table's footnotes when it is empty.  A table that is not
+empty is as it was.}
+
 \item{first, last, counted}{For \code{plan_blanks()}: \code{as_rtftables()}'s
 \code{blank_row_first}, \code{blank_row_end} and
 \code{count_blank_rows}.}
@@ -827,6 +845,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_paginate_group(col, keep, heading, heading_at)}: a page per value. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{split = "by_value"}, \code{group_col}; \code{keep = FALSE} adds it to \code{drop_cols}; \code{heading} names each page from a template (\code{{value}}, \code{{n}}), the name \code{rtf_tables(auto_section = TRUE)} prints; \code{heading_at} says where it prints (\code{"section"}, \code{"title"}, \code{"none"}): the default of \code{rtf_tables(auto_section = , auto_title = )}.
 \item \code{plan_row_group(mode, collapse, group_col)}: groups down the body. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{group_by}, \code{collapse_repeats}, \code{group_col} (a finished table).
 \item \code{plan_hide(...)}: columns not printed. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{drop_cols}.
+\item \code{plan_empty(text, when, position, footnote)}: a table of no events: one row saying so (\code{"No subjects met the criteria."}), and a footnote, only when the table has no row or its overall row is 0.
 \item \code{plan_blanks(where, first, last, counted)}: blank rows. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows}; a listing's \code{where = "records"} is \code{\link[=listing_spec]{listing_spec()}}'s \code{blank_row}.
 \item \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)}: the row budget, inside the BY pages. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label}, \code{page_by}; \code{heading} and \code{heading_at} name each BY page, and say where the name prints, as \code{plan_paginate_group()}'s do.
 \item \code{plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)}: column blocks. Goes to \code{\link[=paginate_cols]{paginate_cols()}}: \code{at}, \code{cols} / \code{by}, \code{carry}, \code{col_header}, \code{width}, \code{allow_span_break}, \code{page_order}.

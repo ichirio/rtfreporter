@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+- **`plan_empty()`: a table of no events says so** (#691).  When the table
+  has no row but its overall row, or its overall row (`normalize_ard(overall
+  = )`) is 0 in every column, one row says so (`"No subjects met the
+  criteria."` by default) -- after the rows (the overall row's 0 stays),
+  before them, or instead of them -- and `footnote =` adds a line to the
+  table's footnotes, on an empty table only.  A table with events is as it
+  was, so the study's defaults can hold it for every table.
+
 - **`rtfreporter_ai_manual()`: one file to paste, the shell in it, a short
   size** (#687).  The kit now comes with `PASTE.md`, its files as one text
   for a chat that takes no attachment (the article's joining code goes).
