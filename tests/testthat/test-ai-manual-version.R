@@ -44,7 +44,7 @@ test_that("rtfreporter_ai_manual(dir = ) writes the kit, or the dev manual", {
   out <- rtfreporter_ai_manual(d)
   expect_identical(basename(out), c("00_START_HERE.md", "01_rtfreporter-ai-user-manual.md",
                                     "02_example_orr_subgroups.R", "03_example_ae_soc_pt.R",
-                                    "04_example_demographics.R"))
+                                    "04_example_demographics.R", "PASTE.md"))
   expect_identical(readLines(file.path(d, "01_rtfreporter-ai-user-manual.md"), warn = FALSE),
                    readLines(.ai_file("user"), warn = FALSE))
   # no ARD: 00 says how to add one

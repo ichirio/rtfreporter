@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9078** (the development
+**This manual documents rtfreporter 0.8.2.9079** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -973,7 +973,8 @@ adds an "Any" row.
 
 This is the section an assistant follows when the user hands it a **shell**
 (the mock-up of one table) and an **ARD** (the statistics, from
-`rtfreporter_ai_manual(dir, ard = )`: `05_ard.csv` and `06_ard_shape.md`).
+`rtfreporter_ai_manual(dir, ard = )`: `05_ard.csv` and `06_ard_shape.md`;
+pasted as one text, `PASTE.md`, the shell last when `shell =` gave it).
 The answer is **one R script** in the layout below, as **one** fenced
 ```` ```r ```` block with no text around it (the `# QUESTION:` lines first,
 inside it). Nothing else: the user saves the block as a file and runs it

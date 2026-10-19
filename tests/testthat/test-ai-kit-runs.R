@@ -135,14 +135,14 @@ test_that("every code block of the ai-plan-code articles runs, in order", {
     }
     expect_true(file.exists(file.path("kit", "T-14-1-1", "06_ard_shape.md")), info = lang)
     expect_true(file.exists(file.path("kit", "T-14-1-1", "PASTE.md")), info = lang)
-    # PASTE.md: the kit but 05, each file once
+    # PASTE.md as the article makes it last: the short one, its shell last
     paste_md <- readLines(file.path("kit", "T-14-1-1", "PASTE.md"), encoding = "UTF-8")
     heads <- sub("^##### ", "", grep("^##### 0", paste_md, value = TRUE))
-    expect_identical(heads, c("00_START_HERE.md", "01_rtfreporter-ai-user-manual.md",
-                              "02_example_orr_subgroups.R", "03_example_ae_soc_pt.R",
-                              "04_example_demographics.R", "06_ard_shape.md"))
-    # the size the articles quote ("about 90,000 characters")
-    expect_true(abs(sum(nchar(paste_md)) - 90000) < 20000, info = sum(nchar(paste_md)))
+    expect_identical(heads, c("00_START_HERE.md",
+                              "01_rtfreporter-ai-user-manual.md (sections 0, 17, 17a and 18)",
+                              "04_example_demographics.R", "06_ard_shape.md", "07_shell.md"))
+    # the size the articles quote ("about 40,000 characters")
+    expect_true(abs(sum(nchar(paste_md)) - 40000) < 10000, info = sum(nchar(paste_md)))
     rtf <- file.path("output", "T-14-1-1.rtf")
     expect_true(file.exists(rtf), info = lang)
     # the Japanese title reached the RTF (as \uN escapes)

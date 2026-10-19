@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+- **`rtfreporter_ai_manual()`: one file to paste, the shell in it, a short
+  size** (#687).  The kit now comes with `PASTE.md`, its files as one text
+  for a chat that takes no attachment (the article's joining code goes).
+  `shell =` (the shell's text, or a `.txt` / `.md` file) puts the table's
+  shell at its end and in `07_shell.md`; `size = "short"` keeps it to what a
+  table's program needs -- `00_START_HERE.md`, the manual's sections 0, 17,
+  17a and 18, the one example closest to the ARD (adverse events for a
+  hierarchical ARD, the ORR for a confidence interval, else demographics)
+  and the ARD's shape: about 40,000 characters, against 80,000 for every
+  file.  The ARD's numbers (`05_ard.csv`) go into it only with
+  `values = TRUE`.  Arguments added only: a call written before writes the
+  files it wrote, and `PASTE.md`.
+
 - **`plan_sort()` by a `plan_compare()` statistic** (#684): the rows by the
   arms' difference.  A key that names a statistic of the comparison
   records (`"-estimate"`, made at the ARD step with
