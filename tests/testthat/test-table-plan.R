@@ -3625,3 +3625,44 @@ test_that("plan_empty(): a table of no events says so, only when it is empty (#6
   expect_identical(nrow(tab(base(ard1) |> plan_filter(n > 1000) |> plan_empty(when = "overall_zero"))), 1L)
   expect_error(base(ard0) |> plan_empty(text = c("a", "b")), "one string")
 })
+
+test_that("no cols: one column, All, when the ARD has no group; its N the ARD's total (#689)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL[cards::ADSL$ARM == "Placebo", ]
+  adae <- cards::ADAE[cards::ADAE$TRTA == "Placebo" &
+                        cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:2], ]
+  ard <- cards::bind_ard(cards::ard_total_n(adsl),
+                         cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD),
+                                                       denominator = adsl, id = USUBJID,
+                                                       over_variables = TRUE))
+  d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD"), overall = "Any TEAE")
+  p <- table_plan(d, rows = c(soc = "AESOC", pt = "AEDECOD")) |>
+    plan_cells(hierarchical = "{n} ({p:.1f%})", notes = FALSE) |>
+    plan_sort(".overall", "soc", ".depth", "-n", "pt")
+  t <- as.data.frame(suppressMessages(plan_apply(p, "table")))
+  expect_true("All" %in% names(t))
+  expect_identical(t$soc[1L], "Any TEAE")
+  n_any <- length(unique(adae$USUBJID))
+  expect_identical(t$All[1L], sprintf("%d (%.1f)", n_any, 100 * n_any / nrow(adsl)))
+  # a header's {n}: the ARD's total
+  hp <- p |> plan_stub(name = "row_label") |>
+    plan_col_header(data.frame(line = c("1", "1"), cols = c("row_label", ".values"),
+                               span = c(NA, "each"), text = c("SOC / PT", "Drug X (N={n})")))
+  tok <- plan_header_tokens(hp)
+  expect_identical(unname(unlist(tok$values[tok$token == "{n}"])), as.numeric(nrow(adsl)))
+  # with no total in the ARD: said
+  d2 <- normalize_ard(cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD),
+                                                    denominator = adsl, id = USUBJID),
+                      hierarchy = c("AESOC", "AEDECOD"))
+  p2 <- table_plan(d2, rows = c(soc = "AESOC", pt = "AEDECOD")) |>
+    plan_cells(hierarchical = "{n}", notes = FALSE) |> plan_stub(name = "row_label") |>
+    plan_col_header(values = list(n = TRUE))
+  expect_error(suppressMessages(plan_apply(p2)), "ard_total_n")
+  # an ARD with a group: cols still named, the group said
+  ard3 <- cards::ard_stack_hierarchical(cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:2], ],
+                                        variables = c(AESOC, AEDECOD), by = TRTA,
+                                        denominator = cards::ADSL, id = USUBJID)
+  p3 <- table_plan(normalize_ard(ard3, hierarchy = c("AESOC", "AEDECOD")),
+                   rows = c(soc = "AESOC", pt = "AEDECOD"))
+  expect_error(suppressMessages(plan_apply(p3, "table")), "the ARD has .TRTA. to spread")
+})

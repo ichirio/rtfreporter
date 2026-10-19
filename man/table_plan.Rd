@@ -32,7 +32,8 @@ A raw cards ARD is refused, with the line to write.}
 \code{widen_ard(cols = )} takes it: one or more columns, optionally
 renamed \code{c(new = old)}.  The order of its values across the table is
 the ARD's (a factor's levels) unless \verb{plan_levels(<key> = c(...))}
-says otherwise.}
+says otherwise.  Left out when the ARD has no group to spread (one
+arm): one column, \code{All} (see \code{\link[=widen_ard]{widen_ard()}}).}
 
 \item{rows}{The keys that go \strong{down} it, likewise.  Left out, the
 analysis variable is used (as \code{group}).  Each name is the column the

@@ -8,6 +8,13 @@
   table's footnotes, on an empty table only.  A table with events is as it
   was, so the study's defaults can hold it for every table.
 
+- **`table_plan()` without `cols`: one column** (#689).  A one-arm table
+  (a single cohort) written with no column key -- as people and AI chats
+  write it -- stopped with "`cols` is required".  Now, when the ARD has no
+  group to spread, the table is one column, `All`, and a header's `{n}` is
+  the ARD's total (`cards::ard_total_n()`).  An ARD that has a group still
+  needs `cols`, and the message names the group.
+
 - **`rtfreporter_ai_manual()`: one file to paste, the shell in it, a short
   size** (#687).  The kit now comes with `PASTE.md`, its files as one text
   for a chat that takes no attachment (the article's joining code goes).

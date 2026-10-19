@@ -32,7 +32,11 @@ widen_ard(
 \item{cols}{Column keys, outermost first.  Multiple keys are pasted with
 \code{sep}, producing the \code{"Placebo____Day 1"} names that
 \code{\link[=rtftable]{rtftable()}}'s \code{col_header} already reads as a spanning header.  May be
-named, in which case the name is ignored for the column text.}
+named, in which case the name is ignored for the column text.  Left
+out (or \code{NULL}) when the ARD has no group to spread (one arm, a single
+cohort): the table is one column, \code{All}, its N the ARD's total
+(\code{\link[cards:ard_total_n]{cards::ard_total_n()}}) for a header's \code{{n}}.  An ARD that has a group
+needs it named.}
 
 \item{rows}{Row keys, in output order -- \strong{any} column of the normalized
 frame, not a fixed one: the ARD's own \code{variable} when the row groups are

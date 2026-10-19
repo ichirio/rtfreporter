@@ -1942,7 +1942,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #' @param cols Column keys, outermost first.  Multiple keys are pasted with
 #'   `sep`, producing the `"Placebo____Day 1"` names that
 #'   [rtftable()]'s `col_header` already reads as a spanning header.  May be
-#'   named, in which case the name is ignored for the column text.
+#'   named, in which case the name is ignored for the column text.  Left
+#'   out (or `NULL`) when the ARD has no group to spread (one arm, a single
+#'   cohort): the table is one column, `All`, its N the ARD's total
+#'   ([cards::ard_total_n()]) for a header's `{n}`.  An ARD that has a group
+#'   needs it named.
 #' @param rows Row keys, in output order -- **any** column of the normalized
 #'   frame, not a fixed one: the ARD's own `variable` when the row groups are
 #'   the analysis variables (a demographics table), or a grouping variable's
@@ -2194,18 +2198,28 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                        sort_stat = NULL, na = NA_character_, notes = TRUE,
                        stat_groups = NULL, compare = NULL, show_keys = NULL,
                        filter = NULL) {
-  if (missing(cols)) {
-    .ard_stop_missing("cols", "`cols` is required: name the column keys.")
-  }
   stats <- match.arg(stats)
   value <- match.arg(value)
   rounding <- .rounding_type(rounding)
+  # No column key: one column, "All", when the ARD has no group to spread
+  # (one arm, a single cohort).  A group the ARD has is named in `cols`.
+  one_column <- missing(cols) || is.null(cols)
+  if (one_column) {
+    free <- .ard_free_keys(as.data.frame(x, stringsAsFactors = FALSE), rows, label)
+    if (length(free)) {
+      .ard_stop_missing("cols", sprintf(paste0(
+        "`cols` is required: the ARD has %s to spread; name the column keys ",
+        "(cols = \"%s\")."), paste(sQuote(free), collapse = ", "), free[1L]))
+    }
+    cols <- ".all"
+  }
   # `stats = "rows"` lays the statistic out as a row and puts a value straight
   # in the cell, so which of the ARD's two values that is has to be sayable:
   # the raw numeric `stat` (the default -- a PK table is formatted later, by
   # set_decimal_split()) or cards' already-formatted `stat_fmt`.
   rows_numeric <- identical(stats, "rows") && identical(value, "stat")
   d <- as.data.frame(x, stringsAsFactors = FALSE)
+  if (one_column) d$.all <- "All"
 
   if (!".kind" %in% names(d) && all(c("variable", "variable_level") %in% names(d))) {
     d$.kind <- .ard_kind(d)
@@ -3595,3 +3609,19 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' @name ard-tables
 #' @seealso [as_rtftables()], [stub_cols()]
 NULL
+
+# The ARD's key columns no role names (normalize_ard() puts the keys before
+# `variable`): a group widen_ard() would have to spread, when `cols` is
+# left out.  None: the table is one column.
+.ard_free_keys <- function(d, rows, label) {
+  at <- match("variable", names(d))
+  if (is.na(at) || at <= 1L) return(character())
+  keys <- names(d)[seq_len(at - 1L)]
+  refs <- c(as.character(unlist(rows, use.names = FALSE)),
+            as.character(unlist(label, use.names = FALSE)))
+  keys <- setdiff(keys, c(refs, ".all"))
+  keys[vapply(keys, function(k) {
+    v <- as.character(d[[k]])
+    any(!is.na(v) & nzchar(v))
+  }, NA)]
+}

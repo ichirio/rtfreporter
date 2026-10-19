@@ -391,7 +391,8 @@
 #'   `widen_ard(cols = )` takes it: one or more columns, optionally
 #'   renamed `c(new = old)`.  The order of its values across the table is
 #'   the ARD's (a factor's levels) unless `plan_levels(<key> = c(...))`
-#'   says otherwise.
+#'   says otherwise.  Left out when the ARD has no group to spread (one
+#'   arm): one column, `All` (see [widen_ard()]).
 #' @param rows The keys that go **down** it, likewise.  Left out, the
 #'   analysis variable is used (as `group`).  Each name is the column the
 #'   finished table gets, and later verbs refer to it by that name
@@ -3438,6 +3439,21 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
 #  with no stated number is left out, with the reason on attr "why"; the
 #  header prints NA there and warns.  Nothing is guessed.
 
+# A one-column table's N: the study total the ARD states (its
+# ..ard_total_n.. row, or the attribute normalize_ard() keeps); NA when it
+# states none, or two.
+.plan_n_one <- function(d) {
+  if (is.data.frame(d) && all(c("variable", "stat_name", "stat") %in% names(d))) {
+    st <- suppressWarnings(as.numeric(as.character(d$stat)))
+    tt <- unique(st[as.character(d$variable) %in% "..ard_total_n.." &
+                      as.character(d$stat_name) %in% "N" & !is.na(st)])
+    if (length(tt) == 1L) return(tt)
+  }
+  total <- attr(d, "ard_total_n", exact = TRUE)
+  if (is.numeric(total) && length(total) == 1L && !is.na(total)) return(total)
+  NA_real_
+}
+
 .plan_n_read <- function(plan, sp, d = plan$data) {
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
   sep <- sp$sep %||% "____"
@@ -3860,10 +3876,16 @@ plan_header_tokens <- function(.plan) {
     }
     if (!is.null(scope)) {
       if (is.null(sp$cols)) {
-        .ard_stop(paste0(
-          "plan_col_header(values = list(n = TRUE)) reads the denominator with the ",
-          "same `cols` table_plan()\n  was given, and this plan ",
-          "has none.  Give a function of the data instead."))
+        # one column ("All", no column key): its N is the total the ARD
+        # states (cards::ard_total_n())
+        tot <- .plan_n_one(data)
+        if (is.na(tot)) {
+          .ard_stop(paste0(
+            "plan_col_header(values = list(n = TRUE)): a table of one column (no ",
+            "`cols`) reads its N from\n  the ARD's total -- add ",
+            "cards::ard_total_n() to the ARD -- or give the number."))
+        }
+        return(structure(c(All = tot), total = tot, why = character()))
       }
       # Only a number the ARD STATES as a population size, at every
       # depth of the keys; what it does not state is left out, and the
