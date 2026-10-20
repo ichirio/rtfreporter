@@ -867,17 +867,21 @@
 }
 
 .ard_lookup_cells <- function(cells, variable, context, kind = NA_character_,
-                              group = NA_character_) {
+                              group = NA_character_, whole = FALSE) {
   # A list is a map only when its elements are NAMED: `c()` over guards
   # returns an unnamed list, and that is one chain, not a map.
   if (inherits(cells, "cell_rows")) return(.ard_cell_entry(cells))
   if (!is.list(cells) || !any(nzchar(names(cells) %||% ""))) {
     return(.ard_cell_entry(cells))
   }
+  # A record split by plan_stat_groups() is its group's (after its own
+  # variable); a record that went whole to `.others` is its context's
+  # first, its group only after them.
   keys <- c(.ard_summary_key(variable, context), variable,
-            if (!is.na(group)) group)
+            if (!is.na(group) && !whole) group)
   if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
   if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
+  if (!is.na(group) && whole) keys <- c(keys, group)
   for (k in c(unique(keys), "default")) {
     if (!is.na(k) && k %in% names(cells) && !is.null(cells[[k]])) {
       return(.ard_cell_entry(cells[[k]]))
@@ -2327,6 +2331,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     sg_ignored <- .ard_tally(d[gone, , drop = FALSE], "in no `stat_groups` group")
     d <- d[!gone, , drop = FALSE]
     d$.stat_group <- g[!gone]
+    # (a record that went whole to `.others` keeps its own cell keys first:
+    # BOR's n (%) is a count, not the rate it sits beside)
+    d$.stat_whole <- !inside[!gone]
   }
 
   colrefs <- .ard_refs(cols, d, "cols")
@@ -2483,7 +2490,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     entry <- .ard_lookup_cells(
       cells, sub$variable[1L], sub$context[1L],
       if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_,
-      group = if (".stat_group" %in% names(sub)) sub$.stat_group[1L] else NA_character_)
+      group = if (".stat_group" %in% names(sub)) sub$.stat_group[1L] else NA_character_,
+      whole = ".stat_whole" %in% names(sub) && isTRUE(sub$.stat_whole[1L]))
     if (is.null(entry)) next
     named[[paste(sub$variable[1L], sub$context[1L], sep = "\r")]] <-
       unique(c(named[[paste(sub$variable[1L], sub$context[1L], sep = "\r")]],

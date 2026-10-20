@@ -203,6 +203,14 @@ kind (\code{continuous} / \code{categorical}), a stat group of
 reserved: a variable called \code{stats}, \code{value}, \code{na} or \code{notes} cannot
 be keyed in \code{plan_cells()}; name it so in the ARD.
 
+In a table of \code{plan_stat_groups()}, the key is picked per record: a
+record of a split variable (\code{.variables}) takes its variable's entry,
+else its \strong{group's} (\code{"n (\%)"}, \code{orr_ci}), before its context or
+kind; a record that went whole to \code{.others} takes its variable's,
+then its context's or kind's (\code{categorical}), its group's only after
+them.  So a study's plan-wide \code{categorical} reaches a block of counts
+beside an ORR, and leaves the rate and its CI to their groups.
+
 For \code{plan_levels()}, \code{variable = c("AGE", "SEX", "RACE")} orders the
 analysis variables themselves (the blocks of rows); variables left out
 follow in the ARD's order.
