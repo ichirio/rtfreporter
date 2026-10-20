@@ -10,7 +10,7 @@ test_that("three levels: the overall rows, then each SOC's own rows, then its PT
   ae$AESEV <- factor(ae$AESEV, levels = c("MILD", "MODERATE", "SEVERE"))
   top <- function(...) dplyr::slice_max(ae, as.integer(AESEV), by = c(USUBJID, ...), n = 1,
                                         with_ties = FALSE)
-  h <- function(d, v) cards::ard_stack_hierarchical(d, variables = tidyselect::all_of(v),
+  h <- function(d, v) cards::ard_stack_hierarchical(d, variables = cards::all_of(v),
                                                     by = TRTA, denominator = adsl, id = USUBJID)
   ard <- cards::bind_ard(
     cards::ard_stack_hierarchical(top(), variables = AESEV, by = TRTA, denominator = adsl,
