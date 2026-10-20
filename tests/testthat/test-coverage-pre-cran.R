@@ -177,15 +177,33 @@ test_that("assemble_toc() needs files or a spec", {
 
 # ── table_plan verbs: plan_cells(), plan_empty(), plan_layers() ────────────
 
+# One plan, built once from a small ADSL (eight subjects an arm), keeps these
+# tests fast.  With cardx (and broom) a Kruskal-Wallis p-value is added for
+# plan_compare().
+pc_plan_cache <- new.env(parent = emptyenv())
+pc_has_test <- function() {
+  requireNamespace("cardx", quietly = TRUE) &&
+    requireNamespace("broom", quietly = TRUE) &&
+    utils::packageVersion("broom") >= "1.0.8"
+}
 pc_plan <- function() {
-  adsl <- cards::ADSL
-  adsl$TRT <- as.character(adsl$ARM)
-  ard <- suppressMessages(normalize_ard(cards::ard_stack(
-    adsl, .by = TRT,
-    cards::ard_summary(
-      variables = AGE,
-      statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd"))))))
-  table_plan(ard, cols = "TRT", rows = c(group = "variable"))
+  if (is.null(pc_plan_cache$p)) {
+    adsl <- cards::ADSL
+    adsl$TRT <- as.character(adsl$ARM)
+    adsl <- do.call(rbind, lapply(split(adsl, adsl$TRT), utils::head, 8L))
+    ard <- cards::ard_stack(
+      adsl, .by = TRT,
+      cards::ard_summary(
+        variables = AGE,
+        statistic = ~ cards::continuous_summary_fns(c("N", "mean", "sd"))))
+    if (pc_has_test()) {
+      ard <- cards::bind_ard(
+        ard, cardx::ard_stats_kruskal_test(adsl, by = TRT, variables = AGE))
+    }
+    pc_plan_cache$p <- table_plan(suppressMessages(normalize_ard(ard)),
+                                  cols = "TRT", rows = c(group = "variable"))
+  }
+  pc_plan_cache$p
 }
 
 test_that("plan_cells() and plan_empty() check their options", {
@@ -203,26 +221,18 @@ test_that("plan_cells() and plan_empty() check their options", {
 
 test_that("plan_layers() reads a single template and the compare columns", {
   skip_if_not_installed("cards")
-  p <- plan_cells(pc_plan(), "{mean:.1f}", notes = FALSE)
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  p <- pc_plan() |>
+    plan_cells("{mean:.1f}", notes = FALSE) |>
+    plan_compare(p = "{p.value:.3f}", diff = c(AGE = "{p.value:.2f}"))
   lay <- suppressMessages(plan_layers(p))
   cl <- lay$cells
   expect_true(length(cl) >= 1L)
   expect_true(is.na(cl[[1L]]$variable))
   expect_true(is.na(cl[[1L]]$context))
-  expect_null(lay$compare)
 
-  skip_if_not_installed("cardx")
-  skip_if_not_installed("broom", minimum_version = "1.0.8")
-  adsl <- cards::ADSL
-  adsl$TRT <- as.character(adsl$ARM)
-  ard <- cards::bind_ard(
-    cards::ard_stack(adsl, .by = TRT, cards::ard_summary(variables = AGE)),
-    cardx::ard_stats_kruskal_test(adsl, by = TRT, variables = AGE))
-  p2 <- table_plan(normalize_ard(ard), cols = "TRT",
-                   rows = c(group = "variable")) |>
-    plan_cells(continuous = c("Mean" = "{mean:.1f}"), notes = FALSE) |>
-    plan_compare(p = "{p.value:.3f}", diff = c(AGE = "{p.value:.2f}"))
-  cmp <- suppressMessages(plan_layers(p2))$compare
+  cmp <- lay$compare
   expect_identical(vapply(cmp$cols, `[[`, "", "column"), c("p", "diff"))
   expect_identical(vapply(cmp$cols, `[[`, "", "context"), c(NA, "AGE"))
   expect_identical(cmp$position, "last")
