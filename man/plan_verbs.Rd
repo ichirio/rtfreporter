@@ -550,7 +550,11 @@ under \code{cards::ard_tabulate(adsl, by = ARM, variables = RACE)}, or
 \code{cards::ard_stack(.overall = TRUE)}) --- so the ARD keeps no \code{ARM}
 value the data does not have.  Its \code{{n}} in the column header is the
 study total the ARD states (the column key tabulated on its own, or
-\code{cards::ard_total_n()}).  One column key only.  Only the body's
+\code{cards::ard_total_n()}).  With two column keys the innermost is folded:
+\code{cols = c(TRTA, AESEV)} gives each arm a total column from its records
+with no \code{AESEV} (an AE's count at any grade, \code{"Any grade"}), placed
+among that arm's grades; records with no \code{TRTA} either make no column.
+Only the body's
 analyses are read: a test or a difference has no column key either,
 and is \code{plan_compare()}'s.  For \code{plan_compare()}, \code{position} is where
 its columns go: after the column key's (\code{"last"}) or before them

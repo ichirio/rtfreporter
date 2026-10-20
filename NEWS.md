@@ -4,6 +4,24 @@
   With `table_plan(cols = c(TRT01A, "variable"))` (each arm's value and
   change side by side), a spanner's `{n}` now shows the arm's N, read from
   the arms' own count, instead of `NA`.
+- **`plan_sort()`: a group's own row comes before its members** (#695,
+  0.8.2.9083).  With a row key among the sort keys, the row of a group
+  itself (its lower key empty: a SOC's own counts over its PTs, the overall
+  rows) sorted after the group's members.  It comes first now, the key
+  ascending or descending, and by a group's statistic (`-n@pt`); tables of
+  two levels, whose parent was already
+  first through `.depth`, are as they were.
+
+- **`plan_total()` with two column keys** (#695): the innermost key is
+  folded -- `cols = c(TRTA, AESEV)` gives each arm a total column (an AE's
+  count at any grade) from its records with no `AESEV`, placed by
+  `position` among that arm's columns.  It stopped before.
+
+- **`plan_sort()`'s key `levels(<key>)`** (#695): the values
+  `plan_levels()` names for a row key first, in its order, the others tied
+  for the next keys -- `plan_levels(soc = "Any TEAE")` with
+  `c("levels(soc)", "-n@soc", "soc")` keeps that block first, even when a
+  SOC has its count, and the other SOCs by theirs.
 
 - **`rtfreporter_ai_manual(shell = "shell.txt")`: a sheet copied from
   Excel** (#692, 0.8.2.9082).  A shell's sheet copied from Excel, pasted

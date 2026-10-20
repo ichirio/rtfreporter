@@ -2589,12 +2589,12 @@ test_that("plan_total() says what is wrong", {
   p2 <- table_plan(nz(both), cols = "ARM2", rows = c(group = "variable")) |>
     plan_cells(categorical = "{n}", notes = FALSE)
   expect_error(plan_apply(plan_total(p2), "table"), "already has a value \"Total\"")
-  # one column key
+  # two column keys: the innermost is folded, from each ARM's rows without SEX
   two <- cards::bind_ard(cards::ard_tabulate(adsl, by = c(ARM, SEX), variables = RACE),
                          cards::ard_tabulate(adsl, variables = RACE))
   p3 <- table_plan(nz(two), cols = c("ARM", "SEX"), rows = c(group = "variable")) |>
     plan_cells(categorical = "{n}", notes = FALSE)
-  expect_error(plan_apply(plan_total(p3), "table"), "one column key")
+  expect_error(plan_apply(plan_total(p3), "table"), "no overall rows, rows without SEX")
   # plan_layers() shows it
   p4 <- table_plan(nz(total_ard()), cols = "TRT", rows = c(group = "variable")) |>
     plan_cells(categorical = "{n}", notes = FALSE)

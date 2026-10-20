@@ -190,7 +190,14 @@ choosing an order for them:
 first.}
 \item{\code{".depth"}}{a level's own summary row before the rows nested
 under it.}
-\item{a column}{any row key or the label column, by its output name.}
+\item{a column}{any row key or the label column, by its output name.
+A group's own row (the lower key empty) comes first in the group,
+the key ascending or descending.}
+\item{\code{"levels(<key>)"}}{the values \code{\link[=plan_levels]{plan_levels()}} names for that row
+key first, in its order; the others tie, for the keys that follow
+(all tie when it names none): \code{plan_levels(soc = "Any TEAE")} with
+\code{c("levels(soc)", "-n@soc", "soc")} keeps that block first and the
+other SOCs by their count.}
 \item{a statistic}{that statistic totalled across the spread columns --
 what a descending-frequency AE table sorts on.}
 \item{\code{"<stat>[<col>]"}}{that statistic in \strong{one} spread column:
