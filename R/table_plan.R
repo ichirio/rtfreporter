@@ -3475,7 +3475,13 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
     rep(FALSE, nrow(d))
   sent <- !is.na(v) & startsWith(v, "..")
-  has  <- lapply(cols, function(k) !is.na(d[[k]]))
+  # `variable` as a column key (each arm's value and change side by side):
+  # another key's own tabulation (the arms' count, variable TRT01A) is no
+  # value of it, so that key's N is read at its own depth
+  has  <- lapply(seq_along(cols), function(j) {
+    h <- !is.na(d[[cols[j]]])
+    if (identical(cols[j], "variable")) h & !(v %in% cols[-j]) else h
+  })
   # a sentinel keyed by nothing is ONE number for the study
   # (..ard_total_n..): a total, never every column's number
   none <- Reduce(`&`, lapply(has, `!`))

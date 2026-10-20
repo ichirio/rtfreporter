@@ -1,5 +1,10 @@
 # rtfreporter (development version)
 
+- **The header's N with `variable` as a column key** (#697, 0.8.2.9084).
+  With `table_plan(cols = c(TRT01A, "variable"))` (each arm's value and
+  change side by side), a spanner's `{n}` now shows the arm's N, read from
+  the arms' own count, instead of `NA`.
+
 - **`rtfreporter_ai_manual(shell = "shell.txt")`: a sheet copied from
   Excel** (#692, 0.8.2.9082).  A shell's sheet copied from Excel, pasted
   into Notepad and saved comes in as it is -- its tabs kept, the empty
