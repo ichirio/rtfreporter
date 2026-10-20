@@ -81,8 +81,16 @@ test_that("stub_vars composes with a group-aware split and renders", {
   expect_true(file.exists(f))
 })
 
-test_that("stub_vars needs at least two columns", {
-  expect_error(as_rtftables(ae, stub_vars = "SOC"), "two columns")
+test_that("stub_vars of one column: that column is the stub, nothing folded", {
+  expect_no_error(pages <- as_rtftables(ae, stub_vars = "SOC"))
+  expect_true(all(vapply(pages, inherits, logical(1L), "rtftable")))
+  doc <- rtf_document() |>
+    rtf_section(secinfo = list(header = NULL)) |>
+    rtf_tables(pages)
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  expect_no_error(generate_rtfreport(doc, f, overwrite = TRUE))
+  expect_true(any(grepl(ae$SOC[1L], readLines(f), fixed = TRUE)))
 })
 
 test_that("by_value + stub_vars works from a gt input and renders (#244)", {

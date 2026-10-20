@@ -3231,6 +3231,41 @@ test_that("table_plan(show_keys = ) and plan_stat_groups(.variables, .others): S
   expect_error(plan_stat_groups(plan(NULL), n = "N", .variables = "RESP", .others = "x"), "one of the groups")
 })
 
+test_that("plan_stat_groups(): a split record takes its group's cells, an .others record its context's, with a plan-wide categorical", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  ard <- cards::bind_ard(
+    cards::ard_tabulate(adsl, by = TRT, variables = AGEGR1),
+    cards::ard_strata(adsl, .by = TRT, .f = function(.x) {
+      cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y")
+    }))
+  plan <- function() table_plan(normalize_ard(ard), cols = c("TRT", ".stat_group"),
+                                rows = c(group = "variable")) |>
+    plan_stat_groups("n (%)" = c("n", "estimate"), "95% CI" = c("conf.low", "conf.high"),
+                     .variables = "RESP", .others = "n (%)") |>
+    plan_cells("n (%)" = "{n} ({estimate:.1f%})", "95% CI" = "[{conf.low:.1f%}, {conf.high:.1f%}]",
+               notes = FALSE)
+  tab_of <- function(p) as.data.frame(suppressMessages(plan_apply(p, "table")))
+  pl <- adsl$TRT == "Placebo"
+  n_resp <- sum(pl & adsl$RESP == "Y")
+  rate <- sprintf("%d (%.1f)", n_resp, 100 * n_resp / sum(pl))
+  # a later plan-wide categorical (a study's default) is AGEGR1's, and the
+  # rate keeps its group's template
+  t <- tab_of(plan() |> plan_cells(categorical = "{n} ({p:.1f%})"))
+  ag <- t[t$group == "AGEGR1", ]
+  n_ag <- sum(pl & adsl$AGEGR1 == ag$label[1L])
+  expect_identical(ag[["Placebo____n (%)"]][1L], sprintf("%d (%.1f)", n_ag, 100 * n_ag / sum(pl)))
+  expect_true(all(is.na(ag[["Placebo____95% CI"]])))
+  rs <- t[t$group == "RESP", ]
+  expect_identical(rs[["Placebo____n (%)"]], rate)
+  expect_match(rs[["Placebo____95% CI"]], "^\\[[0-9.]+, [0-9.]+\\]$")
+  # without it, as before: the rate as its group says
+  expect_identical(tab_of(plan())[["Placebo____n (%)"]][tab_of(plan())$group == "RESP"], rate)
+})
+
 test_that("plan_filter(): PTs with p >= 5% in any arm, a SOC with its PTs; the RTF a hand-filtered ARD gives (#620)", {
   skip_if_not_installed("cards")
   ard <- cards::ard_stack_hierarchical(cards::ADAE, variables = c(AESOC, AEDECOD), by = TRTA,

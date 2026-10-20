@@ -574,6 +574,17 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
 # rest of the header machinery see nothing new.
 .plan_header_cells_resolve <- function(sh, page_names, spread, plan) {
   keys <- unname(as.character(unlist(plan$roles$cols)))
+  # the stub: the columns it folded, and the page's column they became (its
+  # name, else the first column, where stub_cols() puts it)
+  stub <- .plan_merge(.plan_of(plan, "stub"))
+  folded <- character()
+  stub_col <- NA_character_
+  if (length(stub)) {
+    folded <- as.character(unlist(stub$vars %||% c(.plan_row_keys(plan),
+                                                   .plan_label_name(plan))))
+    stub_col <- if (!is.null(stub$name) && stub$name %in% page_names) stub$name else
+      if (length(page_names) && !page_names[1L] %in% spread) page_names[1L] else NA_character_
+  }
   sep <- .plan_sep(plan)
   # each spread column's key values: from the data where it can be
   # rebuilt, by splitting the name otherwise
@@ -615,6 +626,10 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
         out <- c(out, match(hit, page_names))
       } else if (it %in% page_names) {
         out <- c(out, match(it, page_names))
+      } else if (!is.na(stub_col) && it %in% folded) {
+        # a row key the stub folded (a study's plan_stub(name = ) on a
+        # template's `group`): the stub column it is now
+        out <- c(out, match(stub_col, page_names))
       } else {
         .ard_stop(sprintf(paste0("`col_header`: no column %s on the page.",
                                  "\n  Columns: %s"), sQuote(it),
@@ -846,6 +861,14 @@ print.table_plan <- function(x, ...) {
 #'   reserved: a variable called `stats`, `value`, `na` or `notes` cannot
 #'   be keyed in `plan_cells()`; name it so in the ARD.
 #'
+#'   In a table of `plan_stat_groups()`, the key is picked per record: a
+#'   record of a split variable (`.variables`) takes its variable's entry,
+#'   else its **group's** (`"n (%)"`, `orr_ci`), before its context or
+#'   kind; a record that went whole to `.others` takes its variable's,
+#'   then its context's or kind's (`categorical`), its group's only after
+#'   them.  So a study's plan-wide `categorical` reaches a block of counts
+#'   beside an ORR, and leaves the rate and its CI to their groups.
+#'
 #'   For `plan_levels()`, `variable = c("AGE", "SEX", "RACE")` orders the
 #'   analysis variables themselves (the blocks of rows); variables left out
 #'   follow in the ARD's order.
@@ -1018,7 +1041,10 @@ print.table_plan <- function(x, ...) {
 #'   fold into one stub column and how, as [stub_cols()] takes them.
 #'   `name` is the NAME the folded column gets (`stub_cols(label = )`),
 #'   which is a different thing from `table_plan(label = )` --- the column
-#'   whose VALUES are the row text.  `vars` is derived when left out.
+#'   whose VALUES are the row text.  `vars` is derived when left out.  With
+#'   one column (a table of one row heading, a study's `plan_stub(name =
+#'   "row_label")` on it), that column is the stub, renamed `name`, and
+#'   nothing is folded.
 #' @param before For `plan_stub()`: `FALSE` (default) folds the stub inside
 #'   [as_rtftables()], after grouping and pagination have had their say.
 #'   `TRUE` folds it first, with [stub_cols()], which is what
@@ -2614,8 +2640,14 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     vars <- if ("variable" %in% names(x)) .ard_first_seen(x$variable[body])
             else character(0)
     vars <- vars[!is.na(vars)]
+    # A variable plan_stat_groups() splits is looked up by its record's
+    # group when the cells are made: pinning it here by its context or kind
+    # (a study's `categorical`) would shadow the group's template.
+    split <- if (length(s_args$stat_groups)) {
+      .ard_stat_groups_opts(s_args$stat_groups)$variables %||% vars
+    } else character(0)
     filled <- list()
-    for (v in vars) {
+    for (v in setdiff(vars, split)) {
       sel <- body & x$variable == v
       # One entry per SUMMARY -- a variable under one context.  A variable
       # both summarised and tabulated is two summaries, and pinning the

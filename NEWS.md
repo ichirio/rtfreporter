@@ -1,10 +1,26 @@
 # rtfreporter (development version)
 
-- **Tests: coverage raised from 95.5% to 95.8%; URL and spelling fixes**
-  (#699, 0.8.2.9085).  New tests for the least-covered exported functions,
+- **Tests: coverage raised from 95.5% to 95.8%; spelling wordlist**
+  (#699, 0.8.2.9087).  New tests for the least-covered exported functions,
   and `inst/WORDLIST` takes the words `spelling` flagged.  One fix they
   found: `style_header()` on a table of several data frames restyled only
   the first frame's header; every frame sharing that header now takes it.
+
+- **`plan_stat_groups()` tables pick a cell's template per record**
+  (0.8.2.9086).  A split variable's record takes its group's template
+  before a context's or kind's, and a record gone whole to `.others` its
+  context's first: a plan-wide `plan_cells(categorical = )` (a study's
+  default) no longer empties the rate and CI beside a block of counts, and
+  the counts no longer take the rate's template.  Tables without
+  `plan_stat_groups()` are unchanged.
+
+- **A one-column stub is the stub as it is** (#701, 0.8.2.9085).
+  `stub_cols()` (and `plan_stub()`, `as_rtftables(stub_vars = )`) with one
+  row key stopped ("`vars` needs at least two columns"): a table of one
+  row heading in a study whose standard says `plan_stub(name =
+  "row_label")` could not be drawn.  That column is now the stub, renamed,
+  every row its own; nothing to fold.  And a `plan_col_header()` cell that
+  names a column the stub folded (`group`) is the stub column it became.
 
 - **The header's N with `variable` as a column key** (#697, 0.8.2.9084).
   With `table_plan(cols = c(TRT01A, "variable"))` (each arm's value and
