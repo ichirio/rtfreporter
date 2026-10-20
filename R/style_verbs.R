@@ -349,14 +349,16 @@ style_header.rtftable <- function(x, row = NULL, cols = NULL, label = NULL,
         "style_header")
     }
   }
-  x$col_header <- hdrs
-  # Multi-DF tables render from col_header_list; keep it in step.
+  # Multi-DF tables render from col_header_list; keep it in step.  Each entry
+  # still equal to the header before this call takes the restyled one, so the
+  # comparison is made before x$col_header is replaced.
   if (!is.null(x$col_header_list)) {
     x$col_header_list <- lapply(x$col_header_list, function(h) {
       if (identical(h, x$col_header)) hdrs else h
     })
     x$col_header_list[[1L]] <- hdrs
   }
+  x$col_header <- hdrs
   x
 }
 
