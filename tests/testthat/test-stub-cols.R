@@ -112,7 +112,7 @@ test_that("integer and mixed list vars are accepted", {
 test_that("validation errors are raised", {
   expect_error(stub_cols(list(a = 1), vars = c("a", "b")),
                "must be a data.frame")
-  expect_error(stub_cols(ae, vars = "soc"), "at least two columns")
+  expect_error(stub_cols(ae, vars = character()), "names no column")
   expect_error(stub_cols(ae, vars = c("soc", "soc")), "distinct")
   expect_error(stub_cols(ae, vars = c("soc", "nope")), "not found")
   expect_error(stub_cols(ae, vars = c(1L, 9L)), "out of range")
@@ -228,4 +228,18 @@ test_that("output feeds the group-aware pagination via indent detection", {
   p1 <- pages[[1L]]$data[[1L]]
   expect_identical(p1[1L], "SOC A")
   expect_false(any(p1 == "SOC B"))
+})
+
+test_that("one column: renamed to label, every row its own, nothing folded", {
+  one <- data.frame(label = c("Any TEAE", "Headache", NA), n = c("9", "4", "1"),
+                    stringsAsFactors = FALSE)
+  out <- stub_cols(one, vars = "label", label = "row_label")
+  expect_identical(names(out), c("row_label", "n"))
+  expect_identical(out$row_label, c("Any TEAE", "Headache", ""))
+  expect_identical(out$n, one$n)
+  expect_identical(attr(out, "rtf_stub_src"), 1:3)
+  # its name by default: the column's label attribute, else its name
+  expect_identical(names(stub_cols(one, vars = "label"))[1L], "label")
+  # layout = "columns": the data as it is
+  expect_identical(names(stub_cols(one, vars = "label", layout = "columns")), c("label", "n"))
 })

@@ -17,9 +17,10 @@ stub_cols(
 \arguments{
 \item{data}{A data.frame (or tibble).}
 
-\item{vars}{The hierarchy columns to merge, \strong{parent first, leaf last} --
-at least two.  A character / integer vector (or a \code{list()} to mix names
-and indices).}
+\item{vars}{The hierarchy columns to merge, \strong{parent first, leaf last}.
+A character / integer vector (or a \code{list()} to mix names and indices).
+One column is folded into nothing: it is the stub as it is, named
+\code{label}.}
 
 \item{label}{Column name for the merged stub column (this is what a
 default column header shows).  \code{NULL} (default) joins the display names

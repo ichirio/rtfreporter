@@ -1018,7 +1018,10 @@ print.table_plan <- function(x, ...) {
 #'   fold into one stub column and how, as [stub_cols()] takes them.
 #'   `name` is the NAME the folded column gets (`stub_cols(label = )`),
 #'   which is a different thing from `table_plan(label = )` --- the column
-#'   whose VALUES are the row text.  `vars` is derived when left out.
+#'   whose VALUES are the row text.  `vars` is derived when left out.  With
+#'   one column (a table of one row heading, a study's `plan_stub(name =
+#'   "row_label")` on it), that column is the stub, renamed `name`, and
+#'   nothing is folded.
 #' @param before For `plan_stub()`: `FALSE` (default) folds the stub inside
 #'   [as_rtftables()], after grouping and pagination have had their say.
 #'   `TRUE` folds it first, with [stub_cols()], which is what

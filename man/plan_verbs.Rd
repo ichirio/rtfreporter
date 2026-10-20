@@ -378,7 +378,9 @@ departs from the study's rule.}
 fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} takes them.
 \code{name} is the NAME the folded column gets (\code{stub_cols(label = )}),
 which is a different thing from \code{table_plan(label = )} --- the column
-whose VALUES are the row text.  \code{vars} is derived when left out.}
+whose VALUES are the row text.  \code{vars} is derived when left out.  With
+one column (a table of one row heading, a study's \code{plan_stub(name = "row_label")} on it), that column is the stub, renamed \code{name}, and
+nothing is folded.}
 
 \item{before}{For \code{plan_stub()}: \code{FALSE} (default) folds the stub inside
 \code{\link[=as_rtftables]{as_rtftables()}}, after grouping and pagination have had their say.

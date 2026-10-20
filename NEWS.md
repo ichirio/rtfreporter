@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **A one-column stub is the stub as it is** (#701, 0.8.2.9085).
+  `stub_cols()` (and `plan_stub()`, `as_rtftables(stub_vars = )`) with one
+  row key stopped ("`vars` needs at least two columns"): a table of one
+  row heading in a study whose standard says `plan_stub(name =
+  "row_label")` could not be drawn.  That column is now the stub, renamed,
+  every row its own; nothing to fold.
+
 - **The header's N with `variable` as a column key** (#697, 0.8.2.9084).
   With `table_plan(cols = c(TRT01A, "variable"))` (each arm's value and
   change side by side), a spanner's `{n}` now shows the arm's N, read from
