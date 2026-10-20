@@ -861,6 +861,14 @@ print.table_plan <- function(x, ...) {
 #'   reserved: a variable called `stats`, `value`, `na` or `notes` cannot
 #'   be keyed in `plan_cells()`; name it so in the ARD.
 #'
+#'   In a table of `plan_stat_groups()`, the key is picked per record: a
+#'   record of a split variable (`.variables`) takes its variable's entry,
+#'   else its **group's** (`"n (%)"`, `orr_ci`), before its context or
+#'   kind; a record that went whole to `.others` takes its variable's,
+#'   then its context's or kind's (`categorical`), its group's only after
+#'   them.  So a study's plan-wide `categorical` reaches a block of counts
+#'   beside an ORR, and leaves the rate and its CI to their groups.
+#'
 #'   For `plan_levels()`, `variable = c("AGE", "SEX", "RACE")` orders the
 #'   analysis variables themselves (the blocks of rows); variables left out
 #'   follow in the ARD's order.
@@ -2632,8 +2640,14 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     vars <- if ("variable" %in% names(x)) .ard_first_seen(x$variable[body])
             else character(0)
     vars <- vars[!is.na(vars)]
+    # A variable plan_stat_groups() splits is looked up by its record's
+    # group when the cells are made: pinning it here by its context or kind
+    # (a study's `categorical`) would shadow the group's template.
+    split <- if (length(s_args$stat_groups)) {
+      .ard_stat_groups_opts(s_args$stat_groups)$variables %||% vars
+    } else character(0)
     filled <- list()
-    for (v in vars) {
+    for (v in setdiff(vars, split)) {
       sel <- body & x$variable == v
       # One entry per SUMMARY -- a variable under one context.  A variable
       # both summarised and tabulated is two summaries, and pinning the

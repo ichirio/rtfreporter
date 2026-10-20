@@ -1,5 +1,13 @@
 # rtfreporter (development version)
 
+- **`plan_stat_groups()` tables pick a cell's template per record**
+  (0.8.2.9086).  A split variable's record takes its group's template
+  before a context's or kind's, and a record gone whole to `.others` its
+  context's first: a plan-wide `plan_cells(categorical = )` (a study's
+  default) no longer empties the rate and CI beside a block of counts, and
+  the counts no longer take the rate's template.  Tables without
+  `plan_stat_groups()` are unchanged.
+
 - **A one-column stub is the stub as it is** (#701, 0.8.2.9085).
   `stub_cols()` (and `plan_stub()`, `as_rtftables(stub_vars = )`) with one
   row key stopped ("`vars` needs at least two columns"): a table of one
