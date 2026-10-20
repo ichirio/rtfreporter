@@ -4,6 +4,7 @@
   With `table_plan(cols = c(TRT01A, "variable"))` (each arm's value and
   change side by side), a spanner's `{n}` now shows the arm's N, read from
   the arms' own count, instead of `NA`.
+
 - **`plan_sort()`: a group's own row comes before its members** (#695,
   0.8.2.9083).  With a row key among the sort keys, the row of a group
   itself (its lower key empty: a SOC's own counts over its PTs, the overall
