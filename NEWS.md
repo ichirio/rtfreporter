@@ -5,7 +5,8 @@
   row key stopped ("`vars` needs at least two columns"): a table of one
   row heading in a study whose standard says `plan_stub(name =
   "row_label")` could not be drawn.  That column is now the stub, renamed,
-  every row its own; nothing to fold.
+  every row its own; nothing to fold.  And a `plan_col_header()` cell that
+  names a column the stub folded (`group`) is the stub column it became.
 
 - **The header's N with `variable` as a column key** (#697, 0.8.2.9084).
   With `table_plan(cols = c(TRT01A, "variable"))` (each arm's value and

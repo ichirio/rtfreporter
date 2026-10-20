@@ -243,3 +243,21 @@ test_that("one column: renamed to label, every row its own, nothing folded", {
   # layout = "columns": the data as it is
   expect_identical(names(stub_cols(one, vars = "label", layout = "columns")), c("label", "n"))
 })
+
+test_that("a header cell naming a column the stub folded is the stub column", {
+  skip_if_not_installed("cards")
+  ard <- cards::bind_ard(cards::ard_tabulate(cards::ADSL, variables = ARM),
+                         cards::ard_tabulate(cards::ADSL, by = ARM, variables = SEX))
+  hdr <- data.frame(line = c("1", "1"), cols = c("group", ".values"),
+                    span = c(NA, "each"), text = c("Subjects with", "{col}"))
+  p <- normalize_ard(ard) |>
+    table_plan(cols = "ARM", rows = list(group = "variable"), label = NA) |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_stub(name = "row_label", before = TRUE) |>
+    plan_col_header(header = hdr)
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f))
+  expect_no_error(suppressMessages(
+    generate_rtfreport(rtf_tables(rtf_document(), plan_apply(p)), f, overwrite = TRUE)))
+  expect_true(any(grepl("Subjects with", readLines(f), fixed = TRUE)))
+})

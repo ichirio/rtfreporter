@@ -574,6 +574,17 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
 # rest of the header machinery see nothing new.
 .plan_header_cells_resolve <- function(sh, page_names, spread, plan) {
   keys <- unname(as.character(unlist(plan$roles$cols)))
+  # the stub: the columns it folded, and the page's column they became (its
+  # name, else the first column, where stub_cols() puts it)
+  stub <- .plan_merge(.plan_of(plan, "stub"))
+  folded <- character()
+  stub_col <- NA_character_
+  if (length(stub)) {
+    folded <- as.character(unlist(stub$vars %||% c(.plan_row_keys(plan),
+                                                   .plan_label_name(plan))))
+    stub_col <- if (!is.null(stub$name) && stub$name %in% page_names) stub$name else
+      if (length(page_names) && !page_names[1L] %in% spread) page_names[1L] else NA_character_
+  }
   sep <- .plan_sep(plan)
   # each spread column's key values: from the data where it can be
   # rebuilt, by splitting the name otherwise
@@ -615,6 +626,10 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
         out <- c(out, match(hit, page_names))
       } else if (it %in% page_names) {
         out <- c(out, match(it, page_names))
+      } else if (!is.na(stub_col) && it %in% folded) {
+        # a row key the stub folded (a study's plan_stub(name = ) on a
+        # template's `group`): the stub column it is now
+        out <- c(out, match(stub_col, page_names))
       } else {
         .ard_stop(sprintf(paste0("`col_header`: no column %s on the page.",
                                  "\n  Columns: %s"), sQuote(it),
