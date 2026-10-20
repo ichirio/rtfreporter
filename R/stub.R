@@ -97,9 +97,10 @@
 #' them up as header labels.
 #'
 #' @param data A data.frame (or tibble).
-#' @param vars The hierarchy columns to merge, **parent first, leaf last** --
-#'   at least two.  A character / integer vector (or a `list()` to mix names
-#'   and indices).
+#' @param vars The hierarchy columns to merge, **parent first, leaf last**.
+#'   A character / integer vector (or a `list()` to mix names and indices).
+#'   One column is folded into nothing: it is the stub as it is, named
+#'   `label`.
 #' @param label Column name for the merged stub column (this is what a
 #'   default column header shows).  `NULL` (default) joins the display names
 #'   of the merged columns with `" / "` -- e.g. `"SOC / PT"` -- using a
@@ -204,13 +205,37 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
   if (anyDuplicated(idx)) {
     stop("`vars` must name distinct columns.", call. = FALSE)
   }
-  if (length(idx) < 2L) {
-    stop("`vars` needs at least two columns (parent, then leaf) to merge.",
-         call. = FALSE)
+  if (!length(idx)) {
+    stop("`vars` names no column.", call. = FALSE)
   }
   if (!is.null(label) &&
       (!is.character(label) || length(label) != 1L || is.na(label))) {
     stop("`label` must be NULL or a single string.", call. = FALSE)
+  }
+  # One column: nothing to fold.  It is the stub as it is, named `label`
+  # (layout = "merged"; its place is first, as a folded stub's), every row
+  # its own.
+  if (length(idx) == 1L) {
+    if (identical(layout, "columns")) {
+      out <- data
+      attr(out, "rtf_stub_src") <- seq_len(nrow(data))
+      return(out)
+    }
+    v <- as.character(data[[idx]])
+    v[is.na(v)] <- ""
+    if (is.null(label)) {
+      lb <- attr(data[[idx]], "label", exact = TRUE)
+      label <- if (!is.null(lb) && length(lb) == 1L && !is.na(lb) && nzchar(lb)) {
+        as.character(lb)
+      } else names(data)[idx]
+    }
+    keep <- setdiff(seq_len(ncol(data)), idx)
+    out <- cbind(data.frame(.stub. = v, stringsAsFactors = FALSE),
+                 data[keep])
+    names(out) <- c(label, names(data)[keep])
+    rownames(out) <- NULL
+    attr(out, "rtf_stub_src") <- seq_len(nrow(data))
+    return(out)
   }
   indent <- as.integer(indent)
   if (length(indent) != 1L || is.na(indent) || indent < 0L) {

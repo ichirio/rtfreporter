@@ -1,7 +1,7 @@
 Package: rtfreporter
 Type: Package
 Title: Clinical RTF Reporting Toolkit for Tables, Listings and Figures
-Version: 0.8.2.9084
+Version: 0.8.2.9085
 Authors@R:
     person(given  = "Yoichi",
            family = "Masui",
@@ -63,4 +63,3 @@ Suggests:
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
