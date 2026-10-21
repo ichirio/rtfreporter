@@ -3582,9 +3582,54 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   NA_real_
 }
 
+# The keys of a header's N to add up, each population once: a
+# plan_stat_groups() column's number is a copy of its record's (#709), so
+# the record's columns count as the record
+.plan_n_once <- function(v, keys) {
+  of <- attr(v, "copy_of", exact = TRUE)
+  if (is.null(of) || !length(keys)) return(keys)
+  hit <- keys %in% names(of)
+  unique(c(keys[!hit], unname(of[keys[hit]])))
+}
+
 .plan_n_read <- function(plan, sp, d = plan$data) {
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
   sep <- sp$sep %||% "____"
+  # plan_stat_groups()'s key (`.stat_group`, #709) is made when the plan
+  # runs: one record's statistics side by side, each group the same
+  # population as the record.  So its N is read without it -- the arm's --
+  # and each group's column under the arm is given that arm's number.
+  sg <- match(".stat_group", cols)
+  if (!is.na(sg) && length(cols) > 1L && is.data.frame(d) &&
+      !".stat_group" %in% names(d)) {
+    sub <- sp
+    sub$cols <- cols[-sg]
+    base <- .plan_n_read(plan, sub, d)
+    grp <- names(sp$stat_groups) %||% character(0)
+    grp <- grp[nzchar(grp) & !startsWith(grp, ".")]
+    if (!length(base) || !length(grp)) return(base)
+    parts <- strsplit(names(base), sep, fixed = TRUE)
+    extra <- unlist(lapply(seq_along(base), function(i) {
+      p <- parts[[i]]
+      # a key above the group's depth stays as it is; at the depth just
+      # above it and below, each group's key is the record's number
+      if (length(p) < sg - 1L) return(NULL)
+      nm <- vapply(grp, function(g) paste(append(p, g, after = sg - 1L),
+                                          collapse = sep), "")
+      stats::setNames(rep(base[[i]], length(nm)), nm)
+    }))
+    # (each group's key -> the record's: a sum counts the record once)
+    of <- unlist(lapply(seq_along(base), function(i) {
+      p <- parts[[i]]
+      if (length(p) < sg - 1L) return(NULL)
+      nm <- vapply(grp, function(g) paste(append(p, g, after = sg - 1L),
+                                          collapse = sep), "")
+      stats::setNames(rep(names(base)[i], length(nm)), nm)
+    }))
+    keep <- vapply(parts, length, 1L) < sg
+    return(structure(c(base[keep], extra), total = attr(base, "total"),
+                     why = attr(base, "why"), copy_of = of))
+  }
   total <- .ard_total_n_of(d)
   out <- numeric(0)
   why <- character(0)
@@ -3902,6 +3947,7 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
     # the parts
     tc <- .plan_total_spec(plan)$label
     if (!is.null(tc) && length(names(lv))) lv <- lv[names(lv) != tc]
+    if (length(names(lv))) lv <- v[.plan_n_once(v, names(lv))]
     tot <- suppressWarnings(sum(as.numeric(unlist(lv)), na.rm = TRUE))
     add(paste0("{", nm, ":sum}"), "sum", tot, paste0(
       "= ", format(tot, trim = TRUE),
@@ -4764,7 +4810,7 @@ plan_n_candidates <- function(.plan) {
       if (!length(keep) ||
           length(keep) < length(intersect(over, parts))) return(NA)
     }
-    sum(suppressWarnings(as.numeric(unlist(v[keep]))), na.rm = TRUE)
+    sum(suppressWarnings(as.numeric(unlist(v[.plan_n_once(v, keep)]))), na.rm = TRUE)
   }
   one <- function(tpl, col, over = character(0)) {
     if (!is.character(tpl) || !length(tpl) ||
