@@ -36,11 +36,11 @@ test_that("a short table goes under the one before, on its page", {
   expect_lt(regexpr("Table 1", txt, fixed = TRUE), regexpr("Listing 1", txt, fixed = TRUE))
 })
 
-test_that("a long table is cut where the page ends; the rest begins the next, headers again", {
+test_that("fit = TRUE: a long table is cut where the page ends; the rest begins the next, headers again", {
   doc <- rtf_document() |>
     rtf_tables(list(.fl_df(8)), titles = list("Table 1")) |>
     rtf_tables(list(.fl_df(70, "Row")), titles = list("Listing 1"), page_break = FALSE,
-               cont_title = "(continued)")
+               fit = TRUE, cont_title = "(continued)")
   pg <- .fl_pages(doc)
   expect_length(pg, 2L)
   first <- .fl_rows(pg[[1L]])
@@ -57,10 +57,10 @@ test_that("a long table is cut where the page ends; the rest begins the next, he
   expect_identical(lengths(regmatches(txt, gregexpr("Item[^ 0-9]", txt))), 3L)
 })
 
-test_that("fewer than min_rows left: the table begins a new page", {
+test_that("fit = TRUE, fewer than min_rows left: the table begins a new page", {
   doc <- rtf_document() |>
     rtf_tables(list(.fl_df(44))) |>
-    rtf_tables(list(.fl_df(30, "Row")), page_break = FALSE, min_rows = 10)
+    rtf_tables(list(.fl_df(30, "Row")), page_break = FALSE, fit = TRUE, min_rows = 10)
   pg <- .fl_pages(doc)
   expect_length(pg, 2L)
   expect_null(pg[[1L]]$blocks)
@@ -179,12 +179,12 @@ test_that("rtf_figures(page_break = FALSE): a figure under the table when the pa
   expect_gt(pict, regexpr("Figure 1", txt, fixed = TRUE))
 })
 
-test_that("a figure the page cannot hold begins the next page: a figure is not cut", {
+test_that("fit = TRUE: a figure the page cannot hold begins the next page, not cut", {
   png_path <- .fl_png(400, 300)
   on.exit(unlink(png_path), add = TRUE)
   doc <- rtf_document() |>
     rtf_tables(list(.fl_df(30))) |>
-    rtf_figures(list(rtfplot(png_path, width_twips = 9000L)), page_break = FALSE)
+    rtf_figures(list(rtfplot(png_path, width_twips = 9000L)), page_break = FALSE, fit = TRUE)
   pg <- .fl_pages(doc)
   expect_length(pg, 2L)
   expect_null(pg[[2L]]$blocks)
@@ -195,4 +195,46 @@ test_that("a figure the page cannot hold begins the next page: a figure is not c
   expect_length(.fl_pages(d2), 1L)
   expect_error(rtf_figures(rtf_document(), list(small, small), page_break = c(TRUE, FALSE, TRUE)),
                "rtf_figures(): `page_break`", fixed = TRUE)
+})
+
+# ---- the default: nothing measured, the reader carries the rest -------------
+
+test_that("page_break = FALSE alone: the whole table goes on, uncut; Word carries the rest", {
+  doc <- rtf_document() |>
+    rtf_tables(list(.fl_df(8)), titles = list("Table 1")) |>
+    rtf_tables(list(.fl_df(70, "Row")), titles = list("Listing 1"), page_break = FALSE,
+               cont_title = "(continued)") |>
+    rtf_tables(list(.fl_df(5, "More")), page_break = FALSE)
+  pg <- .fl_pages(doc)
+  expect_length(pg, 1L)
+  expect_identical(.fl_rows(pg[[1L]]), c(8, 70, 5))
+  txt <- .render_to_string(doc)
+  expect_identical(.fl_count(txt, .fl_page_cmd), 0L)
+  # (cont_title belongs to fit = TRUE)
+  expect_identical(.fl_count(txt, "(continued)"), 0L)
+  # a figure the same: under the table, whatever its size
+  png_path <- .fl_png(400, 300)
+  on.exit(unlink(png_path), add = TRUE)
+  d2 <- rtf_tables(rtf_document(), list(.fl_df(40))) |>
+    rtf_figures(list(rtfplot(png_path, width_twips = 9000L)), page_break = FALSE)
+  expect_length(.fl_pages(d2), 1L)
+  expect_error(rtf_tables(rtf_document(), list(.fl_df(2)), fit = NA), "`fit` is TRUE or FALSE")
+})
+
+test_that("the header rows of a table that runs on repeat on the reader's next page", {
+  trhdr <- paste0(intToUtf8(92), "trhdr")
+  sp <- rtftable(.fl_df(4, "Sp"), spanning_header = list(list(from = 2L, to = 3L, label = "Values")))
+  doc <- rtf_document() |>
+    rtf_tables(list(.fl_df(3)), titles = list("Table 1")) |>
+    rtf_tables(list(sp), page_break = FALSE)
+  txt <- .render_to_string(doc)
+  # the flowing table's spanning row and label row; not the first table's
+  expect_identical(.fl_count(txt, trhdr), 2L)
+  rows <- strsplit(txt, paste0(intToUtf8(92), "row"), fixed = TRUE)[[1L]]
+  marked <- grep(trhdr, rows, fixed = TRUE)
+  expect_true(all(grepl("Values|Item", rows[marked])))
+  # a document without page_break = FALSE: none, anywhere
+  plain <- .render_to_string(rtf_document() |> rtf_tables(list(.fl_df(3))) |>
+                               rtf_tables(list(sp)))
+  expect_identical(.fl_count(plain, trhdr), 0L)
 })

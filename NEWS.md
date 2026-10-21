@@ -1,5 +1,16 @@
 # rtfreporter (development version)
 
+- **`page_break = FALSE` measures nothing by default** (0.8.2.9093): a
+  table or a figure goes on under the content before it as it is, and the
+  reader (Word, LibreOffice) carries what does not fit to the next page --
+  fitting a page is the program's to arrange.  A table that runs on has its
+  header rows marked to repeat (RTF `\trhdr`), so the reader draws the
+  column header again on each page it continues on; its title and footnote
+  are not repeated there.  The estimate and the cut of 0.8.2.9091 / 9092
+  are now `fit = TRUE` (`min_rows`, `cont_title` with it).  Use
+  `{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}` in a document whose tables run on.
+  `page_break = TRUE`, the default, writes every document as before.
+
 - **`rtf_figures(page_break = FALSE)`: a figure under the content before
   it** (0.8.2.9092; flow placement, phase 2).  It goes on what is left of
   that page when the page holds its title, image and footnote, else it

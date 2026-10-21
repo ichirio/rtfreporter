@@ -14,12 +14,15 @@
 #  .flow_layout() turns the content pages into physical pages: a page of one
 #  content stays as it was; a page of several is an `rtf_flow_page` (its
 #  blocks, first to last), which the renderer draws block after block.
-#  Where a content goes is decided by its height, estimated from the page's
-#  geometry and the table's rows (an estimate on the safe side: Word, not
-#  this, lays the page out).
+#  By default nothing is measured: a content goes on under the one before,
+#  and the reader carries what does not fit to the next page (a table's
+#  header rows marked to repeat there).  With `fit = TRUE` a content goes
+#  where its height, estimated from the page's geometry and the table's
+#  rows, says (an estimate on the safe side: Word, not this, lays the page
+#  out) -- a table cut, a figure moved to the next page.
 
 .flow_defaults <- function() {
-  list(page_break = TRUE, min_rows = 3L, space_before = 0L, cont_title = NULL)
+  list(page_break = TRUE, fit = FALSE, min_rows = 3L, space_before = 0L, cont_title = NULL)
 }
 
 # rtf_tables() / rtf_figures(): the placement of the pages just added.
@@ -27,8 +30,11 @@
 # always begin a page.  Nothing is written when every page breaks and the
 # document has no placement yet.
 .flow_placement_append <- function(doc, n_new, item_start, page_break = TRUE,
-                                   min_rows = 3L, space_before = 0L,
+                                   fit = FALSE, min_rows = 3L, space_before = 0L,
                                    cont_title = NULL, fn = "rtf_tables") {
+  if (!is.logical(fit) || length(fit) != 1L || is.na(fit)) {
+    stop(sprintf("%s(): `fit` is TRUE or FALSE.", fn), call. = FALSE)
+  }
   if (!is.logical(page_break) || anyNA(page_break) ||
       !length(page_break) %in% c(1L, n_new)) {
     stop(sprintf(paste0("%s(): `page_break` is TRUE or FALSE, one for every ",
@@ -53,7 +59,7 @@
   n_old <- length(doc$contents) - n_new
   if (is.null(doc$placement)) doc$placement <- rep(list(.flow_defaults()), n_old)
   new <- lapply(seq_len(n_new), function(i) {
-    list(page_break = pb[i], min_rows = as.integer(min_rows),
+    list(page_break = pb[i], fit = fit, min_rows = as.integer(min_rows),
          space_before = as.integer(space_before), cont_title = cont_title)
   })
   doc$placement <- c(doc$placement, new)
@@ -237,9 +243,11 @@
 
 # ---- the layout -----------------------------------------------------------------
 
-.flow_block <- function(content, title, footnote, space_before = 0L) {
+# `flow`: placed with page_break = FALSE -- its column header repeats on a
+# page Word continues it on (	rhdr)
+.flow_block <- function(content, title, footnote, space_before = 0L, flow = FALSE) {
   list(content = content, title = title, footnote = footnote,
-       space_before = as.integer(space_before %||% 0L))
+       space_before = as.integer(space_before %||% 0L), flow = isTRUE(flow))
 }
 
 # The content pages -> physical pages.  Returns the document with
@@ -276,7 +284,7 @@
       }
       item <- .unwrap_auto_section_item(item)
     }
-    block <- .flow_block(item, title, footnote, pl$space_before)
+    block <- .flow_block(item, title, footnote, pl$space_before, flow = flow)
     if (!flow) {
       open_page(block, wrap)
       next
@@ -284,7 +292,10 @@
     gap <- 40 + block$space_before * m$rh
     room <- m$body_h - used - gap
     h <- .flow_block_height(item, title, footnote, m)
-    if (h <= room) {
+    # (the default: no estimate -- the content goes on, Word carries what
+    # does not fit to the next page; the heights only tell a later
+    # `fit = TRUE` content how full the page is)
+    if (!isTRUE(pl$fit) || h <= room) {
       add_block(block, gap + h)
       next
     }
@@ -293,7 +304,7 @@
     } else 0L
     if (k >= pl$min_rows && k < nrow(item$data)) {
       cut <- .rtftable_cut(item, k)
-      add_block(.flow_block(cut[[1L]], title, footnote, pl$space_before), gap + h)
+      add_block(.flow_block(cut[[1L]], title, footnote, pl$space_before, flow = TRUE), gap + h)
       rest_title <- title
       if (!is.null(pl$cont_title)) {
         rows <- if (is.null(title)) list() else if (is.list(title)) title else as.list(title)
@@ -357,12 +368,14 @@
         current_page = p_idx, total_pages = ctx$total_pages)
     })
     if (inherits(ct, "rtftable")) {
-      out <- c(out, .render_rtftable(ct, writable_w, ctx$font_half_points,
-                                     font_index_map = ctx$font_index_map,
-                                     ctx$color_index_map,
-                                     doc_row_height = ctx$doc_row_height,
-                                     doc_pad_l = ctx$doc_pad_l, doc_pad_r = ctx$doc_pad_r,
-                                     doc_markup = ctx$doc_markup))
+      rows <- .render_rtftable(ct, writable_w, ctx$font_half_points,
+                               font_index_map = ctx$font_index_map,
+                               ctx$color_index_map,
+                               doc_row_height = ctx$doc_row_height,
+                               doc_pad_l = ctx$doc_pad_l, doc_pad_r = ctx$doc_pad_r,
+                               doc_markup = ctx$doc_markup)
+      if (isTRUE(b$flow)) rows <- .flow_header_rows_repeat(rows, ct)
+      out <- c(out, rows)
     } else if (inherits(ct, "rtfplot")) {
       out <- c(out, .render_rtfplot(ct, writable_w))
     }
@@ -390,4 +403,24 @@
     })
   }
   out
+}
+
+# A table placed with page_break = FALSE runs on where it begins; Word (and
+# LibreOffice) carry what does not fit to the next page, and draw its column
+# header there again when the header rows say \trhdr.  The table's first
+# header rows -- its spanning row and its label rows, the first section's of
+# a table of several data frames -- get it.
+.flow_header_rows_repeat <- function(rows, tbl) {
+  heads <- if (!is.null(tbl$data_list)) {
+    tbl$col_header_list[[1L]] %||% list(names(tbl$data_list[[1L]]))
+  } else {
+    tbl$col_header %||% list(names(tbl$data))
+  }
+  n <- length(heads) + !is.null(tbl$spanning_header)
+  start <- .load_rtf_commands()$table$row_start
+  at <- which(startsWith(rows, start))[seq_len(n)]
+  at <- at[!is.na(at)]
+  rows[at] <- paste0(start, .load_rtf_commands()$table$header_repeat,
+                     substring(rows[at], nchar(start) + 1L))
+  rows
 }

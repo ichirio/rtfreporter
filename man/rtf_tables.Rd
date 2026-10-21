@@ -41,6 +41,7 @@ rtf_tables(
   title_label_align = "left",
   read_gt = FALSE,
   page_break = TRUE,
+  fit = FALSE,
   min_rows = 3L,
   space_before = 0L,
   cont_title = NULL
@@ -134,30 +135,45 @@ table through \code{\link[=as_rtftables]{as_rtftables()}}, which reads its label
 and source notes, and place the pages it returns here.}
 
 \item{page_break}{\code{TRUE} (the default): each table begins a new page.
-\code{FALSE}: a table begins on what is left of the page the content before
-it ends on -- a listing under its summary table -- and what does not fit
-goes on the next pages, the column headers drawn again.  One value for
-every table, or one each.  A table's own later pages (a plan's, or
-\code{\link[=as_rtftables]{as_rtftables()}}'s) always begin a page; so does the document's first
-content.  Unlike reporter's \code{add_content(page_break = )} this is the
-break \emph{before} the table.  A table that goes on the page before it
-opens no section of its own (\code{auto_section}): \code{auto_title} names it.
-\code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the pages as printed.}
+\code{FALSE}: a table goes on under the content before it, on the page that
+one ends on -- a listing under its summary table.  Nothing is measured:
+what does not fit, Word (or another reader) carries to the next page,
+the column header drawn again there (its header rows are marked to
+repeat, RTF's header-row mark); fitting a page is the program's to arrange
+(\code{max_rows}, widths, font size).  One value for every table, or one
+each.  A table's own later pages (a plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s)
+always begin a page; so does the document's first content.  Unlike
+reporter's \code{add_content(page_break = )} this is the break \emph{before} the
+table.  A table that goes on the page before it opens no section of
+its own (\code{auto_section}): \code{auto_title} names it.
 
-\item{min_rows}{With \code{page_break = FALSE}, the fewest body rows left on
-the page before: fewer than that and the table begins a new page.}
+What the reader carries over is the table alone: its title and
+footnote are not repeated on the page it runs on to, and the page
+header and footer are the section's -- a static \code{{PAGE}} /
+\code{{TOTAL_PAGES}} counts the pages as written, not the ones the reader
+adds; use \code{{AUTO_PAGE}} / \code{{AUTO_TOTAL_PAGES}} (the reader's own
+numbers) in a document whose tables run on.  \code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the pages as written.}
+
+\item{fit}{With \code{page_break = FALSE}, \code{TRUE} to estimate whether the
+table fits what is left of the page (its title, header, rows -- their
+wrapping text -- and footnote, from the page's height, with a margin of
+\code{getOption("rtfreporter.flow.safety_rows", 1)} rows): if it does not,
+its rows that fit stay and the rest begins the next page, its title,
+header and footnote written again (\code{min_rows}, \code{cont_title}).  An
+estimate, on the side of a new page; only a table's first page is
+cut, so that page's next one is shorter.  \code{FALSE} (the default): no
+estimate.}
+
+\item{min_rows}{With \code{fit = TRUE}, the fewest body rows left on the page
+before: fewer than that and the table begins a new page.}
 
 \item{space_before}{With \code{page_break = FALSE}, empty lines between the
 content before and this table (0: the title's own blank line alone).}
 
-\item{cont_title}{With \code{page_break = FALSE}, a line added under the
-title where a table cut at the end of that page goes on
-(\code{"(continued)"}); \code{NULL}: none.  Not \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cont_label},
-which marks a group cut across pages.  Where a table fits is estimated
-from the page's height and the rows' (their wrapping text, the header
-and footer rows, a margin of \code{getOption("rtfreporter.flow.safety_rows", 1)} rows); Word lays the page out, so the estimate errs on the side of
-a new page.  Only a table's first page goes on the page before it: one
-cut there has a shorter next page.}
+\item{cont_title}{With \code{fit = TRUE}, a line added under the title where a
+table cut at the end of the page goes on (\code{"(continued)"}); \code{NULL}:
+none.  Not \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cont_label}, which marks a group cut
+across pages.}
 }
 \value{
 Modified rtf_document with appended contents.
