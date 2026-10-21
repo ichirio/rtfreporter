@@ -1,5 +1,11 @@
 # rtfreporter (development version)
 
+- **Tests: coverage raised from 95.5% to 95.8%; spelling wordlist**
+  (#699, 0.8.2.9087).  New tests for the least-covered exported functions,
+  and `inst/WORDLIST` takes the words `spelling` flagged.  One fix they
+  found: `style_header()` on a table of several data frames restyled only
+  the first frame's header; every frame sharing that header now takes it.
+
 - **`plan_stat_groups()` tables pick a cell's template per record**
   (0.8.2.9086).  A split variable's record takes its group's template
   before a context's or kind's, and a record gone whole to `.others` its
