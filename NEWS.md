@@ -1,5 +1,20 @@
 # rtfreporter (development version)
 
+- **`plan_total(direction = )`: a shift table's Total row and corner**
+  (0.8.2.9088).  `direction = "rows"` / `"both"` places cards' plain
+  margins in the body: with the cells `ard_tabulate(adlb, variables =
+  ATOXGR, by = c(PARAM, BTOXGR))`, the column key tabulated by the row keys
+  (`variables = BTOXGR, by = PARAM`) is each column's Total row, and a row
+  key's own (`variables = PARAM`) the corner -- the ARD in ADaM's values,
+  no Total level made in the data, no rewriting of `variable`.  The
+  header's `{n}` is read as before.  `"cols"`, the default, is the Total
+  column as before.
+- **`table_plan(label = c(label = c(f1, f2)))` stops with what to write**:
+  `c()` numbers a name given around a vector of formulas (`label1`,
+  `label2`), which then failed deep in the header (`invalid 'times'
+  argument`); the message gives `label = c(is.na(.label) ~ "Total", ~
+  "{.label}")`.
+
 - **Tests: coverage raised from 95.5% to 95.8%; spelling wordlist**
   (#699, 0.8.2.9087).  New tests for the least-covered exported functions,
   and `inst/WORDLIST` takes the words `spelling` flagged.  One fix they
