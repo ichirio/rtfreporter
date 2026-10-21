@@ -74,7 +74,12 @@ plan_row_group(.plan, mode = NULL, collapse = NULL, group_col = NULL)
 
 plan_nest(.plan, ...)
 
-plan_total(.plan, label = "Total", position = c("last", "first"))
+plan_total(
+  .plan,
+  label = "Total",
+  position = c("last", "first"),
+  direction = c("cols", "rows", "both")
+)
 
 plan_filter(.plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL)
 
@@ -566,7 +571,20 @@ with no \code{AESEV} (an AE's count at any grade, \code{"Any grade"}), placed
 among that arm's grades; records with no \code{TRTA} either make no column.
 Only the body's
 analyses are read: a test or a difference has no column key either,
-and is \code{plan_compare()}'s.  For \code{plan_compare()}, \code{position} is where
+and is \code{plan_compare()}'s.}
+
+\item{direction}{For \code{plan_total()}: the Total \strong{column} (\code{"cols"}, the
+default, as above), the Total \strong{row} (\code{"rows"}) or both (\code{"both"}) --
+a shift table's margins.  A Total row is read from cards' tabulations
+of a key without the body's variable: with the cells
+\code{ard_tabulate(adlb, variables = ATOXGR, by = c(PARAM, BTOXGR))}, the
+column key tabulated by the row keys (\verb{variables = BTOXGR, by = PARAM})
+is each column's Total row, and a row key's own (\code{variables = PARAM})
+the corner, the Total row's Total column.  \code{\link[=normalize_ard]{normalize_ard()}} marks
+them as a key's own tabulation; \code{plan_total()} places them in the body
+of its one analysis variable, labelled \code{label}, last or first
+(\code{position}).  The header's \code{{n}} is read as before.
+For \code{plan_compare()}, \code{position} is where
 its columns go: after the column key's (\code{"last"}) or before them
 (\code{"first"}).  For \code{plan_empty()}, \code{position} is where its row goes:
 \code{"last"} (after the rows: the overall row's 0 stays), \code{"first"} or

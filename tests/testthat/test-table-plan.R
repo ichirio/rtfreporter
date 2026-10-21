@@ -3701,3 +3701,106 @@ test_that("no cols: one column, All, when the ARD has no group; its N the ARD's 
                    rows = c(soc = "AESOC", pt = "AEDECOD"))
   expect_error(suppressMessages(plan_apply(p3, "table")), "the ARD has .TRTA. to spread")
 })
+
+# ---------------------------------- a shift table's margins (plan_total(direction))
+
+# subjects x parameter x direction, baseline and worst grade (the ADaM values)
+shift_ard <- function(two_cols = FALSE) {
+  set.seed(15)
+  adsl <- data.frame(USUBJID = sprintf("S%03d", 1:29), TRTA = rep(c("A", "B"), length.out = 29))
+  g <- function(n) factor(sample(as.character(c(0, 0, 0, 1:4)), n, TRUE), levels = as.character(0:4))
+  x <- expand.grid(USUBJID = adsl$USUBJID, PARAM = c("Albumin", "Potassium"),
+                   ATOXDIR = c("Low", "High"), stringsAsFactors = FALSE)
+  x <- x[!(x$PARAM == "Albumin" & x$ATOXDIR == "High"), ]
+  x$PARAM <- factor(x$PARAM, levels = c("Albumin", "Potassium"))
+  x$ATOXDIR <- factor(x$ATOXDIR, levels = c("Low", "High"))
+  x$BTOXGR <- g(nrow(x))
+  x$ATOXGR <- g(nrow(x))
+  x$TRTA <- adsl$TRTA[match(x$USUBJID, adsl$USUBJID)]
+  st <- everything() ~ c("n", "p")
+  by0 <- if (two_cols) "TRTA" else character(0)
+  cards::bind_ard(
+    cards::ard_total_n(adsl),
+    cards::ard_tabulate(x, variables = ATOXGR, by = c(by0, "PARAM", "ATOXDIR", "BTOXGR"),
+                        denominator = adsl, statistic = st),
+    cards::ard_tabulate(x, variables = ATOXGR, by = c(by0, "PARAM", "ATOXDIR"), denominator = adsl, statistic = st),
+    cards::ard_tabulate(x, variables = BTOXGR, by = c(by0, "PARAM", "ATOXDIR"), denominator = adsl, statistic = st),
+    cards::ard_tabulate(x, variables = ATOXDIR, by = c(by0, "PARAM"), denominator = adsl, statistic = st))
+}
+shift_plan <- function(nd, cols = "BTOXGR", ...) {
+  table_plan(nd, cols = cols, rows = c(LAB = ~ "{PARAM} - {ATOXDIR}"),
+             label = c(is.na(.label) ~ "Total", ~ "{.label}")) |>
+    plan_cells("{n:.0f} ({p:.1f%})", notes = FALSE) |>
+    plan_total(label = "Total", ...)
+}
+
+test_that("plan_total(direction = \"both\"): a shift table's Total row and corner from cards' plain margins", {
+  skip_if_not_installed("cards")
+  nd <- normalize_ard(shift_ard())
+  # the workaround it replaces: the margins rewritten as the body's variable
+  nd2 <- nd
+  m <- nd2$.key_own %in% TRUE & nd2$variable %in% c("BTOXGR", "ATOXDIR")
+  nd2$variable[m] <- "ATOXGR"
+  nd2$.label[m] <- NA_character_
+  nd2$.key_own[m] <- FALSE
+  nd2$.kind[m] <- nd2$.kind[!m & nd2$variable == "ATOXGR"][1L]
+  nd2$.label_order[m] <- max(nd2$.label_order, na.rm = TRUE) + 1
+  old <- shift_plan(nd2)
+  new <- shift_plan(nd, direction = "both")
+  t_new <- as.data.frame(plan_apply(new, "table"))
+  expect_identical(t_new, as.data.frame(plan_apply(old, "table")))
+  alb <- t_new[t_new$LAB == "Albumin - Low", ]
+  expect_identical(as.character(alb$label), c(as.character(0:4), "Total"))
+  expect_identical(alb$Total[6L], "29 (100.0)")              # the corner
+  expect_identical(nrow(t_new), 4L * 6L)   # four blocks of six (Albumin - High: n = 0, the factors)
+  # the RTF, byte for byte
+  op <- options(rtfreporter.render_time = as.POSIXct("2026-01-01 09:00", tz = "UTC"))
+  on.exit(options(op), add = TRUE)
+  f1 <- tempfile(fileext = ".rtf"); f2 <- tempfile(fileext = ".rtf")
+  on.exit(unlink(c(f1, f2)), add = TRUE)
+  generate_rtfreport(rtf_document() |> rtf_tables(old), f1, overwrite = TRUE)
+  generate_rtfreport(rtf_document() |> rtf_tables(new), f2, overwrite = TRUE)
+  expect_identical(unname(tools::md5sum(f1)), unname(tools::md5sum(f2)))
+  # the header's N as before
+  expect_identical(plan_n_candidates(new), plan_n_candidates(shift_plan(nd)))
+  # "rows": the Total row, no Total column
+  r <- as.data.frame(plan_apply(shift_plan(nd, direction = "rows"), "table"))
+  expect_false("Total" %in% names(r))
+  expect_identical(as.character(r$label[r$LAB == "Albumin - Low"]), c(as.character(0:4), "Total"))
+  # first
+  f <- as.data.frame(plan_apply(shift_plan(nd, direction = "both", position = "first"), "table"))
+  expect_identical(as.character(f$label[f$LAB == "Albumin - Low"]), c("Total", as.character(0:4)))
+  expect_identical(names(f)[3L], "Total")
+  # the default writes no direction: the plan as before
+  expect_null(.plan_merge(.plan_of(shift_plan(nd), "total"))$direction)
+})
+
+test_that("plan_total(direction = ): two column keys; one analysis variable; margins needed", {
+  skip_if_not_installed("cards")
+  nd <- normalize_ard(shift_ard(two_cols = TRUE))
+  t <- as.data.frame(plan_apply(shift_plan(nd, cols = c("TRTA", "BTOXGR"), direction = "both"), "table"))
+  expect_true(all(c("A____Total", "B____Total") %in% names(t)))
+  alb <- t[t$LAB == "Albumin - Low", ]
+  expect_identical(as.character(alb$label[6L]), "Total")
+  expect_match(alb$A____Total[6L], "^[0-9]+ \\(")              # each arm's corner
+  # a second analysis variable in the body: which one's margins is not said
+  two <- normalize_ard(cards::bind_ard(shift_ard(), cards::ard_tabulate(
+    data.frame(SEX = c("F", "M"), BTOXGR = factor(c("0", "1"), levels = as.character(0:4))),
+    variables = SEX, by = BTOXGR)))
+  expect_error(plan_apply(shift_plan(two, direction = "both"), "table"), "one analysis\\s+variable")
+  # no margins in the ARD
+  cells <- normalize_ard(cards::ard_tabulate(
+    data.frame(BTOXGR = factor(c("0", "1")), ATOXGR = factor(c("1", "1"))),
+    variables = ATOXGR, by = BTOXGR))
+  expect_error(plan_apply(table_plan(cells, cols = "BTOXGR") |> plan_total(direction = "rows"), "table"),
+               "no margins")
+  expect_error(plan_total(table_plan(cells, cols = "BTOXGR"), direction = "down"), "should be one of")
+})
+
+test_that("table_plan(label = c(label = c(...))): c() numbered the formulas, said", {
+  skip_if_not_installed("cards")
+  nd <- normalize_ard(shift_ard())
+  expect_error(table_plan(nd, cols = "BTOXGR", rows = c(LAB = ~ "{PARAM} - {ATOXDIR}"),
+                          label = c(label = c(is.na(.label) ~ "Total", ~ "{.label}"))),
+               "label = c\\(is.na")
+})

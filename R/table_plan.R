@@ -729,6 +729,21 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
 # and `label = NA` says there is no label column at all.
 .plan_check_roles <- function(data, roles) {
   if (!is.data.frame(data)) return(invisible(TRUE))
+  # `label = c(label = c(f1, f2))`: c() names the formulas label1, label2 --
+  # a chain of guards written inside a name it cannot keep
+  lb <- roles[["label"]]
+  if (is.list(lb) && length(lb) > 1L &&
+      all(vapply(lb, inherits, logical(1L), what = "formula")) &&
+      !is.null(names(lb)) && all(grepl("^[A-Za-z._][A-Za-z0-9._]*[0-9]+$", names(lb))) &&
+      length(unique(sub("[0-9]+$", "", names(lb)))) == 1L) {
+    .ard_stop(sprintf(paste0(
+      "table_plan(label = ): %s is a named list of formulas (%s): c() numbers a name ",
+      "it is given around a vector.\n",
+      "  Write the chain itself: label = c(is.na(.label) ~ \"Total\", ~ \"{.label}\") ",
+      "(its column is \"label\")."),
+      sQuote(paste0("c(", sub("[0-9]+$", "", names(lb)[1L]), " = c(...))")),
+      paste(names(lb), collapse = ", ")))
+  }
   nm <- names(data)
   for (r in c("cols", "rows", "label", "variable", "stat_name", "stat")) {
     v <- roles[[r]]
@@ -1456,7 +1471,19 @@ print.table_plan <- function(x, ...) {
 #'   among that arm's grades; records with no `TRTA` either make no column.
 #'   Only the body's
 #'   analyses are read: a test or a difference has no column key either,
-#'   and is `plan_compare()`'s.  For `plan_compare()`, `position` is where
+#'   and is `plan_compare()`'s.
+#' @param direction For `plan_total()`: the Total **column** (`"cols"`, the
+#'   default, as above), the Total **row** (`"rows"`) or both (`"both"`) --
+#'   a shift table's margins.  A Total row is read from cards' tabulations
+#'   of a key without the body's variable: with the cells
+#'   `ard_tabulate(adlb, variables = ATOXGR, by = c(PARAM, BTOXGR))`, the
+#'   column key tabulated by the row keys (`variables = BTOXGR, by = PARAM`)
+#'   is each column's Total row, and a row key's own (`variables = PARAM`)
+#'   the corner, the Total row's Total column.  [normalize_ard()] marks
+#'   them as a key's own tabulation; `plan_total()` places them in the body
+#'   of its one analysis variable, labelled `label`, last or first
+#'   (`position`).  The header's `{n}` is read as before.
+#'   For `plan_compare()`, `position` is where
 #'   its columns go: after the column key's (`"last"`) or before them
 #'   (`"first"`).  For `plan_empty()`, `position` is where its row goes:
 #'   `"last"` (after the rows: the overall row's 0 stays), `"first"` or
@@ -2075,13 +2102,17 @@ plan_nest <- function(.plan, ...) {
 # the label is the table's.
 #' @rdname plan_verbs
 #' @export
-plan_total <- function(.plan, label = "Total", position = c("last", "first")) {
+plan_total <- function(.plan, label = "Total", position = c("last", "first"),
+                       direction = c("cols", "rows", "both")) {
   if (!is.character(label) || length(label) != 1L || is.na(label) ||
       !nzchar(label)) {
     .ard_stop("plan_total(label = ) is one text, the column's heading: \"Total\".")
   }
   position <- match.arg(position)
-  .plan_layer(.plan, "total", list(label = label, position = position))
+  direction <- match.arg(direction)
+  # (the default as before, byte for byte: no `direction` in the layer)
+  .plan_layer(.plan, "total", c(list(label = label, position = position),
+                                if (!identical(direction, "cols")) list(direction = direction)))
 }
 
 # Rows dropped by a condition over the record -- `p >= 0.05` in any arm --
@@ -2872,6 +2903,9 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (!length(cols)) {
     .ard_stop("plan_total(): a Total column is read for a column key; this table has no cols.")
   }
+  dir <- tt$direction %||% "cols"
+  if (dir %in% c("rows", "both")) d <- .plan_total_margins(plan, d, tt, cols)
+  if (identical(dir, "rows")) return(d)
   # the innermost column key is the one folded: with cols = c(TRTA, AESEV),
   # each arm's records with no AESEV make that arm's total column; records
   # with no TRTA either are no column of this table
@@ -2910,6 +2944,60 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   d[[cols]] <- if (is.factor(k)) {
     factor(x, levels = .plan_total_levels(levels(k), tt))
   } else x
+  d
+}
+
+# plan_total(direction = "rows" / "both"): the margins of a shift table --
+# a tabulation of a key of the table (BTOXGR by PARAM; ATOXDIR by PARAM),
+# the body's analysis variable (ATOXGR) left out -- become the body's Total
+# row, last (or first) in each block.  normalize_ard() marks them as the
+# key's own tabulation; their shape says what they are: a key-own record
+# whose variable is a key of this table.  A record with no value of the
+# column key as well (ATOXDIR by PARAM) is then the Total row's Total
+# column, folded as any overall record.
+.plan_total_margins <- function(plan, d, tt, cols) {
+  own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else rep(FALSE, nrow(d))
+  v <- if ("variable" %in% names(d)) as.character(d$variable) else rep(NA_character_, nrow(d))
+  # the table's keys: its column keys and the columns its row keys read
+  # (a name, or a template's {column})
+  rk <- unlist(lapply(plan$roles$rows %||% list(), function(r) {
+    if (inherits(r, "formula")) {
+      tx <- paste(deparse(r[[length(r)]]), collapse = "")
+      m <- regmatches(tx, gregexpr("\\{[A-Za-z.][A-Za-z0-9._]*", tx))[[1L]]
+      sub("^\\{", "", m)
+    } else as.character(r)
+  }), use.names = FALSE)
+  keys <- setdiff(unique(c(cols, rk)), c("variable", ".label", "variable_level"))
+  m <- own & v %in% keys
+  if (!any(m)) {
+    .ard_stop(sprintf(paste0(
+      "plan_total(direction = \"%s\"): the ARD has no margins -- a key's tabulation ",
+      "without the body's variable.\n",
+      "  Ask cards for them: ard_tabulate(data, variables = %s, by = <the row keys>), ",
+      "and the row keys' own for the corner."), tt$direction, cols[length(cols)]))
+  }
+  # the body's analysis variable: the one the cells are of
+  body <- unique(v[!own & !is.na(v) & !(v %in% "..ard_total_n..")])
+  if (length(body) != 1L) {
+    .ard_stop(sprintf(paste0(
+      "plan_total(direction = \"%s\"): a Total row is the margin of one analysis ",
+      "variable; this table has %d (%s)."), tt$direction, length(body),
+      paste(sQuote(body), collapse = ", ")))
+  }
+  d$variable[m] <- body
+  if (".label" %in% names(d)) d$.label[m] <- tt$label
+  if ("variable_level" %in% names(d)) {
+    d$variable_level[m] <- if (is.list(d$variable_level)) list(NULL) else NA
+  }
+  if (".kind" %in% names(d)) d$.kind[m] <- d$.kind[!own & v %in% body][1L]
+  if (".label_order" %in% names(d)) {
+    lo <- d$.label_order[!m]
+    lo <- lo[!is.na(lo)]
+    d$.label_order[m] <- if (identical(tt$position, "first")) {
+      (if (length(lo)) min(lo) else 0) - 1
+    } else (if (length(lo)) max(lo) else 0) + 1
+  }
+  d$.key_own[m] <- FALSE
   d
 }
 
