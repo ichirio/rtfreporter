@@ -2655,6 +2655,43 @@ test_that("plan_stat_groups(): one record's N in one column, its rate and CI in 
   expect_error(plan_stat_groups(table_plan(d, cols = "TRT"), a = character()), "names no statistic")
 })
 
+test_that("plan_stat_groups() columns: the header reads each arm's N over its columns (#709)", {
+  skip_if_not_installed("cards")
+  skip_if_not_installed("cardx")
+  skip_if_not_installed("broom", minimum_version = "1.0.8")
+  adsl <- cards::ADSL
+  adsl$RESP <- factor(ifelse(adsl$AGE > 75, "Y", "N"), levels = c("Y", "N"))
+  ard <- cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = ARM),
+    cards::ard_strata(adsl, .by = ARM, .f = function(.x)
+      cardx::ard_categorical_ci(.x, variables = RESP, value = RESP ~ "Y")))
+  nd <- normalize_ard(ard)
+  arm_n <- c(Placebo = 86, "Xanomeline High Dose" = 84, "Xanomeline Low Dose" = 84)
+  p <- table_plan(nd, cols = c("ARM", ".stat_group")) |>
+    plan_stat_groups("n (%)" = c("n", "estimate"), "95% CI" = c("conf.low", "conf.high"),
+                     .variables = "RESP") |>
+    plan_cells("n (%)" = "{n} ({estimate:.1f%})", "95% CI" = "{conf.low:.1f%}, {conf.high:.1f%}") |>
+    plan_col_header(header = data.frame(line = c("1", "2"), cols = c(".values", ".values"),
+                                        span = c("ARM", "each"),
+                                        text = c("{col1} (N={n1})", "{col} {n}")))
+  tk <- plan_header_tokens(p)
+  expect_true(all(tk$resolved[startsWith(tk$token, "{n")]))
+  # each arm's N; each of its columns the arm's too; the total counts each arm once
+  n <- tk$values[tk$token == "{n}"][[1L]]
+  expect_identical(unname(n[names(arm_n)]), unname(arm_n))
+  expect_identical(unname(n[["Placebo____95% CI"]]), 86)
+  expect_identical(tk$values[tk$token == "{n:sum}"][[1L]], sum(arm_n))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  expect_no_warning(suppressMessages(generate_rtfreport(rtf_tables(rtf_document(), p), f,
+                                                        overwrite = TRUE)))
+  txt <- paste(readLines(f, warn = FALSE), collapse = " ")
+  expect_true(grepl("Placebo (N=86)", txt, fixed = TRUE))
+  expect_true(grepl("Xanomeline Low Dose (N=84)", txt, fixed = TRUE))
+  expect_true(grepl("95% CI 84", txt, fixed = TRUE))
+  expect_false(grepl("N=NA", txt, fixed = TRUE))
+})
+
 test_that("plan_stat_groups() x cell_rows(): n rows x m columns of one record, on cols or rows (#619)", {
   skip_if_not_installed("cards")
   skip_if_not_installed("cardx")
