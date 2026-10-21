@@ -151,3 +151,48 @@ test_that("a row's wrapping text counts its lines", {
   expect_gt(.flow_table_heights(rtftable(long), m)$body,
             2 * .flow_table_heights(rtftable(short), m)$body)
 })
+
+# ---- phase 2: figures --------------------------------------------------------
+
+.fl_png <- function(w, h) {
+  f <- tempfile(fileext = ".png")
+  grDevices::png(f, width = w, height = h)
+  graphics::plot(1)
+  grDevices::dev.off()
+  f
+}
+
+test_that("rtf_figures(page_break = FALSE): a figure under the table when the page holds it", {
+  png_path <- .fl_png(400, 300)
+  on.exit(unlink(png_path), add = TRUE)
+  doc <- rtf_document() |>
+    rtf_tables(list(.fl_df(5)), titles = list("Table 1")) |>
+    rtf_figures(list(rtfplot(png_path, width_twips = 4000L)), titles = list("Figure 1"),
+                page_break = FALSE)
+  pg <- .fl_pages(doc)
+  expect_length(pg, 1L)
+  expect_true(inherits(pg[[1L]]$blocks[[2L]]$content, "rtfplot"))
+  txt <- .render_to_string(doc)
+  expect_identical(.fl_count(txt, .fl_page_cmd), 0L)
+  pict <- regexpr(paste0(intToUtf8(92), "pict"), txt, fixed = TRUE)
+  expect_gt(pict, regexpr("Item 05", txt, fixed = TRUE))
+  expect_gt(pict, regexpr("Figure 1", txt, fixed = TRUE))
+})
+
+test_that("a figure the page cannot hold begins the next page: a figure is not cut", {
+  png_path <- .fl_png(400, 300)
+  on.exit(unlink(png_path), add = TRUE)
+  doc <- rtf_document() |>
+    rtf_tables(list(.fl_df(30))) |>
+    rtf_figures(list(rtfplot(png_path, width_twips = 9000L)), page_break = FALSE)
+  pg <- .fl_pages(doc)
+  expect_length(pg, 2L)
+  expect_null(pg[[2L]]$blocks)
+  expect_true(inherits(pg[[2L]]$content, "rtfplot"))
+  # two figures, the second under the first when both fit
+  small <- rtfplot(png_path, width_twips = 2000L)
+  d2 <- rtf_document() |> rtf_figures(list(small, small), page_break = FALSE)
+  expect_length(.fl_pages(d2), 1L)
+  expect_error(rtf_figures(rtf_document(), list(small, small), page_break = c(TRUE, FALSE, TRUE)),
+               "rtf_figures(): `page_break`", fixed = TRUE)
+})

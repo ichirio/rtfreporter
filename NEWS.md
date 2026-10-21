@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **`rtf_figures(page_break = FALSE)`: a figure under the content before
+  it** (0.8.2.9092; flow placement, phase 2).  It goes on what is left of
+  that page when the page holds its title, image and footnote, else it
+  begins the next page -- a figure is not cut.  `space_before` as
+  `rtf_tables()`'s.  `page_break = TRUE`, the default, writes every
+  document as before.
+
 - **`rtf_tables(page_break = FALSE)`: a table on what is left of the page
   before it** (0.8.2.9091; flow placement, phase 1: tables).  A listing
   goes under its summary table, its first rows on the summary's page and

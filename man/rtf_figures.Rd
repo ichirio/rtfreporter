@@ -11,7 +11,9 @@ rtf_figures(
   height_twips = NULL,
   align = "center",
   titles = NULL,
-  footnotes = NULL
+  footnotes = NULL,
+  page_break = TRUE,
+  space_before = 0L
 )
 }
 \arguments{
@@ -39,6 +41,16 @@ image's aspect ratio gives.}
 \item{titles, footnotes}{Optional lists of length \code{length(figures)} or
 length 1 (common to all figures). See \code{\link[=rtf_tables]{rtf_tables()}} for the block
 structure (character vectors or per-row styled lists).}
+
+\item{page_break}{\code{TRUE} (the default): each figure begins a new page.
+\code{FALSE}: a figure goes under the content before it when what is left of
+that page holds it -- its title, the image and its footnote -- else it
+begins the next page (a figure is not cut).  One value for every
+figure, or one each; the document's first content always begins a
+page.  As \code{\link[=rtf_tables]{rtf_tables()}}'s \code{page_break}.}
+
+\item{space_before}{With \code{page_break = FALSE}, empty lines between the
+content before and this figure.}
 }
 \value{
 Modified rtf_document with appended figure contents.
