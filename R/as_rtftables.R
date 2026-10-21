@@ -482,6 +482,11 @@
 #'
 #'   The substitution happens before the split, so the `NA`s `collapse_repeats`
 #'   writes per page to blank out repeated values stay blank.
+#' @param first_rows The rows of the first page, the rest paginated as the
+#'   other arguments say (`max_rows`, `split`): the page a table shares with
+#'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  `NULL`
+#'   (the default): the first page as the others.  Not with `page_by`,
+#'   `split = "by_value"` or a custom `split`.
 #' @param collapse_repeats Columns in which to blank **consecutive repeated
 #'   values** (repeat suppression), or `NULL` (default, off).  A character /
 #'   integer vector naming the columns in priority order.  Within each column,
@@ -791,6 +796,7 @@ as_rtftables.default <- function(x,
                          table_width_twips = NULL,
                          border          = "tfl",
                          style           = NULL,
+                         first_rows      = NULL,
                          ...) {
   # `split` is a built-in strategy name OR a custom pagination function.
   #
@@ -1148,7 +1154,7 @@ as_rtftables.default <- function(x,
       blank_ignore = names(body)[drop_idx],
       align_count_pct = align_count_pct, cell_format = cell_format, na = na,
       collapse_repeats = collapse_repeats,
-      collapse_record = listing_record)
+      collapse_record = listing_record, first_rows = first_rows)
     page_names <- names(pages)
 
     out <- lapply(seq_along(pages), function(i) {

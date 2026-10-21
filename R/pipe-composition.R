@@ -430,28 +430,36 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   table through [as_rtftables()], which reads its labels, alignment, titles
 #'   and source notes, and place the pages it returns here.
 #' @param page_break `TRUE` (the default): each table begins a new page.
-#'   `FALSE`: a table begins on what is left of the page the content before
-#'   it ends on -- a listing under its summary table -- and what does not fit
-#'   goes on the next pages, the column headers drawn again.  One value for
-#'   every table, or one each.  A table's own later pages (a plan's, or
-#'   [as_rtftables()]'s) always begin a page; so does the document's first
-#'   content.  Unlike reporter's `add_content(page_break = )` this is the
-#'   break *before* the table.  A table that goes on the page before it
-#'   opens no section of its own (`auto_section`): `auto_title` names it.
-#'   [rtf_section()]`(page = n)` counts the pages as printed.
-#' @param min_rows With `page_break = FALSE`, the fewest body rows left on
-#'   the page before: fewer than that and the table begins a new page.
+#'   `FALSE`: a table goes on under the content before it, on the page that
+#'   one ends on -- a listing under its summary table.  Nothing is measured:
+#'   what does not fit, the reader (Word, LibreOffice) carries to the next
+#'   page by itself -- with no title, no column header and no footnote
+#'   there; fitting the page is the program's to arrange.  To go on with
+#'   the title, column header and footnote on pages of its own, give
+#'   `first_rows`.  One value for every table, or one each.  A table's own
+#'   later pages (a plan's, or [as_rtftables()]'s) always begin a page; so
+#'   does the document's first content.  Unlike reporter's
+#'   `add_content(page_break = )` this is the break *before* the table.  A
+#'   table that goes on the page before it opens no section of its own
+#'   (`auto_section`): `auto_title` names it.  The page header and footer
+#'   are the section's; a static `{PAGE}` / `{TOTAL_PAGES}` counts the pages
+#'   as written, so where the reader carries a table on, use `{AUTO_PAGE}` /
+#'   `{AUTO_TOTAL_PAGES}`.  [rtf_section()]`(page = n)` counts the pages as
+#'   written.
+#' @param first_rows With `page_break = FALSE`, the rows of the table that
+#'   go on the page before it; the rest is paginated as the table says --
+#'   a plan's `plan_paginate_rows(max_rows = , split = )` -- each page with
+#'   its title, column header and footnote.  The program counts what fits:
+#'   rtfreporter does not measure the page.  `tables` is then one table: a
+#'   [table_plan()], a data frame (its rest one page; for `max_rows` give
+#'   [as_rtftables()]`(first_rows = )` the pages) or an [rtftable()] (cut
+#'   there, its rest one page).  `NULL` (the default): the whole table goes
+#'   on.
 #' @param space_before With `page_break = FALSE`, empty lines between the
 #'   content before and this table (0: the title's own blank line alone).
-#' @param cont_title With `page_break = FALSE`, a line added under the
-#'   title where a table cut at the end of that page goes on
-#'   (`"(continued)"`); `NULL`: none.  Not [as_rtftables()]'s `cont_label`,
-#'   which marks a group cut across pages.  Where a table fits is estimated
-#'   from the page's height and the rows' (their wrapping text, the header
-#'   and footer rows, a margin of `getOption("rtfreporter.flow.safety_rows",
-#'   1)` rows); Word lays the page out, so the estimate errs on the side of
-#'   a new page.  Only a table's first page goes on the page before it: one
-#'   cut there has a shorter next page.
+#' @param cont_title With `first_rows`, a line under the title of each page
+#'   after the shared one (`"(continued)"`); `NULL`: none.  Not
+#'   [as_rtftables()]'s `cont_label`, which marks a group cut across pages.
 #'
 #' @return Modified rtf_document with appended contents.
 #'
@@ -512,7 +520,7 @@ rtf_tables <- function(doc, tables,
                         title_label_align = "left",
                         read_gt = FALSE,
                         page_break = TRUE,
-                        min_rows = 3L,
+                        first_rows = NULL,
                         space_before = 0L,
                         cont_title = NULL) {
   if (!inherits(doc, "rtf_document")) {
@@ -527,7 +535,17 @@ rtf_tables <- function(doc, tables,
   # A source whose package registered an as_rtftables() method becomes its
   # pages here, so rtf_tables(doc, x) reads like every other source.
   expanded <- .has_rtftables_method(tables)
-  if (expanded) tables <- as_rtftables(tables)
+  # first_rows: the table as pages, the shared page's rows first (R/flow.R)
+  if (!is.null(first_rows)) {
+    if (all(page_break)) {
+      stop("rtf_tables(): `first_rows` is the rows a table puts on the page before it: page_break = FALSE.",
+           call. = FALSE)
+    }
+    tables <- .flow_first_rows(tables, first_rows)
+    expanded <- TRUE
+  } else if (expanded) {
+    tables <- as_rtftables(tables)
+  }
 
   # Auto-wrap a single content item so callers can write rtf_tables(tbl)
   # instead of rtf_tables(list(tbl)).  data.frame is IS a list in R, so it
@@ -784,6 +802,24 @@ rtf_tables <- function(doc, tables,
     }
   }
 
+  # cont_title: a line under the title of each page after the shared one
+  # (first_rows), as auto_title adds the page name
+  if (!is.null(cont_title)) {
+    if (!is.character(cont_title) || length(cont_title) != 1L || is.na(cont_title)) {
+      stop("rtf_tables(): `cont_title` is one line of text, or NULL.", call. = FALSE)
+    }
+    if (is.null(first_rows)) {
+      stop("rtf_tables(): `cont_title` titles the pages after the shared one: give `first_rows`.",
+           call. = FALSE)
+    }
+    for (i in seq_along(tables)[-1L]) {
+      existing <- titles[[i]]
+      rows <- if (is.null(existing)) list() else if (is.list(existing)) existing
+              else as.list(existing)
+      titles[[i]] <- c(rows, list(list(text = cont_title, align = "left")))
+    }
+  }
+
   # Create copy and append
   doc_copy <- doc
   doc_copy$contents  <- c(doc_copy$contents,  tables)
@@ -791,8 +827,7 @@ rtf_tables <- function(doc, tables,
   doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
   # (page_break = FALSE: the pages' placement, beside them -- see R/flow.R)
   .flow_placement_append(doc_copy, length(tables), .flow_item_start(tables, expanded),
-                         page_break = page_break, min_rows = min_rows,
-                         space_before = space_before, cont_title = cont_title)
+                         page_break = page_break, space_before = space_before)
 }
 
 #' Add figure content to document
@@ -822,11 +857,11 @@ rtf_tables <- function(doc, tables,
 #'   length 1 (common to all figures). See [rtf_tables()] for the block
 #'   structure (character vectors or per-row styled lists).
 #' @param page_break `TRUE` (the default): each figure begins a new page.
-#'   `FALSE`: a figure goes under the content before it when what is left of
-#'   that page holds it -- its title, the image and its footnote -- else it
-#'   begins the next page (a figure is not cut).  One value for every
-#'   figure, or one each; the document's first content always begins a
-#'   page.  As [rtf_tables()]'s `page_break`.
+#'   `FALSE`: a figure goes on under the content before it; nothing is
+#'   measured -- one that does not fit what is left of the page, the reader
+#'   moves to the next, its title left behind.  One value for every figure,
+#'   or one each; the document's first content always begins a page.  As
+#'   [rtf_tables()]'s `page_break`.
 #' @param space_before With `page_break = FALSE`, empty lines between the
 #'   content before and this figure.
 #'

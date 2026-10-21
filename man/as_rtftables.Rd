@@ -40,6 +40,7 @@ as_rtftables(x, ...)
   table_width_twips = NULL,
   border = "tfl",
   style = NULL,
+  first_rows = NULL,
   ...
 )
 }
@@ -542,6 +543,12 @@ there.}
 
 \item{border, style}{Passed to \code{\link[=rtftable]{rtftable()}} for every page.  \code{border}
 defaults to \code{"tfl"}.}
+
+\item{first_rows}{The rows of the first page, the rest paginated as the
+other arguments say (\code{max_rows}, \code{split}): the page a table shares with
+the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  \code{NULL}
+(the default): the first page as the others.  Not with \code{page_by},
+\code{split = "by_value"} or a custom \code{split}.}
 }
 \value{
 A list of \code{rtftable} objects, one per page.  When the split is

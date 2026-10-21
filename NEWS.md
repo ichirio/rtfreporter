@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+- **`page_break = FALSE` measures nothing; `first_rows` says the rows the
+  shared page takes** (0.8.2.9093).  A table or a figure with
+  `page_break = FALSE` goes on under the content before it as it is; what
+  does not fit, the reader carries to the next page by itself (no title,
+  header or footnote there) -- fitting a page is the program's to arrange.
+  `rtf_tables(page_break = FALSE, first_rows = n)` puts the table's first
+  `n` rows on the shared page and paginates the rest by the table's own
+  `max_rows` / `split` (a plan's `plan_paginate_rows()`), each page with
+  its title, column header and footnote; `cont_title` titles those pages.
+  `as_rtftables(first_rows = )` does the same for pages built there.  The
+  estimate and the cut of 0.8.2.9091 / 9092 (`min_rows`) are gone.
+  `page_break = TRUE`, the default, writes every document as before.
+
 - **`rtf_figures(page_break = FALSE)`: a figure under the content before
   it** (0.8.2.9092; flow placement, phase 2).  It goes on what is left of
   that page when the page holds its title, image and footnote, else it

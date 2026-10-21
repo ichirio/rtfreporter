@@ -2182,7 +2182,7 @@
 
   # rtf_tables(page_break = FALSE): the content pages laid out as printed
   # pages first (R/flow.R); a document without it is untouched
-  if (.flow_active(pipe_doc)) pipe_doc <- .flow_layout(pipe_doc, report)
+  if (.flow_active(pipe_doc)) pipe_doc <- .flow_layout(pipe_doc)
 
   # -- Detect auto-section items ---------------------------------------------
   has_auto_section <- any(vapply(pipe_doc$contents,
