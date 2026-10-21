@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+- **`rtf_tables(page_break = FALSE)`: a table on what is left of the page
+  before it** (0.8.2.9091; flow placement, phase 1: tables).  A listing
+  goes under its summary table, its first rows on the summary's page and
+  the rest on the next pages with the column headers again.  `min_rows`
+  (3): fewer body rows left than that and the table begins a new page;
+  `space_before`: empty lines between the two; `cont_title`: a line under
+  the title of the page a cut table goes on to (`"(continued)"`).  A
+  table's own later pages, and the document's first content, always begin
+  a page; a table that goes on the page before it opens no `auto_section`.
+  Where it fits is estimated from the page and the rows (their wrapping
+  text), on the side of a new page.  `page_break = TRUE`, the default,
+  writes every document byte for byte as before.
+
 - **The header reads each arm's N over `plan_stat_groups()` columns**
   (0.8.2.9090, #709).  A table that splits one record into several
   columns per arm (`cols = c(ARM, ".stat_group")`) left `{n}` / `{n1}`
