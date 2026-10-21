@@ -125,6 +125,11 @@ columns}, so \code{dplyr::mutate()}, \code{filter()}, \code{arrange()}, \code{bi
 break the rows is still caught -- two values arriving in one cell is an
 error, not a silent overwrite.
 
+The study total (\code{cards::ard_total_n()}, a header's \code{{n}}) is the column
+\code{.total_n} -- kept by \code{mutate()}, \code{filter()} and base \code{transform()} --
+as well as the attribute \code{"ard_total_n"}; a \code{select()} that leaves the
+column out leaves the header's \code{{n}} without it.
+
 One attribute is left, \code{"ard_ignored"}, and nothing reads it to build the
 table: it is a report about rows that are no longer in the frame, so there
 is no column it could be.  Dropping it (\code{mutate()} and \code{select()}, base

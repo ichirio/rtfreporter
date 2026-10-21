@@ -3804,3 +3804,34 @@ test_that("table_plan(label = c(label = c(...))): c() numbered the formulas, sai
                           label = c(label = c(is.na(.label) ~ "Total", ~ "{.label}"))),
                "label = c\\(is.na")
 })
+
+test_that("the study total survives a mutate() between normalize_ard() and table_plan()", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  nd <- normalize_ard(cards::bind_ard(
+    cards::ard_tabulate(adsl, by = ARM, variables = SEX),
+    cards::ard_total_n(adsl)))
+  expect_identical(unique(nd$.total_n), as.numeric(nrow(adsl)))
+  n_of <- function(d) plan_n_candidates(table_plan(d, cols = "ARM") |> plan_total())
+  before <- n_of(nd)
+  # base transform() drops the attribute; the column keeps the total
+  tr <- transform(nd, z = 1)
+  expect_null(attr(tr, "ard_total_n"))
+  expect_identical(n_of(tr), before)
+  expect_identical(before$value[is.na(before$column)], as.numeric(nrow(adsl)))
+  if (requireNamespace("dplyr", quietly = TRUE)) {
+    expect_identical(n_of(dplyr::mutate(nd, z = 1)), before)
+  }
+  # no total stated: no column
+  expect_false(".total_n" %in% names(normalize_ard(cards::ard_tabulate(adsl, by = ARM, variables = SEX))))
+})
+
+test_that("plan_n_candidates(): nothing to read is no row, not an error", {
+  skip_if_not_installed("cards")
+  d <- normalize_ard(cards::ard_summary(cards::ADSL, by = ARM, variables = AGE,
+                                         statistic = everything() ~ list(mean = mean)))
+  nc <- plan_n_candidates(table_plan(d, cols = "ARM"))
+  expect_s3_class(nc, "data.frame")
+  expect_identical(nrow(nc), 0L)
+  expect_identical(names(nc), c("scope", "page", "column", "value"))
+})

@@ -3577,7 +3577,7 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
                       as.character(d$stat_name) %in% "N" & !is.na(st)])
     if (length(tt) == 1L) return(tt)
   }
-  total <- attr(d, "ard_total_n", exact = TRUE)
+  total <- .ard_total_n_of(d)
   if (is.numeric(total) && length(total) == 1L && !is.na(total)) return(total)
   NA_real_
 }
@@ -3585,7 +3585,7 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
 .plan_n_read <- function(plan, sp, d = plan$data) {
   cols <- as.character(unlist(sp$cols, use.names = FALSE))
   sep <- sp$sep %||% "____"
-  total <- attr(d, "ard_total_n", exact = TRUE)
+  total <- .ard_total_n_of(d)
   out <- numeric(0)
   why <- character(0)
   done <- function() structure(out, total = total, why = why)
@@ -3985,7 +3985,7 @@ plan_header_tokens <- function(.plan) {
     g <- as.character(data[[page$col]])
     mine <- data[!is.na(g) & g == page$value, , drop = FALSE]
     rest <- data[is.na(g), , drop = FALSE]
-    attr(rest, "ard_total_n") <- attr(data, "ard_total_n", exact = TRUE)
+    attr(rest, "ard_total_n") <- .ard_total_n_of(data)
   }
   read <- function(scope) {
     if (is.null(page)) return(.plan_n_read(plan, sp, data))
@@ -4219,6 +4219,11 @@ plan_n_candidates <- function(.plan) {
   rows <- function(n, scope, page) {
     nm <- names(n) %||% rep("", length(n))
     tot <- attr(n, "total", exact = TRUE)
+    # no number and no total: no row (the ARD states none for these columns)
+    if (!length(n) && is.null(tot)) {
+      scope <- character(0)
+      page <- character(0)
+    }
     data.frame(scope = scope, page = page,
                column = c(nm, if (!is.null(tot)) NA_character_),
                value = c(unname(as.numeric(n)), if (!is.null(tot)) as.numeric(tot)),
@@ -4239,7 +4244,7 @@ plan_n_candidates <- function(.plan) {
   # page key, a page's from its own rows and the table's for what it lacks
   g <- as.character(data[[src]])
   rest <- data[is.na(g), , drop = FALSE]
-  attr(rest, "ard_total_n") <- attr(data, "ard_total_n", exact = TRUE)
+  attr(rest, "ard_total_n") <- .ard_total_n_of(data)
   tbl <- .plan_n_read(.plan, sp, rest)
   parts <- list()
   differ <- FALSE
