@@ -1,5 +1,14 @@
 # rtfreporter (development version)
 
+- **The study total survives a `mutate()` after `normalize_ard()`**
+  (0.8.2.9089).  The total `cards::ard_total_n()` states is now also the
+  column `.total_n`, which `dplyr::mutate()` and base `transform()` keep
+  (they drop the attribute it was only in): the header's `{n}` no longer
+  turns `NA` after reshaping the normalized frame.
+- **`plan_n_candidates()` with nothing to read returns no row** (a data
+  frame of none) instead of an internal error (`arguments imply differing
+  number of rows`).
+
 - **`plan_total(direction = )`: a shift table's Total row and corner**
   (0.8.2.9088).  `direction = "rows"` / `"both"` places cards' plain
   margins in the body: with the cells `ard_tabulate(adlb, variables =

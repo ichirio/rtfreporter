@@ -310,6 +310,19 @@
 # Read from the rows normalize_ard() drops so that a header can still
 # ask for it.  A total that is not one number is not a study total, and
 # guessing which of several it meant is exactly what this refuses to do.
+# The study total a normalized frame carries: its attribute, else its
+# `.total_n` column (which mutate(), transform() and filter() keep, as they
+# do not keep attributes); NULL when it has none.
+.ard_total_n_of <- function(d) {
+  total <- attr(d, "ard_total_n", exact = TRUE)
+  if (is.null(total) && is.data.frame(d) && ".total_n" %in% names(d)) {
+    v <- unique(suppressWarnings(as.numeric(d$.total_n)))
+    v <- v[!is.na(v)]
+    if (length(v) == 1L) total <- v
+  }
+  total
+}
+
 .ard_total_n_value <- function(x) {
   if (is.null(x) || !nrow(x)) return(NULL)
   v <- as.character(.ard_unlist_col(x[["variable"]]))
@@ -1388,6 +1401,11 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #' break the rows is still caught -- two values arriving in one cell is an
 #' error, not a silent overwrite.
 #'
+#' The study total (`cards::ard_total_n()`, a header's `{n}`) is the column
+#' `.total_n` -- kept by `mutate()`, `filter()` and base `transform()` --
+#' as well as the attribute `"ard_total_n"`; a `select()` that leaves the
+#' column out leaves the header's `{n}` without it.
+#'
 #' One attribute is left, `"ard_ignored"`, and nothing reads it to build the
 #' table: it is a report about rows that are no longer in the frame, so there
 #' is no column it could be.  Dropping it (`mutate()` and `select()`, base
@@ -1677,6 +1695,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   # column it could be.  Losing it only shortens a message.
   attr(out, "ard_ignored") <- ignored
   attr(out, "ard_total_n") <- total_n
+  # (and as a column, so a mutate() between keeps it)
+  if (!is.null(total_n) && nrow(out)) out$.total_n <- total_n
   # The class is a hint, not a requirement: widen_ard() accepts any data frame
   # of the right shape, because the whole point of the two-stage split is that
   # you may rebuild the middle however you like.  It is here so that passing a
