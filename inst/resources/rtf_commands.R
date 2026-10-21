@@ -60,9 +60,6 @@ rtf_commands <- list(
   ),
   table = list(
     row_start = "\\trowd",
-    # a header row the viewer repeats on each page the table runs on to
-    # (rtf_tables(page_break = FALSE))
-    header_repeat = "\\trhdr",
     row_end = "\\row",
     row_height_template = "\\trrh{row_height_twips}",
     # Legacy cell templates used by .render_header_footer().

@@ -13,7 +13,6 @@ rtf_figures(
   titles = NULL,
   footnotes = NULL,
   page_break = TRUE,
-  fit = FALSE,
   space_before = 0L
 )
 }
@@ -45,15 +44,10 @@ structure (character vectors or per-row styled lists).}
 
 \item{page_break}{\code{TRUE} (the default): each figure begins a new page.
 \code{FALSE}: a figure goes on under the content before it; nothing is
-measured -- a figure that does not fit the rest of that page is moved
-to the next by the reader, its title left behind.  One value for every
-figure, or one each; the document's first content always begins a
-page.  As \code{\link[=rtf_tables]{rtf_tables()}}'s \code{page_break}.}
-
-\item{fit}{With \code{page_break = FALSE}, \code{TRUE} to estimate whether the
-figure, its title and its footnote fit what is left of the page, and
-begin the next page with all of them if not (a figure is not cut).
-\code{FALSE} (the default): no estimate.}
+measured -- one that does not fit what is left of the page, the reader
+moves to the next, its title left behind.  One value for every figure,
+or one each; the document's first content always begins a page.  As
+\code{\link[=rtf_tables]{rtf_tables()}}'s \code{page_break}.}
 
 \item{space_before}{With \code{page_break = FALSE}, empty lines between the
 content before and this figure.}

@@ -1,14 +1,16 @@
 # rtfreporter (development version)
 
-- **`page_break = FALSE` measures nothing by default** (0.8.2.9093): a
-  table or a figure goes on under the content before it as it is, and the
-  reader (Word, LibreOffice) carries what does not fit to the next page --
-  fitting a page is the program's to arrange.  A table that runs on has its
-  header rows marked to repeat (RTF `\trhdr`), so the reader draws the
-  column header again on each page it continues on; its title and footnote
-  are not repeated there.  The estimate and the cut of 0.8.2.9091 / 9092
-  are now `fit = TRUE` (`min_rows`, `cont_title` with it).  Use
-  `{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}` in a document whose tables run on.
+- **`page_break = FALSE` measures nothing; `first_rows` says the rows the
+  shared page takes** (0.8.2.9093).  A table or a figure with
+  `page_break = FALSE` goes on under the content before it as it is; what
+  does not fit, the reader carries to the next page by itself (no title,
+  header or footnote there) -- fitting a page is the program's to arrange.
+  `rtf_tables(page_break = FALSE, first_rows = n)` puts the table's first
+  `n` rows on the shared page and paginates the rest by the table's own
+  `max_rows` / `split` (a plan's `plan_paginate_rows()`), each page with
+  its title, column header and footnote; `cont_title` titles those pages.
+  `as_rtftables(first_rows = )` does the same for pages built there.  The
+  estimate and the cut of 0.8.2.9091 / 9092 (`min_rows`) are gone.
   `page_break = TRUE`, the default, writes every document as before.
 
 - **`rtf_figures(page_break = FALSE)`: a figure under the content before

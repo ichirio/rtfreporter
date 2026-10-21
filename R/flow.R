@@ -1,28 +1,26 @@
 # ---------------------------------------------------------------------------
-#  Flow placement: a content on the page the one before it ends (#flow)
+#  Flow placement: a content on the page the one before it ends (#711)
 # ---------------------------------------------------------------------------
-#  rtf_tables(page_break = FALSE) puts a table on what is left of the page
-#  the previous content ends on; what does not fit goes on the next pages,
-#  their column headers drawn again.  The document keeps one entry a content
-#  page in `contents` (as rtf_tables() expands them), and beside it
-#  `placement`: each page's page_break / min_rows / space_before /
-#  cont_title.  A document with no `placement` -- every one written before
-#  this, and every one whose contents all break -- never reaches this file:
-#  .pipe_doc_to_rtfreport() and the renderer take their old paths, byte for
-#  byte.
+#  rtf_tables(page_break = FALSE) / rtf_figures(page_break = FALSE) put a
+#  content under the one before it, on the page that one ends on.  Nothing
+#  is measured: what does not fit, the reader (Word, LibreOffice) carries to
+#  the next page -- fitting a page is the program's to arrange.  A table
+#  that should go on with its title, header and footnote on pages of its
+#  own says how many of its rows the shared page takes, `first_rows`: the
+#  rest is paginated by its own `max_rows` (as_rtftables(first_rows = ),
+#  .paginate_df()).
 #
-#  .flow_layout() turns the content pages into physical pages: a page of one
-#  content stays as it was; a page of several is an `rtf_flow_page` (its
-#  blocks, first to last), which the renderer draws block after block.
-#  By default nothing is measured: a content goes on under the one before,
-#  and the reader carries what does not fit to the next page (a table's
-#  header rows marked to repeat there).  With `fit = TRUE` a content goes
-#  where its height, estimated from the page's geometry and the table's
-#  rows, says (an estimate on the safe side: Word, not this, lays the page
-#  out) -- a table cut, a figure moved to the next page.
+#  The document keeps one entry a content page in `contents` (as
+#  rtf_tables() expands them), and beside it `placement`: each page's
+#  page_break / space_before.  A document with no `placement` -- every one
+#  whose contents all break -- never reaches this file:
+#  .pipe_doc_to_rtfreport() and the renderer take their old paths, byte for
+#  byte.  .flow_layout() turns the content pages into printed pages: a page
+#  of one content stays as it was; a page of several is an `rtf_flow_page`
+#  (its blocks, first to last), which the renderer draws block after block.
 
 .flow_defaults <- function() {
-  list(page_break = TRUE, fit = FALSE, min_rows = 3L, space_before = 0L, cont_title = NULL)
+  list(page_break = TRUE, space_before = 0L)
 }
 
 # rtf_tables() / rtf_figures(): the placement of the pages just added.
@@ -30,28 +28,16 @@
 # always begin a page.  Nothing is written when every page breaks and the
 # document has no placement yet.
 .flow_placement_append <- function(doc, n_new, item_start, page_break = TRUE,
-                                   fit = FALSE, min_rows = 3L, space_before = 0L,
-                                   cont_title = NULL, fn = "rtf_tables") {
-  if (!is.logical(fit) || length(fit) != 1L || is.na(fit)) {
-    stop(sprintf("%s(): `fit` is TRUE or FALSE.", fn), call. = FALSE)
-  }
+                                   space_before = 0L, fn = "rtf_tables") {
   if (!is.logical(page_break) || anyNA(page_break) ||
       !length(page_break) %in% c(1L, n_new)) {
     stop(sprintf(paste0("%s(): `page_break` is TRUE or FALSE, one for every ",
                         "page or one each (%d)."), fn, n_new), call. = FALSE)
   }
-  if (!is.numeric(min_rows) || length(min_rows) != 1L || is.na(min_rows) ||
-      min_rows < 1 || min_rows != round(min_rows)) {
-    stop(sprintf("%s(): `min_rows` is a whole number, 1 or more.", fn), call. = FALSE)
-  }
   if (!is.numeric(space_before) || length(space_before) != 1L ||
       is.na(space_before) || space_before < 0 || space_before != round(space_before)) {
     stop(sprintf("%s(): `space_before` is a whole number of empty lines, 0 or more.", fn),
          call. = FALSE)
-  }
-  if (!is.null(cont_title) &&
-      (!is.character(cont_title) || length(cont_title) != 1L || is.na(cont_title))) {
-    stop(sprintf("%s(): `cont_title` is one line of text, or NULL.", fn), call. = FALSE)
   }
   pb <- rep_len(page_break, n_new)
   pb[!item_start] <- TRUE
@@ -59,8 +45,7 @@
   n_old <- length(doc$contents) - n_new
   if (is.null(doc$placement)) doc$placement <- rep(list(.flow_defaults()), n_old)
   new <- lapply(seq_len(n_new), function(i) {
-    list(page_break = pb[i], fit = fit, min_rows = as.integer(min_rows),
-         space_before = as.integer(space_before), cont_title = cont_title)
+    list(page_break = pb[i], space_before = as.integer(space_before))
   })
   doc$placement <- c(doc$placement, new)
   doc
@@ -86,115 +71,35 @@
   !is.null(pl) && any(!vapply(pl, function(p) isTRUE(p$page_break), logical(1L)))
 }
 
-# ---- heights ------------------------------------------------------------------
+# ---- first_rows: the rows the shared page takes -------------------------------
 
-# What the estimates read from the document: the page's body height, the
-# writable width, the font, the default row height, the title / footnote
-# forms -- resolved as the renderer resolves them.
-.flow_metrics <- function(pipe_doc, report) {
-  pg <- report$document$default_page %||% .new_rtfreport()$document$default_page
-  df <- pipe_doc$document$default_format %||% list()
-  fhp <- as.integer(df$font_size_half_points %||% .opt("rtfreporter.font_size_half_points"))
-  doc_rh <- df$row_height_twips %||% .opt("rtfreporter.row_height_twips")
-  rh <- as.integer(doc_rh %||% .default_row_height_twips(fhp))
-  hf_rows <- function(which) {
-    n <- vapply(pipe_doc$sections, function(s) {
-      h <- s[[which]]
-      if (is.null(h)) 0L else length(h$rows %||% h)
-    }, integer(1L))
-    if (length(n)) max(n) else 0L
+# rtf_tables(first_rows = ): the table as pages, its first `first_rows`
+# rows the first page and the rest paginated as the table says.  A plan
+# takes it as a pages setting (its own max_rows / split stay); a data frame
+# goes through as_rtftables(); a built rtftable is cut there, its rest one
+# page.  Pages already built (as_rtftables()'s list) are past it.
+.flow_first_rows <- function(tables, first_rows) {
+  if (!is.numeric(first_rows) || length(first_rows) != 1L || is.na(first_rows) ||
+      first_rows < 1 || first_rows != round(first_rows)) {
+    stop("rtf_tables(): `first_rows` is a whole number of rows, 1 or more.", call. = FALSE)
   }
-  safety_rows <- as.numeric(getOption("rtfreporter.flow.safety_rows", 1))
-  body <- as.numeric(pg$height_twips) - as.numeric(pg$margin_top_twips) -
-    as.numeric(pg$margin_bottom_twips) - (hf_rows("header") + hf_rows("footer")) * rh
-  body <- body - safety_rows * rh - 0.05 * body
-  pad_res <- .load_rtfreporter_defaults()
-  list(body_h = body, rh = rh, fhp = fhp, doc_rh = doc_rh,
-       writable_w = as.numeric(pg$width_twips) - as.numeric(pg$margin_left_twips) -
-         as.numeric(pg$margin_right_twips),
-       pad = as.integer(df$cell_padding_left_twips %||% .opt("rtfreporter.cell_padding_left_twips") %||%
-                          pad_res$default_cell_padding_left_twips %||% 0L) +
-         as.integer(df$cell_padding_right_twips %||% .opt("rtfreporter.cell_padding_right_twips") %||%
-                      pad_res$default_cell_padding_right_twips %||% 0L),
-       title_format = .resolve_text_block_format(
-         df$title_format %||% .opt("rtfreporter.title_format"), "text"),
-       footnote_format = .resolve_text_block_format(
-         df$footnote_format %||% .opt("rtfreporter.footnote_format"), "table"),
-       wrap = as.numeric(getOption("rtfreporter.flow.wrap_factor", 1)))
+  first_rows <- as.integer(first_rows)
+  if (inherits(tables, "table_plan")) {
+    return(as_rtftables(.plan_layer(tables, "pages", list(first_rows = first_rows))))
+  }
+  one <- if (is.data.frame(tables) || inherits(tables, "rtftable")) tables
+         else if (is.list(tables) && length(tables) == 1L) tables[[1L]]
+  if (is.data.frame(one)) return(as_rtftables(one, first_rows = first_rows))
+  if (inherits(one, "rtftable") && !is.null(one$data)) {
+    if (first_rows >= nrow(one$data)) return(list(one))
+    return(.rtftable_cut(one, first_rows))
+  }
+  stop(paste0("rtf_tables(): `first_rows` takes one table -- a table_plan, a data frame ",
+              "or an rtftable;\n  pages already built take it where they are built: ",
+              "as_rtftables(first_rows = )."), call. = FALSE)
 }
 
-# A title / footnote block's lines (NULL: the title's one blank line)
-.flow_text_lines <- function(block, is_footer) {
-  if (is.null(block)) return(if (is_footer) 0L else 1L)
-  rows <- .normalize_text_block(block, is_footer)
-  txt <- vapply(rows, function(r) paste(r$text %||% r, collapse = "\n"), "")
-  sum(lengths(strsplit(txt, "\n", fixed = TRUE)) + (!nzchar(txt)))
-}
-
-# A table's rows: the header's height and each body row's (twips), a row as
-# many lines as its widest-wrapping cell needs
-.flow_table_heights <- function(tbl, m) {
-  df <- tbl$data
-  metrics <- .resolve_element_metrics(tbl$font_size_half_points, tbl$row_height_twips,
-                                      m$fhp, m$doc_rh)
-  rh <- as.numeric(metrics$rh %||% m$rh)
-  if (!rh) rh <- m$rh
-  fs <- metrics$fs %||% m$fhp
-  hdr_h <- as.numeric(tbl$header_row_height_twips %||% rh)
-  blank_h <- as.numeric(tbl$blank_row_height_twips %||% rh)
-  cellx <- .compute_cellx(ncol(df), m$writable_w, tbl)
-  w_in <- pmax(diff(c(0, cellx)) - (tbl$cell_padding_left_twips %||% 0) -
-                 (tbl$cell_padding_right_twips %||% 0) - m$pad, 144) / 1440
-  lines_of <- function(cells) {
-    cells <- ifelse(is.na(cells), "", as.character(cells))
-    parts <- strsplit(cells, "\n", fixed = TRUE)
-    max(1, vapply(seq_along(parts), function(j) {
-      p <- parts[[j]]
-      if (!length(p)) return(1)
-      sum(pmax(1, ceiling(m$wrap * text_width_in(p, tbl$font, fs) / w_in[j])))
-    }, 1))
-  }
-  exact <- isTRUE(tbl$row_height_exact)
-  body <- if (!nrow(df)) numeric(0) else vapply(seq_len(nrow(df)), function(i) {
-    (if (exact) 1 else lines_of(unlist(df[i, ], use.names = FALSE))) * rh
-  }, 1)
-  heads <- tbl$col_header %||% list(names(df))
-  head_h <- sum(vapply(heads, function(h) {
-    tx <- if (is.list(h)) vapply(h, function(z) paste(z$label %||% z$text %||% z, collapse = " "), "")
-          else as.character(h)
-    if (length(tx) != ncol(df)) return(hdr_h)
-    (if (exact) 1 else lines_of(tx)) * hdr_h
-  }, 1)) + if (!is.null(tbl$spanning_header)) hdr_h else 0
-  list(head = head_h, body = body, blank = length(tbl$blank_rows %||% integer(0)) * blank_h)
-}
-
-# One block's height (twips): its title, its content, its footnote
-.flow_block_height <- function(content, title, footnote, m) {
-  h <- .flow_text_lines(title, FALSE) * m$rh
-  fl <- .flow_text_lines(footnote, TRUE)
-  if (fl) h <- h + fl * m$rh + (if (identical(m$footnote_format, "table")) 40 else 0)
-  if (inherits(content, "rtfplot")) {
-    return(h + as.numeric(.rtfplot_display_twips(content)$h) + m$rh)
-  }
-  if (inherits(content, "rtftable") && !is.null(content$data)) {
-    th <- .flow_table_heights(content, m)
-    return(h + th$head + sum(th$body) + th$blank)
-  }
-  if (inherits(content, "rtftable")) {
-    # several data frames: each its header and rows
-    return(h + sum(vapply(content$data_list, function(d) {
-      t1 <- content
-      t1$data <- d
-      t1$data_list <- NULL
-      t1$col_header <- NULL
-      th <- .flow_table_heights(t1, m)
-      th$head + sum(th$body)
-    }, 1)))
-  }
-  h
-}
-
-# ---- cutting a table ------------------------------------------------------------
+# ---- cutting a built table ------------------------------------------------------
 
 # Rows 1..k and k+1..n of a one-data-frame rtftable: the same columns,
 # headers, widths and styles; the body rows, their cell styles and the blank
@@ -226,47 +131,20 @@
   list(part(seq_len(k), TRUE), part(seq.int(k + 1L, n), FALSE))
 }
 
-# The rows of a table that fit in `room` twips under its own title, header
-# and footnote; a group's heading is not left last on the page
-.flow_rows_fit <- function(tbl, title, footnote, room, m) {
-  th <- .flow_table_heights(tbl, m)
-  fixed <- .flow_block_height(NULL, title, footnote, m) + th$head
-  k <- sum(cumsum(th$body) <= room - fixed)
-  if (k > 0L && k < nrow(tbl$data)) {
-    gi <- .compute_group_info(tbl$data, 1L, "auto")
-    if (!identical(gi$mode, "value")) {
-      while (k > 0L && isTRUE(gi$headers[k])) k <- k - 1L
-    }
-  }
-  k
-}
-
 # ---- the layout -----------------------------------------------------------------
 
-# `flow`: placed with page_break = FALSE -- its column header repeats on a
-# page Word continues it on (	rhdr)
-.flow_block <- function(content, title, footnote, space_before = 0L, flow = FALSE) {
+.flow_block <- function(content, title, footnote, space_before = 0L) {
   list(content = content, title = title, footnote = footnote,
-       space_before = as.integer(space_before %||% 0L), flow = isTRUE(flow))
+       space_before = as.integer(space_before %||% 0L))
 }
 
-# The content pages -> physical pages.  Returns the document with
-# `contents` / `titles` / `footnotes` one entry a physical page and no
-# `placement`; a page of several blocks is an `rtf_flow_page` (inside the
-# auto-section wrapper of its first content when that had one).
-.flow_layout <- function(pipe_doc, report) {
-  m <- .flow_metrics(pipe_doc, report)
+# The content pages -> printed pages: a content with page_break = FALSE
+# joins the page before it.  Returns the document with `contents` /
+# `titles` / `footnotes` one entry a page and no `placement`; a page of
+# several blocks is an `rtf_flow_page` (inside the auto-section wrapper of
+# its first content when that had one).
+.flow_layout <- function(pipe_doc) {
   pages <- list()
-  used <- 0
-  open_page <- function(block, wrap) {
-    pages[[length(pages) + 1L]] <<- list(blocks = list(block), wrap = wrap)
-    used <<- .flow_block_height(block$content, block$title, block$footnote, m)
-  }
-  add_block <- function(block, h) {
-    k <- length(pages)
-    pages[[k]]$blocks[[length(pages[[k]]$blocks) + 1L]] <<- block
-    used <<- used + h
-  }
   for (i in seq_along(pipe_doc$contents)) {
     item <- pipe_doc$contents[[i]]
     pl <- pipe_doc$placement[[i]] %||% .flow_defaults()
@@ -284,35 +162,12 @@
       }
       item <- .unwrap_auto_section_item(item)
     }
-    block <- .flow_block(item, title, footnote, pl$space_before, flow = flow)
-    if (!flow) {
-      open_page(block, wrap)
-      next
-    }
-    gap <- 40 + block$space_before * m$rh
-    room <- m$body_h - used - gap
-    h <- .flow_block_height(item, title, footnote, m)
-    # (the default: no estimate -- the content goes on, Word carries what
-    # does not fit to the next page; the heights only tell a later
-    # `fit = TRUE` content how full the page is)
-    if (!isTRUE(pl$fit) || h <= room) {
-      add_block(block, gap + h)
-      next
-    }
-    k <- if (inherits(item, "rtftable") && !is.null(item$data) && nrow(item$data) > 1L) {
-      .flow_rows_fit(item, title, footnote, room, m)
-    } else 0L
-    if (k >= pl$min_rows && k < nrow(item$data)) {
-      cut <- .rtftable_cut(item, k)
-      add_block(.flow_block(cut[[1L]], title, footnote, pl$space_before, flow = TRUE), gap + h)
-      rest_title <- title
-      if (!is.null(pl$cont_title)) {
-        rows <- if (is.null(title)) list() else if (is.list(title)) title else as.list(title)
-        rest_title <- c(rows, list(list(text = pl$cont_title, align = "left")))
-      }
-      open_page(.flow_block(cut[[2L]], rest_title, footnote, 0L), NULL)
+    block <- .flow_block(item, title, footnote, pl$space_before)
+    if (flow) {
+      k <- length(pages)
+      pages[[k]]$blocks[[length(pages[[k]]$blocks) + 1L]] <- block
     } else {
-      open_page(.flow_block(item, title, footnote, 0L), NULL)
+      pages[[length(pages) + 1L]] <- list(blocks = list(block), wrap = wrap)
     }
   }
   out <- pipe_doc
@@ -374,7 +229,6 @@
                                doc_row_height = ctx$doc_row_height,
                                doc_pad_l = ctx$doc_pad_l, doc_pad_r = ctx$doc_pad_r,
                                doc_markup = ctx$doc_markup)
-      if (isTRUE(b$flow)) rows <- .flow_header_rows_repeat(rows, ct)
       out <- c(out, rows)
     } else if (inherits(ct, "rtfplot")) {
       out <- c(out, .render_rtfplot(ct, writable_w))
@@ -403,24 +257,4 @@
     })
   }
   out
-}
-
-# A table placed with page_break = FALSE runs on where it begins; Word (and
-# LibreOffice) carry what does not fit to the next page, and draw its column
-# header there again when the header rows say \trhdr.  The table's first
-# header rows -- its spanning row and its label rows, the first section's of
-# a table of several data frames -- get it.
-.flow_header_rows_repeat <- function(rows, tbl) {
-  heads <- if (!is.null(tbl$data_list)) {
-    tbl$col_header_list[[1L]] %||% list(names(tbl$data_list[[1L]]))
-  } else {
-    tbl$col_header %||% list(names(tbl$data))
-  }
-  n <- length(heads) + !is.null(tbl$spanning_header)
-  start <- .load_rtf_commands()$table$row_start
-  at <- which(startsWith(rows, start))[seq_len(n)]
-  at <- at[!is.na(at)]
-  rows[at] <- paste0(start, .load_rtf_commands()$table$header_repeat,
-                     substring(rows[at], nchar(start) + 1L))
-  rows
 }

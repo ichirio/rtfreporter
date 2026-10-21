@@ -332,6 +332,10 @@ paginate.data.frame <- function(x, ...) {
                                  # A listing's record-id column: repeats are
                                  # judged within a record first (#505).
                                  collapse_record  = NULL,
+                                 # rtf_tables(first_rows = ): the first page
+                                 # holds these rows, the rest is paginated
+                                 # as the other arguments say (R/flow.R)
+                                 first_rows       = NULL,
                                  ...) {
   # `split` is either one of the built-in strategy names (character) or a
   # user-supplied custom function that cuts the body into per-page chunks.
@@ -379,6 +383,10 @@ paginate.data.frame <- function(x, ...) {
   # function, so there is no second pagination engine to keep in step: each
   # partition goes through the identical machinery, one level down, with the
   # body-wide passes above already applied (hence cell_format = NULL, na = "").
+  if (!is.null(first_rows) && (is_custom_split || !is.null(page_by))) {
+    stop("`first_rows` paginates one table by rows or groups: not with `page_by` or a custom `split`.",
+         call. = FALSE)
+  }
   if (!is.null(page_by)) {
     args <- mget(setdiff(names(formals(sys.function())), "..."))
     return(.paginate_by_page(args, list(...)))
@@ -491,7 +499,7 @@ paginate.data.frame <- function(x, ...) {
       list(idx = gidx, info = .compute_group_info(x, gidx, group_by))
     }
     mgr <- as.integer(min_group_rows %||% 2L)
-    chunks <- switch(split,
+    cut_rows <- function() switch(split,
       none        = list(x),
       rows        = {
         if (is.null(split_rows)) {
@@ -518,6 +526,25 @@ paginate.data.frame <- function(x, ...) {
                                       else as.integer(max_rows),
                                       cont_label, g$idx, mgr) }
     )
+    if (is.null(first_rows) || as.integer(first_rows) >= nrow(x)) {
+      chunks <- if (is.null(first_rows)) cut_rows() else list(x)
+    } else {
+      if (split %in% "by_value") {
+        stop("`first_rows` paginates by rows or groups: not split = \"by_value\".",
+             call. = FALSE)
+      }
+      fr <- seq_len(as.integer(first_rows))
+      whole <- x
+      x <- whole[-fr, , drop = FALSE]
+      # (split = "rows": its row positions are the whole table's)
+      if (identical(split, "rows")) {
+        split_rows <- as.integer(split_rows) - length(fr)
+        split_rows <- split_rows[split_rows > 0L]
+      }
+      rest <- cut_rows()
+      x <- whole
+      chunks <- c(list(whole[fr, , drop = FALSE]), unname(rest))
+    }
   }
   strategy <- if (is_custom_split) "custom" else split
 
