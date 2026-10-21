@@ -821,6 +821,14 @@ rtf_tables <- function(doc, tables,
 #' @param titles,footnotes Optional lists of length `length(figures)` or
 #'   length 1 (common to all figures). See [rtf_tables()] for the block
 #'   structure (character vectors or per-row styled lists).
+#' @param page_break `TRUE` (the default): each figure begins a new page.
+#'   `FALSE`: a figure goes under the content before it when what is left of
+#'   that page holds it -- its title, the image and its footnote -- else it
+#'   begins the next page (a figure is not cut).  One value for every
+#'   figure, or one each; the document's first content always begins a
+#'   page.  As [rtf_tables()]'s `page_break`.
+#' @param space_before With `page_break = FALSE`, empty lines between the
+#'   content before and this figure.
 #'
 #' @return Modified rtf_document with appended figure contents.
 #'
@@ -845,7 +853,8 @@ rtf_tables <- function(doc, tables,
 rtf_figures <- function(doc, figures,
                          width_twips = NULL, height_twips = NULL,
                          align = "center",
-                         titles = NULL, footnotes = NULL) {
+                         titles = NULL, footnotes = NULL,
+                         page_break = TRUE, space_before = 0L) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -893,13 +902,13 @@ rtf_figures <- function(doc, figures,
 
   doc_copy <- doc
   doc_copy$contents  <- c(doc_copy$contents,  fig_objs)
-  # (a document whose contents flow: each figure on a page of its own)
-  if (!is.null(doc_copy$placement)) {
-    doc_copy$placement <- c(doc_copy$placement, rep(list(.flow_defaults()), length(fig_objs)))
-  }
   doc_copy$titles    <- c(doc_copy$titles,    titles)
   doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
-  doc_copy
+  # (page_break = FALSE: the pages' placement, beside them -- see R/flow.R;
+  # every figure a content of its own)
+  .flow_placement_append(doc_copy, length(fig_objs), rep(TRUE, length(fig_objs)),
+                         page_break = page_break, space_before = space_before,
+                         fn = "rtf_figures")
 }
 
 # Is `x` one figure rather than a list of them?  An rtfplot, one path, a
