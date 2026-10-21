@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **The header reads each arm's N over `plan_stat_groups()` columns**
+  (0.8.2.9090, #709).  A table that splits one record into several
+  columns per arm (`cols = c(ARM, ".stat_group")`) left `{n}` / `{n1}`
+  "NOT resolved": the `.stat_group` key, made when the plan runs, is not
+  in the ARD.  The N is now read without it -- the arm's -- and each of the
+  arm's columns has that number; `{n:sum}` counts each arm once.
+
 - **The study total survives a `mutate()` after `normalize_ard()`**
   (0.8.2.9089).  The total `cards::ard_total_n()` states is now also the
   column `.total_n`, which `dplyr::mutate()` and base `transform()` keep
