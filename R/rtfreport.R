@@ -467,6 +467,20 @@ rtf_footer <- function(rows,
 # -- Page ops ----------------------------------------------------------------
 
 .rtfreport_add_page <- function(report, title = NULL, content = NULL, footnote = NULL) {
+  # a page of several contents (rtf_tables(page_break = FALSE), R/flow.R):
+  # its first block is the page's content, title and footnote, as a page of
+  # one would have them; `blocks` holds them all, first to last
+  if (inherits(content, "rtf_flow_page")) {
+    blocks <- lapply(content$blocks, function(b) {
+      b$content <- .normalize_content(b$content)
+      b
+    })
+    page <- .new_page(title = blocks[[1L]]$title, content = blocks[[1L]]$content,
+                      footnote = blocks[[1L]]$footnote)
+    page$blocks <- blocks
+    report$pages[[length(report$pages) + 1L]] <- page
+    return(report)
+  }
   if (!is.null(content)) content <- .normalize_content(content)
   page <- .new_page(title = title, content = content, footnote = footnote)
   report$pages[[length(report$pages) + 1L]] <- page
@@ -501,6 +515,12 @@ rtf_footer <- function(rows,
     if (!is.null(ct) && !inherits(ct, "rtftable") && !inherits(ct, "rtfplot")) {
       stop(sprintf("Page %d content must be rtftable, rtfplot, or NULL.", i),
            call. = FALSE)
+    }
+    for (b in report$pages[[i]]$blocks) {
+      if (!inherits(b$content, "rtftable") && !inherits(b$content, "rtfplot")) {
+        stop(sprintf("Page %d: each content must be rtftable or rtfplot.", i),
+             call. = FALSE)
+      }
     }
   }
   report

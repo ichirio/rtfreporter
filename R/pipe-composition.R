@@ -429,6 +429,29 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #' @param read_gt **Deprecated** (removed in 0.9.0): pass a gt or gtsummary
 #'   table through [as_rtftables()], which reads its labels, alignment, titles
 #'   and source notes, and place the pages it returns here.
+#' @param page_break `TRUE` (the default): each table begins a new page.
+#'   `FALSE`: a table begins on what is left of the page the content before
+#'   it ends on -- a listing under its summary table -- and what does not fit
+#'   goes on the next pages, the column headers drawn again.  One value for
+#'   every table, or one each.  A table's own later pages (a plan's, or
+#'   [as_rtftables()]'s) always begin a page; so does the document's first
+#'   content.  Unlike reporter's `add_content(page_break = )` this is the
+#'   break *before* the table.  A table that goes on the page before it
+#'   opens no section of its own (`auto_section`): `auto_title` names it.
+#'   [rtf_section()]`(page = n)` counts the pages as printed.
+#' @param min_rows With `page_break = FALSE`, the fewest body rows left on
+#'   the page before: fewer than that and the table begins a new page.
+#' @param space_before With `page_break = FALSE`, empty lines between the
+#'   content before and this table (0: the title's own blank line alone).
+#' @param cont_title With `page_break = FALSE`, a line added under the
+#'   title where a table cut at the end of that page goes on
+#'   (`"(continued)"`); `NULL`: none.  Not [as_rtftables()]'s `cont_label`,
+#'   which marks a group cut across pages.  Where a table fits is estimated
+#'   from the page's height and the rows' (their wrapping text, the header
+#'   and footer rows, a margin of `getOption("rtfreporter.flow.safety_rows",
+#'   1)` rows); Word lays the page out, so the estimate errs on the side of
+#'   a new page.  Only a table's first page goes on the page before it: one
+#'   cut there has a shorter next page.
 #'
 #' @return Modified rtf_document with appended contents.
 #'
@@ -487,7 +510,11 @@ rtf_tables <- function(doc, tables,
                         section_label_align = "left",
                         auto_title = NULL,
                         title_label_align = "left",
-                        read_gt = FALSE) {
+                        read_gt = FALSE,
+                        page_break = TRUE,
+                        min_rows = 3L,
+                        space_before = 0L,
+                        cont_title = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -499,7 +526,8 @@ rtf_tables <- function(doc, tables,
 
   # A source whose package registered an as_rtftables() method becomes its
   # pages here, so rtf_tables(doc, x) reads like every other source.
-  if (.has_rtftables_method(tables)) tables <- as_rtftables(tables)
+  expanded <- .has_rtftables_method(tables)
+  if (expanded) tables <- as_rtftables(tables)
 
   # Auto-wrap a single content item so callers can write rtf_tables(tbl)
   # instead of rtf_tables(list(tbl)).  data.frame is IS a list in R, so it
@@ -761,7 +789,10 @@ rtf_tables <- function(doc, tables,
   doc_copy$contents  <- c(doc_copy$contents,  tables)
   doc_copy$titles    <- c(doc_copy$titles,    titles)
   doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
-  doc_copy
+  # (page_break = FALSE: the pages' placement, beside them -- see R/flow.R)
+  .flow_placement_append(doc_copy, length(tables), .flow_item_start(tables, expanded),
+                         page_break = page_break, min_rows = min_rows,
+                         space_before = space_before, cont_title = cont_title)
 }
 
 #' Add figure content to document
@@ -862,6 +893,10 @@ rtf_figures <- function(doc, figures,
 
   doc_copy <- doc
   doc_copy$contents  <- c(doc_copy$contents,  fig_objs)
+  # (a document whose contents flow: each figure on a page of its own)
+  if (!is.null(doc_copy$placement)) {
+    doc_copy$placement <- c(doc_copy$placement, rep(list(.flow_defaults()), length(fig_objs)))
+  }
   doc_copy$titles    <- c(doc_copy$titles,    titles)
   doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
   doc_copy

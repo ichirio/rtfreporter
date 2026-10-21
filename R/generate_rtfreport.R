@@ -2180,6 +2180,10 @@
     report <- .rtfreport_set_default_format(report, pipe_doc$document$default_format)
   }
 
+  # rtf_tables(page_break = FALSE): the content pages laid out as printed
+  # pages first (R/flow.R); a document without it is untouched
+  if (.flow_active(pipe_doc)) pipe_doc <- .flow_layout(pipe_doc, report)
+
   # -- Detect auto-section items ---------------------------------------------
   has_auto_section <- any(vapply(pipe_doc$contents,
     function(x) inherits(x, "rtf_auto_section_item"), logical(1L)))
@@ -2673,6 +2677,17 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
         emit_section_preamble(p_idx)
       }
 
+      # A page of several contents (rtf_tables(page_break = FALSE)): block
+      # after block, R/flow.R.  A page of one takes the code below as ever.
+      if (!is.null(page$blocks)) {
+        lines <- c(lines, .render_flow_blocks(page$blocks, p_idx, list(
+          doc = doc, writable_w = writable_w, total_pages = total_pages,
+          font_half_points = font_half_points, font_index_map = font_index_map,
+          color_index_map = color_index_map, doc_row_height = doc_row_height,
+          doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r, doc_markup = doc_markup,
+          doc_title_format = doc_title_format, doc_footnote_format = doc_footnote_format,
+          doc_title_width = doc_title_width, doc_footnote_width = doc_footnote_width)))
+      } else {
       # -- Content (single rtftable or rtfplot) -----------------------------
       ct <- page$content
 
@@ -2753,6 +2768,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
         # visible space, the same trick the page-break code uses.
         if (length(fn_rtf)) c("{\\pard\\fs2\\par}", fn_rtf) else fn_rtf
       })
+      }
 
       # End-of-page break.  A table must be terminated before any paragraph-level
       # break or the document close, or strict readers absorb the break into the

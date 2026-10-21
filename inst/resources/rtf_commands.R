@@ -51,7 +51,12 @@ rtf_commands <- list(
     center_bold_template = "\\pard\\qc\\b {text}\\b0\\par",
     left_template = "\\pard\\ql {text}\\par",
     figure_placeholder_center_template = "\\pard\\qc [Figure: {filename}]\\par",
-    empty_table = "\\par [empty table]\\par"
+    empty_table = "\\par [empty table]\\par",
+    # rtf_tables(page_break = FALSE): between two contents on one page, a 1pt
+    # paragraph (two tables no paragraph separates are merged into one), and
+    # an empty line of the document's font for each `space_before`
+    flow_gap = "{\\pard\\fs2\\par}",
+    flow_blank_line = "{\\pard\\par}"
   ),
   table = list(
     row_start = "\\trowd",
