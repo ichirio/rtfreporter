@@ -262,6 +262,9 @@ update_footer_row <- function(footer, row, content) {
 #' @param font Font family for this band, e.g. `"Arial"`. `NULL` (default)
 #'   uses the document font. A family not already in the document's
 #'   `font_table` is added to it automatically, the way a colour is.
+#'   A named vector gives one family per script slot (`latin`,
+#'   `east_asian`, `complex`, optional `hansi`), e.g. `c(latin =
+#'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
 #' @param markup Cell-text markup for this band; `NULL` (default) inherits the
 #'   document setting. See [rtftable()].
 #' @param row_height_twips Integer. Row height in twips. `NULL` (default) reads
@@ -578,6 +581,7 @@ print.rtfreport <- function(x, ...) {
   nf  <- length(x$document$font_table)
   ncl <- length(x$document$color_table)
   fn1 <- tryCatch(x$document$font_table[[1L]]$name, error = function(e) NULL)
+  if (!is.null(fn1)) fn1 <- .font_label(fn1)
   cat(sprintf("  Fonts:   %d%s   Colors: %d\n",
               nf, if (!is.null(fn1)) paste0(" (", fn1, ")") else "", ncl))
   invisible(x)

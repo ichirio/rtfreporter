@@ -55,14 +55,60 @@ text_width_in <- function(text, font = NULL, font_size_half_points = 18L,
   text <- ifelse(is.na(text), "", as.character(text))
   size_pt  <- as.numeric(size_half_points %||% font_size_half_points) / 2
   char_w   <- .char_width_in(.font_key(font), size_pt)
-  nchar(text, type = "chars") * char_w
+  .text_columns(text, font) * char_w
 }
 
 # A font as the width tables know it: "Courier New" -> "courier_new"; NULL
-# is the package's font (the option), as for every other `font =` (#594)
+# is the package's font (the option), as for every other `font =` (#594).
+# A font named per script slot is measured by its `latin` family.
 .font_key <- function(font) {
   f <- font %||% .opt("rtfreporter.font") %||% "courier_new"
+  if (.is_slotted(f)) f <- f[["latin"]]
   tolower(gsub("[ -]+", "_", trimws(f)))
+}
+
+# How many character columns `text` takes.  A single family counts every
+# character as one, as it always has.  A font with an `east_asian` slot sets
+# CJK in a font whose ideographs, kana, Hangul and fullwidth forms are twice
+# the width of its Latin letters, so those count as two.
+.text_columns <- function(text, font = NULL) {
+  f <- font %||% .opt("rtfreporter.font")
+  n <- nchar(text, type = "chars")
+  if (.is_slotted(f) && !is.na(f["east_asian"])) n <- n + .ea_wide_count(text)
+  n
+}
+
+# Unicode East_Asian_Width W and F, as the blocks a CJK document actually
+# uses -- the ranges below, not the full UAX #11 table.
+.EA_WIDE_RANGES <- matrix(c(
+  0x1100, 0x115F,   # Hangul Jamo (leading consonants)
+  0x2E80, 0x303E,   # CJK radicals, Kangxi, ideographic description, CJK punctuation
+  0x3041, 0x33FF,   # Hiragana, Katakana, Bopomofo, Hangul compat., Kanbun, CJK compat.
+  0x3400, 0x4DBF,   # CJK Unified Ideographs Extension A
+  0x4E00, 0x9FFF,   # CJK Unified Ideographs
+  0xA000, 0xA4CF,   # Yi
+  0xA960, 0xA97F,   # Hangul Jamo Extended-A
+  0xAC00, 0xD7A3,   # Hangul Syllables
+  0xF900, 0xFAFF,   # CJK Compatibility Ideographs
+  0xFE10, 0xFE19,   # Vertical forms
+  0xFE30, 0xFE6F,   # CJK compatibility forms, small form variants
+  0xFF00, 0xFF60,   # Fullwidth forms
+  0xFFE0, 0xFFE6,   # Fullwidth signs
+  0x1F300, 0x1F64F, # Pictographs, emoticons
+  0x20000, 0x3FFFD  # CJK Extensions B and beyond (planes 2-3)
+), ncol = 2L, byrow = TRUE)
+
+# Per string, the number of East Asian wide / fullwidth characters.
+.ea_wide_count <- function(text) {
+  text <- as.character(text)
+  text[is.na(text)] <- ""
+  vapply(text, function(t) {
+    cp <- utf8ToInt(enc2utf8(t))
+    if (!length(cp) || anyNA(cp) || all(cp < 0x1100)) return(0L)
+    sum(vapply(seq_len(nrow(.EA_WIDE_RANGES)), function(i) {
+      sum(cp >= .EA_WIDE_RANGES[i, 1L] & cp <= .EA_WIDE_RANGES[i, 2L])
+    }, integer(1L)))
+  }, integer(1L), USE.NAMES = FALSE)
 }
 
 

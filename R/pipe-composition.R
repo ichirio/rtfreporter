@@ -34,6 +34,17 @@
 #'   named list with a `name` (e.g. `list(list(name = "Arial"))`). The first
 #'   entry is the document's default font. Default: `list(list(name =
 #'   "Courier"))` (a fixed-width font, which keeps clinical columns aligned).
+#'   A `name` may be a named vector of families per script slot (see
+#'   *Fonts per script* below).
+#' @param font_lang Optional language per font slot, a named character vector
+#'   such as `c(east_asian = "ja")`.  Names are `latin`, `east_asian` and
+#'   `complex`; languages are `"ja"`, `"zh-Hans"`, `"zh-Hant"`, `"ko"`,
+#'   `"ar"`, `"he"` and `"en"`.  It sets the font-table charset of that slot's
+#'   fonts (`ja` = 128, `zh-Hans` = 134, `zh-Hant` = 136, `ko` = 129,
+#'   `ar` = 178, `he` = 177) and the RTF language words (`\langfe`,
+#'   `\lang`, `\alang`, and the document's `\deflangfe` / `\deflang` /
+#'   `\adeflang`).  `NULL` (default) is `getOption("rtfreporter.font_lang")`,
+#'   itself `NULL`: nothing is written.
 #' @param color_table Optional character vector of `"#RRGGBB"` colours to
 #'   pre-declare in the document's colour table (so they are available by
 #'   index). Default `c("#000000")`. Colours actually used by borders and by
@@ -83,6 +94,27 @@
 #'   program.  `NULL` (default): none, and `generate_rtfreport()` needs
 #'   `file_path`.
 #'
+#' @section Fonts per script:
+#' Every `font =` (a table, a header/footer band, titles, footnotes, a
+#' watermark, `plan_style()`, the `font_table` entries and
+#' `options(rtfreporter.font =)`) takes either one family name -- which keeps
+#' its old meaning and writes exactly the same RTF -- or a named character
+#' vector with a family per script slot:
+#'
+#' * `latin`: ASCII and the high-ANSI range (Latin, Greek, Cyrillic);
+#'   RTF `\loch\f` / `\hich\af`.  Required.
+#' * `east_asian`: CJK text; RTF `\dbch\af`.
+#' * `complex`: right-to-left and complex scripts; RTF `\rtlch\af`.
+#' * `hansi` (optional): overrides `latin` for the high-ANSI range only.
+#'
+#' A slot an element leaves out takes the document default's family for that
+#' slot, else the element's `latin`.  A slotted document default also writes
+#' the document-level defaults Word uses for new text (`\adeff`,
+#' `\stshfdbch`, `\stshfloch`, `\stshfhich`, `\stshfbi`).  Use
+#' `font_lang` to tag a slot with its language, e.g.
+#' `rtf_document(font_table = list(list(name = c(latin = "Times New Roman",
+#' east_asian = "MS Mincho"))), font_lang = c(east_asian = "ja"))`.
+#'
 #' @return An `rtf_document` S3 object: a list with `document`
 #'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
 #'   `contents`
@@ -121,7 +153,8 @@
 rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
                          default_format = NULL, watermark = NULL,
                          program = NULL, tokens = NULL,
-                         program_fallback = NULL, file = NULL) {
+                         program_fallback = NULL, font_lang = NULL,
+                         file = NULL) {
   if (!is.null(program) &&
       (!is.character(program) || length(program) != 1L || is.na(program))) {
     stop("`program` must be a single string: the program's path.",
@@ -151,8 +184,11 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
   }
 
   if (is.null(font_table)) {
-    font_table <- list(list(name = .opt("rtfreporter.font")))
+    font_table <- list(list(name = .check_font(.opt("rtfreporter.font"),
+                                               "rtfreporter.font")))
   }
+  font_table <- .check_font_table(font_table)
+  font_lang  <- .check_font_lang(font_lang %||% .opt("rtfreporter.font_lang"))
 
   if (is.null(color_table)) {
     color_table <- c("#000000")
@@ -163,6 +199,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
     list(
       document = list(
         font_table = font_table,
+        font_lang = font_lang,
         color_table = color_table,
         page = page,
         default_format = default_format,
@@ -234,6 +271,8 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #'
 #' @param doc An rtf_document object.
 #' @param font_table Optional font table; replaces the current one.
+#' @param font_lang Optional language per font slot (see [rtf_document()]);
+#'   replaces the current one.  `NA` removes it.
 #' @param color_table Optional colour table; replaces the current one.
 #' @param page New page geometry, **merged per key** onto the current page: an
 #'   [rtf_page()] object, or a named list with the same keys (see [rtf_page()]).
@@ -264,7 +303,8 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #'
 #' @export
 rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
-                       default_format = NULL, watermark = NULL) {
+                       default_format = NULL, watermark = NULL,
+                       font_lang = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -274,7 +314,11 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 
   # Whole-object replacements.
   if (!is.null(font_table)) {
-    doc_copy$document$font_table <- font_table
+    doc_copy$document$font_table <- .check_font_table(font_table)
+  }
+  if (!is.null(font_lang)) {
+    doc_copy$document["font_lang"] <- list(
+      if (identical(font_lang, NA)) NULL else .check_font_lang(font_lang))
   }
   if (!is.null(color_table)) {
     doc_copy$document$color_table <- color_table
@@ -982,6 +1026,9 @@ rtf_figures <- function(doc, figures,
 #'   this block, overriding the document default from [rtf_default_format()].
 #'   `font` names a family (e.g. `"Arial"`); one not already in the document's
 #'   `font_table` is added to it automatically, the way a colour is.
+#'   A named vector gives one family per script slot (`latin`,
+#'   `east_asian`, `complex`, optional `hansi`), e.g. `c(latin =
+#'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
 #'   Anything left `NULL` is inherited. Font size and row height resolve
 #'   **together**: a size given without a height recomputes the height from
 #'   that size rather than inheriting one chosen for a different size, and an
@@ -1059,6 +1106,9 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'   this block, overriding the document default from [rtf_default_format()].
 #'   `font` names a family (e.g. `"Arial"`); one not already in the document's
 #'   `font_table` is added to it automatically, the way a colour is.
+#'   A named vector gives one family per script slot (`latin`,
+#'   `east_asian`, `complex`, optional `hansi`), e.g. `c(latin =
+#'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
 #'   Anything left `NULL` is inherited. Font size and row height resolve
 #'   **together**: a size given without a height recomputes the height from
 #'   that size rather than inheriting one chosen for a different size, and an

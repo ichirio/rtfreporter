@@ -42,7 +42,11 @@
 #'   stays readable behind body text.
 #' @param angle Rotation in degrees, counter-clockwise negative. `-45` (the
 #'   default) is the conventional bottom-left to top-right diagonal.
-#' @param font Font family. `NULL` (default) uses the document font.
+#' @param font Font family. `NULL` (default) uses the document font.  A named
+#'   vector of families per script slot (see [rtftable()]'s `font`) is
+#'   accepted too: a watermark is drawn in one family, so the `east_asian`
+#'   one is used when the text holds East Asian wide characters, the `latin`
+#'   one otherwise.
 #' @param width_in,height_in Size of the shape's bounding box in inches. The
 #'   defaults suit a single word on a Letter/A4 page; a long phrase needs a
 #'   wider box.
@@ -91,7 +95,9 @@ rtf_watermark <- function(text,
       stop("`", nm, "` must be one positive number, in inches.", call. = FALSE)
     }
   }
-  if (!is.null(font) && (!is.character(font) || length(font) != 1L)) {
+  if (!is.null(font) && is.character(font) && !is.null(names(font))) {
+    font <- .check_font(font, "font")
+  } else if (!is.null(font) && (!is.character(font) || length(font) != 1L)) {
     stop("`font` must be NULL or one font-family name.", call. = FALSE)
   }
 
@@ -117,7 +123,7 @@ print.rtf_watermark <- function(x, ...) {
   cat("  color : ", x$color, "\n", sep = "")
   cat("  angle : ", x$angle, " deg\n", sep = "")
   cat("  box   : ", x$width_in, " x ", x$height_in, " in\n", sep = "")
-  if (!is.null(x$font)) cat("  font  : ", x$font, "\n", sep = "")
+  if (!is.null(x$font)) cat("  font  : ", .font_label(x$font), "\n", sep = "")
   invisible(x)
 }
 
@@ -145,6 +151,16 @@ print.rtf_watermark <- function(x, ...) {
   g <- strtoi(substr(hex, 4L, 5L), 16L)
   b <- strtoi(substr(hex, 6L, 7L), 16L)
   as.integer(b * 65536L + g * 256L + r)
+}
+
+# A watermark is one WordArt shape in one family: for a slotted font, the
+# East Asian family when the text needs it, else the Latin one.
+.watermark_family <- function(font, text) {
+  if (!.is_slotted(font)) return(font)
+  if (!is.na(font["east_asian"]) && .ea_wide_count(text) > 0L) {
+    return(font[["east_asian"]])
+  }
+  font[["latin"]]
 }
 
 # The `{\shp ...}` group, centred on a page `page_w_twips` x `page_h_twips`.
@@ -184,7 +200,7 @@ print.rtf_watermark <- function(x, ...) {
     sp("rotation", format(as.integer(round(wm$angle * 65536)), scientific = FALSE)),
     sp("fGtext", 1L),
     sp("gtextUNICODE", .toc_escape(wm$text)),
-    sp("gtextFont", wm$font %||% default_font),
+    sp("gtextFont", .watermark_family(wm$font %||% default_font, wm$text)),
     sp("gtextSize", wm$font_size_half_points * 10L),
     sp("fHidden", 0L),
     "}}"

@@ -69,7 +69,9 @@ the row height from that size unless \code{row_height_twips} is given.}
 
 \item{font}{Font family for this band, e.g. \code{"Arial"}. \code{NULL} (default)
 uses the document font. A family not already in the document's
-\code{font_table} is added to it automatically, the way a colour is.}
+\code{font_table} is added to it automatically, the way a colour is.
+A named vector gives one family per script slot (\code{latin},
+\code{east_asian}, \code{complex}, optional \code{hansi}), e.g. \code{c(latin = "Times New Roman", east_asian = "MS Mincho")}; see \code{\link[=rtf_document]{rtf_document()}}.}
 
 \item{markup}{Cell-text markup for this band; \code{NULL} (default) inherits the
 document setting. See \code{\link[=rtftable]{rtftable()}}.}

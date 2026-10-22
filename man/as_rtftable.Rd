@@ -46,7 +46,7 @@ titles, footnotes, in-cell footnote marks and (for gt/gtsummary) explicit
 theme borders and Markdown are not.
 }
 \examples{
-\dontshow{if (requireNamespace("gt", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+\dontshow{if (requireNamespace("gt", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 library(gt)
 g <- gt(head(mtcars, 5)) |>
   cols_label(mpg = "MPG", cyl = "Cyl") |>

@@ -50,6 +50,8 @@
     rtfreporter.page.margin_right_in  = 0.75,
     rtfreporter.font                  = "Courier",
     rtfreporter.font_size_half_points = 18L,
+    # Language per font slot, e.g. c(east_asian = "ja"); NULL writes nothing.
+    rtfreporter.font_lang             = NULL,
     # Document-wide style defaults. NULL = inherit the baseline:
     #   row height  -> font-aware default (resource table),
     #   cell padding -> resource default (0 twips = flush).
