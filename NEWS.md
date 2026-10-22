@@ -1,5 +1,27 @@
 # rtfreporter (development version)
 
+- **A font per script slot: `latin` / `east_asian` / `complex`, and
+  `font_lang`** (0.8.2.9094).  Every `font =` (table, header/footer band,
+  titles, footnotes, watermark, `plan_style()`, `font_table` entries and
+  `options(rtfreporter.font =)`) also takes a named vector, so Japanese
+  text is set in a Japanese font in Word and LibreOffice:
+  `rtftable(df, font = c(latin = "Times New Roman", east_asian = "MS Mincho"))`
+  with `rtf_document(font_lang = c(east_asian = "ja"))`.  Each run writes
+  `\rtlch\af \ltrch\hich\af \dbch\af \loch\f` (optional `hansi`
+  overrides `latin` for high-ANSI); `font_lang` (also
+  `rtf_config(font_lang =)` and `options(rtfreporter.font_lang =)`; `ja`,
+  `zh-Hans`, `zh-Hant`, `ko`, `ar`, `he`, `en`) sets that slot's font-table
+  charset (`ja` = `\fcharset128`) and `\langfe` / `\lang` `\langnp` /
+  `\alang`, plus `\deflangfe` / `\adeflang`.  A slotted document default
+  also writes `\adeff` and `\stshfdbch` / `\stshfloch` / `\stshfhich` /
+  `\stshfbi`.  A vector must name `latin` (there is no fall-back to the
+  document default: an unknown slot, an empty name or no `latin` is an
+  error); a slot an element leaves out takes the document default's, else
+  its own `latin`.  With an `east_asian` font, `text_width_in()` (and so
+  `auto_col_widths()`) counts East Asian wide / fullwidth characters as two
+  columns.  A single string keeps its meaning and writes exactly the same
+  RTF; the default font stays `"Courier"`.
+
 - **`page_break = FALSE` measures nothing; `first_rows` says the rows the
   shared page takes** (0.8.2.9093).  A table or a figure with
   `page_break = FALSE` goes on under the content before it as it is; what

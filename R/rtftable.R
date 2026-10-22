@@ -525,6 +525,9 @@
 #' @param font Font family for this table, e.g. `"Arial"`. `NULL` (default)
 #'   uses the document font. A family not already in the document's
 #'   `font_table` is added to it automatically, the way a colour is.
+#'   A named vector gives one family per script slot (`latin`,
+#'   `east_asian`, `complex`, optional `hansi`), e.g. `c(latin =
+#'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
 #' @param blank_row_height_twips Row height for blank separator rows.
 #' @param cell_padding_left_twips Left cell padding in twips (default 0
 #'   since v0.0.21; cell content sits flush against the cell border).

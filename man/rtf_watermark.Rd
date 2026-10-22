@@ -27,7 +27,11 @@ stays readable behind body text.}
 \item{angle}{Rotation in degrees, counter-clockwise negative. \code{-45} (the
 default) is the conventional bottom-left to top-right diagonal.}
 
-\item{font}{Font family. \code{NULL} (default) uses the document font.}
+\item{font}{Font family. \code{NULL} (default) uses the document font.  A named
+vector of families per script slot (see \code{\link[=rtftable]{rtftable()}}'s \code{font}) is
+accepted too: a watermark is drawn in one family, so the \code{east_asian}
+one is used when the text holds East Asian wide characters, the \code{latin}
+one otherwise.}
 
 \item{width_in, height_in}{Size of the shape's bounding box in inches. The
 defaults suit a single word on a Letter/A4 page; a long phrase needs a

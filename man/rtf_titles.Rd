@@ -23,6 +23,8 @@ rtf_titles(
 this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
 \code{font} names a family (e.g. \code{"Arial"}); one not already in the document's
 \code{font_table} is added to it automatically, the way a colour is.
+A named vector gives one family per script slot (\code{latin},
+\code{east_asian}, \code{complex}, optional \code{hansi}), e.g. \code{c(latin = "Times New Roman", east_asian = "MS Mincho")}; see \code{\link[=rtf_document]{rtf_document()}}.
 Anything left \code{NULL} is inherited. Font size and row height resolve
 \strong{together}: a size given without a height recomputes the height from
 that size rather than inheriting one chosen for a different size, and an

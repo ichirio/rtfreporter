@@ -10,7 +10,8 @@ rtf_config(
   color_table = NULL,
   page = NULL,
   default_format = NULL,
-  watermark = NULL
+  watermark = NULL,
+  font_lang = NULL
 )
 }
 \arguments{
@@ -31,6 +32,9 @@ with the same keys (see \code{\link[=rtf_default_format]{rtf_default_format()}})
 \item{watermark}{New page watermark: an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare
 string, or \code{NA} to remove the one the document has. \code{NULL} (default)
 leaves it unchanged -- so \code{NA}, not \code{NULL}, is how one is cleared.}
+
+\item{font_lang}{Optional language per font slot (see \code{\link[=rtf_document]{rtf_document()}});
+replaces the current one.  \code{NA} removes it.}
 }
 \value{
 Modified rtf_document object (new copy, original unchanged).

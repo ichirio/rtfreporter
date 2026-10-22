@@ -2145,6 +2145,7 @@
   if (!is.null(pipe_doc$document$font_table)) {
     report <- .rtfreport_set_font_table(report, pipe_doc$document$font_table)
   }
+  report$document$font_lang <- pipe_doc$document$font_lang
   if (!is.null(pipe_doc$document$color_table)) {
     report <- .rtfreport_set_color_table(report, pipe_doc$document$color_table)
   }
@@ -2455,9 +2456,14 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
   doc           <- report$document
   page_defaults <- doc$default_page
   # Fonts: the declared table plus anything an element asked for (#293).
-  doc_fonts      <- .collect_fonts(doc$font_table, .collect_report_fonts(report))
-  font_index_map <- .build_font_index_map(doc_fonts)
-  primary_font   <- doc_fonts[[1L]]
+  # A font may name a family per script slot, and `font_lang` tags a slot
+  # with a language; both leave an unslotted, untagged document as it was.
+  font_ctx       <- .font_render_ctx(
+    doc$font_table, .collect_report_fonts(report),
+    .check_font_lang(doc$font_lang %||% .opt("rtfreporter.font_lang")))
+  doc_fonts      <- font_ctx$fonts
+  font_index_map <- font_ctx$map
+  primary_font   <- font_ctx$default
   writable_w    <- page_defaults$width_twips -
                    page_defaults$margin_left_twips -
                    page_defaults$margin_right_twips
@@ -2481,7 +2487,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
   color_index_map <- .build_color_index_map(doc_colors)
 
   lines <- c(
-    doc_cmd$rtf_header_open,
+    .font_header_rtf(doc_cmd$rtf_header_open, font_index_map),
     .build_font_table_rtf(doc_fonts),
     color_table_str,
     .cmd_fmt(doc_cmd$page_settings_template, list(

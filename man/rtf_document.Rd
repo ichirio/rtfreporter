@@ -13,13 +13,16 @@ rtf_document(
   program = NULL,
   tokens = NULL,
   program_fallback = NULL,
+  font_lang = NULL,
   file = NULL
 )
 }
 \arguments{
 \item{font_table}{Optional font table: a list of font specifications, each a
 named list with a \code{name} (e.g. \code{list(list(name = "Arial"))}). The first
-entry is the document's default font. Default: \code{list(list(name = "Courier"))} (a fixed-width font, which keeps clinical columns aligned).}
+entry is the document's default font. Default: \code{list(list(name = "Courier"))} (a fixed-width font, which keeps clinical columns aligned).
+A \code{name} may be a named vector of families per script slot (see
+\emph{Fonts per script} below).}
 
 \item{color_table}{Optional character vector of \code{"#RRGGBB"} colours to
 pre-declare in the document's colour table (so they are available by
@@ -71,6 +74,16 @@ none.}
 e.g. the program a report is to be written to.  Said in a message when
 used.  \code{NULL} (default): none.}
 
+\item{font_lang}{Optional language per font slot, a named character vector
+such as \code{c(east_asian = "ja")}.  Names are \code{latin}, \code{east_asian} and
+\code{complex}; languages are \code{"ja"}, \code{"zh-Hans"}, \code{"zh-Hant"}, \code{"ko"},
+\code{"ar"}, \code{"he"} and \code{"en"}.  It sets the font-table charset of that slot's
+fonts (\code{ja} = 128, \code{zh-Hans} = 134, \code{zh-Hant} = 136, \code{ko} = 129,
+\code{ar} = 178, \code{he} = 177) and the RTF language words (\verb{\\langfe},
+\verb{\\lang}, \verb{\\alang}, and the document's \verb{\\deflangfe} / \verb{\\deflang} /
+\verb{\\adeflang}).  \code{NULL} (default) is \code{getOption("rtfreporter.font_lang")},
+itself \code{NULL}: nothing is written.}
+
 \item{file}{The RTF file the document is written to: one string, a path.
 \code{\link[=generate_rtfreport]{generate_rtfreport()}} writes there when it is given no \code{file_path}
 (one given wins), so a program can say its output where it says its
@@ -99,6 +112,29 @@ two are complementary, not interchangeable -- you cannot change the page of
 an already-composed report with \code{rtf_document()} without discarding its
 content.
 }
+\section{Fonts per script}{
+
+Every \verb{font =} (a table, a header/footer band, titles, footnotes, a
+watermark, \code{plan_style()}, the \code{font_table} entries and
+\code{options(rtfreporter.font =)}) takes either one family name -- which keeps
+its old meaning and writes exactly the same RTF -- or a named character
+vector with a family per script slot:
+\itemize{
+\item \code{latin}: ASCII and the high-ANSI range (Latin, Greek, Cyrillic);
+RTF \verb{\\loch\\f} / \verb{\\hich\\af}.  Required.
+\item \code{east_asian}: CJK text; RTF \verb{\\dbch\\af}.
+\item \code{complex}: right-to-left and complex scripts; RTF \verb{\\rtlch\\af}.
+\item \code{hansi} (optional): overrides \code{latin} for the high-ANSI range only.
+}
+
+A slot an element leaves out takes the document default's family for that
+slot, else the element's \code{latin}.  A slotted document default also writes
+the document-level defaults Word uses for new text (\verb{\\adeff},
+\verb{\\stshfdbch}, \verb{\\stshfloch}, \verb{\\stshfhich}, \verb{\\stshfbi}).  Use
+\code{font_lang} to tag a slot with its language, e.g.
+\code{rtf_document(font_table = list(list(name = c(latin = "Times New Roman", east_asian = "MS Mincho"))), font_lang = c(east_asian = "ja"))}.
+}
+
 \examples{
 # 1. Simplest: every default (landscape Letter, Courier 9 pt).
 doc <- rtf_document()
