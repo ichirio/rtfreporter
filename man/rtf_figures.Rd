@@ -23,7 +23,10 @@ rtf_figures(
 image file (PNG/JPEG), a plot object (a ggplot2 plot, a patchwork, a
 grob, a recorded base plot, a function that draws -- see \code{\link[=rtfplot]{rtfplot()}}),
 or a pre-built \code{rtfplot}.  One figure is given as it is --
-\code{rtf_figures(doc, plot)} -- and several as a list.}
+\code{rtf_figures(doc, plot)} -- and several as a list.  A plot object is
+drawn with the device the \code{rtfreporter.png_device} option names; its
+default follows \code{ggplot2::ggsave()}: ragg when installed,
+\code{grDevices::png()} otherwise (build an \code{\link[=rtfplot]{rtfplot()}} to choose per figure).}
 
 \item{width_twips}{Display width in twips of a figure that is not an
 \code{rtfplot} already (a file or a plot object), as \code{\link[=rtfplot]{rtfplot()}} takes it.

@@ -71,6 +71,10 @@
     # DPI assumed for an embedded figure (rtfplot) whose file carries no
     # resolution metadata. Figures default to their native size at this DPI.
     rtfreporter.figure.default_dpi       = 96L,
+    # The PNG device a plot object is drawn with (rtfplot): "auto" = ragg when
+    # installed, else grDevices::png(), as ggplot2::ggsave() does; "ragg";
+    # "png".
+    rtfreporter.png_device               = "auto",
     # How every formatter rounds an exact half: "r" = base::round() (half to
     # even), "sas" = half away from zero, as SAS ROUND() does.  See round_num().
     rtfreporter.rounding                 = "r",
@@ -91,6 +95,18 @@
 #' values -- the option value where one is set (e.g. in `Rprofile.site`),
 #' otherwise the factory baseline. Use it to record the configuration a report
 #' was generated under (a useful audit trail for validated/reproducible runs).
+#'
+#' @details
+#' Two of the options are about figures ([rtfplot()], [rtf_figures()]):
+#' \describe{
+#'   \item{`rtfreporter.figure.default_dpi`}{The DPI assumed for an image file
+#'     that records none (factory `96`).}
+#'   \item{`rtfreporter.png_device`}{The PNG device a plot object is drawn
+#'     with: `"auto"` (factory), `"ragg"` or `"png"`.  The default follows
+#'     `ggplot2::ggsave()`: ragg (`ragg::agg_png()`) when it is installed,
+#'     `grDevices::png()` otherwise; `"png"` pins the base device.  Files
+#'     given as paths are embedded as they are, whatever it says.}
+#' }
 #'
 #' @return A named list of resolved default values.
 #'

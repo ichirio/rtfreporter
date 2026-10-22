@@ -167,9 +167,29 @@
   invisible(NULL)
 }
 
+# Which PNG device draws a plot object: "ragg" or "png".  `device` is the
+# argument (NULL = the `rtfreporter.png_device` option); "auto" takes ragg
+# when it is installed -- it draws text and anti-aliasing the same on every
+# platform -- and grDevices::png() otherwise.
+.rtfplot_png_device <- function(device = NULL) {
+  if (is.null(device)) device <- .opt("rtfreporter.png_device")
+  if (!is.character(device) || length(device) != 1L || is.na(device) ||
+      !device %in% c("auto", "ragg", "png")) {
+    stop("`png_device` (option `rtfreporter.png_device`) must be ",
+         "\"auto\", \"ragg\" or \"png\".", call. = FALSE)
+  }
+  has_ragg <- requireNamespace("ragg", quietly = TRUE)
+  if (device == "ragg" && !has_ragg) {
+    stop("`png_device = \"ragg\"` needs the ragg package: ",
+         "install.packages(\"ragg\"), or use \"png\".", call. = FALSE)
+  }
+  if (device == "auto") device <- if (has_ragg) "ragg" else "png"
+  device
+}
+
 # Draw `x` into a temporary PNG and return its path.  The file lives for the
 # session, which is as long as the rtfplot that points at it needs it.
-.rtfplot_render <- function(x, width, height, dpi) {
+.rtfplot_render <- function(x, width, height, dpi, device = NULL) {
   for (nm in c("render_width", "render_height", "render_dpi")) {
     v <- switch(nm, render_width = width, render_height = height,
                 render_dpi = dpi)
@@ -178,13 +198,19 @@
            call. = FALSE)
     }
   }
-  if (!isTRUE(unname(capabilities("png")))) {
+  device <- .rtfplot_png_device(device)
+  if (device == "png" && !isTRUE(unname(capabilities("png")))) {
     stop("This R has no PNG device, so a plot object cannot be drawn.  ",
          "Save the figure yourself and pass the file path.", call. = FALSE)
   }
   path <- tempfile(fileext = ".png")
-  grDevices::png(filename = path, width = width, height = height,
-                 units = "in", res = dpi)
+  if (device == "ragg") {
+    ragg::agg_png(filename = path, width = width, height = height,
+                  units = "in", res = dpi, background = "white")
+  } else {
+    grDevices::png(filename = path, width = width, height = height,
+                   units = "in", res = dpi)
+  }
   ok <- FALSE
   on.exit({
     grDevices::dev.off()
@@ -228,6 +254,13 @@
 #' @param render_dpi Resolution to draw a plot object at (default `300`).  It
 #'   decides how sharp the figure is, **not** how big: a plot drawn at 600 dpi
 #'   occupies the same inches on the page as one drawn at 150.
+#' @param png_device The PNG device a plot object is drawn with: `"auto"`,
+#'   `"ragg"` or `"png"` (`grDevices::png()`).  `NULL` (default) takes the
+#'   `rtfreporter.png_device` option, whose default `"auto"` follows
+#'   `ggplot2::ggsave()`: ragg (`ragg::agg_png()`) when it is installed,
+#'   `grDevices::png()` otherwise.  `"ragg"` is an error without ragg.  The
+#'   figure takes the same inches on the page whichever device drew it.
+#'   Refused for a file.
 #'
 #' @details
 #' The native size is read from the file's resolution metadata (PNG `pHYs`
@@ -257,16 +290,19 @@
 #' @export
 rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
                     align = "center", render_width = 6.5,
-                    render_height = 4.5, render_dpi = 300) {
+                    render_height = 4.5, render_dpi = 300,
+                    png_device = NULL) {
   drawn <- .rtfplot_is_object(x)
   if (drawn) {
-    path <- .rtfplot_render(x, render_width, render_height, render_dpi)
+    path <- .rtfplot_render(x, render_width, render_height, render_dpi,
+                            png_device)
   } else {
     given <- c(!missing(render_width), !missing(render_height),
-               !missing(render_dpi))
+               !missing(render_dpi), !is.null(png_device))
     if (any(given)) {
-      stop("`render_width`, `render_height` and `render_dpi` say how to draw ",
-           "a plot object; a file already has a size and a resolution.",
+      stop("`render_width`, `render_height`, `render_dpi` and `png_device` ",
+           "say how to draw a plot object; a file already has a size and a ",
+           "resolution.",
            call. = FALSE)
     }
     path <- x

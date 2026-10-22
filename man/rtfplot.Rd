@@ -11,7 +11,8 @@ rtfplot(
   align = "center",
   render_width = 6.5,
   render_height = 4.5,
-  render_dpi = 300
+  render_dpi = 300,
+  png_device = NULL
 )
 }
 \arguments{
@@ -46,6 +47,14 @@ Refused for a file, which has its size already.}
 \item{render_dpi}{Resolution to draw a plot object at (default \code{300}).  It
 decides how sharp the figure is, \strong{not} how big: a plot drawn at 600 dpi
 occupies the same inches on the page as one drawn at 150.}
+
+\item{png_device}{The PNG device a plot object is drawn with: \code{"auto"},
+\code{"ragg"} or \code{"png"} (\code{grDevices::png()}).  \code{NULL} (default) takes the
+\code{rtfreporter.png_device} option, whose default \code{"auto"} follows
+\code{ggplot2::ggsave()}: ragg (\code{ragg::agg_png()}) when it is installed,
+\code{grDevices::png()} otherwise.  \code{"ragg"} is an error without ragg.  The
+figure takes the same inches on the page whichever device drew it.
+Refused for a file.}
 }
 \value{
 An \code{rtfplot} (S3) object suitable for use in \code{rtf_tables()}.
