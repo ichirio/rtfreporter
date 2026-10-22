@@ -12,8 +12,8 @@
 .fonttbl  <- function(l) grep("fonttbl", l, value = TRUE)[1L]
 
 .ja <- c(latin = "Times New Roman", east_asian = "MS Mincho")
-# "年齢" is written ␘0?䂀2?
-.ja_df <- function() data.frame(a = c("Age", "年齢"), b = c("1", "2"),
+# "\u5e74\u9f62" is written \u24180?\u40802?
+.ja_df <- function() data.frame(a = c("Age", "\u5e74\u9f62"), b = c("1", "2"),
                                 stringsAsFactors = FALSE)
 
 # The documents the byte-identity fixtures were written from (by the code
@@ -21,16 +21,16 @@
 # change elsewhere alters this output.
 .slot_base_doc <- function(font = NULL, tfont = NULL, hfont = NULL,
                            wm = NULL, tf = "table") {
-  df <- data.frame(a = c("x", "日本語"), b = c("1", "café"),
+  df <- data.frame(a = c("x", "\u65e5\u672c\u8a9e"), b = c("1", "caf\u00e9"),
                    stringsAsFactors = FALSE)
   rtf_document(watermark = wm,
                default_format = rtf_default_format(title_format = tf)) |>
     rtf_section(page = 1, secinfo = list(
-      header = rtf_header(rows = list(c(l = "HDR 日", r = "Page {PAGE}")),
+      header = rtf_header(rows = list(c(l = "HDR \u65e5", r = "Page {PAGE}")),
                           font = hfont),
       footer = rtf_footer(rows = list(c(l = "FTR")), font = hfont))) |>
     rtf_tables(rtftable(df, border = "tfl", font = font)) |>
-    rtf_titles(list("Title 表"), font = tfont) |>
+    rtf_titles(list("Title \u8868"), font = tfont) |>
     rtf_footnotes(list("Foot"), font = tfont)
 }
 
@@ -160,7 +160,7 @@ test_that("a title, in either format, carries the slot words", {
       rtf_document(font_lang = c(east_asian = "ja"),
                    default_format = rtf_default_format(title_format = tf)) |>
         rtf_tables(rtftable(.ja_df(), border = "tfl")) |>
-        rtf_titles(list("表 14.1"), font = .ja))
+        rtf_titles(list("\u8868 14.1"), font = .ja))
     expect_match(.line_of(l, "\\u34920? 14.1"), .ja_run, fixed = TRUE)
   }
 })
@@ -168,7 +168,7 @@ test_that("a title, in either format, carries the slot words", {
 test_that("a footnote carries the slot words", {
   l <- .run_slots(rtf_document(font_lang = c(east_asian = "ja")) |>
                     rtf_tables(rtftable(.ja_df(), border = "tfl")) |>
-                    rtf_footnotes(list("注 note"), font = .ja))
+                    rtf_footnotes(list("\u6ce8 note"), font = .ja))
   expect_match(.line_of(l, "\\u27880? note"), .ja_run, fixed = TRUE)
 })
 
@@ -176,8 +176,8 @@ test_that("a header and a footer band carry the slot words", {
   l <- .run_slots(
     rtf_document(font_lang = c(east_asian = "ja")) |>
       rtf_section(page = 1, secinfo = list(
-        header = rtf_header(rows = list(c(l = "ヘッダ")), font = .ja),
-        footer = rtf_footer(rows = list(c(l = "フッタ")), font = .ja))) |>
+        header = rtf_header(rows = list(c(l = "\u30d8\u30c3\u30c0")), font = .ja),
+        footer = rtf_footer(rows = list(c(l = "\u30d5\u30c3\u30bf")), font = .ja))) |>
       rtf_tables(rtftable(.ja_df(), border = "tfl")))
   expect_match(.line_of(l, "{\\header"), paste0(.ja_run, " \\u12504?"),
                fixed = TRUE)
@@ -228,7 +228,7 @@ test_that("a slotted document default writes the document-level defaults", {
     rtf_document(font_table = list(list(name = .ja)),
                  font_lang = c(east_asian = "ja")) |>
       rtf_section(page = 1, secinfo = list(
-        header = rtf_header(rows = list(c(l = "ヘッダ"))))) |>
+        header = rtf_header(rows = list(c(l = "\u30d8\u30c3\u30c0"))))) |>
       rtf_tables(rtftable(.ja_df(), border = "tfl")))
   expect_equal(l[1L], paste0(
     "{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033\\adeff0\\stshfdbch1",
@@ -266,9 +266,9 @@ test_that("rtf_config() sets and clears font_lang", {
 test_that("a slotted watermark font draws in the family its text needs", {
   wf <- rtfreporter:::.watermark_family
   expect_equal(wf(.ja, "DRAFT"), "Times New Roman")
-  expect_equal(wf(.ja, "社外秘"), "MS Mincho")
-  expect_equal(wf("Arial", "社外秘"), "Arial")
-  l <- .run_slots(rtf_document(watermark = rtf_watermark("社外秘",
+  expect_equal(wf(.ja, "\u793e\u5916\u79d8"), "MS Mincho")
+  expect_equal(wf("Arial", "\u793e\u5916\u79d8"), "Arial")
+  l <- .run_slots(rtf_document(watermark = rtf_watermark("\u793e\u5916\u79d8",
                                                          font = .ja)) |>
                     rtf_tables(rtftable(.ja_df())))
   expect_true(any(grepl("{\\sn gtextFont}{\\sv MS Mincho}", l, fixed = TRUE)))
@@ -277,7 +277,7 @@ test_that("a slotted watermark font draws in the family its text needs", {
 # ---- width estimation --------------------------------------------------------------
 
 test_that("an east_asian font counts wide characters as two columns", {
-  mixed <- "日本語abcＡ"     # 3 ideographs + abc + fullwidth A
+  mixed <- "\u65e5\u672c\u8a9eabc\uff21"     # 3 ideographs + abc + fullwidth A
   one   <- text_width_in("0", font = "Courier")
   expect_equal(text_width_in(mixed, font = "Courier"), 7 * one)
   expect_equal(text_width_in(mixed,
@@ -288,14 +288,14 @@ test_that("an east_asian font counts wide characters as two columns", {
                                              complex = "Arial")),
                7 * one)
   expect_equal(rtfreporter:::.ea_wide_count(
-    c("abc", "あア가", "é", NA)), c(0L, 3L, 0L, 0L))
+    c("abc", "\u3042\u30a2\uac00", "\u00e9", NA)), c(0L, 3L, 0L, 0L))
 })
 
 test_that("the option's east_asian slot reaches text_width_in() and listings", {
   old <- options(rtfreporter.font = c(latin = "Courier", east_asian = "MS Gothic"))
   on.exit(options(old), add = TRUE)
   one <- text_width_in("0")
-  expect_equal(text_width_in("日本ab"), 6 * one)
+  expect_equal(text_width_in("\u65e5\u672cab"), 6 * one)
   # the characters per line come from the latin font, as for "Courier"
   pg <- rtf_page(paper_size = "letter", orientation = "landscape")
   expect_identical(
