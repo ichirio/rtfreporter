@@ -363,3 +363,66 @@ test_that("rtf_figures() takes plot objects and renders them", {
   generate_rtfreport(doc, out, overwrite = TRUE)
   expect_length(grep("pngblip", readLines(out, warn = FALSE)), 2L)
 })
+
+# ──────── the PNG device: ragg when installed, as ggsave() does ────────────
+
+test_that("png_device chooses the device, and is checked", {
+  old <- options(rtfreporter.png_device = NULL); on.exit(options(old))
+  has_ragg <- requireNamespace("ragg", quietly = TRUE)
+  dev <- rtfreporter:::.rtfplot_png_device
+  expect_identical(dev(), if (has_ragg) "ragg" else "png")     # "auto"
+  expect_identical(dev("png"), "png")
+  options(rtfreporter.png_device = "png")
+  expect_identical(dev(), "png")                                # the option
+  expect_error(dev("svg"), "must be \"auto\", \"ragg\" or \"png\"")
+  expect_error(dev(c("png", "ragg")), "must be")
+  if (has_ragg) expect_identical(dev("ragg"), "ragg")
+})
+
+test_that("png_device = \"ragg\" without ragg says so", {
+  testthat::local_mocked_bindings(requireNamespace = function(...) FALSE,
+                                  .package = "base")
+  expect_error(rtfreporter:::.rtfplot_png_device("ragg"),
+               "needs the ragg package")
+  expect_identical(rtfreporter:::.rtfplot_png_device("auto"), "png")
+})
+
+test_that("png_device is refused for a file", {
+  f <- .tmp_png(); on.exit(unlink(f), add = TRUE)
+  expect_error(rtfplot(f, png_device = "png"), "a file already has a size")
+})
+
+test_that("a ragg figure takes the same inches as a png() one", {
+  skip_if_not_installed("ragg")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  draw <- function() plot(1:10)
+  rg <- rtfplot(draw, render_width = 4, render_height = 3, render_dpi = 150,
+                png_device = "ragg")
+  bp <- rtfplot(draw, render_width = 4, render_height = 3, render_dpi = 150,
+                png_device = "png")
+  expect_identical(c(rg$img_width, rg$img_height), c(600L, 450L))
+  expect_identical(c(rg$img_width, rg$img_height),
+                   c(bp$img_width, bp$img_height))
+  # ragg records the resolution in the file's pHYs chunk, as png() does
+  expect_equal(rtfreporter:::.read_png_density(rg$path)$dpi_x, 150,
+               tolerance = 0.01)
+  goal <- function(fig) {
+    rtf <- paste(rtfreporter:::.render_rtfplot(fig, 12240L), collapse = "")
+    regmatches(rtf, regexpr("\\\\picwgoal[0-9]+\\\\pichgoal[0-9]+", rtf))
+  }
+  expect_identical(goal(rg), "\\picwgoal5760\\pichgoal4320")
+  expect_identical(goal(rg), goal(bp))
+})
+
+test_that("the option draws a plot object with ragg", {
+  skip_if_not_installed("ragg")
+  old <- options(rtfreporter.png_device = "ragg"); on.exit(options(old))
+  fig <- rtfplot(function() plot(1:3), render_width = 4, render_height = 2,
+                 render_dpi = 100)
+  expect_identical(c(fig$img_width, fig$img_height), c(400L, 200L))
+  # a file given as a path is embedded as it is
+  f <- .tmp_png(); on.exit(unlink(f), add = TRUE)
+  bytes <- readBin(f, "raw", file.size(f))
+  expect_identical(rtfplot(f)$path, f)
+  expect_identical(readBin(f, "raw", file.size(f)), bytes)
+})

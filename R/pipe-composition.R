@@ -886,7 +886,10 @@ rtf_tables <- function(doc, tables,
 #'   image file (PNG/JPEG), a plot object (a ggplot2 plot, a patchwork, a
 #'   grob, a recorded base plot, a function that draws -- see [rtfplot()]),
 #'   or a pre-built `rtfplot`.  One figure is given as it is --
-#'   `rtf_figures(doc, plot)` -- and several as a list.
+#'   `rtf_figures(doc, plot)` -- and several as a list.  A plot object is
+#'   drawn with the device the `rtfreporter.png_device` option names; its
+#'   default follows `ggplot2::ggsave()`: ragg when installed,
+#'   `grDevices::png()` otherwise (build an [rtfplot()] to choose per figure).
 #' @param width_twips Display width in twips of a figure that is not an
 #'   `rtfplot` already (a file or a plot object), as [rtfplot()] takes it.
 #'   `NULL` (default): the image's native size -- a file at its embedded DPI,

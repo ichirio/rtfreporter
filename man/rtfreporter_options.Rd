@@ -15,6 +15,18 @@ values -- the option value where one is set (e.g. in \code{Rprofile.site}),
 otherwise the factory baseline. Use it to record the configuration a report
 was generated under (a useful audit trail for validated/reproducible runs).
 }
+\details{
+Two of the options are about figures (\code{\link[=rtfplot]{rtfplot()}}, \code{\link[=rtf_figures]{rtf_figures()}}):
+\describe{
+\item{\code{rtfreporter.figure.default_dpi}}{The DPI assumed for an image file
+that records none (factory \code{96}).}
+\item{\code{rtfreporter.png_device}}{The PNG device a plot object is drawn
+with: \code{"auto"} (factory), \code{"ragg"} or \code{"png"}.  The default follows
+\code{ggplot2::ggsave()}: ragg (\code{ragg::agg_png()}) when it is installed,
+\code{grDevices::png()} otherwise; \code{"png"} pins the base device.  Files
+given as paths are embedded as they are, whatever it says.}
+}
+}
 \examples{
 rtfreporter_options()
 

@@ -1,5 +1,18 @@
 # rtfreporter (development version)
 
+- **Plot objects are drawn with ragg when it is installed, as
+  `ggplot2::ggsave()` does** (0.8.2.9095).  `rtfplot()` and
+  `rtf_figures()` draw a ggplot2 plot, patchwork, grob, recorded plot or
+  drawing function with `ragg::agg_png()` when ragg is installed, and with
+  `grDevices::png()` otherwise -- same inches, same `render_dpi`, so the
+  figure's `\picwgoal` / `\pichgoal` do not change.  The new option
+  `rtfreporter.png_device` (`"auto"`, the default; `"ragg"`, an error
+  without ragg; `"png"`, the previous behaviour) and `rtfplot()`'s new
+  `png_device =` argument choose:
+  `options(rtfreporter.png_device = "png")` keeps the base device's
+  bytes, `rtfplot(p, png_device = "ragg")` asks for ragg.  Files given as
+  paths are embedded as they are.  ragg is in Suggests.
+
 - **A font per script slot: `latin` / `east_asian` / `complex`, and
   `font_lang`** (0.8.2.9094).  Every `font =` (table, header/footer band,
   titles, footnotes, watermark, `plan_style()`, `font_table` entries and
