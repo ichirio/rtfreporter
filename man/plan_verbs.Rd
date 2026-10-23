@@ -175,7 +175,9 @@ plan_listing(
   spacer = NULL,
   spacer_rel_width = NULL,
   layout = NULL,
-  wrap = NULL
+  wrap = NULL,
+  align = NULL,
+  record = NULL
 )
 
 plan_titles(.plan, ..., pages = NULL)
@@ -469,7 +471,10 @@ applies to the cells \code{cols} / \code{header} / \code{where} choose.  A
 columns, \code{NA} leaving the column default alone --- \code{bold = ~ is.na(label)}, \code{color = list(Placebo = ~ ifelse(n > 50, "#CC0000", NA))}, a named list scoping it to columns.  Formula styles see the
 printed rows only with \code{plan_stub(before = TRUE)}.  For \code{plan_style()},
 \code{align}, \code{bold} and \code{italic} are the body's default look,
-\code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.}
+\code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.
+For \code{plan_listing()}, \code{align} is \code{\link[=listing_spec]{listing_spec()}}'s: the alignment of
+the columns that set none of their own (\code{listing_col(align = )});
+\code{NULL} the template's.}
 
 \item{border, align_count_pct, font, font_size_half_points, row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips, cell_padding_left_twips, cell_padding_right_twips, cell_valign, table_align, markup, blank_row_normalize}{For \code{plan_style()}: the settings of the \strong{whole table}, by
 \code{\link[=rtftable]{rtftable()}}'s and \code{\link[=as_rtftables]{as_rtftables()}}'s names.  What a table has per
@@ -819,11 +824,13 @@ column) and \code{\link[=rtftable]{rtftable()}}'s \code{column_widths_twips}, as
 \code{column_widths_twips}, when given, fixes the widths and \code{widths} is not
 used, as in \code{\link[=rtftable]{rtftable()}}.}
 
-\item{type, spacer, spacer_rel_width, layout, wrap}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged.
-\code{...} there takes the \code{\link[=listing_col]{listing_col()}}s.  A blank row between records
-is \code{plan_blanks(where = "records")}, one at the top of each page
-\code{plan_blanks(first = TRUE)}, and a column's alignment is its own
-(\code{listing_col(align = )}).}
+\item{type, spacer, spacer_rel_width, layout, wrap, record}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged
+(\code{record}: the hidden record column -- \code{FALSE} none, a string its
+name; \code{NULL} the default, \code{TRUE}).  \code{...} there takes the
+\code{\link[=listing_col]{listing_col()}}s.  A blank row between records is
+\code{plan_blanks(where = "records")}, one at the top of each page
+\code{plan_blanks(first = TRUE)}; a column's own alignment is
+\code{listing_col(align = )}, the others' \code{plan_listing(align = )}.}
 
 \item{pages}{For \code{plan_titles()} / \code{plan_footnotes()}: a list with one
 block per page, when the pages do not share a block.  \code{...} is the rows
@@ -885,7 +892,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)}: the whole table. Goes to \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} by the same names; \verb{border_*} and the default look (\code{header_align}, \code{header_bold}, \code{header_italic}, \code{align}, \code{bold}, \code{italic}, \code{underline}) via \code{\link[=rtf_table_style]{rtf_table_style()}}.
 \item \code{plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)}: the columns. Goes to \code{\link[=rtftable]{rtftable()}}: \code{col_rel_width}, \code{row_title}, \code{column_widths_twips}; \code{\link[=set_decimal_split]{set_decimal_split()}}: \code{cols}; \code{\link[=as_rtftables]{as_rtftables()}}: \code{auto_width}, \code{cell_format}; \code{\link[=widen_ard]{widen_ard()}}: \code{sep}.
 \item \code{plan_col_header(header, values, header_sep, col_header_align, lines, span)}: the column header. Goes to \code{\link[=set_col_header]{set_col_header()}}: the header (or \code{lines}, the header a row at a time) and a data frame of \code{values}; a population fills its \code{{n}} tokens; \code{\link[=as_rtftables]{as_rtftables()}}: \code{header_sep}; \code{\link[=rtftable]{rtftable()}}: \code{col_header_align}.
-\item \code{plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)}: a listing. Goes to \code{\link[=listing_spec]{listing_spec()}}, the same names.
+\item \code{plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap, align, record)}: a listing. Goes to \code{\link[=listing_spec]{listing_spec()}}, the same names.
 \item \code{plan_titles()}, \code{plan_footnotes()}: the blocks above and below. Goes to \code{\link[=rtf_titles]{rtf_titles()}}, \code{\link[=rtf_footnotes]{rtf_footnotes()}}.
 \item \code{plan_after(...)}: anything else. Goes to your functions of the pages.
 }
