@@ -1,0 +1,110 @@
+# Asking an AI chat for a table's plan code
+
+[In
+Japanese](https://ichirio.github.io/rtfreporter/articles/ai-plan-code-ja.md)
+
+## 1. What it does
+
+A chat AI writes the R program of **one table**, from the table’s
+**shell** and its **ARD**:
+`normalize_ard() |> table_plan() |> plan_*()`, the document and the
+file. rtfreporter gives it a **kit** of facts first, so it writes only
+functions that exist. Nothing is sent by rtfreporter.
+
+The code here runs on the `ADSL` that ships with `cards`
+(`install.packages("cards")`). For real work, replace the lines that
+build the ARD with reading your study’s ARD.
+
+## 2. Make the kit
+
+``` r
+
+library(rtfreporter)
+library(cards)
+
+# to try it: an ARD from the ADSL bundled with cards
+# real work: ard <- readRDS("the study ARD.rds"), cut to this table's rows
+adsl <- ADSL[ADSL$SAFFL == "Y", ]
+ard  <- ard_stack(adsl, .by = ARM,
+  ard_summary(variables = AGE),
+  ard_tabulate(variables = c(AGEGR1, SEX)))
+saveRDS(ard, "ard.rds")                         # the same ARD for step 5
+
+rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, overwrite = TRUE)
+```
+
+| File | What it is |
+|----|----|
+| `00_START_HERE.md` | the request: the program’s three steps, the rules, the answer’s form (one R block) |
+| `01_rtfreporter-ai-user-manual.md` | the manual: the functions that exist (§18), a table from an ARD (§17, §17a) |
+| `02_` … `04_example_*.R` | programs in that layout: ORR by subgroup, AEs by SOC/PT, demographics |
+| `05_ard.csv` | the table’s ARD, normalized (with `ard =`) |
+| `06_ard_shape.md` | the ARD’s summary: the names of its keys, variables and statistics — no numbers (with `ard =`) |
+
+The files are written in UTF-8 whatever the locale, on Windows too;
+Japanese labels survive.
+
+## 3. What to paste
+
+| Paste | Never |
+|----|----|
+| the kit’s files `00` to `04` and `06_ard_shape.md` (the ARD’s summary) | **subject-level data**: ADaM or SDTM datasets, listings, anything with a `USUBJID` |
+| `05_ard.csv` (the ARD’s numbers), only when your rules allow it | other tables’ shells or ARDs |
+| the **shell of this table only**, as text (rows, columns, cell format, titles, footnotes) |  |
+
+**One table a chat.**
+
+**When the chat takes no attachment**, paste `PASTE.md`: the kit makes
+it, its files as one text (about 80,000 characters; the ARD’s numbers
+only with `values = TRUE`), then the table’s shell under it. Shorter,
+with the shell in it – the manual’s §0, §17, §17a and §18 and the one
+example closest to the ARD, about 40,000 characters:
+
+``` r
+
+shell <- c("Table 14.1.1  Demographic and Baseline Characteristics",
+           "                     Placebo   Xanomeline Low   Xanomeline High",
+           "Age (years)  n / Mean (SD) / Median / Min, Max",
+           "Sex, n (%)   F / M")
+rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, shell = shell, size = "short",
+                      overwrite = TRUE)          # or shell = "shell.txt", a file
+```
+
+A shell in Excel: select the whole sheet, copy, paste it into Notepad
+and save it as UTF-8 (`shell.txt`), then `shell = "shell.txt"`.
+
+## 4. How to ask
+
+> Write the R program for table T-14-1-1, following 00_START_HERE.md.
+> Answer with one R code block only. The shell is below. The ARD is
+> `ard` (its shape in 06_ard_shape.md); `output_path` and `report_name`
+> exist.
+>
+> *(the shell, pasted)*
+
+The answer is one block starting ```` ```r ````. `# QUESTION:` lines at
+its top: answer them in the chat and ask for the program again.
+
+## 5. Try the code it returns
+
+Save the block’s content as `T-14-1-1.R` (UTF-8), then run:
+
+``` r
+
+library(rtfreporter)
+ard         <- readRDS("ard.rds")           # the ARD the kit was made from
+output_path <- "output"
+report_name <- "T-14-1-1"
+dir.create(output_path, showWarnings = FALSE)
+source("T-14-1-1.R", encoding = "UTF-8")    # the AI's program
+plan_apply(tbl_plan, "table")               # the table as a data frame
+```
+
+It writes `output/T-14-1-1.rtf`.
+
+| What you see | What to do |
+|----|----|
+| an error naming a function or an argument | paste the error into the same chat: “this error; correct the program” |
+| `# QUESTION:` lines at the top | answer them in the chat |
+| a row or column missing | check `06_ard_shape.md`: the ARD may not hold it — add it to the ARD, not to the program |
+| the numbers | they are the ARD’s; the plan never computes |

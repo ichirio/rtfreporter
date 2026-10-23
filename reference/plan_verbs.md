@@ -1,0 +1,1353 @@
+# Declare the table, one layer at a time
+
+Each verb adds a layer to an
+[`table_plan()`](https://ichirio.github.io/rtfreporter/reference/table_plan.md).
+**A later layer wins.** The roles — which column goes across, which go
+down, which carries the row identity — are said once, on
+[`table_plan()`](https://ichirio.github.io/rtfreporter/reference/table_plan.md);
+these verbs are the things a report really does declare twice. Their
+arguments are the ones
+[`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md)
+and
+[`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+already take, so the layering is the only new idea.
+
+## Usage
+
+``` r
+plan_levels(.plan, ..., .drop_empty = NULL)
+
+plan_labels(.plan, ...)
+
+plan_cells(.plan, ..., stats = NULL, value = NULL, na = NULL, notes = NULL)
+
+plan_digits(.plan, ..., rounding = NULL)
+
+plan_stub(
+  .plan,
+  vars = NULL,
+  name = NULL,
+  indent = NULL,
+  group_summary = NULL,
+  before = FALSE
+)
+
+plan_cell_style(
+  .plan,
+  cols = NULL,
+  header = FALSE,
+  where = NULL,
+  bold = NULL,
+  italic = NULL,
+  align = NULL,
+  color = NULL,
+  background = NULL,
+  border = NULL,
+  underline = NULL,
+  indent_twips = NULL
+)
+
+plan_paginate_group(
+  .plan,
+  col = NULL,
+  keep = TRUE,
+  heading = NULL,
+  heading_at = NULL
+)
+
+plan_row_group(.plan, mode = NULL, collapse = NULL, group_col = NULL)
+
+plan_nest(.plan, ...)
+
+plan_total(
+  .plan,
+  label = "Total",
+  position = c("last", "first"),
+  direction = c("cols", "rows", "both")
+)
+
+plan_filter(.plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL)
+
+plan_compare(.plan, ..., by = NULL, position = c("last", "first"))
+
+plan_stat_groups(.plan, ..., .variables = NULL, .others = NULL)
+
+plan_hide(.plan, ...)
+
+plan_sort(.plan, ..., stat = NULL, keep = TRUE)
+
+plan_empty(
+  .plan,
+  text = "No subjects met the criteria.",
+  when = c("auto", "no_rows", "overall_zero"),
+  position = c("last", "first", "replace"),
+  footnote = NULL
+)
+
+plan_blanks(.plan, where = NULL, first = NULL, last = NULL, counted = NULL)
+
+plan_paginate_rows(
+  .plan,
+  max_rows = NULL,
+  split = NULL,
+  break_before = NULL,
+  min_group_rows = NULL,
+  cont_label = NULL,
+  page_by = NULL,
+  heading = NULL,
+  heading_at = NULL
+)
+
+plan_style(
+  .plan,
+  border = NULL,
+  align_count_pct = NULL,
+  font = NULL,
+  font_size_half_points = NULL,
+  row_height_twips = NULL,
+  row_height_exact = NULL,
+  header_row_height_twips = NULL,
+  blank_row_height_twips = NULL,
+  cell_padding_left_twips = NULL,
+  cell_padding_right_twips = NULL,
+  cell_valign = NULL,
+  table_align = NULL,
+  markup = NULL,
+  blank_row_normalize = NULL,
+  border_header = NULL,
+  border_spanning = NULL,
+  border_body = NULL,
+  border_first_row = NULL,
+  border_last_row = NULL,
+  header_align = NULL,
+  header_bold = NULL,
+  header_italic = NULL,
+  align = NULL,
+  bold = NULL,
+  italic = NULL,
+  underline = NULL,
+  table_width_twips = NULL,
+  table_width_pct = NULL,
+  table_width_pct_of_writable = NULL
+)
+
+plan_col_header(
+  .plan,
+  header = NULL,
+  values = NULL,
+  header_sep = NULL,
+  col_header_align = NULL,
+  lines = NULL,
+  span = "each"
+)
+
+plan_columns(
+  .plan,
+  widths = NULL,
+  decimal = NULL,
+  row_title = NULL,
+  auto_width = NULL,
+  sep = NULL,
+  cell_format = NULL,
+  column_widths_twips = NULL
+)
+
+plan_listing(
+  .plan,
+  ...,
+  type = NULL,
+  sep = NULL,
+  spacer = NULL,
+  spacer_rel_width = NULL,
+  layout = NULL,
+  wrap = NULL,
+  align = NULL,
+  record = NULL
+)
+
+plan_titles(.plan, ..., pages = NULL)
+
+plan_footnotes(.plan, ..., pages = NULL)
+
+plan_after(.plan, ...)
+
+plan_paginate_cols(
+  .plan,
+  at = NULL,
+  cut_by = NULL,
+  every = NULL,
+  keep = NULL,
+  col_header = NULL,
+  fit = NULL,
+  allow_span_break = NULL,
+  order = NULL
+)
+```
+
+## Arguments
+
+- .plan:
+
+  A
+  [`table_plan()`](https://ichirio.github.io/rtfreporter/reference/table_plan.md).
+  The pipe passes it by position; the dot keeps a name in `...` such as
+  `p` (cards' percentage) from being taken for it (an argument before
+  `...` matches by its first letters).
+
+- ...:
+
+  For `plan_cells()`, exactly what `widen_ard(cells = )` takes: one bare
+  entry, or entries named by variable, `context`, kind (`continuous` /
+  `categorical`), a stat group of `plan_stat_groups()` or `default`. The
+  names after `...` are reserved: a variable called `stats`, `value`,
+  `na` or `notes` cannot be keyed in `plan_cells()`; name it so in the
+  ARD.
+
+  In a table of `plan_stat_groups()`, the key is picked per record: a
+  record of a split variable (`.variables`) takes its variable's entry,
+  else its **group's** (`"n (%)"`, `orr_ci`), before its context or
+  kind; a record that went whole to `.others` takes its variable's, then
+  its context's or kind's (`categorical`), its group's only after them.
+  So a study's plan-wide `categorical` reaches a block of counts beside
+  an ORR, and leaves the rate and its CI to their groups.
+
+  For `plan_levels()`, `variable = c("AGE", "SEX", "RACE")` orders the
+  analysis variables themselves (the blocks of rows); variables left out
+  follow in the ARD's order.
+
+  `plan_compare()` takes the **comparison columns**, each named (the
+  column's name) and each what `plan_cells()` takes for one cell: a
+  template with guards, or a map keyed by context / kind / `default` —
+  here a named vector is that map, since a column is one cell with no
+  rows to label: `p = c(stats_t_test = "{p.value:.3f}")` reads the
+  t-test and leaves a Wilcoxon of the same variable (noted, as every
+  record no column takes); two tests one column reads both of are an
+  error, never one picked. A template reads only the statistics it
+  names. It reads the ARD's comparison records — the column key with
+  **no value**, in an analysis the body does not have: cardx's
+  `ard_stats_t_test()`, `ard_stats_chisq_test()`,
+  `ard_stats_fisher_test()`, `ard_stats_kruskal_test()`,
+  `ard_stats_oneway_test()`, `ard_stats_prop_test()` — and puts each on
+  its **variable's block**: the row of its level when it has one, else
+  the block's first row as the table is sorted (the variable's heading
+  row under `plan_stub()`). Nothing is computed; the p-value, the
+  difference and its CI are the ARD's. A test whose record names no
+  variable (`ard_stats_aov()`'s term) has no row; use
+  `ard_stats_oneway_test()`.
+
+  The names are **the columns' own** — any name, as many as the table
+  has; `p` and `diff` are only examples. Each column reads whatever
+  statistics its template names from the same record:
+
+      plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))
+      plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})",
+                   p = "{p.value:.3f}")
+      plan_compare(t = "{statistic:.2f}", df = "{parameter:.0f}",   # a t-test laid out
+                   p = "{p.value:.4f}")
+      plan_compare(odds_ratio = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})")  # an odds ratio (Fisher)
+      plan_compare(p = c(stats_t_test = "{p.value:.3f}"))              # the t-test of several tests
+      plan_compare(p = c(stats_chisq_test  = "{p.value:.3f}",          # each test its own way
+                         stats_fisher_test = "{p.value:.4f}"))
+
+  **Lines** are
+  [`cell_rows()`](https://ichirio.github.io/rtfreporter/reference/cell_rows.md),
+  as in the body: each line goes on the variable's row of that label, so
+  a difference and its CI sit beside the body's estimate and CI lines
+  (an ORR table's `"1"` / `"2"`), and a p-value on line 1 only is
+  `cell_rows("1" = ...)` (a named vector is a map by context here, not
+  lines):
+
+      plan_compare(diff = cell_rows("1" = "{estimate:.3f}",
+                                    "2" = "({conf.low:.3f}, {conf.high:.3f})"),
+                   p    = cell_rows("1" = "{p.value:.3f}"))
+
+  The columns have no population: the header's `{col}` / `{n}` and its
+  short rows leave them alone, so the header names them
+  (`rtf_col_header(c(..., "p-value"))`).
+
+  `plan_stat_groups(.variables = , .others = )` scopes the groups: only
+  the records of `.variables` (`"RESP"`) are split; the other variables'
+  records go **whole** to the group `.others` names (`"n"`), every
+  statistic with them — so a block of SEX's n (%) (`show_keys`) is not
+  pulled into the ORR's groups by its `n`. `.others` needs `.variables`.
+
+  `plan_stat_groups()` takes the groups, each a name and the statistics
+  in it
+  (`n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")`).
+  Each row of the ARD gets its group in the key `.stat_group`, which
+  `table_plan(cols = )` or `rows = ` names like any other:
+  `cols = c("TRT01A", ".stat_group")` puts one record's N in one column
+  and its rate and interval in the next, and `plan_cells()` keys a
+  template by the group's name (`n = "{N}"`, `orr_ci = cell_rows(...)`).
+  A statistic in no group is not read. This is what a
+  [`mutate()`](https://dplyr.tidyverse.org/reference/mutate.html) of
+  `variable` before
+  [`table_plan()`](https://ichirio.github.io/rtfreporter/reference/table_plan.md)
+  did — a workaround: keep the ARD as it is (`variable` is the analysis
+  variable) and choose the layout in the plan.
+
+  With
+  [`cell_rows()`](https://ichirio.github.io/rtfreporter/reference/cell_rows.md)
+  (or named templates) for the rows inside a cell, one analysis's
+  statistics lay out as **n rows x m columns**: the groups go across
+  (`cols = c("TRT01A", ".stat_group")`) or down
+  (`rows = c(..., stat = ".stat_group")`, in the order the groups are
+  said), and each group's template has its own rows; a group with fewer
+  rows leaves the rest empty, aligned row by row. The groups split **one
+  record** — the same analysis and the same keys; statistics of two
+  analyses are two records, joined by the keys as always.
+
+  `plan_digits()` takes the same keys, with the digits as the value. A
+  value is **one number**, for every token in that entry, or a vector
+  **named by statistic** — a house rule is rarely one number. The two
+  keys combine, which is the point of the verb:
+
+      plan_digits(continuous  = c(mean = 2, sd = 3, median = 2),
+                  categorical = c(p = 1)) |>      # the house rule
+        plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
+
+  A value is the **decimals**, or `"4s"` for **4 significant digits** —
+  the token grammar's own distinction (`{mean:.4f}` / `{mean:.4s}`), not
+  a second argument to learn:
+
+      plan_digits(continuous = c(mean = "4s", sd = "5s", n = 0))
+
+  A statistic the narrower entry says nothing about falls through to the
+  wider one, so AGE's `median` stays at 2 above. Digits only reach a
+  token that left the question open (`{mean}`, or `{p:\%}`): one that
+  answered it (`{mean:.2f}`) keeps its answer, so a template meant to be
+  tuned is written open.
+
+  A **finished table** has no templates to fill — a source that is
+  already the table, or statistics laid out as rows
+  (`plan_cells(stats = "rows")`) — so there `plan_digits()` formats the
+  numbers themselves, with
+  [`fmt_numeric()`](https://ichirio.github.io/rtfreporter/reference/fmt_numeric.md):
+  a key that names a **column** formats that column, and `.rows` formats
+  the value columns by the text of the label column:
+
+      plan_digits(.rows = c(N = 0, Mean = 1, SD = "3s"))
+
+  A key that reaches neither a variable nor a column is an error, not
+  silence.
+
+  For `plan_nest()`, one entry per nested variable: its name, and the
+  variable and level its rows go under,
+  `plan_nest(RACESUB = c(RACE = "Asian"))`. The level is matched as the
+  table shows it (the ARD's level: a code list's label). The nested rows
+  follow that level's row, one indent step deeper (the stub's `indent`,
+  default 4), in the parent's group; their own heading is dropped, their
+  order and text stay `plan_levels()`' and `plan_labels()`'. The rows
+  key that carries the variable
+  (`table_plan(rows = c(group = "variable"))`) is what is read.
+
+  For `plan_levels()` and `plan_labels()`, one entry per column or
+  analysis variable: an order (`AGEGR1 = c("<65", "65-74")`), or the
+  text values are printed as (`AGE = "Age (years)"`). An order may name
+  its values' text, as
+  [`base::factor()`](https://rdrr.io/r/base/factor.html)'s `levels` and
+  `labels`: `plan_levels(SEX = c(F = "Female", M = "Male"))` is the
+  order F, M and their text, an element without a name the value as it
+  is, and `variable = c(AGE = "Age (years)", "SEX")` the variables'
+  order and a heading. `plan_labels()` names without ordering, and its
+  text wins value by value over a name an order gives, whichever comes
+  first; it names a value by itself or by the text the order gives it
+  (`plan_labels(SEX = c(Female = "Women"))` after the order above), the
+  value first when a text is both (said in a message). Both merge one
+  **key** at a time, so a later layer adds a variable without restating
+  the rest — which is the whole reason these two are layers and the
+  roles are not. A `plan_labels()` entry whose value is itself a named
+  vector applies to that **column** only: a shift table's `"0"` is
+  `"Grade 0"` down the side and `"Baseline 0"` across the top.
+
+- .drop_empty:
+
+  For `plan_levels()`: variables whose levels **no record has** are not
+  shown – a level whose `n` is 0 (or missing) in every column, as an ARD
+  made with a code list's full set of levels has (a factor's unused
+  level, counted 0). `NULL` (default): every level the data has is
+  shown. A level that some column counts stays; a variable summarised
+  without `n` is untouched. Several calls add up.
+
+- stats, value, na, notes:
+
+  For `plan_cells()`: how a cell is made, as
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md)
+  takes them — `stats = "cells"` (default) fills a template per cell and
+  `"rows"` makes each statistic a row of its own; `value` matters only
+  with `stats = "rows"`: the raw number (`"stat"`) or cards' formatted
+  text (`"stat_fmt"`) in each row. With templates (`stats = "cells"`) an
+  open `{x}` takes `stat_fmt` when the ARD has it and `stat` otherwise,
+  and `{x:stat_fmt}` / `{x:.1f}` say so per token; `na` what fills a
+  cell no template could; `notes = FALSE` stops the report of the
+  statistics no template used. They hold however the plan is run, by
+  [`plan_apply()`](https://ichirio.github.io/rtfreporter/reference/plan_apply.md)
+  or by `rtf_tables(doc, plan)`. On a plan of a table that is already
+  built (no statistics), `na` alone is taken, and is
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  `na`: what a missing value prints as.
+
+- rounding:
+
+  For `plan_digits()`: the tie-breaking family for the run, as
+  `widen_ard(rounding = )` takes it. Last wins, like every other layer.
+  A study sets the rule once with `options(rtfreporter.rounding = )`;
+  give it here only for a table that departs from the study's rule.
+
+- vars, name, indent, group_summary:
+
+  For `plan_stub()`: the row keys to fold into one stub column and how,
+  as
+  [`stub_cols()`](https://ichirio.github.io/rtfreporter/reference/stub_cols.md)
+  takes them. `name` is the NAME the folded column gets
+  (`stub_cols(label = )`), which is a different thing from
+  `table_plan(label = )` — the column whose VALUES are the row text.
+  `vars` is derived when left out. With one column (a table of one row
+  heading, a study's `plan_stub(name = "row_label")` on it), that column
+  is the stub, renamed `name`, and nothing is folded.
+
+- before:
+
+  For `plan_stub()`: `FALSE` (default) folds the stub inside
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md),
+  after grouping and pagination have had their say. `TRUE` folds it
+  first, with
+  [`stub_cols()`](https://ichirio.github.io/rtfreporter/reference/stub_cols.md),
+  which is what `plan_cell_style()` needs — only then can a condition
+  see the rows that will be printed. The two do **not** always give the
+  same table: folded first, the row keys are gone before a page split or
+  a row group could read them, so `plan_paginate_group(col = )` naming
+  one of them no longer finds it. That is why this is a choice and not
+  worked out for you.
+
+- cols:
+
+  For `plan_cell_style()`: the columns styled, by name (`.values` for
+  every value column); left out, every column.
+
+- header:
+
+  For `plan_cell_style()`: `TRUE` styles the column header
+  ([`style_header()`](https://ichirio.github.io/rtfreporter/reference/style_header.md)).
+  For `plan_col_header()`: the header, built with the same
+  [`rtf_col_header()`](https://ichirio.github.io/rtfreporter/reference/rtf_col_header.md)
+  as everywhere else — or a **function** of the resolved `n` (and, with
+  two arguments, the finished table) when it has to be computed — or a
+  **data frame of cells**, one row a cell, with the `col_header` sheet's
+  columns (`line`, `cols`, `span`, `text`, borders ...), placed on each
+  page's columns when it is made; this is how
+  `tflspec::tfl_table_code()` writes a workbook's header. The plan adds
+  two things to a header it is given, both of which used to need a
+  function:
+
+  - `{n:sum}` is that number **totalled over the columns the cell
+    covers**, so a spanner over one arm's two columns shows that arm's N
+    and one over all of them shows the study total — neither written
+    down. A cell outside the data (the stub) totals every column. A
+    spanner's `{col1}`, `{col2}`, ... are the levels its columns
+    **agree** on, which is the arm name a spanning cell wants;
+
+  - `{n:<column>}` names **one** of the values, for a cell that has to
+    say a number belonging to a column it does not sit over —
+    `"A={n:Placebo} B={n:Xanomeline High Dose}"`;
+
+  - **[`print()`](https://rdrr.io/r/base/print.html) lists every token
+    this plan offers, with its VALUES**, under `header tokens` — the
+    numbers a `{n}` holds and the text a `{col1}` prints as — because
+    they come from the ARD and from the spread, and neither is visible
+    in the call. The `{col...}` ones appear once the table has been
+    built at least once;
+
+  - its cells may carry `{col}` and `{n}` — the column and its
+    denominator (or the single one there is). Several `cols` keys make a
+    name like "Placebo\_\_\_\_Negative", which nobody wants printed, so
+    `{col}` is the **leaf** and `{col1}`, `{col2}`, ... are the levels
+    in order; with one key the leaf is the whole name. The hierarchy
+    itself needs no header —
+    [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+    builds the spanning rows from the same separator, merging the cells.
+    What each level READS is `plan_labels()`'s business, since it
+    recodes the values the name is made of;
+
+  - a row **shorter** than the table has its last cell repeated over the
+    spread columns, whose names are not known until the table exists.
+
+      plan_col_header(values = list(n = TRUE), rtf_col_header(
+        c("",               "{col}"),
+        c("Characteristic", "(N={n})")))
+
+  A row already the right length, and a cell with no token in it, are
+  untouched — so a spanner, a border or a cell that reads the finished
+  table is written exactly as it always was.
+
+- where:
+
+  For `plan_cell_style()`: a one-sided formula over the table's columns
+  choosing the rows, e.g. `where = ~ is.na(label)`. For `plan_blanks()`:
+  `as_rtftables(blank_rows = )`, or `"records"` for a blank row after
+  each record of a listing.
+
+- bold, italic, align, color, background:
+
+  For `plan_cell_style()`: how the cells look. A **value**
+  (`bold = TRUE`, `color = "#CC0000"`) applies to the cells `cols` /
+  `header` / `where` choose. A **one-sided formula** computes the value
+  row by row over the table's columns, `NA` leaving the column default
+  alone — `bold = ~ is.na(label)`,
+  `color = list(Placebo = ~ ifelse(n > 50, "#CC0000", NA))`, a named
+  list scoping it to columns. Formula styles see the printed rows only
+  with `plan_stub(before = TRUE)`. For `plan_style()`, `align`, `bold`
+  and `italic` are the body's default look,
+  [`rtf_table_style()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style.md)'s
+  fields. For `plan_listing()`, `align` is
+  [`listing_spec()`](https://ichirio.github.io/rtfreporter/reference/listing_spec.md)'s:
+  the alignment of the columns that set none of their own
+  (`listing_col(align = )`); `NULL` the template's.
+
+- border, align_count_pct, font, font_size_half_points,
+  row_height_twips, row_height_exact, header_row_height_twips,
+  blank_row_height_twips, cell_padding_left_twips,
+  cell_padding_right_twips, cell_valign, table_align, markup,
+  blank_row_normalize:
+
+  For `plan_style()`: the settings of the **whole table**, by
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)'s
+  and
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  names. What a table has per column or per cell is another verb's —
+  `plan_columns()`, `plan_cell_style()`, `plan_col_header()`,
+  `plan_blanks()` — so this list is the whole of it. For
+  `plan_cell_style()`, `border` is a column's border
+  ([`rtf_border()`](https://ichirio.github.io/rtfreporter/reference/rtf_border.md)).
+
+- underline:
+
+  For `plan_style()`: the body's default, an
+  [`rtf_table_style()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style.md)
+  field like `align`, `bold` and `italic` (which are that too in
+  `plan_style()`). For `plan_cell_style()`: the cells' underline, as
+  `bold`.
+
+- indent_twips:
+
+  For `plan_cell_style()`: the left indent of the cells' text,
+  [`style_cols()`](https://ichirio.github.io/rtfreporter/reference/style_header.md)'s
+  `indent_twips` (not on the header).
+
+- col:
+
+  For `plan_paginate_group()`: the column whose value starts a new page
+  ([`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  `page_by`, or `split = "by_value"` with a `plan_stub()`). Left out, it
+  is the outermost row key. It is a PAGE key, the same on every row of a
+  page, so it is never a row group: blank rows between groups,
+  `collapse`, `row_title`, the stub and the column positions start at
+  the first printed row key, and `first` / `last` apply on every page.
+  The page is **named** after the value, which is the line
+  `rtf_tables(auto_section = TRUE)` cuts a section on — so this verb
+  decides what a section is. It is the only verb that makes a page per
+  value.
+
+- keep:
+
+  `FALSE` also hides the column the verb names: the page key for
+  `plan_paginate_group()`, the sort keys for `plan_sort()`. A column can
+  be **needed and not wanted** — the key a page break reads, a sort
+  carrier — and the verb that needs it is the one place that knows, so
+  it says so there instead of the name being written again in a
+  `plan_hide()`. Names that are not columns (a statistic, `".depth"`)
+  are ignored rather than refused.
+
+- heading:
+
+  For `plan_paginate_group()` (and `plan_paginate_rows()` with one
+  `page_by` column, a page per value with a row budget inside): the
+  page's name as a template, `"Treatment: {value} (N={n})"`, in place of
+  the bare value — so the section header
+  `rtf_tables(auto_section = TRUE)` prints (or the title line of
+  `auto_title = TRUE`) says the arm and its N with neither written by
+  hand, and a study with three arms gets three. `{value}` is the page's
+  value as printed; `{n}` its population **as the ARD states it**: the
+  page variable's own tabulation,
+  `cards::ard_tabulate(adsl, variables = TRT01A)` bound into the ARD
+  (the `.key_own` rows
+  [`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md)
+  keeps), never an analysis's `N` (the count of its non-missing values).
+  What the ARD does not state is `NA`, with a warning. `{PROGRAM}`,
+  `{DATETIME}` and the page tokens are left for the renderer.
+
+- heading_at:
+
+  For `plan_paginate_group()` (and `plan_paginate_rows()` with
+  `page_by`): where the page's name prints — `"section"`, in the section
+  header (what `rtf_tables(auto_section = TRUE)` does); `"title"`, as
+  the last line of the titles above the table (`auto_title = TRUE`);
+  `"none"`, nowhere. It is the default of
+  [`rtf_tables()`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md)'s
+  `auto_section` / `auto_title` for these pages, so the plan says it
+  with the pages it names and `rtf_tables(plan)` needs neither; an
+  `auto_section` / `auto_title` given to
+  [`rtf_tables()`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md)
+  wins. `NULL` (default): not said
+  ([`rtf_tables()`](https://ichirio.github.io/rtfreporter/reference/rtf_tables.md)'s
+  own default, nowhere).
+
+- mode, collapse:
+
+  For `plan_row_group()`: what a run of rows sharing a value is, and how
+  the repeat shows. `mode` is `as_rtftables(group_by = )`, which is how
+  a group BOUNDARY is found — `"value"` (each run of equal values),
+  `"indent`" (a row starts a group when its cell is not indented),
+  `"filled"` (when its cell is not empty), or `"auto"`. `collapse` is
+  `collapse_repeats`: a repeated value printed once and then blank, in
+  the columns named (`collapse = c("grp1", "grp2")`, the row keys'
+  names) or counted on the PRINTED columns (a hidden key left out), like
+  every column position in a plan.
+
+  `mode = "indent"` **reads** indentation to find the boundary;
+  `plan_stub(indent = )` **writes** it. They are not the same knob, and
+  a stub written with `indent` is exactly what that mode then reads.
+
+  The rows are grouped by the outermost row key (`table_plan(rows = )`);
+  folded into a stub, by the stub's headings.
+
+- group_col:
+
+  For `plan_row_group()`, on a plan of a table that is already built:
+  `as_rtftables(group_col = )`, the column whose runs are the groups
+  (what `split = "group_safe"`, `mode` and the blank rows between groups
+  read), with the pages still cut by rows. An ARD plan names it as its
+  outermost row key (`table_plan(rows = )`) and refuses this; a page per
+  value is `plan_paginate_group()`.
+
+- label, position:
+
+  For `plan_total()`: the heading of the **Total column** (`"Total"`)
+  and where it goes among the column key's values (`"last"`, `"first"`).
+  Needed only when the ARD has overall rows (no value of the column
+  key): an ARD whose column variable already has a `"Total"` level needs
+  no `plan_total()`, that level being a column like any other. Its cells
+  are cards' own overall rows — the statistics with no value of the
+  column key, from the same analysis without its `by`
+  (`cards::ard_tabulate(adsl, variables = RACE)` bound under
+  `cards::ard_tabulate(adsl, by = ARM, variables = RACE)`, or
+  `cards::ard_stack(.overall = TRUE)`) — so the ARD keeps no `ARM` value
+  the data does not have. Its `{n}` in the column header is the study
+  total the ARD states (the column key tabulated on its own, or
+  [`cards::ard_total_n()`](https://pharmaverse.github.io/cards/latest-tag/reference/ard_total_n.html)).
+  With two column keys the innermost is folded: `cols = c(TRTA, AESEV)`
+  gives each arm a total column from its records with no `AESEV` (an
+  AE's count at any grade, `"Any grade"`), placed among that arm's
+  grades; records with no `TRTA` either make no column. Only the body's
+  analyses are read: a test or a difference has no column key either,
+  and is `plan_compare()`'s.
+
+- direction:
+
+  For `plan_total()`: the Total **column** (`"cols"`, the default, as
+  above), the Total **row** (`"rows"`) or both (`"both"`) – a shift
+  table's margins. A Total row is read from cards' tabulations of a key
+  without the body's variable: with the cells
+  `ard_tabulate(adlb, variables = ATOXGR, by = c(PARAM, BTOXGR))`, the
+  column key tabulated by the row keys
+  (`variables = BTOXGR, by = PARAM`) is each column's Total row, and a
+  row key's own (`variables = PARAM`) the corner, the Total row's Total
+  column.
+  [`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md)
+  marks them as a key's own tabulation; `plan_total()` places them in
+  the body of its one analysis variable, labelled `label`, last or first
+  (`position`). The header's `{n}` is read as before. For
+  `plan_compare()`, `position` is where its columns go: after the column
+  key's (`"last"`) or before them (`"first"`). For `plan_empty()`,
+  `position` is where its row goes: `"last"` (after the rows: the
+  overall row's 0 stays), `"first"` or `"replace"` (the row alone).
+
+- any, parents:
+
+  For `plan_filter()`: a row stays when **any** column's record meets
+  the conditions (`TRUE`, default: "PTs with 5% or more in any arm") or
+  when **every** column's does (`FALSE`); a record whose statistics do
+  not answer the conditions does not count, and a row no column answers
+  stays (the notes say how many). `parents = "keep"` (default): a parent
+  row — a SOC, its PT key empty — stays exactly when one of its children
+  does, so no SOC is left without its PTs and none is kept for its own
+  count; `"drop"` judges it by its own counts. An overall row
+  (`normalize_ard(overall = )`, "Any TEAE") always stays. The conditions
+  in `...` are `plan_cells()`' guards — R over the record's statistics
+  and keys, unnamed, all of them holding: `plan_filter(p >= 0.05)`,
+  `plan_filter(n >= 3, TRTA != "Placebo")`. They run before the cells
+  are made and the rows sorted; the columns stay. Nothing is computed:
+  `p` is the ARD's.
+
+- by:
+
+  For `plan_filter()`: a row key whose rows are judged together (with
+  the keys outside it). For `plan_compare()`: the column that splits the
+  comparison records into columns, one a level (`by = "COMPARISON"`:
+  each active arm against placebo, the ARD made by
+  `ard_strata(.strata = COMPARISON)` over two-arm subsets). With several
+  columns in `...` they are named `<level>____<column>`. `NULL`: one
+  comparison a variable.
+
+- .variables, .others:
+
+  For `plan_stat_groups()`: the variables whose records are split into
+  the groups (`NULL`: all), and the group the other variables' records
+  go to whole (`NULL`: none).
+
+- stat:
+
+  For `plan_sort()`: the statistic totalled into `.sort_stat` for a
+  frequency order (`widen_ard(sort_stat = )`), e.g. `stat = "n"`.
+
+- text, when, footnote:
+
+  For `plan_empty()`: what an empty table says. `text` is one row (in
+  the row label column; `NULL` for none); `when` the table is empty –
+  `"no_rows"` (no body row, after `plan_filter()`), `"overall_zero"`
+  (its overall row, `normalize_ard(overall = )`, is 0 in every column),
+  `"auto"` (either; the default); `footnote` a line added to the table's
+  footnotes when it is empty (`position` is where the row goes: see
+  `label, position`). A table that is not empty is as it was.
+
+- first, last, counted:
+
+  For `plan_blanks()`:
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  `blank_row_first`, `blank_row_end` and `count_blank_rows`.
+
+- max_rows, split, break_before, min_group_rows, cont_label:
+
+  For `plan_paginate_rows()`: the row budget and what a page break may
+  cut —
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  `max_rows`, `split`, `split_rows`, `min_group_rows` and `cont_label`.
+  This is the **row** axis; a page per value (the **group** axis) is
+  `plan_paginate_group()`, and the **column** axis is
+  `plan_paginate_cols()`.
+
+- page_by:
+
+  For `plan_paginate_rows()`:
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  `page_by` – the column(s) whose value partitions the body **first**,
+  each value a page named after it; the row settings then apply
+  **within** one partition (a period, a cohort), so a BY page can still
+  be cut by a row budget. `plan_paginate_group()` is the other way to
+  page by a value: one page per value however long it is, with no row
+  budget. The BY column is printed unless hidden (`plan_hide()`). Like
+  `plan_paginate_group(col = )` it is a page key, never a row group.
+
+- border_header, border_spanning, border_body, border_first_row,
+  border_last_row:
+
+  For `plan_style()`: the rules of one kind of row, by the names
+  [`rtf_table_style()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style.md)
+  gives them. Say the table's rules one way: `border = "tfl"`, or these.
+
+- header_align, header_bold, header_italic:
+
+  For `plan_style()`: the whole header's default look,
+  [`rtf_table_style()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style.md)'s
+  fields; with the `border_*` zones and `align` ... `underline` they
+  make the `as_rtftables(style = )` object. One column or one cell is
+  `plan_cell_style()`.
+
+- table_width_twips, table_width_pct, table_width_pct_of_writable:
+
+  For `plan_style()`: the table's width, by
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)'s
+  names (and
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  `table_width_twips`).
+
+- values:
+
+  For `plan_col_header()`: what the header's `{tokens}` take. The
+  **population** each column describes — its analysis set, the number a
+  header prints as `(N=86)` — is `values = list(n = TRUE)` (or just
+  `TRUE`), read from the data, keyed by the same `cols` / `levels`
+  [`table_plan()`](https://ichirio.github.io/rtfreporter/reference/table_plan.md)
+  was given, **at every depth of the keys**: with
+  `cols = c("TRT", "SEX")` both the arm (`"Placebo"`) and the arm x sex
+  cell (`"Placebo____F"`) are looked up. Only a number the ARD **states
+  as a population size** is read:
+
+  1.  a **cards sentinel**'s `N` keyed by exactly those keys —
+      `..ard_hierarchical_overall..` from
+      `cards::ard_stack_hierarchical(over_variables = TRUE)`, each arm's
+      denominator; never its `n`, the subjects with an event that the
+      "Any" row shows. Taken only when there is one kind of sentinel;
+
+  2.  the column variable's **own tabulation** — the per-arm `n` of
+      `cards::ard_stack(.by = )`, which
+      [`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md)
+      keeps as `.key_own` rows — where its counts add up to the `N`
+      those rows state (the population split by arm, not the treatment
+      counted as an event). At depth *k* it is `cols[k]` tabulated
+      within `cols[1..k-1]`: cards tabulates each `.by` variable on its
+      own, so `ard_stack(.by = c(TRT, SEX))` states the arm but not the
+      arm x sex cell — bind
+      `cards::ard_tabulate(adsl, by = TRT, variables = SEX)` to state
+      that. A **stacked key**
+      ([`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md)'s
+      `stack`) on the columns, `cols = c("subgroup", "subgroup_level")`,
+      is tabulated as its layer's variable: the `SEX____F` column's
+      population is SEX's own count at F
+      (`cards::ard_tabulate(adsl, variables = SEX)`); a crossed layer's
+      is not read;
+
+  3.  an analysis summary's `N` only where it is a denominator by
+      construction (a hierarchical summary, a percentage of the
+      `denominator =` data) or where **two or more different variables
+      agree on it for every column**. One variable's `N` is the count of
+      its **non-missing** values — the arm size only if nothing is
+      missing, which the ARD cannot show — and an `N` per visit or per
+      parameter is not a column's at all.
+      [`pull_ard()`](https://ichirio.github.io/rtfreporter/reference/pull_ard.md)
+      is not asked.
+
+  The study total (`..ard_total_n..`, the one
+  [`normalize_ard()`](https://ichirio.github.io/rtfreporter/reference/normalize_ard.md)
+  remembers as it drops that row, or the `N` the column variable's own
+  tabulation states) is **never put in every column**: it answers a
+  one-column table and a cell over all the columns.
+
+  **Pages split by a group value** (`plan_paginate_group()`: a lab
+  parameter, a visit) have **two populations**, and which one the header
+  says is the author's choice:
+
+  - `values = list(n = "page")` — each page's own, the subjects with
+    that test: the ARD rows **carrying** the page key, e.g.
+    `cards::ard_tabulate(adlb, by = PARAM, variables = BGRADE)`, which
+    states each baseline column's N and the page's total;
+
+  - `list(n = "table")` — the analysis set: the ARD rows **without** the
+    page key, e.g. `cards::ard_total_n(adsl)` or the treatment tabulated
+    from ADSL;
+
+  - `list(n = "page", N = "table")` — both, as `{n}` and `{N}`.
+
+  `n = TRUE` reads the page's rows, then the table's for what they lack,
+  and **warns** when the ARD states both and they differ. Neither is
+  filled in from outside the ARD: a population it does not state is
+  `NA`. Keep the header consistent with the body — the percentages are
+  over the denominator cards used, so a header saying the analysis set
+  wants an ARD built with that `denominator =`. The workbook says the
+  same on `tables$header_n`.
+
+  What cannot be read is printed as **`NA`**, and one **warning** lists
+  every such cell with the reason (`only AGE states an N (79)`,
+  `the analysis variables state different N`, ...). The table is still
+  built; a guessed number would look exactly like a right one.
+  [`print()`](https://rdrr.io/r/base/print.html) shows the resolved
+  values and what is not resolved.
+
+  In a header cell, `{n}` is the number of **what the cell stands for**:
+  its column; over a spanner, the level its columns agree on (the arm
+  over its F and M); over all columns, the total. `{n1}`, `{n2}`, ...
+  name a depth from any cell — `"{col2} {n2}"` under `"{col1} {n1}"`.
+
+  To **give the numbers yourself**, `n` is a vector named by column key,
+  at any depth — `c(Placebo = 86, "Placebo____F" = 53, ...)` — or a
+  function of the data returning one; a single unnamed number fills
+  every cell. After a workbook (`tflspec::tfl_table_plan()`), a later
+  `plan_col_header(values = ...)` supplies the numbers and keeps the
+  workbook's header.
+
+  A **data frame** of per-page values is
+  [`set_col_header()`](https://ichirio.github.io/rtfreporter/reference/set_col_header.md)'s
+  own `values =`: one row per page key, a column per `{token}`. \#' A
+  **function** of the data covers what neither can find, and a **named
+  list** of either supplies several — and then **each name is a token**,
+  which is how one header says two numbers with no function at all: the
+  study total in a spanner and each column's own underneath it.
+
+      plan_col_header(
+        values = list(n = TRUE, total = 254),
+        rtf_col_header(
+          list(col_cell(1, ""), col_cell(c(2, 4), "All (N={total})")),
+          c("",               "{col}"),
+          c("Characteristic", "(N={n})")))
+
+  An entry keyed by column fills each column with its own; a single
+  number fills every cell. `{n}` is the entry called `n`, or the only
+  entry when there is one. The resolved value is also what `header =` is
+  called with when it is a function.
+
+- header_sep, col_header_align:
+
+  For `plan_col_header()`:
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  `header_sep` (the separator a plain table's column names are split on
+  into spanning header rows) and
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)'s
+  `col_header_align`.
+
+- lines:
+
+  For `plan_col_header()`: the header **a row at a time**, as it reads,
+  instead of `header`: a list, one element a header row (the top first),
+  each a named character vector – a cell's name the columns it sits on
+  (a column name, `.values` for every value column, a position or range
+  such as `3:5`, or `KEY = value`), its value the text, with the same
+  tokens (`{col}`, `{n}`, `{n:sum}` ...):
+
+      plan_col_header(lines = list(
+        c(row_label = "",               .values = "{col}"),
+        c(row_label = "Characteristic", .values = "(N={n})")))
+
+  It is the data frame of cells written another way (one row a cell:
+  `line`, `cols`, `text`, `span`), so it does all that does.
+
+- span:
+
+  For `plan_col_header(lines = )`: how a cell over several columns is
+  made – `"each"` (the default: a cell a column), `"one"` (one cell over
+  them all) or a key's name (a cell per value of that key: a spanner).
+  One value for every cell, or a list as `lines` is, each element the
+  spans of that row's cells, named as its cells are (a cell not named
+  there is `"each"`).
+
+- widths:
+
+  For `plan_columns()`: the relative column widths,
+  `rtftable(col_rel_width = )`. **Named by column**
+  (`c(row_label = 5, .values = 2)`, `.values` for every value column) a
+  reordered table keeps them, and that is what the `columns` sheet's
+  `width` is; unnamed, they are one a column in order, as
+  `col_rel_width` itself.
+
+- decimal:
+
+  For `plan_columns()`: the columns whose numbers line up at the decimal
+  point (`.values` for every value column) — the `columns` sheet's
+  `decimal_split`.
+
+- row_title, auto_width:
+
+  For `plan_columns()`: the row-heading columns
+  (`rtftable(row_title = )`) and whether each column is sized to its
+  content (`as_rtftables(auto_width = )`). Name the columns, as `widths`
+  does: a row key's name as `table_plan(rows = )` gives it, `.values`
+  for every value column — `row_title = c("grp1", "grp2")`. A position
+  counts the PRINTED columns, as unnamed `widths` do: a key hidden with
+  `plan_hide()` or taken out by `page_by` is left out.
+
+- sep:
+
+  For `plan_columns()`: the separator several `cols` keys are joined
+  with in the value columns' names, `"____"` by default —
+  `"Placebo____F"`. The spanning header is built by splitting on it, so
+  a key value that contains it is refused. For `plan_listing()`,
+  [`listing_spec()`](https://ichirio.github.io/rtfreporter/reference/listing_spec.md)'s
+  `sep`.
+
+- cell_format, column_widths_twips:
+
+  For `plan_columns()`:
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)'s
+  `cell_format` (a formatter, or a list of them one a column) and
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)'s
+  `column_widths_twips`, as they are. `column_widths_twips`, when given,
+  fixes the widths and `widths` is not used, as in
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md).
+
+- type, spacer, spacer_rel_width, layout, wrap, record:
+
+  For `plan_listing()`:
+  [`listing_spec()`](https://ichirio.github.io/rtfreporter/reference/listing_spec.md)'s
+  own arguments, unchanged (`record`: the hidden record column – `FALSE`
+  none, a string its name; `NULL` the default, `TRUE`). `...` there
+  takes the
+  [`listing_col()`](https://ichirio.github.io/rtfreporter/reference/listing_col.md)s.
+  A blank row between records is `plan_blanks(where = "records")`, one
+  at the top of each page `plan_blanks(first = TRUE)`; a column's own
+  alignment is `listing_col(align = )`, the others'
+  `plan_listing(align = )`.
+
+- pages:
+
+  For `plan_titles()` / `plan_footnotes()`: a list with one block per
+  page, when the pages do not share a block. `...` is the rows of a
+  single block used on every page; give one or the other, never both,
+  because a three-row title on a three-page table cannot be told apart
+  from three one-row titles.
+
+- at, cut_by, col_header, fit, allow_span_break, order:
+
+  For `plan_paginate_cols()`, in
+  [`paginate_cols()`](https://ichirio.github.io/rtfreporter/reference/paginate_cols.md)'s
+  terms: `at` the columns to cut before; `cut_by` a list of column
+  blocks (`paginate_cols(cols = )`), or a separator found in the column
+  names / one key per column (`paginate_cols(by = )`); `col_header` what
+  the header becomes; `fit` `TRUE` (every block's widths on page 1's
+  scale, `width = "fill"`) or `FALSE` (each column keeps its width,
+  `"keep"`); `order` `paginate_cols(page_order = )`, the order the three
+  axes nest in, outermost first: `"group"`, `"rows"`, `"cols"`, or the
+  shorthands `"across"` and `"down"`. For `plan_paginate_cols()` `keep`
+  is the columns every block repeats (`paginate_cols(carry = )`).
+
+- every:
+
+  For `plan_paginate_cols()`: cut a block every this many columns,
+  counting only the ones a block does not keep. This is `at` without
+  writing down how many columns one study had — the plan is deferred, so
+  it counts them when the table exists. Give one of `at`, `cut_by` or
+  `every`.
+
+## Value
+
+The plan, with one more layer.
+
+## Where each argument goes
+
+Each verb has **one job**, and its arguments keep the names of the
+function that does it. This is what each one hands on.
+
+- `plan_cells(..., stats, value, na, notes)`: how a cell is made. Goes
+  to
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md):
+  `cells`, `stats`, `value`, `na`, `notes`; a finished table
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `na`.
+
+- `plan_digits(..., rounding)`: the digits. Goes to the open tokens of
+  the templates; on a finished table
+  [`fmt_numeric()`](https://ichirio.github.io/rtfreporter/reference/fmt_numeric.md).
+
+- `plan_levels()`, `plan_labels()`: the order and text of values. Goes
+  to
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md):
+  `levels`, `labels`. A named element of `plan_levels()` is a value and
+  its text, as [`base::factor()`](https://rdrr.io/r/base/factor.html)'s
+  `levels` and `labels`
+  (`plan_levels(SEX = c(F = "Female", M = "Male"))`,
+  `variable = c(AGE = "Age (years)", "SEX")`); `plan_labels()` names
+  without ordering, and wins value by value over a name `plan_levels()`
+  gives.
+
+- `plan_total(label, position)`: a Total column from the ARD's overall
+  rows. Goes to
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md):
+  those rows as one more value of the column key, and its place in
+  `levels`; the header's `{n}` there is the study total.
+  `plan_levels(.drop_empty = )` leaves out the levels no record has,
+  before the table is made.
+
+- `plan_stat_groups(...)`: the statistics in named groups. Goes to
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md):
+  `stat_groups` (the key `.stat_group`).
+
+- `plan_filter(..., any, parents, by)`: rows dropped by a condition over
+  the record. Goes to
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md):
+  `filter`.
+
+- `plan_compare(..., by, position)`: columns read from comparison
+  records (a test's p-value, a difference and its CI). Goes to
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md):
+  `compare`.
+
+- `plan_sort(..., stat, keep)`: the row order. Goes to
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md):
+  `sort`, `sort_stat`; a finished table
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `sort_by`, `sort_desc` from `-name`.
+
+- `plan_stub(vars, name, indent, group_summary, before)`: the row
+  headings. Goes to
+  [`stub_cols()`](https://ichirio.github.io/rtfreporter/reference/stub_cols.md):
+  `vars`, `label`, `indent`, `group_summary`.
+
+- `plan_cell_style(cols, header, where, bold, italic, align, color, background, border, underline, indent_twips)`:
+  how cells look. Goes to
+  [`style_header()`](https://ichirio.github.io/rtfreporter/reference/style_header.md),
+  [`style_cols()`](https://ichirio.github.io/rtfreporter/reference/style_header.md),
+  or
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)'s
+  `cell_styles` for a condition.
+
+- `plan_paginate_group(col, keep, heading, heading_at)`: a page per
+  value. Goes to
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `split = "by_value"`, `group_col`; `keep = FALSE` adds it to
+  `drop_cols`; `heading` names each page from a template (`{value}`,
+  `{n}`), the name `rtf_tables(auto_section = TRUE)` prints;
+  `heading_at` says where it prints (`"section"`, `"title"`, `"none"`):
+  the default of `rtf_tables(auto_section = , auto_title = )`.
+
+- `plan_row_group(mode, collapse, group_col)`: groups down the body.
+  Goes to
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `group_by`, `collapse_repeats`, `group_col` (a finished table).
+
+- `plan_hide(...)`: columns not printed. Goes to
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `drop_cols`.
+
+- `plan_empty(text, when, position, footnote)`: a table of no events:
+  one row saying so (`"No subjects met the criteria."`), and a footnote,
+  only when the table has no row or its overall row is 0.
+
+- `plan_blanks(where, first, last, counted)`: blank rows. Goes to
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`;
+  a listing's `where = "records"` is
+  [`listing_spec()`](https://ichirio.github.io/rtfreporter/reference/listing_spec.md)'s
+  `blank_row`.
+
+- `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`:
+  the row budget, inside the BY pages. Goes to
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`,
+  `page_by`; `heading` and `heading_at` name each BY page, and say where
+  the name prints, as `plan_paginate_group()`'s do.
+
+- `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`:
+  column blocks. Goes to
+  [`paginate_cols()`](https://ichirio.github.io/rtfreporter/reference/paginate_cols.md):
+  `at`, `cols` / `by`, `carry`, `col_header`, `width`,
+  `allow_span_break`, `page_order`.
+
+- `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`:
+  the whole table. Goes to
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md)
+  /
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md)
+  by the same names; `border_*` and the default look (`header_align`,
+  `header_bold`, `header_italic`, `align`, `bold`, `italic`,
+  `underline`) via
+  [`rtf_table_style()`](https://ichirio.github.io/rtfreporter/reference/rtf_table_style.md).
+
+- `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`:
+  the columns. Goes to
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md):
+  `col_rel_width`, `row_title`, `column_widths_twips`;
+  [`set_decimal_split()`](https://ichirio.github.io/rtfreporter/reference/set_decimal_split.md):
+  `cols`;
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `auto_width`, `cell_format`;
+  [`widen_ard()`](https://ichirio.github.io/rtfreporter/reference/widen_ard.md):
+  `sep`.
+
+- `plan_col_header(header, values, header_sep, col_header_align, lines, span)`:
+  the column header. Goes to
+  [`set_col_header()`](https://ichirio.github.io/rtfreporter/reference/set_col_header.md):
+  the header (or `lines`, the header a row at a time) and a data frame
+  of `values`; a population fills its `{n}` tokens;
+  [`as_rtftables()`](https://ichirio.github.io/rtfreporter/reference/as_rtftables.md):
+  `header_sep`;
+  [`rtftable()`](https://ichirio.github.io/rtfreporter/reference/rtftable.md):
+  `col_header_align`.
+
+- `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap, align, record)`:
+  a listing. Goes to
+  [`listing_spec()`](https://ichirio.github.io/rtfreporter/reference/listing_spec.md),
+  the same names.
+
+- `plan_titles()`, `plan_footnotes()`: the blocks above and below. Goes
+  to
+  [`rtf_titles()`](https://ichirio.github.io/rtfreporter/reference/rtf_titles.md),
+  [`rtf_footnotes()`](https://ichirio.github.io/rtfreporter/reference/rtf_footnotes.md).
+
+- `plan_after(...)`: anything else. Goes to your functions of the pages.
+
+`plan_columns()` declares the columns **of this table** — widths,
+alignment, the key separator — and is not
+[`rtf_columns()`](https://ichirio.github.io/rtfreporter/reference/rtf_columns.md),
+which addresses the columns of finished pages by their printed names.
+
+## plan_after() is the way out, not the way in
+
+`plan_after()` runs functions of your own on the finished pages. It is
+for what the plan cannot **declare** — a step with no verb — and it is
+the only verb whose content the plan cannot read: a workbook
+(`tflspec::tfl_as_table_spec()`) cannot carry it, and the columns it
+names are positions on the pages, which a reordered table does not keep.
+The usual reasons to reach for it each have a declaration, which names
+columns and goes into a workbook:
+
+- `set_decimal_split(x, cols = 3:31)` is declared as
+  `plan_columns(decimal = ".values")`
+
+- `paginate_cols(x, ...)` is declared as
+  `plan_paginate_cols(every = , at = , keep = )`
+
+- `rtftable(col_rel_width = )` by position is declared as
+  `plan_columns(widths = c(Analyte = 3, .values = 2))`
+
+- [`set_col_header()`](https://ichirio.github.io/rtfreporter/reference/set_col_header.md)
+  /
+  [`rtf_col_header()`](https://ichirio.github.io/rtfreporter/reference/rtf_col_header.md)
+  is declared as `plan_col_header()`
+
+- `as_rtftables(align_count_pct = TRUE)` is declared as
+  `plan_style(align_count_pct = TRUE)`
+
+- [`fmt_numeric()`](https://ichirio.github.io/rtfreporter/reference/fmt_numeric.md)
+  is declared as `plan_digits(<column> = 2)`,
+  `plan_digits(.rows = c(Mean = 1))`
+
+- [`paginate()`](https://ichirio.github.io/rtfreporter/reference/paginate.md)
+  is declared as `plan_paginate_rows()`
+
+- `style_header(x, ...)` is declared as
+  `plan_cell_style(header = TRUE, ...)`
+
+- `style_cols(x, ...)` is declared as `plan_cell_style(cols = , ...)`
+
+- bold / colour / alignment of body cells, by condition is declared as
+  `plan_cell_style(where = ~ ..., ...)`
+
+- `style_zone(x, ...)` is declared as
+  `plan_style(border_header = , border_body = , ...)`
+
+Two kinds of names: `plan_levels()`, `plan_labels()`, `plan_filter()`,
+`plan_nest()`, `plan_stat_groups()` and `plan_compare()` read the
+normalized ARD's columns (`variable`, the keys as the ARD names them);
+`plan_hide()`, `plan_paginate_group(col = )`, `plan_row_group()`,
+`plan_cell_style()`, `plan_columns()` and `plan_col_header()` read the
+finished table's columns (the names `table_plan(rows = )` gave,
+`row_label`, the arms).
+
+The styles `plan_cell_style()` declares run on the pages in the order
+written (after the header and the decimal alignment, before any
+`plan_after()` step). Its `cols` may be column names, and `.values`
+stands for every value column, so a reordered table keeps them.
+
+## See also
+
+[`table_plan()`](https://ichirio.github.io/rtfreporter/reference/table_plan.md),
+[`plan_apply()`](https://ichirio.github.io/rtfreporter/reference/plan_apply.md)
+
+## Examples
+
+``` r
+if (requireNamespace("cards", quietly = TRUE)) {
+  # One ARD, normalized once; each block below adds verbs to `base`.
+  adsl <- cards::ADSL
+  adsl$ARM <- factor(adsl$ARM)
+  ard <- cards::ard_stack(
+    adsl, .by = ARM,
+    cards::ard_summary(variables = AGE),
+    cards::ard_tabulate(variables = c(SEX, AGEGR1)),
+    .overall = TRUE)
+  base <- table_plan(normalize_ard(ard), cols = "ARM",
+                     rows = c(group = "variable"))
+
+  # -- The cells: templates, digits, the order and text of values --------
+  p <- base |>
+    plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})",
+                               "Median"    = "{median}"),
+               categorical = "{n} ({p:%})", notes = FALSE) |>
+    plan_digits(1) |>                                   # the house rule
+    plan_digits(AGE = c(mean = 1, sd = 2)) |>           # one variable
+    plan_levels(SEX = c("M", "F")) |>
+    plan_levels(variable = c("AGE", "SEX", "AGEGR1")) |>  # the blocks
+    plan_labels(c(AGE = "Age (years)", SEX = "Sex", AGEGR1 = "Age group"))
+  plan_apply(p, "table")
+
+  # hide a variable's rows: plan_filter() keeps the rows it holds for
+  plan_apply(p |> plan_filter(!variable %in% "AGEGR1"), "table")
+
+  # -- The rows: stub, groups, blank rows, order, hidden columns ---------
+  p <- p |>
+    plan_stub(name = "Characteristic", before = TRUE) |>
+    plan_row_group(mode = "indent") |>
+    plan_blanks(where = "between_groups", last = TRUE) |>
+    plan_total(label = "Total")
+  plan_apply(p, "table")
+
+  # -- The columns, the header, the look ---------------------------------
+  p <- p |>
+    plan_columns(widths = c(Characteristic = 3, .values = 2)) |>
+    plan_col_header(values = list(n = TRUE),
+                    rtf_col_header(c("", "{col}"),
+                                   c("Characteristic", "(N={n})"))) |>
+    plan_style(border = "tfl", align_count_pct = TRUE) |>
+    plan_cell_style(cols = "Characteristic", italic = ~ grepl("^ ", Characteristic))
+
+  # -- Pages: row budget, column blocks, titles and footnotes ------------
+  p <- p |>
+    plan_paginate_rows(max_rows = 20) |>
+    plan_titles(c("Table 14.1.1", "Demographics")) |>
+    plan_footnotes("Percentages are of the subjects in each arm.") |>
+    plan_after(function(pages) pages)                   # your own step
+  length(plan_apply(p))                                 # the pages
+  plan_layers(p)
+
+  # -- A page per value, a column split, nesting, sort, hide -------------
+  ard_bm <- cards::ard_summary(adsl, by = c(SEX, ARM), variables = c(AGE, BMIBL))
+  q <- table_plan(normalize_ard(ard_bm), cols = "ARM",
+                  rows = c(SEX = "SEX", group = "variable")) |>
+    plan_cells(continuous = c("n" = "{N}", "Mean (SD)" = "{mean} ({sd})"),
+               notes = FALSE) |>
+    plan_digits(1) |>
+    plan_stub(name = "Parameter") |>
+    plan_paginate_group(col = "SEX") |>                 # a page per sex
+    plan_paginate_cols(every = 2, keep = "Parameter")   # two arms a page
+  length(plan_apply(q))
+
+  # -- Rows under one level of another variable; frequency order --------
+  ard_r <- cards::ard_tabulate(adsl, by = ARM, variables = c(RACE, ETHNIC))
+  table_plan(normalize_ard(ard_r), cols = "ARM",
+             rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_nest(ETHNIC = c(RACE = "WHITE")) |>
+    plan_sort("-n") |>
+    plan_apply("table")
+}
+#>   group                            label Placebo Xanomeline High Dose
+#> 1  RACE                            WHITE      78                   74
+#> 2  RACE           NOT HISPANIC OR LATINO      83                   81
+#> 3  RACE               HISPANIC OR LATINO       3                    3
+#> 4  RACE        BLACK OR AFRICAN AMERICAN       8                    9
+#> 5  RACE AMERICAN INDIAN OR ALASKA NATIVE       0                    1
+#>   Xanomeline Low Dose
+#> 1                  78
+#> 2                  78
+#> 3                   6
+#> 4                   6
+#> 5                   0
+
+# The display verbs also lay out a finished data frame -- no ARD needed.
+tbl <- data.frame(
+  Parameter = c("Subjects", "Age, mean (SD)", "Female, n (%)"),
+  Placebo   = c("86", "75.2 (8.59)", "53 (61.6)"),
+  Active    = c("84", "75.7 (8.29)", "50 (59.5)"))
+pages <- table_plan(tbl) |>
+  plan_columns(widths = c(Parameter = 3, .values = 2)) |>
+  plan_hide("Active") |>
+  plan_style(border = "tfl") |>
+  plan_titles("Table 1  Summary") |>
+  plan_apply()
+pages[[1]]
+#>      Table 1  Summary      
+#> ───────────────────────────
+#> Parameter         Placebo  
+#> ───────────────────────────
+#> Subjects            86     
+#> Age, mean (SD)  75.2 (8.59)
+#> Female, n (%)    53 (61.6) 
+#> 
+#> <rtftable> 3 rows x 2 columns
+#>   Row title:  col 1
+#>   Borders:    set
+#>   Widths:     relative 3:2
+#>   Titles:     1 line(s)
+#> 
+
+# A listing of records.
+recs <- data.frame(USUBJID = c("01-001", "01-001", "01-002"),
+                   AETERM  = c("Headache", "Nausea", "Fatigue"),
+                   AESEV   = c("MILD", "MODERATE", "MILD"))
+listing <- table_plan(recs) |>
+  plan_sort("USUBJID", "AETERM") |>
+  plan_listing(listing_col("USUBJID", label = "Subject"),
+               listing_col("AETERM", label = "Adverse event"),
+               listing_col("AESEV", label = "Severity")) |>
+  plan_apply()
+length(listing)
+#> [1] 1
+```

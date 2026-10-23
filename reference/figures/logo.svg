@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  rtfreporter hex logo
+  ====================
+
+  Part of the **ichirio** package family.  Shared design language:
+    * pointy-top hexagon (R community convention)
+    * navy frame (#0d2840) with depth: gradient body, glossy top-edge
+      highlight, soft outer drop shadow
+    * package wordmark large, centred, below the per-package
+      illustration
+    * subtle "ichirio" attribution along the lower hex edge
+
+  rtfreporter-specific element: a miniature clinical-TFL page rendered
+  as `generate_rtfreport()` would produce it — paper tinted in soft
+  ichirio-blue, borderless header, centred title block, clinical-TFL
+  body table, italic footnote.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="560" height="620"
+     viewBox="0 0 560 620">
+
+  <!-- ── Definitions: gradients, filters, clipPath ─────────────────── -->
+  <defs>
+    <!-- Hex body: navy with subtle vertical lift -->
+    <linearGradient id="hexbg" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#2d6fa8"/>
+      <stop offset="60%"  stop-color="#1a4a78"/>
+      <stop offset="100%" stop-color="#0e2e4d"/>
+    </linearGradient>
+
+    <!-- Inner top highlight (gloss feel on the top half of the hex) -->
+    <radialGradient id="topgloss" cx="50%" cy="0%" r="65%" fx="50%" fy="0%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.32"/>
+      <stop offset="40%"  stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Vignette: subtle darkening near the lower hex corners -->
+    <radialGradient id="vignette" cx="50%" cy="100%" r="80%" fx="50%" fy="100%">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0"/>
+      <stop offset="80%"  stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.30"/>
+    </radialGradient>
+
+    <!-- Paper background: very pale ichirio-blue tint (NOT pure white) -->
+    <linearGradient id="paperbg" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%"   stop-color="#f3f8fd"/>
+      <stop offset="100%" stop-color="#dde9f4"/>
+    </linearGradient>
+
+    <!-- Outer drop shadow for the whole hex (soft, 3D lift) -->
+    <filter id="hex-shadow" x="-12%" y="-8%" width="124%" height="124%">
+      <feDropShadow dx="0" dy="9" stdDeviation="11"
+                    flood-color="#000913" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Paper drop shadow inside the hex (smaller, crisp) -->
+    <filter id="paper-shadow" x="-8%" y="-8%" width="116%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4"
+                    flood-color="#0a1c30" flood-opacity="0.55"/>
+    </filter>
+
+    <!-- Soft drop shadow for the wordmark (subtle depth) -->
+    <filter id="text-shadow" x="-10%" y="-50%" width="120%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2"
+                    flood-color="#000913" flood-opacity="0.55"/>
+    </filter>
+
+    <clipPath id="hex-clip">
+      <polygon points="280,28 512,163 512,431 280,566 48,431 48,163"/>
+    </clipPath>
+  </defs>
+
+  <!-- ────────────────────────────────────────────────────────────────── -->
+  <!-- 3D-lifted hexagon body                                              -->
+  <!-- ────────────────────────────────────────────────────────────────── -->
+  <g filter="url(#hex-shadow)">
+    <polygon points="280,28 512,163 512,431 280,566 48,431 48,163"
+             fill="url(#hexbg)"/>
+  </g>
+
+  <!-- Top gloss + bottom vignette, clipped to the hex shape -->
+  <g clip-path="url(#hex-clip)">
+    <rect x="0" y="0" width="560" height="620" fill="url(#topgloss)"/>
+    <rect x="0" y="0" width="560" height="620" fill="url(#vignette)"/>
+  </g>
+
+  <!-- ────────────────────────────────────────────────────────────────── -->
+  <!-- Mini clinical report INSIDE the hex                                 -->
+  <!-- ────────────────────────────────────────────────────────────────── -->
+  <g clip-path="url(#hex-clip)">
+
+    <!-- Soft, slightly-blue paper sheet (landscape) -->
+    <rect x="92" y="138" width="376" height="252" rx="7" ry="7"
+          fill="url(#paperbg)"
+          stroke="#9fb6c8" stroke-width="1.4"
+          filter="url(#paper-shadow)"/>
+
+    <!-- Page-top hairline (paper edge highlight) -->
+    <line x1="98" y1="141" x2="462" y2="141"
+          stroke="#ffffff" stroke-width="1" opacity="0.8"/>
+
+    <!-- Borderless header table -->
+    <g font-family="Source Sans 3, Helvetica, Arial, sans-serif" fill="#4a5a6a">
+      <text x="108" y="166" font-size="12" text-anchor="start">Protocol XYZ-001</text>
+      <text x="452" y="166" font-size="12" text-anchor="end">Page 1 of 1</text>
+      <text x="108" y="182" font-size="12" text-anchor="start">ACME Pharma</text>
+      <text x="452" y="182" font-size="12" text-anchor="end">Confidential</text>
+    </g>
+
+    <!-- Centred title block -->
+    <g font-family="Source Sans 3, Helvetica, Arial, sans-serif" fill="#1f4e79">
+      <text x="280" y="214" font-size="17" font-weight="700"
+            text-anchor="middle">Table 14.1.1</text>
+      <text x="280" y="233" font-size="13" font-weight="600"
+            text-anchor="middle">Demographics</text>
+    </g>
+
+    <!-- Body table: column-header top rule -->
+    <line x1="108" y1="252" x2="452" y2="252"
+          stroke="#1a3a5a" stroke-width="1.5"/>
+
+    <!-- Column-header labels -->
+    <g font-family="Source Sans 3, Helvetica, Arial, sans-serif"
+       font-size="11" font-weight="600" fill="#1f3a5a">
+      <text x="118" y="268" text-anchor="start">Characteristic</text>
+      <text x="262" y="268" text-anchor="middle">Placebo</text>
+      <text x="346" y="268" text-anchor="middle">Active</text>
+      <text x="424" y="268" text-anchor="middle">Total</text>
+    </g>
+
+    <!-- Column-header bottom rule -->
+    <line x1="108" y1="278" x2="452" y2="278"
+          stroke="#1a3a5a" stroke-width="1.5"/>
+
+    <!-- Data rows (no per-row borders) -->
+    <g font-family="Source Sans 3, Helvetica, Arial, sans-serif"
+       font-size="10.5" fill="#3a4a5a">
+      <text x="118" y="296" text-anchor="start">Age, mean</text>
+      <text x="262" y="296" text-anchor="middle">52.3</text>
+      <text x="346" y="296" text-anchor="middle">54.1</text>
+      <text x="424" y="296" text-anchor="middle">53.2</text>
+
+      <text x="118" y="314" text-anchor="start">Sex, n (%)</text>
+
+      <text x="128" y="332" text-anchor="start">Female</text>
+      <text x="262" y="332" text-anchor="middle">16 (53)</text>
+      <text x="346" y="332" text-anchor="middle">14 (47)</text>
+      <text x="424" y="332" text-anchor="middle">30 (50)</text>
+
+      <text x="128" y="350" text-anchor="start">Male</text>
+      <text x="262" y="350" text-anchor="middle">14 (47)</text>
+      <text x="346" y="350" text-anchor="middle">16 (53)</text>
+      <text x="424" y="350" text-anchor="middle">30 (50)</text>
+    </g>
+
+    <!-- Italic footnote -->
+    <text x="108" y="378"
+          font-family="Source Sans 3, Helvetica, Arial, sans-serif"
+          font-size="9.5" font-style="italic" fill="#6a7886">
+      Source: ADaM ADSL.
+    </text>
+  </g>
+
+  <!-- ────────────────────────────────────────────────────────────────── -->
+  <!-- Package wordmark (with subtle drop shadow for depth)               -->
+  <!-- ────────────────────────────────────────────────────────────────── -->
+  <text x="280" y="490"
+        font-family="Source Sans 3, Helvetica, Arial, sans-serif"
+        font-size="46" font-weight="700"
+        text-anchor="middle" fill="#ffffff"
+        letter-spacing="-0.5"
+        filter="url(#text-shadow)">rtfreporter</text>
+
+  <!-- Per-package tagline -->
+  <text x="280" y="522"
+        font-family="Source Sans 3, Helvetica, Arial, sans-serif"
+        font-size="13.5" font-weight="500"
+        text-anchor="middle" fill="#d6e6f4"
+        letter-spacing="3.5">CLINICAL · TFL · RTF</text>
+
+  <!-- ── Shared "ichirio" attribution (subtle) ──────────────────────── -->
+  <text x="280" y="555"
+        font-family="Source Sans 3, Helvetica, Arial, sans-serif"
+        font-size="11" font-weight="500"
+        text-anchor="middle" fill="#ffffff" opacity="0.32"
+        letter-spacing="6">i c h i r i o</text>
+
+  <!-- ────────────────────────────────────────────────────────────────── -->
+  <!-- Hexagon outline (with subtle inner highlight stripe for a bevel)   -->
+  <!-- ────────────────────────────────────────────────────────────────── -->
+  <!-- Outer stroke (darker, thicker) -->
+  <polygon points="280,28 512,163 512,431 280,566 48,431 48,163"
+           fill="none" stroke="#0d2840" stroke-width="14"
+           stroke-linejoin="round"/>
+
+  <!-- Inner highlight (thin, white, low-opacity = bevel look) -->
+  <polygon points="280,38 502,168 502,425 280,556 58,425 58,168"
+           fill="none" stroke="#ffffff" stroke-width="1.5"
+           stroke-linejoin="round" opacity="0.18"/>
+</svg>
