@@ -426,3 +426,97 @@ test_that("the option draws a plot object with ragg", {
   expect_identical(rtfplot(f)$path, f)
   expect_identical(readBin(f, "raw", file.size(f)), bytes)
 })
+
+# ──────── rtf_figures(render_width / render_height / render_dpi / png_device) ────
+
+.rtf_bytes <- function(doc) {
+  out <- tempfile(fileext = ".rtf")
+  on.exit(unlink(out))
+  generate_rtfreport(doc, out, overwrite = TRUE)
+  readBin(out, "raw", file.size(out))
+}
+.png_bytes <- function(fig) readBin(fig$path, "raw", file.size(fig$path))
+
+test_that("rtf_figures() without the drawing arguments writes what it wrote before", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  old <- options(rtfreporter.png_device = "png"); on.exit(options(old))
+  draw <- function() plot(1:10)
+  # before: rtf_figures() handed a plot object to rtfplot() with only
+  # width_twips / height_twips / align
+  before <- rtf_document() |>
+    rtf_figures(list(rtfplot(draw, width_twips = 7000L, align = "left")),
+                titles = list("Figure 1"))
+  now <- rtf_document() |>
+    rtf_figures(draw, width_twips = 7000L, align = "left",
+                titles = list("Figure 1"))
+  nulls <- rtf_document() |>
+    rtf_figures(draw, width_twips = 7000L, align = "left",
+                titles = list("Figure 1"), render_width = NULL,
+                render_height = NULL, render_dpi = NULL, png_device = NULL)
+  expect_identical(.rtf_bytes(now), .rtf_bytes(before))
+  expect_identical(.rtf_bytes(nulls), .rtf_bytes(before))
+  fig <- now$contents[[1L]]
+  expect_identical(c(fig$img_width, fig$img_height), c(1950L, 1350L))
+})
+
+test_that("rtf_figures() draws plot objects at render_width x render_height x render_dpi", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  old <- options(rtfreporter.png_device = "png"); on.exit(options(old))
+  doc <- rtf_document() |>
+    rtf_figures(list(function() plot(1:10), grid::circleGrob()),
+                render_width = 3, render_height = 2, render_dpi = 100)
+  for (fig in doc$contents) {
+    expect_identical(c(fig$img_width, fig$img_height), c(300L, 200L))
+    expect_identical(fig$dpi_x, 100)
+    disp <- rtfreporter:::.rtfplot_display_twips(fig)
+    expect_identical(c(disp$w, disp$h), c(4320L, 2880L))
+  }
+  # one given, the others keep rtfplot()'s defaults (6.5 x 4.5 in)
+  one <- rtf_document() |>
+    rtf_figures(function() plot(1:3), render_dpi = 100)
+  expect_identical(c(one$contents[[1L]]$img_width,
+                     one$contents[[1L]]$img_height), c(650L, 450L))
+  # ... and they are checked by rtfplot(), saying which item
+  expect_error(rtf_figures(rtf_document(), function() plot(1), render_dpi = -1),
+               "Item 1: `render_dpi` must be a single positive number")
+  expect_error(rtf_figures(rtf_document(), function() plot(1), png_device = "svg"),
+               "Item 1: `png_device`")
+})
+
+test_that("rtf_figures(png_device =) chooses the device", {
+  skip_if_not_installed("ragg")
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  draw <- function() plot(1:10)
+  fig <- function(dev) {
+    doc <- rtf_figures(rtf_document(), draw, render_width = 3,
+                       render_height = 2, render_dpi = 100, png_device = dev)
+    doc$contents[[1L]]
+  }
+  rg <- fig("ragg"); bp <- fig("png")
+  expect_identical(c(rg$img_width, rg$img_height), c(300L, 200L))
+  expect_identical(c(bp$img_width, bp$img_height), c(300L, 200L))
+  ref <- function(dev) {
+    rtfplot(draw, render_width = 3, render_height = 2, render_dpi = 100,
+            png_device = dev)
+  }
+  expect_identical(.png_bytes(rg), .png_bytes(ref("ragg")))
+  expect_identical(.png_bytes(bp), .png_bytes(ref("png")))
+  expect_false(identical(.png_bytes(rg), .png_bytes(bp)))
+})
+
+test_that("rtf_figures(render_*) leave an rtfplot() and a file path as they are", {
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  old <- options(rtfreporter.png_device = "png"); on.exit(options(old))
+  rp <- rtfplot(function() plot(1:3), render_width = 4, render_height = 2,
+                render_dpi = 100)
+  f <- .tmp_png(); on.exit(unlink(f), add = TRUE)
+  bytes <- readBin(f, "raw", file.size(f))
+  doc <- rtf_document() |>
+    rtf_figures(list(rp, f), render_width = 5, render_height = 4,
+                render_dpi = 50, png_device = "png")
+  expect_identical(doc$contents[[1L]], rp)
+  expect_identical(c(doc$contents[[1L]]$img_width,
+                     doc$contents[[1L]]$img_height), c(400L, 200L))
+  expect_identical(doc$contents[[2L]], rtf_figures(rtf_document(), f)$contents[[1L]])
+  expect_identical(readBin(f, "raw", file.size(f)), bytes)
+})

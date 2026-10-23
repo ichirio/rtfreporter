@@ -13,7 +13,11 @@ rtf_figures(
   titles = NULL,
   footnotes = NULL,
   page_break = TRUE,
-  space_before = 0L
+  space_before = 0L,
+  render_width = NULL,
+  render_height = NULL,
+  render_dpi = NULL,
+  png_device = NULL
 )
 }
 \arguments{
@@ -24,9 +28,9 @@ image file (PNG/JPEG), a plot object (a ggplot2 plot, a patchwork, a
 grob, a recorded base plot, a function that draws -- see \code{\link[=rtfplot]{rtfplot()}}),
 or a pre-built \code{rtfplot}.  One figure is given as it is --
 \code{rtf_figures(doc, plot)} -- and several as a list.  A plot object is
-drawn with the device the \code{rtfreporter.png_device} option names; its
-default follows \code{ggplot2::ggsave()}: ragg when installed,
-\code{grDevices::png()} otherwise (build an \code{\link[=rtfplot]{rtfplot()}} to choose per figure).}
+drawn with \code{png_device} (default: the \code{rtfreporter.png_device} option,
+which follows \code{ggplot2::ggsave()}: ragg when installed,
+\code{grDevices::png()} otherwise); build an \code{\link[=rtfplot]{rtfplot()}} to choose per figure.}
 
 \item{width_twips}{Display width in twips of a figure that is not an
 \code{rtfplot} already (a file or a plot object), as \code{\link[=rtfplot]{rtfplot()}} takes it.
@@ -54,6 +58,13 @@ or one each; the document's first content always begins a page.  As
 
 \item{space_before}{With \code{page_break = FALSE}, empty lines between the
 content before and this figure.}
+
+\item{render_width, render_height, render_dpi, png_device}{How to draw the
+\strong{plot objects} in \code{figures}, as \code{\link[=rtfplot]{rtfplot()}} takes them: size in inches,
+resolution, and PNG device.  \code{NULL} (default) is \code{\link[=rtfplot]{rtfplot()}}'s own
+default (6.5 x 4.5 in, 300 dpi, the \code{rtfreporter.png_device} option).  A
+file path ignores them (a file has its size already), and a figure given
+as an \code{\link[=rtfplot]{rtfplot()}} keeps the settings it was built with.}
 }
 \value{
 Modified rtf_document with appended figure contents.
