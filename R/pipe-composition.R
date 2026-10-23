@@ -887,9 +887,9 @@ rtf_tables <- function(doc, tables,
 #'   grob, a recorded base plot, a function that draws -- see [rtfplot()]),
 #'   or a pre-built `rtfplot`.  One figure is given as it is --
 #'   `rtf_figures(doc, plot)` -- and several as a list.  A plot object is
-#'   drawn with the device the `rtfreporter.png_device` option names; its
-#'   default follows `ggplot2::ggsave()`: ragg when installed,
-#'   `grDevices::png()` otherwise (build an [rtfplot()] to choose per figure).
+#'   drawn with `png_device` (default: the `rtfreporter.png_device` option,
+#'   which follows `ggplot2::ggsave()`: ragg when installed,
+#'   `grDevices::png()` otherwise); build an [rtfplot()] to choose per figure.
 #' @param width_twips Display width in twips of a figure that is not an
 #'   `rtfplot` already (a file or a plot object), as [rtfplot()] takes it.
 #'   `NULL` (default): the image's native size -- a file at its embedded DPI,
@@ -911,6 +911,12 @@ rtf_tables <- function(doc, tables,
 #'   [rtf_tables()]'s `page_break`.
 #' @param space_before With `page_break = FALSE`, empty lines between the
 #'   content before and this figure.
+#' @param render_width,render_height,render_dpi,png_device How to draw the
+#'   **plot objects** in `figures`, as [rtfplot()] takes them: size in inches,
+#'   resolution, and PNG device.  `NULL` (default) is [rtfplot()]'s own
+#'   default (6.5 x 4.5 in, 300 dpi, the `rtfreporter.png_device` option).  A
+#'   file path ignores them (a file has its size already), and a figure given
+#'   as an [rtfplot()] keeps the settings it was built with.
 #'
 #' @return Modified rtf_document with appended figure contents.
 #'
@@ -936,10 +942,18 @@ rtf_figures <- function(doc, figures,
                          width_twips = NULL, height_twips = NULL,
                          align = "center",
                          titles = NULL, footnotes = NULL,
-                         page_break = TRUE, space_before = 0L) {
+                         page_break = TRUE, space_before = 0L,
+                         render_width = NULL, render_height = NULL,
+                         render_dpi = NULL, png_device = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
+  # How to draw a plot object: only what was given, so rtfplot() keeps its
+  # own defaults for the rest (and a file path is never handed any).
+  draw_args <- Filter(Negate(is.null),
+                      list(render_width = render_width,
+                           render_height = render_height,
+                           render_dpi = render_dpi, png_device = png_device))
 
   # one figure, given as it is (a ggplot is a list too: it is not a list of
   # figures)
@@ -958,8 +972,9 @@ rtf_figures <- function(doc, figures,
     }
     # rtfplot() knows what can be drawn; say which item it was.
     tryCatch(
-      rtfplot(fig, width_twips = width_twips,
-              height_twips = height_twips, align = align),
+      do.call(rtfplot, c(list(fig, width_twips = width_twips,
+                              height_twips = height_twips, align = align),
+                         if (!is.character(fig)) draw_args)),
       error = function(e) {
         stop("Item ", i, ": ", conditionMessage(e), call. = FALSE)
       })

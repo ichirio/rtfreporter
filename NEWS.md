@@ -1,5 +1,16 @@
 # rtfreporter (development version)
 
+- **`rtf_figures()` takes `render_width`, `render_height`, `render_dpi`
+  and `png_device`** (0.8.2.9096), so the drawing settings are given in
+  one place:
+  `rtf_figures(doc, list(p1, p2), render_width = 9, render_height = 5, render_dpi = 600)`.
+  They apply to the plot objects in `figures`, as `rtfplot()` takes them;
+  `NULL` (the default) keeps `rtfplot()`'s own default (6.5 x 4.5 in,
+  300 dpi, the `rtfreporter.png_device` option).  A figure already built
+  with `rtfplot()` keeps its settings, and a file path ignores them.  The
+  new arguments come after the existing ones, and a call without them
+  writes the same RTF as before.
+
 - **Plot objects are drawn with ragg when it is installed, as
   `ggplot2::ggsave()` does** (0.8.2.9095).  `rtfplot()` and
   `rtf_figures()` draw a ggplot2 plot, patchwork, grob, recorded plot or
