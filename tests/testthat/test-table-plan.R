@@ -809,6 +809,29 @@ test_that("a listing matches the same call written by hand", {
   expect_equal(new, ref)
 })
 
+test_that("plan_listing(align, record): listing_spec()'s, as the same call by hand (#720)", {
+  skip_if_no_cards2()
+  d <- data.frame(USUBJID = sprintf("S-%03d", 1:6),
+                  ARM = rep(c("A", "B"), 3), stringsAsFactors = FALSE)
+  cols <- list(listing_col("USUBJID", width = 12), listing_col("ARM", width = 10))
+  by_hand <- function(...) {
+    as_rtftables(d, listing = listing_spec(cols, ...), max_rows = 20)
+  }
+  by_plan <- function(...) {
+    suppressMessages(plan_apply(
+      table_plan(d) |>
+        plan_listing(cols[[1L]], cols[[2L]], ...) |>
+        plan_paginate_rows(max_rows = 20)))
+  }
+  # the columns' default alignment
+  expect_equal(by_plan(align = "center"), by_hand(align = "center"))
+  # no record column; the record column under a name of its own
+  expect_equal(by_plan(record = FALSE), by_hand(record = FALSE))
+  expect_equal(by_plan(record = "REC"), by_hand(record = "REC"))
+  # (not given: as before)
+  expect_equal(by_plan(), by_hand())
+})
+
 test_that("a frame that is neither an ARD nor a listing says which to add", {
   expect_error(plan_apply(table_plan(data.frame(a = "x", b = "y"))),
                "plan_listing")

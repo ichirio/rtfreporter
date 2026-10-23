@@ -1253,12 +1253,14 @@ print.table_plan <- function(x, ...) {
 #' @param decimal For `plan_columns()`: the columns whose numbers line
 #'   up at the decimal point (`.values` for every value column) --- the
 #'   `columns` sheet's `decimal_split`.
-#' @param type,spacer,spacer_rel_width,layout,wrap
-#'   For `plan_listing()`: [listing_spec()]'s own arguments, unchanged.
-#'   `...` there takes the [listing_col()]s.  A blank row between records
-#'   is `plan_blanks(where = "records")`, one at the top of each page
-#'   `plan_blanks(first = TRUE)`, and a column's alignment is its own
-#'   (`listing_col(align = )`).
+#' @param type,spacer,spacer_rel_width,layout,wrap,record
+#'   For `plan_listing()`: [listing_spec()]'s own arguments, unchanged
+#'   (`record`: the hidden record column -- `FALSE` none, a string its
+#'   name; `NULL` the default, `TRUE`).  `...` there takes the
+#'   [listing_col()]s.  A blank row between records is
+#'   `plan_blanks(where = "records")`, one at the top of each page
+#'   `plan_blanks(first = TRUE)`; a column's own alignment is
+#'   `listing_col(align = )`, the others' `plan_listing(align = )`.
 #' @param pages For `plan_titles()` / `plan_footnotes()`: a list with one
 #'   block per page, when the pages do not share a block.  `...` is the rows
 #'   of a single block used on every page; give one or the other, never
@@ -1276,6 +1278,9 @@ print.table_plan <- function(x, ...) {
 #'   printed rows only with `plan_stub(before = TRUE)`.  For `plan_style()`,
 #'   `align`, `bold` and `italic` are the body's default look,
 #'   [rtf_table_style()]'s fields.
+#'   For `plan_listing()`, `align` is [listing_spec()]'s: the alignment of
+#'   the columns that set none of their own (`listing_col(align = )`);
+#'   `NULL` the template's.
 #' @param header For `plan_cell_style()`: `TRUE` styles the column header
 #'   ([style_header()]).  For `plan_col_header()`: the header, built with the same
 #'   [rtf_col_header()] as everywhere else --- or a **function** of the
@@ -1516,7 +1521,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
 #' * `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: the column header. Goes to [set_col_header()]: the header (or `lines`, the header a row at a time) and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align`.
-#' * `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap)`: a listing. Goes to [listing_spec()], the same names.
+#' * `plan_listing(..., type, sep, spacer, spacer_rel_width, layout, wrap, align, record)`: a listing. Goes to [listing_spec()], the same names.
 #' * `plan_titles()`, `plan_footnotes()`: the blocks above and below. Goes to [rtf_titles()], [rtf_footnotes()].
 #' * `plan_after(...)`: anything else. Goes to your functions of the pages.
 #'
@@ -2477,16 +2482,18 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
 #' @rdname plan_verbs
 #' @export
 # Blank rows are plan_blanks()'s (`where = "records"` ends each record's
-# block with one, `first = TRUE` starts each page with one), and an
-# alignment is a column's own (listing_col(align = )), so this verb keeps
-# what only a listing has.
+# block with one, `first = TRUE` starts each page with one), so this verb
+# keeps what only a listing has -- the columns' default alignment and the
+# hidden record column too (listing_spec()'s `align`, `record`).
 plan_listing <- function(.plan, ..., type = NULL, sep = NULL,
                          spacer = NULL, spacer_rel_width = NULL,
-                         layout = NULL, wrap = NULL) {
+                         layout = NULL, wrap = NULL, align = NULL,
+                         record = NULL) {
   .plan_layer(.plan, "listing",
               list(cols = list(...), type = type, sep = sep,
                    spacer = spacer, spacer_rel_width = spacer_rel_width,
-                   layout = layout, wrap = wrap))
+                   layout = layout, wrap = wrap, align = align,
+                   record = record))
 }
 
 #' @rdname plan_verbs

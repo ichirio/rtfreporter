@@ -1,5 +1,12 @@
 # rtfreporter (development version)
 
+- **`plan_listing()` takes `align` and `record`** (0.8.2.9097, #720), as
+  `listing_spec()` does: `align` is the alignment of the columns that set
+  none of their own (`listing_col(align = )`), `record` the hidden record
+  column (`FALSE` none, a string its name).  A plan can now write every
+  argument of a listing (a blank row at the top of each page was already
+  `plan_blanks(first = TRUE)`); not given, the listing is as before.
+
 - **`rtf_figures()` takes `render_width`, `render_height`, `render_dpi`
   and `png_device`** (0.8.2.9096), so the drawing settings are given in
   one place:

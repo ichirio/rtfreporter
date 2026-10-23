@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9096** (the development
+**This manual documents rtfreporter 0.8.2.9097** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -903,7 +903,7 @@ p_ae <- ard_ae |>
 | A subgroup's own n (%) beside its ORR (SEX both a variable and a subgroup layer) | `table_plan(..., rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level"), show_keys = "SEX")` + `plan_stat_groups(n = "N", orr_ci = c(...), .variables = "RESP", .others = "n")` + `plan_cells(SEX = "{n} ({p:.1f%})", ...)` |
 | Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
-| A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap)` |
+| A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap, align, record)` |
 | Titles / footnotes | `plan_titles(...)`, `plan_footnotes(...)` (`pages =` for one block per page) |
 | Anything else | `plan_after(function(pages) ...)`: last resort; prefer a verb |
 
