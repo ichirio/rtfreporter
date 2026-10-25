@@ -68,7 +68,7 @@ df <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# All defaults -- landscape Letter, 9pt Courier
+# All defaults -- landscape Letter, 9pt Courier New
 doc <- rtf_document() |>
   rtf_tables(as_rtftables(df))
 ```
@@ -227,7 +227,7 @@ sized against, so changing the margins automatically reflows full-width tables.
 ## Fonts -- `font_table`
 
 The report uses a **single** font, given by `font_table`. The default is
-**Courier**, a monospaced font: in clinical listings, monospacing is what lets
+**Courier New**, a monospaced font: in clinical listings, monospacing is what lets
 count/percent columns line up by character (see the count/percent formatters in
 the pagination article). Switch to a proportional font only if you do not rely
 on character alignment:

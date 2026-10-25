@@ -101,7 +101,7 @@ test_that("named fonts get their own entries, with the slot's charset", {
   l <- .run_slots(rtf_document(font_lang = c(east_asian = "ja")) |>
                     rtf_tables(rtftable(.ja_df(), border = "tfl", font = .ja)))
   expect_equal(.fonttbl(l), paste0(
-    "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier;}",
+    "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}",
     "{\\f1\\fnil\\fcharset0 Times New Roman;}",
     "{\\f2\\fnil\\fcharset128 MS Mincho;}}"))
 })
@@ -110,7 +110,7 @@ test_that("without font_lang every entry stays ANSI", {
   l <- .run_slots(rtf_document() |>
                     rtf_tables(rtftable(.ja_df(), border = "tfl", font = .ja)))
   expect_equal(.fonttbl(l), paste0(
-    "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier;}",
+    "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}",
     "{\\f1\\fnil\\fcharset0 Times New Roman;}",
     "{\\f2\\fnil\\fcharset0 MS Mincho;}}"))
   # and no language word is written anywhere

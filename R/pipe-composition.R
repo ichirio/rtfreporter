@@ -33,7 +33,7 @@
 #' @param font_table Optional font table: a list of font specifications, each a
 #'   named list with a `name` (e.g. `list(list(name = "Arial"))`). The first
 #'   entry is the document's default font. Default: `list(list(name =
-#'   "Courier"))` (a fixed-width font, which keeps clinical columns aligned).
+#'   "Courier New"))` (a fixed-width font, which keeps clinical columns aligned).
 #'   A `name` may be a named vector of families per script slot (see
 #'   *Fonts per script* below).
 #' @param font_lang Optional language per font slot, a named character vector
@@ -127,7 +127,7 @@
 #'   [generate_rtfreport()] to render.
 #'
 #' @examples
-#' # 1. Simplest: every default (landscape Letter, Courier 9 pt).
+#' # 1. Simplest: every default (landscape Letter, Courier New 9 pt).
 #' doc <- rtf_document()
 #'
 #' # 2. A fully specified document, built from the rtf_page() /

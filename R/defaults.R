@@ -48,7 +48,7 @@
     rtfreporter.page.margin_bottom_in = 0.75,
     rtfreporter.page.margin_left_in   = 0.75,
     rtfreporter.page.margin_right_in  = 0.75,
-    rtfreporter.font                  = "Courier",
+    rtfreporter.font                  = "Courier New",
     rtfreporter.font_size_half_points = 18L,
     # Language per font slot, e.g. c(east_asian = "ja"); NULL writes nothing.
     rtfreporter.font_lang             = NULL,
@@ -135,7 +135,7 @@ rtfreporter_options <- function() {
 #'
 #' @examples
 #' old <- options(rtfreporter.font = "Arial")
-#' rtfreporter_reset_defaults()       # back to "Courier"
+#' rtfreporter_reset_defaults()       # back to "Courier New"
 #' getOption("rtfreporter.font")
 #' options(old)
 #'

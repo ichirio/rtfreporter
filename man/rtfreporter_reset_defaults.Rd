@@ -16,7 +16,7 @@ if a configuration has been changed in error.
 }
 \examples{
 old <- options(rtfreporter.font = "Arial")
-rtfreporter_reset_defaults()       # back to "Courier"
+rtfreporter_reset_defaults()       # back to "Courier New"
 getOption("rtfreporter.font")
 options(old)
 

@@ -16,7 +16,7 @@ text_width_in(
 
 \item{font}{Font name: \code{"Courier New"} / \code{"courier_new"}, \code{"Courier"}, or
 \code{"Arial"} (case and spaces do not matter).  \code{NULL} (default) is the
-package's font, \code{getOption("rtfreporter.font")} ("Courier"), as for every
+package's font, \code{getOption("rtfreporter.font")} ("Courier New"), as for every
 other \verb{font =}.  Unrecognised values fall back to Courier New.}
 
 \item{font_size_half_points}{Font size in \strong{half-points} (the unit used by
