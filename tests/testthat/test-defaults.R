@@ -16,7 +16,7 @@
 
 test_that("factory defaults are seeded as rtfreporter.* options at load", {
   expect_identical(getOption("rtfreporter.page.paper_size"), "letter")
-  expect_identical(getOption("rtfreporter.font"), "Courier")
+  expect_identical(getOption("rtfreporter.font"), "Courier New")
   expect_identical(getOption("rtfreporter.font_size_half_points"), 18L)
 })
 
@@ -51,7 +51,7 @@ test_that("rtfreporter_reset_defaults() restores the factory baseline", {
                  rtfreporter.page.margin_top_in = 2.0)
   on.exit(options(old), add = TRUE)
   rtfreporter_reset_defaults()
-  expect_identical(getOption("rtfreporter.font"), "Courier")
+  expect_identical(getOption("rtfreporter.font"), "Courier New")
   expect_identical(getOption("rtfreporter.page.margin_top_in"), 0.75)
 })
 

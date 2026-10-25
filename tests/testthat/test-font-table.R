@@ -53,7 +53,7 @@ test_that(".build_font_table_rtf declares every entry", {
 
 test_that("a single-font document is unchanged", {
   l <- .run(rtf_document() |> rtf_tables(rtftable(.df(), border = "tfl")))
-  expect_equal(.ftbl(l), "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier;}}")
+  expect_equal(.ftbl(l), "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}}")
   expect_length(.fcmd(l, "\\\\cell"), 0L)      # no \fN anywhere in the body
 })
 
@@ -94,8 +94,8 @@ test_that("a declared table is honoured, default first", {
 
 test_that("asking for the document default emits nothing", {
   l <- .run(rtf_document() |>
-              rtf_tables(rtftable(.df(), border = "tfl", font = "Courier")))
-  expect_equal(.ftbl(l), "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier;}}")
+              rtf_tables(rtftable(.df(), border = "tfl", font = "Courier New")))
+  expect_equal(.ftbl(l), "{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}}")
   expect_length(.fcmd(l, "x\\\\cell"), 0L)
 })
 

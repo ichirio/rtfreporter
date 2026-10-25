@@ -20,7 +20,7 @@ rtf_document(
 \arguments{
 \item{font_table}{Optional font table: a list of font specifications, each a
 named list with a \code{name} (e.g. \code{list(list(name = "Arial"))}). The first
-entry is the document's default font. Default: \code{list(list(name = "Courier"))} (a fixed-width font, which keeps clinical columns aligned).
+entry is the document's default font. Default: \code{list(list(name = "Courier New"))} (a fixed-width font, which keeps clinical columns aligned).
 A \code{name} may be a named vector of families per script slot (see
 \emph{Fonts per script} below).}
 
@@ -136,7 +136,7 @@ the document-level defaults Word uses for new text (\verb{\\adeff},
 }
 
 \examples{
-# 1. Simplest: every default (landscape Letter, Courier 9 pt).
+# 1. Simplest: every default (landscape Letter, Courier New 9 pt).
 doc <- rtf_document()
 
 # 2. A fully specified document, built from the rtf_page() /

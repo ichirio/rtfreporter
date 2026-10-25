@@ -34,7 +34,7 @@
 #' @param text A character vector.  `NA` is treated as `""`.
 #' @param font Font name: `"Courier New"` / `"courier_new"`, `"Courier"`, or
 #'   `"Arial"` (case and spaces do not matter).  `NULL` (default) is the
-#'   package's font, `getOption("rtfreporter.font")` ("Courier"), as for every
+#'   package's font, `getOption("rtfreporter.font")` ("Courier New"), as for every
 #'   other `font =`.  Unrecognised values fall back to Courier New.
 #' @param font_size_half_points Font size in **half-points** (the unit used by
 #'   RTF and the document's `default_format$font_size_half_points`).  Default
