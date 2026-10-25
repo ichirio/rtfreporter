@@ -149,7 +149,7 @@ table that goes on the page before it opens no section of its own
 are the section's; a static \code{{PAGE}} / \code{{TOTAL_PAGES}} counts the pages
 as written, so where the reader carries a table on, use \code{{AUTO_PAGE}} /
 \code{{AUTO_TOTAL_PAGES}}.  \code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the pages as
-written.}
+written; \code{\link[=rtf_layout]{rtf_layout()}} shows them.}
 
 \item{first_rows}{With \code{page_break = FALSE}, the rows of the table that
 go on the page before it; the rest is paginated as the table says --

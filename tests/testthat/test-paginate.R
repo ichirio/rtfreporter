@@ -244,7 +244,7 @@ test_that("rtf_tables() can take paginate() output directly", {
   doc <- rtf_tables(doc, res)
   expect_length(doc$contents, length(res))
   for (i in seq_along(res)) {
-    expect_s3_class(doc$contents[[i]], "rtftable")
+    expect_s3_class(doc$contents[[i]]$content, "rtftable")
   }
 })
 

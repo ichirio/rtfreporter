@@ -17,7 +17,7 @@ rtf_titles(
 \arguments{
 \item{doc}{An rtf_document object.}
 
-\item{titles}{A list of length = number of pages, or length 1 (common).}
+\item{titles}{A list of length = number of contents, or length 1 (common).}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
 this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
@@ -35,10 +35,12 @@ alignment; a per-row \code{align} still beats it.}
 Modified rtf_document.
 }
 \description{
-Replace the per-page title list with the supplied values.  \code{titles} must
-have length equal to the number of pages already added via \code{\link[=rtf_tables]{rtf_tables()}} /
-\code{\link[=rtf_figures]{rtf_figures()}}, \strong{or length 1} -- a single block is then applied to every
-page (common title).
+Replace the title of every content already added with the supplied
+values.  \code{titles} must have length equal to the number of contents (table
+or figure pages) already added via \code{\link[=rtf_tables]{rtf_tables()}} / \code{\link[=rtf_figures]{rtf_figures()}}, \strong{or
+length 1} -- a single block is then applied to every content (common
+title).  Each content is a page of its own unless it was added with
+\code{page_break = FALSE}; \code{\link[=rtf_layout]{rtf_layout()}} shows them.
 }
 \details{
 Each element is a title \strong{block}: either a character vector (one entry per

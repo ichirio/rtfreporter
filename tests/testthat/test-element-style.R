@@ -275,7 +275,7 @@ test_that("an explicit row height still wins at the rtf_tables() level", {
 test_that("the override reaches every page of an as_rtftables() list", {
   pages <- as_rtftables(.ovdf(), border = "tfl")
   d <- rtf_document() |> rtf_tables(pages, font_size_half_points = 14L)
-  expect_true(all(vapply(d$contents,
+  expect_true(all(vapply(.doc_items(d),
                          function(p) identical(p$font_size_half_points, 14L),
                          logical(1L))))
 })

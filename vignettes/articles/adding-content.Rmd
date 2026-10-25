@@ -152,8 +152,8 @@ t1 <- rtftable(df1, border = "tfl", row_height_twips = 280L)
 t2 <- rtftable(df2, border = NULL,  row_height_twips = 200L)   # no borders
 
 doc <- rtf_document() |> rtf_tables(list(t1, t2))
-doc$contents[[1]]$row_height_twips   # 280 -- t1 keeps its own
-doc$contents[[2]]$row_height_twips   # 200 -- t2 keeps its own
+doc$contents[[1]]$content$row_height_twips   # 280 -- t1 keeps its own
+doc$contents[[2]]$content$row_height_twips   # 200 -- t2 keeps its own
 ```
 
 

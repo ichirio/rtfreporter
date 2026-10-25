@@ -10,46 +10,12 @@
 #  rest is paginated by its own `max_rows` (as_rtftables(first_rows = ),
 #  .paginate_df()).
 #
-#  The document keeps one entry a content page in `contents` (as
-#  rtf_tables() expands them), and beside it `placement`: each page's
-#  page_break / space_before.  A document with no `placement` -- every one
-#  whose contents all break -- never reaches this file:
-#  .pipe_doc_to_rtfreport() and the renderer take their old paths, byte for
-#  byte.  .flow_layout() turns the content pages into printed pages: a page
-#  of one content stays as it was; a page of several is an `rtf_flow_page`
-#  (its blocks, first to last), which the renderer draws block after block.
-
-.flow_defaults <- function() {
-  list(page_break = TRUE, space_before = 0L)
-}
-
-# rtf_tables() / rtf_figures(): the placement of the pages just added.
-# `item_start`: which of them begin a content -- a table's own later pages
-# always begin a page.  Nothing is written when every page breaks and the
-# document has no placement yet.
-.flow_placement_append <- function(doc, n_new, item_start, page_break = TRUE,
-                                   space_before = 0L, fn = "rtf_tables") {
-  if (!is.logical(page_break) || anyNA(page_break) ||
-      !length(page_break) %in% c(1L, n_new)) {
-    stop(sprintf(paste0("%s(): `page_break` is TRUE or FALSE, one for every ",
-                        "page or one each (%d)."), fn, n_new), call. = FALSE)
-  }
-  if (!is.numeric(space_before) || length(space_before) != 1L ||
-      is.na(space_before) || space_before < 0 || space_before != round(space_before)) {
-    stop(sprintf("%s(): `space_before` is a whole number of empty lines, 0 or more.", fn),
-         call. = FALSE)
-  }
-  pb <- rep_len(page_break, n_new)
-  pb[!item_start] <- TRUE
-  if (all(pb) && is.null(doc$placement)) return(doc)
-  n_old <- length(doc$contents) - n_new
-  if (is.null(doc$placement)) doc$placement <- rep(list(.flow_defaults()), n_old)
-  new <- lapply(seq_len(n_new), function(i) {
-    list(page_break = pb[i], space_before = as.integer(space_before))
-  })
-  doc$placement <- c(doc$placement, new)
-  doc
-}
+#  Each content page is a block of the document's `contents`, with its
+#  page_break / space_before (R/blocks.R); rtf_layout() turns the blocks
+#  into printed pages (R/layout.R).  A page of one block is drawn as it
+#  always was; a page of several reaches the renderer as an
+#  `rtf_flow_page` (its blocks, first to last), drawn block after block
+#  here.
 
 # Which pages of a call begin a content: every page, but a table's own
 # later pages (as_rtftables() marks them, `rtf_paginate_meta$page_index`),
@@ -64,11 +30,6 @@
     pi <- m$page_index
     is.null(pi) || isTRUE(as.integer(pi)[1L] <= 1L)
   }, logical(1L))
-}
-
-.flow_active <- function(doc) {
-  pl <- doc$placement
-  !is.null(pl) && any(!vapply(pl, function(p) isTRUE(p$page_break), logical(1L)))
 }
 
 # ---- first_rows: the rows the shared page takes -------------------------------
@@ -131,58 +92,11 @@
   list(part(seq_len(k), TRUE), part(seq.int(k + 1L, n), FALSE))
 }
 
-# ---- the layout -----------------------------------------------------------------
+# ---- a block of a page of several -----------------------------------------------
 
 .flow_block <- function(content, title, footnote, space_before = 0L) {
   list(content = content, title = title, footnote = footnote,
        space_before = as.integer(space_before %||% 0L))
-}
-
-# The content pages -> printed pages: a content with page_break = FALSE
-# joins the page before it.  Returns the document with `contents` /
-# `titles` / `footnotes` one entry a page and no `placement`; a page of
-# several blocks is an `rtf_flow_page` (inside the auto-section wrapper of
-# its first content when that had one).
-.flow_layout <- function(pipe_doc) {
-  pages <- list()
-  for (i in seq_along(pipe_doc$contents)) {
-    item <- pipe_doc$contents[[i]]
-    pl <- pipe_doc$placement[[i]] %||% .flow_defaults()
-    title <- if (i <= length(pipe_doc$titles)) pipe_doc$titles[[i]] else NULL
-    footnote <- if (i <= length(pipe_doc$footnotes)) pipe_doc$footnotes[[i]] else NULL
-    flow <- !isTRUE(pl$page_break) && length(pages) > 0L
-    wrap <- NULL
-    if (inherits(item, "rtf_auto_section_item")) {
-      if (flow) {
-        warning(sprintf(paste0("rtf_tables(page_break = FALSE): '%s' goes on the page ",
-                               "before it, so it opens no section of its own; ",
-                               "auto_title names it."), item$label), call. = FALSE)
-      } else {
-        wrap <- item
-      }
-      item <- .unwrap_auto_section_item(item)
-    }
-    block <- .flow_block(item, title, footnote, pl$space_before)
-    if (flow) {
-      k <- length(pages)
-      pages[[k]]$blocks[[length(pages[[k]]$blocks) + 1L]] <- block
-    } else {
-      pages[[length(pages) + 1L]] <- list(blocks = list(block), wrap = wrap)
-    }
-  }
-  out <- pipe_doc
-  out$placement <- NULL
-  out$contents <- lapply(pages, function(p) {
-    ct <- if (length(p$blocks) == 1L) p$blocks[[1L]]$content
-          else structure(list(blocks = p$blocks), class = "rtf_flow_page")
-    if (is.null(p$wrap)) return(ct)
-    w <- p$wrap
-    w$content <- ct
-    w
-  })
-  out$titles <- lapply(pages, function(p) p$blocks[[1L]]$title)
-  out$footnotes <- lapply(pages, function(p) p$blocks[[1L]]$footnote)
-  out
 }
 
 # ---- drawing a page of several contents ---------------------------------------

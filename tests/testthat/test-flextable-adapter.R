@@ -132,7 +132,7 @@ test_that("as_rtftables(flextable) end-to-end render succeeds", {
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(as_rtftables(ft))
-  expect_identical(doc$titles[[1L]], "Table 14.1: Demographics")
+  expect_identical(doc$contents[[1L]]$title, "Table 14.1: Demographics")
   out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
   generate_rtfreport(doc, out, overwrite = TRUE)
   expect_true(file.exists(out))

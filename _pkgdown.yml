@@ -381,10 +381,13 @@ reference:
       **Note the two levels:** `rtftable()` sets how a table looks; passing
       the same setting to `rtf_tables()` overrides it *for that placement
       only*, leaving the table object untouched.
+      `rtf_layout()` shows how the contents fall on the printed pages
+      (`page_break = FALSE` puts one under the content before it).
     contents:
       - rtf_tables
       - rtf_titles
       - rtf_footnotes
+      - rtf_layout
       - rtftable
       - print.rtftable
       - format.rtftable
