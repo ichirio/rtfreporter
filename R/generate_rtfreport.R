@@ -556,6 +556,13 @@
   numpages_rtf <- .cmd_fmt(cmds$fields$auto_total_pages, list(total_pages = fallback))
   out <- gsub("\\{AUTO_TOTAL_PAGES\\}", numpages_rtf, out, fixed = TRUE)
 
+  # (a document the reader lays out, page_break = FALSE: the static tokens
+  # as the dynamic ones, generate_rtfreport())
+  if (isTRUE(.run_ctx$dynamic_pages)) {
+    out <- gsub("\\{PAGE\\}", "\\chpgn ", out, fixed = TRUE)
+    out <- gsub("\\{TOTAL_PAGES\\}", numpages_rtf, out, fixed = TRUE)
+  }
+
   # Static per-section page number: integer baked in at render time.
   # `current_page` is the first-page number of the section being rendered.
   if (!is.null(current_page)) {
@@ -2437,8 +2444,15 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     .run_ctx$program_done <- NULL
     .run_ctx$time <- NULL
     .run_ctx$tokens <- NULL
+    .run_ctx$dynamic_pages <- NULL
   }, add = TRUE)
   if (inherits(report, "rtf_document")) {
+    # A content that goes on under the one before (page_break = FALSE) is
+    # laid out by the reader, not measured here: the printed pages are the
+    # reader's, so the static {PAGE} / {TOTAL_PAGES} are the reader's own
+    # numbers too ({AUTO_PAGE} / {AUTO_TOTAL_PAGES}) -- else a page the
+    # content runs onto would repeat the number of the one before
+    if (.flow_active(report)) .run_ctx$dynamic_pages <- TRUE
     report <- .pipe_doc_to_rtfreport(report)
     if (is.null(report)) {
       stop("`doc` must be an rtf_document or rtfreport object.", call. = FALSE)
