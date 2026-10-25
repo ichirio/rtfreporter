@@ -176,3 +176,24 @@ test_that(".rtftable_cut(): the rows, cell styles and blank rows divided; one da
   expect_error(.rtftable_cut(tbl, 6L), "within the rows")
   expect_error(.rtftable_cut(rtftable(list(.fl_df(2), .fl_df(2))), 1L), "one data frame")
 })
+
+test_that("a document the reader lays out: {PAGE} / {TOTAL_PAGES} are the reader's own numbers", {
+  hdr <- function(d) d |> rtf_section(header = rtf_header(list(c(r = "Page {PAGE} of {TOTAL_PAGES}"))))
+  txt <- function(d) {
+    f <- tempfile(fileext = ".rtf")
+    on.exit(unlink(f))
+    generate_rtfreport(d, f)
+    paste(readLines(f, warn = FALSE), collapse = "\n")
+  }
+  chpgn <- paste0(intToUtf8(92), "chpgn")
+  # flowed: the page number and the total are the reader's fields
+  flowed <- txt(hdr(rtf_document()) |> rtf_tables(list(.fl_df(5))) |>
+                  rtf_tables(list(.fl_df(60)), page_break = FALSE))
+  expect_true(grepl(chpgn, flowed, fixed = TRUE))
+  expect_true(grepl("NUMPAGES", flowed, fixed = TRUE))
+  expect_false(grepl("Page 1 of", flowed, fixed = TRUE))
+  # not flowed: as before, the numbers written
+  paged <- txt(hdr(rtf_document()) |> rtf_tables(list(.fl_df(5))) |> rtf_tables(list(.fl_df(6))))
+  expect_true(grepl("Page 1 of 2", paged, fixed = TRUE))
+  expect_false(grepl(chpgn, paged, fixed = TRUE))
+})
