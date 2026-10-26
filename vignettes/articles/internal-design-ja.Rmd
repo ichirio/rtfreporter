@@ -384,7 +384,8 @@ rtf_document（公開・パイプで構築）
 | `rtfplot` | ディスパッチ（`print`）＋ `inherits()` |
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()`（空行リゾルバの分岐） |
 | `rtf_toc_heading`, `rtf_toc_entry` | `inherits()`（TOC 正規化） |
-| `rtfreport`, `rtf_auto_section_item` | `inherits()`（内部） |
+| `rtf_block`, `rtf_contents`, `rtf_pages` | ディスパッチ（`print`。`rtf_contents` は `[` と `length` も） |
+| `rtfreport` | `inherits()`（内部） |
 | `rtf_page`, `rtf_sect` | 内部構造マーカー（ディスパッチ無し） |
 
 ## 3.5 拡張時に従う規約

@@ -33,7 +33,7 @@ The rule of thumb:
 | `rtf_col_header`, `rtf_col_cell` | **S3** (tagged lists) | [`R/col_header.R`](R/col_header.R) | Header rows and cells; `col_cell(pos = )` may hold a selector function. |
 | `rtf_stub_spec` | **S3** (tagged list) | [`R/stub_spec.R`](R/stub_spec.R) | The row-stub settings, as one object. |
 | `rtf_blank_rows_by_change` / `_by_rule` | **S3** (tagged lists) | [`R/blank_rows.R`](R/blank_rows.R) | Tiny specification records. |
-| `rtf_auto_section_item` | **S3** (tagged list) | [`R/pipe-composition.R`](R/pipe-composition.R) | A render-time sentinel; pure data. |
+| `rtf_block`, `rtf_contents`, `rtf_pages` | **S3** (tagged lists) | [`R/blocks.R`](R/blocks.R), [`R/layout.R`](R/layout.R) | A document's contents (one block per content page, with its title, footnote, placement and `auto_section` heading) and `rtf_layout()`'s printed pages. |
 
 ---
 

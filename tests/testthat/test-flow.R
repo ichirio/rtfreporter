@@ -7,7 +7,7 @@
 }
 .fl_pages <- function(doc) .pipe_doc_to_rtfreport(doc)$pages
 .fl_rows <- function(p) {
-  bl <- p$blocks %||% list(list(content = p$content))
+  bl <- p$segments
   vapply(bl, function(b) {
     if (inherits(b$content, "rtftable")) nrow(b$content$data) else NA_real_
   }, 1)
@@ -96,7 +96,27 @@ test_that("first_rows on a data frame and an rtftable; as_rtftables(first_rows =
                "as_rtftables(first_rows = )", fixed = TRUE)
   expect_error(rtf_tables(base, .fl_df(20), first_rows = 6), "page_break = FALSE")
   expect_error(rtf_tables(base, .fl_df(20), page_break = FALSE, first_rows = 0), "first_rows")
-  expect_error(rtf_tables(base, .fl_df(20), page_break = FALSE, cont_title = "x"), "first_rows")
+  expect_error(rtf_tables(base, .fl_df(20), page_break = FALSE, cont_title = 1), "cont_title")
+})
+
+test_that("cont_title: under the title of a table's later pages, from first_rows or its own", {
+  pages <- as_rtftables(.fl_df(50, "Row"), split = "rows", split_rows = c(21, 41))
+  doc <- rtf_document() |>
+    rtf_tables(pages, titles = "Listing 1", cont_title = "(continued)") |>
+    rtf_tables(list(.fl_df(3)), titles = "Table 2", cont_title = "(continued)")
+  pg <- .fl_pages(doc)
+  expect_length(pg, 4L)
+  last <- function(p) {
+    t <- p$title
+    if (is.list(t)) t[[length(t)]]$text %||% t[[length(t)]] else t[length(t)]
+  }
+  expect_identical(vapply(pg, last, ""),
+                   c("Listing 1", "(continued)", "(continued)", "Table 2"))
+  txt <- .render_to_string(doc)
+  expect_identical(.fl_count(txt, "(continued)"), 2L)
+  # rtf_titles() replaces the titles whole, the continued line too
+  d2 <- rtf_titles(doc, "New")
+  expect_identical(lapply(.fl_pages(d2), `[[`, "title"), rep(list("New"), 4L))
 })
 
 test_that("a plan's or as_rtftables()'s later pages begin a page of their own", {
@@ -132,7 +152,7 @@ test_that("rtf_figures(page_break = FALSE): a figure under the content before it
                 page_break = FALSE)
   pg <- .fl_pages(doc)
   expect_length(pg, 1L)
-  expect_true(inherits(pg[[1L]]$blocks[[2L]]$content, "rtfplot"))
+  expect_true(inherits(pg[[1L]]$segments[[2L]]$content, "rtfplot"))
   txt <- .render_to_string(doc)
   expect_identical(.fl_count(txt, .fl_page_cmd), 0L)
   pict <- regexpr(paste0(intToUtf8(92), "pict"), txt, fixed = TRUE)
@@ -149,12 +169,22 @@ test_that("rtf_figures(page_break = FALSE): a figure under the content before it
                "rtf_figures(): `page_break`", fixed = TRUE)
 })
 
-test_that("a table that flows opens no auto section, and says so", {
+test_that("a page's auto section: the first table on it with a heading names it", {
+  # (the first table has none: the one that flows onto its page names it)
   doc <- rtf_document() |>
     rtf_tables(list("Part A" = .fl_df(4))) |>
     rtf_tables(list("Part B" = .fl_df(4)), auto_section = TRUE, page_break = FALSE)
-  expect_warning(r <- .pipe_doc_to_rtfreport(doc), "opens no section")
+  expect_no_warning(r <- .pipe_doc_to_rtfreport(doc))
   expect_length(r$pages, 1L)
+  expect_length(r$sections, 1L)
+  expect_match(.render_to_string(doc), "Part B", fixed = TRUE)
+  # two headings on one page: the first is the page's, the other is said
+  d2 <- rtf_document() |>
+    rtf_tables(list("Part A" = .fl_df(4)), auto_section = TRUE) |>
+    rtf_tables(list("Part B" = .fl_df(4)), auto_section = TRUE, page_break = FALSE)
+  expect_warning(r2 <- .pipe_doc_to_rtfreport(d2), "'Part A' is its heading")
+  expect_length(r2$pages, 1L)
+  expect_length(r2$sections, 1L)
 })
 
 test_that("the arguments are checked", {

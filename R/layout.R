@@ -18,6 +18,13 @@
 #' table's own later pages (a plan's, or [as_rtftables()]'s) always begin
 #' a page, and so does the document's first content.
 #'
+#' A page has one `auto_section` heading (see [rtf_tables()]): that of the
+#' first block on it that has one.  A later block on the same page with a
+#' different heading gets a warning, and its heading is not used; no page
+#' break is added for it.  A page whose blocks have none stays in the
+#' section before it.  An [rtf_section()]`(page = n)` on the page wins over
+#' its heading.
+#'
 #' Nothing is measured: the pages are decided by `page_break` and by the
 #' tables' own pagination (`max_rows`, `split`, `first_rows`) alone.  A page
 #' holding more than fits is carried on by the reader (Word, LibreOffice),
@@ -38,8 +45,10 @@
 #'       opens), `section_label` (that heading, or `NULL`) and `segments`:
 #'       the blocks on the page, top to bottom, each a list with `block` (its
 #'       position in the document), `name`, `content` (an `rtftable` or
-#'       `rtfplot`), `title`, `footnote`, `space_before`, `group` and
-#'       `page_in_group` (which table, and which page of it).}
+#'       `rtfplot`), `title` (with `cont_title`'s line on a table's later
+#'       pages), `footnote`, `space_before`, `group` and `page_in_group`
+#'       (which table, and which page of it), and `section` (the
+#'       `auto_section` heading the block opens, or `NULL`).}
 #'     \item{`n_blocks`}{the number of blocks.}
 #'     \item{`paper`}{the page size and font size, for printing.}
 #'   }
@@ -74,34 +83,48 @@ rtf_layout <- function(doc) {
   pages <- list()
   for (i in seq_along(blocks)) {
     b <- blocks[[i]]
-    item <- b[["content"]]
-    flow <- !isTRUE(b$page_break) && length(pages) > 0L
-    auto <- NULL
-    # RTF begins a section only at a page: a block that goes on the page
-    # before it cannot open one
-    if (inherits(item, "rtf_auto_section_item")) {
-      if (!flow) {
-        auto <- list(label = item$label, label_align = item$label_align)
-      } else if (warn) {
-        warning(sprintf(paste0("rtf_tables(page_break = FALSE): '%s' goes on the page ",
-                               "before it, so it opens no section of its own; ",
-                               "auto_title names it."), item$label), call. = FALSE)
-      }
-      item <- .unwrap_auto_section_item(item)
+    # a table's later page begins a page (rtf_tables() made it break, too)
+    flow <- !isTRUE(b$page_break) && b$page_in_group <= 1L && length(pages) > 0L
+    # cont_title: under the title of a table's later pages, wherever its
+    # pages come from (first_rows, or the table's own pagination)
+    title <- b[["title"]]
+    if (!is.null(b[["cont_title"]]) && b$page_in_group > 1L) {
+      title <- .title_add_row(title, list(text = b[["cont_title"]], align = "left"))
     }
     seg <- list(block = i,
                 name = if (is.null(nms) || is.na(nms[i]) || !nzchar(nms[i])) NULL
                        else .page_name_base(nms[i]),
-                content = item, title = b[["title"]], footnote = b[["footnote"]],
+                content = b[["content"]], title = title, footnote = b[["footnote"]],
                 space_before = b$space_before %||% 0L,
-                group = b$group, page_in_group = b$page_in_group)
+                group = b$group, page_in_group = b$page_in_group,
+                section = b[["section"]])
     if (flow) {
       k <- length(pages)
       pages[[k]]$segments[[length(pages[[k]]$segments) + 1L]] <- seg
     } else {
       pages[[length(pages) + 1L]] <- list(number = length(pages) + 1L, section = NA_integer_,
                                           section_start = FALSE, section_label = NULL,
-                                          auto_section = auto, segments = list(seg))
+                                          auto_section = NULL, segments = list(seg))
+    }
+  }
+  # A page's auto_section heading: that of the first block on it that has
+  # one (rtf_tables(auto_section = TRUE)).  RTF begins a section only at a
+  # page, so a page has one heading: a later block's different heading is
+  # said and not used, and no page break is added for it (the pages are
+  # page_break's and the tables' own alone).  A page whose blocks have
+  # none stays in the section open before it.
+  for (k in seq_along(pages)) {
+    secs <- Filter(Negate(is.null), lapply(pages[[k]]$segments, `[[`, "section"))
+    if (!length(secs)) next
+    first <- secs[[1L]]
+    pages[[k]]$auto_section <- list(label = first[["label"]], label_align = first[["align"]])
+    other <- setdiff(unique(vapply(secs, `[[`, "", "label")), first[["label"]])
+    if (warn && length(other)) {
+      warning(sprintf(paste0("rtf_layout(): page %d holds the auto_section headings ",
+                             "'%s' and '%s'; a page has one: '%s' is its heading ",
+                             "(auto_title names a table on its title)."),
+                      k, first[["label"]], paste(other, collapse = "', '"),
+                      first[["label"]]), call. = FALSE)
     }
   }
   # The sections the pages are in: one begins on page 1, on a page
@@ -120,25 +143,6 @@ rtf_layout <- function(doc) {
   }
   structure(list(pages = pages, n_blocks = length(blocks), paper = .rtf_paper_desc(doc)),
             class = "rtf_pages")
-}
-
-# A printed page as .pipe_doc_to_rtfreport() hands it on: a page of one
-# block is that block's content, as it always was; a page of several is an
-# `rtf_flow_page` (its blocks, first to last, R/flow.R).  Either goes inside
-# the auto-section wrapper of its first block when that had one.
-.rtf_page_item <- function(page) {
-  segs <- page$segments
-  ct <- if (length(segs) == 1L) {
-    segs[[1L]]$content
-  } else {
-    structure(list(blocks = lapply(segs, function(s) {
-      .flow_block(s$content, s$title, s$footnote, s$space_before)
-    })), class = "rtf_flow_page")
-  }
-  auto <- page$auto_section
-  if (is.null(auto)) return(ct)
-  structure(list(content = ct, label = auto$label, label_align = auto$label_align),
-            class = "rtf_auto_section_item")
 }
 
 # "letter landscape, 9 pt": the page and the document's font size

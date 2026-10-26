@@ -27,8 +27,10 @@ An \code{rtf_pages} object: a list with
 opens), \code{section_label} (that heading, or \code{NULL}) and \code{segments}:
 the blocks on the page, top to bottom, each a list with \code{block} (its
 position in the document), \code{name}, \code{content} (an \code{rtftable} or
-\code{rtfplot}), \code{title}, \code{footnote}, \code{space_before}, \code{group} and
-\code{page_in_group} (which table, and which page of it).}
+\code{rtfplot}), \code{title} (with \code{cont_title}'s line on a table's later
+pages), \code{footnote}, \code{space_before}, \code{group} and \code{page_in_group}
+(which table, and which page of it), and \code{section} (the
+\code{auto_section} heading the block opens, or \code{NULL}).}
 \item{\code{n_blocks}}{the number of blocks.}
 \item{\code{paper}}{the page size and font size, for printing.}
 }
@@ -43,6 +45,13 @@ table's own later pages (a plan's, or \code{\link[=as_rtftables]{as_rtftables()}
 a page, and so does the document's first content.
 }
 \details{
+A page has one \code{auto_section} heading (see \code{\link[=rtf_tables]{rtf_tables()}}): that of the
+first block on it that has one.  A later block on the same page with a
+different heading gets a warning, and its heading is not used; no page
+break is added for it.  A page whose blocks have none stays in the
+section before it.  An \code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} on the page wins over
+its heading.
+
 Nothing is measured: the pages are decided by \code{page_break} and by the
 tables' own pagination (\code{max_rows}, \code{split}, \code{first_rows}) alone.  A page
 holding more than fits is carried on by the reader (Word, LibreOffice),

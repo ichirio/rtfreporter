@@ -469,23 +469,28 @@ rtf_footer <- function(rows,
 
 # -- Page ops ----------------------------------------------------------------
 
-.rtfreport_add_page <- function(report, title = NULL, content = NULL, footnote = NULL) {
-  # a page of several contents (rtf_tables(page_break = FALSE), R/flow.R):
-  # its first block is the page's content, title and footnote, as a page of
-  # one would have them; `blocks` holds them all, first to last
-  if (inherits(content, "rtf_flow_page")) {
-    blocks <- lapply(content$blocks, function(b) {
-      b$content <- .normalize_content(b$content)
-      b
-    })
-    page <- .new_page(title = blocks[[1L]]$title, content = blocks[[1L]]$content,
-                      footnote = blocks[[1L]]$footnote)
-    page$blocks <- blocks
-    report$pages[[length(report$pages) + 1L]] <- page
-    return(report)
+# A page is the segments on it, top to bottom: each a content with its
+# title, footnote and the empty lines before it (`space_before`), as
+# rtf_layout() lays them out (R/layout.R).  `segments` gives them; or
+# `title` / `content` / `footnote` give a page of one.  The page's own
+# `title` / `content` / `footnote` are its first segment's, which is what
+# a page of one is drawn from.
+.rtfreport_add_page <- function(report, title = NULL, content = NULL, footnote = NULL,
+                                segments = NULL) {
+  if (is.null(segments)) {
+    segments <- if (!is.null(content)) {
+      list(list(content = content, title = title, footnote = footnote, space_before = 0L))
+    } else list()
   }
-  if (!is.null(content)) content <- .normalize_content(content)
-  page <- .new_page(title = title, content = content, footnote = footnote)
+  segments <- lapply(segments, function(s) {
+    s$content <- .normalize_content(s$content)
+    s
+  })
+  page <- if (length(segments)) {
+    .new_page(title = segments[[1L]]$title, content = segments[[1L]]$content,
+              footnote = segments[[1L]]$footnote)
+  } else .new_page(title = title, footnote = footnote)
+  page$segments <- segments
   report$pages[[length(report$pages) + 1L]] <- page
   report
 }
@@ -519,7 +524,7 @@ rtf_footer <- function(rows,
       stop(sprintf("Page %d content must be rtftable, rtfplot, or NULL.", i),
            call. = FALSE)
     }
-    for (b in report$pages[[i]]$blocks) {
+    for (b in report$pages[[i]]$segments) {
       if (!inherits(b$content, "rtftable") && !inherits(b$content, "rtfplot")) {
         stop(sprintf("Page %d: each content must be rtftable or rtfplot.", i),
              call. = FALSE)

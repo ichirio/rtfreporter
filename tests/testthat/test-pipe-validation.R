@@ -57,13 +57,14 @@ test_that("rtf_tables rejects `titles` / `footnotes` of wrong shape", {
   )
 })
 
-test_that("rtf_tables auto_section wraps named items in rtf_auto_section_item", {
+test_that("rtf_tables auto_section gives each named item's block its section", {
   d <- rtf_document()
   d <- rtf_tables(d,
                   list(Demo = data.frame(A = 1L), AE = data.frame(A = 2L)),
                   auto_section = TRUE)
-  cls <- vapply(.doc_items(d), function(c) class(c)[1L], character(1L))
-  expect_true(all(cls == "rtf_auto_section_item"))
+  labels <- vapply(d$contents, function(b) b[["section"]][["label"]], character(1L))
+  expect_identical(unname(labels), c("Demo", "AE"))
+  expect_true(all(vapply(.doc_items(d), inherits, NA, "rtftable")))
 })
 
 test_that("rtf_tables auto_section ignores items without names", {
