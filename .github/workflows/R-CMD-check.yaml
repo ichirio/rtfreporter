@@ -2,7 +2,7 @@
 # Matrix covers the platforms and R versions CRAN expects.
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, next]
   pull_request:
   workflow_dispatch:
 

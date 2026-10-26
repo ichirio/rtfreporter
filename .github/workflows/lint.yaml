@@ -3,7 +3,7 @@
 # scope to R/ and tunes the linter set).  Derived from r-lib/actions examples.
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, next]
   pull_request:
   workflow_dispatch:
 
