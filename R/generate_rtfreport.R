@@ -1836,6 +1836,16 @@
     cols <- c(cols, .text_block_colors(pg$title,    is_footer = FALSE))
     cols <- c(cols, .text_block_colors(pg$footnote, is_footer = TRUE))
   }
+  # a page of several contents (page_break = FALSE): its later contents'
+  # colours too (they were drawn black) -- last, so a document without such
+  # a page keeps its colour indices
+  for (pg in report$pages) {
+    for (b in pg$blocks[-1L]) {
+      if (inherits(b$content, "rtftable")) cols <- c(cols, .tbl_colors(b$content))
+      cols <- c(cols, .text_block_colors(b$title,    is_footer = FALSE))
+      cols <- c(cols, .text_block_colors(b$footnote, is_footer = TRUE))
+    }
+  }
   cols <- cols[!is.na(cols) & nzchar(cols)]
   # Black / white already occupy the reserved colour-table slots (index 1 / 2),
   # so drop them: declaring them adds nothing, and it keeps the default
