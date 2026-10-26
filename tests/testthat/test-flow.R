@@ -179,3 +179,17 @@ test_that(".rtftable_cut(): the rows, cell styles and blank rows divided; one da
   expect_error(.rtftable_cut(tbl, 6L), "within the rows")
   expect_error(.rtftable_cut(rtftable(list(.fl_df(2), .fl_df(2))), 1L), "one data frame")
 })
+
+test_that("a later content on a page has its font and colour in the document's tables", {
+  df <- function(n) data.frame(Item = sprintf("Row %02d", seq_len(n)), N = seq_len(n))
+  bs <- intToUtf8(92)
+  doc <- rtf_document() |> rtf_tables(list(df(3)), titles = "T1") |>
+    rtf_tables(list(rtftable(df(3), font = "Arial",
+                             col_spec = list(list(col = 2, color = "#FF0000")))),
+               titles = "T2", page_break = FALSE)
+  txt <- .render_to_string(doc)
+  expect_true(grepl(paste0(bs, "f1", bs, "fnil", bs, "fcharset0 Arial;"), txt, fixed = TRUE))
+  expect_true(grepl(paste0(bs, "red255", bs, "green0", bs, "blue0;"), txt, fixed = TRUE))
+  expect_true(grepl(paste0(bs, "f1 Row 01"), txt, fixed = TRUE))
+  expect_true(grepl(paste0(bs, "cf3 1"), txt, fixed = TRUE))
+})

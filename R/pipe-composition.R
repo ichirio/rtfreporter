@@ -792,6 +792,10 @@ rtf_tables <- function(doc, tables,
   #      with read_gt = (legacy path).
   for (i in seq_along(tables)) {
     item <- tables[[i]]
+    # (a page that opens an auto section is wrapped: its attributes are its
+    # content's -- read from the wrapper they were lost, and the page
+    # printed without its title)
+    if (inherits(item, "rtf_auto_section_item")) item <- item[["content"]]
     a_titles    <- attr(item, "rtf_titles",    exact = TRUE)
     a_footnotes <- attr(item, "rtf_footnotes", exact = TRUE)
     gtx <- gt_extracts[[i]]

@@ -363,6 +363,13 @@
     if (!is.list(s)) next
     out <- c(out, list(fld(s$header)), list(fld(s$footer)))
   }
+  # a page of several contents (page_break = FALSE): its later contents'
+  # fonts too -- last, so a document without such a page keeps its table
+  for (p in report$pages) {
+    for (b in p$blocks[-1L]) {
+      if (inherits(b$content, "rtftable")) out <- c(out, list(fld(b$content)))
+    }
+  }
   out <- Filter(Negate(is.null), c(list(fld(doc$title_style)),
                                    list(fld(doc$footnote_style)), out))
   # A slot vector must stay whole; a report of single names stays the plain

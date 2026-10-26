@@ -155,3 +155,14 @@ test_that("the document renders end to end", {
   expect_silent(generate_rtfreport(doc, f, overwrite = TRUE))
   expect_true(file.exists(f))
 })
+
+test_that("a page that opens an auto section keeps the title carried on it (as_rtftables)", {
+  pages <- .pages()
+  attr(pages[[1L]], "rtf_titles") <- "Title of cohort A"
+  attr(pages[[2L]], "rtf_footnotes") <- "Footnote of cohort B"
+  doc <- rtf_document() |> rtf_tables(pages, auto_section = TRUE)
+  expect_identical(unname(.title_texts(doc, 1L)), "Title of cohort A")
+  x <- paste(.render(doc, NULL), collapse = " ")
+  expect_match(x, "Title of cohort A", fixed = TRUE)
+  expect_match(x, "Footnote of cohort B", fixed = TRUE)
+})
