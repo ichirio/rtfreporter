@@ -77,10 +77,13 @@ test_that("several elements each get their own index", {
   for (nm in c("Calibri", "Arial", "Times New Roman")) {
     expect_match(.ftbl(l), nm, fixed = TRUE)
   }
-  expect_length(.fcmd(l, "MYHDR"), 1L)
+  # (the document's font at the band's start, then the band's own)
+  hdr <- .fcmd(l, "MYHDR")
+  expect_length(hdr, 2L)
+  expect_identical(hdr[[1L]], "\\f0")
   expect_length(.fcmd(l, "MYTITLE"), 1L)
   expect_length(.fcmd(l, "MYFOOT"), 0L)        # inherits the default
-  expect_false(identical(.fcmd(l, "MYHDR"), .fcmd(l, "MYTITLE")))
+  expect_false(identical(hdr[[2L]], .fcmd(l, "MYTITLE")))
 })
 
 test_that("a declared table is honoured, default first", {
