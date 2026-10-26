@@ -12,6 +12,12 @@ name: lint
 permissions:
   contents: read
 
+# On next, a newer push cancels the run still going (nobody waits for it);
+# main and pull requests keep every run (each run is its own group).
+concurrency:
+  group: ${{ github.ref == 'refs/heads/next' && format('{0}-next', github.workflow) || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
