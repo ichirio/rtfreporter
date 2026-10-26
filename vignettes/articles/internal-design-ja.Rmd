@@ -277,12 +277,13 @@ rtfreporter のオブジェクトは主に**データ**です。一度構築し�
 rtf_document（公開・パイプで構築）
  └─ レンダリング時に変換 → rtfreport（内部）
       ├─ document   : font_table, color_table, default_page, default_format
-      ├─ pages[]    : rtf_page   （1 ページ 1 コンテンツ）
+      ├─ pages[]    : rtf_page   （印刷ページに載る segment の並び）
       └─ sections[] : rtf_sect   （ページ範囲へのヘッダー／フッター割当）
 ```
 
-* **ページは文書直下でフラット**。**1 ページ ＝ 1 コンテンツ**（`rtftable` または
-  `rtfplot`）。
+* **ページは文書直下でフラット**。ページはそこに載る **segment** の上からの並び
+  です。ふつうは 1 コンテンツ（`rtftable` または `rtfplot`）、`page_break = FALSE`
+  で下に続けたときは複数。
 * **セクションはオーバーレイ**。各 `rtf_sect` は、あるページから次のセクションまで
   ヘッダー／フッターを割り当てるもので、コンテンツ自体は内包しません。
 
@@ -319,11 +320,14 @@ rtf_document（公開・パイプで構築）
 
 ### `rtf_page`（内部・S3 タグ付きリスト）
 
-`structure(list(title, content, footnote), class = "rtf_page")` ― 1 ページを表します。
+`structure(list(title, content, footnote), class = "rtf_page")` に `segments` を
+加えたもの ― 1 ページを表します。
 
-* `title` ― コンテンツ上部に中央寄せで出す文字ベクトル
-* `content` ― `rtftable` または `rtfplot`（または `NULL`）
-* `footnote` ― コンテンツ下部に出す文字ベクトル
+* `segments` ― ページに載る内容（上から順）。各要素は `content`・`title`・
+  `footnote`・`space_before`（上の空行数）のリスト
+* `title` / `content` / `footnote` ― 最初の segment の写し（1 つだけのページは
+  これで描く）: コンテンツ上部に中央寄せで出す文字ベクトル、`rtftable` または
+  `rtfplot`（または `NULL`）、コンテンツ下部に出す文字ベクトル
 
 ### `rtf_sect`（内部・S3 タグ付きリスト）
 
@@ -378,10 +382,10 @@ rtf_document（公開・パイプで構築）
 | クラス | 役割 |
 |--------|------|
 | `rtf_document` | ディスパッチ（`print`, `plot`）＋ `inherits()` |
-| `rtftable` | ディスパッチ（`print`, `format`, `summary`, `plot`）＋ `inherits()` |
+| `rtftable` | ディスパッチ（`print`, `format`, `summary`, `plot`。内部の `.render_content`）＋ `inherits()` |
 | `rtf_border_line`, `rtf_border`, `rtf_table_border` | ディスパッチ（`print`, `plot`）＋ `inherits()` |
 | `rtf_table_style`, `rtf_col_cell`, `rtf_col_header` | ディスパッチ（`print`）＋ `inherits()` |
-| `rtfplot` | ディスパッチ（`print`）＋ `inherits()` |
+| `rtfplot` | ディスパッチ（`print`。内部の `.render_content`）＋ `inherits()` |
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()`（空行リゾルバの分岐） |
 | `rtf_toc_heading`, `rtf_toc_entry` | `inherits()`（TOC 正規化） |
 | `rtf_block`, `rtf_contents`, `rtf_pages` | ディスパッチ（`print`。`rtf_contents` は `[` と `length` も） |

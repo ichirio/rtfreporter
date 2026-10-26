@@ -363,6 +363,15 @@
     if (!is.list(s)) next
     out <- c(out, list(fld(s$header)), list(fld(s$footer)))
   }
+  # A page's later segments (rtf_tables(page_break = FALSE)) go last, after
+  # everything above: where they add nothing new the table is the one it
+  # always was, and where they do, their fonts are declared (once a font
+  # only a later segment asked for was left out).
+  for (p in report$pages) {
+    for (sg in p$segments[-1L]) {
+      if (inherits(sg[["content"]], "rtftable")) out <- c(out, list(fld(sg[["content"]])))
+    }
+  }
   out <- Filter(Negate(is.null), c(list(fld(doc$title_style)),
                                    list(fld(doc$footnote_style)), out))
   # A slot vector must stay whole; a report of single names stays the plain
