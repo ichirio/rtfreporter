@@ -676,18 +676,15 @@ rtf_tables <- function(doc, tables,
   # none: the `rtf_titles` / `rtf_footnotes` attributes of a page (how
   # as_rtftables() carries a source's title and notes onto each page),
   # else -- the deprecated read_gt path -- what was read from a gt table.
-  # A page that opens an auto section has never had its attributes read
-  # (it sat inside the section wrapper when they were): kept so, so that
-  # every RTF written stays as it was.
+  # A page that opens an auto section reads them as any other page does.
   for (i in seq_along(tables)) {
     item <- tables[[i]]
-    own <- is.null(sections[[i]])
     if (is.null(titles[[i]])) {
-      titles[i] <- list((if (own) attr(item, "rtf_titles", exact = TRUE)) %||%
+      titles[i] <- list(attr(item, "rtf_titles", exact = TRUE) %||%
                           gt_texts$titles[[i]])
     }
     if (is.null(footnotes[[i]])) {
-      footnotes[i] <- list((if (own) attr(item, "rtf_footnotes", exact = TRUE)) %||%
+      footnotes[i] <- list(attr(item, "rtf_footnotes", exact = TRUE) %||%
                              gt_texts$footnotes[[i]])
     }
   }

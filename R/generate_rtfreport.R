@@ -2602,14 +2602,20 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
       # The watermark shape lives in the header group so it repeats on every
       # page of the section.  It goes in even when there is no header text --
       # then the group carries the shape and an empty paragraph, nothing else.
+      # (the document's font said at the band's start: a reader may not carry
+      # \deff into a header or footer -- LibreOffice draws one in its own
+      # default font -- so the band's text would not be the body's; a band's
+      # own font still comes after, on its cells)
+      band_f <- attr(font_index_map, "default_cmd", exact = TRUE) %||% ""
+      if (!nzchar(band_f)) band_f <- "\\f0"
       if (length(header_rtf) > 0L || nzchar(watermark_rtf)) {
         lines <<- c(lines, .cmd_fmt(doc_cmd$header_wrapper,
-                                    list(content = paste0(watermark_rtf, fs_cmd,
+                                    list(content = paste0(watermark_rtf, band_f, fs_cmd,
                                           paste(header_rtf, collapse = "")))))
       }
       if (length(footer_rtf) > 0L) {
         lines <<- c(lines, .cmd_fmt(doc_cmd$footer_wrapper,
-                                    list(content = paste0(fs_cmd,
+                                    list(content = paste0(band_f, fs_cmd,
                                           paste(footer_rtf, collapse = "")))))
       }
     }
