@@ -37,7 +37,9 @@ A list of data.frames (tibbles if the input was a tibble or
 \item \code{attr(., "rtf_blank_rows")} -- integer positions consumed by
 \code{\link[=rtftable]{rtftable()}} when \code{read_attributes = TRUE}.
 \item \code{attr(., "rtf_paginate_meta")} -- list with \code{strategy},
-\code{page_index}, \code{total_pages}, \code{group_col}, \code{page_name}.
+\code{page_index}, \code{total_pages}, \code{group_col}, \code{page_name}; a page cut on a
+column (\code{page_by}, or \code{split = "by_value"} with \code{group_col}) also has
+\code{page_values}, the column(s) and this page's value(s).
 }
 
 When \code{split = "by_value"} -- or when the caller passed a \emph{named}

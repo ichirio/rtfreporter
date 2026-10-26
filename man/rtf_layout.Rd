@@ -29,8 +29,12 @@ the blocks on the page, top to bottom, each a list with \code{block} (its
 position in the document), \code{name}, \code{content} (an \code{rtftable} or
 \code{rtfplot}), \code{title} (with \code{cont_title}'s line on a table's later
 pages), \code{footnote}, \code{space_before}, \code{group} and \code{page_in_group}
-(which table, and which page of it), and \code{section} (the
-\code{auto_section} heading the block opens, or \code{NULL}).}
+(which table, and which page of it), \code{section} (the
+\code{auto_section} heading the block opens, or \code{NULL}) and \code{values}
+(the columns its table was cut on and this page's value of each, a
+named character vector, or \code{NULL}: see \emph{Page values} in
+\code{\link[=rtf_tables]{rtf_tables()}}); and the page's own \code{values}: each column that of
+the first block on the page with a value for it.}
 \item{\code{n_blocks}}{the number of blocks.}
 \item{\code{paper}}{the page size and font size, for printing.}
 }

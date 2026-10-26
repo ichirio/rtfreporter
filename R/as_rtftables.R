@@ -315,7 +315,9 @@
 #'       `rtf_tables(auto_section = TRUE)` / `auto_title = TRUE` prints and the
 #'       line a section breaks on, so joining them would cut one group into a
 #'       section per BY value; both values stay readable in the page's
-#'       `rtf_paginate_meta` (`page_group` / `page_by`).  Pages that share a
+#'       `rtf_paginate_meta` (`page_group` / `page_by`), and by column as
+#'       `page_values` (`c(PARAM = "ALT")`), which a title or band writes as
+#'       `{PARAM}` (see *Page values* in [rtf_tables()]).  Pages that share a
 #'       heading are numbered with a **`"...n"` tail** -- `"Period 1...1"`,
 #'       `"Period 1...2"` -- so the list stays addressable, R returning the
 #'       *first* match for a repeated list name (which is what
@@ -960,7 +962,12 @@ as_rtftables.default <- function(x,
   if (.is_gtsummary_tbl(x)) x <- .gtsummary_to_gt(x)
 
   # ---- resolve body + metadata ------------------------------------------
+  # `src_values`: the columns and values a source says this table's page was
+  # cut on -- a tfrmt page_plan's note on a gt_group member, an rtables
+  # page's page_titles -- for a `{<column>}` token (R/page_values.R).
+  src_values <- NULL
   if (.is_gt_tbl(x)) {
+    src_values      <- attr(x, "rtf_page_values", exact = TRUE)
     tokens          <- .resolve_gt_tokens(read_meta)
     kw              <- .gt_to_rtftable_kwargs(x, tokens = tokens)
     body            <- kw$data
@@ -968,6 +975,7 @@ as_rtftables.default <- function(x,
     titles_block    <- kw$titles_block
     footnotes_block <- kw$footnotes_block
   } else if (.is_rtables_tbl(x)) {
+    src_values      <- .rtables_page_values(x)
     tokens          <- .resolve_rtables_tokens(read_meta)
     kw              <- .rtables_to_rtftable_kwargs(x, tokens = tokens)
     body            <- kw$data
@@ -1178,6 +1186,12 @@ as_rtftables.default <- function(x,
       # body and its attributes.  Carry it onto the built page, as the
       # blank-row attribute is carried.
       pmeta <- attr(pg, "rtf_paginate_meta", exact = TRUE)
+      # What the source says the page was cut on (an rtables page's
+      # page_titles, a tfrmt page note) goes with what the cut here says.
+      if (length(src_values)) {
+        if (!is.list(pmeta)) pmeta <- list()
+        pmeta$page_values <- .merge_page_values(pmeta$page_values, src_values)
+      }
       if (!is.null(pmeta) && !is.null(rt$data)) {
         attr(rt$data, "rtf_paginate_meta") <- pmeta
       }
@@ -1251,6 +1265,10 @@ as_rtftables.default <- function(x,
           meta$page_group <- g_nm
           meta$page_by    <- if (nzchar(pt$label)) pt$label else NULL
           meta$page_name  <- nm
+          # both columns the page was cut on, by name, for a `{<column>}`
+          # token (the group's value only when it is a value of its own)
+          meta$page_values <- .merge_page_values(
+            pt$values, if (nzchar(lv[k])) stats::setNames(lv[k], names(body)[gidx]))
           attr(pgs[[q]]$data, "rtf_paginate_meta") <- meta
         }
         out <- c(out, pgs)

@@ -90,7 +90,8 @@ header or footer band -- \code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}, \code{{P
 "Page 1 of 3" sits next to the table instead of at the page margin. A
 static \code{{PAGE}} costs nothing here: these bands are re-emitted for every
 page, so each page bakes its own number without the extra RTF section the
-same token forces in a header.}
+same token forces in a header.  A table paginated on a column fills
+\verb{\{<column name>\}} with its page's value (see \emph{Page values}).}
 
 \item{footnotes}{\code{NULL} (default) or a list of length \code{length(tables)} or
 length 1 (common to all). Same block structure as \code{titles}, and the same
@@ -185,6 +186,35 @@ A table's appearance is written where the table is made: in \code{\link[=rtftabl
 \code{\link[=as_rtftables]{as_rtftables()}} or \code{\link[=plan_style]{plan_style()}}.  A bare \code{data.frame} placed here gets
 their defaults.
 }
+\section{Page values}{
+
+A table cut into pages on a column -- \code{\link[=as_rtftables]{as_rtftables()}}\verb{(page_by = )}, a
+value split on a named group column (\verb{split = "by_value", group_col = }),
+a plan's \code{\link[=plan_paginate_group]{plan_paginate_group()}} -- knows each page's value of that column.
+A title, footnote, \code{auto_section} heading, header or footer
+(\code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}}) then writes \verb{\{<column name>\}}
+(\code{{PARAM}}, \code{{SEX}}) and gets that page's value when the file is written:
+\itemize{
+\item a title or footnote takes the value of its own table, so on a page
+of several tables (\code{page_break = FALSE}) each names its own;
+\item a header or footer belongs to the page: each column takes the first
+table on the page with a value for it (the rule of the \code{auto_section}
+heading); a later table with another value gets a warning.  A band
+that uses one is written for each page, as one with a static \code{{PAGE}}
+is;
+\item a \code{{NAME}} the page has no value for is printed as written, as any
+unknown token is (a title's \code{{N}} stays \code{{N}}); rtfreporter's own tokens
+(\code{{PAGE}}, \code{{PROGRAM}}, ...) and a token of one's own
+(\code{rtf_document(tokens = )}) of the same name win over a column's.
+}
+The values are on each page's \code{rtf_paginate_meta} as \code{page_values}
+(\code{c(PARAM = "ALT")}), and \code{\link[=rtf_layout]{rtf_layout()}} shows them.  An rtables page from
+\code{rtables::paginate_table()} carries its \code{split_rows_by(page_by = TRUE)}
+values by their page-title prefix; a gt_group member of tfrmt's
+\code{print_to_gt()} the \code{page_structure()} columns of a \code{page_plan(note_loc = )}
+that writes the page note.
+}
+
 \section{Deprecated arguments}{
 
 The 26 table-format arguments that copy \code{\link[=rtftable]{rtftable()}}'s (\code{col_header},

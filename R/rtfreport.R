@@ -247,7 +247,10 @@ update_footer_row <- function(footer, row, content) {
 #'   contain **page-number tokens** that the renderer substitutes: `{AUTO_PAGE}`
 #'   (the current page, updated live by the viewer), `{AUTO_TOTAL_PAGES}` (the
 #'   document total), and `{PAGE}` / `{TOTAL_PAGES}` (static numbers baked in at
-#'   render time).
+#'   render time).  A table paginated on a column (`as_rtftables(page_by = )`)
+#'   gives each page its value of that column, written `{<column name>}`
+#'   (`{PARAM}`): the band then shows the page's value, and is written for
+#'   each page.  See *Page values* in [rtf_tables()].
 #' @param border An [rtf_border()] object controlling the border applied to
 #'   all rows of the header/footer table. `NULL` = no border (default for
 #'   header). Use `rtf_border(top = TRUE)` for a horizontal dividing line (default
