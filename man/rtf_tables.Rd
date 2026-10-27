@@ -144,12 +144,14 @@ the title, column header and footnote on pages of its own, give
 later pages (a plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s) always begin a page; so
 does the document's first content.  Unlike reporter's
 \code{add_content(page_break = )} this is the break \emph{before} the table.  A
-table that goes on the page before it opens no section of its own
-(\code{auto_section}): \code{auto_title} names it.  The page header and footer
-are the section's; a static \code{{PAGE}} / \code{{TOTAL_PAGES}} counts the pages
-as written, so where the reader carries a table on, use \code{{AUTO_PAGE}} /
-\code{{AUTO_TOTAL_PAGES}}.  \code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the pages as
-written; \code{\link[=rtf_layout]{rtf_layout()}} shows them.}
+page has one \code{auto_section} heading: that of the first table on it that
+has one; a later table on the page with another heading gets a warning
+(\code{auto_title} names it on its title), and no page break is added for
+it.  The page header and footer are the section's; a static \code{{PAGE}} /
+\code{{TOTAL_PAGES}} counts the pages as written, which are right when each
+page holds what fits it: the program counts the rows.
+\code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the pages as written; \code{\link[=rtf_layout]{rtf_layout()}}
+shows them.}
 
 \item{first_rows}{With \code{page_break = FALSE}, the rows of the table that
 go on the page before it; the rest is paginated as the table says --
@@ -164,9 +166,12 @@ on.}
 \item{space_before}{With \code{page_break = FALSE}, empty lines between the
 content before and this table (0: the title's own blank line alone).}
 
-\item{cont_title}{With \code{first_rows}, a line under the title of each page
-after the shared one (\code{"(continued)"}); \code{NULL}: none.  Not
-\code{\link[=as_rtftables]{as_rtftables()}}'s \code{cont_label}, which marks a group cut across pages.}
+\item{cont_title}{A line under the title of each later page of a table
+(\code{"(continued)"}): the pages after the shared one of \code{first_rows}, and
+a table's own later pages (a plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s \code{max_rows}
+pages).  \code{NULL}: none.  \code{\link[=rtf_titles]{rtf_titles()}} replaces the titles whole,
+this line too.  Not \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cont_label}, which marks a
+group cut across pages.}
 }
 \value{
 Modified rtf_document with appended contents.

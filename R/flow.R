@@ -11,54 +11,11 @@
 #  .paginate_df()).
 #
 #  Each content page is a block of the document's `contents`, with its
-#  page_break / space_before (R/blocks.R); rtf_layout() turns the blocks
-#  into printed pages (R/layout.R).  A page of one block is drawn as it
-#  always was; a page of several reaches the renderer as an
-#  `rtf_flow_page` (its blocks, first to last), drawn block after block
-#  here.
-
-# Which pages of a call begin a content: every page, but a table's own
-# later pages (as_rtftables() marks them, `rtf_paginate_meta$page_index`),
-# and -- a plan or another source expanded here -- only its first.
-.flow_item_start <- function(tables, expanded) {
-  n <- length(tables)
-  if (isTRUE(expanded)) return(seq_len(n) == 1L)
-  vapply(tables, function(x) {
-    d <- if (inherits(x, "rtftable")) x$data %||% x$data_list[[1L]] else x
-    m <- attr(d, "rtf_paginate_meta", exact = TRUE) %||%
-      attr(x, "rtf_paginate_meta", exact = TRUE)
-    pi <- m$page_index
-    is.null(pi) || isTRUE(as.integer(pi)[1L] <= 1L)
-  }, logical(1L))
-}
-
-# ---- first_rows: the rows the shared page takes -------------------------------
-
-# rtf_tables(first_rows = ): the table as pages, its first `first_rows`
-# rows the first page and the rest paginated as the table says.  A plan
-# takes it as a pages setting (its own max_rows / split stay); a data frame
-# goes through as_rtftables(); a built rtftable is cut there, its rest one
-# page.  Pages already built (as_rtftables()'s list) are past it.
-.flow_first_rows <- function(tables, first_rows) {
-  if (!is.numeric(first_rows) || length(first_rows) != 1L || is.na(first_rows) ||
-      first_rows < 1 || first_rows != round(first_rows)) {
-    stop("rtf_tables(): `first_rows` is a whole number of rows, 1 or more.", call. = FALSE)
-  }
-  first_rows <- as.integer(first_rows)
-  if (inherits(tables, "table_plan")) {
-    return(as_rtftables(.plan_layer(tables, "pages", list(first_rows = first_rows))))
-  }
-  one <- if (is.data.frame(tables) || inherits(tables, "rtftable")) tables
-         else if (is.list(tables) && length(tables) == 1L) tables[[1L]]
-  if (is.data.frame(one)) return(as_rtftables(one, first_rows = first_rows))
-  if (inherits(one, "rtftable") && !is.null(one$data)) {
-    if (first_rows >= nrow(one$data)) return(list(one))
-    return(.rtftable_cut(one, first_rows))
-  }
-  stop(paste0("rtf_tables(): `first_rows` takes one table -- a table_plan, a data frame ",
-              "or an rtftable;\n  pages already built take it where they are built: ",
-              "as_rtftables(first_rows = )."), call. = FALSE)
-}
+#  page_break / space_before (R/blocks.R); `first_rows` cuts the table where
+#  it is added (.content_split(), R/content.R).  rtf_layout() turns the
+#  blocks into printed pages, each the segments on it (R/layout.R).  A page
+#  of one segment is drawn as it always was; a page of several is drawn
+#  segment after segment here.
 
 # ---- cutting a built table ------------------------------------------------------
 
@@ -90,13 +47,6 @@
     x
   }
   list(part(seq_len(k), TRUE), part(seq.int(k + 1L, n), FALSE))
-}
-
-# ---- a block of a page of several -----------------------------------------------
-
-.flow_block <- function(content, title, footnote, space_before = 0L) {
-  list(content = content, title = title, footnote = footnote,
-       space_before = as.integer(space_before %||% 0L))
 }
 
 # ---- drawing a page of several contents ---------------------------------------

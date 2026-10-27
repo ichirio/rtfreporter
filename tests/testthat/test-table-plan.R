@@ -1084,10 +1084,9 @@ test_that("plan_paginate_group() is what auto_section cuts on", {
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(p, auto_section = TRUE)
-  items <- Filter(function(x) inherits(x, "rtf_auto_section_item"),
-                  .doc_items(doc))
-  expect_length(items, 3L)
-  expect_setequal(vapply(items, function(x) x$label, ""),
+  secs <- Filter(Negate(is.null), lapply(doc$contents, `[[`, "section"))
+  expect_length(secs, 3L)
+  expect_setequal(vapply(secs, function(x) x[["label"]], ""),
                   c("AGE", "BMIBL", "SEX"))
 })
 

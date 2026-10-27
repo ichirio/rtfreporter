@@ -366,7 +366,7 @@
   # a page of several contents (page_break = FALSE): its later contents'
   # fonts too -- last, so a document without such a page keeps its table
   for (p in report$pages) {
-    for (b in p$blocks[-1L]) {
+    for (b in p$segments[-1L]) {
       if (inherits(b$content, "rtftable")) out <- c(out, list(fld(b$content)))
     }
   }

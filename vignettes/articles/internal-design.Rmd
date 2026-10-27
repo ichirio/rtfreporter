@@ -184,7 +184,8 @@ S3 class plays one of three roles:
 | `rtfplot` | dispatch (`print`) + `inherits()` |
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()` (blank-row resolver dispatch) |
 | `rtf_toc_heading`, `rtf_toc_entry` | `inherits()` (TOC normalisation) |
-| `rtfreport`, `rtf_auto_section_item` | `inherits()` (internal) |
+| `rtf_block`, `rtf_contents`, `rtf_pages` | dispatch (`print`; `[` and `length` for `rtf_contents`) |
+| `rtfreport` | `inherits()` (internal) |
 | `rtf_page`, `rtf_sect` | internal structural marker (no dispatch) |
 
 ### Conventions to follow when extending

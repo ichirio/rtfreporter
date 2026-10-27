@@ -87,13 +87,75 @@ test_that("rtf_layout(): the sections the pages are in", {
   # an explicit section on the page wins over the auto one (#548)
   expect_identical(lapply(lay$pages, `[[`, "section_label"),
                    list(NULL, "Part A", NULL, NULL))
-  # a block that flows opens no section: the layout says so
-  flow <- rtf_document() |> rtf_tables(list(.ly_df(2))) |>
-    rtf_tables(list("Part B" = .ly_df(2)), auto_section = TRUE, page_break = FALSE)
-  expect_warning(lay2 <- rtf_layout(flow), "opens no section")
-  expect_length(lay2$pages, 1L)
+  # each block that opens a section says so
+  expect_identical(unname(lapply(doc$contents, `[[`, "section")),
+                   list(NULL, list(label = "Part A", align = "left"), NULL,
+                        list(label = "Part B", align = "left")))
+})
+
+test_that("rtf_layout(): a page's section is the first block on it with one (12.3)", {
+  sec <- function(lay) lapply(lay$pages, `[[`, "section_label")
+  a <- function(...) rtf_tables(..., auto_section = TRUE)
+  # 1. the first has one, the second none: the first's
+  d1 <- rtf_document() |> a(list("A" = .ly_df(2))) |>
+    rtf_tables(list(.ly_df(2)), page_break = FALSE)
+  expect_identical(sec(rtf_layout(d1)), list("A"))
+  # 2. the first none, the second one: the second's
+  d2 <- rtf_document() |> rtf_tables(list(.ly_df(2))) |>
+    a(list("B" = .ly_df(2)), page_break = FALSE)
+  expect_identical(sec(rtf_layout(d2)), list("B"))
+  # 3. both, different: the first's, and a warning; no page is added
+  d3 <- rtf_document() |> a(list("A" = .ly_df(2))) |>
+    a(list("B" = .ly_df(2)), page_break = FALSE) |>
+    a(list("C" = .ly_df(2)), page_break = FALSE)
+  expect_warning(lay3 <- rtf_layout(d3), "page 1 holds the auto_section headings 'A' and 'B'")
+  expect_length(lay3$pages, 1L)
+  expect_identical(sec(lay3), list("A"))
+  #    the same heading twice says nothing
+  d3b <- rtf_document() |> a(list("A" = .ly_df(2))) |>
+    a(list("A" = .ly_df(2)), page_break = FALSE)
+  expect_no_warning(rtf_layout(d3b))
+  # 4. none on a page: it stays in the section before it
+  d4 <- rtf_document() |> a(list("A" = .ly_df(2))) |> rtf_tables(list(.ly_df(2)))
+  lay4 <- rtf_layout(d4)
+  expect_identical(vapply(lay4$pages, `[[`, 1L, "section"), c(1L, 1L))
+  # an explicit section on the page wins (#548)
+  d5 <- d2 |> rtf_section(page = 1, header = rtf_header("Own"))
+  expect_identical(sec(rtf_layout(d5)), list(NULL))
   # print() shows the layout without the warning
-  expect_silent(capture.output(print(flow)))
+  expect_silent(capture.output(print(d3)))
+})
+
+test_that(".rtf_content(): pages that know which table they are a page of", {
+  pages <- as_rtftables(.ly_df(30), split = "rows", split_rows = c(11, 21))
+  # a list of built pages keeps its tables together
+  p <- .rtf_content(c(list(rtftable(.ly_df(2))), pages, list(rtftable(.ly_df(3)))))
+  expect_length(p, 5L)
+  expect_identical(attr(p, "group"), c(1L, 2L, 2L, 2L, 3L))
+  expect_identical(attr(p, "page_in_group"), c(1L, 1L, 2L, 3L, 1L))
+  # a later page with nothing before it is still a later page
+  expect_identical(attr(.rtf_content(pages[2:3]), "page_in_group"), 2:3)
+  # a data frame is a page of rtftable()'s; a figure is drawn
+  png <- .ly_png()
+  on.exit(unlink(png), add = TRUE)
+  q <- .rtf_content(list(a = .ly_df(2), b = png))
+  expect_s3_class(q[[1L]], "rtftable")
+  expect_s3_class(q[[2L]], "rtfplot")
+  expect_named(q, c("a", "b"))
+  expect_error(.rtf_content(list(.ly_df(2), 42)), "Item 2")
+})
+
+test_that(".content_split(): first_rows on a plan, a data frame, an rtftable, a list of one", {
+  rows <- function(p) vapply(p, function(x) nrow(x$data), 1)
+  expect_identical(rows(.content_split(.ly_df(20), 6L)), c(6, 14))
+  expect_identical(rows(.content_split(rtftable(.ly_df(20)), 6L)), c(6, 14))
+  expect_identical(rows(.content_split(list(.ly_df(20)), 6L)), c(6, 14))
+  expect_length(.content_split(rtftable(.ly_df(4)), 6L), 1L)
+  expect_error(.content_split(list(.ly_df(2), .ly_df(2)), 1L), "takes one table")
+  expect_error(.content_split("x", 1L), "takes one table")
+  p <- .rtf_content(.ly_df(20), first_rows = 6)
+  expect_identical(attr(p, "group"), c(1L, 1L))
+  expect_identical(attr(p, "page_in_group"), 1:2)
 })
 
 test_that("print() shows each page's tables (rows) and figures (size)", {
@@ -123,6 +185,7 @@ test_that("a document whose blocks all break writes what each block alone would"
   two <- one |> rtf_tables(list(.ly_df(4)), titles = "B")
   r <- .pipe_doc_to_rtfreport(two)
   expect_length(r$pages, 2L)
-  expect_null(r$pages[[1L]]$blocks)
+  # (a page is the segments on it: here one each)
+  expect_identical(lengths(lapply(r$pages, `[[`, "segments")), c(1L, 1L))
   expect_identical(r$pages[[2L]]$title, "B")
 })

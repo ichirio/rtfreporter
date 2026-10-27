@@ -133,8 +133,7 @@ test_that("auto_title composes with auto_section", {
   # the names survive the auto_section rewrap, which drops list names
   expect_identical(.title_texts(doc, 1L), "Cohort A")
   expect_identical(.title_texts(doc, 2L), "Cohort B")
-  n_sec <- sum(vapply(.doc_items(doc), inherits, logical(1L),
-                      "rtf_auto_section_item"))
+  n_sec <- sum(!vapply(doc$contents, function(b) is.null(b[["section"]]), NA))
   expect_identical(n_sec, 2L)
 })
 

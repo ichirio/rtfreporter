@@ -10,14 +10,13 @@
 #  `page_in_group`).  Nothing beside the blocks keeps a list of its own, so
 #  the titles cannot fall out of step with the contents.  rtf_layout() turns
 #  the blocks into printed pages (R/layout.R).
-#
-#  For now `content` is still wrapped in an `rtf_auto_section_item` where
-#  rtf_tables(auto_section = TRUE) opens a section there; the wrapper is
-#  read where it always was (rtf_layout(), .pipe_doc_to_rtfreport()).
 
-# One block.  `title` / `footnote` are text blocks (NULL: none);
-# `cont_title` and `section` are kept for the layout to read and are NULL
-# until it does.
+# One block.  `title` / `footnote` are text blocks (NULL: none).
+# `cont_title`: the line rtf_layout() adds under the title where the block
+# is a later page of its table.  `section`: list(label =, align =) where
+# rtf_tables(auto_section = TRUE) opens a section with the block's heading,
+# else NULL; rtf_layout() decides the page's section from it (§12.3 of the
+# layout design: the first block on a page that has one).
 .rtf_block <- function(content, group = 1L, page_in_group = 1L,
                        title = NULL, footnote = NULL, page_break = TRUE,
                        space_before = 0L, cont_title = NULL, section = NULL) {
@@ -49,13 +48,6 @@ length.rtf_contents <- function(x) {
   length(unclass(x))
 }
 
-# The content inside the auto-section wrapper, when there is one
-.rtf_block_content <- function(b) {
-  ct <- b[["content"]]
-  if (inherits(ct, "rtf_auto_section_item")) ct <- .unwrap_auto_section_item(ct)
-  ct
-}
-
 # ---- adding blocks ----------------------------------------------------------------
 
 # rtf_tables() / rtf_figures(): the titles or footnotes given for n
@@ -80,12 +72,14 @@ length.rtf_contents <- function(x) {
 }
 
 # The one place rtf_tables() and rtf_figures() add to a document: each
-# content becomes a block with its title, footnote and placement.
-# `item_start`: which contents begin a content of their own -- a table's
-# own later pages always begin a page, and are pages of the same group.
-.rtf_add_blocks <- function(doc, contents, titles, footnotes, item_start,
+# content page (from .rtf_content(), R/content.R) becomes a block with its
+# title, footnote and placement.  The pages say which table each is a page
+# of (`group`, `page_in_group`); a table's later pages always begin a page.
+# `cont_title`: one line for every block; `sections`: one entry per page.
+.rtf_add_blocks <- function(doc, contents, titles, footnotes,
                             page_break = TRUE, space_before = 0L,
-                            fn = "rtf_tables") {
+                            fn = "rtf_tables", cont_title = NULL,
+                            sections = NULL) {
   n_new <- length(contents)
   if (!is.logical(page_break) || anyNA(page_break) ||
       !length(page_break) %in% c(1L, n_new)) {
@@ -97,22 +91,19 @@ length.rtf_contents <- function(x) {
     stop(sprintf("%s(): `space_before` is a whole number of empty lines, 0 or more.", fn),
          call. = FALSE)
   }
+  in_group <- attr(contents, "page_in_group") %||% rep(1L, n_new)
   pb <- rep_len(page_break, n_new)
-  pb[!item_start] <- TRUE
+  pb[in_group > 1L] <- TRUE
   old <- doc[["contents"]]
-  # each call's first content begins a group, whatever its pages say
-  group <- if (length(old)) max(vapply(old, function(b) b$group, 1L)) else 0L
-  in_group <- 0L
+  # the groups go on from the document's: a call's first content begins one
+  first <- if (length(old)) max(vapply(old, function(b) b$group, 1L)) else 0L
+  group <- first + (attr(contents, "group") %||% seq_len(n_new))
   blocks <- vector("list", n_new)
   for (i in seq_len(n_new)) {
-    if (i == 1L || isTRUE(item_start[i])) {
-      group <- group + 1L
-      in_group <- 0L
-    }
-    in_group <- in_group + 1L
-    blocks[[i]] <- .rtf_block(contents[[i]], group = group, page_in_group = in_group,
+    blocks[[i]] <- .rtf_block(contents[[i]], group = group[i], page_in_group = in_group[i],
                               title = titles[[i]], footnote = footnotes[[i]],
-                              page_break = pb[i], space_before = space_before)
+                              page_break = pb[i], space_before = space_before,
+                              cont_title = cont_title, section = sections[[i]])
   }
   names(blocks) <- names(contents)
   doc$contents <- .rtf_contents(c(unclass(old), blocks))
@@ -149,14 +140,13 @@ length.rtf_contents <- function(x) {
 
 #' @export
 print.rtf_block <- function(x, ...) {
-  ct <- .rtf_block_content(x)
-  cat(sprintf("<rtf_block> %s (group %d, page %d)\n", .rtf_content_desc(ct),
+  cat(sprintf("<rtf_block> %s (group %d, page %d)\n", .rtf_content_desc(x[["content"]]),
               x$group, x$page_in_group))
   cat(sprintf("  page_break %s, space_before %d, title %d row(s), footnote %d row(s)\n",
               x$page_break, x$space_before, .rtf_text_rows(x[["title"]]),
               .rtf_text_rows(x[["footnote"]])))
-  if (inherits(x[["content"]], "rtf_auto_section_item")) {
-    cat(sprintf("  opens the auto section \"%s\"\n", x[["content"]]$label))
+  if (!is.null(x[["section"]])) {
+    cat(sprintf("  opens the auto section \"%s\"\n", x[["section"]][["label"]]))
   }
   invisible(x)
 }
@@ -170,7 +160,7 @@ print.rtf_contents <- function(x, ...) {
     b <- x[[i]]
     nm <- if (is.null(nms) || is.na(nms[i]) || !nzchar(nms[i])) "" else
             paste0(" ", .page_name_base(nms[i]))
-    cat(sprintf(" %d%s: %s%s\n", i, nm, .rtf_content_desc(.rtf_block_content(b)),
+    cat(sprintf(" %d%s: %s%s\n", i, nm, .rtf_content_desc(b[["content"]]),
                 if (isTRUE(b$page_break)) "" else "  (goes on the page before)"))
   }
   invisible(x)
