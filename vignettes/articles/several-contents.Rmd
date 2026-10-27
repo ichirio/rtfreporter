@@ -129,7 +129,7 @@ doc_a <- rtf_document() |>
 generate_rtfreport(doc_a, "a_table_table.rtf", overwrite = TRUE)
 ```
 
-![](img/several-contents/a_table_table.png)
+![Demographics table with the disposition table under it on one page](img/several-contents/a_table_table.png)
 
 Each table keeps its own title and footnote. The output's own title (the
 table number, its name and the population) is the first content's title
@@ -158,7 +158,7 @@ doc_b <- rtf_document() |>
 generate_rtfreport(doc_b, "b_table_figure.rtf", overwrite = TRUE)
 ```
 
-![](img/several-contents/b_table_figure.png)
+![Demographics table with a box plot of age by arm under it](img/several-contents/b_table_figure.png)
 
 ## (c) A PK summary and its listing
 
@@ -266,11 +266,11 @@ generate_rtfreport(doc_pk, "c_pk.rtf", overwrite = TRUE)
 
 Page 1, the summary and the first 16 rows of the listing:
 
-![](img/several-contents/c_pk_page1.png)
+![Page 1: the PK concentration summary and the first rows of the listing](img/several-contents/c_pk_page1.png)
 
 Page 2, where the listing goes on:
 
-![](img/several-contents/c_pk_page2.png)
+![Page 2: the listing continued, titled (continued)](img/several-contents/c_pk_page2.png)
 
 The footnotes here are in the page footer, so they print on every page. A
 footnote given to `rtf_tables(footnotes = )` belongs to that content and
@@ -333,7 +333,7 @@ rtf_layout(doc_t)$pages[[2]]$values     # the values of page 2
 generate_rtfreport(doc_t, "t_tokens.rtf", overwrite = TRUE)
 ```
 
-![](img/several-contents/t_tokens_page2.png)
+![Page 2 of the lab table, its header and title naming AST](img/several-contents/t_tokens_page2.png)
 
 On a page of several contents, a title or footnote takes the value of its
 own table, so each names its own. The header and footer belong to the page:

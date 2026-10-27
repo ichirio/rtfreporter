@@ -125,7 +125,7 @@ doc_a <- rtf_document() |>
 generate_rtfreport(doc_a, "a_table_table.rtf", overwrite = TRUE)
 ```
 
-![](img/several-contents/a_table_table.png)
+![1 ページに人口統計の表と、その下に内訳の表](img/several-contents/a_table_table.png)
 
 どちらの表も自分のタイトルと脚注を持ちます。出力全体のタイトル（表番号、表題、集団）は
 1 つ目のコンテンツのタイトルに書きます。出力全体の脚注は最後のコンテンツの脚注に書きます。
@@ -152,7 +152,7 @@ doc_b <- rtf_document() |>
 generate_rtfreport(doc_b, "b_table_figure.rtf", overwrite = TRUE)
 ```
 
-![](img/several-contents/b_table_figure.png)
+![人口統計の表と、その下に群ごとの年齢の箱ひげ図](img/several-contents/b_table_figure.png)
 
 ## (c) PK 濃度の集計表とリスティング
 
@@ -252,11 +252,11 @@ generate_rtfreport(doc_pk, "c_pk.rtf", overwrite = TRUE)
 
 1 ページ目: 集計表と、リスティングの最初の 16 行:
 
-![](img/several-contents/c_pk_page1.png)
+![1 ページ目: PK 濃度の集計表とリスティングの始め](img/several-contents/c_pk_page1.png)
 
 2 ページ目: リスティングの続き:
 
-![](img/several-contents/c_pk_page2.png)
+![2 ページ目: (continued) の付いたリスティングの続き](img/several-contents/c_pk_page2.png)
 
 この例の脚注はページのフッターに入れたので、どのページにも出ます。`rtf_tables(footnotes = )` に
 書いた脚注はそのコンテンツの物で、そのコンテンツの各ページで、その下に出ます。
@@ -314,7 +314,7 @@ rtf_layout(doc_t)$pages[[2]]$values     # the values of page 2
 generate_rtfreport(doc_t, "t_tokens.rtf", overwrite = TRUE)
 ```
 
-![](img/several-contents/t_tokens_page2.png)
+![検査値の表の 2 ページ目: ヘッダーとタイトルに AST](img/several-contents/t_tokens_page2.png)
 
 複数のコンテンツがあるページでは、タイトルと脚注は自分の表の値を取るので、それぞれが自分の値を書きます。
 ヘッダーとフッターはページの物で、列ごとに、そのページで最初に値を持つ表の値を取ります。後の表が違う値を
