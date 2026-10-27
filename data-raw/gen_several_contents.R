@@ -28,7 +28,7 @@ setwd(root)
 img <- file.path(root, "vignettes", "articles", "img", "several-contents")
 dir.create(img, showWarnings = FALSE, recursive = TRUE)
 # file -> the pages the article shows
-shots <- list(a_table_table = 1L, b_table_figure = 1L, c_pk = 1:2, t_tokens = 2L)
+shots <- list(a_table_table = 1L, b_table_figure = 1L, c_pk = 1L, d_pk = 1:2, t_tokens = 2L)
 for (f in names(shots)) {
   rtf <- file.path(out, paste0(f, ".rtf"))
   env <- if (.Platform$OS.type == "unix") "LD_LIBRARY_PATH=" else character()
@@ -39,7 +39,7 @@ for (f in names(shots)) {
   for (p in pages) {
     raw <- file.path(out, sprintf("%s-%d.png", f, p))
     png::writePNG(pdftools::pdf_render_page(pdf, page = p, dpi = 110, numeric = TRUE), raw)
-    name <- if (identical(f, "a_table_table") || identical(f, "b_table_figure")) f
+    name <- if (f %in% c("a_table_table", "b_table_figure", "c_pk")) f
             else sprintf("%s_page%d", f, p)
     squash_blank_band(raw, file.path(img, paste0(name, ".png")))
   }
