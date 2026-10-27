@@ -166,8 +166,8 @@ A concentration summary by time point, and under it the listing of the same
 concentrations, both with the time points across: the summary's rows are its
 statistics, the listing's its subjects. The data is made up here: 24
 subjects, 8 nominal times, a one-compartment curve with some noise, BLQ
-under 2 ng/mL. This example takes three of the subjects, so both fit on one
-page; (d) takes all 24.
+under 2 ng/mL. This example takes five of the subjects: with the time points
+across, the summary and the listing fit on one page. (d) takes all 24.
 
 ```{r c-data, fold = "closed"}
 set.seed(20261028)
@@ -192,8 +192,7 @@ adpc$ATPT  <- factor(adpc$ATPT, levels = tpt$ATPT)
 
 The summary is an ARD by time point, the time points across. BLQ samples are
 left out, and pre-dose (BLQ for every subject) has no column. One function
-makes the plan, so (d) can use it for all 24 subjects with more statistics;
-with three subjects, n, mean, SD, min and max are enough:
+makes the plan, so (d) can use it for all 24 subjects:
 
 ```{r c-summary}
 cv <- function(x) 100 * stats::sd(x) / mean(x)
@@ -214,10 +213,11 @@ pk_summary_plan <- function(data, cells) {
     plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
     plan_style(border = "tfl")
 }
-pk3 <- adpc[adpc$USUBJID %in% unique(adpc$USUBJID)[1:3], ]
-summary3 <- pk_summary_plan(pk3, c("n" = "{N:.0f}", "Mean" = "{mean:.1f}",
-                                   "SD" = "{sd:.2f}", "Min" = "{min:.1f}",
-                                   "Max" = "{max:.1f}"))
+pk_cells <- c("n" = "{N:.0f}", "Mean" = "{mean:.1f}", "SD" = "{sd:.2f}",
+              "CV%" = "{cv:.1f}", "Geometric mean" = "{geo_mean:.1f}",
+              "Median" = "{median:.1f}", "Min" = "{min:.1f}", "Max" = "{max:.1f}")
+pk5 <- adpc[adpc$USUBJID %in% unique(adpc$USUBJID)[1:5], ]
+summary5 <- pk_summary_plan(pk5, pk_cells)
 ```
 
 The listing is laid out as the summary: a row a subject, a column a time
@@ -226,16 +226,16 @@ It is a plain data frame, its column names the header, with the summary's
 column widths so the two line up:
 
 ```{r c-listing}
-post <- pk3[pk3$ATPT != "Pre-dose", ]
-listing3 <- data.frame(Subject = unique(post$USUBJID))
+post <- pk5[pk5$ATPT != "Pre-dose", ]
+listing5 <- data.frame(Subject = unique(post$USUBJID))
 for (t in tpt$ATPT[-1]) {
   at <- post[post$ATPT == t, ]
-  listing3[[t]] <- at$AVALC[match(listing3$Subject, at$USUBJID)]
+  listing5[[t]] <- at$AVALC[match(listing5$Subject, at$USUBJID)]
 }
-listing3_plan <- table_plan(listing3) |>
+listing5_plan <- table_plan(listing5) |>
   plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
   plan_style(border = "tfl")
-listing3
+listing5
 ```
 
 The summary starts the page and carries the output's title; the listing goes
@@ -249,16 +249,16 @@ pk_footer <- rtf_footer(list(
   c(l = "Pre-dose: BLQ for every subject. Synthetic data made for this page.")))
 doc_c <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
   rtf_section(header = pk_header, footer = pk_footer) |>
-  rtf_tables(summary3,
+  rtf_tables(summary5,
              titles = list(c("Table 14.4.1",
                              "Drug X Plasma Concentrations: Summary and Listing",
                              "Safety Population"))) |>
-  rtf_tables(listing3_plan, page_break = FALSE, space_before = 1L,
+  rtf_tables(listing5_plan, page_break = FALSE, space_before = 1L,
              titles = list("Listing of concentrations (ng/mL)"))
 generate_rtfreport(doc_c, "c_pk.rtf", overwrite = TRUE)
 ```
 
-![The PK concentration summary of three subjects and, under it, their concentrations by time point](img/several-contents/c_pk.png)
+![The PK concentration summary of five subjects and, under it, their concentrations by time point](img/several-contents/c_pk.png)
 
 ## (d) A long listing that goes on
 
@@ -271,10 +271,7 @@ the subject on its first row only (and again at the top of a page),
 cutting a subject:
 
 ```{r d-listing}
-pk_summary <- pk_summary_plan(adpc, c(
-  "n" = "{N:.0f}", "Mean" = "{mean:.1f}", "SD" = "{sd:.2f}", "CV%" = "{cv:.1f}",
-  "Geometric mean" = "{geo_mean:.1f}", "Median" = "{median:.1f}",
-  "Min" = "{min:.1f}", "Max" = "{max:.1f}"))
+pk_summary <- pk_summary_plan(adpc, pk_cells)
 lst <- data.frame(Subject = adpc$USUBJID,
                   `Nominal time` = as.character(adpc$ATPT),
                   `Actual time (h)` = format(adpc$ARELTM, nsmall = 2),
