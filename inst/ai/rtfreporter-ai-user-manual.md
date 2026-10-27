@@ -282,7 +282,7 @@ without writing a file.
 | Align decimal points | `set_decimal_split(pages, cols =)` |
 | Style after the fact | `style_cols()`, `style_body()`, `style_header()`, `style_zone()` |
 | Borders | `border = "tfl"`, `rtf_border()`, `rtf_border_line()` |
-| Column-width help | `auto_col_widths(df, ...)`, `fit_listing_widths(data, spec, page =)` |
+| Column-width help | `auto_col_widths(df, ...)`, `default_col_widths(df)` (the proportions used when none are given), `fit_listing_widths(data, spec, page =)` |
 | Table from a cards / cardx ARD | `normalize_ard()` → `table_plan()` → `plan_*()` → `rtf_tables(doc, plan)` **(§17)** |
 
 ---
@@ -1101,7 +1101,7 @@ reference of a difference.
 `listing_split_after` `listing_take`
 
 **Pagination / layout:** `paginate_cols` `set_decimal_split`
-`set_blank_rows` `add_cont_label` `auto_col_widths` `text_width_in`
+`set_blank_rows` `add_cont_label` `auto_col_widths` `default_col_widths` `text_width_in`
 
 **Styling:** `style_header` `style_cols` `style_body` `style_zone`
 `rtf_table_style` `rtf_table_style_with` `rtf_table_style_tfl`

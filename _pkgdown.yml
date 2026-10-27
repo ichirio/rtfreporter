@@ -512,6 +512,7 @@ reference:
     contents:
       - text_width_in
       - auto_col_widths
+      - default_col_widths
 
   # ── 4. Listings ─────────────────────────────────────────────────────
   - title: Listings (source data → listing body)

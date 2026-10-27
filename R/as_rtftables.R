@@ -652,7 +652,8 @@
 #'     \item{`table_width_twips`}{the total, absolute.}
 #'     \item{`table_width_pct` / `table_width_pct_of_writable`}{the total, as
 #'       a share of the writable page width (paper minus the side margins).}
-#'     \item{nothing}{the writable width, divided equally.}
+#'     \item{nothing}{the writable width: the row-heading columns by their
+#'       content, the data columns sharing the rest ([default_col_widths()]).}
 #'   }
 #'   All of them are `rtftable()`'s, and mean here exactly what they mean
 #'   there.

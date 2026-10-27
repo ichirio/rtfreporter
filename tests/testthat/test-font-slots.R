@@ -29,7 +29,8 @@
       header = rtf_header(rows = list(c(l = "HDR \u65e5", r = "Page {PAGE}")),
                           font = hfont),
       footer = rtf_footer(rows = list(c(l = "FTR")), font = hfont))) |>
-    rtf_tables(rtftable(df, border = "tfl", font = font)) |>
+    # (equal widths, as the fixtures were written before default_col_widths())
+    rtf_tables(rtftable(df, border = "tfl", font = font, col_rel_width = c(1, 1))) |>
     rtf_titles(list("Title \u8868"), font = tfont) |>
     rtf_footnotes(list("Foot"), font = tfont)
 }

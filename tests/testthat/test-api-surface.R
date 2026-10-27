@@ -132,9 +132,10 @@ test_that("the effective export count is the reviewed number", {
   # 108 since #625 added plan_compare(), the comparison columns; 132 / 109
   # since #620 added plan_filter(), rows dropped by a condition; 133 / 110
   # since #691 added plan_empty(), the row of a table of no events; 134 /
-  # 111 since rtf_layout(), a document's contents as printed pages.)
-  expect_length(.exports(), 134L)
-  expect_length(setdiff(.exports(), .dep), 111L)
+  # 111 since rtf_layout(), a document's contents as printed pages; 135 /
+  # 112 since default_col_widths(), the widths of a table that gives none.)
+  expect_length(.exports(), 135L)
+  expect_length(setdiff(.exports(), .dep), 112L)
 })
 
 test_that("the old argument names still work, with a warning", {

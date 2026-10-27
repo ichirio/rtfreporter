@@ -53,8 +53,9 @@
 #  Column widths
 #  -------------
 #  `column_widths_twips` is absolute, so a subset already carries the right
-#  widths and nothing is scaled.  Relative widths (and the default equal
-#  distribution) need help: `.compute_cellx()` re-normalises whatever it is
+#  widths and nothing is scaled.  Relative widths (and a table that gives
+#  none: its default ones, default_col_widths(), taken as relative widths
+#  first) need help: `.compute_cellx()` re-normalises whatever it is
 #  given across the page's table width, so a bare subset would stretch the kept
 #  columns to refill the sheet, making a ratio-1 column a different size on
 #  every page.
@@ -759,6 +760,16 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
   }
 
   keeps <- lapply(blocks, function(b) sort(unique(c(carry_idx, b))))
+
+  # A table that gives no widths takes the whole table's default ones
+  # (default_col_widths()) as its relative widths, so a column is as wide on
+  # every page as it would be unsplit
+  x <- lapply(x, function(tbl) {
+    if (is.null(tbl$column_widths_twips) && is.null(tbl$col_rel_width)) {
+      tbl$col_rel_width <- .default_table_weights(tbl)
+    }
+    tbl
+  })
 
   # Width rescaling: one factor per column block, measured against page 1's
   # share ("fill") or the whole table's ("keep").  NULL throughout when the

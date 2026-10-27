@@ -665,7 +665,7 @@
 # -- Column width computation ---------------------------------------------------
 
 # Compute cumulative cellx positions for a table.
-# Priority: column_widths_twips > col_rel_width > equal distribution.
+# Priority: column_widths_twips > col_rel_width > the default (default_col_widths()).
 .compute_cellx <- function(ncols, writable_width_twips, tbl) {
   if (!is.null(tbl$column_widths_twips)) {
     widths <- as.integer(tbl$column_widths_twips)
@@ -697,11 +697,9 @@
     return(cumsum(widths))
   }
 
-  # Equal distribution.
-  cell_w <- max(1L, floor(total_w / ncols))
-  widths  <- rep(cell_w, ncols)
-  widths[ncols] <- total_w - sum(widths[-ncols])
-  cumsum(widths)
+  # None given: the row headings by their content, the data columns sharing
+  # the rest (default_col_widths())
+  cumsum(.default_cellx_widths(tbl, ncols, total_w))
 }
 
 # Total rendered width (twips) of a page's content, so the title / footnote
