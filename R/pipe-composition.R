@@ -117,9 +117,9 @@
 #'
 #' @return An `rtf_document` S3 object: a list with `document`
 #'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
-#'   `contents`
-#'   (filled by [rtf_tables()] / [rtf_figures()]), `titles`, `footnotes`, and
-#'   `sections` (filled by [rtf_section()]).
+#'   `contents` (filled by [rtf_tables()] / [rtf_figures()]: one block per
+#'   content, each with its own title and footnote; [rtf_layout()] shows how
+#'   they fall on the pages), and `sections` (filled by [rtf_section()]).
 #'
 #' @seealso [rtf_page()] / [rtf_default_format()] for the page / formatting
 #'   settings, [rtf_config()] to edit an already-composed document, [rtf_tables()]
@@ -209,9 +209,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         tokens = tokens,
         file = file
       ),
-      contents  = list(),
-      titles    = list(),
-      footnotes = list(),
+      contents  = .rtf_contents(),
       sections  = list()
     ),
     class = "rtf_document"
@@ -489,7 +487,7 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   are the section's; a static `{PAGE}` / `{TOTAL_PAGES}` counts the pages
 #'   as written, so where the reader carries a table on, use `{AUTO_PAGE}` /
 #'   `{AUTO_TOTAL_PAGES}`.  [rtf_section()]`(page = n)` counts the pages as
-#'   written.
+#'   written; [rtf_layout()] shows them.
 #' @param first_rows With `page_break = FALSE`, the rows of the table that
 #'   go on the page before it; the rest is paginated as the table says --
 #'   a plan's `plan_paginate_rows(max_rows = , split = )` -- each page with
@@ -781,25 +779,8 @@ rtf_tables <- function(doc, tables,
   }
 
   # Validate titles / footnotes lengths
-  .validate_parallel <- function(x, n, name) {
-    if (is.null(x)) return(rep(list(NULL), n))
-    # a character vector is one block (its lines), for every page (#594)
-    if (is.character(x)) x <- list(x)
-    if (!is.list(x)) {
-      stop(sprintf("`%s` must be a list (or NULL).", name), call. = FALSE)
-    }
-    if (length(x) == 1L && n > 1L) return(rep(x, n))  # one block = common to all
-    if (length(x) != n) {
-      stop(sprintf(paste0("`%s` has %d blocks but there %s %d page%s: give ",
-                          "one block per page, or one block (a list of ",
-                          "length 1) for every page."),
-                   name, length(x), if (n == 1L) "is" else "are", n,
-                   if (n == 1L) "" else "s"), call. = FALSE)
-    }
-    x
-  }
-  titles    <- .validate_parallel(titles,    length(tables), "titles")
-  footnotes <- .validate_parallel(footnotes, length(tables), "footnotes")
+  titles    <- .rtf_block_texts(titles,    length(tables), "titles")
+  footnotes <- .rtf_block_texts(footnotes, length(tables), "footnotes")
 
   # Pull through page-level title / source-note blocks.  Two sources, in
   # priority order (user-supplied `titles` / `footnotes` always win over
@@ -868,14 +849,9 @@ rtf_tables <- function(doc, tables,
     }
   }
 
-  # Create copy and append
-  doc_copy <- doc
-  doc_copy$contents  <- c(doc_copy$contents,  tables)
-  doc_copy$titles    <- c(doc_copy$titles,    titles)
-  doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
-  # (page_break = FALSE: the pages' placement, beside them -- see R/flow.R)
-  .flow_placement_append(doc_copy, length(tables), .flow_item_start(tables, expanded),
-                         page_break = page_break, space_before = space_before)
+  # Each page a block, with its title, footnote and placement (R/blocks.R)
+  .rtf_add_blocks(doc, tables, titles, footnotes, .flow_item_start(tables, expanded),
+                  page_break = page_break, space_before = space_before)
 }
 
 #' Add figure content to document
@@ -984,32 +960,13 @@ rtf_figures <- function(doc, figures,
       })
   })
 
-  .validate_parallel <- function(x, n, name) {
-    if (is.null(x)) return(rep(list(NULL), n))
-    # a character vector is one block (its lines), for every page (#594)
-    if (is.character(x)) x <- list(x)
-    if (!is.list(x))
-      stop(sprintf("`%s` must be a list (or NULL).", name), call. = FALSE)
-    if (length(x) == 1L && n > 1L) return(rep(x, n))  # one block = common to all
-    if (length(x) != n)
-      stop(sprintf(paste0("`%s` has %d blocks but there %s %d figure%s: give ",
-                          "one block per figure, or one block for every figure."),
-                   name, length(x), if (n == 1L) "is" else "are", n,
-                   if (n == 1L) "" else "s"), call. = FALSE)
-    x
-  }
-  titles    <- .validate_parallel(titles,    length(figures), "titles")
-  footnotes <- .validate_parallel(footnotes, length(figures), "footnotes")
+  titles    <- .rtf_block_texts(titles,    length(figures), "titles", "figure")
+  footnotes <- .rtf_block_texts(footnotes, length(figures), "footnotes", "figure")
 
-  doc_copy <- doc
-  doc_copy$contents  <- c(doc_copy$contents,  fig_objs)
-  doc_copy$titles    <- c(doc_copy$titles,    titles)
-  doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
-  # (page_break = FALSE: the pages' placement, beside them -- see R/flow.R;
-  # every figure a content of its own)
-  .flow_placement_append(doc_copy, length(fig_objs), rep(TRUE, length(fig_objs)),
-                         page_break = page_break, space_before = space_before,
-                         fn = "rtf_figures")
+  # Each figure a block of its own (R/blocks.R)
+  .rtf_add_blocks(doc, fig_objs, titles, footnotes, rep(TRUE, length(fig_objs)),
+                  page_break = page_break, space_before = space_before,
+                  fn = "rtf_figures")
 }
 
 # Is `x` one figure rather than a list of them?  An rtfplot, one path, a
@@ -1031,10 +988,12 @@ rtf_figures <- function(doc, figures,
 
 #' Assign content titles to pages
 #'
-#' Replace the per-page title list with the supplied values.  `titles` must
-#' have length equal to the number of pages already added via [rtf_tables()] /
-#' [rtf_figures()], **or length 1** -- a single block is then applied to every
-#' page (common title).
+#' Replace the title of every content already added with the supplied
+#' values.  `titles` must have length equal to the number of contents (table
+#' or figure pages) already added via [rtf_tables()] / [rtf_figures()], **or
+#' length 1** -- a single block is then applied to every content (common
+#' title).  Each content is a page of its own unless it was added with
+#' `page_break = FALSE`; [rtf_layout()] shows them.
 #'
 #' Each element is a title **block**: either a character vector (one entry per
 #' row, default styling) or a list of rows, where a row is a string or a styled
@@ -1043,7 +1002,7 @@ rtf_figures <- function(doc, figures,
 #' same width as the content; title rows default to centred + bold.
 #'
 #' @param doc An rtf_document object.
-#' @param titles A list of length = number of pages, or length 1 (common).
+#' @param titles A list of length = number of contents, or length 1 (common).
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, overriding the document default from [rtf_default_format()].
 #'   `font` names a family (e.g. `"Arial"`); one not already in the document's
@@ -1098,7 +1057,7 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
                  length(titles), n, if (n == 1L) "" else "s"), call. = FALSE)
   }
   doc_copy <- doc
-  doc_copy$titles <- titles
+  doc_copy$contents <- .rtf_blocks_set(doc$contents, "title", titles)
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_titles")
   if (!is.null(font)) st$font <- .check_font(font, "rtf_titles(font)")
@@ -1108,16 +1067,16 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 
 #' Assign content footnotes to pages
 #'
-#' Same shape as [rtf_titles()]: a list with one block per page (or length 1,
-#' common to all). Each block is a character vector or a list of rows (a string
+#' Same shape as [rtf_titles()]: a list with one block per content (table or
+#' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
 #' or `list(text=, align=, bold=, italic=, underline=, color=, border=)`).
 #' Footnote rows default to left-aligned, and the first row carries a top rule
 #' (the separator) unless that row sets its own `border`. `NULL` per element
-#' suppresses the footnote for that page.
+#' suppresses the footnote for that content.
 #'
 #' @param doc An rtf_document object.
-#' @param footnotes A list of length = number of pages, or length 1 (common).
-#'   Each page's element is a list of rows. A row is a single string, or a
+#' @param footnotes A list of length = number of contents, or length 1
+#'   (common).  Each content's element is a list of rows. A row is a single string, or a
 #'   named vector `c(l = , c = , r = )` giving up to three cells positioned
 #'   left / centre / right -- the same row model [rtf_footer()] uses. A bare
 #'   string lands in whichever slot `align` selects.
@@ -1174,7 +1133,7 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
                  length(footnotes), n, if (n == 1L) "" else "s"), call. = FALSE)
   }
   doc_copy <- doc
-  doc_copy$footnotes <- footnotes
+  doc_copy$contents <- .rtf_blocks_set(doc$contents, "footnote", footnotes)
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_footnotes")
   if (!is.null(font)) st$font <- .check_font(font, "rtf_footnotes(font)")
@@ -1363,24 +1322,19 @@ rtf_section <- function(doc, page = NULL, secinfo = NULL, header = NULL,
 #' @param x An rtf_document object.
 #' @param ... Additional arguments (unused).
 #'
-#' @return `x`, invisibly. Called for the side effect of printing a one-line
-#'   summary (page count, sections defined, page size).
+#' @return `x`, invisibly. Called for the side effect of printing the
+#'   document's layout, as [rtf_layout()] makes it: the number of contents
+#'   (blocks) and printed pages, the page and font size, and one line per
+#'   content -- its page, the section a page begins, its name, the rows of a
+#'   table or the size of a figure, and the rows of its title and footnote.
 #'
 #' @examples
 #' print(rtf_document())
+#' rtf_document() |>
+#'   rtf_tables(list(Demog = data.frame(A = 1:3)), titles = "Table 1")
 #'
 #' @export
 print.rtf_document <- function(x, ...) {
-  cat("rtf_document object\n")
-  cat("  Pages:", length(x$contents), "\n")
-  cat("  Sections defined:", length(x$sections), "\n")
-  # a preset page (the default) has no width / height of its own (#547)
-  pg <- x$document$page
-  size <- if (!is.null(pg$width_in) || !is.null(pg$height_in)) {
-    sprintf("%s x %s inches", pg$width_in %||% "?", pg$height_in %||% "?")
-  } else {
-    sprintf("%s (%s)", pg$paper_size %||% "letter", pg$orientation %||% "landscape")
-  }
-  cat("  Document page size:", size, "\n")
+  .rtf_pages_print(.rtf_layout(x, warn = FALSE), "rtf_document")
   invisible(x)
 }

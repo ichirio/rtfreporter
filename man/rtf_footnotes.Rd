@@ -18,8 +18,8 @@ rtf_footnotes(
 \arguments{
 \item{doc}{An rtf_document object.}
 
-\item{footnotes}{A list of length = number of pages, or length 1 (common).
-Each page's element is a list of rows. A row is a single string, or a
+\item{footnotes}{A list of length = number of contents, or length 1
+(common).  Each content's element is a list of rows. A row is a single string, or a
 named vector \code{c(l = , c = , r = )} giving up to three cells positioned
 left / centre / right -- the same row model \code{\link[=rtf_footer]{rtf_footer()}} uses. A bare
 string lands in whichever slot \code{align} selects.}
@@ -44,12 +44,12 @@ first row, e.g. \code{border = rtf_border(top = TRUE)}.}
 Modified rtf_document.
 }
 \description{
-Same shape as \code{\link[=rtf_titles]{rtf_titles()}}: a list with one block per page (or length 1,
-common to all). Each block is a character vector or a list of rows (a string
+Same shape as \code{\link[=rtf_titles]{rtf_titles()}}: a list with one block per content (table or
+figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
 or \code{list(text=, align=, bold=, italic=, underline=, color=, border=)}).
 Footnote rows default to left-aligned, and the first row carries a top rule
 (the separator) unless that row sets its own \code{border}. \code{NULL} per element
-suppresses the footnote for that page.
+suppresses the footnote for that content.
 }
 \examples{
 df <- data.frame(A = 1:2, B = c("x", "y"))

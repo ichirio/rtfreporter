@@ -58,6 +58,8 @@ documents are linked below (each opens in English with a Japanese toggle).
 rtfreporter/
 ├── R/
 │   ├── pipe-composition.R   # public pipe API: rtf_document/section/tables/figures
+│   ├── blocks.R             # rtf_block / rtf_contents: a document's contents
+│   ├── layout.R             # rtf_layout(): the contents as printed pages
 │   ├── rtftable.R           # rtftable() S3 object + normalisation helpers
 │   ├── rtfplot.R            # rtfplot() S3 object
 │   ├── rtfreport.R          # internal rtfreport document object + rtf_header/footer
@@ -81,10 +83,13 @@ rtfreporter/
 
 ```
 rtf_document          (public S3, built by the pipe API)
-  ├── contents[]      one entry per page: rtftable | rtfplot
-  ├── titles[]        per-page title block (character vector)
-  ├── footnotes[]     per-page footnote block
+  ├── contents        rtf_contents: one rtf_block per content page
+  │     └── rtf_block   content (rtftable | rtfplot), title, footnote,
+  │                     page_break, space_before, group, page_in_group
   └── sections[]      header/footer per page-range (via from_page)
+
+rtf_layout(doc) -> rtf_pages: the blocks as printed pages (a block with
+  page_break = FALSE goes on the page before it; nothing is measured)
 
 rtftable              one table (single- or multi-data.frame)
   ├── data / data_list

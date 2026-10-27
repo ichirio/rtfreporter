@@ -6,8 +6,10 @@ silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 test_that("rtf_document() returns the expected S3 structure with defaults", {
   doc <- rtf_document()
   expect_s3_class(doc, "rtf_document")
-  expect_setequal(names(doc),
-                  c("document", "contents", "titles", "footnotes", "sections"))
+  expect_setequal(names(doc), c("document", "contents", "sections"))
+  # the contents are blocks, each with its own title and footnote
+  expect_s3_class(doc$contents, "rtf_contents")
+  expect_length(doc$contents, 0L)
   expect_identical(doc$document$page$orientation, "landscape")
   # The default page now carries a named size; dimensions come from the preset.
   expect_identical(doc$document$page$paper_size, "letter")
@@ -59,10 +61,10 @@ test_that("rtf_tables() promotes bare data.frames and applies shared formatting"
   doc <- rtf_tables(rtf_document(), list(df1, df2),
                     col_rel_width = c(1, 2), row_height_twips = 280L)
   expect_length(doc$contents, 2L)
-  expect_s3_class(doc$contents[[1L]], "rtftable")
-  expect_identical(doc$contents[[1L]]$col_rel_width, c(1, 2))
-  expect_identical(doc$contents[[1L]]$row_height_twips, 280L)
-  expect_identical(doc$contents[[2L]]$col_rel_width, c(1, 2))
+  expect_s3_class(doc$contents[[1L]]$content, "rtftable")
+  expect_identical(doc$contents[[1L]]$content$col_rel_width, c(1, 2))
+  expect_identical(doc$contents[[1L]]$content$row_height_twips, 280L)
+  expect_identical(doc$contents[[2L]]$content$col_rel_width, c(1, 2))
 })
 
 test_that("explicit rtf_tables() args override pre-built rtftable settings", {
@@ -74,8 +76,8 @@ test_that("explicit rtf_tables() args override pre-built rtftable settings", {
   # build and the pre-built rtftable's own c(3, 1).
   doc <- rtf_tables(rtf_document(), list(df1, custom_tbl),
                     col_rel_width = c(1, 2))
-  expect_identical(doc$contents[[1L]]$col_rel_width, c(1, 2))
-  expect_identical(doc$contents[[2L]]$col_rel_width, c(1, 2))
+  expect_identical(doc$contents[[1L]]$content$col_rel_width, c(1, 2))
+  expect_identical(doc$contents[[2L]]$content$col_rel_width, c(1, 2))
 })
 
 test_that("pre-built rtftable() keeps settings NOT explicitly overridden", {
@@ -85,8 +87,8 @@ test_that("pre-built rtftable() keeps settings NOT explicitly overridden", {
 
   # Only table_align is passed -> col_rel_width stays the table's own c(3, 1).
   doc <- rtf_tables(rtf_document(), list(custom_tbl), table_align = "right")
-  expect_identical(doc$contents[[1L]]$col_rel_width, c(3, 1))
-  expect_identical(doc$contents[[1L]]$table_align, "right")
+  expect_identical(doc$contents[[1L]]$content$col_rel_width, c(3, 1))
+  expect_identical(doc$contents[[1L]]$content$table_align, "right")
 })
 
 test_that("multi-content-per-page is rejected", {
@@ -120,8 +122,8 @@ test_that("print(rtf_document) prints a summary header", {
   df1 <- data.frame(A = 1:3, B = c("x", "y", "z"))
   doc <- rtf_section(rtf_tables(rtf_document(), list(df1, df1, df1)),
                      page = 1, secinfo = list(header = NULL, footer = NULL))
-  expect_output(print(doc), "rtf_document object")
-  expect_output(print(doc), "Pages: 3")
+  expect_output(print(doc), "rtf_document: 3 blocks on 3 pages", fixed = TRUE)
+  expect_output(print(doc), "page 3", fixed = TRUE)
 })
 
 test_that("end-to-end pipe-style workflow builds a valid document", {
@@ -144,6 +146,6 @@ test_that("end-to-end pipe-style workflow builds a valid document", {
 
   expect_length(doc$contents, 2L)
   expect_length(doc$sections, 2L)
-  expect_s3_class(doc$contents[[1L]], "rtftable")
-  expect_identical(doc$contents[[1L]]$col_rel_width, c(1, 2))
+  expect_s3_class(doc$contents[[1L]]$content, "rtftable")
+  expect_identical(doc$contents[[1L]]$content$col_rel_width, c(1, 2))
 })

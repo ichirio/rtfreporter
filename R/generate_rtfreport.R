@@ -2191,12 +2191,17 @@
     report <- .rtfreport_set_default_format(report, pipe_doc$document$default_format)
   }
 
-  # rtf_tables(page_break = FALSE): the content pages laid out as printed
-  # pages first (R/flow.R); a document without it is untouched
-  if (.flow_active(pipe_doc)) pipe_doc <- .flow_layout(pipe_doc)
+  # The blocks laid out as printed pages first (rtf_layout(), R/layout.R):
+  # one item a page -- a block's content, or an `rtf_flow_page` of several
+  # -- with the title and footnote of its first block.  A document whose
+  # blocks all begin a page has one item per block, as it always had.
+  layout         <- .rtf_layout(pipe_doc)
+  page_items     <- lapply(layout$pages, .rtf_page_item)
+  page_titles    <- lapply(layout$pages, function(p) p$segments[[1L]]$title)
+  page_footnotes <- lapply(layout$pages, function(p) p$segments[[1L]]$footnote)
 
   # -- Detect auto-section items ---------------------------------------------
-  has_auto_section <- any(vapply(pipe_doc$contents,
+  has_auto_section <- any(vapply(page_items,
     function(x) inherits(x, "rtf_auto_section_item"), logical(1L)))
 
   if (has_auto_section) {
@@ -2217,8 +2222,8 @@
 
     # Process contents one by one, creating one RTF section per named item.
     page_counter <- 0L
-    for (ci in seq_along(pipe_doc$contents)) {
-      content_item <- pipe_doc$contents[[ci]]
+    for (ci in seq_along(page_items)) {
+      content_item <- page_items[[ci]]
       page_counter <- page_counter + 1L
 
       if (inherits(content_item, "rtf_auto_section_item")) {
@@ -2241,10 +2246,8 @@
       } else {
         ct <- .normalise_content_item(content_item)
       }
-      title_i    <- if (ci <= length(pipe_doc$titles))    pipe_doc$titles[[ci]]    else NULL
-      footnote_i <- if (ci <= length(pipe_doc$footnotes)) pipe_doc$footnotes[[ci]] else NULL
-      report <- .rtfreport_add_page(report, content = ct, title = title_i,
-                                    footnote = footnote_i)
+      report <- .rtfreport_add_page(report, content = ct, title = page_titles[[ci]],
+                                    footnote = page_footnotes[[ci]])
     }
 
     # Guard: if no section was added at all (e.g., all items were non-auto),
@@ -2290,13 +2293,11 @@
       }
     }
 
-    # Add pages from pipe_doc$contents (each element = one page)
-    for (ci in seq_along(pipe_doc$contents)) {
-      ct         <- .normalise_content_item(pipe_doc$contents[[ci]])
-      title_i    <- if (ci <= length(pipe_doc$titles))    pipe_doc$titles[[ci]]    else NULL
-      footnote_i <- if (ci <= length(pipe_doc$footnotes)) pipe_doc$footnotes[[ci]] else NULL
-      report <- .rtfreport_add_page(report, content = ct, title = title_i,
-                                    footnote = footnote_i)
+    # Add the pages (each item = one page)
+    for (ci in seq_along(page_items)) {
+      ct     <- .normalise_content_item(page_items[[ci]])
+      report <- .rtfreport_add_page(report, content = ct, title = page_titles[[ci]],
+                                    footnote = page_footnotes[[ci]])
     }
   }
 

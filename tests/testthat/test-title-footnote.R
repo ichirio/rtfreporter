@@ -80,8 +80,8 @@ test_that("a length-1 titles list in rtf_tables() is common to all pages", {
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(list(df, df, df), titles = list("Common Title"))
-  expect_length(doc$titles, 3L)
-  expect_true(all(vapply(doc$titles, identical, logical(1), "Common Title")))
+  expect_length(.doc_titles(doc), 3L)
+  expect_true(all(vapply(.doc_titles(doc), identical, logical(1), "Common Title")))
 })
 
 test_that("rtf_titles()/rtf_footnotes() accept length 1 (common) or length n", {
@@ -90,10 +90,10 @@ test_that("rtf_titles()/rtf_footnotes() accept length 1 (common) or length n", {
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(list(df, df))
   d1 <- rtf_titles(base, list("One For All"))
-  expect_length(d1$titles, 2L)
-  expect_identical(d1$titles[[1]], d1$titles[[2]])
+  expect_length(.doc_titles(d1), 2L)
+  expect_identical(d1$contents[[1]]$title, d1$contents[[2]]$title)
   d2 <- rtf_footnotes(base, list("a", "b"))
-  expect_identical(d2$footnotes[[2]], "b")
+  expect_identical(d2$contents[[2]]$footnote, "b")
   expect_error(rtf_titles(base, list("x", "y", "z")), "has 3 blocks but the document has 2 pages")
 })
 
@@ -168,8 +168,8 @@ test_that("rtf_titles() and rtf_footnotes() set per-page titles/footnotes", {
   doc <- rtf_titles(doc, list("Page One", c("Page Two", "", "Subtitle")))
   doc <- rtf_footnotes(doc, list(NULL, "Footnote of page 2"))
 
-  expect_length(doc$titles,    2L)
-  expect_length(doc$footnotes, 2L)
+  expect_length(.doc_titles(doc),    2L)
+  expect_length(.doc_footnotes(doc), 2L)
   txt <- .render_with(doc)
   expect_match(txt, "Page One")
   expect_match(txt, "Page Two")

@@ -132,8 +132,8 @@ doc <- rtf_document() |>
   rtf_section(page = 1, header = NULL, footer = NULL) |>
   rtf_tables(pages)
 
-doc$titles[[1]]        # title + subtitle, read from the gt object
-doc$footnotes[[1]]     # source note
+doc$contents[[1]]$title       # title + subtitle, read from the gt object
+doc$contents[[1]]$footnote    # source note
 ```
 
 For a single page you can use the convenience wrapper [as_rtftable()],
@@ -299,10 +299,10 @@ doc <- rtf_document() |>
 ```
 
 
-`doc$contents[[1L]]` now has:
+`doc$contents[[1L]]$content` now has:
 
 ```{r}
-tbl <- doc$contents[[1L]]
+tbl <- doc$contents[[1L]]$content
 nrow(tbl$data)          # 5 PT rows + 2 SOC group rows
 tbl$data$rowname[1:3]   # the SOC's heading row, then its first two PTs, indented
 tbl$col_header          # spanner row + stubhead-labelled bottom row
@@ -311,8 +311,8 @@ tbl$col_header          # spanner row + stubhead-labelled bottom row
 Page-level blocks:
 
 ```{r}
-doc$titles[[1L]]        # title + subtitle
-doc$footnotes[[1L]]     # footnote text + source note (in that order)
+doc$contents[[1L]]$title      # title + subtitle
+doc$contents[[1L]]$footnote   # footnote text + source note (in that order)
 ```
 
 Render to RTF:

@@ -26,8 +26,8 @@ test_that("the default and page_break = TRUE leave the document as it was", {
   d1 <- rtf_document() |> rtf_tables(list(.fl_df(5))) |> rtf_tables(list(.fl_df(6)))
   d2 <- rtf_document() |> rtf_tables(list(.fl_df(5))) |>
     rtf_tables(list(.fl_df(6)), page_break = TRUE)
-  expect_null(d1$placement)
-  expect_null(d2$placement)
+  expect_true(all(vapply(d1$contents, `[[`, NA, "page_break")))
+  expect_true(all(vapply(d2$contents, `[[`, NA, "page_break")))
   expect_identical(.render_to_string(d1), .render_to_string(d2))
 })
 
@@ -103,7 +103,10 @@ test_that("a plan's or as_rtftables()'s later pages begin a page of their own", 
   pages <- as_rtftables(.fl_df(60, "Row"), split = "rows", split_rows = 25)
   doc <- rtf_document() |> rtf_tables(list(.fl_df(5))) |>
     rtf_tables(pages, page_break = FALSE)
-  expect_identical(vapply(doc$placement, `[[`, NA, "page_break"), c(TRUE, FALSE, TRUE))
+  expect_identical(vapply(doc$contents, `[[`, NA, "page_break"), c(TRUE, FALSE, TRUE))
+  # (the two pages are one table: one group, its pages 1 and 2)
+  expect_identical(vapply(doc$contents, `[[`, 1L, "group"), c(1L, 2L, 2L))
+  expect_identical(vapply(doc$contents, `[[`, 1L, "page_in_group"), c(1L, 1L, 2L))
   pg <- .fl_pages(doc)
   expect_length(pg, 2L)
   expect_identical(.fl_rows(pg[[1L]]), c(5, nrow(pages[[1L]]$data)))
@@ -139,7 +142,7 @@ test_that("rtf_figures(page_break = FALSE): a figure under the content before it
   d2 <- rtf_document() |> rtf_tables(list(.fl_df(3))) |>
     rtf_tables(list(.fl_df(3)), page_break = FALSE) |>
     rtf_figures(list(rtfplot(png_path)))
-  expect_length(d2$placement, 3L)
+  expect_identical(vapply(d2$contents, `[[`, NA, "page_break"), c(TRUE, FALSE, TRUE))
   expect_length(.fl_pages(d2), 2L)
   small <- rtfplot(png_path, width_twips = 2000L)
   expect_error(rtf_figures(rtf_document(), list(small, small), page_break = c(TRUE, FALSE, TRUE)),

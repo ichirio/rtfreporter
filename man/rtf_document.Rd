@@ -93,9 +93,9 @@ program.  \code{NULL} (default): none, and \code{generate_rtfreport()} needs
 \value{
 An \code{rtf_document} S3 object: a list with \code{document}
 (\code{font_table} / \code{color_table} / \code{page} / \code{default_format} / \code{watermark}),
-\code{contents}
-(filled by \code{\link[=rtf_tables]{rtf_tables()}} / \code{\link[=rtf_figures]{rtf_figures()}}), \code{titles}, \code{footnotes}, and
-\code{sections} (filled by \code{\link[=rtf_section]{rtf_section()}}).
+\code{contents} (filled by \code{\link[=rtf_tables]{rtf_tables()}} / \code{\link[=rtf_figures]{rtf_figures()}}: one block per
+content, each with its own title and footnote; \code{\link[=rtf_layout]{rtf_layout()}} shows how
+they fall on the pages), and \code{sections} (filled by \code{\link[=rtf_section]{rtf_section()}}).
 }
 \description{
 Initialize a new RTF document object for building reports with pipes.

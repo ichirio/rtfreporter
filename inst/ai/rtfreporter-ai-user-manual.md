@@ -273,6 +273,7 @@ without writing a file.
 | Place tables on pages | `rtf_tables(doc, tables, titles =, footnotes =, ...)` |
 | Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)`; one figure as it is: `rtf_figures(doc, plot)` (a ggplot, a path), several as a list |
 | Set titles / footnotes later | `rtf_titles(doc, list)`, `rtf_footnotes(doc, list)` |
+| See how the contents fall on pages | `rtf_layout(doc)` (or `print(doc)`): each page's tables (rows) and figures (size) |
 | Write the RTF | `generate_rtfreport(doc, file_path)` (written over by default); or say the file in the document, `rtf_document(file = )`, and `generate_rtfreport(doc)` |
 | Concatenate finished RTFs | `assemble_rtf(input_files, output_file, toc =, book_page =)` |
 | Listings | `listing_col()` → `listing_spec()` → `as_rtftables(data, listing = spec)` |
@@ -1086,7 +1087,7 @@ reference of a difference.
 **Sections / bands:** `rtf_section` `combine_sections` `rtf_header` `rtf_footer`
 `rtf_header_source` `rtf_titles` `rtf_footnotes`
 
-**Content:** `rtf_tables` `rtf_figures` `rtftable` `rtfplot` `as_rtftable`
+**Content:** `rtf_tables` `rtf_figures` `rtf_layout` `rtftable` `rtfplot` `as_rtftable`
 `as_rtftables`
 
 **Column headers:** `col_cell` `col_key` `rtf_col_header` `set_col_header`

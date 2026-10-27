@@ -328,7 +328,7 @@ test_that("auto_title prints the heading without the tail", {
   doc <- rtf_document() |>
     rtf_section(secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(pg, auto_title = TRUE)
-  ttl <- doc$titles[[2L]]
+  ttl <- doc$contents[[2L]]$title
   expect_identical(ttl[[length(ttl)]]$text, "Period 1")
 })
 
