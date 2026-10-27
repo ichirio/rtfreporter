@@ -312,6 +312,41 @@ rtf_text_tokens(doc)[rtf_text_tokens(doc)$kind == "own", c("token", "example")]
 .shot("hf_own_tokens.png")
 ```
 
+### A page's own value: `{<column>}`
+
+A table cut into pages on a column -- `as_rtftables(page_by = )`, a value
+split on a named `group_col`, a plan's `plan_paginate_group()` -- knows each
+page's value of that column, and a title, footnote, section label, header or
+footer writes it as `{<column name>}`.  This is how a study header says which
+parameter a page shows without an `auto_section` row:
+
+```{r column-tokens}
+lab <- data.frame(
+  PARAM = rep(c("ALT (U/L)", "AST (U/L)"), each = 3),
+  Visit = rep(c("Baseline", "Week 4", "Week 8"), 2),
+  Mean  = c("21.3", "22.0", "21.8", "24.1", "23.5", "24.9"))
+pages <- as_rtftables(lab, page_by = "PARAM", drop_cols = "PARAM")
+
+doc <- rtf_document() |>
+  rtf_section(header = rtf_header(
+    c(l = "Parameter: {PARAM}", r = "Page {PAGE} of {TOTAL_PAGES}"))) |>
+  rtf_tables(pages, titles = "Table 14.3.1  Mean {PARAM} by visit")
+generate_rtfreport(doc, tempfile(fileext = ".rtf"))
+sapply(rtf_layout(doc)$pages, `[[`, "values")   # each page's value, by column
+```
+
+A title or footnote takes the value of its own table, so on a page of
+several tables (`page_break = FALSE`) each names its own.  A header or footer
+belongs to the page: each column takes the first table on the page that has
+a value for it, and a later table with another value gets a warning.  A band
+that uses a column is written once per page, as one with a static `{PAGE}`
+is.  A `{NAME}` the page has no value for is printed as written, so a title's
+`{N}` stays `{N}`; rtfreporter's own tokens and your own (`tokens =`) win
+over a column of the same name.  An rtables page from
+`rtables::paginate_table()` names its `split_rows_by(page_by = TRUE)` values
+by their page-title prefix, and a tfrmt `page_plan(note_loc = )` its
+`page_structure()` columns.
+
 See `?rtf_section`, `?rtf_header`, `?rtf_footer` and `?rtf_text_tokens` for
 the full reference.
 

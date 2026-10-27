@@ -98,7 +98,9 @@
 #'   * `attr(., "rtf_blank_rows")` -- integer positions consumed by
 #'     [rtftable()] when `read_attributes = TRUE`.
 #'   * `attr(., "rtf_paginate_meta")` -- list with `strategy`,
-#'     `page_index`, `total_pages`, `group_col`, `page_name`.
+#'     `page_index`, `total_pages`, `group_col`, `page_name`; a page cut on a
+#'     column (`page_by`, or `split = "by_value"` with `group_col`) also has
+#'     `page_values`, the column(s) and this page's value(s).
 #'
 #'   When `split = "by_value"` -- or when the caller passed a *named*
 #'   `list` and no splitting happened -- each element ALSO carries
@@ -558,10 +560,21 @@ paginate.data.frame <- function(x, ...) {
   # Each page restarts the suppression, so a group continued onto the next page
   # shows its label again at the top.
   collapse_idx <- .resolve_collapse_cols(collapse_repeats, x)
+  # A value split on a named group column cuts the pages on that column, so
+  # each page knows its value by the column's name too (`page_values`, what
+  # a `{<column>}` token is filled from).  Not for an indent-detected group:
+  # that is a position in the body, not a column's value.
+  by_value_col <- if (identical(strategy, "by_value") && !is.null(group_col)) {
+    gi <- tryCatch(.resolve_group_col(group_col, x), error = function(e) NULL)
+    if (length(gi) == 1L && !is.na(gi)) names(x)[gi]
+  }
   n_pages     <- length(chunks)
   chunk_names <- names(chunks)        # may be NULL for non-named splits
   out <- lapply(seq_along(chunks), function(i) {
     chunk <- chunks[[i]]
+    page_values <- if (!is.null(by_value_col) && !is.null(chunk_names)) {
+      .column_page_value(chunk[[by_value_col]], by_value_col, chunk_names[i])
+    }
     # Restore the input's class chain so tibble-ness survives.
     class(chunk) <- input_class
     rownames(chunk) <- NULL
@@ -592,6 +605,9 @@ paginate.data.frame <- function(x, ...) {
       group_col   = group_col,
       page_name   = if (!is.null(chunk_names)) chunk_names[i] else NULL
     )
+    if (length(page_values)) {
+      attr(chunk, "rtf_paginate_meta")$page_values <- page_values
+    }
     chunk
   })
   # Carry chunk names through `lapply` (which otherwise drops them).
@@ -661,9 +677,14 @@ paginate.data.frame <- function(x, ...) {
   keys <- lapply(idx, function(j) .fill_page_by_gaps(as.character(df[[j]])))
   key  <- do.call(paste, c(keys, list(sep = "\r")))
   lab  <- do.call(paste, c(keys, list(sep = ", ")))
+  cols <- names(df)[idx]
   lapply(unique(key), function(k) {
     rows <- which(key == k)
-    list(rows = rows, label = lab[rows[1L]])
+    # `values`: the same key by column, so a page can say which column it
+    # was cut on as well as the value -- what a `{<column>}` token in a
+    # title or a band is filled from (.page_values_of(), R/page_values.R).
+    list(rows = rows, label = lab[rows[1L]],
+         values = stats::setNames(vapply(keys, `[`, "", rows[1L]), cols))
   })
 }
 
@@ -717,13 +738,14 @@ paginate.data.frame <- function(x, ...) {
 #
 # The pages are built BY partition (that is how the body is cut) and ordered
 # afterwards -- pages are independent, so this is a reordering, not a rebuild.
-.order_and_name_pages <- function(pages, grp, by) {
+.order_and_name_pages <- function(pages, grp, by, by_val = NULL) {
   n <- length(pages)
   if (n == 0L) return(pages)
+  if (length(by_val) != n) by_val <- rep(list(NULL), n)
   has_grp <- length(grp) == n && !any(is.na(grp))
   if (has_grp) {
     ord   <- order(match(grp, unique(grp)), match(by, unique(by)), seq_len(n))
-    pages <- pages[ord]; grp <- grp[ord]; by <- by[ord]
+    pages <- pages[ord]; grp <- grp[ord]; by <- by[ord]; by_val <- by_val[ord]
   }
   # Several pages can share one name (a group that outgrew `max_rows`, or the
   # BY values inside a group), and they simply do: a page name is a HEADING --
@@ -735,6 +757,7 @@ paginate.data.frame <- function(x, ...) {
     meta$page_group <- if (has_grp) grp[i] else NULL
     meta$page_by    <- by[i]
     meta$page_name  <- nm[i]
+    meta$page_values <- .merge_page_values(by_val[[i]], meta$page_values)
     attr(pages[[i]], "rtf_paginate_meta") <- meta
   }
   names(pages) <- .uniquify_page_names(nm)
@@ -775,7 +798,7 @@ paginate.data.frame <- function(x, ...) {
   edges   <- in_attr[in_attr <= 0L]
   inner   <- in_attr[in_attr > 0L]
 
-  out <- list(); by_lab <- character(0); grp_lab <- character(0)
+  out <- list(); by_lab <- character(0); grp_lab <- character(0); by_val <- list()
   for (r in .page_by_runs(x, idx)) {
     part <- x[r$rows, , drop = FALSE]
     rownames(part) <- NULL
@@ -793,12 +816,13 @@ paginate.data.frame <- function(x, ...) {
     nm <- names(chunks)
     for (k in seq_along(chunks)) {
       out[[length(out) + 1L]] <- chunks[[k]]
+      by_val[[length(by_val) + 1L]] <- r$values
       by_lab  <- c(by_lab, r$label)
       grp_lab <- c(grp_lab,
                    if (!is.null(nm) && nzchar(nm[k] %||% "")) nm[k] else NA_character_)
     }
   }
-  .order_and_name_pages(out, grp_lab, by_lab)
+  .order_and_name_pages(out, grp_lab, by_lab, by_val)
 }
 
 # column index -- or NULL for "auto-detect from leading whitespace".

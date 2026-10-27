@@ -47,8 +47,12 @@
 #'       position in the document), `name`, `content` (an `rtftable` or
 #'       `rtfplot`), `title` (with `cont_title`'s line on a table's later
 #'       pages), `footnote`, `space_before`, `group` and `page_in_group`
-#'       (which table, and which page of it), and `section` (the
-#'       `auto_section` heading the block opens, or `NULL`).}
+#'       (which table, and which page of it), `section` (the
+#'       `auto_section` heading the block opens, or `NULL`) and `values`
+#'       (the columns its table was cut on and this page's value of each, a
+#'       named character vector, or `NULL`: see *Page values* in
+#'       [rtf_tables()]); and the page's own `values`: each column that of
+#'       the first block on the page with a value for it.}
 #'     \item{`n_blocks`}{the number of blocks.}
 #'     \item{`paper`}{the page size and font size, for printing.}
 #'   }
@@ -97,7 +101,7 @@ rtf_layout <- function(doc) {
                 content = b[["content"]], title = title, footnote = b[["footnote"]],
                 space_before = b$space_before %||% 0L,
                 group = b$group, page_in_group = b$page_in_group,
-                section = b[["section"]])
+                section = b[["section"]], values = .content_page_values(b[["content"]]))
     if (flow) {
       k <- length(pages)
       pages[[k]]$segments[[length(pages[[k]]$segments) + 1L]] <- seg
@@ -114,6 +118,9 @@ rtf_layout <- function(doc) {
   # page_break's and the tables' own alone).  A page whose blocks have
   # none stays in the section open before it.
   for (k in seq_along(pages)) {
+    # the page's values by column, for a {<column>} token in its header or
+    # footer: each column that of the first block on it with a value for it
+    pages[[k]]["values"] <- list(.page_values_of(pages[[k]]$segments))
     secs <- Filter(Negate(is.null), lapply(pages[[k]]$segments, `[[`, "section"))
     if (!length(secs)) next
     first <- secs[[1L]]

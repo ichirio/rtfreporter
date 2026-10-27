@@ -23,7 +23,8 @@
   segs <- page$segments
   if (length(segs) > 1L) return(segs)
   list(list(content = page[["content"]], title = page[["title"]],
-            footnote = page[["footnote"]], space_before = 0L))
+            footnote = page[["footnote"]], space_before = 0L,
+            values = if (length(segs)) segs[[1L]][["values"]]))
 }
 
 # Each segment draws its title, content and footnote, with a separating
@@ -35,9 +36,13 @@
   out <- character(0)
   cmds <- .load_rtf_commands()$paragraph
   sep <- cmds$flow_gap
+  # A segment's title and footnote fill the {<column>} tokens from its own
+  # content's values (R/page_values.R), not another segment's on the page.
+  on.exit(.run_ctx$page_values <- NULL, add = TRUE)
   for (bi in seq_along(segments)) {
     b <- segments[[bi]]
     ct <- b[["content"]]
+    .run_ctx$page_values <- .segment_values(b)
     if (bi > 1L) {
       out <- c(out, sep, rep(cmds$flow_blank_line, b$space_before %||% 0L))
     }

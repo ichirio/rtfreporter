@@ -46,7 +46,10 @@ e.g. \code{c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")}. Cell text may
 contain \strong{page-number tokens} that the renderer substitutes: \code{{AUTO_PAGE}}
 (the current page, updated live by the viewer), \code{{AUTO_TOTAL_PAGES}} (the
 document total), and \code{{PAGE}} / \code{{TOTAL_PAGES}} (static numbers baked in at
-render time).}
+render time).  A table paginated on a column (\code{as_rtftables(page_by = )})
+gives each page its value of that column, written \verb{\{<column name>\}}
+(\code{{PARAM}}): the band then shows the page's value, and is written for
+each page.  See \emph{Page values} in \code{\link[=rtf_tables]{rtf_tables()}}.}
 
 \item{border}{An \code{\link[=rtf_border]{rtf_border()}} object controlling the border applied to
 all rows of the header/footer table. \code{NULL} = no border (default for

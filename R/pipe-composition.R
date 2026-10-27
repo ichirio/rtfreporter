@@ -381,6 +381,33 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #' [as_rtftables()] or [plan_style()].  A bare `data.frame` placed here gets
 #' their defaults.
 #'
+#' @section Page values:
+#' A table cut into pages on a column -- [as_rtftables()]`(page_by = )`, a
+#' value split on a named group column (`split = "by_value", group_col = `),
+#' a plan's [plan_paginate_group()] -- knows each page's value of that column.
+#' A title, footnote, `auto_section` heading, header or footer
+#' ([rtf_header()] / [rtf_footer()]) then writes `{<column name>}`
+#' (`{PARAM}`, `{SEX}`) and gets that page's value when the file is written:
+#' \itemize{
+#'   \item a title or footnote takes the value of its own table, so on a page
+#'     of several tables (`page_break = FALSE`) each names its own;
+#'   \item a header or footer belongs to the page: each column takes the first
+#'     table on the page with a value for it (the rule of the `auto_section`
+#'     heading); a later table with another value gets a warning.  A band
+#'     that uses one is written for each page, as one with a static `{PAGE}`
+#'     is;
+#'   \item a `{NAME}` the page has no value for is printed as written, as any
+#'     unknown token is (a title's `{N}` stays `{N}`); rtfreporter's own tokens
+#'     (`{PAGE}`, `{PROGRAM}`, ...) and a token of one's own
+#'     (`rtf_document(tokens = )`) of the same name win over a column's.
+#' }
+#' The values are on each page's `rtf_paginate_meta` as `page_values`
+#' (`c(PARAM = "ALT")`), and [rtf_layout()] shows them.  An rtables page from
+#' `rtables::paginate_table()` carries its `split_rows_by(page_by = TRUE)`
+#' values by their page-title prefix; a gt_group member of tfrmt's
+#' `print_to_gt()` the `page_structure()` columns of a `page_plan(note_loc = )`
+#' that writes the page note.
+#'
 #' @section Deprecated arguments:
 #' The 26 table-format arguments that copy [rtftable()]'s (`col_header`,
 #' `border`, `col_rel_width`, `row_height_twips`, `font_size_half_points`,
@@ -435,7 +462,8 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   "Page 1 of 3" sits next to the table instead of at the page margin. A
 #'   static `{PAGE}` costs nothing here: these bands are re-emitted for every
 #'   page, so each page bakes its own number without the extra RTF section the
-#'   same token forces in a header.
+#'   same token forces in a header.  A table paginated on a column fills
+#'   `{<column name>}` with its page's value (see *Page values*).
 #' @param footnotes `NULL` (default) or a list of length `length(tables)` or
 #'   length 1 (common to all). Same block structure as `titles`, and the same
 #'   page-number tokens; footnote rows default to left-aligned, and the first

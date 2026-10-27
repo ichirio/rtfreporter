@@ -521,8 +521,11 @@
       out <- .replace_token(out, h, .rtf_escape(.format_run_time(time, fmt)))
     }
   }
-  # tokens of one's own (rtf_document(tokens = ), the option)
-  .substitute_user_tokens(out)
+  # tokens of one's own (rtf_document(tokens = ), the option), then the
+  # page's values by column, {PARAM} (R/page_values.R): set only while a
+  # page's text is written, so they never reach another page
+  out <- .substitute_user_tokens(out)
+  .substitute_column_tokens(out)
 }
 
 .substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
@@ -2371,6 +2374,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     .run_ctx$program_done <- NULL
     .run_ctx$time <- NULL
     .run_ctx$tokens <- NULL
+    .run_ctx$page_values <- NULL
   }, add = TRUE)
   if (inherits(report, "rtf_document")) {
     report <- .pipe_doc_to_rtfreport(report)
@@ -2543,6 +2547,12 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     #     each rendered page can carry its own baked-in page number.
     emit_section_preamble <- function(pg_for_hf) {
       lines <<- c(lines, doc_cmd$section_defaults)
+      # The page's values for the {<column>} tokens its bands name: a band
+      # that names one is written for each page (`band_cols`, below).
+      .run_ctx$page_values <- if (length(band_cols)) {
+        .page_values_of(.page_segments(report$pages[[pg_for_hf]]), band_cols, pg_for_hf)
+      }
+      on.exit(.run_ctx$page_values <- NULL, add = TRUE)
 
       # Re-emit section-level page properties after \sectd.
       #
@@ -2617,10 +2627,18 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     # either header or footer), we promote every sub-page boundary
     # from a `\page` break to a `\sect` break and re-emit the
     # section preamble with the correct baked-in number.
-    needs_per_page_section <- .uses_static_page_token(cur_header_hf) ||
-                              .uses_static_page_token(cur_footer_hf)
-
+    # So is a page's value: a band naming a column a page of the section
+    # was cut on ({PARAM}, R/page_values.R) is written for each page.
     sec_pages <- seq(pg_from, pg_to)
+    sec_cols <- unique(unlist(lapply(report$pages[sec_pages], function(pg) {
+      lapply(.page_segments(pg), function(s) names(.segment_values(s)))
+    }), use.names = FALSE))
+    band_cols <- unique(c(.hf_column_tokens(cur_header_hf, sec_cols),
+                          .hf_column_tokens(cur_footer_hf, sec_cols)))
+    needs_per_page_section <- .uses_static_page_token(cur_header_hf) ||
+                              .uses_static_page_token(cur_footer_hf) ||
+                              length(band_cols) > 0L
+
     if (!needs_per_page_section) {
       emit_section_preamble(pg_from)
     }
