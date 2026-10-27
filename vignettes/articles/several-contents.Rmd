@@ -163,8 +163,11 @@ generate_rtfreport(doc_b, "b_table_figure.rtf", overwrite = TRUE)
 ## (c) A PK summary and its listing
 
 A concentration summary by time point, and under it the listing of the same
-concentrations. The data is made up here: 24 subjects, 8 nominal times, a
-one-compartment curve with some noise, BLQ under 2 ng/mL.
+concentrations, both with the time points across: the summary's rows are its
+statistics, the listing's its subjects. The data is made up here: 24
+subjects, 8 nominal times, a one-compartment curve with some noise, BLQ
+under 2 ng/mL. This example takes three of the subjects, so both fit on one
+page; (d) takes all 24.
 
 ```{r c-data, fold = "closed"}
 set.seed(20261028)
@@ -188,39 +191,90 @@ adpc$ATPT  <- factor(adpc$ATPT, levels = tpt$ATPT)
 ```
 
 The summary is an ARD by time point, the time points across. BLQ samples are
-left out, so pre-dose (all BLQ) has no column:
+left out, and pre-dose (BLQ for every subject) has no column. One function
+makes the plan, so (d) can use it for all 24 subjects with more statistics;
+with three subjects, n, mean, SD, min and max are enough:
 
 ```{r c-summary}
 cv <- function(x) 100 * stats::sd(x) / mean(x)
 gm <- function(x) exp(mean(log(x)))
-ard_pc <- cards::ard_summary(
-  droplevels(adpc[!is.na(adpc$AVAL), ]), by = ATPT, variables = AVAL,
-  statistic = ~ list(N = length, mean = mean, sd = stats::sd, cv = cv,
-                     geo_mean = gm, median = stats::median, min = min, max = max))
-pk_summary <- ard_pc |>
-  normalize_ard() |>
-  table_plan(cols = "ATPT", rows = c(group = "variable")) |>
-  plan_cells(continuous = c("n" = "{N:.0f}", "Mean" = "{mean:.1f}", "SD" = "{sd:.2f}",
-                            "CV%" = "{cv:.1f}", "Geometric mean" = "{geo_mean:.1f}",
-                            "Median" = "{median:.1f}", "Min" = "{min:.1f}",
-                            "Max" = "{max:.1f}"),
-             notes = FALSE) |>
-  plan_labels(c(AVAL = "Concentration (ng/mL)")) |>
-  plan_levels(ATPT = tpt$ATPT[-1]) |>
-  plan_col_header(rtf_col_header(c("Drug X (ng/mL)", "{col}"))) |>
-  plan_stub(name = "row_label") |>
-  plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
-  plan_style(border = "tfl")
+pk_summary_plan <- function(data, cells) {
+  ard <- cards::ard_summary(
+    droplevels(data[!is.na(data$AVAL), ]), by = ATPT, variables = AVAL,
+    statistic = ~ list(N = length, mean = mean, sd = stats::sd, cv = cv,
+                       geo_mean = gm, median = stats::median, min = min, max = max))
+  ard |>
+    normalize_ard() |>
+    table_plan(cols = "ATPT", rows = c(group = "variable")) |>
+    plan_cells(continuous = cells, notes = FALSE) |>
+    plan_labels(c(AVAL = "Concentration (ng/mL)")) |>
+    plan_levels(ATPT = tpt$ATPT[-1]) |>
+    plan_col_header(rtf_col_header(c("Drug X (ng/mL)", "{col}"))) |>
+    plan_stub(name = "row_label") |>
+    plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
+    plan_style(border = "tfl")
+}
+pk3 <- adpc[adpc$USUBJID %in% unique(adpc$USUBJID)[1:3], ]
+summary3 <- pk_summary_plan(pk3, c("n" = "{N:.0f}", "Mean" = "{mean:.1f}",
+                                   "SD" = "{sd:.2f}", "Min" = "{min:.1f}",
+                                   "Max" = "{max:.1f}"))
 ```
 
-The listing has one row a sample, so it is written as a plain table: the
-columns as they print, named as their headers. `plan_row_group()` prints the
-subject on its first row only (and again at the top of a page),
+The listing is laid out as the summary: a row a subject, a column a time
+point, the concentration in each cell (`BLQ` where it is below the limit).
+It is a plain data frame, its column names the header, with the summary's
+column widths so the two line up:
+
+```{r c-listing}
+post <- pk3[pk3$ATPT != "Pre-dose", ]
+listing3 <- data.frame(Subject = unique(post$USUBJID))
+for (t in tpt$ATPT[-1]) {
+  at <- post[post$ATPT == t, ]
+  listing3[[t]] <- at$AVALC[match(listing3$Subject, at$USUBJID)]
+}
+listing3_plan <- table_plan(listing3) |>
+  plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
+  plan_style(border = "tfl")
+listing3
+```
+
+The summary starts the page and carries the output's title; the listing goes
+on under it:
+
+```{r c-doc}
+pk_header <- rtf_header(list(
+  c(l = "Protocol: {STUDY} (synthetic data)", r = "Page {PAGE} of {TOTAL_PAGES}")))
+pk_footer <- rtf_footer(list(
+  c(l = "BLQ: below the lower limit of quantification (2 ng/mL); left out of the summary."),
+  c(l = "Pre-dose: BLQ for every subject. Synthetic data made for this page.")))
+doc_c <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
+  rtf_section(header = pk_header, footer = pk_footer) |>
+  rtf_tables(summary3,
+             titles = list(c("Table 14.4.1",
+                             "Drug X Plasma Concentrations: Summary and Listing",
+                             "Safety Population"))) |>
+  rtf_tables(listing3_plan, page_break = FALSE, space_before = 1L,
+             titles = list("Listing of concentrations (ng/mL)"))
+generate_rtfreport(doc_c, "c_pk.rtf", overwrite = TRUE)
+```
+
+![The PK concentration summary of three subjects and, under it, their concentrations by time point](img/several-contents/c_pk.png)
+
+## (d) A long listing that goes on
+
+With all 24 subjects, the listing is longer than what is left under the
+summary. Here it has one row a sample, so it is written as a plain table:
+the columns as they print, named as their headers. `plan_row_group()` prints
+the subject on its first row only (and again at the top of a page),
 `plan_blanks()` puts a blank row between subjects, and
 `plan_paginate_rows()` makes pages of 24 rows (three subjects) without
 cutting a subject:
 
-```{r c-listing}
+```{r d-listing}
+pk_summary <- pk_summary_plan(adpc, c(
+  "n" = "{N:.0f}", "Mean" = "{mean:.1f}", "SD" = "{sd:.2f}", "CV%" = "{cv:.1f}",
+  "Geometric mean" = "{geo_mean:.1f}", "Median" = "{median:.1f}",
+  "Min" = "{min:.1f}", "Max" = "{max:.1f}"))
 lst <- data.frame(Subject = adpc$USUBJID,
                   `Nominal time` = as.character(adpc$ATPT),
                   `Actual time (h)` = format(adpc$ARELTM, nsmall = 2),
@@ -238,39 +292,31 @@ pk_listing <- table_plan(lst) |>
 over several lines, such as adverse events; they put a blank row after every
 record. See [Listings with a plan](plan-listings.html).)
 
-## (d) A long listing that goes on
-
-The listing is longer than what is left under the summary. `first_rows`
-says how many of its rows go on the shared page (rows of data: the blank
-rows between subjects come on top); the rest goes on pages of its own,
-paginated by its plan, each with the listing's title, the `cont_title`
-line, the column header and the footnote:
+`first_rows` says how many of the listing's rows go on the shared page (rows
+of data: the blank rows between subjects come on top); the rest goes on
+pages of its own, paginated by its plan, each with the listing's title, the
+`cont_title` line, the column header and the footnote:
 
 ```{r d-doc}
 doc_pk <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
-  rtf_section(
-    header = rtf_header(list(
-      c(l = "Protocol: {STUDY} (synthetic data)", r = "Page {PAGE} of {TOTAL_PAGES}"))),
-    footer = rtf_footer(list(
-      c(l = "BLQ: below the lower limit of quantification (2 ng/mL); left out of the summary."),
-      c(l = "Synthetic data made for this page.")))) |>
+  rtf_section(header = pk_header, footer = pk_footer) |>
   rtf_tables(pk_summary,
-             titles = list(c("Table 14.4.1",
+             titles = list(c("Table 14.4.2",
                              "Drug X Plasma Concentrations: Summary and Listing",
                              "Safety Population"))) |>
   rtf_tables(pk_listing, page_break = FALSE, space_before = 1L,
              first_rows = 16L, cont_title = "(continued)",
              titles = list("Listing of concentrations"))
-generate_rtfreport(doc_pk, "c_pk.rtf", overwrite = TRUE)
+generate_rtfreport(doc_pk, "d_pk.rtf", overwrite = TRUE)
 ```
 
 Page 1, the summary and the first 16 rows of the listing:
 
-![Page 1: the PK concentration summary and the first rows of the listing](img/several-contents/c_pk_page1.png)
+![Page 1: the PK concentration summary and the first rows of the listing](img/several-contents/d_pk_page1.png)
 
 Page 2, where the listing goes on:
 
-![Page 2: the listing continued, titled (continued)](img/several-contents/c_pk_page2.png)
+![Page 2: the listing continued, titled (continued)](img/several-contents/d_pk_page2.png)
 
 The footnotes here are in the page footer, so they print on every page. A
 footnote given to `rtf_tables(footnotes = )` belongs to that content and

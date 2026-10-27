@@ -156,8 +156,10 @@ generate_rtfreport(doc_b, "b_table_figure.rtf", overwrite = TRUE)
 
 ## (c) PK 濃度の集計表とリスティング
 
-時点ごとの濃度の集計表と、その下に同じ濃度のリスティングを置きます。データはここで作る合成の物です。
-24 人、8 時点、1-コンパートメントの曲線に誤差を足し、2 ng/mL 未満は BLQ です。
+時点ごとの濃度の集計表と、その下に同じ濃度のリスティングを置きます。どちらも時点を横に並べ、
+集計表の行は統計量、リスティングの行は被験者です。データはここで作る合成の物です。24 人、8 時点、
+1-コンパートメントの曲線に誤差を足し、2 ng/mL 未満は BLQ です。この例ではそのうち 3 人を使い、
+2 つが 1 ページに収まるようにします。(d) では 24 人全員を使います。
 
 ```{r c-data, fold = "closed"}
 set.seed(20261028)
@@ -180,36 +182,84 @@ adpc$AVALC <- ifelse(blq, "BLQ", format(round(conc, 1), nsmall = 1, trim = TRUE)
 adpc$ATPT  <- factor(adpc$ATPT, levels = tpt$ATPT)
 ```
 
-集計表は時点ごとの ARD から作り、時点を横に並べます。BLQ の検体は除くので、投与前（すべて BLQ）の列はありません:
+集計表は時点ごとの ARD から作り、時点を横に並べます。BLQ の検体は除き、投与前（全員 BLQ）の列は
+ありません。plan は 1 つの関数で作り、(d) では 24 人全員と多くの統計量に使います。3 人なので、
+ここでは n・平均・SD・最小・最大に絞ります:
 
 ```{r c-summary}
 cv <- function(x) 100 * stats::sd(x) / mean(x)
 gm <- function(x) exp(mean(log(x)))
-ard_pc <- cards::ard_summary(
-  droplevels(adpc[!is.na(adpc$AVAL), ]), by = ATPT, variables = AVAL,
-  statistic = ~ list(N = length, mean = mean, sd = stats::sd, cv = cv,
-                     geo_mean = gm, median = stats::median, min = min, max = max))
-pk_summary <- ard_pc |>
-  normalize_ard() |>
-  table_plan(cols = "ATPT", rows = c(group = "variable")) |>
-  plan_cells(continuous = c("n" = "{N:.0f}", "Mean" = "{mean:.1f}", "SD" = "{sd:.2f}",
-                            "CV%" = "{cv:.1f}", "Geometric mean" = "{geo_mean:.1f}",
-                            "Median" = "{median:.1f}", "Min" = "{min:.1f}",
-                            "Max" = "{max:.1f}"),
-             notes = FALSE) |>
-  plan_labels(c(AVAL = "Concentration (ng/mL)")) |>
-  plan_levels(ATPT = tpt$ATPT[-1]) |>
-  plan_col_header(rtf_col_header(c("Drug X (ng/mL)", "{col}"))) |>
-  plan_stub(name = "row_label") |>
-  plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
-  plan_style(border = "tfl")
+pk_summary_plan <- function(data, cells) {
+  ard <- cards::ard_summary(
+    droplevels(data[!is.na(data$AVAL), ]), by = ATPT, variables = AVAL,
+    statistic = ~ list(N = length, mean = mean, sd = stats::sd, cv = cv,
+                       geo_mean = gm, median = stats::median, min = min, max = max))
+  ard |>
+    normalize_ard() |>
+    table_plan(cols = "ATPT", rows = c(group = "variable")) |>
+    plan_cells(continuous = cells, notes = FALSE) |>
+    plan_labels(c(AVAL = "Concentration (ng/mL)")) |>
+    plan_levels(ATPT = tpt$ATPT[-1]) |>
+    plan_col_header(rtf_col_header(c("Drug X (ng/mL)", "{col}"))) |>
+    plan_stub(name = "row_label") |>
+    plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
+    plan_style(border = "tfl")
+}
+pk3 <- adpc[adpc$USUBJID %in% unique(adpc$USUBJID)[1:3], ]
+summary3 <- pk_summary_plan(pk3, c("n" = "{N:.0f}", "Mean" = "{mean:.1f}",
+                                   "SD" = "{sd:.2f}", "Min" = "{min:.1f}",
+                                   "Max" = "{max:.1f}"))
 ```
 
-リスティングは 1 行が 1 検体なので、ふつうの表として書きます。列は印刷する形にし、列名を見出しにします。
-`plan_row_group()` は被験者番号を最初の行だけに出し（ページの頭では出し直す）、`plan_blanks()` は
-被験者の間に空行を入れ、`plan_paginate_rows()` は被験者の途中で切らずに 1 ページ 24 行（3 人分）に分けます:
+リスティングは集計表と同じ形にします。行が被験者、列が時点、セルが濃度です（下限未満は `BLQ`）。
+ふつうのデータフレームで、列名が見出しになります。列幅を集計表と同じにして、2 つの列をそろえます:
 
 ```{r c-listing}
+post <- pk3[pk3$ATPT != "Pre-dose", ]
+listing3 <- data.frame(Subject = unique(post$USUBJID))
+for (t in tpt$ATPT[-1]) {
+  at <- post[post$ATPT == t, ]
+  listing3[[t]] <- at$AVALC[match(listing3$Subject, at$USUBJID)]
+}
+listing3_plan <- table_plan(listing3) |>
+  plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
+  plan_style(border = "tfl")
+listing3
+```
+
+集計表がページを始めて出力のタイトルを持ち、リスティングはその下に続きます:
+
+```{r c-doc}
+pk_header <- rtf_header(list(
+  c(l = "Protocol: {STUDY} (synthetic data)", r = "Page {PAGE} of {TOTAL_PAGES}")))
+pk_footer <- rtf_footer(list(
+  c(l = "BLQ: below the lower limit of quantification (2 ng/mL); left out of the summary."),
+  c(l = "Pre-dose: BLQ for every subject. Synthetic data made for this page.")))
+doc_c <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
+  rtf_section(header = pk_header, footer = pk_footer) |>
+  rtf_tables(summary3,
+             titles = list(c("Table 14.4.1",
+                             "Drug X Plasma Concentrations: Summary and Listing",
+                             "Safety Population"))) |>
+  rtf_tables(listing3_plan, page_break = FALSE, space_before = 1L,
+             titles = list("Listing of concentrations (ng/mL)"))
+generate_rtfreport(doc_c, "c_pk.rtf", overwrite = TRUE)
+```
+
+![3 人の PK 濃度の集計表と、その下に時点ごとの濃度のリスティング](img/several-contents/c_pk.png)
+
+## (d) 長いリスティングの続き
+
+24 人全員では、リスティングは集計表の下の残りより長くなります。ここでは 1 行が 1 検体のふつうの表として
+書きます。列は印刷する形にし、列名を見出しにします。`plan_row_group()` は被験者番号を最初の行だけに出し
+（ページの頭では出し直す）、`plan_blanks()` は被験者の間に空行を入れ、`plan_paginate_rows()` は被験者の
+途中で切らずに 1 ページ 24 行（3 人分）に分けます:
+
+```{r d-listing}
+pk_summary <- pk_summary_plan(adpc, c(
+  "n" = "{N:.0f}", "Mean" = "{mean:.1f}", "SD" = "{sd:.2f}", "CV%" = "{cv:.1f}",
+  "Geometric mean" = "{geo_mean:.1f}", "Median" = "{median:.1f}",
+  "Min" = "{min:.1f}", "Max" = "{max:.1f}"))
 lst <- data.frame(Subject = adpc$USUBJID,
                   `Nominal time` = as.character(adpc$ATPT),
                   `Actual time (h)` = format(adpc$ARELTM, nsmall = 2),
@@ -226,37 +276,30 @@ pk_listing <- table_plan(lst) |>
 （`plan_listing()` と `listing_spec()` は、有害事象のように 1 件が何行にも折り返すリスティング向けで、
 1 件ごとに空行が入ります。[Listings with a plan](plan-listings.html) を見てください。）
 
-## (d) 長いリスティングの続き
-
-リスティングは集計表の下の残りより長くなります。`first_rows` で、共有するページに載せる行数を書きます
-（データの行数で、被験者の間の空行は数えません）。残りは plan のページ分けのとおりに自分のページへ続き、
-各ページにリスティングのタイトル、`cont_title` の行、列見出し、脚注が付きます:
+`first_rows` で、共有するページに載せるリスティングの行数を書きます（データの行数で、被験者の間の空行は
+数えません）。残りは plan のページ分けのとおりに自分のページへ続き、各ページにリスティングのタイトル、
+`cont_title` の行、列見出し、脚注が付きます:
 
 ```{r d-doc}
 doc_pk <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
-  rtf_section(
-    header = rtf_header(list(
-      c(l = "Protocol: {STUDY} (synthetic data)", r = "Page {PAGE} of {TOTAL_PAGES}"))),
-    footer = rtf_footer(list(
-      c(l = "BLQ: below the lower limit of quantification (2 ng/mL); left out of the summary."),
-      c(l = "Synthetic data made for this page.")))) |>
+  rtf_section(header = pk_header, footer = pk_footer) |>
   rtf_tables(pk_summary,
-             titles = list(c("Table 14.4.1",
+             titles = list(c("Table 14.4.2",
                              "Drug X Plasma Concentrations: Summary and Listing",
                              "Safety Population"))) |>
   rtf_tables(pk_listing, page_break = FALSE, space_before = 1L,
              first_rows = 16L, cont_title = "(continued)",
              titles = list("Listing of concentrations"))
-generate_rtfreport(doc_pk, "c_pk.rtf", overwrite = TRUE)
+generate_rtfreport(doc_pk, "d_pk.rtf", overwrite = TRUE)
 ```
 
 1 ページ目: 集計表と、リスティングの最初の 16 行:
 
-![1 ページ目: PK 濃度の集計表とリスティングの始め](img/several-contents/c_pk_page1.png)
+![1 ページ目: PK 濃度の集計表とリスティングの始め](img/several-contents/d_pk_page1.png)
 
 2 ページ目: リスティングの続き:
 
-![2 ページ目: (continued) の付いたリスティングの続き](img/several-contents/c_pk_page2.png)
+![2 ページ目: (continued) の付いたリスティングの続き](img/several-contents/d_pk_page2.png)
 
 この例の脚注はページのフッターに入れたので、どのページにも出ます。`rtf_tables(footnotes = )` に
 書いた脚注はそのコンテンツの物で、そのコンテンツの各ページで、その下に出ます。
