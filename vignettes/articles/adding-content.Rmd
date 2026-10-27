@@ -349,6 +349,7 @@ See `?rtf_tables` and `?rtf_figures` for the full argument reference.
 
 ## Where next
 
+- [Several contents on one page](several-contents.html) --- a table under a table, a figure under a table, a listing that goes on
 - [Figures](figures.html) --- plot objects, size on the page, formats
 - [Borders](borders.html) --- how a table gets its rules
 - [Sections](section-splitting.html) --- when one document needs more than one header
