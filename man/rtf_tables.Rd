@@ -90,7 +90,8 @@ header or footer band -- \code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}, \code{{P
 "Page 1 of 3" sits next to the table instead of at the page margin. A
 static \code{{PAGE}} costs nothing here: these bands are re-emitted for every
 page, so each page bakes its own number without the extra RTF section the
-same token forces in a header.}
+same token forces in a header.  A table paginated on a column fills
+\verb{\{<column name>\}} with its page's value (see \emph{Page values}).}
 
 \item{footnotes}{\code{NULL} (default) or a list of length \code{length(tables)} or
 length 1 (common to all). Same block structure as \code{titles}, and the same
@@ -144,12 +145,14 @@ the title, column header and footnote on pages of its own, give
 later pages (a plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s) always begin a page; so
 does the document's first content.  Unlike reporter's
 \code{add_content(page_break = )} this is the break \emph{before} the table.  A
-table that goes on the page before it opens no section of its own
-(\code{auto_section}): \code{auto_title} names it.  The page header and footer
-are the section's; a static \code{{PAGE}} / \code{{TOTAL_PAGES}} counts the pages
-as written, so where the reader carries a table on, use \code{{AUTO_PAGE}} /
-\code{{AUTO_TOTAL_PAGES}}.  \code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the pages as
-written.}
+page has one \code{auto_section} heading: that of the first table on it that
+has one; a later table on the page with another heading gets a warning
+(\code{auto_title} names it on its title), and no page break is added for
+it.  The page header and footer are the section's; a static \code{{PAGE}} /
+\code{{TOTAL_PAGES}} counts the pages as written, which are right when each
+page holds what fits it: the program counts the rows.
+\code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the pages as written; \code{\link[=rtf_layout]{rtf_layout()}}
+shows them.}
 
 \item{first_rows}{With \code{page_break = FALSE}, the rows of the table that
 go on the page before it; the rest is paginated as the table says --
@@ -164,9 +167,12 @@ on.}
 \item{space_before}{With \code{page_break = FALSE}, empty lines between the
 content before and this table (0: the title's own blank line alone).}
 
-\item{cont_title}{With \code{first_rows}, a line under the title of each page
-after the shared one (\code{"(continued)"}); \code{NULL}: none.  Not
-\code{\link[=as_rtftables]{as_rtftables()}}'s \code{cont_label}, which marks a group cut across pages.}
+\item{cont_title}{A line under the title of each later page of a table
+(\code{"(continued)"}): the pages after the shared one of \code{first_rows}, and
+a table's own later pages (a plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s \code{max_rows}
+pages).  \code{NULL}: none.  \code{\link[=rtf_titles]{rtf_titles()}} replaces the titles whole,
+this line too.  Not \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cont_label}, which marks a
+group cut across pages.}
 }
 \value{
 Modified rtf_document with appended contents.
@@ -180,6 +186,35 @@ A table's appearance is written where the table is made: in \code{\link[=rtftabl
 \code{\link[=as_rtftables]{as_rtftables()}} or \code{\link[=plan_style]{plan_style()}}.  A bare \code{data.frame} placed here gets
 their defaults.
 }
+\section{Page values}{
+
+A table cut into pages on a column -- \code{\link[=as_rtftables]{as_rtftables()}}\verb{(page_by = )}, a
+value split on a named group column (\verb{split = "by_value", group_col = }),
+a plan's \code{\link[=plan_paginate_group]{plan_paginate_group()}} -- knows each page's value of that column.
+A title, footnote, \code{auto_section} heading, header or footer
+(\code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}}) then writes \verb{\{<column name>\}}
+(\code{{PARAM}}, \code{{SEX}}) and gets that page's value when the file is written:
+\itemize{
+\item a title or footnote takes the value of its own table, so on a page
+of several tables (\code{page_break = FALSE}) each names its own;
+\item a header or footer belongs to the page: each column takes the first
+table on the page with a value for it (the rule of the \code{auto_section}
+heading); a later table with another value gets a warning.  A band
+that uses one is written for each page, as one with a static \code{{PAGE}}
+is;
+\item a \code{{NAME}} the page has no value for is printed as written, as any
+unknown token is (a title's \code{{N}} stays \code{{N}}); rtfreporter's own tokens
+(\code{{PAGE}}, \code{{PROGRAM}}, ...) and a token of one's own
+(\code{rtf_document(tokens = )}) of the same name win over a column's.
+}
+The values are on each page's \code{rtf_paginate_meta} as \code{page_values}
+(\code{c(PARAM = "ALT")}), and \code{\link[=rtf_layout]{rtf_layout()}} shows them.  An rtables page from
+\code{rtables::paginate_table()} carries its \code{split_rows_by(page_by = TRUE)}
+values by their page-title prefix; a gt_group member of tfrmt's
+\code{print_to_gt()} the \code{page_structure()} columns of a \code{page_plan(note_loc = )}
+that writes the page note.
+}
+
 \section{Deprecated arguments}{
 
 The 26 table-format arguments that copy \code{\link[=rtftable]{rtftable()}}'s (\code{col_header},

@@ -42,12 +42,13 @@ of section overlays:
 rtf_document (public, pipe-built)
  └─ converted at render time to →  rtfreport (internal)
       ├─ document   : font_table, color_table, default_page, default_format
-      ├─ pages[]    : rtf_page    (one content item per page)
+      ├─ pages[]    : rtf_page    (the segments on a printed page)
       └─ sections[] : rtf_sect    (header/footer assigned to a page range)
 ```
 
-* **Pages are flat** at the document level; **1 page = 1 content** (an
-  `rtftable` or an `rtfplot`).
+* **Pages are flat** at the document level; a page is the **segments** on it,
+  top to bottom -- usually one content (an `rtftable` or an `rtfplot`), several
+  where `page_break = FALSE` put one under another.
 * **Sections are an overlay**: each `rtf_sect` assigns a header/footer starting
   at a page and applying until the next section. They do not contain content.
 
@@ -88,11 +89,14 @@ validation lives in `.rtfreport_validate()`.
 
 ### `rtf_page` (internal, S3 tagged list)
 
-`structure(list(title, content, footnote), class = "rtf_page")` -- one page:
+`structure(list(title, content, footnote), class = "rtf_page")` plus
+`segments` -- one page:
 
-* `title` — character vector (centred lines above the content);
-* `content` — an `rtftable` or `rtfplot` (or `NULL`);
-* `footnote` — character vector rendered below the content.
+* `segments` — the contents on the page, top to bottom, each a list of
+  `content`, `title`, `footnote` and `space_before` (empty lines above it);
+* `title` / `content` / `footnote` — the first segment's (a page of one is
+  drawn from these): a character vector of centred lines above the content, an
+  `rtftable` or `rtfplot` (or `NULL`), and a character vector below it.
 
 ### `rtf_sect` (internal, S3 tagged list)
 
@@ -134,8 +138,12 @@ without mutating the original.
 `generate_rtfreport()` converts the `rtf_document` to an `rtfreport`, resolves
 sections, computes the colour table (from the border colours used), and emits
 the RTF: a font table, colour table, page settings, then per section a
-`{\header}` / `{\footer}` followed by the page content (tables via the row
-renderers, figures via the picture renderer). Page-number tokens
+`{\header}` / `{\footer}` followed by the page content. Every page, of one
+segment or several, is drawn by `.render_page_segments()` (`R/render_page.R`):
+each segment's title, content and footnote, a separating paragraph between
+segments. The content itself is the internal generic `.render_content()` --
+tables via the row renderers, figures via the picture renderer -- so a new kind
+of content adds one method. Page-number tokens
 (`{AUTO_PAGE}` / `{AUTO_TOTAL_PAGES}` / `{PAGE}`) are substituted here. Helper
 functions (`.resolve_sections()`, `.render_footnote_table()`,
 `.compute_content_width()`, …) live in `R/generate_rtfreport.R`.
@@ -178,13 +186,14 @@ S3 class plays one of three roles:
 | Class | Role |
 |-------|------|
 | `rtf_document` | dispatch (`print`, `plot`) + `inherits()` |
-| `rtftable` | dispatch (`print`, `format`, `summary`, `plot`) + `inherits()` |
+| `rtftable` | dispatch (`print`, `format`, `summary`, `plot`; internal `.render_content`) + `inherits()` |
 | `rtf_border_line`, `rtf_border`, `rtf_table_border` | dispatch (`print`, `plot`) + `inherits()` |
 | `rtf_table_style`, `rtf_col_cell`, `rtf_col_header` | dispatch (`print`) + `inherits()` |
-| `rtfplot` | dispatch (`print`) + `inherits()` |
+| `rtfplot` | dispatch (`print`; internal `.render_content`) + `inherits()` |
 | `rtf_blank_rows_by_change`, `rtf_blank_rows_by_rule` | `inherits()` (blank-row resolver dispatch) |
 | `rtf_toc_heading`, `rtf_toc_entry` | `inherits()` (TOC normalisation) |
-| `rtfreport`, `rtf_auto_section_item` | `inherits()` (internal) |
+| `rtf_block`, `rtf_contents`, `rtf_pages` | dispatch (`print`; `[` and `length` for `rtf_contents`) |
+| `rtfreport` | `inherits()` (internal) |
 | `rtf_page`, `rtf_sect` | internal structural marker (no dispatch) |
 
 ### Conventions to follow when extending

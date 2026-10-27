@@ -67,7 +67,39 @@
   .need_pkg("gt", "Reading from a gt_group")
   n <- nrow(x[["gt_tbls"]])
   if (is.null(n) || n < 1L) return(list())
-  lapply(seq_len(n), function(i) gt::grp_pull(x, which = i))
+  lapply(seq_len(n), function(i) {
+    tbl <- gt::grp_pull(x, which = i)
+    # A tfrmt page_plan says what each member's page was cut on; kept by
+    # column for a `{<column>}` token (R/page_values.R).
+    vals <- .tfrmt_page_note_values(tbl)
+    if (length(vals)) attr(tbl, "rtf_page_values") <- vals
+    tbl
+  })
+}
+
+# The note a tfrmt page_plan writes on each page's table when it is told
+# where to (`page_plan(note_loc = "preheader" | "subtitle" | "source_note")`):
+# "PARAM: ALT" or "PARAM: ALT, VISIT: V1" -- the page_structure's columns and
+# this page's values.  Read wherever it is, and only when a whole line has
+# that form, as a named character vector (NULL: none).  A gt_group not made
+# by tfrmt rarely has such a line; if it does, it only fills a token the
+# program wrote.
+.tfrmt_page_note_values <- function(tbl) {
+  heading <- tbl[["_heading"]]
+  lines <- c(.flatten_to_chr(heading$preheader), .flatten_to_chr(heading$subtitle),
+             unlist(lapply(tbl[["_source_notes"]], .flatten_to_chr)))
+  lines <- lines[!is.na(lines)]
+  nm_rx <- "[A-Za-z.][A-Za-z0-9._]*"
+  rx <- paste0("^", nm_rx, ": .*$")
+  for (ln in lines) {
+    if (!grepl(rx, ln)) next
+    # split before each ", NAME: " -- a value may hold a comma of its own
+    parts <- strsplit(ln, paste0(", (?=", nm_rx, ": )"), perl = TRUE)[[1L]]
+    nm <- sub(": .*$", "", parts)
+    val <- sub(paste0("^", nm_rx, ": "), "", parts)
+    return(stats::setNames(val, nm))
+  }
+  NULL
 }
 
 # Is `x` a gtsummary tbl_split -- the container returned by

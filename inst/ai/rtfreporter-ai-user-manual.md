@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9098** (the development
+**This manual documents rtfreporter 0.8.2.9099** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -273,6 +273,7 @@ without writing a file.
 | Place tables on pages | `rtf_tables(doc, tables, titles =, footnotes =, ...)` |
 | Place figures on pages | `rtf_figures(doc, figures, ...)` + `rtfplot(path)`; one figure as it is: `rtf_figures(doc, plot)` (a ggplot, a path), several as a list |
 | Set titles / footnotes later | `rtf_titles(doc, list)`, `rtf_footnotes(doc, list)` |
+| See how the contents fall on pages | `rtf_layout(doc)` (or `print(doc)`): each page's tables (rows) and figures (size) |
 | Write the RTF | `generate_rtfreport(doc, file_path)` (written over by default); or say the file in the document, `rtf_document(file = )`, and `generate_rtfreport(doc)` |
 | Concatenate finished RTFs | `assemble_rtf(input_files, output_file, toc =, book_page =)` |
 | Listings | `listing_col()` → `listing_spec()` → `as_rtftables(data, listing = spec)` |
@@ -438,6 +439,7 @@ rtf_footer(rows = list(c(l = "Source: ADSL.", r = "CONFIDENTIAL")))
 | `{PROGRAM_FULL}` | the same program path made absolute (`normalizePath()`, from the working folder when the file is written), with the system's separator: `\` on Windows, `/` elsewhere |
 | `{DATETIME}` / `{DATETIME:<fmt>}` | when the file is written, `%d%b%Y  %H:%M` in the C locale (`options(rtfreporter.datetime_format)`); `options(rtfreporter.render_time)` fixes it |
 | `{STUDY}`, `{CUTOFF}` ... (your own) | `rtf_document(tokens = list(STUDY = "ABC-123"))`, or `options(rtfreporter.tokens = list(...))` for the session (the document's value wins); a name is upper case (a letter, then letters, digits, `_`) and not one of the above; headers, footers, titles and footnotes only (a column header takes `set_col_header(values = )`); `rtf_header(drop_empty_rows = TRUE)` / `rtf_footer()` leave out a row whose own tokens are all empty (and the rest blanks or brackets) |
+| `{PARAM}`, `{SEX}` ... (a page's column) | a table paginated on a column -- `as_rtftables(page_by =)`, `split = "by_value", group_col =`, `plan_paginate_group()` -- gives each page its value; titles, footnotes, `auto_section` headings, headers and footers write `{<column name>}` and get the page's value (`rtf_paginate_meta$page_values`; `rtf_layout(doc)$pages[[i]]$values`). A title / footnote takes its own table's value; a header / footer the first table on the page with one (another value later on the page: a warning), and is then written for each page. A column the page lacks is printed as written (`{N}` stays `{N}`); own tokens and rtfreporter's win over a column of the same name. rtables: `rtables::paginate_table(tt, lpp = NULL, cpp = NULL)` pages (page-title prefix = name); tfrmt: `page_plan(note_loc =)` (its `page_structure()` columns). Use this instead of an `auto_section` row for a study header such as `"Parameter: {PARAM}"` |
 
 `rtf_text_tokens()` returns this list as data (token, page or run, when it is
 filled, what it becomes, an example) for a program that offers the tokens;
@@ -1086,7 +1088,7 @@ reference of a difference.
 **Sections / bands:** `rtf_section` `combine_sections` `rtf_header` `rtf_footer`
 `rtf_header_source` `rtf_titles` `rtf_footnotes`
 
-**Content:** `rtf_tables` `rtf_figures` `rtftable` `rtfplot` `as_rtftable`
+**Content:** `rtf_tables` `rtf_figures` `rtf_layout` `rtftable` `rtfplot` `as_rtftable`
 `as_rtftables`
 
 **Column headers:** `col_cell` `col_key` `rtf_col_header` `set_col_header`

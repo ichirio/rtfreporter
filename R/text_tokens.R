@@ -22,6 +22,10 @@
 #' `{DATETIME}` also takes a format, `{DATETIME:%Y-%m-%d}`
 #' ([base::strptime()] codes); `example` shows one.
 #'
+#' A table paginated on a column also gives each page its value of it,
+#' written `{<column name>}`; those depend on the data, so are not listed
+#' here (see *Page values* in [rtf_tables()]).
+#'
 #' Tokens of one's own (`rtf_document(tokens = )`,
 #' `options(rtfreporter.tokens = )`) follow, `kind = "own"`, their value as
 #' the example: the session's, and a document's when `doc` is given.

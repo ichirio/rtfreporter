@@ -186,7 +186,9 @@ group's.  The two are never joined.  A page name is the heading
 \code{rtf_tables(auto_section = TRUE)} / \code{auto_title = TRUE} prints and the
 line a section breaks on, so joining them would cut one group into a
 section per BY value; both values stay readable in the page's
-\code{rtf_paginate_meta} (\code{page_group} / \code{page_by}).  Pages that share a
+\code{rtf_paginate_meta} (\code{page_group} / \code{page_by}), and by column as
+\code{page_values} (\code{c(PARAM = "ALT")}), which a title or band writes as
+\code{{PARAM}} (see \emph{Page values} in \code{\link[=rtf_tables]{rtf_tables()}}).  Pages that share a
 heading are numbered with a \strong{\code{"...n"} tail} -- \code{"Period 1...1"},
 \code{"Period 1...2"} -- so the list stays addressable, R returning the
 \emph{first} match for a repeated list name (which is what

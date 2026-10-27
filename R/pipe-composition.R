@@ -117,9 +117,9 @@
 #'
 #' @return An `rtf_document` S3 object: a list with `document`
 #'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
-#'   `contents`
-#'   (filled by [rtf_tables()] / [rtf_figures()]), `titles`, `footnotes`, and
-#'   `sections` (filled by [rtf_section()]).
+#'   `contents` (filled by [rtf_tables()] / [rtf_figures()]: one block per
+#'   content, each with its own title and footnote; [rtf_layout()] shows how
+#'   they fall on the pages), and `sections` (filled by [rtf_section()]).
 #'
 #' @seealso [rtf_page()] / [rtf_default_format()] for the page / formatting
 #'   settings, [rtf_config()] to edit an already-composed document, [rtf_tables()]
@@ -209,9 +209,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         tokens = tokens,
         file = file
       ),
-      contents  = list(),
-      titles    = list(),
-      footnotes = list(),
+      contents  = .rtf_contents(),
       sections  = list()
     ),
     class = "rtf_document"
@@ -383,6 +381,33 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #' [as_rtftables()] or [plan_style()].  A bare `data.frame` placed here gets
 #' their defaults.
 #'
+#' @section Page values:
+#' A table cut into pages on a column -- [as_rtftables()]`(page_by = )`, a
+#' value split on a named group column (`split = "by_value", group_col = `),
+#' a plan's [plan_paginate_group()] -- knows each page's value of that column.
+#' A title, footnote, `auto_section` heading, header or footer
+#' ([rtf_header()] / [rtf_footer()]) then writes `{<column name>}`
+#' (`{PARAM}`, `{SEX}`) and gets that page's value when the file is written:
+#' \itemize{
+#'   \item a title or footnote takes the value of its own table, so on a page
+#'     of several tables (`page_break = FALSE`) each names its own;
+#'   \item a header or footer belongs to the page: each column takes the first
+#'     table on the page with a value for it (the rule of the `auto_section`
+#'     heading); a later table with another value gets a warning.  A band
+#'     that uses one is written for each page, as one with a static `{PAGE}`
+#'     is;
+#'   \item a `{NAME}` the page has no value for is printed as written, as any
+#'     unknown token is (a title's `{N}` stays `{N}`); rtfreporter's own tokens
+#'     (`{PAGE}`, `{PROGRAM}`, ...) and a token of one's own
+#'     (`rtf_document(tokens = )`) of the same name win over a column's.
+#' }
+#' The values are on each page's `rtf_paginate_meta` as `page_values`
+#' (`c(PARAM = "ALT")`), and [rtf_layout()] shows them.  An rtables page from
+#' `rtables::paginate_table()` carries its `split_rows_by(page_by = TRUE)`
+#' values by their page-title prefix; a gt_group member of tfrmt's
+#' `print_to_gt()` the `page_structure()` columns of a `page_plan(note_loc = )`
+#' that writes the page note.
+#'
 #' @section Deprecated arguments:
 #' The 26 table-format arguments that copy [rtftable()]'s (`col_header`,
 #' `border`, `col_rel_width`, `row_height_twips`, `font_size_half_points`,
@@ -437,7 +462,8 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   "Page 1 of 3" sits next to the table instead of at the page margin. A
 #'   static `{PAGE}` costs nothing here: these bands are re-emitted for every
 #'   page, so each page bakes its own number without the extra RTF section the
-#'   same token forces in a header.
+#'   same token forces in a header.  A table paginated on a column fills
+#'   `{<column name>}` with its page's value (see *Page values*).
 #' @param footnotes `NULL` (default) or a list of length `length(tables)` or
 #'   length 1 (common to all). Same block structure as `titles`, and the same
 #'   page-number tokens; footnote rows default to left-aligned, and the first
@@ -484,12 +510,14 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   later pages (a plan's, or [as_rtftables()]'s) always begin a page; so
 #'   does the document's first content.  Unlike reporter's
 #'   `add_content(page_break = )` this is the break *before* the table.  A
-#'   table that goes on the page before it opens no section of its own
-#'   (`auto_section`): `auto_title` names it.  The page header and footer
-#'   are the section's; a static `{PAGE}` / `{TOTAL_PAGES}` counts the pages
-#'   as written, so where the reader carries a table on, use `{AUTO_PAGE}` /
-#'   `{AUTO_TOTAL_PAGES}`.  [rtf_section()]`(page = n)` counts the pages as
-#'   written.
+#'   page has one `auto_section` heading: that of the first table on it that
+#'   has one; a later table on the page with another heading gets a warning
+#'   (`auto_title` names it on its title), and no page break is added for
+#'   it.  The page header and footer are the section's; a static `{PAGE}` /
+#'   `{TOTAL_PAGES}` counts the pages as written, which are right when each
+#'   page holds what fits it: the program counts the rows.
+#'   [rtf_section()]`(page = n)` counts the pages as written; [rtf_layout()]
+#'   shows them.
 #' @param first_rows With `page_break = FALSE`, the rows of the table that
 #'   go on the page before it; the rest is paginated as the table says --
 #'   a plan's `plan_paginate_rows(max_rows = , split = )` -- each page with
@@ -501,9 +529,12 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   on.
 #' @param space_before With `page_break = FALSE`, empty lines between the
 #'   content before and this table (0: the title's own blank line alone).
-#' @param cont_title With `first_rows`, a line under the title of each page
-#'   after the shared one (`"(continued)"`); `NULL`: none.  Not
-#'   [as_rtftables()]'s `cont_label`, which marks a group cut across pages.
+#' @param cont_title A line under the title of each later page of a table
+#'   (`"(continued)"`): the pages after the shared one of `first_rows`, and
+#'   a table's own later pages (a plan's, or [as_rtftables()]'s `max_rows`
+#'   pages).  `NULL`: none.  [rtf_titles()] replaces the titles whole,
+#'   this line too.  Not [as_rtftables()]'s `cont_label`, which marks a
+#'   group cut across pages.
 #'
 #' @return Modified rtf_document with appended contents.
 #'
@@ -576,29 +607,35 @@ rtf_tables <- function(doc, tables,
   # data.frame takes their defaults.
   .warn_rtf_tables_fmt_args(names(match.call())[-1L])
 
-  # A source whose package registered an as_rtftables() method becomes its
-  # pages here, so rtf_tables(doc, x) reads like every other source.
-  expanded <- .has_rtftables_method(tables)
-  # first_rows: the table as pages, the shared page's rows first (R/flow.R)
-  if (!is.null(first_rows)) {
-    if (all(page_break)) {
-      stop("rtf_tables(): `first_rows` is the rows a table puts on the page before it: page_break = FALSE.",
-           call. = FALSE)
-    }
-    tables <- .flow_first_rows(tables, first_rows)
-    expanded <- TRUE
-  } else if (expanded) {
-    tables <- as_rtftables(tables)
+  if (!is.null(first_rows) && all(page_break)) {
+    stop("rtf_tables(): `first_rows` is the rows a table puts on the page before it: page_break = FALSE.",
+         call. = FALSE)
   }
 
-  # Auto-wrap a single content item so callers can write rtf_tables(tbl)
-  # instead of rtf_tables(list(tbl)).  data.frame is IS a list in R, so it
-  # needs an explicit guard; everything else that is not already a plain list
-  # (rtftable, rtfplot, gt_tbl, gtsummary) is wrapped too.
-  if (is.data.frame(tables) || !is.list(tables) ||
-      inherits(tables, "rtftable") || inherits(tables, "rtfplot") ||
-      .is_gt_tbl(tables) || .is_gtsummary_tbl(tables)) {
-    tables <- list(tables)
+  # The deprecated table-format arguments (#511 B-1, #594), as given: they
+  # build the data frames of a list of pages, and those passed explicitly
+  # override the fields of a built rtftable page.  Removed in 0.9.0.
+  fmt <- mget(setdiff(.rtf_tables_fmt_args, "read_gt"), envir = environment())
+  .explicit <- intersect(names(match.call())[-1L], .rtf_tables_fmt_overrides)
+  overrides <- fmt[.explicit]
+
+  # The pages, each knowing which table it is a page of (.rtf_content(),
+  # R/content.R): a plan, a source with an as_rtftables() method, the rows
+  # first_rows puts on the page before and the rest, or a list of pages.
+  # A list of pages first takes the deprecated path, which builds its data
+  # frames, gt and gtsummary tables with the arguments above; 0.9.0 removes
+  # it, leaving the one call.
+  legacy <- is.null(first_rows) && !.has_rtftables_method(tables)
+  gt_texts <- NULL
+  if (legacy) {
+    tables <- .rtf_tables_legacy_pages(tables, fmt, overrides, read_gt)
+    gt_texts <- attr(tables, "gt_texts")
+  }
+  tables <- .rtf_content(tables, first_rows = first_rows)
+  if (!legacy && length(overrides)) {
+    tables[] <- lapply(tables, function(x) {
+      if (inherits(x, "rtftable")) .override_rtftable_fields(x, overrides) else x
+    })
   }
 
   # Where the page names print, when the call does not say: what the pages
@@ -609,23 +646,107 @@ rtf_tables <- function(doc, tables,
     if (is.null(auto_section)) auto_section <- identical(at, "section")
     if (is.null(auto_title)) auto_title <- identical(at, "title")
   }
+  page_names <- names(tables)
 
-  # Which table-formatting arguments did the caller pass EXPLICITLY?  These
-  # override the corresponding fields of any pre-built rtftable item (e.g.
-  # the output of as_rtftables()); arguments left at their default do not
-  # touch the rtftable's own / gt-derived values.  Detection via match.call()
-  # so we can tell "passed border = 'tfl'" from "defaulted to 'tfl'".
-  .fmt_args <- c("col_header", "col_header_align", "spanning_header",
-                 "col_spec", "row_title", "border", "blank_rows", "style",
-                 "col_rel_width", "column_widths_twips", "table_width_twips",
-                 "table_width_pct_of_writable", "table_width_pct",
-                 "table_align", "row_height_twips", "row_height_exact",
-                 "header_row_height_twips", "blank_row_height_twips",
-                 "cell_padding_left_twips", "cell_padding_right_twips",
-                 "cell_valign", "font_size_half_points", "font")
-  .explicit <- intersect(names(match.call())[-1L], .fmt_args)
-  .overrides <- if (length(.explicit))
-                  mget(.explicit, envir = environment()) else list()
+  # auto_section: the heading a page opens a section with, where the page
+  # name CHANGES -- a page name is a heading, so consecutive pages that
+  # carry the same one are one section of several pages.  The uniquifying
+  # "...n" tail a page list carries so its names stay addressable is not
+  # part of the heading: it is stripped, for the comparison and for what is
+  # printed.  An empty name falls through into the open section, which is
+  # how a caller groups pages whose headings differ (combine_sections()
+  # blanks them).  rtf_layout() opens the sections (R/layout.R).
+  sections <- rep(list(NULL), length(tables))
+  if (isTRUE(auto_section) && !is.null(page_names) && any(nzchar(page_names))) {
+    open <- NULL
+    for (i in seq_along(tables)) {
+      nm <- .page_name_base(page_names[[i]])
+      if (!is.null(nm) && !is.na(nm) && nzchar(nm) && !identical(nm, open)) {
+        open <- nm
+        sections[[i]] <- list(label = nm, align = section_label_align)
+      }
+    }
+  }
+
+  # Validate titles / footnotes lengths
+  titles    <- .rtf_block_texts(titles,    length(tables), "titles")
+  footnotes <- .rtf_block_texts(footnotes, length(tables), "footnotes")
+
+  # Titles and footnotes the pages carry, where `titles` / `footnotes` give
+  # none: the `rtf_titles` / `rtf_footnotes` attributes of a page (how
+  # as_rtftables() carries a source's title and notes onto each page),
+  # else -- the deprecated read_gt path -- what was read from a gt table.
+  # A page that opens an auto section reads them as any other page does.
+  for (i in seq_along(tables)) {
+    item <- tables[[i]]
+    if (is.null(titles[[i]])) {
+      titles[i] <- list(attr(item, "rtf_titles", exact = TRUE) %||%
+                          gt_texts$titles[[i]])
+    }
+    if (is.null(footnotes[[i]])) {
+      footnotes[i] <- list(attr(item, "rtf_footnotes", exact = TRUE) %||%
+                             gt_texts$footnotes[[i]])
+    }
+  }
+
+  # auto_title: the page name as the LAST row of that table's title block,
+  # after whatever `titles =` or the `rtf_titles` attribute already put there.
+  # Both title formats resolve their rows through .normalize_text_block(),
+  # which honours a per-row `align`, so this needs no renderer change.
+  if (isTRUE(auto_title) && !is.null(page_names) && any(nzchar(page_names))) {
+    if (!is.character(title_label_align) || length(title_label_align) != 1L ||
+        !title_label_align %in% c("left", "center", "right")) {
+      stop("`title_label_align` must be \"left\", \"center\", or \"right\".",
+           call. = FALSE)
+    }
+    for (i in seq_along(tables)) {
+      nm <- .page_name_base(page_names[[i]])   # the heading, without "...n"
+      if (is.na(nm) || !nzchar(nm)) next
+      titles[[i]] <- .title_add_row(titles[[i]], list(text = nm, align = title_label_align))
+    }
+  }
+
+  # cont_title: a line under the title of a table's later pages, which
+  # rtf_layout() adds (R/layout.R) -- those of first_rows and of the
+  # table's own pagination alike
+  if (!is.null(cont_title) &&
+      (!is.character(cont_title) || length(cont_title) != 1L || is.na(cont_title))) {
+    stop("rtf_tables(): `cont_title` is one line of text, or NULL.", call. = FALSE)
+  }
+
+  # Each page a block, with its title, footnote and placement (R/blocks.R)
+  .rtf_add_blocks(doc, tables, titles, footnotes, page_break = page_break,
+                  space_before = space_before, cont_title = cont_title,
+                  sections = sections)
+}
+
+# The rtf_tables() arguments that, passed explicitly, override the field of
+# the same name of a built rtftable page (deprecated with the rest)
+.rtf_tables_fmt_overrides <- c(
+  "col_header", "col_header_align", "spanning_header", "col_spec", "row_title",
+  "border", "blank_rows", "style", "col_rel_width", "column_widths_twips",
+  "table_width_twips", "table_width_pct_of_writable", "table_width_pct",
+  "table_align", "row_height_twips", "row_height_exact", "header_row_height_twips",
+  "blank_row_height_twips", "cell_padding_left_twips", "cell_padding_right_twips",
+  "cell_valign", "font_size_half_points", "font")
+
+# rtf_tables(doc, <a list of pages>) as it has always taken one: each
+# element one page -- a data frame (built here with the deprecated format
+# arguments `fmt`), a gt or gtsummary table (read here, the deprecated
+# read_gt path), an rtftable (the explicitly passed `overrides` applied) or
+# an rtfplot.  Deprecated with those arguments; 0.9.0 removes it, and a
+# list of pages then goes to .rtf_content() as it is.  What was read from a
+# gt table's title and notes rides on the result as `gt_texts`.
+.rtf_tables_legacy_pages <- function(tables, fmt, overrides, read_gt) {
+  # Auto-wrap a single content item so callers can write rtf_tables(tbl)
+  # instead of rtf_tables(list(tbl)).  data.frame is IS a list in R, so it
+  # needs an explicit guard; everything else that is not already a plain list
+  # (rtftable, rtfplot, gt_tbl, gtsummary) is wrapped too.
+  if (is.data.frame(tables) || !is.list(tables) ||
+      inherits(tables, "rtftable") || inherits(tables, "rtfplot") ||
+      .is_gt_tbl(tables) || .is_gtsummary_tbl(tables)) {
+    tables <- list(tables)
+  }
 
   .is_content_item <- function(x) {
     is.data.frame(x) ||
@@ -663,7 +784,7 @@ rtf_tables <- function(doc, tables,
   # -- gt_tbl handling: extract requested attributes ----------------------
   # `read_gt` is normalised once; the resolved token vector is used both
   # for per-table extraction and for the page-level title / source-note
-  # pull-through done after table promotion.
+  # pull-through.
   gt_tokens   <- .resolve_gt_tokens(read_gt)
   gt_extracts <- vector("list", length(tables))
   for (i in seq_along(tables)) {
@@ -686,20 +807,20 @@ rtf_tables <- function(doc, tables,
       # col_header / col_spec / column_widths_twips / col_rel_width
       # into the user-supplied arguments (user always wins).
       gtx <- gt_extracts[[i]]
-      eff_col_header <- if (!is.null(col_header))    col_header
+      eff_col_header <- if (!is.null(fmt$col_header))    fmt$col_header
                        else if (!is.null(gtx) && !is.null(gtx$col_header))
                          gtx$col_header
                        else NULL
       eff_col_spec   <- if (!is.null(gtx) && !is.null(gtx$col_spec))
-                         .merge_col_spec(col_spec, gtx$col_spec)
-                       else col_spec
-      eff_col_widths <- if (!is.null(column_widths_twips))
-                         column_widths_twips
+                         .merge_col_spec(fmt$col_spec, gtx$col_spec)
+                       else fmt$col_spec
+      eff_col_widths <- if (!is.null(fmt$column_widths_twips))
+                         fmt$column_widths_twips
                        else if (!is.null(gtx) && !is.null(gtx$column_widths_twips))
                          gtx$column_widths_twips
                        else NULL
-      eff_col_rel    <- if (!is.null(col_rel_width))
-                         col_rel_width
+      eff_col_rel    <- if (!is.null(fmt$col_rel_width))
+                         fmt$col_rel_width
                        else if (!is.null(gtx) && !is.null(gtx$col_rel_width))
                          gtx$col_rel_width
                        else NULL
@@ -709,173 +830,52 @@ rtf_tables <- function(doc, tables,
       rtftable(
         data                        = item,
         col_header                  = eff_col_header,
-        col_header_align            = col_header_align,
-        spanning_header             = spanning_header,
+        col_header_align            = fmt$col_header_align,
+        spanning_header             = fmt$spanning_header,
         col_spec                    = eff_col_spec,
-        row_title                   = row_title,
-        border                      = border,
-        blank_rows                  = blank_rows,
-        read_attributes             = read_attributes,
-        style                       = style,
+        row_title                   = fmt$row_title,
+        border                      = fmt$border,
+        blank_rows                  = fmt$blank_rows,
+        read_attributes             = fmt$read_attributes,
+        style                       = fmt$style,
         col_rel_width               = eff_col_rel,
         column_widths_twips         = eff_col_widths,
-        table_width_twips           = table_width_twips,
-        table_width_pct_of_writable = table_width_pct_of_writable,
-        table_width_pct             = table_width_pct,
-        table_align                 = table_align,
-        row_height_twips            = row_height_twips,
-        row_height_exact            = row_height_exact,
-        header_row_height_twips     = header_row_height_twips,
-        blank_row_height_twips      = blank_row_height_twips,
-        cell_padding_left_twips     = cell_padding_left_twips,
-        cell_padding_right_twips    = cell_padding_right_twips,
-        cell_valign                 = cell_valign,
+        table_width_twips           = fmt$table_width_twips,
+        table_width_pct_of_writable = fmt$table_width_pct_of_writable,
+        table_width_pct             = fmt$table_width_pct,
+        table_align                 = fmt$table_align,
+        row_height_twips            = fmt$row_height_twips,
+        row_height_exact            = fmt$row_height_exact,
+        header_row_height_twips     = fmt$header_row_height_twips,
+        blank_row_height_twips      = fmt$blank_row_height_twips,
+        cell_padding_left_twips     = fmt$cell_padding_left_twips,
+        cell_padding_right_twips    = fmt$cell_padding_right_twips,
+        cell_valign                 = fmt$cell_valign,
         cell_styles                 = eff_cell_styles,
-        blank_row_normalize         = blank_row_normalize,
-        markup                      = markup
+        blank_row_normalize         = fmt$blank_row_normalize,
+        markup                      = fmt$markup
       )
     } else if (inherits(item, "rtftable")) {
       # Pre-built rtftable (e.g. from as_rtftables()): apply only the
       # explicitly-passed rtf_tables() formatting arguments as overrides;
       # everything else keeps the table's own / gt-derived settings.
-      .override_rtftable_fields(item, .overrides)
+      .override_rtftable_fields(item, overrides)
     } else {
       item   # rtfplot or anything else passes through untouched
     }
   })
   names(tables) <- tables_names
+  attr(tables, "gt_texts") <- list(
+    titles    = lapply(gt_extracts, function(g) g$titles_block),
+    footnotes = lapply(gt_extracts, function(g) g$footnotes_block))
+  tables
+}
 
-  # Captured before the auto_section block below, which rebuilds `tables`
-  # with lapply(seq_along(.)) and so drops its names.  auto_title needs
-  # them afterwards, and the two options must compose.
-  auto_labels <- names(tables)
-
-  # When auto_section = TRUE, wrap each named item in an rtf_auto_section_item
-  # sentinel so that .pipe_doc_to_r6_report() can build per-section headers.
-  if (isTRUE(auto_section)) {
-    tbl_names <- names(tables)
-    if (!is.null(tbl_names) && any(nzchar(tbl_names))) {
-      # A section opens where the HEADING CHANGES, not at every named element:
-      # a page name is a heading, so consecutive pages that carry the same one
-      # are one section of several pages.  The uniquifying "...n" tail a page
-      # list carries so its names stay addressable is not part of the heading
-      # -- it is stripped here, for the comparison and for what is printed.
-      # An empty name falls through into the open section, as it always has --
-      # which is still how a caller groups pages whose headings differ
-      # (combine_sections() blanks them).
-      open <- NULL
-      tables <- lapply(seq_along(tables), function(i) {
-        nm <- .page_name_base(tbl_names[[i]])
-        if (!is.null(nm) && !is.na(nm) && nzchar(nm) && !identical(nm, open)) {
-          open <<- nm
-          structure(
-            list(content = tables[[i]], label = nm,
-                 label_align = section_label_align),
-            class = "rtf_auto_section_item"
-          )
-        } else {
-          tables[[i]]
-        }
-      })
-    }
-  }
-
-  # Validate titles / footnotes lengths
-  .validate_parallel <- function(x, n, name) {
-    if (is.null(x)) return(rep(list(NULL), n))
-    # a character vector is one block (its lines), for every page (#594)
-    if (is.character(x)) x <- list(x)
-    if (!is.list(x)) {
-      stop(sprintf("`%s` must be a list (or NULL).", name), call. = FALSE)
-    }
-    if (length(x) == 1L && n > 1L) return(rep(x, n))  # one block = common to all
-    if (length(x) != n) {
-      stop(sprintf(paste0("`%s` has %d blocks but there %s %d page%s: give ",
-                          "one block per page, or one block (a list of ",
-                          "length 1) for every page."),
-                   name, length(x), if (n == 1L) "is" else "are", n,
-                   if (n == 1L) "" else "s"), call. = FALSE)
-    }
-    x
-  }
-  titles    <- .validate_parallel(titles,    length(tables), "titles")
-  footnotes <- .validate_parallel(footnotes, length(tables), "footnotes")
-
-  # Pull through page-level title / source-note blocks.  Two sources, in
-  # priority order (user-supplied `titles` / `footnotes` always win over
-  # both):
-  #   1. `rtf_titles` / `rtf_footnotes` attributes on a pre-built rtftable
-  #      item -- this is how as_rtftables() carries gt's title / source
-  #      notes onto each page.
-  #   2. gt_extracts blocks, for a raw gt_tbl handed directly to rtf_tables()
-  #      with read_gt = (legacy path).
-  for (i in seq_along(tables)) {
-    item <- tables[[i]]
-    # (a page that opens an auto section is wrapped: its attributes are its
-    # content's -- read from the wrapper they were lost, and the page
-    # printed without its title)
-    if (inherits(item, "rtf_auto_section_item")) item <- item[["content"]]
-    a_titles    <- attr(item, "rtf_titles",    exact = TRUE)
-    a_footnotes <- attr(item, "rtf_footnotes", exact = TRUE)
-    gtx <- gt_extracts[[i]]
-    if (is.null(titles[[i]])) {
-      if (!is.null(a_titles))                          titles[[i]] <- a_titles
-      else if (!is.null(gtx) && !is.null(gtx$titles_block))
-                                                       titles[[i]] <- gtx$titles_block
-    }
-    if (is.null(footnotes[[i]])) {
-      if (!is.null(a_footnotes))                       footnotes[[i]] <- a_footnotes
-      else if (!is.null(gtx) && !is.null(gtx$footnotes_block))
-                                                       footnotes[[i]] <- gtx$footnotes_block
-    }
-  }
-
-  # auto_title: the page name as the LAST row of that table's title block,
-  # after whatever `titles =` or the `rtf_titles` attribute already put there.
-  # Both title formats resolve their rows through .normalize_text_block(),
-  # which honours a per-row `align`, so this needs no renderer change.
-  if (isTRUE(auto_title) && !is.null(auto_labels) && any(nzchar(auto_labels))) {
-    if (!is.character(title_label_align) || length(title_label_align) != 1L ||
-        !title_label_align %in% c("left", "center", "right")) {
-      stop("`title_label_align` must be \"left\", \"center\", or \"right\".",
-           call. = FALSE)
-    }
-    for (i in seq_along(tables)) {
-      nm <- .page_name_base(auto_labels[[i]])   # the heading, without "...n"
-      if (is.na(nm) || !nzchar(nm)) next
-      existing <- titles[[i]]
-      rows <- if (is.null(existing)) list() else if (is.list(existing)) existing
-              else as.list(existing)
-      titles[[i]] <- c(rows, list(list(text = nm, align = title_label_align)))
-    }
-  }
-
-  # cont_title: a line under the title of each page after the shared one
-  # (first_rows), as auto_title adds the page name
-  if (!is.null(cont_title)) {
-    if (!is.character(cont_title) || length(cont_title) != 1L || is.na(cont_title)) {
-      stop("rtf_tables(): `cont_title` is one line of text, or NULL.", call. = FALSE)
-    }
-    if (is.null(first_rows)) {
-      stop("rtf_tables(): `cont_title` titles the pages after the shared one: give `first_rows`.",
-           call. = FALSE)
-    }
-    for (i in seq_along(tables)[-1L]) {
-      existing <- titles[[i]]
-      rows <- if (is.null(existing)) list() else if (is.list(existing)) existing
-              else as.list(existing)
-      titles[[i]] <- c(rows, list(list(text = cont_title, align = "left")))
-    }
-  }
-
-  # Create copy and append
-  doc_copy <- doc
-  doc_copy$contents  <- c(doc_copy$contents,  tables)
-  doc_copy$titles    <- c(doc_copy$titles,    titles)
-  doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
-  # (page_break = FALSE: the pages' placement, beside them -- see R/flow.R)
-  .flow_placement_append(doc_copy, length(tables), .flow_item_start(tables, expanded),
-                         page_break = page_break, space_before = space_before)
+# A title block with one row more at its end: the rows it has (a character
+# vector's lines, or its list of rows) and then `row`
+.title_add_row <- function(block, row) {
+  rows <- if (is.null(block)) list() else if (is.list(block)) block else as.list(block)
+  c(rows, list(row))
 }
 
 #' Add figure content to document
@@ -968,48 +968,32 @@ rtf_figures <- function(doc, figures,
          call. = FALSE)
   }
 
-  # Validate and promote each element to rtfplot.
-  fig_objs <- lapply(seq_along(figures), function(i) {
+  # A table (a data frame, an rtftable, a plan, a gt table ...) is not a
+  # figure, though .rtf_content() would make it a page: it goes in
+  # rtf_tables(), where its titles and sections are read.
+  for (i in seq_along(figures)) {
     fig <- figures[[i]]
-    if (inherits(fig, "rtfplot")) {
-      return(fig)
+    if (is.list(fig) && !.rtf_one_figure(fig)) {
+      stop("Item ", i, ": a '", paste(class(fig), collapse = "/"), "' is not a ",
+           "figure; a table goes in rtf_tables().", call. = FALSE)
     }
-    # rtfplot() knows what can be drawn; say which item it was.
-    tryCatch(
-      do.call(rtfplot, c(list(fig, width_twips = width_twips,
-                              height_twips = height_twips, align = align),
-                         if (!is.character(fig)) draw_args)),
-      error = function(e) {
-        stop("Item ", i, ": ", conditionMessage(e), call. = FALSE)
-      })
-  })
-
-  .validate_parallel <- function(x, n, name) {
-    if (is.null(x)) return(rep(list(NULL), n))
-    # a character vector is one block (its lines), for every page (#594)
-    if (is.character(x)) x <- list(x)
-    if (!is.list(x))
-      stop(sprintf("`%s` must be a list (or NULL).", name), call. = FALSE)
-    if (length(x) == 1L && n > 1L) return(rep(x, n))  # one block = common to all
-    if (length(x) != n)
-      stop(sprintf(paste0("`%s` has %d blocks but there %s %d figure%s: give ",
-                          "one block per figure, or one block for every figure."),
-                   name, length(x), if (n == 1L) "is" else "are", n,
-                   if (n == 1L) "" else "s"), call. = FALSE)
-    x
   }
-  titles    <- .validate_parallel(titles,    length(figures), "titles")
-  footnotes <- .validate_parallel(footnotes, length(figures), "footnotes")
 
-  doc_copy <- doc
-  doc_copy$contents  <- c(doc_copy$contents,  fig_objs)
-  doc_copy$titles    <- c(doc_copy$titles,    titles)
-  doc_copy$footnotes <- c(doc_copy$footnotes, footnotes)
-  # (page_break = FALSE: the pages' placement, beside them -- see R/flow.R;
-  # every figure a content of its own)
-  .flow_placement_append(doc_copy, length(fig_objs), rep(TRUE, length(fig_objs)),
-                         page_break = page_break, space_before = space_before,
-                         fn = "rtf_figures")
+  # Each element one figure, made an rtfplot where it is not one
+  # (.rtf_content(), R/content.R); an element's error names it.  The list
+  # method is called as such: `figures` is a list of figures whatever its
+  # class, and its names have never named the pages.
+  fig_objs <- .rtf_content.list(unname(figures), width_twips = width_twips,
+                                height_twips = height_twips, align = align,
+                                draw_args = draw_args)
+
+  titles    <- .rtf_block_texts(titles,    length(figures), "titles", "figure")
+  footnotes <- .rtf_block_texts(footnotes, length(figures), "footnotes", "figure")
+
+  # Each figure a block of its own (R/blocks.R)
+  .rtf_add_blocks(doc, fig_objs, titles, footnotes,
+                  page_break = page_break, space_before = space_before,
+                  fn = "rtf_figures")
 }
 
 # Is `x` one figure rather than a list of them?  An rtfplot, one path, a
@@ -1031,10 +1015,12 @@ rtf_figures <- function(doc, figures,
 
 #' Assign content titles to pages
 #'
-#' Replace the per-page title list with the supplied values.  `titles` must
-#' have length equal to the number of pages already added via [rtf_tables()] /
-#' [rtf_figures()], **or length 1** -- a single block is then applied to every
-#' page (common title).
+#' Replace the title of every content already added with the supplied
+#' values.  `titles` must have length equal to the number of contents (table
+#' or figure pages) already added via [rtf_tables()] / [rtf_figures()], **or
+#' length 1** -- a single block is then applied to every content (common
+#' title).  Each content is a page of its own unless it was added with
+#' `page_break = FALSE`; [rtf_layout()] shows them.
 #'
 #' Each element is a title **block**: either a character vector (one entry per
 #' row, default styling) or a list of rows, where a row is a string or a styled
@@ -1043,7 +1029,7 @@ rtf_figures <- function(doc, figures,
 #' same width as the content; title rows default to centred + bold.
 #'
 #' @param doc An rtf_document object.
-#' @param titles A list of length = number of pages, or length 1 (common).
+#' @param titles A list of length = number of contents, or length 1 (common).
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, overriding the document default from [rtf_default_format()].
 #'   `font` names a family (e.g. `"Arial"`); one not already in the document's
@@ -1098,7 +1084,12 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
                  length(titles), n, if (n == 1L) "" else "s"), call. = FALSE)
   }
   doc_copy <- doc
-  doc_copy$titles <- titles
+  doc_copy$contents <- .rtf_blocks_set(doc$contents, "title", titles)
+  # The titles given are the whole titles: rtf_tables(cont_title = )'s
+  # line, which the layout adds, goes with the ones they replace (as it
+  # always has, when it was written into them).
+  doc_copy$contents <- .rtf_blocks_set(doc_copy$contents, "cont_title",
+                                       rep(list(NULL), n))
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_titles")
   if (!is.null(font)) st$font <- .check_font(font, "rtf_titles(font)")
@@ -1108,16 +1099,16 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 
 #' Assign content footnotes to pages
 #'
-#' Same shape as [rtf_titles()]: a list with one block per page (or length 1,
-#' common to all). Each block is a character vector or a list of rows (a string
+#' Same shape as [rtf_titles()]: a list with one block per content (table or
+#' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
 #' or `list(text=, align=, bold=, italic=, underline=, color=, border=)`).
 #' Footnote rows default to left-aligned, and the first row carries a top rule
 #' (the separator) unless that row sets its own `border`. `NULL` per element
-#' suppresses the footnote for that page.
+#' suppresses the footnote for that content.
 #'
 #' @param doc An rtf_document object.
-#' @param footnotes A list of length = number of pages, or length 1 (common).
-#'   Each page's element is a list of rows. A row is a single string, or a
+#' @param footnotes A list of length = number of contents, or length 1
+#'   (common).  Each content's element is a list of rows. A row is a single string, or a
 #'   named vector `c(l = , c = , r = )` giving up to three cells positioned
 #'   left / centre / right -- the same row model [rtf_footer()] uses. A bare
 #'   string lands in whichever slot `align` selects.
@@ -1174,7 +1165,7 @@ rtf_footnotes <- function(doc, footnotes, font_size_half_points = NULL,
                  length(footnotes), n, if (n == 1L) "" else "s"), call. = FALSE)
   }
   doc_copy <- doc
-  doc_copy$footnotes <- footnotes
+  doc_copy$contents <- .rtf_blocks_set(doc$contents, "footnote", footnotes)
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_footnotes")
   if (!is.null(font)) st$font <- .check_font(font, "rtf_footnotes(font)")
@@ -1363,24 +1354,19 @@ rtf_section <- function(doc, page = NULL, secinfo = NULL, header = NULL,
 #' @param x An rtf_document object.
 #' @param ... Additional arguments (unused).
 #'
-#' @return `x`, invisibly. Called for the side effect of printing a one-line
-#'   summary (page count, sections defined, page size).
+#' @return `x`, invisibly. Called for the side effect of printing the
+#'   document's layout, as [rtf_layout()] makes it: the number of contents
+#'   (blocks) and printed pages, the page and font size, and one line per
+#'   content -- its page, the section a page begins, its name, the rows of a
+#'   table or the size of a figure, and the rows of its title and footnote.
 #'
 #' @examples
 #' print(rtf_document())
+#' rtf_document() |>
+#'   rtf_tables(list(Demog = data.frame(A = 1:3)), titles = "Table 1")
 #'
 #' @export
 print.rtf_document <- function(x, ...) {
-  cat("rtf_document object\n")
-  cat("  Pages:", length(x$contents), "\n")
-  cat("  Sections defined:", length(x$sections), "\n")
-  # a preset page (the default) has no width / height of its own (#547)
-  pg <- x$document$page
-  size <- if (!is.null(pg$width_in) || !is.null(pg$height_in)) {
-    sprintf("%s x %s inches", pg$width_in %||% "?", pg$height_in %||% "?")
-  } else {
-    sprintf("%s (%s)", pg$paper_size %||% "letter", pg$orientation %||% "landscape")
-  }
-  cat("  Document page size:", size, "\n")
+  .rtf_pages_print(.rtf_layout(x, warn = FALSE), "rtf_document")
   invisible(x)
 }

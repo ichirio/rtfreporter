@@ -19,7 +19,7 @@ test_that('rtftable(border = "none") is accepted and means no borders', {
 
 test_that('rtf_tables() accepts a "none" border override', {
   tbl <- rtftable(df2(), border = "tfl")
-  out <- rtf_tables(rtf_document(), tbl, border = "none")$contents[[1L]]
+  out <- rtf_tables(rtf_document(), tbl, border = "none")$contents[[1L]]$content
   expect_null(out$border)
 })
 
@@ -107,7 +107,7 @@ test_that("rtf_tables() override actually replaces the field", {
   doc <- rtf_document()
   tbl <- rtftable(df2(), table_align = "left")
   doc <- rtf_tables(doc, tbl, table_align = "center")
-  expect_identical(doc$contents[[1L]]$table_align, "center")
+  expect_identical(doc$contents[[1L]]$content$table_align, "center")
 })
 
 test_that("rtf_tables() applies the full range of explicit overrides", {
@@ -126,7 +126,7 @@ test_that("rtf_tables() applies the full range of explicit overrides", {
     col_header               = c("Col A", "Col B"),
     blank_rows               = c(1L),
     col_spec                 = list(list(col = 1L, align = "right"))
-  )$contents[[1L]]
+  )$contents[[1L]]$content
 
   expect_equal(out$column_widths_twips, c(1200L, 800L))
   expect_identical(out$row_height_twips, 300L)
@@ -151,7 +151,7 @@ test_that("rtf_tables() col_spec override requires a `col` key", {
 
 test_that("rtf_tables() override clears blank_rows when passed NULL explicitly", {
   tbl <- rtftable(df2(), blank_rows = c(1L))
-  out <- rtf_tables(rtf_document(), tbl, blank_rows = NULL)$contents[[1L]]
+  out <- rtf_tables(rtf_document(), tbl, blank_rows = NULL)$contents[[1L]]$content
   expect_null(out$blank_rows)
 })
 
@@ -188,13 +188,13 @@ test_that("row_title validates its range / names (#98)", {
 
 test_that("rtf_tables(row_title=) re-aligns only still-default columns (#98)", {
   tbl <- rtftable(df7())                                  # col1 left, rest center
-  out <- rtf_tables(rtf_document(), tbl, row_title = c(1, 2))$contents[[1L]]
+  out <- rtf_tables(rtf_document(), tbl, row_title = c(1, 2))$contents[[1L]]$content
   expect_identical(.aligns(out), c("left", "left", rep("center", 5L)))
 })
 
 test_that("rtf_tables(row_title=) applies to bare data.frames in bulk (#98)", {
   out <- rtf_tables(rtf_document(), list(df7(), df7()),
-                    row_title = c(1, 2))$contents
+                    row_title = c(1, 2)) |> .doc_items()
   expect_identical(.aligns(out[[1L]]), c("left", "left", rep("center", 5L)))
   expect_identical(.aligns(out[[2L]]), c("left", "left", rep("center", 5L)))
 })

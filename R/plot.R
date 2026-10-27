@@ -256,7 +256,7 @@ plot.rtf_document <- function(x, max_pages = 12L, ...) {
     graphics::rect(0.6, 1.0, pw - 0.6, 1.5, col = "gray97", border = NA)
     graphics::text(pw / 2, 1.25, "title", cex = 0.75, col = "gray50")
 
-    ct <- x$contents[[i]]
+    ct <- x$contents[[i]][["content"]]
     label <- if (inherits(ct, "rtftable")) "table"
              else if (inherits(ct, "rtfplot")) "figure"
              else "content"

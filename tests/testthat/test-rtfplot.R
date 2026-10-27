@@ -455,7 +455,7 @@ test_that("rtf_figures() without the drawing arguments writes what it wrote befo
                 render_height = NULL, render_dpi = NULL, png_device = NULL)
   expect_identical(.rtf_bytes(now), .rtf_bytes(before))
   expect_identical(.rtf_bytes(nulls), .rtf_bytes(before))
-  fig <- now$contents[[1L]]
+  fig <- now$contents[[1L]]$content
   expect_identical(c(fig$img_width, fig$img_height), c(1950L, 1350L))
 })
 
@@ -465,7 +465,7 @@ test_that("rtf_figures() draws plot objects at render_width x render_height x re
   doc <- rtf_document() |>
     rtf_figures(list(function() plot(1:10), grid::circleGrob()),
                 render_width = 3, render_height = 2, render_dpi = 100)
-  for (fig in doc$contents) {
+  for (fig in .doc_items(doc)) {
     expect_identical(c(fig$img_width, fig$img_height), c(300L, 200L))
     expect_identical(fig$dpi_x, 100)
     disp <- rtfreporter:::.rtfplot_display_twips(fig)
@@ -474,8 +474,8 @@ test_that("rtf_figures() draws plot objects at render_width x render_height x re
   # one given, the others keep rtfplot()'s defaults (6.5 x 4.5 in)
   one <- rtf_document() |>
     rtf_figures(function() plot(1:3), render_dpi = 100)
-  expect_identical(c(one$contents[[1L]]$img_width,
-                     one$contents[[1L]]$img_height), c(650L, 450L))
+  expect_identical(c(one$contents[[1L]]$content$img_width,
+                     one$contents[[1L]]$content$img_height), c(650L, 450L))
   # ... and they are checked by rtfplot(), saying which item
   expect_error(rtf_figures(rtf_document(), function() plot(1), render_dpi = -1),
                "Item 1: `render_dpi` must be a single positive number")
@@ -490,7 +490,7 @@ test_that("rtf_figures(png_device =) chooses the device", {
   fig <- function(dev) {
     doc <- rtf_figures(rtf_document(), draw, render_width = 3,
                        render_height = 2, render_dpi = 100, png_device = dev)
-    doc$contents[[1L]]
+    doc$contents[[1L]]$content
   }
   rg <- fig("ragg"); bp <- fig("png")
   expect_identical(c(rg$img_width, rg$img_height), c(300L, 200L))
@@ -514,9 +514,9 @@ test_that("rtf_figures(render_*) leave an rtfplot() and a file path as they are"
   doc <- rtf_document() |>
     rtf_figures(list(rp, f), render_width = 5, render_height = 4,
                 render_dpi = 50, png_device = "png")
-  expect_identical(doc$contents[[1L]], rp)
-  expect_identical(c(doc$contents[[1L]]$img_width,
-                     doc$contents[[1L]]$img_height), c(400L, 200L))
-  expect_identical(doc$contents[[2L]], rtf_figures(rtf_document(), f)$contents[[1L]])
+  expect_identical(doc$contents[[1L]]$content, rp)
+  expect_identical(c(doc$contents[[1L]]$content$img_width,
+                     doc$contents[[1L]]$content$img_height), c(400L, 200L))
+  expect_identical(doc$contents[[2L]]$content, rtf_figures(rtf_document(), f)$contents[[1L]]$content)
   expect_identical(readBin(f, "raw", file.size(f)), bytes)
 })

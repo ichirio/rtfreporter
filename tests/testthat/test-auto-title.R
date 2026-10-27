@@ -10,7 +10,7 @@
 
 # the text of each stored title row, in order
 .title_texts <- function(doc, i) {
-  vapply(doc$titles[[i]],
+  vapply(doc$contents[[i]]$title,
          function(r) if (is.list(r)) r$text else as.character(r),
          character(1L))
 }
@@ -51,14 +51,14 @@ test_that("a multi-row existing title keeps every row", {
 
 test_that("the label is left-aligned by default", {
   doc <- rtf_document() |> rtf_tables(.pages(), auto_title = TRUE)
-  expect_identical(doc$titles[[1L]][[1L]]$align, "left")
+  expect_identical(doc$contents[[1L]]$title[[1L]]$align, "left")
 })
 
 test_that("title_label_align moves it", {
   for (a in c("left", "center", "right")) {
     doc <- rtf_document() |>
       rtf_tables(.pages(), auto_title = TRUE, title_label_align = a)
-    expect_identical(doc$titles[[1L]][[1L]]$align, a)
+    expect_identical(doc$contents[[1L]]$title[[1L]]$align, a)
   }
 })
 
@@ -107,14 +107,14 @@ test_that("a right-aligned label carries \\qr", {
 
 test_that("the default leaves titles untouched", {
   doc <- rtf_document() |> rtf_tables(.pages())
-  expect_null(doc$titles[[1L]])
-  expect_null(doc$titles[[2L]])
+  expect_null(doc$contents[[1L]]$title)
+  expect_null(doc$contents[[2L]]$title)
 })
 
 test_that("an unnamed list is a no-op", {
   doc <- rtf_document() |> rtf_tables(unname(.pages()), auto_title = TRUE)
-  expect_null(doc$titles[[1L]])
-  expect_null(doc$titles[[2L]])
+  expect_null(doc$contents[[1L]]$title)
+  expect_null(doc$contents[[2L]]$title)
 })
 
 test_that("only the named elements of a partly named list get a label", {
@@ -122,7 +122,7 @@ test_that("only the named elements of a partly named list get a label", {
   names(pages) <- c("Cohort A", "")
   doc <- rtf_document() |> rtf_tables(pages, auto_title = TRUE)
   expect_identical(.title_texts(doc, 1L), "Cohort A")
-  expect_null(doc$titles[[2L]])
+  expect_null(doc$contents[[2L]]$title)
 })
 
 # ── composition ────────────────────────────────────────────────────────────
@@ -133,8 +133,7 @@ test_that("auto_title composes with auto_section", {
   # the names survive the auto_section rewrap, which drops list names
   expect_identical(.title_texts(doc, 1L), "Cohort A")
   expect_identical(.title_texts(doc, 2L), "Cohort B")
-  n_sec <- sum(vapply(doc$contents, inherits, logical(1L),
-                      "rtf_auto_section_item"))
+  n_sec <- sum(!vapply(doc$contents, function(b) is.null(b[["section"]]), NA))
   expect_identical(n_sec, 2L)
 })
 

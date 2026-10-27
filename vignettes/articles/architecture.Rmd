@@ -58,6 +58,11 @@ documents are linked below (each opens in English with a Japanese toggle).
 rtfreporter/
 ├── R/
 │   ├── pipe-composition.R   # public pipe API: rtf_document/section/tables/figures
+│   ├── blocks.R             # rtf_block / rtf_contents: a document's contents
+│   ├── content.R            # .rtf_content(): anything that can be content, as content pages
+│   ├── layout.R             # rtf_layout(): the contents as printed pages
+│   ├── flow.R               # page_break = FALSE / first_rows: cutting a table for a shared page
+│   ├── render_page.R        # drawing a page: its segments; .render_content() per kind
 │   ├── rtftable.R           # rtftable() S3 object + normalisation helpers
 │   ├── rtfplot.R            # rtfplot() S3 object
 │   ├── rtfreport.R          # internal rtfreport document object + rtf_header/footer
@@ -81,10 +86,13 @@ rtfreporter/
 
 ```
 rtf_document          (public S3, built by the pipe API)
-  ├── contents[]      one entry per page: rtftable | rtfplot
-  ├── titles[]        per-page title block (character vector)
-  ├── footnotes[]     per-page footnote block
+  ├── contents        rtf_contents: one rtf_block per content page
+  │     └── rtf_block   content (rtftable | rtfplot), title, footnote,
+  │                     page_break, space_before, group, page_in_group
   └── sections[]      header/footer per page-range (via from_page)
+
+rtf_layout(doc) -> rtf_pages: the blocks as printed pages (a block with
+  page_break = FALSE goes on the page before it; nothing is measured)
 
 rtftable              one table (single- or multi-data.frame)
   ├── data / data_list
@@ -134,16 +142,30 @@ wireframe of a table's borders or of the document.
 
 ```
 rtf_document()  |>  rtf_section()  |>  rtf_tables() / rtf_figures()
-        │
+        │   .rtf_content()                   (any source -> content pages, one block each)
+        ▼
+   rtf_document$contents                     (rtf_blocks: content, title, footnote, page_break)
+        │   rtf_layout()                     (blocks -> printed pages, each its segments)
         ▼   .pipe_doc_to_rtfreport()         (adapter: pipe API -> rtfreport)
    rtfreport
         │   .rtfreport_validate()            (auto-default section, checks)
         ▼
    generate_rtfreport(doc, "out.rtf")        (renderer in generate_rtfreport.R)
-        │   .render_rtftable() / .render_rtfplot()
+        │   .render_page_segments()          (each page: title, content, footnote per segment)
+        │   .render_content()                (S3: the rtftable and rtfplot methods)
         ▼
    .rtf  text file
 ```
+
+Every page is drawn by the same code, whether it holds one content or
+several (`page_break = FALSE`): the segments one after another, each with its
+title and footnote, a thin separating paragraph between them. So a table looks
+the same on a page of its own and under another table, and the title / footnote
+width and format are decided in one place. The content itself is drawn by the
+internal generic `.render_content()`; a new kind of content adds a method there
+(and comes in through `.rtf_content()`), the page drawing is not touched. The
+font and colour tables at the head of the file are collected from every segment
+of every page.
 
 The renderer is pure string assembly driven by templates in
 `inst/resources/rtf_commands.R`; size/spacing defaults live in

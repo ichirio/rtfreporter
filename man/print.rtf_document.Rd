@@ -12,13 +12,18 @@
 \item{...}{Additional arguments (unused).}
 }
 \value{
-\code{x}, invisibly. Called for the side effect of printing a one-line
-summary (page count, sections defined, page size).
+\code{x}, invisibly. Called for the side effect of printing the
+document's layout, as \code{\link[=rtf_layout]{rtf_layout()}} makes it: the number of contents
+(blocks) and printed pages, the page and font size, and one line per
+content -- its page, the section a page begins, its name, the rows of a
+table or the size of a figure, and the rows of its title and footnote.
 }
 \description{
 Print an rtf_document object
 }
 \examples{
 print(rtf_document())
+rtf_document() |>
+  rtf_tables(list(Demog = data.frame(A = 1:3)), titles = "Table 1")
 
 }

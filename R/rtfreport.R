@@ -123,7 +123,8 @@
 
 # rtf_page: structured page object stored in rtfreport$pages
 #   title    -- character vector (multi-line, center)
-#   content  -- rtftable | rtfplot | NULL (exactly 1 per page)
+#   content  -- rtftable | rtfplot | NULL (the first segment's; the page's
+#               `segments`, added by .rtfreport_add_page(), hold them all)
 #   footnote -- character vector (multi-line, rendered as left-aligned paragraphs)
 .new_page <- function(title = NULL, content = NULL, footnote = NULL) {
   structure(
@@ -246,7 +247,10 @@ update_footer_row <- function(footer, row, content) {
 #'   contain **page-number tokens** that the renderer substitutes: `{AUTO_PAGE}`
 #'   (the current page, updated live by the viewer), `{AUTO_TOTAL_PAGES}` (the
 #'   document total), and `{PAGE}` / `{TOTAL_PAGES}` (static numbers baked in at
-#'   render time).
+#'   render time).  A table paginated on a column (`as_rtftables(page_by = )`)
+#'   gives each page its value of that column, written `{<column name>}`
+#'   (`{PARAM}`): the band then shows the page's value, and is written for
+#'   each page.  See *Page values* in [rtf_tables()].
 #' @param border An [rtf_border()] object controlling the border applied to
 #'   all rows of the header/footer table. `NULL` = no border (default for
 #'   header). Use `rtf_border(top = TRUE)` for a horizontal dividing line (default
@@ -469,23 +473,28 @@ rtf_footer <- function(rows,
 
 # -- Page ops ----------------------------------------------------------------
 
-.rtfreport_add_page <- function(report, title = NULL, content = NULL, footnote = NULL) {
-  # a page of several contents (rtf_tables(page_break = FALSE), R/flow.R):
-  # its first block is the page's content, title and footnote, as a page of
-  # one would have them; `blocks` holds them all, first to last
-  if (inherits(content, "rtf_flow_page")) {
-    blocks <- lapply(content$blocks, function(b) {
-      b$content <- .normalize_content(b$content)
-      b
-    })
-    page <- .new_page(title = blocks[[1L]]$title, content = blocks[[1L]]$content,
-                      footnote = blocks[[1L]]$footnote)
-    page$blocks <- blocks
-    report$pages[[length(report$pages) + 1L]] <- page
-    return(report)
+# A page is the segments on it, top to bottom: each a content with its
+# title, footnote and the empty lines before it (`space_before`), as
+# rtf_layout() lays them out (R/layout.R).  `segments` gives them; or
+# `title` / `content` / `footnote` give a page of one.  The page's own
+# `title` / `content` / `footnote` are its first segment's, which is what
+# a page of one is drawn from.
+.rtfreport_add_page <- function(report, title = NULL, content = NULL, footnote = NULL,
+                                segments = NULL) {
+  if (is.null(segments)) {
+    segments <- if (!is.null(content)) {
+      list(list(content = content, title = title, footnote = footnote, space_before = 0L))
+    } else list()
   }
-  if (!is.null(content)) content <- .normalize_content(content)
-  page <- .new_page(title = title, content = content, footnote = footnote)
+  segments <- lapply(segments, function(s) {
+    s$content <- .normalize_content(s$content)
+    s
+  })
+  page <- if (length(segments)) {
+    .new_page(title = segments[[1L]]$title, content = segments[[1L]]$content,
+              footnote = segments[[1L]]$footnote)
+  } else .new_page(title = title, footnote = footnote)
+  page$segments <- segments
   report$pages[[length(report$pages) + 1L]] <- page
   report
 }
@@ -519,7 +528,7 @@ rtf_footer <- function(rows,
       stop(sprintf("Page %d content must be rtftable, rtfplot, or NULL.", i),
            call. = FALSE)
     }
-    for (b in report$pages[[i]]$blocks) {
+    for (b in report$pages[[i]]$segments) {
       if (!inherits(b$content, "rtftable") && !inherits(b$content, "rtfplot")) {
         stop(sprintf("Page %d: each content must be rtftable or rtfplot.", i),
              call. = FALSE)

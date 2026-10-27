@@ -131,9 +131,10 @@ test_that("the effective export count is the reviewed number", {
   # added plan_stat_groups(), a record's statistics in named groups; 131 /
   # 108 since #625 added plan_compare(), the comparison columns; 132 / 109
   # since #620 added plan_filter(), rows dropped by a condition; 133 / 110
-  # since #691 added plan_empty(), the row of a table of no events.)
-  expect_length(.exports(), 133L)
-  expect_length(setdiff(.exports(), .dep), 110L)
+  # since #691 added plan_empty(), the row of a table of no events; 134 /
+  # 111 since rtf_layout(), a document's contents as printed pages.)
+  expect_length(.exports(), 134L)
+  expect_length(setdiff(.exports(), .dep), 111L)
 })
 
 test_that("the old argument names still work, with a warning", {
@@ -154,7 +155,7 @@ test_that("rtf_tables()'s table-format arguments warn once each, and still apply
   d <- data.frame(a = 1, b = 2)
   expect_warning(doc <- rtf_tables(rtf_document(), d, col_rel_width = c(2, 1)),
                  "rtf_tables(col_rel_width = )` is deprecated", fixed = TRUE)
-  expect_identical(doc$contents[[1]]$col_rel_width, c(2, 1))   # as before
+  expect_identical(doc$contents[[1]]$content$col_rel_width, c(2, 1))   # as before
   expect_silent(rtf_tables(rtf_document(), d, col_rel_width = c(2, 1)))
   # each its own once
   expect_warning(rtf_tables(rtf_document(), d, border = "tfl"), "border")
@@ -162,7 +163,7 @@ test_that("rtf_tables()'s table-format arguments warn once each, and still apply
   expect_warning(rtf_tables(rtf_document(), d, read_gt = TRUE), "as_rtftables")
   # the same settings on the table: no warning, the same page
   expect_silent(doc2 <- rtf_tables(rtf_document(), rtftable(d, col_rel_width = c(2, 1))))
-  expect_identical(doc2$contents[[1]]$col_rel_width, c(2, 1))
+  expect_identical(doc2$contents[[1]]$content$col_rel_width, c(2, 1))
   # the arguments that are not table-format copies say nothing
   expect_silent(rtf_tables(rtf_document(), d, titles = list("T"), auto_title = FALSE))
   expect_length(rtfreporter:::.rtf_tables_fmt_args, 27L)
@@ -254,11 +255,11 @@ test_that("rtf_section(header = , footer = ) is the section; secinfo is checked 
 
 test_that("a character vector of titles or footnotes is one block for every page (#594)", {
   d <- rtf_tables(rtf_document(), list(data.frame(a = 1), data.frame(a = 2)))
-  expect_identical(rtf_titles(d, c("T", "U"))$titles, list(c("T", "U"), c("T", "U")))
-  expect_identical(rtf_footnotes(d, "F")$footnotes, list("F", "F"))
+  expect_identical(.doc_titles(rtf_titles(d, c("T", "U"))), list(c("T", "U"), c("T", "U")))
+  expect_identical(.doc_footnotes(rtf_footnotes(d, "F")), list("F", "F"))
   d2 <- rtf_tables(rtf_document(), list(data.frame(a = 1), data.frame(a = 2)),
                    titles = c("T", "U"))
-  expect_identical(d2$titles, list(c("T", "U"), c("T", "U")))
+  expect_identical(.doc_titles(d2), list(c("T", "U"), c("T", "U")))
   expect_error(rtf_titles(d, 1), "character vector")
 })
 

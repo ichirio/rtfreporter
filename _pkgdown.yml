@@ -204,6 +204,8 @@ navbar:
           href: articles/section-splitting.html
         - text: "Titles, footnotes and several tables"
           href: articles/adding-content.html
+        - text: "Several contents on one page"
+          href: articles/several-contents.html
         - text: "Borders and rules"
           href: articles/borders.html
         - text: "Rendering and post-processing"
@@ -381,10 +383,13 @@ reference:
       **Note the two levels:** `rtftable()` sets how a table looks; passing
       the same setting to `rtf_tables()` overrides it *for that placement
       only*, leaving the table object untouched.
+      `rtf_layout()` shows how the contents fall on the printed pages
+      (`page_break = FALSE` puts one under the content before it).
     contents:
       - rtf_tables
       - rtf_titles
       - rtf_footnotes
+      - rtf_layout
       - rtftable
       - print.rtftable
       - format.rtftable
@@ -732,6 +737,7 @@ articles:
       - articles/headers-footers
       - articles/section-splitting
       - articles/adding-content
+      - articles/several-contents
       - articles/borders
       - articles/output
       - articles/assembling
@@ -760,6 +766,7 @@ articles:
       - articles/ai-development-ja
       - articles/architecture-ja
       - articles/extending-adapters-ja
+      - articles/several-contents-ja
 
   # Deep-dive S3 / OOP references. Deliberately kept OUT of the navbar
   # Articles menu -- pkgdown requires every built article to appear in the

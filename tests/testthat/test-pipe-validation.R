@@ -41,7 +41,7 @@ test_that("rtf_tables rejects a non-content item", {
 test_that("rtf_tables rejects `titles` / `footnotes` of wrong shape", {
   d <- rtf_document()
   # a character vector is one block for every page (#594)
-  expect_identical(rtf_tables(d, list(data.frame(A = 1L)), titles = "x")$titles,
+  expect_identical(rtf_tables(d, list(data.frame(A = 1L)), titles = "x") |> .doc_titles(),
                    list("x"))
   expect_error(
     rtf_tables(d, list(data.frame(A = 1L)), titles = 1),
@@ -57,13 +57,14 @@ test_that("rtf_tables rejects `titles` / `footnotes` of wrong shape", {
   )
 })
 
-test_that("rtf_tables auto_section wraps named items in rtf_auto_section_item", {
+test_that("rtf_tables auto_section gives each named item's block its section", {
   d <- rtf_document()
   d <- rtf_tables(d,
                   list(Demo = data.frame(A = 1L), AE = data.frame(A = 2L)),
                   auto_section = TRUE)
-  cls <- vapply(d$contents, function(c) class(c)[1L], character(1L))
-  expect_true(all(cls == "rtf_auto_section_item"))
+  labels <- vapply(d$contents, function(b) b[["section"]][["label"]], character(1L))
+  expect_identical(unname(labels), c("Demo", "AE"))
+  expect_true(all(vapply(.doc_items(d), inherits, NA, "rtftable")))
 })
 
 test_that("rtf_tables auto_section ignores items without names", {
@@ -71,7 +72,7 @@ test_that("rtf_tables auto_section ignores items without names", {
   d <- rtf_tables(d, list(data.frame(A = 1L), data.frame(A = 2L)),
                   auto_section = TRUE)
   # No names -> the wrap-loop never triggers; items stay rtftable.
-  expect_true(inherits(d$contents[[1L]], "rtftable"))
+  expect_true(inherits(d$contents[[1L]]$content, "rtftable"))
 })
 
 # ──────── rtf_figures -- validation branches ──────────────────────────────
@@ -95,13 +96,13 @@ test_that("rtf_figures(doc, plot): one plot object without list() (#589)", {
   one <- rtf_figures(rtf_document(), p)
   two <- rtf_figures(rtf_document(), list(p))
   expect_length(one$contents, 1L)
-  expect_s3_class(one$contents[[1L]], "rtfplot")
+  expect_s3_class(one$contents[[1L]]$content, "rtfplot")
   # the same page as in a list (the drawn file aside)
-  strip <- function(d) { d$contents[[1L]]$path <- NULL; d }
+  strip <- function(d) { d$contents[[1L]]$content$path <- NULL; d }
   expect_identical(strip(one), strip(two))
   # an rtfplot, as it is
-  rp <- two$contents[[1L]]
-  expect_identical(rtf_figures(rtf_document(), rp)$contents, list(rp))
+  rp <- two$contents[[1L]]$content
+  expect_identical(.doc_items(rtf_figures(rtf_document(), rp)), list(rp))
   # a list of plots is still several figures
   expect_length(rtf_figures(rtf_document(), list(p, p))$contents, 2L)
 })
@@ -126,7 +127,7 @@ test_that("rtf_figures validates `titles` and `footnotes` shape", {
     0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
     0xAE, 0x42, 0x60, 0x82)), png)
   d <- rtf_document()
-  expect_identical(rtf_figures(d, list(png), titles = "x")$titles, list("x"))
+  expect_identical(rtf_figures(d, list(png), titles = "x") |> .doc_titles(), list("x"))
   expect_error(rtf_figures(d, list(png), titles = 1),
                "`titles` must be a list")
   expect_error(rtf_figures(d, list(png), titles = list("a", "b")),
@@ -155,7 +156,7 @@ test_that("rtf_titles rejects non-list / wrong-length input", {
   expect_error(rtf_footnotes(d, 1),                    "must be a list")
   expect_error(rtf_footnotes(d, list("a", "b", "c")),  "has 3 blocks but the document has 2 pages")
   # length 1 is now accepted (common to all pages).
-  expect_length(rtf_titles(d, list("common"))$titles, 2L)
+  expect_length(.doc_titles(rtf_titles(d, list("common"))), 2L)
 })
 
 test_that("rtf_titles / rtf_footnotes successfully attach lists of length n", {
@@ -163,8 +164,8 @@ test_that("rtf_titles / rtf_footnotes successfully attach lists of length n", {
     rtf_tables(list(data.frame(A = 1L), data.frame(A = 2L))) |>
     rtf_titles(list("T1", "T2")) |>
     rtf_footnotes(list("F1", "F2"))
-  expect_identical(d$titles[[1L]], "T1")
-  expect_identical(d$footnotes[[2L]], "F2")
+  expect_identical(d$contents[[1L]]$title, "T1")
+  expect_identical(d$contents[[2L]]$footnote, "F2")
 })
 
 # ──────── rtf_section -- various code paths ───────────────────────────────

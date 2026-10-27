@@ -922,18 +922,18 @@ test_that("`program` is one string, or it is refused", {
   expect_identical(rtfreporter:::.resolve_program("my_script.R"), "my_script.R")
 })
 
-test_that("print.rtf_document() summarises pages and sections", {
+test_that("print.rtf_document() shows the layout: contents, pages and sizes", {
   d <- data.frame(a = "x", stringsAsFactors = FALSE)
   doc <- rtf_document() |> rtf_tables(list(d, d))
   out <- capture.output(res <- print(doc))
   expect_identical(res, doc)
-  expect_identical(out[1:3], c("rtf_document object", "  Pages: 2 ",
-                               "  Sections defined: 0 "))
-  # the size line is there; its wording for a preset page is #547's business
-  expect_match(out[4], "Document page size:")
+  expect_identical(out[1L], "rtf_document: 2 blocks on 2 pages (letter landscape, 9 pt)")
+  expect_identical(out[2L], " page 1  [sec 1]  rtftable 1 row")
+  expect_match(out[3L], "^ page 2 +rtftable 1 row$")
+  # the size of a page given by its width and height (#547)
   sized <- capture.output(print(rtf_document(page = rtf_page(width_in = 8.5,
                                                               height_in = 11))))
-  expect_match(sized[4], "8.5 x 11 inches")
+  expect_identical(sized, "rtf_document: no contents yet (8.5 x 11 in, 9 pt)")
 })
 
 # ── figures: image headers read by hand, plot objects, refusals ───────────
@@ -1581,10 +1581,10 @@ test_that("plot(rtftable) draws a header with spanning cells and a last-row rule
 
 test_that("print(rtf_document()) names a preset page by its size and orientation (#547)", {
   out <- capture.output(print(rtf_document()))
-  expect_true(any(grepl("Document page size: letter \\(landscape\\)", out)))
+  expect_true(any(grepl("(letter landscape, 9 pt)", out, fixed = TRUE)))
   out2 <- capture.output(print(rtf_document(page = rtf_page(width_in = 8.5,
                                                             height_in = 11))))
-  expect_true(any(grepl("Document page size: 8.5 x 11 inches", out2)))
+  expect_true(any(grepl("(8.5 x 11 in, 9 pt)", out2, fixed = TRUE)))
 })
 
 test_that("an explicit rtf_section(page = 1) wins over the first auto section (#548)", {

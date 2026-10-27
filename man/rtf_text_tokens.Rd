@@ -31,6 +31,10 @@ file is opened, so it stays right after \code{\link[=assemble_rtf]{assemble_rtf(
 \code{{DATETIME}} also takes a format, \verb{\{DATETIME:\%Y-\%m-\%d\}}
 (\code{\link[base:strptime]{base::strptime()}} codes); \code{example} shows one.
 
+A table paginated on a column also gives each page its value of it,
+written \verb{\{<column name>\}}; those depend on the data, so are not listed
+here (see \emph{Page values} in \code{\link[=rtf_tables]{rtf_tables()}}).
+
 Tokens of one's own (\code{rtf_document(tokens = )},
 \code{options(rtfreporter.tokens = )}) follow, \code{kind = "own"}, their value as
 the example: the session's, and a document's when \code{doc} is given.

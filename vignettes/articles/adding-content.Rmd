@@ -55,10 +55,11 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
 library(rtfreporter)
 ```
 
-A rtfreporter document is a **flat sequence of pages**, and the rule is simple:
-**one page holds exactly one content item** -- a table or a figure -- plus an
-optional title and footnote block. You add content with `rtf_tables()` (and
-`rtf_figures()` for images); each element you pass becomes one page.
+A rtfreporter document is a **sequence of contents** -- tables and figures --
+each with an optional title and footnote block. You add content with
+`rtf_tables()` (and `rtf_figures()` for images); by default each element you
+pass starts a page of its own, and `page_break = FALSE` puts it under the
+content before it instead (see [Two contents on one page](#two-contents-on-one-page)).
 
 This article is the deep dive on content. For document-wide settings (page size,
 fonts) see [Page & document setup](page-setup.html); for converting `gt` /
@@ -152,8 +153,8 @@ t1 <- rtftable(df1, border = "tfl", row_height_twips = 280L)
 t2 <- rtftable(df2, border = NULL,  row_height_twips = 200L)   # no borders
 
 doc <- rtf_document() |> rtf_tables(list(t1, t2))
-doc$contents[[1]]$row_height_twips   # 280 -- t1 keeps its own
-doc$contents[[2]]$row_height_twips   # 200 -- t2 keeps its own
+doc$contents[[1]]$content$row_height_twips   # 280 -- t1 keeps its own
+doc$contents[[2]]$content$row_height_twips   # 200 -- t2 keeps its own
 ```
 
 
@@ -322,12 +323,33 @@ content pages -- some tables, some figures -- each optionally titled and
 footnoted. To control the running header/footer across those pages, see the
 headers & footers article.
 
+## Two contents on one page
+
+`page_break = FALSE` puts a content under the one before it, on the page that
+one ends on; `space_before` adds empty lines between them. Each keeps its own
+title and footnote, and is drawn exactly as it would be on a page of its own.
+`rtf_layout()` (or `print(doc)`) shows the printed pages:
+
+```{r same-page}
+doc <- rtf_document() |>
+  rtf_tables(df1, titles = "Table 1", footnotes = "Mean and SD.") |>
+  rtf_tables(df2, titles = "Table 2", page_break = FALSE, space_before = 1)
+rtf_layout(doc)
+```
+
+Nothing is measured: a content that does not fit is carried to the next page by
+the reader (Word, LibreOffice). To go on with a long table on pages of its own,
+say how many of its rows the shared page takes with `first_rows`; the rest is
+paginated by its own `max_rows`. `rtf_figures(page_break = FALSE)` puts a
+figure under a table the same way.
+
 See `?rtf_tables` and `?rtf_figures` for the full argument reference.
 
 <!-- where-next -->
 
 ## Where next
 
+- [Several contents on one page](several-contents.html) --- a table under a table, a figure under a table, a listing that goes on
 - [Figures](figures.html) --- plot objects, size on the page, formats
 - [Borders](borders.html) --- how a table gets its rules
 - [Sections](section-splitting.html) --- when one document needs more than one header

@@ -216,3 +216,17 @@
   v <- v[!is.na(v) & nzchar(v)]
   if (length(v)) v else NULL
 }
+
+# What an rtables page was cut on, by column, for a `{<column>}` token
+# (R/page_values.R): a page from rtables::paginate_table() of a table with
+# split_rows_by(page_by = TRUE) carries one page title per such split,
+# "<prefix>: <value>" -- the prefix the split's variable unless
+# split_rows_by(page_prefix = ) names another.  A table not paginated so has
+# none: NULL.
+.rtables_page_values <- function(x) {
+  pt <- tryCatch(formatters::page_titles(x), error = function(e) NULL)
+  pt <- as.character(unlist(pt, use.names = FALSE))
+  pt <- pt[!is.na(pt) & grepl(": ", pt, fixed = TRUE)]
+  if (!length(pt)) return(NULL)
+  stats::setNames(sub("^.*?: ", "", pt, perl = TRUE), sub(": .*$", "", pt, perl = FALSE))
+}

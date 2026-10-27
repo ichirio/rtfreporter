@@ -521,8 +521,11 @@
       out <- .replace_token(out, h, .rtf_escape(.format_run_time(time, fmt)))
     }
   }
-  # tokens of one's own (rtf_document(tokens = ), the option)
-  .substitute_user_tokens(out)
+  # tokens of one's own (rtf_document(tokens = ), the option), then the
+  # page's values by column, {PARAM} (R/page_values.R): set only while a
+  # page's text is written, so they never reach another page
+  out <- .substitute_user_tokens(out)
+  .substitute_column_tokens(out)
 }
 
 .substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
@@ -1836,14 +1839,14 @@
     cols <- c(cols, .text_block_colors(pg$title,    is_footer = FALSE))
     cols <- c(cols, .text_block_colors(pg$footnote, is_footer = TRUE))
   }
-  # a page of several contents (page_break = FALSE): its later contents'
-  # colours too (they were drawn black) -- last, so a document without such
-  # a page keeps its colour indices
+  # A page's later segments go last, after everything above, for the same
+  # reason as their fonts (.collect_report_fonts()): the table stays the one
+  # it always was unless they add a colour, which is now declared.
   for (pg in report$pages) {
-    for (b in pg$blocks[-1L]) {
-      if (inherits(b$content, "rtftable")) cols <- c(cols, .tbl_colors(b$content))
-      cols <- c(cols, .text_block_colors(b$title,    is_footer = FALSE))
-      cols <- c(cols, .text_block_colors(b$footnote, is_footer = TRUE))
+    for (sg in pg$segments[-1L]) {
+      cols <- c(cols, .tbl_colors(sg[["content"]]))
+      cols <- c(cols, .text_block_colors(sg[["title"]],    is_footer = FALSE))
+      cols <- c(cols, .text_block_colors(sg[["footnote"]], is_footer = TRUE))
     }
   }
   cols <- cols[!is.na(cols) & nzchar(cols)]
@@ -2131,20 +2134,6 @@
   norm
 }
 
-# Unwrap an rtf_auto_section_item to its underlying content object.
-# By contract, item$content is always a single rtftable, rtfplot, or
-# data.frame (validated and promoted in rtf_tables()).
-.unwrap_auto_section_item <- function(item) {
-  item$content
-}
-
-# Internal helper: pass through a single content item.
-# By contract, rtf_tables() and rtf_figures() guarantee a single content
-# object (rtftable, rtfplot, or data.frame) per element.
-.normalise_content_item <- function(content_item) {
-  content_item
-}
-
 # Internal helper: convert S3 rtf_document (pipe API) to internal S3 rtfreport.
 .pipe_doc_to_rtfreport <- function(pipe_doc) {
   if (!inherits(pipe_doc, "rtf_document")) return(NULL)
@@ -2191,113 +2180,51 @@
     report <- .rtfreport_set_default_format(report, pipe_doc$document$default_format)
   }
 
-  # rtf_tables(page_break = FALSE): the content pages laid out as printed
-  # pages first (R/flow.R); a document without it is untouched
-  if (.flow_active(pipe_doc)) pipe_doc <- .flow_layout(pipe_doc)
+  # The blocks laid out as printed pages (rtf_layout(), R/layout.R), copied
+  # as they are: the sections, then the pages, each the blocks on it.
+  layout <- .rtf_layout(pipe_doc)
 
-  # -- Detect auto-section items ---------------------------------------------
-  has_auto_section <- any(vapply(pipe_doc$contents,
-    function(x) inherits(x, "rtf_auto_section_item"), logical(1L)))
-
-  if (has_auto_section) {
-    # -- Auto-section path --------------------------------------------------
-    # "_default" section provides the base header/footer template.
-    default_sec <- pipe_doc$sections[["_default"]]
-
-    # Add any explicit page-number sections (not "_default") first.
-    all_keys     <- names(pipe_doc$sections)
-    explicit_keys <- sort(as.integer(all_keys[all_keys != "_default"]))
-    for (key in explicit_keys) {
-      si <- pipe_doc$sections[[as.character(key)]]
-      report <- .rtfreport_add_section(report, header = si$header,
-                                       footer = si$footer, from_page = key,
-                                       watermark = si$watermark,
-                                       has_watermark = "watermark" %in% names(si))
-    }
-
-    # Process contents one by one, creating one RTF section per named item.
-    page_counter <- 0L
-    for (ci in seq_along(pipe_doc$contents)) {
-      content_item <- pipe_doc$contents[[ci]]
-      page_counter <- page_counter + 1L
-
-      if (inherits(content_item, "rtf_auto_section_item")) {
-        # an explicit rtf_section(page = n) wins over the auto section that
-        # would start on the same page: two sections starting on one page
-        # leave the first with no pages (#548)
-        if (!page_counter %in% explicit_keys) {
-          label       <- content_item$label
-          label_align <- content_item$label_align %||% "left"
-          sec_header  <- .build_auto_section_header(default_sec, label, label_align)
-          sec_footer  <- if (!is.null(default_sec)) default_sec$footer else NULL
-          report <- .rtfreport_add_section(report, header = sec_header,
-                                           footer = sec_footer,
-                                           from_page = page_counter,
-                                           watermark = default_sec$watermark,
-                                           has_watermark =
-                                             "watermark" %in% names(default_sec))
-        }
-        ct <- .unwrap_auto_section_item(content_item)
-      } else {
-        ct <- .normalise_content_item(content_item)
-      }
-      title_i    <- if (ci <= length(pipe_doc$titles))    pipe_doc$titles[[ci]]    else NULL
-      footnote_i <- if (ci <= length(pipe_doc$footnotes)) pipe_doc$footnotes[[ci]] else NULL
-      report <- .rtfreport_add_page(report, content = ct, title = title_i,
-                                    footnote = footnote_i)
-    }
-
-    # Guard: if no section was added at all (e.g., all items were non-auto),
-    # fall back to the "_default" section or an empty one.
-    if (length(report$sections) == 0L) {
-      if (!is.null(default_sec)) {
-        report <- .rtfreport_add_section(report, header = default_sec$header,
-                                         footer = default_sec$footer,
-                                         watermark = default_sec$watermark,
-                                         has_watermark =
-                                           "watermark" %in% names(default_sec))
-      } else {
-        report <- .rtfreport_add_section(report)
-      }
-    }
-
-  } else {
-    # -- Original path (no auto-section items) -----------------------------
-    all_keys     <- names(pipe_doc$sections)
-    non_def_keys <- all_keys[all_keys != "_default"]
-    section_keys <- sort(as.integer(non_def_keys))
-
-    if (length(section_keys) == 0L) {
-      # No explicit page sections - use "_default" or an empty default.
-      default_sec <- pipe_doc$sections[["_default"]]
-      if (!is.null(default_sec)) {
-        report <- .rtfreport_add_section(report, header = default_sec$header,
-                                         footer = default_sec$footer,
-                                         watermark = default_sec$watermark,
-                                         has_watermark =
-                                           "watermark" %in% names(default_sec))
-      } else {
-        report <- .rtfreport_add_section(report)  # default covering all pages
-      }
+  # The sections: one on each page rtf_section(page = n) names, then one on
+  # each page an auto_section heading opens -- the page's own explicit
+  # section wins over it: two sections starting on one page leave the first
+  # with no pages (#548).  An auto section's band is the "_default"
+  # section's with the heading as a row more.  With neither, the
+  # "_default" section (rtf_section() without `page`) covers every page.
+  default_sec <- pipe_doc$sections[["_default"]]
+  all_keys      <- names(pipe_doc$sections)
+  explicit_keys <- sort(as.integer(all_keys[all_keys != "_default"]))
+  for (key in explicit_keys) {
+    si <- pipe_doc$sections[[as.character(key)]]
+    report <- .rtfreport_add_section(report, header = si$header,
+                                     footer = si$footer, from_page = key,
+                                     watermark = si$watermark,
+                                     has_watermark = "watermark" %in% names(si))
+  }
+  for (p in layout$pages) {
+    auto <- p$auto_section
+    if (is.null(auto) || p$number %in% explicit_keys) next
+    sec_header <- .build_auto_section_header(default_sec, auto$label,
+                                             auto$label_align %||% "left")
+    report <- .rtfreport_add_section(report, header = sec_header,
+                                     footer = if (!is.null(default_sec)) default_sec$footer,
+                                     from_page = p$number,
+                                     watermark = default_sec$watermark,
+                                     has_watermark = "watermark" %in% names(default_sec))
+  }
+  if (length(report$sections) == 0L) {
+    if (!is.null(default_sec)) {
+      report <- .rtfreport_add_section(report, header = default_sec$header,
+                                       footer = default_sec$footer,
+                                       watermark = default_sec$watermark,
+                                       has_watermark =
+                                         "watermark" %in% names(default_sec))
     } else {
-      for (key in section_keys) {
-        si <- pipe_doc$sections[[as.character(key)]]
-        report <- .rtfreport_add_section(report, header = si$header,
-                                         footer = si$footer, from_page = key,
-                                         watermark = si$watermark,
-                                         has_watermark =
-                                           "watermark" %in% names(si))
-      }
+      report <- .rtfreport_add_section(report)  # default covering all pages
     }
+  }
 
-    # Add pages from pipe_doc$contents (each element = one page)
-    for (ci in seq_along(pipe_doc$contents)) {
-      ct         <- .normalise_content_item(pipe_doc$contents[[ci]])
-      title_i    <- if (ci <= length(pipe_doc$titles))    pipe_doc$titles[[ci]]    else NULL
-      footnote_i <- if (ci <= length(pipe_doc$footnotes)) pipe_doc$footnotes[[ci]] else NULL
-      report <- .rtfreport_add_page(report, content = ct, title = title_i,
-                                    footnote = footnote_i)
-    }
+  for (p in layout$pages) {
+    report <- .rtfreport_add_page(report, segments = p$segments)
   }
 
   report
@@ -2447,6 +2374,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     .run_ctx$program_done <- NULL
     .run_ctx$time <- NULL
     .run_ctx$tokens <- NULL
+    .run_ctx$page_values <- NULL
   }, add = TRUE)
   if (inherits(report, "rtf_document")) {
     report <- .pipe_doc_to_rtfreport(report)
@@ -2570,6 +2498,15 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     doc$default_format$footnote_width %||% .opt("rtfreporter.footnote_width"),
     "footnote_width")
 
+  # What drawing a page needs of the document, resolved once.
+  page_ctx <- list(
+    doc = doc, writable_w = writable_w, total_pages = total_pages,
+    font_half_points = font_half_points, font_index_map = font_index_map,
+    color_index_map = color_index_map, doc_row_height = doc_row_height,
+    doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r, doc_markup = doc_markup,
+    doc_title_format = doc_title_format, doc_footnote_format = doc_footnote_format,
+    doc_title_width = doc_title_width, doc_footnote_width = doc_footnote_width)
+
   # Resolve sections (sorted, with from_page / to_page assigned).
   resolved_sections <- .resolve_sections(report)
 
@@ -2610,6 +2547,12 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     #     each rendered page can carry its own baked-in page number.
     emit_section_preamble <- function(pg_for_hf) {
       lines <<- c(lines, doc_cmd$section_defaults)
+      # The page's values for the {<column>} tokens its bands name: a band
+      # that names one is written for each page (`band_cols`, below).
+      .run_ctx$page_values <- if (length(band_cols)) {
+        .page_values_of(.page_segments(report$pages[[pg_for_hf]]), band_cols, pg_for_hf)
+      }
+      on.exit(.run_ctx$page_values <- NULL, add = TRUE)
 
       # Re-emit section-level page properties after \sectd.
       #
@@ -2684,10 +2627,18 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     # either header or footer), we promote every sub-page boundary
     # from a `\page` break to a `\sect` break and re-emit the
     # section preamble with the correct baked-in number.
-    needs_per_page_section <- .uses_static_page_token(cur_header_hf) ||
-                              .uses_static_page_token(cur_footer_hf)
-
+    # So is a page's value: a band naming a column a page of the section
+    # was cut on ({PARAM}, R/page_values.R) is written for each page.
     sec_pages <- seq(pg_from, pg_to)
+    sec_cols <- unique(unlist(lapply(report$pages[sec_pages], function(pg) {
+      lapply(.page_segments(pg), function(s) names(.segment_values(s)))
+    }), use.names = FALSE))
+    band_cols <- unique(c(.hf_column_tokens(cur_header_hf, sec_cols),
+                          .hf_column_tokens(cur_footer_hf, sec_cols)))
+    needs_per_page_section <- .uses_static_page_token(cur_header_hf) ||
+                              .uses_static_page_token(cur_footer_hf) ||
+                              length(band_cols) > 0L
+
     if (!needs_per_page_section) {
       emit_section_preamble(pg_from)
     }
@@ -2699,98 +2650,9 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
         emit_section_preamble(p_idx)
       }
 
-      # A page of several contents (rtf_tables(page_break = FALSE)): block
-      # after block, R/flow.R.  A page of one takes the code below as ever.
-      if (!is.null(page$blocks)) {
-        lines <- c(lines, .render_flow_blocks(page$blocks, p_idx, list(
-          doc = doc, writable_w = writable_w, total_pages = total_pages,
-          font_half_points = font_half_points, font_index_map = font_index_map,
-          color_index_map = color_index_map, doc_row_height = doc_row_height,
-          doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r, doc_markup = doc_markup,
-          doc_title_format = doc_title_format, doc_footnote_format = doc_footnote_format,
-          doc_title_width = doc_title_width, doc_footnote_width = doc_footnote_width)))
-      } else {
-      # -- Content (single rtftable or rtfplot) -----------------------------
-      ct <- page$content
-
-      # Title / footnote render as content-width tables (one row per line),
-      # so they align with the content above/below (see .render_text_block_table).
-      content_w     <- .content_width_twips(ct, writable_w)
-      content_align <- .content_align(ct)
-      # Per-element width (#291): "content" (the default -- follow the body),
-      # "page", a fraction of the writable width, or twips.
-      title_st    <- doc$title_style
-      footnote_st <- doc$footnote_style
-      title_w    <- .resolve_block_width(doc_title_width,    content_w, writable_w)
-      footnote_w <- .resolve_block_width(doc_footnote_width, content_w, writable_w)
-      # Title / footnote inherit the document-wide cell padding and row height.
-      tf_pad_l      <- doc_pad_l
-      tf_pad_r      <- doc_pad_r
-      tf_valign     <- "\\clvertalt"
-
-      # -- Title (default centre + bold; NULL -> one blank gap row) ----------
-      # Default renders as plain paragraphs (full writable width); the legacy
-      # content-width table form is opt-in via title_format = "table".
-      lines <- c(lines, if (identical(doc_title_format, "text")) {
-        .render_text_block_text(page$title, is_footer = FALSE, style = title_st,
-                                font_half_points = font_half_points,
-                                font_index_map = font_index_map,
-                                color_index_map, markup = doc_markup,
-                                pad_l = tf_pad_l, pad_r = tf_pad_r,
-                                current_page = p_idx, total_pages = total_pages)
-      } else {
-        .render_text_block_table(
-          page$title, title_w, is_footer = FALSE, font_half_points,
-          tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
-          doc_row_height = doc_row_height, markup = doc_markup,
-          style = title_st,
-          font_index_map = font_index_map,
-          current_page = p_idx, total_pages = total_pages)
-      })
-      if (!is.null(ct)) {
-        if (inherits(ct, "rtftable")) {
-          lines <- c(lines, .render_rtftable(ct, writable_w, font_half_points,
-                                              font_index_map = font_index_map,
-                                              color_index_map,
-                                              doc_row_height = doc_row_height,
-                                              doc_pad_l = doc_pad_l,
-                                              doc_pad_r = doc_pad_r,
-                                              doc_markup = doc_markup))
-        } else if (inherits(ct, "rtfplot")) {
-          lines <- c(lines, .render_rtfplot(ct, writable_w))
-        }
-      }
-
-      # -- Footnote (default left; first row carries the separator top rule) -
-      # Default keeps the content-width table form (so the separator rule is
-      # drawn); footnote_format = "text" switches to plain paragraphs.
-      lines <- c(lines, if (identical(doc_footnote_format, "text")) {
-        .render_text_block_text(
-          .footnote_rows(page$footnote, footnote_st$align %||% "left", "text"),
-          is_footer = TRUE, style = footnote_st,
-          font_half_points = font_half_points,
-          color_index_map, markup = doc_markup,
-          pad_l = tf_pad_l, pad_r = tf_pad_r,
-          current_page = p_idx, total_pages = total_pages)
-      } else {
-        fn_rtf <- .render_header_footer(
-          .footnote_hf(page$footnote, footnote_st, footnote_w),
-          footnote_w, is_footer = TRUE,
-          current_page = p_idx, total_pages = total_pages,
-          color_index_map = color_index_map,
-          font_half_points = font_half_points,
-          doc_row_height = doc_row_height,
-          doc_pad_l = tf_pad_l, doc_pad_r = tf_pad_r,
-          doc_markup = doc_markup,
-          font_index_map = font_index_map)
-        # An INDEPENDENT table: RTF merges consecutive \trowd runs that no
-        # paragraph separates, so without this the footnote would still be the
-        # body table wearing different \cellx values -- and could not carry a
-        # width of its own.  \fs2 keeps the separating paragraph from adding
-        # visible space, the same trick the page-break code uses.
-        if (length(fn_rtf)) c("{\\pard\\fs2\\par}", fn_rtf) else fn_rtf
-      })
-      }
+      # The page's segments, top to bottom (R/render_page.R): a page of one
+      # and a page of several are drawn the same way.
+      lines <- c(lines, .render_page_segments(.page_segments(page), p_idx, page_ctx))
 
       # End-of-page break.  A table must be terminated before any paragraph-level
       # break or the document close, or strict readers absorb the break into the
