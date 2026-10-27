@@ -461,8 +461,11 @@ finished table is written exactly as it always was.}
 
 \item{where}{For \code{plan_cell_style()}: a one-sided formula over the
 table's columns choosing the rows, e.g. \code{where = ~ is.na(label)}.  For
-\code{plan_blanks()}: \code{as_rtftables(blank_rows = )}, or \code{"records"} for a
-blank row after each record of a listing.}
+\code{plan_blanks()}: \code{as_rtftables(blank_rows = )}, \code{"records"} for a
+blank row after each record of a listing, or \code{"none"} for none -- a
+listing's records then follow each other with no blank row between
+them (the multiline type puts one after each; \code{first = FALSE} takes
+away the one at the top of each page too).}
 
 \item{bold, italic, align, color, background}{For \code{plan_cell_style()}: how
 the cells look.  A \strong{value} (\code{bold = TRUE}, \code{color = "#CC0000"})
@@ -886,7 +889,7 @@ function that does it.  This is what each one hands on.
 \item \code{plan_row_group(mode, collapse, group_col)}: groups down the body. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{group_by}, \code{collapse_repeats}, \code{group_col} (a finished table).
 \item \code{plan_hide(...)}: columns not printed. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{drop_cols}.
 \item \code{plan_empty(text, when, position, footnote)}: a table of no events: one row saying so (\code{"No subjects met the criteria."}), and a footnote, only when the table has no row or its overall row is 0.
-\item \code{plan_blanks(where, first, last, counted)}: blank rows. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows}; a listing's \code{where = "records"} is \code{\link[=listing_spec]{listing_spec()}}'s \code{blank_row}.
+\item \code{plan_blanks(where, first, last, counted)}: blank rows. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{blank_rows}, \code{blank_row_first}, \code{blank_row_end}, \code{count_blank_rows}; a listing's \code{where = "records"} / \code{"none"} is \code{\link[=listing_spec]{listing_spec()}}'s \code{blank_row = TRUE} / \code{FALSE}.
 \item \code{plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)}: the row budget, inside the BY pages. Goes to \code{\link[=as_rtftables]{as_rtftables()}}: \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}, \code{cont_label}, \code{page_by}; \code{heading} and \code{heading_at} name each BY page, and say where the name prints, as \code{plan_paginate_group()}'s do.
 \item \code{plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)}: column blocks. Goes to \code{\link[=paginate_cols]{paginate_cols()}}: \code{at}, \code{cols} / \code{by}, \code{carry}, \code{col_header}, \code{width}, \code{allow_span_break}, \code{page_order}.
 \item \code{plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)}: the whole table. Goes to \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}} by the same names; \verb{border_*} and the default look (\code{header_align}, \code{header_bold}, \code{header_italic}, \code{align}, \code{bold}, \code{italic}, \code{underline}) via \code{\link[=rtf_table_style]{rtf_table_style()}}.

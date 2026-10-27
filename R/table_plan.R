@@ -1135,8 +1135,11 @@ print.table_plan <- function(x, ...) {
 #'   (default): not said ([rtf_tables()]'s own default, nowhere).
 #' @param where For `plan_cell_style()`: a one-sided formula over the
 #'   table's columns choosing the rows, e.g. `where = ~ is.na(label)`.  For
-#'   `plan_blanks()`: `as_rtftables(blank_rows = )`, or `"records"` for a
-#'   blank row after each record of a listing.
+#'   `plan_blanks()`: `as_rtftables(blank_rows = )`, `"records"` for a
+#'   blank row after each record of a listing, or `"none"` for none -- a
+#'   listing's records then follow each other with no blank row between
+#'   them (the multiline type puts one after each; `first = FALSE` takes
+#'   away the one at the top of each page too).
 #' @param text,when,footnote For `plan_empty()`: what an empty
 #'   table says.  `text` is one row (in the row label column; `NULL` for
 #'   none); `when` the table is empty -- `"no_rows"` (no body row, after
@@ -1515,7 +1518,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_row_group(mode, collapse, group_col)`: groups down the body. Goes to [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table).
 #' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
 #' * `plan_empty(text, when, position, footnote)`: a table of no events: one row saying so (`"No subjects met the criteria."`), and a footnote, only when the table has no row or its overall row is 0.
-#' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row`.
+#' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` / `"none"` is [listing_spec()]'s `blank_row = TRUE` / `FALSE`.
 #' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do.
 #' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
@@ -4392,12 +4395,19 @@ plan_n_candidates <- function(.plan) {
   if (length(lst)) {
     cols <- lst$cols; lst$cols <- NULL
     lst <- lst[!vapply(lst, is.null, logical(1L))]
-    # plan_blanks(where = "records") is a listing's record separator
+    # plan_blanks(where = "records") is a listing's record separator, and
+    # where = "none" takes it away (the multiline type ends each record
+    # with one)
     if (identical(rtf$blank_rows, "records")) {
       lst$blank_row <- TRUE
       rtf$blank_rows <- NULL
+    } else if (identical(rtf$blank_rows, "none")) {
+      lst$blank_row <- FALSE
+      rtf$blank_rows <- NULL
     }
     rtf$listing <- do.call(listing_spec, c(list(cols = cols), lst))
+  } else if (identical(rtf$blank_rows, "none")) {
+    rtf$blank_rows <- NULL
   } else if (identical(rtf$blank_rows, "records")) {
     .ard_stop(paste0(
       "plan_blanks(where = \"records\") separates the records of a listing, ",

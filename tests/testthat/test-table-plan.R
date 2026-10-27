@@ -2102,6 +2102,25 @@ test_that("plan_blanks(where = \"records\") separates a listing's records", {
                           "pages"), "plan_listing")
 })
 
+test_that("plan_blanks(where = \"none\") takes a listing's record separator away", {
+  d <- data.frame(USUBJID = rep(c("S1", "S2"), each = 3), T = rep(1:3, 2), V = 1:6)
+  lst <- function(p) p |> plan_listing(listing_col("USUBJID", width = 8),
+                                       listing_col("T", width = 4), listing_col("V", width = 4))
+  rows <- function(p) {
+    pg <- plan_apply(p)
+    nrow((if (inherits(pg, "rtftable")) pg else pg[[1L]])$data)
+  }
+  # the multiline type: a blank row after each record; none: the records alone
+  expect_gt(rows(lst(table_plan(d))), nrow(d))
+  expect_identical(rows(lst(table_plan(d)) |> plan_blanks(where = "none")), nrow(d))
+  # the same as listing_spec(blank_row = FALSE)
+  spec <- listing_spec(list(listing_col("USUBJID", width = 8), listing_col("T", width = 4),
+                            listing_col("V", width = 4)), blank_row = FALSE)
+  expect_identical(nrow(build_listing(d, spec)), nrow(d))
+  # a table: no blank rows, as before
+  expect_identical(rows(table_plan(d) |> plan_blanks(where = "none")), nrow(d))
+})
+
 test_that("plan_paginate_cols() cuts by a block list or a separator", {
   skip_if_no_cards2()
   p <- disp_plan() |> plan_paginate_rows(max_rows = 40)
