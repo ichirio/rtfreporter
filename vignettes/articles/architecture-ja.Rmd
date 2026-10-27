@@ -59,7 +59,10 @@ rtfreporter/
 ├── R/
 │   ├── pipe-composition.R   # 公開パイプ API: rtf_document/section/tables/figures
 │   ├── blocks.R             # rtf_block / rtf_contents: 文書の内容
+│   ├── content.R            # .rtf_content(): 内容になる物を内容ページの並びにする
 │   ├── layout.R             # rtf_layout(): 内容を印刷ページに割り付ける
+│   ├── flow.R               # page_break = FALSE / first_rows: 共有ページ用に表を切る
+│   ├── render_page.R        # ページの描画: segment を順に; 種類ごとの .render_content()
 │   ├── rtftable.R           # rtftable() S3 オブジェクト + 正規化ヘルパー
 │   ├── rtfplot.R            # rtfplot() S3 オブジェクト
 │   ├── rtfreport.R          # 内部 rtfreport 文書オブジェクト + rtf_header/footer
@@ -138,16 +141,28 @@ rtfplot               1 つの埋め込み図（PNG/JPEG）
 
 ```
 rtf_document()  |>  rtf_section()  |>  rtf_tables() / rtf_figures()
-        │
+        │   .rtf_content()                   （何でも内容ページに。1 ページ 1 ブロック）
+        ▼
+   rtf_document$contents                     （rtf_block: 内容・タイトル・脚注・page_break）
+        │   rtf_layout()                     （ブロック -> 印刷ページ。各ページは segment の並び）
         ▼   .pipe_doc_to_rtfreport()         （アダプタ: パイプ API -> rtfreport）
    rtfreport
         │   .rtfreport_validate()            （既定セクション補完・各種検証）
         ▼
    generate_rtfreport(doc, "out.rtf")        （generate_rtfreport.R のレンダラー）
-        │   .render_rtftable() / .render_rtfplot()
+        │   .render_page_segments()          （各ページ: segment ごとにタイトル・内容・脚注）
+        │   .render_content()                （S3: rtftable と rtfplot のメソッド）
         ▼
    .rtf  テキストファイル
 ```
+
+内容が 1 つのページも複数のページ（`page_break = FALSE`）も、同じコードで描きます。
+segment を順に、それぞれのタイトルと脚注を付け、間に薄い区切りの段落を入れます。
+そのため表は単独のページでも別の表の下でも同じ見た目になり、タイトル・脚注の幅と
+形式は 1 か所で決まります。内容そのものは内部 generic の `.render_content()` が
+描きます。新しい種類の内容はここにメソッドを 1 つ足し（入口は `.rtf_content()`）、
+ページの描画は触りません。ファイル先頭のフォント表・色表は、全ページの全 segment
+から集めます。
 
 レンダラーは `inst/resources/rtf_commands.R` のテンプレートに基づく純粋な
 文字列組み立てです。サイズ・余白の既定値は

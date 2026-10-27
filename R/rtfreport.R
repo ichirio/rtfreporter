@@ -123,7 +123,8 @@
 
 # rtf_page: structured page object stored in rtfreport$pages
 #   title    -- character vector (multi-line, center)
-#   content  -- rtftable | rtfplot | NULL (exactly 1 per page)
+#   content  -- rtftable | rtfplot | NULL (the first segment's; the page's
+#               `segments`, added by .rtfreport_add_page(), hold them all)
 #   footnote -- character vector (multi-line, rendered as left-aligned paragraphs)
 .new_page <- function(title = NULL, content = NULL, footnote = NULL) {
   structure(

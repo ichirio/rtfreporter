@@ -313,6 +313,20 @@ are embedded in the `.rtf` itself, so there is no folder of files to keep
 beside it, which is much of the point of the format for a deliverable that
 gets emailed.
 
+A figure can also go under the table before it, on the same page:
+`page_break = FALSE`. It is drawn exactly as on a page of its own, with its
+title and footnote; nothing is measured, so size it to fit what is left of the
+page (`rtf_layout()` shows how the pages fall).
+
+```{r figure-under-table}
+doc <- rtf_document() |>
+  rtf_tables(list(head(mtcars[, 1:4], 8)),
+             titles = list(c("Table 14.1.1", "Vehicle characteristics"))) |>
+  rtf_figures(p, titles = list(c("Figure 14.2.1", "Mean change by week")),
+              height_twips = 4320L, page_break = FALSE)   # 3 in high
+rtf_layout(doc)
+```
+
 ## Where next
 
 - [Adding content](adding-content.html) --- titles, footnotes and the page model

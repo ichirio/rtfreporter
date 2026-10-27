@@ -1836,14 +1836,14 @@
     cols <- c(cols, .text_block_colors(pg$title,    is_footer = FALSE))
     cols <- c(cols, .text_block_colors(pg$footnote, is_footer = TRUE))
   }
-  # a page of several contents (page_break = FALSE): its later contents'
-  # colours too (they were drawn black) -- last, so a document without such
-  # a page keeps its colour indices
+  # A page's later segments go last, after everything above, for the same
+  # reason as their fonts (.collect_report_fonts()): the table stays the one
+  # it always was unless they add a colour, which is now declared.
   for (pg in report$pages) {
-    for (b in pg$segments[-1L]) {
-      if (inherits(b$content, "rtftable")) cols <- c(cols, .tbl_colors(b$content))
-      cols <- c(cols, .text_block_colors(b$title,    is_footer = FALSE))
-      cols <- c(cols, .text_block_colors(b$footnote, is_footer = TRUE))
+    for (sg in pg$segments[-1L]) {
+      cols <- c(cols, .tbl_colors(sg[["content"]]))
+      cols <- c(cols, .text_block_colors(sg[["title"]],    is_footer = FALSE))
+      cols <- c(cols, .text_block_colors(sg[["footnote"]], is_footer = TRUE))
     }
   }
   cols <- cols[!is.na(cols) & nzchar(cols)]
@@ -2494,6 +2494,15 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     doc$default_format$footnote_width %||% .opt("rtfreporter.footnote_width"),
     "footnote_width")
 
+  # What drawing a page needs of the document, resolved once.
+  page_ctx <- list(
+    doc = doc, writable_w = writable_w, total_pages = total_pages,
+    font_half_points = font_half_points, font_index_map = font_index_map,
+    color_index_map = color_index_map, doc_row_height = doc_row_height,
+    doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r, doc_markup = doc_markup,
+    doc_title_format = doc_title_format, doc_footnote_format = doc_footnote_format,
+    doc_title_width = doc_title_width, doc_footnote_width = doc_footnote_width)
+
   # Resolve sections (sorted, with from_page / to_page assigned).
   resolved_sections <- .resolve_sections(report)
 
@@ -2623,99 +2632,9 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
         emit_section_preamble(p_idx)
       }
 
-      # A page of several segments (rtf_tables(page_break = FALSE)): segment
-      # after segment, R/flow.R.  A page of one takes the code below as ever
-      # (one way to draw both is still to come).
-      if (length(page$segments) > 1L) {
-        lines <- c(lines, .render_flow_blocks(page$segments, p_idx, list(
-          doc = doc, writable_w = writable_w, total_pages = total_pages,
-          font_half_points = font_half_points, font_index_map = font_index_map,
-          color_index_map = color_index_map, doc_row_height = doc_row_height,
-          doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r, doc_markup = doc_markup,
-          doc_title_format = doc_title_format, doc_footnote_format = doc_footnote_format,
-          doc_title_width = doc_title_width, doc_footnote_width = doc_footnote_width)))
-      } else {
-      # -- Content (single rtftable or rtfplot) -----------------------------
-      ct <- page$content
-
-      # Title / footnote render as content-width tables (one row per line),
-      # so they align with the content above/below (see .render_text_block_table).
-      content_w     <- .content_width_twips(ct, writable_w)
-      content_align <- .content_align(ct)
-      # Per-element width (#291): "content" (the default -- follow the body),
-      # "page", a fraction of the writable width, or twips.
-      title_st    <- doc$title_style
-      footnote_st <- doc$footnote_style
-      title_w    <- .resolve_block_width(doc_title_width,    content_w, writable_w)
-      footnote_w <- .resolve_block_width(doc_footnote_width, content_w, writable_w)
-      # Title / footnote inherit the document-wide cell padding and row height.
-      tf_pad_l      <- doc_pad_l
-      tf_pad_r      <- doc_pad_r
-      tf_valign     <- "\\clvertalt"
-
-      # -- Title (default centre + bold; NULL -> one blank gap row) ----------
-      # Default renders as plain paragraphs (full writable width); the legacy
-      # content-width table form is opt-in via title_format = "table".
-      lines <- c(lines, if (identical(doc_title_format, "text")) {
-        .render_text_block_text(page$title, is_footer = FALSE, style = title_st,
-                                font_half_points = font_half_points,
-                                font_index_map = font_index_map,
-                                color_index_map, markup = doc_markup,
-                                pad_l = tf_pad_l, pad_r = tf_pad_r,
-                                current_page = p_idx, total_pages = total_pages)
-      } else {
-        .render_text_block_table(
-          page$title, title_w, is_footer = FALSE, font_half_points,
-          tf_pad_l, tf_pad_r, tf_valign, content_align, color_index_map,
-          doc_row_height = doc_row_height, markup = doc_markup,
-          style = title_st,
-          font_index_map = font_index_map,
-          current_page = p_idx, total_pages = total_pages)
-      })
-      if (!is.null(ct)) {
-        if (inherits(ct, "rtftable")) {
-          lines <- c(lines, .render_rtftable(ct, writable_w, font_half_points,
-                                              font_index_map = font_index_map,
-                                              color_index_map,
-                                              doc_row_height = doc_row_height,
-                                              doc_pad_l = doc_pad_l,
-                                              doc_pad_r = doc_pad_r,
-                                              doc_markup = doc_markup))
-        } else if (inherits(ct, "rtfplot")) {
-          lines <- c(lines, .render_rtfplot(ct, writable_w))
-        }
-      }
-
-      # -- Footnote (default left; first row carries the separator top rule) -
-      # Default keeps the content-width table form (so the separator rule is
-      # drawn); footnote_format = "text" switches to plain paragraphs.
-      lines <- c(lines, if (identical(doc_footnote_format, "text")) {
-        .render_text_block_text(
-          .footnote_rows(page$footnote, footnote_st$align %||% "left", "text"),
-          is_footer = TRUE, style = footnote_st,
-          font_half_points = font_half_points,
-          color_index_map, markup = doc_markup,
-          pad_l = tf_pad_l, pad_r = tf_pad_r,
-          current_page = p_idx, total_pages = total_pages)
-      } else {
-        fn_rtf <- .render_header_footer(
-          .footnote_hf(page$footnote, footnote_st, footnote_w),
-          footnote_w, is_footer = TRUE,
-          current_page = p_idx, total_pages = total_pages,
-          color_index_map = color_index_map,
-          font_half_points = font_half_points,
-          doc_row_height = doc_row_height,
-          doc_pad_l = tf_pad_l, doc_pad_r = tf_pad_r,
-          doc_markup = doc_markup,
-          font_index_map = font_index_map)
-        # An INDEPENDENT table: RTF merges consecutive \trowd runs that no
-        # paragraph separates, so without this the footnote would still be the
-        # body table wearing different \cellx values -- and could not carry a
-        # width of its own.  \fs2 keeps the separating paragraph from adding
-        # visible space, the same trick the page-break code uses.
-        if (length(fn_rtf)) c("{\\pard\\fs2\\par}", fn_rtf) else fn_rtf
-      })
-      }
+      # The page's segments, top to bottom (R/render_page.R): a page of one
+      # and a page of several are drawn the same way.
+      lines <- c(lines, .render_page_segments(.page_segments(page), p_idx, page_ctx))
 
       # End-of-page break.  A table must be terminated before any paragraph-level
       # break or the document close, or strict readers absorb the break into the
