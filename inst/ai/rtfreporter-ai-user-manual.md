@@ -905,6 +905,7 @@ p_ae <- ard_ae |>
 | A subgroup's own n (%) beside its ORR (SEX both a variable and a subgroup layer) | `table_plan(..., rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level"), show_keys = "SEX")` + `plan_stat_groups(n = "N", orr_ci = c(...), .variables = "RESP", .others = "n")` + `plan_cells(SEX = "{n} ({p:.1f%})", ...)` |
 | Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
+| A listing above its summary in one table (a PK concentrations table: a row a subject, then "Summary Statistics") | Two ordinary plans: `listing <- table_plan(adpc, cols = "ATPT", rows = c(subject = ~ "{USUBJID}/{AGE}/{SEX}"), value = "AVAL") \|> plan_cells("{value:.3s}", na = "BLQ")`; `summary <- normalize_ard(ard) \|> table_plan(cols = "ATPT", rows = c(block = ~ "Summary Statistics")) \|> plan_cells(continuous = c(N = "{N:.0f}", Mean = "{mean:.4s}"))`; `listing \|> plan_layer(summary, name, absent)` then the whole table's verbs (`plan_levels(ATPT = )`, `plan_col_header()`, `plan_columns()`, `plan_paginate_rows(page_by = )`, `plan_blanks(where = "between_layers")`) before or after it. A layer carries only its row verbs; a page group a layer lacks stops (`absent = "skip"`). Never reshape the records by hand |
 | A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap, align, record)` |
 | Titles / footnotes | `plan_titles(...)`, `plan_footnotes(...)` (`pages =` for one block per page) |
 | Anything else | `plan_after(function(pages) ...)`: last resort; prefer a verb |
@@ -1121,7 +1122,7 @@ reference of a difference.
 `blank_rows_by_change` `blank_rows_by_rule`
 
 **Tables from a cards / cardx ARD:** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
-`cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens` `plan_n_candidates`
+`cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layer` `plan_layers` `plan_header_tokens` `plan_n_candidates`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
 `plan_hide` `plan_nest` `plan_total` `plan_stat_groups` `plan_compare` `plan_filter` `plan_sort` `plan_empty` `plan_blanks` `plan_paginate_rows`
