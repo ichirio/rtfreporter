@@ -54,10 +54,10 @@ jobs:
           name: validation-report
           path: |
             validation/out/validation-report.pdf
+            validation/out/traceability.xlsx
             validation/out/*.csv
-            validation/out/*.html
+            validation/out/*.txt
             validation/out/summary.md
-            validation/out/session.txt
           if-no-files-found: warn
 
       # A release: the PDF attached to it (a run by hand is not)

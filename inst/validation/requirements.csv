@@ -68,7 +68,7 @@
 "FR-PL120","FR-PL001","PL","data","table_plan() with a frame of records and plan_listing() passes the rows through unnormalised and unspread, as as_rtftables(listing = listing_spec(...)).","table_plan","0.8.0","active",
 "FR-PL121","FR-PL001","PL","data","table_plan(rows = c(soc = , pt = )) with a hierarchical normalized ARD and an overall row makes one row per SOC and PT, the overall row first.","table_plan","0.8.0","active",
 "FR-PL122","FR-PL001","PL","data","table_plan(cols = KEY) with a factor KEY orders the value columns by the factor's levels.","table_plan","0.8.0","active","probe: reversed levels give reversed columns; no test asserts the order"
-"FR-PL123","FR-PL001","PL","data","table_plan() with non-ASCII (Japanese) key values keeps them unchanged as column names and labels.","table_plan","0.8.0","active","probe: works; no test"
+"FR-PL123","FR-PL001","PL","data","table_plan() with non-ASCII (Japanese) values keeps them unchanged as the value columns' names and the row keys' values.","table_plan","0.8.0","active","probe: works; no test"
 "FR-PL124","FR-PL001","PL","data","table_plan() with a frame of zero rows stops at plan_apply(): ""No cell was produced, so there is nothing to widen.""","table_plan","0.8.0","active","message from widen_ard(); widen_ard test exists (test-ard-tables.R) but not through a plan"
 "FR-PL125","FR-PL001","PL","guard","table_plan() without x stops: ""`x` (the data) is required.""","table_plan","0.8.0","active",
 "FR-PL126","FR-PL001","PL","guard","table_plan(<raw cards ARD or a non-data-frame>) stops: ""table_plan() takes the NORMALIZED frame, not a raw ARD""","table_plan","0.8.0","active","non-data-frame case (e.g. a list) is untested"
@@ -91,13 +91,13 @@
 "FR-PL143","FR-PL002","PL","argument","plan_filter(any = FALSE) keeps a row only when every answering column's record passes.","plan_filter","0.8.0","active",
 "FR-PL144","FR-PL002","PL","argument","plan_filter(parents = ""keep""), the default, keeps a parent row (a SOC) exactly when one of its children is kept.","plan_filter","0.8.0","active",
 "FR-PL145","FR-PL002","PL","argument","plan_filter(parents = ""drop"") judges a parent row by its own counts.","plan_filter","0.8.0","active",
-"FR-PL146","FR-PL002","PL","argument","plan_filter(by = KEY) judges the rows that share KEY (and the keys outside it) together.","plan_filter","0.8.0","active",
+"FR-PL146","FR-PL002","PL","argument","plan_filter(by = KEY) makes the rows sharing KEY (and the keys outside it) in a column one record, each statistic read once, so a parameter's rows (n / mean / sd as rows) stay or go together.","plan_filter","0.8.0","active",
 "FR-PL147","FR-PL002","PL","data","plan_filter() with a hierarchical SOC/PT ARD filters PTs and keeps the SOCs they belong to.","plan_filter","0.8.0","active",
 "FR-PL148","FR-PL002","PL","data","plan_filter() that no body row passes leaves only the overall row, which plan_empty() then recognises as empty.","plan_filter","0.8.0","active",
 "FR-PL149","FR-PL002","PL","guard","plan_filter(<no condition, or a named one such as keep = p > 0>) stops: ""plan_filter() takes conditions, unnamed: `plan_filter(p >= 0.05)`.""","plan_filter","0.8.0","active","the no-condition case is untested"
 "FR-PL150","FR-PL002","PL","guard","plan_filter(any = NA) (not one TRUE/FALSE) stops: ""plan_filter(any = ) is TRUE (any column) or FALSE (every column).""","plan_filter","0.8.0","active",
 "FR-PL151","FR-PL002","PL","guard","plan_filter(parents = ""x"") stops: ""'arg' should be one of ""keep"", ""drop""""","plan_filter","0.8.0","active","match.arg"
-"FR-PL152","FR-PL002","PL","guard","plan_filter(by = <not a row key>) stops at plan_apply(): ""plan_filter(by = ""<KEY>""): not a row key.  Row keys: ...""","plan_filter","0.8.0","active",".ard_filter_keep in R/ard_tables.R"
+"FR-PL152","FR-PL002","PL","guard","plan_filter(by = <a name that is no row key's column>) stops at plan_apply(): ""plan_filter(by = \""<name>\""): not a row key."", listing the row keys by their column names.","plan_filter","0.8.0","active",".ard_filter_keep in R/ard_tables.R"
 "FR-PL153","FR-PL002","PL","guard","plan_filter(<not a table_plan>) stops: ""Expected a table_plan; pipe from table_plan(ard).""","plan_filter","0.8.0","active",
 "FR-PL154","FR-PL002","PL","guard","plan_filter() on a finished (wide) table stops at plan_apply(): ""This source has no statistics to read -- ... but table_plan(cols = ) / plan_cells() need them.""","plan_filter","0.8.0","active",
 "FR-PL155","FR-PL003","PL","behaviour","plan_columns(), even empty, makes plan_apply() run to RTF pages rather than stop at the table.","plan_columns","0.8.0","active",".plan_reach"
@@ -142,3 +142,4 @@
 "FR-PL194","FR-PL004","PL","guard","plan_blanks(where = <an unknown string, e.g. ""nope"">) stops at plan_apply(): ""Unrecognised `blank_rows` entry: nope"" with ""declared by: plan_blanks(where = ""nope"")"".","plan_blanks","0.8.0","active","where = ""none"" is not a value: omit where for no blanks; from paginate.R"
 "FR-PL195","FR-PL004","PL","guard","plan_blanks(<not a table_plan>) stops: ""Expected a table_plan; pipe from table_plan(ard).""","plan_blanks","0.8.0","active",
 "FR-PL196","FR-PL004","PL","argument","plan_blanks(where = ""none"") gives a listing's records no blank row between them (listing_spec(blank_row = FALSE)), and a table no blank rows.","plan_blanks","0.8.2","active",
+"FR-PL197","FR-PL001","PL","guard","table_plan() with a long frame (built without cards) of zero rows stops at plan_apply() with a message saying the table has no rows.","table_plan","0.8.2","active","today it stops with R's own 'replacement has 1 row, data has 0'"

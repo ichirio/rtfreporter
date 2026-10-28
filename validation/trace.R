@@ -29,13 +29,17 @@
 #  tests to read, never counted as coverage.
 #
 #  Written to validation/out/:
-#    traceability.csv / .html   one row an FR: its FTs (the mapping alone)
+#    traceability.xlsx / .csv   one row a leaf FR: its tests and where (no results)
 #    ft.csv                     one row an FT: its file, test, FRs
-#    test-results.csv           one row an FT: its result (apart from the matrix)
+#    test-log.txt               testthat's output for these tests (the evidence)
 #    functions.csv              one row a function: FRs by kind, with a test,
 #                               arguments an FR names, arguments a test gives
 #    candidates.csv             blocks calling a function in scope, not mapped
-#    summary.md                 the Development Summary Report (1 page)
+#    summary.md                 the Development Summary Report (1 page): the
+#                               results, the deviations with why they are
+#                               accepted (inst/validation/deviations.csv), the
+#                               conclusion and how to read the attachments
+#  Needs pkgload, testthat and writexl (Suggests).
 #
 #  Run from the package root:  Rscript validation/trace.R
 # ---------------------------------------------------------------------------
@@ -81,12 +85,13 @@ given_args <- function(e, acc = list()) {
 blocks <- function(file) {
   ex <- tryCatch(parse(file, keep.source = TRUE), error = function(e) NULL)
   if (is.null(ex)) return(NULL)
+  sr <- utils::getSrcref(ex)
   rows <- lapply(seq_along(ex), function(i) {
     e <- ex[[i]]
     if (!is.call(e) || !identical(e[[1L]], as.name("test_that"))) return(NULL)
     desc <- tryCatch(as.character(eval(e[[2L]], baseenv())), error = function(err) NA_character_)
     ga <- given_args(e[[3L]])
-    data.frame(file = basename(file), test = desc,
+    data.frame(file = basename(file), test = desc, line = sr[[i]][1L],
                calls = paste(unique(all.names(e[[3L]])), collapse = " "),
                given = paste(unlist(lapply(names(ga), function(n) paste0(n, ":", ga[[n]]))),
                              collapse = " "),
@@ -123,50 +128,42 @@ not_leaf <- intersect(unlist(strsplit(map$fr, " ", fixed = TRUE)), fr$id[!leaf])
 if (length(not_leaf)) stop("Tests are mapped to the leaves only, not to ",
                            paste(not_leaf, collapse = ", "), call. = FALSE)
 
-# ---- the matrix: FR -> FT, the mapping alone ----------------------------------------
+# ---- the matrix: one row a leaf FR, its tests (no results) --------------------------
 fts <- function(id) map$ft[vapply(strsplit(map$fr, " ", fixed = TRUE), function(x) id %in% x, NA)]
+where_of <- function(f) {
+  i <- match(paste(map$file[map$ft %in% f], map$test[map$ft %in% f]), paste(tb$file, tb$test))
+  paste(sprintf("%s:%s", tb$file[i], tb$line[i]), collapse = " ")
+}
 tr <- data.frame(fr = fr$id, parent = fr$parent, kind = fr$kind, statement = fr$statement,
                  functions = fr$functions,
                  ft = vapply(fr$id, function(id) paste(fts(id), collapse = " "), ""),
                  n_ft = vapply(fr$id, function(id) length(fts(id)), 0L),
                  stringsAsFactors = FALSE, row.names = NULL)
-# coverage: a leaf with a test is covered; a parent by its leaves
 tr$coverage <- vapply(fr$id, function(id) {
   lv <- leaves_of(id)
   n <- sum(tr$n_ft[match(lv, tr$fr)] > 0L)
   if (n == length(lv)) "covered" else if (n > 0L) "partial" else "none"
 }, "")
-utils::write.csv(tr, file.path(out, "traceability.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+tm <- data.frame(`FR ID` = tr$fr, parent = tr$parent, `function` = tr$functions, type = tr$kind,
+                 requirement = tr$statement, `FT ID(s)` = tr$ft,
+                 `test file:line` = vapply(tr$fr, function(id) where_of(fts(id)), ""),
+                 status = tr$coverage, check.names = FALSE, stringsAsFactors = FALSE)
+tm <- tm[leaf, , drop = FALSE]
+utils::write.csv(tm, file.path(out, "traceability.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+writexl::write_xlsx(list(`FR to FT` = tm,
+                         `upper FRs` = data.frame(`FR ID` = tr$fr[!leaf], parent = tr$parent[!leaf],
+                                                  requirement = tr$statement[!leaf],
+                                                  status = tr$coverage[!leaf], check.names = FALSE)),
+                    file.path(out, "traceability.xlsx"))
 utils::write.csv(map[c("ft", "file", "test", "fr")], file.path(out, "ft.csv"), row.names = FALSE,
                  fileEncoding = "UTF-8")
-esc <- function(x) gsub("<", "&lt;", gsub("&", "&amp;", x, fixed = TRUE), fixed = TRUE)
-# the matrix as a tree: each parent a <details> that folds its children
-node <- function(id) {
-  r <- tr[tr$fr == id, ]
-  kids <- tr$fr[tr$parent == id]
-  label <- sprintf("<b>%s</b> %s <span class='%s'>[%s]</span>%s", r$fr, esc(r$statement),
-                   r$coverage, r$coverage,
-                   if (length(kids)) "" else sprintf(" <i>%s</i> &rarr; %s", r$kind,
-                                                       if (nzchar(r$ft)) esc(r$ft) else "<b>no test</b>"))
-  if (!length(kids)) return(sprintf("<li>%s</li>", label))
-  c(sprintf("<li><details open><summary>%s</summary><ul>", label),
-    unlist(lapply(kids, node)), "</ul></details></li>")
-}
-roots <- tr$fr[!nzchar(tr$parent) | !tr$parent %in% tr$fr]
-writeLines(c(
-  "<!doctype html><meta charset='utf-8'><title>Traceability matrix</title>",
-  "<style>body{font-family:sans-serif;font-size:13px}ul{list-style:none;padding-left:1.2em}.covered{color:#070}.partial{color:#a60}.none{color:#b00}</style>",
-  sprintf("<h1>rtfreporter %s: FR &rarr; FT</h1>", utils::packageVersion("rtfreporter")),
-  "<p>Each parent folds; a parent is covered when every leaf under it has a test.</p>",
-  "<ul>", unlist(lapply(roots, node)), "</ul>"), file.path(out, "traceability.html"),
-  useBytes = TRUE)
 
 # ---- candidates: blocks calling a function in scope, not mapped (a help) --------------
 cand <- tb[!paste(tb$file, tb$test) %in% paste(map$file, map$test), , drop = FALSE]
 cand$functions <- vapply(strsplit(cand$calls, " ", fixed = TRUE), function(cl) {
   paste(intersect(scope, cl), collapse = " ")
 }, "")
-cand <- cand[nzchar(cand$functions), c("file", "test", "functions"), drop = FALSE]
+cand <- cand[nzchar(cand$functions), c("file", "line", "test", "functions"), drop = FALSE]
 utils::write.csv(cand, file.path(out, "candidates.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 
 # ---- per function: FRs by kind, with a test; arguments an FR names, a test gives ---------
@@ -186,8 +183,7 @@ fn_rows <- lapply(scope, function(f) {
   cnt <- vapply(kinds, function(k) sum(mine & fr$kind == k), 0L)
   data.frame(`function` = f, behaviour = cnt[["behaviour"]], argument = cnt[["argument"]],
              data = cnt[["data"]], guard = cnt[["guard"]], interaction = cnt[["interaction"]],
-             frs = sum(mine),
-             frs_tested = sum(mine & tr$n_ft > 0L), arguments = length(formals_),
+             frs = sum(mine), frs_tested = sum(mine & tr$n_ft > 0L), arguments = length(formals_),
              arguments_in_fr = length(named_in_fr), arguments_in_tests = length(given_in_test),
              arguments_in_no_fr = paste(setdiff(formals_, named_in_fr), collapse = " "),
              check.names = FALSE, stringsAsFactors = FALSE)
@@ -195,80 +191,120 @@ fn_rows <- lapply(scope, function(f) {
 fn_tab <- do.call(rbind, fn_rows)
 utils::write.csv(fn_tab, file.path(out, "functions.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 
-# ---- the tests' results: apart from the matrix -----------------------------------------
+# ---- the tests, run: their log is the evidence; FT results stay inside ----------------
 run_files <- unique(map$file)
-res <- do.call(rbind, lapply(run_files, function(f) {
-  r <- testthat::test_file(file.path(root, "tests", "testthat", f),
-                           reporter = testthat::ListReporter$new(), package = "rtfreporter")
-  d <- as.data.frame(r)
-  data.frame(file = f, test = d$test,
-             result = ifelse(d$error | d$failed > 0, "fail", ifelse(d$skipped, "skip", "pass")),
-             stringsAsFactors = FALSE)
-}))
+lst <- testthat::ListReporter$new()
+log <- utils::capture.output(
+  testthat::test_dir(file.path(root, "tests", "testthat"),
+                     filter = paste0("^(", paste(gsub("^test-|[.]R$", "", run_files), collapse = "|"), ")$"),
+                     reporter = testthat::MultiReporter$new(list(
+                       lst, testthat::ProgressReporter$new(show_praise = FALSE))),
+                     load_package = "none", stop_on_failure = FALSE),
+  type = "output")
+writeLines(log, file.path(out, "test-log.txt"), useBytes = TRUE)
+d <- as.data.frame(lst$get_results())
+res <- data.frame(file = d$file, test = d$test,
+                  result = ifelse(d$error | d$failed > 0, "fail", ifelse(d$skipped, "skip", "pass")),
+                  stringsAsFactors = FALSE)
 res <- res[!duplicated(paste(res$file, res$test)), , drop = FALSE]
 result <- res$result[match(paste(map$file, map$test), paste(res$file, res$test))]
 result[is.na(result)] <- "not run"
-utils::write.csv(data.frame(ft = map$ft, file = map$file, test = map$test, result = result),
-                 file.path(out, "test-results.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 fr_ok <- vapply(fr$id[leaf], function(id) {
   r <- result[map$ft %in% fts(id)]
   length(r) > 0L && !any(r %in% c("fail", "not run"))
 }, NA)
 
-# ---- the Development Summary Report: one page ---------------------------------------------
-tl <- tr[leaf, , drop = FALSE]   # (the counts are of the leaves)
+# ---- the deviations: the leaves with no test, and why they are accepted -----------------
+# inst/validation/deviations.csv, written by a person: one row a group of FRs
+# accepted for one reason (ids space-separated), its risk (high / medium /
+# low) and the basis of that, the reason it is accepted, the action
+dev <- utils::read.csv(file.path(vdir, "deviations.csv"), colClasses = "character",
+                       na.strings = "", stringsAsFactors = FALSE)
+tl <- tr[leaf, , drop = FALSE]
+untested <- tl$fr[tl$n_ft == 0L]
+dev_ids <- strsplit(dev$ids, " ", fixed = TRUE)
+dev <- dev[vapply(dev_ids, function(x) any(x %in% untested), NA), , drop = FALSE]
+dev_ids <- strsplit(dev$ids, " ", fixed = TRUE)
+unassessed <- setdiff(untested, unlist(dev_ids))
+not_accepted <- dev[dev$risk == "high" & (is.na(dev$reason) | !nzchar(dev$reason)), , drop = FALSE]
+failing <- tl$fr[tl$n_ft > 0L & !fr_ok]
+
+# ---- the environments (from the CI validation report, when there) --------------------
+envs <- if (file.exists(file.path(out, "environments.rds"))) readRDS(file.path(out, "environments.rds"))
+local_runs <- if (file.exists(file.path(out, "local-runs.csv"))) {
+  utils::read.csv(file.path(out, "local-runs.csv"), colClasses = "character")
+}
+env_ok <- !is.null(envs) && nrow(envs) && all(envs$result == "success")
+
+# ---- the Development Summary Report: one page -----------------------------------------
 pct <- function(a, b) if (b) sprintf("%d of %d (%.0f%%)", a, b, 100 * a / b) else "0 of 0"
+pass_line <- grep("\\[ FAIL [0-9]+ \\| WARN [0-9]+ \\| SKIP [0-9]+ \\| PASS [0-9]+ \\]", log,
+                  value = TRUE)
+pass_line <- if (length(pass_line)) trimws(pass_line[length(pass_line)]) else "(no summary line)"
+ready <- !length(failing) && !length(unassessed) && !nrow(not_accepted)
+dev_lines <- if (!nrow(dev) && !length(unassessed)) "None." else c(
+  "| FR | Content | Risk | Why accepted | Action |", "|---|---|---|---|---|",
+  sprintf("| %s | %s | %s: %s | %s | %s |", gsub(" ", ", ", dev$ids), dev$item, dev$risk,
+          dev$risk_basis, ifelse(is.na(dev$reason), "**not accepted: no reason**", dev$reason),
+          ifelse(is.na(dev$action), "", dev$action)),
+  if (length(unassessed)) sprintf("| %s | not yet assessed | -- | **not accepted** | assess |",
+                                  paste(unassessed, collapse = ", ")))
 sm <- c(
-  sprintf("# rtfreporter %s: Development Summary Report (scope: %s)",
-          utils::packageVersion("rtfreporter"), paste(scope, collapse = ", ")),
+  sprintf("# rtfreporter %s: Development Summary Report", utils::packageVersion("rtfreporter")),
   "",
-  sprintf("Date: %s. Commit: %s.", format(Sys.Date()),
+  sprintf("Date: %s. Commit: %s. Scope: %s.", format(Sys.Date()),
           tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
-                   error = function(e) "unknown")),
-  sprintf("Environment: %s; %s.", R.version.string, utils::sessionInfo()$running),
-  "",
-  "## Scope",
-  sprintf("%d functional requirements (leaves) of %d functions (inst/validation/requirements.csv): %s.",
-          nrow(tl), length(scope), paste(sprintf("%d %s", vapply(kinds, function(k) sum(tl$kind == k), 0L),
-                                                 kinds), collapse = ", ")),
+                   error = function(e) "unknown"), paste(scope, collapse = ", ")),
   "",
   "## Results",
   "",
   "| Measure | Value |", "|---|---|",
-  sprintf("| Requirements with a test (a person mapped it) | %s |", pct(sum(tl$n_ft > 0), nrow(tl))),
+  sprintf("| Requirements (leaves) with a test, mapped by a person | %s |", pct(sum(tl$n_ft > 0), nrow(tl))),
   sprintf("| Guard requirements (unintended use stopped) with a test | %s |",
           pct(sum(tl$n_ft > 0 & tl$kind == "guard"), sum(tl$kind == "guard"))),
   sprintf("| Interaction requirements (across functions) with a test | %s |",
           pct(sum(tl$n_ft > 0 & tl$kind == "interaction"), sum(tl$kind == "interaction"))),
-  sprintf("| Functional tests | %d: %d pass, %d fail, %d skip |", nrow(map),
-          sum(result == "pass"), sum(result == "fail"), sum(result == "skip")),
   sprintf("| Requirements whose tests all pass | %s |", pct(sum(fr_ok), nrow(tl))),
-  sprintf("| Arguments a requirement names (functions with their own requirements) | %s |", pct(sum(fn_tab$arguments_in_fr), sum(fn_tab$arguments))),
-  sprintf("| Arguments a test gives (an aid, not coverage) | %s |",
-          pct(sum(fn_tab$arguments_in_tests), sum(fn_tab$arguments))),
-  "",
-  sprintf("Upper requirements: %s.", paste(sprintf("%s %s", tr$fr[!leaf], tr$coverage[!leaf]),
-                                            collapse = "; ")),
-  "",
-  "",
-  "By function (behaviour / argument / data / guard / interaction; tested):",
-  "",
-  "| Function | B | A | D | G | I | Tested |", "|---|---|---|---|---|---|---|",
-  sprintf("| %s | %d | %d | %d | %d | %d | %d of %d |", fn_tab[["function"]], fn_tab$behaviour,
-          fn_tab$argument, fn_tab$data, fn_tab$guard, fn_tab$interaction, fn_tab$frs_tested,
-          fn_tab$frs),
-  "",
-  "A failing test fails the pull request's checks (CI), so it cannot be merged.",
+  sprintf("| The tests run (test-log.txt) | %s |", pass_line),
+  sprintf("| Arguments a requirement names (functions with their own requirements) | %s |",
+          pct(sum(fn_tab$arguments_in_fr), sum(fn_tab$arguments))),
+  sprintf("| Upper requirements | %s |", paste(sprintf("%s %s", tr$fr[!leaf], tr$coverage[!leaf]),
+                                                collapse = "; ")),
   "",
   "## Deviations",
-  if (any(tl$n_ft == 0)) sprintf("- %s (%s): no test", tl$fr[tl$n_ft == 0], tl$kind[tl$n_ft == 0]) else "None.",
-  if (any(tl$n_ft > 0 & !fr_ok)) sprintf("- %s: a test fails", tl$fr[tl$n_ft > 0 & !fr_ok]),
+  "",
+  "The requirements with no test, grouped by the reason they are accepted. A high risk with no reason is not accepted.",
+  "",
+  dev_lines,
+  if (length(failing)) c("", sprintf("Failing: %s.", paste(failing, collapse = ", "))),
   "",
   "## Conclusion",
-  if (all(fr_ok)) {
-    "Every requirement in scope has tests, and they pass."
-  } else "Not every requirement in scope is met by passing tests: see the deviations.",
   "",
-  "Attachments: traceability.csv / .html (FR -> FT), ft.csv, test-results.csv, functions.csv, candidates.csv (blocks to read, not counted).")
+  "What assures the quality, in order:",
+  "",
+  sprintf("1. **Environments.** %s",
+          if (env_ok) sprintf("The same tests pass on every CI environment of this commit (%d: %s)%s.",
+                              nrow(envs), paste(envs$environment, collapse = ", "),
+                              if (!is.null(local_runs)) sprintf(" and on %d local runs", nrow(local_runs)) else "")
+          else "The CI validation report (attached) shows the tests on every environment of the release's commit."),
+  sprintf("2. **Tests.** Every requirement mapped to a test has its tests pass (%s); the requirements with no test are the deviations above, each accepted for a stated reason.",
+          pct(sum(fr_ok), sum(tl$n_ft > 0))),
+  "3. **Process.** Every change is an issue and a pull request, reviewed, with every CI workflow required: a failing test fails the checks and the change cannot be merged (CONTRIBUTING.md, Quality assurance).",
+  "4. **Other measures.** Line coverage and the arguments the tests give are aids, not evidence of a requirement met.",
+  "",
+  if (ready) {
+    "Taken together, the package is **validation-ready**: it can be audited against these records. (No third-party audit has been made.)"
+  } else {
+    "**Not validation-ready**: a test fails, or a deviation is not yet assessed or not accepted (above)."
+  },
+  "",
+  "## Attachments, and how to read them",
+  "",
+  "- **traceability.xlsx / .csv**: one row a requirement (a leaf): its parent, function, type, the tests that check it and where they are (file:line), and its status. Read it by requirement; a blank FT is a deviation.",
+  "- **ft.csv**: one row a test: its file, name and the requirements it checks. Read it by test.",
+  "- **test-log.txt**: testthat's own output for these tests, ending in `[ FAIL | WARN | SKIP | PASS ]`. The evidence that they pass.",
+  "- **functions.csv**: per function, its requirements by type, how many have a test, and its arguments a requirement names. Read it to see a function's depth.",
+  "- **candidates.csv**: tests that call a function in scope but are not mapped: what to read next. Not counted.",
+  "- **The CI validation report (PDF)**: the environments (OS, R, the result and tests on each), sessionInfo and the package versions, R CMD check, line coverage and the tests that run each exported function. Read it for where and with what the tests ran.")
 writeLines(sm, file.path(out, "summary.md"), useBytes = TRUE)
-cat(sprintf("FR %d, FT %d, written to %s\n", nrow(tl), nrow(map), out))
+cat(sprintf("FR %d, FT %d, ready %s, written to %s\n", nrow(tl), nrow(map), ready, out))

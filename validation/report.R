@@ -33,9 +33,15 @@ if (!identical(Sys.getenv("RTFREPORTER_VAL_CHECK"), "false")) {
 
 # ---- the tests' results -------------------------------------------------------------
 step("tests")
-res <- testthat::test_local(root, reporter = testthat::ListReporter$new(),
-                            stop_on_failure = FALSE, load_package = "source")
-d <- as.data.frame(res)
+# testthat's own output is the attachment (it ends in [ FAIL | WARN | SKIP | PASS ])
+lst <- testthat::ListReporter$new()
+log <- utils::capture.output(
+  testthat::test_local(root, reporter = testthat::MultiReporter$new(list(
+    lst, testthat::ProgressReporter$new(show_praise = FALSE))),
+    stop_on_failure = FALSE, load_package = "source"),
+  type = "output")
+writeLines(log, file.path(out, "test-log-all.txt"), useBytes = TRUE)
+d <- as.data.frame(lst$get_results())
 tests <- data.frame(file = d$file, test = d$test, expectations = d$nb, failed = d$failed,
                     skipped = d$skipped, error = d$error, seconds = d$real,
                     stringsAsFactors = FALSE)
@@ -65,10 +71,6 @@ fn_tests <- if (!is.null(tr)) {
 } else NULL
 saveRDS(list(total = covr::percent_coverage(cov), files = files, fn_tests = fn_tests,
              exports = exports), file.path(out, "coverage.rds"))
-
-# ---- the FR -> FT matrix ----------------------------------------------------------
-step("FR -> FT")
-sys.source(file.path(root, "validation", "trace.R"), envir = new.env())
 
 # ---- R-CMD-check on every CI environment, for this commit ----------------------------
 # Not run again: the R-CMD-check workflow's run for this commit, read with gh
@@ -110,8 +112,18 @@ if (nzchar(local_csv) && file.exists(local_csv)) {
   file.copy(local_csv, file.path(out, "local-runs.csv"), overwrite = TRUE)
 }
 
-# ---- the environment, and the report ----------------------------------------------
+# ---- the FR -> FT matrix and the summary (after the environments: it cites them) --
+step("FR -> FT")
+sys.source(file.path(root, "validation", "trace.R"), envir = new.env())
+
+# ---- the environment: sessionInfo and the versions of every dependency -------------
 writeLines(utils::capture.output(utils::sessionInfo()), file.path(out, "session.txt"))
+desc <- read.dcf(file.path(root, "DESCRIPTION"), fields = c("Imports", "Suggests"))
+deps <- trimws(sub("[(].*$", "", unlist(strsplit(paste(stats::na.omit(desc), collapse = ","), ","))))
+deps <- sort(unique(deps[nzchar(deps)]))
+utils::write.csv(data.frame(package = deps, version = vapply(deps, function(p) {
+  tryCatch(as.character(utils::packageVersion(p)), error = function(e) "not installed")
+}, "")), file.path(out, "packages.csv"), row.names = FALSE)
 step("report")
 fmt <- if (identical(Sys.getenv("RTFREPORTER_VAL_FORMAT"), "html")) {
   rmarkdown::html_document(toc = TRUE)
