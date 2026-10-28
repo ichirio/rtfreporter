@@ -88,7 +88,7 @@
 "FR-PL157","FR-PL003","PL","argument","plan_columns(widths = <unnamed>) is col_rel_width, one a printed column in order (hidden and page_by keys not counted).","plan_columns","0.8.0","active",
 "FR-PL158","FR-PL003","PL","argument","plan_columns(widths = <unnamed and shorter than the printed columns>) repeats its last value.","plan_columns","0.8.0","active",
 "FR-PL159","FR-PL003","PL","argument","plan_columns(widths = c(col = w, .values = w)) sets widths by column name, .values covering every value column.","plan_columns","0.8.0","active",
-"FR-PL160","FR-PL003","PL","behaviour","plan_columns(widths = <named>) ignores names that are not printed columns.","plan_columns","0.8.0","active","probe: extra name nope = 9 ignored silently"
+"FR-PL160","FR-PL003","PL","guard","plan_columns(widths = <named>) naming no column of the table stops at plan_apply(): ""plan_columns(widths = ) names '<name>', not a column of the table."" with the printed columns; a hidden column's width is allowed.","plan_columns","0.8.0","active",
 "FR-PL161","FR-PL003","PL","argument","plan_columns(decimal = "".values"") aligns every value column at the decimal point, as set_decimal_split() on those columns.","plan_columns","0.8.0","active",
 "FR-PL162","FR-PL003","PL","argument","plan_columns(decimal = c(<column names>)) aligns the named columns, following them by name.","plan_columns","0.8.0","active",
 "FR-PL163","FR-PL003","PL","behaviour","plan_columns(decimal = <name not on the page>) ignores that name.","plan_columns","0.8.0","active","probe: decimal = nope runs without a message"
@@ -100,7 +100,7 @@
 "FR-PL169","FR-PL003","PL","argument","plan_columns() without sep joins column keys with ""____"" (e.g. Placebo____n).","plan_columns","0.8.0","active",
 "FR-PL170","FR-PL003","PL","argument","plan_columns(cell_format = f or list(NULL, NULL, f)) passes as_rtftables(cell_format = ), same pages and RTF as the direct call.","plan_columns","0.8.0","active",
 "FR-PL171","FR-PL003","PL","argument","plan_columns(column_widths_twips = w) passes rtftable(column_widths_twips = w), same pages and RTF as the direct call.","plan_columns","0.8.0","active",
-"FR-PL172","FR-PL003","PL","argument","plan_columns(widths = , column_widths_twips = ) together: the twips fix the widths and widths is not used, as in rtftable().","plan_columns","0.8.0","active","probe: both col_rel_width and column_widths_twips are set on the page"
+"FR-PL172","FR-PL003","PL","guard","plan_columns(widths = , column_widths_twips = ) in one call stops: ""plan_columns(): `widths` and `column_widths_twips` both set the columns' widths.""","plan_columns","0.8.0","active",
 "FR-PL173","FR-PL003","PL","behaviour","plan_columns() not called: no cell_format / column_widths_twips argument reaches as_rtftables().","plan_columns","0.8.0","active",
 "FR-PL174","FR-PL003","PL","data","plan_columns() on a finished (wide) table applies its settings to that table's pages.","plan_columns","0.8.0","active",
 "FR-PL175","FR-PL003","PL","data","plan_columns(widths / decimal / row_title by name) matches non-ASCII (Japanese) column names.","plan_columns","0.8.0","active",
@@ -130,7 +130,7 @@
 "FR-IX003","FR-IX000","IX","group","Combinations that once had a bug stay fixed.",,"0.8.0","active",
 "FR-IX004","FR-IX000","IX","group","Scenarios: data to RTF, the file compared byte for byte.",,"0.8.0","active",
 "FR-IX101","FR-IX001","IX","interaction","as_rtftables(column_widths_twips = , auto_width = TRUE): the explicit twips win over the automatic widths.","as_rtftables","0.8.0","active",
-"FR-IX102","FR-IX001","IX","interaction","plan_columns(widths = ) with column_widths_twips: the absolute twips win, the relative widths are not applied.","plan_columns","0.8.0","active","both are set on the page today; no test"
+"FR-IX102","FR-IX001","IX","interaction","plan_columns(widths = ) and plan_columns(column_widths_twips = ) in two calls stop at plan_apply(), asking for one of them.","plan_columns","0.8.0","active",
 "FR-IX103","FR-IX001","IX","interaction","rtf_tables() with several contents on a page: the page's section is the first content's with one; a later different one warns and adds no page.","rtf_tables;rtf_layout","0.8.0","active",
 "FR-IX104","FR-IX001","IX","interaction","rtf_tables() with several contents on a page: each title takes its own table's page values; the header and footer take the first table's, a later different value warns.","rtf_tables;as_rtftables","0.8.0","active",
 "FR-IX111","FR-IX002","IX","interaction","{AUTO_PAGE} in a source file stays a dynamic field after assemble_rtf(), so the assembled document numbers its own pages.","assemble_rtf","0.8.0","active",
