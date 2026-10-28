@@ -230,18 +230,29 @@ not_accepted <- dev[dev$risk == "high" & (is.na(dev$reason) | !nzchar(dev$reason
 failing <- tl$fr[tl$n_ft > 0L & !fr_ok]
 
 # ---- the environments (from the CI validation report, when there) --------------------
+# (validation/report.R gathers them: every CI job's and the local runs')
 envs <- if (file.exists(file.path(out, "environments.rds"))) readRDS(file.path(out, "environments.rds"))
-local_runs <- if (file.exists(file.path(out, "local-runs.csv"))) {
-  utils::read.csv(file.path(out, "local-runs.csv"), colClasses = "character")
+env_pass <- function(e) {
+  grepl("[ FAIL 0 |", e$tests, fixed = TRUE) & (is.na(e$check) | e$check %in% c("", "success"))
 }
-env_ok <- !is.null(envs) && nrow(envs) && all(envs$result == "success")
+env_ok <- !is.null(envs) && nrow(envs) > 0L && all(env_pass(envs))
+env_lines <- if (is.null(envs) || !nrow(envs)) {
+  "No environment's record was gathered (this summary was made outside the release's CI run)."
+} else c(
+  "| Environment | CI / local | OS | R | Main dependencies | R CMD check | Tests |",
+  "|---|---|---|---|---|---|---|",
+  sprintf("| %s | %s | %s | %s | %s | %s | %s |", envs$environment, envs$source, envs$os,
+          sub("^R version ", "", envs$r), envs$main_deps,
+          ifelse(is.na(envs$check) | !nzchar(envs$check), "--", envs$check),
+          ifelse(is.na(envs$tests), "no log", gsub("|", "/", envs$tests, fixed = TRUE))))
 
 # ---- the Development Summary Report: one page -----------------------------------------
 pct <- function(a, b) if (b) sprintf("%d of %d (%.0f%%)", a, b, 100 * a / b) else "0 of 0"
 pass_line <- grep("\\[ FAIL [0-9]+ \\| WARN [0-9]+ \\| SKIP [0-9]+ \\| PASS [0-9]+ \\]", log,
                   value = TRUE)
 pass_line <- if (length(pass_line)) trimws(pass_line[length(pass_line)]) else "(no summary line)"
-ready <- !length(failing) && !length(unassessed) && !nrow(not_accepted)
+ready <- !length(failing) && !length(unassessed) && !nrow(not_accepted) &&
+  (is.null(envs) || !nrow(envs) || env_ok)
 dev_lines <- if (!nrow(dev) && !length(unassessed)) "None." else c(
   "| FR | Content | Risk | Why accepted | Action |", "|---|---|---|---|---|",
   sprintf("| %s | %s | %s: %s | %s | %s |", gsub(" ", ", ", dev$ids), dev$item, dev$risk,
@@ -271,6 +282,12 @@ sm <- c(
   sprintf("| Upper requirements | %s |", paste(sprintf("%s %s", tr$fr[!leaf], tr$coverage[!leaf]),
                                                 collapse = "; ")),
   "",
+  "## Environments",
+  "",
+  "The same tests, on every environment of this release (CI's jobs and the maintainers' local runs):",
+  "",
+  env_lines,
+  "",
   "## Deviations",
   "",
   "The requirements with no test, grouped by the reason they are accepted. A high risk with no reason is not accepted.",
@@ -283,10 +300,12 @@ sm <- c(
   "What assures the quality, in order:",
   "",
   sprintf("1. **Environments.** %s",
-          if (env_ok) sprintf("The same tests pass on every CI environment of this commit (%d: %s)%s.",
-                              nrow(envs), paste(envs$environment, collapse = ", "),
-                              if (!is.null(local_runs)) sprintf(" and on %d local runs", nrow(local_runs)) else "")
-          else "The CI validation report (attached) shows the tests on every environment of the release's commit."),
+          if (env_ok) {
+            sprintf("The same tests pass on every environment above (%d: %d in CI, where R CMD check succeeds too, and %d local); environments.txt holds each one's sessionInfo and tests' log.",
+                    nrow(envs), sum(envs$source == "ci"), sum(envs$source != "ci"))
+          } else if (is.null(envs) || !nrow(envs)) {
+            "No environment was gathered here; the release's CI run gathers every one (Environments)."
+          } else "**Not every environment passes**: see Environments."),
   sprintf("2. **Tests.** Every requirement mapped to a test has its tests pass (%s); the requirements with no test are the deviations above, each accepted for a stated reason.",
           pct(sum(fr_ok), sum(tl$n_ft > 0))),
   "3. **Process.** Every change is an issue and a pull request, reviewed, with every CI workflow required: a failing test fails the checks and the change cannot be merged (CONTRIBUTING.md, Quality assurance).",
@@ -305,6 +324,7 @@ sm <- c(
   "- **test-log.txt**: testthat's own output for these tests, ending in `[ FAIL | WARN | SKIP | PASS ]`. The evidence that they pass.",
   "- **functions.csv**: per function, its requirements by type, how many have a test, and its arguments a requirement names. Read it to see a function's depth.",
   "- **candidates.csv**: tests that call a function in scope but are not mapped: what to read next. Not counted.",
-  "- **The CI validation report (PDF)**: the environments (OS, R, the result and tests on each), sessionInfo and the package versions, R CMD check, line coverage and the tests that run each exported function. Read it for where and with what the tests ran.")
+  "- **environments.txt**: each environment of the table above, its full sessionInfo (every package's version) and testthat's log. Read it for with what, exactly, the tests ran.",
+  "- **Line coverage** (in the PDF): the share of the code the tests run, by file. An aid, not evidence of a requirement met.")
 writeLines(sm, file.path(out, "summary.md"), useBytes = TRUE)
 cat(sprintf("FR %d, FT %d, ready %s, written to %s\n", nrow(tl), nrow(map), ready, out))

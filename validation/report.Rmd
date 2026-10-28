@@ -1,5 +1,5 @@
 ---
-title: "rtfreporter: Development Summary Report and its attachments"
+title: "rtfreporter: Development Summary Report"
 params:
   out: "out"
 output: pdf_document
@@ -8,19 +8,12 @@ output: pdf_document
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 out <- params$out
-rd <- function(f) if (file.exists(file.path(out, f))) readRDS(file.path(out, f))
-csv <- function(f) if (file.exists(file.path(out, f))) {
-  utils::read.csv(file.path(out, f), colClasses = "character", check.names = FALSE,
-                  stringsAsFactors = FALSE)
-}
-chk <- rd("check.rds")
-cov <- rd("coverage.rds")
-envs <- rd("environments.rds")
-local_runs <- csv("local-runs.csv")
+cov <- if (file.exists(file.path(out, "coverage.rds"))) readRDS(file.path(out, "coverage.rds"))
 ```
 
 ```{r summary, results = "asis"}
-# page one: the Development Summary Report, as validation/trace.R wrote it
+# the Development Summary Report, as validation/trace.R wrote it (the
+# environments' table included)
 sm <- readLines(file.path(out, "summary.md"), encoding = "UTF-8")
 cat(sm[-1L], sep = "\n")
 gh <- Sys.getenv(c("GITHUB_SERVER_URL", "GITHUB_REPOSITORY", "GITHUB_RUN_ID"))
@@ -32,74 +25,23 @@ if (all(nzchar(gh))) {
 
 \newpage
 
-# The CI validation report
+# Attachments
 
-What the tests ran on and with: every CI environment of this commit, the
-package versions, R CMD check, the tests' log, line coverage and the tests that
-run each exported function.
+## Line coverage by file (an aid)
 
-## A. R-CMD-check of this commit, every CI environment
-
-```{r attach-a, results = "asis"}
-if (is.null(envs) || !nrow(envs)) {
-  cat("No R-CMD-check run was found for this commit (the report was made outside CI).")
+```{r coverage, results = "asis"}
+if (is.null(cov)) {
+  cat("Not measured in this run.")
 } else {
-  print(knitr::kable(data.frame(Environment = envs$environment, Result = envs$result,
-                                Tests = envs$tests, Run = sprintf("<%s>", envs$url)),
-                     row.names = FALSE))
-}
-if (!is.null(local_runs)) {
-  cat("\n\nLocal runs (by hand):\n\n")
-  print(knitr::kable(local_runs, row.names = FALSE))
+  cat(sprintf("Total: %.1f%% of the package's lines run under the tests.\n\n", cov$total))
+  print(knitr::kable(cov$files[order(cov$files$file), ],
+                     col.names = c("File", "Lines", "Covered", "%"), row.names = FALSE))
 }
 ```
 
-## B. This run's environment and package versions
+## Every environment's sessionInfo and tests' log
 
-```{r attach-b, comment = ""}
-if (file.exists(file.path(out, "session.txt"))) cat(readLines(file.path(out, "session.txt")), sep = "\n")
-```
-
-```{r attach-b2}
-p <- csv("packages.csv")
-if (!is.null(p)) knitr::kable(p, col.names = c("Package", "Version"), row.names = FALSE)
-```
-
-## C. R CMD check
-
-```{r attach-c, results = "asis"}
-if (is.null(chk)) cat("Not run.") else {
-  cat(sprintf("Status %s; %d errors, %d warnings, %d notes.\n\n", chk$status,
-              length(chk$errors), length(chk$warnings), length(chk$notes)))
-  for (x in c(chk$errors, chk$warnings, chk$notes)) cat("```\n", x, "\n```\n\n")
-}
-```
-
-## D. The tests' log (testthat)
-
-The whole suite's output is `test-log-all.txt`; its last lines:
-
-```{r attach-d, comment = ""}
-f <- file.path(out, "test-log-all.txt")
-if (file.exists(f)) cat(utils::tail(readLines(f), 12), sep = "\n")
-```
-
-## E. Line coverage by file
-
-```{r attach-e}
-if (!is.null(cov)) knitr::kable(cov$files[order(cov$files$file), ],
-                                col.names = c("File", "Lines", "Covered", "%"), row.names = FALSE)
-```
-
-## F. Exported functions and the tests that run them
-
-```{r attach-f}
-fn <- cov$fn_tests
-if (!is.null(fn)) {
-  direct <- unique(fn$alias[fn$direct %in% TRUE])
-  n <- table(factor(fn$alias, levels = cov$exports))
-  knitr::kable(data.frame(Function = names(n), Tests = as.integer(n),
-                          Direct = ifelse(names(n) %in% direct, "yes", "")),
-               row.names = FALSE)
-}
-```
+In `environments.txt` (attached to the release with this report), one part an
+environment of the table above: its full `sessionInfo()` -- R, the OS and every
+package's version -- and testthat's own log, ending in
+`[ FAIL | WARN | SKIP | PASS ]`.

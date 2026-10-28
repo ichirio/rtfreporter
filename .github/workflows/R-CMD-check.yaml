@@ -1,9 +1,18 @@
 # Standard R-CMD-check workflow, derived from r-lib/actions examples.
 # Matrix covers the platforms and R versions CRAN expects.
+#
+# At a published release, and by hand, each job also writes its environment
+# (sessionInfo, the dependencies' versions, R CMD check's result, the tests'
+# log) and the last job gathers them into the Development Summary Report
+# (validation/report.R): one table of every environment, the traceability
+# matrix and the deviations.  A release keeps them as its assets (an
+# artifact is deleted after 90 days).
 on:
   push:
     branches: [main, master, next]
   pull_request:
+  release:
+    types: [published]
   workflow_dispatch:
 
 name: R-CMD-check
@@ -58,8 +67,83 @@ jobs:
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
+        id: check
         env:
           _R_CHECK_FORCE_SUGGESTS_: ${{ matrix.config.force-suggests || 'true' }}
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+
+      # a release or a run by hand: this environment, for the summary
+      - name: This environment, for the validation report
+        if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+        shell: bash
+        run: |
+          Rscript validation/env.R "${{ matrix.config.os }} (R ${{ matrix.config.r }})" ci             "${{ steps.check.outcome }}" check
+
+      - uses: actions/upload-artifact@v4
+        if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+        with:
+          name: env-${{ matrix.config.os }}-${{ matrix.config.r }}
+          path: validation/env-out/
+
+  # The Development Summary Report: every environment, the traceability
+  # matrix, the deviations; one PDF and its attachments.  At a release they
+  # are attached to it; by hand they are this run's artifact.
+  validation-report:
+    needs: R-CMD-check
+    if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      NOT_CRAN: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: env-*
+          path: validation/env-out
+          merge-multiple: true
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-tinytex@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr, any::rmarkdown, any::knitr, any::pkgload, any::testthat, any::writexl
+          needs: check
+
+      - name: The report
+        run: Rscript validation/report.R
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-report
+          path: |
+            validation/out/validation-report.pdf
+            validation/out/summary.md
+            validation/out/traceability.xlsx
+            validation/out/*.csv
+            validation/out/*.txt
+
+      - name: Attach it to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          cd validation/out
+          cp validation-report.pdf "validation-report-$tag.pdf"
+          cp traceability.xlsx "traceability-$tag.xlsx"
+          cp environments.txt "environments-$tag.txt"
+          gh release upload "$tag" "validation-report-$tag.pdf" "traceability-$tag.xlsx"             "environments-$tag.txt" --clobber
