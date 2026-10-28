@@ -448,29 +448,17 @@
 # The rounding family is the package's one rule (round_num(), option
 # `rtfreporter.rounding`); an ARD table does not get a second one.
 
-# Format to `d` significant digits with the caller's rounding family.
-# The decimals a significant-digit request implies depend on the value,
-# so each element is handled on its own; trailing zeros are dropped, as
-# signif() + format() did, so only the HALF cases change.
+# Format to `d` significant digits with the caller's rounding family, as
+# fmt_signif() prints them: the decimals a significant-digit request
+# implies depend on the value, and every one of them is printed, trailing
+# zeros included (7.2 to 3 digits is "7.20"; #736).  The same helpers as
+# fmt_signif(), so the token and the function never disagree.
 .ard_signif_fmt <- function(x, d, round_type = NULL) {
   rnd <- .rounder(round_type)
-  out <- character(length(x))
-  for (i in seq_along(x)) {
-    v <- x[[i]]
-    if (is.na(v)) {
-      out[i] <- NA_character_
-      next
-    }
-    dec <- if (v == 0) max(0L, d - 1L) else
-      max(0L, d - 1L - as.integer(floor(log10(abs(v)))))
-    r <- rnd(v, dec)
-    # rounding can carry into the next decade (99.95 -> 100.0)
-    dec2 <- if (r == 0) max(0L, d - 1L) else
-      max(0L, d - 1L - as.integer(floor(log10(abs(r)))))
-    if (!identical(dec2, dec)) r <- rnd(v, dec2)
-    out[i] <- format(r, trim = TRUE, scientific = FALSE)
-  }
-  out
+  dec_fun <- function(v) .signif_decimals(v, d, "signif")
+  vapply(x, .fmt_num_one, character(1L),
+         dec_fun = dec_fun, rnd = rnd, na = NA_character_, recompute = TRUE,
+         USE.NAMES = FALSE)
 }
 
 

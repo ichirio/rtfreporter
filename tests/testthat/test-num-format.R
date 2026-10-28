@@ -271,3 +271,48 @@ test_that("the formatted text is what set_decimal_split() splits on", {
   expect_equal(plan$parts[[2L]]$left,  c("0", "12"))
   expect_equal(plan$parts[[2L]]$right, c(".3333", ".50"))
 })
+
+test_that("a plan's significant-digit token prints as fmt_signif() does (#736)", {
+  fv <- rtfreporter:::.ard_format_value
+  # trailing zeros are printed
+  expect_identical(fv(7.2, NA, ".3s", "r"), "7.20")
+  expect_identical(fv(1, NA, ".3s", "r"), "1.00")
+  expect_identical(fv(0.99, NA, ".3s", "r"), "0.990")
+  expect_identical(fv(100, NA, ".4s", "r"), "100.0")
+  # an integer, and an integer part longer than the digits
+  expect_identical(fv(12, NA, ".2s", "r"), "12")
+  expect_identical(fv(1234.5, NA, ".3s", "r"), "1234")
+  # small values, zero, negative values
+  expect_identical(fv(0.000456, NA, ".3s", "r"), "0.000456")
+  expect_identical(fv(0.0004, NA, ".3s", "r"), "0.000400")
+  expect_identical(fv(0, NA, ".3s", "r"), "0.00")
+  expect_identical(fv(-7.2, NA, ".3s", "r"), "-7.20")
+  expect_identical(fv(-0.05, NA, ".2s", "r"), "-0.050")
+  # rounding into the next decade
+  expect_identical(fv(99.96, NA, ".3s", "r"), "100")
+  # missing
+  expect_true(is.na(fv(NA_real_, NA, ".3s", "r")))
+  # the same text as fmt_signif() for every value
+  x <- c(7.2, 1, 0.99, 12, 1234.5, 0.000456, 0, -7.2, 99.96, 23.445, 0.012345)
+  for (rnd in c("r", "sas")) {
+    expect_identical(rtfreporter:::.ard_signif_fmt(x, 3, rnd),
+                     fmt_signif(x, digits = 3, rounding = rnd))
+  }
+  expect_identical(rtfreporter:::.ard_signif_fmt(c(7.2, NA), 3, "r"),
+                   c("7.20", NA))
+})
+
+test_that("a plan's {mean:.3s} keeps the trailing zero in the table (#736)", {
+  ard <- data.frame(
+    group1 = "TRT", group1_level = "A",
+    variable = "AVAL", variable_level = NA,
+    stat_name = c("N", "mean"), stat_label = c("N", "Mean"),
+    stat = I(list(3, 7.2)), context = "summary"
+  )
+  tab <- normalize_ard(ard) |>
+    table_plan(cols = "TRT", rows = c(group = "variable")) |>
+    plan_cells(continuous = c(N = "{N:.0f}", Mean = "{mean:.3s}"),
+               notes = FALSE) |>
+    plan_apply("table")
+  expect_identical(tab$A[tab$label == "Mean"], "7.20")
+})
