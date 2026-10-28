@@ -699,9 +699,19 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
   unique(out)
 }
 
-.plan_col_widths <- function(pages, widths, spread) {
+.plan_col_widths <- function(pages, widths, spread, hidden = character()) {
   one <- function(tb) {
     nm <- names(tb$data)
+    # a name that is no column of the table: a typo, or a column renamed
+    # (a hidden column's width is harmless: it is not printed)
+    bad <- setdiff(names(widths), c(nm, ".values", hidden))
+    if (length(bad)) {
+      .ard_stop(paste0(
+        "plan_columns(widths = ) names ", paste(sQuote(bad, FALSE), collapse = ", "),
+        ", not a column of the table.\n",
+        "  Its printed columns: ", paste(sQuote(nm, FALSE), collapse = ", "),
+        " (`.values` covers the value columns)."))
+    }
     w <- rep(NA_real_, length(nm))
     if (".values" %in% names(widths)) w[nm %in% spread] <- widths[[".values"]]
     own <- intersect(names(widths), nm)
@@ -720,6 +730,14 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
   if (inherits(pages, "rtftable")) return(one(pages))
   pages[] <- lapply(pages, one)
   pages
+}
+
+# Widths said twice: relative (`widths`) and absolute (`column_widths_twips`)
+.plan_widths_both <- function() {
+  .ard_stop(paste0(
+    "plan_columns(): `widths` and `column_widths_twips` both set the columns' widths.\n",
+    "  Give one: `widths` (relative, by name or in order) or ",
+    "`column_widths_twips` (absolute, one a column)."))
 }
 
 # The whole point of naming the roles beside the data is that the names can
@@ -1209,8 +1227,10 @@ print.table_plan <- function(x, ...) {
 #' @param cell_format,column_widths_twips For `plan_columns()`:
 #'   [as_rtftables()]'s `cell_format` (a formatter, or a list of them one a
 #'   column) and [rtftable()]'s `column_widths_twips`, as they are.
-#'   `column_widths_twips`, when given, fixes the widths and `widths` is not
-#'   used, as in [rtftable()].
+#'   `column_widths_twips` fixes the widths absolutely: a plan gives it or
+#'   `widths`, not both (an error says so).  A name in `widths` must be a
+#'   column of the table (`.values` covers the value columns); another stops
+#'   with the names the table has.
 #' @param header_sep,col_header_align For `plan_col_header()`:
 #'   [as_rtftables()]'s `header_sep` (the separator a plain table's column
 #'   names are split on into spanning header rows) and [rtftable()]'s
@@ -2429,6 +2449,7 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
                         is.na(sep) || !nzchar(sep))) {
     .ard_stop("plan_columns(sep = ) is one non-empty string, \"____\" by default.")
   }
+  if (length(widths) && !is.null(column_widths_twips)) .plan_widths_both()
   .plan_layer(.plan, "columns",
               list(widths = widths, decimal = decimal, row_title = row_title,
                    auto_width = auto_width, sep = sep,
@@ -3137,6 +3158,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # column in order; named, it is applied to the pages by column name
   colset <- .plan_merge(.plan_of(plan, "columns"))
   cw <- colset$widths
+  # (two plan_columns() calls, one each: still both)
+  if (length(cw) && !is.null(colset$column_widths_twips)) .plan_widths_both()
   if (length(cw) && is.null(names(cw)) && is.null(out$col_rel_width)) {
     out$col_rel_width <- cw
   }
@@ -4456,7 +4479,7 @@ plan_n_candidates <- function(.plan) {
   colset <- .plan_merge(.plan_of(plan, "columns"))
   spread <- .plan_spread_cols(plan, pre)
   if (length(colset$widths) && is.null(rtf$col_rel_width)) {
-    out <- .plan_col_widths(out, colset$widths, spread)
+    out <- .plan_col_widths(out, colset$widths, spread, hidden = rtf$drop_cols %||% character())
   }
   # what tfl_as_table_spec() reads back: the columns and widths before the
   # column axis cuts them into blocks

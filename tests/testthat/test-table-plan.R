@@ -3913,3 +3913,35 @@ test_that("plan_n_candidates(): nothing to read is no row, not an error", {
   expect_identical(nrow(nc), 0L)
   expect_identical(names(nc), c("scope", "page", "column", "value"))
 })
+
+test_that("FT-PL046 [FR-PL160]: plan_columns(widths =) naming no column of the table stops, naming it", {
+  d <- data.frame(Item = c("a", "b"), A = c("1", "2"), B = c("3", "4"), Hid = c("x", "y"),
+                  stringsAsFactors = FALSE)
+  pages <- function(p) suppressMessages(plan_apply(p, "pages"))
+  # every name a column: fine; a hidden column's width is harmless
+  ok <- pages(table_plan(d) |> plan_hide("Hid") |>
+                plan_columns(widths = c(Item = 3, A = 1, B = 1, Hid = 9)))
+  ok <- if (inherits(ok, "rtftable")) ok else ok[[1L]]
+  expect_equal(as.numeric(ok$col_rel_width), c(3, 1, 1))
+  # a name that is no column: stops, with the name and the printed columns
+  err <- expect_error(pages(table_plan(d) |> plan_columns(widths = c(Item = 3, nope = 1, .values = 1))),
+                      "plan_columns(widths = ) names 'nope', not a column of the table", fixed = TRUE)
+  expect_match(conditionMessage(err), "Its printed columns: 'Item', 'A', 'B', 'Hid'", fixed = TRUE)
+})
+
+test_that("FT-PL047 [FR-PL172 FR-IX102]: plan_columns(widths =) with column_widths_twips stops: one of them", {
+  d <- data.frame(Item = c("a", "b"), A = c("1", "2"), stringsAsFactors = FALSE)
+  # in one call
+  expect_error(table_plan(d) |> plan_columns(widths = c(2, 1), column_widths_twips = c(3000, 1500)),
+               "`widths` and `column_widths_twips` both set the columns' widths", fixed = TRUE)
+  # in two calls: at plan_apply()
+  p <- table_plan(d) |> plan_columns(widths = c(Item = 2, A = 1)) |>
+    plan_columns(column_widths_twips = c(3000, 1500))
+  expect_error(suppressMessages(plan_apply(p, "pages")),
+               "Give one: `widths` (relative, by name or in order) or", fixed = TRUE)
+  # either alone: fine
+  tw <- suppressMessages(plan_apply(table_plan(d) |> plan_columns(column_widths_twips = c(3000, 1500)),
+                                    "pages"))
+  tw <- if (inherits(tw, "rtftable")) tw else tw[[1L]]
+  expect_identical(tw$column_widths_twips, c(3000L, 1500L))
+})

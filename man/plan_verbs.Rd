@@ -824,8 +824,10 @@ a key value that contains it is refused.  For \code{plan_listing()},
 \item{cell_format, column_widths_twips}{For \code{plan_columns()}:
 \code{\link[=as_rtftables]{as_rtftables()}}'s \code{cell_format} (a formatter, or a list of them one a
 column) and \code{\link[=rtftable]{rtftable()}}'s \code{column_widths_twips}, as they are.
-\code{column_widths_twips}, when given, fixes the widths and \code{widths} is not
-used, as in \code{\link[=rtftable]{rtftable()}}.}
+\code{column_widths_twips} fixes the widths absolutely: a plan gives it or
+\code{widths}, not both (an error says so).  A name in \code{widths} must be a
+column of the table (\code{.values} covers the value columns); another stops
+with the names the table has.}
 
 \item{type, spacer, spacer_rel_width, layout, wrap, record}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged
 (\code{record}: the hidden record column -- \code{FALSE} none, a string its
