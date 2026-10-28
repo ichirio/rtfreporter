@@ -11,6 +11,11 @@
 #    data       a data shape it is meant to handle (empty, NA, levels, one or
 #               many groups, long or non-ASCII text ...)
 #    guard      an unintended use it prevents, and the error or warning it gives
+#    interaction  how functions or arguments act together where it is a risk:
+#               a precedence or override, an argument that changes another's
+#               meaning, a combination that once had a bug, a scenario (data
+#               to RTF, compared byte for byte).  These sit apart from the
+#               functions' own, under FR-IX000.
 #  Only `active` rows count (`draft`: a coarse row not yet split).
 #
 #  An FT is a test_that() block that checks an FR -- decided by a person who
@@ -39,7 +44,7 @@ root <- normalizePath(".", winslash = "/")
 vdir <- file.path(root, "inst", "validation")
 out  <- file.path(root, "validation", "out")
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
-kinds <- c("behaviour", "argument", "data", "guard")
+kinds <- c("behaviour", "argument", "data", "guard", "interaction")
 
 fr <- utils::read.csv(file.path(vdir, "requirements.csv"), colClasses = "character",
                       na.strings = "", stringsAsFactors = FALSE)
@@ -175,9 +180,13 @@ fn_rows <- lapply(scope, function(f) {
     sub("^[^:]*:", "", g[startsWith(g, paste0(f, ":"))])
   })))
   given_in_test <- intersect(formals_, given)
+  # (a function that only an interaction names: its arguments are not counted)
+  own <- any(mine & fr$kind != "interaction")
+  if (!own) named_in_fr <- given_in_test <- formals_ <- character()
   cnt <- vapply(kinds, function(k) sum(mine & fr$kind == k), 0L)
   data.frame(`function` = f, behaviour = cnt[["behaviour"]], argument = cnt[["argument"]],
-             data = cnt[["data"]], guard = cnt[["guard"]], frs = sum(mine),
+             data = cnt[["data"]], guard = cnt[["guard"]], interaction = cnt[["interaction"]],
+             frs = sum(mine),
              frs_tested = sum(mine & tr$n_ft > 0L), arguments = length(formals_),
              arguments_in_fr = length(named_in_fr), arguments_in_tests = length(given_in_test),
              arguments_in_no_fr = paste(setdiff(formals_, named_in_fr), collapse = " "),
@@ -229,21 +238,25 @@ sm <- c(
   sprintf("| Requirements with a test (a person mapped it) | %s |", pct(sum(tl$n_ft > 0), nrow(tl))),
   sprintf("| Guard requirements (unintended use stopped) with a test | %s |",
           pct(sum(tl$n_ft > 0 & tl$kind == "guard"), sum(tl$kind == "guard"))),
+  sprintf("| Interaction requirements (across functions) with a test | %s |",
+          pct(sum(tl$n_ft > 0 & tl$kind == "interaction"), sum(tl$kind == "interaction"))),
   sprintf("| Functional tests | %d: %d pass, %d fail, %d skip |", nrow(map),
           sum(result == "pass"), sum(result == "fail"), sum(result == "skip")),
   sprintf("| Requirements whose tests all pass | %s |", pct(sum(fr_ok), nrow(tl))),
-  sprintf("| Arguments a requirement names | %s |", pct(sum(fn_tab$arguments_in_fr), sum(fn_tab$arguments))),
+  sprintf("| Arguments a requirement names (functions with their own requirements) | %s |", pct(sum(fn_tab$arguments_in_fr), sum(fn_tab$arguments))),
   sprintf("| Arguments a test gives (an aid, not coverage) | %s |",
           pct(sum(fn_tab$arguments_in_tests), sum(fn_tab$arguments))),
   "",
   sprintf("Upper requirements: %s.", paste(sprintf("%s %s", tr$fr[!leaf], tr$coverage[!leaf]),
                                             collapse = "; ")),
   "",
-  "By function (behaviour / argument / data / guard; tested):",
   "",
-  "| Function | B | A | D | G | Tested |", "|---|---|---|---|---|---|",
-  sprintf("| %s | %d | %d | %d | %d | %d of %d |", fn_tab[["function"]], fn_tab$behaviour,
-          fn_tab$argument, fn_tab$data, fn_tab$guard, fn_tab$frs_tested, fn_tab$frs),
+  "By function (behaviour / argument / data / guard / interaction; tested):",
+  "",
+  "| Function | B | A | D | G | I | Tested |", "|---|---|---|---|---|---|---|",
+  sprintf("| %s | %d | %d | %d | %d | %d | %d of %d |", fn_tab[["function"]], fn_tab$behaviour,
+          fn_tab$argument, fn_tab$data, fn_tab$guard, fn_tab$interaction, fn_tab$frs_tested,
+          fn_tab$frs),
   "",
   "A failing test fails the pull request's checks (CI), so it cannot be merged.",
   "",

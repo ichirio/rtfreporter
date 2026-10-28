@@ -447,13 +447,18 @@ what it does not.
   mapped to the leaves; a parent is covered when every
   leaf under it has a test.  A user's requirement may be traced to an FR at
   any level.  The leaves are finer than a function: each function has
-  leaves of four kinds --
+  leaves of five kinds --
   - `behaviour`: each thing it does;
   - `argument`: each argument, and each meaningful value or combination;
   - `data`: each data shape it is meant to handle where that matters (no
     rows, NA, factor levels, one or many groups, long or non-ASCII text);
   - `guard`: each unintended use it stops -- a wrong argument, type or a
-    contradictory combination -- and the error or warning it gives.
+    contradictory combination -- and the error or warning it gives;
+  - `interaction`: how functions or arguments act together, where that is
+    a risk -- a precedence or override, an argument that changes another's
+    meaning, a combination that once had a bug, a scenario from data to RTF
+    (compared byte for byte).  Not every combination: these, under their
+    own group `FR-IX000`, apart from the functions' rows.
   A PR that adds or changes a behaviour adds or changes its FRs in the same
   PR; an FR is never renumbered, a withdrawn one is `superseded` or
   `removed` (`draft`: a coarse row not yet split, not counted).

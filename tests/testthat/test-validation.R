@@ -16,7 +16,7 @@ test_that("the requirements: unique ids, their area, a statement, functions that
   # a hierarchy: every parent is an FR; an active leaf has a kind
   expect_true(all(is.na(fr$parent) | fr$parent %in% fr$id))
   leaf <- !fr$id %in% fr$parent & fr$status == "active"
-  expect_true(all(fr$kind[leaf] %in% c("behaviour", "argument", "data", "guard")))
+  expect_true(all(fr$kind[leaf] %in% c("behaviour", "argument", "data", "guard", "interaction")))
   expect_identical(sub("^FR-([A-Z]+).*$", "\\1", fr$id), fr$area)
   expect_false(any(is.na(fr$statement) | !nzchar(fr$statement)))
   expect_true(all(fr$status %in% c("active", "draft", "superseded", "removed")))
