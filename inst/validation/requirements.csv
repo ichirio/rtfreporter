@@ -1,30 +1,126 @@
-id,area,statement,functions,since,status,notes
-FR-PLAN-001,PLAN,"table_plan() starts a plan from an ARD (or a finished table, or records): it names the key across (cols) and the keys down (rows); nothing runs until the plan is used.",table_plan,0.8.0,active,
-FR-PLAN-002,PLAN,"plan_apply() runs a plan into the table, its pages (rtftables) or a stage between, the same way every time.",plan_apply,0.8.0,active,
-FR-PLAN-003,PLAN,"plan_layers() shows what a plan declares: its layers by verb, and the columns its table will print.",plan_layers,0.8.0,active,
-FR-PLAN-004,PLAN,"plan_template() writes a plan's code from a named template of verbs.",plan_template,0.8.0,active,
-FR-PLAN-005,PLAN,"plan_header_tokens() lists the tokens a column header can say ({col}, {n}, ...) for a plan; plan_n_candidates() lists the populations a header's {n} can count.",plan_header_tokens;plan_n_candidates,0.8.0,active,
-FR-PLAN-010,PLAN,"plan_cells() says how each cell is made from the ARD's statistics: a token template per kind (continuous, categorical, ...), per variable or per context; a statistic missing is shown as declared (na).",plan_cells,0.8.0,active,
-FR-PLAN-011,PLAN,"plan_digits() sets the digits of the cells' numbers (and the rounding), by statistic or by column of a finished table.",plan_digits,0.8.0,active,
-FR-PLAN-012,PLAN,"plan_levels() sets the order of a key's values (and a value's printed text); plan_labels() sets a variable's printed label.",plan_levels;plan_labels,0.8.0,active,
-FR-PLAN-013,PLAN,"plan_total() adds a Total column from the ARD's overall rows, at the position given.",plan_total,0.8.0,active,
-FR-PLAN-014,PLAN,"plan_stat_groups() groups a record's statistics into named groups of rows.",plan_stat_groups,0.8.0,active,
-FR-PLAN-015,PLAN,"plan_filter() drops the rows a condition over the record names (any column, with or without their parents).",plan_filter,0.8.0,active,
-FR-PLAN-016,PLAN,"plan_compare() adds columns read from comparison records (a test's p-value, a difference and its CI), at the position given.",plan_compare,0.8.0,active,
-FR-PLAN-017,PLAN,"plan_sort() orders the rows by keys or by a statistic, descending with a minus sign, keeping the groups together.",plan_sort,0.8.0,active,
-FR-PLAN-018,PLAN,"plan_nest() puts a variable's rows under a level of another.",plan_nest,0.8.0,active,
-FR-PLAN-020,PLAN,"plan_stub() makes the row headings: the key columns into one stub column, indented by level, with a group's summary row.",plan_stub,0.8.0,active,
-FR-PLAN-021,PLAN,"plan_col_header() writes the column header (lines, spans, token values such as {n}) over the printed columns.",plan_col_header,0.8.0,active,
-FR-PLAN-022,PLAN,"plan_columns() sets the printed columns' widths (by name), decimal alignment, row-title columns and cell format.",plan_columns,0.8.0,active,
-FR-PLAN-023,PLAN,"plan_hide() keeps columns from printing while they still pace the pages.",plan_hide,0.8.0,active,
-FR-PLAN-024,PLAN,"plan_cell_style() styles cells: bold, italic, alignment, colour, background, borders, indent; by column, header or a condition over the row.",plan_cell_style,0.8.0,active,
-FR-PLAN-025,PLAN,"plan_style() sets the whole table's look: its border preset and borders, header look, alignment, width.",plan_style,0.8.0,active,
-FR-PLAN-026,PLAN,"plan_empty() writes a table of no events as one row saying so (and a footnote), when the table has no row or its overall row is 0.",plan_empty,0.8.0,active,
-FR-PLAN-030,PLAN,"plan_paginate_rows() paginates the rows within a row budget, keeping groups together as asked, with a continued label.",plan_paginate_rows,0.8.0,active,
-FR-PLAN-031,PLAN,"plan_paginate_group() makes a page (or a section) per value of a column, its heading from a template.",plan_paginate_group,0.8.0,active,
-FR-PLAN-032,PLAN,"plan_paginate_cols() cuts the columns into blocks of pages, carrying the stub, the header sliced per block.",plan_paginate_cols,0.8.0,active,
-FR-PLAN-033,PLAN,"plan_row_group() groups the body's rows by a column's runs, a repeated value printed once.",plan_row_group,0.8.0,active,
-FR-PLAN-034,PLAN,"plan_blanks() puts blank rows between groups, after each record of a listing, at the top or end of a page; where = none takes a listing's away.",plan_blanks,0.8.0,active,
-FR-PLAN-040,PLAN,"plan_listing() makes a plan a listing: its printed columns (listing_col()) and the listing's layout.",plan_listing,0.8.0,active,
-FR-PLAN-041,PLAN,"plan_titles() and plan_footnotes() put a title block above and a footnote block below every page (or one per page).",plan_titles;plan_footnotes,0.8.0,active,
-FR-PLAN-042,PLAN,"plan_after() runs the user's own functions over the finished pages.",plan_after,0.8.0,active,
+"id","parent","area","kind","statement","functions","since","status","notes"
+"FR-PL000",,"PL","group","The plan verbs build a table's plan and run it into pages.","table_plan;plan_filter;plan_columns;plan_blanks","0.8.0","active",
+"FR-PL001","FR-PL000","PL","group","table_plan() starts a deferred, last-wins plan from the data and takes the roles: what goes across, what goes down, what carries the row identity.","table_plan","0.8.0","active",
+"FR-PL002","FR-PL000","PL","group","plan_filter() drops the rows whose records fail a condition over the ARD's statistics and keys, judged across the columns.","plan_filter","0.8.0","active",
+"FR-PL003","FR-PL000","PL","group","plan_columns() declares the columns: widths by name, decimal alignment, row-title columns, auto width, the key separator, cell formatters and widths in twips.","plan_columns","0.8.0","active",
+"FR-PL004","FR-PL000","PL","group","plan_blanks() declares the blank rows: between groups, at the page edges, counted in the row budget, or between a listing's records.","plan_blanks","0.8.0","active",
+"FR-PL005","FR-PL000","PL",,"plan_apply() runs a plan into the table, its pages (rtftables) or a stage between, the same way every time.","plan_apply","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL006","FR-PL000","PL",,"plan_layers() shows what a plan declares: its layers by verb, and the columns its table will print.","plan_layers","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL007","FR-PL000","PL",,"plan_template() writes a plan's code from a named template of verbs.","plan_template","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL008","FR-PL000","PL",,"plan_header_tokens() lists the tokens a column header can say ({col}, {n}, ...) for a plan; plan_n_candidates() lists the populations a header's {n} can count.","plan_header_tokens;plan_n_candidates","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL009","FR-PL000","PL",,"plan_cells() says how each cell is made from the ARD's statistics: a token template per kind (continuous, categorical, ...), per variable or per context; a statistic missing is shown as declared (na).","plan_cells","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL010","FR-PL000","PL",,"plan_digits() sets the digits of the cells' numbers (and the rounding), by statistic or by column of a finished table.","plan_digits","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL011","FR-PL000","PL",,"plan_levels() sets the order of a key's values (and a value's printed text); plan_labels() sets a variable's printed label.","plan_levels;plan_labels","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL012","FR-PL000","PL",,"plan_total() adds a Total column from the ARD's overall rows, at the position given.","plan_total","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL013","FR-PL000","PL",,"plan_stat_groups() groups a record's statistics into named groups of rows.","plan_stat_groups","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL014","FR-PL000","PL",,"plan_compare() adds columns read from comparison records (a test's p-value, a difference and its CI), at the position given.","plan_compare","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL015","FR-PL000","PL",,"plan_sort() orders the rows by keys or by a statistic, descending with a minus sign, keeping the groups together.","plan_sort","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL016","FR-PL000","PL",,"plan_nest() puts a variable's rows under a level of another.","plan_nest","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL017","FR-PL000","PL",,"plan_stub() makes the row headings: the key columns into one stub column, indented by level, with a group's summary row.","plan_stub","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL018","FR-PL000","PL",,"plan_col_header() writes the column header (lines, spans, token values such as {n}) over the printed columns.","plan_col_header","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL019","FR-PL000","PL",,"plan_hide() keeps columns from printing while they still pace the pages.","plan_hide","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL020","FR-PL000","PL",,"plan_cell_style() styles cells: bold, italic, alignment, colour, background, borders, indent; by column, header or a condition over the row.","plan_cell_style","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL021","FR-PL000","PL",,"plan_style() sets the whole table's look: its border preset and borders, header look, alignment, width.","plan_style","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL022","FR-PL000","PL",,"plan_empty() writes a table of no events as one row saying so (and a footnote), when the table has no row or its overall row is 0.","plan_empty","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL023","FR-PL000","PL",,"plan_paginate_rows() paginates the rows within a row budget, keeping groups together as asked, with a continued label.","plan_paginate_rows","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL024","FR-PL000","PL",,"plan_paginate_group() makes a page (or a section) per value of a column, its heading from a template.","plan_paginate_group","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL025","FR-PL000","PL",,"plan_paginate_cols() cuts the columns into blocks of pages, carrying the stub, the header sliced per block.","plan_paginate_cols","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL026","FR-PL000","PL",,"plan_row_group() groups the body's rows by a column's runs, a repeated value printed once.","plan_row_group","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL027","FR-PL000","PL",,"plan_listing() makes a plan a listing: its printed columns (listing_col()) and the listing's layout.","plan_listing","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL028","FR-PL000","PL",,"plan_titles() and plan_footnotes() put a title block above and a footnote block below every page (or one per page).","plan_titles;plan_footnotes","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL029","FR-PL000","PL",,"plan_after() runs the user's own functions over the finished pages.","plan_after","0.8.0","draft","coarse: to be split into leaves"
+"FR-PL101","FR-PL001","PL","behaviour","table_plan() returns a table_plan that holds the data unchanged with its roles and no layers, and computes nothing until plan_apply().","table_plan","0.8.0","active",
+"FR-PL102","FR-PL001","PL","behaviour","table_plan() classifies its source by the columns alone as normalized (.label/.kind), long (stat_name + stat, no context/groupN), ard (cards shape or not a data frame) or wide (anything else).","table_plan","0.8.0","active",".plan_source_kind()"
+"FR-PL103","FR-PL001","PL","behaviour","print() of a table_plan shows the source kind, the columns the roles may name, the layers in declaration order and whether plan_apply() gives a table data.frame or RTF pages (or says it has no layers).","table_plan","0.8.0","active","print.table_plan"
+"FR-PL104","FR-PL001","PL","behaviour","table_plan(cols = c(KEY, "".stat_group"")) accepts .stat_group as a role though it is not yet a column (plan_stat_groups() makes it at run time).","table_plan","0.8.0","active",".plan_check_roles exempts .stat_group"
+"FR-PL105","FR-PL001","PL","argument","table_plan(cols = KEY) spreads one value column per value of KEY, the same table widen_ard(cols = KEY) gives.","table_plan","0.8.0","active",
+"FR-PL106","FR-PL001","PL","argument","table_plan(cols = c(K1, K2)) spreads one column per combination, named by the values joined with the key separator (""____"" unless plan_columns(sep = )).","table_plan","0.8.0","active",
+"FR-PL107","FR-PL001","PL","argument","table_plan() with cols left out, on data with no group to spread, makes one value column named All.","table_plan","0.8.0","active","#689"
+"FR-PL108","FR-PL001","PL","argument","table_plan(rows = c(name = KEY)) gives the finished table one row-key column per key under the given names.","table_plan","0.8.0","active",
+"FR-PL109","FR-PL001","PL","argument","table_plan() with rows left out uses the analysis variable as the row key, in a column named group.","table_plan","0.8.0","active",
+"FR-PL110","FR-PL001","PL","argument","table_plan(label = c(new = COL)) takes the row identity from COL (default "".label"") into a column named new.","table_plan","0.8.0","active",
+"FR-PL111","FR-PL001","PL","argument","table_plan(label = NA) makes a table with no label column.","table_plan","0.8.0","active",
+"FR-PL112","FR-PL001","PL","argument","table_plan(label = list(row = c(A, B))) coalesces the columns, the first non-missing value winning per row.","table_plan","0.8.0","active",
+"FR-PL113","FR-PL001","PL","argument","table_plan(label = c(guard ~ ""text"", ~ ""{.label}"")) builds the label from a guarded template chain (e.g. NA .label -> ""Total"").","table_plan","0.8.0","active","checked only through plan_total() shift-table tests"
+"FR-PL114","FR-PL001","PL","argument","table_plan(stat = c(variable = , name = , value = )) names which of the frame's own columns play the analysis variable, the statistic name and its value.","table_plan","0.8.0","active",
+"FR-PL115","FR-PL001","PL","argument","table_plan(show_keys = KEY) puts a row key's own tabulation (rows marked .key_own) into the body as a block of its own.","table_plan","0.8.0","active","#621"
+"FR-PL116","FR-PL001","PL","argument","table_plan(show_keys = NULL), the default, leaves a key's own counts out of the body (they feed only the header {n}).","table_plan","0.8.0","active",
+"FR-PL117","FR-PL001","PL","data","table_plan() with a frame from normalize_ard() (including one edited between normalize_ard() and the plan) takes it as the input stage unchanged.","table_plan","0.8.0","active",
+"FR-PL118","FR-PL001","PL","data","table_plan() with a long frame built without cards (keys, stat_name, stat) makes a table, plan-wide and per-variable digits included.","table_plan","0.8.0","active",
+"FR-PL119","FR-PL001","PL","data","table_plan() with a finished (wide) table runs only the display half, giving the pages as_rtftables(read_meta = FALSE, ...) gives.","table_plan","0.8.0","active",
+"FR-PL120","FR-PL001","PL","data","table_plan() with a frame of records and plan_listing() passes the rows through unnormalised and unspread, as as_rtftables(listing = listing_spec(...)).","table_plan","0.8.0","active",
+"FR-PL121","FR-PL001","PL","data","table_plan(rows = c(soc = , pt = )) with a hierarchical normalized ARD and an overall row makes one row per SOC and PT, the overall row first.","table_plan","0.8.0","active",
+"FR-PL122","FR-PL001","PL","data","table_plan(cols = KEY) with a factor KEY orders the value columns by the factor's levels.","table_plan","0.8.0","active","probe: reversed levels give reversed columns; no test asserts the order"
+"FR-PL123","FR-PL001","PL","data","table_plan() with non-ASCII (Japanese) key values keeps them unchanged as column names and labels.","table_plan","0.8.0","active","probe: works; no test"
+"FR-PL124","FR-PL001","PL","data","table_plan() with a frame of zero rows stops at plan_apply(): ""No cell was produced, so there is nothing to widen.""","table_plan","0.8.0","active","message from widen_ard(); widen_ard test exists (test-ard-tables.R) but not through a plan"
+"FR-PL125","FR-PL001","PL","guard","table_plan() without x stops: ""`x` (the data) is required.""","table_plan","0.8.0","active",
+"FR-PL126","FR-PL001","PL","guard","table_plan(<raw cards ARD or a non-data-frame>) stops: ""table_plan() takes the NORMALIZED frame, not a raw ARD""","table_plan","0.8.0","active","non-data-frame case (e.g. a list) is untested"
+"FR-PL127","FR-PL001","PL","guard","table_plan(<role> = <name not a column>) stops: ""table_plan(<role> = ): no column '<name>' in the data.""","table_plan","0.8.0","active","role shown as cols/rows/label or stat = c(variable|name|value"
+"FR-PL128","FR-PL001","PL","guard","table_plan(stat = <unnamed, unknown or repeated part names>) stops: ""table_plan(stat = ) names the parts of a statistic your frame calls something else""","table_plan","0.8.0","active",
+"FR-PL129","FR-PL001","PL","guard","table_plan(stat = c(value = NA)) (a part not one non-empty string) stops: ""table_plan(stat = ): each part is one column name.""","table_plan","0.8.0","active",
+"FR-PL130","FR-PL001","PL","guard","table_plan(label = c(label = c(f1, f2))) stops: ""table_plan(label = ): 'c(label = c(...))' is a named list of formulas""","table_plan","0.8.0","active",
+"FR-PL131","FR-PL001","PL","guard","table_plan() with cols left out on data that has a group stops at plan_apply(): ""`cols` is required: the ARD has '<KEY>' to spread""","table_plan","0.8.0","active","from widen_ard()"
+"FR-PL132","FR-PL001","PL","guard","table_plan(show_keys = <a column key>) stops at plan_apply(): ""`show_keys`: '<KEY>' is a column key; its own counts are the columns' populations""","table_plan","0.8.0","active","tested only on widen_ard() directly"
+"FR-PL133","FR-PL001","PL","guard","table_plan(<finished table>) with no layers stops at plan_apply(): ""This source has no statistics to read -- ... and the plan declares nothing.""","table_plan","0.8.0","active","names plan_listing() and the display verbs"
+"FR-PL134","FR-PL001","PL","guard","table_plan(<finished table>, cols = ) or ARD-half verbs (plan_cells ...) stop at plan_apply(): ""This source has no statistics to read -- ... but table_plan(cols = ) / plan_cells() need them.""","table_plan","0.8.0","active",
+"FR-PL135","FR-PL002","PL","behaviour","plan_filter(p >= 0.05) drops the rows no column's record meets, giving the RTF of the same plan on a hand-filtered ARD.","plan_filter","0.8.0","active","#620"
+"FR-PL136","FR-PL002","PL","behaviour","plan_filter() keeps every value column even when all of a column's rows are dropped (columns are counted before filtering).","plan_filter","0.8.0","active",
+"FR-PL137","FR-PL002","PL","behaviour","plan_filter() always keeps an overall row (normalize_ard(overall = ), e.g. ""Any TEAE"").","plan_filter","0.8.0","active",
+"FR-PL138","FR-PL002","PL","behaviour","plan_filter() treats a record its statistics cannot answer (error or non-logical) as unknown, keeps a row no column answers, and reports it in the notes.","plan_filter","0.8.0","active","probe: plan_filter(zzz > 1) keeps all rows"
+"FR-PL139","FR-PL002","PL","behaviour","plan_filter() called twice uses only the last call's conditions (no combining).","plan_filter","0.8.0","active",".plan_spread_args takes fl[[length(fl)]]"
+"FR-PL140","FR-PL002","PL","argument","plan_filter(cond1, cond2) keeps a record only when every condition holds.","plan_filter","0.8.0","active",
+"FR-PL141","FR-PL002","PL","argument","plan_filter(n >= 3, TRTA != ""Placebo"") evaluates conditions over the record's keys as well as its statistics.","plan_filter","0.8.0","active","example from the help"
+"FR-PL142","FR-PL002","PL","argument","plan_filter(any = TRUE), the default, keeps a row when any column's record passes.","plan_filter","0.8.0","active",
+"FR-PL143","FR-PL002","PL","argument","plan_filter(any = FALSE) keeps a row only when every answering column's record passes.","plan_filter","0.8.0","active",
+"FR-PL144","FR-PL002","PL","argument","plan_filter(parents = ""keep""), the default, keeps a parent row (a SOC) exactly when one of its children is kept.","plan_filter","0.8.0","active",
+"FR-PL145","FR-PL002","PL","argument","plan_filter(parents = ""drop"") judges a parent row by its own counts.","plan_filter","0.8.0","active",
+"FR-PL146","FR-PL002","PL","argument","plan_filter(by = KEY) judges the rows that share KEY (and the keys outside it) together.","plan_filter","0.8.0","active",
+"FR-PL147","FR-PL002","PL","data","plan_filter() with a hierarchical SOC/PT ARD filters PTs and keeps the SOCs they belong to.","plan_filter","0.8.0","active",
+"FR-PL148","FR-PL002","PL","data","plan_filter() that no body row passes leaves only the overall row, which plan_empty() then recognises as empty.","plan_filter","0.8.0","active",
+"FR-PL149","FR-PL002","PL","guard","plan_filter(<no condition, or a named one such as keep = p > 0>) stops: ""plan_filter() takes conditions, unnamed: `plan_filter(p >= 0.05)`.""","plan_filter","0.8.0","active","the no-condition case is untested"
+"FR-PL150","FR-PL002","PL","guard","plan_filter(any = NA) (not one TRUE/FALSE) stops: ""plan_filter(any = ) is TRUE (any column) or FALSE (every column).""","plan_filter","0.8.0","active",
+"FR-PL151","FR-PL002","PL","guard","plan_filter(parents = ""x"") stops: ""'arg' should be one of ""keep"", ""drop""""","plan_filter","0.8.0","active","match.arg"
+"FR-PL152","FR-PL002","PL","guard","plan_filter(by = <not a row key>) stops at plan_apply(): ""plan_filter(by = ""<KEY>""): not a row key.  Row keys: ...""","plan_filter","0.8.0","active",".ard_filter_keep in R/ard_tables.R"
+"FR-PL153","FR-PL002","PL","guard","plan_filter(<not a table_plan>) stops: ""Expected a table_plan; pipe from table_plan(ard).""","plan_filter","0.8.0","active",
+"FR-PL154","FR-PL002","PL","guard","plan_filter() on a finished (wide) table stops at plan_apply(): ""This source has no statistics to read -- ... but table_plan(cols = ) / plan_cells() need them.""","plan_filter","0.8.0","active",
+"FR-PL155","FR-PL003","PL","behaviour","plan_columns(), even empty, makes plan_apply() run to RTF pages rather than stop at the table.","plan_columns","0.8.0","active",".plan_reach"
+"FR-PL156","FR-PL003","PL","behaviour","plan_columns() called twice merges field by field, the later value of a field winning and the others kept.","plan_columns","0.8.0","active",
+"FR-PL157","FR-PL003","PL","argument","plan_columns(widths = <unnamed>) is col_rel_width, one a printed column in order (hidden and page_by keys not counted).","plan_columns","0.8.0","active",
+"FR-PL158","FR-PL003","PL","argument","plan_columns(widths = <unnamed and shorter than the printed columns>) repeats its last value.","plan_columns","0.8.0","active",
+"FR-PL159","FR-PL003","PL","argument","plan_columns(widths = c(col = w, .values = w)) sets widths by column name, .values covering every value column.","plan_columns","0.8.0","active",
+"FR-PL160","FR-PL003","PL","behaviour","plan_columns(widths = <named>) ignores names that are not printed columns.","plan_columns","0.8.0","active","probe: extra name nope = 9 ignored silently"
+"FR-PL161","FR-PL003","PL","argument","plan_columns(decimal = "".values"") aligns every value column at the decimal point, as set_decimal_split() on those columns.","plan_columns","0.8.0","active",
+"FR-PL162","FR-PL003","PL","argument","plan_columns(decimal = c(<column names>)) aligns the named columns, following them by name.","plan_columns","0.8.0","active",
+"FR-PL163","FR-PL003","PL","behaviour","plan_columns(decimal = <name not on the page>) ignores that name.","plan_columns","0.8.0","active","probe: decimal = nope runs without a message"
+"FR-PL164","FR-PL003","PL","argument","plan_columns(row_title = <positions>) marks the row-heading columns, the positions counting printed columns.","plan_columns","0.8.0","active",
+"FR-PL165","FR-PL003","PL","argument","plan_columns(row_title = c(<row key names>, "".values"")) marks columns by name, .values for every value column.","plan_columns","0.8.0","active","#635"
+"FR-PL166","FR-PL003","PL","argument","plan_columns(auto_width = TRUE) passes as_rtftables(auto_width = TRUE).","plan_columns","0.8.0","active","auto_width is not validated by the plan"
+"FR-PL167","FR-PL003","PL","argument","plan_columns(sep = s) is widen_ard(sep = s), the separator several cols keys are joined with.","plan_columns","0.8.0","active",
+"FR-PL168","FR-PL003","PL","argument","plan_columns(sep = s) on an ARD plan is also the header_sep the spanning header is split on, unless plan_col_header(header_sep = ) says otherwise.","plan_columns","0.8.0","active","#520"
+"FR-PL169","FR-PL003","PL","argument","plan_columns() without sep joins column keys with ""____"" (e.g. Placebo____n).","plan_columns","0.8.0","active",
+"FR-PL170","FR-PL003","PL","argument","plan_columns(cell_format = f or list(NULL, NULL, f)) passes as_rtftables(cell_format = ), same pages and RTF as the direct call.","plan_columns","0.8.0","active",
+"FR-PL171","FR-PL003","PL","argument","plan_columns(column_widths_twips = w) passes rtftable(column_widths_twips = w), same pages and RTF as the direct call.","plan_columns","0.8.0","active",
+"FR-PL172","FR-PL003","PL","argument","plan_columns(widths = , column_widths_twips = ) together: the twips fix the widths and widths is not used, as in rtftable().","plan_columns","0.8.0","active","probe: both col_rel_width and column_widths_twips are set on the page"
+"FR-PL173","FR-PL003","PL","behaviour","plan_columns() not called: no cell_format / column_widths_twips argument reaches as_rtftables().","plan_columns","0.8.0","active",
+"FR-PL174","FR-PL003","PL","data","plan_columns() on a finished (wide) table applies its settings to that table's pages.","plan_columns","0.8.0","active",
+"FR-PL175","FR-PL003","PL","data","plan_columns(widths / decimal / row_title by name) matches non-ASCII (Japanese) column names.","plan_columns","0.8.0","active",
+"FR-PL176","FR-PL003","PL","guard","plan_columns(widths = <named, missing a printed column>) stops at plan_apply(): ""The `columns` sheet gives widths, but not for: ...""","plan_columns","0.8.0","active",
+"FR-PL177","FR-PL003","PL","guard","plan_columns(row_title = <position past the printed columns>) stops at plan_apply(): ""plan_columns(row_title = 6): the table prints 5 columns (...); positions count those, or name the columns.""","plan_columns","0.8.0","active",
+"FR-PL178","FR-PL003","PL","guard","plan_columns(row_title = <hidden or unknown name>) stops at plan_apply(): ""plan_columns(row_title = ): '<name>' is not a printed column: ...""","plan_columns","0.8.0","active",
+"FR-PL179","FR-PL003","PL","guard","plan_columns(sep = <"""", NA, several, non-character>) stops: ""plan_columns(sep = ) is one non-empty string, ""____"" by default.""","plan_columns","0.8.0","active","only sep = "" is tested"
+"FR-PL180","FR-PL003","PL","guard","A column-key value containing the separator stops at plan_apply(): ""'<KEY>' has a value containing the key separator ""____"" ('<value>').""","plan_columns","0.8.0","active",".plan_check_key_sep"
+"FR-PL181","FR-PL003","PL","guard","plan_columns(<not a table_plan>) stops: ""Expected a table_plan; pipe from table_plan(ard).""","plan_columns","0.8.0","active",
+"FR-PL182","FR-PL004","PL","behaviour","plan_blanks(), even empty, makes plan_apply() run to RTF pages rather than stop at the table.","plan_blanks","0.8.0","active",".plan_reach"
+"FR-PL183","FR-PL004","PL","argument","plan_blanks(where = ""between_groups"") puts a blank row at each change of the first printed row key, never on the page key.","plan_blanks","0.8.0","active","#635"
+"FR-PL184","FR-PL004","PL","argument","plan_blanks(first = TRUE) puts a blank row at the top of every page.","plan_blanks","0.8.0","active","first/last/counted are not validated (any value; isTRUE)"
+"FR-PL185","FR-PL004","PL","argument","plan_blanks(last = TRUE) puts a blank row at the bottom of every page.","plan_blanks","0.8.0","active",
+"FR-PL186","FR-PL004","PL","argument","plan_blanks(counted = TRUE) counts the blank rows in plan_paginate_rows(max_rows = ), as as_rtftables(count_blank_rows = TRUE).","plan_blanks","0.8.0","active","tested only on as_rtftables()"
+"FR-PL187","FR-PL004","PL","argument","plan_blanks(where = <row positions>) puts a blank row after those rows of each page.","plan_blanks","0.8.0","active",
+"FR-PL188","FR-PL004","PL","argument","plan_blanks(where = blank_rows_by_change() / blank_rows_by_rule() / a list of them) passes the spec to as_rtftables(blank_rows = ).","plan_blanks","0.8.0","active",
+"FR-PL189","FR-PL004","PL","argument","plan_blanks(where = ""records"") with plan_listing() puts a blank row after each record (listing_spec(blank_row = TRUE)).","plan_blanks","0.8.0","active",
+"FR-PL190","FR-PL004","PL","behaviour","plan_blanks() called twice merges field by field, the later value of a field winning.","plan_blanks","0.8.0","active",
+"FR-PL191","FR-PL004","PL","data","plan_blanks(where = ""between_groups"") on a table with one group adds no blank row.","plan_blanks","0.8.0","active",
+"FR-PL192","FR-PL004","PL","data","plan_blanks() on BY pages (page_by or plan_paginate_group()) applies between_groups, first and last within every page.","plan_blanks","0.8.0","active",
+"FR-PL193","FR-PL004","PL","guard","plan_blanks(where = ""records"") without plan_listing() stops at plan_apply(): ""plan_blanks(where = ""records"") separates the records of a listing, and this plan has no plan_listing().""","plan_blanks","0.8.0","active",
+"FR-PL194","FR-PL004","PL","guard","plan_blanks(where = <unknown string, e.g. ""none"">) stops at plan_apply(): ""Unrecognised `blank_rows` entry: none"" with ""declared by: plan_blanks(where = ""none"")"".","plan_blanks","0.8.0","active","where = ""none"" is not a value: omit where for no blanks; from paginate.R"
+"FR-PL195","FR-PL004","PL","guard","plan_blanks(<not a table_plan>) stops: ""Expected a table_plan; pipe from table_plan(ard).""","plan_blanks","0.8.0","active",

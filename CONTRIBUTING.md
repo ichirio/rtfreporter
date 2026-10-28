@@ -440,15 +440,31 @@ the CI runs, the releases -- is not written again; this section says only
 what it does not.
 
 - **Functional requirements (FR)** are `inst/validation/requirements.csv`,
-  one row a requirement: `FR-<AREA>-<nnn>`, a statement of what a function
-  (argument) does, the functions, `since`, `status`.  A PR that adds or
-  changes a behaviour adds or changes its FR in the same PR; an FR is never
-  renumbered, a withdrawn one is `superseded` or `removed`.
-- **Functional tests (FT)** are the `test_that()` blocks.  A new test names
-  its id at its head (`"FT-PLAN-217: plan_cells(continuous=) ..."`); the
-  others are mapped in `inst/validation/test_map.csv`, which
-  `Rscript validation/trace.R --map` keeps up to date from the tests (a
-  block calling an FR's functions is that FR's FT; an id once given stays).
+  one row a requirement, a hierarchy: each row names its `parent`
+  (`FR-PL000` the plan verbs > `FR-PL040` plan_blanks() > `FR-PL041` ...: an
+  id is short, the area's two letters and a number; the `parent` column
+  holds the hierarchy, and a number once given is never reused).  Tests are
+  mapped to the leaves; a parent is covered when every
+  leaf under it has a test.  A user's requirement may be traced to an FR at
+  any level.  The leaves are finer than a function: each function has
+  leaves of four kinds --
+  - `behaviour`: each thing it does;
+  - `argument`: each argument, and each meaningful value or combination;
+  - `data`: each data shape it is meant to handle where that matters (no
+    rows, NA, factor levels, one or many groups, long or non-ASCII text);
+  - `guard`: each unintended use it stops -- a wrong argument, type or a
+    contradictory combination -- and the error or warning it gives.
+  A PR that adds or changes a behaviour adds or changes its FRs in the same
+  PR; an FR is never renumbered, a withdrawn one is `superseded` or
+  `removed` (`draft`: a coarse row not yet split, not counted).
+- **Functional tests (FT)** are the `test_that()` blocks that check an FR,
+  as a person who read them decided -- not a block that merely calls the
+  function.  A new test names its id and FRs at its head
+  (`"FT-PL217 [FR-PL305 FR-PL311]: plan_columns(widths =) ..."`);
+  an existing one is mapped by hand in `inst/validation/test_map.csv`.  An
+  FR no test checks is a deviation until a test is added.
+  `validation/trace.R` lists the blocks that call a function in scope but
+  are not mapped (candidates to read); it never counts them.
 - **The traceability matrix (FR -> FT)** is the mapping alone, made by
   `validation/trace.R`; it holds no results.  The tests' results are the CI
   record; a failing test fails the PR's checks, so it cannot be merged.

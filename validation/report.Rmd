@@ -20,8 +20,12 @@ local_runs <- csv("local-runs.csv")
 tr <- csv("traceability.csv")
 ft <- csv("ft.csv")
 fres <- csv("test-results.csv")
+fn_tab <- csv("functions.csv")
+# the leaves carry the tests; a parent's coverage is its leaves'
+leaf <- !tr$fr %in% tr$parent
+tl <- tr[leaf, , drop = FALSE]
 # an FR met: it has FTs, and they all pass
-fr_ok <- vapply(tr$fr, function(id) {
+fr_ok <- vapply(tl$fr, function(id) {
   f <- ft$ft[vapply(strsplit(ft$fr, " ", fixed = TRUE), function(x) id %in% x, NA)]
   r <- fres$result[fres$ft %in% f]
   length(r) > 0L && !any(r %in% c("fail", "not run"))
@@ -53,7 +57,7 @@ if (all(nzchar(gh[1:3]))) {
 
 The package's functional requirements (FR, `inst/validation/requirements.csv`) and the
 functional tests that check them (FT, the test blocks; `inst/validation/test_map.csv`),
-`r nrow(tr)` FRs in this release's scope.  The traceability matrix FR -> FT is the
+`r nrow(tl)` FRs (leaves) in this release's scope.  The traceability matrix FR -> FT is the
 record of what is tested; the automatic report below (tests, coverage, the tests that run
 each exported function, R CMD check) is its evidence that every exported function runs
 under the tests.
@@ -62,8 +66,10 @@ under the tests.
 
 | Measure | Value |
 |---|---|
-| FRs with at least one FT | `r sum(as.integer(tr$n_ft) > 0)` of `r nrow(tr)` |
-| FRs whose FTs all pass | `r sum(fr_ok)` of `r nrow(tr)` |
+| FRs with at least one FT | `r sum(as.integer(tl$n_ft) > 0)` of `r nrow(tl)` |
+| Guard FRs (unintended use stopped) with an FT | `r sum(as.integer(tl$n_ft) > 0 & tl$kind == "guard")` of `r sum(tl$kind == "guard")` |
+| FRs whose FTs all pass | `r sum(fr_ok)` of `r nrow(tl)` |
+| Upper FRs covered / partial / none | `r sum(tr$coverage[!leaf] == "covered")` / `r sum(tr$coverage[!leaf] == "partial")` / `r sum(tr$coverage[!leaf] == "none")` |
 | Functional tests (FT) | `r nrow(ft)`: `r sum(fres$result == "pass")` pass, `r sum(fres$result == "fail")` fail, `r sum(fres$result == "skip")` skip |
 | All tests (test blocks; expectations) | `r if (!is.null(tests)) nrow(tests) else NA`; `r if (!is.null(tests)) sum(tests$expectations) else NA`, `r n_fail` failing blocks |
 | Line coverage | `r if (!is.null(cov)) sprintf("%.1f%%", cov$total) else NA` |
@@ -76,7 +82,7 @@ under the tests.
 
 ```{r deviations, results = "asis"}
 dev <- c(
-  if (!all(fr_ok)) sprintf("- FR %s: no passing test", tr$fr[!fr_ok]),
+  if (!all(fr_ok)) sprintf("- %s (%s): no passing test", tl$fr[!fr_ok], tl$kind[!fr_ok]),
   if (isTRUE(n_fail > 0)) sprintf("- %d test blocks fail.", n_fail),
   if (length(not_run)) sprintf("- Exported functions no test runs: %s.", paste(not_run, collapse = ", ")),
   if (!is.null(chk) && length(chk$errors)) "- R CMD check has errors.",
@@ -105,7 +111,8 @@ cat(if (ok) {
 ## A. Traceability matrix: FR -> FT
 
 ```{r attach-a}
-knitr::kable(tr[, c("fr", "functions", "n_ft")], col.names = c("FR", "Functions", "FTs"))
+knitr::kable(tr[, c("fr", "parent", "kind", "functions", "n_ft", "coverage")],
+             col.names = c("FR", "Parent", "Kind", "Functions", "FTs", "Coverage"))
 ```
 
 The FT ids of each FR are in `traceability.csv`, each FT's file and test in `ft.csv`; the
