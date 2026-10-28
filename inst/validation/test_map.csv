@@ -53,3 +53,4 @@
 "test-flow.R","a later content on a page has its font and colour in the document's tables","FT-IX007","FR-IX122"
 "test-font-table.R","several elements each get their own index","FT-IX008","FR-IX123"
 "test-font-slots.R","a single-string font writes exactly the pre-slot RTF","FT-IX009","FR-IX131"
+"test-table-plan.R","plan_blanks(where = ""none"") takes a listing's record separator away","FT-PL048","FR-PL196"

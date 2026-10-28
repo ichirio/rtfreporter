@@ -1,4 +1,21 @@
 "id","parent","area","kind","statement","functions","since","status","notes"
+"FR-IX000",,"IX","group","Functions and arguments act together as declared, where that is a risk.",,"0.8.0","active",
+"FR-IX001","FR-IX000","IX","group","Precedence and overrides: where two settings say the same thing, the documented one wins.",,"0.8.0","active",
+"FR-IX002","FR-IX000","IX","group","An argument that changes another's meaning does so as documented.",,"0.8.0","active",
+"FR-IX003","FR-IX000","IX","group","Combinations that once had a bug stay fixed.",,"0.8.0","active",
+"FR-IX004","FR-IX000","IX","group","Scenarios: data to RTF, the file compared byte for byte.",,"0.8.0","active",
+"FR-IX101","FR-IX001","IX","interaction","as_rtftables(column_widths_twips = , auto_width = TRUE): the explicit twips win over the automatic widths.","as_rtftables","0.8.0","active",
+"FR-IX102","FR-IX001","IX","interaction","plan_columns(widths = ) and plan_columns(column_widths_twips = ) in two calls stop at plan_apply(), asking for one of them.","plan_columns","0.8.0","active",
+"FR-IX103","FR-IX001","IX","interaction","rtf_tables() with several contents on a page: the page's section is the first content's with one; a later different one warns and adds no page.","rtf_tables;rtf_layout","0.8.0","active",
+"FR-IX104","FR-IX001","IX","interaction","rtf_tables() with several contents on a page: each title takes its own table's page values; the header and footer take the first table's, a later different value warns.","rtf_tables;as_rtftables","0.8.0","active",
+"FR-IX111","FR-IX002","IX","interaction","{AUTO_PAGE} in a source file stays a dynamic field after assemble_rtf(), so the assembled document numbers its own pages.","assemble_rtf","0.8.0","active",
+"FR-IX121","FR-IX003","IX","interaction","rtf_tables(auto_section = TRUE): a page that opens a section keeps the title carried on it (#728).","rtf_tables;as_rtftables","0.8.0","active",
+"FR-IX122","FR-IX003","IX","interaction","A later content on a page with its own font and colour has them declared in the document's tables (#730).","rtf_tables","0.8.0","active",
+"FR-IX123","FR-IX003","IX","interaction","Headers and footers start in the document's font, then their own, so every reader shows them in it (#732).","rtf_header;rtf_footer","0.8.0","active",
+"FR-IX131","FR-IX004","IX","interaction","A table from a data frame to an RTF file is written byte for byte as its reference.","rtftable;rtf_tables;generate_rtfreport","0.8.0","active",
+"FR-IX132","FR-IX004","IX","interaction","A listing from records to an RTF file is written byte for byte as its reference.","plan_listing;rtf_tables;generate_rtfreport","0.8.0","active","no reference file yet"
+"FR-IX133","FR-IX004","IX","interaction","A figure from a plot to an RTF file is written byte for byte as its reference.","rtf_figures;generate_rtfreport","0.8.0","active","no reference file yet"
+"FR-IX134","FR-IX004","IX","interaction","Several contents on a page (a summary and its listing) to an RTF file are written byte for byte as their reference.","rtf_tables;generate_rtfreport","0.8.0","active","no reference file yet"
 "FR-PL000",,"PL","group","The plan verbs build a table's plan and run it into pages.","table_plan;plan_filter;plan_columns;plan_blanks","0.8.0","active",
 "FR-PL001","FR-PL000","PL","group","table_plan() starts a deferred, last-wins plan from the data and takes the roles: what goes across, what goes down, what carries the row identity.","table_plan","0.8.0","active",
 "FR-PL002","FR-PL000","PL","group","plan_filter() drops the rows whose records fail a condition over the ARD's statistics and keys, judged across the columns.","plan_filter","0.8.0","active",
@@ -122,22 +139,6 @@
 "FR-PL191","FR-PL004","PL","data","plan_blanks(where = ""between_groups"") on a table with one group adds no blank row.","plan_blanks","0.8.0","active",
 "FR-PL192","FR-PL004","PL","data","plan_blanks() on BY pages (page_by or plan_paginate_group()) applies between_groups, first and last within every page.","plan_blanks","0.8.0","active",
 "FR-PL193","FR-PL004","PL","guard","plan_blanks(where = ""records"") without plan_listing() stops at plan_apply(): ""plan_blanks(where = ""records"") separates the records of a listing, and this plan has no plan_listing().""","plan_blanks","0.8.0","active",
-"FR-PL194","FR-PL004","PL","guard","plan_blanks(where = <unknown string, e.g. ""none"">) stops at plan_apply(): ""Unrecognised `blank_rows` entry: none"" with ""declared by: plan_blanks(where = ""none"")"".","plan_blanks","0.8.0","active","where = ""none"" is not a value: omit where for no blanks; from paginate.R"
+"FR-PL194","FR-PL004","PL","guard","plan_blanks(where = <an unknown string, e.g. ""nope"">) stops at plan_apply(): ""Unrecognised `blank_rows` entry: nope"" with ""declared by: plan_blanks(where = ""nope"")"".","plan_blanks","0.8.0","active","where = ""none"" is not a value: omit where for no blanks; from paginate.R"
 "FR-PL195","FR-PL004","PL","guard","plan_blanks(<not a table_plan>) stops: ""Expected a table_plan; pipe from table_plan(ard).""","plan_blanks","0.8.0","active",
-"FR-IX000",,"IX","group","Functions and arguments act together as declared, where that is a risk.",,"0.8.0","active",
-"FR-IX001","FR-IX000","IX","group","Precedence and overrides: where two settings say the same thing, the documented one wins.",,"0.8.0","active",
-"FR-IX002","FR-IX000","IX","group","An argument that changes another's meaning does so as documented.",,"0.8.0","active",
-"FR-IX003","FR-IX000","IX","group","Combinations that once had a bug stay fixed.",,"0.8.0","active",
-"FR-IX004","FR-IX000","IX","group","Scenarios: data to RTF, the file compared byte for byte.",,"0.8.0","active",
-"FR-IX101","FR-IX001","IX","interaction","as_rtftables(column_widths_twips = , auto_width = TRUE): the explicit twips win over the automatic widths.","as_rtftables","0.8.0","active",
-"FR-IX102","FR-IX001","IX","interaction","plan_columns(widths = ) and plan_columns(column_widths_twips = ) in two calls stop at plan_apply(), asking for one of them.","plan_columns","0.8.0","active",
-"FR-IX103","FR-IX001","IX","interaction","rtf_tables() with several contents on a page: the page's section is the first content's with one; a later different one warns and adds no page.","rtf_tables;rtf_layout","0.8.0","active",
-"FR-IX104","FR-IX001","IX","interaction","rtf_tables() with several contents on a page: each title takes its own table's page values; the header and footer take the first table's, a later different value warns.","rtf_tables;as_rtftables","0.8.0","active",
-"FR-IX111","FR-IX002","IX","interaction","{AUTO_PAGE} in a source file stays a dynamic field after assemble_rtf(), so the assembled document numbers its own pages.","assemble_rtf","0.8.0","active",
-"FR-IX121","FR-IX003","IX","interaction","rtf_tables(auto_section = TRUE): a page that opens a section keeps the title carried on it (#728).","rtf_tables;as_rtftables","0.8.0","active",
-"FR-IX122","FR-IX003","IX","interaction","A later content on a page with its own font and colour has them declared in the document's tables (#730).","rtf_tables","0.8.0","active",
-"FR-IX123","FR-IX003","IX","interaction","Headers and footers start in the document's font, then their own, so every reader shows them in it (#732).","rtf_header;rtf_footer","0.8.0","active",
-"FR-IX131","FR-IX004","IX","interaction","A table from a data frame to an RTF file is written byte for byte as its reference.","rtftable;rtf_tables;generate_rtfreport","0.8.0","active",
-"FR-IX132","FR-IX004","IX","interaction","A listing from records to an RTF file is written byte for byte as its reference.","plan_listing;rtf_tables;generate_rtfreport","0.8.0","active","no reference file yet"
-"FR-IX133","FR-IX004","IX","interaction","A figure from a plot to an RTF file is written byte for byte as its reference.","rtf_figures;generate_rtfreport","0.8.0","active","no reference file yet"
-"FR-IX134","FR-IX004","IX","interaction","Several contents on a page (a summary and its listing) to an RTF file are written byte for byte as their reference.","rtf_tables;generate_rtfreport","0.8.0","active","no reference file yet"
+"FR-PL196","FR-PL004","PL","argument","plan_blanks(where = ""none"") gives a listing's records no blank row between them (listing_spec(blank_row = FALSE)), and a table no blank rows.","plan_blanks","0.8.2","active",
