@@ -155,3 +155,4 @@
 "test-table-plan.R","plan_nest() says what is wrong","FT-PL128","FR-PL325"
 "test-table-plan.R","plan_sort() goes to the ARD half, where the statistics are","FT-PL129","FR-PL304"
 "test-table-plan.R","a finished table sorts descending by -name","FT-PL130","FR-PL304"
+"test-table-plan.R","last wins for the same key too, not just for a narrower one","FT-IX011","FR-IX257"

@@ -477,6 +477,10 @@ what it does not.
   A PR that changes the RTF written says so: it compares the reference
   outputs byte for byte with `main` and lists, in its description, the
   outputs it changes on purpose; every other output is identical.
+  The validation scenarios (FR-IX131 .. FR-IX134) are such references under
+  `tests/testthat/fixtures/`: their tests compare the file written now with
+  the one kept, line for line; a deliberate change regenerates them
+  (`tests/testthat/helper-validation-scenarios.R` says how).
 - **At a release**, each R-CMD-check job writes its environment
   (`validation/env.R`: sessionInfo, the dependencies' versions, R CMD
   check's result, the tests' log), and the workflow's last job gathers them

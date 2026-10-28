@@ -304,7 +304,7 @@ test_that("FT-PL283 [FR-PL422 FR-PL427 FR-PL428]: plan_style()'s whole-table set
 
 # ---- plan_paginate_rows() --------------------------------------------------
 
-test_that("FT-PL284 [FR-PL433 FR-PL434 FR-PL435 FR-PL436]: every split, with its own arguments, is the direct call's", {
+test_that("FT-PL284 [FR-PL433 FR-PL434 FR-PL435 FR-PL436 FR-IX262]: every split, with its own arguments, is the direct call's", {
   d <- vp_wide()
   same <- function(p, ...) expect_equal(vp_pages(p), vp_direct(d, ...))
   same(table_plan(d) |> plan_paginate_rows(max_rows = 4, split = "group_safe"),
@@ -346,7 +346,7 @@ test_that("FT-PL285 [FR-PL438 FR-PL439 FR-PL441]: heading = names the BY pages, 
   expect_null(attr(plain[[1L]], "rtf_heading_at"))
 })
 
-test_that("FT-PL286 [FR-PL444 FR-PL445 FR-PL446 FR-PL447]: plan_paginate_rows() refuses a bad heading, heading_at, a budget the split ignores, an unknown page_by", {
+test_that("FT-PL286 [FR-PL444 FR-PL445 FR-PL446 FR-PL447 FR-IX262]: plan_paginate_rows() refuses a bad heading, heading_at, a budget the split ignores, an unknown page_by", {
   p <- table_plan(vp_wide())
   expect_error(plan_paginate_rows(p, page_by = "grp", heading = c("a", "b")),
                "plan_paginate_rows(heading = ) is one text with `{value}` and `{n}`", fixed = TRUE)
