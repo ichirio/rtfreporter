@@ -249,6 +249,11 @@ contributor to several.
   releasable: green on all CI workflows (R-CMD-check, test-coverage,
   pkgdown) and `0 errors / 0 warnings` on `devtools::check()`.  The
   current *development version* lives here.
+- **`next` gathers the maintainers' work that is not urgent.**  Their
+  topic branches go to `next` once their own checks pass; `next` goes to
+  `main` about once a week, by a pull request (a merge commit) that runs
+  every CI workflow.  An urgent fix goes to `main` as a small PR of its own.
+  Contributors keep opening their PRs against `main`.
 - **Direct commits to `main`.**  Branch protection is **not yet enabled**
   while the project has a single maintainer (so `main` currently accepts
   direct pushes).  As soon as there is more than one contributor it will be
@@ -336,6 +341,7 @@ green.
 | **pkgdown** | `pkgdown.yaml` | Builds the documentation site and (on `main` / on a published release) deploys it to the `gh-pages` branch. |
 | **version-guard** | `version-guard.yaml` | Fails a PR that raises the **MINOR or MAJOR** position of `DESCRIPTION` `Version:` unless the PR carries the `release` label (see *Versioning & releases*). A PATCH bump or no change always passes. |
 | **lint** | `lint.yaml` | Runs `lintr::lint_package()` and fails on any lint. Scope and rules are set by the repository-root `.lintr` (currently lints `R/` only). |
+| **validation-report** | `validation-report.yaml` | Only for a published release (and by hand): the validation report, one PDF attached to the release (see *Quality assurance*). Never on a push or a PR. |
 
 All three also accept `workflow_dispatch` (run-on-demand from the Actions
 tab).  Releases additionally re-trigger pkgdown on `release: published`.
@@ -426,6 +432,35 @@ open issues can be bulk-added from the board's *＋ Add items* search.
 
 Until the board exists, labels + milestones already give a usable backlog
 view via the Issues tab (filter by `exec:agent`, by milestone, or by type).
+
+## Quality assurance: requirements, tests, traceability
+
+What GitHub already records -- issues, pull requests and their reviews,
+the CI runs, the releases -- is not written again; this section says only
+what it does not.
+
+- **Functional requirements (FR)** are `inst/validation/requirements.csv`,
+  one row a requirement: `FR-<AREA>-<nnn>`, a statement of what a function
+  (argument) does, the functions, `since`, `status`.  A PR that adds or
+  changes a behaviour adds or changes its FR in the same PR; an FR is never
+  renumbered, a withdrawn one is `superseded` or `removed`.
+- **Functional tests (FT)** are the `test_that()` blocks.  A new test names
+  its id at its head (`"FT-PLAN-217: plan_cells(continuous=) ..."`); the
+  others are mapped in `inst/validation/test_map.csv`, which
+  `Rscript validation/trace.R --map` keeps up to date from the tests (a
+  block calling an FR's functions is that FR's FT; an id once given stays).
+- **The traceability matrix (FR -> FT)** is the mapping alone, made by
+  `validation/trace.R`; it holds no results.  The tests' results are the CI
+  record; a failing test fails the PR's checks, so it cannot be merged.
+- **Regression**: every PR runs the whole test suite and R CMD check (CI).
+  A PR that changes the RTF written says so: it compares the reference
+  outputs byte for byte with `main` and lists, in its description, the
+  outputs it changes on purpose; every other output is identical.
+- **At a release**, `validation-report.yaml` writes one PDF -- the
+  Development Summary Report (version, scope, environment, results,
+  deviations, conclusion) and its evidence (the matrix, R CMD check, the
+  tests' results, line coverage, the tests that run each exported function,
+  the environment) -- and attaches it to the release.
 
 ## Code style
 
@@ -595,6 +630,8 @@ open a release Issue and perform a release.**
      --notes-file <notes-from-NEWS> --latest
    ```
 
+   Publishing the release runs `validation-report.yaml`, which attaches the
+   validation report (PDF) to it.
 7. **(Once on CRAN)** run the CRAN pre-checks and submit —
    `devtools::check_win_devel()`, `urlchecker::url_check()`,
    `devtools::release()`.

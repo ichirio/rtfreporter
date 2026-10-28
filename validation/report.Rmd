@@ -1,0 +1,176 @@
+---
+title: "rtfreporter: Development Summary Report"
+params:
+  out: "out"
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+out <- params$out
+rd <- function(f) if (file.exists(file.path(out, f))) readRDS(file.path(out, f))
+csv <- function(f) if (file.exists(file.path(out, f))) {
+  utils::read.csv(file.path(out, f), colClasses = "character", stringsAsFactors = FALSE)
+}
+chk <- rd("check.rds")
+tests <- rd("tests.rds")
+cov <- rd("coverage.rds")
+envs <- rd("environments.rds")
+local_runs <- csv("local-runs.csv")
+tr <- csv("traceability.csv")
+ft <- csv("ft.csv")
+fres <- csv("test-results.csv")
+# an FR met: it has FTs, and they all pass
+fr_ok <- vapply(tr$fr, function(id) {
+  f <- ft$ft[vapply(strsplit(ft$fr, " ", fixed = TRUE), function(x) id %in% x, NA)]
+  r <- fres$result[fres$ft %in% f]
+  length(r) > 0L && !any(r %in% c("fail", "not run"))
+}, NA)
+ver <- as.character(utils::packageVersion("rtfreporter"))
+commit <- tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
+                   error = function(e) "unknown")
+n_fail <- if (!is.null(tests)) sum(tests$failed > 0 | tests$error) else NA
+# the exported functions a test runs (covtracer), and those it runs directly
+fn <- cov$fn_tests
+run_by_test <- if (!is.null(fn)) unique(fn$alias) else character()
+direct <- if (!is.null(fn) && any(!is.na(fn$direct))) unique(fn$alias[fn$direct %in% TRUE]) else
+  character()
+not_run <- setdiff(cov$exports, run_by_test)
+```
+
+Version `r ver` (commit `r commit`), `r format(Sys.Date())`.
+Environment: `r R.version.string`; `r utils::sessionInfo()$running`.
+```{r links, results = "asis"}
+# (the details are GitHub's: the run that made this report, the release)
+gh <- Sys.getenv(c("GITHUB_SERVER_URL", "GITHUB_REPOSITORY", "GITHUB_RUN_ID", "GITHUB_REF_NAME"))
+if (all(nzchar(gh[1:3]))) {
+  cat(sprintf("Run: <%s/%s/actions/runs/%s>; releases: <%s/%s/releases>.\n",
+              gh[1], gh[2], gh[3], gh[1], gh[2]))
+}
+```
+
+## Scope
+
+The package's functional requirements (FR, `inst/validation/requirements.csv`) and the
+functional tests that check them (FT, the test blocks; `inst/validation/test_map.csv`),
+`r nrow(tr)` FRs in this release's scope.  The traceability matrix FR -> FT is the
+record of what is tested; the automatic report below (tests, coverage, the tests that run
+each exported function, R CMD check) is its evidence that every exported function runs
+under the tests.
+
+## Results
+
+| Measure | Value |
+|---|---|
+| FRs with at least one FT | `r sum(as.integer(tr$n_ft) > 0)` of `r nrow(tr)` |
+| FRs whose FTs all pass | `r sum(fr_ok)` of `r nrow(tr)` |
+| Functional tests (FT) | `r nrow(ft)`: `r sum(fres$result == "pass")` pass, `r sum(fres$result == "fail")` fail, `r sum(fres$result == "skip")` skip |
+| All tests (test blocks; expectations) | `r if (!is.null(tests)) nrow(tests) else NA`; `r if (!is.null(tests)) sum(tests$expectations) else NA`, `r n_fail` failing blocks |
+| Line coverage | `r if (!is.null(cov)) sprintf("%.1f%%", cov$total) else NA` |
+| Exported functions run by a test | `r length(intersect(cov$exports, run_by_test))` of `r length(cov$exports)` |
+| Exported functions a test calls directly | `r if (length(direct)) length(intersect(cov$exports, direct)) else "not recorded"` |
+| R-CMD-check of this commit on CI | `r if (!is.null(envs) && nrow(envs)) sprintf("%d of %d environments succeed (attachment G)", sum(envs$result == "success"), nrow(envs)) else "not found"` |
+| R CMD check (`--as-cran`) | `r if (!is.null(chk)) sprintf("%d errors, %d warnings, %d notes", length(chk$errors), length(chk$warnings), length(chk$notes)) else "not run"` |
+
+## Deviations
+
+```{r deviations, results = "asis"}
+dev <- c(
+  if (!all(fr_ok)) sprintf("- FR %s: no passing test", tr$fr[!fr_ok]),
+  if (isTRUE(n_fail > 0)) sprintf("- %d test blocks fail.", n_fail),
+  if (length(not_run)) sprintf("- Exported functions no test runs: %s.", paste(not_run, collapse = ", ")),
+  if (!is.null(chk) && length(chk$errors)) "- R CMD check has errors.",
+  if (!is.null(envs) && any(envs$result != "success")) sprintf("- R-CMD-check on %s: %s.",
+    envs$environment[envs$result != "success"], envs$result[envs$result != "success"]),
+  if (!is.null(chk) && length(chk$warnings)) "- R CMD check has warnings.")
+cat(if (length(dev)) dev else "None.", sep = "\n")
+```
+
+## Conclusion
+
+```{r conclusion, results = "asis"}
+ok <- all(fr_ok) && isTRUE(n_fail == 0) &&
+  (is.null(chk) || !length(chk$errors))
+cat(if (ok) {
+  "Every functional requirement in scope is checked by tests that pass, and the package passes R CMD check without errors."
+} else {
+  "Not every criterion is met: see the deviations."
+})
+```
+
+\newpage
+
+# Attachments
+
+## A. Traceability matrix: FR -> FT
+
+```{r attach-a}
+knitr::kable(tr[, c("fr", "functions", "n_ft")], col.names = c("FR", "Functions", "FTs"))
+```
+
+The FT ids of each FR are in `traceability.csv`, each FT's file and test in `ft.csv`; the
+tests' results are apart, in `test-results.csv` and the CI's test record.  A failing test
+fails the pull request's checks, so it cannot be merged.
+
+## B. R CMD check
+
+```{r attach-b, results = "asis"}
+if (is.null(chk)) cat("Not run.") else {
+  cat(sprintf("Status %s; %d errors, %d warnings, %d notes.\n\n", chk$status,
+              length(chk$errors), length(chk$warnings), length(chk$notes)))
+  for (x in c(chk$errors, chk$warnings, chk$notes)) cat("```\n", x, "\n```\n\n")
+}
+```
+
+## C. Test results by file
+
+```{r attach-c}
+if (!is.null(tests)) {
+  by <- aggregate(cbind(blocks = 1, expectations = expectations, failed = as.integer(failed > 0 | error),
+                        skipped = as.integer(skipped)) ~ file, data = tests, sum)
+  knitr::kable(by, col.names = c("File", "Blocks", "Expectations", "Failed", "Skipped"))
+}
+```
+
+## D. Line coverage by file
+
+```{r attach-d}
+if (!is.null(cov)) knitr::kable(cov$files[order(cov$files$file), ],
+                                col.names = c("File", "Lines", "Covered", "%"), row.names = FALSE)
+```
+
+## E. Exported functions and the tests that run them
+
+```{r attach-e}
+if (!is.null(fn)) {
+  n <- table(factor(fn$alias, levels = cov$exports))
+  knitr::kable(data.frame(Function = names(n), Tests = as.integer(n),
+                          Direct = if (length(direct)) ifelse(names(n) %in% direct, "yes", "") else ""),
+               row.names = FALSE)
+}
+```
+
+## F. Environment
+
+```{r attach-f, comment = ""}
+if (file.exists(file.path(out, "session.txt"))) cat(readLines(file.path(out, "session.txt")), sep = "\n")
+```
+
+## G. R-CMD-check of this commit, every CI environment
+
+```{r attach-g, results = "asis"}
+if (is.null(envs) || !nrow(envs)) {
+  cat("No R-CMD-check run was found for this commit.")
+} else {
+  print(knitr::kable(data.frame(Environment = envs$environment, Result = envs$result,
+                                Tests = envs$tests, Run = sprintf("<%s>", envs$url)),
+                     row.names = FALSE))
+}
+```
+
+```{r attach-h, results = "asis"}
+if (!is.null(local_runs)) {
+  cat("\n## H. Local runs (by hand)\n\n")
+  print(knitr::kable(local_runs, row.names = FALSE))
+}
+```

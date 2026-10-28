@@ -7,9 +7,11 @@
 #  writes afresh from the tests: each block calling an FR's functions is
 #  mapped to that FR.  The tests are run, and the result is
 #
-#    validation/out/traceability.csv   one row an FR: its FTs and their result
-#    validation/out/ft.csv             one row an FT: its FRs and its result
+#    validation/out/traceability.csv   one row an FR: its FTs (the mapping
+#                                      alone; a matrix holds no results)
+#    validation/out/ft.csv             one row an FT: its file, test and FRs
 #    validation/out/traceability.html  the matrix to read
+#    validation/out/test-results.csv   one row an FT: its result
 #    validation/out/summary.md         the Development Summary Report (1 page)
 #
 #  Run from the package root:
@@ -116,7 +118,28 @@ if (any(gone)) {
                                 collapse = "; ")), call. = FALSE)
 }
 
-# ---- run them ----------------------------------------------------------------
+# ---- the matrix: FR -> FT, the mapping alone (no results) ------------------------
+fts <- function(id) map$ft[vapply(strsplit(map$fr, " ", fixed = TRUE), function(x) id %in% x, NA)]
+tr <- data.frame(fr = fr$id, statement = fr$statement, functions = fr$functions,
+                 ft = vapply(fr$id, function(id) paste(fts(id), collapse = " "), ""),
+                 n_ft = vapply(fr$id, function(id) length(fts(id)), 0L),
+                 stringsAsFactors = FALSE, row.names = NULL)
+utils::write.csv(tr, file.path(out, "traceability.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+utils::write.csv(map[c("ft", "file", "test", "fr")], file.path(out, "ft.csv"), row.names = FALSE,
+                 fileEncoding = "UTF-8")
+
+esc <- function(x) gsub("<", "&lt;", gsub("&", "&amp;", x, fixed = TRUE), fixed = TRUE)
+html <- c("<!doctype html><meta charset='utf-8'><title>Traceability matrix</title>",
+          "<style>body{font-family:sans-serif;font-size:13px}td,th{border:1px solid #ccc;padding:3px 6px;vertical-align:top}table{border-collapse:collapse}.no{background:#ffd}</style>",
+          sprintf("<h1>rtfreporter %s: FR &rarr; FT</h1>", utils::packageVersion("rtfreporter")),
+          "<table><tr><th>FR</th><th>Statement</th><th>Functions</th><th>FT</th></tr>",
+          sprintf("<tr class='%s'><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
+                  ifelse(tr$n_ft == 0L, "no", ""), tr$fr, esc(tr$statement), esc(tr$functions),
+                  esc(tr$ft)),
+          "</table>")
+writeLines(html, file.path(out, "traceability.html"), useBytes = TRUE)
+
+# ---- the tests' results: apart from the matrix -----------------------------------
 pkgload::load_all(root, quiet = TRUE)
 run_files <- unique(map$file)
 res <- do.call(rbind, lapply(run_files, function(f) {
@@ -128,36 +151,17 @@ res <- do.call(rbind, lapply(run_files, function(f) {
              stringsAsFactors = FALSE)
 }))
 res <- res[!duplicated(paste(res$file, res$test)), , drop = FALSE]
-map$result <- res$result[match(paste(map$file, map$test), paste(res$file, res$test))]
-map$result[is.na(map$result)] <- "not run"
-utils::write.csv(map, file.path(out, "ft.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-
-# ---- the matrix: one row an FR -------------------------------------------------
-tr <- do.call(rbind, lapply(seq_len(nrow(fr)), function(i) {
-  m <- map[vapply(strsplit(map$fr, " ", fixed = TRUE), function(x) fr$id[i] %in% x, NA), ]
-  data.frame(fr = fr$id[i], statement = fr$statement[i], functions = fr$functions[i],
-             ft = paste(m$ft, collapse = " "), n_ft = nrow(m),
-             pass = sum(m$result == "pass"), fail = sum(m$result == "fail"),
-             skip = sum(m$result == "skip"),
-             status = if (!nrow(m)) "no test" else if (any(m$result == "fail")) "fail" else "pass",
-             stringsAsFactors = FALSE)
-}))
-utils::write.csv(tr, file.path(out, "traceability.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-
-esc <- function(x) gsub("<", "&lt;", gsub("&", "&amp;", x, fixed = TRUE), fixed = TRUE)
-html <- c("<!doctype html><meta charset='utf-8'><title>Traceability matrix</title>",
-          "<style>body{font-family:sans-serif;font-size:13px}td,th{border:1px solid #ccc;padding:3px 6px;vertical-align:top}table{border-collapse:collapse}.fail{background:#fdd}.no{background:#ffd}</style>",
-          sprintf("<h1>rtfreporter %s: FR &rarr; FT</h1>", utils::packageVersion("rtfreporter")),
-          "<table><tr><th>FR</th><th>Statement</th><th>Functions</th><th>FT</th><th>Pass</th><th>Fail</th><th>Skip</th><th>Status</th></tr>",
-          sprintf("<tr class='%s'><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td><td>%s</td></tr>",
-                  ifelse(tr$status == "fail", "fail", ifelse(tr$status == "no test", "no", "")),
-                  tr$fr, esc(tr$statement), esc(tr$functions), esc(tr$ft), tr$pass, tr$fail,
-                  tr$skip, tr$status),
-          "</table>")
-writeLines(html, file.path(out, "traceability.html"), useBytes = TRUE)
+result <- res$result[match(paste(map$file, map$test), paste(res$file, res$test))]
+result[is.na(result)] <- "not run"
+utils::write.csv(data.frame(ft = map$ft, file = map$file, test = map$test, result = result),
+                 file.path(out, "test-results.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+# an FR met: it has FTs, and they all pass
+fr_ok <- vapply(fr$id, function(id) {
+  r <- result[map$ft %in% fts(id)]
+  length(r) > 0L && !any(r %in% c("fail", "not run"))
+}, NA)
 
 # ---- the Development Summary Report: one page -----------------------------------
-exp_fns <- getNamespaceExports("rtfreporter")
 in_area <- unique(unlist(fr_fns))
 called <- unique(unlist(strsplit(tb$calls, " ", fixed = TRUE)))
 untested_fns <- setdiff(in_area, called)
@@ -177,24 +181,24 @@ sm <- c(
   "## Results",
   "",
   "| Measure | Value |", "|---|---|",
-  sprintf("| Requirements with at least one test | %d of %d (%.0f%%) |", sum(tr$n_ft > 0), nrow(tr),
-          100 * mean(tr$n_ft > 0)),
-  sprintf("| Requirements whose tests all pass | %d of %d |", sum(tr$status == "pass"), nrow(tr)),
+  sprintf("| Requirements with at least one test (traceability matrix) | %d of %d |",
+          sum(tr$n_ft > 0), nrow(tr)),
   sprintf("| Functional tests (test blocks) | %d: %d pass, %d fail, %d skip |", nrow(map),
-          sum(map$result == "pass"), sum(map$result == "fail"), sum(map$result == "skip")),
+          sum(result == "pass"), sum(result == "fail"), sum(result == "skip")),
+  sprintf("| Requirements whose tests all pass | %d of %d |", sum(fr_ok), nrow(fr)),
   sprintf("| Functions in scope not called by any test | %s |",
           if (length(untested_fns)) paste(untested_fns, collapse = ", ") else "none"),
   "",
+  "A failing test fails the pull request's checks (CI), so it cannot be merged.",
+  "",
   "## Deviations",
-  if (any(tr$status != "pass")) {
-    sprintf("- %s: %s", tr$fr[tr$status != "pass"], tr$status[tr$status != "pass"])
-  } else "None.",
+  if (!all(fr_ok)) sprintf("- %s: no passing test", fr$id[!fr_ok]) else "None.",
   "",
   "## Conclusion",
-  if (all(tr$status == "pass")) {
+  if (all(fr_ok)) {
     "Every requirement in scope has tests, and they pass."
   } else "Not every requirement in scope is met by passing tests: see the deviations.",
   "",
-  "Attachments: traceability.csv / .html (FR -> FT), ft.csv (FT -> FR and result); R CMD check, covr and the tests' map to the help pages come from CI.")
+  "Attachments: traceability.csv / .html (FR -> FT), ft.csv (FT -> FR), test-results.csv (each FT's result); R CMD check, covr and the tests that run each function come from CI.")
 writeLines(sm, file.path(out, "summary.md"), useBytes = TRUE)
 cat(sprintf("FR %d, FT %d, written to %s\n", nrow(tr), nrow(map), out))
