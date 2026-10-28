@@ -1,0 +1,151 @@
+"USUBJID","AGE","SEX","RENALGR","ANALYTE","PARAMCD","PARAM","AVAL"
+"1001",37,"F","Normal","Parent","CMAX","C_{max} (ng/mL)",3.7856455950754
+"1001",37,"F","Normal","Parent","TMAX","T_{max} (hr)",1.48
+"1001",37,"F","Normal","Parent","AUCLST","AUC_{last} (ng·hr/mL)",26.3512246342567
+"1001",37,"F","Normal","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",26.873191911482
+"1001",37,"F","Normal","Parent","LAMZHL","t1/2 (hr)",4.14472475824707
+"1002",63,"F","Normal","Parent","CMAX","C_{max} (ng/mL)",3.32517038777162
+"1002",63,"F","Normal","Parent","TMAX","T_{max} (hr)",1.47
+"1002",63,"F","Normal","Parent","AUCLST","AUC_{last} (ng·hr/mL)",22.9200550925009
+"1002",63,"F","Normal","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",28.3484006828861
+"1002",63,"F","Normal","Parent","LAMZHL","t1/2 (hr)",5.04089695889817
+"1003",67,"F","Normal","Parent","CMAX","C_{max} (ng/mL)",2.7683570429518
+"1003",67,"F","Normal","Parent","TMAX","T_{max} (hr)",2.09
+"1003",67,"F","Normal","Parent","AUCLST","AUC_{last} (ng·hr/mL)",14.9831000638464
+"1003",67,"F","Normal","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",16.9486639389963
+"1003",67,"F","Normal","Parent","LAMZHL","t1/2 (hr)",3.8114043769103
+"1004",64,"M","Normal","Parent","CMAX","C_{max} (ng/mL)",3.04871635698791
+"1004",64,"M","Normal","Parent","TMAX","T_{max} (hr)",2.03
+"1004",64,"M","Normal","Parent","AUCLST","AUC_{last} (ng·hr/mL)",21.1082557255451
+"1004",64,"M","Normal","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",21.632060424624
+"1004",64,"M","Normal","Parent","LAMZHL","t1/2 (hr)",4.48422502204192
+"1005",41,"F","Normal","Parent","CMAX","C_{max} (ng/mL)",3.70694769448644
+"1005",41,"F","Normal","Parent","TMAX","T_{max} (hr)",1.48
+"1005",41,"F","Normal","Parent","AUCLST","AUC_{last} (ng·hr/mL)",20.0183553293135
+"1005",41,"F","Normal","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",21.8019348218489
+"1005",41,"F","Normal","Parent","LAMZHL","t1/2 (hr)",3.25073339052593
+"1006",41,"F","Normal","Parent","CMAX","C_{max} (ng/mL)",4.6622908414237
+"1006",41,"F","Normal","Parent","TMAX","T_{max} (hr)",1.48
+"1006",41,"F","Normal","Parent","AUCLST","AUC_{last} (ng·hr/mL)",37.1118835914842
+"1006",41,"F","Normal","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",37.8678835745891
+"1006",41,"F","Normal","Parent","LAMZHL","t1/2 (hr)",4.37581794367869
+"1007",60,"F","Mild","Parent","CMAX","C_{max} (ng/mL)",2.67971069105887
+"1007",60,"F","Mild","Parent","TMAX","T_{max} (hr)",1.96
+"1007",60,"F","Mild","Parent","AUCLST","AUC_{last} (ng·hr/mL)",30.8506272605453
+"1007",60,"F","Mild","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",31.857430520912
+"1007",60,"F","Mild","Parent","LAMZHL","t1/2 (hr)",7.03963388687151
+"1008",75,"F","Mild","Parent","CMAX","C_{max} (ng/mL)",2.46977592271813
+"1008",75,"F","Mild","Parent","TMAX","T_{max} (hr)",2.89
+"1008",75,"F","Mild","Parent","AUCLST","AUC_{last} (ng·hr/mL)",21.8057446968452
+"1008",75,"F","Mild","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",22.5012813806932
+"1008",75,"F","Mild","Parent","LAMZHL","t1/2 (hr)",4.8341475072567
+"1009",53,"F","Mild","Parent","CMAX","C_{max} (ng/mL)",2.76334805305751
+"1009",53,"F","Mild","Parent","TMAX","T_{max} (hr)",4.14
+"1009",53,"F","Mild","Parent","AUCLST","AUC_{last} (ng·hr/mL)",38.9984194528455
+"1009",53,"F","Mild","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",39.6038799869218
+"1009",53,"F","Mild","Parent","LAMZHL","t1/2 (hr)",7.95803363327075
+"1010",38,"F","Mild","Parent","CMAX","C_{max} (ng/mL)",2.55790662648136
+"1010",38,"F","Mild","Parent","TMAX","T_{max} (hr)",3.03
+"1010",38,"F","Mild","Parent","AUCLST","AUC_{last} (ng·hr/mL)",29.0750781886085
+"1010",38,"F","Mild","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",29.6930363532517
+"1010",38,"F","Mild","Parent","LAMZHL","t1/2 (hr)",6.5739724753638
+"1011",39,"F","Mild","Parent","CMAX","C_{max} (ng/mL)",4.07194057993354
+"1011",39,"F","Mild","Parent","TMAX","T_{max} (hr)",2.07
+"1011",39,"F","Mild","Parent","AUCLST","AUC_{last} (ng·hr/mL)",40.8262821989492
+"1011",39,"F","Mild","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",41.616756177876
+"1011",39,"F","Mild","Parent","LAMZHL","t1/2 (hr)",6.6276171098283
+"1012",54,"F","Moderate","Parent","CMAX","C_{max} (ng/mL)",3.06997574583821
+"1012",54,"F","Moderate","Parent","TMAX","T_{max} (hr)",4.08
+"1012",54,"F","Moderate","Parent","AUCLST","AUC_{last} (ng·hr/mL)",48.271973007725
+"1012",54,"F","Moderate","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",51.6052226320483
+"1012",54,"F","Moderate","Parent","LAMZHL","t1/2 (hr)",12.9306761097685
+"1013",66,"F","Moderate","Parent","CMAX","C_{max} (ng/mL)",2.52939449202469
+"1013",66,"F","Moderate","Parent","TMAX","T_{max} (hr)",1.95
+"1013",66,"F","Moderate","Parent","AUCLST","AUC_{last} (ng·hr/mL)",36.6315267152985
+"1013",66,"F","Moderate","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",37.9862180555737
+"1013",66,"F","Moderate","Parent","LAMZHL","t1/2 (hr)",10.4415935023783
+"1014",54,"M","Moderate","Parent","CMAX","C_{max} (ng/mL)",2.42881129940903
+"1014",54,"M","Moderate","Parent","TMAX","T_{max} (hr)",1.99
+"1014",54,"M","Moderate","Parent","AUCLST","AUC_{last} (ng·hr/mL)",37.801842589849
+"1014",54,"M","Moderate","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",39.2390478240592
+"1014",54,"M","Moderate","Parent","LAMZHL","t1/2 (hr)",9.51609534242697
+"1015",36,"F","Moderate","Parent","CMAX","C_{max} (ng/mL)",1.97459669777596
+"1015",36,"F","Moderate","Parent","TMAX","T_{max} (hr)",2.01
+"1015",36,"F","Moderate","Parent","AUCLST","AUC_{last} (ng·hr/mL)",31.6915295240965
+"1015",36,"F","Moderate","Parent","AUCIFO","AUC_{inf} (ng·hr/mL)",32.4555119157581
+"1015",36,"F","Moderate","Parent","LAMZHL","t1/2 (hr)",8.39780393873259
+"1001",37,"F","Normal","Metabolite M1","CMAX","C_{max} (ng/mL)",1.12553170532315
+"1001",37,"F","Normal","Metabolite M1","TMAX","T_{max} (hr)",1.98
+"1001",37,"F","Normal","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",9.49905417316326
+"1001",37,"F","Normal","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",9.98197366404962
+"1001",37,"F","Normal","Metabolite M1","LAMZHL","t1/2 (hr)",5.35242144542135
+"1002",63,"F","Normal","Metabolite M1","CMAX","C_{max} (ng/mL)",1.07693688022706
+"1002",63,"F","Normal","Metabolite M1","TMAX","T_{max} (hr)",1.47
+"1002",63,"F","Normal","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",7.59994494246349
+"1002",63,"F","Normal","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",9.68116947890216
+"1002",63,"F","Normal","Metabolite M1","LAMZHL","t1/2 (hr)",5.23420228984933
+"1003",67,"F","Normal","Metabolite M1","CMAX","C_{max} (ng/mL)",0.787129781464236
+"1003",67,"F","Normal","Metabolite M1","TMAX","T_{max} (hr)",2.09
+"1003",67,"F","Normal","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",5.00404090942337
+"1003",67,"F","Normal","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",5.94258315906146
+"1003",67,"F","Normal","Metabolite M1","LAMZHL","t1/2 (hr)",4.11443714392524
+"1004",64,"M","Normal","Metabolite M1","CMAX","C_{max} (ng/mL)",0.744178167295348
+"1004",64,"M","Normal","Metabolite M1","TMAX","T_{max} (hr)",2.03
+"1004",64,"M","Normal","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",5.74907692671766
+"1004",64,"M","Normal","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",7.32148213720446
+"1004",64,"M","Normal","Metabolite M1","LAMZHL","t1/2 (hr)",5.06484165222305
+"1005",41,"F","Normal","Metabolite M1","CMAX","C_{max} (ng/mL)",1.24737843617371
+"1005",41,"F","Normal","Metabolite M1","TMAX","T_{max} (hr)",1.48
+"1005",41,"F","Normal","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",6.49364944501193
+"1005",41,"F","Normal","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",7.34313423141267
+"1005",41,"F","Normal","Metabolite M1","LAMZHL","t1/2 (hr)",3.81181202497816
+"1006",41,"F","Normal","Metabolite M1","CMAX","C_{max} (ng/mL)",1.40870243421425
+"1006",41,"F","Normal","Metabolite M1","TMAX","T_{max} (hr)",1.48
+"1006",41,"F","Normal","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",13.6194472287572
+"1006",41,"F","Normal","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",14.2249607624412
+"1006",41,"F","Normal","Metabolite M1","LAMZHL","t1/2 (hr)",5.4253647307164
+"1007",60,"F","Mild","Metabolite M1","CMAX","C_{max} (ng/mL)",0.830395914746318
+"1007",60,"F","Mild","Metabolite M1","TMAX","T_{max} (hr)",1.46
+"1007",60,"F","Mild","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",9.08834025900413
+"1007",60,"F","Mild","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",10.3104412996698
+"1007",60,"F","Mild","Metabolite M1","LAMZHL","t1/2 (hr)",7.52471257358912
+"1008",75,"F","Mild","Metabolite M1","CMAX","C_{max} (ng/mL)",0.841720591632388
+"1008",75,"F","Mild","Metabolite M1","TMAX","T_{max} (hr)",1.49
+"1008",75,"F","Mild","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",5.8324947034918
+"1008",75,"F","Mild","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",7.17304883475251
+"1008",75,"F","Mild","Metabolite M1","LAMZHL","t1/2 (hr)",4.59564219804316
+"1009",53,"F","Mild","Metabolite M1","CMAX","C_{max} (ng/mL)",0.900598313322312
+"1009",53,"F","Mild","Metabolite M1","TMAX","T_{max} (hr)",4.14
+"1009",53,"F","Mild","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",13.3220313094463
+"1009",53,"F","Mild","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",14.2368665599218
+"1009",53,"F","Mild","Metabolite M1","LAMZHL","t1/2 (hr)",8.95093018599524
+"1010",38,"F","Mild","Metabolite M1","CMAX","C_{max} (ng/mL)",0.827887999715697
+"1010",38,"F","Mild","Metabolite M1","TMAX","T_{max} (hr)",1.49
+"1010",38,"F","Mild","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",8.93607210006665
+"1010",38,"F","Mild","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",10.3268796121301
+"1010",38,"F","Mild","Metabolite M1","LAMZHL","t1/2 (hr)",8.71803288117679
+"1011",39,"F","Mild","Metabolite M1","CMAX","C_{max} (ng/mL)",1.03522903018887
+"1011",39,"F","Mild","Metabolite M1","TMAX","T_{max} (hr)",1.02
+"1011",39,"F","Mild","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",12.4710072425243
+"1011",39,"F","Mild","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",14.0834865702385
+"1011",39,"F","Mild","Metabolite M1","LAMZHL","t1/2 (hr)",7.13476147042602
+"1012",54,"F","Moderate","Metabolite M1","CMAX","C_{max} (ng/mL)",0.951991077742446
+"1012",54,"F","Moderate","Metabolite M1","TMAX","T_{max} (hr)",3.03
+"1012",54,"F","Moderate","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",16.9778310458039
+"1012",54,"F","Moderate","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",18.5836286980549
+"1012",54,"F","Moderate","Metabolite M1","LAMZHL","t1/2 (hr)",14.2022018749507
+"1013",66,"F","Moderate","Metabolite M1","CMAX","C_{max} (ng/mL)",0.783138813446131
+"1013",66,"F","Moderate","Metabolite M1","TMAX","T_{max} (hr)",3.85
+"1013",66,"F","Moderate","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",11.3524080153534
+"1013",66,"F","Moderate","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",12.3357381614708
+"1013",66,"F","Moderate","Metabolite M1","LAMZHL","t1/2 (hr)",10.5499848133235
+"1014",54,"M","Moderate","Metabolite M1","CMAX","C_{max} (ng/mL)",0.706227744934402
+"1014",54,"M","Moderate","Metabolite M1","TMAX","T_{max} (hr)",1.99
+"1014",54,"M","Moderate","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",11.3338842940222
+"1014",54,"M","Moderate","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",13.1932538224159
+"1014",54,"M","Moderate","Metabolite M1","LAMZHL","t1/2 (hr)",12.6194585335597
+"1015",36,"F","Moderate","Metabolite M1","CMAX","C_{max} (ng/mL)",0.703814558897569
+"1015",36,"F","Moderate","Metabolite M1","TMAX","T_{max} (hr)",3.05
+"1015",36,"F","Moderate","Metabolite M1","AUCLST","AUC_{last} (ng·hr/mL)",10.7253405977771
+"1015",36,"F","Moderate","Metabolite M1","AUCIFO","AUC_{inf} (ng·hr/mL)",11.3308280735488
+"1015",36,"F","Moderate","Metabolite M1","LAMZHL","t1/2 (hr)",8.32677628005792

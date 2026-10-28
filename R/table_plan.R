@@ -428,6 +428,14 @@
 #'   `stat` and needs none of this; a summary somebody built with dplyr says
 #'   so here, once, instead of being asked again by every verb.  Name only
 #'   the parts your frame calls something else.
+#' @param value For a frame of **records** (an ADaM, one row a record): the
+#'   column whose value a cell prints, `value = "AVAL"`.  That makes a
+#'   records plan: one row a `rows` key (a subject: `rows = c(subject = ~
+#'   "{USUBJID}/{AGE}/{SEX}")`), the records' values spread across `cols`,
+#'   one cell template (`plan_cells("{value:.3s}", na = "BLQ")`) -- a
+#'   listing laid out as a table, with nothing reshaped by hand.  Two
+#'   records of one key and column stop.  See [plan_layer()] for its
+#'   summary under it.
 #'
 #' @section Where the other settings went:
 #' `table_plan()` takes the **roles** and nothing else.  Every other setting
@@ -459,8 +467,36 @@
 #' @seealso [plan_apply()], [normalize_ard()], [widen_ard()]
 #' @export
 table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
-                       stat = NULL, show_keys = NULL) {
+                       stat = NULL, show_keys = NULL, value = NULL) {
   data <- x
+  # A frame of records (an ADaM, one row a record) with `value`: a RECORDS
+  # plan.  One row a `rows` key, the records' values spread across `cols`,
+  # one cell template (plan_cells("{value:.3s}", na = "BLQ")).  Inside it is
+  # the long route with one statistic, `value`, and no row identity but the
+  # keys: nothing is reshaped by hand.
+  if (!is.null(value)) {
+    if (!is.character(value) || length(value) != 1L || is.na(value)) {
+      .ard_stop("table_plan(value = ) names one column of the records: the value a cell prints.")
+    }
+    if (!is.data.frame(data) || !value %in% names(data)) {
+      .ard_stop(sprintf(paste0(
+        "table_plan(value = %s): no such column.\n  Columns: %s"),
+        sQuote(value), paste(utils::head(names(data), 12L), collapse = ", ")))
+    }
+    if (is.null(rows) && is.null(label)) {
+      .ard_stop(paste0(
+        "table_plan(value = ): a records plan needs `rows` -- the key(s) one ",
+        "row stands for\n  (a subject: rows = c(subject = ~ \"{USUBJID}/{AGE}/{SEX}\"))."))
+    }
+    if (!is.null(stat)) .ard_stop("table_plan(value = ) takes no `stat`: the records are not statistics.")
+    data$variable <- rep("value", nrow(data))
+    data$stat_name <- rep("value", nrow(data))
+    data$stat <- data[[value]]
+    if (is.null(label)) {
+      data$.label <- rep(NA_character_, nrow(data))
+      label <- NA
+    }
+  }
   # Internally the three parts keep the names widen_ard() reads them by.
   parts <- .plan_stat_roles(stat)
   roles <- list(cols = cols, rows = rows, label = label,
@@ -491,7 +527,7 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
   }
   .plan_check_roles(data, roles)
   p <- structure(list(data = data, kind = kind, roles = roles,
-                      layers = list(),
+                      layers = list(), records = value,
                       cache = new.env(parent = emptyenv())),
                  class = "table_plan")
   p
@@ -2259,8 +2295,16 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
                                heading = NULL, heading_at = NULL) {
   .plan_check_heading(heading, "plan_paginate_rows")
   if (!is.null(heading) && (length(page_by) != 1L)) {
-    .ard_stop(paste0("plan_paginate_rows(heading = ) names the BY pages: ",
-                     "give one `page_by` column."))
+    # several page_by columns: the heading names each by its own token
+    # ("Analyte: {ANALYTE}\nGroup: {RENALGR}"), never `{value}`
+    toks <- .text_tokens(heading)
+    if (!length(page_by) || !all(page_by %in% toks) || "value" %in% toks) {
+      .ard_stop(paste0(
+        "plan_paginate_rows(heading = ) names the BY pages: with one `page_by` ",
+        "column, `{value}`\n  is its value; with several, the heading carries ",
+        "a token for each column:\n",
+        "    heading = \"Analyte: {ANALYTE}\\nRenal Function Group: {RENALGR}\""))
+    }
   }
   heading_at <- .plan_check_heading_at(heading_at, "plan_paginate_rows")
   if (!is.null(heading_at) && !length(page_by)) {
@@ -2610,6 +2654,10 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   }
   stage <- match.arg(stage)
   if (identical(stage, "auto")) stage <- .plan_reach(.plan)
+
+  # Layers (plan_layer()): each to its table, stacked, then the whole
+  # table's settings on the stack (R/plan_layer.R)
+  if (length(.plan_of(.plan, "layer"))) return(.plan_apply_layers(.plan, stage))
 
   # A LISTING never goes near an ARD.  Its source is SDTM or ADaM -- an
   # ordinary frame of subject records -- and plan_listing() is what says
@@ -4155,6 +4203,18 @@ plan_header_tokens <- function(.plan) {
   nm <- names(out)
   base <- .page_name_base(nm)
   tail <- substring(nm, nchar(base) + 1L)
+  # several page_by columns: each page's values by column, from the page
+  # itself (rtf_paginate_meta$page_values), into the heading's `{<column>}`
+  if (by_rows && length(pb$page_by) > 1L) {
+    filled <- vapply(seq_along(out), function(i) {
+      meta <- attr(out[[i]]$data, "rtf_paginate_meta", exact = TRUE)
+      v <- meta$page_values
+      vals <- as.list(if (is.null(v)) character() else v[intersect(names(v), pb$page_by)])
+      .fill_text_tokens(h, vals, verb)
+    }, character(1L))
+    names(out) <- paste0(filled, tail)
+    return(out)
+  }
   pg <- if (by_rows) .plan_page_by_values(plan, pb$page_by, base)
         else .plan_page_group(plan, base)
   wants_n <- "n" %in% .text_tokens(h)
@@ -4391,7 +4451,9 @@ plan_n_candidates <- function(.plan) {
 .plan_to_pages <- function(plan, tbl) {
   hdr <- .plan_merge(.plan_of(plan, "header"))
   n_req <- .plan_header_n(hdr)
-  nvals <- .plan_n_values(plan, n_req)
+  # a stack of layers reads the header's n off the first plan (its ARD)
+  n_plan <- plan$cache$n_plan %||% plan
+  nvals <- .plan_n_values(n_plan, n_req)
 
   tbl <- .plan_digits_display(plan, tbl)
 
@@ -4431,6 +4493,11 @@ plan_n_candidates <- function(.plan) {
     rtf$listing <- do.call(listing_spec, c(list(cols = cols), lst))
   } else if (identical(rtf$blank_rows, "none")) {
     rtf$blank_rows <- NULL
+  } else if (identical(rtf$blank_rows, "between_layers")) {
+    .ard_stop(paste0(
+      "plan_blanks(where = \"between_layers\") separates the layers of a table, ",
+      "and this plan\n  has no plan_layer().  Between the groups of a table ",
+      "is where = \"between_groups\"."))
   } else if (identical(rtf$blank_rows, "records")) {
     .ard_stop(paste0(
       "plan_blanks(where = \"records\") separates the records of a listing, ",
@@ -4469,6 +4536,8 @@ plan_n_candidates <- function(.plan) {
     }
     rtf$cell_styles <- .plan_cell_styles(st, tbl, pre)
   }
+  # a stack of layers: each layer's styles, read off the stack already
+  if (!is.null(plan$cache$cell_styles)) rtf$cell_styles <- plan$cache$cell_styles
   out <- .plan_stage(
     do.call(as_rtftables, c(list(x = tbl), rtf)), plan,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
@@ -4526,7 +4595,7 @@ plan_n_candidates <- function(.plan) {
       said <- character(0)
       for (i in seq_along(out)) {
         nv <- if (is.null(pg$value[[i]])) nvals
-              else .plan_n_values(plan, n_req, page = list(
+              else .plan_n_values(n_plan, n_req, page = list(
                 col = pg$col, value = pg$value[[i]]))
         chose <- if (is.list(nv) && !is.numeric(nv))
           any(vapply(nv, function(z) isTRUE(attr(z, "choice")), NA))
@@ -5133,7 +5202,7 @@ plan_layers <- function(.plan) {
   kinds <- vapply(.plan$layers, `[[`, "", "kind")
   layers <- list()
   for (k in unique(kinds)) {
-    layers[[k]] <- if (k %in% c("after", "restyle")) .plan_of(.plan, k)
+    layers[[k]] <- if (k %in% c("after", "restyle", "layer")) .plan_of(.plan, k)
                    else if (k %in% c("levels", "labels", "nest"))
                      .plan_merge(.plan_of(.plan, k), deep = k)
                    else .plan_merge(.plan_of(.plan, k))

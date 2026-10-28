@@ -10,7 +10,8 @@ table_plan(
   rows = NULL,
   label = NULL,
   stat = NULL,
-  show_keys = NULL
+  show_keys = NULL,
+  value = NULL
 )
 }
 \arguments{
@@ -72,6 +73,14 @@ the body instead of only to the header's \code{{n}}.  With \code{rows = c(block 
 n (\%) is a block of its own beside the ORR's SEX subgroups.  A column
 key is refused (its counts are the columns' populations).  \code{NULL}
 (default): none, as before.}
+
+\item{value}{For a frame of \strong{records} (an ADaM, one row a record): the
+column whose value a cell prints, \code{value = "AVAL"}.  That makes a
+records plan: one row a \code{rows} key (a subject: \code{rows = c(subject = ~ "{USUBJID}/{AGE}/{SEX}")}), the records' values spread across \code{cols},
+one cell template (\code{plan_cells("{value:.3s}", na = "BLQ")}) -- a
+listing laid out as a table, with nothing reshaped by hand.  Two
+records of one key and column stop.  See \code{\link[=plan_layer]{plan_layer()}} for its
+summary under it.}
 }
 \value{
 An object of class \code{table_plan}.
