@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-#  One environment's record, for the Development Summary Report
+#  One environment's record, for the Quality Report
 # ---------------------------------------------------------------------------
 #  Writes validation/env-out/<slug>/:
 #    env.csv        one row: the environment, CI or local, OS, R, the main

@@ -1,5 +1,5 @@
 ---
-title: "rtfreporter: Development Summary Report"
+title: "rtfreporter: Quality Report"
 params:
   out: "out"
 output: pdf_document
@@ -12,9 +12,9 @@ cov <- if (file.exists(file.path(out, "coverage.rds"))) readRDS(file.path(out, "
 ```
 
 ```{r summary, results = "asis"}
-# the Development Summary Report, as validation/trace.R wrote it (the
+# the Quality Report, as validation/trace.R wrote it (the
 # environments' table included)
-sm <- readLines(file.path(out, "summary.md"), encoding = "UTF-8")
+sm <- readLines(file.path(out, "quality-report.md"), encoding = "UTF-8")
 cat(sm[-1L], sep = "\n")
 gh <- Sys.getenv(c("GITHUB_SERVER_URL", "GITHUB_REPOSITORY", "GITHUB_RUN_ID"))
 if (all(nzchar(gh))) {

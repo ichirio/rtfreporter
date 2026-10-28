@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-#  The release's Development Summary Report: gathered, then the PDF
+#  The release's Quality Report: gathered, then the PDF
 # ---------------------------------------------------------------------------
 #  Run from the package root by the R-CMD-check workflow's last job (at a
 #  published release, or by hand), after every environment's record
@@ -11,8 +11,8 @@
 #                  (validation/env-local/*/), one row each; the text holds
 #                  each one's sessionInfo and tests' log
 #    coverage.rds  line coverage by file (covr): an aid, not evidence
-#    the FR -> FT matrix and summary.md (validation/trace.R)
-#  then renders validation/report.Rmd into validation/out/validation-report.pdf
+#    the FR -> FT matrix and quality-report.md (validation/trace.R)
+#  then renders validation/report.Rmd into validation/out/quality-report.pdf
 #  (RTFREPORTER_VAL_FORMAT=html for an HTML one).  covr and rmarkdown are the
 #  CI's, not the package's dependencies.
 # ---------------------------------------------------------------------------
@@ -62,6 +62,6 @@ fmt <- if (identical(Sys.getenv("RTFREPORTER_VAL_FORMAT"), "html")) {
   rmarkdown::html_document(toc = TRUE)
 } else rmarkdown::pdf_document(toc = TRUE)
 rmarkdown::render(file.path(root, "validation", "report.Rmd"), output_format = fmt,
-                  output_dir = out, output_file = "validation-report",
+                  output_dir = out, output_file = "quality-report",
                   params = list(out = out), envir = new.env(), quiet = TRUE)
 step("done")

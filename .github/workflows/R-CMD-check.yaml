@@ -3,7 +3,7 @@
 #
 # At a published release, and by hand, each job also writes its environment
 # (sessionInfo, the dependencies' versions, R CMD check's result, the tests'
-# log) and the last job gathers them into the Development Summary Report
+# log) and the last job gathers them into the Quality Report
 # (validation/report.R): one table of every environment, the traceability
 # matrix and the deviations.  A release keeps them as its assets (an
 # artifact is deleted after 90 days).
@@ -87,10 +87,10 @@ jobs:
           name: env-${{ matrix.config.os }}-${{ matrix.config.r }}
           path: validation/env-out/
 
-  # The Development Summary Report: every environment, the traceability
+  # The Quality Report: every environment, the traceability
   # matrix, the deviations; one PDF and its attachments.  At a release they
   # are attached to it; by hand they are this run's artifact.
-  validation-report:
+  quality-report:
     needs: R-CMD-check
     if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -128,10 +128,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: validation-report
+          name: quality-report
           path: |
-            validation/out/validation-report.pdf
-            validation/out/summary.md
+            validation/out/quality-report.pdf
+            validation/out/quality-report.md
             validation/out/traceability.xlsx
             validation/out/*.csv
             validation/out/*.txt
@@ -143,7 +143,7 @@ jobs:
         run: |
           tag="${{ github.event.release.tag_name }}"
           cd validation/out
-          cp validation-report.pdf "validation-report-$tag.pdf"
+          cp quality-report.pdf "quality-report-$tag.pdf"
           cp traceability.xlsx "traceability-$tag.xlsx"
           cp environments.txt "environments-$tag.txt"
-          gh release upload "$tag" "validation-report-$tag.pdf" "traceability-$tag.xlsx"             "environments-$tag.txt" --clobber
+          gh release upload "$tag" "quality-report-$tag.pdf" "traceability-$tag.xlsx"             "environments-$tag.txt" --clobber

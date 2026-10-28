@@ -34,6 +34,15 @@ library(rtfreporter)
 # sessionInfo()
 ```
 
+## Impact, risk and the requirements it touches
+
+<!-- For the maintainers' change control (inst/validation/quality-plan.md).
+     Leave blank if you are not sure; a maintainer fills it in. -->
+
+- Functions and outputs affected:
+- Risk (high / medium / low) and why:
+- Functional requirements (FR ids, inst/validation/requirements.csv):
+
 ## Checklist
 
 - [ ] I searched existing issues and this is not a duplicate.

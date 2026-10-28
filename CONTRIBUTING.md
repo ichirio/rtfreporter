@@ -341,7 +341,7 @@ green.
 | **pkgdown** | `pkgdown.yaml` | Builds the documentation site and (on `main` / on a published release) deploys it to the `gh-pages` branch. |
 | **version-guard** | `version-guard.yaml` | Fails a PR that raises the **MINOR or MAJOR** position of `DESCRIPTION` `Version:` unless the PR carries the `release` label (see *Versioning & releases*). A PATCH bump or no change always passes. |
 | **lint** | `lint.yaml` | Runs `lintr::lint_package()` and fails on any lint. Scope and rules are set by the repository-root `.lintr` (currently lints `R/` only). |
-| **validation-report** | the last job of `R-CMD-check.yaml` | Only for a published release (and by hand): gathers every environment's record and writes the Development Summary Report, attached to the release (see *Quality assurance*). Never on a push or a PR. |
+| **quality-report** | the last job of `R-CMD-check.yaml` | Only for a published release (and by hand): gathers every environment's record and writes the Quality Report, attached to the release (see *Quality assurance*). Never on a push or a PR. |
 
 All three also accept `workflow_dispatch` (run-on-demand from the Actions
 tab).  Releases additionally re-trigger pkgdown on `release: published`.
@@ -481,7 +481,7 @@ what it does not.
   (`validation/env.R`: sessionInfo, the dependencies' versions, R CMD
   check's result, the tests' log), and the workflow's last job gathers them
   with the maintainers' local runs (`validation/env-local/`, the same
-  script run by hand) into the Development Summary Report: one table of
+  script run by hand) into the Quality Report: one table of
   every environment, the results, the deviations and why they are
   accepted, the conclusion.  The PDF, the traceability matrix
   (`traceability.xlsx`) and every environment's sessionInfo and log
@@ -656,8 +656,8 @@ open a release Issue and perform a release.**
      --notes-file <notes-from-NEWS> --latest
    ```
 
-   Publishing the release runs R-CMD-check's validation-report job, which
-   attaches the Development Summary Report and its attachments to it.  Run
+   Publishing the release runs R-CMD-check's quality-report job, which
+   attaches the Quality Report and its attachments to it.  Run
    `Rscript validation/env.R "<OS>, R <version>" local` on the
    maintainers' PCs first and commit `validation/env-local/`.
 7. **(Once on CRAN)** run the CRAN pre-checks and submit —

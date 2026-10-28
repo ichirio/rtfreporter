@@ -35,7 +35,7 @@
 #    functions.csv              one row a function: FRs by kind, with a test,
 #                               arguments an FR names, arguments a test gives
 #    candidates.csv             blocks calling a function in scope, not mapped
-#    summary.md                 the Development Summary Report (1 page): the
+#    quality-report.md                 the Quality Report (1 page): the
 #                               results, the deviations with why they are
 #                               accepted (inst/validation/deviations.csv), the
 #                               conclusion and how to read the attachments
@@ -246,7 +246,7 @@ env_lines <- if (is.null(envs) || !nrow(envs)) {
           ifelse(is.na(envs$check) | !nzchar(envs$check), "--", envs$check),
           ifelse(is.na(envs$tests), "no log", gsub("|", "/", envs$tests, fixed = TRUE))))
 
-# ---- the Development Summary Report: one page -----------------------------------------
+# ---- the Quality Report: one page -----------------------------------------
 pct <- function(a, b) if (b) sprintf("%d of %d (%.0f%%)", a, b, 100 * a / b) else "0 of 0"
 pass_line <- grep("\\[ FAIL [0-9]+ \\| WARN [0-9]+ \\| SKIP [0-9]+ \\| PASS [0-9]+ \\]", log,
                   value = TRUE)
@@ -261,7 +261,9 @@ dev_lines <- if (!nrow(dev) && !length(unassessed)) "None." else c(
   if (length(unassessed)) sprintf("| %s | not yet assessed | -- | **not accepted** | assess |",
                                   paste(unassessed, collapse = ", ")))
 sm <- c(
-  sprintf("# rtfreporter %s: Development Summary Report", utils::packageVersion("rtfreporter")),
+  sprintf("# rtfreporter %s: Quality Report", utils::packageVersion("rtfreporter")),
+  "",
+  "Against the Quality Plan (inst/validation/quality-plan.md).",
   "",
   sprintf("Date: %s. Commit: %s. Scope: %s.", format(Sys.Date()),
           tryCatch(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE),
@@ -326,5 +328,5 @@ sm <- c(
   "- **candidates.csv**: tests that call a function in scope but are not mapped: what to read next. Not counted.",
   "- **environments.txt**: each environment of the table above, its full sessionInfo (every package's version) and testthat's log. Read it for with what, exactly, the tests ran.",
   "- **Line coverage** (in the PDF): the share of the code the tests run, by file. An aid, not evidence of a requirement met.")
-writeLines(sm, file.path(out, "summary.md"), useBytes = TRUE)
+writeLines(sm, file.path(out, "quality-report.md"), useBytes = TRUE)
 cat(sprintf("FR %d, FT %d, ready %s, written to %s\n", nrow(tl), nrow(map), ready, out))
