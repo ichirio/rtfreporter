@@ -3507,14 +3507,14 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     # the one that decides.
     return(list(widen = s_args, rtf = .plan_rtf_args(.plan)))
   }
-  tbl <- .plan_stage(do.call(widen_ard, c(list(x = x), s_args)),
+  emp <- .plan_merge(.plan_of(.plan, "empty"))
+  tbl <- .plan_stage(.plan_widen(x, s_args, empty = length(emp) > 0L),
                      .plan, c("cells", "cell_options", "digits", "round",
                              "levels", "labels"))
   # a variable's rows under one level of another (plan_nest())
   nest <- .plan_merge(.plan_of(.plan, "nest"), deep = "nest")$nest
   if (length(nest)) tbl <- .plan_nest_rows(.plan, tbl, nest, s_args)
   # a table of no events: its sentence (plan_empty())
-  emp <- .plan_merge(.plan_of(.plan, "empty"))
   if (length(emp)) tbl <- .plan_empty_rows(.plan, tbl, x, emp, s_args)
   .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = length(cells) > 0L)
   # the table-side seam: a column the table can only know once it exists
@@ -3524,6 +3524,23 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   .plan_to_pages(.plan, tbl)
 }
 
+
+# widen_ard() as the plan calls it.  A plan with plan_empty() whose filter
+# took every row (an ARD with no overall row the filter keeps): no cell is
+# left to widen, and widen_ard() stops -- the table is then its columns with
+# no row, made without the filter, for plan_empty() to say it is empty
+# (#750).  Any other error stands.
+.plan_widen <- function(x, s_args, empty = FALSE) {
+  if (!empty || is.null(s_args$filter)) return(do.call(widen_ard, c(list(x = x), s_args)))
+  tryCatch(do.call(widen_ard, c(list(x = x), s_args)), error = function(err) {
+    if (!grepl("every row was filtered out", conditionMessage(err), fixed = TRUE)) stop(err)
+    a <- s_args
+    a$filter <- NULL
+    whole <- tryCatch(do.call(widen_ard, c(list(x = x), a)), error = function(e) NULL)
+    if (is.null(whole)) stop(err)
+    whole[0L, , drop = FALSE]
+  })
+}
 
 # plan_empty(): is the table empty -- no row but its overall row (`no_rows`), or its overall
 # row's n 0 in every column (`overall_zero`, the ARD's

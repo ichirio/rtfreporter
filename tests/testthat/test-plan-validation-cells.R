@@ -975,3 +975,17 @@ test_that("FT-PL172 [FR-PL333 FR-PL334]: plan_empty() says what is wrong", {
   expect_error(plan_empty(p, position = "x"), "'arg' should be one of \"last\", \"first\", \"replace\"", fixed = TRUE)
   expect_error(plan_empty(vc_empty()), "Expected a table_plan; pipe from table_plan(ard).", fixed = TRUE)
 })
+
+test_that("plan_empty() says a table its filter emptied, with no overall row in the ARD (#750)", {
+  ae <- data.frame(ARM = c("Placebo", "Active"), .label = "Headache",
+                   .kind = "categorical", stat_name = "n", stat = c(1, 2))
+  p <- table_plan(ae, cols = "ARM") |> plan_cells(categorical = "{n}") |>
+    plan_filter(n >= 5)
+  # without plan_empty(): the error as before
+  expect_error(plan_apply(p, "table"), "every row was filtered out", fixed = TRUE)
+  # with it: the table's columns, the sentence its one row
+  tbl <- plan_apply(plan_empty(p), "table")
+  expect_identical(nrow(tbl), 1L)
+  expect_true(all(c("Placebo", "Active") %in% names(tbl)))
+  expect_identical(tbl[[1L]], "No subjects met the criteria.")
+})
