@@ -42,8 +42,9 @@ width to shrink a figure wider than the page.}
 \code{NULL}: the native height, or -- with \code{width_twips} -- the height the
 image's aspect ratio gives.}
 
-\item{align}{Horizontal alignment for bare paths: \code{"center"} (default),
-\code{"left"}, or \code{"right"}.}
+\item{align}{Horizontal alignment of each figure made here, from a path or
+a plot object: \code{"center"} (default), \code{"left"}, or \code{"right"}. An
+\code{\link[=rtfplot]{rtfplot()}} keeps its own.}
 
 \item{titles, footnotes}{Optional lists of length \code{length(figures)} or
 length 1 (common to all figures). See \code{\link[=rtf_tables]{rtf_tables()}} for the block

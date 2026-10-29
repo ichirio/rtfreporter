@@ -904,8 +904,9 @@ rtf_tables <- function(doc, tables,
 #' @param height_twips Display height in twips, as [rtfplot()] takes it.
 #'   `NULL`: the native height, or -- with `width_twips` -- the height the
 #'   image's aspect ratio gives.
-#' @param align Horizontal alignment for bare paths: `"center"` (default),
-#'   `"left"`, or `"right"`.
+#' @param align Horizontal alignment of each figure made here, from a path or
+#'   a plot object: `"center"` (default), `"left"`, or `"right"`. An
+#'   [rtfplot()] keeps its own.
 #' @param titles,footnotes Optional lists of length `length(figures)` or
 #'   length 1 (common to all figures). See [rtf_tables()] for the block
 #'   structure (character vectors or per-row styled lists).

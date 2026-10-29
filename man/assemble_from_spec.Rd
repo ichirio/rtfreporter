@@ -21,7 +21,8 @@ spec file.}
 \item{output_file}{Path of the assembled \code{.rtf} to write.}
 
 \item{toc_title, toc_leader, toc_page_numbering, overwrite, ...}{Passed to
-\code{\link[=assemble_rtf]{assemble_rtf()}}.}
+\code{\link[=assemble_rtf]{assemble_rtf()}}; \code{toc_page_numbering} defaults to \code{"decimal"} here
+(\code{"none"} in \code{\link[=assemble_rtf]{assemble_rtf()}}).}
 }
 \value{
 Invisibly, \code{output_file}.

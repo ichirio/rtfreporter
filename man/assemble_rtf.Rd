@@ -141,8 +141,8 @@ calculated by the viewer when the file opens.
 
 \section{Page numbering}{
 
-\code{toc_page_numbering} controls how the TOC pages (and cover, if
-present) are numbered:
+\code{toc_page_numbering} controls how the TOC pages are numbered (a cover
+page keeps the document's Arabic numbering):
 
 \describe{
 \item{\code{"none"} (default)}{Arabic numbering flows continuously from
@@ -150,9 +150,12 @@ the first page; if the source files use \code{\{AUTO_PAGE\}} the
 TOC counts as page 1, 2, ...}
 \item{\code{"roman"}}{TOC pages use lowercase Roman numerals (\code{i}, \code{ii},
 ...); body pages restart at \code{1}.}
-\item{\code{"decimal"}}{TOC pages use Arabic numerals starting at \code{1};
-body pages restart at \code{1}.}
+\item{\code{"decimal"}}{TOC pages use Arabic numerals starting at \code{1}, and
+the body continues from them (with a one-page TOC the first table is
+page 2).}
 }
+
+\code{\link[=assemble_folder]{assemble_folder()}} and \code{\link[=assemble_from_spec]{assemble_from_spec()}} default to \code{"decimal"}.
 }
 
 \examples{

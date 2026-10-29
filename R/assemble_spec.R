@@ -374,7 +374,8 @@ assemble_toc <- function(files = NULL, spec = NULL, ...) {
 #'   spec file.
 #' @param output_file Path of the assembled `.rtf` to write.
 #' @param toc_title,toc_leader,toc_page_numbering,overwrite,... Passed to
-#'   [assemble_rtf()].
+#'   [assemble_rtf()]; `toc_page_numbering` defaults to `"decimal"` here
+#'   (`"none"` in [assemble_rtf()]).
 #'
 #' @return Invisibly, `output_file`.
 #' @seealso [assemble_spec()], [assemble_folder()], [assemble_rtf()].
@@ -455,11 +456,14 @@ assemble_from_spec <- function(spec, output_file,
 #'   (default): return the table of contents only.
 #' @param spec_file Optional path (`.xlsx` or `.csv`).  When given, the
 #'   generated spec is **saved** there (so you can inspect / edit it); when
-#'   `NULL` (default) the spec is kept in memory only.
+#'   `NULL` (default) the spec is kept in memory only.  It is written, never
+#'   read back: assemble an edited one with `assemble_rtf(toc = spec_file)`
+#'   (or [assemble_from_spec()]).
 #' @param recursive Recurse into sub-directories when scanning?  Default
 #'   `FALSE`.
 #' @param toc_title,toc_leader,toc_page_numbering,overwrite,... Passed through
-#'   to [assemble_rtf()].
+#'   to [assemble_rtf()]; `toc_page_numbering` defaults to `"decimal"` here
+#'   (`"none"` in [assemble_rtf()]).
 #'
 #' @return Without `output_file`, the table of contents.  With one,
 #'   invisibly, a list with `output` (the assembled file) and `spec` (the
