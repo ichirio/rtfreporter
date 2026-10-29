@@ -75,3 +75,19 @@ test_that("rtf_default_format() flows through to the rendered document", {
   generate_rtfreport(doc, f, overwrite = TRUE)
   expect_match(paste(readLines(f, warn = FALSE), collapse = ""), "\\\\fs22")
 })
+
+test_that("dimensions alone leave paper_size / orientation unset, without warnings (#761)", {
+  p <- rtf_page(width_in = 8.5, height_in = 14)
+  expect_null(p$paper_size)
+  expect_null(p$orientation)
+  doc <- rtf_document(page = p) |>
+    rtf_tables(as_rtftables(data.frame(a = "x", b = 1)))
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  expect_no_warning(generate_rtfreport(doc, f, overwrite = TRUE))
+  # a value the caller did give beside the dimensions is still warned about
+  expect_warning(
+    generate_rtfreport(rtf_document(page = rtf_page(orientation = "landscape",
+                                                    width_in = 8.5, height_in = 14)) |>
+                         rtf_tables(as_rtftables(data.frame(a = "x"))), f, overwrite = TRUE),
+    "contradicts")
+})

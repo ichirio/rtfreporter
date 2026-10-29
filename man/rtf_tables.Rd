@@ -95,9 +95,8 @@ same token forces in a header.  A table paginated on a column fills
 
 \item{footnotes}{\code{NULL} (default) or a list of length \code{length(tables)} or
 length 1 (common to all). Same block structure as \code{titles}, and the same
-page-number tokens; footnote rows default to left-aligned, and the first
-row carries a top rule (the separator) unless that row sets its own
-\code{border}.}
+page-number tokens; footnote rows default to left-aligned and draw no
+rule unless a row sets its own \code{border}.}
 
 \item{auto_section}{Logical. When \code{TRUE} and \code{tables} is a \strong{named} list,
 each name is used as a per-section heading appended to the common header

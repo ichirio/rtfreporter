@@ -30,8 +30,7 @@
 #' structured `rtf_page` object, so the available options and their **defaults**
 #' are visible right here in the signature (rather than buried in a named list).
 #'
-#' The default is **landscape Letter** with 0.9" top/bottom and 0.6" left/right
-#' margins. A *site* can change any default by setting the matching
+#' The default is **landscape Letter** with 0.75" margins on all four sides. A *site* can change any default by setting the matching
 #' `rtfreporter.*` option (e.g. in `Rprofile.site`): an argument you do not pass
 #' falls back to that option, so the resolution order is **explicit argument >
 #' `rtfreporter.*` option > the factory default shown below** (see
@@ -43,7 +42,8 @@
 #' @param width_in,height_in Explicit page size in inches. When supplied these
 #'   **win** over `paper_size`, and the orientation is *inferred* from them
 #'   (`width_in >= height_in` means landscape). `NULL` (default) uses
-#'   `paper_size`.
+#'   `paper_size`. With dimensions given, `paper_size` and `orientation` stay
+#'   unset unless you pass them, so only a value you passed is warned about.
 #' @param margin_top_in,margin_bottom_in,margin_left_in,margin_right_in The four
 #'   page margins, in inches.
 #' @param header_dist_in,footer_dist_in Distance (inches) of the header / footer
@@ -84,8 +84,13 @@ rtf_page <- function(paper_size       = "letter",
                      footer_dist_in   = NULL) {
   # Site defaults (#111): only an argument the caller did NOT pass falls back to
   # the rtfreporter.* option (the literal in the signature is the factory value).
-  if (missing(paper_size))       paper_size       <- .opt("rtfreporter.page.paper_size")
-  if (missing(orientation))      orientation      <- .opt("rtfreporter.page.orientation")
+  # With explicit dimensions an unpassed paper_size / orientation stays unset:
+  # the dimensions decide, and only a value the caller gave is warned about.
+  has_dims <- !is.null(width_in) || !is.null(height_in)
+  if (missing(paper_size))
+    paper_size  <- if (has_dims) NULL else .opt("rtfreporter.page.paper_size")
+  if (missing(orientation))
+    orientation <- if (has_dims) NULL else .opt("rtfreporter.page.orientation")
   if (missing(margin_top_in))    margin_top_in    <- .opt("rtfreporter.page.margin_top_in")
   if (missing(margin_bottom_in)) margin_bottom_in <- .opt("rtfreporter.page.margin_bottom_in")
   if (missing(margin_left_in))   margin_left_in   <- .opt("rtfreporter.page.margin_left_in")
