@@ -512,6 +512,18 @@ test_that("FT-PL150 [FR-PL244 FR-PL246 FR-PL247]: a finished table's columns by 
                fixed = TRUE)
 })
 
+test_that("FT-PL911 [FR-PL245]: statistics as rows (plan_cells(stats = 'rows')): a column key formats that column; a key that reaches none is refused", {
+  p <- vc_base() |> plan_cells(stats = "rows", notes = FALSE)
+  pg <- plan_apply(p |> plan_digits(A = 1) |> plan_columns())
+  expect_identical(pg[[1L]]$data$A, c("20.0", "31.2", "4.1", "20.0", "28.7", "3.9"))
+  expect_identical(pg[[1L]]$data$B, c(18, 33.108, 5.3, 18, 30.2, 4.44))
+  pg2 <- plan_apply(p |> plan_digits(A = 1) |> plan_digits(A = 0) |> plan_columns())
+  expect_identical(pg2[[1L]]$data$A, c("20", "31", "4", "20", "29", "4"))
+  expect_error(plan_apply(p |> plan_digits(nope = 1) |> plan_columns()),
+               "plan_digits() names 'nope', which matched nothing.\n  A key is a column of the table, `.rows` or \"default\".",
+               fixed = TRUE)
+})
+
 test_that("FT-PL151 [FR-PL248 FR-PL250]: plan_digits() refuses two defaults, a key twice, and not a plan", {
   expect_error(plan_digits(vc_base(), 1, 2),
                "Give at most one unnamed value (the plan-wide default); name the rest.", fixed = TRUE)

@@ -2720,6 +2720,14 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
                                  collapse = ", ")))
   }
 
+  # A long frame of no rows -- a cards ARD or one built by hand -- has no
+  # cell to make; said here, before the spread trips over it in R's words.
+  if (is.data.frame(.plan$data) && !nrow(.plan$data)) {
+    .ard_stop(paste0(
+      "The long frame has no rows. No cell was produced, so there is ",
+      "nothing to widen.\n  Check the filter or the data that made it."))
+  }
+
   # 1. the long-frame seam.  Nothing is flattened here: normalize_ard()
   #    ran before the plan, which is why the roles could be checked
   #    against real column names when they were declared.
@@ -2806,6 +2814,11 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     #     variable column is called PARAM does nothing, and says so.
     reached <- c("default", ".rows", names(cells), vars)
     .plan$cache$digit_cols <- setdiff(names(dig), reached)
+  } else if (identical(.plan_merge(.plan_of(.plan, "cell_options"))$stats, "rows")) {
+    # Statistics as rows with no templates: the table is the finished
+    # numbers, so a key names a column of it (formatted by
+    # .plan_digits_display(), checked below) as on a finished table.
+    .plan$cache$digit_cols <- setdiff(names(dig), c("default", ".rows"))
   }
 
   # 5. one rounding family for the run; a per-variable one would have to reach
@@ -2830,7 +2843,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # a table of no events: its sentence (plan_empty())
   emp <- .plan_merge(.plan_of(.plan, "empty"))
   if (length(emp)) tbl <- .plan_empty_rows(.plan, tbl, x, emp, s_args)
-  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = TRUE)
+  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = length(cells) > 0L)
   # the table-side seam: a column the table can only know once it exists
   .plan_remember(.plan, "table", tbl)
   if (identical(stage, "table")) return(tbl)

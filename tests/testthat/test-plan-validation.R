@@ -89,6 +89,16 @@ test_that("FT-PL051 [FR-PL124]: table_plan() over a frame of zero rows stops: no
                fixed = TRUE)
 })
 
+test_that("FT-PL910 [FR-PL197]: a long frame built by hand of zero rows stops with the package's message", {
+  d <- data.frame(TRT = character(), PARAM = character(), stat_name = character(),
+                  stat = numeric(), stringsAsFactors = FALSE)
+  p <- table_plan(d, cols = "TRT", rows = c(param = "PARAM"), label = c(row = "stat_name"))
+  msg <- "The long frame has no rows. No cell was produced, so there is nothing to widen."
+  expect_error(plan_apply(p |> plan_cells("{stat}")), msg, fixed = TRUE)
+  expect_error(plan_apply(p |> plan_cells(stats = "rows")), msg, fixed = TRUE)
+  expect_error(plan_apply(p), msg, fixed = TRUE)
+})
+
 test_that("FT-PL052 [FR-PL129]: table_plan(stat = c(value = NA)) stops: each part is one column", {
   expect_error(table_plan(val_long(), stat = c(value = NA)),
                "table_plan(stat = ): each part is one column name.", fixed = TRUE)

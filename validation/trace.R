@@ -247,7 +247,16 @@ env_lines <- if (is.null(envs) || !nrow(envs)) {
           ifelse(is.na(envs$tests), "no log", gsub("|", "/", envs$tests, fixed = TRUE))))
 
 # ---- the Quality Report: one page -----------------------------------------
-pct <- function(a, b) if (b) sprintf("%d of %d (%.0f%%)", a, b, 100 * a / b) else "0 of 0"
+# one decimal, truncated: 416 of 418 is 99.5%, and 100% only when all
+pct <- function(a, b) {
+  if (!b) return("0 of 0")
+  if (a == b) return(sprintf("%d of %d (100%%)", a, b))
+  sprintf("%d of %d (%.1f%%)", a, b, floor(1000 * a / b) / 10)
+}
+# The record is the CI run of a release (or one started by hand); a local
+# run is a draft of it, whatever it finds.
+ci_record <- identical(Sys.getenv("GITHUB_ACTIONS"), "true") &&
+  Sys.getenv("GITHUB_EVENT_NAME") %in% c("release", "workflow_dispatch")
 pass_line <- grep("\\[ FAIL [0-9]+ \\| WARN [0-9]+ \\| SKIP [0-9]+ \\| PASS [0-9]+ \\]", log,
                   value = TRUE)
 pass_line <- if (length(pass_line)) trimws(pass_line[length(pass_line)]) else "(no summary line)"
@@ -313,8 +322,10 @@ sm <- c(
   "3. **Process.** Every change is an issue and a pull request, reviewed, with every CI workflow required: a failing test fails the checks and the change cannot be merged (CONTRIBUTING.md, Quality assurance).",
   "4. **Other measures.** Line coverage and the arguments the tests give are aids, not evidence of a requirement met.",
   "",
-  if (ready) {
+  if (ready && ci_record) {
     "Taken together, the package is **validation-ready**: it can be audited against these records. (No third-party audit has been made.)"
+  } else if (ready) {
+    "**DRAFT (local run; the CI release run is the record)**: every check here passes, and the CI run of the release is what states the package validation-ready."
   } else {
     "**Not validation-ready**: a test fails, or a deviation is not yet assessed or not accepted (above)."
   },
