@@ -1,0 +1,106 @@
+---
+title: "Validating rtfreporter in your environment"
+description: >
+  What the package provides as evidence of its quality (requirements, tests,
+  the traceability matrix, the Quality Report), and the kit you copy and
+  edit to validate it for your own use.
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+A company that uses R for clinical reports validates each package for its
+own use, in its own environment. rtfreporter gives you two things for that:
+its own quality records, and templates for yours.
+
+## What the package provides
+
+The package keeps three records of what it does and how it is tested.
+
+- **Functional Requirements (FR).** One row per thing a function does, an
+  argument, a data shape it handles, a misuse it stops, or a risky
+  combination. Each has an id such as `FR-PL161`. They are in
+  `inst/validation/requirements.csv`.
+- **Functional Tests (FT).** The package's tests, each mapped to the FRs it
+  checks by a person who read it.
+- **The Traceability Matrix (FR -> FT).** Every FR with its tests. An FR with
+  no test is listed as a deviation, with its risk and why it is accepted.
+
+At each release, CI writes the **Quality Report**: the results on every
+environment (Linux, macOS and Windows, several R versions), the deviations
+and the conclusion. It is attached to the GitHub release with its evidence:
+the matrix (`traceability.xlsx`) and every environment's sessionInfo and
+test log (`environments.txt`). The rules behind it are the package's
+**Quality Plan** (`inst/validation/quality-plan.md`).
+
+You use these as supplier evidence. You do not repeat them.
+
+## What you do
+
+1. **Copy the kit** into a folder of your own.
+
+    ```{r}
+    library(rtfreporter)
+    rtfreporter_validation_kit("rtfreporter-validation")
+    ```
+
+    The folder holds:
+
+    | File | What it is |
+    |---|---|
+    | `validation_plan.md` | The plan: scope, intended use, roles, approach, acceptance criteria, deviations. |
+    | `urs.csv`, `urs.md` | Your user requirements (`UR-NNN`), each linked to FR ids. `urs.md` explains the columns. |
+    | `uat_cases.csv`, `uat_cases.xlsx` | Your test cases (`UAT-NNN`) on dummy data, with columns to record the results. |
+    | `build_user_matrix.R` | Writes the matrix URS -> FR -> UAT. |
+    | `validation_summary_report.md` | The report you fill at the end. |
+    | `quality-plan.md`, `requirements.csv` | The package's plan and FRs, for reference. |
+
+    The examples are fictional (a company called "Example Pharma"). Replace
+    them with yours.
+
+2. **Write the plan.** Say which version, which environment and what use.
+   Decide how deeply to test each priority.
+
+3. **Adapt the URS.** Keep the needs your reports have, drop the others, add
+   your own. For each, find the FRs it relies on in `requirements.csv`
+   (filter on the function you call).
+
+4. **Run the UAT cases** in your environment, on dummy data. Record what you
+   saw, the result, who and when. A failure is a deviation: record it, find
+   its cause, and decide.
+
+5. **Build the matrix.**
+
+    ```{r}
+    kit_dir <- "rtfreporter-validation"
+    source(file.path(kit_dir, "build_user_matrix.R"))
+    ```
+
+    Or from a shell: `Rscript build_user_matrix.R rtfreporter-validation`.
+
+6. **Fill the Summary Report**, and attach the package's Quality Report for
+   the same version.
+
+## How they connect
+
+The FR ids join your records to the package's.
+
+```
+your need          the package's requirement      the package's tests
+UR-008  ----------> FR-PL161 decimal alignment ----> FT (in traceability.xlsx)
+   |
+   +--> UAT-011  your check in your environment
+```
+
+- Your matrix (URS -> FR -> UAT) shows that every need has a check of your
+  own.
+- The package's matrix (FR -> FT) and Quality Report show that the same FRs
+  are tested, and passed, on every CI environment.
+- Together they cover a need from your words down to a test.
+
+## A new version
+
+Read the version's NEWS and the release's records. Find the FRs added,
+changed or removed. Rerun the UAT cases that name them, and the high-priority
+ones. Write a short Summary Report for the new version.

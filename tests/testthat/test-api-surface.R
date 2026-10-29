@@ -135,9 +135,10 @@ test_that("the effective export count is the reviewed number", {
   # 111 since rtf_layout(), a document's contents as printed pages; 135 /
   # 112 since default_col_widths(), the widths of a table that gives none;
   # 136 / 113 since #737 added plan_append(), another plan's rows under a
-  # table's.)
-  expect_length(.exports(), 136L)
-  expect_length(setdiff(.exports(), .dep), 113L)
+  # table's; 137 / 114 since rtfreporter_validation_kit(), the user's
+  # validation templates.)
+  expect_length(.exports(), 137L)
+  expect_length(setdiff(.exports(), .dep), 114L)
 })
 
 test_that("the old argument names still work, with a warning", {

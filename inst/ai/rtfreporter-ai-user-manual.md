@@ -1085,6 +1085,7 @@ reference of a difference.
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
 `rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
 `rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
+`rtfreporter_validation_kit`
 
 **Sections / bands:** `rtf_section` `combine_sections` `rtf_header` `rtf_footer`
 `rtf_header_source` `rtf_titles` `rtf_footnotes`

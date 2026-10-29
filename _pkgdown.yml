@@ -233,6 +233,11 @@ navbar:
           href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md
         - text: "AI developer manual"
           href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.8.2.md
+        # ── Validation ──────────────────────────────────────────────────
+        - text: -------
+        - text: "Validation"
+        - text: "Validating rtfreporter in your environment"
+          href: articles/validation.html
         # ── Specification / internals (advanced) ────────────────────────
         - text: -------
         - text: "Specification & internals"
@@ -629,6 +634,16 @@ reference:
     contents:
       - rtfreporter_ai_manual
 
+  # ── 8b. Validation ──────────────────────────────────────────────────
+  - title: Validating rtfreporter in your environment
+    desc: >
+      The templates a company copies and edits to validate the package for
+      its own use -- a Validation Plan, user requirements linked to the
+      package's Functional Requirements, UAT cases on dummy data, the
+      traceability matrix and a Summary Report.
+    contents:
+      - rtfreporter_validation_kit
+
   # ── 9. Deprecated ───────────────────────────────────────────────────
   - title: Deprecated -- scheduled for removal
     desc: >
@@ -742,6 +757,14 @@ articles:
       - articles/borders
       - articles/output
       - articles/assembling
+
+  - title: Validation
+    desc: >
+      What the package provides as evidence of its quality, and the kit a
+      company edits to validate it in its own environment.
+    navbar: ~
+    contents:
+      - articles/validation
 
   - title: For contributors
     desc: >

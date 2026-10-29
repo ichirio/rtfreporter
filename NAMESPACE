@@ -2,6 +2,7 @@
 export(rtfreporter_ai_manual)
 export(rtfreporter_options)
 export(rtfreporter_reset_defaults)
+export(rtfreporter_validation_kit)
 
 # Pipe Composition API (primary public API)
 export(rtf_document)
