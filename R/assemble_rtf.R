@@ -479,6 +479,41 @@ toc_entry <- function(label, file = NULL, level = 2L) {
   600L * (max(1L, as.integer(level)) - 1L)
 }
 
+# The TOC page each entry goes on (#767).  The TOC section is landscape
+# Letter with 0.9" top / bottom margins: 9648 twips to write in.  A line is
+# taken as 1.15 x its font size, a label wraps at Courier New's width beside
+# its indent and page number, and a page is filled to 90% only, so the page
+# breaks are the TOC's own (\pagebb) and its page count is known for the
+# cached page numbers.  A heading last on a page goes over with what it heads.
+.toc_entry_pages <- function(toc_entries) {
+  if (!length(toc_entries)) return(integer(0))
+  room <- 0.9 * (12240 - 2 * 1296)
+  line <- function(hp) 1.15 * hp * 10               # half-points -> twips
+  char <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
+  used <- line(28) + line(18)                       # the title, the blank
+  page <- 1L
+  out  <- integer(length(toc_entries))
+  for (i in seq_along(toc_entries)) {
+    e  <- toc_entries[[i]]
+    hp <- if (identical(e$type, "heading")) 22 else 20
+    width <- 14400 - .toc_indent_for_level(e$level) - 720
+    n  <- max(1, ceiling(nchar(e$label %||% "") * char * hp / 20 / width))
+    h  <- n * line(hp)
+    if (used + h > room && used > 0) {
+      page <- page + 1L
+      used <- 0
+    }
+    used   <- used + h
+    out[i] <- page
+  }
+  for (i in rev(seq_along(out))[-1L]) {
+    if (identical(toc_entries[[i]]$type, "heading") && out[i + 1L] > out[i]) {
+      out[i] <- out[i + 1L]
+    }
+  }
+  out
+}
+
 # Render the TOC section.  page_numbering = "roman" inserts \pgnlcrm
 # (Roman lowercase) so TOC pages are i, ii, iii.  The caller is
 # responsible for inserting \pgnrestart\pgndec on the next body section.
@@ -512,9 +547,13 @@ toc_entry <- function(label, file = NULL, level = 2L) {
     "{\\pard\\fs18\\par}"
   )
 
-  for (e in toc_entries) {
+  on_page <- .toc_entry_pages(toc_entries)
+  for (k in seq_along(toc_entries)) {
+    e          <- toc_entries[[k]]
     indent     <- .toc_indent_for_level(e$level)
     indent_cmd <- if (indent > 0L) sprintf("\\li%d", indent) else ""
+    # (the first entry of each later TOC page starts that page)
+    if (k > 1L && on_page[k] > on_page[k - 1L]) indent_cmd <- paste0("\\pagebb", indent_cmd)
 
     if (e$type == "heading") {
       # Heading -- bold, no leader, no page number.
@@ -792,13 +831,14 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   # spelled, so the start page of file i = front-matter pages + 1 + pages in
   # files 1..i-1.
   entry_pages <- NULL
+  toc_pages   <- if (use_toc) max(1L, .toc_entry_pages(toc_entries)) else 0L
   if (use_toc) {
     npages <- vapply(input_files, function(f)
       .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L))
     front <- if (toc_page_numbering == "roman") {
       0L                            # body restarts at 1 (front matter is i, ii)
     } else {
-      (if (use_cover) 1L else 0L) + 1L   # cover + TOC, then continuous numbering
+      (if (use_cover) 1L else 0L) + toc_pages   # cover + TOC, then continuous
     }
     entry_pages <- as.integer(front + 1L + cumsum(c(0L, npages[-length(npages)])))
   }
@@ -855,10 +895,10 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   }
 
   # The assembled document's own page count, known only here.  Front matter
-  # counts: a cover is one page, the TOC one more.
+  # counts: a cover is one page, the TOC its own pages (.toc_entry_pages()).
   body_pages  <- sum(vapply(input_files, function(f)
     .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L)))
-  front_pages <- (if (use_cover) 1L else 0L) + (if (use_toc) 1L else 0L)
+  front_pages <- (if (use_cover) 1L else 0L) + toc_pages
   book_pages  <- body_pages + front_pages
 
   # Fill the reserved slots, then make every NUMPAGES cache -- the inputs' own
