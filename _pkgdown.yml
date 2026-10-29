@@ -296,7 +296,8 @@ reference:
       `show_keys =` also shows a subgroup key's own counts as rows) and each
       `plan_*()` verb adds one declaration.  Nothing runs until the plan is
       handed to `rtf_tables()` or `plan_apply()`; a later layer wins.  The
-      verbs share one help page, `plan_verbs`; by job:
+      overview of every verb is `plan_verbs`, and many have a page of
+      their own; by job:
 
       * **cells**: `plan_cells()`, `plan_digits()`, `plan_stat_groups()`
       * **rows**: `plan_filter()`, `plan_sort()` (`-n@SOC`, `-n[Total]`),
@@ -308,13 +309,23 @@ reference:
         `plan_paginate_cols()`
       * **header and text**: `plan_col_header()`, `plan_titles()`,
         `plan_footnotes()`
-      * **the rest**: `plan_listing()`, `plan_after()`
+      * **the rest**: `plan_listing()`, `plan_append()`, `plan_after()`
 
       The *plan verbs* article has an at-a-glance table.  The Excel
       definition of a table lives in tflspec (`tflspec::tfl_table_plan()`).
     contents:
       - table_plan
       - plan_verbs
+      - plan_cells
+      - plan_digits
+      - plan_filter
+      - plan_sort
+      - plan_levels
+      - plan_labels
+      - plan_total
+      - plan_stub
+      - plan_col_header
+      - plan_append
       - plan_apply
       - plan_template
   - subtitle: Looking inside a plan
