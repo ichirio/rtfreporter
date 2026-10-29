@@ -274,3 +274,16 @@ test_that("fmt_value_paren agrees with realign_count_pct on the 100 branch", {
   expect_identical(trimws(unbsp(fmt_value_paren(x))),
                    trimws(unbsp(realign_count_pct(x))))
 })
+
+test_that("fmt_value_paren() rounds a parenthetical of 100 or more by the package's rule (#765)", {
+  withr_opts <- options(rtfreporter.rounding = "sas")
+  on.exit(options(withr_opts), add = TRUE)
+  expect_identical(fmt_value_paren(c("1.5 (100.5)", "2 (102.5)"), nbsp = " "),
+                   c("1.5 (101)", "  2 (103)"))
+  expect_identical(fmt_value_paren(c("1.5 (100.5)", "2 (102.5)"), nbsp = " ", rounding = "r"),
+                   c("1.5 (100)", "  2 (102)"))
+  options(rtfreporter.rounding = "r")
+  expect_identical(fmt_value_paren("3 (100.5%)", nbsp = " "), "3 (100%)")
+  expect_identical(fmt_value_paren("3 (100.5%)", nbsp = " ", rounding = "sas"), "3 (101%)")
+  expect_error(fmt_value_paren("3 (100.5)", rounding = "x"), "`rounding` must be")
+})

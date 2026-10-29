@@ -316,6 +316,12 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 #'
 #' @return Character vector the same length as `x`.
 #'
+#' @param rounding How a parenthetical of 100 or more is rounded to a whole
+#'   number (`"(100.5)"`): `"r"` (half to even, as `round()` does) or
+#'   `"sas"` (half away from zero); `NULL` (default) takes
+#'   `getOption("rtfreporter.rounding")`, as [fmt_count_pct()] does.  See
+#'   [round_num()].
+#'
 #' @examples
 #' # A zero count prints on its own; "(100)" is flush against its ")".
 #' fmt_value_paren(c("12 (100)", "6 (50.0)", "1 (8.3)", "0 (0.0)"), nbsp = " ")
@@ -327,9 +333,10 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 #'   [fmt_count_pct()] for the same parenthesis rules from numbers, and the
 #'   `cell_format` argument of [as_rtftables()].
 #' @export
-fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
+fmt_value_paren <- function(x, nbsp = "\u00a0", na = "", rounding = NULL) {
   if (length(x) == 0L) return(x)
   na <- .check_na_text(na)
+  rnd <- .rounder(rounding)
   x <- as.character(x)
   x[is.na(x)] <- na
 
@@ -373,7 +380,8 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "") {
   big <- !is.na(inner) & grepl("^[0-9]+([.][0-9]+)?$", pc) &
          !is.na(num) & num >= 100
   if (any(big)) {
-    inner[big] <- paste0(format(round(num[big]), trim = TRUE, scientific = FALSE),
+    # (rounded by the package's rule, as fmt_count_pct() rounds that branch)
+    inner[big] <- paste0(format(rnd(num[big], 0L), trim = TRUE, scientific = FALSE),
                          ifelse(endsWith(inner[big], "%"), "%", ""))
   }
 

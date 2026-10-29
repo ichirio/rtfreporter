@@ -316,3 +316,16 @@ test_that("a plan's {mean:.3s} keeps the trailing zero in the table (#736)", {
     plan_apply("table")
   expect_identical(tab$A[tab$label == "Mean"], "7.20")
 })
+
+test_that("a negative value that rounds to zero prints 0, not -0 (#765)", {
+  expect_identical(fmt_round(-0.4, 0), "0")
+  expect_identical(fmt_round(-0.004, 2), "0.00")
+  expect_identical(fmt_round(-0.4, 0, rounding = "sas"), "0")
+  expect_identical(fmt_signif(-0.0004, 3, small = "fixed"), "0.00")
+  expect_identical(fmt_round(-0.6, 0), "-1")
+  expect_identical(sprintf("%.0f", round_num(-0.4, 0, rounding = "sas")), "0")
+  expect_identical(sprintf("%.1f", round_num(c(-0.04, 0.04, -0.06), 1, rounding = "sas")),
+                   c("0.0", "0.0", "-0.1"))
+  d <- data.frame(stat = c("mean", "sd"), v = c(-0.04, 1.234))
+  expect_identical(fmt_numeric(d, cols = "v", digits = 1)$v, c("0.0", "1.2"))
+})
