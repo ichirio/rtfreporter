@@ -114,13 +114,23 @@ pages[[1]]
 \link{plan_verbs} for every verb.
 
 Other plan verbs:
+\code{\link[=plan_blanks]{plan_blanks()}},
+\code{\link[=plan_cell_style]{plan_cell_style()}},
 \code{\link[=plan_cells]{plan_cells()}},
 \code{\link[=plan_col_header]{plan_col_header()}},
+\code{\link[=plan_compare]{plan_compare()}},
 \code{\link[=plan_digits]{plan_digits()}},
+\code{\link[=plan_empty]{plan_empty()}},
 \code{\link[=plan_filter]{plan_filter()}},
+\code{\link[=plan_hide]{plan_hide()}},
 \code{\link[=plan_labels]{plan_labels()}},
 \code{\link[=plan_levels]{plan_levels()}},
+\code{\link[=plan_nest]{plan_nest()}},
+\code{\link[=plan_paginate_group]{plan_paginate_group()}},
+\code{\link[=plan_paginate_rows]{plan_paginate_rows()}},
+\code{\link[=plan_row_group]{plan_row_group()}},
 \code{\link[=plan_sort]{plan_sort()}},
+\code{\link[=plan_stat_groups]{plan_stat_groups()}},
 \code{\link[=plan_stub]{plan_stub()}},
 \code{\link[=plan_total]{plan_total()}}
 }

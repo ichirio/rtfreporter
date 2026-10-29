@@ -2,16 +2,6 @@
 % Please edit documentation in R/table_plan.R
 \name{plan_verbs}
 \alias{plan_verbs}
-\alias{plan_cell_style}
-\alias{plan_paginate_group}
-\alias{plan_row_group}
-\alias{plan_nest}
-\alias{plan_compare}
-\alias{plan_stat_groups}
-\alias{plan_hide}
-\alias{plan_empty}
-\alias{plan_blanks}
-\alias{plan_paginate_rows}
 \alias{plan_style}
 \alias{plan_columns}
 \alias{plan_listing}
@@ -21,61 +11,6 @@
 \alias{plan_paginate_cols}
 \title{Declare the table, one layer at a time}
 \usage{
-plan_cell_style(
-  .plan,
-  cols = NULL,
-  header = FALSE,
-  where = NULL,
-  bold = NULL,
-  italic = NULL,
-  align = NULL,
-  color = NULL,
-  background = NULL,
-  border = NULL,
-  underline = NULL,
-  indent_twips = NULL
-)
-
-plan_paginate_group(
-  .plan,
-  col = NULL,
-  keep = TRUE,
-  heading = NULL,
-  heading_at = NULL
-)
-
-plan_row_group(.plan, mode = NULL, collapse = NULL, group_col = NULL)
-
-plan_nest(.plan, ...)
-
-plan_compare(.plan, ..., by = NULL, position = c("last", "first"))
-
-plan_stat_groups(.plan, ..., .variables = NULL, .others = NULL)
-
-plan_hide(.plan, ...)
-
-plan_empty(
-  .plan,
-  text = "No subjects met the criteria.",
-  when = c("auto", "no_rows", "overall_zero"),
-  position = c("last", "first", "replace"),
-  footnote = NULL
-)
-
-plan_blanks(.plan, where = NULL, first = NULL, last = NULL, counted = NULL)
-
-plan_paginate_rows(
-  .plan,
-  max_rows = NULL,
-  split = NULL,
-  break_before = NULL,
-  min_group_rows = NULL,
-  cont_label = NULL,
-  page_by = NULL,
-  heading = NULL,
-  heading_at = NULL
-)
-
 plan_style(
   .plan,
   border = NULL,
@@ -156,246 +91,11 @@ plan_paginate_cols(
 keeps a name in \code{...} such as \code{p} (cards' percentage) from being taken
 for it (an argument before \code{...} matches by its first letters).}
 
-\item{cols}{For \code{plan_cell_style()}: the columns styled, by name
-(\code{.values} for every value column); left out, every column.}
-
-\item{header}{For \code{plan_cell_style()}: \code{TRUE} styles the column header
-(\code{\link[=style_header]{style_header()}}).}
-
-\item{where}{For \code{plan_cell_style()}: a one-sided formula over the
-table's columns choosing the rows, e.g. \code{where = ~ is.na(label)}.  For
-\code{plan_blanks()}: \code{as_rtftables(blank_rows = )}, \code{"records"} for a
-blank row after each record of a listing, or \code{"none"} for none -- a
-listing's records then follow each other with no blank row between
-them (the multiline type puts one after each; \code{first = FALSE} takes
-away the one at the top of each page too).}
-
-\item{bold, italic, align, color, background}{For \code{plan_cell_style()}: how
-the cells look.  A \strong{value} (\code{bold = TRUE}, \code{color = "#CC0000"})
-applies to the cells \code{cols} / \code{header} / \code{where} choose.  A
-\strong{one-sided formula} computes the value row by row over the table's
-columns, \code{NA} leaving the column default alone --- \code{bold = ~ is.na(label)}, \code{color = list(Placebo = ~ ifelse(n > 50, "#CC0000", NA))}, a named list scoping it to columns.  Formula styles see the
-printed rows only with \code{plan_stub(before = TRUE)}.  For \code{plan_style()},
-\code{align}, \code{bold} and \code{italic} are the body's default look,
-\code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.
-For \code{plan_listing()}, \code{align} is \code{\link[=listing_spec]{listing_spec()}}'s: the alignment of
-the columns that set none of their own (\code{listing_col(align = )});
-\code{NULL} the template's.}
-
 \item{border, align_count_pct, font, font_size_half_points, row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips, cell_padding_left_twips, cell_padding_right_twips, cell_valign, table_align, markup, blank_row_normalize}{For \code{plan_style()}: the settings of the \strong{whole table}, by
 \code{\link[=rtftable]{rtftable()}}'s and \code{\link[=as_rtftables]{as_rtftables()}}'s names.  What a table has per
 column or per cell is another verb's --- \code{\link[=plan_columns]{plan_columns()}},
 \code{\link[=plan_cell_style]{plan_cell_style()}}, \code{\link[=plan_col_header]{plan_col_header()}}, \code{\link[=plan_blanks]{plan_blanks()}} --- so this
-list is the whole of it.  For \code{plan_cell_style()}, \code{border} is a
-column's border (\code{\link[=rtf_border]{rtf_border()}}).}
-
-\item{underline}{For \code{plan_style()}: the body's default, an
-\code{\link[=rtf_table_style]{rtf_table_style()}} field like \code{align}, \code{bold} and \code{italic} (which
-are that too in \code{plan_style()}).  For \code{plan_cell_style()}: the cells'
-underline, as \code{bold}.}
-
-\item{indent_twips}{For \code{plan_cell_style()}: the left indent of the
-cells' text, \code{\link[=style_cols]{style_cols()}}'s \code{indent_twips} (not on the header).}
-
-\item{col}{For \code{plan_paginate_group()}: the column whose value starts a
-new page (\code{as_rtftables()}'s \code{page_by}, or \code{split = "by_value"} with a
-\code{\link[=plan_stub]{plan_stub()}}).  Left out, it is the outermost row key.  It is a PAGE
-key, the same on every row of a page, so it is never a row group: blank
-rows between groups, \code{collapse}, \code{row_title}, the stub and the column
-positions start at the first printed row key, and \code{first} / \code{last}
-apply on every page.  The page is \strong{named} after
-the value, which is the line \code{rtf_tables(auto_section = TRUE)}
-cuts a section on --- so this verb decides what a section is.
-It is the only verb that makes a page per value.}
-
-\item{keep}{For \code{plan_paginate_group()}: \code{FALSE} also hides the page key
-(for \code{plan_paginate_cols()}, see \code{at}).  A column
-can be \strong{needed and not wanted} --- the key a page break reads ---
-and the verb that needs it is the one place that knows, so
-it says so there instead of the name being written again in a
-\code{plan_hide()}.  Names that are not columns (a statistic, \code{".depth"})
-are ignored rather than refused.}
-
-\item{heading}{For \code{plan_paginate_group()} (and \code{plan_paginate_rows()}
-with one \code{page_by} column, a page per value with a row budget inside):
-the page's name as a template,
-\code{"Treatment: {value} (N={n})"}, in place of the bare value --- so the
-section header \code{rtf_tables(auto_section = TRUE)} prints (or the title
-line of \code{auto_title = TRUE}) says the arm and its N with neither written
-by hand, and a study with three arms gets three.  \code{{value}} is the
-page's value as printed; \code{{n}} its population \strong{as the ARD states it}:
-the page variable's own tabulation, \code{cards::ard_tabulate(adsl, variables = TRT01A)} bound into the ARD (the \code{.key_own} rows
-\code{\link[=normalize_ard]{normalize_ard()}} keeps), never an analysis's \code{N} (the count of its
-non-missing values).  What the ARD does not state is \code{NA}, with a
-warning.  \code{{PROGRAM}}, \code{{DATETIME}} and the page tokens are left for the
-renderer.}
-
-\item{heading_at}{For \code{plan_paginate_group()} (and \code{plan_paginate_rows()}
-with \code{page_by}): where the page's name prints --- \code{"section"}, in the
-section header (what \code{rtf_tables(auto_section = TRUE)} does); \code{"title"},
-as the last line of the titles above the table (\code{auto_title = TRUE});
-\code{"none"}, nowhere.  It is the default of \code{\link[=rtf_tables]{rtf_tables()}}'s
-\code{auto_section} / \code{auto_title} for these pages, so the plan says it with
-the pages it names and \code{rtf_tables(plan)} needs neither; an
-\code{auto_section} / \code{auto_title} given to \code{\link[=rtf_tables]{rtf_tables()}} wins.  \code{NULL}
-(default): not said (\code{\link[=rtf_tables]{rtf_tables()}}'s own default, nowhere).}
-
-\item{mode, collapse}{For \code{plan_row_group()}: what a run of rows sharing a
-value is, and how the repeat shows.  \code{mode} is \code{as_rtftables(group_by = )},
-which is how a group BOUNDARY is found --- \code{"value"} (each run of equal
-values), \verb{"indent}" (a row starts a group when its cell is not indented),
-\code{"filled"} (when its cell is not empty), or \code{"auto"}.  \code{collapse} is
-\code{collapse_repeats}: a repeated value printed once and then blank, in the
-columns named (\code{collapse = c("grp1", "grp2")}, the row keys' names) or
-counted on the PRINTED columns (a hidden key left out), like every
-column position in a plan.
-
-\code{mode = "indent"} \strong{reads} indentation to find the boundary;
-\code{plan_stub(indent = )} \strong{writes} it.  They are not the same knob, and
-a stub written with \code{indent} is exactly what that mode then reads.
-
-The rows are grouped by the outermost row key (\code{table_plan(rows = )});
-folded into a stub, by the stub's headings.}
-
-\item{group_col}{For \code{plan_row_group()}, on a plan of a table that is
-already built: \code{as_rtftables(group_col = )}, the column whose runs are
-the groups (what \code{split = "group_safe"}, \code{mode} and the blank rows
-between groups read), with the pages still cut by rows.  An ARD plan
-names it as its outermost row key (\code{table_plan(rows = )}) and refuses
-this; a page per value is \code{\link[=plan_paginate_group]{plan_paginate_group()}}.}
-
-\item{...}{For \code{plan_hide()}, the names of the columns not printed.  For
-\code{plan_titles()} / \code{plan_footnotes()}, the rows of one block (see
-\code{pages}); for \code{plan_listing()}, the \code{\link[=listing_col]{listing_col()}}s; for
-\code{plan_after()}, the functions run on the pages.
-
-\code{plan_compare()} takes the \strong{comparison columns}, each named (the
-column's name) and each what \code{plan_cells()} takes for one cell: a
-template with guards, or a map keyed by context / kind / \code{default}
---- here a named vector is that map, since a column is one cell with
-no rows to label: \code{p = c(stats_t_test = "{p.value:.3f}")} reads the
-t-test and leaves a Wilcoxon of the same variable (noted, as every
-record no column takes); two tests one column reads both of are an
-error, never one picked.  A template reads only the statistics it
-names.  It reads the ARD's comparison records --- the column key with \strong{no
-value}, in an analysis the body does not have: cardx's
-\code{ard_stats_t_test()}, \code{ard_stats_chisq_test()}, \code{ard_stats_fisher_test()},
-\code{ard_stats_kruskal_test()}, \code{ard_stats_oneway_test()},
-\code{ard_stats_prop_test()} --- and puts each on its \strong{variable's block}:
-the row of its level when it has one, else the block's first row as the
-table is sorted (the variable's heading row under \code{plan_stub()}).
-Nothing is computed; the p-value, the difference and its CI are the
-ARD's.  A test whose record names no variable (\code{ard_stats_aov()}'s
-term) has no row; use \code{ard_stats_oneway_test()}.
-
-The names are \strong{the columns' own} --- any name, as many as the
-table has; \code{p} and \code{diff} are only examples.  Each column reads
-whatever statistics its template names from the same record:
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_compare(p = c(p.value < 0.001 ~ "<0.001", "\{p.value:.3f\}"))
-plan_compare(diff = "\{estimate:.2f\} (\{conf.low:.2f\}, \{conf.high:.2f\})",
-             p = "\{p.value:.3f\}")
-plan_compare(t = "\{statistic:.2f\}", df = "\{parameter:.0f\}",   # a t-test laid out
-             p = "\{p.value:.4f\}")
-plan_compare(odds_ratio = "\{estimate:.2f\} (\{conf.low:.2f\}, \{conf.high:.2f\})")  # an odds ratio (Fisher)
-plan_compare(p = c(stats_t_test = "\{p.value:.3f\}"))              # the t-test of several tests
-plan_compare(p = c(stats_chisq_test  = "\{p.value:.3f\}",          # each test its own way
-                   stats_fisher_test = "\{p.value:.4f\}"))
-}\if{html}{\out{</div>}}
-
-\strong{Lines} are \code{\link[=cell_rows]{cell_rows()}}, as in the body: each line goes on the
-variable's row of that label, so a difference and its CI sit beside the
-body's estimate and CI lines (an ORR table's \code{"1"} / \code{"2"}), and a
-p-value on line 1 only is \code{cell_rows("1" = ...)} (a named vector is a
-map by context here, not lines):
-
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_compare(diff = cell_rows("1" = "\{estimate:.3f\}",
-                              "2" = "(\{conf.low:.3f\}, \{conf.high:.3f\})"),
-             p    = cell_rows("1" = "\{p.value:.3f\}"))
-}\if{html}{\out{</div>}}
-
-The columns have no population: the header's \code{{col}} / \code{{n}} and its
-short rows leave them alone, so the header names them
-(\code{rtf_col_header(c(..., "p-value"))}).
-
-\code{plan_stat_groups(.variables = , .others = )} scopes the groups: only
-the records of \code{.variables} (\code{"RESP"}) are split; the other variables'
-records go \strong{whole} to the group \code{.others} names (\code{"n"}), every
-statistic with them --- so a block of SEX's n (\%) (\code{show_keys}) is not
-pulled into the ORR's groups by its \code{n}.  \code{.others} needs \code{.variables}.
-
-\code{plan_stat_groups()} takes the groups, each a name and the
-statistics in it (\verb{n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")}).  Each row of the ARD gets its group in the key
-\code{.stat_group}, which \code{table_plan(cols = )} or \verb{rows = } names like any
-other: \code{cols = c("TRT01A", ".stat_group")} puts one record's N in one
-column and its rate and interval in the next, and \code{\link[=plan_cells]{plan_cells()}} keys a
-template by the group's name (\code{n = "{N}"}, \code{orr_ci = cell_rows(...)}).
-A statistic in no group is not read.  This is what a \code{mutate()} of
-\code{variable} before \code{\link[=table_plan]{table_plan()}} did --- a workaround: keep the ARD
-as it is (\code{variable} is the analysis variable) and choose the layout
-in the plan.
-
-With \code{cell_rows()} (or named templates) for the rows inside a cell,
-one analysis's statistics lay out as \strong{n rows x m columns}: the
-groups go across (\code{cols = c("TRT01A", ".stat_group")}) or down
-(\code{rows = c(..., stat = ".stat_group")}, in the order the groups are
-said), and each group's template has its own rows; a group with fewer
-rows leaves the rest empty, aligned row by row.  The groups split
-\strong{one record} --- the same analysis and the same keys; statistics of
-two analyses are two records, joined by the keys as always.
-
-For \code{plan_nest()}, one entry per nested variable: its name, and the
-variable and level its rows go under,
-\code{plan_nest(RACESUB = c(RACE = "Asian"))}.  The level is matched as the
-table shows it (the ARD's level: a code list's label).  The nested
-rows follow that level's row, one indent step deeper (the stub's
-\code{indent}, default 4), in the parent's group; their own heading is
-dropped, their order and text stay \code{plan_levels()}' and
-\code{plan_labels()}'.  The rows key that carries the variable
-(\code{table_plan(rows = c(group = "variable"))}) is what is read.}
-
-\item{by}{For \code{plan_compare()}: the column that splits the comparison
-records into columns, one a level (\code{by = "COMPARISON"}: each active arm
-against placebo, the ARD made by \code{ard_strata(.strata = COMPARISON)} over
-two-arm subsets).  With several columns in \code{...} they are named
-\verb{<level>____<column>}.  \code{NULL}: one comparison a variable.}
-
-\item{position}{For \code{plan_compare()}: where its columns go, after the
-column key's (\code{"last"}) or before them (\code{"first"}).  For
-\code{plan_empty()}: where its row goes, \code{"last"} (after the rows: the
-overall row's 0 stays), \code{"first"} or \code{"replace"} (the row alone).}
-
-\item{.variables, .others}{For \code{plan_stat_groups()}: the variables whose
-records are split into the groups (\code{NULL}: all), and the group the
-other variables' records go to whole (\code{NULL}: none).}
-
-\item{text, when, footnote}{For \code{plan_empty()}: what an empty
-table says.  \code{text} is one row (in the row label column; \code{NULL} for
-none); \code{when} the table is empty -- \code{"no_rows"} (no body row, after
-\code{\link[=plan_filter]{plan_filter()}}), \code{"overall_zero"} (its overall row, \code{normalize_ard(overall = )}, is 0 in every column), \code{"auto"} (either; the default);
-\code{footnote} a line added to the table's footnotes when it is empty
-(\code{position} is where the row goes).  A table
-that is not empty is as it was.}
-
-\item{first, last, counted}{For \code{plan_blanks()}: \code{as_rtftables()}'s
-\code{blank_row_first}, \code{blank_row_end} and
-\code{count_blank_rows}.}
-
-\item{max_rows, split, break_before, min_group_rows, cont_label}{For
-\code{plan_paginate_rows()}: the row budget and what a page break may cut ---
-\code{as_rtftables()}'s \code{max_rows}, \code{split}, \code{split_rows}, \code{min_group_rows}
-and \code{cont_label}.  This is the \strong{row} axis; a page per value (the
-\strong{group} axis) is \code{plan_paginate_group()}, and the \strong{column} axis
-is \code{plan_paginate_cols()}.}
-
-\item{page_by}{For \code{plan_paginate_rows()}: \code{as_rtftables()}'s \code{page_by}
--- the column(s) whose value partitions the body \strong{first}, each value
-a page named after it; the row settings then apply \strong{within} one
-partition (a period, a cohort), so a BY page can still be cut by a row
-budget.  \code{plan_paginate_group()} is the other way to page by a value:
-one page per value however long it is, with no row budget.  The BY
-column is printed unless hidden (\code{\link[=plan_hide]{plan_hide()}}).  Like
-\code{plan_paginate_group(col = )} it is a page key, never a row group.}
+list is the whole of it.}
 
 \item{border_header, border_spanning, border_body, border_first_row, border_last_row}{For \code{plan_style()}: the rules of one kind of row, by the names
 \code{\link[=rtf_table_style]{rtf_table_style()}} gives them.  Say the table's rules one way:
@@ -406,6 +106,15 @@ whole header's default look, \code{\link[=rtf_table_style]{rtf_table_style()}}'s
 \verb{border_*} zones and \code{align} ... \code{underline} they make the
 \code{as_rtftables(style = )} object.  One column or one cell is
 \code{\link[=plan_cell_style]{plan_cell_style()}}.}
+
+\item{bold, italic, align}{For \code{plan_style()}: the body's default look,
+\code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.  For \code{plan_listing()}, \code{align} is
+\code{\link[=listing_spec]{listing_spec()}}'s: the alignment of the columns that set none of
+their own (\code{listing_col(align = )}); \code{NULL} the template's.  One
+column or one cell is \code{\link[=plan_cell_style]{plan_cell_style()}}.}
+
+\item{underline}{For \code{plan_style()}: the body's default, an
+\code{\link[=rtf_table_style]{rtf_table_style()}} field like \code{align}, \code{bold} and \code{italic}.}
 
 \item{table_width_twips, table_width_pct, table_width_pct_of_writable}{For
 \code{plan_style()}: the table's width, by \code{\link[=rtftable]{rtftable()}}'s names (and
@@ -442,6 +151,10 @@ column) and \code{\link[=rtftable]{rtftable()}}'s \code{column_widths_twips}, as
 column of the table (\code{.values} covers the value columns); another stops
 with the names the table has.}
 
+\item{...}{For \code{plan_titles()} / \code{plan_footnotes()}, the rows of one
+block (see \code{pages}); for \code{plan_listing()}, the \code{\link[=listing_col]{listing_col()}}s; for
+\code{plan_after()}, the functions run on the pages.}
+
 \item{type, spacer, spacer_rel_width, layout, wrap, record}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged
 (\code{record}: the hidden record column -- \code{FALSE} none, a string its
 name; \code{NULL} the default, \code{TRUE}).  \code{...} there takes the
@@ -464,14 +177,16 @@ to cut before; \code{cut_by} a list of column blocks (\code{paginate_cols(cols =
 \code{FALSE} (each column keeps its width, \code{"keep"}); \code{order}
 \code{paginate_cols(page_order = )}, the order the three axes nest in,
 outermost first: \code{"group"}, \code{"rows"}, \code{"cols"}, or the shorthands
-\code{"across"} and \code{"down"}.  For \code{plan_paginate_cols()} \code{keep} is the
-columns every block repeats (\code{paginate_cols(carry = )}).}
+\code{"across"} and \code{"down"}.}
 
 \item{every}{For \code{plan_paginate_cols()}: cut a block every this many
 columns, counting only the ones a block does not keep.  This is
 \code{at} without writing down how many columns one study had --- the
 plan is deferred, so it counts them when the table exists.  Give one
 of \code{at}, \code{cut_by} or \code{every}.}
+
+\item{keep}{For \code{plan_paginate_cols()}: the columns every block
+repeats (\code{paginate_cols(carry = )}), such as the row headings.}
 }
 \value{
 The plan, with one more layer.
@@ -495,7 +210,7 @@ others are documented here.
 statistics.
 \item \code{\link[=plan_digits]{plan_digits()}}: the decimals (or significant digits) the templates'
 open tokens take.
-\item \code{plan_stat_groups()}: one record's statistics split into named groups,
+\item \code{\link[=plan_stat_groups]{plan_stat_groups()}}: one record's statistics split into named groups,
 the key \code{.stat_group}.
 }
 
@@ -505,26 +220,26 @@ the key \code{.stat_group}.
 \item \code{\link[=plan_sort]{plan_sort()}}: the row order, alphabetical or by frequency.
 \item \code{\link[=plan_levels]{plan_levels()}}: the order of values (and of the analysis variables).
 \item \code{\link[=plan_labels]{plan_labels()}}: the text values and variables print as.
-\item \code{plan_nest()}: one variable's rows under one level of another.
-\item \code{plan_empty()}: what a table with no events says.
+\item \code{\link[=plan_nest]{plan_nest()}}: one variable's rows under one level of another.
+\item \code{\link[=plan_empty]{plan_empty()}}: what a table with no events says.
 }
 
 \strong{More columns}
 \itemize{
 \item \code{\link[=plan_total]{plan_total()}}: a Total column (or row) from the ARD's overall rows.
-\item \code{plan_compare()}: columns read from comparison records (a p-value, a
+\item \code{\link[=plan_compare]{plan_compare()}}: columns read from comparison records (a p-value, a
 difference).
 }
 
 \strong{The layout}
 \itemize{
 \item \code{\link[=plan_stub]{plan_stub()}}: fold the row keys into one row-heading column.
-\item \code{plan_row_group()}: how a run of rows sharing a value shows.
-\item \code{plan_blanks()}: where the blank rows go.
-\item \code{plan_hide()}: columns that do their work without being printed.
+\item \code{\link[=plan_row_group]{plan_row_group()}}: how a run of rows sharing a value shows.
+\item \code{\link[=plan_blanks]{plan_blanks()}}: where the blank rows go.
+\item \code{\link[=plan_hide]{plan_hide()}}: columns that do their work without being printed.
 \item \code{plan_columns()}: widths, decimal alignment and row titles, by column
 name.
-\item \code{plan_cell_style()}: bold, italic, colour, alignment of cells, by
+\item \code{\link[=plan_cell_style]{plan_cell_style()}}: bold, italic, colour, alignment of cells, by
 column or by condition.
 \item \code{plan_style()}: the settings of the whole table (borders, font, row
 heights).
@@ -532,8 +247,8 @@ heights).
 
 \strong{The pages}
 \itemize{
-\item \code{plan_paginate_group()}: a page per value of a column.
-\item \code{plan_paginate_rows()}: the row budget, and what a break may cut.
+\item \code{\link[=plan_paginate_group]{plan_paginate_group()}}: a page per value of a column.
+\item \code{\link[=plan_paginate_rows]{plan_paginate_rows()}}: the row budget, and what a break may cut.
 \item \code{plan_paginate_cols()}: column blocks, and how the three page axes
 nest.
 }
@@ -629,8 +344,8 @@ stands for every value column, so a reordered table keeps them.
 
 \examples{
 if (requireNamespace("cards", quietly = TRUE)) {
-  # One ARD, normalized once.  The cells, digits, labels and stub have
-  # pages of their own; the blocks below add the other verbs to `p`.
+  # One ARD, normalized once.  Most verbs have pages of their own;
+  # this shows the pipe as a whole, the blocks below adding to `p`.
   adsl <- cards::ADSL
   adsl$ARM <- factor(adsl$ARM)
   ard <- cards::ard_stack(
