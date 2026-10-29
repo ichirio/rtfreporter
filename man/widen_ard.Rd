@@ -206,7 +206,8 @@ takes its columns, \code{Placebo____F} and \code{Placebo____M}).}
 \item{\code{"<stat>@<key>"}}{the statistic of the \strong{group's own} row ---
 the row key's summary, its shallowest row --- carried to every row
 of the group: \code{"-n@soc"} orders the SOCs by their own count and
-keeps each SOC's PTs with it.  Both at once: \code{"-n@soc[Total]"}.
+keeps each SOC's PTs with it, two SOCs of the same count too (the
+group itself breaks the tie).  Both at once: \code{"-n@soc[Total]"}.
 An overall row keeps its own number.}
 \item{\code{"max(<stat>)"}, \code{"min(<stat>)"}}{the statistic's \strong{largest}
 (smallest) value across the spread columns instead of their total:
