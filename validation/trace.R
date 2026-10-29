@@ -287,7 +287,8 @@ sm <- c(
   sprintf("| Interaction requirements (across functions) with a test | %s |",
           pct(sum(tl$n_ft > 0 & tl$kind == "interaction"), sum(tl$kind == "interaction"))),
   sprintf("| Requirements whose tests all pass | %s |", pct(sum(fr_ok), nrow(tl))),
-  sprintf("| The tests run (test-log.txt) | %s |", pass_line),
+  # (testthat's `|` would split the table's cell: `/` as the environments' table has it)
+  sprintf("| The tests run (test-log.txt) | %s |", gsub("|", "/", pass_line, fixed = TRUE)),
   sprintf("| Arguments a requirement names (functions with their own requirements) | %s |",
           pct(sum(fn_tab$arguments_in_fr), sum(fn_tab$arguments))),
   sprintf("| Upper requirements | %s |", paste(sprintf("%s %s", tr$fr[!leaf], tr$coverage[!leaf]),
