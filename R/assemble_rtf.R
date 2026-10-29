@@ -256,7 +256,19 @@ toc_heading <- function(label, level = 1L) {
   .toc_heading(label, level)
 }
 
+# A TOC level: a whole number from 1 to `max` (a heading 2, an entry 3)
+.check_toc_level <- function(level, max, what) {
+  ok <- is.numeric(level) && length(level) == 1L && !is.na(level) &&
+    level == round(level) && level >= 1 && level <= max
+  if (!ok) {
+    stop(sprintf("A TOC %s's `level` must be a whole number from 1 to %d.",
+                 sub("toc_", "", what), max), call. = FALSE)
+  }
+  invisible(level)
+}
+
 .toc_heading <- function(label, level = 1L) {
+  .check_toc_level(level, 2L, "toc_heading")
   structure(
     list(label = as.character(label)[1L], level = as.integer(level)),
     class = "rtf_toc_heading"
@@ -296,6 +308,7 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 }
 
 .toc_entry <- function(label, file = NULL, level = 2L) {
+  .check_toc_level(level, 3L, "toc_entry")
   structure(
     list(label = as.character(label)[1L],
          file  = file,
@@ -389,7 +402,10 @@ toc_entry <- function(label, file = NULL, level = 2L) {
         } else if (is.numeric(e$file)) {
           fi <- as.integer(e$file)
         } else if (is.character(e$file)) {
+          # (one file however it is spelled: relative / absolute, \ or /)
+          norm <- function(p) normalizePath(p, "/", mustWork = FALSE)
           fi <- match(e$file, input_files)
+          if (is.na(fi)) fi <- match(norm(e$file), norm(input_files))
           if (is.na(fi)) {
             stop(sprintf("toc_entry: file '%s' is not in `input_files`.",
                          e$file), call. = FALSE)
@@ -617,8 +633,8 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #' calculated by the viewer when the file opens.
 #'
 #' @section Page numbering:
-#' `toc_page_numbering` controls how the TOC pages (and cover, if
-#' present) are numbered:
+#' `toc_page_numbering` controls how the TOC pages are numbered (a cover
+#' page keeps the document's Arabic numbering):
 #'
 #' \describe{
 #'   \item{`"none"` (default)}{Arabic numbering flows continuously from
@@ -626,9 +642,12 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'     TOC counts as page 1, 2, ...}
 #'   \item{`"roman"`}{TOC pages use lowercase Roman numerals (`i`, `ii`,
 #'     ...); body pages restart at `1`.}
-#'   \item{`"decimal"`}{TOC pages use Arabic numerals starting at `1`;
-#'     body pages restart at `1`.}
+#'   \item{`"decimal"`}{TOC pages use Arabic numerals starting at `1`, and
+#'     the body continues from them (with a one-page TOC the first table is
+#'     page 2).}
 #' }
+#'
+#' [assemble_folder()] and [assemble_from_spec()] default to `"decimal"`.
 #'
 #' @param input_files Character vector of paths to RTF files to combine
 #'   (at least 2).  May be left out when `toc` is a table (or its path):
@@ -728,8 +747,10 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
 
   # A table of contents given as a table, or as the path of one: its rows in
   # `order`, and its files when `input_files` is left out.
-  if (is.character(toc) && length(toc) == 1L &&
-      grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE)) {
+  # (any other file: .read_spec() says it must be .xlsx / .csv)
+  if (is.character(toc) && length(toc) == 1L && !identical(toc, "auto") &&
+      (grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE) || file.exists(toc) ||
+       grepl("[.][A-Za-z]{2,5}$", toc))) {
     toc <- .read_spec(toc)
   }
   if (is.data.frame(toc)) {
