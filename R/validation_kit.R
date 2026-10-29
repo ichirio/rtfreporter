@@ -7,19 +7,20 @@
 #' edit and fill:
 #'
 #' \describe{
-#'   \item{`validation_plan.md`}{Purpose, scope and intended use, roles, the
-#'     risk-based approach (what the package's evidence covers, what you
-#'     check), acceptance criteria, deviations.}
+#'   \item{`validation_plan.md`}{The Validation Plan: purpose, scope and
+#'     intended use, roles, the risk-based approach (what the package's
+#'     evidence covers, what you check), acceptance criteria, deviations.}
 #'   \item{`urs.csv`, `urs.md`}{The User Requirement Specification: your
 #'     needs (`UR-NNN`), each linked to the package's FR ids; `urs.md`
 #'     explains the columns of this file and of the UAT cases.}
 #'   \item{`uat_cases.csv`, `uat_cases.xlsx`}{User acceptance test cases
 #'     (`UAT-NNN`) on dummy data, with blank `actual`, `result`, `tester` and
 #'     `date` to fill.}
-#'   \item{`build_user_matrix.R`}{Writes the Traceability Matrix URS -> FR ->
-#'     UAT (`user_traceability.csv`, and `.xlsx` when writexl is installed).}
-#'   \item{`validation_summary_report.md`}{The report you fill: environment,
-#'     UAT results, deviations, conclusion.}
+#'   \item{`build_user_matrix.R`}{Writes your Traceability Matrix (URS -> FR
+#'     -> UAT): `user_traceability.csv`, and `user_traceability.xlsx` when
+#'     writexl is installed.}
+#'   \item{`validation_summary_report.md`}{The Validation Summary Report you
+#'     fill: environment, UAT results, deviations, conclusion.}
 #'   \item{`quality-plan.md`, `requirements.csv`}{The package's own Quality
 #'     Plan and Functional Requirements, for reference.}
 #' }
