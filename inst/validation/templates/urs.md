@@ -36,14 +36,29 @@ parent (`kind = group`) is fine to say "all of this function".
 is the master: if you record in the xlsx, save it back as `uat_cases.csv`
 before you build the matrix.
 
-## The matrix
+## The Traceability Matrix (URS -> FR -> UAT)
 
 `build_user_matrix.R` reads `urs.csv`, `uat_cases.csv` and
-`requirements.csv` and writes `user_traceability.csv` and `.xlsx`: one row per
-(UR, FR) pair, with the UAT cases that check it and their results, and one
-row per UR with its status (`pass`, `not run`, `fail or deviation`,
-`no UAT case`).
+`requirements.csv` and writes `user_traceability.csv` and
+`user_traceability.xlsx` into the kit folder. The csv, and the xlsx's sheet
+`urs_fr_uat`, have one row per (UR, FR) pair: the UAT cases that name both,
+and their results (`not run` until filled). The xlsx's sheet
+`by_requirement` has one row per UR with its status: `pass` (every case
+passed), `not run` (a case has no result yet), `fail or deviation`, or
+`no UAT case`. A pair with no UAT case is not an error: the UR is checked by
+its other pairs' cases, and the FR by the package's own tests.
+
+From a shell, in the folder that holds the kit:
 
 ```sh
-Rscript build_user_matrix.R path/to/kit
+Rscript path/to/kit/build_user_matrix.R path/to/kit
 ```
+
+or in R:
+
+```r
+kit_dir <- "path/to/kit"
+source(file.path(kit_dir, "build_user_matrix.R"))
+```
+
+The xlsx needs the writexl package; without it only the csv is written.

@@ -3,9 +3,11 @@
 #
 # At a published release, and by hand, each job also writes its environment
 # (sessionInfo, the dependencies' versions, R CMD check's result, the tests'
-# log) and the last job gathers them into the Quality Report
-# (validation/report.R): one table of every environment, the traceability
-# matrix and the deviations.  A release keeps them as its assets (an
+# log) and the last job gathers them, with the maintainers' local runs
+# (validation/env-local/), into the Quality Report (validation/report.R): one
+# table of every environment, the results, the Traceability Matrix and the
+# deviations.  Only the published release's run concludes "validation-ready"
+# (a run by hand is marked DRAFT).  A release keeps them as its assets (an
 # artifact is deleted after 90 days).
 on:
   push:
@@ -74,8 +76,8 @@ jobs:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
 
-      # a release or a run by hand: this environment, for the summary
-      - name: This environment, for the validation report
+      # a release or a run by hand: this environment, for the Quality Report
+      - name: This environment, for the Quality Report
         if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
         shell: bash
         run: |
@@ -87,9 +89,9 @@ jobs:
           name: env-${{ matrix.config.os }}-${{ matrix.config.r }}
           path: validation/env-out/
 
-  # The Quality Report: every environment, the traceability
-  # matrix, the deviations; one PDF and its attachments.  At a release they
-  # are attached to it; by hand they are this run's artifact.
+  # The Quality Report: every environment, the Traceability Matrix, the
+  # deviations; one PDF and its attachments.  At a release they are attached
+  # to it; by hand they are this run's artifact (and the report a DRAFT).
   quality-report:
     needs: R-CMD-check
     if: always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch')
@@ -143,7 +145,11 @@ jobs:
         run: |
           tag="${{ github.event.release.tag_name }}"
           cd validation/out
-          cp quality-report.pdf "quality-report-$tag.pdf"
-          cp traceability.xlsx "traceability-$tag.xlsx"
-          cp environments.txt "environments-$tag.txt"
-          gh release upload "$tag" "quality-report-$tag.pdf" "traceability-$tag.xlsx"             "environments-$tag.txt" --clobber
+          # the report and every attachment its reading guide names
+          files=""
+          for f in quality-report.pdf traceability.xlsx environments.txt test-log.txt \
+                   ft.csv functions.csv candidates.csv; do
+            cp "$f" "${f%.*}-$tag.${f##*.}"
+            files="$files ${f%.*}-$tag.${f##*.}"
+          done
+          gh release upload "$tag" $files --clobber

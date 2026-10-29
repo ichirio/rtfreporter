@@ -113,8 +113,8 @@ issue ──▶ discuss / agree approach ──▶ branch off main ──▶ ope
   (`bug`, `enhancement`, `good first issue`, ...).
 * **Branch + PR** — see *Branching & collaboration* below.  Reference the
   issue with `Closes #N` so it auto-closes on merge.
-* **Review + CI** — all three GitHub Actions workflows must pass (see
-  *Continuous integration*) and at least one maintainer approves.
+* **Review + CI** — every GitHub Actions workflow that runs on the PR must
+  pass (see *Continuous integration*) and at least one maintainer approves.
 * **Merge** — the maintainer merges to `main`; the branch is deleted.
 
 ## Execution-disposition labels (`exec:*`)
@@ -246,7 +246,7 @@ branch plus short-lived topic branches.  This scales cleanly from one
 contributor to several.
 
 - **`main` is the single source of truth.**  It must always be
-  releasable: green on all CI workflows (R-CMD-check, test-coverage,
+  releasable: green on all CI workflows (R-CMD-check, test-coverage, lint,
   pkgdown) and `0 errors / 0 warnings` on `devtools::check()`.  The
   current *development version* lives here.
 - **`next` gathers the maintainers' work that is not urgent.**  Their
@@ -330,9 +330,9 @@ contributor to several.
 
 ## Continuous integration (GitHub Actions)
 
-Three workflows run on every push to `main` and on every pull request
-(under `.github/workflows/`).  A PR is mergeable only when all three are
-green.
+These workflows run on pushes and pull requests (under
+`.github/workflows/`).  A PR is mergeable only when every workflow that runs
+on it is green.
 
 | Workflow | File | What it does |
 |----------|------|--------------|
@@ -341,10 +341,12 @@ green.
 | **pkgdown** | `pkgdown.yaml` | Builds the documentation site and (on `main` / on a published release) deploys it to the `gh-pages` branch. |
 | **version-guard** | `version-guard.yaml` | Fails a PR that raises the **MINOR or MAJOR** position of `DESCRIPTION` `Version:` unless the PR carries the `release` label (see *Versioning & releases*). A PATCH bump or no change always passes. |
 | **lint** | `lint.yaml` | Runs `lintr::lint_package()` and fails on any lint. Scope and rules are set by the repository-root `.lintr` (currently lints `R/` only). |
-| **quality-report** | the last job of `R-CMD-check.yaml` | Only for a published release (and by hand): gathers every environment's record and writes the Quality Report, attached to the release (see *Quality assurance*). Never on a push or a PR. |
+| **quality-report** | the last job of `R-CMD-check.yaml` | Only for a published release (and by hand): gathers every environment's record and writes the Quality Report, attached to the release (see *Quality assurance*). A run by hand writes a DRAFT, kept as the run's artifact. Never on a push or a PR. |
 
-All three also accept `workflow_dispatch` (run-on-demand from the Actions
-tab).  Releases additionally re-trigger pkgdown on `release: published`.
+R-CMD-check, test-coverage, pkgdown and lint also accept `workflow_dispatch`
+(run-on-demand from the Actions tab).  Releases additionally re-trigger
+pkgdown and R-CMD-check (with its quality-report job) on `release:
+published`.
 Before pushing, reproduce CI locally with `devtools::document()`,
 `devtools::test()` and `devtools::check()`.
 
@@ -439,15 +441,15 @@ What GitHub already records -- issues, pull requests and their reviews,
 the CI runs, the releases -- is not written again; this section says only
 what it does not.
 
-- **Functional requirements (FR)** are `inst/validation/requirements.csv`,
+- **Functional Requirements (FR)** are `inst/validation/requirements.csv`,
   one row a requirement, a hierarchy: each row names its `parent`
-  (`FR-PL000` the plan verbs > `FR-PL040` plan_blanks() > `FR-PL041` ...: an
+  (`FR-PL000` the plan verbs > `FR-PL004` plan_blanks() > `FR-PL182` ...: an
   id is short, the area's two letters and a number; the `parent` column
-  holds the hierarchy, and a number once given is never reused).  Tests are
-  mapped to the leaves; a parent is covered when every
-  leaf under it has a test.  A user's requirement may be traced to an FR at
-  any level.  The leaves are finer than a function: each function has
-  leaves of five kinds --
+  holds the hierarchy, and a number once given is never reused).  A parent
+  is of kind `group`.  Tests are mapped to the leaves; a parent is covered
+  when every leaf under it has a test.  A user's requirement may be traced
+  to an FR at any level.  The leaves are finer than a function: each
+  function has leaves of five kinds --
   - `behaviour`: each thing it does;
   - `argument`: each argument, and each meaningful value or combination;
   - `data`: each data shape it is meant to handle where that matters (no
@@ -462,15 +464,16 @@ what it does not.
   A PR that adds or changes a behaviour adds or changes its FRs in the same
   PR; an FR is never renumbered, a withdrawn one is `superseded` or
   `removed` (`draft`: a coarse row not yet split, not counted).
-- **Functional tests (FT)** are the `test_that()` blocks that check an FR,
+- **Functional Tests (FT)** are the `test_that()` blocks that check an FR,
   as a person who read them decided -- not a block that merely calls the
   function.  A new test names its id and FRs at its head
-  (`"FT-PL217 [FR-PL305 FR-PL311]: plan_columns(widths =) ..."`);
+  (`"FT-PL<nnn> [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`, the
+  next unused FT number);
   an existing one is mapped by hand in `inst/validation/test_map.csv`.  An
   FR no test checks is a deviation until a test is added.
   `validation/trace.R` lists the blocks that call a function in scope but
   are not mapped (candidates to read); it never counts them.
-- **The traceability matrix (FR -> FT)** is the mapping alone, made by
+- **The Traceability Matrix (FR -> FT)** is the mapping alone, made by
   `validation/trace.R`; it holds no results.  The tests' results are the CI
   record; a failing test fails the PR's checks, so it cannot be merged.
 - **Regression**: every PR runs the whole test suite and R CMD check (CI).
@@ -487,10 +490,14 @@ what it does not.
   with the maintainers' local runs (`validation/env-local/`, the same
   script run by hand) into the Quality Report: one table of
   every environment, the results, the deviations and why they are
-  accepted, the conclusion.  The PDF, the traceability matrix
-  (`traceability.xlsx`) and every environment's sessionInfo and log
-  (`environments.txt`) are attached to the release (an artifact would be
-  deleted after 90 days).
+  accepted, the conclusion, how to read the attachments.  The PDF, the
+  Traceability Matrix (`traceability.xlsx`), every environment's
+  sessionInfo and log (`environments.txt`), the mapped tests' log
+  (`test-log.txt`) and the tables behind the results (`ft.csv`,
+  `functions.csv`, `candidates.csv`) are attached to the release, each name
+  carrying the tag (an artifact would be deleted after 90 days).  Only this
+  run concludes *validation-ready*; a run by hand, in CI or on a PC
+  (`Rscript validation/report.R`), writes the same report marked DRAFT.
 
 ## Code style
 
@@ -661,9 +668,12 @@ open a release Issue and perform a release.**
    ```
 
    Publishing the release runs R-CMD-check's quality-report job, which
-   attaches the Quality Report and its attachments to it.  Run
+   attaches the Quality Report and its attachments to it.  Before step 5,
+   on the release branch (`Version: X.Y.Z`), run
    `Rscript validation/env.R "<OS>, R <version>" local` on the
-   maintainers' PCs first and commit `validation/env-local/`.
+   maintainers' PC for each R version of the Quality Plan and commit
+   `validation/env-local/` in the release PR: the report counts only the
+   records of the version it reports.
 7. **(Once on CRAN)** run the CRAN pre-checks and submit —
    `devtools::check_win_devel()`, `urlchecker::url_check()`,
    `devtools::release()`.

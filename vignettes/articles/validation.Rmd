@@ -2,7 +2,7 @@
 title: "Validating rtfreporter in your environment"
 description: >
   What the package provides as evidence of its quality (requirements, tests,
-  the traceability matrix, the Quality Report), and the kit you copy and
+  the Traceability Matrix, the Quality Report), and the kit you copy and
   edit to validate it for your own use.
 ---
 
@@ -28,11 +28,15 @@ The package keeps three records of what it does and how it is tested.
   no test is listed as a deviation, with its risk and why it is accepted.
 
 At each release, CI writes the **Quality Report**: the results on every
-environment (Linux, macOS and Windows, several R versions), the deviations
-and the conclusion. It is attached to the GitHub release with its evidence:
-the matrix (`traceability.xlsx`) and every environment's sessionInfo and
-test log (`environments.txt`). The rules behind it are the package's
-**Quality Plan** (`inst/validation/quality-plan.md`).
+environment (six in CI -- Linux, macOS and Windows, several R versions --
+and two runs on the maintainers' PC), the deviations, the conclusion and how
+to read each attachment. It is attached to the GitHub release with its
+evidence: the Traceability Matrix (`traceability-<tag>.xlsx`), every
+environment's sessionInfo and test log (`environments-<tag>.txt`), the
+mapped tests' log and the tables behind the results. Only the report of a
+published release can conclude *validation-ready*; a report made any other
+way is marked DRAFT. The rules behind it are the package's **Quality Plan**
+(`inst/validation/quality-plan.md`, also in the kit below).
 
 You use these as supplier evidence. You do not repeat them.
 
@@ -49,18 +53,18 @@ You use these as supplier evidence. You do not repeat them.
 
     | File | What it is |
     |---|---|
-    | `validation_plan.md` | The plan: scope, intended use, roles, approach, acceptance criteria, deviations. |
-    | `urs.csv`, `urs.md` | Your user requirements (`UR-NNN`), each linked to FR ids. `urs.md` explains the columns. |
-    | `uat_cases.csv`, `uat_cases.xlsx` | Your test cases (`UAT-NNN`) on dummy data, with columns to record the results. |
-    | `build_user_matrix.R` | Writes the matrix URS -> FR -> UAT. |
-    | `validation_summary_report.md` | The report you fill at the end. |
-    | `quality-plan.md`, `requirements.csv` | The package's plan and FRs, for reference. |
+    | `validation_plan.md` | The Validation Plan: scope, intended use, roles, approach, acceptance criteria, deviations. |
+    | `urs.csv`, `urs.md` | The User Requirement Specification (URS): your requirements (`UR-NNN`), each linked to FR ids. `urs.md` explains the columns of the URS and of the UAT cases. |
+    | `uat_cases.csv`, `uat_cases.xlsx` | Your user acceptance test (UAT) cases (`UAT-NNN`) on dummy data, with columns to record the results. |
+    | `build_user_matrix.R` | Writes your Traceability Matrix (URS -> FR -> UAT). |
+    | `validation_summary_report.md` | The Validation Summary Report you fill at the end. |
+    | `quality-plan.md`, `requirements.csv` | The package's Quality Plan and FRs, for reference. |
 
     The examples are fictional (a company called "Example Pharma"). Replace
     them with yours.
 
-2. **Write the plan.** Say which version, which environment and what use.
-   Decide how deeply to test each priority.
+2. **Write the Validation Plan.** Say which version, which environment and
+   what use. Decide how deeply to test each priority.
 
 3. **Adapt the URS.** Keep the needs your reports have, drop the others, add
    your own. For each, find the FRs it relies on in `requirements.csv`
@@ -68,7 +72,7 @@ You use these as supplier evidence. You do not repeat them.
 
 4. **Run the UAT cases** in your environment, on dummy data. Record what you
    saw, the result, who and when. A failure is a deviation: record it, find
-   its cause, and decide.
+   its cause, and decide (the Validation Plan, section 6).
 
 5. **Build the matrix.**
 
@@ -77,10 +81,13 @@ You use these as supplier evidence. You do not repeat them.
     source(file.path(kit_dir, "build_user_matrix.R"))
     ```
 
-    Or from a shell: `Rscript build_user_matrix.R rtfreporter-validation`.
+    Or from a shell, in the folder that holds the kit:
+    `Rscript rtfreporter-validation/build_user_matrix.R rtfreporter-validation`.
+    It writes `user_traceability.csv` and `user_traceability.xlsx` into the
+    kit folder.
 
-6. **Fill the Summary Report**, and attach the package's Quality Report for
-   the same version.
+6. **Fill the Validation Summary Report**, and attach the package's Quality
+   Report for the same version.
 
 ## How they connect
 
@@ -96,11 +103,12 @@ UR-008  ----------> FR-PL161 decimal alignment ----> FT (in traceability.xlsx)
 - Your matrix (URS -> FR -> UAT) shows that every need has a check of your
   own.
 - The package's matrix (FR -> FT) and Quality Report show that the same FRs
-  are tested, and passed, on every CI environment.
+  are tested, and passed, on every environment of its Quality Plan.
 - Together they cover a need from your words down to a test.
 
 ## A new version
 
 Read the version's NEWS and the release's records. Find the FRs added,
 changed or removed. Rerun the UAT cases that name them, and the high-priority
-ones. Write a short Summary Report for the new version.
+ones. Write a short Validation Summary Report for the new version (the
+Validation Plan, section 8).
