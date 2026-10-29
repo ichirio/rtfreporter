@@ -15,7 +15,8 @@ fmt_count_pct(
 )
 }
 \arguments{
-\item{count}{Integer / numeric vector of counts.  A \code{0} count produces the
+\item{count}{Integer / numeric vector of whole counts (a fraction is an
+error).  A \code{0} count produces the
 count-only branch (no parentheses); a \strong{missing} count produces the \code{na}
 token instead.}
 
@@ -55,9 +56,10 @@ Character vector the same length as \code{count} / \code{pct}.
 }
 \description{
 Returns each pair \verb{(count[i], pct[i])} as a padded \code{"n (xx.x)"}
-string suitable for monospaced clinical TFL alignment.  The four
-width branches match the convention in the rtfreporter Issue #2
-reference helper.
+string suitable for monospaced clinical TFL alignment.  The five
+branches -- a count only, a percentage below 10, 10 to 99, 100 or more,
+and a missing count (\code{na}) -- match the convention in the rtfreporter
+Issue #2 reference helper.
 }
 \details{
 \code{fmt_count_pct()} was called \code{format_count_pct()}, the one cell formatter
