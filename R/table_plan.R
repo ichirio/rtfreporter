@@ -5764,7 +5764,20 @@ plan_n_candidates <- function(.plan) {
 # template instead of a function that reassembles the names.
 .plan_spread_cols <- function(plan, tbl) {
   lb <- .plan_label_name(plan)
-  setdiff(names(tbl), c(.plan_row_keys(plan), lb, .plan_compare_cols(plan, tbl)))
+  setdiff(names(tbl), c(.plan_row_keys(plan), lb, .plan_compare_cols(plan, tbl),
+                        .plan_wide_heads(plan, tbl)))
+}
+
+# A finished table's row-heading columns, which no role names: those
+# plan_columns(row_title = ) gives (names or positions), else its first
+# column -- not value columns, so `.values` leaves them out (#755).  None
+# for a plan of an ARD (its row keys and label say them).
+.plan_wide_heads <- function(plan, tbl) {
+  if (!identical(plan$kind, "wide") || !ncol(tbl)) return(character(0))
+  rt <- .plan_merge(.plan_of(plan, "columns"))$row_title
+  if (is.null(rt)) return(names(tbl)[1L])
+  rt <- if (is.numeric(rt)) names(tbl)[rt[rt >= 1 & rt <= ncol(tbl)]] else as.character(unlist(rt))
+  intersect(rt, names(tbl))
 }
 
 # plan_compare()'s columns, which have no population and no `{col}`: the
