@@ -326,6 +326,16 @@ reference:
       - plan_stub
       - plan_col_header
       - plan_append
+      - plan_stat_groups
+      - plan_nest
+      - plan_empty
+      - plan_compare
+      - plan_row_group
+      - plan_blanks
+      - plan_hide
+      - plan_cell_style
+      - plan_paginate_group
+      - plan_paginate_rows
       - plan_apply
       - plan_template
   - subtitle: Looking inside a plan

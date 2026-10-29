@@ -67,14 +67,13 @@ p |> plan_sort("-n") |> plan_apply("table")
 # Ordered by the active arm's count, ties alphabetical
 p |> plan_sort("-n[Active]", "label") |> plan_apply("table")
 
-# On a listing it sorts the records (here one line a record)
+# On a listing it sorts the records
 recs <- data.frame(USUBJID = c("01-002", "01-001", "01-001"),
                    AETERM  = c("Fatigue", "Nausea", "Headache"))
 pages <- table_plan(recs) |>
   plan_sort("USUBJID", "AETERM") |>
   plan_listing(listing_col("USUBJID", label = "Subject"),
                listing_col("AETERM", label = "Adverse event")) |>
-  plan_blanks(where = "none") |>
   plan_apply()
 pages[[1]]
 }
@@ -83,12 +82,22 @@ pages[[1]]
 
 Other plan verbs:
 \code{\link[=plan_append]{plan_append()}},
+\code{\link[=plan_blanks]{plan_blanks()}},
+\code{\link[=plan_cell_style]{plan_cell_style()}},
 \code{\link[=plan_cells]{plan_cells()}},
 \code{\link[=plan_col_header]{plan_col_header()}},
+\code{\link[=plan_compare]{plan_compare()}},
 \code{\link[=plan_digits]{plan_digits()}},
+\code{\link[=plan_empty]{plan_empty()}},
 \code{\link[=plan_filter]{plan_filter()}},
+\code{\link[=plan_hide]{plan_hide()}},
 \code{\link[=plan_labels]{plan_labels()}},
 \code{\link[=plan_levels]{plan_levels()}},
+\code{\link[=plan_nest]{plan_nest()}},
+\code{\link[=plan_paginate_group]{plan_paginate_group()}},
+\code{\link[=plan_paginate_rows]{plan_paginate_rows()}},
+\code{\link[=plan_row_group]{plan_row_group()}},
+\code{\link[=plan_stat_groups]{plan_stat_groups()}},
 \code{\link[=plan_stub]{plan_stub()}},
 \code{\link[=plan_total]{plan_total()}}
 }
