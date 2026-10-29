@@ -296,10 +296,9 @@ add_col_header_row <- function(hdr, row,
 #' it labels rather than of column numbers that shift whenever a column is
 #' added, dropped or reordered.
 #'
-#' The separator is the one already used to rebuild a spanning header from
-#' delimited column names (see `as_rtftables(header_sep = )`) and to split a
-#' table column-wise (see [paginate_cols()] `by = `), so the three stay in
-#' step.
+#' By default the separator is detected from the column names: `"____"` or
+#' the tfrmt delimiter, the defaults of `as_rtftables(header_sep = )`. A
+#' custom `header_sep` is not seen here, so give the same value as `sep`.
 #'
 #' A selector may also be written directly as a plain function of the column
 #' names, which covers glob and regular-expression matching without any

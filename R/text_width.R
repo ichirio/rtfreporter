@@ -141,8 +141,10 @@ text_width_in <- function(text, font = NULL, font_size_half_points = 18L,
 #'   its natural width.  Only the remaining columns are shrunk to fit, so e.g.
 #'   a row-label column (`protect_cols = 1`) stays readable while the data
 #'   columns absorb the squeeze.  Protection is dropped if it would push the
-#'   scalable columns below `min_col_width_twips`.  Has no effect when scaling
-#'   *up* or when `table_width_twips` is `NULL`.  Default none.
+#'   scalable columns below `min_col_width_twips`.  When the table is scaled
+#'   *up*, the protected columns likewise keep their natural width and only the
+#'   others grow to the target.  No effect when `table_width_twips` is `NULL`.
+#'   Default none.
 #'
 #' @return An integer vector of column widths in twips, one per column of `data`.
 #'

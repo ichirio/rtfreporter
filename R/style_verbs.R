@@ -110,18 +110,18 @@
     verb), call. = FALSE)
 }
 
-.style_check_align <- function(a, verb) {
+.style_check_align <- function(a, verb, arg = "align") {
   if (!is.character(a) || length(a) != 1L ||
       !a %in% c("left", "center", "right")) {
-    stop(sprintf("`%s(align = )` must be \"left\", \"center\", or \"right\".",
-                 verb), call. = FALSE)
+    stop(sprintf("`%s(%s = )` must be \"left\", \"center\", or \"right\".",
+                 verb, arg), call. = FALSE)
   }
   a
 }
 
-.style_check_border <- function(b, verb) {
+.style_check_border <- function(b, verb, arg = "border") {
   if (!inherits(b, "rtf_border")) {
-    stop(sprintf("`%s(border = )` must be an rtf_border() object.", verb),
+    stop(sprintf("`%s(%s = )` must be an rtf_border() object.", verb, arg),
          call. = FALSE)
   }
   b
@@ -405,7 +405,7 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
   .check_own_dots(list(...), style_cols.rtftable, "style_cols")
   cols_idx <- .style_resolve_cols(x, cols, "style_cols")
   if (!is.null(align))        align        <- .style_check_align(align, "style_cols")
-  if (!is.null(header_align)) header_align <- .style_check_align(header_align, "style_cols")
+  if (!is.null(header_align)) header_align <- .style_check_align(header_align, "style_cols", "header_align")
   if (!is.null(border))       border       <- .style_check_border(border, "style_cols")
   for (arg in c("bold", "italic", "underline", "header_bold", "header_italic")) {
     v <- get(arg)
@@ -553,7 +553,7 @@ style_zone.rtftable <- function(x, header = NULL, spanning = NULL,
                 first_row = first_row, last_row = last_row)
   zones <- zones[!vapply(zones, is.null, logical(1L))]
   if (length(zones) == 0L) return(x)
-  for (z in names(zones)) .style_check_border(zones[[z]], "style_zone")
+  for (z in names(zones)) .style_check_border(zones[[z]], "style_zone", z)
 
   frames <- .style_body_frames(x)
   .warn_old_edge_reading(
@@ -664,8 +664,9 @@ add_header_row.list <- function(x, ...) {
 #'   [rtf_col_header()] object.  Passing nothing clears the header.
 #'
 #'   A **fully named** label row need not have one entry per column; an
-#'   unnamed one must.  An unknown name, or a row that is only partly named,
-#'   is an error either way.
+#'   unnamed one must.  An unknown name is an error.  In a partly named row an
+#'   unnamed value that is a column name is placed at that column, and any
+#'   other by its position.
 #' @param align Optional column-header text alignment for the final columns:
 #'   `"left"`/`"center"`/`"right"` (applied to every column) or a character
 #'   vector of length `ncol` (one per printed column).  `NULL` (default) leaves
@@ -1042,8 +1043,8 @@ set_header_cell.list <- function(x, ...) {
 #' is what the geometry needs.
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
-#' @param cols Columns to split: names or positions.  `NULL` clears the
-#'   setting.
+#' @param cols Columns to split: names or positions.  Needed to set a split;
+#'   left out (`NULL`) it clears the setting.
 #' @param ratio `NULL` (the default) to size the two halves automatically from
 #'   the widest left and right part actually present, or a number in `(0, 1)`
 #'   giving the left half's share of the column width.  Pass an explicit value

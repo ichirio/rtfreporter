@@ -116,7 +116,8 @@ rtf_table_style <- function(
 #'
 #' @param style An [rtf_table_style()] object.
 #' @param ... Named field overrides.  Allowed names match the arguments of
-#'   [rtf_table_style()].
+#'   [rtf_table_style()]; each is checked as that function checks it. `NULL`
+#'   resets a field to its [rtf_table_style()] default.
 #'
 #' @return A new `rtf_table_style` object.
 #'
@@ -129,14 +130,21 @@ rtf_table_style_with <- function(style, ...) {
     stop("`style` must be an rtf_table_style object.", call. = FALSE)
   }
   overrides <- list(...)
-  allowed <- names(style)
-  for (nm in names(overrides)) {
-    if (!nm %in% allowed) {
-      stop(sprintf("Unknown style field: '%s'", nm), call. = FALSE)
-    }
-    style[[nm]] <- overrides[[nm]]
+  if (!length(overrides)) return(style)
+  nms <- names(overrides)
+  if (is.null(nms) || any(!nzchar(nms))) {
+    stop("The fields given to `rtf_table_style_with()` must be named, ",
+         "e.g. `align = \"center\"`.", call. = FALSE)
   }
-  style
+  bad <- setdiff(nms, names(style))
+  if (length(bad)) {
+    stop(sprintf("Unknown style field: '%s'", bad[1L]), call. = FALSE)
+  }
+  # Rebuilt through rtf_table_style(): the values are checked there, and a NULL
+  # (kept with `[<-`, not dropped as `[[<-` would) gives the field its default.
+  fields <- unclass(style)
+  fields[nms] <- overrides
+  do.call(rtf_table_style, fields)
 }
 
 #' @export
