@@ -10,8 +10,9 @@ list_ard_keys(x)
 \item{x}{A cards/cardx ARD (any data frame with the ARD columns).}
 }
 \value{
-Invisibly, a list with elements \code{keys}, \code{variables}, \code{contexts} and
-\code{stats} (a data frame of context / stat_name / stat_label).
+Invisibly, a list with elements \code{keys}, \code{variables}, \code{contexts},
+\code{kinds} (the structural kinds, as printed) and \code{stats} (a data frame of
+context / stat_name / stat_label).
 }
 \description{
 Prints, and returns invisibly, the structural facts you need in order to

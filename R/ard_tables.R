@@ -968,8 +968,9 @@
 #'
 #' @param x A cards/cardx ARD (any data frame with the ARD columns).
 #'
-#' @return Invisibly, a list with elements `keys`, `variables`, `contexts` and
-#'   `stats` (a data frame of context / stat_name / stat_label).
+#' @return Invisibly, a list with elements `keys`, `variables`, `contexts`,
+#'   `kinds` (the structural kinds, as printed) and `stats` (a data frame of
+#'   context / stat_name / stat_label).
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -1060,7 +1061,7 @@ list_ard_keys <- function(x) {
 #' @seealso [normalize_ard()], [widen_ard()]
 #' @export
 overall_row <- function(label, from = NULL) {
-  if (missing(label) || !is.character(label) || length(label) != 1L) {
+  if (missing(label) || !is.character(label) || length(label) != 1L || is.na(label)) {
     .ard_stop("`label` is required: one string for the overall row.")
   }
   structure(list(label = label, from = as.character(from)),
@@ -1196,7 +1197,10 @@ print.cell_rows <- function(x, ...) {
 #'   `context`.  Use them when the error message says the choice is ambiguous,
 #'   or to ask for the key variable's own rows.
 #' @param levels Optional level order for the keys, so the result lines up
-#'   with the table's columns.
+#'   with the table's columns: a named list, as in [widen_ard()]
+#'   (`list(TRT = c("Placebo", "Drug"))`; a plain vector is not read).  With
+#'   several `cols` the order is matched against the joined names
+#'   (`"Placebo____F"`).
 #' @param sep Separator between multiple `cols` keys; match [widen_ard()].
 #'
 #' @return A named vector, one element per column key.
@@ -1325,8 +1329,9 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   folded into the matching key column.
 #' @param overall Label to give the `..ard_hierarchical_overall..` rows
 #'   produced by `cards::ard_stack_hierarchical(over_variables = TRUE)`, e.g.
-#'   `"Any TEAE"`.  They are placed on the first `hierarchy` column.  `NULL`
-#'   (default) leaves them alone.
+#'   `"Any TEAE"`.  They are placed on the first `hierarchy` column, so
+#'   `hierarchy` is needed with it.  `NULL` (default) drops them, recorded in
+#'   the `"ard_ignored"` attribute.
 #' @param drop_contexts `context` values to discard.  The default drops the
 #'   `attributes` rows (whose `stat` is a vector and cannot be flattened) and
 #'   the `total_n` row.  Dropping the total does not lose the NUMBER: when
@@ -1552,7 +1557,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
       key_levels[[k]] <- base::levels(d[[k]])
     }
   }
-  for (k in keys) d[[k]] <- NA_character_
+  # (a key column the frame already has keeps its values -- a flat frame
+  # keyed by its own TRT column; the group pairs fill in over it, #766)
+  for (k in keys) {
+    d[[k]] <- if (k %in% names(d)) as.character(d[[k]]) else NA_character_
+  }
   for (g in gcols) {
     lv <- paste0(g, "_level")
     if (!lv %in% names(d)) next
@@ -1581,6 +1590,10 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   ov <- !is.na(d$variable) & d$variable == "..ard_hierarchical_overall.."
   if (length(ovs$from)) {
     ov <- ov | (!is.na(d$variable) & d$variable %in% ovs$from)
+  }
+  if (!is.null(ovs$label) && any(ov) && !length(hierarchy)) {
+    .ard_stop(paste0("`overall` labels the overall rows of a hierarchy: give ",
+                     "`hierarchy` too (the levels the overall row heads)."))
   }
   if (!is.null(ovs$label) && any(ov) && length(hierarchy)) {
     d[[hierarchy[1L]]][ov] <- ovs$label
@@ -2173,7 +2186,9 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #' @param sort_stat Name of a statistic to total across the spread columns and
 #'   attach as a numeric `.sort_stat` column -- what a descending-frequency AE
 #'   table sorts on.  `NULL` (default) adds nothing.
-#' @param na Value to put in a cell no template could fill.
+#' @param na Value to put in a cell no template could fill.  No effect with
+#'   `stats = "rows"` and `value = "stat"`: that table is numeric, and its
+#'   empty cells are `NA`.
 #' @param notes Report what was **not** used.  Every stage discards ARD rows
 #'   -- the `attributes` and `total_n` rows, the key variables' own
 #'   tabulations, rows with no value for a `cols` key, and every statistic no
@@ -2221,6 +2236,10 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   stats <- match.arg(stats)
   value <- match.arg(value)
   rounding <- .rounding_type(rounding)
+  if (!(isTRUE(notes) || isFALSE(notes) ||
+        (is.character(notes) && length(notes) == 1L && notes %in% c("attr", "applied")))) {
+    .ard_stop("`notes` must be TRUE, FALSE, \"attr\" or \"applied\".")
+  }
   # No column key: one column, "All", when the ARD has no group to spread
   # (one arm, a single cohort).  A group the ARD has is named in `cols`.
   one_column <- missing(cols) || is.null(cols)
@@ -2256,7 +2275,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   if (!inherits(x, "ard_long") &&
       !any(c(".label", ".kind", "stat_name") %in% names(d))) {
     .ard_stop(paste0(
-      "`x` does not look like an normalize_ard() result: it has none of\n",
+      "`x` does not look like a normalize_ard() result: it has none of\n",
       "  `.label`, `.kind`, `stat_name`.  Pass the ARD through\n",
       "  normalize_ard() first."))
   }
@@ -3573,9 +3592,9 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' A small family that turns an **ARD** (Analysis Results Data, as produced by
 #' \pkg{cards} and \pkg{cardx}) into the table `data.frame` that
 #' [as_rtftables()] consumes.  The target is *one ARD record, one table row*.
-#' Layouts that print one record over two lines, or that need derived rows such
-#' as marginal totals, stay a human job -- do them on the returned data frame,
-#' or on the long frame from [normalize_ard()].
+#' Layouts that print one record over two lines are done on the returned data
+#' frame, or on the long frame from [normalize_ard()]; marginal totals are
+#' made by [plan_total()] (`direction = `).
 #'
 #' @section The functions:
 #' \describe{
