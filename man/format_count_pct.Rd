@@ -15,7 +15,8 @@ format_count_pct(
 )
 }
 \arguments{
-\item{count}{Integer / numeric vector of counts.  A \code{0} count produces the
+\item{count}{Integer / numeric vector of whole counts (a fraction is an
+error).  A \code{0} count produces the
 count-only branch (no parentheses); a \strong{missing} count produces the \code{na}
 token instead.}
 

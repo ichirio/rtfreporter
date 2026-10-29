@@ -35,15 +35,17 @@
 #' Format count + percent cells to a uniform display width
 #'
 #' Returns each pair `(count[i], pct[i])` as a padded `"n (xx.x)"`
-#' string suitable for monospaced clinical TFL alignment.  The four
-#' width branches match the convention in the rtfreporter Issue #2
-#' reference helper.
+#' string suitable for monospaced clinical TFL alignment.  The five
+#' branches -- a count only, a percentage below 10, 10 to 99, 100 or more,
+#' and a missing count (`na`) -- match the convention in the rtfreporter
+#' Issue #2 reference helper.
 #'
 #' `fmt_count_pct()` was called `format_count_pct()`, the one cell formatter
 #' not named `fmt_`: the old name is **deprecated** (it says so once a session
 #' and still works) and is removed in 0.9.0, the first CRAN release.
 #'
-#' @param count Integer / numeric vector of counts.  A `0` count produces the
+#' @param count Integer / numeric vector of whole counts (a fraction is an
+#'   error).  A `0` count produces the
 #'   count-only branch (no parentheses); a **missing** count produces the `na`
 #'   token instead.
 #' @param pct   Numeric vector of percentages.  By default expressed
@@ -102,6 +104,12 @@ fmt_count_pct <- function(count, pct,
   na <- .check_na_text(na)
   if (!is.numeric(count) || !is.numeric(pct)) {
     stop("`count` and `pct` must both be numeric.", call. = FALSE)
+  }
+  # a count is whole: 5.7 would print as 5 (#765)
+  frac <- is.finite(count) & count != round(count)
+  if (any(frac)) {
+    stop(sprintf("`count` must be whole numbers; got %s.",
+                 paste(utils::head(count[frac], 3L), collapse = ", ")), call. = FALSE)
   }
   n_in <- max(length(count), length(pct))
   if (length(count) == 1L) count <- rep(count, n_in)

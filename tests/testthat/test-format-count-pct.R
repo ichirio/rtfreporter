@@ -267,3 +267,8 @@ test_that("as_rtftables(na =) validates its argument", {
   expect_error(as_rtftables(df, na = NA), "single string")
   expect_error(as_rtftables(df, na = c("-", "x")), "single string")
 })
+
+test_that("fmt_count_pct() refuses a fractional count (#765)", {
+  expect_error(fmt_count_pct(5.7, 0.5), "whole numbers")
+  expect_no_error(fmt_count_pct(c(5, NA), c(0.5, NA)))
+})

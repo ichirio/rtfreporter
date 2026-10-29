@@ -103,7 +103,8 @@
 #'   lines up with theirs.  `Inf` / `-Inf` are **not** missing and print as
 #'   `"Inf"` / `"-Inf"`.  See the `na` argument of [as_rtftables()].
 #'
-#' @return Character vector the same length as `x`.
+#' @return Character vector the same length as `x`.  Every space in a padded
+#'   cell, inside the text too, is a non-breaking space (`nbsp`).
 #'
 #' @examples
 #' fmt_right_align(c("5", "120", "7"))

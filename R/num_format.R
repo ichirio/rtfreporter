@@ -80,7 +80,8 @@
 #' ([fmt_count_pct()], ...) format cells as the table is built.
 #'
 #' @param x A numeric vector.
-#' @param digits Decimal places. Default `0`.
+#' @param digits Decimal places. Default `0`.  A fraction is cut to its
+#'   whole part (`1.9` is `1`).
 #' @param rounding `"r"` (base R, half to even) or `"sas"` (half away from
 #'   zero), in either case (`"SAS"` is `"sas"`; so for the option and every
 #'   function's `rounding`).  `NULL`, the default, reads
