@@ -1,8 +1,8 @@
-# The reference RTF files of the plan_layer() tests, built BY HAND -- the
+# The reference RTF files of the plan_append() tests, built BY HAND -- the
 # listing and the summary each made on their own, joined row by row, paged
 # with as_rtftables() -- the way these tables were written before
-# plan_layer() (dev-rep samples/multi-object/listing-summary-one-table).
-# A plan_layer() version of each table has to give the same bytes.
+# plan_append() (dev-rep samples/multi-object/listing-summary-one-table).
+# A plan_append() version of each table has to give the same bytes.
 #
 # The data are synthetic (adpc.csv, adpp.csv: 15 subjects, three renal
 # function groups, two analytes).  Run from this folder:
@@ -118,7 +118,7 @@ write_report(
                      "PK Population",
                      list(text = "Analyte: {ANALYTE}", align = "left"),
                      list(text = "Renal Function Group: {RENALGR}", align = "left"))),
-  file = "ref_conc_cols_time.rtf", program = "plan-layer/conc_cols_time.R")
+  file = "ref_conc_cols_time.rtf", program = "plan-append/conc_cols_time.R")
 
 # ---- 2. the PK parameters across ------------------------------------------------
 adpp <- read.csv("adpp.csv")
@@ -137,7 +137,7 @@ write_report(
                      "PK Population",
                      list(text = "Analyte: {ANALYTE}", align = "left"),
                      list(text = "Renal Function Group: {RENALGR}", align = "left"))),
-  file = "ref_param_by_group.rtf", program = "plan-layer/param_by_group.R")
+  file = "ref_param_by_group.rtf", program = "plan-append/param_by_group.R")
 
 # ---- 3. the analytes across, a page a group and time point ---------------------
 adpc2 <- records(read.csv("adpc.csv"))
@@ -153,4 +153,4 @@ write_report(
                      "PK Population",
                      list(text = "Time: {ATPT}", align = "left"),
                      list(text = "Renal Function Group: {RENALGR}", align = "left"))),
-  file = "ref_conc_cols_analyte.rtf", program = "plan-layer/conc_cols_analyte.R")
+  file = "ref_conc_cols_analyte.rtf", program = "plan-append/conc_cols_analyte.R")

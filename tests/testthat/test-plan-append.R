@@ -1,9 +1,9 @@
-# plan_layer(): another plan's rows under a table's (issue #737).  The
+# plan_append(): another plan's rows under a table's (issue #737).  The
 # three PK tables are compared byte for byte with the references built by
-# hand (fixtures/plan-layer/make_reference.R); the rest are unit tests on
+# hand (fixtures/plan-append/make_reference.R); the rest are unit tests on
 # small frames.
 
-pl_fx <- function(...) test_path("fixtures", "plan-layer", ...)
+pl_fx <- function(...) test_path("fixtures", "plan-append", ...)
 pl_skip <- function() {
   skip_if_not_installed("cards")
   skip_if_not_installed("dplyr")
@@ -60,9 +60,9 @@ test_that("FT-PL901 [FR-PL901]: a listing above its summary, the time points acr
     table_plan(cols = "ATPT", rows = c(block = ~ "Summary Statistics")) |>
     plan_cells(continuous = pl_stats)
   p <- listing |>
-    plan_layer(summary) |>
+    plan_append(summary) |>
     plan_levels(ATPT = times) |>
-    plan_blanks(first = TRUE, last = TRUE, where = "between_layers") |>
+    plan_blanks(first = TRUE, last = TRUE, where = "between_parts") |>
     plan_col_header(rtf_col_header(
       list(col_cell(1, ""), col_cell(c(2, length(times) + 1L), "Time (hr) Relative to Dose")),
       c("Subject ID/Age (years)/Gender", "{col}"))) |>
@@ -71,21 +71,21 @@ test_that("FT-PL901 [FR-PL901]: a listing above its summary, the time points acr
     plan_paginate_cols(at = "4 hr", order = "down") |>
     plan_style(border = "tfl") |>
     plan_after(function(x) lapply(x, style_zone, last_row = rtf_border(bottom = TRUE)))
-  # the stack: [page keys][label][values], the layers in order, a group's
+  # the stack: [page keys][label][values], the parts in order, a group's
   # rows together
   tb <- plan_apply(p, "table")
   expect_identical(names(tb)[1:3], c("ANALYTE", "RENALGR", "label"))
-  expect_identical(unique(tb$.layer), c("layer1", "layer2"))
+  expect_identical(unique(tb$.part), c("part1", "part2"))
   expect_true(all(times %in% names(tb)))
   titles <- list(list("Table 14.4.3", "Drug X Plasma Concentrations (ng/mL) by Subject",
                       "PK Population",
                       list(text = "Analyte: {ANALYTE}", align = "left"),
                       list(text = "Renal Function Group: {RENALGR}", align = "left")))
-  pl_same_bytes(pl_doc(p, titles, "plan-layer/conc_cols_time.R"), pl_fx("ref_conc_cols_time.rtf"))
-  # the whole table's verbs before plan_layer() or after: the same bytes
+  pl_same_bytes(pl_doc(p, titles, "plan-append/conc_cols_time.R"), pl_fx("ref_conc_cols_time.rtf"))
+  # the whole table's verbs before plan_append() or after: the same bytes
   p2 <- listing |>
     plan_levels(ATPT = times) |>
-    plan_blanks(first = TRUE, last = TRUE, where = "between_layers") |>
+    plan_blanks(first = TRUE, last = TRUE, where = "between_parts") |>
     plan_col_header(rtf_col_header(
       list(col_cell(1, ""), col_cell(c(2, length(times) + 1L), "Time (hr) Relative to Dose")),
       c("Subject ID/Age (years)/Gender", "{col}"))) |>
@@ -94,11 +94,11 @@ test_that("FT-PL901 [FR-PL901]: a listing above its summary, the time points acr
     plan_paginate_cols(at = "4 hr", order = "down") |>
     plan_style(border = "tfl") |>
     plan_after(function(x) lapply(x, style_zone, last_row = rtf_border(bottom = TRUE))) |>
-    plan_layer(summary)
-  pl_same_bytes(pl_doc(p2, titles, "plan-layer/conc_cols_time.R"), pl_fx("ref_conc_cols_time.rtf"))
+    plan_append(summary)
+  pl_same_bytes(pl_doc(p2, titles, "plan-append/conc_cols_time.R"), pl_fx("ref_conc_cols_time.rtf"))
   # ... and the later of two wins, as always
   p3 <- p2 |> plan_paginate_cols(at = "2 hr", order = "down") |> plan_paginate_cols(at = "4 hr", order = "down")
-  pl_same_bytes(pl_doc(p3, titles, "plan-layer/conc_cols_time.R"), pl_fx("ref_conc_cols_time.rtf"))
+  pl_same_bytes(pl_doc(p3, titles, "plan-append/conc_cols_time.R"), pl_fx("ref_conc_cols_time.rtf"))
 })
 
 test_that("FT-PL902 [FR-PL901]: the PK parameters across, a page an analyte and group: the same bytes as by hand", {
@@ -115,10 +115,10 @@ test_that("FT-PL902 [FR-PL901]: the PK parameters across, a page an analyte and 
     table_plan(cols = "PARAM", rows = c(block = ~ "Summary Statistics")) |>
     plan_cells(continuous = pl_stats)
   p <- listing |>
-    plan_layer(summary) |>
+    plan_append(summary) |>
     plan_levels(PARAM = params, ANALYTE = c("Parent", "Metabolite M1"),
                 RENALGR = c("Normal", "Mild", "Moderate")) |>
-    plan_blanks(first = TRUE, last = TRUE, where = "between_layers") |>
+    plan_blanks(first = TRUE, last = TRUE, where = "between_parts") |>
     plan_col_header(rtf_col_header(
       list(col_cell(1, ""), col_cell(c(2, length(params) + 1L), "Parameter")),
       c("Subject ID/Age (years)/Gender", "{col}"))) |>
@@ -130,7 +130,7 @@ test_that("FT-PL902 [FR-PL901]: the PK parameters across, a page an analyte and 
                       "PK Population",
                       list(text = "Analyte: {ANALYTE}", align = "left"),
                       list(text = "Renal Function Group: {RENALGR}", align = "left")))
-  pl_same_bytes(pl_doc(p, titles, "plan-layer/param_by_group.R"), pl_fx("ref_param_by_group.rtf"))
+  pl_same_bytes(pl_doc(p, titles, "plan-append/param_by_group.R"), pl_fx("ref_param_by_group.rtf"))
 })
 
 test_that("FT-PL903 [FR-PL901]: the analytes across, a page a group and time point: the same bytes as by hand", {
@@ -148,10 +148,10 @@ test_that("FT-PL903 [FR-PL901]: the analytes across, a page a group and time poi
     table_plan(cols = "ANALYTE", rows = c(block = ~ "Summary Statistics")) |>
     plan_cells(continuous = pl_stats)
   p <- listing |>
-    plan_layer(summary) |>
+    plan_append(summary) |>
     plan_levels(ANALYTE = c("Parent", "Metabolite M1"), ATPT = c("1 hr", "12 hr"),
                 RENALGR = c("Normal", "Mild", "Moderate")) |>
-    plan_blanks(first = TRUE, last = TRUE, where = "between_layers") |>
+    plan_blanks(first = TRUE, last = TRUE, where = "between_parts") |>
     plan_col_header(rtf_col_header(
       list(col_cell(1, ""), col_cell(c(2, 3), "Analyte")),
       c("Subject ID/Age (years)/Gender", "{col}"))) |>
@@ -163,7 +163,7 @@ test_that("FT-PL903 [FR-PL901]: the analytes across, a page a group and time poi
                       "PK Population",
                       list(text = "Time: {ATPT}", align = "left"),
                       list(text = "Renal Function Group: {RENALGR}", align = "left")))
-  pl_same_bytes(pl_doc(p, titles, "plan-layer/conc_cols_analyte.R"), pl_fx("ref_conc_cols_analyte.rtf"))
+  pl_same_bytes(pl_doc(p, titles, "plan-append/conc_cols_analyte.R"), pl_fx("ref_conc_cols_analyte.rtf"))
 })
 
 # ---- unit tests on small frames ------------------------------------------------
@@ -194,7 +194,7 @@ test_that("FT-PL904 [FR-PL902]: a records plan (value = ): one row a key, the va
   expect_error(table_plan(d, cols = "T", rows = "ID", value = "V", stat = c(name = "x")), "takes no `stat`")
 })
 
-test_that("FT-PL905 [FR-PL903]: a layer's rows under the parent's; a column a layer lacks prints its na; the layer's own na", {
+test_that("FT-PL905 [FR-PL903]: a part's rows under the parent's; a column a part lacks prints its na; the part's own na", {
   rec <- pl_rec()
   rec$GRP <- NULL
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}", na = "BLQ")
@@ -202,88 +202,88 @@ test_that("FT-PL905 [FR-PL903]: a layer's rows under the parent's; a column a la
   lng <- lng[lng$T != "t3", ]
   child <- table_plan(lng, cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.2f}"))
-  t <- as.data.frame(plan_apply(parent |> plan_layer(child), "table"))
-  expect_identical(names(t), c("label", "t1", "t2", "t3", ".layer"))
+  t <- as.data.frame(plan_apply(parent |> plan_append(child), "table"))
+  expect_identical(names(t), c("label", "t1", "t2", "t3", ".part"))
   expect_identical(t$label, c("A", "B", "Summary", paste0(strrep(" ", 4L), "Mean")))
-  expect_identical(t$.layer, c("layer1", "layer1", "layer2", "layer2"))
+  expect_identical(t$.part, c("part1", "part1", "part2", "part2"))
   # the parent's na, not the child's: t3 is empty on the child's rows
   expect_identical(t$t3, c("BLQ", "5.0", "", ""))
   expect_identical(t$t1[4], "1.50")
   # the child inherits the parent's digits by key, and its own win
   child2 <- table_plan(lng, cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean}"))
-  t2 <- as.data.frame(plan_apply(parent |> plan_digits(3) |> plan_layer(child2), "table"))
+  t2 <- as.data.frame(plan_apply(parent |> plan_digits(3) |> plan_append(child2), "table"))
   expect_identical(t2$t1[4], "1.500")
-  t3 <- as.data.frame(plan_apply(parent |> plan_digits(3) |> plan_layer(child2 |> plan_digits(1)), "table"))
+  t3 <- as.data.frame(plan_apply(parent |> plan_digits(3) |> plan_append(child2 |> plan_digits(1)), "table"))
   expect_identical(t3$t1[4], "1.5")
-  # the layers in the order declared; a name of their own
-  t4 <- as.data.frame(plan_apply(parent |> plan_layer(child, name = "stats") |>
-                                   plan_layer(child2, name = "again"), "table"))
-  expect_identical(unique(t4$.layer), c("layer1", "stats", "again"))
-  expect_error(parent |> plan_layer(child, name = "layer1"), "already there")
+  # the parts in the order declared; a name of their own
+  t4 <- as.data.frame(plan_apply(parent |> plan_append(child, name = "stats") |>
+                                   plan_append(child2, name = "again"), "table"))
+  expect_identical(unique(t4$.part), c("part1", "stats", "again"))
+  expect_error(parent |> plan_append(child, name = "part1"), "already there")
 })
 
-test_that("FT-PL906 [FR-PL904]: page groups are matched by value; a group a layer lacks stops, or is skipped", {
+test_that("FT-PL906 [FR-PL904]: page groups are matched by value; a group a part lacks stops, or is skipped", {
   rec <- pl_rec()
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}") |>
     plan_paginate_rows(page_by = "GRP")
   child <- table_plan(pl_long(), cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
-  t <- as.data.frame(plan_apply(parent |> plan_layer(child), "table"))
+  t <- as.data.frame(plan_apply(parent |> plan_append(child), "table"))
   expect_identical(t$GRP, c("x", "x", "x", "y", "y", "y"))
-  expect_identical(t$.layer, rep(c("layer1", "layer2", "layer2"), 2L))
-  pg <- plan_apply(parent |> plan_layer(child), "pages")
+  expect_identical(t$.part, rep(c("part1", "part2", "part2"), 2L))
+  pg <- plan_apply(parent |> plan_append(child), "pages")
   expect_length(pg, 2L)
   expect_identical(names(pg[[1L]]$data), c("label", "t1", "t2", "t3"))
   expect_identical(pg[[2L]]$data$label, c("B", "Summary", paste0(strrep(" ", 4L), "Mean")))
-  # a group the layer has not: an error, or skipped
+  # a group the part has not: an error, or skipped
   half <- pl_long()[pl_long()$GRP == "x", ]
   child_x <- table_plan(half, cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
-  expect_error(plan_apply(parent |> plan_layer(child_x), "table"), "no rows for .GRP. .y.")
-  t2 <- as.data.frame(plan_apply(parent |> plan_layer(child_x, absent = "skip"), "table"))
-  expect_identical(t2$.layer, c("layer1", "layer2", "layer2", "layer1"))
-  # a group only the layer has makes no rows
+  expect_error(plan_apply(parent |> plan_append(child_x), "table"), "no rows for .GRP. .y.")
+  t2 <- as.data.frame(plan_apply(parent |> plan_append(child_x, absent = "skip"), "table"))
+  expect_identical(t2$.part, c("part1", "part2", "part2", "part1"))
+  # a group only the part has makes no rows
   more <- rbind(pl_long(), data.frame(GRP = "z", T = "t1", variable = "V", stat_name = "mean",
                                       stat = 9, .label = NA_character_))
   child_z <- table_plan(more, cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
-  expect_false("z" %in% as.data.frame(plan_apply(parent |> plan_layer(child_z), "table"))$GRP)
-  # the layer's data must carry the page key
+  expect_false("z" %in% as.data.frame(plan_apply(parent |> plan_append(child_z), "table"))$GRP)
+  # the part's data must carry the page key
   nogrp <- pl_long()
   nogrp$GRP <- NULL
   child_n <- table_plan(nogrp, cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
-  expect_error(plan_apply(parent |> plan_layer(child_n), "table"), "has no .GRP., the page_by column")
+  expect_error(plan_apply(parent |> plan_append(child_n), "table"), "has no .GRP., the page_by column")
 })
 
-test_that("FT-PL907 [FR-PL905]: blank rows between the layers, and a layer's own first / last", {
+test_that("FT-PL907 [FR-PL905]: blank rows between the parts, and a part's own first / last", {
   rec <- pl_rec()
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}") |>
     plan_paginate_rows(page_by = "GRP")
   child <- table_plan(pl_long(), cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
-  t <- as.data.frame(plan_apply(parent |> plan_layer(child) |> plan_blanks(where = "between_layers"), "table"))
+  t <- as.data.frame(plan_apply(parent |> plan_append(child) |> plan_blanks(where = "between_parts"), "table"))
   expect_identical(t$label[1:4], c("A", "", "Summary", paste0(strrep(" ", 4L), "Mean")))
   expect_identical(t$GRP[2], "x")
   expect_identical(nrow(t), 8L)
-  t2 <- as.data.frame(plan_apply(parent |> plan_layer(child |> plan_blanks(first = TRUE, last = TRUE)), "table"))
+  t2 <- as.data.frame(plan_apply(parent |> plan_append(child |> plan_blanks(first = TRUE, last = TRUE)), "table"))
   expect_identical(t2$label[1:6], c("A", "", "Summary", paste0(strrep(" ", 4L), "Mean"), "", "B"))
   # a blank row is a row of the pages (an empty row prints as a separator)
-  pg <- plan_apply(parent |> plan_layer(child) |> plan_blanks(where = "between_layers"), "pages")
+  pg <- plan_apply(parent |> plan_append(child) |> plan_blanks(where = "between_parts"), "pages")
   expect_identical(nrow(pg[[1L]]$data), 4L)
-  # between_layers without layers
+  # between_parts without parts
   expect_error(plan_apply(table_plan(rec, cols = "T", rows = "ID", value = "V") |>
-                            plan_cells("{value:.1f}") |> plan_blanks(where = "between_layers"), "pages"),
-               "has no plan_layer")
+                            plan_cells("{value:.1f}") |> plan_blanks(where = "between_parts"), "pages"),
+               "has no plan_append")
 })
 
-test_that("FT-PL908 [FR-PL906]: a layer may not carry the whole table's settings; its column key is the table's", {
+test_that("FT-PL908 [FR-PL906]: a part may not carry the whole table's settings; its column key is the table's", {
   rec <- pl_rec()
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}")
   child <- table_plan(pl_long(), cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
-  bad <- function(c2, what) expect_error(parent |> plan_layer(c2), what, fixed = TRUE)
+  bad <- function(c2, what) expect_error(parent |> plan_append(c2), what, fixed = TRUE)
   bad(child |> plan_col_header(rtf_col_header(c("a", "b", "c", "d"))), "plan_col_header()")
   bad(child |> plan_columns(widths = c(1, 1, 1, 1)), "plan_columns()")
   bad(child |> plan_paginate_rows(max_rows = 5), "plan_paginate_rows()")
@@ -292,16 +292,16 @@ test_that("FT-PL908 [FR-PL906]: a layer may not carry the whole table's settings
   bad(child |> plan_style(border = "tfl"), "plan_style()")
   bad(child |> plan_titles("T"), "plan_titles()")
   bad(child |> plan_levels(T = c("t3", "t2", "t1")), "plan_levels(T = )")
-  bad(child |> plan_layer(child), "plan_layer()")
-  expect_error(parent |> plan_layer(table_plan(pl_long(), cols = "GRP", rows = c(block = ~ "S")) |>
+  bad(child |> plan_append(child), "plan_append()")
+  expect_error(parent |> plan_append(table_plan(pl_long(), cols = "GRP", rows = c(block = ~ "S")) |>
                                       plan_cells(V = c(Mean = "{mean:.1f}"))),
                "column key is 'GRP' and the table's is 'T'")
-  expect_error(parent |> plan_layer(pl_long()), "is a table_plan")
-  # a layer may say how its own rows are made
+  expect_error(parent |> plan_append(pl_long()), "is a table_plan")
+  # a part may say how its own rows are made
   ok <- child |> plan_digits(2) |> plan_labels(V = "Value") |> plan_stub(indent = 2L) |>
     plan_cell_style(where = ~ label == "Summary", bold = TRUE) |> plan_blanks(first = TRUE)
-  expect_s3_class(parent |> plan_layer(ok), "table_plan")
-  pg <- plan_apply(parent |> plan_layer(ok) |> plan_style(border = "tfl"), "pages")[[1L]]
+  expect_s3_class(parent |> plan_append(ok), "table_plan")
+  pg <- plan_apply(parent |> plan_append(ok) |> plan_style(border = "tfl"), "pages")[[1L]]
   # (its own blank row first: the heading is the stack's 4th row)
   expect_null(pg$cell_styles[[3L]])
   expect_true(isTRUE(pg$cell_styles[[4L]]$bold[1L]))
@@ -315,7 +315,7 @@ test_that("FT-PL909 [FR-PL907]: the header's {n} and {col}, the widths and the d
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}")
   child <- table_plan(pl_long(), cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
-  p <- parent |> plan_layer(child) |>
+  p <- parent |> plan_append(child) |>
     plan_col_header(rtf_col_header(c("Subject", "{col}"))) |>
     plan_columns(widths = c(label = 2, .values = 1), decimal = ".values") |>
     plan_style(border = "tfl")
@@ -323,6 +323,6 @@ test_that("FT-PL909 [FR-PL907]: the header's {n} and {col}, the widths and the d
   expect_identical(pg$col_rel_width, c(2, 1, 1, 1))
   expect_identical(names(pg$data), c("label", "t1", "t2", "t3"))
   expect_true(any(grepl("t1", unlist(pg$col_header), fixed = TRUE)))
-  # print() says the layers
-  expect_output(print(p), "layer")
+  # print() says the parts
+  expect_output(print(p), "part")
 })

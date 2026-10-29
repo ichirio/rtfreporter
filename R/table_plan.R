@@ -434,7 +434,7 @@
 #'   "{USUBJID}/{AGE}/{SEX}")`), the records' values spread across `cols`,
 #'   one cell template (`plan_cells("{value:.3s}", na = "BLQ")`) -- a
 #'   listing laid out as a table, with nothing reshaped by hand.  Two
-#'   records of one key and column stop.  See [plan_layer()] for its
+#'   records of one key and column stop.  See [plan_append()] for its
 #'   summary under it.
 #'
 #' @section Where the other settings went:
@@ -1113,9 +1113,9 @@ print.table_plan <- function(x, ...) {
 #'   whose VALUES are the row text.  `vars` is derived when left out.  With
 #'   one column (a table of one row heading, a study's `plan_stub(name =
 #'   "row_label")` on it), that column is the stub, renamed `name`, and
-#'   nothing is folded.  For `plan_layer()`, `name` is the layer's name,
-#'   for its messages and for [plan_layers()]: `"layer2"`, `"layer3"`, ...
-#'   by default (the first plan is `"layer1"`).
+#'   nothing is folded.  For `plan_append()`, `name` is the part's name,
+#'   for its messages and for [plan_layers()]: `"part2"`, `"part3"`, ...
+#'   by default (the first plan is `"part1"`).
 #' @param before For `plan_stub()`: `FALSE` (default) folds the stub inside
 #'   [as_rtftables()], after grouping and pagination have had their say.
 #'   `TRUE` folds it first, with [stub_cols()], which is what
@@ -2657,9 +2657,9 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   stage <- match.arg(stage)
   if (identical(stage, "auto")) stage <- .plan_reach(.plan)
 
-  # Layers (plan_layer()): each to its table, stacked, then the whole
-  # table's settings on the stack (R/plan_layer.R)
-  if (length(.plan_of(.plan, "layer"))) return(.plan_apply_layers(.plan, stage))
+  # Appended plans (plan_append()): each to its table, stacked, then the
+  # whole table's settings on the stack (R/plan_append.R)
+  if (length(.plan_of(.plan, "part"))) return(.plan_apply_parts(.plan, stage))
 
   # A LISTING never goes near an ARD.  Its source is SDTM or ADaM -- an
   # ordinary frame of subject records -- and plan_listing() is what says
@@ -4466,7 +4466,7 @@ plan_n_candidates <- function(.plan) {
 .plan_to_pages <- function(plan, tbl) {
   hdr <- .plan_merge(.plan_of(plan, "header"))
   n_req <- .plan_header_n(hdr)
-  # a stack of layers reads the header's n off the first plan (its ARD)
+  # a stack of parts reads the header's n off the first plan (its ARD)
   n_plan <- plan$cache$n_plan %||% plan
   nvals <- .plan_n_values(n_plan, n_req)
 
@@ -4508,10 +4508,10 @@ plan_n_candidates <- function(.plan) {
     rtf$listing <- do.call(listing_spec, c(list(cols = cols), lst))
   } else if (identical(rtf$blank_rows, "none")) {
     rtf$blank_rows <- NULL
-  } else if (identical(rtf$blank_rows, "between_layers")) {
+  } else if (identical(rtf$blank_rows, "between_parts")) {
     .ard_stop(paste0(
-      "plan_blanks(where = \"between_layers\") separates the layers of a table, ",
-      "and this plan\n  has no plan_layer().  Between the groups of a table ",
+      "plan_blanks(where = \"between_parts\") separates the parts of a table, ",
+      "and this plan\n  has no plan_append().  Between the groups of a table ",
       "is where = \"between_groups\"."))
   } else if (identical(rtf$blank_rows, "records")) {
     .ard_stop(paste0(
@@ -4551,7 +4551,7 @@ plan_n_candidates <- function(.plan) {
     }
     rtf$cell_styles <- .plan_cell_styles(st, tbl, pre)
   }
-  # a stack of layers: each layer's styles, read off the stack already
+  # a stack of parts: each part's styles, read off the stack already
   if (!is.null(plan$cache$cell_styles)) rtf$cell_styles <- plan$cache$cell_styles
   out <- .plan_stage(
     do.call(as_rtftables, c(list(x = tbl), rtf)), plan,
@@ -5217,7 +5217,7 @@ plan_layers <- function(.plan) {
   kinds <- vapply(.plan$layers, `[[`, "", "kind")
   layers <- list()
   for (k in unique(kinds)) {
-    layers[[k]] <- if (k %in% c("after", "restyle", "layer")) .plan_of(.plan, k)
+    layers[[k]] <- if (k %in% c("after", "restyle", "part")) .plan_of(.plan, k)
                    else if (k %in% c("levels", "labels", "nest"))
                      .plan_merge(.plan_of(.plan, k), deep = k)
                    else .plan_merge(.plan_of(.plan, k))

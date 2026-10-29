@@ -79,7 +79,7 @@ column whose value a cell prints, \code{value = "AVAL"}.  That makes a
 records plan: one row a \code{rows} key (a subject: \code{rows = c(subject = ~ "{USUBJID}/{AGE}/{SEX}")}), the records' values spread across \code{cols},
 one cell template (\code{plan_cells("{value:.3s}", na = "BLQ")}) -- a
 listing laid out as a table, with nothing reshaped by hand.  Two
-records of one key and column stop.  See \code{\link[=plan_layer]{plan_layer()}} for its
+records of one key and column stop.  See \code{\link[=plan_append]{plan_append()}} for its
 summary under it.}
 }
 \value{
