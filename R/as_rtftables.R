@@ -1096,6 +1096,17 @@ as_rtftables.default <- function(x,
     # blank_rows positions all see the sorted order.  cell_styles (per original
     # row) is reordered in lockstep so per-cell styling stays with its row.
     ord <- .resolve_sort_order(sort_by, sort_desc, body)
+    # A listing's records are sorted whole (#745): each by its first row,
+    # its other rows -- a wrapped cell's lines, the blank row that closes it
+    # -- kept under it.  Sorted row by row, the blank rows (empty keys) left
+    # their records and gathered at one end.
+    if (!is.null(ord) && !is.null(listing_record) && listing_record %in% names(body)) {
+      r <- body[[listing_record]]
+      first <- which(!duplicated(r))
+      by_rec <- .resolve_sort_order(sort_by, sort_desc, body[first, , drop = FALSE])
+      rows_of <- split(seq_along(r), factor(r, levels = unique(r)))
+      ord <- unlist(rows_of[as.character(r[first][by_rec])], use.names = FALSE)
+    }
     if (!is.null(ord)) {
       body <- body[ord, , drop = FALSE]
       rownames(body) <- NULL
