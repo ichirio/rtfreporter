@@ -27,7 +27,11 @@
 # binary representation of values like 2.675, stored as 2.67499999999999982.
 .round_half_up <- function(x, digits = 0L) {
   z <- abs(x) * 10^digits
-  sign(x) * floor(z + 0.5 + sqrt(.Machine$double.eps) * abs(z)) / 10^digits
+  r <- sign(x) * floor(z + 0.5 + sqrt(.Machine$double.eps) * abs(z)) / 10^digits
+  # (a negative value that rounds to zero is zero, not -0: sprintf() would
+  # print "-0")
+  r[!is.na(r) & r == 0] <- 0
+  r
 }
 
 # The rounding family, resolved once for the whole package.  `NULL` reads
@@ -124,6 +128,8 @@ round_num <- function(x, digits = 0, rounding = NULL) {
     d2 <- dec_fun(r)
     if (!identical(d2, d)) { d <- d2; r <- rnd(v, d) }
   }
+  # (a negative value that rounds to zero prints "0.00", not "-0.00")
+  if (r == 0) r <- 0
   sprintf("%.*f", as.integer(d), r)
 }
 

@@ -4,7 +4,7 @@
 \alias{fmt_value_paren}
 \title{Align "value (parenthetical)" cells, text values included}
 \usage{
-fmt_value_paren(x, nbsp = " ", na = "")
+fmt_value_paren(x, nbsp = " ", na = "", rounding = NULL)
 }
 \arguments{
 \item{x}{Character vector (one table column).}
@@ -17,6 +17,12 @@ as missing).  The default \code{""} leaves the cell empty, as before.  A
 non-empty token is right-justified with the other cells, so its right edge
 lines up with theirs.  \code{Inf} / \code{-Inf} are \strong{not} missing and print as
 \code{"Inf"} / \code{"-Inf"}.  See the \code{na} argument of \code{\link[=as_rtftables]{as_rtftables()}}.}
+
+\item{rounding}{How a parenthetical of 100 or more is rounded to a whole
+number (\code{"(100.5)"}): \code{"r"} (half to even, as \code{round()} does) or
+\code{"sas"} (half away from zero); \code{NULL} (default) takes
+\code{getOption("rtfreporter.rounding")}, as \code{\link[=fmt_count_pct]{fmt_count_pct()}} does.  See
+\code{\link[=round_num]{round_num()}}.}
 }
 \value{
 Character vector the same length as \code{x}.
