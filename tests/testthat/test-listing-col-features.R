@@ -136,8 +136,24 @@ test_that("a marked column is carried down its record's rows", {
   expect_length(content, 3L)
   expect_true(all(body$USUBJID[content] == "01-701-1015"))
 
-  # the blank row that closes the record stays blank
-  expect_identical(body$USUBJID[rows[length(rows)]], "")
+  # and on the blank row that closes the record (#742): the run goes on to
+  # the next record of the same id, which as_rtftables() then blanks
+  expect_identical(body$USUBJID[rows[length(rows)]], "01-701-1015")
+})
+
+test_that("records of the same value print it once, their blank rows between (#742)", {
+  d <- data.frame(USUBJID = c("S1", "S1", "S2", "S2"),
+                  AEDECOD = c("Cough", "Headache", "Nausea", "Rash"))
+  spec <- listing_spec(list(listing_col("USUBJID", label = "Subject", collapse_repeats = TRUE),
+                            listing_col("AEDECOD", label = "Term")))
+  expect_true(isTRUE(spec$blank_row))
+  tbl <- as_rtftables(d, listing = spec)
+  if (!inherits(tbl, "rtftable")) tbl <- tbl[[1L]]
+  ids <- tbl$data$USUBJID
+  ids[is.na(ids)] <- ""
+  expect_identical(ids[nzchar(ids)], c("S1", "S2"))
+  # the other column as it was: each record's term, a blank row after it
+  expect_identical(tbl$data$AEDECOD, c("Cough", "", "Headache", "", "Nausea", "", "Rash", ""))
 })
 
 test_that("an unmarked column is padded with blanks, as before", {
@@ -167,9 +183,9 @@ test_that("as_rtftables blanks the repeats the marked column carried", {
 
   ids <- tbl$data[[1L]]
   ids[is.na(ids)] <- ""
-  # the id prints once per record, not on every row of it
-  expect_identical(sum(nzchar(ids)), 3L)          # 3 records, 3 printed ids
-  expect_identical(ids[1L], "01-701-1015")
+  # the id prints once per run of its records, not on every row of them:
+  # records 1 and 2 are the same subject, record 3 another (#742)
+  expect_identical(ids[nzchar(ids)], c("01-701-1015", "01-701-1023"))
 })
 
 # A key column to the LEFT that wraps must not stop the one to its right from
@@ -204,9 +220,9 @@ test_that("with no wrap the blanking is what it always was", {
   tbl <- as_rtftables(.wrap_keys(), listing = .wrap_spec(trt_width = 22))[[1L]]
   expect_identical(.printed(tbl$data$SUBJ)[nzchar(.printed(tbl$data$SUBJ))],
                    c("S-1", "S-2", "S-3"))
-  # the same treatment on consecutive records is printed per record: the
-  # blank row between records ends the run
-  expect_identical(sum(.printed(tbl$data$TRT) == "Xanomeline High Dose"), 2L)
+  # the same treatment on consecutive records is printed once: the blank
+  # row between records carries it, so the run goes on (#742)
+  expect_identical(sum(.printed(tbl$data$TRT) == "Xanomeline High Dose"), 1L)
 })
 
 test_that("without blank rows, a key still collapses across records", {

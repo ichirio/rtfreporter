@@ -58,8 +58,10 @@ sex, a value and its unit) does not spend two rows on four characters.
 With no \code{width} there is nothing to lay out and both behave alike.}
 
 \item{collapse_repeats}{Logical (default \code{FALSE}).  Mark this as a \strong{key}
-column: its value is carried down every physical row of a record, and
-\code{\link[=as_rtftables]{as_rtftables()}} then blanks the repeats.  Carrying and delegating rather
+column: its value is carried down every physical row of a record (its
+blank row too), and \code{\link[=as_rtftables]{as_rtftables()}} then blanks the repeats -- so the
+value prints once per run of records that share it, blank rows between
+them or not.  Carrying and delegating rather
 than blanking here is what makes the value \strong{reappear at the top of the
 next page} -- the suppression happens per page, after the split, so a
 record continued across a page break still shows its subject.  A cell
