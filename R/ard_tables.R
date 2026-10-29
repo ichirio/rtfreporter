@@ -2319,6 +2319,21 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
         !(d$variable %in% "..ard_total_n..")
       cmp_d <- d[at, , drop = FALSE]
       d <- d[!at, , drop = FALSE]
+      # a comparison record is an ARD row: its variable and its statistic's
+      # name.  Rows with neither are not an ARD's (an analysis that returned
+      # a plain data frame, bound into the ARD): said here, not as an NA
+      # deep in the placing (#757)
+      bad <- is.na(cmp_d$variable) | is.na(cmp_d$stat_name)
+      if (any(bad)) {
+        rows <- cmp_d[bad, , drop = FALSE]
+        filled <- names(rows)[vapply(rows, function(v) any(!is.na(unlist(v))), NA)]
+        .ard_stop(sprintf(paste0(
+          "plan_compare(): %d of the comparison records have no `variable` or no ",
+          "`stat_name`.\n  A comparison record is an ARD row (variable, context, ",
+          "stat_name, stat); these\n  are not an ARD's -- an analysis that returned ",
+          "a plain data frame?  Their filled\n  columns: %s."),
+          sum(bad), paste(utils::head(filled, 8L), collapse = ", ")))
+      }
     }
   }
 

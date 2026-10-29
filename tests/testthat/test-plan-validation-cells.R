@@ -1005,3 +1005,17 @@ test_that(".values on a finished table leaves the row-heading column out (#755)"
   pg <- table_plan(t2) |> plan_columns(decimal = ".values", row_title = 1:2) |> plan_apply()
   expect_identical(as.integer(pg[[1L]]$decimal_split$cols), 3L)
 })
+
+test_that("plan_compare() says when comparison records are not ARD rows (#757)", {
+  d <- vc_cmp()
+  # a row of a plain data frame bound into the ARD: no variable, no statistic
+  odd <- d[1L, ]
+  odd[1L, ] <- NA
+  odd$PARAM <- "ALT"
+  x <- rbind(d, odd)
+  expect_error(vc_cp(x) |> plan_compare(p = "{p.value:.3f}") |> plan_apply("table"),
+               "1 of the comparison records have no `variable` or no `stat_name`", fixed = TRUE)
+  # the ARD's own comparison records: placed as before
+  tbl <- vc_cp() |> plan_compare(p = "{p.value:.3f}") |> plan_apply("table")
+  expect_true("p" %in% names(tbl))
+})
