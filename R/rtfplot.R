@@ -8,6 +8,10 @@
 .read_png_dims <- function(path) {
   raw <- readBin(path, "raw", n = 24L)
   if (length(raw) < 24L) stop("File too short to be a valid PNG.", call. = FALSE)
+  png_sig <- as.raw(c(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A))
+  if (!identical(raw[1:8], png_sig) || rawToChar(raw[13:16]) != "IHDR") {
+    stop(sprintf("Not a PNG file (no PNG signature): %s", path), call. = FALSE)
+  }
   # PNG signature: bytes 1-8.  IHDR chunk: bytes 9-12 (length), 13-16 (type),
   # 17-20 (width), 21-24 (height) -- all big-endian.
   to_int <- function(b) sum(as.integer(b) * c(16777216L, 65536L, 256L, 1L))
@@ -329,6 +333,13 @@ rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
 
   if (!align %in% c("left", "center", "right")) {
     stop("`align` must be 'left', 'center', or 'right'.", call. = FALSE)
+  }
+  for (nm in c("width_twips", "height_twips")) {
+    v <- get(nm)
+    if (!is.null(v) && (!is.numeric(v) || length(v) != 1L || is.na(v) || v <= 0)) {
+      stop(sprintf("`%s` must be NULL or a single positive number of twips.", nm),
+           call. = FALSE)
+    }
   }
 
   structure(

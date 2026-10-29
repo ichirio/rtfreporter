@@ -733,3 +733,45 @@ test_that("assemble_rtf TOC caches cumulative page numbers (decimal = continuous
   # TOC is page 1; the two 1-page tables start on pages 2 and 3.
   expect_equal(pages, c(2L, 3L))
 })
+
+test_that("a TOC over 2 pages breaks itself and counts its pages (#767)", {
+  f1 <- .write_demo_rtf("First")
+  f2 <- .write_demo_rtf("Second")
+  out <- tempfile(fileext = ".rtf"); on.exit(unlink(c(f1, f2, out)), add = TRUE)
+  toc <- c(list(toc_heading("Tables", level = 1)),
+           lapply(seq_len(60), function(i)
+             toc_entry(sprintf("Table 14.%d Summary", i), file = if (i == 1L) f1 else f2,
+                       level = 2)))
+  assemble_rtf(c(f1, f2), out, overwrite = TRUE, toc = toc, toc_page_numbering = "decimal")
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  n_toc <- max(rtfreporter:::.toc_entry_pages(toc))
+  expect_gt(n_toc, 1L)
+  # the TOC's own page breaks, one before each later TOC page
+  expect_equal(lengths(regmatches(txt, gregexpr("\\\\pagebb", txt))), n_toc - 1L)
+  hits  <- regmatches(txt, gregexpr("PAGEREF.{1,60}?fldrslt [0-9]+", txt))[[1L]]
+  pages <- unique(as.integer(sub(".*fldrslt ([0-9]+)$", "\\1", hits)))
+  expect_equal(pages, n_toc + c(1L, 2L))
+})
+
+test_that("a heading never closes a TOC page (#767)", {
+  long <- lapply(seq_len(36), function(i) list(type = "entry", label = "x", level = 1))
+  e <- c(long, list(list(type = "heading", label = "H", level = 1)),
+         lapply(1:3, function(i) list(type = "entry", label = "y", level = 2)))
+  p <- rtfreporter:::.toc_entry_pages(e)
+  h <- which(vapply(e, function(x) x$type == "heading", logical(1L)))
+  expect_identical(p[h], p[h + 1L])
+})
+
+test_that("rtfplot() checks the PNG signature and the twips (#767)", {
+  bad <- tempfile(fileext = ".png"); on.exit(unlink(bad), add = TRUE)
+  writeBin(as.raw(seq_len(40)), bad)
+  expect_error(rtfplot(bad), "Not a PNG file")
+  png_f <- tempfile(fileext = ".png"); on.exit(unlink(png_f), add = TRUE)
+  grDevices::png(png_f, width = 200, height = 100); graphics::par(mar = c(0, 0, 0, 0))
+  graphics::plot.new(); grDevices::dev.off()
+  expect_s3_class(rtfplot(png_f), "rtfplot")
+  for (v in list(NA, 0, -5, "wide", c(1, 2))) {
+    expect_error(rtfplot(png_f, width_twips = v), "positive number of twips")
+    expect_error(rtfplot(png_f, height_twips = v), "positive number of twips")
+  }
+})
