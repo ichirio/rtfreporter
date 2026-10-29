@@ -125,3 +125,39 @@ test_that("sort_desc length must be 1 or length(sort_by)", {
                  sort_desc = c(TRUE, FALSE, TRUE)),
     "length 1 or 2")
 })
+
+test_that("a listing is sorted record by record: each keeps its lines and its blank row (#745)", {
+  d <- data.frame(USUBJID = c("S2", "S1", "S3"),
+                  AEDECOD = c("Rash", "A term long enough to wrap", "Nausea"))
+  spec <- listing_spec(list(listing_col("USUBJID", label = "Subject"),
+                            listing_col("AEDECOD", label = "Term", width = 10)))
+  tbl <- as_rtftables(d, listing = spec, sort_by = "USUBJID")
+  if (!inherits(tbl, "rtftable")) tbl <- tbl[[1L]]
+  ids <- tbl$data$USUBJID
+  terms <- tbl$data$AEDECOD
+  # S1's record first, its wrapped lines and blank row under it; no blank
+  # row gathered at the top
+  expect_identical(ids[nzchar(ids)], c("S1", "S2", "S3"))
+  expect_true(nzchar(ids[1L]))
+  s1 <- which(ids == "S1")
+  s2 <- which(ids == "S2")
+  expect_true(all(nzchar(terms[(s1 + 1L):(s2 - 2L)])))   # S1's wrapped lines
+  expect_identical(terms[s2 - 1L], "")                   # its blank row
+  expect_identical(utils::tail(terms, 1L), "")           # S3's blank row last
+  # descending: whole records too
+  dn <- as_rtftables(d, listing = spec, sort_by = "USUBJID", sort_desc = TRUE)
+  if (!inherits(dn, "rtftable")) dn <- dn[[1L]]
+  idn <- dn$data$USUBJID
+  expect_identical(idn[nzchar(idn)], c("S3", "S2", "S1"))
+  expect_true(nzchar(idn[1L]))
+})
+
+test_that("plan_sort() on a listing plan sorts the records whole (#745)", {
+  d <- data.frame(USUBJID = c("S2", "S1", "S3"), AEDECOD = c("Rash", "Cough", "Nausea"))
+  p <- table_plan(d) |>
+    plan_listing(listing_col("USUBJID", label = "Subject"), listing_col("AEDECOD", label = "Term")) |>
+    plan_sort("USUBJID")
+  r <- plan_apply(p)
+  if (!inherits(r, "rtftable")) r <- r[[1L]]
+  expect_identical(r$data$USUBJID, c("S1", "", "S2", "", "S3", ""))
+})
