@@ -296,8 +296,8 @@ reference:
       `show_keys =` also shows a subgroup key's own counts as rows) and each
       `plan_*()` verb adds one declaration.  Nothing runs until the plan is
       handed to `rtf_tables()` or `plan_apply()`; a later layer wins.  The
-      overview of every verb is `plan_verbs`, and many have a page of
-      their own; by job:
+      overview of every verb is `plan_verbs`, and each has a page of
+      its own; by job:
 
       * **cells**: `plan_cells()`, `plan_digits()`, `plan_stat_groups()`
       * **rows**: `plan_filter()`, `plan_sort()` (`-n@SOC`, `-n[Total]`),
@@ -336,6 +336,13 @@ reference:
       - plan_cell_style
       - plan_paginate_group
       - plan_paginate_rows
+      - plan_paginate_cols
+      - plan_columns
+      - plan_style
+      - plan_titles
+      - plan_footnotes
+      - plan_listing
+      - plan_after
       - plan_apply
       - plan_template
   - subtitle: Looking inside a plan

@@ -2,216 +2,27 @@
 % Please edit documentation in R/table_plan.R
 \name{plan_verbs}
 \alias{plan_verbs}
-\alias{plan_style}
-\alias{plan_columns}
-\alias{plan_listing}
-\alias{plan_titles}
-\alias{plan_footnotes}
-\alias{plan_after}
-\alias{plan_paginate_cols}
 \title{Declare the table, one layer at a time}
-\usage{
-plan_style(
-  .plan,
-  border = NULL,
-  align_count_pct = NULL,
-  font = NULL,
-  font_size_half_points = NULL,
-  row_height_twips = NULL,
-  row_height_exact = NULL,
-  header_row_height_twips = NULL,
-  blank_row_height_twips = NULL,
-  cell_padding_left_twips = NULL,
-  cell_padding_right_twips = NULL,
-  cell_valign = NULL,
-  table_align = NULL,
-  markup = NULL,
-  blank_row_normalize = NULL,
-  border_header = NULL,
-  border_spanning = NULL,
-  border_body = NULL,
-  border_first_row = NULL,
-  border_last_row = NULL,
-  header_align = NULL,
-  header_bold = NULL,
-  header_italic = NULL,
-  align = NULL,
-  bold = NULL,
-  italic = NULL,
-  underline = NULL,
-  table_width_twips = NULL,
-  table_width_pct = NULL,
-  table_width_pct_of_writable = NULL
-)
-
-plan_columns(
-  .plan,
-  widths = NULL,
-  decimal = NULL,
-  row_title = NULL,
-  auto_width = NULL,
-  sep = NULL,
-  cell_format = NULL,
-  column_widths_twips = NULL
-)
-
-plan_listing(
-  .plan,
-  ...,
-  type = NULL,
-  sep = NULL,
-  spacer = NULL,
-  spacer_rel_width = NULL,
-  layout = NULL,
-  wrap = NULL,
-  align = NULL,
-  record = NULL
-)
-
-plan_titles(.plan, ..., pages = NULL)
-
-plan_footnotes(.plan, ..., pages = NULL)
-
-plan_after(.plan, ...)
-
-plan_paginate_cols(
-  .plan,
-  at = NULL,
-  cut_by = NULL,
-  every = NULL,
-  keep = NULL,
-  col_header = NULL,
-  fit = NULL,
-  allow_span_break = NULL,
-  order = NULL
-)
-}
-\arguments{
-\item{.plan}{A \code{\link[=table_plan]{table_plan()}}.  The pipe passes it by position; the dot
-keeps a name in \code{...} such as \code{p} (cards' percentage) from being taken
-for it (an argument before \code{...} matches by its first letters).}
-
-\item{border, align_count_pct, font, font_size_half_points, row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips, cell_padding_left_twips, cell_padding_right_twips, cell_valign, table_align, markup, blank_row_normalize}{For \code{plan_style()}: the settings of the \strong{whole table}, by
-\code{\link[=rtftable]{rtftable()}}'s and \code{\link[=as_rtftables]{as_rtftables()}}'s names.  What a table has per
-column or per cell is another verb's --- \code{\link[=plan_columns]{plan_columns()}},
-\code{\link[=plan_cell_style]{plan_cell_style()}}, \code{\link[=plan_col_header]{plan_col_header()}}, \code{\link[=plan_blanks]{plan_blanks()}} --- so this
-list is the whole of it.}
-
-\item{border_header, border_spanning, border_body, border_first_row, border_last_row}{For \code{plan_style()}: the rules of one kind of row, by the names
-\code{\link[=rtf_table_style]{rtf_table_style()}} gives them.  Say the table's rules one way:
-\code{border = "tfl"}, or these.}
-
-\item{header_align, header_bold, header_italic}{For \code{plan_style()}: the
-whole header's default look, \code{\link[=rtf_table_style]{rtf_table_style()}}'s fields; with the
-\verb{border_*} zones and \code{align} ... \code{underline} they make the
-\code{as_rtftables(style = )} object.  One column or one cell is
-\code{\link[=plan_cell_style]{plan_cell_style()}}.}
-
-\item{bold, italic, align}{For \code{plan_style()}: the body's default look,
-\code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.  For \code{plan_listing()}, \code{align} is
-\code{\link[=listing_spec]{listing_spec()}}'s: the alignment of the columns that set none of
-their own (\code{listing_col(align = )}); \code{NULL} the template's.  One
-column or one cell is \code{\link[=plan_cell_style]{plan_cell_style()}}.}
-
-\item{underline}{For \code{plan_style()}: the body's default, an
-\code{\link[=rtf_table_style]{rtf_table_style()}} field like \code{align}, \code{bold} and \code{italic}.}
-
-\item{table_width_twips, table_width_pct, table_width_pct_of_writable}{For
-\code{plan_style()}: the table's width, by \code{\link[=rtftable]{rtftable()}}'s names (and
-\code{\link[=as_rtftables]{as_rtftables()}}'s \code{table_width_twips}).}
-
-\item{widths}{For \code{plan_columns()}: the relative column widths,
-\code{rtftable(col_rel_width = )}.  \strong{Named by column} (\code{c(row_label = 5, .values = 2)}, \code{.values} for every value column) a reordered table keeps
-them, and that is what the \code{columns} sheet's \code{width} is; unnamed, they
-are one a column in order, as \code{col_rel_width} itself.}
-
-\item{decimal}{For \code{plan_columns()}: the columns whose numbers line
-up at the decimal point (\code{.values} for every value column) --- the
-\code{columns} sheet's \code{decimal_split}.}
-
-\item{row_title, auto_width}{For \code{plan_columns()}: the row-heading
-columns (\code{rtftable(row_title = )}) and whether each column is sized to
-its content (\code{as_rtftables(auto_width = )}).  Name the columns, as
-\code{widths} does: a row key's name as \code{table_plan(rows = )} gives it,
-\code{.values} for every value column --- \code{row_title = c("grp1", "grp2")}.
-A position counts the PRINTED columns, as unnamed \code{widths} do: a key
-hidden with \code{\link[=plan_hide]{plan_hide()}} or taken out by \code{page_by} is left out.}
-
-\item{sep}{For \code{plan_columns()}: the separator several \code{cols} keys are
-joined with in the value columns' names, \code{"____"} by default ---
-\code{"Placebo____F"}.  The spanning header is built by splitting on it, so
-a key value that contains it is refused.  For \code{plan_listing()},
-\code{\link[=listing_spec]{listing_spec()}}'s \code{sep}.}
-
-\item{cell_format, column_widths_twips}{For \code{plan_columns()}:
-\code{\link[=as_rtftables]{as_rtftables()}}'s \code{cell_format} (a formatter, or a list of them one a
-column) and \code{\link[=rtftable]{rtftable()}}'s \code{column_widths_twips}, as they are.
-\code{column_widths_twips} fixes the widths absolutely: a plan gives it or
-\code{widths}, not both (an error says so).  A name in \code{widths} must be a
-column of the table (\code{.values} covers the value columns); another stops
-with the names the table has.}
-
-\item{...}{For \code{plan_titles()} / \code{plan_footnotes()}, the rows of one
-block (see \code{pages}); for \code{plan_listing()}, the \code{\link[=listing_col]{listing_col()}}s; for
-\code{plan_after()}, the functions run on the pages.}
-
-\item{type, spacer, spacer_rel_width, layout, wrap, record}{For \code{plan_listing()}: \code{\link[=listing_spec]{listing_spec()}}'s own arguments, unchanged
-(\code{record}: the hidden record column -- \code{FALSE} none, a string its
-name; \code{NULL} the default, \code{TRUE}).  \code{...} there takes the
-\code{\link[=listing_col]{listing_col()}}s.  A blank row between records is
-\code{plan_blanks(where = "records")}, one at the top of each page
-\code{plan_blanks(first = TRUE)}; a column's own alignment is
-\code{listing_col(align = )}, the others' \code{plan_listing(align = )}.}
-
-\item{pages}{For \code{plan_titles()} / \code{plan_footnotes()}: a list with one
-block per page, when the pages do not share a block.  \code{...} is the rows
-of a single block used on every page; give one or the other, never
-both, because a three-row title on a three-page table cannot be told
-apart from three one-row titles.}
-
-\item{at, cut_by, col_header, fit, allow_span_break, order}{For
-\code{plan_paginate_cols()}, in \code{\link[=paginate_cols]{paginate_cols()}}'s terms: \code{at} the columns
-to cut before; \code{cut_by} a list of column blocks (\code{paginate_cols(cols = )}), or a separator found in the column names / one key per column
-(\code{paginate_cols(by = )}); \code{col_header} what the header becomes; \code{fit}
-\code{TRUE} (every block's widths on page 1's scale, \code{width = "fill"}) or
-\code{FALSE} (each column keeps its width, \code{"keep"}); \code{order}
-\code{paginate_cols(page_order = )}, the order the three axes nest in,
-outermost first: \code{"group"}, \code{"rows"}, \code{"cols"}, or the shorthands
-\code{"across"} and \code{"down"}.}
-
-\item{every}{For \code{plan_paginate_cols()}: cut a block every this many
-columns, counting only the ones a block does not keep.  This is
-\code{at} without writing down how many columns one study had --- the
-plan is deferred, so it counts them when the table exists.  Give one
-of \code{at}, \code{cut_by} or \code{every}.}
-
-\item{keep}{For \code{plan_paginate_cols()}: the columns every block
-repeats (\code{paginate_cols(carry = )}), such as the row headings.}
-}
-\value{
-The plan, with one more layer.
-}
 \description{
 Each verb adds a layer to an \code{\link[=table_plan]{table_plan()}}.  \strong{A later layer wins.}
 The roles --- which column goes across, which go down, which carries
 the row identity --- are said once, on \code{\link[=table_plan]{table_plan()}}; these verbs are
 the things a report really does declare twice.  Their arguments are
 the ones \code{\link[=widen_ard]{widen_ard()}} and \code{\link[=as_rtftables]{as_rtftables()}} already take, so the
-layering is the only new idea.
-}
-\details{
+layering is the only new idea.  Nothing runs until the plan is handed
+to \code{\link[=plan_apply]{plan_apply()}} or \code{\link[=rtf_tables]{rtf_tables()}}.
+
 This page is the overview of the verbs, in the order a report is
-usually written.  The verbs with a page of their own are linked; the
-others are documented here.
+usually written; each has a page of its own.  Every verb takes the plan
+first, as \code{.plan}: the pipe passes it by position, and the dot keeps a
+name in \code{...} such as \code{p} (cards' percentage) from being taken for it.
 
 \strong{The cells}
 \itemize{
-\item \code{\link[=plan_cells]{plan_cells()}}: the cell templates --- how each cell is made from the
+\item \code{\link[=plan_cells]{plan_cells()}}: the cell templates, how each cell is made from the
 statistics.
-\item \code{\link[=plan_digits]{plan_digits()}}: the decimals (or significant digits) the templates'
-open tokens take.
-\item \code{\link[=plan_stat_groups]{plan_stat_groups()}}: one record's statistics split into named groups,
-the key \code{.stat_group}.
+\item \code{\link[=plan_digits]{plan_digits()}}: the decimals (or significant digits) of the open tokens.
+\item \code{\link[=plan_stat_groups]{plan_stat_groups()}}: one record's statistics split into named groups.
 }
 
 \strong{The rows}
@@ -237,35 +48,30 @@ difference).
 \item \code{\link[=plan_row_group]{plan_row_group()}}: how a run of rows sharing a value shows.
 \item \code{\link[=plan_blanks]{plan_blanks()}}: where the blank rows go.
 \item \code{\link[=plan_hide]{plan_hide()}}: columns that do their work without being printed.
-\item \code{plan_columns()}: widths, decimal alignment and row titles, by column
-name.
-\item \code{\link[=plan_cell_style]{plan_cell_style()}}: bold, italic, colour, alignment of cells, by
-column or by condition.
-\item \code{plan_style()}: the settings of the whole table (borders, font, row
-heights).
+\item \code{\link[=plan_columns]{plan_columns()}}: widths, decimal alignment and row titles, by name.
+\item \code{\link[=plan_cell_style]{plan_cell_style()}}: bold, italic, colour, alignment of cells.
+\item \code{\link[=plan_style]{plan_style()}}: the whole table's borders, font and row heights.
 }
 
 \strong{The pages}
 \itemize{
 \item \code{\link[=plan_paginate_group]{plan_paginate_group()}}: a page per value of a column.
 \item \code{\link[=plan_paginate_rows]{plan_paginate_rows()}}: the row budget, and what a break may cut.
-\item \code{plan_paginate_cols()}: column blocks, and how the three page axes
-nest.
+\item \code{\link[=plan_paginate_cols]{plan_paginate_cols()}}: column blocks, and how the page axes nest.
 }
 
 \strong{The header and the text around the table}
 \itemize{
-\item \code{\link[=plan_col_header]{plan_col_header()}}: the column header, and the populations its
-\code{{n}} tokens print.
-\item \code{plan_titles()}, \code{plan_footnotes()}: the blocks above and below the
-table.
+\item \code{\link[=plan_col_header]{plan_col_header()}}: the column header and the numbers it prints.
+\item \code{\link[=plan_titles]{plan_titles()}}: the block of titles above the table.
+\item \code{\link[=plan_footnotes]{plan_footnotes()}}: the block of footnotes below the table.
 }
 
 \strong{The rest}
 \itemize{
-\item \code{plan_listing()}: lay a frame of records out as a listing.
+\item \code{\link[=plan_listing]{plan_listing()}}: lay a frame of records out as a listing.
 \item \code{\link[=plan_append]{plan_append()}}: another plan's rows under this table's.
-\item \code{plan_after()}: your own functions, run on the finished pages.
+\item \code{\link[=plan_after]{plan_after()}}: your own functions, run on the finished pages.
 }
 }
 \section{Where each argument goes}{
@@ -304,37 +110,14 @@ alignment, the key separator --- and is not \code{\link[=rtf_columns]{rtf_column
 addresses the columns of finished pages by their printed names.
 }
 
-\section{plan_after() is the way out, not the way in}{
+\section{Two kinds of names}{
 
-
-\code{plan_after()} runs functions of your own on the finished pages.  It
-is for what the plan cannot \strong{declare} --- a step with no verb --- and
-it is the only verb whose content the plan cannot read: a workbook
-(\code{tflspec::tfl_as_table_spec()}) cannot carry it, and the columns it names are
-positions on the pages, which a reordered table does not keep.  The usual
-reasons to reach for it each have a declaration, which names columns and
-goes into a workbook:
-\itemize{
-\item \code{set_decimal_split(x, cols = 3:31)} is declared as \code{plan_columns(decimal = ".values")}
-\item \code{paginate_cols(x, ...)} is declared as \code{plan_paginate_cols(every = , at = , keep = )}
-\item \code{rtftable(col_rel_width = )} by position is declared as \code{plan_columns(widths = c(Analyte = 3, .values = 2))}
-\item \code{set_col_header()} / \code{rtf_col_header()} is declared as \code{plan_col_header()}
-\item \code{as_rtftables(align_count_pct = TRUE)} is declared as \code{plan_style(align_count_pct = TRUE)}
-\item \code{fmt_numeric()} is declared as \verb{plan_digits(<column> = 2)}, \code{plan_digits(.rows = c(Mean = 1))}
-\item \code{paginate()} is declared as \code{plan_paginate_rows()}
-\item \code{style_header(x, ...)} is declared as \code{plan_cell_style(header = TRUE, ...)}
-\item \code{style_cols(x, ...)} is declared as \code{plan_cell_style(cols = , ...)}
-\item bold / colour / alignment of body cells, by condition is declared as \code{plan_cell_style(where = ~ ..., ...)}
-\item \code{style_zone(x, ...)} is declared as \code{plan_style(border_header = , border_body = , ...)}
-}
-
-Two kinds of names: \code{plan_levels()}, \code{plan_labels()}, \code{plan_filter()},
-\code{plan_nest()}, \code{plan_stat_groups()} and \code{plan_compare()} read the
-normalized ARD's columns (\code{variable}, the keys as the ARD names them);
-\code{plan_hide()}, \code{plan_paginate_group(col = )}, \code{plan_row_group()},
-\code{plan_cell_style()}, \code{plan_columns()} and \code{plan_col_header()} read the
-finished table's columns (the names \code{table_plan(rows = )} gave,
-\code{row_label}, the arms).
+\code{plan_levels()}, \code{plan_labels()}, \code{plan_filter()}, \code{plan_nest()},
+\code{plan_stat_groups()} and \code{plan_compare()} read the normalized ARD's
+columns (\code{variable}, the keys as the ARD names them); \code{plan_hide()},
+\code{plan_paginate_group(col = )}, \code{plan_row_group()}, \code{plan_cell_style()},
+\code{plan_columns()} and \code{plan_col_header()} read the finished table's
+columns (the names \code{table_plan(rows = )} gave, \code{row_label}, the arms).
 
 The styles \code{plan_cell_style()} declares run on the pages in the order
 written (after the header and the decimal alignment, before any
@@ -343,88 +126,28 @@ stands for every value column, so a reordered table keeps them.
 }
 
 \examples{
-if (requireNamespace("cards", quietly = TRUE)) {
-  # One ARD, normalized once.  Most verbs have pages of their own;
-  # this shows the pipe as a whole, the blocks below adding to `p`.
-  adsl <- cards::ADSL
-  adsl$ARM <- factor(adsl$ARM)
-  ard <- cards::ard_stack(
-    adsl, .by = ARM,
-    cards::ard_summary(variables = AGE),
-    cards::ard_tabulate(variables = c(SEX, AGEGR1)),
-    .overall = TRUE)
-  p <- table_plan(normalize_ard(ard), cols = "ARM",
-                  rows = c(group = "variable")) |>
-    plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})",
-                               "Median"    = "{median}"),
-               categorical = "{n} ({p:\%})", notes = FALSE) |>
-    plan_digits(1) |>
-    plan_labels(c(AGE = "Age (years)", SEX = "Sex", AGEGR1 = "Age group")) |>
-    plan_stub(name = "Characteristic", before = TRUE)
+# Invented summary statistics of two arms, one row a statistic
+st <- data.frame(
+  ARM       = rep(c("Placebo", "Active"), each = 4),
+  variable  = rep(c("AGE", "AGE", "SEX", "SEX"), 2),
+  .label    = rep(c(NA, NA, "F", "M"), 2),
+  .kind     = rep(c("continuous", "continuous", "categorical",
+                    "categorical"), 2),
+  stat_name = rep(c("mean", "sd", "n", "n"), 2),
+  stat      = c(61.2, 9.81, 12, 8, 63.5, 10.2, 9, 11))
 
-  # -- The layout: groups, blank rows, columns, the look -----------------
-  p <- p |>
-    plan_row_group(mode = "indent") |>
-    plan_blanks(where = "between_groups", last = TRUE) |>
-    plan_columns(widths = c(Characteristic = 3, .values = 2)) |>
-    plan_style(border = "tfl", align_count_pct = TRUE) |>
-    plan_cell_style(cols = "Characteristic", italic = ~ grepl("^ ", Characteristic))
-
-  # -- Pages: row budget, titles and footnotes, a step of your own -------
-  p <- p |>
-    plan_paginate_rows(max_rows = 20) |>
-    plan_titles(c("Table 14.1.1", "Demographics")) |>
-    plan_footnotes("Percentages are of the subjects in each arm.") |>
-    plan_after(function(pages) pages)                   # your own step
-  length(plan_apply(p))                                 # the pages
-  plan_layers(p)                                        # every layer
-
-  # -- A page per value and a column split -------------------------------
-  ard_bm <- cards::ard_summary(adsl, by = c(SEX, ARM), variables = c(AGE, BMIBL))
-  q <- table_plan(normalize_ard(ard_bm), cols = "ARM",
-                  rows = c(SEX = "SEX", group = "variable")) |>
-    plan_cells(continuous = c("n" = "{N}", "Mean (SD)" = "{mean} ({sd})"),
-               notes = FALSE) |>
-    plan_digits(1) |>
-    plan_stub(name = "Parameter") |>
-    plan_paginate_group(col = "SEX") |>                 # a page per sex
-    plan_paginate_cols(every = 2, keep = "Parameter")   # two arms a page
-  length(plan_apply(q))
-
-  # -- Rows under one level of another variable --------------------------
-  ard_r <- cards::ard_tabulate(adsl, by = ARM, variables = c(RACE, ETHNIC))
-  table_plan(normalize_ard(ard_r), cols = "ARM",
-             rows = c(group = "variable")) |>
-    plan_cells(categorical = "{n}", notes = FALSE) |>
-    plan_nest(ETHNIC = c(RACE = "WHITE")) |>
-    plan_apply("table")
-}
-
-# The display verbs also lay out a finished data frame -- no ARD needed.
-tbl <- data.frame(
-  Parameter = c("Subjects", "Age, mean (SD)", "Female, n (\%)"),
-  Placebo   = c("86", "75.2 (8.59)", "53 (61.6)"),
-  Active    = c("84", "75.7 (8.29)", "50 (59.5)"))
-pages <- table_plan(tbl) |>
-  plan_columns(widths = c(Parameter = 3, .values = 2)) |>
-  plan_hide("Active") |>
-  plan_style(border = "tfl") |>
-  plan_titles("Table 1  Summary") |>
+# The roles once, then one verb a declaration; plan_apply() runs it
+pages <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+  plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+             categorical = "{n}") |>
+  plan_labels(AGE = "Age (years)", SEX = "Sex") |>
+  plan_stub(name = "Characteristic") |>
+  plan_col_header(rtf_col_header(c("Characteristic", "{col}"))) |>
+  plan_titles("Table 14.1.1", "Demographics") |>
   plan_apply()
 pages[[1]]
 
-# A listing of records.
-recs <- data.frame(USUBJID = c("01-001", "01-001", "01-002"),
-                   AETERM  = c("Headache", "Nausea", "Fatigue"),
-                   AESEV   = c("MILD", "MODERATE", "MILD"))
-listing <- table_plan(recs) |>
-  plan_listing(listing_col("USUBJID", label = "Subject"),
-               listing_col("AETERM", label = "Adverse event"),
-               listing_col("AESEV", label = "Severity")) |>
-  plan_apply()
-length(listing)
-
 }
 \seealso{
-\code{\link[=table_plan]{table_plan()}}, \code{\link[=plan_apply]{plan_apply()}}
+\code{\link[=table_plan]{table_plan()}}, \code{\link[=plan_apply]{plan_apply()}}, \code{\link[=plan_layers]{plan_layers()}}
 }
