@@ -303,8 +303,10 @@ listing_split_after <- function(text, sep) {
 #'   `NULL` (default) takes the listing's own (`"stack"` under `"multiline"`).
 #'   With no `width` there is nothing to lay out and both behave alike.
 #' @param collapse_repeats Logical (default `FALSE`).  Mark this as a **key**
-#'   column: its value is carried down every physical row of a record, and
-#'   [as_rtftables()] then blanks the repeats.  Carrying and delegating rather
+#'   column: its value is carried down every physical row of a record (its
+#'   blank row too), and [as_rtftables()] then blanks the repeats -- so the
+#'   value prints once per run of records that share it, blank rows between
+#'   them or not.  Carrying and delegating rather
 #'   than blanking here is what makes the value **reappear at the top of the
 #'   next page** -- the suppression happens per page, after the split, so a
 #'   record continued across a page break still shows its subject.  A cell
@@ -978,14 +980,17 @@ build_listing <- function(data, spec) {
     # has a constant run to suppress -- and, because it suppresses per page,
     # after the split, the value reappears at the top of the next page.  Only
     # a single-line value is carried: a cell that already wraps has no one
-    # value to repeat, and printing it in full is never wrong.
+    # value to repeat, and printing it in full is never wrong.  It is carried
+    # into the record's blank row too (#742): a blank row left "" would break
+    # the run between two records of the same value, and none would be
+    # blanked.  A page never parts a record from its blank row, so the
+    # carried value there is always blanked as a repeat.
     down <- isTRUE(spec$cols[[j]]$collapse_repeats)
     for (i in seq_len(n)) {
       L <- lines[[j]][[i]]
       if (!length(L)) next
-      body_rows <- if (isTRUE(spec$blank_row)) nl[i] - 1L else nl[i]
-      if (down && length(L) == 1L && body_rows > 1L) {
-        v[seq.int(start[i], length.out = body_rows)] <- L
+      if (down && length(L) == 1L && nl[i] > 1L) {
+        v[seq.int(start[i], length.out = nl[i])] <- L
       } else {
         v[seq.int(start[i], length.out = length(L))] <- L
       }
