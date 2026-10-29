@@ -43,7 +43,7 @@ deliberately empty header.}
 
 \item{rel_width}{Relative width of this column in the rendered table.
 \code{NULL} (default) uses \code{width} when there is one, otherwise the longest
-line of \code{label}.}
+line of \code{label}; with neither, 10.}
 
 \item{align}{\code{"left"}, \code{"center"} or \code{"right"}.  \code{NULL} (default) takes the
 listing's own (\code{"left"} under the \code{"multiline"} type).}

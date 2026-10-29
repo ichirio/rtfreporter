@@ -114,10 +114,11 @@
 #' is expected to have.
 #'
 #' @param x,text Text to measure, cut or split.  `listing_disp_width()` is
-#'   vectorised; the other two take one string.
-#' @param width Maximum display width.
-#' @param sep The separator to break after.  `""` or `NULL` returns `text`
-#'   unsplit.
+#'   vectorised; the other two take one string (not `NA`), and stop
+#'   otherwise.
+#' @param width Maximum display width: one number of 0 or more.
+#' @param sep The separator to break after: one string.  `""` or `NULL`
+#'   returns `text` unsplit.
 #' @return `listing_disp_width()` an integer vector; `listing_take()` a single
 #'   string; `listing_split_after()` a character vector of pieces.
 #' @seealso [listing_wrap()], the rule these build; [listing_wrap_code()] to
@@ -143,6 +144,13 @@ listing_disp_width <- function(x) {
 #' @rdname listing_measures
 #' @export
 listing_take <- function(x, width) {
+  if (!is.character(x) || length(x) != 1L || is.na(x)) {
+    stop("`listing_take()`: `x` must be one string.", call. = FALSE)
+  }
+  if (!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0) {
+    stop("`listing_take()`: `width` must be one number of 0 or more (a display width).",
+         call. = FALSE)
+  }
   n <- nchar(x, type = "chars")
   if (n == 0L) return("")
   best <- 1L
@@ -155,6 +163,12 @@ listing_take <- function(x, width) {
 #' @rdname listing_measures
 #' @export
 listing_split_after <- function(text, sep) {
+  if (!is.character(text) || length(text) != 1L || is.na(text)) {
+    stop("`listing_split_after()`: `text` must be one string.", call. = FALSE)
+  }
+  if (!is.null(sep) && (!is.character(sep) || length(sep) != 1L || is.na(sep))) {
+    stop("`listing_split_after()`: `sep` must be one string, or NULL.", call. = FALSE)
+  }
   if (is.null(sep) || !nzchar(sep)) return(text)
   # \Q...\E quotes the separator, so a "." or a "|" separator is a literal and
   # the lookbehind stays fixed-width.  (Written this way rather than with an
@@ -316,7 +330,7 @@ listing_split_after <- function(text, sep) {
 #'   `vars`; [listing_spec()] makes the set unique if two columns collide.
 #' @param rel_width Relative width of this column in the rendered table.
 #'   `NULL` (default) uses `width` when there is one, otherwise the longest
-#'   line of `label`.
+#'   line of `label`; with neither, 10.
 #' @param align `"left"`, `"center"` or `"right"`.  `NULL` (default) takes the
 #'   listing's own (`"left"` under the `"multiline"` type).
 #'
@@ -607,7 +621,8 @@ listing_spec <- function(cols,
       stop("`wrap` must be a function(text, width, sep, layout) returning ",
            "the lines, or NULL for the type's own rule.", call. = FALSE)
     }
-    if (length(formals(wrap)) < 4L) {
+    fm <- names(formals(wrap))
+    if (length(fm) < 4L && !"..." %in% fm) {
       stop("`wrap` must accept four arguments: text, width, sep, layout.",
            call. = FALSE)
     }
@@ -1120,7 +1135,7 @@ listing_wrap <- function(text, width, sep = "/",
     stop("`sep` must be a single string, or NULL.", call. = FALSE)
   }
   if (!is.null(width) && (!is.numeric(width) || length(width) != 1L ||
-                          (!is.na(width) && width < 1))) {
+                          is.na(width) || width < 1)) {
     stop("`width` must be a single positive number, or NULL.", call. = FALSE)
   }
   if (length(text) == 1L) {
