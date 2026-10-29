@@ -161,3 +161,30 @@ test_that("plan_sort() on a listing plan sorts the records whole (#745)", {
   if (!inherits(r, "rtftable")) r <- r[[1L]]
   expect_identical(r$data$USUBJID, c("S1", "", "S2", "", "S3", ""))
 })
+
+test_that("-n@group1 keeps each group's rows together when two groups tie (#760)", {
+  ae <- expand.grid(ARM = c("Placebo", "Drug A 20 mg"), AEBODSYS = c("Cardiac", "Nervous", "Skin"),
+                    AEDECOD = c("t1", "t2"), stringsAsFactors = FALSE)
+  ae$AEDECOD <- paste(substr(ae$AEBODSYS, 1, 1), ae$AEDECOD)
+  ae$n <- c(3, 4, 1, 1, 2, 2, 2, 1, 0, 4, 1, 3)
+  ae$n[ae$ARM == "Drug A 20 mg"] <- c(3, 1, 2, 2, 4, 1)   # Cardiac 5, Nervous 5, Skin 3
+  soc <- aggregate(n ~ ARM + AEBODSYS, ae, sum)
+  soc$AEDECOD <- NA
+  x <- rbind(ae, soc[names(ae)])
+  x$variable <- ifelse(is.na(x$AEDECOD), "AEBODSYS", "AEDECOD")
+  x$.label <- ifelse(is.na(x$AEDECOD), x$AEBODSYS, x$AEDECOD)
+  x$.kind <- "categorical"
+  x$stat_name <- "n"
+  x$stat <- x$n
+  x$n <- NULL
+  x$.depth <- ifelse(x$variable == "AEBODSYS", 1, 2)
+  p <- table_plan(x, cols = "ARM", rows = c(group1 = "AEBODSYS")) |> plan_cells(categorical = "{n}")
+  a <- p |> plan_sort(".overall", "-n@group1[Drug A 20 mg]", ".depth", "-n[Drug A 20 mg]", "label") |>
+    plan_apply("table")
+  expect_identical(a$label, c("Cardiac", "C t1", "C t2", "Nervous", "N t2", "N t1",
+                              "Skin", "S t1", "S t2"))
+  # the same as with the group written after it
+  b <- p |> plan_sort(".overall", "-n@group1[Drug A 20 mg]", "group1", ".depth",
+                      "-n[Drug A 20 mg]", "label") |> plan_apply("table")
+  expect_identical(a$label, b$label)
+})

@@ -2141,7 +2141,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'     \item{`"<stat>@<key>"`}{the statistic of the **group's own** row ---
 #'       the row key's summary, its shallowest row --- carried to every row
 #'       of the group: `"-n@soc"` orders the SOCs by their own count and
-#'       keeps each SOC's PTs with it.  Both at once: `"-n@soc[Total]"`.
+#'       keeps each SOC's PTs with it, two SOCs of the same count too (the
+#'       group itself breaks the tie).  Both at once: `"-n@soc[Total]"`.
 #'       An overall row keeps its own number.}
 #'     \item{`"max(<stat>)"`, `"min(<stat>)"`}{the statistic's **largest**
 #'       (smallest) value across the spread columns instead of their total:
@@ -2851,6 +2852,12 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       v[is.na(out[[sc$key]])] <- -Inf
     }
     keys[[length(keys) + 1L]] <- v
+    # a group's carried statistic (`-n@group1`) keeps the group's rows
+    # together when two groups tie on it: the group itself next, as if
+    # written after it (#760)
+    if (!is.null(sc) && !is.null(sc$key) && sc$key %in% names(out)) {
+      keys[[length(keys) + 1L]] <- xtfrm(as.character(out[[sc$key]]))
+    }
   }
   do.call(order, keys)
 }
