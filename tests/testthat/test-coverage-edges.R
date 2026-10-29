@@ -676,8 +676,11 @@ test_that("style_body(rows = ) selects across the tables of a multi-table rtftab
 
 test_that("style_header() promotes, patches and warns where it must", {
   t1 <- edge_tbl()
+  # no header of its own: the columns' names (what prints) are made its
+  # header, then styled (#749)
   no_head <- rtftable(data.frame(a = 1))
-  expect_error(style_header(no_head, bold = TRUE), "this rtftable has no column header")
+  styled <- style_header(no_head, bold = TRUE)
+  expect_identical(styled$col_header, list("a"))
   expect_error(style_header(t1, row = 5, bold = TRUE),
                "`style_header\\(row = \\)` must be in 1..1")
   expect_error(style_header(t1, bold = "yes"), "bold")

@@ -247,9 +247,10 @@ test_that("every idiom the manual teaches runs", {
   dfh <- data.frame(row_label = c("A", "B"), g1 = 1:2, g2 = 3:4, Total = 5:6)
   hpages <- as_rtftables(dfh, border = "tfl")
   expect_identical(rtf_columns(hpages), c("row_label", "g1", "g2", "Total"))
-  ## a bare data.frame page has no header object -- the manual's gotcha
-  expect_error(style_header(hpages, row = 1, cols = 2, bold = TRUE),
-               "no column header")
+  ## a bare data.frame page has no header object: style_header() makes the
+  ## names that print its header, and styles it (#749)
+  styled <- style_header(hpages, row = 1, cols = 2, bold = TRUE)
+  expect_identical(styled[[1L]]$col_header, list(c("row_label", "g1", "g2", "Total")))
   hpages <- hpages |> set_col_header(
     list(col_cell("row_label", ""), col_cell(c("g1", "g2"), "Treatment")),
     c(row_label = "Category", g1 = "Low", g2 = "High", Total = "Total"))
