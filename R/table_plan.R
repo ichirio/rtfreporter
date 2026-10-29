@@ -1113,7 +1113,9 @@ print.table_plan <- function(x, ...) {
 #'   whose VALUES are the row text.  `vars` is derived when left out.  With
 #'   one column (a table of one row heading, a study's `plan_stub(name =
 #'   "row_label")` on it), that column is the stub, renamed `name`, and
-#'   nothing is folded.
+#'   nothing is folded.  For `plan_layer()`, `name` is the layer's name,
+#'   for its messages and for [plan_layers()]: `"layer2"`, `"layer3"`, ...
+#'   by default (the first plan is `"layer1"`).
 #' @param before For `plan_stub()`: `FALSE` (default) folds the stub inside
 #'   [as_rtftables()], after grouping and pagination have had their say.
 #'   `TRUE` folds it first, with [stub_cols()], which is what

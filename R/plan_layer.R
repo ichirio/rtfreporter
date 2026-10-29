@@ -39,9 +39,6 @@
 #'   `.plan`.  Several `plan_layer()` calls stack their layers in the order
 #'   written.  The layer's plan says how its own rows are made and nothing
 #'   about the whole table (see *Layers* below).
-#' @param name The layer's name, for its messages and for
-#'   [plan_layers()]; `"layer2"`, `"layer3"`, ... by default (the first plan
-#'   is `"layer1"`).
 #' @param absent What a page group (a value of `plan_paginate_rows(page_by
 #'   = )`) the layer has no rows for does: `"error"` (default: a report is
 #'   not defined by a group that is missing), or `"skip"` (that page has no

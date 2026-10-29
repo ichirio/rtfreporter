@@ -211,10 +211,6 @@ for it (an argument before \code{...} matches by its first letters).}
 written.  The layer's plan says how its own rows are made and nothing
 about the whole table (see \emph{Layers} below).}
 
-\item{name}{The layer's name, for its messages and for
-\code{\link[=plan_layers]{plan_layers()}}; \code{"layer2"}, \code{"layer3"}, ... by default (the first plan
-is \code{"layer1"}).}
-
 \item{absent}{What a page group (a value of \code{plan_paginate_rows(page_by = )}) the layer has no rows for does: \code{"error"} (default: a report is
 not defined by a group that is missing), or \code{"skip"} (that page has no
 rows of this layer).}
@@ -411,7 +407,9 @@ fold into one stub column and how, as \code{\link[=stub_cols]{stub_cols()}} take
 which is a different thing from \code{table_plan(label = )} --- the column
 whose VALUES are the row text.  \code{vars} is derived when left out.  With
 one column (a table of one row heading, a study's \code{plan_stub(name = "row_label")} on it), that column is the stub, renamed \code{name}, and
-nothing is folded.}
+nothing is folded.  For \code{plan_layer()}, \code{name} is the layer's name,
+for its messages and for \code{\link[=plan_layers]{plan_layers()}}: \code{"layer2"}, \code{"layer3"}, ...
+by default (the first plan is \code{"layer1"}).}
 
 \item{before}{For \code{plan_stub()}: \code{FALSE} (default) folds the stub inside
 \code{\link[=as_rtftables]{as_rtftables()}}, after grouping and pagination have had their say.
