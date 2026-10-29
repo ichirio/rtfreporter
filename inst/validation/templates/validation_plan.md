@@ -61,22 +61,26 @@ rtfreporter is open-source software with its own quality records. Example
 Pharma relies on them for what the package does in general, and tests itself
 only what its own use needs, as deeply as the risk calls for.
 
-**What the package already provides** (supplier evidence, attached to each
-GitHub release of rtfreporter; also in this kit):
+**What the package already provides** (supplier evidence, on each GitHub
+release of rtfreporter; the Quality Plan and the Functional Requirements are
+also in this kit):
 
 | Package document | What it shows |
 |---|---|
 | Quality Plan (`quality-plan.md`) | How the package's quality is assured: scope, the risk-based requirements, the acceptance criteria, the environments. |
-| Functional Requirements (`requirements.csv`) | What each exported function does, its arguments, the data it handles and the misuse it stops: one id (`FR-...`) each. |
-| Functional Tests and the Traceability Matrix (`traceability.xlsx`, release asset) | The tests of each FR (FR -> FT). |
-| Quality Report (release asset) | The results on every CI environment (Linux, macOS, Windows; several R versions), the deviations (an FR with no test, and why it is accepted) and the conclusion; with every environment's sessionInfo and test log (`environments.txt`). |
+| Functional Requirements (`requirements.csv`) | What each function in the package's scope does, its arguments, the data it handles and the misuse it stops: one id (`FR-...`) each. The Quality Report lists the functions in scope. |
+| Functional Tests and the Traceability Matrix (FR -> FT) (`traceability-<tag>.xlsx`, release asset) | The tests of each FR. |
+| Quality Report (`quality-report-<tag>.pdf`, release asset) | The results on every environment of the package's Quality Plan (six in CI: Linux, macOS, Windows, several R versions; two on the maintainers' PC), the deviations (an FR with no test, and why it is accepted), the conclusion (*validation-ready* on a published release) and how to read each attachment; with every environment's sessionInfo and test log (`environments-<tag>.txt`). |
 
 **What Example Pharma checks itself**
 
 1. **Installation**: the package and its dependencies install into the
    validated library; `packageVersion("rtfreporter")` is the version in
-   scope; the package's own tests pass there (`testthat::test_package("rtfreporter")`
-   or `R CMD check` of the source package) -- record the log.
+   scope; the package's own tests pass there -- install it with its tests
+   (`install.packages("rtfreporter", INSTALL_opts = "--install-tests")`)
+   and run `testthat::test_package("rtfreporter")`, or run `R CMD check` on
+   the source package. Record the log; a test whose suggested package is not
+   installed is skipped, and the log says so.
 2. **User requirements** (`urs.csv`): what our TFLs need, each linked to the
    FRs it relies on.
 3. **UAT** (`uat_cases.csv`): our own cases on dummy data, run in our
@@ -95,7 +99,7 @@ rtfreporter `<x.y.z>` is accepted for the intended use when all of these hold:
 
 1. The installation check passed and its log is filed.
 2. The package's Quality Report for `<x.y.z>` concludes *validation-ready*,
-   and none of its deviations touches a FR linked to a `High` UR without an
+   and none of its deviations touches an FR linked to a `High` UR without an
    assessment by the system owner.
 3. Every UR has at least one UAT case, and every case has a result.
 4. Every UAT case passed, or its failure is a deviation assessed and
@@ -126,7 +130,7 @@ A high-risk deviation with no workaround blocks acceptance.
 | UAT cases and their results | `uat_cases.csv` / `uat_cases.xlsx` |
 | Traceability Matrix (URS -> FR -> UAT) | `user_traceability.xlsx` (from `build_user_matrix.R`) |
 | Validation Summary Report | `validation_summary_report.md` |
-| Supplier evidence | the package's Quality Plan, requirements, and the release's Quality Report and attachments |
+| Supplier evidence | the package's Quality Plan and Functional Requirements, and the release's Quality Report and its attachments |
 
 ## 8. A new version of rtfreporter
 
@@ -140,8 +144,8 @@ use changes; write a short Summary Report for the new version.
 - rtfreporter Quality Plan: `quality-plan.md` (in this kit, and
   `system.file("validation", "quality-plan.md", package = "rtfreporter")`).
 - rtfreporter Functional Requirements: `requirements.csv`.
-- rtfreporter releases (Quality Report, traceability, environments):
-  <https://github.com/ichirio/rtfreporter/releases>
+- rtfreporter releases (the Quality Report, the Traceability Matrix, the
+  environments): <https://github.com/ichirio/rtfreporter/releases>
 - The article "Validating rtfreporter in your environment":
   <https://ichirio.github.io/rtfreporter/articles/validation.html>
 - `<Your company's SOP on computerized system validation>`

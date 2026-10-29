@@ -1,5 +1,6 @@
 ---
-title: "rtfreporter: Quality Report"
+title: "`r sub('^# ', '', readLines(file.path(params$out, 'quality-report.md'), n = 1L, encoding = 'UTF-8'))`"
+subtitle: "`r d <- grep('^[*][*]DRAFT', readLines(file.path(params$out, 'quality-report.md'), encoding = 'UTF-8'), value = TRUE); if (length(d)) gsub('[*]', '', d[1L]) else ''`"
 params:
   out: "out"
 output: pdf_document
@@ -33,7 +34,8 @@ if (all(nzchar(gh))) {
 if (is.null(cov)) {
   cat("Not measured in this run.")
 } else {
-  cat(sprintf("Total: %.1f%% of the package's lines run under the tests.\n\n", cov$total))
+  cat(sprintf("Total: %.1f%% of the package's lines run under the tests (floored to one decimal).\n\n",
+              cov$total))
   print(knitr::kable(cov$files[order(cov$files$file), ],
                      col.names = c("File", "Lines", "Covered", "%"), row.names = FALSE))
 }
@@ -44,4 +46,4 @@ if (is.null(cov)) {
 In `environments.txt` (attached to the release with this report), one part an
 environment of the table above: its full `sessionInfo()` -- R, the OS and every
 package's version -- and testthat's own log, ending in
-`[ FAIL | WARN | SKIP | PASS ]`.
+`[ FAIL n | WARN n | SKIP n | PASS n ]`.

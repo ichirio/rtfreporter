@@ -11,7 +11,8 @@
 #                  (validation/env-local/*/), one row each; the text holds
 #                  each one's sessionInfo and tests' log
 #    coverage.rds  line coverage by file (covr): an aid, not evidence
-#    the FR -> FT matrix and quality-report.md (validation/trace.R)
+#    the Traceability Matrix (FR -> FT), the tests' log and
+#                  quality-report.md (validation/trace.R)
 #  then renders validation/report.Rmd into validation/out/quality-report.pdf
 #  (RTFREPORTER_VAL_FORMAT=html for an HTML one).  covr and rmarkdown are the
 #  CI's, not the package's dependencies.
@@ -48,8 +49,10 @@ if (!identical(Sys.getenv("RTFREPORTER_VAL_COVERAGE"), "false")) {
                             function(v) c(lines = length(v), covered = sum(v > 0)))
   files <- data.frame(file = files$filename, lines = files$value[, "lines"],
                       covered = files$value[, "covered"], stringsAsFactors = FALSE)
-  files$percent <- round(100 * files$covered / files$lines, 1)
-  saveRDS(list(total = covr::percent_coverage(cov), files = files), file.path(out, "coverage.rds"))
+  # one decimal, floored, as the report's other percentages
+  files$percent <- ((1000 * files$covered) %/% files$lines) / 10
+  saveRDS(list(total = floor(10 * covr::percent_coverage(cov)) / 10, files = files),
+          file.path(out, "coverage.rds"))
 }
 
 # ---- the FR -> FT matrix and the summary (it cites the environments) -------------------
