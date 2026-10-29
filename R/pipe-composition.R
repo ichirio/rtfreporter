@@ -466,9 +466,8 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   `{<column name>}` with its page's value (see *Page values*).
 #' @param footnotes `NULL` (default) or a list of length `length(tables)` or
 #'   length 1 (common to all). Same block structure as `titles`, and the same
-#'   page-number tokens; footnote rows default to left-aligned, and the first
-#'   row carries a top rule (the separator) unless that row sets its own
-#'   `border`.
+#'   page-number tokens; footnote rows default to left-aligned and draw no
+#'   rule unless a row sets its own `border`.
 #' @param auto_section Logical. When `TRUE` and `tables` is a **named** list,
 #'   each name is used as a per-section heading appended to the common header
 #'   defined by `rtf_section(secinfo = ...)` (called without a `page` argument).
@@ -1117,8 +1116,8 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #' Same shape as [rtf_titles()]: a list with one block per content (table or
 #' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
 #' or `list(text=, align=, bold=, italic=, underline=, color=, border=)`).
-#' Footnote rows default to left-aligned, and the first row carries a top rule
-#' (the separator) unless that row sets its own `border`. `NULL` per element
+#' Footnote rows default to left-aligned and draw no rule unless `border`
+#' (or a row's own `border`) asks for one. `NULL` per element
 #' suppresses the footnote for that content.
 #'
 #' @param doc An rtf_document object.

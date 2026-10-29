@@ -47,8 +47,8 @@ Modified rtf_document.
 Same shape as \code{\link[=rtf_titles]{rtf_titles()}}: a list with one block per content (table or
 figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
 or \code{list(text=, align=, bold=, italic=, underline=, color=, border=)}).
-Footnote rows default to left-aligned, and the first row carries a top rule
-(the separator) unless that row sets its own \code{border}. \code{NULL} per element
+Footnote rows default to left-aligned and draw no rule unless \code{border}
+(or a row's own \code{border}) asks for one. \code{NULL} per element
 suppresses the footnote for that content.
 }
 \examples{
