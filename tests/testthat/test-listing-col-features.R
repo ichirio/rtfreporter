@@ -632,3 +632,20 @@ test_that("the emitted rule shares them rather than carrying a copy", {
   expect_true(any(grepl("listing_disp_width(", src, fixed = TRUE)))
   expect_true(any(grepl("listing_split_after(", src, fixed = TRUE)))
 })
+
+test_that("the measures and listing_wrap() refuse what is not one string or one width (#764)", {
+  expect_error(listing_take(c("a", "b"), 3), "`x` must be one string")
+  expect_error(listing_take(NA_character_, 3), "`x` must be one string")
+  expect_error(listing_take("abc", NA), "`width` must be one number")
+  expect_error(listing_take("abc", c(1, 2)), "`width` must be one number")
+  expect_identical(listing_take("abc", 0), "a")   # never "" for non-empty text
+  expect_error(listing_split_after(c("a/b", "c"), "/"), "`text` must be one string")
+  expect_error(listing_split_after(NA_character_, "/"), "`text` must be one string")
+  expect_error(listing_split_after("a/b", c("/", "-")), "`sep` must be one string")
+  expect_identical(listing_split_after("a/b", NULL), "a/b")
+  expect_error(listing_wrap("a b", NA), "`width` must be a single positive number")
+  expect_error(listing_wrap("a b", NA_real_), "`width` must be a single positive number")
+  # a wrap rule may take the four arguments through ...
+  expect_s3_class(listing_spec("A", wrap = function(text, width, ...) text), "rtf_listing_spec")
+  expect_error(listing_spec("A", wrap = function(text, width) text), "four arguments")
+})
