@@ -30,8 +30,9 @@ folded into the matching key column.}
 
 \item{overall}{Label to give the \code{..ard_hierarchical_overall..} rows
 produced by \code{cards::ard_stack_hierarchical(over_variables = TRUE)}, e.g.
-\code{"Any TEAE"}.  They are placed on the first \code{hierarchy} column.  \code{NULL}
-(default) leaves them alone.}
+\code{"Any TEAE"}.  They are placed on the first \code{hierarchy} column, so
+\code{hierarchy} is needed with it.  \code{NULL} (default) drops them, recorded in
+the \code{"ard_ignored"} attribute.}
 
 \item{drop_contexts}{\code{context} values to discard.  The default drops the
 \code{attributes} rows (whose \code{stat} is a vector and cannot be flattened) and
