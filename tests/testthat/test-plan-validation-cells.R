@@ -276,7 +276,9 @@ test_that("FT-PL137 [FR-PL213]: plan_layers()$compare parses the comparison colu
 test_that("FT-PL138 [FR-PL212 FR-PL215]: plan_layers() on a finished table, and not a plan", {
   lay <- plan_layers(table_plan(vc_wide()) |> plan_columns())
   expect_identical(lay$columns$names, c("term", "val", "other"))
-  expect_identical(lay$columns$spread, c("term", "val", "other"))   # no row key, no label column
+  # no row key, no label column: the first column is the row heading, the
+  # rest the values (#755)
+  expect_identical(lay$columns$spread, c("val", "other"))
   expect_null(lay$columns$widths)
   expect_null(lay$cells)
   expect_identical(lay$declared, "columns")
@@ -988,4 +990,18 @@ test_that("plan_empty() says a table its filter emptied, with no overall row in 
   expect_identical(nrow(tbl), 1L)
   expect_true(all(c("Placebo", "Active") %in% names(tbl)))
   expect_identical(tbl[[1L]], "No subjects met the criteria.")
+})
+
+test_that(".values on a finished table leaves the row-heading column out (#755)", {
+  tbl <- data.frame(Parameter = c("A", "B"), Placebo = c("1.5", "2"), Active = c("3", "4.25"))
+  pg <- table_plan(tbl) |> plan_columns(decimal = ".values", row_title = "Parameter") |> plan_apply()
+  expect_identical(as.integer(pg[[1L]]$decimal_split$cols), 2:3)
+  # no row_title: the first column is the row heading
+  pg <- table_plan(tbl) |> plan_cell_style(cols = ".values", bold = TRUE) |> plan_apply()
+  expect_identical(vapply(pg[[1L]]$col_spec, function(s) isTRUE(s$bold), logical(1L)),
+                   c(FALSE, TRUE, TRUE))
+  # two row-heading columns, by position
+  t2 <- data.frame(Grp = "G", Parameter = "A", Placebo = "1.5")
+  pg <- table_plan(t2) |> plan_columns(decimal = ".values", row_title = 1:2) |> plan_apply()
+  expect_identical(as.integer(pg[[1L]]$decimal_split$cols), 3L)
 })
