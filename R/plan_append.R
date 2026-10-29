@@ -34,11 +34,26 @@
 .plan_inherit_kinds <- c("cells", "cell_options", "digits", "round", "labels",
                          "levels", "stub", "styles")
 
-#' @rdname plan_verbs
+#' Lay another plan's rows under a table's
+#'
+#' `plan_append()` builds one table from two sources: the rows of
+#' `.plan` (the **parent**: say, a listing of each subject's
+#' concentrations) and under them the rows of `part` (the **child**: their
+#' summary statistics), on the same columns.  Each is an ordinary plan,
+#' run to its table on its own; the tables are stacked before the pages
+#' are cut, so a page holds every part's rows of its group.  The whole
+#' table's settings --- header, widths, pages, style, titles --- are the
+#' parent's, written before or after `plan_append()`.
+#'
+#' @param .plan A [table_plan()]: the parent, whose column axis and header
+#'   the table has.
 #' @param part Another [table_plan()]: its rows go **under** the rows of
 #'   `.plan`.  Several `plan_append()` calls stack their parts in the order
 #'   written.  The part's plan says how its own rows are made and nothing
 #'   about the whole table (see *Parts* below).
+#' @param name The part's name, for its messages and for [plan_layers()]:
+#'   `"part2"`, `"part3"`, ... by default (the parent is `"part1"`).  One
+#'   non-empty string, not already taken.
 #' @param absent What a page group (a value of `plan_paginate_rows(page_by
 #'   = )`) the part has no rows for does: `"error"` (default: a report is
 #'   not defined by a group that is missing), or `"skip"` (that page has no
@@ -84,6 +99,42 @@
 #' A part run on its own (`plan_apply(part, "table")`) is the same rows
 #' for every group at once, with only what it says itself: that is the
 #' whole difference from the part in the table.
+#'
+#' @return The plan, with one more layer.  [plan_apply()] of it gives the
+#'   stacked table, with a `.part` column naming each row's part.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' # Invented concentrations: three subjects, three time points; S-02's
+#' # 4 h sample is below the limit of quantitation (NA)
+#' conc <- data.frame(
+#'   USUBJID = rep(c("S-01", "S-02", "S-03"), each = 3),
+#'   ATPT    = rep(c("1 h", "2 h", "4 h"), 3),
+#'   AVAL    = c(12.1, 8.4, 3.2, 10.5, 7.9, NA, 14.0, 9.6, 4.1))
+#' listing <- table_plan(conc, cols = "ATPT", rows = c(subject = ~ "{USUBJID}"),
+#'                       value = "AVAL") |>
+#'   plan_cells("{value:.1f}", na = "BLQ")
+#'
+#' # Their summary, one row a statistic, under one heading row
+#' smry <- data.frame(
+#'   ATPT      = rep(c("1 h", "2 h", "4 h"), each = 2),
+#'   variable  = "AVAL", .label = NA, .kind = "continuous",
+#'   stat_name = c("N", "mean"),
+#'   stat      = c(3, 12.20, 3, 8.633, 2, 3.65))
+#' summary <- table_plan(smry, cols = "ATPT", rows = c(block = ~ "Summary")) |>
+#'   plan_cells(c(N = "{N:.0f}", Mean = "{mean:.2f}"))
+#'
+#' # Minimal: the summary's rows under the listing's
+#' listing |> plan_append(summary) |> plan_apply("table")
+#'
+#' # The whole table's settings are the parent's: a blank row between the
+#' # parts, and one header for both
+#' pages <- listing |>
+#'   plan_append(summary, name = "summary") |>
+#'   plan_blanks(where = "between_parts") |>
+#'   plan_col_header(rtf_col_header(c("Subject", "{col}"))) |>
+#'   plan_apply()
+#' pages[[1]]
 #' @export
 plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
   if (!inherits(.plan, "table_plan")) {
