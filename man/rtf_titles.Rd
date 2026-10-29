@@ -17,7 +17,10 @@ rtf_titles(
 \arguments{
 \item{doc}{An rtf_document object.}
 
-\item{titles}{A list of length = number of contents, or length 1 (common).}
+\item{titles}{A list of length = number of contents, or length 1 (common).
+A page's heading (\code{rtf_tables(auto_title = TRUE)}, a plan's
+\code{plan_paginate_group(heading_at = "title")}) is not replaced: it
+stays as the block's last row, under the titles given.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
 this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.

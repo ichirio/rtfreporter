@@ -165,3 +165,20 @@ test_that("a page that opens an auto section keeps the title carried on it (as_r
   expect_match(x, "Title of cohort A", fixed = TRUE)
   expect_match(x, "Footnote of cohort B", fixed = TRUE)
 })
+
+test_that("rtf_titles() keeps the page's heading under the titles it sets (#748)", {
+  doc <- rtf_document() |>
+    rtf_tables(.pages(), titles = list("Table 14.1.1"), auto_title = TRUE) |>
+    rtf_titles(list(c("Table 14.1.1", "Demographics")))
+  expect_identical(.title_texts(doc, 1L), c("Table 14.1.1", "Demographics", "Cohort A"))
+  expect_identical(.title_texts(doc, 2L), c("Table 14.1.1", "Demographics", "Cohort B"))
+  # a second rtf_titles() keeps it once
+  doc2 <- rtf_titles(doc, list("Only"))
+  expect_identical(.title_texts(doc2, 1L), c("Only", "Cohort A"))
+  # a page with no heading (auto_title = FALSE): the titles as given
+  doc3 <- rtf_document() |>
+    rtf_tables(.pages(), titles = list("T"), auto_title = FALSE) |>
+    rtf_titles(list("New"))
+  expect_identical(unname(.title_texts(doc3, 1L)), "New")
+  expect_identical(unname(.title_texts(doc3, 2L)), "New")
+})

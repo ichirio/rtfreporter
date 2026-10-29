@@ -702,7 +702,10 @@ rtf_tables <- function(doc, tables,
     for (i in seq_along(tables)) {
       nm <- .page_name_base(page_names[[i]])   # the heading, without "...n"
       if (is.na(nm) || !nzchar(nm)) next
-      titles[[i]] <- .title_add_row(titles[[i]], list(text = nm, align = title_label_align))
+      # (marked as the page's heading: rtf_titles() keeps it under the
+      # titles it sets)
+      titles[[i]] <- .title_add_row(titles[[i]],
+                                    list(text = nm, align = title_label_align, heading = TRUE))
     }
   }
 
@@ -1030,6 +1033,9 @@ rtf_figures <- function(doc, figures,
 #'
 #' @param doc An rtf_document object.
 #' @param titles A list of length = number of contents, or length 1 (common).
+#'   A page's heading (`rtf_tables(auto_title = TRUE)`, a plan's
+#'   `plan_paginate_group(heading_at = "title")`) is not replaced: it
+#'   stays as the block's last row, under the titles given.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, overriding the document default from [rtf_default_format()].
 #'   `font` names a family (e.g. `"Arial"`); one not already in the document's
@@ -1082,6 +1088,15 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
                         "page%s: give one block per page, or one block (a ",
                         "list of length 1) for every page."),
                  length(titles), n, if (n == 1L) "" else "s"), call. = FALSE)
+  }
+  # a page's heading (plan_paginate_group(heading_at = "title"), the last
+  # row of its title block) stays, under the titles given: the titles are
+  # the report's, the heading the page's
+  for (i in seq_len(n)) {
+    old <- doc$contents[[i]]$title
+    if (!is.list(old)) next
+    kept <- Filter(function(r) is.list(r) && isTRUE(r$heading), old)
+    for (r in kept) titles[[i]] <- .title_add_row(titles[[i]], r)
   }
   doc_copy <- doc
   doc_copy$contents <- .rtf_blocks_set(doc$contents, "title", titles)
