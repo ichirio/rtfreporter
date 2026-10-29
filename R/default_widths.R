@@ -29,8 +29,9 @@
 #' points more when the rows are indented), the data columns sharing the
 #' rest equally, and a data column whose longest cell does not fit widened
 #' from the others.  A program that wants these as its starting point writes
-#' them out: `col_rel_width = default_col_widths(data)` gives the same table,
-#' and is then changed by hand.
+#' them out: `col_rel_width = default_col_widths(data)` gives the same table
+#' (to a few twips of rounding at the default `digits = 1`), and is then
+#' changed by hand.
 #'
 #' @param data A data frame: the table's body, as it prints.
 #' @param row_title The row-heading columns, by position or name; `NULL`

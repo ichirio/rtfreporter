@@ -35,7 +35,8 @@
 #'   \describe{
 #'     \item{`NULL`}{(default) no positions from this argument.}
 #'     \item{an integer vector}{explicit positions: `0` = before the first row,
-#'       `k` = after row `k`.}
+#'       `k` = after row `k`.  Positions out of range, `NA` and negative ones
+#'       are dropped without a warning.}
 #'     \item{`"between_groups"`}{insert a blank at every group transition,
 #'       using `group_by` (the same detection as the pagination splits).}
 #'     \item{a [blank_rows_by_change()] or [blank_rows_by_rule()] spec}{resolved

@@ -22,7 +22,8 @@ any of (positions are unioned):
 \describe{
 \item{\code{NULL}}{(default) no positions from this argument.}
 \item{an integer vector}{explicit positions: \code{0} = before the first row,
-\code{k} = after row \code{k}.}
+\code{k} = after row \code{k}.  Positions out of range, \code{NA} and negative ones
+are dropped without a warning.}
 \item{\code{"between_groups"}}{insert a blank at every group transition,
 using \code{group_by} (the same detection as the pagination splits).}
 \item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} or \code{\link[=blank_rows_by_rule]{blank_rows_by_rule()}} spec}{resolved

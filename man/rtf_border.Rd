@@ -49,7 +49,9 @@ Specifies borders for up to four sides (top, bottom, left, right).  Each
 side is either \code{NULL} (no border) or a border side.
 }
 \details{
-To derive a new border from an existing one, pass it as \code{from}.
+To add to a border already in place, attach a second one where the first
+is: the places it attaches to merge side by side (see \emph{Building versus
+layering}).
 }
 \section{Functions}{
 \itemize{
@@ -95,8 +97,8 @@ within a call and it reads evenly:
   style name  rtf_border(top = "single", bottom = "none")
 }
 
-The two agree: \code{TRUE} is a rule in this call's \code{style} / \code{width} / \code{color},
-and \code{FALSE} is \code{"none"} -- an explicit \emph{no line}, which erases a rule the
+The two agree: \code{TRUE} is \code{rtf_border_line()} with its defaults (a single
+rule), and \code{FALSE} is \code{"none"} -- an explicit \emph{no line}, which erases a rule the
 selection would otherwise inherit. The style names are \code{"single"},
 \code{"double"}, \code{"thick"}, \code{"dash"}, \code{"dot"} and \code{"none"}.
 
@@ -130,8 +132,8 @@ A side is in one of three states, and all three matter:
 the enclosing selection supplies.}
 \item{erased (\code{FALSE} / \code{"none"})}{an explicit \emph{no line}, which overrides
 an inherited rule.}
-\item{a rule (\code{TRUE} / a style name)}{drawn in this call's \code{style},
-\code{width} and \code{color}.}
+\item{a rule (\code{TRUE} / a style name)}{an \code{\link[=rtf_border_line]{rtf_border_line()}}: its
+defaults for \code{TRUE}, that style for a name.}
 }
 
 A call to \code{rtf_border()} says everything about the border it returns: every

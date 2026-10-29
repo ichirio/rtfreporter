@@ -41,8 +41,9 @@ the table (at most 40\%; less with many data columns, down to 20\%; 5
 points more when the rows are indented), the data columns sharing the
 rest equally, and a data column whose longest cell does not fit widened
 from the others.  A program that wants these as its starting point writes
-them out: \code{col_rel_width = default_col_widths(data)} gives the same table,
-and is then changed by hand.
+them out: \code{col_rel_width = default_col_widths(data)} gives the same table
+(to a few twips of rounding at the default \code{digits = 1}), and is then
+changed by hand.
 }
 \examples{
 df <- data.frame(Characteristic = c("Age (years)", "  Mean (SD)", "  Median"),

@@ -31,9 +31,9 @@ apart.
 }
 \details{
 The \code{stub_vars} / \code{stub_label} / \code{stub_indent} / \code{stub_group_summary}
-arguments of \code{\link[=as_rtftables]{as_rtftables()}} are \strong{superseded} by this: they still work
-and are not deprecated, but they cannot reach \code{layout} or \code{label_span}, and
-new settings will only be added here.
+arguments of \code{\link[=as_rtftables]{as_rtftables()}} are \strong{deprecated} in favour of this: they
+still work but warn once a session, cannot reach \code{layout} or \code{label_span},
+and new settings will only be added here.
 }
 \examples{
 # The clinical indented stub, as as_rtftables(stub_vars = ) builds it.

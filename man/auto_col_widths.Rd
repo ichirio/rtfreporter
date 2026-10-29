@@ -45,8 +45,10 @@ for cell padding and inter-column spacing.  Default \code{288} (= 0.2 inch).}
 its natural width.  Only the remaining columns are shrunk to fit, so e.g.
 a row-label column (\code{protect_cols = 1}) stays readable while the data
 columns absorb the squeeze.  Protection is dropped if it would push the
-scalable columns below \code{min_col_width_twips}.  Has no effect when scaling
-\emph{up} or when \code{table_width_twips} is \code{NULL}.  Default none.}
+scalable columns below \code{min_col_width_twips}.  When the table is scaled
+\emph{up}, the protected columns likewise keep their natural width and only the
+others grow to the target.  No effect when \code{table_width_twips} is \code{NULL}.
+Default none.}
 
 \item{df, size_half_points}{\emph{Superseded} by \code{data} and
 \code{font_size_half_points} (the names the other functions use); documented,

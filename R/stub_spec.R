@@ -22,9 +22,9 @@
 #' apart.
 #'
 #' The `stub_vars` / `stub_label` / `stub_indent` / `stub_group_summary`
-#' arguments of [as_rtftables()] are **superseded** by this: they still work
-#' and are not deprecated, but they cannot reach `layout` or `label_span`, and
-#' new settings will only be added here.
+#' arguments of [as_rtftables()] are **deprecated** in favour of this: they
+#' still work but warn once a session, cannot reach `layout` or `label_span`,
+#' and new settings will only be added here.
 #'
 #' @param vars The hierarchy columns, **parent first, leaf last** -- at least
 #'   two.  See [stub_cols()].

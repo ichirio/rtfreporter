@@ -22,8 +22,9 @@ column names or final positions).  Alternatively a single pre-built
 \code{\link[=rtf_col_header]{rtf_col_header()}} object.  Passing nothing clears the header.
 
 A \strong{fully named} label row need not have one entry per column; an
-unnamed one must.  An unknown name, or a row that is only partly named,
-is an error either way.}
+unnamed one must.  An unknown name is an error.  In a partly named row an
+unnamed value that is a column name is placed at that column, and any
+other by its position.}
 
 \item{values}{Optional table of \strong{per-page values} for the \code{{tokens}} in
 the header, one row per page key: write the header once and let each page

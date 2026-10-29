@@ -243,7 +243,9 @@ print.rtf_border_line <- function(x, ...) {
 #' Specifies borders for up to four sides (top, bottom, left, right).  Each
 #' side is either `NULL` (no border) or a border side.
 #'
-#' To derive a new border from an existing one, pass it as `from`.
+#' To add to a border already in place, attach a second one where the first
+#' is: the places it attaches to merge side by side (see *Building versus
+#' layering*).
 #'
 #' @section What a border applies to:
 #'
@@ -274,8 +276,8 @@ print.rtf_border_line <- function(x, ...) {
 #'   style name  rtf_border(top = "single", bottom = "none")
 #' }
 #'
-#' The two agree: `TRUE` is a rule in this call's `style` / `width` / `color`,
-#' and `FALSE` is `"none"` -- an explicit *no line*, which erases a rule the
+#' The two agree: `TRUE` is `rtf_border_line()` with its defaults (a single
+#' rule), and `FALSE` is `"none"` -- an explicit *no line*, which erases a rule the
 #' selection would otherwise inherit. The style names are `"single"`,
 #' `"double"`, `"thick"`, `"dash"`, `"dot"` and `"none"`.
 #'
@@ -307,8 +309,8 @@ print.rtf_border_line <- function(x, ...) {
 #'     the enclosing selection supplies.}
 #'   \item{erased (`FALSE` / `"none"`)}{an explicit *no line*, which overrides
 #'     an inherited rule.}
-#'   \item{a rule (`TRUE` / a style name)}{drawn in this call's `style`,
-#'     `width` and `color`.}
+#'   \item{a rule (`TRUE` / a style name)}{an [rtf_border_line()]: its
+#'     defaults for `TRUE`, that style for a name.}
 #' }
 #'
 #' A call to `rtf_border()` says everything about the border it returns: every
