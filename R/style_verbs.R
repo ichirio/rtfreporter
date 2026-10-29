@@ -301,7 +301,13 @@ style_header.rtftable <- function(x, row = NULL, cols = NULL, label = NULL,
                                   italic = NULL, underline = NULL, ...) {
   .check_own_dots(list(...), style_header.rtftable, "style_header")
   if (is.null(x$col_header) || length(x$col_header) == 0L) {
-    stop("`style_header()`: this rtftable has no column header.", call. = FALSE)
+    # No header of its own: the one the writer prints, the columns' names
+    # (generate_rtfreport()'s `tbl$col_header %||% list(names(df))`), made
+    # the table's so it can be styled (#749)
+    if (is.null(x$data) || !ncol(x$data)) {
+      stop("`style_header()`: this rtftable has no column header.", call. = FALSE)
+    }
+    x$col_header <- list(names(x$data))
   }
   if (!is.null(border)) border <- .style_check_border(border, "style_header")
   if (!is.null(align))  align  <- .style_check_align(align, "style_header")

@@ -422,3 +422,15 @@ test_that("a named patch applies to every page of a list", {
     expect_identical(.sv_labels(p), c("Item", "Low", "High", "C"))
   }
 })
+
+test_that("plan_cell_style(header = TRUE) styles the header a plan prints from its columns (#749)", {
+  tbl <- data.frame(Parameter = "Subjects", Placebo = "86")
+  r <- table_plan(tbl) |> plan_cell_style(header = TRUE, bold = TRUE) |> plan_apply()
+  if (!inherits(r, "rtftable")) r <- r[[1L]]
+  expect_identical(r$col_header, list(c("Parameter", "Placebo")))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  generate_rtfreport(rtf_tables(rtf_document(), r), f, overwrite = TRUE)
+  x <- paste(readLines(f, warn = FALSE), collapse = "")
+  expect_true(grepl("\\b Parameter\\b0", x, fixed = TRUE))
+})

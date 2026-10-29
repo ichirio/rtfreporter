@@ -520,9 +520,10 @@ pages |> style_header(row = 2, cols = 2:3, bold = TRUE)
 * Per-page numbers in the header (`"Placebo\n(N={n_pbo})"`): pass a
   `values = data.frame(...)` with one row per page key plus `by =`
   (`"group"` / `"rows"` / `"name"`) to `set_col_header()`.
-* **Gotcha:** pages built from a bare `data.frame` have *no* header object
-  (the data names are used at render time), so `style_header()` errors there.
-  Give the table a header first — `col_header =` or `set_col_header()`.
+* Pages built from a bare `data.frame` have no header object of their own:
+  the data names print as the header.  `style_header()` makes that row the
+  table's header and styles it; to change its text, give a header with
+  `col_header =` or `set_col_header()`.
 
 ---
 
@@ -1148,7 +1149,6 @@ reference of a difference.
 | A grouping column shows up in the output | add it to `drop_cols` |
 | Titles land on the wrong page | `titles` / `footnotes` must be one entry **per page**, in order |
 | The total page count is wrong in a bound book | use `{AUTO_TOTAL_PAGES}`, or `{BOOK_PAGE}` + `assemble_rtf(book_page =)` |
-| `style_header(): this rtftable has no column header` | a bare `data.frame` page has no header object — set one with `col_header =` or `set_col_header()` first |
 | `the label row has N labels but the table has M printed columns` | an **unnamed** label row needs one entry per printed column; name the entries to patch a subset, check `rtf_columns()`, and set a whole-table header **before** `paginate_cols()` |
 | Header edits hit the wrong column | address by name (`c(TRT01A = "…")`, `col_cell("TRT01A", …)`, `col_key()`), not by position |
 | Decimal points are ragged | `set_decimal_split(cols =)` on the pages |
