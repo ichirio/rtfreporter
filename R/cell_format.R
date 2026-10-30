@@ -274,7 +274,7 @@ fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
 #' The value before the parenthesis may be **any text**, and cells with and
 #' without a parenthesis are both padded into one column.
 #'
-#' Three rules, applied to the whole column at once:
+#' Four rules, applied to the whole column at once:
 #'
 #' * the **value** is right-justified, so its rightmost character lines up --
 #'   whether it is a count (`"86"`), a fraction (`"3/12"`), an `"n=3"` or a

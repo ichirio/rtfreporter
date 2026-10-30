@@ -32,7 +32,7 @@ The value before the parenthesis may be \strong{any text}, and cells with and
 without a parenthesis are both padded into one column.
 }
 \details{
-Three rules, applied to the whole column at once:
+Four rules, applied to the whole column at once:
 \itemize{
 \item the \strong{value} is right-justified, so its rightmost character lines up --
 whether it is a count (\code{"86"}), a fraction (\code{"3/12"}), an \code{"n=3"} or a
