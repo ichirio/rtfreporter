@@ -30,7 +30,6 @@ W <- 13680L
 
 # ──────── blocks and carry columns ─────────────────────────────────────────
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that("`at` cuts before the named columns", {
   pages <- paginate_cols(rtftable(.df()), at = c(4, 6))
@@ -505,14 +504,6 @@ test_that("set_col_header() refuses a header wider than the page", {
   # ... and points at the fix
   expect_error(set_col_header(pg, c("Label", paste("Visit", 1:6))),
                "BEFORE the column split")
-})
-
-test_that("rtf_tables(col_header = ) refuses it too", {
-  pg  <- paginate_cols(rtftable(.wide()), at = 5, keep = 1, fit = FALSE)
-  doc <- rtf_document() |>
-    rtf_section(secinfo = list(header = NULL, footer = NULL))
-  expect_error(rtf_tables(doc, pg, col_header = c("Label", paste("Visit", 1:6))),
-               "rtf_tables(col_header)", fixed = TRUE)
 })
 
 test_that("a right-width header still applies to every page", {

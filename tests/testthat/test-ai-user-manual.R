@@ -87,6 +87,11 @@ test_that("the manual documents every deprecated export as deprecated", {
   lines <- .manual_lines()
   dep <- rtfreporter:::.deprecated_exports
   from <- grep("^\\*\\*Deprecated", lines)
+  # none since 0.9.0 (#788): then the manual has no such table either
+  if (!length(dep)) {
+    expect_length(from, 0L)
+    return(invisible())
+  }
   expect_length(from, 1L)
   block <- lines[seq(from, min(from + 40L, length(lines)))]
   for (f in dep) {

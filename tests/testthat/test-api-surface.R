@@ -90,26 +90,6 @@ test_that("the argument names removed in 0.9.0 are gone (#788)", {
   expect_length(t2$col_header, 2L)
 })
 
-test_that("rtf_tables()'s table-format arguments warn once each, and still apply (#594)", {
-  .reset_deprecation()
-  d <- data.frame(a = 1, b = 2)
-  expect_warning(doc <- rtf_tables(rtf_document(), d, col_rel_width = c(2, 1)),
-                 "rtf_tables(col_rel_width = )` is deprecated", fixed = TRUE)
-  expect_identical(doc$contents[[1]]$content$col_rel_width, c(2, 1))   # as before
-  expect_silent(rtf_tables(rtf_document(), d, col_rel_width = c(2, 1)))
-  # each its own once
-  expect_warning(rtf_tables(rtf_document(), d, border = "tfl"), "border")
-  expect_warning(rtf_tables(rtf_document(), d, font = "Arial"), "font")
-  expect_warning(rtf_tables(rtf_document(), d, read_gt = TRUE), "as_rtftables")
-  # the same settings on the table: no warning, the same page
-  expect_silent(doc2 <- rtf_tables(rtf_document(), rtftable(d, col_rel_width = c(2, 1))))
-  expect_identical(doc2$contents[[1]]$content$col_rel_width, c(2, 1))
-  # the arguments that are not table-format copies say nothing
-  expect_silent(rtf_tables(rtf_document(), d, titles = list("T"), auto_title = FALSE))
-  expect_length(rtfreporter:::.rtf_tables_fmt_args, 26L)
-  .reset_deprecation()
-})
-
 test_that("fmt_count_paren(bare = TRUE) is the built-in \"count_paren_bare\", byte for byte (#594)", {
   xs <- list(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)"),
              c("5 (33.3)", "0", "12 (100.0)", NA, ""),

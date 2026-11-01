@@ -1,13 +1,11 @@
-# rtftable() construction: defensive-contract / boundary-value / multi-DF tests,
-# plus the rtf_tables() override path validating consistently with the
-# constructor.  These exercise public input-validation behaviour, not internals.
+# rtftable() construction: defensive-contract / boundary-value / multi-DF tests.
+# These exercise public input-validation behaviour, not internals.
 
 df2 <- function() data.frame(a = c("1", "2"), b = c("x", "y"),
                              stringsAsFactors = FALSE)
 
 # ── Argument validation (equivalence partitioning + boundary values) ─────────
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that('rtftable(border = "none") is accepted and means no borders', {
   none <- rtftable(df2(), border = "none")
@@ -15,12 +13,6 @@ test_that('rtftable(border = "none") is accepted and means no borders', {
   expect_s3_class(none, "rtftable")
   expect_null(none$border)                       # no borders
   expect_identical(none$border, null$border)     # same as border = NULL
-})
-
-test_that('rtf_tables() accepts a "none" border override', {
-  tbl <- rtftable(df2(), border = "tfl")
-  out <- rtf_tables(rtf_document(), tbl, border = "none")$contents[[1L]]$content
-  expect_null(out$border)
 })
 
 test_that("rtftable() rejects a non-rtf_table_style `style`", {
@@ -90,71 +82,6 @@ test_that("multi-DF blank_rows accepts integer positions only", {
   expect_silent(rtftable(list(df2(), df2()), blank_rows = c(-1L, 0L, 1L)))
 })
 
-# ── rtf_tables() override path validates like the constructor ────────────────
-
-test_that("rtf_tables() overrides reject invalid values consistently", {
-  doc <- rtf_document()
-  tbl <- rtftable(df2())
-  expect_error(rtf_tables(doc, tbl, table_width_pct = 200),
-               "\\(0, 100\\]")
-  expect_error(rtf_tables(doc, tbl, table_align = "middle"),
-               "'left', 'center', or 'right'")
-  expect_error(rtf_tables(doc, tbl, row_height_exact = "x"),
-               "TRUE or FALSE")
-})
-
-test_that("rtf_tables() override actually replaces the field", {
-  doc <- rtf_document()
-  tbl <- rtftable(df2(), table_align = "left")
-  doc <- rtf_tables(doc, tbl, table_align = "center")
-  expect_identical(doc$contents[[1L]]$content$table_align, "center")
-})
-
-test_that("rtf_tables() applies the full range of explicit overrides", {
-  tbl <- rtftable(df2())
-  out <- rtf_tables(
-    rtf_document(), tbl,
-    col_rel_width            = c(2, 1),
-    column_widths_twips      = c(1200L, 800L),
-    row_height_twips         = 300L,
-    header_row_height_twips  = 280L,
-    blank_row_height_twips   = 120L,
-    cell_padding_left_twips  = 40L,
-    cell_padding_right_twips = 50L,
-    cell_valign              = "center",
-    border                   = NULL,
-    col_header               = c("Col A", "Col B"),
-    blank_rows               = c(1L),
-    col_spec                 = list(list(col = 1L, align = "right"))
-  )$contents[[1L]]$content
-
-  expect_equal(out$column_widths_twips, c(1200L, 800L))
-  expect_identical(out$row_height_twips, 300L)
-  expect_identical(out$header_row_height_twips, 280L)
-  expect_identical(out$blank_row_height_twips, 120L)
-  expect_identical(out$cell_padding_left_twips, 40L)
-  expect_identical(out$cell_padding_right_twips, 50L)
-  expect_identical(out$cell_valign, "center")
-  expect_equal(out$blank_rows, 1L)
-  # col_spec override: align applied and header_align re-inherits it.
-  expect_identical(out$col_spec[[1L]]$align, "right")
-  expect_identical(out$col_spec[[1L]]$header_align, "right")
-})
-
-test_that("rtf_tables() col_spec override requires a `col` key", {
-  tbl <- rtftable(df2())
-  expect_error(
-    rtf_tables(rtf_document(), tbl, col_spec = list(list(align = "right"))),
-    "must be a list with a `col` key"
-  )
-})
-
-test_that("rtf_tables() override clears blank_rows when passed NULL explicitly", {
-  tbl <- rtftable(df2(), blank_rows = c(1L))
-  out <- rtf_tables(rtf_document(), tbl, blank_rows = NULL)$contents[[1L]]$content
-  expect_null(out$blank_rows)
-})
-
 # ── row_title + default alignment (#98) ──────────────────────────────────────
 
 df7 <- function() data.frame(Lab = "x", A = "1", B = "2", C = "3",
@@ -186,15 +113,3 @@ test_that("row_title validates its range / names (#98)", {
   expect_error(rtftable(df7(), row_title = "Nope"), "not found in data")
 })
 
-test_that("rtf_tables(row_title=) re-aligns only still-default columns (#98)", {
-  tbl <- rtftable(df7())                                  # col1 left, rest center
-  out <- rtf_tables(rtf_document(), tbl, row_title = c(1, 2))$contents[[1L]]$content
-  expect_identical(.aligns(out), c("left", "left", rep("center", 5L)))
-})
-
-test_that("rtf_tables(row_title=) applies to bare data.frames in bulk (#98)", {
-  out <- rtf_tables(rtf_document(), list(df7(), df7()),
-                    row_title = c(1, 2)) |> .doc_items()
-  expect_identical(.aligns(out[[1L]]), c("left", "left", rep("center", 5L)))
-  expect_identical(.aligns(out[[2L]]), c("left", "left", rep("center", 5L)))
-})

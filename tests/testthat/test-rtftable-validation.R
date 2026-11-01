@@ -5,7 +5,6 @@
 
 # ──────── .normalize_table_border ─────────────────────────────────────────
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that(".normalize_table_border accepts every documented input form", {
   expect_null(rtfreporter:::.normalize_table_border(NULL))
@@ -42,7 +41,7 @@ test_that("an rtf_border selects the whole table, never silently emptied (#326, 
   df <- data.frame(a = c("x", "y"), b = c("1", "2"), stringsAsFactors = FALSE)
   # The table's top edge is the topmost row's top, and it carries the rule.
   expect_identical(rtftable(df, border = b)$border$first_row$top, b$top)
-  expect_silent(rtf_tables(rtf_document(), df, border = b))
+  expect_silent(rtf_tables(rtf_document(), rtftable(df, border = b)))
 
   # A zone map still works when built through the supported route.  (Start from
   # "none": the default preset would supply a header bottom rule of its own.)

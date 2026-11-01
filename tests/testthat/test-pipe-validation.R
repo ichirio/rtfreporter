@@ -26,10 +26,9 @@ test_that("rtf_tables rejects non-rtf_document `doc`", {
 
 test_that("rtf_tables auto-wraps a single content item and rejects invalid types", {
   d <- rtf_document()
-  # A plain character string is not a recognised content item and should error
-  # (it gets auto-wrapped into list("not-a-list") then rejected by the item
-  # validator, so the error message changed from "must be a list" to "Item 1").
-  expect_error(rtf_tables(d, "not-a-list"), "Item 1")
+  # A plain character string is not a table: it is auto-wrapped into
+  # list("not-a-list") and handed to rtfplot(), which says it is not an image file.
+  expect_error(rtf_tables(d, "not-a-list"), "Image file not found: not-a-list")
 })
 
 test_that("rtf_tables rejects a non-content item", {

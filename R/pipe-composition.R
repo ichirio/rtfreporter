@@ -348,35 +348,6 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 # Content Addition: rtf_tables() and rtf_figures()
 # ============================================================================
 
-# The table-format arguments of rtf_tables() that copy rtftable()'s, and
-# read_gt: deprecated in 0.8.x (#511 B-1, #594), removed in 0.9.0.
-.rtf_tables_fmt_args <- c(
-  "col_header", "col_header_align", "col_spec", "row_title",
-  "border", "blank_rows", "read_attributes", "style", "col_rel_width",
-  "column_widths_twips", "table_width_twips", "table_width_pct_of_writable",
-  "table_width_pct", "table_align", "row_height_twips", "row_height_exact",
-  "header_row_height_twips", "blank_row_height_twips", "cell_padding_left_twips",
-  "cell_padding_right_twips", "cell_valign", "blank_row_normalize", "markup",
-  "font_size_half_points", "font", "read_gt")
-
-# Each one the caller passed says once a session that it is deprecated
-.warn_rtf_tables_fmt_args <- function(passed) {
-  for (a in intersect(passed, .rtf_tables_fmt_args)) {
-    .deprecate_once(
-      paste0("rtf_tables_", a),
-      if (identical(a, "read_gt")) {
-        paste0("`rtf_tables(read_gt = )` is deprecated: pass a gt or gtsummary ",
-               "table through as_rtftables(), which reads its titles, labels and ",
-               "notes.\n  Removed in 0.9.0.")
-      } else {
-        paste0("`rtf_tables(", a, " = )` is deprecated: write a table's ",
-               "appearance in rtftable(), as_rtftables() or plan_style() (a bare ",
-               "data.frame takes their defaults).\n  Removed in 0.9.0.")
-      })
-  }
-  invisible()
-}
-
 #' Add content pages to document
 #'
 #' Append one or more content items as pages. **Each element of `tables`
@@ -413,19 +384,6 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #' `print_to_gt()` the `page_structure()` columns of a `page_plan(note_loc = )`
 #' that writes the page note.
 #'
-#' @section Deprecated arguments:
-#' The 26 table-format arguments that copy [rtftable()]'s (`col_header`,
-#' `border`, `col_rel_width`, `row_height_twips`, `font_size_half_points`,
-#' `font`, ... -- see the usage) and `read_gt` are **deprecated** in 0.8.x:
-#' each one passed says so once a session and still works as before, and they
-#' are removed in 0.9.0, the first CRAN release.  Write the same settings on
-#' the table: `rtftable(df, border = "tfl", col_rel_width = c(2, 1))`, or
-#' `as_rtftables(x, ...)` for a paged or converted table; pass a gt or
-#' gtsummary table through [as_rtftables()] instead of `read_gt`.  Until then
-#' they behave as they always did: used to build a bare `data.frame` element,
-#' and, when passed explicitly, overriding the matching field of a pre-built
-#' `rtftable()` page (`rtfplot()` pages are never modified).
-#'
 #' @param doc An rtf_document object.
 #' @param tables The pages to add. The usual forms are:
 #'   \describe{
@@ -434,24 +392,19 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'     \item{the output of [as_rtftables()]}{the pages of a gt, gtsummary,
 #'       rtables/tern, rlistings, flextable or huxtable table, or of a
 #'       `data.frame` paged and styled there.}
-#'     \item{a bare `data.frame`}{one simple page; the table-format arguments
-#'       below apply to it.}
+#'     \item{a bare `data.frame`}{one simple page with [rtftable()]'s
+#'       defaults; write its appearance on [rtftable()] or [as_rtftables()].}
 #'   }
 #'   More generally, `tables` is one page or a list of pages, **each element
 #'   one page** with a single content: a `data.frame`, an `rtftable` (from
 #'   [rtftable()] or [as_rtftables()]), an `rtfplot` (from [rtfplot()]), or a
-#'   `gt_tbl` / gtsummary table. A `gt_tbl` or gtsummary table is best passed
-#'   through [as_rtftables()], which reads its labels, alignment, titles and
-#'   source notes; placed here directly it is treated like a `data.frame`
-#'   unless `read_gt` is set (see `read_gt`).
+#'   `gt_tbl` / gtsummary table. A `gt_tbl` or gtsummary table goes through
+#'   [as_rtftables()], which reads its labels, alignment, titles and source
+#'   notes.
 #'
 #'   `tables` may also be a single object of a class another package has
 #'   registered an [as_rtftables()] method for; it is converted to its pages
 #'   first (see "Supplying a source from another package" in [as_rtftables()]).
-#' @param col_header,col_header_align,col_spec,row_title,border,blank_rows,read_attributes,style,col_rel_width,column_widths_twips,table_width_twips,table_width_pct_of_writable,table_width_pct,table_align,row_height_twips,row_height_exact,header_row_height_twips,blank_row_height_twips,cell_padding_left_twips,cell_padding_right_twips,cell_valign,blank_row_normalize,markup,font_size_half_points,font
-#'   **Deprecated** (removed in 0.9.0): the same arguments of [rtftable()],
-#'   written there (or in [as_rtftables()] / [plan_style()]) instead.  See
-#'   "Deprecated arguments" below.
 #' @param titles `NULL` (default) or a list of length `length(tables)` **or
 #'   length 1** (a single block applied to every page).  Each element is a
 #'   title **block**.
@@ -514,9 +467,6 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   }
 #' @param title_label_align Alignment for the auto-appended title label row.
 #'   One of `"left"` (default), `"center"`, or `"right"`.
-#' @param read_gt **Deprecated** (removed in 0.9.0): pass a gt or gtsummary
-#'   table through [as_rtftables()], which reads its labels, alignment, titles
-#'   and source notes, and place the pages it returns here.
 #' @param page_break `TRUE` (the default): each table begins a new page.
 #'   `FALSE`: a table goes on under the content before it, on the page that
 #'   one ends on -- a listing under its summary table.  One value for every
@@ -589,38 +539,12 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'
 #' @export
 rtf_tables <- function(doc, tables,
-                        col_header = NULL,
-                        col_header_align = NULL,
-                        col_spec = NULL,
-                        row_title = NULL,
-                        border = "tfl",
-                        blank_rows = NULL,
-                        read_attributes = TRUE,
-                        style = NULL,
-                        col_rel_width = NULL,
-                        column_widths_twips = NULL,
-                        table_width_twips = NULL,
-                        table_width_pct_of_writable = NULL,
-                        table_width_pct = NULL,
-                        table_align = "left",
-                        row_height_twips = NULL,
-                        row_height_exact = FALSE,
-                        header_row_height_twips = NULL,
-                        blank_row_height_twips = NULL,
-                        cell_padding_left_twips = NULL,
-                        cell_padding_right_twips = NULL,
-                        cell_valign = "bottom",
-                        blank_row_normalize = c("detect", "collapse"),
-                        markup = NULL,
-                        font_size_half_points = NULL,
-                        font = NULL,
                         titles = NULL,
                         footnotes = NULL,
                         auto_section = NULL,
                         section_label_align = "left",
                         auto_title = NULL,
                         title_label_align = "left",
-                        read_gt = FALSE,
                         page_break = TRUE,
                         first_rows = NULL,
                         space_before = 0L,
@@ -628,42 +552,16 @@ rtf_tables <- function(doc, tables,
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
-  # The table-format copies (#511 B-1, #594): deprecated, each saying so once
-  # a session; removed in 0.9.0.  A table's appearance is written in one
-  # place -- rtftable(), as_rtftables() or plan_style() -- and a bare
-  # data.frame takes their defaults.
-  .warn_rtf_tables_fmt_args(names(match.call())[-1L])
-
   if (!is.null(first_rows) && all(page_break)) {
     stop("rtf_tables(): `first_rows` is the rows a table puts on the page before it: page_break = FALSE.",
          call. = FALSE)
   }
 
-  # The deprecated table-format arguments (#511 B-1, #594), as given: they
-  # build the data frames of a list of pages, and those passed explicitly
-  # override the fields of a built rtftable page.  Removed in 0.9.0.
-  fmt <- mget(setdiff(.rtf_tables_fmt_args, "read_gt"), envir = environment())
-  .explicit <- intersect(names(match.call())[-1L], .rtf_tables_fmt_overrides)
-  overrides <- fmt[.explicit]
-
   # The pages, each knowing which table it is a page of (.rtf_content(),
-  # R/content.R): a plan, a source with an as_rtftables() method, the rows
-  # first_rows puts on the page before and the rest, or a list of pages.
-  # A list of pages first takes the deprecated path, which builds its data
-  # frames, gt and gtsummary tables with the arguments above; 0.9.0 removes
-  # it, leaving the one call.
-  legacy <- is.null(first_rows) && !.has_rtftables_method(tables)
-  gt_texts <- NULL
-  if (legacy) {
-    tables <- .rtf_tables_legacy_pages(tables, fmt, overrides, read_gt)
-    gt_texts <- attr(tables, "gt_texts")
-  }
+  # R/content.R): a plan, a source with an as_rtftables() method, a bare data
+  # frame, the rows first_rows puts on the page before and the rest, or a list
+  # of pages.
   tables <- .rtf_content(tables, first_rows = first_rows)
-  if (!legacy && length(overrides)) {
-    tables[] <- lapply(tables, function(x) {
-      if (inherits(x, "rtftable")) .override_rtftable_fields(x, overrides) else x
-    })
-  }
 
   # Where the page names print, when the call does not say: what the pages
   # say (a plan's plan_paginate_group(heading_at = ), carried on each page
@@ -701,18 +599,15 @@ rtf_tables <- function(doc, tables,
 
   # Titles and footnotes the pages carry, where `titles` / `footnotes` give
   # none: the `rtf_titles` / `rtf_footnotes` attributes of a page (how
-  # as_rtftables() carries a source's title and notes onto each page),
-  # else -- the deprecated read_gt path -- what was read from a gt table.
+  # as_rtftables() carries a source's title and notes onto each page).
   # A page that opens an auto section reads them as any other page does.
   for (i in seq_along(tables)) {
     item <- tables[[i]]
     if (is.null(titles[[i]])) {
-      titles[i] <- list(attr(item, "rtf_titles", exact = TRUE) %||%
-                          gt_texts$titles[[i]])
+      titles[i] <- list(attr(item, "rtf_titles", exact = TRUE))
     }
     if (is.null(footnotes[[i]])) {
-      footnotes[i] <- list(attr(item, "rtf_footnotes", exact = TRUE) %||%
-                             gt_texts$footnotes[[i]])
+      footnotes[i] <- list(attr(item, "rtf_footnotes", exact = TRUE))
     }
   }
 
@@ -748,156 +643,6 @@ rtf_tables <- function(doc, tables,
   .rtf_add_blocks(doc, tables, titles, footnotes, page_break = page_break,
                   space_before = space_before, cont_title = cont_title,
                   sections = sections)
-}
-
-# The rtf_tables() arguments that, passed explicitly, override the field of
-# the same name of a built rtftable page (deprecated with the rest)
-.rtf_tables_fmt_overrides <- c(
-  "col_header", "col_header_align", "col_spec", "row_title",
-  "border", "blank_rows", "style", "col_rel_width", "column_widths_twips",
-  "table_width_twips", "table_width_pct_of_writable", "table_width_pct",
-  "table_align", "row_height_twips", "row_height_exact", "header_row_height_twips",
-  "blank_row_height_twips", "cell_padding_left_twips", "cell_padding_right_twips",
-  "cell_valign", "font_size_half_points", "font")
-
-# rtf_tables(doc, <a list of pages>) as it has always taken one: each
-# element one page -- a data frame (built here with the deprecated format
-# arguments `fmt`), a gt or gtsummary table (read here, the deprecated
-# read_gt path), an rtftable (the explicitly passed `overrides` applied) or
-# an rtfplot.  Deprecated with those arguments; 0.9.0 removes it, and a
-# list of pages then goes to .rtf_content() as it is.  What was read from a
-# gt table's title and notes rides on the result as `gt_texts`.
-.rtf_tables_legacy_pages <- function(tables, fmt, overrides, read_gt) {
-  # Auto-wrap a single content item so callers can write rtf_tables(tbl)
-  # instead of rtf_tables(list(tbl)).  data.frame is IS a list in R, so it
-  # needs an explicit guard; everything else that is not already a plain list
-  # (rtftable, rtfplot, gt_tbl, gtsummary) is wrapped too.
-  if (is.data.frame(tables) || !is.list(tables) ||
-      inherits(tables, "rtftable") || inherits(tables, "rtfplot") ||
-      .is_gt_tbl(tables) || .is_gtsummary_tbl(tables)) {
-    tables <- list(tables)
-  }
-
-  .is_content_item <- function(x) {
-    is.data.frame(x) ||
-      inherits(x, "rtftable") ||
-      inherits(x, "rtfplot") ||
-      .is_gt_tbl(x) ||
-      .is_gtsummary_tbl(x)
-  }
-
-  # Validate each page-level item: exactly one content per page.
-  for (i in seq_along(tables)) {
-    item <- tables[[i]]
-    if (!.is_content_item(item)) {
-      stop("Item ", i, " is a '", paste(class(item), collapse = "/"), "'. ",
-           "Each list element is one page: a data.frame, rtftable(), rtfplot(), ",
-           "gt_tbl or gtsummary table.\n  A table_plan, or a class whose ",
-           "package registered an as_rtftables() method, can be passed as ",
-           "`tables` itself.\n  Other tables (rtables/tern, rlistings, ",
-           "flextable, huxtable, gt_group) become pages with ",
-           "as_rtftables(): rtf_tables(doc, as_rtftables(x)).",
-           call. = FALSE)
-    }
-  }
-
-  # -- gtsummary pre-conversion: gtsummary tables -> gt_tbl ---------------
-  # Done before gt extraction so the existing gt pipeline handles them
-  # uniformly.  Conversion uses gtsummary::as_gt() (the package's own
-  # rendering layer); no gtsummary-internal slots are read directly.
-  for (i in seq_along(tables)) {
-    if (.is_gtsummary_tbl(tables[[i]])) {
-      tables[[i]] <- .gtsummary_to_gt(tables[[i]])
-    }
-  }
-
-  # -- gt_tbl handling: extract requested attributes ----------------------
-  # `read_gt` is normalised once; the resolved token vector is used both
-  # for per-table extraction and for the page-level title / source-note
-  # pull-through.
-  gt_tokens   <- .resolve_gt_tokens(read_gt)
-  gt_extracts <- vector("list", length(tables))
-  for (i in seq_along(tables)) {
-    if (.is_gt_tbl(tables[[i]])) {
-      gt_extracts[[i]] <- .gt_to_rtftable_kwargs(tables[[i]], tokens = gt_tokens)
-      # Replace the gt_tbl in `tables` with its rendered data.frame so
-      # the downstream loop treats it like a bare data.frame.
-      tables[[i]] <- gt_extracts[[i]]$data
-    }
-  }
-
-  # Promote bare data.frames to rtftable using the supplied formatting args.
-  # NB: iterate over indices (not items) so we can look up the matching
-  # gt_extracts slot per page.  We restore the original names() afterwards.
-  tables_names <- names(tables)
-  tables <- lapply(seq_along(tables), function(i) {
-    item <- tables[[i]]
-    if (is.data.frame(item)) {
-      # If this slot originated from a gt_tbl, merge the extracted
-      # col_header / col_spec / column_widths_twips / col_rel_width
-      # into the user-supplied arguments (user always wins).
-      gtx <- gt_extracts[[i]]
-      eff_col_header <- if (!is.null(fmt$col_header))    fmt$col_header
-                       else if (!is.null(gtx) && !is.null(gtx$col_header))
-                         gtx$col_header
-                       else NULL
-      eff_col_spec   <- if (!is.null(gtx) && !is.null(gtx$col_spec))
-                         .merge_col_spec(fmt$col_spec, gtx$col_spec)
-                       else fmt$col_spec
-      eff_col_widths <- if (!is.null(fmt$column_widths_twips))
-                         fmt$column_widths_twips
-                       else if (!is.null(gtx) && !is.null(gtx$column_widths_twips))
-                         gtx$column_widths_twips
-                       else NULL
-      eff_col_rel    <- if (!is.null(fmt$col_rel_width))
-                         fmt$col_rel_width
-                       else if (!is.null(gtx) && !is.null(gtx$col_rel_width))
-                         gtx$col_rel_width
-                       else NULL
-      # Phase D: cell_styles from gt extraction (user has no rtf_tables()-level
-      # override; cell_styles can only be set on individual rtftable() objects).
-      eff_cell_styles <- if (!is.null(gtx)) gtx$cell_styles else NULL
-      rtftable(
-        data                        = item,
-        col_header                  = eff_col_header,
-        col_header_align            = fmt$col_header_align,
-        col_spec                    = eff_col_spec,
-        row_title                   = fmt$row_title,
-        border                      = fmt$border,
-        blank_rows                  = fmt$blank_rows,
-        read_attributes             = fmt$read_attributes,
-        style                       = fmt$style,
-        col_rel_width               = eff_col_rel,
-        column_widths_twips         = eff_col_widths,
-        table_width_twips           = fmt$table_width_twips,
-        table_width_pct_of_writable = fmt$table_width_pct_of_writable,
-        table_width_pct             = fmt$table_width_pct,
-        table_align                 = fmt$table_align,
-        row_height_twips            = fmt$row_height_twips,
-        row_height_exact            = fmt$row_height_exact,
-        header_row_height_twips     = fmt$header_row_height_twips,
-        blank_row_height_twips      = fmt$blank_row_height_twips,
-        cell_padding_left_twips     = fmt$cell_padding_left_twips,
-        cell_padding_right_twips    = fmt$cell_padding_right_twips,
-        cell_valign                 = fmt$cell_valign,
-        cell_styles                 = eff_cell_styles,
-        blank_row_normalize         = fmt$blank_row_normalize,
-        markup                      = fmt$markup
-      )
-    } else if (inherits(item, "rtftable")) {
-      # Pre-built rtftable (e.g. from as_rtftables()): apply only the
-      # explicitly-passed rtf_tables() formatting arguments as overrides;
-      # everything else keeps the table's own / gt-derived settings.
-      .override_rtftable_fields(item, overrides)
-    } else {
-      item   # rtfplot or anything else passes through untouched
-    }
-  })
-  names(tables) <- tables_names
-  attr(tables, "gt_texts") <- list(
-    titles    = lapply(gt_extracts, function(g) g$titles_block),
-    footnotes = lapply(gt_extracts, function(g) g$footnotes_block))
-  tables
 }
 
 # A title block with one row more at its end: the rows it has (a character

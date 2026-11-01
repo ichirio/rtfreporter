@@ -657,12 +657,6 @@ builds a single edge (`"single"`, `"double"`, …).
 | `format_count_pct()` | `fmt_count_pct()` (the same arguments) |
 | `paginate_cols(cols = , by = , carry = , width = , page_order = )` | `cut_by =` (blocks, a separator or keys), `keep =`, `fit = TRUE / FALSE`, `order =` |
 | `size_half_points =` of `text_width_in()`, `auto_col_widths()`, `fit_listing_widths()`; `auto_col_widths(df = )` | `font_size_half_points =`; `data =` |
-
-**Deprecated — do not generate these** (they still work but warn, and are
-removed later):
-
-| Deprecated | Write instead |
-|---|---|
 | `rtf_tables(doc, df, border = , col_rel_width = , col_header = , font = , ...)` -- the table-format arguments -- and `rtf_tables(read_gt = )` | the same arguments on the table: `rtf_tables(doc, rtftable(df, border = , col_rel_width = , ...))`, or `as_rtftables()` / `plan_style()`; a gt table through `as_rtftables()` |
 
 Post-hoc styling (each accepts one `rtftable` **or** a list of pages):
