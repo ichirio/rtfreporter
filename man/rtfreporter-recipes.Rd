@@ -113,7 +113,7 @@ pk_pages <- as_rtftables(
 
 pk_pages <- pk_pages |>
   set_decimal_split(cols = 2:5) |>   # line the decimal points up
-  paginate_cols(at = 4L, carry = 1L) # split by COLUMN, repeat the stub
+  paginate_cols(at = 4L, keep = 1L)  # split by COLUMN, repeat the stub
 
 pk_doc <- rtf_document(page = rtf_page(orientation = "landscape"))
 for (p in pk_pages) pk_doc <- rtf_tables(pk_doc, p)
