@@ -29,29 +29,35 @@ be rendered on.  \code{NULL} (default) uses rtfreporter's own page defaults.
 Ignored when \code{total_width} is given.}
 
 \item{font, font_size_half_points}{The font the listing renders in, used to
-turn the page's width into a number of characters.  \code{font = NULL}
-(default) is the package's font, \code{getOption("rtfreporter.font")}, as for
-every other \verb{font =}.  \code{font_size_half_points} is
-\strong{half-points}, as everywhere in RTF: 8pt is \code{16L}, 9pt (the default)
-is \code{18L}.  Getting it wrong silently changes the budget -- at 8pt a
-landscape A4 with half-inch margins holds 159 characters, at 9pt only
-141.  Pass the same values the document uses in
-\code{rtf_document(default_format = )}.}
+turn the page's width into a number of characters.
+\describe{
+\item{\code{font}}{\code{NULL} (default) is the package's font,
+\code{getOption("rtfreporter.font")}, as for every other \verb{font =}.}
+\item{\code{font_size_half_points}}{is \strong{half-points}, as everywhere in
+RTF: 8pt is \code{16L}, 9pt (the default) is \code{18L}.  Getting it wrong
+silently changes the budget -- at 8pt a landscape A4 with half-inch
+margins holds 159 characters, at 9pt only 141.  Pass the same values
+the document uses in \code{rtf_document(default_format = )}.}
+}}
 
 \item{total_width}{Character budget for the whole listing, gutters included.
 \code{NULL} (default) computes it from \code{page}, \code{font} and
 \code{font_size_half_points}.}
 
 \item{labels}{Named character vector giving the words for the \strong{source}
-variables, e.g. \code{c(USUBJID = "Unique Subject ID", AGE = "Age")}.  Used
-for data that carries no \code{label} attributes -- a CSV, a frame built in
-the program, a \code{subset()} that dropped them.  A column's header is still
-derived from these: the labels of its source variables are joined with
-its separator and wrapped to the width just fitted, so where the lines
-break is still worked out for you.  Precedence: \code{listing_col(label = )},
-then \code{labels}, then the variable's \code{label} attribute, then its name.  A
+variables, e.g. \code{c(USUBJID = "Unique Subject ID", AGE = "Age")}.  A
 define/spec extract converts directly:
-\code{setNames(spec$label, spec$variable)}.}
+\code{setNames(spec$label, spec$variable)}.
+\describe{
+\item{When}{Used for data that carries no \code{label} attributes -- a CSV,
+a frame built in the program, a \code{subset()} that dropped them.}
+\item{What is derived}{A column's header is still derived from these:
+the labels of its source variables are joined with its separator and
+wrapped to the width just fitted, so where the lines break is still
+worked out for you.}
+\item{Precedence}{\code{listing_col(label = )}, then \code{labels}, then the
+variable's \code{label} attribute, then its name.}
+}}
 
 \item{header_lines}{How many lines a header may reasonably occupy (default
 \code{4}).  A column is asked to be at least wide enough for its header at

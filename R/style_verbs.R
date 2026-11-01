@@ -657,24 +657,39 @@ add_header_row.list <- function(x, ...) {
 #' applied after [paginate_cols()].
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
-#' @param ... The header rows, in render order (top first) -- each a character
-#'   vector (a label row, optionally named to place labels by column name) or a
-#'   list of [col_cell()] cells (a spanning / cell row, whose `pos` may be
-#'   column names or final positions).  Alternatively a single pre-built
-#'   [rtf_col_header()] object.  Passing nothing clears the header.
-#'
-#'   A **fully named** label row need not have one entry per column; an
-#'   unnamed one must.  An unknown name is an error.  In a partly named row an
-#'   unnamed value that is a column name is placed at that column, and any
-#'   other by its position.
+#' @param ... The header rows, in render order (top first), or a single
+#'   pre-built [rtf_col_header()] object.  Passing nothing clears the
+#'   header.
+#'   \describe{
+#'     \item{A row}{each a character vector (a label row, optionally named to
+#'       place labels by column name) or a list of [col_cell()] cells (a
+#'       spanning / cell row, whose `pos` may be column names or final
+#'       positions).}
+#'     \item{Names in a label row}{A **fully named** label row need not have
+#'       one entry per column; an unnamed one must.  An unknown name is an
+#'       error.  In a partly named row an unnamed value that is a column name
+#'       is placed at that column, and any other by its position.}
+#'   }
 #' @param align Optional column-header text alignment for the final columns:
 #'   `"left"`/`"center"`/`"right"` (applied to every column) or a character
 #'   vector of length `ncol` (one per printed column).  `NULL` (default) leaves
 #'   the current header alignment untouched.
 #'
 #' @param values Optional table of **per-page values** for the `{tokens}` in
-#'   the header, one row per page key: write the header once and let each page
-#'   take its own numbers.
+#'   the header, one row per page key: write the header once and let each
+#'   page take its own numbers.
+#'   \describe{
+#'     \item{Tokens}{A token is `{name}`, `name` being a column of `values`;
+#'       doubling a brace prints it literally.}
+#'     \item{Left for the renderer}{The render-time tokens (`{PAGE}`,
+#'       `{TOTAL_PAGES}`, `{BOOK_PAGE}`, `{AUTO_PAGE}`,
+#'       `{AUTO_TOTAL_PAGES}`, `{PROGRAM}`, `{PROGRAM_FULL}`, `{DATETIME}`
+#'       ..., [rtf_text_tokens()]); any other unfilled token is an error.}
+#'     \item{Checked}{Every row of `values` must be used by some page, and
+#'       every page must find a row -- a mistyped level is an error, not a
+#'       silently wrong header.  [header_map()] shows what each page ended
+#'       up with.}
+#'   }
 #'   ```r
 #'   hdr  <- rtf_col_header(
 #'     list(col_cell(1L, ""),
@@ -683,15 +698,6 @@ add_header_row.list <- function(x, ...) {
 #'   vals <- data.frame(group = periods, n_pbo = c(120, 118, 238))
 #'   pages |> set_col_header(hdr, values = vals)
 #'   ```
-#'   A token is `{name}`, `name` being a column of `values`; doubling a brace
-#'   prints it literally; the render-time tokens (`{PAGE}`,
-#'   `{TOTAL_PAGES}`, `{BOOK_PAGE}`, `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`,
-#'   `{PROGRAM}`, `{PROGRAM_FULL}`, `{DATETIME}` ..., [rtf_text_tokens()])
-#'   are left for the
-#'   renderer, and any other unfilled token is an error. Every row of `values`
-#'   must be used by some page, and every page must find a row -- a mistyped
-#'   level is an error, not a silently wrong header. [header_map()] shows what
-#'   each page ended up with.
 #' @param by Which page key `values` is matched on, named after the axis it
 #'   matches -- the same vocabulary `paginate_cols(page_order = )` uses. The
 #'   key column of `values` carries that name.
@@ -1055,13 +1061,17 @@ set_header_cell.list <- function(x, ...) {
 #'   `c(1, 1)`.
 #' @param min_chars Floor for each half, in the same units, applied after
 #'   `pad_chars`: the effective width of a half is
-#'   `max(measured + pad_chars, min_chars)`.  Default `c(4, 6)` -- a
-#'   three-digit integer part and a five-character decimal part, each plus its
-#'   padding character -- so anything at or below that size holds a `4 : 6`
-#'   baseline and anything larger scales from its own measurement.  Without a
-#'   floor a column of `0.0000` values measures 1 against 5 and leaves the
-#'   integer half cramped.  Pass `pad_chars = c(0, 0), min_chars = c(0, 0)` for
-#'   the raw measured ratio.
+#'   `max(measured + pad_chars, min_chars)`.
+#'   \describe{
+#'     \item{Default}{`c(4, 6)` -- a three-digit integer part and a
+#'       five-character decimal part, each plus its padding character -- so
+#'       anything at or below that size holds a `4 : 6` baseline and anything
+#'       larger scales from its own measurement.}
+#'     \item{Why a floor}{Without one a column of `0.0000` values measures 1
+#'       against 5 and leaves the integer half cramped.}
+#'     \item{No floor}{Pass `pad_chars = c(0, 0), min_chars = c(0, 0)` for the
+#'       raw measured ratio.}
+#'   }
 #' @param max_chars Total measured width, in the same units, above which the
 #'   allowance is dropped and the raw measured proportions are used however
 #'   lopsided.  Default `10`: a column that long needs every twip it has, and

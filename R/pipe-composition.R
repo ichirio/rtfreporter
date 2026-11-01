@@ -888,14 +888,18 @@ rtf_tables <- function(doc, tables,
 #' already constructed via [rtfplot()] keep their own settings.
 #'
 #' @param doc An rtf_document object.
-#' @param figures A figure, or a list of them: a character file path to an
-#'   image file (PNG/JPEG), a plot object (a ggplot2 plot, a patchwork, a
-#'   grob, a recorded base plot, a function that draws -- see [rtfplot()]),
-#'   or a pre-built `rtfplot`.  One figure is given as it is --
-#'   `rtf_figures(doc, plot)` -- and several as a list.  A plot object is
-#'   drawn with `png_device` (default: the `rtfreporter.png_device` option,
-#'   which follows `ggplot2::ggsave()`: ragg when installed,
-#'   `grDevices::png()` otherwise); build an [rtfplot()] to choose per figure.
+#' @param figures A figure, or a list of them.  One figure is given as it is
+#'   -- `rtf_figures(doc, plot)` -- and several as a list.
+#'   \describe{
+#'     \item{A file}{a character file path to an image file (PNG/JPEG).}
+#'     \item{A plot object}{a ggplot2 plot, a patchwork, a grob, a recorded
+#'       base plot, a function that draws -- see [rtfplot()].  It is drawn
+#'       with `png_device` (default: the `rtfreporter.png_device` option,
+#'       which follows `ggplot2::ggsave()`: ragg when installed,
+#'       `grDevices::png()` otherwise).}
+#'     \item{A pre-built `rtfplot`}{Build an [rtfplot()] to choose the device
+#'       per figure.}
+#'   }
 #' @param width_twips Display width in twips of a figure that is not an
 #'   `rtfplot` already (a file or a plot object), as [rtfplot()] takes it.
 #'   `NULL` (default): the image's native size -- a file at its embedded DPI,
@@ -1038,16 +1042,21 @@ rtf_figures <- function(doc, figures,
 #'   stays as the block's last row, under the titles given.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, overriding the document default from [rtf_default_format()].
-#'   `font` names a family (e.g. `"Arial"`); one not already in the document's
-#'   `font_table` is added to it automatically, the way a colour is.
-#'   A named vector gives one family per script slot (`latin`,
-#'   `east_asian`, `complex`, optional `hansi`), e.g. `c(latin =
-#'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
-#'   Anything left `NULL` is inherited. Font size and row height resolve
-#'   **together**: a size given without a height recomputes the height from
-#'   that size rather than inheriting one chosen for a different size, and an
-#'   explicit height always wins. `align` sets the block's default row
-#'   alignment; a per-row `align` still beats it.
+#'   Anything left `NULL` is inherited.
+#'   \describe{
+#'     \item{`font`}{names a family (e.g. `"Arial"`); one not already in the
+#'       document's `font_table` is added to it automatically, the way a
+#'       colour is.  A named vector gives one family per script slot
+#'       (`latin`, `east_asian`, `complex`, optional `hansi`), e.g.
+#'       `c(latin = "Times New Roman", east_asian = "MS Mincho")`; see
+#'       [rtf_document()].}
+#'     \item{`font_size_half_points`, `row_height_twips`}{resolve
+#'       **together**: a size given without a height recomputes the height
+#'       from that size rather than inheriting one chosen for a different
+#'       size, and an explicit height always wins.}
+#'     \item{`align`}{sets the block's default row alignment; a per-row
+#'       `align` still beats it.}
+#'   }
 #'
 #' @return Modified rtf_document.
 #'
@@ -1132,16 +1141,21 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'   first row, e.g. `border = rtf_border(top = TRUE)`.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, overriding the document default from [rtf_default_format()].
-#'   `font` names a family (e.g. `"Arial"`); one not already in the document's
-#'   `font_table` is added to it automatically, the way a colour is.
-#'   A named vector gives one family per script slot (`latin`,
-#'   `east_asian`, `complex`, optional `hansi`), e.g. `c(latin =
-#'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
-#'   Anything left `NULL` is inherited. Font size and row height resolve
-#'   **together**: a size given without a height recomputes the height from
-#'   that size rather than inheriting one chosen for a different size, and an
-#'   explicit height always wins. `align` sets the block's default row
-#'   alignment; a per-row `align` still beats it.
+#'   Anything left `NULL` is inherited.
+#'   \describe{
+#'     \item{`font`}{names a family (e.g. `"Arial"`); one not already in the
+#'       document's `font_table` is added to it automatically, the way a
+#'       colour is.  A named vector gives one family per script slot
+#'       (`latin`, `east_asian`, `complex`, optional `hansi`), e.g.
+#'       `c(latin = "Times New Roman", east_asian = "MS Mincho")`; see
+#'       [rtf_document()].}
+#'     \item{`font_size_half_points`, `row_height_twips`}{resolve
+#'       **together**: a size given without a height recomputes the height
+#'       from that size rather than inheriting one chosen for a different
+#'       size, and an explicit height always wins.}
+#'     \item{`align`}{sets the block's default row alignment; a per-row
+#'       `align` still beats it.}
+#'   }
 #'
 #' @return Modified rtf_document.
 #'

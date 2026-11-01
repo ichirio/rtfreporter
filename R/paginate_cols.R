@@ -543,18 +543,21 @@
 #'   throughout; `"keep"` gives each kept column exactly the width it had
 #'   before the split. No effect under `column_widths_twips`. See
 #'   *Column widths*.
-#' @param page_order *Superseded* by `order`. The order the pages come out in, as the **axes** of the
-#'   split, outermost first: any of `"group"` (the pages a value-based split
-#'   made, `as_rtftables(split = "by_value", group_col = )`), `"rows"` (the row
-#'   pages -- `page_by` and every other row split) and `"cols"` (the column
-#'   blocks this verb cuts). Axes left out are appended in that default order,
-#'   and an axis the table does not have never varies.
-#'
-#'   `"across"` and `"down"` are the two usual orders, kept as shorthands:
-#'   `"across"` is `c("group", "cols", "rows")` -- the page number advances
-#'   across the columns first -- and `"down"` is `c("group", "rows", "cols")`,
-#'   advancing down the rows. The pages themselves are identical whatever the
-#'   order; only the sequence differs. See *Page order*.
+#' @param page_order *Superseded* by `order`.  The order the pages come out
+#'   in, as the **axes** of the split, outermost first.
+#'   \describe{
+#'     \item{Axes}{any of `"group"` (the pages a value-based split made,
+#'       `as_rtftables(split = "by_value", group_col = )`), `"rows"` (the row
+#'       pages -- `page_by` and every other row split) and `"cols"` (the
+#'       column blocks this verb cuts).  Axes left out are appended in that
+#'       default order, and an axis the table does not have never varies.}
+#'     \item{`"across"`}{is `c("group", "cols", "rows")` -- the page number
+#'       advances across the columns first.}
+#'     \item{`"down"`}{is `c("group", "rows", "cols")`, advancing down the
+#'       rows.}
+#'   }
+#'   The two are kept as shorthands.  The pages themselves are identical
+#'   whatever the order; only the sequence differs.  See *Page order*.
 #' @param ... Unused.
 #'
 #' @section Columns named `<group>__<item>`:

@@ -27,16 +27,19 @@ record missing its middle value does not print a doubled separator.}
 \item{width}{Integer or \code{NULL}.  Maximum characters per physical row before
 the cell wraps.  \code{NULL} (default) never wraps this column.}
 
-\item{label}{The column header.  A \strong{character vector is the lines} --
-one element, one line -- and so is a string that carries its own line
-breaks: both say "I have laid this out", and neither is re-wrapped.  A
-\strong{single string with no breaks} is words for the package to lay out: it
-is wrapped to \code{width} by the same rule the cells use (see
-\code{\link[=listing_wrap]{listing_wrap()}}), or left as one line when there is no \code{width}.
-\code{NULL} (default) \strong{derives} the header from the data -- each source
-column's \code{label} attribute when it has one, otherwise its name, joined
-with \code{sep} -- or from \code{fit_listing_widths(labels = )}.  \code{""} asks for a
-deliberately empty header.}
+\item{label}{The column header.  \code{NULL} (default) \strong{derives} the header
+from the data -- each source column's \code{label} attribute when it has one,
+otherwise its name, joined with \code{sep} -- or from
+\code{fit_listing_widths(labels = )}.
+\describe{
+\item{A character vector}{is the lines -- one element, one line -- and
+so is a string that carries its own line breaks: both say "I have
+laid this out", and neither is re-wrapped.}
+\item{A single string with no breaks}{is words for the package to lay
+out: it is wrapped to \code{width} by the same rule the cells use (see
+\code{\link[=listing_wrap]{listing_wrap()}}), or left as one line when there is no \code{width}.}
+\item{\code{""}}{asks for a deliberately empty header.}
+}}
 
 \item{name}{Output column name.  \code{NULL} (default) uses the first entry of
 \code{vars}; \code{\link[=listing_spec]{listing_spec()}} makes the set unique if two columns collide.}
@@ -48,25 +51,32 @@ line of \code{label}; with neither, 10.}
 \item{align}{\code{"left"}, \code{"center"} or \code{"right"}.  \code{NULL} (default) takes the
 listing's own (\code{"left"} under the \code{"multiline"} type).}
 
-\item{layout}{How a cell lays its parts out: \code{"stack"} breaks after
-\strong{every} separator, so each source column starts its own line -- the
-conventional listing look, and it keeps a column reading down the page.
-\code{"flow"} treats the separator as a break \emph{opportunity} and fills each
-line as far as \code{width} allows, so a column of short parts (an age and a
-sex, a value and its unit) does not spend two rows on four characters.
-\code{NULL} (default) takes the listing's own (\code{"stack"} under \code{"multiline"}).
-With no \code{width} there is nothing to lay out and both behave alike.}
+\item{layout}{How a cell lays its parts out.  \code{NULL} (default) takes the
+listing's own (\code{"stack"} under \code{"multiline"}).  With no \code{width} there is
+nothing to lay out and both behave alike.
+\describe{
+\item{\code{"stack"}}{breaks after \strong{every} separator, so each source
+column starts its own line -- the conventional listing look, and it
+keeps a column reading down the page.}
+\item{\code{"flow"}}{treats the separator as a break \emph{opportunity} and
+fills each line as far as \code{width} allows, so a column of short parts
+(an age and a sex, a value and its unit) does not spend two rows on
+four characters.}
+}}
 
 \item{collapse_repeats}{Logical (default \code{FALSE}).  Mark this as a \strong{key}
 column: its value is carried down every physical row of a record (its
 blank row too), and \code{\link[=as_rtftables]{as_rtftables()}} then blanks the repeats -- so the
 value prints once per run of records that share it, blank rows between
-them or not.  Carrying and delegating rather
-than blanking here is what makes the value \strong{reappear at the top of the
-next page} -- the suppression happens per page, after the split, so a
-record continued across a page break still shows its subject.  A cell
-that already wraps onto several lines is padded as usual: there is no one
-value to repeat.}
+them or not.
+\describe{
+\item{Why delegated}{Carrying and delegating rather than blanking here
+is what makes the value \strong{reappear at the top of the next page} --
+the suppression happens per page, after the split, so a record
+continued across a page break still shows its subject.}
+\item{Wrapped cells}{A cell that already wraps onto several lines is
+padded as usual: there is no one value to repeat.}
+}}
 }
 \value{
 An object of class \code{rtf_listing_col}.

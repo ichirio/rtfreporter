@@ -138,13 +138,17 @@ text_width_in <- function(text, font = NULL, font_size_half_points = 18L,
 #'   for cell padding and inter-column spacing.  Default `288` (= 0.2 inch).
 #' @param protect_cols Integer column indices to keep at their natural
 #'   (content) width when `table_width_twips` forces the table *narrower* than
-#'   its natural width.  Only the remaining columns are shrunk to fit, so e.g.
-#'   a row-label column (`protect_cols = 1`) stays readable while the data
-#'   columns absorb the squeeze.  Protection is dropped if it would push the
-#'   scalable columns below `min_col_width_twips`.  When the table is scaled
-#'   *up*, the protected columns likewise keep their natural width and only the
-#'   others grow to the target.  No effect when `table_width_twips` is `NULL`.
-#'   Default none.
+#'   its natural width.  Default none.  No effect when `table_width_twips` is
+#'   `NULL`.
+#'   \describe{
+#'     \item{Squeezed}{Only the remaining columns are shrunk to fit, so e.g. a
+#'       row-label column (`protect_cols = 1`) stays readable while the data
+#'       columns absorb the squeeze.  Protection is dropped if it would push
+#'       the scalable columns below `min_col_width_twips`.}
+#'     \item{Scaled up}{When the table is scaled *up*, the protected columns
+#'       likewise keep their natural width and only the others grow to the
+#'       target.}
+#'   }
 #'
 #' @return An integer vector of column widths in twips, one per column of `data`.
 #'

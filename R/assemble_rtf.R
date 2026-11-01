@@ -711,23 +711,25 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'   bookmark name (default `"tfl_"`).  Helps avoid clashes if you
 #'   later concatenate multiple assembled outputs.
 #' @param book_page Text for the compiled document's page number, put into
-#'   every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves the
-#'   slots empty.
-#'
-#'   A deliverable that will be bound into a book needs two page numbers: its
-#'   own (`Page 1 of 3`) and the book's (`Page 4 of 57`).  Written from the
-#'   start they print the same number twice on a standalone deliverable, where
-#'   the two are equal.  So the deliverable reserves the position instead --
-#'   `c(c = "{BOOK_PAGE}")` in whichever band it wants, header, footer, title
-#'   or footnote -- and renders it empty, keeping the row's height.  This
-#'   argument supplies the content when the book is built, so filling it cannot
-#'   shift anything.
-#'
-#'   Typically `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"`.  The total resolves
-#'   to the **book's** page count, which is what the deliverable could not know
-#'   on its own.  The static `{PAGE}` / `{TOTAL_PAGES}` are rejected: the slot
-#'   sits in one band shared by every page of a section, so a single
-#'   substitution cannot give each page its own number.
+#'   every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves
+#'   the slots empty.
+#'   \describe{
+#'     \item{Why a slot}{A deliverable that will be bound into a book needs
+#'       two page numbers: its own (`Page 1 of 3`) and the book's (`Page 4
+#'       of 57`).  Written from the start they print the same number twice
+#'       on a standalone deliverable, where the two are equal.  So the
+#'       deliverable reserves the position instead -- `c(c = "{BOOK_PAGE}")`
+#'       in whichever band it wants, header, footer, title or footnote --
+#'       and renders it empty, keeping the row's height.  This argument
+#'       supplies the content when the book is built, so filling it cannot
+#'       shift anything.}
+#'     \item{What to give}{Typically `"Page {AUTO_PAGE} of
+#'       {AUTO_TOTAL_PAGES}"`.  The total resolves to the **book's** page
+#'       count, which is what the deliverable could not know on its own.}
+#'     \item{Refused}{The static `{PAGE}` / `{TOTAL_PAGES}` are rejected: the
+#'       slot sits in one band shared by every page of a section, so a
+#'       single substitution cannot give each page its own number.}
+#'   }
 #'
 #' @return Invisibly returns `output_file`.
 #'

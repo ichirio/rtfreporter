@@ -114,14 +114,16 @@
 #'   be rendered on.  `NULL` (default) uses rtfreporter's own page defaults.
 #'   Ignored when `total_width` is given.
 #' @param font,font_size_half_points The font the listing renders in, used to
-#'   turn the page's width into a number of characters.  `font = NULL`
-#'   (default) is the package's font, `getOption("rtfreporter.font")`, as for
-#'   every other `font =`.  `font_size_half_points` is
-#'   **half-points**, as everywhere in RTF: 8pt is `16L`, 9pt (the default)
-#'   is `18L`.  Getting it wrong silently changes the budget -- at 8pt a
-#'   landscape A4 with half-inch margins holds 159 characters, at 9pt only
-#'   141.  Pass the same values the document uses in
-#'   `rtf_document(default_format = )`.
+#'   turn the page's width into a number of characters.
+#'   \describe{
+#'     \item{`font`}{`NULL` (default) is the package's font,
+#'       `getOption("rtfreporter.font")`, as for every other `font =`.}
+#'     \item{`font_size_half_points`}{is **half-points**, as everywhere in
+#'       RTF: 8pt is `16L`, 9pt (the default) is `18L`.  Getting it wrong
+#'       silently changes the budget -- at 8pt a landscape A4 with half-inch
+#'       margins holds 159 characters, at 9pt only 141.  Pass the same values
+#'       the document uses in `rtf_document(default_format = )`.}
+#'   }
 #' @param total_width Character budget for the whole listing, gutters included.
 #'   `NULL` (default) computes it from `page`, `font` and
 #'   `font_size_half_points`.
@@ -130,15 +132,19 @@
 #'   Give it directly when you know the budget and would rather not describe
 #'   the page.
 #' @param labels Named character vector giving the words for the **source**
-#'   variables, e.g. `c(USUBJID = "Unique Subject ID", AGE = "Age")`.  Used
-#'   for data that carries no `label` attributes -- a CSV, a frame built in
-#'   the program, a `subset()` that dropped them.  A column's header is still
-#'   derived from these: the labels of its source variables are joined with
-#'   its separator and wrapped to the width just fitted, so where the lines
-#'   break is still worked out for you.  Precedence: `listing_col(label = )`,
-#'   then `labels`, then the variable's `label` attribute, then its name.  A
+#'   variables, e.g. `c(USUBJID = "Unique Subject ID", AGE = "Age")`.  A
 #'   define/spec extract converts directly:
 #'   `setNames(spec$label, spec$variable)`.
+#'   \describe{
+#'     \item{When}{Used for data that carries no `label` attributes -- a CSV,
+#'       a frame built in the program, a `subset()` that dropped them.}
+#'     \item{What is derived}{A column's header is still derived from these:
+#'       the labels of its source variables are joined with its separator and
+#'       wrapped to the width just fitted, so where the lines break is still
+#'       worked out for you.}
+#'     \item{Precedence}{`listing_col(label = )`, then `labels`, then the
+#'       variable's `label` attribute, then its name.}
+#'   }
 #' @param header_lines How many lines a header may reasonably occupy (default
 #'   `4`).  A column is asked to be at least wide enough for its header at
 #'   that height, so a long label buys width in proportion to how tall it
