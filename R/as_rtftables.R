@@ -152,7 +152,9 @@
 #' `row_grp_plan(label_loc = element_row_grp_loc(location = "column"))` layout --
 #' is read from the table's own `_data` / `_boxhead` slots instead, as
 #' `gt::extract_body()` does not support multiple stub columns; the group and
-#' label columns then come through as ordinary columns.)  On top of that body the
+#' label columns then come through as ordinary columns.  A gt table grouped by
+#' several columns, `gt(groupname_col = c("ARM", "SEX"))`, gets one group row
+#' per combination, named as gt names it: "A - F".)  On top of that body the
 #' following *metadata* is read:
 #'
 #' \tabular{lllll}{
@@ -191,7 +193,8 @@
 #' **Not carried** (RTF cannot reproduce these, or they belong to the
 #' source's own theme): cell background colours / fills, font and size
 #' styling, gt theme borders (`tab_options()`), header text colour, and
-#' Markdown formatting inside labels or titles.  For a plain `data.frame` / tibble two pieces of
+#' Markdown formatting inside labels or titles (a `gt::html()` label is read
+#' as its text, a `<br>` as a line break).  For a plain `data.frame` / tibble two pieces of
 #' metadata are read: column `label` attributes become header labels (the
 #' `"labels"` token, see `read_meta`), and delimited column names are
 #' reconstructed into a spanning header (see `header_sep`); everything else
