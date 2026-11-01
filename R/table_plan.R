@@ -294,6 +294,86 @@
   entry
 }
 
+# Digits keyed by a row key's value (#751): `plan_digits(PARAMCD = c(ALT = 1,
+# BILI = 3))`, a define's SignificantDigits one parameter at a time.  Such a
+# key is a column of the long frame that is no analysis variable, and the
+# names of its value are values of that column.
+.plan_row_key_digits <- function(dig, x, vars) {
+  rk <- setdiff(names(dig), c("default", ".rows", vars))
+  rk <- rk[rk %in% names(x)]
+  for (k in rk) {
+    nm <- names(dig[[k]])
+    if (is.null(nm) || !all(nzchar(nm))) {
+      .ard_stop(paste0(
+        "plan_digits(", k, " = ) names a row key, so its digits are given ",
+        "value by value:\n  `", k, " = c(<value> = 1, ...)`, or `", k,
+        " = list(<value> = c(mean = 1, sd = 2), ...)`."))
+    }
+  }
+  rk
+}
+
+# A cells entry with its digits filled in, the rows that carry a value of a
+# row key (`rk`) taking that value's own.  Every template of a chain becomes
+# `KEY == "<value>" ~ <template, the value's digits>` for each value the
+# rows `sel` carry, followed by the template with the digits it had; a guard
+# of the caller's keeps its place.  So a variable's own digits win, then the
+# value's, then the context's, the kind's and the default.
+# Returns list(entry, filled = the entry without the values' digits, check =
+# whether a row can reach that entry, so its open tokens need an answer).
+.plan_fill_keyed <- function(entry, dig, rk, sel, v, ctx, knd, variable = TRUE) {
+  plain  <- dig[setdiff(names(dig), rk)]
+  filled <- .plan_fill_entry(entry, .plan_pick(plain, v, ctx, knd))
+  out <- list(entry = filled, filled = filled, check = TRUE)
+  if (is.null(entry) || !length(rk)) return(out)
+  # `v` an analysis variable: its own digits come before the value's; a
+  # key of the cells map (`continuous`) comes after them
+  own <- variable && !is.na(v) && v %in% names(plain)
+  rest <- if (own) .plan_pick(plain[setdiff(names(plain), v)], NA_character_, ctx, knd)
+          else .plan_pick(plain, v, ctx, knd)
+  own <- if (own) list(plain[[v]]) else list()
+  guards <- list()
+  for (k in rk) {
+    seen <- unique(as.character(sel[[k]]))
+    seen <- seen[!is.na(seen)]
+    vals <- intersect(names(dig[[k]]), seen)
+    for (val in vals) {
+      guards[[length(guards) + 1L]] <-
+        list(key = k, val = val, cands = c(own, list(dig[[k]][[val]]), rest))
+    }
+    if (length(seen) && all(seen %in% vals)) out$check <- FALSE
+  }
+  if (!length(guards)) return(out)
+  base <- .plan_pick(plain, v, ctx, knd)
+  one_chain <- function(ch) {
+    if (inherits(ch, "formula")) ch <- list(ch)
+    els <- list()
+    for (el in as.list(ch)) {
+      if (!is.character(el)) {
+        els[[length(els) + 1L]] <- el
+        next
+      }
+      tpl <- .plan_fill_one(el, base)
+      for (g in guards) {
+        mine <- .plan_fill_one(el, g$cands)
+        if (identical(mine, tpl)) next
+        els[[length(els) + 1L]] <- stats::as.formula(
+          call("~", call("==", as.name(g$key), g$val), mine), env = baseenv())
+      }
+      els[[length(els) + 1L]] <- tpl
+    }
+    els
+  }
+  out$entry <- if (inherits(entry, "cell_rows")) {
+    structure(lapply(unclass(entry), one_chain), class = class(entry))
+  } else if (!is.null(names(entry)) && any(nzchar(names(entry)))) {
+    lapply(as.list(entry), one_chain)
+  } else {
+    one_chain(entry)
+  }
+  out
+}
+
 # `{p:%}` is plan-only notation.  A template that reaches the engine still
 # carrying it never had a `plan_digits()` to answer it, and the engine's own
 # message ("Unknown format spec") would not say that, so this one does.
@@ -1375,6 +1455,14 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 #'       token grammar's `{mean:.4s}`; it may be mixed in a named vector,
 #'       `c(mean = "4s", n = 0)`.}
 #'   }
+#'   A key may also be a **row key** (a column of the long frame, such as
+#'   `PARAMCD`), its digits given **value by value**: one of the values above
+#'   for each, `PARAMCD = c(ALT = 1, BILI = 3)` or `PARAMCD = list(ALT =
+#'   c(mean = 1, sd = 2), BILI = 3)` --- a define's `SignificantDigits` one
+#'   parameter at a time.  The rows carrying that value take them after the
+#'   analysis variable's own and before the context's, the kind's and the
+#'   default; a value the rows do not carry is ignored, so one map can serve
+#'   every table.
 #'   On a **finished table** (a source that is already the table, or
 #'   `plan_cells(stats = "rows")`) a key that names a **column** formats
 #'   that column, and `.rows` formats the value columns by the text of the
@@ -1409,6 +1497,18 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 #' p |>
 #'   plan_digits(continuous = c(mean = 1, sd = 2), categorical = c(n = 0)) |>
 #'   plan_digits(WEIGHT = c(mean = 2, sd = 3)) |>
+#'   plan_apply("table")
+#'
+#' # A lab table: the digits by parameter, as a define gives them
+#' lb <- data.frame(
+#'   ARM = rep(c("Placebo", "Active"), each = 4),
+#'   PARAMCD = rep(rep(c("ALT", "BILI"), each = 2), 2),
+#'   variable = "AVAL", .label = NA, .kind = "continuous",
+#'   stat_name = rep(c("mean", "sd"), 4),
+#'   stat = c(31.234, 4.102, 0.612, 0.1234, 33.111, 5.303, 0.707, 0.1515))
+#' table_plan(lb, cols = "ARM", rows = c(param = "PARAMCD")) |>
+#'   plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})")) |>
+#'   plan_digits(PARAMCD = list(ALT = c(mean = 1, sd = 2), BILI = c(mean = 3, sd = 4))) |>
 #'   plan_apply("table")
 #' @export
 plan_digits <- function(.plan, ..., rounding = NULL) {
@@ -3631,6 +3731,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     split <- if (length(s_args$stat_groups)) {
       .ard_stat_groups_opts(s_args$stat_groups)$variables %||% vars
     } else character(0)
+    # digits keyed by a row key's value (plan_digits(PARAMCD = c(ALT = 1)))
+    rk <- .plan_row_key_digits(dig, x, vars)
     filled <- list()
     for (v in setdiff(vars, split)) {
       sel <- body & x$variable == v
@@ -3642,14 +3744,15 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
       if (!length(ctxs)) ctxs <- NA_character_
       got <- list()
       for (ctx in ctxs) {
-        s2  <- sel & (if (is.na(ctx)) is.na(x$context) else
+        # (a frame with no `context` column is one summary a variable)
+        s2  <- sel & (if (is.null(x$context)) TRUE else if (is.na(ctx)) is.na(x$context) else
                         (!is.na(x$context) & x$context == ctx))
         knd <- .ard_first_seen(x$.kind[s2])[1L]
         entry <- .plan_lookup_raw(cells, v, ctx, knd)
         if (is.null(entry)) next
-        entry <- .plan_fill_entry(entry, .plan_pick(dig, v, ctx, knd))
-        .plan_check_open(entry, v)
-        got[[.ard_summary_key(v, ctx)]] <- entry
+        f <- .plan_fill_keyed(entry, dig, rk, x[s2, , drop = FALSE], v, ctx, knd)
+        if (f$check) .plan_check_open(f$filled, v)
+        got[[.ard_summary_key(v, ctx)]] <- f$entry
       }
       if (!length(got)) next
       # the usual case -- one summary, or several sharing one recipe --
@@ -3662,14 +3765,14 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     #     nothing at all when there were no variables to expand.
     for (k in names(cells)) {
       if (k %in% names(filled)) next
-      cells[[k]] <- .plan_fill_entry(cells[[k]],
-                                     .plan_pick(dig, k, NA_character_,
-                                                NA_character_))
+      f <- .plan_fill_keyed(cells[[k]], dig, rk, x[body, , drop = FALSE], k,
+                            NA_character_, NA_character_, variable = k %in% vars)
+      cells[[k]] <- f$entry
       # Only worth complaining about a key that can still be REACHED.  With
       # variables present every lookup goes through (a), so a `categorical`
       # entry that every variable has overridden is dead and its unanswered
       # tokens are nobody's problem.
-      if (!length(vars)) .plan_check_open(cells[[k]], k)
+      if (!length(vars) && f$check) .plan_check_open(f$filled, k)
     }
     for (k in names(filled)) cells[[k]] <- filled[[k]]
     s_args$cells <- cells
@@ -3677,7 +3780,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     #  c) a digits key that reached nothing is a typo, and silence is how a
     #     typo survives review.  "AST = 3" on a frame whose analysis
     #     variable column is called PARAM does nothing, and says so.
-    reached <- c("default", ".rows", names(cells), vars)
+    reached <- c("default", ".rows", names(cells), vars, rk)
     .plan$cache$digit_cols <- setdiff(names(dig), reached)
   } else if (identical(.plan_merge(.plan_of(.plan, "cell_options"))$stats, "rows")) {
     # Statistics as rows with no templates: the table is the finished
