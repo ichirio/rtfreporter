@@ -233,7 +233,7 @@
            call. = FALSE)
     }
     blocks <- lapply(cols, function(b)
-      sort(unique(.resolve_col_indices(b, ref, "paginate_cols(cols)"))))
+      sort(unique(.resolve_col_indices(b, ref, "paginate_cols(cut_by)"))))
   } else {
     if (is.null(at) || length(at) == 0L) {
       stop("One of `at` (the columns to cut before), `cut_by` or `every` is required.",

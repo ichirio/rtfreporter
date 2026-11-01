@@ -25,10 +25,10 @@ plan_paginate_cols(
 
 \item{cut_by}{Where to cut other than by position, one of:
 \describe{
-\item{a list of column blocks}{\code{list(2:3, 4:5)}, \code{paginate_cols(cols = )}.}
+\item{a list of column blocks}{\code{list(2:3, 4:5)}.}
 \item{a separator}{one string found in the column names: with
 \code{"____"}, \code{"Placebo____Day 1"} keys on \code{"Placebo"}, and each run of
-one key is a block (\code{paginate_cols(by = )}).}
+one key is a block.}
 \item{one key per column}{a vector as long as the columns; each run of
 one key is a block.}
 }}
@@ -36,7 +36,7 @@ one key is a block.}
 \item{every}{Cut a block every this many columns, counting only the ones
 a block does not keep.  A table no wider than one block is not cut.}
 
-\item{keep}{The columns every block repeats (\code{paginate_cols(carry = )}),
+\item{keep}{The columns every block repeats,
 such as the row headings; by default the table's row titles (column 1
 unless \code{\link[=plan_columns]{plan_columns()}} says otherwise).}
 

@@ -4470,8 +4470,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
 #'   `6:` the last.
 #' @param cut_by Where to cut other than by position, one of:
 #'   \describe{
-#'     \item{a list of column blocks}{`list(2:3, 4:5)`, `paginate_cols(cols
-#'       = )`.}
+#'     \item{a list of column blocks}{`list(2:3, 4:5)`.}
 #'     \item{a separator}{one string found in the column names: with
 #'       `"____"`, `"Placebo____Day 1"` keys on `"Placebo"`, and each run of
 #'       one key is a block.}
