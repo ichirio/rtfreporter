@@ -15,20 +15,35 @@ set_col_header(x, ...)
 \arguments{
 \item{x}{An \code{\link[=rtftable]{rtftable()}}, or a list of them (pages from \code{\link[=as_rtftables]{as_rtftables()}}).}
 
-\item{...}{The header rows, in render order (top first) -- each a character
-vector (a label row, optionally named to place labels by column name) or a
-list of \code{\link[=col_cell]{col_cell()}} cells (a spanning / cell row, whose \code{pos} may be
-column names or final positions).  Alternatively a single pre-built
-\code{\link[=rtf_col_header]{rtf_col_header()}} object.  Passing nothing clears the header.
-
-A \strong{fully named} label row need not have one entry per column; an
-unnamed one must.  An unknown name is an error.  In a partly named row an
-unnamed value that is a column name is placed at that column, and any
-other by its position.}
+\item{...}{The header rows, in render order (top first), or a single
+pre-built \code{\link[=rtf_col_header]{rtf_col_header()}} object.  Passing nothing clears the
+header.
+\describe{
+\item{A row}{each a character vector (a label row, optionally named to
+place labels by column name) or a list of \code{\link[=col_cell]{col_cell()}} cells (a
+spanning / cell row, whose \code{pos} may be column names or final
+positions).}
+\item{Names in a label row}{A \strong{fully named} label row need not have
+one entry per column; an unnamed one must.  An unknown name is an
+error.  In a partly named row an unnamed value that is a column name
+is placed at that column, and any other by its position.}
+}}
 
 \item{values}{Optional table of \strong{per-page values} for the \code{{tokens}} in
-the header, one row per page key: write the header once and let each page
-take its own numbers.
+the header, one row per page key: write the header once and let each
+page take its own numbers.
+\describe{
+\item{Tokens}{A token is \code{{name}}, \code{name} being a column of \code{values};
+doubling a brace prints it literally.}
+\item{Left for the renderer}{The render-time tokens (\code{{PAGE}},
+\code{{TOTAL_PAGES}}, \code{{BOOK_PAGE}}, \code{{AUTO_PAGE}},
+\code{{AUTO_TOTAL_PAGES}}, \code{{PROGRAM}}, \code{{PROGRAM_FULL}}, \code{{DATETIME}}
+..., \code{\link[=rtf_text_tokens]{rtf_text_tokens()}}); any other unfilled token is an error.}
+\item{Checked}{Every row of \code{values} must be used by some page, and
+every page must find a row -- a mistyped level is an error, not a
+silently wrong header.  \code{\link[=header_map]{header_map()}} shows what each page ended
+up with.}
+}
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{hdr  <- rtf_col_header(
   list(col_cell(1L, ""),
@@ -36,17 +51,7 @@ take its own numbers.
   c("Parameter", visits))
 vals <- data.frame(group = periods, n_pbo = c(120, 118, 238))
 pages |> set_col_header(hdr, values = vals)
-}\if{html}{\out{</div>}}
-
-A token is \code{{name}}, \code{name} being a column of \code{values}; doubling a brace
-prints it literally; the render-time tokens (\code{{PAGE}},
-\code{{TOTAL_PAGES}}, \code{{BOOK_PAGE}}, \code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}},
-\code{{PROGRAM}}, \code{{PROGRAM_FULL}}, \code{{DATETIME}} ..., \code{\link[=rtf_text_tokens]{rtf_text_tokens()}})
-are left for the
-renderer, and any other unfilled token is an error. Every row of \code{values}
-must be used by some page, and every page must find a row -- a mistyped
-level is an error, not a silently wrong header. \code{\link[=header_map]{header_map()}} shows what
-each page ended up with.}
+}\if{html}{\out{</div>}}}
 
 \item{by}{Which page key \code{values} is matched on, named after the axis it
 matches -- the same vocabulary \code{paginate_cols(page_order = )} uses. The

@@ -11,12 +11,16 @@ plan_nest(.plan, ...)
 
 \item{...}{One entry per nested variable, named by it, whose value is
 the variable and level its rows go under, named by the variable:
-\code{plan_nest(RACESUB = c(RACE = "Asian"))}.  The level is matched as the
-table shows it (the ARD's level: a code list's label).  The nested
-variable's own heading is dropped; its order and text stay
-\code{\link[=plan_levels]{plan_levels()}}' and \code{\link[=plan_labels]{plan_labels()}}'.  The rows key that carries the
-variable (\code{table_plan(rows = c(group = "variable"))}) is what is read,
-and the indent is the stub's (\code{plan_stub(indent = )}, default 4).}
+\code{plan_nest(RACESUB = c(RACE = "Asian"))}.
+\describe{
+\item{The level}{is matched as the table shows it (the ARD's level: a
+code list's label).}
+\item{The nested variable}{Its own heading is dropped; its order and
+text stay \code{\link[=plan_levels]{plan_levels()}}' and \code{\link[=plan_labels]{plan_labels()}}'.}
+\item{What is read}{The rows key that carries the variable
+(\code{table_plan(rows = c(group = "variable"))}) is what is read, and the
+indent is the stub's (\code{plan_stub(indent = )}, default 4).}
+}}
 }
 \value{
 The plan, with one more layer.

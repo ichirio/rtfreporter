@@ -96,18 +96,21 @@ throughout; \code{"keep"} gives each kept column exactly the width it had
 before the split. No effect under \code{column_widths_twips}. See
 \emph{Column widths}.}
 
-\item{page_order}{\emph{Superseded} by \code{order}. The order the pages come out in, as the \strong{axes} of the
-split, outermost first: any of \code{"group"} (the pages a value-based split
-made, \code{as_rtftables(split = "by_value", group_col = )}), \code{"rows"} (the row
-pages -- \code{page_by} and every other row split) and \code{"cols"} (the column
-blocks this verb cuts). Axes left out are appended in that default order,
-and an axis the table does not have never varies.
-
-\code{"across"} and \code{"down"} are the two usual orders, kept as shorthands:
-\code{"across"} is \code{c("group", "cols", "rows")} -- the page number advances
-across the columns first -- and \code{"down"} is \code{c("group", "rows", "cols")},
-advancing down the rows. The pages themselves are identical whatever the
-order; only the sequence differs. See \emph{Page order}.}
+\item{page_order}{\emph{Superseded} by \code{order}.  The order the pages come out
+in, as the \strong{axes} of the split, outermost first.
+\describe{
+\item{Axes}{any of \code{"group"} (the pages a value-based split made,
+\code{as_rtftables(split = "by_value", group_col = )}), \code{"rows"} (the row
+pages -- \code{page_by} and every other row split) and \code{"cols"} (the
+column blocks this verb cuts).  Axes left out are appended in that
+default order, and an axis the table does not have never varies.}
+\item{\code{"across"}}{is \code{c("group", "cols", "rows")} -- the page number
+advances across the columns first.}
+\item{\code{"down"}}{is \code{c("group", "rows", "cols")}, advancing down the
+rows.}
+}
+The two are kept as shorthands.  The pages themselves are identical
+whatever the order; only the sequence differs.  See \emph{Page order}.}
 
 \item{cut_by}{Where to cut other than by position, as
 \code{\link[=plan_paginate_cols]{plan_paginate_cols()}} says it: a \strong{list} of column blocks

@@ -298,34 +298,44 @@ listing_split_after <- function(text, sep) {
 #'   (`"/"` under the `"multiline"` type).
 #' @param width Integer or `NULL`.  Maximum characters per physical row before
 #'   the cell wraps.  `NULL` (default) never wraps this column.
-#' @param label The column header.  A **character vector is the lines** --
-#'   one element, one line -- and so is a string that carries its own line
-#'   breaks: both say "I have laid this out", and neither is re-wrapped.  A
-#'   **single string with no breaks** is words for the package to lay out: it
-#'   is wrapped to `width` by the same rule the cells use (see
-#'   [listing_wrap()]), or left as one line when there is no `width`.
-#'   `NULL` (default) **derives** the header from the data -- each source
-#'   column's `label` attribute when it has one, otherwise its name, joined
-#'   with `sep` -- or from `fit_listing_widths(labels = )`.  `""` asks for a
-#'   deliberately empty header.
-#' @param layout How a cell lays its parts out: `"stack"` breaks after
-#'   **every** separator, so each source column starts its own line -- the
-#'   conventional listing look, and it keeps a column reading down the page.
-#'   `"flow"` treats the separator as a break *opportunity* and fills each
-#'   line as far as `width` allows, so a column of short parts (an age and a
-#'   sex, a value and its unit) does not spend two rows on four characters.
-#'   `NULL` (default) takes the listing's own (`"stack"` under `"multiline"`).
-#'   With no `width` there is nothing to lay out and both behave alike.
+#' @param label The column header.  `NULL` (default) **derives** the header
+#'   from the data -- each source column's `label` attribute when it has one,
+#'   otherwise its name, joined with `sep` -- or from
+#'   `fit_listing_widths(labels = )`.
+#'   \describe{
+#'     \item{A character vector}{is the lines -- one element, one line -- and
+#'       so is a string that carries its own line breaks: both say "I have
+#'       laid this out", and neither is re-wrapped.}
+#'     \item{A single string with no breaks}{is words for the package to lay
+#'       out: it is wrapped to `width` by the same rule the cells use (see
+#'       [listing_wrap()]), or left as one line when there is no `width`.}
+#'     \item{`""`}{asks for a deliberately empty header.}
+#'   }
+#' @param layout How a cell lays its parts out.  `NULL` (default) takes the
+#'   listing's own (`"stack"` under `"multiline"`).  With no `width` there is
+#'   nothing to lay out and both behave alike.
+#'   \describe{
+#'     \item{`"stack"`}{breaks after **every** separator, so each source
+#'       column starts its own line -- the conventional listing look, and it
+#'       keeps a column reading down the page.}
+#'     \item{`"flow"`}{treats the separator as a break *opportunity* and
+#'       fills each line as far as `width` allows, so a column of short parts
+#'       (an age and a sex, a value and its unit) does not spend two rows on
+#'       four characters.}
+#'   }
 #' @param collapse_repeats Logical (default `FALSE`).  Mark this as a **key**
 #'   column: its value is carried down every physical row of a record (its
 #'   blank row too), and [as_rtftables()] then blanks the repeats -- so the
 #'   value prints once per run of records that share it, blank rows between
-#'   them or not.  Carrying and delegating rather
-#'   than blanking here is what makes the value **reappear at the top of the
-#'   next page** -- the suppression happens per page, after the split, so a
-#'   record continued across a page break still shows its subject.  A cell
-#'   that already wraps onto several lines is padded as usual: there is no one
-#'   value to repeat.
+#'   them or not.
+#'   \describe{
+#'     \item{Why delegated}{Carrying and delegating rather than blanking here
+#'       is what makes the value **reappear at the top of the next page** --
+#'       the suppression happens per page, after the split, so a record
+#'       continued across a page break still shows its subject.}
+#'     \item{Wrapped cells}{A cell that already wraps onto several lines is
+#'       padded as usual: there is no one value to repeat.}
+#'   }
 #' @param name Output column name.  `NULL` (default) uses the first entry of
 #'   `vars`; [listing_spec()] makes the set unique if two columns collide.
 #' @param rel_width Relative width of this column in the rendered table.

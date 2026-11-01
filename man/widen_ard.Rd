@@ -39,44 +39,46 @@ cohort): the table is one column, \code{All}, its N the ARD's total
 needs it named.}
 
 \item{rows}{Row keys, in output order -- \strong{any} column of the normalized
-frame, not a fixed one: the ARD's own \code{variable} when the row groups are
-the analysis variables (a demographics table), or a grouping variable's
-name when they are not (\code{"AEBODSYS"}).  A named vector renames them, and
-the name is only the output column's name: \code{rows = c(group = "variable")}
-and \code{rows = c(group1 = "AEBODSYS")} differ in \emph{what} they group by, not in
-kind.
-
-Left \code{NULL} on a flat ARD carrying more than one analysis variable, it
-defaults to \code{c(group = "variable")}, since that is the only thing left to
-group those rows by.  One analysis variable, or any \code{hierarchy}, leaves it
-empty.
-
-A \strong{formula} element is a template here too, which is how a constant
-row-group heading stops needing a \code{mutate()} of its own:
-\code{rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline Values")}.
-A bare string is still a column name, so nothing already written
-changes meaning.}
+frame, not a fixed one.  A named vector renames them.
+\describe{
+\item{Which column}{The ARD's own \code{variable} when the row groups are
+the analysis variables (a demographics table), or a grouping
+variable's name when they are not (\code{"AEBODSYS"}).}
+\item{Names}{The name is only the output column's name:
+\code{rows = c(group = "variable")} and \code{rows = c(group1 = "AEBODSYS")}
+differ in \emph{what} they group by, not in kind.}
+\item{Left \code{NULL}}{On a flat ARD carrying more than one analysis
+variable, it defaults to \code{c(group = "variable")}, since that is the
+only thing left to group those rows by.  One analysis variable, or
+any \code{hierarchy}, leaves it empty.}
+\item{A formula}{A \strong{formula} element is a template here too, which
+is how a constant row-group heading stops needing a \code{mutate()} of
+its own: \code{rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline Values")}.  A bare string is still a column name, so nothing
+already written changes meaning.}
+}}
 
 \item{label}{Source of the row label, as a single (optionally named)
 reference.  Default \code{".label"}, which \code{\link[=normalize_ard]{normalize_ard()}} sets to the
 deepest hierarchy value, or to \code{variable_level} when there is no
-hierarchy.  \code{NULL} drops the label column, which is what you want when
-every \code{cells} entry is named.
-
-\code{NA} builds the column, uses it to tell the rows apart, and then
-\strong{drops it}: a recipe whose names are a row index --- \code{"1"} for an
-estimate line and \code{"2"} for the confidence interval under it --- needs
-them to separate two rows of one record, and does not want a column of
-1s and 2s in the result.  \code{NULL} leaves the label out of the row
-identity altogether, so those two rows collide.
-
-An element that is a \strong{formula} is a template over the record rather
-than a column name, and the chain works as \code{cells} does: the first
-element whose guard holds wins, and \code{~ "..."} is the unguarded one.
-Inside a template \code{{column}} interpolates, and \code{{.label}} is the label
-this row would otherwise carry.  So indenting the severities under
-\code{Any} is a rule rather than a \code{paste0()} on \code{.label}:
-\code{label = c(.label \%in\% c("Mild", "Severe") ~ "  {.label}", ~ "{.label}")}.}
+hierarchy.
+\describe{
+\item{\code{NULL}}{drops the label column, which is what you want when
+every \code{cells} entry is named.  It leaves the label out of the row
+identity altogether, so two rows told apart only by a row index
+collide.}
+\item{\code{NA}}{builds the column, uses it to tell the rows apart, and
+then \strong{drops it}: a recipe whose names are a row index --- \code{"1"}
+for an estimate line and \code{"2"} for the confidence interval under it
+--- needs them to separate two rows of one record, and does not
+want a column of 1s and 2s in the result.}
+\item{A formula}{An element that is a \strong{formula} is a template over
+the record rather than a column name, and the chain works as
+\code{cells} does: the first element whose guard holds wins, and
+\code{~ "..."} is the unguarded one.  Inside a template \code{{column}}
+interpolates, and \code{{.label}} is the label this row would otherwise
+carry.  So indenting the severities under \code{Any} is a rule rather
+than a \code{paste0()} on \code{.label}: \code{label = c(.label \%in\% c("Mild", "Severe") ~ "  {.label}", ~ "{.label}")}.}
+}}
 
 \item{cells}{The cell recipes.  A \strong{character vector} is one recipe, used
 for every variable:
@@ -141,32 +143,34 @@ it) is said in a message, whatever \code{notes} says: a level shown with no
 record has to be in the ARD -- a factor's level, as the study's code
 list applied when the ARD is made gives, which cards counts as 0.}
 
-\item{labels}{Named character vector recoding key \emph{values} to display text,
-e.g. \code{c(AGE = "Age (years)", SEX = "Sex [n (\\\%)]")}.  Text only: the
-order is \code{levels}' or the data's, never the order the labels are
-written in.  The two-parallel-vector spelling works just as well --
-\code{stats::setNames(group_labels, group_vars)} -- but note that \code{setNames()}
-gives an element an \code{NA} name rather than complaining when the two vectors
-are different lengths, so that entry would never apply; every element must
-be named, and an unnamed one is an error here rather than a silent
-omission.
-
-One vector is one dictionary for the \strong{whole table}, and the same
-value can mean two things on the two axes --- a shift table's \code{"0"}
-is \code{"Grade 0"} down the side and \code{"Baseline 0"} across the top.
-Scope it the way \code{levels} already is, with a \strong{list keyed by
-column}, matched on the output name then the source name, with
-\code{.default} covering the rest:
+\item{labels}{Named character vector recoding key \emph{values} to display
+text, e.g. \code{c(AGE = "Age (years)", SEX = "Sex [n (\\\%)]")}.
+\describe{
+\item{Text only}{The order is \code{levels}' or the data's, never the order
+the labels are written in.}
+\item{Every element named}{The two-parallel-vector spelling works just
+as well -- \code{stats::setNames(group_labels, group_vars)} -- but note
+that \code{setNames()} gives an element an \code{NA} name rather than
+complaining when the two vectors are different lengths, so that
+entry would never apply; every element must be named, and an
+unnamed one is an error here rather than a silent omission.}
+\item{One dictionary, or one for each axis}{One vector is one
+dictionary for the \strong{whole table}, and the same value can mean two
+things on the two axes --- a shift table's \code{"0"} is \code{"Grade 0"} down
+the side and \code{"Baseline 0"} across the top.  Scope it the way
+\code{levels} already is, with a \strong{list keyed by column}, matched on the
+output name then the source name, with \code{.default} covering the
+rest.}
+\item{An analysis variable}{A scope may name an \strong{analysis variable}
+too: \code{labels = list(SEX = c(F = "Female", M = "Male"))} recodes that
+variable's levels in the label column, as \code{levels = list(SEX = c("M", "F"))} orders them (the order is written in the values, the
+label column prints the text).  Its entry under the variable's own
+name is the variable's label: \code{SEX = c(SEX = "Sex", F = "Female", M = "Male")}.}
+}
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{labels = list(BGRADE = c("0" = "Baseline 0"),
               WORST  = c("0" = "Grade 0"))
-}\if{html}{\out{</div>}}
-
-A scope may name an \strong{analysis variable} too: \code{labels = list(SEX = c(F = "Female", M = "Male"))} recodes that variable's levels in the
-label column, as \code{levels = list(SEX = c("M", "F"))} orders them (the
-order is written in the values, the label column prints the text).
-Its entry under the variable's own name is the variable's label:
-\code{SEX = c(SEX = "Sex", F = "Female", M = "Male")}.}
+}\if{html}{\out{</div>}}}
 
 \item{sort}{\code{FALSE} (default) moves a row only where somebody
 \strong{declared} an order.  A key is a factor exactly when \code{levels},
@@ -250,28 +254,37 @@ empty cells are \code{NA}.}
 -- the \code{attributes} and \code{total_n} rows, the key variables' own
 tabulations, rows with no value for a \code{cols} key, and every statistic no
 template named -- and discarding them in silence is how a mis-typed
-\code{cells} looks exactly like a correct one.  \code{TRUE} (default) prints a
-summary, \code{FALSE} says nothing, and \code{"attr"} also attaches the per-variable
-detail as the \code{"ard_ignored"} attribute.  It is not attached by default
-because the result is a plain data frame that you will compare against
-whatever you built before, and an extra attribute makes \code{all.equal()}
-report a difference that is not in the table.
-
-\code{"applied"} adds the other half: \strong{which template produced each cell},
-with the guard that let it through when it had one.  A bare template is
-its own explanation, but a guarded chain is not --- the finished cell
-cannot tell you which of its three candidates you got --- so this is the
-companion to \code{cells} guards rather than a general-purpose log.}
+\code{cells} looks exactly like a correct one.
+\describe{
+\item{\code{TRUE}}{(default) prints a summary.}
+\item{\code{FALSE}}{says nothing.}
+\item{\code{"attr"}}{also attaches the per-variable detail as the
+\code{"ard_ignored"} attribute.  It is not attached by default because
+the result is a plain data frame that you will compare against
+whatever you built before, and an extra attribute makes
+\code{all.equal()} report a difference that is not in the table.}
+\item{\code{"applied"}}{adds the other half: \strong{which template produced each
+cell}, with the guard that let it through when it had one.  A bare
+template is its own explanation, but a guarded chain is not --- the
+finished cell cannot tell you which of its three candidates you got
+--- so this is the companion to \code{cells} guards rather than a
+general-purpose log.}
+}}
 
 \item{stat_groups}{The statistics in named groups, as a named list
-(\code{list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))}):
-each row gets its group in a key \code{.stat_group}, which \code{cols} or \code{rows}
-name like any other (\code{cols = c("ARM", ".stat_group")}: one record's N in
-one column, its rate and interval in the next), and a \code{cells} map may be
-keyed by a group's name (looked up after the analysis variable).  A
-statistic in no group is not read.  The options \code{.variables} and
-\code{.others} scope it (see \code{\link[=plan_stat_groups]{plan_stat_groups()}}).  \code{\link[=plan_stat_groups]{plan_stat_groups()}} is the plan's
-spelling.  \code{NULL} (default): no groups.}
+(\code{list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))}).
+\code{NULL} (default): no groups.  \code{\link[=plan_stat_groups]{plan_stat_groups()}} is the plan's
+spelling.
+\describe{
+\item{\code{.stat_group}}{Each row gets its group in a key \code{.stat_group},
+which \code{cols} or \code{rows} name like any other (\code{cols = c("ARM", ".stat_group")}: one record's N in one column, its rate and
+interval in the next).}
+\item{\code{cells}}{A \code{cells} map may be keyed by a group's name (looked up
+after the analysis variable).}
+\item{Not in a group}{A statistic in no group is not read.}
+\item{Scope}{The options \code{.variables} and \code{.others} scope it (see
+\code{\link[=plan_stat_groups]{plan_stat_groups()}}).}
+}}
 
 \item{compare}{Columns read from the ARD's comparison records --- the
 column key with no value, in an analysis the body does not have (a

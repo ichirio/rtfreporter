@@ -50,12 +50,16 @@ is simply displayed in its own column.}
 
 \item{label_span}{Render each group's label row as \strong{one cell spanning the
 table} instead of a stub cell followed by empty ones.  \code{FALSE} by
-default, which is the historical look.  Applies to \code{layout = "merged"}
-only; \code{layout = "columns"} keeps the group value in its own column and so
-has nothing to span.  A group-summary row folded onto a label row is never
-spanned -- it carries statistics in the other columns.  The span is
-recorded as \code{attr(out, "rtf_label_rows")}, which
-\code{rtftable(read_attributes = TRUE)} consumes.}
+default, which is the historical look.
+\describe{
+\item{Which layout}{Applies to \code{layout = "merged"} only;
+\code{layout = "columns"} keeps the group value in its own column and so
+has nothing to span.}
+\item{Not spanned}{A group-summary row folded onto a label row is never
+spanned -- it carries statistics in the other columns.}
+\item{Recorded}{The span is recorded as \code{attr(out, "rtf_label_rows")},
+which \code{rtftable(read_attributes = TRUE)} consumes.}
+}}
 }
 \value{
 A data.frame: the stub column first, then every column of \code{data}

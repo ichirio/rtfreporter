@@ -1973,43 +1973,47 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   ([cards::ard_total_n()]) for a header's `{n}`.  An ARD that has a group
 #'   needs it named.
 #' @param rows Row keys, in output order -- **any** column of the normalized
-#'   frame, not a fixed one: the ARD's own `variable` when the row groups are
-#'   the analysis variables (a demographics table), or a grouping variable's
-#'   name when they are not (`"AEBODSYS"`).  A named vector renames them, and
-#'   the name is only the output column's name: `rows = c(group = "variable")`
-#'   and `rows = c(group1 = "AEBODSYS")` differ in *what* they group by, not in
-#'   kind.
-#'
-#'   Left `NULL` on a flat ARD carrying more than one analysis variable, it
-#'   defaults to `c(group = "variable")`, since that is the only thing left to
-#'   group those rows by.  One analysis variable, or any `hierarchy`, leaves it
-#'   empty.
-#'
-#'   A **formula** element is a template here too, which is how a constant
-#'   row-group heading stops needing a `mutate()` of its own:
-#'   `rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline Values")`.
-#'   A bare string is still a column name, so nothing already written
-#'   changes meaning.
+#'   frame, not a fixed one.  A named vector renames them.
+#'   \describe{
+#'     \item{Which column}{The ARD's own `variable` when the row groups are
+#'       the analysis variables (a demographics table), or a grouping
+#'       variable's name when they are not (`"AEBODSYS"`).}
+#'     \item{Names}{The name is only the output column's name:
+#'       `rows = c(group = "variable")` and `rows = c(group1 = "AEBODSYS")`
+#'       differ in *what* they group by, not in kind.}
+#'     \item{Left `NULL`}{On a flat ARD carrying more than one analysis
+#'       variable, it defaults to `c(group = "variable")`, since that is the
+#'       only thing left to group those rows by.  One analysis variable, or
+#'       any `hierarchy`, leaves it empty.}
+#'     \item{A formula}{A **formula** element is a template here too, which
+#'       is how a constant row-group heading stops needing a `mutate()` of
+#'       its own: `rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline
+#'       Values")`.  A bare string is still a column name, so nothing
+#'       already written changes meaning.}
+#'   }
 #' @param label Source of the row label, as a single (optionally named)
 #'   reference.  Default `".label"`, which [normalize_ard()] sets to the
 #'   deepest hierarchy value, or to `variable_level` when there is no
-#'   hierarchy.  `NULL` drops the label column, which is what you want when
-#'   every `cells` entry is named.
-#'
-#'   `NA` builds the column, uses it to tell the rows apart, and then
-#'   **drops it**: a recipe whose names are a row index --- `"1"` for an
-#'   estimate line and `"2"` for the confidence interval under it --- needs
-#'   them to separate two rows of one record, and does not want a column of
-#'   1s and 2s in the result.  `NULL` leaves the label out of the row
-#'   identity altogether, so those two rows collide.
-#'
-#'   An element that is a **formula** is a template over the record rather
-#'   than a column name, and the chain works as `cells` does: the first
-#'   element whose guard holds wins, and `~ "..."` is the unguarded one.
-#'   Inside a template `{column}` interpolates, and `{.label}` is the label
-#'   this row would otherwise carry.  So indenting the severities under
-#'   `Any` is a rule rather than a `paste0()` on `.label`:
-#'   `label = c(.label %in% c("Mild", "Severe") ~ "  {.label}", ~ "{.label}")`.
+#'   hierarchy.
+#'   \describe{
+#'     \item{`NULL`}{drops the label column, which is what you want when
+#'       every `cells` entry is named.  It leaves the label out of the row
+#'       identity altogether, so two rows told apart only by a row index
+#'       collide.}
+#'     \item{`NA`}{builds the column, uses it to tell the rows apart, and
+#'       then **drops it**: a recipe whose names are a row index --- `"1"`
+#'       for an estimate line and `"2"` for the confidence interval under it
+#'       --- needs them to separate two rows of one record, and does not
+#'       want a column of 1s and 2s in the result.}
+#'     \item{A formula}{An element that is a **formula** is a template over
+#'       the record rather than a column name, and the chain works as
+#'       `cells` does: the first element whose guard holds wins, and
+#'       `~ "..."` is the unguarded one.  Inside a template `{column}`
+#'       interpolates, and `{.label}` is the label this row would otherwise
+#'       carry.  So indenting the severities under `Any` is a rule rather
+#'       than a `paste0()` on `.label`: `label = c(.label %in% c("Mild",
+#'       "Severe") ~ "  {.label}", ~ "{.label}")`.}
+#'   }
 #' @param cells The cell recipes.  A **character vector** is one recipe, used
 #'   for every variable:
 #'   * `"{n} ({p})"` -- one row, labelled from `label`;
@@ -2039,14 +2043,20 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'
 #'   See [ard-tables] for the `{token:spec}` grammar.
 #' @param stat_groups The statistics in named groups, as a named list
-#'   (`list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))`):
-#'   each row gets its group in a key `.stat_group`, which `cols` or `rows`
-#'   name like any other (`cols = c("ARM", ".stat_group")`: one record's N in
-#'   one column, its rate and interval in the next), and a `cells` map may be
-#'   keyed by a group's name (looked up after the analysis variable).  A
-#'   statistic in no group is not read.  The options `.variables` and
-#'   `.others` scope it (see [plan_stat_groups()]).  [plan_stat_groups()] is the plan's
-#'   spelling.  `NULL` (default): no groups.
+#'   (`list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))`).
+#'   `NULL` (default): no groups.  [plan_stat_groups()] is the plan's
+#'   spelling.
+#'   \describe{
+#'     \item{`.stat_group`}{Each row gets its group in a key `.stat_group`,
+#'       which `cols` or `rows` name like any other (`cols = c("ARM",
+#'       ".stat_group")`: one record's N in one column, its rate and
+#'       interval in the next).}
+#'     \item{`cells`}{A `cells` map may be keyed by a group's name (looked up
+#'       after the analysis variable).}
+#'     \item{Not in a group}{A statistic in no group is not read.}
+#'     \item{Scope}{The options `.variables` and `.others` scope it (see
+#'       [plan_stat_groups()]).}
+#'   }
 #' @param filter Rows dropped by a condition over their records:
 #'   `list(conds = list(quote(p >= 0.05)), any = TRUE, parents = "keep")`.
 #'   [plan_filter()] is the plan's spelling, and says the rules.  `NULL`
@@ -2088,34 +2098,36 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   it) is said in a message, whatever `notes` says: a level shown with no
 #'   record has to be in the ARD -- a factor's level, as the study's code
 #'   list applied when the ARD is made gives, which cards counts as 0.
-#' @param labels Named character vector recoding key *values* to display text,
-#'   e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.  Text only: the
-#'   order is `levels`' or the data's, never the order the labels are
-#'   written in.  The two-parallel-vector spelling works just as well --
-#'   `stats::setNames(group_labels, group_vars)` -- but note that `setNames()`
-#'   gives an element an `NA` name rather than complaining when the two vectors
-#'   are different lengths, so that entry would never apply; every element must
-#'   be named, and an unnamed one is an error here rather than a silent
-#'   omission.
-#'
-#'   One vector is one dictionary for the **whole table**, and the same
-#'   value can mean two things on the two axes --- a shift table's `"0"`
-#'   is `"Grade 0"` down the side and `"Baseline 0"` across the top.
-#'   Scope it the way `levels` already is, with a **list keyed by
-#'   column**, matched on the output name then the source name, with
-#'   `.default` covering the rest:
-#'
+#' @param labels Named character vector recoding key *values* to display
+#'   text, e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.
+#'   \describe{
+#'     \item{Text only}{The order is `levels`' or the data's, never the order
+#'       the labels are written in.}
+#'     \item{Every element named}{The two-parallel-vector spelling works just
+#'       as well -- `stats::setNames(group_labels, group_vars)` -- but note
+#'       that `setNames()` gives an element an `NA` name rather than
+#'       complaining when the two vectors are different lengths, so that
+#'       entry would never apply; every element must be named, and an
+#'       unnamed one is an error here rather than a silent omission.}
+#'     \item{One dictionary, or one for each axis}{One vector is one
+#'       dictionary for the **whole table**, and the same value can mean two
+#'       things on the two axes --- a shift table's `"0"` is `"Grade 0"` down
+#'       the side and `"Baseline 0"` across the top.  Scope it the way
+#'       `levels` already is, with a **list keyed by column**, matched on the
+#'       output name then the source name, with `.default` covering the
+#'       rest.}
+#'     \item{An analysis variable}{A scope may name an **analysis variable**
+#'       too: `labels = list(SEX = c(F = "Female", M = "Male"))` recodes that
+#'       variable's levels in the label column, as `levels = list(SEX =
+#'       c("M", "F"))` orders them (the order is written in the values, the
+#'       label column prints the text).  Its entry under the variable's own
+#'       name is the variable's label: `SEX = c(SEX = "Sex", F = "Female", M
+#'       = "Male")`.}
+#'   }
 #'   ```r
 #'   labels = list(BGRADE = c("0" = "Baseline 0"),
 #'                 WORST  = c("0" = "Grade 0"))
 #'   ```
-#'
-#'   A scope may name an **analysis variable** too: `labels = list(SEX =
-#'   c(F = "Female", M = "Male"))` recodes that variable's levels in the
-#'   label column, as `levels = list(SEX = c("M", "F"))` orders them (the
-#'   order is written in the values, the label column prints the text).
-#'   Its entry under the variable's own name is the variable's label:
-#'   `SEX = c(SEX = "Sex", F = "Female", M = "Male")`.
 #' @param sort `FALSE` (default) moves a row only where somebody
 #'   **declared** an order.  A key is a factor exactly when `levels`,
 #'   `labels` or the data itself made it one --- and making a column a
@@ -2193,18 +2205,22 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   -- the `attributes` and `total_n` rows, the key variables' own
 #'   tabulations, rows with no value for a `cols` key, and every statistic no
 #'   template named -- and discarding them in silence is how a mis-typed
-#'   `cells` looks exactly like a correct one.  `TRUE` (default) prints a
-#'   summary, `FALSE` says nothing, and `"attr"` also attaches the per-variable
-#'   detail as the `"ard_ignored"` attribute.  It is not attached by default
-#'   because the result is a plain data frame that you will compare against
-#'   whatever you built before, and an extra attribute makes `all.equal()`
-#'   report a difference that is not in the table.
-#'
-#'   `"applied"` adds the other half: **which template produced each cell**,
-#'   with the guard that let it through when it had one.  A bare template is
-#'   its own explanation, but a guarded chain is not --- the finished cell
-#'   cannot tell you which of its three candidates you got --- so this is the
-#'   companion to `cells` guards rather than a general-purpose log.
+#'   `cells` looks exactly like a correct one.
+#'   \describe{
+#'     \item{`TRUE`}{(default) prints a summary.}
+#'     \item{`FALSE`}{says nothing.}
+#'     \item{`"attr"`}{also attaches the per-variable detail as the
+#'       `"ard_ignored"` attribute.  It is not attached by default because
+#'       the result is a plain data frame that you will compare against
+#'       whatever you built before, and an extra attribute makes
+#'       `all.equal()` report a difference that is not in the table.}
+#'     \item{`"applied"`}{adds the other half: **which template produced each
+#'       cell**, with the guard that let it through when it had one.  A bare
+#'       template is its own explanation, but a guarded chain is not --- the
+#'       finished cell cannot tell you which of its three candidates you got
+#'       --- so this is the companion to `cells` guards rather than a
+#'       general-purpose log.}
+#'   }
 #'
 #' @return A data frame: the `rows` columns, the label column, then one column
 #'   per column key.

@@ -119,12 +119,16 @@
 #'   }
 #' @param label_span Render each group's label row as **one cell spanning the
 #'   table** instead of a stub cell followed by empty ones.  `FALSE` by
-#'   default, which is the historical look.  Applies to `layout = "merged"`
-#'   only; `layout = "columns"` keeps the group value in its own column and so
-#'   has nothing to span.  A group-summary row folded onto a label row is never
-#'   spanned -- it carries statistics in the other columns.  The span is
-#'   recorded as `attr(out, "rtf_label_rows")`, which
-#'   `rtftable(read_attributes = TRUE)` consumes.
+#'   default, which is the historical look.
+#'   \describe{
+#'     \item{Which layout}{Applies to `layout = "merged"` only;
+#'       `layout = "columns"` keeps the group value in its own column and so
+#'       has nothing to span.}
+#'     \item{Not spanned}{A group-summary row folded onto a label row is never
+#'       spanned -- it carries statistics in the other columns.}
+#'     \item{Recorded}{The span is recorded as `attr(out, "rtf_label_rows")`,
+#'       which `rtftable(read_attributes = TRUE)` consumes.}
+#'   }
 #' @param group_summary Which leaf values mark a row as its group's summary,
 #'   folding that row's statistics onto the group label row instead of an
 #'   indented leaf row (see *Group-summary rows*).  A subset of
