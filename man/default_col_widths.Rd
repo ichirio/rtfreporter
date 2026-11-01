@@ -38,7 +38,8 @@ The proportions \code{\link[=rtftable]{rtftable()}} uses when a table gives no w
 \code{col_rel_width}, \code{column_widths_twips}, or a plan's \code{plan_columns(widths = )}):
 the row-heading columns as wide as their longest line, within a share of
 the table (at most 40\%; less with many data columns, down to 20\%; 5
-points more when the rows are indented), the data columns sharing the
+points more when the rows are indented) but never narrower than one and a
+half data columns (one data column: 60:40), the data columns sharing the
 rest equally, and a data column whose longest cell does not fit widened
 from the others.  A program that wants these as its starting point writes
 them out: \code{col_rel_width = default_col_widths(data)} gives the same table
