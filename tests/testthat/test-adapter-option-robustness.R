@@ -211,3 +211,30 @@ test_that("rtables: a table with no data rows reads to a zero-row body", {
   rt <- expect_no_error(as_rtftable(t, read_meta = TRUE))
   expect_equal(nrow(rt$data), 0L)
 })
+
+test_that("gt: several group columns give one group row per combination, formats kept (#193)", {
+  skip_if_not_installed("gt")
+  d <- data.frame(a = c("x", "y", "x", "y"), b = c("p", "p", "q", "p"),
+                  v = c(1.234, 2, 3, 4))
+  g <- gt::fmt_number(gt::gt(d, groupname_col = c("a", "b")), v, decimals = 1)
+  rt <- expect_no_error(as_rtftable(g, read_meta = TRUE))
+  # rows under a group are indented (non-breaking spaces)
+  cells <- trimws(unlist(rt$data, use.names = FALSE), whitespace = "[\\h\\v]")
+  expect_true(all(c("x - p", "y - p", "x - q") %in% cells))
+  expect_true(all(c("1.2", "2.0", "4.0", "3.0") %in% cells))
+  expect_lt(match("y - p", cells), match("x - q", cells))
+})
+
+test_that("gt: a table with no column stops with a clear message (#193)", {
+  skip_if_not_installed("gt")
+  expect_error(as_rtftable(gt::gt(data.frame())), "no column to read")
+})
+
+test_that("gt: an html() label is read as its text, <br> a line break (#193)", {
+  skip_if_not_installed("gt")
+  g <- gt::cols_label(gt::gt(data.frame(a = 1, b = 2, c = 3)),
+                      a = gt::html("W<sub>t</sub>"), b = gt::html("A<br>B"),
+                      c = gt::md("**Age**"))
+  rt <- as_rtftable(g, read_meta = TRUE)
+  expect_identical(unlist(rt$col_header), c("Wt", "A\nB", "Age"))
+})

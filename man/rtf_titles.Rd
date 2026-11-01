@@ -17,19 +17,28 @@ rtf_titles(
 \arguments{
 \item{doc}{An rtf_document object.}
 
-\item{titles}{A list of length = number of contents, or length 1 (common).}
+\item{titles}{A list of length = number of contents, or length 1 (common).
+A page's heading (\code{rtf_tables(auto_title = TRUE)}, a plan's
+\code{plan_paginate_group(heading_at = "title")}) is not replaced: it
+stays as the block's last row, under the titles given.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
 this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
-\code{font} names a family (e.g. \code{"Arial"}); one not already in the document's
-\code{font_table} is added to it automatically, the way a colour is.
-A named vector gives one family per script slot (\code{latin},
-\code{east_asian}, \code{complex}, optional \code{hansi}), e.g. \code{c(latin = "Times New Roman", east_asian = "MS Mincho")}; see \code{\link[=rtf_document]{rtf_document()}}.
-Anything left \code{NULL} is inherited. Font size and row height resolve
-\strong{together}: a size given without a height recomputes the height from
-that size rather than inheriting one chosen for a different size, and an
-explicit height always wins. \code{align} sets the block's default row
-alignment; a per-row \code{align} still beats it.}
+Anything left \code{NULL} is inherited.
+\describe{
+\item{\code{font}}{names a family (e.g. \code{"Arial"}); one not already in the
+document's \code{font_table} is added to it automatically, the way a
+colour is.  A named vector gives one family per script slot
+(\code{latin}, \code{east_asian}, \code{complex}, optional \code{hansi}), e.g.
+\code{c(latin = "Times New Roman", east_asian = "MS Mincho")}; see
+\code{\link[=rtf_document]{rtf_document()}}.}
+\item{\code{font_size_half_points}, \code{row_height_twips}}{resolve
+\strong{together}: a size given without a height recomputes the height
+from that size rather than inheriting one chosen for a different
+size, and an explicit height always wins.}
+\item{\code{align}}{sets the block's default row alignment; a per-row
+\code{align} still beats it.}
+}}
 }
 \value{
 Modified rtf_document.

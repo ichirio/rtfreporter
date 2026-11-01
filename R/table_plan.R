@@ -394,15 +394,19 @@
 #'   says otherwise.  Left out when the ARD has no group to spread (one
 #'   arm): one column, `All` (see [widen_ard()]).
 #' @param rows The keys that go **down** it, likewise.  Left out, the
-#'   analysis variable is used (as `group`).  Each name is the column the
-#'   finished table gets, and later verbs refer to it by that name
-#'   ([plan_stub()], `plan_paginate_group(col = )`, [plan_hide()]); left
-#'   unnamed, the first key is called `group`.  `"variable"` is the column
-#'   that holds the analysis variable's name, so `c(group = "variable")`
-#'   makes one block of rows per analysis variable (AGE, SEX, ...).
-#'   Subgroups from different variables laid one under another come from
-#'   `normalize_ard(stack = )`; see the article *Tables from an ARD, step by
-#'   step* (*Subgroups*).
+#'   analysis variable is used (as `group`).
+#'   \describe{
+#'     \item{Names}{Each name is the column the finished table gets, and
+#'       later verbs refer to it by that name ([plan_stub()],
+#'       `plan_paginate_group(col = )`, [plan_hide()]); left unnamed, the
+#'       first key is called `group`.}
+#'     \item{`"variable"`}{The column that holds the analysis variable's
+#'       name, so `c(group = "variable")` makes one block of rows per
+#'       analysis variable (AGE, SEX, ...).}
+#'     \item{Subgroups}{Subgroups from different variables laid one under
+#'       another come from `normalize_ard(stack = )`; see the article
+#'       *Tables from an ARD, step by step* (*Subgroups*).}
+#'   }
 #' @param label The column carrying the **row identity** --- the text in
 #'   the label column.  `".label"` by default (what [normalize_ard()]
 #'   builds), `NA` for a table that has none, or a guarded template.
@@ -410,24 +414,41 @@
 #'   categorical variable; the deepest level's value in a `hierarchy`; and
 #'   `NA` for a continuous variable, whose rows are named by the
 #'   [plan_cells()] template names (`"Mean (SD)"`).
-#' @param show_keys Row keys this table also shows **as variables**: their
-#'   own counts (`cards::ard_tabulate(adsl, by = TRT, variables = SEX)`),
-#'   which [normalize_ard()] marks as a key's own tabulation once SEX is a
-#'   key anywhere in the ARD (a subgroup layer of another analysis), go to
-#'   the body instead of only to the header's `{n}`.  With `rows =
-#'   c(block = "variable", grp = "subgroup", lvl = "subgroup_level")` SEX's
-#'   n (%) is a block of its own beside the ORR's SEX subgroups.  A column
-#'   key is refused (its counts are the columns' populations).  `NULL`
-#'   (default): none, as before.
+#' @param show_keys Row keys this table also shows **as variables**.
+#'   `NULL` (default): none, as before.
+#'   \describe{
+#'     \item{What it does}{A key's own counts
+#'       (`cards::ard_tabulate(adsl, by = TRT, variables = SEX)`), which
+#'       [normalize_ard()] marks as a key's own tabulation once SEX is a
+#'       key anywhere in the ARD (a subgroup layer of another analysis), go
+#'       to the body instead of only to the header's `{n}`.}
+#'     \item{Example}{With `rows = c(block = "variable", grp = "subgroup",
+#'       lvl = "subgroup_level")` SEX's n (%) is a block of its own beside
+#'       the ORR's SEX subgroups.}
+#'     \item{Refused}{A column key (its counts are the columns'
+#'       populations).}
+#'   }
 #' @param stat Which of **your** columns play the three parts [widen_ard()]
-#'   reads by name, as a named vector: `variable` (the analysis variable,
-#'   what [plan_cells()] and [plan_digits()] key on), `name` (which
-#'   statistic a row is) and `value` (what it is worth) ---
+#'   reads by name, as a named vector:
+#'   \describe{
+#'     \item{`variable`}{the analysis variable, what [plan_cells()] and
+#'       [plan_digits()] key on;}
+#'     \item{`name`}{which statistic a row is;}
+#'     \item{`value`}{what it is worth.}
+#'   }
 #'   `stat = c(variable = "PARAMCD", name = "STAT", value = "AVAL")`.  A
 #'   frame from \pkg{cards} already calls them `variable`, `stat_name` and
 #'   `stat` and needs none of this; a summary somebody built with dplyr says
 #'   so here, once, instead of being asked again by every verb.  Name only
 #'   the parts your frame calls something else.
+#' @param value For a frame of **records** (an ADaM, one row a record): the
+#'   column whose value a cell prints, `value = "AVAL"`.  That makes a
+#'   records plan: one row a `rows` key (a subject: `rows = c(subject = ~
+#'   "{USUBJID}/{AGE}/{SEX}")`), the records' values spread across `cols`,
+#'   one cell template (`plan_cells("{value:.3s}", na = "BLQ")`) -- a
+#'   listing laid out as a table, with nothing reshaped by hand.  Two
+#'   records of one key and column stop.  See [plan_append()] for its
+#'   summary under it.
 #'
 #' @section Where the other settings went:
 #' `table_plan()` takes the **roles** and nothing else.  Every other setting
@@ -459,8 +480,36 @@
 #' @seealso [plan_apply()], [normalize_ard()], [widen_ard()]
 #' @export
 table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
-                       stat = NULL, show_keys = NULL) {
+                       stat = NULL, show_keys = NULL, value = NULL) {
   data <- x
+  # A frame of records (an ADaM, one row a record) with `value`: a RECORDS
+  # plan.  One row a `rows` key, the records' values spread across `cols`,
+  # one cell template (plan_cells("{value:.3s}", na = "BLQ")).  Inside it is
+  # the long route with one statistic, `value`, and no row identity but the
+  # keys: nothing is reshaped by hand.
+  if (!is.null(value)) {
+    if (!is.character(value) || length(value) != 1L || is.na(value)) {
+      .ard_stop("table_plan(value = ) names one column of the records: the value a cell prints.")
+    }
+    if (!is.data.frame(data) || !value %in% names(data)) {
+      .ard_stop(sprintf(paste0(
+        "table_plan(value = %s): no such column.\n  Columns: %s"),
+        sQuote(value), paste(utils::head(names(data), 12L), collapse = ", ")))
+    }
+    if (is.null(rows) && is.null(label)) {
+      .ard_stop(paste0(
+        "table_plan(value = ): a records plan needs `rows` -- the key(s) one ",
+        "row stands for\n  (a subject: rows = c(subject = ~ \"{USUBJID}/{AGE}/{SEX}\"))."))
+    }
+    if (!is.null(stat)) .ard_stop("table_plan(value = ) takes no `stat`: the records are not statistics.")
+    data$variable <- rep("value", nrow(data))
+    data$stat_name <- rep("value", nrow(data))
+    data$stat <- data[[value]]
+    if (is.null(label)) {
+      data$.label <- rep(NA_character_, nrow(data))
+      label <- NA
+    }
+  }
   # Internally the three parts keep the names widen_ard() reads them by.
   parts <- .plan_stat_roles(stat)
   roles <- list(cols = cols, rows = rows, label = label,
@@ -491,7 +540,7 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
   }
   .plan_check_roles(data, roles)
   p <- structure(list(data = data, kind = kind, roles = roles,
-                      layers = list(),
+                      layers = list(), records = value,
                       cache = new.env(parent = emptyenv())),
                  class = "table_plan")
   p
@@ -699,9 +748,19 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
   unique(out)
 }
 
-.plan_col_widths <- function(pages, widths, spread) {
+.plan_col_widths <- function(pages, widths, spread, hidden = character()) {
   one <- function(tb) {
     nm <- names(tb$data)
+    # a name that is no column of the table: a typo, or a column renamed
+    # (a hidden column's width is harmless: it is not printed)
+    bad <- setdiff(names(widths), c(nm, ".values", hidden))
+    if (length(bad)) {
+      .ard_stop(paste0(
+        "plan_columns(widths = ) names ", paste(sQuote(bad, FALSE), collapse = ", "),
+        ", not a column of the table.\n",
+        "  Its printed columns: ", paste(sQuote(nm, FALSE), collapse = ", "),
+        " (`.values` covers the value columns)."))
+    }
     w <- rep(NA_real_, length(nm))
     if (".values" %in% names(widths)) w[nm %in% spread] <- widths[[".values"]]
     own <- intersect(names(widths), nm)
@@ -720,6 +779,14 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
   if (inherits(pages, "rtftable")) return(one(pages))
   pages[] <- lapply(pages, one)
   pages
+}
+
+# Widths said twice: relative (`widths`) and absolute (`column_widths_twips`)
+.plan_widths_both <- function() {
+  .ard_stop(paste0(
+    "plan_columns(): `widths` and `column_widths_twips` both set the columns' widths.\n",
+    "  Give one: `widths` (relative, by name or in order) or ",
+    "`column_widths_twips` (absolute, one a column)."))
 }
 
 # The whole point of naming the roles beside the data is that the names can
@@ -857,644 +924,64 @@ print.table_plan <- function(x, ...) {
 
 # -- the verbs ---------------------------------------------------------------
 
-#' Declare the table, one layer at a time
+#' @title Declare the table, one layer at a time
 #'
+#' @description
 #' Each verb adds a layer to an [table_plan()].  **A later layer wins.**
 #' The roles --- which column goes across, which go down, which carries
 #' the row identity --- are said once, on [table_plan()]; these verbs are
 #' the things a report really does declare twice.  Their arguments are
 #' the ones [widen_ard()] and [as_rtftables()] already take, so the
-#' layering is the only new idea.
+#' layering is the only new idea.  Nothing runs until the plan is handed
+#' to [plan_apply()] or [rtf_tables()].
 #'
-#' @param .plan A [table_plan()].  The pipe passes it by position; the dot
-#'   keeps a name in `...` such as `p` (cards' percentage) from being taken
-#'   for it (an argument before `...` matches by its first letters).
-#' @param ... For `plan_cells()`, exactly what `widen_ard(cells = )`
-#'   takes: one bare entry, or entries named by variable, `context`,
-#'   kind (`continuous` / `categorical`), a stat group of
-#'   `plan_stat_groups()` or `default`.  The names after `...` are
-#'   reserved: a variable called `stats`, `value`, `na` or `notes` cannot
-#'   be keyed in `plan_cells()`; name it so in the ARD.
+#' This page is the overview of the verbs, in the order a report is
+#' usually written; each has a page of its own.  Every verb takes the plan
+#' first, as `.plan`: the pipe passes it by position, and the dot keeps a
+#' name in `...` such as `p` (cards' percentage) from being taken for it.
 #'
-#'   In a table of `plan_stat_groups()`, the key is picked per record: a
-#'   record of a split variable (`.variables`) takes its variable's entry,
-#'   else its **group's** (`"n (%)"`, `orr_ci`), before its context or
-#'   kind; a record that went whole to `.others` takes its variable's,
-#'   then its context's or kind's (`categorical`), its group's only after
-#'   them.  So a study's plan-wide `categorical` reaches a block of counts
-#'   beside an ORR, and leaves the rate and its CI to their groups.
+#' **The cells**
+#' * [plan_cells()]: the cell templates, how each cell is made from the
+#'   statistics.
+#' * [plan_digits()]: the decimals (or significant digits) of the open tokens.
+#' * [plan_stat_groups()]: one record's statistics split into named groups.
 #'
-#'   For `plan_levels()`, `variable = c("AGE", "SEX", "RACE")` orders the
-#'   analysis variables themselves (the blocks of rows); variables left out
-#'   follow in the ARD's order.
+#' **The rows**
+#' * [plan_filter()]: drop rows by a condition over their statistics.
+#' * [plan_sort()]: the row order, alphabetical or by frequency.
+#' * [plan_levels()]: the order of values (and of the analysis variables).
+#' * [plan_labels()]: the text values and variables print as.
+#' * [plan_nest()]: one variable's rows under one level of another.
+#' * [plan_empty()]: what a table with no events says.
 #'
-#'   `plan_compare()` takes the **comparison columns**, each named (the
-#'   column's name) and each what `plan_cells()` takes for one cell: a
-#'   template with guards, or a map keyed by context / kind / `default`
-#'   --- here a named vector is that map, since a column is one cell with
-#'   no rows to label: `p = c(stats_t_test = "{p.value:.3f}")` reads the
-#'   t-test and leaves a Wilcoxon of the same variable (noted, as every
-#'   record no column takes); two tests one column reads both of are an
-#'   error, never one picked.  A template reads only the statistics it
-#'   names.  It reads the ARD's comparison records --- the column key with **no
-#'   value**, in an analysis the body does not have: cardx's
-#'   `ard_stats_t_test()`, `ard_stats_chisq_test()`, `ard_stats_fisher_test()`,
-#'   `ard_stats_kruskal_test()`, `ard_stats_oneway_test()`,
-#'   `ard_stats_prop_test()` --- and puts each on its **variable's block**:
-#'   the row of its level when it has one, else the block's first row as the
-#'   table is sorted (the variable's heading row under `plan_stub()`).
-#'   Nothing is computed; the p-value, the difference and its CI are the
-#'   ARD's.  A test whose record names no variable (`ard_stats_aov()`'s
-#'   term) has no row; use `ard_stats_oneway_test()`.
+#' **More columns**
+#' * [plan_total()]: a Total column (or row) from the ARD's overall rows.
+#' * [plan_compare()]: columns read from comparison records (a p-value, a
+#'   difference).
 #'
-#'   The names are **the columns' own** --- any name, as many as the
-#'   table has; `p` and `diff` are only examples.  Each column reads
-#'   whatever statistics its template names from the same record:
+#' **The layout**
+#' * [plan_stub()]: fold the row keys into one row-heading column.
+#' * [plan_row_group()]: how a run of rows sharing a value shows.
+#' * [plan_blanks()]: where the blank rows go.
+#' * [plan_hide()]: columns that do their work without being printed.
+#' * [plan_columns()]: widths, decimal alignment and row titles, by name.
+#' * [plan_cell_style()]: bold, italic, colour, alignment of cells.
+#' * [plan_style()]: the whole table's borders, font and row heights.
 #'
-#'   ```r
-#'   plan_compare(p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}"))
-#'   plan_compare(diff = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})",
-#'                p = "{p.value:.3f}")
-#'   plan_compare(t = "{statistic:.2f}", df = "{parameter:.0f}",   # a t-test laid out
-#'                p = "{p.value:.4f}")
-#'   plan_compare(odds_ratio = "{estimate:.2f} ({conf.low:.2f}, {conf.high:.2f})")  # an odds ratio (Fisher)
-#'   plan_compare(p = c(stats_t_test = "{p.value:.3f}"))              # the t-test of several tests
-#'   plan_compare(p = c(stats_chisq_test  = "{p.value:.3f}",          # each test its own way
-#'                      stats_fisher_test = "{p.value:.4f}"))
-#'   ```
+#' **The pages**
+#' * [plan_paginate_group()]: a page per value of a column.
+#' * [plan_paginate_rows()]: the row budget, and what a break may cut.
+#' * [plan_paginate_cols()]: column blocks, and how the page axes nest.
 #'
-#'   **Lines** are [cell_rows()], as in the body: each line goes on the
-#'   variable's row of that label, so a difference and its CI sit beside the
-#'   body's estimate and CI lines (an ORR table's `"1"` / `"2"`), and a
-#'   p-value on line 1 only is `cell_rows("1" = ...)` (a named vector is a
-#'   map by context here, not lines):
+#' **The header and the text around the table**
+#' * [plan_col_header()]: the column header and the numbers it prints.
+#' * [plan_titles()]: the block of titles above the table.
+#' * [plan_footnotes()]: the block of footnotes below the table.
 #'
-#'   ```r
-#'   plan_compare(diff = cell_rows("1" = "{estimate:.3f}",
-#'                                 "2" = "({conf.low:.3f}, {conf.high:.3f})"),
-#'                p    = cell_rows("1" = "{p.value:.3f}"))
-#'   ```
-#'
-#'   The columns have no population: the header's `{col}` / `{n}` and its
-#'   short rows leave them alone, so the header names them
-#'   (`rtf_col_header(c(..., "p-value"))`).
-#'
-#'   `plan_stat_groups(.variables = , .others = )` scopes the groups: only
-#'   the records of `.variables` (`"RESP"`) are split; the other variables'
-#'   records go **whole** to the group `.others` names (`"n"`), every
-#'   statistic with them --- so a block of SEX's n (%) (`show_keys`) is not
-#'   pulled into the ORR's groups by its `n`.  `.others` needs `.variables`.
-#'
-#'   `plan_stat_groups()` takes the groups, each a name and the
-#'   statistics in it (`n = "N", orr_ci = c("n", "estimate", "conf.low",
-#'   "conf.high")`).  Each row of the ARD gets its group in the key
-#'   `.stat_group`, which `table_plan(cols = )` or `rows = ` names like any
-#'   other: `cols = c("TRT01A", ".stat_group")` puts one record's N in one
-#'   column and its rate and interval in the next, and [plan_cells()] keys a
-#'   template by the group's name (`n = "{N}"`, `orr_ci = cell_rows(...)`).
-#'   A statistic in no group is not read.  This is what a `mutate()` of
-#'   `variable` before [table_plan()] did --- a workaround: keep the ARD
-#'   as it is (`variable` is the analysis variable) and choose the layout
-#'   in the plan.
-#'
-#'   With `cell_rows()` (or named templates) for the rows inside a cell,
-#'   one analysis's statistics lay out as **n rows x m columns**: the
-#'   groups go across (`cols = c("TRT01A", ".stat_group")`) or down
-#'   (`rows = c(..., stat = ".stat_group")`, in the order the groups are
-#'   said), and each group's template has its own rows; a group with fewer
-#'   rows leaves the rest empty, aligned row by row.  The groups split
-#'   **one record** --- the same analysis and the same keys; statistics of
-#'   two analyses are two records, joined by the keys as always.
-#'
-#'   `plan_digits()` takes the same keys, with the digits as the value.
-#'   A value is **one number**, for every token in that entry, or a
-#'   vector **named by statistic** --- a house rule is rarely one number.
-#'   The two keys combine, which is the point of the verb:
-#'
-#'   ```r
-#'   plan_digits(continuous  = c(mean = 2, sd = 3, median = 2),
-#'               categorical = c(p = 1)) |>      # the house rule
-#'     plan_digits(AGE = c(mean = 1, sd = 2))    # AGE only
-#'   ```
-#'
-#'   A value is the **decimals**, or `"4s"` for **4 significant digits** ---
-#'   the token grammar's own distinction (`{mean:.4f}` / `{mean:.4s}`), not a
-#'   second argument to learn:
-#'
-#'   ```r
-#'   plan_digits(continuous = c(mean = "4s", sd = "5s", n = 0))
-#'   ```
-#'
-#'   A statistic the narrower entry says nothing about falls through to
-#'   the wider one, so AGE's `median` stays at 2 above.  Digits only
-#'   reach a token that left the question open (`{mean}`, or `{p:\%}`):
-#'   one that answered it (`{mean:.2f}`) keeps its answer, so a template
-#'   meant to be tuned is written open.
-#'
-#'   A **finished table** has no templates to fill --- a source that is
-#'   already the table, or statistics laid out as rows
-#'   (`plan_cells(stats = "rows")`) --- so there `plan_digits()` formats
-#'   the numbers themselves, with [fmt_numeric()]: a key that names a
-#'   **column** formats that column, and `.rows` formats the value columns
-#'   by the text of the label column:
-#'
-#'   ```r
-#'   plan_digits(.rows = c(N = 0, Mean = 1, SD = "3s"))
-#'   ```
-#'
-#'   A key that reaches neither a variable nor a column is an error, not
-#'   silence.
-#'
-#'   For `plan_nest()`, one entry per nested variable: its name, and the
-#'   variable and level its rows go under,
-#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.  The level is matched as the
-#'   table shows it (the ARD's level: a code list's label).  The nested
-#'   rows follow that level's row, one indent step deeper (the stub's
-#'   `indent`, default 4), in the parent's group; their own heading is
-#'   dropped, their order and text stay `plan_levels()`' and
-#'   `plan_labels()`'.  The rows key that carries the variable
-#'   (`table_plan(rows = c(group = "variable"))`) is what is read.
-#'
-#'   For `plan_levels()` and `plan_labels()`, one entry per column or
-#'   analysis variable: an order (`AGEGR1 = c("<65", "65-74")`), or
-#'   the text values are printed as (`AGE = "Age (years)"`).  An order may
-#'   name its values' text, as [base::factor()]'s `levels` and `labels`:
-#'   `plan_levels(SEX = c(F = "Female", M = "Male"))` is the order F, M and
-#'   their text, an element without a name the value as it is, and
-#'   `variable = c(AGE = "Age (years)", "SEX")` the variables' order and a
-#'   heading.  `plan_labels()` names without ordering, and its text wins
-#'   value by value over a name an order gives, whichever comes first; it
-#'   names a value by itself or by the text the order gives it
-#'   (`plan_labels(SEX = c(Female = "Women"))` after the order above), the
-#'   value first when a text is both (said in a message).  Both
-#'   merge one **key** at a time, so a later layer adds a variable
-#'   without restating the rest --- which is the whole reason these
-#'   two are layers and the roles are not.  A `plan_labels()` entry
-#'   whose value is itself a named vector applies to that **column**
-#'   only: a shift table's `"0"` is `"Grade 0"` down the side and
-#'   `"Baseline 0"` across the top.
-#' @param .drop_empty For `plan_levels()`: variables whose levels **no record
-#'   has** are not shown -- a level whose `n` is 0 (or missing) in every
-#'   column, as an ARD made with a code list's full set of levels has
-#'   (a factor's unused level, counted 0).  `NULL` (default): every level
-#'   the data has is shown.  A level that some column counts stays; a
-#'   variable summarised without `n` is untouched.  Several calls add up.
-#' @param stats,value,na,notes For `plan_cells()`: how a cell is made,
-#'   as [widen_ard()] takes them --- `stats = "cells"` (default) fills a
-#'   template per cell and `"rows"` makes each statistic a row of its own;
-#'   `value` matters only with `stats = "rows"`: the raw number (`"stat"`)
-#'   or cards' formatted text (`"stat_fmt"`) in each row.  With templates
-#'   (`stats = "cells"`) an open `{x}` takes `stat_fmt` when the ARD has it
-#'   and `stat` otherwise, and `{x:stat_fmt}` / `{x:.1f}` say so per
-#'   token; `na` what fills
-#'   a cell no template could; `notes = FALSE` stops the report of the
-#'   statistics no template used.  They hold however the plan is run, by
-#'   [plan_apply()] or by `rtf_tables(doc, plan)`.  On a plan of a table
-#'   that is already built (no statistics), `na` alone is taken, and is
-#'   [as_rtftables()]'s `na`: what a missing value prints as.
-#' @param vars,name,indent,group_summary For `plan_stub()`: the row keys to
-#'   fold into one stub column and how, as [stub_cols()] takes them.
-#'   `name` is the NAME the folded column gets (`stub_cols(label = )`),
-#'   which is a different thing from `table_plan(label = )` --- the column
-#'   whose VALUES are the row text.  `vars` is derived when left out.  With
-#'   one column (a table of one row heading, a study's `plan_stub(name =
-#'   "row_label")` on it), that column is the stub, renamed `name`, and
-#'   nothing is folded.
-#' @param before For `plan_stub()`: `FALSE` (default) folds the stub inside
-#'   [as_rtftables()], after grouping and pagination have had their say.
-#'   `TRUE` folds it first, with [stub_cols()], which is what
-#'   `plan_cell_style()` needs --- only then can a condition see the rows that
-#'   will be printed.  The two do **not** always give the same table:
-#'   folded first, the row keys are gone before a page split or a row
-#'   group could read them, so `plan_paginate_group(col = )` naming one of
-#'   them no longer finds it.  That is why this is a choice and not
-#'   worked out for you.
-#' @param keep `FALSE` also hides the column the verb names: the page key
-#'   for `plan_paginate_group()`, the sort keys for `plan_sort()`.  A column
-#'   can be **needed and not wanted** --- the key a page break reads, a sort
-#'   carrier --- and the verb that needs it is the one place that knows, so
-#'   it says so there instead of the name being written again in a
-#'   `plan_hide()`.  Names that are not columns (a statistic, `".depth"`)
-#'   are ignored rather than refused.
-#' @param stat For `plan_sort()`: the statistic totalled into `.sort_stat`
-#'   for a frequency order (`widen_ard(sort_stat = )`), e.g. `stat = "n"`.
-#' @param mode,collapse For `plan_row_group()`: what a run of rows sharing a
-#'   value is, and how the repeat shows.  `mode` is `as_rtftables(group_by = )`,
-#'   which is how a group BOUNDARY is found --- `"value"` (each run of equal
-#'   values), `"indent`" (a row starts a group when its cell is not indented),
-#'   `"filled"` (when its cell is not empty), or `"auto"`.  `collapse` is
-#'   `collapse_repeats`: a repeated value printed once and then blank, in the
-#'   columns named (`collapse = c("grp1", "grp2")`, the row keys' names) or
-#'   counted on the PRINTED columns (a hidden key left out), like every
-#'   column position in a plan.
-#'
-#'   `mode = "indent"` **reads** indentation to find the boundary;
-#'   `plan_stub(indent = )` **writes** it.  They are not the same knob, and
-#'   a stub written with `indent` is exactly what that mode then reads.
-#'
-#'   The rows are grouped by the outermost row key (`table_plan(rows = )`);
-#'   folded into a stub, by the stub's headings.
-#' @param group_col For `plan_row_group()`, on a plan of a table that is
-#'   already built: `as_rtftables(group_col = )`, the column whose runs are
-#'   the groups (what `split = "group_safe"`, `mode` and the blank rows
-#'   between groups read), with the pages still cut by rows.  An ARD plan
-#'   names it as its outermost row key (`table_plan(rows = )`) and refuses
-#'   this; a page per value is [plan_paginate_group()].
-#' @param col For `plan_paginate_group()`: the column whose value starts a
-#'   new page (`as_rtftables()`'s `page_by`, or `split = "by_value"` with a
-#'   [plan_stub()]).  Left out, it is the outermost row key.  It is a PAGE
-#'   key, the same on every row of a page, so it is never a row group: blank
-#'   rows between groups, `collapse`, `row_title`, the stub and the column
-#'   positions start at the first printed row key, and `first` / `last`
-#'   apply on every page.  The page is **named** after
-#'   the value, which is the line `rtf_tables(auto_section = TRUE)`
-#'   cuts a section on --- so this verb decides what a section is.
-#'   It is the only verb that makes a page per value.
-#' @param heading For `plan_paginate_group()` (and `plan_paginate_rows()`
-#'   with one `page_by` column, a page per value with a row budget inside):
-#'   the page's name as a template,
-#'   `"Treatment: {value} (N={n})"`, in place of the bare value --- so the
-#'   section header `rtf_tables(auto_section = TRUE)` prints (or the title
-#'   line of `auto_title = TRUE`) says the arm and its N with neither written
-#'   by hand, and a study with three arms gets three.  `{value}` is the
-#'   page's value as printed; `{n}` its population **as the ARD states it**:
-#'   the page variable's own tabulation, `cards::ard_tabulate(adsl,
-#'   variables = TRT01A)` bound into the ARD (the `.key_own` rows
-#'   [normalize_ard()] keeps), never an analysis's `N` (the count of its
-#'   non-missing values).  What the ARD does not state is `NA`, with a
-#'   warning.  `{PROGRAM}`, `{DATETIME}` and the page tokens are left for the
-#'   renderer.
-#' @param heading_at For `plan_paginate_group()` (and `plan_paginate_rows()`
-#'   with `page_by`): where the page's name prints --- `"section"`, in the
-#'   section header (what `rtf_tables(auto_section = TRUE)` does); `"title"`,
-#'   as the last line of the titles above the table (`auto_title = TRUE`);
-#'   `"none"`, nowhere.  It is the default of [rtf_tables()]'s
-#'   `auto_section` / `auto_title` for these pages, so the plan says it with
-#'   the pages it names and `rtf_tables(plan)` needs neither; an
-#'   `auto_section` / `auto_title` given to [rtf_tables()] wins.  `NULL`
-#'   (default): not said ([rtf_tables()]'s own default, nowhere).
-#' @param where For `plan_cell_style()`: a one-sided formula over the
-#'   table's columns choosing the rows, e.g. `where = ~ is.na(label)`.  For
-#'   `plan_blanks()`: `as_rtftables(blank_rows = )`, or `"records"` for a
-#'   blank row after each record of a listing.
-#' @param text,when,footnote For `plan_empty()`: what an empty
-#'   table says.  `text` is one row (in the row label column; `NULL` for
-#'   none); `when` the table is empty -- `"no_rows"` (no body row, after
-#'   [plan_filter()]), `"overall_zero"` (its overall row, `normalize_ard(overall
-#'   = )`, is 0 in every column), `"auto"` (either; the default);
-#'   `footnote` a line added to the table's footnotes when it is empty
-#'   (`position` is where the row goes: see `label, position`).  A table
-#'   that is not empty is as it was.
-#' @param first,last,counted For `plan_blanks()`: `as_rtftables()`'s
-#'   `blank_row_first`, `blank_row_end` and
-#'   `count_blank_rows`.
-#' @param max_rows,split,break_before,min_group_rows,cont_label For
-#'   `plan_paginate_rows()`: the row budget and what a page break may cut ---
-#'   `as_rtftables()`'s `max_rows`, `split`, `split_rows`, `min_group_rows`
-#'   and `cont_label`.  This is the **row** axis; a page per value (the
-#'   **group** axis) is `plan_paginate_group()`, and the **column** axis
-#'   is `plan_paginate_cols()`.
-#' @param page_by For `plan_paginate_rows()`: `as_rtftables()`'s `page_by`
-#'   -- the column(s) whose value partitions the body **first**, each value
-#'   a page named after it; the row settings then apply **within** one
-#'   partition (a period, a cohort), so a BY page can still be cut by a row
-#'   budget.  `plan_paginate_group()` is the other way to page by a value:
-#'   one page per value however long it is, with no row budget.  The BY
-#'   column is printed unless hidden ([plan_hide()]).  Like
-#'   `plan_paginate_group(col = )` it is a page key, never a row group.
-#' @param every For `plan_paginate_cols()`: cut a block every this many
-#'   columns, counting only the ones a block does not keep.  This is
-#'   `at` without writing down how many columns one study had --- the
-#'   plan is deferred, so it counts them when the table exists.  Give one
-#'   of `at`, `cut_by` or `every`.
-#' @param at,cut_by,col_header,fit,allow_span_break,order For
-#'   `plan_paginate_cols()`, in [paginate_cols()]'s terms: `at` the columns
-#'   to cut before; `cut_by` a list of column blocks (`paginate_cols(cols =
-#'   )`), or a separator found in the column names / one key per column
-#'   (`paginate_cols(by = )`); `col_header` what the header becomes; `fit`
-#'   `TRUE` (every block's widths on page 1's scale, `width = "fill"`) or
-#'   `FALSE` (each column keeps its width, `"keep"`); `order`
-#'   `paginate_cols(page_order = )`, the order the three axes nest in,
-#'   outermost first: `"group"`, `"rows"`, `"cols"`, or the shorthands
-#'   `"across"` and `"down"`.  For `plan_paginate_cols()` `keep` is the
-#'   columns every block repeats (`paginate_cols(carry = )`).
-#' @param border,align_count_pct,font,font_size_half_points,row_height_twips,row_height_exact,header_row_height_twips,blank_row_height_twips,cell_padding_left_twips,cell_padding_right_twips,cell_valign,table_align,markup,blank_row_normalize
-#'   For `plan_style()`: the settings of the **whole table**, by
-#'   [rtftable()]'s and [as_rtftables()]'s names.  What a table has per
-#'   column or per cell is another verb's --- [plan_columns()],
-#'   [plan_cell_style()], [plan_col_header()], [plan_blanks()] --- so this
-#'   list is the whole of it.  For `plan_cell_style()`, `border` is a
-#'   column's border ([rtf_border()]).
-#' @param border_header,border_spanning,border_body,border_first_row,border_last_row
-#'   For `plan_style()`: the rules of one kind of row, by the names
-#'   [rtf_table_style()] gives them.  Say the table's rules one way:
-#'   `border = "tfl"`, or these.
-#' @param table_width_twips,table_width_pct,table_width_pct_of_writable For
-#'   `plan_style()`: the table's width, by [rtftable()]'s names (and
-#'   [as_rtftables()]'s `table_width_twips`).
-#' @param header_align,header_bold,header_italic For `plan_style()`: the
-#'   whole header's default look, [rtf_table_style()]'s fields; with the
-#'   `border_*` zones and `align` ... `underline` they make the
-#'   `as_rtftables(style = )` object.  One column or one cell is
-#'   [plan_cell_style()].
-#' @param underline For `plan_style()`: the body's default, an
-#'   [rtf_table_style()] field like `align`, `bold` and `italic` (which
-#'   are that too in `plan_style()`).  For `plan_cell_style()`: the cells'
-#'   underline, as `bold`.
-#' @param indent_twips For `plan_cell_style()`: the left indent of the
-#'   cells' text, [style_cols()]'s `indent_twips` (not on the header).
-#' @param cell_format,column_widths_twips For `plan_columns()`:
-#'   [as_rtftables()]'s `cell_format` (a formatter, or a list of them one a
-#'   column) and [rtftable()]'s `column_widths_twips`, as they are.
-#'   `column_widths_twips`, when given, fixes the widths and `widths` is not
-#'   used, as in [rtftable()].
-#' @param header_sep,col_header_align For `plan_col_header()`:
-#'   [as_rtftables()]'s `header_sep` (the separator a plain table's column
-#'   names are split on into spanning header rows) and [rtftable()]'s
-#'   `col_header_align`.
-#' @param lines For `plan_col_header()`: the header **a row at a time**,
-#'   as it reads, instead of `header`: a list, one element a header row
-#'   (the top first), each a named character vector -- a cell's name the
-#'   columns it sits on (a column name, `.values` for every value column,
-#'   a position or range such as `3:5`, or `KEY = value`), its value the
-#'   text, with the same tokens (`{col}`, `{n}`, `{n:sum}` ...):
-#'
-#'   ```r
-#'   plan_col_header(lines = list(
-#'     c(row_label = "",               .values = "{col}"),
-#'     c(row_label = "Characteristic", .values = "(N={n})")))
-#'   ```
-#'
-#'   It is the data frame of cells written another way (one row a cell:
-#'   `line`, `cols`, `text`, `span`), so it does all that does.
-#' @param span For `plan_col_header(lines = )`: how a cell over several
-#'   columns is made -- `"each"` (the default: a cell a column), `"one"`
-#'   (one cell over them all) or a key's name (a cell per value of that
-#'   key: a spanner).  One value for every cell, or a list as `lines` is,
-#'   each element the spans of that row's cells, named as its cells are
-#'   (a cell not named there is `"each"`).
-#' @param widths For `plan_columns()`: the relative column widths,
-#'   `rtftable(col_rel_width = )`.  **Named by column** (`c(row_label = 5,
-#'   .values = 2)`, `.values` for every value column) a reordered table keeps
-#'   them, and that is what the `columns` sheet's `width` is; unnamed, they
-#'   are one a column in order, as `col_rel_width` itself.
-#' @param row_title,auto_width For `plan_columns()`: the row-heading
-#'   columns (`rtftable(row_title = )`) and whether each column is sized to
-#'   its content (`as_rtftables(auto_width = )`).  Name the columns, as
-#'   `widths` does: a row key's name as `table_plan(rows = )` gives it,
-#'   `.values` for every value column --- `row_title = c("grp1", "grp2")`.
-#'   A position counts the PRINTED columns, as unnamed `widths` do: a key
-#'   hidden with [plan_hide()] or taken out by `page_by` is left out.
-#' @param sep For `plan_columns()`: the separator several `cols` keys are
-#'   joined with in the value columns' names, `"____"` by default ---
-#'   `"Placebo____F"`.  The spanning header is built by splitting on it, so
-#'   a key value that contains it is refused.  For `plan_listing()`,
-#'   [listing_spec()]'s `sep`.
-#' @param decimal For `plan_columns()`: the columns whose numbers line
-#'   up at the decimal point (`.values` for every value column) --- the
-#'   `columns` sheet's `decimal_split`.
-#' @param type,spacer,spacer_rel_width,layout,wrap,record
-#'   For `plan_listing()`: [listing_spec()]'s own arguments, unchanged
-#'   (`record`: the hidden record column -- `FALSE` none, a string its
-#'   name; `NULL` the default, `TRUE`).  `...` there takes the
-#'   [listing_col()]s.  A blank row between records is
-#'   `plan_blanks(where = "records")`, one at the top of each page
-#'   `plan_blanks(first = TRUE)`; a column's own alignment is
-#'   `listing_col(align = )`, the others' `plan_listing(align = )`.
-#' @param pages For `plan_titles()` / `plan_footnotes()`: a list with one
-#'   block per page, when the pages do not share a block.  `...` is the rows
-#'   of a single block used on every page; give one or the other, never
-#'   both, because a three-row title on a three-page table cannot be told
-#'   apart from three one-row titles.
-#' @param cols For `plan_cell_style()`: the columns styled, by name
-#'   (`.values` for every value column); left out, every column.
-#' @param bold,italic,align,color,background For `plan_cell_style()`: how
-#'   the cells look.  A **value** (`bold = TRUE`, `color = "#CC0000"`)
-#'   applies to the cells `cols` / `header` / `where` choose.  A
-#'   **one-sided formula** computes the value row by row over the table's
-#'   columns, `NA` leaving the column default alone --- `bold = ~
-#'   is.na(label)`, `color = list(Placebo = ~ ifelse(n > 50, "#CC0000",
-#'   NA))`, a named list scoping it to columns.  Formula styles see the
-#'   printed rows only with `plan_stub(before = TRUE)`.  For `plan_style()`,
-#'   `align`, `bold` and `italic` are the body's default look,
-#'   [rtf_table_style()]'s fields.
-#'   For `plan_listing()`, `align` is [listing_spec()]'s: the alignment of
-#'   the columns that set none of their own (`listing_col(align = )`);
-#'   `NULL` the template's.
-#' @param header For `plan_cell_style()`: `TRUE` styles the column header
-#'   ([style_header()]).  For `plan_col_header()`: the header, built with the same
-#'   [rtf_col_header()] as everywhere else --- or a **function** of the
-#'   resolved `n` (and, with two arguments, the finished table) when it
-#'   has to be computed --- or a **data frame of cells**, one row a cell,
-#'   with the `col_header` sheet's columns (`line`, `cols`, `span`, `text`,
-#'   borders ...), placed on each page's columns when it is made; this is
-#'   how `tflspec::tfl_table_code()` writes a workbook's header.  The plan adds two things to a header it is
-#'   given, both of which used to need a function:
-#'
-#'   * `{n:sum}` is that number **totalled over the columns the cell
-#'     covers**, so a spanner over one arm's two columns shows that
-#'     arm's N and one over all of them shows the study total ---
-#'     neither written down.  A cell outside the data (the stub)
-#'     totals every column.  A spanner's `{col1}`, `{col2}`, ... are
-#'     the levels its columns **agree** on, which is the arm name a
-#'     spanning cell wants;
-#'   * `{n:<column>}` names **one** of the values, for a cell that has
-#'     to say a number belonging to a column it does not sit over ---
-#'     `"A={n:Placebo} B={n:Xanomeline High Dose}"`;
-#'   * **`print()` lists every token this plan offers, with its
-#'     VALUES**, under `header tokens` --- the numbers a `{n}` holds and
-#'     the text a `{col1}` prints as --- because they come from the ARD
-#'     and from the spread, and neither is visible in the call.  The
-#'     `{col...}` ones appear once the table has been built at least
-#'     once;
-#'   * its cells may carry `{col}` and `{n}` --- the column and its
-#'     denominator (or the single one there is).  Several `cols` keys
-#'     make a name like "Placebo____Negative", which nobody wants
-#'     printed, so `{col}` is the **leaf** and `{col1}`, `{col2}`, ... are
-#'     the levels in order; with one key the leaf is the whole name.
-#'     The hierarchy itself needs no header --- [as_rtftables()] builds
-#'     the spanning rows from the same separator, merging the cells.
-#'     What each level READS is [plan_labels()]'s business, since it
-#'     recodes the values the name is made of;
-#'   * a row **shorter** than the table has its last cell repeated over
-#'     the spread columns, whose names are not known until the table
-#'     exists.
-#'
-#'   ```r
-#'   plan_col_header(values = list(n = TRUE), rtf_col_header(
-#'     c("",               "{col}"),
-#'     c("Characteristic", "(N={n})")))
-#'   ```
-#'
-#'   A row already the right length, and a cell with no token in it, are
-#'   untouched --- so a spanner, a border or a cell that reads the
-#'   finished table is written exactly as it always was.
-#' @param values For `plan_col_header()`: what the header's `{tokens}`
-#'   take.  The **population** each column describes --- its analysis set,
-#'   the number a header prints as `(N=86)` --- is `values = list(n = TRUE)`
-#'   (or just `TRUE`), read from the data, keyed by the same `cols` /
-#'   `levels` `table_plan()` was given, **at every depth of the keys**: with
-#'   `cols = c("TRT", "SEX")` both the arm (`"Placebo"`) and the arm x sex
-#'   cell (`"Placebo____F"`) are looked up.  Only a number the ARD
-#'   **states as a population size** is read:
-#'   1. a **cards sentinel**'s `N` keyed by exactly those keys ---
-#'      `..ard_hierarchical_overall..` from
-#'      `cards::ard_stack_hierarchical(over_variables = TRUE)`, each arm's
-#'      denominator; never its `n`, the subjects with an event that the
-#'      "Any" row shows.  Taken only when there is one kind of sentinel;
-#'   2. the column variable's **own tabulation** --- the per-arm `n` of
-#'      `cards::ard_stack(.by = )`, which [normalize_ard()] keeps as
-#'      `.key_own` rows --- where its counts add up to the `N` those rows
-#'      state (the population split by arm, not the treatment counted as
-#'      an event).  At depth *k* it is `cols[k]` tabulated within
-#'      `cols[1..k-1]`: cards tabulates each `.by` variable on its own,
-#'      so `ard_stack(.by = c(TRT, SEX))` states the arm but not the arm
-#'      x sex cell --- bind `cards::ard_tabulate(adsl, by = TRT,
-#'      variables = SEX)` to state that.  A **stacked key**
-#'      ([normalize_ard()]'s `stack`) on the columns, `cols = c("subgroup",
-#'      "subgroup_level")`, is tabulated as its layer's variable: the
-#'      `SEX____F` column's population is SEX's own count at F
-#'      (`cards::ard_tabulate(adsl, variables = SEX)`); a crossed layer's is
-#'      not read;
-#'   3. an analysis summary's `N` only where it is a denominator by
-#'      construction (a hierarchical summary, a percentage of the
-#'      `denominator =` data) or where **two or more different variables
-#'      agree on it for every column**.  One variable's `N` is the count
-#'      of its **non-missing** values --- the arm size only if nothing is
-#'      missing, which the ARD cannot show --- and an `N` per visit or per
-#'      parameter is not a column's at all.  [pull_ard()] is not asked.
-#'
-#'   The study total (`..ard_total_n..`, the one [normalize_ard()]
-#'   remembers as it drops that row, or the `N` the column variable's
-#'   own tabulation states) is **never put in every column**: it answers
-#'   a one-column table and a cell over all the columns.
-#'
-#'   **Pages split by a group value** ([plan_paginate_group()]: a lab
-#'   parameter, a visit) have **two populations**, and which one the
-#'   header says is the author's choice:
-#'
-#'   * `values = list(n = "page")` --- each page's own, the subjects with that test:
-#'     the ARD rows **carrying** the page key, e.g.
-#'     `cards::ard_tabulate(adlb, by = PARAM, variables = BGRADE)`,
-#'     which states each baseline column's N and the page's total;
-#'   * `list(n = "table")` --- the analysis set: the ARD rows **without** the
-#'     page key, e.g. `cards::ard_total_n(adsl)` or the treatment
-#'     tabulated from ADSL;
-#'   * `list(n = "page", N = "table")` --- both, as `{n}` and `{N}`.
-#'
-#'   `n = TRUE` reads the page's rows, then the table's for what they lack,
-#'   and **warns** when the ARD states both and they differ.  Neither is
-#'   filled in from outside the ARD: a population it does not state is
-#'   `NA`.  Keep the header consistent with the body --- the percentages
-#'   are over the denominator cards used, so a header saying the analysis
-#'   set wants an ARD built with that `denominator =`.  The workbook says
-#'   the same on `tables$header_n`.
-#'
-#'   What cannot be read is printed as **`NA`**, and one **warning** lists
-#'   every such cell with the reason (`only AGE states an N (79)`,
-#'   `the analysis variables state different N`, ...).  The table is still
-#'   built; a guessed number would look exactly like a right one.
-#'   `print()` shows the resolved values and what is not resolved.
-#'
-#'   In a header cell, `{n}` is the number of **what the cell stands
-#'   for**: its column; over a spanner, the level its columns agree on
-#'   (the arm over its F and M); over all columns, the total.
-#'   `{n1}`, `{n2}`, ... name a depth from any cell --- `"{col2} {n2}"`
-#'   under `"{col1} {n1}"`.
-#'
-#'   To **give the numbers yourself**, `n` is a vector named by column
-#'   key, at any depth --- `c(Placebo = 86, "Placebo____F" = 53, ...)` ---
-#'   or a function of the data returning one; a single unnamed number
-#'   fills every cell.  After a workbook (`tflspec::tfl_table_plan()`), a later
-#'   `plan_col_header(values = ...)` supplies the numbers and keeps the
-#'   workbook's header.
-#'
-#'   A **data frame** of per-page values is [set_col_header()]'s own
-#'   `values =`: one row per page key, a column per `{token}`.
-#'#'   A **function** of the data covers what neither can find, and a
-#'   **named list** of either supplies several --- and then **each
-#'   name is a token**, which is how one header says two numbers with
-#'   no function at all: the study total in a spanner and each
-#'   column's own underneath it.
-#'
-#'   ```r
-#'   plan_col_header(
-#'     values = list(n = TRUE, total = 254),
-#'     rtf_col_header(
-#'       list(col_cell(1, ""), col_cell(c(2, 4), "All (N={total})")),
-#'       c("",               "{col}"),
-#'       c("Characteristic", "(N={n})")))
-#'   ```
-#'
-#'   An entry keyed by column fills each column with its own; a single
-#'   number fills every cell.  `{n}` is the entry called `n`, or the
-#'   only entry when there is one.  The resolved value is also what
-#'   `header =` is called with when it is a function.
-#' @param rounding For `plan_digits()`: the tie-breaking family for the
-#'   run, as `widen_ard(rounding = )` takes it.  Last wins, like every
-#'   other layer.  A study sets the rule once with
-#'   `options(rtfreporter.rounding = )`; give it here only for a table that
-#'   departs from the study's rule.
-#' @param .variables,.others For `plan_stat_groups()`: the variables whose
-#'   records are split into the groups (`NULL`: all), and the group the
-#'   other variables' records go to whole (`NULL`: none).
-#' @param any,parents For `plan_filter()`: a row stays when **any** column's
-#'   record meets the conditions (`TRUE`, default: "PTs with 5% or more in
-#'   any arm") or when **every** column's does (`FALSE`); a record whose
-#'   statistics do not answer the conditions does not count, and a row no
-#'   column answers stays (the notes say how many).  `parents = "keep"`
-#'   (default): a parent row --- a SOC, its PT key empty --- stays exactly
-#'   when one of its children does, so no SOC is left without its PTs and
-#'   none is kept for its own count; `"drop"` judges it by its own
-#'   counts.  An overall row (`normalize_ard(overall = )`, "Any TEAE")
-#'   always stays.  The conditions in `...` are [plan_cells()]' guards ---
-#'   R over the record's statistics and keys, unnamed, all of them holding:
-#'   `plan_filter(p >= 0.05)`, `plan_filter(n >= 3, TRTA != "Placebo")`.
-#'   They run before the cells are made and the rows sorted; the columns
-#'   stay.  Nothing is computed: `p` is the ARD's.
-#' @param by For `plan_filter()`: a row key whose rows are judged together
-#'   (with the keys outside it). For `plan_compare()`: the column that splits the comparison
-#'   records into columns, one a level (`by = "COMPARISON"`: each active arm
-#'   against placebo, the ARD made by `ard_strata(.strata = COMPARISON)` over
-#'   two-arm subsets).  With several columns in `...` they are named
-#'   `<level>____<column>`.  `NULL`: one comparison a variable.
-#' @param label,position For `plan_total()`: the heading of the **Total
-#'   column** (`"Total"`) and where it goes among the column key's values
-#'   (`"last"`, `"first"`).  Needed only when the ARD has overall rows (no
-#'   value of the column key): an ARD whose column variable already has a
-#'   `"Total"` level needs no `plan_total()`, that level being a column like
-#'   any other.  Its cells are cards' own overall rows --- the
-#'   statistics with no value of the column key, from the same analysis
-#'   without its `by` (`cards::ard_tabulate(adsl, variables = RACE)` bound
-#'   under `cards::ard_tabulate(adsl, by = ARM, variables = RACE)`, or
-#'   `cards::ard_stack(.overall = TRUE)`) --- so the ARD keeps no `ARM`
-#'   value the data does not have.  Its `{n}` in the column header is the
-#'   study total the ARD states (the column key tabulated on its own, or
-#'   `cards::ard_total_n()`).  With two column keys the innermost is folded:
-#'   `cols = c(TRTA, AESEV)` gives each arm a total column from its records
-#'   with no `AESEV` (an AE's count at any grade, `"Any grade"`), placed
-#'   among that arm's grades; records with no `TRTA` either make no column.
-#'   Only the body's
-#'   analyses are read: a test or a difference has no column key either,
-#'   and is `plan_compare()`'s.
-#' @param direction For `plan_total()`: the Total **column** (`"cols"`, the
-#'   default, as above), the Total **row** (`"rows"`) or both (`"both"`) --
-#'   a shift table's margins.  A Total row is read from cards' tabulations
-#'   of a key without the body's variable: with the cells
-#'   `ard_tabulate(adlb, variables = ATOXGR, by = c(PARAM, BTOXGR))`, the
-#'   column key tabulated by the row keys (`variables = BTOXGR, by = PARAM`)
-#'   is each column's Total row, and a row key's own (`variables = PARAM`)
-#'   the corner, the Total row's Total column.  [normalize_ard()] marks
-#'   them as a key's own tabulation; `plan_total()` places them in the body
-#'   of its one analysis variable, labelled `label`, last or first
-#'   (`position`).  The header's `{n}` is read as before.
-#'   For `plan_compare()`, `position` is where
-#'   its columns go: after the column key's (`"last"`) or before them
-#'   (`"first"`).  For `plan_empty()`, `position` is where its row goes:
-#'   `"last"` (after the rows: the overall row's 0 stays), `"first"` or
-#'   `"replace"` (the row alone).
-#'
-#' @return The plan, with one more layer.
+#' **The rest**
+#' * [plan_listing()]: lay a frame of records out as a listing.
+#' * [plan_append()]: another plan's rows under this table's.
+#' * [plan_after()]: your own functions, run on the finished pages.
 #'
 #' @section Where each argument goes:
 #' Each verb has **one job**, and its arguments keep the names of the
@@ -1515,9 +1002,9 @@ print.table_plan <- function(x, ...) {
 #' * `plan_row_group(mode, collapse, group_col)`: groups down the body. Goes to [as_rtftables()]: `group_by`, `collapse_repeats`, `group_col` (a finished table).
 #' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
 #' * `plan_empty(text, when, position, footnote)`: a table of no events: one row saying so (`"No subjects met the criteria."`), and a footnote, only when the table has no row or its overall row is 0.
-#' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` is [listing_spec()]'s `blank_row`.
+#' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` / `"none"` is [listing_spec()]'s `blank_row = TRUE` / `FALSE`.
 #' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do.
-#' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
+#' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()], whose arguments have the same names.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
 #' * `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: the column header. Goes to [set_col_header()]: the header (or `lines`, the header a row at a time) and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align`.
@@ -1529,35 +1016,13 @@ print.table_plan <- function(x, ...) {
 #' alignment, the key separator --- and is not [rtf_columns()], which
 #' addresses the columns of finished pages by their printed names.
 #'
-#' @section plan_after() is the way out, not the way in:
-#'
-#' `plan_after()` runs functions of your own on the finished pages.  It
-#' is for what the plan cannot **declare** --- a step with no verb --- and
-#' it is the only verb whose content the plan cannot read: a workbook
-#' (`tflspec::tfl_as_table_spec()`) cannot carry it, and the columns it names are
-#' positions on the pages, which a reordered table does not keep.  The usual
-#' reasons to reach for it each have a declaration, which names columns and
-#' goes into a workbook:
-#'
-#' * `set_decimal_split(x, cols = 3:31)` is declared as `plan_columns(decimal = ".values")`
-#' * `paginate_cols(x, ...)` is declared as `plan_paginate_cols(every = , at = , keep = )`
-#' * `rtftable(col_rel_width = )` by position is declared as `plan_columns(widths = c(Analyte = 3, .values = 2))`
-#' * `set_col_header()` / `rtf_col_header()` is declared as `plan_col_header()`
-#' * `as_rtftables(align_count_pct = TRUE)` is declared as `plan_style(align_count_pct = TRUE)`
-#' * `fmt_numeric()` is declared as `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))`
-#' * `paginate()` is declared as `plan_paginate_rows()`
-#' * `style_header(x, ...)` is declared as `plan_cell_style(header = TRUE, ...)`
-#' * `style_cols(x, ...)` is declared as `plan_cell_style(cols = , ...)`
-#' * bold / colour / alignment of body cells, by condition is declared as `plan_cell_style(where = ~ ..., ...)`
-#' * `style_zone(x, ...)` is declared as `plan_style(border_header = , border_body = , ...)`
-#'
-#' Two kinds of names: `plan_levels()`, `plan_labels()`, `plan_filter()`,
-#' `plan_nest()`, `plan_stat_groups()` and `plan_compare()` read the
-#' normalized ARD's columns (`variable`, the keys as the ARD names them);
-#' `plan_hide()`, `plan_paginate_group(col = )`, `plan_row_group()`,
-#' `plan_cell_style()`, `plan_columns()` and `plan_col_header()` read the
-#' finished table's columns (the names `table_plan(rows = )` gave,
-#' `row_label`, the arms).
+#' @section Two kinds of names:
+#' `plan_levels()`, `plan_labels()`, `plan_filter()`, `plan_nest()`,
+#' `plan_stat_groups()` and `plan_compare()` read the normalized ARD's
+#' columns (`variable`, the keys as the ARD names them); `plan_hide()`,
+#' `plan_paginate_group(col = )`, `plan_row_group()`, `plan_cell_style()`,
+#' `plan_columns()` and `plan_col_header()` read the finished table's
+#' columns (the names `table_plan(rows = )` gave, `row_label`, the arms).
 #'
 #' The styles `plan_cell_style()` declares run on the pages in the order
 #' written (after the header and the decimal alignment, before any
@@ -1565,108 +1030,29 @@ print.table_plan <- function(x, ...) {
 #' stands for every value column, so a reordered table keeps them.
 #'
 #' @examples
-#' if (requireNamespace("cards", quietly = TRUE)) {
-#'   # One ARD, normalized once; each block below adds verbs to `base`.
-#'   adsl <- cards::ADSL
-#'   adsl$ARM <- factor(adsl$ARM)
-#'   ard <- cards::ard_stack(
-#'     adsl, .by = ARM,
-#'     cards::ard_summary(variables = AGE),
-#'     cards::ard_tabulate(variables = c(SEX, AGEGR1)),
-#'     .overall = TRUE)
-#'   base <- table_plan(normalize_ard(ard), cols = "ARM",
-#'                      rows = c(group = "variable"))
+#' # Invented summary statistics of two arms, one row a statistic
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 4),
+#'   variable  = rep(c("AGE", "AGE", "SEX", "SEX"), 2),
+#'   .label    = rep(c(NA, NA, "F", "M"), 2),
+#'   .kind     = rep(c("continuous", "continuous", "categorical",
+#'                     "categorical"), 2),
+#'   stat_name = rep(c("mean", "sd", "n", "n"), 2),
+#'   stat      = c(61.2, 9.81, 12, 8, 63.5, 10.2, 9, 11))
 #'
-#'   # -- The cells: templates, digits, the order and text of values --------
-#'   p <- base |>
-#'     plan_cells(continuous  = c("Mean (SD)" = "{mean} ({sd})",
-#'                                "Median"    = "{median}"),
-#'                categorical = "{n} ({p:%})", notes = FALSE) |>
-#'     plan_digits(1) |>                                   # the house rule
-#'     plan_digits(AGE = c(mean = 1, sd = 2)) |>           # one variable
-#'     plan_levels(SEX = c("M", "F")) |>
-#'     plan_levels(variable = c("AGE", "SEX", "AGEGR1")) |>  # the blocks
-#'     plan_labels(c(AGE = "Age (years)", SEX = "Sex", AGEGR1 = "Age group"))
-#'   plan_apply(p, "table")
-#'
-#'   # hide a variable's rows: plan_filter() keeps the rows it holds for
-#'   plan_apply(p |> plan_filter(!variable %in% "AGEGR1"), "table")
-#'
-#'   # -- The rows: stub, groups, blank rows, order, hidden columns ---------
-#'   p <- p |>
-#'     plan_stub(name = "Characteristic", before = TRUE) |>
-#'     plan_row_group(mode = "indent") |>
-#'     plan_blanks(where = "between_groups", last = TRUE) |>
-#'     plan_total(label = "Total")
-#'   plan_apply(p, "table")
-#'
-#'   # -- The columns, the header, the look ---------------------------------
-#'   p <- p |>
-#'     plan_columns(widths = c(Characteristic = 3, .values = 2)) |>
-#'     plan_col_header(values = list(n = TRUE),
-#'                     rtf_col_header(c("", "{col}"),
-#'                                    c("Characteristic", "(N={n})"))) |>
-#'     plan_style(border = "tfl", align_count_pct = TRUE) |>
-#'     plan_cell_style(cols = "Characteristic", italic = ~ grepl("^ ", Characteristic))
-#'
-#'   # -- Pages: row budget, column blocks, titles and footnotes ------------
-#'   p <- p |>
-#'     plan_paginate_rows(max_rows = 20) |>
-#'     plan_titles(c("Table 14.1.1", "Demographics")) |>
-#'     plan_footnotes("Percentages are of the subjects in each arm.") |>
-#'     plan_after(function(pages) pages)                   # your own step
-#'   length(plan_apply(p))                                 # the pages
-#'   plan_layers(p)
-#'
-#'   # -- A page per value, a column split, nesting, sort, hide -------------
-#'   ard_bm <- cards::ard_summary(adsl, by = c(SEX, ARM), variables = c(AGE, BMIBL))
-#'   q <- table_plan(normalize_ard(ard_bm), cols = "ARM",
-#'                   rows = c(SEX = "SEX", group = "variable")) |>
-#'     plan_cells(continuous = c("n" = "{N}", "Mean (SD)" = "{mean} ({sd})"),
-#'                notes = FALSE) |>
-#'     plan_digits(1) |>
-#'     plan_stub(name = "Parameter") |>
-#'     plan_paginate_group(col = "SEX") |>                 # a page per sex
-#'     plan_paginate_cols(every = 2, keep = "Parameter")   # two arms a page
-#'   length(plan_apply(q))
-#'
-#'   # -- Rows under one level of another variable; frequency order --------
-#'   ard_r <- cards::ard_tabulate(adsl, by = ARM, variables = c(RACE, ETHNIC))
-#'   table_plan(normalize_ard(ard_r), cols = "ARM",
-#'              rows = c(group = "variable")) |>
-#'     plan_cells(categorical = "{n}", notes = FALSE) |>
-#'     plan_nest(ETHNIC = c(RACE = "WHITE")) |>
-#'     plan_sort("-n") |>
-#'     plan_apply("table")
-#' }
-#'
-#' # The display verbs also lay out a finished data frame -- no ARD needed.
-#' tbl <- data.frame(
-#'   Parameter = c("Subjects", "Age, mean (SD)", "Female, n (%)"),
-#'   Placebo   = c("86", "75.2 (8.59)", "53 (61.6)"),
-#'   Active    = c("84", "75.7 (8.29)", "50 (59.5)"))
-#' pages <- table_plan(tbl) |>
-#'   plan_columns(widths = c(Parameter = 3, .values = 2)) |>
-#'   plan_hide("Active") |>
-#'   plan_style(border = "tfl") |>
-#'   plan_titles("Table 1  Summary") |>
+#' # The roles once, then one verb a declaration; plan_apply() runs it
+#' pages <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+#'              categorical = "{n}") |>
+#'   plan_labels(AGE = "Age (years)", SEX = "Sex") |>
+#'   plan_stub(name = "Characteristic") |>
+#'   plan_col_header(rtf_col_header(c("Characteristic", "{col}"))) |>
+#'   plan_titles("Table 14.1.1", "Demographics") |>
 #'   plan_apply()
 #' pages[[1]]
 #'
-#' # A listing of records.
-#' recs <- data.frame(USUBJID = c("01-001", "01-001", "01-002"),
-#'                    AETERM  = c("Headache", "Nausea", "Fatigue"),
-#'                    AESEV   = c("MILD", "MODERATE", "MILD"))
-#' listing <- table_plan(recs) |>
-#'   plan_sort("USUBJID", "AETERM") |>
-#'   plan_listing(listing_col("USUBJID", label = "Subject"),
-#'                listing_col("AETERM", label = "Adverse event"),
-#'                listing_col("AESEV", label = "Severity")) |>
-#'   plan_apply()
-#' length(listing)
-#'
 #' @name plan_verbs
-#' @seealso [table_plan()], [plan_apply()]
+#' @seealso [table_plan()], [plan_apply()], [plan_layers()]
 NULL
 
 # The order values appear in, and the text they appear as.  These are the
@@ -1674,7 +1060,69 @@ NULL
 # everything, then one variable's own -- so they are layers, merged one
 # KEY at a time: a later plan_levels() adds a variable without restating
 # the rest.  The roles are said once, on table_plan(); these are not roles.
-#' @rdname plan_verbs
+#' Order the values of a key, and the analysis variables
+#'
+#' `plan_levels()` says the order the values of a column or analysis
+#' variable appear in --- the arms across the top, the categories of SEX
+#' down the side, or the blocks of rows themselves --- and may give each
+#' value its text on the way.  It is a layer like every verb after
+#' [table_plan()]: it merges one key at a time, so a later call adds a
+#' variable without restating the rest.  Values left out follow in the
+#' data's order.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... One entry per column or analysis variable, named by it; the
+#'   value is the order.  An order may name its values' text, as
+#'   [base::factor()]'s `levels` and `labels` do:
+#'   \describe{
+#'     \item{`<key> = c("M", "F")`}{the order of a key's values (`ARM`,
+#'       `SEX`, a value of `table_plan(cols = )` or `rows = `).}
+#'     \item{`<key> = c(F = "Female", M = "Male")`}{the order F, M, and
+#'       the text each prints as; an element without a name is the value
+#'       as it is.}
+#'     \item{`variable = c("AGE", "SEX")`}{the order of the analysis
+#'       variables (the blocks of rows); a named element also gives the
+#'       block's heading, `variable = c(AGE = "Age (years)", "SEX")`.}
+#'   }
+#'   A single unnamed argument that is itself a named list or vector is
+#'   taken as the whole map.  [plan_labels()] names values without
+#'   ordering them, and wins value by value over a text given here.
+#' @param .drop_empty Variables whose levels **no record has** are not
+#'   shown: a level whose `n` is 0 (or missing) in every column, as an ARD
+#'   made with a code list's full set of levels has (a factor's unused
+#'   level, counted 0).  `NULL` (default): every level the data has is
+#'   shown.  A level that some column counts stays; a variable summarised
+#'   without `n` is untouched.  Several calls add up.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [plan_labels()] for text without
+#'   order.
+#' @examples
+#' # Invented counts, one row a statistic: SEX has an "Unknown" level
+#' # that no subject has.
+#' st <- data.frame(
+#'   ARM       = rep(c("Active", "Placebo"), each = 4),
+#'   variable  = rep(c("AGE", "SEX", "SEX", "SEX"), 2),
+#'   .label    = rep(c(NA, "F", "M", "U"), 2),
+#'   .kind     = rep(c("continuous", "categorical", "categorical",
+#'                     "categorical"), 2),
+#'   stat_name = rep(c("mean", "n", "n", "n"), 2),
+#'   stat      = c(63.5, 9, 11, 0, 61.2, 12, 8, 0))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c(Mean = "{mean:.1f}"), categorical = "{n}")
+#'
+#' # Minimal: males first
+#' p |> plan_levels(SEX = c("M", "F", "U")) |> plan_apply("table")
+#'
+#' # Placebo on the left, the SEX block first with its heading, each sex
+#' # spelled out, and the empty "Unknown" row dropped
+#' p |>
+#'   plan_levels(ARM = c("Placebo", "Active"),
+#'               variable = c(SEX = "Sex", AGE = "Age (years)"),
+#'               SEX = c(F = "Female", M = "Male", U = "Unknown"),
+#'               .drop_empty = "SEX") |>
+#'   plan_apply("table")
 #' @export
 plan_levels <- function(.plan, ..., .drop_empty = NULL) {
   v <- if (...length()) .plan_map(list(...), "plan_levels")
@@ -1687,7 +1135,61 @@ plan_levels <- function(.plan, ..., .drop_empty = NULL) {
                 if (!is.null(.drop_empty)) list(drop_empty = .drop_empty)))
 }
 
-#' @rdname plan_verbs
+#' Give values and variables the text they print as
+#'
+#' `plan_labels()` says the text a value, a column or an analysis variable
+#' prints as, without changing the order ([plan_levels()] does that).
+#' Write the plan with the data's own codes and rename at the end: one
+#' entry per key, merged one key at a time, so a later call relabels one
+#' variable and leaves the others.  It is read when the table is made, so
+#' it can come anywhere in the pipe after [table_plan()].
+#'
+#' @param .plan A [table_plan()].
+#' @param ... One entry per value, column or analysis variable, named by
+#'   it.  The shape of the value says which:
+#'   \describe{
+#'     \item{`<value> = "text"`}{one text: that value's text wherever it
+#'       appears.  An analysis variable's name is a value too, so
+#'       `AGE = "Age (years)"` is the heading of AGE's block of rows.}
+#'     \item{`<key> = c(code = "text", ...)`}{a named vector: a dictionary
+#'       for that key only --- a column key (`ARM = c(Active = "Drug X 10
+#'       mg")`) or an analysis variable's levels (`SEX = c(F = "Female", M
+#'       = "Male")`).  Its entry under the variable's own name is the
+#'       variable's heading: `SEX = c(SEX = "Sex", F = "Female")`.  So the
+#'       same code can mean two things on two axes: a shift table's `"0"`
+#'       is `"Grade 0"` down the side and `"Baseline 0"` across the top.}
+#'   }
+#'   A value may be named by itself or by the text a [plan_levels()] order
+#'   gave it; this text wins over that one.  A later call replaces an
+#'   entry of the same name whole.  A single unnamed argument that is
+#'   itself a named vector is taken as the whole map:
+#'   `plan_labels(study_labels)`.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 3),
+#'   variable  = rep(c("AGE", "SEX", "SEX"), 2),
+#'   .label    = rep(c(NA, "F", "M"), 2),
+#'   .kind     = rep(c("continuous", "categorical", "categorical"), 2),
+#'   stat_name = rep(c("mean", "n", "n"), 2),
+#'   stat      = c(61.2, 12, 8, 63.5, 9, 11))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c(Mean = "{mean:.1f}"), categorical = "{n}")
+#'
+#' # Minimal: the headings of the two blocks
+#' p |> plan_labels(AGE = "Age (years)", SEX = "Sex") |> plan_apply("table")
+#'
+#' # The study keeps its labels in one vector.  This table also spells
+#' # out the sexes and names the active arm's dose; AGE keeps the study's
+#' study_labels <- c(AGE = "Age (years)", SEX = "Sex")
+#' p |>
+#'   plan_labels(study_labels) |>
+#'   plan_labels(SEX = c(SEX = "Sex, n", F = "Female", M = "Male"),
+#'               ARM = c(Active = "Drug X 10 mg")) |>
+#'   plan_apply("table")
 #' @export
 plan_labels <- function(.plan, ...) {
   v <- .plan_map(list(...), "plan_labels")
@@ -1750,7 +1252,85 @@ plan_labels <- function(.plan, ...) {
 # are the cells' own, so they are declared here and not on table_plan(),
 # which takes the roles and nothing else.  Declared on the plan, they hold
 # however the plan is run: plan_apply(), rtf_tables(doc, plan).
-#' @rdname plan_verbs
+#' Say how each cell is made from the statistics
+#'
+#' `plan_cells()` gives the **cell templates**: the text a cell prints,
+#' written with the statistics' names in braces (`"{mean} ({sd})"`,
+#' `"{n} ({p:%})"`).  It is usually the first verb after [table_plan()],
+#' since it decides what the rows of a block are; [plan_digits()] then
+#' fills in the decimals the templates leave open.  It also takes the
+#' settings of how cells are made --- a row per statistic instead of a
+#' template, which number a token reads, what an empty cell prints --- as
+#' [widen_ard()] takes them.
+#'
+#' @param .plan A [table_plan()].  The pipe passes it by position; the dot
+#'   keeps a name in `...` such as `p` (cards' percentage) from being taken
+#'   for it.
+#' @param ... The templates, as `widen_ard(cells = )` takes them: one bare
+#'   entry for every cell, or entries named by what they apply to.  Each
+#'   entry is a template, a named vector of templates (one row each, the
+#'   names the rows' labels), guards (`c(n == 0 ~ "0", "{n} ({p})")`) or
+#'   [cell_rows()].  The names, from the most specific:
+#'   \describe{
+#'     \item{`<variable>`}{an analysis variable, `AGE = "{mean} ({sd})"`.}
+#'     \item{`<stat group>`}{a group of [plan_stat_groups()], `orr_ci =
+#'       cell_rows(...)`.}
+#'     \item{`<context>`}{an ARD context, `tabulate = "{n}"`.}
+#'     \item{`continuous`, `categorical`}{a kind of variable.}
+#'     \item{`default`}{everything else (the unnamed entry).}
+#'   }
+#'   In a table of [plan_stat_groups()], a record of a split variable
+#'   (`.variables`) takes its variable's entry, else its **group's**,
+#'   before its context or kind; a record that went whole to `.others`
+#'   takes its variable's, then its context's or kind's, its group's only
+#'   after them.  The names of the arguments after `...` are reserved: a
+#'   variable called `stats`, `value`, `na` or `notes` cannot be keyed
+#'   here; name it otherwise in the ARD.
+#' @param stats `"cells"` (default) fills a template per cell; `"rows"`
+#'   makes each statistic a row of its own (no template).
+#' @param value With `stats = "rows"`: the raw number (`"stat"`) or cards'
+#'   formatted text (`"stat_fmt"`) in each row.  With templates an open
+#'   `{x}` takes `stat_fmt` when the ARD has it and `stat` otherwise, and
+#'   `{x:stat_fmt}` / `{x:.1f}` say so per token.
+#' @param na What fills a cell no template could (a statistic the ARD does
+#'   not have).  On a plan of a table that is already built (no
+#'   statistics), `na` alone is taken: [as_rtftables()]'s `na`, what a
+#'   missing value prints as.
+#' @param notes `FALSE` stops the message listing the statistics no
+#'   template used; `TRUE` (or `NULL`, the default) reports them.
+#'
+#' @return The plan, with one more layer.  The settings hold however the
+#'   plan is run, by [plan_apply()] or by `rtf_tables(doc, plan)`.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [widen_ard()] for the template
+#'   language.
+#' @examples
+#' # Invented summary statistics, one row a statistic (no cards needed)
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 7),
+#'   variable  = rep(c("AGE", "AGE", "AGE", "SEX", "SEX", "SEX", "SEX"), 2),
+#'   .label    = rep(c(NA, NA, NA, "F", "F", "M", "M"), 2),
+#'   .kind     = rep(c(rep("continuous", 3), rep("categorical", 4)), 2),
+#'   stat_name = rep(c("mean", "sd", "median", "n", "p", "n", "p"), 2),
+#'   stat      = c(61.2, 9.81, 60, 12, 0.6, 8, 0.4,
+#'                 63.5, 10.2, NA, 20, 1, 0, 0))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable"))
+#'
+#' # Minimal: one template per kind, the digits written in the template;
+#' # the name of a continuous template is its row's label
+#' p |>
+#'   plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})"),
+#'              categorical = "{n} ({p:.1f%})", notes = FALSE) |>
+#'   plan_apply("table")
+#'
+#' # A demographics block: AGE as two named rows, a zero count printed
+#' # as "0" rather than "0 (0.0)", and a median the ARD lacks as "-"
+#' p |>
+#'   plan_cells(continuous  = c("Mean (SD)" = "{mean:.1f} ({sd:.2f})",
+#'                              "Median"    = "{median:.1f}"),
+#'              categorical = c(n == 0 ~ "0", "{n} ({p:.1f%})"),
+#'              na = "-") |>
+#'   plan_apply("table")
 #' @export
 plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
                        notes = NULL) {
@@ -1772,7 +1352,64 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 # `round` used to be a verb of its own, and it never earned one: the whole
 # run takes ONE rounding family, so it is a setting of the digits rather
 # than a layer beside them.
-#' @rdname plan_verbs
+#' Set the digits of the numbers in the cells
+#'
+#' `plan_digits()` gives the decimals (or significant digits) the open
+#' tokens of the [plan_cells()] templates take --- `{mean}`, `{p:%}`, as
+#' opposed to `{mean:.2f}`, which already says.  It is the verb a study
+#' writes twice: a house rule for every table, then one variable's own.  A
+#' later layer wins key by key, and a statistic the narrower entry says
+#' nothing about falls through to the wider one.  On a plan of a finished
+#' table it formats the numbers themselves, with [fmt_numeric()].
+#'
+#' @param .plan A [table_plan()].
+#' @param ... The digits, keyed as [plan_cells()]' templates are (an
+#'   analysis variable, a stat group, a context, `continuous` /
+#'   `categorical`, or one unnamed entry for every cell).  Each value is:
+#'   \describe{
+#'     \item{one number}{the decimals of every open token in that entry,
+#'       `plan_digits(1)`, `plan_digits(AGE = 0)`.}
+#'     \item{a vector named by statistic}{each statistic its own,
+#'       `continuous = c(mean = 1, sd = 2, median = 1)`.}
+#'     \item{`"4s"`}{4 **significant** digits instead of decimals, as the
+#'       token grammar's `{mean:.4s}`; it may be mixed in a named vector,
+#'       `c(mean = "4s", n = 0)`.}
+#'   }
+#'   On a **finished table** (a source that is already the table, or
+#'   `plan_cells(stats = "rows")`) a key that names a **column** formats
+#'   that column, and `.rows` formats the value columns by the text of the
+#'   label column: `plan_digits(.rows = c(N = 0, Mean = 1, SD = "3s"))`.
+#'   A key that reaches neither a variable nor a column is an error.
+#' @param rounding The tie-breaking family for the run, as
+#'   `widen_ard(rounding = )` takes it.  Last wins.  A study sets the rule
+#'   once with `options(rtfreporter.rounding = )`; give it here only for a
+#'   table that departs from it.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 6),
+#'   variable  = rep(c("AGE", "AGE", "WEIGHT", "WEIGHT", "SEX", "SEX"), 2),
+#'   .label    = rep(c(NA, NA, NA, NA, "F", "M"), 2),
+#'   .kind     = rep(c(rep("continuous", 4), rep("categorical", 2)), 2),
+#'   stat_name = rep(c("mean", "sd", "mean", "sd", "n", "n"), 2),
+#'   stat      = c(61.24, 9.812, 72.456, 12.345, 12, 8,
+#'                 63.51, 10.218, 70.12, 11.874, 9, 11))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})"),
+#'              categorical = "{n}")
+#'
+#' # Minimal: one decimal for every open token (the counts too)
+#' p |> plan_digits(1) |> plan_apply("table")
+#'
+#' # The house rule (SD one more than the mean, counts whole), then
+#' # WEIGHT, measured more finely, one more again
+#' p |>
+#'   plan_digits(continuous = c(mean = 1, sd = 2), categorical = c(n = 0)) |>
+#'   plan_digits(WEIGHT = c(mean = 2, sd = 3)) |>
+#'   plan_apply("table")
 #' @export
 plan_digits <- function(.plan, ..., rounding = NULL) {
   d <- list(...)
@@ -1828,7 +1465,67 @@ plan_digits <- function(.plan, ..., rounding = NULL) {
 # grouped by a carrier column needs.  Folding it FIRST, with stub_cols(),
 # is what plan_cell_style() needs, because only then can a condition see the
 # rows that will be printed.
-#' @rdname plan_verbs
+#' Fold the row keys into one row-heading column
+#'
+#' `plan_stub()` makes the **stub**: the row keys (the block of each
+#' analysis variable, the category under it) folded into one indented
+#' column with a heading row per block, as [stub_cols()] does.  It belongs
+#' to the display half of the pipe, after the cells and rows are declared
+#' and before the header and pages.  By default the fold happens inside
+#' [as_rtftables()], after grouping and pagination have read the keys.
+#'
+#' @param .plan A [table_plan()].
+#' @param vars The row keys to fold, as `stub_cols(vars = )`.  Left out,
+#'   they are worked out from the plan: the names of `table_plan(rows = )`
+#'   and its label column, without a grouping carrier.  With one column (a
+#'   table of one row heading), that column is the stub, renamed `name`,
+#'   and nothing is folded.
+#' @param name The name of the folded column, `stub_cols(label = )`, and
+#'   so its header text unless [plan_col_header()] says otherwise:
+#'   `"Characteristic"`.  Not the same as `table_plan(label = )`, the
+#'   column whose **values** are the row text.
+#' @param indent The non-breaking spaces per nesting level,
+#'   `stub_cols(indent = )` (default 4).  `plan_row_group(mode = "indent")`
+#'   reads the indent this writes.
+#' @param group_summary Which leaf values mark a row as its group's
+#'   summary, folding its statistics onto the group's heading row, as
+#'   `stub_cols(group_summary = )`: `"empty"`, `"parent"`, `"all"` or
+#'   `"none"`.
+#' @param before `FALSE` (default) folds the stub inside [as_rtftables()],
+#'   after grouping and pagination have had their say.  `TRUE` folds it
+#'   first, with [stub_cols()], which is what a condition of
+#'   `plan_cell_style()` needs: only then can it see the rows that will be
+#'   printed.  The two do **not** always give the same table: folded
+#'   first, the row keys are gone before a page split or a row group could
+#'   read them, so `plan_paginate_group(col = )` naming one of them no
+#'   longer finds it.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [stub_cols()].
+#' @examples
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 3),
+#'   variable  = rep(c("AGE", "SEX", "SEX"), 2),
+#'   .label    = rep(c(NA, "F", "M"), 2),
+#'   .kind     = rep(c("continuous", "categorical", "categorical"), 2),
+#'   stat_name = rep(c("mean", "n", "n"), 2),
+#'   stat      = c(61.2, 12, 8, 63.5, 9, 11))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c(Mean = "{mean:.1f}"), categorical = "{n}") |>
+#'   plan_labels(AGE = "Age (years)", SEX = "Sex")
+#'
+#' # Minimal: one stub column with a heading row per variable
+#' plan_apply(p |> plan_stub(name = "Characteristic"), "pages")[[1]]
+#'
+#' # A narrower indent, folded first so that a condition can read the
+#' # printed rows: the heading rows (no indent) in bold
+#' pages <- p |>
+#'   plan_stub(name = "Characteristic", indent = 2, before = TRUE) |>
+#'   plan_cell_style(cols = "Characteristic",
+#'                   bold = ~ !grepl("^ ", Characteristic)) |>
+#'   plan_apply("pages")
+#' pages[[1]]
 #' @export
 # `vars` is derivable and was being written twice: the row keys are the
 # names of table_plan(rows = ), the label column is the name of its
@@ -1863,7 +1560,72 @@ plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
 # (style_cols()), and `where =` is a condition on the rows, over `cols` or
 # every column.  One verb for "which cells, and how they look", instead of
 # one per place.
-#' @rdname plan_verbs
+#' Style cells by column, in the header, or by a condition
+#'
+#' `plan_cell_style()` says how cells look --- bold, italic, underline,
+#' colour, background, alignment, indent, border --- and which cells: the
+#' column header (`header = TRUE`), whole columns (`cols`), or the rows a
+#' condition chooses (`where`, or an attribute written as a formula).  It is
+#' SAS's `call define()` in a `compute` block: a cell looks at its own row
+#' and decides how it is printed.  Columns are named, so a reordered table
+#' keeps its styles; the styles run on the pages in the order written.
+#'
+#' @param .plan A [table_plan()].
+#' @param cols The columns styled, by name (`.values` for every value
+#'   column); left out, every column.
+#' @param header `TRUE` styles the column header ([style_header()]) instead
+#'   of the body; it takes `bold`, `italic`, `underline`, `align` and
+#'   `border`, and no `where`.
+#' @param where A one-sided formula over the table's columns choosing the
+#'   rows, `where = ~ is.na(label)`; the attributes given apply there and
+#'   leave the other rows alone.  Left out, the whole of `cols` is styled
+#'   ([style_cols()]).
+#' @param bold,italic,align,color,background,underline How the cells look.
+#'   Each is one of:
+#'   \describe{
+#'     \item{a value}{`bold = TRUE`, `align = "center"`, `color =
+#'       "#CC0000"`: applied to the cells `cols` / `header` / `where`
+#'       choose.}
+#'     \item{a one-sided formula}{the value computed row by row over the
+#'       table's columns, `NA` leaving the column default alone: `bold = ~
+#'       is.na(label)`.  A call whose attributes are formulas takes neither
+#'       `where` nor `header`.}
+#'     \item{a named list of formulas}{one a column, by name: `color =
+#'       list(Placebo = ~ ifelse(n > 50, "#CC0000", NA))`.}
+#'   }
+#'   A formula sees the printed rows only with `plan_stub(before = TRUE)`.
+#' @param border A column's border, an [rtf_border()]: on whole columns or
+#'   the header, not with `where`.
+#' @param indent_twips The left indent of the cells' text,
+#'   [style_cols()]'s `indent_twips` (not on the header).
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [plan_style()] for the whole
+#'   table's look.
+#' @examples
+#' tbl <- data.frame(
+#'   Parameter = c("Subjects", "Age, mean (SD)", "Female, n (%)"),
+#'   Placebo   = c("86", "75.2 (8.59)", "53 (61.6)"),
+#'   Active    = c("84", "75.7 (8.29)", "50 (59.5)"))
+#'
+#' # Minimal: the active arm's column in bold
+#' pages <- table_plan(tbl) |>
+#'   plan_cell_style(cols = "Active", bold = TRUE) |>
+#'   plan_apply()
+#' pages[[1]]$col_spec[[3]]$bold
+#'
+#' # The header in bold, the arms centred, the count row in italics and
+#' # the active arm's female cell in red
+#' pages <- table_plan(tbl) |>
+#'   plan_col_header(rtf_col_header(c("Parameter", "Placebo", "Active"))) |>
+#'   plan_cell_style(header = TRUE, bold = TRUE) |>
+#'   plan_cell_style(cols = c("Placebo", "Active"), align = "center") |>
+#'   plan_cell_style(where = ~ Parameter == "Subjects", italic = TRUE) |>
+#'   plan_cell_style(color = list(
+#'     Active = ~ ifelse(startsWith(Parameter, "Female"), "#CC0000", NA))) |>
+#'   plan_apply()
+#' pages[[1]]
 #' @export
 plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
                             bold = NULL, italic = NULL, align = NULL,
@@ -2031,7 +1793,73 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
 # `col` may be left out and read off table_plan(rows = ), so which column
 # to hide is not known here.  Record the answer and let
 # .plan_rtf_args() do it once the roles are in hand.
-#' @rdname plan_verbs
+#' Start a new page for each value of a column
+#'
+#' `plan_paginate_group()` is the **group** axis of pagination: every value
+#' of one column becomes its own page, however long, and the page is named
+#' after it --- the line `rtf_tables(auto_section = TRUE)` cuts a section
+#' on, so this verb decides what a section is.  It is the only verb that
+#' makes a page per value with no row budget; [plan_paginate_rows()] is the
+#' row axis (with `page_by`, a page per value cut by rows too), and
+#' `plan_paginate_cols()` the column axis.
+#'
+#' @param .plan A [table_plan()].
+#' @param col The column whose value starts a new page (`as_rtftables()`'s
+#'   `page_by`, or `split = "by_value"` with a [plan_stub()]).  Left out, it
+#'   is the outermost row key.  It is a **page** key, the same on every row
+#'   of a page, so it is never a row group: blank rows between groups,
+#'   `collapse`, `row_title`, the stub and the column positions start at the
+#'   first printed row key.
+#' @param keep `FALSE` also hides the page key.  A column can be **needed
+#'   and not wanted** --- the key a page break reads --- and the verb that
+#'   needs it is the one place that knows, so it says so here instead of
+#'   the name being written again in a [plan_hide()].
+#' @param heading The page's name as a template, in place of the bare value:
+#'   `"Treatment: {value} (N={n})"`.  `{value}` is the page's value as
+#'   printed; `{n}` its population **as the ARD states it** --- the page
+#'   variable's own tabulation, `cards::ard_tabulate(adsl, variables =
+#'   TRT01A)` bound into the ARD (the `.key_own` rows [normalize_ard()]
+#'   keeps), never an analysis's `N`.  What the ARD does not state is `NA`,
+#'   with a warning.  `{PROGRAM}`, `{DATETIME}` and the page tokens are left
+#'   for the renderer.
+#' @param heading_at Where the page's name prints:
+#'   \describe{
+#'     \item{`"section"`}{in the section header, what `rtf_tables(auto_section
+#'       = TRUE)` does.}
+#'     \item{`"title"`}{as the last line of the titles above the table
+#'       (`auto_title = TRUE`).}
+#'     \item{`"none"`}{nowhere.}
+#'     \item{`NULL`}{(default) not said: [rtf_tables()]'s own default,
+#'       nowhere.}
+#'   }
+#'   It is the default of [rtf_tables()]'s `auto_section` / `auto_title`
+#'   for these pages, so `rtf_tables(doc, plan)` needs neither; an
+#'   `auto_section` / `auto_title` given to [rtf_tables()] wins.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [plan_paginate_rows()] for a row
+#'   budget.
+#' @examples
+#' # A finished table of two laboratory parameters
+#' lab <- data.frame(
+#'   PARAM   = rep(c("ALT (U/L)", "AST (U/L)"), each = 2),
+#'   Visit   = rep(c("Baseline", "Week 4"), 2),
+#'   Placebo = c("22.1", "23.0", "25.4", "24.8"),
+#'   Active  = c("21.8", "30.2", "24.9", "29.1"))
+#'
+#' # Minimal: a page per parameter, each named after it
+#' pages <- table_plan(lab) |> plan_paginate_group(col = "PARAM") |> plan_apply()
+#' names(pages)
+#'
+#' # The parameter leaves the body and names the page instead, as the
+#' # last title line
+#' pages <- table_plan(lab) |>
+#'   plan_paginate_group(col = "PARAM", keep = FALSE,
+#'                       heading = "Parameter: {value}", heading_at = "title") |>
+#'   plan_apply()
+#' names(pages)
+#' pages[[2]]
 #' @export
 plan_paginate_group <- function(.plan, col = NULL, keep = TRUE, heading = NULL,
                                 heading_at = NULL) {
@@ -2047,7 +1875,63 @@ plan_paginate_group <- function(.plan, col = NULL, keep = TRUE, heading = NULL,
 # does NOT make the row headings; folding the keys into one heading
 # column, indenting them and adding a summary row is plan_stub().
 # In six reports this and the page group were never used together.
-#' @rdname plan_verbs
+#' Say how a run of rows sharing a value shows
+#'
+#' `plan_row_group()` says what a **row group** is inside the body ---
+#' where one run of equal values ends and the next begins --- and whether
+#' the repeated value is printed once and then left blank.  The group it
+#' finds is what the blank rows between groups ([plan_blanks()]) and a
+#' page split that keeps groups whole ([plan_paginate_rows()]) read.  It
+#' does not make the row headings: folding the keys into one indented
+#' column is [plan_stub()].
+#'
+#' @param .plan A [table_plan()].
+#' @param mode How a group boundary is found, `as_rtftables(group_by = )`:
+#'   \describe{
+#'     \item{`"value"`}{each run of equal values.}
+#'     \item{`"indent"`}{a row starts a group when its cell is not
+#'       indented --- the indent `plan_stub(indent = )` writes.}
+#'     \item{`"filled"`}{a row starts a group when its cell is not empty.}
+#'     \item{`"auto"`}{worked out from the column.}
+#'   }
+#'   The rows are grouped by the outermost row key (`table_plan(rows = )`);
+#'   folded into a stub, by the stub's headings.
+#' @param collapse The columns whose repeated value is printed once and then
+#'   blank, `as_rtftables(collapse_repeats = )`: by name (`collapse =
+#'   c("grp1", "grp2")`, the row keys' names) or by position, counted on the
+#'   **printed** columns (a hidden key left out).
+#' @param group_col On a plan of a table that is already built:
+#'   `as_rtftables(group_col = )`, the one column whose runs are the
+#'   groups.  An ARD plan names it as its outermost row key
+#'   (`table_plan(rows = )`) and refuses this; a page per value is
+#'   [plan_paginate_group()].
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' # A finished table of adverse events, one row a preferred term
+#' ae <- data.frame(
+#'   SOC     = rep(c("Gastrointestinal", "Nervous system"), each = 2),
+#'   PT      = c("Nausea", "Vomiting", "Dizziness", "Headache"),
+#'   Placebo = c("3", "1", "2", "5"),
+#'   Active  = c("6", "2", "4", "7"))
+#'
+#' # Minimal: each SOC printed once, on its first row
+#' table_plan(ae) |> plan_row_group(collapse = "SOC") |> plan_apply()
+#'
+#' # The runs of SOC are the groups: a blank row between them (after
+#' # row 2), and a page break that keeps each group whole
+#' pages <- table_plan(ae) |>
+#'   plan_row_group(mode = "value", collapse = "SOC", group_col = "SOC") |>
+#'   plan_blanks(where = "between_groups") |>
+#'   plan_apply()
+#' pages[[1]]$blank_rows
+#' pages <- table_plan(ae) |>
+#'   plan_row_group(mode = "value", collapse = "SOC", group_col = "SOC") |>
+#'   plan_paginate_rows(max_rows = 3, split = "group_safe") |>
+#'   plan_apply()
+#' length(pages)  # one SOC a page
 #' @export
 # The carrier is the outermost row key, which table_plan(rows = ) has
 # already named; naming it again here was a second place for the two to
@@ -2080,7 +1964,57 @@ plan_row_group <- function(.plan, mode = NULL, collapse = NULL,
 # data (a hierarchical tabulation would drop every level that has no
 # sub-level), placed by the layout: the rows move, they are not counted
 # again.
-#' @rdname plan_verbs
+#' Put one variable's rows under one level of another
+#'
+#' `plan_nest()` places the rows of one analysis variable under a single
+#' row of another: the sub-categories of a race under its `"Asian"` row.
+#' They are two analyses of the same data --- a hierarchical tabulation
+#' would drop every level that has no sub-level --- and the layout puts
+#' them together: the rows move, nothing is counted again.  The nested
+#' rows follow that level's row, one indent step deeper, in the parent's
+#' group.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... One entry per nested variable, named by it, whose value is
+#'   the variable and level its rows go under, named by the variable:
+#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.
+#'   \describe{
+#'     \item{The level}{is matched as the table shows it (the ARD's level: a
+#'       code list's label).}
+#'     \item{The nested variable}{Its own heading is dropped; its order and
+#'       text stay [plan_levels()]' and [plan_labels()]'.}
+#'     \item{What is read}{The rows key that carries the variable
+#'       (`table_plan(rows = c(group = "variable"))`) is what is read, and the
+#'       indent is the stub's (`plan_stub(indent = )`, default 4).}
+#'   }
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' # Invented counts: RACE, and the Asian subjects' origin as its own
+#' # variable
+#' race <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 5),
+#'   variable  = rep(c("RACE", "RACE", "RACE", "ASIANORG", "ASIANORG"), 2),
+#'   .label    = rep(c("White", "Asian", "Black", "Chinese", "Japanese"), 2),
+#'   .kind     = "categorical",
+#'   stat_name = "n",
+#'   stat      = c(10, 6, 4, 2, 4, 9, 7, 4, 3, 4))
+#' p <- table_plan(race, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(categorical = "{n}")
+#'
+#' # Minimal: the origins follow the "Asian" row, in RACE's block
+#' p |> plan_nest(ASIANORG = c(RACE = "Asian")) |> plan_apply("table")
+#'
+#' # As printed: one stub, the origins indented under "Asian", Japanese
+#' # first
+#' p |>
+#'   plan_nest(ASIANORG = c(RACE = "Asian")) |>
+#'   plan_levels(ASIANORG = c("Japanese", "Chinese")) |>
+#'   plan_labels(RACE = "Race") |>
+#'   plan_stub(name = "Characteristic") |>
+#'   plan_apply("pages")
 #' @export
 plan_nest <- function(.plan, ...) {
   dots <- list(...)
@@ -2105,7 +2039,63 @@ plan_nest <- function(.plan, ...) {
 # `ard_tabulate(adsl, by = ARM, variables = RACE)`, ard_stack(.overall =
 # TRUE)) -- which carry no group.  The ARD keeps no invented ARM value;
 # the label is the table's.
-#' @rdname plan_verbs
+#' Add a Total column (or row) from the overall statistics
+#'
+#' `plan_total()` adds a **Total column**: the statistics an ARD carries
+#' with no value of the column key --- the same analysis run without its
+#' `by`, such as cards' `ard_stack(.overall = TRUE)` --- placed as one more
+#' column, last or first.  Nothing is computed: the cells are the ARD's
+#' own overall rows, so an ARD whose column variable already has a
+#' `"Total"` level needs no `plan_total()`.  It sits with the row and
+#' column verbs, before the display ones; the header's `{n}` over it is
+#' the study total the ARD states.
+#'
+#' @param .plan A [table_plan()].
+#' @param label The heading of the Total column (or the label of the Total
+#'   row), one text: `"Total"`.
+#' @param position Where it goes among the column key's values: `"last"`
+#'   (default) or `"first"`.
+#' @param direction What is added:
+#'   \describe{
+#'     \item{`"cols"`}{(default) the Total **column**, from the records
+#'       with no value of the column key.  With two column keys the
+#'       innermost is folded: `cols = c(TRTA, AESEV)` gives each arm a
+#'       total column from its records with no `AESEV` (an AE at any
+#'       grade), placed among that arm's grades.}
+#'     \item{`"rows"`}{the Total **row**, a shift table's margin: read
+#'       from the column key tabulated by the row keys, without the body's
+#'       variable (`ard_tabulate(adlb, variables = BTOXGR, by = PARAM)`
+#'       beside the body's `variables = ATOXGR, by = c(PARAM, BTOXGR)`),
+#'       labelled `label` and placed by `position`.}
+#'     \item{`"both"`}{both, with the corner (a row key's own tabulation)
+#'       as the Total row's Total column.}
+#'   }
+#'   Only the body's analyses are read: a test or a difference has no
+#'   column key either, and is `plan_compare()`'s.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [normalize_ard()] for the overall
+#'   rows.
+#' @examples
+#' # Invented counts: an ARM of NA is the overall row (both arms together)
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active", NA), each = 2),
+#'   variable  = "SEX",
+#'   .label    = rep(c("F", "M"), 3),
+#'   .kind     = "categorical",
+#'   stat_name = "n",
+#'   stat      = c(12, 8, 9, 11, 21, 19))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(categorical = "{n}")
+#'
+#' # Minimal: a "Total" column after the arms
+#' p |> plan_total() |> plan_apply("table")
+#'
+#' # The study's wording, and the total before the arms
+#' p |>
+#'   plan_total(label = "All subjects", position = "first") |>
+#'   plan_apply("table")
 #' @export
 plan_total <- function(.plan, label = "Total", position = c("last", "first"),
                        direction = c("cols", "rows", "both")) {
@@ -2122,7 +2112,55 @@ plan_total <- function(.plan, label = "Total", position = c("last", "first"),
 
 # Rows dropped by a condition over the record -- `p >= 0.05` in any arm --
 # in plan_cells()' guard language; a SOC goes with its last PT (#620).
-#' @rdname plan_verbs
+#' Drop rows by a condition over their statistics
+#'
+#' `plan_filter()` keeps the rows whose statistics meet a condition ---
+#' "preferred terms in 5% or more of the subjects in any arm" --- and
+#' drops the rest, before the cells are made and the rows sorted.  The
+#' conditions are R over a record's statistics and keys, the language of
+#' [plan_cells()]' guards; nothing is computed, `p` is the ARD's.  The
+#' columns stay.  In a SOC / PT table a SOC goes with its last PT.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... The conditions, unnamed, all of them holding:
+#'   `plan_filter(p >= 0.05)`, `plan_filter(n >= 3, ARM != "Placebo")`.
+#'   A record whose statistics do not answer them does not count, and a row
+#'   no column answers stays (the notes say how many).
+#' @param any `TRUE` (default): a row stays when **any** column's record
+#'   meets the conditions; `FALSE`: only when **every** column's does.
+#' @param parents What a parent row (a SOC, its PT key empty) does:
+#'   \describe{
+#'     \item{`"keep"`}{(default) it stays exactly when one of its children
+#'       does, so no SOC is left without its PTs and none is kept for its
+#'       own count.}
+#'     \item{`"drop"`}{it is judged by its own counts, as any row.}
+#'   }
+#'   An overall row (`normalize_ard(overall = )`, "Any TEAE") always stays.
+#' @param by A row key whose rows are judged together (with the keys
+#'   outside it).  `NULL` (default): each row on its own.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; `plan_empty()` for what a table
+#'   left with no rows says.
+#' @examples
+#' # Invented adverse-event counts, 20 subjects an arm
+#' ae <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 4),
+#'   variable  = "AEDECOD",
+#'   .label    = rep(c("Headache", "Nausea", "Dizziness", "Rash"), 2),
+#'   .kind     = "categorical",
+#'   stat_name = "n",
+#'   stat      = c(3, 1, 0, 2, 6, 4, 1, 0))
+#' ae <- rbind(ae, transform(ae, stat_name = "p", stat = stat / 20))
+#' p <- table_plan(ae, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(categorical = "{n} ({p:.0f%})", notes = FALSE)
+#'
+#' # Minimal: the terms in 10% or more of any arm
+#' p |> plan_filter(p >= 0.1) |> plan_apply("table")
+#'
+#' # The terms seen in both arms: every column must have a case
+#' p |> plan_filter(n >= 1, any = FALSE) |> plan_apply("table")
 #' @export
 plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by = NULL) {
   conds <- as.list(substitute(list(...)))[-1L]
@@ -2141,7 +2179,77 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 # Columns read from comparison records -- a test's p-value, a difference
 # with its CI -- that carry the column key without a value: placed on the
 # summary's row, never computed (#625).
-#' @rdname plan_verbs
+#' Add columns read from comparison records
+#'
+#' `plan_compare()` adds **comparison columns** --- a test's p-value, a
+#' difference and its CI --- read from the ARD's comparison records: the
+#' column key with **no value**, in an analysis the body does not have
+#' (cardx's `ard_stats_t_test()`, `ard_stats_chisq_test()`,
+#' `ard_stats_fisher_test()`, ...).  Each goes on its **variable's block**:
+#' the row of its level when it has one, else the block's first row as the
+#' table is sorted.  Nothing is computed; the numbers are the ARD's.
+#'
+#' @param .plan A [table_plan()].  The dot keeps `p = `, the commonest
+#'   column here, from being taken for it.
+#' @param ... The columns, each named (the column's name, any name) and
+#'   each what [plan_cells()] takes for one cell:
+#'   \describe{
+#'     \item{a template}{`p = "{p.value:.3f}"`, reading only the statistics
+#'       it names.}
+#'     \item{guards}{`p = c(p.value < 0.001 ~ "<0.001", "{p.value:.3f}")`.}
+#'     \item{a map by context / kind / `default`}{a named vector:
+#'       `p = c(stats_t_test = "{p.value:.3f}")` reads the t-test and leaves
+#'       a Wilcoxon of the same variable (noted, as every record no column
+#'       takes).  Two tests one column reads both of are an error, never
+#'       one picked.}
+#'     \item{[cell_rows()]}{lines: each goes on the variable's row of that
+#'       label, so a p-value on one row only is `cell_rows("Mean (SD)" =
+#'       "{p.value:.3f}")`.}
+#'   }
+#'   A test whose record names no variable (`ard_stats_aov()`'s term) has
+#'   no row; use `ard_stats_oneway_test()`.  The columns have no
+#'   population: the header's `{col}` / `{n}` and its short rows leave them
+#'   alone, so the header names them (`rtf_col_header(c(..., "p-value"))`).
+#' @param by The column that splits the comparison records into columns,
+#'   one a level (`by = "COMPARISON"`: each active arm against placebo, the
+#'   ARD made by `ard_strata(.strata = COMPARISON)` over two-arm subsets).
+#'   With several columns in `...` they are named `<level>____<column>`.
+#'   `NULL`: one comparison a variable.
+#' @param position Where the columns go: after the column key's (`"last"`,
+#'   the default) or before them (`"first"`).
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' # Invented statistics: AGE by arm, and a t-test of the two arms (the
+#' # record with no ARM)
+#' st <- data.frame(
+#'   ARM       = c(rep(c("Placebo", "Active"), each = 3), NA, NA, NA, NA),
+#'   variable  = "AGE",
+#'   context   = c(rep("summary", 6), rep("stats_t_test", 4)),
+#'   .label    = NA,
+#'   .kind     = "continuous",
+#'   stat_name = c("N", "mean", "sd", "N", "mean", "sd",
+#'                 "p.value", "estimate", "conf.low", "conf.high"),
+#'   stat      = c(20, 61.2, 9.81, 20, 63.5, 10.2,
+#'                 0.0312, -2.3, -4.4, -0.2))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c(n = "{N}",
+#'                             "Mean (SD)" = "{mean:.1f} ({sd:.2f})"))
+#'
+#' # Minimal: the p-value, on the block's first row
+#' p |> plan_compare(p = "{p.value:.3f}") |> plan_apply("table")
+#'
+#' # The difference with its CI and the p-value, both on the Mean row,
+#' # a small p-value printed as "<0.001"
+#' p |>
+#'   plan_compare(
+#'     diff = cell_rows("Mean (SD)" =
+#'       "{estimate:.1f} ({conf.low:.1f}, {conf.high:.1f})"),
+#'     p    = cell_rows("Mean (SD)" = c(p.value < 0.001 ~ "<0.001",
+#'                                      "{p.value:.3f}"))) |>
+#'   plan_apply("table")
 #' @export
 # `.plan`, not `plan`: an argument before `...` is matched by a prefix, and
 # `p = ` -- the commonest column here -- would be taken for the plan.
@@ -2154,7 +2262,63 @@ plan_compare <- function(.plan, ..., by = NULL, position = c("last", "first")) {
 # One record's statistics in named groups -- its N in one column, its rate
 # and interval in the next -- which `cols` / `rows` name as `.stat_group`
 # (#619): the mutate() a table needed before table_plan() is a layer.
-#' @rdname plan_verbs
+#' Split one record's statistics into named groups
+#'
+#' `plan_stat_groups()` puts the statistics of one record into named
+#' groups --- its N in one, its rate and interval in another --- and gives
+#' each row of the ARD its group in the key `.stat_group`, which
+#' `table_plan(cols = )` or `rows = ` names like any other key.  So one
+#' analysis lays out as **n rows x m columns** without a `mutate()` of
+#' `variable` before [table_plan()]: the groups go across (`cols =
+#' c("ARM", ".stat_group")`) or down (`rows = c(..., stat = ".stat_group")`),
+#' and [plan_cells()] keys a template by a group's name.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... The groups, each named, the value the statistics in it:
+#'   `n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high")`.  A
+#'   statistic in no group is not read (and noted).  Down the rows the
+#'   groups come in the data's order; [plan_levels()] (`.stat_group = `)
+#'   orders them.  With [cell_rows()] or named templates for the rows inside
+#'   a cell, a group with fewer rows leaves the rest empty, aligned row by
+#'   row.  A later call replaces the groups whole.
+#' @param .variables The variables whose records are split into the groups;
+#'   `NULL` (default): all.
+#' @param .others The group the other variables' records go to **whole**,
+#'   every statistic with them --- so a block of SEX's n (%) is not pulled
+#'   into a response rate's groups by its `n`.  `NULL` (default): none.
+#'   `.others` needs `.variables`.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [plan_cells()] for how a template
+#'   is chosen for a group.
+#' @examples
+#' # Invented response rates: one record per arm, with its N, the number of
+#' # responders, the rate and its 95% CI
+#' orr <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 5),
+#'   variable  = "RESP",
+#'   .label    = "Responders",
+#'   .kind     = "categorical",
+#'   stat_name = rep(c("N", "n", "estimate", "conf.low", "conf.high"), 2),
+#'   stat      = c(40, 8, 0.20, 0.09, 0.36, 41, 17, 0.415, 0.263, 0.579))
+#'
+#' # Minimal: each arm's N in one column and n (%) in the next
+#' table_plan(orr, cols = c("ARM", ".stat_group"), rows = c(group = "variable")) |>
+#'   plan_stat_groups(N = "N", rate = c("n", "estimate")) |>
+#'   plan_cells(N = "{N}", rate = "{n} ({estimate:.1f%})", notes = FALSE) |>
+#'   plan_apply("table")
+#'
+#' # The same record down the rows: the rate first, then its CI
+#' table_plan(orr, cols = "ARM",
+#'            rows = c(group = "variable", stat = ".stat_group")) |>
+#'   plan_stat_groups(ci = c("conf.low", "conf.high"),
+#'                    rate = c("n", "estimate")) |>
+#'   plan_levels(.stat_group = c(rate = "n (%)", ci = "95% CI")) |>
+#'   plan_cells(rate = "{n} ({estimate:.1f%})",
+#'              ci   = "({conf.low:.1f%}, {conf.high:.1f%})",
+#'              notes = FALSE) |>
+#'   plan_apply("table")
 #' @export
 plan_stat_groups <- function(.plan, ..., .variables = NULL, .others = NULL) {
   g <- c(list(...), list(.variables = .variables, .others = .others))
@@ -2164,7 +2328,41 @@ plan_stat_groups <- function(.plan, ..., .variables = NULL, .others = NULL) {
   .plan_layer(.plan, "stat_groups", list(stat_groups = g))
 }
 
-#' @rdname plan_verbs
+#' Keep columns out of the printed table
+#'
+#' `plan_hide()` names the columns that do their work without being
+#' printed: a sort carrier, the key a page break reads, an identifier a
+#' style condition tests.  The column stays in the table until the pages
+#' are made, so the other verbs can still read it; it is
+#' `as_rtftables(drop_cols = )`.  A column that a verb already needs ---
+#' a page key, a sort key --- is hidden more simply by that verb's own
+#' `keep = FALSE`.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... The names of the columns not printed, as strings or character
+#'   vectors.  A position among the printed columns (`row_title`,
+#'   `collapse`, unnamed `widths`) leaves a hidden column out.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' # A finished table with the visit's number beside its name
+#' vs <- data.frame(
+#'   VISITNUM = c(3, 1, 2),
+#'   Visit    = c("Week 8", "Baseline", "Week 4"),
+#'   Placebo  = c("128.4", "131.2", "129.9"),
+#'   Active   = c("121.7", "130.8", "125.3"))
+#'
+#' # Minimal: the number is not printed
+#' table_plan(vs) |> plan_hide("VISITNUM") |> plan_apply()
+#'
+#' # The number still orders the visits, then stays out of sight
+#' table_plan(vs) |>
+#'   plan_sort("VISITNUM") |>
+#'   plan_hide("VISITNUM") |>
+#'   plan_titles("Systolic blood pressure (mmHg), mean") |>
+#'   plan_apply()
 #' @export
 plan_hide <- function(.plan, ...) {
   cols <- unlist(list(...), use.names = FALSE)
@@ -2177,7 +2375,73 @@ plan_hide <- function(.plan, ...) {
 # statistics are still there to sort ON (`-n`, `.overall`, `.depth`),
 # and a plan over a finished table sorts the table.  Two verbs for
 # that would be the same duplication the roles just lost.
-#' @rdname plan_verbs
+#' Put the rows in order
+#'
+#' `plan_sort()` says the order of the rows: by the values of columns, or
+#' by frequency.  On a plan with an ARD half it sorts before the cells are
+#' filled, while the statistics are still there to sort on (`-n`, the
+#' most frequent first); on a plan of a finished table or a listing it
+#' sorts the table.  It is one verb whichever of the two does the work.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... The sort keys in priority order, each a string; a leading
+#'   `-` sorts descending, ties go to the keys that follow.  They are
+#'   [widen_ard()]'s `sort`, where each form is described in full:
+#'   \describe{
+#'     \item{a column}{a row key or the label column by its output name
+#'       (`"label"`); on a finished table or a listing, any column
+#'       (`"USUBJID"`).}
+#'     \item{a statistic}{`"-n"`: that statistic totalled across the
+#'       columns, the most frequent first.}
+#'     \item{`"<stat>[<col>]"`}{the statistic in **one** column:
+#'       `"-n[Active]"`, `"-n[Total]"`.}
+#'     \item{`"<stat>@<key>"`}{the statistic of the group's own row,
+#'       carried to every row of the group: `"-n@soc"` orders the SOCs by
+#'       their own count and keeps each SOC's PTs with it.}
+#'     \item{`"max(<stat>)"`, `"min(<stat>)"`}{the largest (smallest)
+#'       value across the columns instead of the total: `"-max(n)"`.}
+#'     \item{`"levels(<key>)"`}{the values [plan_levels()] names for that
+#'       key first, in its order.}
+#'     \item{`".overall"`, `".depth"`}{the overall rows first; a level's
+#'       own row before the rows nested under it.}
+#'   }
+#'   One logical is `widen_ard(sort = )` as it is: `TRUE` brings a key's
+#'   separate blocks together, `FALSE` moves only what an order declares.
+#' @param stat The statistic totalled into `.sort_stat` for a frequency
+#'   order (`widen_ard(sort_stat = )`), e.g. `stat = "n"`.
+#' @param keep `FALSE` also hides the sort keys that are columns: a sort
+#'   carrier needed and not wanted.  Names that are not columns (a
+#'   statistic, `".depth"`) are ignored rather than refused.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' ae <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 4),
+#'   variable  = "AEDECOD",
+#'   .label    = rep(c("Headache", "Nausea", "Dizziness", "Rash"), 2),
+#'   .kind     = "categorical",
+#'   stat_name = "n",
+#'   stat      = c(3, 1, 0, 2, 6, 4, 1, 0))
+#' p <- table_plan(ae, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(categorical = "{n}")
+#'
+#' # Minimal: the most frequent term first, over both arms
+#' p |> plan_sort("-n") |> plan_apply("table")
+#'
+#' # Ordered by the active arm's count, ties alphabetical
+#' p |> plan_sort("-n[Active]", "label") |> plan_apply("table")
+#'
+#' # On a listing it sorts the records
+#' recs <- data.frame(USUBJID = c("01-002", "01-001", "01-001"),
+#'                    AETERM  = c("Fatigue", "Nausea", "Headache"))
+#' pages <- table_plan(recs) |>
+#'   plan_sort("USUBJID", "AETERM") |>
+#'   plan_listing(listing_col("USUBJID", label = "Subject"),
+#'                listing_col("AETERM", label = "Adverse event")) |>
+#'   plan_apply()
+#' pages[[1]]
 #' @export
 plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
   v <- list(...)
@@ -2193,7 +2457,61 @@ plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
   !identical(plan$kind, "wide") && !length(.plan_of(plan, "listing"))
 }
 
-#' @rdname plan_verbs
+#' Say what a table with no events shows
+#'
+#' `plan_empty()` gives an empty table a row that says so --- `"No subjects
+#' met the criteria."` --- and, if asked, a footnote.  A table is empty
+#' when it has no body row (every row filtered out by [plan_filter()], or
+#' none in the data) or when its overall row is 0 in every column; a table
+#' that is not empty is as it was.  So one plan serves a study whether or
+#' not the events happened.
+#'
+#' @param .plan A [table_plan()].
+#' @param text The row's text, one string, in the row label column (the
+#'   first column when there is none); `NULL` for no row.
+#' @param when When the table is empty:
+#'   \describe{
+#'     \item{`"auto"`}{(default) either of the two below.}
+#'     \item{`"no_rows"`}{no body row, after [plan_filter()].}
+#'     \item{`"overall_zero"`}{its overall row (`normalize_ard(overall = )`)
+#'       is 0 in every column.}
+#'   }
+#' @param position Where the row goes: `"last"` (default, after the rows:
+#'   the overall row's 0 stays), `"first"` or `"replace"` (the row alone).
+#' @param footnote A line added to the table's footnotes when it is empty,
+#'   after any [plan_footnotes()]; `NULL` (default) none.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' # Invented counts: no subject had a serious adverse event
+#' sae <- data.frame(ARM = c("Placebo", "Active"),
+#'                   .label = "Any serious adverse event", .overall = TRUE,
+#'                   .kind = "categorical", stat_name = "n", stat = 0)
+#'
+#' # Minimal: the 0 row, then the sentence
+#' table_plan(sae, cols = "ARM") |>
+#'   plan_cells(categorical = "{n}") |>
+#'   plan_empty() |>
+#'   plan_apply("table")
+#'
+#' # A table of the events seen in 5 or more subjects of an arm, where
+#' # none was: the study's sentence and a footnote saying why
+#' ae <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), 3),
+#'   .label    = rep(c("Any adverse event", "Headache", "Rash"), each = 2),
+#'   .overall  = rep(c(TRUE, FALSE, FALSE), each = 2),
+#'   .kind     = "categorical", stat_name = "n",
+#'   stat      = c(3, 4, 2, 3, 1, 1))
+#' pages <- table_plan(ae, cols = "ARM") |>
+#'   plan_cells(categorical = "{n}", notes = FALSE) |>
+#'   plan_filter(n >= 5) |>
+#'   plan_stub(name = "Adverse event") |>
+#'   plan_empty("No event reached 5 subjects in an arm.",
+#'              footnote = "Events in 5 or more subjects of an arm are shown.") |>
+#'   plan_apply()
+#' pages[[1]]
 #' @export
 plan_empty <- function(.plan, text = "No subjects met the criteria.",
                        when = c("auto", "no_rows", "overall_zero"),
@@ -2210,7 +2528,73 @@ plan_empty <- function(.plan, text = "No subjects met the criteria.",
                                    footnote = footnote, .no_text = is.null(text)))
 }
 
-#' @rdname plan_verbs
+#' Say where the blank rows go
+#'
+#' `plan_blanks()` places the blank separator rows: between the row groups,
+#' after each record of a listing, at the top or bottom of every page, or
+#' at positions given.  They are added after the page split, so by default
+#' they do not count toward a row budget ([plan_paginate_rows()]); `counted
+#' = TRUE` makes the budget mean the rows the page prints.  The rows are
+#' kept as positions on each page (`pages[[1]]$blank_rows`) and appear when
+#' the page is rendered.
+#'
+#' @param .plan A [table_plan()].
+#' @param where Where blank rows go in the body, `as_rtftables(blank_rows
+#'   = )`:
+#'   \describe{
+#'     \item{`"between_groups"`}{at every change of group, as
+#'       [plan_row_group()] finds it.}
+#'     \item{`"records"`}{after each record of a listing
+#'       (`listing_spec(blank_row = TRUE)`).}
+#'     \item{`"none"`}{none: a listing's records follow each other with no
+#'       blank row between them (`blank_row = FALSE`).}
+#'     \item{positions}{an integer vector, a blank row after each given row;
+#'       `0` before the first, `-1` after the last.}
+#'     \item{a rule}{a [blank_rows_by_change()] or [blank_rows_by_rule()]
+#'       object, or a `list()` combining any of these.}
+#'   }
+#' @param first,last `TRUE` adds one blank row at the top (`first`) or the
+#'   bottom (`last`) of every page, `as_rtftables()`'s `blank_row_first` /
+#'   `blank_row_end`.  On a listing `first = FALSE` takes away the one the
+#'   multiline type puts at the top of each page.
+#' @param counted `TRUE` counts the blank rows toward `max_rows`,
+#'   `as_rtftables(count_blank_rows = )`; `FALSE` (default) does not, so a
+#'   printed page can be taller than `max_rows`.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 3),
+#'   variable  = rep(c("AGE", "SEX", "SEX"), 2),
+#'   .label    = rep(c(NA, "F", "M"), 2),
+#'   .kind     = rep(c("continuous", "categorical", "categorical"), 2),
+#'   stat_name = rep(c("mean", "n", "n"), 2),
+#'   stat      = c(61.2, 12, 8, 63.5, 9, 11))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(continuous = c(Mean = "{mean:.1f}"), categorical = "{n}") |>
+#'   plan_labels(AGE = "Age (years)", SEX = "Sex") |>
+#'   plan_stub(name = "Characteristic")
+#'
+#' # Minimal: a blank row between the two blocks (after printed row 2)
+#' pages <- p |> plan_blanks(where = "between_groups") |> plan_apply()
+#' pages[[1]]$blank_rows
+#'
+#' # The same, with one more at the top and the bottom of the page
+#' pages <- p |>
+#'   plan_blanks(where = "between_groups", first = TRUE, last = TRUE) |>
+#'   plan_apply()
+#' pages[[1]]$blank_rows
+#'
+#' # A listing puts one after each record; a compact one puts none
+#' recs <- data.frame(USUBJID = c("01-001", "01-001", "01-002"),
+#'                    AETERM  = c("Headache", "Nausea", "Fatigue"))
+#' table_plan(recs) |>
+#'   plan_listing(listing_col("USUBJID", label = "Subject"),
+#'                listing_col("AETERM", label = "Adverse event")) |>
+#'   plan_blanks(where = "none") |>
+#'   plan_apply()
 #' @export
 plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
                         counted = NULL) {
@@ -2219,7 +2603,78 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
                    blank_row_end = last, count_blank_rows = counted))
 }
 
-#' @rdname plan_verbs
+#' Cut the pages by a row budget
+#'
+#' `plan_paginate_rows()` is the **row** axis of pagination: how many body
+#' rows a page holds and what a page break may cut --- a group kept whole,
+#' or cut with a continuation label.  With `page_by` the body is first
+#' partitioned by the value of a column (a period, a cohort), each value a
+#' page named after it, and the row budget applies within one partition.
+#' A page per value with no row budget is [plan_paginate_group()]; the
+#' column axis is [plan_paginate_cols()].
+#'
+#' @param .plan A [table_plan()].
+#' @param max_rows The most body rows a page holds, for the
+#'   `"group_safe"` and `"group_force"` splits (which need it).  Blank rows
+#'   count only with `plan_blanks(counted = TRUE)`.
+#' @param split How a page break is placed, `as_rtftables(split = )`:
+#'   \describe{
+#'     \item{`"none"`}{(default) one page; `max_rows` is not read.}
+#'     \item{`"group_safe"`}{whole groups to a page: a group that does not
+#'       fit starts the next page; one longer than a page is cut, with a
+#'       continuation label.}
+#'     \item{`"group_force"`}{a cut every `max_rows` rows wherever it falls,
+#'       a group straddling it continued on the next page; only
+#'       `min_group_rows` pulls a cut back.}
+#'     \item{`"rows"`}{a cut before each row of `break_before`.}
+#'     \item{a function}{a split of your own, as [as_rtftables()] takes it.}
+#'   }
+#' @param break_before With `split = "rows"`: the row positions to cut
+#'   before, `as_rtftables(split_rows = )`.
+#' @param min_group_rows The fewest rows of a group left on a page or
+#'   carried to the next, to avoid a widow or an orphan.
+#' @param cont_label The text added to a group's heading on the page it is
+#'   continued on, `as_rtftables(cont_label = )`.
+#' @param page_by The column(s) whose value partitions the body **first**,
+#'   each value a page named after it, `as_rtftables(page_by = )`; the
+#'   settings above then apply within one partition.  The BY column is
+#'   printed unless hidden ([plan_hide()]); it is a page key, never a row
+#'   group.
+#' @param heading,heading_at With `page_by`: the BY page's name as a
+#'   template and where it prints, as [plan_paginate_group()]'s.  With one
+#'   `page_by` column `{value}` is its value; with several the heading
+#'   carries a token for each column by its name, `"Analyte: {ANALYTE}"`,
+#'   and no `{value}`.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [as_rtftables()] for the splits
+#'   in full.
+#' @examples
+#' # Invented records of twelve subjects
+#' subj <- data.frame(Subject = sprintf("01-%03d", 1:12),
+#'                    Age = c(61, 58, 70, 66, 54, 49, 73, 62, 68, 57, 60, 71))
+#'
+#' # Minimal: five rows a page
+#' pages <- table_plan(subj) |>
+#'   plan_paginate_rows(max_rows = 5, split = "group_force") |>
+#'   plan_apply()
+#' vapply(pages, function(pg) nrow(pg$data), integer(1))
+#'
+#' # A laboratory value over two periods: a page per period, each named
+#' # after it, cut every two rows; the period itself is not printed
+#' lab <- data.frame(
+#'   Period  = rep(c("Period 1", "Period 2"), each = 4),
+#'   Subject = rep(sprintf("01-%03d", 1:4), 2),
+#'   ALT     = c(22, 25, 31, 19, 24, 27, 29, 20))
+#' pages <- table_plan(lab) |>
+#'   plan_paginate_rows(max_rows = 2, split = "group_force",
+#'                      page_by = "Period", heading = "{value}",
+#'                      heading_at = "title") |>
+#'   plan_hide("Period") |>
+#'   plan_apply()
+#' length(pages)
+#' pages[[2]]
 #' @export
 # The ROW axis.  A page per value of a column, with no row budget, is the
 # group axis, plan_paginate_group().  `page_by` is the one thing here that
@@ -2236,8 +2691,16 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
                                heading = NULL, heading_at = NULL) {
   .plan_check_heading(heading, "plan_paginate_rows")
   if (!is.null(heading) && (length(page_by) != 1L)) {
-    .ard_stop(paste0("plan_paginate_rows(heading = ) names the BY pages: ",
-                     "give one `page_by` column."))
+    # several page_by columns: the heading names each by its own token
+    # ("Analyte: {ANALYTE}\nGroup: {RENALGR}"), never `{value}`
+    toks <- .text_tokens(heading)
+    if (!length(page_by) || !all(page_by %in% toks) || "value" %in% toks) {
+      .ard_stop(paste0(
+        "plan_paginate_rows(heading = ) names the BY pages: with one `page_by` ",
+        "column, `{value}`\n  is its value; with several, the heading carries ",
+        "a token for each column:\n",
+        "    heading = \"Analyte: {ANALYTE}\\nRenal Function Group: {RENALGR}\""))
+    }
   }
   heading_at <- .plan_check_heading_at(heading_at, "plan_paginate_rows")
   if (!is.null(heading_at) && !length(page_by)) {
@@ -2258,7 +2721,76 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 # name -- and a name that is written here is checked here.  The rules of
 # one kind of row are `border_header` ... `border_last_row`, the names
 # rtf_table_style() gives them.
-#' @rdname plan_verbs
+#' Set the look of the whole table
+#'
+#' `plan_style()` gives the settings that belong to the **whole table**:
+#' its rules, font, row heights, padding and width, and the default look
+#' of the header and the body.  The arguments keep the names [rtftable()],
+#' [as_rtftables()] and [rtf_table_style()] give them.  What a table has
+#' per column or per cell is another verb's --- [plan_columns()],
+#' [plan_cell_style()], [plan_col_header()], [plan_blanks()] --- so this
+#' list is the whole of it.
+#'
+#' @param .plan A [table_plan()].
+#' @param border The table's rules, [rtftable()]'s `border`: `"tfl"` (the
+#'   clinical preset), `"none"`, or an [rtf_border()] object.  Say the
+#'   rules one way: `border`, or the `border_*` zones below, not both.
+#' @param border_header,border_spanning,border_body,border_first_row,border_last_row
+#'   The rules of one kind of row (the column header, a spanning header
+#'   row, the body, its first and its last row), each an [rtf_border()], by
+#'   the names [rtf_table_style()] gives them.
+#' @param align_count_pct `as_rtftables(align_count_pct = )`: `TRUE`
+#'   realigns `"n (xx.x)"` cells to one width before the pages are cut, or
+#'   the name of another built-in cell format (`"count_paren"`, ...).
+#' @param font,font_size_half_points The table's font family (`"Arial"`;
+#'   a named vector gives one a script slot) and size in half-points.
+#'   `NULL` takes the document's.
+#' @param row_height_twips,row_height_exact,header_row_height_twips,blank_row_height_twips
+#'   The heights of the body rows, the header rows and the blank rows, in
+#'   twips (1/1440 inch); `row_height_exact = TRUE` makes a height exact
+#'   (clipped) rather than a minimum.
+#' @param cell_padding_left_twips,cell_padding_right_twips The cells' left
+#'   and right padding, in twips.
+#' @param cell_valign The cells' vertical alignment: `"bottom"` (default),
+#'   `"top"` or `"center"`.
+#' @param table_align Where the table sits across the page: `"left"`
+#'   (default), `"center"` or `"right"`.
+#' @param table_width_twips,table_width_pct,table_width_pct_of_writable
+#'   The table's width: in twips, as a percentage (0--100) or a fraction
+#'   (0--1) of the writable page width.
+#' @param markup,blank_row_normalize [rtftable()]'s `markup` (the cell-text
+#'   markup applied when the page is rendered, such as `"script"`) and
+#'   `blank_row_normalize` (how blank rows are normalised then).
+#' @param header_align,header_bold,header_italic The whole header's default
+#'   look, [rtf_table_style()]'s fields.
+#' @param align,bold,italic,underline The body's default look,
+#'   [rtf_table_style()]'s fields.  One column or one cell is
+#'   [plan_cell_style()].
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [rtftable()] and
+#'   [rtf_table_style()] for the settings in full.
+#' @examples
+#' tbl <- data.frame(
+#'   Parameter = c("Subjects", "Age, mean (SD)", "Female, n (%)"),
+#'   Placebo   = c("86", "75.2 (8.59)", "53 (61.6)"),
+#'   Active    = c("84", "75.7 (8.29)", "50 (59.5)"))
+#'
+#' # Minimal: the clinical rules (a rule over and under the header, one
+#' # under the last row)
+#' pages <- table_plan(tbl) |> plan_style(border = "tfl") |> plan_apply()
+#' class(pages[[1]]$border)
+#'
+#' # A house style: Arial 9 pt, taller rows, the table centred at 80% of
+#' # the page width, its counts and percentages lined up
+#' pages <- table_plan(tbl) |>
+#'   plan_style(border = "tfl", font = "Arial", font_size_half_points = 18,
+#'              row_height_twips = 300, table_align = "center",
+#'              table_width_pct = 80, align_count_pct = TRUE) |>
+#'   plan_apply()
+#' pages[[1]][c("font", "font_size_half_points", "row_height_twips",
+#'              "table_align", "table_width_pct_of_writable")]
 #' @export
 plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
                        font = NULL, font_size_half_points = NULL,
@@ -2362,7 +2894,126 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
 # whole object and there is nothing useful to merge field-wise.  A function
 # is accepted too, and is called with the resolved `n`, which is
 # how "(N=86)" reaches the header without being written down twice.
-#' @rdname plan_verbs
+#' Declare the column header, and the numbers it prints
+#'
+#' `plan_col_header()` gives the column header, built with the same
+#' [rtf_col_header()] as everywhere else (or a row at a time with `lines`),
+#' and says what its `{tokens}` print: `{col}` the column, `{n}` the
+#' column's population, read from the ARD or given.  A row shorter than
+#' the table has its last cell repeated over the value columns, whose
+#' names are not known until the table exists, so one header serves a
+#' study with two arms or five.  It is a display verb: it runs on the
+#' pages, as [set_col_header()].
+#'
+#' @param .plan A [table_plan()].
+#' @param header The header, one of:
+#'   \describe{
+#'     \item{an [rtf_col_header()]}{the ordinary case.  Its cells may
+#'       carry `{col}` (the column; with several `cols` keys the **leaf**,
+#'       and `{col1}`, `{col2}`, ... the levels in order) and `{n}`.  A row
+#'       already the right length, and a cell with no token, are
+#'       untouched.}
+#'     \item{a data frame of cells}{one row a cell, with the `col_header`
+#'       sheet's columns (`line`, `cols`, `span`, `text`, borders ...),
+#'       placed on each page's columns when it is made; how
+#'       `tflspec::tfl_table_code()` writes a workbook's header.}
+#'     \item{a function}{of the resolved `n` (and, with two arguments, the
+#'       finished table), when the header has to be computed.}
+#'   }
+#'   The tokens a cell may use besides `{col}` and `{n}`: `{n:sum}`, the
+#'   number totalled over the columns the cell covers (a spanner over one
+#'   arm shows that arm's N, one over all of them the study total), and
+#'   `{n:<column>}`, the number of one named column
+#'   (`"A={n:Placebo}"`).  `{n1}`, `{n2}`, ... name a depth of the keys.
+#'   `print()` of the plan lists every token it offers, with its values;
+#'   see also [plan_header_tokens()].
+#' @param values What the `{tokens}` take.  A named list, **each name a
+#'   token**; one value that is not a list is taken as `n`:
+#'   \describe{
+#'     \item{`list(n = TRUE)`}{(or `TRUE`) the population of each column,
+#'       read from the ARD at every depth of the `cols` keys.  Only a
+#'       number the ARD states as a population size is read: a cards
+#'       sentinel's `N` (`ard_stack_hierarchical(over_variables = TRUE)`),
+#'       the column variable's own tabulation (the `.key_own` rows
+#'       [normalize_ard()] keeps from `ard_stack(.by = )`), or an analysis
+#'       `N` that is a denominator by construction or that two variables
+#'       agree on.  What cannot be read prints `NA`, with one warning that
+#'       says why.}
+#'     \item{`list(n = "page")`, `list(n = "table")`}{for pages split by a
+#'       group value ([plan_paginate_group()]): each page's own population
+#'       (the ARD rows carrying the page key), or the analysis set's (the
+#'       rows without it).  `list(n = "page", N = "table")` gives both, as
+#'       `{n}` and `{N}`.  `n = TRUE` reads the page's, then the table's,
+#'       and warns when both are stated and differ.}
+#'     \item{numbers}{given by hand: a vector named by column key at any
+#'       depth, `n = c(Placebo = 20, Active = 20)`, or one unnamed number
+#'       for every cell.  After a workbook (`tflspec::tfl_table_plan()`) a
+#'       later `plan_col_header(values = )` supplies the numbers and keeps
+#'       the workbook's header.}
+#'     \item{a function}{of the data, returning one of the above, for a
+#'       number neither can find.}
+#'     \item{more names}{further tokens: `list(n = TRUE, total = 254)`
+#'       makes `{total}` print 254 in a spanner over each column's
+#'       `{n}`.}
+#'   }
+#'   A **data frame** of per-page values is [set_col_header()]'s own
+#'   `values`: one row per page key, a column per `{token}`.  The study
+#'   total is never put in every column: it answers a one-column table and
+#'   a cell over all the columns.  Keep the header consistent with the
+#'   body: the percentages are over the denominator cards used.
+#' @param header_sep [as_rtftables()]'s `header_sep`: the separator a plain
+#'   table's column names are split on into spanning header rows.
+#' @param col_header_align [rtftable()]'s `col_header_align`.
+#' @param lines The header **a row at a time**, instead of `header`: a
+#'   list, one element a header row (the top first), each a named character
+#'   vector.  A cell's name is the columns it sits on (a column name,
+#'   `.values` for every value column, a position or range such as `3:5`,
+#'   or `KEY = value`), its value the text, with the same tokens:
+#'   `list(c(label = "", .values = "{col}"), c(label = "Characteristic",
+#'   .values = "(N={n})"))`.
+#' @param span With `lines`: how a cell over several columns is made, one
+#'   value for every cell or a list as `lines` is (each element the spans
+#'   of that row's cells, named as its cells are):
+#'   \describe{
+#'     \item{`"each"`}{(default) a cell a column.}
+#'     \item{`"one"`}{one cell over them all: a spanner.}
+#'     \item{a key's name}{a cell per value of that key.}
+#'   }
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [rtf_col_header()],
+#'   [plan_header_tokens()], [plan_n_candidates()].
+#' @examples
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 2),
+#'   variable  = "SEX",
+#'   .label    = rep(c("F", "M"), 2),
+#'   .kind     = "categorical",
+#'   stat_name = "n",
+#'   stat      = c(12, 8, 9, 11))
+#' p <- table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'   plan_cells(categorical = "{n}") |>
+#'   plan_stub(name = "Characteristic")
+#'
+#' # Minimal: the stub's heading, then each arm's name (the row is short:
+#' # "{col}" repeats over the value columns)
+#' pages <- p |>
+#'   plan_col_header(rtf_col_header(c("Characteristic", "{col}"))) |>
+#'   plan_apply()
+#' pages[[1]]
+#'
+#' # Each arm with its N (given here; an ARD from cards states them), and
+#' # a spanner over both that totals them
+#' pages <- p |>
+#'   plan_col_header(
+#'     values = list(n = c(Placebo = 20, Active = 20)),
+#'     lines  = list(c(Characteristic = "", .values = "Treatment (N={n:sum})"),
+#'                   c(Characteristic = "", .values = "{col}"),
+#'                   c(Characteristic = "Characteristic", .values = "(N={n})")),
+#'     span   = list("one", "each", "each")) |>
+#'   plan_apply()
+#' pages[[1]]
 #' @export
 # `n` lives here because the header is the only thing that uses it, and
 # because it already knows which columns there are: `TRUE` means "the
@@ -2417,7 +3068,79 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 
 # Widths by column NAME (a reordered table keeps them) and the columns
 # whose numbers line up at the decimal point: the `columns` sheet.
-#' @rdname plan_verbs
+#' Declare the columns: widths, decimal alignment and row titles
+#'
+#' `plan_columns()` declares the columns **of this table** by name:
+#' their relative widths, the ones whose numbers line up at the decimal
+#' point, the row-heading columns, and the separator several `cols` keys
+#' are joined with.  Named by column, the settings follow a column when the
+#' table is reordered or a study has more arms, and they are what a
+#' workbook's `columns` sheet holds.  It is not [rtf_columns()], which
+#' addresses the columns of finished pages by their printed names.
+#'
+#' @param .plan A [table_plan()].
+#' @param widths The relative column widths, `rtftable(col_rel_width = )`.
+#'   **Named by column** (`c(row_label = 5, .values = 2)`, `.values` for
+#'   every value column) a reordered table keeps them; unnamed, they are one
+#'   a column in order, as `col_rel_width` itself.  A name that is not a
+#'   column of the table stops with the names the table has.
+#' @param decimal The columns whose numbers line up at the decimal point
+#'   (`.values` for every value column), [set_decimal_split()]'s `cols`.
+#' @param row_title The row-heading columns, `rtftable(row_title = )`, by
+#'   name as `widths` are: a row key's name as `table_plan(rows = )` gives
+#'   it, `.values` for every value column.  A position counts the
+#'   **printed** columns: a key hidden with [plan_hide()] or taken out by
+#'   `page_by` is left out.
+#' @param auto_width `TRUE` sizes each column to its widest content,
+#'   `as_rtftables(auto_width = )`.
+#' @param sep The separator several `cols` keys are joined with in the
+#'   value columns' names, `"____"` by default (`"Placebo____F"`).  The
+#'   spanning header is built by splitting on it, so a key value that
+#'   contains it is refused.
+#' @param cell_format,column_widths_twips [as_rtftables()]'s `cell_format`
+#'   (a formatter, or a list of them one a column) and [rtftable()]'s
+#'   `column_widths_twips` (absolute widths), as they are.  A plan gives
+#'   `column_widths_twips` or `widths`, not both.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [plan_style()] for the table's
+#'   width.
+#' @examples
+#' st <- data.frame(
+#'   ARM       = rep(c("Placebo", "Active"), each = 3),
+#'   variable  = rep(c("AGE", "WEIGHT", "SEX"), 2),
+#'   .label    = rep(c(NA, NA, "F"), 2),
+#'   .kind     = rep(c("continuous", "continuous", "categorical"), 2),
+#'   stat_name = rep(c("mean", "mean", "n"), 2),
+#'   stat      = c(61.2, 72.43, 12, 63.5, 101.8, 9))
+#' demog <- function(st) {
+#'   table_plan(st, cols = "ARM", rows = c(group = "variable")) |>
+#'     plan_cells(continuous = c(Mean = "{mean:.1f}"), categorical = "{n}") |>
+#'     plan_labels(AGE = "Age (years)", WEIGHT = "Weight (kg)", SEX = "Sex") |>
+#'     plan_stub(name = "Characteristic")
+#' }
+#'
+#' # Minimal: the heading column three parts wide, each arm two
+#' pages <- demog(st) |>
+#'   plan_columns(widths = c(Characteristic = 3, .values = 2)) |>
+#'   plan_apply()
+#' pages[[1]]$col_rel_width
+#'
+#' # The arms' numbers lined up at the decimal point too.  A third arm
+#' # needs no change: the names reach it
+#' st3 <- rbind(st, data.frame(
+#'   ARM = "High dose", variable = c("AGE", "WEIGHT", "SEX"),
+#'   .label = c(NA, NA, "F"),
+#'   .kind = c("continuous", "continuous", "categorical"),
+#'   stat_name = c("mean", "mean", "n"), stat = c(62.0, 88.6, 10)))
+#' pages <- demog(st3) |>
+#'   plan_columns(widths = c(Characteristic = 3, .values = 2),
+#'                decimal = ".values") |>
+#'   plan_apply()
+#' pages[[1]]$col_rel_width
+#' pages[[1]]$decimal_split$cols
+#' pages[[1]]
 #' @export
 plan_columns <- function(.plan, widths = NULL, decimal = NULL,
                          row_title = NULL, auto_width = NULL, sep = NULL,
@@ -2426,6 +3149,7 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
                         is.na(sep) || !nzchar(sep))) {
     .ard_stop("plan_columns(sep = ) is one non-empty string, \"____\" by default.")
   }
+  if (length(widths) && !is.null(column_widths_twips)) .plan_widths_both()
   .plan_layer(.plan, "columns",
               list(widths = widths, decimal = decimal, row_title = row_title,
                    auto_width = auto_width, sep = sep,
@@ -2479,7 +3203,67 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
 # cannot say so by its columns, and guessing would be the wrong kind of
 # clever.  `...` takes listing_col()s; the rest are listing_spec()'s own
 # arguments, unchanged.
-#' @rdname plan_verbs
+#' Lay a frame of records out as a listing
+#'
+#' `plan_listing()` makes the plan a **listing**: a data frame of subject
+#' records (SDTM or ADaM, nothing summarised) printed through
+#' [listing_spec()], with columns that can stack several variables in one
+#' cell and wrap long text.  A record wrapped over several rows is never cut
+#' by a page break.  Its arguments are [listing_spec()]'s own, unchanged;
+#' the blank rows are [plan_blanks()]'s, as for a table.
+#'
+#' @param .plan A [table_plan()] of a data frame of records.
+#' @param ... The printed columns, in order: [listing_col()]s, or bare
+#'   column names.
+#' @param type The listing template, [listing_spec()]'s `type`; the one
+#'   that ships is `"multiline"` (the default): a `"/"` separator, gutter
+#'   columns, a blank row after each record and one at the top of each
+#'   page, text wrapped at the separator.
+#' @param sep,align,layout The defaults for the columns that set none of
+#'   their own: the separator between the variables of one cell, the
+#'   alignment, and `"stack"` (a line a part) or `"flow"` (filled to the
+#'   column's width).  `NULL` takes the template's.
+#' @param spacer,spacer_rel_width Whether a narrow gutter column goes
+#'   between the printed columns, and its relative width.  `NULL` takes the
+#'   template's.
+#' @param wrap The rule that breaks a cell into lines, a function as
+#'   [listing_spec()] describes; `NULL` the type's own ([listing_wrap()]).
+#' @param record The hidden record column that keeps a record on one page:
+#'   `TRUE` (the default, `NULL`) under its standard name, `FALSE` none, or
+#'   a string naming it.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [listing_spec()] and
+#'   [listing_col()] for the listing in full.
+#' @examples
+#' # Invented adverse-event records
+#' recs <- data.frame(
+#'   USUBJID = c("01-001", "01-001", "01-002"),
+#'   AETERM  = c("Headache", "Nausea", "Fatigue"),
+#'   AESEV   = c("MILD", "MODERATE", "MILD"),
+#'   ASTDY   = c(3, 10, 5))
+#'
+#' # Minimal: two columns; the multiline type puts a blank row after each
+#' # record
+#' pages <- table_plan(recs) |>
+#'   plan_listing(listing_col("USUBJID", label = "Subject"),
+#'                listing_col("AETERM", label = "Adverse event")) |>
+#'   plan_apply()
+#' pages[[1]]
+#'
+#' # The event and its severity stacked in one cell (a line each, within
+#' # ten characters), the study day beside it; no gutter columns and no
+#' # blank rows, for a compact listing
+#' pages <- table_plan(recs) |>
+#'   plan_listing(listing_col("USUBJID", label = "Subject"),
+#'                listing_col(c("AETERM", "AESEV"), width = 10,
+#'                            label = "Adverse event/\nSeverity"),
+#'                listing_col("ASTDY", label = "Study day"),
+#'                spacer = FALSE) |>
+#'   plan_blanks(where = "none", first = FALSE) |>
+#'   plan_apply()
+#' pages[[1]]
 #' @export
 # Blank rows are plan_blanks()'s (`where = "records"` ends each record's
 # block with one, `first = TRUE` starts each page with one), so this verb
@@ -2496,13 +3280,95 @@ plan_listing <- function(.plan, ..., type = NULL, sep = NULL,
                    record = record))
 }
 
-#' @rdname plan_verbs
+#' Put a block of titles above the table
+#'
+#' `plan_titles()` gives the title lines printed above the table on each
+#' page, in the body of the page and the width of the content --- not the
+#' section header, which is the page's own furniture.  One block serves
+#' every page; `pages` gives each page its own.  The plan attaches them as
+#' the pages' `rtf_titles` attribute, which [rtf_tables()] prints as
+#' [rtf_titles()] does.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... The rows of one block, used on every page: strings, one a
+#'   line, or a character vector of them.
+#' @param pages A list with one block per page, when the pages do not share
+#'   one.  Give `...` or `pages`, never both: a three-row title on a
+#'   three-page table cannot be told apart from three one-row titles.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [plan_footnotes()] for the block
+#'   below; [plan_paginate_group()] (`heading_at = "title"`) for a title line
+#'   named after each page's value.
+#' @examples
+#' tbl <- data.frame(
+#'   Parameter = c("Subjects", "Age, mean (SD)"),
+#'   Placebo   = c("86", "75.2 (8.59)"),
+#'   Active    = c("84", "75.7 (8.29)"))
+#'
+#' # Minimal: two title lines on the one page
+#' pages <- table_plan(tbl) |>
+#'   plan_titles("Table 14.1.1", "Demographics") |>
+#'   plan_apply()
+#' attr(pages[[1]], "rtf_titles")
+#'
+#' # A page per laboratory parameter, each with its own table number
+#' lab <- data.frame(
+#'   PARAM   = rep(c("ALT (U/L)", "AST (U/L)"), each = 2),
+#'   Visit   = rep(c("Baseline", "Week 4"), 2),
+#'   Placebo = c("22.1", "23.0", "25.4", "24.8"),
+#'   Active  = c("21.8", "30.2", "24.9", "29.1"))
+#' pages <- table_plan(lab) |>
+#'   plan_paginate_group(col = "PARAM", keep = FALSE) |>
+#'   plan_titles(pages = list(c("Table 14.3.1", "Alanine aminotransferase"),
+#'                            c("Table 14.3.2", "Aspartate aminotransferase"))) |>
+#'   plan_apply()
+#' lapply(pages, attr, "rtf_titles")
 #' @export
 plan_titles <- function(.plan, ..., pages = NULL) {
   .plan_block(.plan, "titles", list(...), pages)
 }
 
-#' @rdname plan_verbs
+#' Put a block of footnotes below the table
+#'
+#' `plan_footnotes()` gives the footnote lines printed a blank line below
+#' the table on each page, in the body of the page --- not the section
+#' footer.  One block serves every page; `pages` gives each page its own.
+#' The plan attaches them as the pages' `rtf_footnotes` attribute, which
+#' [rtf_tables()] prints as [rtf_footnotes()] does.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... The rows of one block, used on every page: strings, one a
+#'   line, or a character vector of them.
+#' @param pages A list with one block per page, when the pages do not share
+#'   one.  Give `...` or `pages`, never both.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [plan_titles()] for the block
+#'   above; [plan_empty()] for a footnote added only when a table is empty.
+#' @examples
+#' tbl <- data.frame(
+#'   Parameter = c("Subjects", "Female, n (%)"),
+#'   Placebo   = c("86", "53 (61.6)"),
+#'   Active    = c("84", "50 (59.5)"))
+#'
+#' # Minimal: one footnote line
+#' pages <- table_plan(tbl) |>
+#'   plan_footnotes("Percentages are of the subjects in each arm.") |>
+#'   plan_apply()
+#' attr(pages[[1]], "rtf_footnotes")
+#'
+#' # Two pages cut by a row budget share one block of two lines: each
+#' # page carries the same block
+#' long <- data.frame(Subject = sprintf("01-%03d", 1:6),
+#'                    Age = c(61, 58, 70, 66, 54, 49))
+#' pages <- table_plan(long) |>
+#'   plan_paginate_rows(max_rows = 3, split = "group_force") |>
+#'   plan_footnotes(c("Age is at screening.", "Source: invented data.")) |>
+#'   plan_apply()
+#' lapply(pages, attr, "rtf_footnotes")
 #' @export
 plan_footnotes <- function(.plan, ..., pages = NULL) {
   .plan_block(.plan, "footnotes", list(...), pages)
@@ -2513,7 +3379,74 @@ plan_footnotes <- function(.plan, ..., pages = NULL) {
 # cannot carry one); what they were once used for most --
 # set_decimal_split(), paginate_cols() -- has a declaration now
 # (plan_columns(decimal = ), plan_paginate_cols()).
-#' @rdname plan_verbs
+#' Run your own functions on the finished pages
+#'
+#' `plan_after()` adds steps of your own: functions run, in the order
+#' written, on the finished pages, after the header, the decimal alignment
+#' and the cell styles are on them.  Each takes the pages and returns
+#' them, so any function of rtfreporter that works on pages can be a step.
+#' It is the way out for what no verb declares, and the plan cannot read
+#' it: see the section below for the declarations to prefer.
+#'
+#' @param .plan A [table_plan()].
+#' @param ... The steps, each a function of the pages (a list of
+#'   [rtftable()]s) that returns them, `function(pages)
+#'   style_header(pages, bold = TRUE)`.  Anything else is an error.
+#'
+#' @section plan_after() is the way out, not the way in:
+#'
+#' `plan_after()` runs functions of your own on the finished pages.  It
+#' is for what the plan cannot **declare** --- a step with no verb --- and
+#' it is the only verb whose content the plan cannot read: a workbook
+#' (`tflspec::tfl_as_table_spec()`) cannot carry it, and the columns it names are
+#' positions on the pages, which a reordered table does not keep.  The usual
+#' reasons to reach for it each have a declaration, which names columns and
+#' goes into a workbook:
+#'
+#' * `set_decimal_split(x, cols = 3:31)` is declared as `plan_columns(decimal = ".values")`
+#' * `paginate_cols(x, ...)` is declared as `plan_paginate_cols(every = , at = , keep = )`
+#' * `rtftable(col_rel_width = )` by position is declared as `plan_columns(widths = c(Analyte = 3, .values = 2))`
+#' * `set_col_header()` / `rtf_col_header()` is declared as `plan_col_header()`
+#' * `as_rtftables(align_count_pct = TRUE)` is declared as `plan_style(align_count_pct = TRUE)`
+#' * `fmt_numeric()` is declared as `plan_digits(<column> = 2)`, `plan_digits(.rows = c(Mean = 1))`
+#' * `paginate()` is declared as `plan_paginate_rows()`
+#' * `style_header(x, ...)` is declared as `plan_cell_style(header = TRUE, ...)`
+#' * `style_cols(x, ...)` is declared as `plan_cell_style(cols = , ...)`
+#' * bold / colour / alignment of body cells, by condition is declared as `plan_cell_style(where = ~ ..., ...)`
+#' * `style_zone(x, ...)` is declared as `plan_style(border_header = , border_body = , ...)`
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb.
+#' @examples
+#' tbl <- data.frame(
+#'   Parameter = c("Subjects", "Age, mean (SD)"),
+#'   Placebo   = c("86", "75.2 (8.59)"),
+#'   Active    = c("84", "75.7 (8.29)"))
+#'
+#' # Minimal: a step that returns the pages as they are
+#' pages <- table_plan(tbl) |>
+#'   plan_after(function(pages) pages) |>
+#'   plan_apply()
+#' length(pages)
+#'
+#' # Two steps, run in order on the finished pages: one stamps a draft
+#' # title on every page, the next adds a line under it
+#' stamp <- function(pages) {
+#'   for (i in seq_along(pages)) attr(pages[[i]], "rtf_titles") <- "DRAFT"
+#'   pages
+#' }
+#' add_line <- function(pages) {
+#'   for (i in seq_along(pages)) {
+#'     attr(pages[[i]], "rtf_titles") <-
+#'       c(attr(pages[[i]], "rtf_titles"), "Not for distribution")
+#'   }
+#'   pages
+#' }
+#' pages <- table_plan(tbl) |>
+#'   plan_after(stamp, add_line) |>
+#'   plan_apply()
+#' attr(pages[[1]], "rtf_titles")
 #' @export
 plan_after <- function(.plan, ...) {
   fs <- list(...)
@@ -2538,26 +3471,28 @@ plan_after <- function(.plan, ...) {
 #' do" --- there is no second code path that could disagree with the first.
 #'
 #' @param .plan An [table_plan()].
-#' @param stage How far to go.  `"auto"`, the default, is **as far as the
-#'   plan declares**: a plan that says nothing about the display stops at
-#'   the table `data.frame`; one that carries a display verb goes on
-#'   to the RTF pages.  You rarely need this function at all ---
-#'   [rtf_tables()] takes a plan directly --- and naming a stage is
-#'   for looking inside: `"input"`, `"args"`, `"table"`, `"pages"`.
-#'
-#'   The named stages: `"table"` returns the table
-#'   `data.frame`, the same object [widen_ard()] returns.  `"input"`
-#'   returns the frame going in, with the ARD column names the roles
-#'   renamed.  `"args"` returns the resolved argument lists
-#'   without running anything --- the call the plan amounts to, as
-#'   `$widen` ([widen_ard()]'s) and `$rtf` ([as_rtftables()]'s).  Both
-#'   are resolved from layers and either can be the one that
-#'   surprises: a page budget declared twice is last-wins, and the
-#'   call you are editing may not be the one that decides, so
-#'   `plan_apply(p, "args")$rtf$max_rows` is the way to ask.
-#'   `"pages"` goes all the way: [fmt_numeric()], [stub_cols()],
-#'   [as_rtftables()], [set_col_header()] and whatever `plan_after()`
-#'   declared, giving the RTF pages.
+#' @param stage How far to go.  You rarely need this function at all ---
+#'   [rtf_tables()] takes a plan directly --- and naming a stage is for
+#'   looking inside.
+#'   \describe{
+#'     \item{`"auto"`}{(default) As far as the plan declares: a plan that
+#'       says nothing about the display stops at the table `data.frame`; one
+#'       that carries a display verb goes on to the RTF pages.}
+#'     \item{`"input"`}{The frame going in, with the ARD column names the
+#'       roles renamed.}
+#'     \item{`"args"`}{The resolved argument lists without running
+#'       anything --- the call the plan amounts to, as `$widen`
+#'       ([widen_ard()]'s) and `$rtf` ([as_rtftables()]'s).  Both are
+#'       resolved from layers and either can be the one that surprises: a
+#'       page budget declared twice is last-wins, and the call you are
+#'       editing may not be the one that decides, so
+#'       `plan_apply(p, "args")$rtf$max_rows` is the way to ask.}
+#'     \item{`"table"`}{The table `data.frame`, the same object
+#'       [widen_ard()] returns.}
+#'     \item{`"pages"`}{Goes all the way: [fmt_numeric()], [stub_cols()],
+#'       [as_rtftables()], [set_col_header()] and whatever `plan_after()`
+#'       declared, giving the RTF pages.}
+#'   }
 #'
 #' @return A data frame; for `stage = "args"` the resolved argument list;
 #'   for `stage = "pages"` what [as_rtftables()] and the steps after it
@@ -2586,6 +3521,10 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   }
   stage <- match.arg(stage)
   if (identical(stage, "auto")) stage <- .plan_reach(.plan)
+
+  # Appended plans (plan_append()): each to its table, stacked, then the
+  # whole table's settings on the stack (R/plan_append.R)
+  if (length(.plan_of(.plan, "part"))) return(.plan_apply_parts(.plan, stage))
 
   # A LISTING never goes near an ARD.  Its source is SDTM or ADaM -- an
   # ordinary frame of subject records -- and plan_listing() is what says
@@ -2644,6 +3583,14 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
       "  If it is a listing of records, add plan_listing(...).\n",
       "  Columns seen : ", paste(utils::head(names(.plan$data), 8L),
                                  collapse = ", ")))
+  }
+
+  # A long frame of no rows -- a cards ARD or one built by hand -- has no
+  # cell to make; said here, before the spread trips over it in R's words.
+  if (is.data.frame(.plan$data) && !nrow(.plan$data)) {
+    .ard_stop(paste0(
+      "The long frame has no rows. No cell was produced, so there is ",
+      "nothing to widen.\n  Check the filter or the data that made it."))
   }
 
   # 1. the long-frame seam.  Nothing is flattened here: normalize_ard()
@@ -2732,6 +3679,11 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     #     variable column is called PARAM does nothing, and says so.
     reached <- c("default", ".rows", names(cells), vars)
     .plan$cache$digit_cols <- setdiff(names(dig), reached)
+  } else if (identical(.plan_merge(.plan_of(.plan, "cell_options"))$stats, "rows")) {
+    # Statistics as rows with no templates: the table is the finished
+    # numbers, so a key names a column of it (formatted by
+    # .plan_digits_display(), checked below) as on a finished table.
+    .plan$cache$digit_cols <- setdiff(names(dig), c("default", ".rows"))
   }
 
   # 5. one rounding family for the run; a per-variable one would have to reach
@@ -2747,16 +3699,16 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     # the one that decides.
     return(list(widen = s_args, rtf = .plan_rtf_args(.plan)))
   }
-  tbl <- .plan_stage(do.call(widen_ard, c(list(x = x), s_args)),
+  emp <- .plan_merge(.plan_of(.plan, "empty"))
+  tbl <- .plan_stage(.plan_widen(x, s_args, empty = length(emp) > 0L),
                      .plan, c("cells", "cell_options", "digits", "round",
                              "levels", "labels"))
   # a variable's rows under one level of another (plan_nest())
   nest <- .plan_merge(.plan_of(.plan, "nest"), deep = "nest")$nest
   if (length(nest)) tbl <- .plan_nest_rows(.plan, tbl, nest, s_args)
   # a table of no events: its sentence (plan_empty())
-  emp <- .plan_merge(.plan_of(.plan, "empty"))
   if (length(emp)) tbl <- .plan_empty_rows(.plan, tbl, x, emp, s_args)
-  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = TRUE)
+  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = length(cells) > 0L)
   # the table-side seam: a column the table can only know once it exists
   .plan_remember(.plan, "table", tbl)
   if (identical(stage, "table")) return(tbl)
@@ -2764,6 +3716,23 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   .plan_to_pages(.plan, tbl)
 }
 
+
+# widen_ard() as the plan calls it.  A plan with plan_empty() whose filter
+# took every row (an ARD with no overall row the filter keeps): no cell is
+# left to widen, and widen_ard() stops -- the table is then its columns with
+# no row, made without the filter, for plan_empty() to say it is empty
+# (#750).  Any other error stands.
+.plan_widen <- function(x, s_args, empty = FALSE) {
+  if (!empty || is.null(s_args$filter)) return(do.call(widen_ard, c(list(x = x), s_args)))
+  tryCatch(do.call(widen_ard, c(list(x = x), s_args)), error = function(err) {
+    if (!grepl("every row was filtered out", conditionMessage(err), fixed = TRUE)) stop(err)
+    a <- s_args
+    a$filter <- NULL
+    whole <- tryCatch(do.call(widen_ard, c(list(x = x), a)), error = function(e) NULL)
+    if (is.null(whole)) stop(err)
+    whole[0L, , drop = FALSE]
+  })
+}
 
 # plan_empty(): is the table empty -- no row but its overall row (`no_rows`), or its overall
 # row's n 0 in every column (`overall_zero`, the ARD's
@@ -3134,6 +4103,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # column in order; named, it is applied to the pages by column name
   colset <- .plan_merge(.plan_of(plan, "columns"))
   cw <- colset$widths
+  # (two plan_columns() calls, one each: still both)
+  if (length(cw) && !is.null(colset$column_widths_twips)) .plan_widths_both()
   if (length(cw) && is.null(names(cw)) && is.null(out$col_rel_width)) {
     out$col_rel_width <- cw
   }
@@ -3482,7 +4453,75 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
 # `order` is where the three nest: "group" (a value split), "rows"
 # (page_by and every row split) and "cols" (these blocks), outermost
 # first, or the shorthands "across" / "down".
-#' @rdname plan_verbs
+#' Cut a wide table into column blocks
+#'
+#' `plan_paginate_cols()` is the **column** axis of pagination: a table
+#' too wide for one page is cut into blocks of columns, each block a page
+#' that repeats the row headings.  Say where to cut one way --- before named
+#' columns (`at`), into given blocks or by a key in the column names
+#' (`cut_by`), or every so many columns (`every`, counted when the table
+#' exists, so a study with more visits needs nothing rewritten).  With
+#' `order` it also says how the three axes nest: this one, the row axis
+#' ([plan_paginate_rows()]) and the group axis ([plan_paginate_group()]).
+#'
+#' @param .plan A [table_plan()].
+#' @param at The columns to cut **before**, as names or positions,
+#'   [paginate_cols()]'s `at`: `at = c(4, 6)` makes blocks `1:3`, `4:5` and
+#'   `6:` the last.
+#' @param cut_by Where to cut other than by position, one of:
+#'   \describe{
+#'     \item{a list of column blocks}{`list(2:3, 4:5)`.}
+#'     \item{a separator}{one string found in the column names: with
+#'       `"____"`, `"Placebo____Day 1"` keys on `"Placebo"`, and each run of
+#'       one key is a block.}
+#'     \item{one key per column}{a vector as long as the columns; each run of
+#'       one key is a block.}
+#'   }
+#' @param every Cut a block every this many columns, counting only the ones
+#'   a block does not keep.  A table no wider than one block is not cut.
+#' @param keep The columns every block repeats,
+#'   such as the row headings; by default the table's row titles (column 1
+#'   unless [plan_columns()] says otherwise).
+#' @param col_header The header each block carries, written once for the
+#'   whole table in its coordinates and sliced to each block,
+#'   [paginate_cols()]'s `col_header`.  `NULL` slices the header the table
+#'   has.
+#' @param fit `TRUE` puts every block's widths on page 1's scale (the
+#'   default: page 1 fills the sheet and a ratio is the same width
+#'   throughout); `FALSE` keeps each column's own width.
+#' @param allow_span_break `TRUE` (default) allows a cut inside a spanning
+#'   header cell.
+#' @param order The order the pages come out in, as the **axes** of the
+#'   split, outermost first (`paginate_cols(order = )`): any of
+#'   `"group"`, `"rows"` and `"cols"`, or the shorthands `"across"` and
+#'   `"down"`.  Axes left out follow in that default order.
+#'
+#' @return The plan, with one more layer.
+#' @family plan verbs
+#' @seealso [plan_verbs] for every verb; [paginate_cols()] for the split in
+#'   full.
+#' @examples
+#' # Invented laboratory means at five visits: too wide for one page
+#' wide <- data.frame(
+#'   Parameter = c("ALT (U/L)", "AST (U/L)"),
+#'   Day1  = c("22.1", "25.4"), Day8  = c("23.0", "24.8"),
+#'   Day15 = c("30.2", "29.1"), Day22 = c("28.4", "27.0"),
+#'   Day29 = c("26.3", "26.1"))
+#'
+#' # Minimal: two visits a page, the parameter repeated on each
+#' pages <- table_plan(wide) |>
+#'   plan_paginate_cols(every = 2, keep = "Parameter") |>
+#'   plan_apply()
+#' length(pages)
+#' lapply(pages, function(pg) names(pg$data))
+#'
+#' # The first two weeks on one page and the rest on the next, each column
+#' # keeping its width
+#' pages <- table_plan(wide) |>
+#'   plan_paginate_cols(at = "Day15", keep = "Parameter", fit = FALSE) |>
+#'   plan_apply()
+#' lapply(pages, function(pg) names(pg$data))
+#' pages[[2]]
 #' @export
 plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
                                every = NULL, keep = NULL, col_header = NULL,
@@ -3501,15 +4540,11 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
                    allow_span_break = allow_span_break, order = order))
 }
 
-# The plan's words for paginate_cols()'s arguments: `cut_by` is a list of
-# column blocks (`cols`) or a separator / one key per column (`by`),
-# `keep` the columns every block repeats (`carry`), `fit` the width rule.
+# paginate_cols()'s arguments: the plan's words are its own (#594).
 .plan_colpages_args <- function(cp) {
-  out <- list(at = cp$at, carry = cp$keep, col_header = cp$col_header,
-              allow_span_break = cp$allow_span_break, page_order = cp$order)
-  if (is.list(cp$cut_by)) out$cols <- cp$cut_by
-  else if (!is.null(cp$cut_by)) out$by <- cp$cut_by
-  if (!is.null(cp$fit)) out$width <- if (isTRUE(cp$fit)) "fill" else "keep"
+  out <- list(at = cp$at, cut_by = cp$cut_by, keep = cp$keep,
+              col_header = cp$col_header, allow_span_break = cp$allow_span_break,
+              fit = cp$fit, order = cp$order)
   out[!vapply(out, is.null, logical(1L))]
 }
 
@@ -4129,6 +5164,18 @@ plan_header_tokens <- function(.plan) {
   nm <- names(out)
   base <- .page_name_base(nm)
   tail <- substring(nm, nchar(base) + 1L)
+  # several page_by columns: each page's values by column, from the page
+  # itself (rtf_paginate_meta$page_values), into the heading's `{<column>}`
+  if (by_rows && length(pb$page_by) > 1L) {
+    filled <- vapply(seq_along(out), function(i) {
+      meta <- attr(out[[i]]$data, "rtf_paginate_meta", exact = TRUE)
+      v <- meta$page_values
+      vals <- as.list(if (is.null(v)) character() else v[intersect(names(v), pb$page_by)])
+      .fill_text_tokens(h, vals, verb)
+    }, character(1L))
+    names(out) <- paste0(filled, tail)
+    return(out)
+  }
   pg <- if (by_rows) .plan_page_by_values(plan, pb$page_by, base)
         else .plan_page_group(plan, base)
   wants_n <- "n" %in% .text_tokens(h)
@@ -4365,7 +5412,9 @@ plan_n_candidates <- function(.plan) {
 .plan_to_pages <- function(plan, tbl) {
   hdr <- .plan_merge(.plan_of(plan, "header"))
   n_req <- .plan_header_n(hdr)
-  nvals <- .plan_n_values(plan, n_req)
+  # a stack of parts reads the header's n off the first plan (its ARD)
+  n_plan <- plan$cache$n_plan %||% plan
+  nvals <- .plan_n_values(n_plan, n_req)
 
   tbl <- .plan_digits_display(plan, tbl)
 
@@ -4392,12 +5441,24 @@ plan_n_candidates <- function(.plan) {
   if (length(lst)) {
     cols <- lst$cols; lst$cols <- NULL
     lst <- lst[!vapply(lst, is.null, logical(1L))]
-    # plan_blanks(where = "records") is a listing's record separator
+    # plan_blanks(where = "records") is a listing's record separator, and
+    # where = "none" takes it away (the multiline type ends each record
+    # with one)
     if (identical(rtf$blank_rows, "records")) {
       lst$blank_row <- TRUE
       rtf$blank_rows <- NULL
+    } else if (identical(rtf$blank_rows, "none")) {
+      lst$blank_row <- FALSE
+      rtf$blank_rows <- NULL
     }
     rtf$listing <- do.call(listing_spec, c(list(cols = cols), lst))
+  } else if (identical(rtf$blank_rows, "none")) {
+    rtf$blank_rows <- NULL
+  } else if (identical(rtf$blank_rows, "between_parts")) {
+    .ard_stop(paste0(
+      "plan_blanks(where = \"between_parts\") separates the parts of a table, ",
+      "and this plan\n  has no plan_append().  Between the groups of a table ",
+      "is where = \"between_groups\"."))
   } else if (identical(rtf$blank_rows, "records")) {
     .ard_stop(paste0(
       "plan_blanks(where = \"records\") separates the records of a listing, ",
@@ -4436,6 +5497,8 @@ plan_n_candidates <- function(.plan) {
     }
     rtf$cell_styles <- .plan_cell_styles(st, tbl, pre)
   }
+  # a stack of parts: each part's styles, read off the stack already
+  if (!is.null(plan$cache$cell_styles)) rtf$cell_styles <- plan$cache$cell_styles
   out <- .plan_stage(
     do.call(as_rtftables, c(list(x = tbl), rtf)), plan,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
@@ -4446,7 +5509,7 @@ plan_n_candidates <- function(.plan) {
   colset <- .plan_merge(.plan_of(plan, "columns"))
   spread <- .plan_spread_cols(plan, pre)
   if (length(colset$widths) && is.null(rtf$col_rel_width)) {
-    out <- .plan_col_widths(out, colset$widths, spread)
+    out <- .plan_col_widths(out, colset$widths, spread, hidden = rtf$drop_cols %||% character())
   }
   # what tfl_as_table_spec() reads back: the columns and widths before the
   # column axis cuts them into blocks
@@ -4493,7 +5556,7 @@ plan_n_candidates <- function(.plan) {
       said <- character(0)
       for (i in seq_along(out)) {
         nv <- if (is.null(pg$value[[i]])) nvals
-              else .plan_n_values(plan, n_req, page = list(
+              else .plan_n_values(n_plan, n_req, page = list(
                 col = pg$col, value = pg$value[[i]]))
         chose <- if (is.list(nv) && !is.numeric(nv))
           any(vapply(nv, function(z) isTRUE(attr(z, "choice")), NA))
@@ -4715,7 +5778,20 @@ plan_n_candidates <- function(.plan) {
 # template instead of a function that reassembles the names.
 .plan_spread_cols <- function(plan, tbl) {
   lb <- .plan_label_name(plan)
-  setdiff(names(tbl), c(.plan_row_keys(plan), lb, .plan_compare_cols(plan, tbl)))
+  setdiff(names(tbl), c(.plan_row_keys(plan), lb, .plan_compare_cols(plan, tbl),
+                        .plan_wide_heads(plan, tbl)))
+}
+
+# A finished table's row-heading columns, which no role names: those
+# plan_columns(row_title = ) gives (names or positions), else its first
+# column -- not value columns, so `.values` leaves them out (#755).  None
+# for a plan of an ARD (its row keys and label say them).
+.plan_wide_heads <- function(plan, tbl) {
+  if (!identical(plan$kind, "wide") || !ncol(tbl)) return(character(0))
+  rt <- .plan_merge(.plan_of(plan, "columns"))$row_title
+  if (is.null(rt)) return(names(tbl)[1L])
+  rt <- if (is.numeric(rt)) names(tbl)[rt[rt >= 1 & rt <= ncol(tbl)]] else as.character(unlist(rt))
+  intersect(rt, names(tbl))
 }
 
 # plan_compare()'s columns, which have no population and no `{col}`: the
@@ -5100,7 +6176,7 @@ plan_layers <- function(.plan) {
   kinds <- vapply(.plan$layers, `[[`, "", "kind")
   layers <- list()
   for (k in unique(kinds)) {
-    layers[[k]] <- if (k %in% c("after", "restyle")) .plan_of(.plan, k)
+    layers[[k]] <- if (k %in% c("after", "restyle", "part")) .plan_of(.plan, k)
                    else if (k %in% c("levels", "labels", "nest"))
                      .plan_merge(.plan_of(.plan, k), deep = k)
                    else .plan_merge(.plan_of(.plan, k))

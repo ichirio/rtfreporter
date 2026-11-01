@@ -27,7 +27,10 @@ variable's own name, not its \verb{group*} position.}
 or to ask for the key variable's own rows.}
 
 \item{levels}{Optional level order for the keys, so the result lines up
-with the table's columns.}
+with the table's columns: a named list, as in \code{\link[=widen_ard]{widen_ard()}}
+(\code{list(TRT = c("Placebo", "Drug"))}; a plain vector is not read).  With
+several \code{cols} the order is matched against the joined names
+(\code{"Placebo____F"}).}
 
 \item{sep}{Separator between multiple \code{cols} keys; match \code{\link[=widen_ard]{widen_ard()}}.}
 }

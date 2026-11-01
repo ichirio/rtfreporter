@@ -187,16 +187,12 @@ test_that("the zone map rejects non-rtf_border values in any zone", {
   expect_error(ztb(last_row  = NA),         "rtf_border object")
 })
 
-# ──────── rtf_border_with edge cases ──────────────────────────────────────
+# ──────── rtf_border edge cases ───────────────────────────────────────────
 
 test_that("a side given as a value is stored verbatim", {
   b <- rtf_border(top = rtf_border_line("dot"))
   expect_s3_class(b, "rtf_border")
   expect_identical(b$top$style, "dot")
-})
-
-test_that("rtf_border_with() still guards its base, behind its warning", {
-  expect_error(suppressWarnings(rtf_border_with("oops")), "rtf_border object")
 })
 
 # ──────── Internal helpers via end-to-end rendering ───────────────────────
@@ -327,4 +323,23 @@ test_that("a style that does not say align keeps each column's default alignment
   expect_identical(aligns(plan_apply(p)[[1]]), c("left", "center"))
   p <- table_plan(df) |> plan_style(align = "left")
   expect_identical(aligns(plan_apply(p)[[1]]), c("left", "left"))
+})
+
+test_that("rtf_table_style_with(): NULL resets, unnamed stops (#763)", {
+  s <- rtf_table_style_with(rtf_table_style_tfl(), align = "center", bold = TRUE)
+  r <- rtf_table_style_with(s, align = NULL, bold = NULL)
+  expect_true("align" %in% names(r))
+  expect_null(r$align)
+  expect_false(r$bold)
+  # the field is still there, so a later override works
+  expect_identical(rtf_table_style_with(r, align = "left")$align, "left")
+  expect_error(rtf_table_style_with(s, "center"), "must be named")
+  expect_error(rtf_table_style_with(s, nope = 1), "Unknown style field")
+  expect_error(rtf_table_style_with(s, border_body = TRUE), "rtf_border")
+})
+
+test_that("style messages name the argument that was wrong (#763)", {
+  tb <- rtftable(data.frame(a = "x"))
+  expect_error(style_cols(tb, 1, header_align = "middle"), "header_align = ")
+  expect_error(style_zone(tb, body = TRUE), "body = ")
 })

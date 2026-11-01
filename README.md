@@ -30,12 +30,16 @@ included.**
 
 ## Installation
 
-Not on CRAN yet; from GitHub:
+Not on CRAN yet (0.9.0 is the version going there); install from GitHub:
 
 ``` r
-remotes::install_github("ichirio/rtfreporter@v0.8.2")   # the latest release
-remotes::install_github("ichirio/rtfreporter")          # the development version
+remotes::install_github("ichirio/rtfreporter")          # the 0.9 line, in development
+remotes::install_github("ichirio/rtfreporter@v0.8.2")   # the latest release, 0.8.2
 ```
+
+The 0.9 line removes the functions and arguments 0.8.x deprecated (each
+0.8.x one warns and names its replacement); code that runs without those
+warnings on 0.8.2 runs on 0.9.
 
 ## From an ARD to an RTF table in 30 seconds
 
@@ -305,8 +309,8 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 ## Status
 
 Pre-1.0 (`lifecycle: experimental`): the latest release is `v0.8.2`, and
-development continues on `main` -- see [`NEWS.md`](NEWS.md); the roadmap is in
-the site's sidebar.
+`main` is the 0.9 line, the version for the first CRAN submission -- see
+[`NEWS.md`](NEWS.md); the roadmap is in the site's sidebar.
 
 ## Citation
 

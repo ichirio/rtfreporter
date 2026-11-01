@@ -114,10 +114,11 @@
 #' is expected to have.
 #'
 #' @param x,text Text to measure, cut or split.  `listing_disp_width()` is
-#'   vectorised; the other two take one string.
-#' @param width Maximum display width.
-#' @param sep The separator to break after.  `""` or `NULL` returns `text`
-#'   unsplit.
+#'   vectorised; the other two take one string (not `NA`), and stop
+#'   otherwise.
+#' @param width Maximum display width: one number of 0 or more.
+#' @param sep The separator to break after: one string.  `""` or `NULL`
+#'   returns `text` unsplit.
 #' @return `listing_disp_width()` an integer vector; `listing_take()` a single
 #'   string; `listing_split_after()` a character vector of pieces.
 #' @seealso [listing_wrap()], the rule these build; [listing_wrap_code()] to
@@ -143,6 +144,13 @@ listing_disp_width <- function(x) {
 #' @rdname listing_measures
 #' @export
 listing_take <- function(x, width) {
+  if (!is.character(x) || length(x) != 1L || is.na(x)) {
+    stop("`listing_take()`: `x` must be one string.", call. = FALSE)
+  }
+  if (!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0) {
+    stop("`listing_take()`: `width` must be one number of 0 or more (a display width).",
+         call. = FALSE)
+  }
   n <- nchar(x, type = "chars")
   if (n == 0L) return("")
   best <- 1L
@@ -155,6 +163,12 @@ listing_take <- function(x, width) {
 #' @rdname listing_measures
 #' @export
 listing_split_after <- function(text, sep) {
+  if (!is.character(text) || length(text) != 1L || is.na(text)) {
+    stop("`listing_split_after()`: `text` must be one string.", call. = FALSE)
+  }
+  if (!is.null(sep) && (!is.character(sep) || length(sep) != 1L || is.na(sep))) {
+    stop("`listing_split_after()`: `sep` must be one string, or NULL.", call. = FALSE)
+  }
   if (is.null(sep) || !nzchar(sep)) return(text)
   # \Q...\E quotes the separator, so a "." or a "|" separator is a literal and
   # the lookbehind stays fixed-width.  (Written this way rather than with an
@@ -284,37 +298,49 @@ listing_split_after <- function(text, sep) {
 #'   (`"/"` under the `"multiline"` type).
 #' @param width Integer or `NULL`.  Maximum characters per physical row before
 #'   the cell wraps.  `NULL` (default) never wraps this column.
-#' @param label The column header.  A **character vector is the lines** --
-#'   one element, one line -- and so is a string that carries its own line
-#'   breaks: both say "I have laid this out", and neither is re-wrapped.  A
-#'   **single string with no breaks** is words for the package to lay out: it
-#'   is wrapped to `width` by the same rule the cells use (see
-#'   [listing_wrap()]), or left as one line when there is no `width`.
-#'   `NULL` (default) **derives** the header from the data -- each source
-#'   column's `label` attribute when it has one, otherwise its name, joined
-#'   with `sep` -- or from `fit_listing_widths(labels = )`.  `""` asks for a
-#'   deliberately empty header.
-#' @param layout How a cell lays its parts out: `"stack"` breaks after
-#'   **every** separator, so each source column starts its own line -- the
-#'   conventional listing look, and it keeps a column reading down the page.
-#'   `"flow"` treats the separator as a break *opportunity* and fills each
-#'   line as far as `width` allows, so a column of short parts (an age and a
-#'   sex, a value and its unit) does not spend two rows on four characters.
-#'   `NULL` (default) takes the listing's own (`"stack"` under `"multiline"`).
-#'   With no `width` there is nothing to lay out and both behave alike.
+#' @param label The column header.  `NULL` (default) **derives** the header
+#'   from the data -- each source column's `label` attribute when it has one,
+#'   otherwise its name, joined with `sep` -- or from
+#'   `fit_listing_widths(labels = )`.
+#'   \describe{
+#'     \item{A character vector}{is the lines -- one element, one line -- and
+#'       so is a string that carries its own line breaks: both say "I have
+#'       laid this out", and neither is re-wrapped.}
+#'     \item{A single string with no breaks}{is words for the package to lay
+#'       out: it is wrapped to `width` by the same rule the cells use (see
+#'       [listing_wrap()]), or left as one line when there is no `width`.}
+#'     \item{`""`}{asks for a deliberately empty header.}
+#'   }
+#' @param layout How a cell lays its parts out.  `NULL` (default) takes the
+#'   listing's own (`"stack"` under `"multiline"`).  With no `width` there is
+#'   nothing to lay out and both behave alike.
+#'   \describe{
+#'     \item{`"stack"`}{breaks after **every** separator, so each source
+#'       column starts its own line -- the conventional listing look, and it
+#'       keeps a column reading down the page.}
+#'     \item{`"flow"`}{treats the separator as a break *opportunity* and
+#'       fills each line as far as `width` allows, so a column of short parts
+#'       (an age and a sex, a value and its unit) does not spend two rows on
+#'       four characters.}
+#'   }
 #' @param collapse_repeats Logical (default `FALSE`).  Mark this as a **key**
-#'   column: its value is carried down every physical row of a record, and
-#'   [as_rtftables()] then blanks the repeats.  Carrying and delegating rather
-#'   than blanking here is what makes the value **reappear at the top of the
-#'   next page** -- the suppression happens per page, after the split, so a
-#'   record continued across a page break still shows its subject.  A cell
-#'   that already wraps onto several lines is padded as usual: there is no one
-#'   value to repeat.
+#'   column: its value is carried down every physical row of a record (its
+#'   blank row too), and [as_rtftables()] then blanks the repeats -- so the
+#'   value prints once per run of records that share it, blank rows between
+#'   them or not.
+#'   \describe{
+#'     \item{Why delegated}{Carrying and delegating rather than blanking here
+#'       is what makes the value **reappear at the top of the next page** --
+#'       the suppression happens per page, after the split, so a record
+#'       continued across a page break still shows its subject.}
+#'     \item{Wrapped cells}{A cell that already wraps onto several lines is
+#'       padded as usual: there is no one value to repeat.}
+#'   }
 #' @param name Output column name.  `NULL` (default) uses the first entry of
 #'   `vars`; [listing_spec()] makes the set unique if two columns collide.
 #' @param rel_width Relative width of this column in the rendered table.
 #'   `NULL` (default) uses `width` when there is one, otherwise the longest
-#'   line of `label`.
+#'   line of `label`; with neither, 10.
 #' @param align `"left"`, `"center"` or `"right"`.  `NULL` (default) takes the
 #'   listing's own (`"left"` under the `"multiline"` type).
 #'
@@ -605,7 +631,8 @@ listing_spec <- function(cols,
       stop("`wrap` must be a function(text, width, sep, layout) returning ",
            "the lines, or NULL for the type's own rule.", call. = FALSE)
     }
-    if (length(formals(wrap)) < 4L) {
+    fm <- names(formals(wrap))
+    if (length(fm) < 4L && !"..." %in% fm) {
       stop("`wrap` must accept four arguments: text, width, sep, layout.",
            call. = FALSE)
     }
@@ -978,14 +1005,17 @@ build_listing <- function(data, spec) {
     # has a constant run to suppress -- and, because it suppresses per page,
     # after the split, the value reappears at the top of the next page.  Only
     # a single-line value is carried: a cell that already wraps has no one
-    # value to repeat, and printing it in full is never wrong.
+    # value to repeat, and printing it in full is never wrong.  It is carried
+    # into the record's blank row too (#742): a blank row left "" would break
+    # the run between two records of the same value, and none would be
+    # blanked.  A page never parts a record from its blank row, so the
+    # carried value there is always blanked as a repeat.
     down <- isTRUE(spec$cols[[j]]$collapse_repeats)
     for (i in seq_len(n)) {
       L <- lines[[j]][[i]]
       if (!length(L)) next
-      body_rows <- if (isTRUE(spec$blank_row)) nl[i] - 1L else nl[i]
-      if (down && length(L) == 1L && body_rows > 1L) {
-        v[seq.int(start[i], length.out = body_rows)] <- L
+      if (down && length(L) == 1L && nl[i] > 1L) {
+        v[seq.int(start[i], length.out = nl[i])] <- L
       } else {
         v[seq.int(start[i], length.out = length(L))] <- L
       }
@@ -1115,7 +1145,7 @@ listing_wrap <- function(text, width, sep = "/",
     stop("`sep` must be a single string, or NULL.", call. = FALSE)
   }
   if (!is.null(width) && (!is.numeric(width) || length(width) != 1L ||
-                          (!is.na(width) && width < 1))) {
+                          is.na(width) || width < 1)) {
     stop("`width` must be a single positive number, or NULL.", call. = FALSE)
   }
   if (length(text) == 1L) {

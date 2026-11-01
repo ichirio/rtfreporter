@@ -5,16 +5,14 @@
 \title{Automatically calculate column widths for a data.frame}
 \usage{
 auto_col_widths(
-  data = NULL,
+  data,
   col_header = NULL,
   font = NULL,
   font_size_half_points = 18L,
   table_width_twips = NULL,
   min_col_width_twips = 720L,
   col_padding_twips = 288L,
-  protect_cols = integer(0),
-  df = NULL,
-  size_half_points = NULL
+  protect_cols = integer(0)
 )
 }
 \arguments{
@@ -42,15 +40,17 @@ for cell padding and inter-column spacing.  Default \code{288} (= 0.2 inch).}
 
 \item{protect_cols}{Integer column indices to keep at their natural
 (content) width when \code{table_width_twips} forces the table \emph{narrower} than
-its natural width.  Only the remaining columns are shrunk to fit, so e.g.
-a row-label column (\code{protect_cols = 1}) stays readable while the data
-columns absorb the squeeze.  Protection is dropped if it would push the
-scalable columns below \code{min_col_width_twips}.  Has no effect when scaling
-\emph{up} or when \code{table_width_twips} is \code{NULL}.  Default none.}
-
-\item{df, size_half_points}{\emph{Superseded} by \code{data} and
-\code{font_size_half_points} (the names the other functions use); documented,
-still working, not warned.}
+its natural width.  Default none.  No effect when \code{table_width_twips} is
+\code{NULL}.
+\describe{
+\item{Squeezed}{Only the remaining columns are shrunk to fit, so e.g. a
+row-label column (\code{protect_cols = 1}) stays readable while the data
+columns absorb the squeeze.  Protection is dropped if it would push
+the scalable columns below \code{min_col_width_twips}.}
+\item{Scaled up}{When the table is scaled \emph{up}, the protected columns
+likewise keep their natural width and only the others grow to the
+target.}
+}}
 }
 \value{
 An integer vector of column widths in twips, one per column of \code{data}.

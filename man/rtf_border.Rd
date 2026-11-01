@@ -2,10 +2,6 @@
 % Please edit documentation in R/rtf_border.R
 \name{rtf_border}
 \alias{rtf_border}
-\alias{rtf_border_none}
-\alias{rtf_border_top}
-\alias{rtf_border_bottom}
-\alias{rtf_border_box}
 \title{Four-edge border specification for a cell or row}
 \usage{
 rtf_border(
@@ -17,14 +13,6 @@ rtf_border(
   inside_h = NULL,
   inside_v = NULL
 )
-
-rtf_border_none()
-
-rtf_border_top(style = "single", width = 15L, color = NULL)
-
-rtf_border_bottom(style = "single", width = 15L, color = NULL)
-
-rtf_border_box(style = "single", width = 15L, color = NULL)
 }
 \arguments{
 \item{all}{Shorthand for \code{top}, \code{bottom}, \code{left} and \code{right} at once. A side
@@ -37,9 +25,6 @@ or \code{NULL} to leave it unset. See \emph{Writing a side} below.}
 \item{inside_h, inside_v}{The rules drawn \emph{between} the selection's rows
 (\code{inside_h}) and \emph{between} its cells (\code{inside_v}). Same values as the
 edges; \code{NULL} (default) means no rule there.}
-
-\item{style, width, color}{Line style, weight in twips and colour, as in
-\code{\link[=rtf_border_line]{rtf_border_line()}}.}
 }
 \value{
 A list of class \code{"rtf_border"}.
@@ -49,19 +34,10 @@ Specifies borders for up to four sides (top, bottom, left, right).  Each
 side is either \code{NULL} (no border) or a border side.
 }
 \details{
-To derive a new border from an existing one, pass it as \code{from}.
+To add to a border already in place, attach a second one where the first
+is: the places it attaches to merge side by side (see \emph{Building versus
+layering}).
 }
-\section{Functions}{
-\itemize{
-\item \code{rtf_border_none()}: Deprecated. Write \code{rtf_border()}.
-
-\item \code{rtf_border_top()}: Deprecated. Write \code{rtf_border(top = TRUE)}.
-
-\item \code{rtf_border_bottom()}: Deprecated. Write \code{rtf_border(bottom = TRUE)}.
-
-\item \code{rtf_border_box()}: Deprecated. Write \code{rtf_border(all = TRUE)}.
-
-}}
 \section{What a border applies to}{
 
 
@@ -95,8 +71,8 @@ within a call and it reads evenly:
   style name  rtf_border(top = "single", bottom = "none")
 }
 
-The two agree: \code{TRUE} is a rule in this call's \code{style} / \code{width} / \code{color},
-and \code{FALSE} is \code{"none"} -- an explicit \emph{no line}, which erases a rule the
+The two agree: \code{TRUE} is \code{rtf_border_line()} with its defaults (a single
+rule), and \code{FALSE} is \code{"none"} -- an explicit \emph{no line}, which erases a rule the
 selection would otherwise inherit. The style names are \code{"single"},
 \code{"double"}, \code{"thick"}, \code{"dash"}, \code{"dot"} and \code{"none"}.
 
@@ -130,8 +106,8 @@ A side is in one of three states, and all three matter:
 the enclosing selection supplies.}
 \item{erased (\code{FALSE} / \code{"none"})}{an explicit \emph{no line}, which overrides
 an inherited rule.}
-\item{a rule (\code{TRUE} / a style name)}{drawn in this call's \code{style},
-\code{width} and \code{color}.}
+\item{a rule (\code{TRUE} / a style name)}{an \code{\link[=rtf_border_line]{rtf_border_line()}}: its
+defaults for \code{TRUE}, that style for a name.}
 }
 
 A call to \code{rtf_border()} says everything about the border it returns: every
@@ -157,7 +133,8 @@ inherit, while \code{rtf_border()} says nothing at all and inherits.
 \section{Writing borders before and after 0.5.0}{
 
 
-Two things changed at 0.5.0.  \code{\link[=rtf_table_border]{rtf_table_border()}} is deprecated, so a
+Two things changed at 0.5.0.  \code{rtf_table_border()} was deprecated (and
+removed in 0.9.0), so a
 border is aimed with \code{rtftable(border = )} or \code{\link[=style_zone]{style_zone()}} instead; and an
 edge now always means the \strong{outer} edge of the selection, so the rules
 \emph{inside} it have to be asked for by name.  Each case below, \code{s} being an
@@ -210,10 +187,9 @@ as a value rather than built:
   rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
 }
 
-All of them still work and warn once per session; they are removed in
-0.9.0, the first CRAN release.
+All of them were removed in 0.9.0.
 
-\code{border = "tfl"} and \code{\link[=rtf_border_tfl]{rtf_border_tfl()}} are unaffected, as is any border on
+\code{border = "tfl"} is unaffected, as is any border on
 a single cell (\code{\link[=col_cell]{col_cell()}}, \code{cell_styles}): a cell has no inside, so its
 four edges never meant anything else.
 

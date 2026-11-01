@@ -1,11 +1,9 @@
-# fmt_count_pct() / realign_count_pct() — uniform "n (xx.x)" widths.
+# fmt_count_pct() / .realign_count_pct() — uniform "n (xx.x)" widths.
 
 NBSP <- intToUtf8(160L)
 unbsp <- function(x) gsub(NBSP, " ", x, fixed = TRUE)
 
-# ──────── format_count_pct: numeric inputs ───────────────────────────────
-
-silence_deprecation(c("realign_count_pct", "cell_format_realign_count_pct"))   # until 0.9.0 (#594)
+# ──────── fmt_count_pct: numeric inputs ───────────────────────────────
 
 test_that("fmt_count_pct() produces 10-char-wide strings (NBSP padded)", {
   # Fractions (default)
@@ -88,11 +86,11 @@ test_that("fmt_count_pct() rejects mismatched non-recyclable lengths", {
   expect_error(fmt_count_pct(1:3, c(0.1, 0.2)), "same length")
 })
 
-# ──────── realign_count_pct: string inputs ────────────────────────────────
+# ──────── .realign_count_pct: string inputs ────────────────────────────────
 
-test_that("realign_count_pct() reformats matching cells; passes through others", {
+test_that(".realign_count_pct() reformats matching cells; passes through others", {
   inp <- c("5 (33.3)", "12 (100.0)", "0 (0.0)", "not a count", "1 (5.0)")
-  out <- realign_count_pct(inp)
+  out <- rtfreporter:::.realign_count_pct(inp)
   # Lengths uniform for matching cells
   matching_idx <- c(1L, 2L, 3L, 5L)
   expect_identical(nchar(out[matching_idx]),
@@ -101,24 +99,24 @@ test_that("realign_count_pct() reformats matching cells; passes through others",
   expect_identical(out[4L], "not a count")
 })
 
-test_that("realign_count_pct() handles empty / NULL / non-character input gracefully", {
-  expect_identical(realign_count_pct(character(0)), character(0))
-  expect_null(realign_count_pct(NULL))
+test_that(".realign_count_pct() handles empty / NULL / non-character input gracefully", {
+  expect_identical(rtfreporter:::.realign_count_pct(character(0)), character(0))
+  expect_null(rtfreporter:::.realign_count_pct(NULL))
   # Numeric input is coerced
-  expect_identical(realign_count_pct(c(1L, 2L)), c("1", "2"))
+  expect_identical(rtfreporter:::.realign_count_pct(c(1L, 2L)), c("1", "2"))
 })
 
-# ──────── paginate(align_count_pct = TRUE) integration ────────────────────
+# ──────── as_rtftables(align_count_pct = TRUE) integration ────────────────────
 
-test_that("paginate(align_count_pct = TRUE) realigns columns 2..N", {
+test_that("as_rtftables(align_count_pct = TRUE) realigns columns 2..N", {
   df <- data.frame(
     label = c("Sex", "  Female", "  Male"),
     a     = c("",        "16 (53.3)",  "14 (46.7)"),
     b     = c("",        "1 (5.0)",    "12 (100.0)"),
     stringsAsFactors = FALSE
   )
-  pages <- paginate(df, align_count_pct = TRUE)
-  out_a <- pages[[1L]]$a
+  pages <- as_rtftables(df, align_count_pct = TRUE)
+  out_a <- pages[[1L]]$data$a
   # Count-percent cells are aligned: within a column every non-empty cell has
   # the same (content-adaptive) width, the count right-justified.
   non_empty <- nzchar(out_a)
@@ -126,14 +124,14 @@ test_that("paginate(align_count_pct = TRUE) realigns columns 2..N", {
   expect_true(grepl(")$", out_a[2L]))
 })
 
-test_that("paginate(align_count_pct = FALSE) leaves columns untouched (default)", {
+test_that("as_rtftables(align_count_pct = FALSE) leaves columns untouched (default)", {
   df <- data.frame(
     label = c("Sex", "  F"),
     a     = c("",    "5 (33.3)"),
     stringsAsFactors = FALSE
   )
-  pages <- paginate(df)                    # default = FALSE
-  expect_identical(pages[[1L]]$a[2L], "5 (33.3)")
+  pages <- as_rtftables(df)               # default = FALSE
+  expect_identical(pages[[1L]]$data$a[2L], "5 (33.3)")
 })
 
 test_that("align_count_pct leaves an integer-only column untouched (#80)", {
@@ -169,8 +167,8 @@ test_that("align_count_pct reformats only 'integer (real)' cells (#148)", {
   expect_true(endsWith(out$a[4L], ")"))
 })
 
-test_that("realign_count_pct() aligns percent-sign cells, keeping the %", {
-  out <- realign_count_pct(c("8 (28.6%)", "10 (35.7%)", "3 (100%)", "5 (5.0%)"),
+test_that(".realign_count_pct() aligns percent-sign cells, keeping the %", {
+  out <- rtfreporter:::.realign_count_pct(c("8 (28.6%)", "10 (35.7%)", "3 (100%)", "5 (5.0%)"),
                            nbsp = " ")
   # All re-padded to the same display width, '%' preserved, ')' last char.
   expect_true(all(nchar(out) == nchar(out[1L])))
@@ -189,32 +187,32 @@ test_that("fmt_count_pct(pct_sign = TRUE) adds % and stays width-aligned", {
 })
 
 
-# ──────── realign_count_pct / as_rtftables: na = (#350) ──────────────────
+# ──────── .realign_count_pct / as_rtftables: na = (#350) ──────────────────
 
-test_that("realign_count_pct() leaves NA alone by default", {
-  out <- realign_count_pct(c("5 (33.3)", NA))
+test_that(".realign_count_pct() leaves NA alone by default", {
+  out <- rtfreporter:::.realign_count_pct(c("5 (33.3)", NA))
   expect_identical(unbsp(out[1L]), "  5 (33.3)")
   expect_identical(out[2L], NA_character_)
 })
 
-test_that("realign_count_pct() aligns the na token in the count field", {
-  out <- unbsp(realign_count_pct(c("5 (33.3)", NA, "12 (100.0)"), na = "-"))
+test_that(".realign_count_pct() aligns the na token in the count field", {
+  out <- unbsp(rtfreporter:::.realign_count_pct(c("5 (33.3)", NA, "12 (100.0)"), na = "-"))
   expect_identical(out[2L], "  -       ")
   expect_true(all(nchar(out) == 10L))
 })
 
-test_that("realign_count_pct() follows the column's percent sign", {
-  out <- unbsp(realign_count_pct(c("5 (33.3%)", NA), na = "-"))
+test_that(".realign_count_pct() follows the column's percent sign", {
+  out <- unbsp(rtfreporter:::.realign_count_pct(c("5 (33.3%)", NA), na = "-"))
   expect_true(all(nchar(out) == 11L))    # the "%" widens every branch
 })
 
-test_that("realign_count_pct() does not pad the token in a column with no counts", {
+test_that(".realign_count_pct() does not pad the token in a column with no counts", {
   # Nothing to line it up WITH, so the fixed 10-wide layout is not imposed.
-  expect_identical(realign_count_pct(c("text", NA), na = "-"), c("text", "-"))
+  expect_identical(rtfreporter:::.realign_count_pct(c("text", NA), na = "-"), c("text", "-"))
 })
 
-test_that("realign_count_pct() leaves non-missing text unchanged", {
-  out <- realign_count_pct(c("5 (33.3)", "NE", "NA (NA)"), na = "-")
+test_that(".realign_count_pct() leaves non-missing text unchanged", {
+  out <- rtfreporter:::.realign_count_pct(c("5 (33.3)", "NE", "NA (NA)"), na = "-")
   expect_identical(out[2:3], c("NE", "NA (NA)"))
 })
 
@@ -266,4 +264,9 @@ test_that("as_rtftables(na =) validates its argument", {
   df <- data.frame(P = "a", A = "1", stringsAsFactors = FALSE)
   expect_error(as_rtftables(df, na = NA), "single string")
   expect_error(as_rtftables(df, na = c("-", "x")), "single string")
+})
+
+test_that("fmt_count_pct() refuses a fractional count (#765)", {
+  expect_error(fmt_count_pct(5.7, 0.5), "whole numbers")
+  expect_no_error(fmt_count_pct(c(5, NA), c(0.5, NA)))
 })

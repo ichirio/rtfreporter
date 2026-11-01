@@ -1,7 +1,6 @@
 # Pipe Composition API — document creation, configuration, content addition,
 # section definition, deprecated formatters, print method, full workflow.
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that("rtf_document() returns the expected S3 structure with defaults", {
   doc <- rtf_document()
@@ -54,50 +53,28 @@ test_that("rtf_config() leaves content and sections intact (#108)", {
   expect_identical(a4$document$page$width_in, 11.69)
 })
 
-test_that("rtf_tables() promotes bare data.frames and applies shared formatting", {
+test_that("rtf_tables() promotes bare data.frames and keeps the format given on rtftable()", {
   df1 <- data.frame(A = 1:3, B = c("x", "y", "z"))
   df2 <- data.frame(ID = c(10, 20, 30), Value = c(100, 200, 300))
 
-  doc <- rtf_tables(rtf_document(), list(df1, df2),
-                    col_rel_width = c(1, 2), row_height_twips = 280L)
+  doc <- rtf_tables(rtf_document(),
+                    list(df1, rtftable(df2, col_rel_width = c(1, 2),
+                                       row_height_twips = 280L)))
   expect_length(doc$contents, 2L)
   expect_s3_class(doc$contents[[1L]]$content, "rtftable")
-  expect_identical(doc$contents[[1L]]$content$col_rel_width, c(1, 2))
-  expect_identical(doc$contents[[1L]]$content$row_height_twips, 280L)
+  expect_s3_class(doc$contents[[2L]]$content, "rtftable")
   expect_identical(doc$contents[[2L]]$content$col_rel_width, c(1, 2))
+  expect_identical(doc$contents[[2L]]$content$row_height_twips, 280L)
 })
 
-test_that("explicit rtf_tables() args override pre-built rtftable settings", {
-  df1 <- data.frame(A = 1:3, B = c("x", "y", "z"))
-  df2 <- data.frame(ID = c(10, 20, 30), Value = c(100, 200, 300))
-  custom_tbl <- rtftable(df2, col_rel_width = c(3, 1))
-
-  # col_rel_width is passed explicitly -> overrides BOTH the bare data.frame
-  # build and the pre-built rtftable's own c(3, 1).
-  doc <- rtf_tables(rtf_document(), list(df1, custom_tbl),
-                    col_rel_width = c(1, 2))
-  expect_identical(doc$contents[[1L]]$content$col_rel_width, c(1, 2))
-  expect_identical(doc$contents[[2L]]$content$col_rel_width, c(1, 2))
-})
-
-test_that("pre-built rtftable() keeps settings NOT explicitly overridden", {
+test_that("pre-built rtftable() keeps its own settings", {
   df2 <- data.frame(ID = c(10, 20, 30), Value = c(100, 200, 300))
   custom_tbl <- rtftable(df2, col_rel_width = c(3, 1),
                          table_align = "center")
 
-  # Only table_align is passed -> col_rel_width stays the table's own c(3, 1).
-  doc <- rtf_tables(rtf_document(), list(custom_tbl), table_align = "right")
+  doc <- rtf_tables(rtf_document(), list(custom_tbl))
   expect_identical(doc$contents[[1L]]$content$col_rel_width, c(3, 1))
-  expect_identical(doc$contents[[1L]]$content$table_align, "right")
-})
-
-test_that("multi-content-per-page is rejected", {
-  df1 <- data.frame(A = 1:3, B = c("x", "y", "z"))
-  df2 <- data.frame(ID = c(10, 20, 30), Value = c(100, 200, 300))
-  expect_error(
-    rtf_tables(rtf_document(), list(df1, list(df2))),
-    "list element"
-  )
+  expect_identical(doc$contents[[1L]]$content$table_align, "center")
 })
 
 test_that("rtf_section() supports single and multiple page assignments", {
@@ -134,9 +111,10 @@ test_that("end-to-end pipe-style workflow builds a valid document", {
   doc <- rtf_config(doc, page = list(
     orientation = "landscape", width_in = 11, height_in = 8.5
   ))
-  doc <- rtf_tables(doc, list(df1, df2),
-                    border = "tfl", row_height_twips = 280L,
-                    col_rel_width = c(1, 2))
+  doc <- rtf_tables(doc, list(
+    rtftable(df1, border = "tfl", row_height_twips = 280L, col_rel_width = c(1, 2)),
+    rtftable(df2, border = "tfl", row_height_twips = 280L, col_rel_width = c(1, 2))
+  ))
   doc <- rtf_section(doc, page = 1,
                      secinfo = list(header = list(l = "Section 1", r = "Page 1"),
                                     footer = list(c = "Footer 1")))
@@ -148,4 +126,19 @@ test_that("end-to-end pipe-style workflow builds a valid document", {
   expect_length(doc$sections, 2L)
   expect_s3_class(doc$contents[[1L]]$content, "rtftable")
   expect_identical(doc$contents[[1L]]$content$col_rel_width, c(1, 2))
+})
+
+test_that("a gt table given to rtf_tables() is read as as_rtftables() reads it (#788)", {
+  skip_if_not_installed("gt")
+  g <- gt::gt(data.frame(a = c("1", "2"), b = c("x", "y"))) |>
+    gt::tab_header(title = "A gt title") |>
+    gt::cols_label(a = "Alpha")
+  doc <- rtf_tables(rtf_document(), g)
+  expect_s3_class(doc$contents[[1L]]$content, "rtftable")
+  expect_identical(doc$contents[[1L]]$content$col_header,
+                   as_rtftables(g)[[1L]]$col_header)
+  # in a list too
+  doc2 <- rtf_tables(rtf_document(), list(g, data.frame(z = 1)))
+  expect_length(doc2$contents, 2L)
+  expect_s3_class(doc2$contents[[1L]]$content, "rtftable")
 })

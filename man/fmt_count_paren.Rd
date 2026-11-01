@@ -21,7 +21,7 @@ lines up with theirs.  \code{Inf} / \code{-Inf} are \strong{not} missing and pri
 \item{bare}{\code{FALSE} (default) leaves a cell with no parentheses as it is;
 \code{TRUE} also pads a \strong{bare integer count} (a lone \code{"0"}, a raw event
 total) into the count field, so it lines up under the parenthetical
-cells.  (It was \code{fmt_count_paren_bare()}, deprecated.)}
+cells.  (It was \code{fmt_count_paren_bare()}, removed in 0.9.0.)}
 }
 \value{
 Character vector the same length as \code{x}.

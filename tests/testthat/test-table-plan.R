@@ -2,8 +2,6 @@
 # Tests for the DEFERRED, LAST-WINS plan spike (#474).
 # This whole file belongs to R/ard-plan-spike.R and is deleted with it.
 
-local_deprecated("stub_vars")  # deprecated in 0.8.x
-
 skip_if_no_cards2 <- function() testthat::skip_if_not_installed("cards")
 
 # Flattening is RUN before the plan now, so that table_plan()'s roles
@@ -342,7 +340,7 @@ test_that("stage = \"pages\" reaches the same rtftable as the code does", {
   ard <- plan_ard()
   tbl <- suppressMessages(plan_apply(disp_plan(ard)))
 
-  ref <- as_rtftables(tbl, stub_vars = c("group", "label"),
+  ref <- as_rtftables(tbl, stub = stub_spec(c("group", "label")),
                       group_by = "indent", split = "group_safe",
                       max_rows = 22, border = "tfl")
   new <- suppressMessages(plan_apply(
@@ -852,7 +850,7 @@ test_that("a finished table is a source for the display half alone", {
       widen_ard(cols = "TRT", rows = c(group = "variable"),
                  cells = "{n:.0f}", notes = FALSE))
   ref <- as_rtftables(tbl, read_meta = FALSE,
-                      stub_vars = c("group", "label"), border = "tfl")
+                      stub = stub_spec(c("group", "label")), border = "tfl")
   new <- suppressMessages(plan_apply(
     table_plan(tbl) |>
       plan_stub(vars = c("group", "label")) |>
@@ -2100,6 +2098,25 @@ test_that("plan_blanks(where = \"records\") separates a listing's records", {
   # a table has no records to separate
   expect_error(plan_apply(disp_plan() |> plan_blanks(where = "records"),
                           "pages"), "plan_listing")
+})
+
+test_that("plan_blanks(where = \"none\") takes a listing's record separator away", {
+  d <- data.frame(USUBJID = rep(c("S1", "S2"), each = 3), T = rep(1:3, 2), V = 1:6)
+  lst <- function(p) p |> plan_listing(listing_col("USUBJID", width = 8),
+                                       listing_col("T", width = 4), listing_col("V", width = 4))
+  rows <- function(p) {
+    pg <- plan_apply(p)
+    nrow((if (inherits(pg, "rtftable")) pg else pg[[1L]])$data)
+  }
+  # the multiline type: a blank row after each record; none: the records alone
+  expect_gt(rows(lst(table_plan(d))), nrow(d))
+  expect_identical(rows(lst(table_plan(d)) |> plan_blanks(where = "none")), nrow(d))
+  # the same as listing_spec(blank_row = FALSE)
+  spec <- listing_spec(list(listing_col("USUBJID", width = 8), listing_col("T", width = 4),
+                            listing_col("V", width = 4)), blank_row = FALSE)
+  expect_identical(nrow(build_listing(d, spec)), nrow(d))
+  # a table: no blank rows, as before
+  expect_identical(rows(table_plan(d) |> plan_blanks(where = "none")), nrow(d))
 })
 
 test_that("plan_paginate_cols() cuts by a block list or a separator", {
@@ -3893,4 +3910,36 @@ test_that("plan_n_candidates(): nothing to read is no row, not an error", {
   expect_s3_class(nc, "data.frame")
   expect_identical(nrow(nc), 0L)
   expect_identical(names(nc), c("scope", "page", "column", "value"))
+})
+
+test_that("FT-PL046 [FR-PL160]: plan_columns(widths =) naming no column of the table stops, naming it", {
+  d <- data.frame(Item = c("a", "b"), A = c("1", "2"), B = c("3", "4"), Hid = c("x", "y"),
+                  stringsAsFactors = FALSE)
+  pages <- function(p) suppressMessages(plan_apply(p, "pages"))
+  # every name a column: fine; a hidden column's width is harmless
+  ok <- pages(table_plan(d) |> plan_hide("Hid") |>
+                plan_columns(widths = c(Item = 3, A = 1, B = 1, Hid = 9)))
+  ok <- if (inherits(ok, "rtftable")) ok else ok[[1L]]
+  expect_equal(as.numeric(ok$col_rel_width), c(3, 1, 1))
+  # a name that is no column: stops, with the name and the printed columns
+  err <- expect_error(pages(table_plan(d) |> plan_columns(widths = c(Item = 3, nope = 1, .values = 1))),
+                      "plan_columns(widths = ) names 'nope', not a column of the table", fixed = TRUE)
+  expect_match(conditionMessage(err), "Its printed columns: 'Item', 'A', 'B', 'Hid'", fixed = TRUE)
+})
+
+test_that("FT-PL047 [FR-PL172 FR-IX102]: plan_columns(widths =) with column_widths_twips stops: one of them", {
+  d <- data.frame(Item = c("a", "b"), A = c("1", "2"), stringsAsFactors = FALSE)
+  # in one call
+  expect_error(table_plan(d) |> plan_columns(widths = c(2, 1), column_widths_twips = c(3000, 1500)),
+               "`widths` and `column_widths_twips` both set the columns' widths", fixed = TRUE)
+  # in two calls: at plan_apply()
+  p <- table_plan(d) |> plan_columns(widths = c(Item = 2, A = 1)) |>
+    plan_columns(column_widths_twips = c(3000, 1500))
+  expect_error(suppressMessages(plan_apply(p, "pages")),
+               "Give one: `widths` (relative, by name or in order) or", fixed = TRUE)
+  # either alone: fine
+  tw <- suppressMessages(plan_apply(table_plan(d) |> plan_columns(column_widths_twips = c(3000, 1500)),
+                                    "pages"))
+  tw <- if (inherits(tw, "rtftable")) tw else tw[[1L]]
+  expect_identical(tw$column_widths_twips, c(3000L, 1500L))
 })

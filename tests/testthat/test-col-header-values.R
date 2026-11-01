@@ -1,7 +1,5 @@
 # set_col_header(values = ): {tokens} filled per page from a keyed table (#449)
 
-local_deprecated("stub_vars")  # deprecated in 0.8.x
-
 .vt_pages <- function(periods = c("Per 1", "Per 2"), pages = c("1", "2")) {
   arms <- c("Placebo", "TAK-003")
   days <- paste("Day", 1:2)
@@ -14,7 +12,7 @@ local_deprecated("stub_vars")  # deprecated in 0.8.x
     }))))
   as_rtftables(d, split = "by_value", group_col = "period", page_by = "page",
                drop_cols = c("page", "period"),
-               stub_vars = c("row_grp1", "label"), stub_label = "Sev")
+               stub = stub_spec(c("row_grp1", "label"), label = "Sev"))
 }
 
 .vt_hdr <- function() {
@@ -49,7 +47,7 @@ test_that("pages of one group share its row", {
 
 test_that("the keys survive drop_cols and the column split", {
   pg <- set_col_header(.vt_pages(), .vt_hdr(), values = .vt_vals()) |>
-    paginate_cols(by = "____", carry = 1, width = "keep")
+    paginate_cols(cut_by = "____", keep = 1, fit = FALSE)
   # the group column was dropped, yet every page still found its N
   labs <- vapply(pg, function(p) .span(p)$label, character(1L))
   expect_true(all(grepl("N=(120|118|115|112)", labs)))

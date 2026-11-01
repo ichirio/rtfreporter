@@ -676,8 +676,11 @@ test_that("style_body(rows = ) selects across the tables of a multi-table rtftab
 
 test_that("style_header() promotes, patches and warns where it must", {
   t1 <- edge_tbl()
+  # no header of its own: the columns' names (what prints) are made its
+  # header, then styled (#749)
   no_head <- rtftable(data.frame(a = 1))
-  expect_error(style_header(no_head, bold = TRUE), "this rtftable has no column header")
+  styled <- style_header(no_head, bold = TRUE)
+  expect_identical(styled$col_header, list("a"))
   expect_error(style_header(t1, row = 5, bold = TRUE),
                "`style_header\\(row = \\)` must be in 1..1")
   expect_error(style_header(t1, bold = "yes"), "bold")
@@ -748,94 +751,6 @@ test_that("set_col_header() and rtf_columns() say what is wrong with their input
   expect_identical(rtf_columns(list(t1, t1)), c("a", "b", "c"))
   expect_error(rtf_columns(list("a")), "expects rtftable pages")
   expect_error(col_cell(c(3, 1), "x"), "`pos` start must be <= end")
-})
-
-# ── rtftable overrides (what rtf_tables() applies to a built table) ────────
-
-test_that("the table overrides are stored, coerced and checked", {
-  ov <- rtfreporter:::.override_rtftable_fields
-  d <- data.frame(a = c("x", "y"), b = 1:2, c = c(1.5, 2.5), stringsAsFactors = FALSE)
-  t1 <- rtftable(d)
-  expect_identical(ov(t1, list()), t1)
-
-  r <- ov(t1, list(table_width_twips = 9000L, table_width_pct_of_writable = 0.8,
-                   table_align = "center", col_rel_width = c(1, 2, 3),
-                   column_widths_twips = c(1000, 2000, 3000),
-                   row_height_twips = 300, header_row_height_twips = 200,
-                   blank_row_height_twips = 100, row_height_exact = TRUE,
-                   cell_padding_left_twips = 50, cell_padding_right_twips = 60,
-                   cell_valign = "bottom", font_size_half_points = 16L,
-                   font = "Arial"))
-  expect_identical(r$table_width_twips, 9000L)
-  expect_identical(r$table_width_pct_of_writable, 0.8)
-  expect_identical(r$table_align, "center")
-  expect_identical(r$column_widths_twips, c(1000L, 2000L, 3000L))   # integers
-  expect_identical(r$row_height_twips, 300L)
-  expect_identical(r$header_row_height_twips, 200L)
-  expect_identical(r$blank_row_height_twips, 100L)
-  expect_true(r$row_height_exact)
-  expect_identical(r$cell_padding_left_twips, 50L)
-  expect_identical(r$cell_padding_right_twips, 60L)
-  expect_identical(r$cell_valign, "bottom")
-  expect_identical(r$font, "Arial")
-  # NULL clears
-  cleared <- ov(r, list(column_widths_twips = NULL, row_height_twips = NULL,
-                        header_row_height_twips = NULL, blank_row_height_twips = NULL,
-                        cell_padding_left_twips = NULL, cell_padding_right_twips = NULL))
-  expect_null(cleared$column_widths_twips)
-  expect_null(cleared$row_height_twips)
-  expect_null(cleared$cell_padding_right_twips)
-  expect_identical(ov(t1, list(table_width_pct = 80))$table_width_pct_of_writable, 0.8)
-
-  expect_error(ov(t1, list(table_align = "up")), "`table_align` must be 'left', 'center', or 'right'")
-  expect_error(ov(t1, list(row_height_exact = "yes")), "`row_height_exact` must be TRUE or FALSE")
-  expect_error(ov(t1, list(row_height_exact = c(TRUE, FALSE))), "`row_height_exact` must be TRUE or FALSE")
-  expect_error(ov(t1, list(cell_valign = "mid")), "`cell_valign` must be 'top', 'center', or 'bottom'")
-})
-
-test_that("overriding a header, blank rows, row titles and column specs", {
-  ov <- rtfreporter:::.override_rtftable_fields
-  d <- data.frame(a = c("x", "y"), b = 1:2, c = c(1.5, 2.5), stringsAsFactors = FALSE)
-  t1 <- rtftable(d)
-  m <- rtftable(list(d, d))
-
-  # a border and a header in the same call: the border sees the header
-  r <- ov(t1, list(border = "tfl", col_header = c("A", "B", "C")))
-  expect_identical(r$col_header, list(c("A", "B", "C")))
-  expect_false(is.null(r$border$header))
-
-  expect_identical(ov(t1, list(blank_rows = 2L))$blank_rows, 2L)
-  expect_null(ov(t1, list(blank_rows = NULL))$blank_rows)
-  multi <- ov(m, list(col_header = c("A", "B", "C"), blank_rows = c(2, 1, 2)))
-  expect_length(multi$col_header_list, 2L)
-  expect_identical(multi$blank_rows, c(1L, 2L))               # sorted, unique
-  expect_error(ov(m, list(col_header = list(1))),
-               "Multi-row col_header must contain only character vectors and")
-  # once a session: start from a clean slate, and put the state back
-  st <- rtfreporter:::.deprecation_state
-  saved <- as.list(st)
-  rm(list = ls(st), envir = st)
-  on.exit({ rm(list = ls(st), envir = st); list2env(saved, envir = st) }, add = TRUE)
-  expect_warning(ov(t1, list(spanning_header = list(list(from = 1, to = 2, label = "S")))),
-                 "`spanning_header =` is deprecated")
-
-  # row titles re-seed only the columns still at their default alignment
-  rt <- ov(t1, list(row_title = 2L))
-  expect_identical(rt$row_title, 2L)
-  expect_identical(vapply(rt$col_spec, function(s) s$align, ""),
-                   c("center", "left", "center"))
-
-  expect_error(ov(t1, list(col_spec = list(list(bold = TRUE)))),
-               "Each element of `col_spec` must be a list with a `col` key")
-  cs <- ov(t1, list(col_spec = list(list(col = "b", align = "right"),
-                                    list(col = "nope", bold = TRUE),
-                                    list(col = 9, bold = TRUE))))
-  expect_identical(cs$col_spec[[2]]$align, "right")
-  expect_identical(cs$col_spec[[2]]$header_align, "right")    # follows the data
-  expect_identical(vapply(ov(t1, list(col_header_align = "left"))$col_spec,
-                          function(s) s$header_align, ""), rep("left", 3))
-  expect_identical(vapply(ov(t1, list(col_header_align = c("left", "center", "right")))$col_spec,
-                          function(s) s$header_align, ""), c("left", "center", "right"))
 })
 
 # ── rendering: multi-table pages, section templates, widths, empty tables ──
@@ -1128,9 +1043,9 @@ test_that("the generated code's pipe is chosen by argument or option", {
   expect_identical(got, "%>%")
 })
 
-# ── deprecated arguments warn exactly once a session ───────────────────────
+# ── the border-reading change warns exactly once a session ─────────────────
 
-test_that("deprecated arguments and the border-reading change warn once, not every call", {
+test_that("the border-reading change warns once, not every call", {
   st <- rtfreporter:::.deprecation_state
   saved <- as.list(st)
   reset <- function() rm(list = ls(st), envir = st)
@@ -1142,27 +1057,9 @@ test_that("deprecated arguments and the border-reading change warn once, not eve
     })
     n
   }
-  d <- data.frame(g = c("a", "a", "b"), v = c("x", "y", "z"), n = 1:3,
-                  stringsAsFactors = FALSE)
-
-  reset()
-  expect_identical(n_warnings({
-    add_cont_label(d, "G", chunk = d)
-    add_cont_label(d, "G", chunk = d)
-  }), 1L)
-  reset()
-  expect_warning(add_cont_label(d, "G", chunk = d), "`add_cont_label\\(chunk = \\)` is deprecated")
-
-  reset()
-  expect_identical(n_warnings({
-    as_rtftables(d, stub_vars = c("g", "v"))
-    as_rtftables(d, stub_vars = c("g", "v"))
-  }), 1L)
-
   # the 0.5.0 reading of left/right: said once, and only where the readings differ
-  local_deprecated("rtf_table_border")
-  tb <- rtf_table_border(body = rtf_border(left = TRUE))
-  reset(); local_deprecated("rtf_table_border")
+  tb <- rtfreporter:::.rtf_table_border(body = rtf_border(left = TRUE))
+  reset()
   expect_identical(n_warnings({
     rtfreporter:::.warn_old_edge_reading(tb, 3L, 2L)
     rtfreporter:::.warn_old_edge_reading(tb, 3L, 2L)
@@ -1172,8 +1069,7 @@ test_that("deprecated arguments and the border-reading change warn once, not eve
   expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(NULL, 3L, 2L)), 0L)
   expect_false(rtfreporter:::.warn_old_edge_reading(NULL, 3L, 2L))
   # naming the interior rule silences it
-  local_deprecated("rtf_table_border")
-  quiet <- rtf_table_border(body = rtf_border(left = TRUE, inside_v = TRUE))
+  quiet <- rtfreporter:::.rtf_table_border(body = rtf_border(left = TRUE, inside_v = TRUE))
   expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(quiet, 3L, 2L)), 0L)
 })
 
@@ -1423,19 +1319,19 @@ test_that("as_rtftables() makes one page of an empty, one-row or one-column data
                strrep("long words ", 60), fixed = TRUE)
 })
 
-test_that("paginate_cols() explains a bad `by`, an unknown `at` and an empty cut", {
+test_that("paginate_cols() explains a bad `cut_by`, an unknown `at` and an empty cut", {
   d <- data.frame(id = c("s1", "s2"), `P____D1` = 1:2, `P____D2` = 3:4,
                   `Q____D1` = 5:6, `Q____D2` = 7:8, check.names = FALSE,
                   stringsAsFactors = FALSE)
   t1 <- rtftable(d, col_header = c("ID", "D1", "D2", "D1", "D2"))
-  expect_error(paginate_cols(t1, by = c("a", "b")),
-               "`by` must be a single separator found in the column names, or one key per column \\(5\\)")
-  expect_error(paginate_cols(t1, by = "____", carry = 1:5),
-               "`by` left no columns to split: every column is a carry column")
+  expect_error(paginate_cols(t1, cut_by = c("a", "b")),
+               "`cut_by` must be a list of column blocks, a single separator found in the column names, or one key per column \\(5\\)")
+  expect_error(paginate_cols(t1, cut_by = "____", keep = 1:5),
+               "`cut_by` left no columns to split: every column is a kept column")
   expect_error(paginate_cols(t1, at = 9), "`paginate_cols\\(at\\)` index 9 out of range \\(1..5\\)")
-  expect_error(paginate_cols(t1), "One of `at` \\(the columns to cut before\\), `cols` or `by` is required")
-  # one key per column is accepted, and the carry column is on every page
-  pages <- suppressWarnings(paginate_cols(t1, by = c(NA, "P", "P", "Q", "Q")))
+  expect_error(paginate_cols(t1), "One of `at` \\(the columns to cut before\\), `cut_by` or `every` is required")
+  # one key per column is accepted, and the kept column is on every page
+  pages <- paginate_cols(t1, cut_by = c(NA, "P", "P", "Q", "Q"))
   expect_length(pages, 2L)
   expect_identical(names(pages[[1]]$data), c("id", "P____D1", "P____D2"))
   expect_identical(names(pages[[2]]$data), c("id", "Q____D1", "Q____D2"))

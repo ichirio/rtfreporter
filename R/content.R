@@ -21,6 +21,8 @@
   if (!is.null(first_rows)) {
     return(.rtf_one_table(.content_split(x, .check_first_rows(first_rows))))
   }
+  # a table source before the class methods: a gt table is a list too
+  if (.is_table_source(x)) return(.rtf_one_table(as_rtftables(x)))
   UseMethod(".rtf_content")
 }
 
@@ -95,19 +97,26 @@
   .rtf_content_pages(pages, group, in_group)
 }
 
-# Anything else: a source a package registered an as_rtftables() method
-# for (gt, gtsummary, rtables, rlistings, flextable, huxtable, ...) becomes
-# its pages, one table; the rest is a figure -- rtfplot() knows what can be
-# drawn, and says what cannot.  `width_twips` / `height_twips` / `align`
+# Anything else (a table source as_rtftables() reads -- gt, gtsummary,
+# rtables, rlistings, flextable, huxtable, a class a package registered a
+# method for -- became its pages above) is a figure: rtfplot() knows what
+# can be drawn, and says what cannot.  `width_twips` / `height_twips` / `align`
 # and `draw_args` (render_width, render_height, render_dpi, png_device) are
 # how to show and draw it; a file path is never handed `draw_args`.
 .rtf_content.default <- function(x, ..., width_twips = NULL, height_twips = NULL,
                                  align = "center", draw_args = list()) {
-  if (.has_rtftables_method(x)) return(.rtf_one_table(as_rtftables(x)))
   fig <- do.call(rtfplot, c(list(x, width_twips = width_twips,
                                  height_twips = height_twips, align = align),
                             if (!is.character(x)) draw_args))
   .rtf_content_pages(list(fig), 1L, 1L)
+}
+
+# A table as_rtftables() reads: its own sources, which its default method
+# knows by class, and a class with a method of its own
+.is_table_source <- function(x) {
+  .has_rtftables_method(x) || .is_gt_tbl(x) || .is_gt_group(x) ||
+    .is_gtsummary_tbl(x) || .is_gtsummary_split(x) || .is_flextable_tbl(x) ||
+    .is_huxtable_tbl(x) || .is_rtables_tbl(x) || .is_rlistings_tbl(x)
 }
 
 # ---- first_rows: the rows the shared page takes -------------------------------

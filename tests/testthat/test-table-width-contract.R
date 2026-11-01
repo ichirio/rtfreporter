@@ -4,7 +4,7 @@
 #   col_rel_width        per column, relative -- apportions the total
 #   table_width_twips    the total, absolute
 #   table_width_pct      the total, as a percentage of the writable width
-#   nothing              the writable width, split equally
+#   nothing              the writable width, by default_col_widths()
 #
 # `table_width_twips` and `table_width_pct` are two spellings of the same
 # thing, so the absolute one wins; neither has anything to do with
@@ -41,9 +41,14 @@
 
 # ── rtftable(): the renderer defines the contract ────────────────────────────
 
-test_that("nothing given fills the writable width, split equally", {
-  expect_identical(.rendered_widths(rtftable(.wdf())),
-                   rep(.WRITABLE %/% 3L, 3L))
+test_that("nothing given fills the writable width, by default_col_widths()", {
+  w <- .rendered_widths(rtftable(.wdf()))
+  expect_identical(sum(w), .WRITABLE)
+  # the proportions default_col_widths() gives, to a twip or so of rounding
+  rel <- default_col_widths(.wdf(), digits = 6L)
+  expect_true(all(abs(w - .WRITABLE * rel / sum(rel)) <= 2))
+  # the data columns share the rest equally
+  expect_lte(abs(w[2L] - w[3L]), 1L)
 })
 
 test_that("col_rel_width apportions the total", {

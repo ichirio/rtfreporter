@@ -1,7 +1,5 @@
 # Column-header / spanning alignment and style — defaults, cascades, overrides.
 
-local_deprecated("spanning_header")  # deprecated in 0.8.x
-
 .render_tbl <- function(tbl) {
   doc <- rtf_document()
   doc <- rtf_section(doc, page = 1, secinfo = list(header = NULL, footer = NULL))
@@ -107,17 +105,18 @@ test_that("spanning alignment inherits from the level below (right-aligned data)
                    B_N = 30L, B_Mean = 46.1,
                    stringsAsFactors = FALSE)
   tbl <- rtftable(df,
-    col_header = c("Item", "N", "Mean", "N", "Mean"),
+    col_header = list(
+      list(
+        list(from = 2, to = 3, label = "Drug A"),
+        list(from = 4, to = 5, label = "Drug B")
+      ),
+      c("Item", "N", "Mean", "N", "Mean")),
     col_spec   = list(
       list(col = 1, align = "left"),
       list(col = 2, align = "right"),
       list(col = 3, align = "right"),
       list(col = 4, align = "right"),
       list(col = 5, align = "right")
-    ),
-    spanning_header = list(
-      list(from = 2, to = 3, label = "Drug A"),
-      list(from = 4, to = 5, label = "Drug B")
     ))
   txt <- .render_tbl(tbl)
   expect_identical(.span_align_for(txt, "Drug A"), "r")
@@ -127,13 +126,13 @@ test_that("spanning alignment inherits from the level below (right-aligned data)
 test_that("spanning alignment with mixed columns picks the leftmost", {
   df <- data.frame(L = "x", C = "y", R = 1L, stringsAsFactors = FALSE)
   tbl <- rtftable(df,
-    col_header = c("L", "C", "R"),
+    col_header = list(list(list(from = 1, to = 3, label = "All3")),
+                      c("L", "C", "R")),
     col_spec = list(
       list(col = 1, align = "left"),
       list(col = 2, align = "center"),
       list(col = 3, align = "right")
-    ),
-    spanning_header = list(list(from = 1, to = 3, label = "All3")))
+    ))
   txt <- .render_tbl(tbl)
   expect_identical(.span_align_for(txt, "All3"), "l")
 })
@@ -144,16 +143,17 @@ test_that("explicit sp$align overrides the inherited spanning alignment", {
                    B_N = 30L, B_Mean = 46.1,
                    stringsAsFactors = FALSE)
   tbl <- rtftable(df,
-    col_header = c("Item", "N", "Mean", "N", "Mean"),
+    col_header = list(
+      list(
+        list(from = 2, to = 3, label = "Override", align = "center")
+      ),
+      c("Item", "N", "Mean", "N", "Mean")),
     col_spec   = list(
       list(col = 1, align = "left"),
       list(col = 2, align = "right"),
       list(col = 3, align = "right"),
       list(col = 4, align = "right"),
       list(col = 5, align = "right")
-    ),
-    spanning_header = list(
-      list(from = 2, to = 3, label = "Override", align = "center")
     ))
   txt <- .render_tbl(tbl)
   expect_identical(.span_align_for(txt, "Override"), "c")
@@ -164,7 +164,8 @@ test_that("explicit sp$align overrides the inherited spanning alignment", {
 test_that("spanning bold/italic/underline default to FALSE", {
   df  <- data.frame(L = "x", C = "y", R = 1L, stringsAsFactors = FALSE)
   tbl <- rtftable(df,
-    spanning_header = list(list(from = 1, to = 3, label = "PureSpan")))
+    col_header = list(list(list(from = 1, to = 3, label = "PureSpan")),
+                      c("L", "C", "R")))
   txt <- .render_tbl(tbl)
   expect_false(grepl("\\\\b PureSpan",  txt))
   expect_false(grepl("\\\\i PureSpan",  txt))
@@ -175,15 +176,18 @@ test_that("spanning bold/italic/underline can be enabled per cell", {
   df  <- data.frame(L = "x", C = "y", R = 1L, stringsAsFactors = FALSE)
 
   tbl_b <- rtftable(df,
-    spanning_header = list(list(from = 1, to = 3, label = "BoldSpan", bold = TRUE)))
+    col_header = list(list(list(from = 1, to = 3, label = "BoldSpan", bold = TRUE)),
+                      c("L", "C", "R")))
   expect_match(.render_tbl(tbl_b), "\\\\b BoldSpan\\\\b0")
 
   tbl_i <- rtftable(df,
-    spanning_header = list(list(from = 1, to = 3, label = "ItalSpan", italic = TRUE)))
+    col_header = list(list(list(from = 1, to = 3, label = "ItalSpan", italic = TRUE)),
+                      c("L", "C", "R")))
   expect_match(.render_tbl(tbl_i), "\\\\i ItalSpan\\\\i0")
 
   tbl_u <- rtftable(df,
-    spanning_header = list(list(from = 1, to = 3, label = "ULSpan", underline = TRUE)))
+    col_header = list(list(list(from = 1, to = 3, label = "ULSpan", underline = TRUE)),
+                      c("L", "C", "R")))
   expect_match(.render_tbl(tbl_u), "\\\\ul ULSpan\\\\ulnone")
 })
 

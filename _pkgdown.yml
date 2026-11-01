@@ -233,6 +233,11 @@ navbar:
           href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md
         - text: "AI developer manual"
           href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.8.2.md
+        # ── Validation ──────────────────────────────────────────────────
+        - text: -------
+        - text: "Validation"
+        - text: "Validating rtfreporter in your environment"
+          href: articles/validation.html
         # ── Specification / internals (advanced) ────────────────────────
         - text: -------
         - text: "Specification & internals"
@@ -291,7 +296,8 @@ reference:
       `show_keys =` also shows a subgroup key's own counts as rows) and each
       `plan_*()` verb adds one declaration.  Nothing runs until the plan is
       handed to `rtf_tables()` or `plan_apply()`; a later layer wins.  The
-      verbs share one help page, `plan_verbs`; by job:
+      overview of every verb is `plan_verbs`, and each has a page of
+      its own; by job:
 
       * **cells**: `plan_cells()`, `plan_digits()`, `plan_stat_groups()`
       * **rows**: `plan_filter()`, `plan_sort()` (`-n@SOC`, `-n[Total]`),
@@ -303,13 +309,40 @@ reference:
         `plan_paginate_cols()`
       * **header and text**: `plan_col_header()`, `plan_titles()`,
         `plan_footnotes()`
-      * **the rest**: `plan_listing()`, `plan_after()`
+      * **the rest**: `plan_listing()`, `plan_append()`, `plan_after()`
 
       The *plan verbs* article has an at-a-glance table.  The Excel
       definition of a table lives in tflspec (`tflspec::tfl_table_plan()`).
     contents:
       - table_plan
       - plan_verbs
+      - plan_cells
+      - plan_digits
+      - plan_filter
+      - plan_sort
+      - plan_levels
+      - plan_labels
+      - plan_total
+      - plan_stub
+      - plan_col_header
+      - plan_append
+      - plan_stat_groups
+      - plan_nest
+      - plan_empty
+      - plan_compare
+      - plan_row_group
+      - plan_blanks
+      - plan_hide
+      - plan_cell_style
+      - plan_paginate_group
+      - plan_paginate_rows
+      - plan_paginate_cols
+      - plan_columns
+      - plan_style
+      - plan_titles
+      - plan_footnotes
+      - plan_listing
+      - plan_after
       - plan_apply
       - plan_template
   - subtitle: Looking inside a plan
@@ -512,6 +545,7 @@ reference:
     contents:
       - text_width_in
       - auto_col_widths
+      - default_col_widths
 
   # ── 4. Listings ─────────────────────────────────────────────────────
   - title: Listings (source data → listing body)
@@ -628,48 +662,15 @@ reference:
     contents:
       - rtfreporter_ai_manual
 
-  # ── 9. Deprecated ───────────────────────────────────────────────────
-  - title: Deprecated -- scheduled for removal
+  # ── 8b. Validation ──────────────────────────────────────────────────
+  - title: Validating rtfreporter in your environment
     desc: >
-      The border constructors that `rtf_border_line()` and `rtf_border()`
-      replaced at 0.5.0 / 0.6.0.  They still work and each warns once per
-      session, naming its replacement, and are **removed in 0.9.0** -- do not write new code against them.  `?rtf_border` pairs the old and the new spelling for every case.
-      `rtf_border_none()`, `rtf_border_top()`, `rtf_border_bottom()` and
-      `rtf_border_box()` are documented on the `rtf_border()` page itself.
-      Deprecated in 0.8.x by the pre-CRAN API review, and removed in 0.9.0
-      too: `rtf_border_side()`
-      (now `rtf_border_line()`, documented on its page), the header editors
-      below (write the header in `rtf_col_header()` / `rtf_header()`
-      instead), `paginate()` (use `as_rtftables()`), and the arguments
-      `rtftable(spanning_header = )` and `as_rtftable(gt_obj = )` (now `x`),
-      the `as_rtftables()` arguments `stub_vars` / `stub_label` /
-      `stub_indent` / `stub_group_summary` (now `stub = `), and the assembly
-      helpers below (`assemble_folder()` and `assemble_rtf(toc = <a table>)`).
-      Deprecated by the review's iteration 0 (#594), removed in 0.9.0 too:
-      the 26 table-format arguments of `rtf_tables()` and `read_gt` (write
-      them on `rtftable()` / `as_rtftables()` / `plan_style()`), and the cell
-      formatters below -- `fmt_count_paren_bare()` (now
-      `fmt_count_paren(bare = TRUE)`), `realign_count_pct()` (now
-      `as_rtftables(align_count_pct = TRUE)`) and `format_count_pct()` (now
-      `fmt_count_pct()`).
+      The templates a company copies and edits to validate the package for
+      its own use -- a Validation Plan, user requirements linked to the
+      package's Functional Requirements, UAT cases on dummy data, the
+      Traceability Matrix (URS -> FR -> UAT) and a Validation Summary Report.
     contents:
-      - rtf_border_with
-      - rtf_table_border
-      - rtf_border_tfl
-      - add_col_header_row
-      - col_header_from_names
-      - set_header_cell
-      - update_header_row
-      - paginate
-      - assemble_files
-      - assemble_spec
-      - assemble_toc
-      - assemble_from_spec
-      - toc_heading
-      - toc_entry
-      - fmt_count_paren_bare
-      - realign_count_pct
-      - format_count_pct
+      - rtfreporter_validation_kit
 
 # Articles index page (/articles/).  Same order as the navbar menu: the ARD +
 # plan workflow first, a table from another package second, then listings,
@@ -741,6 +742,14 @@ articles:
       - articles/borders
       - articles/output
       - articles/assembling
+
+  - title: Validation
+    desc: >
+      What the package provides as evidence of its quality, and the kit a
+      company edits to validate it in its own environment.
+    navbar: ~
+    contents:
+      - articles/validation
 
   - title: For contributors
     desc: >

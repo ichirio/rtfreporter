@@ -9,26 +9,28 @@ plan_apply(.plan, stage = c("auto", "input", "args", "table", "pages"))
 \arguments{
 \item{.plan}{An \code{\link[=table_plan]{table_plan()}}.}
 
-\item{stage}{How far to go.  \code{"auto"}, the default, is \strong{as far as the
-plan declares}: a plan that says nothing about the display stops at
-the table \code{data.frame}; one that carries a display verb goes on
-to the RTF pages.  You rarely need this function at all ---
-\code{\link[=rtf_tables]{rtf_tables()}} takes a plan directly --- and naming a stage is
-for looking inside: \code{"input"}, \code{"args"}, \code{"table"}, \code{"pages"}.
-
-The named stages: \code{"table"} returns the table
-\code{data.frame}, the same object \code{\link[=widen_ard]{widen_ard()}} returns.  \code{"input"}
-returns the frame going in, with the ARD column names the roles
-renamed.  \code{"args"} returns the resolved argument lists
-without running anything --- the call the plan amounts to, as
-\verb{$widen} (\code{\link[=widen_ard]{widen_ard()}}'s) and \verb{$rtf} (\code{\link[=as_rtftables]{as_rtftables()}}'s).  Both
-are resolved from layers and either can be the one that
-surprises: a page budget declared twice is last-wins, and the
-call you are editing may not be the one that decides, so
-\code{plan_apply(p, "args")$rtf$max_rows} is the way to ask.
-\code{"pages"} goes all the way: \code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=stub_cols]{stub_cols()}},
+\item{stage}{How far to go.  You rarely need this function at all ---
+\code{\link[=rtf_tables]{rtf_tables()}} takes a plan directly --- and naming a stage is for
+looking inside.
+\describe{
+\item{\code{"auto"}}{(default) As far as the plan declares: a plan that
+says nothing about the display stops at the table \code{data.frame}; one
+that carries a display verb goes on to the RTF pages.}
+\item{\code{"input"}}{The frame going in, with the ARD column names the
+roles renamed.}
+\item{\code{"args"}}{The resolved argument lists without running
+anything --- the call the plan amounts to, as \verb{$widen}
+(\code{\link[=widen_ard]{widen_ard()}}'s) and \verb{$rtf} (\code{\link[=as_rtftables]{as_rtftables()}}'s).  Both are
+resolved from layers and either can be the one that surprises: a
+page budget declared twice is last-wins, and the call you are
+editing may not be the one that decides, so
+\code{plan_apply(p, "args")$rtf$max_rows} is the way to ask.}
+\item{\code{"table"}}{The table \code{data.frame}, the same object
+\code{\link[=widen_ard]{widen_ard()}} returns.}
+\item{\code{"pages"}}{Goes all the way: \code{\link[=fmt_numeric]{fmt_numeric()}}, \code{\link[=stub_cols]{stub_cols()}},
 \code{\link[=as_rtftables]{as_rtftables()}}, \code{\link[=set_col_header]{set_col_header()}} and whatever \code{plan_after()}
 declared, giving the RTF pages.}
+}}
 }
 \value{
 A data frame; for \code{stage = "args"} the resolved argument list;

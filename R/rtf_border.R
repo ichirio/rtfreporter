@@ -5,7 +5,9 @@
 #
 #   rtf_border_line   -- one edge (style, width, color)
 #   rtf_border        -- four edges of a single cell/row
-#   rtf_table_border  -- per-zone borders for a full table
+#   rtf_table_border  -- per-zone borders for a full table (internal:
+#                        .rtf_table_border(); the exported constructor was
+#                        removed in 0.9.0)
 #
 # All three are plain S3 lists with a class attribute.  Reference semantics
 # are intentionally absent: every value is a pure record that travels with
@@ -19,45 +21,14 @@
 # Deprecation warnings fire once per session: a table-building loop would
 # otherwise repeat the same paragraph for every table.  The environment is
 # package-local, so the state dies with the session.
-# Exported functions that are deprecated and scheduled for bulk removal in
-# v0.9.0, which is also the first CRAN submission.  They still work, and each
-# warns once per session.
+# Exported functions that are deprecated and scheduled for removal.  Each
+# still works and warns once per session.
 #
 # Removing them in a MINOR is legal only because `MAJOR 0` means the package is
 # not formally released (see "Pre-1.0 is different" in CONTRIBUTING.md).  From
 # v1.0.0 the same removal would require a major.
-#
-# The API-review measure is deliberately the export count EXCLUDING these: a
-# function you are being told to stop using is not part of what a reader has to
-# learn.  test-api-surface.R asserts both numbers so the claim stays honest.
-.deprecated_exports <- c(
-  "rtf_border_top",    # -> rtf_border(top = TRUE)
-  "rtf_border_bottom", # -> rtf_border(bottom = TRUE)
-  "rtf_border_box",    # -> rtf_border(all = TRUE)
-  "rtf_border_none",   # -> rtf_border()
-  "rtf_border_with",   # -> layer at the attach point (style_zone() etc.)
-  "rtf_border_tfl",    # -> border = "tfl" / rtf_table_style_tfl()
-  "rtf_table_border",  # -> rtftable(border = ) / style_zone()
-  # 0.8.2.9013: the pre-CRAN API review (iteration 1); removed in 0.9.0
-  "rtf_border_side",       # -> rtf_border_line()
-  "add_col_header_row",    # -> a row of rtf_col_header()
-  "col_header_from_names", # -> the default (names split on header_sep)
-  "set_header_cell",       # -> style_header()
-  "update_header_row",     # -> rtf_header() made again
-  "update_footer_row",     # -> rtf_footer() made again
-  "paginate",              # -> as_rtftables() (deprecated since 0.7.x)
-  # 0.8.2.9014: the assembly helpers (N-5)
-  "assemble_files",        # -> assemble_folder()
-  "assemble_spec",         # -> assemble_folder() without output_file
-  "assemble_toc",          # -> assemble_rtf(toc = <table>)
-  "assemble_from_spec",    # -> assemble_rtf(toc = <table or its path>)
-  "toc_heading",           # -> the `heading` column of the table
-  "toc_entry",             # -> a row of the table
-  # 0.8.2.9039: the pre-CRAN API review, iteration 0 (#594 O2)
-  "fmt_count_paren_bare",  # -> fmt_value_paren()
-  "realign_count_pct",     # -> as_rtftables(align_count_pct = TRUE) / "count_pct"
-  "format_count_pct"       # -> fmt_count_pct()
-)
+# 0.9.0 removed the 0.5.0 - 0.8.x ones (#594, #788); none is deprecated now
+.deprecated_exports <- character(0)
 
 .deprecation_state <- new.env(parent = emptyenv())
 
@@ -161,8 +132,7 @@
 #' @param color Line colour.  `NULL` (default) = black.  Or a 6-digit hex
 #'   string such as `"#003366"`.
 #'
-#' `rtf_border_side()` is its old name: **deprecated** in 0.8.x (it warns once
-#' a session and still works) and removed in 0.9.0.
+#' `rtf_border_side()` was its old name, removed in 0.9.0.
 #'
 #' @return A list of class `"rtf_border_line"`.
 #'
@@ -186,16 +156,6 @@ rtf_border_line <- function(style = "single", width = 15L, color = NULL) {
     list(style = style, width = width, color = color),
     class = "rtf_border_line"
   )
-}
-
-#' @rdname rtf_border_line
-#' @export
-rtf_border_side <- function(style = "single", width = 15L, color = NULL) {
-  .deprecate_once(
-    "rtf_border_side",
-    paste0("`rtf_border_side()` is deprecated: it is `rtf_border_line()` now ",
-           "(the same arguments).\n  The old name is removed in 0.9.0."))
-  rtf_border_line(style = style, width = width, color = color)
 }
 
 # Resolve whatever a caller wrote for one side into an rtf_border_line.
@@ -243,7 +203,9 @@ print.rtf_border_line <- function(x, ...) {
 #' Specifies borders for up to four sides (top, bottom, left, right).  Each
 #' side is either `NULL` (no border) or a border side.
 #'
-#' To derive a new border from an existing one, pass it as `from`.
+#' To add to a border already in place, attach a second one where the first
+#' is: the places it attaches to merge side by side (see *Building versus
+#' layering*).
 #'
 #' @section What a border applies to:
 #'
@@ -274,8 +236,8 @@ print.rtf_border_line <- function(x, ...) {
 #'   style name  rtf_border(top = "single", bottom = "none")
 #' }
 #'
-#' The two agree: `TRUE` is a rule in this call's `style` / `width` / `color`,
-#' and `FALSE` is `"none"` -- an explicit *no line*, which erases a rule the
+#' The two agree: `TRUE` is `rtf_border_line()` with its defaults (a single
+#' rule), and `FALSE` is `"none"` -- an explicit *no line*, which erases a rule the
 #' selection would otherwise inherit. The style names are `"single"`,
 #' `"double"`, `"thick"`, `"dash"`, `"dot"` and `"none"`.
 #'
@@ -307,8 +269,8 @@ print.rtf_border_line <- function(x, ...) {
 #'     the enclosing selection supplies.}
 #'   \item{erased (`FALSE` / `"none"`)}{an explicit *no line*, which overrides
 #'     an inherited rule.}
-#'   \item{a rule (`TRUE` / a style name)}{drawn in this call's `style`,
-#'     `width` and `color`.}
+#'   \item{a rule (`TRUE` / a style name)}{an [rtf_border_line()]: its
+#'     defaults for `TRUE`, that style for a name.}
 #' }
 #'
 #' A call to `rtf_border()` says everything about the border it returns: every
@@ -332,7 +294,8 @@ print.rtf_border_line <- function(x, ...) {
 #'
 #' @section Writing borders before and after 0.5.0:
 #'
-#' Two things changed at 0.5.0.  [rtf_table_border()] is deprecated, so a
+#' Two things changed at 0.5.0.  `rtf_table_border()` was deprecated (and
+#' removed in 0.9.0), so a
 #' border is aimed with `rtftable(border = )` or [style_zone()] instead; and an
 #' edge now always means the **outer** edge of the selection, so the rules
 #' *inside* it have to be asked for by name.  Each case below, `s` being an
@@ -385,10 +348,9 @@ print.rtf_border_line <- function(x, ...) {
 #'   rtf_border_tfl()                  ->  border = "tfl", rtf_table_style_tfl()
 #' }
 #'
-#' All of them still work and warn once per session; they are removed in
-#' 0.9.0, the first CRAN release.
+#' All of them were removed in 0.9.0.
 #'
-#' `border = "tfl"` and [rtf_border_tfl()] are unaffected, as is any border on
+#' `border = "tfl"` is unaffected, as is any border on
 #' a single cell ([col_cell()], `cell_styles`): a cell has no inside, so its
 #' four edges never meant anything else.
 #'
@@ -469,178 +431,9 @@ print.rtf_border <- function(x, ...) {
   invisible(x)
 }
 
-#' Return a copy of an `rtf_border` with selected sides replaced
-#'
-#' Non-mutating: returns a new `rtf_border` with the supplied side(s) set on
-#' top of `border`.  `NULL` arguments leave the corresponding side unchanged.
-#'
-#' @param border An [rtf_border()] object.  `NULL` is accepted and treated as
-#'   an empty border.
-#' @param top,bottom,left,right Replacement side values, or
-#'   `NULL` to leave a side unchanged.
-#' @param inside_h,inside_v Replacement side values for the
-#'   between-rows and between-cells rules, or `NULL` to leave them unchanged.
-#'
-#' @return A new `rtf_border` object.
-#'
-#' @examples
-#' b <- rtf_border(top = TRUE, bottom = TRUE)
-#' rtf_border(top = b$top, bottom = rtf_border_line(color = "#003366"))
-#' rtf_border(top = "none", bottom = b$bottom)   # an explicit no-line on top
-#' @export
-rtf_border_with <- function(border, top = NULL, bottom = NULL,
-                            left = NULL, right = NULL,
-                            inside_h = NULL, inside_v = NULL) {
-  .deprecate_once(
-    "rtf_border_with",
-    paste0(
-      "`rtf_border_with()` is deprecated. Layering happens where a border is ",
-      "attached:\n",
-      "    style_zone() / style_header() / style_body() merge side by side, ",
-      "so a\n    second call adds to the first instead of replacing it.\n",
-      "  A border that needs different weights or colours per side says so in ",
-      "one\n  call: rtf_border(top = rtf_border_line(...), bottom = ",
-      "rtf_border_line(...))."))
-  if (is.null(border)) border <- rtf_border()
-  if (!inherits(border, "rtf_border")) {
-    stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
-  }
-  args <- list()
-  if (!missing(top))      args$top      <- top
-  if (!missing(bottom))   args$bottom   <- bottom
-  if (!missing(left))     args$left     <- left
-  if (!missing(right))    args$right    <- right
-  if (!missing(inside_h)) args$inside_h <- inside_h
-  if (!missing(inside_v)) args$inside_v <- inside_v
-  .merge_rtf_border(border, do.call(rtf_border, args))
-}
-
-
-# -- Convenience rtf_border constructors ----------------------------------------
-
-.deprecate_sugar <- function(fn, replacement) {
-  .deprecate_once(fn, sprintf(
-    "`%s()` is deprecated: write `%s` instead.  See ?rtf_border.",
-    fn, replacement))
-}
-
-#' @describeIn rtf_border Deprecated. Write `rtf_border()`.
-#' @export
-rtf_border_none <- function() {
-  .deprecate_sugar("rtf_border_none", "rtf_border()")
-  rtf_border()
-}
-
-#' @describeIn rtf_border Deprecated. Write `rtf_border(top = TRUE)`.
-#' @param style,width,color Line style, weight in twips and colour, as in
-#'   [rtf_border_line()].
-#' @export
-rtf_border_top <- function(style = "single", width = 15L, color = NULL) {
-  .deprecate_sugar("rtf_border_top", "rtf_border(top = TRUE)")
-  rtf_border(top = rtf_border_line(style, width, color))
-}
-
-#' @describeIn rtf_border Deprecated. Write `rtf_border(bottom = TRUE)`.
-#' @export
-rtf_border_bottom <- function(style = "single", width = 15L, color = NULL) {
-  .deprecate_sugar("rtf_border_bottom", "rtf_border(bottom = TRUE)")
-  rtf_border(bottom = rtf_border_line(style, width, color))
-}
-
-#' @describeIn rtf_border Deprecated. Write `rtf_border(all = TRUE)`.
-#' @export
-rtf_border_box <- function(style = "single", width = 15L, color = NULL) {
-  .deprecate_sugar("rtf_border_box", "rtf_border(all = TRUE)")
-  rtf_border(all = rtf_border_line(style, width, color))
-}
 
 
 # -- rtf_table_border ----------------------------------------------------------
-
-#' Per-zone border specification for a table
-#'
-#' Specifies borders for each logical zone of an [rtftable()].
-#' Each zone is either `NULL` (no border) or an [rtf_border()] object.
-#' `first_row` and `last_row` are *overrides* merged on top of the `body` spec.
-#'
-#' @section Deprecated since 0.5.0:
-#'
-#' A border is now written once with [rtf_border()], and *where* it applies is
-#' decided by where you attach it:
-#'
-#' \preformatted{
-#'   rtftable(border = rtf_border(...))                    # the whole table
-#'   style_zone(header = rtf_border(...), body = ...)      # one kind of row
-#'   col_cell(border = rtf_border(...))                    # one cell
-#' }
-#'
-#' `outer =` becomes the four edges of that `rtf_border()`; `inside_h =` and
-#' `inside_v =` keep their names.  This function still works and still returns
-#' the same value, but warns once per session.
-#'
-#' @inheritSection rtf_border Writing borders before and after 0.5.0
-#'
-#' @param header    [rtf_border()] for column-header rows.  `NULL` = none.
-#' @param spanning  [rtf_border()] for spanning-header rows.  `NULL` = none.
-#' @param body      [rtf_border()] for data rows.  `NULL` = none.
-#' @param first_row [rtf_border()] override for the first data row.
-#' @param last_row  [rtf_border()] override for the last data row.
-#' @param outer     [rtf_border()] for the table's four outermost edges, or
-#'   `NULL` (default).  See the section above.
-#' @param inside_h,inside_v Side values for the rules between rows and
-#'   between cells, or `NULL` (default).
-#'
-#' @return A list of class `"rtf_table_border"`.
-#'
-#' @seealso [rtf_border()] for the pieces; pass the result
-#'   as `rtftable(border = )`.
-#'
-#' @examples
-#' s  <- TRUE
-#' df <- data.frame(A = c("1", "2"), B = c("x", "y"))
-#'
-#' # The clinical TFL look, spelled out one row kind at a time.
-#' rtftable(df, border = "none") |>
-#'   style_zone(header   = rtf_border(top = s, bottom = s),
-#'              last_row = rtf_border(bottom = s))
-#'
-#' # The listing look: outer frame plus a rule under every row, and no vertical
-#' # rules between the columns.
-#' rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
-#'                                  inside_h = s))
-#'
-#' # A full grid: add the rules between the cells.
-#' rtftable(df, border = rtf_border(top = s, bottom = s, left = s, right = s,
-#'                                  inside_h = s, inside_v = s))
-#'
-#' # Deprecated: the same thing written the old way (it says so once).
-#' rtf_table_border(header = rtf_border(top = s, bottom = s))
-#' @export
-rtf_table_border <- function(header    = NULL,
-                              spanning  = NULL,
-                              body      = NULL,
-                              first_row = NULL,
-                              last_row  = NULL,
-                              outer     = NULL,
-                              inside_h  = NULL,
-                              inside_v  = NULL) {
-  .deprecate_once(
-    "rtf_table_border",
-    paste0(
-      "`rtf_table_border()` is deprecated: a border is now written once with ",
-      "`rtf_border()`, and *where* it applies is decided by where you attach ",
-      "it.\n",
-      "  whole table : rtftable(border = rtf_border(...))\n",
-      "  one row kind: style_zone(header = rtf_border(...), body = ...)\n",
-      "  one cell    : col_cell(border = rtf_border(...))\n",
-      "  `outer =` becomes the four edges of that rtf_border(); `inside_h =` ",
-      "and `inside_v =` keep their names.\n",
-      "  See ?rtf_border, section \"Writing borders before and after 0.5.0\", ",
-      "for the old and new spelling of each case."))
-  .rtf_table_border(header = header, spanning = spanning, body = body,
-                    first_row = first_row, last_row = last_row,
-                    outer = outer, inside_h = inside_h, inside_v = inside_v)
-}
 
 # The five-zone map, unexported.  It stays the renderer's internal vocabulary;
 # users address a row kind with style_zone() or rtf_table_style(border_* = ).
@@ -777,43 +570,6 @@ print.rtf_table_border <- function(x, ...) {
 
 
 # -- TFL preset ----------------------------------------------------------------
-
-#' Clinical TFL-style table border preset
-#'
-#' Returns an [rtf_table_border()] matching the standard clinical TFL style:
-#' **borders are applied to the column-header block only**, with no
-#' borders in the data area by default.  Specifically:
-#'
-#' * `header$top`    -- top border on the topmost header row
-#' * `header$bottom` -- bottom border on the bottommost header row
-#' * A multi-column spanning cell additionally receives a bottom border
-#'   (group underline) **only where the column grouping changes below it**
-#'   -- that is, when the next header row subdivides the columns the span
-#'   covers.  A span repeated unchanged on the following row is not
-#'   underlined.  This is added automatically by the renderer.
-#' * No vertical lines.
-#' * **No borders on the data section** (`body` / `first_row` /
-#'   `last_row` all `NULL`).  Callers who want a bottom rule under the
-#'   last data row can set it explicitly:
-#'   `rtf_table_border(last_row = rtf_border(bottom = TRUE))`.
-#'
-#' @inheritParams rtf_border_line
-#' @return An `rtf_table_border` object.
-#'
-#' @examples
-#' rtf_border_tfl()                         # the standard clinical TFL rules
-#' rtf_border_tfl(width = 30L)              # heavier rules
-#' rtftable(data.frame(A = 1:2), border = rtf_border_tfl())
-#' @export
-rtf_border_tfl <- function(style = "single", width = 15L, color = NULL) {
-  .deprecate_once(
-    "rtf_border_tfl",
-    paste0(
-      "`rtf_border_tfl()` is deprecated: the clinical TFL rules are already ",
-      "reachable as\n  `rtftable(border = \"tfl\")`, and as a reusable value ",
-      "from `rtf_table_style_tfl()`."))
-  .rtf_border_tfl(style = style, width = width, color = color)
-}
 
 # The preset itself, for `border = "tfl"` and rtf_table_style_tfl().
 .rtf_border_tfl <- function(style = "single", width = 15L, color = NULL) {

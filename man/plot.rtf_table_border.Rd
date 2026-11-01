@@ -7,7 +7,8 @@
 \method{plot}{rtf_table_border}(x, ...)
 }
 \arguments{
-\item{x}{An \code{\link[=rtf_table_border]{rtf_table_border()}} object.}
+\item{x}{An \code{rtf_table_border} object: a table's resolved per-zone
+borders, e.g. the \code{border} of an \code{\link[=rtftable]{rtftable()}}.}
 
 \item{...}{Unused.}
 }
@@ -19,5 +20,6 @@ Draws a schematic table with the four zones (header, body, first_row,
 last_row) coloured to show which one provides which border.
 }
 \examples{
-plot(rtf_border_tfl())          # preview the clinical TFL border zones
+tbl <- rtftable(data.frame(A = 1:2, B = 3:4), border = "tfl")
+plot(tbl$border)          # preview the clinical TFL border zones
 }

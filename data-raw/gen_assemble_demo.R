@@ -188,16 +188,13 @@ convert_to_pdf <- function(rtf) {
 
 # Build the multi-level TOC for a given set of 3 input files.
 build_toc_for <- function(f1, f2, f3) {
-  list(
-    toc_heading("EFFICACY ANALYSES", level = 1),
-    toc_entry  ("Table 14.1.1 Demographics and Baseline Characteristics",
-                file = f1, level = 2),
-    toc_heading("SAFETY ANALYSES",   level = 1),
-    toc_entry  ("Table 14.2.1 Adverse Events Summary",
-                file = f2, level = 2),
-    toc_heading("LISTINGS",          level = 1),
-    toc_entry  ("Listing 16.1 Subject Disposition",
-                file = f3, level = 2)
+  data.frame(
+    file    = c(f1, f2, f3),
+    label   = c("Table 14.1.1 Demographics and Baseline Characteristics",
+                "Table 14.2.1 Adverse Events Summary",
+                "Listing 16.1 Subject Disposition"),
+    heading = c("EFFICACY ANALYSES", "SAFETY ANALYSES", "LISTINGS"),
+    level   = 2L
   )
 }
 

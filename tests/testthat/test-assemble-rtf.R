@@ -1,7 +1,5 @@
 # assemble_rtf.R -- concatenate multiple rtfreporter-generated RTFs.
 
-local_deprecated("toc_heading", "toc_entry")  # deprecated in 0.8.x
-
 .write_demo_rtf <- function(title) {
   doc <- rtf_document()
   doc <- rtf_section(doc, page = 1, secinfo = list(
@@ -240,35 +238,21 @@ test_that("toc = 'auto' falls back to basename when no title is detected", {
   expect_match(txt, "Real Title")
 })
 
-# ──────── Structured TOC: toc_heading() + toc_entry() ─────────────────────
+# ──────── Structured TOC: a table (file, label, heading, level) ───────────
 
-test_that("toc_heading() and toc_entry() build the expected S3 objects", {
-  h <- toc_heading("EFFICACY", level = 1)
-  expect_s3_class(h, "rtf_toc_heading")
-  expect_identical(h$label, "EFFICACY")
-  expect_identical(h$level, 1L)
-
-  e <- toc_entry("Table 14.1.1", file = "t14_1_1.rtf", level = 2)
-  expect_s3_class(e, "rtf_toc_entry")
-  expect_identical(e$label, "Table 14.1.1")
-  expect_identical(e$file,  "t14_1_1.rtf")
-  expect_identical(e$level, 2L)
-})
-
-test_that("structured toc list assigns entries to files in declaration order", {
+test_that("structured toc table assigns entries to files in declaration order", {
   f1 <- .write_demo_rtf("A"); f2 <- .write_demo_rtf("B"); f3 <- .write_demo_rtf("C")
   on.exit(unlink(c(f1, f2, f3)), add = TRUE)
 
   out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
   assemble_rtf(
     c(f1, f2, f3), out,
-    toc = list(
-      toc_heading("EFFICACY ANALYSES"),
-      toc_entry("Table 14.1.1 Demographics"),       # auto-bound to f1
-      toc_heading("SAFETY ANALYSES"),
-      toc_entry("Table 14.2.1 Adverse Events"),     # auto-bound to f2
-      toc_entry("Listing 16.1 Disposition")         # auto-bound to f3
-    ),
+    toc = data.frame(
+      file    = c(f1, f2, f3),
+      label   = c("Table 14.1.1 Demographics", "Table 14.2.1 Adverse Events",
+                  "Listing 16.1 Disposition"),
+      heading = c("EFFICACY ANALYSES", "SAFETY ANALYSES", NA),
+      stringsAsFactors = FALSE),
     overwrite = TRUE
   )
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -279,32 +263,6 @@ test_that("structured toc list assigns entries to files in declaration order", {
   expect_match(txt, "Disposition")
   # 3 bookmarks (one per source file)
   expect_identical(length(gregexpr("bkmkstart tfl_", txt)[[1L]]), 3L)
-})
-
-test_that("toc_entry(file = ...) supports both path and integer index", {
-  f1 <- .write_demo_rtf("X"); f2 <- .write_demo_rtf("Y")
-  on.exit(unlink(c(f1, f2)), add = TRUE)
-  out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
-  expect_invisible(
-    assemble_rtf(c(f1, f2), out,
-                 toc = list(
-                   toc_entry("Entry A", file = f1),
-                   toc_entry("Entry B", file = 2L)
-                 ),
-                 overwrite = TRUE)
-  )
-})
-
-test_that("toc_entry(file) referring to a missing input file errors clearly", {
-  f1 <- .write_demo_rtf("X"); f2 <- .write_demo_rtf("Y")
-  on.exit(unlink(c(f1, f2)), add = TRUE)
-  out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
-  expect_error(
-    assemble_rtf(c(f1, f2), out,
-                 toc = list(toc_entry("X", file = "ghost.rtf")),
-                 overwrite = TRUE),
-    "not in"
-  )
 })
 
 # ──────── Page-numbering modes ─────────────────────────────────────────────
@@ -492,7 +450,7 @@ test_that("toc-enabled assembly emits \\outlinelevel paragraphs (PDF outline pan
   expect_match(txt, "Table B")
 })
 
-test_that("outline labels fall back to basename when a file has no toc_entry", {
+test_that("outline labels fall back to basename when a file has no toc row", {
   f1 <- .write_demo_rtf("X"); f2 <- .write_demo_rtf("Y")
   # Rename so we can spot the basename in the output
   f2b <- file.path(dirname(f2), "fallback_label_42.rtf")
@@ -500,7 +458,8 @@ test_that("outline labels fall back to basename when a file has no toc_entry", {
   on.exit(unlink(c(f1, f2b)), add = TRUE)
   out <- tempfile(fileext = ".rtf"); on.exit(unlink(out), add = TRUE)
   assemble_rtf(c(f1, f2b), out,
-               toc = list(toc_entry("Only entry for first", file = f1)),
+               toc = data.frame(file = f1, label = "Only entry for first",
+                                stringsAsFactors = FALSE),
                overwrite = TRUE)
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(txt, "Only entry for first")
@@ -723,8 +682,8 @@ test_that("assemble_rtf TOC caches cumulative page numbers (decimal = continuous
   f2 <- .write_demo_rtf("Second")
   out <- tempfile(fileext = ".rtf")
   assemble_rtf(c(f1, f2), out, overwrite = TRUE,
-    toc = list(toc_entry("First",  file = f1, level = 1),
-               toc_entry("Second", file = f2, level = 1)),
+    toc = data.frame(file = c(f1, f2), label = c("First", "Second"),
+                     level = 1L, stringsAsFactors = FALSE),
     toc_page_numbering = "decimal")
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   # Each TOC entry caches its page number in the PAGEREF field's result.
@@ -732,4 +691,45 @@ test_that("assemble_rtf TOC caches cumulative page numbers (decimal = continuous
   pages <- as.integer(sub(".*fldrslt ([0-9]+)$", "\\1", hits))
   # TOC is page 1; the two 1-page tables start on pages 2 and 3.
   expect_equal(pages, c(2L, 3L))
+})
+
+test_that("a TOC over 2 pages breaks itself and counts its pages (#767)", {
+  f1 <- .write_demo_rtf("First")
+  f2 <- .write_demo_rtf("Second")
+  out <- tempfile(fileext = ".rtf"); on.exit(unlink(c(f1, f2, out)), add = TRUE)
+  toc <- data.frame(file    = c(f1, rep(f2, 59)),
+                    label   = sprintf("Table 14.%d Summary", 1:60),
+                    heading = "Tables", level = 2L, stringsAsFactors = FALSE)
+  assemble_rtf(c(f1, f2), out, overwrite = TRUE, toc = toc, toc_page_numbering = "decimal")
+  txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  n_toc <- max(rtfreporter:::.toc_entry_pages(rtfreporter:::.spec_to_toc(toc)))
+  expect_gt(n_toc, 1L)
+  # the TOC's own page breaks, one before each later TOC page
+  expect_equal(lengths(regmatches(txt, gregexpr("\\\\pagebb", txt))), n_toc - 1L)
+  hits  <- regmatches(txt, gregexpr("PAGEREF.{1,60}?fldrslt [0-9]+", txt))[[1L]]
+  pages <- unique(as.integer(sub(".*fldrslt ([0-9]+)$", "\\1", hits)))
+  expect_equal(pages, n_toc + c(1L, 2L))
+})
+
+test_that("a heading never closes a TOC page (#767)", {
+  long <- lapply(seq_len(36), function(i) list(type = "entry", label = "x", level = 1))
+  e <- c(long, list(list(type = "heading", label = "H", level = 1)),
+         lapply(1:3, function(i) list(type = "entry", label = "y", level = 2)))
+  p <- rtfreporter:::.toc_entry_pages(e)
+  h <- which(vapply(e, function(x) x$type == "heading", logical(1L)))
+  expect_identical(p[h], p[h + 1L])
+})
+
+test_that("rtfplot() checks the PNG signature and the twips (#767)", {
+  bad <- tempfile(fileext = ".png"); on.exit(unlink(bad), add = TRUE)
+  writeBin(as.raw(seq_len(40)), bad)
+  expect_error(rtfplot(bad), "Not a PNG file")
+  png_f <- tempfile(fileext = ".png"); on.exit(unlink(png_f), add = TRUE)
+  grDevices::png(png_f, width = 200, height = 100); graphics::par(mar = c(0, 0, 0, 0))
+  graphics::plot.new(); grDevices::dev.off()
+  expect_s3_class(rtfplot(png_f), "rtfplot")
+  for (v in list(NA, 0, -5, "wide", c(1, 2))) {
+    expect_error(rtfplot(png_f, width_twips = v), "positive number of twips")
+    expect_error(rtfplot(png_f, height_twips = v), "positive number of twips")
+  }
 })

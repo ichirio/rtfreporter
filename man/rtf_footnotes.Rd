@@ -26,15 +26,21 @@ string lands in whichever slot \code{align} selects.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
 this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
-\code{font} names a family (e.g. \code{"Arial"}); one not already in the document's
-\code{font_table} is added to it automatically, the way a colour is.
-A named vector gives one family per script slot (\code{latin},
-\code{east_asian}, \code{complex}, optional \code{hansi}), e.g. \code{c(latin = "Times New Roman", east_asian = "MS Mincho")}; see \code{\link[=rtf_document]{rtf_document()}}.
-Anything left \code{NULL} is inherited. Font size and row height resolve
-\strong{together}: a size given without a height recomputes the height from
-that size rather than inheriting one chosen for a different size, and an
-explicit height always wins. \code{align} sets the block's default row
-alignment; a per-row \code{align} still beats it.}
+Anything left \code{NULL} is inherited.
+\describe{
+\item{\code{font}}{names a family (e.g. \code{"Arial"}); one not already in the
+document's \code{font_table} is added to it automatically, the way a
+colour is.  A named vector gives one family per script slot
+(\code{latin}, \code{east_asian}, \code{complex}, optional \code{hansi}), e.g.
+\code{c(latin = "Times New Roman", east_asian = "MS Mincho")}; see
+\code{\link[=rtf_document]{rtf_document()}}.}
+\item{\code{font_size_half_points}, \code{row_height_twips}}{resolve
+\strong{together}: a size given without a height recomputes the height
+from that size rather than inheriting one chosen for a different
+size, and an explicit height always wins.}
+\item{\code{align}}{sets the block's default row alignment; a per-row
+\code{align} still beats it.}
+}}
 
 \item{border}{\code{NULL} (default) for \strong{no rule} -- unlike the page footer,
 the footnote draws none unless asked. An \code{\link[=rtf_border]{rtf_border()}} puts one on the
@@ -47,8 +53,8 @@ Modified rtf_document.
 Same shape as \code{\link[=rtf_titles]{rtf_titles()}}: a list with one block per content (table or
 figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
 or \code{list(text=, align=, bold=, italic=, underline=, color=, border=)}).
-Footnote rows default to left-aligned, and the first row carries a top rule
-(the separator) unless that row sets its own \code{border}. \code{NULL} per element
+Footnote rows default to left-aligned and draw no rule unless \code{border}
+(or a row's own \code{border}) asks for one. \code{NULL} per element
 suppresses the footnote for that content.
 }
 \examples{

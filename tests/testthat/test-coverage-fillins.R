@@ -157,30 +157,30 @@ test_that("as_rtftable() forwards `...` to rtftable (e.g. col_rel_width passes t
 })
 
 
-# ── R/paginate.R: defensive empty-input paths ──────────────────────
+# ── R/paginate.R (.paginate_df): defensive empty-input paths ──────────────────────
 
-test_that("paginate() of an empty data.frame returns one empty chunk", {
-  res <- paginate(data.frame(x = integer(0)), max_rows = 5L)
+test_that(".paginate_df() of an empty data.frame returns one empty chunk", {
+  res <- rtfreporter:::.paginate_df(data.frame(x = integer(0)), max_rows = 5L)
   expect_length(res, 1L)
   expect_identical(nrow(res[[1L]]), 0L)
 })
 
-test_that("paginate() of a one-page-fit data.frame returns the same data", {
+test_that(".paginate_df() of a one-page-fit data.frame returns the same data", {
   # Hits the `nrow(df) <= max_rows -> single-chunk` early-return path.
-  # `paginate()` attaches an `rtf_paginate_meta` attribute to every
+  # `.paginate_df()` attaches an `rtf_paginate_meta` attribute to every
   # chunk; compare values only (drop attributes for the equality test).
   df  <- data.frame(grp = c("A", "A", "B"), x = 1:3)
-  res <- paginate(df, max_rows = 10L)
+  res <- rtfreporter:::.paginate_df(df, max_rows = 10L)
   expect_length(res, 1L)
   out <- res[[1L]]
   attr(out, "rtf_paginate_meta") <- NULL
   expect_identical(out, df)
 })
 
-test_that("paginate() errors on a list containing a garbage entry", {
+test_that(".paginate_df() errors on a list containing a garbage entry", {
   expect_error(
-    paginate(data.frame(x = 1:5), max_rows = 3L,
-             blank_rows = list("not_a_spec_string")),
+    rtfreporter:::.paginate_df(data.frame(x = 1:5), max_rows = 3L,
+                               blank_rows = list("not_a_spec_string")),
     "Unrecognised"
   )
 })

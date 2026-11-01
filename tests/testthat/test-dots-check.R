@@ -4,8 +4,6 @@
 # setting instead of applying it, because `colS` fell into `...` and the call
 # then ran with `cols = NULL`.
 
-local_deprecated("set_header_cell")  # deprecated in 0.8.x
-
 mk <- function() {
   df <- data.frame(P = c("a", "b"), Q = c("x", "y"),
                    V1 = c("12.5", "3.45"), V2 = c("100.25", "7.5"),
@@ -48,7 +46,7 @@ test_that(".check_dots keeps unnamed arguments in order when dropping a typo", {
 })
 
 test_that("a positional call through a page list still works", {
-  pages <- paginate_cols(mk(), at = 4, carry = 1:2)
+  pages <- paginate_cols(mk(), at = 4, keep = 1:2)
   expect_silent(out <- add_header_row(pages, c("A", "B", "C")))
   expect_length(out, 2L)
 })
@@ -117,7 +115,7 @@ test_that("partial matching still resolves a prefix", {
 })
 
 test_that("a page list warns once per call, not once per page", {
-  pages <- paginate_cols(mk(), at = 4, carry = 1:2)
+  pages <- paginate_cols(mk(), at = 4, keep = 1:2)
   expect_length(pages, 2L)
   n <- 0L
   withCallingHandlers(
@@ -130,7 +128,7 @@ test_that("a page list warns once per call, not once per page", {
 test_that("a page list with the correct spelling is unaffected", {
   # each page is the 2 carry columns plus 1 data column, so column 3 is the
   # only data column present
-  pages <- paginate_cols(mk(), at = 4, carry = 1:2)
+  pages <- paginate_cols(mk(), at = 4, keep = 1:2)
   expect_silent(out <- set_decimal_split(pages, cols = 3L))
   expect_identical(out[[1L]]$decimal_split$cols, 3L)
 })
@@ -159,8 +157,8 @@ test_that("style_header() warns about an unknown argument", {
 })
 
 test_that("paginate_cols() warns about an unknown argument", {
-  expect_warning(paginate_cols(mk(), at = 4L, carrry = 1:2),
-                 "did you mean `carry`")
+  expect_warning(paginate_cols(mk(), at = 4L, kepp = 1:2),
+                 "did you mean `keep`")
 })
 
 test_that("add_header_row() warns about an unknown argument", {
@@ -177,17 +175,12 @@ test_that("set_col_header() still takes its rows through `...`", {
   expect_length(tbl$col_header, 1L)
 })
 
-test_that("set_header_cell() still takes its cells through `...`", {
-  tbl <- set_col_header(mk(), c("A", "B", "C", "D"))
-  expect_silent(set_header_cell(tbl, col_cell(1L, "Z"), row = 1L))
-})
-
 test_that("existing pipelines produce no new warnings", {
   expect_silent({
     mk() |>
       set_decimal_split(cols = 3:4) |>
       style_cols(cols = 1L, align = "left") |>
       style_body(rows = 1L, bold = TRUE) |>
-      paginate_cols(at = 4L, carry = 1:2)
+      paginate_cols(at = 4L, keep = 1:2)
   })
 })

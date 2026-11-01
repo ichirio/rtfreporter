@@ -110,18 +110,18 @@
     verb), call. = FALSE)
 }
 
-.style_check_align <- function(a, verb) {
+.style_check_align <- function(a, verb, arg = "align") {
   if (!is.character(a) || length(a) != 1L ||
       !a %in% c("left", "center", "right")) {
-    stop(sprintf("`%s(align = )` must be \"left\", \"center\", or \"right\".",
-                 verb), call. = FALSE)
+    stop(sprintf("`%s(%s = )` must be \"left\", \"center\", or \"right\".",
+                 verb, arg), call. = FALSE)
   }
   a
 }
 
-.style_check_border <- function(b, verb) {
+.style_check_border <- function(b, verb, arg = "border") {
   if (!inherits(b, "rtf_border")) {
-    stop(sprintf("`%s(border = )` must be an rtf_border() object.", verb),
+    stop(sprintf("`%s(%s = )` must be an rtf_border() object.", verb, arg),
          call. = FALSE)
   }
   b
@@ -301,7 +301,13 @@ style_header.rtftable <- function(x, row = NULL, cols = NULL, label = NULL,
                                   italic = NULL, underline = NULL, ...) {
   .check_own_dots(list(...), style_header.rtftable, "style_header")
   if (is.null(x$col_header) || length(x$col_header) == 0L) {
-    stop("`style_header()`: this rtftable has no column header.", call. = FALSE)
+    # No header of its own: the one the writer prints, the columns' names
+    # (generate_rtfreport()'s `tbl$col_header %||% list(names(df))`), made
+    # the table's so it can be styled (#749)
+    if (is.null(x$data) || !ncol(x$data)) {
+      stop("`style_header()`: this rtftable has no column header.", call. = FALSE)
+    }
+    x$col_header <- list(names(x$data))
   }
   if (!is.null(border)) border <- .style_check_border(border, "style_header")
   if (!is.null(align))  align  <- .style_check_align(align, "style_header")
@@ -399,7 +405,7 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
   .check_own_dots(list(...), style_cols.rtftable, "style_cols")
   cols_idx <- .style_resolve_cols(x, cols, "style_cols")
   if (!is.null(align))        align        <- .style_check_align(align, "style_cols")
-  if (!is.null(header_align)) header_align <- .style_check_align(header_align, "style_cols")
+  if (!is.null(header_align)) header_align <- .style_check_align(header_align, "style_cols", "header_align")
   if (!is.null(border))       border       <- .style_check_border(border, "style_cols")
   for (arg in c("bold", "italic", "underline", "header_bold", "header_italic")) {
     v <- get(arg)
@@ -532,7 +538,7 @@ style_body.list <- function(x, rows = NULL, ...) {
 #' @rdname style_header
 #' @param header,spanning,body,first_row,last_row Per-zone [rtf_border()]
 #'   overrides, merged side-by-side onto the table's current
-#'   [rtf_table_border()] (see the *Borders* article for what each zone
+#'   per-zone borders (see the *Borders* article for what each zone
 #'   covers).
 #' @export
 style_zone <- function(x, ...) UseMethod("style_zone")
@@ -547,7 +553,7 @@ style_zone.rtftable <- function(x, header = NULL, spanning = NULL,
                 first_row = first_row, last_row = last_row)
   zones <- zones[!vapply(zones, is.null, logical(1L))]
   if (length(zones) == 0L) return(x)
-  for (z in names(zones)) .style_check_border(zones[[z]], "style_zone")
+  for (z in names(zones)) .style_check_border(zones[[z]], "style_zone", z)
 
   frames <- .style_body_frames(x)
   .warn_old_edge_reading(
@@ -651,23 +657,39 @@ add_header_row.list <- function(x, ...) {
 #' applied after [paginate_cols()].
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
-#' @param ... The header rows, in render order (top first) -- each a character
-#'   vector (a label row, optionally named to place labels by column name) or a
-#'   list of [col_cell()] cells (a spanning / cell row, whose `pos` may be
-#'   column names or final positions).  Alternatively a single pre-built
-#'   [rtf_col_header()] object.  Passing nothing clears the header.
-#'
-#'   A **fully named** label row need not have one entry per column; an
-#'   unnamed one must.  An unknown name, or a row that is only partly named,
-#'   is an error either way.
+#' @param ... The header rows, in render order (top first), or a single
+#'   pre-built [rtf_col_header()] object.  Passing nothing clears the
+#'   header.
+#'   \describe{
+#'     \item{A row}{each a character vector (a label row, optionally named to
+#'       place labels by column name) or a list of [col_cell()] cells (a
+#'       spanning / cell row, whose `pos` may be column names or final
+#'       positions).}
+#'     \item{Names in a label row}{A **fully named** label row need not have
+#'       one entry per column; an unnamed one must.  An unknown name is an
+#'       error.  In a partly named row an unnamed value that is a column name
+#'       is placed at that column, and any other by its position.}
+#'   }
 #' @param align Optional column-header text alignment for the final columns:
 #'   `"left"`/`"center"`/`"right"` (applied to every column) or a character
 #'   vector of length `ncol` (one per printed column).  `NULL` (default) leaves
 #'   the current header alignment untouched.
 #'
 #' @param values Optional table of **per-page values** for the `{tokens}` in
-#'   the header, one row per page key: write the header once and let each page
-#'   take its own numbers.
+#'   the header, one row per page key: write the header once and let each
+#'   page take its own numbers.
+#'   \describe{
+#'     \item{Tokens}{A token is `{name}`, `name` being a column of `values`;
+#'       doubling a brace prints it literally.}
+#'     \item{Left for the renderer}{The render-time tokens (`{PAGE}`,
+#'       `{TOTAL_PAGES}`, `{BOOK_PAGE}`, `{AUTO_PAGE}`,
+#'       `{AUTO_TOTAL_PAGES}`, `{PROGRAM}`, `{PROGRAM_FULL}`, `{DATETIME}`
+#'       ..., [rtf_text_tokens()]); any other unfilled token is an error.}
+#'     \item{Checked}{Every row of `values` must be used by some page, and
+#'       every page must find a row -- a mistyped level is an error, not a
+#'       silently wrong header.  [header_map()] shows what each page ended
+#'       up with.}
+#'   }
 #'   ```r
 #'   hdr  <- rtf_col_header(
 #'     list(col_cell(1L, ""),
@@ -676,17 +698,8 @@ add_header_row.list <- function(x, ...) {
 #'   vals <- data.frame(group = periods, n_pbo = c(120, 118, 238))
 #'   pages |> set_col_header(hdr, values = vals)
 #'   ```
-#'   A token is `{name}`, `name` being a column of `values`; doubling a brace
-#'   prints it literally; the render-time tokens (`{PAGE}`,
-#'   `{TOTAL_PAGES}`, `{BOOK_PAGE}`, `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`,
-#'   `{PROGRAM}`, `{PROGRAM_FULL}`, `{DATETIME}` ..., [rtf_text_tokens()])
-#'   are left for the
-#'   renderer, and any other unfilled token is an error. Every row of `values`
-#'   must be used by some page, and every page must find a row -- a mistyped
-#'   level is an error, not a silently wrong header. [header_map()] shows what
-#'   each page ended up with.
 #' @param by Which page key `values` is matched on, named after the axis it
-#'   matches -- the same vocabulary `paginate_cols(page_order = )` uses. The
+#'   matches -- the same vocabulary `paginate_cols(order = )` uses. The
 #'   key column of `values` carries that name.
 #'   \describe{
 #'     \item{`"group"`}{(default) the value a `split = "by_value"` page was cut
@@ -836,157 +849,6 @@ set_col_header.list <- function(x, ..., values = NULL, by = NULL) {
 }
 
 
-# ── set_header_cell() ──────────────────────────────────────────────────────
-
-# Convert a col_cell() to a header cell {from, to, <attrs>}, resolving its `pos`
-# (name(s) or position(s)) against the final column names.
-.header_cell_from_col_cell <- function(cc, cn, nc) {
-  if (!inherits(cc, "rtf_col_cell")) {
-    stop("`set_header_cell()` takes col_cell() objects in `...`.", call. = FALSE)
-  }
-  p    <- .resolve_cell_pos(cc$pos, cn)
-  from <- as.integer(p[[1L]])
-  to   <- if (length(p) == 1L) from else as.integer(p[[2L]])
-  if (from > to) { tmp <- from; from <- to; to <- tmp }
-  if (from < 1L || to > nc) {
-    stop(sprintf("col_cell() covers columns %d-%d, outside 1..%d.", from, to, nc),
-         call. = FALSE)
-  }
-  spec <- list(from = from, to = to, label = cc$label %||% "")
-  for (k in c("align", "bold", "italic", "underline", "border")) {
-    if (!is.null(cc[[k]])) spec[[k]] <- cc[[k]]
-  }
-  spec
-}
-
-# Splice `new_cells` into a header row `cur` (a list of {from,to,label,...}
-# cells that cover columns 1..N with no gaps/overlaps).  Untargeted cells are
-# preserved; every new span must align to existing cell boundaries (no partial
-# split of an existing span); the new spans must not overlap each other.
-.splice_header_cells <- function(cur, new_cells) {
-  cells  <- cur[order(vapply(cur, function(c) as.integer(c$from), integer(1L)))]
-  starts <- vapply(cells, function(c) as.integer(c$from), integer(1L))
-  ends   <- vapply(cells, function(c) as.integer(c$to),   integer(1L))
-
-  ord <- order(vapply(new_cells, function(c) c$from, integer(1L)))
-  nc2 <- new_cells[ord]
-  for (i in seq_along(nc2)) {
-    a <- nc2[[i]]$from; b <- nc2[[i]]$to
-    if (i > 1L && a <= nc2[[i - 1L]]$to) {
-      stop(sprintf("Requested header cells overlap (columns %d-%d and %d-%d).",
-                   nc2[[i - 1L]]$from, nc2[[i - 1L]]$to, a, b), call. = FALSE)
-    }
-    if (!(a %in% starts) || !(b %in% ends)) {
-      stop(sprintf(
-        "Target columns %d-%d do not align to existing header-cell boundaries in that row (would split a spanning cell); adjust the span.",
-        a, b), call. = FALSE)
-    }
-  }
-
-  covered <- function(c) any(vapply(new_cells, function(n)
-    as.integer(c$from) >= n$from && as.integer(c$to) <= n$to, logical(1L)))
-  out <- c(Filter(function(c) !covered(c), cells), new_cells)
-  out[order(vapply(out, function(c) as.integer(c$from), integer(1L)))]
-}
-
-#' Set or merge individual column-header cells (deprecated)
-#'
-#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
-#' 0.9.0.  Restyle a header's cells with [style_header()], and write a
-#' spanning cell into the header itself ([rtf_col_header()] /
-#' [set_col_header()], or [add_header_row()] for a new row).
-#'
-#' Edits **specific cells of one header row** of a finished [rtftable()] (or a
-#' list of pages) without rebuilding the whole header: place one or more
-#' [col_cell()]s -- by column **name or position**, spanning via `c(a, b)` --
-#' into row `row`, keeping the other cells of that row intact.  Merging
-#' currently-separate cells into one spanning cell is the core use.  Borders,
-#' alignment and text decorations are carried natively by [col_cell()].
-#'
-#' A **label row** is promoted to cells first (as in [style_header()]), so the
-#' row then renders through the `spanning` border zone (which falls back to the
-#' `header` zone when unset).  Merging cells in one row replaces their
-#' individual labels with the single span label -- to keep the sub-labels, put
-#' the span on a separate upper row (e.g. via [add_header_row()]).
-#'
-#' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
-#' @param ... One or more [col_cell()] objects to place in `row`.  Their `pos`
-#'   may be column names or positions (spanning via `c(a, b)`), resolved against
-#'   the final columns; `align` / `border` / `bold` / `italic` / `underline`
-#'   are applied to the cell.
-#' @param row The header row to edit (1 = top).  Must be an existing row -- add
-#'   a new row with [add_header_row()].
-#'
-#' @return An object of the same shape as `x`.
-#'
-#' @section Rules:
-#' Each target span must align to existing cell boundaries in that row (it
-#' cannot split an existing spanning cell -- an error is raised otherwise), and
-#' the requested cells must not overlap one another.
-#'
-#' @seealso [set_col_header()] to set the whole header; [style_header()] to
-#'   restyle existing cells; [add_header_row()] to add a row; [col_cell()].
-#'
-#' @examples
-#' # instead: the spanning cell written in the header
-#' df  <- data.frame(Item = "x", g1 = 1, g2 = 2, g3 = 3, Total = 4)
-#' tbl <- rtftable(df, col_header = rtf_col_header(
-#'   list(col_cell(1, ""), col_cell(c(2, 4), "Statistics"), col_cell(5, "")),
-#'   c("Item", "N", "Mean", "SD", "Total")))
-#' @export
-set_header_cell <- function(x, ...) {
-  .deprecate_once(
-    "set_header_cell",
-    paste0("`set_header_cell()` is deprecated: write the spanning cell in the ",
-           "header (`rtf_col_header()` / `set_col_header()`, a new row with ",
-           "`add_header_row()`) and restyle cells with `style_header()`.\n  ",
-           "Removed in 0.9.0."))
-  UseMethod("set_header_cell")
-}
-
-#' @rdname set_header_cell
-#' @export
-set_header_cell.rtftable <- function(x, ..., row) {
-  cells <- list(...)
-  if (length(cells) == 0L) {
-    stop("Provide at least one col_cell() to place.", call. = FALSE)
-  }
-  if (missing(row) || length(row) != 1L || is.na(suppressWarnings(as.integer(row)))) {
-    stop("`row` (a single header-row index, 1 = top) is required.", call. = FALSE)
-  }
-  hdrs <- x$col_header
-  if (is.null(hdrs) || length(hdrs) == 0L) {
-    stop("This rtftable has no column header; use set_col_header() first.",
-         call. = FALSE)
-  }
-  row <- as.integer(row)
-  if (row < 1L || row > length(hdrs)) {
-    stop(sprintf("`row` must be in 1..%d (the header rows, top first). To add a new row use add_header_row().",
-                 length(hdrs)), call. = FALSE)
-  }
-
-  ref <- .style_ref_df(x)
-  cn  <- names(ref)
-  nc  <- ncol(ref)
-
-  new_cells <- lapply(cells, .header_cell_from_col_cell, cn = cn, nc = nc)
-
-  r   <- hdrs[[row]]
-  cur <- if (is.character(r)) .style_promote_labels_row(r, x$col_spec) else r
-  hdrs[[row]] <- .splice_header_cells(cur, new_cells)
-
-  x$col_header <- hdrs
-  if (!is.null(x$col_header_list)) x$col_header_list[[1L]] <- hdrs
-  x
-}
-
-#' @rdname set_header_cell
-#' @export
-set_header_cell.list <- function(x, ...) {
-  .style_map_pages(x, set_header_cell, ..., verb = "set_header_cell")
-}
-
-
 # ── set_decimal_split() ────────────────────────────────────────────────────
 
 #' Line up the decimal points of a numeric column
@@ -1036,8 +898,8 @@ set_header_cell.list <- function(x, ...) {
 #' is what the geometry needs.
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
-#' @param cols Columns to split: names or positions.  `NULL` clears the
-#'   setting.
+#' @param cols Columns to split: names or positions.  Needed to set a split;
+#'   left out (`NULL`) it clears the setting.
 #' @param ratio `NULL` (the default) to size the two halves automatically from
 #'   the widest left and right part actually present, or a number in `(0, 1)`
 #'   giving the left half's share of the column width.  Pass an explicit value
@@ -1048,13 +910,17 @@ set_header_cell.list <- function(x, ...) {
 #'   `c(1, 1)`.
 #' @param min_chars Floor for each half, in the same units, applied after
 #'   `pad_chars`: the effective width of a half is
-#'   `max(measured + pad_chars, min_chars)`.  Default `c(4, 6)` -- a
-#'   three-digit integer part and a five-character decimal part, each plus its
-#'   padding character -- so anything at or below that size holds a `4 : 6`
-#'   baseline and anything larger scales from its own measurement.  Without a
-#'   floor a column of `0.0000` values measures 1 against 5 and leaves the
-#'   integer half cramped.  Pass `pad_chars = c(0, 0), min_chars = c(0, 0)` for
-#'   the raw measured ratio.
+#'   `max(measured + pad_chars, min_chars)`.
+#'   \describe{
+#'     \item{Default}{`c(4, 6)` -- a three-digit integer part and a
+#'       five-character decimal part, each plus its padding character -- so
+#'       anything at or below that size holds a `4 : 6` baseline and anything
+#'       larger scales from its own measurement.}
+#'     \item{Why a floor}{Without one a column of `0.0000` values measures 1
+#'       against 5 and leaves the integer half cramped.}
+#'     \item{No floor}{Pass `pad_chars = c(0, 0), min_chars = c(0, 0)` for the
+#'       raw measured ratio.}
+#'   }
 #' @param max_chars Total measured width, in the same units, above which the
 #'   allowance is dropped and the raw measured proportions are used however
 #'   lopsided.  Default `10`: a column that long needs every twip it has, and

@@ -908,7 +908,7 @@ test_that("passing the raw ARD says so", {
   skip_if_no_cards()
   err <- tryCatch(widen_ard(cards::ADSL, cols = "ARM"),
                   error = function(e) conditionMessage(e))
-  expect_match(err, "does not look like an normalize_ard")
+  expect_match(err, "does not look like a normalize_ard")
   expect_match(err, "Pass the ARD through")
   # but a rebuilt frame without the class is still accepted
   d <- normalize_ard(make_ard())

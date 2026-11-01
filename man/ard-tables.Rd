@@ -7,9 +7,9 @@
 A small family that turns an \strong{ARD} (Analysis Results Data, as produced by
 \pkg{cards} and \pkg{cardx}) into the table \code{data.frame} that
 \code{\link[=as_rtftables]{as_rtftables()}} consumes.  The target is \emph{one ARD record, one table row}.
-Layouts that print one record over two lines, or that need derived rows such
-as marginal totals, stay a human job -- do them on the returned data frame,
-or on the long frame from \code{\link[=normalize_ard]{normalize_ard()}}.
+Layouts that print one record over two lines are done on the returned data
+frame, or on the long frame from \code{\link[=normalize_ard]{normalize_ard()}}; marginal totals are
+made by \code{\link[=plan_total]{plan_total()}} (\verb{direction = }).
 }
 \section{The functions}{
 

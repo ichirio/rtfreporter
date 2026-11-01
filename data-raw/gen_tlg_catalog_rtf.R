@@ -269,13 +269,12 @@ assemble_rtf(
   c(out_dm_gts, out_ae_tern),
   file.path(out_dir, "pharmaverse-assembled.rtf"),
   overwrite = TRUE,
-  toc = list(
-    toc_heading("DEMOGRAPHIC DATA", level = 1),
-    toc_entry("Table 14.1.1b  Demographic and Baseline Characteristics (gtsummary)",
-              file = out_dm_gts, level = 2),
-    toc_heading("SAFETY DATA", level = 1),
-    toc_entry("Table 14.3.1a  Adverse Events by SOC and Preferred Term (tern)",
-              file = out_ae_tern, level = 2)),
+  toc = data.frame(
+    file    = c(out_dm_gts, out_ae_tern),
+    label   = c("Table 14.1.1b  Demographic and Baseline Characteristics (gtsummary)",
+                "Table 14.3.1a  Adverse Events by SOC and Preferred Term (tern)"),
+    heading = c("DEMOGRAPHIC DATA", "SAFETY DATA"),
+    level   = 2L),
   toc_title = "Table of Contents",
   toc_page_numbering = "decimal")
 message("wrote ", file.path(out_dir, "pharmaverse-assembled.rtf"))

@@ -1,7 +1,5 @@
 # Tests for paginate_cols() -- horizontal (column-wise) pagination.
 
-local_deprecated("spanning_header")  # deprecated in 0.8.x
-
 W <- 13680L
 
 .df <- function() {
@@ -32,7 +30,6 @@ W <- 13680L
 
 # ──────── blocks and carry columns ─────────────────────────────────────────
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that("`at` cuts before the named columns", {
   pages <- paginate_cols(rtftable(.df()), at = c(4, 6))
@@ -48,8 +45,8 @@ test_that("`at` accepts column names", {
   expect_equal(names(pages[[2L]]$data), c("Parameter", "B_n", "B_mean"))
 })
 
-test_that("`cols` gives the blocks explicitly", {
-  pages <- paginate_cols(rtftable(.df()), cols = list(2:3, 6:7))
+test_that("`cut_by` gives the blocks explicitly", {
+  pages <- paginate_cols(rtftable(.df()), cut_by = list(2:3, 6:7))
   expect_length(pages, 2L)
   expect_equal(names(pages[[1L]]$data), c("Parameter", "A_n", "A_mean"))
   expect_equal(names(pages[[2L]]$data), c("Parameter", "C_n", "C_mean"))
@@ -57,22 +54,22 @@ test_that("`cols` gives the blocks explicitly", {
 
 test_that("the carry columns default to row_title and are never duplicated", {
   tbl <- rtftable(.df(), row_title = 1L)
-  pages <- paginate_cols(tbl, at = 4, width = "keep")
+  pages <- paginate_cols(tbl, at = 4, fit = FALSE)
   expect_equal(names(pages[[1L]]$data), c("Parameter", "A_n", "A_mean"))
   # the carry column is stripped from the block, not printed twice
   expect_equal(sum(names(pages[[1L]]$data) == "Parameter"), 1L)
   expect_equal(pages[[1L]]$row_title, 1L)
 })
 
-test_that("`carry` overrides the row-heading columns", {
-  pages <- paginate_cols(rtftable(.df()), at = 4, carry = c("Parameter", "A_n"), width = "keep")
+test_that("`keep` overrides the row-heading columns", {
+  pages <- paginate_cols(rtftable(.df()), at = 4, keep = c("Parameter", "A_n"), fit = FALSE)
   expect_equal(names(pages[[1L]]$data), c("Parameter", "A_n", "A_mean"))
   expect_equal(names(pages[[2L]]$data),
                c("Parameter", "A_n", "B_n", "B_mean", "C_n", "C_mean"))
 })
 
-test_that("carry = integer(0) repeats nothing", {
-  pages <- paginate_cols(rtftable(.df()), at = 4, carry = integer(0), width = "keep")
+test_that("keep = integer(0) repeats nothing", {
+  pages <- paginate_cols(rtftable(.df()), at = 4, keep = integer(0), fit = FALSE)
   expect_equal(names(pages[[1L]]$data), c("Parameter", "A_n", "A_mean"))
   expect_equal(names(pages[[2L]]$data), c("B_n", "B_mean", "C_n", "C_mean"))
 })
@@ -80,15 +77,16 @@ test_that("carry = integer(0) repeats nothing", {
 test_that("paginate_cols() validates its arguments", {
   tbl <- rtftable(.df())
   expect_error(paginate_cols(tbl), "`at`")
-  expect_error(paginate_cols(tbl, at = 4, cols = list(2:3)), "not at and cols")
+  expect_error(paginate_cols(tbl, at = 4, cut_by = list(2:3)),
+               "Give one of `at` or `cut_by`, not both.")
   expect_error(paginate_cols(tbl, at = 1), "nothing before column 1")
   expect_error(paginate_cols(tbl, at = 99), "at")
-  expect_error(paginate_cols(tbl, cols = 2:3), "list of column blocks")
+  expect_error(paginate_cols(tbl, cut_by = 2:3), "list of column blocks")
 })
 
-test_that("splitting a table that is all carry columns errors", {
+test_that("splitting a table that is all kept columns errors", {
   tbl <- rtftable(.df())
-  expect_error(paginate_cols(tbl, at = 4, carry = 1:7), "carry")
+  expect_error(paginate_cols(tbl, at = 4, keep = 1:7), "kept")
 })
 
 # ──────── column widths: same column, same width ───────────────────────────
@@ -96,7 +94,7 @@ test_that("splitting a table that is all carry columns errors", {
 test_that("col_rel_width keeps each column exactly as wide as in the full table", {
   tbl <- rtftable(.df(), col_rel_width = c(3, 2, 2, 2, 2, 2, 2))
   full  <- .widths(tbl)
-  pages <- paginate_cols(tbl, at = c(4, 6), width = "keep")
+  pages <- paginate_cols(tbl, at = c(4, 6), fit = FALSE)
   expect_equal(.widths(pages[[1L]]), full[c(1L, 2L, 3L)])
   expect_equal(.widths(pages[[2L]]), full[c(1L, 4L, 5L)])
   expect_equal(.widths(pages[[3L]]), full[c(1L, 6L, 7L)])
@@ -115,7 +113,7 @@ test_that("column_widths_twips are carried through verbatim", {
 test_that("equal distribution keeps column widths within rounding drift", {
   tbl   <- rtftable(.df())
   full  <- .widths(tbl)
-  pages <- paginate_cols(tbl, at = c(4, 6), width = "keep")
+  pages <- paginate_cols(tbl, at = c(4, 6), fit = FALSE)
   expect_true(all(abs(.widths(pages[[1L]]) - full[c(1L, 2L, 3L)]) <= 2L))
   expect_true(all(abs(.widths(pages[[2L]]) - full[c(1L, 4L, 5L)]) <= 2L))
 })
@@ -123,14 +121,14 @@ test_that("equal distribution keeps column widths within rounding drift", {
 test_that("the width scale composes with an explicit table width", {
   tbl <- rtftable(.df(), col_rel_width = rep(1, 7),
                   table_width_pct_of_writable = 0.5)
-  pages <- paginate_cols(tbl, at = 4, width = "keep")
+  pages <- paginate_cols(tbl, at = 4, fit = FALSE)
   # 3 of 7 columns kept -> 0.5 * 3/7
   expect_equal(pages[[1L]]$table_width_pct_of_writable, 0.5 * 3 / 7)
 })
 
 test_that("an absolute table_width_twips is scaled rather than a pct added", {
   tbl <- rtftable(.df(), col_rel_width = rep(1, 7), table_width_twips = 7000L)
-  pages <- paginate_cols(tbl, at = 4, width = "keep")
+  pages <- paginate_cols(tbl, at = 4, fit = FALSE)
   expect_equal(pages[[1L]]$table_width_twips, as.integer(round(7000 * 3 / 7)))
   expect_null(pages[[1L]]$table_width_pct_of_writable)
 })
@@ -153,7 +151,7 @@ test_that("leaf header labels follow the kept columns", {
 
 test_that("a cut inside a spanning group repeats the label by default", {
   pages <- paginate_cols(rtftable(.df(), col_header = .hdr()), at = 3,
-                         width = "keep")
+                         fit = FALSE)
   labs <- function(p) vapply(p$col_header[[1L]],
                              function(c) c$label %||% "", character(1L))
   expect_true("Placebo" %in% labs(pages[[1L]]))
@@ -168,14 +166,16 @@ test_that("allow_span_break = FALSE rejects a cut inside a spanning cell", {
   expect_length(paginate_cols(tbl, at = c(4, 6), allow_span_break = FALSE), 3L)
 })
 
-test_that("a standalone spanning_header is clipped too", {
+test_that("a standalone spanning row is clipped too", {
   tbl <- rtftable(.df(),
-                  spanning_header = list(list(from = 2, to = 3, label = "P"),
-                                         list(from = 4, to = 5, label = "A")))
-  pages <- paginate_cols(tbl, at = 4, width = "keep")
-  expect_length(pages[[1L]]$spanning_header, 1L)
-  expect_equal(pages[[1L]]$spanning_header[[1L]]$label, "P")
-  expect_equal(pages[[2L]]$spanning_header[[1L]]$label, "A")
+                  col_header = list(list(col_cell(2:3, "P"), col_cell(4:5, "A")),
+                                    names(.df())))
+  pages <- paginate_cols(tbl, at = 4, fit = FALSE)
+  span <- function(p) Filter(function(c1) nzchar(c1$label %||% ""),
+                             p$col_header[[1L]])
+  expect_length(span(pages[[1L]]), 1L)
+  expect_equal(span(pages[[1L]])[[1L]]$label, "P")
+  expect_equal(span(pages[[2L]])[[1L]]$label, "A")
 })
 
 # ──────── other per-column state ───────────────────────────────────────────
@@ -197,13 +197,13 @@ test_that("cell_styles follow the kept columns", {
 
 test_that("row_title is remapped onto the kept columns", {
   tbl <- rtftable(.df(), row_title = c(1L, 2L))
-  pages <- paginate_cols(tbl, at = 4, carry = c(1L, 2L), width = "keep")
+  pages <- paginate_cols(tbl, at = 4, keep = c(1L, 2L), fit = FALSE)
   expect_equal(pages[[1L]]$row_title, c(1L, 2L))
 })
 
 test_that("blank rows survive the column subset", {
   tbl <- rtftable(.df(), blank_rows = 3L)
-  pages <- paginate_cols(tbl, at = 4, width = "keep")
+  pages <- paginate_cols(tbl, at = 4, fit = FALSE)
   expect_equal(pages[[1L]]$blank_rows, 3L)
   expect_equal(pages[[2L]]$blank_rows, 3L)
 })
@@ -211,7 +211,7 @@ test_that("blank rows survive the column subset", {
 test_that("a multi-DF table is split on every constituent frame", {
   d <- .df()
   tbl <- rtftable(list(d, d))
-  pages <- paginate_cols(tbl, at = 4, width = "keep")
+  pages <- paginate_cols(tbl, at = 4, fit = FALSE)
   expect_length(pages[[1L]]$data_list, 2L)
   expect_equal(names(pages[[1L]]$data_list[[2L]]),
                c("Parameter", "A_n", "A_mean"))
@@ -239,7 +239,7 @@ test_that("down = the row page advances first, its blocks following it", {
   d  <- .df()
   t1 <- rtftable(d[1:3, , drop = FALSE])          # row band 1
   t2 <- rtftable(d[4:6, , drop = FALSE])          # row band 2
-  pages <- paginate_cols(list(t1, t2), at = c(4, 6), page_order = "down")
+  pages <- paginate_cols(list(t1, t2), at = c(4, 6), order = "down")
   expect_length(pages, 6L)
 
   # 2 row bands x 3 column blocks, the page number advancing DOWN ->
@@ -251,18 +251,18 @@ test_that("down = the row page advances first, its blocks following it", {
   expect_equal(band, c(rep(d$Parameter[1L], 3L), rep(d$Parameter[4L], 3L)))
 })
 
-test_that("page_order only reorders: the same pages come back either way", {
+test_that("order only reorders: the same pages come back either way", {
   d  <- .df()
   pg <- list(rtftable(d[1:3, , drop = FALSE]), rtftable(d[4:6, , drop = FALSE]))
   a <- paginate_cols(pg, at = c(4, 6))                          # across
-  b <- paginate_cols(pg, at = c(4, 6), page_order = "down")     # down
+  b <- paginate_cols(pg, at = c(4, 6), order = "down")     # down
   # down index (row i, block bi) -> across index
   expect_equal(a, b[c(1L, 4L, 2L, 5L, 3L, 6L)])
 })
 
-test_that("page_order is a no-op on a single row page", {
+test_that("order is a no-op on a single row page", {
   tbl <- rtftable(.df())
-  expect_equal(paginate_cols(tbl, at = c(4, 6), page_order = "down"),
+  expect_equal(paginate_cols(tbl, at = c(4, 6), order = "down"),
                paginate_cols(tbl, at = c(4, 6)))
 })
 
@@ -272,19 +272,19 @@ test_that("a name follows its row page whatever the order", {
              g2 = rtftable(d[4:6, , drop = FALSE]))
   base <- rtfreporter:::.page_name_base
   # "down": the row page advances first, so its two column pages are adjacent
-  expect_equal(base(names(paginate_cols(pg, at = 4, width = "keep",
-                                        page_order = "down"))),
+  expect_equal(base(names(paginate_cols(pg, at = 4, fit = FALSE,
+                                        order = "down"))),
                c("g1", "g1", "g2", "g2"))
   # "across": the column block advances first, so equal headings interleave
-  expect_equal(base(names(paginate_cols(pg, at = 4, width = "keep"))),
+  expect_equal(base(names(paginate_cols(pg, at = 4, fit = FALSE))),
                c("g1", "g2", "g1", "g2"))
 })
 
-test_that("`page_order` is validated", {
-  expect_error(paginate_cols(rtftable(.df()), at = 4, page_order = "sideways"),
+test_that("`order` is validated", {
+  expect_error(paginate_cols(rtftable(.df()), at = 4, order = "sideways"),
                "is not an axis")
   expect_error(paginate_cols(rtftable(.df()), at = 4,
-                             page_order = c("cols", "cols")),
+                             order = c("cols", "cols")),
                "may appear once")
 })
 
@@ -292,7 +292,7 @@ test_that("page names are carried through, kept addressable", {
   d  <- .df()
   pg <- list(one = rtftable(d[1:3, , drop = FALSE]),
              one = rtftable(d[4:6, , drop = FALSE]))
-  out <- paginate_cols(pg, at = 4, width = "keep")
+  out <- paginate_cols(pg, at = 4, fit = FALSE)
   # the HEADING is carried onto every column page ...
   expect_equal(rtfreporter:::.page_name_base(names(out)), rep("one", 4L))
   # ... and the list stays addressable by name
@@ -301,7 +301,7 @@ test_that("page names are carried through, kept addressable", {
 })
 
 test_that("an unnamed page list stays unnamed", {
-  expect_null(names(paginate_cols(list(rtftable(.df())), at = 4, width = "keep")))
+  expect_null(names(paginate_cols(list(rtftable(.df())), at = 4, fit = FALSE)))
 })
 
 test_that("paginate_cols() rejects a list that is not pages", {
@@ -335,12 +335,12 @@ test_that("column pages render, each keeping the full table's right edge", {
 
 test_that("a table that is not paginated is untouched", {
   tbl   <- rtftable(.df(), col_header = .hdr(), border = "tfl")
-  pages <- paginate_cols(tbl, cols = list(2:7))
+  pages <- paginate_cols(tbl, cut_by = list(2:7))
   expect_identical(rtfreporter:::.render_rtftable(pages[[1L]], W),
                    rtfreporter:::.render_rtftable(tbl, W))
 })
 
-# ──────── width = "fill" / "keep" (#289) ───────────────────────────────────
+# ──────── fit = TRUE / "keep" (#289) ───────────────────────────────────
 
 .rel_tbl <- function(nvis = 8L) {
   d <- data.frame(Parameter = c("n", "Mean"), stringsAsFactors = FALSE)
@@ -387,7 +387,7 @@ test_that("four even blocks each fill the sheet", {
 test_that("width = 'keep' preserves the pre-split widths", {
   full  <- .rel_tbl()
   wf    <- .w(full)
-  pages <- paginate_cols(full, at = 6L, width = "keep")
+  pages <- paginate_cols(full, at = 6L, fit = FALSE)
   # within the rounding drift .compute_cellx() absorbs in a page's last column
   expect_true(all(abs(.w(pages[[1L]]) - wf[1:5]) <= 2L))
   expect_lt(.tot(pages[[1L]]), W)                  # a shorter page
@@ -398,7 +398,7 @@ test_that("a block wider than block 1 warns under 'fill'", {
                  "wider than the sheet")
   expect_silent(paginate_cols(.rel_tbl(), at = 6L))    # 4 + 4: fine
   # "keep" cannot overflow, so it never warns
-  expect_silent(paginate_cols(.rel_tbl(), at = 5L, width = "keep"))
+  expect_silent(paginate_cols(.rel_tbl(), at = 5L, fit = FALSE))
 })
 
 test_that("equal distribution follows the same rule", {
@@ -409,23 +409,24 @@ test_that("equal distribution follows the same rule", {
   expect_equal(.w(pages[[1L]]), .w(pages[[2L]]))
 })
 
-test_that("absolute widths ignore `width` entirely", {
+test_that("absolute widths ignore `fit` entirely", {
   d <- data.frame(Parameter = c("n", "Mean"), stringsAsFactors = FALSE)
   for (v in paste0("D", 1:4)) d[[v]] <- c("86", "45.2")
   aw  <- c(2000L, 900L, 900L, 900L, 900L)
   tbl <- rtftable(d, column_widths_twips = aw, border = "tfl")
-  a <- paginate_cols(tbl, at = 4L, width = "fill")
-  b <- paginate_cols(tbl, at = 4L, width = "keep")
+  a <- paginate_cols(tbl, at = 4L, fit = TRUE)
+  b <- paginate_cols(tbl, at = 4L, fit = FALSE)
   expect_equal(.w(a[[1L]]), aw[1:3])
   expect_equal(.w(a[[1L]]), .w(b[[1L]]))
   expect_null(a[[1L]]$table_width_pct_of_writable)
 })
 
-test_that("`width` is validated", {
-  expect_error(paginate_cols(.rel_tbl(), at = 6L, width = "nope"), "arg")
+test_that("`fit` is validated", {
+  expect_error(paginate_cols(.rel_tbl(), at = 6L, fit = "nope"),
+               "paginate_cols(fit = )", fixed = TRUE)
 })
 
-# ──────── by = : blocks from the column names (#435) ───────────────────────
+# ──────── cut_by = : blocks from the column names (#435) ───────────────────────
 
 .wide <- function() {
   d <- data.frame(Parameter = c("n", "Mean (SD)"), stringsAsFactors = FALSE)
@@ -435,8 +436,8 @@ test_that("`width` is validated", {
   d
 }
 
-test_that("by = a separator cuts on the part before it", {
-  pg <- paginate_cols(rtftable(.wide()), by = "____", carry = 1, width = "keep")
+test_that("cut_by = a separator cuts on the part before it", {
+  pg <- paginate_cols(rtftable(.wide()), cut_by = "____", keep = 1, fit = FALSE)
   expect_length(pg, 2L)
   expect_identical(names(pg[[1L]]$data),
                    c("Parameter", paste0("Placebo____Day ", c(1, 2, 8))))
@@ -444,24 +445,24 @@ test_that("by = a separator cuts on the part before it", {
                    c("Parameter", paste0("HOGE-001____Day ", c(1, 2, 8))))
 })
 
-test_that("by = a key vector cuts on a grouping that is not in the names", {
-  pg <- paginate_cols(rtftable(.wide()), by = c(NA, rep(c("A", "B"), each = 3L)),
-                      carry = 1, width = "keep")
+test_that("cut_by = a key vector cuts on a grouping that is not in the names", {
+  pg <- paginate_cols(rtftable(.wide()), cut_by = c(NA, rep(c("A", "B"), each = 3L)),
+                      keep = 1, fit = FALSE)
   expect_length(pg, 2L)
   expect_identical(vapply(pg, function(p) ncol(p$data), integer(1L)),
                    c(4L, 4L))
 })
 
-test_that("at / cols / by are mutually exclusive", {
-  expect_error(paginate_cols(rtftable(.wide()), at = 3, by = "____"),
-               "not at and by")
+test_that("at / cut_by are mutually exclusive", {
+  expect_error(paginate_cols(rtftable(.wide()), at = 3, cut_by = "____"),
+               "Give one of `at` or `cut_by`, not both.")
 })
 
 # ──────── col_header = : written once, for the whole table ─────────────────
 
 test_that("col_header = \"names\" builds the two-level header per page", {
-  pg <- paginate_cols(rtftable(.wide()), by = "____", carry = 1,
-                      col_header = "names", width = "keep")
+  pg <- paginate_cols(rtftable(.wide()), cut_by = "____", keep = 1,
+                      col_header = "names", fit = FALSE)
   h1 <- pg[[1L]]$col_header
   # the label row: the stub keeps its name, the rest keep the visit
   expect_identical(h1[[2L]], c("Parameter", "Day 1", "Day 2", "Day 8"))
@@ -474,15 +475,15 @@ test_that("col_header = \"names\" builds the two-level header per page", {
                           pg[[2L]]$col_header[[1L]])[[1L]]$label, "HOGE-001")
 })
 
-test_that("col_header = \"names\" needs a separator `by`", {
+test_that("col_header = \"names\" needs a separator `cut_by`", {
   expect_error(paginate_cols(rtftable(.wide()), at = 5, col_header = "names"),
-               "needs `by`")
+               "needs `cut_by`")
 })
 
 test_that("a full-table col_header is sliced to each page", {
   hdr <- c("Label", paste("Visit", 1:6))
-  pg  <- paginate_cols(rtftable(.wide()), at = 5, carry = 1,
-                       col_header = hdr, width = "keep")
+  pg  <- paginate_cols(rtftable(.wide()), at = 5, keep = 1,
+                       col_header = hdr, fit = FALSE)
   expect_identical(unlist(pg[[1L]]$col_header),
                    c("Label", "Visit 1", "Visit 2", "Visit 3"))
   expect_identical(unlist(pg[[2L]]$col_header),
@@ -497,7 +498,7 @@ test_that("a col_header of the wrong width is refused", {
 # ──────── the width guard on the after-the-split paths ─────────────────────
 
 test_that("set_col_header() refuses a header wider than the page", {
-  pg <- paginate_cols(rtftable(.wide()), at = 5, carry = 1, width = "keep")
+  pg <- paginate_cols(rtftable(.wide()), at = 5, keep = 1, fit = FALSE)
   expect_error(set_col_header(pg, c("Label", paste("Visit", 1:6))),
                "the table has 4 printed columns")
   # ... and points at the fix
@@ -505,16 +506,8 @@ test_that("set_col_header() refuses a header wider than the page", {
                "BEFORE the column split")
 })
 
-test_that("rtf_tables(col_header = ) refuses it too", {
-  pg  <- paginate_cols(rtftable(.wide()), at = 5, carry = 1, width = "keep")
-  doc <- rtf_document() |>
-    rtf_section(secinfo = list(header = NULL, footer = NULL))
-  expect_error(rtf_tables(doc, pg, col_header = c("Label", paste("Visit", 1:6))),
-               "rtf_tables(col_header)", fixed = TRUE)
-})
-
 test_that("a right-width header still applies to every page", {
-  pg <- paginate_cols(rtftable(.wide()), at = 5, carry = 1, width = "keep")
+  pg <- paginate_cols(rtftable(.wide()), at = 5, keep = 1, fit = FALSE)
   out <- set_col_header(pg, c("Lab", "A", "B", "C"))
   expect_identical(unlist(out[[1L]]$col_header), c("Lab", "A", "B", "C"))
   expect_identical(unlist(out[[2L]]$col_header), c("Lab", "A", "B", "C"))
@@ -528,8 +521,8 @@ test_that("a col_header with col_cell() rows is resolved before it is sliced", {
               col_cell(c(5, 7), "HOGE-001\n(N=84)\nn (%)"))
   hdr <- list(top, c("Parameter", rep(c("Day 1", "Day 2", "Day 8"), 2L)))
 
-  pg <- paginate_cols(rtftable(d), by = "____", carry = 1,
-                      col_header = hdr, width = "keep")
+  pg <- paginate_cols(rtftable(d), cut_by = "____", keep = 1,
+                      col_header = hdr, fit = FALSE)
   span <- function(p) Filter(function(c1) nzchar(c1$label %||% ""),
                              p$col_header[[1L]])[[1L]]
   expect_identical(span(pg[[1L]])$label, "Placebo\n(N=86)\nn (%)")

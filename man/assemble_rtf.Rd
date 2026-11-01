@@ -50,23 +50,23 @@ bookmark name (default \code{"tfl_"}).  Helps avoid clashes if you
 later concatenate multiple assembled outputs.}
 
 \item{book_page}{Text for the compiled document's page number, put into
-every \code{{BOOK_PAGE}} slot the inputs reserved.  \code{NULL} (default) leaves the
-slots empty.
-
-A deliverable that will be bound into a book needs two page numbers: its
-own (\verb{Page 1 of 3}) and the book's (\verb{Page 4 of 57}).  Written from the
-start they print the same number twice on a standalone deliverable, where
-the two are equal.  So the deliverable reserves the position instead --
-\code{c(c = "{BOOK_PAGE}")} in whichever band it wants, header, footer, title
-or footnote -- and renders it empty, keeping the row's height.  This
-argument supplies the content when the book is built, so filling it cannot
-shift anything.
-
-Typically \code{"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"}.  The total resolves
-to the \strong{book's} page count, which is what the deliverable could not know
-on its own.  The static \code{{PAGE}} / \code{{TOTAL_PAGES}} are rejected: the slot
-sits in one band shared by every page of a section, so a single
-substitution cannot give each page its own number.}
+every \code{{BOOK_PAGE}} slot the inputs reserved.  \code{NULL} (default) leaves
+the slots empty.
+\describe{
+\item{Why a slot}{A deliverable that will be bound into a book needs
+two page numbers: its own (\verb{Page 1 of 3}) and the book's (\verb{Page 4 of 57}).  Written from the start they print the same number twice
+on a standalone deliverable, where the two are equal.  So the
+deliverable reserves the position instead -- \code{c(c = "{BOOK_PAGE}")}
+in whichever band it wants, header, footer, title or footnote --
+and renders it empty, keeping the row's height.  This argument
+supplies the content when the book is built, so filling it cannot
+shift anything.}
+\item{What to give}{Typically \code{"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"}.  The total resolves to the \strong{book's} page
+count, which is what the deliverable could not know on its own.}
+\item{Refused}{The static \code{{PAGE}} / \code{{TOTAL_PAGES}} are rejected: the
+slot sits in one band shared by every page of a section, so a
+single substitution cannot give each page its own number.}
+}}
 }
 \value{
 Invisibly returns \code{output_file}.
@@ -129,8 +129,6 @@ folder, ready to edit.  \code{input_files} can then be left out: the
 table's \code{file} column is used.}
 \item{the path of such a table}{an \code{.xlsx} or \code{.csv} file, e.g. the one
 \code{assemble_folder(spec_file = )} wrote and you edited.}
-\item{a \code{list(...)} of \code{toc_heading()} and \code{toc_entry()} objects}{the
-older spelling of the table (deprecated).}
 }
 
 Each TOC entry is an RTF \code{HYPERLINK} field; clicking it in
@@ -141,8 +139,8 @@ calculated by the viewer when the file opens.
 
 \section{Page numbering}{
 
-\code{toc_page_numbering} controls how the TOC pages (and cover, if
-present) are numbered:
+\code{toc_page_numbering} controls how the TOC pages are numbered (a cover
+page keeps the document's Arabic numbering):
 
 \describe{
 \item{\code{"none"} (default)}{Arabic numbering flows continuously from
@@ -150,9 +148,12 @@ the first page; if the source files use \code{\{AUTO_PAGE\}} the
 TOC counts as page 1, 2, ...}
 \item{\code{"roman"}}{TOC pages use lowercase Roman numerals (\code{i}, \code{ii},
 ...); body pages restart at \code{1}.}
-\item{\code{"decimal"}}{TOC pages use Arabic numerals starting at \code{1};
-body pages restart at \code{1}.}
+\item{\code{"decimal"}}{TOC pages use Arabic numerals starting at \code{1}, and
+the body continues from them (with a one-page TOC the first table is
+page 2).}
 }
+
+\code{\link[=assemble_folder]{assemble_folder()}} defaults to \code{"decimal"}.
 }
 
 \examples{

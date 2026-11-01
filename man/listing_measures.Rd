@@ -15,12 +15,13 @@ listing_split_after(text, sep)
 }
 \arguments{
 \item{x, text}{Text to measure, cut or split.  \code{listing_disp_width()} is
-vectorised; the other two take one string.}
+vectorised; the other two take one string (not \code{NA}), and stop
+otherwise.}
 
-\item{width}{Maximum display width.}
+\item{width}{Maximum display width: one number of 0 or more.}
 
-\item{sep}{The separator to break after.  \code{""} or \code{NULL} returns \code{text}
-unsplit.}
+\item{sep}{The separator to break after: one string.  \code{""} or \code{NULL}
+returns \code{text} unsplit.}
 }
 \value{
 \code{listing_disp_width()} an integer vector; \code{listing_take()} a single

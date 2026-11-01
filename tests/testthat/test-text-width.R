@@ -20,9 +20,9 @@ test_that("text_width_in() scales linearly with character count (Courier)", {
   expect_equal(w5, 5 * w1, tolerance = 1e-10)
 })
 
-test_that("text_width_in() scales with size_half_points (larger size -> wider)", {
-  w_9pt  <- text_width_in("hello", size_half_points = 18L)   # 9pt
-  w_12pt <- text_width_in("hello", size_half_points = 24L)   # 12pt
+test_that("text_width_in() scales with font_size_half_points (larger size -> wider)", {
+  w_9pt  <- text_width_in("hello", font_size_half_points = 18L)   # 9pt
+  w_12pt <- text_width_in("hello", font_size_half_points = 24L)   # 12pt
   expect_gt(w_12pt, w_9pt)
 })
 

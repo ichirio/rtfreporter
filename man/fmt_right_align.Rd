@@ -19,7 +19,8 @@ lines up with theirs.  \code{Inf} / \code{-Inf} are \strong{not} missing and pri
 \code{"Inf"} / \code{"-Inf"}.  See the \code{na} argument of \code{\link[=as_rtftables]{as_rtftables()}}.}
 }
 \value{
-Character vector the same length as \code{x}.
+Character vector the same length as \code{x}.  Every space in a padded
+cell, inside the text too, is a non-breaking space (\code{nbsp}).
 }
 \description{
 A minimal cell-format function (see \emph{The contract} in the

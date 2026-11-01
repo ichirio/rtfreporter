@@ -10,7 +10,8 @@ table_plan(
   rows = NULL,
   label = NULL,
   stat = NULL,
-  show_keys = NULL
+  show_keys = NULL,
+  value = NULL
 )
 }
 \arguments{
@@ -36,15 +37,19 @@ says otherwise.  Left out when the ARD has no group to spread (one
 arm): one column, \code{All} (see \code{\link[=widen_ard]{widen_ard()}}).}
 
 \item{rows}{The keys that go \strong{down} it, likewise.  Left out, the
-analysis variable is used (as \code{group}).  Each name is the column the
-finished table gets, and later verbs refer to it by that name
-(\code{\link[=plan_stub]{plan_stub()}}, \code{plan_paginate_group(col = )}, \code{\link[=plan_hide]{plan_hide()}}); left
-unnamed, the first key is called \code{group}.  \code{"variable"} is the column
-that holds the analysis variable's name, so \code{c(group = "variable")}
-makes one block of rows per analysis variable (AGE, SEX, ...).
-Subgroups from different variables laid one under another come from
-\code{normalize_ard(stack = )}; see the article \emph{Tables from an ARD, step by
-step} (\emph{Subgroups}).}
+analysis variable is used (as \code{group}).
+\describe{
+\item{Names}{Each name is the column the finished table gets, and
+later verbs refer to it by that name (\code{\link[=plan_stub]{plan_stub()}},
+\code{plan_paginate_group(col = )}, \code{\link[=plan_hide]{plan_hide()}}); left unnamed, the
+first key is called \code{group}.}
+\item{\code{"variable"}}{The column that holds the analysis variable's
+name, so \code{c(group = "variable")} makes one block of rows per
+analysis variable (AGE, SEX, ...).}
+\item{Subgroups}{Subgroups from different variables laid one under
+another come from \code{normalize_ard(stack = )}; see the article
+\emph{Tables from an ARD, step by step} (\emph{Subgroups}).}
+}}
 
 \item{label}{The column carrying the \strong{row identity} --- the text in
 the label column.  \code{".label"} by default (what \code{\link[=normalize_ard]{normalize_ard()}}
@@ -55,23 +60,40 @@ categorical variable; the deepest level's value in a \code{hierarchy}; and
 \code{\link[=plan_cells]{plan_cells()}} template names (\code{"Mean (SD)"}).}
 
 \item{stat}{Which of \strong{your} columns play the three parts \code{\link[=widen_ard]{widen_ard()}}
-reads by name, as a named vector: \code{variable} (the analysis variable,
-what \code{\link[=plan_cells]{plan_cells()}} and \code{\link[=plan_digits]{plan_digits()}} key on), \code{name} (which
-statistic a row is) and \code{value} (what it is worth) ---
+reads by name, as a named vector:
+\describe{
+\item{\code{variable}}{the analysis variable, what \code{\link[=plan_cells]{plan_cells()}} and
+\code{\link[=plan_digits]{plan_digits()}} key on;}
+\item{\code{name}}{which statistic a row is;}
+\item{\code{value}}{what it is worth.}
+}
 \code{stat = c(variable = "PARAMCD", name = "STAT", value = "AVAL")}.  A
 frame from \pkg{cards} already calls them \code{variable}, \code{stat_name} and
 \code{stat} and needs none of this; a summary somebody built with dplyr says
 so here, once, instead of being asked again by every verb.  Name only
 the parts your frame calls something else.}
 
-\item{show_keys}{Row keys this table also shows \strong{as variables}: their
-own counts (\code{cards::ard_tabulate(adsl, by = TRT, variables = SEX)}),
-which \code{\link[=normalize_ard]{normalize_ard()}} marks as a key's own tabulation once SEX is a
-key anywhere in the ARD (a subgroup layer of another analysis), go to
-the body instead of only to the header's \code{{n}}.  With \code{rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level")} SEX's
-n (\%) is a block of its own beside the ORR's SEX subgroups.  A column
-key is refused (its counts are the columns' populations).  \code{NULL}
-(default): none, as before.}
+\item{show_keys}{Row keys this table also shows \strong{as variables}.
+\code{NULL} (default): none, as before.
+\describe{
+\item{What it does}{A key's own counts
+(\code{cards::ard_tabulate(adsl, by = TRT, variables = SEX)}), which
+\code{\link[=normalize_ard]{normalize_ard()}} marks as a key's own tabulation once SEX is a
+key anywhere in the ARD (a subgroup layer of another analysis), go
+to the body instead of only to the header's \code{{n}}.}
+\item{Example}{With \code{rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level")} SEX's n (\%) is a block of its own beside
+the ORR's SEX subgroups.}
+\item{Refused}{A column key (its counts are the columns'
+populations).}
+}}
+
+\item{value}{For a frame of \strong{records} (an ADaM, one row a record): the
+column whose value a cell prints, \code{value = "AVAL"}.  That makes a
+records plan: one row a \code{rows} key (a subject: \code{rows = c(subject = ~ "{USUBJID}/{AGE}/{SEX}")}), the records' values spread across \code{cols},
+one cell template (\code{plan_cells("{value:.3s}", na = "BLQ")}) -- a
+listing laid out as a table, with nothing reshaped by hand.  Two
+records of one key and column stop.  See \code{\link[=plan_append]{plan_append()}} for its
+summary under it.}
 }
 \value{
 An object of class \code{table_plan}.

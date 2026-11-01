@@ -9,7 +9,8 @@ round_num(x, digits = 0, rounding = NULL)
 \arguments{
 \item{x}{A numeric vector.}
 
-\item{digits}{Decimal places. Default \code{0}.}
+\item{digits}{Decimal places. Default \code{0}.  A fraction is cut to its
+whole part (\code{1.9} is \code{1}).}
 
 \item{rounding}{\code{"r"} (base R, half to even) or \code{"sas"} (half away from
 zero), in either case (\code{"SAS"} is \code{"sas"}; so for the option and every

@@ -25,7 +25,6 @@
 #
 #    col_cell(pos, label, ...)           -- one cell
 #    rtf_col_header(...)                 -- collect rows top-to-bottom
-#    add_col_header_row(hdr, row, ...)   -- append (or prepend) a row
 #
 #  Internally a pos-style row is converted to the existing (from, to)
 #  spanning-row representation via `.pos_row_to_spans()`, so every
@@ -242,46 +241,6 @@ print.rtf_col_header <- function(x, ...) {
   invisible(x)
 }
 
-#' Append (or prepend) a row to an `rtf_col_header` (deprecated)
-#'
-#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
-#' 0.9.0.  Write the row in [rtf_col_header()] itself -- it takes the rows top
-#' first, cell rows and label rows alike:
-#' `rtf_col_header(list(col_cell(c(2, 3), "Drug A")), c("Item", "N", "Mean"))`.
-#'
-#' @param hdr An [rtf_col_header()], or any value accepted by
-#'   `rtftable(col_header = ...)`.  Non-`rtf_col_header` inputs are
-#'   promoted automatically.
-#' @param row One header row: a character vector or a list of cell specs.
-#' @param .position `"bottom"` (default) appends below the existing rows;
-#'   `"top"` prepends above.
-#'
-#' @return A new `rtf_col_header`.
-#'
-#' @examples
-#' # instead: the rows top first, in one rtf_col_header()
-#' rtf_col_header(
-#'   list(col_cell(1, ""), col_cell(c(2, 3), "Drug A"), col_cell(c(4, 5), "Drug B")),
-#'   c("Item", "N", "Mean", "N", "Mean"))
-#'
-#' @export
-add_col_header_row <- function(hdr, row,
-                                .position = c("bottom", "top")) {
-  .deprecate_once(
-    "add_col_header_row",
-    paste0("`add_col_header_row()` is deprecated: write the row in ",
-           "`rtf_col_header()` itself (its rows, top first).\n  ",
-           "Removed in 0.9.0."))
-  .position <- match.arg(.position)
-  if (!inherits(hdr, "rtf_col_header")) {
-    hdr <- rtf_col_header(hdr)
-  }
-  current <- unclass(hdr)
-  result  <- if (.position == "bottom") c(current, list(row))
-             else c(list(row), current)
-  structure(result, class = "rtf_col_header")
-}
-
 
 #' Select header columns by a column-name segment
 #'
@@ -296,10 +255,9 @@ add_col_header_row <- function(hdr, row,
 #' it labels rather than of column numbers that shift whenever a column is
 #' added, dropped or reordered.
 #'
-#' The separator is the one already used to rebuild a spanning header from
-#' delimited column names (see `as_rtftables(header_sep = )`) and to split a
-#' table column-wise (see [paginate_cols()] `by = `), so the three stay in
-#' step.
+#' By default the separator is detected from the column names: `"____"` or
+#' the tfrmt delimiter, the defaults of `as_rtftables(header_sep = )`. A
+#' custom `header_sep` is not seen here, so give the same value as `sep`.
 #'
 #' A selector may also be written directly as a plain function of the column
 #' names, which covers glob and regular-expression matching without any
@@ -730,60 +688,4 @@ col_key <- function(key, sep = NULL, part = 1L) {
   bottom[is.na(bottom)] <- ""
 
   c(upper_rows, list(bottom))
-}
-
-#' Build a spanning column header from delimited column names (deprecated)
-#'
-#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
-#' 0.9.0.  It is what [as_rtftables()] already does with a plain data.frame's
-#' names (`header_sep =`) and what a plan does with its column keys, so there
-#' is nothing to call.
-#'
-#' Reconstructs a multi-row, spanning [rtf_col_header()] by parsing the nesting
-#' encoded in delimited column names -- e.g. `"Drug A____N"`, `"Drug A____Mean"`,
-#' `"Drug B____N"`, `"Drug B____Mean"` becomes a `Drug A` / `Drug B` spanning row
-#' over an `N` / `Mean` leaf row.  Horizontally adjacent columns that share a
-#' label **and** the same ancestor path are merged into one spanning cell;
-#' columns with fewer segments (e.g. an id column with no separator) are
-#' bottom-aligned so their label sits on the leaf row with blank cells above.
-#'
-#' This is the same reconstruction [as_rtftables()] applies automatically to a
-#' plain data.frame; exposing it lets you build the header explicitly and pass
-#' it to [set_col_header()] or `rtftable(col_header = )`.
-#'
-#' @param names A character vector of column names, or a `data.frame` (its
-#'   `names()` are used).
-#' @param sep Character vector of separator(s) to split names on; the longest
-#'   matching separator wins.  Default recognises `"____"`
-#'   (`ydisctools::pivot_stats_wider()`) and `"___tlang_delim___"` (tfrmt's
-#'   column delimiter).  A doubled separator yields an empty (blank) cell at
-#'   that level.
-#'
-#' @return An [rtf_col_header()].  When no name splits into more than one
-#'   segment, a single flat label row of `names`.
-#'
-#' @seealso [set_col_header()] to apply it, [rtf_col_header()] / [col_cell()]
-#'   for the pieces.
-#'
-#' @examples
-#' # instead: as_rtftables() makes the same header from the names
-#' df <- data.frame(Item = "x", "Drug A____N" = 1, "Drug A____Mean" = 2,
-#'                  check.names = FALSE)
-#' as_rtftables(df)[[1]]$col_header
-#' @export
-col_header_from_names <- function(names, sep = .default_header_seps()) {
-  .deprecate_once(
-    "col_header_from_names",
-    paste0("`col_header_from_names()` is deprecated: `as_rtftables()` builds ",
-           "this header from a data.frame's names (`header_sep =`), and a ",
-           "plan from its column keys.\n  Removed in 0.9.0."))
-  if (is.data.frame(names)) names <- names(names)
-  if (!is.character(names)) names <- as.character(names)
-  if (length(names) == 0L) {
-    stop("`names` must be a non-empty character vector (or a data.frame).",
-         call. = FALSE)
-  }
-  rows <- .split_names_to_col_header(names, sep)
-  if (is.null(rows)) rows <- list(names)          # flat: one label row
-  structure(rows, class = "rtf_col_header")
 }

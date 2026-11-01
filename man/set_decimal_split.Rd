@@ -27,8 +27,8 @@ set_decimal_split(x, ...)
 
 \item{...}{Unused.}
 
-\item{cols}{Columns to split: names or positions.  \code{NULL} clears the
-setting.}
+\item{cols}{Columns to split: names or positions.  Needed to set a split;
+left out (\code{NULL}) it clears the setting.}
 
 \item{ratio}{\code{NULL} (the default) to size the two halves automatically from
 the widest left and right part actually present, or a number in \verb{(0, 1)}
@@ -43,13 +43,17 @@ is taken, in character-width units, integer half first.  Default
 
 \item{min_chars}{Floor for each half, in the same units, applied after
 \code{pad_chars}: the effective width of a half is
-\code{max(measured + pad_chars, min_chars)}.  Default \code{c(4, 6)} -- a
-three-digit integer part and a five-character decimal part, each plus its
-padding character -- so anything at or below that size holds a \code{4 : 6}
-baseline and anything larger scales from its own measurement.  Without a
-floor a column of \code{0.0000} values measures 1 against 5 and leaves the
-integer half cramped.  Pass \verb{pad_chars = c(0, 0), min_chars = c(0, 0)} for
-the raw measured ratio.}
+\code{max(measured + pad_chars, min_chars)}.
+\describe{
+\item{Default}{\code{c(4, 6)} -- a three-digit integer part and a
+five-character decimal part, each plus its padding character -- so
+anything at or below that size holds a \code{4 : 6} baseline and anything
+larger scales from its own measurement.}
+\item{Why a floor}{Without one a column of \code{0.0000} values measures 1
+against 5 and leaves the integer half cramped.}
+\item{No floor}{Pass \verb{pad_chars = c(0, 0), min_chars = c(0, 0)} for the
+raw measured ratio.}
+}}
 
 \item{max_chars}{Total measured width, in the same units, above which the
 allowance is dropped and the raw measured proportions are used however

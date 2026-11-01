@@ -27,7 +27,11 @@
 # binary representation of values like 2.675, stored as 2.67499999999999982.
 .round_half_up <- function(x, digits = 0L) {
   z <- abs(x) * 10^digits
-  sign(x) * floor(z + 0.5 + sqrt(.Machine$double.eps) * abs(z)) / 10^digits
+  r <- sign(x) * floor(z + 0.5 + sqrt(.Machine$double.eps) * abs(z)) / 10^digits
+  # (a negative value that rounds to zero is zero, not -0: sprintf() would
+  # print "-0")
+  r[!is.na(r) & r == 0] <- 0
+  r
 }
 
 # The rounding family, resolved once for the whole package.  `NULL` reads
@@ -76,7 +80,8 @@
 #' ([fmt_count_pct()], ...) format cells as the table is built.
 #'
 #' @param x A numeric vector.
-#' @param digits Decimal places. Default `0`.
+#' @param digits Decimal places. Default `0`.  A fraction is cut to its
+#'   whole part (`1.9` is `1`).
 #' @param rounding `"r"` (base R, half to even) or `"sas"` (half away from
 #'   zero), in either case (`"SAS"` is `"sas"`; so for the option and every
 #'   function's `rounding`).  `NULL`, the default, reads
@@ -97,7 +102,7 @@ round_num <- function(x, digits = 0, rounding = NULL) {
     stop(sprintf("`round_num()` rounds numeric input; got %s.",
                  paste(class(x), collapse = "/")), call. = FALSE)
   }
-  digits <- .check_digits(digits, "digits", "round_num")
+  digits <- .check_digits(digits, "digits", "round_num", whole = FALSE)
   .rounder(rounding)(x, digits)
 }
 
@@ -124,6 +129,8 @@ round_num <- function(x, digits = 0, rounding = NULL) {
     d2 <- dec_fun(r)
     if (!identical(d2, d)) { d <- d2; r <- rnd(v, d) }
   }
+  # (a negative value that rounds to zero prints "0.00", not "-0.00")
+  if (r == 0) r <- 0
   sprintf("%.*f", as.integer(d), r)
 }
 
@@ -136,9 +143,12 @@ round_num <- function(x, digits = 0, rounding = NULL) {
   invisible(x)
 }
 
-.check_digits <- function(d, arg, fn) {
+# `whole = TRUE` also refuses a fractional value (1.5, #785); round_num() cuts
+# one to an integer instead, as base::round() does (FR-FM113)
+.check_digits <- function(d, arg, fn, whole = TRUE) {
+  frac <- whole && is.numeric(d) && length(d) == 1L && !is.na(d) && is.finite(d) && d != round(d)
   d <- suppressWarnings(as.integer(d))
-  if (length(d) != 1L || is.na(d) || d < 0L) {
+  if (frac || length(d) != 1L || is.na(d) || d < 0L) {
     stop(sprintf("`%s(%s = )` must be a single non-negative integer.", fn, arg),
          call. = FALSE)
   }

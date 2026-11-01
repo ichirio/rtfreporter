@@ -10,7 +10,8 @@ rtf_table_style_with(style, ...)
 \item{style}{An \code{\link[=rtf_table_style]{rtf_table_style()}} object.}
 
 \item{...}{Named field overrides.  Allowed names match the arguments of
-\code{\link[=rtf_table_style]{rtf_table_style()}}.}
+\code{\link[=rtf_table_style]{rtf_table_style()}}; each is checked as that function checks it. \code{NULL}
+resets a field to its \code{\link[=rtf_table_style]{rtf_table_style()}} default.}
 }
 \value{
 A new \code{rtf_table_style} object.

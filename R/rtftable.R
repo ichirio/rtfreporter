@@ -445,12 +445,6 @@
 #'   from `col_spec` (i.e. column headers follow the data alignment).
 #'   `"center"` / `"left"` / `"right"` applies a single value to every
 #'   column; a character vector of length `ncol` overrides per-column.
-#' @param spanning_header **Deprecated** in 0.8.x (warns once a session,
-#'   still works), removed in 0.9.0.  A standalone spanning row placed
-#'   **above** the `col_header` rows (each element
-#'   `list(from, to, label, underline)`).  Write it as the first row of
-#'   `col_header` instead: `col_header = list(<that row>, <the label row>)`,
-#'   or with [rtf_col_header()] / [col_cell()].
 #' @param col_spec Per-column formatting, as a `list` of per-column specs. Each
 #'   spec is a named list identifying its column with `col`, plus any of:
 #'   \describe{
@@ -468,12 +462,16 @@
 #' @param row_title Which columns are **row-heading** columns.  `NULL`
 #'   (default) means the first column only; otherwise an integer vector of
 #'   column indices or a character vector of column names (e.g.
-#'   `row_title = c(1, 2)`).  This sets the per-column **default data
-#'   alignment**: row-heading columns default to `"left"` and every other
-#'   column defaults to `"center"`.  Explicit `col_spec` alignment, an
-#'   `rtf_table_style`, or alignment read from a gt/rtables source all still
-#'   override this default; column headers follow the data alignment via the
-#'   usual cascade.
+#'   `row_title = c(1, 2)`).
+#'   \describe{
+#'     \item{Default alignment}{This sets the per-column default data
+#'       alignment: row-heading columns default to `"left"` and every other
+#'       column defaults to `"center"`.}
+#'     \item{What overrides it}{Explicit `col_spec` alignment, an
+#'       `rtf_table_style`, or alignment read from a gt/rtables source all
+#'       still override this default; column headers follow the data
+#'       alignment via the usual cascade.}
+#'   }
 #' @param border The table borders. One of:
 #'   \describe{
 #'     \item{`"tfl"`}{(default) the clinical TFL preset: header top + bottom
@@ -483,8 +481,6 @@
 #'       and its `inside_h` / `inside_v` rules fall between the rows / cells;
 #'       [style_zone()] then sets one kind of row.}
 #'     \item{an [rtf_table_style()] object}{its border zones are used.}
-#'     \item{an `rtf_table_border()` object}{**deprecated** (removed in
-#'       0.9.0): the per-zone form; see [rtf_border()] for the new spelling.}
 #'   }
 #' @param style Optional shared `rtf_table_style` (S3).  Provides default
 #'   values for borders, alignment, cell padding, etc.; explicit arguments
@@ -624,7 +620,6 @@ rtftable <- function(
   data,
   col_header = NULL,
   col_header_align = NULL,
-  spanning_header = NULL,
   col_spec = NULL,
   row_title = NULL,
   border = "tfl",
@@ -670,7 +665,6 @@ rtftable <- function(
       cell_padding_right_twips <- style$cell_padding_right_twips
   }
 
-  if (!is.null(spanning_header)) .deprecate_spanning_header()
 
   data_single  <- NULL
   data_list    <- NULL
@@ -755,7 +749,7 @@ rtftable <- function(
   # which is why the expansion happens here and not in the constructor.
   border_resolved <- .expand_table_border(
     .normalize_table_border(border),
-    has_header = !is.null(spanning_header) || !is.null(col_header))
+    has_header = !is.null(col_header))
   # Raised here because it needs the shape of the table to know whether the
   # pre-0.5 reading would have produced anything different.
   .warn_old_edge_reading(.normalize_table_border(border),
@@ -822,7 +816,6 @@ rtftable <- function(
       data_list                   = data_list,
       col_header                  = col_hdr_one,
       col_header_list             = col_hdr_list,
-      spanning_header             = spanning_header,
       col_spec                    = cs,
       row_title                   = row_title_idx,
       border                      = border_resolved,
@@ -847,189 +840,6 @@ rtftable <- function(
     ),
     class = "rtftable"
   )
-}
-
-
-# Apply explicitly-passed rtf_tables() formatting overrides onto a pre-built
-# rtftable, in place of the table's own / gt-derived values.  `ov` is a named
-# list containing ONLY the arguments the caller passed explicitly (see
-# rtf_tables()); fields absent from `ov` are left untouched.  Each value is
-# normalised exactly as the rtftable() constructor would.
-.deprecate_spanning_header <- function() {
-  .deprecate_once(
-    "spanning_header",
-    paste0("`spanning_header =` is deprecated: write the spanning row as the ",
-           "first row of `col_header`\n  (`col_header = list(<spanning row>, ",
-           "<label row>)`, or `rtf_col_header()` / `col_cell()`).\n  ",
-           "Removed in 0.9.0."))
-}
-
-.override_rtftable_fields <- function(tbl, ov) {
-  if (length(ov) == 0L) return(tbl)
-  has <- function(k) k %in% names(ov)
-
-  ref_df    <- if (!is.null(tbl$data_list)) tbl$data_list[[1L]] else tbl$data
-  ncol_df   <- if (!is.null(ref_df)) ncol(ref_df) else length(tbl$col_spec)
-  col_names <- if (!is.null(ref_df)) names(ref_df) else NULL
-
-  # -- column / table widths and placement (stored verbatim) --------------
-  if (has("col_rel_width"))        tbl$col_rel_width <- ov$col_rel_width
-  if (has("column_widths_twips"))  tbl$column_widths_twips <-
-      if (is.null(ov$column_widths_twips)) NULL else as.integer(ov$column_widths_twips)
-  if (has("table_width_twips"))    tbl$table_width_twips <- ov$table_width_twips
-  if (has("table_width_pct_of_writable"))
-    tbl$table_width_pct_of_writable <- ov$table_width_pct_of_writable
-  if (has("table_width_pct") && !is.null(ov$table_width_pct)) {
-    tbl$table_width_pct_of_writable <- .table_width_pct_frac(ov$table_width_pct)
-  }
-  if (has("table_align")) {
-    if (!ov$table_align %in% c("left", "center", "right")) {
-      stop("`table_align` must be 'left', 'center', or 'right'.", call. = FALSE)
-    }
-    tbl$table_align <- ov$table_align
-  }
-
-  # -- row heights ---------------------------------------------------------
-  if (has("row_height_twips"))
-    tbl$row_height_twips <- if (is.null(ov$row_height_twips)) NULL
-                            else as.integer(ov$row_height_twips)
-  if (has("row_height_exact")) {
-    if (!is.logical(ov$row_height_exact) || length(ov$row_height_exact) != 1L) {
-      stop("`row_height_exact` must be TRUE or FALSE.", call. = FALSE)
-    }
-    tbl$row_height_exact <- ov$row_height_exact
-  }
-  if (has("header_row_height_twips"))
-    tbl$header_row_height_twips <- if (is.null(ov$header_row_height_twips)) NULL
-                                   else as.integer(ov$header_row_height_twips)
-  if (has("blank_row_height_twips"))
-    tbl$blank_row_height_twips <- if (is.null(ov$blank_row_height_twips)) NULL
-                                  else as.integer(ov$blank_row_height_twips)
-
-  # -- cell padding / valign ----------------------------------------------
-  if (has("cell_padding_left_twips"))
-    tbl$cell_padding_left_twips <- if (is.null(ov$cell_padding_left_twips)) NULL
-                                   else as.integer(ov$cell_padding_left_twips)
-  if (has("cell_padding_right_twips"))
-    tbl$cell_padding_right_twips <- if (is.null(ov$cell_padding_right_twips)) NULL
-                                    else as.integer(ov$cell_padding_right_twips)
-  if (has("cell_valign")) {
-    if (!ov$cell_valign %in% c("top", "center", "bottom")) {
-      stop("`cell_valign` must be 'top', 'center', or 'bottom'.", call. = FALSE)
-    }
-    tbl$cell_valign <- ov$cell_valign
-  }
-
-  # -- typography (#299) ---------------------------------------------------
-  # Font and size are settable on the table when you build it and overridable
-  # from rtf_tables() when you place it in a document -- the same two levels
-  # row_height_twips already has.  They stay together so the size / height
-  # coupling of #292 is resolved in one place.
-  if (has("font_size_half_points")) {
-    tbl$font_size_half_points <-
-      .check_font_size(ov$font_size_half_points, "font_size_half_points")
-  }
-  if (has("font")) tbl$font <- .check_font(ov$font, "font")
-
-  # -- border (needs normalisation) ---------------------------------------
-  if (has("border")) {
-    # A header supplied in the same override call counts, so read `ov` first.
-    hdr_now <- if (has("spanning_header")) ov$spanning_header else tbl$spanning_header
-    col_now <- if (has("col_header")) ov$col_header
-               else tbl$col_header %||% tbl$col_header_list
-    tbl$border <- .expand_table_border(
-      .normalize_table_border(ov$border),
-      has_header = !is.null(hdr_now) || !is.null(col_now))
-  }
-
-  # -- spanning header (stored verbatim) ----------------------------------
-  if (has("spanning_header")) {
-    if (!is.null(ov$spanning_header)) .deprecate_spanning_header()
-    tbl$spanning_header <- ov$spanning_header
-  }
-
-  # -- column header (single- vs multi-DF) --------------------------------
-  if (has("col_header")) {
-    # One label per printed column -- and a page cut out by paginate_cols()
-    # keeps only its own, so a header written for the whole table does not fit
-    # it (#435).
-    .check_col_header_width(ov$col_header, ncol_df, "rtf_tables(col_header)")
-    if (!is.null(tbl$data_list)) {
-      tbl$col_header_list <- .normalize_multi_col_header(
-        ov$col_header, length(tbl$data_list), ncol_df = ncol_df,
-        col_names = col_names)
-    } else {
-      tbl$col_header <- .normalize_col_header_rows(ov$col_header, ncol_df,
-                                                   col_names)
-    }
-  }
-
-  # -- blank rows (resolve against the table's data) ----------------------
-  if (has("blank_rows")) {
-    if (is.null(ov$blank_rows)) {
-      tbl$blank_rows <- NULL
-    } else if (!is.null(tbl$data)) {
-      tbl$blank_rows <- .resolve_blank_rows(ov$blank_rows, tbl$data)
-    } else {
-      v <- as.integer(ov$blank_rows)
-      tbl$blank_rows <- sort(unique(v))
-    }
-  }
-
-  # -- row-title columns: re-seed the DEFAULT data/header alignment -------
-  # Changing which columns are row titles only re-aligns columns that are
-  # still at their (old) default alignment; a column whose align was set
-  # explicitly (by col_spec, a style, or gt extraction) is left untouched.
-  if (has("row_title")) {
-    new_rt <- .normalize_row_title(ov$row_title, ncol_df, col_names)
-    old_rt <- tbl$row_title %||% 1L
-    old_def <- function(j) if (j %in% old_rt) "left" else "center"
-    new_def <- function(j) if (j %in% new_rt) "left" else "center"
-    for (j in seq_along(tbl$col_spec)) {
-      if (identical(tbl$col_spec[[j]]$align, old_def(j))) {
-        tbl$col_spec[[j]]$align <- new_def(j)
-        if (identical(tbl$col_spec[[j]]$header_align, old_def(j))) {
-          tbl$col_spec[[j]]$header_align <- new_def(j)
-        }
-      }
-    }
-    tbl$row_title <- new_rt
-  }
-
-  # -- per-column spec: merge user fields over the existing spec ----------
-  if (has("col_spec") && !is.null(ov$col_spec)) {
-    for (spec in ov$col_spec) {
-      if (!is.list(spec) || is.null(spec$col)) {
-        stop("Each element of `col_spec` must be a list with a `col` key.",
-             call. = FALSE)
-      }
-      idx <- if (is.character(spec$col)) match(spec$col, col_names)
-             else as.integer(spec$col)
-      if (is.na(idx) || idx < 1L || idx > length(tbl$col_spec)) next
-      for (f in setdiff(names(spec), "col")) tbl$col_spec[[idx]][[f]] <- spec[[f]]
-      # The column header (and any spanning header above it) inherits the
-      # data alignment unless the header alignment is set explicitly.  When
-      # this override changes `align` but not `header_align`, re-inherit so
-      # the headers follow -- matching the construction-time cascade.
-      if ("align" %in% names(spec) && !("header_align" %in% names(spec))) {
-        tbl$col_spec[[idx]]$header_align <- spec$align
-      }
-    }
-  }
-
-  # -- column-header alignment (top-priority override of the cascade) -----
-  if (has("col_header_align") && !is.null(ov$col_header_align)) {
-    cha <- ov$col_header_align
-    for (j in seq_along(tbl$col_spec)) {
-      tbl$col_spec[[j]]$header_align <- if (length(cha) == 1L) cha else cha[[j]]
-    }
-  }
-
-  # NB: `style` is a construction-time defaults seed and is NOT applied as a
-  # post-hoc override to a pre-built rtftable; pass it to rtftable() /
-  # as_rtftables() instead.
-
-  tbl
 }
 
 

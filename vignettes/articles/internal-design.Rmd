@@ -173,9 +173,7 @@ Knowing **why** a class exists tells you how to work with it. In rtfreporter an
 S3 class plays one of three roles:
 
 1. **Generic dispatch.** A few classes carry `print()` / `plot()` methods (for
-   readable console output and base-graphics layout previews). `paginate()` is
-   also an S3 generic, but it dispatches on the *input* type
-   (`data.frame` / `gt_tbl` / `list`), not on a rtfreporter class.
+   readable console output and base-graphics layout previews).
 2. **Type tag for `inherits()`.** Most classes exist to be recognised by
    `inherits(x, "<class>")` in ordinary `if` branches -- the renderer and the
    pipe verbs switch on object kind this way. There is no method involved.

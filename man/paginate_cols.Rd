@@ -11,36 +11,26 @@ paginate_cols(x, ...)
 \method{paginate_cols}{rtftable}(
   x,
   at = NULL,
-  cols = NULL,
-  by = NULL,
-  carry = NULL,
-  col_header = NULL,
-  allow_span_break = TRUE,
-  width = c("fill", "keep"),
-  page_order = c("across", "down"),
   cut_by = NULL,
   every = NULL,
   keep = NULL,
-  fit = NULL,
-  order = NULL,
+  col_header = NULL,
+  allow_span_break = TRUE,
+  fit = TRUE,
+  order = "across",
   ...
 )
 
 \method{paginate_cols}{list}(
   x,
   at = NULL,
-  cols = NULL,
-  by = NULL,
-  carry = NULL,
-  col_header = NULL,
-  allow_span_break = TRUE,
-  width = c("fill", "keep"),
-  page_order = c("across", "down"),
   cut_by = NULL,
   every = NULL,
   keep = NULL,
-  fit = NULL,
-  order = NULL,
+  col_header = NULL,
+  allow_span_break = TRUE,
+  fit = TRUE,
+  order = "across",
   ...
 )
 }
@@ -53,21 +43,28 @@ Every page in a list must have the same columns.}
 \item{at}{Columns to cut \strong{before}, as names or positions (symmetric with
 \code{split_rows}). \code{at = c(4, 6)} yields blocks \code{1:3}, \code{4:5}, \code{6:ncol}.}
 
-\item{cols}{\emph{Superseded} by \code{cut_by}: explicit column blocks as a list,
-e.g. \code{list(2:3, 4:5)}.}
-
-\item{by}{\emph{Superseded} by \code{cut_by}. Where to cut, taken from the \strong{columns themselves} instead of
-positions: either a \strong{separator} found in the column names (a single
-string -- \code{"Placebo____Day 1"} with \code{by = "____"} keys on \code{"Placebo"}), or
-one \strong{key per column}. Each run of one key becomes a block, so a wide
+\item{cut_by}{Where to cut other than by position, as
+\code{\link[=plan_paginate_cols]{plan_paginate_cols()}} says it.
+\describe{
+\item{a \strong{list} of column blocks}{e.g. \code{list(2:3, 4:5)}.}
+\item{a \strong{separator} found in the column names}{a single string --
+\code{"Placebo____Day 1"} with \code{cut_by = "____"} keys on \code{"Placebo"}.}
+\item{one \strong{key per column}}{a vector as long as the table is wide.}
+}
+With a separator or keys each run of one key becomes a block, so a wide
 table laid out as \verb{<group>____<visit>} splits per group with no positions
-to count. Carry columns belong to no block. Give one of \code{at}, \code{cols} or
-\code{by}.}
+to count.  Kept columns belong to no block.}
 
-\item{carry}{\emph{Superseded} by \code{keep}. Row-heading columns repeated on every page. Defaults to the
-table's \code{row_title} (column 1 unless set). \code{carry = integer(0)} repeats
-nothing. Carry columns are removed from the blocks automatically, so they
-are never printed twice on a page.}
+\item{every}{Cut a block every this many columns, counting only the ones a
+block does not keep -- \code{at} without counting the columns yourself.  A
+table no wider than one block is returned as it is.
+
+Give one of \code{at}, \code{cut_by} or \code{every}.}
+
+\item{keep}{The row-heading columns repeated on every page.  Defaults to
+the table's \code{row_title} (column 1 unless set); \code{keep = integer(0)}
+repeats nothing.  Kept columns are removed from the blocks automatically,
+so they are never printed twice on a page.}
 
 \item{col_header}{The header each page should carry, written \strong{once} for
 the whole table:
@@ -76,9 +73,9 @@ the whole table:
 rows of \code{\link[=col_cell]{col_cell()}} -- sliced to each page's columns, spanning cells
 clipped, exactly as a header already on the table is.}
 \item{\code{"names"}}{build the \strong{two-level} header the column names
-already carry: the \code{by} key on top (the group), the rest of the name
-below (the visit). Needs \code{by} to be a separator. A carry column keeps
-its own label and sits under no spanning cell.}
+already carry: the \code{cut_by} key on top (the group), the rest of the
+name below (the visit). Needs \code{cut_by} to be a separator. A kept
+column keeps its own label and sits under no spanning cell.}
 \item{\code{NULL}}{(default) leave the table's own header, which is sliced
 per page either way.}
 }
@@ -89,45 +86,31 @@ after the split (\code{set_col_header()} on the page list) is an error.}
 \item{allow_span_break}{Allow a cut inside a spanning header cell. Default
 \code{TRUE}.}
 
-\item{width}{\emph{Superseded} by \code{fit}. How relative widths are rescaled after the split. \code{"fill"}
+\item{fit}{How relative widths are rescaled after the split.  \code{TRUE}
 (default) fixes the twips-per-ratio unit on \strong{page 1} and reuses it on
 every page, so page 1 fills the sheet and a given ratio is the same width
-throughout; \code{"keep"} gives each kept column exactly the width it had
+throughout; \code{FALSE} gives each kept column exactly the width it had
 before the split. No effect under \code{column_widths_twips}. See
 \emph{Column widths}.}
 
-\item{page_order}{\emph{Superseded} by \code{order}. The order the pages come out in, as the \strong{axes} of the
-split, outermost first: any of \code{"group"} (the pages a value-based split
-made, \code{as_rtftables(split = "by_value", group_col = )}), \code{"rows"} (the row
-pages -- \code{page_by} and every other row split) and \code{"cols"} (the column
-blocks this verb cuts). Axes left out are appended in that default order,
-and an axis the table does not have never varies.
-
-\code{"across"} and \code{"down"} are the two usual orders, kept as shorthands:
-\code{"across"} is \code{c("group", "cols", "rows")} -- the page number advances
-across the columns first -- and \code{"down"} is \code{c("group", "rows", "cols")},
-advancing down the rows. The pages themselves are identical whatever the
-order; only the sequence differs. See \emph{Page order}.}
-
-\item{cut_by}{Where to cut other than by position, as
-\code{\link[=plan_paginate_cols]{plan_paginate_cols()}} says it: a \strong{list} of column blocks
-(\code{list(2:3, 4:5)}), or a separator / one key per column (see \code{by}).}
-
-\item{every}{Cut a block every this many columns, counting only the ones a
-block does not keep -- \code{at} without counting the columns yourself.  A
-table no wider than one block is returned as it is.}
-
-\item{keep}{The row-heading columns every block repeats (see \code{carry}).}
-
-\item{fit}{\code{TRUE} (every block's widths on page 1's scale) or \code{FALSE} (each
-column keeps its width) -- \code{width = "fill"} / \code{"keep"}.}
-
-\item{order}{The order the pages come out in (see \code{page_order}).
+\item{order}{The order the pages come out in, as the \strong{axes} of the
+split, outermost first.
+\describe{
+\item{Axes}{any of \code{"group"} (the pages a value-based split made,
+\code{as_rtftables(split = "by_value", group_col = )}), \code{"rows"} (the row
+pages -- \code{page_by} and every other row split) and \code{"cols"} (the
+column blocks this verb cuts).  Axes left out are appended in that
+default order, and an axis the table does not have never varies.}
+\item{\code{"across"}}{(default) is \code{c("group", "cols", "rows")} -- the page
+number advances across the columns first.}
+\item{\code{"down"}}{is \code{c("group", "rows", "cols")}, advancing down the
+rows.}
+}
+The two are kept as shorthands.  The pages themselves are identical
+whatever the order; only the sequence differs.  See \emph{Page order}.
 
 \code{cut_by}, \code{every}, \code{keep}, \code{fit} and \code{order} are \code{\link[=plan_paginate_cols]{plan_paginate_cols()}}'s
-names, the primary ones here too (#594); \code{cols}, \code{by}, \code{carry}, \code{width}
-and \code{page_order} are \emph{superseded} by them -- documented, still working,
-not warned.  Give one of \code{at}, \code{cut_by} (\code{cols} / \code{by}) or \code{every}.}
+names (#594).}
 }
 \value{
 A list of \code{\link[=rtftable]{rtftable()}} pages. Names are carried through unchanged --
@@ -139,7 +122,7 @@ the row pagination \code{\link[=as_rtftables]{as_rtftables()}} performs -- repea
 column(s) on every page so each one can be read on its own.
 
 Row splitting happens first; this verb then splits the resulting pages, and
-\code{page_order} says which axis the \strong{page number advances along first} --
+\code{order} says which axis the \strong{page number advances along first} --
 \code{"across"} the columns (the default: the column block advances, the row
 pages running inside it) or \code{"down"} the rows (the row page advances, its
 column blocks following it). Two row pages by three column blocks come out
@@ -157,12 +140,12 @@ printed columns -- after \code{drop_cols}, \code{stub} and any user
 \section{Column widths}{
 
 \code{column_widths_twips} is absolute, so a subset already carries the right
-widths and \code{width} has no effect. Relative widths (and the default equal
+widths and \code{fit} has no effect. Relative widths (and the default equal
 distribution) need a rule, because \code{.compute_cellx()} re-normalises whatever
 it is given across the page: a bare subset would stretch the kept columns to
 refill the sheet, making a ratio-1 column a different size on every page.
 
-\code{width = "fill"} (the default) fixes the \strong{twips per ratio unit on page 1}
+\code{fit = TRUE} (the default) fixes the \strong{twips per ratio unit on page 1}
 and reuses it everywhere. Page 1 -- and any block with the same ratio total
 -- fills the sheet, while a given ratio is the same width on every page.
 With \code{rel = c(3, 1, 1, 1, 1, 1, 1, 1, 1)} on a 13680-twip page:\tabular{lll}{
@@ -173,13 +156,13 @@ With \code{rel = c(3, 1, 1, 1, 1, 1, 1, 1, 1)} on a 13680-twip page:\tabular{lll
 }
 
 
-\code{width = "keep"} measures against the whole table instead, so a kept column
+\code{fit = FALSE} measures against the whole table instead, so a kept column
 has exactly the width it had before the split and a partial block yields a
 proportionally shorter page.
 
 A block totalling \strong{more} ratio than page 1 scales past the sheet under
-\code{"fill"}; a warning names the pages. Order the blocks so the widest comes
-first, or use \code{"keep"}.
+\code{fit = TRUE}; a warning names the pages. Order the blocks so the widest
+comes first, or use \code{fit = FALSE}.
 }
 
 \section{Spanning headers}{
@@ -193,12 +176,12 @@ cut instead.
 \section{Columns named \verb{<group>__<item>}}{
 
 The common wide layout -- one column per treatment x visit -- splits per
-group and wants a two-level header, group over visit. \code{by} and
+group and wants a two-level header, group over visit. \code{cut_by} and
 \code{col_header = "names"} do both from the names:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{as_rtftables(df, split = "by_value", group_col = "period",
              stub = c("row_grp1", "label")) |>
-  paginate_cols(by = "____", carry = 1, col_header = "names")
+  paginate_cols(cut_by = "____", keep = 1, col_header = "names")
 }\if{html}{\out{</div>}}
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{page 1                        page 2
@@ -209,7 +192,7 @@ group and wants a two-level header, group over visit. \code{by} and
 
 \section{Page order}{
 
-A table can be split on three axes, and \code{page_order} names them in the order
+A table can be split on three axes, and \code{order} names them in the order
 they should nest, \strong{outermost first}:
 \itemize{
 \item \code{"group"}: the pages a value-based split made -- \code{as_rtftables(split = "by_value", group_col = )}
@@ -226,7 +209,7 @@ With a group \code{G}, two row pages \code{P1} / \code{P2} and two column blocks
 }
 
 An axis left out of the vector is appended in the default order
-(\code{"group"}, \code{"rows"}, \code{"cols"}), so \code{page_order = "cols"} means "column
+(\code{"group"}, \code{"rows"}, \code{"cols"}), so \code{order = "cols"} means "column
 blocks outermost, everything else as usual".
 
 Each page records its own group in \code{rtf_paginate_meta$page_group} (and its
@@ -243,7 +226,7 @@ section per block and group.
 \section{Page names}{
 
 A column page inherits the name of the row page it was cut from, whatever
-\code{page_order} is -- that is the only name there is. Under \code{"across"} pages
+\code{order} is -- that is the only name there is. Under \code{"across"} pages
 that share a name are therefore no longer adjacent.
 
 Pages sharing a heading are numbered with a \code{"...n"} tail

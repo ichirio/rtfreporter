@@ -35,15 +35,16 @@
 #' Format count + percent cells to a uniform display width
 #'
 #' Returns each pair `(count[i], pct[i])` as a padded `"n (xx.x)"`
-#' string suitable for monospaced clinical TFL alignment.  The four
-#' width branches match the convention in the rtfreporter Issue #2
-#' reference helper.
+#' string suitable for monospaced clinical TFL alignment.  The five
+#' branches -- a count only, a percentage below 10, 10 to 99, 100 or more,
+#' and a missing count (`na`) -- match the convention in the rtfreporter
+#' Issue #2 reference helper.
 #'
 #' `fmt_count_pct()` was called `format_count_pct()`, the one cell formatter
-#' not named `fmt_`: the old name is **deprecated** (it says so once a session
-#' and still works) and is removed in 0.9.0, the first CRAN release.
+#' not named `fmt_`; the old name was removed in 0.9.0.
 #'
-#' @param count Integer / numeric vector of counts.  A `0` count produces the
+#' @param count Integer / numeric vector of whole counts (a fraction is an
+#'   error).  A `0` count produces the
 #'   count-only branch (no parentheses); a **missing** count produces the `na`
 #'   token instead.
 #' @param pct   Numeric vector of percentages.  By default expressed
@@ -102,6 +103,12 @@ fmt_count_pct <- function(count, pct,
   na <- .check_na_text(na)
   if (!is.numeric(count) || !is.numeric(pct)) {
     stop("`count` and `pct` must both be numeric.", call. = FALSE)
+  }
+  # a count is whole: 5.7 would print as 5 (#765)
+  frac <- is.finite(count) & count != round(count)
+  if (any(frac)) {
+    stop(sprintf("`count` must be whole numbers; got %s.",
+                 paste(utils::head(count[frac], 3L), collapse = ", ")), call. = FALSE)
   }
   n_in <- max(length(count), length(pct))
   if (length(count) == 1L) count <- rep(count, n_in)
@@ -164,49 +171,6 @@ fmt_count_pct <- function(count, pct,
 }
 
 
-#' Re-align existing "n (xx.x)" strings to a uniform display width
-#'
-#' **Deprecated** in 0.8.x (it says so once a session and still works),
-#' removed in 0.9.0: the same alignment is `as_rtftables(align_count_pct =
-#' TRUE)`, or the built-in cell format `"count_pct"`
-#' (`as_rtftables(cell_format = "count_pct")`).
-#'
-#' Scans `x` for cells matching the clinical-TFL pattern `"n (xx.x)"`
-#' (e.g. `"5 (33.3)"`), parses the count and percent, and reformats
-#' them through [fmt_count_pct()] so every cell is the same width.
-#' Cells that do not match are returned unchanged.
-#'
-#' @param x Character vector.  Cells that match the regex
-#'   `^\\d+ \\(\\d+(\\.\\d+)?\\)$` are reformatted; all others are
-#'   returned unchanged.
-#' @param nbsp Padding character (see [fmt_count_pct()]).
-#' @param na Text to print for a missing cell -- an `NA` in `x`, or a cell that
-#'   already holds this token because [as_rtftables()] substituted it.  It is
-#'   right-justified in the count field, so its right edge lands on the ones
-#'   digit.  The default `""` leaves the cell empty, as before.  Text that is
-#'   neither the token nor a count/percent cell (`"NE"`, `"n/a"`, free text) is
-#'   still returned unchanged and unpadded.
-#'
-#' @return Character vector the same length as `x`.
-#'
-#' @examples
-#' # deprecated: the same as as_rtftables(align_count_pct = TRUE) does
-#' suppressWarnings(
-#'   realign_count_pct(c("5 (33.3)", "12 (100.0)", "0 (0.0)",
-#'                       "not a count", "1 (5.0)", "1 (50.0)")))
-#'
-#' @seealso [fmt_count_pct()] for the numeric -> string variant.
-#' @keywords internal
-#' @export
-realign_count_pct <- function(x, nbsp = "\u00a0", na = "") {
-  .deprecate_once(
-    "realign_count_pct",
-    paste0("`realign_count_pct()` is deprecated: align the column with ",
-           "`as_rtftables(align_count_pct = TRUE)` (the built-in cell format ",
-           "\"count_pct\").\n  Removed in 0.9.0."))
-  .realign_count_pct(x, nbsp = nbsp, na = na)
-}
-
 # The alignment itself: what align_count_pct = TRUE and the built-in cell
 # format "count_pct" apply
 .realign_count_pct <- function(x, nbsp = "\u00a0", na = "") {
@@ -247,30 +211,4 @@ realign_count_pct <- function(x, nbsp = "\u00a0", na = "") {
     }
   }
   out
-}
-
-#' Format count + percent cells (old name)
-#'
-#' **Deprecated** in 0.8.x (it says so once a session and still works),
-#' removed in 0.9.0: the function is [fmt_count_pct()] now, named like the
-#' other cell formatters.
-#'
-#' @inheritParams fmt_count_pct
-#' @return As [fmt_count_pct()].
-#' @examples
-#' suppressWarnings(format_count_pct(5L, 0.05))   # fmt_count_pct(5L, 0.05)
-#' @keywords internal
-#' @export
-format_count_pct <- function(count, pct,
-                             pct_unit = c("fraction", "percent"),
-                             nbsp     = "\u00a0",
-                             pct_sign = FALSE,
-                             na       = "",
-                             rounding = NULL) {
-  .deprecate_once(
-    "format_count_pct",
-    paste0("`format_count_pct()` is deprecated: it is `fmt_count_pct()` now, ",
-           "with the same arguments.\n  Removed in 0.9.0."))
-  fmt_count_pct(count, pct, pct_unit = pct_unit, nbsp = nbsp, pct_sign = pct_sign,
-                na = na, rounding = rounding)
 }

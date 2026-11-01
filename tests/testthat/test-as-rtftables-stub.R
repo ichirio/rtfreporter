@@ -1,6 +1,4 @@
-# as_rtftables(stub_vars = ): fold stub_cols() into the extraction pipeline (#242)
-
-local_deprecated("stub_vars")  # deprecated in 0.8.x
+# as_rtftables(stub = ): fold stub_cols() into the extraction pipeline (#242)
 
 nbsp <- intToUtf8(160L)
 
@@ -12,8 +10,8 @@ ae <- data.frame(
   stringsAsFactors = FALSE
 )
 
-test_that("stub_vars merges hierarchy columns into one indented stub (data.frame)", {
-  pg <- as_rtftables(ae, stub_vars = c("SOC", "PT"), stub_label = "SOC / PT")[[1L]]
+test_that("stub merges hierarchy columns into one indented stub (data.frame)", {
+  pg <- as_rtftables(ae, stub = stub_spec(c("SOC", "PT"), label = "SOC / PT"))[[1L]]
 
   expect_s3_class(pg, "rtftable")
   expect_identical(names(pg$data), c("SOC / PT", "Placebo", "Active"))
@@ -24,7 +22,7 @@ test_that("stub_vars merges hierarchy columns into one indented stub (data.frame
   expect_false(startsWith(pg$data[[1L]][1L], nbsp))
 })
 
-test_that("stub_vars = NULL is a no-op (backward compatible)", {
+test_that("stub = NULL is a no-op (backward compatible)", {
   a <- as_rtftables(ae)[[1L]]
   expect_identical(names(a$data), c("SOC", "PT", "Placebo", "Active"))
   expect_identical(nrow(a$data), 3L)
@@ -39,13 +37,13 @@ test_that("stub_cols() output still carries a src attribute without breaking cal
   expect_identical(sum(is.na(src)), 2L)
 })
 
-test_that("stub_vars reindexes a gt spanning header onto the reshaped columns", {
+test_that("stub reindexes a gt spanning header onto the reshaped columns", {
   skip_if_not_installed("gt")
   g <- gt::gt(ae) |>
     gt::tab_spanner("Treatment", c(Placebo, Active)) |>
     gt::cols_align("center", c(Placebo, Active))
 
-  pg <- as_rtftables(g, read_meta = TRUE, stub_vars = c("SOC", "PT"))[[1L]]
+  pg <- as_rtftables(g, read_meta = TRUE, stub = stub_spec(c("SOC", "PT")))[[1L]]
 
   expect_identical(names(pg$data), c("SOC / PT", "Placebo", "Active"))
   # two-row header: spanning row + leaf row
@@ -61,13 +59,13 @@ test_that("stub_vars reindexes a gt spanning header onto the reshaped columns", 
   expect_identical(pg$col_header[[2L]][[1L]], "SOC / PT")
 })
 
-test_that("stub_vars composes with a group-aware split and renders", {
+test_that("stub composes with a group-aware split and renders", {
   skip_if_not_installed("gt")
   big <- do.call(rbind, replicate(3, ae, simplify = FALSE))
   big$PT <- paste0(big$PT, seq_len(nrow(big)))         # distinct leaves
   g <- gt::gt(big)
 
-  pages <- as_rtftables(g, read_meta = TRUE, stub_vars = c("SOC", "PT"),
+  pages <- as_rtftables(g, read_meta = TRUE, stub = stub_spec(c("SOC", "PT")),
                         split = "group_safe", max_rows = 5)
   expect_gt(length(pages), 1L)
   expect_true(all(vapply(pages, inherits, logical(1L), "rtftable")))
@@ -81,8 +79,8 @@ test_that("stub_vars composes with a group-aware split and renders", {
   expect_true(file.exists(f))
 })
 
-test_that("stub_vars of one column: that column is the stub, nothing folded", {
-  expect_no_error(pages <- as_rtftables(ae, stub_vars = "SOC"))
+test_that("stub of one column: that column is the stub, nothing folded", {
+  expect_no_error(pages <- as_rtftables(ae, stub = stub_spec("SOC")))
   expect_true(all(vapply(pages, inherits, logical(1L), "rtftable")))
   doc <- rtf_document() |>
     rtf_section(secinfo = list(header = NULL)) |>
@@ -93,7 +91,7 @@ test_that("stub_vars of one column: that column is the stub, nothing folded", {
   expect_true(any(grepl(ae$SOC[1L], readLines(f), fixed = TRUE)))
 })
 
-test_that("by_value + stub_vars works from a gt input and renders (#244)", {
+test_that("by_value + stub works from a gt input and renders (#244)", {
   skip_if_not_installed("gt")
   df <- data.frame(
     grade  = c("Grade 1", "Grade 1", "Grade 2", "Grade 2"),
@@ -103,8 +101,8 @@ test_that("by_value + stub_vars works from a gt input and renders (#244)", {
     stringsAsFactors = FALSE
   )
   g <- gt::gt(df)
-  pages <- as_rtftables(g, read_meta = TRUE, stub_vars = c("group1", "label"),
-                        stub_label = "Parameter", split = "by_value",
+  pages <- as_rtftables(g, read_meta = TRUE, stub = stub_spec(c("group1", "label"), label = "Parameter"),
+                        split = "by_value",
                         group_col = "grade", drop_cols = "grade")
 
   expect_identical(names(pages), c("Grade 1", "Grade 2"))
@@ -120,7 +118,7 @@ test_that("by_value + stub_vars works from a gt input and renders (#244)", {
   expect_true(file.exists(f))
 })
 
-test_that("by_value + stub_vars splits by group_col first, then stubs each page (#244)", {
+test_that("by_value + stub splits by group_col first, then stubs each page (#244)", {
   # Outer grouping column (grade) + inner hierarchy (SOC/PT) folded into a stub.
   # Previously the stub was built once on the whole body, blanking `grade` on
   # the inserted SOC label rows -> one page per row + nameless "group_0".
@@ -131,7 +129,7 @@ test_that("by_value + stub_vars splits by group_col first, then stubs each page 
     N     = c("3", "2", "5", "1", "4"),
     stringsAsFactors = FALSE
   )
-  pages <- as_rtftables(df, stub_vars = c("SOC", "PT"), stub_label = "SOC / PT",
+  pages <- as_rtftables(df, stub = stub_spec(c("SOC", "PT"), label = "SOC / PT"),
                         split = "by_value", group_col = "grade",
                         drop_cols = "grade")
 
@@ -150,7 +148,7 @@ test_that("by_value + stub_vars splits by group_col first, then stubs each page 
   expect_true(startsWith(pages[[1L]]$data[[1L]][2L], strrep(nbsp, 4L)))
 })
 
-test_that("by_value + stub_vars handles a constant intermediate hierarchy level (#244)", {
+test_that("by_value + stub handles a constant intermediate hierarchy level (#244)", {
   # The reported case: LBCAT / group1 / label where group1 is a fixed value
   # shared by every row.  Building the stub before the split would collapse
   # group1 into a single label row spanning both grades; splitting first gives
@@ -162,8 +160,7 @@ test_that("by_value + stub_vars handles a constant intermediate hierarchy level 
     N      = c("3", "2", "1", "4"),
     stringsAsFactors = FALSE
   )
-  pages <- as_rtftables(df, stub_vars = c("group1", "label"),
-                        stub_label = "Parameter",
+  pages <- as_rtftables(df, stub = stub_spec(c("group1", "label"), label = "Parameter"),
                         split = "by_value", group_col = "grade",
                         drop_cols = "grade")
 
@@ -195,7 +192,7 @@ test_that("a group_col the stub consumes is accepted, as the docs promise", {
   # built, so naming it is correct -- it used to error on an argument that was
   # only ever forwarded, never used (#429).
   pg <- as_rtftables(.ae429(), split = "by_value", group_col = "soc",
-                     stub_vars = c("soc", "pt"), drop_cols = "period")
+                     stub = stub_spec(c("soc", "pt")), drop_cols = "period")
   expect_identical(names(pg), c("CARDIAC", "GI"))
   # each page: the stub label row plus that SOC's PT rows from both periods
   expect_identical(vapply(pg, function(p) nrow(p$data), integer(1L)),
@@ -207,7 +204,7 @@ test_that("inside a page, group detection falls to the stub column", {
   # group_col is spent on the split, so a "between_groups" spec inside a page
   # detects on column 1 -- the stub, which is where the hierarchy now lives.
   pg <- as_rtftables(.ae429(), split = "by_value", group_col = "period",
-                     stub_vars = c("soc", "pt"), drop_cols = "period",
+                     stub = stub_spec(c("soc", "pt")), drop_cols = "period",
                      blank_rows = "between_groups")
   expect_identical(names(pg), c("Period 1", "Period 2"))
   expect_identical(attr(pg[[1L]]$data, "rtf_blank_rows", exact = TRUE), 3L)
@@ -215,7 +212,7 @@ test_that("inside a page, group detection falls to the stub column", {
 
 test_that("a group_col that survives the stub still works", {
   pg <- as_rtftables(.ae429(), split = "by_value", group_col = "period",
-                     stub_vars = c("soc", "pt"), drop_cols = "period")
+                     stub = stub_spec(c("soc", "pt")), drop_cols = "period")
   expect_identical(names(pg), c("Period 1", "Period 2"))
   expect_identical(unname(vapply(pg, function(p) nrow(p$data), integer(1L))),
                    c(6L, 6L))

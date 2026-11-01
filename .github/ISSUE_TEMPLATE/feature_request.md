@@ -22,6 +22,15 @@ assignees: ""
 <!-- Other ways you have tried or thought about (other packages, manual
      post-processing, ...). -->
 
+## Impact, risk and the requirements it touches
+
+<!-- For the maintainers' change control (inst/validation/quality-plan.md).
+     Leave blank if you are not sure; a maintainer fills it in. -->
+
+- Functions and outputs affected:
+- Risk (high / medium / low) and why:
+- Functional requirements (FR ids, inst/validation/requirements.csv):
+
 ## Scope note
 
 <!-- See "Why rtfreporter?" in the README: the package says no to features

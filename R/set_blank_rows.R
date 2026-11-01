@@ -3,7 +3,7 @@
 # ============================================================================
 #
 #  Standalone helper for assigning blank-row positions to a single
-#  data.frame.  This is the function `paginate()` calls on every
+#  data.frame.  This is the function `as_rtftables()` calls on every
 #  per-page chunk; we expose it so callers who do their own paging
 #  (or who only need blank-row insertion, no splitting) can use the
 #  same blank-spec API.
@@ -28,14 +28,13 @@
 #' and `blank_row_end` arguments do.
 #'
 #' @param data A data.frame (or tibble).
-#' @param df The old name of `data`: **deprecated** in 0.8.x (warns once a
-#'   session, still works), removed in 0.9.0.
 #' @param blank_rows Blank-row specification. One of -- or a `list()` combining
 #'   any of (positions are unioned):
 #'   \describe{
 #'     \item{`NULL`}{(default) no positions from this argument.}
 #'     \item{an integer vector}{explicit positions: `0` = before the first row,
-#'       `k` = after row `k`.}
+#'       `k` = after row `k`.  Positions out of range, `NA` and negative ones
+#'       are dropped without a warning.}
 #'     \item{`"between_groups"`}{insert a blank at every group transition,
 #'       using `group_by` (the same detection as the pagination splits).}
 #'     \item{a [blank_rows_by_change()] or [blank_rows_by_rule()] spec}{resolved
@@ -80,15 +79,7 @@ set_blank_rows <- function(data,
                             blank_row_end   = FALSE,
                             group_col       = NULL,
                             group_by        = c("auto", "indent",
-                                                "value", "filled"),
-                            df) {
-  if (!missing(df)) {
-    .deprecate_once(
-      "set_blank_rows_df",
-      paste0("`set_blank_rows(df = )` is deprecated: the argument is `data` ",
-             "now.\n  The old name is removed in 0.9.0."))
-    data <- df
-  }
+                                                "value", "filled")) {
   df <- data
   if (!is.data.frame(df)) {
     stop("`data` must be a data.frame (or tibble).", call. = FALSE)

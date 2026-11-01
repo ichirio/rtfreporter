@@ -448,29 +448,17 @@
 # The rounding family is the package's one rule (round_num(), option
 # `rtfreporter.rounding`); an ARD table does not get a second one.
 
-# Format to `d` significant digits with the caller's rounding family.
-# The decimals a significant-digit request implies depend on the value,
-# so each element is handled on its own; trailing zeros are dropped, as
-# signif() + format() did, so only the HALF cases change.
+# Format to `d` significant digits with the caller's rounding family, as
+# fmt_signif() prints them: the decimals a significant-digit request
+# implies depend on the value, and every one of them is printed, trailing
+# zeros included (7.2 to 3 digits is "7.20"; #736).  The same helpers as
+# fmt_signif(), so the token and the function never disagree.
 .ard_signif_fmt <- function(x, d, round_type = NULL) {
   rnd <- .rounder(round_type)
-  out <- character(length(x))
-  for (i in seq_along(x)) {
-    v <- x[[i]]
-    if (is.na(v)) {
-      out[i] <- NA_character_
-      next
-    }
-    dec <- if (v == 0) max(0L, d - 1L) else
-      max(0L, d - 1L - as.integer(floor(log10(abs(v)))))
-    r <- rnd(v, dec)
-    # rounding can carry into the next decade (99.95 -> 100.0)
-    dec2 <- if (r == 0) max(0L, d - 1L) else
-      max(0L, d - 1L - as.integer(floor(log10(abs(r)))))
-    if (!identical(dec2, dec)) r <- rnd(v, dec2)
-    out[i] <- format(r, trim = TRUE, scientific = FALSE)
-  }
-  out
+  dec_fun <- function(v) .signif_decimals(v, d, "signif")
+  vapply(x, .fmt_num_one, character(1L),
+         dec_fun = dec_fun, rnd = rnd, na = NA_character_, recompute = TRUE,
+         USE.NAMES = FALSE)
 }
 
 
@@ -980,8 +968,9 @@
 #'
 #' @param x A cards/cardx ARD (any data frame with the ARD columns).
 #'
-#' @return Invisibly, a list with elements `keys`, `variables`, `contexts` and
-#'   `stats` (a data frame of context / stat_name / stat_label).
+#' @return Invisibly, a list with elements `keys`, `variables`, `contexts`,
+#'   `kinds` (the structural kinds, as printed) and `stats` (a data frame of
+#'   context / stat_name / stat_label).
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -1072,7 +1061,7 @@ list_ard_keys <- function(x) {
 #' @seealso [normalize_ard()], [widen_ard()]
 #' @export
 overall_row <- function(label, from = NULL) {
-  if (missing(label) || !is.character(label) || length(label) != 1L) {
+  if (missing(label) || !is.character(label) || length(label) != 1L || is.na(label)) {
     .ard_stop("`label` is required: one string for the overall row.")
   }
   structure(list(label = label, from = as.character(from)),
@@ -1208,7 +1197,10 @@ print.cell_rows <- function(x, ...) {
 #'   `context`.  Use them when the error message says the choice is ambiguous,
 #'   or to ask for the key variable's own rows.
 #' @param levels Optional level order for the keys, so the result lines up
-#'   with the table's columns.
+#'   with the table's columns: a named list, as in [widen_ard()]
+#'   (`list(TRT = c("Placebo", "Drug"))`; a plain vector is not read).  With
+#'   several `cols` the order is matched against the joined names
+#'   (`"Placebo____F"`).
 #' @param sep Separator between multiple `cols` keys; match [widen_ard()].
 #'
 #' @return A named vector, one element per column key.
@@ -1337,8 +1329,9 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   folded into the matching key column.
 #' @param overall Label to give the `..ard_hierarchical_overall..` rows
 #'   produced by `cards::ard_stack_hierarchical(over_variables = TRUE)`, e.g.
-#'   `"Any TEAE"`.  They are placed on the first `hierarchy` column.  `NULL`
-#'   (default) leaves them alone.
+#'   `"Any TEAE"`.  They are placed on the first `hierarchy` column, so
+#'   `hierarchy` is needed with it.  `NULL` (default) drops them, recorded in
+#'   the `"ard_ignored"` attribute.
 #' @param drop_contexts `context` values to discard.  The default drops the
 #'   `attributes` rows (whose `stat` is a vector and cannot be flattened) and
 #'   the `total_n` row.  Dropping the total does not lose the NUMBER: when
@@ -1353,36 +1346,44 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   [widen_ard()] leaves them out of the body while a column header can
 #'   still read them.  `TRUE` removes them outright.
 #'
-#' @param stack Subgroups as one pair of keys (a complete ORR-by-subgroup
-#'   example is in the article *Tables from an ARD, step by step*,
-#'   *Subgroups*), a named list of **layers**:
-#'   `stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))`
-#'   adds the columns `subgroup` (the layer: `"SEX"`, or variables crossed,
-#'   `"AGEGR1 / SEX"`) and `subgroup_level` (its level: `"F"`, `"65-80 / F"`)
-#'   --- what `group2` / `group2_level` say in an ARD whose subgroups all
-#'   came in that slot, but **whatever slot** each came in (a subgroup is in
-#'   `group3` as soon as a strata or a `by =` has one variable more, and a
-#'   crossed one, `ard_strata(.strata = c(AGEGR1, SEX))`, is in both).  A
-#'   character vector is layers of one variable each (`c("ALL", "SEX",
-#'   "AGEGR1")`); a crossed layer of three or more is the same rule.  A row
-#'   goes to the layer whose variables are **exactly** the stacked variables
-#'   it has; a row whose combination no layer names is an error that says
-#'   which layer to add.  **Group slots** stand for what the ARD has there:
-#'   `stack = list(subgroup = c("group2", "group3"))` is each combination of
-#'   variables in those slots, in the order first seen (one variable, or
-#'   several crossed in slot order); slots that also hold a variable coming
-#'   in a slot not named (`by = c(AGEGR1, TRT)` puts the arm in `group2`) are
-#'   refused.  The layers written out are the general form.
-#'   `table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))` then
-#'   lays the layers one under another in the order written, each one's
-#'   levels in their own order (crossed: the first variable turning
-#'   slowest); [plan_labels()] names them (`plan_labels(subgroup = c(SEX =
-#'   "Sex", "AGEGR1 / SEX" = "Age Group by Sex"))`).  The variables' own
-#'   columns stay, so a table of crossed rows only can still be
-#'   `rows = c("AGEGR1", "SEX")`; a `hierarchy` does not stack.  A row with
-#'   none of them (an analysis by the arm alone) keeps both `NA`; an overall
-#'   row is a constant stratum (`ALL = "All"`) stacked first, which the ARD
-#'   and the ARS then state.
+#' @param stack Subgroups stacked into one pair of keys: a named list of
+#'   **layers**.  The name is the new key; each layer is one variable or
+#'   several crossed.
+#'   \describe{
+#'     \item{What it adds}{`stack = list(subgroup = list("ALL", "SEX",
+#'       "AGEGR1", c("AGEGR1", "SEX")))` adds `subgroup` (the layer: `"SEX"`,
+#'       or crossed `"AGEGR1 / SEX"`) and `subgroup_level` (its level:
+#'       `"F"`, `"65-80 / F"`) --- what `group2` / `group2_level` say in an
+#'       ARD whose subgroups all came in that slot, but **whatever slot**
+#'       each came in (a subgroup is in `group3` as soon as a strata or a
+#'       `by =` has one variable more, and a crossed one,
+#'       `ard_strata(.strata = c(AGEGR1, SEX))`, is in both).}
+#'     \item{Short forms}{A character vector is layers of one variable each
+#'       (`c("ALL", "SEX", "AGEGR1")`); a crossed layer of three or more is
+#'       the same rule.  **Group slots** stand for what the ARD has there:
+#'       `stack = list(subgroup = c("group2", "group3"))` is each
+#'       combination of variables in those slots, in the order first seen
+#'       (one variable, or several crossed in slot order).  The layers
+#'       written out are the general form.}
+#'     \item{Which row goes where}{A row goes to the layer whose variables
+#'       are **exactly** the stacked variables it has; a row whose
+#'       combination no layer names is an error that says which layer to
+#'       add.  A row with none of them (an analysis by the arm alone) keeps
+#'       both `NA`; an overall row is a constant stratum (`ALL = "All"`)
+#'       stacked first, which the ARD and the ARS then state.}
+#'     \item{Refused}{Slots that also hold a variable coming in a slot not
+#'       named (`by = c(AGEGR1, TRT)` puts the arm in `group2`); a
+#'       `hierarchy` does not stack.}
+#'     \item{In the table}{`table_plan(rows = c(grp1 = "subgroup", grp2 =
+#'       "subgroup_level"))` lays the layers one under another in the order
+#'       written, each one's levels in their own order (crossed: the first
+#'       variable turning slowest); [plan_labels()] names them
+#'       (`plan_labels(subgroup = c(SEX = "Sex", "AGEGR1 / SEX" = "Age Group
+#'       by Sex"))`).  The variables' own columns stay, so a table of
+#'       crossed rows only can still be `rows = c("AGEGR1", "SEX")`.}
+#'   }
+#'   A complete ORR-by-subgroup example is in the article *Tables from an
+#'   ARD, step by step*, *Subgroups*.
 #' @param stack_sep What joins a crossed layer's names and levels: `" / "`.
 #' @param stack_nest `TRUE` puts a crossed layer's outer levels in a key of
 #'   their own, `<name>_outer` (`65-80`), and its innermost in `<name>_level`
@@ -1564,7 +1565,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
       key_levels[[k]] <- base::levels(d[[k]])
     }
   }
-  for (k in keys) d[[k]] <- NA_character_
+  # (a key column the frame already has keeps its values -- a flat frame
+  # keyed by its own TRT column; the group pairs fill in over it, #766)
+  for (k in keys) {
+    d[[k]] <- if (k %in% names(d)) as.character(d[[k]]) else NA_character_
+  }
   for (g in gcols) {
     lv <- paste0(g, "_level")
     if (!lv %in% names(d)) next
@@ -1593,6 +1598,10 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   ov <- !is.na(d$variable) & d$variable == "..ard_hierarchical_overall.."
   if (length(ovs$from)) {
     ov <- ov | (!is.na(d$variable) & d$variable %in% ovs$from)
+  }
+  if (!is.null(ovs$label) && any(ov) && !length(hierarchy)) {
+    .ard_stop(paste0("`overall` labels the overall rows of a hierarchy: give ",
+                     "`hierarchy` too (the levels the overall row heads)."))
   }
   if (!is.null(ovs$label) && any(ov) && length(hierarchy)) {
     d[[hierarchy[1L]]][ov] <- ovs$label
@@ -1972,43 +1981,47 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   ([cards::ard_total_n()]) for a header's `{n}`.  An ARD that has a group
 #'   needs it named.
 #' @param rows Row keys, in output order -- **any** column of the normalized
-#'   frame, not a fixed one: the ARD's own `variable` when the row groups are
-#'   the analysis variables (a demographics table), or a grouping variable's
-#'   name when they are not (`"AEBODSYS"`).  A named vector renames them, and
-#'   the name is only the output column's name: `rows = c(group = "variable")`
-#'   and `rows = c(group1 = "AEBODSYS")` differ in *what* they group by, not in
-#'   kind.
-#'
-#'   Left `NULL` on a flat ARD carrying more than one analysis variable, it
-#'   defaults to `c(group = "variable")`, since that is the only thing left to
-#'   group those rows by.  One analysis variable, or any `hierarchy`, leaves it
-#'   empty.
-#'
-#'   A **formula** element is a template here too, which is how a constant
-#'   row-group heading stops needing a `mutate()` of its own:
-#'   `rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline Values")`.
-#'   A bare string is still a column name, so nothing already written
-#'   changes meaning.
+#'   frame, not a fixed one.  A named vector renames them.
+#'   \describe{
+#'     \item{Which column}{The ARD's own `variable` when the row groups are
+#'       the analysis variables (a demographics table), or a grouping
+#'       variable's name when they are not (`"AEBODSYS"`).}
+#'     \item{Names}{The name is only the output column's name:
+#'       `rows = c(group = "variable")` and `rows = c(group1 = "AEBODSYS")`
+#'       differ in *what* they group by, not in kind.}
+#'     \item{Left `NULL`}{On a flat ARD carrying more than one analysis
+#'       variable, it defaults to `c(group = "variable")`, since that is the
+#'       only thing left to group those rows by.  One analysis variable, or
+#'       any `hierarchy`, leaves it empty.}
+#'     \item{A formula}{A **formula** element is a template here too, which
+#'       is how a constant row-group heading stops needing a `mutate()` of
+#'       its own: `rows = c(param = "PARAM", grp = ~ "Worst Post-Baseline
+#'       Values")`.  A bare string is still a column name, so nothing
+#'       already written changes meaning.}
+#'   }
 #' @param label Source of the row label, as a single (optionally named)
 #'   reference.  Default `".label"`, which [normalize_ard()] sets to the
 #'   deepest hierarchy value, or to `variable_level` when there is no
-#'   hierarchy.  `NULL` drops the label column, which is what you want when
-#'   every `cells` entry is named.
-#'
-#'   `NA` builds the column, uses it to tell the rows apart, and then
-#'   **drops it**: a recipe whose names are a row index --- `"1"` for an
-#'   estimate line and `"2"` for the confidence interval under it --- needs
-#'   them to separate two rows of one record, and does not want a column of
-#'   1s and 2s in the result.  `NULL` leaves the label out of the row
-#'   identity altogether, so those two rows collide.
-#'
-#'   An element that is a **formula** is a template over the record rather
-#'   than a column name, and the chain works as `cells` does: the first
-#'   element whose guard holds wins, and `~ "..."` is the unguarded one.
-#'   Inside a template `{column}` interpolates, and `{.label}` is the label
-#'   this row would otherwise carry.  So indenting the severities under
-#'   `Any` is a rule rather than a `paste0()` on `.label`:
-#'   `label = c(.label %in% c("Mild", "Severe") ~ "  {.label}", ~ "{.label}")`.
+#'   hierarchy.
+#'   \describe{
+#'     \item{`NULL`}{drops the label column, which is what you want when
+#'       every `cells` entry is named.  It leaves the label out of the row
+#'       identity altogether, so two rows told apart only by a row index
+#'       collide.}
+#'     \item{`NA`}{builds the column, uses it to tell the rows apart, and
+#'       then **drops it**: a recipe whose names are a row index --- `"1"`
+#'       for an estimate line and `"2"` for the confidence interval under it
+#'       --- needs them to separate two rows of one record, and does not
+#'       want a column of 1s and 2s in the result.}
+#'     \item{A formula}{An element that is a **formula** is a template over
+#'       the record rather than a column name, and the chain works as
+#'       `cells` does: the first element whose guard holds wins, and
+#'       `~ "..."` is the unguarded one.  Inside a template `{column}`
+#'       interpolates, and `{.label}` is the label this row would otherwise
+#'       carry.  So indenting the severities under `Any` is a rule rather
+#'       than a `paste0()` on `.label`: `label = c(.label %in% c("Mild",
+#'       "Severe") ~ "  {.label}", ~ "{.label}")`.}
+#'   }
 #' @param cells The cell recipes.  A **character vector** is one recipe, used
 #'   for every variable:
 #'   * `"{n} ({p})"` -- one row, labelled from `label`;
@@ -2038,14 +2051,20 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'
 #'   See [ard-tables] for the `{token:spec}` grammar.
 #' @param stat_groups The statistics in named groups, as a named list
-#'   (`list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))`):
-#'   each row gets its group in a key `.stat_group`, which `cols` or `rows`
-#'   name like any other (`cols = c("ARM", ".stat_group")`: one record's N in
-#'   one column, its rate and interval in the next), and a `cells` map may be
-#'   keyed by a group's name (looked up after the analysis variable).  A
-#'   statistic in no group is not read.  The options `.variables` and
-#'   `.others` scope it (see [plan_stat_groups()]).  [plan_stat_groups()] is the plan's
-#'   spelling.  `NULL` (default): no groups.
+#'   (`list(n = "N", orr_ci = c("n", "estimate", "conf.low", "conf.high"))`).
+#'   `NULL` (default): no groups.  [plan_stat_groups()] is the plan's
+#'   spelling.
+#'   \describe{
+#'     \item{`.stat_group`}{Each row gets its group in a key `.stat_group`,
+#'       which `cols` or `rows` name like any other (`cols = c("ARM",
+#'       ".stat_group")`: one record's N in one column, its rate and
+#'       interval in the next).}
+#'     \item{`cells`}{A `cells` map may be keyed by a group's name (looked up
+#'       after the analysis variable).}
+#'     \item{Not in a group}{A statistic in no group is not read.}
+#'     \item{Scope}{The options `.variables` and `.others` scope it (see
+#'       [plan_stat_groups()]).}
+#'   }
 #' @param filter Rows dropped by a condition over their records:
 #'   `list(conds = list(quote(p >= 0.05)), any = TRUE, parents = "keep")`.
 #'   [plan_filter()] is the plan's spelling, and says the rules.  `NULL`
@@ -2087,34 +2106,36 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'   it) is said in a message, whatever `notes` says: a level shown with no
 #'   record has to be in the ARD -- a factor's level, as the study's code
 #'   list applied when the ARD is made gives, which cards counts as 0.
-#' @param labels Named character vector recoding key *values* to display text,
-#'   e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.  Text only: the
-#'   order is `levels`' or the data's, never the order the labels are
-#'   written in.  The two-parallel-vector spelling works just as well --
-#'   `stats::setNames(group_labels, group_vars)` -- but note that `setNames()`
-#'   gives an element an `NA` name rather than complaining when the two vectors
-#'   are different lengths, so that entry would never apply; every element must
-#'   be named, and an unnamed one is an error here rather than a silent
-#'   omission.
-#'
-#'   One vector is one dictionary for the **whole table**, and the same
-#'   value can mean two things on the two axes --- a shift table's `"0"`
-#'   is `"Grade 0"` down the side and `"Baseline 0"` across the top.
-#'   Scope it the way `levels` already is, with a **list keyed by
-#'   column**, matched on the output name then the source name, with
-#'   `.default` covering the rest:
-#'
+#' @param labels Named character vector recoding key *values* to display
+#'   text, e.g. `c(AGE = "Age (years)", SEX = "Sex [n (\%)]")`.
+#'   \describe{
+#'     \item{Text only}{The order is `levels`' or the data's, never the order
+#'       the labels are written in.}
+#'     \item{Every element named}{The two-parallel-vector spelling works just
+#'       as well -- `stats::setNames(group_labels, group_vars)` -- but note
+#'       that `setNames()` gives an element an `NA` name rather than
+#'       complaining when the two vectors are different lengths, so that
+#'       entry would never apply; every element must be named, and an
+#'       unnamed one is an error here rather than a silent omission.}
+#'     \item{One dictionary, or one for each axis}{One vector is one
+#'       dictionary for the **whole table**, and the same value can mean two
+#'       things on the two axes --- a shift table's `"0"` is `"Grade 0"` down
+#'       the side and `"Baseline 0"` across the top.  Scope it the way
+#'       `levels` already is, with a **list keyed by column**, matched on the
+#'       output name then the source name, with `.default` covering the
+#'       rest.}
+#'     \item{An analysis variable}{A scope may name an **analysis variable**
+#'       too: `labels = list(SEX = c(F = "Female", M = "Male"))` recodes that
+#'       variable's levels in the label column, as `levels = list(SEX =
+#'       c("M", "F"))` orders them (the order is written in the values, the
+#'       label column prints the text).  Its entry under the variable's own
+#'       name is the variable's label: `SEX = c(SEX = "Sex", F = "Female", M
+#'       = "Male")`.}
+#'   }
 #'   ```r
 #'   labels = list(BGRADE = c("0" = "Baseline 0"),
 #'                 WORST  = c("0" = "Grade 0"))
 #'   ```
-#'
-#'   A scope may name an **analysis variable** too: `labels = list(SEX =
-#'   c(F = "Female", M = "Male"))` recodes that variable's levels in the
-#'   label column, as `levels = list(SEX = c("M", "F"))` orders them (the
-#'   order is written in the values, the label column prints the text).
-#'   Its entry under the variable's own name is the variable's label:
-#'   `SEX = c(SEX = "Sex", F = "Female", M = "Male")`.
 #' @param sort `FALSE` (default) moves a row only where somebody
 #'   **declared** an order.  A key is a factor exactly when `levels`,
 #'   `labels` or the data itself made it one --- and making a column a
@@ -2153,7 +2174,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'     \item{`"<stat>@<key>"`}{the statistic of the **group's own** row ---
 #'       the row key's summary, its shallowest row --- carried to every row
 #'       of the group: `"-n@soc"` orders the SOCs by their own count and
-#'       keeps each SOC's PTs with it.  Both at once: `"-n@soc[Total]"`.
+#'       keeps each SOC's PTs with it, two SOCs of the same count too (the
+#'       group itself breaks the tie).  Both at once: `"-n@soc[Total]"`.
 #'       An overall row keeps its own number.}
 #'     \item{`"max(<stat>)"`, `"min(<stat>)"`}{the statistic's **largest**
 #'       (smallest) value across the spread columns instead of their total:
@@ -2184,23 +2206,29 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #' @param sort_stat Name of a statistic to total across the spread columns and
 #'   attach as a numeric `.sort_stat` column -- what a descending-frequency AE
 #'   table sorts on.  `NULL` (default) adds nothing.
-#' @param na Value to put in a cell no template could fill.
+#' @param na Value to put in a cell no template could fill.  No effect with
+#'   `stats = "rows"` and `value = "stat"`: that table is numeric, and its
+#'   empty cells are `NA`.
 #' @param notes Report what was **not** used.  Every stage discards ARD rows
 #'   -- the `attributes` and `total_n` rows, the key variables' own
 #'   tabulations, rows with no value for a `cols` key, and every statistic no
 #'   template named -- and discarding them in silence is how a mis-typed
-#'   `cells` looks exactly like a correct one.  `TRUE` (default) prints a
-#'   summary, `FALSE` says nothing, and `"attr"` also attaches the per-variable
-#'   detail as the `"ard_ignored"` attribute.  It is not attached by default
-#'   because the result is a plain data frame that you will compare against
-#'   whatever you built before, and an extra attribute makes `all.equal()`
-#'   report a difference that is not in the table.
-#'
-#'   `"applied"` adds the other half: **which template produced each cell**,
-#'   with the guard that let it through when it had one.  A bare template is
-#'   its own explanation, but a guarded chain is not --- the finished cell
-#'   cannot tell you which of its three candidates you got --- so this is the
-#'   companion to `cells` guards rather than a general-purpose log.
+#'   `cells` looks exactly like a correct one.
+#'   \describe{
+#'     \item{`TRUE`}{(default) prints a summary.}
+#'     \item{`FALSE`}{says nothing.}
+#'     \item{`"attr"`}{also attaches the per-variable detail as the
+#'       `"ard_ignored"` attribute.  It is not attached by default because
+#'       the result is a plain data frame that you will compare against
+#'       whatever you built before, and an extra attribute makes
+#'       `all.equal()` report a difference that is not in the table.}
+#'     \item{`"applied"`}{adds the other half: **which template produced each
+#'       cell**, with the guard that let it through when it had one.  A bare
+#'       template is its own explanation, but a guarded chain is not --- the
+#'       finished cell cannot tell you which of its three candidates you got
+#'       --- so this is the companion to `cells` guards rather than a
+#'       general-purpose log.}
+#'   }
 #'
 #' @return A data frame: the `rows` columns, the label column, then one column
 #'   per column key.
@@ -2232,6 +2260,10 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   stats <- match.arg(stats)
   value <- match.arg(value)
   rounding <- .rounding_type(rounding)
+  if (!(isTRUE(notes) || isFALSE(notes) ||
+        (is.character(notes) && length(notes) == 1L && notes %in% c("attr", "applied")))) {
+    .ard_stop("`notes` must be TRUE, FALSE, \"attr\" or \"applied\".")
+  }
   # No column key: one column, "All", when the ARD has no group to spread
   # (one arm, a single cohort).  A group the ARD has is named in `cols`.
   one_column <- missing(cols) || is.null(cols)
@@ -2267,7 +2299,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   if (!inherits(x, "ard_long") &&
       !any(c(".label", ".kind", "stat_name") %in% names(d))) {
     .ard_stop(paste0(
-      "`x` does not look like an normalize_ard() result: it has none of\n",
+      "`x` does not look like a normalize_ard() result: it has none of\n",
       "  `.label`, `.kind`, `stat_name`.  Pass the ARD through\n",
       "  normalize_ard() first."))
   }
@@ -2331,6 +2363,21 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
         !(d$variable %in% "..ard_total_n..")
       cmp_d <- d[at, , drop = FALSE]
       d <- d[!at, , drop = FALSE]
+      # a comparison record is an ARD row: its variable and its statistic's
+      # name.  Rows with neither are not an ARD's (an analysis that returned
+      # a plain data frame, bound into the ARD): said here, not as an NA
+      # deep in the placing (#757)
+      bad <- is.na(cmp_d$variable) | is.na(cmp_d$stat_name)
+      if (any(bad)) {
+        rows <- cmp_d[bad, , drop = FALSE]
+        filled <- names(rows)[vapply(rows, function(v) any(!is.na(unlist(v))), NA)]
+        .ard_stop(sprintf(paste0(
+          "plan_compare(): %d of the comparison records have no `variable` or no ",
+          "`stat_name`.\n  A comparison record is an ARD row (variable, context, ",
+          "stat_name, stat); these\n  are not an ARD's -- an analysis that returned ",
+          "a plain data frame?  Their filled\n  columns: %s."),
+          sum(bad), paste(utils::head(filled, 8L), collapse = ", ")))
+      }
     }
   }
 
@@ -2848,6 +2895,12 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       v[is.na(out[[sc$key]])] <- -Inf
     }
     keys[[length(keys) + 1L]] <- v
+    # a group's carried statistic (`-n@group1`) keeps the group's rows
+    # together when two groups tie on it: the group itself next, as if
+    # written after it (#760)
+    if (!is.null(sc) && !is.null(sc$key) && sc$key %in% names(out)) {
+      keys[[length(keys) + 1L]] <- xtfrm(as.character(out[[sc$key]]))
+    }
   }
   do.call(order, keys)
 }
@@ -3563,9 +3616,9 @@ rid_for_stat <- function(d, rowrefs, labref, sort_stat) {
 #' A small family that turns an **ARD** (Analysis Results Data, as produced by
 #' \pkg{cards} and \pkg{cardx}) into the table `data.frame` that
 #' [as_rtftables()] consumes.  The target is *one ARD record, one table row*.
-#' Layouts that print one record over two lines, or that need derived rows such
-#' as marginal totals, stay a human job -- do them on the returned data frame,
-#' or on the long frame from [normalize_ard()].
+#' Layouts that print one record over two lines are done on the returned data
+#' frame, or on the long frame from [normalize_ard()]; marginal totals are
+#' made by [plan_total()] (`direction = `).
 #'
 #' @section The functions:
 #' \describe{

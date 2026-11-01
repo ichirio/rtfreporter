@@ -111,7 +111,7 @@ test_that("they survive paginate_cols()", {
                    stringsAsFactors = FALSE)
   pages <- rtftable(df, column_widths_twips = c(1000L, 1000L, 1000L, 1000L)) |>
     set_decimal_split(cols = 3:4, pad_chars = c(1, 2), max_chars = 20) |>
-    paginate_cols(at = 4L, carry = 1:2)
+    paginate_cols(at = 4L, keep = 1:2)
   expect_identical(pages[[1L]]$decimal_split$pad_chars, c(1, 2))
   expect_identical(pages[[2L]]$decimal_split$max_chars, 20)
 })

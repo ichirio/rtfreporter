@@ -2,7 +2,6 @@
 # Each of these used to be accepted and fail later (or never), so the
 # valid spellings next to them must keep working unchanged.
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that("rtf_document(page = ) / rtf_config(page = ) take an rtf_page or a named list (E1)", {
   expect_error(rtf_document(page = "a4"),
@@ -38,8 +37,6 @@ test_that("a positional col_header row gives one label per column (E4)", {
                "row 1 has 2 labels but the table has 3 columns \\(a, b, c\\)")
   expect_error(rtftable(df, col_header = list(c("A", "B", "C"), c("x", "y", "z", "w"))),
                "row 2 has 4 labels")
-  expect_error(rtf_tables(rtf_document(), df, col_header = c("A", "B")),
-               "has 2 labels but the table has 3 columns")
   expect_error(rtftable(df, col_header = "A | B"), "row 1 has 2 labels")
 
   # named rows still change only the columns they name
@@ -61,8 +58,8 @@ test_that("rtf_col_header() label rows have the same length (E5)", {
 })
 
 test_that("rtf_tables() names what it got and where other tables go (E6)", {
-  expect_error(rtf_tables(rtf_document(), list("notatable")),
-               "Item 1 is a 'character'.*one page.*as_rtftables\\(\\)")
+  expect_error(rtf_tables(rtf_document(), list(42L)),
+               "Item 1: A figure is one file path, or one plot object")
 })
 
 test_that("error texts name the real argument (E7, E8) and verb (E9)", {

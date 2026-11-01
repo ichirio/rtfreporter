@@ -26,7 +26,8 @@ rtf_page(
 \item{width_in, height_in}{Explicit page size in inches. When supplied these
 \strong{win} over \code{paper_size}, and the orientation is \emph{inferred} from them
 (\code{width_in >= height_in} means landscape). \code{NULL} (default) uses
-\code{paper_size}.}
+\code{paper_size}. With dimensions given, \code{paper_size} and \code{orientation} stay
+unset unless you pass them, so only a value you passed is warned about.}
 
 \item{margin_top_in, margin_bottom_in, margin_left_in, margin_right_in}{The four
 page margins, in inches.}
@@ -44,8 +45,7 @@ structured \code{rtf_page} object, so the available options and their \strong{de
 are visible right here in the signature (rather than buried in a named list).
 }
 \details{
-The default is \strong{landscape Letter} with 0.9" top/bottom and 0.6" left/right
-margins. A \emph{site} can change any default by setting the matching
+The default is \strong{landscape Letter} with 0.75" margins on all four sides. A \emph{site} can change any default by setting the matching
 \verb{rtfreporter.*} option (e.g. in \code{Rprofile.site}): an argument you do not pass
 falls back to that option, so the resolution order is \strong{explicit argument >
 \verb{rtfreporter.*} option > the factory default shown below} (see

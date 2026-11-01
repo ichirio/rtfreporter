@@ -30,8 +30,9 @@ folded into the matching key column.}
 
 \item{overall}{Label to give the \code{..ard_hierarchical_overall..} rows
 produced by \code{cards::ard_stack_hierarchical(over_variables = TRUE)}, e.g.
-\code{"Any TEAE"}.  They are placed on the first \code{hierarchy} column.  \code{NULL}
-(default) leaves them alone.}
+\code{"Any TEAE"}.  They are placed on the first \code{hierarchy} column, so
+\code{hierarchy} is needed with it.  \code{NULL} (default) drops them, recorded in
+the \code{"ard_ignored"} attribute.}
 
 \item{drop_contexts}{\code{context} values to discard.  The default drops the
 \code{attributes} rows (whose \code{stat} is a vector and cannot be flattened) and
@@ -48,34 +49,41 @@ size.  \code{FALSE} (default) keeps them and marks them \code{.key_own = TRUE}, 
 \code{\link[=widen_ard]{widen_ard()}} leaves them out of the body while a column header can
 still read them.  \code{TRUE} removes them outright.}
 
-\item{stack}{Subgroups as one pair of keys (a complete ORR-by-subgroup
-example is in the article \emph{Tables from an ARD, step by step},
-\emph{Subgroups}), a named list of \strong{layers}:
-\code{stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))}
-adds the columns \code{subgroup} (the layer: \code{"SEX"}, or variables crossed,
-\code{"AGEGR1 / SEX"}) and \code{subgroup_level} (its level: \code{"F"}, \code{"65-80 / F"})
---- what \code{group2} / \code{group2_level} say in an ARD whose subgroups all
-came in that slot, but \strong{whatever slot} each came in (a subgroup is in
-\code{group3} as soon as a strata or a \verb{by =} has one variable more, and a
-crossed one, \code{ard_strata(.strata = c(AGEGR1, SEX))}, is in both).  A
-character vector is layers of one variable each (\code{c("ALL", "SEX", "AGEGR1")}); a crossed layer of three or more is the same rule.  A row
-goes to the layer whose variables are \strong{exactly} the stacked variables
-it has; a row whose combination no layer names is an error that says
-which layer to add.  \strong{Group slots} stand for what the ARD has there:
-\code{stack = list(subgroup = c("group2", "group3"))} is each combination of
-variables in those slots, in the order first seen (one variable, or
-several crossed in slot order); slots that also hold a variable coming
-in a slot not named (\code{by = c(AGEGR1, TRT)} puts the arm in \code{group2}) are
-refused.  The layers written out are the general form.
-\code{table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))} then
-lays the layers one under another in the order written, each one's
-levels in their own order (crossed: the first variable turning
-slowest); \code{\link[=plan_labels]{plan_labels()}} names them (\code{plan_labels(subgroup = c(SEX = "Sex", "AGEGR1 / SEX" = "Age Group by Sex"))}).  The variables' own
-columns stay, so a table of crossed rows only can still be
-\code{rows = c("AGEGR1", "SEX")}; a \code{hierarchy} does not stack.  A row with
-none of them (an analysis by the arm alone) keeps both \code{NA}; an overall
-row is a constant stratum (\code{ALL = "All"}) stacked first, which the ARD
-and the ARS then state.}
+\item{stack}{Subgroups stacked into one pair of keys: a named list of
+\strong{layers}.  The name is the new key; each layer is one variable or
+several crossed.
+\describe{
+\item{What it adds}{\code{stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))} adds \code{subgroup} (the layer: \code{"SEX"},
+or crossed \code{"AGEGR1 / SEX"}) and \code{subgroup_level} (its level:
+\code{"F"}, \code{"65-80 / F"}) --- what \code{group2} / \code{group2_level} say in an
+ARD whose subgroups all came in that slot, but \strong{whatever slot}
+each came in (a subgroup is in \code{group3} as soon as a strata or a
+\verb{by =} has one variable more, and a crossed one,
+\code{ard_strata(.strata = c(AGEGR1, SEX))}, is in both).}
+\item{Short forms}{A character vector is layers of one variable each
+(\code{c("ALL", "SEX", "AGEGR1")}); a crossed layer of three or more is
+the same rule.  \strong{Group slots} stand for what the ARD has there:
+\code{stack = list(subgroup = c("group2", "group3"))} is each
+combination of variables in those slots, in the order first seen
+(one variable, or several crossed in slot order).  The layers
+written out are the general form.}
+\item{Which row goes where}{A row goes to the layer whose variables
+are \strong{exactly} the stacked variables it has; a row whose
+combination no layer names is an error that says which layer to
+add.  A row with none of them (an analysis by the arm alone) keeps
+both \code{NA}; an overall row is a constant stratum (\code{ALL = "All"})
+stacked first, which the ARD and the ARS then state.}
+\item{Refused}{Slots that also hold a variable coming in a slot not
+named (\code{by = c(AGEGR1, TRT)} puts the arm in \code{group2}); a
+\code{hierarchy} does not stack.}
+\item{In the table}{\code{table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))} lays the layers one under another in the order
+written, each one's levels in their own order (crossed: the first
+variable turning slowest); \code{\link[=plan_labels]{plan_labels()}} names them
+(\code{plan_labels(subgroup = c(SEX = "Sex", "AGEGR1 / SEX" = "Age Group by Sex"))}).  The variables' own columns stay, so a table of
+crossed rows only can still be \code{rows = c("AGEGR1", "SEX")}.}
+}
+A complete ORR-by-subgroup example is in the article \emph{Tables from an
+ARD, step by step}, \emph{Subgroups}.}
 
 \item{stack_sep}{What joins a crossed layer's names and levels: \code{" / "}.}
 

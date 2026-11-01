@@ -140,7 +140,7 @@ pages <- as_rtftables(
   # stub plus six visits = 12845 twips, 94% of the sheet.
   # "down": the row band advances first, so its two column blocks are
   # adjacent -- the reader follows one time point across the sheet.
-  paginate_cols(at = HALF + 2L, page_order = "down")
+  paginate_cols(at = HALF + 2L, order = "down")
 
 # ── running header ─────────────────────────────────────────────────────────
 #

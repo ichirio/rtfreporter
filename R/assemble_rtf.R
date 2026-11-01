@@ -225,77 +225,27 @@
 
 # ── TOC entry helpers (exported) ───────────────────────────────────────────
 
-#' Build a structured TOC heading (deprecated)
-#'
-#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
-#' 0.9.0.  Give [assemble_rtf()] the table of contents as a table:
-#' a row whose `heading` column is filled starts a heading.
-#'
-#' Use inside [assemble_rtf()]'s `toc =` list to insert a section
-#' heading (no clickable link, no page number) above a group of
-#' [toc_entry()]s.
-#'
-#' @param label Character; the heading text.
-#' @param level Integer; 1 (default) or 2.  Controls indent depth in
-#'   the rendered TOC.
-#'
-#' @return A list of class `"rtf_toc_heading"`.
-#'
-#' @examples
-#' # instead: the heading column of the table of contents
-#' data.frame(heading = c("EFFICACY ANALYSES", NA), label = c("Table 14.2.1", "Table 14.2.2"),
-#'            file = c("t14_2_1.rtf", "t14_2_2.rtf"))
-#'
-#' @export
-toc_heading <- function(label, level = 1L) {
-  .deprecate_once(
-    "toc_heading",
-    paste0("`toc_heading()` is deprecated: give `assemble_rtf(toc = )` a ",
-           "table (columns file, label, heading, level).\n  ",
-           "Removed in 0.9.0."))
-  .toc_heading(label, level)
+# A TOC level: a whole number from 1 to `max` (a heading 2, an entry 3)
+.check_toc_level <- function(level, max, what) {
+  ok <- is.numeric(level) && length(level) == 1L && !is.na(level) &&
+    level == round(level) && level >= 1 && level <= max
+  if (!ok) {
+    stop(sprintf("A TOC %s's `level` must be a whole number from 1 to %d.",
+                 sub("toc_", "", what), max), call. = FALSE)
+  }
+  invisible(level)
 }
 
 .toc_heading <- function(label, level = 1L) {
+  .check_toc_level(level, 2L, "toc_heading")
   structure(
     list(label = as.character(label)[1L], level = as.integer(level)),
     class = "rtf_toc_heading"
   )
 }
 
-#' Build a structured TOC entry (deprecated)
-#'
-#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
-#' 0.9.0.  Give [assemble_rtf()] the table of contents as a table:
-#' one row per file (`file`, `label`, `level`).
-#'
-#' Use inside [assemble_rtf()]'s `toc =` list to add a clickable TOC
-#' entry pointing at one of the `input_files`.
-#'
-#' @param label Character; the entry text.
-#' @param file Either a path that appears in `input_files`, an integer
-#'   1-based index into `input_files`, or `NULL` (default: consume the
-#'   next file in order).
-#' @param level Integer; 1 to 3.  Indent depth in the rendered TOC
-#'   (1 = flush left, 2 = small indent, ...).
-#'
-#' @return A list of class `"rtf_toc_entry"`.
-#'
-#' @examples
-#' # instead: one row of the table of contents
-#' data.frame(file = "t14_1_1.rtf", label = "Table 14.1.1 Demographics", level = 2)
-#'
-#' @export
-toc_entry <- function(label, file = NULL, level = 2L) {
-  .deprecate_once(
-    "toc_entry",
-    paste0("`toc_entry()` is deprecated: give `assemble_rtf(toc = )` a ",
-           "table (columns file, label, heading, level).\n  ",
-           "Removed in 0.9.0."))
-  .toc_entry(label, file, level)
-}
-
 .toc_entry <- function(label, file = NULL, level = 2L) {
+  .check_toc_level(level, 3L, "toc_entry")
   structure(
     list(label = as.character(label)[1L],
          file  = file,
@@ -371,7 +321,8 @@ toc_entry <- function(label, file = NULL, level = 2L) {
                                     file_idx = i, type = "entry")))
   }
 
-  # Structured list of toc_heading() / toc_entry()
+  # The internal structured list (.toc_heading() / .toc_entry()) a table
+  # becomes in .spec_to_toc()
   if (is.list(toc)) {
     used      <- integer(0)
     next_free <- function() {
@@ -389,23 +340,26 @@ toc_entry <- function(label, file = NULL, level = 2L) {
         } else if (is.numeric(e$file)) {
           fi <- as.integer(e$file)
         } else if (is.character(e$file)) {
+          # (one file however it is spelled: relative / absolute, \ or /)
+          norm <- function(p) normalizePath(p, "/", mustWork = FALSE)
           fi <- match(e$file, input_files)
+          if (is.na(fi)) fi <- match(norm(e$file), norm(input_files))
           if (is.na(fi)) {
-            stop(sprintf("toc_entry: file '%s' is not in `input_files`.",
+            stop(sprintf("`toc`: file '%s' is not in `input_files`.",
                          e$file), call. = FALSE)
           }
         } else {
-          stop("toc_entry: `file` must be a character path or integer index.",
+          stop("`toc`: `file` must be a character path or integer index.",
                call. = FALSE)
         }
         if (is.na(fi) || fi < 1L || fi > length(input_files)) {
-          stop("toc_entry: file index out of range.", call. = FALSE)
+          stop("`toc`: file index out of range.", call. = FALSE)
         }
         used <<- c(used, fi)
         return(list(label = e$label, level = e$level,
                     file_idx = fi, type = "entry"))
       }
-      stop("Each `toc` element must be toc_heading() or toc_entry().",
+      stop("`toc` must be \"auto\", a character vector of labels, a table (data.frame) or the path of one.",
            call. = FALSE)
     })
     return(out)
@@ -479,6 +433,41 @@ toc_entry <- function(label, file = NULL, level = 2L) {
   600L * (max(1L, as.integer(level)) - 1L)
 }
 
+# The TOC page each entry goes on (#767).  The TOC section is landscape
+# Letter with 0.9" top / bottom margins: 9648 twips to write in.  A line is
+# taken as 1.15 x its font size, a label wraps at Courier New's width beside
+# its indent and page number, and a page is filled to 90% only, so the page
+# breaks are the TOC's own (\pagebb) and its page count is known for the
+# cached page numbers.  A heading last on a page goes over with what it heads.
+.toc_entry_pages <- function(toc_entries) {
+  if (!length(toc_entries)) return(integer(0))
+  room <- 0.9 * (12240 - 2 * 1296)
+  line <- function(hp) 1.15 * hp * 10               # half-points -> twips
+  char <- .char_width_in("courier_new", 10) * 1440  # a 10 pt character, twips
+  used <- line(28) + line(18)                       # the title, the blank
+  page <- 1L
+  out  <- integer(length(toc_entries))
+  for (i in seq_along(toc_entries)) {
+    e  <- toc_entries[[i]]
+    hp <- if (identical(e$type, "heading")) 22 else 20
+    width <- 14400 - .toc_indent_for_level(e$level) - 720
+    n  <- max(1, ceiling(nchar(e$label %||% "") * char * hp / 20 / width))
+    h  <- n * line(hp)
+    if (used + h > room && used > 0) {
+      page <- page + 1L
+      used <- 0
+    }
+    used   <- used + h
+    out[i] <- page
+  }
+  for (i in rev(seq_along(out))[-1L]) {
+    if (identical(toc_entries[[i]]$type, "heading") && out[i + 1L] > out[i]) {
+      out[i] <- out[i + 1L]
+    }
+  }
+  out
+}
+
 # Render the TOC section.  page_numbering = "roman" inserts \pgnlcrm
 # (Roman lowercase) so TOC pages are i, ii, iii.  The caller is
 # responsible for inserting \pgnrestart\pgndec on the next body section.
@@ -512,9 +501,13 @@ toc_entry <- function(label, file = NULL, level = 2L) {
     "{\\pard\\fs18\\par}"
   )
 
-  for (e in toc_entries) {
+  on_page <- .toc_entry_pages(toc_entries)
+  for (k in seq_along(toc_entries)) {
+    e          <- toc_entries[[k]]
     indent     <- .toc_indent_for_level(e$level)
     indent_cmd <- if (indent > 0L) sprintf("\\li%d", indent) else ""
+    # (the first entry of each later TOC page starts that page)
+    if (k > 1L && on_page[k] > on_page[k - 1L]) indent_cmd <- paste0("\\pagebb", indent_cmd)
 
     if (e$type == "heading") {
       # Heading -- bold, no leader, no page number.
@@ -607,8 +600,6 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'     table's `file` column is used.}
 #'   \item{the path of such a table}{an `.xlsx` or `.csv` file, e.g. the one
 #'     `assemble_folder(spec_file = )` wrote and you edited.}
-#'   \item{a `list(...)` of `toc_heading()` and `toc_entry()` objects}{the
-#'     older spelling of the table (deprecated).}
 #' }
 #'
 #' Each TOC entry is an RTF `HYPERLINK` field; clicking it in
@@ -617,8 +608,8 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #' calculated by the viewer when the file opens.
 #'
 #' @section Page numbering:
-#' `toc_page_numbering` controls how the TOC pages (and cover, if
-#' present) are numbered:
+#' `toc_page_numbering` controls how the TOC pages are numbered (a cover
+#' page keeps the document's Arabic numbering):
 #'
 #' \describe{
 #'   \item{`"none"` (default)}{Arabic numbering flows continuously from
@@ -626,9 +617,12 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'     TOC counts as page 1, 2, ...}
 #'   \item{`"roman"`}{TOC pages use lowercase Roman numerals (`i`, `ii`,
 #'     ...); body pages restart at `1`.}
-#'   \item{`"decimal"`}{TOC pages use Arabic numerals starting at `1`;
-#'     body pages restart at `1`.}
+#'   \item{`"decimal"`}{TOC pages use Arabic numerals starting at `1`, and
+#'     the body continues from them (with a one-page TOC the first table is
+#'     page 2).}
 #' }
+#'
+#' [assemble_folder()] defaults to `"decimal"`.
 #'
 #' @param input_files Character vector of paths to RTF files to combine
 #'   (at least 2).  May be left out when `toc` is a table (or its path):
@@ -653,23 +647,25 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'   bookmark name (default `"tfl_"`).  Helps avoid clashes if you
 #'   later concatenate multiple assembled outputs.
 #' @param book_page Text for the compiled document's page number, put into
-#'   every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves the
-#'   slots empty.
-#'
-#'   A deliverable that will be bound into a book needs two page numbers: its
-#'   own (`Page 1 of 3`) and the book's (`Page 4 of 57`).  Written from the
-#'   start they print the same number twice on a standalone deliverable, where
-#'   the two are equal.  So the deliverable reserves the position instead --
-#'   `c(c = "{BOOK_PAGE}")` in whichever band it wants, header, footer, title
-#'   or footnote -- and renders it empty, keeping the row's height.  This
-#'   argument supplies the content when the book is built, so filling it cannot
-#'   shift anything.
-#'
-#'   Typically `"Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"`.  The total resolves
-#'   to the **book's** page count, which is what the deliverable could not know
-#'   on its own.  The static `{PAGE}` / `{TOTAL_PAGES}` are rejected: the slot
-#'   sits in one band shared by every page of a section, so a single
-#'   substitution cannot give each page its own number.
+#'   every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves
+#'   the slots empty.
+#'   \describe{
+#'     \item{Why a slot}{A deliverable that will be bound into a book needs
+#'       two page numbers: its own (`Page 1 of 3`) and the book's (`Page 4
+#'       of 57`).  Written from the start they print the same number twice
+#'       on a standalone deliverable, where the two are equal.  So the
+#'       deliverable reserves the position instead -- `c(c = "{BOOK_PAGE}")`
+#'       in whichever band it wants, header, footer, title or footnote --
+#'       and renders it empty, keeping the row's height.  This argument
+#'       supplies the content when the book is built, so filling it cannot
+#'       shift anything.}
+#'     \item{What to give}{Typically `"Page {AUTO_PAGE} of
+#'       {AUTO_TOTAL_PAGES}"`.  The total resolves to the **book's** page
+#'       count, which is what the deliverable could not know on its own.}
+#'     \item{Refused}{The static `{PAGE}` / `{TOTAL_PAGES}` are rejected: the
+#'       slot sits in one band shared by every page of a section, so a
+#'       single substitution cannot give each page its own number.}
+#'   }
 #'
 #' @return Invisibly returns `output_file`.
 #'
@@ -728,8 +724,10 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
 
   # A table of contents given as a table, or as the path of one: its rows in
   # `order`, and its files when `input_files` is left out.
-  if (is.character(toc) && length(toc) == 1L &&
-      grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE)) {
+  # (any other file: .read_spec() says it must be .xlsx / .csv)
+  if (is.character(toc) && length(toc) == 1L && !identical(toc, "auto") &&
+      (grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE) || file.exists(toc) ||
+       grepl("[.][A-Za-z]{2,5}$", toc))) {
     toc <- .read_spec(toc)
   }
   if (is.data.frame(toc)) {
@@ -768,7 +766,7 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
     }
     # Map each input file -> its TOC entry label (used as the PDF
     # outline-entry text).  If a file is not referenced by any
-    # toc_entry(), fall back to basename(file) so the PDF outline
+    # entry, fall back to basename(file) so the PDF outline
     # still shows a useful name.
     for (e in toc_entries) {
       if (e$type == "entry" && !is.na(e$file_idx)) {
@@ -792,13 +790,14 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   # spelled, so the start page of file i = front-matter pages + 1 + pages in
   # files 1..i-1.
   entry_pages <- NULL
+  toc_pages   <- if (use_toc) max(1L, .toc_entry_pages(toc_entries)) else 0L
   if (use_toc) {
     npages <- vapply(input_files, function(f)
       .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L))
     front <- if (toc_page_numbering == "roman") {
       0L                            # body restarts at 1 (front matter is i, ii)
     } else {
-      (if (use_cover) 1L else 0L) + 1L   # cover + TOC, then continuous numbering
+      (if (use_cover) 1L else 0L) + toc_pages   # cover + TOC, then continuous
     }
     entry_pages <- as.integer(front + 1L + cumsum(c(0L, npages[-length(npages)])))
   }
@@ -855,10 +854,10 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   }
 
   # The assembled document's own page count, known only here.  Front matter
-  # counts: a cover is one page, the TOC one more.
+  # counts: a cover is one page, the TOC its own pages (.toc_entry_pages()).
   body_pages  <- sum(vapply(input_files, function(f)
     .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L)))
-  front_pages <- (if (use_cover) 1L else 0L) + (if (use_toc) 1L else 0L)
+  front_pages <- (if (use_cover) 1L else 0L) + toc_pages
   book_pages  <- body_pages + front_pages
 
   # Fill the reserved slots, then make every NUMPAGES cache -- the inputs' own

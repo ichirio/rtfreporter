@@ -4,32 +4,13 @@
 # data frames, a page vector, the arguments refused.  No network, no random
 # numbers, no LibreOffice.
 
-# ── borders: the deprecated rtf_border_with() and rtf_table_border() ───────
-
-test_that("rtf_border_with() replaces only the sides it is given", {
-  silence_deprecation("rtf_border_with")
-  b <- rtf_border(top = TRUE, bottom = TRUE)
-  got <- rtf_border_with(b, bottom = rtf_border_line(color = "#003366"))
-  expect_s3_class(got, "rtf_border")
-  expect_identical(got$top, b$top)
-  expect_identical(got$bottom$color, "#003366")
-
-  # every side at once, on a NULL border (an empty one)
-  all6 <- rtf_border_with(NULL, top = TRUE, bottom = TRUE, left = TRUE,
-                          right = TRUE, inside_h = TRUE, inside_v = TRUE)
-  for (s in c("top", "bottom", "left", "right", "inside_h", "inside_v")) {
-    expect_s3_class(all6[[s]], "rtf_border_line")
-  }
-  expect_error(rtf_border_with("single", top = TRUE),
-               "`border` must be NULL or an rtf_border object")
-})
+# ── borders: the internal rtf_table_border() ────────────────────────────────
 
 test_that("print.rtf_table_border() shows the outer and inside rules", {
-  silence_deprecation("rtf_table_border")
-  tb <- rtf_table_border(header = rtf_border(top = TRUE),
-                         outer = rtf_border(top = TRUE),
-                         inside_h = rtf_border_line(),
-                         inside_v = rtf_border_line(width = 30L))
+  tb <- rtfreporter:::.rtf_table_border(header = rtf_border(top = TRUE),
+                                        outer = rtf_border(top = TRUE),
+                                        inside_h = rtf_border_line(),
+                                        inside_v = rtf_border_line(width = 30L))
   out <- capture.output(res <- print(tb))
   expect_identical(res, tb)
   expect_identical(out[1], "<rtf_table_border>")
@@ -114,16 +95,6 @@ test_that("style_header() restyles the header of every data frame (#699)", {
   expect_identical(s2$col_header_list[[2L]], list(c("C", "D")))
 })
 
-test_that("set_header_cell() needs a header and keeps the first frame's in step", {
-  silence_deprecation("set_header_cell")
-  expect_error(set_header_cell(rtftable(data.frame(a = 1)), col_cell(1, "x"),
-                               row = 1),
-               "has no column header; use set_col_header\\(\\) first")
-  h <- set_header_cell(pc_multi(), col_cell(1:2, "Span"), row = 1)
-  expect_identical(h$col_header_list[[1L]], h$col_header)
-  expect_identical(h$col_header[[1L]][[1L]]$label, "Span")
-})
-
 test_that("set_col_header(values = ) fills a single table's tokens", {
   t1 <- rtftable(data.frame(a = c("x", "y"), b = c("1", "2")))
   expect_message(
@@ -166,13 +137,6 @@ test_that("rtf_section() stores an empty section, or one for several pages", {
   expect_error(rtf_section(d, page = 1, header = "H",
                            secinfo = list(header = "H")),
                "not both")
-})
-
-# ── assemble_toc() (deprecated) ─────────────────────────────────────────────
-
-test_that("assemble_toc() needs files or a spec", {
-  silence_deprecation("assemble_toc")
-  expect_error(assemble_toc(), "Supply `files` or `spec`")
 })
 
 # ── table_plan verbs: plan_cells(), plan_empty(), plan_layers() ────────────

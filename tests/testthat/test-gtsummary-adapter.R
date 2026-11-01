@@ -37,7 +37,6 @@ library(testthat)
 
 # ── .is_gtsummary_tbl() ───────────────────────────────────────────────────────
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that(".is_gtsummary_tbl() returns TRUE for gtsummary objects", {
   skip_if_not_installed("gtsummary")
@@ -130,28 +129,15 @@ test_that("rtf_tables() accepts a gtsummary object in the contents list", {
   skip_if_not_installed("gt")
   s   <- .make_tbl_summary()
   doc <- rtf_document() |>
-    rtf_tables(list(s))
+    rtf_tables(as_rtftables(s))
   expect_s3_class(doc, "rtf_document")
-  expect_length(doc$contents, 1L)
-})
-
-test_that("rtf_tables() with read_gt = TRUE pulls titles from gtsummary", {
-  skip_if_not_installed("gtsummary")
-  skip_if_not_installed("gt")
-  s <- gtsummary::tbl_summary(
-    data.frame(x = 1:5, y = letters[1:5]),
-    label = list(x ~ "Age", y ~ "Group")
-  )
-  doc <- rtf_document() |>
-    rtf_tables(list(s), read_gt = TRUE)
-  # doc$contents should contain exactly 1 page entry
   expect_length(doc$contents, 1L)
 })
 
 test_that("rtf_tables() rejects items that are not valid content types", {
   expect_error(
     rtf_tables(rtf_document(), list(42L)),
-    "data.frame"
+    "Item 1"
   )
 })
 
@@ -161,6 +147,6 @@ test_that("rtf_tables() handles mix of gtsummary and data.frame", {
   s   <- .make_tbl_summary()
   df  <- data.frame(a = 1:3, b = c("x", "y", "z"))
   doc <- rtf_document() |>
-    rtf_tables(list(s, df))
+    rtf_tables(list(as_rtftables(s), df))
   expect_length(doc$contents, 2L)
 })

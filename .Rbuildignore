@@ -36,3 +36,4 @@
 ^inst/rtf-examples/.*\.png$
 ^vignettes/figures$
 ^CLAUDE\.md$
+^validation$

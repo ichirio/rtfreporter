@@ -32,10 +32,9 @@ one of \code{key}, so a spanning header cell is written in terms of the \emph{va
 it labels rather than of column numbers that shift whenever a column is
 added, dropped or reordered.
 
-The separator is the one already used to rebuild a spanning header from
-delimited column names (see \code{as_rtftables(header_sep = )}) and to split a
-table column-wise (see \code{\link[=paginate_cols]{paginate_cols()}} \verb{by = }), so the three stay in
-step.
+By default the separator is detected from the column names: \code{"____"} or
+the tfrmt delimiter, the defaults of \code{as_rtftables(header_sep = )}. A
+custom \code{header_sep} is not seen here, so give the same value as \code{sep}.
 
 A selector may also be written directly as a plain function of the column
 names, which covers glob and regular-expression matching without any

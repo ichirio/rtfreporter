@@ -201,15 +201,6 @@ test_that("with no header, the table's top edge lands on the first data row", {
 
 # -- deprecation ----------------------------------------------------------------
 
-test_that("rtf_table_border() warns once and still builds the same value", {
-  .bi_reset()
-  expect_warning(tb <- rtf_table_border(header = rtf_border(top = S)),
-                 "deprecated")
-  expect_silent(tb2 <- rtf_table_border(header = rtf_border(top = S)))
-  expect_identical(tb, tb2)
-  expect_identical(tb, rtfreporter:::.rtf_table_border(header = rtf_border(top = S)))
-})
-
 test_that("the changed edge reading warns once, and only when it matters", {
   .bi_reset()
   # A zone border with left/right and no inside_v named: this is the shape whose

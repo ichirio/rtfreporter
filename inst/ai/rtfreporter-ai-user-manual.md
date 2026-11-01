@@ -1,6 +1,6 @@
 # rtfreporter — AI user manual
 
-**This manual documents rtfreporter 0.8.2.9099** (the development
+**This manual documents rtfreporter 0.8.2.9100** (the development
 version, after release 0.8.2).
 Check it matches what you have — `packageVersion("rtfreporter")`. If they
 differ, trust the package, not this file, and fetch the matching copy with
@@ -149,7 +149,7 @@ study_footer <- function(notes = character()) {
 # 3  BODY -------------------------------------------------------------------
 body_ae <- function(arms, days) {
   # ... compute counts; return a data.frame whose data columns are named
-  #     "<arm>____<day>" so col_key() and paginate_cols(by = "____") can
+  #     "<arm>____<day>" so col_key() and paginate_cols(cut_by = "____") can
   #     find them.  No RTF vocabulary in here.
 }
 
@@ -177,8 +177,8 @@ pages_ae <- function(arms, days) {
     col_rel_width = c(5.5, rep(2, length(days) * length(arms)))
   ) |>
     set_col_header(hdr, values = vals) |>
-    paginate_cols(by = "____", carry = 1,
-                  page_order = c("cols", "group", "rows"))
+    paginate_cols(cut_by = "____", keep = 1,
+                  order = c("cols", "group", "rows"))
 }
 
 # 6  RENDER -----------------------------------------------------------------
@@ -278,11 +278,11 @@ without writing a file.
 | Concatenate finished RTFs | `assemble_rtf(input_files, output_file, toc =, book_page =)` |
 | Listings | `listing_col()` → `listing_spec()` → `as_rtftables(data, listing = spec)` |
 | Merge a SOC/PT hierarchy into one stub | `as_rtftables(stub = stub_spec(c("SOC", "PT")))`; `stub_cols()` to do it on the data |
-| Split a too-wide table by column | `paginate_cols(pages, at =, carry =)` |
+| Split a too-wide table by column | `paginate_cols(pages, at =, keep =)` |
 | Align decimal points | `set_decimal_split(pages, cols =)` |
 | Style after the fact | `style_cols()`, `style_body()`, `style_header()`, `style_zone()` |
 | Borders | `border = "tfl"`, `rtf_border()`, `rtf_border_line()` |
-| Column-width help | `auto_col_widths(df, ...)`, `fit_listing_widths(data, spec, page =)` |
+| Column-width help | `auto_col_widths(df, ...)`, `default_col_widths(df)` (the proportions used when none are given), `fit_listing_widths(data, spec, page =)` |
 | Table from a cards / cardx ARD | `normalize_ard()` → `table_plan()` → `plan_*()` → `rtf_tables(doc, plan)` **(§17)** |
 
 ---
@@ -385,7 +385,7 @@ pk_pages <- as_rtftables(pk,
 
 pk_pages <- pk_pages |>
   set_decimal_split(cols = 2:5) |>    # line the decimal points up
-  paginate_cols(at = 4L, carry = 1L)  # split by COLUMN, repeating the stub
+  paginate_cols(at = 4L, keep = 1L)   # split by COLUMN, repeating the stub
 
 pk_doc <- rtf_document(page = rtf_page(orientation = "landscape"))
 for (p in pk_pages) pk_doc <- rtf_tables(pk_doc, p)
@@ -520,9 +520,10 @@ pages |> style_header(row = 2, cols = 2:3, bold = TRUE)
 * Per-page numbers in the header (`"Placebo\n(N={n_pbo})"`): pass a
   `values = data.frame(...)` with one row per page key plus `by =`
   (`"group"` / `"rows"` / `"name"`) to `set_col_header()`.
-* **Gotcha:** pages built from a bare `data.frame` have *no* header object
-  (the data names are used at render time), so `style_header()` errors there.
-  Give the table a header first — `col_header =` or `set_col_header()`.
+* Pages built from a bare `data.frame` have no header object of their own:
+  the data names print as the header.  `style_header()` makes that row the
+  table's header and styles it; to change its text, give a header with
+  `col_header =` or `set_col_header()`.
 
 ---
 
@@ -584,7 +585,7 @@ pages <- as_rtftables(adsl, listing = spec, max_rows = 8)  # never splits a subj
 * `listing_col(vars, ...)` — several source variables in one printed column are
   stacked on separate lines. `width` is a **display width in characters** (a
   full-width CJK glyph counts as 2). `\n` in `label` starts a new header line.
-* `fit_listing_widths(data, spec, page = rtf_page(...), size_half_points = 16L)`
+* `fit_listing_widths(data, spec, page = rtf_page(...), font_size_half_points = 16L)`
   works the widths out from the paper, margins, font and data; a `width` you set
   yourself is honoured and the rest fit around it.
 * `listing_code(fitted, name = "listing")` prints the fitted spec back as R
@@ -630,10 +631,9 @@ rtftable(df, border = "none") |>
 `rtf_border()` is the one constructor; `rtf_border_line(style, width, color)`
 builds a single edge (`"single"`, `"double"`, …).
 
-**Deprecated — do not generate these** (they still work but warn, and are
-scheduled for removal before CRAN):
+**Removed in 0.9.0 — do not generate these** (each is an error now):
 
-| Deprecated | Write instead |
+| Removed | Write instead |
 |---|---|
 | `rtf_border_top()` | `rtf_border(top = TRUE)` |
 | `rtf_border_bottom()` | `rtf_border(bottom = TRUE)` |
@@ -652,10 +652,12 @@ scheduled for removal before CRAN):
 | `as_rtftables(stub_vars = , stub_label = , stub_indent = , stub_group_summary = )` | `stub = stub_spec(vars, label = , indent = , group_summary = )` |
 | `set_blank_rows(df = )`, `add_cont_label(chunk = )` | `data =` (or by position) |
 | `assemble_files()`, `assemble_spec()`, `assemble_toc()`, `assemble_from_spec()`, `toc_heading()`, `toc_entry()` | `assemble_folder()` (the table of contents) and `assemble_rtf(toc = <that table or its path>)` |
-| `rtf_tables(doc, df, border = , col_rel_width = , col_header = , font = , ...)` -- the 26 table-format arguments -- and `rtf_tables(read_gt = )` | the same arguments on the table: `rtf_tables(doc, rtftable(df, border = , col_rel_width = , ...))`, or `as_rtftables()` / `plan_style()`; a gt table through `as_rtftables()` |
 | `fmt_count_paren_bare()` | `fmt_value_paren()` |
 | `realign_count_pct()` | `as_rtftables(align_count_pct = TRUE)` (the cell format `"count_pct"`) |
 | `format_count_pct()` | `fmt_count_pct()` (the same arguments) |
+| `paginate_cols(cols = , by = , carry = , width = , page_order = )` | `cut_by =` (blocks, a separator or keys), `keep =`, `fit = TRUE / FALSE`, `order =` |
+| `size_half_points =` of `text_width_in()`, `auto_col_widths()`, `fit_listing_widths()`; `auto_col_widths(df = )` | `font_size_half_points =`; `data =` |
+| `rtf_tables(doc, df, border = , col_rel_width = , col_header = , font = , ...)` -- the table-format arguments -- and `rtf_tables(read_gt = )` | the same arguments on the table: `rtf_tables(doc, rtftable(df, border = , col_rel_width = , ...))`, or `as_rtftables()` / `plan_style()`; a gt table through `as_rtftables()` |
 
 Post-hoc styling (each accepts one `rtftable` **or** a list of pages):
 
@@ -905,6 +907,7 @@ p_ae <- ard_ae |>
 | A subgroup's own n (%) beside its ORR (SEX both a variable and a subgroup layer) | `table_plan(..., rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level"), show_keys = "SEX")` + `plan_stat_groups(n = "N", orr_ci = c(...), .variables = "RESP", .others = "n")` + `plan_cells(SEX = "{n} ({p:.1f%})", ...)` |
 | Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
+| A listing above its summary in one table (a PK concentrations table: a row a subject, then "Summary Statistics") | Two ordinary plans: `listing <- table_plan(adpc, cols = "ATPT", rows = c(subject = ~ "{USUBJID}/{AGE}/{SEX}"), value = "AVAL") \|> plan_cells("{value:.3s}", na = "BLQ")`; `summary <- normalize_ard(ard) \|> table_plan(cols = "ATPT", rows = c(block = ~ "Summary Statistics")) \|> plan_cells(continuous = c(N = "{N:.0f}", Mean = "{mean:.4s}"))`; `listing \|> plan_append(summary, name, absent)` then the whole table's verbs (`plan_levels(ATPT = )`, `plan_col_header()`, `plan_columns()`, `plan_paginate_rows(page_by = )`, `plan_blanks(where = "between_parts")`) before or after it. An appended plan carries only its row verbs; a page group a part lacks stops (`absent = "skip"`). Never reshape the records by hand |
 | A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap, align, record)` |
 | Titles / footnotes | `plan_titles(...)`, `plan_footnotes(...)` (`pages =` for one block per page) |
 | Anything else | `plan_after(function(pages) ...)`: last resort; prefer a verb |
@@ -1084,6 +1087,7 @@ reference of a difference.
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
 `rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
 `rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
+`rtfreporter_validation_kit`
 
 **Sections / bands:** `rtf_section` `combine_sections` `rtf_header` `rtf_footer`
 `rtf_header_source` `rtf_titles` `rtf_footnotes`
@@ -1101,19 +1105,13 @@ reference of a difference.
 `listing_split_after` `listing_take`
 
 **Pagination / layout:** `paginate_cols` `set_decimal_split`
-`set_blank_rows` `add_cont_label` `auto_col_widths` `text_width_in`
+`set_blank_rows` `add_cont_label` `auto_col_widths` `default_col_widths` `text_width_in`
 
 **Styling:** `style_header` `style_cols` `style_body` `style_zone`
 `rtf_table_style` `rtf_table_style_with` `rtf_table_style_tfl`
 
 **Borders:** `rtf_border` `rtf_border_line`
-*(deprecated, still exported: `rtf_border_none` `rtf_border_top`
-`rtf_border_bottom` `rtf_border_box` `rtf_table_border` `rtf_border_tfl`
-`rtf_border_with` `rtf_border_side` `add_col_header_row`
-`col_header_from_names` `set_header_cell` `update_header_row`
-`update_footer_row` `paginate` `assemble_files` `assemble_spec`
-`assemble_toc` `assemble_from_spec` `toc_heading` `toc_entry`
-`fmt_count_paren_bare` `realign_count_pct` `format_count_pct` — see §13)*
+*(the functions 0.9.0 removed are listed in §13)*
 
 **Formatting:** `fmt_count_paren` `fmt_value_paren`
 `fmt_right_align` `fmt_count_pct` `fmt_signif`
@@ -1121,7 +1119,7 @@ reference of a difference.
 `blank_rows_by_change` `blank_rows_by_rule`
 
 **Tables from a cards / cardx ARD:** `normalize_ard` `widen_ard` `pull_ard` `list_ard_keys`
-`cell_rows` `overall_row` `table_plan` `plan_apply` `plan_layers` `plan_header_tokens` `plan_n_candidates`
+`cell_rows` `overall_row` `table_plan` `plan_apply` `plan_append` `plan_layers` `plan_header_tokens` `plan_n_candidates`
 `plan_template` `plan_levels` `plan_labels` `plan_cells` `plan_digits`
 `plan_stub` `plan_cell_style` `plan_paginate_group` `plan_row_group`
 `plan_hide` `plan_nest` `plan_total` `plan_stat_groups` `plan_compare` `plan_filter` `plan_sort` `plan_empty` `plan_blanks` `plan_paginate_rows`
@@ -1146,7 +1144,6 @@ reference of a difference.
 | A grouping column shows up in the output | add it to `drop_cols` |
 | Titles land on the wrong page | `titles` / `footnotes` must be one entry **per page**, in order |
 | The total page count is wrong in a bound book | use `{AUTO_TOTAL_PAGES}`, or `{BOOK_PAGE}` + `assemble_rtf(book_page =)` |
-| `style_header(): this rtftable has no column header` | a bare `data.frame` page has no header object — set one with `col_header =` or `set_col_header()` first |
 | `the label row has N labels but the table has M printed columns` | an **unnamed** label row needs one entry per printed column; name the entries to patch a subset, check `rtf_columns()`, and set a whole-table header **before** `paginate_cols()` |
 | Header edits hit the wrong column | address by name (`c(TRT01A = "…")`, `col_cell("TRT01A", …)`, `col_key()`), not by position |
 | Decimal points are ragged | `set_decimal_split(cols =)` on the pages |

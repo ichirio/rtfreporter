@@ -6,7 +6,7 @@
 #  Design (since v0.0.46)
 #  ----------------------
 #  The table BODY is taken from `gt::extract_body(gt_obj, output = "html")` --
-#  the same rendered-body route the (now deprecated) paginate() used.  This is
+#  the same rendered-body route the old paginate() (removed in 0.9.0) used.  This is
 #  deliberately the cleanest source:
 #
 #    * only the VISIBLE columns appear (hidden / helper columns such as
@@ -136,8 +136,11 @@
   if (length(x) == 0L) return(NA_character_)
   if (is.list(x))  x <- x[[1L]]
   if (is.null(x)) return(NA_character_)
+  html <- inherits(x, "html")
   v <- as.character(x)[1L]
   if (is.na(v) || !nzchar(v)) return(NA_character_)
+  # A gt::html() label: its tags go, `<br>` is a line break (#193)
+  if (html) v <- .strip_html_from_df(data.frame(v = v, stringsAsFactors = FALSE))$v
   v <- gsub("**", "", v, fixed = TRUE)        # strip markdown bold markers
   if (!nzchar(v)) return(NA_character_)
   v
@@ -475,10 +478,33 @@
 # metadata mapping below is identical to the extract_body() path.
 .gt_extract_body_safe <- function(gt_obj) {
   boxh <- gt_obj[["_boxhead"]]
-  multi_stub <- !is.null(boxh) &&
-    sum(as.character(boxh$type) == "stub", na.rm = TRUE) > 1L
-  if (!multi_stub) return(gt::extract_body(gt_obj, output = "html"))
-  .gt_body_from_slots(gt_obj)
+  type <- as.character(boxh$type)
+  if (!is.null(boxh) && !any(type %in% c("stub", "default"))) {
+    stop("The gt table has no column to read: as_rtftable() needs at least ",
+         "one visible column.", call. = FALSE)
+  }
+  multi_stub <- !is.null(boxh) && sum(type == "stub", na.rm = TRUE) > 1L
+  if (multi_stub) return(.gt_body_from_slots(gt_obj))
+  gt::extract_body(.gt_one_group_col(gt_obj), output = "html")
+}
+
+# extract_body() also assumes ONE row-group column: `gt(groupname_col =
+# c("ARM", "SEX"))` errors `the condition has length > 1` (#193).  gt itself
+# groups by the columns' values joined ("A - F", in `_stub_df$group_id`).
+# A copy is handed to extract_body() with that joined value in the first
+# group column and the others hidden, so the body keeps gt's formats and
+# gt's group order.  Slot access only, as above.
+.gt_one_group_col <- function(gt_obj) {
+  boxh <- gt_obj[["_boxhead"]]
+  gv <- as.character(boxh$var)[as.character(boxh$type) == "row_group"]
+  sd <- gt_obj[["_stub_df"]]
+  if (length(gv) < 2L || is.null(sd) || !"group_id" %in% names(sd)) return(gt_obj)
+  boxh$type[as.character(boxh$var) %in% gv[-1L]] <- "hidden"
+  dat <- gt_obj[["_data"]]
+  dat[[gv[1L]]] <- as.character(sd$group_id[order(sd$rownum_i)])
+  gt_obj[["_boxhead"]] <- boxh
+  gt_obj[["_data"]] <- dat
+  gt_obj
 }
 
 # Reconstruct the rendered body from `_data` + `_boxhead` for the multi-stub
