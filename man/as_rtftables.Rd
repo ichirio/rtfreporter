@@ -603,7 +603,9 @@ with more than one stub column -- e.g. a tfrmt
 \code{row_grp_plan(label_loc = element_row_grp_loc(location = "column"))} layout --
 is read from the table's own \verb{_data} / \verb{_boxhead} slots instead, as
 \code{gt::extract_body()} does not support multiple stub columns; the group and
-label columns then come through as ordinary columns.)  On top of that body the
+label columns then come through as ordinary columns.  A gt table grouped by
+several columns, \code{gt(groupname_col = c("ARM", "SEX"))}, gets one group row
+per combination, named as gt names it: "A - F".)  On top of that body the
 following \emph{metadata} is read:
 
 \tabular{lllll}{
@@ -642,7 +644,8 @@ the caption (a page title) is carried.
 \strong{Not carried} (RTF cannot reproduce these, or they belong to the
 source's own theme): cell background colours / fills, font and size
 styling, gt theme borders (\code{tab_options()}), header text colour, and
-Markdown formatting inside labels or titles.  For a plain \code{data.frame} / tibble two pieces of
+Markdown formatting inside labels or titles (a \code{gt::html()} label is read
+as its text, a \verb{<br>} as a line break).  For a plain \code{data.frame} / tibble two pieces of
 metadata are read: column \code{label} attributes become header labels (the
 \code{"labels"} token, see \code{read_meta}), and delimited column names are
 reconstructed into a spanning header (see \code{header_sep}); everything else
