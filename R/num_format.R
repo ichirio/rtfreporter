@@ -102,7 +102,7 @@ round_num <- function(x, digits = 0, rounding = NULL) {
     stop(sprintf("`round_num()` rounds numeric input; got %s.",
                  paste(class(x), collapse = "/")), call. = FALSE)
   }
-  digits <- .check_digits(digits, "digits", "round_num")
+  digits <- .check_digits(digits, "digits", "round_num", whole = FALSE)
   .rounder(rounding)(x, digits)
 }
 
@@ -143,9 +143,12 @@ round_num <- function(x, digits = 0, rounding = NULL) {
   invisible(x)
 }
 
-.check_digits <- function(d, arg, fn) {
+# `whole = TRUE` also refuses a fractional value (1.5, #785); round_num() cuts
+# one to an integer instead, as base::round() does (FR-FM113)
+.check_digits <- function(d, arg, fn, whole = TRUE) {
+  frac <- whole && is.numeric(d) && length(d) == 1L && !is.na(d) && is.finite(d) && d != round(d)
   d <- suppressWarnings(as.integer(d))
-  if (length(d) != 1L || is.na(d) || d < 0L) {
+  if (frac || length(d) != 1L || is.na(d) || d < 0L) {
     stop(sprintf("`%s(%s = )` must be a single non-negative integer.", fn, arg),
          call. = FALSE)
   }

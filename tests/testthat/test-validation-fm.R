@@ -30,7 +30,7 @@ test_that("FT-FM089 [FR-FM168 FR-FM172 FR-FM173]: fmt_numeric() refuses several 
                "`fmt_numeric(by)` column 'zz' not found in the table.", fixed = TRUE)
   expect_error(fmt_numeric(d, cols = "b", by = 9, formats = fm),
                "`fmt_numeric(by)` index 9 out of range (1..3).", fixed = TRUE)
-  for (v in list(-1, c(1, 2), "a", NA)) {
+  for (v in list(-1, c(1, 2), "a", NA, 1.5)) {
     expect_error(fmt_numeric(d, cols = "b", digits = v),
                  "`fmt_numeric(digits = )` must be a single non-negative integer.", fixed = TRUE)
     expect_error(fmt_numeric(d, cols = "b", signif = v),
@@ -41,6 +41,18 @@ test_that("FT-FM089 [FR-FM168 FR-FM172 FR-FM173]: fmt_numeric() refuses several 
                "`fmt_numeric(digits = )` must be a single non-negative integer.", fixed = TRUE)
   expect_error(fmt_numeric(d, cols = "b", by = "a", formats = list(x = list(signif = "a"), y = list(digits = 1))),
                "`fmt_numeric(signif = )` must be a single non-negative integer.", fixed = TRUE)
+  expect_error(fmt_numeric(d, cols = "b", by = "a", formats = list(x = list(digits = 0.5), y = list(digits = 1))),
+               "`fmt_numeric(digits = )` must be a single non-negative integer.", fixed = TRUE)
+  # a whole number given as a double is fine
+  expect_identical(fmt_numeric(d, cols = "b", digits = 1)$b, c("1.2", "5.7"))
+})
+
+test_that("FT-FM098 [FR-FM127 FR-FM146]: fmt_round() and fmt_signif() refuse a fractional digits as they refuse a negative one (#785)", {
+  expect_error(fmt_round(1.234, digits = 1.5), "`fmt_round(digits = )` must be a single non-negative integer.",
+               fixed = TRUE)
+  expect_error(fmt_signif(1.234, digits = 2.5), "`fmt_signif(digits = )` must be a single non-negative integer.",
+               fixed = TRUE)
+  expect_identical(fmt_round(1.234, digits = 1), "1.2")
 })
 
 test_that("FT-FM090 [FR-FM195 FR-FM211 FR-FM239]: fmt_count_pct(), realign_count_pct() and fmt_value_paren() refuse an na that is not one string", {
