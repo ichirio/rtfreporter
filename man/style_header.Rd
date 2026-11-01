@@ -150,7 +150,7 @@ pages -- so use a predicate/formula (evaluated per page) or \code{NULL}.}
 
 \item{header, spanning, body, first_row, last_row}{Per-zone \code{\link[=rtf_border]{rtf_border()}}
 overrides, merged side-by-side onto the table's current
-\code{\link[=rtf_table_border]{rtf_table_border()}} (see the \emph{Borders} article for what each zone
+per-zone borders (see the \emph{Borders} article for what each zone
 covers).}
 
 \item{.position}{\code{"top"} (default) prepends the new row above the existing

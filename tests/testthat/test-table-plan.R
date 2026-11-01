@@ -2,8 +2,6 @@
 # Tests for the DEFERRED, LAST-WINS plan spike (#474).
 # This whole file belongs to R/ard-plan-spike.R and is deleted with it.
 
-local_deprecated("stub_vars")  # deprecated in 0.8.x
-
 skip_if_no_cards2 <- function() testthat::skip_if_not_installed("cards")
 
 # Flattening is RUN before the plan now, so that table_plan()'s roles
@@ -342,7 +340,7 @@ test_that("stage = \"pages\" reaches the same rtftable as the code does", {
   ard <- plan_ard()
   tbl <- suppressMessages(plan_apply(disp_plan(ard)))
 
-  ref <- as_rtftables(tbl, stub_vars = c("group", "label"),
+  ref <- as_rtftables(tbl, stub = stub_spec(c("group", "label")),
                       group_by = "indent", split = "group_safe",
                       max_rows = 22, border = "tfl")
   new <- suppressMessages(plan_apply(
@@ -852,7 +850,7 @@ test_that("a finished table is a source for the display half alone", {
       widen_ard(cols = "TRT", rows = c(group = "variable"),
                  cells = "{n:.0f}", notes = FALSE))
   ref <- as_rtftables(tbl, read_meta = FALSE,
-                      stub_vars = c("group", "label"), border = "tfl")
+                      stub = stub_spec(c("group", "label")), border = "tfl")
   new <- suppressMessages(plan_apply(
     table_plan(tbl) |>
       plan_stub(vars = c("group", "label")) |>

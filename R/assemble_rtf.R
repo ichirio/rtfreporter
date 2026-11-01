@@ -225,37 +225,6 @@
 
 # ── TOC entry helpers (exported) ───────────────────────────────────────────
 
-#' Build a structured TOC heading (deprecated)
-#'
-#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
-#' 0.9.0.  Give [assemble_rtf()] the table of contents as a table:
-#' a row whose `heading` column is filled starts a heading.
-#'
-#' Use inside [assemble_rtf()]'s `toc =` list to insert a section
-#' heading (no clickable link, no page number) above a group of
-#' [toc_entry()]s.
-#'
-#' @param label Character; the heading text.
-#' @param level Integer; 1 (default) or 2.  Controls indent depth in
-#'   the rendered TOC.
-#'
-#' @return A list of class `"rtf_toc_heading"`.
-#'
-#' @examples
-#' # instead: the heading column of the table of contents
-#' data.frame(heading = c("EFFICACY ANALYSES", NA), label = c("Table 14.2.1", "Table 14.2.2"),
-#'            file = c("t14_2_1.rtf", "t14_2_2.rtf"))
-#'
-#' @export
-toc_heading <- function(label, level = 1L) {
-  .deprecate_once(
-    "toc_heading",
-    paste0("`toc_heading()` is deprecated: give `assemble_rtf(toc = )` a ",
-           "table (columns file, label, heading, level).\n  ",
-           "Removed in 0.9.0."))
-  .toc_heading(label, level)
-}
-
 # A TOC level: a whole number from 1 to `max` (a heading 2, an entry 3)
 .check_toc_level <- function(level, max, what) {
   ok <- is.numeric(level) && length(level) == 1L && !is.na(level) &&
@@ -273,38 +242,6 @@ toc_heading <- function(label, level = 1L) {
     list(label = as.character(label)[1L], level = as.integer(level)),
     class = "rtf_toc_heading"
   )
-}
-
-#' Build a structured TOC entry (deprecated)
-#'
-#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
-#' 0.9.0.  Give [assemble_rtf()] the table of contents as a table:
-#' one row per file (`file`, `label`, `level`).
-#'
-#' Use inside [assemble_rtf()]'s `toc =` list to add a clickable TOC
-#' entry pointing at one of the `input_files`.
-#'
-#' @param label Character; the entry text.
-#' @param file Either a path that appears in `input_files`, an integer
-#'   1-based index into `input_files`, or `NULL` (default: consume the
-#'   next file in order).
-#' @param level Integer; 1 to 3.  Indent depth in the rendered TOC
-#'   (1 = flush left, 2 = small indent, ...).
-#'
-#' @return A list of class `"rtf_toc_entry"`.
-#'
-#' @examples
-#' # instead: one row of the table of contents
-#' data.frame(file = "t14_1_1.rtf", label = "Table 14.1.1 Demographics", level = 2)
-#'
-#' @export
-toc_entry <- function(label, file = NULL, level = 2L) {
-  .deprecate_once(
-    "toc_entry",
-    paste0("`toc_entry()` is deprecated: give `assemble_rtf(toc = )` a ",
-           "table (columns file, label, heading, level).\n  ",
-           "Removed in 0.9.0."))
-  .toc_entry(label, file, level)
 }
 
 .toc_entry <- function(label, file = NULL, level = 2L) {
@@ -384,7 +321,8 @@ toc_entry <- function(label, file = NULL, level = 2L) {
                                     file_idx = i, type = "entry")))
   }
 
-  # Structured list of toc_heading() / toc_entry()
+  # The internal structured list (.toc_heading() / .toc_entry()) a table
+  # becomes in .spec_to_toc()
   if (is.list(toc)) {
     used      <- integer(0)
     next_free <- function() {
@@ -407,21 +345,21 @@ toc_entry <- function(label, file = NULL, level = 2L) {
           fi <- match(e$file, input_files)
           if (is.na(fi)) fi <- match(norm(e$file), norm(input_files))
           if (is.na(fi)) {
-            stop(sprintf("toc_entry: file '%s' is not in `input_files`.",
+            stop(sprintf("`toc`: file '%s' is not in `input_files`.",
                          e$file), call. = FALSE)
           }
         } else {
-          stop("toc_entry: `file` must be a character path or integer index.",
+          stop("`toc`: `file` must be a character path or integer index.",
                call. = FALSE)
         }
         if (is.na(fi) || fi < 1L || fi > length(input_files)) {
-          stop("toc_entry: file index out of range.", call. = FALSE)
+          stop("`toc`: file index out of range.", call. = FALSE)
         }
         used <<- c(used, fi)
         return(list(label = e$label, level = e$level,
                     file_idx = fi, type = "entry"))
       }
-      stop("Each `toc` element must be toc_heading() or toc_entry().",
+      stop("`toc` must be \"auto\", a character vector of labels, a table (data.frame) or the path of one.",
            call. = FALSE)
     })
     return(out)
@@ -662,8 +600,6 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'     table's `file` column is used.}
 #'   \item{the path of such a table}{an `.xlsx` or `.csv` file, e.g. the one
 #'     `assemble_folder(spec_file = )` wrote and you edited.}
-#'   \item{a `list(...)` of `toc_heading()` and `toc_entry()` objects}{the
-#'     older spelling of the table (deprecated).}
 #' }
 #'
 #' Each TOC entry is an RTF `HYPERLINK` field; clicking it in
@@ -686,7 +622,7 @@ toc_entry <- function(label, file = NULL, level = 2L) {
 #'     page 2).}
 #' }
 #'
-#' [assemble_folder()] and [assemble_from_spec()] default to `"decimal"`.
+#' [assemble_folder()] defaults to `"decimal"`.
 #'
 #' @param input_files Character vector of paths to RTF files to combine
 #'   (at least 2).  May be left out when `toc` is a table (or its path):
@@ -830,7 +766,7 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
     }
     # Map each input file -> its TOC entry label (used as the PDF
     # outline-entry text).  If a file is not referenced by any
-    # toc_entry(), fall back to basename(file) so the PDF outline
+    # entry, fall back to basename(file) so the PDF outline
     # still shows a useful name.
     for (e in toc_entries) {
       if (e$type == "entry" && !is.na(e$file_idx)) {

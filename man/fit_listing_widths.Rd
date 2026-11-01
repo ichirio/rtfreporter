@@ -14,8 +14,7 @@ fit_listing_widths(
   labels = NULL,
   header_lines = 4L,
   min_width = 6L,
-  probs = 0.9,
-  size_half_points = NULL
+  probs = 0.9
 )
 }
 \arguments{
@@ -42,7 +41,8 @@ the document uses in \code{rtf_document(default_format = )}.}
 
 \item{total_width}{Character budget for the whole listing, gutters included.
 \code{NULL} (default) computes it from \code{page}, \code{font} and
-\code{font_size_half_points}.}
+\code{font_size_half_points}.  Give it directly when you know the budget and
+would rather not describe the page.}
 
 \item{labels}{Named character vector giving the words for the \strong{source}
 variables, e.g. \code{c(USUBJID = "Unique Subject ID", AGE = "Age")}.  A
@@ -71,11 +71,6 @@ data-driven fit.}
 
 \item{probs}{Quantile of a column's cell widths taken as its demand
 (default \code{0.9}).}
-
-\item{size_half_points}{\emph{Superseded} by \code{font_size_half_points} (the name
-every other function uses); documented, still working, not warned.
-Give it directly when you know the budget and would rather not describe
-the page.}
 }
 \value{
 The \code{listing_spec}, with a \code{width} on every column.  It carries the
@@ -93,7 +88,7 @@ hand to \code{\link[=build_listing]{build_listing()}} or \code{as_rtftables(list
 
 The page decides the budget.  The sheet's writable width (paper and
 orientation minus the side margins) is divided by the width of one character
-in \code{font} at \code{size_half_points}, which gives the number of characters the
+in \code{font} at \code{font_size_half_points}, which gives the number of characters the
 listing has to spend.  The gutter columns are subtracted first -- they are
 printed too -- and so is every \code{width} you set yourself, because those are
 decisions, not proposals.

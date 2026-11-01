@@ -10,8 +10,7 @@ set_blank_rows(
   blank_row_first = FALSE,
   blank_row_end = FALSE,
   group_col = NULL,
-  group_by = c("auto", "indent", "value", "filled"),
-  df
+  group_by = c("auto", "indent", "value", "filled")
 )
 }
 \arguments{
@@ -44,9 +43,6 @@ group, used only when \code{blank_rows = "between_groups"}.  \code{NULL}
 \code{blank_rows = "between_groups"}: \code{"auto"} (default), \code{"indent"},
 \code{"value"}, or \code{"filled"} -- the same detection as the pagination splits
 (see \code{\link[=as_rtftables]{as_rtftables()}}).}
-
-\item{df}{The old name of \code{data}: \strong{deprecated} in 0.8.x (warns once a
-session, still works), removed in 0.9.0.}
 }
 \value{
 \code{data} with \code{attr(., "rtf_blank_rows")} updated.  The

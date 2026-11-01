@@ -4,9 +4,6 @@
 NBSP <- intToUtf8(160L)
 unbsp <- function(x) gsub(NBSP, " ", x, fixed = TRUE)   # nbsp -> space for asserts
 
-silence_deprecation(c("fmt_count_paren_bare", "realign_count_pct",
-                      "cell_format_realign_count_pct"))   # until 0.9.0 (#594)
-
 test_that("fmt_right_align right-justifies non-empty cells, leaves blanks", {
   out <- fmt_right_align(c("5", "120", "7", ""))
   expect_identical(unbsp(out), c("  5", "120", "  7", ""))
@@ -24,8 +21,8 @@ test_that("fmt_count_paren aligns only parenthetical cells; bare counts untouche
   expect_true(all(nchar(out[c(1, 3, 4)]) == nchar(out[1L])))
 })
 
-test_that("fmt_count_paren_bare also pads a bare lone count", {
-  out <- unbsp(fmt_count_paren_bare(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)")))
+test_that("fmt_count_paren(bare = TRUE) also pads a bare lone count", {
+  out <- unbsp(fmt_count_paren(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)"), bare = TRUE))
   expect_identical(out, c("  1 ( 1.2%)", "  0        ",
                           " 11 ( 3.6%)", "108 (35.3%)"))
   expect_true(all(nchar(out) == nchar(out[1L])))   # every cell same width
@@ -122,8 +119,8 @@ test_that("fmt_right_align right-justifies the na token with the rest", {
                    c("  5", "120", "  -"))
 })
 
-test_that("fmt_count_paren_bare takes na too", {
-  out <- unbsp(fmt_count_paren_bare(c("1 (1.2%)", "0", NA), na = "-"))
+test_that("fmt_count_paren(bare = TRUE) takes na too", {
+  out <- unbsp(fmt_count_paren(c("1 (1.2%)", "0", NA), na = "-", bare = TRUE))
   expect_identical(out, c("1 (1.2%)", "0       ", "-       "))
 })
 
@@ -239,7 +236,7 @@ test_that("align_count_pct = TRUE / FALSE keep their old meaning", {
   df <- data.frame(lab = c("A", "B"), x = c("5 (5.0)", "12 (100.0)"),
                    stringsAsFactors = FALSE)
   expect_identical(as_rtftables(df, align_count_pct = TRUE)[[1L]]$data$x,
-                   realign_count_pct(df$x))
+                   rtfreporter:::.realign_count_pct(df$x))
   expect_identical(as_rtftables(df, align_count_pct = FALSE)[[1L]]$data$x, df$x)
 })
 
@@ -272,7 +269,7 @@ test_that("fmt_value_paren agrees with realign_count_pct on the 100 branch", {
   x <- c("12 (100.0)", "6 (50.0)")
   # same convention: 100 as an integer, the rest keeping one decimal
   expect_identical(trimws(unbsp(fmt_value_paren(x))),
-                   trimws(unbsp(realign_count_pct(x))))
+                   trimws(unbsp(rtfreporter:::.realign_count_pct(x))))
 })
 
 test_that("fmt_value_paren() rounds a parenthetical of 100 or more by the package's rule (#765)", {

@@ -61,7 +61,7 @@ test_that("a wider page gives wider columns", {
 test_that("the budget really does come from the paper, margins and font", {
   fit_on <- function(...) {
     attr(fit_listing_widths(.fit_adsl(), .plain_spec(),
-                            page = rtf_page(...), size_half_points = 16L),
+                            page = rtf_page(...), font_size_half_points = 16L),
          "rtf_listing_fit", exact = TRUE)$total_width
   }
   a4_land <- fit_on(paper_size = "A4", orientation = "landscape",
@@ -77,11 +77,11 @@ test_that("the budget really does come from the paper, margins and font", {
   # ... and a smaller font fits more characters across the same sheet
   small <- attr(fit_listing_widths(.fit_adsl(), .plain_spec(),
                                    page = rtf_page(paper_size = "A4"),
-                                   size_half_points = 12L),
+                                   font_size_half_points = 12L),
                 "rtf_listing_fit", exact = TRUE)$total_width
   big <- attr(fit_listing_widths(.fit_adsl(), .plain_spec(),
                                  page = rtf_page(paper_size = "A4"),
-                                 size_half_points = 24L),
+                                 font_size_half_points = 24L),
               "rtf_listing_fit", exact = TRUE)$total_width
   expect_gt(small, big)
 })
@@ -237,7 +237,7 @@ test_that("a fitted spec renders, and its widths reach the table", {
     .fit_adsl(), .plain_spec(),
     page = rtf_page(paper_size = "A4", orientation = "landscape",
                     margin_left_in = 0.5, margin_right_in = 0.5),
-    size_half_points = 16L)
+    font_size_half_points = 16L)
 
   tbl <- as_rtftables(.fit_adsl(), listing = fitted)[[1L]]
   expect_identical(ncol(tbl$data), 5L)          # 3 columns + 2 gutters

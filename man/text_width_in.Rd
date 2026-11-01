@@ -4,12 +4,7 @@
 \alias{text_width_in}
 \title{Estimate the display width of a text string}
 \usage{
-text_width_in(
-  text,
-  font = NULL,
-  font_size_half_points = 18L,
-  size_half_points = NULL
-)
+text_width_in(text, font = NULL, font_size_half_points = 18L)
 }
 \arguments{
 \item{text}{A character vector.  \code{NA} is treated as \code{""}.}
@@ -22,9 +17,6 @@ other \verb{font =}.  Unrecognised values fall back to Courier New.}
 \item{font_size_half_points}{Font size in \strong{half-points} (the unit used by
 RTF and the document's \code{default_format$font_size_half_points}).  Default
 \code{18} = 9 pt.}
-
-\item{size_half_points}{\emph{Superseded} by \code{font_size_half_points} (the name
-every other function uses); documented, still working, not warned.}
 }
 \value{
 A numeric vector of estimated widths in inches (same length as

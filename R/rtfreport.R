@@ -184,50 +184,6 @@
   hf
 }
 
-#' Update a specific row in an `rtf_header()` object (deprecated)
-#'
-#' **Deprecated** in 0.8.x (warns once a session, still works); removed in
-#' 0.9.0.  Make the header (or footer) again with [rtf_header()] /
-#' [rtf_footer()]: its rows are a list, and a list is edited with R.
-#'
-#' Adds a new row or replaces an existing row in a header/footer object.
-#' If `row` is beyond the current number of rows, intermediate rows are
-#' auto-filled with empty center-aligned rows (`c(c = "")`).
-#'
-#' @param header An `rtf_header()` object (returned by `rtf_header()`).
-#' @param row Integer. Target row number (1-based).
-#' @param content A named character vector for the row (e.g.
-#'   `c(l = "Left", r = "Right")`). See `rtf_header()` for column rules.
-#'
-#' @return A modified `rtf_header()` object.
-#'
-#' @examples
-#' # instead: the rows as a list, made again
-#' rows <- list(c(l = "Protocol: XXX-001", r = "Company"),
-#'              c(l = "Table 14.1.1", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"))
-#' rows[[3]] <- c(c = "Draft - Confidential")
-#' hdr <- rtf_header(rows = rows)
-#'
-#' @export
-update_header_row <- function(header, row, content) {
-  .deprecate_once(
-    "update_header_row",
-    paste0("`update_header_row()` is deprecated: make the header again with ",
-           "`rtf_header(rows = )` (a list of rows).\n  Removed in 0.9.0."))
-  .update_hf_rows(header, row, content)
-}
-
-#' @rdname update_header_row
-#' @param footer An `rtf_footer()` object (returned by `rtf_footer()`).
-#' @export
-update_footer_row <- function(footer, row, content) {
-  .deprecate_once(
-    "update_footer_row",
-    paste0("`update_footer_row()` is deprecated: make the footer again with ",
-           "`rtf_footer(rows = )` (a list of rows).\n  Removed in 0.9.0."))
-  .update_hf_rows(footer, row, content)
-}
-
 # -- rtf_header() / rtf_footer() ----------------------------------------------
 
 #' Create a header or footer object for a section

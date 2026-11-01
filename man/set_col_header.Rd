@@ -54,7 +54,7 @@ pages |> set_col_header(hdr, values = vals)
 }\if{html}{\out{</div>}}}
 
 \item{by}{Which page key \code{values} is matched on, named after the axis it
-matches -- the same vocabulary \code{paginate_cols(page_order = )} uses. The
+matches -- the same vocabulary \code{paginate_cols(order = )} uses. The
 key column of \code{values} carries that name.
 \describe{
 \item{\code{"group"}}{(default) the value a \code{split = "by_value"} page was cut

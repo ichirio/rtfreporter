@@ -814,13 +814,6 @@ test_that("overriding a header, blank rows, row titles and column specs", {
   expect_identical(multi$blank_rows, c(1L, 2L))               # sorted, unique
   expect_error(ov(m, list(col_header = list(1))),
                "Multi-row col_header must contain only character vectors and")
-  # once a session: start from a clean slate, and put the state back
-  st <- rtfreporter:::.deprecation_state
-  saved <- as.list(st)
-  rm(list = ls(st), envir = st)
-  on.exit({ rm(list = ls(st), envir = st); list2env(saved, envir = st) }, add = TRUE)
-  expect_warning(ov(t1, list(spanning_header = list(list(from = 1, to = 2, label = "S")))),
-                 "`spanning_header =` is deprecated")
 
   # row titles re-seed only the columns still at their default alignment
   rt <- ov(t1, list(row_title = 2L))
@@ -1131,9 +1124,9 @@ test_that("the generated code's pipe is chosen by argument or option", {
   expect_identical(got, "%>%")
 })
 
-# ── deprecated arguments warn exactly once a session ───────────────────────
+# ── the border-reading change warns exactly once a session ─────────────────
 
-test_that("deprecated arguments and the border-reading change warn once, not every call", {
+test_that("the border-reading change warns once, not every call", {
   st <- rtfreporter:::.deprecation_state
   saved <- as.list(st)
   reset <- function() rm(list = ls(st), envir = st)
@@ -1145,27 +1138,9 @@ test_that("deprecated arguments and the border-reading change warn once, not eve
     })
     n
   }
-  d <- data.frame(g = c("a", "a", "b"), v = c("x", "y", "z"), n = 1:3,
-                  stringsAsFactors = FALSE)
-
-  reset()
-  expect_identical(n_warnings({
-    add_cont_label(d, "G", chunk = d)
-    add_cont_label(d, "G", chunk = d)
-  }), 1L)
-  reset()
-  expect_warning(add_cont_label(d, "G", chunk = d), "`add_cont_label\\(chunk = \\)` is deprecated")
-
-  reset()
-  expect_identical(n_warnings({
-    as_rtftables(d, stub_vars = c("g", "v"))
-    as_rtftables(d, stub_vars = c("g", "v"))
-  }), 1L)
-
   # the 0.5.0 reading of left/right: said once, and only where the readings differ
-  local_deprecated("rtf_table_border")
-  tb <- rtf_table_border(body = rtf_border(left = TRUE))
-  reset(); local_deprecated("rtf_table_border")
+  tb <- rtfreporter:::.rtf_table_border(body = rtf_border(left = TRUE))
+  reset()
   expect_identical(n_warnings({
     rtfreporter:::.warn_old_edge_reading(tb, 3L, 2L)
     rtfreporter:::.warn_old_edge_reading(tb, 3L, 2L)
@@ -1175,8 +1150,7 @@ test_that("deprecated arguments and the border-reading change warn once, not eve
   expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(NULL, 3L, 2L)), 0L)
   expect_false(rtfreporter:::.warn_old_edge_reading(NULL, 3L, 2L))
   # naming the interior rule silences it
-  local_deprecated("rtf_table_border")
-  quiet <- rtf_table_border(body = rtf_border(left = TRUE, inside_v = TRUE))
+  quiet <- rtfreporter:::.rtf_table_border(body = rtf_border(left = TRUE, inside_v = TRUE))
   expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(quiet, 3L, 2L)), 0L)
 })
 
@@ -1426,19 +1400,19 @@ test_that("as_rtftables() makes one page of an empty, one-row or one-column data
                strrep("long words ", 60), fixed = TRUE)
 })
 
-test_that("paginate_cols() explains a bad `by`, an unknown `at` and an empty cut", {
+test_that("paginate_cols() explains a bad `cut_by`, an unknown `at` and an empty cut", {
   d <- data.frame(id = c("s1", "s2"), `P____D1` = 1:2, `P____D2` = 3:4,
                   `Q____D1` = 5:6, `Q____D2` = 7:8, check.names = FALSE,
                   stringsAsFactors = FALSE)
   t1 <- rtftable(d, col_header = c("ID", "D1", "D2", "D1", "D2"))
-  expect_error(paginate_cols(t1, by = c("a", "b")),
-               "`by` must be a single separator found in the column names, or one key per column \\(5\\)")
-  expect_error(paginate_cols(t1, by = "____", carry = 1:5),
-               "`by` left no columns to split: every column is a carry column")
+  expect_error(paginate_cols(t1, cut_by = c("a", "b")),
+               "`cut_by` must be a list of column blocks, a single separator found in the column names, or one key per column \\(5\\)")
+  expect_error(paginate_cols(t1, cut_by = "____", keep = 1:5),
+               "`cut_by` left no columns to split: every column is a kept column")
   expect_error(paginate_cols(t1, at = 9), "`paginate_cols\\(at\\)` index 9 out of range \\(1..5\\)")
-  expect_error(paginate_cols(t1), "One of `at` \\(the columns to cut before\\), `cols` or `by` is required")
-  # one key per column is accepted, and the carry column is on every page
-  pages <- suppressWarnings(paginate_cols(t1, by = c(NA, "P", "P", "Q", "Q")))
+  expect_error(paginate_cols(t1), "One of `at` \\(the columns to cut before\\), `cut_by` or `every` is required")
+  # one key per column is accepted, and the kept column is on every page
+  pages <- paginate_cols(t1, cut_by = c(NA, "P", "P", "Q", "Q"))
   expect_length(pages, 2L)
   expect_identical(names(pages[[1]]$data), c("id", "P____D1", "P____D2"))
   expect_identical(names(pages[[2]]$data), c("id", "Q____D1", "Q____D2"))

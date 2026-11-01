@@ -4,7 +4,7 @@
 \alias{as_rtftable}
 \title{Convert one table object to a single rtftable}
 \usage{
-as_rtftable(x, read_meta = TRUE, ..., gt_obj)
+as_rtftable(x, read_meta = TRUE, ...)
 }
 \arguments{
 \item{x}{A \code{gt_tbl}, a gtsummary table, an rtables/tern \code{VTableTree},
@@ -21,9 +21,6 @@ exactly one table; multi-member containers error -- convert those with
 
 \item{...}{Passed to \code{\link[=rtftable]{rtftable()}} (and on to \code{\link[=as_rtftables]{as_rtftables()}}).  Explicit
 values always win over the values extracted from the source table.}
-
-\item{gt_obj}{The old name of \code{x}: \strong{deprecated} in 0.8.x (warns once a
-session, still works), removed in 0.9.0.}
 }
 \value{
 An \code{rtftable} S3 object.
@@ -46,7 +43,7 @@ titles, footnotes, in-cell footnote marks and (for gt/gtsummary) explicit
 theme borders and Markdown are not.
 }
 \examples{
-\dontshow{if (requireNamespace("gt", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (requireNamespace("gt", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(gt)
 g <- gt(head(mtcars, 5)) |>
   cols_label(mpg = "MPG", cyl = "Cyl") |>

@@ -55,10 +55,10 @@ test_that("FT-FM098 [FR-FM127 FR-FM146]: fmt_round() and fmt_signif() refuse a f
   expect_identical(fmt_round(1.234, digits = 1), "1.2")
 })
 
-test_that("FT-FM090 [FR-FM195 FR-FM211 FR-FM239]: fmt_count_pct(), realign_count_pct() and fmt_value_paren() refuse an na that is not one string", {
+test_that("FT-FM090 [FR-FM195 FR-FM211 FR-FM239]: fmt_count_pct(), .realign_count_pct() and fmt_value_paren() refuse an na that is not one string", {
   expect_error(fmt_count_pct(1, 0.5, na = NA), .na_msg, fixed = TRUE)
   expect_error(fmt_count_pct(1, 0.5, na = c("a", "b")), .na_msg, fixed = TRUE)
-  expect_error(suppressWarnings(realign_count_pct("1 (5.0)", na = 1)), .na_msg, fixed = TRUE)
+  expect_error(rtfreporter:::.realign_count_pct("1 (5.0)", na = 1), .na_msg, fixed = TRUE)
   expect_error(fmt_value_paren("1 (2)", na = c("a", "b")), .na_msg, fixed = TRUE)
 })
 
@@ -80,14 +80,6 @@ test_that("FT-FM092 [FR-FM160]: fmt_numeric(small = ) is signif by default, or f
   out <- fmt_numeric(r, cols = "b", by = "g", formats = list(x = list(signif = 2), y = list(signif = 2)),
                      small = "fixed")
   expect_identical(out$b, rep(fmt_signif(0.000123, 2, small = "fixed"), 2L))
-})
-
-test_that("FT-FM093 [FR-FM199]: format_count_pct() passes pct_unit, nbsp, pct_sign, na and rounding to fmt_count_pct()", {
-  a <- suppressWarnings(format_count_pct(c(1, 10, NA), c(50, 25, NA), pct_unit = "percent", nbsp = " ",
-                                         pct_sign = TRUE, na = "-", rounding = "sas"))
-  b <- fmt_count_pct(c(1, 10, NA), c(50, 25, NA), pct_unit = "percent", nbsp = " ",
-                     pct_sign = TRUE, na = "-", rounding = "sas")
-  expect_identical(a, b)
 })
 
 test_that("FT-FM094 [FR-FM237 FR-FM243]: fmt_value_paren(nbsp = ) and fmt_right_align(): the padding is non-breaking by default, plain with nbsp = \" \"; every space in a padded cell is replaced", {

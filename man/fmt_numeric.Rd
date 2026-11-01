@@ -32,7 +32,7 @@ one of \code{signif} or \code{digits}, and may add \code{small}. The reserved na
 \item{signif, digits}{Used \strong{without} \code{by} to format every selected cell the
 same way. Give exactly one of them.}
 
-\item{rounding}{\code{"r"} rounds with \code{\link[base:Round]{base::round()}}, which is banker's
+\item{rounding}{\code{"r"} rounds with \code{\ink[base:Round]{base::round()}}, which is banker's
 rounding; \code{"sas"} rounds half away from zero as SAS does. They differ on
 exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"} under
 \code{"sas"}.  \code{NULL}, the default, reads \code{getOption("rtfreporter.rounding")}

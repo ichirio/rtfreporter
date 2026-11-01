@@ -79,18 +79,9 @@ print.rtf_stub_spec <- function(x, ...) {
 # Resolve `as_rtftables(stub = )` plus the superseded flat arguments into one
 # spec, or NULL when no stub was asked for.  Mixing the two is an error rather
 # than a silent precedence rule.
-.resolve_stub_spec <- function(stub, stub_vars, stub_label, stub_indent,
-                               stub_group_summary, flat_given) {
-  if (!is.null(stub) && any(flat_given)) {
-    stop("Pass either `stub` or the superseded `stub_vars` family, not both.",
-         call. = FALSE)
-  }
-  if (!is.null(stub)) {
-    if (inherits(stub, "rtf_stub_spec")) return(stub)
-    # A bare vector of column names / positions is the common case.
-    return(stub_spec(stub))
-  }
-  if (is.null(stub_vars)) return(NULL)
-  stub_spec(stub_vars, label = stub_label, indent = stub_indent,
-            group_summary = stub_group_summary)
+.resolve_stub_spec <- function(stub) {
+  if (is.null(stub)) return(NULL)
+  if (inherits(stub, "rtf_stub_spec")) return(stub)
+  # A bare vector of column names / positions is the common case.
+  stub_spec(stub)
 }

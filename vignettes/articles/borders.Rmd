@@ -387,7 +387,7 @@ The four recipes (`?rtfreporter-recipes`) are the same ground covered as runnabl
 Two things changed at 0.5.0, and they compound, so here is every common case
 written both ways. `s` is an `TRUE` throughout.
 
-First, `rtf_table_border()` is deprecated: a border is aimed with
+First, `rtf_table_border()` was deprecated (and removed in 0.9.0): a border is aimed with
 `rtftable(border = )` for the whole table, or `style_zone()` for one kind of
 row. Second, an edge now always means the **outer** edge of the selection, so
 the rules *inside* it are asked for by name -- `inside_h` between the rows,
@@ -416,8 +416,7 @@ And the constructors that folded into `rtf_border()` itself:
 | `rtf_border_with(b, bottom = x)` | layer at the attach point, e.g. a second `style_zone()` |
 | `rtf_border_tfl()` | `border = "tfl"`, or `rtf_table_style_tfl()` |
 
-All of these still work and warn once per session. They are removed in
-0.9.0.
+All of these were removed in 0.9.0.
 
 The first two rows change spelling but not meaning. Rows three to five change
 meaning as well: those are the ones where an edge used to be uniform.

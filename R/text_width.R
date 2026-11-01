@@ -39,8 +39,6 @@
 #' @param font_size_half_points Font size in **half-points** (the unit used by
 #'   RTF and the document's `default_format$font_size_half_points`).  Default
 #'   `18` = 9 pt.
-#' @param size_half_points *Superseded* by `font_size_half_points` (the name
-#'   every other function uses); documented, still working, not warned.
 #'
 #' @return A numeric vector of estimated widths in inches (same length as
 #'   `text`).
@@ -50,10 +48,9 @@
 #' text_width_in("abc", font_size_half_points = 24)   # 12pt
 #'
 #' @export
-text_width_in <- function(text, font = NULL, font_size_half_points = 18L,
-                          size_half_points = NULL) {
+text_width_in <- function(text, font = NULL, font_size_half_points = 18L) {
   text <- ifelse(is.na(text), "", as.character(text))
-  size_pt  <- as.numeric(size_half_points %||% font_size_half_points) / 2
+  size_pt  <- as.numeric(font_size_half_points) / 2
   char_w   <- .char_width_in(.font_key(font), size_pt)
   .text_columns(text, font) * char_w
 }
@@ -126,9 +123,6 @@ text_width_in <- function(text, font = NULL, font_size_half_points = 18L,
 #' @param font Font name passed to [text_width_in()].  `NULL` (default) is
 #'   the package's font, `getOption("rtfreporter.font")`.
 #' @param font_size_half_points Font size in half-points.  Default `18` (= 9 pt).
-#' @param df,size_half_points *Superseded* by `data` and
-#'   `font_size_half_points` (the names the other functions use); documented,
-#'   still working, not warned.
 #' @param table_width_twips If not `NULL`, the column widths are scaled so that
 #'   their sum equals this value.  Useful for fitting tables to a fixed page
 #'   width.
@@ -162,20 +156,18 @@ text_width_in <- function(text, font = NULL, font_size_half_points = 18L,
 #' tbl <- rtftable(df, column_widths_twips = widths)
 #'
 #' @export
-auto_col_widths <- function(data = NULL,
+auto_col_widths <- function(data,
                              col_header         = NULL,
                              font               = NULL,
                              font_size_half_points = 18L,
                              table_width_twips  = NULL,
                              min_col_width_twips = 720L,
                              col_padding_twips  = 288L,
-                             protect_cols       = integer(0),
-                             df                 = NULL,
-                             size_half_points   = NULL) {
-  df <- data %||% df
+                             protect_cols       = integer(0)) {
+  df <- data
   if (!is.data.frame(df)) stop("`data` must be a data.frame.", call. = FALSE)
   ncols   <- ncol(df)
-  size_pt <- as.numeric(size_half_points %||% font_size_half_points) / 2
+  size_pt <- as.numeric(font_size_half_points) / 2
 
   # Resolve header labels (use first row when multi-row).
   hdr_labels <- if (is.null(col_header)) {

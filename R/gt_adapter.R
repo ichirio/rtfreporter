@@ -6,7 +6,7 @@
 #  Design (since v0.0.46)
 #  ----------------------
 #  The table BODY is taken from `gt::extract_body(gt_obj, output = "html")` --
-#  the same rendered-body route the (now deprecated) paginate() used.  This is
+#  the same rendered-body route the old paginate() (removed in 0.9.0) used.  This is
 #  deliberately the cleanest source:
 #
 #    * only the VISIBLE columns appear (hidden / helper columns such as

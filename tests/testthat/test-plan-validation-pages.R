@@ -403,34 +403,34 @@ test_that("FT-PL288 [FR-PL461 FR-PL462 FR-PL463 FR-PL465 FR-PL466 FR-PL467]: pla
   base <- vp_direct(d)
   # at, keep, fit = FALSE
   a <- vp_pages(table_plan(d) |> plan_paginate_cols(at = 4L, keep = 1:2, fit = FALSE))
-  expect_equal(a, paginate_cols(base, at = 4L, carry = 1:2, width = "keep"))
+  expect_equal(a, paginate_cols(base, at = 4L, keep = 1:2, fit = FALSE))
   expect_length(a, 2L)
   expect_identical(names(a[[1L]]$data), c("grp", "label", "X"))
   expect_identical(names(a[[2L]]$data), c("grp", "label", "Y"))
-  # at by name; fit = TRUE is "fill"
+  # at by name; fit = TRUE
   expect_equal(vp_pages(table_plan(d) |> plan_paginate_cols(at = "Y", keep = c("grp", "label"), fit = TRUE)),
-               paginate_cols(base, at = "Y", carry = c("grp", "label"), width = "fill"))
+               paginate_cols(base, at = "Y", keep = c("grp", "label"), fit = TRUE))
   # cut_by: a list of blocks, or a separator (with col_header = "names")
   expect_equal(vp_pages(table_plan(d) |> plan_paginate_cols(cut_by = list(3L, 4L), keep = 1:2)),
-               paginate_cols(base, cols = list(3L, 4L), carry = 1:2))
+               paginate_cols(base, cut_by = list(3L, 4L), keep = 1:2))
   d2 <- d
   names(d2)[3:4] <- c("A__X", "B__Y")
   expect_equal(vp_pages(table_plan(d2) |> plan_paginate_cols(cut_by = "__", keep = 1:2,
                                                               col_header = "names")),
-               paginate_cols(vp_direct(d2), by = "__", carry = 1:2, col_header = "names"))
-  # order: the axes nest as paginate_cols(page_order = )
+               paginate_cols(vp_direct(d2), cut_by = "__", keep = 1:2, col_header = "names"))
+  # order: the axes nest as paginate_cols(order = )
   rows <- vp_direct(d, max_rows = 4, split = "group_force")
   down <- vp_pages(table_plan(d) |> plan_paginate_rows(max_rows = 4, split = "group_force") |>
                      plan_paginate_cols(at = 4L, keep = 1:2, order = "down"))
-  expect_equal(down, paginate_cols(rows, at = 4L, carry = 1:2, page_order = "down"))
+  expect_equal(down, paginate_cols(rows, at = 4L, keep = 1:2, order = "down"))
   across <- vp_pages(table_plan(d) |> plan_paginate_rows(max_rows = 4, split = "group_force") |>
                        plan_paginate_cols(at = 4L, keep = 1:2, order = "across"))
-  expect_equal(across, paginate_cols(rows, at = 4L, carry = 1:2, page_order = "across"))
+  expect_equal(across, paginate_cols(rows, at = 4L, keep = 1:2, order = "across"))
   expect_identical(vapply(down, function(z) names(z$data)[3L], ""), c("X", "Y", "X", "Y"))
   expect_identical(vapply(across, function(z) names(z$data)[3L], ""), c("X", "X", "Y", "Y"))
   # allow_span_break passes
   expect_equal(vp_pages(table_plan(d) |> plan_paginate_cols(at = 4L, keep = 1:2, allow_span_break = FALSE)),
-               paginate_cols(base, at = 4L, carry = 1:2, allow_span_break = FALSE))
+               paginate_cols(base, at = 4L, keep = 1:2, allow_span_break = FALSE))
 })
 
 test_that("FT-PL289 [FR-PL468 FR-IX254 FR-PL471]: the column cut runs after plan_after(), and every = must be positive", {

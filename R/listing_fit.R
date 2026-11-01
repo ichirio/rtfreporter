@@ -67,7 +67,7 @@
 #'
 #' The page decides the budget.  The sheet's writable width (paper and
 #' orientation minus the side margins) is divided by the width of one character
-#' in `font` at `size_half_points`, which gives the number of characters the
+#' in `font` at `font_size_half_points`, which gives the number of characters the
 #' listing has to spend.  The gutter columns are subtracted first -- they are
 #' printed too -- and so is every `width` you set yourself, because those are
 #' decisions, not proposals.
@@ -126,11 +126,8 @@
 #'   }
 #' @param total_width Character budget for the whole listing, gutters included.
 #'   `NULL` (default) computes it from `page`, `font` and
-#'   `font_size_half_points`.
-#' @param size_half_points *Superseded* by `font_size_half_points` (the name
-#'   every other function uses); documented, still working, not warned.
-#'   Give it directly when you know the budget and would rather not describe
-#'   the page.
+#'   `font_size_half_points`.  Give it directly when you know the budget and
+#'   would rather not describe the page.
 #' @param labels Named character vector giving the words for the **source**
 #'   variables, e.g. `c(USUBJID = "Unique Subject ID", AGE = "Age")`.  A
 #'   define/spec extract converts directly:
@@ -204,8 +201,7 @@ fit_listing_widths <- function(data, spec,
                                labels           = NULL,
                                header_lines     = 4L,
                                min_width        = 6L,
-                               probs            = 0.9,
-                               size_half_points = NULL) {
+                               probs            = 0.9) {
   if (!is.data.frame(data)) {
     stop("`data` must be a data.frame or tibble; got '",
          paste(class(data), collapse = "/"), "'.", call. = FALSE)
@@ -243,8 +239,7 @@ fit_listing_widths <- function(data, spec,
     stop("`probs` must be a single number in [0, 1].", call. = FALSE)
   }
   if (is.null(total_width)) {
-    total_width <- .listing_total_width(page, font,
-                                        size_half_points %||% font_size_half_points)
+    total_width <- .listing_total_width(page, font, font_size_half_points)
   }
   total_width <- as.integer(total_width)
   if (length(total_width) != 1L || is.na(total_width) || total_width < 1L) {

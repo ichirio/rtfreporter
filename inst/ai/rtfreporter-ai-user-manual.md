@@ -149,7 +149,7 @@ study_footer <- function(notes = character()) {
 # 3  BODY -------------------------------------------------------------------
 body_ae <- function(arms, days) {
   # ... compute counts; return a data.frame whose data columns are named
-  #     "<arm>____<day>" so col_key() and paginate_cols(by = "____") can
+  #     "<arm>____<day>" so col_key() and paginate_cols(cut_by = "____") can
   #     find them.  No RTF vocabulary in here.
 }
 
@@ -177,8 +177,8 @@ pages_ae <- function(arms, days) {
     col_rel_width = c(5.5, rep(2, length(days) * length(arms)))
   ) |>
     set_col_header(hdr, values = vals) |>
-    paginate_cols(by = "____", carry = 1,
-                  page_order = c("cols", "group", "rows"))
+    paginate_cols(cut_by = "____", keep = 1,
+                  order = c("cols", "group", "rows"))
 }
 
 # 6  RENDER -----------------------------------------------------------------
@@ -278,7 +278,7 @@ without writing a file.
 | Concatenate finished RTFs | `assemble_rtf(input_files, output_file, toc =, book_page =)` |
 | Listings | `listing_col()` → `listing_spec()` → `as_rtftables(data, listing = spec)` |
 | Merge a SOC/PT hierarchy into one stub | `as_rtftables(stub = stub_spec(c("SOC", "PT")))`; `stub_cols()` to do it on the data |
-| Split a too-wide table by column | `paginate_cols(pages, at =, carry =)` |
+| Split a too-wide table by column | `paginate_cols(pages, at =, keep =)` |
 | Align decimal points | `set_decimal_split(pages, cols =)` |
 | Style after the fact | `style_cols()`, `style_body()`, `style_header()`, `style_zone()` |
 | Borders | `border = "tfl"`, `rtf_border()`, `rtf_border_line()` |
@@ -385,7 +385,7 @@ pk_pages <- as_rtftables(pk,
 
 pk_pages <- pk_pages |>
   set_decimal_split(cols = 2:5) |>    # line the decimal points up
-  paginate_cols(at = 4L, carry = 1L)  # split by COLUMN, repeating the stub
+  paginate_cols(at = 4L, keep = 1L)   # split by COLUMN, repeating the stub
 
 pk_doc <- rtf_document(page = rtf_page(orientation = "landscape"))
 for (p in pk_pages) pk_doc <- rtf_tables(pk_doc, p)
@@ -585,7 +585,7 @@ pages <- as_rtftables(adsl, listing = spec, max_rows = 8)  # never splits a subj
 * `listing_col(vars, ...)` — several source variables in one printed column are
   stacked on separate lines. `width` is a **display width in characters** (a
   full-width CJK glyph counts as 2). `\n` in `label` starts a new header line.
-* `fit_listing_widths(data, spec, page = rtf_page(...), size_half_points = 16L)`
+* `fit_listing_widths(data, spec, page = rtf_page(...), font_size_half_points = 16L)`
   works the widths out from the paper, margins, font and data; a `width` you set
   yourself is honoured and the rest fit around it.
 * `listing_code(fitted, name = "listing")` prints the fitted spec back as R
@@ -631,10 +631,9 @@ rtftable(df, border = "none") |>
 `rtf_border()` is the one constructor; `rtf_border_line(style, width, color)`
 builds a single edge (`"single"`, `"double"`, …).
 
-**Deprecated — do not generate these** (they still work but warn, and are
-scheduled for removal before CRAN):
+**Removed in 0.9.0 — do not generate these** (each is an error now):
 
-| Deprecated | Write instead |
+| Removed | Write instead |
 |---|---|
 | `rtf_border_top()` | `rtf_border(top = TRUE)` |
 | `rtf_border_bottom()` | `rtf_border(bottom = TRUE)` |
@@ -653,10 +652,18 @@ scheduled for removal before CRAN):
 | `as_rtftables(stub_vars = , stub_label = , stub_indent = , stub_group_summary = )` | `stub = stub_spec(vars, label = , indent = , group_summary = )` |
 | `set_blank_rows(df = )`, `add_cont_label(chunk = )` | `data =` (or by position) |
 | `assemble_files()`, `assemble_spec()`, `assemble_toc()`, `assemble_from_spec()`, `toc_heading()`, `toc_entry()` | `assemble_folder()` (the table of contents) and `assemble_rtf(toc = <that table or its path>)` |
-| `rtf_tables(doc, df, border = , col_rel_width = , col_header = , font = , ...)` -- the 26 table-format arguments -- and `rtf_tables(read_gt = )` | the same arguments on the table: `rtf_tables(doc, rtftable(df, border = , col_rel_width = , ...))`, or `as_rtftables()` / `plan_style()`; a gt table through `as_rtftables()` |
 | `fmt_count_paren_bare()` | `fmt_value_paren()` |
 | `realign_count_pct()` | `as_rtftables(align_count_pct = TRUE)` (the cell format `"count_pct"`) |
 | `format_count_pct()` | `fmt_count_pct()` (the same arguments) |
+| `paginate_cols(cols = , by = , carry = , width = , page_order = )` | `cut_by =` (blocks, a separator or keys), `keep =`, `fit = TRUE / FALSE`, `order =` |
+| `size_half_points =` of `text_width_in()`, `auto_col_widths()`, `fit_listing_widths()`; `auto_col_widths(df = )` | `font_size_half_points =`; `data =` |
+
+**Deprecated — do not generate these** (they still work but warn, and are
+removed later):
+
+| Deprecated | Write instead |
+|---|---|
+| `rtf_tables(doc, df, border = , col_rel_width = , col_header = , font = , ...)` -- the table-format arguments -- and `rtf_tables(read_gt = )` | the same arguments on the table: `rtf_tables(doc, rtftable(df, border = , col_rel_width = , ...))`, or `as_rtftables()` / `plan_style()`; a gt table through `as_rtftables()` |
 
 Post-hoc styling (each accepts one `rtftable` **or** a list of pages):
 
@@ -1110,13 +1117,7 @@ reference of a difference.
 `rtf_table_style` `rtf_table_style_with` `rtf_table_style_tfl`
 
 **Borders:** `rtf_border` `rtf_border_line`
-*(deprecated, still exported: `rtf_border_none` `rtf_border_top`
-`rtf_border_bottom` `rtf_border_box` `rtf_table_border` `rtf_border_tfl`
-`rtf_border_with` `rtf_border_side` `add_col_header_row`
-`col_header_from_names` `set_header_cell` `update_header_row`
-`update_footer_row` `paginate` `assemble_files` `assemble_spec`
-`assemble_toc` `assemble_from_spec` `toc_heading` `toc_entry`
-`fmt_count_paren_bare` `realign_count_pct` `format_count_pct` — see §13)*
+*(the functions 0.9.0 removed are listed in §13)*
 
 **Formatting:** `fmt_count_paren` `fmt_value_paren`
 `fmt_right_align` `fmt_count_pct` `fmt_signif`

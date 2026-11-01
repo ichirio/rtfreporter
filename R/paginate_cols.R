@@ -108,7 +108,7 @@
   ax <- as.character(page_order)
   bad <- setdiff(ax, .PAGE_AXES)
   if (length(bad)) {
-    stop(sprintf(paste0("`page_order`: %s is not an axis.  Give the axes ",
+    stop(sprintf(paste0("`order`: %s is not an axis.  Give the axes ",
                         "outermost first, from %s -- or \"across\" / \"down\" ",
                         "for the two usual orders."),
                  paste0("\"", bad[1L], "\""),
@@ -116,7 +116,7 @@
          call. = FALSE)
   }
   if (anyDuplicated(ax)) {
-    stop("`page_order`: each axis may appear once.", call. = FALSE)
+    stop("`order`: each axis may appear once.", call. = FALSE)
   }
   c(ax, setdiff(.PAGE_AXES, ax))                 # the rest keep their order
 }
@@ -175,8 +175,9 @@
   } else if (is.character(by) && length(by) == 1L) {
     vapply(strsplit(nm, by, fixed = TRUE), `[`, character(1L), 1L)
   } else {
-    stop(sprintf(paste0("`by` must be a single separator found in the column ",
-                        "names, or one key per column (%d)."), n), call. = FALSE)
+    stop(sprintf(paste0("`cut_by` must be a list of column blocks, a single ",
+                        "separator found in the column names, or one key per ",
+                        "column (%d)."), n), call. = FALSE)
   }
   key[carry] <- NA_character_
   key
@@ -186,7 +187,7 @@
 .blocks_from_key <- function(key) {
   keep <- which(!is.na(key) & nzchar(key))
   if (length(keep) == 0L) {
-    stop("`by` left no columns to split: every column is a carry column.",
+    stop("`cut_by` left no columns to split: every column is a kept column.",
          call. = FALSE)
   }
   k   <- key[keep]
@@ -215,28 +216,27 @@
   list(cells, bot)
 }
 
-# Resolve `at` (cut BEFORE these columns) / `cols` (explicit blocks) into a
-# list of integer column vectors, each excluding the carry columns.
+# Resolve `at` (cut BEFORE these columns) / `cols` (explicit blocks) / `by`
+# (a separator or keys) -- the last two are `cut_by` -- into a list of integer
+# column vectors, each excluding the carry columns.
 .resolve_col_blocks <- function(at, cols, ref, carry, by = NULL) {
   n0 <- ncol(ref)
-  given <- c(at = !is.null(at), cols = !is.null(cols), by = !is.null(by))
-  if (sum(given) > 1L) {
-    stop(sprintf("Give one of `at`, `cols` or `by`, not %s.",
-                 paste(names(given)[given], collapse = " and ")), call. = FALSE)
+  if (!is.null(at) && (!is.null(cols) || !is.null(by))) {
+    stop("Give one of `at` or `cut_by`, not both.", call. = FALSE)
   }
 
   if (!is.null(by)) {
     blocks <- unname(.blocks_from_key(.resolve_by_key(by, ref, carry)))
   } else if (!is.null(cols)) {
     if (!is.list(cols)) {
-      stop("`cols` must be a list of column blocks (names or positions).",
+      stop("`cut_by` must be a list of column blocks (names or positions).",
            call. = FALSE)
     }
     blocks <- lapply(cols, function(b)
       sort(unique(.resolve_col_indices(b, ref, "paginate_cols(cols)"))))
   } else {
     if (is.null(at) || length(at) == 0L) {
-      stop("One of `at` (the columns to cut before), `cols` or `by` is required.",
+      stop("One of `at` (the columns to cut before), `cut_by` or `every` is required.",
            call. = FALSE)
     }
     idx <- sort(unique(.resolve_col_indices(at, ref, "paginate_cols(at)")))
@@ -253,7 +253,7 @@
   blocks <- Filter(function(b) length(b) > 0L, blocks)
   if (length(blocks) == 0L) {
     stop("`paginate_cols()` produced no column blocks: every column is a ",
-         "carry (row-heading) column.", call. = FALSE)
+         "kept (row-heading) column.", call. = FALSE)
   }
   blocks
 }
@@ -439,7 +439,7 @@
 #' column(s) on every page so each one can be read on its own.
 #'
 #' Row splitting happens first; this verb then splits the resulting pages, and
-#' `page_order` says which axis the **page number advances along first** --
+#' `order` says which axis the **page number advances along first** --
 #' `"across"` the columns (the default: the column block advances, the row
 #' pages running inside it) or `"down"` the rows (the row page advances, its
 #' column blocks following it). Two row pages by three column blocks come out
@@ -457,12 +457,12 @@
 #'
 #' @section Column widths:
 #' `column_widths_twips` is absolute, so a subset already carries the right
-#' widths and `width` has no effect. Relative widths (and the default equal
+#' widths and `fit` has no effect. Relative widths (and the default equal
 #' distribution) need a rule, because `.compute_cellx()` re-normalises whatever
 #' it is given across the page: a bare subset would stretch the kept columns to
 #' refill the sheet, making a ratio-1 column a different size on every page.
 #'
-#' `width = "fill"` (the default) fixes the **twips per ratio unit on page 1**
+#' `fit = TRUE` (the default) fixes the **twips per ratio unit on page 1**
 #' and reuses it everywhere. Page 1 -- and any block with the same ratio total
 #' -- fills the sheet, while a given ratio is the same width on every page.
 #' With `rel = c(3, 1, 1, 1, 1, 1, 1, 1, 1)` on a 13680-twip page:
@@ -473,13 +473,13 @@
 #' | 4 + 3   | 1954.3 | 100% / 85.7%     |
 #' | 2+2+2+2 | 2736.0 | 100% on all four |
 #'
-#' `width = "keep"` measures against the whole table instead, so a kept column
+#' `fit = FALSE` measures against the whole table instead, so a kept column
 #' has exactly the width it had before the split and a partial block yields a
 #' proportionally shorter page.
 #'
 #' A block totalling **more** ratio than page 1 scales past the sheet under
-#' `"fill"`; a warning names the pages. Order the blocks so the widest comes
-#' first, or use `"keep"`.
+#' `fit = TRUE`; a warning names the pages. Order the blocks so the widest
+#' comes first, or use `fit = FALSE`.
 #'
 #' @section Spanning headers:
 #' Spanning cells are clipped to each page's columns. By default a cut may
@@ -492,29 +492,25 @@
 #' @param at Columns to cut **before**, as names or positions (symmetric with
 #'   `split_rows`). `at = c(4, 6)` yields blocks `1:3`, `4:5`, `6:ncol`.
 #' @param cut_by Where to cut other than by position, as
-#'   [plan_paginate_cols()] says it: a **list** of column blocks
-#'   (`list(2:3, 4:5)`), or a separator / one key per column (see `by`).
+#'   [plan_paginate_cols()] says it.
+#'   \describe{
+#'     \item{a **list** of column blocks}{e.g. `list(2:3, 4:5)`.}
+#'     \item{a **separator** found in the column names}{a single string --
+#'       `"Placebo____Day 1"` with `cut_by = "____"` keys on `"Placebo"`.}
+#'     \item{one **key per column**}{a vector as long as the table is wide.}
+#'   }
+#'   With a separator or keys each run of one key becomes a block, so a wide
+#'   table laid out as `<group>____<visit>` splits per group with no positions
+#'   to count.  Kept columns belong to no block.
 #' @param every Cut a block every this many columns, counting only the ones a
 #'   block does not keep -- `at` without counting the columns yourself.  A
 #'   table no wider than one block is returned as it is.
-#' @param keep The row-heading columns every block repeats (see `carry`).
-#' @param fit `TRUE` (every block's widths on page 1's scale) or `FALSE` (each
-#'   column keeps its width) -- `width = "fill"` / `"keep"`.
-#' @param order The order the pages come out in (see `page_order`).
 #'
-#'   `cut_by`, `every`, `keep`, `fit` and `order` are [plan_paginate_cols()]'s
-#'   names, the primary ones here too (#594); `cols`, `by`, `carry`, `width`
-#'   and `page_order` are *superseded* by them -- documented, still working,
-#'   not warned.  Give one of `at`, `cut_by` (`cols` / `by`) or `every`.
-#' @param cols *Superseded* by `cut_by`: explicit column blocks as a list,
-#'   e.g. `list(2:3, 4:5)`.
-#' @param by *Superseded* by `cut_by`. Where to cut, taken from the **columns themselves** instead of
-#'   positions: either a **separator** found in the column names (a single
-#'   string -- `"Placebo____Day 1"` with `by = "____"` keys on `"Placebo"`), or
-#'   one **key per column**. Each run of one key becomes a block, so a wide
-#'   table laid out as `<group>____<visit>` splits per group with no positions
-#'   to count. Carry columns belong to no block. Give one of `at`, `cols` or
-#'   `by`.
+#'   Give one of `at`, `cut_by` or `every`.
+#' @param keep The row-heading columns repeated on every page.  Defaults to
+#'   the table's `row_title` (column 1 unless set); `keep = integer(0)`
+#'   repeats nothing.  Kept columns are removed from the blocks automatically,
+#'   so they are never printed twice on a page.
 #' @param col_header The header each page should carry, written **once** for
 #'   the whole table:
 #'   \describe{
@@ -522,53 +518,52 @@
 #'       rows of [col_cell()] -- sliced to each page's columns, spanning cells
 #'       clipped, exactly as a header already on the table is.}
 #'     \item{`"names"`}{build the **two-level** header the column names
-#'       already carry: the `by` key on top (the group), the rest of the name
-#'       below (the visit). Needs `by` to be a separator. A carry column keeps
-#'       its own label and sits under no spanning cell.}
+#'       already carry: the `cut_by` key on top (the group), the rest of the
+#'       name below (the visit). Needs `cut_by` to be a separator. A kept
+#'       column keeps its own label and sits under no spanning cell.}
 #'     \item{`NULL`}{(default) leave the table's own header, which is sliced
 #'       per page either way.}
 #'   }
 #'   This is the place to put it: a header written for the whole table does
 #'   **not** fit a page that kept only some of its columns, so applying one
 #'   after the split (`set_col_header()` on the page list) is an error.
-#' @param carry *Superseded* by `keep`. Row-heading columns repeated on every page. Defaults to the
-#'   table's `row_title` (column 1 unless set). `carry = integer(0)` repeats
-#'   nothing. Carry columns are removed from the blocks automatically, so they
-#'   are never printed twice on a page.
 #' @param allow_span_break Allow a cut inside a spanning header cell. Default
 #'   `TRUE`.
-#' @param width *Superseded* by `fit`. How relative widths are rescaled after the split. `"fill"`
+#' @param fit How relative widths are rescaled after the split.  `TRUE`
 #'   (default) fixes the twips-per-ratio unit on **page 1** and reuses it on
 #'   every page, so page 1 fills the sheet and a given ratio is the same width
-#'   throughout; `"keep"` gives each kept column exactly the width it had
+#'   throughout; `FALSE` gives each kept column exactly the width it had
 #'   before the split. No effect under `column_widths_twips`. See
 #'   *Column widths*.
-#' @param page_order *Superseded* by `order`.  The order the pages come out
-#'   in, as the **axes** of the split, outermost first.
+#' @param order The order the pages come out in, as the **axes** of the
+#'   split, outermost first.
 #'   \describe{
 #'     \item{Axes}{any of `"group"` (the pages a value-based split made,
 #'       `as_rtftables(split = "by_value", group_col = )`), `"rows"` (the row
 #'       pages -- `page_by` and every other row split) and `"cols"` (the
 #'       column blocks this verb cuts).  Axes left out are appended in that
 #'       default order, and an axis the table does not have never varies.}
-#'     \item{`"across"`}{is `c("group", "cols", "rows")` -- the page number
-#'       advances across the columns first.}
+#'     \item{`"across"`}{(default) is `c("group", "cols", "rows")` -- the page
+#'       number advances across the columns first.}
 #'     \item{`"down"`}{is `c("group", "rows", "cols")`, advancing down the
 #'       rows.}
 #'   }
 #'   The two are kept as shorthands.  The pages themselves are identical
 #'   whatever the order; only the sequence differs.  See *Page order*.
+#'
+#'   `cut_by`, `every`, `keep`, `fit` and `order` are [plan_paginate_cols()]'s
+#'   names (#594).
 #' @param ... Unused.
 #'
 #' @section Columns named `<group>__<item>`:
 #' The common wide layout -- one column per treatment x visit -- splits per
-#' group and wants a two-level header, group over visit. `by` and
+#' group and wants a two-level header, group over visit. `cut_by` and
 #' `col_header = "names"` do both from the names:
 #'
 #' ```r
 #' as_rtftables(df, split = "by_value", group_col = "period",
 #'              stub = c("row_grp1", "label")) |>
-#'   paginate_cols(by = "____", carry = 1, col_header = "names")
+#'   paginate_cols(cut_by = "____", keep = 1, col_header = "names")
 #' ```
 #'
 #' ```
@@ -578,7 +573,7 @@
 #' ```
 #'
 #' @section Page order:
-#' A table can be split on three axes, and `page_order` names them in the order
+#' A table can be split on three axes, and `order` names them in the order
 #' they should nest, **outermost first**:
 #'
 #' * `"group"`: the pages a value-based split made -- `as_rtftables(split = "by_value", group_col = )`
@@ -593,7 +588,7 @@
 #' * `c("cols", "group", "rows")` gives the page sequence `C1 G1 P1`, `C1 G1 P2`, `C1 G2 P1`, ...
 #'
 #' An axis left out of the vector is appended in the default order
-#' (`"group"`, `"rows"`, `"cols"`), so `page_order = "cols"` means "column
+#' (`"group"`, `"rows"`, `"cols"`), so `order = "cols"` means "column
 #' blocks outermost, everything else as usual".
 #'
 #' Each page records its own group in `rtf_paginate_meta$page_group` (and its
@@ -608,7 +603,7 @@
 #'
 #' @section Page names:
 #' A column page inherits the name of the row page it was cut from, whatever
-#' `page_order` is -- that is the only name there is. Under `"across"` pages
+#' `order` is -- that is the only name there is. Under `"across"` pages
 #' that share a name are therefore no longer adjacent.
 #'
 #' Pages sharing a heading are numbered with a `"...n"` tail
@@ -648,62 +643,39 @@ paginate_cols <- function(x, ...) UseMethod("paginate_cols")
 
 #' @rdname paginate_cols
 #' @export
-paginate_cols.rtftable <- function(x, at = NULL, cols = NULL, by = NULL,
-                                   carry = NULL, col_header = NULL,
-                                   allow_span_break = TRUE,
-                                   width = c("fill", "keep"),
-                                   page_order = c("across", "down"),
-                                   cut_by = NULL, every = NULL, keep = NULL,
-                                   fit = NULL, order = NULL, ...) {
-  paginate_cols(list(x), at = at, cols = cols, by = by, carry = carry,
+paginate_cols.rtftable <- function(x, at = NULL, cut_by = NULL, every = NULL,
+                                   keep = NULL, col_header = NULL,
+                                   allow_span_break = TRUE, fit = TRUE,
+                                   order = "across", ...) {
+  paginate_cols(list(x), at = at, cut_by = cut_by, every = every, keep = keep,
                 col_header = col_header,
-                allow_span_break = allow_span_break,
-                width = if (missing(width)) NULL else width,
-                page_order = if (missing(page_order)) NULL else page_order,
-                cut_by = cut_by, every = every, keep = keep, fit = fit,
+                allow_span_break = allow_span_break, fit = fit,
                 order = order, ...)
 }
 
 #' @rdname paginate_cols
 #' @export
-paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
-                               carry = NULL, col_header = NULL,
-                               allow_span_break = TRUE,
-                               width = c("fill", "keep"),
-                               page_order = c("across", "down"),
-                               cut_by = NULL, every = NULL, keep = NULL,
-                               fit = NULL, order = NULL, ...) {
+paginate_cols.list <- function(x, at = NULL, cut_by = NULL, every = NULL,
+                               keep = NULL, col_header = NULL,
+                               allow_span_break = TRUE, fit = TRUE,
+                               order = "across", ...) {
   .check_own_dots(list(...), paginate_cols.list, "paginate_cols")
-  # The plan's names (#594) are the primary ones; the old ones, superseded,
-  # still work.  One thing said both ways is an error.
-  both <- function(new, old) {
-    stop(sprintf("`paginate_cols()`: give `%s` or the older `%s`, not both.", new, old),
-         call. = FALSE)
-  }
+  # The plan's names (#594); the code below works in its own terms: `cols`
+  # (explicit blocks) or `by` (a separator / keys), `carry`, `width` and
+  # `page_order`.
+  cols <- by <- NULL
   if (!is.null(cut_by)) {
-    if (!is.null(cols) || !is.null(by)) both("cut_by", if (!is.null(cols)) "cols" else "by")
     if (is.list(cut_by)) cols <- cut_by else by <- cut_by
   }
-  if (!is.null(keep)) {
-    if (!is.null(carry)) both("keep", "carry")
-    carry <- keep
+  carry <- keep
+  if (!(is.logical(fit) && length(fit) == 1L && !is.na(fit))) {
+    stop("`paginate_cols(fit = )` is TRUE (page 1's scale on every block) or FALSE (each column keeps its width).",
+         call. = FALSE)
   }
-  if (!is.null(fit)) {
-    if (!missing(width) && !is.null(width)) both("fit", "width")
-    if (!(is.logical(fit) && length(fit) == 1L && !is.na(fit))) {
-      stop("`paginate_cols(fit = )` is TRUE (page 1's scale on every block) or FALSE (each column keeps its width).",
-           call. = FALSE)
-    }
-    width <- if (fit) "fill" else "keep"
-  }
-  if (!is.null(order)) {
-    if (!missing(page_order) && !is.null(page_order)) both("order", "page_order")
-    page_order <- order
-  }
+  width <- if (fit) "fill" else "keep"
+  page_order <- order %||% "across"
   # (`order` is base::order() to the code below, which passes it on)
   rm(order)
-  if (is.null(width)) width <- "fill"
-  if (is.null(page_order)) page_order <- "across"
   if (!is.null(every)) {
     if (!is.null(at) || !is.null(cols) || !is.null(by)) {
       stop("`paginate_cols()`: say where to cut one way -- `at`, `cut_by` or `every`.",
@@ -745,8 +717,8 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
   hdr_names <- identical(col_header, "names")
   if (hdr_names) {
     if (!(is.character(by) && length(by) == 1L)) {
-      stop("`col_header = \"names\"` needs `by` to be the separator in the ",
-           "column names (e.g. by = \"____\").", call. = FALSE)
+      stop("`col_header = \"names\"` needs `cut_by` to be the separator in the ",
+           "column names (e.g. cut_by = \"____\").", call. = FALSE)
     }
   } else if (!is.null(col_header)) {
     .check_col_header_width(col_header, ncol(ref), "paginate_cols(col_header)")
@@ -790,7 +762,7 @@ paginate_cols.list <- function(x, at = NULL, cols = NULL, by = NULL,
     warning(sprintf(
       paste0("`paginate_cols()`: column block%s %s total%s more than block 1, so ",
              "%s page%s wider than the sheet. Put the widest block first, or ",
-             "use width = \"keep\"."),
+             "use fit = FALSE."),
       if (length(over) == 1L) "" else "s",
       paste(over, collapse = ", "),
       if (length(over) == 1L) "s" else "",

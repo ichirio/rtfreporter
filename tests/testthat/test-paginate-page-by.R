@@ -1,8 +1,6 @@
 # as_rtftables(page_by = ): the OUTER page partition -- a page per BY value,
 # with the inner grouping still protected inside it (#423).
 
-local_deprecated("stub_vars")  # deprecated in 0.8.x
-
 .lab <- function(periods = c("Period 1", "Period 2"),
                  params  = c("ALT", "Bilirubin", "Haemoglobin")) {
   do.call(rbind, lapply(periods, function(per) {
@@ -137,7 +135,7 @@ test_that("blank_rows positions are resolved per partition", {
                    attr(pg[[2L]]$data, "rtf_blank_rows", exact = TRUE))
 })
 
-test_that("page_by composes with paginate_cols() and page_order", {
+test_that("page_by composes with paginate_cols() and order", {
   rows <- as_rtftables(.lab(), page_by = "period", split = "group_safe",
                        group_by = "indent", max_rows = 8, drop_cols = "period")
   expect_identical(.names(rows), c("Period 1...1", "Period 1...2",
@@ -153,7 +151,7 @@ test_that("page_by composes with paginate_cols() and page_order", {
   expect_identical(rtfreporter:::.page_name_base(unname(.names(a))),
                    rep(c("Period 1", "Period 1", "Period 2", "Period 2"), 2L))
   expect_false(anyDuplicated(.names(a)) > 0L)   # still addressable by name
-  d <- paginate_cols(rows, at = 4, page_order = "down")
+  d <- paginate_cols(rows, at = 4, order = "down")
   expect_identical(blocks(d), rep(c("V1", "V3"), 4L))
   expect_identical(rtfreporter:::.page_name_base(unname(.names(d))),
                    rep(c("Period 1", "Period 1", "Period 2", "Period 2"),
@@ -184,7 +182,7 @@ test_that("an unknown page_by column is an error", {
 }
 
 test_that("a stub label row does not start a page of its own", {
-  pg <- as_rtftables(.ae(), page_by = "period", stub_vars = c("soc", "pt"),
+  pg <- as_rtftables(.ae(), page_by = "period", stub = stub_spec(c("soc", "pt")),
                      drop_cols = "period")
   expect_length(pg, 2L)                       # not 8 (a page per label row)
   expect_identical(names(pg), c("Period 1", "Period 2"))
@@ -215,7 +213,7 @@ test_that("group_col is the OUTER level under split = by_value + a stub", {
       d
     }))))
   pg <- as_rtftables(ae, page_by = "period", split = "by_value",
-                     group_col = "cohort", stub_vars = c("soc", "pt"),
+                     group_col = "cohort", stub = stub_spec(c("soc", "pt")),
                      drop_cols = c("period", "cohort"))
   expect_identical(rtfreporter:::.page_name_base(names(pg)),
                    c("Cohort A", "Cohort A", "Cohort B", "Cohort B"))
@@ -224,7 +222,7 @@ test_that("group_col is the OUTER level under split = by_value + a stub", {
 
 test_that("split = by_value + a stub is unchanged without page_by", {
   pg <- as_rtftables(.ae(), split = "by_value", group_col = "period",
-                     stub_vars = c("soc", "pt"), drop_cols = "period")
+                     stub = stub_spec(c("soc", "pt")), drop_cols = "period")
   expect_identical(names(pg), c("Period 1", "Period 2"))
   expect_identical(unname(.rows(pg)), c(6L, 6L))
 })
@@ -264,7 +262,7 @@ test_that("the group is the outer axis and page_by the inner one", {
 test_that("across = group / column block / page_by", {
   pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
                      page_by = "period", drop_cols = c("cohort", "period")) |>
-    paginate_cols(at = 4, carry = 1, width = "keep")
+    paginate_cols(at = 4, keep = 1, fit = FALSE)
   expect_identical(unname(.seq_of(pg)),
                    c("G1|P1/V1", "G1|P2/V1", "G1|P1/V3", "G1|P2/V3",
                      "G2|P1/V1", "G2|P2/V1", "G2|P1/V3", "G2|P2/V3"))
@@ -273,7 +271,7 @@ test_that("across = group / column block / page_by", {
 test_that("down = group / page_by / column block", {
   pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
                      page_by = "period", drop_cols = c("cohort", "period")) |>
-    paginate_cols(at = 4, carry = 1, width = "keep", page_order = "down")
+    paginate_cols(at = 4, keep = 1, fit = FALSE, order = "down")
   expect_identical(unname(.seq_of(pg)),
                    c("G1|P1/V1", "G1|P1/V3", "G1|P2/V1", "G1|P2/V3",
                      "G2|P1/V1", "G2|P1/V3", "G2|P2/V1", "G2|P2/V3"))
@@ -283,8 +281,8 @@ test_that("a group is never broken up by the column split", {
   pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
                      page_by = "period", drop_cols = c("cohort", "period"))
   for (po in c("across", "down")) {
-    out <- paginate_cols(pg, at = 4, carry = 1, width = "keep",
-                         page_order = po)
+    out <- paginate_cols(pg, at = 4, keep = 1, fit = FALSE,
+                         order = po)
     grp <- rtfreporter:::.page_name_base(names(out))
     expect_identical(rle(grp)$values, c("G1", "G2"), info = po)
   }
@@ -338,7 +336,7 @@ test_that("a heading that already ends in ...n is renumbered, not doubled", {
   expect_identical(rtfreporter:::.page_name_base("A...12"), "A")
 })
 
-# ──────── page_order as an axis order (#444) ───────────────────────────────
+# ──────── order as an axis order (#444) ───────────────────────────────
 
 .axis_seq <- function(pages) {
   m <- lapply(pages, function(p) attr(p$data, "rtf_paginate_meta", exact = TRUE))
@@ -350,8 +348,8 @@ test_that("a heading that already ends in ...n is renumbered, not doubled", {
 test_that("the shorthands are the two usual axis orders", {
   pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
                      page_by = "period", drop_cols = c("cohort", "period"))
-  cut <- function(po) .axis_seq(paginate_cols(pg, at = 4, carry = 1,
-                                              width = "keep", page_order = po))
+  cut <- function(po) .axis_seq(paginate_cols(pg, at = 4, keep = 1,
+                                              fit = FALSE, order = po))
   expect_identical(cut("across"), cut(c("group", "cols", "rows")))
   expect_identical(cut("down"),   cut(c("group", "rows", "cols")))
 })
@@ -359,9 +357,9 @@ test_that("the shorthands are the two usual axis orders", {
 test_that("every axis order is expressible", {
   pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
                      page_by = "period", drop_cols = c("cohort", "period"))
-  cut <- function(po) unname(.axis_seq(paginate_cols(pg, at = 4, carry = 1,
-                                                     width = "keep",
-                                                     page_order = po)))
+  cut <- function(po) unname(.axis_seq(paginate_cols(pg, at = 4, keep = 1,
+                                                     fit = FALSE,
+                                                     order = po)))
   expect_identical(cut(c("group", "cols", "rows")),
                    c("G1P1/V1", "G1P2/V1", "G1P1/V3", "G1P2/V3",
                      "G2P1/V1", "G2P2/V1", "G2P1/V3", "G2P2/V3"))
@@ -384,18 +382,18 @@ test_that("every axis order is expressible", {
 test_that("an axis left out is appended in the default order", {
   pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
                      page_by = "period", drop_cols = c("cohort", "period"))
-  cut <- function(po) .axis_seq(paginate_cols(pg, at = 4, carry = 1,
-                                              width = "keep", page_order = po))
+  cut <- function(po) .axis_seq(paginate_cols(pg, at = 4, keep = 1,
+                                              fit = FALSE, order = po))
   expect_identical(cut("cols"), cut(c("cols", "group", "rows")))
   expect_identical(cut("rows"), cut(c("rows", "group", "cols")))
 })
 
-test_that("`page_order` axes are validated", {
+test_that("`order` axes are validated", {
   pg <- as_rtftables(.gpc(), split = "by_value", group_col = "cohort",
                      page_by = "period", drop_cols = c("cohort", "period"))
-  expect_error(paginate_cols(pg, at = 4, page_order = "sideways"),
+  expect_error(paginate_cols(pg, at = 4, order = "sideways"),
                "is not an axis")
-  expect_error(paginate_cols(pg, at = 4, page_order = c("cols", "cols")),
+  expect_error(paginate_cols(pg, at = 4, order = c("cols", "cols")),
                "may appear once")
 })
 

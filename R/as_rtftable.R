@@ -27,8 +27,6 @@
 #'   [as_rtftables()].
 #' @param ... Passed to [rtftable()] (and on to [as_rtftables()]).  Explicit
 #'   values always win over the values extracted from the source table.
-#' @param gt_obj The old name of `x`: **deprecated** in 0.8.x (warns once a
-#'   session, still works), removed in 0.9.0.
 #'
 #' @return An `rtftable` S3 object.
 #'
@@ -43,14 +41,7 @@
 #'   the per-source metadata table.
 #'
 #' @export
-as_rtftable <- function(x, read_meta = TRUE, ..., gt_obj) {
-  if (!missing(gt_obj)) {
-    .deprecate_once(
-      "as_rtftable_gt_obj",
-      paste0("`as_rtftable(gt_obj = )` is deprecated: the argument is `x` ",
-             "now.\n  The old name is removed in 0.9.0."))
-    x <- gt_obj
-  }
+as_rtftable <- function(x, read_meta = TRUE, ...) {
   gt_obj <- x
   # A gt_group (gt::gt_group() / gt::gt_split(); tfrmt page_plan output) is
   # accepted only when it holds exactly one table -- this is a single-table

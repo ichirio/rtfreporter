@@ -1004,7 +1004,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_empty(text, when, position, footnote)`: a table of no events: one row saying so (`"No subjects met the criteria."`), and a footnote, only when the table has no row or its overall row is 0.
 #' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` / `"none"` is [listing_spec()]'s `blank_row = TRUE` / `FALSE`.
 #' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do.
-#' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()]: `at`, `cols` / `by`, `carry`, `col_header`, `width`, `allow_span_break`, `page_order`.
+#' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()], whose arguments have the same names.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
 #' * `plan_col_header(header, values, header_sep, col_header_align, lines, span)`: the column header. Goes to [set_col_header()]: the header (or `lines`, the header a row at a time) and a data frame of `values`; a population fills its `{n}` tokens; [as_rtftables()]: `header_sep`; [rtftable()]: `col_header_align`.
@@ -4474,26 +4474,26 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
 #'       = )`.}
 #'     \item{a separator}{one string found in the column names: with
 #'       `"____"`, `"Placebo____Day 1"` keys on `"Placebo"`, and each run of
-#'       one key is a block (`paginate_cols(by = )`).}
+#'       one key is a block.}
 #'     \item{one key per column}{a vector as long as the columns; each run of
 #'       one key is a block.}
 #'   }
 #' @param every Cut a block every this many columns, counting only the ones
 #'   a block does not keep.  A table no wider than one block is not cut.
-#' @param keep The columns every block repeats (`paginate_cols(carry = )`),
+#' @param keep The columns every block repeats,
 #'   such as the row headings; by default the table's row titles (column 1
 #'   unless [plan_columns()] says otherwise).
 #' @param col_header The header each block carries, written once for the
 #'   whole table in its coordinates and sliced to each block,
 #'   [paginate_cols()]'s `col_header`.  `NULL` slices the header the table
 #'   has.
-#' @param fit `TRUE` puts every block's widths on page 1's scale (`width =
-#'   "fill"`, the default: page 1 fills the sheet and a ratio is the same
-#'   width throughout); `FALSE` keeps each column's own width (`"keep"`).
+#' @param fit `TRUE` puts every block's widths on page 1's scale (the
+#'   default: page 1 fills the sheet and a ratio is the same width
+#'   throughout); `FALSE` keeps each column's own width.
 #' @param allow_span_break `TRUE` (default) allows a cut inside a spanning
 #'   header cell.
 #' @param order The order the pages come out in, as the **axes** of the
-#'   split, outermost first (`paginate_cols(page_order = )`): any of
+#'   split, outermost first (`paginate_cols(order = )`): any of
 #'   `"group"`, `"rows"` and `"cols"`, or the shorthands `"across"` and
 #'   `"down"`.  Axes left out follow in that default order.
 #'
@@ -4541,15 +4541,11 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
                    allow_span_break = allow_span_break, order = order))
 }
 
-# The plan's words for paginate_cols()'s arguments: `cut_by` is a list of
-# column blocks (`cols`) or a separator / one key per column (`by`),
-# `keep` the columns every block repeats (`carry`), `fit` the width rule.
+# paginate_cols()'s arguments: the plan's words are its own (#594).
 .plan_colpages_args <- function(cp) {
-  out <- list(at = cp$at, carry = cp$keep, col_header = cp$col_header,
-              allow_span_break = cp$allow_span_break, page_order = cp$order)
-  if (is.list(cp$cut_by)) out$cols <- cp$cut_by
-  else if (!is.null(cp$cut_by)) out$by <- cp$cut_by
-  if (!is.null(cp$fit)) out$width <- if (isTRUE(cp$fit)) "fill" else "keep"
+  out <- list(at = cp$at, cut_by = cp$cut_by, keep = cp$keep,
+              col_header = cp$col_header, allow_span_break = cp$allow_span_break,
+              fit = cp$fit, order = cp$order)
   out[!vapply(out, is.null, logical(1L))]
 }
 

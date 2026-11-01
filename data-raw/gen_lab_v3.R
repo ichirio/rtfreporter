@@ -16,7 +16,7 @@ col_hdr_row <- c("Baseline\nGrade", rep(c("0","1","2","3","4","Total"), 3L))
 col_widths  <- c(1200L, rep(733L, 18L))
 
 make_shift_tbl <- function(df) rtftable(
-  df, col_header = col_hdr_row, spanning_header = spanning_hdr,
+  df, col_header = list(spanning_hdr, col_hdr_row),
   column_widths_twips = col_widths,
   col_spec = c(list(list(col=1, align="left")),
                lapply(2:19, function(j) list(col=j, align="center"))),

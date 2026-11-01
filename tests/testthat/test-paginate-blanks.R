@@ -1,4 +1,4 @@
-# paginate() — blank_row_first / blank_row_end + indent-based grouping.
+# .paginate_df() — blank_row_first / blank_row_end + indent-based grouping.
 
 # 2 top-level groups with deep sub-row indentation; matches the layout
 # described in Issue follow-up: group label, then 4-space sub-rows, then
@@ -57,7 +57,7 @@ test_that("group_safe splits at top-level group boundaries even with nested inde
   df  <- .deep_indent_df()
   # max_rows = 6 → group1(5 rows) fits; group2(5 rows) doesn't fit alongside
   # (5+5 = 10 > 6) → spill onto a second page.
-  res <- paginate(df, max_rows = 6L, split = "group_safe")
+  res <- .paginate_df(df, max_rows = 6L, split = "group_safe")
   expect_length(res, 2L)
   expect_identical(unique(rtfreporter:::.compute_group_info(res[[1L]],
                                                               NULL)$id), 1L)
@@ -69,7 +69,7 @@ test_that("group_safe splits at top-level group boundaries even with nested inde
 
 test_that("blank_row_first = TRUE adds position 0 to every page", {
   df  <- .deep_indent_df()
-  res <- paginate(df, max_rows = 6L, split = "group_safe",
+  res <- .paginate_df(df, max_rows = 6L, split = "group_safe",
                    blank_row_first = TRUE)
   for (chunk in res) {
     pos <- attr(chunk, "rtf_blank_rows")
@@ -83,7 +83,7 @@ test_that("blank_row_first = TRUE adds position 0 to every page", {
 
 test_that("blank_row_end = TRUE adds the page's last position", {
   df  <- .deep_indent_df()
-  res <- paginate(df, max_rows = 6L, split = "group_safe",
+  res <- .paginate_df(df, max_rows = 6L, split = "group_safe",
                    blank_row_end = TRUE)
   for (chunk in res) {
     pos <- attr(chunk, "rtf_blank_rows")
@@ -98,7 +98,7 @@ test_that("blank_row_end = TRUE adds the page's last position", {
 test_that("between_groups + blank_row_first + blank_row_end union as expected", {
   df  <- .deep_indent_df()
   # Single page (max_rows large enough for all 10 rows)
-  res <- paginate(df, max_rows = 20L, split = "group_safe",
+  res <- .paginate_df(df, max_rows = 20L, split = "group_safe",
                    blank_rows      = "between_groups",
                    blank_row_first = TRUE,
                    blank_row_end   = TRUE)
@@ -114,7 +114,7 @@ test_that("between_groups + blank_row_first + blank_row_end union as expected", 
 # ──────── Sanity: defaults don't add blanks ────────────────────────────────
 
 test_that("defaults (no blank_rows / no blank_row_first / no blank_row_end) add no blanks", {
-  res <- paginate(.deep_indent_df())
+  res <- .paginate_df(.deep_indent_df())
   expect_null(attr(res[[1L]], "rtf_blank_rows"))
 })
 
@@ -122,7 +122,7 @@ test_that("defaults (no blank_rows / no blank_row_first / no blank_row_end) add 
 
 test_that("rtftable(read_attributes = TRUE) picks up blank_row_first + between_groups + blank_row_end", {
   df  <- .deep_indent_df()
-  res <- paginate(df, blank_rows = "between_groups",
+  res <- .paginate_df(df, blank_rows = "between_groups",
                    blank_row_first = TRUE, blank_row_end = TRUE)
   tbl <- rtftable(res[[1L]])
   expect_identical(tbl$blank_rows, c(0L, 5L, 10L))

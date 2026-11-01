@@ -1,8 +1,6 @@
-# Helpers around assemble_rtf(): assemble_files / _spec / _toc / _from_spec /
-# _folder.
+# Helpers around assemble_rtf(): assemble_folder() and the table of contents.
 
 # A minimal rtfreporter RTF whose header carries a "Table N  <title>" line.
-local_deprecated("assemble_files", "assemble_spec", "assemble_toc", "assemble_from_spec", "toc_heading")  # deprecated in 0.8.x
 
 .make_tbl_rtf <- function(dir, file, table_no, title) {
   doc <- rtf_document()
@@ -26,16 +24,16 @@ local_deprecated("assemble_files", "assemble_spec", "assemble_toc", "assemble_fr
   d
 }
 
-test_that("assemble_files lists rtf files in natural order", {
+test_that("assemble_folder lists rtf files in natural order", {
   d <- .demo_dir()
-  files <- assemble_files(d)
+  files <- assemble_folder(d)$file
   expect_length(files, 2L)
   expect_true(all(grepl("[.]rtf$", files)))
 })
 
-test_that("assemble_spec reads table number + title from the header, ordered by table", {
+test_that("assemble_folder reads table number + title from the header, ordered by table", {
   d <- .demo_dir()
-  sp <- assemble_spec(d)
+  sp <- assemble_folder(d)
   expect_s3_class(sp, "data.frame")
   expect_setequal(c("order", "file", "table", "heading", "label", "level", "pages"),
                   names(sp))
@@ -45,16 +43,9 @@ test_that("assemble_spec reads table number + title from the header, ordered by 
   expect_equal(sp$pages, c(1L, 1L))
 })
 
-test_that("assemble_toc builds toc_entry objects from files", {
+test_that("assemble_folder headings become heading rows of the toc", {
   d <- .demo_dir()
-  toc <- assemble_toc(files = assemble_files(d))
-  expect_true(all(vapply(toc, inherits, logical(1L), "rtf_toc_entry")))
-  expect_length(toc, 2L)
-})
-
-test_that("assemble_spec headings become toc_heading() rows", {
-  d <- .demo_dir()
-  sp <- assemble_spec(d)
+  sp <- assemble_folder(d)
   sp$heading <- ifelse(grepl("^14[.]1", sp$table), "DEMOG", "SAFETY")
   toc <- rtfreporter:::.spec_to_toc(sp)
   kinds <- vapply(toc, function(e) class(e)[1L], character(1L))
@@ -63,11 +54,11 @@ test_that("assemble_spec headings become toc_heading() rows", {
                      "rtf_toc_heading", "rtf_toc_entry"))
 })
 
-test_that("assemble_from_spec writes an assembled file with a TOC", {
+test_that("assemble_rtf(toc = <table>) writes an assembled file with a TOC", {
   d   <- .demo_dir()
-  sp  <- assemble_spec(d)
+  sp  <- assemble_folder(d)
   out <- tempfile(fileext = ".rtf")
-  assemble_from_spec(sp, out, overwrite = TRUE)
+  assemble_rtf(toc = sp, output_file = out, overwrite = TRUE)
   expect_true(file.exists(out))
   txt <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(txt, "Table of Contents")
@@ -131,12 +122,6 @@ test_that("assemble_folder() without an output file gives the table of contents"
   txt <- paste(readLines(out1, warn = FALSE), collapse = "")
   expect_match(txt, "DEMOGRAPHICS")
   expect_match(txt, "SAFETY")
-
-  # the same as the old spelling, byte for byte
-  local_deprecated("assemble_from_spec")
-  out2 <- tempfile(fileext = ".rtf")
-  assemble_from_spec(spec, out2, toc_page_numbering = "none", toc_leader = "dot")
-  expect_identical(readLines(out1, warn = FALSE), readLines(out2, warn = FALSE))
 
   # or the path of the table, in its `order`
   csv <- tempfile(fileext = ".csv")

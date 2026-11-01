@@ -445,12 +445,6 @@
 #'   from `col_spec` (i.e. column headers follow the data alignment).
 #'   `"center"` / `"left"` / `"right"` applies a single value to every
 #'   column; a character vector of length `ncol` overrides per-column.
-#' @param spanning_header **Deprecated** in 0.8.x (warns once a session,
-#'   still works), removed in 0.9.0.  A standalone spanning row placed
-#'   **above** the `col_header` rows (each element
-#'   `list(from, to, label, underline)`).  Write it as the first row of
-#'   `col_header` instead: `col_header = list(<that row>, <the label row>)`,
-#'   or with [rtf_col_header()] / [col_cell()].
 #' @param col_spec Per-column formatting, as a `list` of per-column specs. Each
 #'   spec is a named list identifying its column with `col`, plus any of:
 #'   \describe{
@@ -487,8 +481,6 @@
 #'       and its `inside_h` / `inside_v` rules fall between the rows / cells;
 #'       [style_zone()] then sets one kind of row.}
 #'     \item{an [rtf_table_style()] object}{its border zones are used.}
-#'     \item{an `rtf_table_border()` object}{**deprecated** (removed in
-#'       0.9.0): the per-zone form; see [rtf_border()] for the new spelling.}
 #'   }
 #' @param style Optional shared `rtf_table_style` (S3).  Provides default
 #'   values for borders, alignment, cell padding, etc.; explicit arguments
@@ -628,7 +620,6 @@ rtftable <- function(
   data,
   col_header = NULL,
   col_header_align = NULL,
-  spanning_header = NULL,
   col_spec = NULL,
   row_title = NULL,
   border = "tfl",
@@ -674,7 +665,6 @@ rtftable <- function(
       cell_padding_right_twips <- style$cell_padding_right_twips
   }
 
-  if (!is.null(spanning_header)) .deprecate_spanning_header()
 
   data_single  <- NULL
   data_list    <- NULL
@@ -759,7 +749,7 @@ rtftable <- function(
   # which is why the expansion happens here and not in the constructor.
   border_resolved <- .expand_table_border(
     .normalize_table_border(border),
-    has_header = !is.null(spanning_header) || !is.null(col_header))
+    has_header = !is.null(col_header))
   # Raised here because it needs the shape of the table to know whether the
   # pre-0.5 reading would have produced anything different.
   .warn_old_edge_reading(.normalize_table_border(border),
@@ -826,7 +816,6 @@ rtftable <- function(
       data_list                   = data_list,
       col_header                  = col_hdr_one,
       col_header_list             = col_hdr_list,
-      spanning_header             = spanning_header,
       col_spec                    = cs,
       row_title                   = row_title_idx,
       border                      = border_resolved,
@@ -859,15 +848,6 @@ rtftable <- function(
 # list containing ONLY the arguments the caller passed explicitly (see
 # rtf_tables()); fields absent from `ov` are left untouched.  Each value is
 # normalised exactly as the rtftable() constructor would.
-.deprecate_spanning_header <- function() {
-  .deprecate_once(
-    "spanning_header",
-    paste0("`spanning_header =` is deprecated: write the spanning row as the ",
-           "first row of `col_header`\n  (`col_header = list(<spanning row>, ",
-           "<label row>)`, or `rtf_col_header()` / `col_cell()`).\n  ",
-           "Removed in 0.9.0."))
-}
-
 .override_rtftable_fields <- function(tbl, ov) {
   if (length(ov) == 0L) return(tbl)
   has <- function(k) k %in% names(ov)
@@ -938,18 +918,11 @@ rtftable <- function(
   # -- border (needs normalisation) ---------------------------------------
   if (has("border")) {
     # A header supplied in the same override call counts, so read `ov` first.
-    hdr_now <- if (has("spanning_header")) ov$spanning_header else tbl$spanning_header
     col_now <- if (has("col_header")) ov$col_header
                else tbl$col_header %||% tbl$col_header_list
     tbl$border <- .expand_table_border(
       .normalize_table_border(ov$border),
-      has_header = !is.null(hdr_now) || !is.null(col_now))
-  }
-
-  # -- spanning header (stored verbatim) ----------------------------------
-  if (has("spanning_header")) {
-    if (!is.null(ov$spanning_header)) .deprecate_spanning_header()
-    tbl$spanning_header <- ov$spanning_header
+      has_header = !is.null(col_now))
   }
 
   # -- column header (single- vs multi-DF) --------------------------------

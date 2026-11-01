@@ -5,16 +5,14 @@
 \title{Automatically calculate column widths for a data.frame}
 \usage{
 auto_col_widths(
-  data = NULL,
+  data,
   col_header = NULL,
   font = NULL,
   font_size_half_points = 18L,
   table_width_twips = NULL,
   min_col_width_twips = 720L,
   col_padding_twips = 288L,
-  protect_cols = integer(0),
-  df = NULL,
-  size_half_points = NULL
+  protect_cols = integer(0)
 )
 }
 \arguments{
@@ -53,10 +51,6 @@ the scalable columns below \code{min_col_width_twips}.}
 likewise keep their natural width and only the others grow to the
 target.}
 }}
-
-\item{df, size_half_points}{\emph{Superseded} by \code{data} and
-\code{font_size_half_points} (the names the other functions use); documented,
-still working, not warned.}
 }
 \value{
 An integer vector of column widths in twips, one per column of \code{data}.
