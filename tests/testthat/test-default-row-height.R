@@ -1,7 +1,6 @@
 # Font-size-aware default row height is applied uniformly across all
 # table-shaped elements (RTF header, footer, table body).
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that(".default_row_height_twips() honors lookup, linear fallback, and clamp", {
   expect_identical(rtfreporter:::.default_row_height_twips(18L), 230L)  # 9pt
@@ -39,7 +38,7 @@ test_that("per-element overrides win over the document-wide default", {
     header = rtf_header(rows = list(c(l = "T")), row_height_twips = 500L),
     footer = rtf_footer(rows = list(c(l = "F")), row_height_twips = 400L)
   ))
-  doc <- rtf_tables(doc, list(df), row_height_twips = 320L)
+  doc <- rtf_tables(doc, rtftable(df, row_height_twips = 320L))
 
   txt <- .render_to_string(doc)
   expect_match(txt, "\\\\trrh500\\b")

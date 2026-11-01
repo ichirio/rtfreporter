@@ -7,38 +7,12 @@
 rtf_tables(
   doc,
   tables,
-  col_header = NULL,
-  col_header_align = NULL,
-  col_spec = NULL,
-  row_title = NULL,
-  border = "tfl",
-  blank_rows = NULL,
-  read_attributes = TRUE,
-  style = NULL,
-  col_rel_width = NULL,
-  column_widths_twips = NULL,
-  table_width_twips = NULL,
-  table_width_pct_of_writable = NULL,
-  table_width_pct = NULL,
-  table_align = "left",
-  row_height_twips = NULL,
-  row_height_exact = FALSE,
-  header_row_height_twips = NULL,
-  blank_row_height_twips = NULL,
-  cell_padding_left_twips = NULL,
-  cell_padding_right_twips = NULL,
-  cell_valign = "bottom",
-  blank_row_normalize = c("detect", "collapse"),
-  markup = NULL,
-  font_size_half_points = NULL,
-  font = NULL,
   titles = NULL,
   footnotes = NULL,
   auto_section = NULL,
   section_label_align = "left",
   auto_title = NULL,
   title_label_align = "left",
-  read_gt = FALSE,
   page_break = TRUE,
   first_rows = NULL,
   space_before = 0L,
@@ -55,24 +29,19 @@ data.frame; it becomes its pages, as \code{\link[=plan_apply]{plan_apply()}} wou
 \item{the output of \code{\link[=as_rtftables]{as_rtftables()}}}{the pages of a gt, gtsummary,
 rtables/tern, rlistings, flextable or huxtable table, or of a
 \code{data.frame} paged and styled there.}
-\item{a bare \code{data.frame}}{one simple page; the table-format arguments
-below apply to it.}
+\item{a bare \code{data.frame}}{one simple page with \code{\link[=rtftable]{rtftable()}}'s
+defaults; write its appearance on \code{\link[=rtftable]{rtftable()}} or \code{\link[=as_rtftables]{as_rtftables()}}.}
 }
 More generally, \code{tables} is one page or a list of pages, \strong{each element
 one page} with a single content: a \code{data.frame}, an \code{rtftable} (from
 \code{\link[=rtftable]{rtftable()}} or \code{\link[=as_rtftables]{as_rtftables()}}), an \code{rtfplot} (from \code{\link[=rtfplot]{rtfplot()}}), or a
-\code{gt_tbl} / gtsummary table. A \code{gt_tbl} or gtsummary table is best passed
-through \code{\link[=as_rtftables]{as_rtftables()}}, which reads its labels, alignment, titles and
-source notes; placed here directly it is treated like a \code{data.frame}
-unless \code{read_gt} is set (see \code{read_gt}).
+\code{gt_tbl} / gtsummary table. A \code{gt_tbl} or gtsummary table goes through
+\code{\link[=as_rtftables]{as_rtftables()}}, which reads its labels, alignment, titles and source
+notes.
 
 \code{tables} may also be a single object of a class another package has
 registered an \code{\link[=as_rtftables]{as_rtftables()}} method for; it is converted to its pages
 first (see "Supplying a source from another package" in \code{\link[=as_rtftables]{as_rtftables()}}).}
-
-\item{col_header, col_header_align, col_spec, row_title, border, blank_rows, read_attributes, style, col_rel_width, column_widths_twips, table_width_twips, table_width_pct_of_writable, table_width_pct, table_align, row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips, cell_padding_left_twips, cell_padding_right_twips, cell_valign, blank_row_normalize, markup, font_size_half_points, font}{\strong{Deprecated} (removed in 0.9.0): the same arguments of \code{\link[=rtftable]{rtftable()}},
-written there (or in \code{\link[=as_rtftables]{as_rtftables()}} / \code{\link[=plan_style]{plan_style()}}) instead.  See
-"Deprecated arguments" below.}
 
 \item{titles}{\code{NULL} (default) or a list of length \code{length(tables)} \strong{or
 length 1} (a single block applied to every page).  Each element is a
@@ -139,10 +108,6 @@ name in the section header instead.}
 
 \item{title_label_align}{Alignment for the auto-appended title label row.
 One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}
-
-\item{read_gt}{\strong{Deprecated} (removed in 0.9.0): pass a gt or gtsummary
-table through \code{\link[=as_rtftables]{as_rtftables()}}, which reads its labels, alignment, titles
-and source notes, and place the pages it returns here.}
 
 \item{page_break}{\code{TRUE} (the default): each table begins a new page.
 \code{FALSE}: a table goes on under the content before it, on the page that
@@ -233,21 +198,6 @@ The values are on each page's \code{rtf_paginate_meta} as \code{page_values}
 values by their page-title prefix; a gt_group member of tfrmt's
 \code{print_to_gt()} the \code{page_structure()} columns of a \code{page_plan(note_loc = )}
 that writes the page note.
-}
-
-\section{Deprecated arguments}{
-
-The 26 table-format arguments that copy \code{\link[=rtftable]{rtftable()}}'s (\code{col_header},
-\code{border}, \code{col_rel_width}, \code{row_height_twips}, \code{font_size_half_points},
-\code{font}, ... -- see the usage) and \code{read_gt} are \strong{deprecated} in 0.8.x:
-each one passed says so once a session and still works as before, and they
-are removed in 0.9.0, the first CRAN release.  Write the same settings on
-the table: \code{rtftable(df, border = "tfl", col_rel_width = c(2, 1))}, or
-\code{as_rtftables(x, ...)} for a paged or converted table; pass a gt or
-gtsummary table through \code{\link[=as_rtftables]{as_rtftables()}} instead of \code{read_gt}.  Until then
-they behave as they always did: used to build a bare \code{data.frame} element,
-and, when passed explicitly, overriding the matching field of a pre-built
-\code{rtftable()} page (\code{rtfplot()} pages are never modified).
 }
 
 \examples{

@@ -17,7 +17,6 @@
 
 # ──────── the resolver: size and height move together ──────────────────────
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that("nothing set -> the document size and its implied height", {
   m <- rtfreporter:::.resolve_element_metrics(NULL, NULL, 18L, NULL)
@@ -228,7 +227,7 @@ test_that("a document with no per-element style renders byte-identically", {
   expect_identical(mk(FALSE), mk(TRUE))
 })
 
-# ──────── rtf_tables() overrides the table's typography (#299) ─────────────
+# ──────── the table's typography reaches the rendered rows (#299) ─────────────
 
 .ov <- function(...) {
   d <- rtf_document() |> rtf_tables(...)
@@ -243,21 +242,15 @@ test_that("a document with no per-element style renders byte-identically", {
 .ovdf <- function() data.frame(Parameter = c("Age", "  Mean"), A = c("", "45.2"),
                                stringsAsFactors = FALSE)
 
-test_that("rtf_tables(font_size_half_points = ) reaches the table", {
-  o <- .ov(rtftable(.ovdf(), border = "tfl"), font_size_half_points = 14L)
+test_that("rtftable(font_size_half_points = ) reaches the table", {
+  o <- .ov(rtftable(.ovdf(), border = "tfl", font_size_half_points = 14L))
   expect_equal(o$fs, "\\fs14")
   expect_equal(o$trrh,
                paste0("\\trrh", rtfreporter:::.default_row_height_twips(14L)))
 })
 
-test_that("rtf_tables(font = ) reaches the table", {
-  expect_equal(.ov(rtftable(.ovdf(), border = "tfl"), font = "Arial")$f, "\\f1")
-})
-
-test_that("the rtf_tables() value wins over the table's own", {
-  o <- .ov(rtftable(.ovdf(), border = "tfl", font_size_half_points = 24L),
-           font_size_half_points = 14L)
-  expect_equal(o$fs, "\\fs14")
+test_that("rtftable(font = ) reaches the table", {
+  expect_equal(.ov(rtftable(.ovdf(), border = "tfl", font = "Arial"))$f, "\\f1")
 })
 
 test_that("the table's own value survives when nothing overrides it", {
@@ -265,26 +258,24 @@ test_that("the table's own value survives when nothing overrides it", {
   expect_equal(o$fs, "\\fs24")
 })
 
-test_that("an explicit row height still wins at the rtf_tables() level", {
-  o <- .ov(rtftable(.ovdf(), border = "tfl"),
-           font_size_half_points = 14L, row_height_twips = 300L)
+test_that("an explicit row height still wins over the font size's default", {
+  o <- .ov(rtftable(.ovdf(), border = "tfl",
+                    font_size_half_points = 14L, row_height_twips = 300L))
   expect_equal(o$fs, "\\fs14")
   expect_equal(o$trrh, "\\trrh300")
 })
 
-test_that("the override reaches every page of an as_rtftables() list", {
-  pages <- as_rtftables(.ovdf(), border = "tfl")
-  d <- rtf_document() |> rtf_tables(pages, font_size_half_points = 14L)
+test_that("the font size reaches every page of an as_rtftables() list", {
+  pages <- as_rtftables(.ovdf(), border = "tfl", font_size_half_points = 14L)
+  d <- rtf_document() |> rtf_tables(pages)
   expect_true(all(vapply(.doc_items(d),
                          function(p) identical(p$font_size_half_points, 14L),
                          logical(1L))))
 })
 
-test_that("rtf_tables() validates them like everything else", {
-  d <- rtf_document()
-  expect_error(rtf_tables(d, rtftable(.ovdf()), font = 1), "font family")
-  expect_error(rtf_tables(d, rtftable(.ovdf()), font_size_half_points = 0),
-               "positive")
+test_that("rtftable() validates them like everything else", {
+  expect_error(rtftable(.ovdf(), font = 1), "font family")
+  expect_error(rtftable(.ovdf(), font_size_half_points = 0), "positive")
 })
 
 

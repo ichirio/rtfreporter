@@ -114,8 +114,8 @@
 #' `as_rtftables()` is the single entry point for turning a *table object*
 #' into a list of [rtftable()] objects -- one per RTF page -- ready to hand
 #' straight to [rtf_tables()].  It unifies two jobs that used to be split
-#' across `paginate()` (page splitting, removed in 0.9.0) and `rtf_tables(read_gt = )`
-#' (metadata extraction):
+#' across `paginate()` (page splitting) and `rtf_tables(read_gt = )` (metadata
+#' extraction), both removed in 0.9.0:
 #'
 #' 1. **Read the table's metadata** (only the parts the RTF renderer can use;
 #'    see *What is carried* below).

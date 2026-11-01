@@ -9,7 +9,7 @@ blank_rows_by_rule(col, pattern, where = c("before", "after"))
 \arguments{
 \item{col}{Name of the column to test.}
 
-\item{pattern}{A regular expression (POSIX extended via \code{\ink[base:grep]{base::grepl()}}).}
+\item{pattern}{A regular expression (POSIX extended via \code{\link[base:grep]{base::grepl()}}).}
 
 \item{where}{Either \code{"before"} (default) or \code{"after"}.}
 }

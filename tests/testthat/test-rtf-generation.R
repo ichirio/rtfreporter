@@ -1,6 +1,5 @@
 # End-to-end RTF file generation through the pipe API.
 
-silence_rtf_tables_deprecation()   # the old arguments' own tests (#594)
 
 test_that("generate_rtfreport() writes a valid non-empty RTF file", {
   df_safety <- data.frame(
@@ -16,8 +15,10 @@ test_that("generate_rtfreport() writes a valid non-empty RTF file", {
   )
 
   doc <- rtf_document()
-  doc <- rtf_tables(doc, list(df_safety, df_efficacy),
-                    border = "tfl", row_height_twips = 280L)
+  doc <- rtf_tables(doc, list(
+    rtftable(df_safety, border = "tfl", row_height_twips = 280L),
+    rtftable(df_efficacy, border = "tfl", row_height_twips = 280L)
+  ))
   doc <- rtf_section(doc, page = 1, secinfo = list(
     header = rtf_header(rows = list(l = "Clinical Report", r = "Safety")),
     footer = rtf_footer(rows = list(c = "Page 1"))
