@@ -584,8 +584,8 @@ value-based (or the input was a named list) the list is named.
 \code{as_rtftables()} is the single entry point for turning a \emph{table object}
 into a list of \code{\link[=rtftable]{rtftable()}} objects -- one per RTF page -- ready to hand
 straight to \code{\link[=rtf_tables]{rtf_tables()}}.  It unifies two jobs that used to be split
-across \code{paginate()} (page splitting, removed in 0.9.0) and \code{rtf_tables(read_gt = )}
-(metadata extraction):
+across \code{paginate()} (page splitting) and \code{rtf_tables(read_gt = )} (metadata
+extraction), both removed in 0.9.0:
 }
 \details{
 \enumerate{

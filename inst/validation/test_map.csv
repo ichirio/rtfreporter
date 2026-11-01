@@ -1432,3 +1432,4 @@
 "test-validation-kit.R","rtfreporter_validation_kit() copies the templates and the package's FRs","FT-AS116","FR-AS229"
 "test-validation-kit.R","rtfreporter_validation_kit() refuses a folder with files unless overwrite = TRUE","FT-AS117","FR-AS230 FR-AS231 FR-AS232"
 "test-pipe-api.R","a gt table given to rtf_tables() is read as as_rtftables() reads it (#788)","FT-TB691","FR-TB192"
+"test-default-widths.R","the row headings are at least one and a half data columns, at any count (#791)","FT-TB692","FR-TB383"
