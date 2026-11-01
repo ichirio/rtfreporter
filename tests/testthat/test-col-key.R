@@ -139,9 +139,9 @@ test_that("paginate_cols() still refuses to cut inside a selector span", {
          col_cell(col_key("Total"), "Total")),
     nm))
   expect_error(
-    paginate_cols(tbl, at = 3L, carry = 1L, allow_span_break = FALSE),
+    paginate_cols(tbl, at = 3L, keep = 1L, allow_span_break = FALSE),
     "spanning header cell")
-  pages <- paginate_cols(tbl, at = c(4L, 6L), carry = 1L,
+  pages <- paginate_cols(tbl, at = c(4L, 6L), keep = 1L,
                          allow_span_break = FALSE)
   expect_length(pages, 3L)
 })

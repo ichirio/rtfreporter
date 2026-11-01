@@ -1,7 +1,5 @@
 # One rounding rule for the whole package (#476).
 
-silence_deprecation(c("realign_count_pct"))   # until 0.9.0 (#594)
-
 test_that("round_num() rounds half to even under 'r' and away from zero under 'sas'", {
   x <- c(0.5, 1.5, 2.5, -0.5, -2.5)
   expect_equal(round_num(x, rounding = "r"),   c(0, 2, 2, 0, -2))

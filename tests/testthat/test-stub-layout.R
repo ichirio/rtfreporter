@@ -152,7 +152,7 @@ test_that("the span survives paginate_cols() with no re-indexing", {
   attr(out, "rtf_label_rows") <- c(1L, 4L)
   tbl <- rtftable(out, border = "tfl",
                   column_widths_twips = c(3000L, 3000L, 3000L))
-  pg  <- paginate_cols(tbl, at = 3L, carry = 1L)
+  pg  <- paginate_cols(tbl, at = 3L, keep = 1L)
   expect_length(pg, 2L)
   for (p in pg) {
     o <- rtfreporter:::.render_rtftable(p, 9360L)

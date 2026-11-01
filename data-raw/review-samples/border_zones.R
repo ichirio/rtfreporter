@@ -43,8 +43,8 @@ AMBER  <- "#B36B00"   # first_row
 PURPLE <- "#8250DF"   # last_row
 
 # Every rule here is a thick single line; only the colour changes, so each
-# side carries its own rtf_border_side().
-rule <- function(color) rtf_border_side(width = 30L, color = color)
+# side carries its own rtf_border_line().
+rule <- function(color) rtf_border_line(width = 30L, color = color)
 
 zones <- function(tbl) style_zone(tbl,
   spanning  = rtf_border(top      = rule(RED)),

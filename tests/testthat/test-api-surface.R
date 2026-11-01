@@ -1,117 +1,40 @@
 ## tests/testthat/test-api-surface.R
 ##
-## #346: the API-review measure. Deprecated functions still work, so they still
-## appear in NAMESPACE, but they are not part of what a reader has to learn --
-## they are scheduled for bulk removal before the CRAN submission. The number
-## that matters is therefore the export count MINUS the deprecated set, and
-## these tests keep both honest.
+## #346: the API-review measure -- the export count, kept honest.  0.9.0
+## removed every function and argument the 0.5.0 - 0.8.x reviews had
+## deprecated (#788); the tests below keep them gone.
 
 library(testthat)
-
-.dep <- rtfreporter:::.deprecated_exports
 
 .exports <- function() {
   ns <- asNamespace("rtfreporter")
   sort(getNamespaceExports(ns))
 }
 
-# A folder of two small deliverables, for the assembly helpers.
-.toc_dir <- function() {
-  dir <- file.path(tempdir(), "api-surface-toc")
-  if (!dir.exists(dir)) {
-    dir.create(dir)
-    for (t in c("14.1.1", "14.2.1")) {
-      doc <- rtf_document() |>
-        rtf_tables(data.frame(Parameter = "Age", Value = "75.1")) |>
-        rtf_titles(list(c(paste("Table", t), "Safety Population")))
-      generate_rtfreport(doc, file.path(dir, paste0("t", t, ".rtf")))
-    }
-  }
-  dir
-}
-
 .reset_deprecation <- function() {
   st <- rtfreporter:::.deprecation_state
   rm(list = ls(st), envir = st)
-  # paginate() keeps its own once-a-session flag
-  rm(list = ls(rtfreporter:::.paginate_depr_env),
-     envir = rtfreporter:::.paginate_depr_env)
 }
 
-test_that("every name on the deprecated list is actually exported", {
-  expect_true(all(.dep %in% .exports()),
-              info = paste(setdiff(.dep, .exports()), collapse = ", "))
+test_that("the functions deprecated before 0.9.0 are gone (#788)", {
+  gone <- c("toc_heading", "toc_entry", "assemble_files", "assemble_spec",
+            "assemble_toc", "assemble_from_spec", "fmt_count_paren_bare",
+            "add_col_header_row", "col_header_from_names", "realign_count_pct",
+            "format_count_pct", "paginate", "rtf_border_side", "rtf_border_with",
+            "rtf_border_none", "rtf_border_top", "rtf_border_bottom",
+            "rtf_border_box", "rtf_table_border", "rtf_border_tfl",
+            "update_header_row", "update_footer_row", "set_header_cell")
+  expect_identical(intersect(gone, .exports()), character(0))
+  expect_identical(rtfreporter:::.deprecated_exports, character(0))
 })
 
-test_that("every deprecated function still works and warns once", {
-  b <- rtf_border(top = TRUE)
-  calls <- list(
-    rtf_border_top    = function() rtf_border_top(),
-    rtf_border_bottom = function() rtf_border_bottom(),
-    rtf_border_box    = function() rtf_border_box(),
-    rtf_border_none   = function() rtf_border_none(),
-    rtf_border_with   = function() rtf_border_with(b, bottom = TRUE),
-    rtf_border_tfl    = function() rtf_border_tfl(),
-    rtf_table_border  = function() rtf_table_border(header = b),
-    # 0.8.2.9013, the pre-CRAN API review (iteration 1)
-    rtf_border_side   = function() rtf_border_side(),
-    add_col_header_row = function()
-      add_col_header_row(rtf_col_header(c("a", "b")), c("A", "B")),
-    col_header_from_names = function() col_header_from_names(c("a", "x__b")),
-    set_header_cell   = function()
-      set_header_cell(rtftable(data.frame(a = 1, b = 2), col_header = c("A", "B")),
-                      col_cell(c(1, 2), "AB"), row = 1),
-    update_header_row = function()
-      update_header_row(rtf_header(c(l = "x")), 2, c(l = "y")),
-    update_footer_row = function()
-      update_footer_row(rtf_footer(c(l = "x")), 2, c(l = "y")),
-    paginate          = function() paginate(data.frame(a = 1)),
-    # 0.8.2.9014: the assembly helpers
-    assemble_files    = function() assemble_files(.toc_dir()),
-    assemble_spec     = function() assemble_spec(.toc_dir()),
-    assemble_toc      = function() assemble_toc(spec = assemble_folder(.toc_dir())),
-    assemble_from_spec = function()
-      assemble_from_spec(assemble_folder(.toc_dir()), tempfile(fileext = ".rtf")),
-    toc_heading       = function() toc_heading("A"),
-    toc_entry         = function() toc_entry("A", file = "a.rtf"),
-    # 0.8.2.9039: the pre-CRAN API review, iteration 0 (#594 O2)
-    fmt_count_paren_bare = function() fmt_count_paren_bare(c("1 (5.0%)", "0")),
-    realign_count_pct = function() realign_count_pct(c("5 (33.3)", "12 (100.0)")),
-    format_count_pct  = function() format_count_pct(5L, 0.05)
-  )
-  expect_setequal(names(calls), .dep)
-
-  for (nm in names(calls)) {
-    .reset_deprecation()
-    expect_warning(value <- calls[[nm]](), "deprecated", info = nm)
-    expect_false(is.null(value), info = nm)          # still does its job
-    expect_silent(calls[[nm]]())                     # ... and only warns once
-  }
-  .reset_deprecation()
-})
-
-test_that("the deprecated spellings still produce the new values", {
-  suppressWarnings({
-    expect_identical(rtf_border_none(),  rtf_border())
-    expect_identical(rtf_border_top(),   rtf_border(top = TRUE))
-    expect_identical(rtf_border_bottom(), rtf_border(bottom = TRUE))
-    expect_identical(rtf_border_box(),   rtf_border(all = TRUE))
-    b <- rtf_border(top = TRUE)
-    expect_identical(rtf_border_with(b, bottom = TRUE),
-                     rtf_border(top = TRUE, bottom = TRUE))
-  })
-})
-
-test_that("one border constructor is left once the deprecated ones are set aside", {
+test_that("one border constructor is left, and one line", {
   border_api <- grep("^rtf_border|^rtf_table_border$", .exports(), value = TRUE)
-  expect_length(border_api, 10L)                      # what NAMESPACE still holds
   # Two, doing different jobs: which edges, and what the line is.
-  expect_setequal(setdiff(border_api, .dep),
-                  c("rtf_border", "rtf_border_line"))
+  expect_setequal(border_api, c("rtf_border", "rtf_border_line"))
 })
 
 test_that("the effective export count is the reviewed number", {
-  # 128 exports, 20 of them deprecated and slated for removal before CRAN.
   # (91 since #463 added rtfreporter_ai_manual(); 92 since #476 added
   # round_num(); 126 since #491 brought the ARD table engine --
   # 34 functions -- over from tflspec; 122 since #498 folded plan_fmt()
@@ -136,22 +59,35 @@ test_that("the effective export count is the reviewed number", {
   # 112 since default_col_widths(), the widths of a table that gives none;
   # 136 / 113 since #737 added plan_append(), another plan's rows under a
   # table's; 137 / 114 since rtfreporter_validation_kit(), the user's
-  # validation templates.)
-  expect_length(.exports(), 137L)
-  expect_length(setdiff(.exports(), .dep), 114L)
+  # validation templates; 114 since 0.9.0 removed the 23 deprecated ones,
+  # #788.)
+  expect_length(.exports(), 114L)
 })
 
-test_that("the old argument names still work, with a warning", {
-  .reset_deprecation()
+test_that("the argument names removed in 0.9.0 are gone (#788)", {
+  has <- function(f, a) a %in% names(formals(f))
+  expect_false(has(as_rtftable, "gt_obj"))
+  expect_false(any(has(as_rtftables, c("stub_vars", "stub_label", "stub_indent",
+                                       "stub_group_summary"))))
+  expect_false(has(add_cont_label, "chunk"))
+  expect_false(has(set_blank_rows, "df"))
+  expect_false(has(rtftable, "spanning_header"))
+  expect_false(has(rtf_tables, "spanning_header"))
+  expect_false(any(has(rtfreporter:::paginate_cols.list,
+                       c("cols", "by", "carry", "width", "page_order"))))
+  expect_false(any(has(rtfreporter:::paginate_cols.rtftable,
+                       c("cols", "by", "carry", "width", "page_order"))))
+  for (f in list(text_width_in, auto_col_widths, fit_listing_widths)) {
+    expect_false(has(f, "size_half_points"))
+  }
+  expect_false(has(auto_col_widths, "df"))
+  # the old names now reach `...` and say they are not arguments
   d <- data.frame(a = 1, b = 2)
-  expect_warning(t1 <- as_rtftable(gt_obj = d), "deprecated")
-  expect_identical(t1, as_rtftable(d))
-  .reset_deprecation()
+  expect_warning(paginate_cols(rtftable(d), at = 2, carry = 1), "unknown argument `carry`")
+  # a spanning row is the first row of col_header
   sp <- list(list(from = 1, to = 2, label = "AB"))
-  expect_warning(t2 <- rtftable(d, spanning_header = sp), "deprecated")
-  expect_identical(t2$spanning_header, sp)
-  expect_silent(rtftable(d, spanning_header = sp))     # once a session
-  .reset_deprecation()
+  t2 <- rtftable(d, col_header = list(sp, c("a", "b")))
+  expect_length(t2$col_header, 2L)
 })
 
 test_that("rtf_tables()'s table-format arguments warn once each, and still apply (#594)", {
@@ -170,18 +106,18 @@ test_that("rtf_tables()'s table-format arguments warn once each, and still apply
   expect_identical(doc2$contents[[1]]$content$col_rel_width, c(2, 1))
   # the arguments that are not table-format copies say nothing
   expect_silent(rtf_tables(rtf_document(), d, titles = list("T"), auto_title = FALSE))
-  expect_length(rtfreporter:::.rtf_tables_fmt_args, 27L)
+  expect_length(rtfreporter:::.rtf_tables_fmt_args, 26L)
   .reset_deprecation()
 })
 
-test_that("fmt_count_paren(bare = TRUE) is fmt_count_paren_bare(), byte for byte (#594)", {
+test_that("fmt_count_paren(bare = TRUE) is the built-in \"count_paren_bare\", byte for byte (#594)", {
   xs <- list(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)"),
              c("5 (33.3)", "0", "12 (100.0)", NA, ""),
              c("86", "5 (5.8)", "10 (11.6)", "0"),
              c("Mild", "2 (1.0%)", "0"))
   for (x in xs) for (nb in c(" ", "\u00a0")) for (na in c("", "-")) {
     expect_identical(fmt_count_paren(x, nbsp = nb, na = na, bare = TRUE),
-                     suppressWarnings(fmt_count_paren_bare(x, nbsp = nb, na = na)))
+                     rtfreporter:::.fmt_count_paren_bare(x, nbsp = nb, na = na))
   }
   # bare = FALSE is fmt_count_paren() as it was
   expect_identical(fmt_count_paren(xs[[1]]), fmt_count_paren(xs[[1]], bare = FALSE))
@@ -191,18 +127,16 @@ test_that("generate_rtfreport() writes over a file by default (#594)", {
   expect_true(formals(generate_rtfreport)$overwrite)
 })
 
-test_that("a deprecated cell-format name still resolves, and says so (#594)", {
-  .reset_deprecation()
+test_that("the cell-format name \"realign_count_pct\" is gone; \"count_pct\" is the one (#788)", {
   x <- c("5 (33.3)", "12 (100.0)")
-  expect_warning(f <- rtfreporter:::.builtin_cell_format("realign_count_pct"), "count_pct")
+  expect_error(rtfreporter:::.builtin_cell_format("realign_count_pct"),
+               "not a built-in cell format")
+  f <- rtfreporter:::.builtin_cell_format("count_pct")
   expect_identical(f(x), rtfreporter:::.realign_count_pct(x))
-  expect_silent(rtfreporter:::.builtin_cell_format("count_pct"))
   # "count_paren_bare" stays: fmt_count_paren(bare = TRUE)
   expect_silent(rtfreporter:::.builtin_cell_format("count_paren_bare"))
-  expect_identical(suppressWarnings(format_count_pct(5L, 0.05)), fmt_count_pct(5L, 0.05))
   # the align_count_pct switch says nothing
   expect_silent(rtfreporter:::.resolve_align_count_pct(TRUE))
-  .reset_deprecation()
 })
 
 test_that("a border line saved under the old class name still reads", {
@@ -211,29 +145,10 @@ test_that("a border line saved under the old class name still reads", {
   expect_silent(rtf_border(top = old))
 })
 
-test_that("the first argument is data; the old names still work, with a warning", {
-  d <- data.frame(g = c("A", "A", "B"), v = 1:3)
+test_that("the first argument is data", {
   expect_identical(names(formals(set_blank_rows))[1], "data")
   expect_identical(names(formals(add_cont_label))[1], "data")
-  .reset_deprecation()
-  expect_warning(a <- set_blank_rows(df = d, blank_rows = 1L), "deprecated")
-  expect_identical(a, set_blank_rows(d, blank_rows = 1L))
-  expect_warning(b <- add_cont_label(chunk = d, label = "A"), "deprecated")
-  expect_identical(b, add_cont_label(data = d, label = "A"))
-  .reset_deprecation()
-})
-
-test_that("the NEWS expression finds every deprecated export", {
-  news <- system.file("NEWS.md", package = "rtfreporter")
-  skip_if(!nzchar(news), "NEWS.md is not installed")
-  txt <- readLines(news, warn = FALSE)
-  i <- grep("^\\\\b\\(rtf_border_", txt)
-  skip_if(!length(i), "the expression is not in this NEWS")
-  re <- txt[i[1]]
-  for (f in rtfreporter:::.deprecated_exports) {
-    expect_true(grepl(re, paste0("x <- ", f, "(1)"), perl = TRUE), info = f)
-  }
-  expect_false(grepl(re, "paginate_cols(x)", perl = TRUE))
+  expect_identical(names(formals(auto_col_widths))[1], "data")
 })
 
 test_that("rtf_section(header = , footer = ) is the section; secinfo is checked (#594 1.5, E3)", {
@@ -267,43 +182,40 @@ test_that("a character vector of titles or footnotes is one block for every page
   expect_error(rtf_titles(d, 1), "character vector")
 })
 
-test_that("paginate_cols() takes the plan's names; the old ones still work (#594 1.4)", {
+test_that("paginate_cols() takes the plan's names (#594 1.4)", {
   df <- data.frame(id = 1:2, a = 1, b = 2, c = 3, d = 4, e = 5)
   t <- rtftable(df)
   cols_of <- function(pages) lapply(pages, function(p) names(p$data))
   expect_identical(cols_of(paginate_cols(t, cut_by = list(2:4, 5:6))),
-                   cols_of(paginate_cols(t, cols = list(2:4, 5:6))))
+                   list(c("id", "a", "b", "c"), c("id", "d", "e")))
   expect_identical(cols_of(paginate_cols(t, at = 5, keep = 1)),
-                   cols_of(paginate_cols(t, at = 5, carry = 1)))
-  expect_identical(cols_of(paginate_cols(t, at = 5, fit = FALSE)),
-                   cols_of(paginate_cols(t, at = 5, width = "keep")))
-  expect_identical(paginate_cols(t, at = 5, fit = FALSE)[[2]]$col_rel_width,
-                   paginate_cols(t, at = 5, width = "keep")[[2]]$col_rel_width)
-  expect_identical(cols_of(paginate_cols(t, at = 5, order = "down")),
-                   cols_of(paginate_cols(t, at = 5, page_order = "down")))
+                   list(c("id", "a", "b", "c"), c("id", "d", "e")))
+  expect_identical(cols_of(paginate_cols(t, at = 5, keep = integer(0))),
+                   list(c("id", "a", "b", "c"), c("d", "e")))
+  # fit = FALSE: a column keeps its width, so block 2 is narrower
+  expect_lt(sum(paginate_cols(t, at = 5, fit = FALSE)[[2]]$col_rel_width),
+            sum(paginate_cols(t, at = 5, fit = TRUE)[[2]]$col_rel_width) + 1e-9)
+  expect_length(paginate_cols(t, at = 5, order = "down"), 2L)
   # every: a block every 2 of the columns not kept
   expect_identical(cols_of(paginate_cols(t, every = 2)),
                    list(c("id", "a", "b"), c("id", "c", "d"), c("id", "e")))
   # no wider than one block: the table as it is
   expect_length(paginate_cols(t, every = 10), 1L)
-  expect_error(paginate_cols(t, cut_by = list(2:3), cols = list(2:3)), "not both")
+  expect_error(paginate_cols(t, at = 3, cut_by = list(4:5)), "not both")
   expect_error(paginate_cols(t, at = 3, every = 2), "one way")
 })
 
-test_that("the width helpers: font = NULL is the package's font; the older names work (#594 1.4)", {
+test_that("the width helpers: font = NULL is the package's font (#594 1.4)", {
   expect_identical(text_width_in("abc"), text_width_in("abc", font = "courier_new"))
   expect_identical(text_width_in("abc", font = "Courier New"),
                    text_width_in("abc", font = "courier_new"))
-  expect_identical(text_width_in("abc", size_half_points = 24),
-                   text_width_in("abc", font_size_half_points = 24))
+  expect_gt(text_width_in("abc", font_size_half_points = 24), text_width_in("abc"))
   old <- options(rtfreporter.font = "Arial")
   on.exit(options(old), add = TRUE)
   expect_identical(text_width_in("abc"), text_width_in("abc", font = "arial"))
   options(old)
   df <- data.frame(USUBJID = c("S-001", "S-002"), AGE = c(45L, 62L))
-  expect_identical(auto_col_widths(df = df), auto_col_widths(df))
-  expect_identical(auto_col_widths(df, size_half_points = 20),
-                   auto_col_widths(data = df, font_size_half_points = 20))
+  expect_identical(auto_col_widths(df), auto_col_widths(data = df))
 })
 
 test_that("generate_rtfreport(doc = ); report = still works, by name or with the file by position (#594 1.4)", {

@@ -1,7 +1,5 @@
 # stub_spec(): one argument for every stub setting (#314).
 
-local_deprecated("stub_vars")  # deprecated in 0.8.x
-
 ae <- data.frame(SOC = c("Cardiac", "Cardiac", "GI"),
                  PT  = c("AF", "Brady", "Nausea"),
                  N   = c("3 (2.1%)", "1 (0.7%)", "5 (3.5%)"),
@@ -44,29 +42,12 @@ test_that("it prints", {
   expect_output(print(stub_spec(c("SOC", "PT"))), "SOC, PT")
 })
 
-# ── resolution against the superseded family ───────────────────────────────
-
-test_that("the spec form matches the superseded flat form exactly", {
-  a <- as_rtftables(ae, stub_vars = c("SOC", "PT"), stub_label = "SOC / PT")
-  b <- as_rtftables(ae, stub = stub_spec(c("SOC", "PT"), label = "SOC / PT"))
-  expect_identical(a[[1L]]$data, b[[1L]]$data)
-  expect_identical(names(a[[1L]]$data), c("SOC / PT", "N"))
-})
+# ── resolution ──────────────────────────────────────────────────────────────
 
 test_that("a bare vector is shorthand for stub_spec(vars)", {
   a <- as_rtftables(ae, stub = c("SOC", "PT"))
   b <- as_rtftables(ae, stub = stub_spec(c("SOC", "PT")))
   expect_identical(a[[1L]]$data, b[[1L]]$data)
-})
-
-test_that("mixing stub with the superseded family is an error", {
-  expect_error(as_rtftables(ae, stub = c("SOC", "PT"),
-                            stub_vars = c("SOC", "PT")),
-               "not both")
-  expect_error(as_rtftables(ae, stub = c("SOC", "PT"), stub_label = "x"),
-               "not both")
-  expect_error(as_rtftables(ae, stub = c("SOC", "PT"), stub_indent = 0L),
-               "not both")
 })
 
 test_that("no stub at all is still the default", {

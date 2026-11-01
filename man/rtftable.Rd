@@ -8,7 +8,6 @@ rtftable(
   data,
   col_header = NULL,
   col_header_align = NULL,
-  spanning_header = NULL,
   col_spec = NULL,
   row_title = NULL,
   border = "tfl",
@@ -67,13 +66,6 @@ from \code{col_spec} (i.e. column headers follow the data alignment).
 \code{"center"} / \code{"left"} / \code{"right"} applies a single value to every
 column; a character vector of length \code{ncol} overrides per-column.}
 
-\item{spanning_header}{\strong{Deprecated} in 0.8.x (warns once a session,
-still works), removed in 0.9.0.  A standalone spanning row placed
-\strong{above} the \code{col_header} rows (each element
-\code{list(from, to, label, underline)}).  Write it as the first row of
-\code{col_header} instead: \verb{col_header = list(<that row>, <the label row>)},
-or with \code{\link[=rtf_col_header]{rtf_col_header()}} / \code{\link[=col_cell]{col_cell()}}.}
-
 \item{col_spec}{Per-column formatting, as a \code{list} of per-column specs. Each
 spec is a named list identifying its column with \code{col}, plus any of:
 \describe{
@@ -112,8 +104,6 @@ rules and a bottom rule on the last row.}
 and its \code{inside_h} / \code{inside_v} rules fall between the rows / cells;
 \code{\link[=style_zone]{style_zone()}} then sets one kind of row.}
 \item{an \code{\link[=rtf_table_style]{rtf_table_style()}} object}{its border zones are used.}
-\item{an \code{rtf_table_border()} object}{\strong{deprecated} (removed in
-0.9.0): the per-zone form; see \code{\link[=rtf_border]{rtf_border()}} for the new spelling.}
 }}
 
 \item{blank_rows}{Where to insert blank separator rows. One of -- or a \code{list}

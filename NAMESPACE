@@ -132,15 +132,11 @@ S3method(collapse_repeats, default)
 # Header / footer constructors
 export(rtf_header)
 export(rtf_footer)
-export(update_header_row)
-export(update_footer_row)
 
 # Unified column-header API (v0.0.21+) — pos = 1 / pos = c(2, 5) cells
 export(col_cell)
 export(col_key)
 export(rtf_col_header)
-export(add_col_header_row)
-export(col_header_from_names)
 S3method(print, rtf_col_cell)
 S3method(print, rtf_col_header)
 
@@ -164,9 +160,6 @@ export(set_col_header)
 export(header_map)
 S3method(set_col_header, rtftable)
 S3method(set_col_header, list)
-export(set_header_cell)
-S3method(set_header_cell, rtftable)
-S3method(set_header_cell, list)
 export(set_decimal_split)
 S3method(set_decimal_split, rtftable)
 S3method(set_decimal_split, list)
@@ -178,14 +171,7 @@ S3method(paginate_cols, rtftable)
 S3method(paginate_cols, list)
 export(rtf_header_source)
 
-# Pagination of external table objects → per-page data.frames (v0.0.22+)
-export(paginate)
-S3method(paginate, default)
-S3method(paginate, data.frame)
-S3method(paginate, list)
-S3method(paginate, gt_tbl)
-
-# Blank-row attribute helper (used by paginate(), also standalone)
+# Blank-row attribute helper (used by as_rtftables(), also standalone)
 export(set_blank_rows)
 
 # Continuation-label helper for custom split= pagination functions
@@ -198,10 +184,6 @@ export(fmt_count_paren)
 export(fmt_value_paren)
 export(fmt_right_align)
 export(fmt_count_pct)
-# deprecated (#594), removed in 0.9.0
-export(fmt_count_paren_bare)
-export(format_count_pct)
-export(realign_count_pct)
 
 # Numeric -> character display formatters (significant digits / decimals)
 export(fmt_signif)
@@ -215,22 +197,12 @@ export(blank_rows_by_rule)
 
 # Border utilities
 export(rtf_border_line)
-export(rtf_border_side)
 export(rtf_border)
-export(rtf_border_none)
-export(rtf_border_top)
-export(rtf_border_bottom)
-export(rtf_border_box)
-export(rtf_table_border)
-export(rtf_border_tfl)
 
 # Shared style (S3)
 export(rtf_table_style)
 export(rtf_table_style_with)
 export(rtf_table_style_tfl)
-
-# Border builder helper
-export(rtf_border_with)
 
 # S3 print methods
 S3method(print, rtf_border_line)
@@ -248,13 +220,7 @@ S3method(plot, rtf_document)
 # Report generation
 export(generate_rtfreport)
 export(assemble_rtf)
-export(assemble_files)
-export(assemble_toc)
-export(assemble_spec)
-export(assemble_from_spec)
 export(assemble_folder)
-export(toc_heading)
-export(toc_entry)
 
 # Column width utilities
 export(text_width_in)

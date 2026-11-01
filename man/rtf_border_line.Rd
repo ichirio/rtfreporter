@@ -2,12 +2,9 @@
 % Please edit documentation in R/rtf_border.R
 \name{rtf_border_line}
 \alias{rtf_border_line}
-\alias{rtf_border_side}
 \title{Single-edge border specification}
 \usage{
 rtf_border_line(style = "single", width = 15L, color = NULL)
-
-rtf_border_side(style = "single", width = 15L, color = NULL)
 }
 \arguments{
 \item{style}{Line style.  One of \code{"single"} (default), \code{"double"},
@@ -24,8 +21,7 @@ underline under one spanning column-header cell.}
 \item{color}{Line colour.  \code{NULL} (default) = black.  Or a 6-digit hex
 string such as \code{"#003366"}.
 
-\code{rtf_border_side()} is its old name: \strong{deprecated} in 0.8.x (it warns once
-a session and still works) and removed in 0.9.0.}
+\code{rtf_border_side()} was its old name, removed in 0.9.0.}
 }
 \value{
 A list of class \code{"rtf_border_line"}.

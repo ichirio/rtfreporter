@@ -1,8 +1,6 @@
 # Column-header border defaults: top on the topmost header row, bottom on the
 # bottommost, group-underline on multi-column spanning cells, no body borders.
 
-local_deprecated("spanning_header")  # deprecated in 0.8.x
-
 .render_tbl <- function(tbl) {
   doc <- rtf_document()
   doc <- rtf_section(doc, page = 1, secinfo = list(header = NULL, footer = NULL))
@@ -44,11 +42,11 @@ test_that("two header rows: top only on row 1, bottom only on row 2", {
 
 test_that("multi-col spanning cells carry a group-separator bottom border", {
   tbl <- rtftable(.df_5col(),
-    col_header = c("Item", "N", "Mean", "N", "Mean"),
-    spanning_header = list(
+    col_header = list(list(
       list(from = 2, to = 3, label = "ArmA"),
       list(from = 4, to = 5, label = "ArmB")
-    ))
+    ),
+                      c("Item", "N", "Mean", "N", "Mean")))
   txt <- .render_tbl(tbl)
   # 2 span underlines + 5 last-row label cells.
   expect_identical(.count_bottom(txt), 7L)

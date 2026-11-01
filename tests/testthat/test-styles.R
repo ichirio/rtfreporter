@@ -187,16 +187,12 @@ test_that("the zone map rejects non-rtf_border values in any zone", {
   expect_error(ztb(last_row  = NA),         "rtf_border object")
 })
 
-# ──────── rtf_border_with edge cases ──────────────────────────────────────
+# ──────── rtf_border edge cases ───────────────────────────────────────────
 
 test_that("a side given as a value is stored verbatim", {
   b <- rtf_border(top = rtf_border_line("dot"))
   expect_s3_class(b, "rtf_border")
   expect_identical(b$top$style, "dot")
-})
-
-test_that("rtf_border_with() still guards its base, behind its warning", {
-  expect_error(suppressWarnings(rtf_border_with("oops")), "rtf_border object")
 })
 
 # ──────── Internal helpers via end-to-end rendering ───────────────────────

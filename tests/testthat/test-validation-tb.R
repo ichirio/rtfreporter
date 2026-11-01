@@ -44,7 +44,6 @@ test_that("FT-TB680 [FR-TB336 FR-TB337 FR-TB340]: blank_rows_by_rule(where = \"a
 })
 
 test_that("FT-TB681 [FR-TB368 FR-TB373]: auto_col_widths() refuses what is not a data frame; col_padding_twips is added to every measured width", {
-  expect_error(auto_col_widths(), "`data` must be a data.frame.", fixed = TRUE)
   expect_error(auto_col_widths(list(a = 1)), "`data` must be a data.frame.", fixed = TRUE)
   d <- data.frame(a = strrep("x", 40), b = strrep("y", 60), stringsAsFactors = FALSE)
   w0 <- auto_col_widths(d, col_padding_twips = 0L)
@@ -127,25 +126,24 @@ test_that("FT-TB684 [FR-TB419]: style_cols() refuses a flag that is not TRUE or 
   }
 })
 
-test_that("FT-TB685 [FR-TB441 FR-TB468 FR-TB470]: style_zone() and rtf_table_border() refuse a zone that is not a border", {
+test_that("FT-TB685 [FR-TB441 FR-TB468 FR-TB470]: style_zone() and .rtf_table_border() refuse a zone that is not a border", {
   t <- rtftable(data.frame(a = 1, b = 2))
   expect_error(style_zone(t, header = "single"),
                "`style_zone(header = )` must be an rtf_border() object.", fixed = TRUE)
   expect_error(style_zone(t, body = "single"),
                "`style_zone(body = )` must be an rtf_border() object.", fixed = TRUE)
-  expect_error(rtf_table_border(outer = "single"),
+  expect_error(rtfreporter:::.rtf_table_border(outer = "single"),
                "`outer` must be NULL or an rtf_border object (the table's four outermost edges).",
                fixed = TRUE)
-  expect_error(rtf_table_border(inside_h = rtf_border(top = TRUE)),
+  expect_error(rtfreporter:::.rtf_table_border(inside_h = rtf_border(top = TRUE)),
                "`inside_h` must be NULL or an rtf_border_line object.", fixed = TRUE)
 })
 
-test_that("FT-TB686 [FR-TB485 FR-TB488 FR-TB505 FR-TB508]: the border shorthands stop with rtf_border_line()'s message on a bad style or width", {
-  for (f in list(rtf_border_bottom, rtf_border_box, rtf_border_tfl, rtf_border_top)) {
-    expect_error(suppressWarnings(f(style = "nope")), "should be one of")
-    expect_error(suppressWarnings(f(width = 0)), "`width` must be a positive integer (twips).",
-                 fixed = TRUE)
-  }
+test_that("FT-TB686 [FR-TB485 FR-TB488 FR-TB505 FR-TB508]: the border shorthand .rtf_border_tfl() stops with rtf_border_line()'s message on a bad style or width", {
+  f <- rtfreporter:::.rtf_border_tfl
+  expect_error(f(style = "nope"), "should be one of")
+  expect_error(f(width = 0), "`width` must be a positive integer (twips).",
+               fixed = TRUE)
 })
 
 test_that("FT-TB687 [FR-TB453]: rtf_table_style(row_height_twips = ) is the row height; NULL is the font-aware default", {

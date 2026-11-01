@@ -71,13 +71,15 @@ plot.rtf_border <- function(x, ...) {
 #' Draws a schematic table with the four zones (header, body, first_row,
 #' last_row) coloured to show which one provides which border.
 #'
-#' @param x An [rtf_table_border()] object.
+#' @param x An `rtf_table_border` object: a table's resolved per-zone
+#'   borders, e.g. the `border` of an [rtftable()].
 #' @param ... Unused.
 #'
 #' @return Invisibly returns `x`.
 #'
 #' @examples
-#' plot(rtf_border_tfl())          # preview the clinical TFL border zones
+#' tbl <- rtftable(data.frame(A = 1:2, B = 3:4), border = "tfl")
+#' plot(tbl$border)          # preview the clinical TFL border zones
 #' @export
 plot.rtf_table_border <- function(x, ...) {
   oldpar <- graphics::par(mar = c(2, 2, 3, 2), xpd = NA)

@@ -20,7 +20,9 @@ test_that("the requirements: unique ids, their area, a statement, functions that
   expect_identical(sub("^FR-([A-Z]+).*$", "\\1", fr$id), fr$area)
   expect_false(any(is.na(fr$statement) | !nzchar(fr$statement)))
   expect_true(all(fr$status %in% c("active", "draft", "superseded", "removed")))
-  fns <- unique(stats::na.omit(unlist(strsplit(fr$functions, ";", fixed = TRUE))))
+  # (a removed requirement keeps the name of the function it was about)
+  fns <- unique(stats::na.omit(unlist(strsplit(fr$functions[fr$status != "removed"], ";",
+                                               fixed = TRUE))))
   expect_true(all(fns %in% getNamespaceExports("rtfreporter")), info = paste(
     setdiff(fns, getNamespaceExports("rtfreporter")), collapse = ", "))
 })

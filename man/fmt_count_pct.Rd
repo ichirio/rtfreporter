@@ -63,8 +63,7 @@ Issue #2 reference helper.
 }
 \details{
 \code{fmt_count_pct()} was called \code{format_count_pct()}, the one cell formatter
-not named \code{fmt_}: the old name is \strong{deprecated} (it says so once a session
-and still works) and is removed in 0.9.0, the first CRAN release.
+not named \code{fmt_}; the old name was removed in 0.9.0.
 }
 \examples{
 # Fractions (the default)

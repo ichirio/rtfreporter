@@ -8,8 +8,6 @@ library(testthat)
 
 # ── rtf_columns() ──────────────────────────────────────────────────────────
 
-local_deprecated("stub_vars")  # deprecated in 0.8.x
-
 test_that("rtf_columns() returns the final body column names", {
   tbl <- rtftable(data.frame(Item = "x", A = 1, B = 2))
   expect_identical(rtf_columns(tbl), c("Item", "A", "B"))
@@ -86,8 +84,8 @@ test_that("set_col_header() maps over every page of an as_rtftables() list", {
 
 # ── as_rtftables(col_header =) now resolves in FINAL coordinates ────────────
 
-test_that("as_rtftables(col_header =) with stub_vars + drop_cols uses final coords", {
-  # Input has 9 columns, LBCAT first.  stub_vars folds group1+label into a
+test_that("as_rtftables(col_header =) with stub + drop_cols uses final coords", {
+  # Input has 9 columns, LBCAT first.  The stub folds group1+label into a
   # stub at position 1; LBCAT is dropped.  Final printed columns are:
   #   row_label, Grade 0..Grade 4, Total  (7 columns)
   tbl_df <- data.frame(
@@ -105,7 +103,7 @@ test_that("as_rtftables(col_header =) with stub_vars + drop_cols uses final coor
   out <- as_rtftables(
     tbl_df, read_meta = FALSE, split = "by_value",
     group_col = "LBCAT", drop_cols = "LBCAT",
-    stub_vars = c("group1", "label"), stub_label = "row_label",
+    stub = stub_spec(c("group1", "label"), label = "row_label"),
     col_rel_width = c(5, rep(1, 6)), col_header = hdr
   )
   tbl <- out[[1L]]

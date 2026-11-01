@@ -1,7 +1,6 @@
 ## tests/testthat/test-as-rtftables.R
 ##
-## as_rtftables(): unified table-object -> list-of-rtftable converter,
-## plus the paginate() deprecation shim.
+## as_rtftables(): unified table-object -> list-of-rtftable converter.
 
 library(testthat)
 
@@ -156,21 +155,6 @@ test_that("col_spec override merges per-column over gt-derived spec", {
                col_spec = list(list(col = 1, align = "left")))
   expect_identical(doc$contents[[1L]]$content$col_spec[[1L]]$align, "left")   # overridden
   expect_identical(doc$contents[[1L]]$content$col_spec[[2L]]$align, "right")  # kept
-})
-
-# ── paginate() deprecation ────────────────────────────────────────────────────
-
-test_that("paginate() is deprecated but still functional", {
-  # The deprecation warning fires at most once per session; reset the guard
-  # so this test reliably observes it regardless of test execution order.
-  depr_env <- get(".paginate_depr_env", envir = asNamespace("rtfreporter"))
-  depr_env$warned <- FALSE
-  df <- data.frame(a = 1:4)
-  expect_warning(out <- paginate(df), "deprecated|as_rtftables")
-  expect_type(out, "list")
-  expect_s3_class(out[[1L]], "data.frame")
-  # Second call in the same session does not warn again.
-  expect_no_warning(paginate(df))
 })
 
 test_that("as_rtftables(auto_width=TRUE) sets content-based column widths", {

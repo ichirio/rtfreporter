@@ -114,7 +114,7 @@
 #' `as_rtftables()` is the single entry point for turning a *table object*
 #' into a list of [rtftable()] objects -- one per RTF page -- ready to hand
 #' straight to [rtf_tables()].  It unifies two jobs that used to be split
-#' across `paginate()` (page splitting) and `rtf_tables(read_gt = )`
+#' across `paginate()` (page splitting, removed in 0.9.0) and `rtf_tables(read_gt = )`
 #' (metadata extraction):
 #'
 #' 1. **Read the table's metadata** (only the parts the RTF renderer can use;
@@ -349,11 +349,11 @@
 #'       carries the same value and there is no structure to find.}
 #'     \item{Order of operations}{`page_by` cuts pages, then `split` cuts rows
 #'       inside each one, then [paginate_cols()] cuts columns on the result
-#'       (its `page_order` decides the final page sequence).  With
+#'       (its `order` decides the final page sequence).  With
 #'       `split = "by_value"` the **group is the outer axis** and `page_by`
 #'       the inner one -- a group's pages stay together (and share its name),
 #'       the BY values running in order inside it -- so the three come out as
-#'       `G` / `C` / `P` under `page_order = "across"` and `G` / `P` / `C`
+#'       `G` / `C` / `P` under `order = "across"` and `G` / `P` / `C`
 #'       under `"down"`.}
 #'     \item{Per partition}{`split_rows` positions, `blank_rows` positions
 #'       (`0` / `-1` included), `count_blank_rows` accounting and any
@@ -600,9 +600,7 @@
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
 #'   (parent first, leaf last; at least two).  `NULL` (default) builds no
 #'   stub.  This is the **one** argument for everything [stub_cols()] can do,
-#'   including `layout` and `label_span`, which the deprecated `stub_vars`
-#'   family cannot reach.  Passing both `stub` and any of the `stub_vars`
-#'   family is an error.
+#'   including `layout` and `label_span`.
 #'   \describe{
 #'     \item{Applied to}{The **extracted body** -- after the table is pulled
 #'       out of its source, before pagination -- so any input that carries
@@ -635,53 +633,6 @@
 #'       **not** carried through the merge -- use `auto_width = TRUE` or pass
 #'       explicit widths; `layout = "columns"` keeps them.}
 #'   }
-#' @param stub_vars **Deprecated** in 0.8.x (warns once a session, still
-#'   works), removed in 0.9.0: write `stub = c(...)` (or
-#'   `stub = stub_spec(...)`), which does the same and also reaches `layout`
-#'   and `label_span`.
-#'   Hierarchy columns to merge into a single **indented stub**
-#'   column (parent first, leaf last; at least two), or `NULL` (default, no
-#'   stub built).  Applies [stub_cols()] to the **extracted body**.
-#'   \describe{
-#'     \item{Applied to}{The extracted body -- after the table is pulled out
-#'       of its source, before pagination -- so any input that carries the
-#'       hierarchy as *separate columns* (a plain `data.frame`, a `gt(df)`,
-#'       a multi-group-column table, or a tfrmt
-#'       `row_grp_plan(location = "column")` table) gains a clinical
-#'       stub.}
-#'     \item{Result}{The named columns are consumed and replaced by one stub
-#'       column at position 1; the remaining columns keep their order, and
-#'       `drop_cols` / `group_col` / `sort_by` (plus `group_by = "indent"`
-#'       detection and the group-aware splits) then refer to the reshaped,
-#'       **post-stub** columns.}
-#'     \item{`split = "by_value"`}{**Exception:** the body is split by
-#'       `group_col` *first* and the stub is built per page afterwards --
-#'       each value becomes an independent section, so `group_col` here
-#'       refers to the **pre-stub** columns and is not folded into the stub.
-#'       This keeps a fixed intermediate hierarchy level (e.g. `LBCAT /
-#'       group1 / label` with a constant `group1`) from collapsing into a
-#'       single stub label row that spans every group; put the inner levels
-#'       in `stub_vars` and the outer level in `group_col`.}
-#'     \item{Metadata}{Position-indexed metadata (`col_spec`,
-#'       `col_header_align`, per-cell `cell_styles`) is reindexed
-#'       automatically; a user-supplied `col_header` is instead resolved
-#'       against the final columns (which already include the stub at
-#'       position 1 -- see [set_col_header()]).}
-#'     \item{Sources that do not need it}{Sources that already render an
-#'       indented stub (rtables / tern, tfrmt indented, gtsummary) come out
-#'       pre-merged, so `stub_vars` does not apply to them.}
-#'     \item{Widths}{Column widths from the source are **not** carried
-#'       through the merge -- use `auto_width = TRUE` or pass explicit
-#'       widths.}
-#'   }
-#' @param stub_label,stub_indent,stub_group_summary **Deprecated** with
-#'   `stub_vars` (removed in 0.9.0): they are `stub_spec(label = , indent = ,
-#'   group_summary = )`.  Forwarded to [stub_cols()]
-#'   when `stub_vars` is set: the merged stub column's name / header
-#'   (`NULL` joins the merged columns' display names with `" / "`), the
-#'   non-breaking spaces per nesting level (default `4`), and which leaf values
-#'   fold a row onto its group label row (default `c("empty", "parent")`).
-#'   Ignored when `stub_vars` is `NULL`.
 #' @param header_sep Separator(s) used to reconstruct a **spanning
 #'   (multi-row) column header** from a plain **data.frame**'s column names.
 #'   Only applies to plain data.frame input -- gt / gtsummary / rtables /
@@ -873,10 +824,6 @@ as_rtftables.default <- function(x,
                          drop_cols       = NULL,
                          listing         = NULL,
                          stub            = NULL,
-                         stub_vars       = NULL,
-                         stub_label      = NULL,
-                         stub_indent     = 4L,
-                         stub_group_summary = c("empty", "parent"),
                          header_sep      = .default_header_seps(),
                          auto_width        = FALSE,
                          table_width_twips = NULL,
@@ -903,21 +850,9 @@ as_rtftables.default <- function(x,
   na <- .check_na_text(na)
   user_args <- list(...)
 
-  # One spec from `stub =` or the superseded flat family (#314).  `stub_spec`
-  # is the only place new stub settings are added, so this signature stops
-  # growing with stub_cols().
-  flat_given <- c(!is.null(stub_vars), !is.null(stub_label),
-                  !missing(stub_indent), !missing(stub_group_summary))
-  if (any(flat_given) && is.null(stub)) {
-    .deprecate_once(
-      "stub_vars",
-      paste0("`stub_vars` / `stub_label` / `stub_indent` / ",
-             "`stub_group_summary` are deprecated: write ",
-             "`stub = stub_spec(vars, label = , indent = , group_summary = )` ",
-             "(or `stub = vars`).\n  Removed in 0.9.0."))
-  }
-  stub_spec_obj <- .resolve_stub_spec(
-    stub, stub_vars, stub_label, stub_indent, stub_group_summary, flat_given)
+  # One spec from `stub =` (#314).  `stub_spec` is the only place new stub
+  # settings are added, so this signature stops growing with stub_cols().
+  stub_spec_obj <- .resolve_stub_spec(stub)
 
   # ---- gt_group input: expand to its member gt_tbl list -----------------
   # A gt_group (gt::gt_group() / gt::gt_split(); also what tfrmt's

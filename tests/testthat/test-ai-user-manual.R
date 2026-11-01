@@ -64,10 +64,18 @@ test_that("the manual's API list is exactly the package's exports", {
                  paste(invented, collapse = ", ")))
 })
 
-test_that("the manual never puts a deprecated export in copyable code", {
+test_that("the manual never puts a deprecated or removed function in copyable code", {
   lines <- .manual_lines()
   code  <- .manual_code(lines)
-  dep   <- rtfreporter:::.deprecated_exports
+  # deprecated now, and the ones 0.9.0 removed (#788)
+  dep   <- c(rtfreporter:::.deprecated_exports,
+             "toc_heading", "toc_entry", "assemble_files", "assemble_spec",
+             "assemble_toc", "assemble_from_spec", "fmt_count_paren_bare",
+             "add_col_header_row", "col_header_from_names", "realign_count_pct",
+             "format_count_pct", "paginate", "rtf_border_side", "rtf_border_with",
+             "rtf_border_none", "rtf_border_top", "rtf_border_bottom",
+             "rtf_border_box", "rtf_table_border", "rtf_border_tfl",
+             "update_header_row", "update_footer_row", "set_header_cell")
   hits  <- dep[vapply(dep, function(f)
     any(grepl(paste0("\\b", f, "\\("), code)), logical(1))]
   expect_identical(hits, character(0),
@@ -152,8 +160,8 @@ test_that("every idiom the manual teaches runs", {
       cell_format = fmt_value_paren,
       col_rel_width = c(5.5, rep(2, length(days) * length(arms)))) |>
       set_col_header(hdr, values = denominators(arms)) |>
-      paginate_cols(by = "____", carry = 1,
-                    page_order = c("cols", "group", "rows"))
+      paginate_cols(cut_by = "____", keep = 1,
+                    order = c("cols", "group", "rows"))
   }
   render <- function(pages, titles, notes, file) {
     doc <- rtf_document(page = rtf_page(orientation = "landscape")) |>
@@ -300,7 +308,7 @@ test_that("every idiom the manual teaches runs", {
   fitted <- fit_listing_widths(adsl,
     listing_spec(list(listing_col("USUBJID"), listing_col("AETOXGR"))),
     page = rtf_page(paper_size = "A4", orientation = "landscape"),
-    size_half_points = 16L)
+    font_size_half_points = 16L)
   expect_no_error(listing_code(fitted, name = "listing"))
 
   ## S11 -- figures

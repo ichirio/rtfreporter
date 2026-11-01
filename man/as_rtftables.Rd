@@ -31,10 +31,6 @@ as_rtftables(x, ...)
   drop_cols = NULL,
   listing = NULL,
   stub = NULL,
-  stub_vars = NULL,
-  stub_label = NULL,
-  stub_indent = 4L,
-  stub_group_summary = c("empty", "parent"),
   header_sep = .default_header_seps(),
   auto_width = FALSE,
   table_width_twips = NULL,
@@ -221,11 +217,11 @@ column) never lands on the BY column -- where every row of a partition
 carries the same value and there is no structure to find.}
 \item{Order of operations}{\code{page_by} cuts pages, then \code{split} cuts rows
 inside each one, then \code{\link[=paginate_cols]{paginate_cols()}} cuts columns on the result
-(its \code{page_order} decides the final page sequence).  With
+(its \code{order} decides the final page sequence).  With
 \code{split = "by_value"} the \strong{group is the outer axis} and \code{page_by}
 the inner one -- a group's pages stay together (and share its name),
 the BY values running in order inside it -- so the three come out as
-\code{G} / \code{C} / \code{P} under \code{page_order = "across"} and \code{G} / \code{P} / \code{C}
+\code{G} / \code{C} / \code{P} under \code{order = "across"} and \code{G} / \code{P} / \code{C}
 under \code{"down"}.}
 \item{Per partition}{\code{split_rows} positions, \code{blank_rows} positions
 (\code{0} / \code{-1} included), \code{count_blank_rows} accounting and any
@@ -482,9 +478,7 @@ up and passing \code{listing} as well is an error.  An rlistings
 shorthand for \code{stub_spec(vars)}, a bare vector of hierarchy columns
 (parent first, leaf last; at least two).  \code{NULL} (default) builds no
 stub.  This is the \strong{one} argument for everything \code{\link[=stub_cols]{stub_cols()}} can do,
-including \code{layout} and \code{label_span}, which the deprecated \code{stub_vars}
-family cannot reach.  Passing both \code{stub} and any of the \code{stub_vars}
-family is an error.
+including \code{layout} and \code{label_span}.
 \describe{
 \item{Applied to}{The \strong{extracted body} -- after the table is pulled
 out of its source, before pagination -- so any input that carries
@@ -516,53 +510,6 @@ pre-merged, so a stub does not apply to them.}
 \strong{not} carried through the merge -- use \code{auto_width = TRUE} or pass
 explicit widths; \code{layout = "columns"} keeps them.}
 }}
-
-\item{stub_vars}{\strong{Deprecated} in 0.8.x (warns once a session, still
-works), removed in 0.9.0: write \code{stub = c(...)} (or
-\code{stub = stub_spec(...)}), which does the same and also reaches \code{layout}
-and \code{label_span}.
-Hierarchy columns to merge into a single \strong{indented stub}
-column (parent first, leaf last; at least two), or \code{NULL} (default, no
-stub built).  Applies \code{\link[=stub_cols]{stub_cols()}} to the \strong{extracted body}.
-\describe{
-\item{Applied to}{The extracted body -- after the table is pulled out
-of its source, before pagination -- so any input that carries the
-hierarchy as \emph{separate columns} (a plain \code{data.frame}, a \code{gt(df)},
-a multi-group-column table, or a tfrmt
-\code{row_grp_plan(location = "column")} table) gains a clinical
-stub.}
-\item{Result}{The named columns are consumed and replaced by one stub
-column at position 1; the remaining columns keep their order, and
-\code{drop_cols} / \code{group_col} / \code{sort_by} (plus \code{group_by = "indent"}
-detection and the group-aware splits) then refer to the reshaped,
-\strong{post-stub} columns.}
-\item{\code{split = "by_value"}}{\strong{Exception:} the body is split by
-\code{group_col} \emph{first} and the stub is built per page afterwards --
-each value becomes an independent section, so \code{group_col} here
-refers to the \strong{pre-stub} columns and is not folded into the stub.
-This keeps a fixed intermediate hierarchy level (e.g. \code{LBCAT / group1 / label} with a constant \code{group1}) from collapsing into a
-single stub label row that spans every group; put the inner levels
-in \code{stub_vars} and the outer level in \code{group_col}.}
-\item{Metadata}{Position-indexed metadata (\code{col_spec},
-\code{col_header_align}, per-cell \code{cell_styles}) is reindexed
-automatically; a user-supplied \code{col_header} is instead resolved
-against the final columns (which already include the stub at
-position 1 -- see \code{\link[=set_col_header]{set_col_header()}}).}
-\item{Sources that do not need it}{Sources that already render an
-indented stub (rtables / tern, tfrmt indented, gtsummary) come out
-pre-merged, so \code{stub_vars} does not apply to them.}
-\item{Widths}{Column widths from the source are \strong{not} carried
-through the merge -- use \code{auto_width = TRUE} or pass explicit
-widths.}
-}}
-
-\item{stub_label, stub_indent, stub_group_summary}{\strong{Deprecated} with
-\code{stub_vars} (removed in 0.9.0): they are \code{stub_spec(label = , indent = , group_summary = )}.  Forwarded to \code{\link[=stub_cols]{stub_cols()}}
-when \code{stub_vars} is set: the merged stub column's name / header
-(\code{NULL} joins the merged columns' display names with \code{" / "}), the
-non-breaking spaces per nesting level (default \code{4}), and which leaf values
-fold a row onto its group label row (default \code{c("empty", "parent")}).
-Ignored when \code{stub_vars} is \code{NULL}.}
 
 \item{header_sep}{Separator(s) used to reconstruct a \strong{spanning
 (multi-row) column header} from a plain \strong{data.frame}'s column names.
@@ -637,7 +584,7 @@ value-based (or the input was a named list) the list is named.
 \code{as_rtftables()} is the single entry point for turning a \emph{table object}
 into a list of \code{\link[=rtftable]{rtftable()}} objects -- one per RTF page -- ready to hand
 straight to \code{\link[=rtf_tables]{rtf_tables()}}.  It unifies two jobs that used to be split
-across \code{paginate()} (page splitting) and \code{rtf_tables(read_gt = )}
+across \code{paginate()} (page splitting, removed in 0.9.0) and \code{rtf_tables(read_gt = )}
 (metadata extraction):
 }
 \details{

@@ -9,7 +9,6 @@ rtf_tables(
   tables,
   col_header = NULL,
   col_header_align = NULL,
-  spanning_header = NULL,
   col_spec = NULL,
   row_title = NULL,
   border = "tfl",
@@ -71,7 +70,7 @@ unless \code{read_gt} is set (see \code{read_gt}).
 registered an \code{\link[=as_rtftables]{as_rtftables()}} method for; it is converted to its pages
 first (see "Supplying a source from another package" in \code{\link[=as_rtftables]{as_rtftables()}}).}
 
-\item{col_header, col_header_align, spanning_header, col_spec, row_title, border, blank_rows, read_attributes, style, col_rel_width, column_widths_twips, table_width_twips, table_width_pct_of_writable, table_width_pct, table_align, row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips, cell_padding_left_twips, cell_padding_right_twips, cell_valign, blank_row_normalize, markup, font_size_half_points, font}{\strong{Deprecated} (removed in 0.9.0): the same arguments of \code{\link[=rtftable]{rtftable()}},
+\item{col_header, col_header_align, col_spec, row_title, border, blank_rows, read_attributes, style, col_rel_width, column_widths_twips, table_width_twips, table_width_pct_of_writable, table_width_pct, table_align, row_height_twips, row_height_exact, header_row_height_twips, blank_row_height_twips, cell_padding_left_twips, cell_padding_right_twips, cell_valign, blank_row_normalize, markup, font_size_half_points, font}{\strong{Deprecated} (removed in 0.9.0): the same arguments of \code{\link[=rtftable]{rtftable()}},
 written there (or in \code{\link[=as_rtftables]{as_rtftables()}} / \code{\link[=plan_style]{plan_style()}}) instead.  See
 "Deprecated arguments" below.}
 

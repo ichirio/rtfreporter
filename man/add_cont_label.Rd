@@ -4,7 +4,7 @@
 \alias{add_cont_label}
 \title{Prepend a continuation label row to a paginated chunk}
 \usage{
-add_cont_label(data, label, cont_label = " (Cont.)", col = 1L, chunk)
+add_cont_label(data, label, cont_label = " (Cont.)", col = 1L)
 }
 \arguments{
 \item{data}{A data.frame -- a single continuation page produced by your
@@ -18,9 +18,6 @@ continuation suffix).}
 
 \item{col}{Integer or character column where the label is placed. Default
 \code{1} (the row-label column).}
-
-\item{chunk}{The old name of \code{data}: \strong{deprecated} in 0.8.x (warns once
-a session, still works), removed in 0.9.0.}
 }
 \value{
 \code{data} with one extra row prepended.

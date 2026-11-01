@@ -129,8 +129,6 @@ folder, ready to edit.  \code{input_files} can then be left out: the
 table's \code{file} column is used.}
 \item{the path of such a table}{an \code{.xlsx} or \code{.csv} file, e.g. the one
 \code{assemble_folder(spec_file = )} wrote and you edited.}
-\item{a \code{list(...)} of \code{toc_heading()} and \code{toc_entry()} objects}{the
-older spelling of the table (deprecated).}
 }
 
 Each TOC entry is an RTF \code{HYPERLINK} field; clicking it in
@@ -155,7 +153,7 @@ the body continues from them (with a one-page TOC the first table is
 page 2).}
 }
 
-\code{\link[=assemble_folder]{assemble_folder()}} and \code{\link[=assemble_from_spec]{assemble_from_spec()}} default to \code{"decimal"}.
+\code{\link[=assemble_folder]{assemble_folder()}} defaults to \code{"decimal"}.
 }
 
 \examples{

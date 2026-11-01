@@ -351,7 +351,7 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 # The table-format arguments of rtf_tables() that copy rtftable()'s, and
 # read_gt: deprecated in 0.8.x (#511 B-1, #594), removed in 0.9.0.
 .rtf_tables_fmt_args <- c(
-  "col_header", "col_header_align", "spanning_header", "col_spec", "row_title",
+  "col_header", "col_header_align", "col_spec", "row_title",
   "border", "blank_rows", "read_attributes", "style", "col_rel_width",
   "column_widths_twips", "table_width_twips", "table_width_pct_of_writable",
   "table_width_pct", "table_align", "row_height_twips", "row_height_exact",
@@ -448,7 +448,7 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   `tables` may also be a single object of a class another package has
 #'   registered an [as_rtftables()] method for; it is converted to its pages
 #'   first (see "Supplying a source from another package" in [as_rtftables()]).
-#' @param col_header,col_header_align,spanning_header,col_spec,row_title,border,blank_rows,read_attributes,style,col_rel_width,column_widths_twips,table_width_twips,table_width_pct_of_writable,table_width_pct,table_align,row_height_twips,row_height_exact,header_row_height_twips,blank_row_height_twips,cell_padding_left_twips,cell_padding_right_twips,cell_valign,blank_row_normalize,markup,font_size_half_points,font
+#' @param col_header,col_header_align,col_spec,row_title,border,blank_rows,read_attributes,style,col_rel_width,column_widths_twips,table_width_twips,table_width_pct_of_writable,table_width_pct,table_align,row_height_twips,row_height_exact,header_row_height_twips,blank_row_height_twips,cell_padding_left_twips,cell_padding_right_twips,cell_valign,blank_row_normalize,markup,font_size_half_points,font
 #'   **Deprecated** (removed in 0.9.0): the same arguments of [rtftable()],
 #'   written there (or in [as_rtftables()] / [plan_style()]) instead.  See
 #'   "Deprecated arguments" below.
@@ -591,7 +591,6 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 rtf_tables <- function(doc, tables,
                         col_header = NULL,
                         col_header_align = NULL,
-                        spanning_header = NULL,
                         col_spec = NULL,
                         row_title = NULL,
                         border = "tfl",
@@ -754,7 +753,7 @@ rtf_tables <- function(doc, tables,
 # The rtf_tables() arguments that, passed explicitly, override the field of
 # the same name of a built rtftable page (deprecated with the rest)
 .rtf_tables_fmt_overrides <- c(
-  "col_header", "col_header_align", "spanning_header", "col_spec", "row_title",
+  "col_header", "col_header_align", "col_spec", "row_title",
   "border", "blank_rows", "style", "col_rel_width", "column_widths_twips",
   "table_width_twips", "table_width_pct_of_writable", "table_width_pct",
   "table_align", "row_height_twips", "row_height_exact", "header_row_height_twips",
@@ -862,7 +861,6 @@ rtf_tables <- function(doc, tables,
         data                        = item,
         col_header                  = eff_col_header,
         col_header_align            = fmt$col_header_align,
-        spanning_header             = fmt$spanning_header,
         col_spec                    = eff_col_spec,
         row_title                   = fmt$row_title,
         border                      = fmt$border,

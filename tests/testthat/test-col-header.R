@@ -1,9 +1,7 @@
 # Unified col_header API (v0.0.21+): col_cell(), rtf_col_header(),
-# add_col_header_row(), and the pos = ... cell-spec format.
+# and the pos = ... cell-spec format.
 
 # ──────── col_cell() validation ───────────────────────────────────────────
-
-local_deprecated("add_col_header_row", "spanning_header")  # deprecated in 0.8.x
 
 test_that("col_cell() builds a tagged spec for a single column", {
   c1 <- col_cell(1, "Item")
@@ -40,7 +38,7 @@ test_that("col_cell() rejects malformed align", {
                "align.*must be NULL")
 })
 
-# ──────── rtf_col_header() and add_col_header_row() ───────────────────────
+# ──────── rtf_col_header() ────────────────────────────────────────────────
 
 test_that("rtf_col_header() collects rows top-to-bottom", {
   hdr <- rtf_col_header(
@@ -51,29 +49,6 @@ test_that("rtf_col_header() collects rows top-to-bottom", {
   expect_length(hdr, 2L)
   expect_true(is.list(hdr[[1L]]))
   expect_true(is.character(hdr[[2L]]))
-})
-
-test_that("add_col_header_row() appends and prepends", {
-  hdr <- rtf_col_header(c("Item", "N", "Mean", "N", "Mean"))
-  hdr <- add_col_header_row(hdr,
-                             list(col_cell(1, ""),
-                                  col_cell(c(2, 3), "Drug A"),
-                                  col_cell(c(4, 5), "Drug B")),
-                             .position = "top")
-  expect_length(hdr, 2L)
-  expect_true(is.list(hdr[[1L]]))                   # spanning row on top
-  expect_true(is.character(hdr[[2L]]))              # labels at bottom
-
-  hdr <- add_col_header_row(hdr, c("x", "y", "z", "w", "v"))
-  expect_length(hdr, 3L)
-  expect_true(is.character(hdr[[3L]]))              # appended at bottom
-})
-
-test_that("add_col_header_row() promotes a non-rtf_col_header input", {
-  hdr <- add_col_header_row(c("A", "B"), list(col_cell(1, ""),
-                                                col_cell(2, "Group")))
-  expect_s3_class(hdr, "rtf_col_header")
-  expect_length(hdr, 2L)
 })
 
 # ──────── pos-spec normalisation ───────────────────────────────────────────
@@ -177,38 +152,6 @@ test_that("legacy list(spanning_spec_row) col_header still works", {
   expect_length(tbl$col_header, 2L)
   expect_true(is.list(tbl$col_header[[1L]]))
   expect_identical(tbl$col_header[[2L]], c("a", "b", "c", "d"))
-})
-
-test_that("legacy spanning_header argument still works", {
-  df <- data.frame(Item = "x", A = 1L, B = 2L)
-  tbl <- rtftable(df,
-    spanning_header = list(
-      list(from = 2, to = 3, label = "Group", underline = TRUE)
-    ))
-  doc <- rtf_document()
-  doc <- rtf_section(doc, page = 1, secinfo = list(header = NULL, footer = NULL))
-  doc <- rtf_tables(doc, list(tbl))
-  txt <- .render_to_string(doc)
-  expect_match(txt, "Group")
-})
-
-# ──────── Builder-style incremental API ───────────────────────────────────
-
-test_that("incremental builder produces the same internal shape as one-shot constructor", {
-  one_shot <- rtf_col_header(
-    list(col_cell(1, ""), col_cell(c(2, 5), "Trt")),
-    list(col_cell(1, ""),
-         col_cell(c(2, 3), "A"),
-         col_cell(c(4, 5), "B")),
-    c("Item", "N", "M", "N", "M")
-  )
-  built <- rtf_col_header() |>
-    add_col_header_row(list(col_cell(1, ""), col_cell(c(2, 5), "Trt"))) |>
-    add_col_header_row(list(col_cell(1, ""),
-                             col_cell(c(2, 3), "A"),
-                             col_cell(c(4, 5), "B"))) |>
-    add_col_header_row(c("Item", "N", "M", "N", "M"))
-  expect_identical(unclass(one_shot), unclass(built))
 })
 
 # ──────── col_cell text-decoration flags propagate ────────────────────────

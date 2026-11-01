@@ -25,8 +25,7 @@ assemble_folder(
 \item{spec_file}{Optional path (\code{.xlsx} or \code{.csv}).  When given, the
 generated spec is \strong{saved} there (so you can inspect / edit it); when
 \code{NULL} (default) the spec is kept in memory only.  It is written, never
-read back: assemble an edited one with \code{assemble_rtf(toc = spec_file)}
-(or \code{\link[=assemble_from_spec]{assemble_from_spec()}}).}
+read back: assemble an edited one with \code{assemble_rtf(toc = spec_file)}.}
 
 \item{recursive}{Recurse into sub-directories when scanning?  Default
 \code{FALSE}.}

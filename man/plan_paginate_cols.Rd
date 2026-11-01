@@ -45,14 +45,15 @@ whole table in its coordinates and sliced to each block,
 \code{\link[=paginate_cols]{paginate_cols()}}'s \code{col_header}.  \code{NULL} slices the header the table
 has.}
 
-\item{fit}{\code{TRUE} puts every block's widths on page 1's scale (\code{width = "fill"}, the default: page 1 fills the sheet and a ratio is the same
-width throughout); \code{FALSE} keeps each column's own width (\code{"keep"}).}
+\item{fit}{\code{TRUE} puts every block's widths on page 1's scale (the
+default: page 1 fills the sheet and a ratio is the same width
+throughout); \code{FALSE} keeps each column's own width.}
 
 \item{allow_span_break}{\code{TRUE} (default) allows a cut inside a spanning
 header cell.}
 
 \item{order}{The order the pages come out in, as the \strong{axes} of the
-split, outermost first (\code{paginate_cols(page_order = )}): any of
+split, outermost first (\code{paginate_cols(order = )}): any of
 \code{"group"}, \code{"rows"} and \code{"cols"}, or the shorthands \code{"across"} and
 \code{"down"}.  Axes left out follow in that default order.}
 }

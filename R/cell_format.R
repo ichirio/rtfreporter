@@ -228,44 +228,13 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
 #' @param bare `FALSE` (default) leaves a cell with no parentheses as it is;
 #'   `TRUE` also pads a **bare integer count** (a lone `"0"`, a raw event
 #'   total) into the count field, so it lines up under the parenthetical
-#'   cells.  (It was `fmt_count_paren_bare()`, deprecated.)
+#'   cells.  (It was `fmt_count_paren_bare()`, removed in 0.9.0.)
 #'
 #' @seealso [fmt_value_paren()] (any text before the parenthesis),
 #'   [fmt_right_align()], and the `cell_format` argument of [as_rtftables()].
 #' @export
 fmt_count_paren <- function(x, nbsp = "\u00a0", na = "", bare = FALSE) {
   .fmt_count_core(x, nbsp = nbsp, bare = isTRUE(bare), na = na)
-}
-
-#' Align "count (parenthetical)" cells, including bare counts
-#'
-#' **Deprecated** in 0.8.x (it says so once a session and still works),
-#' removed in 0.9.0: it is `fmt_count_paren(x, bare = TRUE)`, the same
-#' output.
-#'
-#' Like [fmt_count_paren()], but a **bare integer count** with no parentheses
-#' (a lone `"0"` for a zero count, or a raw event total) is also padded into
-#' the same count field, so it lines up under the parenthetical cells instead
-#' of drifting out of line.  Cells that do not start with an integer (text,
-#' decimals, empty cells) are still returned unchanged.
-#'
-#' @inheritParams fmt_right_align
-#'
-#' @return Character vector the same length as `x`.
-#'
-#' @examples
-#' # deprecated: the same as fmt_count_paren(bare = TRUE)
-#' fmt_count_paren(c("1 (1.2%)", "0", "11 (3.6%)", "108 (35.3%)"), bare = TRUE)
-#'
-#' @seealso [fmt_count_paren()].
-#' @keywords internal
-#' @export
-fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
-  .deprecate_once(
-    "fmt_count_paren_bare",
-    paste0("`fmt_count_paren_bare(x)` is deprecated: it is ",
-           "`fmt_count_paren(x, bare = TRUE)`, the same output.\n  Removed in 0.9.0."))
-  .fmt_count_core(x, nbsp = nbsp, bare = TRUE, na = na)
 }
 
 
@@ -429,12 +398,8 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "", rounding = NULL) {
   count_paren       = "fmt_count_paren",
   count_paren_bare  = ".fmt_count_paren_bare",
   value_paren       = "fmt_value_paren",
-  count_pct         = ".realign_count_pct",
-  realign_count_pct = ".realign_count_pct"
+  count_pct         = ".realign_count_pct"
 )
-# a name the deprecated realign_count_pct() gave (#594): it still resolves,
-# and says so.  ("count_paren_bare" stays: fmt_count_paren(bare = TRUE).)
-.CELL_FORMATS_DEPRECATED <- c(realign_count_pct = "\"count_pct\"")
 
 .fmt_count_paren_bare <- function(x, nbsp = "\u00a0", na = "") {
   .fmt_count_core(x, nbsp = nbsp, bare = TRUE, na = na)
@@ -448,14 +413,7 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "", rounding = NULL) {
     stop(sprintf(
       "`%s`: \"%s\" is not a built-in cell format.  The built-ins are %s (the \"fmt_\" prefix is optional), or pass a function of your own.",
       arg, name,
-      paste0("\"", setdiff(names(.CELL_FORMATS), names(.CELL_FORMATS_DEPRECATED)), "\"",
-             collapse = ", ")), call. = FALSE)
-  }
-  if (key %in% names(.CELL_FORMATS_DEPRECATED)) {
-    .deprecate_once(
-      paste0("cell_format_", key),
-      sprintf("The cell format \"%s\" is deprecated: use %s.\n  Removed in 0.9.0.",
-              name, .CELL_FORMATS_DEPRECATED[[key]]))
+      paste0("\"", names(.CELL_FORMATS), "\"", collapse = ", ")), call. = FALSE)
   }
   get(fn, envir = asNamespace("rtfreporter"))
 }

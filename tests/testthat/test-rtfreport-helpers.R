@@ -1,9 +1,7 @@
-# rtfreport.R helpers: header/footer construction, row updates,
+# rtfreport.R helpers: header/footer construction,
 # internal report builders, and validator.
 
 # ──────── rtf_header / rtf_footer construction ────────────────────────────
-
-local_deprecated("update_header_row", "update_footer_row")  # deprecated in 0.8.x
 
 test_that("rtf_header() accepts a single named vector and wraps it in a list", {
   hdr <- rtf_header(c(l = "Left", r = "Right"))
@@ -47,48 +45,6 @@ test_that("rtf_footer() accepts border = NULL to drop the default rule", {
 test_that("rtf_footer() rejects non-rtf_border `border`", {
   expect_error(rtf_footer(rows = c(c = "x"), border = "dot"),
                "rtf_border object")
-})
-
-# ──────── update_header_row / update_footer_row ───────────────────────────
-
-test_that("update_header_row() replaces an existing row", {
-  hdr <- rtf_header(rows = list(c(l = "Old", r = "Right")))
-  hdr <- update_header_row(hdr, row = 1L, content = c(l = "New", r = "Right"))
-  expect_identical(hdr$rows[[1L]][["l"]], "New")
-})
-
-test_that("update_header_row() appends rows beyond the current length", {
-  hdr <- rtf_header(rows = list(c(l = "A")))
-  hdr <- update_header_row(hdr, row = 3L, content = c(l = "C"))
-  expect_length(hdr$rows, 3L)
-  # Intermediate (row 2) auto-filled as empty centered row.
-  expect_identical(hdr$rows[[2L]], c(c = ""))
-  expect_identical(hdr$rows[[3L]][["l"]], "C")
-})
-
-test_that("update_footer_row() works the same way", {
-  ftr <- rtf_footer(rows = list(c(c = "X")))
-  ftr <- update_footer_row(ftr, row = 2L, content = c(c = "Y"))
-  expect_length(ftr$rows, 2L)
-  expect_identical(ftr$rows[[2L]][["c"]], "Y")
-})
-
-test_that("update_*_row() rejects non-rtf_header argument", {
-  expect_error(update_header_row("nope", row = 1L, content = c(c = "x")),
-               "rtf_header.*rtf_footer")
-})
-
-test_that("update_*_row() rejects row < 1", {
-  hdr <- rtf_header(rows = c(c = "x"))
-  expect_error(update_header_row(hdr, row = 0L, content = c(c = "y")),
-               ">= 1")
-})
-
-test_that("update_*_row() preserves names on character input", {
-  hdr <- rtf_header(rows = c(c = "x"))
-  hdr <- update_header_row(hdr, row = 1L,
-                           content = c(l = "L", c = "C", r = "R"))
-  expect_setequal(names(hdr$rows[[1L]]), c("l", "c", "r"))
 })
 
 # ──────── Internal helpers ────────────────────────────────────────────────
