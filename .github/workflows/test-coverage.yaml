@@ -3,7 +3,9 @@
 on:
   push:
     branches: [main, master, next]
+  # (a pull request into next runs quick-check.yaml instead)
   pull_request:
+    branches-ignore: [next]
   workflow_dispatch:
 
 name: test-coverage

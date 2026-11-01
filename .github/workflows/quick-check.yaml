@@ -1,0 +1,53 @@
+# A pull request into next: one quick job -- the package installed and its
+# tests run, on ubuntu with R release; no --as-cran, no other platforms,
+# no pkgdown -- so that next does not queue behind the full matrix.
+# The full R-CMD-check still runs on each push to next (the latest head
+# only), on pull requests into main, and on its schedule.
+on:
+  pull_request:
+    branches: [next]
+
+name: quick-check
+
+permissions:
+  contents: read
+
+# a newer push to the same pull request cancels the run still going
+concurrency:
+  group: quick-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    name: tests (ubuntu-latest, R release)
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      NOT_CRAN: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::testthat
+          needs: check
+
+      - name: Install the package
+        run: R CMD INSTALL --no-docs --no-multiarch .
+
+      - name: Tests
+        shell: Rscript {0}
+        run: |
+          pkg <- read.dcf("DESCRIPTION", fields = "Package")[1L, 1L]
+          library(pkg, character.only = TRUE)
+          testthat::test_dir("tests/testthat", package = pkg, load_package = "installed",
+                             reporter = testthat::ProgressReporter$new(show_praise = FALSE),
+                             stop_on_failure = TRUE)
