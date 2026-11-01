@@ -37,14 +37,19 @@
 #'   A `name` may be a named vector of families per script slot (see
 #'   *Fonts per script* below).
 #' @param font_lang Optional language per font slot, a named character vector
-#'   such as `c(east_asian = "ja")`.  Names are `latin`, `east_asian` and
-#'   `complex`; languages are `"ja"`, `"zh-Hans"`, `"zh-Hant"`, `"ko"`,
-#'   `"ar"`, `"he"` and `"en"`.  It sets the font-table charset of that slot's
-#'   fonts (`ja` = 128, `zh-Hans` = 134, `zh-Hant` = 136, `ko` = 129,
-#'   `ar` = 178, `he` = 177) and the RTF language words (`\langfe`,
-#'   `\lang`, `\alang`, and the document's `\deflangfe` / `\deflang` /
-#'   `\adeflang`).  `NULL` (default) is `getOption("rtfreporter.font_lang")`,
-#'   itself `NULL`: nothing is written.
+#'   such as `c(east_asian = "ja")`.  `NULL` (default) is
+#'   `getOption("rtfreporter.font_lang")`, itself `NULL`: nothing is
+#'   written.
+#'   \describe{
+#'     \item{Names}{`latin`, `east_asian` and `complex`.}
+#'     \item{Languages}{`"ja"`, `"zh-Hans"`, `"zh-Hant"`, `"ko"`, `"ar"`,
+#'       `"he"` and `"en"`.}
+#'     \item{What it sets}{The font-table charset of that slot's fonts (`ja`
+#'       = 128, `zh-Hans` = 134, `zh-Hant` = 136, `ko` = 129, `ar` = 178,
+#'       `he` = 177) and the RTF language words (`\langfe`, `\lang`,
+#'       `\alang`, and the document's `\deflangfe` / `\deflang` /
+#'       `\adeflang`).}
+#'   }
 #' @param color_table Optional character vector of `"#RRGGBB"` colours to
 #'   pre-declare in the document's colour table (so they are available by
 #'   index). Default `c("#000000")`. Colours actually used by borders and by
@@ -448,51 +453,65 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   written there (or in [as_rtftables()] / [plan_style()]) instead.  See
 #'   "Deprecated arguments" below.
 #' @param titles `NULL` (default) or a list of length `length(tables)` **or
-#'   length 1** (a single block applied to every page). Each element is a
-#'   title **block**: either a character vector (one entry per row, default
-#'   styling) or a list of rows, where a row is a string or a styled
-#'   `list(text=, align=, bold=, italic=, underline=, color=, border=)`. An
-#'   empty string (`""`) is a blank row. The block renders as a single-column
-#'   table the same width as the content (so it lines up); title rows default
-#'   to centred + bold.
-#'
-#'   Title and footnote text may carry the same **page-number tokens** as a
-#'   header or footer band -- `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`, `{PAGE}`,
-#'   `{TOTAL_PAGES}` -- which is how a per-table
-#'   "Page 1 of 3" sits next to the table instead of at the page margin. A
-#'   static `{PAGE}` costs nothing here: these bands are re-emitted for every
-#'   page, so each page bakes its own number without the extra RTF section the
-#'   same token forces in a header.  A table paginated on a column fills
-#'   `{<column name>}` with its page's value (see *Page values*).
+#'   length 1** (a single block applied to every page).  Each element is a
+#'   title **block**.
+#'   \describe{
+#'     \item{A block}{Either a character vector (one entry per row, default
+#'       styling) or a list of rows, where a row is a string or a styled
+#'       `list(text=, align=, bold=, italic=, underline=, color=,
+#'       border=)`.  An empty string (`""`) is a blank row.}
+#'     \item{Looks}{The block renders as a single-column table the same
+#'       width as the content (so it lines up); title rows default to
+#'       centred + bold.}
+#'     \item{Page numbers}{Title and footnote text may carry the same
+#'       **page-number tokens** as a header or footer band --
+#'       `{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`, `{PAGE}`, `{TOTAL_PAGES}` --
+#'       which is how a per-table "Page 1 of 3" sits next to the table
+#'       instead of at the page margin.  A static `{PAGE}` costs nothing
+#'       here: these bands are re-emitted for every page, so each page
+#'       bakes its own number without the extra RTF section the same token
+#'       forces in a header.}
+#'     \item{Page values}{A table paginated on a column fills `{<column
+#'       name>}` with its page's value (see *Page values*).}
+#'   }
 #' @param footnotes `NULL` (default) or a list of length `length(tables)` or
 #'   length 1 (common to all). Same block structure as `titles`, and the same
 #'   page-number tokens; footnote rows default to left-aligned and draw no
 #'   rule unless a row sets its own `border`.
-#' @param auto_section Logical. When `TRUE` and `tables` is a **named** list,
-#'   each name is used as a per-section heading appended to the common header
-#'   defined by `rtf_section(secinfo = ...)` (called without a `page` argument).
-#'   A section opens where the name **changes**, so a run of pages carrying the
-#'   same name -- the pages of one split table, which all share its heading --
-#'   is **one** section of several pages. A `"...n"` tail (the serial
-#'   [as_rtftables()] adds so a page list with repeated headings stays
-#'   addressable by name) is **not** part of the name here: it is stripped
-#'   before both the comparison and the printed heading. An item with an empty
-#'   name falls through into the open section, which is how pages whose
-#'   headings *differ* are put in one section (see [combine_sections()]).
-#'   `NULL` (default): what the pages say --- a plan's
+#' @param auto_section Logical.  When `TRUE` and `tables` is a **named**
+#'   list, each name is used as a per-section heading appended to the common
+#'   header defined by `rtf_section(secinfo = ...)` (called without a `page`
+#'   argument).  `NULL` (default): what the pages say --- a plan's
 #'   `plan_paginate_group(heading_at = "section")` --- else `FALSE`.
+#'   \describe{
+#'     \item{Where a section opens}{Where the name **changes**, so a run of
+#'       pages carrying the same name -- the pages of one split table, which
+#'       all share its heading -- is **one** section of several pages.}
+#'     \item{The `"...n"` tail}{The serial [as_rtftables()] adds so a page
+#'       list with repeated headings stays addressable by name is **not**
+#'       part of the name here: it is stripped before both the comparison
+#'       and the printed heading.}
+#'     \item{An empty name}{An item with an empty name falls through into
+#'       the open section, which is how pages whose headings *differ* are
+#'       put in one section (see [combine_sections()]).}
+#'   }
 #' @param section_label_align Alignment for the auto-appended section label row.
 #'   One of `"left"` (default), `"center"`, or `"right"`.
-#' @param auto_title Logical. When `TRUE` and `tables` is a **named** list,
-#'   each name is appended as the **last row of that table's title block**, so
-#'   it prints immediately above the table rather than in the page header.
-#'   Titles already present -- from `titles =`, or carried on the object as the
-#'   `rtf_titles` attribute by [as_rtftables()] -- are kept and the name goes
-#'   after them; a table with no titles gets the name as its whole block.
-#'   Unnamed items are untouched.  Behaves identically under either
-#'   `title_format`.  Composes with `auto_section`, which puts the same name in
-#'   the section header instead.  `NULL` (default): what the pages say --- a
-#'   plan's `plan_paginate_group(heading_at = "title")` --- else `FALSE`.
+#' @param auto_title Logical.  When `TRUE` and `tables` is a **named** list,
+#'   each name is appended as the **last row of that table's title block**,
+#'   so it prints immediately above the table rather than in the page
+#'   header.  `NULL` (default): what the pages say --- a plan's
+#'   `plan_paginate_group(heading_at = "title")` --- else `FALSE`.
+#'   \describe{
+#'     \item{Titles already there}{From `titles =`, or carried on the object
+#'       as the `rtf_titles` attribute by [as_rtftables()] -- are kept and
+#'       the name goes after them; a table with no titles gets the name as
+#'       its whole block.}
+#'     \item{Unnamed items}{are untouched.}
+#'     \item{With other arguments}{Behaves identically under either
+#'       `title_format`.  Composes with `auto_section`, which puts the same
+#'       name in the section header instead.}
+#'   }
 #' @param title_label_align Alignment for the auto-appended title label row.
 #'   One of `"left"` (default), `"center"`, or `"right"`.
 #' @param read_gt **Deprecated** (removed in 0.9.0): pass a gt or gtsummary
@@ -500,32 +519,42 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   and source notes, and place the pages it returns here.
 #' @param page_break `TRUE` (the default): each table begins a new page.
 #'   `FALSE`: a table goes on under the content before it, on the page that
-#'   one ends on -- a listing under its summary table.  Nothing is measured:
-#'   what does not fit, the reader (Word, LibreOffice) carries to the next
-#'   page by itself -- with no title, no column header and no footnote
-#'   there; fitting the page is the program's to arrange.  To go on with
-#'   the title, column header and footnote on pages of its own, give
-#'   `first_rows`.  One value for every table, or one each.  A table's own
-#'   later pages (a plan's, or [as_rtftables()]'s) always begin a page; so
-#'   does the document's first content.  Unlike reporter's
-#'   `add_content(page_break = )` this is the break *before* the table.  A
-#'   page has one `auto_section` heading: that of the first table on it that
-#'   has one; a later table on the page with another heading gets a warning
-#'   (`auto_title` names it on its title), and no page break is added for
-#'   it.  The page header and footer are the section's; a static `{PAGE}` /
-#'   `{TOTAL_PAGES}` counts the pages as written, which are right when each
-#'   page holds what fits it: the program counts the rows.
-#'   [rtf_section()]`(page = n)` counts the pages as written; [rtf_layout()]
-#'   shows them.
+#'   one ends on -- a listing under its summary table.  One value for every
+#'   table, or one each.
+#'   \describe{
+#'     \item{Fitting the page}{Nothing is measured: what does not fit, the
+#'       reader (Word, LibreOffice) carries to the next page by itself --
+#'       with no title, no column header and no footnote there; fitting the
+#'       page is the program's to arrange.  To go on with the title, column
+#'       header and footnote on pages of its own, give `first_rows`.}
+#'     \item{Pages that always start a page}{A table's own later pages (a
+#'       plan's, or [as_rtftables()]'s) always begin a page; so does the
+#'       document's first content.  Unlike reporter's
+#'       `add_content(page_break = )` this is the break *before* the
+#'       table.}
+#'     \item{Section headings}{A page has one `auto_section` heading: that
+#'       of the first table on it that has one; a later table on the page
+#'       with another heading gets a warning (`auto_title` names it on its
+#'       title), and no page break is added for it.}
+#'     \item{Header, footer, page numbers}{The page header and footer are
+#'       the section's; a static `{PAGE}` / `{TOTAL_PAGES}` counts the pages
+#'       as written, which are right when each page holds what fits it: the
+#'       program counts the rows.  [rtf_section()]`(page = n)` counts the
+#'       pages as written; [rtf_layout()] shows them.}
+#'   }
 #' @param first_rows With `page_break = FALSE`, the rows of the table that
-#'   go on the page before it; the rest is paginated as the table says --
-#'   a plan's `plan_paginate_rows(max_rows = , split = )` -- each page with
-#'   its title, column header and footnote.  The program counts what fits:
-#'   rtfreporter does not measure the page.  `tables` is then one table: a
-#'   [table_plan()], a data frame (its rest one page; for `max_rows` give
-#'   [as_rtftables()]`(first_rows = )` the pages) or an [rtftable()] (cut
-#'   there, its rest one page).  `NULL` (the default): the whole table goes
+#'   go on the page before it.  `NULL` (the default): the whole table goes
 #'   on.
+#'   \describe{
+#'     \item{The rest}{is paginated as the table says -- a plan's
+#'       `plan_paginate_rows(max_rows = , split = )` -- each page with its
+#'       title, column header and footnote.  The program counts what fits:
+#'       rtfreporter does not measure the page.}
+#'     \item{`tables`}{is then one table: a [table_plan()], a data frame
+#'       (its rest one page; for `max_rows` give
+#'       [as_rtftables()]`(first_rows = )` the pages) or an [rtftable()]
+#'       (cut there, its rest one page).}
+#'   }
 #' @param space_before With `page_break = FALSE`, empty lines between the
 #'   content before and this table (0: the title's own blank line alone).
 #' @param cont_title A line under the title of each later page of a table

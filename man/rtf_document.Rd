@@ -75,14 +75,19 @@ e.g. the program a report is to be written to.  Said in a message when
 used.  \code{NULL} (default): none.}
 
 \item{font_lang}{Optional language per font slot, a named character vector
-such as \code{c(east_asian = "ja")}.  Names are \code{latin}, \code{east_asian} and
-\code{complex}; languages are \code{"ja"}, \code{"zh-Hans"}, \code{"zh-Hant"}, \code{"ko"},
-\code{"ar"}, \code{"he"} and \code{"en"}.  It sets the font-table charset of that slot's
-fonts (\code{ja} = 128, \code{zh-Hans} = 134, \code{zh-Hant} = 136, \code{ko} = 129,
-\code{ar} = 178, \code{he} = 177) and the RTF language words (\verb{\\langfe},
-\verb{\\lang}, \verb{\\alang}, and the document's \verb{\\deflangfe} / \verb{\\deflang} /
-\verb{\\adeflang}).  \code{NULL} (default) is \code{getOption("rtfreporter.font_lang")},
-itself \code{NULL}: nothing is written.}
+such as \code{c(east_asian = "ja")}.  \code{NULL} (default) is
+\code{getOption("rtfreporter.font_lang")}, itself \code{NULL}: nothing is
+written.
+\describe{
+\item{Names}{\code{latin}, \code{east_asian} and \code{complex}.}
+\item{Languages}{\code{"ja"}, \code{"zh-Hans"}, \code{"zh-Hant"}, \code{"ko"}, \code{"ar"},
+\code{"he"} and \code{"en"}.}
+\item{What it sets}{The font-table charset of that slot's fonts (\code{ja}
+= 128, \code{zh-Hans} = 134, \code{zh-Hant} = 136, \code{ko} = 129, \code{ar} = 178,
+\code{he} = 177) and the RTF language words (\verb{\\langfe}, \verb{\\lang},
+\verb{\\alang}, and the document's \verb{\\deflangfe} / \verb{\\deflang} /
+\verb{\\adeflang}).}
+}}
 
 \item{file}{The RTF file the document is written to: one string, a path.
 \code{\link[=generate_rtfreport]{generate_rtfreport()}} writes there when it is given no \code{file_path}

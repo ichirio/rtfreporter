@@ -206,22 +206,32 @@
 #'   container), an rtables/tern `VTableTree`, an rlistings `listing_df`, a
 #'   `flextable`, a `huxtable`, a `data.frame` / tibble, or a `list` of these.
 #' @param read_meta Controls metadata extraction from the source table:
-#'   `TRUE` (default, read everything in the table above), `FALSE` (use only
-#'   the rendered body -- equivalent to the old `paginate()`), or a character
-#'   vector of tokens.  Tokens for
-#'   gt/gtsummary: `"col_header"`, `"alignment"`, `"spanning"`, `"widths"`,
-#'   `"titles"`, `"footnotes"`, `"styles"` (explicit `tab_style()` borders
-#'   and text styles; see *What is carried*).  For rtables/tern: `"col_header"`,
-#'   `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`, `"indent"`,
-#'   `"footnote_marks"`; **rlistings takes the same tokens**, because the two
-#'   share one `MatrixPrintForm` reader.  For flextable: `"col_header"`, `"alignment"`,
-#'   `"spanning"`, `"titles"`, `"footnotes"`.  For huxtable: `"col_header"`,
-#'   `"alignment"`, `"spanning"`, `"titles"`.  For a plain data.frame /
-#'   tibble the single token is `"labels"`: a column's `label` attribute (the
-#'   haven / labelled / xportr convention) is used as its header label
-#'   (columns without one keep their name).  Unknown tokens are *ignored* for
-#'   data.frames -- a `list()` mixing table objects and data.frames shares one
-#'   `read_meta`, so adapter tokens must not error on the data.frame elements.
+#'   \describe{
+#'     \item{`TRUE`}{(default) read everything in the table above.}
+#'     \item{`FALSE`}{use only the rendered body -- equivalent to the old
+#'       `paginate()`.}
+#'     \item{a character vector}{of tokens, by source below.}
+#'   }
+#'   The tokens:
+#'   \describe{
+#'     \item{gt / gtsummary}{`"col_header"`, `"alignment"`, `"spanning"`,
+#'       `"widths"`, `"titles"`, `"footnotes"`, `"styles"` (explicit
+#'       `tab_style()` borders and text styles; see *What is carried*).}
+#'     \item{rtables / tern}{`"col_header"`, `"alignment"`, `"spanning"`,
+#'       `"titles"`, `"footnotes"`, `"indent"`, `"footnote_marks"`;
+#'       **rlistings takes the same tokens**, because the two share one
+#'       `MatrixPrintForm` reader.}
+#'     \item{flextable}{`"col_header"`, `"alignment"`, `"spanning"`,
+#'       `"titles"`, `"footnotes"`.}
+#'     \item{huxtable}{`"col_header"`, `"alignment"`, `"spanning"`,
+#'       `"titles"`.}
+#'     \item{data.frame / tibble}{The single token `"labels"`: a column's
+#'       `label` attribute (the haven / labelled / xportr convention) is
+#'       used as its header label (columns without one keep their name).
+#'       Unknown tokens are *ignored* for data.frames -- a `list()` mixing
+#'       table objects and data.frames shares one `read_meta`, so adapter
+#'       tokens must not error on the data.frame elements.}
+#'   }
 #' @param split How to break the body into pages. A strategy name:
 #'   \describe{
 #'     \item{`"none"`}{(default) one page; no row limit checked.}
@@ -270,17 +280,22 @@
 #'   `split_rows = c(20, 40)` yields pages `1:19`, `20:39`, `40:nrow`.  It is
 #'   not a page size: for pages of a fixed number of rows use `max_rows` with
 #'   `split = "group_safe"` or `"group_force"`.
-#' @param group_col Character, integer, or `NULL`.  The column the group-aware
-#'   splits (`"group_safe"`, `"group_force"`, `"by_value"`) detect groups on,
-#'   given by name or position.  `NULL` (default) uses **column 1**.  This
-#'   selects only the *column*; how a group boundary is found on it is set by
-#'   `group_by`.  Note that for gt / gtsummary the body keeps gt's column
-#'   **ids** (e.g. `"label"`, `"stat_1"`), and for rtables / flextable /
-#'   huxtable the columns are renamed `V1`, `V2`, ... -- so an **integer** index
-#'   is the most portable.  A **factor** group column is rendered as its labels:
-#'   it is coerced to character just before the split, so the group-aware splits
-#'   can write the `cont_label` suffix into it.  This happens *after* `sort_by`,
-#'   which still orders a factor by its **levels**.
+#' @param group_col Character, integer, or `NULL`.  The column the
+#'   group-aware splits (`"group_safe"`, `"group_force"`, `"by_value"`)
+#'   detect groups on, given by name or position.  `NULL` (default) uses
+#'   **column 1**.  This selects only the *column*; how a group boundary is
+#'   found on it is set by `group_by`.
+#'   \describe{
+#'     \item{Naming it}{For gt / gtsummary the body keeps gt's column
+#'       **ids** (e.g. `"label"`, `"stat_1"`), and for rtables / flextable /
+#'       huxtable the columns are renamed `V1`, `V2`, ... -- so an
+#'       **integer** index is the most portable.}
+#'     \item{A factor}{A **factor** group column is rendered as its labels:
+#'       it is coerced to character just before the split, so the
+#'       group-aware splits can write the `cont_label` suffix into it.  This
+#'       happens *after* `sort_by`, which still orders a factor by its
+#'       **levels**.}
+#'   }
 #' @param group_by How a group boundary is found on `group_col`:
 #'   \describe{
 #'     \item{`"auto"`}{(default) pick from the column content: leading
@@ -360,20 +375,27 @@
 #'   which splits before the stub is built).  With `page_by = NULL` nothing
 #'   changes anywhere -- `"by_value"` still takes its page names from
 #'   `group_col`.
-#' @param sort_by Columns to **order the body rows by, before pagination**, or
-#'   `NULL` (default, keep the input order).  A character / integer vector (or a
-#'   `list()` to mix names and indices) in the **input body's** coordinates --
-#'   the same space as `group_col`, `collapse_repeats` and `drop_cols`.  The sort
-#'   is applied *first*, so group detection, `(Cont.)` labels and `blank_rows`
-#'   positions all see the sorted order.  A sort key may also be listed in
-#'   `drop_cols` to order on a column that is not printed (the classic hidden
-#'   "sort-key" carrier column).  The sort is **stable** (rows that compare equal
-#'   keep their input order) and `NA` keys sort **last** regardless of
-#'   `sort_desc`.  Note that `sort_by` reorders rendered body rows as-is, so it
-#'   suits flat / tabular bodies (a `data.frame`, or a pre-flattened table); on a
-#'   gt / rtables body whose group-label and child rows are already interleaved
-#'   it would scramble that visual hierarchy -- sort the source data before
-#'   building such a table instead.
+#' @param sort_by Columns to **order the body rows by, before pagination**,
+#'   or `NULL` (default, keep the input order).  A character / integer
+#'   vector (or a `list()` to mix names and indices) in the **input body's**
+#'   coordinates -- the same space as `group_col`, `collapse_repeats` and
+#'   `drop_cols`.
+#'   \describe{
+#'     \item{Order of work}{The sort is applied *first*, so group detection,
+#'       `(Cont.)` labels and `blank_rows` positions all see the sorted
+#'       order.}
+#'     \item{Hidden keys}{A sort key may also be listed in `drop_cols` to
+#'       order on a column that is not printed (the classic hidden
+#'       "sort-key" carrier column).}
+#'     \item{Ties and `NA`}{The sort is **stable** (rows that compare equal
+#'       keep their input order) and `NA` keys sort **last** regardless of
+#'       `sort_desc`.}
+#'     \item{Which bodies}{`sort_by` reorders rendered body rows as-is, so
+#'       it suits flat / tabular bodies (a `data.frame`, or a pre-flattened
+#'       table); on a gt / rtables body whose group-label and child rows are
+#'       already interleaved it would scramble that visual hierarchy -- sort
+#'       the source data before building such a table instead.}
+#'   }
 #' @param sort_desc Sort direction for `sort_by`: `NULL`/`FALSE` (default, all
 #'   ascending), a single `TRUE` (all `sort_by` columns descending), or a logical
 #'   vector the same length as `sort_by` (one direction per key).  Ignored when
@@ -409,14 +431,18 @@
 #'   under `FALSE` (the default) they do not, and the printed page can be up
 #'   to two rows taller than `max_rows`.
 #' @param align_count_pct The cell alignment to apply before pagination.
-#'   `FALSE` (default) none; `TRUE` the built-in cell format `"count_pct"`,
-#'   which realigns `"n (xx.x)"` count/percent cells to a uniform width.  It also
-#'   accepts the **name of any built-in** (`"count_paren"`, `"value_paren"`,
-#'   `"right_align"`, ... -- the `fmt_` prefix is optional) or a function of
-#'   your own, in which case it behaves exactly like `cell_format`.  Ignored
-#'   when `cell_format` is supplied, which takes precedence.  Neither one
-#'   controls whether missing values are substituted -- that is `na` -- only
-#'   whether the substituted token is aligned with the counts.
+#'   \describe{
+#'     \item{`FALSE`}{(default) none.}
+#'     \item{`TRUE`}{the built-in cell format `"count_pct"`, which realigns
+#'       `"n (xx.x)"` count/percent cells to a uniform width.}
+#'     \item{a name or a function}{The **name of any built-in**
+#'       (`"count_paren"`, `"value_paren"`, `"right_align"`, ... -- the
+#'       `fmt_` prefix is optional) or a function of your own, in which case
+#'       it behaves exactly like `cell_format`.}
+#'   }
+#'   Ignored when `cell_format` is supplied, which takes precedence.
+#'   Neither one controls whether missing values are substituted -- that is
+#'   `na` -- only whether the substituted token is aligned with the counts.
 #' @param min_group_rows Integer (default `2`).  Widow/orphan control for the
 #'   group-aware splits (`"group_force"`, `"group_safe"`, `"by_value"`): when a
 #'   page would end on a group that *starts* on that page while showing fewer
@@ -444,49 +470,58 @@
 #'   the split and re-attached per page afterwards, with a leading blank
 #'   suppressed at the top of each page.
 #' @param cell_format Optional cell re-formatter applied column-by-column to
-#'   the body **before** pagination, for monospaced alignment.  Either one
-#'   formatter -- applied to every data column (columns 2..N; the row-label
-#'   column 1 is left alone) -- or a list of them taken positionally
-#'   (`cell_format[[j]]` for column `j`; entries that are neither a function
-#'   nor a name are skipped).
-#'
-#'   A formatter is a **function** taking one column (a character vector) and
-#'   returning a character vector of the same length, or the **name** of a
-#'   built-in as a string -- `"right_align"`, `"count_paren"`,
-#'   `"count_paren_bare"`, `"value_paren"`, `"count_pct"`, with the `fmt_`
-#'   prefix optional, so `"fmt_count_paren"` works too:
+#'   the body **before** pagination, for monospaced alignment.
+#'   \describe{
+#'     \item{One formatter}{applied to every data column (columns 2..N; the
+#'       row-label column 1 is left alone).}
+#'     \item{A list}{of them taken positionally (`cell_format[[j]]` for
+#'       column `j`; entries that are neither a function nor a name are
+#'       skipped).}
+#'     \item{A formatter}{is a **function** taking one column (a character
+#'       vector) and returning a character vector of the same length, or the
+#'       **name** of a built-in as a string -- `"right_align"`,
+#'       `"count_paren"`, `"count_paren_bare"`, `"value_paren"`,
+#'       `"count_pct"`, with the `fmt_` prefix optional, so
+#'       `"fmt_count_paren"` works too.}
+#'     \item{Precedence}{When supplied it takes precedence over
+#'       `align_count_pct`.}
+#'   }
 #'   ```r
 #'   as_rtftables(x, cell_format = "value_paren")
 #'   as_rtftables(x, cell_format = list(NULL, "right_align", my_fmt))
 #'   ```
 #'   See [fmt_count_paren()] / [fmt_value_paren()] / [fmt_right_align()] for
 #'   what each one does, and the contract in `?fmt_right_align` for writing
-#'   your own.  When supplied it takes precedence over `align_count_pct`.
+#'   your own.
 #' @param na Text to print for a **missing value** (default `""`, an empty
-#'   cell -- the previous behaviour).  Applied to every column, the row-label
-#'   column included, and **independently of `align_count_pct` / `cell_format`**
-#'   -- those decide whether the substituted token is also *aligned*, not
-#'   whether the substitution happens.  With one of them set, the token is
-#'   right-justified in the count field so its right edge lands on the ones
-#'   digit:
+#'   cell -- the previous behaviour).
+#'   \describe{
+#'     \item{Where}{Applied to every column, the row-label column included,
+#'       and **independently of `align_count_pct` / `cell_format`** -- those
+#'       decide whether the substituted token is also *aligned*, not whether
+#'       the substitution happens.  With one of them set, the token is
+#'       right-justified in the count field so its right edge lands on the
+#'       ones digit (below).}
+#'     \item{Not missing}{Text already in the data that is *not* missing
+#'       (`"NE"`, `"n/a"`, a literal `"-"` you typed yourself) does not
+#'       match the count pattern and passes through unchanged, with no
+#'       padding.  The *strings* `"NA"` / `"NaN"` are never touched -- `"NA"`
+#'       can be legitimate data.}
+#'     \item{`NaN`, `Inf`}{`NaN` counts as missing (R's own `is.na()` says
+#'       so, and in a TFL a `NaN` is a `0/0` percentage).  `Inf` / `-Inf` do
+#'       **not**: they print as `"Inf"` / `"-Inf"`, because an infinity
+#'       means a division by zero upstream and rendering it as `"-"` would
+#'       hide the bug.}
+#'     \item{Order of work}{The substitution happens before the split, so
+#'       the `NA`s `collapse_repeats` writes per page to blank out repeated
+#'       values stay blank.}
+#'   }
 #'   ```
 #'     1 ( 1.2%)
 #'   108 (35.3%)
 #'     -            <- na = "-"
 #'    NE            <- na = "NE", right edge still under the ones digit
 #'   ```
-#'   Text already in the data that is *not* missing (`"NE"`, `"n/a"`, a literal
-#'   `"-"` you typed yourself) does not match the count pattern and passes
-#'   through unchanged, with no padding.
-#'
-#'   `NaN` counts as missing (R's own `is.na()` says so, and in a TFL a `NaN`
-#'   is a `0/0` percentage).  `Inf` / `-Inf` do **not**: they print as `"Inf"` /
-#'   `"-Inf"`, because an infinity means a division by zero upstream and
-#'   rendering it as `"-"` would hide the bug.  The *strings* `"NA"` / `"NaN"`
-#'   are never touched -- `"NA"` can be legitimate data.
-#'
-#'   The substitution happens before the split, so the `NA`s `collapse_repeats`
-#'   writes per page to blank out repeated values stay blank.
 #' @param first_rows The rows of the first page, the rest paginated as the
 #'   other arguments say (`max_rows`, `split`): the page a table shares with
 #'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  `NULL`
@@ -494,55 +529,73 @@
 #'   `split = "by_value"` or a custom `split`.
 #' @param collapse_repeats Columns in which to blank **consecutive repeated
 #'   values** (repeat suppression), or `NULL` (default, off).  A character /
-#'   integer vector naming the columns in priority order.  Within each column,
-#'   only the first value of a run is kept; the rest of the run is replaced with
-#'   `NA` (which renders as an empty cell -- no row is removed, only the display
-#'   text is suppressed).  When several columns are given the suppression is
-#'   **hierarchical**: the first column is collapsed on its own value, and each
-#'   later column on the *combination* of itself with all earlier listed columns
-#'   (a change in any higher column restarts the lower column's run).  This runs
-#'   **per page, after the split**, so the pagination still sees the original
-#'   repeated values -- group boundaries and `(Cont.)` labels stay correct, and a
-#'   group continued onto the next page shows its label again at the top.  (In
-#'   `group_by` terms: value-based grouping happens first, then the column is
-#'   collapsed to a `"filled"`-style display.)
-#' @param drop_cols Columns to **hide from the printed table while still using
-#'   them for pagination / grouping**, or `NULL` (default, drop nothing).  A
-#'   character / integer vector (or a `list()` to mix names and indices) naming
-#'   the columns in the **input body's** coordinates -- the same coordinate
-#'   space as `group_col` and `collapse_repeats`.  The named columns stay
-#'   present through the split (so
-#'   `group_col`, `collapse_repeats` and [blank_rows_by_change()] can reference
-#'   them), then are removed from **every page** before that page's table is
-#'   rendered.  This makes a column usable as a hidden grouping / sort-key /
-#'   carrier column without it appearing in the report.  Position-indexed
-#'   metadata (`col_spec`, column widths, `col_header_align`, `row_title`, and
-#'   per-cell `cell_styles`) is reindexed automatically to the remaining
-#'   columns.  A **user-supplied `col_header`** is the exception: it is applied
-#'   against the **final printed columns** (see the `col_header` argument and
-#'   [set_col_header()]), so you write its positions / names for the columns
-#'   that remain -- not the pre-drop layout.  `drop_cols` must leave at least
-#'   one column to display.  Note that for `split = "by_value"` the page
-#'   **names** come from the `group_col` value, so that column may be dropped and
-#'   the pages are still named by it; but under `"group_safe"` / `"group_force"`
-#'   the `" (Cont.)"` marker is written into the `group_col` cell, so if
-#'   `group_col` is itself dropped the marker is not shown (group on the visible
-#'   label column if the marker is wanted).
+#'   integer vector naming the columns in priority order.
+#'   \describe{
+#'     \item{What is blanked}{Within each column, only the first value of a
+#'       run is kept; the rest of the run is replaced with `NA` (which
+#'       renders as an empty cell -- no row is removed, only the display
+#'       text is suppressed).}
+#'     \item{Several columns}{The suppression is **hierarchical**: the first
+#'       column is collapsed on its own value, and each later column on the
+#'       *combination* of itself with all earlier listed columns (a change
+#'       in any higher column restarts the lower column's run).}
+#'     \item{When}{This runs **per page, after the split**, so the
+#'       pagination still sees the original repeated values -- group
+#'       boundaries and `(Cont.)` labels stay correct, and a group continued
+#'       onto the next page shows its label again at the top.  (In
+#'       `group_by` terms: value-based grouping happens first, then the
+#'       column is collapsed to a `"filled"`-style display.)}
+#'   }
+#' @param drop_cols Columns to **hide from the printed table while still
+#'   using them for pagination / grouping**, or `NULL` (default, drop
+#'   nothing).  A character / integer vector (or a `list()` to mix names and
+#'   indices) naming the columns in the **input body's** coordinates -- the
+#'   same coordinate space as `group_col` and `collapse_repeats`.
+#'   \describe{
+#'     \item{What stays}{The named columns stay present through the split (so
+#'       `group_col`, `collapse_repeats` and [blank_rows_by_change()] can
+#'       reference them), then are removed from **every page** before that
+#'       page's table is rendered.  This makes a column usable as a hidden
+#'       grouping / sort-key / carrier column without it appearing in the
+#'       report.  `drop_cols` must leave at least one column to display.}
+#'     \item{Reindexed}{Position-indexed metadata (`col_spec`, column
+#'       widths, `col_header_align`, `row_title`, and per-cell
+#'       `cell_styles`) is reindexed automatically to the remaining
+#'       columns.}
+#'     \item{`col_header`}{A **user-supplied `col_header`** is the
+#'       exception: it is applied against the **final printed columns** (see
+#'       the `col_header` argument and [set_col_header()]), so you write its
+#'       positions / names for the columns that remain -- not the pre-drop
+#'       layout.}
+#'     \item{With `split`}{For `split = "by_value"` the page **names** come
+#'       from the `group_col` value, so that column may be dropped and the
+#'       pages are still named by it; but under `"group_safe"` /
+#'       `"group_force"` the `" (Cont.)"` marker is written into the
+#'       `group_col` cell, so if `group_col` is itself dropped the marker is
+#'       not shown (group on the visible label column if the marker is
+#'       wanted).}
+#'   }
 #' @param listing Listing settings, as a [listing_spec()] object, or `NULL`
-#'   (default, no listing preparation).  Applies to a **data.frame / tibble**
-#'   source: [build_listing()] reshapes it into a listing body -- source
-#'   variables joined into their printed columns, long cells wrapped over
-#'   several physical rows, gutter columns, a blank row after each record --
-#'   and the spec's columns then supply the `col_header`, the relative widths
-#'   and the (left) alignment, so none of the three has to be written out by
-#'   hand.  The hidden record column is used to keep a record whole across a
-#'   page break: `group_col` points at it, `split` becomes `"group_safe"` when
-#'   `max_rows` is set, and it is added to `drop_cols`.  Every one of those is
-#'   a **default** -- an argument you pass yourself is never overridden.  A
-#'   body that has already been through [build_listing()] carries its own spec,
-#'   so `as_rtftables()` picks it up and passing `listing` as well is an error.
-#'   An rlistings `listing_df` is rejected: it is already laid out, and needs
-#'   no `listing` argument.
+#'   (default, no listing preparation).  Applies to a **data.frame /
+#'   tibble** source.
+#'   \describe{
+#'     \item{What it does}{[build_listing()] reshapes the source into a
+#'       listing body -- source variables joined into their printed columns,
+#'       long cells wrapped over several physical rows, gutter columns, a
+#'       blank row after each record -- and the spec's columns then supply
+#'       the `col_header`, the relative widths and the (left) alignment, so
+#'       none of the three has to be written out by hand.}
+#'     \item{Keeping a record whole}{The hidden record column is used to keep
+#'       a record whole across a page break: `group_col` points at it,
+#'       `split` becomes `"group_safe"` when `max_rows` is set, and it is
+#'       added to `drop_cols`.  Every one of those is a **default** -- an
+#'       argument you pass yourself is never overridden.}
+#'     \item{Already built}{A body that has already been through
+#'       [build_listing()] carries its own spec, so `as_rtftables()` picks it
+#'       up and passing `listing` as well is an error.  An rlistings
+#'       `listing_df` is rejected: it is already laid out, and needs no
+#'       `listing` argument.}
+#'   }
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
 #'   (parent first, leaf last; at least two).  `NULL` (default) builds no
@@ -550,61 +603,77 @@
 #'   including `layout` and `label_span`, which the deprecated `stub_vars`
 #'   family cannot reach.  Passing both `stub` and any of the `stub_vars`
 #'   family is an error.
-#'
-#'   The stub is applied to the **extracted body** -- after the table is pulled
-#'   out of its source, before pagination -- so any input that carries the
-#'   hierarchy as *separate columns* (a plain `data.frame`, a `gt(df)`, a
-#'   multi-group-column table, or a tfrmt `row_grp_plan(location = "column")`
-#'   table) gains a clinical stub.  With `layout = "merged"` the named columns
-#'   are consumed and replaced by one stub column at position 1 and the
-#'   remaining columns keep their order; with `layout = "columns"` every column
-#'   stays where it is.  Either way `drop_cols` / `group_col` / `sort_by` (plus
-#'   `group_by = "indent"` detection and the group-aware splits) then refer to
-#'   the reshaped body.  **Exception: with `split = "by_value"` the body is
-#'   split by `group_col` *first* and the stub is built per page afterwards** --
-#'   each value becomes an independent section, so `group_col` here refers to
-#'   the **pre-stub** columns and is not folded into the stub.  This keeps a
-#'   fixed intermediate hierarchy level (e.g. `LBCAT / group1 / label` with
-#'   a constant `group1`) from collapsing into a single stub label row that
-#'   spans every group; put the inner levels in the stub and the outer level in
-#'   `group_col`.  Position-indexed metadata (`col_spec`, `col_header_align`,
-#'   per-cell `cell_styles`) is reindexed automatically; a user-supplied
-#'   `col_header` is instead resolved against the final columns (see
-#'   [set_col_header()]).  Sources that already render an indented stub
-#'   (rtables / tern, tfrmt indented, gtsummary) come out pre-merged, so a stub
-#'   does not apply to them.  Under `layout = "merged"` the source column
-#'   widths are **not** carried through the merge -- use `auto_width = TRUE` or
-#'   pass explicit widths; `layout = "columns"` keeps them.
+#'   \describe{
+#'     \item{Applied to}{The **extracted body** -- after the table is pulled
+#'       out of its source, before pagination -- so any input that carries
+#'       the hierarchy as *separate columns* (a plain `data.frame`, a
+#'       `gt(df)`, a multi-group-column table, or a tfrmt
+#'       `row_grp_plan(location = "column")` table) gains a clinical
+#'       stub.}
+#'     \item{`layout`}{With `layout = "merged"` the named columns are
+#'       consumed and replaced by one stub column at position 1 and the
+#'       remaining columns keep their order; with `layout = "columns"` every
+#'       column stays where it is.  Either way `drop_cols` / `group_col` /
+#'       `sort_by` (plus `group_by = "indent"` detection and the group-aware
+#'       splits) then refer to the reshaped body.}
+#'     \item{`split = "by_value"`}{**Exception:** the body is split by
+#'       `group_col` *first* and the stub is built per page afterwards --
+#'       each value becomes an independent section, so `group_col` here
+#'       refers to the **pre-stub** columns and is not folded into the stub.
+#'       This keeps a fixed intermediate hierarchy level (e.g. `LBCAT /
+#'       group1 / label` with a constant `group1`) from collapsing into a
+#'       single stub label row that spans every group; put the inner levels
+#'       in the stub and the outer level in `group_col`.}
+#'     \item{Metadata}{Position-indexed metadata (`col_spec`,
+#'       `col_header_align`, per-cell `cell_styles`) is reindexed
+#'       automatically; a user-supplied `col_header` is instead resolved
+#'       against the final columns (see [set_col_header()]).}
+#'     \item{Sources that do not need it}{Sources that already render an
+#'       indented stub (rtables / tern, tfrmt indented, gtsummary) come out
+#'       pre-merged, so a stub does not apply to them.}
+#'     \item{Widths}{Under `layout = "merged"` the source column widths are
+#'       **not** carried through the merge -- use `auto_width = TRUE` or pass
+#'       explicit widths; `layout = "columns"` keeps them.}
+#'   }
 #' @param stub_vars **Deprecated** in 0.8.x (warns once a session, still
 #'   works), removed in 0.9.0: write `stub = c(...)` (or
 #'   `stub = stub_spec(...)`), which does the same and also reaches `layout`
 #'   and `label_span`.
 #'   Hierarchy columns to merge into a single **indented stub**
 #'   column (parent first, leaf last; at least two), or `NULL` (default, no
-#'   stub built).  Applies [stub_cols()] to the **extracted body** -- after the
-#'   table is pulled out of its source, before pagination -- so any input that
-#'   carries the hierarchy as *separate columns* (a plain `data.frame`, a
-#'   `gt(df)`, a multi-group-column table, or a tfrmt
-#'   `row_grp_plan(location = "column")` table) gains a clinical stub.  The
-#'   named columns are consumed and replaced by one stub column at position 1;
-#'   the remaining columns keep their order, and `drop_cols` / `group_col` /
-#'   `sort_by` (plus `group_by = "indent"` detection and the group-aware
-#'   splits) then refer to the reshaped, **post-stub** columns.  **Exception:
-#'   with `split = "by_value"` the body is split by `group_col` *first* and the
-#'   stub is built per page afterwards** -- each value becomes an independent
-#'   section, so `group_col` here refers to the **pre-stub** columns and is not
-#'   folded into the stub.  This keeps a fixed intermediate hierarchy level
-#'   (e.g. `LBCAT / group1 / label` with a constant `group1`) from
-#'   collapsing into a single stub label row that spans every group; put the
-#'   inner levels in `stub_vars` and the outer level in `group_col`.  Position-indexed
-#'   metadata (`col_spec`, `col_header_align`, per-cell `cell_styles`) is
-#'   reindexed automatically; a user-supplied `col_header` is instead resolved
-#'   against the final columns (which already include the stub at position 1 --
-#'   see [set_col_header()]).  Sources that already
-#'   render an indented stub (rtables / tern, tfrmt indented, gtsummary) come
-#'   out pre-merged, so `stub_vars` does not apply to them.  Column widths from
-#'   the source are **not** carried through the merge -- use `auto_width = TRUE`
-#'   or pass explicit widths.
+#'   stub built).  Applies [stub_cols()] to the **extracted body**.
+#'   \describe{
+#'     \item{Applied to}{The extracted body -- after the table is pulled out
+#'       of its source, before pagination -- so any input that carries the
+#'       hierarchy as *separate columns* (a plain `data.frame`, a `gt(df)`,
+#'       a multi-group-column table, or a tfrmt
+#'       `row_grp_plan(location = "column")` table) gains a clinical
+#'       stub.}
+#'     \item{Result}{The named columns are consumed and replaced by one stub
+#'       column at position 1; the remaining columns keep their order, and
+#'       `drop_cols` / `group_col` / `sort_by` (plus `group_by = "indent"`
+#'       detection and the group-aware splits) then refer to the reshaped,
+#'       **post-stub** columns.}
+#'     \item{`split = "by_value"`}{**Exception:** the body is split by
+#'       `group_col` *first* and the stub is built per page afterwards --
+#'       each value becomes an independent section, so `group_col` here
+#'       refers to the **pre-stub** columns and is not folded into the stub.
+#'       This keeps a fixed intermediate hierarchy level (e.g. `LBCAT /
+#'       group1 / label` with a constant `group1`) from collapsing into a
+#'       single stub label row that spans every group; put the inner levels
+#'       in `stub_vars` and the outer level in `group_col`.}
+#'     \item{Metadata}{Position-indexed metadata (`col_spec`,
+#'       `col_header_align`, per-cell `cell_styles`) is reindexed
+#'       automatically; a user-supplied `col_header` is instead resolved
+#'       against the final columns (which already include the stub at
+#'       position 1 -- see [set_col_header()]).}
+#'     \item{Sources that do not need it}{Sources that already render an
+#'       indented stub (rtables / tern, tfrmt indented, gtsummary) come out
+#'       pre-merged, so `stub_vars` does not apply to them.}
+#'     \item{Widths}{Column widths from the source are **not** carried
+#'       through the merge -- use `auto_width = TRUE` or pass explicit
+#'       widths.}
+#'   }
 #' @param stub_label,stub_indent,stub_group_summary **Deprecated** with
 #'   `stub_vars` (removed in 0.9.0): they are `stub_spec(label = , indent = ,
 #'   group_summary = )`.  Forwarded to [stub_cols()]
@@ -613,23 +682,29 @@
 #'   non-breaking spaces per nesting level (default `4`), and which leaf values
 #'   fold a row onto its group label row (default `c("empty", "parent")`).
 #'   Ignored when `stub_vars` is `NULL`.
-#' @param header_sep Separator(s) used to reconstruct a **spanning (multi-row)
-#'   column header** from a plain **data.frame**'s column names.  A bare
-#'   data.frame carries no spanning metadata, so the nesting is parsed out of the
-#'   names: each name is split on `header_sep` into segments that become stacked
-#'   header rows, and horizontally adjacent columns sharing a label *and* the
-#'   same ancestor path are merged into one spanning cell.  Columns with no
-#'   separator (e.g. id columns such as `label`) keep their name on the bottom
-#'   (leaf) row with blank cells above.  The default recognizes **both** built-in
-#'   delimiters: `"____"` (from `ydisctools::pivot_stats_wider()`) and
-#'   `"___tlang_delim___"` (tfrmt's column delimiter).  Pass your own
-#'   separator(s) to override, or `NULL` to disable (use the plain `names(data)`
-#'   single-row header).  Only applies to plain data.frame input -- gt /
-#'   gtsummary / rtables / tern / flextable / huxtable already carry real
-#'   spanning metadata.  With the `"____"` separator a doubled separator
-#'   (`"________"`) yields an empty middle segment, i.e. a **blank cell** at that
-#'   header level (handy to align a column that skips an intermediate spanner
-#'   level).  An explicit `col_header` (passed via `...`) always wins.
+#' @param header_sep Separator(s) used to reconstruct a **spanning
+#'   (multi-row) column header** from a plain **data.frame**'s column names.
+#'   Only applies to plain data.frame input -- gt / gtsummary / rtables /
+#'   tern / flextable / huxtable already carry real spanning metadata.  An
+#'   explicit `col_header` (passed via `...`) always wins.
+#'   \describe{
+#'     \item{How}{A bare data.frame carries no spanning metadata, so the
+#'       nesting is parsed out of the names: each name is split on
+#'       `header_sep` into segments that become stacked header rows, and
+#'       horizontally adjacent columns sharing a label *and* the same
+#'       ancestor path are merged into one spanning cell.  Columns with no
+#'       separator (e.g. id columns such as `label`) keep their name on the
+#'       bottom (leaf) row with blank cells above.}
+#'     \item{Default}{Recognizes **both** built-in delimiters: `"____"`
+#'       (from `ydisctools::pivot_stats_wider()`) and `"___tlang_delim___"`
+#'       (tfrmt's column delimiter).}
+#'     \item{Your own}{Pass your own separator(s) to override, or `NULL` to
+#'       disable (use the plain `names(data)` single-row header).}
+#'     \item{Blank cells}{With the `"____"` separator a doubled separator
+#'       (`"________"`) yields an empty middle segment, i.e. a **blank
+#'       cell** at that header level (handy to align a column that skips an
+#'       intermediate spanner level).}
+#'   }
 #' @param auto_width Logical (default `FALSE`).  When `TRUE`, each column is
 #'   sized to its widest content (column header label or data cell) via
 #'   [auto_col_widths()], so long labels do not wrap.  It decides how the
@@ -664,18 +739,23 @@
 #'   defaults to `"tfl"`.
 #' @param ... Further arguments forwarded to [rtftable()] for every page
 #'   (e.g. `col_header`, `col_spec`, `row_title`, `col_rel_width`,
-#'   `row_height_twips`).  `row_title` names the row-heading columns (default:
-#'   column 1) and sets the per-column default alignment (heading columns left,
-#'   others centre).  Explicit values always win over the gt-extracted ones.
+#'   `row_height_twips`).  Explicit values always win over the
+#'   gt-extracted ones.
+#'   \describe{
+#'     \item{`row_title`}{names the row-heading columns (default: column 1)
+#'       and sets the per-column default alignment (heading columns left,
+#'       others centre).}
+#'     \item{`col_header`}{A user-supplied `col_header` is resolved against
+#'       the **final printed columns** -- after `stub_vars` folding and
+#'       `drop_cols` removal -- so its [col_cell()] positions and names
+#'       refer to the columns you actually see (position 1 = first printed
+#'       column; the `stub_vars` stub is that column).  This is equivalent
+#'       to building the pages and then calling [set_col_header()]; use
+#'       [rtf_columns()] to list the final names first.}
+#'     \item{`col_spec`, `col_rel_width`, `row_title`}{still use the pre-drop
+#'       input coordinates.}
+#'   }
 #'
-#'   A user-supplied `col_header` is resolved against the **final printed
-#'   columns** -- after `stub_vars` folding and `drop_cols` removal -- so its
-#'   [col_cell()] positions and names refer to the columns you actually see
-#'   (position 1 = first printed column; the `stub_vars` stub is that column).
-#'   This is equivalent to building the pages and then calling
-#'   [set_col_header()]; use [rtf_columns()] to list the final names first.
-#'   (`col_spec` / `col_rel_width` / `row_title` still use the pre-drop input
-#'   coordinates.)
 #'
 #' @section Superseded arguments:
 #' These `...` arguments still work and are handy for simple one-shot tables,

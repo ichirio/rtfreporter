@@ -2329,6 +2329,23 @@
 #' out <- tempfile(fileext = ".rtf")     # write to a temporary file
 #' generate_rtfreport(doc, out)      # written over if it is there
 #' file.exists(out)
+#'
+#' # A fuller report: a header and a footer with tokens, a title block and
+#' # a footnote, then the file
+#' dm <- data.frame(
+#'   Parameter = c("Age (years)", "  Mean (SD)", "Sex, n (%)", "  Female", "  Male"),
+#'   Placebo   = c("", "74.8 (8.1)", "", "40 (50.0)", "40 (50.0)"),
+#'   Drug      = c("", "75.4 (8.3)", "", "42 (52.5)", "38 (47.5)"))
+#' doc <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
+#'   rtf_section(page = 1, secinfo = list(
+#'     header = rtf_header(list(c(l = "Study {STUDY}",
+#'                                r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}"))),
+#'     footer = rtf_footer(list(c(l = "Generated on: {DATETIME}"))))) |>
+#'   rtf_tables(as_rtftables(dm),
+#'              titles = list(c("Table 14.1.1", "Demographics")),
+#'              footnotes = list("SD = Standard Deviation."))
+#' generate_rtfreport(doc, out)
+#' sum(grepl("DEMO-01", readLines(out, warn = FALSE))) > 0
 #' @export
 generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
                                program = NULL, program_fallback = NULL,

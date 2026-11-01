@@ -468,12 +468,16 @@
 #' @param row_title Which columns are **row-heading** columns.  `NULL`
 #'   (default) means the first column only; otherwise an integer vector of
 #'   column indices or a character vector of column names (e.g.
-#'   `row_title = c(1, 2)`).  This sets the per-column **default data
-#'   alignment**: row-heading columns default to `"left"` and every other
-#'   column defaults to `"center"`.  Explicit `col_spec` alignment, an
-#'   `rtf_table_style`, or alignment read from a gt/rtables source all still
-#'   override this default; column headers follow the data alignment via the
-#'   usual cascade.
+#'   `row_title = c(1, 2)`).
+#'   \describe{
+#'     \item{Default alignment}{This sets the per-column default data
+#'       alignment: row-heading columns default to `"left"` and every other
+#'       column defaults to `"center"`.}
+#'     \item{What overrides it}{Explicit `col_spec` alignment, an
+#'       `rtf_table_style`, or alignment read from a gt/rtables source all
+#'       still override this default; column headers follow the data
+#'       alignment via the usual cascade.}
+#'   }
 #' @param border The table borders. One of:
 #'   \describe{
 #'     \item{`"tfl"`}{(default) the clinical TFL preset: header top + bottom

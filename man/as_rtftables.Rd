@@ -51,36 +51,50 @@ container), an rtables/tern \code{VTableTree}, an rlistings \code{listing_df}, a
 
 \item{...}{Further arguments forwarded to \code{\link[=rtftable]{rtftable()}} for every page
 (e.g. \code{col_header}, \code{col_spec}, \code{row_title}, \code{col_rel_width},
-\code{row_height_twips}).  \code{row_title} names the row-heading columns (default:
-column 1) and sets the per-column default alignment (heading columns left,
-others centre).  Explicit values always win over the gt-extracted ones.
-
-A user-supplied \code{col_header} is resolved against the \strong{final printed
-columns} -- after \code{stub_vars} folding and \code{drop_cols} removal -- so its
-\code{\link[=col_cell]{col_cell()}} positions and names refer to the columns you actually see
-(position 1 = first printed column; the \code{stub_vars} stub is that column).
-This is equivalent to building the pages and then calling
-\code{\link[=set_col_header]{set_col_header()}}; use \code{\link[=rtf_columns]{rtf_columns()}} to list the final names first.
-(\code{col_spec} / \code{col_rel_width} / \code{row_title} still use the pre-drop input
-coordinates.)}
+\code{row_height_twips}).  Explicit values always win over the
+gt-extracted ones.
+\describe{
+\item{\code{row_title}}{names the row-heading columns (default: column 1)
+and sets the per-column default alignment (heading columns left,
+others centre).}
+\item{\code{col_header}}{A user-supplied \code{col_header} is resolved against
+the \strong{final printed columns} -- after \code{stub_vars} folding and
+\code{drop_cols} removal -- so its \code{\link[=col_cell]{col_cell()}} positions and names
+refer to the columns you actually see (position 1 = first printed
+column; the \code{stub_vars} stub is that column).  This is equivalent
+to building the pages and then calling \code{\link[=set_col_header]{set_col_header()}}; use
+\code{\link[=rtf_columns]{rtf_columns()}} to list the final names first.}
+\item{\code{col_spec}, \code{col_rel_width}, \code{row_title}}{still use the pre-drop
+input coordinates.}
+}}
 
 \item{read_meta}{Controls metadata extraction from the source table:
-\code{TRUE} (default, read everything in the table above), \code{FALSE} (use only
-the rendered body -- equivalent to the old \code{paginate()}), or a character
-vector of tokens.  Tokens for
-gt/gtsummary: \code{"col_header"}, \code{"alignment"}, \code{"spanning"}, \code{"widths"},
-\code{"titles"}, \code{"footnotes"}, \code{"styles"} (explicit \code{tab_style()} borders
-and text styles; see \emph{What is carried}).  For rtables/tern: \code{"col_header"},
-\code{"alignment"}, \code{"spanning"}, \code{"titles"}, \code{"footnotes"}, \code{"indent"},
-\code{"footnote_marks"}; \strong{rlistings takes the same tokens}, because the two
-share one \code{MatrixPrintForm} reader.  For flextable: \code{"col_header"}, \code{"alignment"},
-\code{"spanning"}, \code{"titles"}, \code{"footnotes"}.  For huxtable: \code{"col_header"},
-\code{"alignment"}, \code{"spanning"}, \code{"titles"}.  For a plain data.frame /
-tibble the single token is \code{"labels"}: a column's \code{label} attribute (the
-haven / labelled / xportr convention) is used as its header label
-(columns without one keep their name).  Unknown tokens are \emph{ignored} for
-data.frames -- a \code{list()} mixing table objects and data.frames shares one
-\code{read_meta}, so adapter tokens must not error on the data.frame elements.}
+\describe{
+\item{\code{TRUE}}{(default) read everything in the table above.}
+\item{\code{FALSE}}{use only the rendered body -- equivalent to the old
+\code{paginate()}.}
+\item{a character vector}{of tokens, by source below.}
+}
+The tokens:
+\describe{
+\item{gt / gtsummary}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
+\code{"widths"}, \code{"titles"}, \code{"footnotes"}, \code{"styles"} (explicit
+\code{tab_style()} borders and text styles; see \emph{What is carried}).}
+\item{rtables / tern}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
+\code{"titles"}, \code{"footnotes"}, \code{"indent"}, \code{"footnote_marks"};
+\strong{rlistings takes the same tokens}, because the two share one
+\code{MatrixPrintForm} reader.}
+\item{flextable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
+\code{"titles"}, \code{"footnotes"}.}
+\item{huxtable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
+\code{"titles"}.}
+\item{data.frame / tibble}{The single token \code{"labels"}: a column's
+\code{label} attribute (the haven / labelled / xportr convention) is
+used as its header label (columns without one keep their name).
+Unknown tokens are \emph{ignored} for data.frames -- a \code{list()} mixing
+table objects and data.frames shares one \code{read_meta}, so adapter
+tokens must not error on the data.frame elements.}
+}}
 
 \item{max_rows}{Integer or \code{NULL}.  Maximum body rows per page for the
 \code{"group_safe"} / \code{"group_force"} splits (required by them).  \strong{This is the
@@ -135,17 +149,22 @@ before, for \code{split = "rows"} (required by it; ignored otherwise).
 not a page size: for pages of a fixed number of rows use \code{max_rows} with
 \code{split = "group_safe"} or \code{"group_force"}.}
 
-\item{group_col}{Character, integer, or \code{NULL}.  The column the group-aware
-splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"}) detect groups on,
-given by name or position.  \code{NULL} (default) uses \strong{column 1}.  This
-selects only the \emph{column}; how a group boundary is found on it is set by
-\code{group_by}.  Note that for gt / gtsummary the body keeps gt's column
+\item{group_col}{Character, integer, or \code{NULL}.  The column the
+group-aware splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"})
+detect groups on, given by name or position.  \code{NULL} (default) uses
+\strong{column 1}.  This selects only the \emph{column}; how a group boundary is
+found on it is set by \code{group_by}.
+\describe{
+\item{Naming it}{For gt / gtsummary the body keeps gt's column
 \strong{ids} (e.g. \code{"label"}, \code{"stat_1"}), and for rtables / flextable /
-huxtable the columns are renamed \code{V1}, \code{V2}, ... -- so an \strong{integer} index
-is the most portable.  A \strong{factor} group column is rendered as its labels:
-it is coerced to character just before the split, so the group-aware splits
-can write the \code{cont_label} suffix into it.  This happens \emph{after} \code{sort_by},
-which still orders a factor by its \strong{levels}.}
+huxtable the columns are renamed \code{V1}, \code{V2}, ... -- so an
+\strong{integer} index is the most portable.}
+\item{A factor}{A \strong{factor} group column is rendered as its labels:
+it is coerced to character just before the split, so the
+group-aware splits can write the \code{cont_label} suffix into it.  This
+happens \emph{after} \code{sort_by}, which still orders a factor by its
+\strong{levels}.}
+}}
 
 \item{group_by}{How a group boundary is found on \code{group_col}:
 \describe{
@@ -229,20 +248,27 @@ which splits before the stub is built).  With \code{page_by = NULL} nothing
 changes anywhere -- \code{"by_value"} still takes its page names from
 \code{group_col}.}
 
-\item{sort_by}{Columns to \strong{order the body rows by, before pagination}, or
-\code{NULL} (default, keep the input order).  A character / integer vector (or a
-\code{list()} to mix names and indices) in the \strong{input body's} coordinates --
-the same space as \code{group_col}, \code{collapse_repeats} and \code{drop_cols}.  The sort
-is applied \emph{first}, so group detection, \code{(Cont.)} labels and \code{blank_rows}
-positions all see the sorted order.  A sort key may also be listed in
-\code{drop_cols} to order on a column that is not printed (the classic hidden
-"sort-key" carrier column).  The sort is \strong{stable} (rows that compare equal
+\item{sort_by}{Columns to \strong{order the body rows by, before pagination},
+or \code{NULL} (default, keep the input order).  A character / integer
+vector (or a \code{list()} to mix names and indices) in the \strong{input body's}
+coordinates -- the same space as \code{group_col}, \code{collapse_repeats} and
+\code{drop_cols}.
+\describe{
+\item{Order of work}{The sort is applied \emph{first}, so group detection,
+\code{(Cont.)} labels and \code{blank_rows} positions all see the sorted
+order.}
+\item{Hidden keys}{A sort key may also be listed in \code{drop_cols} to
+order on a column that is not printed (the classic hidden
+"sort-key" carrier column).}
+\item{Ties and \code{NA}}{The sort is \strong{stable} (rows that compare equal
 keep their input order) and \code{NA} keys sort \strong{last} regardless of
-\code{sort_desc}.  Note that \code{sort_by} reorders rendered body rows as-is, so it
-suits flat / tabular bodies (a \code{data.frame}, or a pre-flattened table); on a
-gt / rtables body whose group-label and child rows are already interleaved
-it would scramble that visual hierarchy -- sort the source data before
-building such a table instead.}
+\code{sort_desc}.}
+\item{Which bodies}{\code{sort_by} reorders rendered body rows as-is, so
+it suits flat / tabular bodies (a \code{data.frame}, or a pre-flattened
+table); on a gt / rtables body whose group-label and child rows are
+already interleaved it would scramble that visual hierarchy -- sort
+the source data before building such a table instead.}
+}}
 
 \item{sort_desc}{Sort direction for \code{sort_by}: \code{NULL}/\code{FALSE} (default, all
 ascending), a single \code{TRUE} (all \code{sort_by} columns descending), or a logical
@@ -311,27 +337,36 @@ the split and re-attached per page afterwards, with a leading blank
 suppressed at the top of each page.}
 
 \item{align_count_pct}{The cell alignment to apply before pagination.
-\code{FALSE} (default) none; \code{TRUE} the built-in cell format \code{"count_pct"},
-which realigns \code{"n (xx.x)"} count/percent cells to a uniform width.  It also
-accepts the \strong{name of any built-in} (\code{"count_paren"}, \code{"value_paren"},
-\code{"right_align"}, ... -- the \code{fmt_} prefix is optional) or a function of
-your own, in which case it behaves exactly like \code{cell_format}.  Ignored
-when \code{cell_format} is supplied, which takes precedence.  Neither one
-controls whether missing values are substituted -- that is \code{na} -- only
-whether the substituted token is aligned with the counts.}
+\describe{
+\item{\code{FALSE}}{(default) none.}
+\item{\code{TRUE}}{the built-in cell format \code{"count_pct"}, which realigns
+\code{"n (xx.x)"} count/percent cells to a uniform width.}
+\item{a name or a function}{The \strong{name of any built-in}
+(\code{"count_paren"}, \code{"value_paren"}, \code{"right_align"}, ... -- the
+\code{fmt_} prefix is optional) or a function of your own, in which case
+it behaves exactly like \code{cell_format}.}
+}
+Ignored when \code{cell_format} is supplied, which takes precedence.
+Neither one controls whether missing values are substituted -- that is
+\code{na} -- only whether the substituted token is aligned with the counts.}
 
 \item{cell_format}{Optional cell re-formatter applied column-by-column to
-the body \strong{before} pagination, for monospaced alignment.  Either one
-formatter -- applied to every data column (columns 2..N; the row-label
-column 1 is left alone) -- or a list of them taken positionally
-(\code{cell_format[[j]]} for column \code{j}; entries that are neither a function
-nor a name are skipped).
-
-A formatter is a \strong{function} taking one column (a character vector) and
-returning a character vector of the same length, or the \strong{name} of a
-built-in as a string -- \code{"right_align"}, \code{"count_paren"},
-\code{"count_paren_bare"}, \code{"value_paren"}, \code{"count_pct"}, with the \code{fmt_}
-prefix optional, so \code{"fmt_count_paren"} works too:
+the body \strong{before} pagination, for monospaced alignment.
+\describe{
+\item{One formatter}{applied to every data column (columns 2..N; the
+row-label column 1 is left alone).}
+\item{A list}{of them taken positionally (\code{cell_format[[j]]} for
+column \code{j}; entries that are neither a function nor a name are
+skipped).}
+\item{A formatter}{is a \strong{function} taking one column (a character
+vector) and returning a character vector of the same length, or the
+\strong{name} of a built-in as a string -- \code{"right_align"},
+\code{"count_paren"}, \code{"count_paren_bare"}, \code{"value_paren"},
+\code{"count_pct"}, with the \code{fmt_} prefix optional, so
+\code{"fmt_count_paren"} works too.}
+\item{Precedence}{When supplied it takes precedence over
+\code{align_count_pct}.}
+}
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{as_rtftables(x, cell_format = "value_paren")
 as_rtftables(x, cell_format = list(NULL, "right_align", my_fmt))
@@ -339,88 +374,109 @@ as_rtftables(x, cell_format = list(NULL, "right_align", my_fmt))
 
 See \code{\link[=fmt_count_paren]{fmt_count_paren()}} / \code{\link[=fmt_value_paren]{fmt_value_paren()}} / \code{\link[=fmt_right_align]{fmt_right_align()}} for
 what each one does, and the contract in \code{?fmt_right_align} for writing
-your own.  When supplied it takes precedence over \code{align_count_pct}.}
+your own.}
 
 \item{na}{Text to print for a \strong{missing value} (default \code{""}, an empty
-cell -- the previous behaviour).  Applied to every column, the row-label
-column included, and \strong{independently of \code{align_count_pct} / \code{cell_format}}
--- those decide whether the substituted token is also \emph{aligned}, not
-whether the substitution happens.  With one of them set, the token is
-right-justified in the count field so its right edge lands on the ones
-digit:
+cell -- the previous behaviour).
+\describe{
+\item{Where}{Applied to every column, the row-label column included,
+and \strong{independently of \code{align_count_pct} / \code{cell_format}} -- those
+decide whether the substituted token is also \emph{aligned}, not whether
+the substitution happens.  With one of them set, the token is
+right-justified in the count field so its right edge lands on the
+ones digit (below).}
+\item{Not missing}{Text already in the data that is \emph{not} missing
+(\code{"NE"}, \code{"n/a"}, a literal \code{"-"} you typed yourself) does not
+match the count pattern and passes through unchanged, with no
+padding.  The \emph{strings} \code{"NA"} / \code{"NaN"} are never touched -- \code{"NA"}
+can be legitimate data.}
+\item{\code{NaN}, \code{Inf}}{\code{NaN} counts as missing (R's own \code{is.na()} says
+so, and in a TFL a \code{NaN} is a \code{0/0} percentage).  \code{Inf} / \code{-Inf} do
+\strong{not}: they print as \code{"Inf"} / \code{"-Inf"}, because an infinity
+means a division by zero upstream and rendering it as \code{"-"} would
+hide the bug.}
+\item{Order of work}{The substitution happens before the split, so
+the \code{NA}s \code{collapse_repeats} writes per page to blank out repeated
+values stay blank.}
+}
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{  1 ( 1.2\%)
 108 (35.3\%)
   -            <- na = "-"
  NE            <- na = "NE", right edge still under the ones digit
-}\if{html}{\out{</div>}}
-
-Text already in the data that is \emph{not} missing (\code{"NE"}, \code{"n/a"}, a literal
-\code{"-"} you typed yourself) does not match the count pattern and passes
-through unchanged, with no padding.
-
-\code{NaN} counts as missing (R's own \code{is.na()} says so, and in a TFL a \code{NaN}
-is a \code{0/0} percentage).  \code{Inf} / \code{-Inf} do \strong{not}: they print as \code{"Inf"} /
-\code{"-Inf"}, because an infinity means a division by zero upstream and
-rendering it as \code{"-"} would hide the bug.  The \emph{strings} \code{"NA"} / \code{"NaN"}
-are never touched -- \code{"NA"} can be legitimate data.
-
-The substitution happens before the split, so the \code{NA}s \code{collapse_repeats}
-writes per page to blank out repeated values stay blank.}
+}\if{html}{\out{</div>}}}
 
 \item{collapse_repeats}{Columns in which to blank \strong{consecutive repeated
 values} (repeat suppression), or \code{NULL} (default, off).  A character /
-integer vector naming the columns in priority order.  Within each column,
-only the first value of a run is kept; the rest of the run is replaced with
-\code{NA} (which renders as an empty cell -- no row is removed, only the display
-text is suppressed).  When several columns are given the suppression is
-\strong{hierarchical}: the first column is collapsed on its own value, and each
-later column on the \emph{combination} of itself with all earlier listed columns
-(a change in any higher column restarts the lower column's run).  This runs
-\strong{per page, after the split}, so the pagination still sees the original
-repeated values -- group boundaries and \code{(Cont.)} labels stay correct, and a
-group continued onto the next page shows its label again at the top.  (In
-\code{group_by} terms: value-based grouping happens first, then the column is
-collapsed to a \code{"filled"}-style display.)}
+integer vector naming the columns in priority order.
+\describe{
+\item{What is blanked}{Within each column, only the first value of a
+run is kept; the rest of the run is replaced with \code{NA} (which
+renders as an empty cell -- no row is removed, only the display
+text is suppressed).}
+\item{Several columns}{The suppression is \strong{hierarchical}: the first
+column is collapsed on its own value, and each later column on the
+\emph{combination} of itself with all earlier listed columns (a change
+in any higher column restarts the lower column's run).}
+\item{When}{This runs \strong{per page, after the split}, so the
+pagination still sees the original repeated values -- group
+boundaries and \code{(Cont.)} labels stay correct, and a group continued
+onto the next page shows its label again at the top.  (In
+\code{group_by} terms: value-based grouping happens first, then the
+column is collapsed to a \code{"filled"}-style display.)}
+}}
 
-\item{drop_cols}{Columns to \strong{hide from the printed table while still using
-them for pagination / grouping}, or \code{NULL} (default, drop nothing).  A
-character / integer vector (or a \code{list()} to mix names and indices) naming
-the columns in the \strong{input body's} coordinates -- the same coordinate
-space as \code{group_col} and \code{collapse_repeats}.  The named columns stay
-present through the split (so
-\code{group_col}, \code{collapse_repeats} and \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} can reference
-them), then are removed from \strong{every page} before that page's table is
-rendered.  This makes a column usable as a hidden grouping / sort-key /
-carrier column without it appearing in the report.  Position-indexed
-metadata (\code{col_spec}, column widths, \code{col_header_align}, \code{row_title}, and
-per-cell \code{cell_styles}) is reindexed automatically to the remaining
-columns.  A \strong{user-supplied \code{col_header}} is the exception: it is applied
-against the \strong{final printed columns} (see the \code{col_header} argument and
-\code{\link[=set_col_header]{set_col_header()}}), so you write its positions / names for the columns
-that remain -- not the pre-drop layout.  \code{drop_cols} must leave at least
-one column to display.  Note that for \code{split = "by_value"} the page
-\strong{names} come from the \code{group_col} value, so that column may be dropped and
-the pages are still named by it; but under \code{"group_safe"} / \code{"group_force"}
-the \code{" (Cont.)"} marker is written into the \code{group_col} cell, so if
-\code{group_col} is itself dropped the marker is not shown (group on the visible
-label column if the marker is wanted).}
+\item{drop_cols}{Columns to \strong{hide from the printed table while still
+using them for pagination / grouping}, or \code{NULL} (default, drop
+nothing).  A character / integer vector (or a \code{list()} to mix names and
+indices) naming the columns in the \strong{input body's} coordinates -- the
+same coordinate space as \code{group_col} and \code{collapse_repeats}.
+\describe{
+\item{What stays}{The named columns stay present through the split (so
+\code{group_col}, \code{collapse_repeats} and \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} can
+reference them), then are removed from \strong{every page} before that
+page's table is rendered.  This makes a column usable as a hidden
+grouping / sort-key / carrier column without it appearing in the
+report.  \code{drop_cols} must leave at least one column to display.}
+\item{Reindexed}{Position-indexed metadata (\code{col_spec}, column
+widths, \code{col_header_align}, \code{row_title}, and per-cell
+\code{cell_styles}) is reindexed automatically to the remaining
+columns.}
+\item{\code{col_header}}{A \strong{user-supplied \code{col_header}} is the
+exception: it is applied against the \strong{final printed columns} (see
+the \code{col_header} argument and \code{\link[=set_col_header]{set_col_header()}}), so you write its
+positions / names for the columns that remain -- not the pre-drop
+layout.}
+\item{With \code{split}}{For \code{split = "by_value"} the page \strong{names} come
+from the \code{group_col} value, so that column may be dropped and the
+pages are still named by it; but under \code{"group_safe"} /
+\code{"group_force"} the \code{" (Cont.)"} marker is written into the
+\code{group_col} cell, so if \code{group_col} is itself dropped the marker is
+not shown (group on the visible label column if the marker is
+wanted).}
+}}
 
 \item{listing}{Listing settings, as a \code{\link[=listing_spec]{listing_spec()}} object, or \code{NULL}
-(default, no listing preparation).  Applies to a \strong{data.frame / tibble}
-source: \code{\link[=build_listing]{build_listing()}} reshapes it into a listing body -- source
-variables joined into their printed columns, long cells wrapped over
-several physical rows, gutter columns, a blank row after each record --
-and the spec's columns then supply the \code{col_header}, the relative widths
-and the (left) alignment, so none of the three has to be written out by
-hand.  The hidden record column is used to keep a record whole across a
-page break: \code{group_col} points at it, \code{split} becomes \code{"group_safe"} when
-\code{max_rows} is set, and it is added to \code{drop_cols}.  Every one of those is
-a \strong{default} -- an argument you pass yourself is never overridden.  A
-body that has already been through \code{\link[=build_listing]{build_listing()}} carries its own spec,
-so \code{as_rtftables()} picks it up and passing \code{listing} as well is an error.
-An rlistings \code{listing_df} is rejected: it is already laid out, and needs
-no \code{listing} argument.}
+(default, no listing preparation).  Applies to a \strong{data.frame /
+tibble} source.
+\describe{
+\item{What it does}{\code{\link[=build_listing]{build_listing()}} reshapes the source into a
+listing body -- source variables joined into their printed columns,
+long cells wrapped over several physical rows, gutter columns, a
+blank row after each record -- and the spec's columns then supply
+the \code{col_header}, the relative widths and the (left) alignment, so
+none of the three has to be written out by hand.}
+\item{Keeping a record whole}{The hidden record column is used to keep
+a record whole across a page break: \code{group_col} points at it,
+\code{split} becomes \code{"group_safe"} when \code{max_rows} is set, and it is
+added to \code{drop_cols}.  Every one of those is a \strong{default} -- an
+argument you pass yourself is never overridden.}
+\item{Already built}{A body that has already been through
+\code{\link[=build_listing]{build_listing()}} carries its own spec, so \code{as_rtftables()} picks it
+up and passing \code{listing} as well is an error.  An rlistings
+\code{listing_df} is rejected: it is already laid out, and needs no
+\code{listing} argument.}
+}}
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a
 shorthand for \code{stub_spec(vars)}, a bare vector of hierarchy columns
@@ -429,31 +485,37 @@ stub.  This is the \strong{one} argument for everything \code{\link[=stub_cols]{
 including \code{layout} and \code{label_span}, which the deprecated \code{stub_vars}
 family cannot reach.  Passing both \code{stub} and any of the \code{stub_vars}
 family is an error.
-
-The stub is applied to the \strong{extracted body} -- after the table is pulled
-out of its source, before pagination -- so any input that carries the
-hierarchy as \emph{separate columns} (a plain \code{data.frame}, a \code{gt(df)}, a
-multi-group-column table, or a tfrmt \code{row_grp_plan(location = "column")}
-table) gains a clinical stub.  With \code{layout = "merged"} the named columns
-are consumed and replaced by one stub column at position 1 and the
-remaining columns keep their order; with \code{layout = "columns"} every column
-stays where it is.  Either way \code{drop_cols} / \code{group_col} / \code{sort_by} (plus
-\code{group_by = "indent"} detection and the group-aware splits) then refer to
-the reshaped body.  \strong{Exception: with \code{split = "by_value"} the body is
-split by \code{group_col} \emph{first} and the stub is built per page afterwards} --
-each value becomes an independent section, so \code{group_col} here refers to
-the \strong{pre-stub} columns and is not folded into the stub.  This keeps a
-fixed intermediate hierarchy level (e.g. \code{LBCAT / group1 / label} with
-a constant \code{group1}) from collapsing into a single stub label row that
-spans every group; put the inner levels in the stub and the outer level in
-\code{group_col}.  Position-indexed metadata (\code{col_spec}, \code{col_header_align},
-per-cell \code{cell_styles}) is reindexed automatically; a user-supplied
-\code{col_header} is instead resolved against the final columns (see
-\code{\link[=set_col_header]{set_col_header()}}).  Sources that already render an indented stub
-(rtables / tern, tfrmt indented, gtsummary) come out pre-merged, so a stub
-does not apply to them.  Under \code{layout = "merged"} the source column
-widths are \strong{not} carried through the merge -- use \code{auto_width = TRUE} or
-pass explicit widths; \code{layout = "columns"} keeps them.}
+\describe{
+\item{Applied to}{The \strong{extracted body} -- after the table is pulled
+out of its source, before pagination -- so any input that carries
+the hierarchy as \emph{separate columns} (a plain \code{data.frame}, a
+\code{gt(df)}, a multi-group-column table, or a tfrmt
+\code{row_grp_plan(location = "column")} table) gains a clinical
+stub.}
+\item{\code{layout}}{With \code{layout = "merged"} the named columns are
+consumed and replaced by one stub column at position 1 and the
+remaining columns keep their order; with \code{layout = "columns"} every
+column stays where it is.  Either way \code{drop_cols} / \code{group_col} /
+\code{sort_by} (plus \code{group_by = "indent"} detection and the group-aware
+splits) then refer to the reshaped body.}
+\item{\code{split = "by_value"}}{\strong{Exception:} the body is split by
+\code{group_col} \emph{first} and the stub is built per page afterwards --
+each value becomes an independent section, so \code{group_col} here
+refers to the \strong{pre-stub} columns and is not folded into the stub.
+This keeps a fixed intermediate hierarchy level (e.g. \code{LBCAT / group1 / label} with a constant \code{group1}) from collapsing into a
+single stub label row that spans every group; put the inner levels
+in the stub and the outer level in \code{group_col}.}
+\item{Metadata}{Position-indexed metadata (\code{col_spec},
+\code{col_header_align}, per-cell \code{cell_styles}) is reindexed
+automatically; a user-supplied \code{col_header} is instead resolved
+against the final columns (see \code{\link[=set_col_header]{set_col_header()}}).}
+\item{Sources that do not need it}{Sources that already render an
+indented stub (rtables / tern, tfrmt indented, gtsummary) come out
+pre-merged, so a stub does not apply to them.}
+\item{Widths}{Under \code{layout = "merged"} the source column widths are
+\strong{not} carried through the merge -- use \code{auto_width = TRUE} or pass
+explicit widths; \code{layout = "columns"} keeps them.}
+}}
 
 \item{stub_vars}{\strong{Deprecated} in 0.8.x (warns once a session, still
 works), removed in 0.9.0: write \code{stub = c(...)} (or
@@ -461,30 +523,38 @@ works), removed in 0.9.0: write \code{stub = c(...)} (or
 and \code{label_span}.
 Hierarchy columns to merge into a single \strong{indented stub}
 column (parent first, leaf last; at least two), or \code{NULL} (default, no
-stub built).  Applies \code{\link[=stub_cols]{stub_cols()}} to the \strong{extracted body} -- after the
-table is pulled out of its source, before pagination -- so any input that
-carries the hierarchy as \emph{separate columns} (a plain \code{data.frame}, a
-\code{gt(df)}, a multi-group-column table, or a tfrmt
-\code{row_grp_plan(location = "column")} table) gains a clinical stub.  The
-named columns are consumed and replaced by one stub column at position 1;
-the remaining columns keep their order, and \code{drop_cols} / \code{group_col} /
-\code{sort_by} (plus \code{group_by = "indent"} detection and the group-aware
-splits) then refer to the reshaped, \strong{post-stub} columns.  \strong{Exception:
-with \code{split = "by_value"} the body is split by \code{group_col} \emph{first} and the
-stub is built per page afterwards} -- each value becomes an independent
-section, so \code{group_col} here refers to the \strong{pre-stub} columns and is not
-folded into the stub.  This keeps a fixed intermediate hierarchy level
-(e.g. \code{LBCAT / group1 / label} with a constant \code{group1}) from
-collapsing into a single stub label row that spans every group; put the
-inner levels in \code{stub_vars} and the outer level in \code{group_col}.  Position-indexed
-metadata (\code{col_spec}, \code{col_header_align}, per-cell \code{cell_styles}) is
-reindexed automatically; a user-supplied \code{col_header} is instead resolved
-against the final columns (which already include the stub at position 1 --
-see \code{\link[=set_col_header]{set_col_header()}}).  Sources that already
-render an indented stub (rtables / tern, tfrmt indented, gtsummary) come
-out pre-merged, so \code{stub_vars} does not apply to them.  Column widths from
-the source are \strong{not} carried through the merge -- use \code{auto_width = TRUE}
-or pass explicit widths.}
+stub built).  Applies \code{\link[=stub_cols]{stub_cols()}} to the \strong{extracted body}.
+\describe{
+\item{Applied to}{The extracted body -- after the table is pulled out
+of its source, before pagination -- so any input that carries the
+hierarchy as \emph{separate columns} (a plain \code{data.frame}, a \code{gt(df)},
+a multi-group-column table, or a tfrmt
+\code{row_grp_plan(location = "column")} table) gains a clinical
+stub.}
+\item{Result}{The named columns are consumed and replaced by one stub
+column at position 1; the remaining columns keep their order, and
+\code{drop_cols} / \code{group_col} / \code{sort_by} (plus \code{group_by = "indent"}
+detection and the group-aware splits) then refer to the reshaped,
+\strong{post-stub} columns.}
+\item{\code{split = "by_value"}}{\strong{Exception:} the body is split by
+\code{group_col} \emph{first} and the stub is built per page afterwards --
+each value becomes an independent section, so \code{group_col} here
+refers to the \strong{pre-stub} columns and is not folded into the stub.
+This keeps a fixed intermediate hierarchy level (e.g. \code{LBCAT / group1 / label} with a constant \code{group1}) from collapsing into a
+single stub label row that spans every group; put the inner levels
+in \code{stub_vars} and the outer level in \code{group_col}.}
+\item{Metadata}{Position-indexed metadata (\code{col_spec},
+\code{col_header_align}, per-cell \code{cell_styles}) is reindexed
+automatically; a user-supplied \code{col_header} is instead resolved
+against the final columns (which already include the stub at
+position 1 -- see \code{\link[=set_col_header]{set_col_header()}}).}
+\item{Sources that do not need it}{Sources that already render an
+indented stub (rtables / tern, tfrmt indented, gtsummary) come out
+pre-merged, so \code{stub_vars} does not apply to them.}
+\item{Widths}{Column widths from the source are \strong{not} carried
+through the merge -- use \code{auto_width = TRUE} or pass explicit
+widths.}
+}}
 
 \item{stub_label, stub_indent, stub_group_summary}{\strong{Deprecated} with
 \code{stub_vars} (removed in 0.9.0): they are \code{stub_spec(label = , indent = , group_summary = )}.  Forwarded to \code{\link[=stub_cols]{stub_cols()}}
@@ -494,23 +564,29 @@ non-breaking spaces per nesting level (default \code{4}), and which leaf values
 fold a row onto its group label row (default \code{c("empty", "parent")}).
 Ignored when \code{stub_vars} is \code{NULL}.}
 
-\item{header_sep}{Separator(s) used to reconstruct a \strong{spanning (multi-row)
-column header} from a plain \strong{data.frame}'s column names.  A bare
-data.frame carries no spanning metadata, so the nesting is parsed out of the
-names: each name is split on \code{header_sep} into segments that become stacked
-header rows, and horizontally adjacent columns sharing a label \emph{and} the
-same ancestor path are merged into one spanning cell.  Columns with no
-separator (e.g. id columns such as \code{label}) keep their name on the bottom
-(leaf) row with blank cells above.  The default recognizes \strong{both} built-in
-delimiters: \code{"____"} (from \code{ydisctools::pivot_stats_wider()}) and
-\code{"___tlang_delim___"} (tfrmt's column delimiter).  Pass your own
-separator(s) to override, or \code{NULL} to disable (use the plain \code{names(data)}
-single-row header).  Only applies to plain data.frame input -- gt /
-gtsummary / rtables / tern / flextable / huxtable already carry real
-spanning metadata.  With the \code{"____"} separator a doubled separator
-(\code{"________"}) yields an empty middle segment, i.e. a \strong{blank cell} at that
-header level (handy to align a column that skips an intermediate spanner
-level).  An explicit \code{col_header} (passed via \code{...}) always wins.}
+\item{header_sep}{Separator(s) used to reconstruct a \strong{spanning
+(multi-row) column header} from a plain \strong{data.frame}'s column names.
+Only applies to plain data.frame input -- gt / gtsummary / rtables /
+tern / flextable / huxtable already carry real spanning metadata.  An
+explicit \code{col_header} (passed via \code{...}) always wins.
+\describe{
+\item{How}{A bare data.frame carries no spanning metadata, so the
+nesting is parsed out of the names: each name is split on
+\code{header_sep} into segments that become stacked header rows, and
+horizontally adjacent columns sharing a label \emph{and} the same
+ancestor path are merged into one spanning cell.  Columns with no
+separator (e.g. id columns such as \code{label}) keep their name on the
+bottom (leaf) row with blank cells above.}
+\item{Default}{Recognizes \strong{both} built-in delimiters: \code{"____"}
+(from \code{ydisctools::pivot_stats_wider()}) and \code{"___tlang_delim___"}
+(tfrmt's column delimiter).}
+\item{Your own}{Pass your own separator(s) to override, or \code{NULL} to
+disable (use the plain \code{names(data)} single-row header).}
+\item{Blank cells}{With the \code{"____"} separator a doubled separator
+(\code{"________"}) yields an empty middle segment, i.e. a \strong{blank
+cell} at that header level (handy to align a column that skips an
+intermediate spanner level).}
+}}
 
 \item{auto_width}{Logical (default \code{FALSE}).  When \code{TRUE}, each column is
 sized to its widest content (column header label or data cell) via
