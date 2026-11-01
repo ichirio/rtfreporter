@@ -1,0 +1,111 @@
+# AI チャットに表の plan のコードを書いてもらう
+
+[In
+English](https://ichirio.github.io/rtfreporter/articles/ai-plan-code.md)
+
+## 1. 何をする機能か
+
+チャット AI が、表の**シェル**と**ARD**から、**1 つの表**の R プログラム
+（`normalize_ard() |> table_plan() |> plan_*()`、文書、ファイル）を書きます。
+rtfreporter が先に事実をまとめた**キット**を渡すので、AI
+は実在する関数だけを 使います。rtfreporter は何も送信しません。
+
+この記事のコードは、`cards` パッケージに同梱の `ADSL` だけで動きます
+（`install.packages("cards")`）。実際の作業では、ARD
+を作るところを試験の ARD の読み込みに置き換えます。
+
+## 2. キットを作る
+
+``` r
+
+library(rtfreporter)
+library(cards)
+
+# 試すとき: cards 同梱の ADSL から ARD を作る
+# 実際の作業: ard <- readRDS("試験の ARD.rds") から、この表の行だけにする
+adsl <- ADSL[ADSL$SAFFL == "Y", ]
+ard  <- ard_stack(adsl, .by = ARM,
+  ard_summary(variables = AGE),
+  ard_tabulate(variables = c(AGEGR1, SEX)))
+saveRDS(ard, "ard.rds")                         # 5. で同じ ARD を使う
+
+rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, overwrite = TRUE)
+```
+
+| ファイル | 中身 |
+|----|----|
+| `00_START_HERE.md` | 依頼文: プログラムの 3 段、ルール、答えの形（R のブロック 1 つ） |
+| `01_rtfreporter-ai-user-manual.md` | マニュアル: 存在する関数（§18）、ARD からの表（§17、§17a） |
+| `02_`〜`04_example_*.R` | 同じ形のプログラム: 部分集団の ORR、SOC/PT の有害事象、人口統計 |
+| `05_ard.csv` | この表の ARD（正規化したもの、`ard =` を渡したとき） |
+| `06_ard_shape.md` | ARD の要約: キー・変数・統計量の名前。数値は入らない（`ard =` を渡したとき） |
+
+ファイルは、Windows でもロケールに関係なく UTF-8 で書かれます。日本語の
+ラベルもそのまま残ります。
+
+## 3. AI に何を貼るか
+
+| 貼るもの | 貼らないもの |
+|----|----|
+| キットのファイル `00`〜`04` と `06_ard_shape.md`（ARD の要約） | **被験者単位のデータ**: ADaM・SDTM、リスティング、`USUBJID` のあるもの |
+| `05_ard.csv`（ARD の数値。社内のルールで送ってよいときだけ） | 他の表のシェルや ARD |
+| **この表のシェルだけ**をテキストで（行・列・セルの書式・題名・脚注） |  |
+
+**1 つのチャットに 1 つの表**。
+
+**ファイルを添付できないチャット**では、`PASTE.md`
+を貼ります。キットを作ると 一緒にでき、キットのファイルを 1
+つのテキストにしたものです（約 80,000 文字。 ARD の数値は
+`values = TRUE` のときだけ入ります）。その下に表のシェルを貼ります。
+シェルも入れて短くする（マニュアルの §0・§17・§17a・§18 と、ARD
+に一番近い 見本 1 つ。約 40,000 文字）:
+
+``` r
+
+shell <- c("Table 14.1.1  Demographic and Baseline Characteristics",
+           "                     Placebo   Xanomeline Low   Xanomeline High",
+           "Age (years)  n / Mean (SD) / Median / Min, Max",
+           "Sex, n (%)   F / M")
+rtfreporter_ai_manual("kit/T-14-1-1", ard = ard, shell = shell, size = "short",
+                      overwrite = TRUE)          # shell = "shell.txt"（ファイル）でも
+```
+
+シェルが Excel にあるとき: シートを全選択してコピーし、メモ帳に貼って
+UTF-8 で保存（`shell.txt`）、`shell = "shell.txt"` で渡します。
+
+## 4. 頼み方の例
+
+> 00_START_HERE.md に従って、表 T-14-1-1 の R
+> プログラムを書いてください。 答えは R のコードブロック 1
+> つだけにしてください。シェルは下に貼ります。 ARD は `ard`（形は
+> 06_ard_shape.md）、`output_path` と `report_name` は あります。
+>
+> *（シェルを貼る）*
+
+AI の答えは ```` ```r ```` で始まるブロック 1 つです。先頭に
+`# QUESTION:` の行があれば、チャットで答えてから書き直してもらいます。
+
+## 5. 返ってきたコードの試し方
+
+答えのブロックの中身を `T-14-1-1.R`
+として保存し（UTF-8）、次を実行します:
+
+``` r
+
+library(rtfreporter)
+ard         <- readRDS("ard.rds")           # キットを作ったときと同じ ARD
+output_path <- "output"
+report_name <- "T-14-1-1"
+dir.create(output_path, showWarnings = FALSE)
+source("T-14-1-1.R", encoding = "UTF-8")    # AI のプログラム
+plan_apply(tbl_plan, "table")               # RTF の前に表をデータフレームで見る
+```
+
+`output/T-14-1-1.rtf` ができます。
+
+| 見えたもの | すること |
+|----|----|
+| 関数や引数の名前を言うエラー | 同じチャットにエラーを貼る:「このエラーが出ました。直してください」 |
+| 先頭の `# QUESTION:` の行 | チャットで答える |
+| 行や列が足りない | `06_ard_shape.md` を見る。ARD に無いなら、プログラムでなく ARD に足す |
+| 数値 | ARD の値。plan は計算しない |
