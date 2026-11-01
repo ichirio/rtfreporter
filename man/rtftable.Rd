@@ -92,12 +92,16 @@ e.g. \code{list(list(col = 1, align = "left"), list(col = 2, bold = TRUE))}.}
 \item{row_title}{Which columns are \strong{row-heading} columns.  \code{NULL}
 (default) means the first column only; otherwise an integer vector of
 column indices or a character vector of column names (e.g.
-\code{row_title = c(1, 2)}).  This sets the per-column \strong{default data
-alignment}: row-heading columns default to \code{"left"} and every other
-column defaults to \code{"center"}.  Explicit \code{col_spec} alignment, an
-\code{rtf_table_style}, or alignment read from a gt/rtables source all still
-override this default; column headers follow the data alignment via the
-usual cascade.}
+\code{row_title = c(1, 2)}).
+\describe{
+\item{Default alignment}{This sets the per-column default data
+alignment: row-heading columns default to \code{"left"} and every other
+column defaults to \code{"center"}.}
+\item{What overrides it}{Explicit \code{col_spec} alignment, an
+\code{rtf_table_style}, or alignment read from a gt/rtables source all
+still override this default; column headers follow the data
+alignment via the usual cascade.}
+}}
 
 \item{border}{The table borders. One of:
 \describe{

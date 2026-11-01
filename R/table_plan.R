@@ -394,15 +394,19 @@
 #'   says otherwise.  Left out when the ARD has no group to spread (one
 #'   arm): one column, `All` (see [widen_ard()]).
 #' @param rows The keys that go **down** it, likewise.  Left out, the
-#'   analysis variable is used (as `group`).  Each name is the column the
-#'   finished table gets, and later verbs refer to it by that name
-#'   ([plan_stub()], `plan_paginate_group(col = )`, [plan_hide()]); left
-#'   unnamed, the first key is called `group`.  `"variable"` is the column
-#'   that holds the analysis variable's name, so `c(group = "variable")`
-#'   makes one block of rows per analysis variable (AGE, SEX, ...).
-#'   Subgroups from different variables laid one under another come from
-#'   `normalize_ard(stack = )`; see the article *Tables from an ARD, step by
-#'   step* (*Subgroups*).
+#'   analysis variable is used (as `group`).
+#'   \describe{
+#'     \item{Names}{Each name is the column the finished table gets, and
+#'       later verbs refer to it by that name ([plan_stub()],
+#'       `plan_paginate_group(col = )`, [plan_hide()]); left unnamed, the
+#'       first key is called `group`.}
+#'     \item{`"variable"`}{The column that holds the analysis variable's
+#'       name, so `c(group = "variable")` makes one block of rows per
+#'       analysis variable (AGE, SEX, ...).}
+#'     \item{Subgroups}{Subgroups from different variables laid one under
+#'       another come from `normalize_ard(stack = )`; see the article
+#'       *Tables from an ARD, step by step* (*Subgroups*).}
+#'   }
 #' @param label The column carrying the **row identity** --- the text in
 #'   the label column.  `".label"` by default (what [normalize_ard()]
 #'   builds), `NA` for a table that has none, or a guarded template.
@@ -410,19 +414,28 @@
 #'   categorical variable; the deepest level's value in a `hierarchy`; and
 #'   `NA` for a continuous variable, whose rows are named by the
 #'   [plan_cells()] template names (`"Mean (SD)"`).
-#' @param show_keys Row keys this table also shows **as variables**: their
-#'   own counts (`cards::ard_tabulate(adsl, by = TRT, variables = SEX)`),
-#'   which [normalize_ard()] marks as a key's own tabulation once SEX is a
-#'   key anywhere in the ARD (a subgroup layer of another analysis), go to
-#'   the body instead of only to the header's `{n}`.  With `rows =
-#'   c(block = "variable", grp = "subgroup", lvl = "subgroup_level")` SEX's
-#'   n (%) is a block of its own beside the ORR's SEX subgroups.  A column
-#'   key is refused (its counts are the columns' populations).  `NULL`
-#'   (default): none, as before.
+#' @param show_keys Row keys this table also shows **as variables**.
+#'   `NULL` (default): none, as before.
+#'   \describe{
+#'     \item{What it does}{A key's own counts
+#'       (`cards::ard_tabulate(adsl, by = TRT, variables = SEX)`), which
+#'       [normalize_ard()] marks as a key's own tabulation once SEX is a
+#'       key anywhere in the ARD (a subgroup layer of another analysis), go
+#'       to the body instead of only to the header's `{n}`.}
+#'     \item{Example}{With `rows = c(block = "variable", grp = "subgroup",
+#'       lvl = "subgroup_level")` SEX's n (%) is a block of its own beside
+#'       the ORR's SEX subgroups.}
+#'     \item{Refused}{A column key (its counts are the columns'
+#'       populations).}
+#'   }
 #' @param stat Which of **your** columns play the three parts [widen_ard()]
-#'   reads by name, as a named vector: `variable` (the analysis variable,
-#'   what [plan_cells()] and [plan_digits()] key on), `name` (which
-#'   statistic a row is) and `value` (what it is worth) ---
+#'   reads by name, as a named vector:
+#'   \describe{
+#'     \item{`variable`}{the analysis variable, what [plan_cells()] and
+#'       [plan_digits()] key on;}
+#'     \item{`name`}{which statistic a row is;}
+#'     \item{`value`}{what it is worth.}
+#'   }
 #'   `stat = c(variable = "PARAMCD", name = "STAT", value = "AVAL")`.  A
 #'   frame from \pkg{cards} already calls them `variable`, `stat_name` and
 #'   `stat` and needs none of this; a summary somebody built with dplyr says
@@ -3454,26 +3467,28 @@ plan_after <- function(.plan, ...) {
 #' do" --- there is no second code path that could disagree with the first.
 #'
 #' @param .plan An [table_plan()].
-#' @param stage How far to go.  `"auto"`, the default, is **as far as the
-#'   plan declares**: a plan that says nothing about the display stops at
-#'   the table `data.frame`; one that carries a display verb goes on
-#'   to the RTF pages.  You rarely need this function at all ---
-#'   [rtf_tables()] takes a plan directly --- and naming a stage is
-#'   for looking inside: `"input"`, `"args"`, `"table"`, `"pages"`.
-#'
-#'   The named stages: `"table"` returns the table
-#'   `data.frame`, the same object [widen_ard()] returns.  `"input"`
-#'   returns the frame going in, with the ARD column names the roles
-#'   renamed.  `"args"` returns the resolved argument lists
-#'   without running anything --- the call the plan amounts to, as
-#'   `$widen` ([widen_ard()]'s) and `$rtf` ([as_rtftables()]'s).  Both
-#'   are resolved from layers and either can be the one that
-#'   surprises: a page budget declared twice is last-wins, and the
-#'   call you are editing may not be the one that decides, so
-#'   `plan_apply(p, "args")$rtf$max_rows` is the way to ask.
-#'   `"pages"` goes all the way: [fmt_numeric()], [stub_cols()],
-#'   [as_rtftables()], [set_col_header()] and whatever `plan_after()`
-#'   declared, giving the RTF pages.
+#' @param stage How far to go.  You rarely need this function at all ---
+#'   [rtf_tables()] takes a plan directly --- and naming a stage is for
+#'   looking inside.
+#'   \describe{
+#'     \item{`"auto"`}{(default) As far as the plan declares: a plan that
+#'       says nothing about the display stops at the table `data.frame`; one
+#'       that carries a display verb goes on to the RTF pages.}
+#'     \item{`"input"`}{The frame going in, with the ARD column names the
+#'       roles renamed.}
+#'     \item{`"args"`}{The resolved argument lists without running
+#'       anything --- the call the plan amounts to, as `$widen`
+#'       ([widen_ard()]'s) and `$rtf` ([as_rtftables()]'s).  Both are
+#'       resolved from layers and either can be the one that surprises: a
+#'       page budget declared twice is last-wins, and the call you are
+#'       editing may not be the one that decides, so
+#'       `plan_apply(p, "args")$rtf$max_rows` is the way to ask.}
+#'     \item{`"table"`}{The table `data.frame`, the same object
+#'       [widen_ard()] returns.}
+#'     \item{`"pages"`}{Goes all the way: [fmt_numeric()], [stub_cols()],
+#'       [as_rtftables()], [set_col_header()] and whatever `plan_after()`
+#'       declared, giving the RTF pages.}
+#'   }
 #'
 #' @return A data frame; for `stage = "args"` the resolved argument list;
 #'   for `stage = "pages"` what [as_rtftables()] and the steps after it

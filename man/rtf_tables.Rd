@@ -76,55 +76,67 @@ written there (or in \code{\link[=as_rtftables]{as_rtftables()}} / \code{\link[=
 "Deprecated arguments" below.}
 
 \item{titles}{\code{NULL} (default) or a list of length \code{length(tables)} \strong{or
-length 1} (a single block applied to every page). Each element is a
-title \strong{block}: either a character vector (one entry per row, default
+length 1} (a single block applied to every page).  Each element is a
+title \strong{block}.
+\describe{
+\item{A block}{Either a character vector (one entry per row, default
 styling) or a list of rows, where a row is a string or a styled
-\code{list(text=, align=, bold=, italic=, underline=, color=, border=)}. An
-empty string (\code{""}) is a blank row. The block renders as a single-column
-table the same width as the content (so it lines up); title rows default
-to centred + bold.
-
-Title and footnote text may carry the same \strong{page-number tokens} as a
-header or footer band -- \code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}, \code{{PAGE}},
-\code{{TOTAL_PAGES}} -- which is how a per-table
-"Page 1 of 3" sits next to the table instead of at the page margin. A
-static \code{{PAGE}} costs nothing here: these bands are re-emitted for every
-page, so each page bakes its own number without the extra RTF section the
-same token forces in a header.  A table paginated on a column fills
-\verb{\{<column name>\}} with its page's value (see \emph{Page values}).}
+\code{list(text=, align=, bold=, italic=, underline=, color=, border=)}.  An empty string (\code{""}) is a blank row.}
+\item{Looks}{The block renders as a single-column table the same
+width as the content (so it lines up); title rows default to
+centred + bold.}
+\item{Page numbers}{Title and footnote text may carry the same
+\strong{page-number tokens} as a header or footer band --
+\code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}, \code{{PAGE}}, \code{{TOTAL_PAGES}} --
+which is how a per-table "Page 1 of 3" sits next to the table
+instead of at the page margin.  A static \code{{PAGE}} costs nothing
+here: these bands are re-emitted for every page, so each page
+bakes its own number without the extra RTF section the same token
+forces in a header.}
+\item{Page values}{A table paginated on a column fills \verb{\{<column name>\}} with its page's value (see \emph{Page values}).}
+}}
 
 \item{footnotes}{\code{NULL} (default) or a list of length \code{length(tables)} or
 length 1 (common to all). Same block structure as \code{titles}, and the same
 page-number tokens; footnote rows default to left-aligned and draw no
 rule unless a row sets its own \code{border}.}
 
-\item{auto_section}{Logical. When \code{TRUE} and \code{tables} is a \strong{named} list,
-each name is used as a per-section heading appended to the common header
-defined by \code{rtf_section(secinfo = ...)} (called without a \code{page} argument).
-A section opens where the name \strong{changes}, so a run of pages carrying the
-same name -- the pages of one split table, which all share its heading --
-is \strong{one} section of several pages. A \code{"...n"} tail (the serial
-\code{\link[=as_rtftables]{as_rtftables()}} adds so a page list with repeated headings stays
-addressable by name) is \strong{not} part of the name here: it is stripped
-before both the comparison and the printed heading. An item with an empty
-name falls through into the open section, which is how pages whose
-headings \emph{differ} are put in one section (see \code{\link[=combine_sections]{combine_sections()}}).
-\code{NULL} (default): what the pages say --- a plan's
-\code{plan_paginate_group(heading_at = "section")} --- else \code{FALSE}.}
+\item{auto_section}{Logical.  When \code{TRUE} and \code{tables} is a \strong{named}
+list, each name is used as a per-section heading appended to the common
+header defined by \code{rtf_section(secinfo = ...)} (called without a \code{page}
+argument).  \code{NULL} (default): what the pages say --- a plan's
+\code{plan_paginate_group(heading_at = "section")} --- else \code{FALSE}.
+\describe{
+\item{Where a section opens}{Where the name \strong{changes}, so a run of
+pages carrying the same name -- the pages of one split table, which
+all share its heading -- is \strong{one} section of several pages.}
+\item{The \code{"...n"} tail}{The serial \code{\link[=as_rtftables]{as_rtftables()}} adds so a page
+list with repeated headings stays addressable by name is \strong{not}
+part of the name here: it is stripped before both the comparison
+and the printed heading.}
+\item{An empty name}{An item with an empty name falls through into
+the open section, which is how pages whose headings \emph{differ} are
+put in one section (see \code{\link[=combine_sections]{combine_sections()}}).}
+}}
 
 \item{section_label_align}{Alignment for the auto-appended section label row.
 One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}
 
-\item{auto_title}{Logical. When \code{TRUE} and \code{tables} is a \strong{named} list,
-each name is appended as the \strong{last row of that table's title block}, so
-it prints immediately above the table rather than in the page header.
-Titles already present -- from \verb{titles =}, or carried on the object as the
-\code{rtf_titles} attribute by \code{\link[=as_rtftables]{as_rtftables()}} -- are kept and the name goes
-after them; a table with no titles gets the name as its whole block.
-Unnamed items are untouched.  Behaves identically under either
-\code{title_format}.  Composes with \code{auto_section}, which puts the same name in
-the section header instead.  \code{NULL} (default): what the pages say --- a
-plan's \code{plan_paginate_group(heading_at = "title")} --- else \code{FALSE}.}
+\item{auto_title}{Logical.  When \code{TRUE} and \code{tables} is a \strong{named} list,
+each name is appended as the \strong{last row of that table's title block},
+so it prints immediately above the table rather than in the page
+header.  \code{NULL} (default): what the pages say --- a plan's
+\code{plan_paginate_group(heading_at = "title")} --- else \code{FALSE}.
+\describe{
+\item{Titles already there}{From \verb{titles =}, or carried on the object
+as the \code{rtf_titles} attribute by \code{\link[=as_rtftables]{as_rtftables()}} -- are kept and
+the name goes after them; a table with no titles gets the name as
+its whole block.}
+\item{Unnamed items}{are untouched.}
+\item{With other arguments}{Behaves identically under either
+\code{title_format}.  Composes with \code{auto_section}, which puts the same
+name in the section header instead.}
+}}
 
 \item{title_label_align}{Alignment for the auto-appended title label row.
 One of \code{"left"} (default), \code{"center"}, or \code{"right"}.}
@@ -135,33 +147,43 @@ and source notes, and place the pages it returns here.}
 
 \item{page_break}{\code{TRUE} (the default): each table begins a new page.
 \code{FALSE}: a table goes on under the content before it, on the page that
-one ends on -- a listing under its summary table.  Nothing is measured:
-what does not fit, the reader (Word, LibreOffice) carries to the next
-page by itself -- with no title, no column header and no footnote
-there; fitting the page is the program's to arrange.  To go on with
-the title, column header and footnote on pages of its own, give
-\code{first_rows}.  One value for every table, or one each.  A table's own
-later pages (a plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s) always begin a page; so
-does the document's first content.  Unlike reporter's
-\code{add_content(page_break = )} this is the break \emph{before} the table.  A
-page has one \code{auto_section} heading: that of the first table on it that
-has one; a later table on the page with another heading gets a warning
-(\code{auto_title} names it on its title), and no page break is added for
-it.  The page header and footer are the section's; a static \code{{PAGE}} /
-\code{{TOTAL_PAGES}} counts the pages as written, which are right when each
-page holds what fits it: the program counts the rows.
-\code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the pages as written; \code{\link[=rtf_layout]{rtf_layout()}}
-shows them.}
+one ends on -- a listing under its summary table.  One value for every
+table, or one each.
+\describe{
+\item{Fitting the page}{Nothing is measured: what does not fit, the
+reader (Word, LibreOffice) carries to the next page by itself --
+with no title, no column header and no footnote there; fitting the
+page is the program's to arrange.  To go on with the title, column
+header and footnote on pages of its own, give \code{first_rows}.}
+\item{Pages that always start a page}{A table's own later pages (a
+plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s) always begin a page; so does the
+document's first content.  Unlike reporter's
+\code{add_content(page_break = )} this is the break \emph{before} the
+table.}
+\item{Section headings}{A page has one \code{auto_section} heading: that
+of the first table on it that has one; a later table on the page
+with another heading gets a warning (\code{auto_title} names it on its
+title), and no page break is added for it.}
+\item{Header, footer, page numbers}{The page header and footer are
+the section's; a static \code{{PAGE}} / \code{{TOTAL_PAGES}} counts the pages
+as written, which are right when each page holds what fits it: the
+program counts the rows.  \code{\link[=rtf_section]{rtf_section()}}\code{(page = n)} counts the
+pages as written; \code{\link[=rtf_layout]{rtf_layout()}} shows them.}
+}}
 
 \item{first_rows}{With \code{page_break = FALSE}, the rows of the table that
-go on the page before it; the rest is paginated as the table says --
-a plan's \code{plan_paginate_rows(max_rows = , split = )} -- each page with
-its title, column header and footnote.  The program counts what fits:
-rtfreporter does not measure the page.  \code{tables} is then one table: a
-\code{\link[=table_plan]{table_plan()}}, a data frame (its rest one page; for \code{max_rows} give
-\code{\link[=as_rtftables]{as_rtftables()}}\verb{(first_rows = )} the pages) or an \code{\link[=rtftable]{rtftable()}} (cut
-there, its rest one page).  \code{NULL} (the default): the whole table goes
-on.}
+go on the page before it.  \code{NULL} (the default): the whole table goes
+on.
+\describe{
+\item{The rest}{is paginated as the table says -- a plan's
+\code{plan_paginate_rows(max_rows = , split = )} -- each page with its
+title, column header and footnote.  The program counts what fits:
+rtfreporter does not measure the page.}
+\item{\code{tables}}{is then one table: a \code{\link[=table_plan]{table_plan()}}, a data frame
+(its rest one page; for \code{max_rows} give
+\code{\link[=as_rtftables]{as_rtftables()}}\verb{(first_rows = )} the pages) or an \code{\link[=rtftable]{rtftable()}}
+(cut there, its rest one page).}
+}}
 
 \item{space_before}{With \code{page_break = FALSE}, empty lines between the
 content before and this table (0: the title's own blank line alone).}

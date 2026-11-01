@@ -1346,36 +1346,44 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
 #'   [widen_ard()] leaves them out of the body while a column header can
 #'   still read them.  `TRUE` removes them outright.
 #'
-#' @param stack Subgroups as one pair of keys (a complete ORR-by-subgroup
-#'   example is in the article *Tables from an ARD, step by step*,
-#'   *Subgroups*), a named list of **layers**:
-#'   `stack = list(subgroup = list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX")))`
-#'   adds the columns `subgroup` (the layer: `"SEX"`, or variables crossed,
-#'   `"AGEGR1 / SEX"`) and `subgroup_level` (its level: `"F"`, `"65-80 / F"`)
-#'   --- what `group2` / `group2_level` say in an ARD whose subgroups all
-#'   came in that slot, but **whatever slot** each came in (a subgroup is in
-#'   `group3` as soon as a strata or a `by =` has one variable more, and a
-#'   crossed one, `ard_strata(.strata = c(AGEGR1, SEX))`, is in both).  A
-#'   character vector is layers of one variable each (`c("ALL", "SEX",
-#'   "AGEGR1")`); a crossed layer of three or more is the same rule.  A row
-#'   goes to the layer whose variables are **exactly** the stacked variables
-#'   it has; a row whose combination no layer names is an error that says
-#'   which layer to add.  **Group slots** stand for what the ARD has there:
-#'   `stack = list(subgroup = c("group2", "group3"))` is each combination of
-#'   variables in those slots, in the order first seen (one variable, or
-#'   several crossed in slot order); slots that also hold a variable coming
-#'   in a slot not named (`by = c(AGEGR1, TRT)` puts the arm in `group2`) are
-#'   refused.  The layers written out are the general form.
-#'   `table_plan(rows = c(grp1 = "subgroup", grp2 = "subgroup_level"))` then
-#'   lays the layers one under another in the order written, each one's
-#'   levels in their own order (crossed: the first variable turning
-#'   slowest); [plan_labels()] names them (`plan_labels(subgroup = c(SEX =
-#'   "Sex", "AGEGR1 / SEX" = "Age Group by Sex"))`).  The variables' own
-#'   columns stay, so a table of crossed rows only can still be
-#'   `rows = c("AGEGR1", "SEX")`; a `hierarchy` does not stack.  A row with
-#'   none of them (an analysis by the arm alone) keeps both `NA`; an overall
-#'   row is a constant stratum (`ALL = "All"`) stacked first, which the ARD
-#'   and the ARS then state.
+#' @param stack Subgroups stacked into one pair of keys: a named list of
+#'   **layers**.  The name is the new key; each layer is one variable or
+#'   several crossed.
+#'   \describe{
+#'     \item{What it adds}{`stack = list(subgroup = list("ALL", "SEX",
+#'       "AGEGR1", c("AGEGR1", "SEX")))` adds `subgroup` (the layer: `"SEX"`,
+#'       or crossed `"AGEGR1 / SEX"`) and `subgroup_level` (its level:
+#'       `"F"`, `"65-80 / F"`) --- what `group2` / `group2_level` say in an
+#'       ARD whose subgroups all came in that slot, but **whatever slot**
+#'       each came in (a subgroup is in `group3` as soon as a strata or a
+#'       `by =` has one variable more, and a crossed one,
+#'       `ard_strata(.strata = c(AGEGR1, SEX))`, is in both).}
+#'     \item{Short forms}{A character vector is layers of one variable each
+#'       (`c("ALL", "SEX", "AGEGR1")`); a crossed layer of three or more is
+#'       the same rule.  **Group slots** stand for what the ARD has there:
+#'       `stack = list(subgroup = c("group2", "group3"))` is each
+#'       combination of variables in those slots, in the order first seen
+#'       (one variable, or several crossed in slot order).  The layers
+#'       written out are the general form.}
+#'     \item{Which row goes where}{A row goes to the layer whose variables
+#'       are **exactly** the stacked variables it has; a row whose
+#'       combination no layer names is an error that says which layer to
+#'       add.  A row with none of them (an analysis by the arm alone) keeps
+#'       both `NA`; an overall row is a constant stratum (`ALL = "All"`)
+#'       stacked first, which the ARD and the ARS then state.}
+#'     \item{Refused}{Slots that also hold a variable coming in a slot not
+#'       named (`by = c(AGEGR1, TRT)` puts the arm in `group2`); a
+#'       `hierarchy` does not stack.}
+#'     \item{In the table}{`table_plan(rows = c(grp1 = "subgroup", grp2 =
+#'       "subgroup_level"))` lays the layers one under another in the order
+#'       written, each one's levels in their own order (crossed: the first
+#'       variable turning slowest); [plan_labels()] names them
+#'       (`plan_labels(subgroup = c(SEX = "Sex", "AGEGR1 / SEX" = "Age Group
+#'       by Sex"))`).  The variables' own columns stay, so a table of
+#'       crossed rows only can still be `rows = c("AGEGR1", "SEX")`.}
+#'   }
+#'   A complete ORR-by-subgroup example is in the article *Tables from an
+#'   ARD, step by step*, *Subgroups*.
 #' @param stack_sep What joins a crossed layer's names and levels: `" / "`.
 #' @param stack_nest `TRUE` puts a crossed layer's outer levels in a key of
 #'   their own, `<name>_outer` (`65-80`), and its innermost in `<name>_level`
