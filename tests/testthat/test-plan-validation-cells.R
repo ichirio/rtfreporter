@@ -526,6 +526,60 @@ test_that("FT-PL911 [FR-PL245]: statistics as rows (plan_cells(stats = 'rows')):
                fixed = TRUE)
 })
 
+# a lab table: one analysis variable, its digits by parameter (#751)
+vc_lab <- function(context = TRUE) {
+  d <- data.frame(
+    ARM = rep(c("A", "B"), each = 6),
+    PARAMCD = rep(rep(c("ALT", "BILI", "AST"), each = 2), 2),
+    variable = "AVAL", .label = NA_character_, .kind = "continuous",
+    stat_name = rep(c("mean", "sd"), 6),
+    stat = c(31.2345, 4.10234, 0.61234, 0.123456, 28.5555, 3.3333,
+             33.1111, 5.30303, 0.70707, 0.151515, 29.9999, 4.4444),
+    stringsAsFactors = FALSE)
+  if (context) d$context <- "summary"
+  table_plan(d, cols = "ARM", rows = c(param = "PARAMCD")) |>
+    plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})"), notes = FALSE)
+}
+
+test_that("FT-PL912 [FR-PL908 FR-PL909 FR-PL911]: digits keyed by a row key's value: after the variable's, before the rest (#751)", {
+  for (ctx in c(TRUE, FALSE)) {
+    p <- vc_lab(ctx) |> plan_digits(continuous = c(mean = 2, sd = 3))
+    # one number a value, or the value's digits by statistic; a value the
+    # map leaves out (AST) keeps the house rule
+    expect_identical(vc_tab(p |> plan_digits(PARAMCD = list(ALT = c(mean = 1, sd = 2), BILI = 3)))$A,
+                     c("31.2 (4.10)", "0.612 (0.123)", "28.56 (3.333)"))
+    expect_identical(vc_tab(p |> plan_digits(PARAMCD = c(ALT = 0)))$A,
+                     c("31 (4)", "0.61 (0.123)", "28.56 (3.333)"))
+    # the value's digits leave a statistic it does not name to the rest
+    expect_identical(vc_tab(p |> plan_digits(PARAMCD = list(ALT = c(mean = 1))))$A[1L], "31.2 (4.102)")
+    # the variable's own digits come first
+    expect_identical(vc_tab(p |> plan_digits(PARAMCD = c(ALT = 0)) |> plan_digits(AVAL = c(mean = 3)))$A[1L],
+                     "31.234 (4)")
+  }
+  # a define's map names parameters this table does not have: ignored
+  q <- vc_lab() |> plan_digits(PARAMCD = c(ALT = 1, BILI = 3, AST = 0, GGT = 2))
+  expect_identical(vc_tab(q)$B, c("33.1 (5.3)", "0.707 (0.152)", "30 (4)"))
+  # every row covered, a plan-only `{x:%}` token needs no other answer;
+  # a row left uncovered still does
+  pct <- vc_lab() |> plan_cells(continuous = "{mean:%}", notes = FALSE)
+  expect_identical(vc_tab(pct |> plan_digits(PARAMCD = c(ALT = 1, BILI = 3, AST = 0)))$A,
+                   c("3123.5", "61.234", "2856"))
+  expect_error(plan_apply(pct |> plan_digits(PARAMCD = c(ALT = 1)), "table"),
+               "`{mean:%}` asks the plan for its digits, but nothing declared them for 'AVAL'.",
+               fixed = TRUE)
+  # a caller's guard keeps its place, ahead of the value's digits
+  g <- vc_lab() |>
+    plan_cells(continuous = c(PARAMCD == "AST" ~ "{mean:.0f}", "{mean} ({sd})"), notes = FALSE) |>
+    plan_digits(PARAMCD = c(ALT = 1, BILI = 3, AST = 1))
+  expect_identical(vc_tab(g)$A, c("31.2 (4.1)", "0.612 (0.123)", "29"))
+})
+
+test_that("FT-PL913 [FR-PL910]: a row key's digits given without values are refused (#751)", {
+  expect_error(plan_apply(vc_lab() |> plan_digits(PARAMCD = 1), "table"),
+               "plan_digits(PARAMCD = ) names a row key, so its digits are given value by value:\n  `PARAMCD = c(<value> = 1, ...)`, or `PARAMCD = list(<value> = c(mean = 1, sd = 2), ...)`.",
+               fixed = TRUE)
+})
+
 test_that("FT-PL151 [FR-PL248 FR-PL250]: plan_digits() refuses two defaults, a key twice, and not a plan", {
   expect_error(plan_digits(vc_base(), 1, 2),
                "Give at most one unnamed value (the plan-wide default); name the rest.", fixed = TRUE)

@@ -21,6 +21,13 @@ analysis variable, a stat group, a context, \code{continuous} /
 token grammar's \verb{\{mean:.4s\}}; it may be mixed in a named vector,
 \code{c(mean = "4s", n = 0)}.}
 }
+A key may also be a \strong{row key} (a column of the long frame, such as
+\code{PARAMCD}), its digits given \strong{value by value}: one of the values above
+for each, \code{PARAMCD = c(ALT = 1, BILI = 3)} or \code{PARAMCD = list(ALT = c(mean = 1, sd = 2), BILI = 3)} --- a define's \code{SignificantDigits} one
+parameter at a time.  The rows carrying that value take them after the
+analysis variable's own and before the context's, the kind's and the
+default; a value the rows do not carry is ignored, so one map can serve
+every table.
 On a \strong{finished table} (a source that is already the table, or
 \code{plan_cells(stats = "rows")}) a key that names a \strong{column} formats
 that column, and \code{.rows} formats the value columns by the text of the
@@ -65,6 +72,18 @@ p |> plan_digits(1) |> plan_apply("table")
 p |>
   plan_digits(continuous = c(mean = 1, sd = 2), categorical = c(n = 0)) |>
   plan_digits(WEIGHT = c(mean = 2, sd = 3)) |>
+  plan_apply("table")
+
+# A lab table: the digits by parameter, as a define gives them
+lb <- data.frame(
+  ARM = rep(c("Placebo", "Active"), each = 4),
+  PARAMCD = rep(rep(c("ALT", "BILI"), each = 2), 2),
+  variable = "AVAL", .label = NA, .kind = "continuous",
+  stat_name = rep(c("mean", "sd"), 4),
+  stat = c(31.234, 4.102, 0.612, 0.1234, 33.111, 5.303, 0.707, 0.1515))
+table_plan(lb, cols = "ARM", rows = c(param = "PARAMCD")) |>
+  plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})")) |>
+  plan_digits(PARAMCD = list(ALT = c(mean = 1, sd = 2), BILI = c(mean = 3, sd = 4))) |>
   plan_apply("table")
 }
 \seealso{
