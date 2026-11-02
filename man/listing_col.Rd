@@ -24,8 +24,8 @@ record missing its middle value does not print a doubled separator.}
 \item{sep}{Separator for \code{vars}.  \code{NULL} (default) takes the listing's own
 (\code{"/"} under the \code{"multiline"} type).}
 
-\item{width}{Integer or \code{NULL}.  Maximum characters per physical row before
-the cell wraps.  \code{NULL} (default) never wraps this column.}
+\item{width}{A positive whole number or \code{NULL}.  Maximum characters per
+physical row before the cell wraps.  \code{NULL} (default) never wraps this column.}
 
 \item{label}{The column header.  \code{NULL} (default) \strong{derives} the header
 from the data -- each source column's \code{label} attribute when it has one,
@@ -44,8 +44,8 @@ out: it is wrapped to \code{width} by the same rule the cells use (see
 \item{name}{Output column name.  \code{NULL} (default) uses the first entry of
 \code{vars}; \code{\link[=listing_spec]{listing_spec()}} makes the set unique if two columns collide.}
 
-\item{rel_width}{Relative width of this column in the rendered table.
-\code{NULL} (default) uses \code{width} when there is one, otherwise the longest
+\item{rel_width}{Relative width of this column in the rendered table, a
+positive finite number.  \code{NULL} (default) uses \code{width} when there is one, otherwise the longest
 line of \code{label}; with neither, 10.}
 
 \item{align}{\code{"left"}, \code{"center"} or \code{"right"}.  \code{NULL} (default) takes the

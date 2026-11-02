@@ -22,10 +22,11 @@ assemble_rtf(
 (at least 2).  May be left out when \code{toc} is a table (or its path):
 the table's \code{file} column, in its order.}
 
-\item{output_file}{Path for the assembled output RTF file.}
+\item{output_file}{Path for the assembled output RTF file: a single
+string, in a folder that exists, and not one of the \code{input_files}.}
 
-\item{overwrite}{Logical; whether to overwrite an existing output
-file.  Default \code{FALSE}.}
+\item{overwrite}{\code{TRUE} or \code{FALSE}; whether to overwrite an existing
+output file.  Default \code{FALSE}.}
 
 \item{cover}{Optional \code{list(title, subtitle, date, version, meta)}
 for a cover page.  \code{NULL} (default) = no cover page.}
@@ -36,8 +37,8 @@ character vector = one label per input file; a table (columns \code{file},
 \code{label}, \code{heading}, \code{level}) or the path of one (\code{.xlsx} / \code{.csv}) =
 multi-level layout.  See \strong{Table of Contents} above.}
 
-\item{toc_title}{Centred bold title rendered on the TOC page.
-Default \code{"Table of Contents"}.}
+\item{toc_title}{Centred bold title rendered on the TOC page, a single
+string (\code{""} = an empty title line).  Default \code{"Table of Contents"}.}
 
 \item{toc_leader}{\code{"dot"} (default) draws a dotted leader between
 each TOC entry and its page number; \code{"none"} leaves whitespace.}
@@ -46,11 +47,12 @@ each TOC entry and its page number; \code{"none"} leaves whitespace.}
 \code{"decimal"}.  See \strong{Page numbering} above.}
 
 \item{bookmark_prefix}{String prepended to every auto-generated
-bookmark name (default \code{"tfl_"}).  Helps avoid clashes if you
+bookmark name (default \code{"tfl_"}): letters, digits and \verb{_} only, as a
+bookmark name allows; \code{""} = none.  Helps avoid clashes if you
 later concatenate multiple assembled outputs.}
 
-\item{book_page}{Text for the compiled document's page number, put into
-every \code{{BOOK_PAGE}} slot the inputs reserved.  \code{NULL} (default) leaves
+\item{book_page}{Text for the compiled document's page number, a single
+string put into every \code{{BOOK_PAGE}} slot the inputs reserved.  \code{NULL} (default) leaves
 the slots empty.
 \describe{
 \item{Why a slot}{A deliverable that will be bound into a book needs
@@ -104,7 +106,8 @@ Recognised fields:
 \item{\code{meta}}{character vector of extra centred lines (10 pt).}
 }
 
-Any field that is \code{NULL} or empty is skipped.
+Any field that is \code{NULL}, \code{NA} or empty is skipped, as is an \code{NA} line of
+\code{meta}.  Another field name, or a \code{cover} that is not a list, is an error.
 }
 
 \section{Table of Contents}{

@@ -60,6 +60,17 @@
   na
 }
 
+# Internal: validate a padding character.  One string ("" pads with nothing):
+# NA would turn every cell into NA, and a vector would pad with its first.
+.check_nbsp <- function(nbsp, arg = "nbsp") {
+  if (!is.character(nbsp) || length(nbsp) != 1L || is.na(nbsp)) {
+    stop(sprintf(paste0("`%s` must be a single string -- the padding ",
+                        "character, \"\\u00a0\" by default."), arg),
+         call. = FALSE)
+  }
+  nbsp
+}
+
 
 # Internal: print `na` wherever the body has a missing value.  Applied to EVERY
 # column (the row-label column included) at the cell-format stage, so it does
@@ -308,6 +319,7 @@ fmt_count_paren <- function(x, nbsp = "\u00a0", na = "", bare = FALSE) {
 fmt_value_paren <- function(x, nbsp = "\u00a0", na = "", rounding = NULL) {
   if (length(x) == 0L) return(x)
   na <- .check_na_text(na)
+  nbsp <- .check_nbsp(nbsp)
   rnd <- .rounder(rounding)
   miss <- is.na(x)                  # before as.character(): NaN is missing
   x <- as.character(x)
