@@ -1451,3 +1451,5 @@
 "test-cell-padding-vertical.R","FT-DC230 [FR-DC305 FR-DC306]: a footnote row given as list(columns = , row_height_twips = ) has its own height","FT-DC230","FR-DC305 FR-DC306"
 "test-cell-padding-vertical.R","FT-TB695 [FR-TB544 FR-TB545 FR-TB546 FR-PL427]: rtf_table_style(), rtftable() and plan_style() pad the table's header and data cells","FT-TB695","FR-TB544 FR-TB545 FR-TB546 FR-PL427"
 "test-cell-padding-vertical.R","FT-IX026 [FR-IX395]: top / bottom padding: the module's own value wins over the style's, the document default, the option and the baseline","FT-IX026","FR-IX395"
+"test-rtfplot.R","FT-AS124 [FR-AS233 FR-AS214]: an EMF file is embedded as it is, at its frame's size (#739)","FT-AS124","FR-AS233 FR-AS214"
+"test-rtfplot.R","FT-AS125 [FR-AS234 FR-AS211]: a file that is not an EMF, or another extension, is refused (#739)","FT-AS125","FR-AS234 FR-AS211"

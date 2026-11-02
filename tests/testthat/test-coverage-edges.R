@@ -958,7 +958,7 @@ test_that("plot objects are drawn into a PNG, and the options are checked", {
   expect_error(rtfplot(file.path(tempdir(), "missing.png")), "Image file not found")
   gif <- edge_write(as.raw(1:10), ".gif")
   on.exit(unlink(gif), add = TRUE)
-  expect_error(rtfplot(gif), "supports PNG and JPEG files only")
+  expect_error(rtfplot(gif), "supports PNG, JPEG and EMF files only")
 })
 
 test_that("a plot object needs a PNG device", {

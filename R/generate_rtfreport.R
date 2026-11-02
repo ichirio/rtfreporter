@@ -1584,7 +1584,10 @@
     "\\qc"
   )
 
-  template <- if (plot_obj$img_type == "png") cmds$picture$png_template else cmds$picture$jpeg_template
+  template <- switch(plot_obj$img_type,
+                     png = cmds$picture$png_template,
+                     emf = cmds$picture$emf_template,
+                     cmds$picture$jpeg_template)
   .cmd_fmt(template, list(
     align    = align_cmd,
     picw     = plot_obj$img_width,

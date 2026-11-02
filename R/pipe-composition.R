@@ -654,7 +654,7 @@ rtf_tables <- function(doc, tables,
 
 #' Add figure content to document
 #'
-#' Append one or more figures as content pages -- image files (PNG/JPEG) or
+#' Append one or more figures as content pages -- image files (PNG/JPEG/EMF) or
 #' plot objects. Each figure creates one new page. Display dimensions and
 #' alignment apply to every path and plot object in `figures`; elements
 #' already constructed via [rtfplot()] keep their own settings.
@@ -663,7 +663,7 @@ rtf_tables <- function(doc, tables,
 #' @param figures A figure, or a list of them.  One figure is given as it is
 #'   -- `rtf_figures(doc, plot)` -- and several as a list.
 #'   \describe{
-#'     \item{A file}{a character file path to an image file (PNG/JPEG).}
+#'     \item{A file}{a character file path to an image file (PNG/JPEG/EMF).}
 #'     \item{A plot object}{a ggplot2 plot, a patchwork, a grob, a recorded
 #'       base plot, a function that draws -- see [rtfplot()].  It is drawn
 #'       with `png_device` (default: the `rtfreporter.png_device` option,
