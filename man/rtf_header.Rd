@@ -95,8 +95,8 @@ content-table convention. \code{NULL} (default) reads from
 
 \item{cell_padding_top_twips, cell_padding_bottom_twips}{Integer cell padding
 above / below the text of each header (or footer) cell, in twips, written
-into the cell definitions.  \code{NULL} (default) inherits the document default
-(\code{\link[=rtf_default_format]{rtf_default_format()}}), else the resource baseline (0); 0 writes
+into the cell definitions.  \code{NULL} (default) inherits the document's
+\code{\link[=rtf_style]{rtf_style()}}, else the resource baseline (0); 0 writes
 nothing.}
 
 \item{drop_empty_rows}{Logical. \code{TRUE}: a row whose tokens of one's own

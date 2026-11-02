@@ -2235,9 +2235,6 @@
   report$document$title_style    <- pipe_doc$title_style
   report$document$footnote_style <- pipe_doc$footnote_style
   report$document$watermark      <- pipe_doc$document$watermark
-  if (!is.null(pipe_doc$document$default_format)) {
-    report <- .rtfreport_set_default_format(report, pipe_doc$document$default_format)
-  }
 
   # The blocks laid out as printed pages (rtf_layout(), R/layout.R), copied
   # as they are: the sections, then the pages, each the blocks on it.
@@ -2286,7 +2283,10 @@
     report <- .rtfreport_add_page(report, segments = p$segments)
   }
 
-  report
+  # The document's style (#804): its rtf_style() over its deprecated
+  # default_format -- the shared level as the document defaults, each section
+  # into its modules where they left a key unset (R/rtf_style.R).
+  .apply_style_to_report(report, pipe_doc$document)
 }
 
 #' Generate an RTF file from a report object
@@ -2533,8 +2533,10 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
 
   # Document-wide style defaults (row height, cell padding): the layer between
   # an element's own setting and the font-aware / resource baseline.  Resolved
-  # highest-wins as: per-module value (applied inside each renderer) >
-  # document `default_format` > `rtfreporter.*` option > resource baseline.
+  # highest-wins as: per-module value (applied inside each renderer; an
+  # rtf_style() section already written into it) > the document's rtf_style()
+  # shared level (`default_format` here, R/rtf_style.R) > `rtfreporter.*`
+  # option > resource baseline.
   # `doc_row_height = NULL` means "keep the font-aware default".
   .res_defaults  <- .load_rtfreporter_defaults()
   doc_row_height <- doc$default_format$row_height_twips %||%

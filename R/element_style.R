@@ -2,7 +2,7 @@
 #  Per-element style -- font size, row height, markup, block alignment
 # ============================================================================
 #
-#  `rtf_document(default_format = )` sets the document baseline; each element
+#  `rtf_document(style = rtf_style())` sets the document baseline; each element
 #  -- the table body, the header / footer band, the title and footnote blocks
 #  -- may override it. Anything an element does not set falls back to the
 #  document default, the same cascade `markup` and the widths already follow.

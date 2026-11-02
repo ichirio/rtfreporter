@@ -52,7 +52,7 @@
 #'
 #' @return An `rtf_page` object (a classed named list) for `rtf_document(page =)`.
 #'
-#' @seealso [rtf_document()], [rtf_default_format()], [rtfreporter_options()].
+#' @seealso [rtf_document()], [rtf_style()], [rtfreporter_options()].
 #'
 #' @examples
 #' # Defaults made explicit (landscape Letter):
@@ -138,7 +138,14 @@ print.rtf_page <- function(x, ...) {
   invisible(x)
 }
 
-#' Document-wide default formatting for an RTF document
+#' Document-wide default formatting for an RTF document (deprecated)
+#'
+#' **Deprecated**: use [rtf_style()], which takes every key below at its
+#' shared level and adds a section per module.  `rtf_default_format()` and
+#' `rtf_document(default_format = )` / `rtf_config(default_format = )` still
+#' work: the object maps onto the shared level of [rtf_style()], beneath any
+#' `style` the document is given, and warns once a session.  It will be
+#' removed in 0.9.
 #'
 #' Builds the `default_format` setting for [rtf_document()] / [rtf_config()] as a
 #' structured `rtf_default_format` object, so its options and **defaults** are
@@ -175,9 +182,11 @@ print.rtf_page <- function(x, ...) {
 #'
 #' @return An `rtf_default_format` object for `rtf_document(default_format =)`.
 #'
-#' @seealso [rtf_document()], [rtf_page()], [rtftable()].
+#' @seealso [rtf_style()], which replaces it; [rtf_document()], [rtf_page()],
+#'   [rtftable()].
 #'
 #' @examples
+#' # Deprecated: write rtf_style(font_size_half_points = 20L, ...) instead.
 #' # Defaults made explicit:
 #' rtf_default_format()
 #'
@@ -199,6 +208,7 @@ rtf_default_format <- function(font_size_half_points    = 18L,
                                footnote_format          = "table",
                                title_width              = NULL,
                                footnote_width           = NULL) {
+  .warn_default_format()
   if (missing(font_size_half_points))
     font_size_half_points <- .opt("rtfreporter.font_size_half_points")
   if (missing(markup))          markup          <- .opt("rtfreporter.markup")

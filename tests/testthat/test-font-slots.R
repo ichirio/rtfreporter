@@ -1,5 +1,9 @@
 # Fonts per script slot (latin / east_asian / complex / hansi) and font_lang.
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 .run_slots <- function(doc) {
   d <- tempfile("font-slots-")
   dir.create(d)

@@ -225,7 +225,7 @@
 #' border = rtf_border(bottom = TRUE))`, and an
 #' `"none"` side erases a zone rule on the selected cells.
 #' Row height and cell padding are deliberately *not* per-row properties --
-#' they stay uniform per table / document (see `rtf_document(default_format)`
+#' they stay uniform per table / document (see `rtf_document(style = rtf_style())`
 #' and the `rtfreporter.*` options).
 #'
 #' @section Header rows and the two row kinds:

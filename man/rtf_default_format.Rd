@@ -2,7 +2,7 @@
 % Please edit documentation in R/rtf_page.R
 \name{rtf_default_format}
 \alias{rtf_default_format}
-\title{Document-wide default formatting for an RTF document}
+\title{Document-wide default formatting for an RTF document (deprecated)}
 \usage{
 rtf_default_format(
   font_size_half_points = 18L,
@@ -56,6 +56,14 @@ the separator rule, which \code{footnote_format = "text"} cannot draw.}
 An \code{rtf_default_format} object for \code{rtf_document(default_format =)}.
 }
 \description{
+\strong{Deprecated}: use \code{\link[=rtf_style]{rtf_style()}}, which takes every key below at its
+shared level and adds a section per module.  \code{rtf_default_format()} and
+\code{rtf_document(default_format = )} / \code{rtf_config(default_format = )} still
+work: the object maps onto the shared level of \code{\link[=rtf_style]{rtf_style()}}, beneath any
+\code{style} the document is given, and warns once a session.  It will be
+removed in 0.9.
+}
+\details{
 Builds the \code{default_format} setting for \code{\link[=rtf_document]{rtf_document()}} / \code{\link[=rtf_config]{rtf_config()}} as a
 structured \code{rtf_default_format} object, so its options and \strong{defaults} are
 visible in the signature. Every value is a \emph{default}: a per-module setting on
@@ -64,6 +72,7 @@ overrides it, and a site can change a default via the matching \verb{rtfreporter
 option (an unset argument falls back to it; see \code{\link[=rtfreporter_options]{rtfreporter_options()}}).
 }
 \examples{
+# Deprecated: write rtf_style(font_size_half_points = 20L, ...) instead.
 # Defaults made explicit:
 rtf_default_format()
 
@@ -75,5 +84,6 @@ doc <- rtf_document(default_format = rtf_default_format(font_size_half_points = 
 
 }
 \seealso{
-\code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_page]{rtf_page()}}, \code{\link[=rtftable]{rtftable()}}.
+\code{\link[=rtf_style]{rtf_style()}}, which replaces it; \code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_page]{rtf_page()}},
+\code{\link[=rtftable]{rtftable()}}.
 }

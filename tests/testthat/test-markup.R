@@ -1,6 +1,10 @@
 # markup argument: control >=/<= (relational) and ^{}/_{} (script) conversion.
 # Default "script" -- relational symbol conversion is opt-in (#142).
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 .render_tbl <- function(df, ...) {
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
