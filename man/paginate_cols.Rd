@@ -86,7 +86,7 @@ after the split (\code{set_col_header()} on the page list) is an error.}
 \item{allow_span_break}{Allow a cut inside a spanning header cell. Default
 \code{TRUE}.  \code{FALSE} stops on a cut inside a labelled cell; an empty cell
 (such as the one \code{rtftable()} fills the columns no spanner covers with)
-is not checked.}
+is not checked.  Anything but \code{TRUE} or \code{FALSE} is an error.}
 
 \item{fit}{How relative widths are rescaled after the split.  \code{TRUE}
 (default) fixes the twips-per-ratio unit on \strong{page 1} and reuses it on

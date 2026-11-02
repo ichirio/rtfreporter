@@ -889,7 +889,7 @@ rtf_figures <- function(doc, figures,
 #' row, default styling) or a list of rows, where a row is a string or a styled
 #' `list(text=, align=, bold=, italic=, underline=, color=, border=,
 #' row_height_twips=)`. An empty
-#' string (`""`) is a blank row. The block renders as centred paragraphs, or,
+#' string (`""`), or `NA`, is a blank row. The block renders as centred paragraphs, or,
 #' with `rtf_style(title_format = "table")`, as a single-column table the
 #' same width as the content; title rows default to centred + bold.  A row's
 #' `row_height_twips` is that row's height, over the block's

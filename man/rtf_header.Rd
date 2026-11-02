@@ -70,7 +70,8 @@ full writable width (page width minus margins).  A value that is not one
 non-negative integer is an error.}
 
 \item{width}{Band width in the shared vocabulary: \code{"page"} (the writable
-width, the default), a fraction in \verb{(0, 1]} of it, or twips. \code{width_twips}
+width, the default), a fraction in \verb{(0, 1]} of it, or twips (a whole
+number above 1; \code{1.5} or \code{Inf} is an error). \code{width_twips}
 is the older absolute-only form and wins when both are given.}
 
 \item{row_height_twips}{Integer. Row height in twips. \code{NULL} (default)

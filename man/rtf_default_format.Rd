@@ -47,7 +47,7 @@ content-width table with the separator rule) or \code{"text"} (plain paragraphs)
 \item{title_width, footnote_width}{Width of the title / footnote block:
 \code{"content"} (the default -- follow the table body), \code{"page"} (the writable
 width, margins excluded), a fraction in \verb{(0, 1]} of the writable width, or
-twips. \code{NULL} keeps the default. Applies to the \code{"table"} form; the
+twips (a whole number above 1). \code{NULL} keeps the default. Applies to the \code{"table"} form; the
 \code{"text"} form is plain paragraphs and already spans the page.
 \code{footnote_width = "page"} is the way to reach the full width \strong{and} keep
 the separator rule, which \code{footnote_format = "text"} cannot draw.}

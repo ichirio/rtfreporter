@@ -113,7 +113,8 @@
 #'   footnote.
 #' @param title_width,footnote_width The width of the title / footnote
 #'   block: `"content"` (the table's), `"page"` (the writable width), a
-#'   fraction in `(0, 1]` of the writable width, or twips.
+#'   fraction in `(0, 1]` of the writable width, or twips (a whole number
+#'   above 1).
 #' @param table A named list of [rtftable()]'s arguments for every content
 #'   table: `font`, `font_size_half_points`, `row_height_twips`,
 #'   `row_height_exact`, `header_row_height_twips`, `blank_row_height_twips`,

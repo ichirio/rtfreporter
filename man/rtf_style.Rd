@@ -52,7 +52,8 @@ footnote.}
 
 \item{title_width, footnote_width}{The width of the title / footnote
 block: \code{"content"} (the table's), \code{"page"} (the writable width), a
-fraction in \verb{(0, 1]} of the writable width, or twips.}
+fraction in \verb{(0, 1]} of the writable width, or twips (a whole number
+above 1).}
 
 \item{table}{A named list of \code{\link[=rtftable]{rtftable()}}'s arguments for every content
 table: \code{font}, \code{font_size_half_points}, \code{row_height_twips},
