@@ -95,8 +95,10 @@ tokens must not error on the data.frame elements.}
 \item{max_rows}{Integer or \code{NULL}.  Maximum body rows per page for the
 \code{"group_safe"} / \code{"group_force"} splits (required by them).  \strong{This is the
 setting for fixed-size pages} -- \code{max_rows = 25} gives pages of 25 rows.
-Ignored by \code{"none"}, \code{"rows"} (which cuts at the positions in
-\code{split_rows}) and \code{"by_value"}.}
+Ignored by \code{"none"} and \code{"rows"} (which cuts at the positions in
+\code{split_rows}).  Optional for \code{"by_value"}: a value's page longer than
+\code{max_rows} is cut as \code{"group_force"} cuts, its pages named by the value
+with the \code{"...n"} tail (\code{"A...1"}, \code{"A...2"}).}
 
 \item{split}{How to break the body into pages. A strategy name:
 \describe{
@@ -116,16 +118,13 @@ out the same height, which is why a report asks for it --- but it
 will split a group that would have fitted whole on the next
 page, so it is not \code{"group_safe"} with an escape hatch.  Only
 \code{min_group_rows} pulls a cut back, and only to avoid a widow or an
-orphan.  Requires \code{max_rows}.}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{  Ten groups of four rows with `max_rows = 30` and the blanks counted:
-  `"group_safe"` gives 26 and 26 rows, `"group_force"` gives 30 and 24 with the
-  sixth group cut in half.
-\\item\{`"by_value"`\}\{one page per distinct value of `group_col`; the pages
-  are named by that value.  A page gathers every row with its value,
-  scattered or not, in the body's own order.\}
-}\if{html}{\out{</div>}}
-
+orphan.  Requires \code{max_rows}.  Ten groups of four rows with
+\code{max_rows = 30}, \code{blank_rows = "between_groups"}, \code{blank_row_first}
+and \code{blank_row_end} and the blanks counted (\code{count_blank_rows = TRUE}): \code{"group_safe"} prints 26 and 26 rows, \code{"group_force"} 30 and
+24 with the sixth group cut.}
+\item{\code{"by_value"}}{one page per distinct value of \code{group_col}; the pages
+are named by that value.  A page gathers every row with its value,
+scattered or not, in the body's own order.}
 }
 \code{split} may also be a \strong{custom function} for bespoke page-break rules.
 It is called as
@@ -612,7 +611,9 @@ expanded member by member), rtables/tern \code{VTableTree}
 tables, rlistings \code{listing_df} listings,
 \code{flextable} tables, \code{huxtable} tables, plain \code{data.frame} / tibble,
 or a \code{list} of any of these (the list is flattened, names propagated as
-\code{name}, repeated on every page it makes).  Figures are out of scope -- use
+\code{name}, repeated on every page it makes, with the \code{"...n"} tail of pages
+that share a heading: \code{"name...1"}, \code{"name...2"}).  Figures are out of
+scope -- use
 \code{\link[=rtf_figures]{rtf_figures()}} for those.
 }
 \section{What is carried, by source}{
