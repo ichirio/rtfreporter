@@ -1442,3 +1442,5 @@
 "test-plan-validation-cells.R","FT-PL912 [FR-PL908 FR-PL909 FR-PL911]: digits keyed by a row key's value: after the variable's, before the rest (#751)","FT-PL912","FR-PL908 FR-PL909 FR-PL911"
 "test-plan-validation-cells.R","FT-PL913 [FR-PL910]: a row key's digits given without values are refused (#751)","FT-PL913","FR-PL910"
 "test-plan-validation-pages.R","FT-PL914 [FR-PL912 FR-PL913]: plan_stub(heading = ) is the stub's header cell, not its name (tflspec#538)","FT-PL914","FR-PL912 FR-PL913"
+"test-text-width.R","FT-TB693 [FR-TB542 FR-TB388]: Arial and Times New Roman are measured character by character (#740)","FT-TB693","FR-TB542 FR-TB388"
+"test-text-width.R","FT-TB694 [FR-TB543 FR-TB393]: an East Asian wide character is two n's in a proportional font with an east_asian slot (#740)","FT-TB694","FR-TB543 FR-TB393"
