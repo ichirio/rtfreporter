@@ -12,86 +12,86 @@
 #   new, empty document; rtf_config() edits one             | FR-DC101    | FT-DC056
 #   font_table: first entry the default, default Courier New| FR-DC102    | FT-DC053
 #   font_table name per script slot                         | FR-DC103    | FT-DC074
-#   font_table needs latin; unknown slot is an error        | FR-DC104    | FT-DC255
+#   font_table needs latin; unknown slot is an error        | FR-DC104    | FT-DC257
 #   font_lang: slots, languages, charsets, NULL = option    | FR-DC121    | FT-DC080
 #   font_lang malformed is an error                         | FR-DC122    | FT-DC078
 #   color_table: declared, default #000000, black/white     | FR-DC105    | FT-DC015
 #   page: rtf_page() / named list / NULL = landscape Letter | FR-DC106    | FT-DC165
 #   page: a key left out falls back to its option           | FR-IX303    | FT-DC046
-#   page that is not a named list is an error               | FR-DC107    | FT-DC256
+#   page that is not a named list is an error               | FR-DC107    | FT-DC258
 #   default_format deprecated, beneath style, warns once    | FR-DC319    | FT-DC238
 #   watermark: object, string or NULL                       | FR-DC109    | FT-DC214
-#   watermark: a section overrides it, NA switches it off   | FR-IX300    | FT-DC257
-#   program: the path for the {PROGRAM...} tokens          | FR-DC111    | FT-DC258
+#   watermark: a section overrides it, NA switches it off   | FR-IX300    | FT-DC259
+#   program: the path for the {PROGRAM...} tokens          | FR-DC111    | FT-DC260
 #   program: generate_rtfreport(program = ) wins; order     | FR-IX301    | FT-DC182
-#   program_fallback: the last resort, said in a message    | FR-DC113    | FT-DC259
-#   tokens: list(STUDY = ), written {STUDY}                 | FR-DC115    | FT-DC260
-#   tokens: name upper case, not rtfreporter's own; values  | FR-DC117-120| FT-DC261
+#   program_fallback: the last resort, said in a message    | FR-DC113    | FT-DC261
+#   tokens: list(STUDY = ), written {STUDY}                 | FR-DC115    | FT-DC262
+#   tokens: name upper case, not rtfreporter's own; values  | FR-DC117-120| FT-DC263
 #   tokens: options(rtfreporter.tokens =), document wins    | FR-IX304    | FT-DC209
 #   tokens: not in column headers                           | FR-DC284    | FT-DC203
-#   file: written when generate_rtfreport() has no file_path| FR-DC123    | FT-DC262
-#   file malformed is an error                              | FR-DC124    | FT-DC263
+#   file: written when generate_rtfreport() has no file_path| FR-DC123    | FT-DC264
+#   file malformed is an error                              | FR-DC124    | FT-DC265
 #   style: one rtf_style(); NULL none                       | FR-DC317    | FT-DC231
 #   style: a module's own argument wins                     | FR-DC315    | FT-DC236
 #   fonts per script: one family writes the same RTF        | FR-DC103    | FT-DC077
-#   a slot left out: the default's family, else latin;      | FR-DC338    | FT-DC264
+#   a slot left out: the default's family, else latin;      | FR-DC339    | FT-DC266
 #     a slotted default writes \adeff / \stshf*             |             |
 #   @return: document / contents / sections                 | FR-DC101    | FT-DC056
 #   example: render after rtf_tables()                      | FR-DC268    | FT-DC160
 #
 # rtf_config()
 #   changes document settings, leaves content and sections  | FR-DC126    | FT-DC140
-#   NULL changes nothing; only what is passed               | FR-DC127    | FT-DC265
+#   NULL changes nothing; only what is passed               | FR-DC127    | FT-DC267
 #   returns a new copy, the original intact                | FR-DC125    | FT-DC143
-#   page merged per key                                     | FR-DC130    | FT-DC265
+#   page merged per key                                     | FR-DC130    | FT-DC267
 #   style merged key by key                                 | FR-DC318    | FT-DC237
-#   font_table / color_table replaced whole                 | FR-DC128-129| FT-DC265
+#   font_table / color_table replaced whole                 | FR-DC128-129| FT-DC267
 #   font_lang replaced; NA removes                          | FR-DC133    | FT-DC084
 #   default_format deprecated, merged per key               | FR-DC319    | FT-DC238
 #   watermark: object / string / NA removes; NULL unchanged | FR-DC132    | FT-DC215
-#   merge versus replace, against rtf_document()            | FR-IX305    | FT-DC265
-#   not an rtf_document / page malformed is an error        | FR-DC134/135| FT-DC146, FT-DC256
+#   merge versus replace, against rtf_document()            | FR-IX305    | FT-DC267
+#   not an rtf_document / page malformed is an error        | FR-DC134/135| FT-DC146, FT-DC258
 #   example: identical contents                             | FR-DC126    | FT-DC140
 #
 # rtf_page()
-#   default landscape Letter, 0.75" margins; class rtf_page | FR-DC151    | FT-DC266
+#   default landscape Letter, 0.75" margins; class rtf_page | FR-DC151    | FT-DC268
 #   argument > rtfreporter.page.* option > factory default  | FR-IX311    | FT-DC161
 #   paper_size presets, case-insensitive                    | FR-DC152    | FT-DC129
 #   orientation landscape / portrait                        | FR-DC155    | FT-DC123
 #   width_in / height_in win, orientation inferred          | FR-DC157    | FT-DC127
-#   with dimensions, paper_size / orientation stay unset    | FR-DC339    | FT-DC266
+#   with dimensions, paper_size / orientation stay unset    | FR-DC340    | FT-DC268
 #   only a value passed is warned about                     | FR-IX309/310| FT-DC130, FT-DC125
 #   four margins in inches                                  | FR-DC159    | FT-DC055
 #   header / footer distance; NULL = the full margin        | FR-DC161    | FT-DC045
-#   (code) guards: paper_size, orientation, inches          | FR-DC153/156/158/160 | FT-DC040, FT-DC124, FT-DC267
+#   (code) guards: paper_size, orientation, inches          | FR-DC153/156/158/160 | FT-DC040, FT-DC124, FT-DC269
 #
 # rtf_titles()
-#   replaces the title of every content; returns the doc    | FR-DC185    | FT-DC268
-#   one block per content, or length 1 for all              | FR-DC186-187| FT-DC268
-#   (code) a character vector is one block for all          | FR-DC188    | FT-DC268
+#   replaces the title of every content; returns the doc    | FR-DC185    | FT-DC270
+#   one block per content, or length 1 for all              | FR-DC186-187| FT-DC270
+#   (code) a character vector is one block for all          | FR-DC188    | FT-DC270
 #   a content is a page unless page_break = FALSE           | FR-TB182    | FT-TB164
 #   block: vector or list of styled rows; "" blank; bold    | FR-DC189    | FT-DC195
 #   paragraphs, or a table with title_format = "table"      | FR-DC311    | FT-DC235
 #   a row's row_height_twips (table form)                   | FR-DC303    | FT-DC229
 #   a page's heading stays as the last row                  | FR-DC190    | FT-DC006
-#   style over rtf_style() (section, then shared)           | FR-DC192    | FT-DC269
+#   style over rtf_style() (section, then shared)           | FR-DC192    | FT-DC271
 #   font: added to font_table; per script slot              | FR-DC196    | FT-DC064
-#   size and height resolve together                        | FR-DC193    | FT-DC269
+#   size and height resolve together                        | FR-DC193    | FT-DC271
 #   align: block default, a row's align beats it            | FR-DC195    | FT-DC066
 #   markup of the block                                     | FR-DC194    | FT-DC068
-#   (code) guards                                           | FR-DC197-201| FT-DC270
+#   (code) guards                                           | FR-DC197-201| FT-DC272
 #
 # rtf_footnotes()
-#   same shape as rtf_titles(): one block each, or one      | FR-DC203-205| FT-DC271
-#   returns the modified document                           | FR-DC202    | FT-DC271
+#   same shape as rtf_titles(): one block each, or one      | FR-DC203-205| FT-DC273
+#   returns the modified document                           | FR-DC202    | FT-DC273
 #   row: string, c(l =, c =, r =), list(columns =, ...)     | FR-DC206/305| FT-DC088, FT-DC230
 #   rows left-aligned, no rule unless border                | FR-DC206/207| FT-DC088, FT-DC097
-#   NULL element: no footnote for that content              | FR-DC203    | FT-DC271
+#   NULL element: no footnote for that content              | FR-DC203    | FT-DC273
 #   border: NULL none; rtf_border() on the first row        | FR-DC207    | FT-DC097
 #   font size, the height following it                      | FR-DC208    | FT-DC103
-#   row height: an explicit one wins                        | FR-DC209    | FT-DC271
+#   row height: an explicit one wins                        | FR-DC209    | FT-DC273
 #   markup / align / font                                   | FR-DC210-212| FT-DC095, FT-DC065, FT-DC073
-#   (code) guards                                           | FR-DC213-217/219 | FT-DC272, FT-DC092
+#   (code) guards                                           | FR-DC213-217/219 | FT-DC274, FT-DC092
 #
 # rtf_header() / rtf_footer()
 #   rows: named vector or list; l / c / r cells             | FR-DC325    | FT-DC241
@@ -101,15 +101,15 @@
 #   border: header none, footer top rule                    | FR-DC326    | FT-DC241
 #   width_twips / width                                     | FR-DC327    | FT-DC242
 #   font size; the height following it                      | FR-DC328    | FT-DC242
-#   font: added to font_table; per script slot              | FR-DC340    | FT-DC273
+#   font: added to font_table; per script slot              | FR-DC341    | FT-DC275
 #   markup                                                  | FR-DC329    | FT-DC243
-#   row_height_twips: NULL inherits the document's          | FR-DC341    | FT-DC274
+#   row_height_twips: NULL inherits the document's          | FR-DC342    | FT-DC276
 #   left / right padding: NULL inherits, else 0             | FR-DC330    | FT-DC242
 #   top / bottom padding                                    | FR-DC300    | FT-DC227
 #   color                                                   | FR-DC295    | FT-DC224
 #   drop_empty_rows                                         | FR-DC331    | FT-DC244
-#   twips arguments not integers are an error (fixed here)  | FR-DC342    | FT-DC275
-#   @return: a named list of the band's settings            | FR-DC343    | FT-DC276
+#   twips arguments not integers are an error (fixed here)  | FR-DC343    | FT-DC277
+#   @return: a named list of the band's settings            | FR-DC344    | FT-DC278
 #
 # rtf_style()
 #   one object for every module; an addition, modules win   | FR-DC307/315| FT-DC236
@@ -117,7 +117,7 @@
 #   the order of precedence                                 | FR-DC315    | FT-DC236
 #   a section key reaches only what the element left unset  | FR-DC316    | FT-DC236
 #   size and height resolve together                        | FR-DC316/336| FT-DC251
-#   pages are cut before the style reaches the table        | FR-DC344    | FT-DC277
+#   pages are cut before the style reaches the table        | FR-DC345    | FT-DC279
 #   several styles merge through rtf_config()               | FR-DC318/337| FT-DC237, FT-DC250
 #   replaces rtf_default_format(), beneath any style        | FR-DC319/334| FT-DC238, FT-DC248
 #   color: the page header and footer only                  | FR-DC310    | FT-DC234
@@ -129,20 +129,20 @@
 #
 # generate_rtfreport()
 #   renders an rtf_document or rtfreport; report = superseded| FR-DC269   | FT-DC003
-#   file_path: NULL = rtf_document(file = ); given wins     | FR-DC271/IX302 | FT-DC262
-#   overwrite: TRUE writes over; FALSE stops                | FR-DC274/275| FT-DC002, FT-DC262
+#   file_path: NULL = rtf_document(file = ); given wins     | FR-DC271/IX302 | FT-DC264
+#   overwrite: TRUE writes over; FALSE stops                | FR-DC274/275| FT-DC002, FT-DC264
 #   program overrides the document's                        | FR-DC276    | FT-DC178
-#   program_fallback overrides the document's               | FR-DC277    | FT-DC259
+#   program_fallback overrides the document's               | FR-DC277    | FT-DC261
 #   {PROGRAM}, {PROGRAM_FULL}, {PROGRAM_NAME}, {PROGRAM_DIR}| FR-DC276    | FT-DC178, FT-DC180
 #   {DATETIME}, {DATETIME:fmt}, once per file, render_time  | FR-DC281    | FT-DC177
 #   {PROGRAM} with no program known is an error             | FR-DC280    | FT-DC179
 #   the search for the program; said in a message           | FR-DC278/IX301 | FT-DC184, FT-DC182
-#   tokens of one's own in headers ... footnotes            | FR-DC283    | FT-DC260
+#   tokens of one's own in headers ... footnotes            | FR-DC283    | FT-DC262
 #   a column header takes set_col_header() values           | FR-DC284    | FT-DC203
 #   the file name completed to the one on disk              | FR-DC279    | FT-DC183
 #   page tokens                                             | FR-DC285    | FT-DC133
-#   (code) no file / file_path malformed is an error        | FR-DC272/273| FT-DC262, FT-DC263
-#   overwrite is logical: anything else an error (fixed)    | FR-DC345    | FT-DC278
+#   (code) no file / file_path malformed is an error        | FR-DC272/273| FT-DC264, FT-DC265
+#   overwrite is logical: anything else an error (fixed)    | FR-DC346    | FT-DC280
 #   @return file_path, invisibly                            | FR-DC268    | FT-DC160
 
 # A one-table document, rendered to text.
@@ -162,14 +162,14 @@
 }
 .au_n <- function(s, pat) lengths(regmatches(s, gregexpr(pat, s, fixed = TRUE)))
 
-test_that("FT-DC255 [FR-DC104]: rtf_document(font_table = ) needs a latin font and known slots", {
+test_that("FT-DC257 [FR-DC104]: rtf_document(font_table = ) needs a latin font and known slots", {
   expect_error(rtf_document(font_table = list(list(name = c(hansi = "A")))),
                "`font_table` must name a `latin` font", fixed = TRUE)
   expect_error(rtf_document(font_table = list(list(name = c(latin = "A", bad = "B")))),
                "`font_table`: unknown font slot(s)", fixed = TRUE)
 })
 
-test_that("FT-DC256 [FR-DC107 FR-DC135]: a page that is not an rtf_page() or a named list is refused", {
+test_that("FT-DC258 [FR-DC107 FR-DC135]: a page that is not an rtf_page() or a named list is refused", {
   msg <- paste0("`page` must be an rtf_page() object or a named list of its settings ",
                 "(e.g. list(paper_size = \"A4\")), not the string \"a4\".  For a ",
                 "paper size write page = rtf_page(paper_size = \"a4\").")
@@ -179,7 +179,7 @@ test_that("FT-DC256 [FR-DC107 FR-DC135]: a page that is not an rtf_page() or a n
   expect_error(rtf_config(rtf_document(), page = "a4"), msg, fixed = TRUE)
 })
 
-test_that("FT-DC257 [FR-IX300]: a section's watermark overrides the document's; NA switches it off", {
+test_that("FT-DC259 [FR-IX300]: a section's watermark overrides the document's; NA switches it off", {
   t2 <- list(rtftable(data.frame(A = 1)), rtftable(data.frame(B = 2)))
   doc <- rtf_tables(rtf_document(watermark = "DOCWM"), t2) |>
     rtf_section(page = 1, header = rtf_header(c(l = "H")))
@@ -194,7 +194,7 @@ test_that("FT-DC257 [FR-IX300]: a section's watermark overrides the document's; 
   expect_identical(c(.au_n(s, "DOCWM"), .au_n(s, "SECWM")), c(1L, 1L))
 })
 
-test_that("FT-DC258 [FR-DC111 FR-DC112]: rtf_document(program = ) names the program for the run tokens", {
+test_that("FT-DC260 [FR-DC111 FR-DC112]: rtf_document(program = ) names the program for the run tokens", {
   doc <- .au_one(rtf_document(program = "programs/t_dm.R"),
                  footer = rtf_footer(c(l = "N={PROGRAM_NAME} D={PROGRAM_DIR}")))
   expect_no_message(s <- .au_rs(doc))
@@ -205,7 +205,7 @@ test_that("FT-DC258 [FR-DC111 FR-DC112]: rtf_document(program = ) names the prog
   expect_error(rtf_document(program = NA_character_), msg, fixed = TRUE)
 })
 
-test_that("FT-DC259 [FR-DC113 FR-DC277]: program_fallback is the last resort, said in a message", {
+test_that("FT-DC261 [FR-DC113 FR-DC277]: program_fallback is the last resort, said in a message", {
   old <- options(rtfreporter.program = NULL)
   on.exit(options(old), add = TRUE)
   local_mocked_bindings(.find_program = function() NULL)
@@ -220,7 +220,7 @@ test_that("FT-DC259 [FR-DC113 FR-DC277]: program_fallback is the last resort, sa
   expect_true(any(grepl("P=call.R", readLines(f, warn = FALSE), fixed = TRUE)))
 })
 
-test_that("FT-DC260 [FR-DC115 FR-DC283]: tokens of one's own are filled in headers, footers, titles and footnotes", {
+test_that("FT-DC262 [FR-DC115 FR-DC283]: tokens of one's own are filled in headers, footers, titles and footnotes", {
   doc <- rtf_document(tokens = list(STUDY = "XYZ-9", N = 12)) |>
     rtf_tables(list(rtftable(data.frame(A = 1)))) |>
     rtf_titles("T={STUDY}") |>
@@ -236,7 +236,7 @@ test_that("FT-DC260 [FR-DC115 FR-DC283]: tokens of one's own are filled in heade
   expect_false(grepl("{STUDY}", s, fixed = TRUE))
 })
 
-test_that("FT-DC261 [FR-DC117 FR-DC118 FR-DC119 FR-DC120]: a token's name and value are checked", {
+test_that("FT-DC263 [FR-DC117 FR-DC118 FR-DC119 FR-DC120]: a token's name and value are checked", {
   expect_error(rtf_document(tokens = list(study = "x")),
                "`tokens`: a token's name is upper case -- a letter, then letters, digits or _ (STUDY, DATA_CUTOFF): not `study`.",
                fixed = TRUE)
@@ -256,7 +256,7 @@ test_that("FT-DC261 [FR-DC117 FR-DC118 FR-DC119 FR-DC120]: a token's name and va
                "`tokens`: `STUDY` is one value (a string or a number).", fixed = TRUE)
 })
 
-test_that("FT-DC262 [FR-DC123 FR-DC271 FR-IX302 FR-DC272 FR-DC275]: the document's file, the file_path that wins, and overwrite = FALSE", {
+test_that("FT-DC264 [FR-DC123 FR-DC271 FR-IX302 FR-DC272 FR-DC275]: the document's file, the file_path that wins, and overwrite = FALSE", {
   f <- tempfile(fileext = ".rtf")
   g <- tempfile(fileext = ".rtf")
   on.exit(unlink(c(f, g)), add = TRUE)
@@ -281,7 +281,7 @@ test_that("FT-DC262 [FR-DC123 FR-DC271 FR-IX302 FR-DC272 FR-DC275]: the document
                fixed = TRUE)
 })
 
-test_that("FT-DC263 [FR-DC124 FR-DC273]: a file that is not one string is refused", {
+test_that("FT-DC265 [FR-DC124 FR-DC273]: a file that is not one string is refused", {
   msg <- "`file` must be a single string: the RTF file's path."
   for (bad in list(c("a.rtf", "b.rtf"), "", NA_character_, 1)) {
     expect_error(rtf_document(file = bad), msg, fixed = TRUE)
@@ -290,7 +290,7 @@ test_that("FT-DC263 [FR-DC124 FR-DC273]: a file that is not one string is refuse
                "`file_path` must be a single string: the RTF file's path.", fixed = TRUE)
 })
 
-test_that("FT-DC264 [FR-DC338]: a slot an element leaves out takes the document default's family; a slotted default writes the document defaults", {
+test_that("FT-DC266 [FR-DC339]: a slot an element leaves out takes the document default's family; a slotted default writes the document defaults", {
   ft <- list(list(name = c(latin = "Times New Roman", east_asian = "MS Mincho")))
   s <- .au_rs(rtf_titles(.au_one(rtf_document(font_table = ft)), "TTL", font = "Arial"))
   # Times New Roman f0, MS Mincho f1, Arial f2: the title's east_asian slot is
@@ -301,7 +301,7 @@ test_that("FT-DC264 [FR-DC338]: a slot an element leaves out takes the document 
   expect_false(grepl("stshf", .au_rs(.au_one()), fixed = TRUE))
 })
 
-test_that("FT-DC265 [FR-DC127 FR-DC128 FR-DC129 FR-DC130 FR-IX305]: rtf_config() changes what is passed, merging page and style, replacing the rest", {
+test_that("FT-DC267 [FR-DC127 FR-DC128 FR-DC129 FR-DC130 FR-IX305]: rtf_config() changes what is passed, merging page and style, replacing the rest", {
   base <- rtf_document(font_table = list(list(name = "Arial"), list(name = "Symbol")),
                        color_table = c("#000000", "#FF0000"),
                        page = rtf_page(paper_size = "A4", margin_left_in = 1),
@@ -324,7 +324,7 @@ test_that("FT-DC265 [FR-DC127 FR-DC128 FR-DC129 FR-DC130 FR-IX305]: rtf_config()
   expect_identical(st$markup, rtf_style(markup = "none")$markup)
 })
 
-test_that("FT-DC266 [FR-DC151 FR-DC339]: rtf_page() defaults; given dimensions leave paper and orientation unset", {
+test_that("FT-DC268 [FR-DC151 FR-DC340]: rtf_page() defaults; given dimensions leave paper and orientation unset", {
   p <- rtf_page()
   expect_s3_class(p, "rtf_page")
   expect_identical(p$paper_size, "letter")
@@ -345,7 +345,7 @@ test_that("FT-DC266 [FR-DC151 FR-DC339]: rtf_page() defaults; given dimensions l
                  "Both `paper_size` and `width_in`/`height_in` were supplied", fixed = TRUE)
 })
 
-test_that("FT-DC267 [FR-DC158 FR-DC160]: page sizes and margins in inches are single positive numbers", {
+test_that("FT-DC269 [FR-DC158 FR-DC160]: page sizes and margins in inches are single positive numbers", {
   expect_error(rtf_page(width_in = "wide"),
                "`width_in` must be a single positive number of inches, or NULL.", fixed = TRUE)
   expect_error(rtf_page(height_in = 0), "`height_in` must be a single positive", fixed = TRUE)
@@ -356,7 +356,7 @@ test_that("FT-DC267 [FR-DC158 FR-DC160]: page sizes and margins in inches are si
   expect_error(rtf_page(footer_dist_in = 0), "`footer_dist_in` must be", fixed = TRUE)
 })
 
-test_that("FT-DC268 [FR-DC185 FR-DC186 FR-DC187 FR-DC188]: rtf_titles() sets one block per content, or one for all", {
+test_that("FT-DC270 [FR-DC185 FR-DC186 FR-DC187 FR-DC188]: rtf_titles() sets one block per content, or one for all", {
   d <- rtf_tables(rtf_document(), list(data.frame(A = 1), data.frame(B = 2)))
   d0 <- d
   titles_of <- function(x) lapply(x$contents, function(b) b$title)
@@ -369,7 +369,7 @@ test_that("FT-DC268 [FR-DC185 FR-DC186 FR-DC187 FR-DC188]: rtf_titles() sets one
   expect_identical(.au_n(s, "T1"), 1L)
 })
 
-test_that("FT-DC269 [FR-DC192 FR-DC193]: a title's size and height resolve together, over the document's style", {
+test_that("FT-DC271 [FR-DC192 FR-DC193]: a title's size and height resolve together, over the document's style", {
   doc <- function(...) rtf_document(style = rtf_style(title_format = "table", ...))
   trrh <- function(s) regmatches(s, regexpr("\\\\trrh[0-9]+(?=[^\n]*TTL)", s, perl = TRUE))
   # the size, over the style's section and shared level
@@ -388,7 +388,7 @@ test_that("FT-DC269 [FR-DC192 FR-DC193]: a title's size and height resolve toget
   expect_identical(trrh(s), "\\trrh600")
 })
 
-test_that("FT-DC270 [FR-DC197 FR-DC198 FR-DC199 FR-DC200 FR-DC201]: rtf_titles() checks its document, its blocks and its style", {
+test_that("FT-DC272 [FR-DC197 FR-DC198 FR-DC199 FR-DC200 FR-DC201]: rtf_titles() checks its document, its blocks and its style", {
   expect_error(rtf_titles(list(), list("T")), "`doc` must be an rtf_document object", fixed = TRUE)
   expect_error(rtf_titles(rtf_document(), list("T")),
                "Cannot set titles before any content has been added.  Call rtf_titles() after rtf_tables() / rtf_figures()",
@@ -411,7 +411,7 @@ test_that("FT-DC270 [FR-DC197 FR-DC198 FR-DC199 FR-DC200 FR-DC201]: rtf_titles()
   expect_error(rtf_titles(d, "T", font = 1), "`rtf_titles(font)` must be", fixed = TRUE)
 })
 
-test_that("FT-DC271 [FR-DC202 FR-DC203 FR-DC204 FR-DC205 FR-DC209]: rtf_footnotes() sets one block per content, or one for all; NULL suppresses one", {
+test_that("FT-DC273 [FR-DC202 FR-DC203 FR-DC204 FR-DC205 FR-DC209]: rtf_footnotes() sets one block per content, or one for all; NULL suppresses one", {
   d <- rtf_tables(rtf_document(), list(data.frame(A = 1), data.frame(B = 2)))
   d0 <- d
   fn_of <- function(x) lapply(x$contents, function(b) b$footnote)
@@ -427,7 +427,7 @@ test_that("FT-DC271 [FR-DC202 FR-DC203 FR-DC204 FR-DC205 FR-DC209]: rtf_footnote
   expect_true(grepl("\\\\trrh600[^\n]*FNX", s))
 })
 
-test_that("FT-DC272 [FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC219]: rtf_footnotes() checks its document, its blocks and its style", {
+test_that("FT-DC274 [FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC219]: rtf_footnotes() checks its document, its blocks and its style", {
   expect_error(rtf_footnotes(list(), list("F")), "`doc` must be an rtf_document object", fixed = TRUE)
   expect_error(rtf_footnotes(rtf_document(), list("F")),
                "Cannot set footnotes before any content has been added.  Call rtf_footnotes() after rtf_tables() / rtf_figures()",
@@ -449,7 +449,7 @@ test_that("FT-DC272 [FR-DC213 FR-DC214 FR-DC215 FR-DC216 FR-DC219]: rtf_footnote
                fixed = TRUE)
 })
 
-test_that("FT-DC273 [FR-DC340]: a band's font is added to the font table; a named vector gives one per slot", {
+test_that("FT-DC275 [FR-DC341]: a band's font is added to the font table; a named vector gives one per slot", {
   s <- .au_rs(.au_one(header = rtf_header(c(l = "HDR"), font = "Arial")))
   expect_true(grepl("{\\f1\\fnil\\fcharset0 Arial;}", s, fixed = TRUE))
   expect_true(grepl("\\f1", .au_band(s), fixed = TRUE))
@@ -462,7 +462,7 @@ test_that("FT-DC273 [FR-DC340]: a band's font is added to the font table; a name
   expect_false(grepl("\\f1", s, fixed = TRUE))
 })
 
-test_that("FT-DC274 [FR-DC341]: a band's row height inherits the document's, else follows its font size", {
+test_that("FT-DC276 [FR-DC342]: a band's row height inherits the document's, else follows its font size", {
   hh <- function(doc) regmatches(.au_band(.au_rs(doc)), regexpr("\\\\trrh[0-9]+", .au_band(.au_rs(doc))))
   h <- rtf_header(c(l = "H"))
   base <- hh(.au_one(header = h))
@@ -480,7 +480,7 @@ test_that("FT-DC274 [FR-DC341]: a band's row height inherits the document's, els
                          base))
 })
 
-test_that("FT-DC275 [FR-DC342]: a band's twips arguments are single non-negative integers", {
+test_that("FT-DC277 [FR-DC343]: a band's twips arguments are single non-negative integers", {
   # these used to be written into the file as NA (fixed in this audit)
   for (fn in list(rtf_header, rtf_footer)) {
     expect_error(fn(c(l = "H"), row_height_twips = "a"),
@@ -500,7 +500,7 @@ test_that("FT-DC275 [FR-DC342]: a band's twips arguments are single non-negative
   expect_true(grepl("\\cellx9000\\ql\\li50", s, fixed = TRUE))
 })
 
-test_that("FT-DC276 [FR-DC343]: rtf_header() / rtf_footer() return a named list of the band's settings for rtf_section()", {
+test_that("FT-DC278 [FR-DC344]: rtf_header() / rtf_footer() return a named list of the band's settings for rtf_section()", {
   h <- rtf_header(c(l = "A", r = "B"), row_height_twips = 300L)
   expect_type(h, "list")
   expect_true(all(c("rows", "border", "width_twips", "width", "row_height_twips") %in% names(h)))
@@ -512,7 +512,7 @@ test_that("FT-DC276 [FR-DC343]: rtf_header() / rtf_footer() return a named list 
   expect_s3_class(rtf_section(.au_one(), page = 1, header = h, footer = f), "rtf_document")
 })
 
-test_that("FT-DC277 [FR-DC344]: a table is cut into pages before the style's row height reaches it", {
+test_that("FT-DC279 [FR-DC345]: a table is cut into pages before the style's row height reaches it", {
   big <- data.frame(A = sprintf("row %03d", 1:90))
   pages <- as_rtftables(big, split = "group_force", max_rows = 30)
   plain <- rtf_tables(rtf_document(), pages)
@@ -524,7 +524,7 @@ test_that("FT-DC277 [FR-DC344]: a table is cut into pages before the style's row
   expect_true(grepl("\\trrh1500", .au_rs(styled), fixed = TRUE))
 })
 
-test_that("FT-DC278 [FR-DC345]: generate_rtfreport(overwrite = ) is TRUE or FALSE", {
+test_that("FT-DC280 [FR-DC346]: generate_rtfreport(overwrite = ) is TRUE or FALSE", {
   f <- tempfile(fileext = ".rtf")
   on.exit(unlink(f), add = TRUE)
   # these used to be read as FALSE without a word (fixed in this audit)
