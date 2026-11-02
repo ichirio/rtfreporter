@@ -215,3 +215,8 @@ test_that("FT-DC246 [FR-DC315]: the font size, row height, left / right padding 
   # the header band takes the row height and padding too
   expect_true(grepl("\\trrh300\\cellx13680\\ql\\li33\\ri44 HDR", .vg_rows(s, "HDR"), fixed = TRUE))
 })
+
+test_that("FT-DC247 [FR-DC333]: rtf_layout(doc) stops when doc is not an rtf_document", {
+  expect_error(rtf_layout(list()), "`doc` must be an rtf_document object", fixed = TRUE)
+  expect_error(rtf_layout(data.frame(a = 1)), "`doc` must be an rtf_document object", fixed = TRUE)
+})

@@ -1414,6 +1414,9 @@ plan_labels <- function(.plan, ...) {
 #' @export
 plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
                        notes = NULL) {
+  if (!inherits(.plan, "table_plan")) {
+    .ard_stop("Expected a table_plan; pipe from table_plan(ard).")
+  }
   # the templates are a layer only when there are some: `plan_cells(notes =
   # FALSE)` alone says nothing about them
   p <- if (...length()) .plan_keyed(.plan, "cells", list(...)) else .plan
