@@ -430,10 +430,10 @@ test_that("FT-TB787 [FR-TB569 FR-TB570 FR-IX395 FR-IX335 FR-TB448 FR-TB450 FR-TB
 #    body    none (rows = 1 throughout), bold, align (left), border (bottom
 #            dot), color
 #    split   none, on (set_decimal_split(cols = 2, ratio = 0.5))
-#  Constraints: header border x cols hbold is left out (#872: a label row
-#  promoted by style_header(border = ) keeps the header styling it had then,
-#  so a later style_cols(header_bold = ) is lost, and its header_background
-#  is dropped); header bold x cols hbold write the same field (FR-IX398, (G)).
+#  Constraint: header bold x cols hbold write the same field (FR-IX398, (G)).
+#  (header border x cols hbold was left out until #872 was fixed: a label row
+#  promoted by style_header(border = ) now follows a later
+#  style_cols(header_bold = ); see (J).)
 #  Every row of .allpairs() is applied in the orders zone header cols body
 #  split, the reverse, and cols split zone body header; the three RTFs are
 #  identical, and the first is checked: header cell A's bottom dot (cell) >
@@ -494,6 +494,24 @@ test_that("FT-TB787 [FR-TB569 FR-TB570 FR-IX395 FR-IX335 FR-TB448 FR-TB450 FR-TB
 #  "1" / "3" and \ql \li0\ri<right> ".25" / ".0"; with grid the left half
 #  has no right edge and the right half no left edge.
 #  FR-IX399 FR-IX330 FR-TB363 FR-TB364 FR-TB349 FR-TB360 FR-TB548 FR-TB568.
+#
+#  (J) FT-TB979, decision table: style_header(border = ) on a label row (it
+#  promotes the row to cells) against the columns' header styling (#872).
+#  Each row is the two calls in both orders; the RTFs are identical and
+#  header cell A shows the second call's setting.
+#    second call                                 header cell A
+#    style_cols(header_bold = TRUE)              \b A
+#    style_cols(header_italic = TRUE)            \i A
+#    style_cols(header_align = "left")           \ql
+#    style_cols(header_background = red)         \clcbpat (B none)
+#    style_header(row 2, bold = TRUE), with a    row 1 \b A too (the
+#      second label row                          styling is shared)
+#  Then: the promotion alone writes the label row's RTF, fill included; on
+#  the promoted row itself a later call wins on the field it sets
+#  (style_header(row 1, bold = TRUE) then style_cols(header_bold = FALSE):
+#  not bold, and the reverse: bold); a col_cell() row the author built is
+#  not a promoted row and keeps its own bold.
+#  FR-TB617 FR-IX400 FR-TB434 FR-IX333 FR-IX398.
 # ---------------------------------------------------------------------------
 
 # The table's rows as written: the RTF from the first \trowd on.
@@ -685,8 +703,8 @@ test_that("FT-TB975 [FR-IX397 FR-IX330 FR-IX331 FR-IX332 FR-TB408 FR-TB422 FR-TB
                  cols = c("none", "align", "border", "bold", "bg", "hbold"),
                  body = c("none", "bold", "align", "border", "color"),
                  split = c("none", "on"))
-  # #872 (promotion freezes the header styling) and one shared field
-  out <- function(header, cols) header %in% c("border", "bold") & cols == "hbold"
+  # one shared field (header bold and cols hbold both write header_bold)
+  out <- function(header, cols) header == "bold" & cols == "hbold"
   cand <- do.call(expand.grid, c(levels, stringsAsFactors = FALSE))
   cand <- cand[!out(cand$header, cand$cols), ]
   rownames(cand) <- NULL
@@ -857,4 +875,51 @@ test_that("FT-TB978 [FR-IX399 FR-IX330 FR-TB363 FR-TB364 FR-TB349 FR-TB360 FR-TB
     cs <- as.list(ap$rows[i, ])
     expect_identical(.ts_split_check(cs, W), character(0), label = paste(unlist(cs), collapse = " / "))
   }
+})
+
+test_that("FT-TB979 [FR-TB617 FR-IX400 FR-TB434 FR-IX333 FR-IX398]: decision table -- style_header(border = ) on a label row against the columns' header styling, in either order", {
+  t0 <- rtftable(.ts_split_data())
+  t2 <- rtftable(.ts_split_data(), col_header = list(c("a", "b", "c"), c("P", "A", "B")))
+  promote <- function(x) style_header(x, row = 1, cols = 3, border = rtf_border(bottom = "double"))
+  hb <- function(x) style_header(x, row = 2, cols = 2, bold = TRUE)
+  cell_a <- function(tbl) {
+    h <- .ts_raw(tbl)[[1L]]
+    list(def = h$def[2L], ct = h$ct[2L], def_b = h$def[3L])
+  }
+  dt <- list(
+    hbold = list(t0, function(x) style_cols(x, cols = 2, header_bold = TRUE),
+                 function(a) grepl("\\\\b ", a$ct)),
+    hitalic = list(t0, function(x) style_cols(x, cols = 2, header_italic = TRUE),
+                   function(a) grepl("\\\\i ", a$ct)),
+    halign = list(t0, function(x) style_cols(x, cols = 2, header_align = "left"),
+                  function(a) .ts_q(a$ct) == "l"),
+    hfill = list(t0, function(x) style_cols(x, cols = 2, header_background = "#FF0000"),
+                 function(a) grepl("\\\\clcbpat", a$def) && !grepl("\\\\clcbpat", a$def_b)),
+    other_row = list(t2, function(x) suppressWarnings(hb(x)),
+                     function(a) grepl("\\\\b ", a$ct)))
+  for (nm in names(dt)) {
+    d <- dt[[nm]]
+    before <- promote(d[[2L]](d[[1L]]))
+    after <- d[[2L]](promote(d[[1L]]))
+    expect_identical(.ts_body(after), .ts_body(before), label = paste(nm, "order"))
+    expect_true(d[[3L]](cell_a(after)), label = paste(nm, "header cell A"))
+    # and the border of the promotion lands on B in both
+    expect_identical(.ts_side(cell_a(after)$def_b, "b"), "db", label = paste(nm, "border"))
+  }
+
+  # the promotion alone writes the label row's RTF, the header fill included
+  filled <- style_cols(t0, cols = 2, header_background = "#FF0000")
+  expect_identical(.ts_body(style_header(filled, row = 1, cols = 3, border = rtf_border())),
+                   .ts_body(filled))
+
+  # on the promoted row itself the later call wins on the field it sets
+  own <- function(x) style_header(x, row = 1, cols = 2, bold = TRUE)
+  off <- function(x) style_cols(x, cols = 2, header_bold = FALSE)
+  expect_false(grepl("\\\\b ", cell_a(off(own(promote(t0))))$ct))
+  expect_true(grepl("\\\\b ", cell_a(own(off(promote(t0))))$ct))
+
+  # a col_cell() row the author built is not promoted: it keeps its own bold
+  tc <- rtftable(.ts_split_data(),
+                 col_header = rtf_col_header(list(col_cell(1, "P"), col_cell(2, "A"), col_cell(3, "B"))))
+  expect_false(grepl("\\\\b ", cell_a(style_cols(tc, cols = 2, header_bold = TRUE))$ct))
 })

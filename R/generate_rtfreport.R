@@ -938,6 +938,8 @@
 #   bold         -- (optional) TRUE / FALSE.  Default FALSE.
 #   italic       -- (optional) TRUE / FALSE.  Default FALSE.
 #   underline    -- (optional) TRUE / FALSE.  Default FALSE.
+#   promoted     -- (internal) TRUE on a label-row cell promoted by
+#                   style_header(); it takes col_spec[[from]]$header_background.
 #
 # `border_spec` is the row-level border (only top on first / bottom on
 # last header row, per .header_outer_border()).  `group_bottom_side`,
@@ -1061,9 +1063,16 @@
     k  <- coverage[j]
     ci <- ci + 1L
     if (k > 0L) {
-      to_idx <- as.integer(spanning_header[[k]]$to)
+      sp     <- spanning_header[[k]]
+      to_idx <- as.integer(sp$to)
       bc     <- .build_border_commands(
         .cell_border(k, cell_idx = ci, n_cells = n_cells), color_index_map)
+      # A label-row cell promoted by style_header(border = / underline = )
+      # keeps its column's header fill, as the label row had it (#872).
+      if (isTRUE(sp$promoted) && !is.null(col_spec) && j <= length(col_spec)) {
+        bc <- paste0(bc, .cell_shading_cmd(col_spec[[j]]$header_background,
+                                           color_index_map))
+      }
       cell_defs <- c(cell_defs, paste0(bc, valign_cmd, "\\cellx", cellx[to_idx]))
       j <- to_idx + 1L
     } else {
