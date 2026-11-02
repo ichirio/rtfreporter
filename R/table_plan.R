@@ -530,7 +530,9 @@
 #'   "{USUBJID}/{AGE}/{SEX}")`), the records' values spread across `cols`,
 #'   one cell template (`plan_cells("{value:.3s}", na = "BLQ")`) -- a
 #'   listing laid out as a table, with nothing reshaped by hand.  Two
-#'   records of one key and column stop.  See [plan_append()] for its
+#'   records of one key and column (the row key as resolved, a template
+#'   included) with different values stop, naming the key, the column and
+#'   the values; the same value twice is one.  See [plan_append()] for its
 #'   summary under it.
 #'
 #' @section Where the other settings went:
@@ -2731,11 +2733,16 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 #'
 #' @param .plan A [table_plan()].
 #' @param max_rows The most body rows a page holds, for the
-#'   `"group_safe"` and `"group_force"` splits (which need it).  Blank rows
-#'   count only with `plan_blanks(counted = TRUE)`.
+#'   `"group_safe"` and `"group_force"` splits (which need it).  Given with
+#'   the split left out, the split is `"group_safe"` (a listing's is left
+#'   to [as_rtftables()], which does the same on its record column); with
+#'   a split that has no row budget (`"none"`, `"rows"`, a page per value)
+#'   it stops.  Blank rows count only with `plan_blanks(counted = TRUE)`.
 #' @param split How a page break is placed, `as_rtftables(split = )`:
 #'   \describe{
-#'     \item{`"none"`}{(default) one page; `max_rows` is not read.}
+#'     \item{`"none"`}{one page; the default when `max_rows` is not given
+#'       (with `max_rows` alone the default is `"group_safe"`).  Written
+#'       out with `max_rows` it stops: the budget would have nothing to cut.}
 #'     \item{`"group_safe"`}{whole groups to a page: a group that does not
 #'       fit starts the next page; one longer than a page is cut, with a
 #'       continuation label.}
@@ -3855,6 +3862,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     return(list(widen = s_args, rtf = .plan_rtf_args(.plan)))
   }
   emp <- .plan_merge(.plan_of(.plan, "empty"))
+  # a records plan: one record a cell, checked by widen_ard() (#835)
+  if (!is.null(.plan$records) && is.data.frame(x)) attr(x, ".ard_records") <- TRUE
   tbl <- .plan_stage(.plan_widen(x, s_args, empty = length(emp) > 0L),
                      .plan, c("cells", "cell_options", "digits", "round",
                              "levels", "labels"))
@@ -4326,6 +4335,15 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
         "  which takes `heading =` too."))
     }
     out$split <- "by_value"
+  }
+  # A row budget with the split left out is "group_safe", whole groups to
+  # a page: the budget is what was asked for, and a default that dropped
+  # it would page nothing without a word (#836).  A listing already reads
+  # it so in as_rtftables(), and a listing plan is left to that rule; a
+  # split given, "none" included, is the caller's, checked below.
+  if (!is.null(out$max_rows) && is.null(out$split) &&
+      !length(.plan_of(plan, "listing"))) {
+    out$split <- "group_safe"
   }
   # `max_rows` is the row budget, and three of the splits do not have
   # one: a value split makes a page per value, "rows" cuts at the
