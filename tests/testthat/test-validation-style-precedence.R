@@ -60,7 +60,7 @@
 #  Pairwise set (B), FT-DC249: key (3) x module (where it applies) x the two
 #  sources set (any 2 of S1..S5, 10) x route (2) -- every pair of levels of
 #  every two factors at least once, picked from the valid full product by the
-#  greedy all-pairs helper .sp_allpairs() below; winner the higher source.
+#  greedy all-pairs helper .allpairs() (helper-allpairs.R); winner the higher source.
 #  FR-DC315 FR-DC318 FR-DC319 FR-DC334.
 #
 #  Decision table (C), FT-DC250: rtf_config(style = ) over
@@ -243,25 +243,6 @@
     lapply(seq_len(length(src) - 1L), function(i) src[i:(i + 1L)]), list(src))
 }
 
-# Greedy all-pairs: from `cand` (the valid full combinations, one per row),
-# pick rows until every pair of levels of every two factors that occurs in
-# `cand` is covered.  Deterministic: the first row with the largest gain.
-.sp_allpairs <- function(cand) {
-  pr <- utils::combn(names(cand), 2L, simplify = FALSE)
-  cov <- lapply(seq_len(nrow(cand)), function(i) {
-    vapply(pr, function(p) paste(p[1L], cand[i, p[1L]], p[2L], cand[i, p[2L]], sep = "|"), "")
-  })
-  need <- unique(unlist(cov))
-  pick <- integer(0)
-  while (length(need)) {
-    i <- which.max(vapply(cov, function(k) sum(k %in% need), 0L))
-    pick <- c(pick, i)
-    need <- setdiff(need, cov[[i]])
-  }
-  list(rows = cand[pick, , drop = FALSE], need = unique(unlist(cov)),
-       covered = unique(unlist(cov[pick])))
-}
-
 .sp_cases_a <- function() {
   out <- list()
   for (key in names(.SP_MODULES)) {
@@ -295,7 +276,7 @@ test_that("FT-DC249 [FR-DC315 FR-DC318 FR-DC319 FR-DC334]: pairwise -- key x mod
     expand.grid(key = k, module = .SP_MODULES[[k]], pair = pairs,
                 route = c("document", "config"), stringsAsFactors = FALSE)
   }))
-  ap <- .sp_allpairs(cand)
+  ap <- .allpairs(cand)
   # every valid pair of levels is covered, with far fewer rows than the product
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), nrow(cand) / 3)
