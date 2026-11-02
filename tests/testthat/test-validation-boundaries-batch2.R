@@ -180,7 +180,7 @@
 #  cell_format    | unknown / "" / another case |              | error "is not a built-in cell format" | FR-TB146
 #  cell_format    | NA / a number / TRUE / length 2 / length 0 | | error "`cell_format` must be a function, the name of a built-in" | FR-TB145
 #  cell_format    | a function of the wrong length |          | error "must return a vector the same length" | FR-TB146
-#  first_rows     | 1 (min) / 2 / n - 1 with group_force, 3 | | pages 1,2,3 / 2,1,3 / 5,1        | FR-TB150
+#  first_rows     | 1 (min) / 2 / n - 1 with group_force, 3 | | pages 1,3,3 / 2,2,3 / 5,2 (the next page opens with a continuation row, #856) | FR-TB150 FR-TB610
 #  first_rows     | n / n + 1             | 6 / 7              | one page of 6                    | FR-TB150
 #  first_rows     | 0 / -1 / 1.5 / NA / Inf / "2" / TRUE / length 2 / length 0 | | error "as_rtftables(): `first_rows` is a whole number of rows, 1 or more" | FR-TB603
 #  first_rows     | with page_by / by_value |                  | error "`first_rows` paginates"   | FR-TB151
@@ -701,9 +701,9 @@ test_that("FT-TB776 [FR-IX355 FR-TB118 FR-TB119 FR-TB120 FR-TB145 FR-TB146 FR-TB
     E("cell_format", "a function of the wrong length", function(x) x[1L],
       "^A `cell_format` function must return a vector the same length as the column \\(got 1, expected 2\\)",
       more = list(x = cf)),
-    O("first_rows", "1 (min)", 1, rows(c(1, 2, 3)), more = gf3),
-    O("first_rows", "valid", 2, rows(c(2, 1, 3)), more = gf3),
-    O("first_rows", "n - 1", 5, rows(c(5, 1)), more = gf3),
+    O("first_rows", "1 (min)", 1, rows(c(1, 3, 3)), more = gf3),
+    O("first_rows", "valid", 2, rows(c(2, 2, 3)), more = gf3),
+    O("first_rows", "n - 1", 5, rows(c(5, 2)), more = gf3),
     O("first_rows", "n", 6, rows(6), more = gf3),
     O("first_rows", "n + 1", 7, rows(6), more = gf3),
     E("first_rows", "0", 0, fr, more = gf3),

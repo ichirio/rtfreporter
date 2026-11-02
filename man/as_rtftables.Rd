@@ -585,7 +585,10 @@ defaults to \code{"tfl"}.}
 \item{first_rows}{The rows of the first page (a whole number, 1 or more;
 as many as the table has or more is one page), the rest paginated as the
 other arguments say (\code{max_rows}, \code{split}): the page a table shares with
-the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  \code{NULL}
+the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  Under
+\code{"group_safe"} / \code{"group_force"} a group the cut falls inside goes on
+with its continuation row on the next page, counted in its \code{max_rows},
+as a cut by \code{max_rows} does.  \code{NULL}
 (the default): the first page as the others.  Not with \code{page_by},
 \code{split = "by_value"} or a custom \code{split}.}
 }

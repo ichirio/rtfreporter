@@ -286,8 +286,10 @@
       if (ncol(x) >= cidx && !is.character(x[[cidx]]) && !is.list(x[[cidx]])) {
         x[[cidx]] <<- as.character(x[[cidx]])
       }
-      list(idx = gidx, info = .compute_group_info(x, gidx, group_by))
+      list(idx = gidx,
+           info = info_override %||% .compute_group_info(x, gidx, group_by))
     }
+    info_override <- NULL
     mgr <- as.integer(min_group_rows %||% 2L)
     cut_rows <- function() switch(split,
       none        = list(x),
@@ -324,6 +326,12 @@
              call. = FALSE)
       }
       fr <- seq_len(as.integer(first_rows))
+      # A group split reads the groups on the whole body, so the rest knows
+      # whether it opens inside the group the first page cut (#856).
+      g_all <- if (split %in% c("group_safe", "group_force")) {
+        need_rows(split)
+        grouped()
+      }
       whole <- x
       x <- whole[-fr, , drop = FALSE]
       # (split = "rows": its row positions are the whole table's)
@@ -331,7 +339,37 @@
         split_rows <- as.integer(split_rows) - length(fr)
         split_rows <- split_rows[split_rows > 0L]
       }
+      if (!is.null(g_all)) {
+        rest_info <- lapply(g_all$info[c("id", "label", "headers")],
+                            function(v) v[-fr])
+        rest_info$mode <- g_all$info$mode
+        # The rest opens inside a group when a row of the cut group (not
+        # only its counted separators) follows the cut: it then opens with
+        # the group's continuation row, which counts toward its first page's
+        # `max_rows`, as a cut by `max_rows` does.  Not with `max_rows = 1`,
+        # where the continuation row would fill the page alone.
+        last <- length(fr)
+        gid  <- g_all$info$id
+        mk   <- whole[[".__rtf_blank__"]]
+        is_sep <- function(i) !is.null(mk) && isTRUE(as.integer(mk[[i]]) == .MARK_SEP)
+        k <- last + 1L
+        inside <- FALSE
+        while (k <= nrow(whole) && !is.na(gid[last]) && !is.na(gid[k]) &&
+               gid[k] == gid[last]) {
+          if (!is_sep(k)) { inside <- TRUE; break }
+          k <- k + 1L
+        }
+        if (inside && as.integer(max_rows) >= 2L) {
+          label <- g_all$info$label[last]
+          x <- add_cont_label(x, label, cont_label, col = g_all$idx %||% 1L)
+          rest_info$id      <- c(gid[last], rest_info$id)
+          rest_info$label   <- c(label, rest_info$label)
+          rest_info$headers <- c(TRUE, rest_info$headers)
+        }
+        info_override <- rest_info
+      }
       rest <- cut_rows()
+      info_override <- NULL
       x <- whole
       chunks <- c(list(whole[fr, , drop = FALSE]), unname(rest))
     }

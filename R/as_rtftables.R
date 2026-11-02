@@ -540,7 +540,10 @@
 #' @param first_rows The rows of the first page (a whole number, 1 or more;
 #'   as many as the table has or more is one page), the rest paginated as the
 #'   other arguments say (`max_rows`, `split`): the page a table shares with
-#'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  `NULL`
+#'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  Under
+#'   `"group_safe"` / `"group_force"` a group the cut falls inside goes on
+#'   with its continuation row on the next page, counted in its `max_rows`,
+#'   as a cut by `max_rows` does.  `NULL`
 #'   (the default): the first page as the others.  Not with `page_by`,
 #'   `split = "by_value"` or a custom `split`.
 #' @param collapse_repeats Columns in which to blank **consecutive repeated
@@ -1287,9 +1290,10 @@ as_rtftables.default <- function(x,
   # a fixed group1) collapses into a single stub label row that spans every
   # group and cannot be divided, and the outer value grouping fragments to one
   # page per row.  So here we split the raw body by the `group_col` value first,
-  # then run build_pages(split = "none") on each group.  For every OTHER split
-  # the table stays one logical table paginated across pages, so the stub is
-  # built once on the full body (the plain build_pages() call below).
+  # then run build_pages() on each group (split "none", or "group_force" with
+  # `max_rows`).  For every OTHER split the table stays one logical table
+  # paginated across pages, so the stub is built once on the full body (the
+  # plain build_pages() call below).
   if (!is.function(split) && identical(split, "by_value") &&
       !is.null(stub_spec_obj)) {
     # `page_by` stays the OUTER level here too: partition the raw body by it
@@ -1328,14 +1332,19 @@ as_rtftables.default <- function(x,
         # time, and `group_col` would be resolved against the post-stub body,
         # where the column it names has just been folded into the stub -- the
         # error #429 reported, raised on an argument nothing would use.
-        pgs <- build_pages(sub_body, kw, sub_cs, split_mode = "none",
+        # With `max_rows`, a value's page longer than it is cut as
+        # "group_force" cuts, on the stub this value's page builds: the
+        # stub's label rows are the groups, a cut inside one opens the next
+        # page with its continuation row, and every row counts (#857).
+        pgs <- build_pages(sub_body, kw, sub_cs,
+                           split_mode = if (is.null(max_rows)) "none" else "group_force",
                            page_by_arg = NULL, group_col_arg = NULL)
         # The name is the GROUP alone -- the outermost value -- never the
         # group and the BY value joined: it is the section heading, so joining
         # them would break one group into a section per BY value.  The BY value
         # stays in the page's `rtf_paginate_meta$page_by`.
         nm  <- g_nm
-        names(pgs) <- rep(nm, length(pgs))  # split_mode "none" => one page
+        names(pgs) <- rep(nm, length(pgs))  # one value: its pages share the name
         for (q in seq_along(pgs)) {
           meta <- attr(pgs[[q]]$data, "rtf_paginate_meta", exact = TRUE)
           if (!is.list(meta)) meta <- list()
