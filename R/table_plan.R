@@ -480,8 +480,9 @@
 #'   \describe{
 #'     \item{Names}{Each name is the column the finished table gets, and
 #'       later verbs refer to it by that name ([plan_stub()],
-#'       `plan_paginate_group(col = )`, [plan_hide()]); left unnamed, the
-#'       first key is called `group`.}
+#'       `plan_paginate_group(col = )`, [plan_hide()]); left unnamed, a
+#'       key keeps its column's name (`rows = "variable"` gives a column
+#'       `variable`).}
 #'     \item{`"variable"`}{The column that holds the analysis variable's
 #'       name, so `c(group = "variable")` makes one block of rows per
 #'       analysis variable (AGE, SEX, ...).}
@@ -4144,7 +4145,13 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (!length(vars) || !all(c("variable", "stat_name", "stat") %in% names(d))) {
     return(d)
   }
-  lvl <- if ("variable_level" %in% names(d)) "variable_level" else NULL
+  # a long frame built without cards has no variable_level: its levels
+  # are the label column's values (`.label`, or table_plan(label = COL))
+  lvl <- if ("variable_level" %in% names(d)) "variable_level" else {
+    lb <- plan$roles[["label"]] %||% ".label"
+    lb <- if (is.character(lb) && length(lb) == 1L && !is.na(lb)) unname(lb) else ".label"
+    if (lb %in% names(d)) lb else NULL
+  }
   if (is.null(lvl)) return(d)
   ctx <- if ("context" %in% names(d)) as.character(d$context) else ""
   key <- paste(d$variable, ctx, as.character(d[[lvl]]), sep = "\r")
