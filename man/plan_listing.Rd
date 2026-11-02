@@ -51,8 +51,9 @@ The plan, with one more layer.
 \code{plan_listing()} makes the plan a \strong{listing}: a data frame of subject
 records (SDTM or ADaM, nothing summarised) printed through
 \code{\link[=listing_spec]{listing_spec()}}, with columns that can stack several variables in one
-cell and wrap long text.  A record wrapped over several rows is never cut
-by a page break.  Its arguments are \code{\link[=listing_spec]{listing_spec()}}'s own, unchanged;
+cell and wrap long text.  A record wrapped over several rows is not cut
+by a page break: it moves whole to the next page, unless it alone is
+longer than a page.  Its arguments are \code{\link[=listing_spec]{listing_spec()}}'s own, unchanged;
 the blank rows are \code{\link[=plan_blanks]{plan_blanks()}}'s, as for a table.
 }
 \examples{
