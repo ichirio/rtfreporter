@@ -878,7 +878,10 @@
   # A record split by plan_stat_groups() is its group's (after its own
   # variable); a record that went whole to `.others` is its context's
   # first, its group only after them.
-  keys <- c(.ard_summary_key(variable, context), variable,
+  # (the plan writes a split record's entry, its digits filled in, under
+  # the variable, context and group together: .ard_group_key())
+  keys <- c(if (!is.na(group)) .ard_group_key(variable, context, group),
+            .ard_summary_key(variable, context), variable,
             if (!is.na(group) && !whole) group)
   if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
   if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
@@ -951,6 +954,14 @@
 .ard_summary_key <- function(variable, context) {
   if (is.na(variable) || is.na(context)) return(NA_character_)
   paste(variable, context, sep = "\r")
+}
+
+# The key of one split record's entry -- a variable under one context, in
+# one group of plan_stat_groups().  Written only by the plan; two carriage
+# returns keep it apart from a summary key and from any typed name.
+.ard_group_key <- function(variable, context, group) {
+  if (is.na(variable) || is.na(group)) return(NA_character_)
+  paste(variable, if (is.na(context)) "" else context, group, sep = "\r\r")
 }
 
 
