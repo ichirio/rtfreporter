@@ -16,9 +16,9 @@ rtfplot(
 )
 }
 \arguments{
-\item{x}{A figure.  Either the path to a \strong{PNG or JPEG} file (RTF's
-\verb{\\pngblip} and \verb{\\jpegblip}; no other format is emitted), or a plot
-object to draw:
+\item{x}{A figure.  Either the path to a \strong{PNG, JPEG or EMF} file (RTF's
+\verb{\\pngblip}, \verb{\\jpegblip} and \verb{\\emfblip}, the file embedded as it is;
+no other format is emitted), or a plot object to draw:
 \itemize{
 \item anything that draws when printed -- a \strong{ggplot2} plot, a
 \strong{lattice} trellis object, a \strong{patchwork};
@@ -60,7 +60,7 @@ Refused for a file.}
 An \code{rtfplot} (S3) object suitable for use in \code{rtf_tables()}.
 }
 \description{
-Embeds a figure into the RTF output -- a PNG or JPEG file, or a plot object
+Embeds a figure into the RTF output -- a PNG, JPEG or EMF file, or a plot object
 drawn here and then embedded.  The result can be passed directly to
 \code{\link[=rtf_figures]{rtf_figures()}} or \code{\link[=rtf_tables]{rtf_tables()}} in a pipe chain.
 }
@@ -68,7 +68,9 @@ drawn here and then embedded.  The result can be passed directly to
 The native size is read from the file's resolution metadata (PNG \code{pHYs}
 chunk, JPEG JFIF density). A 2500 x 1438 px image saved at 300 DPI therefore
 embeds at 2500/300 x 1438/300 in. When the file carries no DPI, the
-\code{rtfreporter.figure.default_dpi} option (factory \code{96}) is assumed. There is no
+\code{rtfreporter.figure.default_dpi} option (factory \code{96}) is assumed. An EMF
+(a vector picture, drawn at any size without blur) has its size in its
+header -- the frame, in 0.01 mm -- and embeds at that size. There is no
 automatic page-fit cap; give an explicit \code{width_twips} to shrink a figure that
 is wider than the page.
 }

@@ -26,7 +26,7 @@ rtf_figures(
 \item{figures}{A figure, or a list of them.  One figure is given as it is
 -- \code{rtf_figures(doc, plot)} -- and several as a list.
 \describe{
-\item{A file}{a character file path to an image file (PNG/JPEG).}
+\item{A file}{a character file path to an image file (PNG/JPEG/EMF).}
 \item{A plot object}{a ggplot2 plot, a patchwork, a grob, a recorded
 base plot, a function that draws -- see \code{\link[=rtfplot]{rtfplot()}}.  It is drawn
 with \code{png_device} (default: the \code{rtfreporter.png_device} option,
@@ -75,7 +75,7 @@ as an \code{\link[=rtfplot]{rtfplot()}} keeps the settings it was built with.}
 Modified rtf_document with appended figure contents.
 }
 \description{
-Append one or more figures as content pages -- image files (PNG/JPEG) or
+Append one or more figures as content pages -- image files (PNG/JPEG/EMF) or
 plot objects. Each figure creates one new page. Display dimensions and
 alignment apply to every path and plot object in \code{figures}; elements
 already constructed via \code{\link[=rtfplot]{rtfplot()}} keep their own settings.

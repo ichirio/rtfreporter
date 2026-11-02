@@ -135,7 +135,7 @@ list is short and open-ended:
 | a **grid** grob or `gtable` | `grid::grid.draw()` |
 | a base plot recorded with `grDevices::recordPlot()` | replayed |
 | a **function of no arguments** that draws | called |
-| a path to a **PNG or JPEG** file | read as it stands |
+| a path to a **PNG, JPEG or EMF** file | read as it stands |
 
 The function is the escape hatch, and the natural way to give base graphics --
 which draw as a side effect and leave no object to pass:
@@ -259,10 +259,10 @@ file.
 
 ### Formats
 
-**PNG and JPEG only.** RTF's picture keywords include `\emfblip`,
-`\wmetafile`, `\dibitmap` and `\macpict`; `rtfreporter` emits `\pngblip` and
-`\jpegblip`, and refuses the rest rather than embedding something a viewer may
-not render:
+**PNG, JPEG and EMF.** RTF's picture keywords include `\emfblip`,
+`\wmetafile`, `\dibitmap` and `\macpict`; `rtfreporter` emits `\pngblip`,
+`\jpegblip` and `\emfblip`, and refuses the rest rather than embedding
+something a viewer may not render:
 
 ```{r formats, error = TRUE}
 svg <- tempfile(fileext = ".svg")
@@ -272,9 +272,11 @@ rtfplot(svg)
 
 For a clinical deliverable that is the right pair: PNG for anything with text
 or lines (lossless, and the usual choice for a plot), JPEG for a photograph.
-A vector format would print more sharply, but embedded EMF is not rendered the
-same way by every word processor, and a figure that differs between reviewers'
-machines is worse than one that is 300 dpi.
+An EMF file -- a vector picture, from a program that writes one -- is embedded
+as it is, at the size its header gives (the frame, in 0.01 mm). It prints more
+sharply, but EMF is not rendered the same way by every word processor, and a
+figure that differs between reviewers' machines is worse than one that is
+300 dpi: check it in the readers your reviewers use.
 
 ## A report of figures and tables
 
