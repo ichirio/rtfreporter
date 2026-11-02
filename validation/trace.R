@@ -55,6 +55,7 @@ kinds <- c("behaviour", "argument", "data", "guard", "interaction")
 
 fr <- utils::read.csv(file.path(vdir, "requirements.csv"), colClasses = "character",
                       na.strings = "", stringsAsFactors = FALSE)
+all_ids <- fr$id
 fr <- fr[fr$status %in% "active", , drop = FALSE]
 fr$parent[is.na(fr$parent)] <- ""
 leaf <- !fr$id %in% fr$parent
@@ -124,9 +125,14 @@ if (any(gone)) {
 }
 if (anyDuplicated(map$ft)) stop("An FT id is used twice: ", paste(unique(map$ft[duplicated(map$ft)]),
                                                                  collapse = ", "), call. = FALSE)
-unknown <- setdiff(unlist(strsplit(map$fr, " ", fixed = TRUE)), fr$id)
+unknown <- setdiff(unlist(strsplit(map$fr, " ", fixed = TRUE)), all_ids)
 if (length(unknown)) stop("The map names FRs not in requirements.csv: ",
                           paste(unknown, collapse = ", "), call. = FALSE)
+# a test of a removed (deprecated) feature stays until the code goes; it
+# checks no requirement of the matrix
+map$fr <- vapply(strsplit(map$fr, " ", fixed = TRUE),
+                 function(x) paste(intersect(x, fr$id), collapse = " "), "")
+map <- map[nzchar(map$fr), , drop = FALSE]
 not_leaf <- intersect(unlist(strsplit(map$fr, " ", fixed = TRUE)), fr$id[!leaf])
 if (length(not_leaf)) stop("Tests are mapped to the leaves only, not to ",
                            paste(not_leaf, collapse = ", "), call. = FALSE)

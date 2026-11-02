@@ -33,6 +33,16 @@ test_that("every test test_map.csv names is in its file", {
                             paste(map$file[gone], map$test[gone], sep = ": ", collapse = "\n")))
 })
 
+test_that("an FT id is given once: by a test's own name or by test_map.csv, not both", {
+  map <- .leaf_read("test_map.csv")
+  tb <- .leaf_test_names()
+  named <- grep(.leaf_head, tb$test, value = TRUE)
+  ft <- c(map$ft, sub(paste0(.leaf_head, ".*$"), "\\1", named))
+  twice <- unique(ft[duplicated(ft)])
+  expect(!length(twice), paste0("FT ids given twice (a test named \"FT-xx [FR-..]:\" ",
+                                "needs no test_map.csv row): ", paste(twice, collapse = " ")))
+})
+
 test_that("every active leaf FR has a test or a deviation with its risk", {
   fr <- .leaf_read("requirements.csv")
   map <- .leaf_read("test_map.csv")
