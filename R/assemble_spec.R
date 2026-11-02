@@ -18,12 +18,8 @@
 # character (a non-breaking space, U+00A0, becomes a normal space), and the
 # escaped braces / backslash become literals.
 .rtf_decode_text <- function(x) {
-  pieces <- unique(regmatches(x, gregexpr("\\\\u-?[0-9]+\\?", x))[[1L]])
-  for (p in pieces) {
-    cp <- as.integer(sub("\\\\u(-?[0-9]+)\\?", "\\1", p))
-    ch <- if (is.na(cp) || cp == 160L) " " else intToUtf8(((cp %% 65536L) + 65536L) %% 65536L)
-    x  <- gsub(p, ch, x, fixed = TRUE)
-  }
+  x <- .rtf_unicode_decode(x)
+  x <- gsub(intToUtf8(160L), " ", x, fixed = TRUE)
   x <- gsub("\\{",  "{",  x, fixed = TRUE)
   x <- gsub("\\}",  "}",  x, fixed = TRUE)
   x <- gsub("\\\\", "\\", x, fixed = TRUE)

@@ -216,7 +216,7 @@
     if      (ch == "\\") return("\\\\")
     if      (ch == "{")  return("\\{")
     if      (ch == "}")  return("\\}")
-    if      (cp > 127L)  return(sprintf("\\u%d?", cp))
+    if      (cp > 127L)  return(.rtf_unicode_escape(cp))
     ch
   }, character(1L))
   paste0(out, collapse = "")
@@ -276,14 +276,8 @@
       title <- gsub("\\\\\\\\", "\\\\", g[2L])
       title <- gsub("\\\\\\{",   "{",   title)
       title <- gsub("\\\\\\}",   "}",   title)
-      # \uN? -> the character with codepoint N.  base gsub() does NOT accept a
-      # function replacement, and this Windows R build has broken \\1 backrefs,
-      # so substitute each distinct escape literally via regmatches().
-      escs <- regmatches(title, gregexpr("\\\\u[0-9]+\\?", title))[[1L]]
-      for (e in unique(escs)) {
-        cp <- as.integer(regmatches(e, regexpr("[0-9]+", e)))
-        if (!is.na(cp)) title <- gsub(e, intToUtf8(cp), title, fixed = TRUE)
-      }
+      # \uN? -> the character (signed or unsigned N, surrogate pairs joined)
+      title <- .rtf_unicode_decode(title)
       return(trimws(title))
     }
   }

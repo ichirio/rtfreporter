@@ -159,10 +159,60 @@
     if      (ch == "{")  return("\\{")
     if      (ch == "}")  return("\\}")
     if      (ch == "\n") return("\\line ")
-    if (cp > 127L)       return(sprintf("\\u%d?", cp))
+    if (cp > 127L)       return(.rtf_unicode_escape(cp))
     ch
   }, character(1L))
   paste0(out, collapse = "")
+}
+
+# One code point -> its RTF `\uN?` escape.  RTF reads N as a signed 16-bit
+# number, so a UTF-16 unit above 32767 is written as unit - 65536, and a code
+# point above U+FFFF is written as its surrogate pair (two `\uN?`).
+# U+8868 -> "\u-30616?";  U+00E9 -> "\u233?";  U+1F600 -> "\u-10179?\u-8704?".
+.rtf_unicode_escape <- function(cp) {
+  cp <- as.integer(cp)
+  units <- if (cp > 65535L) {
+    v <- cp - 65536L
+    c(55296L + v %/% 1024L, 56320L + v %% 1024L)
+  } else {
+    cp
+  }
+  units <- ifelse(units > 32767L, units - 65536L, units)
+  paste0(sprintf("\\u%d?", units), collapse = "")
+}
+
+# The reverse: replace every run of `\uN?` escapes in `x` by the characters.
+# N may be signed or unsigned; a surrogate pair becomes one character, and a
+# lone surrogate (or an unreadable N) becomes U+FFFD.
+.rtf_unicode_decode <- function(x) {
+  m <- gregexpr("(?:\\\\u-?[0-9]+\\?)+", x, perl = TRUE)
+  runs <- regmatches(x, m)
+  regmatches(x, m) <- lapply(runs, function(r) {
+    vapply(r, .rtf_unicode_decode_run, character(1L), USE.NAMES = FALSE)
+  })
+  x
+}
+
+.rtf_unicode_decode_run <- function(run) {
+  n <- suppressWarnings(
+    as.integer(regmatches(run, gregexpr("-?[0-9]+", run))[[1L]]))
+  n <- n %% 65536L
+  n[is.na(n)] <- 65533L
+  out <- integer(0)
+  i <- 1L
+  while (i <= length(n)) {
+    u <- n[i]
+    if (u >= 55296L && u <= 56319L && i < length(n) &&
+        n[i + 1L] >= 56320L && n[i + 1L] <= 57343L) {
+      out <- c(out, 65536L + (u - 55296L) * 1024L + (n[i + 1L] - 56320L))
+      i <- i + 2L
+      next
+    }
+    if (u >= 55296L && u <= 57343L) u <- 65533L
+    out <- c(out, u)
+    i <- i + 1L
+  }
+  intToUtf8(out)
 }
 
 # Process a segment of text that may contain ^{} / _{} markup recursively,
