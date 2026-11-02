@@ -280,7 +280,10 @@ vector the same length as \code{sort_by} (one direction per key).  Ignored when
 \item{cont_label}{Character (default \code{" (Cont.)"}).  Suffix appended to a
 group's label on the second and later pages it continues onto (the
 group-aware splits), marking a continued group.  One string; \code{""}
-repeats the label alone.}
+repeats the label alone.  A group whose only rows past a cut are blank
+rows -- a listing record's blank row, or the separators \code{blank_rows}
+counts -- is not continued: no continuation row, and those blank rows,
+which would open the next page, are dropped.}
 
 \item{min_group_rows}{A non-negative whole number (default \code{2}).
 Widow/orphan control for the

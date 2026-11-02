@@ -414,7 +414,10 @@
 #' @param cont_label Character (default `" (Cont.)"`).  Suffix appended to a
 #'   group's label on the second and later pages it continues onto (the
 #'   group-aware splits), marking a continued group.  One string; `""`
-#'   repeats the label alone.
+#'   repeats the label alone.  A group whose only rows past a cut are blank
+#'   rows -- a listing record's blank row, or the separators `blank_rows`
+#'   counts -- is not continued: no continuation row, and those blank rows,
+#'   which would open the next page, are dropped.
 #' @param blank_rows Where to insert blank separator rows in the body.  `NULL`
 #'   (default) inserts none (but an `rtf_blank_rows` attribute already on the
 #'   input is still honoured).  Accepts any of -- or a `list()` combining:
