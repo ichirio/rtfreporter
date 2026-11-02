@@ -99,7 +99,8 @@ listing <- adpc |>
 analyte, treatment and time point. Its constant row key (`block = ~ "Summary
 Statistics"`) makes the heading row above its statistics. Mean, SD,
 geometric mean and median take one significant digit more than the data,
-minimum and maximum the data's, CV% one decimal:
+minimum and maximum the data's, CV% one decimal. A statistic that cannot be
+computed (an SD of one value) prints `na`, NC; the heading row stays empty:
 
 ```{r summary}
 pk_stats <- ~ list(N = length, mean = mean, sd = stats::sd,
@@ -110,12 +111,10 @@ ard <- cards::ard_summary(adpc[!is.na(adpc$AVAL), ], by = c(ANALYTE, ARM, ATPT),
                           variables = AVAL, statistic = pk_stats)
 summary <- normalize_ard(ard) |>
   table_plan(cols = "ATPT", rows = c(block = ~ "Summary Statistics")) |>
-  plan_cells(continuous = cell_rows(
-    N = "{N:.0f}", Mean = "{mean:.4s}",
-    SD = c(is.na(sd) ~ "NC", "{sd:.4s}"),          # NC: not calculated (N < 2)
-    "CV%" = c(is.na(cv) ~ "NC", "{cv:.1f}"),
-    "Geometric mean" = "{geo_mean:.4s}", Median = "{median:.4s}",
-    Min = "{min:.3s}", Max = "{max:.3s}"))
+  plan_cells(continuous = c(N = "{N:.0f}", Mean = "{mean:.4s}", SD = "{sd:.4s}",
+                            "CV%" = "{cv:.1f}", "Geometric mean" = "{geo_mean:.4s}",
+                            Median = "{median:.4s}", Min = "{min:.3s}", Max = "{max:.3s}"),
+             na = "NC")
 ```
 
 Each runs on its own, as any plan does: `plan_apply(summary, "table")` is
