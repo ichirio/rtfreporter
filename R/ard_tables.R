@@ -1274,7 +1274,8 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
     }
   }
   out <- cand[[1L]]
-  ord <- if (is.null(levels)) .ard_key_order(d, cols, key) else {
+  # `levels` is a named list, as in widen_ard(); a plain vector is not read
+  ord <- if (!is.list(levels)) .ard_key_order(d, cols, key) else {
     lv <- levels[[cols[1L]]] %||% levels[[1L]]
     c(intersect(lv, names(out)), setdiff(names(out), lv))
   }
@@ -2452,8 +2453,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # rows apart, and does not want a column of 1s and 2s in the result.  The
   # column is built either way, because the row identity is made of it, and
   # dropped at the end.
-  drop_label <- length(label) == 1L && !inherits(label, "formula") &&
-    is.na(label[[1L]])
+  # (a chain of one formula, c(~ "x"), is a list: no NA to read there)
+  drop_label <- length(label) == 1L && is.atomic(label) && is.na(label[[1L]])
   if (drop_label) label <- ".label"
   # A `label` carrying a formula is a template over the record, not a column
   # name.  Strip the templated part out, keep any plain string as the column
@@ -2461,7 +2462,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # column (or the `cells` names) produced.
   lab_chain <- NULL
   if (is.list(label) || inherits(label, "formula")) {
-    parts <- as.list(label)
+    parts <- if (inherits(label, "formula")) list(label) else as.list(label)
     is_f <- vapply(parts, inherits, logical(1), "formula")
     if (any(is_f)) {
       lab_chain <- .ard_chain(parts, one_sided = TRUE)
