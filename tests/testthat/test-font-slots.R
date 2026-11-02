@@ -16,7 +16,7 @@ silence_deprecation("rtf_default_format")
 .fonttbl  <- function(l) grep("fonttbl", l, value = TRUE)[1L]
 
 .ja <- c(latin = "Times New Roman", east_asian = "MS Mincho")
-# "\u5e74\u9f62" is written \u24180?\u40802?
+# "\u5e74\u9f62" is written \u24180?\u-24734?
 .ja_df <- function() data.frame(a = c("Age", "\u5e74\u9f62"), b = c("1", "2"),
                                 stringsAsFactors = FALSE)
 
@@ -155,8 +155,8 @@ test_that("one family in two slots with different charsets is two entries", {
 test_that("a table cell carries the slot words", {
   l <- .run_slots(rtf_document(font_lang = c(east_asian = "ja")) |>
                     rtf_tables(rtftable(.ja_df(), border = "tfl", font = .ja)))
-  expect_match(.line_of(l, "\\u24180?\\u40802?"),
-               paste0(.ja_run, " \\u24180?\\u40802?\\cell"), fixed = TRUE)
+  expect_match(.line_of(l, "\\u24180?\\u-24734?"),
+               paste0(.ja_run, " \\u24180?\\u-24734?\\cell"), fixed = TRUE)
 })
 
 test_that("a title, in either format, carries the slot words", {
@@ -166,7 +166,7 @@ test_that("a title, in either format, carries the slot words", {
                    default_format = rtf_default_format(title_format = tf)) |>
         rtf_tables(rtftable(.ja_df(), border = "tfl")) |>
         rtf_titles(list("\u8868 14.1"), font = .ja))
-    expect_match(.line_of(l, "\\u34920? 14.1"), .ja_run, fixed = TRUE)
+    expect_match(.line_of(l, "\\u-30616? 14.1"), .ja_run, fixed = TRUE)
   }
 })
 
