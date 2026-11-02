@@ -39,8 +39,12 @@ a group straddling it continued on the next page; only
 \item{break_before}{With \code{split = "rows"}: the row positions to cut
 before, \code{as_rtftables(split_rows = )}.}
 
-\item{min_group_rows}{The fewest rows of a group left on a page or
-carried to the next, to avoid a widow or an orphan.}
+\item{min_group_rows}{Widow / orphan control, \code{as_rtftables(min_group_rows = )}
+(default \code{2}; \code{0} turns it off).  A group that starts on a page with fewer
+than this many rows \strong{after its first row} (its heading, in a
+value-grouped column the row that opens the group) moves whole to the
+next page; a cut inside a group is pulled back so at least this many of
+its rows go on to the next page.}
 
 \item{cont_label}{The text added to a group's heading on the page it is
 continued on, \code{as_rtftables(cont_label = )}.}

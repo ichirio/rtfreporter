@@ -159,9 +159,11 @@
   # "filled" -- under which every non-empty cell opens a group, so every row
   # becomes its own group and `split = "group_safe"` is free to cut anywhere
   # (#330).  Resolving here is a no-op when nothing is materialised, because
-  # the body the detector sees is then the same one.
+  # the body the detector sees is then the same one.  `group_col = NULL` reads
+  # the groups from column 1, so that column is settled the same way (#824).
   if (identical(group_by, "auto") && isTRUE(count_blank_rows)) {
     gidx <- tryCatch(.resolve_group_col(group_col, x), error = function(e) NULL)
+    if (is.null(gidx) && ncol(x) >= 1L) gidx <- 1L
     if (!is.null(gidx) && length(gidx) == 1L && !is.na(gidx)) {
       group_by <- .detect_group_mode(as.character(x[[gidx]]))
     }
@@ -340,12 +342,26 @@
                                        blank_row_first = blank_row_first,
                                        blank_row_end   = blank_row_end)
     } else {
+      # A continuation row ("B (Cont.)") opens the group it continues, so
+      # "between_groups" must not read a group change between it and B's
+      # rows: give it B's value while the blanks are placed (#824).
+      cidx <- tryCatch(.resolve_group_col(group_col, chunk),
+                       error = function(e) NULL) %||% 1L
+      gv   <- if (nrow(chunk) >= 2L && ncol(chunk) >= cidx) chunk[[cidx]]
+      is_cont <- is.character(gv) && !is.na(gv[2L]) && nzchar(cont_label %||% "") &&
+        identical(gv[1L], paste0(gv[2L], cont_label))
+      if (is_cont) chunk[[cidx]][1L] <- gv[2L]
       chunk <- set_blank_rows(chunk,
                                blank_rows      = blank_rows,
                                blank_row_first = blank_row_first,
                                blank_row_end   = blank_row_end,
                                group_col       = group_col,
                                group_by        = group_by)
+      if (is_cont) {
+        br <- attr(chunk, "rtf_blank_rows", exact = TRUE)
+        chunk[[cidx]][1L] <- gv[1L]
+        attr(chunk, "rtf_blank_rows") <- br
+      }
     }
     if (length(collapse_idx)) {
       rec <- if (!is.null(collapse_record) && collapse_record %in% names(chunk))
@@ -361,6 +377,13 @@
     )
     if (length(page_values)) {
       attr(chunk, "rtf_paginate_meta")$page_values <- page_values
+    }
+    # A value split's page is a GROUP page: record the group, the outer page
+    # axis paginate_cols(order = ) sorts on (#824).  page_by + by_value
+    # records it the same way (.order_and_name_pages()).
+    if (identical(strategy, "by_value") && !is.null(chunk_names) &&
+        !is.na(chunk_names[i]) && nzchar(chunk_names[i])) {
+      attr(chunk, "rtf_paginate_meta")$page_group <- chunk_names[i]
     }
     chunk
   })
@@ -969,6 +992,24 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
                                blank_ignore = character(0)) {
   if (nrow(df) == 0L) return(list(df))
   cont_col <- if (is.null(group_idx)) 1L else group_idx
+  # A counted separator (count_blank_rows = TRUE) is read as a row of the group
+  # before it, but it is not one of the group's rows: a group whose only rows
+  # past a cut are its separators is not continued -- no continuation row, and
+  # the separators, which would open the next page, are dropped (a separator
+  # never prints on a page edge, FR-IX324) (#824).
+  is_sep <- function(i) {
+    v <- df[[".__rtf_blank__"]]
+    !is.null(v) && isTRUE(as.integer(v[[i]]) == .MARK_SEP)
+  }
+  continues <- function(e) {
+    k <- e + 1L
+    while (k <= nrow(df) && !is.na(info$id[k]) && !is.na(info$id[e]) &&
+           info$id[k] == info$id[e]) {
+      if (!is_sep(k)) return(TRUE)
+      k <- k + 1L
+    }
+    FALSE
+  }
   result <- list()
   pos <- 1L
   while (pos <= nrow(df)) {
@@ -997,7 +1038,8 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     if (min_group_rows > 0L && end < nrow(df)) {
       end_gid  <- info$id[end]
       next_gid <- info$id[end + 1L]
-      cut_here <- !is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid
+      cut_here <- !is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid &&
+                  continues(end)
       if (cut_here) {
         hpos <- end
         while (hpos > pos && !isTRUE(info$headers[hpos])) hpos <- hpos - 1L
@@ -1010,7 +1052,10 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
           # WIDOW: count the same-group rows that would spill past `end`.
           tail_n <- 0L; k <- end + 1L
           while (k <= nrow(df) && !is.na(info$id[k]) &&
-                 info$id[k] == end_gid) { tail_n <- tail_n + 1L; k <- k + 1L }
+                 info$id[k] == end_gid) {
+            if (!is_sep(k)) tail_n <- tail_n + 1L
+            k <- k + 1L
+          }
           if (tail_n > 0L && tail_n < min_group_rows) {
             new_end <- end - (min_group_rows - tail_n)
             # First row of this group on the current page (a (Cont.) header
@@ -1032,7 +1077,8 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     if (end < nrow(df)) {
       end_gid  <- info$id[end]
       next_gid <- info$id[end + 1L]
-      if (!is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid) {
+      if (!is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid &&
+          continues(end)) {
         label <- info$label[end]
         cont_row <- df[end + 1L, , drop = FALSE]
         # Zero-out every cell, then place the (Cont.) label in cont_col.
@@ -1048,6 +1094,7 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
       }
     }
     pos <- end + 1L
+    while (pos <= nrow(df) && is_sep(pos)) pos <- pos + 1L
   }
   result
 }
@@ -1137,10 +1184,30 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     if (!is.null(buf)) { result[[length(result) + 1L]] <<- buf; buf <<- NULL }
   }
 
+  # A counted separator (count_blank_rows = TRUE) is read as a row of the
+  # group before it.  It is not part of that group's size: it costs a row only
+  # where the next group joins this one's page, and it is dropped where the
+  # next group opens a page, since a separator never prints on a page edge
+  # (FR-IX324).  So a group's trailing separators are held back (`pend`) and
+  # put between it and the next group only when the two share a page (#824).
+  mk  <- df[[".__rtf_blank__"]]
+  sep <- if (is.null(mk)) rep(FALSE, nrow(df)) else {
+    v <- suppressWarnings(as.integer(mk)); !is.na(v) & v == .MARK_SEP
+  }
+  pend <- NULL
+
   for (g in unique_gids) {
     rows <- which(gid == g)
-    g_n  <- length(rows)
+    k    <- length(rows)
+    while (k >= 1L && sep[rows[k]]) k <- k - 1L
+    trail <- if (k < length(rows)) df[rows[(k + 1L):length(rows)], , drop = FALSE]
+    rows  <- rows[seq_len(k)]
+    if (k == 0L) {                       # nothing but separators
+      pend <- if (is.null(pend)) trail else rbind(pend, trail)
+      next
+    }
     gdf  <- df[rows, , drop = FALSE]
+    held <- if (is.null(buf) || is.null(pend)) buf else rbind(buf, pend)
 
     if (printed(NULL, gdf) > max_rows) {
       flush()
@@ -1155,12 +1222,13 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
       # in the buffer so the next group(s) can pack onto it.
       if (length(sub) > 1L) result <- c(result, sub[-length(sub)])
       buf <- sub[[length(sub)]]
-    } else if (!is.null(buf) && printed(buf, gdf) > max_rows) {
+    } else if (!is.null(held) && printed(held, gdf) > max_rows) {
       flush()
       buf <- gdf
     } else {
-      buf <- if (is.null(buf)) gdf else rbind(buf, gdf)
+      buf <- if (is.null(held)) gdf else rbind(held, gdf)
     }
+    pend <- trail
   }
   flush()
   result

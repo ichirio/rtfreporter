@@ -446,10 +446,12 @@
 #' @param min_group_rows Integer (default `2`).  Widow/orphan control for the
 #'   group-aware splits (`"group_force"`, `"group_safe"`, `"by_value"`): when a
 #'   page would end on a group that *starts* on that page while showing fewer
-#'   than `min_group_rows` of the group's child rows, the whole group is moved
-#'   to the next page.  This prevents a lone group header being stranded at the
-#'   foot of a page with none (or too few) of its members.  Set to `0` to
-#'   disable (the previous behaviour).
+#'   than `min_group_rows` of the group's child rows (the rows after its first
+#'   row), the whole group is moved to the next page; and a cut inside a group
+#'   is pulled back so at least `min_group_rows` of its rows go on to the next
+#'   page.  This prevents a lone group header being stranded at the foot of a
+#'   page with none (or too few) of its members.  Set to `0` to disable (the
+#'   previous behaviour).
 #' @param count_blank_rows Logical (default `FALSE`).  What `max_rows` counts.
 #'   \describe{
 #'     \item{`TRUE`}{`max_rows` is the number of rows the page **prints**:

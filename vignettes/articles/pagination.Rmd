@@ -559,8 +559,8 @@ Both stay readable per page in `attr(page$data, "rtf_paginate_meta")`
 (`page_group`, `page_by`).
 
 Add `paginate_cols()` and the column block takes its place between them or
-under them, as `order` says (see *Which axis the page number advances
-along*): `"across"` gives group / column block / `page_by`, `"down"` gives
+under them, as `order` says (see *Which axis is the outer
+one*): `"across"` gives group / column block / `page_by`, `"down"` gives
 group / `page_by` / column block.
 
 
@@ -751,12 +751,13 @@ page 2  row 1 / cols 2    page 5  row 2 / cols 2
 page 3  row 1 / cols 3    page 6  row 2 / cols 3
 ```
 
-### Which axis the page number advances along -- `order`
+### Which axis is the outer one -- `order`
 
-`order` says which axis the **page number advances along first**:
-`"across"` (the default) advances **across the columns** -- the column block
-first, the row pages running inside it -- and `"down"` advances **down the
-rows** -- the row page first, its column blocks following it.
+`order` says which axis is the **outer** one: `"across"` (the default) goes
+**across the columns** -- one column block after another, the row pages of a
+block coming one after the other inside it -- and `"down"` goes **down the
+rows** -- one row page after another, its column blocks coming one after the
+other inside it.
 
 ```{r pagcols_order, eval = FALSE}
 as_rtftables(df, split = "group_safe", max_rows = 20) |>

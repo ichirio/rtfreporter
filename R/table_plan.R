@@ -2746,8 +2746,12 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 #'   }
 #' @param break_before With `split = "rows"`: the row positions to cut
 #'   before, `as_rtftables(split_rows = )`.
-#' @param min_group_rows The fewest rows of a group left on a page or
-#'   carried to the next, to avoid a widow or an orphan.
+#' @param min_group_rows Widow / orphan control, `as_rtftables(min_group_rows = )`
+#'   (default `2`; `0` turns it off).  A group that starts on a page with fewer
+#'   than this many rows **after its first row** (its heading, in a
+#'   value-grouped column the row that opens the group) moves whole to the
+#'   next page; a cut inside a group is pulled back so at least this many of
+#'   its rows go on to the next page.
 #' @param cont_label The text added to a group's heading on the page it is
 #'   continued on, `as_rtftables(cont_label = )`.
 #' @param page_by The column(s) whose value partitions the body **first**,
