@@ -27,7 +27,25 @@
   if (length(rows) == 0L) return(list())
   slot <- switch(align, left = "l", center = "c", right = "r", "l")
 
-  lapply(rows, function(r) {
+  lapply(seq_along(rows), function(i) {
+    r <- rows[[i]]
+    # The page footer's row list, list(columns = , row_height_twips = ): the
+    # row's own height over the block's (#125).  Its columns are read as a
+    # row given bare; the paragraph form has no rows, so it keeps the text.
+    if (is.list(r) && !is.null(r$columns)) {
+      bad <- setdiff(names(r), c("columns", "row_height_twips"))
+      if (length(bad)) {
+        stop(sprintf(paste0("`rtf_footnotes()` row %d: a row given as a list ",
+                            "takes columns = and row_height_twips =; got %s."),
+                     i, paste0("'", bad, "'", collapse = ", ")), call. = FALSE)
+      }
+      h <- .check_row_height(
+        r$row_height_twips,
+        sprintf("rtf_footnotes()` row %d's `row_height_twips", i))
+      cols <- .footnote_rows(list(r$columns), align, format)[[1L]]
+      if (identical(format, "text")) return(cols)
+      return(list(columns = cols, row_height_twips = h))
+    }
     if (is.list(r)) {
       stop(paste0("A footnote row is a string or a named vector such as ",
                   "c(l = \"...\", r = \"...\"). Per-row styling lists are no ",
@@ -76,6 +94,8 @@
     font                  = style[["font"]],   # not `$font`: exact match (#496)
     markup                = style$markup,
     cell_padding_left_twips  = NULL,
-    cell_padding_right_twips = NULL
+    cell_padding_right_twips = NULL,
+    cell_padding_top_twips    = NULL,
+    cell_padding_bottom_twips = NULL
   )
 }

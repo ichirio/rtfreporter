@@ -528,6 +528,11 @@
 #' @param cell_padding_left_twips Left cell padding in twips (default 0
 #'   since v0.0.21; cell content sits flush against the cell border).
 #' @param cell_padding_right_twips Right cell padding in twips (default 0).
+#' @param cell_padding_top_twips,cell_padding_bottom_twips Cell padding above /
+#'   below the text in twips, written into every header and data cell's
+#'   definition (blank separator rows excepted).  `NULL` (default) takes the
+#'   style's, else the document default ([rtf_default_format()]), else 0; 0
+#'   writes nothing.
 #' @param cell_valign Vertical alignment: `"bottom"` (default), `"top"`,
 #'   or `"center"`.
 #' @param cell_styles `NULL` (default), or a list of length `nrow(data)`.
@@ -640,6 +645,8 @@ rtftable <- function(
   blank_row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
   cell_valign = "bottom",
   cell_styles = NULL,
   blank_row_normalize = c("detect", "collapse"),
@@ -663,6 +670,10 @@ rtftable <- function(
       cell_padding_left_twips <- style$cell_padding_left_twips
     if (is.null(cell_padding_right_twips))
       cell_padding_right_twips <- style$cell_padding_right_twips
+    if (is.null(cell_padding_top_twips))
+      cell_padding_top_twips <- style$cell_padding_top_twips
+    if (is.null(cell_padding_bottom_twips))
+      cell_padding_bottom_twips <- style$cell_padding_bottom_twips
   }
 
 
@@ -833,6 +844,8 @@ rtftable <- function(
       blank_row_height_twips      = if (!is.null(blank_row_height_twips)) as.integer(blank_row_height_twips) else NULL,
       cell_padding_left_twips     = if (is.null(cell_padding_left_twips)) NULL else as.integer(cell_padding_left_twips),
       cell_padding_right_twips    = if (is.null(cell_padding_right_twips)) NULL else as.integer(cell_padding_right_twips),
+      cell_padding_top_twips      = .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
+      cell_padding_bottom_twips   = .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
       cell_valign                 = cell_valign,
       cell_styles                 = cell_styles_resolved,
       blank_row_normalize         = .resolve_blank_row_normalize(blank_row_normalize),

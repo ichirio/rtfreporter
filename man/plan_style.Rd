@@ -16,6 +16,8 @@ plan_style(
   blank_row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
   cell_valign = NULL,
   table_align = NULL,
   markup = NULL,
@@ -58,6 +60,9 @@ twips (1/1440 inch); \code{row_height_exact = TRUE} makes a height exact
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{The cells' left
 and right padding, in twips.}
+
+\item{cell_padding_top_twips, cell_padding_bottom_twips}{The cells' top
+and bottom padding, in twips (\code{\link[=rtftable]{rtftable()}}'s).}
 
 \item{cell_valign}{The cells' vertical alignment: \code{"bottom"} (default),
 \code{"top"} or \code{"center"}.}

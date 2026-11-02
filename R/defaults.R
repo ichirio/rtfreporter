@@ -58,6 +58,8 @@
     rtfreporter.row_height_twips         = NULL,
     rtfreporter.cell_padding_left_twips  = NULL,
     rtfreporter.cell_padding_right_twips = NULL,
+    rtfreporter.cell_padding_top_twips    = NULL,
+    rtfreporter.cell_padding_bottom_twips = NULL,
     # Cell-text markup applied at render time. "script" = ^{}/_{} super/subscript
     # only; the >=/<= -> symbol conversion ("relational") is opt-in.
     rtfreporter.markup                   = "script",

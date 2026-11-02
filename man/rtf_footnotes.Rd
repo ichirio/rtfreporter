@@ -51,8 +51,10 @@ Modified rtf_document.
 }
 \description{
 Same shape as \code{\link[=rtf_titles]{rtf_titles()}}: a list with one block per content (table or
-figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
-or \code{list(text=, align=, bold=, italic=, underline=, color=, border=)}).
+figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string,
+a named vector \code{c(l = , c = , r = )}, or the page footer's row list
+\code{list(columns = , row_height_twips = )}, whose \code{row_height_twips} is that
+row's height over the block's).
 Footnote rows default to left-aligned and draw no rule unless \code{border}
 (or a row's own \code{border}) asks for one. \code{NULL} per element
 suppresses the footnote for that content.

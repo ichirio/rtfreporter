@@ -9,6 +9,8 @@ rtf_default_format(
   row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
   markup = "script",
   title_format = "text",
   footnote_format = "table",
@@ -25,6 +27,12 @@ element (content table, page header / footer, title / footnote). \code{NULL}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Default cell padding
 (twips, border-to-text). \code{NULL} (default) keeps the resource baseline (0).}
+
+\item{cell_padding_top_twips, cell_padding_bottom_twips}{Default cell padding
+above / below the text (twips), written into every cell definition of
+every table-shaped element (content table, page header / footer, the
+title's table form, footnote).  \code{NULL} (default) keeps the resource
+baseline (0), and 0 writes nothing.}
 
 \item{markup}{Cell-text markup: \code{"script"} (\verb{^\{\}}/\verb{_\{\}} super/subscript, the
 default), \code{"relational"} (\code{>=}/\code{<=} to the symbols), \code{"all"}, or \code{"none"}.

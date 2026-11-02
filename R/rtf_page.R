@@ -153,6 +153,11 @@ print.rtf_page <- function(x, ...) {
 #'   (default) keeps the font-aware baseline.
 #' @param cell_padding_left_twips,cell_padding_right_twips Default cell padding
 #'   (twips, border-to-text). `NULL` (default) keeps the resource baseline (0).
+#' @param cell_padding_top_twips,cell_padding_bottom_twips Default cell padding
+#'   above / below the text (twips), written into every cell definition of
+#'   every table-shaped element (content table, page header / footer, the
+#'   title's table form, footnote).  `NULL` (default) keeps the resource
+#'   baseline (0), and 0 writes nothing.
 #' @param markup Cell-text markup: `"script"` (`^{}`/`_{}` super/subscript, the
 #'   default), `"relational"` (`>=`/`<=` to the symbols), `"all"`, or `"none"`.
 #'   See [rtftable()].
@@ -187,6 +192,8 @@ rtf_default_format <- function(font_size_half_points    = 18L,
                                row_height_twips         = NULL,
                                cell_padding_left_twips  = NULL,
                                cell_padding_right_twips = NULL,
+                               cell_padding_top_twips    = NULL,
+                               cell_padding_bottom_twips = NULL,
                                markup                   = "script",
                                title_format             = "text",
                                footnote_format          = "table",
@@ -213,6 +220,8 @@ rtf_default_format <- function(font_size_half_points    = 18L,
   .chk_pos_twips(row_height_twips, "row_height_twips")
   .chk_pos_twips(cell_padding_left_twips, "cell_padding_left_twips")
   .chk_pos_twips(cell_padding_right_twips, "cell_padding_right_twips")
+  .chk_pos_twips(cell_padding_top_twips, "cell_padding_top_twips")
+  .chk_pos_twips(cell_padding_bottom_twips, "cell_padding_bottom_twips")
   markup <- .resolve_markup(markup)            # validates the tokens
   title_format    <- .resolve_text_block_format(title_format, "text")
   footnote_format <- .resolve_text_block_format(footnote_format, "table")
@@ -224,6 +233,8 @@ rtf_default_format <- function(font_size_half_points    = 18L,
          row_height_twips = if (is.null(row_height_twips)) NULL else as.integer(row_height_twips),
          cell_padding_left_twips = if (is.null(cell_padding_left_twips)) NULL else as.integer(cell_padding_left_twips),
          cell_padding_right_twips = if (is.null(cell_padding_right_twips)) NULL else as.integer(cell_padding_right_twips),
+         cell_padding_top_twips = if (is.null(cell_padding_top_twips)) NULL else as.integer(cell_padding_top_twips),
+         cell_padding_bottom_twips = if (is.null(cell_padding_bottom_twips)) NULL else as.integer(cell_padding_bottom_twips),
          markup = markup, title_format = title_format,
          footnote_format = footnote_format,
          title_width = title_width, footnote_width = footnote_width),
@@ -237,6 +248,11 @@ print.rtf_default_format <- function(x, ...) {
   cat(sprintf("  font %s half-points; row height %s; padding L/R %s/%s twips\n",
               x$font_size_half_points, x$row_height_twips %||% "auto",
               x$cell_padding_left_twips %||% "0", x$cell_padding_right_twips %||% "0"))
+  # top / bottom only when set, so a format without them prints as before
+  if (!is.null(x$cell_padding_top_twips) || !is.null(x$cell_padding_bottom_twips)) {
+    cat(sprintf("  padding T/B %s/%s twips\n", x$cell_padding_top_twips %||% "0",
+                x$cell_padding_bottom_twips %||% "0"))
+  }
   cat(sprintf("  markup [%s]; title_format \"%s\"; footnote_format \"%s\"\n",
               paste(x$markup, collapse = ", "), x$title_format, x$footnote_format))
   invisible(x)

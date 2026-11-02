@@ -63,7 +63,9 @@
         default_row_height_twips_per_half_point      = 12.8,
         default_row_height_twips_min                 = 180L,
         default_cell_padding_left_twips              = 72L,
-        default_cell_padding_right_twips             = 72L
+        default_cell_padding_right_twips             = 72L,
+        default_cell_padding_top_twips               = 0L,
+        default_cell_padding_bottom_twips            = 0L
       )
       return(cache)
     }
@@ -755,6 +757,23 @@
   paste0(align_cmd, "\\li", li, "\\ri", ri, fs_cmd, " ", text, "\\cell")
 }
 
+# Top / bottom cell padding, as cell-definition commands written before a
+# cell's \cellx (#125).  "" when both are 0 (or NULL), so a document that sets
+# neither is written exactly as before.
+#
+# Word reads \clpadl as the TOP padding and \clpadt as the LEFT one -- the
+# reverse of the RTF specification's names -- and writes them that way itself;
+# LibreOffice follows Word.  So the top padding is written as Word writes it,
+# \clpadl<N>\clpadfl3, and the bottom as \clpadb<N>\clpadfb3 (twips; the
+# \clpadf* unit 3 is twips).  Left / right padding stays the paragraph
+# indent \li / \ri.
+.cell_vpad_cmd <- function(top = 0L, bottom = 0L) {
+  top    <- as.integer(top    %||% 0L)
+  bottom <- as.integer(bottom %||% 0L)
+  paste0(if (top    > 0L) paste0("\\clpadl", top,    "\\clpadfl3") else "",
+         if (bottom > 0L) paste0("\\clpadb", bottom, "\\clpadfb3") else "")
+}
+
 # -- Row renderers --------------------------------------------------------------
 
 # Build one complete RTF table row string.
@@ -1401,7 +1420,8 @@
                              font_index_map = list(),
                              color_index_map = NULL,
                              doc_row_height = NULL, doc_pad_l = 0L, doc_pad_r = 0L,
-                             doc_markup = "script") {
+                             doc_markup = "script", doc_pad_t = 0L,
+                             doc_pad_b = 0L) {
   border   <- tbl$border
   col_spec <- tbl$col_spec
   # Markup: the table's own setting wins; otherwise inherit the document default.
@@ -1411,8 +1431,15 @@
   pad_l    <- tbl$cell_padding_left_twips  %||% doc_pad_l
   pad_r    <- tbl$cell_padding_right_twips %||% doc_pad_r
 
+  # Top / bottom padding (#125) the same way, written with the vertical
+  # alignment into every cell definition (blank separator rows excepted:
+  # they are spacers of their own height).
+  pad_t    <- tbl$cell_padding_top_twips    %||% doc_pad_t
+  pad_b    <- tbl$cell_padding_bottom_twips %||% doc_pad_b
+
   cmds       <- .load_rtf_commands()
-  valign_cmd <- cmds$cell_valign[[tbl$cell_valign]] %||% "\\clvertalb"
+  valign_cmd <- paste0(cmds$cell_valign[[tbl$cell_valign]] %||% "\\clvertalb",
+                       .cell_vpad_cmd(pad_t, pad_b))
 
   # Determine column count from whichever mode is active.
   ref_df <- if (!is.null(tbl$data_list)) tbl$data_list[[1L]] else tbl$data
@@ -1627,7 +1654,8 @@
                                    doc_row_height = NULL,
                                    doc_pad_l = NULL, doc_pad_r = NULL,
                                    doc_markup = character(0),
-                                   font_index_map = list()) {
+                                   font_index_map = list(),
+                                   doc_pad_t = NULL, doc_pad_b = NULL) {
   if (is.null(hf) || length(hf$rows) == 0L) {
     return(character())
   }
@@ -1674,12 +1702,23 @@
                        defaults$default_cell_padding_left_twips  %||% 0L)
   pad_r <- as.integer(hf$cell_padding_right_twips %||% doc_pad_r %||%
                        defaults$default_cell_padding_right_twips %||% 0L)
+  # Top / bottom (#125): the same chain, written into each cell definition.
+  vpad_cmd <- .cell_vpad_cmd(
+    hf$cell_padding_top_twips    %||% doc_pad_t %||%
+      defaults$default_cell_padding_top_twips    %||% 0L,
+    hf$cell_padding_bottom_twips %||% doc_pad_b %||%
+      defaults$default_cell_padding_bottom_twips %||% 0L)
 
   out_rows <- character()
   for (row_idx in seq_along(rows)) {
     row_def  <- rows[[row_idx]]
     # Accept plain vector c(l=..., r=...) directly, or legacy list(columns=c(...)).
     cols_vec <- if (is.list(row_def) && !is.null(row_def$columns)) row_def$columns else row_def
+    # A row given as a list may carry its own height, over the band's (#125).
+    row_rh <- if (is.list(row_def)) row_def$row_height_twips
+    row_rh_str <- if (is.null(row_rh)) rh_str else
+      .cmd_fmt(table_cmd$row_height_template,
+               list(row_height_twips = as.integer(row_rh)))
     if (is.null(cols_vec) || length(cols_vec) == 0L) {
       cols_vec <- c("")
     }
@@ -1731,10 +1770,10 @@
     row_border_cmds <- if (row_idx == 1L) .build_border_commands(hf_border, color_index_map) else ""
 
     row <- table_cmd$row_start
-    row <- paste0(row, rh_str)
+    row <- paste0(row, row_rh_str)
     for (cx in cellx) {
-      if (nzchar(row_border_cmds)) {
-        row <- paste0(row, row_border_cmds, "\\cellx", cx)
+      if (nzchar(row_border_cmds) || nzchar(vpad_cmd)) {
+        row <- paste0(row, row_border_cmds, vpad_cmd, "\\cellx", cx)
       } else {
         row <- paste0(row, .cmd_fmt(table_cmd$cell_boundary_template, list(cx = cx)))
       }
@@ -1922,7 +1961,9 @@
   if (length(block) == 0L) return(list())
   rows <- if (is.list(block)) block else as.list(block)
 
-  out <- lapply(rows, function(r) {
+  fn <- if (is_footer) "rtf_footnotes" else "rtf_titles"
+  out <- lapply(seq_along(rows), function(i) {
+    r <- rows[[i]]
     if (is.null(r) || (is.character(r) && length(r) == 1L)) {
       txt <- if (is.null(r)) "" else r
       rec <- list(text = txt, align = def_align, bold = def_bold,
@@ -1941,6 +1982,10 @@
         stop("A title/footnote row `border` must be NULL or an rtf_border() object.",
              call. = FALSE)
       }
+      # the row's own height, over the block's (#125); NULL leaves the record
+      # as it was
+      rec$row_height_twips <- .check_row_height(
+        r$row_height_twips, sprintf("%s()` row %d's `row_height_twips", fn, i))
     } else {
       stop("Each title/footnote row must be a string or a named list.",
            call. = FALSE)
@@ -2013,6 +2058,8 @@
                                      fs_cmd = fs_cmd)
       rh <- full_h
     }
+    if (!is.null(rec$row_height_twips)) rh <- rec$row_height_twips
+
     .build_row(cell_def, content, rh, table_align)
   }, character(1L))
 }
@@ -2484,9 +2531,18 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
   doc_pad_r <- doc$default_format$cell_padding_right_twips %||%
                  .opt("rtfreporter.cell_padding_right_twips") %||%
                  .res_defaults$default_cell_padding_right_twips %||% 0L
+  # Top / bottom (#125): the same chain; 0 writes nothing.
+  doc_pad_t <- doc$default_format$cell_padding_top_twips %||%
+                 .opt("rtfreporter.cell_padding_top_twips") %||%
+                 .res_defaults$default_cell_padding_top_twips %||% 0L
+  doc_pad_b <- doc$default_format$cell_padding_bottom_twips %||%
+                 .opt("rtfreporter.cell_padding_bottom_twips") %||%
+                 .res_defaults$default_cell_padding_bottom_twips %||% 0L
   doc_row_height <- if (is.null(doc_row_height)) NULL else as.integer(doc_row_height)
   doc_pad_l      <- as.integer(doc_pad_l)
   doc_pad_r      <- as.integer(doc_pad_r)
+  doc_pad_t      <- as.integer(doc_pad_t)
+  doc_pad_b      <- as.integer(doc_pad_b)
 
   # Document-wide cell-text markup default (per-table `markup` overrides it).
   doc_markup <- .resolve_markup(doc$default_format$markup %||%
@@ -2519,6 +2575,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     font_half_points = font_half_points, font_index_map = font_index_map,
     color_index_map = color_index_map, doc_row_height = doc_row_height,
     doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r, doc_markup = doc_markup,
+    doc_pad_t = doc_pad_t, doc_pad_b = doc_pad_b,
     doc_title_format = doc_title_format, doc_footnote_format = doc_footnote_format,
     doc_title_width = doc_title_width, doc_footnote_width = doc_footnote_width)
 
@@ -2604,7 +2661,8 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
                                           doc_row_height = doc_row_height,
                                           doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r,
                                           doc_markup = doc_markup,
-          font_index_map = font_index_map)
+          font_index_map = font_index_map,
+          doc_pad_t = doc_pad_t, doc_pad_b = doc_pad_b)
       footer_rtf <- .render_header_footer(cur_footer_hf, writable_w, is_footer = TRUE,
                                           current_page = pg_for_hf, total_pages = total_pages,
                                           color_index_map = color_index_map,
@@ -2612,7 +2670,8 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
                                           doc_row_height = doc_row_height,
                                           doc_pad_l = doc_pad_l, doc_pad_r = doc_pad_r,
                                           doc_markup = doc_markup,
-          font_index_map = font_index_map)
+          font_index_map = font_index_map,
+          doc_pad_t = doc_pad_t, doc_pad_b = doc_pad_b)
 
       # The watermark shape lives in the header group so it repeats on every
       # page of the section.  It goes in even when there is no header text --
