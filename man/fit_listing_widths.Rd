@@ -35,7 +35,7 @@ turn the page's width into a number of characters.
 \item{\code{font_size_half_points}}{is \strong{half-points}, as everywhere in
 RTF: 8pt is \code{16L}, 9pt (the default) is \code{18L}.  Getting it wrong
 silently changes the budget -- at 8pt a landscape A4 with half-inch
-margins holds 159 characters, at 9pt only 141.  Pass the same values
+margins holds 159 characters, at 9pt only 142.  Pass the same values
 the document uses in \code{rtf_document(style = rtf_style())}.}
 }}
 

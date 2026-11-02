@@ -124,7 +124,7 @@ detected.}
 multi-level (chapter / table) layouts: \code{file} (the path), \code{label} (the
 entry text), and optionally \code{heading} (a heading printed above the
 row's entry whenever it changes; \code{NA} = none), \code{level} (the entry's
-indent, default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
+indent, a whole number from 1 to 3, default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
 folder, ready to edit.  \code{input_files} can then be left out: the
 table's \code{file} column is used.}
 \item{the path of such a table}{an \code{.xlsx} or \code{.csv} file, e.g. the one
