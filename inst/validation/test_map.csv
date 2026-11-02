@@ -1441,3 +1441,4 @@
 "test-validation-as.R","FT-AS123 [FR-AS227]: rtfreporter_ai_manual() in an installation without the manual says where the published copy is","FT-AS123","FR-AS227"
 "test-plan-validation-cells.R","FT-PL912 [FR-PL908 FR-PL909 FR-PL911]: digits keyed by a row key's value: after the variable's, before the rest (#751)","FT-PL912","FR-PL908 FR-PL909 FR-PL911"
 "test-plan-validation-cells.R","FT-PL913 [FR-PL910]: a row key's digits given without values are refused (#751)","FT-PL913","FR-PL910"
+"test-plan-validation-pages.R","FT-PL914 [FR-PL912 FR-PL913]: plan_stub(heading = ) is the stub's header cell, not its name (tflspec#538)","FT-PL914","FR-PL912 FR-PL913"

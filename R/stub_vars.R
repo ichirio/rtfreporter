@@ -41,12 +41,17 @@
     return(list(body = body2, kw = kw, cell_styles = cell_styles))
   }
 
-  stub_header <- names(body2)[1L]          # merged stub-column name
+  # the heading plan_stub() gave the stub, else its merged column name
+  stub_header <- spec$heading %||% names(body2)[1L]
 
   # ---- reindex column-indexed metadata: keep the non-vars cols, prepend stub
   if (!is.null(kw$col_header)) {
     ch <- .reindex_col_header(kw$col_header, keep, n0)
     kw$col_header <- .prepend_stub_header(ch, stub_header, length(keep))
+  }
+  # no header of the names' own: a heading is still the stub's cell
+  if (is.null(kw$col_header) && !is.null(spec$heading)) {
+    kw$col_header <- c(stub_header, names(body2)[-1L])
   }
   if (!is.null(kw$col_spec)) {
     cs <- .reindex_col_spec(kw$col_spec, keep, drop_names)
