@@ -22,10 +22,16 @@ plan_columns(
 \strong{Named by column} (\code{c(row_label = 5, .values = 2)}, \code{.values} for
 every value column) a reordered table keeps them; unnamed, they are one
 a column in order, as \code{col_rel_width} itself.  A name that is not a
-column of the table stops with the names the table has.}
+column of the table stops with the names the table has.  Each width is
+a positive finite number: \code{0}, a negative, \code{NA}, \code{Inf} or a string
+stops at \code{plan_columns()}.}
 
 \item{decimal}{The columns whose numbers line up at the decimal point
-(\code{.values} for every value column), \code{\link[=set_decimal_split]{set_decimal_split()}}'s \code{cols}.}
+(\code{.values} for every value column), \code{\link[=set_decimal_split]{set_decimal_split()}}'s \code{cols}, by
+name.  A value that is not column names (\code{NA}, \code{""}, a number) stops at
+\code{plan_columns()}; a name that is not a column of the table stops when
+the plan is applied, as a \code{widths} name does (a hidden column's name is
+allowed and changes nothing).}
 
 \item{row_title}{The row-heading columns, \code{rtftable(row_title = )}, by
 name as \code{widths} are: a row key's name as \code{table_plan(rows = )} gives

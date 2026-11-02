@@ -1174,7 +1174,7 @@ test_that("FT-FM103 [FR-FM129 FR-FM131 FR-FM135 FR-FM136 FR-FM137 FR-FM138 FR-FM
   E <- .eb3_err
   O <- .eb3_obj
   is <- function(v) function(x) identical(x, v)
-  dg <- "^`fmt_signif\\(digits = \\)` must be a single non-negative integer"
+  dg <- "^`fmt_signif\\(digits = \\)` must be a single positive integer"
   na <- "^`na` must be a single string"
   r2 <- list(digits = 2, rounding = "r")
   s2 <- list(digits = 2, rounding = "sas")
@@ -1219,7 +1219,7 @@ test_that("FT-FM104 [FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM155 FR-FM
   df <- data.frame(g = c("Mean", "SD", "x"), v = c(1.25, 2.35, NA), s = c("a", "b", "c"))
   v_is <- function(v) function(x) identical(x$v, v)
   dg <- "^`fmt_numeric\\(digits = \\)` must be a single non-negative integer"
-  sg <- "^`fmt_numeric\\(signif = \\)` must be a single non-negative integer"
+  sg <- "^`fmt_numeric\\(signif = \\)` must be a single positive integer"
   one <- "^Give exactly one of `signif` or `digits`"
   na <- "^`na` must be a single string"
   d1 <- list(digits = 1)

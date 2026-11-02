@@ -17,18 +17,24 @@ assemble_folder(
 )
 }
 \arguments{
-\item{dir}{Directory of \code{.rtf} files to assemble.}
+\item{dir}{Directory of \code{.rtf} files to assemble: one folder path.  A
+value that is not one non-empty string is an error, as is a folder that
+does not exist or holds no \code{.rtf} file.}
 
 \item{output_file}{Path of the assembled \code{.rtf} to write, or \code{NULL}
-(default): return the table of contents only.}
+(default): return the table of contents only.  Assembling needs two or
+more files, so with an \code{output_file} a folder of one \code{.rtf} file is an
+error (without one, its one-row table is returned).}
 
 \item{spec_file}{Optional path (\code{.xlsx} or \code{.csv}).  When given, the
 generated spec is \strong{saved} there (so you can inspect / edit it); when
 \code{NULL} (default) the spec is kept in memory only.  It is written, never
-read back: assemble an edited one with \code{assemble_rtf(toc = spec_file)}.}
+read back: assemble an edited one with \code{assemble_rtf(toc = spec_file)}.
+One path in a folder that exists; another value is an error, checked
+before any file is read or written.}
 
-\item{recursive}{Recurse into sub-directories when scanning?  Default
-\code{FALSE}.}
+\item{recursive}{Recurse into sub-directories when scanning?  \code{TRUE} or
+\code{FALSE} (default); another value is an error.}
 
 \item{toc_title, toc_leader, toc_page_numbering, overwrite, ...}{Passed through
 to \code{\link[=assemble_rtf]{assemble_rtf()}}; \code{toc_page_numbering} defaults to \code{"decimal"} here
