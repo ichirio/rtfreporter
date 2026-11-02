@@ -41,8 +41,9 @@ analysis variable is used (as \code{group}).
 \describe{
 \item{Names}{Each name is the column the finished table gets, and
 later verbs refer to it by that name (\code{\link[=plan_stub]{plan_stub()}},
-\code{plan_paginate_group(col = )}, \code{\link[=plan_hide]{plan_hide()}}); left unnamed, the
-first key is called \code{group}.}
+\code{plan_paginate_group(col = )}, \code{\link[=plan_hide]{plan_hide()}}); left unnamed, a
+key keeps its column's name (\code{rows = "variable"} gives a column
+\code{variable}).}
 \item{\code{"variable"}}{The column that holds the analysis variable's
 name, so \code{c(group = "variable")} makes one block of rows per
 analysis variable (AGE, SEX, ...).}
