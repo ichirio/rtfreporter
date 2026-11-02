@@ -94,7 +94,11 @@ by name (\code{n}, \code{p}, \code{mean}, ...) plus its own columns (\code{varia
 \code{.label}, \code{.depth}, \code{.kind} and the keys), and it may name the
 caller's variables too;
 \item \code{c("Mean (SD)" = "{mean} ({sd})", "Min, Max" = "{min}, {max}")} -- one
-row per element, the name being the row label.
+row per element, the name being the row label.  A named row is one
+row for the whole variable, so on a variable with several levels (a
+categorical summary, its levels in the label) it stops with an error
+naming the variable rather than keep one level; an unnamed element
+there gives one row per level, labelled from \code{label}.
 }
 
 A \strong{list} is instead a map, looked up by analysis variable, then by
