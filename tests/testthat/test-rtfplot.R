@@ -565,3 +565,33 @@ test_that("FT-AS125 [FR-AS234 FR-AS211]: a file that is not an EMF, or another e
   writeLines("<svg/>", svg)
   expect_error(rtfplot(svg), "rtfplot supports PNG, JPEG and EMF files only.", fixed = TRUE)
 })
+
+test_that("FT-AS126 [FR-AS235]: a plot object drawn as EMF (render_format = 'emf') is a vector picture at its render size (#739)", {
+  skip_if_not_installed("devEMF")
+  draw <- function() graphics::plot(1:5, type = "b", main = "A figure")
+  fig <- rtfplot(draw, render_width = 4, render_height = 3, render_format = "emf")
+  expect_identical(fig$img_type, "emf")
+  # the frame devEMF records: 4 x 3 in, in 0.01 mm
+  expect_equal(fig$img_width / 2540, 4, tolerance = 0.02)
+  expect_equal(fig$img_height / 2540, 3, tolerance = 0.02)
+  disp <- rtfreporter:::.rtfplot_display_twips(fig)
+  expect_equal(disp$w, 4 * 1440, tolerance = 0.02)
+  expect_equal(disp$h, 3 * 1440, tolerance = 0.02)
+  # through rtf_figures(), into the RTF as \pict\emfblip
+  out <- tempfile(fileext = ".rtf")
+  on.exit(unlink(out), add = TRUE)
+  doc <- rtf_figures(rtf_document(), draw, render_width = 4, render_height = 3,
+                     render_format = "emf")
+  generate_rtfreport(doc, out, overwrite = TRUE)
+  expect_match(paste(readLines(out, warn = FALSE), collapse = ""), "\\pict\\emfblip", fixed = TRUE)
+})
+
+test_that("FT-AS127 [FR-AS236]: render_format other than png / emf, for a file, or emf without devEMF is refused (#739)", {
+  draw <- function() graphics::plot(1:3)
+  expect_error(rtfplot(draw, render_format = "svg"), "`render_format` must be \"png\" or \"emf\".", fixed = TRUE)
+  expect_error(rtfplot(test_path("fixtures", "figure.emf"), render_format = "emf"),
+               "say how to draw a plot object", fixed = TRUE)
+  local_mocked_bindings(.has_devemf = function() FALSE)
+  expect_error(rtfplot(draw, render_format = "emf"),
+               "`render_format = \"emf\"` needs the devEMF package", fixed = TRUE)
+})

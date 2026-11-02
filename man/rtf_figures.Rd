@@ -17,7 +17,8 @@ rtf_figures(
   render_width = NULL,
   render_height = NULL,
   render_dpi = NULL,
-  png_device = NULL
+  png_device = NULL,
+  render_format = NULL
 )
 }
 \arguments{
@@ -64,10 +65,11 @@ or one each; the document's first content always begins a page.  As
 \item{space_before}{With \code{page_break = FALSE}, empty lines between the
 content before and this figure.}
 
-\item{render_width, render_height, render_dpi, png_device}{How to draw the
-\strong{plot objects} in \code{figures}, as \code{\link[=rtfplot]{rtfplot()}} takes them: size in inches,
-resolution, and PNG device.  \code{NULL} (default) is \code{\link[=rtfplot]{rtfplot()}}'s own
-default (6.5 x 4.5 in, 300 dpi, the \code{rtfreporter.png_device} option).  A
+\item{render_width, render_height, render_dpi, png_device, render_format}{How
+to draw the \strong{plot objects} in \code{figures}, as \code{\link[=rtfplot]{rtfplot()}} takes them: size
+in inches, resolution, PNG device, and PNG or EMF.  \code{NULL} (default) is
+\code{\link[=rtfplot]{rtfplot()}}'s own default (6.5 x 4.5 in, 300 dpi, the
+\code{rtfreporter.png_device} option, PNG).  A
 file path ignores them (a file has its size already), and a figure given
 as an \code{\link[=rtfplot]{rtfplot()}} keeps the settings it was built with.}
 }

@@ -1453,3 +1453,5 @@
 "test-cell-padding-vertical.R","FT-IX026 [FR-IX395]: top / bottom padding: the module's own value wins over the style's, the document default, the option and the baseline","FT-IX026","FR-IX395"
 "test-rtfplot.R","FT-AS124 [FR-AS233 FR-AS214]: an EMF file is embedded as it is, at its frame's size (#739)","FT-AS124","FR-AS233 FR-AS214"
 "test-rtfplot.R","FT-AS125 [FR-AS234 FR-AS211]: a file that is not an EMF, or another extension, is refused (#739)","FT-AS125","FR-AS234 FR-AS211"
+"test-rtfplot.R","FT-AS126 [FR-AS235]: a plot object drawn as EMF (render_format = 'emf') is a vector picture at its render size (#739)","FT-AS126","FR-AS235"
+"test-rtfplot.R","FT-AS127 [FR-AS236]: render_format other than png / emf, for a file, or emf without devEMF is refused (#739)","FT-AS127","FR-AS236"

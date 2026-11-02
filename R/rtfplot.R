@@ -212,7 +212,7 @@
 
 # Draw `x` into a temporary PNG and return its path.  The file lives for the
 # session, which is as long as the rtfplot that points at it needs it.
-.rtfplot_render <- function(x, width, height, dpi, device = NULL) {
+.rtfplot_render <- function(x, width, height, dpi, device = NULL, format = "png") {
   for (nm in c("render_width", "render_height", "render_dpi")) {
     v <- switch(nm, render_width = width, render_height = height,
                 render_dpi = dpi)
@@ -221,6 +221,7 @@
            call. = FALSE)
     }
   }
+  if (identical(format, "emf")) return(.rtfplot_render_emf(x, width, height))
   device <- .rtfplot_png_device(device)
   if (device == "png" && !isTRUE(unname(capabilities("png")))) {
     stop("This R has no PNG device, so a plot object cannot be drawn.  ",
@@ -238,6 +239,32 @@
   on.exit({
     grDevices::dev.off()
     # A device left open by a failed draw would swallow every later plot.
+    if (!ok) unlink(path)
+  }, add = TRUE)
+  .rtfplot_draw(x)
+  ok <- TRUE
+  path
+}
+
+# A plot object drawn as EMF (#739): a vector picture, through devEMF (in
+# Suggests), at `width` x `height` inches -- the frame its header records,
+# so the size it takes on the page.  Plain EMF records (emfPlus = FALSE),
+# which more readers draw than EMF+.
+# (a function of its own, so a test can say devEMF is not there)
+.has_devemf <- function() requireNamespace("devEMF", quietly = TRUE)
+
+.rtfplot_render_emf <- function(x, width, height) {
+  if (!.has_devemf()) {
+    stop("`render_format = \"emf\"` needs the devEMF package: ",
+         "install.packages(\"devEMF\"), or draw the figure as PNG ",
+         "(render_format = \"png\").", call. = FALSE)
+  }
+  path <- tempfile(fileext = ".emf")
+  devEMF::emf(file = path, width = width, height = height, bg = "white",
+              emfPlus = FALSE)
+  ok <- FALSE
+  on.exit({
+    grDevices::dev.off()
     if (!ok) unlink(path)
   }, add = TRUE)
   .rtfplot_draw(x)
@@ -284,6 +311,12 @@
 #'   `grDevices::png()` otherwise.  `"ragg"` is an error without ragg.  The
 #'   figure takes the same inches on the page whichever device drew it.
 #'   Refused for a file.
+#' @param render_format What a plot object is drawn as: `"png"` (default),
+#'   a bitmap at `render_dpi`, or `"emf"`, a vector picture (sharp at any
+#'   zoom) drawn with **devEMF**, which must be installed (it is suggested,
+#'   not required); `render_dpi` and `png_device` do not apply to it.  Check
+#'   an EMF figure in the readers your reviewers use: not every reader draws
+#'   EMF the same way.  Refused for a file.
 #'
 #' @details
 #' The native size is read from the file's resolution metadata (PNG `pHYs`
@@ -316,16 +349,21 @@
 rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
                     align = "center", render_width = 6.5,
                     render_height = 4.5, render_dpi = 300,
-                    png_device = NULL) {
+                    png_device = NULL, render_format = "png") {
   drawn <- .rtfplot_is_object(x)
+  if (!is.character(render_format) || length(render_format) != 1L ||
+      !render_format %in% c("png", "emf")) {
+    stop("`render_format` must be \"png\" or \"emf\".", call. = FALSE)
+  }
   if (drawn) {
     path <- .rtfplot_render(x, render_width, render_height, render_dpi,
-                            png_device)
+                            png_device, render_format)
   } else {
     given <- c(!missing(render_width), !missing(render_height),
-               !missing(render_dpi), !is.null(png_device))
+               !missing(render_dpi), !is.null(png_device),
+               !missing(render_format))
     if (any(given)) {
-      stop("`render_width`, `render_height`, `render_dpi` and `png_device` ",
+      stop("`render_width`, `render_height`, `render_dpi`, `png_device` and `render_format` ",
            "say how to draw a plot object; a file already has a size and a ",
            "resolution.",
            call. = FALSE)
@@ -347,7 +385,7 @@ rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
   density <- switch(img_type, png = .read_png_density(path),
                     emf = list(dpi_x = 2540, dpi_y = 2540),
                     .read_jpeg_density(path))
-  if (drawn) {
+  if (drawn && img_type != "emf") {
     # We drew it, so we know its resolution: take it from `render_dpi` rather
     # than reading back what the device recorded.  macOS's quartz PNG device
     # writes no `pHYs` chunk at all, and a figure that silently fell back to
