@@ -93,6 +93,11 @@ if (requireNamespace("writexl", quietly = TRUE)) {
   message("writexl is not installed: only user_traceability.csv was written.")
 }
 message("Written: ", paste(out, collapse = ", "))
+if (!is.null(fr) && any(m$fr_status != "active")) {
+  bad <- unique(m$fr_id[m$fr_status != "active"])
+  message("FRs that are not active in requirements.csv (name the active FR that now ",
+          "states the need): ", paste(bad, collapse = ", "))
+}
 if (any(by_ur$status == "no UAT case")) {
   message("URs with no UAT case: ",
           paste(by_ur$ur_id[by_ur$status == "no UAT case"], collapse = ", "))
