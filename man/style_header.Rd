@@ -105,8 +105,8 @@ add_header_row(x, ...)
 targets every header row.}
 
 \item{cols}{Data-column selection: integer positions and/or column names of
-the table body (see the \emph{What the columns are called} section of
-\code{\link[=as_rtftables]{as_rtftables()}}).  \code{NULL} (default) = all columns.  Mix names and
+the table body, as \code{\link[=rtf_columns]{rtf_columns()}} lists them (see also \emph{Naming it} under
+\code{group_col} in \code{\link[=as_rtftables]{as_rtftables()}}).  \code{NULL} (default) = all columns.  Mix names and
 positions with a \code{list()} (\code{c()} would coerce the numbers to strings --
 same convention as \code{drop_cols} / \code{sort_by}).  A spanning cell is
 targeted when its span \strong{intersects} \code{cols}.}

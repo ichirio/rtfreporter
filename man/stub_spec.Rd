@@ -14,8 +14,9 @@ stub_spec(
 )
 }
 \arguments{
-\item{vars}{The hierarchy columns, \strong{parent first, leaf last} -- at least
-two.  See \code{\link[=stub_cols]{stub_cols()}}.}
+\item{vars}{The hierarchy columns, \strong{parent first, leaf last}.  One
+column is the stub as it is, renamed to \code{label} when one is given.  See
+\code{\link[=stub_cols]{stub_cols()}}.}
 
 \item{label, indent, group_summary, layout, label_span}{Passed to \code{\link[=stub_cols]{stub_cols()}};
 see there for the full description of each.}
@@ -30,13 +31,13 @@ per setting.  The arguments are \code{stub_cols()}'s own, so the two never drift
 apart.
 }
 \details{
-The \code{stub_vars} / \code{stub_label} / \code{stub_indent} / \code{stub_group_summary}
-arguments of \code{\link[=as_rtftables]{as_rtftables()}} are \strong{deprecated} in favour of this: they
-still work but warn once a session, cannot reach \code{layout} or \code{label_span},
-and new settings will only be added here.
+It replaces the \code{stub_vars} / \code{stub_label} / \code{stub_indent} /
+\code{stub_group_summary} arguments of \code{\link[=as_rtftables]{as_rtftables()}}, which were removed in
+0.9.0: passing one of them is now an error.  New stub settings are only
+added here.
 }
 \examples{
-# The clinical indented stub, as as_rtftables(stub_vars = ) builds it.
+# The clinical indented stub.
 stub_spec(c("SOC", "PT"), label = "System Organ Class / Preferred Term")
 
 # Keep the hierarchy columns instead, with the group value on its own row.

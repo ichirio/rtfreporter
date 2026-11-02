@@ -147,7 +147,7 @@ test_that("FT-TB686 [FR-TB485 FR-TB488 FR-TB505 FR-TB508]: the border shorthand 
 })
 
 test_that("FT-TB687 [FR-TB453]: rtf_table_style(row_height_twips = ) is the row height; NULL is the font-aware default", {
-  expect_identical(rtf_table_style(row_height_twips = 400)$row_height_twips, 400)
+  expect_identical(rtf_table_style(row_height_twips = 400)$row_height_twips, 400L)
   expect_null(rtf_table_style()$row_height_twips)
   d <- data.frame(a = 1, b = 2)
   s <- .render_to_string(.test_doc_with(rtftable(d, style = rtf_table_style(row_height_twips = 400))))
