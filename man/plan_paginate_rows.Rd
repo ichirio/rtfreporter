@@ -20,12 +20,17 @@ plan_paginate_rows(
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
 
 \item{max_rows}{The most body rows a page holds, for the
-\code{"group_safe"} and \code{"group_force"} splits (which need it).  Blank rows
-count only with \code{plan_blanks(counted = TRUE)}.}
+\code{"group_safe"} and \code{"group_force"} splits (which need it).  Given with
+the split left out, the split is \code{"group_safe"} (a listing's is left
+to \code{\link[=as_rtftables]{as_rtftables()}}, which does the same on its record column); with
+a split that has no row budget (\code{"none"}, \code{"rows"}, a page per value)
+it stops.  Blank rows count only with \code{plan_blanks(counted = TRUE)}.}
 
 \item{split}{How a page break is placed, \code{as_rtftables(split = )}:
 \describe{
-\item{\code{"none"}}{(default) one page; \code{max_rows} is not read.}
+\item{\code{"none"}}{one page; the default when \code{max_rows} is not given
+(with \code{max_rows} alone the default is \code{"group_safe"}).  Written
+out with \code{max_rows} it stops: the budget would have nothing to cut.}
 \item{\code{"group_safe"}}{whole groups to a page: a group that does not
 fit starts the next page; one longer than a page is cut, with a
 continuation label.}

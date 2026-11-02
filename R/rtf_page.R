@@ -15,9 +15,11 @@
 #  explicit argument > `rtfreporter.*` option > factory default.
 # ============================================================================
 
-# Validate a single positive-inches value (or NULL).
+# Validate a single positive-inches value (or NULL).  Inf used to pass and
+# be written as NA twips.
 .chk_pos_in <- function(x, nm) {
-  if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || is.na(x) || x <= 0)) {
+  if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || !is.finite(x) ||
+                      x <= 0)) {
     stop(sprintf("`%s` must be a single positive number of inches, or NULL.", nm),
          call. = FALSE)
   }
@@ -45,10 +47,17 @@
 #'   `paper_size`. With dimensions given, `paper_size` and `orientation` stay
 #'   unset unless you pass them, so only a value you passed is warned about.
 #' @param margin_top_in,margin_bottom_in,margin_left_in,margin_right_in The four
-#'   page margins, in inches.
+#'   page margins, in inches.  Each inch value here is one positive finite
+#'   number; another (`0`, `Inf`, `NA`, a string) is an error.  The margins
+#'   must leave a writable area: when the document is written, left + right
+#'   at least the page width, or top + bottom at least the page height, is an
+#'   error (checked then, because a margin can also come from an
+#'   `rtfreporter.page.*` option).
 #' @param header_dist_in,footer_dist_in Distance (inches) of the header / footer
 #'   band from the page edge. `NULL` (default) uses the **full** corresponding
-#'   top / bottom margin (so the band sits at the margin boundary).
+#'   top / bottom margin (so the band sits at the margin boundary).  A
+#'   distance of at least the page height is an error when the document is
+#'   written.
 #'
 #' @return An `rtf_page` object (a classed named list) for `rtf_document(page =)`.
 #'
@@ -175,7 +184,7 @@ print.rtf_page <- function(x, ...) {
 #' @param title_width,footnote_width Width of the title / footnote block:
 #'   `"content"` (the default -- follow the table body), `"page"` (the writable
 #'   width, margins excluded), a fraction in `(0, 1]` of the writable width, or
-#'   twips. `NULL` keeps the default. Applies to the `"table"` form; the
+#'   twips (a whole number above 1). `NULL` keeps the default. Applies to the `"table"` form; the
 #'   `"text"` form is plain paragraphs and already spans the page.
 #'   `footnote_width = "page"` is the way to reach the full width **and** keep
 #'   the separator rule, which `footnote_format = "text"` cannot draw.

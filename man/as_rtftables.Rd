@@ -68,9 +68,11 @@ input coordinates.}
 \describe{
 \item{\code{TRUE}}{(default) read everything in the table above.}
 \item{\code{FALSE}}{use only the rendered body -- equivalent to the old
-\code{paginate()}.}
+\code{paginate()}.  \code{NULL} is the same.}
 \item{a character vector}{of tokens, by source below.}
 }
+Anything else (\code{NA}, a number, two logicals, a token \code{NA}) is an
+error, for every source.
 The tokens:
 \describe{
 \item{gt / gtsummary}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
@@ -92,15 +94,18 @@ table objects and data.frames shares one \code{read_meta}, so adapter
 tokens must not error on the data.frame elements.}
 }}
 
-\item{max_rows}{Integer or \code{NULL}.  Maximum body rows per page for the
-\code{"group_safe"} / \code{"group_force"} splits (required by them).  \strong{This is the
+\item{max_rows}{A positive whole number, or \code{NULL}; anything else is an
+error, whatever the split.  Maximum body rows per page for the
+\code{"group_safe"} / \code{"group_force"} splits (required by them); with \code{1}
+a continued group gets no continuation row.  \strong{This is the
 setting for fixed-size pages} -- \code{max_rows = 25} gives pages of 25 rows.
 Ignored by \code{"none"} and \code{"rows"} (which cuts at the positions in
 \code{split_rows}).  Optional for \code{"by_value"}: a value's page longer than
 \code{max_rows} is cut as \code{"group_force"} cuts, its pages named by the value
 with the \code{"...n"} tail (\code{"A...1"}, \code{"A...2"}).}
 
-\item{split}{How to break the body into pages. A strategy name:
+\item{split}{How to break the body into pages. A strategy name (a unique
+prefix such as \code{"group_s"} is enough; another value is an error):
 \describe{
 \item{\code{"none"}}{(default) one page; no row limit checked.}
 \item{\code{"rows"}}{cut before each row position given in \code{split_rows};
@@ -142,7 +147,8 @@ A plan passes it the same way: \code{plan_paginate_rows(split = f)}.}
 before, for \code{split = "rows"} (required by it; ignored otherwise).
 \code{split_rows = c(20, 40)} yields pages \code{1:19}, \code{20:39}, \code{40:nrow}.  It is
 not a page size: for pages of a fixed number of rows use \code{max_rows} with
-\code{split = "group_safe"} or \code{"group_force"}.}
+\code{split = "group_safe"} or \code{"group_force"}.  The positions are whole
+numbers in any order; one outside \code{2:nrow} cuts nothing.}
 
 \item{group_col}{Character, integer, or \code{NULL}.  The column the
 group-aware splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"})
@@ -161,7 +167,8 @@ happens \emph{after} \code{sort_by}, which still orders a factor by its
 \strong{levels}.}
 }}
 
-\item{group_by}{How a group boundary is found on \code{group_col}:
+\item{group_by}{How a group boundary is found on \code{group_col} (a unique
+prefix of a name is enough; another value is an error):
 \describe{
 \item{\code{"auto"}}{(default) pick from the column content: leading
 indentation present -> \code{"indent"}; else interspersed empty cells ->
@@ -272,9 +279,11 @@ vector the same length as \code{sort_by} (one direction per key).  Ignored when
 
 \item{cont_label}{Character (default \code{" (Cont.)"}).  Suffix appended to a
 group's label on the second and later pages it continues onto (the
-group-aware splits), marking a continued group.}
+group-aware splits), marking a continued group.  One string; \code{""}
+repeats the label alone.}
 
-\item{min_group_rows}{Integer (default \code{2}).  Widow/orphan control for the
+\item{min_group_rows}{A non-negative whole number (default \code{2}).
+Widow/orphan control for the
 group-aware splits (\code{"group_force"}, \code{"group_safe"}, \code{"by_value"}): when a
 page would end on a group that \emph{starts} on that page while showing fewer
 than \code{min_group_rows} of the group's child rows (the rows after its first
@@ -477,7 +486,7 @@ up and passing \code{listing} as well is an error.  An rlistings
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a
 shorthand for \code{stub_spec(vars)}, a bare vector of hierarchy columns
-(parent first, leaf last; at least two).  \code{NULL} (default) builds no
+(parent first, leaf last; one column is the stub as it is).  \code{NULL} (default) builds no
 stub.  This is the \strong{one} argument for everything \code{\link[=stub_cols]{stub_cols()}} can do,
 including \code{layout} and \code{label_span}.
 \describe{
@@ -528,8 +537,10 @@ bottom (leaf) row with blank cells above.}
 \item{Default}{Recognizes \strong{both} built-in delimiters: \code{"____"}
 (from \code{ydisctools::pivot_stats_wider()}) and \code{"___tlang_delim___"}
 (tfrmt's column delimiter).}
-\item{Your own}{Pass your own separator(s) to override, or \code{NULL} to
-disable (use the plain \code{names(data)} single-row header).}
+\item{Your own}{Pass your own separator(s), a character vector, to
+override, or \code{NULL} (or \code{character(0)}) to disable (use the plain
+\code{names(data)} single-row header).  \code{NA} and \code{""} entries are
+ignored; another type is an error.}
 \item{Blank cells}{With the \code{"____"} separator a doubled separator
 (\code{"________"}) yields an empty middle segment, i.e. a \strong{blank
 cell} at that header level (handy to align a column that skips an
@@ -571,7 +582,8 @@ there.}
 \item{border, style}{Passed to \code{\link[=rtftable]{rtftable()}} for every page.  \code{border}
 defaults to \code{"tfl"}.}
 
-\item{first_rows}{The rows of the first page, the rest paginated as the
+\item{first_rows}{The rows of the first page (a whole number, 1 or more;
+as many as the table has or more is one page), the rest paginated as the
 other arguments say (\code{max_rows}, \code{split}): the page a table shares with
 the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  \code{NULL}
 (the default): the first page as the others.  Not with \code{page_by},

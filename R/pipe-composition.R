@@ -35,7 +35,8 @@
 #'   entry is the document's default font. Default: `list(list(name =
 #'   "Courier New"))` (a fixed-width font, which keeps clinical columns aligned).
 #'   A `name` may be a named vector of families per script slot (see
-#'   *Fonts per script* below).
+#'   *Fonts per script* below).  An empty list, or an entry whose `name` is
+#'   not a family name, is an error.
 #' @param font_lang Optional language per font slot, a named character vector
 #'   such as `c(east_asian = "ja")`.  `NULL` (default) is
 #'   `getOption("rtfreporter.font_lang")`, itself `NULL`: nothing is
@@ -55,7 +56,8 @@
 #'   index). Default `c("#000000")`. Colours actually used by borders and by
 #'   `col_spec` / `cell_styles` `color` are added automatically, so you only
 #'   need this to declare colours you reference elsewhere. Black and white are
-#'   reserved and added implicitly.
+#'   reserved and added implicitly.  Another value (`"red"`, `NA`) is an
+#'   error.
 #' @param page The page geometry. Pass an [rtf_page()] object (recommended --
 #'   its help lists every key with its default), a named list with the same
 #'   keys, or `NULL` (default) to use the option / factory defaults (landscape
@@ -167,7 +169,8 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
                          program_fallback = NULL, font_lang = NULL,
                          style = NULL, file = NULL) {
   if (!is.null(program) &&
-      (!is.character(program) || length(program) != 1L || is.na(program))) {
+      (!is.character(program) || length(program) != 1L || is.na(program) ||
+       !nzchar(program))) {
     stop("`program` must be a single string: the program's path.",
          call. = FALSE)
   }
@@ -180,6 +183,9 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
   .check_user_tokens(tokens)
   .check_page_arg(page)
   .check_style_arg(style, "rtf_document")
+  .check_color_table(color_table)
+  .check_font_table_arg(font_table)
+  .check_default_format_arg(default_format)
   if (!is.null(default_format)) .warn_default_format()
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
@@ -248,7 +254,63 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
                 "settings (e.g. list(paper_size = \"A4\")), not ",
                 .describe_page_arg(page), ".", hint), call. = FALSE)
   }
+  # A named list's values are checked as rtf_page() checks them: a negative
+  # margin used to be written as a negative \margt, a string to stop with
+  # "non-numeric argument to binary operator".
+  for (k in intersect(names(page), c("width_in", "height_in", "margin_top_in",
+                                     "margin_bottom_in", "margin_left_in",
+                                     "margin_right_in", "header_dist_in",
+                                     "footer_dist_in"))) {
+    .chk_pos_in(page[[k]], k)
+  }
+  ps <- page[["paper_size"]]
+  if (!is.null(ps) && (!is.character(ps) || length(ps) != 1L)) {
+    stop("`paper_size` must be a single preset name (e.g. \"A4\") or NULL.",
+         call. = FALSE)
+  }
+  o <- page[["orientation"]]
+  if (!is.null(o) && !(is.character(o) && length(o) == 1L &&
+                       o %in% c("landscape", "portrait"))) {
+    stop("`orientation` must be \"landscape\" or \"portrait\".", call. = FALSE)
+  }
   invisible(page)
+}
+
+# `default_format` (deprecated): an rtf_default_format() or a named list of
+# its keys.  A string used to stop with "second argument must be a list".
+.check_default_format_arg <- function(x) {
+  if (!is.null(x) && !is.list(x)) {
+    stop("`default_format` must be an rtf_default_format() object or a ",
+         "named list of its settings.", call. = FALSE)
+  }
+  invisible(x)
+}
+
+# `color_table`: "#RRGGBB" colours.  "red" or NA used to be kept and written
+# into the colour table as \redNA.
+.check_color_table <- function(x) {
+  if (is.null(x)) return(invisible(NULL))
+  if (!is.character(x) || anyNA(x) || !all(grepl("^#[0-9A-Fa-f]{6}$", x))) {
+    stop("`color_table` must be a character vector of 6-digit hex colours ",
+         "such as \"#1F4E79\".", call. = FALSE)
+  }
+  invisible(x)
+}
+
+# `font_table`: a list of fonts, each a list with a `name` (or the name
+# itself), the first the document's default.  A missing, empty or
+# non-string name used to be dropped for Courier New without a word, or
+# written as an empty font name.
+.check_font_table_arg <- function(x) {
+  if (is.null(x)) return(invisible(NULL))
+  nms <- if (is.list(x)) lapply(x, function(f) if (is.list(f)) f$name else f)
+  if (!length(nms) || !all(vapply(nms, is.character, logical(1L)))) {
+    stop("`font_table` must be a non-empty list of fonts, each a list with ",
+         "a `name`: a family name, or a named vector of them per script ",
+         "slot, e.g. list(list(name = \"Arial\")).", call. = FALSE)
+  }
+  for (nm in nms) .check_font(nm, "font_table")
+  invisible(x)
 }
 
 .describe_page_arg <- function(x) {
@@ -327,6 +389,9 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
   doc_copy <- doc
 
   # Whole-object replacements.
+  .check_font_table_arg(font_table)
+  .check_color_table(color_table)
+  .check_default_format_arg(default_format)
   if (!is.null(font_table)) {
     doc_copy$document$font_table <- .check_font_table(font_table)
   }
@@ -824,7 +889,7 @@ rtf_figures <- function(doc, figures,
 #' row, default styling) or a list of rows, where a row is a string or a styled
 #' `list(text=, align=, bold=, italic=, underline=, color=, border=,
 #' row_height_twips=)`. An empty
-#' string (`""`) is a blank row. The block renders as centred paragraphs, or,
+#' string (`""`), or `NA`, is a blank row. The block renders as centred paragraphs, or,
 #' with `rtf_style(title_format = "table")`, as a single-column table the
 #' same width as the content; title rows default to centred + bold.  A row's
 #' `row_height_twips` is that row's height, over the block's

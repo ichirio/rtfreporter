@@ -211,9 +211,11 @@
 #'   \describe{
 #'     \item{`TRUE`}{(default) read everything in the table above.}
 #'     \item{`FALSE`}{use only the rendered body -- equivalent to the old
-#'       `paginate()`.}
+#'       `paginate()`.  `NULL` is the same.}
 #'     \item{a character vector}{of tokens, by source below.}
 #'   }
+#'   Anything else (`NA`, a number, two logicals, a token `NA`) is an
+#'   error, for every source.
 #'   The tokens:
 #'   \describe{
 #'     \item{gt / gtsummary}{`"col_header"`, `"alignment"`, `"spanning"`,
@@ -234,7 +236,8 @@
 #'       table objects and data.frames shares one `read_meta`, so adapter
 #'       tokens must not error on the data.frame elements.}
 #'   }
-#' @param split How to break the body into pages. A strategy name:
+#' @param split How to break the body into pages. A strategy name (a unique
+#'   prefix such as `"group_s"` is enough; another value is an error):
 #'   \describe{
 #'     \item{`"none"`}{(default) one page; no row limit checked.}
 #'     \item{`"rows"`}{cut before each row position given in `split_rows`;
@@ -272,8 +275,10 @@
 #'   with a `...` so it tolerates the context arguments it does not use, and see
 #'   [add_cont_label()] for re-creating the `" (Cont.)"` continuation row.
 #'   A plan passes it the same way: `plan_paginate_rows(split = f)`.
-#' @param max_rows Integer or `NULL`.  Maximum body rows per page for the
-#'   `"group_safe"` / `"group_force"` splits (required by them).  **This is the
+#' @param max_rows A positive whole number, or `NULL`; anything else is an
+#'   error, whatever the split.  Maximum body rows per page for the
+#'   `"group_safe"` / `"group_force"` splits (required by them); with `1`
+#'   a continued group gets no continuation row.  **This is the
 #'   setting for fixed-size pages** -- `max_rows = 25` gives pages of 25 rows.
 #'   Ignored by `"none"` and `"rows"` (which cuts at the positions in
 #'   `split_rows`).  Optional for `"by_value"`: a value's page longer than
@@ -283,7 +288,8 @@
 #'   before, for `split = "rows"` (required by it; ignored otherwise).
 #'   `split_rows = c(20, 40)` yields pages `1:19`, `20:39`, `40:nrow`.  It is
 #'   not a page size: for pages of a fixed number of rows use `max_rows` with
-#'   `split = "group_safe"` or `"group_force"`.
+#'   `split = "group_safe"` or `"group_force"`.  The positions are whole
+#'   numbers in any order; one outside `2:nrow` cuts nothing.
 #' @param group_col Character, integer, or `NULL`.  The column the
 #'   group-aware splits (`"group_safe"`, `"group_force"`, `"by_value"`)
 #'   detect groups on, given by name or position.  `NULL` (default) uses
@@ -300,7 +306,8 @@
 #'       happens *after* `sort_by`, which still orders a factor by its
 #'       **levels**.}
 #'   }
-#' @param group_by How a group boundary is found on `group_col`:
+#' @param group_by How a group boundary is found on `group_col` (a unique
+#'   prefix of a name is enough; another value is an error):
 #'   \describe{
 #'     \item{`"auto"`}{(default) pick from the column content: leading
 #'       indentation present -> `"indent"`; else interspersed empty cells ->
@@ -406,7 +413,8 @@
 #'   `sort_by` is `NULL`.
 #' @param cont_label Character (default `" (Cont.)"`).  Suffix appended to a
 #'   group's label on the second and later pages it continues onto (the
-#'   group-aware splits), marking a continued group.
+#'   group-aware splits), marking a continued group.  One string; `""`
+#'   repeats the label alone.
 #' @param blank_rows Where to insert blank separator rows in the body.  `NULL`
 #'   (default) inserts none (but an `rtf_blank_rows` attribute already on the
 #'   input is still honoured).  Accepts any of -- or a `list()` combining:
@@ -447,7 +455,8 @@
 #'   Ignored when `cell_format` is supplied, which takes precedence.
 #'   Neither one controls whether missing values are substituted -- that is
 #'   `na` -- only whether the substituted token is aligned with the counts.
-#' @param min_group_rows Integer (default `2`).  Widow/orphan control for the
+#' @param min_group_rows A non-negative whole number (default `2`).
+#'   Widow/orphan control for the
 #'   group-aware splits (`"group_force"`, `"group_safe"`, `"by_value"`): when a
 #'   page would end on a group that *starts* on that page while showing fewer
 #'   than `min_group_rows` of the group's child rows (the rows after its first
@@ -528,7 +537,8 @@
 #'     -            <- na = "-"
 #'    NE            <- na = "NE", right edge still under the ones digit
 #'   ```
-#' @param first_rows The rows of the first page, the rest paginated as the
+#' @param first_rows The rows of the first page (a whole number, 1 or more;
+#'   as many as the table has or more is one page), the rest paginated as the
 #'   other arguments say (`max_rows`, `split`): the page a table shares with
 #'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  `NULL`
 #'   (the default): the first page as the others.  Not with `page_by`,
@@ -604,7 +614,7 @@
 #'   }
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
-#'   (parent first, leaf last; at least two).  `NULL` (default) builds no
+#'   (parent first, leaf last; one column is the stub as it is).  `NULL` (default) builds no
 #'   stub.  This is the **one** argument for everything [stub_cols()] can do,
 #'   including `layout` and `label_span`.
 #'   \describe{
@@ -655,8 +665,10 @@
 #'     \item{Default}{Recognizes **both** built-in delimiters: `"____"`
 #'       (from `ydisctools::pivot_stats_wider()`) and `"___tlang_delim___"`
 #'       (tfrmt's column delimiter).}
-#'     \item{Your own}{Pass your own separator(s) to override, or `NULL` to
-#'       disable (use the plain `names(data)` single-row header).}
+#'     \item{Your own}{Pass your own separator(s), a character vector, to
+#'       override, or `NULL` (or `character(0)`) to disable (use the plain
+#'       `names(data)` single-row header).  `NA` and `""` entries are
+#'       ignored; another type is an error.}
 #'     \item{Blank cells}{With the `"____"` separator a doubled separator
 #'       (`"________"`) yields an empty middle segment, i.e. a **blank
 #'       cell** at that header level (handy to align a column that skips an
@@ -854,6 +866,31 @@ as_rtftables.default <- function(x,
   if (!is.function(split)) split <- match.arg(split)
   group_by <- match.arg(group_by)
   na <- .check_na_text(na)
+  if (!is.logical(auto_width) || length(auto_width) != 1L || is.na(auto_width)) {
+    stop("`auto_width` must be TRUE or FALSE.", call. = FALSE)
+  }
+  # one column: two used to stop with "the condition has length > 1"
+  if (!is.null(group_col) && length(group_col) != 1L) {
+    stop("`group_col` must be one column, by name or position, or NULL.",
+         call. = FALSE)
+  }
+  # checked for every source: a data.frame used to read NA, 1 or a vector of
+  # two logicals as FALSE without a word
+  if (!is.null(read_meta) &&
+      !(is.logical(read_meta) && length(read_meta) == 1L && !is.na(read_meta)) &&
+      !(is.character(read_meta) && !anyNA(read_meta))) {
+    stop("`read_meta` must be FALSE/TRUE or a character vector of tokens.",
+         call. = FALSE)
+  }
+  # a number used to be taken as the separator "1"
+  if (!is.null(header_sep) && !is.character(header_sep)) {
+    stop("`header_sep` must be NULL or a character vector of separators.",
+         call. = FALSE)
+  }
+  # 0 used to give empty pages, NA / Inf / a vector unrelated base-R errors
+  if (!is.null(first_rows)) {
+    first_rows <- .check_first_rows(first_rows, "as_rtftables")
+  }
   user_args <- list(...)
 
   # One spec from `stub =` (#314).  `stub_spec` is the only place new stub
