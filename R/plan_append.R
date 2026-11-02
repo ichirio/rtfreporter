@@ -255,10 +255,11 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
     vcols <- c(intersect(want, vcols), setdiff(vcols, want))
   }
   # every part as [page keys][label][value columns]: a column a part has
-  # not prints its empty-cell text
+  # not prints its empty-cell text, but on a heading row the fold added
   for (i in seq_along(parts)) {
     t <- parts[[i]]$tbl
-    for (v in setdiff(vcols, names(t))) t[[v]] <- rep(parts[[i]]$na, nrow(t))
+    fill <- ifelse(parts[[i]]$heading, "", parts[[i]]$na)
+    for (v in setdiff(vcols, names(t))) t[[v]] <- fill
     t <- t[c(pg, lbl, vcols)]
     t$.part <- rep(parts[[i]]$name, nrow(t))
     parts[[i]]$tbl <- t
@@ -393,16 +394,18 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
   }
   tbl[[lbl]] <- as.character(tbl[[lbl]])
   vcols <- setdiff(names(tbl), c(pg, lbl))
-  # a cell with no value -- a heading row the fold added, a statistic the
-  # ARD has not -- prints the part's empty-cell text
+  # a cell with no value -- a statistic the ARD has not -- prints the part's
+  # empty-cell text; a heading row the fold added (no source row) stays as
+  # written, empty (#798)
+  heading <- is.na(src)
   for (v in vcols) {
     x <- as.character(tbl[[v]])
-    x[is.na(x)] <- na
+    x[is.na(x)] <- ifelse(heading[is.na(x)], "", na)
     tbl[[v]] <- x
   }
   edge <- .plan_merge(.plan_of(l$plan, "blanks"))
   list(name = name, absent = l$absent, tbl = tbl, pre = pre, src = src,
-       vcols = vcols, na = na, input = input, plan = p,
+       vcols = vcols, na = na, heading = heading, input = input, plan = p,
        first = if (isTRUE(l$first)) NULL else edge$blank_row_first,
        last = if (isTRUE(l$first)) NULL else edge$blank_row_end)
 }
