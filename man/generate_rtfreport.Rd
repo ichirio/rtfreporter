@@ -23,7 +23,7 @@ own, \code{rtf_document(file = )}; one given here wins.}
 \item{overwrite}{Logical; whether to write over an existing file.  \code{TRUE}
 (the default since 0.8.2.9039): a report program is run again and again,
 as \code{write.csv()} and \code{ggsave()} write over theirs.  \code{FALSE} stops when the
-file is there.}
+file is there.  Anything but \code{TRUE} or \code{FALSE} is an error.}
 
 \item{program}{Overrides, for this one file, the program the document
 names (\code{rtf_document(program = )}, where a program says it once), for
