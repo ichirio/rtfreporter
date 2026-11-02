@@ -132,7 +132,7 @@
 #  border         | NA                    | NA                 | error, same                      | FR-TB566
 #  blank_rows     | 0 (before the first)  | 0                  | object: blank_rows 0             | FR-TB567
 #  blank_rows     | -1 (after the last)   | -1                 | object: blank_rows 2             | FR-TB567
-#  blank_rows     | n + 1                 | 3                  | warning "out of range"           | FR-TB567
+#  blank_rows     | n + 1                 | 3                  | error "out of range"             | FR-TB607
 #  blank_rows     | NA                    | NA                 | error "Unrecognised `blank_rows` specification" | FR-TB567
 #  table_width_twips | valid              | 5000               | last \cellx5000                  | FR-TB568
 #  table_width_twips | NA                 | NA                 | error "`table_width_twips` must be a single non-negative integer" | FR-TB571
@@ -401,7 +401,7 @@ test_that("FT-DC282 [FR-DC151 FR-DC152 FR-DC153 FR-DC154 FR-DC155 FR-DC156 FR-DC
   })
 })
 
-test_that("FT-TB773 [FR-TB547 FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB555 FR-TB556 FR-TB557 FR-TB558 FR-TB561 FR-TB562 FR-TB564 FR-TB566 FR-TB567 FR-TB568 FR-TB569 FR-TB571 FR-TB572 FR-TB592 FR-TB593 FR-TB594]: rtftable(): equivalence classes and boundaries of its arguments", {
+test_that("FT-TB773 [FR-TB547 FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB555 FR-TB556 FR-TB557 FR-TB558 FR-TB561 FR-TB562 FR-TB564 FR-TB566 FR-TB567 FR-TB607 FR-TB568 FR-TB569 FR-TB571 FR-TB572 FR-TB592 FR-TB593 FR-TB594]: rtftable(): equivalence classes and boundaries of its arguments", {
   C <- .eb_case
   E <- function(arg, cls, val, pat) C(arg, cls, val, paste0("error:", pat))
   rh  <- "^`row_height_twips` must be a single non-negative integer"
@@ -430,7 +430,7 @@ test_that("FT-TB773 [FR-TB547 FR-TB548 FR-TB549 FR-TB550 FR-TB551 FR-TB552 FR-TB
     E("border", "NA", NA, "^`border` must be"),
     C("blank_rows", "0", 0, "ok", chk = function(o) identical(o$blank_rows, 0L)),
     C("blank_rows", "-1", -1, "ok", chk = function(o) identical(o$blank_rows, 2L)),
-    C("blank_rows", "n + 1", 3, "warning:out of range"),
+    E("blank_rows", "n + 1", 3, "^`blank_rows` position 3 out of range"),
     E("blank_rows", "NA", NA, "^Unrecognised `blank_rows` specification"),
     C("table_width_twips", "valid", 5000, "ok:\\\\cellx5000[^0-9]"),
     E("table_width_twips", "NA", NA, "^`table_width_twips` must be a single non-negative integer"),
