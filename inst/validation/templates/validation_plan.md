@@ -35,6 +35,14 @@ figures (TFLs) of its clinical study reports as RTF files.
   submissions. The numbers come from the ARD or the table; rtfreporter lays
   them out.
 
+  The TFLs in use (the URS, `urs.csv`, has one requirement each):
+  demographics, disposition, adverse events (overview, by SOC and PT, by
+  maximum severity), laboratory summary and shift, vital signs, PK
+  concentrations with their summary, subject listings, and figures
+  (Kaplan-Meier, forest plot) given as plots, PNG or EMF; in the company
+  style (`rtf_style()`, `rtf_page()`), with the program and run time in the
+  footer, assembled into one document with a table of contents.
+
 **Out of scope**
 
 - The statistics: the ARD's numbers are made, and validated, by the packages
@@ -91,7 +99,7 @@ also in this kit):
    - `Low`: covered by the package's evidence (the FR's tests passed in the
      Quality Report) or by one visual check.
 4. **Traceability** (`build_user_matrix.R`): every UR maps to FRs and to UAT
-   cases; every FR named exists in the version in scope.
+   cases; every FR named is active (not removed) in the version in scope.
 
 ## 5. Acceptance criteria
 
@@ -104,7 +112,7 @@ rtfreporter `<x.y.z>` is accepted for the intended use when all of these hold:
 3. Every UR has at least one UAT case, and every case has a result.
 4. Every UAT case passed, or its failure is a deviation assessed and
    accepted (section 6).
-5. The matrix shows no UR without a case and no FR id unknown to the version.
+5. The matrix shows no UR without a case and no FR id that is unknown to the version or removed in it.
 
 ## 6. Deviations
 
