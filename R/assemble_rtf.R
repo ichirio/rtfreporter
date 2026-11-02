@@ -619,7 +619,7 @@
 #'     ...); body pages restart at `1`.}
 #'   \item{`"decimal"`}{TOC pages use Arabic numerals starting at `1`, and
 #'     the body continues from them (with a one-page TOC the first table is
-#'     page 2).}
+#'     page 2).  A cover page before the TOC is not counted.}
 #' }
 #'
 #' [assemble_folder()] defaults to `"decimal"`.
@@ -794,11 +794,12 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   if (use_toc) {
     npages <- vapply(input_files, function(f)
       .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L))
-    front <- if (toc_page_numbering == "roman") {
-      0L                            # body restarts at 1 (front matter is i, ii)
-    } else {
-      (if (use_cover) 1L else 0L) + toc_pages   # cover + TOC, then continuous
-    }
+    # The cached numbers follow the numbering the pages show (#815).
+    front <- switch(toc_page_numbering,
+      roman   = 0L,            # body restarts at 1 (front matter is i, ii)
+      decimal = toc_pages,     # TOC restarts at 1 after any cover; body runs on
+      none    = (if (use_cover) 1L else 0L) + toc_pages  # all continuous
+    )
     entry_pages <- as.integer(front + 1L + cumsum(c(0L, npages[-length(npages)])))
   }
 

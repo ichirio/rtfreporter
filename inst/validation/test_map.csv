@@ -1475,3 +1475,4 @@
 "test-validation-tb.R","FT-TB698 [FR-TB552 FR-TB553 FR-TB554 FR-TB555]: rtftable() exact row heights, header and blank row heights, and cell_valign","FT-TB698","FR-TB552 FR-TB553 FR-TB554 FR-TB555"
 "test-validation-tb.R","FT-TB699 [FR-TB556 FR-TB557]: rtftable() cell_styles override single cells; blank_row_normalize detects and collapses blank rows","FT-TB699","FR-TB556 FR-TB557"
 "test-validation-tb.R","FT-TB700 [FR-TB559]: options(rtfreporter.print_ascii = TRUE) prints an rtftable with ASCII rules","FT-TB700","FR-TB559"
+"test-validation-interactions.R","FT-IX034 [FR-IX383]: the page numbers cached in the contents follow its numbering, a cover not counted when the contents restart at 1","FT-IX034","FR-IX383"

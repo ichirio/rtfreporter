@@ -418,3 +418,43 @@ test_that("FT-IX033 [FR-IX391]: rtf_figures(width_twips = , height_twips = , ali
   expect_identical(p$h, c(2000L, 1500L))
   expect_identical(p$q, c("\\qr{", "\\ql{"))
 })
+
+test_that("FT-IX034 [FR-IX383]: the page numbers cached in the contents follow its numbering, a cover not counted when the contents restart at 1", {
+  d <- tempfile("ix-cov-")
+  o <- tempfile("ix-cov-out-")
+  dir.create(d)
+  dir.create(o)
+  on.exit(unlink(c(d, o), recursive = TRUE), add = TRUE)
+  files <- file.path(d, c("t-14-2-1.rtf", "t-14-2-2.rtf"))
+  for (i in 1:2) {
+    doc <- rtf_tables(rtf_document(), list(data.frame(A = 1:2, B = c("x", "y"))),
+                      titles = list(sprintf("Table 14.2.%d", i)))
+    generate_rtfreport(doc, files[i], overwrite = TRUE)
+  }
+  cached <- function(f) {
+    txt  <- paste(readLines(f, warn = FALSE), collapse = "\n")
+    hits <- regmatches(txt, gregexpr("PAGEREF.{1,60}?fldrslt [0-9]+", txt))[[1L]]
+    as.integer(sub(".*fldrslt ([0-9]+)$", "\\1", hits))
+  }
+  cover <- list(title = "Example Pharma STUDY-01")
+  run <- function(name, ...) {
+    out <- file.path(o, name)
+    assemble_rtf(files, out, toc = c("Table 14.2.1", "Table 14.2.2"), ...)
+    cached(out)
+  }
+  # decimal: the contents restart at 1 after the cover, so the cover is not counted
+  expect_identical(run("dec-cover.rtf", cover = cover, toc_page_numbering = "decimal"), c(2L, 3L))
+  expect_identical(run("dec.rtf", toc_page_numbering = "decimal"), c(2L, 3L))
+  # none: one Arabic run from the cover on, so the cover is page 1
+  expect_identical(run("none-cover.rtf", cover = cover), c(3L, 4L))
+  expect_identical(run("none.rtf"), c(2L, 3L))
+  # roman: the body restarts at 1 whatever comes before it
+  expect_identical(run("roman-cover.rtf", cover = cover, toc_page_numbering = "roman"), c(1L, 2L))
+  # assemble_folder() takes "decimal" by default
+  out_folder <- file.path(o, "folder.rtf")
+  assemble_folder(d, out_folder, cover = cover)
+  expect_identical(cached(out_folder), c(2L, 3L))
+  txt <- paste(readLines(out_folder, warn = FALSE), collapse = "\n")
+  expect_identical(regmatches(txt, gregexpr("\\\\pgn[a-z]+", txt))[[1L]],
+                   c("\\pgnrestart", "\\pgndec"))
+})

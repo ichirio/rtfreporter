@@ -150,7 +150,7 @@ TOC counts as page 1, 2, ...}
 ...); body pages restart at \code{1}.}
 \item{\code{"decimal"}}{TOC pages use Arabic numerals starting at \code{1}, and
 the body continues from them (with a one-page TOC the first table is
-page 2).}
+page 2).  A cover page before the TOC is not counted.}
 }
 
 \code{\link[=assemble_folder]{assemble_folder()}} defaults to \code{"decimal"}.
