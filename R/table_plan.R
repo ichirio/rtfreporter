@@ -3334,8 +3334,9 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
 #' `plan_listing()` makes the plan a **listing**: a data frame of subject
 #' records (SDTM or ADaM, nothing summarised) printed through
 #' [listing_spec()], with columns that can stack several variables in one
-#' cell and wrap long text.  A record wrapped over several rows is never cut
-#' by a page break.  Its arguments are [listing_spec()]'s own, unchanged;
+#' cell and wrap long text.  A record wrapped over several rows is not cut
+#' by a page break: it moves whole to the next page, unless it alone is
+#' longer than a page.  Its arguments are [listing_spec()]'s own, unchanged;
 #' the blank rows are [plan_blanks()]'s, as for a table.
 #'
 #' @param .plan A [table_plan()] of a data frame of records.
