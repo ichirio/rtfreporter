@@ -225,6 +225,59 @@
 
 # ── TOC entry helpers (exported) ───────────────────────────────────────────
 
+# The scalar arguments of assemble_rtf(): each one value of its kind, so a
+# typo is an error instead of a base-R message or a silent default.
+.check_assemble_args <- function(output_file, overwrite, cover, toc_title,
+                                 bookmark_prefix, book_page) {
+  one_string <- function(x) {
+    is.character(x) && length(x) == 1L && !is.na(x)
+  }
+  if (!one_string(output_file) || !nzchar(output_file)) {
+    stop("`output_file` must be a single non-empty file path.", call. = FALSE)
+  }
+  if (!dir.exists(dirname(output_file))) {
+    stop(sprintf("The folder of `output_file` does not exist: %s",
+                 dirname(output_file)), call. = FALSE)
+  }
+  if (!is.logical(overwrite) || length(overwrite) != 1L || is.na(overwrite)) {
+    stop("`overwrite` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!one_string(toc_title)) {
+    stop("`toc_title` must be a single string.", call. = FALSE)
+  }
+  if (!one_string(bookmark_prefix) ||
+      !grepl("^[A-Za-z0-9_]*$", bookmark_prefix)) {
+    stop("`bookmark_prefix` must be a single string of letters, digits ",
+         "and `_`.", call. = FALSE)
+  }
+  if (!is.null(book_page) && !one_string(book_page)) {
+    stop("`book_page` must be NULL or a single string.", call. = FALSE)
+  }
+  if (is.null(cover)) return(invisible(NULL))
+  fields <- c("title", "subtitle", "date", "version", "meta")
+  if (!is.list(cover) || is.data.frame(cover) ||
+      (length(cover) && (is.null(names(cover)) ||
+                         !all(names(cover) %in% fields)))) {
+    stop("`cover` must be NULL or a list with the fields title, subtitle, ",
+         "date, version and meta.", call. = FALSE)
+  }
+  for (f in fields[1:4]) {
+    v <- cover[[f]]
+    if (!is.null(v) && !(is.atomic(v) && length(v) <= 1L)) {
+      stop(sprintf("`cover$%s` must be a single string.", f), call. = FALSE)
+    }
+  }
+  if (!is.null(cover$meta) && !is.atomic(cover$meta)) {
+    stop("`cover$meta` must be a character vector.", call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+# A cover field to print: not NULL, NA or "" (those are skipped)
+.cover_has <- function(v) {
+  length(v) == 1L && !is.na(v) && nzchar(as.character(v))
+}
+
 # A TOC level: a whole number from 1 to `max` (a heading 2, an entry 3)
 .check_toc_level <- function(level, max, what) {
   ok <- is.numeric(level) && length(level) == 1L && !is.na(level) &&
@@ -246,6 +299,10 @@
 
 .toc_entry <- function(label, file = NULL, level = 2L) {
   .check_toc_level(level, 3L, "toc_entry")
+  if (length(label) != 1L || is.na(label)) {
+    stop("A TOC entry's `label` must be a single string, not NA.",
+         call. = FALSE)
+  }
   structure(
     list(label = as.character(label)[1L],
          file  = file,
@@ -310,6 +367,7 @@
       stop("`toc` must be a character vector the same length as `input_files`.",
            call. = FALSE)
     }
+    if (anyNA(toc)) stop("`toc` labels must not be NA.", call. = FALSE)
     return(lapply(seq_along(toc),
                   function(i) list(label = toc[i], level = 1L,
                                     file_idx = i, type = "entry")))
@@ -381,27 +439,27 @@
     "{\\pard\\fs18\\par}{\\pard\\fs18\\par}{\\pard\\fs18\\par}"
   )
 
-  if (!is.null(cover$title) && nzchar(cover$title)) {
+  if (.cover_has(cover$title)) {
     blocks <- c(blocks,
       sprintf("{\\pard\\qc\\b\\fs44 %s\\par}",
               .toc_escape(cover$title)),
       "{\\pard\\fs18\\par}"
     )
   }
-  if (!is.null(cover$subtitle) && nzchar(cover$subtitle)) {
+  if (.cover_has(cover$subtitle)) {
     blocks <- c(blocks,
       sprintf("{\\pard\\qc\\fs28 %s\\par}",
               .toc_escape(cover$subtitle)),
       "{\\pard\\fs18\\par}"
     )
   }
-  if (!is.null(cover$date) && nzchar(cover$date)) {
+  if (.cover_has(cover$date)) {
     blocks <- c(blocks,
       sprintf("{\\pard\\qc\\fs22 %s\\par}",
               .toc_escape(cover$date))
     )
   }
-  if (!is.null(cover$version) && nzchar(cover$version)) {
+  if (.cover_has(cover$version)) {
     blocks <- c(blocks,
       sprintf("{\\pard\\qc\\fs22 %s\\par}",
               .toc_escape(cover$version))
@@ -409,7 +467,7 @@
   }
   if (!is.null(cover$meta) && length(cover$meta) > 0L) {
     blocks <- c(blocks, "{\\pard\\fs18\\par}")
-    for (line in cover$meta) {
+    for (line in cover$meta[!is.na(cover$meta)]) {
       blocks <- c(blocks,
         sprintf("{\\pard\\qc\\fs20 %s\\par}",
                 .toc_escape(line))
@@ -571,7 +629,8 @@
 #'   \item{`meta`}{character vector of extra centred lines (10 pt).}
 #' }
 #'
-#' Any field that is `NULL` or empty is skipped.
+#' Any field that is `NULL`, `NA` or empty is skipped, as is an `NA` line of
+#' `meta`.  Another field name, or a `cover` that is not a list, is an error.
 #'
 #' @section Table of Contents:
 #' `toc` can take any of these shapes:
@@ -621,9 +680,10 @@
 #' @param input_files Character vector of paths to RTF files to combine
 #'   (at least 2).  May be left out when `toc` is a table (or its path):
 #'   the table's `file` column, in its order.
-#' @param output_file Path for the assembled output RTF file.
-#' @param overwrite Logical; whether to overwrite an existing output
-#'   file.  Default `FALSE`.
+#' @param output_file Path for the assembled output RTF file: a single
+#'   string, in a folder that exists, and not one of the `input_files`.
+#' @param overwrite `TRUE` or `FALSE`; whether to overwrite an existing
+#'   output file.  Default `FALSE`.
 #' @param cover Optional `list(title, subtitle, date, version, meta)`
 #'   for a cover page.  `NULL` (default) = no cover page.
 #' @param toc Table-of-Contents specification.  `NULL` (default) =
@@ -631,17 +691,18 @@
 #'   character vector = one label per input file; a table (columns `file`,
 #'   `label`, `heading`, `level`) or the path of one (`.xlsx` / `.csv`) =
 #'   multi-level layout.  See **Table of Contents** above.
-#' @param toc_title Centred bold title rendered on the TOC page.
-#'   Default `"Table of Contents"`.
+#' @param toc_title Centred bold title rendered on the TOC page, a single
+#'   string (`""` = an empty title line).  Default `"Table of Contents"`.
 #' @param toc_leader `"dot"` (default) draws a dotted leader between
 #'   each TOC entry and its page number; `"none"` leaves whitespace.
 #' @param toc_page_numbering `"none"` (default) / `"roman"` /
 #'   `"decimal"`.  See **Page numbering** above.
 #' @param bookmark_prefix String prepended to every auto-generated
-#'   bookmark name (default `"tfl_"`).  Helps avoid clashes if you
+#'   bookmark name (default `"tfl_"`): letters, digits and `_` only, as a
+#'   bookmark name allows; `""` = none.  Helps avoid clashes if you
 #'   later concatenate multiple assembled outputs.
-#' @param book_page Text for the compiled document's page number, put into
-#'   every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves
+#' @param book_page Text for the compiled document's page number, a single
+#'   string put into every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves
 #'   the slots empty.
 #'   \describe{
 #'     \item{Why a slot}{A deliverable that will be bound into a book needs
@@ -715,6 +776,8 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
                           book_page          = NULL) {
   toc_leader         <- match.arg(toc_leader)
   toc_page_numbering <- match.arg(toc_page_numbering)
+  .check_assemble_args(output_file, overwrite, cover, toc_title,
+                       bookmark_prefix, book_page)
 
   # A table of contents given as a table, or as the path of one: its rows in
   # `order`, and its files when `input_files` is left out.
@@ -722,6 +785,9 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   if (is.character(toc) && length(toc) == 1L && !identical(toc, "auto") &&
       (grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE) || file.exists(toc) ||
        grepl("[.][A-Za-z]{2,5}$", toc))) {
+    if (grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE) && !file.exists(toc)) {
+      stop(sprintf("`toc` file not found: %s", toc), call. = FALSE)
+    }
     toc <- .read_spec(toc)
   }
   if (is.data.frame(toc)) {
@@ -739,6 +805,11 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   }
   if (file.exists(output_file) && !isTRUE(overwrite)) {
     stop("`output_file` already exists. Set overwrite = TRUE.", call. = FALSE)
+  }
+  norm_path <- function(p) normalizePath(p, "/", mustWork = FALSE)
+  if (norm_path(output_file) %in% norm_path(input_files)) {
+    stop("`output_file` is one of the `input_files`; writing it would ",
+         "destroy that input.", call. = FALSE)
   }
 
   toc_entries <- .normalize_toc(toc, input_files)

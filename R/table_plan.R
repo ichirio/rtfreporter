@@ -2323,7 +2323,7 @@ plan_total <- function(.plan, label = "Total", position = c("last", "first"),
 #'   }
 #'   An overall row (`normalize_ard(overall = )`, "Any TEAE") always stays.
 #' @param by A row key whose rows are judged together (with the keys
-#'   outside it).  `NULL` (default): each row on its own.
+#'   outside it), by its name.  `NULL` (default): each row on its own.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -2357,6 +2357,9 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
   parents <- match.arg(parents)
   if (!is.logical(any) || length(any) != 1L || is.na(any)) {
     .ard_stop("plan_filter(any = ) is TRUE (any column) or FALSE (every column).")
+  }
+  if (!is.null(by) && (!is.character(by) || length(by) != 1L || is.na(by))) {
+    .ard_stop("plan_filter(by = ) is one row key's name, or NULL.")
   }
   .plan_layer(.plan, "filter", list(filter = list(conds = conds, env = parent.frame(),
                                                  any = any, parents = parents, by = by)))
@@ -2594,8 +2597,8 @@ plan_hide <- function(.plan, ...) {
 #'   One logical is `widen_ard(sort = )` as it is: `TRUE` brings a key's
 #'   separate blocks together, `FALSE` moves only what an order declares.
 #' @param stat The statistic totalled into `.sort_stat` for a frequency
-#'   order (`widen_ard(sort_stat = )`), e.g. `stat = "n"`.
-#' @param keep `FALSE` also hides the sort keys that are columns: a sort
+#'   order (`widen_ard(sort_stat = )`), one name, e.g. `stat = "n"`.
+#' @param keep `TRUE` (default) or `FALSE`; `FALSE` also hides the sort keys that are columns: a sort
 #'   carrier needed and not wanted.  Names that are not columns (a
 #'   statistic, `".depth"`) are ignored rather than refused.
 #'
@@ -2633,6 +2636,14 @@ plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
   v <- list(...)
   keys <- if (length(v) == 1L && is.logical(v[[1L]])) v[[1L]]
           else unlist(v, use.names = FALSE)
+  # (NA and "yes" used to be read as TRUE, two statistics as the first)
+  if (!is.logical(keep) || length(keep) != 1L || is.na(keep)) {
+    .ard_stop("plan_sort(keep = ) is TRUE (the sort keys stay) or FALSE (hide them).")
+  }
+  if (!is.null(stat) && (!is.character(stat) || length(stat) != 1L ||
+                         is.na(stat) || !nzchar(stat))) {
+    .ard_stop("plan_sort(stat = ) is one statistic's name, e.g. \"n\", or NULL.")
+  }
   .plan_layer(.plan, "sort",
               list(sort = keys, sort_stat = stat, .keep = keep))
 }
