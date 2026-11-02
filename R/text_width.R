@@ -27,13 +27,17 @@
 #' Estimate the display width of a text string
 #'
 #' Returns an estimated display width in **inches** for a character string
-#' rendered in the given font and size.  For Courier New (monospace) the
-#' estimate is reliable; for proportional fonts (Arial) it is an average-width
-#' approximation.
+#' rendered in the given font and size.  For Courier New (monospace) every
+#' character is one width.  For Arial and Times New Roman (proportional) each
+#' character has its own width, from the font metrics R ships (grDevices'
+#' AFM files: Helvetica, whose widths are Arial's, and Times-Roman): an `i`
+#' is narrower than a `W`.  Characters outside printable ASCII take the width
+#' of an `n`.
 #'
 #' @param text A character vector.  `NA` is treated as `""`.
-#' @param font Font name: `"Courier New"` / `"courier_new"`, `"Courier"`, or
-#'   `"Arial"` (case and spaces do not matter).  `NULL` (default) is the
+#' @param font Font name: `"Courier New"` / `"courier_new"`, `"Courier"`,
+#'   `"Arial"` (or `"Helvetica"`) or `"Times New Roman"` (or `"Times"`); case,
+#'   spaces and hyphens do not matter.  `NULL` (default) is the
 #'   package's font, `getOption("rtfreporter.font")` ("Courier New"), as for every
 #'   other `font =`.  Unrecognised values fall back to Courier New.
 #' @param font_size_half_points Font size in **half-points** (the unit used by
@@ -51,8 +55,68 @@
 text_width_in <- function(text, font = NULL, font_size_half_points = 18L) {
   text <- ifelse(is.na(text), "", as.character(text))
   size_pt  <- as.numeric(font_size_half_points) / 2
-  char_w   <- .char_width_in(.font_key(font), size_pt)
+  key <- .font_key(font)
+  prop <- .prop_family(key)
+  if (!is.null(prop)) {
+    w <- .afm_widths(prop)
+    if (!is.null(w)) return(.prop_width_in(text, w, size_pt, font))
+  }
+  char_w   <- .char_width_in(key, size_pt)
   .text_columns(text, font) * char_w
+}
+
+# A proportional family whose per-character widths R ships (#740): Arial is
+# measured with Helvetica's metrics (the same widths), Times New Roman with
+# Times-Roman's.  NULL for any other font.
+.prop_family <- function(key) {
+  if (key %in% c("arial", "arial_mt", "arialmt", "helvetica")) return("arial")
+  if (key %in% c("times_new_roman", "timesnewroman", "times", "times_roman")) return("times")
+  NULL
+}
+
+# The family's widths in 1/1000 em, by character code (index code + 1), from
+# grDevices' font metrics (AFM): no new dependency.  Read once a session;
+# NULL when the file is not there (the average width is used then).
+.afm_cache <- new.env(parent = emptyenv())
+.afm_widths <- function(family) {
+  if (exists(family, envir = .afm_cache, inherits = FALSE)) {
+    return(get(family, envir = .afm_cache))
+  }
+  file <- switch(family, arial = "Helvetica.afm.gz", times = "Times-Roman.afm.gz")
+  path <- system.file("afm", file, package = "grDevices")
+  w <- NULL
+  if (nzchar(path)) {
+    con <- gzfile(path)
+    l <- tryCatch(readLines(con, warn = FALSE), finally = close(con))
+    l <- grep("^C [0-9]+ ;", l, value = TRUE)
+    code <- as.integer(sub("^C ([0-9]+) ;.*", "\\1", l))
+    wx <- as.numeric(sub(".*; WX ([0-9.]+) ;.*", "\\1", l))
+    w <- rep(NA_real_, 256L)
+    ok <- !is.na(code) & code >= 0L & code < 256L
+    w[code[ok] + 1L] <- wx[ok]
+  }
+  assign(family, w, envir = .afm_cache)
+  w
+}
+
+# Width in inches, character by character: printable ASCII from the table,
+# any other character the width of "n" -- two of them for an East Asian wide
+# character in a font with an east_asian slot, the two-column rule.
+.prop_width_in <- function(text, w, size_pt, font) {
+  n_w <- w[utf8ToInt("n") + 1L]
+  if (is.na(n_w)) n_w <- 500
+  units <- vapply(text, function(t) {
+    cp <- utf8ToInt(enc2utf8(t))
+    if (!length(cp) || anyNA(cp)) return(0)
+    known <- cp >= 32L & cp <= 126L
+    ww <- rep(n_w, length(cp))
+    ww[known] <- w[cp[known] + 1L]
+    ww[is.na(ww)] <- n_w
+    sum(ww)
+  }, numeric(1L), USE.NAMES = FALSE)
+  f <- font %||% .opt("rtfreporter.font")
+  if (.is_slotted(f) && !is.na(f["east_asian"])) units <- units + .ea_wide_count(text) * n_w
+  units / 1000 * size_pt / 72
 }
 
 # A font as the width tables know it: "Courier New" -> "courier_new"; NULL
