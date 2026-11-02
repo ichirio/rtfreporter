@@ -100,6 +100,8 @@
 #' @param data A data.frame (or tibble).
 #' @param vars The hierarchy columns to merge, **parent first, leaf last**.
 #'   A character / integer vector (or a `list()` to mix names and indices).
+#'   A position is a whole number in `1..ncol(data)`; `TRUE`, a fraction or
+#'   a factor stops: "`vars` must be a column name or a whole position".
 #'   One column is folded into nothing: it is the stub as it is, named
 #'   `label`.
 #' @param label Column name for the merged stub column (this is what a

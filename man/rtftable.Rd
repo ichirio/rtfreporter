@@ -113,7 +113,9 @@ and its \code{inside_h} / \code{inside_v} rules fall between the rows / cells;
 combining any of (positions are unioned):
 \describe{
 \item{an integer vector}{positions: \code{0} = before the first row, \code{k} =
-after data row \code{k}, \code{-1} = after the last row.}
+after data row \code{k}, \code{-1} = after the last row.  A position is a
+whole number in \verb{-1..nrow}: a fraction, \code{NA}, or a position past
+the last row (or below \code{-1}) stops, naming the positions.}
 \item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} spec}{insert when a column value changes.}
 \item{a \code{\link[=blank_rows_by_rule]{blank_rows_by_rule()}} spec}{insert before / after rows matching a
 regular expression.}

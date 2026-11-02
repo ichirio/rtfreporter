@@ -292,7 +292,9 @@
 #'   numbers in any order; one outside `2:nrow` cuts nothing.
 #' @param group_col Character, integer, or `NULL`.  The column the
 #'   group-aware splits (`"group_safe"`, `"group_force"`, `"by_value"`)
-#'   detect groups on, given by name or position.  `NULL` (default) uses
+#'   detect groups on, given by name or position (a whole number in
+#'   `1..ncol`; `TRUE`, a fraction or a factor is an error, as in every
+#'   column argument).  `NULL` (default) uses
 #'   **column 1**.  This selects only the *column*; how a group boundary is
 #'   found on it is set by `group_by`.
 #'   \describe{
@@ -424,7 +426,11 @@
 #'   \describe{
 #'     \item{an integer vector of positions}{a blank row is inserted *after* each
 #'       given data-row index; `0` = before the first row, `-1` = after the last
-#'       row (e.g. `c(0, 5, -1)`).}
+#'       row (e.g. `c(0, 5, -1)`).  A position is a whole number in
+#'       `-1..nrow` of the whole body (after `stub`, before pagination): a
+#'       fraction, `NA`, or a position past the body's last row (or below
+#'       `-1`) stops, naming the positions.  On a page shorter than `k`, a
+#'       position `k` within the body puts no blank on that page.}
 #'     \item{`"between_groups"`}{a blank at every group transition on `group_col`,
 #'       using this call's `group_by` detection (auto / indent / value / filled).}
 #'     \item{a [blank_rows_by_change()] object}{insert a blank whenever the group
@@ -1161,6 +1167,12 @@ as_rtftables.default <- function(x,
     # hidden).  Resolved on this body's coordinates, before the sidx helper
     # column is appended below.
     drop_idx <- .resolve_drop_cols(drop_cols, body)
+
+    # ---- blank_rows positions: whole numbers within the body (#853) -----
+    # Checked once on the whole body, before pagination: a position past its
+    # last row reaches no page.  Within the body it is "after row k of each
+    # page", so a page shorter than k simply has none.
+    .check_blank_positions(blank_rows, nrow(body))
 
     # ---- sort body rows -------------------------------------------------
     # Order the body BEFORE pagination so group detection, (Cont.) labels and
