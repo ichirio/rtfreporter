@@ -632,18 +632,40 @@ col_key <- function(key, sep = NULL, part = 1L) {
 # and the rest of the pipeline treat it like any adapter spanning header.
 # Returns NULL when no name splits into more than one segment (caller then
 # falls back to the plain `names(data)` single-row header).
+# Split one string on any of `seps` (literal strings, longest first): at each
+# step the earliest match wins, and at the same place the longer separator.
+# Like strsplit(), a trailing separator gives no empty last piece, and an
+# empty string gives character(0).
+.split_on_fixed_seps <- function(x, seps) {
+  if (is.na(x)) return(NA_character_)
+  parts <- character(0)
+  rest  <- x
+  repeat {
+    at  <- vapply(seps, function(s) regexpr(s, rest, fixed = TRUE),
+                  integer(1L), USE.NAMES = FALSE)
+    hit <- which(at > 0L)
+    if (!length(hit)) break
+    k     <- hit[which.min(at[hit])]
+    start <- at[k]
+    parts <- c(parts, substr(rest, 1L, start - 1L))
+    rest  <- substr(rest, start + nchar(seps[k]), nchar(rest))
+  }
+  if (nzchar(rest)) parts <- c(parts, rest)
+  parts
+}
+
 .split_names_to_col_header <- function(col_names, seps) {
   if (is.null(seps)) return(NULL)
   seps <- seps[!is.na(seps) & nzchar(seps)]
   if (length(seps) == 0L || length(col_names) == 0L) return(NULL)
 
-  # Literal-quote each separator (PCRE \Q...\E) and try longest first, so a
-  # longer separator wins over a shorter one that is its prefix.  \Q...\E avoids
-  # gsub-style backreference escaping (unreliable in this R build).
-  seps    <- seps[order(-nchar(seps))]
-  pattern <- paste0("\\Q", seps, "\\E", collapse = "|")
+  # Try the longest separator first, so a longer separator wins over a shorter
+  # one that is its prefix.  A fixed-string search, so every separator is a
+  # literal: a "." or a "|", and a "\E" too, which ended the \Q...\E quote the
+  # regular expression used before.
+  seps <- seps[order(-nchar(seps))]
 
-  segs  <- strsplit(col_names, pattern, perl = TRUE)
+  segs  <- lapply(col_names, .split_on_fixed_seps, seps = seps)
   segs  <- lapply(segs, function(s) if (length(s) == 0L) "" else s)
   depth <- max(lengths(segs))
   if (depth <= 1L) return(NULL)
