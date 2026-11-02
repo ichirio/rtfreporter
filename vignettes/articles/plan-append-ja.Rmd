@@ -91,7 +91,7 @@ listing <- adpc |>
 
 **要約**は、定量できた濃度の ARD（分析対象・投与群・時点ごと）の plan です。定数の行キー
 （`block = ~ "Summary Statistics"`）が、統計量の上の見出し行になります。平均・SD・幾何平均・
-中央値はデータより有効数字を 1 桁多く、最小・最大はデータと同じ桁、CV% は小数 1 桁です。
+中央値はデータより有効数字を 1 桁多く、最小・最大はデータと同じ桁、CV% は小数 1 桁です。計算できない統計量（値が 1 つの SD など）は `na` の NC になり、見出し行は空のままです。
 
 ```{r summary}
 pk_stats <- ~ list(N = length, mean = mean, sd = stats::sd,
@@ -102,12 +102,10 @@ ard <- cards::ard_summary(adpc[!is.na(adpc$AVAL), ], by = c(ANALYTE, ARM, ATPT),
                           variables = AVAL, statistic = pk_stats)
 summary <- normalize_ard(ard) |>
   table_plan(cols = "ATPT", rows = c(block = ~ "Summary Statistics")) |>
-  plan_cells(continuous = cell_rows(
-    N = "{N:.0f}", Mean = "{mean:.4s}",
-    SD = c(is.na(sd) ~ "NC", "{sd:.4s}"),          # NC: 算出せず（N < 2）
-    "CV%" = c(is.na(cv) ~ "NC", "{cv:.1f}"),
-    "Geometric mean" = "{geo_mean:.4s}", Median = "{median:.4s}",
-    Min = "{min:.3s}", Max = "{max:.3s}"))
+  plan_cells(continuous = c(N = "{N:.0f}", Mean = "{mean:.4s}", SD = "{sd:.4s}",
+                            "CV%" = "{cv:.1f}", "Geometric mean" = "{geo_mean:.4s}",
+                            Median = "{median:.4s}", Min = "{min:.3s}", Max = "{max:.3s}"),
+             na = "NC")
 ```
 
 どちらも普通の plan として単独で動きます。`plan_apply(summary, "table")` は、全グループの
