@@ -378,7 +378,8 @@
 # knitting, the file open in RStudio's editor -- said in one message.
 .check_program <- function(program, arg = "program") {
   if (!is.null(program) &&
-      (!is.character(program) || length(program) != 1L || is.na(program))) {
+      (!is.character(program) || length(program) != 1L || is.na(program) ||
+       !nzchar(program))) {
     stop("`", arg, "` must be a single string: the path of the program ",
          "that writes the file.", call. = FALSE)
   }
@@ -720,11 +721,19 @@
 # Priority: column_widths_twips > col_rel_width > the default (default_col_widths()).
 .compute_cellx <- function(ncols, writable_width_twips, tbl) {
   if (!is.null(tbl$column_widths_twips)) {
-    widths <- as.integer(tbl$column_widths_twips)
+    widths <- tbl$column_widths_twips
     if (length(widths) != ncols) {
       stop(sprintf("`column_widths_twips` length (%d) must match ncol (%d).",
                    length(widths), ncols), call. = FALSE)
     }
+    # a width that is no positive whole number of twips (NA, -1, Inf, "a")
+    # used to be written as it came, NA or negative
+    if (!is.numeric(widths) || any(!is.finite(widths)) || any(widths <= 0) ||
+        any(widths != round(widths))) {
+      stop("`column_widths_twips` values must be positive whole numbers ",
+           "(twips).", call. = FALSE)
+    }
+    widths <- as.integer(widths)
     return(cumsum(widths))
   }
 
@@ -738,12 +747,15 @@
   }
 
   if (!is.null(tbl$col_rel_width)) {
-    rel <- as.numeric(tbl$col_rel_width)
+    rel <- suppressWarnings(as.numeric(tbl$col_rel_width))
     if (length(rel) != ncols) {
       stop(sprintf("`col_rel_width` length (%d) must match ncol (%d).",
                    length(rel), ncols), call. = FALSE)
     }
-    if (any(rel <= 0)) stop("`col_rel_width` values must be positive.", call. = FALSE)
+    # NA or a string used to stop with "missing value where TRUE/FALSE
+    # needed", Inf to pass
+    if (!is.numeric(tbl$col_rel_width) || any(!is.finite(rel)) || any(rel <= 0))
+      stop("`col_rel_width` values must be positive.", call. = FALSE)
     widths <- as.integer(round(total_w * rel / sum(rel)))
     widths[ncols] <- total_w - sum(widths[-ncols])  # absorb rounding drift
     return(cumsum(widths))
@@ -2243,6 +2255,37 @@
   norm
 }
 
+# Stop when the resolved page leaves nothing to write on (#847): the left +
+# right margins must be narrower than the page and the top + bottom margins
+# lower than it, and a header / footer distance must lie on the page.  It is
+# checked here, where the document's page is resolved, because a margin can
+# come from an rtf_page(), a partial `page` list or an rtfreporter.page.*
+# option, and the paper size is only known once these are put together.
+.check_page_writable <- function(pg) {
+  inch <- function(tw) sprintf("%g", round(tw / 1440, 4))
+  w <- pg$width_twips; h <- pg$height_twips
+  lr <- pg$margin_left_twips + pg$margin_right_twips
+  tb <- pg$margin_top_twips + pg$margin_bottom_twips
+  if (lr >= w) {
+    stop(sprintf(paste0("The margins (L + R = %s in) leave no writable width ",
+                        "on a %s in wide page."), inch(lr), inch(w)),
+         call. = FALSE)
+  }
+  if (tb >= h) {
+    stop(sprintf(paste0("The margins (T + B = %s in) leave no writable height ",
+                        "on a %s in high page."), inch(tb), inch(h)),
+         call. = FALSE)
+  }
+  for (k in c("header_dist", "footer_dist")) {
+    d <- pg[[paste0(k, "_twips")]]
+    if (!is.null(d) && d >= h) {
+      stop(sprintf("`%s_in` (%s in) is not on the %s in high page.",
+                   k, inch(d), inch(h)), call. = FALSE)
+    }
+  }
+  invisible(pg)
+}
+
 # Internal helper: convert S3 rtf_document (pipe API) to internal S3 rtfreport.
 .pipe_doc_to_rtfreport <- function(pipe_doc) {
   if (!inherits(pipe_doc, "rtf_document")) return(NULL)
@@ -2278,6 +2321,7 @@
     if (!is.null(hd)) pg$header_dist_twips <- .in_to_twips(hd)
     fd <- ps$footer_dist_in %||% getOption("rtfreporter.page.footer_dist_in")
     if (!is.null(fd)) pg$footer_dist_twips <- .in_to_twips(fd)
+    .check_page_writable(pg)
     report <- .rtfreport_set_default_page(report, pg)
   }
   # Per-element style for the title / footnote blocks (#292) rides on the

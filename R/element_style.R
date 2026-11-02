@@ -20,24 +20,31 @@
 #  `row_height_twips = 0L` keeps its established meaning of "automatic" (emit
 #  no \trrh at all) and is passed through untouched.
 
+# TRUE when `x` is one finite whole number in the integer range that is at
+# least `min`.  A whole number given as a double (18, as YAML and tflspec
+# pass it) counts; a fraction, a string, a logical, NA or a factor does not
+# (#846: these used to be coerced by as.integer()).
+.is_whole_number <- function(x, min) {
+  is.numeric(x) && !is.factor(x) && length(x) == 1L && is.finite(x) &&
+    x == trunc(x) && x >= min && x <= .Machine$integer.max
+}
+
 .check_font_size <- function(x, arg) {
   if (is.null(x)) return(NULL)
-  x <- suppressWarnings(as.integer(x))
-  if (length(x) != 1L || is.na(x) || x <= 0L) {
+  if (!.is_whole_number(x, 1)) {
     stop(sprintf("`%s` must be a single positive integer (half-points).", arg),
          call. = FALSE)
   }
-  x
+  as.integer(x)
 }
 
 .check_row_height <- function(x, arg) {
   if (is.null(x)) return(NULL)
-  x <- suppressWarnings(as.integer(x))
-  if (length(x) != 1L || is.na(x) || x < 0L) {
+  if (!.is_whole_number(x, 0)) {
     stop(sprintf("`%s` must be a single non-negative integer (twips) or NULL.",
                  arg), call. = FALSE)
   }
-  x
+  as.integer(x)
 }
 
 .check_align <- function(x, arg) {

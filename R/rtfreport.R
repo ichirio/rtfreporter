@@ -219,7 +219,8 @@
 #'   full writable width (page width minus margins).  A value that is not one
 #'   non-negative integer is an error.
 #' @param width Band width in the shared vocabulary: `"page"` (the writable
-#'   width, the default), a fraction in `(0, 1]` of it, or twips. `width_twips`
+#'   width, the default), a fraction in `(0, 1]` of it, or twips (a whole
+#'   number above 1; `1.5` or `Inf` is an error). `width_twips`
 #'   is the older absolute-only form and wins when both are given.
 #' @param font_size_half_points Font size for this band, in half-points.
 #'   `NULL` (default) inherits the document size. Setting it also recomputes

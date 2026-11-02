@@ -23,14 +23,16 @@ rtf_document(
 named list with a \code{name} (e.g. \code{list(list(name = "Arial"))}). The first
 entry is the document's default font. Default: \code{list(list(name = "Courier New"))} (a fixed-width font, which keeps clinical columns aligned).
 A \code{name} may be a named vector of families per script slot (see
-\emph{Fonts per script} below).}
+\emph{Fonts per script} below).  An empty list, or an entry whose \code{name} is
+not a family name, is an error.}
 
 \item{color_table}{Optional character vector of \code{"#RRGGBB"} colours to
 pre-declare in the document's colour table (so they are available by
 index). Default \code{c("#000000")}. Colours actually used by borders and by
 \code{col_spec} / \code{cell_styles} \code{color} are added automatically, so you only
 need this to declare colours you reference elsewhere. Black and white are
-reserved and added implicitly.}
+reserved and added implicitly.  Another value (\code{"red"}, \code{NA}) is an
+error.}
 
 \item{page}{The page geometry. Pass an \code{\link[=rtf_page]{rtf_page()}} object (recommended --
 its help lists every key with its default), a named list with the same

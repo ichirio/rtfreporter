@@ -99,6 +99,38 @@
   if (!is_custom_split) split <- match.arg(split)
   group_by <- match.arg(group_by)
 
+  # One positive whole number of rows: 0, a negative number, a fraction or
+  # TRUE used to make the group-aware splits loop forever, NA or Inf to stop
+  # with "missing value where TRUE/FALSE needed".
+  .is_count <- function(v, min) {
+    is.numeric(v) && length(v) == 1L && is.finite(v) && v >= min &&
+      v == round(v)
+  }
+  if (!is.null(max_rows) && !.is_count(max_rows, 1)) {
+    stop("`max_rows` must be a single positive whole number (rows) or NULL.",
+         call. = FALSE)
+  }
+  if (!.is_count(min_group_rows, 0)) {
+    stop("`min_group_rows` must be a single non-negative whole number (rows).",
+         call. = FALSE)
+  }
+  if (!is.null(split_rows) &&
+      (!is.numeric(split_rows) || anyNA(split_rows) ||
+       any(!is.finite(split_rows)) || any(split_rows != round(split_rows)))) {
+    stop("`split_rows` must be whole row positions (numbers) or NULL.",
+         call. = FALSE)
+  }
+  if (!is.character(cont_label) || length(cont_label) != 1L ||
+      is.na(cont_label)) {
+    stop("`cont_label` must be a single string, e.g. \" (Cont.)\".",
+         call. = FALSE)
+  }
+  for (a in c("blank_row_first", "blank_row_end", "count_blank_rows")) {
+    v <- get(a)
+    if (!is.logical(v) || length(v) != 1L || is.na(v)) {
+      stop(sprintf("`%s` must be TRUE or FALSE.", a), call. = FALSE)
+    }
+  }
   if (!is_custom_split) {
     if (split %in% c("group_safe", "group_force") && is.null(max_rows)) {
       stop("`max_rows` is required when split = \"", split, "\".",
@@ -1091,8 +1123,10 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 
     result[[length(result) + 1L]] <- df[pos:end, , drop = FALSE]
 
-    # Mid-group cut?  Inject a Cont. header row before end+1.
-    if (end < nrow(df)) {
+    # Mid-group cut?  Inject a Cont. header row before end+1 -- when the next
+    # page has room for it and a row (with a budget of one row it would hold
+    # only that header, injected again before the same row, forever).
+    if (end < nrow(df) && budget >= 2L) {
       end_gid  <- info$id[end]
       next_gid <- info$id[end + 1L]
       if (!is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid &&

@@ -33,7 +33,8 @@ one key is a block.}
 one key is a block.}
 }}
 
-\item{every}{Cut a block every this many columns, counting only the ones
+\item{every}{Cut a block every this many columns (a whole number, 1 or
+more), counting only the ones
 a block does not keep.  A table no wider than one block is not cut.}
 
 \item{keep}{The columns every block repeats,

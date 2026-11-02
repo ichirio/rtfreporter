@@ -871,6 +871,40 @@
     collapse = "\n")
 }
 
+# A records plan (table_plan(value = )): one cell, one record.  Two records
+# of one key and column with different values would otherwise print the
+# first and drop the other without a word (#835).  The same value stated
+# twice is one value and passes.  Only a records plan is checked: an ARD
+# read by a position (`group1_level` over stacked blocks) can land two
+# statistics in one cell too, and those plans are left as they were.
+.ard_check_one_value <- function(s, chain, rowrefs, key_vals, ckey) {
+  sn <- as.character(s$stat_name)
+  if (!anyDuplicated(sn)) return(invisible())
+  read <- unique(unlist(lapply(chain, function(el)
+    vapply(.ard_tokens(el$tpl), function(z) .ard_token_parts(z)$name, ""))))
+  st <- if (is.list(s$stat)) {
+    vapply(s$stat, function(e) paste(as.character(unlist(e)), collapse = " "), "")
+  } else as.character(s$stat)
+  for (nm in unique(sn[duplicated(sn) & sn %in% read])) {
+    v <- unique(st[sn == nm])
+    if (length(v) < 2L) next
+    keys <- paste(vapply(seq_along(rowrefs), function(i)
+      sprintf("%s = %s", rowrefs[[i]]$out,
+              sQuote(as.character(key_vals[[i]] %||% NA))), ""),
+      collapse = ", ")
+    .ard_stop(paste0(
+      "Two rows reach one cell with different values of ", sQuote(nm),
+      ", and a cell prints one:\n",
+      "  cell  : ", if (nzchar(keys)) paste0(keys, ", "), "column ",
+      sQuote(ckey), "\n",
+      "  values: ", paste(sQuote(utils::head(v, 3L)), collapse = ", "), "\n",
+      "  table_plan(value = ): these are two records of one key and ",
+      "column.\n  Add the key that tells them apart to `rows` ",
+      "or `cols`, or keep one record per cell first."))
+  }
+  invisible()
+}
+
 .ard_lookup_cells <- function(cells, variable, context, kind = NA_character_,
                               group = NA_character_, whole = FALSE) {
   # A list is a map only when its elements are NAMED: `c()` over guards
@@ -2284,6 +2318,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   stats <- match.arg(stats)
   value <- match.arg(value)
   rounding <- .rounding_type(rounding)
+  # a records plan, table_plan(value = ): one record a cell (#835)
+  one_record <- isTRUE(attr(x, ".ard_records", exact = TRUE))
   if (!(isTRUE(notes) || isFALSE(notes) ||
         (is.character(notes) && length(notes) == 1L && notes %in% c("attr", "applied")))) {
     .ard_stop("`notes` must be TRUE, FALSE, \"attr\" or \"applied\".")
@@ -2651,6 +2687,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       for (lv in unique(labs)) {
         sel <- if (is.na(lv)) is.na(labs) else (!is.na(labs) & labs == lv)
         s2 <- sub[sel, , drop = FALSE]
+        if (one_record) {
+          .ard_check_one_value(s2, entry$chains[[1L]], rowrefs, key_vals, ckey)
+        }
         pk <- .ard_chain_pick(entry$chains[[1L]], s2, rounding)
         v <- pk$v
         if (!is.null(lab_chain)) lv <- .ard_label_text(lab_chain, s2, lv)

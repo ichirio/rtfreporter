@@ -24,7 +24,10 @@
     }
     return(w)
   }
-  if (!is.numeric(w) || length(w) != 1L || is.na(w) || w <= 0) {
+  # above 1 a width is twips: a whole, finite number (Inf used to be written
+  # as NA twips, 1.5 as 2 twips)
+  if (!is.numeric(w) || length(w) != 1L || is.na(w) || w <= 0 ||
+      (w > 1 && !.is_whole_number(w, 1))) {
     stop(sprintf("`%s` must be \"content\", \"page\", a fraction in (0, 1], or twips.",
                  arg), call. = FALSE)
   }

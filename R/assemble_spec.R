@@ -162,8 +162,10 @@
       toc <- c(toc, list(.toc_heading(trimws(h), level = 1L)))
       last_heading <- h
     }
+    # (as.numeric(), not as.integer(): a level of 2.5 is refused by
+    # .toc_entry(), not cut to 2)
     lvl <- if (!is.null(spec$level) && !is.na(spec$level[i]))
-      as.integer(spec$level[i]) else 2L
+      as.numeric(spec$level[i]) else 2L
     toc <- c(toc, list(.toc_entry(spec$label[i], file = spec$file[i],
                                   level = lvl)))
   }
@@ -271,8 +273,8 @@
 #' The table has the columns `order` (the assembly order), `file`, `table`
 #' (the table number read from the header, or `NA`), `heading` (a heading
 #' printed above the entry whenever it changes; `NA` = none), `label` (the
-#' entry text, `"Table N  <title>"`), `level` (the entry's indent, default 2)
-#' and `pages` (informational).
+#' entry text, `"Table N  <title>"`), `level` (the entry's indent, a whole
+#' number from 1 to 3, default 2) and `pages` (informational).
 #'
 #' @param dir Directory of `.rtf` files to assemble.
 #' @param output_file Path of the assembled `.rtf` to write, or `NULL`

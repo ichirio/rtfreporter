@@ -16,8 +16,9 @@
 #   "parent" -- a leaf equal to its (deepest non-empty) parent value does too.
 .resolve_group_summary <- function(x) {
   if (is.null(x)) return(character(0))
-  x <- as.character(x)
-  x <- x[!is.na(x) & nzchar(x)]
+  # NA, "" and another type used to be dropped, turning the folding off
+  .check_token_vector(x, "group_summary",
+                      "c(\"empty\", \"parent\") (or \"all\" / \"none\" / NULL)")
   if (length(x) == 0L || identical(x, "none")) return(character(0))
   if (identical(x, "all")) return(c("empty", "parent"))
   allowed <- c("empty", "parent")
@@ -241,10 +242,11 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
     attr(out, "rtf_stub_src") <- seq_len(nrow(data))
     return(out)
   }
-  indent <- as.integer(indent)
-  if (length(indent) != 1L || is.na(indent) || indent < 0L) {
+  # a whole number: 1.5, "2" and TRUE used to be coerced
+  if (!.is_whole_number(indent, 0)) {
     stop("`indent` must be a single non-negative integer.", call. = FALSE)
   }
+  indent <- as.integer(indent)
   summary_modes <- .resolve_group_summary(group_summary)
   empty_mode    <- "empty"  %in% summary_modes
   parent_mode   <- "parent" %in% summary_modes
