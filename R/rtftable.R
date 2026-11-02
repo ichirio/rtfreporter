@@ -496,14 +496,16 @@
 #'     \item{a [blank_rows_by_rule()] spec}{insert before / after rows matching a
 #'       regular expression.}
 #'   }
-#' @param read_attributes Logical. When `TRUE` (default), read recognised
+#' @param read_attributes `TRUE` or `FALSE`. When `TRUE` (default), read recognised
 #'   attributes off `data` for use as fallback defaults -- currently
 #'   `attr(data, "rtf_blank_rows")` is folded into `blank_rows` when the
 #'   argument is `NULL`. Set `FALSE` to ignore attributes.
 #' @param col_rel_width Numeric vector of relative column widths (e.g.
-#'   `c(2, 1, 1)` makes the first column twice as wide as the others).
+#'   `c(2, 1, 1)` makes the first column twice as wide as the others), one
+#'   positive finite number per column; another value is an error when the
+#'   file is written.
 #' @param column_widths_twips Integer vector of absolute column widths in
-#'   twips. Overrides `col_rel_width`.
+#'   twips, one positive whole number per column. Overrides `col_rel_width`.
 #' @param table_width_twips Total table width in twips.  A value that is not
 #'   one non-negative integer is an error.
 #' @param table_width_pct_of_writable Table width as a fraction 0-1 of the
@@ -519,7 +521,8 @@
 #'   `rtfreporter.row_height_twips` option, else the height the font size
 #'   implies. A non-negative integer specifies an explicit value; anything
 #'   else is an error, as it is for the other `*_twips` arguments.
-#' @param row_height_exact Logical. `TRUE` = exact (clipped); `FALSE` = minimum.
+#' @param row_height_exact `TRUE` = exact (clipped); `FALSE` = minimum; `NA`
+#'   or another value is an error.
 #' @param header_row_height_twips Row height for column-header rows.
 #' @param font_size_half_points Font size for this table, in half-points.
 #'   `NULL` (default) inherits the document size. Setting it also recomputes
@@ -813,13 +816,22 @@ rtftable <- function(
     twpw <- .table_width_pct_frac(table_width_pct)
   }
 
-  if (!table_align %in% c("left", "center", "right")) {
+  # one value: a vector of two, or none, used to stop with "the condition has
+  # length > 1" / "argument is of length zero"; NA was taken for FALSE
+  if (length(table_align) != 1L ||
+      !table_align %in% c("left", "center", "right")) {
     stop("`table_align` must be 'left', 'center', or 'right'.", call. = FALSE)
   }
-  if (!is.logical(row_height_exact) || length(row_height_exact) != 1L) {
+  if (!is.logical(row_height_exact) || length(row_height_exact) != 1L ||
+      is.na(row_height_exact)) {
     stop("`row_height_exact` must be TRUE or FALSE.", call. = FALSE)
   }
-  if (!cell_valign %in% c("top", "center", "bottom")) {
+  if (!is.logical(read_attributes) || length(read_attributes) != 1L ||
+      is.na(read_attributes)) {
+    stop("`read_attributes` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (length(cell_valign) != 1L ||
+      !cell_valign %in% c("top", "center", "bottom")) {
     stop("`cell_valign` must be 'top', 'center', or 'bottom'.", call. = FALSE)
   }
 
@@ -852,7 +864,11 @@ rtftable <- function(
       border                      = border_resolved,
       blank_rows                  = blank_rows_resolved,
       col_rel_width               = col_rel_width,
-      column_widths_twips         = if (!is.null(column_widths_twips)) as.integer(column_widths_twips) else NULL,
+      # kept as given unless whole numbers: the writer refuses the rest
+      column_widths_twips         = if (is.numeric(column_widths_twips) &&
+                                        all(is.finite(column_widths_twips)) &&
+                                        all(column_widths_twips == round(column_widths_twips)))
+                                      as.integer(column_widths_twips) else column_widths_twips,
       # the twips arguments are checked as the top / bottom padding is: a
       # non-number used to be written into the file as NA
       table_width_twips           = if (is.null(.check_row_height(table_width_twips, "table_width_twips"))) NULL else table_width_twips,

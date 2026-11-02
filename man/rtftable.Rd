@@ -119,7 +119,7 @@ after data row \code{k}, \code{-1} = after the last row.}
 regular expression.}
 }}
 
-\item{read_attributes}{Logical. When \code{TRUE} (default), read recognised
+\item{read_attributes}{\code{TRUE} or \code{FALSE}. When \code{TRUE} (default), read recognised
 attributes off \code{data} for use as fallback defaults -- currently
 \code{attr(data, "rtf_blank_rows")} is folded into \code{blank_rows} when the
 argument is \code{NULL}. Set \code{FALSE} to ignore attributes.}
@@ -130,10 +130,12 @@ to \code{rtftable()} always override.  Snapshot semantics: each
 \code{rtftable()} call captures the style's current state at construction.}
 
 \item{col_rel_width}{Numeric vector of relative column widths (e.g.
-\code{c(2, 1, 1)} makes the first column twice as wide as the others).}
+\code{c(2, 1, 1)} makes the first column twice as wide as the others), one
+positive finite number per column; another value is an error when the
+file is written.}
 
 \item{column_widths_twips}{Integer vector of absolute column widths in
-twips. Overrides \code{col_rel_width}.}
+twips, one positive whole number per column. Overrides \code{col_rel_width}.}
 
 \item{table_width_twips}{Total table width in twips.  A value that is not
 one non-negative integer is an error.}
@@ -165,7 +167,8 @@ uses the document font. A family not already in the document's
 A named vector gives one family per script slot (\code{latin},
 \code{east_asian}, \code{complex}, optional \code{hansi}), e.g. \code{c(latin = "Times New Roman", east_asian = "MS Mincho")}; see \code{\link[=rtf_document]{rtf_document()}}.}
 
-\item{row_height_exact}{Logical. \code{TRUE} = exact (clipped); \code{FALSE} = minimum.}
+\item{row_height_exact}{\code{TRUE} = exact (clipped); \code{FALSE} = minimum; \code{NA}
+or another value is an error.}
 
 \item{header_row_height_twips}{Row height for column-header rows.}
 

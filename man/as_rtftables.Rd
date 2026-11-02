@@ -92,15 +92,18 @@ table objects and data.frames shares one \code{read_meta}, so adapter
 tokens must not error on the data.frame elements.}
 }}
 
-\item{max_rows}{Integer or \code{NULL}.  Maximum body rows per page for the
-\code{"group_safe"} / \code{"group_force"} splits (required by them).  \strong{This is the
+\item{max_rows}{A positive whole number, or \code{NULL}; anything else is an
+error, whatever the split.  Maximum body rows per page for the
+\code{"group_safe"} / \code{"group_force"} splits (required by them); with \code{1}
+a continued group gets no continuation row.  \strong{This is the
 setting for fixed-size pages} -- \code{max_rows = 25} gives pages of 25 rows.
 Ignored by \code{"none"} and \code{"rows"} (which cuts at the positions in
 \code{split_rows}).  Optional for \code{"by_value"}: a value's page longer than
 \code{max_rows} is cut as \code{"group_force"} cuts, its pages named by the value
 with the \code{"...n"} tail (\code{"A...1"}, \code{"A...2"}).}
 
-\item{split}{How to break the body into pages. A strategy name:
+\item{split}{How to break the body into pages. A strategy name (a unique
+prefix such as \code{"group_s"} is enough; another value is an error):
 \describe{
 \item{\code{"none"}}{(default) one page; no row limit checked.}
 \item{\code{"rows"}}{cut before each row position given in \code{split_rows};
@@ -142,7 +145,8 @@ A plan passes it the same way: \code{plan_paginate_rows(split = f)}.}
 before, for \code{split = "rows"} (required by it; ignored otherwise).
 \code{split_rows = c(20, 40)} yields pages \code{1:19}, \code{20:39}, \code{40:nrow}.  It is
 not a page size: for pages of a fixed number of rows use \code{max_rows} with
-\code{split = "group_safe"} or \code{"group_force"}.}
+\code{split = "group_safe"} or \code{"group_force"}.  The positions are whole
+numbers in any order; one outside \code{2:nrow} cuts nothing.}
 
 \item{group_col}{Character, integer, or \code{NULL}.  The column the
 group-aware splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"})
@@ -161,7 +165,8 @@ happens \emph{after} \code{sort_by}, which still orders a factor by its
 \strong{levels}.}
 }}
 
-\item{group_by}{How a group boundary is found on \code{group_col}:
+\item{group_by}{How a group boundary is found on \code{group_col} (a unique
+prefix of a name is enough; another value is an error):
 \describe{
 \item{\code{"auto"}}{(default) pick from the column content: leading
 indentation present -> \code{"indent"}; else interspersed empty cells ->
@@ -272,9 +277,11 @@ vector the same length as \code{sort_by} (one direction per key).  Ignored when
 
 \item{cont_label}{Character (default \code{" (Cont.)"}).  Suffix appended to a
 group's label on the second and later pages it continues onto (the
-group-aware splits), marking a continued group.}
+group-aware splits), marking a continued group.  One string; \code{""}
+repeats the label alone.}
 
-\item{min_group_rows}{Integer (default \code{2}).  Widow/orphan control for the
+\item{min_group_rows}{A non-negative whole number (default \code{2}).
+Widow/orphan control for the
 group-aware splits (\code{"group_force"}, \code{"group_safe"}, \code{"by_value"}): when a
 page would end on a group that \emph{starts} on that page while showing fewer
 than \code{min_group_rows} of the group's child rows (the rows after its first
