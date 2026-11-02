@@ -19,6 +19,8 @@ stub_cols(
 
 \item{vars}{The hierarchy columns to merge, \strong{parent first, leaf last}.
 A character / integer vector (or a \code{list()} to mix names and indices).
+A position is a whole number in \verb{1..ncol(data)}; \code{TRUE}, a fraction or
+a factor stops: "\code{vars} must be a column name or a whole position".
 One column is folded into nothing: it is the stub as it is, named
 \code{label}.}
 

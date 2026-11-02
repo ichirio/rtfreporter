@@ -184,7 +184,7 @@
 #  first_rows     | n / n + 1             | 6 / 7              | one page of 6                    | FR-TB150
 #  first_rows     | 0 / -1 / 1.5 / NA / Inf / "2" / TRUE / length 2 / length 0 | | error "as_rtftables(): `first_rows` is a whole number of rows, 1 or more" | FR-TB603
 #  first_rows     | with page_by / by_value |                  | error "`first_rows` paginates"   | FR-TB151
-#  (stub = TRUE or a fraction is taken as a position: #850.)
+#  stub, group_col, collapse_repeats, at | TRUE / 1.5 / a factor | | error "must be a column name or a whole position" | FR-TB606 (FT-TB777, #850)
 #
 # ---------------------------------------------------------------------------
 #  plan_paginate_rows()  -- FT-PL967.  Six records, no groups.
@@ -230,7 +230,7 @@
 #  where          | unknown / prefix / NA / TRUE |             | error "Unrecognised `blank_rows` entry" | FR-PL194
 #  where          | "records" with no listing |                | error "separates the records of a listing" | FR-PL193
 #  first, counted | NA / "yes"            |                    | error "must be TRUE or FALSE"    | FR-TB598
-#  (A position past the last row, or a fraction: #853.)
+#  where          | n + 1 / -2 / 1.5 / NA |                    | error "out of range" / "whole numbers" | FR-TB607 (FT-TB778, #853)
 #
 # ---------------------------------------------------------------------------
 #  plan_stub()  -- FT-PL971.  Age (Mean) and Sex (F, M).
@@ -923,4 +923,139 @@ test_that("FT-PL971 [FR-PL362 FR-PL363 FR-PL364 FR-PL913 FR-PL958 FR-TB198 FR-TB
     if (!"name" %in% names(args)) args$name <- "Characteristic"
     plan_apply(do.call(plan_stub, c(list(.eb2_plan()), args)), "pages")
   })
+})
+
+# ---------------------------------------------------------------------------
+#  The fixes for #850 - #853: what the batch left out.
+# ---------------------------------------------------------------------------
+
+test_that("FT-TB777 [FR-TB606 FR-TB128 FR-TB203 FR-TB284]: a column position is a whole number in 1..ncol; TRUE, a fraction or a factor stops", {
+  h <- data.frame(SOC = c("Gastro", "Gastro", "Nerv"),
+                  PT  = c("Nausea", "Vomit", "Headache"),
+                  N   = c("1", "2", "3"))
+  wide <- data.frame(P = "ALT", D1 = "1", D8 = "2", D15 = "3")
+  wp <- "must be a column name or a whole position"
+  # stub (stub_cols' vars through as_rtftables)
+  expect_error(as_rtftables(h, stub = TRUE),
+               "^`stub\\(vars\\)` must be a column name or a whole position \\(1\\.\\.3\\), not TRUE")
+  expect_error(as_rtftables(h, stub = 1.5), "not 1\\.5")
+  expect_error(as_rtftables(h, stub = factor("SOC")),
+               "^`stub\\(vars\\)` must be column names or whole positions")
+  expect_error(stub_cols(h, vars = c(1, 2.5)), paste0("^`vars` ", wp))
+  # names and whole positions (integer or double) keep working
+  expect_identical(as_rtftables(h, stub = c(1, 2))[[1]]$data,
+                   as_rtftables(h, stub = c("SOC", "PT"))[[1]]$data)
+  expect_identical(as_rtftables(h, stub = 1:2)[[1]]$data,
+                   as_rtftables(h, stub = list("SOC", 2L))[[1]]$data)
+  # group_col, collapse_repeats, sort_by, drop_cols
+  expect_error(as_rtftables(h, split = "group_safe", group_col = 1.5, max_rows = 2),
+               paste0("^`group_col` ", wp))
+  expect_error(as_rtftables(h, split = "group_safe", group_col = TRUE, max_rows = 2),
+               paste0("^`group_col` ", wp))
+  expect_length(as_rtftables(h, split = "group_safe", group_col = 1, max_rows = 2), 2L)
+  expect_error(as_rtftables(h, collapse_repeats = TRUE), paste0("^`collapse_repeats` ", wp))
+  expect_true(is.na(as_rtftables(h, collapse_repeats = 1)[[1]]$data[2, 1]))
+  expect_error(as_rtftables(h, sort_by = 2.5), paste0("^`sort_by` ", wp))
+  expect_error(as_rtftables(h, drop_cols = TRUE), paste0("^`drop_cols` ", wp))
+  # paginate_cols(at = )
+  expect_error(paginate_cols(as_rtftables(wide), at = 2.7),
+               paste0("^`paginate_cols\\(at\\)` ", wp, " \\(1\\.\\.4\\), not 2\\.7"))
+  expect_error(paginate_cols(as_rtftables(wide), at = TRUE),
+               paste0("^`paginate_cols\\(at\\)` ", wp))
+  # NA and out of range keep their message
+  expect_error(as_rtftables(h, stub = NA), "^`stub\\(vars\\)` index NA out of range \\(1\\.\\.3\\)")
+  expect_error(as_rtftables(h, stub = 4), "^`stub\\(vars\\)` index 4 out of range \\(1\\.\\.3\\)")
+})
+
+test_that("FT-DC289 [FR-DC356 FR-DC343]: rtf_header() / rtf_footer(width_twips = 0) is the full writable width, as NULL is", {
+  df <- data.frame(Param = "Age", Value = "61")
+  band_x <- function(band, where) {
+    doc <- rtf_section(rtf_tables(rtf_document(), df),
+                       header = if (where == "header") band,
+                       footer = if (where == "footer") band)
+    x <- .eb2_rtf(doc)
+    as.integer(sub("\\\\cellx", "", regmatches(x, gregexpr("\\\\cellx[0-9]+", x))[[1]]))
+  }
+  for (fn in c("header", "footer")) {
+    mk <- if (fn == "header") rtf_header else rtf_footer
+    zero <- band_x(mk(c(l = "Study XYZ"), width_twips = 0), fn)
+    full <- band_x(mk(c(l = "Study XYZ")), fn)
+    expect_false(any(zero == 0L), info = fn)
+    expect_identical(zero, full, info = fn)
+    # with `width` given, 0 leaves the width to it
+    half <- band_x(mk(c(l = "Study XYZ"), width_twips = 0, width = 0.5), fn)
+    expect_identical(half, band_x(mk(c(l = "Study XYZ"), width = 0.5), fn), info = fn)
+    # a positive width_twips still wins
+    expect_true(4000L %in% band_x(mk(c(l = "Study XYZ"), width_twips = 4000), fn), info = fn)
+    expect_error(mk(c(l = "A"), width_twips = -1),
+                 "^`width_twips` must be a single non-negative integer", info = fn)
+  }
+})
+
+test_that("FT-PL972 [FR-PL959 FR-PL240 FR-PL241 FR-PL244]: plan_digits() takes whole decimals (0 or more) or \"<n>s\", and stops on anything else naming the key", {
+  st <- data.frame(ARM = rep(c("Placebo", "Active"), each = 3),
+                   variable = rep(c("AGE", "SEX", "SEX"), 2),
+                   .label = rep(c(NA, "F", "M"), 2),
+                   .kind = rep(c("continuous", "categorical", "categorical"), 2),
+                   stat_name = rep(c("mean", "n", "n"), 2),
+                   stat = c(61.246, 12, 8, 63.51, 9, 11))
+  p <- plan_cells(table_plan(st, cols = "ARM", rows = c(group = "variable")),
+                  continuous = c(Mean = "{mean}"), categorical = "{n}")
+  bad <- "must be a whole number of decimals \\(0 or more\\) or \"<n>s\""
+  for (v in list(1.5, TRUE, "2", c(1, 2), NA, numeric(0), -1, Inf, "x", "0s",
+                 factor("1"), list(1))) {
+    expect_error(plan_digits(p, v), paste0("^plan_digits\\(\\): the unnamed value ", bad),
+                 info = paste(format(v), collapse = " "))
+  }
+  expect_error(plan_digits(p, AGE = 1.5), paste0("^plan_digits\\(\\): `AGE` ", bad, ".*got 1\\.5"))
+  expect_error(plan_digits(p, AGE = "2"), "got \"2\"")
+  expect_error(plan_digits(p, continuous = c(mean = NA)), paste0("`continuous` ", bad))
+  expect_error(plan_digits(p, continuous = c(mean = -1)), paste0("`continuous` ", bad))
+  expect_error(plan_digits(p, .rows = c(N = 0, 1)), paste0("`\\.rows` ", bad))
+  expect_error(plan_digits(p, AGE = list(A = list(B = 1))), paste0("`AGE` ", bad))
+  # what the help documents keeps working
+  tab <- function(...) plan_apply(plan_digits(p, ...), "table")$Placebo
+  expect_identical(tab(0), c("61", "12", "8"))
+  expect_identical(tab(2L), c("61.25", "12.00", "8.00"))
+  expect_identical(tab("3s"), c("61.2", "12.0", "8.00"))
+  expect_identical(tab(continuous = c(mean = 2)), c("61.25", "12", "8"))
+  expect_identical(tab(continuous = list(mean = 2)), c("61.25", "12", "8"))
+  # a mixed vector is text after c(): "0" is decimals there
+  expect_identical(tab(continuous = c(mean = "3s", n = 0)), c("61.2", "12", "8"))
+  expect_s3_class(plan_digits(p, rounding = "sas"), "table_plan")
+})
+
+test_that("FT-TB778 [FR-TB607 FR-PL187 FR-TB598]: a blank_rows position past the last row, below -1 or not whole stops, in rtftable(), as_rtftables() and plan_blanks()", {
+  grp <- data.frame(G = c("Age", "  Mean", "  SD", "Sex", "  F", "  M"),
+                    V = c("40", "41", "3", "x", "5", "6"))
+  oor <- function(p) sprintf(paste0("^`blank_rows` position %s out of range: the table has 6 rows ",
+                                     "\\(positions 0\\.\\.6, or -1 for after the last row\\)"), p)
+  wh  <- "^`blank_rows` positions must be whole numbers"
+  run <- list(
+    rtftable     = function(b) rtftable(grp, blank_rows = b)$blank_rows,
+    as_rtftables = function(b) as_rtftables(grp, blank_rows = b)[[1]]$blank_rows,
+    plan_blanks  = function(b) plan_apply(plan_blanks(table_plan(grp), where = b))[[1]]$blank_rows
+  )
+  for (nm in names(run)) {
+    f <- run[[nm]]
+    expect_error(f(7), oor("7"), info = nm)
+    expect_error(f(-2), oor("-2"), info = nm)
+    expect_error(f(c(2, 7, 9)), "^`blank_rows` positions 7, 9 out of range", info = nm)
+    expect_error(f(1.5), wh, info = nm)
+    expect_error(f(NA_real_), wh, info = nm)
+    expect_error(f(list(2, 8)), oor("8"), info = nm)
+    # the bounds are kept
+    expect_identical(f(c(0, 3, -1)), c(0L, 3L, 6L), info = nm)
+    expect_identical(f(6), 6L, info = nm)
+  }
+  # plan_blanks() says which verb declared it
+  expect_error(plan_apply(plan_blanks(table_plan(grp), where = 7)),
+               "declared by:\\s+plan_blanks\\(where = 7\\)")
+  # checked on the whole body: a position within it, past a shorter page,
+  # puts no blank on that page
+  # (two pages of three rows each here)
+  pg <- as_rtftables(grp, blank_rows = 4, max_rows = 4, split = "group_force")
+  expect_identical(lapply(pg, `[[`, "blank_rows"), list(NULL, NULL))
+  pg <- as_rtftables(grp, blank_rows = 2, max_rows = 4, split = "group_force")
+  expect_identical(lapply(pg, `[[`, "blank_rows"), list(2L, 2L))
 })
