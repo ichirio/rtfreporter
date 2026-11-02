@@ -534,7 +534,7 @@
 #' @param allow_span_break Allow a cut inside a spanning header cell. Default
 #'   `TRUE`.  `FALSE` stops on a cut inside a labelled cell; an empty cell
 #'   (such as the one `rtftable()` fills the columns no spanner covers with)
-#'   is not checked.
+#'   is not checked.  Anything but `TRUE` or `FALSE` is an error.
 #' @param fit How relative widths are rescaled after the split.  `TRUE`
 #'   (default) fixes the twips-per-ratio unit on **page 1** and reuses it on
 #'   every page, so page 1 fills the sheet and a given ratio is the same width
@@ -679,6 +679,11 @@ paginate_cols.list <- function(x, at = NULL, cut_by = NULL, every = NULL,
   if (!(is.logical(fit) && length(fit) == 1L && !is.na(fit))) {
     stop("`paginate_cols(fit = )` is TRUE (page 1's scale on every block) or FALSE (each column keeps its width).",
          call. = FALSE)
+  }
+  # NA and "yes" used to be read as FALSE
+  if (!(is.logical(allow_span_break) && length(allow_span_break) == 1L &&
+        !is.na(allow_span_break))) {
+    stop("`paginate_cols(allow_span_break = )` is TRUE or FALSE.", call. = FALSE)
   }
   width <- if (fit) "fill" else "keep"
   page_order <- order %||% "across"

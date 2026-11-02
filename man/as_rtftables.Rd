@@ -68,9 +68,11 @@ input coordinates.}
 \describe{
 \item{\code{TRUE}}{(default) read everything in the table above.}
 \item{\code{FALSE}}{use only the rendered body -- equivalent to the old
-\code{paginate()}.}
+\code{paginate()}.  \code{NULL} is the same.}
 \item{a character vector}{of tokens, by source below.}
 }
+Anything else (\code{NA}, a number, two logicals, a token \code{NA}) is an
+error, for every source.
 The tokens:
 \describe{
 \item{gt / gtsummary}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
@@ -484,7 +486,7 @@ up and passing \code{listing} as well is an error.  An rlistings
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a
 shorthand for \code{stub_spec(vars)}, a bare vector of hierarchy columns
-(parent first, leaf last; at least two).  \code{NULL} (default) builds no
+(parent first, leaf last; one column is the stub as it is).  \code{NULL} (default) builds no
 stub.  This is the \strong{one} argument for everything \code{\link[=stub_cols]{stub_cols()}} can do,
 including \code{layout} and \code{label_span}.
 \describe{
@@ -535,8 +537,10 @@ bottom (leaf) row with blank cells above.}
 \item{Default}{Recognizes \strong{both} built-in delimiters: \code{"____"}
 (from \code{ydisctools::pivot_stats_wider()}) and \code{"___tlang_delim___"}
 (tfrmt's column delimiter).}
-\item{Your own}{Pass your own separator(s) to override, or \code{NULL} to
-disable (use the plain \code{names(data)} single-row header).}
+\item{Your own}{Pass your own separator(s), a character vector, to
+override, or \code{NULL} (or \code{character(0)}) to disable (use the plain
+\code{names(data)} single-row header).  \code{NA} and \code{""} entries are
+ignored; another type is an error.}
 \item{Blank cells}{With the \code{"____"} separator a doubled separator
 (\code{"________"}) yields an empty middle segment, i.e. a \strong{blank
 cell} at that header level (handy to align a column that skips an
@@ -578,7 +582,8 @@ there.}
 \item{border, style}{Passed to \code{\link[=rtftable]{rtftable()}} for every page.  \code{border}
 defaults to \code{"tfl"}.}
 
-\item{first_rows}{The rows of the first page, the rest paginated as the
+\item{first_rows}{The rows of the first page (a whole number, 1 or more;
+as many as the table has or more is one page), the rest paginated as the
 other arguments say (\code{max_rows}, \code{split}): the page a table shares with
 the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  \code{NULL}
 (the default): the first page as the others.  Not with \code{page_by},

@@ -1650,6 +1650,10 @@ plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
                             is.na(heading))) {
     .ard_stop("plan_stub(heading = ) is one text: \"\" for a blank stub heading.")
   }
+  # NA and "yes" used to be read as FALSE
+  if (!(is.logical(before) && length(before) == 1L && !is.na(before))) {
+    .ard_stop("plan_stub(before = ) is TRUE (fold the stub first) or FALSE (fold it inside as_rtftables()).")
+  }
   # `name` rather than `label`: table_plan(label = ) is the column whose
   # VALUES are the row text, and this is the NAME of the column the row
   # keys are folded into.
@@ -4656,7 +4660,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
 #'     \item{one key per column}{a vector as long as the columns; each run of
 #'       one key is a block.}
 #'   }
-#' @param every Cut a block every this many columns, counting only the ones
+#' @param every Cut a block every this many columns (a whole number, 1 or
+#'   more), counting only the ones
 #'   a block does not keep.  A table no wider than one block is not cut.
 #' @param keep The columns every block repeats,
 #'   such as the row headings; by default the table's row titles (column 1
@@ -4746,10 +4751,11 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
 # table narrower than one block -- not an error and not a one-block split:
 # a table that needs no column pages at all.
 .every_at <- function(first, every, keep = NULL) {
-  k <- as.integer(every)
-  if (length(k) != 1L || is.na(k) || k < 1L) {
+  # a whole number: 1.5 and "2" used to be taken as 1 and 2
+  if (!.is_whole_number(every, 1)) {
     stop("`every` is a positive number of columns.", call. = FALSE)
   }
+  k <- as.integer(every)
   nm <- names(first$data %||% first$data_list[[1L]])
   car <- keep %||% first$row_title %||% 1L
   ci <- if (is.character(car)) match(car, nm) else as.integer(car)

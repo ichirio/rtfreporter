@@ -184,7 +184,7 @@ print.rtf_page <- function(x, ...) {
 #' @param title_width,footnote_width Width of the title / footnote block:
 #'   `"content"` (the default -- follow the table body), `"page"` (the writable
 #'   width, margins excluded), a fraction in `(0, 1]` of the writable width, or
-#'   twips. `NULL` keeps the default. Applies to the `"table"` form; the
+#'   twips (a whole number above 1). `NULL` keeps the default. Applies to the `"table"` form; the
 #'   `"text"` form is plain paragraphs and already spans the page.
 #'   `footnote_width = "page"` is the way to reach the full width **and** keep
 #'   the separator rule, which `footnote_format = "text"` cannot draw.

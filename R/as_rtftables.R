@@ -211,9 +211,11 @@
 #'   \describe{
 #'     \item{`TRUE`}{(default) read everything in the table above.}
 #'     \item{`FALSE`}{use only the rendered body -- equivalent to the old
-#'       `paginate()`.}
+#'       `paginate()`.  `NULL` is the same.}
 #'     \item{a character vector}{of tokens, by source below.}
 #'   }
+#'   Anything else (`NA`, a number, two logicals, a token `NA`) is an
+#'   error, for every source.
 #'   The tokens:
 #'   \describe{
 #'     \item{gt / gtsummary}{`"col_header"`, `"alignment"`, `"spanning"`,
@@ -535,7 +537,8 @@
 #'     -            <- na = "-"
 #'    NE            <- na = "NE", right edge still under the ones digit
 #'   ```
-#' @param first_rows The rows of the first page, the rest paginated as the
+#' @param first_rows The rows of the first page (a whole number, 1 or more;
+#'   as many as the table has or more is one page), the rest paginated as the
 #'   other arguments say (`max_rows`, `split`): the page a table shares with
 #'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  `NULL`
 #'   (the default): the first page as the others.  Not with `page_by`,
@@ -611,7 +614,7 @@
 #'   }
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
-#'   (parent first, leaf last; at least two).  `NULL` (default) builds no
+#'   (parent first, leaf last; one column is the stub as it is).  `NULL` (default) builds no
 #'   stub.  This is the **one** argument for everything [stub_cols()] can do,
 #'   including `layout` and `label_span`.
 #'   \describe{
@@ -662,8 +665,10 @@
 #'     \item{Default}{Recognizes **both** built-in delimiters: `"____"`
 #'       (from `ydisctools::pivot_stats_wider()`) and `"___tlang_delim___"`
 #'       (tfrmt's column delimiter).}
-#'     \item{Your own}{Pass your own separator(s) to override, or `NULL` to
-#'       disable (use the plain `names(data)` single-row header).}
+#'     \item{Your own}{Pass your own separator(s), a character vector, to
+#'       override, or `NULL` (or `character(0)`) to disable (use the plain
+#'       `names(data)` single-row header).  `NA` and `""` entries are
+#'       ignored; another type is an error.}
 #'     \item{Blank cells}{With the `"____"` separator a doubled separator
 #'       (`"________"`) yields an empty middle segment, i.e. a **blank
 #'       cell** at that header level (handy to align a column that skips an
@@ -868,6 +873,23 @@ as_rtftables.default <- function(x,
   if (!is.null(group_col) && length(group_col) != 1L) {
     stop("`group_col` must be one column, by name or position, or NULL.",
          call. = FALSE)
+  }
+  # checked for every source: a data.frame used to read NA, 1 or a vector of
+  # two logicals as FALSE without a word
+  if (!is.null(read_meta) &&
+      !(is.logical(read_meta) && length(read_meta) == 1L && !is.na(read_meta)) &&
+      !(is.character(read_meta) && !anyNA(read_meta))) {
+    stop("`read_meta` must be FALSE/TRUE or a character vector of tokens.",
+         call. = FALSE)
+  }
+  # a number used to be taken as the separator "1"
+  if (!is.null(header_sep) && !is.character(header_sep)) {
+    stop("`header_sep` must be NULL or a character vector of separators.",
+         call. = FALSE)
+  }
+  # 0 used to give empty pages, NA / Inf / a vector unrelated base-R errors
+  if (!is.null(first_rows)) {
+    first_rows <- .check_first_rows(first_rows, "as_rtftables")
   }
   user_args <- list(...)
 
