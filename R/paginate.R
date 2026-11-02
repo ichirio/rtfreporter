@@ -1050,11 +1050,29 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
           end <- hpos - 1L                 # ORPHAN: push the group to next page
         } else {
           # WIDOW: count the same-group rows that would spill past `end`.
-          tail_n <- 0L; k <- end + 1L
+          tail_n <- 0L; n_sep <- 0L; k <- end + 1L
           while (k <= nrow(df) && !is.na(info$id[k]) &&
                  info$id[k] == end_gid) {
-            if (!is_sep(k)) tail_n <- tail_n + 1L
+            if (is_sep(k)) n_sep <- n_sep + 1L else tail_n <- tail_n + 1L
             k <- k + 1L
+          }
+          # The tail's counted separators count too when they print on the
+          # next page, i.e. when the next group can join the tail there
+          # (heading plus `min_group_rows` children, or all of it if smaller).
+          # Otherwise they fall on that page's edge and are dropped (#824).
+          # Leaving a printed one out pulls the cut back a row too far and
+          # under-fills this page.
+          if (n_sep > 0L && tail_n > 0L && k <= nrow(df)) {
+            nxt <- k; ng <- 0L
+            while (nxt <= nrow(df) && identical(info$id[nxt], info$id[k])) {
+              if (!is_sep(nxt)) ng <- ng + 1L
+              nxt <- nxt + 1L
+            }
+            nb <- max_rows - (if (isTRUE(edge_first)) 1L else 0L) -
+              (if (isTRUE(edge_end)) 1L else 0L)
+            if (1L + tail_n + n_sep + min(ng, 1L + min_group_rows) <= nb) {
+              tail_n <- tail_n + n_sep
+            }
           }
           if (tail_n > 0L && tail_n < min_group_rows) {
             new_end <- end - (min_group_rows - tail_n)
