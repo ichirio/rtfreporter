@@ -495,6 +495,7 @@
 #'   Every page in a list must have the same columns.
 #' @param at Columns to cut **before**, as names or positions (symmetric with
 #'   `split_rows`). `at = c(4, 6)` yields blocks `1:3`, `4:5`, `6:ncol`.
+#'   A position is a whole number; `TRUE` or a fraction (`2.7`) is an error.
 #' @param cut_by Where to cut other than by position, as
 #'   [plan_paginate_cols()] says it.
 #'   \describe{

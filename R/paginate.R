@@ -645,12 +645,8 @@
     }
     return(idx)
   }
-  idx <- as.integer(group_col)
-  if (is.na(idx) || idx < 1L || idx > ncol(df)) {
-    stop(sprintf("`group_col` index %s out of range (1..%d).",
-                 group_col, ncol(df)), call. = FALSE)
-  }
-  idx
+  # A position must be a whole number in range (#850): the shared resolver.
+  .resolve_col_indices(list(group_col), df, "group_col")
 }
 
 # Resolve a `collapse_repeats` column spec (character names and/or integer
@@ -659,23 +655,8 @@
 # real columns keep their natural 1-based positions for integer indexing.
 .resolve_collapse_cols <- function(cols, df) {
   if (is.null(cols) || length(cols) == 0L) return(integer(0))
-  vapply(cols, function(c1) {
-    if (is.character(c1)) {
-      idx <- match(c1, names(df))
-      if (is.na(idx)) {
-        stop(sprintf("`collapse_repeats` column '%s' not found in the table.",
-                     c1), call. = FALSE)
-      }
-      as.integer(idx)
-    } else {
-      idx <- as.integer(c1)
-      if (is.na(idx) || idx < 1L || idx > ncol(df)) {
-        stop(sprintf("`collapse_repeats` index %s out of range (1..%d).",
-                     c1, ncol(df)), call. = FALSE)
-      }
-      idx
-    }
-  }, integer(1L), USE.NAMES = FALSE)
+  # A position must be a whole number in range (#850): the shared resolver.
+  .resolve_col_indices(cols, df, "collapse_repeats")
 }
 
 # Blank out consecutive repeated values in the given columns of ONE page,

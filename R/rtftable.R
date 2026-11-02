@@ -507,7 +507,9 @@
 #'   combining any of (positions are unioned):
 #'   \describe{
 #'     \item{an integer vector}{positions: `0` = before the first row, `k` =
-#'       after data row `k`, `-1` = after the last row.}
+#'       after data row `k`, `-1` = after the last row.  A position is a
+#'       whole number in `-1..nrow`: a fraction, `NA`, or a position past
+#'       the last row (or below `-1`) stops, naming the positions.}
 #'     \item{a [blank_rows_by_change()] spec}{insert when a column value changes.}
 #'     \item{a [blank_rows_by_rule()] spec}{insert before / after rows matching a
 #'       regular expression.}
@@ -812,7 +814,8 @@ rtftable <- function(
              call. = FALSE)
       }
       v <- as.integer(blank_rows)
-      if (any(is.na(v)) || any(v < -1L)) {
+      if (any(is.na(v)) || any(v < -1L) ||
+          any(blank_rows != trunc(blank_rows))) {
         stop("`blank_rows` integers must be -1, 0, or positive.", call. = FALSE)
       }
       blank_rows_resolved <- sort(unique(v))
