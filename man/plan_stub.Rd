@@ -10,7 +10,8 @@ plan_stub(
   name = NULL,
   indent = NULL,
   group_summary = NULL,
-  before = FALSE
+  before = FALSE,
+  heading = NULL
 )
 }
 \arguments{
@@ -23,9 +24,9 @@ table of one row heading), that column is the stub, renamed \code{name},
 and nothing is folded.}
 
 \item{name}{The name of the folded column, \code{stub_cols(label = )}, and
-so its header text unless \code{\link[=plan_col_header]{plan_col_header()}} says otherwise:
-\code{"Characteristic"}.  Not the same as \code{table_plan(label = )}, the
-column whose \strong{values} are the row text.}
+so its header text unless \code{heading} or \code{\link[=plan_col_header]{plan_col_header()}} says
+otherwise: \code{"Characteristic"}.  Not the same as \code{table_plan(label = )},
+the column whose \strong{values} are the row text.}
 
 \item{indent}{The non-breaking spaces per nesting level,
 \code{stub_cols(indent = )} (default 4).  \code{plan_row_group(mode = "indent")}
@@ -44,6 +45,12 @@ printed.  The two do \strong{not} always give the same table: folded
 first, the row keys are gone before a page split or a row group could
 read them, so \code{plan_paginate_group(col = )} naming one of them no
 longer finds it.}
+
+\item{heading}{The stub's header text when it is not its \code{name}: \code{""}
+leaves the cell blank, so a column named for the program
+(\code{"row_label"}, the one \code{\link[=plan_columns]{plan_columns()}} widths name) does not print
+that name.  \code{NULL} (default): the name.  A \code{\link[=plan_col_header]{plan_col_header()}} line
+that names the stub's column still sets its cell.}
 }
 \value{
 The plan, with one more layer.

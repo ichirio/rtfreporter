@@ -154,6 +154,54 @@ test_that("FT-PL274 [FR-PL361 FR-PL367 FR-PL369]: plan_stub() derives its column
   expect_identical(names(alone), names(d))
 })
 
+test_that("FT-PL914 [FR-PL912 FR-PL913]: plan_stub(heading = ) is the stub's header cell, not its name (tflspec#538)", {
+  d <- vp_wide()
+  # the header the page prints: its own, else the columns' names
+  hdr <- function(p) {
+    pg <- vp_first(vp_pages(p))
+    unlist(pg$col_header %||% names(pg$data))
+  }
+  base <- table_plan(d) |> plan_style()
+  # by default the name is the heading; "" leaves it blank, either fold
+  expect_identical(hdr(base |> plan_stub(vars = c("grp", "label"), name = "row_label"))[1L],
+                   "row_label")
+  for (b in c(FALSE, TRUE)) {
+    h <- hdr(base |> plan_stub(vars = c("grp", "label"), name = "row_label",
+                               before = b, heading = ""))
+    expect_identical(h, c("", "X", "Y"), info = b)
+    expect_identical(hdr(base |> plan_stub(vars = c("grp", "label"), name = "row_label",
+                                           before = b, heading = "Parameter")),
+                     c("Parameter", "X", "Y"), info = b)
+  }
+  # the data keeps the name (widths and plan_col_header() name it)
+  p <- base |> plan_stub(vars = c("grp", "label"), name = "row_label", before = TRUE,
+                         heading = "")
+  expect_identical(names(vp_first(vp_pages(p))$data)[1L], "row_label")
+  # two column keys: the stub's cell on the leaf row is blank, the spanners stay
+  long <- data.frame(TRT = rep(c("A", "B"), each = 4), WORST = rep(c("Low", "High"), 4),
+                     PARAM = rep(c("ALT", "ALT", "AST", "AST"), 2), stat_name = "n",
+                     stat = 1:8, stringsAsFactors = FALSE)
+  two <- table_plan(long, cols = c("TRT", "WORST"), rows = c(param = "PARAM"),
+                    label = c(row = "stat_name")) |>
+    plan_cells("{n:.0f}", notes = FALSE) |> plan_style() |>
+    plan_stub(name = "row_label", before = TRUE, heading = "")
+  ch <- vp_first(vp_pages(two))$col_header
+  leaf <- unlist(ch[[length(ch)]])
+  expect_identical(leaf[1L], "")
+  expect_false(any(unlist(ch) == "row_label"))
+  expect_true(all(c("A", "B") %in% unlist(ch)))
+  # a plan_col_header() line naming the stub still sets its cell
+  named <- table_plan(long[long$WORST == "Low", ], cols = "TRT", rows = c(param = "PARAM"),
+                      label = c(row = "stat_name")) |>
+    plan_cells("{n:.0f}", notes = FALSE) |> plan_style() |>
+    plan_stub(name = "row_label", before = TRUE, heading = "") |>
+    plan_col_header(lines = list(c(row_label = "Parameter", .values = "{col}")))
+  expect_identical(unlist(vp_first(vp_pages(named))$col_header)[1L], "Parameter")
+  # one text only
+  expect_error(plan_stub(base, heading = c("a", "b")), "one text")
+  expect_error(plan_stub(base, heading = NA_character_), "one text")
+})
+
 test_that("FT-PL275 [FR-PL368]: plan_stub() called twice merges field by field", {
   d <- vp_wide()
   a <- vp_pages(table_plan(d) |> plan_style() |>

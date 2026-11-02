@@ -1056,6 +1056,10 @@ as_rtftables.default <- function(x,
     # (via ...) always wins, so skip then.
     if (is.null(kw$col_header) && is.null(user_args$col_header)) {
       disp     <- .df_display_names(body, read_meta)
+      # a stub folded by plan_stub(before = TRUE, heading = ): its heading,
+      # a blank one too, over its name
+      hd <- lapply(body, attr, which = "rtf_heading", exact = TRUE)
+      for (j in which(!vapply(hd, is.null, NA))) disp[j] <- hd[[j]]
       auto_hdr <- .split_names_to_col_header(disp, header_sep)
       if (!is.null(auto_hdr)) {
         kw$col_header <- auto_hdr

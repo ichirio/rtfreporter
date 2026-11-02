@@ -1581,9 +1581,14 @@ plan_digits <- function(.plan, ..., rounding = NULL) {
 #'   table of one row heading), that column is the stub, renamed `name`,
 #'   and nothing is folded.
 #' @param name The name of the folded column, `stub_cols(label = )`, and
-#'   so its header text unless [plan_col_header()] says otherwise:
-#'   `"Characteristic"`.  Not the same as `table_plan(label = )`, the
-#'   column whose **values** are the row text.
+#'   so its header text unless `heading` or [plan_col_header()] says
+#'   otherwise: `"Characteristic"`.  Not the same as `table_plan(label = )`,
+#'   the column whose **values** are the row text.
+#' @param heading The stub's header text when it is not its `name`: `""`
+#'   leaves the cell blank, so a column named for the program
+#'   (`"row_label"`, the one [plan_columns()] widths name) does not print
+#'   that name.  `NULL` (default): the name.  A [plan_col_header()] line
+#'   that names the stub's column still sets its cell.
 #' @param indent The non-breaking spaces per nesting level,
 #'   `stub_cols(indent = )` (default 4).  `plan_row_group(mode = "indent")`
 #'   reads the indent this writes.
@@ -1632,13 +1637,18 @@ plan_digits <- function(.plan, ..., rounding = NULL) {
 # `label = `, and a grouping carrier is not part of the stub.  Left out,
 # it is worked out from what has already been declared.
 plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
-                      group_summary = NULL, before = FALSE) {
+                      group_summary = NULL, before = FALSE, heading = NULL) {
+  if (!is.null(heading) && (!is.character(heading) || length(heading) != 1L ||
+                            is.na(heading))) {
+    .ard_stop("plan_stub(heading = ) is one text: \"\" for a blank stub heading.")
+  }
   # `name` rather than `label`: table_plan(label = ) is the column whose
   # VALUES are the row text, and this is the NAME of the column the row
   # keys are folded into.
   .plan_layer(.plan, "stub",
               list(vars = vars, name = name, indent = indent,
-                   group_summary = group_summary, before = before))
+                   group_summary = group_summary, before = before,
+                   heading = heading))
 }
 
 # SAS's `call define(_col_, 'style', ...)` inside a `compute` block: a cell
@@ -5537,6 +5547,8 @@ plan_n_candidates <- function(.plan) {
               group_summary = stub$group_summary)
     a <- a[!vapply(a, is.null, logical(1L))]
     tbl <- do.call(stub_cols, c(list(data = tbl), a))
+    # (stub_cols() puts the folded column first)
+    if (!is.null(stub$heading)) attr(tbl[[1L]], "rtf_heading") <- stub$heading
   }
 
   lst <- .plan_merge(.plan_of(plan, "listing"))
@@ -5573,6 +5585,7 @@ plan_n_candidates <- function(.plan) {
       list(stub$vars),
       Filter(Negate(is.null), list(label = stub$name, indent = stub$indent,
                                    group_summary = stub$group_summary))))
+    rtf$stub$heading <- stub$heading
     rtf <- rtf[!vapply(rtf, is.null, logical(1L))]
   }
   # done here, where the final column count is known
