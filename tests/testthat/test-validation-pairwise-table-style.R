@@ -23,7 +23,7 @@
 #             included, bottom on the last data row, left on the first cell
 #             and right on the last cell of every row), inside_h the rule under
 #             every row but the last, inside_v every cell edge -- on a spanning
-#             row the merged cell's (FR-IX338 FR-IX339 FR-TB610).
+#             row the merged cell's (FR-IX338 FR-IX339 FR-TB614).
 #    widths   every row's \cellx: default -> ends at the writable width;
 #             col_rel_width -> that share of it; column_widths_twips -> their
 #             sums; table_width_pct -> ends at that share of the writable
@@ -47,7 +47,7 @@
 #
 #  Data: three records (Age, Sex, Wt) in three columns Param, A, B.
 #
-#  (A) FT-TB781, pairwise.  Factors and levels:
+#  (A) FT-TB785, pairwise.  Factors and levels:
 #    border   tfl, none, box (rtf_border(all = TRUE)), grid (rtf_border(all =
 #             TRUE, inside_h = TRUE, inside_v = TRUE))
 #    header   names (col_header NULL), two (two label rows), span (a spanning
@@ -70,9 +70,9 @@
 #  \clpadl / \clpadb, \q, \li / \ri and text, from the rules above.
 #  FR-TB545 FR-TB547 FR-TB548 FR-TB552 FR-TB553 FR-TB554 FR-TB555 FR-TB564
 #  FR-TB565 FR-TB566 FR-TB567 FR-TB568 FR-TB570 FR-TB457 FR-TB458 FR-IX338
-#  FR-IX339 FR-TB610.
+#  FR-IX339 FR-TB614.
 #
-#  (B) FT-TB782, decision table: the frame's top edge and the inside_h seam
+#  (B) FT-TB786, decision table: the frame's top edge and the inside_h seam
 #  against the header (the rows' \clbrdrt / \clbrdrb, header rows first).
 #    border  col_header      rows      top           bottom
 #    box     NULL            N D D D   N             last D
@@ -84,9 +84,9 @@
 #    tfl     list() (none)   D D D     none          none
 #  (NULL used to be read as "no header": the top rule fell between the
 #  column names and the first data row, and grid lost the seam under them.)
-#  FR-IX338 FR-TB566 FR-TB610.
+#  FR-IX338 FR-TB566 FR-TB614.
 #
-#  (C) FT-TB783, decision table: where a table's value comes from, the
+#  (C) FT-TB787, decision table: where a table's value comes from, the
 #  table's style (rtftable(style = rtf_table_style())) among the sources
 #  FT-DC248 (#818) ranks without it.  Sources: A the argument, T the table
 #  style, S rtf_style(table = list()), H rtf_style() shared, O the option.
@@ -273,7 +273,7 @@
   bad
 }
 
-test_that("FT-TB781 [FR-TB545 FR-TB547 FR-TB548 FR-TB552 FR-TB553 FR-TB554 FR-TB555 FR-TB564 FR-TB565 FR-TB566 FR-TB567 FR-TB568 FR-TB570 FR-TB457 FR-TB458 FR-IX338 FR-IX339 FR-TB610]: pairwise -- border x header x stub x widths x padding x height x alignment x valign x blank rows", {
+test_that("FT-TB785 [FR-TB545 FR-TB547 FR-TB548 FR-TB552 FR-TB553 FR-TB554 FR-TB555 FR-TB564 FR-TB565 FR-TB566 FR-TB567 FR-TB568 FR-TB570 FR-TB457 FR-TB458 FR-IX338 FR-IX339 FR-TB614]: pairwise -- border x header x stub x widths x padding x height x alignment x valign x blank rows", {
   levels <- list(border = c("tfl", "none", "box", "grid"),
                  header = c("names", "two", "span"), stub = c("col1", "none"),
                  widths = c("default", "rel", "twips", "pct"),
@@ -307,7 +307,7 @@ test_that("FT-TB781 [FR-TB545 FR-TB547 FR-TB548 FR-TB552 FR-TB553 FR-TB554 FR-TB
   }
 })
 
-test_that("FT-TB782 [FR-IX338 FR-TB566 FR-TB610]: decision table -- the frame's top edge and the inside_h seam against the header", {
+test_that("FT-TB786 [FR-IX338 FR-TB566 FR-TB614]: decision table -- the frame's top edge and the inside_h seam against the header", {
   df <- .ts_data()
   two <- list(c("a", "b", "c"), c("P", "A", "B"))
   bits <- function(border, col_header) {
@@ -331,7 +331,7 @@ test_that("FT-TB782 [FR-IX338 FR-TB566 FR-TB610]: decision table -- the frame's 
   }
 })
 
-test_that("FT-TB783 [FR-TB569 FR-TB570 FR-IX395 FR-IX335 FR-TB448 FR-TB450 FR-TB455 FR-DC315]: decision table -- the argument > the table style > rtf_style(table = ) > rtf_style() > the option", {
+test_that("FT-TB787 [FR-TB569 FR-TB570 FR-IX395 FR-IX335 FR-TB448 FR-TB450 FR-TB455 FR-DC315]: decision table -- the argument > the table style > rtf_style(table = ) > rtf_style() > the option", {
   df <- .ts_data()
   val <- list(row_height_twips = c(A = 410L, T = 420L, S = 430L, H = 440L, O = 450L),
               pad = c(A = 55L, T = 66L, S = 77L, H = 88L, O = 99L))
