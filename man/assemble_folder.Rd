@@ -61,8 +61,8 @@ before \code{_}.  Files with the same table number keep their file-name order.
 The table has the columns \code{order} (the assembly order), \code{file}, \code{table}
 (the table number read from the header, or \code{NA}), \code{heading} (a heading
 printed above the entry whenever it changes; \code{NA} = none), \code{label} (the
-entry text, \code{"Table N  <title>"}), \code{level} (the entry's indent, default 2)
-and \code{pages} (informational).
+entry text, \code{"Table N  <title>"}), \code{level} (the entry's indent, a whole
+number from 1 to 3, default 2) and \code{pages} (informational).
 }
 \examples{
 # two TFL files in a folder, as a study's output
