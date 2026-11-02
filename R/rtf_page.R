@@ -48,10 +48,16 @@
 #'   unset unless you pass them, so only a value you passed is warned about.
 #' @param margin_top_in,margin_bottom_in,margin_left_in,margin_right_in The four
 #'   page margins, in inches.  Each inch value here is one positive finite
-#'   number; another (`0`, `Inf`, `NA`, a string) is an error.
+#'   number; another (`0`, `Inf`, `NA`, a string) is an error.  The margins
+#'   must leave a writable area: when the document is written, left + right
+#'   at least the page width, or top + bottom at least the page height, is an
+#'   error (checked then, because a margin can also come from an
+#'   `rtfreporter.page.*` option).
 #' @param header_dist_in,footer_dist_in Distance (inches) of the header / footer
 #'   band from the page edge. `NULL` (default) uses the **full** corresponding
-#'   top / bottom margin (so the band sits at the margin boundary).
+#'   top / bottom margin (so the band sits at the margin boundary).  A
+#'   distance of at least the page height is an error when the document is
+#'   written.
 #'
 #' @return An `rtf_page` object (a classed named list) for `rtf_document(page =)`.
 #'

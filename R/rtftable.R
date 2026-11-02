@@ -4,14 +4,30 @@
 # Pass an rtftable to rtf_tables() instead of a bare data.frame for richer
 # control.
 
+# A token argument (`markup`, `blank_row_normalize`) is a character vector of
+# tokens.  Another type (a logical NA, a number) and an NA or "" element are
+# errors (#846: they used to be dropped, so `markup = NA` was read as "none").
+.check_token_vector <- function(x, arg, allowed) {
+  if (!is.character(x) || anyNA(x) || !all(nzchar(x))) {
+    got <- if (is.character(x)) {
+      paste(ifelse(is.na(x), "NA", sprintf("\"%s\"", x)), collapse = ", ")
+    } else {
+      sprintf("a %s", class(x)[1L])
+    }
+    stop(sprintf("`%s` must be a subset of %s; got: %s", arg, allowed, got),
+         call. = FALSE)
+  }
+  invisible(x)
+}
+
 # Resolve the `blank_row_normalize` argument to a clean character vector of the
 # enabled tokens (a subset of c("detect", "collapse")).  Accepts the token
 # vector, `NULL` / `"none"` / `character(0)` (all -> none enabled), and errors on
 # any other token.
 .resolve_blank_row_normalize <- function(x) {
   if (is.null(x)) return(character(0))
-  x <- as.character(x)
-  x <- x[!is.na(x) & nzchar(x)]
+  .check_token_vector(x, "blank_row_normalize",
+                      "c(\"detect\", \"collapse\") (or \"none\" / NULL)")
   if (length(x) == 0L || identical(x, "none")) return(character(0))
   allowed <- c("detect", "collapse")
   bad <- setdiff(x, allowed)
@@ -31,8 +47,8 @@
 #   "relational" -- ">=" -> U+2265, "<=" -> U+2264
 .resolve_markup <- function(x) {
   if (is.null(x)) return(NULL)
-  x <- as.character(x)
-  x <- x[!is.na(x) & nzchar(x)]
+  .check_token_vector(x, "markup",
+                      "c(\"script\", \"relational\") (or \"all\" / \"none\" / NULL)")
   if (length(x) == 0L || identical(x, "none")) return(character(0))
   if (identical(x, "all")) return(c("script", "relational"))
   allowed <- c("script", "relational")

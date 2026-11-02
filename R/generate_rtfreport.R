@@ -2255,6 +2255,37 @@
   norm
 }
 
+# Stop when the resolved page leaves nothing to write on (#847): the left +
+# right margins must be narrower than the page and the top + bottom margins
+# lower than it, and a header / footer distance must lie on the page.  It is
+# checked here, where the document's page is resolved, because a margin can
+# come from an rtf_page(), a partial `page` list or an rtfreporter.page.*
+# option, and the paper size is only known once these are put together.
+.check_page_writable <- function(pg) {
+  inch <- function(tw) sprintf("%g", round(tw / 1440, 4))
+  w <- pg$width_twips; h <- pg$height_twips
+  lr <- pg$margin_left_twips + pg$margin_right_twips
+  tb <- pg$margin_top_twips + pg$margin_bottom_twips
+  if (lr >= w) {
+    stop(sprintf(paste0("The margins (L + R = %s in) leave no writable width ",
+                        "on a %s in wide page."), inch(lr), inch(w)),
+         call. = FALSE)
+  }
+  if (tb >= h) {
+    stop(sprintf(paste0("The margins (T + B = %s in) leave no writable height ",
+                        "on a %s in high page."), inch(tb), inch(h)),
+         call. = FALSE)
+  }
+  for (k in c("header_dist", "footer_dist")) {
+    d <- pg[[paste0(k, "_twips")]]
+    if (!is.null(d) && d >= h) {
+      stop(sprintf("`%s_in` (%s in) is not on the %s in high page.",
+                   k, inch(d), inch(h)), call. = FALSE)
+    }
+  }
+  invisible(pg)
+}
+
 # Internal helper: convert S3 rtf_document (pipe API) to internal S3 rtfreport.
 .pipe_doc_to_rtfreport <- function(pipe_doc) {
   if (!inherits(pipe_doc, "rtf_document")) return(NULL)
@@ -2290,6 +2321,7 @@
     if (!is.null(hd)) pg$header_dist_twips <- .in_to_twips(hd)
     fd <- ps$footer_dist_in %||% getOption("rtfreporter.page.footer_dist_in")
     if (!is.null(fd)) pg$footer_dist_twips <- .in_to_twips(fd)
+    .check_page_writable(pg)
     report <- .rtfreport_set_default_page(report, pg)
   }
   # Per-element style for the title / footnote blocks (#292) rides on the
