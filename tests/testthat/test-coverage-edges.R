@@ -3,6 +3,10 @@
 # empty / one-row / one-column edges that no other file exercised.  Nothing
 # here reads the network or draws random numbers.
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 # ── page, default format, watermark: validation and print methods ──────────
 
 test_that("rtf_page() rejects a malformed paper_size and prints its geometry", {

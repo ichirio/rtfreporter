@@ -3,6 +3,10 @@
 # \clpadl as the top padding), the bottom as \clpadb<N>\clpadfb3.  0 / NULL
 # write nothing.  And a title, footnote or header / footer row's own height.
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 .vpad_df <- function() data.frame(A = 1:2, B = c("x", "y"))
 
 # The rows of a rendered document that carry `text` in a cell.

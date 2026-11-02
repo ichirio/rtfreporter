@@ -173,7 +173,7 @@ since v0.0.21; cell content sits flush against the cell border).}
 \item{cell_padding_top_twips, cell_padding_bottom_twips}{Cell padding above /
 below the text in twips, written into every header and data cell's
 definition (blank separator rows excepted).  \code{NULL} (default) takes the
-style's, else the document default (\code{\link[=rtf_default_format]{rtf_default_format()}}), else 0; 0
+style's, else the document's (\code{\link[=rtf_style]{rtf_style()}}), else 0; 0
 writes nothing.}
 
 \item{cell_valign}{Vertical alignment: \code{"bottom"} (default), \code{"top"},
@@ -226,7 +226,7 @@ character vector of zero or more of:
 \code{U+2264}.}
 }
 \code{"all"} enables both; \code{"none"} / \code{character(0)} enables neither. \code{NULL}
-(default) \strong{inherits} the document default (\code{rtf_document(default_format = list(markup = ))} / the \code{rtfreporter.markup} option), which is \code{"script"} --
+(default) \strong{inherits} the document default (\code{rtf_document(style = rtf_style(markup = ))} / the \code{rtfreporter.markup} option), which is \code{"script"} --
 so super/subscript (e.g. adapter footnote marks \verb{^\{N\}}) work while the
 \code{>=} / \code{<=} symbol conversion is \strong{opt-in}. Applies to all cell text: data
 cells, column / spanning headers, and title / footnote blocks.}

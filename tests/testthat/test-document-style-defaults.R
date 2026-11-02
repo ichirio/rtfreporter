@@ -3,6 +3,10 @@
 ## Document-wide style defaults (row height, cell padding) resolved through
 ## option / default_format, overridable per module (issue #124).
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 library(testthat)
 
 # Render a document to RTF text.

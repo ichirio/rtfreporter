@@ -1,6 +1,10 @@
 # rtf_page() / rtf_default_format(): structured settings with visible defaults
 # whose unset arguments still fall back to the rtfreporter.* options (#111, #152).
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 test_that("rtf_page() defaults equal the factory baseline and carry the class", {
   p <- rtf_page()
   expect_s3_class(p, "rtf_page")

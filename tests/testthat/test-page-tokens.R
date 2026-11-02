@@ -8,6 +8,10 @@
 #   {TOTAL_PAGES}      -> integer literal (STATIC; baked in at render time
 #                                          = document total page count)
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 .render_doc_for_token_test <- function(rows, n_pages = 1L) {
   doc <- rtf_document() |>
     rtf_section(page = 1, secinfo = list(

@@ -238,8 +238,8 @@
 #'   `inst/resources/rtfreporter_defaults.R` (0L for both since v0.0.21).
 #' @param cell_padding_top_twips,cell_padding_bottom_twips Integer cell padding
 #'   above / below the text of each header (or footer) cell, in twips, written
-#'   into the cell definitions.  `NULL` (default) inherits the document default
-#'   ([rtf_default_format()]), else the resource baseline (0); 0 writes
+#'   into the cell definitions.  `NULL` (default) inherits the document's
+#'   [rtf_style()], else the resource baseline (0); 0 writes
 #'   nothing.
 #'
 #' @param drop_empty_rows Logical. `TRUE`: a row whose tokens of one's own
@@ -294,7 +294,8 @@ rtf_header <- function(rows,
          .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
        cell_padding_bottom_twips =
          .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
-       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
+       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows),
+       border_default = missing(border))
 }
 
 # A row's cells are named l / c / r; the renderer reads only those names, so
@@ -364,7 +365,8 @@ rtf_footer <- function(rows,
          .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
        cell_padding_bottom_twips =
          .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
-       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
+       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows),
+       border_default = missing(border))
 }
 
 # ============================================================================

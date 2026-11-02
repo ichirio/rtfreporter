@@ -531,7 +531,7 @@
 #' @param cell_padding_top_twips,cell_padding_bottom_twips Cell padding above /
 #'   below the text in twips, written into every header and data cell's
 #'   definition (blank separator rows excepted).  `NULL` (default) takes the
-#'   style's, else the document default ([rtf_default_format()]), else 0; 0
+#'   style's, else the document's ([rtf_style()]), else 0; 0
 #'   writes nothing.
 #' @param cell_valign Vertical alignment: `"bottom"` (default), `"top"`,
 #'   or `"center"`.
@@ -580,8 +580,8 @@
 #'       `U+2264`.}
 #'   }
 #'   `"all"` enables both; `"none"` / `character(0)` enables neither. `NULL`
-#'   (default) **inherits** the document default (`rtf_document(default_format =
-#'   list(markup = ))` / the `rtfreporter.markup` option), which is `"script"` --
+#'   (default) **inherits** the document default (`rtf_document(style =
+#'   rtf_style(markup = ))` / the `rtfreporter.markup` option), which is `"script"` --
 #'   so super/subscript (e.g. adapter footnote marks `^{N}`) work while the
 #'   `>=` / `<=` symbol conversion is **opt-in**. Applies to all cell text: data
 #'   cells, column / spanning headers, and title / footnote blocks.
@@ -652,6 +652,10 @@ rtftable <- function(
   blank_row_normalize = c("detect", "collapse"),
   markup = NULL
 ) {
+  # The whole-table settings whose default is a value, not NULL: an
+  # rtf_style() table section (#804) may set the ones left at it.
+  style_defaulted <- c("table_align", "cell_valign", "row_height_exact")[
+    c(missing(table_align), missing(cell_valign), missing(row_height_exact))]
   # -- Resolve defaults from a shared style template, when supplied ---
   # The style provides defaults; explicit arguments always override.
   if (!is.null(style)) {
@@ -849,7 +853,8 @@ rtftable <- function(
       cell_valign                 = cell_valign,
       cell_styles                 = cell_styles_resolved,
       blank_row_normalize         = .resolve_blank_row_normalize(blank_row_normalize),
-      markup                      = .resolve_markup(markup)
+      markup                      = .resolve_markup(markup),
+      style_defaulted             = style_defaulted
     ),
     class = "rtftable"
   )

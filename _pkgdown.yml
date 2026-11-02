@@ -381,8 +381,10 @@ reference:
       headers and footers; the section and
       content calls below add to it; `generate_rtfreport()` writes the file.
       **Acts on:** the `rtf_document` object.
-      `rtf_page()` and `rtf_default_format()` are the only settings that are
-      document-only -- everything else in this reference acts on a table.
+      `rtf_page()` and `rtf_style()` are the only settings that are
+      document-only -- everything else in this reference acts on a table
+      (`rtf_style()` gathers every module's look in one object;
+      `rtf_default_format()` is deprecated in its favour).
       `rtf_config()` edits an already-composed document; `rtf_document()`
       starts a new one.  `rtf_text_tokens()` lists every `{TOKEN}` a header,
       footer, title or footnote can carry (`{PAGE}`, `{PROGRAM}`,
@@ -391,6 +393,7 @@ reference:
       - rtf_document
       - rtf_config
       - rtf_page
+      - rtf_style
       - rtf_default_format
       - rtf_watermark
       - generate_rtfreport

@@ -23,7 +23,8 @@ A page's heading (\code{rtf_tables(auto_title = TRUE)}, a plan's
 stays as the block's last row, under the titles given.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
-this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
+this block, over the document's \code{\link[=rtf_style]{rtf_style()}} (its section, then its
+shared level).
 Anything left \code{NULL} is inherited.
 \describe{
 \item{\code{font}}{names a family (e.g. \code{"Arial"}); one not already in the
@@ -59,7 +60,7 @@ string (\code{""}) is a blank row. The block renders as a single-column table th
 same width as the content; title rows default to centred + bold.  A row's
 \code{row_height_twips} is that row's height, over the block's
 \code{row_height_twips}; it applies to the table form
-(\code{rtf_default_format(title_format = "table")}), as the block's does.
+(\code{rtf_style(title_format = "table")}), as the block's does.
 }
 \examples{
 df1 <- data.frame(Parameter = "Age", Value = "75.1")
