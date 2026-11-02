@@ -93,15 +93,22 @@
 # -- Natural sort ------------------------------------------------------------
 
 # Order strings so embedded numbers sort numerically ("t2" < "t10").
-.natural_order <- function(x) {
-  key <- vapply(x, function(s) {
+# Natural sort key: every run of digits zero-padded to 15 places, so "t2"
+# sorts before "t10".
+.natural_key <- function(x) {
+  vapply(x, function(s) {
     parts <- regmatches(s, gregexpr("[0-9]+|[^0-9]+", s))[[1L]]
     paste0(vapply(parts, function(p)
       if (grepl("^[0-9]+$", p)) formatC(as.numeric(p), width = 15, flag = "0",
                                         format = "d")
       else p, character(1L)), collapse = "")
-  }, character(1L))
-  order(key)
+  }, character(1L), USE.NAMES = FALSE)
+}
+
+# Natural order compared byte by byte (the C locale) with method = "radix",
+# so the order is the same in every locale and on every OS (#827).
+.natural_order <- function(x) {
+  order(.natural_key(x), method = "radix")
 }
 
 
@@ -123,9 +130,11 @@
   if (length(files) == 0L) stop("No RTF files found.", call. = FALSE)
   info <- lapply(files, .rtf_table_label)
   tabs <- vapply(info, function(x) x$table %||% NA_character_, character(1L))
-  # Default order: by table number (so 14.1.x precedes 14.3.x); files without
-  # a detected number keep their incoming (natural file-name) order, last.
-  ord  <- .natural_order(ifelse(is.na(tabs), paste0("~", basename(files)), tabs))
+  # Default order: by table number (so 14.1.x precedes 14.3.x), then the
+  # files without a detected number in natural file-name order.  Radix order
+  # compares bytes, so it does not depend on the locale (#827).
+  key  <- .natural_key(ifelse(is.na(tabs), basename(files), tabs))
+  ord  <- order(is.na(tabs), key, method = "radix")
   info <- info[ord]; tabs <- tabs[ord]; files <- files[ord]
   data.frame(
     order   = seq_along(files),
@@ -249,6 +258,15 @@
 #' ([assemble_rtf()]); without one it only returns the table, to edit
 #' (rename labels, fill `heading` to group entries, change `level`, reorder
 #' or drop rows) and hand to `assemble_rtf(toc = )`.
+#'
+#' The rows come in this order, the same in every locale and on every OS:
+#' first the files whose header has a `"Table N"` line, by that number in
+#' natural order (`14.1.2` before `14.1.10`, `14.1.x` before `14.3.x`,
+#' whatever the file names); then the files without one -- listings,
+#' figures, any file whose header has no `"Table N"` line -- by file name in
+#' natural order.  Names are compared character by character as in the C
+#' locale, so upper case comes before lower case (`B` before `a`) and `-`
+#' before `_`.  Files with the same table number keep their file-name order.
 #'
 #' The table has the columns `order` (the assembly order), `file`, `table`
 #' (the table number read from the header, or `NA`), `heading` (a heading

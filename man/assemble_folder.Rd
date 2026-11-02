@@ -49,6 +49,15 @@ a \strong{table of contents}: a \code{data.frame} with one row per file.  With a
 or drop rows) and hand to \code{assemble_rtf(toc = )}.
 }
 \details{
+The rows come in this order, the same in every locale and on every OS:
+first the files whose header has a \code{"Table N"} line, by that number in
+natural order (\code{14.1.2} before \code{14.1.10}, \code{14.1.x} before \code{14.3.x},
+whatever the file names); then the files without one -- listings,
+figures, any file whose header has no \code{"Table N"} line -- by file name in
+natural order.  Names are compared character by character as in the C
+locale, so upper case comes before lower case (\code{B} before \code{a}) and \code{-}
+before \code{_}.  Files with the same table number keep their file-name order.
+
 The table has the columns \code{order} (the assembly order), \code{file}, \code{table}
 (the table number read from the header, or \code{NA}), \code{heading} (a heading
 printed above the entry whenever it changes; \code{NA} = none), \code{label} (the
