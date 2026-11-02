@@ -152,7 +152,9 @@ numbers in any order; one outside \code{2:nrow} cuts nothing.}
 
 \item{group_col}{Character, integer, or \code{NULL}.  The column the
 group-aware splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"})
-detect groups on, given by name or position.  \code{NULL} (default) uses
+detect groups on, given by name or position (a whole number in
+\verb{1..ncol}; \code{TRUE}, a fraction or a factor is an error, as in every
+column argument).  \code{NULL} (default) uses
 \strong{column 1}.  This selects only the \emph{column}; how a group boundary is
 found on it is set by \code{group_by}.
 \describe{
@@ -299,7 +301,11 @@ input is still honoured).  Accepts any of -- or a \code{list()} combining:
 \describe{
 \item{an integer vector of positions}{a blank row is inserted \emph{after} each
 given data-row index; \code{0} = before the first row, \code{-1} = after the last
-row (e.g. \code{c(0, 5, -1)}).}
+row (e.g. \code{c(0, 5, -1)}).  A position is a whole number in
+\verb{-1..nrow} of the whole body (after \code{stub}, before pagination): a
+fraction, \code{NA}, or a position past the body's last row (or below
+\code{-1}) stops, naming the positions.  On a page shorter than \code{k}, a
+position \code{k} within the body puts no blank on that page.}
 \item{\code{"between_groups"}}{a blank at every group transition on \code{group_col},
 using this call's \code{group_by} detection (auto / indent / value / filled).}
 \item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} object}{insert a blank whenever the group

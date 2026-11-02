@@ -216,8 +216,10 @@
 #'   header). Use `rtf_border(top = TRUE)` for a horizontal dividing line (default
 #'   for footer).
 #' @param width_twips Integer. Table width in twips. `NULL` (default) uses the
-#'   full writable width (page width minus margins).  A value that is not one
-#'   non-negative integer is an error.
+#'   full writable width (page width minus margins); so does `0`, as
+#'   `rtftable(table_width_twips = 0)` does, since a band of no width cannot
+#'   be read (`width`, when given, then sets the width).  A value that is not
+#'   one non-negative integer is an error.
 #' @param width Band width in the shared vocabulary: `"page"` (the writable
 #'   width, the default), a fraction in `(0, 1]` of it, or twips (a whole
 #'   number above 1; `1.5` or `Inf` is an error). `width_twips`

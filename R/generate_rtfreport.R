@@ -1735,7 +1735,9 @@
   # Width: the absolute `width_twips` wins (the legacy form), then the shared
   # `width` vocabulary, then the writable width.  A header/footer band has no
   # table body above it, so "content" resolves to the writable width too.
-  width       <- if (!is.null(hf$width_twips)) {
+  # `width_twips = 0` is "not set" (a band of no width cannot be read), as
+  # rtftable(table_width_twips = 0) is.
+  width       <- if (!is.null(hf$width_twips) && hf$width_twips > 0L) {
     as.integer(hf$width_twips)
   } else if (!is.null(hf$width)) {
     .resolve_block_width(hf$width, writable_width_twips, writable_width_twips,
