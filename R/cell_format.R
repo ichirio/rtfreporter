@@ -115,8 +115,9 @@
 fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
   if (length(x) == 0L) return(x)
   na <- .check_na_text(na)
+  miss <- is.na(x)                  # before as.character(): NaN is missing
   x <- as.character(x)
-  x[is.na(x)] <- na
+  x[miss] <- na
   nz <- nzchar(trimws(x))
   if (!any(nz)) return(x)
   w   <- max(nchar(x[nz]))
@@ -146,8 +147,9 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
 .fmt_count_core <- function(x, nbsp, bare, na = "") {
   if (length(x) == 0L) return(x)
   na <- .check_na_text(na)
+  miss <- is.na(x)                  # before as.character(): NaN is missing
   x <- as.character(x)
-  x[is.na(x)] <- na
+  x[miss] <- na
   rx <- "^[[:space:]]*([0-9]+)[[:space:]]*(\\((.*)\\))?[[:space:]]*$"
   m  <- regmatches(x, regexec(rx, x))
   count  <- rep(NA_character_, length(x))
@@ -307,8 +309,9 @@ fmt_value_paren <- function(x, nbsp = "\u00a0", na = "", rounding = NULL) {
   if (length(x) == 0L) return(x)
   na <- .check_na_text(na)
   rnd <- .rounder(rounding)
+  miss <- is.na(x)                  # before as.character(): NaN is missing
   x <- as.character(x)
-  x[is.na(x)] <- na
+  x[miss] <- na
 
   n     <- length(x)
   value <- rep(NA_character_, n)     # the text before the parenthesis
