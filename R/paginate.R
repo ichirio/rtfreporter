@@ -622,7 +622,10 @@
     a$na              <- ""
     chunks <- do.call(.paginate_df, c(a, dots))
 
-    nm <- names(chunks)
+    # the group's heading, without the "...n" tail a split gives the pages of
+    # one value: the tail would order a group's pages by it, P1 and P2
+    # interleaved, instead of together
+    nm <- .page_name_base(names(chunks))
     for (k in seq_along(chunks)) {
       out[[length(out) + 1L]] <- chunks[[k]]
       by_val[[length(by_val) + 1L]] <- r$values
@@ -1182,9 +1185,15 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     if (!nzchar(label)) label <- paste0("group_", g)
 
     if (!is.null(max_rows) && g_n > max_rows) {
+      # A value's rows gathered from several runs are ONE group: its first
+      # row is its only header.  The later runs' headers would read as a new
+      # group starting mid-page, which the widow control moved down again
+      # and again, a continuation row each time, forever.
+      hd <- info$headers[rows]
+      if (identical(info$mode, "value")) hd <- seq_len(g_n) == 1L
       sub_info <- list(id      = gid[rows],
                        label   = info$label[rows],
-                       headers = info$headers[rows],
+                       headers = hd,
                        mode    = info$mode)
       sub <- .split_group_force(chunk, sub_info, max_rows,
                                  cont_label, group_idx, min_group_rows)

@@ -1835,6 +1835,8 @@
 
     cell_w <- floor(width / n_cols)
     cellx  <- cumsum(rep(cell_w, n_cols))
+    # the last cell ends at the band's edge, whatever the division leaves
+    cellx[n_cols] <- as.integer(width)
     # Border applies only to the first row of the header/footer block.
     row_border_cmds <- if (row_idx == 1L) .build_border_commands(hf_border, color_index_map) else ""
 
