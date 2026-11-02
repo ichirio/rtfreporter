@@ -547,7 +547,7 @@ test_that("FT-PL292 [FR-PL486 FR-PL488 FR-PL489]: the blocks sit on a single pag
   expect_identical(attr(pg[[1L]], "rtf_footnotes"), "F1")
   lines <- vp_rtf_lines(pg)
   expect_true(any(grepl("\\b T1\\b0", lines, fixed = TRUE)))
-  expect_true(any(grepl("\\u34920? 2", lines, fixed = TRUE)))      # U+8868 as RTF writes it
+  expect_true(any(grepl("\\u-30616? 2", lines, fixed = TRUE)))      # U+8868 as RTF writes it
   expect_true(any(grepl("F1\\cell", lines, fixed = TRUE)))
   two <- vp_pages(table_plan(d) |> plan_titles("T1") |> plan_titles("T2"))
   expect_identical(attr(two[[1L]], "rtf_titles"), "T2")
