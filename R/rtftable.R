@@ -493,10 +493,15 @@
 #'     \item{`"tfl"`}{(default) the clinical TFL preset: a top and a bottom
 #'       rule on the column-header block only (see [rtf_table_style_tfl()]);
 #'       no rule under the last row.}
-#'     \item{`"none"`}{no borders.}
+#'     \item{`"none"`}{no borders, the underline under a spanning header cell
+#'       included (add one per cell with [col_cell()]`(border = )` or
+#'       [style_header()]).}
 #'     \item{an [rtf_border()] object}{its outer edges frame the whole table
 #'       and its `inside_h` / `inside_v` rules fall between the rows / cells;
-#'       [style_zone()] then sets one kind of row.}
+#'       [style_zone()] then sets one kind of row.  The blank rows of
+#'       `blank_rows` are inside the frame: a blank row carries the left /
+#'       right edges, `inside_v` and `inside_h`, and a leading (no header
+#'       row) or trailing one the top or bottom edge.}
 #'     \item{an [rtf_table_style()] object}{its border zones are used.}
 #'   }
 #' @param style Optional shared `rtf_table_style` (S3).  Provides default
