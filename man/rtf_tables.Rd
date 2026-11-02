@@ -50,8 +50,9 @@ title \strong{block}.
 \item{A block}{Either a character vector (one entry per row, default
 styling) or a list of rows, where a row is a string or a styled
 \code{list(text=, align=, bold=, italic=, underline=, color=, border=)}.  An empty string (\code{""}) is a blank row.}
-\item{Looks}{The block renders as a single-column table the same
-width as the content (so it lines up); title rows default to
+\item{Looks}{The block renders as centred paragraphs, or, with
+\code{rtf_style(title_format = "table")}, as a single-column table the
+same width as the content (so it lines up); title rows default to
 centred + bold.}
 \item{Page numbers}{Title and footnote text may carry the same
 \strong{page-number tokens} as a header or footer band --
@@ -65,9 +66,11 @@ forces in a header.}
 }}
 
 \item{footnotes}{\code{NULL} (default) or a list of length \code{length(tables)} or
-length 1 (common to all). Same block structure as \code{titles}, and the same
-page-number tokens; footnote rows default to left-aligned and draw no
-rule unless a row sets its own \code{border}.}
+length 1 (common to all), each a block of rows, a row being a string or
+a named vector \code{c(l = , c = , r = )} as in \code{\link[=rtf_footnotes]{rtf_footnotes()}} (not the
+styled row lists of \code{titles}), with the same page-number tokens; footnote
+rows default to left-aligned and draw no rule:
+\code{\link[=rtf_footnotes]{rtf_footnotes()}}\verb{(border = )} puts one on the first row.}
 
 \item{auto_section}{Logical.  When \code{TRUE} and \code{tables} is a \strong{named}
 list, each name is used as a per-section heading appended to the common

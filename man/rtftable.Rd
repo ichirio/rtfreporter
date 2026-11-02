@@ -99,8 +99,9 @@ alignment via the usual cascade.}
 
 \item{border}{The table borders. One of:
 \describe{
-\item{\code{"tfl"}}{(default) the clinical TFL preset: header top + bottom
-rules and a bottom rule on the last row.}
+\item{\code{"tfl"}}{(default) the clinical TFL preset: a top and a bottom
+rule on the column-header block only (see \code{\link[=rtf_table_style_tfl]{rtf_table_style_tfl()}});
+no rule under the last row.}
 \item{\code{"none"}}{no borders.}
 \item{an \code{\link[=rtf_border]{rtf_border()}} object}{its outer edges frame the whole table
 and its \code{inside_h} / \code{inside_v} rules fall between the rows / cells;
@@ -134,20 +135,25 @@ to \code{rtftable()} always override.  Snapshot semantics: each
 \item{column_widths_twips}{Integer vector of absolute column widths in
 twips. Overrides \code{col_rel_width}.}
 
-\item{table_width_twips}{Total table width in twips.}
+\item{table_width_twips}{Total table width in twips.  A value that is not
+one non-negative integer is an error.}
 
 \item{table_width_pct_of_writable}{Table width as a fraction 0-1 of the
-writable page width.}
+writable page width.  A value that is not one number in (0, 1] is an
+error.}
 
 \item{table_width_pct}{Table width as a percentage 0-100 of the writable
-page width (convenience alias for \code{table_width_pct_of_writable * 100}).}
+page width (convenience alias for \code{table_width_pct_of_writable * 100}).
+A value that is not one number in (0, 100] is an error.}
 
 \item{table_align}{Horizontal placement: \code{"left"} (default), \code{"center"},
 or \code{"right"}.}
 
 \item{row_height_twips}{Row height for data rows in twips. \code{NULL} (default)
-uses the document-wide default from \code{rtfreporter_defaults.R}
-(font-size-aware). A positive integer specifies an explicit value.}
+takes the \code{style}'s, else the document's (\code{\link[=rtf_style]{rtf_style()}}), else the
+\code{rtfreporter.row_height_twips} option, else the height the font size
+implies. A non-negative integer specifies an explicit value; anything
+else is an error, as it is for the other \verb{*_twips} arguments.}
 
 \item{font_size_half_points}{Font size for this table, in half-points.
 \code{NULL} (default) inherits the document size. Setting it also recomputes
@@ -165,10 +171,13 @@ A named vector gives one family per script slot (\code{latin},
 
 \item{blank_row_height_twips}{Row height for blank separator rows.}
 
-\item{cell_padding_left_twips}{Left cell padding in twips (default 0
-since v0.0.21; cell content sits flush against the cell border).}
+\item{cell_padding_left_twips}{Left cell padding in twips.  \code{NULL}
+(default) takes the \code{style}'s, else the document's (\code{\link[=rtf_style]{rtf_style()}}), else
+the \code{rtfreporter.cell_padding_left_twips} option, else 0 (cell content
+sits flush against the cell border).}
 
-\item{cell_padding_right_twips}{Right cell padding in twips (default 0).}
+\item{cell_padding_right_twips}{Right cell padding in twips, resolved as
+\code{cell_padding_left_twips} is.}
 
 \item{cell_padding_top_twips, cell_padding_bottom_twips}{Cell padding above /
 below the text in twips, written into every header and data cell's

@@ -429,8 +429,9 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'       styling) or a list of rows, where a row is a string or a styled
 #'       `list(text=, align=, bold=, italic=, underline=, color=,
 #'       border=)`.  An empty string (`""`) is a blank row.}
-#'     \item{Looks}{The block renders as a single-column table the same
-#'       width as the content (so it lines up); title rows default to
+#'     \item{Looks}{The block renders as centred paragraphs, or, with
+#'       `rtf_style(title_format = "table")`, as a single-column table the
+#'       same width as the content (so it lines up); title rows default to
 #'       centred + bold.}
 #'     \item{Page numbers}{Title and footnote text may carry the same
 #'       **page-number tokens** as a header or footer band --
@@ -444,9 +445,11 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'       name>}` with its page's value (see *Page values*).}
 #'   }
 #' @param footnotes `NULL` (default) or a list of length `length(tables)` or
-#'   length 1 (common to all). Same block structure as `titles`, and the same
-#'   page-number tokens; footnote rows default to left-aligned and draw no
-#'   rule unless a row sets its own `border`.
+#'   length 1 (common to all), each a block of rows, a row being a string or
+#'   a named vector `c(l = , c = , r = )` as in [rtf_footnotes()] (not the
+#'   styled row lists of `titles`), with the same page-number tokens; footnote
+#'   rows default to left-aligned and draw no rule:
+#'   [rtf_footnotes()]`(border = )` puts one on the first row.
 #' @param auto_section Logical.  When `TRUE` and `tables` is a **named**
 #'   list, each name is used as a per-section heading appended to the common
 #'   header defined by `rtf_section(secinfo = ...)` (called without a `page`

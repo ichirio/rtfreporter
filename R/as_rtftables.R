@@ -137,7 +137,9 @@
 #' tables, rlistings `listing_df` listings,
 #' `flextable` tables, `huxtable` tables, plain `data.frame` / tibble,
 #' or a `list` of any of these (the list is flattened, names propagated as
-#' `name`, repeated on every page it makes).  Figures are out of scope -- use
+#' `name`, repeated on every page it makes, with the `"...n"` tail of pages
+#' that share a heading: `"name...1"`, `"name...2"`).  Figures are out of
+#' scope -- use
 #' [rtf_figures()] for those.
 #'
 #' @section What is carried, by source:
@@ -250,11 +252,11 @@
 #'       will split a group that would have fitted whole on the next
 #'       page, so it is not `"group_safe"` with an escape hatch.  Only
 #'       `min_group_rows` pulls a cut back, and only to avoid a widow or an
-#'       orphan.  Requires `max_rows`.}
-#'
-#'       Ten groups of four rows with `max_rows = 30` and the blanks counted:
-#'       `"group_safe"` gives 26 and 26 rows, `"group_force"` gives 30 and 24 with the
-#'       sixth group cut in half.
+#'       orphan.  Requires `max_rows`.  Ten groups of four rows with
+#'       `max_rows = 30`, `blank_rows = "between_groups"`, `blank_row_first`
+#'       and `blank_row_end` and the blanks counted (`count_blank_rows =
+#'       TRUE`): `"group_safe"` prints 26 and 26 rows, `"group_force"` 30 and
+#'       24 with the sixth group cut.}
 #'     \item{`"by_value"`}{one page per distinct value of `group_col`; the pages
 #'       are named by that value.  A page gathers every row with its value,
 #'       scattered or not, in the body's own order.}
@@ -273,8 +275,10 @@
 #' @param max_rows Integer or `NULL`.  Maximum body rows per page for the
 #'   `"group_safe"` / `"group_force"` splits (required by them).  **This is the
 #'   setting for fixed-size pages** -- `max_rows = 25` gives pages of 25 rows.
-#'   Ignored by `"none"`, `"rows"` (which cuts at the positions in
-#'   `split_rows`) and `"by_value"`.
+#'   Ignored by `"none"` and `"rows"` (which cuts at the positions in
+#'   `split_rows`).  Optional for `"by_value"`: a value's page longer than
+#'   `max_rows` is cut as `"group_force"` cuts, its pages named by the value
+#'   with the `"...n"` tail (`"A...1"`, `"A...2"`).
 #' @param split_rows Integer vector or `NULL`.  Row **positions** to cut
 #'   before, for `split = "rows"` (required by it; ignored otherwise).
 #'   `split_rows = c(20, 40)` yields pages `1:19`, `20:39`, `40:nrow`.  It is
