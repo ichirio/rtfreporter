@@ -474,8 +474,9 @@
 #'   }
 #' @param border The table borders. One of:
 #'   \describe{
-#'     \item{`"tfl"`}{(default) the clinical TFL preset: header top + bottom
-#'       rules and a bottom rule on the last row.}
+#'     \item{`"tfl"`}{(default) the clinical TFL preset: a top and a bottom
+#'       rule on the column-header block only (see [rtf_table_style_tfl()]);
+#'       no rule under the last row.}
 #'     \item{`"none"`}{no borders.}
 #'     \item{an [rtf_border()] object}{its outer edges frame the whole table
 #'       and its `inside_h` / `inside_v` rules fall between the rows / cells;
@@ -503,16 +504,21 @@
 #'   `c(2, 1, 1)` makes the first column twice as wide as the others).
 #' @param column_widths_twips Integer vector of absolute column widths in
 #'   twips. Overrides `col_rel_width`.
-#' @param table_width_twips Total table width in twips.
+#' @param table_width_twips Total table width in twips.  A value that is not
+#'   one non-negative integer is an error.
 #' @param table_width_pct_of_writable Table width as a fraction 0-1 of the
-#'   writable page width.
+#'   writable page width.  A value that is not one number in (0, 1] is an
+#'   error.
 #' @param table_width_pct Table width as a percentage 0-100 of the writable
 #'   page width (convenience alias for `table_width_pct_of_writable * 100`).
+#'   A value that is not one number in (0, 100] is an error.
 #' @param table_align Horizontal placement: `"left"` (default), `"center"`,
 #'   or `"right"`.
 #' @param row_height_twips Row height for data rows in twips. `NULL` (default)
-#'   uses the document-wide default from `rtfreporter_defaults.R`
-#'   (font-size-aware). A positive integer specifies an explicit value.
+#'   takes the `style`'s, else the document's ([rtf_style()]), else the
+#'   `rtfreporter.row_height_twips` option, else the height the font size
+#'   implies. A non-negative integer specifies an explicit value; anything
+#'   else is an error, as it is for the other `*_twips` arguments.
 #' @param row_height_exact Logical. `TRUE` = exact (clipped); `FALSE` = minimum.
 #' @param header_row_height_twips Row height for column-header rows.
 #' @param font_size_half_points Font size for this table, in half-points.
@@ -525,9 +531,12 @@
 #'   `east_asian`, `complex`, optional `hansi`), e.g. `c(latin =
 #'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
 #' @param blank_row_height_twips Row height for blank separator rows.
-#' @param cell_padding_left_twips Left cell padding in twips (default 0
-#'   since v0.0.21; cell content sits flush against the cell border).
-#' @param cell_padding_right_twips Right cell padding in twips (default 0).
+#' @param cell_padding_left_twips Left cell padding in twips.  `NULL`
+#'   (default) takes the `style`'s, else the document's ([rtf_style()]), else
+#'   the `rtfreporter.cell_padding_left_twips` option, else 0 (cell content
+#'   sits flush against the cell border).
+#' @param cell_padding_right_twips Right cell padding in twips, resolved as
+#'   `cell_padding_left_twips` is.
 #' @param cell_padding_top_twips,cell_padding_bottom_twips Cell padding above /
 #'   below the text in twips, written into every header and data cell's
 #'   definition (blank separator rows excepted).  `NULL` (default) takes the
@@ -791,8 +800,15 @@ rtftable <- function(
     }
   }
 
-  # table width %
+  # table width %: a fraction in (0, 1]; 2 or "x" used to be kept as given
   twpw <- table_width_pct_of_writable
+  if (!is.null(twpw)) {
+    twpw <- suppressWarnings(as.numeric(twpw))
+    if (length(twpw) != 1L || is.na(twpw) || twpw <= 0 || twpw > 1) {
+      stop("`table_width_pct_of_writable` must be a number in (0, 1].",
+           call. = FALSE)
+    }
+  }
   if (!is.null(table_width_pct)) {
     twpw <- .table_width_pct_frac(table_width_pct)
   }
@@ -837,17 +853,19 @@ rtftable <- function(
       blank_rows                  = blank_rows_resolved,
       col_rel_width               = col_rel_width,
       column_widths_twips         = if (!is.null(column_widths_twips)) as.integer(column_widths_twips) else NULL,
-      table_width_twips           = table_width_twips,
+      # the twips arguments are checked as the top / bottom padding is: a
+      # non-number used to be written into the file as NA
+      table_width_twips           = if (is.null(.check_row_height(table_width_twips, "table_width_twips"))) NULL else table_width_twips,
       table_width_pct_of_writable = twpw,
       table_align                 = table_align,
-      row_height_twips            = if (is.null(row_height_twips)) NULL else as.integer(row_height_twips),
+      row_height_twips            = .check_row_height(row_height_twips, "row_height_twips"),
       font_size_half_points       = .check_font_size(font_size_half_points, "font_size_half_points"),
       font                        = .check_font(font, "font"),
       row_height_exact            = row_height_exact,
-      header_row_height_twips     = if (!is.null(header_row_height_twips)) as.integer(header_row_height_twips) else NULL,
-      blank_row_height_twips      = if (!is.null(blank_row_height_twips)) as.integer(blank_row_height_twips) else NULL,
-      cell_padding_left_twips     = if (is.null(cell_padding_left_twips)) NULL else as.integer(cell_padding_left_twips),
-      cell_padding_right_twips    = if (is.null(cell_padding_right_twips)) NULL else as.integer(cell_padding_right_twips),
+      header_row_height_twips     = .check_row_height(header_row_height_twips, "header_row_height_twips"),
+      blank_row_height_twips      = .check_row_height(blank_row_height_twips, "blank_row_height_twips"),
+      cell_padding_left_twips     = .check_row_height(cell_padding_left_twips, "cell_padding_left_twips"),
+      cell_padding_right_twips    = .check_row_height(cell_padding_right_twips, "cell_padding_right_twips"),
       cell_padding_top_twips      = .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
       cell_padding_bottom_twips   = .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
       cell_valign                 = cell_valign,

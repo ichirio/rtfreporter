@@ -1313,7 +1313,10 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 
   one <- function(s) {
     if (is.numeric(s) && !is.list(s)) {
-      return(as.integer(s))
+      # -1 is after the page's last row; it used to be dropped as negative
+      s <- as.integer(s)
+      s[!is.na(s) & s == -1L] <- nrow(chunk)
+      return(s)
     }
     if (is.character(s) && length(s) == 1L && s == "between_groups") {
       info <- .compute_group_info(chunk, group_idx, group_by = group_by)
