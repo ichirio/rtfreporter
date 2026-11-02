@@ -792,9 +792,14 @@ rtftable <- function(
   # the whole-table shortcuts (outer / inside_h / inside_v) into the five zones.
   # Whether a column header exists decides where the table's top edge lands,
   # which is why the expansion happens here and not in the constructor.
+  # col_header = NULL still writes a header row (the column names), so the
+  # top edge is that row's; only a header of no rows (list()) has none.  It
+  # used to read NULL as "no header": the top rule fell between the column
+  # names and the first data row, and the inside_h seam under them was lost.
+  first_hdr <- if (!is.null(data_single)) col_hdr_one else col_hdr_list[[1L]]
   border_resolved <- .expand_table_border(
     .normalize_table_border(border),
-    has_header = !is.null(col_header))
+    has_header = is.null(first_hdr) || length(first_hdr) > 0L)
   # Raised here because it needs the shape of the table to know whether the
   # pre-0.5 reading would have produced anything different.
   .warn_old_edge_reading(.normalize_table_border(border),
