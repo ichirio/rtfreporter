@@ -209,6 +209,10 @@ test_that("FT-PL905 [FR-PL903]: a part's rows under the parent's; a column a par
   # the parent's na, not the child's: t3 is empty on the child's rows
   expect_identical(t$t3, c("BLQ", "5.0", "", ""))
   expect_identical(t$t1[4], "1.50")
+  # the child's own na fills its rows' empty cells, never its heading row (#798)
+  t_na <- as.data.frame(plan_apply(parent |> plan_append(child |> plan_cells(na = "NC")), "table"))
+  expect_identical(t_na$t3, c("BLQ", "5.0", "", "NC"))
+  expect_identical(unlist(t_na[3L, c("t1", "t2", "t3")], use.names = FALSE), c("", "", ""))
   # the child inherits the parent's digits by key, and its own win
   child2 <- table_plan(lng, cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean}"))
