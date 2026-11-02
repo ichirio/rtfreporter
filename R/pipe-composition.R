@@ -803,9 +803,13 @@ rtf_figures <- function(doc, figures,
 #'
 #' Each element is a title **block**: either a character vector (one entry per
 #' row, default styling) or a list of rows, where a row is a string or a styled
-#' `list(text=, align=, bold=, italic=, underline=, color=, border=)`. An empty
+#' `list(text=, align=, bold=, italic=, underline=, color=, border=,
+#' row_height_twips=)`. An empty
 #' string (`""`) is a blank row. The block renders as a single-column table the
-#' same width as the content; title rows default to centred + bold.
+#' same width as the content; title rows default to centred + bold.  A row's
+#' `row_height_twips` is that row's height, over the block's
+#' `row_height_twips`; it applies to the table form
+#' (`rtf_default_format(title_format = "table")`), as the block's does.
 #'
 #' @param doc An rtf_document object.
 #' @param titles A list of length = number of contents, or length 1 (common).
@@ -896,8 +900,10 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #' Assign content footnotes to pages
 #'
 #' Same shape as [rtf_titles()]: a list with one block per content (table or
-#' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
-#' or `list(text=, align=, bold=, italic=, underline=, color=, border=)`).
+#' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string,
+#' a named vector `c(l = , c = , r = )`, or the page footer's row list
+#' `list(columns = , row_height_twips = )`, whose `row_height_twips` is that
+#' row's height over the block's).
 #' Footnote rows default to left-aligned and draw no rule unless `border`
 #' (or a row's own `border`) asks for one. `NULL` per element
 #' suppresses the footnote for that content.

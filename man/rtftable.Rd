@@ -28,6 +28,8 @@ rtftable(
   blank_row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
   cell_valign = "bottom",
   cell_styles = NULL,
   blank_row_normalize = c("detect", "collapse"),
@@ -167,6 +169,12 @@ A named vector gives one family per script slot (\code{latin},
 since v0.0.21; cell content sits flush against the cell border).}
 
 \item{cell_padding_right_twips}{Right cell padding in twips (default 0).}
+
+\item{cell_padding_top_twips, cell_padding_bottom_twips}{Cell padding above /
+below the text in twips, written into every header and data cell's
+definition (blank separator rows excepted).  \code{NULL} (default) takes the
+style's, else the document default (\code{\link[=rtf_default_format]{rtf_default_format()}}), else 0; 0
+writes nothing.}
 
 \item{cell_valign}{Vertical alignment: \code{"bottom"} (default), \code{"top"},
 or \code{"center"}.}

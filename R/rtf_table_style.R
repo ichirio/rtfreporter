@@ -38,6 +38,9 @@
 #'   `row_title`); `"left"` / `"center"` / `"right"` sets every column.
 #' @param cell_padding_left_twips,cell_padding_right_twips Cell padding
 #'   (twips) used by both column-header and data cells.
+#' @param cell_padding_top_twips,cell_padding_bottom_twips Cell padding above /
+#'   below the text (twips) of column-header and data cells; `NULL` leaves the
+#'   document's padding.
 #' @param row_height_twips Row height (twips); `NULL` = font-aware default.
 #'
 #' @return A list of class `"rtf_table_style"`.
@@ -70,7 +73,9 @@ rtf_table_style <- function(
   underline        = FALSE,
   cell_padding_left_twips  = NULL,
   cell_padding_right_twips = NULL,
-  row_height_twips         = NULL
+  row_height_twips         = NULL,
+  cell_padding_top_twips    = NULL,
+  cell_padding_bottom_twips = NULL
 ) {
   .check_border <- function(b, nm) {
     if (!is.null(b) && !inherits(b, "rtf_border")) {
@@ -103,7 +108,11 @@ rtf_table_style <- function(
 
       cell_padding_left_twips  = cell_padding_left_twips,
       cell_padding_right_twips = cell_padding_right_twips,
-      row_height_twips         = row_height_twips
+      row_height_twips         = row_height_twips,
+      cell_padding_top_twips    =
+        .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
+      cell_padding_bottom_twips =
+        .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips")
     ),
     class = "rtf_table_style"
   )
@@ -164,6 +173,12 @@ print.rtf_table_style <- function(x, ...) {
   cat(sprintf("  cell_padding : L=%s R=%s\n",
               x$cell_padding_left_twips  %||% "(default)",
               x$cell_padding_right_twips %||% "(default)"))
+  # top / bottom only when set, so a style without them prints as before
+  if (!is.null(x$cell_padding_top_twips) || !is.null(x$cell_padding_bottom_twips)) {
+    cat(sprintf("  cell_padding : T=%s B=%s\n",
+                x$cell_padding_top_twips    %||% "(default)",
+                x$cell_padding_bottom_twips %||% "(default)"))
+  }
   invisible(x)
 }
 

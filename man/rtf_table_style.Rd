@@ -19,7 +19,9 @@ rtf_table_style(
   underline = FALSE,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
-  row_height_twips = NULL
+  row_height_twips = NULL,
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL
 )
 }
 \arguments{
@@ -37,6 +39,10 @@ row-title columns left, the others centred (see \code{\link[=rtftable]{rtftable(
 (twips) used by both column-header and data cells.}
 
 \item{row_height_twips}{Row height (twips); \code{NULL} = font-aware default.}
+
+\item{cell_padding_top_twips, cell_padding_bottom_twips}{Cell padding above /
+below the text (twips) of column-header and data cells; \code{NULL} leaves the
+document's padding.}
 }
 \value{
 A list of class \code{"rtf_table_style"}.

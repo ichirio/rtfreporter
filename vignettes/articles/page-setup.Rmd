@@ -310,7 +310,10 @@ doc <- rtf_document() |>
 
 Cell padding (the gap between the cell border and its text) defaults to `0`
 (text sits flush against the border, the typical clinical look) and is likewise
-configurable per table via `cell_padding_left_twips` / `cell_padding_right_twips`.
+configurable per table via `cell_padding_left_twips` / `cell_padding_right_twips`,
+and above / below the text via `cell_padding_top_twips` /
+`cell_padding_bottom_twips` (written into each cell's definition; `0`, the
+default, writes nothing).
 
 ### Document-wide row height / padding
 

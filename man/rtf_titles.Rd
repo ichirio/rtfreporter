@@ -54,9 +54,12 @@ title).  Each content is a page of its own unless it was added with
 \details{
 Each element is a title \strong{block}: either a character vector (one entry per
 row, default styling) or a list of rows, where a row is a string or a styled
-\code{list(text=, align=, bold=, italic=, underline=, color=, border=)}. An empty
+\code{list(text=, align=, bold=, italic=, underline=, color=, border=, row_height_twips=)}. An empty
 string (\code{""}) is a blank row. The block renders as a single-column table the
-same width as the content; title rows default to centred + bold.
+same width as the content; title rows default to centred + bold.  A row's
+\code{row_height_twips} is that row's height, over the block's
+\code{row_height_twips}; it applies to the table form
+(\code{rtf_default_format(title_format = "table")}), as the block's does.
 }
 \examples{
 df1 <- data.frame(Parameter = "Age", Value = "75.1")

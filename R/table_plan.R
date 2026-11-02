@@ -2861,6 +2861,8 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   (clipped) rather than a minimum.
 #' @param cell_padding_left_twips,cell_padding_right_twips The cells' left
 #'   and right padding, in twips.
+#' @param cell_padding_top_twips,cell_padding_bottom_twips The cells' top
+#'   and bottom padding, in twips ([rtftable()]'s).
 #' @param cell_valign The cells' vertical alignment: `"bottom"` (default),
 #'   `"top"` or `"center"`.
 #' @param table_align Where the table sits across the page: `"left"`
@@ -2908,7 +2910,9 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
                        header_row_height_twips = NULL,
                        blank_row_height_twips = NULL,
                        cell_padding_left_twips = NULL,
-                       cell_padding_right_twips = NULL, cell_valign = NULL,
+                       cell_padding_right_twips = NULL,
+                       cell_padding_top_twips = NULL,
+                       cell_padding_bottom_twips = NULL, cell_valign = NULL,
                        table_align = NULL, markup = NULL,
                        blank_row_normalize = NULL,
                        border_header = NULL, border_spanning = NULL,
@@ -2947,6 +2951,8 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
          blank_row_height_twips = blank_row_height_twips,
          cell_padding_left_twips = cell_padding_left_twips,
          cell_padding_right_twips = cell_padding_right_twips,
+         cell_padding_top_twips = cell_padding_top_twips,
+         cell_padding_bottom_twips = cell_padding_bottom_twips,
          cell_valign = cell_valign, table_align = table_align,
          markup = markup, blank_row_normalize = blank_row_normalize,
          table_width_twips = table_width_twips,

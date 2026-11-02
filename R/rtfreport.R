@@ -199,7 +199,10 @@
 #'     \item{`c`}{centred text}
 #'     \item{`r`}{right-aligned text}
 #'   }
-#'   e.g. `c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")`. Cell text may
+#'   e.g. `c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")`.  A row may
+#'   also be a list, `list(columns = c(l = , c = , r = ), row_height_twips =
+#'   400L)`, whose `row_height_twips` is that row's height (over the band's
+#'   `row_height_twips`).  Cell text may
 #'   contain **page-number tokens** that the renderer substitutes: `{AUTO_PAGE}`
 #'   (the current page, updated live by the viewer), `{AUTO_TOTAL_PAGES}` (the
 #'   document total), and `{PAGE}` / `{TOTAL_PAGES}` (static numbers baked in at
@@ -233,6 +236,11 @@
 #'   on the left / right side of each header (or footer) cell, matching the
 #'   content-table convention. `NULL` (default) reads from
 #'   `inst/resources/rtfreporter_defaults.R` (0L for both since v0.0.21).
+#' @param cell_padding_top_twips,cell_padding_bottom_twips Integer cell padding
+#'   above / below the text of each header (or footer) cell, in twips, written
+#'   into the cell definitions.  `NULL` (default) inherits the document default
+#'   ([rtf_default_format()]), else the resource baseline (0); 0 writes
+#'   nothing.
 #'
 #' @param drop_empty_rows Logical. `TRUE`: a row whose tokens of one's own
 #'   (`rtf_document(tokens = )`, `options(rtfreporter.tokens = )`) are all
@@ -263,6 +271,8 @@ rtf_header <- function(rows,
                         markup                   = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL,
+                        cell_padding_top_twips    = NULL,
+                        cell_padding_bottom_twips = NULL,
                         drop_empty_rows          = FALSE) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
     stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
@@ -280,6 +290,10 @@ rtf_header <- function(rows,
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
        cell_padding_right_twips = cell_padding_right_twips,
+       cell_padding_top_twips    =
+         .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
+       cell_padding_bottom_twips =
+         .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
        drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
 }
 
@@ -289,7 +303,12 @@ rtf_header <- function(rows,
 .check_hf_row_names <- function(rows, fn) {
   for (i in seq_along(rows)) {
     row <- rows[[i]]
-    if (is.list(row) && !is.null(row$columns)) row <- row$columns
+    if (is.list(row) && !is.null(row$columns)) {
+      # a row's own height, over the band's (#125), checked as a height is
+      .check_row_height(row$row_height_twips,
+                        sprintf("%s()` row %d's `row_height_twips", fn, i))
+      row <- row$columns
+    }
     nm <- names(row)
     bad <- setdiff(nm[!is.na(nm) & nzchar(nm)], c("l", "c", "r"))
     if (length(bad)) {
@@ -322,6 +341,8 @@ rtf_footer <- function(rows,
                         markup                   = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL,
+                        cell_padding_top_twips    = NULL,
+                        cell_padding_bottom_twips = NULL,
                         drop_empty_rows          = FALSE) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
     stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
@@ -339,6 +360,10 @@ rtf_footer <- function(rows,
        row_height_twips         = row_height_twips,
        cell_padding_left_twips  = cell_padding_left_twips,
        cell_padding_right_twips = cell_padding_right_twips,
+       cell_padding_top_twips    =
+         .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
+       cell_padding_bottom_twips =
+         .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
        drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
 }
 
