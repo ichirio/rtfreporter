@@ -56,7 +56,8 @@ title).  Each content is a page of its own unless it was added with
 Each element is a title \strong{block}: either a character vector (one entry per
 row, default styling) or a list of rows, where a row is a string or a styled
 \code{list(text=, align=, bold=, italic=, underline=, color=, border=, row_height_twips=)}. An empty
-string (\code{""}) is a blank row. The block renders as a single-column table the
+string (\code{""}) is a blank row. The block renders as centred paragraphs, or,
+with \code{rtf_style(title_format = "table")}, as a single-column table the
 same width as the content; title rows default to centred + bold.  A row's
 \code{row_height_twips} is that row's height, over the block's
 \code{row_height_twips}; it applies to the table form

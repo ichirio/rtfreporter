@@ -2353,7 +2353,7 @@
 #' @param overwrite Logical; whether to write over an existing file.  `TRUE`
 #'   (the default since 0.8.2.9039): a report program is run again and again,
 #'   as `write.csv()` and `ggsave()` write over theirs.  `FALSE` stops when the
-#'   file is there.
+#'   file is there.  Anything but `TRUE` or `FALSE` is an error.
 #' @param program Overrides, for this one file, the program the document
 #'   names (`rtf_document(program = )`, where a program says it once), for
 #'   the `{PROGRAM}` tokens (see *Run tokens*).  `NULL` (default) uses the
@@ -2479,6 +2479,10 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
   if (!is.character(file_path) || length(file_path) != 1L || is.na(file_path) ||
       !nzchar(file_path)) {
     stop("`file_path` must be a single string: the RTF file's path.", call. = FALSE)
+  }
+  # "yes" or NA used to be read as FALSE without a word
+  if (!is.logical(overwrite) || length(overwrite) != 1L || is.na(overwrite)) {
+    stop("`overwrite` must be TRUE or FALSE.", call. = FALSE)
   }
   # the run tokens' context, for this call only
   if (is.null(program) && inherits(report, "rtf_document")) {
