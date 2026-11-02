@@ -2989,6 +2989,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # A column is one cell, with no rows to label, so a named vector is a map
   # (`c(stats_t_test = "{p.value:.3f}", default = ...)`): keyed by context,
   # kind or `default`, it picks one test of several and leaves the others.
+  # Each column is checked here, so widen_ard(compare = ) says it too (#866).
+  for (k in nm) .plan_check_cell_rule(cols[[k]], "plan_compare", k)
   cols <- lapply(cols, function(m) {
     if (is.character(m) && !is.null(names(m)) && all(nzchar(names(m)))) as.list(m) else m
   })

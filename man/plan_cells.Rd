@@ -29,7 +29,16 @@ before its context or kind; a record that went whole to \code{.others}
 takes its variable's, then its context's or kind's, its group's only
 after them.  The names of the arguments after \code{...} are reserved: a
 variable called \code{stats}, \code{value}, \code{na} or \code{notes} cannot be keyed
-here; name it otherwise in the ARD.}
+here; name it otherwise in the ARD.
+
+An unnamed vector of several templates, \code{c("{n} ({p})", "{n}")}, is
+one row: the first template whose statistics the record has wins, as
+with guards.  A template with no token prints as written, so a
+constant cell is text (\code{"-"}, and \code{""} an empty cell).  A list
+holds the same things (\code{list(n = "{N}", Mean = "{mean}")} is the
+named vector).  Anything else --- \code{NULL}, \code{NA}, a number, \code{TRUE}, a
+factor, \code{character(0)}, a template that is \code{NA} --- stops at the verb,
+naming the key.}
 
 \item{stats}{\code{"cells"} (default) fills a template per cell; \code{"rows"}
 makes each statistic a row of its own (no template).}
