@@ -170,10 +170,20 @@ listing_split_after <- function(text, sep) {
     stop("`listing_split_after()`: `sep` must be one string, or NULL.", call. = FALSE)
   }
   if (is.null(sep) || !nzchar(sep)) return(text)
-  # \Q...\E quotes the separator, so a "." or a "|" separator is a literal and
-  # the lookbehind stays fixed-width.  (Written this way rather than with an
-  # escaping gsub(): backreferences are unreliable in some R builds.)
-  parts <- strsplit(text, paste0("(?<=\\Q", sep, "\\E)"), perl = TRUE)[[1L]]
+  # A fixed-string search, so every separator is a literal: a "." or a "|",
+  # and a "\E" too, which ended the \Q...\E quote the regular expression used
+  # before.
+  parts <- character(0)
+  rest  <- text
+  n_sep <- nchar(sep, type = "chars")
+  repeat {
+    at <- regexpr(sep, rest, fixed = TRUE)
+    if (at < 0L) break
+    end   <- at + n_sep - 1L
+    parts <- c(parts, substr(rest, 1L, end))
+    rest  <- substr(rest, end + 1L, nchar(rest, type = "chars"))
+  }
+  if (nzchar(rest)) parts <- c(parts, rest)
   if (!length(parts)) text else parts
 }
 
