@@ -46,8 +46,8 @@
 
 | | Count |
 |---|---|
-| User requirements | `<15>` |
-| UAT cases | `<16>` |
+| User requirements | `<29>` |
+| UAT cases | `<30>` |
 | Passed | `<n>` |
 | Failed | `<n>` |
 | Deviations accepted | `<n>` |
