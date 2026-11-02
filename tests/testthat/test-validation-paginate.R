@@ -90,40 +90,14 @@
 #  axis) and plan_paginate_rows() + plan_paginate_cols(order = ).  FR-TB279
 #  FR-PL461 FR-PL467 FR-TB280.
 #
-#  Not tested here -- the code and an FR or the roxygen disagree (reported,
-#  the code unchanged):
-#    - counted blank rows (plan_blanks(counted = TRUE), as_rtftables(
-#      count_blank_rows = TRUE)) with the group splits:
-#        * with group_col left NULL the blank markers empty column 1 before
-#          the groups are read, the column reads as "filled" and every row is
-#          a group of its own: group_safe and group_force cut inside a group
-#          with no continuation row (FR-PL433, FR-IX324; the #330 fix applies
-#          to a named group_col only);
-#        * in a value-grouped column a separator joins the group before it,
-#          so a group that fits alone is still cut (its separator would fall
-#          on the page edge, where FR-IX324 says it never prints), and a
-#          group whose only row left is that separator gets a continuation
-#          row ("A (Cont.)" over B's rows; FR-PL433, FR-TB137).
-#    - plan_blanks(where = "between_groups") on a page that opens with a
-#      continuation row puts a blank row after it, as if "B (Cont.)" and B's
-#      rows were two groups (FR-PL192 says between groups).  The check below
-#      leaves that one position out.
-#    - a plain as_rtftables(split = "by_value") page records no page_group
-#      (only page_by + by_value does), so paginate_cols(order = ) has no group
-#      axis for it and "across" interleaves the groups' pages with the column
-#      blocks (FR-TB279; the roxygen says the value split is the group axis).
-#    - rtftable() fills the columns a spanner row leaves uncovered with an
-#      empty cell, and allow_span_break = FALSE stops on a cut inside that
-#      empty cell too (FR-TB282, FR-TB289 speak of a spanning header cell).
-#      Hence one labelled cell over every block in (A).
-#    - paginate_cols(order = )'s @param says "across" advances the page
-#      number across the columns first and "down" down the rows; the code,
-#      the *Page order* section and FR-TB279 do the reverse ("across" =
-#      group > cols > rows: the row pages of a block come one after another).
-#    - plan_paginate_rows(min_group_rows = )'s roxygen says "the fewest rows
-#      of a group left on a page"; in a value-grouped column the first row is
-#      the group's header, so a group needs min_group_rows rows after it
-#      (FR-TB138: "child rows").
+#  (E) The cases #824 fixed, one named test each: FT-PL928 counted blank rows
+#  with the group splits (the groups read as without them, with group_col
+#  NULL too; a separator costs a row only between two groups on one page, so
+#  a group that fits is not cut and no "A (Cont.)" opens B's page); FT-PL929
+#  no between_groups blank after a continuation row; FT-TB703 a plain value
+#  split is the group axis of order; FT-TB704 allow_span_break = FALSE skips
+#  the empty filler cell; FT-TB705 "across" / "down" as the help now words
+#  them; FT-PL930 min_group_rows counts the rows after a group's first.
 # ---------------------------------------------------------------------------
 
 # ---- helpers -----------------------------------------------------------------
@@ -383,12 +357,12 @@ test_that("FT-PL927 [FR-PL433 FR-PL435 FR-PL436 FR-PL437 FR-PL192 FR-TB137 FR-IX
       if (r$split == "group_force" && r$mgr == 0L && !last_of_period) {
         expect_identical(nrow(p$data), r$max, label = lk)
       }
-      # the blank rows sit where the group changes (one after a continuation
-      # row is left out, see the design)
+      # the blank rows sit where the group changes, never after a
+      # continuation row (#824)
       g <- grp(p)
       want_b <- if (r$blanks == "none") integer(0) else which(g[-1L] != g[-length(g)])
       got_b <- as.integer(p$blank_rows %||% integer(0))
-      expect_identical(setdiff(got_b, cont_rows), as.integer(want_b), label = paste(lk, "blanks"))
+      expect_identical(got_b, as.integer(want_b), label = paste(lk, "blanks"))
     }
     # group_safe never cuts a group that fits
     if (r$split == "group_safe") {
@@ -486,4 +460,107 @@ test_that("FT-TB702 [FR-TB279 FR-PL461 FR-PL467 FR-TB280]: decision table -- the
                      if (o == "across") c("r01:X1", "r04:X1", "r01:Y1", "r04:Y1") else c("r01:X1", "r01:Y1", "r04:X1", "r04:Y1"),
                      label = o)
   }
+})
+
+# ---- (E) the cases #824 fixed --------------------------------------------------
+
+# A page as text with its blank rows: "_" after the row a blank follows.
+.vp_layb <- function(pg) {
+  paste(vapply(pg, function(p) {
+    d <- p$data
+    s <- ifelse(nzchar(d$R), d$R, paste0(sub(" (Cont.)", "", d$G, fixed = TRUE), "+"))
+    b <- p$blank_rows %||% integer(0)
+    b <- b[b >= 1L & b <= length(s)]
+    s[b] <- paste0(s[b], "_")
+    paste(s, collapse = " ")
+  }, ""), collapse = " | ")
+}
+
+test_that("FT-PL928 [FR-PL433 FR-TB137 FR-TB138 FR-IX324]: counted blank rows with the group splits -- the groups are read as without them, a separator costs a row only between two groups on one page", {
+  dt <- data.frame(
+    split = rep(c("group_safe", "group_force"), each = 4),
+    max   = rep(c(3, 3, 4, 4), 2),
+    mgr   = rep(c(0, 2), 4),
+    want  = c(
+      # group_safe: A (3 rows) fits a page of 3 and is not cut; no "A (Cont.)"
+      "r01 r02 r03 | r04 r05 r06 | B+ r07 r08 | r09 r10 | r11 r12 r13 | D+ r14",
+      "r01 r02 r03 | r04 r05 r06 | B+ r07 r08 | r09 r10 | r11 r12 | D+ r13 r14",
+      "r01 r02 r03 | r04 r05 r06 r07 | B+ r08 | r09 r10 | r11 r12 r13 r14",
+      "r01 r02 r03 | r04 r05 r06 | B+ r07 r08 | r09 r10 | r11 r12 r13 r14",
+      # group_force: a separator between two groups on a page is counted
+      "r01 r02 r03 | r04 r05 r06 | B+ r07 r08 | r09 r10 | r11 r12 r13 | D+ r14",
+      "r01 r02 r03 | r04 r05 r06 | B+ r07 r08 | r09 r10 | r11 r12 | D+ r13 r14",
+      "r01 r02 r03 | r04 r05 r06 r07 | B+ r08_ r09 | C+ r10_ r11 | D+ r12 r13 r14",
+      "r01 r02 r03 | r04 r05 r06 | B+ r07 r08 | r09 r10 | r11 r12 r13 r14"),
+    stringsAsFactors = FALSE)
+  for (i in seq_len(nrow(dt))) {
+    r <- dt[i, ]
+    label <- paste(r$split, r$max, r$mgr, sep = " / ")
+    for (gc in list("G", NULL)) {
+      lab <- paste(label, if (is.null(gc)) "group_col NULL" else "group_col G")
+      pg <- as_rtftables(.vp_recs(), split = r$split, max_rows = r$max, group_col = gc,
+                         blank_rows = "between_groups", count_blank_rows = TRUE, min_group_rows = r$mgr)
+      expect_identical(.vp_layb(pg), r$want, label = lab)
+      # every page prints no more than max_rows rows, blanks included
+      printed <- vapply(pg, function(p) nrow(p$data) + length(p$blank_rows %||% integer(0)), 0)
+      expect_true(all(printed <= r$max), label = lab)
+    }
+  }
+})
+
+test_that("FT-PL929 [FR-PL192 FR-TB137]: between_groups puts no blank row after a continuation row", {
+  pg <- as_rtftables(.vp_recs(), split = "group_force", max_rows = 4, group_col = "G",
+                     blank_rows = "between_groups", min_group_rows = 0)
+  expect_identical(.vp_layb(pg), "r01 r02 r03_ r04 | B+ r05 r06 r07 | B+ r08_ r09 r10 | r11 r12 r13 r14")
+  pg <- table_plan(.vp_recs()) |> plan_row_group(group_col = "G") |>
+    plan_paginate_rows(max_rows = 4, split = "group_force", min_group_rows = 0) |>
+    plan_blanks(where = "between_groups") |> plan_apply()
+  expect_identical(.vp_layb(pg), "r01 r02 r03_ r04 | B+ r05 r06 r07 | B+ r08_ r09 r10 | r11 r12 r13 r14")
+})
+
+test_that("FT-TB703 [FR-TB279]: a plain value split is the group axis of paginate_cols(order = )", {
+  d <- .vp_both()[-1L]
+  rp <- as_rtftables(d, split = "by_value", group_col = "GRP", max_rows = 2)
+  expect_identical(vapply(rp, function(p) attr(p$data, "rtf_paginate_meta")$page_group, ""),
+                   c(G1...1 = "G1", G1...2 = "G1", G2 = "G2"))
+  sig <- function(o) unname(vapply(paginate_cols(rp, every = 2, keep = 1:2, order = o), function(p) {
+    paste0(p$data$GRP[1L], ":", names(p$data)[ncol(p$data) - 1L])
+  }, ""))
+  # the group outermost: G1's pages, then G2's, whatever the inner order
+  expect_identical(sig("across"), c("G1:X1", "G1 (Cont.):X1", "G1:Y1", "G1 (Cont.):Y1", "G2:X1", "G2:Y1"))
+  expect_identical(sig("down"), c("G1:X1", "G1:Y1", "G1 (Cont.):X1", "G1 (Cont.):Y1", "G2:X1", "G2:Y1"))
+  expect_identical(sig("cols"), c("G1:X1", "G1 (Cont.):X1", "G2:X1", "G1:Y1", "G1 (Cont.):Y1", "G2:Y1"))
+})
+
+test_that("FT-TB704 [FR-TB282 FR-TB289]: allow_span_break = FALSE does not stop on the empty cell under the columns no spanner covers", {
+  d <- data.frame(ROW = c("a", "b"), A1 = "1", A2 = "2", B1 = "3", B2 = "4", B3 = "5")
+  t <- rtftable(d, col_header = list(list(col_cell(2:3, "Span A")), names(d)))
+  pg <- paginate_cols(t, at = "B2", allow_span_break = FALSE)
+  expect_identical(lapply(pg, function(p) names(p$data)), list(c("ROW", "A1", "A2", "B1"), c("ROW", "B2", "B3")))
+  expect_error(paginate_cols(t, at = "A2", allow_span_break = FALSE),
+               "would break the spanning header cell 'Span A'")
+})
+
+test_that("FT-TB705 [FR-TB279]: order = \"across\" takes one column block after another, \"down\" one row page after another", {
+  # two row pages (page_by) x three column blocks, as the help draws them
+  d <- data.frame(PER = rep(c("P1", "P2"), each = 2), R = sprintf("r%02d", 1:4),
+                  X1 = "x", X2 = "x", Y1 = "y", Y2 = "y", Z1 = "z", Z2 = "z")
+  rp <- as_rtftables(d, page_by = "PER")
+  sig <- function(o) unname(vapply(paginate_cols(rp, every = 2, keep = 1:2, order = o), function(p) {
+    paste0(substr(names(p$data)[3L], 1L, 1L), "/", p$data$PER[1L])
+  }, ""))
+  expect_identical(sig("across"), c("X/P1", "X/P2", "Y/P1", "Y/P2", "Z/P1", "Z/P2"))
+  expect_identical(sig("down"), c("X/P1", "Y/P1", "Z/P1", "X/P2", "Y/P2", "Z/P2"))
+})
+
+test_that("FT-PL930 [FR-TB138 FR-PL435]: min_group_rows counts a group's rows after its first row", {
+  # B (r04..r08) starts on a page of 5 with two rows, r04 and r05: one after its
+  # first row, so min_group_rows = 2 moves it and 1 leaves it
+  lay <- function(mgr) {
+    .vp_lay(table_plan(.vp_recs()) |>
+              plan_paginate_rows(max_rows = 5, split = "group_force", min_group_rows = mgr) |>
+              plan_apply())
+  }
+  expect_identical(lay(2), "r01 r02 r03 | r04 r05 r06 r07 r08 | r09 r10 r11 r12 | D+ r13 r14")
+  expect_identical(lay(1), "r01 r02 r03 r04 r05 | B+ r06 r07 r08 | r09 r10 r11 r12 r13 | D+ r14")
 })

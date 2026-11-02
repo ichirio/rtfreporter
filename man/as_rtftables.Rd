@@ -278,10 +278,12 @@ group-aware splits), marking a continued group.}
 \item{min_group_rows}{Integer (default \code{2}).  Widow/orphan control for the
 group-aware splits (\code{"group_force"}, \code{"group_safe"}, \code{"by_value"}): when a
 page would end on a group that \emph{starts} on that page while showing fewer
-than \code{min_group_rows} of the group's child rows, the whole group is moved
-to the next page.  This prevents a lone group header being stranded at the
-foot of a page with none (or too few) of its members.  Set to \code{0} to
-disable (the previous behaviour).}
+than \code{min_group_rows} of the group's child rows (the rows after its first
+row), the whole group is moved to the next page; and a cut inside a group
+is pulled back so at least \code{min_group_rows} of its rows go on to the next
+page.  This prevents a lone group header being stranded at the foot of a
+page with none (or too few) of its members.  Set to \code{0} to disable (the
+previous behaviour).}
 
 \item{blank_rows}{Where to insert blank separator rows in the body.  \code{NULL}
 (default) inserts none (but an \code{rtf_blank_rows} attribute already on the

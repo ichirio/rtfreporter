@@ -84,7 +84,9 @@ This is the place to put it: a header written for the whole table does
 after the split (\code{set_col_header()} on the page list) is an error.}
 
 \item{allow_span_break}{Allow a cut inside a spanning header cell. Default
-\code{TRUE}.}
+\code{TRUE}.  \code{FALSE} stops on a cut inside a labelled cell; an empty cell
+(such as the one \code{rtftable()} fills the columns no spanner covers with)
+is not checked.}
 
 \item{fit}{How relative widths are rescaled after the split.  \code{TRUE}
 (default) fixes the twips-per-ratio unit on \strong{page 1} and reuses it on
@@ -101,10 +103,12 @@ split, outermost first.
 pages -- \code{page_by} and every other row split) and \code{"cols"} (the
 column blocks this verb cuts).  Axes left out are appended in that
 default order, and an axis the table does not have never varies.}
-\item{\code{"across"}}{(default) is \code{c("group", "cols", "rows")} -- the page
-number advances across the columns first.}
-\item{\code{"down"}}{is \code{c("group", "rows", "cols")}, advancing down the
-rows.}
+\item{\code{"across"}}{(default) is \code{c("group", "cols", "rows")} -- the
+column block is the outer axis: all the row pages of the first block,
+then those of the next.}
+\item{\code{"down"}}{is \code{c("group", "rows", "cols")} -- the row page is the
+outer axis: all the column blocks of the first row page, then those
+of the next.}
 }
 The two are kept as shorthands.  The pages themselves are identical
 whatever the order; only the sequence differs.  See \emph{Page order}.
@@ -122,10 +126,11 @@ the row pagination \code{\link[=as_rtftables]{as_rtftables()}} performs -- repea
 column(s) on every page so each one can be read on its own.
 
 Row splitting happens first; this verb then splits the resulting pages, and
-\code{order} says which axis the \strong{page number advances along first} --
-\code{"across"} the columns (the default: the column block advances, the row
-pages running inside it) or \code{"down"} the rows (the row page advances, its
-column blocks following it). Two row pages by three column blocks come out
+\code{order} says which axis is the \strong{outer} one --
+\code{"across"} the columns (the default: one column block after another, the
+row pages of a block coming one after the other inside it) or \code{"down"} the
+rows (one row page after another, its column blocks coming one after the
+other inside it). Two row pages by three column blocks come out
 as \code{col1/row1}, \code{col1/row2}, \code{col2/row1}, ... under \code{"across"} and
 \code{row1/col1}, \code{row1/col2}, \code{row1/col3}, \code{row2/col1}, ... under \code{"down"}.
 A \strong{group} is above both: see \emph{Page order}.
