@@ -27,7 +27,7 @@
 #   show_keys: a column key refused                         | FR-PL132    | FT-PL053
 #   stat: the frame's own names for the three parts; guards | FR-PL114/128/129 | FT-PL022, FT-PL052
 #   value: a records plan; guards                           | FR-PL902    | FT-PL904
-#   value: two records of one key and column stop           | issue #835  | --
+#   value: two records of one key and column stop (#835)    | FR-PL943    | FT-PL952
 #   roles only: the other settings belong to the verbs      | FR-PL101    | FT-PL001
 #   no x / a role not a column / no cols with a group       | FR-PL125/127/131 | FT-PL021, FT-PL008, FT-PL041
 #
@@ -122,7 +122,8 @@
 #   split = a function of one's own                         | FR-PL939    | FT-PL948
 #   page_by first, the budget within; heading / heading_at  | FR-PL437-439| FT-PL235, FT-PL256, FT-PL257
 #   several page_by: a token per column, no {value}         | FR-PL938, FR-PL442 (corrected) | FT-PL947
-#   max_rows left with the default split: one page, no word | issue #836  | --
+#   max_rows, split left out: "group_safe" (#836); "none"   | FR-PL944, FR-PL446 | FT-PL953
+#     written out with max_rows stops                       |             |
 #
 # plan_paginate_cols()
 #   at / every / keep / fit / order / col_header            | FR-PL461-467| FT-PL258, FT-PL259, FT-PL288
@@ -403,4 +404,44 @@ test_that("FT-PL951 [FR-PL942]: plan_paginate_group(heading = ) leaves {PROGRAM}
                                             heading = "{value} {PROGRAM} {DATETIME} {PAGE}"))
   expect_identical(names(pages), c("ALT {PROGRAM} {DATETIME} {PAGE}",
                                    "AST {PROGRAM} {DATETIME} {PAGE}"))
+})
+
+test_that("FT-PL952 [FR-PL943]: table_plan(value = ): two records of one key and column stop, naming them", {
+  rec <- data.frame(USUBJID = c("S1", "S1", "S2"), AGE = c(30, 30, 41),
+                    VIS = c("W1", "W1", "W1"), AVAL = c(1, 2, 3))
+  tab <- function(d, rows) {
+    plan_apply(table_plan(d, cols = "VIS", rows = rows, value = "AVAL") |>
+                 plan_cells("{value}"), "table")
+  }
+  # a plain key and a template over the record: both stop, the key as resolved
+  err <- expect_error(tab(rec, c(subject = "USUBJID")), "Two rows reach one cell")
+  expect_match(conditionMessage(err), "subject = 'S1', column 'W1'", fixed = TRUE)
+  expect_match(conditionMessage(err), "'1', '2'", fixed = TRUE)
+  expect_match(conditionMessage(err), "two records of one key and column", fixed = TRUE)
+  err <- expect_error(tab(rec, c(subject = ~ "{USUBJID}/{AGE}")), "Two rows reach one cell")
+  expect_match(conditionMessage(err), "subject = 'S1/30', column 'W1'", fixed = TRUE)
+  # the same value twice is one value; a column that tells them apart passes
+  same <- rec
+  same$AVAL <- c(1, 1, 3)
+  expect_identical(tab(same, c(subject = "USUBJID"))$W1, c("1", "3"))
+  apart <- rec
+  apart$VIS <- c("W1", "W2", "W1")
+  out <- tab(apart, c(subject = "USUBJID"))
+  expect_identical(out$W2[out$subject == "S1"], "2")
+})
+
+test_that("FT-PL953 [FR-PL944]: plan_paginate_rows(max_rows = ) with the split left out is group_safe; with \"none\" it stops", {
+  t9 <- data.frame(G = rep(c("a", "b", "c"), each = 3), V = 1:9)
+  alone <- plan_apply(table_plan(t9) |> plan_paginate_rows(max_rows = 4))
+  safe <- plan_apply(table_plan(t9) |> plan_paginate_rows(max_rows = 4, split = "group_safe"))
+  expect_gt(length(alone), 1L)
+  expect_identical(.ap_nrows(alone), .ap_nrows(safe))
+  expect_identical(lapply(alone, `[[`, "data"), lapply(safe, `[[`, "data"))
+  expect_identical(rtfreporter:::.plan_rtf_args(
+    table_plan(t9) |> plan_paginate_rows(max_rows = 4))$split, "group_safe")
+  expect_error(plan_apply(table_plan(t9) |> plan_paginate_rows(max_rows = 4, split = "none")),
+               "plan_paginate_rows(max_rows = 4) has no effect with split = 'none'.", fixed = TRUE)
+  # no budget, no split: the split stays the default, "none"
+  expect_null(rtfreporter:::.plan_rtf_args(
+    table_plan(t9) |> plan_paginate_rows(min_group_rows = 0))$split)
 })
