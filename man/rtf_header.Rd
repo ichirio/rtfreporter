@@ -66,14 +66,17 @@ header). Use \code{rtf_border(top = TRUE)} for a horizontal dividing line (defau
 for footer).}
 
 \item{width_twips}{Integer. Table width in twips. \code{NULL} (default) uses the
-full writable width (page width minus margins).}
+full writable width (page width minus margins).  A value that is not one
+non-negative integer is an error.}
 
 \item{width}{Band width in the shared vocabulary: \code{"page"} (the writable
 width, the default), a fraction in \verb{(0, 1]} of it, or twips. \code{width_twips}
 is the older absolute-only form and wins when both are given.}
 
-\item{row_height_twips}{Integer. Row height in twips. \code{NULL} (default) reads
-the value from \code{inst/resources/rtfreporter_defaults.R}.}
+\item{row_height_twips}{Integer. Row height in twips. \code{NULL} (default)
+inherits the document's row height (its \code{\link[=rtf_style]{rtf_style()}}, else the
+\code{rtfreporter.row_height_twips} option), else the height the band's font
+size implies.  A value that is not one non-negative integer is an error.}
 
 \item{font_size_half_points}{Font size for this band, in half-points.
 \code{NULL} (default) inherits the document size. Setting it also recomputes
@@ -90,8 +93,9 @@ document setting. See \code{\link[=rtftable]{rtftable()}}.}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Integer cell padding
 on the left / right side of each header (or footer) cell, matching the
-content-table convention. \code{NULL} (default) reads from
-\code{inst/resources/rtfreporter_defaults.R} (0L for both since v0.0.21).}
+content-table convention. \code{NULL} (default) inherits the document's
+\code{\link[=rtf_style]{rtf_style()}}, else the resource baseline (0).  A value that is not one
+non-negative integer is an error.}
 
 \item{cell_padding_top_twips, cell_padding_bottom_twips}{Integer cell padding
 above / below the text of each header (or footer) cell, in twips, written
@@ -112,8 +116,9 @@ without it.  \code{FALSE} (default): every row is written.}
 colour is added to the document's colour table.}
 }
 \value{
-A named list with elements \code{rows}, \code{border}, \code{width_twips}, and
-\code{row_height_twips}.
+A named list of the band's settings, one element per argument
+(\code{rows}, \code{border}, \code{width_twips}, \code{width}, \code{row_height_twips}, ...), for
+\code{\link[=rtf_section]{rtf_section()}}\verb{(header = , footer = )}.
 }
 \description{
 \code{rtf_header()} and \code{rtf_footer()} create structured header/footer objects

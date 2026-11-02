@@ -124,8 +124,10 @@
 #' `rtf_document(font_table = list(list(name = c(latin = "Times New Roman",
 #' east_asian = "MS Mincho"))), font_lang = c(east_asian = "ja"))`.
 #'
-#' @return An `rtf_document` S3 object: a list with `document`
-#'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
+#' @return An `rtf_document` S3 object: a list with `document` (the
+#'   settings given here: `font_table`, `font_lang`, `color_table`, `page`,
+#'   `default_format`, `style`, `watermark`, `program`, `program_fallback`,
+#'   `tokens` and `file`),
 #'   `contents` (filled by [rtf_tables()] / [rtf_figures()]: one block per
 #'   content, each with its own title and footnote; [rtf_layout()] shows how
 #'   they fall on the pages), and `sections` (filled by [rtf_section()]).
@@ -822,7 +824,8 @@ rtf_figures <- function(doc, figures,
 #' row, default styling) or a list of rows, where a row is a string or a styled
 #' `list(text=, align=, bold=, italic=, underline=, color=, border=,
 #' row_height_twips=)`. An empty
-#' string (`""`) is a blank row. The block renders as a single-column table the
+#' string (`""`) is a blank row. The block renders as centred paragraphs, or,
+#' with `rtf_style(title_format = "table")`, as a single-column table the
 #' same width as the content; title rows default to centred + bold.  A row's
 #' `row_height_twips` is that row's height, over the block's
 #' `row_height_twips`; it applies to the table form
@@ -1089,8 +1092,10 @@ rtf_section <- function(doc, page = NULL, secinfo = NULL, header = NULL,
   # Handle single vs. multiple sections
   if (length(page) == 1) {
     # Single section
-    if (is.list(secinfo) && !is.null(secinfo$header) || !is.null(secinfo$footer)) {
-      # secinfo is a single section
+    if (is.list(secinfo) && (!is.null(secinfo$header) || !is.null(secinfo$footer) ||
+                             "watermark" %in% names(secinfo))) {
+      # secinfo is a single section (a watermark alone is one too:
+      # list(watermark = NA) switches the document's off for the section)
       doc_copy$sections[[page]] <- secinfo
     } else if (is.list(secinfo) && length(secinfo) > 0 &&
                (is.list(secinfo[[1]]) || is.null(secinfo[[1]]))) {
