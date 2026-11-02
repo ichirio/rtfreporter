@@ -321,16 +321,18 @@
 # value's, then the context's, the kind's and the default.
 # Returns list(entry, filled = the entry without the values' digits, check =
 # whether a row can reach that entry, so its open tokens need an answer).
-.plan_fill_keyed <- function(entry, dig, rk, sel, v, ctx, knd, variable = TRUE) {
+.plan_fill_keyed <- function(entry, dig, rk, sel, v, ctx, knd, variable = TRUE,
+                             group = NA_character_, whole = FALSE) {
   plain  <- dig[setdiff(names(dig), rk)]
-  filled <- .plan_fill_entry(entry, .plan_pick(plain, v, ctx, knd))
+  filled <- .plan_fill_entry(entry, .plan_pick(plain, v, ctx, knd, group, whole))
   out <- list(entry = filled, filled = filled, check = TRUE)
   if (is.null(entry) || !length(rk)) return(out)
   # `v` an analysis variable: its own digits come before the value's; a
   # key of the cells map (`continuous`) comes after them
   own <- variable && !is.na(v) && v %in% names(plain)
-  rest <- if (own) .plan_pick(plain[setdiff(names(plain), v)], NA_character_, ctx, knd)
-          else .plan_pick(plain, v, ctx, knd)
+  rest <- if (own) .plan_pick(plain[setdiff(names(plain), v)], NA_character_, ctx, knd,
+                              group, whole)
+          else .plan_pick(plain, v, ctx, knd, group, whole)
   own <- if (own) list(plain[[v]]) else list()
   guards <- list()
   for (k in rk) {
@@ -344,7 +346,7 @@
     if (length(seen) && all(seen %in% vals)) out$check <- FALSE
   }
   if (!length(guards)) return(out)
-  base <- .plan_pick(plain, v, ctx, knd)
+  base <- .plan_pick(plain, v, ctx, knd, group, whole)
   one_chain <- function(ch) {
     if (inherits(ch, "formula")) ch <- list(ch)
     els <- list()
@@ -3745,15 +3747,26 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
             else character(0)
     vars <- vars[!is.na(vars)]
     # A variable plan_stat_groups() splits is looked up by its record's
-    # group when the cells are made: pinning it here by its context or kind
-    # (a study's `categorical`) would shadow the group's template.
-    split <- if (length(s_args$stat_groups)) {
-      .ard_stat_groups_opts(s_args$stat_groups)$variables %||% vars
-    } else character(0)
+    # group: its entry is pinned per group (.ard_group_key()), since pinning
+    # it to the variable by its context or kind (a study's `categorical`)
+    # would shadow the group's template.  A record that went whole to
+    # `.others` reads its group after its context and kind (FR-PL239).
+    split <- character(0)
+    xgrp <- rep(NA_character_, nrow(x))
+    others <- NA_character_
+    if (length(s_args$stat_groups)) {
+      sg_op <- .ard_stat_groups_opts(s_args$stat_groups)
+      split <- sg_op$variables %||% vars
+      others <- sg_op$others %||% NA_character_
+      if ("stat_name" %in% names(x)) {
+        xgrp <- unname(.ard_stat_groups(s_args$stat_groups)[as.character(x$stat_name)])
+      }
+    }
     # digits keyed by a row key's value (plan_digits(PARAMCD = c(ALT = 1)))
     rk <- .plan_row_key_digits(dig, x, vars)
     filled <- list()
-    for (v in setdiff(vars, split)) {
+    for (v in vars) {
+      is_split <- v %in% split
       sel <- body & x$variable == v
       # One entry per SUMMARY -- a variable under one context.  A variable
       # both summarised and tabulated is two summaries, and pinning the
@@ -3767,11 +3780,17 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
         s2  <- sel & (if (is.null(x$context)) TRUE else if (is.na(ctx)) is.na(x$context) else
                         (!is.na(x$context) & x$context == ctx))
         knd <- .ard_first_seen(x$.kind[s2])[1L]
-        entry <- .plan_lookup_raw(cells, v, ctx, knd)
-        if (is.null(entry)) next
-        f <- .plan_fill_keyed(entry, dig, rk, x[s2, , drop = FALSE], v, ctx, knd)
-        if (f$check) .plan_check_open(f$filled, v)
-        got[[.ard_summary_key(v, ctx)]] <- f$entry
+        grps <- if (is_split) .ard_first_seen(xgrp[s2]) else others
+        for (g in grps[!is_split | !is.na(grps)]) {
+          s3 <- if (is_split) s2 & xgrp %in% g else s2
+          entry <- .plan_lookup_raw(cells, v, ctx, knd, g, whole = !is_split)
+          if (is.null(entry)) next
+          f <- .plan_fill_keyed(entry, dig, rk, x[s3, , drop = FALSE], v, ctx, knd,
+                                group = g, whole = !is_split)
+          if (f$check) .plan_check_open(f$filled, v)
+          if (is_split) filled[[.ard_group_key(v, ctx, g)]] <- f$entry
+          else got[[.ard_summary_key(v, ctx)]] <- f$entry
+        }
       }
       if (!length(got)) next
       # the usual case -- one summary, or several sharing one recipe --
@@ -3799,7 +3818,15 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     #  c) a digits key that reached nothing is a typo, and silence is how a
     #     typo survives review.  "AST = 3" on a frame whose analysis
     #     variable column is called PARAM does nothing, and says so.
-    reached <- c("default", ".rows", names(cells), vars, rk)
+    #     The digits are keyed as the templates are, whatever key the
+    #     template has (FR-PL242), so a context, a kind or a stat group the
+    #     records carry is reached too.
+    kinds <- unique(c(if (!is.null(x$context)) x$context[body],
+                      if (!is.null(x$.kind)) x$.kind[body]))
+    kinds <- unlist(lapply(kinds[!is.na(kinds)], .ard_context_aliases))
+    grps <- unique(c(xgrp[body & x$variable %in% split], others))
+    reached <- c("default", ".rows", names(cells), vars, rk, kinds,
+                 grps[!is.na(grps)])
     .plan$cache$digit_cols <- setdiff(names(dig), reached)
   } else if (identical(.plan_merge(.plan_of(.plan, "cell_options"))$stats, "rows")) {
     # Statistics as rows with no templates: the table is the finished
@@ -6196,11 +6223,12 @@ plan_n_candidates <- function(.plan) {
 # The cells map, looked up WITHOUT parsing: `.ard_lookup_cells()` returns the
 # parsed entry, and a plan has to rewrite the template text before the engine
 # ever sees it.
-.plan_lookup_raw <- function(cells, variable, context, kind) {
+.plan_lookup_raw <- function(cells, variable, context, kind,
+                             group = NA_character_, whole = FALSE) {
   if (!is.list(cells) || !any(nzchar(names(cells) %||% ""))) return(NULL)
   # the cells map wants the FIRST match, not every candidate: a template
   # is one recipe, and specificity picks it outright
-  hit <- .plan_pick(cells, variable, context, kind)
+  hit <- .plan_pick(cells, variable, context, kind, group, whole)
   if (length(hit)) hit[[1L]] else NULL
 }
 
@@ -6211,15 +6239,21 @@ plan_n_candidates <- function(.plan) {
 # return only the first, which was enough when a declaration was one
 # number; now that it can name statistics, a narrower one may answer
 # for `mean` and a wider one for `sd`.
-.plan_pick <- function(map, variable, context, kind) {
+# With plan_stat_groups() (`group`), a split record's group comes after
+# its variable and a whole one's (`whole`, `.others`) after its kind, as in
+# `.ard_lookup_cells()` (FR-PL239); the digits follow the same order.
+.plan_pick <- function(map, variable, context, kind, group = NA_character_,
+                       whole = FALSE) {
   if (!length(map)) return(list())
-  keys <- variable
+  grp <- !is.null(group) && !is.na(group)
+  keys <- c(variable, if (grp && !whole) group)
   if (!is.null(context) && !is.na(context)) {
     keys <- c(keys, .ard_context_aliases(context))
   }
   if (!is.null(kind) && !is.na(kind)) {
     keys <- c(keys, .ard_context_aliases(kind))
   }
+  if (grp && whole) keys <- c(keys, group)
   out <- list()
   for (k in c(unique(keys), "default")) {
     if (!is.na(k) && k %in% names(map)) out[[length(out) + 1L]] <- map[[k]]

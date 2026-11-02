@@ -42,8 +42,7 @@
 #  (B) FT-PL917, decision table, stat groups (.variables = "ALT", .others =
 #  "N").  Record ALT (split) or AST (whole) x every subset of {variable,
 #  group, context, kind}, the default always set.  Split: V > G > C > K > D;
-#  whole: V > C > K > G > D.  2 x 16 = 32 rows, 31 run: the whole record
-#  with the group alone set is left out (reported, see below).  FR-PL239.
+#  whole: V > C > K > G > D.  2 x 16 = 32 rows.  FR-PL239.
 #
 #  (C) FT-PL918, decision table, which key gives the digits.  The templates
 #  keyed by context and kind (so those digits keys reach); digits variable 3,
@@ -82,18 +81,18 @@
 #  from (a variable key, the default, a token's own .2f): 2.125 to 2 dp is
 #  2.12 / 2.13 whichever.  6 rows.  FR-PL243 FR-AR178.
 #
-#  Not tested here -- code and FR disagree (reported, the code unchanged):
-#    - plan_digits(<context> = ) / plan_digits(<kind> = ) stops "matched
-#      nothing" unless plan_cells() keys the same name (FR-PL242 and the
-#      message itself list contexts and kinds).
-#    - with plan_stat_groups(), plan_digits(<variable> = ) does not reach a
-#      split variable, nor a whole one whose template is its group's: only
-#      the group's and the default's digits do (FR-PL242).
-#    - a whole (.others) record whose template would be its group's takes
-#      the default's: the plan pins the default to the variable before the
-#      group is looked up (FR-PL239).
-#    - FR-IX201 says an open {x} reads stat; it reads stat_fmt when the frame
-#      has it (the roxygen of plan_cells(value = ); FR-PL917).
+#  (I) FT-PL924, decision table, a digits key of a context or a kind
+#  reaches the cells of that context or kind whatever key their template
+#  has (#821).  AGE and SEX x template key (variable, context, kind,
+#  default) x digits key (context, kind).  2 x 4 x 2 = 16 rows.  FR-PL242
+#  FR-PL915.
+#
+#  (J) FT-PL925, decision table, the digits with stat groups (#821).  Record
+#  ALT (split) or AST (whole) x template key (variable, group, default) x
+#  every subset of digits keys {variable, group, context, kind}, the default
+#  always set.  The digits read the order of the template: split V > G > C >
+#  K > D, whole V > C > K > G > D.  2 x 3 x 16 = 96 rows.  FR-PL239
+#  FR-PL242 FR-PL915.
 # ---------------------------------------------------------------------------
 
 .PC_KEYS <- list(AGE = c(variable = "AGE", context = "ctxc", kind = "continuous"),
@@ -235,8 +234,6 @@ test_that("FT-PL917 [FR-PL239]: decision table -- a split record reads variable 
   n <- 0L
   for (rec in names(order)) {
     for (set in .pc_subsets(c("variable", "group", "context", "kind"))) {
-      # reported: a whole record with only its group set takes the default
-      if (rec == "AST" && identical(set, "group")) next
       ent <- list(msd = "M{mean:.1f}", default = "D{n:.0f}")
       for (k in set) {
         ent[[if (k == "variable") rec else name[[k]]]] <- paste0(.PC_MARK[[k]], "{n:.0f}")
@@ -252,7 +249,7 @@ test_that("FT-PL917 [FR-PL239]: decision table -- a split record reads variable 
       n <- n + 1L
     }
   }
-  expect_identical(n, 31L)
+  expect_identical(n, 32L)
 })
 
 
@@ -487,4 +484,65 @@ test_that("FT-PL923 [FR-PL243 FR-AR178]: decision table -- the rounding family r
     }
   }
   expect_identical(n, 6L)
+})
+
+
+# ---- (I) a context or kind digits key, any template key ------------------------
+
+test_that("FT-PL924 [FR-PL242 FR-PL915]: decision table -- a digits key of a context or a kind reaches the cells whatever key their template has", {
+  tpl <- list(AGE = "{mean} ({sd})", SEX = "{n} ({p:%})")
+  x <- list(AGE = c(31.2468, 4.1357), SEX = c(12, 0.6))
+  spec <- list(AGE = c("", ""), SEX = c("", "%"))
+  n <- 0L
+  for (var in names(.PC_KEYS)) {
+    for (tk in .PC_ORDER) {
+      for (dk in c("context", "kind")) {
+        cells <- c(stats::setNames(list(.pc_tpl(var, tpl[[var]])), .pc_key_name(var, tk)),
+                   .pc_others(var))
+        p <- .pc_call(plan_cells, .pc_base(), cells, notes = FALSE)
+        p <- .pc_call(plan_digits, p, stats::setNames(list(2L), .pc_key_name(var, dk)))
+        want <- paste0(.pc_fmt(x[[var]][1L], spec[[var]][1L], 2L), " (",
+                       .pc_fmt(x[[var]][2L], spec[[var]][2L], 2L), ")")
+        expect_identical(.pc_cell(.pc_page(p), var, .pc_leaf[[var]]), want,
+                         label = sprintf("%s / template %s / digits %s", var, tk, dk))
+        n <- n + 1L
+      }
+    }
+  }
+  expect_identical(n, 16L)
+})
+
+
+# ---- (J) the digits with stat groups ---------------------------------------------
+
+test_that("FT-PL925 [FR-PL239 FR-PL242 FR-PL915]: decision table -- with stat groups the digits reach split and whole records in the order of their template", {
+  base <- table_plan(.pc_sg(), cols = c("TRT", ".stat_group"), rows = c(group = "variable"),
+                     label = c(row = "LBL")) |>
+    plan_stat_groups(N = "n", msd = c("mean", "sd"), .variables = "ALT", .others = "N")
+  order <- list(ALT = c("variable", "group", "context", "kind"),
+                AST = c("variable", "context", "kind", "group"))
+  name <- c(group = "N", context = "ctxc", kind = "continuous")
+  dval <- c(variable = 3L, group = 2L, context = 1L, kind = 4L)
+  nval <- c(ALT = 20, AST = 19)
+  n <- 0L
+  for (rec in names(order)) {
+    other <- setdiff(names(order), rec)
+    for (tk in c("variable", "group", "default")) {
+      tkey <- switch(tk, variable = rec, group = "N", default = "default")
+      cells <- stats::setNames(list("{n}", "M{mean:.1f}", "{n:.0f}"), c(tkey, "msd", other))
+      for (set in .pc_subsets(names(dval))) {
+        dig <- list(default = 0L)
+        for (k in set) dig[[if (k == "variable") rec else name[[k]]]] <- dval[[k]]
+        p <- .pc_call(plan_digits, .pc_call(plan_cells, base, cells, notes = FALSE), dig)
+        tb <- suppressMessages(plan_apply(p, "table"))
+        win <- intersect(order[[rec]], set)
+        d <- if (length(win)) dval[[win[1L]]] else 0L
+        expect_identical(as.character(tb$A____N[tb$group == rec]), sprintf("%.*f", d, nval[[rec]]),
+                         label = sprintf("%s / template %s / digits {%s}", rec, tk,
+                                         paste(set, collapse = " ")))
+        n <- n + 1L
+      }
+    }
+  }
+  expect_identical(n, 96L)
 })
