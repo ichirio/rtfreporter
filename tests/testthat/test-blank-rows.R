@@ -10,12 +10,12 @@ test_that("mode 1 positions accept c(0, k, -1) and resolve -1 to nrow", {
   expect_identical(tbl$blank_rows, c(0L, 2L, 5L))
 })
 
-test_that("mode 1 out-of-range positions warn and are dropped", {
+test_that("mode 1 out-of-range positions stop, naming them (#853)", {
   df <- data.frame(Grp = c("A","A","B","B","C"), Val = 1:5,
                    stringsAsFactors = FALSE)
-  expect_warning(tbl <- rtftable(df, blank_rows = c(2, 99)),
-                 "out of range")
-  expect_identical(tbl$blank_rows, 2L)
+  expect_error(rtftable(df, blank_rows = c(2, 99)),
+               "`blank_rows` position 99 out of range: the table has 5 rows")
+  expect_identical(rtftable(df, blank_rows = c(2, 5))$blank_rows, c(2L, 5L))
 })
 
 # ──── blank_rows mode 2: by_change ───────────────────────────────────────────

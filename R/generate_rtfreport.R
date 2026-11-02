@@ -1735,7 +1735,9 @@
   # Width: the absolute `width_twips` wins (the legacy form), then the shared
   # `width` vocabulary, then the writable width.  A header/footer band has no
   # table body above it, so "content" resolves to the writable width too.
-  width       <- if (!is.null(hf$width_twips)) {
+  # `width_twips = 0` is "not set" (a band of no width cannot be read), as
+  # rtftable(table_width_twips = 0) is.
+  width       <- if (!is.null(hf$width_twips) && hf$width_twips > 0L) {
     as.integer(hf$width_twips)
   } else if (!is.null(hf$width)) {
     .resolve_block_width(hf$width, writable_width_twips, writable_width_twips,
@@ -1835,6 +1837,8 @@
 
     cell_w <- floor(width / n_cols)
     cellx  <- cumsum(rep(cell_w, n_cols))
+    # the last cell ends at the band's edge, whatever the division leaves
+    cellx[n_cols] <- as.integer(width)
     # Border applies only to the first row of the header/footer block.
     row_border_cmds <- if (row_idx == 1L) .build_border_commands(hf_border, color_index_map) else ""
 

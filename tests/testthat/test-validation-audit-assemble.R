@@ -41,8 +41,8 @@
 # assemble_folder()
 #   the .rtf files of dir, read from the running header;    | FR-AS148/149| FT-AS053, FT-AS056, FT-AS130
 #     the table returned without output_file                |             |
-#   ... the help's own example writes its titles with       | (#843)      | -- disagrees: left out
-#     rtf_titles(), which it does not read                  |             |
+#   ... no "Table N" in the header: the rtf_titles() title  | FR-AS242    | FT-AS137
+#     block, as the help's example writes it (#843)         |             |
 #   the order: by table number, then by file name, C locale | FR-AS151    | FT-AS056, FT-AS130
 #   ... the same table number keeps the file-name order     | FR-AS236    | FT-AS131
 #   the title, the "Table N" line, a <...> subtitle         | FR-AS150    | FT-AS058, FT-AS129
@@ -216,4 +216,38 @@ test_that("FT-AS136 [FR-AS241]: print() of an rtfplot shows the type, sizes, dpi
   out <- capture.output(print(rtfplot(.a7_png(11811L))))
   expect_match(out[2L], "Native size:  120 x 80 px  (300 x 300 dpi)", fixed = TRUE)
   expect_match(out[3L], "0.40 in (576 twips) wide x 0.27 in (384 twips)", fixed = TRUE)
+})
+
+test_that("FT-AS137 [FR-AS242]: assemble_folder() reads the rtf_titles() title block when the header has no \"Table N\" line", {
+  d <- .a7_dir()
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  titled <- function(file, titles, header = NULL) {
+    doc <- rtf_document()
+    if (!is.null(header)) {
+      doc <- rtf_section(doc, page = 1, secinfo = list(
+        header = rtf_header(rows = list(c(c = header)))))
+    }
+    doc <- rtf_tables(doc, data.frame(Parameter = "Age", Value = "51.0"))
+    doc <- rtf_titles(doc, list(titles))
+    f <- file.path(d, file)
+    generate_rtfreport(doc, f, overwrite = TRUE)
+    f
+  }
+  # the help's example: the number and the title written with rtf_titles()
+  titled("t14_2_1.rtf", c("Table 14.2.1", "Safety Population"))
+  titled("t14_1_1.rtf", c("Table 14.1.1", "Safety Population"))
+  # a header-based file still sorts and reads as before
+  .a7_tbl(d, "a_hdr.rtf", "14.1.5", "Vital Signs")
+  # the header's "Table N" wins over the title block
+  titled("b_both.rtf", c("Table 99.9", "Body Title"), header = "Table 14.1.3")
+  # no "Table N" anywhere: by file name, after the numbered files
+  titled("l16_1.rtf", c("Listing 16.1", "Subject Listing"))
+  spec <- assemble_folder(d)
+  expect_identical(basename(spec$file),
+                   c("t14_1_1.rtf", "b_both.rtf", "a_hdr.rtf", "t14_2_1.rtf", "l16_1.rtf"))
+  expect_identical(spec$table, c("14.1.1", "14.1.3", "14.1.5", "14.2.1", NA))
+  expect_identical(spec$label,
+                   c("Table 14.1.1  Safety Population", "Table 14.1.3",
+                     "Table 14.1.5  Vital Signs", "Table 14.2.1  Safety Population",
+                     "l16_1"))
 })

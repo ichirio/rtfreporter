@@ -1476,6 +1476,14 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 #'   that column, and `.rows` formats the value columns by the text of the
 #'   label column: `plan_digits(.rows = c(N = 0, Mean = 1, SD = "3s"))`.
 #'   A key that reaches neither a variable nor a column is an error.
+#'
+#'   A number of decimals is one whole number, 0 or more; a significant
+#'   count is `"<n>s"` with `n` 1 or more (`"0s"` is an error).  A vector of
+#'   more than one value is named (by statistic, or by value for a row key).
+#'   Anything else --- `1.5`, `-1`, `Inf`, `NA`, `TRUE`, `"2"` on its own,
+#'   `"x"`, `c(1, 2)` unnamed, a zero-length vector --- stops at the verb,
+#'   naming the key.  (A whole number as text, `"0"`, is read as decimals
+#'   inside a named vector, as `c(mean = "4s", n = 0)` makes it.)
 #' @param rounding The tie-breaking family for the run, as
 #'   `widen_ard(rounding = )` takes it.  Last wins.  A study sets the rule
 #'   once with `options(rtfreporter.rounding = )`; give it here only for a
@@ -1521,10 +1529,66 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 #' @export
 plan_digits <- function(.plan, ..., rounding = NULL) {
   d <- list(...)
+  .check_plan_digits(d)
   p <- if (length(d) || is.null(rounding)) .plan_keyed(.plan, "digits", d)
        else .plan
   if (is.null(rounding)) p
   else .plan_layer(p, "round", list(rounding = rounding))
+}
+
+# plan_digits()' values, checked at the verb (#852): each key's value is a
+# digit, a vector of digits named by statistic, or -- for a row key -- a
+# named list of those by value.  A digit is one whole number of decimals,
+# 0 or more, or "<n>s" (n >= 1 significant digits).  A string that is a whole
+# number ("0") is a decimals entry only inside a named vector, where c()
+# turns c(mean = "4s", n = 0) into text; on its own it is refused.
+.check_plan_digits <- function(d) {
+  nms <- names(d) %||% rep("", length(d))
+  bad <- function(k, what = NULL) {
+    key <- if (nzchar(k)) sprintf("`%s`", k) else "the unnamed value"
+    .ard_stop(sprintf(paste0(
+      "plan_digits(): %s must be a whole number of decimals (0 or more) ",
+      "or \"<n>s\" (n >= 1 significant digits), or a vector of them named ",
+      "by statistic%s."), key,
+      if (is.null(what)) "" else paste0("; got ", what)))
+  }
+  is_sig <- function(v) grepl("^[1-9][0-9]*s$", v)
+  ok_atomic <- function(v) {
+    if (length(v) == 0L || is.factor(v)) return(FALSE)
+    named <- !is.null(names(v)) && all(nzchar(names(v)) & !is.na(names(v)))
+    if (length(v) > 1L && !named) return(FALSE)
+    if (is.numeric(v)) {
+      return(all(!is.na(v) & is.finite(v) & v >= 0 & v == trunc(v)))
+    }
+    if (is.character(v)) {
+      if (anyNA(v)) return(FALSE)
+      if (!named) return(all(is_sig(v)))
+      return(all(is_sig(v) | grepl("^[0-9]+$", v)))
+    }
+    FALSE
+  }
+  show <- function(v) {
+    if (is.list(v)) return("a list")
+    if (length(v) == 0L) return(sprintf("%s(0)", class(v)[1L]))
+    f <- if (is.character(v)) paste0("\"", v, "\"") else format(v)
+    s <- paste(utils::head(f, 3L), collapse = ", ")
+    if (length(v) > 1L) s <- sprintf("c(%s%s)", s, if (length(v) > 3L) ", ..." else "")
+    s
+  }
+  for (i in seq_along(d)) {
+    v <- d[[i]]; k <- nms[i]
+    if (is.null(v)) next
+    if (is.list(v)) {
+      ln <- names(v)
+      if (length(v) == 0L || is.null(ln) || !all(nzchar(ln) & !is.na(ln)) ||
+          !all(vapply(v, function(e) !is.list(e) && ok_atomic(e), logical(1L)))) {
+        bad(k, "a list that is not of digits named by value or statistic")
+      }
+    } else if (!ok_atomic(v)) {
+      bad(k, show(v))
+    }
+  }
+  invisible(d)
 }
 
 
@@ -2682,7 +2746,9 @@ plan_empty <- function(.plan, text = "No subjects met the criteria.",
 #'     \item{`"none"`}{none: a listing's records follow each other with no
 #'       blank row between them (`blank_row = FALSE`).}
 #'     \item{positions}{an integer vector, a blank row after each given row;
-#'       `0` before the first, `-1` after the last.}
+#'       `0` before the first, `-1` after the last.  A fraction or a
+#'       position past the body's last row stops at [plan_apply()], naming
+#'       the positions, as `as_rtftables(blank_rows = )` does.}
 #'     \item{a rule}{a [blank_rows_by_change()] or [blank_rows_by_rule()]
 #'       object, or a `list()` combining any of these.}
 #'   }
