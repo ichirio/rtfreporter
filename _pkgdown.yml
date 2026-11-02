@@ -188,6 +188,8 @@ navbar:
           href: articles/plan-listings.html
         - text: "Listings end to end"
           href: articles/listings.html
+        - text: "A listing and its summary in one table"
+          href: articles/plan-append.html
         # ── 4. Figures ──────────────────────────────────────────────────
         - text: -------
         - text: "Figures"
@@ -720,6 +722,7 @@ articles:
     contents:
       - articles/plan-listings
       - articles/listings
+      - articles/plan-append
 
   - title: Figures
     desc: A plot object, or an image file, placed on a page.
@@ -776,6 +779,7 @@ articles:
       - articles/architecture-ja
       - articles/extending-adapters-ja
       - articles/several-contents-ja
+      - articles/plan-append-ja
 
   # Deep-dive S3 / OOP references. Deliberately kept OUT of the navbar
   # Articles menu -- pkgdown requires every built article to appear in the
