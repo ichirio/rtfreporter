@@ -70,5 +70,5 @@ doc <- rtf_document(page = rtf_page(paper_size = "A4", orientation = "portrait")
 
 }
 \seealso{
-\code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_default_format]{rtf_default_format()}}, \code{\link[=rtfreporter_options]{rtfreporter_options()}}.
+\code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_style]{rtf_style()}}, \code{\link[=rtfreporter_options]{rtfreporter_options()}}.
 }

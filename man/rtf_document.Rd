@@ -14,6 +14,7 @@ rtf_document(
   tokens = NULL,
   program_fallback = NULL,
   font_lang = NULL,
+  style = NULL,
   file = NULL
 )
 }
@@ -37,11 +38,10 @@ keys, or \code{NULL} (default) to use the option / factory defaults (landscape
 Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
 back to the corresponding \verb{rtfreporter.*} option (see \code{\link[=rtfreporter_options]{rtfreporter_options()}}).}
 
-\item{default_format}{Document-wide default formatting. Pass an
-\code{\link[=rtf_default_format]{rtf_default_format()}} object (recommended -- its help lists every key with
-its default), a named list with the same keys, or \code{NULL} (default). Each
-value is a \emph{default} that a per-module setting (\code{\link[=rtftable]{rtftable()}} /
-\code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}} / \code{\link[=rtf_table_style]{rtf_table_style()}}) overrides.}
+\item{default_format}{\strong{Deprecated}: use \code{style = rtf_style()}.  An
+\code{\link[=rtf_default_format]{rtf_default_format()}} object or a named list of its keys still works:
+it maps onto the shared level of \code{\link[=rtf_style]{rtf_style()}}, beneath any \code{style}
+given, and warns once a session.}
 
 \item{watermark}{A diagonal word drawn behind the page body on every page:
 an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare string (\code{watermark = "DRAFT"} uses the
@@ -88,6 +88,12 @@ written.
 \verb{\\alang}, and the document's \verb{\\deflangfe} / \verb{\\deflang} /
 \verb{\\adeflang}).}
 }}
+
+\item{style}{The document's look, one \code{\link[=rtf_style]{rtf_style()}} object: a shared
+level (font, size, row height, padding, markup, the title and footnote
+form) and one section per module (\code{table}, \code{titles}, \code{footnotes},
+\code{header}, \code{footer}).  A module's own argument wins over it.  \code{NULL}
+(default): none.}
 
 \item{file}{The RTF file the document is written to: one string, a path.
 \code{\link[=generate_rtfreport]{generate_rtfreport()}} writes there when it is given no \code{file_path}
@@ -145,14 +151,14 @@ the document-level defaults Word uses for new text (\verb{\\adeff},
 doc <- rtf_document()
 
 # 2. A fully specified document, built from the rtf_page() /
-#    rtf_default_format() constructors (whose own help shows every default):
+#    rtf_style() constructors:
 doc <- rtf_document(
-  font_table     = list(list(name = "Arial")),
-  color_table    = c("#000000", "#1F4E79"),
-  page           = rtf_page(paper_size = "A4", orientation = "portrait",
-                            margin_left_in = 0.75, margin_right_in = 0.75),
-  default_format = rtf_default_format(font_size_half_points = 20L,  # 10 pt
-                                      row_height_twips = 240L)
+  font_table  = list(list(name = "Arial")),
+  color_table = c("#000000", "#1F4E79"),
+  page        = rtf_page(paper_size = "A4", orientation = "portrait",
+                         margin_left_in = 0.75, margin_right_in = 0.75),
+  style       = rtf_style(font_size_half_points = 20L,  # 10 pt
+                          row_height_twips = 240L)
 )
 
 # ... then add content and render:
@@ -165,7 +171,7 @@ unlink(f)
 
 }
 \seealso{
-\code{\link[=rtf_page]{rtf_page()}} / \code{\link[=rtf_default_format]{rtf_default_format()}} for the page / formatting
+\code{\link[=rtf_page]{rtf_page()}} / \code{\link[=rtf_style]{rtf_style()}} for the page / formatting
 settings, \code{\link[=rtf_config]{rtf_config()}} to edit an already-composed document, \code{\link[=rtf_tables]{rtf_tables()}}
 / \code{\link[=rtf_figures]{rtf_figures()}} to add content, \code{\link[=rtf_section]{rtf_section()}} for headers / footers, and
 \code{\link[=generate_rtfreport]{generate_rtfreport()}} to render.

@@ -349,7 +349,7 @@ doc <- rtf_document(
   page = list(orientation = "landscape", paper_size = "A4",
               margin_top_in = 0.5, margin_bottom_in = 0.5,
               margin_left_in = 0.5, margin_right_in = 0.5),
-  default_format = list(font_size_half_points = 16L)
+  style = rtf_style(font_size_half_points = 16L)
 ) |>
   rtf_section(
     header = rtf_header(list(

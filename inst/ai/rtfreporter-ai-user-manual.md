@@ -262,10 +262,10 @@ without writing a file.
 
 | Need | Call |
 |---|---|
-| Start a document | `rtf_document(page =, default_format =, watermark =)` |
+| Start a document | `rtf_document(page =, style =, watermark =)` |
 | Paper / orientation / margins | `rtf_page(paper_size = "letter"/"A4", orientation = "landscape", margin_*_in =)` |
-| Document-wide font size etc. | `rtf_default_format(font_size_half_points = 18L, ...)` |
-| Edit an already-built document | `rtf_config(doc, page =, default_format =, ...)` |
+| Document-wide font size etc. | `rtf_style(font_size_half_points = 18L, ..., table = list(...), header = list(...))` |
+| Edit an already-built document | `rtf_config(doc, page =, style =, ...)` |
 | Running header / footer | `rtf_section(doc, page =, header =, footer =)` |
 | Build those bands | `rtf_header(rows =)`, `rtf_footer(rows =)` |
 | data.frame → paginated pages | `as_rtftables(x, ...)` **(the workhorse — §5)** |
@@ -286,6 +286,14 @@ without writing a file.
 | Table from a cards / cardx ARD | `normalize_ard()` → `table_plan()` → `plan_*()` → `rtf_tables(doc, plan)` **(§17)** |
 
 ---
+
+**Deprecated -- do not generate these** (they still work but warn, and are
+removed in 0.9):
+
+| Deprecated | Write instead |
+|---|---|
+| `rtf_default_format()` | `rtf_style()` (same keys at its shared level) |
+| `rtf_document(default_format = )` / `rtf_config(default_format = )` | `style = rtf_style(...)` |
 
 ## 5. `as_rtftables()` — the workhorse
 
@@ -1085,7 +1093,7 @@ reference of a difference.
 ## 18. Complete public API (nothing outside this list exists)
 
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
-`rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
+`rtf_style` `rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
 `rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
 `rtfreporter_validation_kit`
 

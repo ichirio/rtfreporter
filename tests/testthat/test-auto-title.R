@@ -1,5 +1,9 @@
 # rtf_tables(auto_title = TRUE) -- the page name as the last title row (#310).
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 .pages <- function() {
   d <- data.frame(G = c("Cohort A", "Cohort A", "Cohort B"),
                   Stat = c("n", "Mean", "n"),

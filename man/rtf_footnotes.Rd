@@ -25,7 +25,8 @@ left / centre / right -- the same row model \code{\link[=rtf_footer]{rtf_footer(
 string lands in whichever slot \code{align} selects.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
-this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
+this block, over the document's \code{\link[=rtf_style]{rtf_style()}} (its section, then its
+shared level).
 Anything left \code{NULL} is inherited.
 \describe{
 \item{\code{font}}{names a family (e.g. \code{"Arial"}); one not already in the

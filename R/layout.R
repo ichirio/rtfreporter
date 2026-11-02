@@ -161,7 +161,7 @@ rtf_layout <- function(doc) {
   } else {
     sprintf("%s %s", pg$paper_size %||% "letter", pg$orientation %||% "landscape")
   }
-  hp <- doc$document$default_format$font_size_half_points %||%
+  hp <- .doc_effective_style(doc$document)$font_size_half_points %||%
     .opt("rtfreporter.font_size_half_points")
   sprintf("%s, %s pt", size, format(hp / 2))
 }

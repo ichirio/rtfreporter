@@ -41,7 +41,7 @@
 #'   package's font, `getOption("rtfreporter.font")` ("Courier New"), as for every
 #'   other `font =`.  Unrecognised values fall back to Courier New.
 #' @param font_size_half_points Font size in **half-points** (the unit used by
-#'   RTF and the document's `default_format$font_size_half_points`).  Default
+#'   RTF and the document's `rtf_style(font_size_half_points = )`).  Default
 #'   `18` = 9 pt.
 #'
 #' @return A numeric vector of estimated widths in inches (same length as

@@ -8,8 +8,8 @@
 #  keep widening a signature that is already long.
 #
 #  The package already has the answer in three places -- `blank_rows =
-#  blank_rows_by_change(...)`, `page = rtf_page(...)`, `default_format =
-#  rtf_default_format(...)`: fold a bundle of settings into a constructor and
+#  blank_rows_by_change(...)`, `page = rtf_page(...)`, `style =
+#  rtf_style(...)`: fold a bundle of settings into a constructor and
 #  take one argument.  `stub_spec()` is that constructor for the stub, so
 #  `as_rtftables()` needs a single `stub =` and never has to grow again when
 #  `stub_cols()` learns something new.

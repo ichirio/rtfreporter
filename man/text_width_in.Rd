@@ -16,7 +16,7 @@ package's font, \code{getOption("rtfreporter.font")} ("Courier New"), as for eve
 other \verb{font =}.  Unrecognised values fall back to Courier New.}
 
 \item{font_size_half_points}{Font size in \strong{half-points} (the unit used by
-RTF and the document's \code{default_format$font_size_half_points}).  Default
+RTF and the document's \code{rtf_style(font_size_half_points = )}).  Default
 \code{18} = 9 pt.}
 }
 \value{

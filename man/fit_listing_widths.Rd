@@ -36,7 +36,7 @@ turn the page's width into a number of characters.
 RTF: 8pt is \code{16L}, 9pt (the default) is \code{18L}.  Getting it wrong
 silently changes the budget -- at 8pt a landscape A4 with half-inch
 margins holds 159 characters, at 9pt only 141.  Pass the same values
-the document uses in \code{rtf_document(default_format = )}.}
+the document uses in \code{rtf_document(style = rtf_style())}.}
 }}
 
 \item{total_width}{Character budget for the whole listing, gutters included.
