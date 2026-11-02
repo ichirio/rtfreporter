@@ -1435,3 +1435,5 @@
 "test-gt-adapter.R",".gt_extract_body_safe() reads a two-stub body via the _data fallback","FT-TB751","FR-TB582"
 "test-gt-adapter.R","as_rtftable() reads a label_loc='column' tfrmt gt (was an error)","FT-TB752","FR-TB582"
 "test-page-values.R","rtables and tfrmt pages carry the values they were cut on","FT-TB753","FR-TB583"
+"test-adapter-option-robustness.R","gt: several group columns give one group row per combination, formats kept (#193)","FT-TB770","FR-TB585"
+"test-adapter-option-robustness.R","gt: an html() label is read as its text, <br> a line break (#193)","FT-TB771","FR-TB584"

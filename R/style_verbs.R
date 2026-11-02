@@ -245,8 +245,8 @@
 #' @param row Integer header-row index(es), 1 = top row.  `NULL` (default)
 #'   targets every header row.
 #' @param cols Data-column selection: integer positions and/or column names of
-#'   the table body (see the *What the columns are called* section of
-#'   [as_rtftables()]).  `NULL` (default) = all columns.  Mix names and
+#'   the table body, as [rtf_columns()] lists them (see also *Naming it* under
+#'   `group_col` in [as_rtftables()]).  `NULL` (default) = all columns.  Mix names and
 #'   positions with a `list()` (`c()` would coerce the numbers to strings --
 #'   same convention as `drop_cols` / `sort_by`).  A spanning cell is
 #'   targeted when its span **intersects** `cols`.
@@ -898,8 +898,9 @@ set_col_header.list <- function(x, ..., values = NULL, by = NULL) {
 #' is what the geometry needs.
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
-#' @param cols Columns to split: names or positions.  Needed to set a split;
-#'   left out (`NULL`) it clears the setting.
+#' @param cols Columns to split: names or positions.  Required: `cols = NULL`,
+#'   given explicitly, clears a split set before, and leaving `cols` out is an
+#'   error.
 #' @param ratio `NULL` (the default) to size the two halves automatically from
 #'   the widest left and right part actually present, or a number in `(0, 1)`
 #'   giving the left half's share of the column width.  Pass an explicit value
