@@ -378,7 +378,8 @@
 # knitting, the file open in RStudio's editor -- said in one message.
 .check_program <- function(program, arg = "program") {
   if (!is.null(program) &&
-      (!is.character(program) || length(program) != 1L || is.na(program))) {
+      (!is.character(program) || length(program) != 1L || is.na(program) ||
+       !nzchar(program))) {
     stop("`", arg, "` must be a single string: the path of the program ",
          "that writes the file.", call. = FALSE)
   }
@@ -720,11 +721,19 @@
 # Priority: column_widths_twips > col_rel_width > the default (default_col_widths()).
 .compute_cellx <- function(ncols, writable_width_twips, tbl) {
   if (!is.null(tbl$column_widths_twips)) {
-    widths <- as.integer(tbl$column_widths_twips)
+    widths <- tbl$column_widths_twips
     if (length(widths) != ncols) {
       stop(sprintf("`column_widths_twips` length (%d) must match ncol (%d).",
                    length(widths), ncols), call. = FALSE)
     }
+    # a width that is no positive whole number of twips (NA, -1, Inf, "a")
+    # used to be written as it came, NA or negative
+    if (!is.numeric(widths) || any(!is.finite(widths)) || any(widths <= 0) ||
+        any(widths != round(widths))) {
+      stop("`column_widths_twips` values must be positive whole numbers ",
+           "(twips).", call. = FALSE)
+    }
+    widths <- as.integer(widths)
     return(cumsum(widths))
   }
 
@@ -738,12 +747,15 @@
   }
 
   if (!is.null(tbl$col_rel_width)) {
-    rel <- as.numeric(tbl$col_rel_width)
+    rel <- suppressWarnings(as.numeric(tbl$col_rel_width))
     if (length(rel) != ncols) {
       stop(sprintf("`col_rel_width` length (%d) must match ncol (%d).",
                    length(rel), ncols), call. = FALSE)
     }
-    if (any(rel <= 0)) stop("`col_rel_width` values must be positive.", call. = FALSE)
+    # NA or a string used to stop with "missing value where TRUE/FALSE
+    # needed", Inf to pass
+    if (!is.numeric(tbl$col_rel_width) || any(!is.finite(rel)) || any(rel <= 0))
+      stop("`col_rel_width` values must be positive.", call. = FALSE)
     widths <- as.integer(round(total_w * rel / sum(rel)))
     widths[ncols] <- total_w - sum(widths[-ncols])  # absorb rounding drift
     return(cumsum(widths))

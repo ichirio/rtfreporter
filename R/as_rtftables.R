@@ -234,7 +234,8 @@
 #'       table objects and data.frames shares one `read_meta`, so adapter
 #'       tokens must not error on the data.frame elements.}
 #'   }
-#' @param split How to break the body into pages. A strategy name:
+#' @param split How to break the body into pages. A strategy name (a unique
+#'   prefix such as `"group_s"` is enough; another value is an error):
 #'   \describe{
 #'     \item{`"none"`}{(default) one page; no row limit checked.}
 #'     \item{`"rows"`}{cut before each row position given in `split_rows`;
@@ -272,8 +273,10 @@
 #'   with a `...` so it tolerates the context arguments it does not use, and see
 #'   [add_cont_label()] for re-creating the `" (Cont.)"` continuation row.
 #'   A plan passes it the same way: `plan_paginate_rows(split = f)`.
-#' @param max_rows Integer or `NULL`.  Maximum body rows per page for the
-#'   `"group_safe"` / `"group_force"` splits (required by them).  **This is the
+#' @param max_rows A positive whole number, or `NULL`; anything else is an
+#'   error, whatever the split.  Maximum body rows per page for the
+#'   `"group_safe"` / `"group_force"` splits (required by them); with `1`
+#'   a continued group gets no continuation row.  **This is the
 #'   setting for fixed-size pages** -- `max_rows = 25` gives pages of 25 rows.
 #'   Ignored by `"none"` and `"rows"` (which cuts at the positions in
 #'   `split_rows`).  Optional for `"by_value"`: a value's page longer than
@@ -283,7 +286,8 @@
 #'   before, for `split = "rows"` (required by it; ignored otherwise).
 #'   `split_rows = c(20, 40)` yields pages `1:19`, `20:39`, `40:nrow`.  It is
 #'   not a page size: for pages of a fixed number of rows use `max_rows` with
-#'   `split = "group_safe"` or `"group_force"`.
+#'   `split = "group_safe"` or `"group_force"`.  The positions are whole
+#'   numbers in any order; one outside `2:nrow` cuts nothing.
 #' @param group_col Character, integer, or `NULL`.  The column the
 #'   group-aware splits (`"group_safe"`, `"group_force"`, `"by_value"`)
 #'   detect groups on, given by name or position.  `NULL` (default) uses
@@ -300,7 +304,8 @@
 #'       happens *after* `sort_by`, which still orders a factor by its
 #'       **levels**.}
 #'   }
-#' @param group_by How a group boundary is found on `group_col`:
+#' @param group_by How a group boundary is found on `group_col` (a unique
+#'   prefix of a name is enough; another value is an error):
 #'   \describe{
 #'     \item{`"auto"`}{(default) pick from the column content: leading
 #'       indentation present -> `"indent"`; else interspersed empty cells ->
@@ -406,7 +411,8 @@
 #'   `sort_by` is `NULL`.
 #' @param cont_label Character (default `" (Cont.)"`).  Suffix appended to a
 #'   group's label on the second and later pages it continues onto (the
-#'   group-aware splits), marking a continued group.
+#'   group-aware splits), marking a continued group.  One string; `""`
+#'   repeats the label alone.
 #' @param blank_rows Where to insert blank separator rows in the body.  `NULL`
 #'   (default) inserts none (but an `rtf_blank_rows` attribute already on the
 #'   input is still honoured).  Accepts any of -- or a `list()` combining:
@@ -447,7 +453,8 @@
 #'   Ignored when `cell_format` is supplied, which takes precedence.
 #'   Neither one controls whether missing values are substituted -- that is
 #'   `na` -- only whether the substituted token is aligned with the counts.
-#' @param min_group_rows Integer (default `2`).  Widow/orphan control for the
+#' @param min_group_rows A non-negative whole number (default `2`).
+#'   Widow/orphan control for the
 #'   group-aware splits (`"group_force"`, `"group_safe"`, `"by_value"`): when a
 #'   page would end on a group that *starts* on that page while showing fewer
 #'   than `min_group_rows` of the group's child rows (the rows after its first
@@ -854,6 +861,14 @@ as_rtftables.default <- function(x,
   if (!is.function(split)) split <- match.arg(split)
   group_by <- match.arg(group_by)
   na <- .check_na_text(na)
+  if (!is.logical(auto_width) || length(auto_width) != 1L || is.na(auto_width)) {
+    stop("`auto_width` must be TRUE or FALSE.", call. = FALSE)
+  }
+  # one column: two used to stop with "the condition has length > 1"
+  if (!is.null(group_col) && length(group_col) != 1L) {
+    stop("`group_col` must be one column, by name or position, or NULL.",
+         call. = FALSE)
+  }
   user_args <- list(...)
 
   # One spec from `stub =` (#314).  `stub_spec` is the only place new stub

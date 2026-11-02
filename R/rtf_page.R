@@ -15,9 +15,11 @@
 #  explicit argument > `rtfreporter.*` option > factory default.
 # ============================================================================
 
-# Validate a single positive-inches value (or NULL).
+# Validate a single positive-inches value (or NULL).  Inf used to pass and
+# be written as NA twips.
 .chk_pos_in <- function(x, nm) {
-  if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || is.na(x) || x <= 0)) {
+  if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || !is.finite(x) ||
+                      x <= 0)) {
     stop(sprintf("`%s` must be a single positive number of inches, or NULL.", nm),
          call. = FALSE)
   }
@@ -45,7 +47,8 @@
 #'   `paper_size`. With dimensions given, `paper_size` and `orientation` stay
 #'   unset unless you pass them, so only a value you passed is warned about.
 #' @param margin_top_in,margin_bottom_in,margin_left_in,margin_right_in The four
-#'   page margins, in inches.
+#'   page margins, in inches.  Each inch value here is one positive finite
+#'   number; another (`0`, `Inf`, `NA`, a string) is an error.
 #' @param header_dist_in,footer_dist_in Distance (inches) of the header / footer
 #'   band from the page edge. `NULL` (default) uses the **full** corresponding
 #'   top / bottom margin (so the band sits at the margin boundary).

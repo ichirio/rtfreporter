@@ -30,7 +30,8 @@ rtf_page(
 unset unless you pass them, so only a value you passed is warned about.}
 
 \item{margin_top_in, margin_bottom_in, margin_left_in, margin_right_in}{The four
-page margins, in inches.}
+page margins, in inches.  Each inch value here is one positive finite
+number; another (\code{0}, \code{Inf}, \code{NA}, a string) is an error.}
 
 \item{header_dist_in, footer_dist_in}{Distance (inches) of the header / footer
 band from the page edge. \code{NULL} (default) uses the \strong{full} corresponding
