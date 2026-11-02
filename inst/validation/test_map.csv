@@ -1453,3 +1453,5 @@
 "test-cell-padding-vertical.R","FT-IX026 [FR-IX395]: top / bottom padding: the module's own value wins over the style's, the document default, the option and the baseline","FT-IX026","FR-IX395"
 "test-rtfplot.R","FT-AS124 [FR-AS233 FR-AS214]: an EMF file is embedded as it is, at its frame's size (#739)","FT-AS124","FR-AS233 FR-AS214"
 "test-rtfplot.R","FT-AS125 [FR-AS234 FR-AS211]: a file that is not an EMF, or another extension, is refused (#739)","FT-AS125","FR-AS234 FR-AS211"
+"test-header-footer-color.R","FT-DC224 [FR-DC295 FR-DC296]: a band's colour, and a row's over it, are written and in the colour table","FT-DC224","FR-DC295 FR-DC296"
+"test-header-footer-color.R","FT-DC225 [FR-DC297]: a colour that is not one 6-digit hex string is refused","FT-DC225","FR-DC297"

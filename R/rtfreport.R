@@ -201,8 +201,9 @@
 #'   }
 #'   e.g. `c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")`.  A row may
 #'   also be a list, `list(columns = c(l = , c = , r = ), row_height_twips =
-#'   400L)`, whose `row_height_twips` is that row's height (over the band's
-#'   `row_height_twips`).  Cell text may
+#'   400L, color = "#C00000")`, whose `row_height_twips` is that row's height
+#'   (over the band's `row_height_twips`) and `color` its text colour (over
+#'   the band's `color`).  Cell text may
 #'   contain **page-number tokens** that the renderer substitutes: `{AUTO_PAGE}`
 #'   (the current page, updated live by the viewer), `{AUTO_TOTAL_PAGES}` (the
 #'   document total), and `{PAGE}` / `{TOTAL_PAGES}` (static numbers baked in at
@@ -242,6 +243,10 @@
 #'   ([rtf_default_format()]), else the resource baseline (0); 0 writes
 #'   nothing.
 #'
+#' @param color The band's text colour, a 6-digit hex string such as
+#'   `"#7F7F7F"`; `NULL` (default) leaves the text in the document's colour
+#'   (black).  A row given as `list(columns = , color = )` has its own.  The
+#'   colour is added to the document's colour table.
 #' @param drop_empty_rows Logical. `TRUE`: a row whose tokens of one's own
 #'   (`rtf_document(tokens = )`, `options(rtfreporter.tokens = )`) are all
 #'   empty when the file is written, and which says nothing else but blanks
@@ -273,7 +278,8 @@ rtf_header <- function(rows,
                         cell_padding_right_twips = NULL,
                         cell_padding_top_twips    = NULL,
                         cell_padding_bottom_twips = NULL,
-                        drop_empty_rows          = FALSE) {
+                        drop_empty_rows          = FALSE,
+                        color                    = NULL) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
     stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
   }
@@ -294,7 +300,8 @@ rtf_header <- function(rows,
          .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
        cell_padding_bottom_twips =
          .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
-       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
+       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows),
+       color = .check_hf_color(color, "color"))
 }
 
 # A row's cells are named l / c / r; the renderer reads only those names, so
@@ -309,6 +316,9 @@ rtf_header <- function(rows,
                         sprintf("%s()` row %d's `row_height_twips", fn, i))
       row <- row$columns
     }
+    if (is.list(rows[[i]])) {
+      .check_hf_color(rows[[i]]$color, sprintf("%s()` row %d's `color", fn, i))
+    }
     nm <- names(row)
     bad <- setdiff(nm[!is.na(nm) & nzchar(nm)], c("l", "c", "r"))
     if (length(bad)) {
@@ -320,6 +330,18 @@ rtf_header <- function(rows,
     }
   }
   invisible(rows)
+}
+
+# A band's or a row's text colour: NULL, or one "#RRGGBB" (#42).  It used to
+# be taken and left out of the file without a word.
+.check_hf_color <- function(x, arg) {
+  if (is.null(x)) return(NULL)
+  if (!is.character(x) || length(x) != 1L || is.na(x) ||
+      !grepl("^#[0-9A-Fa-f]{6}$", x)) {
+    stop(sprintf("`%s` must be NULL or a 6-digit hex colour such as \"#7F7F7F\".", arg),
+         call. = FALSE)
+  }
+  toupper(x)
 }
 
 .check_drop_empty_rows <- function(x) {
@@ -343,7 +365,8 @@ rtf_footer <- function(rows,
                         cell_padding_right_twips = NULL,
                         cell_padding_top_twips    = NULL,
                         cell_padding_bottom_twips = NULL,
-                        drop_empty_rows          = FALSE) {
+                        drop_empty_rows          = FALSE,
+                        color                    = NULL) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
     stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
   }
@@ -364,7 +387,8 @@ rtf_footer <- function(rows,
          .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
        cell_padding_bottom_twips =
          .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
-       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
+       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows),
+       color = .check_hf_color(color, "color"))
 }
 
 # ============================================================================
