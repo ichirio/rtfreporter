@@ -105,8 +105,7 @@
 #  header_dist_in | Inf                   | Inf                | error, same                      | FR-DC352
 #  footer_dist_in | valid                 | 0.3                | \footery432                      | FR-DC161
 #  footer_dist_in | negative              | -0.1               | error "`footer_dist_in` must be ..." | FR-DC160
-#  (A margin that leaves no writable width is accepted and writes negative
-#  cell positions: #847, not tested here.)
+#  (Margins that leave no writable width or height: FT-DC283, #847.)
 #
 # ---------------------------------------------------------------------------
 #  rtftable()  -- FT-TB773.  The table is written in a document; "object"
@@ -187,8 +186,8 @@
 #  column_widths_twips | wrong length     | 1000               | error "`column_widths_twips` length (1) must match ncol (2)" | FR-TB594
 #  cell_styles    | length 0              | list()             | error "`cell_styles` length (0) must equal" | FR-TB556
 #  cell_styles    | another type          | "x"                | error "`cell_styles` must be a list" | FR-TB556
-#  (Fractions, strings and TRUE given to a *_twips or font size argument
-#  are coerced, and markup = NA is read as "none": #846, not tested here.)
+#  (A fraction, a string or TRUE given to a *_twips or font size argument,
+#  and markup = NA: FT-TB775, #846.)
 #
 # ---------------------------------------------------------------------------
 #  as_rtftables()  -- FT-TB774.  The body has two groups of three rows
@@ -615,4 +614,104 @@ test_that("FT-TB774 [FR-TB114 FR-TB117 FR-TB124 FR-TB126 FR-TB127 FR-TB128 FR-TB
     if (!"x" %in% names(args)) args <- c(list(x = .eb_grp), args)
     do.call(as_rtftables, args)
   })
+})
+
+# ---------------------------------------------------------------------------
+#  The shared twips / font-size checks and the token arguments -- FT-TB775
+#  (#846).  A whole number given as a double (240, as YAML and tflspec pass
+#  it) is valid; a fraction, a string, a logical and NA are errors, in every
+#  function that uses the checks.  `markup` / `blank_row_normalize` refuse
+#  NA, "" and another type instead of dropping them.
+# ---------------------------------------------------------------------------
+
+test_that("FT-TB775 [FR-TB600 FR-TB601]: twips and font-size arguments take whole numbers only; markup = NA is an error", {
+  rh <- "^`row_height_twips` must be a single non-negative integer \\(twips\\)"
+  fs <- "^`font_size_half_points` must be a single positive integer"
+  # The bands and rtf_style() name the function too: `rtf_style(row_height_twips)`.
+  rh2 <- "row_height_twips\\)?` must be a single non-negative integer \\(twips\\)"
+  fs2 <- "font_size_half_points\\)?` must be a single positive integer"
+  bad <- list(fraction = 240.7, string = "240", logical = TRUE, NA_ = NA,
+              NA_real = NA_real_, factor = factor("240"))
+  for (nm in names(bad)) {
+    v <- bad[[nm]]
+    expect_error(rtftable(.eb_df, row_height_twips = v), rh, info = nm)
+    expect_error(rtftable(.eb_df, font_size_half_points = v), fs, info = nm)
+    expect_error(rtf_style(row_height_twips = v), rh2, info = nm)
+    expect_error(rtf_style(font_size_half_points = v), fs2, info = nm)
+    expect_error(rtf_table_style(row_height_twips = v), rh2, info = nm)
+    expect_error(rtf_header(rows = list(c(l = "STUDY-01")), row_height_twips = v),
+                 rh2, info = nm)
+    expect_error(rtf_footer(rows = list(c(l = "STUDY-01")),
+                            font_size_half_points = v), fs2, info = nm)
+    expect_error(rtf_titles(rtf_tables(rtf_document(), .eb_df), "Table 1",
+                            row_height_twips = v), rh2, info = nm)
+    expect_error(rtf_footnotes(rtf_tables(rtf_document(), .eb_df), "Note.",
+                               font_size_half_points = v),
+                 fs2, info = nm)
+  }
+  expect_error(rtftable(.eb_df, cell_padding_left_twips = 0.5),
+               "^`cell_padding_left_twips` must be a single non-negative integer")
+  expect_error(rtftable(.eb_df, font_size_half_points = 18.5), fs)
+  expect_error(rtftable(.eb_df, font_size_half_points = 0.5), fs)
+
+  # A whole number as a double or an integer is valid and written the same.
+  dbl <- .eb_rtf(rtf_tables(rtf_document(),
+    rtftable(.eb_df, row_height_twips = 240, font_size_half_points = 18)))
+  int <- .eb_rtf(rtf_tables(rtf_document(),
+    rtftable(.eb_df, row_height_twips = 240L, font_size_half_points = 18L)))
+  expect_true(grepl("\\\\trrh240[^0-9]", dbl))
+  expect_true(grepl("\\\\fs18[^0-9]", dbl))
+  expect_identical(dbl, int)
+  expect_identical(rtftable(.eb_df, row_height_twips = 0)$row_height_twips, 0L)
+  expect_identical(rtf_style(row_height_twips = 240)$row_height_twips, 240L)
+
+  # markup and blank_row_normalize: NA, "" and another type are errors.
+  for (v in list(NA, NA_character_, "", c("script", NA), 1, TRUE)) {
+    expect_error(rtftable(.eb_df, markup = v), "^`markup` must be a subset",
+                 info = deparse(v))
+    expect_error(rtf_style(markup = v), "^`markup` must be a subset",
+                 info = deparse(v))
+    expect_error(rtftable(.eb_df, blank_row_normalize = v),
+                 "^`blank_row_normalize` must be a subset", info = deparse(v))
+  }
+  # The documented ways to turn them off still work.
+  expect_identical(rtftable(.eb_df, markup = "none")$markup, character(0))
+  expect_identical(rtftable(.eb_df, markup = character(0))$markup, character(0))
+  expect_identical(rtftable(.eb_df, blank_row_normalize = NULL)$blank_row_normalize,
+                   character(0))
+  expect_identical(rtftable(.eb_df, blank_row_normalize = "none")$blank_row_normalize,
+                   character(0))
+})
+
+# ---------------------------------------------------------------------------
+#  The writable area of the page -- FT-DC283 (#847).  Checked when the
+#  document is written, where the page is resolved (rtf_page(), a page list
+#  or an rtfreporter.page.* option).
+# ---------------------------------------------------------------------------
+
+test_that("FT-DC283 [FR-DC353]: margins that leave no writable width or height stop the writing", {
+  w <- function(page) .eb_rtf(rtf_tables(rtf_document(page = page), .eb_df))
+  # Landscape Letter: 11 x 8.5 in.
+  expect_error(w(rtf_page(margin_left_in = 6, margin_right_in = 6)),
+               "^The margins \\(L \\+ R = 12 in\\) leave no writable width on a 11 in wide page")
+  expect_error(w(rtf_page(margin_left_in = 5.5, margin_right_in = 5.5)),
+               "leave no writable width on a 11 in wide page")
+  expect_error(w(rtf_page(margin_top_in = 4.25, margin_bottom_in = 4.25)),
+               "^The margins \\(T \\+ B = 8\\.5 in\\) leave no writable height on a 8\\.5 in high page")
+  expect_error(w(list(paper_size = "A4", orientation = "portrait",
+                      margin_left_in = 4.2, margin_right_in = 4.2)),
+               "leave no writable width on a 8\\.2[0-9]* in wide page")
+  expect_error(w(rtf_page(header_dist_in = 9)),
+               "^`header_dist_in` \\(9 in\\) is not on the 8\\.5 in high page")
+  expect_error(w(rtf_page(footer_dist_in = 8.5)),
+               "^`footer_dist_in` \\(8\\.5 in\\) is not on the 8\\.5 in high page")
+  # From an option.
+  old <- options(rtfreporter.page.margin_left_in = 10.5)
+  on.exit(options(old), add = TRUE)
+  expect_error(w(rtf_page()), "leave no writable width")
+  options(old)
+  # Just inside: a writable width of 0.1 in is written, with positive cells.
+  out <- w(rtf_page(margin_left_in = 5.45, margin_right_in = 5.45))
+  expect_false(grepl("\\\\cellx-", out))
+  expect_true(grepl("\\\\paperw15840", out))
 })
