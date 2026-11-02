@@ -29,6 +29,28 @@ test_that("rtfreporter_validation_kit() refuses a folder with files unless overw
   expect_error(rtfreporter_validation_kit(d, overwrite = NA), "TRUE or FALSE")
 })
 
+test_that("requirements.csv and test_map.csv are strict CSV, every row whole", {
+  # what any CSV reader takes them as (RFC 4180): a field quoted or not,
+  # a quote inside a quoted field doubled -- a backslash does not escape
+  # it, which R's reader forgives and Python's does not; every record as
+  # many fields as the header; a status and a version where they belong
+  field <- "(\"(?:[^\"]|\"\")*+\"|[^,\"]*+)"
+  record <- paste0("^", field, "(?:,", field, ")*+$")
+  for (f in c("requirements.csv", "test_map.csv")) {
+    path <- system.file("validation", f, package = "rtfreporter")
+    lines <- readLines(path, encoding = "UTF-8", warn = FALSE)
+    bad <- which(!grepl(record, lines, perl = TRUE))
+    expect_identical(bad, integer(0), label = paste(f, "lines that are not strict CSV"))
+    n <- utils::count.fields(path, sep = ",", quote = "\"")
+    expect_true(all(n == n[1L]), label = paste(f, "has the same number of fields in every record"))
+  }
+  req <- utils::read.csv(system.file("validation", "requirements.csv", package = "rtfreporter"),
+                         colClasses = "character")
+  expect_true(all(req$status %in% c("active", "removed")))
+  expect_true(all(grepl("^[0-9]+\\.[0-9]+\\.[0-9]+$", req$since)))
+  expect_true(all(grepl("^FR-[A-Z]{2}[0-9]{3}$", req$id)))
+})
+
 test_that("every FR id the URS and the UAT cases name is in requirements.csv", {
   d <- .kit_dir()
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
