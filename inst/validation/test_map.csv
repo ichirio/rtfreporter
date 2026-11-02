@@ -1408,3 +1408,5 @@
 "test-validation-kit.R","rtfreporter_validation_kit() refuses a folder with files unless overwrite = TRUE","FT-AS117","FR-AS230 FR-AS231 FR-AS232"
 "test-pipe-api.R","a gt table given to rtf_tables() is read as as_rtftables() reads it (#788)","FT-TB691","FR-TB192"
 "test-default-widths.R","the row headings are at least one and a half data columns, at any count (#791)","FT-TB692","FR-TB383"
+"test-adapter-option-robustness.R","gt: several group columns give one group row per combination, formats kept (#193)","FT-TB770","FR-TB585"
+"test-adapter-option-robustness.R","gt: an html() label is read as its text, <br> a line break (#193)","FT-TB771","FR-TB584"

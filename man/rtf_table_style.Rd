@@ -28,17 +28,23 @@ rtf_table_style(
 \item{border_header, border_spanning, border_body, border_first_row, border_last_row}{\code{\link[=rtf_border]{rtf_border()}} objects (or \code{NULL}) controlling each zone of the table.}
 
 \item{header_align, header_bold, header_italic}{Defaults for column-header
-row formatting.  \code{header_align = NULL} means "inherit \code{align}".}
+row formatting.  \code{header_align = NULL} means "inherit \code{align}";
+otherwise \code{"left"}, \code{"center"} or \code{"right"}.}
 
 \item{align, bold, italic, underline}{Defaults for data-row formatting.
 \code{align = NULL} (the default) leaves each column's own default alone ---
 row-title columns left, the others centred (see \code{\link[=rtftable]{rtftable()}}'s
-\code{row_title}); \code{"left"} / \code{"center"} / \code{"right"} sets every column.}
+\code{row_title}); \code{"left"} / \code{"center"} / \code{"right"} sets every column.  Any
+other \code{align} or \code{header_align} is an error; a flag other than \code{TRUE} is
+stored as \code{FALSE}.}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Cell padding
-(twips) used by both column-header and data cells.}
+(twips) used by both column-header and data cells; \code{NULL} leaves the
+document's padding.}
 
-\item{row_height_twips}{Row height (twips); \code{NULL} = font-aware default.}
+\item{row_height_twips}{Row height (twips); \code{NULL} = font-aware default.
+This and the four padding arguments are each one non-negative integer
+or \code{NULL}; anything else is an error.}
 
 \item{cell_padding_top_twips, cell_padding_bottom_twips}{Cell padding above /
 below the text (twips) of column-header and data cells; \code{NULL} leaves the

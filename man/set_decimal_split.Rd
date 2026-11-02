@@ -27,8 +27,9 @@ set_decimal_split(x, ...)
 
 \item{...}{Unused.}
 
-\item{cols}{Columns to split: names or positions.  Needed to set a split;
-left out (\code{NULL}) it clears the setting.}
+\item{cols}{Columns to split: names or positions.  Required: \code{cols = NULL},
+given explicitly, clears a split set before, and leaving \code{cols} out is an
+error.}
 
 \item{ratio}{\code{NULL} (the default) to size the two halves automatically from
 the widest left and right part actually present, or a number in \verb{(0, 1)}
