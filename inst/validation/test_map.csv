@@ -1437,3 +1437,5 @@
 "test-rtf-style.R","FT-DC238 [FR-DC319]: default_format still works, maps onto the shared level beneath rtf_style(), and warns once a session","FT-DC238","FR-DC319"
 "test-rtf-style.R","FT-DC239 [FR-DC320 FR-DC321 FR-DC322 FR-DC323]: an unknown key or section, a bad value, a style that is not one","FT-DC239","FR-DC320 FR-DC321 FR-DC322 FR-DC323"
 "test-rtf-style.R","FT-DC240 [FR-DC308 FR-DC315]: the example of #804 runs, and each report setting wins over the study's","FT-DC240","FR-DC308 FR-DC315"
+"test-header-footer-color.R","FT-DC224 [FR-DC295 FR-DC296]: a band's colour, and a row's over it, are written and in the colour table","FT-DC224","FR-DC295 FR-DC296"
+"test-header-footer-color.R","FT-DC225 [FR-DC297]: a colour that is not one 6-digit hex string is refused","FT-DC225","FR-DC297"

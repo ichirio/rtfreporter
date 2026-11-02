@@ -18,7 +18,8 @@ rtf_header(
   cell_padding_right_twips = NULL,
   cell_padding_top_twips = NULL,
   cell_padding_bottom_twips = NULL,
-  drop_empty_rows = FALSE
+  drop_empty_rows = FALSE,
+  color = NULL
 )
 
 rtf_footer(
@@ -34,7 +35,8 @@ rtf_footer(
   cell_padding_right_twips = NULL,
   cell_padding_top_twips = NULL,
   cell_padding_bottom_twips = NULL,
-  drop_empty_rows = FALSE
+  drop_empty_rows = FALSE,
+  color = NULL
 )
 }
 \arguments{
@@ -47,8 +49,9 @@ a row, the name of each element chooses its column:
 \item{\code{r}}{right-aligned text}
 }
 e.g. \code{c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")}.  A row may
-also be a list, \code{list(columns = c(l = , c = , r = ), row_height_twips = 400L)}, whose \code{row_height_twips} is that row's height (over the band's
-\code{row_height_twips}).  Cell text may
+also be a list, \code{list(columns = c(l = , c = , r = ), row_height_twips = 400L, color = "#C00000")}, whose \code{row_height_twips} is that row's height
+(over the band's \code{row_height_twips}) and \code{color} its text colour (over
+the band's \code{color}).  Cell text may
 contain \strong{page-number tokens} that the renderer substitutes: \code{{AUTO_PAGE}}
 (the current page, updated live by the viewer), \code{{AUTO_TOTAL_PAGES}} (the
 document total), and \code{{PAGE}} / \code{{TOTAL_PAGES}} (static numbers baked in at
@@ -102,6 +105,11 @@ empty when the file is written, and which says nothing else but blanks
 and brackets (\code{"<{POPULATION}>"}), is left out.  One header can then
 serve every report of a study, a report with no value for a line going
 without it.  \code{FALSE} (default): every row is written.}
+
+\item{color}{The band's text colour, a 6-digit hex string such as
+\code{"#7F7F7F"}; \code{NULL} (default) leaves the text in the document's colour
+(black).  A row given as \code{list(columns = , color = )} has its own.  The
+colour is added to the document's colour table.}
 }
 \value{
 A named list with elements \code{rows}, \code{border}, \code{width_twips}, and

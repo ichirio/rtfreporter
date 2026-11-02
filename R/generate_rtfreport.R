@@ -1722,6 +1722,10 @@
     row_rh_str <- if (is.null(row_rh)) rh_str else
       .cmd_fmt(table_cmd$row_height_template,
                list(row_height_twips = as.integer(row_rh)))
+    # the text colour: the row's (list form), else the band's (#42)
+    row_color <- (if (is.list(row_def)) row_def$color) %||% hf$color
+    color_idx <- if (!is.null(row_color) && !is.null(color_index_map))
+                   color_index_map[[toupper(row_color)]] else NULL
     if (is.null(cols_vec) || length(cols_vec) == 0L) {
       cols_vec <- c("")
     }
@@ -1786,6 +1790,9 @@
                    center = align_cmd$center, align_cmd$default)
       txt <- .render_tokens(cols_display[i], current_page = current_page,
                             total_pages = total_pages, markup = hf_markup)
+      if (!is.null(color_idx) && nzchar(txt)) {
+        txt <- paste0("\\cf", as.integer(color_idx), " ", txt, "\\cf1 ")
+      }
       row <- paste0(row,
                     at, "\\li", pad_l, "\\ri", pad_r, hf_fs, " ", txt, "\\cell")
     }
@@ -1805,9 +1812,13 @@
 
   .hf_colors <- function(hf) {
     if (is.null(hf)) return(character(0))
+    # the text colours: the band's and its rows' (#42)
+    txt <- c(hf$color, unlist(lapply(hf$rows, function(r) if (is.list(r)) r$color),
+                              use.names = FALSE))
+    txt <- toupper(as.character(txt))
     b <- hf$border
-    if (is.null(b) || !inherits(b, "rtf_border")) return(character(0))
-    .collect_border_colors(b)
+    if (is.null(b) || !inherits(b, "rtf_border")) return(txt)
+    c(txt, .collect_border_colors(b))
   }
 
   # Colours of the per-cell borders inside one col_header rows list.
