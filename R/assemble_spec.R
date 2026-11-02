@@ -56,12 +56,41 @@
          .rtf_decode_text, character(1L), USE.NAMES = FALSE)
 }
 
-# Read one RTF file's table number / title / TOC label from its running
-# header.  Falls back to the file name when no "Table N" header is found.
-.rtf_table_label <- function(file) {
-  txt    <- paste(readLines(file, warn = FALSE), collapse = " ")
-  cells  <- .rtf_centered_cells(.rtf_header_block(txt))
+# The centred bold title lines of the title block in the body (what
+# rtf_titles() writes): the run of consecutive centred bold lines that
+# contains the first "Table N" line, within the first 200 lines and before
+# any picture.  Returns character(0) when no such line is found.
+.rtf_body_title_lines <- function(lines) {
+  n_scan <- min(length(lines), 200L)
+  pat <- "\\\\qc\\\\li[0-9]+\\\\ri[0-9]+\\s+\\\\b\\s+(.+?)\\\\b0"
+  texts <- rep(NA_character_, n_scan)
+  for (i in seq_len(n_scan)) {
+    if (grepl("\\\\pict", lines[i])) {
+      n_scan <- i - 1L
+      break
+    }
+    g <- regmatches(lines[i], regexec(pat, lines[i]))[[1L]]
+    if (length(g) == 2L) texts[i] <- .rtf_decode_text(g[2L])
+  }
+  texts <- texts[seq_len(n_scan)]
+  is_tab <- !is.na(texts) & grepl("^Table\\s+[0-9]", texts)
+  if (!any(is_tab)) return(character(0))
+  first <- which(is_tab)[1L]
+  # Widen to the consecutive centred bold lines around the "Table N" line.
+  lo <- first
+  while (lo > 1L && !is.na(texts[lo - 1L])) lo <- lo - 1L
+  hi <- first
+  while (hi < n_scan && !is.na(texts[hi + 1L])) hi <- hi + 1L
+  texts[lo:hi]
+}
+
+# Table number and title from a set of centred title cells: the first
+# "Table N" cell gives the number; the title is the longest cell that is
+# neither a "Table N" line nor a "<...>" subtitle, else the text after the
+# number on the "Table N" line.
+.rtf_cells_table_title <- function(cells) {
   tabnum <- NA_character_
+  title_inline <- ""
   for (c in cells) {
     g <- regmatches(c, regexec("^Table\\s+([0-9][0-9.A-Za-z-]*)\\b\\s*(.*)$", c))[[1L]]
     if (length(g) == 3L && nzchar(g[2L])) {
@@ -70,13 +99,30 @@
       break
     }
   }
-  # Title = a centred cell that is neither the "Table N" line nor a "<...>"
-  # subtitle; pick the longest such cell.
   cand <- cells[!grepl("^Table\\s", cells) & !grepl("^<.*>$", cells) &
                   nchar(cells) > 0L]
   title <- if (length(cand)) cand[which.max(nchar(cand))] else NA_character_
-  if (!is.na(tabnum) && exists("title_inline") && nzchar(title_inline) &&
-      is.na(title)) title <- title_inline
+  if (!is.na(tabnum) && nzchar(title_inline) && is.na(title)) {
+    title <- title_inline
+  }
+  list(table = tabnum, title = title)
+}
+
+# Read one RTF file's table number / title / TOC label from its running
+# header.  When the header has no "Table N" line, the title block in the body
+# (rtf_titles()) is read instead (#843).  Falls back to the file name when
+# neither has one.
+.rtf_table_label <- function(file) {
+  lines  <- readLines(file, warn = FALSE)
+  txt    <- paste(lines, collapse = " ")
+  cells  <- .rtf_centered_cells(.rtf_header_block(txt))
+  tt     <- .rtf_cells_table_title(cells)
+  if (is.na(tt$table)) {
+    body <- .rtf_cells_table_title(.rtf_body_title_lines(lines))
+    if (!is.na(body$table)) tt <- body
+  }
+  tabnum <- tt$table
+  title  <- tt$title
 
   base <- sub("\\.rtf$", "", basename(file), ignore.case = TRUE)
   label <- if (!is.na(tabnum)) {
@@ -254,24 +300,29 @@
 #' Assemble every RTF in a folder into one TOC deliverable
 #'
 #' Scans `dir` for `.rtf` files (natural-sorted, so `t2` comes before `t10`)
-#' and reads each file's table number and title from its running header into
-#' a **table of contents**: a `data.frame` with one row per file.  With an
+#' and reads each file's table number and title into a **table of
+#' contents**: a `data.frame` with one row per file.  The number and title
+#' come from the running header (`rtf_header()`) when it has a `"Table N"`
+#' line, otherwise from the title block that [rtf_titles()] writes at the top
+#' of the body.  With an
 #' `output_file` it assembles the deliverable with that table of contents
 #' ([assemble_rtf()]); without one it only returns the table, to edit
 #' (rename labels, fill `heading` to group entries, change `level`, reorder
 #' or drop rows) and hand to `assemble_rtf(toc = )`.
 #'
 #' The rows come in this order, the same in every locale and on every OS:
-#' first the files whose header has a `"Table N"` line, by that number in
+#' first the files with a `"Table N"` line (in the header or the titles), by
+#' that number in
 #' natural order (`14.1.2` before `14.1.10`, `14.1.x` before `14.3.x`,
 #' whatever the file names); then the files without one -- listings,
-#' figures, any file whose header has no `"Table N"` line -- by file name in
+#' figures, any file with no `"Table N"` line -- by file name in
 #' natural order.  Names are compared character by character as in the C
 #' locale, so upper case comes before lower case (`B` before `a`) and `-`
 #' before `_`.  Files with the same table number keep their file-name order.
 #'
 #' The table has the columns `order` (the assembly order), `file`, `table`
-#' (the table number read from the header, or `NA`), `heading` (a heading
+#' (the table number read from the header or the titles, or `NA`), `heading`
+#' (a heading
 #' printed above the entry whenever it changes; `NA` = none), `label` (the
 #' entry text, `"Table N  <title>"`), `level` (the entry's indent, a whole
 #' number from 1 to 3, default 2) and `pages` (informational).

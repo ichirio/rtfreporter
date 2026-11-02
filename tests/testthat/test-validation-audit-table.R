@@ -106,7 +106,7 @@
 #     by_value names kept                                   |             |
 #   listing; built body; rlistings; defaults only           | FR-TB155-157, FR-IX318/351/355 | FT-TB113, FT-TB218, FT-TB217, FT-TB216
 #   stub; built before pagination; by_value exception       | FR-TB158/161, FR-IX320 | FT-TB413, FT-TB016, FT-TB017
-#   header_sep                                              | FR-TB162    | FT-TB203
+#   header_sep; each separator literal text, "\E" too       | FR-TB162    | FT-TB203, FT-TB772
 #   auto_width / table_width_twips / the width vocabulary   | FR-TB163/164, FR-IX101/319 | FT-TB015, FT-TB014, FT-IX001, FT-TB429
 #   border / style passed on                                | FR-TB165    | FT-TB688
 #   first_rows; with page_by / custom / by_value an error   | FR-TB150/151| FT-TB165, FT-TB722
@@ -486,4 +486,21 @@ test_that("FT-TB754 [FR-TB139]: as_rtftables(blank_rows = -1) puts a blank after
   s <- .at_one(p[[2L]])
   expect_match(.at_rows(s)[grep("r5\\cell", .at_rows(s), fixed = TRUE) + 1L],
                "\\cell\\row", fixed = TRUE)
+})
+
+test_that("FT-TB772 [FR-TB162]: as_rtftables(header_sep = ) splits on each separator as literal text, a \"\\E\" too", {
+  hdr <- function(nm, sep) {
+    df <- stats::setNames(data.frame("a", "1", "2"), nm)
+    as_rtftables(df, header_sep = sep)[[1L]]$col_header
+  }
+  # "\E" ended the \Q...\E quote of the old regular expression, which then
+  # split every name at each character
+  h <- hdr(c("id", "A\\Ex", "A\\Ey"), "\\E")
+  expect_length(h, 2L)
+  expect_identical(vapply(h[[1L]], function(c) c$label, character(1L)), c("", "A"))
+  expect_identical(h[[2L]], c("id", "x", "y"))
+  # regular-expression characters are literal; the longest separator wins
+  h <- hdr(c("id", "A.|x", "A.|y"), c(".", ".|"))
+  expect_identical(vapply(h[[1L]], function(c) c$label, character(1L)), c("", "A"))
+  expect_identical(h[[2L]], c("id", "x", "y"))
 })
