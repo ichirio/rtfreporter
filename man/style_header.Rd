@@ -210,7 +210,10 @@ by \emph{all} label rows of the table), and a \code{border} or \code{underline} 
 \strong{promotes} the row to an equivalent list of single-column cells (labels
 and current header styling are copied over, so the rendered output is
 unchanged; the promoted row renders through the \code{spanning} border zone,
-which falls back to the \code{header} zone when unset).
+which falls back to the \code{header} zone when unset).  The promoted cells
+keep following the columns' header styling: a later \code{style_cols(header_bold = , header_italic = , header_align = )}, or \code{style_header(bold = , italic = , align = )} on another label row, reaches them too, and
+\code{style_cols(header_background = )} fills them, so the order of the verbs
+does not matter.
 }
 
 \examples{
