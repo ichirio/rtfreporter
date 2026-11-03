@@ -39,8 +39,10 @@ test_that("an rtf_border selects the whole table, never silently emptied (#326, 
   expect_identical(tb$outer, b)
 
   df <- data.frame(a = c("x", "y"), b = c("1", "2"), stringsAsFactors = FALSE)
-  # The table's top edge is the topmost row's top, and it carries the rule.
-  expect_identical(rtftable(df, border = b)$border$first_row$top, b$top)
+  # The table's top edge is the topmost row's top, and it carries the rule:
+  # the column-name header row a NULL col_header writes.
+  expect_identical(rtftable(df, border = b)$border$header$top, b$top)
+  expect_null(rtftable(df, border = b)$border$first_row$top)
   expect_silent(rtf_tables(rtf_document(), rtftable(df, border = b)))
 
   # A zone map still works when built through the supported route.  (Start from
