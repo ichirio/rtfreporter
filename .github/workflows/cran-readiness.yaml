@@ -39,7 +39,7 @@ jobs:
           needs: check
 
       - name: The PDF manual's LaTeX packages
-        run: tlmgr install inconsolata
+        run: tlmgr update --self && tlmgr install inconsolata
 
       - name: R CMD check --as-cran, with the manual
         id: check
