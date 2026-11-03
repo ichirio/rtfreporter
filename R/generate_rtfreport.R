@@ -544,7 +544,7 @@
   format(time, fmt)
 }
 
-.substitute_run_tokens <- function(out) {
+.substitute_run_tokens <- function(out, keep_marks = FALSE) {
   has <- function(tok) grepl(paste0("\\{", tok), out, fixed = TRUE)
   if (has("PROGRAM")) {
     prog <- .program_now()
@@ -556,10 +556,10 @@
            "the program with source() or Rscript.", call. = FALSE)
     }
     # the longer tokens first: {PROGRAM_FULL} is never read as {PROGRAM}
-    out <- .replace_token(out, "\\{PROGRAM_FULL\\}", .rtf_escape(.full_path(prog)))
-    out <- .replace_token(out, "\\{PROGRAM_NAME\\}", .rtf_escape(basename(prog)))
-    out <- .replace_token(out, "\\{PROGRAM_DIR\\}", .rtf_escape(dirname(prog)))
-    out <- .replace_token(out, "\\{PROGRAM\\}", .rtf_escape(prog))
+    out <- .replace_token(out, "\\{PROGRAM_FULL\\}", .token_value(.full_path(prog)))
+    out <- .replace_token(out, "\\{PROGRAM_NAME\\}", .token_value(basename(prog)))
+    out <- .replace_token(out, "\\{PROGRAM_DIR\\}", .token_value(dirname(prog)))
+    out <- .replace_token(out, "\\{PROGRAM\\}", .token_value(prog))
   }
   if (has("DATETIME")) {
     time <- .run_ctx$time %||% .resolve_render_time()
@@ -577,12 +577,25 @@
   # tokens of one's own (rtf_document(tokens = ), the option), then the
   # page's values by column, {PARAM} (R/page_values.R): set only while a
   # page's text is written, so they never reach another page
+  # A value is written as it is: its braces stay marked until the page
+  # tokens are done (.token_value()), so a `{PAGE}` in a value is not filled.
   out <- .substitute_user_tokens(out)
-  .substitute_column_tokens(out)
+  out <- .substitute_column_tokens(out)
+  if (keep_marks) out else .drop_token_marks(out)
 }
 
+# `{{` / `}}` are literal braces in a band, as in a column header (#876).  The
+# text is already RTF-escaped, so a doubled brace reads `\{\{` / `\}\}`; it is
+# parked on a control character while the tokens are filled, then put back as
+# one escaped brace.  A markup's own braces (`{\super ...}`) are not escaped,
+# so they never match.
+.BAND_BRACE_OPEN  <- "\u0006"
+.BAND_BRACE_CLOSE <- "\u0007"
+
 .substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
-  out <- .substitute_run_tokens(out)
+  out <- gsub("\\{\\{", .BAND_BRACE_OPEN, out, fixed = TRUE)
+  out <- gsub("\\}\\}", .BAND_BRACE_CLOSE, out, fixed = TRUE)
+  out <- .substitute_run_tokens(out, keep_marks = TRUE)
   # `{SECTION_PAGES}` was removed in 0.7.31 (#410).  An unrecognised token is
   # passed through as literal text, so falling through silently would print
   # "{SECTION_PAGES}" into a rendered deliverable -- error instead, and say
@@ -623,7 +636,9 @@
     out <- gsub("\\{TOTAL_PAGES\\}", as.character(total_pages), out, fixed = TRUE)
   }
 
-  out
+  out <- .drop_token_marks(out)
+  out <- gsub(.BAND_BRACE_OPEN, "\\{", out, fixed = TRUE)
+  gsub(.BAND_BRACE_CLOSE, "\\}", out, fixed = TRUE)
 }
 
 # Cell shading: `\clcbpat<N>` names a colour-table index as the cell's fill.
@@ -938,6 +953,8 @@
 #   bold         -- (optional) TRUE / FALSE.  Default FALSE.
 #   italic       -- (optional) TRUE / FALSE.  Default FALSE.
 #   underline    -- (optional) TRUE / FALSE.  Default FALSE.
+#   promoted     -- (internal) TRUE on a label-row cell promoted by
+#                   style_header(); it takes col_spec[[from]]$header_background.
 #
 # `border_spec` is the row-level border (only top on first / bottom on
 # last header row, per .header_outer_border()).  `group_bottom_side`,
@@ -1061,9 +1078,16 @@
     k  <- coverage[j]
     ci <- ci + 1L
     if (k > 0L) {
-      to_idx <- as.integer(spanning_header[[k]]$to)
+      sp     <- spanning_header[[k]]
+      to_idx <- as.integer(sp$to)
       bc     <- .build_border_commands(
         .cell_border(k, cell_idx = ci, n_cells = n_cells), color_index_map)
+      # A label-row cell promoted by style_header(border = / underline = )
+      # keeps its column's header fill, as the label row had it (#872).
+      if (isTRUE(sp$promoted) && !is.null(col_spec) && j <= length(col_spec)) {
+        bc <- paste0(bc, .cell_shading_cmd(col_spec[[j]]$header_background,
+                                           color_index_map))
+      }
       cell_defs <- c(cell_defs, paste0(bc, valign_cmd, "\\cellx", cellx[to_idx]))
       j <- to_idx + 1L
     } else {

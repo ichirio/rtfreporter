@@ -119,9 +119,9 @@ test_that("character input is refused", {
 })
 
 test_that("digits must be a single non-negative integer", {
-  expect_error(fmt_signif(1, -1),      "non-negative")
+  expect_error(fmt_signif(1, -1),      "positive")
   expect_error(fmt_round(1, c(1, 2)),  "non-negative")
-  expect_error(fmt_signif(1, "four"),  "non-negative")
+  expect_error(fmt_signif(1, "four"),  "positive")
 })
 
 # ──────── fmt_numeric(): whole-column form ─────────────────────────────────

@@ -282,7 +282,10 @@ vector the same length as \code{sort_by} (one direction per key).  Ignored when
 \item{cont_label}{Character (default \code{" (Cont.)"}).  Suffix appended to a
 group's label on the second and later pages it continues onto (the
 group-aware splits), marking a continued group.  One string; \code{""}
-repeats the label alone.}
+repeats the label alone.  A group whose only rows past a cut are blank
+rows -- a listing record's blank row, or the separators \code{blank_rows}
+counts -- is not continued: no continuation row, and those blank rows,
+which would open the next page, are dropped.}
 
 \item{min_group_rows}{A non-negative whole number (default \code{2}).
 Widow/orphan control for the
@@ -591,7 +594,10 @@ defaults to \code{"tfl"}.}
 \item{first_rows}{The rows of the first page (a whole number, 1 or more;
 as many as the table has or more is one page), the rest paginated as the
 other arguments say (\code{max_rows}, \code{split}): the page a table shares with
-the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  \code{NULL}
+the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  Under
+\code{"group_safe"} / \code{"group_force"} a group the cut falls inside goes on
+with its continuation row on the next page, counted in its \code{max_rows},
+as a cut by \code{max_rows} does.  \code{NULL}
 (the default): the first page as the others.  Not with \code{page_by},
 \code{split = "by_value"} or a custom \code{split}.}
 }

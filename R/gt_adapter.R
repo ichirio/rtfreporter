@@ -701,7 +701,8 @@
              bold      = isTRUE(e$header_bold),
              italic    = isTRUE(e$header_italic),
              underline = lab_underline[j],
-             border    = lab_borders[[j]])
+             border    = lab_borders[[j]],
+             promoted  = TRUE)
       })
       if (is.character(out$col_header)) {
         out$col_header <- list(promoted)

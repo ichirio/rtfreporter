@@ -235,8 +235,11 @@ test_that("FT-PL961 [FR-PL952]: a wrapped record moves whole to the next page; o
   # the record of seven rows (six lines, a blank) does not fit under the first
   expect_identical(terms(8), c("Headache|", "Nausea|and|vomiting|after the|second|dose|",
                                "Fatigue||Rash|"))
+  # its six lines fill a page of six: its blank row, which would open the
+  # next page, is dropped (#859)
+  expect_identical(terms(6)[2:3], c("Nausea|and|vomiting|after the|second|dose", "Fatigue||Rash|"))
   # longer than a page, it is cut where the page is full
-  expect_identical(terms(6)[2:3], c("Nausea|and|vomiting|after the|second", "|dose||Fatigue|"))
+  expect_identical(terms(5)[2:3], c("Nausea|and|vomiting|after the|second", "|dose||Fatigue|"))
 })
 
 # ---- plan_hide(), plan_cell_style() ----------------------------------------------

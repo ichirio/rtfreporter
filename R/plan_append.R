@@ -81,17 +81,22 @@
 #' carries one of them stops.
 #'
 #' What a part does not say, it takes from the parent, key by key: the
-#' cell templates, the digits, the empty-cell text, the labels, the levels
-#' of its row keys, the stub fold; what it says itself wins.  Its row keys
-#' and label are folded into one label column (the parent's
-#' `plan_stub(name =, indent =)`), so every part ends as `[page keys]
-#' [label] [value columns]`: a constant row key (`rows = c(block = ~
-#' "Summary Statistics")`) is the heading row above its rows, as in any
-#' table.  Columns a part does not have print its empty-cell text.
+#' cell templates, the digits, the labels, the levels of its row keys, the
+#' stub fold; what it says itself wins.  The empty-cell text is each part's
+#' own (`plan_cells(na = )`, empty by default): the parent's is no
+#' statistic's.  Its row keys and label are folded into one label column
+#' (the parent's `plan_stub(name =, indent =)`), so every part ends as
+#' `[page keys] [label] [value columns]`: a constant row key
+#' (`rows = c(block = ~ "Summary Statistics")`) is the heading row above its
+#' rows, as in any table, and stays empty.  Columns a part does not have, and
+#' cells it has no value for, print its own empty-cell text.
 #'
 #' The parts are stacked before the pages are cut: a page of
 #' `page_by` value X holds the parent's rows of X, then each part's rows of
-#' X, matched by **value**.  Every part's data must have the `page_by`
+#' X, matched by **value**.  A blank row between the parts
+#' (`plan_blanks(where = "between_parts")`) is a row of the stack, so it
+#' takes a place in `max_rows`, and a group cut by a page break is continued
+#' on the next page by its heading row with `cont_label`.  Every part's data must have the `page_by`
 #' columns (it is not written to every page by default); a value the parent
 #' has and a part has not stops, unless that part says `absent =
 #' "skip"`; a value only a part has makes no page.
