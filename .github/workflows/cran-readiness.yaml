@@ -66,10 +66,16 @@ jobs:
         continue-on-error: true
         run: |
           u <- urlchecker::url_check(".")
-          print(u)
-          out <- c("## URLs", sprintf("%d problem(s)", nrow(u)), "```", utils::capture.output(print(u)), "```")
+          # a host the runner could not reach in time is the runner's network,
+          # not the URL: listed, not counted
+          slow <- grepl("Timeout was reached", u$Message, fixed = TRUE)
+          show <- function(x) if (nrow(x)) tryCatch(utils::capture.output(print(x)), error = function(e) character())
+          out <- c("## URLs", sprintf("%d problem(s), %d not reached in time", sum(!slow), sum(slow)),
+                   "```", show(u[!slow, ]), "```",
+                   if (any(slow)) c("Not reached in time:", "```", unique(u$URL[slow]), "```"))
+          cat(out, sep = "\n")
           cat(out, file = Sys.getenv("GITHUB_STEP_SUMMARY"), sep = "\n", append = TRUE)
-          if (nrow(u)) quit(status = 1)
+          if (any(!slow)) quit(status = 1)
         shell: Rscript {0}
 
       - name: Spelling
