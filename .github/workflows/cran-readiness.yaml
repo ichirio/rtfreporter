@@ -74,6 +74,9 @@ jobs:
         continue-on-error: true
         run: |
           s <- spelling::spell_check_package(".")
+          # the Japanese vignettes (*-ja.Rmd) are not English: their words left out
+          s$found <- lapply(s$found, function(f) f[!grepl("-ja[.]Rmd:", f)])
+          s <- s[lengths(s$found) > 0L, ]
           print(s)
           out <- c("## Spelling (words not in inst/WORDLIST)", sprintf("%d word(s)", nrow(s)),
                    "```", utils::capture.output(print(s)), "```")
