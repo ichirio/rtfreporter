@@ -28,7 +28,8 @@
 #   a named row whose value is a chain (with guards)        | FR-AR164    | FT-TB507
 #   an object of class cell_rows for widen_ard(cells = )    | FR-AR164    | FT-TB507
 #   one argument per row; none stops                        | FR-AR238    | FT-AR095
-#   an unnamed argument takes its label from `label`        | (#840)      | -- disagrees: left out
+#   an unnamed argument takes its label from `label`        | FR-AR164/248| FT-AR105 (#840, fixed)
+#   a named row on a variable with levels stops             | FR-AR249    | FT-AR106 (#840, fixed)
 #
 # pull_ard()
 #   one statistic, keyed like the spread columns; a named   | FR-AR213    | FT-AR049, FT-AR050
@@ -267,6 +268,41 @@ test_that("FT-AR104 [FR-AR247]: label = takes a bare formula and a chain of one 
   t <- .a6_wide(cells = "{n}", label = c(~ "{.label}!"))
   expect_identical(t$label, c("F!", "M!"))
   expect_identical(.a6_wide(cells = "{n}", label = ~ "{.label}!"), t)
+})
+
+test_that("FT-AR105 [FR-AR164, FR-AR248]: an unnamed cell_rows() line is one row per level, labelled from label", {
+  t <- .a6_wide(cells = cell_rows("{n}"))
+  expect_identical(t$label, c("F", "M"))
+  expect_identical(t$A, c("3", "2"))
+  expect_identical(t$B, c("4", "1"))
+  expect_identical(t, .a6_wide(cells = "{n}"))
+  # the guard and the chain are read per level
+  t <- .a6_wide(cells = cell_rows(c(n < 2 ~ "few", "{n}/{N}")))
+  expect_identical(t$A, c("3/5", "2/5"))
+  expect_identical(t$B, c("4/6", "few"))
+  # label = and levels = act on those rows as on a bare template's
+  expect_identical(.a6_wide(cells = cell_rows("{n}"), label = ~ "{.label}!")$label,
+                   c("F!", "M!"))
+  expect_identical(as.character(.a6_wide(cells = cell_rows("{n}"),
+                            levels = list(SEX = c("M", "F")))$label), c("M", "F"))
+  # one label (a continuous summary): the one row, its label from `label`
+  age <- normalize_ard(.a6_rows(c("A", "B"), "AGE", NA, "mean", c(50, 52), ctx = "summary"))
+  t <- widen_ard(age, cols = "TRT", cells = cell_rows("{mean}"), label = ~ "Age", notes = FALSE)
+  expect_identical(t$label, "Age")
+  expect_identical(t$B, "52")
+})
+
+test_that("FT-AR106 [FR-AR249]: a named row on a variable with several levels stops, naming it", {
+  msg <- "`cells` gives 'SEX' named rows ('n'), but 'SEX' has several levels ('F', 'M')."
+  expect_error(.a6_wide(cells = c(n = "{n}")), msg, fixed = TRUE)
+  expect_error(.a6_wide(cells = cell_rows(n = "{n}")), msg, fixed = TRUE)
+  expect_error(.a6_wide(cells = cell_rows("{n}", "%" = "{N}")),
+               "`cells` gives 'SEX' named rows ('%')", fixed = TRUE)
+  # one level: the named rows read the whole record, as before
+  one <- normalize_ard(.a6_rows(c("A", "B"), "SEX", "F", "n", c(3, 4)))
+  t <- widen_ard(one, cols = "TRT", cells = cell_rows("1" = "{n}", "2" = "[{n}]"),
+                 label = NA, notes = FALSE)
+  expect_identical(t$A, c("3", "[3]"))
 })
 
 # ---- the number formats ---------------------------------------------------------

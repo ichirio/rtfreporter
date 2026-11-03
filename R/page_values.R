@@ -112,7 +112,7 @@
   for (nm in setdiff(names(values), .RENDER_TOKENS)) {
     tok <- paste0("\\{", .rtf_escape(nm), "\\}")
     if (grepl(tok, out, fixed = TRUE)) {
-      out <- .replace_token(out, tok, .rtf_escape(values[[nm]]))
+      out <- .replace_token(out, tok, .token_value(values[[nm]]))
     }
   }
   out

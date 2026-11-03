@@ -120,7 +120,10 @@ pre-v0.0.29 behaviour.}
 \item{\code{"auto"}}{auto-extract each input file's title (the first
 centred-bold cell of the title block) and use it as a level-1
 TOC entry.  Falls back to the file's basename if no title is
-detected.}
+detected.  The title is read as the file shows it, its tokens filled
+(\code{{STUDY}}, \code{{PAGE}}), except that a dynamic page number
+(\code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}) and the \code{{BOOK_PAGE}} slot are
+left out, and markup keeps its text without its formatting.}
 \item{a character vector of TOC labels}{one per input file -- same as
 \code{"auto"} but with explicit labels.}
 \item{a table (\code{data.frame})}{one row per file, in order, for

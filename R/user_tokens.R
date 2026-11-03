@@ -67,8 +67,20 @@
   for (nm in names(tokens)) {
     tok <- paste0("\\{", nm, "\\}")
     if (grepl(tok, out, fixed = TRUE)) {
-      out <- .replace_token(out, tok, .rtf_escape(tokens[[nm]]))
+      out <- .replace_token(out, tok, .token_value(tokens[[nm]]))
     }
   }
   out
 }
+
+# A token's value as text: RTF-escaped, its braces marked so that no later
+# substitution reads a `{PAGE}` or `{STUDY}` in the value as a token (a value
+# is written as it is).  .substitute_page_tokens() / .substitute_run_tokens()
+# take the marks out when they are done.
+.TOKEN_VALUE_MARK <- "\u0005"
+.token_value <- function(x) {
+  v <- .rtf_escape(x)
+  v <- gsub("\\{", paste0("\\{", .TOKEN_VALUE_MARK), v, fixed = TRUE)
+  gsub("\\}", paste0(.TOKEN_VALUE_MARK, "\\}"), v, fixed = TRUE)
+}
+.drop_token_marks <- function(out) gsub(.TOKEN_VALUE_MARK, "", out, fixed = TRUE)
