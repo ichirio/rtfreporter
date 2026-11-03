@@ -8,7 +8,11 @@ cell_rows(...)
 }
 \arguments{
 \item{...}{One argument per output row.  Names become row labels; an
-unnamed argument takes its label from \code{label}, as a bare template does.}
+unnamed argument takes its label from \code{label}, as a bare template does.
+On a variable with several levels (a categorical summary) an unnamed
+argument gives one row per level, as a bare template does; a named one
+stops with an error naming the variable, because one named row cannot
+hold every level (put the level in \code{rows} instead).}
 }
 \value{
 An object of class \code{cell_rows}, for \code{cells} in \code{\link[=widen_ard]{widen_ard()}}.

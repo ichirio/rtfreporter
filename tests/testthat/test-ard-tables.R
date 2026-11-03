@@ -212,7 +212,8 @@ test_that("labels set the text, never the order: levels (or the ARD) do", {
   # and the same through the plan verbs
   p <- table_plan(normalize_ard(make_ard()), cols = "TRT",
                   rows = c(group = "variable")) |>
-    plan_cells(cells, notes = FALSE) |>
+    plan_cells(continuous = cells$continuous, categorical = cells$categorical,
+               notes = FALSE) |>
     plan_labels(SEX = "Sex", AGE = "Age")
   expect_identical(as.character(unique(plan_apply(p, "table")$group)),
                    c("Age", "AGEGR", "Sex"))
