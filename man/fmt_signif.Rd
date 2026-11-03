@@ -20,7 +20,7 @@ are taken as already formatted.}
 Zero significant digits would print nothing of a value below 1, so \code{0}
 is an error, as a negative, fractional or \code{NA} value is. Default \code{3}.}
 
-\item{rounding}{\code{"r"} rounds with \code{\ink[base:Round]{base::round()}}, which is banker's
+\item{rounding}{\code{"r"} rounds with \code{\link[base:Round]{base::round()}}, which is banker's
 rounding; \code{"sas"} rounds half away from zero as SAS does. They differ on
 exact halves -- \code{23.445} is \code{"23.44"} under \code{"r"} and \code{"23.45"} under
 \code{"sas"}.  \code{NULL}, the default, reads \code{getOption("rtfreporter.rounding")}
@@ -39,7 +39,7 @@ through as \code{"Inf"} / \code{"-Inf"}.
 Renders a numeric vector as the text a clinical table should show, counting
 \strong{total printed digits including the integer part} -- the convention a SAP
 means by "report to 4 significant digits", which is not the same as
-\code{\ink[base:Round]{base::signif()}}:
+\code{\link[base:Round]{base::signif()}}:
 
 \preformatted{
 fmt_signif(c(0, 10.2, 103.4, 20.333333, 23.4463), digits = 4)
