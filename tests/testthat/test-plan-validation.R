@@ -211,11 +211,10 @@ test_that("FT-PL065 [FR-PL156]: plan_columns() twice merges field by field, the 
   expect_equal(page$row_title, 1L)
 })
 
-test_that("FT-PL066 [FR-PL163]: plan_columns(decimal = <name not on the page>) ignores it", {
+test_that("FT-PL066 [FR-PL163]: plan_columns(decimal = <name not a column of the table>) stops at plan_apply()", {
   p <- table_plan(val_wide())
-  expect_silent(pages <- plan_apply(p |> plan_columns(decimal = "nope")))
-  expect_identical(pages, plan_apply(p |> plan_columns()))
-  expect_null(pages[[1L]]$decimal_split)
+  expect_error(plan_apply(p |> plan_columns(decimal = "nope")),
+               "plan_columns(decimal = ) names 'nope', not a column of the table.", fixed = TRUE)
 })
 
 test_that("FT-PL067 [FR-PL175]: plan_columns(widths, decimal, row_title) match Japanese names", {

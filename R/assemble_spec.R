@@ -266,6 +266,32 @@
 
 # -- Spec file I/O (.xlsx via writexl/readxl, or .csv) -----------------------
 
+# The scalar arguments of assemble_folder() (#862), before any file is read:
+# a base-R message ("invalid filename argument", "NA in coercion to
+# boolean") does not say which argument is wrong.
+.check_folder_args <- function(dir, spec_file, recursive) {
+  if (!is.character(dir) || length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
+    stop("`dir` must be a single folder path.", call. = FALSE)
+  }
+  if (!is.logical(recursive) || length(recursive) != 1L || is.na(recursive)) {
+    stop("`recursive` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (is.null(spec_file)) return(invisible())
+  if (length(spec_file) != 1L) {
+    stop("`spec_file` must be NULL or a single path ending in .xlsx or .csv.",
+         call. = FALSE)
+  }
+  if (!is.character(spec_file) || is.na(spec_file) ||
+      !tolower(tools::file_ext(spec_file)) %in% c("xlsx", "csv")) {
+    stop("`spec_file` must end in .xlsx or .csv.", call. = FALSE)
+  }
+  if (!dir.exists(dirname(spec_file))) {
+    stop(sprintf("The folder of `spec_file` does not exist: %s",
+                 dirname(spec_file)), call. = FALSE)
+  }
+  invisible()
+}
+
 .write_spec <- function(spec, path) {
   ext <- tolower(tools::file_ext(path))
   if (ext == "xlsx") {
@@ -351,15 +377,21 @@
 #' entry text, `"Table N  <title>"`), `level` (the entry's indent, a whole
 #' number from 1 to 3, default 2) and `pages` (informational).
 #'
-#' @param dir Directory of `.rtf` files to assemble.
+#' @param dir Directory of `.rtf` files to assemble: one folder path.  A
+#'   value that is not one non-empty string is an error, as is a folder that
+#'   does not exist or holds no `.rtf` file.
 #' @param output_file Path of the assembled `.rtf` to write, or `NULL`
-#'   (default): return the table of contents only.
+#'   (default): return the table of contents only.  Assembling needs two or
+#'   more files, so with an `output_file` a folder of one `.rtf` file is an
+#'   error (without one, its one-row table is returned).
 #' @param spec_file Optional path (`.xlsx` or `.csv`).  When given, the
 #'   generated spec is **saved** there (so you can inspect / edit it); when
 #'   `NULL` (default) the spec is kept in memory only.  It is written, never
 #'   read back: assemble an edited one with `assemble_rtf(toc = spec_file)`.
-#' @param recursive Recurse into sub-directories when scanning?  Default
-#'   `FALSE`.
+#'   One path in a folder that exists; another value is an error, checked
+#'   before any file is read or written.
+#' @param recursive Recurse into sub-directories when scanning?  `TRUE` or
+#'   `FALSE` (default); another value is an error.
 #' @param toc_title,toc_leader,toc_page_numbering,overwrite,... Passed through
 #'   to [assemble_rtf()]; `toc_page_numbering` defaults to `"decimal"` here
 #'   (`"none"` in [assemble_rtf()]).
@@ -395,7 +427,14 @@ assemble_folder <- function(dir, output_file = NULL, spec_file = NULL,
                             toc_leader = "dot",
                             toc_page_numbering = "decimal",
                             overwrite = FALSE, ...) {
+  .check_folder_args(dir, spec_file, recursive)
   spec <- .assemble_spec(dir = dir, recursive = recursive)
+  # one file is a table of contents, not a book (#862): stop before the
+  # spec file is written
+  if (!is.null(output_file) && nrow(spec) < 2L) {
+    stop(sprintf("`dir` holds one .rtf file (%s); assembling needs two or more.",
+                 basename(spec$file)), call. = FALSE)
+  }
   if (!is.null(spec_file)) .write_spec(spec, spec_file)
   if (is.null(output_file)) return(spec)
   .assemble_from_spec(spec, output_file, toc_title = toc_title,

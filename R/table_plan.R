@@ -1248,7 +1248,12 @@ plan_levels <- function(.plan, ..., .drop_empty = NULL) {
 #'   gave it; this text wins over that one.  A later call replaces an
 #'   entry of the same name whole.  A single unnamed argument that is
 #'   itself a named vector is taken as the whole map:
-#'   `plan_labels(study_labels)`.
+#'   `plan_labels(study_labels)`.  An entry for a value, column or variable
+#'   the table does not have is not used, so one study-wide map serves
+#'   every table.  Each entry is text (`""` prints an empty text); an
+#'   entry that is `NA`, `NULL`, a number, a factor, `character(0)`, two
+#'   texts without names or a dictionary with an `NA` or an unnamed text
+#'   stops.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -1278,6 +1283,21 @@ plan_levels <- function(.plan, ..., .drop_empty = NULL) {
 #' @export
 plan_labels <- function(.plan, ...) {
   v <- .plan_map(list(...), "plan_labels")
+  # Each entry is text: an NA stopped with a base-R message when the table
+  # was made, a factor printed its integer code, a number named a heading
+  # but no value, and an unnamed vector of two was dropped without a word.
+  for (k in names(v)) {
+    x <- v[[k]]
+    nm <- names(x)
+    ok <- is.character(x) && length(x) >= 1L && !anyNA(x) &&
+      (length(x) == 1L ||
+         (!is.null(nm) && !anyNA(nm) && all(nzchar(nm))))
+    if (!ok) {
+      .ard_stop(sprintf(paste0(
+        "plan_labels(%s = ) is one text, or texts named by code: ",
+        "c(F = \"Female\", M = \"Male\")."), k))
+    }
+  }
   .plan_layer(.plan, "labels", list(labels = v))
 }
 
@@ -2163,7 +2183,10 @@ plan_row_group <- function(.plan, mode = NULL, collapse = NULL,
 #' @param .plan A [table_plan()].
 #' @param ... One entry per nested variable, named by it, whose value is
 #'   the variable and level its rows go under, named by the variable:
-#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.
+#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.  The value is one level
+#'   (not `NA`) of one variable other than the nested one, and a variable is
+#'   nested once; another value stops at `plan_nest()`, and a variable or
+#'   level the table does not have stops when the plan is applied.
 #'   \describe{
 #'     \item{The level}{is matched as the table shows it (the ARD's level: a
 #'       code list's label).}
@@ -2208,12 +2231,24 @@ plan_nest <- function(.plan, ...) {
   if (!length(dots) || is.null(nm) || any(!nzchar(nm))) {
     .ard_stop("plan_nest(): name the nested variable, e.g. plan_nest(RACESUB = c(RACE = \"Asian\")).")
   }
+  # a variable named twice went under neither (the second hid the first's
+  # rows); a variable under its own level indented all of its rows
+  if (anyDuplicated(nm)) {
+    .ard_stop(sprintf("plan_nest(%s = ) is given twice: a variable goes under one level.",
+                      nm[anyDuplicated(nm)]))
+  }
   nest <- lapply(nm, function(v) {
     u <- dots[[v]]
-    if (!is.character(u) || length(u) != 1L || is.null(names(u)) || !nzchar(names(u))) {
+    if (!is.character(u) || length(u) != 1L || is.na(u) || is.null(names(u)) ||
+        is.na(names(u)) || !nzchar(names(u))) {
       .ard_stop(sprintf(paste0(
         "plan_nest(%s = ): one level of one variable, named by it: ",
         "c(RACE = \"Asian\")."), v))
+    }
+    if (identical(names(u), v)) {
+      .ard_stop(sprintf(paste0(
+        "plan_nest(%s = ): a variable goes under a level of another ",
+        "variable, not its own."), v))
     }
     list(parent = names(u), level = unname(u))
   })
@@ -3297,9 +3332,15 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   **Named by column** (`c(row_label = 5, .values = 2)`, `.values` for
 #'   every value column) a reordered table keeps them; unnamed, they are one
 #'   a column in order, as `col_rel_width` itself.  A name that is not a
-#'   column of the table stops with the names the table has.
+#'   column of the table stops with the names the table has.  Each width is
+#'   a positive finite number: `0`, a negative, `NA`, `Inf` or a string
+#'   stops at `plan_columns()`.
 #' @param decimal The columns whose numbers line up at the decimal point
-#'   (`.values` for every value column), [set_decimal_split()]'s `cols`.
+#'   (`.values` for every value column), [set_decimal_split()]'s `cols`, by
+#'   name.  A value that is not column names (`NA`, `""`, a number) stops at
+#'   `plan_columns()`; a name that is not a column of the table stops when
+#'   the plan is applied, as a `widths` name does (a hidden column's name is
+#'   allowed and changes nothing).
 #' @param row_title The row-heading columns, `rtftable(row_title = )`, by
 #'   name as `widths` are: a row key's name as `table_plan(rows = )` gives
 #'   it, `.values` for every value column.  A position counts the
@@ -3362,6 +3403,20 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
   if (!is.null(sep) && (!is.character(sep) || length(sep) != 1L ||
                         is.na(sep) || !nzchar(sep))) {
     .ard_stop("plan_columns(sep = ) is one non-empty string, \"____\" by default.")
+  }
+  # (#864) a width of 0, a negative, NA, Inf or a string would reach the
+  # pages and fail only when the file is written
+  if (!is.null(widths) && (!is.numeric(widths) || is.factor(widths) ||
+                           any(!is.finite(widths)) || any(widths <= 0))) {
+    .ard_stop(paste0(
+      "plan_columns(widths = ) is positive finite numbers, one a column in ",
+      "order or named by column."))
+  }
+  if (!is.null(decimal) && (!is.character(decimal) || anyNA(decimal) ||
+                            !all(nzchar(decimal)))) {
+    .ard_stop(paste0(
+      "plan_columns(decimal = ) is column names, \".values\" for every value ",
+      "column."))
   }
   if (length(widths) && !is.null(column_widths_twips)) .plan_widths_both()
   .plan_layer(.plan, "columns",
@@ -5853,6 +5908,17 @@ plan_n_candidates <- function(.plan) {
 
   if (length(colset$decimal)) {
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
+    # a name that is no column of the table stops, as a `widths` name does
+    # (#864); a hidden column is not printed, so it is left alone
+    bad <- setdiff(colset$decimal,
+                   c(names(first_d), ".values", rtf$drop_cols %||% character()))
+    if (length(bad)) {
+      .ard_stop(paste0(
+        "plan_columns(decimal = ) names ", paste(sQuote(bad, FALSE), collapse = ", "),
+        ", not a column of the table.\n",
+        "  Its printed columns: ", paste(sQuote(names(first_d), FALSE), collapse = ", "),
+        " (`.values` covers the value columns)."))
+    }
     dc <- .plan_col_names(colset$decimal, names(first_d), spread)
     if (length(dc)) out <- set_decimal_split(out, cols = dc)
   }

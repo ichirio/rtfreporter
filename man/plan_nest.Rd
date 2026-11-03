@@ -11,7 +11,10 @@ plan_nest(.plan, ...)
 
 \item{...}{One entry per nested variable, named by it, whose value is
 the variable and level its rows go under, named by the variable:
-\code{plan_nest(RACESUB = c(RACE = "Asian"))}.
+\code{plan_nest(RACESUB = c(RACE = "Asian"))}.  The value is one level
+(not \code{NA}) of one variable other than the nested one, and a variable is
+nested once; another value stops at \code{plan_nest()}, and a variable or
+level the table does not have stops when the plan is applied.
 \describe{
 \item{The level}{is matched as the table shows it (the ARD's level: a
 code list's label).}
