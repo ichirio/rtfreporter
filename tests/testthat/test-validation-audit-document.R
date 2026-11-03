@@ -19,7 +19,6 @@
 #   page: rtf_page() / named list / NULL = landscape Letter | FR-DC106    | FT-DC165
 #   page: a key left out falls back to its option           | FR-IX303    | FT-DC046
 #   page that is not a named list is an error               | FR-DC107    | FT-DC258
-#   default_format deprecated, beneath style, warns once    | FR-DC319    | FT-DC238
 #   watermark: object, string or NULL                       | FR-DC109    | FT-DC214
 #   watermark: a section overrides it, NA switches it off   | FR-IX300    | FT-DC259
 #   program: the path for the {PROGRAM...} tokens          | FR-DC111    | FT-DC260
@@ -47,7 +46,6 @@
 #   style merged key by key                                 | FR-DC318    | FT-DC237
 #   font_table / color_table replaced whole                 | FR-DC128-129| FT-DC267
 #   font_lang replaced; NA removes                          | FR-DC133    | FT-DC084
-#   default_format deprecated, merged per key               | FR-DC319    | FT-DC238
 #   watermark: object / string / NA removes; NULL unchanged | FR-DC132    | FT-DC215
 #   merge versus replace, against rtf_document()            | FR-IX305    | FT-DC267
 #   not an rtf_document / page malformed is an error        | FR-DC134/135| FT-DC146, FT-DC258
@@ -119,7 +117,6 @@
 #   size and height resolve together                        | FR-DC316/336| FT-DC251
 #   pages are cut before the style reaches the table        | FR-DC345    | FT-DC279
 #   several styles merge through rtf_config()               | FR-DC318/337| FT-DC237, FT-DC250
-#   replaces rtf_default_format(), beneath any style        | FR-DC319/334| FT-DC238, FT-DC248
 #   color: the page header and footer only                  | FR-DC310    | FT-DC234
 #   title / footnote format and width; defaults             | FR-DC311    | FT-DC235
 #   table / titles / footnotes / header / footer sections   | FR-DC312-314| FT-DC232, FT-DC233, FT-DC234

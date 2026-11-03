@@ -106,9 +106,7 @@ style, its height following its size.  A table is cut into pages
 does not change where the pages break.
 
 Several \code{rtf_style()} objects given through \code{\link[=rtf_config]{rtf_config()}} merge key by
-key, the later winning.  \code{rtf_style()} replaces \code{\link[=rtf_default_format]{rtf_default_format()}},
-which is deprecated: a \code{default_format} still given maps onto the shared
-level, beneath any \code{rtf_style()}.
+key, the later winning.
 }
 \examples{
 study <- rtf_style(

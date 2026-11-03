@@ -27,9 +27,9 @@
 # Removing them in a MINOR is legal only because `MAJOR 0` means the package is
 # not formally released (see "Pre-1.0 is different" in CONTRIBUTING.md).  From
 # v1.0.0 the same removal would require a major.
-# 0.9.0 removed the 0.5.0 - 0.8.x ones (#594, #788).  rtf_default_format()
-# gave way to rtf_style() (#804), and goes in 0.9.
-.deprecated_exports <- c("rtf_default_format")
+# 0.9.0 removed the 0.5.0 - 0.8.x ones (#594, #788) and rtf_default_format()
+# (#804): none is deprecated now.
+.deprecated_exports <- character(0)
 
 .deprecation_state <- new.env(parent = emptyenv())
 

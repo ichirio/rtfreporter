@@ -17,8 +17,7 @@
 #      > the resource baseline
 #
 #  Several rtf_style() objects given through rtf_config(style = ) merge key by
-#  key, the later winning.  The deprecated rtf_default_format() maps onto the
-#  shared level beneath any rtf_style(): an explicit style wins over it.
+#  key, the later winning.
 #
 #  How it is applied: the shared level becomes the document's defaults (the
 #  ones generate_rtfreport() resolves into `doc_row_height`, `doc_pad_*`,
@@ -90,9 +89,7 @@
 #' does not change where the pages break.
 #'
 #' Several `rtf_style()` objects given through [rtf_config()] merge key by
-#' key, the later winning.  `rtf_style()` replaces [rtf_default_format()],
-#' which is deprecated: a `default_format` still given maps onto the shared
-#' level, beneath any `rtf_style()`.
+#' key, the later winning.
 #'
 #' @param font Font family for the text of every module, e.g. `"Arial"`; a
 #'   named vector gives one family per script slot (see [rtf_document()]).  A
@@ -354,30 +351,8 @@ print.rtf_style <- function(x, ...) {
   invisible(style)
 }
 
-# -- the deprecated default_format --------------------------------------------
-
-.warn_default_format <- function() {
-  .deprecate_once("rtf_default_format", paste0(
-    "`rtf_default_format()` is deprecated: use rtf_style(); it will be ",
-    "removed in 0.9."))
-}
-
-# A default_format (an rtf_default_format() or a named list of its keys) as the
-# rtf_style() it maps onto: its keys are the shared level's.  Other names in a
-# list were never read, and still are not.
-.style_from_default_format <- function(df) {
-  if (is.null(df)) return(NULL)
-  keys <- intersect(names(df), .STYLE_DOC_KEYS)
-  args <- unclass(df)[keys]
-  args <- args[!vapply(args, is.null, logical(1L))]
-  do.call(rtf_style, args)
-}
-
-# The document's style: its default_format beneath its rtf_style().
-.doc_effective_style <- function(document) {
-  .merge_style(.style_from_default_format(document$default_format),
-               document$style)
-}
+# The document's style
+.doc_effective_style <- function(document) document$style
 
 # -- applying it to a report --------------------------------------------------
 
@@ -424,8 +399,7 @@ print.rtf_style <- function(x, ...) {
   .style_fill(hf, s[setdiff(names(s), "border")])
 }
 
-# The document's style (its default_format beneath its rtf_style()) applied to
-# a report built from it: the shared level as the document defaults, each
+# The document's style applied to a report built from it: the shared level as the document defaults, each
 # section (with the shared font / colour) into its modules.
 .apply_style_to_report <- function(report, document) {
   st <- .doc_effective_style(document)

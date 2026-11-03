@@ -2,10 +2,6 @@
 # rtf_titles / rtf_footnotes pipe helpers, length-1 (common) recycling, and
 # per-line styling.  Legacy "{...}" tokens render literally (unchanged).
 
-# rtf_default_format() / default_format = are deprecated (#804): these tests
-# check what they still do, not the warning (test-rtf-style.R does).
-silence_deprecation("rtf_default_format")
-
 .render_with <- function(doc) .render_to_string(doc)
 
 .doc_tbl <- function(...,
@@ -44,7 +40,7 @@ test_that("title = character(0) suppresses the title block entirely", {
 
 test_that("title_format = 'table' restores the legacy content-width table form", {
   df  <- data.frame(A = 1L, B = "x", stringsAsFactors = FALSE)
-  doc <- rtf_document(default_format = list(title_format = "table")) |>
+  doc <- rtf_document(style = rtf_style(title_format = "table")) |>
     rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
     rtf_tables(list(df), titles = list(c("Table 14.1.1")))
   txt <- .render_with(doc)
@@ -52,11 +48,7 @@ test_that("title_format = 'table' restores the legacy content-width table form",
 })
 
 test_that("an invalid title_format errors", {
-  df  <- data.frame(A = 1L, B = "x", stringsAsFactors = FALSE)
-  doc <- rtf_document(default_format = list(title_format = "bogus")) |>
-    rtf_section(page = 1, secinfo = list(header = NULL, footer = NULL)) |>
-    rtf_tables(list(df))
-  expect_error(.render_with(doc), "text.*table")
+  expect_error(rtf_style(title_format = "bogus"), "text.*table")
 })
 
 test_that("footnote: no rule by default (#296); blank rows preserved", {

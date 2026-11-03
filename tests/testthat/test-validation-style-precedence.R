@@ -12,13 +12,8 @@
 #                 rtf_footnotes(), rtf_header(), rtf_footer()
 #    S2 section   rtf_style(<module> = list(<key> = ))
 #    S3 shared    rtf_style(<key> = )
-#    S4 deffmt    the deprecated rtf_document(default_format =
-#                 rtf_default_format(<key> = )) -- merged beneath any style
-#    S5 option    options(rtfreporter.<key> = )
-#    S6 baseline  the resource baseline (always there)
-#
-#  The code agrees with FR-DC315 and FR-DC319: the default format becomes the
-#  bottom of the shared level, so it sits between S3 and S5.
+#    S4 option    options(rtfreporter.<key> = )
+#    S5 baseline  the resource baseline (always there)
 #
 #  Factors and levels
 #    key     font_size_half_points (a size), cell_padding_left_twips (a
@@ -26,42 +21,40 @@
 #    module  table, titles, footnotes, header, footer -- where the key applies:
 #            the size and markup all five; the padding table, header, footer
 #            (titles / footnotes have no padding argument or section key);
-#            title_format the titles, from S3, S4, S5 only
-#    sources which of S1..S5 are set (S6 always)
-#    route   the style and default format given to rtf_document() or to
+#            title_format the titles, from S3, S4 only
+#    sources which of S1..S4 are set (S5 always)
+#    route   the style given to rtf_document() or to
 #            rtf_config() (pairwise set only)
 #
 #  Values: each source has its own value, so the output names the winner.
-#    size     S1 30, S2 28, S3 26, S4 24, S5 22, S6 18      (\fsN)
-#    padding  S1 55, S2 66, S3 44, S4 88, S5 77, S6 0       (\liN)
-#    markup   the winner "relational", every other source "none", S6 "script"
-#    title_format  the winner "table", every other source "text", S6 "text"
+#    size     S1 30, S2 28, S3 26, S4 22, S5 18      (\fsN)
+#    padding  S1 55, S2 66, S3 44, S4 77, S5 0       (\liN)
+#    markup   the winner "relational", every other source "none", S5 "script"
+#    title_format  the winner "table", every other source "text", S5 "text"
 #  The output read is the line holding the module's text: the last \fs (else
 #  the document's \fs) and the last \li before it, how ">= 1^{2}" is written
 #  after it, and whether the title is a table row.
 #
 #  Decision table (A), per key x module, run by the loop in FT-DC248:
 #    row  set                          winner     FR
-#    R01  none                         S6         FR-DC315
+#    R01  none                         S5         FR-DC315
 #    R02  S1                           S1         FR-DC315
 #    R03  S2                           S2         FR-DC315 FR-DC312..314
 #    R04  S3                           S3         FR-DC315 FR-DC309
-#    R05  S4                           S4         FR-DC319
-#    R06  S5                           S5         FR-DC315
-#    R07  S1 S2                        S1         FR-DC315
-#    R08  S2 S3                        S2         FR-DC315
-#    R09  S3 S4                        S3         FR-DC319
-#    R10  S4 S5                        S4         FR-DC334
-#    R11  S1 S2 S3 S4 S5               S1         FR-DC315 FR-DC334
-#  title_format (titles; S3 S4 S5): none -> S6; S3, S4, S5 alone; S3 S4 -> S3;
-#  S4 S5 -> S4; all -> S3 (FR-DC311 FR-DC319 FR-DC334).
-#  Rows: 11 x (5 size + 3 padding + 5 markup) + 7 = 150.
+#    R05  S4                           S4         FR-DC315
+#    R06  S1 S2                        S1         FR-DC315
+#    R07  S2 S3                        S2         FR-DC315
+#    R08  S3 S4                        S3         FR-DC315
+#    R09  S1 S2 S3 S4                  S1         FR-DC315
+#  title_format (titles; S3 S4): none -> S5; S3, S4 alone; S3 S4 -> S3
+#  (FR-DC311).
+#  Rows: 9 x (5 size + 3 padding + 5 markup) + 5 = 122.
 #
 #  Pairwise set (B), FT-DC249: key (3) x module (where it applies) x the two
-#  sources set (any 2 of S1..S5, 10) x route (2) -- every pair of levels of
+#  sources set (any 2 of S1..S4, 6) x route (2) -- every pair of levels of
 #  every two factors at least once, picked from the valid full product by the
 #  greedy all-pairs helper .allpairs() (helper-allpairs.R); winner the higher source.
-#  FR-DC315 FR-DC318 FR-DC319 FR-DC334.
+#  FR-DC315 FR-DC318.
 #
 #  Decision table (C), FT-DC250: rtf_config(style = ) over
 #  rtf_document(style = ), the content table's size and padding.
@@ -76,16 +69,16 @@
 #
 #  Decision table (D), FT-DC251: the size without a height (.style_fill), for
 #  the table and the header band.  Size from S1 / S2 / S3 / none x height
-#  (row_height_twips) from S1 410 / S2 420 / S3 430 / S4 440 / S5 450 / none.
+#  (row_height_twips) from S1 410 / S2 420 / S3 430 / S4 450 / none.
 #    height S1                                -> 410            FR-DC316
-#    size S1 or S2, height S3 / S4 / S5 / none -> the height the size implies
+#    size S1 or S2, height S3 / S4 / none -> the height the size implies
 #                                                (as with no height at all)
 #                                                FR-DC316 FR-DC336
 #    size S1, height S2                       -> the size's height FR-DC316
 #    size S2, height S2                       -> 420            FR-DC316
-#    size S3 or none, height S2..S5           -> that height    FR-DC315
+#    size S3 or none, height S2..S4           -> that height    FR-DC315
 #    size S3 or none, no height               -> the size's height
-#  Rows: 4 x 6 x 2 = 48.
+#  Rows: 4 x 5 x 2 = 40.
 #
 #  Decision table (E), FT-DC252: a band's default border counts as unset.
 #    band      its border             section border   written   FR
@@ -113,11 +106,9 @@
 #    none               no colour anywhere
 #  FR-DC310 FR-DC314 FR-DC315.
 #
-#  Deprecation: default_format warns once a session (package state); every
-#  use is wrapped in suppressWarnings(), so no test depends on the order.
 # ---------------------------------------------------------------------------
 
-.SP_SOURCES <- c("arg", "section", "shared", "deffmt", "option")
+.SP_SOURCES <- c("arg", "section", "shared", "option")
 .SP_MARK <- c(table = "TBL", titles = "TTL", footnotes = "FNT", header = "HDR",
               footer = "FTR")
 .SP_MODULES <- list(
@@ -127,11 +118,11 @@
   title_format            = "titles")
 .SP_KEY_SOURCES <- list(
   font_size_half_points = .SP_SOURCES, cell_padding_left_twips = .SP_SOURCES,
-  markup = .SP_SOURCES, title_format = c("shared", "deffmt", "option"))
+  markup = .SP_SOURCES, title_format = c("shared", "option"))
 .SP_NUM <- list(
-  font_size_half_points   = c(arg = 30L, section = 28L, shared = 26L, deffmt = 24L,
+  font_size_half_points   = c(arg = 30L, section = 28L, shared = 26L,
                               option = 22L, baseline = 18L),
-  cell_padding_left_twips = c(arg = 55L, section = 66L, shared = 44L, deffmt = 88L,
+  cell_padding_left_twips = c(arg = 55L, section = 66L, shared = 44L,
                               option = 77L, baseline = 0L))
 .SP_CAT <- list(markup = c(win = "relational", lose = "none", baseline = "script"),
                 title_format = c(win = "table", lose = "text", baseline = "text"))
@@ -149,16 +140,16 @@
 
 # A document with all five modules.  `own`: per module, a list of its own
 # arguments; `bands`: header / footer built by the caller instead.
-.sp_doc <- function(own = list(), style = NULL, df = NULL, route = "document",
+.sp_doc <- function(own = list(), style = NULL, route = "document",
                     bands = list()) {
   o <- function(m) .sp_or(own[[m]], list())
   tbl <- do.call(rtftable, c(list(.sp_data()), o("table")))
   hd <- .sp_or(bands$header, do.call(rtf_header, c(list(c(l = .sp_text("header"))), o("header"))))
   ft <- .sp_or(bands$footer, do.call(rtf_footer, c(list(c(l = .sp_text("footer"))), o("footer"))))
   doc <- if (identical(route, "document")) {
-    rtf_document(style = style, default_format = df)
+    rtf_document(style = style)
   } else {
-    rtf_config(rtf_document(), style = style, default_format = df)
+    rtf_config(rtf_document(), style = style)
   }
   doc <- doc |>
     rtf_section(page = 1, secinfo = list(header = hd, footer = ft)) |>
@@ -222,16 +213,11 @@
   on.exit(options(old), add = TRUE)
   own <- list()
   sty <- list()
-  df <- NULL
   if ("arg" %in% set) own[[module]] <- stats::setNames(list(v("arg")), key)
   if ("section" %in% set) sty[[module]] <- stats::setNames(list(v("section")), key)
   if ("shared" %in% set) sty[[key]] <- v("shared")
-  if ("deffmt" %in% set) {
-    df <- suppressWarnings(do.call(rtf_default_format,
-                                   stats::setNames(list(v("deffmt")), key)))
-  }
   style <- if (length(sty)) do.call(rtf_style, sty) else NULL
-  doc <- suppressWarnings(.sp_doc(own, style, df, route))
+  doc <- .sp_doc(own, style, route)
   list(got = .sp_observe(.render_to_string(doc), key, module),
        want = .sp_value(key, winner, winner))
 }
@@ -257,9 +243,9 @@
   do.call(rbind, out)
 }
 
-test_that("FT-DC248 [FR-DC311 FR-DC315 FR-DC319 FR-DC334]: decision table -- argument > section > shared > default format > option > baseline, for each key and module", {
+test_that("FT-DC248 [FR-DC311 FR-DC315]: decision table -- argument > section > shared > option > baseline, for each key and module", {
   cases <- .sp_cases_a()
-  expect_identical(nrow(cases), 150L)
+  expect_identical(nrow(cases), 122L)
   for (i in seq_len(nrow(cases))) {
     set <- strsplit(cases$set[i], " ", fixed = TRUE)[[1L]]
     r <- .sp_run(cases$key[i], cases$module[i], set)
@@ -269,7 +255,7 @@ test_that("FT-DC248 [FR-DC311 FR-DC315 FR-DC319 FR-DC334]: decision table -- arg
   }
 })
 
-test_that("FT-DC249 [FR-DC315 FR-DC318 FR-DC319 FR-DC334]: pairwise -- key x module x the two sources set x route; the higher source wins", {
+test_that("FT-DC249 [FR-DC315 FR-DC318]: pairwise -- key x module x the two sources set x route; the higher source wins", {
   pairs <- utils::combn(.SP_SOURCES, 2L, FUN = paste, collapse = " ")
   keys <- c("font_size_half_points", "cell_padding_left_twips", "markup")
   cand <- do.call(rbind, lapply(keys, function(k) {
@@ -321,7 +307,7 @@ test_that("FT-DC250 [FR-DC318 FR-DC337]: rtf_config(style = ) merges key by key 
 
 test_that("FT-DC251 [FR-DC315 FR-DC316 FR-DC336]: a size set without a height keeps the height its size implies; a section's size too", {
   sz <- c(arg = 30L, section = 28L, shared = 26L)
-  hv <- c(arg = 410L, section = 420L, shared = 430L, deffmt = 440L, option = 450L)
+  hv <- c(arg = 410L, section = 420L, shared = 430L, option = 450L)
   run <- function(m, size_src, h_src) {
     opts <- if (identical(h_src, "option")) list(rtfreporter.row_height_twips = hv[["option"]]) else list()
     old <- options(opts)
@@ -335,11 +321,10 @@ test_that("FT-DC251 [FR-DC315 FR-DC316 FR-DC336]: a size set without a height ke
     if (identical(h_src, "arg")) own$row_height_twips <- hv[["arg"]]
     if (identical(h_src, "section")) sec$row_height_twips <- hv[["section"]]
     if (identical(h_src, "shared")) sh$row_height_twips <- hv[["shared"]]
-    df <- if (identical(h_src, "deffmt")) list(row_height_twips = hv[["deffmt"]])
     sty <- sh
     if (length(sec)) sty[[m]] <- sec
     style <- if (length(sty)) do.call(rtf_style, sty) else NULL
-    doc <- suppressWarnings(.sp_doc(stats::setNames(list(own), m), style, df))
+    doc <- .sp_doc(stats::setNames(list(own), m), style)
     .sp_observe(.render_to_string(doc), "row_height_twips", m)
   }
   for (m in c("table", "header")) {
