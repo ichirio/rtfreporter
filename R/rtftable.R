@@ -620,6 +620,10 @@
 #'   so super/subscript (e.g. adapter footnote marks `^{N}`) work while the
 #'   `>=` / `<=` symbol conversion is **opt-in**. Applies to all cell text: data
 #'   cells, column / spanning headers, and title / footnote blocks.
+#'   The braces after `^` / `_` are the markup's own, so a token written
+#'   there is not filled: `^{STUDY}` raises the word STUDY.  To raise a
+#'   token's value, put the token's braces inside, `^{{STUDY}}`, or write
+#'   other text with it, `^{n={STUDY}}`.
 #'
 #' @return An `rtftable` (S3) object suitable for use in `rtf_tables()`.
 #'

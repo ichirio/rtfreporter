@@ -67,7 +67,9 @@ A name is upper case -- a letter, then letters, digits or \verb{_} -- and
 not one of rtfreporter's own (\code{\link[=rtf_text_tokens]{rtf_text_tokens()}}); a value is one
 string or number.  \code{options(rtfreporter.tokens = )} sets them for a
 session; the document's value wins.  A value is written as it is: a
-\code{{PAGE}} or \code{{STUDY}} in it is not filled.  Not in column headers: those
+\code{{PAGE}} or \code{{STUDY}} in it is not filled.  \verb{\{\{} and \verb{\}\}} print a
+literal \verb{\{} and \verb{\}} in a header, footer, title or footnote, as in a
+column header.  Not in column headers: those
 take their values from \code{\link[=set_col_header]{set_col_header()}}'s \code{values}; nor in a table's
 cells, which print a token as written.  \code{NULL} (default): none.}
 
