@@ -12,7 +12,7 @@ Description: A standalone toolkit for generating Rich Text Format (RTF)
     Figures (TFLs). Provides a functional, pipe-friendly API to compose
     documents with multi-section headers and footers, multi-row column
     headers including spanning groups, per-column formatting, automatic
-    page-number fields, embedded PNG/JPEG figures, and clinical-style
+    page-number fields, embedded PNG/JPEG/EMF figures, and clinical-style
     borders. Tables can also be made from an analysis results dataset
     (ARD, as built by 'cards' and 'cardx') with a plan of small verbs:
     which keys are columns and rows, how the statistics are formatted, and
