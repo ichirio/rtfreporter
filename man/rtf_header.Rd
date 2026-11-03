@@ -62,7 +62,12 @@ each page.  See \emph{Page values} in \code{\link[=rtf_tables]{rtf_tables()}}.  
 (\code{{PROGRAM}}, \code{{DATETIME}}), the \code{{BOOK_PAGE}} slot and tokens of one's
 own (\code{\link[=rtf_document]{rtf_document()}}\verb{(tokens = )}) are filled too (\code{\link[=rtf_text_tokens]{rtf_text_tokens()}}
 lists them); a token's value is written as it is, and an unknown token
-is printed as written.}
+is printed as written.  \verb{\{\{} and \verb{\}\}} print a literal \verb{\{} and \verb{\}} (as in
+a column header), so \code{"{{PAGE}}"} prints \code{{PAGE}} and fills nothing.
+With \code{markup = "script"}, the braces of \verb{^\{...\}} / \verb{_\{...\}} are the
+markup's own: \verb{^\{STUDY\}} raises the word STUDY.  To raise a token's
+value, write the token inside the braces, \verb{^\{\{STUDY\}\}}, or after a
+character, \verb{^\{n=\{STUDY\}\}}.}
 
 \item{border}{An \code{\link[=rtf_border]{rtf_border()}} object controlling the border applied to
 all rows of the header/footer table. \code{NULL} = no border (default for

@@ -584,7 +584,17 @@
   if (keep_marks) out else .drop_token_marks(out)
 }
 
+# `{{` / `}}` are literal braces in a band, as in a column header (#876).  The
+# text is already RTF-escaped, so a doubled brace reads `\{\{` / `\}\}`; it is
+# parked on a control character while the tokens are filled, then put back as
+# one escaped brace.  A markup's own braces (`{\super ...}`) are not escaped,
+# so they never match.
+.BAND_BRACE_OPEN  <- "\u0006"
+.BAND_BRACE_CLOSE <- "\u0007"
+
 .substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
+  out <- gsub("\\{\\{", .BAND_BRACE_OPEN, out, fixed = TRUE)
+  out <- gsub("\\}\\}", .BAND_BRACE_CLOSE, out, fixed = TRUE)
   out <- .substitute_run_tokens(out, keep_marks = TRUE)
   # `{SECTION_PAGES}` was removed in 0.7.31 (#410).  An unrecognised token is
   # passed through as literal text, so falling through silently would print
@@ -626,7 +636,9 @@
     out <- gsub("\\{TOTAL_PAGES\\}", as.character(total_pages), out, fixed = TRUE)
   }
 
-  .drop_token_marks(out)
+  out <- .drop_token_marks(out)
+  out <- gsub(.BAND_BRACE_OPEN, "\\{", out, fixed = TRUE)
+  gsub(.BAND_BRACE_CLOSE, "\\}", out, fixed = TRUE)
 }
 
 # Cell shading: `\clcbpat<N>` names a colour-table index as the cell's fill.
