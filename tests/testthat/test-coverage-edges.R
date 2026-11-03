@@ -1512,11 +1512,12 @@ test_that("a row of cell_rows() may be one bare guard (#549)", {
                                               statistic = ~ c("n", "p")),
                           .total_n = TRUE)
   w <- widen_ard(normalize_ard(ard), cols = "TRT", rows = c(group = "variable"),
-                 cells = cell_rows("1" = n > 0 ~ "has"), notes = FALSE)
+                 cells = cell_rows(n > 0 ~ "has"), notes = FALSE)
   expect_true(all(unlist(w[, -(1:2)]) == "has"))
+  # (unnamed: a row a level, as SEX has two -- a named row would collide, #840)
   # the same as the guard inside c()
   w2 <- widen_ard(normalize_ard(ard), cols = "TRT", rows = c(group = "variable"),
-                  cells = cell_rows("1" = c(n > 0 ~ "has")), notes = FALSE)
+                  cells = cell_rows(c(n > 0 ~ "has")), notes = FALSE)
   expect_identical(w, w2)
   out <- capture.output(print(cell_rows("1" = n == 0 ~ "0")))
   expect_match(out[2], 'n == 0 ~ "0"', fixed = TRUE)
