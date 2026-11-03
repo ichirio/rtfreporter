@@ -41,6 +41,9 @@ jobs:
       - name: The PDF manual's LaTeX packages
         run: tlmgr update --self && tlmgr install inconsolata
 
+      - name: HTML Tidy, for the HTML manual check
+        run: sudo apt-get install -y tidy
+
       - name: R CMD check --as-cran, with the manual
         id: check
         continue-on-error: true
