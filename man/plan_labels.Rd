@@ -25,7 +25,12 @@ A value may be named by itself or by the text a \code{\link[=plan_levels]{plan_l
 gave it; this text wins over that one.  A later call replaces an
 entry of the same name whole.  A single unnamed argument that is
 itself a named vector is taken as the whole map:
-\code{plan_labels(study_labels)}.}
+\code{plan_labels(study_labels)}.  An entry for a value, column or variable
+the table does not have is not used, so one study-wide map serves
+every table.  Each entry is text (\code{""} prints an empty text); an
+entry that is \code{NA}, \code{NULL}, a number, a factor, \code{character(0)}, two
+texts without names or a dictionary with an \code{NA} or an unnamed text
+stops.}
 }
 \value{
 The plan, with one more layer.

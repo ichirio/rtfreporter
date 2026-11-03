@@ -116,9 +116,9 @@
 #  blank_row_first opens every page; "between_groups" a blank row between
 #  two records on a page; the RTF holds a page per page with its records'
 #  numbers and TERM words in order.  A record cut just before its blank row
-#  continues with the continuation row and that blank row alone (#859);
-#  the oracle accepts it.  FR-LS110 FR-LS156 FR-PL952 FR-TB150 FR-TB576
-#  FR-TB610 FR-TB612.
+#  is not continued: the next page opens on the next record and that blank
+#  row is dropped (#859).  FR-LS110 FR-LS156 FR-PL952 FR-TB150 FR-TB576
+#  FR-TB610 FR-TB612 FR-TB613.
 # ---------------------------------------------------------------------------
 
 .vr_data <- function() {
@@ -379,27 +379,34 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
     }
     list(rec = rec, subj = cell("SUBJ"), seq = seq, term = cell("TERM"))
   })
-  # a page that opens inside a record (rows of the last record of the page
-  # before still to come), under a split by max_rows, goes on with the
-  # record's next line and no empty continuation row before it (#881); any
-  # other page opens on a record's first row
+  # the continuation row: the first row of a page that opens inside a
+  # record (text rows of the last record of the page before still to come),
+  # under a split by max_rows; any other page opens on a record's first row.
+  # A record whose page ends on its last text row is not continued, and its
+  # blank row is dropped (#859), under a split by max_rows.
   seen <- integer(8L)
+  rec_text <- rec_rows - (cs$blank_row == "yes" && !is.na(mr))
+  want_rows <- rec_rows
   for (i in seq_along(rows)) {
     r <- rows[[i]]
     r$cont <- rep(FALSE, length(r$rec))
     empty <- !nzchar(r$subj) & !nzchar(r$seq) & !nzchar(r$term)
     last <- if (i > 1L) utils::tail(rows[[i - 1L]]$rec, 1L) else 0L
-    inside <- last > 0L && seen[last] < rec_rows[last]
+    inside <- last > 0L && seen[last] < rec_text[last]
     if (inside && !is.na(mr)) {
       if (empty[1L]) bad <- c(bad, sprintf("cont row page %d", i))
     } else if (!inside && !nzchar(r$seq[1L])) {
       bad <- c(bad, sprintf("cont page %d", i))
     }
     seen <- seen + tabulate(r$rec[!r$cont], 8L)
+    k <- utils::tail(r$rec, 1L)
+    if (i < length(rows) && rec_text[k] < rec_rows[k] && seen[k] == rec_text[k]) {
+      want_rows[k] <- rec_text[k]
+    }
     rows[[i]] <- r
   }
   # every row of every record once, in order: its TERM words, its number
-  if (!identical(seen, rec_rows)) bad <- c(bad, "record rows")
+  if (!identical(seen, want_rows)) bad <- c(bad, "record rows")
   words <- function(x) unlist(strsplit(x[nzchar(x)], " +"))
   if (!identical(unlist(lapply(rows, function(r) words(r$term))), words(src$TERM))) {
     bad <- c(bad, "words")
@@ -481,7 +488,7 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
   bad
 }
 
-test_that("FT-TB783 [FR-LS110 FR-LS156 FR-PL952 FR-TB150 FR-TB576 FR-TB610 FR-TB612]: pairwise -- listing x split x max_rows x first_rows x count_blank_rows x blank_rows x blank_row x blank_row_first x wrap x collapse_repeats", {
+test_that("FT-TB783 [FR-LS110 FR-LS156 FR-PL952 FR-TB150 FR-TB576 FR-TB610 FR-TB612 FR-TB613]: pairwise -- listing x split x max_rows x first_rows x count_blank_rows x blank_rows x blank_row x blank_row_first x wrap x collapse_repeats", {
   cand <- expand.grid(split = c("default", "group_force"), max_rows = c("none", "4", "7"),
                       first_rows = c("none", "end", "inside"), count = c("no", "yes"),
                       blank_rows = c("no", "yes"), blank_row = c("no", "yes"),
@@ -497,4 +504,40 @@ test_that("FT-TB783 [FR-LS110 FR-LS156 FR-PL952 FR-TB150 FR-TB576 FR-TB610 FR-TB
     cs <- as.list(set[i, ])
     expect_identical(.vl_check(cs), character(0), label = paste(unlist(cs), collapse = " / "))
   }
+})
+
+test_that("FT-TB972 [FR-TB613]: a cut just before a listing record's blank row drops that blank row, with no continuation row", {
+  rd <- function(p) vapply(p, function(x) {
+    d <- x$data
+    paste(apply(d, 1L, function(r) {
+      r[is.na(r)] <- ""
+      if (all(!nzchar(r))) "_" else paste(r[nzchar(r)], collapse = " ")
+    }), collapse = " | ")
+  }, "")
+  df <- data.frame(SUBJ = c("S01", "S02", "S03"), TERM = c("Headache", "Rash", "Cough"))
+  sp <- listing_spec(c("SUBJ", "TERM"), spacer = FALSE, blank_row_first = FALSE)
+  # first_rows cuts record 1 before its blank row (the issue's example)
+  expect_identical(rd(as_rtftables(df, listing = sp, max_rows = 4, first_rows = 1)),
+                   c("S01 Headache", "S02 Rash | _ | S03 Cough | _"))
+  # split = "group_force" cuts record 2 before its blank row
+  expect_identical(rd(as_rtftables(df, listing = sp, max_rows = 3, split = "group_force")),
+                   c("S01 Headache | _ | S02 Rash", "S03 Cough | _"))
+  # a record longer than a page under the default split
+  long <- data.frame(SUBJ = c("S01", "S02"), TERM = c("a b c", "d"))
+  spl <- listing_spec(list("SUBJ", listing_col("TERM", width = 1, layout = "flow")),
+                      spacer = FALSE, blank_row_first = FALSE)
+  expect_identical(rd(as_rtftables(long, listing = spl, max_rows = 3)),
+                   c("S01 a | b | c", "S02 d | _"))
+  # the key value carried into the blank row (collapse_repeats) still reads
+  # as blank, and blank_row_first opens the next page alone
+  df2 <- data.frame(SUBJ = c("S01", "S01", "S02"), TERM = c("Headache", "Rash", "Cough"))
+  sp2 <- listing_spec(list(listing_col("SUBJ", collapse_repeats = TRUE), "TERM"),
+                      spacer = FALSE, blank_row_first = TRUE)
+  p <- as_rtftables(df2, listing = sp2, max_rows = 3, split = "group_force")
+  expect_identical(rd(p), c("S01 Headache | _ | Rash", "S02 Cough | _"))
+  expect_identical(as.integer(p[[2L]]$blank_rows), 0L)
+  # a cut that leaves text rows of the record goes on with them, with no
+  # empty continuation row before them (#881)
+  expect_identical(rd(as_rtftables(long, listing = spl, max_rows = 3, first_rows = 1)),
+                   c("S01 a", "b | c | _", "S02 d | _"))
 })
