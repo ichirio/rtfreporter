@@ -286,8 +286,14 @@
       if (ncol(x) >= cidx && !is.character(x[[cidx]]) && !is.list(x[[cidx]])) {
         x[[cidx]] <<- as.character(x[[cidx]])
       }
-      list(idx = gidx,
-           info = info_override %||% .compute_group_info(x, gidx, group_by))
+      info <- info_override %||% .compute_group_info(x, gidx, group_by)
+      # A listing's group is a record, which has no heading to continue: a
+      # record longer than a page goes on at the next page's top, with no
+      # continuation row before it (#881, as a separator at a page edge is
+      # dropped, #859).
+      info$no_cont <- !is.null(collapse_record) && length(gidx) == 1L &&
+        !is.na(gidx) && identical(names(x)[gidx], collapse_record)
+      list(idx = gidx, info = info)
     }
     info_override <- NULL
     mgr <- as.integer(min_group_rows %||% 2L)
@@ -359,7 +365,7 @@
           if (!is_sep(k)) { inside <- TRUE; break }
           k <- k + 1L
         }
-        if (inside && as.integer(max_rows) >= 2L) {
+        if (inside && as.integer(max_rows) >= 2L && !isTRUE(g_all$info$no_cont)) {
           label <- g_all$info$label[last]
           x <- add_cont_label(x, label, cont_label, col = g_all$idx %||% 1L)
           rest_info$id      <- c(gid[last], rest_info$id)
@@ -1148,7 +1154,7 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     # Mid-group cut?  Inject a Cont. header row before end+1 -- when the next
     # page has room for it and a row (with a budget of one row it would hold
     # only that header, injected again before the same row, forever).
-    if (end < nrow(df) && budget >= 2L) {
+    if (end < nrow(df) && budget >= 2L && !isTRUE(info$no_cont)) {
       end_gid  <- info$id[end]
       next_gid <- info$id[end + 1L]
       if (!is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid &&
@@ -1213,7 +1219,8 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
       sub_info <- list(id      = gid[rows],
                        label   = info$label[rows],
                        headers = hd,
-                       mode    = info$mode)
+                       mode    = info$mode,
+                       no_cont = info$no_cont)
       sub <- .split_group_force(chunk, sub_info, max_rows,
                                  cont_label, group_idx, min_group_rows)
       names(sub) <- rep(label, length(sub))
@@ -1293,7 +1300,8 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
       flush()
       sub_info <- list(id      = info$id[rows],
                        label   = info$label[rows],
-                       headers = info$headers[rows])
+                       headers = info$headers[rows],
+                       no_cont = info$no_cont)
       sub <- .split_group_force(gdf, sub_info, max_rows, cont_label,
                                 group_idx, min_group_rows,
                                 edge_first = edge_first, edge_end = edge_end,

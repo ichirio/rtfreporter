@@ -3424,7 +3424,9 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
 #' [listing_spec()], with columns that can stack several variables in one
 #' cell and wrap long text.  A record wrapped over several rows is not cut
 #' by a page break: it moves whole to the next page, unless it alone is
-#' longer than a page.  Its arguments are [listing_spec()]'s own, unchanged;
+#' longer than a page; then it is cut at the page's end and the rest goes on
+#' at the top of the next page, with no continuation row before it (a record
+#' has no heading).  Its arguments are [listing_spec()]'s own, unchanged;
 #' the blank rows are [plan_blanks()]'s, as for a table.
 #'
 #' @param .plan A [table_plan()] of a data frame of records.

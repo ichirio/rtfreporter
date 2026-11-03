@@ -379,9 +379,10 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
     }
     list(rec = rec, subj = cell("SUBJ"), seq = seq, term = cell("TERM"))
   })
-  # the continuation row: the first row of a page that opens inside a
-  # record (rows of the last record of the page before still to come), under
-  # a split by max_rows; any other page opens on a record's first row
+  # a page that opens inside a record (rows of the last record of the page
+  # before still to come), under a split by max_rows, goes on with the
+  # record's next line and no empty continuation row before it (#881); any
+  # other page opens on a record's first row
   seen <- integer(8L)
   for (i in seq_along(rows)) {
     r <- rows[[i]]
@@ -390,7 +391,7 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
     last <- if (i > 1L) utils::tail(rows[[i - 1L]]$rec, 1L) else 0L
     inside <- last > 0L && seen[last] < rec_rows[last]
     if (inside && !is.na(mr)) {
-      if (!empty[1L]) bad <- c(bad, sprintf("no cont page %d", i)) else r$cont[1L] <- TRUE
+      if (empty[1L]) bad <- c(bad, sprintf("cont row page %d", i))
     } else if (!inside && !nzchar(r$seq[1L])) {
       bad <- c(bad, sprintf("cont page %d", i))
     }
