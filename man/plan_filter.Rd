@@ -27,7 +27,7 @@ own count.}
 An overall row (\code{normalize_ard(overall = )}, "Any TEAE") always stays.}
 
 \item{by}{A row key whose rows are judged together (with the keys
-outside it).  \code{NULL} (default): each row on its own.}
+outside it), by its name.  \code{NULL} (default): each row on its own.}
 }
 \value{
 The plan, with one more layer.

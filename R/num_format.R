@@ -25,9 +25,15 @@
 
 # Half-away-from-zero rounding, as SAS does it.  The epsilon term defeats the
 # binary representation of values like 2.675, stored as 2.67499999999999982.
+# It is a few units in the last place of z (4 machine epsilons, relative):
+# the representation error of x and of the product, no more; and below 0.5,
+# so a whole z of 1e15 (where one unit is 0.125) stays whole.  The former
+# sqrt(.Machine$double.eps), 1.5e-8 relative, carried 123456789.125 to
+# 123456791, 1e15 to 1000000014901161 and 1.00499999 to 1.01.
 .round_half_up <- function(x, digits = 0L) {
   z <- abs(x) * 10^digits
-  r <- sign(x) * floor(z + 0.5 + sqrt(.Machine$double.eps) * abs(z)) / 10^digits
+  fuzz <- pmin(4 * .Machine$double.eps * z, 0.25)
+  r <- sign(x) * floor(z + 0.5 + fuzz) / 10^digits
   # (a negative value that rounds to zero is zero, not -0: sprintf() would
   # print "-0")
   r[!is.na(r) & r == 0] <- 0
@@ -147,8 +153,10 @@ round_num <- function(x, digits = 0, rounding = NULL) {
 # one to an integer instead, as base::round() does (FR-FM113)
 .check_digits <- function(d, arg, fn, whole = TRUE) {
   frac <- whole && is.numeric(d) && length(d) == 1L && !is.na(d) && is.finite(d) && d != round(d)
+  # (a number: "2" and TRUE are not read as 2 and 1)
+  num <- is.numeric(d) && !is.factor(d)
   d <- suppressWarnings(as.integer(d))
-  if (frac || length(d) != 1L || is.na(d) || d < 0L) {
+  if (!num || frac || length(d) != 1L || is.na(d) || d < 0L) {
     stop(sprintf("`%s(%s = )` must be a single non-negative integer.", fn, arg),
          call. = FALSE)
   }
@@ -225,6 +233,7 @@ round_num <- function(x, digits = 0, rounding = NULL) {
 fmt_signif <- function(x, digits = 3L, rounding = NULL,
                        small = c("signif", "fixed"), na = "") {
   .check_num_input(x, "fmt_signif")
+  na       <- .check_na_text(na)
   digits   <- .check_digits(digits, "digits", "fmt_signif")
   small    <- match.arg(small)
   rnd      <- .rounder(rounding)
@@ -260,6 +269,7 @@ fmt_signif <- function(x, digits = 3L, rounding = NULL,
 #' @export
 fmt_round <- function(x, digits = 2L, rounding = NULL, na = "") {
   .check_num_input(x, "fmt_round")
+  na       <- .check_na_text(na)
   digits   <- .check_digits(digits, "digits", "fmt_round")
   rnd      <- .rounder(rounding)
   vapply(x, .fmt_num_one, character(1L),
@@ -364,6 +374,7 @@ fmt_numeric <- function(data, cols, by = NULL, formats = NULL,
   if (!is.data.frame(data)) {
     stop("`fmt_numeric()` needs a data frame.", call. = FALSE)
   }
+  na       <- .check_na_text(na)
   small    <- match.arg(small)
   rnd      <- .rounder(rounding)
 

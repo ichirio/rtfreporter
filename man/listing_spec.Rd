@@ -33,8 +33,8 @@ own.  \code{NULL} (default) takes the template's.}
 \item{spacer}{Logical.  Insert a narrow blank column between each pair of
 printed columns.  \code{NULL} (default) takes the template's.}
 
-\item{spacer_rel_width}{Relative width of those gutter columns.  \code{NULL}
-(default) takes the template's.}
+\item{spacer_rel_width}{Relative width of those gutter columns, a positive
+finite number.  \code{NULL} (default) takes the template's.}
 
 \item{blank_row}{Logical.  End each record's block with a blank row, so one
 subject is visibly separated from the next.  \code{NULL} (default) takes the
