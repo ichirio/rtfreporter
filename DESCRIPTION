@@ -38,6 +38,7 @@ Suggests:
     ggplot2,
     magrittr,
     ragg,
+    devEMF,
     testthat (>= 3.0.0),
     tibble,
     gt (>= 0.11.1),
