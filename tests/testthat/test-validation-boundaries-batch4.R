@@ -90,9 +90,18 @@
 #  position       | another case / "" / unknown / NA / a number / c("first", "last") | | error (match.arg) | FR-PL299
 #  by             | NA / a number / length 2 |                 | error "plan_compare(by = ) is one column" | FR-PL299
 #  by             | not a column / ""     |                    | error at plan_apply() "no such column" | FR-PL301
-#  (a column's template that is NA, a number, TRUE, "" or length 0 gives an
-#   empty or constant column without a message, as plan_cells() does:
-#   issue #866, as it is plan_cells()' rule.)
+#  (a column's rule that is not a template is FT-PL984 below, #866.)
+#
+# ---------------------------------------------------------------------------
+#  plan_cells() / plan_compare(): one cell rule  -- FT-PL984 (#866).
+# ---------------------------------------------------------------------------
+#  rule           | a template / named templates / a named list / guards / | | the cells          | FR-PL965 FR-PL967
+#                 | one guard / cell_rows() / a map by context (compare)  |  |                    |
+#  rule           | c("a", "b") unnamed                    |              | one cell, the first that fills ("a") | FR-PL967
+#  rule           | "" / "-" (no token)                    |              | printed as written | FR-PL967
+#  rule           | NULL / NA / a number / TRUE / a factor / character(0) / | | error at the verb, naming the key/column | FR-PL965 FR-PL966
+#                 | c("a", NA) / list() / list(1) / list("a", c("b","c")) / |  |                  |
+#                 | cell_rows(a = 1) / a map holding NA / a data frame     |  |                    |
 # ---------------------------------------------------------------------------
 
 # ---- the runner (as in batch 3) ---------------------------------------------
@@ -455,4 +464,69 @@ test_that("FT-PL983 [FR-PL289 FR-PL290 FR-PL292 FR-PL298 FR-PL299 FR-PL300 FR-PL
   expect_error(plan_compare(.eb4_cmp_plan()), own)
   expect_error(plan_compare(.eb4_cmp_plan(), "{p.value:.3f}"), own)
   expect_error(plan_compare(.eb4_cmp_plan(), p = "{p.value:.3f}", p = "{estimate}"), own)
+})
+
+test_that("FT-PL984 [FR-PL965 FR-PL966 FR-PL967]: plan_cells() and plan_compare(): equivalence classes and boundaries of a cell rule", {
+  E <- .eb4_err
+  O <- .eb4_obj
+  # plan_cells(continuous = ) over AGE by arm, no comparison records
+  body <- table_plan(.eb4_cmp[1:6, ], cols = "ARM", rows = c(group = "variable"))
+  cell <- function(v) function(t) identical(t$Placebo, v)
+  cr <- "^plan_cells\\(continuous = \\) is a template, a named vector of templates, guards or cell_rows\\(\\), not "
+  cases <- list(
+    O("continuous", "a template", "{mean:.1f}", cell("61.2")),
+    O("continuous", "named templates", c(n = "{N}", Mean = "{mean:.1f}"), cell(c("20", "61.2"))),
+    O("continuous", "a named list", list(n = "{N}", Mean = "{mean:.1f}"), cell(c("20", "61.2"))),
+    O("continuous", "guards", c(N > 100 ~ "big", "{N}"), cell("20")),
+    O("continuous", "one guard", N > 0 ~ "some", cell("some")),
+    O("continuous", "cell_rows()", cell_rows(n = c("{nope}", "{N}")), cell("20")),
+    O("continuous", "two templates unnamed", c("{nope}", "{mean:.1f}"), cell("61.2")),
+    O("continuous", "two templates, the first with no token", c("a", "{mean:.1f}"), cell("a")),
+    O("continuous", "no token", "-", cell("-")),
+    O("continuous", "empty string", "", cell("")),
+    E("continuous", "NULL", NULL, paste0(cr, "NULL\\.")),
+    E("continuous", "NA", NA, paste0(cr, "NA\\.")),
+    E("continuous", "NA_character_", NA_character_, paste0(cr, "NA\\.")),
+    E("continuous", "a number", 1, paste0(cr, "a number\\.")),
+    E("continuous", "TRUE", TRUE, paste0(cr, "TRUE or FALSE\\.")),
+    E("continuous", "a factor", factor("{N}"), paste0(cr, "a factor\\.")),
+    E("continuous", "character(0)", character(0), paste0(cr, "a zero-length vector\\.")),
+    E("continuous", "a template and NA", c("{N}", NA), paste0(cr, "a template that is NA\\.")),
+    E("continuous", "an empty list", list(), paste0(cr, "an empty list\\.")),
+    E("continuous", "a list with a number", list("{N}", 1), paste0(cr, "a list with a number in it\\.")),
+    E("continuous", "a list with a vector", list("{N}", c("a", "b")), paste0(cr, "a list with a vector of templates in it\\.")),
+    E("continuous", "a named list with NA", list(n = NA), paste0(cr, "a list with NA in it\\.")),
+    E("continuous", "cell_rows() with a number", cell_rows(n = 1), paste0(cr, "a cell_rows\\(\\) with a number in it\\.")),
+    E("continuous", "a data frame", data.frame(a = "{N}"), paste0(cr, "an object of class data.frame\\."))
+  )
+  .eb4_run(cases, function(args) {
+    plan_apply(do.call(plan_cells, c(list(body), args, list(notes = FALSE))), "table")
+  })
+  # the unnamed entry, and a key of its own name
+  expect_error(plan_cells(body, NA), "^plan_cells\\(<the unnamed entry>\\) is a template")
+  expect_error(plan_cells(body, AGE = 2), "^plan_cells\\(AGE = \\) is a template")
+
+  # plan_compare(p = ): one column
+  cp <- "^plan_compare\\(p = \\) is a template, guards, a map by context or cell_rows\\(\\), not "
+  pv <- function(v) function(t) identical(t$p, v)
+  cases <- list(
+    O("p", "a map holding cell_rows()", list(stats_t_test = cell_rows("Mean (SD)" = "{p.value:.3f}")),
+      pv(c(NA, "0.031"))),
+    O("p", "two templates unnamed", c("{nope}", "{p.value:.2f}"), pv(c("0.03", NA))),
+    O("p", "two templates, the first with no token", c("a", "b"), pv(c("a", NA))),
+    O("p", "no token", "-", pv(c("-", NA))),
+    E("p", "NULL", NULL, paste0(cp, "NULL\\.")),
+    E("p", "NA", NA, paste0(cp, "NA\\.")),
+    E("p", "a number", 1, paste0(cp, "a number\\.")),
+    E("p", "TRUE", TRUE, paste0(cp, "TRUE or FALSE\\.")),
+    E("p", "character(0)", character(0), paste0(cp, "a zero-length vector\\.")),
+    E("p", "a template and NA", c("{p.value}", NA), paste0(cp, "a template that is NA\\.")),
+    E("p", "a map holding NA", list(stats_t_test = NA), paste0(cp, "a list with NA in it\\.")),
+    E("p", "a map holding a number", c(stats_t_test = 1), paste0(cp, "a number\\."))
+  )
+  .eb4_run(cases, function(args) plan_apply(do.call(plan_compare, c(list(.eb4_cmp_plan()), args)), "table"))
+  # widen_ard(compare = ) says the same
+  expect_error(widen_ard(.eb4_cmp, cols = "ARM", cells = c(n = "{N}"),
+                         compare = list(cols = list(p = 1)), notes = FALSE),
+               paste0(cp, "a number\\."))
 })

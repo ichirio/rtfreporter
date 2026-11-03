@@ -380,6 +380,8 @@
 # carrying it never had a `plan_digits()` to answer it, and the engine's own
 # message ("Unknown format spec") would not say that, so this one does.
 .plan_check_open <- function(entry, key) {
+  # one guard written bare is a chain of one (#549), not a list to walk
+  if (inherits(entry, "formula")) entry <- list(entry)
   tpls <- if (is.character(entry)) entry else
     unlist(entry[vapply(entry, is.character, logical(1L))], use.names = FALSE)
   for (tpl in tpls) {
@@ -1391,6 +1393,15 @@ plan_labels <- function(.plan, ...) {
 #'   after them.  The names of the arguments after `...` are reserved: a
 #'   variable called `stats`, `value`, `na` or `notes` cannot be keyed
 #'   here; name it otherwise in the ARD.
+#'
+#'   An unnamed vector of several templates, `c("{n} ({p})", "{n}")`, is
+#'   one row: the first template whose statistics the record has wins, as
+#'   with guards.  A template with no token prints as written, so a
+#'   constant cell is text (`"-"`, and `""` an empty cell).  A list
+#'   holds the same things (`list(n = "{N}", Mean = "{mean}")` is the
+#'   named vector).  Anything else --- `NULL`, `NA`, a number, `TRUE`, a
+#'   factor, `character(0)`, a template that is `NA` --- stops at the verb,
+#'   naming the key.
 #' @param stats `"cells"` (default) fills a template per cell; `"rows"`
 #'   makes each statistic a row of its own (no template).
 #' @param value With `stats = "rows"`: the raw number (`"stat"`) or cards'
@@ -1444,7 +1455,12 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
   }
   # the templates are a layer only when there are some: `plan_cells(notes =
   # FALSE)` alone says nothing about them
-  p <- if (...length()) .plan_keyed(.plan, "cells", list(...)) else .plan
+  dots <- list(...)
+  nms <- names(dots) %||% rep("", length(dots))
+  for (i in seq_along(dots)) {
+    .plan_check_cell_rule(dots[[i]], "plan_cells", nms[i])
+  }
+  p <- if (length(dots)) .plan_keyed(.plan, "cells", dots) else .plan
   opts <- list(stats = stats, value = value, na = na, notes = notes)
   if (all(vapply(opts, is.null, logical(1L)))) return(p)
   if (!is.null(stats)) stats <- match.arg(stats, c("cells", "rows"))
@@ -1456,6 +1472,83 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
               list(stats = stats, value = value, na = na, notes = notes))
 }
 
+# One cell rule, checked at the verb (#866): what plan_cells() takes for a
+# key and plan_compare() for a column.  Before, NA, a number, TRUE or
+# character(0) went through as.character() at plan_apply() and came out as
+# an empty column or a constant nobody wrote.  The shapes are those of
+# .ard_cell_entry(): a template vector (unnamed: a fallback chain; named:
+# one row each), one guard, a list of templates and guards (unnamed: a
+# chain; named: one row each, every value a chain), or cell_rows().  For
+# plan_compare() a named list is a map by context / kind / default whose
+# values are whole entries (.ard_lookup_cells()).  A number is not a
+# constant cell: a constant is written as text, `"-"`.
+.plan_check_cell_rule <- function(x, verb, key) {
+  one <- function(e) {
+    inherits(e, "formula") || (is.character(e) && length(e) == 1L && !is.na(e))
+  }
+  chain <- function(e) {
+    if (inherits(e, "formula")) return(TRUE)
+    if (is.character(e)) return(length(e) > 0L && !anyNA(e))
+    if (is.list(e) && !is.object(e)) {
+      return(length(e) > 0L && all(vapply(e, one, NA)))
+    }
+    FALSE
+  }
+  named <- function(e) any(nzchar(names(e) %||% ""))
+  ok <- function(e, map) {
+    if (inherits(e, "cell_rows")) return(all(vapply(unclass(e), chain, NA)))
+    if (is.list(e) && !is.object(e) && named(e)) {
+      return(all(vapply(e, if (map) function(z) ok(z, FALSE) else chain, NA)))
+    }
+    chain(e)
+  }
+  if (ok(x, identical(verb, "plan_compare"))) return(invisible(NULL))
+  # what was given, said in the words of the help
+  what <- function(e, map = FALSE) {
+    if (is.null(e)) return("NULL")
+    if (inherits(e, "formula")) return("a guard")
+    if (is.factor(e)) return("a factor")
+    if (is.object(e) && !inherits(e, "cell_rows")) {
+      return(paste("an object of class", class(e)[1L]))
+    }
+    if (!length(e)) return(if (is.list(e)) "an empty list" else "a zero-length vector")
+    if (is.atomic(e) && all(is.na(e))) return("NA")
+    if (is.character(e)) return("a template that is NA")
+    if (is.logical(e)) return("TRUE or FALSE")
+    if (is.numeric(e)) return("a number")
+    if (is.list(e)) {
+      # the element ok() refused, by the same rule
+      fine <- if (inherits(e, "cell_rows")) chain
+              else if (!named(e)) one
+              else if (map) function(z) ok(z, FALSE)
+              else chain
+      bad <- Filter(function(z) !fine(z), unclass(e))
+      # nothing wrong inside: it is the list itself that may not be here
+      # (a row of plan_cells() that is a cell_rows() or a named list)
+      if (!length(bad)) {
+        return(if (inherits(e, "cell_rows")) "a cell_rows()" else "a named list")
+      }
+      bad <- bad[[1L]]
+      inner <- if (is.character(bad) && length(bad) > 1L && !anyNA(bad)) {
+        "a vector of templates"
+      } else what(bad)
+      return(sprintf("%s with %s in it",
+                     if (inherits(e, "cell_rows")) "a cell_rows()" else "a list",
+                     inner))
+    }
+    paste("an object of class", class(e)[1L])
+  }
+  arg <- if (nzchar(key)) sprintf("%s(%s = )", verb, key)
+         else sprintf("%s(<the unnamed entry>)", verb)
+  shapes <- if (identical(verb, "plan_compare")) {
+    "a template, guards, a map by context or cell_rows()"
+  } else {
+    "a template, a named vector of templates, guards or cell_rows()"
+  }
+  .ard_stop(sprintf(paste0("%s is %s, not %s.\n",
+                           "  A constant cell is written as text: \"-\"."),
+                    arg, shapes, what(x, identical(verb, "plan_compare"))))
+}
 
 # `round` used to be a verb of its own, and it never earned one: the whole
 # run takes ONE rounding family, so it is a setting of the digits rather
@@ -2430,6 +2523,14 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 #'       label, so a p-value on one row only is `cell_rows("Mean (SD)" =
 #'       "{p.value:.3f}")`.}
 #'   }
+#'   An unnamed vector of several templates is one cell, the first that
+#'   the record's statistics fill winning (`c("a", "b")` is always `"a"`,
+#'   which has no token).  A template with no token prints as written on
+#'   the comparison's row, `p = "-"`.  `NULL`, `NA`, a number, `TRUE`, a factor,
+#'   `character(0)` or a template that is `NA` stops at the call, naming
+#'   the column: `"plan_compare(p = ) is a template, guards, a map by
+#'   context or cell_rows(), not NA."`
+#'
 #'   A test whose record names no variable (`ard_stats_aov()`'s term) has
 #'   no row; use `ard_stats_oneway_test()`.  The columns have no
 #'   population: the header's `{col}` / `{n}` and its short rows leave them
