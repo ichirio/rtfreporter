@@ -58,6 +58,15 @@ at the top of the next page, with no continuation row before it (a record
 has no heading).  Its arguments are \code{\link[=listing_spec]{listing_spec()}}'s own, unchanged;
 the blank rows are \code{\link[=plan_blanks]{plan_blanks()}}'s, as for a table.
 }
+\details{
+A listing cannot be combined with \code{\link[=plan_append]{plan_append()}}: its columns are the
+records' own, while appended parts are a \code{label} and value columns, so
+\code{plan_append()} stops on a plan that carries \code{plan_listing()}, as the
+first plan or as a part.  To show a listing with a summary, make them
+separate contents of the document: \code{\link[=rtf_tables]{rtf_tables()}} for the listing, then
+\code{\link[=rtf_tables]{rtf_tables()}} for the summary with \code{page_break = FALSE} (see the article
+"Several contents on one page").
+}
 \examples{
 # Invented adverse-event records
 recs <- data.frame(

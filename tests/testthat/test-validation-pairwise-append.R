@@ -96,8 +96,8 @@
 #  FR-PL969 FR-PL905 FR-PL433 FR-PL435 FR-PL436.
 #
 #  (C) FT-LS162, decision table: plan_listing() at a page edge (a listing is
-#  laid out by listing_spec(), so it is a plan of its own; as the parent of
-#  plan_append() it is not laid out, #880).  Six
+#  laid out by listing_spec(), so it is a plan of its own;
+#  plan_append() refuses it, FT-PL987).  Six
 #  records of three subjects, one wrapped over four lines (Nausea ..) and
 #  one over three (Dizziness ..), the key column ID with collapse_repeats:
 #    max_rows  blanks     key repeats  Expected
@@ -641,4 +641,35 @@ test_that("FT-LS163 [FR-LS255 FR-LS254]: a plan_listing() record longer than a p
     # continuation row
     expect_true(all(vapply(pages, function(pg) nrow(pg$data), 0L) <= 3L), info = info)
   }
+})
+
+test_that("FT-PL987 [FR-PL970]: plan_append() on a plan with plan_listing() stops and names the contents of a document", {
+  rec <- data.frame(ID = c("S-01", "S-01", "S-02", "S-02"), TP = rep(c("t1", "t2"), 2),
+                    V = c(1.5, 2.5, 3.5, 4.5))
+  lng <- data.frame(TP = c("t1", "t2"), variable = "V", stat_name = "mean",
+                    stat = c(2.5, 3.5), .label = NA_character_)
+  summary_plan <- table_plan(lng, cols = "TP", rows = c(block = ~ "Summary")) |>
+    plan_cells(V = c(Mean = "{mean:.1f}"))
+  parent <- table_plan(rec, cols = "TP", rows = "ID", value = "V") |>
+    plan_cells("{value:.1f}")
+  listed <- plan_listing(parent, listing_col("ID"), listing_col("V"))
+  advice <- "rtf_tables\(doc, summary_plan, page_break = FALSE\)"
+  # the first plan is a listing: stops where the part is added ...
+  expect_error(plan_append(listed, summary_plan),
+               "first plan carries plan_listing\(\).*cannot be appended")
+  expect_error(plan_append(listed, summary_plan), advice)
+  expect_error(plan_append(listed, summary_plan), "Several contents on one page", fixed = TRUE)
+  # ... and when the listing is written after plan_append()
+  late <- plan_listing(plan_append(parent, summary_plan),
+                       listing_col("ID"), listing_col("V"))
+  expect_error(plan_apply(late, "table"), "first plan carries plan_listing\(\)")
+  expect_error(plan_apply(late), advice)
+  # a part with plan_listing(): the same advice, not "move to the first plan"
+  err <- tryCatch(plan_append(parent, plan_listing(summary_plan, listing_col("TP"))),
+                  error = function(e) conditionMessage(e))
+  expect_match(err, "the part carries plan_listing\(\)")
+  expect_match(err, advice)
+  expect_false(grepl("Move to the first plan", err, fixed = TRUE))
+  # without a listing it stacks as before
+  expect_no_error(plan_apply(plan_append(parent, summary_plan), "table"))
 })
