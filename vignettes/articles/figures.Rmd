@@ -278,6 +278,12 @@ sharply, but EMF is not rendered the same way by every word processor, and a
 figure that differs between reviewers' machines is worse than one that is
 300 dpi: check it in the readers your reviewers use.
 
+A plot object can be drawn as EMF directly: `rtfplot(p, render_format = "emf")`
+(or the same argument of `rtf_figures()`) draws it with the **devEMF** package,
+which is only needed for this, at `render_width` x `render_height` inches and
+embeds it as an EMF file would be. `render_dpi` and `png_device` are for PNG
+and may not be given with it.
+
 ## A report of figures and tables
 
 They share the page model, so a document is a sequence of content pages:
