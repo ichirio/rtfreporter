@@ -544,7 +544,7 @@
   format(time, fmt)
 }
 
-.substitute_run_tokens <- function(out) {
+.substitute_run_tokens <- function(out, keep_marks = FALSE) {
   has <- function(tok) grepl(paste0("\\{", tok), out, fixed = TRUE)
   if (has("PROGRAM")) {
     prog <- .program_now()
@@ -556,10 +556,10 @@
            "the program with source() or Rscript.", call. = FALSE)
     }
     # the longer tokens first: {PROGRAM_FULL} is never read as {PROGRAM}
-    out <- .replace_token(out, "\\{PROGRAM_FULL\\}", .rtf_escape(.full_path(prog)))
-    out <- .replace_token(out, "\\{PROGRAM_NAME\\}", .rtf_escape(basename(prog)))
-    out <- .replace_token(out, "\\{PROGRAM_DIR\\}", .rtf_escape(dirname(prog)))
-    out <- .replace_token(out, "\\{PROGRAM\\}", .rtf_escape(prog))
+    out <- .replace_token(out, "\\{PROGRAM_FULL\\}", .token_value(.full_path(prog)))
+    out <- .replace_token(out, "\\{PROGRAM_NAME\\}", .token_value(basename(prog)))
+    out <- .replace_token(out, "\\{PROGRAM_DIR\\}", .token_value(dirname(prog)))
+    out <- .replace_token(out, "\\{PROGRAM\\}", .token_value(prog))
   }
   if (has("DATETIME")) {
     time <- .run_ctx$time %||% .resolve_render_time()
@@ -577,12 +577,15 @@
   # tokens of one's own (rtf_document(tokens = ), the option), then the
   # page's values by column, {PARAM} (R/page_values.R): set only while a
   # page's text is written, so they never reach another page
+  # A value is written as it is: its braces stay marked until the page
+  # tokens are done (.token_value()), so a `{PAGE}` in a value is not filled.
   out <- .substitute_user_tokens(out)
-  .substitute_column_tokens(out)
+  out <- .substitute_column_tokens(out)
+  if (keep_marks) out else .drop_token_marks(out)
 }
 
 .substitute_page_tokens <- function(out, current_page = NULL, total_pages = NULL) {
-  out <- .substitute_run_tokens(out)
+  out <- .substitute_run_tokens(out, keep_marks = TRUE)
   # `{SECTION_PAGES}` was removed in 0.7.31 (#410).  An unrecognised token is
   # passed through as literal text, so falling through silently would print
   # "{SECTION_PAGES}" into a rendered deliverable -- error instead, and say
@@ -623,7 +626,7 @@
     out <- gsub("\\{TOTAL_PAGES\\}", as.character(total_pages), out, fixed = TRUE)
   }
 
-  out
+  .drop_token_marks(out)
 }
 
 # Cell shading: `\clcbpat<N>` names a colour-table index as the cell's fill.
