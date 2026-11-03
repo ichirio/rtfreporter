@@ -12,7 +12,8 @@ rtfplot(
   render_width = 6.5,
   render_height = 4.5,
   render_dpi = 300,
-  png_device = NULL
+  png_device = NULL,
+  render_format = NULL
 )
 }
 \arguments{
@@ -55,6 +56,15 @@ occupies the same inches on the page as one drawn at 150.}
 \code{grDevices::png()} otherwise.  \code{"ragg"} is an error without ragg.  The
 figure takes the same inches on the page whichever device drew it.
 Refused for a file.}
+
+\item{render_format}{The file format a plot object is drawn as: \code{"png"}
+or \code{"emf"}.  \code{NULL} (default) is \code{"png"}.  \code{"emf"} draws a vector
+picture with the devEMF package (\code{devEMF::emf()}, plain EMF records) at
+\code{render_width} x \code{render_height} inches, embedded as \verb{\\emfblip} exactly
+as an EMF file would be; it is an error without devEMF.
+\code{render_dpi} and \code{png_device} are for PNG and may not be given with it.
+EMF is not rendered the same way by every word processor: check it in
+the readers you will use.  Refused for a file.}
 }
 \value{
 An \code{rtfplot} (S3) object suitable for use in \code{rtf_tables()}.
