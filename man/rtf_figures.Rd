@@ -76,7 +76,9 @@ Modified rtf_document with appended figure contents.
 }
 \description{
 Append one or more figures as content pages -- image files (PNG/JPEG/EMF) or
-plot objects. Each figure creates one new page. Display dimensions and
+plot objects. Each figure is a block of its own and begins a new page,
+unless \code{page_break = FALSE} puts it under the content before. Display
+dimensions and
 alignment apply to every path and plot object in \code{figures}; elements
 already constructed via \code{\link[=rtfplot]{rtfplot()}} keep their own settings.
 }
