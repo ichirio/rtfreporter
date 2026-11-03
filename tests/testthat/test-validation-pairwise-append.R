@@ -653,21 +653,21 @@ test_that("FT-PL987 [FR-PL970]: plan_append() on a plan with plan_listing() stop
   parent <- table_plan(rec, cols = "TP", rows = "ID", value = "V") |>
     plan_cells("{value:.1f}")
   listed <- plan_listing(parent, listing_col("ID"), listing_col("V"))
-  advice <- "rtf_tables\(doc, summary_plan, page_break = FALSE\)"
+  advice <- "rtf_tables\\(doc, summary_plan, page_break = FALSE\\)"
   # the first plan is a listing: stops where the part is added ...
   expect_error(plan_append(listed, summary_plan),
-               "first plan carries plan_listing\(\).*cannot be appended")
+               "first plan carries plan_listing\\(\\).*cannot be appended")
   expect_error(plan_append(listed, summary_plan), advice)
   expect_error(plan_append(listed, summary_plan), "Several contents on one page", fixed = TRUE)
   # ... and when the listing is written after plan_append()
   late <- plan_listing(plan_append(parent, summary_plan),
                        listing_col("ID"), listing_col("V"))
-  expect_error(plan_apply(late, "table"), "first plan carries plan_listing\(\)")
+  expect_error(plan_apply(late, "table"), "first plan carries plan_listing\\(\\)")
   expect_error(plan_apply(late), advice)
   # a part with plan_listing(): the same advice, not "move to the first plan"
   err <- tryCatch(plan_append(parent, plan_listing(summary_plan, listing_col("TP"))),
                   error = function(e) conditionMessage(e))
-  expect_match(err, "the part carries plan_listing\(\)")
+  expect_match(err, "the part carries plan_listing\\(\\)")
   expect_match(err, advice)
   expect_false(grepl("Move to the first plan", err, fixed = TRUE))
   # without a listing it stacks as before
