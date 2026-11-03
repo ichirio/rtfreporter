@@ -1,4 +1,14 @@
-# rtfreporter (development version)
+# rtfreporter 0.9.0
+
+This is the first release on CRAN.  The API deprecated in 0.5.0 - 0.8.x is
+removed, and so is `rtf_default_format()` with `rtf_document(default_format = )`:
+`rtf_style()` sets the look of a document in one object.  The regular
+expression in "Finding what the next minor release removes" below finds
+the removed names in your code.  The 0.8.x - 0.9.0 work is mostly about
+tables made from an analysis results dataset (`table_plan()` and the
+`plan_*()` verbs), about figures (`rtf_figures()`, drawn with ragg when it
+is installed) and about a font per script slot, so Japanese text is set in
+a Japanese font.
 
 - **`plan_listing()` takes `align` and `record`** (0.8.2.9097, #720), as
   `listing_spec()` does: `align` is the alignment of the columns that set
@@ -965,12 +975,14 @@ Found while raising the test coverage before CRAN (#552).
 
 ### Finding what the next minor release removes
 
-0.9.0 removes everything deprecated in 0.8.x.  To find it in your code
-(R scripts, R Markdown / Quarto), search for this regular expression -- each
-hit warns today and stops working in 0.9.0:
+0.9.0 removes everything deprecated in 0.8.x, and `rtf_default_format()`
+and `rtf_document(default_format = )` / `rtf_config(default_format = )`,
+which `rtf_style()` replaces.  To find it in your code (R scripts, R
+Markdown / Quarto), search for this regular expression -- each hit stops
+working in 0.9.0:
 
 ```
-\b(rtf_border_(none|top|bottom|box|with|tfl|side)|rtf_table_border|add_col_header_row|col_header_from_names|set_header_cell|update_(header|footer)_row|paginate|assemble_(files|spec|toc|from_spec)|toc_(heading|entry)|fmt_count_paren_bare|realign_count_pct|format_count_pct)\s*\(|\b(spanning_header|gt_obj|stub_vars|stub_label|stub_indent|stub_group_summary|read_gt)\s*=
+\b(rtf_border_(none|top|bottom|box|with|tfl|side)|rtf_table_border|add_col_header_row|col_header_from_names|set_header_cell|update_(header|footer)_row|paginate|assemble_(files|spec|toc|from_spec)|toc_(heading|entry)|fmt_count_paren_bare|realign_count_pct|format_count_pct|rtf_default_format)\s*\(|\b(spanning_header|gt_obj|stub_vars|stub_label|stub_indent|stub_group_summary|read_gt|default_format)\s*=
 ```
 
 For example `grep -rnE '<the expression>' R/ analysis/`, or RStudio's *Find
