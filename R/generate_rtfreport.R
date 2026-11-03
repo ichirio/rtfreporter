@@ -1370,7 +1370,9 @@
       lines <- c(lines, .render_spanning_rows(
         hdr_row, cellx, row_b, hdr_h, pad_l, pad_r, valign_cmd,
         col_spec = col_spec, table_align = table_align,
-        group_bottom_side = if (idx < n_hdr_rows) {
+        # border = "none" (no border at all) draws no group underline either
+        # (#870); an author who wants it there asks for it per cell.
+        group_bottom_side = if (idx < n_hdr_rows && !is.null(border)) {
           (hdr_border$bottom %||% span_border$bottom %||% rtf_border_line())
         } else {
           NULL   # last header row's outer frame already supplies the bottom
@@ -1389,11 +1391,47 @@
   }
 
   align_cmd <- switch(table_align, center = "\\trqc", right = "\\trqr", "")
-  .blank_row_rtf <- function() {
-    total_w <- cellx[ncols]
-    paste0("\\trowd\\trgaph0\\trleft0\\trrh", blank_h,
-           align_cmd, "\\clvertalb\\cellx", total_w,
-           " \\cell\\row")
+
+  # A blank row is a body row (#869): inside a frame it carries the body
+  # zone's left / right edges, its inside_v (then it is written one empty cell
+  # per column, so the vertical rules run through it) and inside_h as its
+  # bottom.  A leading blank row of a table with no header row takes the
+  # frame's top edge off the first data row, a trailing one the frame's bottom
+  # edge off the last data row -- only the edge the frame put there, never one
+  # a zone set or erased itself (border$frame, .expand_table_border()).
+  frame     <- border$frame
+  body_zone <- if (inherits(border$body, "rtf_border")) border$body
+  lead_blank  <- 0L %in% blank_set
+  trail_blank <- nrows > 0L && nrows %in% blank_set
+  move_top    <- lead_blank && !is.null(frame$top) &&
+                 identical(border$first_row$top, frame$top)
+  move_bottom <- trail_blank && !is.null(frame$bottom) &&
+                 identical(border$last_row$bottom, frame$bottom)
+  .has_line <- function(s) !is.null(s) && !identical(s$style, "none")
+
+  .blank_row_rtf <- function(where = "inside") {
+    b <- rtf_border()
+    b$left     <- body_zone$left
+    b$right    <- body_zone$right
+    b$inside_v <- body_zone$inside_v
+    b$top      <- if (where == "lead" && move_top) frame$top
+    b$bottom   <- if (where == "trail") {
+      if (move_bottom) frame$bottom
+    } else {
+      body_zone$inside_h
+    }
+    if (!any(vapply(c("top", "bottom", "left", "right", "inside_v"),
+                    function(s) .has_line(b[[s]]), logical(1L)))) {
+      # No rule touches it: the bare full-width spacer, as always.
+      return(paste0("\\trowd\\trgaph0\\trleft0\\trrh", blank_h,
+                    align_cmd, "\\clvertalb\\cellx", cellx[ncols],
+                    " \\cell\\row"))
+    }
+    cx   <- if (.has_line(b$inside_v)) cellx else cellx[ncols]
+    defs <- .build_cell_defs(cx, b, "\\clvertalb", color_index_map)
+    paste0("\\trowd\\trgaph0\\trleft0\\trrh", blank_h, align_cmd,
+           paste(defs, collapse = ""),
+           paste(rep(" \\cell", length(cx)), collapse = ""), "\\row")
   }
 
   # Data rows, with blank separator rows spliced in.
@@ -1416,9 +1454,9 @@
 
   out        <- character()
   prev_blank <- FALSE
-  add_blank  <- function() {
+  add_blank  <- function(where = "inside") {
     if (collapse_blank && prev_blank) return(invisible())
-    out        <<- c(out, .blank_row_rtf())
+    out        <<- c(out, .blank_row_rtf(where))
     prev_blank <<- TRUE
   }
   add_data <- function(txt) {
@@ -1426,7 +1464,7 @@
     prev_blank <<- FALSE
   }
 
-  if (0L %in% blank_set) add_blank()
+  if (0L %in% blank_set) add_blank("lead")
 
   for (i in seq_len(nrows)) {
     if (detect_blank && .row_all_empty(df[i, , drop = FALSE])) {
@@ -1444,6 +1482,10 @@
       if (i == nrows && !is.null(border$last_row)) {
         row_border <- .effective_row_border(row_border, border$last_row)
       }
+      # The frame's edge moved onto a leading / trailing blank row (#869):
+      # this row meets the blank one at an inside boundary instead.
+      if (i == 1L && move_top) row_border$top <- NULL
+      if (i == nrows && move_bottom) row_border$bottom <- body_zone$inside_h
       rcs <- if (!is.null(cell_styles) && i <= length(cell_styles))
                cell_styles[[i]] else NULL
       row_vals <- as.list(df[i, , drop = FALSE])
@@ -1468,7 +1510,7 @@
         ))
       }
     }
-    if (i %in% blank_set) add_blank()
+    if (i %in% blank_set) add_blank(if (i == nrows) "trail" else "inside")
   }
 
   c(lines, out)
@@ -1735,7 +1777,9 @@
   # Width: the absolute `width_twips` wins (the legacy form), then the shared
   # `width` vocabulary, then the writable width.  A header/footer band has no
   # table body above it, so "content" resolves to the writable width too.
-  width       <- if (!is.null(hf$width_twips)) {
+  # `width_twips = 0` is "not set" (a band of no width cannot be read), as
+  # rtftable(table_width_twips = 0) is.
+  width       <- if (!is.null(hf$width_twips) && hf$width_twips > 0L) {
     as.integer(hf$width_twips)
   } else if (!is.null(hf$width)) {
     .resolve_block_width(hf$width, writable_width_twips, writable_width_twips,
@@ -1835,6 +1879,8 @@
 
     cell_w <- floor(width / n_cols)
     cellx  <- cumsum(rep(cell_w, n_cols))
+    # the last cell ends at the band's edge, whatever the division leaves
+    cellx[n_cols] <- as.integer(width)
     # Border applies only to the first row of the header/footer block.
     row_border_cmds <- if (row_idx == 1L) .build_border_commands(hf_border, color_index_map) else ""
 

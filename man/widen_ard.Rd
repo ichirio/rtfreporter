@@ -250,7 +250,8 @@ happens).  See \code{\link[=round_num]{round_num()}}.}
 attach as a numeric \code{.sort_stat} column -- what a descending-frequency AE
 table sorts on.  \code{NULL} (default) adds nothing.}
 
-\item{na}{Value to put in a cell no template could fill.  No effect with
+\item{na}{Value to put in a cell no template could fill: one string, or
+\code{NA} (the default) for an empty cell.  No effect with
 \code{stats = "rows"} and \code{value = "stat"}: that table is numeric, and its
 empty cells are \code{NA}.}
 

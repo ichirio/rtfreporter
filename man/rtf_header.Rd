@@ -66,8 +66,10 @@ header). Use \code{rtf_border(top = TRUE)} for a horizontal dividing line (defau
 for footer).}
 
 \item{width_twips}{Integer. Table width in twips. \code{NULL} (default) uses the
-full writable width (page width minus margins).  A value that is not one
-non-negative integer is an error.}
+full writable width (page width minus margins); so does \code{0}, as
+\code{rtftable(table_width_twips = 0)} does, since a band of no width cannot
+be read (\code{width}, when given, then sets the width).  A value that is not
+one non-negative integer is an error.}
 
 \item{width}{Band width in the shared vocabulary: \code{"page"} (the writable
 width, the default), a fraction in \verb{(0, 1]} of it, or twips (a whole

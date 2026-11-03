@@ -69,7 +69,7 @@ df2 <- data.frame(Parameter = "Sex", Value = "53\%")
 doc <- rtf_document() |>
   rtf_tables(list(df1, df2)) |>
   rtf_titles(list(
-    c("Table 14.1.1", "{HALF_BLANK_ROW}", "Safety Population"),
+    c("Table 14.1.1", "", "Safety Population"),
     "Table 14.1.2"
   ))
 

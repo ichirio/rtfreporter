@@ -41,7 +41,8 @@ Every page in a list must have the same columns.}
 \item{...}{Unused.}
 
 \item{at}{Columns to cut \strong{before}, as names or positions (symmetric with
-\code{split_rows}). \code{at = c(4, 6)} yields blocks \code{1:3}, \code{4:5}, \code{6:ncol}.}
+\code{split_rows}). \code{at = c(4, 6)} yields blocks \code{1:3}, \code{4:5}, \code{6:ncol}.
+A position is a whole number; \code{TRUE} or a fraction (\code{2.7}) is an error.}
 
 \item{cut_by}{Where to cut other than by position, as
 \code{\link[=plan_paginate_cols]{plan_paginate_cols()}} says it.

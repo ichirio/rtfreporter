@@ -20,7 +20,7 @@ pull_ard(
 \item{cols}{The column key(s), named as in \code{\link[=widen_ard]{widen_ard()}} -- the grouping
 variable's own name, not its \verb{group*} position.}
 
-\item{stat}{Statistic to read; \code{"N"} by default.}
+\item{stat}{Statistic to read, one name; \code{"N"} by default.}
 
 \item{variable, context}{Restrict to this analysis variable and/or this
 \code{context}.  Use them when the error message says the choice is ambiguous,
@@ -32,7 +32,8 @@ with the table's columns: a named list, as in \code{\link[=widen_ard]{widen_ard(
 several \code{cols} the order is matched against the joined names
 (\code{"Placebo____F"}).}
 
-\item{sep}{Separator between multiple \code{cols} keys; match \code{\link[=widen_ard]{widen_ard()}}.}
+\item{sep}{Separator between multiple \code{cols} keys, one string; match
+\code{\link[=widen_ard]{widen_ard()}}.}
 }
 \value{
 A named vector, one element per column key.

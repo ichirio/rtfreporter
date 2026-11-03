@@ -34,9 +34,9 @@ One logical is \code{widen_ard(sort = )} as it is: \code{TRUE} brings a key's
 separate blocks together, \code{FALSE} moves only what an order declares.}
 
 \item{stat}{The statistic totalled into \code{.sort_stat} for a frequency
-order (\code{widen_ard(sort_stat = )}), e.g. \code{stat = "n"}.}
+order (\code{widen_ard(sort_stat = )}), one name, e.g. \code{stat = "n"}.}
 
-\item{keep}{\code{FALSE} also hides the sort keys that are columns: a sort
+\item{keep}{\code{TRUE} (default) or \code{FALSE}; \code{FALSE} also hides the sort keys that are columns: a sort
 carrier needed and not wanted.  Names that are not columns (a
 statistic, \code{".depth"}) are ignored rather than refused.}
 }

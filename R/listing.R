@@ -306,8 +306,8 @@ listing_split_after <- function(text, sep) {
 #'   record missing its middle value does not print a doubled separator.
 #' @param sep Separator for `vars`.  `NULL` (default) takes the listing's own
 #'   (`"/"` under the `"multiline"` type).
-#' @param width Integer or `NULL`.  Maximum characters per physical row before
-#'   the cell wraps.  `NULL` (default) never wraps this column.
+#' @param width A positive whole number or `NULL`.  Maximum characters per
+#'   physical row before the cell wraps.  `NULL` (default) never wraps this column.
 #' @param label The column header.  `NULL` (default) **derives** the header
 #'   from the data -- each source column's `label` attribute when it has one,
 #'   otherwise its name, joined with `sep` -- or from
@@ -348,8 +348,8 @@ listing_split_after <- function(text, sep) {
 #'   }
 #' @param name Output column name.  `NULL` (default) uses the first entry of
 #'   `vars`; [listing_spec()] makes the set unique if two columns collide.
-#' @param rel_width Relative width of this column in the rendered table.
-#'   `NULL` (default) uses `width` when there is one, otherwise the longest
+#' @param rel_width Relative width of this column in the rendered table, a
+#'   positive finite number.  `NULL` (default) uses `width` when there is one, otherwise the longest
 #'   line of `label`; with neither, 10.
 #' @param align `"left"`, `"center"` or `"right"`.  `NULL` (default) takes the
 #'   listing's own (`"left"` under the `"multiline"` type).
@@ -402,8 +402,9 @@ listing_col <- function(vars,
     stop("`sep` must be a single string, or NULL.", call. = FALSE)
   }
   if (!is.null(width)) {
+    # (a whole, finite number: 1.5 is not cut to 1, Inf is not NA)
     if (length(width) != 1L || is.na(width) || !is.numeric(width) ||
-        width < 1) {
+        width < 1 || !is.finite(width) || width != round(width)) {
       stop("`width` must be a single positive number of characters, or NULL.",
            call. = FALSE)
     }
@@ -411,7 +412,7 @@ listing_col <- function(vars,
   }
   if (!is.null(rel_width)) {
     if (length(rel_width) != 1L || !is.numeric(rel_width) ||
-        is.na(rel_width) || rel_width <= 0) {
+        is.na(rel_width) || rel_width <= 0 || !is.finite(rel_width)) {
       stop("`rel_width` must be a single positive number, or NULL.",
            call. = FALSE)
     }
@@ -511,8 +512,8 @@ print.rtf_listing_col <- function(x, ...) {
 #'   own.  `NULL` (default) takes the template's.
 #' @param spacer Logical.  Insert a narrow blank column between each pair of
 #'   printed columns.  `NULL` (default) takes the template's.
-#' @param spacer_rel_width Relative width of those gutter columns.  `NULL`
-#'   (default) takes the template's.
+#' @param spacer_rel_width Relative width of those gutter columns, a positive
+#'   finite number.  `NULL` (default) takes the template's.
 #' @param blank_row Logical.  End each record's block with a blank row, so one
 #'   subject is visibly separated from the next.  `NULL` (default) takes the
 #'   template's.
@@ -630,7 +631,8 @@ listing_spec <- function(cols,
   blank_row_first <- chk_lgl(blank_row_first, "blank_row_first")
   if (!is.null(spacer_rel_width) &&
       (!is.numeric(spacer_rel_width) || length(spacer_rel_width) != 1L ||
-       is.na(spacer_rel_width) || spacer_rel_width <= 0)) {
+       is.na(spacer_rel_width) || spacer_rel_width <= 0 ||
+       !is.finite(spacer_rel_width))) {
     stop("`spacer_rel_width` must be a single positive number, or NULL.",
          call. = FALSE)
   }

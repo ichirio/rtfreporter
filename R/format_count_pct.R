@@ -101,6 +101,13 @@ fmt_count_pct <- function(count, pct,
   pct_unit <- match.arg(pct_unit)
   rnd <- .rounder(rounding)
   na <- .check_na_text(na)
+  nbsp <- .check_nbsp(nbsp)
+  if (!is.logical(pct_sign) || length(pct_sign) != 1L || is.na(pct_sign)) {
+    stop("`pct_sign` must be TRUE or FALSE.", call. = FALSE)
+  }
+  # a bare NA (logical) is a missing count or percent, as NA_real_ is
+  if (is.logical(count) && all(is.na(count))) count <- as.numeric(count)
+  if (is.logical(pct) && all(is.na(pct))) pct <- as.numeric(pct)
   if (!is.numeric(count) || !is.numeric(pct)) {
     stop("`count` and `pct` must both be numeric.", call. = FALSE)
   }

@@ -493,10 +493,15 @@
 #'     \item{`"tfl"`}{(default) the clinical TFL preset: a top and a bottom
 #'       rule on the column-header block only (see [rtf_table_style_tfl()]);
 #'       no rule under the last row.}
-#'     \item{`"none"`}{no borders.}
+#'     \item{`"none"`}{no borders, the underline under a spanning header cell
+#'       included (add one per cell with [col_cell()]`(border = )` or
+#'       [style_header()]).}
 #'     \item{an [rtf_border()] object}{its outer edges frame the whole table
 #'       and its `inside_h` / `inside_v` rules fall between the rows / cells;
-#'       [style_zone()] then sets one kind of row.}
+#'       [style_zone()] then sets one kind of row.  The blank rows of
+#'       `blank_rows` are inside the frame: a blank row carries the left /
+#'       right edges, `inside_v` and `inside_h`, and a leading (no header
+#'       row) or trailing one the top or bottom edge.}
 #'     \item{an [rtf_table_style()] object}{its border zones are used.}
 #'   }
 #' @param style Optional shared `rtf_table_style` (S3).  Provides default
@@ -507,7 +512,9 @@
 #'   combining any of (positions are unioned):
 #'   \describe{
 #'     \item{an integer vector}{positions: `0` = before the first row, `k` =
-#'       after data row `k`, `-1` = after the last row.}
+#'       after data row `k`, `-1` = after the last row.  A position is a
+#'       whole number in `-1..nrow`: a fraction, `NA`, or a position past
+#'       the last row (or below `-1`) stops, naming the positions.}
 #'     \item{a [blank_rows_by_change()] spec}{insert when a column value changes.}
 #'     \item{a [blank_rows_by_rule()] spec}{insert before / after rows matching a
 #'       regular expression.}
@@ -790,9 +797,14 @@ rtftable <- function(
   # the whole-table shortcuts (outer / inside_h / inside_v) into the five zones.
   # Whether a column header exists decides where the table's top edge lands,
   # which is why the expansion happens here and not in the constructor.
+  # col_header = NULL still writes a header row (the column names), so the
+  # top edge is that row's; only a header of no rows (list()) has none.  It
+  # used to read NULL as "no header": the top rule fell between the column
+  # names and the first data row, and the inside_h seam under them was lost.
+  first_hdr <- if (!is.null(data_single)) col_hdr_one else col_hdr_list[[1L]]
   border_resolved <- .expand_table_border(
     .normalize_table_border(border),
-    has_header = !is.null(col_header))
+    has_header = is.null(first_hdr) || length(first_hdr) > 0L)
   # Raised here because it needs the shape of the table to know whether the
   # pre-0.5 reading would have produced anything different.
   .warn_old_edge_reading(.normalize_table_border(border),
@@ -812,7 +824,8 @@ rtftable <- function(
              call. = FALSE)
       }
       v <- as.integer(blank_rows)
-      if (any(is.na(v)) || any(v < -1L)) {
+      if (any(is.na(v)) || any(v < -1L) ||
+          any(blank_rows != trunc(blank_rows))) {
         stop("`blank_rows` integers must be -1, 0, or positive.", call. = FALSE)
       }
       blank_rows_resolved <- sort(unique(v))

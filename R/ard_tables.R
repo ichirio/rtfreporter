@@ -1245,7 +1245,7 @@ print.cell_rows <- function(x, ...) {
 #' @param x A cards/cardx ARD.
 #' @param cols The column key(s), named as in [widen_ard()] -- the grouping
 #'   variable's own name, not its `group*` position.
-#' @param stat Statistic to read; `"N"` by default.
+#' @param stat Statistic to read, one name; `"N"` by default.
 #' @param variable,context Restrict to this analysis variable and/or this
 #'   `context`.  Use them when the error message says the choice is ambiguous,
 #'   or to ask for the key variable's own rows.
@@ -1254,7 +1254,8 @@ print.cell_rows <- function(x, ...) {
 #'   (`list(TRT = c("Placebo", "Drug"))`; a plain vector is not read).  With
 #'   several `cols` the order is matched against the joined names
 #'   (`"Placebo____F"`).
-#' @param sep Separator between multiple `cols` keys; match [widen_ard()].
+#' @param sep Separator between multiple `cols` keys, one string; match
+#'   [widen_ard()].
 #'
 #' @return A named vector, one element per column key.
 #'
@@ -1273,6 +1274,16 @@ print.cell_rows <- function(x, ...) {
 pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
                      levels = NULL, sep = "____") {
   ard <- x
+  one_text <- function(v) is.character(v) && length(v) == 1L && !is.na(v)
+  if (!is.character(cols) || !length(cols)) {
+    .ard_stop("`cols` names one or more column keys, e.g. cols = \"TRT\".")
+  }
+  if (!one_text(stat)) {
+    .ard_stop("`stat` is one statistic's name, \"N\" by default.")
+  }
+  if (!one_text(sep)) {
+    .ard_stop("`sep` is one text, the separator between `cols` keys: \"____\".")
+  }
   raw   <- as.data.frame(ard, stringsAsFactors = FALSE)
   gcols <- grep("^group[0-9]+$", names(raw), value = TRUE)
   have  <- unique(c(unlist(lapply(gcols, function(g) .ard_first_seen(raw[[g]]))),
@@ -2264,7 +2275,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #' @param sort_stat Name of a statistic to total across the spread columns and
 #'   attach as a numeric `.sort_stat` column -- what a descending-frequency AE
 #'   table sorts on.  `NULL` (default) adds nothing.
-#' @param na Value to put in a cell no template could fill.  No effect with
+#' @param na Value to put in a cell no template could fill: one string, or
+#'   `NA` (the default) for an empty cell.  No effect with
 #'   `stats = "rows"` and `value = "stat"`: that table is numeric, and its
 #'   empty cells are `NA`.
 #' @param notes Report what was **not** used.  Every stage discards ARD rows
@@ -2323,6 +2335,14 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   if (!(isTRUE(notes) || isFALSE(notes) ||
         (is.character(notes) && length(notes) == 1L && notes %in% c("attr", "applied")))) {
     .ard_stop("`notes` must be TRUE, FALSE, \"attr\" or \"applied\".")
+  }
+  # one text for an empty cell (or NA): not the last of a vector, not NULL
+  if (length(na) != 1L || !(is.character(na) || is.na(na))) {
+    .ard_stop("`na` is one text, what a cell no template could fill shows (or NA).")
+  }
+  # one column reference; a chain of templates is a list of formulas
+  if (is.character(label) && length(label) > 1L) {
+    .ard_stop("`label` is one column, optionally named (`c(Parameter = \".label\")`), or NULL / NA.")
   }
   # No column key: one column, "All", when the ARD has no group to spread
   # (one arm, a single cohort).  A group the ARD has is named in `cols`.

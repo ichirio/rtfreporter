@@ -622,7 +622,10 @@
     a$na              <- ""
     chunks <- do.call(.paginate_df, c(a, dots))
 
-    nm <- names(chunks)
+    # the group's heading, without the "...n" tail a split gives the pages of
+    # one value: the tail would order a group's pages by it, P1 and P2
+    # interleaved, instead of together
+    nm <- .page_name_base(names(chunks))
     for (k in seq_along(chunks)) {
       out[[length(out) + 1L]] <- chunks[[k]]
       by_val[[length(by_val) + 1L]] <- r$values
@@ -645,12 +648,8 @@
     }
     return(idx)
   }
-  idx <- as.integer(group_col)
-  if (is.na(idx) || idx < 1L || idx > ncol(df)) {
-    stop(sprintf("`group_col` index %s out of range (1..%d).",
-                 group_col, ncol(df)), call. = FALSE)
-  }
-  idx
+  # A position must be a whole number in range (#850): the shared resolver.
+  .resolve_col_indices(list(group_col), df, "group_col")
 }
 
 # Resolve a `collapse_repeats` column spec (character names and/or integer
@@ -659,23 +658,8 @@
 # real columns keep their natural 1-based positions for integer indexing.
 .resolve_collapse_cols <- function(cols, df) {
   if (is.null(cols) || length(cols) == 0L) return(integer(0))
-  vapply(cols, function(c1) {
-    if (is.character(c1)) {
-      idx <- match(c1, names(df))
-      if (is.na(idx)) {
-        stop(sprintf("`collapse_repeats` column '%s' not found in the table.",
-                     c1), call. = FALSE)
-      }
-      as.integer(idx)
-    } else {
-      idx <- as.integer(c1)
-      if (is.na(idx) || idx < 1L || idx > ncol(df)) {
-        stop(sprintf("`collapse_repeats` index %s out of range (1..%d).",
-                     c1, ncol(df)), call. = FALSE)
-      }
-      idx
-    }
-  }, integer(1L), USE.NAMES = FALSE)
+  # A position must be a whole number in range (#850): the shared resolver.
+  .resolve_col_indices(cols, df, "collapse_repeats")
 }
 
 # Blank out consecutive repeated values in the given columns of ONE page,
@@ -1182,9 +1166,15 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     if (!nzchar(label)) label <- paste0("group_", g)
 
     if (!is.null(max_rows) && g_n > max_rows) {
+      # A value's rows gathered from several runs are ONE group: its first
+      # row is its only header.  The later runs' headers would read as a new
+      # group starting mid-page, which the widow control moved down again
+      # and again, a continuation row each time, forever.
+      hd <- info$headers[rows]
+      if (identical(info$mode, "value")) hd <- seq_len(g_n) == 1L
       sub_info <- list(id      = gid[rows],
                        label   = info$label[rows],
-                       headers = info$headers[rows],
+                       headers = hd,
                        mode    = info$mode)
       sub <- .split_group_force(chunk, sub_info, max_rows,
                                  cont_label, group_idx, min_group_rows)
