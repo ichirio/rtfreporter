@@ -329,8 +329,9 @@
     m <- regexec("\\\\qc\\\\li[0-9]+\\\\ri[0-9]+\\s+\\\\b\\s+(.+?)\\\\b0", line)
     g <- regmatches(line, m)[[1L]]
     if (length(g) == 2L && nzchar(trimws(g[2L]))) {
-      # Reverse the RTF escape: \\ -> \, \{ -> {, \} -> }, \uN? -> char
-      title <- gsub("\\\\\\\\", "\\\\", g[2L])
+      # A page token's field and markup's groups out (.rtf_label_text()),
+      # then reverse the RTF escape: \\ -> \, \{ -> {, \} -> }, \uN? -> char
+      title <- gsub("\\\\\\\\", "\\\\", .rtf_label_text(g[2L]))
       title <- gsub("\\\\\\{",   "{",   title)
       title <- gsub("\\\\\\}",   "}",   title)
       # \uN? -> the character (signed or unsigned N, surrogate pairs joined)
@@ -641,7 +642,10 @@
 #'   \item{`"auto"`}{auto-extract each input file's title (the first
 #'     centred-bold cell of the title block) and use it as a level-1
 #'     TOC entry.  Falls back to the file's basename if no title is
-#'     detected.}
+#'     detected.  The title is read as the file shows it, its tokens filled
+#'     (`{STUDY}`, `{PAGE}`), except that a dynamic page number
+#'     (`{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`) and the `{BOOK_PAGE}` slot are
+#'     left out, and markup keeps its text without its formatting.}
 #'   \item{a character vector of TOC labels}{one per input file -- same as
 #'     `"auto"` but with explicit labels.}
 #'   \item{a table (`data.frame`)}{one row per file, in order, for

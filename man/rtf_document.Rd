@@ -66,9 +66,10 @@ titles and footnotes: a named list,
 A name is upper case -- a letter, then letters, digits or \verb{_} -- and
 not one of rtfreporter's own (\code{\link[=rtf_text_tokens]{rtf_text_tokens()}}); a value is one
 string or number.  \code{options(rtfreporter.tokens = )} sets them for a
-session; the document's value wins.  Not in column headers: those take
-their values from \code{\link[=set_col_header]{set_col_header()}}'s \code{values}.  \code{NULL} (default):
-none.}
+session; the document's value wins.  A value is written as it is: a
+\code{{PAGE}} or \code{{STUDY}} in it is not filled.  Not in column headers: those
+take their values from \code{\link[=set_col_header]{set_col_header()}}'s \code{values}; nor in a table's
+cells, which print a token as written.  \code{NULL} (default): none.}
 
 \item{program_fallback}{The program to name when none is said
 (\code{program}, the option) and none is found (the file \code{source()} or

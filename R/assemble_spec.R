@@ -18,11 +18,35 @@
 # character (a non-breaking space, U+00A0, becomes a normal space), and the
 # escaped braces / backslash become literals.
 .rtf_decode_text <- function(x) {
+  x <- .rtf_label_text(x)
   x <- .rtf_unicode_decode(x)
   x <- gsub(intToUtf8(160L), " ", x, fixed = TRUE)
   x <- gsub("\\{",  "{",  x, fixed = TRUE)
   x <- gsub("\\}",  "}",  x, fixed = TRUE)
   x <- gsub("\\\\", "\\", x, fixed = TRUE)
+  trimws(x)
+}
+
+# A title's RTF as the text of a label (a contents entry, its outline entry,
+# the folder table's label): what a page token wrote there is left out -- a
+# page number (\chpgn), a NUMPAGES field, the {BOOK_PAGE} slot -- since a
+# label is not on that page, and a markup group (`{\sub 2}`, `{\super a}`)
+# keeps its text without its formatting.  The escaped braces of the text
+# (`\{`) are not groups and stay.
+.rtf_label_text <- function(x) {
+  if (!length(x) || is.na(x)) return(x)
+  gone <- "\u0006"
+  x <- gsub("(?<!\\\\)\\{\\\\\\*\\\\[A-Za-z]+\\}", gone, x, perl = TRUE)
+  x <- gsub(paste0("(?<!\\\\)\\{\\\\field\\{\\\\\\*\\\\fldinst [^{}]*\\}",
+                   "\\{\\\\fldrslt [^{}]*\\}\\}"), gone, x, perl = TRUE)
+  x <- gsub("\\\\chpgn(?![A-Za-z]) ?", gone, x, perl = TRUE)
+  repeat {
+    y <- gsub("(?<!\\\\)\\{\\\\[A-Za-z]+-?[0-9]* ?((?:[^{}\\\\]|\\\\[^{}A-Za-z]|\\\\u-?[0-9]+\\?)*)(?<!\\\\)\\}",
+              "\\1", x, perl = TRUE)
+    if (identical(y, x)) break
+    x <- y
+  }
+  x <- gsub(paste0(" *", gone, "[", gone, " ]*"), " ", x)
   trimws(x)
 }
 
