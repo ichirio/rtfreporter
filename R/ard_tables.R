@@ -825,8 +825,12 @@
       entry <- .ard_lookup_cells(
         cells, v, sub$context[1L],
         if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_)
-      lv <- if (!is.null(entry) && !is.null(entry$labels)) entry$labels
-            else .ard_first_seen(sub$.label)
+      seen <- .ard_first_seen(sub$.label)
+      # an unnamed line of a named recipe is labelled from `label`: there,
+      # the levels as first seen
+      lv <- if (!is.null(entry) && !is.null(entry$labels))
+              unlist(lapply(entry$labels, function(l) if (nzchar(l)) l else seen))
+            else seen
     }
     out <- c(out, lv)
   }
@@ -1145,6 +1149,10 @@ overall_row <- function(label, from = NULL) {
 #'
 #' @param ... One argument per output row.  Names become row labels; an
 #'   unnamed argument takes its label from `label`, as a bare template does.
+#'   On a variable with several levels (a categorical summary) an unnamed
+#'   argument gives one row per level, as a bare template does; a named one
+#'   stops with an error naming the variable, because one named row cannot
+#'   hold every level (put the level in `rows` instead).
 #'
 #' @return An object of class `cell_rows`, for `cells` in [widen_ard()].
 #'
@@ -2092,7 +2100,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'     `.label`, `.depth`, `.kind` and the keys), and it may name the
 #'     caller's variables too;
 #'   * `c("Mean (SD)" = "{mean} ({sd})", "Min, Max" = "{min}, {max}")` -- one
-#'     row per element, the name being the row label.
+#'     row per element, the name being the row label.  A named row is one
+#'     row for the whole variable, so on a variable with several levels (a
+#'     categorical summary, its levels in the label) it stops with an error
+#'     naming the variable rather than keep one level; an unnamed element
+#'     there gives one row per level, labelled from `label`.
 #'
 #'   A **list** is instead a map, looked up by analysis variable, then by
 #'   `context`, then by the structural kind, then by `"default"`; each of its
@@ -2636,23 +2648,60 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                           function(z) .ard_token_parts(z)$name, "")))))))
 
     if (!is.null(entry$labels)) {
-      picks <- lapply(entry$chains, .ard_chain_pick, s = sub,
-                      round_type = rounding)
-      vals <- vapply(picks, function(z) z$v, "")
-      labs_out <- entry$labels
-      if (!is.null(lab_chain)) {
-        labs_out <- vapply(labs_out, function(z)
-          .ard_label_text(lab_chain, sub, z), "")
+      # A recipe with row names.  On a summary with one label (a continuous
+      # variable, one level of interest) every line reads the whole record.
+      # On a variable with several levels each level is a record of its own,
+      # as it is to a bare template: an unnamed line is that level's row,
+      # labelled from `label`; a named line would put every level on the
+      # one row of that name, so it stops rather than keep the first.
+      # the levels are the records' own (`.label`, which normalize_ard()
+      # sets from the hierarchy or `variable_level`), not whatever column
+      # `label` names: `label = "stat_name"` labels one record's lines
+      labs <- if (".label" %in% names(sub)) as.character(sub$.label) else
+        rep(NA_character_, nrow(sub))
+      lvs  <- unique(labs[!is.na(labs)])
+      named_ln <- nzchar(entry$labels)
+      if (length(lvs) > 1L && any(named_ln)) {
+        .ard_stop(paste(c(
+          sprintf(paste0("`cells` gives %s named rows (%s), but %s has several ",
+                         "levels (%s)."), sQuote(sub$variable[1L]),
+                  paste(sQuote(entry$labels[named_ln]), collapse = ", "),
+                  sQuote(sub$variable[1L]),
+                  paste(sQuote(utils::head(lvs, 5)), collapse = ", ")),
+          "A named row is one row for the whole variable, so the levels would",
+          "overwrite each other.  Use an unnamed template (one row per level,",
+          "labelled from `label`), or put the level in `rows`."),
+          collapse = "\n"))
       }
-      pieces[[length(pieces) + 1L]] <- data.frame(
-        .lab = labs_out, .col = ckey, .valn = NA_real_, .valc = vals,
-        .tpl = vapply(picks, function(z) z$tpl, ""),
-        .guard = vapply(picks, function(z) z$guard, ""),
-        .depth = if (".depth" %in% names(sub)) sub$.depth[1L] else 1L,
-        .overall = if (".overall" %in% names(sub)) sub$.overall[1L] else FALSE,
-        .var = sub$variable[1L],
-        .keys = I(rep(list(key_vals), length(vals))),
-        stringsAsFactors = FALSE)
+      grp <- if (length(lvs) > 1L) {
+        lapply(unique(labs), function(lv)
+          if (is.na(lv)) is.na(labs) else (!is.na(labs) & labs == lv))
+      } else list(rep(TRUE, length(ii)))
+      for (sel in grp) {
+        s2 <- sub[sel, , drop = FALSE]
+        # an unnamed line's label is `label`'s value for the record, when
+        # it has one value there
+        lsel <- unique(lab_src[ii][sel])
+        lsel <- lsel[!is.na(lsel)]
+        lv <- if (length(lsel) == 1L) lsel else NA_character_
+        picks <- lapply(entry$chains, .ard_chain_pick, s = s2,
+                        round_type = rounding)
+        vals <- vapply(picks, function(z) z$v, "")
+        labs_out <- ifelse(named_ln, entry$labels, lv)
+        if (!is.null(lab_chain)) {
+          labs_out <- vapply(labs_out, function(z)
+            .ard_label_text(lab_chain, s2, z), "")
+        }
+        pieces[[length(pieces) + 1L]] <- data.frame(
+          .lab = unname(labs_out), .col = ckey, .valn = NA_real_, .valc = vals,
+          .tpl = vapply(picks, function(z) z$tpl, ""),
+          .guard = vapply(picks, function(z) z$guard, ""),
+          .depth = if (".depth" %in% names(s2)) s2$.depth[1L] else 1L,
+          .overall = if (".overall" %in% names(s2)) s2$.overall[1L] else FALSE,
+          .var = s2$variable[1L],
+          .keys = I(rep(list(key_vals), length(vals))),
+          stringsAsFactors = FALSE)
+      }
     } else {
       labs <- lab_src[ii]
       for (lv in unique(labs)) {
