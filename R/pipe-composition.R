@@ -739,7 +739,9 @@ rtf_tables <- function(doc, tables,
 #' Add figure content to document
 #'
 #' Append one or more figures as content pages -- image files (PNG/JPEG/EMF) or
-#' plot objects. Each figure creates one new page. Display dimensions and
+#' plot objects. Each figure is a block of its own and begins a new page,
+#' unless `page_break = FALSE` puts it under the content before. Display
+#' dimensions and
 #' alignment apply to every path and plot object in `figures`; elements
 #' already constructed via [rtfplot()] keep their own settings.
 #'
