@@ -537,6 +537,13 @@ print.rtf_border <- function(x, ...) {
   for (z in .table_border_zones) {
     tb[[z]] <- .merge_rtf_border(base[[z]], tb[[z]])
   }
+  # The frame's own top and bottom edges, kept for the renderer (#869): a
+  # leading / trailing blank row is inside the frame, so the edge the zones
+  # put on the first / last data row moves onto it.  Only the edge the frame
+  # put there moves; one a zone set or erased on its own stays where it is.
+  if (!is.null(outer$top) || !is.null(outer$bottom)) {
+    tb$frame <- list(top = outer$top, bottom = outer$bottom)
+  }
   tb$outer    <- NULL
   tb$inside_h <- NULL
   tb$inside_v <- NULL
