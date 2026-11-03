@@ -1,0 +1,107 @@
+# By hand, before a CRAN submission: what R-CMD-check.yaml leaves out.
+# R CMD check --as-cran with the PDF manual (TinyTeX) and the remote
+# incoming checks, the URLs (urlchecker) and the spelling (spelling, with
+# inst/WORDLIST).  Each part writes its findings to the job summary and an
+# artifact; a finding does not stop the other parts.  It also runs when this
+# file changes (a dispatch needs the file on the default branch first).
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/cran-readiness.yaml']
+
+name: cran-readiness
+
+permissions:
+  contents: read
+
+jobs:
+  cran-readiness:
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-tinytex@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck, any::urlchecker, any::spelling
+          needs: check
+
+      - name: The PDF manual's LaTeX packages
+        run: tlmgr update --self && tlmgr install inconsolata
+
+      - name: HTML Tidy, for the HTML manual check
+        run: sudo apt-get install -y tidy
+
+      - name: R CMD check --as-cran, with the manual
+        id: check
+        continue-on-error: true
+        env:
+          _R_CHECK_FORCE_SUGGESTS_: true
+          _R_CHECK_CRAN_INCOMING_REMOTE_: true
+        run: |
+          res <- rcmdcheck::rcmdcheck(args = "--as-cran", build_args = "--compact-vignettes=gs+qpdf",
+                                      error_on = "never", check_dir = "check")
+          out <- c("## R CMD check --as-cran",
+                   sprintf("%d error(s), %d warning(s), %d note(s)",
+                           length(res$errors), length(res$warnings), length(res$notes)),
+                   "```", res$errors, res$warnings, res$notes, "```")
+          cat(out, file = Sys.getenv("GITHUB_STEP_SUMMARY"), sep = "\n", append = TRUE)
+          if (length(res$errors) || length(res$warnings)) quit(status = 1)
+        shell: Rscript {0}
+
+      - name: URLs
+        id: urls
+        continue-on-error: true
+        run: |
+          u <- urlchecker::url_check(".")
+          # a host the runner could not reach in time is the runner's network,
+          # not the URL: listed, not counted
+          slow <- grepl("Timeout was reached", u$Message, fixed = TRUE)
+          show <- function(x) if (nrow(x)) tryCatch(utils::capture.output(print(x)), error = function(e) character())
+          out <- c("## URLs", sprintf("%d problem(s), %d not reached in time", sum(!slow), sum(slow)),
+                   "```", show(u[!slow, ]), "```",
+                   if (any(slow)) c("Not reached in time:", "```", unique(u$URL[slow]), "```"))
+          cat(out, sep = "\n")
+          cat(out, file = Sys.getenv("GITHUB_STEP_SUMMARY"), sep = "\n", append = TRUE)
+          if (any(!slow)) quit(status = 1)
+        shell: Rscript {0}
+
+      - name: Spelling
+        id: spelling
+        continue-on-error: true
+        run: |
+          s <- spelling::spell_check_package(".")
+          # the Japanese vignettes (*-ja.Rmd) are not English: their words left out
+          s$found <- lapply(s$found, function(f) f[!grepl("-ja[.]Rmd:", f)])
+          s <- s[lengths(s$found) > 0L, ]
+          print(s)
+          out <- c("## Spelling (words not in inst/WORDLIST)", sprintf("%d word(s)", nrow(s)),
+                   "```", utils::capture.output(print(s)), "```")
+          cat(out, file = Sys.getenv("GITHUB_STEP_SUMMARY"), sep = "\n", append = TRUE)
+          if (nrow(s)) quit(status = 1)
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cran-readiness
+          path: |
+            check/*.Rcheck/00check.log
+            check/*.Rcheck/00install.out
+            check/*.Rcheck/tests/testthat.Rout.fail
+
+      - name: Any part with findings fails the run
+        if: steps.check.outcome == 'failure' || steps.urls.outcome == 'failure' || steps.spelling.outcome == 'failure'
+        run: exit 1
