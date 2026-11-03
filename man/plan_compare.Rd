@@ -24,6 +24,13 @@ one picked.}
 \item{\code{\link[=cell_rows]{cell_rows()}}}{lines: each goes on the variable's row of that
 label, so a p-value on one row only is \code{cell_rows("Mean (SD)" = "{p.value:.3f}")}.}
 }
+An unnamed vector of several templates is one cell, the first that
+the record's statistics fill winning (\code{c("a", "b")} is always \code{"a"},
+which has no token).  A template with no token prints as written on
+the comparison's row, \code{p = "-"}.  \code{NULL}, \code{NA}, a number, \code{TRUE}, a factor,
+\code{character(0)} or a template that is \code{NA} stops at the call, naming
+the column: \code{"plan_compare(p = ) is a template, guards, a map by context or cell_rows(), not NA."}
+
 A test whose record names no variable (\code{ard_stats_aov()}'s term) has
 no row; use \code{ard_stats_oneway_test()}.  The columns have no
 population: the header's \code{{col}} / \code{{n}} and its short rows leave them
