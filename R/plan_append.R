@@ -45,6 +45,14 @@
 #' table's settings --- header, widths, pages, style, titles --- are the
 #' parent's, written before or after `plan_append()`.
 #'
+#' A listing cannot be appended to: a plan that carries [plan_listing()]
+#' stops here, as the parent or as a part, because a listing's columns are
+#' the records' own, while the stacked parts are a `label` and value
+#' columns.  To show a listing with a summary, make them separate contents
+#' of the document: [rtf_tables()] for the listing, then [rtf_tables()]
+#' for the summary with `page_break = FALSE` (see the article "Several
+#' contents on one page").
+#'
 #' @param .plan A [table_plan()]: the parent, whose column axis and header
 #'   the table has.
 #' @param part Another [table_plan()]: its rows go **under** the rows of
@@ -164,6 +172,9 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
   if (name %in% taken) {
     .ard_stop(sprintf("plan_append(name = \"%s\"): a part of that name is already there.", name))
   }
+  if (length(.plan_of(.plan, "listing"))) {
+    .plan_append_listing_stop("plan_append(): the first plan carries plan_listing()")
+  }
   .plan_append_check_child(part, name, .plan)
   .plan_layer(.plan, "part", list(plan = part, name = name, absent = absent))
 }
@@ -171,6 +182,21 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
 # A child may say how its own rows are made, and nothing about the whole
 # table.  Said here, when the part is declared: the error names the verb
 # and where it goes.
+.plan_append_listing_stop <- function(what) {
+  .ard_stop(paste0(
+    what, ", and a listing cannot be appended to or appended:
+  its columns ",
+    "are the records' own, while the stacked parts are `label` plus value ",
+    "columns,
+  so the rows of a part have nowhere to go.  To show a ",
+    "listing with a summary, make them
+  separate contents of the ",
+    "document: rtf_tables(doc, listing_plan), then
+  rtf_tables(doc, ",
+    "summary_plan, page_break = FALSE), as the article \"Several contents ",
+    "on one page\" shows."))
+}
+
 .plan_append_check_child <- function(child, name, parent) {
   kinds <- vapply(child$layers, `[[`, "", "kind")
   verb_of <- c(header = "plan_col_header()", columns = "plan_columns()",
@@ -178,7 +204,10 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
                colpages = "plan_paginate_cols()", titles = "plan_titles()",
                footnotes = "plan_footnotes()", after = "plan_after()",
                restyle = "plan_cell_style(header = TRUE) / plan_cell_style(cols = ) without a condition",
-               listing = "plan_listing()", part = "plan_append()")
+               part = "plan_append()")
+  if ("listing" %in% kinds) {
+    .plan_append_listing_stop(sprintf("plan_append(\"%s\"): the part carries plan_listing()", name))
+  }
   bad <- unname(verb_of[intersect(kinds, .plan_whole_kinds)])
   if (length(.plan_of(child, "style"))) bad <- c(bad, "plan_style()")
   for (f in .plan_of(child, "blanks")) {
@@ -236,6 +265,9 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
 # stacked; then the parent's whole-table settings on the stack.
 .plan_apply_parts <- function(plan, stage) {
   decls <- .plan_of(plan, "part")
+  if (length(.plan_of(plan, "listing"))) {
+    .plan_append_listing_stop("plan_append(): the first plan carries plan_listing()")
+  }
   parent <- plan
   parent$layers <- Filter(function(l) !identical(l$kind, "part"), plan$layers)
   parent$cache <- new.env(parent = emptyenv())

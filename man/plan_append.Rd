@@ -37,6 +37,15 @@ are cut, so a page holds every part's rows of its group.  The whole
 table's settings --- header, widths, pages, style, titles --- are the
 parent's, written before or after \code{plan_append()}.
 }
+\details{
+A listing cannot be appended to: a plan that carries \code{\link[=plan_listing]{plan_listing()}}
+stops here, as the parent or as a part, because a listing's columns are
+the records' own, while the stacked parts are a \code{label} and value
+columns.  To show a listing with a summary, make them separate contents
+of the document: \code{\link[=rtf_tables]{rtf_tables()}} for the listing, then \code{\link[=rtf_tables]{rtf_tables()}}
+for the summary with \code{page_break = FALSE} (see the article "Several
+contents on one page").
+}
 \section{Parts}{
 
 \code{plan_append(part)} lays another plan's rows under this plan's.  The

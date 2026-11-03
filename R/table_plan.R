@@ -3585,6 +3585,14 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
 #' has no heading).  Its arguments are [listing_spec()]'s own, unchanged;
 #' the blank rows are [plan_blanks()]'s, as for a table.
 #'
+#' A listing cannot be combined with [plan_append()]: its columns are the
+#' records' own, while appended parts are a `label` and value columns, so
+#' `plan_append()` stops on a plan that carries `plan_listing()`, as the
+#' first plan or as a part.  To show a listing with a summary, make them
+#' separate contents of the document: [rtf_tables()] for the listing, then
+#' [rtf_tables()] for the summary with `page_break = FALSE` (see the article
+#' "Several contents on one page").
+#'
 #' @param .plan A [table_plan()] of a data frame of records.
 #' @param ... The printed columns, in order: [listing_col()]s, or bare
 #'   column names.
