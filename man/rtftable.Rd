@@ -248,7 +248,11 @@ character vector of zero or more of:
 (default) \strong{inherits} the document default (\code{rtf_document(style = rtf_style(markup = ))} / the \code{rtfreporter.markup} option), which is \code{"script"} --
 so super/subscript (e.g. adapter footnote marks \verb{^\{N\}}) work while the
 \code{>=} / \code{<=} symbol conversion is \strong{opt-in}. Applies to all cell text: data
-cells, column / spanning headers, and title / footnote blocks.}
+cells, column / spanning headers, and title / footnote blocks.
+The braces after \code{^} / \verb{_} are the markup's own, so a token written
+there is not filled: \verb{^\{STUDY\}} raises the word STUDY.  To raise a
+token's value, put the token's braces inside, \verb{^\{\{STUDY\}\}}, or write
+other text with it, \verb{^\{n=\{STUDY\}\}}.}
 }
 \value{
 An \code{rtftable} (S3) object suitable for use in \code{rtf_tables()}.

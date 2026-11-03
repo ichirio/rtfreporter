@@ -214,7 +214,12 @@
 #'   (`{PROGRAM}`, `{DATETIME}`), the `{BOOK_PAGE}` slot and tokens of one's
 #'   own ([rtf_document()]`(tokens = )`) are filled too ([rtf_text_tokens()]
 #'   lists them); a token's value is written as it is, and an unknown token
-#'   is printed as written.
+#'   is printed as written.  `{{` and `}}` print a literal `{` and `}` (as in
+#'   a column header), so `"{{PAGE}}"` prints `{PAGE}` and fills nothing.
+#'   With `markup = "script"`, the braces of `^{...}` / `_{...}` are the
+#'   markup's own: `^{STUDY}` raises the word STUDY.  To raise a token's
+#'   value, write the token inside the braces, `^{{STUDY}}`, or after a
+#'   character, `^{n={STUDY}}`.
 #' @param border An [rtf_border()] object controlling the border applied to
 #'   all rows of the header/footer table. `NULL` = no border (default for
 #'   header). Use `rtf_border(top = TRUE)` for a horizontal dividing line (default

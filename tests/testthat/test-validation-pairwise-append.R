@@ -453,7 +453,8 @@ test_that("FT-PL986 [FR-PL969 FR-PL905 FR-PL433 FR-PL435 FR-PL436]: decision tab
     paste0(s(5), " | S-06 _ | Summary N Mean SD"),
     # present, between, group_force: the group is cut past what min_group_rows leaves
     paste0(s(4), " _ | Summary N Mean SD"),
-    paste0(s(4), " | S-05 _ Summary N | Summary (Cont.) Mean SD"),
+    # a cut just before a record's blank row drops that blank row (#859)
+    paste0(s(5), " | Summary N Mean SD"),
     paste0(s(5), " | S-06 _ Summary N | Summary (Cont.) Mean SD"),
     # present, none
     paste0(s(4), " | Summary N Mean SD"),
@@ -467,7 +468,7 @@ test_that("FT-PL986 [FR-PL969 FR-PL905 FR-PL433 FR-PL435 FR-PL436]: decision tab
     paste0(s(4), " | S-05 _ N Mean SD"),
     paste0(s(5), " | S-06 _ N Mean SD"),
     paste0(s(4), " _ | N Mean SD"),
-    paste0(s(4), " | S-05 _ N Mean SD"),
+    paste0(s(5), " | N Mean SD"),
     paste0(s(5), " | S-06 _ N Mean SD"),
     # absent, none
     paste0(s(4), " N | Mean SD"),

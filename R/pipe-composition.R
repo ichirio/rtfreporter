@@ -92,7 +92,9 @@
 #'   not one of rtfreporter's own ([rtf_text_tokens()]); a value is one
 #'   string or number.  `options(rtfreporter.tokens = )` sets them for a
 #'   session; the document's value wins.  A value is written as it is: a
-#'   `{PAGE}` or `{STUDY}` in it is not filled.  Not in column headers: those
+#'   `{PAGE}` or `{STUDY}` in it is not filled.  `{{` and `}}` print a
+#'   literal `{` and `}` in a header, footer, title or footnote, as in a
+#'   column header.  Not in column headers: those
 #'   take their values from [set_col_header()]'s `values`; nor in a table's
 #'   cells, which print a token as written.  `NULL` (default): none.
 #' @param file The RTF file the document is written to: one string, a path.

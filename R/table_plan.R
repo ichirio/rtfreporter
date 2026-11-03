@@ -380,6 +380,8 @@
 # carrying it never had a `plan_digits()` to answer it, and the engine's own
 # message ("Unknown format spec") would not say that, so this one does.
 .plan_check_open <- function(entry, key) {
+  # one guard written bare is a chain of one (#549), not a list to walk
+  if (inherits(entry, "formula")) entry <- list(entry)
   tpls <- if (is.character(entry)) entry else
     unlist(entry[vapply(entry, is.character, logical(1L))], use.names = FALSE)
   for (tpl in tpls) {
@@ -1248,7 +1250,12 @@ plan_levels <- function(.plan, ..., .drop_empty = NULL) {
 #'   gave it; this text wins over that one.  A later call replaces an
 #'   entry of the same name whole.  A single unnamed argument that is
 #'   itself a named vector is taken as the whole map:
-#'   `plan_labels(study_labels)`.
+#'   `plan_labels(study_labels)`.  An entry for a value, column or variable
+#'   the table does not have is not used, so one study-wide map serves
+#'   every table.  Each entry is text (`""` prints an empty text); an
+#'   entry that is `NA`, `NULL`, a number, a factor, `character(0)`, two
+#'   texts without names or a dictionary with an `NA` or an unnamed text
+#'   stops.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -1278,6 +1285,21 @@ plan_levels <- function(.plan, ..., .drop_empty = NULL) {
 #' @export
 plan_labels <- function(.plan, ...) {
   v <- .plan_map(list(...), "plan_labels")
+  # Each entry is text: an NA stopped with a base-R message when the table
+  # was made, a factor printed its integer code, a number named a heading
+  # but no value, and an unnamed vector of two was dropped without a word.
+  for (k in names(v)) {
+    x <- v[[k]]
+    nm <- names(x)
+    ok <- is.character(x) && length(x) >= 1L && !anyNA(x) &&
+      (length(x) == 1L ||
+         (!is.null(nm) && !anyNA(nm) && all(nzchar(nm))))
+    if (!ok) {
+      .ard_stop(sprintf(paste0(
+        "plan_labels(%s = ) is one text, or texts named by code: ",
+        "c(F = \"Female\", M = \"Male\")."), k))
+    }
+  }
   .plan_layer(.plan, "labels", list(labels = v))
 }
 
@@ -1371,6 +1393,15 @@ plan_labels <- function(.plan, ...) {
 #'   after them.  The names of the arguments after `...` are reserved: a
 #'   variable called `stats`, `value`, `na` or `notes` cannot be keyed
 #'   here; name it otherwise in the ARD.
+#'
+#'   An unnamed vector of several templates, `c("{n} ({p})", "{n}")`, is
+#'   one row: the first template whose statistics the record has wins, as
+#'   with guards.  A template with no token prints as written, so a
+#'   constant cell is text (`"-"`, and `""` an empty cell).  A list
+#'   holds the same things (`list(n = "{N}", Mean = "{mean}")` is the
+#'   named vector).  Anything else --- `NULL`, `NA`, a number, `TRUE`, a
+#'   factor, `character(0)`, a template that is `NA` --- stops at the verb,
+#'   naming the key.
 #' @param stats `"cells"` (default) fills a template per cell; `"rows"`
 #'   makes each statistic a row of its own (no template).
 #' @param value With `stats = "rows"`: the raw number (`"stat"`) or cards'
@@ -1424,7 +1455,12 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
   }
   # the templates are a layer only when there are some: `plan_cells(notes =
   # FALSE)` alone says nothing about them
-  p <- if (...length()) .plan_keyed(.plan, "cells", list(...)) else .plan
+  dots <- list(...)
+  nms <- names(dots) %||% rep("", length(dots))
+  for (i in seq_along(dots)) {
+    .plan_check_cell_rule(dots[[i]], "plan_cells", nms[i])
+  }
+  p <- if (length(dots)) .plan_keyed(.plan, "cells", dots) else .plan
   opts <- list(stats = stats, value = value, na = na, notes = notes)
   if (all(vapply(opts, is.null, logical(1L)))) return(p)
   if (!is.null(stats)) stats <- match.arg(stats, c("cells", "rows"))
@@ -1436,6 +1472,83 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
               list(stats = stats, value = value, na = na, notes = notes))
 }
 
+# One cell rule, checked at the verb (#866): what plan_cells() takes for a
+# key and plan_compare() for a column.  Before, NA, a number, TRUE or
+# character(0) went through as.character() at plan_apply() and came out as
+# an empty column or a constant nobody wrote.  The shapes are those of
+# .ard_cell_entry(): a template vector (unnamed: a fallback chain; named:
+# one row each), one guard, a list of templates and guards (unnamed: a
+# chain; named: one row each, every value a chain), or cell_rows().  For
+# plan_compare() a named list is a map by context / kind / default whose
+# values are whole entries (.ard_lookup_cells()).  A number is not a
+# constant cell: a constant is written as text, `"-"`.
+.plan_check_cell_rule <- function(x, verb, key) {
+  one <- function(e) {
+    inherits(e, "formula") || (is.character(e) && length(e) == 1L && !is.na(e))
+  }
+  chain <- function(e) {
+    if (inherits(e, "formula")) return(TRUE)
+    if (is.character(e)) return(length(e) > 0L && !anyNA(e))
+    if (is.list(e) && !is.object(e)) {
+      return(length(e) > 0L && all(vapply(e, one, NA)))
+    }
+    FALSE
+  }
+  named <- function(e) any(nzchar(names(e) %||% ""))
+  ok <- function(e, map) {
+    if (inherits(e, "cell_rows")) return(all(vapply(unclass(e), chain, NA)))
+    if (is.list(e) && !is.object(e) && named(e)) {
+      return(all(vapply(e, if (map) function(z) ok(z, FALSE) else chain, NA)))
+    }
+    chain(e)
+  }
+  if (ok(x, identical(verb, "plan_compare"))) return(invisible(NULL))
+  # what was given, said in the words of the help
+  what <- function(e, map = FALSE) {
+    if (is.null(e)) return("NULL")
+    if (inherits(e, "formula")) return("a guard")
+    if (is.factor(e)) return("a factor")
+    if (is.object(e) && !inherits(e, "cell_rows")) {
+      return(paste("an object of class", class(e)[1L]))
+    }
+    if (!length(e)) return(if (is.list(e)) "an empty list" else "a zero-length vector")
+    if (is.atomic(e) && all(is.na(e))) return("NA")
+    if (is.character(e)) return("a template that is NA")
+    if (is.logical(e)) return("TRUE or FALSE")
+    if (is.numeric(e)) return("a number")
+    if (is.list(e)) {
+      # the element ok() refused, by the same rule
+      fine <- if (inherits(e, "cell_rows")) chain
+              else if (!named(e)) one
+              else if (map) function(z) ok(z, FALSE)
+              else chain
+      bad <- Filter(function(z) !fine(z), unclass(e))
+      # nothing wrong inside: it is the list itself that may not be here
+      # (a row of plan_cells() that is a cell_rows() or a named list)
+      if (!length(bad)) {
+        return(if (inherits(e, "cell_rows")) "a cell_rows()" else "a named list")
+      }
+      bad <- bad[[1L]]
+      inner <- if (is.character(bad) && length(bad) > 1L && !anyNA(bad)) {
+        "a vector of templates"
+      } else what(bad)
+      return(sprintf("%s with %s in it",
+                     if (inherits(e, "cell_rows")) "a cell_rows()" else "a list",
+                     inner))
+    }
+    paste("an object of class", class(e)[1L])
+  }
+  arg <- if (nzchar(key)) sprintf("%s(%s = )", verb, key)
+         else sprintf("%s(<the unnamed entry>)", verb)
+  shapes <- if (identical(verb, "plan_compare")) {
+    "a template, guards, a map by context or cell_rows()"
+  } else {
+    "a template, a named vector of templates, guards or cell_rows()"
+  }
+  .ard_stop(sprintf(paste0("%s is %s, not %s.\n",
+                           "  A constant cell is written as text: \"-\"."),
+                    arg, shapes, what(x, identical(verb, "plan_compare"))))
+}
 
 # `round` used to be a verb of its own, and it never earned one: the whole
 # run takes ONE rounding family, so it is a setting of the digits rather
@@ -2163,7 +2276,10 @@ plan_row_group <- function(.plan, mode = NULL, collapse = NULL,
 #' @param .plan A [table_plan()].
 #' @param ... One entry per nested variable, named by it, whose value is
 #'   the variable and level its rows go under, named by the variable:
-#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.
+#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.  The value is one level
+#'   (not `NA`) of one variable other than the nested one, and a variable is
+#'   nested once; another value stops at `plan_nest()`, and a variable or
+#'   level the table does not have stops when the plan is applied.
 #'   \describe{
 #'     \item{The level}{is matched as the table shows it (the ARD's level: a
 #'       code list's label).}
@@ -2208,12 +2324,24 @@ plan_nest <- function(.plan, ...) {
   if (!length(dots) || is.null(nm) || any(!nzchar(nm))) {
     .ard_stop("plan_nest(): name the nested variable, e.g. plan_nest(RACESUB = c(RACE = \"Asian\")).")
   }
+  # a variable named twice went under neither (the second hid the first's
+  # rows); a variable under its own level indented all of its rows
+  if (anyDuplicated(nm)) {
+    .ard_stop(sprintf("plan_nest(%s = ) is given twice: a variable goes under one level.",
+                      nm[anyDuplicated(nm)]))
+  }
   nest <- lapply(nm, function(v) {
     u <- dots[[v]]
-    if (!is.character(u) || length(u) != 1L || is.null(names(u)) || !nzchar(names(u))) {
+    if (!is.character(u) || length(u) != 1L || is.na(u) || is.null(names(u)) ||
+        is.na(names(u)) || !nzchar(names(u))) {
       .ard_stop(sprintf(paste0(
         "plan_nest(%s = ): one level of one variable, named by it: ",
         "c(RACE = \"Asian\")."), v))
+    }
+    if (identical(names(u), v)) {
+      .ard_stop(sprintf(paste0(
+        "plan_nest(%s = ): a variable goes under a level of another ",
+        "variable, not its own."), v))
     }
     list(parent = names(u), level = unname(u))
   })
@@ -2395,6 +2523,14 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 #'       label, so a p-value on one row only is `cell_rows("Mean (SD)" =
 #'       "{p.value:.3f}")`.}
 #'   }
+#'   An unnamed vector of several templates is one cell, the first that
+#'   the record's statistics fill winning (`c("a", "b")` is always `"a"`,
+#'   which has no token).  A template with no token prints as written on
+#'   the comparison's row, `p = "-"`.  `NULL`, `NA`, a number, `TRUE`, a factor,
+#'   `character(0)` or a template that is `NA` stops at the call, naming
+#'   the column: `"plan_compare(p = ) is a template, guards, a map by
+#'   context or cell_rows(), not NA."`
+#'
 #'   A test whose record names no variable (`ard_stats_aov()`'s term) has
 #'   no row; use `ard_stats_oneway_test()`.  The columns have no
 #'   population: the header's `{col}` / `{n}` and its short rows leave them
@@ -3297,9 +3433,15 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   **Named by column** (`c(row_label = 5, .values = 2)`, `.values` for
 #'   every value column) a reordered table keeps them; unnamed, they are one
 #'   a column in order, as `col_rel_width` itself.  A name that is not a
-#'   column of the table stops with the names the table has.
+#'   column of the table stops with the names the table has.  Each width is
+#'   a positive finite number: `0`, a negative, `NA`, `Inf` or a string
+#'   stops at `plan_columns()`.
 #' @param decimal The columns whose numbers line up at the decimal point
-#'   (`.values` for every value column), [set_decimal_split()]'s `cols`.
+#'   (`.values` for every value column), [set_decimal_split()]'s `cols`, by
+#'   name.  A value that is not column names (`NA`, `""`, a number) stops at
+#'   `plan_columns()`; a name that is not a column of the table stops when
+#'   the plan is applied, as a `widths` name does (a hidden column's name is
+#'   allowed and changes nothing).
 #' @param row_title The row-heading columns, `rtftable(row_title = )`, by
 #'   name as `widths` are: a row key's name as `table_plan(rows = )` gives
 #'   it, `.values` for every value column.  A position counts the
@@ -3362,6 +3504,20 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
   if (!is.null(sep) && (!is.character(sep) || length(sep) != 1L ||
                         is.na(sep) || !nzchar(sep))) {
     .ard_stop("plan_columns(sep = ) is one non-empty string, \"____\" by default.")
+  }
+  # (#864) a width of 0, a negative, NA, Inf or a string would reach the
+  # pages and fail only when the file is written
+  if (!is.null(widths) && (!is.numeric(widths) || is.factor(widths) ||
+                           any(!is.finite(widths)) || any(widths <= 0))) {
+    .ard_stop(paste0(
+      "plan_columns(widths = ) is positive finite numbers, one a column in ",
+      "order or named by column."))
+  }
+  if (!is.null(decimal) && (!is.character(decimal) || anyNA(decimal) ||
+                            !all(nzchar(decimal)))) {
+    .ard_stop(paste0(
+      "plan_columns(decimal = ) is column names, \".values\" for every value ",
+      "column."))
   }
   if (length(widths) && !is.null(column_widths_twips)) .plan_widths_both()
   .plan_layer(.plan, "columns",
@@ -5863,6 +6019,17 @@ plan_n_candidates <- function(.plan) {
 
   if (length(colset$decimal)) {
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
+    # a name that is no column of the table stops, as a `widths` name does
+    # (#864); a hidden column is not printed, so it is left alone
+    bad <- setdiff(colset$decimal,
+                   c(names(first_d), ".values", rtf$drop_cols %||% character()))
+    if (length(bad)) {
+      .ard_stop(paste0(
+        "plan_columns(decimal = ) names ", paste(sQuote(bad, FALSE), collapse = ", "),
+        ", not a column of the table.\n",
+        "  Its printed columns: ", paste(sQuote(names(first_d), FALSE), collapse = ", "),
+        " (`.values` covers the value columns)."))
+    }
     dc <- .plan_col_names(colset$decimal, names(first_d), spread)
     if (length(dc)) out <- set_decimal_split(out, cols = dc)
   }

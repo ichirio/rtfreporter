@@ -110,8 +110,23 @@
 #    cell                 {OUTPUT_TITLE}         as written     FR-DC360
 #    column header        {OUTPUT_TITLE}         as written     FR-DC284
 #    footnote             {SECTION_PAGES}        stops          FR-DC286
-#  Left out until decided: doubled braces in a band, {{PAGE}} (#876), and a
-#  token right after markup's ^ or _, x^{PAGE} (#877).
+#
+#  (F) FT-DC295, decision table: doubled braces in a band.  {{ and }} print
+#  a literal { and }, in a header, footer, title and footnote as in a column
+#  header (#876); a table's cell prints them as written.
+#    text                  band prints        FR-DC361
+#    {{PAGE}}              {PAGE}, unfilled
+#    {{STUDY}} {STUDY}     {STUDY} EX-1
+#    a {{x}} b             a {x} b
+#    {{{{ and }}}}         {{ and }}
+#    {{PAGE}} {PAGE}       {PAGE} 1
+#    ^{{STUDY}} (script)   the value EX-1 raised: the markup's braces first
+#
+#  (G) FT-IX036, decision table: a token and the braces of ^ / _ markup.
+#  The braces after ^ or _ are the markup's own (#877): Ref^{STUDY} raises
+#  the word STUDY; Ref^{{STUDY}} and p_{{PAGE}} raise the token's value,
+#  Ref^{n={STUDY}} the text with it; with markup "none", ^ is a character.
+#  FR-IX403 FR-IX401.
 #
 #  (E) FT-AS148, decision table: the page tokens after assembly, two input
 #  files whose header has "{AUTO_PAGE} {AUTO_TOTAL_PAGES} {PAGE}
@@ -536,6 +551,92 @@ test_that("FT-DC294 [FR-DC283 FR-DC331 FR-DC360 FR-DC284 FR-DC286]: decision tab
     expect_identical(.tk_count(out, "\\fldinst SECTIONPAGES"), 0L, info = info)
     expect_identical(.tk_count(out, "\\fldinst NUMPAGES"), 0L, info = info)
     if (cs$where == "drop") expect_false(grepl("<>", out, fixed = TRUE), info = info)
+  }
+})
+
+test_that("FT-DC295 [FR-DC361 FR-DC283 FR-DC360 FR-IX401]: decision table -- {{ and }} are literal braces in a band, as in a column header", {
+  dir <- tempfile("tk_br")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  cases <- data.frame(
+    text   = c("{{PAGE}}", "{{STUDY}} {STUDY}", "a {{x}} b", "{{{{ and }}}}",
+               "{{PAGE}} {PAGE}", "^{{STUDY}}", "{{OUTPUT_TITLE}}"),
+    markup = c("none", "none", "none", "none", "none", "script", "none"),
+    want   = c("\\{PAGE\\}", "\\{STUDY\\} EX-1", "a \\{x\\} b",
+               "\\{\\{ and \\}\\}", "\\{PAGE\\} 1", "{\\super EX-1}",
+               "\\{OUTPUT_TITLE\\}"),
+    stringsAsFactors = FALSE)
+  k <- 0L
+  for (where in c("header", "footer", "title", "footnote", "cell")) {
+    for (i in seq_len(nrow(cases))) {
+      cs <- cases[i, ]
+      info <- paste(where, paste(names(cs), unlist(cs), sep = "=", collapse = " "))
+      mark <- paste("Mk", cs$text, "kM")
+      tbl <- rtftable(data.frame(A = if (where == "cell") mark else "x"),
+                      markup = cs$markup)
+      doc <- rtf_document(tokens = list(STUDY = "EX-1")) |> rtf_tables(list(tbl))
+      if (where == "title") doc <- rtf_titles(doc, list(mark))
+      if (where == "footnote") doc <- rtf_footnotes(doc, list(mark))
+      if (where == "header") {
+        doc <- rtf_section(doc, secinfo = list(
+          header = rtf_header(c(l = mark), markup = cs$markup)))
+      }
+      if (where == "footer") {
+        doc <- rtf_section(doc, secinfo = list(
+          footer = rtf_footer(c(l = mark), markup = cs$markup)))
+      }
+      k <- k + 1L
+      f <- file.path(dir, sprintf("b%03d.rtf", k))
+      generate_rtfreport(doc, f)
+      got <- .tk_marked(.tk_read(f))
+      if (where == "cell") {
+        # a cell prints the text as written (FR-DC360)
+        want <- paste("Mk", gsub("([{}])", "\\\\\\1", cs$text), "kM")
+        if (cs$markup == "script") next
+      } else {
+        want <- paste("Mk", cs$want, "kM")
+      }
+      expect_identical(got, want, info = info)
+    }
+  }
+})
+
+test_that("FT-IX036 [FR-IX403 FR-IX401 FR-DC361]: decision table -- a token and the braces of ^ / _ markup", {
+  dir <- tempfile("tk_sc")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  cases <- data.frame(
+    text   = c("Ref^{STUDY}", "Ref^{{STUDY}}", "p_{{PAGE}}", "Ref^{n={STUDY}}",
+               "H_{2}O {STUDY}", "Ref^{{STUDY}}", "Ref^{STUDY}"),
+    markup = c("script", "script", "script", "script", "script", "none", "none"),
+    want   = c("Ref{\\super STUDY}", "Ref{\\super EX-1}", "p{\\sub 1}",
+               "Ref{\\super n=EX-1}", "H{\\sub 2}O EX-1", "Ref^\\{STUDY\\}",
+               "Ref^EX-1"),
+    stringsAsFactors = FALSE)
+  k <- 0L
+  for (where in c("header", "footer", "title", "footnote")) {
+    for (i in seq_len(nrow(cases))) {
+      cs <- cases[i, ]
+      info <- paste(where, paste(names(cs), unlist(cs), sep = "=", collapse = " "))
+      mark <- paste("Mk", cs$text, "kM")
+      doc <- rtf_document(tokens = list(STUDY = "EX-1")) |>
+        rtf_tables(list(data.frame(A = "x")))
+      if (where == "title") doc <- rtf_titles(doc, list(mark), markup = cs$markup)
+      if (where == "footnote") doc <- rtf_footnotes(doc, list(mark), markup = cs$markup)
+      if (where == "header") {
+        doc <- rtf_section(doc, secinfo = list(
+          header = rtf_header(c(l = mark), markup = cs$markup)))
+      }
+      if (where == "footer") {
+        doc <- rtf_section(doc, secinfo = list(
+          footer = rtf_footer(c(l = mark), markup = cs$markup)))
+      }
+      k <- k + 1L
+      f <- file.path(dir, sprintf("s%03d.rtf", k))
+      generate_rtfreport(doc, f)
+      expect_identical(.tk_marked(.tk_read(f)), paste("Mk", cs$want, "kM"),
+                       info = info)
+    }
   }
 })
 
