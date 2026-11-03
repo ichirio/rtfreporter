@@ -113,7 +113,7 @@
 #    5         records    collapse     (first = FALSE) no blank row at the
 #                                      top of a page
 #  A page begins with one blank row (the template's) unless first = FALSE or
-#  where = "none".  A record longer than a page is left out (#881).
+#  where = "none".  A record longer than a page is FT-LS163 below.
 #  FR-LS254 FR-PL189 FR-PL196 FR-PL184 FR-PL432 FR-LS156.
 # ---------------------------------------------------------------------------
 
@@ -611,5 +611,35 @@ test_that("FT-LS162 [FR-LS254 FR-PL189 FR-PL196 FR-PL184 FR-PL432 FR-LS156]: dec
       }, "")
       expect_identical(got_rtf, rows, info = paste(info, "RTF page", k))
     }
+  }
+})
+
+test_that("FT-LS163 [FR-LS255 FR-LS254]: a plan_listing() record longer than a page continues on the next page with no empty row before it", {
+  d <- data.frame(ID = c("S-01", "S-01"),
+                  TERM = c("Headache", "Nausea and vomiting after the dose"),
+                  SEV = c("MILD", "MODERATE"), stringsAsFactors = FALSE)
+  for (collapse in c(TRUE, FALSE)) {
+    p <- table_plan(d) |>
+      plan_listing(listing_col("ID", width = 6, collapse_repeats = collapse),
+                   listing_col("TERM", width = 12), listing_col("SEV", width = 8)) |>
+      plan_paginate_rows(max_rows = 3)
+    pages <- plan_apply(p)
+    got <- lapply(pages, function(pg) .pa_listing_rows(pg$data, na = ""))
+    info <- paste("collapse_repeats =", collapse)
+    expect_length(pages, 3L)
+    # the long record (four lines) is cut after three rows; its last line
+    # opens the next page, and no page opens with an empty row
+    expect_identical(got[[2L]], c("S-01|Nausea and|MODERATE", "|vomiting|", "|after the|"),
+                     info = info)
+    # (the key shows again at the page's top only when it is collapsed)
+    expect_identical(sub("^[^|]*", "", got[[3L]][1L]), "|dose|", info = info)
+    for (pg in pages[-1L]) {
+      expect_true(nzchar(trimws(pg$data$TERM[1L])), info = info)
+      # the page's template blank row, the only one at its top
+      expect_identical(as.integer(pg$blank_rows), 0L, info = info)
+    }
+    # the budget holds: the rows of a page are the budget, none lost to a
+    # continuation row
+    expect_true(all(vapply(pages, function(pg) nrow(pg$data), 0L) <= 3L), info = info)
   }
 })

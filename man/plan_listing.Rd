@@ -53,7 +53,9 @@ records (SDTM or ADaM, nothing summarised) printed through
 \code{\link[=listing_spec]{listing_spec()}}, with columns that can stack several variables in one
 cell and wrap long text.  A record wrapped over several rows is not cut
 by a page break: it moves whole to the next page, unless it alone is
-longer than a page.  Its arguments are \code{\link[=listing_spec]{listing_spec()}}'s own, unchanged;
+longer than a page; then it is cut at the page's end and the rest goes on
+at the top of the next page, with no continuation row before it (a record
+has no heading).  Its arguments are \code{\link[=listing_spec]{listing_spec()}}'s own, unchanged;
 the blank rows are \code{\link[=plan_blanks]{plan_blanks()}}'s, as for a table.
 }
 \examples{

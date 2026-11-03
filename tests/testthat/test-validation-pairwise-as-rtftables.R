@@ -394,7 +394,7 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
     last <- if (i > 1L) utils::tail(rows[[i - 1L]]$rec, 1L) else 0L
     inside <- last > 0L && seen[last] < rec_text[last]
     if (inside && !is.na(mr)) {
-      if (!empty[1L]) bad <- c(bad, sprintf("no cont page %d", i)) else r$cont[1L] <- TRUE
+      if (empty[1L]) bad <- c(bad, sprintf("cont row page %d", i))
     } else if (!inside && !nzchar(r$seq[1L])) {
       bad <- c(bad, sprintf("cont page %d", i))
     }
@@ -536,8 +536,8 @@ test_that("FT-TB972 [FR-TB613]: a cut just before a listing record's blank row d
   p <- as_rtftables(df2, listing = sp2, max_rows = 3, split = "group_force")
   expect_identical(rd(p), c("S01 Headache | _ | Rash", "S02 Cough | _"))
   expect_identical(as.integer(p[[2L]]$blank_rows), 0L)
-  # a cut that leaves text rows of the record still continues it (the
-  # continuation row is empty, the record column hidden)
+  # a cut that leaves text rows of the record goes on with them, with no
+  # empty continuation row before them (#881)
   expect_identical(rd(as_rtftables(long, listing = spl, max_rows = 3, first_rows = 1)),
-                   c("S01 a", "_ | b | c", "S02 d | _"))
+                   c("S01 a", "b | c | _", "S02 d | _"))
 })
