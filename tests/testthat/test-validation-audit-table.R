@@ -118,6 +118,14 @@
 #   What is carried: flextable                              | FR-TB580    | FT-TB743 to FT-TB746
 #   What is carried: huxtable                               | FR-TB581    | FT-TB747 to FT-TB750
 #   What is carried: a gt with several stub columns         | FR-TB582    | FT-TB751, FT-TB752
+#   flextable caption set with as_paragraph()               | FR-TB618    | FT-TB980
+#   flextable line break, written as \line                  | FR-TB619    | FT-TB981
+#   no header rows: a blank header (flextable, huxtable)    | FR-TB620    | FT-TB982
+#   covered cells print once (flextable)                    | FR-TB621    | FT-TB983
+#   covered cells print once (huxtable)                     | FR-TB622    | FT-TB984
+#   flextable footer row values joined                      | FR-TB623    | FT-TB985
+#   huxtable header padding stripped                        | FR-TB624    | FT-TB986
+#   huxtable trailing newline stripped                      | FR-TB625    | FT-TB987
 #   (not yet audited: a gt grouped by several columns, gt::html() labels
 #    and <br>, the column names of each source for group_col -- batch 3)
 #   the examples                                            | FR-TB121/126/139 | FT-TB724
@@ -503,4 +511,127 @@ test_that("FT-TB772 [FR-TB162]: as_rtftables(header_sep = ) splits on each separ
   h <- hdr(c("id", "A.|x", "A.|y"), c(".", ".|"))
   expect_identical(vapply(h[[1L]], function(c) c$label, character(1L)), c("", "A"))
   expect_identical(h[[2L]], c("id", "x", "y"))
+})
+
+test_that("FT-TB980 [FR-TB618]: a flextable caption set with as_paragraph() is read as its text", {
+  skip_if_not_installed("flextable")
+  d <- data.frame(a = c("x", "y"), b = c("1", "2"))
+  ft <- flextable::set_caption(flextable::flextable(d),
+                               flextable::as_paragraph("Cap ", flextable::as_b("bold"), " end"))
+  p <- as_rtftables(ft)
+  expect_identical(attr(p[[1L]], "rtf_titles"), "Cap bold end")
+  s <- .at_rs(rtf_tables(rtf_document(), p))
+  expect_true(grepl("Cap bold end", s, fixed = TRUE))
+  # a string caption is read as it was
+  p2 <- as_rtftables(flextable::set_caption(flextable::flextable(d), "Plain title"))
+  expect_identical(attr(p2[[1L]], "rtf_titles"), "Plain title")
+})
+
+test_that("FT-TB981 [FR-TB619]: a flextable line break is read as one and written as \\line", {
+  skip_if_not_installed("flextable")
+  d <- data.frame(a = c("x", "y"), b = c("1", "2"))
+  ft <- flextable::compose(flextable::flextable(d), i = 1L, j = 1L,
+                           value = flextable::as_paragraph("top", "\n", "bottom"))
+  p <- as_rtftables(ft)
+  expect_identical(p[[1L]]$data$V1, c("top\nbottom", "y"))
+  s <- .at_rs(rtf_tables(rtf_document(), p))
+  expect_true(grepl("top\\line bottom", s, fixed = TRUE))
+  expect_false(grepl("<br>", s, fixed = TRUE))
+})
+
+test_that("FT-TB982 [FR-TB620]: a flextable or huxtable with no header rows gives a blank header, not V1 V2", {
+  skip_if_not_installed("flextable")
+  skip_if_not_installed("huxtable")
+  d <- data.frame(a = c("x", "y"), b = c("1", "2"))
+  ft <- flextable::delete_part(flextable::flextable(d), part = "header")
+  hx <- huxtable::as_hux(d, add_colnames = FALSE)
+  for (o in list(ft, hx)) {
+    p <- as_rtftables(o)
+    expect_identical(unlist(p[[1L]]$col_header), c("", ""))
+    s <- .at_rs(rtf_tables(rtf_document(), p))
+    expect_false(grepl("V1", s, fixed = TRUE))
+    expect_false(grepl("V2", s, fixed = TRUE))
+    expect_true(grepl("x\\cell", s, fixed = TRUE))
+  }
+})
+
+test_that("FT-TB983 [FR-TB621]: a merged flextable area is read once, in its first cell", {
+  skip_if_not_installed("flextable")
+  d <- data.frame(g = c("A", "A", "B"), h = c("p", "p", "q"), n = c("1", "2", "3"))
+  ft <- flextable::flextable(d)
+  ft <- flextable::merge_v(ft, j = "g")
+  ft <- flextable::merge_h_range(ft, i = 3L, j1 = "h", j2 = "n")
+  ft <- flextable::add_header_row(ft, values = c("g", "Top2"), colwidths = c(1L, 2L))
+  ft <- flextable::merge_v(ft, j = "g", part = "header")
+  p <- as_rtftables(ft)
+  expect_identical(p[[1L]]$data$V1, c("A", "", "B"))
+  expect_identical(p[[1L]]$data$V2, c("p", "p", "q"))
+  expect_identical(p[[1L]]$data$V3, c("1", "2", ""))
+  # the leaf header row: the cell merged down from the spanner is blank
+  expect_identical(p[[1L]]$col_header[[2L]], c("", "h", "n"))
+  expect_length(p[[1L]]$col_header[[1L]], 2L)
+  s <- .at_rs(rtf_tables(rtf_document(), p))
+  expect_equal(length(gregexpr("A\\cell", s, fixed = TRUE)[[1L]]), 1L)
+})
+
+test_that("FT-TB984 [FR-TB622]: a merged huxtable area is read once, an add_footnote() row prints its text once", {
+  skip_if_not_installed("huxtable")
+  d <- data.frame(g = c("A", "A", "B"), n = c("1", "2", "3"), m = c("4", "5", "6"))
+  hx <- huxtable::as_hux(d)
+  hx <- huxtable::set_rowspan(hx, 2L, 1L, 2L)
+  hx <- huxtable::set_colspan(hx, 4L, 2L, 2L)
+  hx <- huxtable::add_footnote(hx, "Source: invented.")
+  p <- as_rtftables(hx)
+  dd <- p[[1L]]$data
+  expect_identical(dd$V1, c("A", "", "B", "Source: invented."))
+  expect_identical(dd$V2, c("1", "2", "3", ""))
+  expect_identical(dd$V3, c("4", "5", "", ""))
+  s <- .at_rs(rtf_tables(rtf_document(), p))
+  expect_equal(length(gregexpr("Source: invented.", s, fixed = TRUE)[[1L]]), 1L)
+  # a spanning leaf header row keeps its text once as well
+  hy <- huxtable::set_colspan(huxtable::as_hux(d), 1L, 2L, 2L)
+  expect_identical(unlist(as_rtftables(hy)[[1L]]$col_header), c("g", "n", ""))
+})
+
+test_that("FT-TB985 [FR-TB623]: a flextable footer row of several values is one line, joined by a space", {
+  skip_if_not_installed("flextable")
+  d <- data.frame(a = c("x", "y"), b = c("1", "2"))
+  ft <- flextable::add_footer_row(flextable::flextable(d), values = c("L", "R"),
+                                  colwidths = c(1L, 1L))
+  ft <- flextable::add_footer_lines(ft, "One line.")
+  p <- as_rtftables(ft)
+  expect_identical(attr(p[[1L]], "rtf_footnotes"), c("L R", "One line."))
+  s <- .at_rs(rtf_tables(rtf_document(), p))
+  expect_true(grepl("L R", s, fixed = TRUE))
+  expect_equal(length(gregexpr("One line.", s, fixed = TRUE)[[1L]]), 1L)
+})
+
+test_that("FT-TB986 [FR-TB624]: huxtable header cells are read without their padding, the body keeps its own", {
+  skip_if_not_installed("huxtable")
+  d <- data.frame(a = c("1.5", "22.25"), b = c("x", "y"))
+  hx <- huxtable::as_hux(d)
+  hx <- huxtable::set_align(hx, huxtable::everywhere, 1L, ".")
+  hx <- huxtable::set_number_format(hx, NA)
+  p <- as_rtftables(hx)
+  # decimal alignment pads the header text on screen; the RTF header is the text
+  expect_identical(unlist(p[[1L]]$col_header), c("a", "b"))
+  # the body keeps the padding, it is the decimal alignment
+  expect_identical(p[[1L]]$data$V1, c("1.5\u00a0", "22.25"))
+  s <- .at_rs(rtf_tables(rtf_document(), p))
+  expect_true(grepl("a\\cell", s, fixed = TRUE))
+  # a spanning row above is stripped too
+  hy <- huxtable::insert_row(huxtable::as_hux(d), "\u00a0Span\u00a0", "", after = 0L, colspan = 2L)
+  hy <- huxtable::set_header_rows(hy, 1:2, TRUE)
+  expect_identical(as_rtftables(hy)[[1L]]$col_header[[1L]][[1L]]$label, "Span")
+})
+
+test_that("FT-TB987 [FR-TB625]: a huxtable markdown cell is read without its trailing newline", {
+  skip_if_not_installed("huxtable")
+  d <- data.frame(a = c("**bold**", "plain"), b = c("1", "2"))
+  hx <- huxtable::set_markdown(huxtable::as_hux(d), 2L, 1L)
+  p <- as_rtftables(hx)
+  expect_false(any(grepl("\n", unlist(p[[1L]]$data), fixed = TRUE)))
+  expect_identical(p[[1L]]$data$V2, c("1", "2"))
+  s <- .at_rs(rtf_tables(rtf_document(), p))
+  expect_true(grepl("plain", s, fixed = TRUE))
 })
