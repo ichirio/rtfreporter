@@ -51,7 +51,8 @@ cd rtfreporter
 # 2. Add the canonical repo as "upstream" (one time only):
 git remote add upstream https://github.com/ichirio/rtfreporter.git
 
-# 3. Before each new piece of work, sync your fork's main with upstream:
+# 3. Before each new piece of work, sync your fork's main with upstream
+#    (VS Code and browser routes: see "Keep your fork and clone up to date"):
 git checkout main
 git fetch upstream
 git merge --ff-only upstream/main      # fast-forward only; no local commits on main
@@ -74,6 +75,62 @@ Keep `main` on your fork **pristine** (never commit to it directly) so the
 fast-forward sync in step 3 always succeeds.  If your branch falls behind
 `main` while in review, `git fetch upstream && git merge upstream/main` into
 the branch and push again.
+
+### Keep your fork and clone up to date
+
+A fork does not update itself.  Sync it **before every new piece of work**,
+and once the hard way if yours is far behind.  You can use the browser,
+the VS Code Source Control view, or the command line.
+
+#### (a) First time, or a fork that is far behind
+
+> **Warning.**  These steps make your `main` equal to upstream's `main`.
+> Any commit on your `main` that upstream does not have is **discarded**.
+> To keep such work, first put it on a branch:
+> `git branch my-old-work main`.
+
+- **Browser.**  Open your fork on GitHub, click **Sync fork**, then
+  **Update branch**.  If GitHub offers **Discard commits**, choosing it
+  discards the fork's own commits on `main`.  Then pull `main` into your
+  clone (see (b)).
+- **VS Code.**  In Source Control, open the `...` menu, then
+  **Remote** > **Add Remote...** (Command Palette: *Git: Add Remote...*),
+  name it `upstream` and enter
+  `https://github.com/ichirio/rtfreporter.git`.  Then *Git: Fetch From All
+  Remotes*, *Git: Checkout to...* `main`, and *Git: Merge Branch...*
+  `upstream/main`.  VS Code has no hard reset; if your `main` has commits
+  of its own, use the terminal (**Terminal** > **New Terminal**) for the
+  command-line steps below.  Finish with **Push**.
+- **Command line.**
+
+  ```bash
+  git remote add upstream https://github.com/ichirio/rtfreporter.git
+  git fetch upstream
+  git checkout main
+  git reset --hard upstream/main
+  git push origin main --force-with-lease
+  ```
+
+#### (b) Every time before new work
+
+- **Browser.**  On your fork, **Sync fork** > **Update branch**.  Then in
+  VS Code check out `main` and **Pull** (`...` menu > **Pull**).
+- **VS Code.**  The same as the command line: *Git: Checkout to...* `main`;
+  *Git: Fetch From All Remotes*; *Git: Merge Branch...* `upstream/main`;
+  **Push** (`...` menu > **Push**); then *Git: Create Branch...* with your
+  new branch name.
+- **Command line.**
+
+  ```bash
+  git checkout main
+  git fetch upstream
+  git merge --ff-only upstream/main
+  git push
+  git checkout -b <type>/<issue>-<slug>
+  ```
+
+If you have the `gh` CLI, `gh repo sync <you>/rtfreporter` updates the fork
+on GitHub (optional); then `git pull` in your clone.
 
 ### Collaborator workflow (direct branch)
 
