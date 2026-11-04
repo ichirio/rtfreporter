@@ -173,6 +173,49 @@ text_width_in <- function(text, font = NULL, font_size_half_points = 18L) {
 }
 
 
+# Scale the widths `w` so that they add up to exactly `total` twips and no
+# column is below `min_w`.  Scale to the target; a column that falls below the
+# minimum is pinned at the minimum and the rest are rescaled to what remains;
+# repeat until none falls below.  The last column still free takes the
+# rounding.  When `total` is below `length(w) * min_w` the minimum cannot be
+# kept: the widths are then scaled proportionally and the minimum is ignored.
+.fit_col_widths <- function(w, total, min_w) {
+  n <- length(w)
+  if (n == 0L) return(integer(0L))
+  w <- as.numeric(w)
+  total <- as.integer(total)
+  if (sum(w) <= 0) {   # nothing to scale: the last column takes the rest
+    out <- as.integer(w)
+    out[n] <- out[n] + (total - sum(out))
+    return(out)
+  }
+  pinned <- rep(FALSE, n)
+  if (total >= n * min_w) {
+    repeat {
+      free <- which(!pinned)
+      remaining <- total - min_w * sum(pinned)
+      sc <- round(w[free] * remaining / sum(w[free]))
+      low <- sc < min_w
+      if (!any(low)) break
+      pinned[free[low]] <- TRUE
+    }
+  }
+  free <- which(!pinned)
+  remaining <- total - min_w * sum(pinned)
+  out <- rep(as.integer(min_w), n)
+  out[free] <- as.integer(round(w[free] * remaining / sum(w[free])))
+  last <- free[length(free)]
+  out[last] <- out[last] + (total - sum(out))
+  # the rounding must not leave the last column under the minimum
+  if (total >= n * min_w && out[last] < min_w) {
+    deficit <- min_w - out[last]
+    out[last] <- as.integer(min_w)
+    donor <- free[which.max(out[free])]
+    out[donor] <- out[donor] - as.integer(deficit)
+  }
+  out
+}
+
 #' Automatically calculate column widths for a data.frame
 #'
 #' Scans the content of each column (header labels and data values) to derive
@@ -184,14 +227,27 @@ text_width_in <- function(text, font = NULL, font_size_half_points = 18L) {
 #'   Accepts the same formats as `rtftable(col_header = ...)`: a character
 #'   vector, a pipe-delimited string, or a list of character vectors (only the
 #'   first row is used for width estimation).
-#' @param font Font name passed to [text_width_in()].  `NULL` (default) is
-#'   the package's font, `getOption("rtfreporter.font")`.
+#' @param font Font name.  The width is an estimate from **one average
+#'   character width** for the font and size, the same for every character
+#'   (it is not [text_width_in()]'s per-character measure): the width of a
+#'   Courier New character (exact, since Courier is monospaced) for
+#'   `"Courier New"`, `"Courier"` and for any name it does not know, and a
+#'   flat average for `"Arial"`.  Case, spaces and hyphens in the name do not
+#'   matter.  `NULL` (default) is the package's font,
+#'   `getOption("rtfreporter.font")`.
 #' @param font_size_half_points Font size in half-points.  Default `18` (= 9 pt).
 #' @param table_width_twips If not `NULL`, the column widths are scaled so that
-#'   their sum equals this value.  Useful for fitting tables to a fixed page
-#'   width.
+#'   their sum equals this value exactly, the last column taking the rounding.
+#'   A column the scaling would take below `min_col_width_twips` is held at
+#'   the minimum and the others are scaled to what is left, so the minimum
+#'   holds and the sum is still exact.  When the value is below the sum of the
+#'   minima (`min_col_width_twips` times the number of columns) both cannot
+#'   hold: the widths are then scaled in proportion to their natural widths,
+#'   ignoring the minimum, so that the sum is still the value.  Useful for
+#'   fitting tables to a fixed page width.
 #' @param min_col_width_twips Minimum width per column in twips.  Default
-#'   `720` (= 0.5 inch).
+#'   `720` (= 0.5 inch).  With `table_width_twips` it holds unless that is
+#'   below the sum of the minima (see there).
 #' @param col_padding_twips Extra twips added to each column width to account
 #'   for cell padding and inter-column spacing.  Default `288` (= 0.2 inch).
 #' @param protect_cols Integer column indices to keep at their natural
@@ -201,8 +257,8 @@ text_width_in <- function(text, font = NULL, font_size_half_points = 18L) {
 #'   \describe{
 #'     \item{Squeezed}{Only the remaining columns are shrunk to fit, so e.g. a
 #'       row-label column (`protect_cols = 1`) stays readable while the data
-#'       columns absorb the squeeze.  Protection is dropped if it would push
-#'       the scalable columns below `min_col_width_twips`.}
+#'       columns absorb the squeeze.  Protection is dropped if the room left
+#'       for the scalable columns is less than `min_col_width_twips` each.}
 #'     \item{Scaled up}{When the table is scaled *up*, the protected columns
 #'       likewise keep their natural width and only the others grow to the
 #'       target.}
@@ -289,27 +345,15 @@ auto_col_widths <- function(data,
       remaining   <- total_w - fixed_w
       min_needed  <- length(scalable) * as.integer(min_col_width_twips)
       if (remaining >= min_needed) {
-        nat_scalable <- sum(col_w[scalable])
-        if (nat_scalable > 0L) {
-          col_w[scalable] <- as.integer(round(col_w[scalable] *
-                                                remaining / nat_scalable))
-          col_w[scalable] <- pmax(col_w[scalable],
-                                   as.integer(min_col_width_twips))
-        }
-        drift <- total_w - sum(col_w)
-        last  <- scalable[length(scalable)]
-        col_w[last] <- col_w[last] + drift
+        col_w[scalable] <- .fit_col_widths(col_w[scalable], remaining,
+                                           as.integer(min_col_width_twips))
         return(col_w)
       }
       # Fall through to uniform scaling when protection cannot be honoured.
     }
 
-    total_natural <- sum(col_w)
-    if (total_natural > 0L) {
-      col_w <- as.integer(round(col_w * total_w / total_natural))
-      # Absorb rounding drift in the last column.
-      col_w[ncols] <- total_w - sum(col_w[-ncols])
-      col_w <- pmax(col_w, as.integer(min_col_width_twips))
+    if (sum(col_w) > 0L) {
+      col_w <- .fit_col_widths(col_w, total_w, as.integer(min_col_width_twips))
     }
   }
 

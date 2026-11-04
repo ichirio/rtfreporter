@@ -23,17 +23,30 @@ Accepts the same formats as \code{rtftable(col_header = ...)}: a character
 vector, a pipe-delimited string, or a list of character vectors (only the
 first row is used for width estimation).}
 
-\item{font}{Font name passed to \code{\link[=text_width_in]{text_width_in()}}.  \code{NULL} (default) is
-the package's font, \code{getOption("rtfreporter.font")}.}
+\item{font}{Font name.  The width is an estimate from \strong{one average
+character width} for the font and size, the same for every character
+(it is not \code{\link[=text_width_in]{text_width_in()}}'s per-character measure): the width of a
+Courier New character (exact, since Courier is monospaced) for
+\code{"Courier New"}, \code{"Courier"} and for any name it does not know, and a
+flat average for \code{"Arial"}.  Case, spaces and hyphens in the name do not
+matter.  \code{NULL} (default) is the package's font,
+\code{getOption("rtfreporter.font")}.}
 
 \item{font_size_half_points}{Font size in half-points.  Default \code{18} (= 9 pt).}
 
 \item{table_width_twips}{If not \code{NULL}, the column widths are scaled so that
-their sum equals this value.  Useful for fitting tables to a fixed page
-width.}
+their sum equals this value exactly, the last column taking the rounding.
+A column the scaling would take below \code{min_col_width_twips} is held at
+the minimum and the others are scaled to what is left, so the minimum
+holds and the sum is still exact.  When the value is below the sum of the
+minima (\code{min_col_width_twips} times the number of columns) both cannot
+hold: the widths are then scaled in proportion to their natural widths,
+ignoring the minimum, so that the sum is still the value.  Useful for
+fitting tables to a fixed page width.}
 
 \item{min_col_width_twips}{Minimum width per column in twips.  Default
-\code{720} (= 0.5 inch).}
+\code{720} (= 0.5 inch).  With \code{table_width_twips} it holds unless that is
+below the sum of the minima (see there).}
 
 \item{col_padding_twips}{Extra twips added to each column width to account
 for cell padding and inter-column spacing.  Default \code{288} (= 0.2 inch).}
@@ -45,8 +58,8 @@ its natural width.  Default none.  No effect when \code{table_width_twips} is
 \describe{
 \item{Squeezed}{Only the remaining columns are shrunk to fit, so e.g. a
 row-label column (\code{protect_cols = 1}) stays readable while the data
-columns absorb the squeeze.  Protection is dropped if it would push
-the scalable columns below \code{min_col_width_twips}.}
+columns absorb the squeeze.  Protection is dropped if the room left
+for the scalable columns is less than \code{min_col_width_twips} each.}
 \item{Scaled up}{When the table is scaled \emph{up}, the protected columns
 likewise keep their natural width and only the others grow to the
 target.}

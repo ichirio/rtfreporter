@@ -21,8 +21,9 @@
 #             rtftable; table_width_pct is that percentage of the writable
 #             width as a fraction (60 is 0.6).
 #    rules    `border` ("tfl", "none", an rtf_border()) and the border_*
-#             zones are two ways to say the rules: both in one call is an
-#             error (FR-PL429).
+#             zones are two ways to say the rules: both in one call, or the
+#             one in one call and the other in a later call of the same plan,
+#             is an error at the call that says the second way (FR-PL429).
 #    limits   each setting has the limits of rtftable()'s help: table_width_pct
 #             a number in (0, 100], table_width_pct_of_writable in (0, 1],
 #             table_width_twips / row_height_twips / the paddings one
@@ -53,13 +54,21 @@
 #  picks the rows covering every pair of levels.  Oracle: the pages equal the
 #  direct call's, and each given setting is the page's (the rule above).
 #
-#  (B) FT-PL991, decision table, the rules against the zones in one call:
-#  border ("tfl", "none", an rtf_border()) x each of the five zones = 15 rows
-#  all errors; border alone, one zone alone, and all five zones: ok.
+#  (B) FT-PL991, decision table, the rules against the zones, in one call and
+#  across calls:
+#    calls                          | rules said                       | result
+#    one                            | border x each of the 5 zones (15)| error
+#    two: border, then a zone       | each of the 15 pairs             | error at the 2nd call
+#    two: a zone, then border       | each of the 15 pairs             | error at the 2nd call
+#    two: a zone, then another zone | the zones only                   | ok, both kept
+#    two: border, then border       | border twice                     | ok, the later wins
+#    two: border, then other fields | no zone                          | ok
+#    one                            | border alone, one zone, five     | ok
 #
 #  (C) FT-PL992, decision table, the limits just inside and just outside.
-#  Across several calls a border and a zone are not asserted: the help says
-#  "not both" for one call only (see the report of the PR).
+#  Across calls the rule is the same as in one call (the help: "Say the rules
+#  one way"); it used to hold for one call only, and the zones won across calls
+#  in either order.
 # ---------------------------------------------------------------------------
 
 .ps_df <- function() {
@@ -147,7 +156,7 @@ test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX
   }
 })
 
-test_that("FT-PL991 [FR-PL424 FR-PL429 FR-IX407]: plan_style(): border against the border_* zones in one call, the decision table", {
+test_that("FT-PL991 [FR-PL424 FR-PL428 FR-PL429 FR-IX407]: plan_style(): border against the border_* zones in one call and across calls, the decision table", {
   zones <- c("border_header", "border_spanning", "border_body", "border_first_row",
              "border_last_row")
   msg <- "`border` is the whole table's rules and `border_*`"
@@ -168,6 +177,30 @@ test_that("FT-PL991 [FR-PL424 FR-PL429 FR-IX407]: plan_style(): border against t
   all5 <- stats::setNames(rep(list(.ps_zone()), 5L), zones)
   got <- .ps_pages(do.call(plan_style, c(list(table_plan(d)), all5)))
   expect_equal(got, .ps_direct(d, all5))
+
+  # across calls: the same error, at the call that says the second way
+  for (b in names(borders)) for (z in zones) {
+    zone_args <- stats::setNames(list(.ps_zone()), z)
+    first_border <- plan_style(table_plan(d), border = borders[[b]])
+    expect_error(do.call(plan_style, c(list(first_border), zone_args)), msg,
+                 fixed = TRUE, info = paste(b, z, "border, then zone"))
+    first_zone <- do.call(plan_style, c(list(table_plan(d)), zone_args))
+    expect_error(plan_style(first_zone, border = borders[[b]]), msg,
+                 fixed = TRUE, info = paste(b, z, "zone, then border"))
+    # with other settings between, the first call's rules still count
+    mid <- plan_style(first_zone, font = "Arial")
+    expect_error(plan_style(mid, border = borders[[b]]), msg, fixed = TRUE,
+                 info = paste(b, z, "zone, other, border"))
+  }
+  # zones in two calls, border twice, border then other fields: ok
+  two <- plan_style(plan_style(table_plan(d), border_header = .ps_zone()),
+                    border_last_row = .ps_zone())
+  expect_equal(.ps_pages(two),
+               .ps_direct(d, list(border_header = .ps_zone(), border_last_row = .ps_zone())))
+  twice <- plan_style(plan_style(table_plan(d), border = "tfl"), border = "none")
+  expect_equal(.ps_pages(twice), .ps_direct(d, list(border = "none")))
+  other <- plan_style(plan_style(table_plan(d), border = "tfl"), font = "Arial")
+  expect_equal(.ps_pages(other), .ps_direct(d, list(border = "tfl", font = "Arial")))
 })
 
 test_that("FT-PL992 [FR-PL426 FR-PL427 FR-IX407]: plan_style(): each setting just inside and just outside its limit", {

@@ -291,6 +291,21 @@ test_that("FT-TB713 [FR-TB568]: col_rel_width, column_widths_twips, table_width_
   expect_identical(max(cellx(a, "x\\cell")), 13680L %/% 2L)
 })
 
+test_that("FT-TB991 [FR-TB568]: rtftable(): table_width_twips, table_width_pct and table_width_pct_of_writable given together", {
+  right <- function(...) {
+    line <- .at_line(.at_one(rtftable(.at_df(), ...)), "x\\cell")[1L]
+    max(as.integer(sub("\\\\cellx", "", regmatches(line, gregexpr("\\\\cellx[0-9]+", line))[[1L]])))
+  }
+  # the twips win over either percentage
+  expect_identical(right(table_width_twips = 6000, table_width_pct = 50), 6000L)
+  expect_identical(right(table_width_twips = 6000, table_width_pct_of_writable = 0.5), 6000L)
+  expect_identical(right(table_width_twips = 6000, table_width_pct = 50,
+                         table_width_pct_of_writable = 0.25), 6000L)
+  # of the two percentages, table_width_pct is the one used
+  expect_identical(right(table_width_pct = 50, table_width_pct_of_writable = 0.25), 13680L %/% 2L)
+  expect_identical(right(table_width_pct_of_writable = 0.25), 13680L %/% 4L)
+})
+
 test_that("FT-TB714 [FR-TB569]: row_height_twips left NULL inherits the style, the document, the option, else the font's height", {
   h <- function(s) unique(regmatches(.at_line(s, "x\\cell"), regexpr("\\\\trrh-?[0-9]+", .at_line(s, "x\\cell"))))
   df <- .at_df()

@@ -3103,7 +3103,8 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   (default), `"center"` or `"right"`.
 #' @param table_width_twips,table_width_pct,table_width_pct_of_writable
 #'   The table's width: in twips, as a percentage (0--100) or a fraction
-#'   (0--1) of the writable page width.
+#'   (0--1) of the writable page width.  Give one; if `table_width_twips` is
+#'   given with a percentage, the twips win.
 #' @param markup,blank_row_normalize [rtftable()]'s `markup` (the cell-text
 #'   markup applied when the page is rendered, such as `"script"`) and
 #'   `blank_row_normalize` (how blank rows are normalised then).
@@ -3175,6 +3176,22 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
       "plan_style(): `border` is the whole table's rules and `border_*` ",
       "those of one kind of row.\n  Say it one way: border = \"tfl\", or ",
       "border_header = , border_body = , ..."))
+  }
+  # the same rule across calls: a plan whose earlier plan_style() gave the
+  # whole table's rules and whose later one gives a kind of row's (or the
+  # other way round) says it two ways, as one call would
+  if (inherits(.plan, "table_plan")) {
+    before <- .plan_of(.plan, "style")
+    had_border <- any(vapply(before, function(f) !is.null(f[["border"]]), NA))
+    had_zones <- any(vapply(before, function(f)
+      any(startsWith(names(f), "border_")), NA))
+    if ((length(zones) && had_border) || (!is.null(border) && had_zones)) {
+      .ard_stop(paste0(
+        "plan_style(): `border` is the whole table's rules and `border_*` ",
+        "those of one kind of row.\n  Say it one way: border = \"tfl\", or ",
+        "border_header = , border_body = , ...\n  An earlier plan_style() ",
+        "call on this plan gave the other, and the two are not both said."))
+    }
   }
   .plan_layer(.plan, "style", c(
     list(border = border, align_count_pct = align_count_pct, font = font,

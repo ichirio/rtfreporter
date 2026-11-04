@@ -145,7 +145,8 @@ file is written.}
 twips, one positive whole number per column. Overrides \code{col_rel_width}.}
 
 \item{table_width_twips}{Total table width in twips.  A value that is not
-one non-negative integer is an error.}
+one non-negative integer is an error.  When it is given together with
+\code{table_width_pct_of_writable} or \code{table_width_pct}, the twips win.}
 
 \item{table_width_pct_of_writable}{Table width as a fraction 0-1 of the
 writable page width.  A value that is not one number in (0, 1] is an
@@ -153,7 +154,9 @@ error.}
 
 \item{table_width_pct}{Table width as a percentage 0-100 of the writable
 page width (convenience alias for \code{table_width_pct_of_writable * 100}).
-A value that is not one number in (0, 100] is an error.}
+A value that is not one number in (0, 100] is an error.  Given together
+with \code{table_width_pct_of_writable}, this one is used; given with
+\code{table_width_twips}, the twips win.}
 
 \item{table_align}{Horizontal placement: \code{"left"} (default), \code{"center"},
 or \code{"right"}.}

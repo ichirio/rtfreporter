@@ -2768,6 +2768,26 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   }
   if (!is.null(label_out)) long[[label_out]] <- long$.lab
 
+  # The sort and `sort_stat` find each row's statistic in `d` by the row's
+  # identity (its keys and its label), which `base$.rid` below holds as the
+  # values SHOWN -- after `labels` recoded them.  `d` still has the values
+  # before recoding, so the join found nothing and the sort did not apply
+  # (sort_stat was NA).  Read `d` through the same recoding.
+  d_rid <- d
+  for (r in rowrefs) d_rid[[r$ref]] <- recode(d[[r$ref]], r$ref, r$out)
+  if (!is.null(label_out) && length(lab_var) && length(labref)) {
+    lr <- labref[[1]]$ref
+    if (lr %in% names(d_rid) && !lr %in% vapply(rowrefs, function(r) r$ref, "")) {
+      d_rid[[lr]] <- as.character(d_rid[[lr]])
+      for (vn in names(lab_var)) {
+        dict <- lab_var[[vn]]
+        hit <- !is.na(d_rid$variable) & d_rid$variable == vn &
+          !is.na(d_rid[[lr]]) & d_rid[[lr]] %in% names(dict)
+        d_rid[[lr]][hit] <- unname(dict[d_rid[[lr]][hit]])
+      }
+    }
+  }
+
   # recode + factorise the row keys
   for (r in rowrefs) {
     v <- recode(long[[r$out]], r$ref, r$out)
@@ -2862,8 +2882,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
   if (!is.null(sort_stat)) {
     tot <- tapply(suppressWarnings(as.numeric(
-      d$stat[d$stat_name == sort_stat])), rid_for_stat(d, rowrefs, labref,
-      sort_stat), sum, na.rm = TRUE)
+      d_rid$stat[d_rid$stat_name == sort_stat])), rid_for_stat(d_rid, rowrefs,
+      labref, sort_stat), sum, na.rm = TRUE)
     out$.sort_stat <- as.numeric(tot[match(base$.rid, names(tot))])
   }
 
@@ -2875,7 +2895,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     cmp_sort <- if (!is.null(cmp_d) && nrow(cmp_d)) {
       list(d = cmp_d, spec = compare, label_out = label_out, recode = recode)
     }
-    out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref,
+    out <- out[.ard_sort_order(sort, out, base, d_rid, rowrefs, labref,
                                colkey = colkey, sep = sep, cmp = cmp_sort,
                                levels = levels), ,
                drop = FALSE]

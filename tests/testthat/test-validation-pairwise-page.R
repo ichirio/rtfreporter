@@ -55,7 +55,10 @@
 #  "landscape" / "portrait" = 18 rows.  The page is the sizes in every row; it
 #  is landscape when width >= height; a warning of paper_size when it was
 #  passed; a warning of orientation exactly when it was passed and differs
-#  from the inferred one.
+#  from the inferred one.  Only one size given (the help): the other is
+#  landscape Letter's, width 11 in and height 8.5 in -- width_in 8 is 8 x 8.5
+#  (portrait), 12 is 12 x 8.5 (landscape), height_in 7 is 11 x 7 (landscape),
+#  12 is 11 x 12 (portrait) -- and the orientation follows from that pair.
 # ---------------------------------------------------------------------------
 
 .pp_df <- data.frame(Param = c("Age", "Weight"), Value = c("65", "70"),
@@ -190,5 +193,18 @@ test_that("FT-DC297 [FR-DC157 FR-DC340 FR-IX309 FR-IX310 FR-IX405]: rtf_page(): 
     expect_identical(orient_warn, r$orient != "unset" && (r$orient == "landscape") != land,
                      info = label)
     expect_length(out$warnings, paper_warn + orient_warn)
+  }
+  # one size only: the other is landscape Letter's (11 wide, 8.5 high)
+  one <- list(list(width_in = 8, want = c(8, 8.5)), list(width_in = 12, want = c(12, 8.5)),
+              list(height_in = 7, want = c(11, 7)), list(height_in = 12, want = c(11, 12)))
+  for (a in one) {
+    want <- a$want
+    a$want <- NULL
+    out <- do.call(.pp_write, a)
+    label <- paste(names(a), unlist(a))
+    expect_identical(c(.pp_num(out$rtf, "paperw"), .pp_num(out$rtf, "paperh")),
+                     as.integer(round(want * 1440)), info = label)
+    expect_identical(.pp_has_landscape(out$rtf), want[1L] >= want[2L], info = label)
+    expect_length(out$warnings, 0L)
   }
 })

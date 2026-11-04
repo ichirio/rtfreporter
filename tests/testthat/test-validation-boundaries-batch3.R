@@ -1409,7 +1409,10 @@ test_that("FT-PL974 [FR-PL310 FR-PL311 FR-PL960]: plan_sort(): equivalence class
     E("keep", "a string", "yes", kp, more = g),
     E("keep", "a number", 1, kp, more = g),
     E("keep", "length 2", c(TRUE, TRUE), kp, more = g),
-    O("stat", "valid", "n", function(p) identical(p[[1L]]$data[[2L]], c("Mean", "F", "M")), more = n),
+    # plan_labels(AGE = , SEX = ) recodes the row key `group`; the sort used to
+    # miss the rows by the recoded value and leave them as they were (Mean, F,
+    # M).  It now sorts by -n: F (21) and M (19), and Mean, which has no n, last.
+    O("stat", "valid", "n", function(p) identical(p[[1L]]$data[[2L]], c("F", "M", "Mean")), more = n),
     E("stat", "NA", NA_character_, sa, more = n),
     E("stat", "length 2", c("n", "mean"), sa, more = n),
     E("stat", "a number", 1, sa, more = n),

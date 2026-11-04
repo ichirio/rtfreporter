@@ -86,7 +86,8 @@ look, \code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.}
 \code{\link[=plan_cell_style]{plan_cell_style()}}.}
 
 \item{table_width_twips, table_width_pct, table_width_pct_of_writable}{The table's width: in twips, as a percentage (0--100) or a fraction
-(0--1) of the writable page width.}
+(0--1) of the writable page width.  Give one; if \code{table_width_twips} is
+given with a percentage, the twips win.}
 }
 \value{
 The plan, with one more layer.
