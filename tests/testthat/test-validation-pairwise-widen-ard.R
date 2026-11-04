@@ -27,7 +27,9 @@
 #             descending: "n" is the statistic totalled across the spread
 #             columns, so the rows go by their total count; nothing is
 #             alphabetised behind the caller's back.  An explicit sort key
-#             decides the order over a declared level order.
+#             decides the order over a declared level order.  The sort and
+#             sort_stat read the rows by the level of the data, the same
+#             whether `labels` recodes it for display or not.
 #    cells    "{n}" and "{n} ({p:.1f%})" print the count, and the count with
 #             the percentage of a fraction (0.6 is 60.0), one text a cell.
 #    na       a cell no record fills is `na`: NA (the default) or one text.
@@ -48,15 +50,19 @@
 #    na       NA | "-"
 #    sep      "____" (the default) | " / "
 #    sort_stat  NULL | "n"
-#  The product is 2 x 2 x 4 x 3 x 3 x 2 x 2 x 2 = 1,152 rows less the SEX
-#  recoding with a sort key or sort_stat (see below): 832; .allpairs() picks
-#  the rows covering every pair.  Oracle: the table is built straight from the counts
-#  by the rules above.
+#  The product is 2 x 2 x 4 x 3 x 3 x 2 x 2 x 2 = 1,152 rows, the SEX
+#  recoding with a sort key or sort_stat among them (it used to leave the rows
+#  in the data's order and .sort_stat NA); .allpairs() picks the rows covering
+#  every pair.  Oracle: the table is built straight from the counts by the
+#  rules above.
 #
-#  Not asserted: a sort key ("n", "-n") or sort_stat with labels = list(SEX = )
-#  -- the rows stay in the data's order, the sort is not applied and .sort_stat
-#  is NA (a mismatch with the sort rule above; the reproduction is in the
-#  report of the PR).
+#  Not asserted: a cell that a second record also reaches, with a key the ARD
+#  has that neither `cols` nor `rows` names (a SITE beside cols = "TRT"): the
+#  first value stays and the others are dropped with no message, where
+#  stats = "rows" stops (FR-AR202).  A stop for it was tried and left out:
+#  the tests of position-read plans (a `group1_level` over stacked blocks,
+#  test-ard-tables.R) and of a dropped label (FT-AR108) rely on the first
+#  value standing; see the report of the PR.
 #
 #  (B) FT-AR111, decision table, stats x value x na (x a `cells` given):
 #    stats | value     | na  | the table
@@ -141,15 +147,13 @@
   out
 }
 
-test_that("FT-AR110 [FR-AR150 FR-AR151 FR-AR160 FR-AR168 FR-AR170 FR-AR172 FR-AR173 FR-AR175 FR-AR177 FR-AR179 FR-AR180 FR-IX409]: widen_ard(): columns x cells x levels x labels x sort x na x sep x sort_stat, pairwise", {
+test_that("FT-AR110 [FR-AR150 FR-AR151 FR-AR160 FR-AR168 FR-AR170 FR-AR172 FR-AR173 FR-AR175 FR-AR177 FR-AR179 FR-AR180 FR-AR252 FR-IX409]: widen_ard(): columns x cells x levels x labels x sort x na x sep x sort_stat, pairwise", {
   cand <- expand.grid(cols = c("one", "two"), cells = c("n", "np"),
                       levels = c("none", "sex", "trt", "both"),
                       labels = c("none", "trt", "sex"), sort = c("no", "-n", "n"),
                       na = c("na", "dash"), sep = c("____", " / "),
                       sort_stat = c("none", "n"), stringsAsFactors = FALSE)
   expect_identical(nrow(cand), 1152L)
-  cand <- cand[!(cand$labels == "sex" & (cand$sort != "no" | cand$sort_stat != "none")), ]
-  expect_identical(nrow(cand), 832L)
   ap <- .allpairs(cand)
   expect_setequal(ap$covered, ap$need)
   expect_lt(nrow(ap$rows), 60L)
@@ -216,4 +220,44 @@ test_that("FT-AR111 [FR-AR166 FR-AR167 FR-AR180 FR-IX409]: widen_ard(): stats x 
   expect_identical(wc(value = "stat_fmt"), wc(value = "stat"))
   expect_identical(wc()$Placebo, c("4", "9", NA))
   expect_identical(wc(na = "-", value = "stat_fmt")$Placebo, c("4", "9", "-"))
+})
+
+test_that("FT-AR112 [FR-AR170 FR-AR175 FR-AR179 FR-AR252 FR-IX409]: widen_ard(): sort and sort_stat against labels, the decision table", {
+  x <- .wa_ard(.wa_long1(), FALSE)
+  # totals across the arms: F 3 + 4 = 7, M 2 + 9 = 11, U 1 (Placebo has none)
+  tot <- c(F = 7, M = 11, U = 1)
+  scoped <- list(SEX = c(F = "Female", M = "Male", U = "Unknown"))
+  shown <- c(F = "Female", M = "Male", U = "Unknown")
+  run <- function(labels, ...) {
+    args <- list(x, cols = "TRT", cells = "{n}", notes = FALSE, ...)
+    if (!is.null(labels)) args$labels <- labels
+    as.data.frame(do.call(widen_ard, args))
+  }
+  # labels: none | scoped by the analysis variable; the rows' label text follows
+  for (case in list(list(name = "no labels", labels = NULL, text = c(F = "F", M = "M", U = "U")),
+                    list(name = "SEX scoped", labels = scoped, text = shown))) {
+    nm <- case$name
+    for (sort in list(FALSE, "-n", "n")) {
+      want <- names(tot)
+      if (identical(sort, "-n")) want <- names(sort(tot, decreasing = TRUE))
+      if (identical(sort, "n")) want <- names(sort(tot))
+      got <- run(case$labels, sort = sort)
+      expect_identical(as.character(got$label), unname(case$text[want]), info = paste(nm, "sort", sort))
+      # the counts stay with their rows
+      expect_identical(got$`Drug A`, unname(c(F = "3", M = "2", U = "1")[want]), info = paste(nm, sort))
+    }
+    # sort_stat: each row's total, whatever the label shows
+    got <- run(case$labels, sort_stat = "n")
+    expect_identical(as.character(got$label), unname(case$text[names(tot)]), info = nm)
+    expect_identical(got$.sort_stat, unname(tot), info = nm)
+    # and a sort key with a declared order of the data's own values
+    got <- run(case$labels, sort = "-n", levels = list(SEX = c("U", "M", "F")), sort_stat = "n")
+    expect_identical(as.character(got$label), unname(case$text[c("M", "F", "U")]), info = nm)
+    expect_identical(got$.sort_stat, c(11, 7, 1), info = nm)
+  }
+  # a recoded row key reads the same: the key's labels do not hide the totals
+  got <- as.data.frame(widen_ard(x, cols = "TRT", rows = c(var = "variable"), cells = "{n}",
+                                 notes = FALSE, labels = c(SEX = "Sex"), sort_stat = "n"))
+  expect_identical(as.character(got$var), rep("Sex", 3L))
+  expect_identical(got$.sort_stat, unname(tot))
 })
