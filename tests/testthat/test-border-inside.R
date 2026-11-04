@@ -86,13 +86,6 @@ test_that("rtf_border() validates the two new slots", {
   expect_identical(rtf_border(inside_v = FALSE)$inside_v$style, "none")
 })
 
-test_that("rtf_border() records which inside_* the caller named", {
-  expect_identical(attr(rtf_border(left = S), "inside_named"),
-                   c(h = FALSE, v = FALSE))
-  expect_identical(attr(rtf_border(left = S, inside_v = NONE), "inside_named"),
-                   c(h = FALSE, v = TRUE))
-})
-
 test_that("inside_h / inside_v take the same values as the edges", {
   expect_identical(rtf_border(inside_v = TRUE)$inside_v,     rtf_border_line())
   expect_identical(rtf_border(inside_h = "double")$inside_h, rtf_border_line("double"))
@@ -198,31 +191,6 @@ test_that("with no header, the table's top edge lands on the first data row", {
   expect_identical(tb$first_row$top$style, "single")
 })
 
-
-# -- deprecation ----------------------------------------------------------------
-
-test_that("the changed edge reading warns once, and only when it matters", {
-  .bi_reset()
-  # A zone border with left/right and no inside_v named: this is the shape whose
-  # reading changed, so it warns -- once.
-  vert <- rtf_border(left = S, right = S)
-  expect_warning(style_zone(.bi_tbl("none"), body = vert), "outer")
-  expect_silent(style_zone(.bi_tbl("none"), body = vert))   # once per session
-
-  # Naming the interior rule says which reading you mean, so no warning.
-  .bi_reset()
-  expect_silent(style_zone(.bi_tbl("none"),
-                           body = rtf_border(left = S, right = S, inside_v = S)))
-
-  # A single-column table has no interior boundary to disagree about.
-  .bi_reset()
-  expect_silent(style_zone(rtftable(data.frame(a = c("1", "2")), border = "none"),
-                           body = vert))
-
-  # A whole-table border was an error before 0.5.0, so it has no old reading.
-  .bi_reset()
-  expect_silent(.bi_tbl(rtf_border(left = S, right = S)))
-})
 
 test_that("the tfl preset renders exactly as before and never warns", {
   .bi_reset()

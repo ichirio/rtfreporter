@@ -2,7 +2,9 @@
 
 This is the first release on CRAN.  The API deprecated in 0.5.0 - 0.8.x is
 removed, and so is `rtf_default_format()` with `rtf_document(default_format = )`:
-`rtf_style()` sets the look of a document in one object.  The regular
+`rtf_style()` sets the look of a document in one object.  The warning that
+`rtf_border()` edges now mean the outer edges (code written before 0.5.0)
+is gone too.  The regular
 expression in "Finding what the next minor release removes" below finds
 the removed names in your code.  The 0.8.x - 0.9.0 work is mostly about
 tables made from an analysis results dataset (`table_plan()` and the

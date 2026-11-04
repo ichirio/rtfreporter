@@ -61,22 +61,6 @@
   unique(x)
 }
 
-# Table shape for the deprecation check, tolerant of the multi-data.frame form.
-.border_warn_ncols <- function(data) {
-  if (is.data.frame(data)) return(ncol(data))
-  if (is.list(data) && length(data) && is.data.frame(data[[1L]])) {
-    return(ncol(data[[1L]]))
-  }
-  1L
-}
-
-.border_warn_nrows <- function(data) {
-  if (is.data.frame(data)) return(nrow(data))
-  if (is.list(data)) return(sum(vapply(
-    data, function(d) if (is.data.frame(d)) nrow(d) else 0L, integer(1L))))
-  1L
-}
-
 # Normalize a border specification to an rtf_table_border (or NULL).
 # Accepts:
 #   rtf_table_border          -> returned as-is
@@ -809,11 +793,6 @@ rtftable <- function(
   border_resolved <- .expand_table_border(
     .normalize_table_border(border),
     has_header = is.null(first_hdr) || length(first_hdr) > 0L)
-  # Raised here because it needs the shape of the table to know whether the
-  # pre-0.5 reading would have produced anything different.
-  .warn_old_edge_reading(.normalize_table_border(border),
-                         ncols = .border_warn_ncols(data),
-                         nrows = .border_warn_nrows(data))
 
   # Resolve blank_rows spec into a sorted integer vector of positions.
   blank_rows_resolved <- NULL

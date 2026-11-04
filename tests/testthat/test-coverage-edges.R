@@ -1013,36 +1013,6 @@ test_that("the generated code's pipe is chosen by argument or option", {
   expect_identical(got, "%>%")
 })
 
-# ── the border-reading change warns exactly once a session ─────────────────
-
-test_that("the border-reading change warns once, not every call", {
-  st <- rtfreporter:::.deprecation_state
-  saved <- as.list(st)
-  reset <- function() rm(list = ls(st), envir = st)
-  on.exit({ reset(); list2env(saved, envir = st) }, add = TRUE)   # leave it as found
-  n_warnings <- function(expr) {
-    n <- 0L
-    withCallingHandlers(force(expr), warning = function(w) {
-      n <<- n + 1L; invokeRestart("muffleWarning")
-    })
-    n
-  }
-  # the 0.5.0 reading of left/right: said once, and only where the readings differ
-  tb <- rtfreporter:::.rtf_table_border(body = rtf_border(left = TRUE))
-  reset()
-  expect_identical(n_warnings({
-    rtfreporter:::.warn_old_edge_reading(tb, 3L, 2L)
-    rtfreporter:::.warn_old_edge_reading(tb, 3L, 2L)
-  }), 1L)
-  reset()
-  expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(tb, 1L, 2L)), 0L)
-  expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(NULL, 3L, 2L)), 0L)
-  expect_false(rtfreporter:::.warn_old_edge_reading(NULL, 3L, 2L))
-  # naming the interior rule silences it
-  quiet <- rtfreporter:::.rtf_table_border(body = rtf_border(left = TRUE, inside_v = TRUE))
-  expect_identical(n_warnings(rtfreporter:::.warn_old_edge_reading(quiet, 3L, 2L)), 0L)
-})
-
 # ── rtf_header_source(): the code that rebuilds a header ───────────────────
 
 test_that("rtf_header_source() refuses what is not a table and a bad stub", {
