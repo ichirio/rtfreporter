@@ -144,7 +144,7 @@ test_that("FT-FM108 [FR-FM148 FR-FM149 FR-FM151 FR-FM152 FR-FM153 FR-FM154 FR-FM
   }
 })
 
-test_that("FT-FM108 anchors: the help's own values for small and rounding, per mode", {
+test_that("fmt_numeric() anchors: the help's own values for small and rounding, per mode", {
   v <- data.frame(k = c("a", "b"), x = c(0.0004567, 23.445))
   expect_identical(fmt_numeric(v, "x", signif = 4)$x[1L], "0.0004567")
   expect_identical(fmt_numeric(v, "x", signif = 4, small = "fixed")$x[1L], "0.000")

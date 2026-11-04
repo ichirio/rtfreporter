@@ -35,27 +35,27 @@
 #' The single most common mistake is reaching for `stub` on a table that
 #' has no hierarchy (DM), or omitting it on one that does (AE, PK).
 #'
-#' @section 1. DM -- demographics:
+#' @section DM -- demographics:
 #'
 #' A flat table of characteristics.  No hierarchy, so **no stub**; the only
 #' structure is that a page must not split a characteristic away from its
 #' statistics, which `split = "group_safe"` guarantees.
 #'
-#' @section 2. AE -- adverse events:
+#' @section AE -- adverse events:
 #'
 #' A two-level hierarchy (system organ class / preferred term) folded into one
 #' indented stub column, with a blank line between organ classes.  Because the
 #' stub merges `SOC` and `PT`, group detection reads the **indentation**
 #' (`group_by = "indent"`) rather than a column.
 #'
-#' @section 3. PK -- concentrations:
+#' @section PK -- concentrations:
 #'
 #' Like AE in shape, but the values are numbers with differing decimal counts
 #' and the visits run across the columns.  So it adds two things no other
 #' shape needs: `set_decimal_split()` to line the decimal points up, and
 #' `paginate_cols()` because the table is wider than the page.
 #'
-#' @section 4. LB -- laboratory shift:
+#' @section LB -- laboratory shift:
 #'
 #' Grouped by a column that is never printed -- the "carrier" idiom.  Name it
 #' in `group_col` **and** in `drop_cols`: the first makes it group the table,
