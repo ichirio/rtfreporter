@@ -65,11 +65,13 @@ jobs:
         id: urls
         continue-on-error: true
         run: |
-          u <- urlchecker::url_check(".")
+          # fail = FALSE: urlchecker (>= 2.0.0) would otherwise stop at any
+          # finding, before the ones not reached in time are told apart
+          u <- urlchecker::url_check(".", progress = FALSE, fail = FALSE)
           # a host the runner could not reach in time is the runner's network,
           # not the URL: listed, not counted
           slow <- grepl("Timeout was reached", u$Message, fixed = TRUE)
-          show <- function(x) if (nrow(x)) tryCatch(utils::capture.output(print(x)), error = function(e) character())
+          show <- function(x) if (NROW(x)) sprintf("%s  %s  %s", x$URL, x$Status, x$Message)
           out <- c("## URLs", sprintf("%d problem(s), %d not reached in time", sum(!slow), sum(slow)),
                    "```", show(u[!slow, ]), "```",
                    if (any(slow)) c("Not reached in time:", "```", unique(u$URL[slow]), "```"))
