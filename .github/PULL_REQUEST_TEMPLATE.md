@@ -36,9 +36,11 @@ Closes #
 - [ ] Branched off the latest `main`; the PR targets `main`.
 - [ ] Added or updated **tests** under `tests/testthat/` for the change.
 - [ ] Updated **roxygen** docs and ran `devtools::document()` (committed `man/*.Rd`).
-- [ ] `devtools::test()` passes locally.
-- [ ] `devtools::check()` is clean (0 errors / 0 warnings).
-- [ ] Updated `NEWS.md` (and `CHANGELOG.md` for a minor/major change).
+- [ ] The four pre-push checks pass (see *Pull requests* in
+      `CONTRIBUTING.md`): `R CMD check --as-cran` on the built tarball,
+      `NOT_CRAN=true devtools::test()`, `pkgdown::check_pkgdown()`,
+      `lintr::lint_package()`.
+- [ ] I did not edit `NEWS.md` or `Version:`; the change is described above.
 - [ ] R code is ASCII-only; no new hard dependency (optional packages stay in `Suggests`).
 
 ## Notes for reviewers
