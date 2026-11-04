@@ -270,7 +270,7 @@ test_that("FT-AR104 [FR-AR247]: label = takes a bare formula and a chain of one 
   expect_identical(.a6_wide(cells = "{n}", label = ~ "{.label}!"), t)
 })
 
-test_that("FT-AR105 [FR-AR164, FR-AR248]: an unnamed cell_rows() line is one row per level, labelled from label", {
+test_that("FT-AR105 [FR-AR164 FR-AR248]: an unnamed cell_rows() line is one row per level, labelled from label", {
   t <- .a6_wide(cells = cell_rows("{n}"))
   expect_identical(t$label, c("F", "M"))
   expect_identical(t$A, c("3", "2"))
