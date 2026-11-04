@@ -109,7 +109,7 @@ tb <- do.call(rbind, lapply(files, blocks))
 # ---- the map: by hand, and the new tests' own names -------------------------------
 map <- utils::read.csv(file.path(vdir, "test_map.csv"), colClasses = "character",
                        stringsAsFactors = FALSE)
-head_re <- "^(FT-[A-Z]{2}[0-9]{3}) \\[([^]]*)\\]:"
+head_re <- "^(FT-[A-Z]{2}[0-9]{3,4}) \\[([^]]*)\\]:"
 named <- tb[grepl(head_re, tb$test), , drop = FALSE]
 if (nrow(named)) {
   map <- rbind(map, data.frame(file = named$file, test = named$test,

@@ -48,7 +48,7 @@ test_that("requirements.csv and test_map.csv are strict CSV, every row whole", {
                          colClasses = "character")
   expect_true(all(req$status %in% c("active", "removed")))
   expect_true(all(grepl("^[0-9]+\\.[0-9]+\\.[0-9]+$", req$since)))
-  expect_true(all(grepl("^FR-[A-Z]{2}[0-9]{3}$", req$id)))
+  expect_true(all(grepl("^FR-[A-Z]{2}[0-9]{3,4}$", req$id)))
 })
 
 test_that("every FR id the URS and the UAT cases name is an active FR of requirements.csv", {
