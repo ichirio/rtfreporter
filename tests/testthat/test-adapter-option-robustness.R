@@ -328,7 +328,6 @@ test_that("flextable: option-built tables read to the displayed body and header"
 
 test_that("flextable: caption, footer lines, and no-op styling calls", {
   skip_if_not_installed("flextable")
-  skip_if_not_installed("officer")
   ft <- flextable::flextable
   d <- .opt_ft_df()
 
@@ -346,7 +345,7 @@ test_that("flextable: caption, footer lines, and no-op styling calls", {
     bg = "grey", part = "header")
   expect_identical(.opt_cells(as_rtftable(styled)), base)
   hl <- flextable::hline(flextable::hline_top(
-    ft(d), border = officer::fp_border()), border = officer::fp_border(width = 2))
+    ft(d), border = flextable::fp_border_default()), border = flextable::fp_border_default(width = 2))
   expect_identical(.opt_cells(as_rtftable(hl)), base)
   fx <- flextable::set_table_properties(ft(d), layout = "fixed", width = 0.8)
   expect_identical(.opt_cells(as_rtftable(fx)), base)
