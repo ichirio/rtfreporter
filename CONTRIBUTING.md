@@ -567,6 +567,23 @@ what it does not.
   FR no test checks is a deviation until a test is added.
   `validation/trace.R` lists the blocks that call a function in scope but
   are not mapped (candidates to read); it never counts them.
+- **What a PR that adds or changes a behaviour does**, in that PR, for a
+  contributor or an AI agent alike:
+  - add or change the FRs in `inst/validation/requirements.csv`;
+  - give every new or changed leaf FR a test.  Name the FT id and FRs at the
+    head of a new test; add a row to `inst/validation/test_map.csv` (file,
+    test, ft, fr) only for an existing test, never for both: an FT id given
+    twice fails;
+  - name every new argument in a leaf FR of its function, as `arg =` or
+    bare inside `f(...)`; the plain word in prose does not count, and an
+    argument without such an FR fails `test-validation-coverage.R`;
+  - where a test is not possible, add a row to `inst/validation/deviations.csv`
+    (`ids`, `item`, `risk`, `risk_basis`, `reason`, `action`) with the risk
+    and the reason; an FR with neither a test nor a deviation fails
+    `test-validation-leaves.R`, and a deviation for an FR that has a test
+    is removed;
+  - keep `Rscript validation/trace.R` running and `test-validation.R`,
+    `test-validation-leaves.R` and `test-validation-coverage.R` passing.
 - **The Traceability Matrix (FR -> FT)** is the mapping alone, made by
   `validation/trace.R`; it holds no results.  The tests' results are the CI
   record; a failing test fails the PR's checks, so it cannot be merged.

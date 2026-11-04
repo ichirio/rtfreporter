@@ -45,6 +45,10 @@ Breaking: no  <!-- or "yes", and the migration: what old code must change to -->
 
 - [ ] Branched off the latest `main`; the PR targets `main`.
 - [ ] Added or updated **tests** under `tests/testthat/` for the change.
+- [ ] For a behaviour change: FRs in `inst/validation/requirements.csv`, a
+      test per leaf FR (named with its FT id, or a row in
+      `inst/validation/test_map.csv`), a `deviations.csv` row where no test
+      is possible; `validation/trace.R` and the `test-validation*.R` tests pass.
 - [ ] Updated **roxygen** docs and ran `devtools::document()` (committed `man/*.Rd`).
 - [ ] The four pre-push checks pass (see *Pull requests* in
       `CONTRIBUTING.md`): `R CMD check --as-cran` on the built tarball,
