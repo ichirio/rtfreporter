@@ -67,3 +67,51 @@ rtfreporter_validation_kit <- function(dir, overwrite = FALSE) {
   }
   invisible(file.path(normalizePath(dir, winslash = "/"), basename(from)))
 }
+
+# Does a glob in the statements (cell_padding_*_twips, rtfreporter.page.*) match
+# `x`?  A bare `rtfreporter.*` (every option) names none in particular.
+#' @noRd
+.fr_glob_names <- function(x, statements) {
+  globs <- unique(unlist(regmatches(statements,
+    gregexpr("[A-Za-z0-9_.]*\\*[A-Za-z0-9_.*]*", statements))))
+  globs <- globs[grepl("[A-Za-z]", globs) & globs != "rtfreporter.*"]
+  if (!length(globs)) return(FALSE)
+  pats <- paste0("^", gsub("\\*", "[A-Za-z0-9_.]*",
+                           gsub(".", "\\.", globs, fixed = TRUE)), "$")
+  any(vapply(pats, grepl, logical(1), x = x))
+}
+
+# Does a requirement name argument `arg` of function `fn`?  `statements` are
+# those of the active leaf FRs that list `fn` in `functions`.  An argument is
+# named when a statement has `arg =` (whole word), or `arg` as a bare argument
+# inside the parentheses of the call form `fn(...)`, or a glob that matches it.
+# The word `arg` in plain prose does not name it.
+#' @noRd
+.fr_names_arg <- function(fn, arg, statements) {
+  statements <- statements[!is.na(statements)]
+  if (!length(statements)) return(FALSE)
+  esc <- function(s) gsub(".", "\\.", s, fixed = TRUE)
+  eq <- paste0("(^|[^A-Za-z0-9_.])", esc(arg), "\\s*=(?!=)")
+  if (any(grepl(eq, statements, perl = TRUE))) return(TRUE)
+  call_form <- paste0("(^|[^A-Za-z0-9_.])", esc(fn), "\\(")
+  for (s in statements) {
+    starts <- gregexpr(call_form, s, perl = TRUE)[[1L]]
+    if (starts[1L] < 0L) next
+    ends <- starts + attr(starts, "match.length") - 1L   # at the "("
+    chars <- strsplit(s, "")[[1L]]
+    for (open in ends) {
+      depth <- 1L; piece <- ""; i <- open + 1L
+      while (i <= length(chars) && depth > 0L) {
+        ch <- chars[i]
+        if (ch %in% c("(", "[", "{")) depth <- depth + 1L
+        else if (ch %in% c(")", "]", "}")) depth <- depth - 1L
+        if (depth == 0L || (depth == 1L && ch == ",")) {
+          if (identical(trimws(piece), arg)) return(TRUE)
+          piece <- ""
+        } else piece <- paste0(piece, ch)
+        i <- i + 1L
+      }
+    }
+  }
+  .fr_glob_names(arg, statements)
+}

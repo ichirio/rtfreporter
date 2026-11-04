@@ -314,6 +314,36 @@ test_that("FT-PL282 [FR-PL405 FR-PL409 FR-PL410]: plan_cell_style() by column na
 })
 
 
+test_that("FT-PL989 [FR-PL972 FR-PL973]: plan_cell_style(align = , background = ) align and fill whole columns, the header, or the rows a condition chooses", {
+  d <- vp_wide()
+  pg <- function(p) vp_first(vp_pages(p))
+  # whole columns: that column alone, as style_cols() sets them
+  c1 <- pg(table_plan(d) |> plan_cell_style(cols = "X", align = "right", background = "#EEEEEE"))
+  expect_identical(c1$col_spec[[3L]]$align, "right")
+  expect_identical(c1$col_spec[[3L]]$background, "#EEEEEE")
+  expect_false(identical(c1$col_spec[[4L]]$align, "right"))
+  expect_null(c1$col_spec[[4L]]$background)
+  direct <- style_cols(vp_first(vp_direct(d)), cols = "X", align = "right", background = "#EEEEEE")
+  expect_identical(c1$col_spec, direct$col_spec)
+  # the header: its own alignment, the body's left as it was
+  h <- pg(table_plan(d) |> plan_cell_style(header = TRUE, cols = "X", align = "right"))
+  expect_identical(h$col_spec[[3L]]$header_align, "right")
+  expect_false(identical(h$col_spec[[3L]]$align, "right"))
+  # a condition: the rows it chooses only (the "n" rows), NA elsewhere
+  w <- pg(table_plan(d) |> plan_cell_style(where = ~ label == "n", cols = "X",
+                                           align = "left", background = "#EEEEEE"))
+  expect_identical(w$cell_styles[[1L]]$align, c(NA, NA, "left", NA))
+  expect_identical(w$cell_styles[[1L]]$background, c(NA, NA, "#EEEEEE", NA))
+  expect_null(w$cell_styles[[2L]])
+  expect_false(identical(w$col_spec[[3L]]$align, "left"))
+  # another alignment stops at plan_apply(); the header takes no background
+  expect_error(vp_pages(table_plan(d) |> plan_cell_style(cols = "X", align = "middle")),
+               'must be "left", "center", or "right"', fixed = TRUE)
+  expect_error(plan_cell_style(table_plan(d), header = TRUE, background = "#EEEEEE"),
+               "takes bold, italic, underline, align and border", fixed = TRUE)
+})
+
+
 # ---- plan_style() ----------------------------------------------------------
 
 test_that("FT-PL283 [FR-PL422 FR-PL427 FR-PL428]: plan_style()'s whole-table settings reach as_rtftables() by name", {
