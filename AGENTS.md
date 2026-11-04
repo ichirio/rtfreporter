@@ -29,6 +29,26 @@ is wrong (open an issue if the design itself is in question).
   comments and roxygen, not in code.
 - **`NAMESPACE` is hand-managed.** Regenerate `man/*.Rd` with
   `devtools::document()` and commit them.
+- **The three packages.** Dependencies point one way: rtfreporter <- tflspec
+  <- tflplanner.  rtfreporter knows nothing of the other two.
+- **Fictional data only.**  No company, study or patient data in code, tests,
+  fixtures, examples, issues or pull requests, and none sent to an AI service.
+
+## Tests and code
+
+- **No withr** (it is not a dependency): use `tempfile()`, `dir.create()` and
+  `on.exit(unlink(...))`.
+- While you work, run the tests of the area you changed and `lintr` on the
+  changed files; before you push, the four pre-push checks (*Pull requests*
+  in `CONTRIBUTING.md`).
+- Run tests where they are; never copy them into a temporary folder
+  (`testthat` would read that folder's `setup*.R`).
+- Point `R_USER_CONFIG_DIR`, `R_USER_DATA_DIR` and `R_USER_CACHE_DIR` at a work
+  folder, never at the user's own.
+- Run the tests in one R session too (`testthat::test_dir()` on the installed
+  package), not only one file at a time: per-file runs miss interference
+  between tests.
+- Split a source file before it passes 2,000 lines.
 
 ## Workflow
 

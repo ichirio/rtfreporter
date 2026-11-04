@@ -277,6 +277,20 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
 * Guard every optional-package test with `skip_if_not_installed()`.
 * When you fix a bug, add the failing case **and** the neighbouring cases
   that already worked, so the next change cannot re-break the boundary.
+* **No withr** (it is not a dependency): use `tempfile()`, `dir.create()` and
+  `on.exit(unlink(...))`.
+* While you work, run the tests of the area you changed and `lintr` on the
+  changed files; before you push, the four pre-push checks (§14).
+* Run tests where they are; never copy them into a temporary folder
+  (`testthat` would read that folder's `setup*.R`).
+* Point `R_USER_CONFIG_DIR`, `R_USER_DATA_DIR` and `R_USER_CACHE_DIR` at a work
+  folder, never at the user's own.
+* Run the tests in one R session too (`testthat::test_dir()` on the installed
+  package), not only one file at a time: per-file runs miss interference
+  between tests.
+* Split a source file before it passes 2,000 lines.
+* **Fictional data only.**  No company, study or patient data in code, tests,
+  fixtures, examples, issues or pull requests, and none sent to an AI service.
 
 ---
 

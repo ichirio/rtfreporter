@@ -30,4 +30,6 @@ Key invariants: S3 throughout (no R6); no third-party runtime dependency
 (`Imports:` holds only packages that ship with R; optional packages live in
 `Suggests` and are reached through `.need_pkg()`); twips as the only
 internal length unit; ASCII-only R code; `NAMESPACE` is hand-managed
-(regenerate `man/*.Rd` with `devtools::document()`).
+(regenerate `man/*.Rd` with `devtools::document()`); fictional data only.
+The rules for tests (no withr, changed-area tests, work folders) are in
+*Tests and code* in `AGENTS.md`.
