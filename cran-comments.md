@@ -26,8 +26,9 @@ contains large components"; that note is gone with the release version.)
 * Suggested packages are used only behind `requireNamespace()` or
   `skip_if_not_installed()`, in the examples, tests and vignettes alike.
   That includes ragg (a plot is drawn with it when installed, else with
-  `grDevices::png()`) and devEMF (only a test uses it, to make an EMF file
-  to embed; that test is skipped without it).
+  `grDevices::png()`) and devEMF (used only when a plot is asked to be
+  drawn as EMF, `render_format = "emf"`, which without it stops with a
+  message saying how to install it; its tests are skipped without it).
 * No test reaches the network.  Two tests call a program outside R and run
   only where it is there: `git`, in a source checkout (skipped in the
   installed package's tests), and LibreOffice (skipped on CRAN).
