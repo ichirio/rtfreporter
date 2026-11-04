@@ -65,9 +65,40 @@
   cc <- as.matrix(cc)
   storage.mode(cc) <- "character"
   cc[is.na(cc)] <- ""
+  # a set_markdown() cell ends in a newline
+  cc[] <- sub("\n+$", "", cc)
   dimnames(cc) <- NULL
   cc
 }
+
+# A logical matrix: TRUE for each cell that another cell's colspan() /
+# rowspan() covers (an origin cell itself stays as it was).
+.huxtable_covered <- function(x) {
+  cs <- as.matrix(huxtable::colspan(x))
+  rs <- as.matrix(huxtable::rowspan(x))
+  nr <- nrow(x)
+  nc <- ncol(x)
+  cv <- matrix(FALSE, nr, nc)
+  for (i in seq_len(nr)) {
+    for (j in seq_len(nc)) {
+      ci <- min(max(as.integer(cs[i, j]), 1L, na.rm = TRUE), nc - j + 1L)
+      ri <- min(max(as.integer(rs[i, j]), 1L, na.rm = TRUE), nr - i + 1L)
+      if (ci > 1L || ri > 1L) {
+        self <- cv[i, j]
+        cv[(i:(i + ri - 1L)), (j:(j + ci - 1L))] <- TRUE
+        cv[i, j] <- self
+      }
+    }
+  }
+  cv
+}
+
+# Header cells are padded for the screen (NBSP and spaces); the RTF header
+# takes the text alone.  The body keeps its padding: it is decimal alignment.
+.huxtable_trim_header <- function(v) {
+  gsub("^[\u00a0 ]+|[\u00a0 ]+$", "", v)
+}
+
 
 
 # -- Central mapping: huxtable + tokens -> rtftable kwargs --------------------
@@ -84,6 +115,10 @@
   nr  <- nrow(x)
   nc  <- ncol(x)
   cc  <- .huxtable_display_matrix(x)
+
+  # cells another cell's colspan() / rowspan() covers print no text
+  covered <- .huxtable_covered(x)
+  cc[covered] <- ""
 
   hdr_flag <- as.logical(huxtable::header_rows(x))
   hdr_idx  <- which(hdr_flag)
@@ -103,17 +138,20 @@
   want_spanned <- "spanning"   %in% tokens
 
   bottom_row <- if (want_header && length(hdr_idx) >= 1L)
-                  as.character(cc[hdr_idx[length(hdr_idx)], ]) else NULL
+                  .huxtable_trim_header(as.character(cc[hdr_idx[length(hdr_idx)], ])) else NULL
 
   span_rows <- list()
   if (want_spanned && length(hdr_idx) >= 2L) {
     cspan <- huxtable::colspan(x)
+    # the upper rows keep the text of a covered cell for the segment reading
+    cc_up <- .huxtable_display_matrix(x)
     # Header rows above the leaf row become spanning rows.
     for (h in hdr_idx[-length(hdr_idx)]) {
       # `.rtables_header_segments()` is the shared span-vector -> segments
       # helper: huxtable's colspan (origin = span width, covered cells skipped
       # by the jump) is read the same way as the rtables/flextable encodings.
-      segs  <- .rtables_header_segments(cc[h, ], as.integer(cspan[h, ]))
+      segs  <- .rtables_header_segments(.huxtable_trim_header(cc_up[h, ]),
+                                     as.integer(cspan[h, ]))
       cells <- lapply(segs, function(sg) {
         pos <- if (sg$from == sg$to) sg$from else c(sg$from, sg$to)
         col_cell(pos = pos, label = sg$label)
@@ -122,7 +160,10 @@
     }
   }
 
-  if (length(span_rows)) {
+  if (want_header && length(hdr_idx) == 0L) {
+    # no header rows (add_colnames = FALSE): a blank header, not V1 V2 ...
+    out$col_header <- rep("", nc)
+  } else if (length(span_rows)) {
     bottom <- bottom_row %||% names(out$data)
     out$col_header <- c(span_rows, list(bottom))
   } else if (!is.null(bottom_row)) {

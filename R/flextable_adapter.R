@@ -59,7 +59,7 @@
 # chunks pasted in `.chunk_index` order, so multi-run / formatted cells render
 # exactly as flextable displays them.  Column order is `col_keys`; row order is
 # the part's natural top-to-bottom order.
-.flextable_part_matrix <- function(chunks, part, col_keys) {
+.flextable_part_matrix <- function(chunks, part, col_keys, spans = NULL) {
   ncol_t <- length(col_keys)
   d <- chunks[chunks$.part == part, , drop = FALSE]
   if (!nrow(d)) {
@@ -67,6 +67,9 @@
                   dimnames = list(NULL, col_keys)))
   }
   d$txt[is.na(d$txt)] <- ""
+  # a chunk that is exactly "<br>" is flextable's line break (as_paragraph(a,
+  # "\n", b)); the gt adapter gives the same "\n"
+  d$txt[d$txt == "<br>"] <- "\n"
   rids <- sort(unique(as.integer(d$.row_id)))
   m <- matrix("", nrow = length(rids), ncol = ncol_t,
               dimnames = list(NULL, col_keys))
@@ -80,6 +83,30 @@
       }
     }
   }
+  if (!is.null(spans)) m <- .flextable_blank_covered(m, spans, rids)
+  m
+}
+
+# Blank the cells a merged area covers, so its text is read once, in the
+# origin cell.  `spans` is a list of flextable's span matrices (`$rows`: n at
+# the origin of a horizontal span, 0 where covered; `$columns`: the same for a
+# vertical span); either may be NULL.  Only the rows in `rows` (the matrix's
+# own row numbers) are touched.
+.flextable_blank_covered <- function(m, spans, rows, only_last = FALSE) {
+  covered <- function(sp) {
+    if (is.null(sp) || !is.matrix(sp)) return(NULL)
+    if (nrow(sp) < max(rows) || ncol(sp) != ncol(m)) return(NULL)
+    sp[rows, , drop = FALSE] == 0
+  }
+  blank <- NULL
+  for (sp in list(spans$rows, spans$columns)) {
+    cv <- covered(sp)
+    if (is.null(cv)) next
+    blank <- if (is.null(blank)) cv else blank | cv
+  }
+  if (is.null(blank)) return(m)
+  if (only_last) blank[-nrow(blank), ] <- FALSE
+  m[blank & !is.na(blank)] <- ""
   m
 }
 
@@ -103,7 +130,7 @@
   out <- list()
 
   # ---- body data.frame (header rows are structural, not data) -------------
-  body_mat <- .flextable_part_matrix(chunks, "body", col_keys)
+  body_mat <- .flextable_part_matrix(chunks, "body", col_keys, x$body$spans)
   df <- as.data.frame(body_mat, stringsAsFactors = FALSE, optional = TRUE)
   names(df)    <- paste0("V", seq_len(ncol_t))
   rownames(df) <- NULL
@@ -111,12 +138,19 @@
 
   # ---- column header rows (leaf labels + optional spanners) ---------------
   header_mat   <- .flextable_part_matrix(chunks, "header", col_keys)
+  # the leaf row, with the cells a merged area covers blanked; the upper rows
+  # keep their text for the segment reading below
+  leaf_mat     <- header_mat
+  if (nrow(leaf_mat) >= 1L) {
+    leaf_mat <- .flextable_blank_covered(leaf_mat, x$header$spans,
+                                         seq_len(nrow(leaf_mat)), only_last = TRUE)
+  }
   nlh          <- nrow(header_mat)
   want_header  <- "col_header" %in% tokens
   want_spanned <- "spanning"   %in% tokens
 
   bottom_row <- if (want_header && nlh >= 1L)
-                  as.character(header_mat[nlh, ]) else NULL
+                  as.character(leaf_mat[nlh, ]) else NULL
 
   span_rows <- list()
   if (want_spanned && nlh >= 2L) {
@@ -136,7 +170,10 @@
     }
   }
 
-  if (length(span_rows)) {
+  if (want_header && nlh == 0L) {
+    # no header rows (delete_part(x, "header")): a blank header, not V1 V2 ...
+    out$col_header <- rep("", ncol_t)
+  } else if (length(span_rows)) {
     bottom <- bottom_row %||% names(out$data)
     out$col_header <- c(span_rows, list(bottom))
   } else if (!is.null(bottom_row)) {
@@ -159,19 +196,27 @@
   # ---- "titles": the caption ----------------------------------------------
   if ("titles" %in% tokens) {
     cap <- x$caption$value
+    if (is.data.frame(cap)) {
+      # set_caption(as_paragraph(...)): a data.frame of chunks
+      txt <- cap$txt
+      txt[is.na(txt)] <- ""
+      cap <- paste0(txt, collapse = "")
+    }
     cap <- cap[!is.na(cap) & nzchar(cap)]
     if (length(cap)) out$titles_block <- as.character(cap)
   }
 
   # ---- "footnotes": footer lines ------------------------------------------
-  # `add_footer_lines()` writes the same line into every column, so per footer
-  # row we take its single distinct non-empty value.
+  # `add_footer_lines()` writes the same line into every column, so a
+  # footer row's distinct non-empty values, in column order, are joined by a
+  # space: one line stays one line, add_footer_row(values = c("L", "R")) is
+  # "L R".
   if ("footnotes" %in% tokens) {
     footer_mat <- .flextable_part_matrix(chunks, "footer", col_keys)
     if (nrow(footer_mat)) {
       fn <- apply(footer_mat, 1L, function(r) {
         u <- unique(r[nzchar(r)])
-        if (length(u)) u[[1L]] else ""
+        if (length(u)) paste(u, collapse = " ") else ""
       })
       fn <- fn[nzchar(fn)]
       if (length(fn)) out$footnotes_block <- as.character(fn)
