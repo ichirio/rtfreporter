@@ -298,6 +298,9 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
 
 * **roxygen** above the function; `devtools::document()` regenerates
   `man/*.Rd` and **both are committed in the same PR**.
+* **Explain features directly.** Do not compare with other packages; naming
+  one is fine where it is the actual subject (an adapter reading a gt table,
+  a ggplot2 figure).
 * **`NAMESPACE` is hand-edited.** Never let a tool rewrite it.
 * `_pkgdown.yml` has a `reference:` section listing every topic — a new
   exported function must be added to it or the pkgdown build fails on an

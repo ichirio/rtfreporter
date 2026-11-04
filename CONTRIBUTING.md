@@ -233,7 +233,8 @@ trying to produce helps a lot.
 3. Follow the existing code style (see below).
 4. Add or update **tests** under `tests/testthat/` for any behaviour
    change, and **documentation** (roxygen2 comments) for any exported
-   function.
+   function.  Explain a feature directly; do not compare it with another
+   package (naming a package is fine where it is the actual subject).
 5. Make sure the checks pass locally.  These are *the four pre-push
    checks*; run `devtools::document()` first (NAMESPACE is hand-managed),
    then all four, and report the results in the PR description:

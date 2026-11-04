@@ -2,7 +2,7 @@
 #  rtf_style() -- one style object for every module (#804)
 # ============================================================================
 #
-#  An ADDITION, like ggplot2's labs(): every per-function style argument keeps
+#  An ADDITION: every per-function style argument keeps
 #  working unchanged, and rtf_style() is a second way to set the same things
 #  in one place.  A shared level reaches every module that has the argument;
 #  a section (`table`, `titles`, `footnotes`, `header`, `footer`) reaches its
