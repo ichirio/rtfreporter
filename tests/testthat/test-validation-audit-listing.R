@@ -21,7 +21,7 @@
 #   label: lines, a string with breaks, words to wrap, ""   | FR-LS146-148, FR-LS151 | FT-LS027, FT-LS034, FT-LS038-FT-LS041, FT-LS047, FT-LS056, FT-LS070
 #   label NULL: label attribute, else name, or labels =;    | FR-LS149/150| FT-LS028, FT-LS031, FT-LS032, FT-LS042, FT-LS046, FT-LS061-FT-LS063, FT-LS065
 #     follows the layout                                    |             |
-#   layout stack / flow; alike with no width                | FR-LS155    | FT-LS024, FT-LS025, FT-LS049, FT-LS074
+#   layout stack / flow; alike with no width                | FR-LS155    | FT-LS024, FT-LS025, FT-LS049, FT-LS074, FT-LS164, FT-LS165
 #   collapse_repeats: carried down, blanked per page; a     | FR-LS156/157| FT-LS026, FT-LS035-FT-LS037, FT-LS043, FT-LS044, FT-LS060
 #     wrapped cell padded                                   |             |
 #   name; rel_width (width, the label, 10); align           | FR-LS152-154| FT-LS006, FT-LS138, FT-TB221

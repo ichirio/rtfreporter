@@ -102,18 +102,24 @@ test_that("with no width there is nothing to lay out, under either layout", {
 })
 
 test_that("layout is per column, and the listing's own is the default", {
-  d <- data.frame(A = "40/F", B = "40/F", stringsAsFactors = FALSE)
-  spec <- listing_spec(list(listing_col("A", width = 20),
-                            listing_col("B", width = 20, layout = "flow")),
+  # Two variables joined in a cell: the separator is the join, so "stack"
+  # puts each on its own line and "flow" lets them share one (#910).  (This
+  # was one variable "40/F" until #910: its "/" is data, and a value that fits
+  # no longer breaks after it.)
+  d <- data.frame(AGE = "40", SEX = "F", stringsAsFactors = FALSE)
+  spec <- listing_spec(list(listing_col(c("AGE", "SEX"), width = 20, name = "A"),
+                            listing_col(c("AGE", "SEX"), width = 20,
+                                        layout = "flow", name = "B")),
                        spacer = FALSE, blank_row = FALSE, record = FALSE)
   body <- build_listing(d, spec)
   expect_identical(body$A, c("40/", "F"))     # stacked: two rows
   expect_identical(body$B, c("40/F", ""))     # flowed: one, padded to match
 
   # ... and the listing-wide default can be flipped
-  spec2 <- listing_spec(list(listing_col("A", width = 20)), layout = "flow",
+  spec2 <- listing_spec(list(listing_col(c("AGE", "SEX"), width = 20)),
+                        layout = "flow",
                         spacer = FALSE, blank_row = FALSE, record = FALSE)
-  expect_identical(build_listing(d, spec2)$A, "40/F")
+  expect_identical(build_listing(d, spec2)[[1L]], "40/F")
 })
 
 test_that("layout is validated", {
@@ -318,7 +324,9 @@ test_that("a string carrying its own breaks is a layout too", {
 test_that("the layout rule is the cells' rule: separator, words, hard split", {
   spec <- listing_spec(list(listing_col("AEDECOD", width = 22,
                                         label = "COMPLETED/UPPER/HYPERGLYCAEMIA")))
-  expect_identical(.lab_of(spec), "COMPLETED/\nUPPER/\nHYPERGLYCAEMIA")
+  # One variable, so the "/" are words in one label, not joins (#910): the
+  # label fills the line and breaks after a "/" only where it ran out.
+  expect_identical(.lab_of(spec), "COMPLETED/UPPER/\nHYPERGLYCAEMIA")
 
   spec2 <- listing_spec(list(listing_col("AEDECOD", width = 8,
                                          label = "Immunohistochemistry")))
