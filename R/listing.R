@@ -308,6 +308,8 @@ listing_split_after <- function(text, sep) {
 #'   (`"/"` under the `"multiline"` type).
 #' @param width A positive whole number or `NULL`.  Maximum characters per
 #'   physical row before the cell wraps.  `NULL` (default) never wraps this column.
+#'   A `/` (the separator) inside a value is not a place to break while the
+#'   value fits: see `layout`.
 #' @param label The column header.  `NULL` (default) **derives** the header
 #'   from the data -- each source column's `label` attribute when it has one,
 #'   otherwise its name, joined with `sep` -- or from
@@ -318,20 +320,29 @@ listing_split_after <- function(text, sep) {
 #'       laid this out", and neither is re-wrapped.}
 #'     \item{A single string with no breaks}{is words for the package to lay
 #'       out: it is wrapped to `width` by the same rule the cells use (see
-#'       [listing_wrap()]), or left as one line when there is no `width`.}
+#'       [listing_wrap()]), or left as one line when there is no `width`.  On
+#'       a column of one variable a `/` in it is words, not a join: `"Age/Sex"`
+#'       in a `width` of 10 stays on one line, and breaks after the `/` only
+#'       when it is too wide.}
 #'     \item{`""`}{asks for a deliberately empty header.}
 #'   }
 #' @param layout How a cell lays its parts out.  `NULL` (default) takes the
 #'   listing's own (`"stack"` under `"multiline"`).  With no `width` there is
 #'   nothing to lay out and both behave alike.
 #'   \describe{
-#'     \item{`"stack"`}{breaks after **every** separator, so each source
-#'       column starts its own line -- the conventional listing look, and it
-#'       keeps a column reading down the page.}
+#'     \item{`"stack"`}{puts each source column on its own line -- the
+#'       conventional listing look, and it keeps a column reading down the
+#'       page.  The separator is what breaks **between** the variables joined
+#'       in a cell; a separator inside one variable's value is data.  So every
+#'       variable's value is laid out on its own and the lines are stacked: a
+#'       value that fits stays on one line (`64/M` in a `width` of 10 is one
+#'       line), and only a value too wide breaks, after its separator first.
+#'       A column of one variable has nothing to stack, so it is simply
+#'       laid out as `"flow"` is.}
 #'     \item{`"flow"`}{treats the separator as a break *opportunity* and
-#'       fills each line as far as `width` allows, so a column of short parts
-#'       (an age and a sex, a value and its unit) does not spend two rows on
-#'       four characters.}
+#'       fills each line as far as `width` allows, across the variables, so a
+#'       column of short parts (an age and a sex, a value and its unit) does
+#'       not spend two rows on four characters.}
 #'   }
 #' @param collapse_repeats Logical (default `FALSE`).  Mark this as a **key**
 #'   column: its value is carried down every physical row of a record (its
@@ -525,7 +536,9 @@ print.rtf_listing_col <- function(x, ...) {
 #'   `NULL` (default) takes the template's.
 #' @param layout Default cell layout for columns that do not set their own:
 #'   `"stack"` breaks after every separator, `"flow"` fills each line as far
-#'   as the column's `width` allows.  See [listing_col()].  `NULL` (default)
+#'   as the column's `width` allows.  Under `"stack"` the separator breaks
+#'   between the variables of a column, not inside a value.  See
+#'   [listing_col()].  `NULL` (default)
 #'   takes the template's.
 #' @param wrap The rule that breaks a cell -- and a derived header -- into
 #'   lines.  `NULL` (default) uses the `type`'s own rule, which is exactly
@@ -538,14 +551,21 @@ print.rtf_listing_col <- function(x, ...) {
 #'   \describe{
 #'     \item{arguments}{called **positionally** with four:
 #'       `function(text, width, sep, layout)`.}
-#'     \item{`text`}{a **length-1** character -- one composed cell, or the
-#'       column's labels already joined.  Never a vector.}
+#'     \item{`text`}{a **length-1** character, never a vector.  Under
+#'       `layout = "stack"` (the default) it is **one variable's value** --
+#'       or one label -- with the separator added at its end unless it is the
+#'       last: a cell of `vars = c("A", "B")` holding `"A/B"` and `"C"` calls
+#'       the rule twice, with `"A/B/"` and `"C"`, and the lines are stacked.
+#'       A column of one variable is one call.  Under `layout = "flow"`, or
+#'       with no `width`, it is the whole cell composed, or the column's
+#'       labels already joined.}
 #'     \item{`width`}{the column's `width`: a positive number, **or `NULL`**
 #'       for a column that sets none.  Handle `NULL` -- it means "no limit".}
 #'     \item{`sep`}{the effective separator, the column's own or the
 #'       listing's.}
 #'     \item{`layout`}{`"stack"` or `"flow"`, already resolved to one
-#'       string.}
+#'       string.  The parts of a stacked cell are passed as `"flow"`: each
+#'       is one value, to be laid out as one.}
 #'     \item{value}{a **non-empty character vector**, one element per line.}
 #'   }
 #'   The simplest way to write one is to delegate to the built-in rule and
@@ -821,7 +841,14 @@ print.rtf_listing_spec <- function(x, ...) {
     if (!isTRUE(wrap)) return(cl$label)
     if (grepl("
 ", cl$label, fixed = TRUE)) return(cl$label)
-    lines <- .listing_wrap_call(wrap_fn, cl$label, cl$width, sep, layout)
+    # One variable: the label is one value, so a "/" in it is words, not a
+    # join (#910).  Two or more: the string is taken to be the variables'
+    # labels written together, and breaks at the separator as before.
+    lines <- if (length(cl$vars) == 1L) {
+      .listing_wrap_cell(wrap_fn, cl$label, cl$width, sep, layout)
+    } else {
+      .listing_wrap_call(wrap_fn, cl$label, cl$width, sep, layout)
+    }
     return(paste(lines, collapse = "
 "))
   }
@@ -835,7 +862,7 @@ print.rtf_listing_spec <- function(x, ...) {
   # share a line, so `layout = "flow"` flowed the cells and not the header.
   joined <- paste(labs, collapse = sep)
   if (!isTRUE(wrap)) return(joined)
-  paste(.listing_wrap_call(wrap_fn, joined, cl$width, sep, layout),
+  paste(.listing_wrap_cell(wrap_fn, labs, cl$width, sep, layout),
         collapse = "
 ")
 }
@@ -850,6 +877,51 @@ print.rtf_listing_spec <- function(x, ...) {
          "vector of lines.", call. = FALSE)
   }
   out
+}
+
+# Lay out one cell, or one derived header, from the values of its variables
+# (#910).  The separator's job is to break BETWEEN the variables joined in a
+# cell; a separator inside one variable's value is data.  So under "stack"
+# every value is laid out on its own -- as "flow", where the separator is a
+# place to break only if the value is too wide -- with the separator kept at
+# the end of every part but the last, and the lines are stacked: each variable
+# starts a line, as it always did.  The rule is called part by part, with one
+# variable's value (and the separator that follows it) as `text`.
+#  `parts` are the values that survive catx(): trimmed, none missing or empty.
+#  Nothing to break between -- "flow", no `width`, no separator -- is the cell
+#  joined and laid out in one call, exactly as before.
+.listing_wrap_cell <- function(fn, parts, width, sep, layout) {
+  parts <- parts[!is.na(parts) & nzchar(parts)]
+  if (length(parts) == 0L) {
+    return(.listing_wrap_call(fn, "", width, sep, layout))
+  }
+  no_width <- is.null(width) || is.na(width)
+  no_sep   <- is.null(sep) || !nzchar(sep)
+  if (identical(layout, "flow") || no_width || (no_sep && length(parts) > 1L)) {
+    return(.listing_wrap_call(fn, paste(parts, collapse = if (no_sep) "" else sep),
+                              width, sep, layout))
+  }
+  k <- length(parts)
+  txt <- if (k > 1L && !no_sep) paste0(parts, c(rep(sep, k - 1L), "")) else parts
+  unlist(lapply(txt, function(s) .listing_wrap_call(fn, s, width, sep, "flow")),
+         use.names = FALSE)
+}
+
+# The values of a column's variables, record by record: what catx() joins,
+# before it joins them (the same trimming, the same dropping of missing and
+# empty values).  One character vector per record.
+.listing_cell_parts <- function(data, cl) {
+  n <- nrow(data)
+  if (n == 0L) return(list())
+  vals <- lapply(unname(as.list(data[cl$vars])), function(x) {
+    x <- as.character(x)
+    x[is.na(x)] <- ""
+    trimws(x)
+  })
+  lapply(seq_len(n), function(i) {
+    p <- vapply(vals, function(v) v[[i]], character(1L))
+    p[nzchar(p)]
+  })
 }
 
 # Header / widths / alignment for a body `build_listing()` produced.  Given in
@@ -908,12 +980,20 @@ print.rtf_listing_spec <- function(x, ...) {
 #'
 #' @section How a cell wraps:
 #'
-#' Under the `"multiline"` type, a cell longer than its column's `width`
-#' breaks **after the separator** first, so each source variable starts its own
-#' line; a piece that is still too long breaks again at a word boundary (after
-#' a space, comma or hyphen); and a token that is *still* too wide is
-#' hard-split, so **every line fits the column it was measured against**.  A
-#' line break already in the data is honoured before any of this.
+#' Under the `"multiline"` type, a cell made of several variables puts each
+#' variable on its own line -- the separator breaks **between** the variables
+#' joined in a cell, and a separator inside one variable's value is data.  Each
+#' value is laid out by itself: it stays on one line if it fits `width` (a
+#' `64/M` is one line in a `width` of 10), and if it is too wide it breaks after
+#' its separator first; a piece that is still too long breaks again at a word
+#' boundary (after a space, comma or hyphen); and a token that is *still* too
+#' wide is hard-split, so **every line fits the column it was measured
+#' against**.  A column of one variable is laid out the same way, as one value.
+#' A line break already in the data is honoured before any of this.  The
+#' header is laid out like the cells.
+#'
+#' With `layout = "flow"` the variables are not stacked: the cell is composed
+#' and its separators are places to break, filling each line.
 #'
 #' `width` is a **display width**: a full-width (CJK) glyph occupies two
 #' monospaced columns and is counted as two, so a Japanese listing wrapped to
@@ -988,14 +1068,15 @@ build_listing <- function(data, spec) {
     cl   <- spec$cols[[j]]
     sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
     lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
-    txt  <- .listing_combine(data, cl, sepj)
+    .listing_combine(data, cl, sepj)     # checks the variables exist
+    parts <- .listing_cell_parts(data, cl)
     spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay,
                                                    wrap_fn = spec$wrap)
     # Through the same caller as the header (#386), so a `wrap` that returns
     # the wrong thing is caught here with the same message rather than failing
     # confusingly further down.
-    lines[[j]] <- lapply(txt, function(s) {
-      .listing_wrap_call(spec$wrap, s, cl$width, sepj, lay)
+    lines[[j]] <- lapply(parts, function(p) {
+      .listing_wrap_cell(spec$wrap, p, cl$width, sepj, lay)
     })
   }
 
@@ -1120,6 +1201,14 @@ build_listing <- function(data, spec) {
 #' `width` there is nothing to break against and `text` is returned as it
 #' stands.
 #'
+#' This is a function of **one string**: it cannot tell a separator that joined
+#' two variables from one inside a value, so `layout = "stack"` breaks after
+#' every separator of `text`.  [build_listing()] knows which is which: it calls
+#' the rule on each variable's value on its own, as `"flow"`, and stacks the
+#' lines, so a value such as `64/M` that fits `width` is not broken
+#' (see *How a cell wraps* in [build_listing()]).  Use `layout = "flow"` here to
+#' preview a single value.
+#'
 #' @param text The text to break.  A vector is wrapped element by element.
 #' @param width Maximum display width per line, or `NULL` for no limit.
 #' @param sep The separator to break after (default `"/"`).  `""` or `NULL`
@@ -1144,7 +1233,10 @@ build_listing <- function(data, spec) {
 #' listing_col("AEDECOD", width = 16,
 #'             label = listing_wrap("Preferred term of the event", 16))
 #'
-#' # "flow" keeps short parts side by side.
+#' # Called on one string, "stack" breaks after every separator and "flow"
+#' # keeps short parts side by side.  A listing column of ONE variable
+#' # ("40/F" is a single value) lays out as "flow"; "stack" is for the
+#' # variables joined in a cell, see build_listing().
 #' listing_wrap("40/F", 20)
 #' listing_wrap("40/F", 20, layout = "flow")
 #'
