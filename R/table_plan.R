@@ -5119,12 +5119,12 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
     rep(FALSE, nrow(d))
   sent <- !is.na(v) & startsWith(v, "..")
   # `variable` as a column key (each arm's value and change side by side),
-  # or `variable_level` (a shift table's arm over its categories): another
+  # or `variable_level` / `.label` (a shift table's arm over its categories): another
   # key's own tabulation (the arms' count, variable TRT01A, level "A") is no
   # value of it, so that key's N is read at its own depth
   has  <- lapply(seq_along(cols), function(j) {
     h <- !is.na(d[[cols[j]]])
-    if (cols[j] %in% c("variable", "variable_level")) h & !(v %in% cols[-j]) else h
+    if (cols[j] %in% c("variable", "variable_level", ".label")) h & !(v %in% cols[-j]) else h
   })
   # a sentinel keyed by nothing is ONE number for the study
   # (..ard_total_n..): a total, never every column's number

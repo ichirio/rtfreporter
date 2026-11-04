@@ -346,21 +346,23 @@ test_that("FT-PL988 [FR-PL971]: an arm over variable_level (a shift table) reads
   lb$POST <- factor(rep_len(c("L", "L", "N"), nrow(lb)))
   ard <- cards::bind_ard(cards::ard_tabulate(lb, by = c(TRT, PARAM, BASE), variables = POST),
                          cards::ard_tabulate(lb, by = PARAM, variables = TRT))
-  p <- table_plan(normalize_ard(ard), cols = c("TRT", "variable_level"),
-                  rows = c(PARAM = "PARAM", BASE = "BASE"), label = c(label = ".label")) |>
-    plan_cells(notes = FALSE) |> plan_cells("{n}") |>
-    plan_paginate_group(col = "PARAM", keep = FALSE) |>
-    plan_col_header(values = TRUE, rtf_col_header(
-      list(col_cell(1:2, ""), col_cell(3:4, "{col1} (N={n})"), col_cell(5:6, "{col1} (N={n})")),
-      c("", "", "{col}")))
-  v <- function(prm) .plan_n_values(p, TRUE, page = list(col = "PARAM", value = prm))
-  expect_identical(as.numeric(v("ALT")[c("A", "B")]), c(5, 4))
-  expect_identical(as.numeric(v("HGB")[c("A", "B")]), c(6, 6))
-  pg <- suppressMessages(plan_apply(p, "pages"))
   f <- tempfile(fileext = ".rtf")
   on.exit(unlink(f), add = TRUE)
-  generate_rtfreport(rtf_tables(rtf_document(), pg), f, overwrite = TRUE)
-  txt <- paste(readLines(f, warn = FALSE), collapse = " ")
-  expect_identical(regmatches(txt, gregexpr("[AB] \\(N=[0-9NA]+\\)", txt))[[1L]],
-                   c("A (N=5)", "B (N=4)", "A (N=6)", "B (N=6)"))
+  for (key in c("variable_level", ".label")) {
+    p <- table_plan(normalize_ard(ard), cols = c("TRT", key),
+                    rows = c(PARAM = "PARAM", BASE = "BASE")) |>
+      plan_cells(notes = FALSE) |> plan_cells("{n}") |>
+      plan_paginate_group(col = "PARAM", keep = FALSE) |>
+      plan_col_header(values = TRUE, rtf_col_header(
+        list(col_cell(1:2, ""), col_cell(3:4, "{col1} (N={n})"), col_cell(5:6, "{col1} (N={n})")),
+        c("", "", "{col}")))
+    v <- function(prm) .plan_n_values(p, TRUE, page = list(col = "PARAM", value = prm))
+    expect_identical(as.numeric(v("ALT")[c("A", "B")]), c(5, 4), label = key)
+    expect_identical(as.numeric(v("HGB")[c("A", "B")]), c(6, 6), label = key)
+    pg <- suppressMessages(plan_apply(p, "pages"))
+    generate_rtfreport(rtf_tables(rtf_document(), pg), f, overwrite = TRUE)
+    txt <- paste(readLines(f, warn = FALSE), collapse = " ")
+    expect_identical(regmatches(txt, gregexpr("[AB] \\(N=[0-9NA]+\\)", txt))[[1L]],
+                     c("A (N=5)", "B (N=4)", "A (N=6)", "B (N=6)"), label = key)
+  }
 })
