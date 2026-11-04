@@ -33,6 +33,9 @@ is wrong (open an issue if the design itself is in question).
 ## Workflow
 
 1. Branch off `main` (see *Branching & collaboration* in `CONTRIBUTING.md`).
+   If you work for a contributor, you do the git work too: *Git work for a
+   contributor* in `inst/ai/rtfreporter-ai-dev-manual.md` (updating the
+   fork, rebasing a topic branch, what to do when CI or a review asks).
 2. Change `R/`, `tests/testthat/`, and the roxygen docs together.
 3. Run `devtools::document()`, then the four pre-push checks listed in
    *Pull requests* in `CONTRIBUTING.md` (set-up: *Development setup* there).

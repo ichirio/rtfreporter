@@ -73,8 +73,11 @@ gh pr create --repo ichirio/rtfreporter --base main \
 
 Keep `main` on your fork **pristine** (never commit to it directly) so the
 fast-forward sync in step 3 always succeeds.  If your branch falls behind
-`main` while in review, `git fetch upstream && git merge upstream/main` into
-the branch and push again.
+`main` while in review, `git fetch upstream && git rebase upstream/main` on
+the branch, then `git push --force-with-lease origin <branch>` (the topic
+branch only, never `main`).  The agent's version of these steps, with conflict
+handling, is *Git work for a contributor* in
+`inst/ai/rtfreporter-ai-dev-manual.md`.
 
 ### Keep your fork and clone up to date
 
