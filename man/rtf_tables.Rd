@@ -124,9 +124,8 @@ page is the program's to arrange.  To go on with the title, column
 header and footnote on pages of its own, give \code{first_rows}.}
 \item{Pages that always start a page}{A table's own later pages (a
 plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s) always begin a page; so does the
-document's first content.  Unlike reporter's
-\code{add_content(page_break = )} this is the break \emph{before} the
-table.}
+document's first content.  This is the break \emph{before} the
+table, not after the content that precedes it.}
 \item{Section headings}{A page has one \code{auto_section} heading: that
 of the first table on it that has one; a later table on the page
 with another heading gets a warning (\code{auto_title} names it on its

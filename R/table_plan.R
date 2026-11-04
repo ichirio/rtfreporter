@@ -50,7 +50,7 @@
 #     own gets.
 #
 #  2. THE ROLES ARE SAID ONCE, WHERE THE DATA IS.  `table_plan()` takes the
-#     NORMALIZED frame and, like `ggplot(data, aes(x, y))`, the columns
+#     NORMALIZED frame and only the columns
 #     that play a part in the table: `cols` across, `rows` down, `label`
 #     for the row identity.  Every other verb reads them from there, so
 #     the stub, the group carrier and the header's denominator are not
@@ -7069,7 +7069,7 @@ plan_template <- function(x, cols = NULL, hierarchy = character(),
 }
 
 
-# A plan is a table source like a gt table: rtf_tables(doc, plan) and
+# A plan is a table source: rtf_tables(doc, plan) and
 # as_rtftables(plan) both work through the generic.
 #' @export
 as_rtftables.table_plan <- function(x, ...) plan_apply(x, "pages")

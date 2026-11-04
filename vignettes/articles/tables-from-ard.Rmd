@@ -155,7 +155,7 @@ you will use in `table_plan()`: look at them first.
 
 ### The roles
 
-`table_plan()` takes the roles and nothing else, like `ggplot(aes())`:
+`table_plan()` takes only the roles, the keys that play a part in the table:
 
 * `cols`: the key that goes **across**, one column per arm;
 * `rows`: the keys that go **down**, here the analysis variable, called
