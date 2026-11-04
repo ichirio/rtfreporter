@@ -74,7 +74,7 @@ Authoritative prose, in order of usefulness:
 |---|---|
 | Architecture, object model, pipeline | `vignettes/articles/architecture.Rmd` |
 | Adding a table-object adapter | `vignettes/articles/extending-adapters.Rmd` |
-| Workflow, branching, versioning, releases | `CONTRIBUTING.md` — its *Contributor vs Collaborator* table is the authority on the fork/direct split. Note its line saying branch protection on `main` is off is stale: `main` now requires 7 green checks and one approving review. |
+| Workflow, branching, versioning, releases | `CONTRIBUTING.md` — its *Contributor vs Collaborator* table is the authority on the fork/direct split. `main` is protected: a PR needs the required checks to pass and one approving review. |
 | Orientation + invariants | `AGENTS.md` |
 | Why S3 and not R6 | `LEARNING.md` — the post-mortem: why the R6 scaffolds, the chained border builders and the shared mutable theme each failed to pay, including the one class that looked justified and still did not survive. |
 | Public classes and their constructors | `vignettes/articles/architecture.Rmd` |
@@ -159,7 +159,7 @@ Order inside `as_rtftables()`, which matters when adding a hook:
 
 ```
 extract (adapter)
-  -> stub fold (stub_vars / stub = stub_spec(), listing = hook)
+  -> stub fold (stub = stub_spec(), listing = hook)
   -> sort (sort_by / sort_desc)        so grouping sees ordered rows
   -> paginate (.paginate_df())         drop_cols are still PRESENT here
   -> .apply_col_drop()                 removes them, reindexes every
@@ -191,7 +191,7 @@ Six steps; the full version is `vignettes/articles/extending-adapters.Rmd`.
    minimum version if needed. Never `Imports:`.
 6. **Tests and docs** — `tests/testthat/test-mypkg-adapter.R` with every test
    wrapped in `skip_if_not_installed("mypkg")`; document the new `read`
-   tokens in `?as_rtftables`; `NEWS.md` entry; `devtools::document()`.
+   tokens in `?as_rtftables`; `devtools::document()`.
 
 Existing adapters to copy from: `gt_adapter.R` (gt / gtsummary / tfrmt),
 `rtables_adapter.R` (rtables / tern), `flextable_adapter.R`,
@@ -218,7 +218,7 @@ Coordinate systems differ and the difference is deliberate:
 
 | Entry point | Positions refer to |
 |---|---|
-| `rtftable(col_header = )` / `as_rtftables(col_header = )` | the **source body**, before `drop_cols` / `stub_vars` |
+| `rtftable(col_header = )` / `as_rtftables(col_header = )` | the **source body**, before `drop_cols` / the `stub` fold |
 | `set_col_header()`, `style_*()` | the **final printed table** |
 
 `rtf_columns()` lists the final names; `header_map()` shows where each header
@@ -290,7 +290,8 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
   unlisted topic.
 * Articles live in `vignettes/articles/` (site only); user-facing vignettes in
   `vignettes/`. Several articles have a `-ja` Japanese twin — update both.
-* `NEWS.md` every PR; `CHANGELOG.md` additionally for a minor/major release.
+* A PR never edits `NEWS.md`, `CHANGELOG.md` or `Version:`; the PR
+  description carries the user-visible change.
 * Regenerate committed examples from the working tree, never from an
   installed build: `Rscript data-raw/gen_tlg_catalog_rtf.R` from the package
   root (the generators `source("data-raw/_load.R")`, which uses
@@ -329,22 +330,23 @@ your own initiative, and never reach for an administrative override to get
 past a protection rule unless the repository owner has told you to in this
 session.
 
-* **Every change starts as an issue.** `exec:agent` on an issue means an
-  agent may implement it; `exec:human` / `exec:hold` / no label mean it may
-  not — report the issue and stop.
+* **Every change starts as an issue.** For the maintainers' own agent:
+  `exec:agent` on an issue means an agent may implement it; `exec:human` /
+  `exec:hold` / no label mean it may not — report the issue and stop. An
+  outside contributor needs no `exec:*` or `priority:*` label and may take any
+  issue a maintainer has pointed them to.
 * **Branch name:** `<type>/<issue>-<slug>` — `feat` `fix` `docs` `chore`
   `refactor` `test` `perf` `ci`. Bare issue number, no `#`.
   Example: `fix/453-named-label-row-guard`.
 * **PR body** carries `Closes #N` (or `Refs #N` for one cut of an umbrella
   issue, which stays open as a tracker with a checklist).
 * **Version:** the standard R scheme — a release is `X.Y.Z`, development is
-  `X.Y.Z.9000`, and the three-component part names the **last release**. An
-  ordinary PR changes only the fourth position, and usually **not at all**:
-  bump it when the change is something another branch or a bug report needs to
-  name, otherwise leave `Version:` alone. `NEWS.md`, not the number, is the
-  record of what changed. Touching `X`, `Y` or `Z`, or lowering the version,
-  fails `version-guard` unless the PR carries the `release` label. Digits and
-  dots only — `0.8.0-rc` is a malformed R version.
+  `X.Y.Z.9000`, and the three-component part names the **last release**. A PR
+  never edits `Version:`, `NEWS.md` or `CHANGELOG.md`: the maintainers write
+  NEWS and bump the version when they tag or release, and `version-guard`
+  accepts a PR with no version change. Touching `X`, `Y` or `Z`, or
+  lowering the version, fails `version-guard` unless the PR carries the
+  `release` label. Digits and dots only — `0.8.0-rc` is a malformed R version.
 * **Releases.** A release ships whatever is on `main`, so a release carrying a
   feature is a MINOR — there is no patch that contains a feature. When a fix
   must ship but the feature on `main` is not ready to freeze, the answer is a
@@ -353,8 +355,10 @@ session.
   `MAJOR` is 0 the package is not formally released, so a MINOR may remove
   public API; from v1.0.0 that needs a major. `CONTRIBUTING.md` has both
   procedures — follow them rather than improvising a number.
-* **CI (all must be green):** `R-CMD-check` (matrix, 0 errors / 0 warnings),
-  `test-coverage`, `pkgdown`, `version-guard`, `lint`.
+* **CI:** the required checks must pass (`R-CMD-check` matrix with 0 errors /
+  0 warnings, `pkgdown`, `test-coverage`); `version-guard` and `lint` also
+  run. A first-time contributor's workflows wait for a maintainer's approval,
+  and CI runs when the PR is opened, not on pushes to a fork's branches.
 * **Before pushing:** `devtools::document()`, then the four checks in §14.
 
 ---
@@ -497,19 +501,22 @@ for the detail — this section deliberately does not copy it.
 * **PR template** (`.github/PULL_REQUEST_TEMPLATE.md`). Fill every section,
   do not delete them: *Summary* (what and why), *Related issue*
   (`Closes #N`), *Type of change* (fix / feature / breaking + migration /
-  docs-tests-internal), the *Checklist* (tests, roxygen + committed
-  `man/*.Rd`, test and check clean, `NEWS.md`, ASCII-only, no new hard
-  dependency) and *Notes for reviewers*. Tick only what you did; name any
-  check you could not run.
+  docs-tests-internal), *Requirements, tests and regression* (every
+  behaviour change needs a requirement in `inst/validation/requirements.csv`
+  and a test named with its FT id; see *Quality assurance* in
+  `CONTRIBUTING.md`), the *Checklist* (tests, roxygen + committed
+  `man/*.Rd`, the four checks, no edit to `NEWS.md` or `Version:`,
+  ASCII-only, no new hard dependency) and *Notes for reviewers*. Tick only
+  what you did; name any check you could not run.
 * **Issue templates** (`.github/ISSUE_TEMPLATE/`). *Bug report* (`[Bug] `,
   label `bug`): expected vs. actual, a minimal reprex with its output, the
   `.rtf` or a screenshot for rendering problems, `sessionInfo()`. *Feature
   request* (`[Feature] `, label `enhancement`): the real TFL deliverable,
   proposed behaviour, alternatives, and the scope note (invariant 8).
   `config.yml` sends usage questions to Discussions.
-* **Pre-push checks — all four, every push.** Stricter than the
-  `devtools::check()` line in `CONTRIBUTING.md`; the maintainer requires all
-  of them. Report the results in the PR body.
+* **Pre-push checks — all four, every push.** The same four
+  are listed in `CONTRIBUTING.md`; the maintainer requires all of them.
+  Report the results in the PR body.
 
   ```bash
   R CMD build . && R CMD check --as-cran rtfreporter_*.tar.gz  # 0 errors / 0 warnings
@@ -518,12 +525,12 @@ for the detail — this section deliberately does not copy it.
   Rscript -e 'lintr::lint_package()'            # must be clean
   ```
 
-* **Versioning + NEWS** (`CONTRIBUTING.md` *Versioning & releases*, §10). An
-  ordinary PR leaves `Version:` alone or raises only the fourth position, and
-  always adds one bullet under `# rtfreporter (development version)` in
-  `NEWS.md`. The stamp at the top of this manual must equal `DESCRIPTION`
-  (`test-ai-manual-version.R`): bump both together, or leave both to the
-  maintainer, who assigns versions at merge time.
+* **Versioning + NEWS** (`CONTRIBUTING.md` *Versioning & releases*, §10). A
+  PR never edits `NEWS.md`, `CHANGELOG.md` or `Version:`; the user-visible
+  change goes in the PR description, and the maintainers write NEWS and bump
+  the version when they tag or release. The stamp at the top of this manual
+  must equal `DESCRIPTION` (`test-ai-manual-version.R`); a PR leaves both
+  alone.
 * **`cran-comments.md`** (root, `.Rbuildignore`d). The note to CRAN's
   reviewers sent with a submission: check results (and why each NOTE is
   acceptable), test environments, and reviewer notes (examples write only

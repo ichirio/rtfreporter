@@ -210,9 +210,29 @@
   device
 }
 
-# Draw `x` into a temporary PNG and return its path.  The file lives for the
-# session, which is as long as the rtfplot that points at it needs it.
-.rtfplot_render <- function(x, width, height, dpi, device = NULL) {
+# Is the devEMF package installed?  One place to ask, so a test can answer
+# "no" without touching requireNamespace() (#739).
+.rtfplot_has_devemf <- function() {
+  requireNamespace("devEMF", quietly = TRUE)
+}
+
+# Which file format draws a plot object: "png" (NULL) or "emf".
+.rtfplot_format <- function(format = NULL) {
+  if (is.null(format)) return("png")
+  if (!is.character(format) || length(format) != 1L || is.na(format) ||
+      !format %in% c("png", "emf")) {
+    stop("`render_format` must be \"png\" or \"emf\".", call. = FALSE)
+  }
+  format
+}
+
+# Draw `x` into a temporary PNG (or EMF) and return its path.  The file lives
+# for the session, which is as long as the rtfplot that points at it needs it.
+# `png_args` says whether `render_dpi` / `png_device` were given by the caller:
+# with "emf" they mean nothing, and are refused rather than ignored.
+.rtfplot_render <- function(x, width, height, dpi, device = NULL,
+                            format = NULL, png_args = FALSE) {
+  format <- .rtfplot_format(format)
   for (nm in c("render_width", "render_height", "render_dpi")) {
     v <- switch(nm, render_width = width, render_height = height,
                 render_dpi = dpi)
@@ -220,6 +240,28 @@
       stop(sprintf("`%s` must be a single positive number.", nm),
            call. = FALSE)
     }
+  }
+  if (format == "emf") {
+    if (png_args) {
+      stop("`render_dpi` and `png_device` are for `render_format = \"png\"` ",
+           "only; an EMF is a vector picture with no resolution.",
+           call. = FALSE)
+    }
+    if (!.rtfplot_has_devemf()) {
+      stop("`render_format = \"emf\"` needs the devEMF package: ",
+           "install.packages(\"devEMF\"), or draw as \"png\".", call. = FALSE)
+    }
+    path <- tempfile(fileext = ".emf")
+    # plain EMF records (no EMF+), which more readers draw
+    devEMF::emf(path, width = width, height = height, emfPlus = FALSE)
+    ok <- FALSE
+    on.exit({
+      grDevices::dev.off()
+      if (!ok) unlink(path)
+    }, add = TRUE)
+    .rtfplot_draw(x)
+    ok <- TRUE
+    return(path)
   }
   device <- .rtfplot_png_device(device)
   if (device == "png" && !isTRUE(unname(capabilities("png")))) {
@@ -285,6 +327,15 @@
 #'   figure takes the same inches on the page whichever device drew it.
 #'   Refused for a file.
 #'
+#' @param render_format The file format a plot object is drawn as: `"png"`
+#'   or `"emf"`.  `NULL` (default) is `"png"`.  `"emf"` draws a vector
+#'   picture with the devEMF package (`devEMF::emf()`, plain EMF records) at
+#'   `render_width` x `render_height` inches, embedded as `\emfblip` exactly
+#'   as an EMF file would be; it is an error without devEMF.
+#'   `render_dpi` and `png_device` are for PNG and may not be given with it.
+#'   EMF is not rendered the same way by every word processor: check it in
+#'   the readers you will use.  Refused for a file.
+#'
 #' @details
 #' The native size is read from the file's resolution metadata (PNG `pHYs`
 #' chunk, JPEG JFIF density). A 2500 x 1438 px image saved at 300 DPI therefore
@@ -316,18 +367,21 @@
 rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
                     align = "center", render_width = 6.5,
                     render_height = 4.5, render_dpi = 300,
-                    png_device = NULL) {
+                    png_device = NULL, render_format = NULL) {
   drawn <- .rtfplot_is_object(x)
   if (drawn) {
     path <- .rtfplot_render(x, render_width, render_height, render_dpi,
-                            png_device)
+                            png_device, render_format,
+                            png_args = !missing(render_dpi) ||
+                              !is.null(png_device))
   } else {
     given <- c(!missing(render_width), !missing(render_height),
-               !missing(render_dpi), !is.null(png_device))
+               !missing(render_dpi), !is.null(png_device),
+               !is.null(render_format))
     if (any(given)) {
-      stop("`render_width`, `render_height`, `render_dpi` and `png_device` ",
-           "say how to draw a plot object; a file already has a size and a ",
-           "resolution.",
+      stop("`render_width`, `render_height`, `render_dpi`, `png_device` and ",
+           "`render_format` say how to draw a plot object; a file already ",
+           "has a size and a resolution.",
            call. = FALSE)
     }
     path <- x
@@ -347,7 +401,7 @@ rtfplot <- function(x, width_twips = NULL, height_twips = NULL,
   density <- switch(img_type, png = .read_png_density(path),
                     emf = list(dpi_x = 2540, dpi_y = 2540),
                     .read_jpeg_density(path))
-  if (drawn) {
+  if (drawn && img_type == "png") {
     # We drew it, so we know its resolution: take it from `render_dpi` rather
     # than reading back what the device recorded.  macOS's quartz PNG device
     # writes no `pHYs` chunk at all, and a figure that silently fell back to

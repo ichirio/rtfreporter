@@ -104,10 +104,6 @@ home:
 
           **Later**:
 
-          - Richer styling per part: titles, footnotes and the running
-            header and footer each with their own style and colour; cell
-            padding.
-          - Body rows added by a verb, with border rules per row.
           - More table sources, and sturdier reading of the ones there are
             (gt, gtsummary, rtables / tern).
           - Inline formatting inside a text: bold, italic and superscript

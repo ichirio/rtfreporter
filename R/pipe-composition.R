@@ -757,9 +757,10 @@ rtf_tables <- function(doc, tables,
 #'   [rtf_tables()]'s `page_break`.
 #' @param space_before With `page_break = FALSE`, empty lines between the
 #'   content before and this figure.
-#' @param render_width,render_height,render_dpi,png_device How to draw the
-#'   **plot objects** in `figures`, as [rtfplot()] takes them: size in inches,
-#'   resolution, and PNG device.  `NULL` (default) is [rtfplot()]'s own
+#' @param render_width,render_height,render_dpi,png_device,render_format How to
+#'   draw the **plot objects** in `figures`, as [rtfplot()] takes them: size in
+#'   inches, resolution, PNG device, and file format (`"png"` or `"emf"`; the
+#'   latter needs the devEMF package).  `NULL` (default) is [rtfplot()]'s own
 #'   default (6.5 x 4.5 in, 300 dpi, the `rtfreporter.png_device` option).  A
 #'   file path ignores them (a file has its size already), and a figure given
 #'   as an [rtfplot()] keeps the settings it was built with.
@@ -790,7 +791,8 @@ rtf_figures <- function(doc, figures,
                          titles = NULL, footnotes = NULL,
                          page_break = TRUE, space_before = 0L,
                          render_width = NULL, render_height = NULL,
-                         render_dpi = NULL, png_device = NULL) {
+                         render_dpi = NULL, png_device = NULL,
+                         render_format = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -799,7 +801,8 @@ rtf_figures <- function(doc, figures,
   draw_args <- Filter(Negate(is.null),
                       list(render_width = render_width,
                            render_height = render_height,
-                           render_dpi = render_dpi, png_device = png_device))
+                           render_dpi = render_dpi, png_device = png_device,
+                           render_format = render_format))
 
   # one figure, given as it is (a ggplot is a list too: it is not a list of
   # figures)

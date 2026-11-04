@@ -66,7 +66,7 @@
 #     an rtfplot keeps its own                              |             |
 #   titles, footnotes: one block or one per figure          | FR-AS187/188| FT-AS080, FT-AS099
 #   page_break; space_before                                | FR-AS189-192| FT-AS071, FT-AS122
-#   render_* and png_device for plot objects; a file and an | FR-AS193-195, FR-IX390 | FT-AS098, FT-AS101, FT-AS102
+#   render_* and png_device for plot objects; a file and an | FR-AS193-195, FR-IX390, FR-AS253 | FT-AS098, FT-AS101, FT-AS102, FT-AS151
 #     rtfplot keep theirs                                   |             |
 #
 # rtfplot()
@@ -81,6 +81,9 @@
 #     a file                                                |             |
 #   png_device "auto" / "ragg" / "png"                      | FR-AS206-208| FT-AS064, FT-AS091-FT-AS093, FT-AS115
 #   not one path; a missing file; another extension         | FR-AS210-212, FR-AS234 | FT-AS086, FT-AS109-FT-AS111, FT-AS125
+#   render_format "png" / "emf": a plot object drawn as EMF | FR-AS251    | FT-AS149
+#   ... a format not allowed; no devEMF; dpi / device with  | FR-AS252, FR-AS209 | FT-AS150, FT-AS152
+#     "emf"; a file with render_format                      |             |
 #   embedded as \pict with its blip and display size        | FR-AS214    | FT-AS085, FT-AS087, FT-AS088, FT-AS124
 #
 # print() of an rtfplot

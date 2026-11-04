@@ -54,10 +54,10 @@ gt-extracted ones.
 and sets the per-column default alignment (heading columns left,
 others centre).}
 \item{\code{col_header}}{A user-supplied \code{col_header} is resolved against
-the \strong{final printed columns} -- after \code{stub_vars} folding and
+the \strong{final printed columns} -- after \code{stub} folding and
 \code{drop_cols} removal -- so its \code{\link[=col_cell]{col_cell()}} positions and names
 refer to the columns you actually see (position 1 = first printed
-column; the \code{stub_vars} stub is that column).  This is equivalent
+column; the \code{stub} column is that column).  This is equivalent
 to building the pages and then calling \code{\link[=set_col_header]{set_col_header()}}; use
 \code{\link[=rtf_columns]{rtf_columns()}} to list the final names first.}
 \item{\code{col_spec}, \code{col_rel_width}, \code{row_title}}{still use the pre-drop

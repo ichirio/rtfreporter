@@ -727,10 +727,10 @@
 #'       and sets the per-column default alignment (heading columns left,
 #'       others centre).}
 #'     \item{`col_header`}{A user-supplied `col_header` is resolved against
-#'       the **final printed columns** -- after `stub_vars` folding and
+#'       the **final printed columns** -- after `stub` folding and
 #'       `drop_cols` removal -- so its [col_cell()] positions and names
 #'       refer to the columns you actually see (position 1 = first printed
-#'       column; the `stub_vars` stub is that column).  This is equivalent
+#'       column; the `stub` column is that column).  This is equivalent
 #'       to building the pages and then calling [set_col_header()]; use
 #'       [rtf_columns()] to list the final names first.}
 #'     \item{`col_spec`, `col_rel_width`, `row_title`}{still use the pre-drop

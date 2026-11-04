@@ -663,14 +663,14 @@ add_header_row.list <- function(x, ...) {
 #' cell against the **final, printed table**: the columns you actually see,
 #' addressed by **name** or by **visible position** (`1` = first printed
 #' column).  Because it runs on the finished table, there is no "intermediate"
-#' column layout to reason about -- no hidden `drop_cols`, no `stub_vars`
+#' column layout to reason about -- no hidden `drop_cols`, no `stub`
 #' bookkeeping, no position shifting.  This is the recommended way to attach a
 #' multi-row / spanning header on top of an `as_rtftables()` pipeline; pair it
 #' with [rtf_columns()] to see the exact column names first.
 #'
 #' Contrast with the `col_header =` argument of [rtftable()] / [as_rtftables()],
 #' whose positions refer to the source body **before** `drop_cols` /
-#' `stub_vars` are applied.  `set_col_header()` always speaks the final table's
+#' `stub` are applied.  `set_col_header()` always speaks the final table's
 #' coordinates.
 #'
 #' Like the other post-hoc verbs it is an S3 generic with an `rtftable` method

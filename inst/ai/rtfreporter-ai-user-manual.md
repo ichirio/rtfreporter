@@ -46,7 +46,7 @@ The released versions' manuals: [0.8.2](https://github.com/ichirio/rtfreporter/b
    is the default since 0.8.2.9039); `overwrite = FALSE` stops instead.
 9. A table's appearance (`border`, `col_rel_width`, `font`, ...) is written on
    the table -- `rtftable()`, `as_rtftables()`, `plan_style()` -- never on
-   `rtf_tables()` (those arguments are deprecated).
+   `rtf_tables()` (its table-format arguments were removed in 0.9.0).
 
 ---
 
@@ -924,9 +924,9 @@ becomes `plan_blanks(where =)`, and `split = "by_value", group_col` becomes
 `plan_col_header(header_sep =)`, `style =` `plan_style(<its fields>)`, and
 `na` `plan_cells(na =)`. Not carried over, by design: `read_meta` /
 `read_attributes` (a plan's input has no adapter metadata; the plan sets
-the attributes itself), and the deprecated `stub_vars` / `stub_label` /
-`stub_indent` / `stub_group_summary` (`plan_stub()`) and `spanning_header`
-(a row of `plan_col_header()`).
+the attributes itself), and `spanning_header` (a row of
+`plan_col_header()`). The stub is `stub =` / `stub_spec()`, which becomes
+`plan_stub()`.
 
 ### Looking inside
 

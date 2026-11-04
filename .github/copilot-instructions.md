@@ -10,7 +10,8 @@ The reference for working on the code is the **AI developer manual**,
 anything duplicated here; where this file and the manual disagree, the
 manual wins.  Its §14 summarises the repository rules (Code of Conduct,
 PR / issue templates, the four pre-push checks, versioning + `NEWS.md`,
-`cran-comments.md`).
+`cran-comments.md`).  A PR never edits `NEWS.md`, `CHANGELOG.md` or
+`Version:`; the change is described in the PR description.
 
 - **Orientation & invariants:** [AGENTS.md](../AGENTS.md)
 - **Workflow, code style, branching, versioning & releases:**
@@ -18,6 +19,12 @@ PR / issue templates, the four pre-push checks, versioning + `NEWS.md`,
 - **Architecture & how to extend it:**
   `vignettes/articles/architecture.Rmd`,
   `vignettes/articles/extending-adapters.Rmd`
+
+Set-up (R version, packages): *Development setup* in `CONTRIBUTING.md`.
+The `exec:*` and `priority:*` labels guide the maintainers' own coding agent;
+an outside contributor needs none of them.  Every behaviour change needs a
+requirement in `inst/validation/requirements.csv` and a test named with its
+FT id (*Quality assurance* in `CONTRIBUTING.md`).
 
 Key invariants: S3 throughout (no R6); no third-party runtime dependency
 (`Imports:` holds only packages that ship with R; optional packages live in
