@@ -603,8 +603,11 @@ for the detail — this section deliberately does not copy it.
   docs-tests-internal), *User-visible change (for NEWS)* (below),
   *Requirements, tests and regression* (every
   behaviour change needs a requirement in `inst/validation/requirements.csv`
-  and a test named with its FT id; see *Quality assurance* in
-  `CONTRIBUTING.md`), the *Checklist* (tests, roxygen + committed
+  and a test named with its FT id (or an existing test mapped in
+  `inst/validation/test_map.csv`), a deviation with its reason in
+  `inst/validation/deviations.csv` where a test is not possible, and
+  `validation/trace.R` and the three `test-validation*.R` tests passing; see
+  *Quality assurance* in `CONTRIBUTING.md`), the *Checklist* (tests, roxygen + committed
   `man/*.Rd`, the four checks, no edit to `NEWS.md` or `Version:`,
   ASCII-only, no new hard dependency) and *Notes for reviewers*. Tick only
   what you did; name any check you could not run.

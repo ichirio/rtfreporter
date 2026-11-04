@@ -24,7 +24,19 @@ Set-up (R version, packages): *Development setup* in `CONTRIBUTING.md`.
 The `exec:*` and `priority:*` labels guide the maintainers' own coding agent;
 an outside contributor needs none of them.  Every behaviour change needs a
 requirement in `inst/validation/requirements.csv` and a test named with its
-FT id (*Quality assurance* in `CONTRIBUTING.md`).
+FT id (*Quality assurance* in `CONTRIBUTING.md`).  Do this in the same PR,
+without being asked:
+- Add or change the FRs in `inst/validation/requirements.csv`.  A new
+  argument must be named by a leaf FR of its function (`arg =`, or bare
+  inside `f(...)`), or `test-validation-coverage.R` fails.
+- Give each leaf FR a test.  A new test names its id and FRs in its title,
+  `test_that("FT-PL049 [FR-PL122]: ...")`; only an existing test is mapped
+  by a row in `inst/validation/test_map.csv` (file, test, ft, fr).  Never
+  both: an FT id given twice fails.
+- Where a test is not possible, add a row with the risk and the reason to
+  `inst/validation/deviations.csv`.
+- Keep `Rscript validation/trace.R` running and `test-validation.R`,
+  `test-validation-leaves.R` and `test-validation-coverage.R` passing.
 
 Key invariants: S3 throughout (no R6); no third-party runtime dependency
 (`Imports:` holds only packages that ship with R; optional packages live in
