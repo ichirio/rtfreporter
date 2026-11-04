@@ -310,6 +310,18 @@ their counts as a variable's --- instead of only the header's: what
 \value{
 A data frame: the \code{rows} columns, the label column, then one column
 per column key.
+
+A cell prints one value.  When records of \strong{different} values reach
+one cell -- the ARD has a key (a \code{SITE} beside \code{cols = "TRT"}) that
+neither \code{cols} nor \code{rows} names -- the first record's value is the one
+kept, and \code{widen_ard()} \strong{warns} that the others are dropped, naming the
+key(s) the records differ in, the cell (its row and column) and the values.
+Add that key to \code{rows} (or \code{cols}), or filter the ARD, to have them
+apart.  The same value twice is one value and says nothing.  The warning is
+not \code{notes}: \code{notes = FALSE} silences the report of unused ARD rows, not
+this one, because these are numbers the table does not carry.  An ARD read
+by a position (\code{group1_level} over stacked blocks) keeps to its own
+warning, and reading a position with its name column is quiet.
 }
 \description{
 Step two of the ARD conversion.  \code{widen_ard()} takes the long table from

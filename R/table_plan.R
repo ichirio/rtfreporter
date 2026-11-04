@@ -3104,7 +3104,8 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #' @param table_width_twips,table_width_pct,table_width_pct_of_writable
 #'   The table's width: in twips, as a percentage (0--100) or a fraction
 #'   (0--1) of the writable page width.  Give one; if `table_width_twips` is
-#'   given with a percentage, the twips win.
+#'   given with a percentage, the twips win, and given both percentages,
+#'   `table_width_pct` wins (as in [rtftable()]).
 #' @param markup,blank_row_normalize [rtftable()]'s `markup` (the cell-text
 #'   markup applied when the page is rendered, such as `"script"`) and
 #'   `blank_row_normalize` (how blank rows are normalised then).
@@ -3112,7 +3113,11 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   look, [rtf_table_style()]'s fields.
 #' @param align,bold,italic,underline The body's default look,
 #'   [rtf_table_style()]'s fields.  One column or one cell is
-#'   [plan_cell_style()].
+#'   [plan_cell_style()].  The flags (`header_bold`, `header_italic`, `bold`,
+#'   `italic`, `underline`) mean what they mean there: only `TRUE` turns the
+#'   look on, and any other value, `NA` included, is the same as `FALSE`
+#'   (not an error, as `row_height_exact = NA` is).  `align` and
+#'   `header_align` must be `"left"`, `"center"` or `"right"`.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs

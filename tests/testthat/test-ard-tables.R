@@ -374,10 +374,14 @@ test_that("a positional key warns when that position holds several variables", {
   # the warning is earned: the position invented columns from the other block
   expect_true(all(c("F", "M") %in% names(bad)))
 
-  # naming the variable is correct and silent
-  expect_no_warning(
+  # naming the variable raises no position warning.  The two blocks both
+  # count AGEGR in each arm (all of it, and by SEX), so a cell has several
+  # records; the first, the all-subjects count, is printed, and widen_ard()
+  # says the others are dropped (FR-AR253) -- nothing about a position.
+  expect_warning(
     good <- ard_pipe(stacked, cols = "TRT", rows = c(group = "variable"),
-                      cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
+                      cells = "{n:.0f} ({p:.1f%})", notes = FALSE),
+    "records of different values")
   expect_setequal(names(good)[-(1:2)],
                   c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
 

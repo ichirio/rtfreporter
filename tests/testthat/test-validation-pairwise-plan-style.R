@@ -226,3 +226,27 @@ test_that("FT-PL992 [FR-PL426 FR-PL427 FR-IX407]: plan_style(): each setting jus
   bad("`border_header` must be NULL or an rtf_border object", border_header = "tfl")
   bad("`border` must be", border = "TFL")
 })
+
+test_that("FT-PL996 [FR-PL974 FR-IX407]: plan_style(): a look flag that is not TRUE (NA, 0, \"yes\") is FALSE, as rtf_table_style() takes it; row_height_exact = NA stops", {
+  d <- .ps_df()
+  off <- .ps_pages(plan_style(table_plan(d), bold = FALSE, italic = FALSE,
+                              underline = FALSE, header_bold = FALSE,
+                              header_italic = FALSE))
+  for (fl in c("bold", "italic", "underline", "header_bold", "header_italic")) {
+    for (v in list(NA, 0, "yes")) {
+      args <- stats::setNames(list(v), fl)
+      info <- paste(fl, deparse(v))
+      # the style the direct call makes: the flag is stored FALSE
+      expect_false(do.call(rtf_table_style, args)[[fl]], info = info)
+      got <- .ps_pages(do.call(plan_style, c(list(table_plan(d)), args)))
+      expect_equal(got, off, info = info)
+      expect_equal(got, .ps_direct(d, args), info = info)
+    }
+    # TRUE still turns it on: the pages differ from the off ones
+    on <- .ps_pages(do.call(plan_style, c(list(table_plan(d)), stats::setNames(list(TRUE), fl))))
+    expect_false(isTRUE(all.equal(on, off)), info = fl)
+  }
+  # the one logical setting rtftable() refuses NA for stops here too
+  expect_error(.ps_pages(plan_style(table_plan(d), row_height_exact = NA)),
+               "`row_height_exact` must be TRUE or FALSE")
+})
