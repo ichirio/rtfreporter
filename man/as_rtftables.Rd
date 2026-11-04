@@ -583,7 +583,8 @@ total turns out to be.}
 \item{\code{table_width_pct} / \code{table_width_pct_of_writable}}{the total, as
 a share of the writable page width (paper minus the side margins).
 Used only when \code{table_width_twips} is not given: the twips win.  Give
-one of the two percentages, not both.}
+one of the two percentages, not both; given both, \code{table_width_pct}
+wins, as in \code{\link[=rtftable]{rtftable()}}.}
 \item{nothing}{the writable width: the row-heading columns by their
 content, the data columns sharing the rest (\code{\link[=default_col_widths]{default_col_widths()}}).}
 }

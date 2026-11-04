@@ -56,13 +56,17 @@
 #  every pair.  Oracle: the table is built straight from the counts by the
 #  rules above.
 #
-#  Not asserted: a cell that a second record also reaches, with a key the ARD
-#  has that neither `cols` nor `rows` names (a SITE beside cols = "TRT"): the
-#  first value stays and the others are dropped with no message, where
-#  stats = "rows" stops (FR-AR202).  A stop for it was tried and left out:
-#  the tests of position-read plans (a `group1_level` over stacked blocks,
-#  test-ard-tables.R) and of a dropped label (FT-AR108) rely on the first
-#  value standing; see the report of the PR.
+#  (D) FT-AR113, a cell that records of different values reach (a SITE
+#  beside cols = "TRT", which neither `cols` nor `rows` names): the first
+#  record's value is printed and widen_ard() WARNS (FR-AR253) -- not an error,
+#  since a plan reading a position over stacked blocks lands several records
+#  in a cell on purpose (test-ard-tables.R) -- naming the key(s) they differ
+#  in, the cell and the values.  stats = "rows" stops (FR-AR202).  Rules:
+#    the same value twice          no warning
+#    the key named in `rows`       no warning, the sites apart
+#    the ARD filtered to one site  no warning
+#    notes = FALSE                 still warns (lost numbers are not notes)
+#    notes = TRUE                  warns once, not twice
 #
 #  (B) FT-AR111, decision table, stats x value x na (x a `cells` given):
 #    stats | value     | na  | the table
@@ -260,4 +264,38 @@ test_that("FT-AR112 [FR-AR170 FR-AR175 FR-AR179 FR-AR252 FR-IX409]: widen_ard():
                                  notes = FALSE, labels = c(SEX = "Sex"), sort_stat = "n"))
   expect_identical(as.character(got$var), rep("Sex", 3L))
   expect_identical(got$.sort_stat, unname(tot))
+})
+
+test_that("FT-AR113 [FR-AR253 FR-IX409]: widen_ard(): records of different values in one cell warn, naming the key, the cell and the values; the first is kept", {
+  x <- .wa_ard(.wa_long2(), TRUE)
+  run <- function(x, ...) as.data.frame(widen_ard(x, cols = "TRT", cells = "{n}", ...))
+  # SITE is left over: Drug A / F is 3 (S1) and 5 (S2); five cells in all
+  # (Drug A F, M, U; Placebo F, M), the first of each printed
+  w <- tryCatch(run(x, notes = FALSE), warning = function(w) conditionMessage(w))
+  expect_match(w, "^widen_ard\\(\\): 5 cells are reached by records of different values")
+  expect_match(w, "cell   : label = 'F', column 'Drug A'", fixed = TRUE)
+  expect_match(w, "values : '3', '5'", fixed = TRUE)
+  expect_match(w, "'SITE'", fixed = TRUE)
+  expect_match(w, "the first is printed", fixed = TRUE)
+  expect_match(w, "Add the key that tells the records apart to `rows`", fixed = TRUE)
+  got <- suppressWarnings(run(x, notes = FALSE))
+  expect_identical(got$`Drug A`[got$label == "F"], "3")
+  expect_identical(got$Placebo[got$label == "F"], "4")
+  # notes = TRUE: one warning, not two
+  n <- 0L
+  withCallingHandlers(suppressMessages(run(x)),
+                      warning = function(w) { n <<- n + 1L; invokeRestart("muffleWarning") })
+  expect_identical(n, 1L)
+  # the key named in `rows` keeps the sites apart, quietly
+  expect_no_warning(by_site <- run(x, rows = c(site = "SITE"), notes = FALSE))
+  expect_identical(by_site$`Drug A`[by_site$site == "S2" & by_site$label == "F"], "5")
+  # one record a cell: filtered to a site
+  s1 <- x[!is.na(x$SITE) & x$SITE == "S1", ]
+  expect_no_warning(one <- run(s1, notes = FALSE))
+  expect_identical(one$`Drug A`[one$label == "F"], "3")
+  # the same value twice is one value
+  l2 <- .wa_long2()[1:6, ]
+  l2$n[l2$SITE == "S2"] <- l2$n[l2$SITE == "S1"]
+  expect_no_warning(same <- run(.wa_ard(l2, TRUE), notes = FALSE))
+  expect_identical(same$`Drug A`[same$label == "F"], "3")
 })

@@ -193,8 +193,12 @@ test_that("a plan can start from an already-normalized frame", {
   expect_true(any(grepl("normalized frame",
                         utils::capture.output(print(p)))))
 
-  out <- suppressMessages(plan_apply(
-    p |> plan_cells(continuous = c("n" = "{N:d}"), categorical = "{n:d}")))
+  # the seam edit puts two variables' records under one name: their N differ,
+  # one is printed and the other said as lost (widen_ard())
+  expect_warning(
+    out <- suppressMessages(plan_apply(
+      p |> plan_cells(continuous = c("n" = "{N:d}"), categorical = "{n:d}"))),
+    "records of different values")
   expect_true(is.data.frame(out))
 })
 

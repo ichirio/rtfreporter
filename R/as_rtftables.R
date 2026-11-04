@@ -7,13 +7,18 @@
 # (#382): an absolute `table_width_twips` first, then a percentage of the
 # writable width, then NULL for "whatever the page gives".  The two spellings
 # of a percentage are rtftable()'s own, and reach as_rtftables() through `...`.
+# Given both, `table_width_pct` wins, as in rtftable(): the width that splits
+# the pages is the width that is rendered.
 .resolve_total_width_twips <- function(twips, user_args) {
   if (!is.null(twips)) return(as.integer(twips))
-  frac <- user_args$table_width_pct_of_writable
-  if (is.null(frac) && !is.null(user_args$table_width_pct)) {
+  # (exact `[[`: `$` would match table_width_pct to table_width_pct_of_writable)
+  frac <- NULL
+  if (!is.null(user_args[["table_width_pct"]])) {
     # Validated here rather than coerced, so a bad percentage is refused with
     # rtftable()'s own message instead of quietly resolving to NA (#388).
-    frac <- .table_width_pct_frac(user_args$table_width_pct)
+    frac <- .table_width_pct_frac(user_args[["table_width_pct"]])
+  } else if (!is.null(user_args[["table_width_pct_of_writable"]])) {
+    frac <- user_args[["table_width_pct_of_writable"]]
   }
   if (is.null(frac)) return(NULL)
   as.integer(round(.default_writable_twips() * as.numeric(frac)))
@@ -712,7 +717,8 @@
 #'     \item{`table_width_pct` / `table_width_pct_of_writable`}{the total, as
 #'       a share of the writable page width (paper minus the side margins).
 #'       Used only when `table_width_twips` is not given: the twips win.  Give
-#'       one of the two percentages, not both.}
+#'       one of the two percentages, not both; given both, `table_width_pct`
+#'       wins, as in [rtftable()].}
 #'     \item{nothing}{the writable width: the row-heading columns by their
 #'       content, the data columns sharing the rest ([default_col_widths()]).}
 #'   }
