@@ -115,11 +115,24 @@
   list(pw = .allpairs(cand), every = every, n_valid = nrow(valid))
 }
 
+# The resolution each file records, as rtfplot() reads it.  Not every device
+# writes the one it was asked for: macOS's quartz PNG device writes no pHYs
+# chunk, and an older R's JPEG none in its JFIF segment either.  A file that
+# records none is shown at the rtfreporter.figure.default_dpi option (96).
+.vf_dpi <- function(files) {
+  fallback <- as.numeric(getOption("rtfreporter.figure.default_dpi", 96))
+  got <- list(png = .read_png_density(files[["png"]]),
+              jpeg = .read_jpeg_density(files[["jpeg"]]))
+  out <- lapply(got, function(d) if (is.null(d)) c(fallback, fallback) else c(d$dpi_x, d$dpi_y))
+  out$emf <- c(2540, 2540)
+  out
+}
+
 # What one case should write: pixels, native and display twips, blip.
-.vf_expect <- function(cs) {
+.vf_expect <- function(cs, dpi) {
   if (cs$source %in% names(.VF_FILE)) {
     f <- .VF_FILE[[cs$source]]
-    px <- f$px; native <- as.integer(round(px / f$dpi * 1440)); blip <- f$blip
+    px <- f$px; native <- as.integer(round(px / dpi[[cs$source]] * 1440)); blip <- f$blip
   } else {
     inch <- if (cs$size == "small") c(3, 2) else c(6.5, 4.5)
     dpi <- switch(cs$dpi, default = 300, as.numeric(cs$dpi))
@@ -146,6 +159,13 @@ test_that("FT-AS143 [FR-AS248]: figures pairwise -- source x render size x dpi x
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
   files <- .vf_files(dir)
   has_emf <- file.exists(files[["emf"]])
+  dpi <- .vf_dpi(files)
+  # a resolution the file records is the one it was drawn at
+  for (k in c("png", "jpeg")) {
+    if (!is.null(switch(k, png = .read_png_density(files[[k]]), jpeg = .read_jpeg_density(files[[k]])))) {
+      expect_equal(dpi[[k]], rep(.VF_FILE[[k]]$dpi, 2L), tolerance = 0.01, label = paste(k, "resolution"))
+    }
+  }
   ran <- 0L
 
   for (r in seq_len(nrow(cases))) {
@@ -184,7 +204,7 @@ test_that("FT-AS143 [FR-AS248]: figures pairwise -- source x render size x dpi x
     generate_rtfreport(doc, path, overwrite = TRUE)
     txt <- readLines(path, warn = FALSE)
     txt <- paste(txt[!grepl("^[0-9A-F]+$", txt)], collapse = "\n")   # the hex apart
-    ex <- .vf_expect(cs)
+    ex <- .vf_expect(cs, dpi)
     al <- c(center = "qc", left = "ql", right = "qr")[[cs$align]]
     pict <- sprintf("\\pard\\%s{\\pict\\%s\\picw%d\\pich%d\\picwgoal%d\\pichgoal%d",
                     al, ex$blip, ex$px[1L], ex$px[2L], ex$disp[1L], ex$disp[2L])
