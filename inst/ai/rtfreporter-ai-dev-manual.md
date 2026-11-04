@@ -159,7 +159,7 @@ Order inside `as_rtftables()`, which matters when adding a hook:
 
 ```
 extract (adapter)
-  -> stub fold (stub_vars / stub = stub_spec(), listing = hook)
+  -> stub fold (stub = stub_spec(), listing = hook)
   -> sort (sort_by / sort_desc)        so grouping sees ordered rows
   -> paginate (.paginate_df())         drop_cols are still PRESENT here
   -> .apply_col_drop()                 removes them, reindexes every
@@ -218,7 +218,7 @@ Coordinate systems differ and the difference is deliberate:
 
 | Entry point | Positions refer to |
 |---|---|
-| `rtftable(col_header = )` / `as_rtftables(col_header = )` | the **source body**, before `drop_cols` / `stub_vars` |
+| `rtftable(col_header = )` / `as_rtftables(col_header = )` | the **source body**, before `drop_cols` / the `stub` fold |
 | `set_col_header()`, `style_*()` | the **final printed table** |
 
 `rtf_columns()` lists the final names; `header_map()` shows where each header

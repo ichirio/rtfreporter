@@ -6699,7 +6699,7 @@ plan_layers <- function(.plan) {
 #'
 #' It writes **both halves** --- the ARD to the table, and the table to the
 #' RTF pages --- because a plan that stops at the table is a plan that made
-#' you look up `stub_vars` and the header somewhere else.  The display half
+#' you look up the `stub` and the header somewhere else.  The display half
 #' is a starting point and is meant to be edited: only `plan_stub()` is
 #' derivable from the ARD, and the rest are display decisions nothing can
 #' guess.
