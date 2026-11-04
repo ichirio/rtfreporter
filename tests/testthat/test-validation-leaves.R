@@ -23,7 +23,7 @@
   do.call(rbind, out)
 }
 
-.leaf_head <- "^(FT-[A-Z]{2}[0-9]{3}) [[]([^]]*)[]]:"
+.leaf_head <- "^(FT-[A-Z]{2}[0-9]{3,4}) [[]([^]]*)[]]:"
 
 test_that("every test test_map.csv names is in its file", {
   map <- .leaf_read("test_map.csv")
@@ -61,4 +61,27 @@ test_that("every active leaf FR has a test or a deviation with its risk", {
   stale <- intersect(unlist(strsplit(dev$ids, " ", fixed = TRUE)), tested)
   expect(!length(stale), paste0("These deviations now have a test; take them off ",
                                 "deviations.csv: ", paste(stale, collapse = " ")))
+})
+
+test_that("a test title that starts with FT- parses as an FT id with its FRs", {
+  tb <- .leaf_test_names()
+  ft_like <- tb[startsWith(tb$test, "FT-"), , drop = FALSE]
+  bad <- ft_like[!grepl(.leaf_head, ft_like$test), , drop = FALSE]
+  expect(!nrow(bad), paste0(
+    "These test titles start with FT- but do not read as an FT id; the form is ",
+    "\"FT-XX<nnn> [FR-XX<nnn> ...]: ...\" (two capital letters, three or four ",
+    "digits, the FRs in square brackets, a colon):\n",
+    paste(bad$file, bad$test, sep = ": ", collapse = "\n")))
+})
+
+test_that("an FT or FR id of four digits is read, as one of three", {
+  for (n in c("999", "1000")) {
+    title <- paste0("FT-TB", n, " [FR-TB", n, "]: x")
+    expect_match(title, .leaf_head)
+    expect_identical(sub(paste0(.leaf_head, ".*$"), "\\1", title), paste0("FT-TB", n))
+    expect_identical(sub(paste0(.leaf_head, ".*$"), "\\2", title), paste0("FR-TB", n))
+  }
+  # a title that is not of the form is not taken as an FT
+  expect_false(grepl(.leaf_head, "FT-TB10000 [FR-TB1]: x"))
+  expect_false(grepl(.leaf_head, "FT-TB1000: no FR list"))
 })

@@ -539,7 +539,8 @@ what it does not.
 - **Functional Requirements (FR)** are `inst/validation/requirements.csv`,
   one row a requirement, a hierarchy: each row names its `parent`
   (`FR-PL000` the plan verbs > `FR-PL004` plan_blanks() > `FR-PL182` ...: an
-  id is short, the area's two letters and a number; the `parent` column
+  id is short, the area's two letters and a number of three or four digits,
+  the next free one in its area; the `parent` column
   holds the hierarchy, and a number once given is never reused).  A parent
   is of kind `group`.  Tests are mapped to the leaves; a parent is covered
   when every leaf under it has a test.  A user's requirement may be traced
@@ -557,13 +558,15 @@ what it does not.
     (compared byte for byte).  Not every combination: these, under their
     own group `FR-IX000`, apart from the functions' rows.
   A PR that adds or changes a behaviour adds or changes its FRs in the same
-  PR; an FR is never renumbered, a withdrawn one is `superseded` or
+  PR, with `since` the next planned release (`0.9.0` now); an FR is never
+  renumbered, a withdrawn one is `superseded` or
   `removed` (`draft`: a coarse row not yet split, not counted).
 - **Functional Tests (FT)** are the `test_that()` blocks that check an FR,
   as a person who read them decided -- not a block that merely calls the
   function.  A new test names its id and FRs at its head
-  (`"FT-PL<nnn> [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`, the
-  next unused FT number);
+  (`"FT-PL<nnn> [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`, three or four
+  digits, the
+  next unused FT number in its area);
   an existing one is mapped by hand in `inst/validation/test_map.csv`.  An
   FR no test checks is a deviation until a test is added.
   `validation/trace.R` lists the blocks that call a function in scope but
