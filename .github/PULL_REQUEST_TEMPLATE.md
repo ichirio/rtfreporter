@@ -21,6 +21,16 @@ Closes #
 - [ ] Breaking change (describe the migration below)
 - [ ] Documentation / tests / internal only
 
+## User-visible change (for NEWS)
+
+<!-- This is the record of the change: a PR never edits NEWS.md, CHANGELOG.md
+     or Version, and the maintainers write NEWS from the merged PRs at release.
+     One or two bullets in NEWS style, or "none" for an internal change. -->
+
+-
+
+Breaking: no  <!-- or "yes", and the migration: what old code must change to -->
+
 ## Requirements, tests and regression
 
 <!-- inst/validation/: the FRs added or changed, and the tests (FT) that
@@ -40,7 +50,8 @@ Closes #
       `CONTRIBUTING.md`): `R CMD check --as-cran` on the built tarball,
       `NOT_CRAN=true devtools::test()`, `pkgdown::check_pkgdown()`,
       `lintr::lint_package()`.
-- [ ] I did not edit `NEWS.md` or `Version:`; the change is described above.
+- [ ] I did not edit `NEWS.md`, `CHANGELOG.md` or `Version:`; the *User-visible
+      change* field above is filled.
 - [ ] R code is ASCII-only; no new hard dependency (optional packages stay in `Suggests`).
 
 ## Notes for reviewers

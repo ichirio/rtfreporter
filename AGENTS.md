@@ -39,9 +39,23 @@ is wrong (open an issue if the design itself is in question).
 2. Change `R/`, `tests/testthat/`, and the roxygen docs together.
 3. Run `devtools::document()`, then the four pre-push checks listed in
    *Pull requests* in `CONTRIBUTING.md` (set-up: *Development setup* there).
-4. Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.  Describe the
-   user-visible change in the PR description; the maintainers write `NEWS.md`
-   and bump the version when they tag or release.
+4. **Record the change in the PR description.**  A PR never edits `NEWS.md`,
+   `CHANGELOG.md` or `Version:`, and there is no separate memo file.  Fill the
+   template's *User-visible change (for NEWS)* field without being asked: one or
+   two bullets in NEWS style (what a user can now do, or what is fixed, named by
+   its function or argument), or "none" for an internal change; then "Breaking:
+   no", or "Breaking: yes" with the migration.  The maintainers write `NEWS.md`
+   from the merged PRs at release.  For example:
+
+   ```markdown
+   ## User-visible change (for NEWS)
+
+   - `rtfplot()` and `rtf_figures()` take `render_format = "emf"`: a plot object is
+     drawn as EMF with devEMF (in Suggests), at `render_width` x `render_height`
+     inches.
+
+   Breaking: no
+   ```
 5. Open a pull request against `main`.
 
 Every behaviour change needs a requirement in

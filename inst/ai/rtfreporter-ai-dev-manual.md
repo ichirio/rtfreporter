@@ -291,7 +291,7 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
 * Articles live in `vignettes/articles/` (site only); user-facing vignettes in
   `vignettes/`. Several articles have a `-ja` Japanese twin — update both.
 * A PR never edits `NEWS.md`, `CHANGELOG.md` or `Version:`; the PR
-  description carries the user-visible change.
+  description's *User-visible change (for NEWS)* field carries the change (§14).
 * Regenerate committed examples from the working tree, never from an
   installed build: `Rscript data-raw/gen_tlg_catalog_rtf.R` from the package
   root (the generators `source("data-raw/_load.R")`, which uses
@@ -586,7 +586,8 @@ for the detail — this section deliberately does not copy it.
 * **PR template** (`.github/PULL_REQUEST_TEMPLATE.md`). Fill every section,
   do not delete them: *Summary* (what and why), *Related issue*
   (`Closes #N`), *Type of change* (fix / feature / breaking + migration /
-  docs-tests-internal), *Requirements, tests and regression* (every
+  docs-tests-internal), *User-visible change (for NEWS)* (below),
+  *Requirements, tests and regression* (every
   behaviour change needs a requirement in `inst/validation/requirements.csv`
   and a test named with its FT id; see *Quality assurance* in
   `CONTRIBUTING.md`), the *Checklist* (tests, roxygen + committed
@@ -610,10 +611,25 @@ for the detail — this section deliberately does not copy it.
   Rscript -e 'lintr::lint_package()'            # must be clean
   ```
 
-* **Versioning + NEWS** (`CONTRIBUTING.md` *Versioning & releases*, §10). A
-  PR never edits `NEWS.md`, `CHANGELOG.md` or `Version:`; the user-visible
-  change goes in the PR description, and the maintainers write NEWS and bump
-  the version when they tag or release. The stamp at the top of this manual
+* **Record the change in the PR description.**  A PR never edits `NEWS.md`,
+  `CHANGELOG.md` or `Version:`, and there is no separate memo file.  Fill the
+  template's *User-visible change (for NEWS)* field without being asked: one or
+  two bullets in NEWS style (what a user can now do, or what is fixed, named by
+  its function or argument), or "none" for an internal change; then "Breaking:
+  no", or "Breaking: yes" with the migration.  The maintainers write `NEWS.md`
+  from the merged PRs at release.  For example:
+
+  ```markdown
+  ## User-visible change (for NEWS)
+
+  - `rtfplot()` and `rtf_figures()` take `render_format = "emf"`: a plot object is
+    drawn as EMF with devEMF (in Suggests), at `render_width` x `render_height`
+    inches.
+
+  Breaking: no
+  ```
+* **Versioning** (`CONTRIBUTING.md` *Versioning & releases*, §10). The
+  maintainers bump the version when they tag or release. The stamp at the top of this manual
   must equal `DESCRIPTION` (`test-ai-manual-version.R`); a PR leaves both
   alone.
 * **`cran-comments.md`** (root, `.Rbuildignore`d). The note to CRAN's

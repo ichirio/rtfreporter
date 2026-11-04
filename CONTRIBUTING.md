@@ -249,9 +249,25 @@ trying to produce helps a lot.
    Rscript -e 'lintr::lint_package()'            # must be clean
    ```
 
-6. Do **not** edit `NEWS.md`, `CHANGELOG.md` or `Version:`.  Describe the
-   user-visible change in the PR description; the maintainers write `NEWS.md`
-   and bump the version when they tag or release.
+6. **Record the change in the PR description.**  A PR never edits `NEWS.md`,
+   `CHANGELOG.md` or `Version:`, and there is no separate memo file.  Fill the
+   template's *User-visible change (for NEWS)* field without being asked: one or
+   two bullets in NEWS style (what a user can now do, or what is fixed, named by
+   its function or argument), or "none" for an internal change; then "Breaking:
+   no", or "Breaking: yes" with the migration.  The maintainers write `NEWS.md`
+   from the merged PRs at release.  For example:
+
+   ```markdown
+   ## User-visible change (for NEWS)
+
+   - `rtfplot()` and `rtf_figures()` take `render_format = "emf"`: a plot object is
+     drawn as EMF with devEMF (in Suggests), at `render_width` x `render_height`
+     inches.
+
+   Breaking: no
+   ```
+
+   The maintainers bump the version when they tag or release.
 7. Open the pull request against `main` with a clear description and a
    reference to the related issue (e.g. `Closes #12`).
 
@@ -703,9 +719,9 @@ with no version change.
 
 1. Leave `Version:` unchanged.  The maintainers set the version when they
    tag or release.
-2. Leave `NEWS.md` and `CHANGELOG.md` unchanged.  Describe the user-visible
-   change in the PR description; the maintainers write the `NEWS.md` bullet
-   when they tag or release.
+2. Leave `NEWS.md` and `CHANGELOG.md` unchanged.  Fill the template's
+   *User-visible change (for NEWS)* field (see *Pull requests*); the
+   maintainers write `NEWS.md` from the merged PRs at release.
 3. Run `devtools::document()` and the four pre-push checks (see *Pull
    requests*).
 4. No git tag, no GitHub Release, no CRAN submission for a development bump.
