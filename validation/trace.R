@@ -343,8 +343,13 @@ sm <- c(
   sprintf("| The mapped tests, run (test-log.txt) | %s |", gsub("|", "/", pass_line, fixed = TRUE)),
   sprintf("| Arguments a requirement names (functions with their own requirements) | %s |",
           pct(sum(fn_tab$arguments_in_fr), sum(fn_tab$arguments))),
-  sprintf("| Upper requirements | %s |", paste(sprintf("%s %s", tr$fr[!leaf], tr$coverage[!leaf]),
-                                                collapse = "; ")),
+  # (the upper FRs' own status is the matrix's second sheet; a gap is named here)
+  sprintf("| Upper requirements fully covered | %s%s |",
+          pct(sum(tr$coverage[!leaf] == "covered"), sum(!leaf)),
+          if (all(tr$coverage[!leaf] == "covered")) "" else
+            paste0("; not covered: ", paste(sprintf("%s %s", tr$fr[!leaf][tr$coverage[!leaf] != "covered"],
+                                                     tr$coverage[!leaf][tr$coverage[!leaf] != "covered"]),
+                                             collapse = "; "))),
   "",
   "## Environments",
   "",
