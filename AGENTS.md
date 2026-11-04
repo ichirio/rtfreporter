@@ -34,17 +34,23 @@ is wrong (open an issue if the design itself is in question).
 
 1. Branch off `main` (see *Branching & collaboration* in `CONTRIBUTING.md`).
 2. Change `R/`, `tests/testthat/`, and the roxygen docs together.
-3. Run `devtools::document()`, `devtools::test()`, `devtools::check()`
-   (target: 0 errors / 0 warnings).
-4. Update `NEWS.md` (and `CHANGELOG.md` for a minor/major release).
+3. Run `devtools::document()`, then the four pre-push checks listed in
+   *Pull requests* in `CONTRIBUTING.md` (set-up: *Development setup* there).
+4. Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.  Describe the
+   user-visible change in the PR description; the maintainers write `NEWS.md`
+   and bump the version when they tag or release.
 5. Open a pull request against `main`.
 
+Every behaviour change needs a requirement in
+`inst/validation/requirements.csv` and a test named with its FT id; see
+*Quality assurance* in `CONTRIBUTING.md`.
+
 **Versioning.**  Standard R scheme: a release is `X.Y.Z`, development is
-`X.Y.Z.9000`, and the three-component part names the last release.  An
-ordinary PR changes only the fourth position and usually leaves `Version:`
-alone -- `NEWS.md` is the record of what changed, not the number.  Touching
-`X`, `Y` or `Z` is a release action and fails `version-guard` without the
-`release` label.  See *Versioning & releases* in `CONTRIBUTING.md`.
+`X.Y.Z.9000`, and the three-component part names the last release.  The
+maintainers set the version when they tag or release; a PR leaves
+`Version:` alone, and `version-guard` accepts a PR with no version change.
+Touching `X`, `Y` or `Z` is a release action and fails `version-guard`
+without the `release` label.  See *Versioning & releases* in `CONTRIBUTING.md`.
 
 ## Layout (standard R-package set)
 
@@ -63,3 +69,5 @@ generators); it is `.Rbuildignore`d and never shipped.
 ```r
 devtools::test()    # all tests must pass before merging to main
 ```
+
+The full list of pre-push checks is in *Pull requests* in `CONTRIBUTING.md`.

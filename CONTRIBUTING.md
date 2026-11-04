@@ -90,9 +90,9 @@ git push -u origin <type>/<issue>-<slug>
 gh pr create --base main               # head is the branch you just pushed
 ```
 
-`main` itself currently accepts direct pushes (branch protection is off while
-the maintainer team is small), **but open a PR anyway** so CI runs and the
-change is reviewable.  Releases — minor/major version bumps, tags, GitHub
+`main` is protected: a change reaches it only through a pull request, once the
+required checks pass and one reviewer approves (see *Continuous
+integration*).  Releases — minor/major version bumps, tags, GitHub
 Releases — are a Collaborator-only action (see *Versioning & releases*).
 
 ## Issue → merge lifecycle
@@ -113,8 +113,8 @@ issue ──▶ discuss / agree approach ──▶ branch off main ──▶ ope
   (`bug`, `enhancement`, `good first issue`, ...).
 * **Branch + PR** — see *Branching & collaboration* below.  Reference the
   issue with `Closes #N` so it auto-closes on merge.
-* **Review + CI** — every GitHub Actions workflow that runs on the PR must
-  pass (see *Continuous integration*) and at least one maintainer approves.
+* **Review + CI** — the required checks must pass (see *Continuous
+  integration*) and one maintainer approves.
 * **Merge** — the maintainer merges to `main`; the branch is deleted.
 
 ## Execution-disposition labels (`exec:*`)
@@ -135,6 +135,10 @@ the two axes from being confused; at most one `exec:*` label applies at a time.
 An issue with **no** `exec:*` label is treated like `exec:hold`: the agent
 reports it but does not start work.  To hand a freshly-filed (e.g. web-created)
 issue to the agent, add `exec:agent`.
+
+The `exec:*` and `priority:*` labels guide the maintainers' own coding agent;
+an outside contributor needs none of them and may take any issue a maintainer
+has pointed them to.
 
 **Future agents.**  While there is a single agent, `exec:agent` is unambiguous.
 When more than one agent exists, split it into suffixed labels
@@ -170,16 +174,24 @@ trying to produce helps a lot.
 4. Add or update **tests** under `tests/testthat/` for any behaviour
    change, and **documentation** (roxygen2 comments) for any exported
    function.
-5. Make sure the checks pass locally:
+5. Make sure the checks pass locally.  These are *the four pre-push
+   checks*; run `devtools::document()` first (NAMESPACE is hand-managed),
+   then all four, and report the results in the PR description:
 
    ```r
-   devtools::document()      # regenerate man/*.Rd (NAMESPACE is hand-managed)
-   devtools::test()          # all tests must pass
-   devtools::check()         # 0 errors / 0 warnings
+   devtools::document()      # regenerate man/*.Rd, commit them
    ```
 
-6. Update `NEWS.md` (user-facing) and, for a major/minor change,
-   `CHANGELOG.md`.
+   ```bash
+   R CMD build . && R CMD check --as-cran rtfreporter_*.tar.gz  # 0 errors / 0 warnings
+   NOT_CRAN=true Rscript -e 'devtools::test()'   # full suite, nothing skipped on CRAN grounds
+   Rscript -e 'pkgdown::check_pkgdown()'         # when exports, Rd or _pkgdown.yml change
+   Rscript -e 'lintr::lint_package()'            # must be clean
+   ```
+
+6. Do **not** edit `NEWS.md`, `CHANGELOG.md` or `Version:`.  Describe the
+   user-visible change in the PR description; the maintainers write `NEWS.md`
+   and bump the version when they tag or release.
 7. Open the pull request against `main` with a clear description and a
    reference to the related issue (e.g. `Closes #12`).
 
@@ -246,19 +258,21 @@ branch plus short-lived topic branches.  This scales cleanly from one
 contributor to several.
 
 - **`main` is the single source of truth.**  It must always be
-  releasable: green on all CI workflows (R-CMD-check, test-coverage, lint,
-  pkgdown) and `0 errors / 0 warnings` on `devtools::check()`.  The
+  releasable: green on the required checks and `0 errors / 0 warnings` on
+  `R CMD check`.  The
   current *development version* lives here.
 - **`next` gathers the maintainers' work that is not urgent.**  Their
   topic branches go to `next` once their own checks pass; `next` goes to
   `main` about once a week, by a pull request (a merge commit) that runs
   every CI workflow.  An urgent fix goes to `main` as a small PR of its own.
-  Contributors keep opening their PRs against `main`.
-- **Direct commits to `main`.**  Branch protection is **not yet enabled**
-  while the project has a single maintainer (so `main` currently accepts
-  direct pushes).  As soon as there is more than one contributor it will be
-  turned on: require a pull request, passing CI, and at least one approving
-  review before merge.  Contributors should use a PR regardless.
+  Contributors open pull requests against `main`.  The `next` branch, the
+  `automerge` label and `merge-after:` lines are the maintainers' own
+  workflow; a maintainer adds any label that is needed.
+- **No direct commits to `main`.**  `main` is protected: a pull request is
+  required, the required checks (`ubuntu-latest (release)`,
+  `ubuntu-latest (devel)`, `ubuntu-latest (oldrel-1)`, `macos-latest
+  (release)`, `windows-latest (release)`, `pkgdown` and `test-coverage`) must
+  pass, and one approving review is needed before merge.
 - **One topic branch per change**, cut from the latest `main`.  Name it
   **`<type>/<issue>-<slug>`** -- lowercase, hyphen-separated, short
   (3-5 words):
@@ -331,8 +345,12 @@ contributor to several.
 ## Continuous integration (GitHub Actions)
 
 These workflows run on pushes and pull requests (under
-`.github/workflows/`).  A PR is mergeable only when every workflow that runs
-on it is green.
+`.github/workflows/`).  A PR is mergeable only when the required checks are
+green and one reviewer approves; `lint` and `version-guard` also run on it.
+
+CI runs when the pull request is opened, not on pushes to the branches of
+your fork.  The workflows of a first-time contributor's PR wait until a
+maintainer approves them.
 
 | Workflow | File | What it does |
 |----------|------|--------------|
@@ -347,8 +365,8 @@ R-CMD-check, test-coverage, pkgdown and lint also accept `workflow_dispatch`
 (run-on-demand from the Actions tab).  Releases additionally re-trigger
 pkgdown and R-CMD-check (with its quality-report job) on `release:
 published`.
-Before pushing, reproduce CI locally with `devtools::document()`,
-`devtools::test()` and `devtools::check()`.
+Before pushing, reproduce CI locally with `devtools::document()` and the
+four pre-push checks (see *Pull requests*).
 
 ## Project tracking (GitHub Projects / labels)
 
@@ -526,8 +544,11 @@ what it does not.
 
 ## Development setup
 
+Use R 4.2 or later (the oldest version CI tests).
+
 ```r
-install.packages("devtools")
+# tools for the pre-push checks; they are not in Suggests
+install.packages(c("devtools", "lintr", "pkgdown", "rcmdcheck", "spelling"))
 devtools::install_dev_deps()   # installs Suggests used by tests/vignettes
 devtools::load_all()           # load the package for interactive work
 ```
@@ -613,20 +634,20 @@ tried it.
 
 ### Procedure — an ordinary development PR
 
-**An ordinary PR does not have to touch `Version:` at all.**
+**An ordinary PR never touches `Version:` or `NEWS.md`.**
 
-The development counter — the fourth position — exists to signal *"depend on
-this"*: bump it when your change is something another branch, a downstream
-user or a bug report needs to name.  A typo fix, a test, a refactor with no
-visible effect: leave it alone.
+The development counter — the fourth position — signals *"depend on this"*.
+The maintainers raise it when something downstream needs to name a
+development state, as part of how they release.  `version-guard` accepts a PR
+with no version change.
 
-1. If the change is worth naming, raise the **fourth** position by one
-   (`0.8.0.9000` → `0.8.0.9001`).  Otherwise leave `Version:` unchanged.
-2. Add a bullet under the `# rtfreporter (development version)` heading in
-   `NEWS.md`.  **This is not optional** — `NEWS.md`, not the version number,
-   is the record of what changed.
-3. Run `devtools::document()`, `devtools::test()`, `lintr::lint_package()`,
-   `devtools::check()`.
+1. Leave `Version:` unchanged.  The maintainers set the version when they
+   tag or release.
+2. Leave `NEWS.md` and `CHANGELOG.md` unchanged.  Describe the user-visible
+   change in the PR description; the maintainers write the `NEWS.md` bullet
+   when they tag or release.
+3. Run `devtools::document()` and the four pre-push checks (see *Pull
+   requests*).
 4. No git tag, no GitHub Release, no CRAN submission for a development bump.
 
 > **Enforced by CI.**  `version-guard` fails any PR that changes `X`, `Y` or
