@@ -277,6 +277,20 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
 * Guard every optional-package test with `skip_if_not_installed()`.
 * When you fix a bug, add the failing case **and** the neighbouring cases
   that already worked, so the next change cannot re-break the boundary.
+* **No withr** (it is not a dependency): use `tempfile()`, `dir.create()` and
+  `on.exit(unlink(...))`.
+* While you work, run the tests of the area you changed and `lintr` on the
+  changed files; before you push, the four pre-push checks (§14).
+* Run tests where they are; never copy them into a temporary folder
+  (`testthat` would read that folder's `setup*.R`).
+* Point `R_USER_CONFIG_DIR`, `R_USER_DATA_DIR` and `R_USER_CACHE_DIR` at a work
+  folder, never at the user's own.
+* Run the tests in one R session too (`testthat::test_dir()` on the installed
+  package), not only one file at a time: per-file runs miss interference
+  between tests.
+* Split a source file before it passes 2,000 lines.
+* **Fictional data only.**  No company, study or patient data in code, tests,
+  fixtures, examples, issues or pull requests, and none sent to an AI service.
 
 ---
 
@@ -291,7 +305,7 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
 * Articles live in `vignettes/articles/` (site only); user-facing vignettes in
   `vignettes/`. Several articles have a `-ja` Japanese twin — update both.
 * A PR never edits `NEWS.md`, `CHANGELOG.md` or `Version:`; the PR
-  description carries the user-visible change.
+  description's *User-visible change (for NEWS)* field carries the change (§14).
 * Regenerate committed examples from the working tree, never from an
   installed build: `Rscript data-raw/gen_tlg_catalog_rtf.R` from the package
   root (the generators `source("data-raw/_load.R")`, which uses
@@ -362,6 +376,91 @@ session.
 * **Before pushing:** `devtools::document()`, then the four checks in §14.
 
 ---
+
+### Git work for a contributor
+
+If you are an agent working for a contributor, you do the git work as well.
+Their fork is `origin`; `https://github.com/ichirio/rtfreporter.git` is `upstream`
+(`git remote add upstream <url>`, one time only). Check with `git remote -v`
+before you start. Run `git status` first; if the working tree has uncommitted
+changes, commit them or ask, and never discard them.
+
+#### Update the fork's main
+
+Do this before every new piece of work. A fork does not update itself. Keep
+`main` pristine: never commit to it.
+
+```bash
+git checkout main
+git fetch upstream
+git merge --ff-only upstream/main
+git push origin main
+```
+
+Then cut the topic branch: `git checkout -b <type>/<issue>-<slug>`.
+
+#### If the fork's main has gone stale or has its own commits
+
+If `git merge --ff-only` fails, `main` has commits upstream does not have.
+Stop and tell the contributor which commits (`git log upstream/main..main`).
+The reset below discards them, so run it only after they agree, and keep the
+work on a branch first:
+
+```bash
+git branch my-old-work main
+git fetch upstream
+git checkout main
+git reset --hard upstream/main
+git push origin main --force-with-lease
+```
+
+This is the only time `main` is ever force-pushed.
+
+#### Rebase a topic branch on upstream/main
+
+Do this when the branch has fallen behind, or when CI or a reviewer asks for it.
+
+```bash
+git fetch upstream
+git checkout <topic-branch>
+git rebase upstream/main
+```
+
+If there are conflicts, git stops at each one:
+
+1. `git status` lists the conflicted files. Open each one and keep both
+   sides' intent: upstream's change and the contributor's.
+2. If you cannot tell what a side intended, read its commit
+   (`git log -p upstream/main -- <file>`). If you still cannot tell, run
+   `git rebase --abort` and ask. Don't guess.
+3. `git add <file>`, then `git rebase --continue`. Repeat until it finishes.
+   Never edit `Version:` or `NEWS.md` to settle a conflict; take upstream's.
+
+Then run the tests of the area you changed again, because a rebase changes the
+code under them. Only when they pass:
+
+```bash
+git push --force-with-lease origin <topic-branch>
+```
+
+- `--force-with-lease` on the topic branch only: a rebase rewrites its history,
+  so a plain push is refused.
+- Never use plain `--force`. If `--force-with-lease` is refused, someone else
+  pushed to the branch: fetch and look at what they pushed before going on.
+- Never force-push `main`, except for the stale-fork reset above.
+
+#### When CI or a review asks for a rebase
+
+- "This branch is out of date" or "has conflicts": rebase as above and push. The
+  pull request updates by itself; don't open a new one, and don't close it.
+- CI failed: read the failed step's log first. If the failure comes from your
+  change, fix it in a new commit on the branch. Rebase only if upstream
+  has moved past a fix you need.
+- A review asked for changes: add commits on the branch and reply on the pull
+  request. Don't rewrite history that the reviewer has already read, unless
+  they asked for a rebase or squash.
+- Stop and ask the contributor if a rebase would drop commits you didn't
+  write, or if conflicts reach beyond the files they changed.
 
 ## 11. Source-file map
 
@@ -501,7 +600,8 @@ for the detail — this section deliberately does not copy it.
 * **PR template** (`.github/PULL_REQUEST_TEMPLATE.md`). Fill every section,
   do not delete them: *Summary* (what and why), *Related issue*
   (`Closes #N`), *Type of change* (fix / feature / breaking + migration /
-  docs-tests-internal), *Requirements, tests and regression* (every
+  docs-tests-internal), *User-visible change (for NEWS)* (below),
+  *Requirements, tests and regression* (every
   behaviour change needs a requirement in `inst/validation/requirements.csv`
   and a test named with its FT id; see *Quality assurance* in
   `CONTRIBUTING.md`), the *Checklist* (tests, roxygen + committed
@@ -525,10 +625,25 @@ for the detail — this section deliberately does not copy it.
   Rscript -e 'lintr::lint_package()'            # must be clean
   ```
 
-* **Versioning + NEWS** (`CONTRIBUTING.md` *Versioning & releases*, §10). A
-  PR never edits `NEWS.md`, `CHANGELOG.md` or `Version:`; the user-visible
-  change goes in the PR description, and the maintainers write NEWS and bump
-  the version when they tag or release. The stamp at the top of this manual
+* **Record the change in the PR description.**  A PR never edits `NEWS.md`,
+  `CHANGELOG.md` or `Version:`, and there is no separate memo file.  Fill the
+  template's *User-visible change (for NEWS)* field without being asked: one or
+  two bullets in NEWS style (what a user can now do, or what is fixed, named by
+  its function or argument), or "none" for an internal change; then "Breaking:
+  no", or "Breaking: yes" with the migration.  The maintainers write `NEWS.md`
+  from the merged PRs at release.  For example:
+
+  ```markdown
+  ## User-visible change (for NEWS)
+
+  - `rtfplot()` and `rtf_figures()` take `render_format = "emf"`: a plot object is
+    drawn as EMF with devEMF (in Suggests), at `render_width` x `render_height`
+    inches.
+
+  Breaking: no
+  ```
+* **Versioning** (`CONTRIBUTING.md` *Versioning & releases*, §10). The
+  maintainers bump the version when they tag or release. The stamp at the top of this manual
   must equal `DESCRIPTION` (`test-ai-manual-version.R`); a PR leaves both
   alone.
 * **`cran-comments.md`** (root, `.Rbuildignore`d). The note to CRAN's
