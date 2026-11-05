@@ -16,7 +16,8 @@ There is **no application or invitation step** — anyone can contribute:
 2. For anything non-trivial, agree the approach on the issue first.
 3. Fork the repo, create a topic branch, make the change, and open a
    pull request (the PR template's checklist walks you through it).
-4. Once all of CI is green, it is merged.
+4. A maintainer reviews and approves your pull request; once it is approved
+   and all of CI is green, it is merged.
 
 After a couple of merged, good-quality PRs you may be offered **write
 access / maintainer status** (the ability to push branches, label issues,
@@ -150,7 +151,8 @@ gh pr create --base main               # head is the branch you just pushed
 ```
 
 `main` is protected: a change reaches it only through a pull request, once the
-required checks pass (see *Continuous integration*).  Releases — minor/major version bumps, tags, GitHub
+required checks pass (see *Continuous integration*).  A maintainer reviews and
+approves a contributor's pull request.  Releases — minor/major version bumps, tags, GitHub
 Releases — are a Collaborator-only action (see *Versioning & releases*).
 
 ## Issue → merge lifecycle
@@ -175,6 +177,7 @@ issue ──▶ discuss / agree approach ──▶ branch off main ──▶ ope
   the PR.  Reference the issue with `Closes #N` so it auto-closes on merge.
 * **CI** — CI runs the tests of the change and the regression tests, on every
   environment; the required checks must pass (see *Continuous integration*).
+  A maintainer reviews and approves a contributor's pull request.
 * **Merge** — the maintainer merges to `main`; the branch is deleted.
 
 ## Execution-disposition labels (`exec:*`)
@@ -352,7 +355,8 @@ contributor to several.
   required, the required checks (`ubuntu-latest (release)`,
   `ubuntu-latest (devel)`, `ubuntu-latest (oldrel-1)`, `macos-latest
   (release)`, `windows-latest (release)`, `pkgdown` and `test-coverage`) must
-  pass before merge.
+  pass before merge, and a maintainer reviews and approves a contributor's
+  pull request.
 - **One topic branch per change**, cut from the latest `main`.  Name it
   **`<type>/<issue>-<slug>`** -- lowercase, hyphen-separated, short
   (3-5 words):
@@ -426,7 +430,8 @@ contributor to several.
 
 These workflows run on pushes and pull requests (under
 `.github/workflows/`).  A PR into `main` merges when the required checks are
-green; `lint` and `version-guard` also run on it.
+green, a contributor's once a maintainer has also reviewed and approved it;
+`lint` and `version-guard` also run on it.
 
 CI runs when the pull request is opened, not on pushes to the branches of
 your fork.  The workflows of a first-time contributor's PR wait until a

@@ -399,7 +399,7 @@ sm <- c(
                       sprintf("Of the %d with no test, not every one is assessed and accepted (Deviations).", n_dev)
                     })
           }),
-  "3. **Process.** Responsibilities are as the Quality Plan says (section 7): the development team evaluates each issue; the developer making a change adds its tests and requirements and runs the tests; the maintainer merges a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. GitHub keeps that record (the issues, the pull requests, the CI runs); it is referred to, not copied.",
+  "3. **Process.** Responsibilities are as the Quality Plan says (section 7): the development team evaluates each issue; the developer making a change adds its tests and requirements and runs the tests; the maintainer reviews and approves a contributor's pull request, and merges a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. GitHub keeps that record (the issues, the pull requests, the CI runs); it is referred to, not copied.",
   "4. **Other measures.** Line coverage (Attachments, at the end of this report) and the arguments the tests give (functions.csv) are secondary: aids that show where to look, not evidence of a requirement met.",
   "",
   if (is.null(draft) && ready) {

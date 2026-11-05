@@ -95,4 +95,4 @@ releases -- is referred to, not copied.
 |---|---|
 | Development team | Evaluating each issue and deciding whether it is taken up. |
 | Contributor (works from a fork) or collaborator (works in the repository): the developer making the change | Making the change with its tests and requirements, mapping the tests to the requirements, running the tests, and opening a pull request. |
-| Author / maintainer | Merging a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. Running the local environments of section 5 before a release, accepting any deviation, making the release, and the conclusion of the Quality Report. |
+| Author / maintainer | Reviewing and approving a contributor's pull request. Merging a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. Running the local environments of section 5 before a release, accepting any deviation, making the release, and the conclusion of the Quality Report. |
