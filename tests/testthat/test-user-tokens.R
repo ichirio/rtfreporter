@@ -83,6 +83,21 @@ test_that("a column header is not filled: set_col_header() still asks for values
                    "N=3 ABC")
 })
 
+test_that("a filled value is not read again: a label with a brace group stays as written (#921)", {
+  fill <- rtfreporter:::.fill_text_tokens
+  v <- list(value = "C_{n}", n = 5)
+  expect_identical(unname(fill("Parameter: {value}", v, "heading")), "Parameter: C_{n}")
+  expect_identical(unname(fill("{value} (n={n})", v, "heading")), "C_{n} (n=5)")
+  expect_identical(unname(fill("Parameter: {value}", list(value = "C_{max}", n = 5), "heading")),
+                   "Parameter: C_{max}")
+  expect_identical(unname(fill("{value}", list(value = "X_{value}"), "heading")), "X_{value}")
+  # a name the token pattern does not match still fills
+  expect_identical(unname(fill("{A B}", list(`A B` = "x"), "heading")), "x")
+  # `{{` stays a literal brace; a token with no value still stops
+  expect_identical(unname(fill("{{a}} {value}", list(value = "v"), "heading")), "{a} v")
+  expect_error(fill("{STUDY} {value}", list(value = "v"), "heading"), "no value for")
+})
+
 test_that("drop_empty_rows leaves out a band row whose tokens are all empty", {
   band <- function(drop) rtf_header(list(
     c(l = "{COMPANY}", r = "Page {PAGE}"),
