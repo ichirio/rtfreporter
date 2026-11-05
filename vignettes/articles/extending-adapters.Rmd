@@ -180,7 +180,7 @@ message.
 **3. `as_rtftable()` in `R/as_rtftable.R`.**  It tests the object against the
 same list before it calls `as_rtftables()`, and stops with "`x` must be a
 gt_tbl, ..." for a type it does not know.  Add `.is_mypkg_tbl()` to that test
-and to the message.  The requirements that quote the message
+and to the message.  The requirements that list the types
 (`FR-TB102`, `FR-TB106` in `inst/validation/requirements.csv`) change with it.
 
 **4. `.is_table_source()` in `R/content.R`.**  `rtf_tables(doc, x)` calls it to
