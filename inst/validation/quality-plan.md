@@ -6,7 +6,7 @@ first release made under it and again for each major version.  The way changes a
 -- issues, pull requests, CI, branches, releases -- is in
 [CONTRIBUTING.md](https://github.com/ichirio/rtfreporter/blob/main/CONTRIBUTING.md) (*Quality assurance*, *Branching &
 collaboration*, *Continuous integration*, *Versioning & releases*) and is not
-repeated here.
+repeated here; who is responsible for what is in section 7.
 
 ## 1. Scope
 
@@ -61,10 +61,7 @@ when all of these hold:
    without a reason, and none not yet assessed;
 3. the tests pass on every environment of section 5, and R CMD check
    succeeds on every CI environment;
-4. the changes were made as CONTRIBUTING.md says (an issue evaluated by the
-   development team, a branch, tests run and a pull request opened, with every
-   CI workflow on every environment required to pass before the merge into
-   `main`).
+4. the changes were made under the responsibilities of section 7.
 
 Line coverage and the arguments the tests give are aids, not criteria.
 
@@ -91,3 +88,11 @@ maintainers' own; no third-party audit is made.
 
 What GitHub already records -- issues, pull requests, the CI runs, the
 releases -- is referred to, not copied.
+
+## 7. Roles and responsibilities
+
+| Role | Responsible for |
+|---|---|
+| Development team | Evaluating each issue and deciding whether it is taken up. |
+| Contributor (works from a fork) or collaborator (works in the repository): the developer making the change | Making the change with its tests and requirements, mapping the tests to the requirements, running the tests, and opening a pull request. |
+| Author / maintainer | Merging a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. Running the local environments of section 5 before a release, accepting any deviation, making the release, and the conclusion of the Quality Report. |
