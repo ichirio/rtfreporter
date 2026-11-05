@@ -180,8 +180,8 @@ rlistings がそうです）は、この分岐を `is.data.frame(x)` の分岐�
 
 **3. `R/as_rtftable.R` の `as_rtftable()`。** `as_rtftables()` を呼ぶ前に、
 同じ一覧でオブジェクトを調べ、知らない型には「`x` must be a gt_tbl, ...」で
-止まります。この判定とメッセージに `.is_mypkg_tbl()` を加えます。メッセージを
-引用している要件（`inst/validation/requirements.csv` の `FR-TB102`,
+止まります。この判定とメッセージに `.is_mypkg_tbl()` を加えます。対応する型を
+並べている要件（`inst/validation/requirements.csv` の `FR-TB102`,
 `FR-TB106`）も一緒に変わります。
 
 **4. `R/content.R` の `.is_table_source()`。** `rtf_tables(doc, x)` は、これで

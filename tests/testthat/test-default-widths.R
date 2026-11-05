@@ -77,6 +77,6 @@ test_that("an rtftable with no widths renders them; one with widths is unchanged
 test_that("a table split into column pages keeps each column's default width", {
   d <- cbind(.dm(), as.data.frame(matrix("1", 3, 4, dimnames = list(NULL, paste0("V", 1:4)))))
   tbl <- rtftable(d)
-  pages <- paginate_cols(tbl, at = 5, width = "keep")
+  pages <- paginate_cols(tbl, at = 5, keep = 1)
   expect_equal(pages[[1L]]$col_rel_width[1L], pages[[2L]]$col_rel_width[1L])
 })
