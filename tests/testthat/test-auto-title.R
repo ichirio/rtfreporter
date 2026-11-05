@@ -414,6 +414,22 @@ test_that("the marker is listed in rtf_text_tokens(), and a header or column hea
   expect_false("PAGE_HEADING" %in% rtfreporter:::.RENDER_TOKENS)
 })
 
+test_that("a marker row that reaches the renderer is not printed: rtf_figures(titles = ), a block by hand", {
+  norm <- rtfreporter:::.normalize_text_block
+  rows <- norm(list("A", "{PAGE_HEADING}", list(text = "{PAGE_HEADING}", align = "left"), "B"), FALSE)
+  expect_identical(vapply(rows, function(r) r$text, ""), c("A", "B"))
+  # a footnote is not a title: its text is as written
+  expect_identical(norm("{PAGE_HEADING}", TRUE)[[1L]]$text, "{PAGE_HEADING}")
+  png <- tempfile(fileext = ".png"); on.exit(unlink(png), add = TRUE)
+  grDevices::png(png); graphics::plot(1:3); grDevices::dev.off()
+  doc <- rtf_document() |> rtf_figures(png, titles = list(c("Figure 1", "{PAGE_HEADING}")))
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  suppressMessages(generate_rtfreport(doc, f, overwrite = TRUE))
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "")
+  expect_true(grepl("Figure 1", rtf, fixed = TRUE))
+  expect_false(grepl("PAGE_HEADING", rtf, fixed = TRUE))
+})
+
 test_that("figure titles: a marker left in a figure page's title is dropped by rtf_titles()", {
   skip_if_not_installed("grid")
   png <- tempfile(fileext = ".png")
