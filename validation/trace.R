@@ -18,8 +18,8 @@
 #               functions' own, under FR-IX000.
 #  Only `active` rows count (`draft`: a coarse row not yet split).
 #
-#  An FT is a test_that() block that checks an FR -- decided by a person who
-#  read it, never by the block merely calling the function:
+#  An FT is a test_that() block that checks an FR -- decided by the developer
+#  making the change, never by the block merely calling the function:
 #    * a new test names its id and FRs at its head:
 #        test_that("FT-PL<nnn> [FR-PL101 FR-PL102]: table_plan() ...", ...)
 #    * an existing test is mapped in inst/validation/test_map.csv
@@ -226,7 +226,7 @@ fr_ok <- vapply(fr$id[leaf], function(id) {
 }, NA)
 
 # ---- the deviations: the leaves with no test, and why they are accepted -----------------
-# inst/validation/deviations.csv, written by a person: one row a group of FRs
+# inst/validation/deviations.csv, written by the developer: one row a group of FRs
 # accepted for one reason (ids space-separated), its risk (high / medium /
 # low) and the basis of that, the reason it is accepted, the action
 dev <- utils::read.csv(file.path(vdir, "deviations.csv"), colClasses = "character",
@@ -333,7 +333,7 @@ sm <- c(
   "## Results",
   "",
   "| Measure | Value |", "|---|---|",
-  sprintf("| Leaf requirements with a test, mapped by a person | %s |", pct(sum(tl$n_ft > 0), nrow(tl))),
+  sprintf("| Leaf requirements with a test, mapped by the developer | %s |", pct(sum(tl$n_ft > 0), nrow(tl))),
   sprintf("| Guard requirements (unintended use stopped) with a test | %s |",
           pct(sum(tl$n_ft > 0 & tl$kind == "guard"), n_guard)),
   sprintf("| Interaction requirements (functions or arguments together) with a test | %s |",
@@ -399,7 +399,7 @@ sm <- c(
                       sprintf("Of the %d with no test, not every one is assessed and accepted (Deviations).", n_dev)
                     })
           }),
-  "3. **Process.** Every change is made as CONTRIBUTING.md says (its issue-to-merge lifecycle and *Quality assurance*): an issue and a pull request, reviewed, with every CI workflow passing before the merge, so a failing test keeps a change out. GitHub keeps that record (the pull requests, their reviews, the CI runs); it is referred to, not copied.",
+  "3. **Process.** Changes are made as CONTRIBUTING.md says (its issue-to-merge lifecycle and *Quality assurance*): an issue evaluated by the development team, a branch, tests run and a pull request opened. CI runs the tests of the change and the regression tests, and every CI workflow on every environment is required to pass before the merge into `main`. GitHub keeps that record (the issues, the pull requests, the CI runs); it is referred to, not copied.",
   "4. **Other measures.** Line coverage (Attachments, at the end of this report) and the arguments the tests give (functions.csv) are secondary: aids that show where to look, not evidence of a requirement met.",
   "",
   if (is.null(draft) && ready) {

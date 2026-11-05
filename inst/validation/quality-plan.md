@@ -3,7 +3,7 @@
 This plan says how rtfreporter's quality is assured for a release, and what
 the Quality Report at that release must show.  It is written once for the
 first release made under it and again for each major version.  The way changes are made
--- issues, pull requests, review, CI, branches, releases -- is in
+-- issues, pull requests, CI, branches, releases -- is in
 [CONTRIBUTING.md](https://github.com/ichirio/rtfreporter/blob/main/CONTRIBUTING.md) (*Quality assurance*, *Branching &
 collaboration*, *Continuous integration*, *Versioning & releases*) and is not
 repeated here.
@@ -40,8 +40,8 @@ the user's report, and deepest where it is likeliest or hardest to see:
   A parent is of kind `group`; each leaf is of one of five kinds:
   `behaviour`, `argument`, `data`, `guard`, `interaction` (the last under
   `FR-IX000`, apart from the functions').
-- **Functional Tests (FT)** are testthat blocks mapped to the leaves by a
-  person who read them: in `inst/validation/test_map.csv`, or by a new
+- **Functional Tests (FT)** are testthat blocks mapped to the leaves by the
+  developer making the change: in `inst/validation/test_map.csv`, or by a new
   test's own name (`"FT-PL<nnn> [FR-PL157 FR-PL159]: ..."`).  A test that
   merely calls a function is not coverage.  A parent requirement is covered
   when every leaf under it is.
@@ -61,8 +61,10 @@ when all of these hold:
    without a reason, and none not yet assessed;
 3. the tests pass on every environment of section 5, and R CMD check
    succeeds on every CI environment;
-4. the changes were made as CONTRIBUTING.md says (a pull request, reviewed,
-   with every CI workflow passing before the merge).
+4. the changes were made as CONTRIBUTING.md says (an issue evaluated by the
+   development team, a branch, tests run and a pull request opened, with every
+   CI workflow on every environment required to pass before the merge into
+   `main`).
 
 Line coverage and the arguments the tests give are aids, not criteria.
 
@@ -87,5 +89,5 @@ maintainers' own; no third-party audit is made.
 | The first release under this plan, and each major version | this **Quality Plan** (by hand) | the **Quality Report** (`quality-report-<tag>.pdf`): made by CI at the published release from the records -- the environments' table, the results, the deviations and why accepted, the conclusion, how to read the attachments; attached to the release with the Traceability Matrix (`traceability-<tag>.xlsx`), every environment's sessionInfo and tests' log (`environments-<tag>.txt`), the tests' log of the mapped tests (`test-log-<tag>.txt`) and the tables behind the results (`ft-<tag>.csv`, `functions-<tag>.csv`, `candidates-<tag>.csv`) |
 | Releases between them | the **Change Request Plan**: the release's GitHub milestone, each issue with its impact, risk and related FRs | the **Change Report**: made from the merged pull requests and issues, the FRs added or changed, the regression evidence (the tests, the byte comparison of the reference outputs), the environments; the deviations' reasons by hand |
 
-What GitHub already records -- issues, pull requests and their reviews, the
-CI runs, the releases -- is referred to, not copied.
+What GitHub already records -- issues, pull requests, the CI runs, the
+releases -- is referred to, not copied.
