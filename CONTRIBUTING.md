@@ -16,8 +16,8 @@ There is **no application or invitation step** — anyone can contribute:
 2. For anything non-trivial, agree the approach on the issue first.
 3. Fork the repo, create a topic branch, make the change, and open a
    pull request (the PR template's checklist walks you through it).
-4. Address review feedback; once CI is green and a maintainer approves,
-   it is merged.
+4. A maintainer reviews and approves your pull request; once it is approved
+   and all of CI is green, it is merged.
 
 After a couple of merged, good-quality PRs you may be offered **write
 access / maintainer status** (the ability to push branches, label issues,
@@ -26,7 +26,7 @@ size are valued, including docs, tests, and bug reports.
 
 ## Contributor vs Collaborator: two ways to push your work
 
-Everyone follows the **same** issue → branch → PR → review → merge lifecycle
+Everyone follows the **same** issue → branch → PR → CI → merge lifecycle
 and the **same** branch-naming rules (below).  The only thing that differs is
 **where your topic branch lives**, which depends on whether you have write
 access to this repository.
@@ -151,8 +151,8 @@ gh pr create --base main               # head is the branch you just pushed
 ```
 
 `main` is protected: a change reaches it only through a pull request, once the
-required checks pass and one reviewer approves (see *Continuous
-integration*).  Releases — minor/major version bumps, tags, GitHub
+required checks pass (see *Continuous integration*).  A maintainer reviews and
+approves a contributor's pull request.  Releases — minor/major version bumps, tags, GitHub
 Releases — are a Collaborator-only action (see *Versioning & releases*).
 
 ## Issue → merge lifecycle
@@ -161,7 +161,7 @@ Releases — are a Collaborator-only action (see *Versioning & releases*).
 issue ──▶ discuss / agree approach ──▶ branch off main ──▶ open PR
    ▲                                                          │
    │                                                          ▼
-   └──────────────── (changes requested) ◀── review + green CI
+   └──────────────── (a check fails) ◀────── tests + all of CI
                                                               │
                                                               ▼
                                                       merge to main
@@ -169,12 +169,15 @@ issue ──▶ discuss / agree approach ──▶ branch off main ──▶ ope
                                                         via "Closes #N")
 ```
 
-* **Issue** — describe the problem/idea; a maintainer triages and labels it
-  (`bug`, `enhancement`, `good first issue`, ...).
-* **Branch + PR** — see *Branching & collaboration* below.  Reference the
-  issue with `Closes #N` so it auto-closes on merge.
-* **Review + CI** — the required checks must pass (see *Continuous
-  integration*) and one maintainer approves.
+* **Issue** — describe the problem/idea; the development team evaluates it,
+  and once it is decided the issue's status changes (its labels: `bug`,
+  `enhancement`, `good first issue`, `exec:*`, ...).
+* **Branch + PR** — a collaborator branches in this repository, a contributor
+  in a fork (see *Branching & collaboration* below).  Run the tests, then open
+  the PR.  Reference the issue with `Closes #N` so it auto-closes on merge.
+* **CI** — CI runs the tests of the change and the regression tests, on every
+  environment; the required checks must pass (see *Continuous integration*).
+  A maintainer reviews and approves a contributor's pull request.
 * **Merge** — the maintainer merges to `main`; the branch is deleted.
 
 ## Execution-disposition labels (`exec:*`)
@@ -341,7 +344,10 @@ contributor to several.
 - **`next` gathers the maintainers' work that is not urgent.**  Their
   topic branches go to `next` once their own checks pass; `next` goes to
   `main` about once a week, by a pull request (a merge commit) that runs
-  every CI workflow.  An urgent fix goes to `main` as a small PR of its own.
+  every CI workflow, on every environment.  A PR into `next` runs `lint` and
+  the tests on Ubuntu (R release); every environment runs on `next` itself,
+  before it reaches `main`.  An urgent fix goes to `main` as a small PR of its
+  own, which runs them all, as a contributor's PR does.
   Contributors open pull requests against `main`.  The `next` branch, the
   `automerge` label and `merge-after:` lines are the maintainers' own
   workflow; a maintainer adds any label that is needed.
@@ -349,7 +355,8 @@ contributor to several.
   required, the required checks (`ubuntu-latest (release)`,
   `ubuntu-latest (devel)`, `ubuntu-latest (oldrel-1)`, `macos-latest
   (release)`, `windows-latest (release)`, `pkgdown` and `test-coverage`) must
-  pass, and one approving review is needed before merge.
+  pass before merge, and a maintainer reviews and approves a contributor's
+  pull request.
 - **One topic branch per change**, cut from the latest `main`.  Name it
   **`<type>/<issue>-<slug>`** -- lowercase, hyphen-separated, short
   (3-5 words):
@@ -422,8 +429,9 @@ contributor to several.
 ## Continuous integration (GitHub Actions)
 
 These workflows run on pushes and pull requests (under
-`.github/workflows/`).  A PR is mergeable only when the required checks are
-green and one reviewer approves; `lint` and `version-guard` also run on it.
+`.github/workflows/`).  A PR into `main` merges when the required checks are
+green, a contributor's once a maintainer has also reviewed and approved it;
+`lint` and `version-guard` also run on it.
 
 CI runs when the pull request is opened, not on pushes to the branches of
 your fork.  The workflows of a first-time contributor's PR wait until a
@@ -482,7 +490,7 @@ record of *what shipped* stays in `NEWS.md` / `CHANGELOG.md`.
 | **Backlog** | Captured, not yet scheduled. | no `exec:*`, or `exec:hold` |
 | **Ready** | Approved and scoped; ready to pick up. | `exec:agent` / `exec:human` (assignee set) |
 | **In progress** | Someone (or the agent) is actively working it. | branch exists |
-| **In review** | PR open, CI green, awaiting review. | open PR |
+| **In review** | PR open, CI running or green, awaiting merge. | open PR |
 | **Blocked** | Needs a decision or an upstream fix. | `exec:hold` |
 | **Done** | Merged / closed. | issue closed via `Closes #N` |
 
@@ -532,9 +540,8 @@ view via the Issues tab (filter by `exec:agent`, by milestone, or by type).
 
 ## Quality assurance: requirements, tests, traceability
 
-What GitHub already records -- issues, pull requests and their reviews,
-the CI runs, the releases -- is not written again; this section says only
-what it does not.
+What GitHub already records -- issues, pull requests, the CI runs, the
+releases -- is not written again; this section says only what it does not.
 
 - **Functional Requirements (FR)** are `inst/validation/requirements.csv`,
   one row a requirement, a hierarchy: each row names its `parent`
@@ -562,8 +569,8 @@ what it does not.
   renumbered, a withdrawn one is `superseded` or
   `removed` (`draft`: a coarse row not yet split, not counted).
 - **Functional Tests (FT)** are the `test_that()` blocks that check an FR,
-  as a person who read them decided -- not a block that merely calls the
-  function.  A new test names its id and FRs at its head
+  as the developer making the change decided -- not a block that merely calls
+  the function.  A new test names its id and FRs at its head
   (`"FT-PL<nnn> [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`, three or four
   digits, the
   next unused FT number in its area);
