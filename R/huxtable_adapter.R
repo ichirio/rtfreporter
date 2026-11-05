@@ -23,12 +23,15 @@
 #    "alignment"  -- per-column alignment
 #    "spanning"   -- upper header rows -> stacked col_header
 #    "titles"     -- caption -> page title block
+#    "footnotes"  -- add_footnote() rows -> page footnote block
 #
 #  Not carried (consistent with the gt adapter): per-cell bold / italic /
-#  colour / fill.  huxtable has no first-class footnote concept, so footnotes
-#  are not extracted.
+#  colour / fill.  huxtable has no first-class footnote concept; the rows
+#  add_footnote() appends (a last row whose first cell spans the whole width)
+#  are read as the footnote lines.
 
-.HUXTABLE_TOKENS_ALL <- c("col_header", "alignment", "spanning", "titles")
+.HUXTABLE_TOKENS_ALL <- c("col_header", "alignment", "spanning", "titles",
+                          "footnotes")
 
 
 # -- Detection ---------------------------------------------------------------
@@ -105,7 +108,7 @@
 
 # Returns a list with the same shape the gt / rtables / flextable adapters
 # produce, so as_rtftables() / as_rtftable() can consume any source identically:
-#   data, col_header, col_spec, titles_block.
+#   data, col_header, col_spec, titles_block, footnotes_block.
 .huxtable_to_rtftable_kwargs <- function(x, tokens = .HUXTABLE_TOKENS_ALL) {
   if (!.is_huxtable_tbl(x)) {
     stop("`x` must be a huxtable object.", call. = FALSE)
@@ -120,11 +123,33 @@
   covered <- .huxtable_covered(x)
   cc[covered] <- ""
 
+  # the header is the run of header rows from the first row on; a row flagged
+  # further down is a row of the body, as it is printed there
   hdr_flag <- as.logical(huxtable::header_rows(x))
-  hdr_idx  <- which(hdr_flag)
+  hdr_flag[is.na(hdr_flag)] <- FALSE
+  hdr_idx  <- which(cumprod(hdr_flag) == 1)
   body_idx <- setdiff(seq_len(nr), hdr_idx)
 
   out <- list()
+
+  # ---- "footnotes": the rows add_footnote() appends -------------------------
+  # add_footnote() adds a last row whose first cell spans the whole width; the
+  # trailing body rows of that shape are the footnote lines.  (With one column
+  # that shape is any row, so nothing is taken then.)
+  if ("footnotes" %in% tokens && nc >= 2L && length(body_idx)) {
+    cs <- as.matrix(huxtable::colspan(x))
+    fn_rows <- integer()
+    for (i in rev(body_idx)) {
+      txt <- trimws(cc[i, 1L], whitespace = "[\\h\\v]")
+      if (as.integer(cs[i, 1L]) != nc || !nzchar(txt) ||
+          any(nzchar(cc[i, -1L]))) break
+      fn_rows <- c(i, fn_rows)
+    }
+    if (length(fn_rows)) {
+      out$footnotes_block <- trimws(cc[fn_rows, 1L], whitespace = "[\\h\\v]")
+      body_idx <- setdiff(body_idx, fn_rows)
+    }
+  }
 
   # ---- body data.frame (header rows are structural, not data) -------------
   body <- cc[body_idx, , drop = FALSE]
