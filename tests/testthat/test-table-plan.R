@@ -2928,6 +2928,33 @@ test_that("plan_paginate_group(heading_at = ): where the page name prints, rtf_t
                    rtf(plan_paginate_group(base, col = "arm", keep = FALSE), auto_section = TRUE))
 })
 
+test_that("plan_paginate_group(heading = ): a label with a brace group is printed as written, not filled again (#921)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$PARAMCD <- ifelse(adsl$AGE > 75, "CMAX", "CN")
+  ard <- cards::ard_stack(adsl, .by = PARAMCD,
+    cards::ard_tabulate(variables = SEX, statistic = ~ c("n", "p")), .overall = FALSE)
+  plan <- table_plan(suppressMessages(normalize_ard(ard)), cols = ".stat_group",
+                     rows = c(prm = "PARAMCD", label = "variable_level"), label = NA) |>
+    plan_stat_groups(n = "n", pct = "p") |>
+    plan_cells(n = "{n}", pct = "{p:.1f%}", notes = FALSE) |>
+    plan_labels(PARAMCD = c(CMAX = "C_{max} {U/L}", CN = "C_{n}")) |>
+    plan_paginate_group(col = "prm", keep = FALSE,
+                        heading = "Parameter: {value}", heading_at = "title")
+  expect_identical(names(suppressMessages(plan_apply(plan))),
+                   c("Parameter: C_{max} {U/L}", "Parameter: C_{n}"))
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  doc <- rtf_document() |> rtf_section(header = rtf_header(list("Table 1"))) |> rtf_tables(plan)
+  suppressMessages(generate_rtfreport(doc, f, overwrite = TRUE))
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "")
+  # `_{max}` prints as a subscript, `{U/L}` as escaped braces, `_{n}` as written
+  expect_true(grepl("Parameter: C{\\sub max} \\{U/L\\}", rtf, fixed = TRUE))
+  expect_true(grepl("Parameter: C{\\sub n}", rtf, fixed = TRUE))
+  # no page's heading shows a count in place of the label
+  expect_false(grepl("Parameter: C[0-9]", rtf))
+  expect_false(grepl("Parameter: C_[0-9]", rtf))
+})
+
 test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its variables, refused where ambiguous (#619)", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
