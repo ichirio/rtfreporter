@@ -175,23 +175,46 @@ printed. Any new position-indexed argument must be added to the reindexers in
 
 ## 5. Adding a table-object adapter
 
-Six steps; the full version is `vignettes/articles/extending-adapters.Rmd`.
+Six steps (step 4 has four edits); the full version is `vignettes/articles/extending-adapters.Rmd`.
 
 1. **Detector** — a cheap, side-effect-free predicate in
    `R/<pkg>_adapter.R`: `.is_mypkg_tbl <- function(x) inherits(x, "mypkg_table")`
    (S4: `isS4(x) && methods::is(x, "MyClass")`).
-2. **Token resolution** — `read =` lets users opt in/out of metadata. Mirror
-   the gt / rtables resolvers: `.MYPKG_TOKENS_ALL <- c("col_header", "alignment", ...)`.
-3. **Extractor** — return the kwargs list of §4. Guard the optional package
-   with `.need_pkg()`, not a bare `requireNamespace()`.
-4. **Wire it in** — three edits in `R/as_rtftables.R`: the list-input guard
-   must not mistake your object for a list of items; the dispatch chain; and
-   optionally the `as_rtftable()` singular wrapper.
-5. **Declare** — add the package to `Suggests:` in `DESCRIPTION`, with a
-   minimum version if needed. Never `Imports:`.
+2. **Token resolution** — `read_meta =` lets users opt in/out of metadata.
+   List the tokens and call `.resolve_meta_tokens(read, allowed, label)`
+   (`R/as_rtftables.R`) as the other adapters do:
+   `.MYPKG_TOKENS_ALL <- c("col_header", "alignment", ...)`.
+3. **Extractor** — return the kwargs list of §4. Start it with
+   `.need_pkg("mypkg", "Reading a mypkg table")` (`R/need_pkg.R`), not a bare
+   `requireNamespace()`: missing stops, older than the `Suggests` minimum only
+   warns, once per session.
+4. **Wire it in** — add the detector in four places; none is optional:
+   - `as_rtftables.default()`, list-input guard: needed only for a plain list
+     (not a data frame, not S4), so it is not read as a list of items.
+   - Same function, the `if (.is_gt_tbl(x)) ... else if` chain: a branch that
+     sets `body`, `kw`, `cell_styles`, `titles_block`, `footnotes_block`. A
+     class that is also a data frame (huxtable, rlistings) goes before
+     `is.data.frame(x)`. Add the type to the final `stop()` message.
+   - `as_rtftable()` in `R/as_rtftable.R`: it stops on a type it does not
+     know, so add the detector to its test and message. The requirements that
+     list the types (`FR-TB102`, `FR-TB106` in
+     `inst/validation/requirements.csv`) change with it.
+   - `.is_table_source()` in `R/content.R`: `rtf_tables(doc, x)` uses it. Without
+     the detector `x` falls to `rtfplot()` as a figure (a data-frame class
+     becomes a plain table, losing the metadata). `as_rtftables(x)` works
+     either way, so also test `rtf_tables(doc, x)`.
+5. **Declare** — `mypkg (>= x.y)` in `Suggests:` of `DESCRIPTION`; never
+   `Imports:`. That entry is the only place a minimum version is written:
+   `.need_pkg()` reads it at run time, so no version appears in R code.
 6. **Tests and docs** — `tests/testthat/test-mypkg-adapter.R` with every test
-   wrapped in `skip_if_not_installed("mypkg")`; document the new `read`
-   tokens in `?as_rtftables`; `devtools::document()`.
+   wrapped in `skip_if_not_installed("mypkg")`; FT/FR ids per test and the FRs
+   in `inst/validation/requirements.csv` (CONTRIBUTING.md); document the new
+   `read_meta` tokens and add the type where the supported types are listed
+   (`?as_rtftables`, `?as_rtftable`, `?rtf_tables`, `README.md`,
+   `_pkgdown.yml`); `devtools::document()`.
+
+A package that depends on rtfreporter registers an `as_rtftables` S3 method
+instead of adding a branch; see the article.
 
 Existing adapters to copy from: `gt_adapter.R` (gt / gtsummary / tfrmt),
 `rtables_adapter.R` (rtables / tern), `flextable_adapter.R`,
