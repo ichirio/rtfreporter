@@ -12,12 +12,11 @@ Description: A standalone toolkit for generating Rich Text Format (RTF)
     Figures (TFLs). Provides a functional, pipe-friendly API to compose
     documents with multi-section headers and footers, multi-row column
     headers including spanning groups, per-column formatting, automatic
-    page-number fields, embedded PNG/JPEG figures, and clinical-style
+    page-number fields, embedded PNG/JPEG/EMF figures, and clinical-style
     borders. Tables can also be made from an analysis results dataset
     (ARD, as built by 'cards' and 'cardx') with a plan of small verbs:
     which keys are columns and rows, how the statistics are formatted, and
-    how the table is paged. Uses only S3 classes and base R; depends on no
-    other RTF-generation packages such as 'r2rtf' or 'reporter'.
+    how the table is paged. Uses only S3 classes and base R.
 License: Apache License (>= 2)
 URL: https://github.com/ichirio/rtfreporter,
     https://ichirio.github.io/rtfreporter/
@@ -25,7 +24,7 @@ BugReports: https://github.com/ichirio/rtfreporter/issues
 Encoding: UTF-8
 Language: en-GB
 Depends:
-    R (>= 4.1)
+    R (>= 4.2)
 Imports:
     grDevices,
     grid,
