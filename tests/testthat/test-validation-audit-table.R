@@ -598,10 +598,19 @@ test_that("FT-TB984 [FR-TB622]: a merged huxtable area is read once, an add_foot
   hx <- huxtable::add_footnote(hx, "Source: invented.")
   p <- as_rtftables(hx)
   dd <- p[[1L]]$data
-  expect_identical(dd$V1, c("A", "", "B", "Source: invented."))
-  expect_identical(dd$V2, c("1", "2", "3", ""))
-  expect_identical(dd$V3, c("4", "5", "", ""))
+  # the footnote row is the page footnote line (FR-TB630), not a body row
+  expect_identical(dd$V1, c("A", "", "B"))
+  expect_identical(dd$V2, c("1", "2", "3"))
+  expect_identical(dd$V3, c("4", "5", ""))
+  expect_identical(attr(p[[1L]], "rtf_footnotes"), "Source: invented.")
   s <- .at_rs(rtf_tables(rtf_document(), p))
+  expect_equal(length(gregexpr("Source: invented.", s, fixed = TRUE)[[1L]]), 1L)
+  # read as body only, the row is a body row and its text still prints once
+  db <- as_rtftables(hx, read_meta = FALSE)[[1L]]$data
+  expect_identical(db$V1, c("A", "", "B", "Source: invented."))
+  expect_identical(db$V2, c("1", "2", "3", ""))
+  expect_identical(db$V3, c("4", "5", "", ""))
+  s <- .at_rs(rtf_tables(rtf_document(), as_rtftables(hx, read_meta = FALSE)))
   expect_equal(length(gregexpr("Source: invented.", s, fixed = TRUE)[[1L]]), 1L)
   # a spanning leaf header row keeps its text once as well
   hy <- huxtable::set_colspan(huxtable::as_hux(d), 1L, 2L, 2L)

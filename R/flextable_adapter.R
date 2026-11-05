@@ -33,7 +33,9 @@
 #    "footnotes"  -- footer lines -> page footnote block
 #
 #  Not carried (consistent with the gt adapter): per-cell bold / italic /
-#  colour / fill, explicit column widths, and `footnote()` reference marks.
+#  colour / fill and explicit column widths.  A `footnote()` reference mark is
+#  read as text: it follows the cell's text ("55.1a") and leads its footer line
+#  ("aNote"), not superscript.
 
 .FLEXTABLE_TOKENS_ALL <- c("col_header", "alignment", "spanning",
                            "titles", "footnotes")
@@ -70,6 +72,8 @@
   # a chunk that is exactly "<br>" is flextable's line break (as_paragraph(a,
   # "\n", b)); the gt adapter gives the same "\n"
   d$txt[d$txt == "<br>"] <- "\n"
+  # and "<tab>" is a tab, as_paragraph("a\tb")
+  d$txt[d$txt == "<tab>"] <- "\t"
   rids <- sort(unique(as.integer(d$.row_id)))
   m <- matrix("", nrow = length(rids), ncol = ncol_t,
               dimnames = list(NULL, col_keys))
@@ -124,8 +128,18 @@
 
   col_keys <- x$col_keys
   ncol_t   <- length(col_keys)
-  chunks   <- as.data.frame(flextable::information_data_chunk(x),
-                            stringsAsFactors = FALSE)
+  # a flextable with no cell at all (no rows and its header deleted) makes
+  # information_data_chunk() fail; it holds no chunk
+  no_cells <- all(vapply(c("header", "body", "footer"), function(p)
+    flextable::nrow_part(x, p) == 0L, logical(1L)))
+  chunks   <- if (no_cells) {
+    data.frame(.part = character(0), .row_id = integer(0),
+               .col_id = character(0), .chunk_index = integer(0),
+               txt = character(0), stringsAsFactors = FALSE)
+  } else {
+    as.data.frame(flextable::information_data_chunk(x),
+                  stringsAsFactors = FALSE)
+  }
 
   out <- list()
 
@@ -200,6 +214,8 @@
       # set_caption(as_paragraph(...)): a data.frame of chunks
       txt <- cap$txt
       txt[is.na(txt)] <- ""
+      txt[txt == "<br>"] <- "\n"
+      txt[txt == "<tab>"] <- "\t"
       cap <- paste0(txt, collapse = "")
     }
     cap <- cap[!is.na(cap) & nzchar(cap)]

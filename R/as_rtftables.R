@@ -171,9 +171,9 @@
 #'   Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 #'   Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
 #'   Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
-#'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab -- \cr
-#'   In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab -- \tab -- \cr
-#'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \cr
+#'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (`add_footnote()` rows) \cr
+#'   In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+#'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 #'   `tab_style()` cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 #' }
 #'
@@ -192,10 +192,19 @@
 #'
 #' For flextable the *displayed* text is read (header labels set via
 #' `set_header_labels()` and `colformat_*()` formatting included), not the raw
-#' `$body$dataset`.  Cells composed of images / equations and `footnote()`
-#' reference marks are not carried.  For huxtable the displayed text is likewise
-#' read (its `number_format` applied); huxtable has no footnote concept, so only
-#' the caption (a page title) is carried.
+#' `$body$dataset`.  Cells composed of images / equations are not carried.  A
+#' `footnote()` reference mark is read as plain text, not superscript: it
+#' follows the cell's text (`"55.1a"`) and leads its footer line (`"aNote"`).
+#' The group rows `as_grouped_data()` makes are rows of text (`"g: A"`) and the
+#' rows under them get no indent (the cell padding is not read).  For huxtable
+#' the displayed text is likewise read (its `number_format` applied), and the
+#' caption is the page title.  huxtable has no footnote concept of its own; the
+#' rows `add_footnote()` appends (a last row whose first cell spans the table)
+#' are read as the footnote lines, not as body rows -- with one column the
+#' shape cannot be told from a row, so they stay in the body then.  Only the
+#' `header_rows()` from the first row on are the column header, and the text of
+#' a cell is read as typed (leading spaces kept; `left_padding()` is not read,
+#' so there is no indent).
 #'
 #' **Not carried** (RTF cannot reproduce these, or they belong to the
 #' source's own theme): cell background colours / fills, font and size
@@ -233,7 +242,7 @@
 #'     \item{flextable}{`"col_header"`, `"alignment"`, `"spanning"`,
 #'       `"titles"`, `"footnotes"`.}
 #'     \item{huxtable}{`"col_header"`, `"alignment"`, `"spanning"`,
-#'       `"titles"`.}
+#'       `"titles"`, `"footnotes"`.}
 #'     \item{data.frame / tibble}{The single token `"labels"`: a column's
 #'       `label` attribute (the haven / labelled / xportr convention) is
 #'       used as its header label (columns without one keep their name).
