@@ -2466,11 +2466,17 @@ test_that("plan_col_header(lines = ): the header a row at a time, the cells' dat
   # one span for every cell: "each", the default
   each <- data.frame(line = c(1, 1, 2, 2), cols = c("row_label", ".values"),
                      span = "each", text = c("", "{col}", "Characteristic", "(N={n})"))
-  expect_identical(
-    pages(base |> plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
-                                               c(row_label = "Characteristic",
-                                                 .values = "(N={n})")))),
-    pages(base |> plan_col_header(header = each)))
+  # ("(N={n})" under a column whose count the ARD does not give prints NA,
+  # and says so)
+  expect_warning(
+    expect_warning(
+      expect_identical(
+        pages(base |> plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
+                                                   c(row_label = "Characteristic",
+                                                     .values = "(N={n})")))),
+        pages(base |> plan_col_header(header = each))),
+      "could not be read"),
+    "could not be read")
   # what it is, and is not
   expect_error(plan_col_header(base, header = each, lines = list(c(a = "x"))),
                "once, as `header` or as `lines`")
@@ -2927,7 +2933,7 @@ test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its va
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   adsl$ALL <- "All"
-  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  tab <- function(by) cards::ard_tabulate(adsl, by = dplyr::all_of(by), variables = DISCONFL)
   # several variables in the slot
   ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1")))
   by_slot <- normalize_ard(ard, stack = list(subgroup = "group2"))
@@ -2951,7 +2957,7 @@ test_that("normalize_ard(stack = ): crossed layers, three-way too, and the slots
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   adsl$ALL <- "All"
-  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  tab <- function(by) cards::ard_tabulate(adsl, by = dplyr::all_of(by), variables = DISCONFL)
   ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1")),
                          tab(c("TRT", "AGEGR1", "SEX")))
   layers <- list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX"))
@@ -2987,7 +2993,7 @@ test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, c
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
-  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  tab <- function(by) cards::ard_tabulate(adsl, by = dplyr::all_of(by), variables = DISCONFL)
   # group1 = the subgroup, the arm last
   ard <- cards::bind_ard(tab(c("SEX", "TRT")), tab(c("AGEGR1", "TRT")), tab(c("AGEGR1", "SEX", "TRT")))
   expect_true(all(as.character(as.data.frame(ard)$group2) %in% c("TRT", "SEX")))
@@ -3220,7 +3226,7 @@ test_that("normalize_ard(stack_nest = TRUE): a crossed layer's outer level as a 
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   adsl$ALL <- "All"
-  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  tab <- function(by) cards::ard_tabulate(adsl, by = dplyr::all_of(by), variables = DISCONFL)
   ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1", "SEX")))
   layers <- list(subgroup = list("ALL", "SEX", c("AGEGR1", "SEX")))
   d <- normalize_ard(ard, stack = layers, stack_nest = TRUE)
@@ -3803,11 +3809,11 @@ shift_ard <- function(two_cols = FALSE) {
   by0 <- if (two_cols) "TRTA" else character(0)
   cards::bind_ard(
     cards::ard_total_n(adsl),
-    cards::ard_tabulate(x, variables = ATOXGR, by = c(by0, "PARAM", "ATOXDIR", "BTOXGR"),
+    cards::ard_tabulate(x, variables = ATOXGR, by = dplyr::all_of(c(by0, "PARAM", "ATOXDIR", "BTOXGR")),
                         denominator = adsl, statistic = st),
-    cards::ard_tabulate(x, variables = ATOXGR, by = c(by0, "PARAM", "ATOXDIR"), denominator = adsl, statistic = st),
-    cards::ard_tabulate(x, variables = BTOXGR, by = c(by0, "PARAM", "ATOXDIR"), denominator = adsl, statistic = st),
-    cards::ard_tabulate(x, variables = ATOXDIR, by = c(by0, "PARAM"), denominator = adsl, statistic = st))
+    cards::ard_tabulate(x, variables = ATOXGR, by = dplyr::all_of(c(by0, "PARAM", "ATOXDIR")), denominator = adsl, statistic = st),
+    cards::ard_tabulate(x, variables = BTOXGR, by = dplyr::all_of(c(by0, "PARAM", "ATOXDIR")), denominator = adsl, statistic = st),
+    cards::ard_tabulate(x, variables = ATOXDIR, by = dplyr::all_of(c(by0, "PARAM")), denominator = adsl, statistic = st))
 }
 shift_plan <- function(nd, cols = "BTOXGR", ...) {
   table_plan(nd, cols = cols, rows = c(LAB = ~ "{PARAM} - {ATOXDIR}"),

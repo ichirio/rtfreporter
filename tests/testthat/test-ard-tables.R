@@ -1563,3 +1563,23 @@ test_that("a guard compares numbers, not text, when the ARD has a text statistic
   expect_false(any(unlist(b[b$row_label == "AGE", -1]) == "few"))
   expect_identical(b, a)
 })
+
+test_that("FT-AR114 [FR-AR254]: normalize_ard() prints a text statistic as it is, with no coercion warning, when its format is a decimal count", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  tt <- ard[ard$stat_name == "mean", , drop = FALSE][rep(1L, 3L), ]
+  tt$context <- "stats_t_test"
+  tt$group1 <- NA_character_
+  tt$group1_level <- list(NULL)
+  tt$stat_name <- c("estimate", "method", "alternative")
+  tt$stat_label <- tt$stat_name
+  tt$stat <- list(-0.749031007751938, "Welch Two Sample t-test", "two.sided")
+  # the combined frame has lost cards' class, so the decimal counts in
+  # `fmt_fun` are applied by normalize_ard() itself
+  mixed <- dplyr::bind_rows(ard, tt)
+  expect_no_warning(d <- normalize_ard(mixed))
+  expect_identical(d$stat_fmt[d$stat_name == "method"], "Welch Two Sample t-test")
+  expect_identical(d$stat_fmt[d$stat_name == "alternative"], "two.sided")
+  # a number still takes its decimal count
+  expect_identical(d$stat_fmt[d$stat_name == "estimate"], "-0.7")
+})
