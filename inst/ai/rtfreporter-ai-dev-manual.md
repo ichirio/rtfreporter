@@ -197,7 +197,7 @@ Six steps (step 4 has four edits); the full version is `vignettes/articles/exten
      `is.data.frame(x)`. Add the type to the final `stop()` message.
    - `as_rtftable()` in `R/as_rtftable.R`: it stops on a type it does not
      know, so add the detector to its test and message. The requirements that
-     quote the message (`FR-TB102`, `FR-TB106` in
+     list the types (`FR-TB102`, `FR-TB106` in
      `inst/validation/requirements.csv`) change with it.
    - `.is_table_source()` in `R/content.R`: `rtf_tables(doc, x)` uses it. Without
      the detector `x` falls to `rtfplot()` as a figure (a data-frame class
