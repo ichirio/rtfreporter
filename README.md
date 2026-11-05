@@ -210,7 +210,7 @@ and [Adverse events](https://ichirio.github.io/rtfreporter/articles/showcase-ae.
 ## Writing rtfreporter code with an AI assistant
 
 rtfreporter is too new to be in any chat model's training data: asked for
-rtfreporter code it reaches for `r2rtf`'s verbs or invents arguments, and
+rtfreporter code it reaches for another package's verbs or invents arguments, and
 flags neither as a guess.  Give it the facts first.
 
 The manuals **ship with the package**, so the one you attach describes the
