@@ -32,7 +32,7 @@ The released versions' manuals: [0.8.2](https://github.com/ichirio/rtfreporter/b
    (`rtf_body()`, `rtf_colheader()`, `create_table()`, …) into rtfreporter code.
    rtfreporter depends on no other RTF package.
 3. **Base R only.** No tidyverse is required. Use the native pipe `|>`
-   (R >= 4.1) or `magrittr::%>%` — both appear in the docs.
+   (R >= 4.2 for this package) or `magrittr::%>%` — both appear in the docs.
 4. **Units.** Widths and heights are **twips**: `1 inch = 1440 twips`,
    `1 pt = 20 twips`. Font size is in **half-points**: `18L` = 9 pt (the
    default), `16L` = 8 pt, `20L` = 10 pt.
