@@ -1651,7 +1651,12 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
           NA_character_ else as.character(got))
       }
       if (is.numeric(f) && length(f) == 1L && !is.na(f)) {
-        return(sprintf(paste0("%.", as.integer(f), "f"), as.numeric(v)))
+        # A value that is not a number (a test's `method`, say) is printed as
+        # it is, not run through the numeric format.
+        num <- suppressWarnings(as.numeric(v))
+        if (!is.na(num)) {
+          return(sprintf(paste0("%.", as.integer(f), "f"), num))
+        }
       }
       as.character(v)
     }, "")
