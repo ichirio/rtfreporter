@@ -98,6 +98,9 @@ each name is appended as the \strong{last row of that table's title block},
 so it prints immediately above the table rather than in the page
 header.  \code{NULL} (default): what the pages say --- a plan's
 \code{plan_paginate_group(heading_at = "title")} --- else \code{FALSE}.
+A title row whose whole text is \code{{PAGE_HEADING}} is where the name goes
+instead: that row keeps its own \code{align}, \code{bold} and so on, and takes
+the name as its text.  A page with no name loses the row.
 \describe{
 \item{Titles already there}{From \verb{titles =}, or carried on the object
 as the \code{rtf_titles} attribute by \code{\link[=as_rtftables]{as_rtftables()}} -- are kept and

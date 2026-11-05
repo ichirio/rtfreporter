@@ -20,7 +20,13 @@ rtf_titles(
 \item{titles}{A list of length = number of contents, or length 1 (common).
 A page's heading (\code{rtf_tables(auto_title = TRUE)}, a plan's
 \code{plan_paginate_group(heading_at = "title")}) is not replaced: it
-stays as the block's last row, under the titles given.}
+stays as the block's last row, under the titles given, or at the
+block's \code{{PAGE_HEADING}} row.  That row -- a title row whose whole text
+is \code{{PAGE_HEADING}}, e.g. \code{list(text = "{PAGE_HEADING}", align = "left")} -- says where the heading goes among the other rows; it keeps
+the row's \code{align}, \code{bold} and so on, and the heading's text fills it.
+A page with no heading loses the row, so one block serves with and
+without headings.  The marker is the row's whole text: with other text,
+or twice in a block, it is an error.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
 this block, over the document's \code{\link[=rtf_style]{rtf_style()}} (its section, then its
