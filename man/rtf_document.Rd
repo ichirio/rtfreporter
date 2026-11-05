@@ -39,7 +39,7 @@ keys, or \code{NULL} (default) to use the option / factory defaults (landscape
 Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
 back to the corresponding \verb{rtfreporter.*} option (see \code{\link[=rtfreporter_options]{rtfreporter_options()}}).}
 
-\\item{watermark}{A diagonal word drawn behind the page body on every page:
+\item{watermark}{A diagonal word drawn behind the page body on every page:
 an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare string (\code{watermark = "DRAFT"} uses the
 defaults), or \code{NULL} (default) for none. A section can override it by
 passing \code{watermark} in its \code{rtf_section(secinfo = )} -- including

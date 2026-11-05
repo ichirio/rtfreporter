@@ -24,7 +24,7 @@ rtf_config(
 \item{page}{New page geometry, \strong{merged per key} onto the current page: an
 \code{\link[=rtf_page]{rtf_page()}} object, or a named list with the same keys (see \code{\link[=rtf_page]{rtf_page()}}).}
 
-\\item{watermark}{New page watermark: an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare
+\item{watermark}{New page watermark: an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare
 string, or \code{NA} to remove the one the document has. \code{NULL} (default)
 leaves it unchanged -- so \code{NA}, not \code{NULL}, is how one is cleared.}
 
