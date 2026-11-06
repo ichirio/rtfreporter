@@ -11,7 +11,7 @@ title: 'rtfreporter: Clinical RTF Reporting Toolkit for Tables, Listings and Fig
 abstract: A standalone toolkit for generating Rich Text Format (RTF) reports used
   in clinical trial deliverables -- Tables, Listings and Figures (TFLs) -- with a
   functional, pipe-friendly API, multi-section headers and footers, and clinical-style
-  borders. Depends on no other RTF-generation package.
+  borders. Requires only packages that ship with R.
 authors:
 - family-names: Masui
   given-names: Yoichi

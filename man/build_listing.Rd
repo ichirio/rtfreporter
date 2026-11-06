@@ -42,12 +42,20 @@ the reshaped data before it is rendered.
 \section{How a cell wraps}{
 
 
-Under the \code{"multiline"} type, a cell longer than its column's \code{width}
-breaks \strong{after the separator} first, so each source variable starts its own
-line; a piece that is still too long breaks again at a word boundary (after
-a space, comma or hyphen); and a token that is \emph{still} too wide is
-hard-split, so \strong{every line fits the column it was measured against}.  A
-line break already in the data is honoured before any of this.
+Under the \code{"multiline"} type, a cell made of several variables puts each
+variable on its own line -- the separator breaks \strong{between} the variables
+joined in a cell, and a separator inside one variable's value is data.  Each
+value is laid out by itself: it stays on one line if it fits \code{width} (a
+\code{64/M} is one line in a \code{width} of 10), and if it is too wide it breaks after
+its separator first; a piece that is still too long breaks again at a word
+boundary (after a space, comma or hyphen); and a token that is \emph{still} too
+wide is hard-split, so \strong{every line fits the column it was measured
+against}.  A column of one variable is laid out the same way, as one value.
+A line break already in the data is honoured before any of this.  The
+header is laid out like the cells.
+
+With \code{layout = "flow"} the variables are not stacked: the cell is composed
+and its separators are places to break, filling each line.
 
 \code{width} is a \strong{display width}: a full-width (CJK) glyph occupies two
 monospaced columns and is counted as two, so a Japanese listing wrapped to

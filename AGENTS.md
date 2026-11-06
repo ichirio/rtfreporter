@@ -29,21 +29,61 @@ is wrong (open an issue if the design itself is in question).
   comments and roxygen, not in code.
 - **`NAMESPACE` is hand-managed.** Regenerate `man/*.Rd` with
   `devtools::document()` and commit them.
+- **The three packages.** Dependencies point one way: rtfreporter <- tflspec
+  <- tflplanner.  rtfreporter knows nothing of the other two.
+- **Fictional data only.**  No company, study or patient data in code, tests,
+  fixtures, examples, issues or pull requests, and none sent to an AI service.
+
+## Tests and code
+
+- **No withr** (it is not a dependency): use `tempfile()`, `dir.create()` and
+  `on.exit(unlink(...))`.
+- While you work, run the tests of the area you changed and `lintr` on the
+  changed files; before you push, the four pre-push checks (*Pull requests*
+  in `CONTRIBUTING.md`).
+- Run tests where they are; never copy them into a temporary folder
+  (`testthat` would read that folder's `setup*.R`).
+- Point `R_USER_CONFIG_DIR`, `R_USER_DATA_DIR` and `R_USER_CACHE_DIR` at a work
+  folder, never at the user's own.
+- Run the tests in one R session too (`testthat::test_dir()` on the installed
+  package), not only one file at a time: per-file runs miss interference
+  between tests.
+- Split a source file before it passes 2,000 lines.
 
 ## Workflow
 
 1. Branch off `main` (see *Branching & collaboration* in `CONTRIBUTING.md`).
+   If you work for a contributor, you do the git work too: *Git work for a
+   contributor* in `inst/ai/rtfreporter-ai-dev-manual.md` (updating the
+   fork, rebasing a topic branch, what to do when CI or a review asks).
 2. Change `R/`, `tests/testthat/`, and the roxygen docs together.
 3. Run `devtools::document()`, then the four pre-push checks listed in
    *Pull requests* in `CONTRIBUTING.md` (set-up: *Development setup* there).
-4. Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.  Describe the
-   user-visible change in the PR description; the maintainers write `NEWS.md`
-   and bump the version when they tag or release.
+4. **Record the change in the PR description.**  A PR never edits `NEWS.md`,
+   `CHANGELOG.md` or `Version:`, and there is no separate memo file.  Fill the
+   template's *User-visible change (for NEWS)* field without being asked: one or
+   two bullets in NEWS style (what a user can now do, or what is fixed, named by
+   its function or argument), or "none" for an internal change; then "Breaking:
+   no", or "Breaking: yes" with the migration.  The maintainers write `NEWS.md`
+   from the merged PRs at release.  For example:
+
+   ```markdown
+   ## User-visible change (for NEWS)
+
+   - `rtfplot()` and `rtf_figures()` take `render_format = "emf"`: a plot object is
+     drawn as EMF with devEMF (in Suggests), at `render_width` x `render_height`
+     inches.
+
+   Breaking: no
+   ```
 5. Open a pull request against `main`.
 
 Every behaviour change needs a requirement in
-`inst/validation/requirements.csv` and a test named with its FT id; see
-*Quality assurance* in `CONTRIBUTING.md`.
+`inst/validation/requirements.csv` and a test named with its FT id (or a
+`test_map.csv` row for an existing test), in the same PR, with
+`validation/trace.R` and the validation tests passing and a
+`deviations.csv` row where a test is not possible; see *Quality assurance*
+in `CONTRIBUTING.md` for the full rule.
 
 **Versioning.**  Standard R scheme: a release is `X.Y.Z`, development is
 `X.Y.Z.9000`, and the three-component part names the last release.  The

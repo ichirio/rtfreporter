@@ -231,19 +231,27 @@ restate it. What is carried:
 | Spanning headers | yes | yes | yes | yes |
 | Column widths | yes (px/pct) | -- | -- | -- |
 | Title + subtitle | yes | yes | yes (caption) | yes (caption) |
-| Footnotes / source notes | yes | yes | yes (footer) | -- |
-| In-cell footnote marks | yes (superscript) | yes (superscript) | -- | -- |
-| Row-group rows + indent | yes (rendered) | yes (rendered) | yes (rendered) | yes (rendered) |
+| Footnotes / source notes | yes | yes | yes (footer) | yes (`add_footnote()` rows) |
+| In-cell footnote marks | yes (superscript) | yes (superscript) | as text | -- |
+| Row-group rows + indent | yes (rendered) | yes (rendered) | group rows, no indent | as typed, no indent |
 
 For **flextable** the *displayed* text is read (header labels from
 `set_header_labels()` and `colformat_*()` formatting included), not the raw
-`$body$dataset`. Image/equation cells and `footnote()` reference marks are not
-carried.
+`$body$dataset`. Image/equation cells are not carried. A `footnote()` reference
+mark is read as plain text, not superscript: it follows the cell's text
+(`"55.1a"`) and leads its footer line (`"aNote"`). The group rows
+`as_grouped_data()` makes are rows of text (`"g: A"`), and the rows under them
+get no indent (the cell padding is not read).
 
 For **huxtable** the *displayed* text is read with its `number_format` applied;
-header rows (`header_rows()`) become the column header, `colspan()` becomes the
-spanning header, and the `caption()` becomes the page title. huxtable has no
-footnote concept, so none is extracted.
+the `header_rows()` from the first row on become the column header (a row
+flagged further down stays in the body), `colspan()` becomes the spanning
+header, and the `caption()` becomes the page title. huxtable has no footnote
+concept of its own; the rows `add_footnote()` appends (a last row whose first
+cell spans the table) are read as the footnote lines instead of body rows --
+with one column that shape cannot be told from a row, so they stay in the body
+then. Cell text is read as typed (leading spaces kept); `left_padding()` is not
+read, so there is no indent.
 
 **Not carried** (RTF cannot reproduce them, so they are intentionally ignored):
 per-cell bold / italic / underline, cell background fills, font/size styling, and
@@ -263,7 +271,8 @@ reconstructed into a spanning header (see `header_sep`); everything else
   rtables/tern: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,
   `"footnotes"`, `"indent"`, `"footnote_marks"`. For flextable:
   `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`, `"footnotes"`. For
-  huxtable: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`. For a
+  huxtable: `"col_header"`, `"alignment"`, `"spanning"`, `"titles"`,
+  `"footnotes"`. For a
   plain data.frame / tibble: `"labels"` (column `label` attributes as header
   labels); unknown tokens are *ignored* for data.frames, so a `list()` mixing
   table objects and data.frames can share one `read_meta`.

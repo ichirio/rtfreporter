@@ -193,8 +193,12 @@ test_that("a plan can start from an already-normalized frame", {
   expect_true(any(grepl("normalized frame",
                         utils::capture.output(print(p)))))
 
-  out <- suppressMessages(plan_apply(
-    p |> plan_cells(continuous = c("n" = "{N:d}"), categorical = "{n:d}")))
+  # the seam edit puts two variables' records under one name: their N differ,
+  # one is printed and the other said as lost (widen_ard())
+  expect_warning(
+    out <- suppressMessages(plan_apply(
+      p |> plan_cells(continuous = c("n" = "{N:d}"), categorical = "{n:d}"))),
+    "records of different values")
   expect_true(is.data.frame(out))
 })
 
@@ -2462,11 +2466,17 @@ test_that("plan_col_header(lines = ): the header a row at a time, the cells' dat
   # one span for every cell: "each", the default
   each <- data.frame(line = c(1, 1, 2, 2), cols = c("row_label", ".values"),
                      span = "each", text = c("", "{col}", "Characteristic", "(N={n})"))
-  expect_identical(
-    pages(base |> plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
-                                               c(row_label = "Characteristic",
-                                                 .values = "(N={n})")))),
-    pages(base |> plan_col_header(header = each)))
+  # ("(N={n})" under a column whose count the ARD does not give prints NA,
+  # and says so)
+  expect_warning(
+    expect_warning(
+      expect_identical(
+        pages(base |> plan_col_header(lines = list(c(row_label = "", .values = "{col}"),
+                                                   c(row_label = "Characteristic",
+                                                     .values = "(N={n})")))),
+        pages(base |> plan_col_header(header = each))),
+      "could not be read"),
+    "could not be read")
   # what it is, and is not
   expect_error(plan_col_header(base, header = each, lines = list(c(a = "x"))),
                "once, as `header` or as `lines`")
@@ -2918,12 +2928,39 @@ test_that("plan_paginate_group(heading_at = ): where the page name prints, rtf_t
                    rtf(plan_paginate_group(base, col = "arm", keep = FALSE), auto_section = TRUE))
 })
 
+test_that("plan_paginate_group(heading = ): a label with a brace group is printed as written, not filled again (#921)", {
+  skip_if_not_installed("cards")
+  adsl <- cards::ADSL
+  adsl$PARAMCD <- ifelse(adsl$AGE > 75, "CMAX", "CN")
+  ard <- cards::ard_stack(adsl, .by = PARAMCD,
+    cards::ard_tabulate(variables = SEX, statistic = ~ c("n", "p")), .overall = FALSE)
+  plan <- table_plan(suppressMessages(normalize_ard(ard)), cols = ".stat_group",
+                     rows = c(prm = "PARAMCD", label = "variable_level"), label = NA) |>
+    plan_stat_groups(n = "n", pct = "p") |>
+    plan_cells(n = "{n}", pct = "{p:.1f%}", notes = FALSE) |>
+    plan_labels(PARAMCD = c(CMAX = "C_{max} {U/L}", CN = "C_{n}")) |>
+    plan_paginate_group(col = "prm", keep = FALSE,
+                        heading = "Parameter: {value}", heading_at = "title")
+  expect_identical(names(suppressMessages(plan_apply(plan))),
+                   c("Parameter: C_{max} {U/L}", "Parameter: C_{n}"))
+  f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
+  doc <- rtf_document() |> rtf_section(header = rtf_header(list("Table 1"))) |> rtf_tables(plan)
+  suppressMessages(generate_rtfreport(doc, f, overwrite = TRUE))
+  rtf <- paste(readLines(f, warn = FALSE), collapse = "")
+  # `_{max}` prints as a subscript, `{U/L}` as escaped braces, `_{n}` as written
+  expect_true(grepl("Parameter: C{\\sub max} \\{U/L\\}", rtf, fixed = TRUE))
+  expect_true(grepl("Parameter: C{\\sub n}", rtf, fixed = TRUE))
+  # no page's heading shows a count in place of the label
+  expect_false(grepl("Parameter: C[0-9]", rtf))
+  expect_false(grepl("Parameter: C_[0-9]", rtf))
+})
+
 test_that("normalize_ard(stack = list(x = \"group2\")): a slot stands for its variables, refused where ambiguous (#619)", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   adsl$ALL <- "All"
-  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  tab <- function(by) cards::ard_tabulate(adsl, by = dplyr::all_of(by), variables = DISCONFL)
   # several variables in the slot
   ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1")))
   by_slot <- normalize_ard(ard, stack = list(subgroup = "group2"))
@@ -2947,7 +2984,7 @@ test_that("normalize_ard(stack = ): crossed layers, three-way too, and the slots
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   adsl$ALL <- "All"
-  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  tab <- function(by) cards::ard_tabulate(adsl, by = dplyr::all_of(by), variables = DISCONFL)
   ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1")),
                          tab(c("TRT", "AGEGR1", "SEX")))
   layers <- list("ALL", "SEX", "AGEGR1", c("AGEGR1", "SEX"))
@@ -2983,7 +3020,7 @@ test_that("normalize_ard(stack = ): the arm in a later slot than the subgroup, c
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
-  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  tab <- function(by) cards::ard_tabulate(adsl, by = dplyr::all_of(by), variables = DISCONFL)
   # group1 = the subgroup, the arm last
   ard <- cards::bind_ard(tab(c("SEX", "TRT")), tab(c("AGEGR1", "TRT")), tab(c("AGEGR1", "SEX", "TRT")))
   expect_true(all(as.character(as.data.frame(ard)$group2) %in% c("TRT", "SEX")))
@@ -3216,7 +3253,7 @@ test_that("normalize_ard(stack_nest = TRUE): a crossed layer's outer level as a 
   adsl <- cards::ADSL
   adsl$TRT <- as.character(adsl$ARM)
   adsl$ALL <- "All"
-  tab <- function(by) cards::ard_tabulate(adsl, by = by, variables = DISCONFL)
+  tab <- function(by) cards::ard_tabulate(adsl, by = dplyr::all_of(by), variables = DISCONFL)
   ard <- cards::bind_ard(tab(c("TRT", "ALL")), tab(c("TRT", "SEX")), tab(c("TRT", "AGEGR1", "SEX")))
   layers <- list(subgroup = list("ALL", "SEX", c("AGEGR1", "SEX")))
   d <- normalize_ard(ard, stack = layers, stack_nest = TRUE)
@@ -3645,6 +3682,8 @@ test_that("plan_levels() with names: a value and its text at once (factor(levels
 test_that("plan_sort() by a plan_compare() statistic: the rows by the arms' difference, either call order (#684)", {
   skip_if_not_installed("cards")
   adsl <- cards::ADSL
+  skip_if_not("diff_ard_hierarchical" %in% getNamespaceExports("cards"),
+              "cards has no diff_ard_hierarchical()")
   adae <- cards::ADAE[cards::ADAE$AESOC %in% c("CARDIAC DISORDERS", "SKIN AND SUBCUTANEOUS TISSUE DISORDERS"), ]
   arms <- c("Placebo", "Xanomeline High Dose")
   adsl <- adsl[adsl$ARM %in% arms, ]
@@ -3797,11 +3836,11 @@ shift_ard <- function(two_cols = FALSE) {
   by0 <- if (two_cols) "TRTA" else character(0)
   cards::bind_ard(
     cards::ard_total_n(adsl),
-    cards::ard_tabulate(x, variables = ATOXGR, by = c(by0, "PARAM", "ATOXDIR", "BTOXGR"),
+    cards::ard_tabulate(x, variables = ATOXGR, by = dplyr::all_of(c(by0, "PARAM", "ATOXDIR", "BTOXGR")),
                         denominator = adsl, statistic = st),
-    cards::ard_tabulate(x, variables = ATOXGR, by = c(by0, "PARAM", "ATOXDIR"), denominator = adsl, statistic = st),
-    cards::ard_tabulate(x, variables = BTOXGR, by = c(by0, "PARAM", "ATOXDIR"), denominator = adsl, statistic = st),
-    cards::ard_tabulate(x, variables = ATOXDIR, by = c(by0, "PARAM"), denominator = adsl, statistic = st))
+    cards::ard_tabulate(x, variables = ATOXGR, by = dplyr::all_of(c(by0, "PARAM", "ATOXDIR")), denominator = adsl, statistic = st),
+    cards::ard_tabulate(x, variables = BTOXGR, by = dplyr::all_of(c(by0, "PARAM", "ATOXDIR")), denominator = adsl, statistic = st),
+    cards::ard_tabulate(x, variables = ATOXDIR, by = dplyr::all_of(c(by0, "PARAM")), denominator = adsl, statistic = st))
 }
 shift_plan <- function(nd, cols = "BTOXGR", ...) {
   table_plan(nd, cols = cols, rows = c(LAB = ~ "{PARAM} - {ATOXDIR}"),

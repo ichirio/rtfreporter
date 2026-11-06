@@ -1009,7 +1009,7 @@ test_that("FT-AR107 [FR-AR119 FR-AR121 FR-AR126]: normalize_ard(): equivalence c
   })
 })
 
-test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR183 FR-AR197 FR-AR209 FR-AR247 FR-AR250]: widen_ard(): equivalence classes and boundaries of na, label and stat_groups", {
+test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR183 FR-AR197 FR-AR209 FR-AR247 FR-AR250 FR-AR253]: widen_ard(): equivalence classes and boundaries of na, label and stat_groups", {
   E <- .eb3_err
   O <- .eb3_obj
   d <- normalize_ard(.eb3_ard)
@@ -1048,7 +1048,15 @@ test_that("FT-AR108 [FR-AR156 FR-AR157 FR-AR158 FR-AR180 FR-AR183 FR-AR197 FR-AR
     E("stat_groups", "an empty group", list(n = character(0)), "^`stat_groups`: 'n' names no statistic")
   )
   .eb3_run(cases, function(args, obj) {
-    do.call(widen_ard, c(list(d, cols = "TRT", cells = "{n}", notes = FALSE), args))
+    run <- function() do.call(widen_ard,
+      c(list(d, cols = "TRT", cells = "{n}", notes = FALSE), args))
+    # no label column: F and M of Drug A land in one cell (n = 3 and 2), and
+    # the second is lost -- said, even with notes = FALSE (FR-AR253)
+    if ("label" %in% names(args) && length(args$label) == 0L) {
+      expect_warning(res <- run(), "^widen_ard\\(\\): 1 cell is reached")
+      return(res)
+    }
+    run()
   })
 })
 
@@ -1409,7 +1417,10 @@ test_that("FT-PL974 [FR-PL310 FR-PL311 FR-PL960]: plan_sort(): equivalence class
     E("keep", "a string", "yes", kp, more = g),
     E("keep", "a number", 1, kp, more = g),
     E("keep", "length 2", c(TRUE, TRUE), kp, more = g),
-    O("stat", "valid", "n", function(p) identical(p[[1L]]$data[[2L]], c("Mean", "F", "M")), more = n),
+    # plan_labels(AGE = , SEX = ) recodes the row key `group`; the sort used to
+    # miss the rows by the recoded value and leave them as they were (Mean, F,
+    # M).  It now sorts by -n: F (21) and M (19), and Mean, which has no n, last.
+    O("stat", "valid", "n", function(p) identical(p[[1L]]$data[[2L]], c("F", "M", "Mean")), more = n),
     E("stat", "NA", NA_character_, sa, more = n),
     E("stat", "length 2", c("n", "mean"), sa, more = n),
     E("stat", "a number", 1, sa, more = n),

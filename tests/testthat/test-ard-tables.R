@@ -374,10 +374,14 @@ test_that("a positional key warns when that position holds several variables", {
   # the warning is earned: the position invented columns from the other block
   expect_true(all(c("F", "M") %in% names(bad)))
 
-  # naming the variable is correct and silent
-  expect_no_warning(
+  # naming the variable raises no position warning.  The two blocks both
+  # count AGEGR in each arm (all of it, and by SEX), so a cell has several
+  # records; the first, the all-subjects count, is printed, and widen_ard()
+  # says the others are dropped (FR-AR253) -- nothing about a position.
+  expect_warning(
     good <- ard_pipe(stacked, cols = "TRT", rows = c(group = "variable"),
-                      cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
+                      cells = "{n:.0f} ({p:.1f%})", notes = FALSE),
+    "records of different values")
   expect_setequal(names(good)[-(1:2)],
                   c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
 
@@ -1558,4 +1562,24 @@ test_that("a guard compares numbers, not text, when the ARD has a text statistic
   # N is 86 and more: never "few" ("86" < "9" is TRUE as text)
   expect_false(any(unlist(b[b$row_label == "AGE", -1]) == "few"))
   expect_identical(b, a)
+})
+
+test_that("FT-AR114 [FR-AR254]: normalize_ard() prints a text statistic as it is, with no coercion warning, when its format is a decimal count", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  tt <- ard[ard$stat_name == "mean", , drop = FALSE][rep(1L, 3L), ]
+  tt$context <- "stats_t_test"
+  tt$group1 <- NA_character_
+  tt$group1_level <- list(NULL)
+  tt$stat_name <- c("estimate", "method", "alternative")
+  tt$stat_label <- tt$stat_name
+  tt$stat <- list(-0.749031007751938, "Welch Two Sample t-test", "two.sided")
+  # the combined frame has lost cards' class, so the decimal counts in
+  # `fmt_fun` are applied by normalize_ard() itself
+  mixed <- dplyr::bind_rows(ard, tt)
+  expect_no_warning(d <- normalize_ard(mixed))
+  expect_identical(d$stat_fmt[d$stat_name == "method"], "Welch Two Sample t-test")
+  expect_identical(d$stat_fmt[d$stat_name == "alternative"], "two.sided")
+  # a number still takes its decimal count
+  expect_identical(d$stat_fmt[d$stat_name == "estimate"], "-0.7")
 })

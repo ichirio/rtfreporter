@@ -25,7 +25,9 @@ record missing its middle value does not print a doubled separator.}
 (\code{"/"} under the \code{"multiline"} type).}
 
 \item{width}{A positive whole number or \code{NULL}.  Maximum characters per
-physical row before the cell wraps.  \code{NULL} (default) never wraps this column.}
+physical row before the cell wraps.  \code{NULL} (default) never wraps this column.
+A \code{/} (the separator) inside a value is not a place to break while the
+value fits: see \code{layout}.}
 
 \item{label}{The column header.  \code{NULL} (default) \strong{derives} the header
 from the data -- each source column's \code{label} attribute when it has one,
@@ -37,7 +39,10 @@ so is a string that carries its own line breaks: both say "I have
 laid this out", and neither is re-wrapped.}
 \item{A single string with no breaks}{is words for the package to lay
 out: it is wrapped to \code{width} by the same rule the cells use (see
-\code{\link[=listing_wrap]{listing_wrap()}}), or left as one line when there is no \code{width}.}
+\code{\link[=listing_wrap]{listing_wrap()}}), or left as one line when there is no \code{width}.  On
+a column of one variable a \code{/} in it is words, not a join: \code{"Age/Sex"}
+in a \code{width} of 10 stays on one line, and breaks after the \code{/} only
+when it is too wide.}
 \item{\code{""}}{asks for a deliberately empty header.}
 }}
 
@@ -55,13 +60,19 @@ listing's own (\code{"left"} under the \code{"multiline"} type).}
 listing's own (\code{"stack"} under \code{"multiline"}).  With no \code{width} there is
 nothing to lay out and both behave alike.
 \describe{
-\item{\code{"stack"}}{breaks after \strong{every} separator, so each source
-column starts its own line -- the conventional listing look, and it
-keeps a column reading down the page.}
+\item{\code{"stack"}}{puts each source column on its own line -- the
+conventional listing look, and it keeps a column reading down the
+page.  The separator is what breaks \strong{between} the variables joined
+in a cell; a separator inside one variable's value is data.  So every
+variable's value is laid out on its own and the lines are stacked: a
+value that fits stays on one line (\code{64/M} in a \code{width} of 10 is one
+line), and only a value too wide breaks, after its separator first.
+A column of one variable has nothing to stack, so it is simply
+laid out as \code{"flow"} is.}
 \item{\code{"flow"}}{treats the separator as a break \emph{opportunity} and
-fills each line as far as \code{width} allows, so a column of short parts
-(an age and a sex, a value and its unit) does not spend two rows on
-four characters.}
+fills each line as far as \code{width} allows, across the variables, so a
+column of short parts (an age and a sex, a value and its unit) does
+not spend two rows on four characters.}
 }}
 
 \item{collapse_repeats}{Logical (default \code{FALSE}).  Mark this as a \strong{key}

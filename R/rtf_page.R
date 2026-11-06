@@ -46,6 +46,10 @@
 #'   (`width_in >= height_in` means landscape). `NULL` (default) uses
 #'   `paper_size`. With dimensions given, `paper_size` and `orientation` stay
 #'   unset unless you pass them, so only a value you passed is warned about.
+#'   Giving only one of the two takes the other from landscape Letter:
+#'   `width_in` alone is a page `width_in` wide and 8.5" high, `height_in`
+#'   alone one 11" wide and `height_in` high; the orientation is then
+#'   inferred from that pair (`width_in = 8` is 8 x 8.5, portrait).
 #' @param margin_top_in,margin_bottom_in,margin_left_in,margin_right_in The four
 #'   page margins, in inches.  Each inch value here is one positive finite
 #'   number; another (`0`, `Inf`, `NA`, a string) is an error.  The margins

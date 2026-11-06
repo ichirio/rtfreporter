@@ -514,13 +514,16 @@
 #' @param column_widths_twips Integer vector of absolute column widths in
 #'   twips, one positive whole number per column. Overrides `col_rel_width`.
 #' @param table_width_twips Total table width in twips.  A value that is not
-#'   one non-negative integer is an error.
+#'   one non-negative integer is an error.  When it is given together with
+#'   `table_width_pct_of_writable` or `table_width_pct`, the twips win.
 #' @param table_width_pct_of_writable Table width as a fraction 0-1 of the
 #'   writable page width.  A value that is not one number in (0, 1] is an
 #'   error.
 #' @param table_width_pct Table width as a percentage 0-100 of the writable
 #'   page width (convenience alias for `table_width_pct_of_writable * 100`).
-#'   A value that is not one number in (0, 100] is an error.
+#'   A value that is not one number in (0, 100] is an error.  Given together
+#'   with `table_width_pct_of_writable`, this one is used; given with
+#'   `table_width_twips`, the twips win.
 #' @param table_align Horizontal placement: `"left"` (default), `"center"`,
 #'   or `"right"`.
 #' @param row_height_twips Row height for data rows in twips. `NULL` (default)

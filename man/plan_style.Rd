@@ -83,10 +83,16 @@ look, \code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.}
 
 \item{align, bold, italic, underline}{The body's default look,
 \code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.  One column or one cell is
-\code{\link[=plan_cell_style]{plan_cell_style()}}.}
+\code{\link[=plan_cell_style]{plan_cell_style()}}.  The flags (\code{header_bold}, \code{header_italic}, \code{bold},
+\code{italic}, \code{underline}) mean what they mean there: only \code{TRUE} turns the
+look on, and any other value, \code{NA} included, is the same as \code{FALSE}
+(not an error, as \code{row_height_exact = NA} is).  \code{align} and
+\code{header_align} must be \code{"left"}, \code{"center"} or \code{"right"}.}
 
 \item{table_width_twips, table_width_pct, table_width_pct_of_writable}{The table's width: in twips, as a percentage (0--100) or a fraction
-(0--1) of the writable page width.}
+(0--1) of the writable page width.  Give one; if \code{table_width_twips} is
+given with a percentage, the twips win, and given both percentages,
+\code{table_width_pct} wins (as in \code{\link[=rtftable]{rtftable()}}).}
 }
 \value{
 The plan, with one more layer.

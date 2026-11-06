@@ -85,7 +85,7 @@ The tokens:
 \item{flextable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
 \code{"titles"}, \code{"footnotes"}.}
 \item{huxtable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
-\code{"titles"}.}
+\code{"titles"}, \code{"footnotes"}.}
 \item{data.frame / tibble}{The single token \code{"labels"}: a column's
 \code{label} attribute (the haven / labelled / xportr convention) is
 used as its header label (columns without one keep their name).
@@ -581,7 +581,10 @@ and the table's total is their sum.}
 total turns out to be.}
 \item{\code{table_width_twips}}{the total, absolute.}
 \item{\code{table_width_pct} / \code{table_width_pct_of_writable}}{the total, as
-a share of the writable page width (paper minus the side margins).}
+a share of the writable page width (paper minus the side margins).
+Used only when \code{table_width_twips} is not given: the twips win.  Give
+one of the two percentages, not both; given both, \code{table_width_pct}
+wins, as in \code{\link[=rtftable]{rtftable()}}.}
 \item{nothing}{the writable width: the row-heading columns by their
 content, the data columns sharing the rest (\code{\link[=default_col_widths]{default_col_widths()}}).}
 }
@@ -665,9 +668,9 @@ Per-column alignment        \tab yes \tab yes \tab yes \tab yes \cr
 Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
 Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
-Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab -- \cr
-In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab -- \tab -- \cr
-Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \cr
+Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (\code{add_footnote()} rows) \cr
+In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 \code{tab_style()} cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 }
 
@@ -686,10 +689,19 @@ fonts and sizes, header text colour, and gt's \strong{theme} borders
 
 For flextable the \emph{displayed} text is read (header labels set via
 \code{set_header_labels()} and \verb{colformat_*()} formatting included), not the raw
-\verb{$body$dataset}.  Cells composed of images / equations and \code{footnote()}
-reference marks are not carried.  For huxtable the displayed text is likewise
-read (its \code{number_format} applied); huxtable has no footnote concept, so only
-the caption (a page title) is carried.
+\verb{$body$dataset}.  Cells composed of images / equations are not carried.  A
+\code{footnote()} reference mark is read as plain text, not superscript: it
+follows the cell's text (\code{"55.1a"}) and leads its footer line (\code{"aNote"}).
+The group rows \code{as_grouped_data()} makes are rows of text (\code{"g: A"}) and the
+rows under them get no indent (the cell padding is not read).  For huxtable
+the displayed text is likewise read (its \code{number_format} applied), and the
+caption is the page title.  huxtable has no footnote concept of its own; the
+rows \code{add_footnote()} appends (a last row whose first cell spans the table)
+are read as the footnote lines, not as body rows -- with one column the
+shape cannot be told from a row, so they stay in the body then.  Only the
+\code{header_rows()} from the first row on are the column header, and the text of
+a cell is read as typed (leading spaces kept; \code{left_padding()} is not read,
+so there is no indent).
 
 \strong{Not carried} (RTF cannot reproduce these, or they belong to the
 source's own theme): cell background colours / fills, font and size

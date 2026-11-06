@@ -27,7 +27,11 @@ rtf_page(
 \strong{win} over \code{paper_size}, and the orientation is \emph{inferred} from them
 (\code{width_in >= height_in} means landscape). \code{NULL} (default) uses
 \code{paper_size}. With dimensions given, \code{paper_size} and \code{orientation} stay
-unset unless you pass them, so only a value you passed is warned about.}
+unset unless you pass them, so only a value you passed is warned about.
+Giving only one of the two takes the other from landscape Letter:
+\code{width_in} alone is a page \code{width_in} wide and 8.5" high, \code{height_in}
+alone one 11" wide and \code{height_in} high; the orientation is then
+inferred from that pair (\code{width_in = 8} is 8 x 8.5, portrait).}
 
 \item{margin_top_in, margin_bottom_in, margin_left_in, margin_right_in}{The four
 page margins, in inches.  Each inch value here is one positive finite

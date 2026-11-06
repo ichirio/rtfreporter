@@ -2106,6 +2106,12 @@
   }
   if (length(block) == 0L) return(list())
   rows <- if (is.list(block)) block else as.list(block)
+  # a {PAGE_HEADING} row no heading took on the way here (a figure's titles,
+  # a report built by hand): it never prints
+  if (!is_footer) {
+    rows <- rows[!vapply(rows, function(r) identical(.title_row_text(r), .PAGE_HEADING_TOKEN),
+                         logical(1L))]
+  }
 
   fn <- if (is_footer) "rtf_footnotes" else "rtf_titles"
   out <- lapply(seq_along(rows), function(i) {

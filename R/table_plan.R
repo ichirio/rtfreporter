@@ -50,7 +50,7 @@
 #     own gets.
 #
 #  2. THE ROLES ARE SAID ONCE, WHERE THE DATA IS.  `table_plan()` takes the
-#     NORMALIZED frame and, like `ggplot(data, aes(x, y))`, the columns
+#     NORMALIZED frame and only the columns
 #     that play a part in the table: `cols` across, `rows` down, `label`
 #     for the row identity.  Every other verb reads them from there, so
 #     the stub, the group carrier and the header's denominator are not
@@ -3103,7 +3103,9 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   (default), `"center"` or `"right"`.
 #' @param table_width_twips,table_width_pct,table_width_pct_of_writable
 #'   The table's width: in twips, as a percentage (0--100) or a fraction
-#'   (0--1) of the writable page width.
+#'   (0--1) of the writable page width.  Give one; if `table_width_twips` is
+#'   given with a percentage, the twips win, and given both percentages,
+#'   `table_width_pct` wins (as in [rtftable()]).
 #' @param markup,blank_row_normalize [rtftable()]'s `markup` (the cell-text
 #'   markup applied when the page is rendered, such as `"script"`) and
 #'   `blank_row_normalize` (how blank rows are normalised then).
@@ -3111,7 +3113,11 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   look, [rtf_table_style()]'s fields.
 #' @param align,bold,italic,underline The body's default look,
 #'   [rtf_table_style()]'s fields.  One column or one cell is
-#'   [plan_cell_style()].
+#'   [plan_cell_style()].  The flags (`header_bold`, `header_italic`, `bold`,
+#'   `italic`, `underline`) mean what they mean there: only `TRUE` turns the
+#'   look on, and any other value, `NA` included, is the same as `FALSE`
+#'   (not an error, as `row_height_exact = NA` is).  `align` and
+#'   `header_align` must be `"left"`, `"center"` or `"right"`.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -3175,6 +3181,22 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
       "plan_style(): `border` is the whole table's rules and `border_*` ",
       "those of one kind of row.\n  Say it one way: border = \"tfl\", or ",
       "border_header = , border_body = , ..."))
+  }
+  # the same rule across calls: a plan whose earlier plan_style() gave the
+  # whole table's rules and whose later one gives a kind of row's (or the
+  # other way round) says it two ways, as one call would
+  if (inherits(.plan, "table_plan")) {
+    before <- .plan_of(.plan, "style")
+    had_border <- any(vapply(before, function(f) !is.null(f[["border"]]), NA))
+    had_zones <- any(vapply(before, function(f)
+      any(startsWith(names(f), "border_")), NA))
+    if ((length(zones) && had_border) || (!is.null(border) && had_zones)) {
+      .ard_stop(paste0(
+        "plan_style(): `border` is the whole table's rules and `border_*` ",
+        "those of one kind of row.\n  Say it one way: border = \"tfl\", or ",
+        "border_header = , border_body = , ...\n  An earlier plan_style() ",
+        "call on this plan gave the other, and the two are not both said."))
+    }
   }
   .plan_layer(.plan, "style", c(
     list(border = border, align_count_pct = align_count_pct, font = font,
@@ -5118,12 +5140,13 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
     rep(FALSE, nrow(d))
   sent <- !is.na(v) & startsWith(v, "..")
-  # `variable` as a column key (each arm's value and change side by side):
-  # another key's own tabulation (the arms' count, variable TRT01A) is no
+  # `variable` as a column key (each arm's value and change side by side),
+  # or `variable_level` / `.label` (a shift table's arm over its categories): another
+  # key's own tabulation (the arms' count, variable TRT01A, level "A") is no
   # value of it, so that key's N is read at its own depth
   has  <- lapply(seq_along(cols), function(j) {
     h <- !is.na(d[[cols[j]]])
-    if (identical(cols[j], "variable")) h & !(v %in% cols[-j]) else h
+    if (cols[j] %in% c("variable", "variable_level", ".label")) h & !(v %in% cols[-j]) else h
   })
   # a sentinel keyed by nothing is ONE number for the study
   # (..ard_total_n..): a total, never every column's number
@@ -7046,7 +7069,7 @@ plan_template <- function(x, cols = NULL, hierarchy = character(),
 }
 
 
-# A plan is a table source like a gt table: rtf_tables(doc, plan) and
+# A plan is a table source: rtf_tables(doc, plan) and
 # as_rtftables(plan) both work through the generic.
 #' @export
 as_rtftables.table_plan <- function(x, ...) plan_apply(x, "pages")

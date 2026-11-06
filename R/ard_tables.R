@@ -905,6 +905,76 @@
   invisible()
 }
 
+# widen_ard(): a cell reached by two records of different values is printed
+# from the FIRST one, and the others used to be dropped without a word -- the
+# ARD has a key (a SITE beside `cols = "TRT"`) that neither `cols` nor `rows`
+# names.  Said here as a warning (not an error: a plan that reads a position
+# over stacked blocks lands several statistics in one cell on purpose, and
+# those are quiet below).  A records plan stops instead, in
+# .ard_check_one_value().  Returns NULL, or what was lost: the statistic, its
+# values as the template prints them (first = the one kept), the ARD columns
+# that tell the records apart (`skip` = those the table already uses).
+.ard_lost_values <- function(s, tpl, skip, round_type) {
+  if (is.na(tpl) || nrow(s) < 2L) return(NULL)
+  sn <- as.character(s$stat_name)
+  for (tk in .ard_tokens(tpl)) {
+    p <- .ard_token_parts(tk)
+    j <- which(sn == p$name)
+    if (length(j) < 2L) next
+    vals <- vapply(j, function(i) tryCatch(
+      .ard_format_value(s$stat[i], s$stat_fmt[i], p$spec, round_type),
+      error = function(e) NA_character_), "")
+    uv <- unique(vals[!is.na(vals)])
+    if (length(uv) < 2L) next
+    cand <- setdiff(names(s), c(skip, "stat_name", "stat", "stat_fmt",
+                                "stat_label", "fmt_fun", "fmt_fn", "warning",
+                                "error", "context", ".label"))
+    cand <- cand[!startsWith(cand, ".")]
+    keys <- cand[vapply(cand, function(k) {
+      v <- s[[k]][j]
+      !is.list(v) && length(unique(as.character(v))) > 1L
+    }, NA)]
+    return(list(stat = p$name, values = uv, keys = keys))
+  }
+  NULL
+}
+
+# True when `rows` or `cols` reads a POSITION (groupN / groupN_level) in a way that is
+# already said or deliberate: the level of a position holding several
+# variables (.ard_warn_positional() warns), or the name column of a position
+# (reading it with its name is quiet, test-ard-tables.R).  Values met there
+# are the plan reading the ARD by position, not values lost.
+.ard_reads_position <- function(refs, d) {
+  if (any(grepl("^group[0-9]+$", refs))) return(TRUE)
+  for (ref in unique(refs)) {
+    if (!grepl("^group[0-9]+_level$", ref)) next
+    g <- sub("_level$", "", ref)
+    if (g %in% names(d) && length(.ard_first_seen(d[[g]])) >= 2L) return(TRUE)
+  }
+  FALSE
+}
+
+.ard_lost_warning <- function(lost) {
+  n <- length(lost)
+  show <- utils::head(lost, 3L)
+  lines <- vapply(show, function(z) paste0(
+    "  cell   : ", if (nzchar(z$cell)) paste0(z$cell, ", "), "column ",
+    sQuote(z$col), "\n",
+    "  values : ", paste(sQuote(utils::head(z$values, 4L)), collapse = ", "),
+    "  (", sQuote(z$stat), "; the first is printed)\n",
+    "  keys the records differ in, named in neither `rows` nor `cols`: ",
+    if (length(z$keys)) paste(sQuote(z$keys), collapse = ", ") else
+      "(none found)"), "")
+  paste0(
+    "widen_ard(): ", n, if (n == 1L) " cell is" else " cells are",
+    " reached by records of different values, and a cell prints one, so ",
+    "the others are dropped:\n",
+    paste(lines, collapse = "\n"),
+    if (n > length(show)) sprintf("\n  ... and %d more cell(s)", n - length(show)),
+    "\nAdd the key that tells the records apart to `rows` (or `cols`), or ",
+    "filter the ARD to one record per cell first.")
+}
+
 .ard_lookup_cells <- function(cells, variable, context, kind = NA_character_,
                               group = NA_character_, whole = FALSE) {
   # A list is a map only when its elements are NAMED: `c()` over guards
@@ -1581,7 +1651,12 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
           NA_character_ else as.character(got))
       }
       if (is.numeric(f) && length(f) == 1L && !is.na(f)) {
-        return(sprintf(paste0("%.", as.integer(f), "f"), as.numeric(v)))
+        # A value that is not a number (a test's `method`, say) is printed as
+        # it is, not run through the numeric format.
+        num <- suppressWarnings(as.numeric(v))
+        if (!is.na(num)) {
+          return(sprintf(paste0("%.", as.integer(f), "f"), num))
+        }
       }
       as.character(v)
     }, "")
@@ -2303,6 +2378,18 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #' @return A data frame: the `rows` columns, the label column, then one column
 #'   per column key.
 #'
+#'   A cell prints one value.  When records of **different** values reach
+#'   one cell -- the ARD has a key (a `SITE` beside `cols = "TRT"`) that
+#'   neither `cols` nor `rows` names -- the first record's value is the one
+#'   kept, and `widen_ard()` **warns** that the others are dropped, naming the
+#'   key(s) the records differ in, the cell (its row and column) and the values.
+#'   Add that key to `rows` (or `cols`), or filter the ARD, to have them
+#'   apart.  The same value twice is one value and says nothing.  The warning is
+#'   not `notes`: `notes = FALSE` silences the report of unused ARD rows, not
+#'   this one, because these are numbers the table does not carry.  An ARD read
+#'   by a position (`group1_level` over stacked blocks) keeps to its own
+#'   warning, and reading a position with its name column is quiet.
+#'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
 #'   ard <- cards::ard_stack(
@@ -2609,6 +2696,30 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
   pieces <- list()
   named  <- list()
+  # cells that two records of different values reach (a warning, below);
+  # a records plan stops on them instead, and a plan reading a position over
+  # stacked blocks is quiet (see .ard_reads_position())
+  lost <- list()
+  lost_skip <- unique(c(vapply(c(rowrefs, colrefs, labref),
+                               function(r) r$ref, "")))
+  lost_off <- one_record || identical(stats, "rows") ||
+    .ard_reads_position(vapply(rowrefs, function(r) r$ref, ""), d) ||
+    .ard_reads_position(vapply(colrefs, function(r) r$ref, ""), d)
+  note_lost <- function(s2, tpl, lab, ckey) {
+    if (lost_off) return(invisible())
+    z <- .ard_lost_values(s2, tpl, lost_skip, rounding)
+    if (is.null(z)) return(invisible())
+    rk <- vapply(seq_along(rowrefs), function(i)
+      sprintf("%s = %s", rowrefs[[i]]$out,
+              sQuote(as.character(s2[[rowrefs[[i]]$ref]][1L]))), "")
+    cell <- paste(c(rk, if (!is.na(lab)) sprintf("%s = %s",
+      if (length(labref)) labref[[1]]$out else "label", sQuote(lab))),
+      collapse = ", ")
+    z$cell <- cell
+    z$col  <- ckey
+    lost[[length(lost) + 1L]] <<- z
+    invisible()
+  }
   idx <- split(seq_len(nrow(d)), factor(gid, levels = unique(gid)))
   for (ii in idx) {
     if (!length(ii)) next
@@ -2692,6 +2803,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
           labs_out <- vapply(labs_out, function(z)
             .ard_label_text(lab_chain, s2, z), "")
         }
+        for (i in seq_along(picks)) note_lost(s2, picks[[i]]$tpl, labs_out[i], ckey)
         pieces[[length(pieces) + 1L]] <- data.frame(
           .lab = unname(labs_out), .col = ckey, .valn = NA_real_, .valc = vals,
           .tpl = vapply(picks, function(z) z$tpl, ""),
@@ -2712,6 +2824,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
         }
         pk <- .ard_chain_pick(entry$chains[[1L]], s2, rounding)
         v <- pk$v
+        note_lost(s2, pk$tpl, lv, ckey)
         if (!is.null(lab_chain)) lv <- .ard_label_text(lab_chain, s2, lv)
         pieces[[length(pieces) + 1L]] <- data.frame(
           .lab = lv, .col = ckey, .valn = NA_real_, .valc = v,
@@ -2767,6 +2880,26 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     }
   }
   if (!is.null(label_out)) long[[label_out]] <- long$.lab
+
+  # The sort and `sort_stat` find each row's statistic in `d` by the row's
+  # identity (its keys and its label), which `base$.rid` below holds as the
+  # values SHOWN -- after `labels` recoded them.  `d` still has the values
+  # before recoding, so the join found nothing and the sort did not apply
+  # (sort_stat was NA).  Read `d` through the same recoding.
+  d_rid <- d
+  for (r in rowrefs) d_rid[[r$ref]] <- recode(d[[r$ref]], r$ref, r$out)
+  if (!is.null(label_out) && length(lab_var) && length(labref)) {
+    lr <- labref[[1]]$ref
+    if (lr %in% names(d_rid) && !lr %in% vapply(rowrefs, function(r) r$ref, "")) {
+      d_rid[[lr]] <- as.character(d_rid[[lr]])
+      for (vn in names(lab_var)) {
+        dict <- lab_var[[vn]]
+        hit <- !is.na(d_rid$variable) & d_rid$variable == vn &
+          !is.na(d_rid[[lr]]) & d_rid[[lr]] %in% names(dict)
+        d_rid[[lr]][hit] <- unname(dict[d_rid[[lr]][hit]])
+      }
+    }
+  }
 
   # recode + factorise the row keys
   for (r in rowrefs) {
@@ -2853,6 +2986,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   if (!is.null(clash)) {
     .ard_stop(.ard_clash_message(clash, long, base, ri, ci, id_cols))
   }
+  # values lost in silence: said, whatever `notes` is (they are numbers the
+  # table does not carry, not an ARD row nobody read)
+  if (length(lost)) warning(.ard_lost_warning(lost), call. = FALSE)
 
   out <- base[, id_cols, drop = FALSE]
   vals <- if (rows_numeric)
@@ -2862,8 +2998,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
   if (!is.null(sort_stat)) {
     tot <- tapply(suppressWarnings(as.numeric(
-      d$stat[d$stat_name == sort_stat])), rid_for_stat(d, rowrefs, labref,
-      sort_stat), sum, na.rm = TRUE)
+      d_rid$stat[d_rid$stat_name == sort_stat])), rid_for_stat(d_rid, rowrefs,
+      labref, sort_stat), sum, na.rm = TRUE)
     out$.sort_stat <- as.numeric(tot[match(base$.rid, names(tot))])
   }
 
@@ -2875,7 +3011,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     cmp_sort <- if (!is.null(cmp_d) && nrow(cmp_d)) {
       list(d = cmp_d, spec = compare, label_out = label_out, recode = recode)
     }
-    out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref,
+    out <- out[.ard_sort_order(sort, out, base, d_rid, rowrefs, labref,
                                colkey = colkey, sep = sep, cmp = cmp_sort,
                                levels = levels), ,
                drop = FALSE]

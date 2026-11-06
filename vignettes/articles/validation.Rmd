@@ -23,7 +23,7 @@ The package keeps three records of what it does and how it is tested.
   combination. Each has an id such as `FR-PL161`. They are in
   `inst/validation/requirements.csv`.
 - **Functional Tests (FT).** The package's tests, each mapped to the FRs it
-  checks by a person who read it.
+  checks by the developer making the change.
 - **The Traceability Matrix (FR -> FT).** Every FR with its tests. An FR with
   no test is listed as a deviation, with its risk and why it is accepted.
 

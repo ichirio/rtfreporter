@@ -46,7 +46,7 @@ jobs:
           # the oldest R tested: a suggested package that cannot be installed
           # on it (it, or what it needs, wants a newer R) is left out
           # (`pkgs`), and the check lets a suggested package be missing
-          - {os: ubuntu-latest,  r: '4.2', pkgs: 'tern=?ignore-before-r=4.4.0', force-suggests: 'false'}
+          - {os: ubuntu-latest,  r: '4.2', pkgs: 'tern=?ignore-before-r=4.4.0 devEMF=?ignore-before-r=4.3.0', force-suggests: 'false'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
 

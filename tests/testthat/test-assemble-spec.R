@@ -178,3 +178,12 @@ test_that("FT-AS130 [FR-AS151 FR-AS148 FR-AS149]: assemble_folder() orders numbe
   }
   expect_gte(tried, 2L)
 })
+
+test_that("natural order: a long run of digits sorts by its number, with no warning", {
+  x <- c("t_20261106093001.rtf", "t_9.rtf", "t_20261106092959.rtf", "t_10.rtf",
+         "t_020261106093000.rtf", "t_123456789012345678901.rtf", "a.rtf")
+  expect_no_warning(o <- rtfreporter:::.natural_order(x))
+  expect_identical(x[o], c("a.rtf", "t_9.rtf", "t_10.rtf", "t_20261106092959.rtf",
+                           "t_020261106093000.rtf", "t_20261106093001.rtf",
+                           "t_123456789012345678901.rtf"))
+})

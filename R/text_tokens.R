@@ -18,6 +18,13 @@
 #' * `when = "viewer"`: an RTF field the word processor computes when the
 #'   file is opened, so it stays right after [assemble_rtf()] joins files.
 #' * `when = "assemble"`: a slot left empty until [assemble_rtf()] fills it.
+#' * `when = "compose"`: put in when the title is composed
+#'   ([rtf_tables()], [rtf_titles()]), not when the file is written.
+#'
+#' `{PAGE_HEADING}` (`kind = "title"`) is only a title row's whole text: the
+#' row where the page's heading goes (`rtf_tables(auto_title = )`, a plan's
+#' `heading_at = "title"`); it is not filled in a header, a footer or a
+#' column header.
 #'
 #' `{DATETIME}` also takes a format, `{DATETIME:%Y-%m-%d}`
 #' ([base::strptime()] codes); `example` shows one.
@@ -33,7 +40,7 @@
 #' @param doc An [rtf_document()] whose tokens of one's own are listed too;
 #'   `NULL` (default): the session's only.
 #' @return A data frame: `token` (as written, with its braces), `kind`
-#'   (`"page"`, `"run"` or `"own"`), `when`, `description`, `example` (what
+#'   (`"page"`, `"run"`, `"title"` or `"own"`), `when`, `description`, `example` (what
 #'   it might print, for a preview).
 #' @examples
 #' rtf_text_tokens()[, c("token", "when", "description")]
@@ -46,11 +53,11 @@ rtf_text_tokens <- function(doc = NULL) {
   base <- data.frame(
     token = c("{PAGE}", "{TOTAL_PAGES}", "{AUTO_PAGE}", "{AUTO_TOTAL_PAGES}",
               "{BOOK_PAGE}", "{PROGRAM}", "{PROGRAM_FULL}", "{PROGRAM_NAME}",
-              "{PROGRAM_DIR}", "{DATETIME}"),
+              "{PROGRAM_DIR}", "{DATETIME}", "{PAGE_HEADING}"),
     kind = c("page", "page", "page", "page", "page", "run", "run", "run",
-             "run", "run"),
+             "run", "run", "title"),
     when = c("render", "render", "viewer", "viewer", "assemble", "render",
-             "render", "render", "render", "render"),
+             "render", "render", "render", "render", "compose"),
     description = c(
       "Page number, written into the file (the first page of the section)",
       "Total pages of this file, written into the file",
@@ -61,10 +68,12 @@ rtf_text_tokens <- function(doc = NULL) {
       "The same path, absolute (the system's separator)",
       "File name of that program",
       "Folder of that program",
-      "Date and time the file was written; {DATETIME:<format>} for another format"),
+      "Date and time the file was written; {DATETIME:<format>} for another format",
+      paste0("A title row of its own, whole: where the page's heading goes ",
+             "(the rest of the title block is as written)")),
     example = c("1", "3", "1", "3", "", "programs/t_14_1_1.R",
                 "C:\\studies\\ABC-101\\programs\\t_14_1_1.R", "t_14_1_1.R",
-                "programs", "04OCT2026  10:05"),
+                "programs", "04OCT2026  10:05", "Parameter: ALT (U/L)"),
     stringsAsFactors = FALSE)
   if (!length(own)) return(base)
   rbind(base, data.frame(

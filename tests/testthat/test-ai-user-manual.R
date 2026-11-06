@@ -105,6 +105,9 @@ test_that("every idiom the manual teaches runs", {
               "AI manual not present (installed package)")
   f <- tempfile(fileext = ".rtf"); on.exit(unlink(f), add = TRUE)
 
+  # An idiom that draws a warning (an argument the function does not have is
+  # "ignored" with one) is a manual that teaches something untrue: fail on it.
+  withCallingHandlers({
   df <- data.frame(USUBJID = c("001-001", "001-002", "001-003"),
                    TRT     = c("Placebo", "Active", "Active"),
                    AVAL    = c(12.3, 14.1, 11.7))
@@ -229,7 +232,7 @@ test_that("every idiom the manual teaches runs", {
                            column_widths_twips = c(2000L, rep(1800L, 4)),
                            border = "tfl") |>
     set_decimal_split(cols = 2:5) |>
-    paginate_cols(at = 4L, carry = 1L)
+    paginate_cols(at = 4L, keep = 1L)
   expect_gt(length(pk_pages), 1L)
 
   ## S5d -- LB: a grouping column that is never printed
@@ -360,6 +363,9 @@ test_that("every idiom the manual teaches runs", {
   expect_s3_class(blank_rows_by_change("Characteristic"), "rtf_blank_rows_by_change")
   expect_s3_class(blank_rows_by_rule("Characteristic", "^Total", where = "before"),
                   "rtf_blank_rows_by_rule")
+  }, warning = function(w) {
+    stop("an idiom in the manual warned: ", conditionMessage(w), call. = FALSE)
+  })
 })
 
 ## -- every call in the manual's code names arguments the function has -------

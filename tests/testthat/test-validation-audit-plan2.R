@@ -95,6 +95,7 @@
 # plan_n_candidates()
 #   scope all / page / table; attributes differ, page_col   | FR-PL222-225| FT-PL103, FT-PL104, FT-PL141, FT-PL142
 #   left unmade with two populations: the pages', a warning | FR-PL957    | FT-PL966
+#   an arm over variable_level (a shift table): the arm's N | FR-PL971    | FT-PL988
 #
 # plan_apply()
 #   stage auto / input / args / table / pages; errors name  | FR-PL200-209| FT-PL100-FT-PL102, FT-PL131-FT-PL135
@@ -332,4 +333,36 @@ test_that("FT-PL966 [FR-PL957]: {n} left unmade with two populations prints each
   expect_identical(unname(vapply(suppressMessages(plan_apply(plan("table"), "pages")),
                                  function(p) p$col_header[[1L]][[2L]]$label, "")),
                    c("T (N=12)", "T (N=12)"))
+})
+
+test_that("FT-PL988 [FR-PL971]: an arm over variable_level (a shift table) reads each page's N from the arm's own tabulation", {
+  skip_if_not_installed("cards")
+  # invented: each subject once a parameter; fewer have ALT than HGB
+  sub <- data.frame(USUBJID = sprintf("S%02d", 1:12), TRT = rep(c("A", "B"), each = 6),
+                    stringsAsFactors = FALSE)
+  lb <- merge(sub, data.frame(PARAM = c("ALT", "HGB"), stringsAsFactors = FALSE))
+  lb <- lb[!(lb$PARAM == "ALT" & lb$USUBJID %in% c("S01", "S07", "S08")), ]
+  lb$BASE <- rep_len(c("L", "N"), nrow(lb))
+  lb$POST <- factor(rep_len(c("L", "L", "N"), nrow(lb)))
+  ard <- cards::bind_ard(cards::ard_tabulate(lb, by = c(TRT, PARAM, BASE), variables = POST),
+                         cards::ard_tabulate(lb, by = PARAM, variables = TRT))
+  f <- tempfile(fileext = ".rtf")
+  on.exit(unlink(f), add = TRUE)
+  for (key in c("variable_level", ".label")) {
+    p <- table_plan(normalize_ard(ard), cols = c("TRT", key),
+                    rows = c(PARAM = "PARAM", BASE = "BASE")) |>
+      plan_cells(notes = FALSE) |> plan_cells("{n}") |>
+      plan_paginate_group(col = "PARAM", keep = FALSE) |>
+      plan_col_header(values = TRUE, rtf_col_header(
+        list(col_cell(1:2, ""), col_cell(3:4, "{col1} (N={n})"), col_cell(5:6, "{col1} (N={n})")),
+        c("", "", "{col}")))
+    v <- function(prm) .plan_n_values(p, TRUE, page = list(col = "PARAM", value = prm))
+    expect_identical(as.numeric(v("ALT")[c("A", "B")]), c(5, 4), label = key)
+    expect_identical(as.numeric(v("HGB")[c("A", "B")]), c(6, 6), label = key)
+    pg <- suppressMessages(plan_apply(p, "pages"))
+    generate_rtfreport(rtf_tables(rtf_document(), pg), f, overwrite = TRUE)
+    txt <- paste(readLines(f, warn = FALSE), collapse = " ")
+    expect_identical(regmatches(txt, gregexpr("[AB] \\(N=[0-9NA]+\\)", txt))[[1L]],
+                     c("A (N=5)", "B (N=4)", "A (N=6)", "B (N=6)"), label = key)
+  }
 })
