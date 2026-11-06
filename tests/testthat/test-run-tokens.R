@@ -257,6 +257,9 @@ test_that("a text without the tokens is untouched", {
 test_that("rtf_text_tokens() lists exactly the tokens a page's text has filled", {
   tk <- rtf_text_tokens()
   expect_named(tk, c("token", "kind", "when", "description", "example"))
+  # {PAGE_HEADING} is put in when a title is composed (kind "title"), not
+  # when the file is written
+  tk <- tk[tk$when != "compose", ]
   expect_false(anyDuplicated(tk$token) > 0)
   # every token listed is replaced when the file is written: none is left
   # in the RTF as its own text
