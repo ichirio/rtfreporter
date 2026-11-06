@@ -163,15 +163,17 @@
 # -- Natural sort ------------------------------------------------------------
 
 # Order strings so embedded numbers sort numerically ("t2" < "t10").
-# Natural sort key: every run of digits zero-padded to 15 places, so "t2"
-# sorts before "t10".
+# Natural sort key: every run of digits, without its leading zeros, after its
+# length, so "t2" sorts before "t10".  As text: a long run, a date and time in
+# a file name, is too large for an integer.
 .natural_key <- function(x) {
   vapply(x, function(s) {
     parts <- regmatches(s, gregexpr("[0-9]+|[^0-9]+", s))[[1L]]
     paste0(vapply(parts, function(p)
-      if (grepl("^[0-9]+$", p)) formatC(as.numeric(p), width = 15, flag = "0",
-                                        format = "d")
-      else p, character(1L)), collapse = "")
+      if (grepl("^[0-9]+$", p)) {
+        p <- sub("^0+(?=[0-9])", "", p, perl = TRUE)
+        paste0(formatC(nchar(p), width = 5, flag = "0"), p)
+      } else p, character(1L)), collapse = "")
   }, character(1L), USE.NAMES = FALSE)
 }
 
