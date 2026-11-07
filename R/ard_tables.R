@@ -213,6 +213,18 @@
   list(flat = flat, scopes = labels[scoped])
 }
 
+# TRUE when the label column names a KEY of the ARD (a `by` variable): not
+# `.label` or `variable_level` (the analysis variable's levels), not a name
+# of an analysis variable, not the statistic's own columns.
+.ard_label_is_key <- function(labref, d) {
+  if (!length(labref)) return(FALSE)
+  ref <- labref[[1]]$ref
+  is.character(ref) && length(ref) == 1L && ref %in% names(d) &&
+    !ref %in% c(".label", "variable_level", "variable", "context", "stat_name",
+                "stat_label", "stat_fmt", "stat", ".kind", ".stat_group") &&
+    !ref %in% as.character(.ard_unlist_col(d[["variable"]]))
+}
+
 .ard_labels_for <- function(labels, ref = NULL, out = NULL) {
   sp <- .ard_labels_split(labels)
   if (is.null(sp)) return(NULL)
@@ -2878,6 +2890,19 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # scope did before.)
   lab_var <- .ard_labels_split(labels)$scopes
   lab_var <- lab_var[names(lab_var) %in% .ard_first_seen(long$.var)]
+  # A label column that names a KEY (a `by` variable such as a shift table's
+  # baseline category) is recoded like a row key, by its own entry: the
+  # analysis variable's dictionary is not for its values.
+  lab_key <- .ard_label_is_key(labref, d)
+  lab_dict <- if (lab_key) .ard_labels_for(labels, labref[[1]]$ref, labref[[1]]$out)
+  if (lab_key) lab_var <- list()
+  recode_lab <- function(v) {
+    v <- as.character(v)
+    if (is.null(lab_dict)) return(v)
+    hit <- !is.na(v) & v %in% names(lab_dict)
+    v[hit] <- unname(lab_dict[v[hit]])
+    v
+  }
   if (!is.null(label_out) && length(lab_var)) {
     for (vn in names(lab_var)) {
       dict <- lab_var[[vn]]
@@ -2886,7 +2911,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       long$.lab[hit] <- unname(dict[long$.lab[hit]])
     }
   }
-  if (!is.null(label_out)) long[[label_out]] <- long$.lab
+  if (!is.null(label_out)) long[[label_out]] <- if (lab_key) recode_lab(long$.lab) else long$.lab
 
   # The sort and `sort_stat` find each row's statistic in `d` by the row's
   # identity (its keys and its label), which `base$.rid` below holds as the
@@ -2895,6 +2920,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # (sort_stat was NA).  Read `d` through the same recoding.
   d_rid <- d
   for (r in rowrefs) d_rid[[r$ref]] <- recode(d[[r$ref]], r$ref, r$out)
+  if (lab_key && !labref[[1]]$ref %in% vapply(rowrefs, function(r) r$ref, "")) {
+    d_rid[[labref[[1]]$ref]] <- recode_lab(d[[labref[[1]]$ref]])
+  }
   if (!is.null(label_out) && length(lab_var) && length(labref)) {
     lr <- labref[[1]]$ref
     if (lr %in% names(d_rid) && !lr %in% vapply(rowrefs, function(r) r$ref, "")) {
@@ -2954,6 +2982,10 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
         dict <- unlist(unname(lab_var))
         lv <- unique(ifelse(lv %in% names(dict), unname(dict[lv]), lv))
       }
+    }
+    if (lab_key && !is.null(lv)) {
+      lv <- recode_lab(lv)
+      if (!is.null(by_var)) by_var <- lapply(by_var, recode_lab)
     }
     if (!is.null(lv)) long[[label_out]] <- .ard_as_factor(long[[label_out]], lv)
     # A label two variables share is ONE level of that factor, placed where

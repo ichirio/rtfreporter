@@ -1637,3 +1637,63 @@ test_that("a label two variables share keeps each variable's own order", {
   expect_identical(as.character(tbl$label[tbl$group == "RACE"]),
                    c("White", "Asian", "Not known"))
 })
+
+test_that("a label column that names a key is recoded like a row key", {
+  skip_if_no_cards()
+  d <- data.frame(
+    TRTA   = rep(c("Drug", "Control"), each = 24),
+    PARAM  = rep(c("ALT", "AST"), 24),
+    BNRIND = rep(c("LOW", "NORMAL", "HIGH", "NORMAL"), 12),
+    ANRIND = rep(c("NORMAL", "HIGH", "LOW"), 16),
+    stringsAsFactors = FALSE)
+  ard <- cards::ard_stack(d, .by = c("TRTA", "PARAM", "BNRIND"),
+                          cards::ard_tabulate(variables = ANRIND),
+                          .attributes = FALSE)
+  codes <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
+  built <- function(...) {
+    p <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                    rows = c(group = "PARAM"), label = "BNRIND") |>
+      plan_cells(categorical = "{n}", notes = FALSE) |>
+      plan_labels(...)
+    plan_apply(p, "table")
+  }
+  rows_of <- function(x) as.character(x$BNRIND[x$group == "ALT"])
+  none <- built()
+  expect_setequal(rows_of(none), c("LOW", "NORMAL", "HIGH"))
+
+  # the key's own entry reaches the rows; the header (.label) is another key
+  x <- built(BNRIND = codes)
+  expect_setequal(rows_of(x), c("Low", "Normal", "High"))
+  expect_true(all(c("Control____LOW", "Control____HIGH") %in% names(x)))
+  # the cells are the ones the codes had
+  expect_identical(unname(unlist(x[x$group == "ALT" & x$BNRIND == "High",
+                                   grep("____", names(x))])),
+                   unname(unlist(none[none$group == "ALT" & none$BNRIND == "HIGH",
+                                      grep("____", names(none))])))
+
+  # a flat entry too, and a value with no label keeps its code
+  expect_setequal(rows_of(built(LOW = "Low", HIGH = "High")),
+                  c("Low", "NORMAL", "High"))
+
+  # the order plan_levels() gives, in the codes or in the text
+  lv_codes <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                         rows = c(group = "PARAM"), label = "BNRIND") |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_levels(BNRIND = c("LOW", "NORMAL", "HIGH")) |>
+    plan_labels(BNRIND = codes)
+  expect_identical(rows_of(plan_apply(lv_codes, "table")), c("Low", "Normal", "High"))
+  lv_text <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                        rows = c(group = "PARAM"), label = "BNRIND") |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_levels(BNRIND = c("High", "Normal", "Low")) |>
+    plan_labels(BNRIND = codes)
+  expect_identical(rows_of(plan_apply(lv_text, "table")), c("High", "Normal", "Low"))
+
+  # the analysis variable's entry is for the analysis variable's values: it no
+  # longer relabels the key's rows (it did, when the two lists shared codes)
+  y <- built(ANRIND = codes)
+  expect_setequal(rows_of(y), c("LOW", "NORMAL", "HIGH"))
+  z <- built(BNRIND = c(LOW = "Baseline low", NORMAL = "Baseline normal", HIGH = "Baseline high"),
+             ANRIND = codes)
+  expect_setequal(rows_of(z), c("Baseline low", "Baseline normal", "Baseline high"))
+})
