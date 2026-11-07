@@ -6462,6 +6462,12 @@ plan_n_candidates <- function(.plan) {
       tk <- paste0("{", nm, "}")
       if (grepl(tk, out, fixed = TRUE)) {
         key <- if (depth > 0L) paste(pp[seq_len(depth)], collapse = sep)
+        # plan_total()'s "Placebo____Total" totals the column group it sits
+        # in: with no number of its own, it is that group's ("Placebo")
+        if (!is.null(col) && depth > 1L && !is.null(total_col) &&
+            pp[depth] %in% total_col && !(key %in% names(v))) {
+          key <- paste(pp[seq_len(depth - 1L)], collapse = sep)
+        }
         out <- gsub(tk, say(lookup(v, key, all_cols), nm), out,
                     fixed = TRUE)
       }
