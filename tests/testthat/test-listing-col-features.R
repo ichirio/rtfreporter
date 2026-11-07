@@ -267,6 +267,52 @@ test_that("a plan listing blanks the same way", {
   expect_identical(subj[nzchar(subj)], c("S-1", "S-2", "S-3"))
 })
 
+test_that("FT-IX037 [FR-IX410]: a listing's pages by page_by start with their own first record, keys shown, no ghost row", {
+  d <- data.frame(
+    TRT  = c(rep("Placebo", 5), rep("Drug", 4)),
+    SUBJ = c("S1", "S1", "S2", "S2", "S2", "S3", "S3", "S4", "S4"),
+    SEV  = c("MILD", "MILD", "MILD", "MODERATE", "MODERATE", "MILD", "MODERATE",
+             "MODERATE", "MODERATE"),
+    TERM = paste("T", 1:9), DAY = as.character(1:9), stringsAsFactors = FALSE)
+  pages_by <- function(by) {
+    p <- table_plan(d) |>
+      plan_listing(listing_col("TRT", width = 12, collapse_repeats = TRUE),
+                   listing_col("SUBJ", width = 8, collapse_repeats = TRUE),
+                   listing_col("SEV", width = 9),
+                   listing_col("TERM", width = 10),
+                   listing_col("DAY", width = 5)) |>
+      plan_paginate_rows(page_by = by, heading_at = "title",
+                         heading = if (length(by) == 1L) "{value}" else "{TRT} {SEV}")
+    lapply(suppressMessages(plan_apply(p, "pages")), function(pg) {
+      x <- as.data.frame(pg$data, stringsAsFactors = FALSE)
+      x[] <- lapply(x, function(v) { v[is.na(v)] <- ""; v })
+      x
+    })
+  }
+  first_rec <- function(x) x[1L, c("TRT", "SUBJ", "TERM", "DAY")]
+  # one BY variable: the MODERATE page opens with its own first record
+  pg <- pages_by("SEV")
+  expect_length(pg, 2L)
+  expect_identical(unlist(first_rec(pg[[2L]]), use.names = FALSE),
+                   c("Placebo", "S2", "T 4", "4"))
+  expect_identical(unlist(first_rec(pg[[1L]]), use.names = FALSE),
+                   c("Placebo", "S1", "T 1", "1"))
+  # every record keeps its blank row on its own page: 4 + 5 records
+  expect_identical(vapply(pg, nrow, 1L, USE.NAMES = FALSE), c(8L, 10L))
+  # a record's key never stands alone on a row of its own
+  for (x in c(pg, pages_by(c("TRT", "SEV")))) {
+    alone <- nzchar(x$TRT) & !nzchar(x$TERM)
+    expect_false(any(alone))
+  }
+  # two BY variables: a page per (TRT, SEV), each opening on its own record
+  pg2 <- pages_by(c("TRT", "SEV"))
+  expect_length(pg2, 4L)
+  expect_identical(vapply(pg2, function(x) x$DAY[1L], "", USE.NAMES = FALSE), c("1", "4", "6", "7"))
+  expect_identical(vapply(pg2, function(x) sum(nzchar(x$DAY)), 1L, USE.NAMES = FALSE),
+                   c(3L, 2L, 1L, 3L))
+  expect_true(all(vapply(pg2, function(x) all(nzchar(x$TRT[1L]), nzchar(x$SUBJ[1L])), NA, USE.NAMES = FALSE)))
+})
+
 test_that("a caller's own collapse_repeats wins over the marked columns", {
   spec <- listing_spec(list(
     listing_col("USUBJID", width = 12, collapse_repeats = TRUE),
