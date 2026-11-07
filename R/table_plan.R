@@ -4141,7 +4141,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (length(nest)) tbl <- .plan_nest_rows(.plan, tbl, nest, s_args)
   # a table of no events: its sentence (plan_empty())
   if (length(emp)) tbl <- .plan_empty_rows(.plan, tbl, x, emp, s_args)
-  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = length(cells) > 0L)
+  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = length(cells) > 0L,
+                         src = x)
   # the table-side seam: a column the table can only know once it exists
   .plan_remember(.plan, "table", tbl)
   if (identical(stage, "table")) return(tbl)
@@ -6200,11 +6201,35 @@ plan_n_candidates <- function(.plan) {
   tbl
 }
 
+# A digits key that is a VALUE of a row key (the parameter's name written
+# at the top level) belongs one level down, under the row key.  One line for
+# each such key (at most three), or "" when there is none.
+.plan_digit_value_hint <- function(plan, src, miss) {
+  if (!is.data.frame(src)) return("")
+  rk <- unlist(lapply(plan$roles$rows %||% list(), function(r) {
+    if (inherits(r, "formula")) character(0) else as.character(r)
+  }), use.names = FALSE)
+  cand <- unique(c(rk, grep("^group[0-9]+_level$", names(src), value = TRUE)))
+  cand <- cand[cand %in% names(src)]
+  out <- character(0)
+  for (m in miss) {
+    for (k in cand) {
+      if (m %in% as.character(unlist(src[[k]]))) {
+        out <- c(out, paste0("  ", sQuote(m), " is a value of ", k,
+                             ": write plan_digits(", k, " = list(`", m,
+                             "` = ...))\n"))
+        break
+      }
+    }
+  }
+  paste(utils::head(out, 3L), collapse = "")
+}
+
 # A digits key must reach something: a variable (checked before the
 # table is made) or a column of the table.  Silence is how a typo
 # survives review -- "AST = 3" on a frame whose variable column is PARAM
 # does nothing -- so a key that reaches nothing is an error.
-.plan_check_digit_cols <- function(plan, tbl, keys, vars = FALSE) {
+.plan_check_digit_cols <- function(plan, tbl, keys, vars = FALSE, src = NULL) {
   miss <- setdiff(keys, names(tbl))
   if (!length(miss)) return(invisible(TRUE))
   .ard_stop(paste0(
@@ -6212,7 +6237,9 @@ plan_n_candidates <- function(.plan) {
     ", which matched nothing.\n",
     "  A key is ",
     if (vars) "an analysis variable, a context, a kind (continuous / categorical), " else "",
-    "a column of the table, `.rows` or \"default\".\n  Columns: ",
+    "a column of the table, `.rows` or \"default\".\n",
+    .plan_digit_value_hint(plan, src, miss),
+    "  Columns: ",
     paste(utils::head(names(tbl), 8L), collapse = ", ")))
 }
 

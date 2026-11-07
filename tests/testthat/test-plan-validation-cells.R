@@ -1073,3 +1073,21 @@ test_that("plan_compare() says when comparison records are not ARD rows (#757)",
   tbl <- vc_cp() |> plan_compare(p = "{p.value:.3f}") |> plan_apply("table")
   expect_true("p" %in% names(tbl))
 })
+
+test_that("FT-PL997 [FR-PL975]: a digits key that is a value of a row key says it belongs under the row key (#928)", {
+  p <- vc_lab()
+  err <- function(q) tryCatch(plan_apply(q, "table"), error = conditionMessage)
+  m <- err(p |> plan_digits(ALT = c(mean = 1, sd = 2), nope = 1))
+  expect_match(m, "plan_digits() names 'ALT', 'nope', which matched nothing.", fixed = TRUE)
+  expect_match(m, "'ALT' is a value of PARAMCD: write plan_digits(PARAMCD = list(`ALT` = ...))",
+               fixed = TRUE)
+  # only the value gets the line, and the rest of the message stays
+  expect_false(grepl("'nope' is a value", m, fixed = TRUE))
+  expect_match(m, "A key is an analysis variable, a context, a kind", fixed = TRUE)
+  expect_match(m, "Columns: ", fixed = TRUE)
+  # no value of a row key: the message is what it was
+  expect_false(grepl("is a value of", err(p |> plan_digits(nope = 1)), fixed = TRUE))
+  # the right form still works
+  expect_identical(vc_tab(p |> plan_digits(PARAMCD = list(ALT = c(mean = 1, sd = 2))))$A[1L],
+                   "31.2 (4.10)")
+})
