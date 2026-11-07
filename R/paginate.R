@@ -293,6 +293,11 @@
       # dropped, #859).
       info$no_cont <- !is.null(collapse_record) && length(gidx) == 1L &&
         !is.na(gidx) && identical(names(x)[gidx], collapse_record)
+      # A listing grouped by something larger than its record (a block of
+      # one value) is cut between records, not inside one.
+      if (!is.null(collapse_record) && !isTRUE(info$no_cont)) {
+        info$record <- collapse_record
+      }
       list(idx = gidx, info = info)
     }
     info_override <- NULL
@@ -355,6 +360,7 @@
         rest_info <- lapply(g_all$info[c("id", "label", "headers")],
                             function(v) v[-fr])
         rest_info$mode <- g_all$info$mode
+        rest_info$record <- g_all$info$record
         # The rest opens inside a group when a row of the cut group (not
         # only its separators: counted ones, or blank rows such as a listing
         # record's) follows the cut: it then opens with the group's
@@ -380,6 +386,7 @@
           rest_info <- lapply(rest_info[c("id", "label", "headers")],
                               function(v) v[-drop])
           rest_info$mode <- g_all$info$mode
+          rest_info$record <- g_all$info$record
         }
         if (inside && as.integer(max_rows) >= 2L && !isTRUE(g_all$info$no_cont)) {
           label <- g_all$info$label[last]
@@ -458,7 +465,23 @@
     if (length(collapse_idx)) {
       rec <- if (!is.null(collapse_record) && collapse_record %in% names(chunk))
         chunk[[collapse_record]]
+      # A continuation row ("MILD (Cont.)") that heads a listing's page
+      # already shows the value its first record would repeat: that record
+      # reads it as a repeat of the row above, and prints it blank.
+      cvals <- NULL
+      if (!is.null(rec) && nrow(chunk) >= 2L && nzchar(cont_label %||% "")) {
+        cj <- tryCatch(.resolve_group_col(group_col, chunk),
+                       error = function(e) NULL)
+        gv <- if (length(cj) == 1L && !is.na(cj) && cj %in% collapse_idx)
+          chunk[[cj]]
+        if (is.character(gv) && !is.na(gv[2L]) &&
+            identical(gv[1L], paste0(gv[2L], cont_label))) {
+          cvals <- list(col = cj, label = gv[1L])
+          chunk[[cj]][1L] <- gv[2L]
+        }
+      }
       chunk <- .collapse_repeats_chunk(chunk, collapse_idx, record = rec)
+      if (!is.null(cvals)) chunk[[cvals$col]][1L] <- cvals$label
     }
     attr(chunk, "rtf_paginate_meta") <- list(
       strategy    = strategy,
@@ -760,11 +783,31 @@
   # column is a repeat when it equals its own previous line.
   same_rec <- if (is.null(record)) rep(FALSE, n - 1L) else
     record[-1L] == record[-n] & !is.na(record[-1L]) & !is.na(record[-n])
+  # A value that wraps has no one line to carry down, so a repeat of it is
+  # told by the record as a whole: all its lines in the column (and in the
+  # columns before) equal the previous record's.  Then every line of the
+  # record is blanked, whether the value wraps or not.
+  run <- cumsum(c(TRUE, !same_rec))
+  rec_txt <- function(v) {
+    v[is.na(v)] <- ""
+    vapply(split(v, run), function(z) {
+      z <- z[seq_len(max(c(0L, which(nzchar(z)))))]
+      paste(z, collapse = "\n")
+    }, character(1L))
+  }
+  rec_key <- NULL
   for (k in seq_along(cols)) {
     key <- do.call(paste, c(orig[seq_len(k)], list(sep = "\r")))
     own <- orig[[k]]
     dup <- c(FALSE, key[-1L] == key[-n] |
                     (same_rec & own[-1L] == own[-n] & nzchar(own[-1L])))
+    if (!is.null(record)) {
+      txt     <- rec_txt(own)
+      rec_key <- if (is.null(rec_key)) txt else paste(rec_key, txt, sep = "\r")
+      m       <- length(txt)
+      rdup    <- c(FALSE, rec_key[-1L] == rec_key[-m] & nzchar(txt[-1L]))
+      dup     <- dup | rdup[run]
+    }
     if (any(dup)) {
       colv      <- chunk[[cols[k]]]
       colv[dup] <- NA
@@ -1213,6 +1256,20 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
       }
     }
 
+    # A listing record is not cut across pages unless it is longer than one:
+    # the cut moves back to where the record starts.  (The continuation row
+    # has no record, so a page is never left with only that.)
+    if (!is.null(info$record) && end < nrow(df)) {
+      rec <- df[[info$record]]
+      if (!is.na(rec[end]) && !is.na(rec[end + 1L]) && rec[end] == rec[end + 1L]) {
+        st <- end
+        while (st > pos && !is.na(rec[st - 1L]) && rec[st - 1L] == rec[end]) {
+          st <- st - 1L
+        }
+        if (st > pos && any(!is.na(rec[pos:(st - 1L)]))) end <- st - 1L
+      }
+    }
+
     result[[length(result) + 1L]] <- df[pos:end, , drop = FALSE]
 
     # The blank rows that end the cut group, when nothing else of it is left,
@@ -1378,7 +1435,8 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
       sub_info <- list(id      = info$id[rows],
                        label   = info$label[rows],
                        headers = info$headers[rows],
-                       no_cont = info$no_cont)
+                       no_cont = info$no_cont,
+                       record  = info$record)
       sub <- .split_group_force(gdf, sub_info, max_rows, cont_label,
                                 group_idx, min_group_rows,
                                 edge_first = edge_first, edge_end = edge_end,

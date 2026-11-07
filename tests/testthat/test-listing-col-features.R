@@ -216,10 +216,10 @@ test_that("a key prints once per record when a key to its left wraps", {
   trt  <- .printed(tbl$data$TRT)
   # every record's subject once, on the record's first line
   expect_identical(subj[nzchar(subj)], c("S-1", "S-2", "S-3"))
-  # the wrapped treatment keeps both of its lines
+  # the wrapped treatment keeps both of its lines, once: records 2 and 3
+  # share it, so the second prints no line of it
   expect_identical(trt[nzchar(trt)],
-                   c("Placebo", "Xanomeline", "High Dose",
-                     "Xanomeline", "High Dose"))
+                   c("Placebo", "Xanomeline", "High Dose"))
 })
 
 test_that("with no wrap the blanking is what it always was", {
@@ -311,6 +311,73 @@ test_that("FT-IX037 [FR-IX410]: a listing's pages by page_by start with their ow
   expect_identical(vapply(pg2, function(x) sum(nzchar(x$DAY)), 1L, USE.NAMES = FALSE),
                    c(3L, 2L, 1L, 3L))
   expect_true(all(vapply(pg2, function(x) all(nzchar(x$TRT[1L]), nzchar(x$SUBJ[1L])), NA, USE.NAMES = FALSE)))
+})
+
+test_that("FT-IX038 [FR-IX411]: a listing blanks a repeat of a value that wraps, as one that does not", {
+  d <- data.frame(
+    TERM = c(rep("Urinary tract infection", 3), "Rash", "Rash",
+             "Urinary tract infection"),
+    SUBJ = paste0("S", 1:6), stringsAsFactors = FALSE)
+  pg <- table_plan(d) |>
+    plan_listing(listing_col("TERM", width = 10, collapse_repeats = TRUE),
+                 listing_col("SUBJ", width = 6)) |>
+    plan_paginate_rows(max_rows = 40) |>
+    plan_apply()
+  x <- as.data.frame(pg[[1L]]$data, stringsAsFactors = FALSE)
+  term <- x$TERM
+  term[is.na(term)] <- ""
+  # the record starts: wrapped lines of "Urinary tract infection" print for
+  # record 1 only; "Rash" once; the wrapped term again after "Rash"
+  starts <- which(nzchar(x$SUBJ))
+  expect_length(starts, 6L)
+  shown <- nzchar(term[starts])
+  expect_identical(shown, c(TRUE, FALSE, FALSE, TRUE, FALSE, TRUE))
+  # a blanked record has no line of the term left, wrapped lines included
+  expect_identical(term[seq(starts[2L], starts[4L] - 1L)],
+                   rep("", starts[4L] - starts[2L]))
+  # the record that prints it prints all its lines
+  expect_identical(term[starts[1L]:(starts[1L] + 2L)],
+                   c("Urinary", "tract", "infection"))
+})
+
+test_that("FT-IX039 [FR-IX412]: a listing cut into blocks keeps a record on one page and heads a continued block once", {
+  d <- data.frame(
+    SEV  = rep(c("MILD", "SEVERE"), c(9, 4)),
+    TERM = c(rep("Urinary tract infection", 3), "Rash", "Rash",
+             rep("Urinary tract infection", 2), "Nausea", "Nausea",
+             "Rash", "Rash", rep("Urinary tract infection", 2)),
+    SUBJ = paste0("S", 1:13), stringsAsFactors = FALSE)
+  pg <- table_plan(d) |>
+    plan_listing(listing_col("SEV", width = 6, collapse_repeats = TRUE),
+                 listing_col("TERM", width = 10),
+                 listing_col("SUBJ", width = 6)) |>
+    plan_paginate_rows(max_rows = 8) |>
+    plan_row_group(mode = "value", group_col = "SEV") |>
+    plan_apply()
+  pages <- lapply(pg, function(p) {
+    x <- as.data.frame(p$data, stringsAsFactors = FALSE)
+    x[] <- lapply(x, function(v) { v[is.na(v)] <- ""; v })
+    x
+  })
+  expect_gt(length(pages), 2L)
+  # every record (its SUBJ) is on one page, with all its wrapped lines
+  subj <- unlist(lapply(pages, function(x) x$SUBJ[nzchar(x$SUBJ)]))
+  expect_identical(subj, paste0("S", 1:13))
+  for (x in pages) {
+    cont <- grepl("(Cont.)", x$SEV, fixed = TRUE)
+    # the record's lines follow its first line on the same page
+    i <- which(x$TERM == "Urinary")
+    expect_identical(x$TERM[i + 1L], rep("tract", length(i)))
+    expect_identical(x$TERM[i + 2L], rep("infection", length(i)))
+    if (any(cont)) {
+      # one heading, on the first row; the first record prints no severity
+      expect_identical(which(cont), 1L)
+      expect_identical(x$SEV[2L:nrow(x)], rep("", nrow(x) - 1L))
+      # and the row under it is a record's first line, not an empty row
+      expect_true(nzchar(x$SUBJ[2L]))
+    }
+  }
+  expect_false(any(grepl("(Cont.)", pages[[1L]]$SEV, fixed = TRUE)))
 })
 
 test_that("a caller's own collapse_repeats wins over the marked columns", {

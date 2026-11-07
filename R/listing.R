@@ -355,7 +355,9 @@ listing_split_after <- function(text, sep) {
 #'       the suppression happens per page, after the split, so a record
 #'       continued across a page break still shows its subject.}
 #'     \item{Wrapped cells}{A cell that already wraps onto several lines is
-#'       padded as usual: there is no one value to repeat.}
+#'       padded as usual, but a record whose lines equal the previous
+#'       record's are blanked all the same: a repeat is blanked whether or
+#'       not the value wraps.}
 #'   }
 #' @param name Output column name.  `NULL` (default) uses the first entry of
 #'   `vars`; [listing_spec()] makes the set unique if two columns collide.
@@ -1098,7 +1100,8 @@ build_listing <- function(data, spec) {
     # has a constant run to suppress -- and, because it suppresses per page,
     # after the split, the value reappears at the top of the next page.  Only
     # a single-line value is carried: a cell that already wraps has no one
-    # value to repeat, and printing it in full is never wrong.  It is carried
+    # value to repeat (a repeat of it is blanked by the record, in
+    # .collapse_repeats_chunk()).  It is carried
     # into the record's blank row too (#742): a blank row left "" would break
     # the run between two records of the same value, and none would be
     # blanked.  A page never parts a record from its blank row, so the
