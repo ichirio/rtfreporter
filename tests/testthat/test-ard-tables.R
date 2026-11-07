@@ -1583,3 +1583,57 @@ test_that("FT-AR114 [FR-AR254]: normalize_ard() prints a text statistic as it is
   # a number still takes its decimal count
   expect_identical(d$stat_fmt[d$stat_name == "estimate"], "-0.7")
 })
+
+test_that("a label two variables share keeps each variable's own order", {
+  skip_if_no_cards()
+  d <- data.frame(
+    ARM  = rep(c("A", "B"), each = 12),
+    SEX  = rep(c("F", "M", "U"), 8),
+    RACE = rep(c("WHITE", "ASIAN", "NOT REPORTED", "UNKNOWN"), 6),
+    stringsAsFactors = FALSE)
+  ard <- cards::ard_stack(d, .by = "ARM",
+                          cards::ard_tabulate(variables = c(SEX, RACE)),
+                          .attributes = FALSE)
+  sex_lv  <- c("F", "M", "U")
+  race_lv <- c("WHITE", "ASIAN", "NOT REPORTED", "UNKNOWN")
+  built <- function(sex, race, ...) {
+    p <- table_plan(normalize_ard(ard), cols = "ARM",
+                    rows = c(group = "variable")) |>
+      plan_cells(categorical = "{n}", notes = FALSE) |>
+      plan_levels(SEX = sex_lv, RACE = race_lv) |>
+      plan_labels(SEX = sex, RACE = race)
+    plan_apply(p, "table")
+  }
+  same_text <- built(c(F = "Female", M = "Male", U = "Unknown"),
+                     c(WHITE = "White", ASIAN = "Asian",
+                       "NOT REPORTED" = "Not reported", UNKNOWN = "Unknown"))
+  # "Unknown" is SEX's third and RACE's last: it is not RACE's first
+  expect_identical(as.character(same_text$label[same_text$group == "SEX"]),
+                   c("Female", "Male", "Unknown"))
+  expect_identical(as.character(same_text$label[same_text$group == "RACE"]),
+                   c("White", "Asian", "Not reported", "Unknown"))
+  # and the order is the same as when the texts differ
+  own <- built(c(F = "Female", M = "Male", U = "Sex unknown"),
+               c(WHITE = "White", ASIAN = "Asian",
+                 "NOT REPORTED" = "Not reported", UNKNOWN = "Race unknown"))
+  expect_identical(as.character(own$label[own$group == "RACE"]),
+                   c("White", "Asian", "Not reported", "Race unknown"))
+  expect_identical(same_text$A, own$A)
+
+  # a code two variables share, read as each one's own text
+  d2 <- d
+  d2$RACE <- rep(c("W", "A", "U"), length.out = nrow(d2))
+  ard2 <- cards::ard_stack(d2, .by = "ARM",
+                           cards::ard_tabulate(variables = c(SEX, RACE)),
+                           .attributes = FALSE)
+  tbl <- widen_ard(normalize_ard(ard2), cols = "ARM",
+                   rows = c(group = "variable"),
+                   cells = list(categorical = "{n}"), notes = FALSE,
+                   levels = list(SEX = sex_lv, RACE = c("W", "A", "U")),
+                   labels = list(SEX = c(F = "Female", M = "Male", U = "Unknown"),
+                                 RACE = c(W = "White", A = "Asian", U = "Not known")))
+  expect_identical(as.character(tbl$label[tbl$group == "SEX"]),
+                   c("Female", "Male", "Unknown"))
+  expect_identical(as.character(tbl$label[tbl$group == "RACE"]),
+                   c("White", "Asian", "Not known"))
+})
