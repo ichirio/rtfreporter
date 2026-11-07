@@ -213,16 +213,19 @@
   list(flat = flat, scopes = labels[scoped])
 }
 
-# TRUE when the label column names a KEY of the ARD (a `by` variable): not
-# `.label` or `variable_level` (the analysis variable's levels), not a name
-# of an analysis variable, not the statistic's own columns.
+# TRUE when the label column names a column of a normalized ARD that holds a
+# key (a `by` variable, a hierarchy's level): not `.label` or `variable_level`
+# (the analysis variable's levels), not the statistic's own columns.  A
+# hierarchy's term is a key for the records of the grades below it and the
+# analysis variable of the records counted at it, so its entry is for the
+# column, not for the records of one analysis variable.  A frame that is not a
+# normalized ARD (a label column of the author's own) holds no keys.
 .ard_label_is_key <- function(labref, d) {
-  if (!length(labref)) return(FALSE)
+  if (!length(labref) || !any(c(".kind", ".label") %in% names(d))) return(FALSE)
   ref <- labref[[1]]$ref
   is.character(ref) && length(ref) == 1L && ref %in% names(d) &&
     !ref %in% c(".label", "variable_level", "variable", "context", "stat_name",
-                "stat_label", "stat_fmt", "stat", ".kind", ".stat_group") &&
-    !ref %in% as.character(.ard_unlist_col(d[["variable"]]))
+                "stat_label", "stat_fmt", "stat", ".kind", ".stat_group")
 }
 
 .ard_labels_for <- function(labels, ref = NULL, out = NULL) {

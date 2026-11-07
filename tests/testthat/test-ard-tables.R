@@ -1697,3 +1697,33 @@ test_that("a label column that names a key is recoded like a row key", {
              ANRIND = codes)
   expect_setequal(rows_of(z), c("Baseline low", "Baseline normal", "Baseline high"))
 })
+
+test_that("a hierarchy's label with a Total column: a term's text is on all its cells, one row", {
+  skip_if_no_cards()
+  adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:2], ]
+  ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD, AESEV),
+                                       by = TRTA, denominator = cards::ADSL,
+                                       id = USUBJID)
+  d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD", "AESEV"))
+  built <- function(...) {
+    p <- table_plan(d, cols = c("TRTA", "AESEV"), rows = c(soc = "AESOC"),
+                    label = c(label = "AEDECOD")) |>
+      plan_cells(categorical = "{n}", notes = FALSE) |>
+      plan_total(label = "Any", position = "first") |>
+      plan_labels(...)
+    x <- as.data.frame(plan_apply(p, "table"))
+    x[] <- lapply(x, function(v) if (is.factor(v)) as.character(v) else v)
+    x
+  }
+  plain <- built()
+  pt <- "DIARRHOEA"
+  x <- built(AEDECOD = c(DIARRHOEA = "Loose stools"))
+  # the same rows, the term's text on one of them, with the cells it had
+  expect_identical(nrow(x), nrow(plain))
+  expect_false(pt %in% x$label)
+  expect_identical(sum(x$label %in% "Loose stools"), 1L)
+  cells <- grep("____", names(x), value = TRUE)
+  expect_identical(x[x$label %in% "Loose stools", cells],
+                   plain[plain$label %in% pt, cells])
+  expect_false(anyNA(x[x$label %in% "Loose stools", "Placebo____Any"]))
+})
