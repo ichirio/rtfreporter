@@ -285,12 +285,18 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
   # label row's value belongs in.
   lvl       <- integer(0)
   prev      <- NULL
+  # Internal: a key per row (the page_by key) whose change opens every
+  # heading row again, so a page cut on it starts with its own headings.
+  brk       <- attr(data, "rtf_stub_break", exact = TRUE)
+  if (length(brk) != n_row) brk <- NULL
   label_pos <- rep(NA_integer_, n_par)
   for (i in seq_len(n_row)) {
     cur <- vapply(parents, `[[`, character(1L), i)
     restart <- if (is.null(prev)) 1L else {
       changed <- which(cur != prev)
-      if (length(changed)) changed[1L] else 0L
+      if (length(changed)) changed[1L]
+      else if (!is.null(brk) && brk[i] != brk[i - 1L]) 1L
+      else 0L
     }
     if (restart > 0L) {
       for (l in restart:n_par) {

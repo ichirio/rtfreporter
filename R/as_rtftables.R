@@ -1172,6 +1172,17 @@ as_rtftables.default <- function(x,
       user_args$cell_styles <- NULL
     }
     if (!is.null(stub_spec_obj)) {
+      # The stub is folded over the whole body, then cut into pages.  Say
+      # where the `page_by` key changes, so every page opens with its own
+      # heading rows (stub_cols() reads this and nothing else does).
+      if (!is.null(page_by_arg) && nrow(body)) {
+        pbi <- .resolve_page_by(page_by_arg, body)
+        if (length(pbi)) {
+          attr(body, "rtf_stub_break") <- do.call(paste, c(lapply(pbi, function(j) {
+            .fill_page_by_gaps(as.character(body[[j]]))
+          }), list(sep = "")))
+        }
+      }
       st          <- .apply_stub_vars(body, kw, cell_styles, stub_spec_obj)
       body        <- st$body
       kw          <- st$kw
