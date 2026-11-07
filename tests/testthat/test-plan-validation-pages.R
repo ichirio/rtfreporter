@@ -618,7 +618,7 @@ test_that("FT-PL294 [FR-PL372 FR-PL398 FR-PL403 FR-PL421 FR-PL431 FR-PL448 FR-PL
   expect_error(plan_after(not, identity), msg, fixed = TRUE)
 })
 
-test_that("FT-PL998 [FR-PL976]: plan_stub() under page_by writes a heading row again on each page, one visit or two", {
+test_that("FT-PL999 [FR-PL977]: plan_stub() under page_by writes a heading row again on each page, one visit or two", {
   mk <- function(visits, paged = TRUE) {
     st <- expand.grid(VISIT = visits, PARAM = c("ALT", "HGB"), ARM = "Placebo", stringsAsFactors = FALSE)
     st$variable <- "AVAL"; st$stat_name <- "mean"; st$stat <- seq_len(nrow(st)) * 1.5
