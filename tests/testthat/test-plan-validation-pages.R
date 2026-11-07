@@ -662,3 +662,20 @@ test_that("FT-PL1000 [FR-PL977]: plan_stub(before = TRUE) with a hidden page_by 
   two <- mk(c("WEEK 4", "WEEK 12"))
   for (pg in two) expect_identical(pg[c(1L, 4L)], c("WEEK 4", "WEEK 12"))
 })
+
+test_that("FT-PL1001 [FR-PL977]: a two-level stub (visit, variable) under a hidden page_by key opens each page with both heading rows", {
+  st <- expand.grid(AVISIT = "WEEK 12", PARAM = c("ALT", "HGB"), ARM = "Placebo", variable = c("AVAL", "CHG"),
+                    stringsAsFactors = FALSE)
+  st$stat_name <- "mean"; st$stat <- seq_len(nrow(st)) * 1.5
+  st$.label <- NA_character_; st$.kind <- "continuous"
+  p <- table_plan(st, cols = "ARM", rows = list(group1 = "PARAM", group2 = "AVISIT", group3 = "variable")) |>
+    plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+    plan_stub(name = "row_label", before = TRUE) |>
+    plan_sort(keys = c("group1", "group2", "group3")) |>
+    plan_paginate_rows(max_rows = 30L, split = "group_safe", page_by = "group1",
+                       heading = "Parameter: {value}", heading_at = "title") |>
+    plan_hide(cols = "group1")
+  pg <- lapply(vp_pages(p), function(z) z$data$row_label)
+  expect_length(pg, 2L)
+  for (x in pg) expect_identical(x[1:2], c("WEEK 12", paste0(strrep(" ", 4L), "AVAL")))
+})

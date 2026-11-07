@@ -294,8 +294,8 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
     cur <- vapply(parents, `[[`, character(1L), i)
     restart <- if (is.null(prev)) 1L else {
       changed <- which(cur != prev)
-      if (length(changed)) changed[1L]
-      else if (!is.null(brk) && brk[i] != brk[i - 1L]) 1L
+      if (!is.null(brk) && brk[i] != brk[i - 1L]) 1L
+      else if (length(changed)) changed[1L]
       else 0L
     }
     if (restart > 0L) {
