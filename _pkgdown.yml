@@ -227,6 +227,12 @@ navbar:
           href: articles/ai-plan-code.html
         - text: "Developing with an AI assistant"
           href: articles/ai-development.html
+        - text: "Developing with AI agents"
+          href: articles/ai-agents.html
+        - text: "AI agents: Claude desktop app"
+          href: articles/ai-agents-claude-app.html
+        - text: "AI agents: VS Code with Copilot"
+          href: articles/ai-agents-vscode-copilot.html
         - text: "AI user manual"
           href: https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-user-manual-0.8.2.md
         - text: "AI developer manual"
@@ -763,6 +769,9 @@ articles:
     navbar: ~
     contents:
       - articles/ai-development
+      - articles/ai-agents
+      - articles/ai-agents-claude-app
+      - articles/ai-agents-vscode-copilot
       - articles/architecture
       - articles/extending-adapters
 

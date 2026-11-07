@@ -1,0 +1,189 @@
+---
+title: "AI agents: set-up in VS Code with GitHub Copilot"
+---
+
+```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+<!-- The Japanese page is added later, beside this one. Then put this here:
+<p align="right">
+  <a class="btn btn-outline-secondary btn-sm" href="ai-agents-vscode-copilot-ja.html">In Japanese</a>
+</p>
+-->
+
+This page sets up VS Code with GitHub Copilot in agent mode for work on
+rtfreporter, tflspec or tflplanner. Read [Developing with AI agents](ai-agents.html)
+first: it says what the set-up is for. Come back to that page for the workflow
+when you are done.
+
+The facts here come from the VS Code and GitHub documentation, read on
+2026-11-08 (see the links). Copilot's screens and settings change often. Where
+the documentation does not show a step, it is marked **(to check)**.
+
+## Open the repository
+
+1. Clone the repository. A contributor clones a fork, a collaborator clones
+   `ichirio/rtfreporter` (*Contributor vs Collaborator* in `CONTRIBUTING.md`).
+   `CONTRIBUTING.md` also shows the VS Code Source Control route.
+2. Open the folder in VS Code (**File** > **Open Folder**).
+3. Make the topic branch from the right base: **Git: Create Branch...** in the
+   Command Palette (*Branching & collaboration* in `CONTRIBUTING.md`).
+4. Open the Chat view and choose agent mode. **(To check:** the current name
+   and place of the agent picker, and which "harness" to choose; the
+   documentation describes Local and Copilot harness sessions.**)**
+
+## The environment
+
+The agent's commands must see the work library and the work home, not yours
+([section 2 of the shared article](ai-agents.html#the-environment)).
+
+* The agent runs commands in the integrated terminal. Start VS Code from a
+  shell where the variables are set (`R_LIBS_USER`, `HOME`, `R_USER_CACHE_DIR`,
+  `R_USER_DATA_DIR`, `R_USER_CONFIG_DIR`, `TMP`, `TEMP`, `TMPDIR`,
+  `WORK_ROOT`), so that every terminal inherits them.
+  **(To check:** the VS Code setting that sets variables for the integrated
+  terminal on your platform, and whether the agent's terminal uses it.**)**
+* Tell the agent which R to call, by its full path, in the instruction file
+  (next section).
+
+Then ask the agent to run the check script from the shared article:
+
+> Save the script from "The environment" as `check-env.R` outside the
+> repository, run it with the project's R, and show me the output.
+
+It must end with `Environment OK.` If it stops, fix the environment first.
+
+## Instructions
+
+Copilot in VS Code reads `.github/copilot-instructions.md` or `AGENTS.md`. This
+repository has both. `.github/copilot-instructions.md` already points to
+`AGENTS.md`, `CONTRIBUTING.md` and the AI developer manual, so keep it short
+and keep the rules in one place. Add the lines that are only for the agent:
+
+```markdown
+- Call R by its full path (the project's R), never a bare `Rscript`.
+- Run the pre-PR check (`/pre-pr`) before you open a pull request.
+- Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:` in `DESCRIPTION`.
+- Stop and ask before you push, install into a library, or delete files.
+```
+
+To confirm that the file was read:
+
+* Run **Chat: Open Customizations** from the Command Palette and select
+  **Instructions**. The file should be listed. This shows that it was found, not
+  that the agent followed it.
+* Start a new chat and look at the **References** section of the answer, where
+  it is shown.
+* Read the changes and the tool activity to see whether the rules were
+  followed.
+
+Sources: <https://code.visualstudio.com/docs/copilot/customization/custom-instructions>,
+<https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions>
+
+## Permissions
+
+The agent asks for approval before it runs a tool. In the approval prompt you can
+choose **Allow Once**. The terminal setting `chat.tools.terminal.autoApprove`
+holds rules that approve a command without asking. Each rule is `true`
+(approve), `false` (ask) or a regular expression between `/` characters. For
+this work, in your user or workspace settings:
+
+```json
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^git (status|diff|log)\\b/": true,
+    "git push": false,
+    "rm": false
+  }
+}
+```
+
+Three things from the documentation. A compound command is approved only if
+every part matches a `true` rule. A `false` rule makes VS Code ask; it does not
+block the command. And the page calls the rules "a best-effort convenience,
+not a security boundary", so keep the work area apart from your own files, as
+in the environment section.
+
+Keep these as "ask": `git push`, installing into any library other than the
+work library, and deleting files. **(To check:** how to allow the project's R
+by its full path in these rules, and whether a rule that allows `Rscript` is
+wise.**)**
+
+Source: <https://code.visualstudio.com/docs/agents/run/approvals>
+
+## The pre-PR check
+
+A **prompt file** is a Markdown file named `<name>.prompt.md`. A workspace
+prompt file lives in `.github/prompts/`. You start it by typing `/<name>` in
+the chat input, or with **Chat: Run Prompt** in the Command Palette. It runs in
+Local sessions in the Chat view. This example is `.github/prompts/pre-pr.prompt.md`:
+
+```markdown
+Run these in order. Stop at the first failure and report it.
+
+1. Run the tests of the changed area, then the whole suite in one R session
+   (`testthat::test_dir()` on the installed package).
+2. Run `lintr::lint_package()`. It must report 0 lints.
+3. List the `pkg::` uses and `requireNamespace()` calls added in the diff, and
+   check each is declared in `DESCRIPTION`.
+4. If the change is in tflspec, run tflplanner's tests too.
+5. Report each result in the form the pull request template asks for.
+
+Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
+```
+
+**(To check:** the optional front matter a prompt file takes in the current
+VS Code release, for example to pick the agent mode.**)**
+
+Source: <https://code.visualstudio.com/docs/copilot/customization/prompt-files>
+
+## Checks on each edit
+
+VS Code has hooks, in **Preview**. A hook is a command that runs at a fixed
+point. Workspace hooks are JSON files in `.github/hooks/`. The event names are
+`preToolUse` and `postToolUse`. A `preToolUse` hook blocks a call by returning
+`permissionDecision` set to `"deny"`; a `postToolUse` hook cannot undo an
+action that has finished. A hook that fails on an error denies the call, but a
+timeout falls through to the normal approval. The rule "refuse an edit to
+`NEWS.md` or to `Version:`" would be one `preToolUse` hook.
+
+**(To check:** the exact file format of a hook in the current release, the field
+names of its input, and the tool names to match for a file edit. This page
+gives no example until they are confirmed.**)** Because the feature is in
+Preview, and because the format is not confirmed, rely on the pre-PR check and
+on CI for these rules until it is.
+
+Source: <https://code.visualstudio.com/docs/copilot/customization/hooks>
+
+## Then
+
+Back to [the workflow in the shared article](ai-agents.html#the-workflow):
+issue, small branch, test first, pre-PR check, pull request. To read an Issue or
+a pull request, the safe route is the GitHub CLI (`gh`) in the terminal.
+**(To check:** the GitHub integration in VS Code for reading an Issue or a
+pull request.**)**
+
+For several pieces of work at once, VS Code has subagents: helpers that work
+in their own context and return a result. A subagent does not inherit the
+conversation, so state the goal, the files and the result you expect.
+Source: <https://code.visualstudio.com/docs/copilot/agents/subagents>
