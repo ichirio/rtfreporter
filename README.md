@@ -7,7 +7,6 @@
 [![test-coverage](https://github.com/ichirio/rtfreporter/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/ichirio/rtfreporter/actions/workflows/test-coverage.yaml)
 [![Codecov test coverage](https://codecov.io/gh/ichirio/rtfreporter/graph/badge.svg)](https://app.codecov.io/gh/ichirio/rtfreporter)
 [![pkgdown](https://github.com/ichirio/rtfreporter/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/ichirio/rtfreporter/actions/workflows/pkgdown.yaml)
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 <!-- badges: end -->
 
@@ -308,9 +307,8 @@ The full pkgdown site is at <https://ichirio.github.io/rtfreporter/>:
 
 ## Status
 
-Pre-1.0 (`lifecycle: experimental`): the latest release is `v0.8.2`, and
-`main` is the 0.9 line, the version for the first CRAN submission -- see
-[`NEWS.md`](NEWS.md); the roadmap is in the site's sidebar.
+Pre-1.0: the API may still change before 1.0 -- see [`NEWS.md`](NEWS.md); the
+roadmap is in the site's sidebar.
 
 ## Citation
 
