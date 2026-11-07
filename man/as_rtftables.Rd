@@ -600,7 +600,8 @@ other arguments say (\code{max_rows}, \code{split}): the page a table shares wit
 the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  Under
 \code{"group_safe"} / \code{"group_force"} a group the cut falls inside goes on
 with its continuation row on the next page, counted in its \code{max_rows},
-as a cut by \code{max_rows} does.  \code{NULL}
+as a cut by \code{max_rows} does.  A \strong{listing} record is not cut: the first
+page ends before the record the row count falls in.  \code{NULL}
 (the default): the first page as the others.  Not with \code{page_by},
 \code{split = "by_value"} or a custom \code{split}.}
 }

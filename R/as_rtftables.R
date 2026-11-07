@@ -566,7 +566,8 @@
 #'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  Under
 #'   `"group_safe"` / `"group_force"` a group the cut falls inside goes on
 #'   with its continuation row on the next page, counted in its `max_rows`,
-#'   as a cut by `max_rows` does.  `NULL`
+#'   as a cut by `max_rows` does.  A **listing** record is not cut: the first
+#'   page ends before the record the row count falls in.  `NULL`
 #'   (the default): the first page as the others.  Not with `page_by`,
 #'   `split = "by_value"` or a custom `split`.
 #' @param collapse_repeats Columns in which to blank **consecutive repeated

@@ -343,6 +343,19 @@
              call. = FALSE)
       }
       fr <- seq_len(as.integer(first_rows))
+      # A listing record is not cut by the first page either: the cut moves
+      # back to where the record starts (unless it starts the page).
+      if (!is.null(collapse_record) && collapse_record %in% names(x)) {
+        rec <- x[[collapse_record]]
+        k <- length(fr)
+        if (!is.na(rec[k]) && !is.na(rec[k + 1L]) && rec[k] == rec[k + 1L]) {
+          st <- k
+          while (st > 1L && !is.na(rec[st - 1L]) && rec[st - 1L] == rec[k]) {
+            st <- st - 1L
+          }
+          if (st > 1L) fr <- seq_len(st - 1L)
+        }
+      }
       # A group split reads the groups on the whole body, so the rest knows
       # whether it opens inside the group the first page cut (#856).
       g_all <- if (split %in% c("group_safe", "group_force")) {
@@ -792,6 +805,9 @@
     v[is.na(v)] <- ""
     vapply(split(v, run), function(z) {
       z <- z[seq_len(max(c(0L, which(nzchar(z)))))]
+      # a value carried down the record's rows is one value, however many
+      # rows the record has
+      if (length(unique(z)) == 1L) z <- z[1L]
       paste(z, collapse = "\n")
     }, character(1L))
   }
