@@ -813,10 +813,14 @@
 # variable's `cells` entry (the `Mean (SD)` / `Min, Max` lines), else its labels
 # as first seen.  Rows are sorted by the row keys before the label, so a
 # variable's labels only ever compete with labels of the same variable and one
-# concatenated order serves them all.
+# concatenated order serves them all -- except that a label two variables
+# share ("Unknown") is one factor level, so it can sit in only one place.
+# The order of each variable is therefore kept, as attribute `by_var`, for
+# the rows to be placed by (see `.lab_pos` in widen_ard()).
 .ard_label_order <- function(d, cells, levels) {
   vars <- .ard_first_seen(d$variable)
   out <- character(0)
+  by_var <- list()
   for (v in vars) {
     lv <- if (is.null(levels)) NULL else levels[[v]]
     if (is.null(lv)) {
@@ -833,8 +837,11 @@
             else seen
     }
     out <- c(out, lv)
+    by_var[[v]] <- as.character(lv)
   }
-  unique(as.character(out))
+  out <- unique(as.character(out))
+  attr(out, "by_var") <- by_var
+  out
 }
 
 # A `cells` that is not a list is ONE entry, used for everything; its names, if
@@ -2917,6 +2924,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       long[[r$out]] <- v
     }
   }
+  lab_by_var <- NULL
   if (!is.null(label_out)) {
     lv <- if (is.null(levels)) NULL else
       (levels[[label_out]] %||% levels[[labref[[1]]$ref]])
@@ -2931,11 +2939,34 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                                                             names(levels))]))
     }
     # the order is of the values; the levels recoded above print as their text
+    by_var <- attr(lv, "by_var")
     if (!is.null(lv) && length(lab_var)) {
-      dict <- unlist(unname(lab_var))
-      lv <- unique(ifelse(lv %in% names(dict), unname(dict[lv]), lv))
+      if (!is.null(by_var)) {
+        # each variable's own map, so a code two variables share ("U") reads
+        # as each one's text
+        by_var <- lapply(stats::setNames(nm = names(by_var)), function(vn) {
+          x <- by_var[[vn]]
+          dict <- lab_var[[vn]]
+          if (is.null(dict)) x else ifelse(x %in% names(dict), unname(dict[x]), x)
+        })
+        lv <- unique(unlist(by_var, use.names = FALSE))
+      } else {
+        dict <- unlist(unname(lab_var))
+        lv <- unique(ifelse(lv %in% names(dict), unname(dict[lv]), lv))
+      }
     }
     if (!is.null(lv)) long[[label_out]] <- .ard_as_factor(long[[label_out]], lv)
+    # A label two variables share is ONE level of that factor, placed where
+    # the first variable has it; the second variable's rows would follow it
+    # there.  When that happens, each row is placed by its own
+    # variable's order instead: a position in the variables' orders end to
+    # end, which is what the one factor stood for when no label is shared.
+    lab_by_var <- if (!is.null(lv)) by_var
+    if (length(lab_by_var) && anyDuplicated(unlist(lab_by_var, use.names = FALSE))) {
+      ln <- vapply(lab_by_var, length, 1L)
+      off <- c(0L, cumsum(ln))[seq_along(ln)]
+      names(off) <- names(lab_by_var)
+    } else lab_by_var <- NULL
   }
 
   rid <- do.call(paste, c(lapply(id_cols, function(k) as.character(long[[k]])),
@@ -3003,6 +3034,18 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     out$.sort_stat <- as.numeric(tot[match(base$.rid, names(tot))])
   }
 
+  # a label two variables share: each row's place in its own variable's order
+  if (!is.null(lab_by_var) && is.factor(out[[label_out]])) {
+    lab_ch <- as.character(out[[label_out]])
+    lab_pos <- as.integer(out[[label_out]])
+    for (vn in names(lab_by_var)) {
+      hit <- !is.na(base$.var) & base$.var == vn & !is.na(lab_ch)
+      pp <- match(lab_ch[hit], lab_by_var[[vn]])
+      lab_pos[hit][!is.na(pp)] <- off[[vn]] + pp[!is.na(pp)]
+    }
+    out$.lab_pos <- lab_pos
+  }
+
   # each row's identity rides through the sort, for plan_compare()
   if (!is.null(cmp_d) && nrow(cmp_d)) out$.cmp_rid <- base$.rid
   if (is.character(sort) && length(sort)) {
@@ -3013,7 +3056,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     }
     out <- out[.ard_sort_order(sort, out, base, d_rid, rowrefs, labref,
                                colkey = colkey, sep = sep, cmp = cmp_sort,
-                               levels = levels), ,
+                               levels = levels, label_out = label_out), ,
                drop = FALSE]
   } else if ((length(rowname_cols) ||
               (!is.null(label_out) && is.factor(out[[label_out]]))) &&
@@ -3039,13 +3082,15 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       else cumsum(c(TRUE, ch[-1L] != ch[-length(ch)]))
     })
     if (!is.null(label_out) && is.factor(out[[label_out]])) {
-      keys <- c(keys, list(out[[label_out]]))
+      keys <- c(keys, list(if (!is.null(out$.lab_pos)) out$.lab_pos
+                           else out[[label_out]]))
     }
     # the row number breaks ties, so equal keys keep the order they
     # arrived in rather than whatever order() happens to produce
     out <- out[do.call(order, c(keys, list(seq_len(nrow(out))))), ,
                drop = FALSE]
   }
+  out$.lab_pos <- NULL
   if (!is.null(cmp_d) && nrow(cmp_d)) {
     ord_rid <- out$.cmp_rid
     out$.cmp_rid <- NULL
@@ -3090,7 +3135,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 # A statistic is recognised last, so a column of that name wins; that is the
 # safe way round, since the column is what the caller can see in the result.
 .ard_sort_order <- function(spec, out, base, d, rowrefs, labref,
-                            colkey = NULL, sep = "____", cmp = NULL, levels = NULL) {
+                            colkey = NULL, sep = "____", cmp = NULL, levels = NULL,
+                            label_out = NULL) {
   keys <- list()
   for (s in spec) {
     desc <- substr(s, 1L, 1L) == "-"
@@ -3115,7 +3161,11 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       next
     }
     sc <- if (!nm %in% names(out)) .ard_sort_scoped(nm)
-    v <- if (nm %in% names(out)) out[[nm]]
+    v <- if (nm %in% names(out)) {
+           # a label two variables share: each row by its own variable's order
+           if (!is.null(out$.lab_pos) && identical(nm, label_out)) out$.lab_pos
+           else out[[nm]]
+         }
          else if (!is.null(sc)) .ard_sort_scoped_value(sc, s, base, d, rowrefs,
                                                        labref, colkey, sep,
                                                        out = out, cmp = cmp)
