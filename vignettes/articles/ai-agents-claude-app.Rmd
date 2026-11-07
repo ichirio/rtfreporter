@@ -187,10 +187,21 @@ Source: <https://code.claude.com/docs/en/skills>
 
 A **hook** is a command that Claude Code runs at a fixed point. Hooks are set
 in `.claude/settings.json`. A `PreToolUse` hook runs before a tool call and
-can block it with exit code 2; the message on stderr is what Claude sees. The
-matcher `Edit|Write` selects file edits, and the file path is in
-`tool_input.file_path`. This example refuses an edit to `NEWS.md` or
-`CHANGELOG.md`, and refuses an edit to `DESCRIPTION` that touches `Version:`:
+can block it with exit code 2; the message on stderr is what Claude sees. A
+`PostToolUse` hook runs after it: it cannot undo the edit, only report back.
+The matcher `Edit|Write` selects file edits, and the file's path is in
+`tool_input.file_path`.
+
+The repository ships two hooks as an example, in `.claude/`:
+
+* `hooks/guard-version-news.sh` (`PreToolUse`) refuses an edit to `NEWS.md`,
+  and an edit to `DESCRIPTION` that touches its `Version:` line, with a message
+  that says why: a pull request leaves them to the release. A maintainer making
+  a release sets `TFL_ALLOW_RELEASE_EDIT=1`.
+* `hooks/lint-changed.sh` (`PostToolUse`) lints a changed file under `R/` or
+  `tests/testthat/` and sends the lints back to Claude. It runs only when
+  `TFL_HOOK_RSCRIPT` names the `Rscript` of your work set-up, so it never reads
+  packages from your own library. Unset, it does nothing.
 
 ```json
 {
@@ -199,11 +210,15 @@ matcher `Edit|Write` selects file edits, and the file path is in
       {
         "matcher": "Edit|Write",
         "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-release-files.sh",
-            "args": []
-          }
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-version-news.sh\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-changed.sh\"", "timeout": 120 }
         ]
       }
     ]
@@ -211,37 +226,21 @@ matcher `Edit|Write` selects file edits, and the file path is in
 }
 ```
 
-```bash
-#!/bin/bash
-# .claude/hooks/protect-release-files.sh  (needs jq)
-input=$(cat)
-file=$(echo "$input" | jq -r '.tool_input.file_path // empty')
-case "$file" in
-  */NEWS.md|*/CHANGELOG.md)
-    echo "A pull request never edits NEWS.md or CHANGELOG.md." >&2
-    exit 2 ;;
-  */DESCRIPTION)
-    text=$(echo "$input" | jq -r '[.tool_input.old_string, .tool_input.new_string, .tool_input.content] | map(. // "") | join("\n")')
-    if echo "$text" | grep -q '^Version:'; then
-      echo "A pull request never edits Version: in DESCRIPTION." >&2
-      exit 2
-    fi ;;
-esac
-exit 0
-```
+**What has been tested.** In the desktop app's Code tab on Windows, in a
+session opened on the repository: an edit to `NEWS.md` and an edit to the
+`Version:` line were refused with the hook's message; an edit to another
+`DESCRIPTION` field, and writing and deleting an R file, went through. The app
+asked nothing before running the project's hooks, and has no `/hooks` screen.
+The lint hook has been tested by giving its script the input a tool call sends;
+in the app it was not run, since `TFL_HOOK_RSCRIPT` was not set. **(To check:**
+the lint hook in the app, with `TFL_HOOK_RSCRIPT` set.**)**
 
-A `PostToolUse` hook on the same matcher can lint a changed `.R` file, as in
-the documentation's example. A `PostToolUse` hook cannot undo the edit; it only
-reports back to Claude.
+**`$CLAUDE_PROJECT_DIR`** is set for hook commands, and the hooks use it to
+find their scripts. It is not set in the agent's own Bash shell: a command the
+agent runs sees it empty.
 
-**(To check:** that hooks run in the desktop app's local sessions, which shell
-runs them on Windows, and whether the app has a screen for them.**)** The
-documentation says a worktree session reads the project's settings, hooks and
-skills. If hooks do not run in your set-up, the pre-PR check and CI cover the
-same rules.
-
-Whether these hook files ship in the repository, or stay in this article, is
-not decided.
+If hooks do not run in your set-up, the pre-PR check and CI cover the same
+rules.
 
 Source: <https://code.claude.com/docs/en/hooks>
 

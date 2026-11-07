@@ -173,6 +173,9 @@ gives no example until they are confirmed.**)** Because the feature is in
 Preview, and because the format is not confirmed, rely on the pre-PR check and
 on CI for these rules until it is.
 
+The hooks the repository ships (`.claude/`) are tested with Claude only; see
+[the Claude app page](ai-agents-claude-app.html#checks-on-each-edit).
+
 Source: <https://code.visualstudio.com/docs/copilot/customization/hooks>
 
 ## Then
