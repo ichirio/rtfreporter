@@ -5885,6 +5885,13 @@ plan_n_candidates <- function(.plan) {
     a <- list(vars = stub$vars, label = stub$name, indent = stub$indent,
               group_summary = stub$group_summary)
     a <- a[!vapply(a, is.null, logical(1L))]
+    # a change of the page_by key writes the heading rows again (stub_cols())
+    pb <- intersect(.plan_merge(.plan_of(plan, "pages"))$page_by, names(tbl))
+    if (length(pb) && nrow(tbl)) {
+      attr(tbl, "rtf_stub_break") <- do.call(paste, c(lapply(pb, function(k) {
+        .fill_page_by_gaps(as.character(tbl[[k]]))
+      }), list(sep = "\r")))
+    }
     tbl <- do.call(stub_cols, c(list(data = tbl), a))
     # (stub_cols() puts the folded column first)
     if (!is.null(stub$heading)) attr(tbl[[1L]], "rtf_heading") <- stub$heading

@@ -642,3 +642,23 @@ test_that("FT-PL999 [FR-PL977]: plan_stub() under page_by writes a heading row a
   expect_identical(sub("^\u00a0+", "", unlist(whole)[1:3]), c("ALT", "WEEK 12", "AVAL"))
   expect_identical(sum(grepl("WEEK 12$", unlist(whole))), 2L)
 })
+
+test_that("FT-PL1000 [FR-PL977]: plan_stub(before = TRUE) with a hidden page_by key writes the heading rows on each page", {
+  mk <- function(visits) {
+    st <- expand.grid(AVISIT = visits, PARAM = c("ALT", "HGB"), ARM = "Placebo", stringsAsFactors = FALSE)
+    st$variable <- "AVAL"; st$stat_name <- "mean"; st$stat <- seq_len(nrow(st)) * 1.5
+    st$.label <- NA_character_; st$.kind <- "continuous"
+    p <- table_plan(st, cols = "ARM", rows = list(group1 = "PARAM", group2 = "AVISIT", group3 = "variable")) |>
+      plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+      plan_stub(name = "row_label", before = TRUE) |>
+      plan_paginate_rows(max_rows = 30L, split = "group_safe", page_by = "group1",
+                         heading = "Parameter: {value}", heading_at = "title") |>
+      plan_hide(cols = "group1")
+    lapply(vp_pages(p), function(z) z$data$row_label)
+  }
+  one <- mk("WEEK 12")
+  expect_length(one, 2L)
+  for (pg in one) expect_identical(pg[1:2], c("WEEK 12", paste0(strrep(" ", 4L), "AVAL")))
+  two <- mk(c("WEEK 4", "WEEK 12"))
+  for (pg in two) expect_identical(pg[c(1L, 4L)], c("WEEK 4", "WEEK 12"))
+})

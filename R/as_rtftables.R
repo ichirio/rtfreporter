@@ -1180,7 +1180,7 @@ as_rtftables.default <- function(x,
         if (length(pbi)) {
           attr(body, "rtf_stub_break") <- do.call(paste, c(lapply(pbi, function(j) {
             .fill_page_by_gaps(as.character(body[[j]]))
-          }), list(sep = "")))
+          }), list(sep = "\r")))
         }
       }
       st          <- .apply_stub_vars(body, kw, cell_styles, stub_spec_obj)
