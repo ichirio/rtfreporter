@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# PreToolUse hook (Edit, Write): a pull request leaves NEWS.md and the
-# version in DESCRIPTION alone -- they are written when a release is made
+# PreToolUse hook (Edit, Write): a pull request leaves NEWS.md, CHANGELOG.md
+# and the version in DESCRIPTION alone -- they are written when a release is made
 # (CONTRIBUTING.md).  An edit to either is refused, with the reason, so the
 # agent puts the change's summary in the PR description instead.
 # A maintainer making a release sets TFL_ALLOW_RELEASE_EDIT=1.
@@ -13,8 +13,8 @@ path=$(printf '%s' "$input" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]
   sed 's/^"file_path"[[:space:]]*:[[:space:]]*"//; s/"$//' | tr '\\' '/')
 
 case "$path" in
-  */NEWS.md)
-    echo "NEWS.md is written when a release is made, not in a pull request: put the change's summary in the PR description (\"User-visible change (for NEWS)\")." >&2
+  */NEWS.md|*/CHANGELOG.md)
+    echo "NEWS.md and CHANGELOG.md are written when a release is made, not in a pull request: put the change's summary in the PR description (\"User-visible change (for NEWS)\")." >&2
     exit 2 ;;
   */DESCRIPTION)
     if printf '%s' "$input" | grep -q 'Version:'; then

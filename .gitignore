@@ -45,3 +45,6 @@ Rplots.pdf
 # chunks render to a fixed filename rather than tempfile().
 /*.rtf
 docs/
+# Claude Code worktrees (the desktop app's Worktree option)
+.claude/worktrees/
+.claude/settings.local.json
