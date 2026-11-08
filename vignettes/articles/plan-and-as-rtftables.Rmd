@@ -87,13 +87,13 @@ The same pages, written both ways:
 ```{r both}
 by_hand <- as_rtftables(
   lab,
-  group_by = "value", collapse_repeats = TRUE,
+  group_by = "value", collapse_repeats = "PARAM",
   blank_rows = "between_groups", blank_row_end = TRUE,
   max_rows = 10, split = "group_safe",
   border = "tfl", read_meta = FALSE)
 
 as_plan <- table_plan(lab) |>
-  plan_row_group(mode = "value", collapse = TRUE) |>
+  plan_row_group(mode = "value", collapse = "PARAM") |>
   plan_blanks(where = "between_groups", last = TRUE) |>
   plan_paginate_rows(max_rows = 10, split = "group_safe") |>
   plan_style(border = "tfl") |>
@@ -122,7 +122,7 @@ without running anything. `$rtf` is the `as_rtftables()` call:
 
 ```{r args}
 p <- table_plan(lab) |>
-  plan_row_group(mode = "value", collapse = TRUE) |>
+  plan_row_group(mode = "value", collapse = "PARAM") |>
   plan_blanks(where = "between_groups", last = TRUE) |>
   plan_paginate_rows(max_rows = 10, split = "group_safe") |>
   plan_style(border = "tfl")
