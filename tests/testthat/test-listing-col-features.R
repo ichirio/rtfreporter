@@ -874,3 +874,43 @@ test_that("FT-IX043 [FR-IX415]: without a listing's records a blank BY value is 
   expect_identical(vapply(r2, `[[`, "", "label"), c("A", "B"))
   expect_identical(lapply(r2, `[[`, "rows"), list(1:2, 3:5))
 })
+
+test_that("FT-IX045 [FR-IX417]: a listing's BY value wider than its column is one page, named by the whole value", {
+  d <- data.frame(SUBJ = c("S1", "S2", "S3", "S4"),
+                  SEV  = c("LIFE-THREATENING", "MILD", "MILD", "LIFE-THREATENING"),
+                  TERM = c("Anaphylaxis", "Nausea", "Rash", "Sepsis"),
+                  DAY  = as.character(1:4), stringsAsFactors = FALSE)
+  d <- d[order(d$SEV, d$SUBJ), ]
+  plan_of <- function(col_sev, ...) {
+    table_plan(d) |>
+      plan_listing(listing_col("SUBJ", width = 8), col_sev,
+                   listing_col("TERM", width = 12), listing_col("DAY", width = 5)) |>
+      plan_paginate_rows(page_by = "SEV", heading_at = "title",
+                         heading = "Severity: {value}", ...)
+  }
+  days <- function(pg) lapply(pg, function(x) {
+    v <- as.character(as.data.frame(x$data, stringsAsFactors = FALSE)$DAY)
+    v[!is.na(v) & nzchar(v)]
+  })
+  # 10 wide: the value prints over "LIFE-", "THREATENIN" and "G"
+  p  <- plan_of(listing_col("SEV", width = 10))
+  pg <- suppressMessages(plan_apply(p, "pages"))
+  expect_identical(names(pg), c("Severity: LIFE-THREATENING", "Severity: MILD"))
+  expect_identical(unname(days(pg)), list(c("1", "4"), c("2", "3")))
+  # the same with 16 wide, where it does not wrap
+  pg16 <- suppressMessages(plan_apply(plan_of(listing_col("SEV", width = 16)), "pages"))
+  expect_identical(names(pg16), names(pg))
+  expect_identical(unname(days(pg16)), unname(days(pg)))
+  # a value that wraps at a space, and a page cut in rows as well
+  pgm <- suppressMessages(plan_apply(plan_of(listing_col("SEV", width = 6), max_rows = 4), "pages"))
+  expect_true(all(startsWith(names(pgm), "Severity: ")))
+  expect_setequal(unique(sub("[.][.][.][0-9]+$", "", names(pgm))),
+                  c("Severity: LIFE-THREATENING", "Severity: MILD"))
+  # the unwrapped values travel on the body; without them the lines are joined
+  b <- build_listing(d, listing_spec(list(listing_col("SEV", width = 10), listing_col("DAY", width = 5))))
+  expect_identical(attr(b, "rtf_listing_values")$SEV, d$SEV)
+  attr(b, "rtf_listing_values") <- NULL
+  r <- .page_by_runs(b, 1L, ".rtf_record")
+  expect_length(r, 2L)
+  expect_identical(vapply(r, `[[`, "", "label"), c("LIFE- THREATENIN G", "MILD"))
+})
