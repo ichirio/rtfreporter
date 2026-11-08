@@ -33,15 +33,16 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 
 This article is for a contributor who works with an **agent**: a tool that
 edits files and runs commands in the repository. Two such tools are covered:
-the Claude desktop app (its Code tab) and VS Code with GitHub Copilot in agent
-mode. This page gives what is the same for both. The steps for each tool are
+the Claude desktop app (its Code tab) and VS Code with GitHub Copilot's
+agent. This page gives what is the same for both. The steps for each tool are
 on its own page:
 
 * [Set-up in the Claude desktop app](ai-agents-claude-app.html)
 * [Set-up in VS Code with GitHub Copilot](ai-agents-vscode-copilot.html)
 
-Items marked **(to check)** are not confirmed in the tools' documentation yet.
-Treat them as open questions, not as facts.
+Items marked **(to check)** are not confirmed yet. Treat them as open
+questions, not as facts. Advice that is the article's own, and not from a tool's
+documentation, is said to be so.
 
 ## 1. What this article is for
 
@@ -82,18 +83,26 @@ So give the agent a separate **work library** and a separate **work home**.
   whichever `Rscript` comes first on the path.
 
 Run the script below first in every session. It prints the facts that matter
-and stops if the user library is on the path. Set `WORK_ROOT` to the work
+and stops if a library or folder outside the work area is in use. Set `WORK_ROOT` to the work
 folder before you run it. The page shows the script and does not run it.
 
 ```{r check-env, eval = FALSE}
 # check-env.R -- run first: Rscript check-env.R
 # WORK_ROOT is the folder that holds the work library and the work home.
+win <- .Platform$OS.type == "windows"
+norm <- function(path) {
+  p <- sub("/+$", "", normalizePath(path, winslash = "/", mustWork = FALSE))
+  if (win) tolower(p) else p   # drive and folder case do not matter on Windows
+}
 root <- Sys.getenv("WORK_ROOT")
-if (!nzchar(root)) stop("Set WORK_ROOT to the work folder first.", call. = FALSE)
-root <- normalizePath(root, winslash = "/", mustWork = TRUE)
-
+if (!nzchar(root) || !dir.exists(root)) {
+  stop("Set WORK_ROOT to an existing work folder first.", call. = FALSE)
+}
+root <- norm(root)
+# TRUE for the root itself and for a path below it; "C:/work-old" is not.
 under_root <- function(path) {
-  startsWith(normalizePath(path, winslash = "/", mustWork = FALSE), root)
+  p <- norm(path)
+  nzchar(path) && (p == root || startsWith(p, paste0(root, "/")))
 }
 
 cat("R:", R.version.string, "\n")
@@ -111,24 +120,35 @@ for (pkg in c("testthat", "lintr", "roxygen2", "covr")) {
   cat(sprintf("%-12s %s\n", pkg, ver))
 }
 
-# The base library of this R is allowed; every other library must be in WORK_ROOT.
-libs <- setdiff(normalizePath(.libPaths(), winslash = "/", mustWork = FALSE),
-                normalizePath(.Library, winslash = "/", mustWork = FALSE))
+# The base library and the site library of this R are allowed and listed;
+# every other library must be in WORK_ROOT.
+allowed <- unique(c(.Library, .Library.site))
+cat("Allowed (base and site):\n", paste0("  ", allowed, collapse = "\n"), "\n")
+libs <- .libPaths()
+libs <- libs[!norm(libs) %in% norm(allowed)]
 outside <- libs[!vapply(libs, under_root, logical(1))]
-dirs <- c(HOME = Sys.getenv("HOME"),
-          R_USER_CACHE_DIR = Sys.getenv("R_USER_CACHE_DIR"),
-          R_USER_DATA_DIR = Sys.getenv("R_USER_DATA_DIR"),
-          R_USER_CONFIG_DIR = Sys.getenv("R_USER_CONFIG_DIR"))
-bad_dirs <- names(dirs)[!nzchar(dirs) | !vapply(dirs, under_root, logical(1))]
 
-if (length(outside) > 0L || length(bad_dirs) > 0L) {
+# R_LIBS_USER must be set, and each folder in it must exist and be in WORK_ROOT.
+# (.libPaths() leaves out a folder that does not exist.)
+user_libs <- strsplit(Sys.getenv("R_LIBS_USER"), .Platform$path.sep)[[1]]
+bad_user <- length(user_libs) == 0L ||
+  !all(vapply(user_libs, function(p) under_root(p) && dir.exists(p), logical(1)))
+
+dirs <- Sys.getenv(c("HOME", "R_USER_CACHE_DIR", "R_USER_DATA_DIR",
+                     "R_USER_CONFIG_DIR", "TMP", "TEMP", "TMPDIR"))
+bad_dirs <- names(dirs)[!vapply(dirs, under_root, logical(1))]
+
+if (length(outside) > 0L || bad_user || length(bad_dirs) > 0L) {
   if (length(outside) > 0L) {
     cat("Libraries outside WORK_ROOT:\n", paste0("  ", outside, collapse = "\n"), "\n")
+  }
+  if (bad_user) {
+    cat("R_LIBS_USER is unset, missing, or outside WORK_ROOT.\n")
   }
   if (length(bad_dirs) > 0L) {
     cat("Folders outside WORK_ROOT (or unset):", paste(bad_dirs, collapse = ", "), "\n")
   }
-  stop("The user library or home is on the path. Fix the environment first.",
+  stop("A library or folder outside the work area is in use. Fix the environment first.",
        call. = FALSE)
 }
 cat("Environment OK.\n")
@@ -148,7 +168,8 @@ tasks, its permissions and the checks that decide.
 Keep one source and short pointers to it, not three copies. The files are:
 
 * `AGENTS.md`: the shared orientation. This repository has one.
-* `CLAUDE.md`: read by Claude Code.
+* `CLAUDE.md`: read by Claude Code. This repository has one. It imports
+  `@AGENTS.md` and adds the notes for Claude Code. Keep it that way.
 * `.github/copilot-instructions.md`: read by Copilot. This repository has one.
 
 What they say should be short:
@@ -162,7 +183,7 @@ What they say should be short:
 
 Claude Code reads `CLAUDE.md` at the start of each session. It reads
 `AGENTS.md` only when there is no `CLAUDE.md`, so a `CLAUDE.md` that wants the
-shared text should import it. Copilot in VS Code reads
+shared text imports it, as this repository's does. Copilot in VS Code reads
 `.github/copilot-instructions.md` or `AGENTS.md`. Each set-up page shows how to
 confirm that the file was read. An instruction file is a request, not a lock:
 Claude Code's documentation says so, and says that a hook is what blocks an
@@ -171,15 +192,18 @@ action.
 ### The pre-PR check as a reusable task
 
 Both tools can keep a task that you start by name. The list is the same, so
-either tool makes the same check:
+either tool makes the same check. It is a faster subset, to run on each change:
 
-1. Run the tests of the changed area, then the whole suite in one R session.
+1. Run the tests of the changed area.
 2. Run `lintr::lint_package()`. The result must be 0 lints.
 3. Check that every new `pkg::` use or `requireNamespace()` call is declared in
    `DESCRIPTION`.
 4. When a change in tflspec can break tflplanner, run tflplanner's tests too.
-5. Report each result in the PR description. `CONTRIBUTING.md` lists the four
-   pre-push checks; this task runs them.
+5. Report each result in the PR description.
+
+This task is not the four pre-push checks of `CONTRIBUTING.md`:
+`R CMD check --as-cran`, `devtools::test()`, `pkgdown::check_pkgdown()` and
+lintr. CI runs the full set, and so does a maintainer before a release.
 
 The Claude desktop app holds the task as a **skill**, and VS Code as a
 **prompt file**. The set-up pages show both.
@@ -196,18 +220,19 @@ An agent's judgment is not a check. These are:
 * undeclared dependencies: search the diff for `pkg::` and
   `requireNamespace()` and compare the names with `DESCRIPTION`. **(To check:**
   whether a ready-made tool should replace this search.**)**
-* a scan of the dependencies for known vulnerabilities. GitHub documents that
-  Dependabot supports GitHub Actions, and this repository has no
-  `.github/dependabot.yml` file today. **(To check:** whether Dependabot reads
-  an R package's `DESCRIPTION`, and what the repository settings already turn
-  on.**)**
+* a scan of the dependencies for known vulnerabilities. GitHub's list of
+  ecosystems that Dependabot supports has GitHub Actions and has no row for R,
+  so Dependabot does not read an R package's `DESCRIPTION`. This repository has
+  no `.github/dependabot.yml` file today. **(To check:** which scanner to use for
+  R dependencies, and what the repository settings already turn on.**)**
 
 ### Checks on each edit
 
 Some rules are better enforced at each edit than at the end: lint a changed R
 file, or refuse an edit to `Version:` in `DESCRIPTION` or to `NEWS.md`. Claude
-Code does this with **hooks**. VS Code has hooks too, in Preview. The set-up
-pages show an example for each. Where a tool cannot do it, the pre-PR check
+Code does this with **hooks**. VS Code has hooks too, in Preview. The Claude
+page shows an example set, which is in pull request #935 and not yet on the
+default branch. The VS Code page shows the format of a hook. Where a tool cannot do it, the pre-PR check
 and CI cover the same ground.
 
 ## 4. The workflow
@@ -219,7 +244,9 @@ Issue, branch, small pull request, CI, review, merge.
 * One change per pull request, with `Closes #n` in its description.
 * A contributor opens the pull request against `main`. A maintainer's topic
   branch goes to `next`, which is merged to `main` about once a week
-  (*Branching & collaboration* in `CONTRIBUTING.md`).
+  (*Branching & collaboration* in `CONTRIBUTING.md`). `AGENTS.md`, which
+  Copilot's instructions point to, names `main` only, so a maintainer who uses
+  Copilot follows `CONTRIBUTING.md`.
 * The description holds the *User-visible change (for NEWS)* text. The agent
   does not edit `NEWS.md` or the version.
 * The agent opens the pull request. It does not merge it. The pause for review
@@ -292,7 +319,7 @@ When a check has found a problem once, keep it as a regression test.
 | Running tests and lint | Runs commands in a terminal tool. | Runs commands in the integrated terminal. |
 | What it may run without asking | Permission rules and permission modes. | Terminal auto-approve rules (`chat.tools.terminal.autoApprove`). |
 | Checks on each edit | Hooks in `.claude/settings.json`. | Hooks (Preview) in `.github/hooks/*.json`. |
-| Several pieces of work at once | Separate sessions; each can use its own worktree. | Subagents, which work in their own context. |
+| Handing a piece of work to a helper | Separate sessions; each can use its own worktree. | Subagents, which work in their own context. |
 | Reading an Issue or a pull request | `gh` in the terminal. The app shows a pull request's CI status after you open it. | **(To check:** how Copilot in VS Code reads an Issue or a pull request.**)** |
 
 The facts in this table come from the tools' own documentation, read on

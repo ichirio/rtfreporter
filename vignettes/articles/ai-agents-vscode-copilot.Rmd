@@ -31,7 +31,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 </p>
 -->
 
-This page sets up VS Code with GitHub Copilot in agent mode for work on
+This page sets up VS Code with GitHub Copilot's agent for work on
 rtfreporter, tflspec or tflplanner. Read [Developing with AI agents](ai-agents.html)
 first: it says what the set-up is for. Come back to that page for the workflow
 when you are done.
@@ -47,10 +47,14 @@ the documentation does not show a step, it is marked **(to check)**.
    `CONTRIBUTING.md` also shows the VS Code Source Control route.
 2. Open the folder in VS Code (**File** > **Open Folder**).
 3. Make the topic branch from the right base: **Git: Create Branch...** in the
-   Command Palette (*Branching & collaboration* in `CONTRIBUTING.md`).
-4. Open the Chat view and choose agent mode. **(To check:** the current name
-   and place of the agent picker, and which "harness" to choose; the
-   documentation describes Local and Copilot harness sessions.**)**
+   Command Palette. A contributor branches from `main` and opens the pull
+   request against `main`; a maintainer's branch goes to `next`
+   (*Branching & collaboration* in `CONTRIBUTING.md`). `AGENTS.md`, which
+   Copilot's instructions point to, names `main` only, so a maintainer follows
+   `CONTRIBUTING.md`.
+4. Open the Chat view and select **Agent** from the agent picker. **(To
+   check:** which "harness" to choose; the documentation describes Local and
+   Copilot harness sessions.**)**
 
 ## The environment
 
@@ -141,8 +145,7 @@ Local sessions in the Chat view. This example is `.github/prompts/pre-pr.prompt.
 ```markdown
 Run these in order. Stop at the first failure and report it.
 
-1. Run the tests of the changed area, then the whole suite in one R session
-   (`testthat::test_dir()` on the installed package).
+1. Run the tests of the changed area.
 2. Run `lintr::lint_package()`. It must report 0 lints.
 3. List the `pkg::` uses and `requireNamespace()` calls added in the diff, and
    check each is declared in `DESCRIPTION`.
@@ -152,8 +155,15 @@ Run these in order. Stop at the first failure and report it.
 Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
 ```
 
-**(To check:** the optional front matter a prompt file takes in the current
-VS Code release, for example to pick the agent mode.**)**
+A prompt file may start with front matter. All of its fields are optional:
+`description`, `name`, `argument-hint`, `agent` (`ask`, `agent`, `plan` or a
+custom agent), `model` and `tools`. There is no `mode` field. The example needs
+none; add `agent: agent` to pin the agent that runs it.
+
+This is a faster subset for each change, not the four pre-push checks of
+`CONTRIBUTING.md` (`R CMD check --as-cran`, `devtools::test()`,
+`pkgdown::check_pkgdown()` and lintr). CI runs the full set, and so does a
+maintainer before a release.
 
 Source: <https://code.visualstudio.com/docs/copilot/customization/prompt-files>
 
@@ -163,17 +173,34 @@ VS Code has hooks, in **Preview**. A hook is a command that runs at a fixed
 point. Workspace hooks are JSON files in `.github/hooks/`. The event names are
 `preToolUse` and `postToolUse`. A `preToolUse` hook blocks a call by returning
 `permissionDecision` set to `"deny"`; a `postToolUse` hook cannot undo an
-action that has finished. A hook that fails on an error denies the call, but a
-timeout falls through to the normal approval. The rule "refuse an edit to
+action that has finished. A `preToolUse` hook that fails on an error denies the call, but a
+timeout falls through to the normal permissions. The rule "refuse an edit to
 `NEWS.md` or to `Version:`" would be one `preToolUse` hook.
 
-**(To check:** the exact file format of a hook in the current release, the field
-names of its input, and the tool names to match for a file edit. This page
-gives no example until they are confirmed.**)** Because the feature is in
-Preview, and because the format is not confirmed, rely on the pre-PR check and
-on CI for these rules until it is.
+A hook file has this shape (the command is a placeholder):
 
-The hooks the repository ships (`.claude/`) are tested with Claude only; see
+```json
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      { "type": "command", "command": "<your script>", "timeoutSec": 10 }
+    ]
+  }
+}
+```
+
+The script gets `toolName` and `toolArgs` as input. To deny, it prints
+`permissionDecision` set to `"deny"` with a `permissionDecisionReason`; `{}`
+means no decision. A PascalCase event name such as `PreToolUse` is an alias that
+uses snake_case fields and Claude-style tool names (`Read`, `Write`, `Edit`).
+**(To check:** the Copilot-native tool name for a file edit. It is not on the
+page, so this page gives no matcher example.**)** Because the feature is in
+Preview, rely on the pre-PR check and on CI for these rules until you have
+tested a hook yourself.
+
+The example hooks in `.claude/` on the branch of pull request #935 (not yet on
+the default branch) are written for Claude Code and tested only with it; see
 [the Claude app page](ai-agents-claude-app.html#checks-on-each-edit).
 
 Source: <https://code.visualstudio.com/docs/copilot/customization/hooks>
@@ -186,7 +213,7 @@ a pull request, the safe route is the GitHub CLI (`gh`) in the terminal.
 **(To check:** the GitHub integration in VS Code for reading an Issue or a
 pull request.**)**
 
-For several pieces of work at once, VS Code has subagents: helpers that work
-in their own context and return a result. A subagent does not inherit the
+To hand a piece of work to a helper, VS Code has subagents: helpers that work
+in their own context and return a focused result. A subagent does not inherit the
 conversation, so state the goal, the files and the result you expect.
 Source: <https://code.visualstudio.com/docs/copilot/agents/subagents>

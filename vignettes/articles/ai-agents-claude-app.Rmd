@@ -45,13 +45,15 @@ documentation does not show a screen, the step is marked **(to check)**.
 1. Clone the repository with `git`. A contributor clones a fork, a
    collaborator clones `ichirio/rtfreporter` (*Contributor vs Collaborator* in
    `CONTRIBUTING.md`).
-2. In the Code tab, use the project folder control in the row under the prompt
-   box, and choose the clone's folder.
+2. In the Code tab, use the project folder control, next to the environment
+   selector, and choose the clone's folder.
 3. To keep the work apart from your main checkout, turn on **Worktree** before
    you start the session. It is off by default. Then Claude works in its own Git
    worktree, under `<project-root>/.claude/worktrees/` by default.
 4. Make the topic branch: ask Claude to run `git checkout -b <type>/<issue>-<slug>`
-   from the right base (*Branching & collaboration* in `CONTRIBUTING.md`).
+   from the right base. A contributor branches from `main` and opens the pull
+   request against `main`; a maintainer's branch goes to `next`
+   (*Branching & collaboration* in `CONTRIBUTING.md`).
    **(To check:** whether the app has its own branch picker.**)**
 
 Source: <https://code.claude.com/docs/en/desktop>
@@ -66,8 +68,12 @@ The agent's commands must see the work library and the work home, not yours
   `R_USER_DATA_DIR`, `R_USER_CONFIG_DIR`, `TMP`, `TEMP`, `TMPDIR` and
   `WORK_ROOT` there. **(To check:** whether Windows paths with a drive letter
   need quoting in that editor.**)**
-* The `env` block of `~/.claude/settings.json` is not a safe place: the
-  documentation says Claude Code ignores some `env` values in local sessions.
+* The `env` block of `~/.claude/settings.json` is a poor place for these. The
+  desktop page says Claude Code ignores a `settings.json` value when the
+  variable is already in the environment that the app starts the session with,
+  or when the app sets the variable itself. Which of your variables that
+  catches depends on your machine. Using the saved local environment is this
+  article's advice.
 * Tell the agent which R to call, by its full path, in the instruction file
   (next section).
 
@@ -85,8 +91,10 @@ Source: <https://code.claude.com/docs/en/desktop>
 
 Claude Code reads `CLAUDE.md` at the start of each session. It reads `AGENTS.md`
 only when there is no `CLAUDE.md` in the folder or above it (this needs Claude
-Code 2.1.277 or later). This repository has an `AGENTS.md`. A short `CLAUDE.md`
-that imports it keeps one source, and lets you add the Claude-specific lines:
+Code 2.1.277 or later). This repository already has a `CLAUDE.md`. It starts with
+`@AGENTS.md`, which imports the shared file, and then adds the notes for
+Claude Code. Keep it that way: do not create a second one, and add Claude-only
+lines to it. The pattern is:
 
 ```markdown
 @AGENTS.md
@@ -100,9 +108,10 @@ that imports it keeps one source, and lets you add the Claude-specific lines:
 ```
 
 To confirm that the file was read, ask: "Which instructions did you load for
-this repository?" The answer should name `CLAUDE.md` and `AGENTS.md`. The
-Claude Code documentation describes a `/memory` command in the terminal tool.
-**(To check:** whether the desktop app lists the loaded files, and where.**)**
+this repository?" The answer should name `CLAUDE.md`, and the text it imports
+from `AGENTS.md`. The Claude Code documentation describes a `/memory` command
+that lists the memory files, and `/context all`, which lists those loaded at
+launch. **(To check:** whether the desktop app offers them, and where.**)**
 
 An instruction file is context, not a lock. For a rule that must hold, use a
 hook (below).
@@ -112,7 +121,7 @@ Source: <https://code.claude.com/docs/en/memory>
 ## Permissions
 
 Claude asks before it edits files or runs most commands. The app has permission
-modes under the prompt box: Manual, Accept edits, Plan, Auto and Bypass
+modes: Manual, Accept edits, Plan, Auto and Bypass
 permissions. For this work use **Manual** or **Accept edits**. Do not use
 Bypass permissions outside a sandbox, such as a container; the documentation
 says the same.
@@ -138,10 +147,13 @@ yourself. The rules go in `.claude/settings.json` (shared) or
 }
 ```
 
-Two cautions from the documentation. A rule matches the command as written:
-`git -C . push` is not matched by `Bash(git push *)`. So treat `deny` as a
-guide and use a hook for a rule that must hold. And an allowed `Rscript` can run
-any R code, so allow it only after the environment check passes.
+Two cautions. The first is in the permissions page: a rule matches the command
+as written, so `git -C . push` is not matched by `Bash(git push *)`. Treat
+`deny` as a guide and use a hook for a rule that must hold. The second is this
+article's own advice, not the documentation's: an allowed `Rscript` can run any
+R code, so allow it only after the environment check passes. **(To check:** how
+the permissions page's rules treat a quoted path with spaces, as in the example
+above.**)**
 
 Keep these as "ask": `git push`, installing into any library other than the
 work library, and deleting files. A push goes through you, as a person.
@@ -166,8 +178,7 @@ disable-model-invocation: true
 
 Run these in order. Stop at the first failure and report it.
 
-1. Run the tests of the changed area, then the whole suite in one R session
-   (`testthat::test_dir()` on the installed package).
+1. Run the tests of the changed area.
 2. Run `lintr::lint_package()`. It must report 0 lints.
 3. List the `pkg::` uses and `requireNamespace()` calls added in the diff, and
    check each is declared in `DESCRIPTION`.
@@ -178,8 +189,13 @@ Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
 ```
 
 `disable-model-invocation: true` means only you start it. Then type `/pre-pr`
-in the prompt box. **(To check:** that `/pre-pr` appears in the desktop app's
-slash menu for a project skill.**)**
+in the prompt box. The desktop page says the slash menu includes project skills
+from your codebase, so `/pre-pr` is listed there.
+
+This is a faster subset for each change, not the four pre-push checks of
+`CONTRIBUTING.md` (`R CMD check --as-cran`, `devtools::test()`,
+`pkgdown::check_pkgdown()` and lintr). CI runs the full set, and so does a
+maintainer before a release.
 
 Source: <https://code.claude.com/docs/en/skills>
 
@@ -192,12 +208,16 @@ can block it with exit code 2; the message on stderr is what Claude sees. A
 The matcher `Edit|Write` selects file edits, and the file's path is in
 `tool_input.file_path`.
 
-The repository ships two hooks as an example, in `.claude/`:
+An example set of two hooks is in `.claude/`, on the branch of pull request
+#935. It is not on the default branch yet; once #935 is merged, the repository
+ships it. The two hooks:
 
 * `hooks/guard-version-news.sh` (`PreToolUse`) refuses an edit to `NEWS.md`,
   and an edit to `DESCRIPTION` that touches its `Version:` line, with a message
   that says why: a pull request leaves them to the release. A maintainer making
-  a release sets `TFL_ALLOW_RELEASE_EDIT=1`.
+  a release sets `TFL_ALLOW_RELEASE_EDIT=1`. A whole-file `Write` of
+  `DESCRIPTION` is refused too, because its text always holds `Version:`. Change
+  other fields with `Edit`.
 * `hooks/lint-changed.sh` (`PostToolUse`) lints a changed file under `R/` or
   `tests/testthat/` and sends the lints back to Claude. It runs only when
   `TFL_HOOK_RSCRIPT` names the `Rscript` of your work set-up, so it never reads

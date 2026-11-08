@@ -282,3 +282,6 @@ subagent
 subagents
 worktree
 Worktree
+codebase
+lintr
+PascalCase
