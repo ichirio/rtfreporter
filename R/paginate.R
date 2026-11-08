@@ -568,18 +568,31 @@
   ifelse(is.na(out), "", out)
 }
 
-# A listing record's own lines are one row of the listing: a line with no BY
-# value (a wrapped line, the record's blank row) belongs to the record's BY
-# value, not to the next record's.  Filling it from the next real row, as
-# .fill_page_by_gaps() does for a stub's label row, moved the record's
-# trailing blank row onto the next BY page, as a row of the previous record's
-# keys at its top.
-.fill_record_gaps <- function(v, rec) {
-  miss <- is.na(v) | !nzchar(trimws(v))
-  if (!any(miss) || all(miss)) return(v)
-  first <- v[!miss][match(rec, rec[!miss])]
-  v[miss & !is.na(first)] <- first[miss & !is.na(first)]
-  v
+# The record's own BY value, whole.  A listing wraps a value wider than its
+# column over several lines, so the lines of one record are not the value: a
+# page cut on them took "LIFE-", "THREATENIN" and "G" for three values and
+# split one record over three pages.  The value comes from the data before it
+# was wrapped (`values`, build_listing()'s record of it by record id); a body
+# without it takes the record's lines joined.  A record with no value has ""
+# -- a value of its own (a study's blank severity is a group of records, not a
+# gap to fill from the neighbour).  NA for a row with no record (a stub's
+# label row).
+.record_by_value <- function(v, rec, values = NULL, name = NULL) {
+  out <- rep(NA_character_, length(v))
+  ok  <- !is.na(rec)
+  if (!any(ok)) return(out)
+  whole <- if (!is.null(values) && !is.null(name)) values[[name]]
+  id <- as.integer(rec[ok])
+  if (!is.null(whole) && all(id >= 1L & id <= length(whole))) {
+    w <- as.character(whole)[id]
+  } else {
+    lines  <- ifelse(is.na(v) | !nzchar(trimws(v)), NA_character_, v)[ok]
+    joined <- tapply(lines, id, function(z) paste(z[!is.na(z)], collapse = " "))
+    w <- unname(joined[as.character(id)])
+  }
+  w[is.na(w)] <- ""
+  out[ok] <- trimws(w)
+  out
 }
 
 # The partitions `page_by` implies: one per DISTINCT BY value, holding every
@@ -593,11 +606,16 @@
 # half of each page without saying so.  On an already-grouped body -- the
 # usual one -- this is exactly what the runs were.
 .page_by_runs <- function(df, idx, record = NULL) {
-  rec <- if (!is.null(record) && record %in% names(df)) df[[record]]
+  rec  <- if (!is.null(record) && record %in% names(df)) df[[record]]
+  vals <- attr(df, "rtf_listing_values", exact = TRUE)
   keys <- lapply(idx, function(j) {
-    v <- as.character(df[[j]])
-    if (!is.null(rec)) v <- .fill_record_gaps(v, rec)
-    .fill_page_by_gaps(v)
+    v   <- as.character(df[[j]])
+    out <- .fill_page_by_gaps(v)
+    if (!is.null(rec)) {
+      r <- .record_by_value(v, rec, vals, names(df)[j])
+      out[!is.na(r)] <- r[!is.na(r)]
+    }
+    out
   })
   key  <- do.call(paste, c(keys, list(sep = "\r")))
   lab  <- do.call(paste, c(keys, list(sep = ", ")))

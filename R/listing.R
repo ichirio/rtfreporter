@@ -1066,11 +1066,12 @@ build_listing <- function(data, spec) {
   # see (#366).  The resolved spec travels on the body, so as_rtftables() and
   # a second build never have to derive it again.
   lines <- vector("list", k)
+  whole <- vector("list", k)    # each cell's whole value, before it is wrapped
   for (j in seq_len(k)) {
     cl   <- spec$cols[[j]]
     sepj <- if (is.null(cl$sep)) spec$sep else cl$sep
     lay  <- if (is.null(cl$layout)) spec$layout else cl$layout
-    .listing_combine(data, cl, sepj)     # checks the variables exist
+    whole[[j]] <- .listing_combine(data, cl, sepj)   # checks the variables exist
     parts <- .listing_cell_parts(data, cl)
     spec$cols[[j]]$label <- .listing_resolve_label(data, cl, sepj, lay,
                                                    wrap_fn = spec$wrap)
@@ -1141,6 +1142,10 @@ build_listing <- function(data, spec) {
   body <- as.data.frame(out, stringsAsFactors = FALSE, check.names = FALSE)
   rownames(body) <- NULL
   attr(body, "rtf_listing") <- spec
+  # The value of each printed column by record id, unwrapped: what a page cut
+  # on a column (`page_by`) keys a record on, not the pieces of its wrap.
+  names(whole) <- vapply(spec$cols, function(cl) cl$name, character(1L))
+  attr(body, "rtf_listing_values") <- whole
   body
 }
 

@@ -824,3 +824,118 @@ test_that("the measures and listing_wrap() refuse what is not one string or one 
   expect_s3_class(listing_spec("A", wrap = function(text, width, ...) text), "rtf_listing_spec")
   expect_error(listing_spec("A", wrap = function(text, width) text), "four arguments")
 })
+
+test_that("FT-IX042 [FR-IX415]: a listing record whose BY value is blank or NA is a page of its own", {
+  pages_of <- function(sev, col = "SEV") {
+    d <- data.frame(SUBJ = c("S1", "S1", "S2", "S3", "S4"), SEV = sev,
+                    TERM = paste("T", 1:5), DAY = as.character(1:5),
+                    stringsAsFactors = FALSE)
+    p <- table_plan(d) |>
+      plan_listing(listing_col("SUBJ", width = 8, collapse_repeats = TRUE),
+                   listing_col("SEV", width = 9),
+                   listing_col("TERM", width = 10),
+                   listing_col("DAY", width = 5)) |>
+      plan_paginate_rows(page_by = col, heading_at = "title",
+                         heading = "Severity: {value}")
+    suppressMessages(plan_apply(p, "pages"))
+  }
+  days <- function(pg) lapply(pg, function(x) {
+    v <- as.character(as.data.frame(x$data, stringsAsFactors = FALSE)$DAY)
+    v[!is.na(v) & nzchar(v)]
+  })
+  for (blank in list("", NA_character_)) {
+    # first: the blank-severity records come first, and keep their own page
+    pg <- pages_of(c(blank, blank, "MILD", "MILD", "SEVERE"))
+    expect_identical(names(pg), c("Severity: ", "Severity: MILD", "Severity: SEVERE"))
+    expect_identical(unname(days(pg)), list(c("1", "2"), c("3", "4"), "5"))
+    # middle: not filled from the next record
+    pg <- pages_of(c("MILD", "MILD", blank, "SEVERE", "SEVERE"))
+    expect_identical(names(pg), c("Severity: MILD", "Severity: ", "Severity: SEVERE"))
+    expect_identical(unname(days(pg)), list(c("1", "2"), "3", c("4", "5")))
+  }
+  # a record's wrapped line and blank row go with the record
+  pg <- pages_of(c("", "", "MILD", "MILD", "SEVERE"))
+  expect_identical(nrow(pg[[1L]]$data), 4L)
+})
+
+test_that("FT-IX043 [FR-IX415]: without a listing's records a blank BY value is still filled from its neighbour", {
+  # a table's stub label row carries NA in the BY column and joins the run it
+  # introduces; a blank value of a table row is a gap too: unchanged
+  d <- data.frame(by = c("A", NA, "", "B", "B"), x = letters[1:5],
+                  stringsAsFactors = FALSE)
+  r <- .page_by_runs(d, 1L)
+  expect_identical(lapply(r, `[[`, "rows"), list(1L, 2:5))
+  expect_identical(vapply(r, `[[`, "", "label"), c("A", "B"))
+  # with records, the line of a record (same record id) is filled from the
+  # record's first line, and a line without a record from the next row
+  rec <- c(1, 1, NA, 2, 2)
+  r2 <- .page_by_runs(data.frame(by = c("A", "", NA, "B", ""), rec = rec,
+                                 stringsAsFactors = FALSE), 1L, "rec")
+  expect_identical(vapply(r2, `[[`, "", "label"), c("A", "B"))
+  expect_identical(lapply(r2, `[[`, "rows"), list(1:2, 3:5))
+})
+
+test_that("FT-IX045 [FR-IX417]: a listing's BY value wider than its column is one page, named by the whole value", {
+  d <- data.frame(SUBJ = c("S1", "S2", "S3", "S4"),
+                  SEV  = c("LIFE-THREATENING", "MILD", "MILD", "LIFE-THREATENING"),
+                  TERM = c("Anaphylaxis", "Nausea", "Rash", "Sepsis"),
+                  DAY  = as.character(1:4), stringsAsFactors = FALSE)
+  d <- d[order(d$SEV, d$SUBJ), ]
+  plan_of <- function(col_sev, ...) {
+    table_plan(d) |>
+      plan_listing(listing_col("SUBJ", width = 8), col_sev,
+                   listing_col("TERM", width = 12), listing_col("DAY", width = 5)) |>
+      plan_paginate_rows(page_by = "SEV", heading_at = "title",
+                         heading = "Severity: {value}", ...)
+  }
+  days <- function(pg) lapply(pg, function(x) {
+    v <- as.character(as.data.frame(x$data, stringsAsFactors = FALSE)$DAY)
+    v[!is.na(v) & nzchar(v)]
+  })
+  # 10 wide: the value prints over "LIFE-", "THREATENIN" and "G"
+  p  <- plan_of(listing_col("SEV", width = 10))
+  pg <- suppressMessages(plan_apply(p, "pages"))
+  expect_identical(names(pg), c("Severity: LIFE-THREATENING", "Severity: MILD"))
+  expect_identical(unname(days(pg)), list(c("1", "4"), c("2", "3")))
+  # the same with 16 wide, where it does not wrap
+  pg16 <- suppressMessages(plan_apply(plan_of(listing_col("SEV", width = 16)), "pages"))
+  expect_identical(names(pg16), names(pg))
+  expect_identical(unname(days(pg16)), unname(days(pg)))
+  # a value that wraps at a space, and a page cut in rows as well
+  pgm <- suppressMessages(plan_apply(plan_of(listing_col("SEV", width = 6), max_rows = 4), "pages"))
+  expect_true(all(startsWith(names(pgm), "Severity: ")))
+  expect_setequal(unique(sub("[.][.][.][0-9]+$", "", names(pgm))),
+                  c("Severity: LIFE-THREATENING", "Severity: MILD"))
+  # the unwrapped values travel on the body; without them the lines are joined
+  b <- build_listing(d, listing_spec(list(listing_col("SEV", width = 10), listing_col("DAY", width = 5))))
+  expect_identical(attr(b, "rtf_listing_values")$SEV, d$SEV)
+  attr(b, "rtf_listing_values") <- NULL
+  r <- .page_by_runs(b, 1L, ".rtf_record")
+  expect_length(r, 2L)
+  expect_identical(vapply(r, `[[`, "", "label"), c("LIFE- THREATENIN G", "MILD"))
+})
+
+test_that("FT-IX044 [FR-IX416]: plan_paginate_rows(na_label = ) names the blank BY group, the default leaves it empty", {
+  d <- data.frame(SUBJ = c("S1", "S2", "S3", "S4"),
+                  SEV = c("", "MILD", NA, "SEVERE"),
+                  TERM = paste("T", 1:4), stringsAsFactors = FALSE)
+  pg <- function(...) {
+    p <- table_plan(d) |>
+      plan_listing(listing_col("SUBJ", width = 8), listing_col("SEV", width = 9),
+                   listing_col("TERM", width = 10)) |>
+      plan_paginate_rows(page_by = "SEV", ...)
+    suppressMessages(plan_apply(p, "pages"))
+  }
+  # unchanged by default
+  expect_identical(names(pg(heading = "Severity: {value}", heading_at = "title")),
+                   c("Severity: ", "Severity: MILD", "Severity: SEVERE"))
+  # the text in the heading and, with no heading, in the page name
+  expect_identical(
+    names(pg(heading = "Severity: {value}", heading_at = "title", na_label = "Not coded")),
+    c("Severity: Not coded", "Severity: MILD", "Severity: SEVERE"))
+  expect_identical(names(pg(na_label = "Not coded")),
+                   c("Not coded", "MILD", "SEVERE"))
+  expect_identical(names(pg()), c("", "MILD", "SEVERE"))
+  expect_error(plan_paginate_rows(table_plan(d), na_label = "x"), "page_by")
+  expect_error(plan_paginate_rows(table_plan(d), page_by = "SEV", na_label = NA_character_), "one text")
+})
