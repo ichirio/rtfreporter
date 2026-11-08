@@ -914,3 +914,28 @@ test_that("FT-IX045 [FR-IX417]: a listing's BY value wider than its column is on
   expect_length(r, 2L)
   expect_identical(vapply(r, `[[`, "", "label"), c("LIFE- THREATENIN G", "MILD"))
 })
+
+test_that("FT-IX044 [FR-IX416]: plan_paginate_rows(na_label = ) names the blank BY group, the default leaves it empty", {
+  d <- data.frame(SUBJ = c("S1", "S2", "S3", "S4"),
+                  SEV = c("", "MILD", NA, "SEVERE"),
+                  TERM = paste("T", 1:4), stringsAsFactors = FALSE)
+  pg <- function(...) {
+    p <- table_plan(d) |>
+      plan_listing(listing_col("SUBJ", width = 8), listing_col("SEV", width = 9),
+                   listing_col("TERM", width = 10)) |>
+      plan_paginate_rows(page_by = "SEV", ...)
+    suppressMessages(plan_apply(p, "pages"))
+  }
+  # unchanged by default
+  expect_identical(names(pg(heading = "Severity: {value}", heading_at = "title")),
+                   c("Severity: ", "Severity: MILD", "Severity: SEVERE"))
+  # the text in the heading and, with no heading, in the page name
+  expect_identical(
+    names(pg(heading = "Severity: {value}", heading_at = "title", na_label = "Not coded")),
+    c("Severity: Not coded", "Severity: MILD", "Severity: SEVERE"))
+  expect_identical(names(pg(na_label = "Not coded")),
+                   c("Not coded", "MILD", "SEVERE"))
+  expect_identical(names(pg()), c("", "MILD", "SEVERE"))
+  expect_error(plan_paginate_rows(table_plan(d), na_label = "x"), "page_by")
+  expect_error(plan_paginate_rows(table_plan(d), page_by = "SEV", na_label = NA_character_), "one text")
+})
