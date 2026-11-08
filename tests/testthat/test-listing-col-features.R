@@ -824,3 +824,53 @@ test_that("the measures and listing_wrap() refuse what is not one string or one 
   expect_s3_class(listing_spec("A", wrap = function(text, width, ...) text), "rtf_listing_spec")
   expect_error(listing_spec("A", wrap = function(text, width) text), "four arguments")
 })
+
+test_that("FT-IX042 [FR-IX415]: a listing record whose BY value is blank or NA is a page of its own", {
+  pages_of <- function(sev, col = "SEV") {
+    d <- data.frame(SUBJ = c("S1", "S1", "S2", "S3", "S4"), SEV = sev,
+                    TERM = paste("T", 1:5), DAY = as.character(1:5),
+                    stringsAsFactors = FALSE)
+    p <- table_plan(d) |>
+      plan_listing(listing_col("SUBJ", width = 8, collapse_repeats = TRUE),
+                   listing_col("SEV", width = 9),
+                   listing_col("TERM", width = 10),
+                   listing_col("DAY", width = 5)) |>
+      plan_paginate_rows(page_by = col, heading_at = "title",
+                         heading = "Severity: {value}")
+    suppressMessages(plan_apply(p, "pages"))
+  }
+  days <- function(pg) lapply(pg, function(x) {
+    v <- as.character(as.data.frame(x$data, stringsAsFactors = FALSE)$DAY)
+    v[!is.na(v) & nzchar(v)]
+  })
+  for (blank in list("", NA_character_)) {
+    # first: the blank-severity records come first, and keep their own page
+    pg <- pages_of(c(blank, blank, "MILD", "MILD", "SEVERE"))
+    expect_identical(names(pg), c("Severity: ", "Severity: MILD", "Severity: SEVERE"))
+    expect_identical(unname(days(pg)), list(c("1", "2"), c("3", "4"), "5"))
+    # middle: not filled from the next record
+    pg <- pages_of(c("MILD", "MILD", blank, "SEVERE", "SEVERE"))
+    expect_identical(names(pg), c("Severity: MILD", "Severity: ", "Severity: SEVERE"))
+    expect_identical(unname(days(pg)), list(c("1", "2"), "3", c("4", "5")))
+  }
+  # a record's wrapped line and blank row go with the record
+  pg <- pages_of(c("", "", "MILD", "MILD", "SEVERE"))
+  expect_identical(nrow(pg[[1L]]$data), 4L)
+})
+
+test_that("FT-IX043 [FR-IX415]: without a listing's records a blank BY value is still filled from its neighbour", {
+  # a table's stub label row carries NA in the BY column and joins the run it
+  # introduces; a blank value of a table row is a gap too: unchanged
+  d <- data.frame(by = c("A", NA, "", "B", "B"), x = letters[1:5],
+                  stringsAsFactors = FALSE)
+  r <- .page_by_runs(d, 1L)
+  expect_identical(lapply(r, `[[`, "rows"), list(1L, 2:5))
+  expect_identical(vapply(r, `[[`, "", "label"), c("A", "B"))
+  # with records, the line of a record (same record id) is filled from the
+  # record's first line, and a line without a record from the next row
+  rec <- c(1, 1, NA, 2, 2)
+  r2 <- .page_by_runs(data.frame(by = c("A", "", NA, "B", ""), rec = rec,
+                                 stringsAsFactors = FALSE), 1L, "rec")
+  expect_identical(vapply(r2, `[[`, "", "label"), c("A", "B"))
+  expect_identical(lapply(r2, `[[`, "rows"), list(1:2, 3:5))
+})

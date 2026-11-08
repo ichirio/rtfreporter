@@ -582,6 +582,16 @@
   v
 }
 
+# The rows of a listing record whose FIRST line has no BY value (NA or ""):
+# the record's value is missing, and that is a value of its own -- a study's
+# blank severity is a group of records, not a gap to fill from the neighbour.
+# A line with no record (a stub's label row) is never one.
+.record_own_blank <- function(v, rec) {
+  miss  <- is.na(v) | !nzchar(trimws(v))
+  first <- match(rec, rec)
+  !is.na(rec) & miss[first]
+}
+
 # The partitions `page_by` implies: one per DISTINCT BY value, holding every
 # row that has it.  A page gathers its rows even when they are scattered --
 # a value that comes back later belongs to the page it names, not to a new
@@ -596,8 +606,12 @@
   rec <- if (!is.null(record) && record %in% names(df)) df[[record]]
   keys <- lapply(idx, function(j) {
     v <- as.character(df[[j]])
+    own <- if (!is.null(rec)) .record_own_blank(v, rec)
     if (!is.null(rec)) v <- .fill_record_gaps(v, rec)
-    .fill_page_by_gaps(v)
+    out <- .fill_page_by_gaps(v)
+    # a record with no BY value on its first line is its own (empty) value
+    if (any(own)) out[own] <- ""
+    out
   })
   key  <- do.call(paste, c(keys, list(sep = "\r")))
   lab  <- do.call(paste, c(keys, list(sep = ", ")))
