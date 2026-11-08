@@ -8,10 +8,10 @@ on:
     branches-ignore: [next]
   release:
     types: [published]
-  # Nightly, 13:00 UTC = 22:00 JST: build next (no deploy), so a broken
+  # Nightly, 16:00 UTC = 1:00 JST: build next (no deploy), so a broken
   # article shows before the daily next -> main merge at about 2:00 JST.
   schedule:
-    - cron: "0 13 * * *"
+    - cron: "0 16 * * *"
   workflow_dispatch:
     inputs:
       nightly:
