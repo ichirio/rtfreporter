@@ -1090,7 +1090,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
 #' * `plan_empty(text, when, position, footnote)`: a table of no events: one row saying so (`"No subjects met the criteria."`), and a footnote, only when the table has no row or its overall row is 0.
 #' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` / `"none"` is [listing_spec()]'s `blank_row = TRUE` / `FALSE`.
-#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do.
+#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at, na_label)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do; `na_label` is the text a blank BY value prints as.
 #' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()], whose arguments have the same names.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
@@ -2989,6 +2989,11 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 #'   `page_by` column `{value}` is its value; with several the heading
 #'   carries a token for each column by its name, `"Analyte: {ANALYTE}"`,
 #'   and no `{value}`.
+#' @param na_label With `page_by`: the text a **blank** BY value (`""` or
+#'   `NA`) prints as in the page's heading (`{value}`, a `{<column>}`) and in
+#'   its name.  The default `NULL` is the empty text, so a template
+#'   `"Severity: {value}"` prints `"Severity: "`.  Like `cont_label`, a text
+#'   of the page, and like `na`, the text of a missing value.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -3032,8 +3037,17 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
                                break_before = NULL, min_group_rows = NULL,
                                cont_label = NULL, page_by = NULL,
-                               heading = NULL, heading_at = NULL) {
+                               heading = NULL, heading_at = NULL,
+                               na_label = NULL) {
   .plan_check_heading(heading, "plan_paginate_rows")
+  if (!is.null(na_label) && (!is.character(na_label) || length(na_label) != 1L ||
+                             is.na(na_label))) {
+    .ard_stop('plan_paginate_rows(na_label = ) is one text: "Not coded".')
+  }
+  if (!is.null(na_label) && !length(page_by)) {
+    .ard_stop(paste0("plan_paginate_rows(na_label = ) names the BY page of a ",
+                     "blank value: give `page_by`."))
+  }
   if (!is.null(heading) && (length(page_by) != 1L)) {
     # several page_by columns: the heading names each by its own token
     # ("Analyte: {ANALYTE}\nGroup: {RENALGR}"), never `{value}`
@@ -3056,7 +3070,8 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
                    split_rows = break_before,
                    min_group_rows = min_group_rows,
                    cont_label = cont_label, page_by = page_by,
-                   .heading = heading, .heading_at = heading_at))
+                   .heading = heading, .heading_at = heading_at,
+                   .na_label = na_label))
 }
 
 # The WHOLE-table settings, listed.  Everything a table has per column or
@@ -5606,16 +5621,24 @@ plan_header_tokens <- function(.plan) {
 .plan_page_headings <- function(plan, out) {
   h <- .plan_merge(.plan_of(plan, "group"))[[".heading"]]
   pb <- .plan_merge(.plan_of(plan, "pages"))
+  na_label <- pb[[".na_label"]]
   by_rows <- is.null(h) && !is.null(pb[[".heading"]])
   if (by_rows) h <- pb[[".heading"]]
   verb <- if (by_rows) "plan_paginate_rows(heading = )"
           else "plan_paginate_group(heading = )"
-  if (is.null(h) || inherits(out, "rtftable") || is.null(names(out))) {
-    return(out)
-  }
+  if (inherits(out, "rtftable") || is.null(names(out))) return(out)
   nm <- names(out)
   base <- .page_name_base(nm)
   tail <- substring(nm, nchar(base) + 1L)
+  # a blank BY value says `na_label`, in the heading and in the page's name
+  blank_val <- function(v) is.na(v) | !nzchar(trimws(v))
+  if (is.null(h)) {
+    if (length(na_label) && nzchar(na_label) && length(pb$page_by) == 1L) {
+      b <- blank_val(base)
+      names(out)[b] <- paste0(na_label, tail[b])
+    }
+    return(out)
+  }
   # several page_by columns: each page's values by column, from the page
   # itself (rtf_paginate_meta$page_values), into the heading's `{<column>}`
   if (by_rows && length(pb$page_by) > 1L) {
@@ -5623,6 +5646,7 @@ plan_header_tokens <- function(.plan) {
       meta <- attr(out[[i]]$data, "rtf_paginate_meta", exact = TRUE)
       v <- meta$page_values
       vals <- as.list(if (is.null(v)) character() else v[intersect(names(v), pb$page_by)])
+      if (length(na_label)) vals[blank_val(unlist(vals))] <- na_label
       .fill_text_tokens(h, vals, verb)
     }, character(1L))
     names(out) <- paste0(filled, tail)
@@ -5632,6 +5656,8 @@ plan_header_tokens <- function(.plan) {
         else .plan_page_group(plan, base)
   wants_n <- "n" %in% .text_tokens(h)
   missed <- character(0)
+  shown <- base
+  if (by_rows && length(na_label)) shown[blank_val(shown)] <- na_label
   filled <- vapply(seq_along(out), function(i) {
     n <- NA
     if (wants_n) {
@@ -5639,7 +5665,7 @@ plan_header_tokens <- function(.plan) {
            else .plan_page_own_n(plan$data, pg$col, pg$value[[i]])
       if (is.na(n)) missed <<- c(missed, base[[i]])
     }
-    .fill_text_tokens(h, list(value = base[[i]], n = if (is.na(n)) "NA" else n),
+    .fill_text_tokens(h, list(value = shown[[i]], n = if (is.na(n)) "NA" else n),
                       verb)
   }, character(1L))
   if (length(missed)) {
