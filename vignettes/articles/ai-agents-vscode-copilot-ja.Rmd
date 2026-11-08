@@ -2,29 +2,6 @@
 title: "AI エージェント：VS Code と GitHub Copilot の設定"
 ---
 
-```{r, include = FALSE}
-# A chunk's code sits under "Show code": open when it is what the page is
-# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
-# the default unless the page sets another); `fold = FALSE` shows it plain,
-# and so is code of three lines or fewer.
-# Its results stay outside, always shown.
-.fold_src <- knitr::knit_hooks$get("source")
-knitr::knit_hooks$set(source = function(x, options) {
-  f <- if (is.null(options$fold)) "closed" else options$fold
-  # short code -- three lines or fewer, a chunk or the part of one before
-  # its next output -- is shown as it is: folded, it would hide less than
-  # the fold itself takes
-  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
-    return(.fold_src(x, options))
-  }
-  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
-         "<summary>Show code</summary>\n\n",
-         .fold_src(x, options), "\n\n</details>\n\n")
-})
-knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
-```
-
 <p align="right">
   <a class="btn btn-outline-secondary btn-sm" href="ai-agents-vscode-copilot.html">In English</a>
 </p>
@@ -35,25 +12,29 @@ Copilot のエージェントを設定します。先に
 が書いてあります。設定が終わったら、ワークフローはそちらのページに戻って確認します。
 
 ここに書いた内容は、2026-11-08 に読んだ VS Code と GitHub のドキュメントに基づいて
-います（リンクを参照）。Copilot の画面や設定はよく変わります。ドキュメントで手順を
+います（リンクを参照）。このページの手順は、VS Code では実行していません。Copilot の画面や設定はよく変わります。ドキュメントで手順を
 確認できなかった箇所には **（要確認）** と付けています。
 
 ## リポジトリを開く
 
-1. リポジトリをクローンします。コントリビューターはフォークをクローンし、
-   コラボレーターは `ichirio/rtfreporter` をクローンします
+1. リポジトリをクローンします。コントリビューターはフォークをクローンします。
+   メンテナー（Collaborator）は `ichirio/rtfreporter` をクローンします
    （`CONTRIBUTING.md` の *Contributor vs Collaborator*）。VS Code の Source Control
    を使う手順も `CONTRIBUTING.md` にあります。
-2. VS Code でフォルダーを開きます（**File** > **Open Folder**）。
+2. VS Code でフォルダーを開きます（**File** > **Open Folder...**）。
 3. 正しいベースからトピックブランチを作ります。コマンドパレットで
    **Git: Create Branch...** を実行します。コントリビューターは `main` からブランチ
    を作り、`main` に向けて PR を出します。メンテナーのブランチは `next` に向けます
    （`CONTRIBUTING.md` の *Branching & collaboration*）。Copilot の指示ファイルが指す
    `AGENTS.md` には `main` しか書かれていないので、メンテナーは
    `CONTRIBUTING.md` に従ってください。
-4. Chat ビューを開き、Agent picker で **Agent** を選びます。**（要確認：**どの
+4. チャット入力で、agent picker から **Agent** を選びます。**（要確認：**どの
    「ハーネス」を選ぶか。ドキュメントには Local と Copilot のハーネスセッションが
    出てきます。**）**
+
+出典：<https://code.visualstudio.com/docs/sourcecontrol/overview>、
+<https://code.visualstudio.com/docs/sourcecontrol/branches-worktrees>、
+<https://code.visualstudio.com/docs/copilot/agents/agent-tools>
 
 ## 環境
 
@@ -61,7 +42,9 @@ Copilot のエージェントを設定します。先に
 のホームが見えている必要があります
 （[共有ページの「環境」](ai-agents-ja.html#the-environment)）。
 
-* エージェントはコマンドを統合ターミナルで実行します。変数（`R_LIBS_USER`、`HOME`、
+* Local セッションでは、エージェントはコマンドを統合ターミナルで実行します。Copilot
+  ハーネスのセッションは、デフォルトでは組み込みのシェルツールを使います（agent-tools の
+  ページ）。変数（`R_LIBS_USER`、`HOME`、
   `R_USER_CACHE_DIR`、`R_USER_DATA_DIR`、`R_USER_CONFIG_DIR`、`TMP`、`TEMP`、
   `TMPDIR`、`WORK_ROOT`）を設定したシェルから VS Code を起動します。そうすれば、
   すべてのターミナルが変数を引き継ぎます。
@@ -70,9 +53,10 @@ Copilot のエージェントを設定します。先に
 * どの R を呼ぶかは、フルパスで指示ファイルに書いてエージェントに伝えます
   （次の節）。
 
-そのうえで、共有ページのチェックスクリプトをエージェントに実行させます。
+そのうえで、共有ページのチェックスクリプトをエージェントに実行させます。エージェントは
+その記事を読んでいないので、先にスクリプトをチャットに貼り付けてから、次のように頼みます。
 
-> 「環境」のスクリプトをリポジトリの外に `check-env.R` として保存し、プロジェクトの
+> 上のスクリプトを `check-env.R` としてリポジトリの外に保存し、プロジェクトの
 > R で実行して、出力を見せてください。
 
 最後に `Environment OK.` と出れば成功です。途中で止まったら、先に環境を直します。
@@ -81,15 +65,19 @@ Copilot のエージェントを設定します。先に
 
 VS Code の Copilot は `.github/copilot-instructions.md` または `AGENTS.md` を読み
 ます。このリポジトリには両方あります。`.github/copilot-instructions.md` は
-`AGENTS.md`、`CONTRIBUTING.md`、AI 開発者マニュアルをすでに指しています。短く保ち、
-ルールは 1 か所にまとめてください。エージェント専用の行だけを追加します。
+`AGENTS.md`、`CONTRIBUTING.md`、AI 開発者マニュアルをすでに指しており、プルリクエストで
+`NEWS.md`、`CHANGELOG.md`、`Version:` を編集しないことも書いてあります。短く保ち、
+ルールは 1 か所にまとめてください。足りない行だけを追加します。
 
 ```markdown
 - Call R by its full path (the project's R), never a bare `Rscript`.
-- Run the pre-PR check (`/pre-pr`) before you open a pull request.
-- Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:` in `DESCRIPTION`.
-- Stop and ask before you push, install into a library, or delete files.
+- After the `pre-pr` prompt file below is added, run it (`/pre-pr`) before you open a pull request.
+- Stop and ask before you push, install into any library other than the work library, or delete files.
 ```
+
+`.github/copilot-instructions.md` は追跡されるファイルなので、足した行はプルリクエストに
+入ります。全員の役に立つ行だけを足し、プルリクエストでそう説明してください。
+**（要確認：**自分だけの指示を、VS Code ではどこに置くか。**）**
 
 ファイルが読まれたかどうかは、次の方法で確認します。
 
@@ -147,8 +135,8 @@ Run these in order. Stop at the first failure and report it.
 2. Run `lintr::lint_package()`. It must report 0 lints.
 3. List the `pkg::` uses and `requireNamespace()` calls added in the diff, and
    check each is declared in `DESCRIPTION`.
-4. If the change is in tflspec, run tflplanner's tests too.
-5. Report each result in the form the pull request template asks for.
+4. When a change in tflspec can break tflplanner, run tflplanner's tests too.
+5. Report each result in the pull request description, in the form the pull request template asks for.
 
 Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
 ```
@@ -199,8 +187,9 @@ VS Code にはフックがあります（**Preview**）。フックは、決ま�
 この機能は Preview なので、自分でフックを試すまでは、これらのルールを PR 前チェック
 と CI に任せてください。
 
-PR #935 のブランチ（まだデフォルトブランチにはありません）の `.claude/` にある
-フックの例は、Claude Code 向けに書かれ、Claude でのみ確認しています。
+PR #935 のブランチの `.claude/` にあるフックの例は、Claude Code 向けに書かれ、Claude でのみ
+確認しています。#935 が `next` にマージされ、`next` が `main` にマージされると、リポジトリに
+含まれます。
 [Claude アプリのページ](ai-agents-claude-app-ja.html#checks-on-each-edit) を参照して
 ください。
 

@@ -64,8 +64,10 @@ rtfreporter、tflspec、tflplanner の 3 パッケージは、1 つのセット�
 インストールが、別の作業で使っているパッケージを上書きすることもあります。
 そこで、エージェントには専用の**作業ライブラリ**と**作業用ホーム**を用意します。
 
-* **R のバージョン。** `DESCRIPTION`（`Depends:`）と、`.github/workflows/R-CMD-check.yaml` の
-  CI マトリクスで確認します。このページから写さないでください。
+* **R のバージョン。** `DESCRIPTION`（`Depends:`）にあるのは最低限のバージョンで、使うべき
+  バージョンではありません。テスト対象のバージョンは、`CONTRIBUTING.md` の *Development setup* と、
+  `.github/workflows/R-CMD-check.yaml` の CI マトリクスにあります。このページからバージョンを
+  写さないでください。
 * **フォルダ。** 最初の R 呼び出しの前に、`R_LIBS_USER`、`HOME`、`R_USER_*` のフォルダ
   （`R_USER_CACHE_DIR`、`R_USER_DATA_DIR`、`R_USER_CONFIG_DIR`）を、作業エリアのフォルダに
   設定します。`Rscript -e` の 1 行だけの呼び出しでも同じです。`TMP`、`TEMP`、`TMPDIR` も設定し、
@@ -74,6 +76,24 @@ rtfreporter、tflspec、tflplanner の 3 パッケージは、1 つのセット�
   `R_LIBS_USER` も設定します。
 * **どの R か。** プロジェクトが指定する R を、フルパスで呼びます。パスの先頭にある `Rscript` を
   そのまま使わないでください。
+
+架空の作業フォルダー `C:/work/tfl` を使った例です。フォルダーは先に作っておきます。
+
+```text
+WORK_ROOT=C:/work/tfl
+R_LIBS_USER=C:/work/tfl/lib
+HOME=C:/work/tfl/home
+R_USER_CACHE_DIR=C:/work/tfl/home/cache
+R_USER_DATA_DIR=C:/work/tfl/home/data
+R_USER_CONFIG_DIR=C:/work/tfl/home/config
+TMP=C:/work/tfl/tmp
+TEMP=C:/work/tfl/tmp
+TMPDIR=C:/work/tfl/tmp
+```
+
+作業ライブラリは、最初は空です。プロジェクトの R とこれらの変数を使って埋めます。
+`CONTRIBUTING.md` の *Development setup* にあるパッケージを `install.packages()` で入れるか、
+クローンの中で `devtools::install_dev_deps()` を実行します（先に devtools を入れてください）。
 
 セッションごとに、最初に下のスクリプトを実行します。重要な情報を出力し、作業エリアの外のライブラリや
 フォルダが使われていれば停止します。実行する前に、`WORK_ROOT` を作業フォルダに設定してください。
@@ -169,7 +189,7 @@ cat("Environment OK.\n")
 
 * 正式な文書の場所（`CONTRIBUTING.md`、アーキテクチャの記事、AI 開発者マニュアル）。
 * どのブランチから作業するか。
-* エージェントが触ってはいけないもの。`DESCRIPTION` の `Version:` と `NEWS.md` です。
+* エージェントが触ってはいけないもの。`DESCRIPTION` の `Version:`、`NEWS.md`、`CHANGELOG.md` です。
 * テストと lint のコマンド。
 * 止まって質問する場面。
 
@@ -189,7 +209,7 @@ VS Code の Copilot は、`.github/copilot-instructions.md` か `AGENTS.md` を�
 2. `lintr::lint_package()` を実行する。結果は lint 0 件にする。
 3. 新しく使った `pkg::` や `requireNamespace()` が、`DESCRIPTION` で宣言されているか確認する。
 4. tflspec の変更が tflplanner を壊しうる場合は、tflplanner のテストも実行する。
-5. 各結果を PR の説明に書く。
+5. 各結果を、プルリクエストの説明に、プルリクエストテンプレートが求める形で書く。
 
 このタスクは、`CONTRIBUTING.md` にある push 前の 4 つのチェックとは別物です。4 つとは、
 `R CMD check --as-cran`、`devtools::test()`、`pkgdown::check_pkgdown()`、lintr です。
@@ -204,22 +224,29 @@ Claude デスクトップアプリでは、このタスクを**スキル**とし
 
 * `testthat`。`CONTRIBUTING.md` のとおりに実行します。
 * `lintr`。リポジトリの `.lintr` を使います。
-* `R CMD check` と、`cran-readiness` ワークフロー（スペル、URL、例の実行時間）。
+* `R CMD check`。
+* `cran-readiness`。CRAN 投稿の前に手動で実行します（マニュアル付きの
+  `R CMD check --as-cran`、URL、スペル）。
+* `version-guard`。`release` ラベルのないプルリクエストが、バージョンをリリースの位置に変えるのを
+  拒否する CI のチェックです。
+* `lint` ワークフロー。CI で lintr を実行します。
 * カバレッジ。`test-coverage.yaml` にあります。
 * 宣言されていない依存。差分で `pkg::` と `requireNamespace()` を検索し、名前を `DESCRIPTION` と
   突き合わせます。**（要確認:** 既製のツールでこの検索を置き換えるべきか。**）**
 * 依存パッケージの既知の脆弱性のスキャン。GitHub が公開している Dependabot 対応エコシステムの
   一覧には GitHub Actions があり、R の行はありません。そのため Dependabot は R パッケージの
-  `DESCRIPTION` を読みません。このリポジトリには、現在 `.github/dependabot.yml` もありません。
-  **（要確認:** R の依存にはどのスキャナーを使うか。リポジトリの設定ですでに有効なものは何か。**）**
+  `DESCRIPTION` を読みません。このリポジトリには、現在 `.github/dependabot.yml` もなく、
+  セキュリティ設定（2026-11-08 に確認）では、Dependabot のセキュリティ更新とシークレットスキャンが
+  無効です。**（要確認:** R の依存にはどのスキャナーを使うか。**）**
 
 ### 編集ごとのチェック
 
 ルールによっては、最後にまとめて確認するより、編集のたびに強制するほうが向いています。変更した
-R ファイルの lint や、`DESCRIPTION` の `Version:` と `NEWS.md` への編集の拒否などです。Claude Code
-では**フック**で行います。VS Code にもフックがありますが、プレビュー版です。Claude のページには、
-プルリクエスト #935 にある例のセットを載せています。これはまだデフォルトブランチにありません。
-VS Code のページには、フックの形式を載せています。ツールにできない場合は、PR 前チェックと CI が
+R ファイルの lint や、`DESCRIPTION` の `Version:`、`NEWS.md`、`CHANGELOG.md` への編集の拒否などです。
+Claude Code では**フック**で行います。VS Code にもフックがありますが、プレビュー版です。Claude の
+ページには、プルリクエスト #935 にある例のセットを載せています。#935 が `next` にマージされ、
+`next` が `main` にマージされると、リポジトリに含まれます。VS Code のページには、フックの形式を
+載せています。ツールにできない場合は、PR 前チェックと CI が
 同じ範囲をカバーします。
 
 ## 4. 進め方 {#the-workflow}
@@ -229,8 +256,8 @@ VS Code のページには、フックの形式を載せています。ツール
 Issue、ブランチ、小さなプルリクエスト、CI、レビュー、マージの順です。
 
 * 1 つのプルリクエストで 1 つの変更にします。説明には `Closes #n` を入れます。
-* コントリビューターは `main` に向けてプルリクエストを出します。メンテナーのトピックブランチは
-  `next` に向け、`next` は週に 1 回ほど `main` にマージされます（`CONTRIBUTING.md` の
+* コントリビューターは `main` に向けてプルリクエストを出します。メンテナー（Collaborator、
+  書き込み権限のある人）のトピックブランチは `next` に向け、`next` は週に 1 回ほど `main` にマージされます（`CONTRIBUTING.md` の
   *Branching & collaboration*）。Copilot の指示が指す `AGENTS.md` は `main` だけを挙げているので、
   Copilot を使うメンテナーは `CONTRIBUTING.md` に従います。
 * 説明には、*User-visible change (for NEWS)* の文を書きます。エージェントは `NEWS.md` もバージョンも
@@ -249,7 +276,7 @@ Issue、ブランチ、小さなプルリクエスト、CI、レビュー、マ�
 * 多くのファイルにまたがる機械的な編集。
 * テストを書くこと。
 * こちらが示したルールに沿った文章の翻訳。
-* ブランチを `next` に追従させること。
+* ブランチをベースに追従させること（`main`。メンテナーは `next`）。
 
 ### 人が確認すること
 
@@ -298,14 +325,15 @@ Table は、この `""` を 1 つのカテゴリとして扱います。空白�
 |---|---|---|
 | リポジトリの常設の指示 | `CLAUDE.md`。`AGENTS.md` は `CLAUDE.md` がないときだけ読まれます。`CLAUDE.md` がインポートしていれば読まれます。 | `.github/copilot-instructions.md` か `AGENTS.md`。 |
 | 繰り返し使うタスク（PR 前チェック） | スキル: `.claude/skills/<name>/SKILL.md`。`/name` で起動します。 | プロンプトファイル: `.github/prompts/<name>.prompt.md`。`/name` で起動します。 |
-| テストと lint の実行 | ターミナルツールでコマンドを実行します。 | 統合ターミナルでコマンドを実行します。 |
+| テストと lint の実行 | Bash ツールでコマンドを実行します。 | 統合ターミナルでコマンドを実行します（Local セッション）。 |
 | 確認なしで実行できるもの | 権限ルールと権限モード。 | ターミナルの自動承認ルール（`chat.tools.terminal.autoApprove`）。 |
 | 編集ごとのチェック | `.claude/settings.json` のフック。 | `.github/hooks/*.json` のフック（プレビュー）。 |
-| 作業の一部を補助に渡す | 別々のセッション。それぞれ専用の worktree を使えます。 | サブエージェント。独自のコンテキストで動きます。 |
+| 作業の一部を補助に渡す | 別々のセッションを並行して動かせます。**Worktree** をオンにすると、それぞれが専用の worktree を使います。 | サブエージェント。独自のコンテキストで動きます。 |
 | Issue やプルリクエストの読み取り | ターミナルの `gh`。アプリは、プルリクエストを開くと CI の状態を表示します。 | **（要確認:** VS Code の Copilot が Issue やプルリクエストをどう読むか。**）** |
 
 この表の内容は、各ツールのドキュメントを 2026-11-08 に読んで得たものです。リンクはセットアップの
-ページにあります。ツールの変化は速いので、手順どおりに動かないときは、そのツールのドキュメントを
+ページにあります。Claude アプリについての 2 つの事実は、アプリでのテストで確認したもので、
+Claude のページに明記しています。ツールの変化は速いので、手順どおりに動かないときは、そのツールのドキュメントを
 確認してください。
 
 ## 次に読むもの

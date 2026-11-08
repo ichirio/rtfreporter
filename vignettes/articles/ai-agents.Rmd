@@ -68,8 +68,10 @@ path, a test can pass only because of a package that you happen to have
 installed. An install can also overwrite a package that you use for other work.
 So give the agent a separate **work library** and a separate **work home**.
 
-* **R version.** Read it from `DESCRIPTION` (`Depends:`) and from the CI
-  matrix in `.github/workflows/R-CMD-check.yaml`. Do not copy it from this page.
+* **R version.** `DESCRIPTION` (`Depends:`) holds the minimum, not the version
+  to use. The versions that are tested are in *Development setup* in
+  `CONTRIBUTING.md` and in the CI matrix in
+  `.github/workflows/R-CMD-check.yaml`. Do not copy a version from this page.
 * **Folders.** Before the first R call, set `R_LIBS_USER`, `HOME` and the
   `R_USER_*` folders (`R_USER_CACHE_DIR`, `R_USER_DATA_DIR`,
   `R_USER_CONFIG_DIR`) to folders of the work area. This holds for a one-line
@@ -79,6 +81,25 @@ So give the agent a separate **work library** and a separate **work home**.
   library. Set `R_LIBS_USER` too.
 * **Which R.** Call the R that the project names, by its full path. Do not use
   whichever `Rscript` comes first on the path.
+
+An example, with a fictional work folder `C:/work/tfl`. Make the folders first.
+
+```text
+WORK_ROOT=C:/work/tfl
+R_LIBS_USER=C:/work/tfl/lib
+HOME=C:/work/tfl/home
+R_USER_CACHE_DIR=C:/work/tfl/home/cache
+R_USER_DATA_DIR=C:/work/tfl/home/data
+R_USER_CONFIG_DIR=C:/work/tfl/home/config
+TMP=C:/work/tfl/tmp
+TEMP=C:/work/tfl/tmp
+TMPDIR=C:/work/tfl/tmp
+```
+
+The work library starts empty. Fill it with the project's R and these
+variables: `install.packages()` for the packages in *Development setup* in
+`CONTRIBUTING.md`, or `devtools::install_dev_deps()` in the clone (install
+devtools first).
 
 Run the script below first in every session. It prints the facts that matter
 and stops if a library or folder outside the work area is in use. Set `WORK_ROOT` to the work
@@ -175,7 +196,8 @@ What they say should be short:
 * where the authoritative documents are (`CONTRIBUTING.md`, the architecture
   article, the AI developer manual);
 * which branch to work from;
-* what an agent must not touch: `Version:` in `DESCRIPTION`, and `NEWS.md`;
+* what an agent must not touch: `Version:` in `DESCRIPTION`, `NEWS.md` and
+  `CHANGELOG.md`;
 * the test and lint commands;
 * when to stop and ask.
 
@@ -197,7 +219,7 @@ either tool makes the same check. It is a faster subset, to run on each change:
 3. Check that every new `pkg::` use or `requireNamespace()` call is declared in
    `DESCRIPTION`.
 4. When a change in tflspec can break tflplanner, run tflplanner's tests too.
-5. Report each result in the PR description.
+5. Report each result in the pull request description, in the form the pull request template asks for.
 
 This task is not the four pre-push checks of `CONTRIBUTING.md`:
 `R CMD check --as-cran`, `devtools::test()`, `pkgdown::check_pkgdown()` and
@@ -212,8 +234,12 @@ An agent's judgment is not a check. These are:
 
 * `testthat`, run as in `CONTRIBUTING.md`;
 * `lintr`, with the repository's `.lintr`;
-* `R CMD check`, and the `cran-readiness` workflow (spelling, URLs, example
-  timings);
+* `R CMD check`;
+* `cran-readiness`, which is run by hand before a CRAN submission
+  (`R CMD check --as-cran` with the manual, URLs, spelling);
+* `version-guard`, a CI check that refuses a change of the version to a release
+  position unless the pull request has the `release` label;
+* the `lint` workflow, which runs lintr in CI;
 * coverage, in `test-coverage.yaml`;
 * undeclared dependencies: search the diff for `pkg::` and
   `requireNamespace()` and compare the names with `DESCRIPTION`. **(To check:**
@@ -221,17 +247,19 @@ An agent's judgment is not a check. These are:
 * a scan of the dependencies for known vulnerabilities. GitHub's list of
   ecosystems that Dependabot supports has GitHub Actions and has no row for R,
   so Dependabot does not read an R package's `DESCRIPTION`. This repository has
-  no `.github/dependabot.yml` file today. **(To check:** which scanner to use for
-  R dependencies, and what the repository settings already turn on.**)**
+  no `.github/dependabot.yml` file today, and its security settings (read
+  2026-11-08) show Dependabot security updates and secret scanning as
+  disabled. **(To check:** which scanner to use for R dependencies.**)**
 
 ### Checks on each edit
 
 Some rules are better enforced at each edit than at the end: lint a changed R
-file, or refuse an edit to `Version:` in `DESCRIPTION` or to `NEWS.md`. Claude
-Code does this with **hooks**. VS Code has hooks too, in Preview. The Claude
-page shows an example set, which is in pull request #935 and not yet on the
-default branch. The VS Code page shows the format of a hook. Where a tool cannot do it, the pre-PR check
-and CI cover the same ground.
+file, or refuse an edit to `Version:` in `DESCRIPTION`, to `NEWS.md` or to
+`CHANGELOG.md`. Claude Code does this with **hooks**. VS Code has hooks too, in
+Preview. The Claude page shows an example set, which is in pull request #935.
+Once #935 is merged into `next`, and `next` into `main`, the repository holds
+it. The VS Code page shows the format of a hook. Where a tool cannot do it, the
+pre-PR check and CI cover the same ground.
 
 ## 4. The workflow
 
@@ -240,8 +268,8 @@ and CI cover the same ground.
 Issue, branch, small pull request, CI, review, merge.
 
 * One change per pull request, with `Closes #n` in its description.
-* A contributor opens the pull request against `main`. A maintainer's topic
-  branch goes to `next`, which is merged to `main` about once a week
+* A contributor opens the pull request against `main`. A maintainer (a
+  Collaborator, with write access) works on a topic branch that goes to `next`, which is merged to `main` about once a week
   (*Branching & collaboration* in `CONTRIBUTING.md`). `AGENTS.md`, which
   Copilot's instructions point to, names `main` only, so a maintainer who uses
   Copilot follows `CONTRIBUTING.md`.
@@ -262,7 +290,8 @@ and goes into the issue or the pull request.
 * A mechanical edit across many files.
 * Writing tests.
 * Translating text under a rule that you state.
-* Bringing a branch up to date with `next`.
+* Bringing a branch up to date with its base (`main`, or `next` for a
+  maintainer).
 
 ### What a person must check
 
@@ -314,14 +343,15 @@ When a check has found a problem once, keep it as a regression test.
 |---|---|---|
 | Standing instructions for the repository | `CLAUDE.md`. `AGENTS.md` is read only when there is no `CLAUDE.md`, unless `CLAUDE.md` imports it. | `.github/copilot-instructions.md`, or `AGENTS.md`. |
 | A reusable task (the pre-PR check) | A skill: `.claude/skills/<name>/SKILL.md`, started with `/name`. | A prompt file: `.github/prompts/<name>.prompt.md`, started with `/name`. |
-| Running tests and lint | Runs commands in a terminal tool. | Runs commands in the integrated terminal. |
+| Running tests and lint | Runs commands with its Bash tool. | Runs commands in the integrated terminal (Local sessions). |
 | What it may run without asking | Permission rules and permission modes. | Terminal auto-approve rules (`chat.tools.terminal.autoApprove`). |
 | Checks on each edit | Hooks in `.claude/settings.json`. | Hooks (Preview) in `.github/hooks/*.json`. |
-| Handing a piece of work to a helper | Separate sessions; each can use its own worktree. | Subagents, which work in their own context. |
+| Handing a piece of work to a helper | Separate sessions run in parallel; with **Worktree** on, each has its own worktree. | Subagents, which work in their own context. |
 | Reading an Issue or a pull request | `gh` in the terminal. The app shows a pull request's CI status after you open it. | **(To check:** how Copilot in VS Code reads an Issue or a pull request.**)** |
 
 The facts in this table come from the tools' own documentation, read on
-2026-11-08; the set-up pages link the pages. Tools change fast, so check the
+2026-11-08; the set-up pages link the pages. Two facts about the Claude app
+were seen in a test in the app, and the Claude page says which. Tools change fast, so check the
 tool's documentation when a step does not work as written.
 
 ## Where next
