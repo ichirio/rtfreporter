@@ -70,3 +70,12 @@ test_that("errors on a data.frame and on an unknown column", {
                "expects an rtftable")
   expect_error(collapse_repeats(rtftable(df3()), cols = "nope"), "not found")
 })
+
+test_that("a multi-data.frame rtftable collapses each data.frame on its own", {
+  tbl <- rtftable(list(
+    data.frame(g = c("A", "A", "B"), v = 1:3, stringsAsFactors = FALSE),
+    data.frame(g = c("C", "C", "C"), v = 4:6, stringsAsFactors = FALSE)))
+  out <- collapse_repeats(tbl, cols = "g")
+  expect_identical(is.na(out$data_list[[1L]]$g), c(FALSE, TRUE, FALSE))
+  expect_identical(is.na(out$data_list[[2L]]$g), c(FALSE, TRUE, TRUE))
+})
