@@ -2,11 +2,12 @@ Package: rtfreporter
 Type: Package
 Title: Clinical RTF Reporting Toolkit for Tables, Listings and Figures
 Version: 0.8.2.9100
-Authors@R:
+Authors@R: c(
     person(given  = "Yoichi",
            family = "Masui",
            email  = "ichi.r.pro@gmail.com",
-           role   = c("aut", "cre", "cph"))
+           role   = c("aut", "cph")),
+    person("Shoichi", "Fujita", email = "shoichi.fujita@takeda.com", role = "cre"))
 Description: A standalone toolkit for generating Rich Text Format (RTF)
     reports used in clinical trial deliverables -- Tables, Listings and
     Figures (TFLs). Provides a functional, pipe-friendly API to compose
