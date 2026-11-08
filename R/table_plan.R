@@ -5885,6 +5885,13 @@ plan_n_candidates <- function(.plan) {
     a <- list(vars = stub$vars, label = stub$name, indent = stub$indent,
               group_summary = stub$group_summary)
     a <- a[!vapply(a, is.null, logical(1L))]
+    # a change of the page_by key writes the heading rows again (stub_cols())
+    pb <- intersect(.plan_merge(.plan_of(plan, "pages"))$page_by, names(tbl))
+    if (length(pb) && nrow(tbl)) {
+      attr(tbl, "rtf_stub_break") <- do.call(paste, c(lapply(pb, function(k) {
+        .fill_page_by_gaps(as.character(tbl[[k]]))
+      }), list(sep = "\r")))
+    }
     tbl <- do.call(stub_cols, c(list(data = tbl), a))
     # (stub_cols() puts the folded column first)
     if (!is.null(stub$heading)) attr(tbl[[1L]], "rtf_heading") <- stub$heading
@@ -6462,6 +6469,12 @@ plan_n_candidates <- function(.plan) {
       tk <- paste0("{", nm, "}")
       if (grepl(tk, out, fixed = TRUE)) {
         key <- if (depth > 0L) paste(pp[seq_len(depth)], collapse = sep)
+        # plan_total()'s "Placebo____Total" totals the column group it sits
+        # in: with no number of its own, it is that group's ("Placebo")
+        if (!is.null(col) && depth > 1L && !is.null(total_col) &&
+            pp[depth] %in% total_col && !(key %in% names(v))) {
+          key <- paste(pp[seq_len(depth - 1L)], collapse = sep)
+        }
         out <- gsub(tk, say(lookup(v, key, all_cols), nm), out,
                     fixed = TRUE)
       }

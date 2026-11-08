@@ -566,7 +566,8 @@
 #'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  Under
 #'   `"group_safe"` / `"group_force"` a group the cut falls inside goes on
 #'   with its continuation row on the next page, counted in its `max_rows`,
-#'   as a cut by `max_rows` does.  `NULL`
+#'   as a cut by `max_rows` does.  A **listing** record is not cut: the first
+#'   page ends before the record the row count falls in.  `NULL`
 #'   (the default): the first page as the others.  Not with `page_by`,
 #'   `split = "by_value"` or a custom `split`.
 #' @param collapse_repeats Columns in which to blank **consecutive repeated
@@ -1172,6 +1173,17 @@ as_rtftables.default <- function(x,
       user_args$cell_styles <- NULL
     }
     if (!is.null(stub_spec_obj)) {
+      # The stub is folded over the whole body, then cut into pages.  Say
+      # where the `page_by` key changes, so every page opens with its own
+      # heading rows (stub_cols() reads this and nothing else does).
+      if (!is.null(page_by_arg) && nrow(body)) {
+        pbi <- .resolve_page_by(page_by_arg, body)
+        if (length(pbi)) {
+          attr(body, "rtf_stub_break") <- do.call(paste, c(lapply(pbi, function(j) {
+            .fill_page_by_gaps(as.character(body[[j]]))
+          }), list(sep = "\r")))
+        }
+      }
       st          <- .apply_stub_vars(body, kw, cell_styles, stub_spec_obj)
       body        <- st$body
       kw          <- st$kw

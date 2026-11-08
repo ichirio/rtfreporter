@@ -2621,6 +2621,47 @@ test_that("{n:sum} leaves the Total column out: it is the sum, not a part", {
   expect_match(txt, "Total (N=254)", fixed = TRUE)
 })
 
+test_that("FT-PL998 [FR-PL976]: a <outer>____Total column's {n} is its outer group's N", {
+  skip_if_no_cards2()
+  adsl <- cards::ADSL
+  adsl$TRT <- as.character(adsl$ARM)
+  adsl$SEX <- as.character(adsl$SEX)
+  adsl$AGEG <- ifelse(adsl$AGE < 75, "YOUNG", "OLD")
+  ard <- cards::bind_ard(
+    cards::ard_tabulate(adsl, variables = TRT),
+    cards::ard_tabulate(adsl, by = c(TRT, AGEG), variables = SEX),
+    cards::ard_tabulate(adsl, by = TRT, variables = SEX))
+  nv <- c(table(adsl$TRT), table(paste(adsl$TRT, adsl$AGEG, sep = "____")))
+  hdr <- data.frame(line = "1", cols = ".values", span = "each",
+                    text = "{col} (N={n})")
+  p <- suppressMessages(normalize_ard(ard)) |>
+    table_plan(cols = c("TRT", "AGEG"), rows = c(group = "variable")) |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_total() |>
+    plan_col_header(header = hdr, values = nv)
+  expect_no_warning(pg <- plan_apply(p, "pages"))
+  h <- unlist(if (inherits(pg, "rtftable")) pg$col_header else pg[[1L]]$col_header)
+  h <- unname(h[grepl("N=", h)])
+  arm <- function(a) as.character(nv[[a]])
+  expect_false(any(grepl("N=NA", h, fixed = TRUE)))
+  # the Total column is the arm's N; every other column keeps its own
+  expect_identical(h, c(
+    sprintf("OLD (N=%d)", nv[["Placebo____OLD"]]),
+    sprintf("YOUNG (N=%d)", nv[["Placebo____YOUNG"]]),
+    sprintf("Total (N=%s)", arm("Placebo")),
+    sprintf("OLD (N=%d)", nv[["Xanomeline High Dose____OLD"]]),
+    sprintf("YOUNG (N=%d)", nv[["Xanomeline High Dose____YOUNG"]]),
+    sprintf("Total (N=%s)", arm("Xanomeline High Dose")),
+    sprintf("OLD (N=%d)", nv[["Xanomeline Low Dose____OLD"]]),
+    sprintf("YOUNG (N=%d)", nv[["Xanomeline Low Dose____YOUNG"]]),
+    sprintf("Total (N=%s)", arm("Xanomeline Low Dose"))))
+  # a number of its own for the Total column still wins
+  p2 <- plan_col_header(p, header = hdr, values = c(nv, "Placebo____Total" = 7))
+  pg2 <- plan_apply(p2, "pages")
+  h2 <- unlist(if (inherits(pg2, "rtftable")) pg2$col_header else pg2[[1L]]$col_header)
+  expect_true("Total (N=7)" %in% h2)
+})
+
 test_that("plan_total() says what is wrong", {
   skip_if_no_cards2()
   adsl <- cards::ADSL

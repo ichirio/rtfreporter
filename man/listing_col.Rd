@@ -86,7 +86,9 @@ is what makes the value \strong{reappear at the top of the next page} --
 the suppression happens per page, after the split, so a record
 continued across a page break still shows its subject.}
 \item{Wrapped cells}{A cell that already wraps onto several lines is
-padded as usual: there is no one value to repeat.}
+padded as usual, but a record whose lines equal the previous
+record's are blanked all the same: a repeat is blanked whether or
+not the value wraps.}
 }}
 }
 \value{
