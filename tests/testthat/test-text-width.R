@@ -102,3 +102,29 @@ test_that("auto_col_widths(protect_cols=) keeps a column at natural width when s
   # The data columns absorbed the squeeze.
   expect_lt(sum(protected[-1L]), sum(natural[-1L]))
 })
+
+test_that("FT-TB693 [FR-TB542 FR-TB388]: Arial and Times New Roman are measured character by character (#740)", {
+  a <- function(x, f = "Arial") text_width_in(x, font = f, font_size_half_points = 24L)
+  # Helvetica's metrics, which are Arial's: i 222, W 944, n 556 (1/1000 em)
+  expect_equal(a("iiii"), 4 * 222 / 1000 * 12 / 72)
+  expect_equal(a("WWWW"), 4 * 944 / 1000 * 12 / 72)
+  expect_true(a("iiii") < a("nnnn") && a("nnnn") < a("WWWW"))
+  # spaces, case and hyphens do not matter; Helvetica is the same widths
+  expect_identical(a("Total"), a("Total", "arial"))
+  expect_identical(a("Total"), a("Total", "Helvetica"))
+  # Times New Roman: Times-Roman's metrics (i 278, W 944)
+  expect_equal(a("i", "Times New Roman"), 278 / 1000 * 12 / 72)
+  expect_identical(a("W", "Times New Roman"), a("W", "times"))
+  # a character outside printable ASCII takes the width of "n"
+  expect_equal(a("\u00e9"), a("n"))
+  # Courier New is unchanged: one width for every character
+  expect_identical(text_width_in("iiii"), text_width_in("WWWW"))
+})
+
+test_that("FT-TB694 [FR-TB543 FR-TB393]: an East Asian wide character is two n's in a proportional font with an east_asian slot (#740)", {
+  slots <- c(latin = "Arial", east_asian = "MS Mincho")
+  w <- function(x, f) text_width_in(x, font = f, font_size_half_points = 24L)
+  expect_equal(w("\u65e5\u672c", slots), 4 * w("n", "Arial"))
+  # without the slot, one n each
+  expect_equal(w("\u65e5\u672c", "Arial"), 2 * w("n", "Arial"))
+})

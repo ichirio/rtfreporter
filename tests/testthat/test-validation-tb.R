@@ -147,7 +147,7 @@ test_that("FT-TB686 [FR-TB485 FR-TB488 FR-TB505 FR-TB508]: the border shorthand 
 })
 
 test_that("FT-TB687 [FR-TB453]: rtf_table_style(row_height_twips = ) is the row height; NULL is the font-aware default", {
-  expect_identical(rtf_table_style(row_height_twips = 400)$row_height_twips, 400)
+  expect_identical(rtf_table_style(row_height_twips = 400)$row_height_twips, 400L)
   expect_null(rtf_table_style()$row_height_twips)
   d <- data.frame(a = 1, b = 2)
   s <- .render_to_string(.test_doc_with(rtftable(d, style = rtf_table_style(row_height_twips = 400))))
@@ -193,4 +193,103 @@ test_that("FT-IX025 [FR-IX340]: rtf_border(all = , top = ): the side named expli
   expect_identical(a, b)
   expect_identical(a$top$style, "dot")
   for (side in c("bottom", "left", "right")) expect_identical(a[[side]]$style, "double")
+})
+
+# The table rows of a one-table document, as written.
+.vg_body <- function(tbl) {
+  doc <- rtf_document() |> rtf_section(page = 1) |> rtf_tables(list(tbl))
+  s <- .render_to_string(doc)
+  regmatches(s, gregexpr("\\\\trowd[^\n]*?\\\\row", s))[[1L]]
+}
+.vg_df <- function() data.frame(A = c("a1", "a2"), B = c("b1", "b2"), C = c("c1", "c2"))
+
+test_that("FT-TB696 [FR-TB547 FR-TB548 FR-TB549]: rtftable() row_title, table_width_pct_of_writable and table_align", {
+  # row headings are left-aligned, the other columns centred
+  expect_true(grepl("\\ql\\li0\\ri0 a1\\cell\\qc\\li0\\ri0 b1\\cell\\qc",
+                    .vg_body(rtftable(.vg_df()))[2L], fixed = TRUE))
+  expect_true(grepl("\\ql\\li0\\ri0 a1\\cell\\ql\\li0\\ri0 b1\\cell\\qc",
+                    .vg_body(rtftable(.vg_df(), row_title = c(1, 2)))[2L], fixed = TRUE))
+  expect_true(grepl("\\ql\\li0\\ri0 a1\\cell\\ql\\li0\\ri0 b1\\cell\\qc",
+                    .vg_body(rtftable(.vg_df(), row_title = c("A", "B")))[2L], fixed = TRUE))
+  # half the writable width (13680 twips)
+  expect_true(grepl("\\cellx6840\\ql", .vg_body(rtftable(.vg_df(), table_width_pct_of_writable = 0.5))[2L],
+                    fixed = TRUE))
+  expect_true(grepl("\\cellx13680\\ql", .vg_body(rtftable(.vg_df()))[2L], fixed = TRUE))
+  # placement
+  expect_false(any(grepl("\\\\trq[lcr]", .vg_body(rtftable(.vg_df())))))
+  expect_true(all(grepl("\\trqc", .vg_body(rtftable(.vg_df(), table_align = "center")), fixed = TRUE)))
+  expect_true(all(grepl("\\trqr", .vg_body(rtftable(.vg_df(), table_align = "right")), fixed = TRUE)))
+  expect_error(rtftable(.vg_df(), table_align = "middle"),
+               "`table_align` must be 'left', 'center', or 'right'.", fixed = TRUE)
+})
+
+test_that("FT-TB697 [FR-TB550 FR-TB551 FR-TB558]: rtftable() font size, font and markup are the table's own", {
+  r <- .vg_body(rtftable(.vg_df(), font_size_half_points = 24L))[2L]
+  expect_true(grepl("\\trrh290", r, fixed = TRUE))
+  expect_true(grepl("\\fs24 a1\\cell", r, fixed = TRUE))
+  expect_false(grepl("\\fs", .vg_body(rtftable(.vg_df()))[2L], fixed = TRUE))
+  # a family not in the font table is added to it
+  doc <- rtf_document() |> rtf_section(page = 1) |> rtf_tables(list(rtftable(.vg_df(), font = "Arial")))
+  s <- .render_to_string(doc)
+  expect_true(grepl("{\\f1\\fnil\\fcharset0 Arial;}", s, fixed = TRUE))
+  expect_true(grepl("\\f1 a1\\cell", .vg_body(rtftable(.vg_df(), font = "Arial"))[2L], fixed = TRUE))
+  # markup
+  d <- data.frame(A = "x >= 1", B = "y^{2}")
+  expect_true(grepl("x >= 1\\cell\\qc\\li0\\ri0 y{\\super 2}\\cell", .vg_body(rtftable(d))[2L], fixed = TRUE))
+  expect_true(grepl("x \\u8805? 1\\cell\\qc\\li0\\ri0 y^\\{2\\}\\cell",
+                    .vg_body(rtftable(d, markup = "relational"))[2L], fixed = TRUE))
+  expect_true(grepl("x >= 1\\cell\\qc\\li0\\ri0 y^\\{2\\}\\cell",
+                    .vg_body(rtftable(d, markup = "none"))[2L], fixed = TRUE))
+})
+
+test_that("FT-TB698 [FR-TB552 FR-TB553 FR-TB554 FR-TB555]: rtftable() exact row heights, header and blank row heights, and cell_valign", {
+  expect_true(all(startsWith(.vg_body(rtftable(.vg_df(), row_height_exact = TRUE)), "\\trowd\\trrh-230")))
+  expect_true(all(startsWith(.vg_body(rtftable(.vg_df())), "\\trowd\\trrh230")))
+  r <- .vg_body(rtftable(.vg_df(), header_row_height_twips = 400L))
+  expect_true(startsWith(r[1L], "\\trowd\\trrh400"))
+  expect_true(startsWith(r[2L], "\\trowd\\trrh230"))
+  r <- .vg_body(rtftable(.vg_df(), blank_rows = 1L, blank_row_height_twips = 111L))
+  expect_identical(r[3L], "\\trowd\\trgaph0\\trleft0\\trrh111\\clvertalb\\cellx13680 \\cell\\row")
+  expect_true(startsWith(r[2L], "\\trowd\\trrh230"))
+  r <- .vg_body(rtftable(.vg_df(), blank_rows = 1L))
+  expect_true(startsWith(r[3L], "\\trowd\\trgaph0\\trleft0\\trrh230"))
+  # vertical alignment
+  expect_true(grepl("\\clvertalb\\cellx", .vg_body(rtftable(.vg_df()))[2L], fixed = TRUE))
+  expect_true(grepl("\\clvertalt\\cellx", .vg_body(rtftable(.vg_df(), cell_valign = "top"))[2L], fixed = TRUE))
+  expect_true(grepl("\\clvertalc\\cellx", .vg_body(rtftable(.vg_df(), cell_valign = "center"))[2L], fixed = TRUE))
+  expect_error(rtftable(.vg_df(), cell_valign = "middle"),
+               "`cell_valign` must be 'top', 'center', or 'bottom'.", fixed = TRUE)
+})
+
+test_that("FT-TB699 [FR-TB556 FR-TB557]: rtftable() cell_styles override single cells; blank_row_normalize detects and collapses blank rows", {
+  r <- .vg_body(rtftable(.vg_df(), cell_styles = list(list(bold = c(NA, TRUE, NA)), NULL)))
+  expect_true(grepl("a1\\cell\\qc\\li0\\ri0 \\b b1\\b0 \\cell\\qc\\li0\\ri0 c1\\cell", r[2L], fixed = TRUE))
+  expect_false(grepl("\\b ", r[3L], fixed = TRUE))
+  # an empty data row after a separator: detected, then the two collapsed
+  d <- data.frame(A = c("a1", "", "a3"), B = c("b1", NA, "b3"))
+  blank <- "\\trowd\\trgaph0\\trleft0\\trrh230\\clvertalb\\cellx13680 \\cell\\row"
+  both <- .vg_body(rtftable(d, blank_rows = 1L))
+  expect_length(both, 4L)
+  expect_identical(both[3L], blank)
+  detect <- .vg_body(rtftable(d, blank_rows = 1L, blank_row_normalize = "detect"))
+  expect_identical(detect[3:4], c(blank, blank))
+  none <- .vg_body(rtftable(d, blank_rows = 1L, blank_row_normalize = "none"))
+  expect_length(none, 5L)
+  expect_true(grepl("\\ql\\li0\\ri0 \\cell\\qc\\li0\\ri0 \\cell\\row", none[4L], fixed = TRUE))
+})
+
+test_that("FT-TB700 [FR-TB559]: options(rtfreporter.print_ascii = TRUE) prints an rtftable with ASCII rules", {
+  t <- rtftable(data.frame(A = c("a1", "a2"), B = c("b1", "b2")))
+  old <- options(rtfreporter.print_ascii = TRUE)
+  on.exit(options(old), add = TRUE)
+  out <- capture.output(print(t))
+  expect_identical(out[1L], "------")
+  expect_true(all(!grepl("[^ -~]", out)))
+  options(rtfreporter.print_ascii = FALSE)
+  out <- capture.output(print(t))
+  if (isTRUE(l10n_info()[["UTF-8"]]) || identical(l10n_info()[["codepage"]], 65001L)) {
+    expect_identical(out[1L], strrep("─", 6L))
+  } else {
+    expect_identical(out[1L], "------")
+  }
 })

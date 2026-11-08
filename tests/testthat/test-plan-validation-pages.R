@@ -154,6 +154,54 @@ test_that("FT-PL274 [FR-PL361 FR-PL367 FR-PL369]: plan_stub() derives its column
   expect_identical(names(alone), names(d))
 })
 
+test_that("FT-PL914 [FR-PL912 FR-PL913]: plan_stub(heading = ) is the stub's header cell, not its name (tflspec#538)", {
+  d <- vp_wide()
+  # the header the page prints: its own, else the columns' names
+  hdr <- function(p) {
+    pg <- vp_first(vp_pages(p))
+    unlist(pg$col_header %||% names(pg$data))
+  }
+  base <- table_plan(d) |> plan_style()
+  # by default the name is the heading; "" leaves it blank, either fold
+  expect_identical(hdr(base |> plan_stub(vars = c("grp", "label"), name = "row_label"))[1L],
+                   "row_label")
+  for (b in c(FALSE, TRUE)) {
+    h <- hdr(base |> plan_stub(vars = c("grp", "label"), name = "row_label",
+                               before = b, heading = ""))
+    expect_identical(h, c("", "X", "Y"), info = b)
+    expect_identical(hdr(base |> plan_stub(vars = c("grp", "label"), name = "row_label",
+                                           before = b, heading = "Parameter")),
+                     c("Parameter", "X", "Y"), info = b)
+  }
+  # the data keeps the name (widths and plan_col_header() name it)
+  p <- base |> plan_stub(vars = c("grp", "label"), name = "row_label", before = TRUE,
+                         heading = "")
+  expect_identical(names(vp_first(vp_pages(p))$data)[1L], "row_label")
+  # two column keys: the stub's cell on the leaf row is blank, the spanners stay
+  long <- data.frame(TRT = rep(c("A", "B"), each = 4), WORST = rep(c("Low", "High"), 4),
+                     PARAM = rep(c("ALT", "ALT", "AST", "AST"), 2), stat_name = "n",
+                     stat = 1:8, stringsAsFactors = FALSE)
+  two <- table_plan(long, cols = c("TRT", "WORST"), rows = c(param = "PARAM"),
+                    label = c(row = "stat_name")) |>
+    plan_cells("{n:.0f}", notes = FALSE) |> plan_style() |>
+    plan_stub(name = "row_label", before = TRUE, heading = "")
+  ch <- vp_first(vp_pages(two))$col_header
+  leaf <- unlist(ch[[length(ch)]])
+  expect_identical(leaf[1L], "")
+  expect_false(any(unlist(ch) == "row_label"))
+  expect_true(all(c("A", "B") %in% unlist(ch)))
+  # a plan_col_header() line naming the stub still sets its cell
+  named <- table_plan(long[long$WORST == "Low", ], cols = "TRT", rows = c(param = "PARAM"),
+                      label = c(row = "stat_name")) |>
+    plan_cells("{n:.0f}", notes = FALSE) |> plan_style() |>
+    plan_stub(name = "row_label", before = TRUE, heading = "") |>
+    plan_col_header(lines = list(c(row_label = "Parameter", .values = "{col}")))
+  expect_identical(unlist(vp_first(vp_pages(named))$col_header)[1L], "Parameter")
+  # one text only
+  expect_error(plan_stub(base, heading = c("a", "b")), "one text")
+  expect_error(plan_stub(base, heading = NA_character_), "one text")
+})
+
 test_that("FT-PL275 [FR-PL368]: plan_stub() called twice merges field by field", {
   d <- vp_wide()
   a <- vp_pages(table_plan(d) |> plan_style() |>
@@ -263,6 +311,36 @@ test_that("FT-PL282 [FR-PL405 FR-PL409 FR-PL410]: plan_cell_style() by column na
   expect_identical(names(v$data)[1:2], c("group", "label"))
   expect_identical(vapply(v$col_spec, function(s) isTRUE(s$bold), NA),
                    c(FALSE, FALSE, TRUE, TRUE, TRUE))
+})
+
+
+test_that("FT-PL989 [FR-PL972 FR-PL973]: plan_cell_style(align = , background = ) align and fill whole columns, the header, or the rows a condition chooses", {
+  d <- vp_wide()
+  pg <- function(p) vp_first(vp_pages(p))
+  # whole columns: that column alone, as style_cols() sets them
+  c1 <- pg(table_plan(d) |> plan_cell_style(cols = "X", align = "right", background = "#EEEEEE"))
+  expect_identical(c1$col_spec[[3L]]$align, "right")
+  expect_identical(c1$col_spec[[3L]]$background, "#EEEEEE")
+  expect_false(identical(c1$col_spec[[4L]]$align, "right"))
+  expect_null(c1$col_spec[[4L]]$background)
+  direct <- style_cols(vp_first(vp_direct(d)), cols = "X", align = "right", background = "#EEEEEE")
+  expect_identical(c1$col_spec, direct$col_spec)
+  # the header: its own alignment, the body's left as it was
+  h <- pg(table_plan(d) |> plan_cell_style(header = TRUE, cols = "X", align = "right"))
+  expect_identical(h$col_spec[[3L]]$header_align, "right")
+  expect_false(identical(h$col_spec[[3L]]$align, "right"))
+  # a condition: the rows it chooses only (the "n" rows), NA elsewhere
+  w <- pg(table_plan(d) |> plan_cell_style(where = ~ label == "n", cols = "X",
+                                           align = "left", background = "#EEEEEE"))
+  expect_identical(w$cell_styles[[1L]]$align, c(NA, NA, "left", NA))
+  expect_identical(w$cell_styles[[1L]]$background, c(NA, NA, "#EEEEEE", NA))
+  expect_null(w$cell_styles[[2L]])
+  expect_false(identical(w$col_spec[[3L]]$align, "left"))
+  # another alignment stops at plan_apply(); the header takes no background
+  expect_error(vp_pages(table_plan(d) |> plan_cell_style(cols = "X", align = "middle")),
+               'must be "left", "center", or "right"', fixed = TRUE)
+  expect_error(plan_cell_style(table_plan(d), header = TRUE, background = "#EEEEEE"),
+               "takes bold, italic, underline, align and border", fixed = TRUE)
 })
 
 
@@ -499,7 +577,7 @@ test_that("FT-PL292 [FR-PL486 FR-PL488 FR-PL489]: the blocks sit on a single pag
   expect_identical(attr(pg[[1L]], "rtf_footnotes"), "F1")
   lines <- vp_rtf_lines(pg)
   expect_true(any(grepl("\\b T1\\b0", lines, fixed = TRUE)))
-  expect_true(any(grepl("\\u34920? 2", lines, fixed = TRUE)))      # U+8868 as RTF writes it
+  expect_true(any(grepl("\\u-30616? 2", lines, fixed = TRUE)))      # U+8868 as RTF writes it
   expect_true(any(grepl("F1\\cell", lines, fixed = TRUE)))
   two <- vp_pages(table_plan(d) |> plan_titles("T1") |> plan_titles("T2"))
   expect_identical(attr(two[[1L]], "rtf_titles"), "T2")
@@ -538,4 +616,66 @@ test_that("FT-PL294 [FR-PL372 FR-PL398 FR-PL403 FR-PL421 FR-PL431 FR-PL448 FR-PL
   expect_error(plan_titles(not, "t"), msg, fixed = TRUE)
   expect_error(plan_footnotes(not, "f"), msg, fixed = TRUE)
   expect_error(plan_after(not, identity), msg, fixed = TRUE)
+})
+
+test_that("FT-PL999 [FR-PL977]: plan_stub() under page_by writes a heading row again on each page, one visit or two", {
+  mk <- function(visits, paged = TRUE) {
+    st <- expand.grid(VISIT = visits, PARAM = c("ALT", "HGB"), ARM = "Placebo", stringsAsFactors = FALSE)
+    st$variable <- "AVAL"; st$stat_name <- "mean"; st$stat <- seq_len(nrow(st)) * 1.5
+    st$.label <- NA_character_; st$.kind <- "continuous"
+    p <- table_plan(st, cols = "ARM", rows = c(group1 = "PARAM", group2 = "VISIT", group3 = "variable")) |>
+      plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+      plan_stub(name = "row_label")
+    p <- if (paged) plan_paginate_rows(p, max_rows = 30L, split = "group_safe", page_by = "group1")
+         else plan_paginate_rows(p, max_rows = 30L, split = "group_safe")
+    lapply(vp_pages(p), function(z) z$data$row_label)
+  }
+  nb <- intToUtf8(160L)
+  one <- mk("WEEK 12")
+  expect_length(one, 2L)
+  for (pg in one) expect_identical(pg[1:2], c("WEEK 12", paste0(nb, nb, nb, nb, "AVAL")))
+  two <- mk(c("WEEK 4", "WEEK 12"))
+  expect_length(two, 2L)
+  for (pg in two) expect_identical(pg[c(1L, 4L)], c("WEEK 4", "WEEK 12"))
+  # no page_by: one stub over the table, PARAM and VISIT each written as before
+  whole <- mk("WEEK 12", paged = FALSE)
+  expect_identical(sub("^\u00a0+", "", unlist(whole)[1:3]), c("ALT", "WEEK 12", "AVAL"))
+  expect_identical(sum(grepl("WEEK 12$", unlist(whole))), 2L)
+})
+
+test_that("FT-PL1000 [FR-PL977]: plan_stub(before = TRUE) with a hidden page_by key writes the heading rows on each page", {
+  mk <- function(visits) {
+    st <- expand.grid(AVISIT = visits, PARAM = c("ALT", "HGB"), ARM = "Placebo", stringsAsFactors = FALSE)
+    st$variable <- "AVAL"; st$stat_name <- "mean"; st$stat <- seq_len(nrow(st)) * 1.5
+    st$.label <- NA_character_; st$.kind <- "continuous"
+    p <- table_plan(st, cols = "ARM", rows = list(group1 = "PARAM", group2 = "AVISIT", group3 = "variable")) |>
+      plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+      plan_stub(name = "row_label", before = TRUE) |>
+      plan_paginate_rows(max_rows = 30L, split = "group_safe", page_by = "group1",
+                         heading = "Parameter: {value}", heading_at = "title") |>
+      plan_hide(cols = "group1")
+    lapply(vp_pages(p), function(z) z$data$row_label)
+  }
+  one <- mk("WEEK 12")
+  expect_length(one, 2L)
+  for (pg in one) expect_identical(pg[1:2], c("WEEK 12", paste0(strrep(" ", 4L), "AVAL")))
+  two <- mk(c("WEEK 4", "WEEK 12"))
+  for (pg in two) expect_identical(pg[c(1L, 4L)], c("WEEK 4", "WEEK 12"))
+})
+
+test_that("FT-PL1001 [FR-PL977]: a two-level stub (visit, variable) under a hidden page_by key opens each page with both heading rows", {
+  st <- expand.grid(AVISIT = "WEEK 12", PARAM = c("ALT", "HGB"), ARM = "Placebo", variable = c("AVAL", "CHG"),
+                    stringsAsFactors = FALSE)
+  st$stat_name <- "mean"; st$stat <- seq_len(nrow(st)) * 1.5
+  st$.label <- NA_character_; st$.kind <- "continuous"
+  p <- table_plan(st, cols = "ARM", rows = list(group1 = "PARAM", group2 = "AVISIT", group3 = "variable")) |>
+    plan_cells(continuous = c(Mean = "{mean:.1f}")) |>
+    plan_stub(name = "row_label", before = TRUE) |>
+    plan_sort(keys = c("group1", "group2", "group3")) |>
+    plan_paginate_rows(max_rows = 30L, split = "group_safe", page_by = "group1",
+                       heading = "Parameter: {value}", heading_at = "title") |>
+    plan_hide(cols = "group1")
+  pg <- lapply(vp_pages(p), function(z) z$data$row_label)
+  expect_length(pg, 2L)
+  for (x in pg) expect_identical(x[1:2], c("WEEK 12", paste0(strrep(" ", 4L), "AVAL")))
 })

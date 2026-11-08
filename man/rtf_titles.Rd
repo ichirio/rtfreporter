@@ -20,10 +20,17 @@ rtf_titles(
 \item{titles}{A list of length = number of contents, or length 1 (common).
 A page's heading (\code{rtf_tables(auto_title = TRUE)}, a plan's
 \code{plan_paginate_group(heading_at = "title")}) is not replaced: it
-stays as the block's last row, under the titles given.}
+stays as the block's last row, under the titles given, or at the
+block's \code{{PAGE_HEADING}} row.  That row -- a title row whose whole text
+is \code{{PAGE_HEADING}}, e.g. \code{list(text = "{PAGE_HEADING}", align = "left")} -- says where the heading goes among the other rows; it keeps
+the row's \code{align}, \code{bold} and so on, and the heading's text fills it.
+A page with no heading loses the row, so one block serves with and
+without headings.  The marker is the row's whole text: with other text,
+or twice in a block, it is an error.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
-this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
+this block, over the document's \code{\link[=rtf_style]{rtf_style()}} (its section, then its
+shared level).
 Anything left \code{NULL} is inherited.
 \describe{
 \item{\code{font}}{names a family (e.g. \code{"Arial"}); one not already in the
@@ -54,9 +61,13 @@ title).  Each content is a page of its own unless it was added with
 \details{
 Each element is a title \strong{block}: either a character vector (one entry per
 row, default styling) or a list of rows, where a row is a string or a styled
-\code{list(text=, align=, bold=, italic=, underline=, color=, border=)}. An empty
-string (\code{""}) is a blank row. The block renders as a single-column table the
-same width as the content; title rows default to centred + bold.
+\code{list(text=, align=, bold=, italic=, underline=, color=, border=, row_height_twips=)}. An empty
+string (\code{""}), or \code{NA}, is a blank row. The block renders as centred paragraphs, or,
+with \code{rtf_style(title_format = "table")}, as a single-column table the
+same width as the content; title rows default to centred + bold.  A row's
+\code{row_height_twips} is that row's height, over the block's
+\code{row_height_twips}; it applies to the table form
+(\code{rtf_style(title_format = "table")}), as the block's does.
 }
 \examples{
 df1 <- data.frame(Parameter = "Age", Value = "75.1")
@@ -64,7 +75,7 @@ df2 <- data.frame(Parameter = "Sex", Value = "53\%")
 doc <- rtf_document() |>
   rtf_tables(list(df1, df2)) |>
   rtf_titles(list(
-    c("Table 14.1.1", "{HALF_BLANK_ROW}", "Safety Population"),
+    c("Table 14.1.1", "", "Safety Population"),
     "Table 14.1.2"
   ))
 

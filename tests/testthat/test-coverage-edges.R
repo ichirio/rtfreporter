@@ -3,6 +3,10 @@
 # empty / one-row / one-column edges that no other file exercised.  Nothing
 # here reads the network or draws random numbers.
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 # ── page, default format, watermark: validation and print methods ──────────
 
 test_that("rtf_page() rejects a malformed paper_size and prints its geometry", {
@@ -958,7 +962,7 @@ test_that("plot objects are drawn into a PNG, and the options are checked", {
   expect_error(rtfplot(file.path(tempdir(), "missing.png")), "Image file not found")
   gif <- edge_write(as.raw(1:10), ".gif")
   on.exit(unlink(gif), add = TRUE)
-  expect_error(rtfplot(gif), "supports PNG and JPEG files only")
+  expect_error(rtfplot(gif), "supports PNG, JPEG and EMF files only")
 })
 
 test_that("a plot object needs a PNG device", {
@@ -1508,11 +1512,12 @@ test_that("a row of cell_rows() may be one bare guard (#549)", {
                                               statistic = ~ c("n", "p")),
                           .total_n = TRUE)
   w <- widen_ard(normalize_ard(ard), cols = "TRT", rows = c(group = "variable"),
-                 cells = cell_rows("1" = n > 0 ~ "has"), notes = FALSE)
+                 cells = cell_rows(n > 0 ~ "has"), notes = FALSE)
   expect_true(all(unlist(w[, -(1:2)]) == "has"))
+  # (unnamed: a row a level, as SEX has two -- a named row would collide, #840)
   # the same as the guard inside c()
   w2 <- widen_ard(normalize_ard(ard), cols = "TRT", rows = c(group = "variable"),
-                  cells = cell_rows("1" = c(n > 0 ~ "has")), notes = FALSE)
+                  cells = cell_rows(c(n > 0 ~ "has")), notes = FALSE)
   expect_identical(w, w2)
   out <- capture.output(print(cell_rows("1" = n == 0 ~ "0")))
   expect_match(out[2], 'n == 0 ~ "0"', fixed = TRUE)

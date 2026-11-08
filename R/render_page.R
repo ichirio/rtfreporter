@@ -66,7 +66,9 @@
     } else {
       .render_text_block_table(
         b$title, title_w, is_footer = FALSE, ctx$font_half_points,
-        ctx$doc_pad_l, ctx$doc_pad_r, "\\clvertalt", content_align, ctx$color_index_map,
+        ctx$doc_pad_l, ctx$doc_pad_r,
+        paste0("\\clvertalt", .cell_vpad_cmd(ctx$doc_pad_t, ctx$doc_pad_b)),
+        content_align, ctx$color_index_map,
         doc_row_height = ctx$doc_row_height, markup = ctx$doc_markup,
         style = doc$title_style, font_index_map = ctx$font_index_map,
         current_page = p_idx, total_pages = ctx$total_pages)
@@ -94,7 +96,8 @@
         doc_row_height = ctx$doc_row_height,
         doc_pad_l = ctx$doc_pad_l, doc_pad_r = ctx$doc_pad_r,
         doc_markup = ctx$doc_markup,
-        font_index_map = ctx$font_index_map)
+        font_index_map = ctx$font_index_map,
+        doc_pad_t = ctx$doc_pad_t, doc_pad_b = ctx$doc_pad_b)
       # An INDEPENDENT table: RTF merges consecutive \trowd runs that no
       # paragraph separates, so without the gap the footnote would still be
       # the body table wearing different \cellx values -- and could not carry
@@ -123,7 +126,8 @@
                    ctx$color_index_map,
                    doc_row_height = ctx$doc_row_height,
                    doc_pad_l = ctx$doc_pad_l, doc_pad_r = ctx$doc_pad_r,
-                   doc_markup = ctx$doc_markup)
+                   doc_markup = ctx$doc_markup,
+                   doc_pad_t = ctx$doc_pad_t, doc_pad_b = ctx$doc_pad_b)
 }
 
 .render_content.rtfplot <- function(x, ctx) {

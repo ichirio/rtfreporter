@@ -41,8 +41,9 @@ analysis variable is used (as \code{group}).
 \describe{
 \item{Names}{Each name is the column the finished table gets, and
 later verbs refer to it by that name (\code{\link[=plan_stub]{plan_stub()}},
-\code{plan_paginate_group(col = )}, \code{\link[=plan_hide]{plan_hide()}}); left unnamed, the
-first key is called \code{group}.}
+\code{plan_paginate_group(col = )}, \code{\link[=plan_hide]{plan_hide()}}); left unnamed, a
+key keeps its column's name (\code{rows = "variable"} gives a column
+\code{variable}).}
 \item{\code{"variable"}}{The column that holds the analysis variable's
 name, so \code{c(group = "variable")} makes one block of rows per
 analysis variable (AGE, SEX, ...).}
@@ -92,7 +93,9 @@ column whose value a cell prints, \code{value = "AVAL"}.  That makes a
 records plan: one row a \code{rows} key (a subject: \code{rows = c(subject = ~ "{USUBJID}/{AGE}/{SEX}")}), the records' values spread across \code{cols},
 one cell template (\code{plan_cells("{value:.3s}", na = "BLQ")}) -- a
 listing laid out as a table, with nothing reshaped by hand.  Two
-records of one key and column stop.  See \code{\link[=plan_append]{plan_append()}} for its
+records of one key and column (the row key as resolved, a template
+included) with different values stop, naming the key, the column and
+the values; the same value twice is one.  See \code{\link[=plan_append]{plan_append()}} for its
 summary under it.}
 }
 \value{

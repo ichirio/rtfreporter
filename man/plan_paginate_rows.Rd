@@ -13,19 +13,25 @@ plan_paginate_rows(
   cont_label = NULL,
   page_by = NULL,
   heading = NULL,
-  heading_at = NULL
+  heading_at = NULL,
+  na_label = NULL
 )
 }
 \arguments{
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
 
 \item{max_rows}{The most body rows a page holds, for the
-\code{"group_safe"} and \code{"group_force"} splits (which need it).  Blank rows
-count only with \code{plan_blanks(counted = TRUE)}.}
+\code{"group_safe"} and \code{"group_force"} splits (which need it).  Given with
+the split left out, the split is \code{"group_safe"} (a listing's is left
+to \code{\link[=as_rtftables]{as_rtftables()}}, which does the same on its record column); with
+a split that has no row budget (\code{"none"}, \code{"rows"}, a page per value)
+it stops.  Blank rows count only with \code{plan_blanks(counted = TRUE)}.}
 
 \item{split}{How a page break is placed, \code{as_rtftables(split = )}:
 \describe{
-\item{\code{"none"}}{(default) one page; \code{max_rows} is not read.}
+\item{\code{"none"}}{one page; the default when \code{max_rows} is not given
+(with \code{max_rows} alone the default is \code{"group_safe"}).  Written
+out with \code{max_rows} it stops: the budget would have nothing to cut.}
 \item{\code{"group_safe"}}{whole groups to a page: a group that does not
 fit starts the next page; one longer than a page is cut, with a
 continuation label.}
@@ -39,8 +45,12 @@ a group straddling it continued on the next page; only
 \item{break_before}{With \code{split = "rows"}: the row positions to cut
 before, \code{as_rtftables(split_rows = )}.}
 
-\item{min_group_rows}{The fewest rows of a group left on a page or
-carried to the next, to avoid a widow or an orphan.}
+\item{min_group_rows}{Widow / orphan control, \code{as_rtftables(min_group_rows = )}
+(default \code{2}; \code{0} turns it off).  A group that starts on a page with fewer
+than this many rows \strong{after its first row} (its heading, in a
+value-grouped column the row that opens the group) moves whole to the
+next page; a cut inside a group is pulled back so at least this many of
+its rows go on to the next page.}
 
 \item{cont_label}{The text added to a group's heading on the page it is
 continued on, \code{as_rtftables(cont_label = )}.}
@@ -56,6 +66,11 @@ template and where it prints, as \code{\link[=plan_paginate_group]{plan_paginate
 \code{page_by} column \code{{value}} is its value; with several the heading
 carries a token for each column by its name, \code{"Analyte: {ANALYTE}"},
 and no \code{{value}}.}
+
+\item{na_label}{With \code{page_by}: the text a \strong{blank} BY value (\code{""} or \code{NA}) prints as in the page's heading (\code{{value}}, a \code{{<column>}}) and in
+its name.  The default \code{NULL} is the empty text, so a template
+\code{"Severity: {value}"} prints \code{"Severity: "}.  Like \code{cont_label}, a text
+of the page, and like \code{na}, the text of a missing value.}
 }
 \value{
 The plan, with one more layer.

@@ -59,7 +59,7 @@ test_that("rtfplot() rejects non-existent files", {
 test_that("rtfplot() rejects unsupported extensions", {
   f <- tempfile(fileext = ".bmp"); file.create(f)
   on.exit(unlink(f), add = TRUE)
-  expect_error(rtfplot(f), "PNG and JPEG")
+  expect_error(rtfplot(f), "PNG, JPEG and EMF")
 })
 
 test_that("rtfplot() rejects invalid align", {
@@ -285,7 +285,7 @@ test_that("rtfplot() accepts each align value", {
 test_that("rtfplot() rejects unrecognised extension via file_ext()", {
   # Empty extension is also unsupported.
   f <- tempfile(); file.create(f); on.exit(unlink(f), add = TRUE)
-  expect_error(rtfplot(f), "PNG and JPEG")
+  expect_error(rtfplot(f), "PNG, JPEG and EMF")
 })
 
 # ──────── plot objects, drawn here rather than saved by hand (#394) ────────
@@ -519,4 +519,136 @@ test_that("rtf_figures(render_*) leave an rtfplot() and a file path as they are"
                      doc$contents[[1L]]$content$img_height), c(400L, 200L))
   expect_identical(doc$contents[[2L]]$content, rtf_figures(rtf_document(), f)$contents[[1L]]$content)
   expect_identical(readBin(f, "raw", file.size(f)), bytes)
+})
+
+test_that("FT-AS124 [FR-AS233 FR-AS214]: an EMF file is embedded as it is, at its frame's size (#739)", {
+  emf <- test_path("fixtures", "figure.emf")
+  fig <- rtfplot(emf)
+  expect_identical(fig$img_type, "emf")
+  # the frame, in 0.01 mm, from the header record (rclFrame, bytes 25-40)
+  hdr <- readBin(readBin(emf, "raw", 40L)[25:40], "integer", n = 4L, size = 4L, endian = "little")
+  expect_identical(c(fig$img_width, fig$img_height), c(hdr[3] - hdr[1], hdr[4] - hdr[2]))
+  # drawn 3 x 2 in: the frame keeps that shape
+  expect_equal(fig$img_width / fig$img_height, 1.5, tolerance = 0.02)
+  # the page size is the frame's: 2540 of 0.01 mm an inch, 1440 twips
+  disp <- rtfreporter:::.rtfplot_display_twips(fig)
+  expect_identical(disp$w, as.integer(round(fig$img_width / 2540 * 1440)))
+  expect_identical(disp$h, as.integer(round(fig$img_height / 2540 * 1440)))
+  # width_twips alone keeps the aspect
+  sized <- rtfreporter:::.rtfplot_display_twips(rtfplot(emf, width_twips = 4320L))
+  expect_equal(sized$h, 2880, tolerance = 0.02)
+  expect_output(print(fig), "mm  (the EMF's frame)", fixed = TRUE)
+  out <- tempfile(fileext = ".rtf")
+  on.exit(unlink(out), add = TRUE)
+  generate_rtfreport(rtf_figures(rtf_document(), emf), out, overwrite = TRUE)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "")
+  expect_match(txt, sprintf("\\pict\\emfblip\\picw%d\\pich%d\\picwgoal%d\\pichgoal%d",
+                            fig$img_width, fig$img_height, disp$w, disp$h), fixed = TRUE)
+  # the file's bytes, as hex
+  bytes <- readBin(emf, "raw", file.size(emf))
+  expect_match(txt, toupper(paste(format(as.hexmode(as.integer(bytes[1:60])), width = 2L),
+                                  collapse = "")), fixed = TRUE)
+})
+
+test_that("FT-AS125 [FR-AS234 FR-AS211]: a file that is not an EMF, or another extension, is refused (#739)", {
+  bad <- tempfile(fileext = ".emf")
+  on.exit(unlink(bad), add = TRUE)
+  writeBin(as.raw(rep(0L, 100L)), bad)
+  expect_error(rtfplot(bad), "Not an EMF file (no EMF header)", fixed = TRUE)
+  # a header with an empty frame
+  hdr <- readBin(test_path("fixtures", "figure.emf"), "raw", 88L)
+  hdr[33:40] <- hdr[25:32]
+  writeBin(hdr, bad)
+  expect_error(rtfplot(bad), "The EMF's frame has no size", fixed = TRUE)
+  svg <- tempfile(fileext = ".svg")
+  on.exit(unlink(svg), add = TRUE)
+  writeLines("<svg/>", svg)
+  expect_error(rtfplot(svg), "rtfplot supports PNG, JPEG and EMF files only.", fixed = TRUE)
+})
+
+# ──────── drawing a plot object as EMF with devEMF (#739) ────────
+
+test_that("FT-AS149 [FR-AS251 FR-AS214 FR-AS248]: render_format = \"emf\" draws a plot object as an EMF at render_width x render_height (#739)", {
+  skip_if_not_installed("devEMF")
+  draw <- function() plot(1:10)
+  fig <- rtfplot(draw, render_width = 3, render_height = 2, render_format = "emf")
+  expect_identical(fig$img_type, "emf")
+  expect_identical(tolower(tools::file_ext(fig$path)), "emf")
+  # the header's frame (0.01 mm, rclFrame) is the inches asked for
+  hdr <- readBin(fig$path, "integer", n = 10L, size = 4L, endian = "little")
+  expect_equal(c(hdr[9] - hdr[7], hdr[10] - hdr[8]) / 2540, c(3, 2), tolerance = 0.005)
+  expect_equal(c(fig$img_width, fig$img_height) / 2540, c(3, 2), tolerance = 0.005)
+  # plain EMF records: no EMF+ comment in the file
+  bytes <- readBin(fig$path, "raw", file.size(fig$path))
+  expect_false(grepl("EMF+", rawToChar(bytes[bytes != as.raw(0L)]), fixed = TRUE, useBytes = TRUE))
+  # the default size, and the page size the frame's
+  def <- rtfplot(draw, render_format = "emf")
+  expect_equal(c(def$img_width, def$img_height) / 2540, c(6.5, 4.5), tolerance = 0.005)
+  disp <- rtfreporter:::.rtfplot_display_twips(fig)
+  expect_equal(c(disp$w, disp$h), c(4320, 2880), tolerance = 0.005)
+  expect_output(print(fig), "mm  (the EMF's frame)", fixed = TRUE)
+  expect_output(print(fig), "Display:      3.00 in", fixed = TRUE)
+  # NULL is "png"
+  expect_identical(rtfplot(function() plot(1), render_format = NULL)$img_type, "png")
+  # embedded as \emfblip, as the same file given by path would be
+  out <- tempfile(fileext = ".rtf")
+  on.exit(unlink(out), add = TRUE)
+  generate_rtfreport(rtf_figures(rtf_document(), fig), out, overwrite = TRUE)
+  txt <- paste(readLines(out, warn = FALSE), collapse = "")
+  expect_match(txt, sprintf("\\pict\\emfblip\\picw%d\\pich%d\\picwgoal%d\\pichgoal%d",
+                            fig$img_width, fig$img_height, disp$w, disp$h), fixed = TRUE)
+  expect_identical(rtfplot(fig$path)$img_width, fig$img_width)
+  # a failing plot leaves no device open and no file behind
+  n <- length(grDevices::dev.list())
+  expect_error(rtfplot(function() stop("boom"), render_format = "emf"), "boom")
+  expect_length(grDevices::dev.list(), n)
+})
+
+test_that("FT-AS150 [FR-AS252]: render_format: an unknown format and no devEMF are refused (#739)", {
+  draw <- function() plot(1)
+  expect_error(rtfplot(draw, render_format = "svg"),
+               "`render_format` must be \"png\" or \"emf\"", fixed = TRUE)
+  expect_error(rtfplot(draw, render_format = c("png", "emf")), "\"png\" or \"emf\"", fixed = TRUE)
+  expect_error(rtfplot(draw, render_format = NA_character_), "\"png\" or \"emf\"", fixed = TRUE)
+  # without devEMF (the check is mocked: devEMF may well be installed)
+  local_mocked_bindings(.rtfplot_has_devemf = function() FALSE)
+  expect_error(rtfplot(draw, render_format = "emf"),
+               "`render_format = \"emf\"` needs the devEMF package: install.packages(\"devEMF\"), or draw as \"png\".",
+               fixed = TRUE)
+  # "png" never asks for devEMF
+  skip_if_not(isTRUE(unname(capabilities("png"))), "no PNG device")
+  expect_identical(rtfplot(draw, render_format = "png")$img_type, "png")
+})
+
+test_that("FT-AS152 [FR-AS252 FR-AS209]: render_dpi / png_device with \"emf\" stop; a file with render_format stops (#739)", {
+  skip_if_not_installed("devEMF")
+  draw <- function() plot(1)
+  expect_error(rtfplot(draw, render_format = "emf", render_dpi = 300),
+               "are for `render_format = \"png\"` only", fixed = TRUE)
+  expect_error(rtfplot(draw, render_format = "emf", png_device = "png"),
+               "are for `render_format = \"png\"` only", fixed = TRUE)
+  # width and height are fine, and nothing given is silent
+  expect_no_error(rtfplot(draw, render_format = "emf", render_width = 4, render_height = 3))
+  f <- test_path("fixtures", "figure.emf")
+  expect_error(rtfplot(f, render_format = "emf"), "`render_format` say how to draw a plot object", fixed = TRUE)
+  expect_error(rtfplot(f, render_format = "png"), "a file already has a size", fixed = TRUE)
+})
+
+test_that("FT-AS151 [FR-AS253]: rtf_figures(render_format = ) is passed to each plot object (#739)", {
+  skip_if_not_installed("devEMF")
+  doc <- rtf_figures(rtf_document(), list(function() plot(1), function() plot(2)),
+                     render_width = 3, render_height = 2, render_format = "emf")
+  for (i in 1:2) {
+    fig <- doc$contents[[i]]$content
+    expect_identical(fig$img_type, "emf")
+    expect_equal(c(fig$img_width, fig$img_height) / 2540, c(3, 2), tolerance = 0.005)
+  }
+  # same as rtfplot() with the same arguments
+  ref <- rtfplot(function() plot(1), render_width = 3, render_height = 2, render_format = "emf")
+  expect_identical(doc$contents[[1L]]$content$img_width, ref$img_width)
+  # a file path is never handed it
+  f <- test_path("fixtures", "figure.emf")
+  expect_identical(rtf_figures(rtf_document(), f, render_format = "emf")$contents[[1L]]$content$img_type, "emf")
+  expect_error(rtf_figures(rtf_document(), function() plot(1), render_format = "svg"),
+               "`render_format` must be", fixed = TRUE)
 })

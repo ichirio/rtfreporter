@@ -18,15 +18,35 @@
 # character (a non-breaking space, U+00A0, becomes a normal space), and the
 # escaped braces / backslash become literals.
 .rtf_decode_text <- function(x) {
-  pieces <- unique(regmatches(x, gregexpr("\\\\u-?[0-9]+\\?", x))[[1L]])
-  for (p in pieces) {
-    cp <- as.integer(sub("\\\\u(-?[0-9]+)\\?", "\\1", p))
-    ch <- if (is.na(cp) || cp == 160L) " " else intToUtf8(((cp %% 65536L) + 65536L) %% 65536L)
-    x  <- gsub(p, ch, x, fixed = TRUE)
-  }
+  x <- .rtf_label_text(x)
+  x <- .rtf_unicode_decode(x)
+  x <- gsub(intToUtf8(160L), " ", x, fixed = TRUE)
   x <- gsub("\\{",  "{",  x, fixed = TRUE)
   x <- gsub("\\}",  "}",  x, fixed = TRUE)
   x <- gsub("\\\\", "\\", x, fixed = TRUE)
+  trimws(x)
+}
+
+# A title's RTF as the text of a label (a contents entry, its outline entry,
+# the folder table's label): what a page token wrote there is left out -- a
+# page number (\chpgn), a NUMPAGES field, the {BOOK_PAGE} slot -- since a
+# label is not on that page, and a markup group (`{\sub 2}`, `{\super a}`)
+# keeps its text without its formatting.  The escaped braces of the text
+# (`\{`) are not groups and stay.
+.rtf_label_text <- function(x) {
+  if (!length(x) || is.na(x)) return(x)
+  gone <- "\u0006"
+  x <- gsub("(?<!\\\\)\\{\\\\\\*\\\\[A-Za-z]+\\}", gone, x, perl = TRUE)
+  x <- gsub(paste0("(?<!\\\\)\\{\\\\field\\{\\\\\\*\\\\fldinst [^{}]*\\}",
+                   "\\{\\\\fldrslt [^{}]*\\}\\}"), gone, x, perl = TRUE)
+  x <- gsub("\\\\chpgn(?![A-Za-z]) ?", gone, x, perl = TRUE)
+  repeat {
+    y <- gsub("(?<!\\\\)\\{\\\\[A-Za-z]+-?[0-9]* ?((?:[^{}\\\\]|\\\\[^{}A-Za-z]|\\\\u-?[0-9]+\\?)*)(?<!\\\\)\\}",
+              "\\1", x, perl = TRUE)
+    if (identical(y, x)) break
+    x <- y
+  }
+  x <- gsub(paste0(" *", gone, "[", gone, " ]*"), " ", x)
   trimws(x)
 }
 
@@ -60,12 +80,41 @@
          .rtf_decode_text, character(1L), USE.NAMES = FALSE)
 }
 
-# Read one RTF file's table number / title / TOC label from its running
-# header.  Falls back to the file name when no "Table N" header is found.
-.rtf_table_label <- function(file) {
-  txt    <- paste(readLines(file, warn = FALSE), collapse = " ")
-  cells  <- .rtf_centered_cells(.rtf_header_block(txt))
+# The centred bold title lines of the title block in the body (what
+# rtf_titles() writes): the run of consecutive centred bold lines that
+# contains the first "Table N" line, within the first 200 lines and before
+# any picture.  Returns character(0) when no such line is found.
+.rtf_body_title_lines <- function(lines) {
+  n_scan <- min(length(lines), 200L)
+  pat <- "\\\\qc\\\\li[0-9]+\\\\ri[0-9]+\\s+\\\\b\\s+(.+?)\\\\b0"
+  texts <- rep(NA_character_, n_scan)
+  for (i in seq_len(n_scan)) {
+    if (grepl("\\\\pict", lines[i])) {
+      n_scan <- i - 1L
+      break
+    }
+    g <- regmatches(lines[i], regexec(pat, lines[i]))[[1L]]
+    if (length(g) == 2L) texts[i] <- .rtf_decode_text(g[2L])
+  }
+  texts <- texts[seq_len(n_scan)]
+  is_tab <- !is.na(texts) & grepl("^Table\\s+[0-9]", texts)
+  if (!any(is_tab)) return(character(0))
+  first <- which(is_tab)[1L]
+  # Widen to the consecutive centred bold lines around the "Table N" line.
+  lo <- first
+  while (lo > 1L && !is.na(texts[lo - 1L])) lo <- lo - 1L
+  hi <- first
+  while (hi < n_scan && !is.na(texts[hi + 1L])) hi <- hi + 1L
+  texts[lo:hi]
+}
+
+# Table number and title from a set of centred title cells: the first
+# "Table N" cell gives the number; the title is the longest cell that is
+# neither a "Table N" line nor a "<...>" subtitle, else the text after the
+# number on the "Table N" line.
+.rtf_cells_table_title <- function(cells) {
   tabnum <- NA_character_
+  title_inline <- ""
   for (c in cells) {
     g <- regmatches(c, regexec("^Table\\s+([0-9][0-9.A-Za-z-]*)\\b\\s*(.*)$", c))[[1L]]
     if (length(g) == 3L && nzchar(g[2L])) {
@@ -74,13 +123,30 @@
       break
     }
   }
-  # Title = a centred cell that is neither the "Table N" line nor a "<...>"
-  # subtitle; pick the longest such cell.
   cand <- cells[!grepl("^Table\\s", cells) & !grepl("^<.*>$", cells) &
                   nchar(cells) > 0L]
   title <- if (length(cand)) cand[which.max(nchar(cand))] else NA_character_
-  if (!is.na(tabnum) && exists("title_inline") && nzchar(title_inline) &&
-      is.na(title)) title <- title_inline
+  if (!is.na(tabnum) && nzchar(title_inline) && is.na(title)) {
+    title <- title_inline
+  }
+  list(table = tabnum, title = title)
+}
+
+# Read one RTF file's table number / title / TOC label from its running
+# header.  When the header has no "Table N" line, the title block in the body
+# (rtf_titles()) is read instead (#843).  Falls back to the file name when
+# neither has one.
+.rtf_table_label <- function(file) {
+  lines  <- readLines(file, warn = FALSE)
+  txt    <- paste(lines, collapse = " ")
+  cells  <- .rtf_centered_cells(.rtf_header_block(txt))
+  tt     <- .rtf_cells_table_title(cells)
+  if (is.na(tt$table)) {
+    body <- .rtf_cells_table_title(.rtf_body_title_lines(lines))
+    if (!is.na(body$table)) tt <- body
+  }
+  tabnum <- tt$table
+  title  <- tt$title
 
   base <- sub("\\.rtf$", "", basename(file), ignore.case = TRUE)
   label <- if (!is.na(tabnum)) {
@@ -97,15 +163,24 @@
 # -- Natural sort ------------------------------------------------------------
 
 # Order strings so embedded numbers sort numerically ("t2" < "t10").
-.natural_order <- function(x) {
-  key <- vapply(x, function(s) {
+# Natural sort key: every run of digits, without its leading zeros, after its
+# length, so "t2" sorts before "t10".  As text: a long run, a date and time in
+# a file name, is too large for an integer.
+.natural_key <- function(x) {
+  vapply(x, function(s) {
     parts <- regmatches(s, gregexpr("[0-9]+|[^0-9]+", s))[[1L]]
     paste0(vapply(parts, function(p)
-      if (grepl("^[0-9]+$", p)) formatC(as.numeric(p), width = 15, flag = "0",
-                                        format = "d")
-      else p, character(1L)), collapse = "")
-  }, character(1L))
-  order(key)
+      if (grepl("^[0-9]+$", p)) {
+        p <- sub("^0+(?=[0-9])", "", p, perl = TRUE)
+        paste0(formatC(nchar(p), width = 5, flag = "0"), p)
+      } else p, character(1L)), collapse = "")
+  }, character(1L), USE.NAMES = FALSE)
+}
+
+# Natural order compared byte by byte (the C locale) with method = "radix",
+# so the order is the same in every locale and on every OS (#827).
+.natural_order <- function(x) {
+  order(.natural_key(x), method = "radix")
 }
 
 
@@ -127,9 +202,11 @@
   if (length(files) == 0L) stop("No RTF files found.", call. = FALSE)
   info <- lapply(files, .rtf_table_label)
   tabs <- vapply(info, function(x) x$table %||% NA_character_, character(1L))
-  # Default order: by table number (so 14.1.x precedes 14.3.x); files without
-  # a detected number keep their incoming (natural file-name) order, last.
-  ord  <- .natural_order(ifelse(is.na(tabs), paste0("~", basename(files)), tabs))
+  # Default order: by table number (so 14.1.x precedes 14.3.x), then the
+  # files without a detected number in natural file-name order.  Radix order
+  # compares bytes, so it does not depend on the locale (#827).
+  key  <- .natural_key(ifelse(is.na(tabs), basename(files), tabs))
+  ord  <- order(is.na(tabs), key, method = "radix")
   info <- info[ord]; tabs <- tabs[ord]; files <- files[ord]
   data.frame(
     order   = seq_along(files),
@@ -157,8 +234,10 @@
       toc <- c(toc, list(.toc_heading(trimws(h), level = 1L)))
       last_heading <- h
     }
+    # (as.numeric(), not as.integer(): a level of 2.5 is refused by
+    # .toc_entry(), not cut to 2)
     lvl <- if (!is.null(spec$level) && !is.na(spec$level[i]))
-      as.integer(spec$level[i]) else 2L
+      as.numeric(spec$level[i]) else 2L
     toc <- c(toc, list(.toc_entry(spec$label[i], file = spec$file[i],
                                   level = lvl)))
   }
@@ -188,6 +267,32 @@
 
 
 # -- Spec file I/O (.xlsx via writexl/readxl, or .csv) -----------------------
+
+# The scalar arguments of assemble_folder() (#862), before any file is read:
+# a base-R message ("invalid filename argument", "NA in coercion to
+# boolean") does not say which argument is wrong.
+.check_folder_args <- function(dir, spec_file, recursive) {
+  if (!is.character(dir) || length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
+    stop("`dir` must be a single folder path.", call. = FALSE)
+  }
+  if (!is.logical(recursive) || length(recursive) != 1L || is.na(recursive)) {
+    stop("`recursive` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (is.null(spec_file)) return(invisible())
+  if (length(spec_file) != 1L) {
+    stop("`spec_file` must be NULL or a single path ending in .xlsx or .csv.",
+         call. = FALSE)
+  }
+  if (!is.character(spec_file) || is.na(spec_file) ||
+      !tolower(tools::file_ext(spec_file)) %in% c("xlsx", "csv")) {
+    stop("`spec_file` must end in .xlsx or .csv.", call. = FALSE)
+  }
+  if (!dir.exists(dirname(spec_file))) {
+    stop(sprintf("The folder of `spec_file` does not exist: %s",
+                 dirname(spec_file)), call. = FALSE)
+  }
+  invisible()
+}
 
 .write_spec <- function(spec, path) {
   ext <- tolower(tools::file_ext(path))
@@ -247,28 +352,48 @@
 #' Assemble every RTF in a folder into one TOC deliverable
 #'
 #' Scans `dir` for `.rtf` files (natural-sorted, so `t2` comes before `t10`)
-#' and reads each file's table number and title from its running header into
-#' a **table of contents**: a `data.frame` with one row per file.  With an
+#' and reads each file's table number and title into a **table of
+#' contents**: a `data.frame` with one row per file.  The number and title
+#' come from the running header (`rtf_header()`) when it has a `"Table N"`
+#' line, otherwise from the title block that [rtf_titles()] writes at the top
+#' of the body.  With an
 #' `output_file` it assembles the deliverable with that table of contents
 #' ([assemble_rtf()]); without one it only returns the table, to edit
 #' (rename labels, fill `heading` to group entries, change `level`, reorder
 #' or drop rows) and hand to `assemble_rtf(toc = )`.
 #'
-#' The table has the columns `order` (the assembly order), `file`, `table`
-#' (the table number read from the header, or `NA`), `heading` (a heading
-#' printed above the entry whenever it changes; `NA` = none), `label` (the
-#' entry text, `"Table N  <title>"`), `level` (the entry's indent, default 2)
-#' and `pages` (informational).
+#' The rows come in this order, the same in every locale and on every OS:
+#' first the files with a `"Table N"` line (in the header or the titles), by
+#' that number in
+#' natural order (`14.1.2` before `14.1.10`, `14.1.x` before `14.3.x`,
+#' whatever the file names); then the files without one -- listings,
+#' figures, any file with no `"Table N"` line -- by file name in
+#' natural order.  Names are compared character by character as in the C
+#' locale, so upper case comes before lower case (`B` before `a`) and `-`
+#' before `_`.  Files with the same table number keep their file-name order.
 #'
-#' @param dir Directory of `.rtf` files to assemble.
+#' The table has the columns `order` (the assembly order), `file`, `table`
+#' (the table number read from the header or the titles, or `NA`), `heading`
+#' (a heading
+#' printed above the entry whenever it changes; `NA` = none), `label` (the
+#' entry text, `"Table N  <title>"`), `level` (the entry's indent, a whole
+#' number from 1 to 3, default 2) and `pages` (informational).
+#'
+#' @param dir Directory of `.rtf` files to assemble: one folder path.  A
+#'   value that is not one non-empty string is an error, as is a folder that
+#'   does not exist or holds no `.rtf` file.
 #' @param output_file Path of the assembled `.rtf` to write, or `NULL`
-#'   (default): return the table of contents only.
+#'   (default): return the table of contents only.  Assembling needs two or
+#'   more files, so with an `output_file` a folder of one `.rtf` file is an
+#'   error (without one, its one-row table is returned).
 #' @param spec_file Optional path (`.xlsx` or `.csv`).  When given, the
 #'   generated spec is **saved** there (so you can inspect / edit it); when
 #'   `NULL` (default) the spec is kept in memory only.  It is written, never
 #'   read back: assemble an edited one with `assemble_rtf(toc = spec_file)`.
-#' @param recursive Recurse into sub-directories when scanning?  Default
-#'   `FALSE`.
+#'   One path in a folder that exists; another value is an error, checked
+#'   before any file is read or written.
+#' @param recursive Recurse into sub-directories when scanning?  `TRUE` or
+#'   `FALSE` (default); another value is an error.
 #' @param toc_title,toc_leader,toc_page_numbering,overwrite,... Passed through
 #'   to [assemble_rtf()]; `toc_page_numbering` defaults to `"decimal"` here
 #'   (`"none"` in [assemble_rtf()]).
@@ -304,7 +429,14 @@ assemble_folder <- function(dir, output_file = NULL, spec_file = NULL,
                             toc_leader = "dot",
                             toc_page_numbering = "decimal",
                             overwrite = FALSE, ...) {
+  .check_folder_args(dir, spec_file, recursive)
   spec <- .assemble_spec(dir = dir, recursive = recursive)
+  # one file is a table of contents, not a book (#862): stop before the
+  # spec file is written
+  if (!is.null(output_file) && nrow(spec) < 2L) {
+    stop(sprintf("`dir` holds one .rtf file (%s); assembling needs two or more.",
+                 basename(spec$file)), call. = FALSE)
+  }
   if (!is.null(spec_file)) .write_spec(spec, spec_file)
   if (is.null(output_file)) return(spec)
   .assemble_from_spec(spec, output_file, toc_title = toc_title,

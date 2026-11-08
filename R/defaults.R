@@ -37,7 +37,7 @@
 #
 # Document-wide style defaults (row height, cell padding) are seeded as `NULL`,
 # meaning "inherit the font-aware / resource-file baseline". Set them (here, in
-# Rprofile.site, or per document via `rtf_config(default_format = list(...))`) to
+# Rprofile.site, or per document via `rtf_config(style = rtf_style(...))`) to
 # change the package-wide default; a per-module value (rtftable / rtf_header /
 # rtf_footer / rtf_table_style) always overrides it.
 .rtfreporter_factory_defaults <- function() {
@@ -58,6 +58,8 @@
     rtfreporter.row_height_twips         = NULL,
     rtfreporter.cell_padding_left_twips  = NULL,
     rtfreporter.cell_padding_right_twips = NULL,
+    rtfreporter.cell_padding_top_twips    = NULL,
+    rtfreporter.cell_padding_bottom_twips = NULL,
     # Cell-text markup applied at render time. "script" = ^{}/_{} super/subscript
     # only; the >=/<= -> symbol conversion ("relational") is opt-in.
     rtfreporter.markup                   = "script",

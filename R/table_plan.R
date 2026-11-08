@@ -50,7 +50,7 @@
 #     own gets.
 #
 #  2. THE ROLES ARE SAID ONCE, WHERE THE DATA IS.  `table_plan()` takes the
-#     NORMALIZED frame and, like `ggplot(data, aes(x, y))`, the columns
+#     NORMALIZED frame and only the columns
 #     that play a part in the table: `cols` across, `rows` down, `label`
 #     for the row identity.  Every other verb reads them from there, so
 #     the stub, the group carrier and the header's denominator are not
@@ -294,10 +294,94 @@
   entry
 }
 
+# Digits keyed by a row key's value (#751): `plan_digits(PARAMCD = c(ALT = 1,
+# BILI = 3))`, a define's SignificantDigits one parameter at a time.  Such a
+# key is a column of the long frame that is no analysis variable, and the
+# names of its value are values of that column.
+.plan_row_key_digits <- function(dig, x, vars) {
+  rk <- setdiff(names(dig), c("default", ".rows", vars))
+  rk <- rk[rk %in% names(x)]
+  for (k in rk) {
+    nm <- names(dig[[k]])
+    if (is.null(nm) || !all(nzchar(nm))) {
+      .ard_stop(paste0(
+        "plan_digits(", k, " = ) names a row key, so its digits are given ",
+        "value by value:\n  `", k, " = c(<value> = 1, ...)`, or `", k,
+        " = list(<value> = c(mean = 1, sd = 2), ...)`."))
+    }
+  }
+  rk
+}
+
+# A cells entry with its digits filled in, the rows that carry a value of a
+# row key (`rk`) taking that value's own.  Every template of a chain becomes
+# `KEY == "<value>" ~ <template, the value's digits>` for each value the
+# rows `sel` carry, followed by the template with the digits it had; a guard
+# of the caller's keeps its place.  So a variable's own digits win, then the
+# value's, then the context's, the kind's and the default.
+# Returns list(entry, filled = the entry without the values' digits, check =
+# whether a row can reach that entry, so its open tokens need an answer).
+.plan_fill_keyed <- function(entry, dig, rk, sel, v, ctx, knd, variable = TRUE,
+                             group = NA_character_, whole = FALSE) {
+  plain  <- dig[setdiff(names(dig), rk)]
+  filled <- .plan_fill_entry(entry, .plan_pick(plain, v, ctx, knd, group, whole))
+  out <- list(entry = filled, filled = filled, check = TRUE)
+  if (is.null(entry) || !length(rk)) return(out)
+  # `v` an analysis variable: its own digits come before the value's; a
+  # key of the cells map (`continuous`) comes after them
+  own <- variable && !is.na(v) && v %in% names(plain)
+  rest <- if (own) .plan_pick(plain[setdiff(names(plain), v)], NA_character_, ctx, knd,
+                              group, whole)
+          else .plan_pick(plain, v, ctx, knd, group, whole)
+  own <- if (own) list(plain[[v]]) else list()
+  guards <- list()
+  for (k in rk) {
+    seen <- unique(as.character(sel[[k]]))
+    seen <- seen[!is.na(seen)]
+    vals <- intersect(names(dig[[k]]), seen)
+    for (val in vals) {
+      guards[[length(guards) + 1L]] <-
+        list(key = k, val = val, cands = c(own, list(dig[[k]][[val]]), rest))
+    }
+    if (length(seen) && all(seen %in% vals)) out$check <- FALSE
+  }
+  if (!length(guards)) return(out)
+  base <- .plan_pick(plain, v, ctx, knd, group, whole)
+  one_chain <- function(ch) {
+    if (inherits(ch, "formula")) ch <- list(ch)
+    els <- list()
+    for (el in as.list(ch)) {
+      if (!is.character(el)) {
+        els[[length(els) + 1L]] <- el
+        next
+      }
+      tpl <- .plan_fill_one(el, base)
+      for (g in guards) {
+        mine <- .plan_fill_one(el, g$cands)
+        if (identical(mine, tpl)) next
+        els[[length(els) + 1L]] <- stats::as.formula(
+          call("~", call("==", as.name(g$key), g$val), mine), env = baseenv())
+      }
+      els[[length(els) + 1L]] <- tpl
+    }
+    els
+  }
+  out$entry <- if (inherits(entry, "cell_rows")) {
+    structure(lapply(unclass(entry), one_chain), class = class(entry))
+  } else if (!is.null(names(entry)) && any(nzchar(names(entry)))) {
+    lapply(as.list(entry), one_chain)
+  } else {
+    one_chain(entry)
+  }
+  out
+}
+
 # `{p:%}` is plan-only notation.  A template that reaches the engine still
 # carrying it never had a `plan_digits()` to answer it, and the engine's own
 # message ("Unknown format spec") would not say that, so this one does.
 .plan_check_open <- function(entry, key) {
+  # one guard written bare is a chain of one (#549), not a list to walk
+  if (inherits(entry, "formula")) entry <- list(entry)
   tpls <- if (is.character(entry)) entry else
     unlist(entry[vapply(entry, is.character, logical(1L))], use.names = FALSE)
   for (tpl in tpls) {
@@ -398,8 +482,9 @@
 #'   \describe{
 #'     \item{Names}{Each name is the column the finished table gets, and
 #'       later verbs refer to it by that name ([plan_stub()],
-#'       `plan_paginate_group(col = )`, [plan_hide()]); left unnamed, the
-#'       first key is called `group`.}
+#'       `plan_paginate_group(col = )`, [plan_hide()]); left unnamed, a
+#'       key keeps its column's name (`rows = "variable"` gives a column
+#'       `variable`).}
 #'     \item{`"variable"`}{The column that holds the analysis variable's
 #'       name, so `c(group = "variable")` makes one block of rows per
 #'       analysis variable (AGE, SEX, ...).}
@@ -447,7 +532,9 @@
 #'   "{USUBJID}/{AGE}/{SEX}")`), the records' values spread across `cols`,
 #'   one cell template (`plan_cells("{value:.3s}", na = "BLQ")`) -- a
 #'   listing laid out as a table, with nothing reshaped by hand.  Two
-#'   records of one key and column stop.  See [plan_append()] for its
+#'   records of one key and column (the row key as resolved, a template
+#'   included) with different values stop, naming the key, the column and
+#'   the values; the same value twice is one.  See [plan_append()] for its
 #'   summary under it.
 #'
 #' @section Where the other settings went:
@@ -1003,7 +1090,7 @@ print.table_plan <- function(x, ...) {
 #' * `plan_hide(...)`: columns not printed. Goes to [as_rtftables()]: `drop_cols`.
 #' * `plan_empty(text, when, position, footnote)`: a table of no events: one row saying so (`"No subjects met the criteria."`), and a footnote, only when the table has no row or its overall row is 0.
 #' * `plan_blanks(where, first, last, counted)`: blank rows. Goes to [as_rtftables()]: `blank_rows`, `blank_row_first`, `blank_row_end`, `count_blank_rows`; a listing's `where = "records"` / `"none"` is [listing_spec()]'s `blank_row = TRUE` / `FALSE`.
-#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do.
+#' * `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at, na_label)`: the row budget, inside the BY pages. Goes to [as_rtftables()]: `max_rows`, `split`, `split_rows`, `min_group_rows`, `cont_label`, `page_by`; `heading` and `heading_at` name each BY page, and say where the name prints, as `plan_paginate_group()`'s do; `na_label` is the text a blank BY value prints as.
 #' * `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)`: column blocks. Goes to [paginate_cols()], whose arguments have the same names.
 #' * `plan_style(border, ..., border_header, ..., header_bold, ..., table_width_twips, ...)`: the whole table. Goes to [rtftable()] / [as_rtftables()] by the same names; `border_*` and the default look (`header_align`, `header_bold`, `header_italic`, `align`, `bold`, `italic`, `underline`) via [rtf_table_style()].
 #' * `plan_columns(widths, decimal, row_title, auto_width, sep, cell_format, column_widths_twips)`: the columns. Goes to [rtftable()]: `col_rel_width`, `row_title`, `column_widths_twips`; [set_decimal_split()]: `cols`; [as_rtftables()]: `auto_width`, `cell_format`; [widen_ard()]: `sep`.
@@ -1163,7 +1250,12 @@ plan_levels <- function(.plan, ..., .drop_empty = NULL) {
 #'   gave it; this text wins over that one.  A later call replaces an
 #'   entry of the same name whole.  A single unnamed argument that is
 #'   itself a named vector is taken as the whole map:
-#'   `plan_labels(study_labels)`.
+#'   `plan_labels(study_labels)`.  An entry for a value, column or variable
+#'   the table does not have is not used, so one study-wide map serves
+#'   every table.  Each entry is text (`""` prints an empty text); an
+#'   entry that is `NA`, `NULL`, a number, a factor, `character(0)`, two
+#'   texts without names or a dictionary with an `NA` or an unnamed text
+#'   stops.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -1193,6 +1285,21 @@ plan_levels <- function(.plan, ..., .drop_empty = NULL) {
 #' @export
 plan_labels <- function(.plan, ...) {
   v <- .plan_map(list(...), "plan_labels")
+  # Each entry is text: an NA stopped with a base-R message when the table
+  # was made, a factor printed its integer code, a number named a heading
+  # but no value, and an unnamed vector of two was dropped without a word.
+  for (k in names(v)) {
+    x <- v[[k]]
+    nm <- names(x)
+    ok <- is.character(x) && length(x) >= 1L && !anyNA(x) &&
+      (length(x) == 1L ||
+         (!is.null(nm) && !anyNA(nm) && all(nzchar(nm))))
+    if (!ok) {
+      .ard_stop(sprintf(paste0(
+        "plan_labels(%s = ) is one text, or texts named by code: ",
+        "c(F = \"Female\", M = \"Male\")."), k))
+    }
+  }
   .plan_layer(.plan, "labels", list(labels = v))
 }
 
@@ -1286,6 +1393,15 @@ plan_labels <- function(.plan, ...) {
 #'   after them.  The names of the arguments after `...` are reserved: a
 #'   variable called `stats`, `value`, `na` or `notes` cannot be keyed
 #'   here; name it otherwise in the ARD.
+#'
+#'   An unnamed vector of several templates, `c("{n} ({p})", "{n}")`, is
+#'   one row: the first template whose statistics the record has wins, as
+#'   with guards.  A template with no token prints as written, so a
+#'   constant cell is text (`"-"`, and `""` an empty cell).  A list
+#'   holds the same things (`list(n = "{N}", Mean = "{mean}")` is the
+#'   named vector).  Anything else --- `NULL`, `NA`, a number, `TRUE`, a
+#'   factor, `character(0)`, a template that is `NA` --- stops at the verb,
+#'   naming the key.
 #' @param stats `"cells"` (default) fills a template per cell; `"rows"`
 #'   makes each statistic a row of its own (no template).
 #' @param value With `stats = "rows"`: the raw number (`"stat"`) or cards'
@@ -1334,9 +1450,17 @@ plan_labels <- function(.plan, ...) {
 #' @export
 plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
                        notes = NULL) {
+  if (!inherits(.plan, "table_plan")) {
+    .ard_stop("Expected a table_plan; pipe from table_plan(ard).")
+  }
   # the templates are a layer only when there are some: `plan_cells(notes =
   # FALSE)` alone says nothing about them
-  p <- if (...length()) .plan_keyed(.plan, "cells", list(...)) else .plan
+  dots <- list(...)
+  nms <- names(dots) %||% rep("", length(dots))
+  for (i in seq_along(dots)) {
+    .plan_check_cell_rule(dots[[i]], "plan_cells", nms[i])
+  }
+  p <- if (length(dots)) .plan_keyed(.plan, "cells", dots) else .plan
   opts <- list(stats = stats, value = value, na = na, notes = notes)
   if (all(vapply(opts, is.null, logical(1L)))) return(p)
   if (!is.null(stats)) stats <- match.arg(stats, c("cells", "rows"))
@@ -1348,6 +1472,83 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
               list(stats = stats, value = value, na = na, notes = notes))
 }
 
+# One cell rule, checked at the verb (#866): what plan_cells() takes for a
+# key and plan_compare() for a column.  Before, NA, a number, TRUE or
+# character(0) went through as.character() at plan_apply() and came out as
+# an empty column or a constant nobody wrote.  The shapes are those of
+# .ard_cell_entry(): a template vector (unnamed: a fallback chain; named:
+# one row each), one guard, a list of templates and guards (unnamed: a
+# chain; named: one row each, every value a chain), or cell_rows().  For
+# plan_compare() a named list is a map by context / kind / default whose
+# values are whole entries (.ard_lookup_cells()).  A number is not a
+# constant cell: a constant is written as text, `"-"`.
+.plan_check_cell_rule <- function(x, verb, key) {
+  one <- function(e) {
+    inherits(e, "formula") || (is.character(e) && length(e) == 1L && !is.na(e))
+  }
+  chain <- function(e) {
+    if (inherits(e, "formula")) return(TRUE)
+    if (is.character(e)) return(length(e) > 0L && !anyNA(e))
+    if (is.list(e) && !is.object(e)) {
+      return(length(e) > 0L && all(vapply(e, one, NA)))
+    }
+    FALSE
+  }
+  named <- function(e) any(nzchar(names(e) %||% ""))
+  ok <- function(e, map) {
+    if (inherits(e, "cell_rows")) return(all(vapply(unclass(e), chain, NA)))
+    if (is.list(e) && !is.object(e) && named(e)) {
+      return(all(vapply(e, if (map) function(z) ok(z, FALSE) else chain, NA)))
+    }
+    chain(e)
+  }
+  if (ok(x, identical(verb, "plan_compare"))) return(invisible(NULL))
+  # what was given, said in the words of the help
+  what <- function(e, map = FALSE) {
+    if (is.null(e)) return("NULL")
+    if (inherits(e, "formula")) return("a guard")
+    if (is.factor(e)) return("a factor")
+    if (is.object(e) && !inherits(e, "cell_rows")) {
+      return(paste("an object of class", class(e)[1L]))
+    }
+    if (!length(e)) return(if (is.list(e)) "an empty list" else "a zero-length vector")
+    if (is.atomic(e) && all(is.na(e))) return("NA")
+    if (is.character(e)) return("a template that is NA")
+    if (is.logical(e)) return("TRUE or FALSE")
+    if (is.numeric(e)) return("a number")
+    if (is.list(e)) {
+      # the element ok() refused, by the same rule
+      fine <- if (inherits(e, "cell_rows")) chain
+              else if (!named(e)) one
+              else if (map) function(z) ok(z, FALSE)
+              else chain
+      bad <- Filter(function(z) !fine(z), unclass(e))
+      # nothing wrong inside: it is the list itself that may not be here
+      # (a row of plan_cells() that is a cell_rows() or a named list)
+      if (!length(bad)) {
+        return(if (inherits(e, "cell_rows")) "a cell_rows()" else "a named list")
+      }
+      bad <- bad[[1L]]
+      inner <- if (is.character(bad) && length(bad) > 1L && !anyNA(bad)) {
+        "a vector of templates"
+      } else what(bad)
+      return(sprintf("%s with %s in it",
+                     if (inherits(e, "cell_rows")) "a cell_rows()" else "a list",
+                     inner))
+    }
+    paste("an object of class", class(e)[1L])
+  }
+  arg <- if (nzchar(key)) sprintf("%s(%s = )", verb, key)
+         else sprintf("%s(<the unnamed entry>)", verb)
+  shapes <- if (identical(verb, "plan_compare")) {
+    "a template, guards, a map by context or cell_rows()"
+  } else {
+    "a template, a named vector of templates, guards or cell_rows()"
+  }
+  .ard_stop(sprintf(paste0("%s is %s, not %s.\n",
+                           "  A constant cell is written as text: \"-\"."),
+                    arg, shapes, what(x, identical(verb, "plan_compare"))))
+}
 
 # `round` used to be a verb of its own, and it never earned one: the whole
 # run takes ONE rounding family, so it is a setting of the digits rather
@@ -1375,11 +1576,27 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 #'       token grammar's `{mean:.4s}`; it may be mixed in a named vector,
 #'       `c(mean = "4s", n = 0)`.}
 #'   }
+#'   A key may also be a **row key** (a column of the long frame, such as
+#'   `PARAMCD`), its digits given **value by value**: one of the values above
+#'   for each, `PARAMCD = c(ALT = 1, BILI = 3)` or `PARAMCD = list(ALT =
+#'   c(mean = 1, sd = 2), BILI = 3)` --- a define's `SignificantDigits` one
+#'   parameter at a time.  The rows carrying that value take them after the
+#'   analysis variable's own and before the context's, the kind's and the
+#'   default; a value the rows do not carry is ignored, so one map can serve
+#'   every table.
 #'   On a **finished table** (a source that is already the table, or
 #'   `plan_cells(stats = "rows")`) a key that names a **column** formats
 #'   that column, and `.rows` formats the value columns by the text of the
 #'   label column: `plan_digits(.rows = c(N = 0, Mean = 1, SD = "3s"))`.
 #'   A key that reaches neither a variable nor a column is an error.
+#'
+#'   A number of decimals is one whole number, 0 or more; a significant
+#'   count is `"<n>s"` with `n` 1 or more (`"0s"` is an error).  A vector of
+#'   more than one value is named (by statistic, or by value for a row key).
+#'   Anything else --- `1.5`, `-1`, `Inf`, `NA`, `TRUE`, `"2"` on its own,
+#'   `"x"`, `c(1, 2)` unnamed, a zero-length vector --- stops at the verb,
+#'   naming the key.  (A whole number as text, `"0"`, is read as decimals
+#'   inside a named vector, as `c(mean = "4s", n = 0)` makes it.)
 #' @param rounding The tie-breaking family for the run, as
 #'   `widen_ard(rounding = )` takes it.  Last wins.  A study sets the rule
 #'   once with `options(rtfreporter.rounding = )`; give it here only for a
@@ -1410,13 +1627,81 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 #'   plan_digits(continuous = c(mean = 1, sd = 2), categorical = c(n = 0)) |>
 #'   plan_digits(WEIGHT = c(mean = 2, sd = 3)) |>
 #'   plan_apply("table")
+#'
+#' # A lab table: the digits by parameter, as a define gives them
+#' lb <- data.frame(
+#'   ARM = rep(c("Placebo", "Active"), each = 4),
+#'   PARAMCD = rep(rep(c("ALT", "BILI"), each = 2), 2),
+#'   variable = "AVAL", .label = NA, .kind = "continuous",
+#'   stat_name = rep(c("mean", "sd"), 4),
+#'   stat = c(31.234, 4.102, 0.612, 0.1234, 33.111, 5.303, 0.707, 0.1515))
+#' table_plan(lb, cols = "ARM", rows = c(param = "PARAMCD")) |>
+#'   plan_cells(continuous = c("Mean (SD)" = "{mean} ({sd})")) |>
+#'   plan_digits(PARAMCD = list(ALT = c(mean = 1, sd = 2), BILI = c(mean = 3, sd = 4))) |>
+#'   plan_apply("table")
 #' @export
 plan_digits <- function(.plan, ..., rounding = NULL) {
   d <- list(...)
+  .check_plan_digits(d)
   p <- if (length(d) || is.null(rounding)) .plan_keyed(.plan, "digits", d)
        else .plan
   if (is.null(rounding)) p
   else .plan_layer(p, "round", list(rounding = rounding))
+}
+
+# plan_digits()' values, checked at the verb (#852): each key's value is a
+# digit, a vector of digits named by statistic, or -- for a row key -- a
+# named list of those by value.  A digit is one whole number of decimals,
+# 0 or more, or "<n>s" (n >= 1 significant digits).  A string that is a whole
+# number ("0") is a decimals entry only inside a named vector, where c()
+# turns c(mean = "4s", n = 0) into text; on its own it is refused.
+.check_plan_digits <- function(d) {
+  nms <- names(d) %||% rep("", length(d))
+  bad <- function(k, what = NULL) {
+    key <- if (nzchar(k)) sprintf("`%s`", k) else "the unnamed value"
+    .ard_stop(sprintf(paste0(
+      "plan_digits(): %s must be a whole number of decimals (0 or more) ",
+      "or \"<n>s\" (n >= 1 significant digits), or a vector of them named ",
+      "by statistic%s."), key,
+      if (is.null(what)) "" else paste0("; got ", what)))
+  }
+  is_sig <- function(v) grepl("^[1-9][0-9]*s$", v)
+  ok_atomic <- function(v) {
+    if (length(v) == 0L || is.factor(v)) return(FALSE)
+    named <- !is.null(names(v)) && all(nzchar(names(v)) & !is.na(names(v)))
+    if (length(v) > 1L && !named) return(FALSE)
+    if (is.numeric(v)) {
+      return(all(!is.na(v) & is.finite(v) & v >= 0 & v == trunc(v)))
+    }
+    if (is.character(v)) {
+      if (anyNA(v)) return(FALSE)
+      if (!named) return(all(is_sig(v)))
+      return(all(is_sig(v) | grepl("^[0-9]+$", v)))
+    }
+    FALSE
+  }
+  show <- function(v) {
+    if (is.list(v)) return("a list")
+    if (length(v) == 0L) return(sprintf("%s(0)", class(v)[1L]))
+    f <- if (is.character(v)) paste0("\"", v, "\"") else format(v)
+    s <- paste(utils::head(f, 3L), collapse = ", ")
+    if (length(v) > 1L) s <- sprintf("c(%s%s)", s, if (length(v) > 3L) ", ..." else "")
+    s
+  }
+  for (i in seq_along(d)) {
+    v <- d[[i]]; k <- nms[i]
+    if (is.null(v)) next
+    if (is.list(v)) {
+      ln <- names(v)
+      if (length(v) == 0L || is.null(ln) || !all(nzchar(ln) & !is.na(ln)) ||
+          !all(vapply(v, function(e) !is.list(e) && ok_atomic(e), logical(1L)))) {
+        bad(k, "a list that is not of digits named by value or statistic")
+      }
+    } else if (!ok_atomic(v)) {
+      bad(k, show(v))
+    }
+  }
+  invisible(d)
 }
 
 
@@ -1481,9 +1766,14 @@ plan_digits <- function(.plan, ..., rounding = NULL) {
 #'   table of one row heading), that column is the stub, renamed `name`,
 #'   and nothing is folded.
 #' @param name The name of the folded column, `stub_cols(label = )`, and
-#'   so its header text unless [plan_col_header()] says otherwise:
-#'   `"Characteristic"`.  Not the same as `table_plan(label = )`, the
-#'   column whose **values** are the row text.
+#'   so its header text unless `heading` or [plan_col_header()] says
+#'   otherwise: `"Characteristic"`.  Not the same as `table_plan(label = )`,
+#'   the column whose **values** are the row text.
+#' @param heading The stub's header text when it is not its `name`: `""`
+#'   leaves the cell blank, so a column named for the program
+#'   (`"row_label"`, the one [plan_columns()] widths name) does not print
+#'   that name.  `NULL` (default): the name.  A [plan_col_header()] line
+#'   that names the stub's column still sets its cell.
 #' @param indent The non-breaking spaces per nesting level,
 #'   `stub_cols(indent = )` (default 4).  `plan_row_group(mode = "indent")`
 #'   reads the indent this writes.
@@ -1532,13 +1822,22 @@ plan_digits <- function(.plan, ..., rounding = NULL) {
 # `label = `, and a grouping carrier is not part of the stub.  Left out,
 # it is worked out from what has already been declared.
 plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
-                      group_summary = NULL, before = FALSE) {
+                      group_summary = NULL, before = FALSE, heading = NULL) {
+  if (!is.null(heading) && (!is.character(heading) || length(heading) != 1L ||
+                            is.na(heading))) {
+    .ard_stop("plan_stub(heading = ) is one text: \"\" for a blank stub heading.")
+  }
+  # NA and "yes" used to be read as FALSE
+  if (!(is.logical(before) && length(before) == 1L && !is.na(before))) {
+    .ard_stop("plan_stub(before = ) is TRUE (fold the stub first) or FALSE (fold it inside as_rtftables()).")
+  }
   # `name` rather than `label`: table_plan(label = ) is the column whose
   # VALUES are the row text, and this is the NAME of the column the row
   # keys are folded into.
   .plan_layer(.plan, "stub",
               list(vars = vars, name = name, indent = indent,
-                   group_summary = group_summary, before = before))
+                   group_summary = group_summary, before = before,
+                   heading = heading))
 }
 
 # SAS's `call define(_col_, 'style', ...)` inside a `compute` block: a cell
@@ -1977,7 +2276,10 @@ plan_row_group <- function(.plan, mode = NULL, collapse = NULL,
 #' @param .plan A [table_plan()].
 #' @param ... One entry per nested variable, named by it, whose value is
 #'   the variable and level its rows go under, named by the variable:
-#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.
+#'   `plan_nest(RACESUB = c(RACE = "Asian"))`.  The value is one level
+#'   (not `NA`) of one variable other than the nested one, and a variable is
+#'   nested once; another value stops at `plan_nest()`, and a variable or
+#'   level the table does not have stops when the plan is applied.
 #'   \describe{
 #'     \item{The level}{is matched as the table shows it (the ARD's level: a
 #'       code list's label).}
@@ -2022,12 +2324,24 @@ plan_nest <- function(.plan, ...) {
   if (!length(dots) || is.null(nm) || any(!nzchar(nm))) {
     .ard_stop("plan_nest(): name the nested variable, e.g. plan_nest(RACESUB = c(RACE = \"Asian\")).")
   }
+  # a variable named twice went under neither (the second hid the first's
+  # rows); a variable under its own level indented all of its rows
+  if (anyDuplicated(nm)) {
+    .ard_stop(sprintf("plan_nest(%s = ) is given twice: a variable goes under one level.",
+                      nm[anyDuplicated(nm)]))
+  }
   nest <- lapply(nm, function(v) {
     u <- dots[[v]]
-    if (!is.character(u) || length(u) != 1L || is.null(names(u)) || !nzchar(names(u))) {
+    if (!is.character(u) || length(u) != 1L || is.na(u) || is.null(names(u)) ||
+        is.na(names(u)) || !nzchar(names(u))) {
       .ard_stop(sprintf(paste0(
         "plan_nest(%s = ): one level of one variable, named by it: ",
         "c(RACE = \"Asian\")."), v))
+    }
+    if (identical(names(u), v)) {
+      .ard_stop(sprintf(paste0(
+        "plan_nest(%s = ): a variable goes under a level of another ",
+        "variable, not its own."), v))
     }
     list(parent = names(u), level = unname(u))
   })
@@ -2137,7 +2451,7 @@ plan_total <- function(.plan, label = "Total", position = c("last", "first"),
 #'   }
 #'   An overall row (`normalize_ard(overall = )`, "Any TEAE") always stays.
 #' @param by A row key whose rows are judged together (with the keys
-#'   outside it).  `NULL` (default): each row on its own.
+#'   outside it), by its name.  `NULL` (default): each row on its own.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -2171,6 +2485,9 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
   parents <- match.arg(parents)
   if (!is.logical(any) || length(any) != 1L || is.na(any)) {
     .ard_stop("plan_filter(any = ) is TRUE (any column) or FALSE (every column).")
+  }
+  if (!is.null(by) && (!is.character(by) || length(by) != 1L || is.na(by))) {
+    .ard_stop("plan_filter(by = ) is one row key's name, or NULL.")
   }
   .plan_layer(.plan, "filter", list(filter = list(conds = conds, env = parent.frame(),
                                                  any = any, parents = parents, by = by)))
@@ -2206,6 +2523,14 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 #'       label, so a p-value on one row only is `cell_rows("Mean (SD)" =
 #'       "{p.value:.3f}")`.}
 #'   }
+#'   An unnamed vector of several templates is one cell, the first that
+#'   the record's statistics fill winning (`c("a", "b")` is always `"a"`,
+#'   which has no token).  A template with no token prints as written on
+#'   the comparison's row, `p = "-"`.  `NULL`, `NA`, a number, `TRUE`, a factor,
+#'   `character(0)` or a template that is `NA` stops at the call, naming
+#'   the column: `"plan_compare(p = ) is a template, guards, a map by
+#'   context or cell_rows(), not NA."`
+#'
 #'   A test whose record names no variable (`ard_stats_aov()`'s term) has
 #'   no row; use `ard_stats_oneway_test()`.  The columns have no
 #'   population: the header's `{col}` / `{n}` and its short rows leave them
@@ -2408,8 +2733,8 @@ plan_hide <- function(.plan, ...) {
 #'   One logical is `widen_ard(sort = )` as it is: `TRUE` brings a key's
 #'   separate blocks together, `FALSE` moves only what an order declares.
 #' @param stat The statistic totalled into `.sort_stat` for a frequency
-#'   order (`widen_ard(sort_stat = )`), e.g. `stat = "n"`.
-#' @param keep `FALSE` also hides the sort keys that are columns: a sort
+#'   order (`widen_ard(sort_stat = )`), one name, e.g. `stat = "n"`.
+#' @param keep `TRUE` (default) or `FALSE`; `FALSE` also hides the sort keys that are columns: a sort
 #'   carrier needed and not wanted.  Names that are not columns (a
 #'   statistic, `".depth"`) are ignored rather than refused.
 #'
@@ -2447,6 +2772,14 @@ plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
   v <- list(...)
   keys <- if (length(v) == 1L && is.logical(v[[1L]])) v[[1L]]
           else unlist(v, use.names = FALSE)
+  # (NA and "yes" used to be read as TRUE, two statistics as the first)
+  if (!is.logical(keep) || length(keep) != 1L || is.na(keep)) {
+    .ard_stop("plan_sort(keep = ) is TRUE (the sort keys stay) or FALSE (hide them).")
+  }
+  if (!is.null(stat) && (!is.character(stat) || length(stat) != 1L ||
+                         is.na(stat) || !nzchar(stat))) {
+    .ard_stop("plan_sort(stat = ) is one statistic's name, e.g. \"n\", or NULL.")
+  }
   .plan_layer(.plan, "sort",
               list(sort = keys, sort_stat = stat, .keep = keep))
 }
@@ -2549,7 +2882,9 @@ plan_empty <- function(.plan, text = "No subjects met the criteria.",
 #'     \item{`"none"`}{none: a listing's records follow each other with no
 #'       blank row between them (`blank_row = FALSE`).}
 #'     \item{positions}{an integer vector, a blank row after each given row;
-#'       `0` before the first, `-1` after the last.}
+#'       `0` before the first, `-1` after the last.  A fraction or a
+#'       position past the body's last row stops at [plan_apply()], naming
+#'       the positions, as `as_rtftables(blank_rows = )` does.}
 #'     \item{a rule}{a [blank_rows_by_change()] or [blank_rows_by_rule()]
 #'       object, or a `list()` combining any of these.}
 #'   }
@@ -2615,11 +2950,16 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 #'
 #' @param .plan A [table_plan()].
 #' @param max_rows The most body rows a page holds, for the
-#'   `"group_safe"` and `"group_force"` splits (which need it).  Blank rows
-#'   count only with `plan_blanks(counted = TRUE)`.
+#'   `"group_safe"` and `"group_force"` splits (which need it).  Given with
+#'   the split left out, the split is `"group_safe"` (a listing's is left
+#'   to [as_rtftables()], which does the same on its record column); with
+#'   a split that has no row budget (`"none"`, `"rows"`, a page per value)
+#'   it stops.  Blank rows count only with `plan_blanks(counted = TRUE)`.
 #' @param split How a page break is placed, `as_rtftables(split = )`:
 #'   \describe{
-#'     \item{`"none"`}{(default) one page; `max_rows` is not read.}
+#'     \item{`"none"`}{one page; the default when `max_rows` is not given
+#'       (with `max_rows` alone the default is `"group_safe"`).  Written
+#'       out with `max_rows` it stops: the budget would have nothing to cut.}
 #'     \item{`"group_safe"`}{whole groups to a page: a group that does not
 #'       fit starts the next page; one longer than a page is cut, with a
 #'       continuation label.}
@@ -2631,8 +2971,12 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 #'   }
 #' @param break_before With `split = "rows"`: the row positions to cut
 #'   before, `as_rtftables(split_rows = )`.
-#' @param min_group_rows The fewest rows of a group left on a page or
-#'   carried to the next, to avoid a widow or an orphan.
+#' @param min_group_rows Widow / orphan control, `as_rtftables(min_group_rows = )`
+#'   (default `2`; `0` turns it off).  A group that starts on a page with fewer
+#'   than this many rows **after its first row** (its heading, in a
+#'   value-grouped column the row that opens the group) moves whole to the
+#'   next page; a cut inside a group is pulled back so at least this many of
+#'   its rows go on to the next page.
 #' @param cont_label The text added to a group's heading on the page it is
 #'   continued on, `as_rtftables(cont_label = )`.
 #' @param page_by The column(s) whose value partitions the body **first**,
@@ -2645,6 +2989,11 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 #'   `page_by` column `{value}` is its value; with several the heading
 #'   carries a token for each column by its name, `"Analyte: {ANALYTE}"`,
 #'   and no `{value}`.
+#' @param na_label With `page_by`: the text a **blank** BY value (`""` or
+#'   `NA`) prints as in the page's heading (`{value}`, a `{<column>}`) and in
+#'   its name.  The default `NULL` is the empty text, so a template
+#'   `"Severity: {value}"` prints `"Severity: "`.  Like `cont_label`, a text
+#'   of the page, and like `na`, the text of a missing value.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -2688,8 +3037,17 @@ plan_blanks <- function(.plan, where = NULL, first = NULL, last = NULL,
 plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
                                break_before = NULL, min_group_rows = NULL,
                                cont_label = NULL, page_by = NULL,
-                               heading = NULL, heading_at = NULL) {
+                               heading = NULL, heading_at = NULL,
+                               na_label = NULL) {
   .plan_check_heading(heading, "plan_paginate_rows")
+  if (!is.null(na_label) && (!is.character(na_label) || length(na_label) != 1L ||
+                             is.na(na_label))) {
+    .ard_stop('plan_paginate_rows(na_label = ) is one text: "Not coded".')
+  }
+  if (!is.null(na_label) && !length(page_by)) {
+    .ard_stop(paste0("plan_paginate_rows(na_label = ) names the BY page of a ",
+                     "blank value: give `page_by`."))
+  }
   if (!is.null(heading) && (length(page_by) != 1L)) {
     # several page_by columns: the heading names each by its own token
     # ("Analyte: {ANALYTE}\nGroup: {RENALGR}"), never `{value}`
@@ -2712,7 +3070,8 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
                    split_rows = break_before,
                    min_group_rows = min_group_rows,
                    cont_label = cont_label, page_by = page_by,
-                   .heading = heading, .heading_at = heading_at))
+                   .heading = heading, .heading_at = heading_at,
+                   .na_label = na_label))
 }
 
 # The WHOLE-table settings, listed.  Everything a table has per column or
@@ -2751,13 +3110,17 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   (clipped) rather than a minimum.
 #' @param cell_padding_left_twips,cell_padding_right_twips The cells' left
 #'   and right padding, in twips.
+#' @param cell_padding_top_twips,cell_padding_bottom_twips The cells' top
+#'   and bottom padding, in twips ([rtftable()]'s).
 #' @param cell_valign The cells' vertical alignment: `"bottom"` (default),
 #'   `"top"` or `"center"`.
 #' @param table_align Where the table sits across the page: `"left"`
 #'   (default), `"center"` or `"right"`.
 #' @param table_width_twips,table_width_pct,table_width_pct_of_writable
 #'   The table's width: in twips, as a percentage (0--100) or a fraction
-#'   (0--1) of the writable page width.
+#'   (0--1) of the writable page width.  Give one; if `table_width_twips` is
+#'   given with a percentage, the twips win, and given both percentages,
+#'   `table_width_pct` wins (as in [rtftable()]).
 #' @param markup,blank_row_normalize [rtftable()]'s `markup` (the cell-text
 #'   markup applied when the page is rendered, such as `"script"`) and
 #'   `blank_row_normalize` (how blank rows are normalised then).
@@ -2765,7 +3128,11 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   look, [rtf_table_style()]'s fields.
 #' @param align,bold,italic,underline The body's default look,
 #'   [rtf_table_style()]'s fields.  One column or one cell is
-#'   [plan_cell_style()].
+#'   [plan_cell_style()].  The flags (`header_bold`, `header_italic`, `bold`,
+#'   `italic`, `underline`) mean what they mean there: only `TRUE` turns the
+#'   look on, and any other value, `NA` included, is the same as `FALSE`
+#'   (not an error, as `row_height_exact = NA` is).  `align` and
+#'   `header_align` must be `"left"`, `"center"` or `"right"`.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -2798,7 +3165,9 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
                        header_row_height_twips = NULL,
                        blank_row_height_twips = NULL,
                        cell_padding_left_twips = NULL,
-                       cell_padding_right_twips = NULL, cell_valign = NULL,
+                       cell_padding_right_twips = NULL,
+                       cell_padding_top_twips = NULL,
+                       cell_padding_bottom_twips = NULL, cell_valign = NULL,
                        table_align = NULL, markup = NULL,
                        blank_row_normalize = NULL,
                        border_header = NULL, border_spanning = NULL,
@@ -2828,6 +3197,22 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
       "those of one kind of row.\n  Say it one way: border = \"tfl\", or ",
       "border_header = , border_body = , ..."))
   }
+  # the same rule across calls: a plan whose earlier plan_style() gave the
+  # whole table's rules and whose later one gives a kind of row's (or the
+  # other way round) says it two ways, as one call would
+  if (inherits(.plan, "table_plan")) {
+    before <- .plan_of(.plan, "style")
+    had_border <- any(vapply(before, function(f) !is.null(f[["border"]]), NA))
+    had_zones <- any(vapply(before, function(f)
+      any(startsWith(names(f), "border_")), NA))
+    if ((length(zones) && had_border) || (!is.null(border) && had_zones)) {
+      .ard_stop(paste0(
+        "plan_style(): `border` is the whole table's rules and `border_*` ",
+        "those of one kind of row.\n  Say it one way: border = \"tfl\", or ",
+        "border_header = , border_body = , ...\n  An earlier plan_style() ",
+        "call on this plan gave the other, and the two are not both said."))
+    }
+  }
   .plan_layer(.plan, "style", c(
     list(border = border, align_count_pct = align_count_pct, font = font,
          font_size_half_points = font_size_half_points,
@@ -2837,6 +3222,8 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
          blank_row_height_twips = blank_row_height_twips,
          cell_padding_left_twips = cell_padding_left_twips,
          cell_padding_right_twips = cell_padding_right_twips,
+         cell_padding_top_twips = cell_padding_top_twips,
+         cell_padding_bottom_twips = cell_padding_bottom_twips,
          cell_valign = cell_valign, table_align = table_align,
          markup = markup, blank_row_normalize = blank_row_normalize,
          table_width_twips = table_width_twips,
@@ -3083,9 +3470,15 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   **Named by column** (`c(row_label = 5, .values = 2)`, `.values` for
 #'   every value column) a reordered table keeps them; unnamed, they are one
 #'   a column in order, as `col_rel_width` itself.  A name that is not a
-#'   column of the table stops with the names the table has.
+#'   column of the table stops with the names the table has.  Each width is
+#'   a positive finite number: `0`, a negative, `NA`, `Inf` or a string
+#'   stops at `plan_columns()`.
 #' @param decimal The columns whose numbers line up at the decimal point
-#'   (`.values` for every value column), [set_decimal_split()]'s `cols`.
+#'   (`.values` for every value column), [set_decimal_split()]'s `cols`, by
+#'   name.  A value that is not column names (`NA`, `""`, a number) stops at
+#'   `plan_columns()`; a name that is not a column of the table stops when
+#'   the plan is applied, as a `widths` name does (a hidden column's name is
+#'   allowed and changes nothing).
 #' @param row_title The row-heading columns, `rtftable(row_title = )`, by
 #'   name as `widths` are: a row key's name as `table_plan(rows = )` gives
 #'   it, `.values` for every value column.  A position counts the
@@ -3149,6 +3542,20 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
                         is.na(sep) || !nzchar(sep))) {
     .ard_stop("plan_columns(sep = ) is one non-empty string, \"____\" by default.")
   }
+  # (#864) a width of 0, a negative, NA, Inf or a string would reach the
+  # pages and fail only when the file is written
+  if (!is.null(widths) && (!is.numeric(widths) || is.factor(widths) ||
+                           any(!is.finite(widths)) || any(widths <= 0))) {
+    .ard_stop(paste0(
+      "plan_columns(widths = ) is positive finite numbers, one a column in ",
+      "order or named by column."))
+  }
+  if (!is.null(decimal) && (!is.character(decimal) || anyNA(decimal) ||
+                            !all(nzchar(decimal)))) {
+    .ard_stop(paste0(
+      "plan_columns(decimal = ) is column names, \".values\" for every value ",
+      "column."))
+  }
   if (length(widths) && !is.null(column_widths_twips)) .plan_widths_both()
   .plan_layer(.plan, "columns",
               list(widths = widths, decimal = decimal, row_title = row_title,
@@ -3208,9 +3615,20 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
 #' `plan_listing()` makes the plan a **listing**: a data frame of subject
 #' records (SDTM or ADaM, nothing summarised) printed through
 #' [listing_spec()], with columns that can stack several variables in one
-#' cell and wrap long text.  A record wrapped over several rows is never cut
-#' by a page break.  Its arguments are [listing_spec()]'s own, unchanged;
+#' cell and wrap long text.  A record wrapped over several rows is not cut
+#' by a page break: it moves whole to the next page, unless it alone is
+#' longer than a page; then it is cut at the page's end and the rest goes on
+#' at the top of the next page, with no continuation row before it (a record
+#' has no heading).  Its arguments are [listing_spec()]'s own, unchanged;
 #' the blank rows are [plan_blanks()]'s, as for a table.
+#'
+#' A listing cannot be combined with [plan_append()]: its columns are the
+#' records' own, while appended parts are a `label` and value columns, so
+#' `plan_append()` stops on a plan that carries `plan_listing()`, as the
+#' first plan or as a part.  To show a listing with a summary, make them
+#' separate contents of the document: [rtf_tables()] for the listing, then
+#' [rtf_tables()] for the summary with `page_break = FALSE` (see the article
+#' "Several contents on one page").
 #'
 #' @param .plan A [table_plan()] of a data frame of records.
 #' @param ... The printed columns, in order: [listing_col()]s, or bare
@@ -3626,13 +4044,26 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
             else character(0)
     vars <- vars[!is.na(vars)]
     # A variable plan_stat_groups() splits is looked up by its record's
-    # group when the cells are made: pinning it here by its context or kind
-    # (a study's `categorical`) would shadow the group's template.
-    split <- if (length(s_args$stat_groups)) {
-      .ard_stat_groups_opts(s_args$stat_groups)$variables %||% vars
-    } else character(0)
+    # group: its entry is pinned per group (.ard_group_key()), since pinning
+    # it to the variable by its context or kind (a study's `categorical`)
+    # would shadow the group's template.  A record that went whole to
+    # `.others` reads its group after its context and kind (FR-PL239).
+    split <- character(0)
+    xgrp <- rep(NA_character_, nrow(x))
+    others <- NA_character_
+    if (length(s_args$stat_groups)) {
+      sg_op <- .ard_stat_groups_opts(s_args$stat_groups)
+      split <- sg_op$variables %||% vars
+      others <- sg_op$others %||% NA_character_
+      if ("stat_name" %in% names(x)) {
+        xgrp <- unname(.ard_stat_groups(s_args$stat_groups)[as.character(x$stat_name)])
+      }
+    }
+    # digits keyed by a row key's value (plan_digits(PARAMCD = c(ALT = 1)))
+    rk <- .plan_row_key_digits(dig, x, vars)
     filled <- list()
-    for (v in setdiff(vars, split)) {
+    for (v in vars) {
+      is_split <- v %in% split
       sel <- body & x$variable == v
       # One entry per SUMMARY -- a variable under one context.  A variable
       # both summarised and tabulated is two summaries, and pinning the
@@ -3642,14 +4073,21 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
       if (!length(ctxs)) ctxs <- NA_character_
       got <- list()
       for (ctx in ctxs) {
-        s2  <- sel & (if (is.na(ctx)) is.na(x$context) else
+        # (a frame with no `context` column is one summary a variable)
+        s2  <- sel & (if (is.null(x$context)) TRUE else if (is.na(ctx)) is.na(x$context) else
                         (!is.na(x$context) & x$context == ctx))
         knd <- .ard_first_seen(x$.kind[s2])[1L]
-        entry <- .plan_lookup_raw(cells, v, ctx, knd)
-        if (is.null(entry)) next
-        entry <- .plan_fill_entry(entry, .plan_pick(dig, v, ctx, knd))
-        .plan_check_open(entry, v)
-        got[[.ard_summary_key(v, ctx)]] <- entry
+        grps <- if (is_split) .ard_first_seen(xgrp[s2]) else others
+        for (g in grps[!is_split | !is.na(grps)]) {
+          s3 <- if (is_split) s2 & xgrp %in% g else s2
+          entry <- .plan_lookup_raw(cells, v, ctx, knd, g, whole = !is_split)
+          if (is.null(entry)) next
+          f <- .plan_fill_keyed(entry, dig, rk, x[s3, , drop = FALSE], v, ctx, knd,
+                                group = g, whole = !is_split)
+          if (f$check) .plan_check_open(f$filled, v)
+          if (is_split) filled[[.ard_group_key(v, ctx, g)]] <- f$entry
+          else got[[.ard_summary_key(v, ctx)]] <- f$entry
+        }
       }
       if (!length(got)) next
       # the usual case -- one summary, or several sharing one recipe --
@@ -3662,14 +4100,14 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     #     nothing at all when there were no variables to expand.
     for (k in names(cells)) {
       if (k %in% names(filled)) next
-      cells[[k]] <- .plan_fill_entry(cells[[k]],
-                                     .plan_pick(dig, k, NA_character_,
-                                                NA_character_))
+      f <- .plan_fill_keyed(cells[[k]], dig, rk, x[body, , drop = FALSE], k,
+                            NA_character_, NA_character_, variable = k %in% vars)
+      cells[[k]] <- f$entry
       # Only worth complaining about a key that can still be REACHED.  With
       # variables present every lookup goes through (a), so a `categorical`
       # entry that every variable has overridden is dead and its unanswered
       # tokens are nobody's problem.
-      if (!length(vars)) .plan_check_open(cells[[k]], k)
+      if (!length(vars) && f$check) .plan_check_open(f$filled, k)
     }
     for (k in names(filled)) cells[[k]] <- filled[[k]]
     s_args$cells <- cells
@@ -3677,7 +4115,15 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     #  c) a digits key that reached nothing is a typo, and silence is how a
     #     typo survives review.  "AST = 3" on a frame whose analysis
     #     variable column is called PARAM does nothing, and says so.
-    reached <- c("default", ".rows", names(cells), vars)
+    #     The digits are keyed as the templates are, whatever key the
+    #     template has (FR-PL242), so a context, a kind or a stat group the
+    #     records carry is reached too.
+    kinds <- unique(c(if (!is.null(x$context)) x$context[body],
+                      if (!is.null(x$.kind)) x$.kind[body]))
+    kinds <- unlist(lapply(kinds[!is.na(kinds)], .ard_context_aliases))
+    grps <- unique(c(xgrp[body & x$variable %in% split], others))
+    reached <- c("default", ".rows", names(cells), vars, rk, kinds,
+                 grps[!is.na(grps)])
     .plan$cache$digit_cols <- setdiff(names(dig), reached)
   } else if (identical(.plan_merge(.plan_of(.plan, "cell_options"))$stats, "rows")) {
     # Statistics as rows with no templates: the table is the finished
@@ -3700,6 +4146,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     return(list(widen = s_args, rtf = .plan_rtf_args(.plan)))
   }
   emp <- .plan_merge(.plan_of(.plan, "empty"))
+  # a records plan: one record a cell, checked by widen_ard() (#835)
+  if (!is.null(.plan$records) && is.data.frame(x)) attr(x, ".ard_records") <- TRUE
   tbl <- .plan_stage(.plan_widen(x, s_args, empty = length(emp) > 0L),
                      .plan, c("cells", "cell_options", "digits", "round",
                              "levels", "labels"))
@@ -3708,7 +4156,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (length(nest)) tbl <- .plan_nest_rows(.plan, tbl, nest, s_args)
   # a table of no events: its sentence (plan_empty())
   if (length(emp)) tbl <- .plan_empty_rows(.plan, tbl, x, emp, s_args)
-  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = length(cells) > 0L)
+  .plan_check_digit_cols(.plan, tbl, .plan$cache$digit_cols, vars = length(cells) > 0L,
+                         src = x)
   # the table-side seam: a column the table can only know once it exists
   .plan_remember(.plan, "table", tbl)
   if (identical(stage, "table")) return(tbl)
@@ -3991,7 +4440,13 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (!length(vars) || !all(c("variable", "stat_name", "stat") %in% names(d))) {
     return(d)
   }
-  lvl <- if ("variable_level" %in% names(d)) "variable_level" else NULL
+  # a long frame built without cards has no variable_level: its levels
+  # are the label column's values (`.label`, or table_plan(label = COL))
+  lvl <- if ("variable_level" %in% names(d)) "variable_level" else {
+    lb <- plan$roles[["label"]] %||% ".label"
+    lb <- if (is.character(lb) && length(lb) == 1L && !is.na(lb)) unname(lb) else ".label"
+    if (lb %in% names(d)) lb else NULL
+  }
   if (is.null(lvl)) return(d)
   ctx <- if ("context" %in% names(d)) as.character(d$context) else ""
   key <- paste(d$variable, ctx, as.character(d[[lvl]]), sep = "\r")
@@ -4165,6 +4620,15 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
         "  which takes `heading =` too."))
     }
     out$split <- "by_value"
+  }
+  # A row budget with the split left out is "group_safe", whole groups to
+  # a page: the budget is what was asked for, and a default that dropped
+  # it would page nothing without a word (#836).  A listing already reads
+  # it so in as_rtftables(), and a listing plan is left to that rule; a
+  # split given, "none" included, is the caller's, checked below.
+  if (!is.null(out$max_rows) && is.null(out$split) &&
+      !length(.plan_of(plan, "listing"))) {
+    out$split <- "group_safe"
   }
   # `max_rows` is the row budget, and three of the splits do not have
   # one: a value split makes a page per value, "rows" cuts at the
@@ -4477,7 +4941,8 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
 #'     \item{one key per column}{a vector as long as the columns; each run of
 #'       one key is a block.}
 #'   }
-#' @param every Cut a block every this many columns, counting only the ones
+#' @param every Cut a block every this many columns (a whole number, 1 or
+#'   more), counting only the ones
 #'   a block does not keep.  A table no wider than one block is not cut.
 #' @param keep The columns every block repeats,
 #'   such as the row headings; by default the table's row titles (column 1
@@ -4567,10 +5032,11 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
 # table narrower than one block -- not an error and not a one-block split:
 # a table that needs no column pages at all.
 .every_at <- function(first, every, keep = NULL) {
-  k <- as.integer(every)
-  if (length(k) != 1L || is.na(k) || k < 1L) {
+  # a whole number: 1.5 and "2" used to be taken as 1 and 2
+  if (!.is_whole_number(every, 1)) {
     stop("`every` is a positive number of columns.", call. = FALSE)
   }
+  k <- as.integer(every)
   nm <- names(first$data %||% first$data_list[[1L]])
   car <- keep %||% first$row_title %||% 1L
   ci <- if (is.character(car)) match(car, nm) else as.integer(car)
@@ -4690,12 +5156,13 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   own <- if (".key_own" %in% names(d)) d$.key_own %in% TRUE else
     rep(FALSE, nrow(d))
   sent <- !is.na(v) & startsWith(v, "..")
-  # `variable` as a column key (each arm's value and change side by side):
-  # another key's own tabulation (the arms' count, variable TRT01A) is no
+  # `variable` as a column key (each arm's value and change side by side),
+  # or `variable_level` / `.label` (a shift table's arm over its categories): another
+  # key's own tabulation (the arms' count, variable TRT01A, level "A") is no
   # value of it, so that key's N is read at its own depth
   has  <- lapply(seq_along(cols), function(j) {
     h <- !is.na(d[[cols[j]]])
-    if (identical(cols[j], "variable")) h & !(v %in% cols[-j]) else h
+    if (cols[j] %in% c("variable", "variable_level", ".label")) h & !(v %in% cols[-j]) else h
   })
   # a sentinel keyed by nothing is ONE number for the study
   # (..ard_total_n..): a total, never every column's number
@@ -5154,16 +5621,24 @@ plan_header_tokens <- function(.plan) {
 .plan_page_headings <- function(plan, out) {
   h <- .plan_merge(.plan_of(plan, "group"))[[".heading"]]
   pb <- .plan_merge(.plan_of(plan, "pages"))
+  na_label <- pb[[".na_label"]]
   by_rows <- is.null(h) && !is.null(pb[[".heading"]])
   if (by_rows) h <- pb[[".heading"]]
   verb <- if (by_rows) "plan_paginate_rows(heading = )"
           else "plan_paginate_group(heading = )"
-  if (is.null(h) || inherits(out, "rtftable") || is.null(names(out))) {
-    return(out)
-  }
+  if (inherits(out, "rtftable") || is.null(names(out))) return(out)
   nm <- names(out)
   base <- .page_name_base(nm)
   tail <- substring(nm, nchar(base) + 1L)
+  # a blank BY value says `na_label`, in the heading and in the page's name
+  blank_val <- function(v) is.na(v) | !nzchar(trimws(v))
+  if (is.null(h)) {
+    if (length(na_label) && nzchar(na_label) && length(pb$page_by) == 1L) {
+      b <- blank_val(base)
+      names(out)[b] <- paste0(na_label, tail[b])
+    }
+    return(out)
+  }
   # several page_by columns: each page's values by column, from the page
   # itself (rtf_paginate_meta$page_values), into the heading's `{<column>}`
   if (by_rows && length(pb$page_by) > 1L) {
@@ -5171,6 +5646,7 @@ plan_header_tokens <- function(.plan) {
       meta <- attr(out[[i]]$data, "rtf_paginate_meta", exact = TRUE)
       v <- meta$page_values
       vals <- as.list(if (is.null(v)) character() else v[intersect(names(v), pb$page_by)])
+      if (length(na_label)) vals[blank_val(unlist(vals))] <- na_label
       .fill_text_tokens(h, vals, verb)
     }, character(1L))
     names(out) <- paste0(filled, tail)
@@ -5180,6 +5656,8 @@ plan_header_tokens <- function(.plan) {
         else .plan_page_group(plan, base)
   wants_n <- "n" %in% .text_tokens(h)
   missed <- character(0)
+  shown <- base
+  if (by_rows && length(na_label)) shown[blank_val(shown)] <- na_label
   filled <- vapply(seq_along(out), function(i) {
     n <- NA
     if (wants_n) {
@@ -5187,7 +5665,7 @@ plan_header_tokens <- function(.plan) {
            else .plan_page_own_n(plan$data, pg$col, pg$value[[i]])
       if (is.na(n)) missed <<- c(missed, base[[i]])
     }
-    .fill_text_tokens(h, list(value = base[[i]], n = if (is.na(n)) "NA" else n),
+    .fill_text_tokens(h, list(value = shown[[i]], n = if (is.na(n)) "NA" else n),
                       verb)
   }, character(1L))
   if (length(missed)) {
@@ -5433,7 +5911,16 @@ plan_n_candidates <- function(.plan) {
     a <- list(vars = stub$vars, label = stub$name, indent = stub$indent,
               group_summary = stub$group_summary)
     a <- a[!vapply(a, is.null, logical(1L))]
+    # a change of the page_by key writes the heading rows again (stub_cols())
+    pb <- intersect(.plan_merge(.plan_of(plan, "pages"))$page_by, names(tbl))
+    if (length(pb) && nrow(tbl)) {
+      attr(tbl, "rtf_stub_break") <- do.call(paste, c(lapply(pb, function(k) {
+        .fill_page_by_gaps(as.character(tbl[[k]]))
+      }), list(sep = "\r")))
+    }
     tbl <- do.call(stub_cols, c(list(data = tbl), a))
+    # (stub_cols() puts the folded column first)
+    if (!is.null(stub$heading)) attr(tbl[[1L]], "rtf_heading") <- stub$heading
   }
 
   lst <- .plan_merge(.plan_of(plan, "listing"))
@@ -5470,6 +5957,7 @@ plan_n_candidates <- function(.plan) {
       list(stub$vars),
       Filter(Negate(is.null), list(label = stub$name, indent = stub$indent,
                                    group_summary = stub$group_summary))))
+    rtf$stub$heading <- stub$heading
     rtf <- rtf[!vapply(rtf, is.null, logical(1L))]
   }
   # done here, where the final column count is known
@@ -5588,6 +6076,17 @@ plan_n_candidates <- function(.plan) {
 
   if (length(colset$decimal)) {
     first_d <- if (inherits(out, "rtftable")) out$data else out[[1L]]$data
+    # a name that is no column of the table stops, as a `widths` name does
+    # (#864); a hidden column is not printed, so it is left alone
+    bad <- setdiff(colset$decimal,
+                   c(names(first_d), ".values", rtf$drop_cols %||% character()))
+    if (length(bad)) {
+      .ard_stop(paste0(
+        "plan_columns(decimal = ) names ", paste(sQuote(bad, FALSE), collapse = ", "),
+        ", not a column of the table.\n",
+        "  Its printed columns: ", paste(sQuote(names(first_d), FALSE), collapse = ", "),
+        " (`.values` covers the value columns)."))
+    }
     dc <- .plan_col_names(colset$decimal, names(first_d), spread)
     if (length(dc)) out <- set_decimal_split(out, cols = dc)
   }
@@ -5735,11 +6234,35 @@ plan_n_candidates <- function(.plan) {
   tbl
 }
 
+# A digits key that is a VALUE of a row key (the parameter's name written
+# at the top level) belongs one level down, under the row key.  One line for
+# each such key (at most three), or "" when there is none.
+.plan_digit_value_hint <- function(plan, src, miss) {
+  if (!is.data.frame(src)) return("")
+  rk <- unlist(lapply(plan$roles$rows %||% list(), function(r) {
+    if (inherits(r, "formula")) character(0) else as.character(r)
+  }), use.names = FALSE)
+  cand <- unique(c(rk, grep("^group[0-9]+_level$", names(src), value = TRUE)))
+  cand <- cand[cand %in% names(src)]
+  out <- character(0)
+  for (m in miss) {
+    for (k in cand) {
+      if (m %in% as.character(unlist(src[[k]]))) {
+        out <- c(out, paste0("  ", sQuote(m), " is a value of ", k,
+                             ": write plan_digits(", k, " = list(`", m,
+                             "` = ...))\n"))
+        break
+      }
+    }
+  }
+  paste(utils::head(out, 3L), collapse = "")
+}
+
 # A digits key must reach something: a variable (checked before the
 # table is made) or a column of the table.  Silence is how a typo
 # survives review -- "AST = 3" on a frame whose variable column is PARAM
 # does nothing -- so a key that reaches nothing is an error.
-.plan_check_digit_cols <- function(plan, tbl, keys, vars = FALSE) {
+.plan_check_digit_cols <- function(plan, tbl, keys, vars = FALSE, src = NULL) {
   miss <- setdiff(keys, names(tbl))
   if (!length(miss)) return(invisible(TRUE))
   .ard_stop(paste0(
@@ -5747,7 +6270,9 @@ plan_n_candidates <- function(.plan) {
     ", which matched nothing.\n",
     "  A key is ",
     if (vars) "an analysis variable, a context, a kind (continuous / categorical), " else "",
-    "a column of the table, `.rows` or \"default\".\n  Columns: ",
+    "a column of the table, `.rows` or \"default\".\n",
+    .plan_digit_value_hint(plan, src, miss),
+    "  Columns: ",
     paste(utils::head(names(tbl), 8L), collapse = ", ")))
 }
 
@@ -5970,6 +6495,12 @@ plan_n_candidates <- function(.plan) {
       tk <- paste0("{", nm, "}")
       if (grepl(tk, out, fixed = TRUE)) {
         key <- if (depth > 0L) paste(pp[seq_len(depth)], collapse = sep)
+        # plan_total()'s "Placebo____Total" totals the column group it sits
+        # in: with no number of its own, it is that group's ("Placebo")
+        if (!is.null(col) && depth > 1L && !is.null(total_col) &&
+            pp[depth] %in% total_col && !(key %in% names(v))) {
+          key <- paste(pp[seq_len(depth - 1L)], collapse = sep)
+        }
         out <- gsub(tk, say(lookup(v, key, all_cols), nm), out,
                     fixed = TRUE)
       }
@@ -6071,11 +6602,12 @@ plan_n_candidates <- function(.plan) {
 # The cells map, looked up WITHOUT parsing: `.ard_lookup_cells()` returns the
 # parsed entry, and a plan has to rewrite the template text before the engine
 # ever sees it.
-.plan_lookup_raw <- function(cells, variable, context, kind) {
+.plan_lookup_raw <- function(cells, variable, context, kind,
+                             group = NA_character_, whole = FALSE) {
   if (!is.list(cells) || !any(nzchar(names(cells) %||% ""))) return(NULL)
   # the cells map wants the FIRST match, not every candidate: a template
   # is one recipe, and specificity picks it outright
-  hit <- .plan_pick(cells, variable, context, kind)
+  hit <- .plan_pick(cells, variable, context, kind, group, whole)
   if (length(hit)) hit[[1L]] else NULL
 }
 
@@ -6086,15 +6618,21 @@ plan_n_candidates <- function(.plan) {
 # return only the first, which was enough when a declaration was one
 # number; now that it can name statistics, a narrower one may answer
 # for `mean` and a wider one for `sd`.
-.plan_pick <- function(map, variable, context, kind) {
+# With plan_stat_groups() (`group`), a split record's group comes after
+# its variable and a whole one's (`whole`, `.others`) after its kind, as in
+# `.ard_lookup_cells()` (FR-PL239); the digits follow the same order.
+.plan_pick <- function(map, variable, context, kind, group = NA_character_,
+                       whole = FALSE) {
   if (!length(map)) return(list())
-  keys <- variable
+  grp <- !is.null(group) && !is.na(group)
+  keys <- c(variable, if (grp && !whole) group)
   if (!is.null(context) && !is.na(context)) {
     keys <- c(keys, .ard_context_aliases(context))
   }
   if (!is.null(kind) && !is.na(kind)) {
     keys <- c(keys, .ard_context_aliases(kind))
   }
+  if (grp && whole) keys <- c(keys, group)
   out <- list()
   for (k in c(unique(keys), "default")) {
     if (!is.na(k) && k %in% names(map)) out[[length(out) + 1L]] <- map[[k]]
@@ -6250,7 +6788,7 @@ plan_layers <- function(.plan) {
 #'
 #' It writes **both halves** --- the ARD to the table, and the table to the
 #' RTF pages --- because a plan that stops at the table is a plan that made
-#' you look up `stub_vars` and the header somewhere else.  The display half
+#' you look up the `stub` and the header somewhere else.  The display half
 #' is a starting point and is meant to be edited: only `plan_stub()` is
 #' derivable from the ARD, and the rest are display decisions nothing can
 #' guess.
@@ -6597,7 +7135,7 @@ plan_template <- function(x, cols = NULL, hierarchy = character(),
 }
 
 
-# A plan is a table source like a gt table: rtf_tables(doc, plan) and
+# A plan is a table source: rtf_tables(doc, plan) and
 # as_rtftables(plan) both work through the generic.
 #' @export
 as_rtftables.table_plan <- function(x, ...) plan_apply(x, "pages")

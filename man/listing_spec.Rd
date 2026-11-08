@@ -33,8 +33,8 @@ own.  \code{NULL} (default) takes the template's.}
 \item{spacer}{Logical.  Insert a narrow blank column between each pair of
 printed columns.  \code{NULL} (default) takes the template's.}
 
-\item{spacer_rel_width}{Relative width of those gutter columns.  \code{NULL}
-(default) takes the template's.}
+\item{spacer_rel_width}{Relative width of those gutter columns, a positive
+finite number.  \code{NULL} (default) takes the template's.}
 
 \item{blank_row}{Logical.  End each record's block with a blank row, so one
 subject is visibly separated from the next.  \code{NULL} (default) takes the
@@ -50,7 +50,9 @@ template's.}
 
 \item{layout}{Default cell layout for columns that do not set their own:
 \code{"stack"} breaks after every separator, \code{"flow"} fills each line as far
-as the column's \code{width} allows.  See \code{\link[=listing_col]{listing_col()}}.  \code{NULL} (default)
+as the column's \code{width} allows.  Under \code{"stack"} the separator breaks
+between the variables of a column, not inside a value.  See
+\code{\link[=listing_col]{listing_col()}}.  \code{NULL} (default)
 takes the template's.}
 
 \item{wrap}{The rule that breaks a cell -- and a derived header -- into
@@ -64,14 +66,21 @@ consistent.  The contract is:
 \describe{
 \item{arguments}{called \strong{positionally} with four:
 \verb{function(text, width, sep, layout)}.}
-\item{\code{text}}{a \strong{length-1} character -- one composed cell, or the
-column's labels already joined.  Never a vector.}
+\item{\code{text}}{a \strong{length-1} character, never a vector.  Under
+\code{layout = "stack"} (the default) it is \strong{one variable's value} --
+or one label -- with the separator added at its end unless it is the
+last: a cell of \code{vars = c("A", "B")} holding \code{"A/B"} and \code{"C"} calls
+the rule twice, with \code{"A/B/"} and \code{"C"}, and the lines are stacked.
+A column of one variable is one call.  Under \code{layout = "flow"}, or
+with no \code{width}, it is the whole cell composed, or the column's
+labels already joined.}
 \item{\code{width}}{the column's \code{width}: a positive number, \strong{or \code{NULL}}
 for a column that sets none.  Handle \code{NULL} -- it means "no limit".}
 \item{\code{sep}}{the effective separator, the column's own or the
 listing's.}
 \item{\code{layout}}{\code{"stack"} or \code{"flow"}, already resolved to one
-string.}
+string.  The parts of a stacked cell are passed as \code{"flow"}: each
+is one value, to be laid out as one.}
 \item{value}{a \strong{non-empty character vector}, one element per line.}
 }
 The simplest way to write one is to delegate to the built-in rule and

@@ -11,7 +11,8 @@ rtf_config(
   page = NULL,
   default_format = NULL,
   watermark = NULL,
-  font_lang = NULL
+  font_lang = NULL,
+  style = NULL
 )
 }
 \arguments{
@@ -24,10 +25,9 @@ rtf_config(
 \item{page}{New page geometry, \strong{merged per key} onto the current page: an
 \code{\link[=rtf_page]{rtf_page()}} object, or a named list with the same keys (see \code{\link[=rtf_page]{rtf_page()}}).}
 
-\item{default_format}{New document-wide default formatting, \strong{merged per key}
-onto the current defaults: an \code{\link[=rtf_default_format]{rtf_default_format()}} object, or a named list
-with the same keys (see \code{\link[=rtf_default_format]{rtf_default_format()}}). Each is a document-wide
-\emph{default} that any per-module setting overrides.}
+\item{default_format}{\strong{Deprecated}: use \code{style = rtf_style()}.  Still
+merged per key onto the current one, and mapped onto the shared level of
+\code{\link[=rtf_style]{rtf_style()}} beneath any \code{style}; warns once a session.}
 
 \item{watermark}{New page watermark: an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare
 string, or \code{NA} to remove the one the document has. \code{NULL} (default)
@@ -35,6 +35,9 @@ leaves it unchanged -- so \code{NA}, not \code{NULL}, is how one is cleared.}
 
 \item{font_lang}{Optional language per font slot (see \code{\link[=rtf_document]{rtf_document()}});
 replaces the current one.  \code{NA} removes it.}
+
+\item{style}{An \code{\link[=rtf_style]{rtf_style()}}, \strong{merged key by key} over the document's
+style: a key it sets wins, the others stay.}
 }
 \value{
 Modified rtf_document object (new copy, original unchanged).
@@ -52,10 +55,11 @@ size) by changing only the relevant setting and rendering each copy. Because
 an \code{rtf_document} is immutable, each call returns a fresh copy and the
 original is left intact, so the variants are independent.
 
-\code{page} and \code{default_format} are \strong{merged per key}: passing
+\code{page} and \code{style} are \strong{merged per key}: passing
 \code{page = list(width_in = 8.27, height_in = 11.69)} changes only those two keys
-and keeps the document's existing orientation and margins. \code{font_table} and
-\code{color_table} are replaced as a whole.
+and keeps the document's existing orientation and margins, and an
+\code{\link[=rtf_style]{rtf_style()}} sets only the keys it gives, over the document's (the later
+wins). \code{font_table} and \code{color_table} are replaced as a whole.
 }
 \examples{
 # Compose once, then render two paper-size variants from the SAME content.
@@ -72,5 +76,5 @@ identical(letter$contents, a4$contents)
 }
 \seealso{
 \code{\link[=rtf_document]{rtf_document()}} (the constructor), \code{\link[=rtf_page]{rtf_page()}} /
-\code{\link[=rtf_default_format]{rtf_default_format()}} for the settings.
+\code{\link[=rtf_style]{rtf_style()}} for the settings.
 }

@@ -25,9 +25,15 @@
 
 # Half-away-from-zero rounding, as SAS does it.  The epsilon term defeats the
 # binary representation of values like 2.675, stored as 2.67499999999999982.
+# It is a few units in the last place of z (4 machine epsilons, relative):
+# the representation error of x and of the product, no more; and below 0.5,
+# so a whole z of 1e15 (where one unit is 0.125) stays whole.  The former
+# sqrt(.Machine$double.eps), 1.5e-8 relative, carried 123456789.125 to
+# 123456791, 1e15 to 1000000014901161 and 1.00499999 to 1.01.
 .round_half_up <- function(x, digits = 0L) {
   z <- abs(x) * 10^digits
-  r <- sign(x) * floor(z + 0.5 + sqrt(.Machine$double.eps) * abs(z)) / 10^digits
+  fuzz <- pmin(4 * .Machine$double.eps * z, 0.25)
+  r <- sign(x) * floor(z + 0.5 + fuzz) / 10^digits
   # (a negative value that rounds to zero is zero, not -0: sprintf() would
   # print "-0")
   r[!is.na(r) & r == 0] <- 0
@@ -144,12 +150,16 @@ round_num <- function(x, digits = 0, rounding = NULL) {
 }
 
 # `whole = TRUE` also refuses a fractional value (1.5, #785); round_num() cuts
-# one to an integer instead, as base::round() does (FR-FM113)
-.check_digits <- function(d, arg, fn, whole = TRUE) {
+# one to an integer instead, as base::round() does (FR-FM113).  `min = 1L`
+# is for a count of significant digits: zero of them prints nothing (#863).
+.check_digits <- function(d, arg, fn, whole = TRUE, min = 0L) {
   frac <- whole && is.numeric(d) && length(d) == 1L && !is.na(d) && is.finite(d) && d != round(d)
+  # (a number: "2" and TRUE are not read as 2 and 1)
+  num <- is.numeric(d) && !is.factor(d)
   d <- suppressWarnings(as.integer(d))
-  if (frac || length(d) != 1L || is.na(d) || d < 0L) {
-    stop(sprintf("`%s(%s = )` must be a single non-negative integer.", fn, arg),
+  if (!num || frac || length(d) != 1L || is.na(d) || d < min) {
+    stop(sprintf("`%s(%s = )` must be a single %s integer.", fn, arg,
+                 if (min > 0L) "positive" else "non-negative"),
          call. = FALSE)
   }
   d
@@ -199,7 +209,9 @@ round_num <- function(x, digits = 0, rounding = NULL) {
 #'
 #' @param x A numeric vector. Character input is an error -- character columns
 #'   are taken as already formatted.
-#' @param digits Total significant digits. Default `3`.
+#' @param digits Total significant digits, one whole number of 1 or more.
+#'   Zero significant digits would print nothing of a value below 1, so `0`
+#'   is an error, as a negative, fractional or `NA` value is. Default `3`.
 #' @param rounding `"r"` rounds with [base::round()], which is banker's
 #'   rounding; `"sas"` rounds half away from zero as SAS does. They differ on
 #'   exact halves -- `23.445` is `"23.44"` under `"r"` and `"23.45"` under
@@ -225,7 +237,8 @@ round_num <- function(x, digits = 0, rounding = NULL) {
 fmt_signif <- function(x, digits = 3L, rounding = NULL,
                        small = c("signif", "fixed"), na = "") {
   .check_num_input(x, "fmt_signif")
-  digits   <- .check_digits(digits, "digits", "fmt_signif")
+  na       <- .check_na_text(na)
+  digits   <- .check_digits(digits, "digits", "fmt_signif", min = 1L)
   small    <- match.arg(small)
   rnd      <- .rounder(rounding)
   dec_fun  <- function(v) .signif_decimals(v, digits, small)
@@ -260,6 +273,7 @@ fmt_signif <- function(x, digits = 3L, rounding = NULL,
 #' @export
 fmt_round <- function(x, digits = 2L, rounding = NULL, na = "") {
   .check_num_input(x, "fmt_round")
+  na       <- .check_na_text(na)
   digits   <- .check_digits(digits, "digits", "fmt_round")
   rnd      <- .rounder(rounding)
   vapply(x, .fmt_num_one, character(1L),
@@ -282,7 +296,7 @@ fmt_round <- function(x, digits = 2L, rounding = NULL, na = "") {
   }
   sm <- rule$small %||% small
   if (has_s) {
-    s <- .check_digits(rule$signif, "signif", "fmt_numeric")
+    s <- .check_digits(rule$signif, "signif", "fmt_numeric", min = 1L)
     function(v) .signif_decimals(v, s, sm)
   } else {
     d <- .check_digits(rule$digits, "digits", "fmt_numeric")
@@ -334,7 +348,10 @@ fmt_round <- function(x, digits = 2L, rounding = NULL, na = "") {
 #'   one of `signif` or `digits`, and may add `small`. The reserved name
 #'   `.default` covers unmatched keys.
 #' @param signif,digits Used **without** `by` to format every selected cell the
-#'   same way. Give exactly one of them.
+#'   same way. Give exactly one of them: `signif`, the total significant
+#'   digits, is one whole number of 1 or more (as [fmt_signif()]'s
+#'   `digits`); `digits`, the decimal places, one whole number of 0 or more.
+#'   A rule in `formats` takes the same values.
 #' @inheritParams fmt_signif
 #'
 #' @return `data` with the selected numeric columns replaced by character
@@ -364,6 +381,7 @@ fmt_numeric <- function(data, cols, by = NULL, formats = NULL,
   if (!is.data.frame(data)) {
     stop("`fmt_numeric()` needs a data frame.", call. = FALSE)
   }
+  na       <- .check_na_text(na)
   small    <- match.arg(small)
   rnd      <- .rounder(rounding)
 
@@ -418,7 +436,7 @@ fmt_numeric <- function(data, cols, by = NULL, formats = NULL,
          call. = FALSE)
   }
   if (!is.null(signif)) {
-    s <- .check_digits(signif, "signif", "fmt_numeric")
+    s <- .check_digits(signif, "signif", "fmt_numeric", min = 1L)
     dec_fun <- function(v) .signif_decimals(v, s, small)
     recompute <- TRUE
   } else {

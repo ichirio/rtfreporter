@@ -28,6 +28,8 @@ rtftable(
   blank_row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
   cell_valign = "bottom",
   cell_styles = NULL,
   blank_row_normalize = c("detect", "collapse"),
@@ -97,12 +99,18 @@ alignment via the usual cascade.}
 
 \item{border}{The table borders. One of:
 \describe{
-\item{\code{"tfl"}}{(default) the clinical TFL preset: header top + bottom
-rules and a bottom rule on the last row.}
-\item{\code{"none"}}{no borders.}
+\item{\code{"tfl"}}{(default) the clinical TFL preset: a top and a bottom
+rule on the column-header block only (see \code{\link[=rtf_table_style_tfl]{rtf_table_style_tfl()}});
+no rule under the last row.}
+\item{\code{"none"}}{no borders, the underline under a spanning header cell
+included (add one per cell with \code{\link[=col_cell]{col_cell()}}\verb{(border = )} or
+\code{\link[=style_header]{style_header()}}).}
 \item{an \code{\link[=rtf_border]{rtf_border()}} object}{its outer edges frame the whole table
 and its \code{inside_h} / \code{inside_v} rules fall between the rows / cells;
-\code{\link[=style_zone]{style_zone()}} then sets one kind of row.}
+\code{\link[=style_zone]{style_zone()}} then sets one kind of row.  The blank rows of
+\code{blank_rows} are inside the frame: a blank row carries the left /
+right edges, \code{inside_v} and \code{inside_h}, and a leading (no header
+row) or trailing one the top or bottom edge.}
 \item{an \code{\link[=rtf_table_style]{rtf_table_style()}} object}{its border zones are used.}
 }}
 
@@ -110,13 +118,15 @@ and its \code{inside_h} / \code{inside_v} rules fall between the rows / cells;
 combining any of (positions are unioned):
 \describe{
 \item{an integer vector}{positions: \code{0} = before the first row, \code{k} =
-after data row \code{k}, \code{-1} = after the last row.}
+after data row \code{k}, \code{-1} = after the last row.  A position is a
+whole number in \verb{-1..nrow}: a fraction, \code{NA}, or a position past
+the last row (or below \code{-1}) stops, naming the positions.}
 \item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} spec}{insert when a column value changes.}
 \item{a \code{\link[=blank_rows_by_rule]{blank_rows_by_rule()}} spec}{insert before / after rows matching a
 regular expression.}
 }}
 
-\item{read_attributes}{Logical. When \code{TRUE} (default), read recognised
+\item{read_attributes}{\code{TRUE} or \code{FALSE}. When \code{TRUE} (default), read recognised
 attributes off \code{data} for use as fallback defaults -- currently
 \code{attr(data, "rtf_blank_rows")} is folded into \code{blank_rows} when the
 argument is \code{NULL}. Set \code{FALSE} to ignore attributes.}
@@ -127,25 +137,35 @@ to \code{rtftable()} always override.  Snapshot semantics: each
 \code{rtftable()} call captures the style's current state at construction.}
 
 \item{col_rel_width}{Numeric vector of relative column widths (e.g.
-\code{c(2, 1, 1)} makes the first column twice as wide as the others).}
+\code{c(2, 1, 1)} makes the first column twice as wide as the others), one
+positive finite number per column; another value is an error when the
+file is written.}
 
 \item{column_widths_twips}{Integer vector of absolute column widths in
-twips. Overrides \code{col_rel_width}.}
+twips, one positive whole number per column. Overrides \code{col_rel_width}.}
 
-\item{table_width_twips}{Total table width in twips.}
+\item{table_width_twips}{Total table width in twips.  A value that is not
+one non-negative integer is an error.  When it is given together with
+\code{table_width_pct_of_writable} or \code{table_width_pct}, the twips win.}
 
 \item{table_width_pct_of_writable}{Table width as a fraction 0-1 of the
-writable page width.}
+writable page width.  A value that is not one number in (0, 1] is an
+error.}
 
 \item{table_width_pct}{Table width as a percentage 0-100 of the writable
-page width (convenience alias for \code{table_width_pct_of_writable * 100}).}
+page width (convenience alias for \code{table_width_pct_of_writable * 100}).
+A value that is not one number in (0, 100] is an error.  Given together
+with \code{table_width_pct_of_writable}, this one is used; given with
+\code{table_width_twips}, the twips win.}
 
 \item{table_align}{Horizontal placement: \code{"left"} (default), \code{"center"},
 or \code{"right"}.}
 
 \item{row_height_twips}{Row height for data rows in twips. \code{NULL} (default)
-uses the document-wide default from \code{rtfreporter_defaults.R}
-(font-size-aware). A positive integer specifies an explicit value.}
+takes the \code{style}'s, else the document's (\code{\link[=rtf_style]{rtf_style()}}), else the
+\code{rtfreporter.row_height_twips} option, else the height the font size
+implies. A non-negative integer specifies an explicit value; anything
+else is an error, as it is for the other \verb{*_twips} arguments.}
 
 \item{font_size_half_points}{Font size for this table, in half-points.
 \code{NULL} (default) inherits the document size. Setting it also recomputes
@@ -157,16 +177,26 @@ uses the document font. A family not already in the document's
 A named vector gives one family per script slot (\code{latin},
 \code{east_asian}, \code{complex}, optional \code{hansi}), e.g. \code{c(latin = "Times New Roman", east_asian = "MS Mincho")}; see \code{\link[=rtf_document]{rtf_document()}}.}
 
-\item{row_height_exact}{Logical. \code{TRUE} = exact (clipped); \code{FALSE} = minimum.}
+\item{row_height_exact}{\code{TRUE} = exact (clipped); \code{FALSE} = minimum; \code{NA}
+or another value is an error.}
 
 \item{header_row_height_twips}{Row height for column-header rows.}
 
 \item{blank_row_height_twips}{Row height for blank separator rows.}
 
-\item{cell_padding_left_twips}{Left cell padding in twips (default 0
-since v0.0.21; cell content sits flush against the cell border).}
+\item{cell_padding_left_twips}{Left cell padding in twips.  \code{NULL}
+(default) takes the \code{style}'s, else the document's (\code{\link[=rtf_style]{rtf_style()}}), else
+the \code{rtfreporter.cell_padding_left_twips} option, else 0 (cell content
+sits flush against the cell border).}
 
-\item{cell_padding_right_twips}{Right cell padding in twips (default 0).}
+\item{cell_padding_right_twips}{Right cell padding in twips, resolved as
+\code{cell_padding_left_twips} is.}
+
+\item{cell_padding_top_twips, cell_padding_bottom_twips}{Cell padding above /
+below the text in twips, written into every header and data cell's
+definition (blank separator rows excepted).  \code{NULL} (default) takes the
+style's, else the document's (\code{\link[=rtf_style]{rtf_style()}}), else 0; 0
+writes nothing.}
 
 \item{cell_valign}{Vertical alignment: \code{"bottom"} (default), \code{"top"},
 or \code{"center"}.}
@@ -218,10 +248,14 @@ character vector of zero or more of:
 \code{U+2264}.}
 }
 \code{"all"} enables both; \code{"none"} / \code{character(0)} enables neither. \code{NULL}
-(default) \strong{inherits} the document default (\code{rtf_document(default_format = list(markup = ))} / the \code{rtfreporter.markup} option), which is \code{"script"} --
+(default) \strong{inherits} the document default (\code{rtf_document(style = rtf_style(markup = ))} / the \code{rtfreporter.markup} option), which is \code{"script"} --
 so super/subscript (e.g. adapter footnote marks \verb{^\{N\}}) work while the
 \code{>=} / \code{<=} symbol conversion is \strong{opt-in}. Applies to all cell text: data
-cells, column / spanning headers, and title / footnote blocks.}
+cells, column / spanning headers, and title / footnote blocks.
+The braces after \code{^} / \verb{_} are the markup's own, so a token written
+there is not filled: \verb{^\{STUDY\}} raises the word STUDY.  To raise a
+token's value, put the token's braces inside, \verb{^\{\{STUDY\}\}}, or write
+other text with it, \verb{^\{n=\{STUDY\}\}}.}
 }
 \value{
 An \code{rtftable} (S3) object suitable for use in \code{rtf_tables()}.

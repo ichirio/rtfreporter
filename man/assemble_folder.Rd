@@ -17,18 +17,24 @@ assemble_folder(
 )
 }
 \arguments{
-\item{dir}{Directory of \code{.rtf} files to assemble.}
+\item{dir}{Directory of \code{.rtf} files to assemble: one folder path.  A
+value that is not one non-empty string is an error, as is a folder that
+does not exist or holds no \code{.rtf} file.}
 
 \item{output_file}{Path of the assembled \code{.rtf} to write, or \code{NULL}
-(default): return the table of contents only.}
+(default): return the table of contents only.  Assembling needs two or
+more files, so with an \code{output_file} a folder of one \code{.rtf} file is an
+error (without one, its one-row table is returned).}
 
 \item{spec_file}{Optional path (\code{.xlsx} or \code{.csv}).  When given, the
 generated spec is \strong{saved} there (so you can inspect / edit it); when
 \code{NULL} (default) the spec is kept in memory only.  It is written, never
-read back: assemble an edited one with \code{assemble_rtf(toc = spec_file)}.}
+read back: assemble an edited one with \code{assemble_rtf(toc = spec_file)}.
+One path in a folder that exists; another value is an error, checked
+before any file is read or written.}
 
-\item{recursive}{Recurse into sub-directories when scanning?  Default
-\code{FALSE}.}
+\item{recursive}{Recurse into sub-directories when scanning?  \code{TRUE} or
+\code{FALSE} (default); another value is an error.}
 
 \item{toc_title, toc_leader, toc_page_numbering, overwrite, ...}{Passed through
 to \code{\link[=assemble_rtf]{assemble_rtf()}}; \code{toc_page_numbering} defaults to \code{"decimal"} here
@@ -41,19 +47,33 @@ table of contents used).
 }
 \description{
 Scans \code{dir} for \code{.rtf} files (natural-sorted, so \code{t2} comes before \code{t10})
-and reads each file's table number and title from its running header into
-a \strong{table of contents}: a \code{data.frame} with one row per file.  With an
+and reads each file's table number and title into a \strong{table of
+contents}: a \code{data.frame} with one row per file.  The number and title
+come from the running header (\code{rtf_header()}) when it has a \code{"Table N"}
+line, otherwise from the title block that \code{\link[=rtf_titles]{rtf_titles()}} writes at the top
+of the body.  With an
 \code{output_file} it assembles the deliverable with that table of contents
 (\code{\link[=assemble_rtf]{assemble_rtf()}}); without one it only returns the table, to edit
 (rename labels, fill \code{heading} to group entries, change \code{level}, reorder
 or drop rows) and hand to \code{assemble_rtf(toc = )}.
 }
 \details{
+The rows come in this order, the same in every locale and on every OS:
+first the files with a \code{"Table N"} line (in the header or the titles), by
+that number in
+natural order (\verb{14.1.2} before \verb{14.1.10}, \verb{14.1.x} before \verb{14.3.x},
+whatever the file names); then the files without one -- listings,
+figures, any file with no \code{"Table N"} line -- by file name in
+natural order.  Names are compared character by character as in the C
+locale, so upper case comes before lower case (\code{B} before \code{a}) and \code{-}
+before \verb{_}.  Files with the same table number keep their file-name order.
+
 The table has the columns \code{order} (the assembly order), \code{file}, \code{table}
-(the table number read from the header, or \code{NA}), \code{heading} (a heading
+(the table number read from the header or the titles, or \code{NA}), \code{heading}
+(a heading
 printed above the entry whenever it changes; \code{NA} = none), \code{label} (the
-entry text, \code{"Table N  <title>"}), \code{level} (the entry's indent, default 2)
-and \code{pages} (informational).
+entry text, \code{"Table N  <title>"}), \code{level} (the entry's indent, a whole
+number from 1 to 3, default 2) and \code{pages} (informational).
 }
 \examples{
 # two TFL files in a folder, as a study's output

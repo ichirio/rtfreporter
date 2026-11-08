@@ -82,7 +82,7 @@ An object of the same shape as \code{x} (rtftable, or list of pages).
 cell against the \strong{final, printed table}: the columns you actually see,
 addressed by \strong{name} or by \strong{visible position} (\code{1} = first printed
 column).  Because it runs on the finished table, there is no "intermediate"
-column layout to reason about -- no hidden \code{drop_cols}, no \code{stub_vars}
+column layout to reason about -- no hidden \code{drop_cols}, no \code{stub}
 bookkeeping, no position shifting.  This is the recommended way to attach a
 multi-row / spanning header on top of an \code{as_rtftables()} pipeline; pair it
 with \code{\link[=rtf_columns]{rtf_columns()}} to see the exact column names first.
@@ -90,7 +90,7 @@ with \code{\link[=rtf_columns]{rtf_columns()}} to see the exact column names fir
 \details{
 Contrast with the \verb{col_header =} argument of \code{\link[=rtftable]{rtftable()}} / \code{\link[=as_rtftables]{as_rtftables()}},
 whose positions refer to the source body \strong{before} \code{drop_cols} /
-\code{stub_vars} are applied.  \code{set_col_header()} always speaks the final table's
+\code{stub} are applied.  \code{set_col_header()} always speaks the final table's
 coordinates.
 
 Like the other post-hoc verbs it is an S3 generic with an \code{rtftable} method

@@ -1,5 +1,9 @@
 # Tests for per-element style: font size, row height, markup, alignment (#292).
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 .df   <- function() data.frame(a = c("x", "y"), b = c("1", "2"),
                                stringsAsFactors = FALSE)
 .W    <- 9360L

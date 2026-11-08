@@ -8,10 +8,11 @@
   feature starts here and the others follow.
 
 ## Pull requests
-- Do not change `Version`, `NEWS.md` or the AI manuals' version line in a PR
-  (this overrides step 4 above). Put the NEWS point in the PR description; the
+- Do not change `Version`, `NEWS.md` or the AI manuals' version line in a PR.
+  Put the NEWS point in the PR description; the
   version is bumped only for a tagged snapshot or a CRAN submission.
-- Branch from `main`; do not stack PRs. One open PR at a time per group of files.
+- Maintainers branch from `next` and open PRs into `next`; outside contributors
+  use `main` (see `CONTRIBUTING.md`). Do not stack PRs. One open PR at a time per group of files.
 - When a PR is ready, add the `automerge` label. If it must wait for another PR,
   write one line in its description: `merge-after: tflspec#123`.
 - Before a PR: the tests of what changed, and lint on the changed files. The

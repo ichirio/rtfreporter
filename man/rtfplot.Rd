@@ -12,13 +12,14 @@ rtfplot(
   render_width = 6.5,
   render_height = 4.5,
   render_dpi = 300,
-  png_device = NULL
+  png_device = NULL,
+  render_format = NULL
 )
 }
 \arguments{
-\item{x}{A figure.  Either the path to a \strong{PNG or JPEG} file (RTF's
-\verb{\\pngblip} and \verb{\\jpegblip}; no other format is emitted), or a plot
-object to draw:
+\item{x}{A figure.  Either the path to a \strong{PNG, JPEG or EMF} file (RTF's
+\verb{\\pngblip}, \verb{\\jpegblip} and \verb{\\emfblip}, the file embedded as it is;
+no other format is emitted), or a plot object to draw:
 \itemize{
 \item anything that draws when printed -- a \strong{ggplot2} plot, a
 \strong{lattice} trellis object, a \strong{patchwork};
@@ -55,12 +56,21 @@ occupies the same inches on the page as one drawn at 150.}
 \code{grDevices::png()} otherwise.  \code{"ragg"} is an error without ragg.  The
 figure takes the same inches on the page whichever device drew it.
 Refused for a file.}
+
+\item{render_format}{The file format a plot object is drawn as: \code{"png"}
+or \code{"emf"}.  \code{NULL} (default) is \code{"png"}.  \code{"emf"} draws a vector
+picture with the devEMF package (\code{devEMF::emf()}, plain EMF records) at
+\code{render_width} x \code{render_height} inches, embedded as \verb{\\emfblip} exactly
+as an EMF file would be; it is an error without devEMF.
+\code{render_dpi} and \code{png_device} are for PNG and may not be given with it.
+EMF is not rendered the same way by every word processor: check it in
+the readers you will use.  Refused for a file.}
 }
 \value{
 An \code{rtfplot} (S3) object suitable for use in \code{rtf_tables()}.
 }
 \description{
-Embeds a figure into the RTF output -- a PNG or JPEG file, or a plot object
+Embeds a figure into the RTF output -- a PNG, JPEG or EMF file, or a plot object
 drawn here and then embedded.  The result can be passed directly to
 \code{\link[=rtf_figures]{rtf_figures()}} or \code{\link[=rtf_tables]{rtf_tables()}} in a pipe chain.
 }
@@ -68,7 +78,9 @@ drawn here and then embedded.  The result can be passed directly to
 The native size is read from the file's resolution metadata (PNG \code{pHYs}
 chunk, JPEG JFIF density). A 2500 x 1438 px image saved at 300 DPI therefore
 embeds at 2500/300 x 1438/300 in. When the file carries no DPI, the
-\code{rtfreporter.figure.default_dpi} option (factory \code{96}) is assumed. There is no
+\code{rtfreporter.figure.default_dpi} option (factory \code{96}) is assumed. An EMF
+(a vector picture, drawn at any size without blur) has its size in its
+header -- the frame, in 0.01 mm -- and embeds at that size. There is no
 automatic page-fit cap; give an explicit \code{width_twips} to shrink a figure that
 is wider than the page.
 }

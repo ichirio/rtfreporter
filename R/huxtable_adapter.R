@@ -23,12 +23,15 @@
 #    "alignment"  -- per-column alignment
 #    "spanning"   -- upper header rows -> stacked col_header
 #    "titles"     -- caption -> page title block
+#    "footnotes"  -- add_footnote() rows -> page footnote block
 #
 #  Not carried (consistent with the gt adapter): per-cell bold / italic /
-#  colour / fill.  huxtable has no first-class footnote concept, so footnotes
-#  are not extracted.
+#  colour / fill.  huxtable has no first-class footnote concept; the rows
+#  add_footnote() appends (a last row whose first cell spans the whole width)
+#  are read as the footnote lines.
 
-.HUXTABLE_TOKENS_ALL <- c("col_header", "alignment", "spanning", "titles")
+.HUXTABLE_TOKENS_ALL <- c("col_header", "alignment", "spanning", "titles",
+                          "footnotes")
 
 
 # -- Detection ---------------------------------------------------------------
@@ -65,16 +68,47 @@
   cc <- as.matrix(cc)
   storage.mode(cc) <- "character"
   cc[is.na(cc)] <- ""
+  # a set_markdown() cell ends in a newline
+  cc[] <- sub("\n+$", "", cc)
   dimnames(cc) <- NULL
   cc
 }
+
+# A logical matrix: TRUE for each cell that another cell's colspan() /
+# rowspan() covers (an origin cell itself stays as it was).
+.huxtable_covered <- function(x) {
+  cs <- as.matrix(huxtable::colspan(x))
+  rs <- as.matrix(huxtable::rowspan(x))
+  nr <- nrow(x)
+  nc <- ncol(x)
+  cv <- matrix(FALSE, nr, nc)
+  for (i in seq_len(nr)) {
+    for (j in seq_len(nc)) {
+      ci <- min(max(as.integer(cs[i, j]), 1L, na.rm = TRUE), nc - j + 1L)
+      ri <- min(max(as.integer(rs[i, j]), 1L, na.rm = TRUE), nr - i + 1L)
+      if (ci > 1L || ri > 1L) {
+        self <- cv[i, j]
+        cv[(i:(i + ri - 1L)), (j:(j + ci - 1L))] <- TRUE
+        cv[i, j] <- self
+      }
+    }
+  }
+  cv
+}
+
+# Header cells are padded for the screen (NBSP and spaces); the RTF header
+# takes the text alone.  The body keeps its padding: it is decimal alignment.
+.huxtable_trim_header <- function(v) {
+  gsub("^[\u00a0 ]+|[\u00a0 ]+$", "", v)
+}
+
 
 
 # -- Central mapping: huxtable + tokens -> rtftable kwargs --------------------
 
 # Returns a list with the same shape the gt / rtables / flextable adapters
 # produce, so as_rtftables() / as_rtftable() can consume any source identically:
-#   data, col_header, col_spec, titles_block.
+#   data, col_header, col_spec, titles_block, footnotes_block.
 .huxtable_to_rtftable_kwargs <- function(x, tokens = .HUXTABLE_TOKENS_ALL) {
   if (!.is_huxtable_tbl(x)) {
     stop("`x` must be a huxtable object.", call. = FALSE)
@@ -85,11 +119,37 @@
   nc  <- ncol(x)
   cc  <- .huxtable_display_matrix(x)
 
+  # cells another cell's colspan() / rowspan() covers print no text
+  covered <- .huxtable_covered(x)
+  cc[covered] <- ""
+
+  # the header is the run of header rows from the first row on; a row flagged
+  # further down is a row of the body, as it is printed there
   hdr_flag <- as.logical(huxtable::header_rows(x))
-  hdr_idx  <- which(hdr_flag)
+  hdr_flag[is.na(hdr_flag)] <- FALSE
+  hdr_idx  <- which(cumprod(hdr_flag) == 1)
   body_idx <- setdiff(seq_len(nr), hdr_idx)
 
   out <- list()
+
+  # ---- "footnotes": the rows add_footnote() appends -------------------------
+  # add_footnote() adds a last row whose first cell spans the whole width; the
+  # trailing body rows of that shape are the footnote lines.  (With one column
+  # that shape is any row, so nothing is taken then.)
+  if ("footnotes" %in% tokens && nc >= 2L && length(body_idx)) {
+    cs <- as.matrix(huxtable::colspan(x))
+    fn_rows <- integer()
+    for (i in rev(body_idx)) {
+      txt <- trimws(cc[i, 1L], whitespace = "[\\h\\v]")
+      if (as.integer(cs[i, 1L]) != nc || !nzchar(txt) ||
+          any(nzchar(cc[i, -1L]))) break
+      fn_rows <- c(i, fn_rows)
+    }
+    if (length(fn_rows)) {
+      out$footnotes_block <- trimws(cc[fn_rows, 1L], whitespace = "[\\h\\v]")
+      body_idx <- setdiff(body_idx, fn_rows)
+    }
+  }
 
   # ---- body data.frame (header rows are structural, not data) -------------
   body <- cc[body_idx, , drop = FALSE]
@@ -103,17 +163,20 @@
   want_spanned <- "spanning"   %in% tokens
 
   bottom_row <- if (want_header && length(hdr_idx) >= 1L)
-                  as.character(cc[hdr_idx[length(hdr_idx)], ]) else NULL
+                  .huxtable_trim_header(as.character(cc[hdr_idx[length(hdr_idx)], ])) else NULL
 
   span_rows <- list()
   if (want_spanned && length(hdr_idx) >= 2L) {
     cspan <- huxtable::colspan(x)
+    # the upper rows keep the text of a covered cell for the segment reading
+    cc_up <- .huxtable_display_matrix(x)
     # Header rows above the leaf row become spanning rows.
     for (h in hdr_idx[-length(hdr_idx)]) {
       # `.rtables_header_segments()` is the shared span-vector -> segments
       # helper: huxtable's colspan (origin = span width, covered cells skipped
       # by the jump) is read the same way as the rtables/flextable encodings.
-      segs  <- .rtables_header_segments(cc[h, ], as.integer(cspan[h, ]))
+      segs  <- .rtables_header_segments(.huxtable_trim_header(cc_up[h, ]),
+                                     as.integer(cspan[h, ]))
       cells <- lapply(segs, function(sg) {
         pos <- if (sg$from == sg$to) sg$from else c(sg$from, sg$to)
         col_cell(pos = pos, label = sg$label)
@@ -122,7 +185,10 @@
     }
   }
 
-  if (length(span_rows)) {
+  if (want_header && length(hdr_idx) == 0L) {
+    # no header rows (add_colnames = FALSE): a blank header, not V1 V2 ...
+    out$col_header <- rep("", nc)
+  } else if (length(span_rows)) {
     bottom <- bottom_row %||% names(out$data)
     out$col_header <- c(span_rows, list(bottom))
   } else if (!is.null(bottom_row)) {

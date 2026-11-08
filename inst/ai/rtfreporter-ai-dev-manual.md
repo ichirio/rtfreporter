@@ -74,7 +74,7 @@ Authoritative prose, in order of usefulness:
 |---|---|
 | Architecture, object model, pipeline | `vignettes/articles/architecture.Rmd` |
 | Adding a table-object adapter | `vignettes/articles/extending-adapters.Rmd` |
-| Workflow, branching, versioning, releases | `CONTRIBUTING.md` — its *Contributor vs Collaborator* table is the authority on the fork/direct split. Note its line saying branch protection on `main` is off is stale: `main` now requires 7 green checks and one approving review. |
+| Workflow, branching, versioning, releases | `CONTRIBUTING.md` — its *Contributor vs Collaborator* table is the authority on the fork/direct split. `main` is protected: a PR needs the required checks to pass and one approving review. |
 | Orientation + invariants | `AGENTS.md` |
 | Why S3 and not R6 | `LEARNING.md` — the post-mortem: why the R6 scaffolds, the chained border builders and the shared mutable theme each failed to pay, including the one class that looked justified and still did not survive. |
 | Public classes and their constructors | `vignettes/articles/architecture.Rmd` |
@@ -159,7 +159,7 @@ Order inside `as_rtftables()`, which matters when adding a hook:
 
 ```
 extract (adapter)
-  -> stub fold (stub_vars / stub = stub_spec(), listing = hook)
+  -> stub fold (stub = stub_spec(), listing = hook)
   -> sort (sort_by / sort_desc)        so grouping sees ordered rows
   -> paginate (.paginate_df())         drop_cols are still PRESENT here
   -> .apply_col_drop()                 removes them, reindexes every
@@ -175,23 +175,46 @@ printed. Any new position-indexed argument must be added to the reindexers in
 
 ## 5. Adding a table-object adapter
 
-Six steps; the full version is `vignettes/articles/extending-adapters.Rmd`.
+Six steps (step 4 has four edits); the full version is `vignettes/articles/extending-adapters.Rmd`.
 
 1. **Detector** — a cheap, side-effect-free predicate in
    `R/<pkg>_adapter.R`: `.is_mypkg_tbl <- function(x) inherits(x, "mypkg_table")`
    (S4: `isS4(x) && methods::is(x, "MyClass")`).
-2. **Token resolution** — `read =` lets users opt in/out of metadata. Mirror
-   the gt / rtables resolvers: `.MYPKG_TOKENS_ALL <- c("col_header", "alignment", ...)`.
-3. **Extractor** — return the kwargs list of §4. Guard the optional package
-   with `.need_pkg()`, not a bare `requireNamespace()`.
-4. **Wire it in** — three edits in `R/as_rtftables.R`: the list-input guard
-   must not mistake your object for a list of items; the dispatch chain; and
-   optionally the `as_rtftable()` singular wrapper.
-5. **Declare** — add the package to `Suggests:` in `DESCRIPTION`, with a
-   minimum version if needed. Never `Imports:`.
+2. **Token resolution** — `read_meta =` lets users opt in/out of metadata.
+   List the tokens and call `.resolve_meta_tokens(read, allowed, label)`
+   (`R/as_rtftables.R`) as the other adapters do:
+   `.MYPKG_TOKENS_ALL <- c("col_header", "alignment", ...)`.
+3. **Extractor** — return the kwargs list of §4. Start it with
+   `.need_pkg("mypkg", "Reading a mypkg table")` (`R/need_pkg.R`), not a bare
+   `requireNamespace()`: missing stops, older than the `Suggests` minimum only
+   warns, once per session.
+4. **Wire it in** — add the detector in four places; none is optional:
+   - `as_rtftables.default()`, list-input guard: needed only for a plain list
+     (not a data frame, not S4), so it is not read as a list of items.
+   - Same function, the `if (.is_gt_tbl(x)) ... else if` chain: a branch that
+     sets `body`, `kw`, `cell_styles`, `titles_block`, `footnotes_block`. A
+     class that is also a data frame (huxtable, rlistings) goes before
+     `is.data.frame(x)`. Add the type to the final `stop()` message.
+   - `as_rtftable()` in `R/as_rtftable.R`: it stops on a type it does not
+     know, so add the detector to its test and message. The requirements that
+     list the types (`FR-TB102`, `FR-TB106` in
+     `inst/validation/requirements.csv`) change with it.
+   - `.is_table_source()` in `R/content.R`: `rtf_tables(doc, x)` uses it. Without
+     the detector `x` falls to `rtfplot()` as a figure (a data-frame class
+     becomes a plain table, losing the metadata). `as_rtftables(x)` works
+     either way, so also test `rtf_tables(doc, x)`.
+5. **Declare** — `mypkg (>= x.y)` in `Suggests:` of `DESCRIPTION`; never
+   `Imports:`. That entry is the only place a minimum version is written:
+   `.need_pkg()` reads it at run time, so no version appears in R code.
 6. **Tests and docs** — `tests/testthat/test-mypkg-adapter.R` with every test
-   wrapped in `skip_if_not_installed("mypkg")`; document the new `read`
-   tokens in `?as_rtftables`; `NEWS.md` entry; `devtools::document()`.
+   wrapped in `skip_if_not_installed("mypkg")`; FT/FR ids per test and the FRs
+   in `inst/validation/requirements.csv` (CONTRIBUTING.md); document the new
+   `read_meta` tokens and add the type where the supported types are listed
+   (`?as_rtftables`, `?as_rtftable`, `?rtf_tables`, `README.md`,
+   `_pkgdown.yml`); `devtools::document()`.
+
+A package that depends on rtfreporter registers an `as_rtftables` S3 method
+instead of adding a branch; see the article.
 
 Existing adapters to copy from: `gt_adapter.R` (gt / gtsummary / tfrmt),
 `rtables_adapter.R` (rtables / tern), `flextable_adapter.R`,
@@ -218,7 +241,7 @@ Coordinate systems differ and the difference is deliberate:
 
 | Entry point | Positions refer to |
 |---|---|
-| `rtftable(col_header = )` / `as_rtftables(col_header = )` | the **source body**, before `drop_cols` / `stub_vars` |
+| `rtftable(col_header = )` / `as_rtftables(col_header = )` | the **source body**, before `drop_cols` / the `stub` fold |
 | `set_col_header()`, `style_*()` | the **final printed table** |
 
 `rtf_columns()` lists the final names; `header_map()` shows where each header
@@ -277,6 +300,20 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
 * Guard every optional-package test with `skip_if_not_installed()`.
 * When you fix a bug, add the failing case **and** the neighbouring cases
   that already worked, so the next change cannot re-break the boundary.
+* **No withr** (it is not a dependency): use `tempfile()`, `dir.create()` and
+  `on.exit(unlink(...))`.
+* While you work, run the tests of the area you changed and `lintr` on the
+  changed files; before you push, the four pre-push checks (§14).
+* Run tests where they are; never copy them into a temporary folder
+  (`testthat` would read that folder's `setup*.R`).
+* Point `R_USER_CONFIG_DIR`, `R_USER_DATA_DIR` and `R_USER_CACHE_DIR` at a work
+  folder, never at the user's own.
+* Run the tests in one R session too (`testthat::test_dir()` on the installed
+  package), not only one file at a time: per-file runs miss interference
+  between tests.
+* Split a source file before it passes 2,000 lines.
+* **Fictional data only.**  No company, study or patient data in code, tests,
+  fixtures, examples, issues or pull requests, and none sent to an AI service.
 
 ---
 
@@ -284,13 +321,17 @@ lintr::lint_package()     # must be clean; config in .lintr (lints R/ only)
 
 * **roxygen** above the function; `devtools::document()` regenerates
   `man/*.Rd` and **both are committed in the same PR**.
+* **Explain features directly.** Do not compare with other packages; naming
+  one is fine where it is the actual subject (an adapter reading a gt table,
+  a ggplot2 figure).
 * **`NAMESPACE` is hand-edited.** Never let a tool rewrite it.
 * `_pkgdown.yml` has a `reference:` section listing every topic — a new
   exported function must be added to it or the pkgdown build fails on an
   unlisted topic.
 * Articles live in `vignettes/articles/` (site only); user-facing vignettes in
   `vignettes/`. Several articles have a `-ja` Japanese twin — update both.
-* `NEWS.md` every PR; `CHANGELOG.md` additionally for a minor/major release.
+* A PR never edits `NEWS.md`, `CHANGELOG.md` or `Version:`; the PR
+  description's *User-visible change (for NEWS)* field carries the change (§14).
 * Regenerate committed examples from the working tree, never from an
   installed build: `Rscript data-raw/gen_tlg_catalog_rtf.R` from the package
   root (the generators `source("data-raw/_load.R")`, which uses
@@ -329,22 +370,23 @@ your own initiative, and never reach for an administrative override to get
 past a protection rule unless the repository owner has told you to in this
 session.
 
-* **Every change starts as an issue.** `exec:agent` on an issue means an
-  agent may implement it; `exec:human` / `exec:hold` / no label mean it may
-  not — report the issue and stop.
+* **Every change starts as an issue.** For the maintainers' own agent:
+  `exec:agent` on an issue means an agent may implement it; `exec:human` /
+  `exec:hold` / no label mean it may not — report the issue and stop. An
+  outside contributor needs no `exec:*` or `priority:*` label and may take any
+  issue a maintainer has pointed them to.
 * **Branch name:** `<type>/<issue>-<slug>` — `feat` `fix` `docs` `chore`
   `refactor` `test` `perf` `ci`. Bare issue number, no `#`.
   Example: `fix/453-named-label-row-guard`.
 * **PR body** carries `Closes #N` (or `Refs #N` for one cut of an umbrella
   issue, which stays open as a tracker with a checklist).
 * **Version:** the standard R scheme — a release is `X.Y.Z`, development is
-  `X.Y.Z.9000`, and the three-component part names the **last release**. An
-  ordinary PR changes only the fourth position, and usually **not at all**:
-  bump it when the change is something another branch or a bug report needs to
-  name, otherwise leave `Version:` alone. `NEWS.md`, not the number, is the
-  record of what changed. Touching `X`, `Y` or `Z`, or lowering the version,
-  fails `version-guard` unless the PR carries the `release` label. Digits and
-  dots only — `0.8.0-rc` is a malformed R version.
+  `X.Y.Z.9000`, and the three-component part names the **last release**. A PR
+  never edits `Version:`, `NEWS.md` or `CHANGELOG.md`: the maintainers write
+  NEWS and bump the version when they tag or release, and `version-guard`
+  accepts a PR with no version change. Touching `X`, `Y` or `Z`, or
+  lowering the version, fails `version-guard` unless the PR carries the
+  `release` label. Digits and dots only — `0.8.0-rc` is a malformed R version.
 * **Releases.** A release ships whatever is on `main`, so a release carrying a
   feature is a MINOR — there is no patch that contains a feature. When a fix
   must ship but the feature on `main` is not ready to freeze, the answer is a
@@ -353,11 +395,98 @@ session.
   `MAJOR` is 0 the package is not formally released, so a MINOR may remove
   public API; from v1.0.0 that needs a major. `CONTRIBUTING.md` has both
   procedures — follow them rather than improvising a number.
-* **CI (all must be green):** `R-CMD-check` (matrix, 0 errors / 0 warnings),
-  `test-coverage`, `pkgdown`, `version-guard`, `lint`.
+* **CI:** the required checks must pass (`R-CMD-check` matrix with 0 errors /
+  0 warnings, `pkgdown`, `test-coverage`); `version-guard` and `lint` also
+  run. A first-time contributor's workflows wait for a maintainer's approval,
+  and CI runs when the PR is opened, not on pushes to a fork's branches.
 * **Before pushing:** `devtools::document()`, then the four checks in §14.
 
 ---
+
+### Git work for a contributor
+
+If you are an agent working for a contributor, you do the git work as well.
+Their fork is `origin`; `https://github.com/ichirio/rtfreporter.git` is `upstream`
+(`git remote add upstream <url>`, one time only). Check with `git remote -v`
+before you start. Run `git status` first; if the working tree has uncommitted
+changes, commit them or ask, and never discard them.
+
+#### Update the fork's main
+
+Do this before every new piece of work. A fork does not update itself. Keep
+`main` pristine: never commit to it.
+
+```bash
+git checkout main
+git fetch upstream
+git merge --ff-only upstream/main
+git push origin main
+```
+
+Then cut the topic branch: `git checkout -b <type>/<issue>-<slug>`.
+
+#### If the fork's main has gone stale or has its own commits
+
+If `git merge --ff-only` fails, `main` has commits upstream does not have.
+Stop and tell the contributor which commits (`git log upstream/main..main`).
+The reset below discards them, so run it only after they agree, and keep the
+work on a branch first:
+
+```bash
+git branch my-old-work main
+git fetch upstream
+git checkout main
+git reset --hard upstream/main
+git push origin main --force-with-lease
+```
+
+This is the only time `main` is ever force-pushed.
+
+#### Rebase a topic branch on upstream/main
+
+Do this when the branch has fallen behind, or when CI or a reviewer asks for it.
+
+```bash
+git fetch upstream
+git checkout <topic-branch>
+git rebase upstream/main
+```
+
+If there are conflicts, git stops at each one:
+
+1. `git status` lists the conflicted files. Open each one and keep both
+   sides' intent: upstream's change and the contributor's.
+2. If you cannot tell what a side intended, read its commit
+   (`git log -p upstream/main -- <file>`). If you still cannot tell, run
+   `git rebase --abort` and ask. Don't guess.
+3. `git add <file>`, then `git rebase --continue`. Repeat until it finishes.
+   Never edit `Version:` or `NEWS.md` to settle a conflict; take upstream's.
+
+Then run the tests of the area you changed again, because a rebase changes the
+code under them. Only when they pass:
+
+```bash
+git push --force-with-lease origin <topic-branch>
+```
+
+- `--force-with-lease` on the topic branch only: a rebase rewrites its history,
+  so a plain push is refused.
+- Never use plain `--force`. If `--force-with-lease` is refused, someone else
+  pushed to the branch: fetch and look at what they pushed before going on.
+- Never force-push `main`, except for the stale-fork reset above.
+
+#### When CI or a review asks for a rebase
+
+- "This branch is out of date" or "has conflicts": rebase as above and push. The
+  pull request updates by itself; don't open a new one, and don't close it.
+- CI failed: read the failed step's log first. If the failure comes from your
+  change, fix it in a new commit on the branch. Rebase only if upstream
+  has moved past a fix you need.
+- A review asked for changes: add commits on the branch and reply on the pull
+  request. Don't rewrite history that the reviewer has already read, unless
+  they asked for a rebase or squash.
+- Stop and ask the contributor if a rebase would drop commits you didn't
+  write, or if conflicts reach beyond the files they changed.
 
 ## 11. Source-file map
 
@@ -497,19 +626,26 @@ for the detail — this section deliberately does not copy it.
 * **PR template** (`.github/PULL_REQUEST_TEMPLATE.md`). Fill every section,
   do not delete them: *Summary* (what and why), *Related issue*
   (`Closes #N`), *Type of change* (fix / feature / breaking + migration /
-  docs-tests-internal), the *Checklist* (tests, roxygen + committed
-  `man/*.Rd`, test and check clean, `NEWS.md`, ASCII-only, no new hard
-  dependency) and *Notes for reviewers*. Tick only what you did; name any
-  check you could not run.
+  docs-tests-internal), *User-visible change (for NEWS)* (below),
+  *Requirements, tests and regression* (every
+  behaviour change needs a requirement in `inst/validation/requirements.csv`
+  and a test named with its FT id (or an existing test mapped in
+  `inst/validation/test_map.csv`), a deviation with its reason in
+  `inst/validation/deviations.csv` where a test is not possible, and
+  `validation/trace.R` and the three `test-validation*.R` tests passing; see
+  *Quality assurance* in `CONTRIBUTING.md`), the *Checklist* (tests, roxygen + committed
+  `man/*.Rd`, the four checks, no edit to `NEWS.md` or `Version:`,
+  ASCII-only, no new hard dependency) and *Notes for reviewers*. Tick only
+  what you did; name any check you could not run.
 * **Issue templates** (`.github/ISSUE_TEMPLATE/`). *Bug report* (`[Bug] `,
   label `bug`): expected vs. actual, a minimal reprex with its output, the
   `.rtf` or a screenshot for rendering problems, `sessionInfo()`. *Feature
   request* (`[Feature] `, label `enhancement`): the real TFL deliverable,
   proposed behaviour, alternatives, and the scope note (invariant 8).
   `config.yml` sends usage questions to Discussions.
-* **Pre-push checks — all four, every push.** Stricter than the
-  `devtools::check()` line in `CONTRIBUTING.md`; the maintainer requires all
-  of them. Report the results in the PR body.
+* **Pre-push checks — all four, every push.** The same four
+  are listed in `CONTRIBUTING.md`; the maintainer requires all of them.
+  Report the results in the PR body.
 
   ```bash
   R CMD build . && R CMD check --as-cran rtfreporter_*.tar.gz  # 0 errors / 0 warnings
@@ -518,12 +654,27 @@ for the detail — this section deliberately does not copy it.
   Rscript -e 'lintr::lint_package()'            # must be clean
   ```
 
-* **Versioning + NEWS** (`CONTRIBUTING.md` *Versioning & releases*, §10). An
-  ordinary PR leaves `Version:` alone or raises only the fourth position, and
-  always adds one bullet under `# rtfreporter (development version)` in
-  `NEWS.md`. The stamp at the top of this manual must equal `DESCRIPTION`
-  (`test-ai-manual-version.R`): bump both together, or leave both to the
-  maintainer, who assigns versions at merge time.
+* **Record the change in the PR description.**  A PR never edits `NEWS.md`,
+  `CHANGELOG.md` or `Version:`, and there is no separate memo file.  Fill the
+  template's *User-visible change (for NEWS)* field without being asked: one or
+  two bullets in NEWS style (what a user can now do, or what is fixed, named by
+  its function or argument), or "none" for an internal change; then "Breaking:
+  no", or "Breaking: yes" with the migration.  The maintainers write `NEWS.md`
+  from the merged PRs at release.  For example:
+
+  ```markdown
+  ## User-visible change (for NEWS)
+
+  - `rtfplot()` and `rtf_figures()` take `render_format = "emf"`: a plot object is
+    drawn as EMF with devEMF (in Suggests), at `render_width` x `render_height`
+    inches.
+
+  Breaking: no
+  ```
+* **Versioning** (`CONTRIBUTING.md` *Versioning & releases*, §10). The
+  maintainers bump the version when they tag or release. The stamp at the top of this manual
+  must equal `DESCRIPTION` (`test-ai-manual-version.R`); a PR leaves both
+  alone.
 * **`cran-comments.md`** (root, `.Rbuildignore`d). The note to CRAN's
   reviewers sent with a submission: check results (and why each NOTE is
   acceptable), test environments, and reviewer notes (examples write only

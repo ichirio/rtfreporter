@@ -216,7 +216,7 @@
     if      (ch == "\\") return("\\\\")
     if      (ch == "{")  return("\\{")
     if      (ch == "}")  return("\\}")
-    if      (cp > 127L)  return(sprintf("\\u%d?", cp))
+    if      (cp > 127L)  return(.rtf_unicode_escape(cp))
     ch
   }, character(1L))
   paste0(out, collapse = "")
@@ -224,6 +224,59 @@
 
 
 # ── TOC entry helpers (exported) ───────────────────────────────────────────
+
+# The scalar arguments of assemble_rtf(): each one value of its kind, so a
+# typo is an error instead of a base-R message or a silent default.
+.check_assemble_args <- function(output_file, overwrite, cover, toc_title,
+                                 bookmark_prefix, book_page) {
+  one_string <- function(x) {
+    is.character(x) && length(x) == 1L && !is.na(x)
+  }
+  if (!one_string(output_file) || !nzchar(output_file)) {
+    stop("`output_file` must be a single non-empty file path.", call. = FALSE)
+  }
+  if (!dir.exists(dirname(output_file))) {
+    stop(sprintf("The folder of `output_file` does not exist: %s",
+                 dirname(output_file)), call. = FALSE)
+  }
+  if (!is.logical(overwrite) || length(overwrite) != 1L || is.na(overwrite)) {
+    stop("`overwrite` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!one_string(toc_title)) {
+    stop("`toc_title` must be a single string.", call. = FALSE)
+  }
+  if (!one_string(bookmark_prefix) ||
+      !grepl("^[A-Za-z0-9_]*$", bookmark_prefix)) {
+    stop("`bookmark_prefix` must be a single string of letters, digits ",
+         "and `_`.", call. = FALSE)
+  }
+  if (!is.null(book_page) && !one_string(book_page)) {
+    stop("`book_page` must be NULL or a single string.", call. = FALSE)
+  }
+  if (is.null(cover)) return(invisible(NULL))
+  fields <- c("title", "subtitle", "date", "version", "meta")
+  if (!is.list(cover) || is.data.frame(cover) ||
+      (length(cover) && (is.null(names(cover)) ||
+                         !all(names(cover) %in% fields)))) {
+    stop("`cover` must be NULL or a list with the fields title, subtitle, ",
+         "date, version and meta.", call. = FALSE)
+  }
+  for (f in fields[1:4]) {
+    v <- cover[[f]]
+    if (!is.null(v) && !(is.atomic(v) && length(v) <= 1L)) {
+      stop(sprintf("`cover$%s` must be a single string.", f), call. = FALSE)
+    }
+  }
+  if (!is.null(cover$meta) && !is.atomic(cover$meta)) {
+    stop("`cover$meta` must be a character vector.", call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+# A cover field to print: not NULL, NA or "" (those are skipped)
+.cover_has <- function(v) {
+  length(v) == 1L && !is.na(v) && nzchar(as.character(v))
+}
 
 # A TOC level: a whole number from 1 to `max` (a heading 2, an entry 3)
 .check_toc_level <- function(level, max, what) {
@@ -246,6 +299,10 @@
 
 .toc_entry <- function(label, file = NULL, level = 2L) {
   .check_toc_level(level, 3L, "toc_entry")
+  if (length(label) != 1L || is.na(label)) {
+    stop("A TOC entry's `label` must be a single string, not NA.",
+         call. = FALSE)
+  }
   structure(
     list(label = as.character(label)[1L],
          file  = file,
@@ -272,18 +329,13 @@
     m <- regexec("\\\\qc\\\\li[0-9]+\\\\ri[0-9]+\\s+\\\\b\\s+(.+?)\\\\b0", line)
     g <- regmatches(line, m)[[1L]]
     if (length(g) == 2L && nzchar(trimws(g[2L]))) {
-      # Reverse the RTF escape: \\ -> \, \{ -> {, \} -> }, \uN? -> char
-      title <- gsub("\\\\\\\\", "\\\\", g[2L])
+      # A page token's field and markup's groups out (.rtf_label_text()),
+      # then reverse the RTF escape: \\ -> \, \{ -> {, \} -> }, \uN? -> char
+      title <- gsub("\\\\\\\\", "\\\\", .rtf_label_text(g[2L]))
       title <- gsub("\\\\\\{",   "{",   title)
       title <- gsub("\\\\\\}",   "}",   title)
-      # \uN? -> the character with codepoint N.  base gsub() does NOT accept a
-      # function replacement, and this Windows R build has broken \\1 backrefs,
-      # so substitute each distinct escape literally via regmatches().
-      escs <- regmatches(title, gregexpr("\\\\u[0-9]+\\?", title))[[1L]]
-      for (e in unique(escs)) {
-        cp <- as.integer(regmatches(e, regexpr("[0-9]+", e)))
-        if (!is.na(cp)) title <- gsub(e, intToUtf8(cp), title, fixed = TRUE)
-      }
+      # \uN? -> the character (signed or unsigned N, surrogate pairs joined)
+      title <- .rtf_unicode_decode(title)
       return(trimws(title))
     }
   }
@@ -316,6 +368,7 @@
       stop("`toc` must be a character vector the same length as `input_files`.",
            call. = FALSE)
     }
+    if (anyNA(toc)) stop("`toc` labels must not be NA.", call. = FALSE)
     return(lapply(seq_along(toc),
                   function(i) list(label = toc[i], level = 1L,
                                     file_idx = i, type = "entry")))
@@ -387,27 +440,27 @@
     "{\\pard\\fs18\\par}{\\pard\\fs18\\par}{\\pard\\fs18\\par}"
   )
 
-  if (!is.null(cover$title) && nzchar(cover$title)) {
+  if (.cover_has(cover$title)) {
     blocks <- c(blocks,
       sprintf("{\\pard\\qc\\b\\fs44 %s\\par}",
               .toc_escape(cover$title)),
       "{\\pard\\fs18\\par}"
     )
   }
-  if (!is.null(cover$subtitle) && nzchar(cover$subtitle)) {
+  if (.cover_has(cover$subtitle)) {
     blocks <- c(blocks,
       sprintf("{\\pard\\qc\\fs28 %s\\par}",
               .toc_escape(cover$subtitle)),
       "{\\pard\\fs18\\par}"
     )
   }
-  if (!is.null(cover$date) && nzchar(cover$date)) {
+  if (.cover_has(cover$date)) {
     blocks <- c(blocks,
       sprintf("{\\pard\\qc\\fs22 %s\\par}",
               .toc_escape(cover$date))
     )
   }
-  if (!is.null(cover$version) && nzchar(cover$version)) {
+  if (.cover_has(cover$version)) {
     blocks <- c(blocks,
       sprintf("{\\pard\\qc\\fs22 %s\\par}",
               .toc_escape(cover$version))
@@ -415,7 +468,7 @@
   }
   if (!is.null(cover$meta) && length(cover$meta) > 0L) {
     blocks <- c(blocks, "{\\pard\\fs18\\par}")
-    for (line in cover$meta) {
+    for (line in cover$meta[!is.na(cover$meta)]) {
       blocks <- c(blocks,
         sprintf("{\\pard\\qc\\fs20 %s\\par}",
                 .toc_escape(line))
@@ -577,7 +630,8 @@
 #'   \item{`meta`}{character vector of extra centred lines (10 pt).}
 #' }
 #'
-#' Any field that is `NULL` or empty is skipped.
+#' Any field that is `NULL`, `NA` or empty is skipped, as is an `NA` line of
+#' `meta`.  Another field name, or a `cover` that is not a list, is an error.
 #'
 #' @section Table of Contents:
 #' `toc` can take any of these shapes:
@@ -588,14 +642,17 @@
 #'   \item{`"auto"`}{auto-extract each input file's title (the first
 #'     centred-bold cell of the title block) and use it as a level-1
 #'     TOC entry.  Falls back to the file's basename if no title is
-#'     detected.}
+#'     detected.  The title is read as the file shows it, its tokens filled
+#'     (`{STUDY}`, `{PAGE}`), except that a dynamic page number
+#'     (`{AUTO_PAGE}`, `{AUTO_TOTAL_PAGES}`) and the `{BOOK_PAGE}` slot are
+#'     left out, and markup keeps its text without its formatting.}
 #'   \item{a character vector of TOC labels}{one per input file -- same as
 #'     `"auto"` but with explicit labels.}
 #'   \item{a table (`data.frame`)}{one row per file, in order, for
 #'     multi-level (chapter / table) layouts: `file` (the path), `label` (the
 #'     entry text), and optionally `heading` (a heading printed above the
 #'     row's entry whenever it changes; `NA` = none), `level` (the entry's
-#'     indent, default 2) and `order`.  [assemble_folder()] makes one from a
+#'     indent, a whole number from 1 to 3, default 2) and `order`.  [assemble_folder()] makes one from a
 #'     folder, ready to edit.  `input_files` can then be left out: the
 #'     table's `file` column is used.}
 #'   \item{the path of such a table}{an `.xlsx` or `.csv` file, e.g. the one
@@ -619,7 +676,7 @@
 #'     ...); body pages restart at `1`.}
 #'   \item{`"decimal"`}{TOC pages use Arabic numerals starting at `1`, and
 #'     the body continues from them (with a one-page TOC the first table is
-#'     page 2).}
+#'     page 2).  A cover page before the TOC is not counted.}
 #' }
 #'
 #' [assemble_folder()] defaults to `"decimal"`.
@@ -627,9 +684,10 @@
 #' @param input_files Character vector of paths to RTF files to combine
 #'   (at least 2).  May be left out when `toc` is a table (or its path):
 #'   the table's `file` column, in its order.
-#' @param output_file Path for the assembled output RTF file.
-#' @param overwrite Logical; whether to overwrite an existing output
-#'   file.  Default `FALSE`.
+#' @param output_file Path for the assembled output RTF file: a single
+#'   string, in a folder that exists, and not one of the `input_files`.
+#' @param overwrite `TRUE` or `FALSE`; whether to overwrite an existing
+#'   output file.  Default `FALSE`.
 #' @param cover Optional `list(title, subtitle, date, version, meta)`
 #'   for a cover page.  `NULL` (default) = no cover page.
 #' @param toc Table-of-Contents specification.  `NULL` (default) =
@@ -637,17 +695,18 @@
 #'   character vector = one label per input file; a table (columns `file`,
 #'   `label`, `heading`, `level`) or the path of one (`.xlsx` / `.csv`) =
 #'   multi-level layout.  See **Table of Contents** above.
-#' @param toc_title Centred bold title rendered on the TOC page.
-#'   Default `"Table of Contents"`.
+#' @param toc_title Centred bold title rendered on the TOC page, a single
+#'   string (`""` = an empty title line).  Default `"Table of Contents"`.
 #' @param toc_leader `"dot"` (default) draws a dotted leader between
 #'   each TOC entry and its page number; `"none"` leaves whitespace.
 #' @param toc_page_numbering `"none"` (default) / `"roman"` /
 #'   `"decimal"`.  See **Page numbering** above.
 #' @param bookmark_prefix String prepended to every auto-generated
-#'   bookmark name (default `"tfl_"`).  Helps avoid clashes if you
+#'   bookmark name (default `"tfl_"`): letters, digits and `_` only, as a
+#'   bookmark name allows; `""` = none.  Helps avoid clashes if you
 #'   later concatenate multiple assembled outputs.
-#' @param book_page Text for the compiled document's page number, put into
-#'   every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves
+#' @param book_page Text for the compiled document's page number, a single
+#'   string put into every `{BOOK_PAGE}` slot the inputs reserved.  `NULL` (default) leaves
 #'   the slots empty.
 #'   \describe{
 #'     \item{Why a slot}{A deliverable that will be bound into a book needs
@@ -721,6 +780,8 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
                           book_page          = NULL) {
   toc_leader         <- match.arg(toc_leader)
   toc_page_numbering <- match.arg(toc_page_numbering)
+  .check_assemble_args(output_file, overwrite, cover, toc_title,
+                       bookmark_prefix, book_page)
 
   # A table of contents given as a table, or as the path of one: its rows in
   # `order`, and its files when `input_files` is left out.
@@ -728,6 +789,9 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   if (is.character(toc) && length(toc) == 1L && !identical(toc, "auto") &&
       (grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE) || file.exists(toc) ||
        grepl("[.][A-Za-z]{2,5}$", toc))) {
+    if (grepl("[.](xlsx|csv)$", toc, ignore.case = TRUE) && !file.exists(toc)) {
+      stop(sprintf("`toc` file not found: %s", toc), call. = FALSE)
+    }
     toc <- .read_spec(toc)
   }
   if (is.data.frame(toc)) {
@@ -745,6 +809,11 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   }
   if (file.exists(output_file) && !isTRUE(overwrite)) {
     stop("`output_file` already exists. Set overwrite = TRUE.", call. = FALSE)
+  }
+  norm_path <- function(p) normalizePath(p, "/", mustWork = FALSE)
+  if (norm_path(output_file) %in% norm_path(input_files)) {
+    stop("`output_file` is one of the `input_files`; writing it would ",
+         "destroy that input.", call. = FALSE)
   }
 
   toc_entries <- .normalize_toc(toc, input_files)
@@ -794,11 +863,12 @@ assemble_rtf <- function(input_files = NULL, output_file, overwrite = FALSE,
   if (use_toc) {
     npages <- vapply(input_files, function(f)
       .count_rtf_pages(readLines(f, warn = FALSE)), integer(1L))
-    front <- if (toc_page_numbering == "roman") {
-      0L                            # body restarts at 1 (front matter is i, ii)
-    } else {
-      (if (use_cover) 1L else 0L) + toc_pages   # cover + TOC, then continuous
-    }
+    # The cached numbers follow the numbering the pages show (#815).
+    front <- switch(toc_page_numbering,
+      roman   = 0L,            # body restarts at 1 (front matter is i, ii)
+      decimal = toc_pages,     # TOC restarts at 1 after any cover; body runs on
+      none    = (if (use_cover) 1L else 0L) + toc_pages  # all continuous
+    )
     entry_pages <- as.integer(front + 1L + cumsum(c(0L, npages[-length(npages)])))
   }
 

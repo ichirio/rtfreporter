@@ -50,8 +50,9 @@ title \strong{block}.
 \item{A block}{Either a character vector (one entry per row, default
 styling) or a list of rows, where a row is a string or a styled
 \code{list(text=, align=, bold=, italic=, underline=, color=, border=)}.  An empty string (\code{""}) is a blank row.}
-\item{Looks}{The block renders as a single-column table the same
-width as the content (so it lines up); title rows default to
+\item{Looks}{The block renders as centred paragraphs, or, with
+\code{rtf_style(title_format = "table")}, as a single-column table the
+same width as the content (so it lines up); title rows default to
 centred + bold.}
 \item{Page numbers}{Title and footnote text may carry the same
 \strong{page-number tokens} as a header or footer band --
@@ -65,9 +66,11 @@ forces in a header.}
 }}
 
 \item{footnotes}{\code{NULL} (default) or a list of length \code{length(tables)} or
-length 1 (common to all). Same block structure as \code{titles}, and the same
-page-number tokens; footnote rows default to left-aligned and draw no
-rule unless a row sets its own \code{border}.}
+length 1 (common to all), each a block of rows, a row being a string or
+a named vector \code{c(l = , c = , r = )} as in \code{\link[=rtf_footnotes]{rtf_footnotes()}} (not the
+styled row lists of \code{titles}), with the same page-number tokens; footnote
+rows default to left-aligned and draw no rule:
+\code{\link[=rtf_footnotes]{rtf_footnotes()}}\verb{(border = )} puts one on the first row.}
 
 \item{auto_section}{Logical.  When \code{TRUE} and \code{tables} is a \strong{named}
 list, each name is used as a per-section heading appended to the common
@@ -95,6 +98,9 @@ each name is appended as the \strong{last row of that table's title block},
 so it prints immediately above the table rather than in the page
 header.  \code{NULL} (default): what the pages say --- a plan's
 \code{plan_paginate_group(heading_at = "title")} --- else \code{FALSE}.
+A title row whose whole text is \code{{PAGE_HEADING}} is where the name goes
+instead: that row keeps its own \code{align}, \code{bold} and so on, and takes
+the name as its text.  A page with no name loses the row.
 \describe{
 \item{Titles already there}{From \verb{titles =}, or carried on the object
 as the \code{rtf_titles} attribute by \code{\link[=as_rtftables]{as_rtftables()}} -- are kept and
@@ -121,9 +127,8 @@ page is the program's to arrange.  To go on with the title, column
 header and footnote on pages of its own, give \code{first_rows}.}
 \item{Pages that always start a page}{A table's own later pages (a
 plan's, or \code{\link[=as_rtftables]{as_rtftables()}}'s) always begin a page; so does the
-document's first content.  Unlike reporter's
-\code{add_content(page_break = )} this is the break \emph{before} the
-table.}
+document's first content.  This is the break \emph{before} the
+table, not after the content that precedes it.}
 \item{Section headings}{A page has one \code{auto_section} heading: that
 of the first table on it that has one; a later table on the page
 with another heading gets a warning (\code{auto_title} names it on its

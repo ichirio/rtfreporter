@@ -213,6 +213,21 @@
   list(flat = flat, scopes = labels[scoped])
 }
 
+# TRUE when the label column names a column of a normalized ARD that holds a
+# key (a `by` variable, a hierarchy's level): not `.label` or `variable_level`
+# (the analysis variable's levels), not the statistic's own columns.  A
+# hierarchy's term is a key for the records of the grades below it and the
+# analysis variable of the records counted at it, so its entry is for the
+# column, not for the records of one analysis variable.  A frame that is not a
+# normalized ARD (a label column of the author's own) holds no keys.
+.ard_label_is_key <- function(labref, d) {
+  if (!length(labref) || !any(c(".kind", ".label") %in% names(d))) return(FALSE)
+  ref <- labref[[1]]$ref
+  is.character(ref) && length(ref) == 1L && ref %in% names(d) &&
+    !ref %in% c(".label", "variable_level", "variable", "context", "stat_name",
+                "stat_label", "stat_fmt", "stat", ".kind", ".stat_group")
+}
+
 .ard_labels_for <- function(labels, ref = NULL, out = NULL) {
   sp <- .ard_labels_split(labels)
   if (is.null(sp)) return(NULL)
@@ -813,10 +828,14 @@
 # variable's `cells` entry (the `Mean (SD)` / `Min, Max` lines), else its labels
 # as first seen.  Rows are sorted by the row keys before the label, so a
 # variable's labels only ever compete with labels of the same variable and one
-# concatenated order serves them all.
+# concatenated order serves them all -- except that a label two variables
+# share ("Unknown") is one factor level, so it can sit in only one place.
+# The order of each variable is therefore kept, as attribute `by_var`, for
+# the rows to be placed by (see `.lab_pos` in widen_ard()).
 .ard_label_order <- function(d, cells, levels) {
   vars <- .ard_first_seen(d$variable)
   out <- character(0)
+  by_var <- list()
   for (v in vars) {
     lv <- if (is.null(levels)) NULL else levels[[v]]
     if (is.null(lv)) {
@@ -825,12 +844,19 @@
       entry <- .ard_lookup_cells(
         cells, v, sub$context[1L],
         if (".kind" %in% names(sub)) sub$.kind[1L] else NA_character_)
-      lv <- if (!is.null(entry) && !is.null(entry$labels)) entry$labels
-            else .ard_first_seen(sub$.label)
+      seen <- .ard_first_seen(sub$.label)
+      # an unnamed line of a named recipe is labelled from `label`: there,
+      # the levels as first seen
+      lv <- if (!is.null(entry) && !is.null(entry$labels))
+              unlist(lapply(entry$labels, function(l) if (nzchar(l)) l else seen))
+            else seen
     }
     out <- c(out, lv)
+    by_var[[v]] <- as.character(lv)
   }
-  unique(as.character(out))
+  out <- unique(as.character(out))
+  attr(out, "by_var") <- by_var
+  out
 }
 
 # A `cells` that is not a list is ONE entry, used for everything; its names, if
@@ -867,6 +893,110 @@
     collapse = "\n")
 }
 
+# A records plan (table_plan(value = )): one cell, one record.  Two records
+# of one key and column with different values would otherwise print the
+# first and drop the other without a word (#835).  The same value stated
+# twice is one value and passes.  Only a records plan is checked: an ARD
+# read by a position (`group1_level` over stacked blocks) can land two
+# statistics in one cell too, and those plans are left as they were.
+.ard_check_one_value <- function(s, chain, rowrefs, key_vals, ckey) {
+  sn <- as.character(s$stat_name)
+  if (!anyDuplicated(sn)) return(invisible())
+  read <- unique(unlist(lapply(chain, function(el)
+    vapply(.ard_tokens(el$tpl), function(z) .ard_token_parts(z)$name, ""))))
+  st <- if (is.list(s$stat)) {
+    vapply(s$stat, function(e) paste(as.character(unlist(e)), collapse = " "), "")
+  } else as.character(s$stat)
+  for (nm in unique(sn[duplicated(sn) & sn %in% read])) {
+    v <- unique(st[sn == nm])
+    if (length(v) < 2L) next
+    keys <- paste(vapply(seq_along(rowrefs), function(i)
+      sprintf("%s = %s", rowrefs[[i]]$out,
+              sQuote(as.character(key_vals[[i]] %||% NA))), ""),
+      collapse = ", ")
+    .ard_stop(paste0(
+      "Two rows reach one cell with different values of ", sQuote(nm),
+      ", and a cell prints one:\n",
+      "  cell  : ", if (nzchar(keys)) paste0(keys, ", "), "column ",
+      sQuote(ckey), "\n",
+      "  values: ", paste(sQuote(utils::head(v, 3L)), collapse = ", "), "\n",
+      "  table_plan(value = ): these are two records of one key and ",
+      "column.\n  Add the key that tells them apart to `rows` ",
+      "or `cols`, or keep one record per cell first."))
+  }
+  invisible()
+}
+
+# widen_ard(): a cell reached by two records of different values is printed
+# from the FIRST one, and the others used to be dropped without a word -- the
+# ARD has a key (a SITE beside `cols = "TRT"`) that neither `cols` nor `rows`
+# names.  Said here as a warning (not an error: a plan that reads a position
+# over stacked blocks lands several statistics in one cell on purpose, and
+# those are quiet below).  A records plan stops instead, in
+# .ard_check_one_value().  Returns NULL, or what was lost: the statistic, its
+# values as the template prints them (first = the one kept), the ARD columns
+# that tell the records apart (`skip` = those the table already uses).
+.ard_lost_values <- function(s, tpl, skip, round_type) {
+  if (is.na(tpl) || nrow(s) < 2L) return(NULL)
+  sn <- as.character(s$stat_name)
+  for (tk in .ard_tokens(tpl)) {
+    p <- .ard_token_parts(tk)
+    j <- which(sn == p$name)
+    if (length(j) < 2L) next
+    vals <- vapply(j, function(i) tryCatch(
+      .ard_format_value(s$stat[i], s$stat_fmt[i], p$spec, round_type),
+      error = function(e) NA_character_), "")
+    uv <- unique(vals[!is.na(vals)])
+    if (length(uv) < 2L) next
+    cand <- setdiff(names(s), c(skip, "stat_name", "stat", "stat_fmt",
+                                "stat_label", "fmt_fun", "fmt_fn", "warning",
+                                "error", "context", ".label"))
+    cand <- cand[!startsWith(cand, ".")]
+    keys <- cand[vapply(cand, function(k) {
+      v <- s[[k]][j]
+      !is.list(v) && length(unique(as.character(v))) > 1L
+    }, NA)]
+    return(list(stat = p$name, values = uv, keys = keys))
+  }
+  NULL
+}
+
+# True when `rows` or `cols` reads a POSITION (groupN / groupN_level) in a way that is
+# already said or deliberate: the level of a position holding several
+# variables (.ard_warn_positional() warns), or the name column of a position
+# (reading it with its name is quiet, test-ard-tables.R).  Values met there
+# are the plan reading the ARD by position, not values lost.
+.ard_reads_position <- function(refs, d) {
+  if (any(grepl("^group[0-9]+$", refs))) return(TRUE)
+  for (ref in unique(refs)) {
+    if (!grepl("^group[0-9]+_level$", ref)) next
+    g <- sub("_level$", "", ref)
+    if (g %in% names(d) && length(.ard_first_seen(d[[g]])) >= 2L) return(TRUE)
+  }
+  FALSE
+}
+
+.ard_lost_warning <- function(lost) {
+  n <- length(lost)
+  show <- utils::head(lost, 3L)
+  lines <- vapply(show, function(z) paste0(
+    "  cell   : ", if (nzchar(z$cell)) paste0(z$cell, ", "), "column ",
+    sQuote(z$col), "\n",
+    "  values : ", paste(sQuote(utils::head(z$values, 4L)), collapse = ", "),
+    "  (", sQuote(z$stat), "; the first is printed)\n",
+    "  keys the records differ in, named in neither `rows` nor `cols`: ",
+    if (length(z$keys)) paste(sQuote(z$keys), collapse = ", ") else
+      "(none found)"), "")
+  paste0(
+    "widen_ard(): ", n, if (n == 1L) " cell is" else " cells are",
+    " reached by records of different values, and a cell prints one, so ",
+    "the others are dropped:\n",
+    paste(lines, collapse = "\n"),
+    if (n > length(show)) sprintf("\n  ... and %d more cell(s)", n - length(show)),
+    "\nAdd the key that tells the records apart to `rows` (or `cols`), or ",
+    "filter the ARD to one record per cell first.")
+}
+
 .ard_lookup_cells <- function(cells, variable, context, kind = NA_character_,
                               group = NA_character_, whole = FALSE) {
   # A list is a map only when its elements are NAMED: `c()` over guards
@@ -878,7 +1008,10 @@
   # A record split by plan_stat_groups() is its group's (after its own
   # variable); a record that went whole to `.others` is its context's
   # first, its group only after them.
-  keys <- c(.ard_summary_key(variable, context), variable,
+  # (the plan writes a split record's entry, its digits filled in, under
+  # the variable, context and group together: .ard_group_key())
+  keys <- c(if (!is.na(group)) .ard_group_key(variable, context, group),
+            .ard_summary_key(variable, context), variable,
             if (!is.na(group) && !whole) group)
   if (!is.na(context)) keys <- c(keys, .ard_context_aliases(context))
   if (!is.na(kind))    keys <- c(keys, .ard_context_aliases(kind))
@@ -951,6 +1084,14 @@
 .ard_summary_key <- function(variable, context) {
   if (is.na(variable) || is.na(context)) return(NA_character_)
   paste(variable, context, sep = "\r")
+}
+
+# The key of one split record's entry -- a variable under one context, in
+# one group of plan_stat_groups().  Written only by the plan; two carriage
+# returns keep it apart from a summary key and from any typed name.
+.ard_group_key <- function(variable, context, group) {
+  if (is.na(variable) || is.na(group)) return(NA_character_)
+  paste(variable, if (is.na(context)) "" else context, group, sep = "\r\r")
 }
 
 
@@ -1100,6 +1241,10 @@ overall_row <- function(label, from = NULL) {
 #'
 #' @param ... One argument per output row.  Names become row labels; an
 #'   unnamed argument takes its label from `label`, as a bare template does.
+#'   On a variable with several levels (a categorical summary) an unnamed
+#'   argument gives one row per level, as a bare template does; a named one
+#'   stops with an error naming the variable, because one named row cannot
+#'   hold every level (put the level in `rows` instead).
 #'
 #' @return An object of class `cell_rows`, for `cells` in [widen_ard()].
 #'
@@ -1192,7 +1337,7 @@ print.cell_rows <- function(x, ...) {
 #' @param x A cards/cardx ARD.
 #' @param cols The column key(s), named as in [widen_ard()] -- the grouping
 #'   variable's own name, not its `group*` position.
-#' @param stat Statistic to read; `"N"` by default.
+#' @param stat Statistic to read, one name; `"N"` by default.
 #' @param variable,context Restrict to this analysis variable and/or this
 #'   `context`.  Use them when the error message says the choice is ambiguous,
 #'   or to ask for the key variable's own rows.
@@ -1201,7 +1346,8 @@ print.cell_rows <- function(x, ...) {
 #'   (`list(TRT = c("Placebo", "Drug"))`; a plain vector is not read).  With
 #'   several `cols` the order is matched against the joined names
 #'   (`"Placebo____F"`).
-#' @param sep Separator between multiple `cols` keys; match [widen_ard()].
+#' @param sep Separator between multiple `cols` keys, one string; match
+#'   [widen_ard()].
 #'
 #' @return A named vector, one element per column key.
 #'
@@ -1220,6 +1366,16 @@ print.cell_rows <- function(x, ...) {
 pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
                      levels = NULL, sep = "____") {
   ard <- x
+  one_text <- function(v) is.character(v) && length(v) == 1L && !is.na(v)
+  if (!is.character(cols) || !length(cols)) {
+    .ard_stop("`cols` names one or more column keys, e.g. cols = \"TRT\".")
+  }
+  if (!one_text(stat)) {
+    .ard_stop("`stat` is one statistic's name, \"N\" by default.")
+  }
+  if (!one_text(sep)) {
+    .ard_stop("`sep` is one text, the separator between `cols` keys: \"____\".")
+  }
   raw   <- as.data.frame(ard, stringsAsFactors = FALSE)
   gcols <- grep("^group[0-9]+$", names(raw), value = TRUE)
   have  <- unique(c(unlist(lapply(gcols, function(g) .ard_first_seen(raw[[g]]))),
@@ -1263,7 +1419,8 @@ pull_ard <- function(x, cols, stat = "N", variable = NULL, context = NULL,
     }
   }
   out <- cand[[1L]]
-  ord <- if (is.null(levels)) .ard_key_order(d, cols, key) else {
+  # `levels` is a named list, as in widen_ard(); a plain vector is not read
+  ord <- if (!is.list(levels)) .ard_key_order(d, cols, key) else {
     lv <- levels[[cols[1L]]] %||% levels[[1L]]
     c(intersect(lv, names(out)), setdiff(names(out), lv))
   }
@@ -1516,7 +1673,12 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
           NA_character_ else as.character(got))
       }
       if (is.numeric(f) && length(f) == 1L && !is.na(f)) {
-        return(sprintf(paste0("%.", as.integer(f), "f"), as.numeric(v)))
+        # A value that is not a number (a test's `method`, say) is printed as
+        # it is, not run through the numeric format.
+        num <- suppressWarnings(as.numeric(v))
+        if (!is.na(num)) {
+          return(sprintf(paste0("%.", as.integer(f), "f"), num))
+        }
       }
       as.character(v)
     }, "")
@@ -2035,7 +2197,11 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'     `.label`, `.depth`, `.kind` and the keys), and it may name the
 #'     caller's variables too;
 #'   * `c("Mean (SD)" = "{mean} ({sd})", "Min, Max" = "{min}, {max}")` -- one
-#'     row per element, the name being the row label.
+#'     row per element, the name being the row label.  A named row is one
+#'     row for the whole variable, so on a variable with several levels (a
+#'     categorical summary, its levels in the label) it stops with an error
+#'     naming the variable rather than keep one level; an unnamed element
+#'     there gives one row per level, labelled from `label`.
 #'
 #'   A **list** is instead a map, looked up by analysis variable, then by
 #'   `context`, then by the structural kind, then by `"default"`; each of its
@@ -2206,7 +2372,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #' @param sort_stat Name of a statistic to total across the spread columns and
 #'   attach as a numeric `.sort_stat` column -- what a descending-frequency AE
 #'   table sorts on.  `NULL` (default) adds nothing.
-#' @param na Value to put in a cell no template could fill.  No effect with
+#' @param na Value to put in a cell no template could fill: one string, or
+#'   `NA` (the default) for an empty cell.  No effect with
 #'   `stats = "rows"` and `value = "stat"`: that table is numeric, and its
 #'   empty cells are `NA`.
 #' @param notes Report what was **not** used.  Every stage discards ARD rows
@@ -2232,6 +2399,18 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
 #'
 #' @return A data frame: the `rows` columns, the label column, then one column
 #'   per column key.
+#'
+#'   A cell prints one value.  When records of **different** values reach
+#'   one cell -- the ARD has a key (a `SITE` beside `cols = "TRT"`) that
+#'   neither `cols` nor `rows` names -- the first record's value is the one
+#'   kept, and `widen_ard()` **warns** that the others are dropped, naming the
+#'   key(s) the records differ in, the cell (its row and column) and the values.
+#'   Add that key to `rows` (or `cols`), or filter the ARD, to have them
+#'   apart.  The same value twice is one value and says nothing.  The warning is
+#'   not `notes`: `notes = FALSE` silences the report of unused ARD rows, not
+#'   this one, because these are numbers the table does not carry.  An ARD read
+#'   by a position (`group1_level` over stacked blocks) keeps to its own
+#'   warning, and reading a position with its name column is quiet.
 #'
 #' @examples
 #' if (requireNamespace("cards", quietly = TRUE)) {
@@ -2260,9 +2439,19 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   stats <- match.arg(stats)
   value <- match.arg(value)
   rounding <- .rounding_type(rounding)
+  # a records plan, table_plan(value = ): one record a cell (#835)
+  one_record <- isTRUE(attr(x, ".ard_records", exact = TRUE))
   if (!(isTRUE(notes) || isFALSE(notes) ||
         (is.character(notes) && length(notes) == 1L && notes %in% c("attr", "applied")))) {
     .ard_stop("`notes` must be TRUE, FALSE, \"attr\" or \"applied\".")
+  }
+  # one text for an empty cell (or NA): not the last of a vector, not NULL
+  if (length(na) != 1L || !(is.character(na) || is.na(na))) {
+    .ard_stop("`na` is one text, what a cell no template could fill shows (or NA).")
+  }
+  # one column reference; a chain of templates is a list of formulas
+  if (is.character(label) && length(label) > 1L) {
+    .ard_stop("`label` is one column, optionally named (`c(Parameter = \".label\")`), or NULL / NA.")
   }
   # No column key: one column, "All", when the ARD has no group to spread
   # (one arm, a single cohort).  A group the ARD has is named in `cols`.
@@ -2441,8 +2630,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # rows apart, and does not want a column of 1s and 2s in the result.  The
   # column is built either way, because the row identity is made of it, and
   # dropped at the end.
-  drop_label <- length(label) == 1L && !inherits(label, "formula") &&
-    is.na(label[[1L]])
+  # (a chain of one formula, c(~ "x"), is a list: no NA to read there)
+  drop_label <- length(label) == 1L && is.atomic(label) && is.na(label[[1L]])
   if (drop_label) label <- ".label"
   # A `label` carrying a formula is a template over the record, not a column
   # name.  Strip the templated part out, keep any plain string as the column
@@ -2450,7 +2639,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # column (or the `cells` names) produced.
   lab_chain <- NULL
   if (is.list(label) || inherits(label, "formula")) {
-    parts <- as.list(label)
+    parts <- if (inherits(label, "formula")) list(label) else as.list(label)
     is_f <- vapply(parts, inherits, logical(1), "formula")
     if (any(is_f)) {
       lab_chain <- .ard_chain(parts, one_sided = TRUE)
@@ -2529,6 +2718,30 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
   pieces <- list()
   named  <- list()
+  # cells that two records of different values reach (a warning, below);
+  # a records plan stops on them instead, and a plan reading a position over
+  # stacked blocks is quiet (see .ard_reads_position())
+  lost <- list()
+  lost_skip <- unique(c(vapply(c(rowrefs, colrefs, labref),
+                               function(r) r$ref, "")))
+  lost_off <- one_record || identical(stats, "rows") ||
+    .ard_reads_position(vapply(rowrefs, function(r) r$ref, ""), d) ||
+    .ard_reads_position(vapply(colrefs, function(r) r$ref, ""), d)
+  note_lost <- function(s2, tpl, lab, ckey) {
+    if (lost_off) return(invisible())
+    z <- .ard_lost_values(s2, tpl, lost_skip, rounding)
+    if (is.null(z)) return(invisible())
+    rk <- vapply(seq_along(rowrefs), function(i)
+      sprintf("%s = %s", rowrefs[[i]]$out,
+              sQuote(as.character(s2[[rowrefs[[i]]$ref]][1L]))), "")
+    cell <- paste(c(rk, if (!is.na(lab)) sprintf("%s = %s",
+      if (length(labref)) labref[[1]]$out else "label", sQuote(lab))),
+      collapse = ", ")
+    z$cell <- cell
+    z$col  <- ckey
+    lost[[length(lost) + 1L]] <<- z
+    invisible()
+  }
   idx <- split(seq_len(nrow(d)), factor(gid, levels = unique(gid)))
   for (ii in idx) {
     if (!length(ii)) next
@@ -2568,30 +2781,72 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                           function(z) .ard_token_parts(z)$name, "")))))))
 
     if (!is.null(entry$labels)) {
-      picks <- lapply(entry$chains, .ard_chain_pick, s = sub,
-                      round_type = rounding)
-      vals <- vapply(picks, function(z) z$v, "")
-      labs_out <- entry$labels
-      if (!is.null(lab_chain)) {
-        labs_out <- vapply(labs_out, function(z)
-          .ard_label_text(lab_chain, sub, z), "")
+      # A recipe with row names.  On a summary with one label (a continuous
+      # variable, one level of interest) every line reads the whole record.
+      # On a variable with several levels each level is a record of its own,
+      # as it is to a bare template: an unnamed line is that level's row,
+      # labelled from `label`; a named line would put every level on the
+      # one row of that name, so it stops rather than keep the first.
+      # the levels are the records' own (`.label`, which normalize_ard()
+      # sets from the hierarchy or `variable_level`), not whatever column
+      # `label` names: `label = "stat_name"` labels one record's lines
+      labs <- if (".label" %in% names(sub)) as.character(sub$.label) else
+        rep(NA_character_, nrow(sub))
+      lvs  <- unique(labs[!is.na(labs)])
+      named_ln <- nzchar(entry$labels)
+      if (length(lvs) > 1L && any(named_ln)) {
+        .ard_stop(paste(c(
+          sprintf(paste0("`cells` gives %s named rows (%s), but %s has several ",
+                         "levels (%s)."), sQuote(sub$variable[1L]),
+                  paste(sQuote(entry$labels[named_ln]), collapse = ", "),
+                  sQuote(sub$variable[1L]),
+                  paste(sQuote(utils::head(lvs, 5)), collapse = ", ")),
+          "A named row is one row for the whole variable, so the levels would",
+          "overwrite each other.  Use an unnamed template (one row per level,",
+          "labelled from `label`), or put the level in `rows`."),
+          collapse = "\n"))
       }
-      pieces[[length(pieces) + 1L]] <- data.frame(
-        .lab = labs_out, .col = ckey, .valn = NA_real_, .valc = vals,
-        .tpl = vapply(picks, function(z) z$tpl, ""),
-        .guard = vapply(picks, function(z) z$guard, ""),
-        .depth = if (".depth" %in% names(sub)) sub$.depth[1L] else 1L,
-        .overall = if (".overall" %in% names(sub)) sub$.overall[1L] else FALSE,
-        .var = sub$variable[1L],
-        .keys = I(rep(list(key_vals), length(vals))),
-        stringsAsFactors = FALSE)
+      grp <- if (length(lvs) > 1L) {
+        lapply(unique(labs), function(lv)
+          if (is.na(lv)) is.na(labs) else (!is.na(labs) & labs == lv))
+      } else list(rep(TRUE, length(ii)))
+      for (sel in grp) {
+        s2 <- sub[sel, , drop = FALSE]
+        # an unnamed line's label is `label`'s value for the record, when
+        # it has one value there
+        lsel <- unique(lab_src[ii][sel])
+        lsel <- lsel[!is.na(lsel)]
+        lv <- if (length(lsel) == 1L) lsel else NA_character_
+        picks <- lapply(entry$chains, .ard_chain_pick, s = s2,
+                        round_type = rounding)
+        vals <- vapply(picks, function(z) z$v, "")
+        labs_out <- ifelse(named_ln, entry$labels, lv)
+        if (!is.null(lab_chain)) {
+          labs_out <- vapply(labs_out, function(z)
+            .ard_label_text(lab_chain, s2, z), "")
+        }
+        for (i in seq_along(picks)) note_lost(s2, picks[[i]]$tpl, labs_out[i], ckey)
+        pieces[[length(pieces) + 1L]] <- data.frame(
+          .lab = unname(labs_out), .col = ckey, .valn = NA_real_, .valc = vals,
+          .tpl = vapply(picks, function(z) z$tpl, ""),
+          .guard = vapply(picks, function(z) z$guard, ""),
+          .depth = if (".depth" %in% names(s2)) s2$.depth[1L] else 1L,
+          .overall = if (".overall" %in% names(s2)) s2$.overall[1L] else FALSE,
+          .var = s2$variable[1L],
+          .keys = I(rep(list(key_vals), length(vals))),
+          stringsAsFactors = FALSE)
+      }
     } else {
       labs <- lab_src[ii]
       for (lv in unique(labs)) {
         sel <- if (is.na(lv)) is.na(labs) else (!is.na(labs) & labs == lv)
         s2 <- sub[sel, , drop = FALSE]
+        if (one_record) {
+          .ard_check_one_value(s2, entry$chains[[1L]], rowrefs, key_vals, ckey)
+        }
         pk <- .ard_chain_pick(entry$chains[[1L]], s2, rounding)
         v <- pk$v
+        note_lost(s2, pk$tpl, lv, ckey)
         if (!is.null(lab_chain)) lv <- .ard_label_text(lab_chain, s2, lv)
         pieces[[length(pieces) + 1L]] <- data.frame(
           .lab = lv, .col = ckey, .valn = NA_real_, .valc = v,
@@ -2638,6 +2893,19 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # scope did before.)
   lab_var <- .ard_labels_split(labels)$scopes
   lab_var <- lab_var[names(lab_var) %in% .ard_first_seen(long$.var)]
+  # A label column that names a KEY (a `by` variable such as a shift table's
+  # baseline category) is recoded like a row key, by its own entry: the
+  # analysis variable's dictionary is not for its values.
+  lab_key <- .ard_label_is_key(labref, d)
+  lab_dict <- if (lab_key) .ard_labels_for(labels, labref[[1]]$ref, labref[[1]]$out)
+  if (lab_key) lab_var <- list()
+  recode_lab <- function(v) {
+    v <- as.character(v)
+    if (is.null(lab_dict)) return(v)
+    hit <- !is.na(v) & v %in% names(lab_dict)
+    v[hit] <- unname(lab_dict[v[hit]])
+    v
+  }
   if (!is.null(label_out) && length(lab_var)) {
     for (vn in names(lab_var)) {
       dict <- lab_var[[vn]]
@@ -2646,7 +2914,30 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       long$.lab[hit] <- unname(dict[long$.lab[hit]])
     }
   }
-  if (!is.null(label_out)) long[[label_out]] <- long$.lab
+  if (!is.null(label_out)) long[[label_out]] <- if (lab_key) recode_lab(long$.lab) else long$.lab
+
+  # The sort and `sort_stat` find each row's statistic in `d` by the row's
+  # identity (its keys and its label), which `base$.rid` below holds as the
+  # values SHOWN -- after `labels` recoded them.  `d` still has the values
+  # before recoding, so the join found nothing and the sort did not apply
+  # (sort_stat was NA).  Read `d` through the same recoding.
+  d_rid <- d
+  for (r in rowrefs) d_rid[[r$ref]] <- recode(d[[r$ref]], r$ref, r$out)
+  if (lab_key && !labref[[1]]$ref %in% vapply(rowrefs, function(r) r$ref, "")) {
+    d_rid[[labref[[1]]$ref]] <- recode_lab(d[[labref[[1]]$ref]])
+  }
+  if (!is.null(label_out) && length(lab_var) && length(labref)) {
+    lr <- labref[[1]]$ref
+    if (lr %in% names(d_rid) && !lr %in% vapply(rowrefs, function(r) r$ref, "")) {
+      d_rid[[lr]] <- as.character(d_rid[[lr]])
+      for (vn in names(lab_var)) {
+        dict <- lab_var[[vn]]
+        hit <- !is.na(d_rid$variable) & d_rid$variable == vn &
+          !is.na(d_rid[[lr]]) & d_rid[[lr]] %in% names(dict)
+        d_rid[[lr]][hit] <- unname(dict[d_rid[[lr]][hit]])
+      }
+    }
+  }
 
   # recode + factorise the row keys
   for (r in rowrefs) {
@@ -2664,6 +2955,7 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       long[[r$out]] <- v
     }
   }
+  lab_by_var <- NULL
   if (!is.null(label_out)) {
     lv <- if (is.null(levels)) NULL else
       (levels[[label_out]] %||% levels[[labref[[1]]$ref]])
@@ -2678,11 +2970,38 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
                                                             names(levels))]))
     }
     # the order is of the values; the levels recoded above print as their text
+    by_var <- attr(lv, "by_var")
     if (!is.null(lv) && length(lab_var)) {
-      dict <- unlist(unname(lab_var))
-      lv <- unique(ifelse(lv %in% names(dict), unname(dict[lv]), lv))
+      if (!is.null(by_var)) {
+        # each variable's own map, so a code two variables share ("U") reads
+        # as each one's text
+        by_var <- lapply(stats::setNames(nm = names(by_var)), function(vn) {
+          x <- by_var[[vn]]
+          dict <- lab_var[[vn]]
+          if (is.null(dict)) x else ifelse(x %in% names(dict), unname(dict[x]), x)
+        })
+        lv <- unique(unlist(by_var, use.names = FALSE))
+      } else {
+        dict <- unlist(unname(lab_var))
+        lv <- unique(ifelse(lv %in% names(dict), unname(dict[lv]), lv))
+      }
+    }
+    if (lab_key && !is.null(lv)) {
+      lv <- recode_lab(lv)
+      if (!is.null(by_var)) by_var <- lapply(by_var, recode_lab)
     }
     if (!is.null(lv)) long[[label_out]] <- .ard_as_factor(long[[label_out]], lv)
+    # A label two variables share is ONE level of that factor, placed where
+    # the first variable has it; the second variable's rows would follow it
+    # there.  When that happens, each row is placed by its own
+    # variable's order instead: a position in the variables' orders end to
+    # end, which is what the one factor stood for when no label is shared.
+    lab_by_var <- if (!is.null(lv)) by_var
+    if (length(lab_by_var) && anyDuplicated(unlist(lab_by_var, use.names = FALSE))) {
+      ln <- vapply(lab_by_var, length, 1L)
+      off <- c(0L, cumsum(ln))[seq_along(ln)]
+      names(off) <- names(lab_by_var)
+    } else lab_by_var <- NULL
   }
 
   rid <- do.call(paste, c(lapply(id_cols, function(k) as.character(long[[k]])),
@@ -2733,6 +3052,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   if (!is.null(clash)) {
     .ard_stop(.ard_clash_message(clash, long, base, ri, ci, id_cols))
   }
+  # values lost in silence: said, whatever `notes` is (they are numbers the
+  # table does not carry, not an ARD row nobody read)
+  if (length(lost)) warning(.ard_lost_warning(lost), call. = FALSE)
 
   out <- base[, id_cols, drop = FALSE]
   vals <- if (rows_numeric)
@@ -2742,9 +3064,21 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 
   if (!is.null(sort_stat)) {
     tot <- tapply(suppressWarnings(as.numeric(
-      d$stat[d$stat_name == sort_stat])), rid_for_stat(d, rowrefs, labref,
-      sort_stat), sum, na.rm = TRUE)
+      d_rid$stat[d_rid$stat_name == sort_stat])), rid_for_stat(d_rid, rowrefs,
+      labref, sort_stat), sum, na.rm = TRUE)
     out$.sort_stat <- as.numeric(tot[match(base$.rid, names(tot))])
+  }
+
+  # a label two variables share: each row's place in its own variable's order
+  if (!is.null(lab_by_var) && is.factor(out[[label_out]])) {
+    lab_ch <- as.character(out[[label_out]])
+    lab_pos <- as.integer(out[[label_out]])
+    for (vn in names(lab_by_var)) {
+      hit <- !is.na(base$.var) & base$.var == vn & !is.na(lab_ch)
+      pp <- match(lab_ch[hit], lab_by_var[[vn]])
+      lab_pos[hit][!is.na(pp)] <- off[[vn]] + pp[!is.na(pp)]
+    }
+    out$.lab_pos <- lab_pos
   }
 
   # each row's identity rides through the sort, for plan_compare()
@@ -2755,9 +3089,9 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
     cmp_sort <- if (!is.null(cmp_d) && nrow(cmp_d)) {
       list(d = cmp_d, spec = compare, label_out = label_out, recode = recode)
     }
-    out <- out[.ard_sort_order(sort, out, base, d, rowrefs, labref,
+    out <- out[.ard_sort_order(sort, out, base, d_rid, rowrefs, labref,
                                colkey = colkey, sep = sep, cmp = cmp_sort,
-                               levels = levels), ,
+                               levels = levels, label_out = label_out), ,
                drop = FALSE]
   } else if ((length(rowname_cols) ||
               (!is.null(label_out) && is.factor(out[[label_out]]))) &&
@@ -2783,13 +3117,15 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       else cumsum(c(TRUE, ch[-1L] != ch[-length(ch)]))
     })
     if (!is.null(label_out) && is.factor(out[[label_out]])) {
-      keys <- c(keys, list(out[[label_out]]))
+      keys <- c(keys, list(if (!is.null(out$.lab_pos)) out$.lab_pos
+                           else out[[label_out]]))
     }
     # the row number breaks ties, so equal keys keep the order they
     # arrived in rather than whatever order() happens to produce
     out <- out[do.call(order, c(keys, list(seq_len(nrow(out))))), ,
                drop = FALSE]
   }
+  out$.lab_pos <- NULL
   if (!is.null(cmp_d) && nrow(cmp_d)) {
     ord_rid <- out$.cmp_rid
     out$.cmp_rid <- NULL
@@ -2834,7 +3170,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
 # A statistic is recognised last, so a column of that name wins; that is the
 # safe way round, since the column is what the caller can see in the result.
 .ard_sort_order <- function(spec, out, base, d, rowrefs, labref,
-                            colkey = NULL, sep = "____", cmp = NULL, levels = NULL) {
+                            colkey = NULL, sep = "____", cmp = NULL, levels = NULL,
+                            label_out = NULL) {
   keys <- list()
   for (s in spec) {
     desc <- substr(s, 1L, 1L) == "-"
@@ -2859,7 +3196,11 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
       next
     }
     sc <- if (!nm %in% names(out)) .ard_sort_scoped(nm)
-    v <- if (nm %in% names(out)) out[[nm]]
+    v <- if (nm %in% names(out)) {
+           # a label two variables share: each row by its own variable's order
+           if (!is.null(out$.lab_pos) && identical(nm, label_out)) out$.lab_pos
+           else out[[nm]]
+         }
          else if (!is.null(sc)) .ard_sort_scoped_value(sc, s, base, d, rowrefs,
                                                        labref, colkey, sep,
                                                        out = out, cmp = cmp)
@@ -2918,6 +3259,8 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   # A column is one cell, with no rows to label, so a named vector is a map
   # (`c(stats_t_test = "{p.value:.3f}", default = ...)`): keyed by context,
   # kind or `default`, it picks one test of several and leaves the others.
+  # Each column is checked here, so widen_ard(compare = ) says it too (#866).
+  for (k in nm) .plan_check_cell_rule(cols[[k]], "plan_compare", k)
   cols <- lapply(cols, function(m) {
     if (is.character(m) && !is.null(names(m)) && all(nzchar(names(m)))) as.list(m) else m
   })

@@ -52,5 +52,10 @@ rtfreporter_defaults <- list(
   # clinical TFL look.  Set to e.g. 72L (= 0.05 inch ≈ 1 mm) for a small
   # internal padding.
   default_cell_padding_left_twips  = 0L,
-  default_cell_padding_right_twips = 0L
+  default_cell_padding_right_twips = 0L,
+
+  # Default top / bottom cell padding (#125), written into each cell
+  # definition. 0L writes nothing, so rows keep their height as before.
+  default_cell_padding_top_twips    = 0L,
+  default_cell_padding_bottom_twips = 0L
 )

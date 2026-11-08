@@ -30,11 +30,12 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 </p>
 
 rtfreporter can read tables produced by other packages — gt, gtsummary,
-rtables/tern, flextable, and huxtable — and turn them into RTF while preserving
-their metadata (column labels, alignment, spanning headers, titles, footnotes,
-per-cell styles).  This article shows how to teach it about **a new
+rtables/tern, rlistings, flextable, and huxtable — and turn them into RTF while
+preserving their metadata (column labels, alignment, spanning headers, titles,
+footnotes, per-cell styles).  This article shows how to teach it about **a new
 table-object type**, using the existing `gt_adapter.R`, `rtables_adapter.R`,
-`flextable_adapter.R` and `huxtable_adapter.R` as templates.
+`rlistings_adapter.R`, `flextable_adapter.R` and `huxtable_adapter.R` as
+templates.
 
 Read [Architecture & internals](architecture.html) first for the big
 picture.
@@ -50,11 +51,16 @@ list(
   data            = <data.frame>,   # REQUIRED: the rendered body (character cells are fine)
   col_header      = <chr vector | stacked spanning rows>,
   col_spec        = list(list(col = 1L, align = "left"), ...),
+  col_rel_width   = <numeric vector> | column_widths_twips = <integer vector>,
   cell_styles     = <list, one element per data row, or NULL>,
   titles_block    = <chr vector | NULL>,   # becomes the page title
   footnotes_block = <chr vector | NULL>    # becomes the page footnote
 )
 ```
+
+`col_header`, `col_spec` and the width fields are read from this list as they
+are; an argument the user passes to `as_rtftables()` wins over them.  Of the
+existing adapters, only gt sets the width fields.
 
 `as_rtftables()` does everything else (pagination, per-page `cell_styles`
 slicing, replicating shared metadata, attaching titles/footnotes).  You do
@@ -72,33 +78,31 @@ Add a cheap, dependency-light predicate.  Keep it side-effect free.
 
 ## Step 2 — token resolution
 
-Tokens let users opt in/out of metadata via `read =`.  Mirror the gt /
-rtables resolvers.
+Tokens let users opt in/out of metadata via `read_meta =`.  List your
+tokens and hand them to the shared `.resolve_meta_tokens(read, allowed, label)`
+(`R/as_rtftables.R`), as every existing adapter does.  It maps `FALSE` to no
+tokens and `TRUE` to all of them, and stops with an error naming any unknown
+token.
 
 ```r
 .MYPKG_TOKENS_ALL <- c("col_header", "alignment", "titles", "footnotes")
 
 .resolve_mypkg_tokens <- function(read) {
-  if (is.null(read) || isFALSE(read)) return(character(0))
-  if (isTRUE(read))                    return(.MYPKG_TOKENS_ALL)
-  if (!is.character(read))
-    stop("`read` must be FALSE/TRUE or a character vector of tokens.",
-         call. = FALSE)
-  bad <- setdiff(read, .MYPKG_TOKENS_ALL)
-  if (length(bad))
-    stop("Unknown token(s): ", paste(bad, collapse = ", "), call. = FALSE)
-  read
+  .resolve_meta_tokens(read, .MYPKG_TOKENS_ALL, "mypkg")
 }
 ```
 
 ## Step 3 — the extractor
 
-Return the kwargs list.  Always require the heavy package lazily.
+Return the kwargs list.  Start with `.need_pkg()` (`R/need_pkg.R`), so the
+package is needed only when a table of its kind is read.  If the package is
+missing, `.need_pkg()` stops with an error.  If it is older than the minimum
+in rtfreporter's `DESCRIPTION`, it gives a warning, once per session, and the
+call goes on.
 
 ```r
 .mypkg_to_rtftable_kwargs <- function(x, tokens = .MYPKG_TOKENS_ALL) {
-  if (!requireNamespace("mypkg", quietly = TRUE))
-    stop("Reading a mypkg table requires the `mypkg` package.", call. = FALSE)
+  .need_pkg("mypkg", "Reading a mypkg table")
 
   out <- list()
   out$data <- mypkg::as_body_data_frame(x)          # however your package exposes the body
@@ -125,30 +129,40 @@ Tips drawn from the existing adapters:
 * **Spanning headers** are a multi-row `col_header`: a list whose upper
   elements are `list(col_cell(pos = c(from, to), label = ...), ...)` and
   whose last element is the leaf-label character vector.  See
-  `.extract_spanners()` (gt) and `.rtables_header_segments()` (rtables).
+  `.extract_spanners_body()` (gt) and `.rtables_header_segments()` (rtables).
 * **Per-cell styles** go in `cell_styles`: a list with one element per data
-  row, each either `NULL` or
-  `list(bold=, italic=, underline=, indent_twips=)` where each is a vector
-  of length `ncol` with `NA` meaning "inherit from `col_spec`".
+  row, each either `NULL` or a list of vectors of length `ncol` — `bold`,
+  `italic`, `underline`, `indent_twips`, `color`, `align`, `border` — with
+  `NA` meaning "inherit from `col_spec`" (see `cell_styles` in `?rtftable`).
+  Only the gt adapter sets `cell_styles`; rtables bakes the row indentation
+  into the stub text instead.
 * **Footnote marks already in the text.** If your source renders marks
-  inline (gt uses `<sup>N</sup>`, rtables uses `{N}`), convert them to
+  inline (gt wraps a mark in a `gt_footnote_marks` span holding `<sup>N</sup>`;
+  rtables writes `{N}`), convert them to
   rtfreporter's `^{N}` superscript markup **without `gsub` backreferences**
   (some locale-broken R builds drop `\\1`) — use `regmatches()` as in
   `.convert_footnote_marks()` / `.convert_rtables_marks()`.
 
-## Step 4 — wire it into `as_rtftables()`
+## Step 4 — wire it in
 
-Three small edits in `R/as_rtftables.R`:
+Four places name every adapter's detector.  Add yours to each.
+
+**1. `as_rtftables.default()` in `R/as_rtftables.R` — the list-input guard.**
+Needed only if your object is a plain list (not a data frame, not S4); the
+guard must not treat it as a list of items to convert one by one:
 
 ```r
-# (a) the list-input guard must NOT treat your object as a list of items
 if (is.list(x) && !is.data.frame(x) && !isS4(x) &&
-    !.is_gt_tbl(x) && !.is_gtsummary_tbl(x) &&
-    !.is_rtables_tbl(x) && !.is_mypkg_tbl(x)) { ... }
+    !.is_gt_tbl(x) && !.is_gtsummary_tbl(x) && !.is_rtables_tbl(x) &&
+    !.is_flextable_tbl(x) && !.is_mypkg_tbl(x)) { ... }
+```
 
-# (b) the resolve-body-+-metadata dispatch
+**2. The same function — the dispatch that resolves body and metadata.**
+Add a branch to the `if (.is_gt_tbl(x)) ... else if` chain:
+
+```r
 } else if (.is_mypkg_tbl(x)) {
-  tokens          <- .resolve_mypkg_tokens(read)
+  tokens          <- .resolve_mypkg_tokens(read_meta)
   kw              <- .mypkg_to_rtftable_kwargs(x, tokens = tokens)
   body            <- kw$data
   cell_styles     <- kw$cell_styles
@@ -157,22 +171,49 @@ if (is.list(x) && !is.data.frame(x) && !isS4(x) &&
 }
 ```
 
-Optionally relax the guard in `as_rtftable()` (the singular wrapper) so it
-accepts your type too.
+`col_header`, `col_spec` and the width fields are not copied: they stay in
+`kw`, which is read later.  If your class is also a data frame (huxtable and
+rlistings are), put the branch before the `is.data.frame(x)` branch.  The
+`stop()` that ends the chain names the supported types; add yours to its
+message.
+
+**3. `as_rtftable()` in `R/as_rtftable.R`.**  It tests the object against the
+same list before it calls `as_rtftables()`, and stops with "`x` must be a
+gt_tbl, ..." for a type it does not know.  Add `.is_mypkg_tbl()` to that test
+and to the message.  The requirements that list the types
+(`FR-TB102`, `FR-TB106` in `inst/validation/requirements.csv`) change with it.
+
+**4. `.is_table_source()` in `R/content.R`.**  `rtf_tables(doc, x)` calls it to
+decide whether `x` is a table source.  Without your detector, `x` is not
+treated as a table: `.rtf_content()` falls through to its default method, which hands
+`x` to `rtfplot()` as a figure and prints it.  An object whose class also
+includes `data.frame` becomes a plain table instead, without the adapter's
+metadata.  Calling `as_rtftables(x)` yourself works either way, so a test of
+the adapter alone does not show the gap; test `rtf_tables(doc, x)` too.
 
 ## Step 5 — declare the dependency
 
-Add `mypkg` to `Suggests:` in `DESCRIPTION`.  Never add it to `Imports:` —
-the zero-hard-dependency rule is deliberate.  The lazy
-`requireNamespace()` in Step 3 produces a friendly error when it is
-missing.
+Add `mypkg` to `Suggests:` in `DESCRIPTION`, as `mypkg (>= x.y)` when there is
+a minimum.  That entry is the only place the minimum is written:
+`.need_pkg()` reads it from rtfreporter's `DESCRIPTION` when it runs, so no
+version number appears in R code.  Never add the package to `Imports:`, which
+holds only packages that ship with R (grDevices, grid, methods, stats, utils).
+The `.need_pkg()` call in Step 3 gives the error when `mypkg` is missing.
 
 ## Step 6 — tests and docs
 
 * Add `tests/testthat/test-mypkg-adapter.R`, wrapping every test in
   `skip_if_not_installed("mypkg")`.
-* Document the new `read` tokens (extend `?as_rtftables`).
-* Add a `NEWS.md` entry; for a major/minor change update `CHANGELOG.md`.
+* A new feature comes with its requirements: each test names an FT id and
+  the FR ids it checks at its head, and the FRs are added to
+  `inst/validation/requirements.csv` in the same PR.  The rules are in
+  "Quality assurance: requirements, tests, traceability" in `CONTRIBUTING.md`.
+* Document the new `read_meta` tokens (extend `?as_rtftables`), and add the
+  type where the supported types are listed: `?as_rtftables`, `?as_rtftable`,
+  `?rtf_tables`, `README.md` and `_pkgdown.yml`.
+* Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:` in the PR.  Fill the
+  *User-visible change (for NEWS)* field of the PR template; the maintainers
+  write `NEWS.md` from it.
 * Run `devtools::document()`, `devtools::test()`, `devtools::check()`.
 
 ## Supplying a method from your own package
@@ -202,8 +243,9 @@ rtfreporter, and rtfreporter does not depend on yours.
 
 ## A worked reference
 
-The rtables adapter (`R/rtables_adapter.R`) is a compact, complete example
-that exercises every part of the contract — multi-level spanning headers,
-per-row indentation as `cell_styles`, inline `{N}` -> `^{N}` mark
-conversion, and title/footer extraction — all from a single
-`formatters::matrix_form()` call.  It is a good model to copy.
+The rtables adapter (`R/rtables_adapter.R`) is a compact example.  It reads
+multi-level spanning headers, per-column alignment, row-label indentation
+(baked into the stub text), inline `{N}` -> `^{N}` mark conversion, and the
+titles and footnotes — all from a single `formatters::matrix_form()` call.
+The rlistings adapter reuses the same reader.  It sets no `cell_styles`; the
+gt adapter is the one to read for those.

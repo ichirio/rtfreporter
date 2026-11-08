@@ -25,6 +25,9 @@
 # while the real tokens are replaced, then put back.
 .BRACE_OPEN  <- "\u0001"
 .BRACE_CLOSE <- "\u0002"
+# A filled value waits behind these marks, so it is not read as a token again.
+.FILL_OPEN  <- "\u0003"
+.FILL_CLOSE <- "\u0004"
 
 .TOKEN_RX <- "[{]([A-Za-z._][A-Za-z0-9._]*)[}]"
 
@@ -45,8 +48,10 @@
     if (is.na(s) || !grepl("{", s, fixed = TRUE)) return(s)
     s <- gsub("{{", .BRACE_OPEN, s, fixed = TRUE)
     s <- gsub("}}", .BRACE_CLOSE, s, fixed = TRUE)
-    for (nm in names(vals)) {
-      s <- gsub(paste0("{", nm, "}"), as.character(vals[[nm]]), s, fixed = TRUE)
+    # fill once: a filled value is not read again (a label may hold `_{n}`)
+    for (i in seq_along(vals)) {
+      s <- gsub(paste0("{", names(vals)[i], "}"),
+                paste0(.FILL_OPEN, i, .FILL_CLOSE), s, fixed = TRUE)
     }
     left <- .text_tokens(s)
     left <- setdiff(left, .RENDER_TOKENS)
@@ -61,7 +66,12 @@
         call. = FALSE)
     }
     s <- gsub(.BRACE_OPEN, "{", s, fixed = TRUE)
-    gsub(.BRACE_CLOSE, "}", s, fixed = TRUE)
+    s <- gsub(.BRACE_CLOSE, "}", s, fixed = TRUE)
+    for (i in seq_along(vals)) {
+      s <- gsub(paste0(.FILL_OPEN, i, .FILL_CLOSE),
+                as.character(vals[[i]]), s, fixed = TRUE)
+    }
+    s
   }, character(1L), USE.NAMES = FALSE)
 }
 

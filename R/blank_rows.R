@@ -9,7 +9,7 @@
 #       0    = blank row BEFORE the first data row
 #       k    = blank row AFTER data row k (1 <= k <= n)
 #       -1   = blank row AFTER the last data row
-#       out-of-range values produce a warning and are ignored.
+#       a value out of range, a fraction or NA stops (#853).
 #
 #    2. Variable-change spec via blank_rows_by_change():
 #         blank_rows_by_change(cols, include_before_first, include_after_last)
@@ -146,7 +146,7 @@ blank_rows_by_rule <- function(col, pattern,
 .resolve_blank_rows <- function(spec, df) {
   if (is.null(spec)) return(integer(0))
   if (is.numeric(spec) && !is.list(spec)) {
-    return(.resolve_blank_positions(as.integer(spec), nrow(df)))
+    return(.resolve_blank_positions(spec, nrow(df)))
   }
   if (inherits(spec, "rtf_blank_rows_by_change")) {
     return(.resolve_by_change(spec, df))
@@ -164,20 +164,45 @@ blank_rows_by_rule <- function(col, pattern,
 
 # Mode 1: positions
 .resolve_blank_positions <- function(positions, n) {
-  out <- integer(0)
-  for (p in positions) {
-    if (is.na(p)) next
-    if (p == -1L) {
-      out <- c(out, n)
-    } else if (p >= 0L && p <= n) {
-      out <- c(out, p)
-    } else {
-      warning(sprintf(
-        "blank_rows position %d is out of range (data has %d rows); ignored.",
-        p, n), call. = FALSE)
-    }
+  .check_blank_positions(positions, n)
+  positions <- as.integer(positions)
+  positions[positions == -1L] <- n
+  sort(unique(positions))
+}
+
+# The integer positions of a `blank_rows` spec (a numeric vector, or the
+# numeric items of a plain list) must be whole numbers in -1..n: 0 before the
+# first row, k after row k, -1 after the last.  Anything else stops, naming
+# the positions (#853); a position out of range used to warn in rtftable()
+# and be dropped without a word in as_rtftables() / plan_blanks(), and a
+# fraction was truncated.  `n` is the rows of the body the positions index.
+.check_blank_positions <- function(spec, n, arg = "blank_rows") {
+  if (is.null(spec)) return(invisible(NULL))
+  nums <- if (is.numeric(spec) && !is.list(spec)) {
+    spec
+  } else if (is.list(spec) && !inherits(spec, "rtf_blank_rows_by_change") &&
+             !inherits(spec, "rtf_blank_rows_by_rule")) {
+    unlist(Filter(function(s) is.numeric(s) && !is.list(s), spec),
+           use.names = FALSE)
+  } else {
+    NULL
   }
-  sort(unique(out))
+  if (!length(nums)) return(invisible(NULL))
+  frac <- nums[is.na(nums) | !is.finite(nums) | nums != trunc(nums)]
+  if (length(frac)) {
+    stop(sprintf(paste0("`%s` positions must be whole numbers (0 before the ",
+                        "first row, k after row k, -1 after the last), not %s."),
+                 arg, paste(format(frac), collapse = ", ")), call. = FALSE)
+  }
+  out <- nums[nums < -1 | nums > n]
+  if (length(out)) {
+    stop(sprintf(paste0("`%s` position%s %s out of range: the table has %d ",
+                        "row%s (positions 0..%d, or -1 for after the last row)."),
+                 arg, if (length(out) > 1L) "s" else "",
+                 paste(format(out), collapse = ", "), n,
+                 if (n == 1L) "" else "s", n), call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 # Mode 2: by-variable-change.  `group_by = "value"` (default) uses exact

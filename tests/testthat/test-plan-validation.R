@@ -211,11 +211,10 @@ test_that("FT-PL065 [FR-PL156]: plan_columns() twice merges field by field, the 
   expect_equal(page$row_title, 1L)
 })
 
-test_that("FT-PL066 [FR-PL163]: plan_columns(decimal = <name not on the page>) ignores it", {
+test_that("FT-PL066 [FR-PL163]: plan_columns(decimal = <name not a column of the table>) stops at plan_apply()", {
   p <- table_plan(val_wide())
-  expect_silent(pages <- plan_apply(p |> plan_columns(decimal = "nope")))
-  expect_identical(pages, plan_apply(p |> plan_columns()))
-  expect_null(pages[[1L]]$decimal_split)
+  expect_error(plan_apply(p |> plan_columns(decimal = "nope")),
+               "plan_columns(decimal = ) names 'nope', not a column of the table.", fixed = TRUE)
 })
 
 test_that("FT-PL067 [FR-PL175]: plan_columns(widths, decimal, row_title) match Japanese names", {
@@ -312,4 +311,28 @@ test_that("FT-PL076 [FR-PL194]: plan_blanks(where = \"nope\") stops at plan_appl
 test_that("FT-PL077 [FR-PL195]: plan_blanks(<not a table_plan>) stops", {
   expect_error(plan_blanks(val_wide()),
                "Expected a table_plan; pipe from table_plan(ard).", fixed = TRUE)
+})
+
+test_that("FT-PL915 [FR-PL914]: every plan verb stops when `.plan` is not a table_plan", {
+  # each verb gets the least it needs to reach the check of its plan
+  others <- list(
+    plan_cell_style  = list(bold = TRUE),
+    plan_compare     = list(p = "{p.value:.3f}"),
+    plan_filter      = list(quote(n > 0)),
+    plan_nest        = list(SUB = c(GRP = "A")),
+    plan_stat_groups = list(N = "n")
+  )
+  verbs <- c("plan_after", "plan_append", "plan_apply", "plan_blanks",
+             "plan_cell_style", "plan_cells", "plan_col_header", "plan_columns",
+             "plan_compare", "plan_digits", "plan_empty", "plan_filter",
+             "plan_footnotes", "plan_header_tokens", "plan_hide", "plan_labels",
+             "plan_layers", "plan_levels", "plan_listing", "plan_n_candidates",
+             "plan_nest", "plan_paginate_cols", "plan_paginate_group",
+             "plan_paginate_rows", "plan_row_group", "plan_sort",
+             "plan_stat_groups", "plan_stub", "plan_style", "plan_titles",
+             "plan_total")
+  for (v in verbs) {
+    call <- as.call(c(as.name(v), list(val_wide()), others[[v]]))
+    expect_error(eval(call), "[Ee]xpected a table_plan", info = v)
+  }
 })

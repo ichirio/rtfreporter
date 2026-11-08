@@ -32,7 +32,7 @@ The released versions' manuals: [0.8.2](https://github.com/ichirio/rtfreporter/b
    (`rtf_body()`, `rtf_colheader()`, `create_table()`, …) into rtfreporter code.
    rtfreporter depends on no other RTF package.
 3. **Base R only.** No tidyverse is required. Use the native pipe `|>`
-   (R >= 4.1) or `magrittr::%>%` — both appear in the docs.
+   (R >= 4.2 for this package) or `magrittr::%>%` — both appear in the docs.
 4. **Units.** Widths and heights are **twips**: `1 inch = 1440 twips`,
    `1 pt = 20 twips`. Font size is in **half-points**: `18L` = 9 pt (the
    default), `16L` = 8 pt, `20L` = 10 pt.
@@ -46,7 +46,7 @@ The released versions' manuals: [0.8.2](https://github.com/ichirio/rtfreporter/b
    is the default since 0.8.2.9039); `overwrite = FALSE` stops instead.
 9. A table's appearance (`border`, `col_rel_width`, `font`, ...) is written on
    the table -- `rtftable()`, `as_rtftables()`, `plan_style()` -- never on
-   `rtf_tables()` (those arguments are deprecated).
+   `rtf_tables()` (its table-format arguments were removed in 0.9.0).
 
 ---
 
@@ -262,10 +262,10 @@ without writing a file.
 
 | Need | Call |
 |---|---|
-| Start a document | `rtf_document(page =, default_format =, watermark =)` |
+| Start a document | `rtf_document(page =, style =, watermark =)` |
 | Paper / orientation / margins | `rtf_page(paper_size = "letter"/"A4", orientation = "landscape", margin_*_in =)` |
-| Document-wide font size etc. | `rtf_default_format(font_size_half_points = 18L, ...)` |
-| Edit an already-built document | `rtf_config(doc, page =, default_format =, ...)` |
+| Document-wide font size etc. | `rtf_style(font_size_half_points = 18L, ..., table = list(...), header = list(...))` |
+| Edit an already-built document | `rtf_config(doc, page =, style =, ...)` |
 | Running header / footer | `rtf_section(doc, page =, header =, footer =)` |
 | Build those bands | `rtf_header(rows =)`, `rtf_footer(rows =)` |
 | data.frame → paginated pages | `as_rtftables(x, ...)` **(the workhorse — §5)** |
@@ -286,6 +286,14 @@ without writing a file.
 | Table from a cards / cardx ARD | `normalize_ard()` → `table_plan()` → `plan_*()` → `rtf_tables(doc, plan)` **(§17)** |
 
 ---
+
+**Deprecated -- do not generate these** (they still work but warn, and are
+removed in 0.9):
+
+| Deprecated | Write instead |
+|---|---|
+| `rtf_default_format()` | `rtf_style()` (same keys at its shared level) |
+| `rtf_document(default_format = )` / `rtf_config(default_format = )` | `style = rtf_style(...)` |
 
 ## 5. `as_rtftables()` — the workhorse
 
@@ -905,7 +913,7 @@ p_ae <- ard_ae |>
 | A section per arm with a row budget inside | `plan_paginate_rows(page_by = "arm", max_rows = 20, split = "group_safe", heading = "Treatment: {value} (N={n})", heading_at = "section")` + `plan_hide("arm")` |
 | Only the PTs with 5% or more in any arm (a SOC with its PTs) | `plan_filter(p >= 0.05)` (`any = FALSE` for every arm; `parents = "drop"` to judge a SOC by its own counts; `by = "SOC"` judges a key's rows together). Never filter the ARD by hand for this |
 | A subgroup's own n (%) beside its ORR (SEX both a variable and a subgroup layer) | `table_plan(..., rows = c(block = "variable", grp = "subgroup", lvl = "subgroup_level"), show_keys = "SEX")` + `plan_stat_groups(n = "N", orr_ci = c(...), .variables = "RESP", .others = "n")` + `plan_cells(SEX = "{n} ({p:.1f%})", ...)` |
-| Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each |
+| Row budget per page | `plan_paginate_rows(max_rows, split, break_before, min_group_rows, cont_label, page_by, heading, heading_at, na_label)`; `page_by =`: BY pages first (a period, a cohort), the row budget inside each; `na_label =`: the text a blank BY value prints as in the heading (left out, nothing) |
 | Too wide: column blocks | `plan_paginate_cols(at, cut_by, every, keep, col_header, fit, allow_span_break, order)` |
 | A listing above its summary in one table (a PK concentrations table: a row a subject, then "Summary Statistics") | Two ordinary plans: `listing <- table_plan(adpc, cols = "ATPT", rows = c(subject = ~ "{USUBJID}/{AGE}/{SEX}"), value = "AVAL") \|> plan_cells("{value:.3s}", na = "BLQ")`; `summary <- normalize_ard(ard) \|> table_plan(cols = "ATPT", rows = c(block = ~ "Summary Statistics")) \|> plan_cells(continuous = c(N = "{N:.0f}", Mean = "{mean:.4s}"))`; `listing \|> plan_append(summary, name, absent)` then the whole table's verbs (`plan_levels(ATPT = )`, `plan_col_header()`, `plan_columns()`, `plan_paginate_rows(page_by = )`, `plan_blanks(where = "between_parts")`) before or after it. An appended plan carries only its row verbs; a page group a part lacks stops (`absent = "skip"`). Never reshape the records by hand |
 | A listing | `plan_listing(listing_col(...), ..., type, sep, spacer, spacer_rel_width, layout, wrap, align, record)` |
@@ -924,9 +932,9 @@ becomes `plan_blanks(where =)`, and `split = "by_value", group_col` becomes
 `plan_col_header(header_sep =)`, `style =` `plan_style(<its fields>)`, and
 `na` `plan_cells(na =)`. Not carried over, by design: `read_meta` /
 `read_attributes` (a plan's input has no adapter metadata; the plan sets
-the attributes itself), and the deprecated `stub_vars` / `stub_label` /
-`stub_indent` / `stub_group_summary` (`plan_stub()`) and `spanning_header`
-(a row of `plan_col_header()`).
+the attributes itself), and `spanning_header` (a row of
+`plan_col_header()`). The stub is `stub =` / `stub_spec()`, which becomes
+`plan_stub()`.
 
 ### Looking inside
 
@@ -1085,7 +1093,7 @@ reference of a difference.
 ## 18. Complete public API (nothing outside this list exists)
 
 **Document / render:** `rtf_document` `rtf_config` `rtf_page`
-`rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
+`rtf_style` `rtf_default_format` `rtf_watermark` `generate_rtfreport` `rtf_text_tokens`
 `rtfreporter_options` `rtfreporter_reset_defaults` `rtfreporter_ai_manual`
 `rtfreporter_validation_kit`
 

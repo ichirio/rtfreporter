@@ -142,19 +142,52 @@
 # a labels row, which the labels renderer cannot express.  NB the promoted
 # row is rendered through the spanning zone; that zone falls back to the
 # header zone when unset, so appearance only changes if a *distinct*
-# `spanning` zone border was configured.
+# `spanning` zone border was configured.  The cells are marked
+# `promoted = TRUE`: a later write of the columns' header styling
+# (.style_sync_promoted()) reaches them, and the renderer gives them the
+# column's `header_background`, as it does a label row (#872).
 .style_promote_labels_row <- function(labels, col_spec) {
   lapply(seq_along(col_spec), function(j) {
     spec <- col_spec[[j]]
     list(
-      from   = j,
-      to     = j,
-      label  = if (j <= length(labels)) as.character(labels[[j]]) else "",
-      align  = spec$header_align %||% "center",
-      bold   = isTRUE(spec$header_bold),
-      italic = isTRUE(spec$header_italic)
+      from     = j,
+      to       = j,
+      label    = if (j <= length(labels)) as.character(labels[[j]]) else "",
+      align    = spec$header_align %||% "center",
+      bold     = isTRUE(spec$header_bold),
+      italic   = isTRUE(spec$header_italic),
+      promoted = TRUE
     )
   })
+}
+
+# A write of the columns' header styling (header_align / header_bold /
+# header_italic) also lands on the promoted label-row cells of those columns,
+# so a later verb wins whatever the order of the promotion (#872).  Applied
+# to `col_header` and to every entry of `col_header_list`.
+.style_sync_promoted <- function(x, cols_idx, align = NULL, bold = NULL,
+                                 italic = NULL) {
+  if (is.null(align) && is.null(bold) && is.null(italic)) return(x)
+  sync_cell <- function(cell) {
+    f <- as.integer(cell$from)
+    if (!isTRUE(cell$promoted) || f != as.integer(cell$to) ||
+        !f %in% cols_idx) {
+      return(cell)
+    }
+    if (!is.null(align))  cell$align  <- align
+    if (!is.null(bold))   cell$bold   <- bold
+    if (!is.null(italic)) cell$italic <- italic
+    cell
+  }
+  sync_hdr <- function(hdr) {
+    if (is.null(hdr) || is.character(hdr)) return(hdr)
+    lapply(hdr, function(r) if (is.character(r)) r else lapply(r, sync_cell))
+  }
+  x$col_header <- sync_hdr(x$col_header)
+  if (!is.null(x$col_header_list)) {
+    x$col_header_list <- lapply(x$col_header_list, sync_hdr)
+  }
+  x
 }
 
 # Patch the cells of one cell-style header row.  A cell is targeted when its
@@ -225,7 +258,7 @@
 #' border = rtf_border(bottom = TRUE))`, and an
 #' `"none"` side erases a zone rule on the selected cells.
 #' Row height and cell padding are deliberately *not* per-row properties --
-#' they stay uniform per table / document (see `rtf_document(default_format)`
+#' they stay uniform per table / document (see `rtf_document(style = rtf_style())`
 #' and the `rtfreporter.*` options).
 #'
 #' @section Header rows and the two row kinds:
@@ -239,14 +272,19 @@
 #' **promotes** the row to an equivalent list of single-column cells (labels
 #' and current header styling are copied over, so the rendered output is
 #' unchanged; the promoted row renders through the `spanning` border zone,
-#' which falls back to the `header` zone when unset).
+#' which falls back to the `header` zone when unset).  The promoted cells
+#' keep following the columns' header styling: a later `style_cols(header_bold
+#' = , header_italic = , header_align = )`, or `style_header(bold = , italic =
+#' , align = )` on another label row, reaches them too, and
+#' `style_cols(header_background = )` fills them, so the order of the verbs
+#' does not matter.
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
 #' @param row Integer header-row index(es), 1 = top row.  `NULL` (default)
 #'   targets every header row.
 #' @param cols Data-column selection: integer positions and/or column names of
-#'   the table body (see the *What the columns are called* section of
-#'   [as_rtftables()]).  `NULL` (default) = all columns.  Mix names and
+#'   the table body, as [rtf_columns()] lists them (see also *Naming it* under
+#'   `group_col` in [as_rtftables()]).  `NULL` (default) = all columns.  Mix names and
 #'   positions with a `list()` (`c()` would coerce the numbers to strings --
 #'   same convention as `drop_cols` / `sort_by`).  A spanning cell is
 #'   targeted when its span **intersects** `cols`.
@@ -324,6 +362,7 @@ style_header.rtftable <- function(x, row = NULL, cols = NULL, label = NULL,
   cols_idx <- .style_resolve_cols(x, cols, "style_header")
 
   n_label_rows <- sum(vapply(hdrs, is.character, logical(1L)))
+  wrote_spec <- FALSE
   for (ri in idx) {
     r <- hdrs[[ri]]
     if (is.character(r)) {
@@ -348,6 +387,7 @@ style_header.rtftable <- function(x, row = NULL, cols = NULL, label = NULL,
           if (!is.null(italic)) x$col_spec[[j]]$header_italic <- italic
           if (!is.null(align))  x$col_spec[[j]]$header_align  <- align
         }
+        wrote_spec <- TRUE
       }
     } else {
       hdrs[[ri]] <- .style_patch_header_cells(
@@ -365,6 +405,9 @@ style_header.rtftable <- function(x, row = NULL, cols = NULL, label = NULL,
     x$col_header_list[[1L]] <- hdrs
   }
   x$col_header <- hdrs
+  # Header styling written to the columns also reaches the label rows an
+  # earlier call promoted to cells (#872).
+  if (wrote_spec) x <- .style_sync_promoted(x, cols_idx, align, bold, italic)
   x
 }
 
@@ -428,7 +471,7 @@ style_cols.rtftable <- function(x, cols = NULL, align = NULL, bold = NULL,
     if (!is.null(header_italic)) spec$header_italic <- header_italic
     x$col_spec[[j]] <- spec
   }
-  x
+  .style_sync_promoted(x, cols_idx, header_align, header_bold, header_italic)
 }
 
 #' @rdname style_header
@@ -628,14 +671,14 @@ add_header_row.list <- function(x, ...) {
 #' cell against the **final, printed table**: the columns you actually see,
 #' addressed by **name** or by **visible position** (`1` = first printed
 #' column).  Because it runs on the finished table, there is no "intermediate"
-#' column layout to reason about -- no hidden `drop_cols`, no `stub_vars`
+#' column layout to reason about -- no hidden `drop_cols`, no `stub`
 #' bookkeeping, no position shifting.  This is the recommended way to attach a
 #' multi-row / spanning header on top of an `as_rtftables()` pipeline; pair it
 #' with [rtf_columns()] to see the exact column names first.
 #'
 #' Contrast with the `col_header =` argument of [rtftable()] / [as_rtftables()],
 #' whose positions refer to the source body **before** `drop_cols` /
-#' `stub_vars` are applied.  `set_col_header()` always speaks the final table's
+#' `stub` are applied.  `set_col_header()` always speaks the final table's
 #' coordinates.
 #'
 #' Like the other post-hoc verbs it is an S3 generic with an `rtftable` method
@@ -898,8 +941,9 @@ set_col_header.list <- function(x, ..., values = NULL, by = NULL) {
 #' is what the geometry needs.
 #'
 #' @param x An [rtftable()], or a list of them (pages from [as_rtftables()]).
-#' @param cols Columns to split: names or positions.  Needed to set a split;
-#'   left out (`NULL`) it clears the setting.
+#' @param cols Columns to split: names or positions.  Required: `cols = NULL`,
+#'   given explicitly, clears a split set before, and leaving `cols` out is an
+#'   error.
 #' @param ratio `NULL` (the default) to size the two halves automatically from
 #'   the widest left and right part actually present, or a number in `(0, 1)`
 #'   giving the left half's share of the column width.  Pass an explicit value

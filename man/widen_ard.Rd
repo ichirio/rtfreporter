@@ -94,7 +94,11 @@ by name (\code{n}, \code{p}, \code{mean}, ...) plus its own columns (\code{varia
 \code{.label}, \code{.depth}, \code{.kind} and the keys), and it may name the
 caller's variables too;
 \item \code{c("Mean (SD)" = "{mean} ({sd})", "Min, Max" = "{min}, {max}")} -- one
-row per element, the name being the row label.
+row per element, the name being the row label.  A named row is one
+row for the whole variable, so on a variable with several levels (a
+categorical summary, its levels in the label) it stops with an error
+naming the variable rather than keep one level; an unnamed element
+there gives one row per level, labelled from \code{label}.
 }
 
 A \strong{list} is instead a map, looked up by analysis variable, then by
@@ -246,7 +250,8 @@ happens).  See \code{\link[=round_num]{round_num()}}.}
 attach as a numeric \code{.sort_stat} column -- what a descending-frequency AE
 table sorts on.  \code{NULL} (default) adds nothing.}
 
-\item{na}{Value to put in a cell no template could fill.  No effect with
+\item{na}{Value to put in a cell no template could fill: one string, or
+\code{NA} (the default) for an empty cell.  No effect with
 \code{stats = "rows"} and \code{value = "stat"}: that table is numeric, and its
 empty cells are \code{NA}.}
 
@@ -305,6 +310,18 @@ their counts as a variable's --- instead of only the header's: what
 \value{
 A data frame: the \code{rows} columns, the label column, then one column
 per column key.
+
+A cell prints one value.  When records of \strong{different} values reach
+one cell -- the ARD has a key (a \code{SITE} beside \code{cols = "TRT"}) that
+neither \code{cols} nor \code{rows} names -- the first record's value is the one
+kept, and \code{widen_ard()} \strong{warns} that the others are dropped, naming the
+key(s) the records differ in, the cell (its row and column) and the values.
+Add that key to \code{rows} (or \code{cols}), or filter the ARD, to have them
+apart.  The same value twice is one value and says nothing.  The warning is
+not \code{notes}: \code{notes = FALSE} silences the report of unused ARD rows, not
+this one, because these are numbers the table does not carry.  An ARD read
+by a position (\code{group1_level} over stacked blocks) keeps to its own
+warning, and reading a position with its name column is quiet.
 }
 \description{
 Step two of the ARD conversion.  \code{widen_ard()} takes the long table from

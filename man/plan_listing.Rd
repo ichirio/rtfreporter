@@ -51,9 +51,21 @@ The plan, with one more layer.
 \code{plan_listing()} makes the plan a \strong{listing}: a data frame of subject
 records (SDTM or ADaM, nothing summarised) printed through
 \code{\link[=listing_spec]{listing_spec()}}, with columns that can stack several variables in one
-cell and wrap long text.  A record wrapped over several rows is never cut
-by a page break.  Its arguments are \code{\link[=listing_spec]{listing_spec()}}'s own, unchanged;
+cell and wrap long text.  A record wrapped over several rows is not cut
+by a page break: it moves whole to the next page, unless it alone is
+longer than a page; then it is cut at the page's end and the rest goes on
+at the top of the next page, with no continuation row before it (a record
+has no heading).  Its arguments are \code{\link[=listing_spec]{listing_spec()}}'s own, unchanged;
 the blank rows are \code{\link[=plan_blanks]{plan_blanks()}}'s, as for a table.
+}
+\details{
+A listing cannot be combined with \code{\link[=plan_append]{plan_append()}}: its columns are the
+records' own, while appended parts are a \code{label} and value columns, so
+\code{plan_append()} stops on a plan that carries \code{plan_listing()}, as the
+first plan or as a part.  To show a listing with a summary, make them
+separate contents of the document: \code{\link[=rtf_tables]{rtf_tables()}} for the listing, then
+\code{\link[=rtf_tables]{rtf_tables()}} for the summary with \code{page_break = FALSE} (see the article
+"Several contents on one page").
 }
 \examples{
 # Invented adverse-event records

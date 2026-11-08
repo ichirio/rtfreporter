@@ -16,8 +16,8 @@ There is **no application or invitation step** — anyone can contribute:
 2. For anything non-trivial, agree the approach on the issue first.
 3. Fork the repo, create a topic branch, make the change, and open a
    pull request (the PR template's checklist walks you through it).
-4. Address review feedback; once CI is green and a maintainer approves,
-   it is merged.
+4. A maintainer reviews and approves your pull request; once it is approved
+   and all of CI is green, it is merged.
 
 After a couple of merged, good-quality PRs you may be offered **write
 access / maintainer status** (the ability to push branches, label issues,
@@ -26,7 +26,7 @@ size are valued, including docs, tests, and bug reports.
 
 ## Contributor vs Collaborator: two ways to push your work
 
-Everyone follows the **same** issue → branch → PR → review → merge lifecycle
+Everyone follows the **same** issue → branch → PR → CI → merge lifecycle
 and the **same** branch-naming rules (below).  The only thing that differs is
 **where your topic branch lives**, which depends on whether you have write
 access to this repository.
@@ -51,7 +51,8 @@ cd rtfreporter
 # 2. Add the canonical repo as "upstream" (one time only):
 git remote add upstream https://github.com/ichirio/rtfreporter.git
 
-# 3. Before each new piece of work, sync your fork's main with upstream:
+# 3. Before each new piece of work, sync your fork's main with upstream
+#    (VS Code and browser routes: see "Keep your fork and clone up to date"):
 git checkout main
 git fetch upstream
 git merge --ff-only upstream/main      # fast-forward only; no local commits on main
@@ -72,8 +73,67 @@ gh pr create --repo ichirio/rtfreporter --base main \
 
 Keep `main` on your fork **pristine** (never commit to it directly) so the
 fast-forward sync in step 3 always succeeds.  If your branch falls behind
-`main` while in review, `git fetch upstream && git merge upstream/main` into
-the branch and push again.
+`main` while in review, `git fetch upstream && git rebase upstream/main` on
+the branch, then `git push --force-with-lease origin <branch>` (the topic
+branch only, never `main`).  The agent's version of these steps, with conflict
+handling, is *Git work for a contributor* in
+`inst/ai/rtfreporter-ai-dev-manual.md`.
+
+### Keep your fork and clone up to date
+
+A fork does not update itself.  Sync it **before every new piece of work**,
+and once the hard way if yours is far behind.  You can use the browser,
+the VS Code Source Control view, or the command line.
+
+#### (a) First time, or a fork that is far behind
+
+> **Warning.**  These steps make your `main` equal to upstream's `main`.
+> Any commit on your `main` that upstream does not have is **discarded**.
+> To keep such work, first put it on a branch:
+> `git branch my-old-work main`.
+
+- **Browser.**  Open your fork on GitHub, click **Sync fork**, then
+  **Update branch**.  If GitHub offers **Discard commits**, choosing it
+  discards the fork's own commits on `main`.  Then pull `main` into your
+  clone (see (b)).
+- **VS Code.**  In Source Control, open the `...` menu, then
+  **Remote** > **Add Remote...** (Command Palette: *Git: Add Remote...*),
+  name it `upstream` and enter
+  `https://github.com/ichirio/rtfreporter.git`.  Then *Git: Fetch From All
+  Remotes*, *Git: Checkout to...* `main`, and *Git: Merge Branch...*
+  `upstream/main`.  VS Code has no hard reset; if your `main` has commits
+  of its own, use the terminal (**Terminal** > **New Terminal**) for the
+  command-line steps below.  Finish with **Push**.
+- **Command line.**
+
+  ```bash
+  git remote add upstream https://github.com/ichirio/rtfreporter.git
+  git fetch upstream
+  git checkout main
+  git reset --hard upstream/main
+  git push origin main --force-with-lease
+  ```
+
+#### (b) Every time before new work
+
+- **Browser.**  On your fork, **Sync fork** > **Update branch**.  Then in
+  VS Code check out `main` and **Pull** (`...` menu > **Pull**).
+- **VS Code.**  The same as the command line: *Git: Checkout to...* `main`;
+  *Git: Fetch From All Remotes*; *Git: Merge Branch...* `upstream/main`;
+  **Push** (`...` menu > **Push**); then *Git: Create Branch...* with your
+  new branch name.
+- **Command line.**
+
+  ```bash
+  git checkout main
+  git fetch upstream
+  git merge --ff-only upstream/main
+  git push
+  git checkout -b <type>/<issue>-<slug>
+  ```
+
+If you have the `gh` CLI, `gh repo sync <you>/rtfreporter` updates the fork
+on GitHub (optional); then `git pull` in your clone.
 
 ### Collaborator workflow (direct branch)
 
@@ -90,9 +150,9 @@ git push -u origin <type>/<issue>-<slug>
 gh pr create --base main               # head is the branch you just pushed
 ```
 
-`main` itself currently accepts direct pushes (branch protection is off while
-the maintainer team is small), **but open a PR anyway** so CI runs and the
-change is reviewable.  Releases — minor/major version bumps, tags, GitHub
+`main` is protected: a change reaches it only through a pull request, once the
+required checks pass (see *Continuous integration*).  A maintainer reviews and
+approves a contributor's pull request.  Releases — minor/major version bumps, tags, GitHub
 Releases — are a Collaborator-only action (see *Versioning & releases*).
 
 ## Issue → merge lifecycle
@@ -101,7 +161,7 @@ Releases — are a Collaborator-only action (see *Versioning & releases*).
 issue ──▶ discuss / agree approach ──▶ branch off main ──▶ open PR
    ▲                                                          │
    │                                                          ▼
-   └──────────────── (changes requested) ◀── review + green CI
+   └──────────────── (a check fails) ◀────── tests + all of CI
                                                               │
                                                               ▼
                                                       merge to main
@@ -109,12 +169,15 @@ issue ──▶ discuss / agree approach ──▶ branch off main ──▶ ope
                                                         via "Closes #N")
 ```
 
-* **Issue** — describe the problem/idea; a maintainer triages and labels it
-  (`bug`, `enhancement`, `good first issue`, ...).
-* **Branch + PR** — see *Branching & collaboration* below.  Reference the
-  issue with `Closes #N` so it auto-closes on merge.
-* **Review + CI** — every GitHub Actions workflow that runs on the PR must
-  pass (see *Continuous integration*) and at least one maintainer approves.
+* **Issue** — describe the problem/idea; the development team evaluates it,
+  and once it is decided the issue's status changes (its labels: `bug`,
+  `enhancement`, `good first issue`, `exec:*`, ...).
+* **Branch + PR** — a collaborator branches in this repository, a contributor
+  in a fork (see *Branching & collaboration* below).  Run the tests, then open
+  the PR.  Reference the issue with `Closes #N` so it auto-closes on merge.
+* **CI** — CI runs the tests of the change and the regression tests, on every
+  environment; the required checks must pass (see *Continuous integration*).
+  A maintainer reviews and approves a contributor's pull request.
 * **Merge** — the maintainer merges to `main`; the branch is deleted.
 
 ## Execution-disposition labels (`exec:*`)
@@ -135,6 +198,10 @@ the two axes from being confused; at most one `exec:*` label applies at a time.
 An issue with **no** `exec:*` label is treated like `exec:hold`: the agent
 reports it but does not start work.  To hand a freshly-filed (e.g. web-created)
 issue to the agent, add `exec:agent`.
+
+The `exec:*` and `priority:*` labels guide the maintainers' own coding agent;
+an outside contributor needs none of them and may take any issue a maintainer
+has pointed them to.
 
 **Future agents.**  While there is a single agent, `exec:agent` is unambiguous.
 When more than one agent exists, split it into suffixed labels
@@ -169,17 +236,42 @@ trying to produce helps a lot.
 3. Follow the existing code style (see below).
 4. Add or update **tests** under `tests/testthat/` for any behaviour
    change, and **documentation** (roxygen2 comments) for any exported
-   function.
-5. Make sure the checks pass locally:
+   function.  Explain a feature directly; do not compare it with another
+   package (naming a package is fine where it is the actual subject).
+5. Make sure the checks pass locally.  These are *the four pre-push
+   checks*; run `devtools::document()` first (NAMESPACE is hand-managed),
+   then all four, and report the results in the PR description:
 
    ```r
-   devtools::document()      # regenerate man/*.Rd (NAMESPACE is hand-managed)
-   devtools::test()          # all tests must pass
-   devtools::check()         # 0 errors / 0 warnings
+   devtools::document()      # regenerate man/*.Rd, commit them
    ```
 
-6. Update `NEWS.md` (user-facing) and, for a major/minor change,
-   `CHANGELOG.md`.
+   ```bash
+   R CMD build . && R CMD check --as-cran rtfreporter_*.tar.gz  # 0 errors / 0 warnings
+   NOT_CRAN=true Rscript -e 'devtools::test()'   # full suite, nothing skipped on CRAN grounds
+   Rscript -e 'pkgdown::check_pkgdown()'         # when exports, Rd or _pkgdown.yml change
+   Rscript -e 'lintr::lint_package()'            # must be clean
+   ```
+
+6. **Record the change in the PR description.**  A PR never edits `NEWS.md`,
+   `CHANGELOG.md` or `Version:`, and there is no separate memo file.  Fill the
+   template's *User-visible change (for NEWS)* field without being asked: one or
+   two bullets in NEWS style (what a user can now do, or what is fixed, named by
+   its function or argument), or "none" for an internal change; then "Breaking:
+   no", or "Breaking: yes" with the migration.  The maintainers write `NEWS.md`
+   from the merged PRs at release.  For example:
+
+   ```markdown
+   ## User-visible change (for NEWS)
+
+   - `rtfplot()` and `rtf_figures()` take `render_format = "emf"`: a plot object is
+     drawn as EMF with devEMF (in Suggests), at `render_width` x `render_height`
+     inches.
+
+   Breaking: no
+   ```
+
+   The maintainers bump the version when they tag or release.
 7. Open the pull request against `main` with a clear description and a
    reference to the related issue (e.g. `Closes #12`).
 
@@ -246,19 +338,25 @@ branch plus short-lived topic branches.  This scales cleanly from one
 contributor to several.
 
 - **`main` is the single source of truth.**  It must always be
-  releasable: green on all CI workflows (R-CMD-check, test-coverage, lint,
-  pkgdown) and `0 errors / 0 warnings` on `devtools::check()`.  The
+  releasable: green on the required checks and `0 errors / 0 warnings` on
+  `R CMD check`.  The
   current *development version* lives here.
 - **`next` gathers the maintainers' work that is not urgent.**  Their
   topic branches go to `next` once their own checks pass; `next` goes to
   `main` about once a week, by a pull request (a merge commit) that runs
-  every CI workflow.  An urgent fix goes to `main` as a small PR of its own.
-  Contributors keep opening their PRs against `main`.
-- **Direct commits to `main`.**  Branch protection is **not yet enabled**
-  while the project has a single maintainer (so `main` currently accepts
-  direct pushes).  As soon as there is more than one contributor it will be
-  turned on: require a pull request, passing CI, and at least one approving
-  review before merge.  Contributors should use a PR regardless.
+  every CI workflow, on every environment.  A PR into `next` runs `lint` and
+  the tests on Ubuntu (R release); every environment runs on `next` itself,
+  before it reaches `main`.  An urgent fix goes to `main` as a small PR of its
+  own, which runs them all, as a contributor's PR does.
+  Contributors open pull requests against `main`.  The `next` branch, the
+  `automerge` label and `merge-after:` lines are the maintainers' own
+  workflow; a maintainer adds any label that is needed.
+- **No direct commits to `main`.**  `main` is protected: a pull request is
+  required, the required checks (`ubuntu-latest (release)`,
+  `ubuntu-latest (devel)`, `ubuntu-latest (oldrel-1)`, `macos-latest
+  (release)`, `windows-latest (release)`, `pkgdown` and `test-coverage`) must
+  pass before merge, and a maintainer reviews and approves a contributor's
+  pull request.
 - **One topic branch per change**, cut from the latest `main`.  Name it
   **`<type>/<issue>-<slug>`** -- lowercase, hyphen-separated, short
   (3-5 words):
@@ -331,8 +429,13 @@ contributor to several.
 ## Continuous integration (GitHub Actions)
 
 These workflows run on pushes and pull requests (under
-`.github/workflows/`).  A PR is mergeable only when every workflow that runs
-on it is green.
+`.github/workflows/`).  A PR into `main` merges when the required checks are
+green, a contributor's once a maintainer has also reviewed and approved it;
+`lint` and `version-guard` also run on it.
+
+CI runs when the pull request is opened, not on pushes to the branches of
+your fork.  The workflows of a first-time contributor's PR wait until a
+maintainer approves them.
 
 | Workflow | File | What it does |
 |----------|------|--------------|
@@ -347,8 +450,8 @@ R-CMD-check, test-coverage, pkgdown and lint also accept `workflow_dispatch`
 (run-on-demand from the Actions tab).  Releases additionally re-trigger
 pkgdown and R-CMD-check (with its quality-report job) on `release:
 published`.
-Before pushing, reproduce CI locally with `devtools::document()`,
-`devtools::test()` and `devtools::check()`.
+Before pushing, reproduce CI locally with `devtools::document()` and the
+four pre-push checks (see *Pull requests*).
 
 ## Project tracking (GitHub Projects / labels)
 
@@ -387,7 +490,7 @@ record of *what shipped* stays in `NEWS.md` / `CHANGELOG.md`.
 | **Backlog** | Captured, not yet scheduled. | no `exec:*`, or `exec:hold` |
 | **Ready** | Approved and scoped; ready to pick up. | `exec:agent` / `exec:human` (assignee set) |
 | **In progress** | Someone (or the agent) is actively working it. | branch exists |
-| **In review** | PR open, CI green, awaiting review. | open PR |
+| **In review** | PR open, CI running or green, awaiting merge. | open PR |
 | **Blocked** | Needs a decision or an upstream fix. | `exec:hold` |
 | **Done** | Merged / closed. | issue closed via `Closes #N` |
 
@@ -437,14 +540,14 @@ view via the Issues tab (filter by `exec:agent`, by milestone, or by type).
 
 ## Quality assurance: requirements, tests, traceability
 
-What GitHub already records -- issues, pull requests and their reviews,
-the CI runs, the releases -- is not written again; this section says only
-what it does not.
+What GitHub already records -- issues, pull requests, the CI runs, the
+releases -- is not written again; this section says only what it does not.
 
 - **Functional Requirements (FR)** are `inst/validation/requirements.csv`,
   one row a requirement, a hierarchy: each row names its `parent`
   (`FR-PL000` the plan verbs > `FR-PL004` plan_blanks() > `FR-PL182` ...: an
-  id is short, the area's two letters and a number; the `parent` column
+  id is short, the area's two letters and a number of three or four digits,
+  the next free one in its area; the `parent` column
   holds the hierarchy, and a number once given is never reused).  A parent
   is of kind `group`.  Tests are mapped to the leaves; a parent is covered
   when every leaf under it has a test.  A user's requirement may be traced
@@ -462,17 +565,36 @@ what it does not.
     (compared byte for byte).  Not every combination: these, under their
     own group `FR-IX000`, apart from the functions' rows.
   A PR that adds or changes a behaviour adds or changes its FRs in the same
-  PR; an FR is never renumbered, a withdrawn one is `superseded` or
+  PR, with `since` the next planned release (`0.9.0` now); an FR is never
+  renumbered, a withdrawn one is `superseded` or
   `removed` (`draft`: a coarse row not yet split, not counted).
 - **Functional Tests (FT)** are the `test_that()` blocks that check an FR,
-  as a person who read them decided -- not a block that merely calls the
-  function.  A new test names its id and FRs at its head
-  (`"FT-PL<nnn> [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`, the
-  next unused FT number);
+  as the developer making the change decided -- not a block that merely calls
+  the function.  A new test names its id and FRs at its head
+  (`"FT-PL<nnn> [FR-PL157 FR-PL159]: plan_columns(widths = ) ..."`, three or four
+  digits, the
+  next unused FT number in its area);
   an existing one is mapped by hand in `inst/validation/test_map.csv`.  An
   FR no test checks is a deviation until a test is added.
   `validation/trace.R` lists the blocks that call a function in scope but
   are not mapped (candidates to read); it never counts them.
+- **What a PR that adds or changes a behaviour does**, in that PR, for a
+  contributor or an AI agent alike:
+  - add or change the FRs in `inst/validation/requirements.csv`;
+  - give every new or changed leaf FR a test.  Name the FT id and FRs at the
+    head of a new test; add a row to `inst/validation/test_map.csv` (file,
+    test, ft, fr) only for an existing test, never for both: an FT id given
+    twice fails;
+  - name every new argument in a leaf FR of its function, as `arg =` or
+    bare inside `f(...)`; the plain word in prose does not count, and an
+    argument without such an FR fails `test-validation-coverage.R`;
+  - where a test is not possible, add a row to `inst/validation/deviations.csv`
+    (`ids`, `item`, `risk`, `risk_basis`, `reason`, `action`) with the risk
+    and the reason; an FR with neither a test nor a deviation fails
+    `test-validation-leaves.R`, and a deviation for an FR that has a test
+    is removed;
+  - keep `Rscript validation/trace.R` running and `test-validation.R`,
+    `test-validation-leaves.R` and `test-validation-coverage.R` passing.
 - **The Traceability Matrix (FR -> FT)** is the mapping alone, made by
   `validation/trace.R`; it holds no results.  The tests' results are the CI
   record; a failing test fails the PR's checks, so it cannot be merged.
@@ -526,8 +648,11 @@ what it does not.
 
 ## Development setup
 
+Use R 4.2 or later (the oldest version CI tests).
+
 ```r
-install.packages("devtools")
+# tools for the pre-push checks; they are not in Suggests
+install.packages(c("devtools", "lintr", "pkgdown", "rcmdcheck", "spelling"))
 devtools::install_dev_deps()   # installs Suggests used by tests/vignettes
 devtools::load_all()           # load the package for interactive work
 ```
@@ -613,20 +738,20 @@ tried it.
 
 ### Procedure — an ordinary development PR
 
-**An ordinary PR does not have to touch `Version:` at all.**
+**An ordinary PR never touches `Version:` or `NEWS.md`.**
 
-The development counter — the fourth position — exists to signal *"depend on
-this"*: bump it when your change is something another branch, a downstream
-user or a bug report needs to name.  A typo fix, a test, a refactor with no
-visible effect: leave it alone.
+The development counter — the fourth position — signals *"depend on this"*.
+The maintainers raise it when something downstream needs to name a
+development state, as part of how they release.  `version-guard` accepts a PR
+with no version change.
 
-1. If the change is worth naming, raise the **fourth** position by one
-   (`0.8.0.9000` → `0.8.0.9001`).  Otherwise leave `Version:` unchanged.
-2. Add a bullet under the `# rtfreporter (development version)` heading in
-   `NEWS.md`.  **This is not optional** — `NEWS.md`, not the version number,
-   is the record of what changed.
-3. Run `devtools::document()`, `devtools::test()`, `lintr::lint_package()`,
-   `devtools::check()`.
+1. Leave `Version:` unchanged.  The maintainers set the version when they
+   tag or release.
+2. Leave `NEWS.md` and `CHANGELOG.md` unchanged.  Fill the template's
+   *User-visible change (for NEWS)* field (see *Pull requests*); the
+   maintainers write `NEWS.md` from the merged PRs at release.
+3. Run `devtools::document()` and the four pre-push checks (see *Pull
+   requests*).
 4. No git tag, no GitHub Release, no CRAN submission for a development bump.
 
 > **Enforced by CI.**  `version-guard` fails any PR that changes `X`, `Y` or

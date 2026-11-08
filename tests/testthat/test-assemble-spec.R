@@ -136,3 +136,54 @@ test_that("assemble_folder() without an output file gives the table of contents"
                             output_file = tempfile(fileext = ".rtf")),
                "needs the columns `file` and `label`")
 })
+
+test_that("FT-AS130 [FR-AS151 FR-AS148 FR-AS149]: assemble_folder() orders numbered files by number, then the others by file name, the same in every locale (#827)", {
+  d <- tempfile("asm-ord"); dir.create(d)
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  mk_unnumbered <- function(file, title) {
+    doc <- rtf_document()
+    doc <- rtf_section(doc, page = 1, secinfo = list(
+      header = rtf_header(rows = list(c(c = title)))))
+    doc <- rtf_tables(doc, list(data.frame(A = "1")))
+    generate_rtfreport(doc, file.path(d, file), overwrite = TRUE)
+  }
+  # numbered: file names in the opposite order to the numbers
+  .make_tbl_rtf(d, "z_t14_1_2.rtf", "14.1.2", "Demographics")
+  .make_tbl_rtf(d, "Y_t14_1_10.rtf", "14.1.10", "Disposition")
+  .make_tbl_rtf(d, "a_t14_3_1.rtf", "14.3.1", "Adverse Events")
+  # unnumbered (listings, figures): case, "-" vs "_", digits
+  mk_unnumbered("l16_2_1.rtf", "Listing 16.2.1b")
+  mk_unnumbered("l16-2-1.rtf", "Listing 16.2.1a")
+  mk_unnumbered("L16_2_10.rtf", "Listing 16.2.10")
+  mk_unnumbered("L16_2_9.rtf", "Listing 16.2.9")
+  mk_unnumbered("0_figure.rtf", "Figure 14.2.1")
+  want <- c("z_t14_1_2.rtf", "Y_t14_1_10.rtf", "a_t14_3_1.rtf",
+            "0_figure.rtf", "L16_2_9.rtf", "L16_2_10.rtf",
+            "l16-2-1.rtf", "l16_2_1.rtf")
+
+  old <- Sys.getlocale("LC_COLLATE")
+  on.exit(Sys.setlocale("LC_COLLATE", old), add = TRUE)
+  locales <- unique(c("C", old, "English_United States.1252",
+                      "Japanese_Japan.utf8", "en_US.UTF-8"))
+  tried <- 0L
+  for (loc in locales) {
+    if (!nzchar(suppressWarnings(Sys.setlocale("LC_COLLATE", loc)))) next
+    tried <- tried + 1L
+    sp <- assemble_folder(d)
+    expect_identical(basename(sp$file), want, label = loc)
+    expect_identical(sp$table,
+                     c("14.1.2", "14.1.10", "14.3.1", rep(NA, 5L)),
+                     label = loc)
+    expect_identical(sp$order, 1:8, label = loc)
+  }
+  expect_gte(tried, 2L)
+})
+
+test_that("natural order: a long run of digits sorts by its number, with no warning", {
+  x <- c("t_20261106093001.rtf", "t_9.rtf", "t_20261106092959.rtf", "t_10.rtf",
+         "t_020261106093000.rtf", "t_123456789012345678901.rtf", "a.rtf")
+  expect_no_warning(o <- rtfreporter:::.natural_order(x))
+  expect_identical(x[o], c("a.rtf", "t_9.rtf", "t_10.rtf", "t_20261106092959.rtf",
+                           "t_020261106093000.rtf", "t_20261106093001.rtf",
+                           "t_123456789012345678901.rtf"))
+})

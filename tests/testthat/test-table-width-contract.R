@@ -152,3 +152,28 @@ test_that("a listing reaches the same contract", {
                                        table_width_twips = 6000L)[[1L]]),
                    6000L)
 })
+
+test_that("FT-TB992 [FR-TB628]: as_rtftables() and rtftable(): given both percentages, table_width_pct wins", {
+  # rtftable(): table_width_pct wins over table_width_pct_of_writable (FR-TB568).
+  # as_rtftables() sizes the columns, and so splits the pages, from the same
+  # total, so it takes the same one: 50 (not 0.8) is 6840 twips here.
+  want <- as.integer(round(.WRITABLE * 0.5))
+  expect_identical(.total(rtftable(.wdf(), table_width_pct = 50,
+                                   table_width_pct_of_writable = 0.8)), want)
+  expect_identical(.total(.one(table_width_pct = 50,
+                               table_width_pct_of_writable = 0.8)), want)
+  expect_identical(.total(.one(auto_width = TRUE, table_width_pct = 50,
+                               table_width_pct_of_writable = 0.8)), want)
+  # the order the two are written in does not matter
+  expect_identical(.total(.one(auto_width = TRUE,
+                               table_width_pct_of_writable = 0.8,
+                               table_width_pct = 50)), want)
+  # the resolved total is the percentage's, and the twips still win over both
+  expect_identical(.resolve_total_width_twips(
+    NULL, list(table_width_pct = 50, table_width_pct_of_writable = 0.8)), want)
+  expect_identical(.resolve_total_width_twips(
+    6000L, list(table_width_pct = 50, table_width_pct_of_writable = 0.8)), 6000L)
+  # one of them alone is as it was
+  expect_identical(.resolve_total_width_twips(
+    NULL, list(table_width_pct_of_writable = 0.5)), want)
+})

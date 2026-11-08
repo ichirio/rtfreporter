@@ -2,13 +2,15 @@
 % Please edit documentation in R/rtf_page.R
 \name{rtf_default_format}
 \alias{rtf_default_format}
-\title{Document-wide default formatting for an RTF document}
+\title{Document-wide default formatting for an RTF document (deprecated)}
 \usage{
 rtf_default_format(
   font_size_half_points = 18L,
   row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
   markup = "script",
   title_format = "text",
   footnote_format = "table",
@@ -26,6 +28,12 @@ element (content table, page header / footer, title / footnote). \code{NULL}
 \item{cell_padding_left_twips, cell_padding_right_twips}{Default cell padding
 (twips, border-to-text). \code{NULL} (default) keeps the resource baseline (0).}
 
+\item{cell_padding_top_twips, cell_padding_bottom_twips}{Default cell padding
+above / below the text (twips), written into every cell definition of
+every table-shaped element (content table, page header / footer, the
+title's table form, footnote).  \code{NULL} (default) keeps the resource
+baseline (0), and 0 writes nothing.}
+
 \item{markup}{Cell-text markup: \code{"script"} (\verb{^\{\}}/\verb{_\{\}} super/subscript, the
 default), \code{"relational"} (\code{>=}/\code{<=} to the symbols), \code{"all"}, or \code{"none"}.
 See \code{\link[=rtftable]{rtftable()}}.}
@@ -39,7 +47,7 @@ content-width table with the separator rule) or \code{"text"} (plain paragraphs)
 \item{title_width, footnote_width}{Width of the title / footnote block:
 \code{"content"} (the default -- follow the table body), \code{"page"} (the writable
 width, margins excluded), a fraction in \verb{(0, 1]} of the writable width, or
-twips. \code{NULL} keeps the default. Applies to the \code{"table"} form; the
+twips (a whole number above 1). \code{NULL} keeps the default. Applies to the \code{"table"} form; the
 \code{"text"} form is plain paragraphs and already spans the page.
 \code{footnote_width = "page"} is the way to reach the full width \strong{and} keep
 the separator rule, which \code{footnote_format = "text"} cannot draw.}
@@ -48,6 +56,14 @@ the separator rule, which \code{footnote_format = "text"} cannot draw.}
 An \code{rtf_default_format} object for \code{rtf_document(default_format =)}.
 }
 \description{
+\strong{Deprecated}: use \code{\link[=rtf_style]{rtf_style()}}, which takes every key below at its
+shared level and adds a section per module.  \code{rtf_default_format()} and
+\code{rtf_document(default_format = )} / \code{rtf_config(default_format = )} still
+work: the object maps onto the shared level of \code{\link[=rtf_style]{rtf_style()}}, beneath any
+\code{style} the document is given, and warns once a session.  It will be
+removed in 0.9.
+}
+\details{
 Builds the \code{default_format} setting for \code{\link[=rtf_document]{rtf_document()}} / \code{\link[=rtf_config]{rtf_config()}} as a
 structured \code{rtf_default_format} object, so its options and \strong{defaults} are
 visible in the signature. Every value is a \emph{default}: a per-module setting on
@@ -56,6 +72,7 @@ overrides it, and a site can change a default via the matching \verb{rtfreporter
 option (an unset argument falls back to it; see \code{\link[=rtfreporter_options]{rtfreporter_options()}}).
 }
 \examples{
+# Deprecated: write rtf_style(font_size_half_points = 20L, ...) instead.
 # Defaults made explicit:
 rtf_default_format()
 
@@ -67,5 +84,6 @@ doc <- rtf_document(default_format = rtf_default_format(font_size_half_points = 
 
 }
 \seealso{
-\code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_page]{rtf_page()}}, \code{\link[=rtftable]{rtftable()}}.
+\code{\link[=rtf_style]{rtf_style()}}, which replaces it; \code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_page]{rtf_page()}},
+\code{\link[=rtftable]{rtftable()}}.
 }

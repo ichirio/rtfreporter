@@ -144,10 +144,12 @@ already carries those labels, so most listings need not write a single header
 by hand. `label = ""` asks for a deliberately empty one.
 
 Two more per-column settings matter before the widths: `layout = "flow"`
-fills each line as far as `width` allows instead of breaking after every
-separator -- for a column like `AGE/SEX`, which would otherwise spend two rows
-on four characters -- and `collapse_repeats = TRUE` marks a **key** column,
-printed once per record and again at the top of the next page.
+fills each line as far as `width` allows instead of starting every variable on
+its own line -- for a column of `c("AGE", "SEX")`, which would otherwise spend
+two rows on four characters -- and `collapse_repeats = TRUE` marks a **key**
+column, printed once per record and again at the top of the next page. (The
+separator breaks *between* the variables of a column, not inside a value: a
+single variable `AGESEX` holding `64/M` stays on one line when it fits.)
 
 `listing_spec()` collects the columns, in the order they print, and the
 settings that apply to all of them:
@@ -247,9 +249,11 @@ Read that against the source data:
   takes 15, so it breaks after a hyphen -- `build_listing()` breaks at word
   boundaries (a space, a comma, a hyphen) and takes the break *after* the
   character, so the reader can see why the line ended.
-* **The joined column breaks at the separator first.** Each source variable
-  starts its own line, which is what makes a listing of this shape readable at
-  all. Only a piece that is *still* too long breaks again at a word boundary --
+* **The joined column puts each variable on its own line.** The separator
+  breaks between the variables, which is what makes a listing of this shape
+  readable at all; a `/` inside one variable's value is data, and a value that
+  fits the column stays on one line. Only a value that is *still* too long
+  breaks again, after a `/` first and then at a word boundary --
   `UPPER RESPIRATORY TRACT INFECTION` becomes two lines under a 22-character
   column.
 * **Every column of one subject is padded to the tallest**, so the block stays
@@ -349,7 +353,7 @@ doc <- rtf_document(
   page = list(orientation = "landscape", paper_size = "A4",
               margin_top_in = 0.5, margin_bottom_in = 0.5,
               margin_left_in = 0.5, margin_right_in = 0.5),
-  default_format = list(font_size_half_points = 16L)
+  style = rtf_style(font_size_half_points = 16L)
 ) |>
   rtf_section(
     header = rtf_header(list(
@@ -383,7 +387,7 @@ default alignment, and the wrapping rule itself. One ships:
 
 | `type` | what it means |
 |---|---|
-| `"multiline"` | `/` separator, gutter columns, a blank row after each record and one at the top of every page, left aligned, and text wrapped at the separator first and at word boundaries only where a piece is still too long. |
+| `"multiline"` | `/` separator, gutter columns, a blank row after each record and one at the top of every page, left aligned, and each variable of a column on its own line, wrapped at word boundaries only where a value is still too long. |
 
 Any argument you pass explicitly overrides the template, the same relationship
 `rtftable(border = "tfl")` has with its preset:

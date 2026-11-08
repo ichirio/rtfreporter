@@ -117,14 +117,17 @@
 #'   turn the page's width into a number of characters.
 #'   \describe{
 #'     \item{`font`}{`NULL` (default) is the package's font,
-#'       `getOption("rtfreporter.font")`, as for every other `font =`.}
+#'       `getOption("rtfreporter.font")`, as for every other `font =`; else one
+#'       family name, or a named vector per script slot (its `latin` is
+#'       measured).}
 #'     \item{`font_size_half_points`}{is **half-points**, as everywhere in
-#'       RTF: 8pt is `16L`, 9pt (the default) is `18L`.  Getting it wrong
-#'       silently changes the budget -- at 8pt a landscape A4 with half-inch
-#'       margins holds 159 characters, at 9pt only 141.  Pass the same values
-#'       the document uses in `rtf_document(default_format = )`.}
+#'       RTF, a positive whole number: 8pt is `16L`, 9pt (the default) is
+#'       `18L`.  Getting it wrong silently changes the budget -- at 8pt a landscape A4 with half-inch
+#'       margins holds 159 characters, at 9pt only 142.  Pass the same values
+#'       the document uses in `rtf_document(style = rtf_style())`.}
 #'   }
-#' @param total_width Character budget for the whole listing, gutters included.
+#' @param total_width Character budget for the whole listing, gutters included:
+#'   a positive whole number.
 #'   `NULL` (default) computes it from `page`, `font` and
 #'   `font_size_half_points`.  Give it directly when you know the budget and
 #'   would rather not describe the page.
@@ -230,10 +233,21 @@ fit_listing_widths <- function(data, spec,
     stop("`header_lines` must be a single number >= 1, or Inf.",
          call. = FALSE)
   }
-  min_width <- as.integer(min_width)
-  if (length(min_width) != 1L || is.na(min_width) || min_width < 1L) {
+  # (whole numbers: 6.5, "6" and TRUE are not cut or coerced to one)
+  if (!.is_whole_number(min_width, 1)) {
     stop("`min_width` must be a single positive integer.", call. = FALSE)
   }
+  min_width <- as.integer(min_width)
+  # (17.5, "18", TRUE or two sizes are refused here; a size of 0, a negative,
+  # NA or Inf measures no character and stops below, FR-LS232)
+  fs <- font_size_half_points
+  if (length(fs) != 1L || !(is.numeric(fs) || identical(fs, NA)) ||
+      is.factor(fs) || (is.finite(fs) && fs != round(fs))) {
+    stop("`font_size_half_points` must be a single positive integer ",
+         "(half-points).", call. = FALSE)
+  }
+  font <- .check_font(font, "font")
+  if (length(font) > 1L) font <- font[["latin"]]
   if (length(probs) != 1L || !is.numeric(probs) || is.na(probs) ||
       probs < 0 || probs > 1) {
     stop("`probs` must be a single number in [0, 1].", call. = FALSE)
@@ -241,11 +255,11 @@ fit_listing_widths <- function(data, spec,
   if (is.null(total_width)) {
     total_width <- .listing_total_width(page, font, font_size_half_points)
   }
-  total_width <- as.integer(total_width)
-  if (length(total_width) != 1L || is.na(total_width) || total_width < 1L) {
+  if (!.is_whole_number(total_width, 1)) {
     stop("`total_width` must be a single positive number of characters.",
          call. = FALSE)
   }
+  total_width <- as.integer(total_width)
 
   k     <- length(spec$cols)
   fixed <- vapply(spec$cols, function(cl) !is.null(cl$width), logical(1L))

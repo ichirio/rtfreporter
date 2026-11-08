@@ -35,7 +35,8 @@
 #'   entry is the document's default font. Default: `list(list(name =
 #'   "Courier New"))` (a fixed-width font, which keeps clinical columns aligned).
 #'   A `name` may be a named vector of families per script slot (see
-#'   *Fonts per script* below).
+#'   *Fonts per script* below).  An empty list, or an entry whose `name` is
+#'   not a family name, is an error.
 #' @param font_lang Optional language per font slot, a named character vector
 #'   such as `c(east_asian = "ja")`.  `NULL` (default) is
 #'   `getOption("rtfreporter.font_lang")`, itself `NULL`: nothing is
@@ -55,17 +56,17 @@
 #'   index). Default `c("#000000")`. Colours actually used by borders and by
 #'   `col_spec` / `cell_styles` `color` are added automatically, so you only
 #'   need this to declare colours you reference elsewhere. Black and white are
-#'   reserved and added implicitly.
+#'   reserved and added implicitly.  Another value (`"red"`, `NA`) is an
+#'   error.
 #' @param page The page geometry. Pass an [rtf_page()] object (recommended --
 #'   its help lists every key with its default), a named list with the same
 #'   keys, or `NULL` (default) to use the option / factory defaults (landscape
 #'   Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
 #'   back to the corresponding `rtfreporter.*` option (see [rtfreporter_options()]).
-#' @param default_format Document-wide default formatting. Pass an
-#'   [rtf_default_format()] object (recommended -- its help lists every key with
-#'   its default), a named list with the same keys, or `NULL` (default). Each
-#'   value is a *default* that a per-module setting ([rtftable()] /
-#'   [rtf_header()] / [rtf_footer()] / [rtf_table_style()]) overrides.
+#' @param default_format **Deprecated**: use `style = rtf_style()`.  An
+#'   [rtf_default_format()] object or a named list of its keys still works:
+#'   it maps onto the shared level of [rtf_style()], beneath any `style`
+#'   given, and warns once a session.
 #' @param watermark A diagonal word drawn behind the page body on every page:
 #'   an [rtf_watermark()] object, a bare string (`watermark = "DRAFT"` uses the
 #'   defaults), or `NULL` (default) for none. A section can override it by
@@ -90,14 +91,22 @@
 #'   A name is upper case -- a letter, then letters, digits or `_` -- and
 #'   not one of rtfreporter's own ([rtf_text_tokens()]); a value is one
 #'   string or number.  `options(rtfreporter.tokens = )` sets them for a
-#'   session; the document's value wins.  Not in column headers: those take
-#'   their values from [set_col_header()]'s `values`.  `NULL` (default):
-#'   none.
+#'   session; the document's value wins.  A value is written as it is: a
+#'   `{PAGE}` or `{STUDY}` in it is not filled.  `{{` and `}}` print a
+#'   literal `{` and `}` in a header, footer, title or footnote, as in a
+#'   column header.  Not in column headers: those
+#'   take their values from [set_col_header()]'s `values`; nor in a table's
+#'   cells, which print a token as written.  `NULL` (default): none.
 #' @param file The RTF file the document is written to: one string, a path.
 #'   [generate_rtfreport()] writes there when it is given no `file_path`
 #'   (one given wins), so a program can say its output where it says its
 #'   program.  `NULL` (default): none, and `generate_rtfreport()` needs
 #'   `file_path`.
+#' @param style The document's look, one [rtf_style()] object: a shared
+#'   level (font, size, row height, padding, markup, the title and footnote
+#'   form) and one section per module (`table`, `titles`, `footnotes`,
+#'   `header`, `footer`).  A module's own argument wins over it.  `NULL`
+#'   (default): none.
 #'
 #' @section Fonts per script:
 #' Every `font =` (a table, a header/footer band, titles, footnotes, a
@@ -120,13 +129,15 @@
 #' `rtf_document(font_table = list(list(name = c(latin = "Times New Roman",
 #' east_asian = "MS Mincho"))), font_lang = c(east_asian = "ja"))`.
 #'
-#' @return An `rtf_document` S3 object: a list with `document`
-#'   (`font_table` / `color_table` / `page` / `default_format` / `watermark`),
+#' @return An `rtf_document` S3 object: a list with `document` (the
+#'   settings given here: `font_table`, `font_lang`, `color_table`, `page`,
+#'   `default_format`, `style`, `watermark`, `program`, `program_fallback`,
+#'   `tokens` and `file`),
 #'   `contents` (filled by [rtf_tables()] / [rtf_figures()]: one block per
 #'   content, each with its own title and footnote; [rtf_layout()] shows how
 #'   they fall on the pages), and `sections` (filled by [rtf_section()]).
 #'
-#' @seealso [rtf_page()] / [rtf_default_format()] for the page / formatting
+#' @seealso [rtf_page()] / [rtf_style()] for the page / formatting
 #'   settings, [rtf_config()] to edit an already-composed document, [rtf_tables()]
 #'   / [rtf_figures()] to add content, [rtf_section()] for headers / footers, and
 #'   [generate_rtfreport()] to render.
@@ -136,14 +147,14 @@
 #' doc <- rtf_document()
 #'
 #' # 2. A fully specified document, built from the rtf_page() /
-#' #    rtf_default_format() constructors (whose own help shows every default):
+#' #    rtf_style() constructors:
 #' doc <- rtf_document(
-#'   font_table     = list(list(name = "Arial")),
-#'   color_table    = c("#000000", "#1F4E79"),
-#'   page           = rtf_page(paper_size = "A4", orientation = "portrait",
-#'                             margin_left_in = 0.75, margin_right_in = 0.75),
-#'   default_format = rtf_default_format(font_size_half_points = 20L,  # 10 pt
-#'                                       row_height_twips = 240L)
+#'   font_table  = list(list(name = "Arial")),
+#'   color_table = c("#000000", "#1F4E79"),
+#'   page        = rtf_page(paper_size = "A4", orientation = "portrait",
+#'                          margin_left_in = 0.75, margin_right_in = 0.75),
+#'   style       = rtf_style(font_size_half_points = 20L,  # 10 pt
+#'                           row_height_twips = 240L)
 #' )
 #'
 #' # ... then add content and render:
@@ -159,9 +170,10 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
                          default_format = NULL, watermark = NULL,
                          program = NULL, tokens = NULL,
                          program_fallback = NULL, font_lang = NULL,
-                         file = NULL) {
+                         style = NULL, file = NULL) {
   if (!is.null(program) &&
-      (!is.character(program) || length(program) != 1L || is.na(program))) {
+      (!is.character(program) || length(program) != 1L || is.na(program) ||
+       !nzchar(program))) {
     stop("`program` must be a single string: the program's path.",
          call. = FALSE)
   }
@@ -173,6 +185,11 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
   .check_program(program_fallback, "program_fallback")
   .check_user_tokens(tokens)
   .check_page_arg(page)
+  .check_style_arg(style, "rtf_document")
+  .check_color_table(color_table)
+  .check_font_table_arg(font_table)
+  .check_default_format_arg(default_format)
+  if (!is.null(default_format)) .warn_default_format()
   # Default clinical trial page used when none is supplied.  A *partial* `page`
   # is kept as given; any key left out (orientation, dimensions, margins) is
   # resolved to its default at render time -- including inferring the
@@ -208,6 +225,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
         color_table = color_table,
         page = page,
         default_format = default_format,
+        style = style,
         watermark = .normalize_watermark(watermark),
         program = program,
         program_fallback = program_fallback,
@@ -239,7 +257,63 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
                 "settings (e.g. list(paper_size = \"A4\")), not ",
                 .describe_page_arg(page), ".", hint), call. = FALSE)
   }
+  # A named list's values are checked as rtf_page() checks them: a negative
+  # margin used to be written as a negative \margt, a string to stop with
+  # "non-numeric argument to binary operator".
+  for (k in intersect(names(page), c("width_in", "height_in", "margin_top_in",
+                                     "margin_bottom_in", "margin_left_in",
+                                     "margin_right_in", "header_dist_in",
+                                     "footer_dist_in"))) {
+    .chk_pos_in(page[[k]], k)
+  }
+  ps <- page[["paper_size"]]
+  if (!is.null(ps) && (!is.character(ps) || length(ps) != 1L)) {
+    stop("`paper_size` must be a single preset name (e.g. \"A4\") or NULL.",
+         call. = FALSE)
+  }
+  o <- page[["orientation"]]
+  if (!is.null(o) && !(is.character(o) && length(o) == 1L &&
+                       o %in% c("landscape", "portrait"))) {
+    stop("`orientation` must be \"landscape\" or \"portrait\".", call. = FALSE)
+  }
   invisible(page)
+}
+
+# `default_format` (deprecated): an rtf_default_format() or a named list of
+# its keys.  A string used to stop with "second argument must be a list".
+.check_default_format_arg <- function(x) {
+  if (!is.null(x) && !is.list(x)) {
+    stop("`default_format` must be an rtf_default_format() object or a ",
+         "named list of its settings.", call. = FALSE)
+  }
+  invisible(x)
+}
+
+# `color_table`: "#RRGGBB" colours.  "red" or NA used to be kept and written
+# into the colour table as \redNA.
+.check_color_table <- function(x) {
+  if (is.null(x)) return(invisible(NULL))
+  if (!is.character(x) || anyNA(x) || !all(grepl("^#[0-9A-Fa-f]{6}$", x))) {
+    stop("`color_table` must be a character vector of 6-digit hex colours ",
+         "such as \"#1F4E79\".", call. = FALSE)
+  }
+  invisible(x)
+}
+
+# `font_table`: a list of fonts, each a list with a `name` (or the name
+# itself), the first the document's default.  A missing, empty or
+# non-string name used to be dropped for Courier New without a word, or
+# written as an empty font name.
+.check_font_table_arg <- function(x) {
+  if (is.null(x)) return(invisible(NULL))
+  nms <- if (is.list(x)) lapply(x, function(f) if (is.list(f)) f$name else f)
+  if (!length(nms) || !all(vapply(nms, is.character, logical(1L)))) {
+    stop("`font_table` must be a non-empty list of fonts, each a list with ",
+         "a `name`: a family name, or a named vector of them per script ",
+         "slot, e.g. list(list(name = \"Arial\")).", call. = FALSE)
+  }
+  for (nm in nms) .check_font(nm, "font_table")
+  invisible(x)
 }
 
 .describe_page_arg <- function(x) {
@@ -267,10 +341,11 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #' an `rtf_document` is immutable, each call returns a fresh copy and the
 #' original is left intact, so the variants are independent.
 #'
-#' `page` and `default_format` are **merged per key**: passing
+#' `page` and `style` are **merged per key**: passing
 #' `page = list(width_in = 8.27, height_in = 11.69)` changes only those two keys
-#' and keeps the document's existing orientation and margins. `font_table` and
-#' `color_table` are replaced as a whole.
+#' and keeps the document's existing orientation and margins, and an
+#' [rtf_style()] sets only the keys it gives, over the document's (the later
+#' wins). `font_table` and `color_table` are replaced as a whole.
 #'
 #' @param doc An rtf_document object.
 #' @param font_table Optional font table; replaces the current one.
@@ -279,10 +354,11 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #' @param color_table Optional colour table; replaces the current one.
 #' @param page New page geometry, **merged per key** onto the current page: an
 #'   [rtf_page()] object, or a named list with the same keys (see [rtf_page()]).
-#' @param default_format New document-wide default formatting, **merged per key**
-#'   onto the current defaults: an [rtf_default_format()] object, or a named list
-#'   with the same keys (see [rtf_default_format()]). Each is a document-wide
-#'   *default* that any per-module setting overrides.
+#' @param default_format **Deprecated**: use `style = rtf_style()`.  Still
+#'   merged per key onto the current one, and mapped onto the shared level of
+#'   [rtf_style()] beneath any `style`; warns once a session.
+#' @param style An [rtf_style()], **merged key by key** over the document's
+#'   style: a key it sets wins, the others stay.
 #' @param watermark New page watermark: an [rtf_watermark()] object, a bare
 #'   string, or `NA` to remove the one the document has. `NULL` (default)
 #'   leaves it unchanged -- so `NA`, not `NULL`, is how one is cleared.
@@ -290,7 +366,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #' @return Modified rtf_document object (new copy, original unchanged).
 #'
 #' @seealso [rtf_document()] (the constructor), [rtf_page()] /
-#'   [rtf_default_format()] for the settings.
+#'   [rtf_style()] for the settings.
 #'
 #' @examples
 #' # Compose once, then render two paper-size variants from the SAME content.
@@ -307,7 +383,7 @@ rtf_document <- function(font_table = NULL, color_table = NULL, page = NULL,
 #' @export
 rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
                        default_format = NULL, watermark = NULL,
-                       font_lang = NULL) {
+                       font_lang = NULL, style = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -316,6 +392,9 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
   doc_copy <- doc
 
   # Whole-object replacements.
+  .check_font_table_arg(font_table)
+  .check_color_table(color_table)
+  .check_default_format_arg(default_format)
   if (!is.null(font_table)) {
     doc_copy$document$font_table <- .check_font_table(font_table)
   }
@@ -332,8 +411,13 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
     doc_copy$document$page <- .merge_list(doc_copy$document$page, page)
   }
   if (!is.null(default_format)) {
+    .warn_default_format()
     doc_copy$document$default_format <-
       .merge_list(doc_copy$document$default_format, default_format)
+  }
+  .check_style_arg(style, "rtf_config")
+  if (!is.null(style)) {
+    doc_copy$document$style <- .merge_style(doc_copy$document$style, style)
   }
   # Whole-object replacement, like font_table.  `NA` clears an existing one --
   # `NULL` cannot, since it is this function's "leave alone" value.
@@ -413,8 +497,9 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'       styling) or a list of rows, where a row is a string or a styled
 #'       `list(text=, align=, bold=, italic=, underline=, color=,
 #'       border=)`.  An empty string (`""`) is a blank row.}
-#'     \item{Looks}{The block renders as a single-column table the same
-#'       width as the content (so it lines up); title rows default to
+#'     \item{Looks}{The block renders as centred paragraphs, or, with
+#'       `rtf_style(title_format = "table")`, as a single-column table the
+#'       same width as the content (so it lines up); title rows default to
 #'       centred + bold.}
 #'     \item{Page numbers}{Title and footnote text may carry the same
 #'       **page-number tokens** as a header or footer band --
@@ -428,9 +513,11 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'       name>}` with its page's value (see *Page values*).}
 #'   }
 #' @param footnotes `NULL` (default) or a list of length `length(tables)` or
-#'   length 1 (common to all). Same block structure as `titles`, and the same
-#'   page-number tokens; footnote rows default to left-aligned and draw no
-#'   rule unless a row sets its own `border`.
+#'   length 1 (common to all), each a block of rows, a row being a string or
+#'   a named vector `c(l = , c = , r = )` as in [rtf_footnotes()] (not the
+#'   styled row lists of `titles`), with the same page-number tokens; footnote
+#'   rows default to left-aligned and draw no rule:
+#'   [rtf_footnotes()]`(border = )` puts one on the first row.
 #' @param auto_section Logical.  When `TRUE` and `tables` is a **named**
 #'   list, each name is used as a per-section heading appended to the common
 #'   header defined by `rtf_section(secinfo = ...)` (called without a `page`
@@ -455,6 +542,9 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'   so it prints immediately above the table rather than in the page
 #'   header.  `NULL` (default): what the pages say --- a plan's
 #'   `plan_paginate_group(heading_at = "title")` --- else `FALSE`.
+#'   A title row whose whole text is `{PAGE_HEADING}` is where the name goes
+#'   instead: that row keeps its own `align`, `bold` and so on, and takes
+#'   the name as its text.  A page with no name loses the row.
 #'   \describe{
 #'     \item{Titles already there}{From `titles =`, or carried on the object
 #'       as the `rtf_titles` attribute by [as_rtftables()] -- are kept and
@@ -479,9 +569,8 @@ rtf_config <- function(doc, font_table = NULL, color_table = NULL, page = NULL,
 #'       header and footnote on pages of its own, give `first_rows`.}
 #'     \item{Pages that always start a page}{A table's own later pages (a
 #'       plan's, or [as_rtftables()]'s) always begin a page; so does the
-#'       document's first content.  Unlike reporter's
-#'       `add_content(page_break = )` this is the break *before* the
-#'       table.}
+#'       document's first content.  This is the break *before* the
+#'       table, not after the content that precedes it.}
 #'     \item{Section headings}{A page has one `auto_section` heading: that
 #'       of the first table on it that has one; a later table on the page
 #'       with another heading gets a warning (`auto_title` names it on its
@@ -609,10 +698,12 @@ rtf_tables <- function(doc, tables,
     if (is.null(footnotes[[i]])) {
       footnotes[i] <- list(attr(item, "rtf_footnotes", exact = TRUE))
     }
+    .title_check_marker(titles[[i]], "rtf_tables()")
   }
 
   # auto_title: the page name as the LAST row of that table's title block,
-  # after whatever `titles =` or the `rtf_titles` attribute already put there.
+  # after whatever `titles =` or the `rtf_titles` attribute already put there
+  # -- or at the {PAGE_HEADING} row, where the block has one.
   # Both title formats resolve their rows through .normalize_text_block(),
   # which honours a per-row `align`, so this needs no renderer change.
   if (isTRUE(auto_title) && !is.null(page_names) && any(nzchar(page_names))) {
@@ -626,10 +717,13 @@ rtf_tables <- function(doc, tables,
       if (is.na(nm) || !nzchar(nm)) next
       # (marked as the page's heading: rtf_titles() keeps it under the
       # titles it sets)
-      titles[[i]] <- .title_add_row(titles[[i]],
-                                    list(text = nm, align = title_label_align, heading = TRUE))
+      titles[i] <- list(.title_place_heading(
+        titles[[i]], list(text = nm, align = title_label_align, heading = TRUE)))
     }
   }
+  # a {PAGE_HEADING} row no heading took (auto_title = FALSE, an unnamed
+  # table, a name that is empty) is dropped: it never prints
+  for (i in seq_along(tables)) titles[i] <- list(.title_drop_marker(titles[[i]]))
 
   # cont_title: a line under the title of a table's later pages, which
   # rtf_layout() adds (R/layout.R) -- those of first_rows and of the
@@ -652,10 +746,80 @@ rtf_tables <- function(doc, tables,
   c(rows, list(row))
 }
 
+# The row of a title block that says where the page's heading goes: its whole
+# text is this.  Not a render-time token (.RENDER_TOKENS): the heading is put
+# there when the document is composed, so its markup is read as any title
+# row's, and a column header cannot carry it.
+.PAGE_HEADING_TOKEN <- "{PAGE_HEADING}"
+
+# the text of a title row (a string, or a row list's `text`); NULL when it has none
+.title_row_text <- function(r) {
+  if (is.list(r)) r <- r$text
+  if (is.character(r)) r else NULL
+}
+
+# the rows of a block that are the marker (indices); stops on a marker that
+# is not a row's whole text, and on two in one block
+.title_check_marker <- function(block, where = "rtf_titles()") {
+  if (is.null(block) || !length(block)) return(integer(0))
+  rows <- if (is.list(block)) block else as.list(block)
+  hit <- integer(0)
+  for (k in seq_along(rows)) {
+    txt <- .title_row_text(rows[[k]])
+    if (!length(txt)) next
+    has <- !is.na(txt) & grepl(.PAGE_HEADING_TOKEN, txt, fixed = TRUE)
+    if (!any(has)) next
+    if (length(txt) == 1L && identical(txt, .PAGE_HEADING_TOKEN)) {
+      hit <- c(hit, k)
+    } else {
+      stop(sprintf(paste0(
+        "%s: `%s` is a title row of its own, the place of the page's ",
+        "heading: it cannot share a row with other text, nor sit in a ",
+        "multi-line string (row %d is \"%s\")."),
+        where, .PAGE_HEADING_TOKEN, k, gsub("\n", "\\n", txt[has][1L], fixed = TRUE)),
+        call. = FALSE)
+    }
+  }
+  if (length(hit) > 1L) {
+    stop(sprintf(paste0("%s: `%s` is in %d rows of one title block: give it ",
+                        "once, where the page's heading goes."),
+                 where, .PAGE_HEADING_TOKEN, length(hit)), call. = FALSE)
+  }
+  hit
+}
+
+# A title block with the page's heading `row` placed: at its {PAGE_HEADING}
+# row if it has one (the row's own fields -- align, bold, ... -- stay; the
+# text and `heading = TRUE` are the heading's; a plain string takes the
+# heading row's align), else last
+.title_place_heading <- function(block, row, where = "rtf_titles()") {
+  k <- .title_check_marker(block, where)
+  if (!length(k)) return(.title_add_row(block, row))
+  rows <- if (is.list(block)) block else as.list(block)
+  mk <- rows[[k]]
+  if (!is.list(mk)) mk <- list(align = row$align)
+  if (is.null(mk$align)) mk$align <- row$align
+  mk$text <- row$text
+  mk$heading <- TRUE
+  rows[[k]] <- mk
+  rows
+}
+
+# A title block without its {PAGE_HEADING} row: for a page no heading was
+# placed on, so the marker never prints
+.title_drop_marker <- function(block) {
+  k <- .title_check_marker(block)
+  if (!length(k)) return(block)
+  rows <- if (is.list(block)) block else as.list(block)
+  rows[-k]
+}
+
 #' Add figure content to document
 #'
-#' Append one or more figures as content pages -- image files (PNG/JPEG) or
-#' plot objects. Each figure creates one new page. Display dimensions and
+#' Append one or more figures as content pages -- image files (PNG/JPEG/EMF) or
+#' plot objects. Each figure is a block of its own and begins a new page,
+#' unless `page_break = FALSE` puts it under the content before. Display
+#' dimensions and
 #' alignment apply to every path and plot object in `figures`; elements
 #' already constructed via [rtfplot()] keep their own settings.
 #'
@@ -663,7 +827,7 @@ rtf_tables <- function(doc, tables,
 #' @param figures A figure, or a list of them.  One figure is given as it is
 #'   -- `rtf_figures(doc, plot)` -- and several as a list.
 #'   \describe{
-#'     \item{A file}{a character file path to an image file (PNG/JPEG).}
+#'     \item{A file}{a character file path to an image file (PNG/JPEG/EMF).}
 #'     \item{A plot object}{a ggplot2 plot, a patchwork, a grob, a recorded
 #'       base plot, a function that draws -- see [rtfplot()].  It is drawn
 #'       with `png_device` (default: the `rtfreporter.png_device` option,
@@ -694,9 +858,10 @@ rtf_tables <- function(doc, tables,
 #'   [rtf_tables()]'s `page_break`.
 #' @param space_before With `page_break = FALSE`, empty lines between the
 #'   content before and this figure.
-#' @param render_width,render_height,render_dpi,png_device How to draw the
-#'   **plot objects** in `figures`, as [rtfplot()] takes them: size in inches,
-#'   resolution, and PNG device.  `NULL` (default) is [rtfplot()]'s own
+#' @param render_width,render_height,render_dpi,png_device,render_format How to
+#'   draw the **plot objects** in `figures`, as [rtfplot()] takes them: size in
+#'   inches, resolution, PNG device, and file format (`"png"` or `"emf"`; the
+#'   latter needs the devEMF package).  `NULL` (default) is [rtfplot()]'s own
 #'   default (6.5 x 4.5 in, 300 dpi, the `rtfreporter.png_device` option).  A
 #'   file path ignores them (a file has its size already), and a figure given
 #'   as an [rtfplot()] keeps the settings it was built with.
@@ -727,7 +892,8 @@ rtf_figures <- function(doc, figures,
                          titles = NULL, footnotes = NULL,
                          page_break = TRUE, space_before = 0L,
                          render_width = NULL, render_height = NULL,
-                         render_dpi = NULL, png_device = NULL) {
+                         render_dpi = NULL, png_device = NULL,
+                         render_format = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -736,7 +902,8 @@ rtf_figures <- function(doc, figures,
   draw_args <- Filter(Negate(is.null),
                       list(render_width = render_width,
                            render_height = render_height,
-                           render_dpi = render_dpi, png_device = png_device))
+                           render_dpi = render_dpi, png_device = png_device,
+                           render_format = render_format))
 
   # one figure, given as it is (a ggplot is a list too: it is not a list of
   # figures)
@@ -803,17 +970,30 @@ rtf_figures <- function(doc, figures,
 #'
 #' Each element is a title **block**: either a character vector (one entry per
 #' row, default styling) or a list of rows, where a row is a string or a styled
-#' `list(text=, align=, bold=, italic=, underline=, color=, border=)`. An empty
-#' string (`""`) is a blank row. The block renders as a single-column table the
-#' same width as the content; title rows default to centred + bold.
+#' `list(text=, align=, bold=, italic=, underline=, color=, border=,
+#' row_height_twips=)`. An empty
+#' string (`""`), or `NA`, is a blank row. The block renders as centred paragraphs, or,
+#' with `rtf_style(title_format = "table")`, as a single-column table the
+#' same width as the content; title rows default to centred + bold.  A row's
+#' `row_height_twips` is that row's height, over the block's
+#' `row_height_twips`; it applies to the table form
+#' (`rtf_style(title_format = "table")`), as the block's does.
 #'
 #' @param doc An rtf_document object.
 #' @param titles A list of length = number of contents, or length 1 (common).
 #'   A page's heading (`rtf_tables(auto_title = TRUE)`, a plan's
 #'   `plan_paginate_group(heading_at = "title")`) is not replaced: it
-#'   stays as the block's last row, under the titles given.
+#'   stays as the block's last row, under the titles given, or at the
+#'   block's `{PAGE_HEADING}` row.  That row -- a title row whose whole text
+#'   is `{PAGE_HEADING}`, e.g. `list(text = "{PAGE_HEADING}", align =
+#'   "left")` -- says where the heading goes among the other rows; it keeps
+#'   the row's `align`, `bold` and so on, and the heading's text fills it.
+#'   A page with no heading loses the row, so one block serves with and
+#'   without headings.  The marker is the row's whole text: with other text,
+#'   or twice in a block, it is an error.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
-#'   this block, overriding the document default from [rtf_default_format()].
+#'   this block, over the document's [rtf_style()] (its section, then its
+#'   shared level).
 #'   Anything left `NULL` is inherited.
 #'   \describe{
 #'     \item{`font`}{names a family (e.g. `"Arial"`); one not already in the
@@ -838,7 +1018,7 @@ rtf_figures <- function(doc, figures,
 #' doc <- rtf_document() |>
 #'   rtf_tables(list(df1, df2)) |>
 #'   rtf_titles(list(
-#'     c("Table 14.1.1", "{HALF_BLANK_ROW}", "Safety Population"),
+#'     c("Table 14.1.1", "", "Safety Population"),
 #'     "Table 14.1.2"
 #'   ))
 #'
@@ -873,11 +1053,15 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
   # a page's heading (plan_paginate_group(heading_at = "title"), the last
   # row of its title block) stays, under the titles given: the titles are
   # the report's, the heading the page's
+  # -- at the block's {PAGE_HEADING} row, where it has one.  A page that has
+  # none loses a {PAGE_HEADING} row the titles gave it: it never prints.
   for (i in seq_len(n)) {
+    .title_check_marker(titles[[i]])
     old <- doc$contents[[i]]$title
-    if (!is.list(old)) next
-    kept <- Filter(function(r) is.list(r) && isTRUE(r$heading), old)
-    for (r in kept) titles[[i]] <- .title_add_row(titles[[i]], r)
+    kept <- if (is.list(old)) Filter(function(r) is.list(r) && isTRUE(r$heading), old)
+            else list()
+    for (r in kept) titles[i] <- list(.title_place_heading(titles[[i]], r))
+    titles[i] <- list(.title_drop_marker(titles[[i]]))
   }
   doc_copy <- doc
   doc_copy$contents <- .rtf_blocks_set(doc$contents, "title", titles)
@@ -896,8 +1080,10 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #' Assign content footnotes to pages
 #'
 #' Same shape as [rtf_titles()]: a list with one block per content (table or
-#' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
-#' or `list(text=, align=, bold=, italic=, underline=, color=, border=)`).
+#' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string,
+#' a named vector `c(l = , c = , r = )`, or the page footer's row list
+#' `list(columns = , row_height_twips = )`, whose `row_height_twips` is that
+#' row's height over the block's).
 #' Footnote rows default to left-aligned and draw no rule unless `border`
 #' (or a row's own `border`) asks for one. `NULL` per element
 #' suppresses the footnote for that content.
@@ -912,7 +1098,8 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'   the footnote draws none unless asked. An [rtf_border()] puts one on the
 #'   first row, e.g. `border = rtf_border(top = TRUE)`.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
-#'   this block, overriding the document default from [rtf_default_format()].
+#'   this block, over the document's [rtf_style()] (its section, then its
+#'   shared level).
 #'   Anything left `NULL` is inherited.
 #'   \describe{
 #'     \item{`font`}{names a family (e.g. `"Arial"`); one not already in the
@@ -1064,8 +1251,10 @@ rtf_section <- function(doc, page = NULL, secinfo = NULL, header = NULL,
   # Handle single vs. multiple sections
   if (length(page) == 1) {
     # Single section
-    if (is.list(secinfo) && !is.null(secinfo$header) || !is.null(secinfo$footer)) {
-      # secinfo is a single section
+    if (is.list(secinfo) && (!is.null(secinfo$header) || !is.null(secinfo$footer) ||
+                             "watermark" %in% names(secinfo))) {
+      # secinfo is a single section (a watermark alone is one too:
+      # list(watermark = NA) switches the document's off for the section)
       doc_copy$sections[[page]] <- secinfo
     } else if (is.list(secinfo) && length(secinfo) > 0 &&
                (is.list(secinfo[[1]]) || is.null(secinfo[[1]]))) {

@@ -31,15 +31,18 @@ Ignored when \code{total_width} is given.}
 turn the page's width into a number of characters.
 \describe{
 \item{\code{font}}{\code{NULL} (default) is the package's font,
-\code{getOption("rtfreporter.font")}, as for every other \verb{font =}.}
+\code{getOption("rtfreporter.font")}, as for every other \verb{font =}; else one
+family name, or a named vector per script slot (its \code{latin} is
+measured).}
 \item{\code{font_size_half_points}}{is \strong{half-points}, as everywhere in
-RTF: 8pt is \code{16L}, 9pt (the default) is \code{18L}.  Getting it wrong
-silently changes the budget -- at 8pt a landscape A4 with half-inch
-margins holds 159 characters, at 9pt only 141.  Pass the same values
-the document uses in \code{rtf_document(default_format = )}.}
+RTF, a positive whole number: 8pt is \code{16L}, 9pt (the default) is
+\code{18L}.  Getting it wrong silently changes the budget -- at 8pt a landscape A4 with half-inch
+margins holds 159 characters, at 9pt only 142.  Pass the same values
+the document uses in \code{rtf_document(style = rtf_style())}.}
 }}
 
-\item{total_width}{Character budget for the whole listing, gutters included.
+\item{total_width}{Character budget for the whole listing, gutters included:
+a positive whole number.
 \code{NULL} (default) computes it from \code{page}, \code{font} and
 \code{font_size_half_points}.  Give it directly when you know the budget and
 would rather not describe the page.}

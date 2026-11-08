@@ -17,7 +17,8 @@ rtf_figures(
   render_width = NULL,
   render_height = NULL,
   render_dpi = NULL,
-  png_device = NULL
+  png_device = NULL,
+  render_format = NULL
 )
 }
 \arguments{
@@ -26,7 +27,7 @@ rtf_figures(
 \item{figures}{A figure, or a list of them.  One figure is given as it is
 -- \code{rtf_figures(doc, plot)} -- and several as a list.
 \describe{
-\item{A file}{a character file path to an image file (PNG/JPEG).}
+\item{A file}{a character file path to an image file (PNG/JPEG/EMF).}
 \item{A plot object}{a ggplot2 plot, a patchwork, a grob, a recorded
 base plot, a function that draws -- see \code{\link[=rtfplot]{rtfplot()}}.  It is drawn
 with \code{png_device} (default: the \code{rtfreporter.png_device} option,
@@ -64,9 +65,10 @@ or one each; the document's first content always begins a page.  As
 \item{space_before}{With \code{page_break = FALSE}, empty lines between the
 content before and this figure.}
 
-\item{render_width, render_height, render_dpi, png_device}{How to draw the
-\strong{plot objects} in \code{figures}, as \code{\link[=rtfplot]{rtfplot()}} takes them: size in inches,
-resolution, and PNG device.  \code{NULL} (default) is \code{\link[=rtfplot]{rtfplot()}}'s own
+\item{render_width, render_height, render_dpi, png_device, render_format}{How to
+draw the \strong{plot objects} in \code{figures}, as \code{\link[=rtfplot]{rtfplot()}} takes them: size in
+inches, resolution, PNG device, and file format (\code{"png"} or \code{"emf"}; the
+latter needs the devEMF package).  \code{NULL} (default) is \code{\link[=rtfplot]{rtfplot()}}'s own
 default (6.5 x 4.5 in, 300 dpi, the \code{rtfreporter.png_device} option).  A
 file path ignores them (a file has its size already), and a figure given
 as an \code{\link[=rtfplot]{rtfplot()}} keeps the settings it was built with.}
@@ -75,8 +77,10 @@ as an \code{\link[=rtfplot]{rtfplot()}} keeps the settings it was built with.}
 Modified rtf_document with appended figure contents.
 }
 \description{
-Append one or more figures as content pages -- image files (PNG/JPEG) or
-plot objects. Each figure creates one new page. Display dimensions and
+Append one or more figures as content pages -- image files (PNG/JPEG/EMF) or
+plot objects. Each figure is a block of its own and begins a new page,
+unless \code{page_break = FALSE} puts it under the content before. Display
+dimensions and
 alignment apply to every path and plot object in \code{figures}; elements
 already constructed via \code{\link[=rtfplot]{rtfplot()}} keep their own settings.
 }

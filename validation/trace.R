@@ -18,8 +18,8 @@
 #               functions' own, under FR-IX000.
 #  Only `active` rows count (`draft`: a coarse row not yet split).
 #
-#  An FT is a test_that() block that checks an FR -- decided by a person who
-#  read it, never by the block merely calling the function:
+#  An FT is a test_that() block that checks an FR -- decided by the developer
+#  making the change, never by the block merely calling the function:
 #    * a new test names its id and FRs at its head:
 #        test_that("FT-PL<nnn> [FR-PL101 FR-PL102]: table_plan() ...", ...)
 #    * an existing test is mapped in inst/validation/test_map.csv
@@ -55,6 +55,7 @@ kinds <- c("behaviour", "argument", "data", "guard", "interaction")
 
 fr <- utils::read.csv(file.path(vdir, "requirements.csv"), colClasses = "character",
                       na.strings = "", stringsAsFactors = FALSE)
+all_ids <- fr$id
 fr <- fr[fr$status %in% "active", , drop = FALSE]
 fr$parent[is.na(fr$parent)] <- ""
 leaf <- !fr$id %in% fr$parent
@@ -108,7 +109,7 @@ tb <- do.call(rbind, lapply(files, blocks))
 # ---- the map: by hand, and the new tests' own names -------------------------------
 map <- utils::read.csv(file.path(vdir, "test_map.csv"), colClasses = "character",
                        stringsAsFactors = FALSE)
-head_re <- "^(FT-[A-Z]{2}[0-9]{3}) \\[([^]]*)\\]:"
+head_re <- "^(FT-[A-Z]{2}[0-9]{3,4}) \\[([^]]*)\\]:"
 named <- tb[grepl(head_re, tb$test), , drop = FALSE]
 if (nrow(named)) {
   map <- rbind(map, data.frame(file = named$file, test = named$test,
@@ -124,9 +125,14 @@ if (any(gone)) {
 }
 if (anyDuplicated(map$ft)) stop("An FT id is used twice: ", paste(unique(map$ft[duplicated(map$ft)]),
                                                                  collapse = ", "), call. = FALSE)
-unknown <- setdiff(unlist(strsplit(map$fr, " ", fixed = TRUE)), fr$id)
+unknown <- setdiff(unlist(strsplit(map$fr, " ", fixed = TRUE)), all_ids)
 if (length(unknown)) stop("The map names FRs not in requirements.csv: ",
                           paste(unknown, collapse = ", "), call. = FALSE)
+# a test of a removed (deprecated) feature stays until the code goes; it
+# checks no requirement of the matrix
+map$fr <- vapply(strsplit(map$fr, " ", fixed = TRUE),
+                 function(x) paste(intersect(x, fr$id), collapse = " "), "")
+map <- map[nzchar(map$fr), , drop = FALSE]
 not_leaf <- intersect(unlist(strsplit(map$fr, " ", fixed = TRUE)), fr$id[!leaf])
 if (length(not_leaf)) stop("Tests are mapped to the leaves only, not to ",
                            paste(not_leaf, collapse = ", "), call. = FALSE)
@@ -173,8 +179,10 @@ utils::write.csv(cand, file.path(out, "candidates.csv"), row.names = FALSE, file
 fn_rows <- lapply(scope, function(f) {
   mine <- leaf & vapply(fr_fns, function(x) f %in% x, NA)
   formals_ <- setdiff(names(formals(get(f, envir = ns))), c(".plan", "..."))
+  # (a deprecated export is left out of the argument count, as in the coverage test)
+  if (f %in% get(".deprecated_exports", envir = ns)) formals_ <- character()
   named_in_fr <- formals_[vapply(formals_, function(a) {
-    any(grepl(sprintf("\\b%s\\s*=", a), fr$statement[mine], perl = TRUE))
+    ns$.fr_names_arg(f, a, fr$statement[mine])
   }, NA)]
   given <- unique(unlist(lapply(strsplit(tb$given, " ", fixed = TRUE), function(g) {
     sub("^[^:]*:", "", g[startsWith(g, paste0(f, ":"))])
@@ -218,7 +226,7 @@ fr_ok <- vapply(fr$id[leaf], function(id) {
 }, NA)
 
 # ---- the deviations: the leaves with no test, and why they are accepted -----------------
-# inst/validation/deviations.csv, written by a person: one row a group of FRs
+# inst/validation/deviations.csv, written by the developer: one row a group of FRs
 # accepted for one reason (ids space-separated), its risk (high / medium /
 # low) and the basis of that, the reason it is accepted, the action
 dev <- utils::read.csv(file.path(vdir, "deviations.csv"), colClasses = "character",
@@ -325,7 +333,7 @@ sm <- c(
   "## Results",
   "",
   "| Measure | Value |", "|---|---|",
-  sprintf("| Leaf requirements with a test, mapped by a person | %s |", pct(sum(tl$n_ft > 0), nrow(tl))),
+  sprintf("| Leaf requirements with a test, mapped by the developer | %s |", pct(sum(tl$n_ft > 0), nrow(tl))),
   sprintf("| Guard requirements (unintended use stopped) with a test | %s |",
           pct(sum(tl$n_ft > 0 & tl$kind == "guard"), n_guard)),
   sprintf("| Interaction requirements (functions or arguments together) with a test | %s |",
@@ -335,8 +343,13 @@ sm <- c(
   sprintf("| The mapped tests, run (test-log.txt) | %s |", gsub("|", "/", pass_line, fixed = TRUE)),
   sprintf("| Arguments a requirement names (functions with their own requirements) | %s |",
           pct(sum(fn_tab$arguments_in_fr), sum(fn_tab$arguments))),
-  sprintf("| Upper requirements | %s |", paste(sprintf("%s %s", tr$fr[!leaf], tr$coverage[!leaf]),
-                                                collapse = "; ")),
+  # (the upper FRs' own status is the matrix's second sheet; a gap is named here)
+  sprintf("| Upper requirements fully covered | %s%s |",
+          pct(sum(tr$coverage[!leaf] == "covered"), sum(!leaf)),
+          if (all(tr$coverage[!leaf] == "covered")) "" else
+            paste0("; not covered: ", paste(sprintf("%s %s", tr$fr[!leaf][tr$coverage[!leaf] != "covered"],
+                                                     tr$coverage[!leaf][tr$coverage[!leaf] != "covered"]),
+                                             collapse = "; "))),
   "",
   "## Environments",
   "",
@@ -386,7 +399,7 @@ sm <- c(
                       sprintf("Of the %d with no test, not every one is assessed and accepted (Deviations).", n_dev)
                     })
           }),
-  "3. **Process.** Every change is made as CONTRIBUTING.md says (its issue-to-merge lifecycle and *Quality assurance*): an issue and a pull request, reviewed, with every CI workflow passing before the merge, so a failing test keeps a change out. GitHub keeps that record (the pull requests, their reviews, the CI runs); it is referred to, not copied.",
+  "3. **Process.** Responsibilities are as the Quality Plan says (section 7): the development team evaluates each issue; the developer making a change adds its tests and requirements and runs the tests; the maintainer reviews and approves a contributor's pull request, and merges a change into the release branch only after all tests, of the change and for regression, have passed in all CI environments. GitHub keeps that record (the issues, the pull requests, the CI runs); it is referred to, not copied.",
   "4. **Other measures.** Line coverage (Attachments, at the end of this report) and the arguments the tests give (functions.csv) are secondary: aids that show where to look, not evidence of a requirement met.",
   "",
   if (is.null(draft) && ready) {

@@ -1,8 +1,8 @@
 ---
 title: "Several contents on one page"
 description: >
-  A table under a table, a figure under a table, a PK summary with its
-  listing, and a long listing that goes on over pages of its own: the
+  A table under a table, a figure under a table, and a long listing that
+  goes on over pages of its own: the
   arguments that place them, the titles and footnotes, the sections and the
   page values, and rtf_layout() to check the pages before writing them.
 ---
@@ -43,7 +43,7 @@ A report often puts two contents on one page: a summary table and the
 listing behind it, a table and its figure, two short tables. In rtfreporter
 each `rtf_tables()` or `rtf_figures()` call adds a content, and
 `page_break = FALSE` puts it under the content before it instead of on a new
-page. This page shows four such reports and the rules behind them.
+page. This page shows three such reports and the rules behind them.
 
 ```{r setup, fold = FALSE}
 library(rtfreporter)
@@ -72,40 +72,54 @@ this page, shows the pages as rtfreporter will write them.
 
 ## (a) A table under a table
 
-Two summaries of one population, each from its own ARD and plan:
-demographics, and the subjects' disposition.
+An overview of the treatment-emergent adverse events and, under it, the
+demographic characteristics of the same population: two ARDs and two plans,
+with one column header -- the arm and its N -- written once and used by
+both.
 
 ```{r a-data, fold = "closed"}
-adsl <- cards::ADSL
-adsl$ARM <- factor(adsl$ARM, levels = c("Placebo", "Xanomeline Low Dose",
-                                        "Xanomeline High Dose"))
+arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
+adsl <- cards::ADSL[cards::ADSL$SAFFL == "Y", ]
+adsl$ARM <- factor(adsl$ARM, levels = arms)
+adae <- cards::ADAE[cards::ADAE$TRTEMFL == "Y", ]
+# a subject-level flag for each row of the overview
+had <- function(rows) adsl$USUBJID %in% adae$USUBJID[rows]
+adsl$ANYAE <- had(TRUE)
+adsl$RELAE <- had(adae$AEREL %in% c("POSSIBLE", "PROBABLE"))
+adsl$SEVAE <- had(adae$AESEV == "SEVERE")
+adsl$SERAE <- had(adae$AESER == "Y")
+adsl$DISAE <- adsl$DSRAEFL %in% "Y"
+adsl$DTHAE <- had(adae$AESDTH == "Y")
+ard_ae <- cards::ard_tabulate_value(adsl, by = ARM,
+                                    variables = c(ANYAE, RELAE, SEVAE, SERAE, DISAE, DTHAE))
 ard_dm <- cards::ard_stack(
   adsl, .by = ARM,
   cards::ard_summary(variables = AGE),
-  cards::ard_tabulate(variables = c(AGEGR1, SEX)))
-ard_ds <- cards::ard_stack(
-  adsl, .by = ARM,
-  cards::ard_tabulate(variables = DCDECOD))
+  cards::ard_tabulate(variables = c(AGEGR1, SEX, RACE)))
 
 # the column header both tables share: the arm and its N
 arm_header <- rtf_col_header(c("", "{col}"), c("", "(N={n})"))
+ae <- ard_ae |>
+  normalize_ard() |>
+  table_plan(cols = "ARM", rows = "variable") |>
+  plan_cells(c(n == 0 ~ "0", "{n:.0f} ({p:.1f%})"), notes = FALSE) |>
+  plan_labels(c(ANYAE = "Any TEAE", RELAE = "Any drug-related TEAE",
+                SEVAE = "Any severe TEAE", SERAE = "Any serious TEAE",
+                DISAE = "Any TEAE leading to discontinuation",
+                DTHAE = "Any TEAE leading to death")) |>
+  plan_col_header(values = list(n = TRUE), arm_header) |>
+  plan_hide("label") |>
+  plan_columns(widths = c(4, 2, 2, 2)) |>
+  plan_style(border = "tfl", align_count_pct = TRUE)
 dm <- ard_dm |>
   normalize_ard() |>
   table_plan(cols = "ARM", rows = c(group = "variable")) |>
   plan_cells(continuous = c("n" = "{N:.0f}", "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
-                            "Min, Max" = "{min:.0f}, {max:.0f}"),
-             categorical = "{n:.0f} ({p:.1f%})", notes = FALSE) |>
-  plan_labels(c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)", SEX = "Sex, n (%)")) |>
+                            "Median" = "{median:.1f}", "Min, Max" = "{min:.0f}, {max:.0f}"),
+             categorical = c(n == 0 ~ "0", "{n:.0f} ({p:.1f%})"), notes = FALSE) |>
+  plan_labels(c(AGE = "Age (years)", AGEGR1 = "Age group (years), n (%)",
+                SEX = "Sex, n (%)", RACE = "Race, n (%)")) |>
   plan_levels(AGEGR1 = c("<65", "65-80", ">80"), SEX = c("F", "M")) |>
-  plan_col_header(values = list(n = TRUE), arm_header) |>
-  plan_stub(name = "row_label") |>
-  plan_columns(widths = c(4, 2, 2, 2)) |>
-  plan_style(border = "tfl", align_count_pct = TRUE)
-ds <- ard_ds |>
-  normalize_ard() |>
-  table_plan(cols = "ARM", rows = c(group = "variable")) |>
-  plan_cells(categorical = "{n:.0f} ({p:.1f%})", notes = FALSE) |>
-  plan_labels(c(DCDECOD = "Disposition, n (%)")) |>
   plan_col_header(values = list(n = TRUE), arm_header) |>
   plan_stub(name = "row_label") |>
   plan_columns(widths = c(4, 2, 2, 2)) |>
@@ -119,17 +133,18 @@ The first `rtf_tables()` starts the page; the second, with
 header <- rtf_header(list(c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}")))
 doc_a <- rtf_document() |>
   rtf_section(header = header) |>
-  rtf_tables(dm, titles = list(c("Table 14.1.1",
-                                 "Demographics and Disposition",
-                                 "Intent-to-Treat Population")),
-             footnotes = list("Percentages are of the subjects in the arm.")) |>
-  rtf_tables(ds, page_break = FALSE, space_before = 1L,
-             titles = list("Disposition"),
-             footnotes = list("Source: ADSL."))
+  rtf_tables(ae, titles = list(c("Table 14.3.1.1",
+                                 "Overview of Treatment-Emergent Adverse Events and Demographic Characteristics",
+                                 "Safety Population")),
+             footnotes = list(c("TEAE = treatment-emergent adverse event. A subject is counted once in each row.",
+                                "Drug-related: possibly or probably related to the study drug, as judged by the investigator."))) |>
+  rtf_tables(dm, page_break = FALSE, space_before = 1L,
+             titles = list("Demographic Characteristics"),
+             footnotes = list("Percentages are based on the number of subjects in the Safety Population in each arm."))
 generate_rtfreport(doc_a, "a_table_table.rtf", overwrite = TRUE)
 ```
 
-![Demographics table with the disposition table under it on one page](img/several-contents/a_table_table.png)
+![The overview of adverse events with the demographic characteristics under it on one page](img/several-contents/a_table_table.png)
 
 Each table keeps its own title and footnote. The output's own title (the
 table number, its name and the population) is the first content's title
@@ -138,186 +153,142 @@ or the page footer when it is wanted on every page.
 
 ## (b) A figure under a table
 
+A Kaplan-Meier plot under its table: the events, the censored subjects, the
+median time with its confidence interval, and the number at risk at the
+plot's ticks. The table is a plain data frame, made from the `survfit()`
+fit the plot draws:
+
+```{r b-data, fold = "closed"}
+adtte <- cards::ADTTE[cards::ADTTE$PARAMCD == "TTDE", ]
+adtte$TRTA <- factor(adtte$TRTA, levels = arms)
+fit <- survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = adtte)
+s <- summary(fit)$table
+q <- quantile(fit, probs = 0.5)
+ne <- function(x) if (is.na(x)) "NE" else format(round(x))
+days <- c(0, 28, 56, 84, 112, 140, 168)
+at_risk <- matrix(summary(fit, times = days, extend = TRUE)$n.risk, ncol = length(arms))
+km_tab <- data.frame(
+  Item = c("Subjects with an event, n (%)", "Censored, n (%)",
+           "Median time to event (days) (95% CI)", "Number at risk", paste0("  Day ", days)))
+for (i in seq_along(arms)) {
+  n <- s[i, "records"]
+  e <- s[i, "events"]
+  km_tab[[arms[i]]] <- c(sprintf("%d (%.1f)", e, 100 * e / n),
+                         sprintf("%d (%.1f)", n - e, 100 * (n - e) / n),
+                         sprintf("%s (%s, %s)", ne(q$quantile[i]), ne(q$lower[i]), ne(q$upper[i])),
+                         "", as.character(at_risk[, i]))
+}
+names(km_tab)[1] <- ""
+km_table <- table_plan(km_tab) |>
+  plan_col_header(rtf_col_header(c("", arms), c("", sprintf("(N=%d)", s[, "records"])))) |>
+  plan_columns(widths = c(4, 2, 2, 2)) |>
+  plan_style(border = "tfl")
+```
+
 `rtf_figures()` takes the same `page_break` and `space_before`. Give the
 figure the height that is left on the page:
 
 ```{r b-doc}
 library(ggplot2)
-age_plot <- ggplot(adsl, aes(ARM, AGE)) +
-  geom_boxplot() +
-  labs(x = NULL, y = "Age (years)") +
-  theme_bw(base_size = 9)
+# the curves from `fit` above: a step from (0, 1) per arm, a + at each censoring
+arm <- sub("^TRTA=", "", names(fit$strata))
+km_df <- rbind(data.frame(time = 0, surv = 1, arm = arm, n.censor = 0),
+               data.frame(time = fit$time, surv = fit$surv,
+                          arm = rep(arm, fit$strata), n.censor = fit$n.censor))
+km_plot <- ggplot(km_df, aes(time, surv, colour = arm)) +
+  geom_step(linewidth = 0.6) +
+  geom_point(data = km_df[km_df$n.censor > 0, ], shape = 3, size = 1.5) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_x_continuous(breaks = days) +
+  labs(x = "Days since first dose", y = "Probability of no dermatologic event") +
+  theme_bw(base_size = 9) +
+  theme(legend.position = "bottom", legend.title = element_blank())
 doc_b <- rtf_document() |>
   rtf_section(header = header) |>
-  rtf_tables(dm, titles = list(c("Table 14.1.2", "Age by Arm",
-                                 "Intent-to-Treat Population"))) |>
-  rtf_figures(age_plot, page_break = FALSE, space_before = 1L,
-              render_width = 6, render_height = 2.6,
-              titles = list("Figure: age by arm"),
-              footnotes = list("Box: quartiles; whiskers: 1.5 IQR."))
+  rtf_tables(km_table, titles = list(c("Figure 14.3.2.1",
+                                       "Kaplan-Meier Plot of Time to First Dermatologic Event",
+                                       "Safety Population"))) |>
+  rtf_figures(km_plot, page_break = FALSE, space_before = 1L,
+              render_width = 7, render_height = 3.2,
+              footnotes = list(c("Dermatologic event: a treatment-emergent skin and subcutaneous tissue event.",
+                                 "+ Censored at the last contact.",
+                                 "Median and 95% CI from the Kaplan-Meier estimate. NE = not estimable.")))
 generate_rtfreport(doc_b, "b_table_figure.rtf", overwrite = TRUE)
 ```
 
-![Demographics table with a box plot of age by arm under it](img/several-contents/b_table_figure.png)
+![The time-to-event table with the Kaplan-Meier plot under it](img/several-contents/b_table_figure.png)
 
-## (c) A PK summary and its listing
+## (c) A long listing that goes on
 
-A concentration summary by time point, and under it the listing of the same
-concentrations, both with the time points across: the summary's rows are its
-statistics, the listing's its subjects. The data is made up here: 24
-subjects, 8 nominal times, a one-compartment curve with some noise, BLQ
-under 2 ng/mL. This example takes five of the subjects: with the time points
-across, the summary and the listing fit on one page. (d) takes all 24.
-
-```{r c-data, fold = "closed"}
-set.seed(20261028)
-n_subj <- 24
-tpt <- data.frame(ATPTN = c(0, 0.5, 1, 2, 4, 8, 12, 24),
-                  ATPT  = c("Pre-dose", "0.5 h", "1 h", "2 h", "4 h", "8 h", "12 h", "24 h"))
-subj <- data.frame(USUBJID = sprintf("DEMO-01-%03d", seq_len(n_subj)),
-                   ka   = stats::rlnorm(n_subj, log(1.2), 0.25),
-                   ke   = stats::rlnorm(n_subj, log(0.12), 0.25),
-                   dose = stats::rlnorm(n_subj, log(400), 0.20))
-adpc <- merge(subj, tpt, by = NULL)
-adpc <- adpc[order(adpc$USUBJID, adpc$ATPTN), ]
-conc <- with(adpc, dose * ka / (ka - ke) * (exp(-ke * ATPTN) - exp(-ka * ATPTN)))
-conc <- conc * stats::rlnorm(nrow(adpc), 0, 0.12)
-adpc$ARELTM <- round(pmax(0, adpc$ATPTN +
-  ifelse(adpc$ATPTN == 0, -0.1, stats::runif(nrow(adpc), -0.08, 0.12))), 2)
-blq <- adpc$ATPTN == 0 | conc < 2
-adpc$AVAL  <- ifelse(blq, NA_real_, round(conc, 1))
-adpc$AVALC <- ifelse(blq, "BLQ", format(round(conc, 1), nsmall = 1, trim = TRUE))
-adpc$ATPT  <- factor(adpc$ATPT, levels = tpt$ATPT)
-```
-
-The summary is an ARD by time point, the time points across. BLQ samples are
-left out, and pre-dose (BLQ for every subject) has no column. One function
-makes the plan, so (d) can use it for all 24 subjects:
-
-```{r c-summary}
-cv <- function(x) 100 * stats::sd(x) / mean(x)
-gm <- function(x) exp(mean(log(x)))
-pk_summary_plan <- function(data, cells) {
-  ard <- cards::ard_summary(
-    droplevels(data[!is.na(data$AVAL), ]), by = ATPT, variables = AVAL,
-    statistic = ~ list(N = length, mean = mean, sd = stats::sd, cv = cv,
-                       geo_mean = gm, median = stats::median, min = min, max = max))
-  ard |>
-    normalize_ard() |>
-    table_plan(cols = "ATPT", rows = c(group = "variable")) |>
-    plan_cells(continuous = cells, notes = FALSE) |>
-    plan_labels(c(AVAL = "Concentration (ng/mL)")) |>
-    plan_levels(ATPT = tpt$ATPT[-1]) |>
-    plan_col_header(rtf_col_header(c("Drug X (ng/mL)", "{col}"))) |>
-    plan_stub(name = "row_label") |>
-    plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
-    plan_style(border = "tfl")
-}
-pk_cells <- c("n" = "{N:.0f}", "Mean" = "{mean:.1f}", "SD" = "{sd:.2f}",
-              "CV%" = "{cv:.1f}", "Geometric mean" = "{geo_mean:.1f}",
-              "Median" = "{median:.1f}", "Min" = "{min:.1f}", "Max" = "{max:.1f}")
-pk5 <- adpc[adpc$USUBJID %in% unique(adpc$USUBJID)[1:5], ]
-summary5 <- pk_summary_plan(pk5, pk_cells)
-```
-
-The listing is laid out as the summary: a row a subject, a column a time
-point, the concentration in each cell (`BLQ` where it is below the limit).
-It is a plain data frame, its column names the header, with the summary's
-column widths so the two line up:
-
-```{r c-listing}
-post <- pk5[pk5$ATPT != "Pre-dose", ]
-listing5 <- data.frame(Subject = unique(post$USUBJID))
-for (t in tpt$ATPT[-1]) {
-  at <- post[post$ATPT == t, ]
-  listing5[[t]] <- at$AVALC[match(listing5$Subject, at$USUBJID)]
-}
-listing5_plan <- table_plan(listing5) |>
-  plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
-  plan_style(border = "tfl")
-listing5
-```
-
-The summary starts the page and carries the output's title; the listing goes
-on under it:
-
-```{r c-doc}
-pk_header <- rtf_header(list(
-  c(l = "Protocol: {STUDY} (synthetic data)", r = "Page {PAGE} of {TOTAL_PAGES}")))
-pk_footer <- rtf_footer(list(
-  c(l = "BLQ: below the lower limit of quantification (2 ng/mL); left out of the summary."),
-  c(l = "Pre-dose: BLQ for every subject. Synthetic data made for this page.")))
-doc_c <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
-  rtf_section(header = pk_header, footer = pk_footer) |>
-  rtf_tables(summary5,
-             titles = list(c("Table 14.4.1",
-                             "Drug X Plasma Concentrations: Summary and Listing",
-                             "Safety Population"))) |>
-  rtf_tables(listing5_plan, page_break = FALSE, space_before = 1L,
-             titles = list("Listing of concentrations (ng/mL)"))
-generate_rtfreport(doc_c, "c_pk.rtf", overwrite = TRUE)
-```
-
-![The PK concentration summary of five subjects and, under it, their concentrations by time point](img/several-contents/c_pk.png)
-
-## (d) A long listing that goes on
-
-With all 24 subjects, the listing is longer than what is left under the
-summary. Here it has one row a sample, so it is written as a plain table:
-the columns as they print, named as their headers. `plan_row_group()` prints
-the subject on its first row only (and again at the top of a page),
-`plan_blanks()` puts a blank row between subjects, and
-`plan_paginate_rows()` makes pages of 24 rows (three subjects) without
-cutting a subject:
+A disposition summary and, under it, the listing of the subjects who
+discontinued: 144 subjects, far more than what is left under the summary.
+The listing is a plain table, its columns as they print, named as their
+headers. `plan_row_group()` prints the treatment on its first row only (and
+again at the top of a page), and `plan_paginate_rows()` makes pages of 30
+rows:
 
 ```{r d-listing}
-pk_summary <- pk_summary_plan(adpc, pk_cells)
-lst <- data.frame(Subject = adpc$USUBJID,
-                  `Nominal time` = as.character(adpc$ATPT),
-                  `Actual time (h)` = format(adpc$ARELTM, nsmall = 2),
-                  `Concentration (ng/mL)` = adpc$AVALC,
+ard_ds <- cards::ard_stack(adsl, .by = ARM, cards::ard_tabulate(variables = DCDECOD))
+ds <- ard_ds |>
+  normalize_ard() |>
+  table_plan(cols = "ARM", rows = c(group = "variable")) |>
+  plan_cells(categorical = c(n == 0 ~ "0", "{n:.0f} ({p:.1f%})"), notes = FALSE) |>
+  plan_labels(c(DCDECOD = "Status at end of study, n (%)")) |>
+  plan_col_header(values = list(n = TRUE), arm_header) |>
+  plan_stub(name = "row_label") |>
+  plan_columns(widths = c(4, 2, 2, 2)) |>
+  plan_style(border = "tfl", align_count_pct = TRUE)
+
+disc <- adsl[adsl$DCDECOD != "COMPLETED", ]
+disc <- disc[order(disc$ARM, disc$USUBJID), ]
+lst <- data.frame(Treatment = as.character(disc$ARM),
+                  `Subject ID` = disc$USUBJID,
+                  `Age/Sex` = paste0(disc$AGE, "/", disc$SEX),
+                  `Last dose (study day)` = as.character(disc$TRTDUR),
+                  `Reason for discontinuation` = tools::toTitleCase(tolower(disc$DCDECOD)),
                   check.names = FALSE)
-pk_listing <- table_plan(lst) |>
-  plan_row_group(mode = "value", collapse = "Subject", group_col = "Subject") |>
-  plan_blanks(where = "between_groups") |>
-  plan_paginate_rows(max_rows = 24, split = "group_safe") |>
-  plan_columns(widths = c(2, 1.5, 1.5, 2)) |>
+disc_listing <- table_plan(lst) |>
+  plan_row_group(mode = "value", collapse = "Treatment", group_col = "Treatment") |>
+  plan_paginate_rows(max_rows = 30, split = "group_force") |>
+  plan_columns(widths = c(2.4, 1.6, 1, 1.6, 3)) |>
   plan_style(border = "tfl")
 ```
 
 (`plan_listing()` and `listing_spec()` are for listings whose records wrap
-over several lines, such as adverse events; they put a blank row after every
-record. See [Listings with a plan](plan-listings.html).)
+over several lines, such as adverse events. See
+[Listings with a plan](plan-listings.html). A listing whose summary shares its
+columns -- a PK concentration listing with its summary statistics under it --
+is one table, not two contents: see
+[A listing and its summary in one table](plan-append.html).)
 
-`first_rows` says how many of the listing's rows go on the shared page (rows
-of data: the blank rows between subjects come on top); the rest goes on
-pages of its own, paginated by its plan, each with the listing's title, the
-`cont_title` line, the column header and the footnote:
+`first_rows` says how many of the listing's rows go on the shared page; the
+rest goes on pages of its own, paginated by its plan, each with the
+listing's title, the `cont_title` line, the column header and the footnote:
 
 ```{r d-doc}
-doc_pk <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
-  rtf_section(header = pk_header, footer = pk_footer) |>
-  rtf_tables(pk_summary,
-             titles = list(c("Table 14.4.2",
-                             "Drug X Plasma Concentrations: Summary and Listing",
-                             "Safety Population"))) |>
-  rtf_tables(pk_listing, page_break = FALSE, space_before = 1L,
-             first_rows = 16L, cont_title = "(continued)",
-             titles = list("Listing of concentrations"))
-generate_rtfreport(doc_pk, "d_pk.rtf", overwrite = TRUE)
+doc_d <- rtf_document() |>
+  rtf_section(header = header) |>
+  rtf_tables(ds, titles = list(c("Table 14.1.2",
+                                 "Subject Disposition and Subjects Who Discontinued",
+                                 "Safety Population"))) |>
+  rtf_tables(disc_listing, page_break = FALSE, space_before = 1L,
+             first_rows = 12L, cont_title = "(continued)",
+             titles = list("Subjects Who Discontinued the Study"),
+             footnotes = list("Last dose: the study day of the last dose, day 1 being the first."))
+generate_rtfreport(doc_d, "c_listing.rtf", overwrite = TRUE)
 ```
 
-Page 1, the summary and the first 16 rows of the listing:
+Page 1, the summary and the first 12 rows of the listing:
 
-![Page 1: the PK concentration summary and the first rows of the listing](img/several-contents/d_pk_page1.png)
+![Page 1: the disposition summary and the first rows of the listing](img/several-contents/c_listing_page1.png)
 
 Page 2, where the listing goes on:
 
-![Page 2: the listing continued, titled (continued)](img/several-contents/d_pk_page2.png)
+![Page 2: the listing continued, titled (continued)](img/several-contents/c_listing_page2.png)
 
-The footnotes here are in the page footer, so they print on every page. A
-footnote given to `rtf_tables(footnotes = )` belongs to that content and
-prints under it, on each of its pages.
+A footnote given to `rtf_tables(footnotes = )` belongs to that content and
+prints under it, on each of its pages; one wanted on every page goes in the
+page footer.
 
 ## Checking the pages: `rtf_layout()`
 
@@ -327,7 +298,7 @@ each table and the size of each figure. Use it to count what goes on a page
 and to see where a content is cut:
 
 ```{r layout}
-rtf_layout(doc_pk)
+rtf_layout(doc_d)
 ```
 
 The result is a list as well: `rtf_layout(doc)$pages` has one entry per

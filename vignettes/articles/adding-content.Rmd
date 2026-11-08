@@ -173,7 +173,7 @@ rule). You can switch either form with the document defaults
 `title_format` / `footnote_format` (`"text"` or `"table"`):
 
 ```{r title-format}
-doc <- rtf_document(default_format = list(title_format = "table")) |>  # legacy
+doc <- rtf_document(style = rtf_style(title_format = "table")) |>  # legacy
   rtf_tables(list(df1), titles = list("Table 14.1.1"))
 ```
 
@@ -252,7 +252,7 @@ notes flow through automatically -- see
 Cell text (data cells, column / spanning headers, titles and footnotes) is run
 through a small markup step controlled by the `markup` argument of `rtftable()`
 (and `rtf_tables()` for bare data.frames; the document-wide default is
-`rtf_document(default_format = list(markup = ))`). It takes a character vector of:
+`rtf_document(style = rtf_style(markup = ))`). It takes a character vector of:
 
 - `"script"` -- `^{...}` renders as superscript, `_{...}` as subscript (this is
   how adapter-generated footnote reference marks such as `^{1}` become real

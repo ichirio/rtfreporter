@@ -199,7 +199,7 @@ test_that("FT-PL905 [FR-PL903]: a part's rows under the parent's; a column a par
   rec$GRP <- NULL
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}", na = "BLQ")
   lng <- pl_long()
-  lng <- lng[lng$T != "t3", ]
+  lng <- lng[lng$GRP == "x" & lng$T != "t3", ]  # one record a cell: y would be lost in silence (a warning)
   child <- table_plan(lng, cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.2f}"))
   t <- as.data.frame(plan_apply(parent |> plan_append(child), "table"))
@@ -209,6 +209,10 @@ test_that("FT-PL905 [FR-PL903]: a part's rows under the parent's; a column a par
   # the parent's na, not the child's: t3 is empty on the child's rows
   expect_identical(t$t3, c("BLQ", "5.0", "", ""))
   expect_identical(t$t1[4], "1.50")
+  # the child's own na fills its rows' empty cells, never its heading row (#798)
+  t_na <- as.data.frame(plan_apply(parent |> plan_append(child |> plan_cells(na = "NC")), "table"))
+  expect_identical(t_na$t3, c("BLQ", "5.0", "", "NC"))
+  expect_identical(unlist(t_na[3L, c("t1", "t2", "t3")], use.names = FALSE), c("", "", ""))
   # the child inherits the parent's digits by key, and its own win
   child2 <- table_plan(lng, cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean}"))
@@ -281,7 +285,7 @@ test_that("FT-PL907 [FR-PL905]: blank rows between the parts, and a part's own f
 test_that("FT-PL908 [FR-PL906]: a part may not carry the whole table's settings; its column key is the table's", {
   rec <- pl_rec()
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}")
-  child <- table_plan(pl_long(), cols = "T", rows = c(block = ~ "Summary")) |>
+  child <- table_plan(pl_long()[pl_long()$GRP == "x", ], cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
   bad <- function(c2, what) expect_error(parent |> plan_append(c2), what, fixed = TRUE)
   bad(child |> plan_col_header(rtf_col_header(c("a", "b", "c", "d"))), "plan_col_header()")
@@ -313,7 +317,7 @@ test_that("FT-PL908 [FR-PL906]: a part may not carry the whole table's settings;
 test_that("FT-PL909 [FR-PL907]: the header's {n} and {col}, the widths and the decimal split read the stack", {
   rec <- pl_rec()
   parent <- table_plan(rec, cols = "T", rows = "ID", value = "V") |> plan_cells("{value:.1f}")
-  child <- table_plan(pl_long(), cols = "T", rows = c(block = ~ "Summary")) |>
+  child <- table_plan(pl_long()[pl_long()$GRP == "x", ], cols = "T", rows = c(block = ~ "Summary")) |>
     plan_cells(V = c(Mean = "{mean:.1f}"))
   p <- parent |> plan_append(child) |>
     plan_col_header(rtf_col_header(c("Subject", "{col}"))) |>

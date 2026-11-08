@@ -85,10 +85,10 @@ A document has exactly **one** document-level configuration, and you can set all
 of it on `rtf_document()`. The two calls below are equivalent:
 
 ```{r equivalent, eval = FALSE}
-rtf_document(default_format = list(font_size_half_points = 20L))
+rtf_document(style = rtf_style(font_size_half_points = 20L))
 
 rtf_document() |>
-  rtf_config(default_format = list(font_size_half_points = 20L))
+  rtf_config(style = rtf_style(font_size_half_points = 20L))
 ```
 
 For a brand-new document `rtf_config()` is **not required** -- you can pass the
@@ -112,15 +112,17 @@ a4      <- base |> rtf_config(page = list(paper_size = "A4"))   # landscape A4
 # generate_rtfreport(a4,     "report-a4.rtf",     overwrite = TRUE)
 ```
 
-`page` and `default_format` are **merged per key**, so the A4 variant above
+`page` and `style` are **merged per key**, so the A4 variant above
 keeps `base`'s orientation and margins and only swaps the paper size. The same
 trick produces a large-print copy
-(`rtf_config(default_format = list(font_size_half_points = 24L))`) or a
+(`rtf_config(style = rtf_style(font_size_half_points = 24L))`) or a
 client-specific font (`rtf_config(font_table = list(list(name = "Arial")))`)
 from one composed report.
 
-Both functions take the same four parameters: `page`, `font_table`,
-`color_table`, and `default_format`, covered below.
+Both functions take the same parameters: `page`, `font_table`,
+`color_table`, and `style`, covered below. (`default_format =` and
+`rtf_default_format()` are deprecated: `rtf_style()` holds everything they
+did, and they will be removed in 0.9.)
 
 
 ## Page geometry -- `page`
@@ -249,14 +251,14 @@ and per-text font selection are a planned enhancement.) To use one font
 throughout, set that first entry as above.
 
 
-## Document font size -- `default_format`
+## Document font size -- `rtf_style()`
 
-The document font size lives in `default_format` and is expressed in
+The document font size lives in the document's `rtf_style()` and is expressed in
 **half-points** (the unit of the RTF `\fs` command): `18` = 9 pt, `20` = 10 pt,
 `24` = 12 pt, and so on. 9 pt is the package default.
 
 ```{r fontsize}
-doc <- rtf_document(default_format = list(font_size_half_points = 22L)) |>  # 11pt
+doc <- rtf_document(style = rtf_style(font_size_half_points = 22L)) |>  # 11pt
   rtf_tables(as_rtftables(df))
 ```
 
@@ -310,17 +312,20 @@ doc <- rtf_document() |>
 
 Cell padding (the gap between the cell border and its text) defaults to `0`
 (text sits flush against the border, the typical clinical look) and is likewise
-configurable per table via `cell_padding_left_twips` / `cell_padding_right_twips`.
+configurable per table via `cell_padding_left_twips` / `cell_padding_right_twips`,
+and above / below the text via `cell_padding_top_twips` /
+`cell_padding_bottom_twips` (written into each cell's definition; `0`, the
+default, writes nothing).
 
 ### Document-wide row height / padding
 
 To change the row height or cell padding for the **whole report** -- without
-editing the resource file -- set it on the document via `default_format` (or
+editing the resource file -- set it on the document via `rtf_style()` (or
 globally as an option). It applies to every table-shaped element (content table,
 page header/footer, title/footnote), and a per-module value still overrides it:
 
 ```{r rowheight-doc}
-doc <- rtf_document(default_format = list(
+doc <- rtf_document(style = rtf_style(
   row_height_twips         = 280L,
   cell_padding_left_twips  = 72L,
   cell_padding_right_twips = 72L
@@ -332,8 +337,36 @@ doc <- rtf_document(default_format = list(
 ```
 
 Resolution is highest-wins: **per-module** (`rtftable()` / `rtf_header()` /
-`rtf_footer()` / `rtf_table_style()`) > **document** `default_format` >
-`rtfreporter.*` **option** > the font-aware / resource baseline.
+`rtf_footer()` / `rtf_table_style()`) > the `rtf_style()` **section** of that
+module > the `rtf_style()` **shared** level > `rtfreporter.*` **option** > the
+font-aware / resource baseline.
+
+### One style for every module -- `rtf_style()`
+
+`rtf_style()` gathers a study's look in one object. Its shared arguments reach
+every module that has the argument; a section (`table`, `titles`, `footnotes`,
+`header`, `footer`) is a named list of that module's own arguments, and reaches
+that module only. It is an addition: a module's own argument still wins, so a
+report changes what it needs where it says it.
+
+```{r rtf-style}
+study <- rtf_style(
+  font = "Arial", font_size_half_points = 18L,
+  cell_padding_left_twips = 40L, cell_padding_right_twips = 40L,
+  table     = list(header_row_height_twips = 260L, cell_valign = "center"),
+  header    = list(color = "#7F7F7F"),
+  footnotes = list(font_size_half_points = 16L)
+)
+doc <- rtf_document(style = study) |>
+  rtf_tables(as_rtftables(df), titles = "Table 14.1.1") |>
+  rtf_footnotes("Source: ADSL", font_size_half_points = 14L)  # this report: 7 pt wins
+```
+
+Several styles given through `rtf_config(style = )` merge key by key, the
+later winning, so a report can start from the study's and change one key:
+`doc |> rtf_config(style = rtf_style(table = list(cell_valign = "top")))`.
+A key a section does not know is an error that names the section and lists
+the keys it takes.
 
 
 ## Site-wide defaults
@@ -432,8 +465,8 @@ doc <- rtf_document(
     margin_left_in = 0.75, margin_right_in = 0.75,
     margin_top_in  = 1.0,  margin_bottom_in = 1.0
   ),
-  font_table     = list(list(name = "Arial")),
-  default_format = list(font_size_half_points = 22L)
+  font_table = list(list(name = "Arial")),
+  style      = rtf_style(font_size_half_points = 22L)
 ) |>
   rtf_section(page = 1,
     header = rtf_header(rows = list(c(l = "Protocol XYZ-001", r = "Confidential")),

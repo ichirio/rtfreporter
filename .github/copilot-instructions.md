@@ -10,7 +10,8 @@ The reference for working on the code is the **AI developer manual**,
 anything duplicated here; where this file and the manual disagree, the
 manual wins.  Its §14 summarises the repository rules (Code of Conduct,
 PR / issue templates, the four pre-push checks, versioning + `NEWS.md`,
-`cran-comments.md`).
+`cran-comments.md`).  A PR never edits `NEWS.md`, `CHANGELOG.md` or
+`Version:`; the change is described in the PR description.
 
 - **Orientation & invariants:** [AGENTS.md](../AGENTS.md)
 - **Workflow, code style, branching, versioning & releases:**
@@ -19,8 +20,28 @@ PR / issue templates, the four pre-push checks, versioning + `NEWS.md`,
   `vignettes/articles/architecture.Rmd`,
   `vignettes/articles/extending-adapters.Rmd`
 
+Set-up (R version, packages): *Development setup* in `CONTRIBUTING.md`.
+The `exec:*` and `priority:*` labels guide the maintainers' own coding agent;
+an outside contributor needs none of them.  Every behaviour change needs a
+requirement in `inst/validation/requirements.csv` and a test named with its
+FT id (*Quality assurance* in `CONTRIBUTING.md`).  Do this in the same PR,
+without being asked:
+- Add or change the FRs in `inst/validation/requirements.csv`.  A new
+  argument must be named by a leaf FR of its function (`arg =`, or bare
+  inside `f(...)`), or `test-validation-coverage.R` fails.
+- Give each leaf FR a test.  A new test names its id and FRs in its title,
+  `test_that("FT-PL049 [FR-PL122]: ...")`; only an existing test is mapped
+  by a row in `inst/validation/test_map.csv` (file, test, ft, fr).  Never
+  both: an FT id given twice fails.
+- Where a test is not possible, add a row with the risk and the reason to
+  `inst/validation/deviations.csv`.
+- Keep `Rscript validation/trace.R` running and `test-validation.R`,
+  `test-validation-leaves.R` and `test-validation-coverage.R` passing.
+
 Key invariants: S3 throughout (no R6); no third-party runtime dependency
 (`Imports:` holds only packages that ship with R; optional packages live in
 `Suggests` and are reached through `.need_pkg()`); twips as the only
 internal length unit; ASCII-only R code; `NAMESPACE` is hand-managed
-(regenerate `man/*.Rd` with `devtools::document()`).
+(regenerate `man/*.Rd` with `devtools::document()`); fictional data only.
+The rules for tests (no withr, changed-area tests, work folders) are in
+*Tests and code* in `AGENTS.md`.

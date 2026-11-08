@@ -105,10 +105,12 @@ rtf_commands <- list(
     super     = list(on = "\\super ",  off = "\\nosupersub "),
     sub       = list(on = "\\sub ",    off = "\\nosupersub ")
   ),
-  # RTF picture templates for PNG and JPEG embedding.
+  # RTF picture templates for PNG, JPEG and EMF embedding (an EMF's
+  # picw / pich are its frame in 0.01 mm, as Word writes them).
   picture = list(
     png_template  = "\\pard{align}{\\pict\\pngblip\\picw{picw}\\pich{pich}\\picwgoal{picwgoal}\\pichgoal{pichgoal}\n{hex}\n}\\par",
-    jpeg_template = "\\pard{align}{\\pict\\jpegblip\\picw{picw}\\pich{pich}\\picwgoal{picwgoal}\\pichgoal{pichgoal}\n{hex}\n}\\par"
+    jpeg_template = "\\pard{align}{\\pict\\jpegblip\\picw{picw}\\pich{pich}\\picwgoal{picwgoal}\\pichgoal{pichgoal}\n{hex}\n}\\par",
+    emf_template  = "\\pard{align}{\\pict\\emfblip\\picw{picw}\\pich{pich}\\picwgoal{picwgoal}\\pichgoal{pichgoal}\n{hex}\n}\\par"
   ),
   # RTF dynamic field templates.
   fields = list(

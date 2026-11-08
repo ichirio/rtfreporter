@@ -53,6 +53,14 @@ describe the page (see \code{\link[=build_listing]{build_listing()}}).
 line break already in \code{text} is honoured before any of this.  With no
 \code{width} there is nothing to break against and \code{text} is returned as it
 stands.
+
+This is a function of \strong{one string}: it cannot tell a separator that joined
+two variables from one inside a value, so \code{layout = "stack"} breaks after
+every separator of \code{text}.  \code{\link[=build_listing]{build_listing()}} knows which is which: it calls
+the rule on each variable's value on its own, as \code{"flow"}, and stacks the
+lines, so a value such as \code{64/M} that fits \code{width} is not broken
+(see \emph{How a cell wraps} in \code{\link[=build_listing]{build_listing()}}).  Use \code{layout = "flow"} here to
+preview a single value.
 }
 
 \examples{
@@ -65,7 +73,10 @@ listing_wrap("Immunohistochemistry", 8)
 listing_col("AEDECOD", width = 16,
             label = listing_wrap("Preferred term of the event", 16))
 
-# "flow" keeps short parts side by side.
+# Called on one string, "stack" breaks after every separator and "flow"
+# keeps short parts side by side.  A listing column of ONE variable
+# ("40/F" is a single value) lays out as "flow"; "stack" is for the
+# variables joined in a cell, see build_listing().
 listing_wrap("40/F", 20)
 listing_wrap("40/F", 20, layout = "flow")
 

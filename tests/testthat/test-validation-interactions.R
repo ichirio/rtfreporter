@@ -265,3 +265,196 @@ test_that("FT-IX021 [FR-IX266]: a footer, like a header, starts in the document'
                                      bs, "dbch", bs, "af1", bs, "loch", bs, "f0", bs, "fs")))
   }
 })
+
+# ── The precedence leaves that had no test (the first version's deviations) ──
+
+vi_ae <- function() {
+  data.frame(USUBJID = sprintf("XP-01-%03d", 1:6),
+             AEDECOD = rep(c("HEADACHE", "NAUSEA", "DIZZINESS"), 2),
+             stringsAsFactors = FALSE)
+}
+
+vi_lspec <- function(...) {
+  listing_spec(list(listing_col("USUBJID"), listing_col("AEDECOD")), ...)
+}
+
+vi_ard_rows <- function(g1, g1l, var, lvl, ctx, sn, st) {
+  data.frame(group1 = g1, group1_level = g1l, variable = var,
+             variable_level = lvl, context = ctx, stat_name = sn,
+             stat_label = sn, stat = st, stringsAsFactors = FALSE)
+}
+
+vi_png <- function(w = 300L, h = 150L) {
+  f <- tempfile(fileext = ".png")
+  grDevices::png(f, width = w, height = h)
+  graphics::plot(1:3)
+  grDevices::dev.off()
+  f
+}
+
+# The \picwgoal / \pichgoal and the paragraph alignments of a rendered document.
+vi_pics <- function(doc) {
+  txt <- paste(vi_render(doc), collapse = "\n")
+  num <- function(re) as.integer(sub("^[^0-9]+", "", regmatches(txt, gregexpr(re, txt))[[1L]]))
+  list(w = num("\\\\picwgoal[0-9]+"), h = num("\\\\pichgoal[0-9]+"),
+       q = regmatches(txt, gregexpr("\\\\q[lcr]\\{", txt))[[1L]])
+}
+
+test_that("FT-IX027 [FR-IX353]: as_rtftables(blank_row_first = ) given by the caller wins over listing_spec(blank_row_first = ), in both orders", {
+  blanks <- function(spec, ...) {
+    pages <- as_rtftables(vi_ae(), listing = spec, max_rows = 3, ...)
+    unique(lapply(pages, function(p) attr(p$data, "rtf_blank_rows")))
+  }
+  # the spec alone decides
+  expect_identical(blanks(vi_lspec()), list(0L))
+  expect_identical(blanks(vi_lspec(blank_row_first = FALSE)), list(NULL))
+  # the caller's FALSE over the spec's TRUE, and the caller's TRUE over FALSE
+  expect_identical(blanks(vi_lspec(), blank_row_first = FALSE), list(NULL))
+  expect_identical(blanks(vi_lspec(blank_row_first = FALSE), blank_row_first = TRUE),
+                   list(0L))
+})
+
+test_that("FT-IX028 [FR-IX354]: fit_listing_widths(total_width = ) wins over page, font and font_size_half_points, which are then not read", {
+  d <- vi_ae()
+  given <- fit_listing_widths(d, vi_lspec(), total_width = 40)
+  expect_identical(attr(given, "rtf_listing_fit")$total_width, 40L)
+  expect_identical(sum(vapply(given$cols, `[[`, numeric(1L), "width")) + 1, 40)
+  # another page, font and size change nothing
+  expect_identical(fit_listing_widths(d, vi_lspec(), total_width = 40,
+                                      page = rtf_page(paper_size = "A4"),
+                                      font = "Arial", font_size_half_points = 30),
+                   given)
+  # not even values that would stop without it
+  expect_identical(fit_listing_widths(d, vi_lspec(), total_width = 40,
+                                      page = list(margin_left_in = 6, margin_right_in = 6),
+                                      font_size_half_points = 0),
+                   given)
+  # without it, the page and the font decide
+  expect_false(identical(attr(fit_listing_widths(d, vi_lspec()), "rtf_listing_fit")$total_width,
+                         40L))
+})
+
+test_that("FT-IX029 [FR-IX377]: normalize_ard(stack_sep = , stack_nest = ) change nothing without stack", {
+  a <- rbind(
+    vi_ard_rows("TRT", "Drug A", "AGE", NA, "summary", "mean", 41.5),
+    vi_ard_rows("TRT", "Placebo", "AGE", NA, "summary", "mean", 43.0))
+  a$group2 <- "SEX"
+  a$group2_level <- c("F", "M")
+  plain <- normalize_ard(a)
+  expect_identical(normalize_ard(a, stack_sep = " | ", stack_nest = TRUE), plain)
+  # not even a value stack would refuse
+  expect_identical(normalize_ard(a, stack_sep = 1), plain)
+  # with stack, stack_sep is read
+  expect_error(normalize_ard(a, stack = list(subgroup = "SEX"), stack_sep = 1),
+               "`stack_sep` is one text, what joins a crossed layer's names: \" / \".",
+               fixed = TRUE)
+})
+
+test_that("FT-IX030 [FR-IX379]: in widen_ard(sort = ), a column of the result wins over a statistic of the same name", {
+  # two statistics with the same values, F 9 and M 1: `w`, and one named
+  # `label` like the result's label column
+  a <- rbind(
+    vi_ard_rows("TRT", c("Drug A", "Drug A", "Placebo", "Placebo"), "SEX",
+                c("F", "M", "F", "M"), "tabulate", "n", c(3, 2, 4, 6)),
+    vi_ard_rows("TRT", "Drug A", "SEX", c("F", "M"), "tabulate", "label", c(9, 1)),
+    vi_ard_rows("TRT", "Drug A", "SEX", c("F", "M"), "tabulate", "w", c(9, 1)))
+  x <- normalize_ard(a)
+  w <- function(s) widen_ard(x, cols = "TRT", cells = "{n}", notes = FALSE, sort = s)$label
+  # the statistic `w` sorts by its values: M (1) first
+  expect_identical(w("w"), c("M", "F"))
+  expect_identical(w("-w"), c("F", "M"))
+  # `label` is the column: its text decides, the opposite order
+  expect_identical(w("label"), c("F", "M"))
+  expect_identical(w("-label"), c("M", "F"))
+})
+
+test_that("FT-IX031 [FR-IX385]: assemble_folder() numbers the contents in decimal by default, where assemble_rtf() writes no numbering", {
+  d <- tempfile("ix-asm-")
+  o <- tempfile("ix-out-")
+  dir.create(d)
+  dir.create(o)
+  on.exit(unlink(c(d, o), recursive = TRUE), add = TRUE)
+  files <- file.path(d, c("t-14-1-1.rtf", "t-14-1-2.rtf"))
+  for (i in 1:2) {
+    doc <- rtf_tables(rtf_document(), list(data.frame(A = 1:2, B = c("x", "y"))),
+                      titles = list(sprintf("Table 14.1.%d", i)))
+    generate_rtfreport(doc, files[i], overwrite = TRUE)
+  }
+  pgn <- function(f) {
+    txt <- paste(readLines(f, warn = FALSE), collapse = "\n")
+    regmatches(txt, gregexpr("\\\\pgn[a-z]+", txt))[[1L]]
+  }
+  out_folder <- file.path(o, "folder.rtf")
+  out_rtf    <- file.path(o, "rtf.rtf")
+  assemble_folder(d, out_folder)
+  assemble_rtf(files, out_rtf, toc = c("Table 14.1.1", "Table 14.1.2"))
+  expect_identical(pgn(out_folder), c("\\pgnrestart", "\\pgndec"))
+  expect_identical(pgn(out_rtf), character(0))
+  # the defaults are the only difference: given alike, they agree
+  out_none <- file.path(o, "none.rtf")
+  assemble_folder(d, out_none, toc_page_numbering = "none")
+  expect_identical(pgn(out_none), character(0))
+  expect_identical(formals(assemble_folder)$toc_page_numbering, "decimal")
+  expect_identical(eval(formals(assemble_rtf)$toc_page_numbering)[[1L]], "none")
+})
+
+test_that("FT-IX032 [FR-IX387]: rtfplot(width_twips = ) alone derives the height from the image, height_twips alone the width; both are used as given", {
+  png <- vi_png(300L, 150L)                        # 2:1
+  on.exit(unlink(png), add = TRUE)
+  one <- function(...) vi_pics(rtf_figures(rtf_document(), rtfplot(png, ...)))[c("w", "h")]
+  expect_identical(one(width_twips = 6000L), list(w = 6000L, h = 3000L))
+  expect_identical(one(height_twips = 1000L), list(w = 2000L, h = 1000L))
+  expect_identical(one(width_twips = 6000L, height_twips = 6000L), list(w = 6000L, h = 6000L))
+})
+
+test_that("FT-IX033 [FR-IX391]: rtf_figures(width_twips = , height_twips = , align = ) size a path, but an rtfplot() keeps its own size and alignment", {
+  png <- vi_png(300L, 150L)
+  on.exit(unlink(png), add = TRUE)
+  own <- rtfplot(png, width_twips = 3000L, align = "left")
+  p <- vi_pics(rtf_figures(rtf_document(), list(png, own),
+                           width_twips = 9000L, height_twips = 2000L, align = "right"))
+  # the path takes the call's size and alignment; the rtfplot its own
+  expect_identical(p$w, c(9000L, 3000L))
+  expect_identical(p$h, c(2000L, 1500L))
+  expect_identical(p$q, c("\\qr{", "\\ql{"))
+})
+
+test_that("FT-IX034 [FR-IX383]: the page numbers cached in the contents follow its numbering, a cover not counted when the contents restart at 1", {
+  d <- tempfile("ix-cov-")
+  o <- tempfile("ix-cov-out-")
+  dir.create(d)
+  dir.create(o)
+  on.exit(unlink(c(d, o), recursive = TRUE), add = TRUE)
+  files <- file.path(d, c("t-14-2-1.rtf", "t-14-2-2.rtf"))
+  for (i in 1:2) {
+    doc <- rtf_tables(rtf_document(), list(data.frame(A = 1:2, B = c("x", "y"))),
+                      titles = list(sprintf("Table 14.2.%d", i)))
+    generate_rtfreport(doc, files[i], overwrite = TRUE)
+  }
+  cached <- function(f) {
+    txt  <- paste(readLines(f, warn = FALSE), collapse = "\n")
+    hits <- regmatches(txt, gregexpr("PAGEREF.{1,60}?fldrslt [0-9]+", txt))[[1L]]
+    as.integer(sub(".*fldrslt ([0-9]+)$", "\\1", hits))
+  }
+  cover <- list(title = "Example Pharma STUDY-01")
+  run <- function(name, ...) {
+    out <- file.path(o, name)
+    assemble_rtf(files, out, toc = c("Table 14.2.1", "Table 14.2.2"), ...)
+    cached(out)
+  }
+  # decimal: the contents restart at 1 after the cover, so the cover is not counted
+  expect_identical(run("dec-cover.rtf", cover = cover, toc_page_numbering = "decimal"), c(2L, 3L))
+  expect_identical(run("dec.rtf", toc_page_numbering = "decimal"), c(2L, 3L))
+  # none: one Arabic run from the cover on, so the cover is page 1
+  expect_identical(run("none-cover.rtf", cover = cover), c(3L, 4L))
+  expect_identical(run("none.rtf"), c(2L, 3L))
+  # roman: the body restarts at 1 whatever comes before it
+  expect_identical(run("roman-cover.rtf", cover = cover, toc_page_numbering = "roman"), c(1L, 2L))
+  # assemble_folder() takes "decimal" by default
+  out_folder <- file.path(o, "folder.rtf")
+  assemble_folder(d, out_folder, cover = cover)
+  expect_identical(cached(out_folder), c(2L, 3L))
+  txt <- paste(readLines(out_folder, warn = FALSE), collapse = "\n")
+  expect_identical(regmatches(txt, gregexpr("\\\\pgn[a-z]+", txt))[[1L]],
+                   c("\\pgnrestart", "\\pgndec"))
+})

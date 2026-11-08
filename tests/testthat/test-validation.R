@@ -12,7 +12,7 @@ test_that("the requirements: unique ids, their area, a statement, functions that
   expect_named(fr, c("id", "parent", "area", "kind", "statement", "functions", "since", "status",
                      "notes"))
   expect_false(anyDuplicated(fr$id) > 0L)
-  expect_true(all(grepl("^FR-[A-Z]{2}[0-9]{3}$", fr$id)))
+  expect_true(all(grepl("^FR-[A-Z]{2}[0-9]{3,4}$", fr$id)))
   # a hierarchy: every parent is an FR; an active leaf has a kind
   expect_true(all(is.na(fr$parent) | fr$parent %in% fr$id))
   leaf <- !fr$id %in% fr$parent & fr$status == "active"
@@ -40,7 +40,7 @@ test_that("the map of the tests: unique FT ids, each to known requirements", {
   map <- .val_read("test_map.csv")
   expect_named(map, c("file", "test", "ft", "fr"))
   expect_false(anyDuplicated(map$ft) > 0L)
-  expect_true(all(grepl("^FT-[A-Z]{2}[0-9]{3}$", map$ft)))
+  expect_true(all(grepl("^FT-[A-Z]{2}[0-9]{3,4}$", map$ft)))
   ids <- unique(unlist(strsplit(map$fr, " ", fixed = TRUE)))
   expect_true(all(ids %in% fr$id))
   # to the leaves only

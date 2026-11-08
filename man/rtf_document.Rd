@@ -14,6 +14,7 @@ rtf_document(
   tokens = NULL,
   program_fallback = NULL,
   font_lang = NULL,
+  style = NULL,
   file = NULL
 )
 }
@@ -22,14 +23,16 @@ rtf_document(
 named list with a \code{name} (e.g. \code{list(list(name = "Arial"))}). The first
 entry is the document's default font. Default: \code{list(list(name = "Courier New"))} (a fixed-width font, which keeps clinical columns aligned).
 A \code{name} may be a named vector of families per script slot (see
-\emph{Fonts per script} below).}
+\emph{Fonts per script} below).  An empty list, or an entry whose \code{name} is
+not a family name, is an error.}
 
 \item{color_table}{Optional character vector of \code{"#RRGGBB"} colours to
 pre-declare in the document's colour table (so they are available by
 index). Default \code{c("#000000")}. Colours actually used by borders and by
 \code{col_spec} / \code{cell_styles} \code{color} are added automatically, so you only
 need this to declare colours you reference elsewhere. Black and white are
-reserved and added implicitly.}
+reserved and added implicitly.  Another value (\code{"red"}, \code{NA}) is an
+error.}
 
 \item{page}{The page geometry. Pass an \code{\link[=rtf_page]{rtf_page()}} object (recommended --
 its help lists every key with its default), a named list with the same
@@ -37,11 +40,10 @@ keys, or \code{NULL} (default) to use the option / factory defaults (landscape
 Letter, 0.75" top/bottom and 0.75" left/right margins). An omitted key falls
 back to the corresponding \verb{rtfreporter.*} option (see \code{\link[=rtfreporter_options]{rtfreporter_options()}}).}
 
-\item{default_format}{Document-wide default formatting. Pass an
-\code{\link[=rtf_default_format]{rtf_default_format()}} object (recommended -- its help lists every key with
-its default), a named list with the same keys, or \code{NULL} (default). Each
-value is a \emph{default} that a per-module setting (\code{\link[=rtftable]{rtftable()}} /
-\code{\link[=rtf_header]{rtf_header()}} / \code{\link[=rtf_footer]{rtf_footer()}} / \code{\link[=rtf_table_style]{rtf_table_style()}}) overrides.}
+\item{default_format}{\strong{Deprecated}: use \code{style = rtf_style()}.  An
+\code{\link[=rtf_default_format]{rtf_default_format()}} object or a named list of its keys still works:
+it maps onto the shared level of \code{\link[=rtf_style]{rtf_style()}}, beneath any \code{style}
+given, and warns once a session.}
 
 \item{watermark}{A diagonal word drawn behind the page body on every page:
 an \code{\link[=rtf_watermark]{rtf_watermark()}} object, a bare string (\code{watermark = "DRAFT"} uses the
@@ -64,9 +66,12 @@ titles and footnotes: a named list,
 A name is upper case -- a letter, then letters, digits or \verb{_} -- and
 not one of rtfreporter's own (\code{\link[=rtf_text_tokens]{rtf_text_tokens()}}); a value is one
 string or number.  \code{options(rtfreporter.tokens = )} sets them for a
-session; the document's value wins.  Not in column headers: those take
-their values from \code{\link[=set_col_header]{set_col_header()}}'s \code{values}.  \code{NULL} (default):
-none.}
+session; the document's value wins.  A value is written as it is: a
+\code{{PAGE}} or \code{{STUDY}} in it is not filled.  \verb{\{\{} and \verb{\}\}} print a
+literal \verb{\{} and \verb{\}} in a header, footer, title or footnote, as in a
+column header.  Not in column headers: those
+take their values from \code{\link[=set_col_header]{set_col_header()}}'s \code{values}; nor in a table's
+cells, which print a token as written.  \code{NULL} (default): none.}
 
 \item{program_fallback}{The program to name when none is said
 (\code{program}, the option) and none is found (the file \code{source()} or
@@ -89,6 +94,12 @@ written.
 \verb{\\adeflang}).}
 }}
 
+\item{style}{The document's look, one \code{\link[=rtf_style]{rtf_style()}} object: a shared
+level (font, size, row height, padding, markup, the title and footnote
+form) and one section per module (\code{table}, \code{titles}, \code{footnotes},
+\code{header}, \code{footer}).  A module's own argument wins over it.  \code{NULL}
+(default): none.}
+
 \item{file}{The RTF file the document is written to: one string, a path.
 \code{\link[=generate_rtfreport]{generate_rtfreport()}} writes there when it is given no \code{file_path}
 (one given wins), so a program can say its output where it says its
@@ -96,8 +107,10 @@ program.  \code{NULL} (default): none, and \code{generate_rtfreport()} needs
 \code{file_path}.}
 }
 \value{
-An \code{rtf_document} S3 object: a list with \code{document}
-(\code{font_table} / \code{color_table} / \code{page} / \code{default_format} / \code{watermark}),
+An \code{rtf_document} S3 object: a list with \code{document} (the
+settings given here: \code{font_table}, \code{font_lang}, \code{color_table}, \code{page},
+\code{default_format}, \code{style}, \code{watermark}, \code{program}, \code{program_fallback},
+\code{tokens} and \code{file}),
 \code{contents} (filled by \code{\link[=rtf_tables]{rtf_tables()}} / \code{\link[=rtf_figures]{rtf_figures()}}: one block per
 content, each with its own title and footnote; \code{\link[=rtf_layout]{rtf_layout()}} shows how
 they fall on the pages), and \code{sections} (filled by \code{\link[=rtf_section]{rtf_section()}}).
@@ -145,14 +158,14 @@ the document-level defaults Word uses for new text (\verb{\\adeff},
 doc <- rtf_document()
 
 # 2. A fully specified document, built from the rtf_page() /
-#    rtf_default_format() constructors (whose own help shows every default):
+#    rtf_style() constructors:
 doc <- rtf_document(
-  font_table     = list(list(name = "Arial")),
-  color_table    = c("#000000", "#1F4E79"),
-  page           = rtf_page(paper_size = "A4", orientation = "portrait",
-                            margin_left_in = 0.75, margin_right_in = 0.75),
-  default_format = rtf_default_format(font_size_half_points = 20L,  # 10 pt
-                                      row_height_twips = 240L)
+  font_table  = list(list(name = "Arial")),
+  color_table = c("#000000", "#1F4E79"),
+  page        = rtf_page(paper_size = "A4", orientation = "portrait",
+                         margin_left_in = 0.75, margin_right_in = 0.75),
+  style       = rtf_style(font_size_half_points = 20L,  # 10 pt
+                          row_height_twips = 240L)
 )
 
 # ... then add content and render:
@@ -165,7 +178,7 @@ unlink(f)
 
 }
 \seealso{
-\code{\link[=rtf_page]{rtf_page()}} / \code{\link[=rtf_default_format]{rtf_default_format()}} for the page / formatting
+\code{\link[=rtf_page]{rtf_page()}} / \code{\link[=rtf_style]{rtf_style()}} for the page / formatting
 settings, \code{\link[=rtf_config]{rtf_config()}} to edit an already-composed document, \code{\link[=rtf_tables]{rtf_tables()}}
 / \code{\link[=rtf_figures]{rtf_figures()}} to add content, \code{\link[=rtf_section]{rtf_section()}} for headers / footers, and
 \code{\link[=generate_rtfreport]{generate_rtfreport()}} to render.

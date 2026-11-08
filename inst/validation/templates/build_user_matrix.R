@@ -61,7 +61,9 @@ m$uat_ids <- vapply(hits, function(h) paste(uat$id[h], collapse = ";"), "")
 m$uat_results <- vapply(hits, function(h) {
   paste(ifelse(nzchar(uat$result[h]), uat$result[h], "not run"), collapse = ";")
 }, "")
-m <- m[order(m$ur_id, m$fr_id), , drop = FALSE]
+# the number of an id sorts as a number: FR-TB999 before FR-TB1000
+fr_num <- suppressWarnings(as.integer(sub("^.*[^0-9]", "", m$fr_id)))
+m <- m[order(m$ur_id, sub("[0-9]+$", "", m$fr_id), fr_num), , drop = FALSE]
 lead <- c("ur_id", "priority", "ur_statement", "fr_id")
 m <- m[c(lead, setdiff(names(m), lead))]
 rownames(m) <- NULL
@@ -93,6 +95,11 @@ if (requireNamespace("writexl", quietly = TRUE)) {
   message("writexl is not installed: only user_traceability.csv was written.")
 }
 message("Written: ", paste(out, collapse = ", "))
+if (!is.null(fr) && any(m$fr_status != "active")) {
+  bad <- unique(m$fr_id[m$fr_status != "active"])
+  message("FRs that are not active in requirements.csv (name the active FR that now ",
+          "states the need): ", paste(bad, collapse = ", "))
+}
 if (any(by_ur$status == "no UAT case")) {
   message("URs with no UAT case: ",
           paste(by_ur$ur_id[by_ur$status == "no UAT case"], collapse = ", "))

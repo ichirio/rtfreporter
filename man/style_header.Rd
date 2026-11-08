@@ -105,8 +105,8 @@ add_header_row(x, ...)
 targets every header row.}
 
 \item{cols}{Data-column selection: integer positions and/or column names of
-the table body (see the \emph{What the columns are called} section of
-\code{\link[=as_rtftables]{as_rtftables()}}).  \code{NULL} (default) = all columns.  Mix names and
+the table body, as \code{\link[=rtf_columns]{rtf_columns()}} lists them (see also \emph{Naming it} under
+\code{group_col} in \code{\link[=as_rtftables]{as_rtftables()}}).  \code{NULL} (default) = all columns.  Mix names and
 positions with a \code{list()} (\code{c()} would coerce the numbers to strings --
 same convention as \code{drop_cols} / \code{sort_by}).  A spanning cell is
 targeted when its span \strong{intersects} \code{cols}.}
@@ -194,7 +194,7 @@ of the row's resolved zone border (\code{body} crossed with \code{first_row} /
 \code{style_body(rows = ~ Item == "Total", border = rtf_border(bottom = TRUE))}, and an
 \code{"none"} side erases a zone rule on the selected cells.
 Row height and cell padding are deliberately \emph{not} per-row properties --
-they stay uniform per table / document (see \code{rtf_document(default_format)}
+they stay uniform per table / document (see \code{rtf_document(style = rtf_style())}
 and the \verb{rtfreporter.*} options).
 }
 
@@ -210,7 +210,10 @@ by \emph{all} label rows of the table), and a \code{border} or \code{underline} 
 \strong{promotes} the row to an equivalent list of single-column cells (labels
 and current header styling are copied over, so the rendered output is
 unchanged; the promoted row renders through the \code{spanning} border zone,
-which falls back to the \code{header} zone when unset).
+which falls back to the \code{header} zone when unset).  The promoted cells
+keep following the columns' header styling: a later \code{style_cols(header_bold = , header_italic = , header_align = )}, or \code{style_header(bold = , italic = , align = )} on another label row, reaches them too, and
+\code{style_cols(header_background = )} fills them, so the order of the verbs
+does not matter.
 }
 
 \examples{

@@ -39,8 +39,8 @@ If you would rather work by hand, everything here is optional — skip to
 ## The problem it solves
 
 rtfreporter is young and is not in any model's training data. Asked for
-rtfreporter code, an assistant reaches for the package it *does* know —
-`r2rtf` — and produces `rtf_body()`, `rtf_colheader()`, `create_table()`.
+rtfreporter code, an assistant reaches for a package it *does* know
+and writes the functions of that other package instead.
 Where it does reach for the right function it invents plausible arguments.
 None of it is flagged as a guess, so you end up checking every name against
 the reference, which is slower than writing the code yourself.

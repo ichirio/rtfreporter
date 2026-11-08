@@ -27,8 +27,9 @@
 # Removing them in a MINOR is legal only because `MAJOR 0` means the package is
 # not formally released (see "Pre-1.0 is different" in CONTRIBUTING.md).  From
 # v1.0.0 the same removal would require a major.
-# 0.9.0 removed the 0.5.0 - 0.8.x ones (#594, #788); none is deprecated now
-.deprecated_exports <- character(0)
+# 0.9.0 removed the 0.5.0 - 0.8.x ones (#594, #788).  rtf_default_format()
+# gave way to rtf_style() (#804), and goes in 0.9.
+.deprecated_exports <- c("rtf_default_format")
 
 .deprecation_state <- new.env(parent = emptyenv())
 
@@ -535,6 +536,13 @@ print.rtf_border <- function(x, ...) {
 
   for (z in .table_border_zones) {
     tb[[z]] <- .merge_rtf_border(base[[z]], tb[[z]])
+  }
+  # The frame's own top and bottom edges, kept for the renderer (#869): a
+  # leading / trailing blank row is inside the frame, so the edge the zones
+  # put on the first / last data row moves onto it.  Only the edge the frame
+  # put there moves; one a zone set or erased on its own stays where it is.
+  if (!is.null(outer$top) || !is.null(outer$bottom)) {
+    tb$frame <- list(top = outer$top, bottom = outer$bottom)
   }
   tb$outer    <- NULL
   tb$inside_h <- NULL

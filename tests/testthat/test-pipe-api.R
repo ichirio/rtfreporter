@@ -1,6 +1,10 @@
 # Pipe Composition API — document creation, configuration, content addition,
 # section definition, deprecated formatters, print method, full workflow.
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 
 test_that("rtf_document() returns the expected S3 structure with defaults", {
   doc <- rtf_document()

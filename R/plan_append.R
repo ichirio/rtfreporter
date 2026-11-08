@@ -45,6 +45,14 @@
 #' table's settings --- header, widths, pages, style, titles --- are the
 #' parent's, written before or after `plan_append()`.
 #'
+#' A listing cannot be appended to: a plan that carries [plan_listing()]
+#' stops here, as the parent or as a part, because a listing's columns are
+#' the records' own, while the stacked parts are a `label` and value
+#' columns.  To show a listing with a summary, make them separate contents
+#' of the document: [rtf_tables()] for the listing, then [rtf_tables()]
+#' for the summary with `page_break = FALSE` (see the article "Several
+#' contents on one page").
+#'
 #' @param .plan A [table_plan()]: the parent, whose column axis and header
 #'   the table has.
 #' @param part Another [table_plan()]: its rows go **under** the rows of
@@ -81,17 +89,22 @@
 #' carries one of them stops.
 #'
 #' What a part does not say, it takes from the parent, key by key: the
-#' cell templates, the digits, the empty-cell text, the labels, the levels
-#' of its row keys, the stub fold; what it says itself wins.  Its row keys
-#' and label are folded into one label column (the parent's
-#' `plan_stub(name =, indent =)`), so every part ends as `[page keys]
-#' [label] [value columns]`: a constant row key (`rows = c(block = ~
-#' "Summary Statistics")`) is the heading row above its rows, as in any
-#' table.  Columns a part does not have print its empty-cell text.
+#' cell templates, the digits, the labels, the levels of its row keys, the
+#' stub fold; what it says itself wins.  The empty-cell text is each part's
+#' own (`plan_cells(na = )`, empty by default): the parent's is no
+#' statistic's.  Its row keys and label are folded into one label column
+#' (the parent's `plan_stub(name =, indent =)`), so every part ends as
+#' `[page keys] [label] [value columns]`: a constant row key
+#' (`rows = c(block = ~ "Summary Statistics")`) is the heading row above its
+#' rows, as in any table, and stays empty.  Columns a part does not have, and
+#' cells it has no value for, print its own empty-cell text.
 #'
 #' The parts are stacked before the pages are cut: a page of
 #' `page_by` value X holds the parent's rows of X, then each part's rows of
-#' X, matched by **value**.  Every part's data must have the `page_by`
+#' X, matched by **value**.  A blank row between the parts
+#' (`plan_blanks(where = "between_parts")`) is a row of the stack, so it
+#' takes a place in `max_rows`, and a group cut by a page break is continued
+#' on the next page by its heading row with `cont_label`.  Every part's data must have the `page_by`
 #' columns (it is not written to every page by default); a value the parent
 #' has and a part has not stops, unless that part says `absent =
 #' "skip"`; a value only a part has makes no page.
@@ -159,6 +172,9 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
   if (name %in% taken) {
     .ard_stop(sprintf("plan_append(name = \"%s\"): a part of that name is already there.", name))
   }
+  if (length(.plan_of(.plan, "listing"))) {
+    .plan_append_listing_stop("plan_append(): the first plan carries plan_listing()")
+  }
   .plan_append_check_child(part, name, .plan)
   .plan_layer(.plan, "part", list(plan = part, name = name, absent = absent))
 }
@@ -166,6 +182,21 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
 # A child may say how its own rows are made, and nothing about the whole
 # table.  Said here, when the part is declared: the error names the verb
 # and where it goes.
+.plan_append_listing_stop <- function(what) {
+  .ard_stop(paste0(
+    what, ", and a listing cannot be appended to or appended:
+  its columns ",
+    "are the records' own, while the stacked parts are `label` plus value ",
+    "columns,
+  so the rows of a part have nowhere to go.  To show a ",
+    "listing with a summary, make them
+  separate contents of the ",
+    "document: rtf_tables(doc, listing_plan), then
+  rtf_tables(doc, ",
+    "summary_plan, page_break = FALSE), as the article \"Several contents ",
+    "on one page\" shows."))
+}
+
 .plan_append_check_child <- function(child, name, parent) {
   kinds <- vapply(child$layers, `[[`, "", "kind")
   verb_of <- c(header = "plan_col_header()", columns = "plan_columns()",
@@ -173,7 +204,10 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
                colpages = "plan_paginate_cols()", titles = "plan_titles()",
                footnotes = "plan_footnotes()", after = "plan_after()",
                restyle = "plan_cell_style(header = TRUE) / plan_cell_style(cols = ) without a condition",
-               listing = "plan_listing()", part = "plan_append()")
+               part = "plan_append()")
+  if ("listing" %in% kinds) {
+    .plan_append_listing_stop(sprintf("plan_append(\"%s\"): the part carries plan_listing()", name))
+  }
   bad <- unname(verb_of[intersect(kinds, .plan_whole_kinds)])
   if (length(.plan_of(child, "style"))) bad <- c(bad, "plan_style()")
   for (f in .plan_of(child, "blanks")) {
@@ -231,6 +265,9 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
 # stacked; then the parent's whole-table settings on the stack.
 .plan_apply_parts <- function(plan, stage) {
   decls <- .plan_of(plan, "part")
+  if (length(.plan_of(plan, "listing"))) {
+    .plan_append_listing_stop("plan_append(): the first plan carries plan_listing()")
+  }
   parent <- plan
   parent$layers <- Filter(function(l) !identical(l$kind, "part"), plan$layers)
   parent$cache <- new.env(parent = emptyenv())
@@ -255,10 +292,11 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
     vcols <- c(intersect(want, vcols), setdiff(vcols, want))
   }
   # every part as [page keys][label][value columns]: a column a part has
-  # not prints its empty-cell text
+  # not prints its empty-cell text, but on a heading row the fold added
   for (i in seq_along(parts)) {
     t <- parts[[i]]$tbl
-    for (v in setdiff(vcols, names(t))) t[[v]] <- rep(parts[[i]]$na, nrow(t))
+    fill <- ifelse(parts[[i]]$heading, "", parts[[i]]$na)
+    for (v in setdiff(vcols, names(t))) t[[v]] <- fill
     t <- t[c(pg, lbl, vcols)]
     t$.part <- rep(parts[[i]]$name, nrow(t))
     parts[[i]]$tbl <- t
@@ -393,16 +431,18 @@ plan_append <- function(.plan, part, name = NULL, absent = c("error", "skip")) {
   }
   tbl[[lbl]] <- as.character(tbl[[lbl]])
   vcols <- setdiff(names(tbl), c(pg, lbl))
-  # a cell with no value -- a heading row the fold added, a statistic the
-  # ARD has not -- prints the part's empty-cell text
+  # a cell with no value -- a statistic the ARD has not -- prints the part's
+  # empty-cell text; a heading row the fold added (no source row) stays as
+  # written, empty (#798)
+  heading <- is.na(src)
   for (v in vcols) {
     x <- as.character(tbl[[v]])
-    x[is.na(x)] <- na
+    x[is.na(x)] <- ifelse(heading[is.na(x)], "", na)
     tbl[[v]] <- x
   }
   edge <- .plan_merge(.plan_of(l$plan, "blanks"))
   list(name = name, absent = l$absent, tbl = tbl, pre = pre, src = src,
-       vcols = vcols, na = na, input = input, plan = p,
+       vcols = vcols, na = na, heading = heading, input = input, plan = p,
        first = if (isTRUE(l$first)) NULL else edge$blank_row_first,
        last = if (isTRUE(l$first)) NULL else edge$blank_row_end)
 }

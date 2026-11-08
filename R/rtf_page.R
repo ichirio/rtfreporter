@@ -15,9 +15,11 @@
 #  explicit argument > `rtfreporter.*` option > factory default.
 # ============================================================================
 
-# Validate a single positive-inches value (or NULL).
+# Validate a single positive-inches value (or NULL).  Inf used to pass and
+# be written as NA twips.
 .chk_pos_in <- function(x, nm) {
-  if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || is.na(x) || x <= 0)) {
+  if (!is.null(x) && (!is.numeric(x) || length(x) != 1L || !is.finite(x) ||
+                      x <= 0)) {
     stop(sprintf("`%s` must be a single positive number of inches, or NULL.", nm),
          call. = FALSE)
   }
@@ -44,15 +46,26 @@
 #'   (`width_in >= height_in` means landscape). `NULL` (default) uses
 #'   `paper_size`. With dimensions given, `paper_size` and `orientation` stay
 #'   unset unless you pass them, so only a value you passed is warned about.
+#'   Giving only one of the two takes the other from landscape Letter:
+#'   `width_in` alone is a page `width_in` wide and 8.5" high, `height_in`
+#'   alone one 11" wide and `height_in` high; the orientation is then
+#'   inferred from that pair (`width_in = 8` is 8 x 8.5, portrait).
 #' @param margin_top_in,margin_bottom_in,margin_left_in,margin_right_in The four
-#'   page margins, in inches.
+#'   page margins, in inches.  Each inch value here is one positive finite
+#'   number; another (`0`, `Inf`, `NA`, a string) is an error.  The margins
+#'   must leave a writable area: when the document is written, left + right
+#'   at least the page width, or top + bottom at least the page height, is an
+#'   error (checked then, because a margin can also come from an
+#'   `rtfreporter.page.*` option).
 #' @param header_dist_in,footer_dist_in Distance (inches) of the header / footer
 #'   band from the page edge. `NULL` (default) uses the **full** corresponding
-#'   top / bottom margin (so the band sits at the margin boundary).
+#'   top / bottom margin (so the band sits at the margin boundary).  A
+#'   distance of at least the page height is an error when the document is
+#'   written.
 #'
 #' @return An `rtf_page` object (a classed named list) for `rtf_document(page =)`.
 #'
-#' @seealso [rtf_document()], [rtf_default_format()], [rtfreporter_options()].
+#' @seealso [rtf_document()], [rtf_style()], [rtfreporter_options()].
 #'
 #' @examples
 #' # Defaults made explicit (landscape Letter):
@@ -138,7 +151,14 @@ print.rtf_page <- function(x, ...) {
   invisible(x)
 }
 
-#' Document-wide default formatting for an RTF document
+#' Document-wide default formatting for an RTF document (deprecated)
+#'
+#' **Deprecated**: use [rtf_style()], which takes every key below at its
+#' shared level and adds a section per module.  `rtf_default_format()` and
+#' `rtf_document(default_format = )` / `rtf_config(default_format = )` still
+#' work: the object maps onto the shared level of [rtf_style()], beneath any
+#' `style` the document is given, and warns once a session.  It will be
+#' removed in 0.9.
 #'
 #' Builds the `default_format` setting for [rtf_document()] / [rtf_config()] as a
 #' structured `rtf_default_format` object, so its options and **defaults** are
@@ -153,6 +173,11 @@ print.rtf_page <- function(x, ...) {
 #'   (default) keeps the font-aware baseline.
 #' @param cell_padding_left_twips,cell_padding_right_twips Default cell padding
 #'   (twips, border-to-text). `NULL` (default) keeps the resource baseline (0).
+#' @param cell_padding_top_twips,cell_padding_bottom_twips Default cell padding
+#'   above / below the text (twips), written into every cell definition of
+#'   every table-shaped element (content table, page header / footer, the
+#'   title's table form, footnote).  `NULL` (default) keeps the resource
+#'   baseline (0), and 0 writes nothing.
 #' @param markup Cell-text markup: `"script"` (`^{}`/`_{}` super/subscript, the
 #'   default), `"relational"` (`>=`/`<=` to the symbols), `"all"`, or `"none"`.
 #'   See [rtftable()].
@@ -163,16 +188,18 @@ print.rtf_page <- function(x, ...) {
 #' @param title_width,footnote_width Width of the title / footnote block:
 #'   `"content"` (the default -- follow the table body), `"page"` (the writable
 #'   width, margins excluded), a fraction in `(0, 1]` of the writable width, or
-#'   twips. `NULL` keeps the default. Applies to the `"table"` form; the
+#'   twips (a whole number above 1). `NULL` keeps the default. Applies to the `"table"` form; the
 #'   `"text"` form is plain paragraphs and already spans the page.
 #'   `footnote_width = "page"` is the way to reach the full width **and** keep
 #'   the separator rule, which `footnote_format = "text"` cannot draw.
 #'
 #' @return An `rtf_default_format` object for `rtf_document(default_format =)`.
 #'
-#' @seealso [rtf_document()], [rtf_page()], [rtftable()].
+#' @seealso [rtf_style()], which replaces it; [rtf_document()], [rtf_page()],
+#'   [rtftable()].
 #'
 #' @examples
+#' # Deprecated: write rtf_style(font_size_half_points = 20L, ...) instead.
 #' # Defaults made explicit:
 #' rtf_default_format()
 #'
@@ -187,11 +214,14 @@ rtf_default_format <- function(font_size_half_points    = 18L,
                                row_height_twips         = NULL,
                                cell_padding_left_twips  = NULL,
                                cell_padding_right_twips = NULL,
+                               cell_padding_top_twips    = NULL,
+                               cell_padding_bottom_twips = NULL,
                                markup                   = "script",
                                title_format             = "text",
                                footnote_format          = "table",
                                title_width              = NULL,
                                footnote_width           = NULL) {
+  .warn_default_format()
   if (missing(font_size_half_points))
     font_size_half_points <- .opt("rtfreporter.font_size_half_points")
   if (missing(markup))          markup          <- .opt("rtfreporter.markup")
@@ -213,6 +243,8 @@ rtf_default_format <- function(font_size_half_points    = 18L,
   .chk_pos_twips(row_height_twips, "row_height_twips")
   .chk_pos_twips(cell_padding_left_twips, "cell_padding_left_twips")
   .chk_pos_twips(cell_padding_right_twips, "cell_padding_right_twips")
+  .chk_pos_twips(cell_padding_top_twips, "cell_padding_top_twips")
+  .chk_pos_twips(cell_padding_bottom_twips, "cell_padding_bottom_twips")
   markup <- .resolve_markup(markup)            # validates the tokens
   title_format    <- .resolve_text_block_format(title_format, "text")
   footnote_format <- .resolve_text_block_format(footnote_format, "table")
@@ -224,6 +256,8 @@ rtf_default_format <- function(font_size_half_points    = 18L,
          row_height_twips = if (is.null(row_height_twips)) NULL else as.integer(row_height_twips),
          cell_padding_left_twips = if (is.null(cell_padding_left_twips)) NULL else as.integer(cell_padding_left_twips),
          cell_padding_right_twips = if (is.null(cell_padding_right_twips)) NULL else as.integer(cell_padding_right_twips),
+         cell_padding_top_twips = if (is.null(cell_padding_top_twips)) NULL else as.integer(cell_padding_top_twips),
+         cell_padding_bottom_twips = if (is.null(cell_padding_bottom_twips)) NULL else as.integer(cell_padding_bottom_twips),
          markup = markup, title_format = title_format,
          footnote_format = footnote_format,
          title_width = title_width, footnote_width = footnote_width),
@@ -237,6 +271,11 @@ print.rtf_default_format <- function(x, ...) {
   cat(sprintf("  font %s half-points; row height %s; padding L/R %s/%s twips\n",
               x$font_size_half_points, x$row_height_twips %||% "auto",
               x$cell_padding_left_twips %||% "0", x$cell_padding_right_twips %||% "0"))
+  # top / bottom only when set, so a format without them prints as before
+  if (!is.null(x$cell_padding_top_twips) || !is.null(x$cell_padding_bottom_twips)) {
+    cat(sprintf("  padding T/B %s/%s twips\n", x$cell_padding_top_twips %||% "0",
+                x$cell_padding_bottom_twips %||% "0"))
+  }
   cat(sprintf("  markup [%s]; title_format \"%s\"; footnote_format \"%s\"\n",
               paste(x$markup, collapse = ", "), x$title_format, x$footnote_format))
   invisible(x)

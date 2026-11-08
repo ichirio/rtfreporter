@@ -212,7 +212,8 @@ test_that("labels set the text, never the order: levels (or the ARD) do", {
   # and the same through the plan verbs
   p <- table_plan(normalize_ard(make_ard()), cols = "TRT",
                   rows = c(group = "variable")) |>
-    plan_cells(cells, notes = FALSE) |>
+    plan_cells(continuous = cells$continuous, categorical = cells$categorical,
+               notes = FALSE) |>
     plan_labels(SEX = "Sex", AGE = "Age")
   expect_identical(as.character(unique(plan_apply(p, "table")$group)),
                    c("Age", "AGEGR", "Sex"))
@@ -373,10 +374,14 @@ test_that("a positional key warns when that position holds several variables", {
   # the warning is earned: the position invented columns from the other block
   expect_true(all(c("F", "M") %in% names(bad)))
 
-  # naming the variable is correct and silent
-  expect_no_warning(
+  # naming the variable raises no position warning.  The two blocks both
+  # count AGEGR in each arm (all of it, and by SEX), so a cell has several
+  # records; the first, the all-subjects count, is printed, and widen_ard()
+  # says the others are dropped (FR-AR253) -- nothing about a position.
+  expect_warning(
     good <- ard_pipe(stacked, cols = "TRT", rows = c(group = "variable"),
-                      cells = "{n:.0f} ({p:.1f%})", notes = FALSE))
+                      cells = "{n:.0f} ({p:.1f%})", notes = FALSE),
+    "records of different values")
   expect_setequal(names(good)[-(1:2)],
                   c("Placebo", "Xanomeline High Dose", "Xanomeline Low Dose"))
 
@@ -1557,4 +1562,168 @@ test_that("a guard compares numbers, not text, when the ARD has a text statistic
   # N is 86 and more: never "few" ("86" < "9" is TRUE as text)
   expect_false(any(unlist(b[b$row_label == "AGE", -1]) == "few"))
   expect_identical(b, a)
+})
+
+test_that("FT-AR114 [FR-AR254]: normalize_ard() prints a text statistic as it is, with no coercion warning, when its format is a decimal count", {
+  skip_if_no_cards()
+  ard <- make_ard()
+  tt <- ard[ard$stat_name == "mean", , drop = FALSE][rep(1L, 3L), ]
+  tt$context <- "stats_t_test"
+  tt$group1 <- NA_character_
+  tt$group1_level <- list(NULL)
+  tt$stat_name <- c("estimate", "method", "alternative")
+  tt$stat_label <- tt$stat_name
+  tt$stat <- list(-0.749031007751938, "Welch Two Sample t-test", "two.sided")
+  # the combined frame has lost cards' class, so the decimal counts in
+  # `fmt_fun` are applied by normalize_ard() itself
+  mixed <- dplyr::bind_rows(ard, tt)
+  expect_no_warning(d <- normalize_ard(mixed))
+  expect_identical(d$stat_fmt[d$stat_name == "method"], "Welch Two Sample t-test")
+  expect_identical(d$stat_fmt[d$stat_name == "alternative"], "two.sided")
+  # a number still takes its decimal count
+  expect_identical(d$stat_fmt[d$stat_name == "estimate"], "-0.7")
+})
+
+test_that("a label two variables share keeps each variable's own order", {
+  skip_if_no_cards()
+  d <- data.frame(
+    ARM  = rep(c("A", "B"), each = 12),
+    SEX  = rep(c("F", "M", "U"), 8),
+    RACE = rep(c("WHITE", "ASIAN", "NOT REPORTED", "UNKNOWN"), 6),
+    stringsAsFactors = FALSE)
+  ard <- cards::ard_stack(d, .by = "ARM",
+                          cards::ard_tabulate(variables = c(SEX, RACE)),
+                          .attributes = FALSE)
+  sex_lv  <- c("F", "M", "U")
+  race_lv <- c("WHITE", "ASIAN", "NOT REPORTED", "UNKNOWN")
+  built <- function(sex, race, ...) {
+    p <- table_plan(normalize_ard(ard), cols = "ARM",
+                    rows = c(group = "variable")) |>
+      plan_cells(categorical = "{n}", notes = FALSE) |>
+      plan_levels(SEX = sex_lv, RACE = race_lv) |>
+      plan_labels(SEX = sex, RACE = race)
+    plan_apply(p, "table")
+  }
+  same_text <- built(c(F = "Female", M = "Male", U = "Unknown"),
+                     c(WHITE = "White", ASIAN = "Asian",
+                       "NOT REPORTED" = "Not reported", UNKNOWN = "Unknown"))
+  # "Unknown" is SEX's third and RACE's last: it is not RACE's first
+  expect_identical(as.character(same_text$label[same_text$group == "SEX"]),
+                   c("Female", "Male", "Unknown"))
+  expect_identical(as.character(same_text$label[same_text$group == "RACE"]),
+                   c("White", "Asian", "Not reported", "Unknown"))
+  # and the order is the same as when the texts differ
+  own <- built(c(F = "Female", M = "Male", U = "Sex unknown"),
+               c(WHITE = "White", ASIAN = "Asian",
+                 "NOT REPORTED" = "Not reported", UNKNOWN = "Race unknown"))
+  expect_identical(as.character(own$label[own$group == "RACE"]),
+                   c("White", "Asian", "Not reported", "Race unknown"))
+  expect_identical(same_text$A, own$A)
+
+  # a code two variables share, read as each one's own text
+  d2 <- d
+  d2$RACE <- rep(c("W", "A", "U"), length.out = nrow(d2))
+  ard2 <- cards::ard_stack(d2, .by = "ARM",
+                           cards::ard_tabulate(variables = c(SEX, RACE)),
+                           .attributes = FALSE)
+  tbl <- widen_ard(normalize_ard(ard2), cols = "ARM",
+                   rows = c(group = "variable"),
+                   cells = list(categorical = "{n}"), notes = FALSE,
+                   levels = list(SEX = sex_lv, RACE = c("W", "A", "U")),
+                   labels = list(SEX = c(F = "Female", M = "Male", U = "Unknown"),
+                                 RACE = c(W = "White", A = "Asian", U = "Not known")))
+  expect_identical(as.character(tbl$label[tbl$group == "SEX"]),
+                   c("Female", "Male", "Unknown"))
+  expect_identical(as.character(tbl$label[tbl$group == "RACE"]),
+                   c("White", "Asian", "Not known"))
+})
+
+test_that("a label column that names a key is recoded like a row key", {
+  skip_if_no_cards()
+  d <- data.frame(
+    TRTA   = rep(c("Drug", "Control"), each = 24),
+    PARAM  = rep(c("ALT", "AST"), 24),
+    BNRIND = rep(c("LOW", "NORMAL", "HIGH", "NORMAL"), 12),
+    ANRIND = rep(c("NORMAL", "HIGH", "LOW"), 16),
+    stringsAsFactors = FALSE)
+  ard <- cards::ard_stack(d, .by = c("TRTA", "PARAM", "BNRIND"),
+                          cards::ard_tabulate(variables = ANRIND),
+                          .attributes = FALSE)
+  codes <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
+  built <- function(...) {
+    p <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                    rows = c(group = "PARAM"), label = "BNRIND") |>
+      plan_cells(categorical = "{n}", notes = FALSE) |>
+      plan_labels(...)
+    plan_apply(p, "table")
+  }
+  rows_of <- function(x) as.character(x$BNRIND[x$group == "ALT"])
+  none <- built()
+  expect_setequal(rows_of(none), c("LOW", "NORMAL", "HIGH"))
+
+  # the key's own entry reaches the rows; the header (.label) is another key
+  x <- built(BNRIND = codes)
+  expect_setequal(rows_of(x), c("Low", "Normal", "High"))
+  expect_true(all(c("Control____LOW", "Control____HIGH") %in% names(x)))
+  # the cells are the ones the codes had
+  expect_identical(unname(unlist(x[x$group == "ALT" & x$BNRIND == "High",
+                                   grep("____", names(x))])),
+                   unname(unlist(none[none$group == "ALT" & none$BNRIND == "HIGH",
+                                      grep("____", names(none))])))
+
+  # a flat entry too, and a value with no label keeps its code
+  expect_setequal(rows_of(built(LOW = "Low", HIGH = "High")),
+                  c("Low", "NORMAL", "High"))
+
+  # the order plan_levels() gives, in the codes or in the text
+  lv_codes <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                         rows = c(group = "PARAM"), label = "BNRIND") |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_levels(BNRIND = c("LOW", "NORMAL", "HIGH")) |>
+    plan_labels(BNRIND = codes)
+  expect_identical(rows_of(plan_apply(lv_codes, "table")), c("Low", "Normal", "High"))
+  lv_text <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                        rows = c(group = "PARAM"), label = "BNRIND") |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_levels(BNRIND = c("High", "Normal", "Low")) |>
+    plan_labels(BNRIND = codes)
+  expect_identical(rows_of(plan_apply(lv_text, "table")), c("High", "Normal", "Low"))
+
+  # the analysis variable's entry is for the analysis variable's values: it no
+  # longer relabels the key's rows (it did, when the two lists shared codes)
+  y <- built(ANRIND = codes)
+  expect_setequal(rows_of(y), c("LOW", "NORMAL", "HIGH"))
+  z <- built(BNRIND = c(LOW = "Baseline low", NORMAL = "Baseline normal", HIGH = "Baseline high"),
+             ANRIND = codes)
+  expect_setequal(rows_of(z), c("Baseline low", "Baseline normal", "Baseline high"))
+})
+
+test_that("a hierarchy's label with a Total column: a term's text is on all its cells, one row", {
+  skip_if_no_cards()
+  adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:2], ]
+  ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD, AESEV),
+                                       by = TRTA, denominator = cards::ADSL,
+                                       id = USUBJID)
+  d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD", "AESEV"))
+  built <- function(...) {
+    p <- table_plan(d, cols = c("TRTA", "AESEV"), rows = c(soc = "AESOC"),
+                    label = c(label = "AEDECOD")) |>
+      plan_cells(categorical = "{n}", notes = FALSE) |>
+      plan_total(label = "Any", position = "first") |>
+      plan_labels(...)
+    x <- as.data.frame(plan_apply(p, "table"))
+    x[] <- lapply(x, function(v) if (is.factor(v)) as.character(v) else v)
+    x
+  }
+  plain <- built()
+  pt <- "DIARRHOEA"
+  x <- built(AEDECOD = c(DIARRHOEA = "Loose stools"))
+  # the same rows, the term's text on one of them, with the cells it had
+  expect_identical(nrow(x), nrow(plain))
+  expect_false(pt %in% x$label)
+  expect_identical(sum(x$label %in% "Loose stools"), 1L)
+  cells <- grep("____", names(x), value = TRUE)
+  expect_identical(x[x$label %in% "Loose stools", cells],
+                   plain[plain$label %in% pt, cells])
+  expect_false(anyNA(x[x$label %in% "Loose stools", "Placebo____Any"]))
 })

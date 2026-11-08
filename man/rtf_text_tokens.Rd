@@ -12,7 +12,7 @@ rtf_text_tokens(doc = NULL)
 }
 \value{
 A data frame: \code{token} (as written, with its braces), \code{kind}
-(\code{"page"}, \code{"run"} or \code{"own"}), \code{when}, \code{description}, \code{example} (what
+(\code{"page"}, \code{"run"}, \code{"title"} or \code{"own"}), \code{when}, \code{description}, \code{example} (what
 it might print, for a preview).
 }
 \description{
@@ -26,7 +26,14 @@ offers them -- an "insert" menu, a preview -- reads them here.
 \item \code{when = "viewer"}: an RTF field the word processor computes when the
 file is opened, so it stays right after \code{\link[=assemble_rtf]{assemble_rtf()}} joins files.
 \item \code{when = "assemble"}: a slot left empty until \code{\link[=assemble_rtf]{assemble_rtf()}} fills it.
+\item \code{when = "compose"}: put in when the title is composed
+(\code{\link[=rtf_tables]{rtf_tables()}}, \code{\link[=rtf_titles]{rtf_titles()}}), not when the file is written.
 }
+
+\code{{PAGE_HEADING}} (\code{kind = "title"}) is only a title row's whole text: the
+row where the page's heading goes (\code{rtf_tables(auto_title = )}, a plan's
+\code{heading_at = "title"}); it is not filled in a header, a footer or a
+column header.
 
 \code{{DATETIME}} also takes a format, \verb{\{DATETIME:\%Y-\%m-\%d\}}
 (\code{\link[base:strptime]{base::strptime()}} codes); \code{example} shows one.

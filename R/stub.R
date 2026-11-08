@@ -16,8 +16,9 @@
 #   "parent" -- a leaf equal to its (deepest non-empty) parent value does too.
 .resolve_group_summary <- function(x) {
   if (is.null(x)) return(character(0))
-  x <- as.character(x)
-  x <- x[!is.na(x) & nzchar(x)]
+  # NA, "" and another type used to be dropped, turning the folding off
+  .check_token_vector(x, "group_summary",
+                      "c(\"empty\", \"parent\") (or \"all\" / \"none\" / NULL)")
   if (length(x) == 0L || identical(x, "none")) return(character(0))
   if (identical(x, "all")) return(c("empty", "parent"))
   allowed <- c("empty", "parent")
@@ -99,6 +100,8 @@
 #' @param data A data.frame (or tibble).
 #' @param vars The hierarchy columns to merge, **parent first, leaf last**.
 #'   A character / integer vector (or a `list()` to mix names and indices).
+#'   A position is a whole number in `1..ncol(data)`; `TRUE`, a fraction or
+#'   a factor stops: "`vars` must be a column name or a whole position".
 #'   One column is folded into nothing: it is the stub as it is, named
 #'   `label`.
 #' @param label Column name for the merged stub column (this is what a
@@ -241,10 +244,11 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
     attr(out, "rtf_stub_src") <- seq_len(nrow(data))
     return(out)
   }
-  indent <- as.integer(indent)
-  if (length(indent) != 1L || is.na(indent) || indent < 0L) {
+  # a whole number: 1.5, "2" and TRUE used to be coerced
+  if (!.is_whole_number(indent, 0)) {
     stop("`indent` must be a single non-negative integer.", call. = FALSE)
   }
+  indent <- as.integer(indent)
   summary_modes <- .resolve_group_summary(group_summary)
   empty_mode    <- "empty"  %in% summary_modes
   parent_mode   <- "parent" %in% summary_modes
@@ -281,12 +285,18 @@ stub_cols <- function(data, vars, label = NULL, indent = 4L,
   # label row's value belongs in.
   lvl       <- integer(0)
   prev      <- NULL
+  # Internal: a key per row (the page_by key) whose change opens every
+  # heading row again, so a page cut on it starts with its own headings.
+  brk       <- attr(data, "rtf_stub_break", exact = TRUE)
+  if (length(brk) != n_row) brk <- NULL
   label_pos <- rep(NA_integer_, n_par)
   for (i in seq_len(n_row)) {
     cur <- vapply(parents, `[[`, character(1L), i)
     restart <- if (is.null(prev)) 1L else {
       changed <- which(cur != prev)
-      if (length(changed)) changed[1L] else 0L
+      if (!is.null(brk) && brk[i] != brk[i - 1L]) 1L
+      else if (length(changed)) changed[1L]
+      else 0L
     }
     if (restart > 0L) {
       for (l in restart:n_par) {

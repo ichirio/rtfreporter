@@ -9,13 +9,12 @@
 #  Page order
 #  ----------
 #  Row splitting happens first (as_rtftables), then this verb splits the
-#  resulting pages by column.  `page_order` says which axis the PAGE NUMBER
-#  advances along first:
+#  resulting pages by column.  `page_order` says which axis is the OUTER one:
 #
-#    "across" (the default)  ACROSS the columns -- the column block advances
-#                            first, and the row pages run inside it;
-#    "down"                  DOWN the rows -- the row page advances first, and
-#                            its column blocks follow it.
+#    "across" (the default)  ACROSS the columns -- one column block after
+#                            another, the row pages of a block inside it;
+#    "down"                  DOWN the rows -- one row page after another, its
+#                            column blocks inside it.
 #
 #  Two row pages x three column blocks:
 #
@@ -274,6 +273,10 @@
     if (!is.list(row) || length(row) == 0L) next
     for (cell in row) {
       if (!is.list(cell)) next
+      # A cell with no label -- the empty filler rtftable() puts under the
+      # columns no spanner covers -- has nothing a cut could break (#824).
+      lab <- cell$label
+      if (is.null(lab) || (is.character(lab) && all(is.na(lab) | !nzchar(trimws(lab))))) next
       p <- if (!is.null(cell$pos)) cell$pos else c(cell$from, cell$to)
       if (is.function(p)) {
         p <- tryCatch(.resolve_cell_pos(p, names(tbl$data)),
@@ -439,10 +442,11 @@
 #' column(s) on every page so each one can be read on its own.
 #'
 #' Row splitting happens first; this verb then splits the resulting pages, and
-#' `order` says which axis the **page number advances along first** --
-#' `"across"` the columns (the default: the column block advances, the row
-#' pages running inside it) or `"down"` the rows (the row page advances, its
-#' column blocks following it). Two row pages by three column blocks come out
+#' `order` says which axis is the **outer** one --
+#' `"across"` the columns (the default: one column block after another, the
+#' row pages of a block coming one after the other inside it) or `"down"` the
+#' rows (one row page after another, its column blocks coming one after the
+#' other inside it). Two row pages by three column blocks come out
 #' as `col1/row1`, `col1/row2`, `col2/row1`, ... under `"across"` and
 #' `row1/col1`, `row1/col2`, `row1/col3`, `row2/col1`, ... under `"down"`.
 #' A **group** is above both: see *Page order*.
@@ -491,6 +495,7 @@
 #'   Every page in a list must have the same columns.
 #' @param at Columns to cut **before**, as names or positions (symmetric with
 #'   `split_rows`). `at = c(4, 6)` yields blocks `1:3`, `4:5`, `6:ncol`.
+#'   A position is a whole number; `TRUE` or a fraction (`2.7`) is an error.
 #' @param cut_by Where to cut other than by position, as
 #'   [plan_paginate_cols()] says it.
 #'   \describe{
@@ -528,7 +533,9 @@
 #'   **not** fit a page that kept only some of its columns, so applying one
 #'   after the split (`set_col_header()` on the page list) is an error.
 #' @param allow_span_break Allow a cut inside a spanning header cell. Default
-#'   `TRUE`.
+#'   `TRUE`.  `FALSE` stops on a cut inside a labelled cell; an empty cell
+#'   (such as the one `rtftable()` fills the columns no spanner covers with)
+#'   is not checked.  Anything but `TRUE` or `FALSE` is an error.
 #' @param fit How relative widths are rescaled after the split.  `TRUE`
 #'   (default) fixes the twips-per-ratio unit on **page 1** and reuses it on
 #'   every page, so page 1 fills the sheet and a given ratio is the same width
@@ -543,10 +550,12 @@
 #'       pages -- `page_by` and every other row split) and `"cols"` (the
 #'       column blocks this verb cuts).  Axes left out are appended in that
 #'       default order, and an axis the table does not have never varies.}
-#'     \item{`"across"`}{(default) is `c("group", "cols", "rows")` -- the page
-#'       number advances across the columns first.}
-#'     \item{`"down"`}{is `c("group", "rows", "cols")`, advancing down the
-#'       rows.}
+#'     \item{`"across"`}{(default) is `c("group", "cols", "rows")` -- the
+#'       column block is the outer axis: all the row pages of the first block,
+#'       then those of the next.}
+#'     \item{`"down"`}{is `c("group", "rows", "cols")` -- the row page is the
+#'       outer axis: all the column blocks of the first row page, then those
+#'       of the next.}
 #'   }
 #'   The two are kept as shorthands.  The pages themselves are identical
 #'   whatever the order; only the sequence differs.  See *Page order*.
@@ -672,6 +681,11 @@ paginate_cols.list <- function(x, at = NULL, cut_by = NULL, every = NULL,
     stop("`paginate_cols(fit = )` is TRUE (page 1's scale on every block) or FALSE (each column keeps its width).",
          call. = FALSE)
   }
+  # NA and "yes" used to be read as FALSE
+  if (!(is.logical(allow_span_break) && length(allow_span_break) == 1L &&
+        !is.na(allow_span_break))) {
+    stop("`paginate_cols(allow_span_break = )` is TRUE or FALSE.", call. = FALSE)
+  }
   width <- if (fit) "fill" else "keep"
   page_order <- order %||% "across"
   # (`order` is base::order() to the code below, which passes it on)
@@ -777,10 +791,10 @@ paginate_cols.list <- function(x, at = NULL, cut_by = NULL, every = NULL,
   # A group (`as_rtftables(split = "by_value", group_col = )`) is the OUTERMOST
   # page axis and is never broken up: the column split happens INSIDE one
   # group, so a group's pages stay together whatever `page_order` says.
-  # Within a group, `page_order` decides which axis the page number advances
-  # along first -- "across" the columns (the column block advances, then the
-  # row pages inside it) or "down" the rows (the row page advances, and its
-  # column blocks follow it).
+  # Within a group, `page_order` decides which axis is the outer one --
+  # "across" the columns (one column block after another, the row pages of a
+  # block inside it) or "down" the rows (one row page after another, its
+  # column blocks inside it).
   # Every (row page, column block) pair, ordered by the axes `page_order`
   # names -- outermost first.  The pages are the same whatever the order; only
   # the sequence differs, so this is a sort, not a different build.

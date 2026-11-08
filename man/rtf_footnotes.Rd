@@ -25,7 +25,8 @@ left / centre / right -- the same row model \code{\link[=rtf_footer]{rtf_footer(
 string lands in whichever slot \code{align} selects.}
 
 \item{font_size_half_points, row_height_twips, markup, align, font}{Style for
-this block, overriding the document default from \code{\link[=rtf_default_format]{rtf_default_format()}}.
+this block, over the document's \code{\link[=rtf_style]{rtf_style()}} (its section, then its
+shared level).
 Anything left \code{NULL} is inherited.
 \describe{
 \item{\code{font}}{names a family (e.g. \code{"Arial"}); one not already in the
@@ -51,8 +52,10 @@ Modified rtf_document.
 }
 \description{
 Same shape as \code{\link[=rtf_titles]{rtf_titles()}}: a list with one block per content (table or
-figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string
-or \code{list(text=, align=, bold=, italic=, underline=, color=, border=)}).
+figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string,
+a named vector \code{c(l = , c = , r = )}, or the page footer's row list
+\code{list(columns = , row_height_twips = )}, whose \code{row_height_twips} is that
+row's height over the block's).
 Footnote rows default to left-aligned and draw no rule unless \code{border}
 (or a row's own \code{border}) asks for one. \code{NULL} per element
 suppresses the footnote for that content.

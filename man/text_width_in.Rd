@@ -9,13 +9,14 @@ text_width_in(text, font = NULL, font_size_half_points = 18L)
 \arguments{
 \item{text}{A character vector.  \code{NA} is treated as \code{""}.}
 
-\item{font}{Font name: \code{"Courier New"} / \code{"courier_new"}, \code{"Courier"}, or
-\code{"Arial"} (case and spaces do not matter).  \code{NULL} (default) is the
+\item{font}{Font name: \code{"Courier New"} / \code{"courier_new"}, \code{"Courier"},
+\code{"Arial"} (or \code{"Helvetica"}) or \code{"Times New Roman"} (or \code{"Times"}); case,
+spaces and hyphens do not matter.  \code{NULL} (default) is the
 package's font, \code{getOption("rtfreporter.font")} ("Courier New"), as for every
 other \verb{font =}.  Unrecognised values fall back to Courier New.}
 
 \item{font_size_half_points}{Font size in \strong{half-points} (the unit used by
-RTF and the document's \code{default_format$font_size_half_points}).  Default
+RTF and the document's \code{rtf_style(font_size_half_points = )}).  Default
 \code{18} = 9 pt.}
 }
 \value{
@@ -24,9 +25,12 @@ A numeric vector of estimated widths in inches (same length as
 }
 \description{
 Returns an estimated display width in \strong{inches} for a character string
-rendered in the given font and size.  For Courier New (monospace) the
-estimate is reliable; for proportional fonts (Arial) it is an average-width
-approximation.
+rendered in the given font and size.  For Courier New (monospace) every
+character is one width.  For Arial and Times New Roman (proportional) each
+character has its own width, from the font metrics R ships (grDevices'
+AFM files: Helvetica, whose widths are Arial's, and Times-Roman): an \code{i}
+is narrower than a \code{W}.  Characters outside printable ASCII take the width
+of an \code{n}.
 }
 \examples{
 text_width_in("Hello, World!")          # ~0.88 inches at 9pt Courier New

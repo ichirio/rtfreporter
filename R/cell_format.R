@@ -60,6 +60,17 @@
   na
 }
 
+# Internal: validate a padding character.  One string ("" pads with nothing):
+# NA would turn every cell into NA, and a vector would pad with its first.
+.check_nbsp <- function(nbsp, arg = "nbsp") {
+  if (!is.character(nbsp) || length(nbsp) != 1L || is.na(nbsp)) {
+    stop(sprintf(paste0("`%s` must be a single string -- the padding ",
+                        "character, \"\\u00a0\" by default."), arg),
+         call. = FALSE)
+  }
+  nbsp
+}
+
 
 # Internal: print `na` wherever the body has a missing value.  Applied to EVERY
 # column (the row-label column included) at the cell-format stage, so it does
@@ -115,8 +126,9 @@
 fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
   if (length(x) == 0L) return(x)
   na <- .check_na_text(na)
+  miss <- is.na(x)                  # before as.character(): NaN is missing
   x <- as.character(x)
-  x[is.na(x)] <- na
+  x[miss] <- na
   nz <- nzchar(trimws(x))
   if (!any(nz)) return(x)
   w   <- max(nchar(x[nz]))
@@ -146,8 +158,9 @@ fmt_right_align <- function(x, nbsp = "\u00a0", na = "") {
 .fmt_count_core <- function(x, nbsp, bare, na = "") {
   if (length(x) == 0L) return(x)
   na <- .check_na_text(na)
+  miss <- is.na(x)                  # before as.character(): NaN is missing
   x <- as.character(x)
-  x[is.na(x)] <- na
+  x[miss] <- na
   rx <- "^[[:space:]]*([0-9]+)[[:space:]]*(\\((.*)\\))?[[:space:]]*$"
   m  <- regmatches(x, regexec(rx, x))
   count  <- rep(NA_character_, length(x))
@@ -306,9 +319,11 @@ fmt_count_paren <- function(x, nbsp = "\u00a0", na = "", bare = FALSE) {
 fmt_value_paren <- function(x, nbsp = "\u00a0", na = "", rounding = NULL) {
   if (length(x) == 0L) return(x)
   na <- .check_na_text(na)
+  nbsp <- .check_nbsp(nbsp)
   rnd <- .rounder(rounding)
+  miss <- is.na(x)                  # before as.character(): NaN is missing
   x <- as.character(x)
-  x[is.na(x)] <- na
+  x[miss] <- na
 
   n     <- length(x)
   value <- rep(NA_character_, n)     # the text before the parenthesis

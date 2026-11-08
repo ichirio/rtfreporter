@@ -1,5 +1,9 @@
 # Tests for the per-element width vocabulary (#291).
 
+# rtf_default_format() / default_format = are deprecated (#804): these tests
+# check what they still do, not the warning (test-rtf-style.R does).
+silence_deprecation("rtf_default_format")
+
 W <- rtfreporter:::.default_writable_twips()
 
 .tbl <- function() {

@@ -22,10 +22,11 @@ assemble_rtf(
 (at least 2).  May be left out when \code{toc} is a table (or its path):
 the table's \code{file} column, in its order.}
 
-\item{output_file}{Path for the assembled output RTF file.}
+\item{output_file}{Path for the assembled output RTF file: a single
+string, in a folder that exists, and not one of the \code{input_files}.}
 
-\item{overwrite}{Logical; whether to overwrite an existing output
-file.  Default \code{FALSE}.}
+\item{overwrite}{\code{TRUE} or \code{FALSE}; whether to overwrite an existing
+output file.  Default \code{FALSE}.}
 
 \item{cover}{Optional \code{list(title, subtitle, date, version, meta)}
 for a cover page.  \code{NULL} (default) = no cover page.}
@@ -36,8 +37,8 @@ character vector = one label per input file; a table (columns \code{file},
 \code{label}, \code{heading}, \code{level}) or the path of one (\code{.xlsx} / \code{.csv}) =
 multi-level layout.  See \strong{Table of Contents} above.}
 
-\item{toc_title}{Centred bold title rendered on the TOC page.
-Default \code{"Table of Contents"}.}
+\item{toc_title}{Centred bold title rendered on the TOC page, a single
+string (\code{""} = an empty title line).  Default \code{"Table of Contents"}.}
 
 \item{toc_leader}{\code{"dot"} (default) draws a dotted leader between
 each TOC entry and its page number; \code{"none"} leaves whitespace.}
@@ -46,11 +47,12 @@ each TOC entry and its page number; \code{"none"} leaves whitespace.}
 \code{"decimal"}.  See \strong{Page numbering} above.}
 
 \item{bookmark_prefix}{String prepended to every auto-generated
-bookmark name (default \code{"tfl_"}).  Helps avoid clashes if you
+bookmark name (default \code{"tfl_"}): letters, digits and \verb{_} only, as a
+bookmark name allows; \code{""} = none.  Helps avoid clashes if you
 later concatenate multiple assembled outputs.}
 
-\item{book_page}{Text for the compiled document's page number, put into
-every \code{{BOOK_PAGE}} slot the inputs reserved.  \code{NULL} (default) leaves
+\item{book_page}{Text for the compiled document's page number, a single
+string put into every \code{{BOOK_PAGE}} slot the inputs reserved.  \code{NULL} (default) leaves
 the slots empty.
 \describe{
 \item{Why a slot}{A deliverable that will be bound into a book needs
@@ -104,7 +106,8 @@ Recognised fields:
 \item{\code{meta}}{character vector of extra centred lines (10 pt).}
 }
 
-Any field that is \code{NULL} or empty is skipped.
+Any field that is \code{NULL}, \code{NA} or empty is skipped, as is an \code{NA} line of
+\code{meta}.  Another field name, or a \code{cover} that is not a list, is an error.
 }
 
 \section{Table of Contents}{
@@ -117,14 +120,17 @@ pre-v0.0.29 behaviour.}
 \item{\code{"auto"}}{auto-extract each input file's title (the first
 centred-bold cell of the title block) and use it as a level-1
 TOC entry.  Falls back to the file's basename if no title is
-detected.}
+detected.  The title is read as the file shows it, its tokens filled
+(\code{{STUDY}}, \code{{PAGE}}), except that a dynamic page number
+(\code{{AUTO_PAGE}}, \code{{AUTO_TOTAL_PAGES}}) and the \code{{BOOK_PAGE}} slot are
+left out, and markup keeps its text without its formatting.}
 \item{a character vector of TOC labels}{one per input file -- same as
 \code{"auto"} but with explicit labels.}
 \item{a table (\code{data.frame})}{one row per file, in order, for
 multi-level (chapter / table) layouts: \code{file} (the path), \code{label} (the
 entry text), and optionally \code{heading} (a heading printed above the
 row's entry whenever it changes; \code{NA} = none), \code{level} (the entry's
-indent, default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
+indent, a whole number from 1 to 3, default 2) and \code{order}.  \code{\link[=assemble_folder]{assemble_folder()}} makes one from a
 folder, ready to edit.  \code{input_files} can then be left out: the
 table's \code{file} column is used.}
 \item{the path of such a table}{an \code{.xlsx} or \code{.csv} file, e.g. the one
@@ -150,7 +156,7 @@ TOC counts as page 1, 2, ...}
 ...); body pages restart at \code{1}.}
 \item{\code{"decimal"}}{TOC pages use Arabic numerals starting at \code{1}, and
 the body continues from them (with a one-page TOC the first table is
-page 2).}
+page 2).  A cover page before the TOC is not counted.}
 }
 
 \code{\link[=assemble_folder]{assemble_folder()}} defaults to \code{"decimal"}.

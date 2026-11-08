@@ -51,6 +51,21 @@
   lines
 }
 
+# The lines of one cell made of several source columns (#910): the separator
+# breaks BETWEEN the columns, so each value is laid out on its own, followed
+# by the separator unless it is the last.  A "/" inside one value is data:
+# a value that fits stays on one line, and only a value too wide is cut after
+# its "/" and then at its words, by .hand_wrap().
+.hand_wrap_cell <- function(row, width, sep = "/") {
+  vals <- trimws(as.character(unlist(row, use.names = FALSE)))
+  vals <- vals[!is.na(vals) & nzchar(vals)]
+  if (!length(vals)) return(character(0L))
+  txt <- paste0(vals, c(rep(sep, length(vals) - 1L), ""))
+  unlist(lapply(txt, function(v) {
+    if (nchar(v) <= width) v else .hand_wrap(v, width)
+  }), use.names = FALSE)
+}
+
 # The listing: `cols` names each printed column and the source columns it
 # joins (in print order), `widths` the printed columns that wrap and their
 # width.  A record is as many lines as its tallest wrapped cell, plus one
@@ -62,7 +77,7 @@
   joined <- lapply(cols, function(src) .hand_join("/", data[src]))
   records <- lapply(seq_len(nrow(data)), function(i) {
     cells <- lapply(printed, function(k) {
-      if (is.null(widths[[k]])) joined[[k]][i] else .hand_wrap(joined[[k]][i], widths[[k]])
+      if (is.null(widths[[k]])) joined[[k]][i] else .hand_wrap_cell(data[i, cols[[k]], drop = FALSE], widths[[k]])
     })
     tall <- max(c(0L, lengths(cells[printed %in% names(widths)])))
     block <- matrix("", nrow = tall + 1L, ncol = length(printed))

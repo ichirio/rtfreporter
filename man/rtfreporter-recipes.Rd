@@ -29,6 +29,40 @@ The single most common mistake is reaching for \code{stub} on a table that
 has no hierarchy (DM), or omitting it on one that does (AE, PK).
 }
 
+\section{DM -- demographics}{
+
+
+A flat table of characteristics.  No hierarchy, so \strong{no stub}; the only
+structure is that a page must not split a characteristic away from its
+statistics, which \code{split = "group_safe"} guarantees.
+}
+
+\section{AE -- adverse events}{
+
+
+A two-level hierarchy (system organ class / preferred term) folded into one
+indented stub column, with a blank line between organ classes.  Because the
+stub merges \code{SOC} and \code{PT}, group detection reads the \strong{indentation}
+(\code{group_by = "indent"}) rather than a column.
+}
+
+\section{PK -- concentrations}{
+
+
+Like AE in shape, but the values are numbers with differing decimal counts
+and the visits run across the columns.  So it adds two things no other
+shape needs: \code{set_decimal_split()} to line the decimal points up, and
+\code{paginate_cols()} because the table is wider than the page.
+}
+
+\section{LB -- laboratory shift}{
+
+
+Grouped by a column that is never printed -- the "carrier" idiom.  Name it
+in \code{group_col} \strong{and} in \code{drop_cols}: the first makes it group the table,
+the second keeps it off the page.
+}
+
 \examples{
 # ==========================================================================
 # 1. DM -- demographics.  Flat table, grouped by characteristic.

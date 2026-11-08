@@ -199,22 +199,39 @@
 #'     \item{`c`}{centred text}
 #'     \item{`r`}{right-aligned text}
 #'   }
-#'   e.g. `c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")`. Cell text may
+#'   e.g. `c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")`.  A row may
+#'   also be a list, `list(columns = c(l = , c = , r = ), row_height_twips =
+#'   400L, color = "#C00000")`, whose `row_height_twips` is that row's height
+#'   (over the band's `row_height_twips`) and `color` its text colour (over
+#'   the band's `color`).  Cell text may
 #'   contain **page-number tokens** that the renderer substitutes: `{AUTO_PAGE}`
 #'   (the current page, updated live by the viewer), `{AUTO_TOTAL_PAGES}` (the
 #'   document total), and `{PAGE}` / `{TOTAL_PAGES}` (static numbers baked in at
 #'   render time).  A table paginated on a column (`as_rtftables(page_by = )`)
 #'   gives each page its value of that column, written `{<column name>}`
 #'   (`{PARAM}`): the band then shows the page's value, and is written for
-#'   each page.  See *Page values* in [rtf_tables()].
+#'   each page.  See *Page values* in [rtf_tables()].  The run tokens
+#'   (`{PROGRAM}`, `{DATETIME}`), the `{BOOK_PAGE}` slot and tokens of one's
+#'   own ([rtf_document()]`(tokens = )`) are filled too ([rtf_text_tokens()]
+#'   lists them); a token's value is written as it is, and an unknown token
+#'   is printed as written.  `{{` and `}}` print a literal `{` and `}` (as in
+#'   a column header), so `"{{PAGE}}"` prints `{PAGE}` and fills nothing.
+#'   With `markup = "script"`, the braces of `^{...}` / `_{...}` are the
+#'   markup's own: `^{STUDY}` raises the word STUDY.  To raise a token's
+#'   value, write the token inside the braces, `^{{STUDY}}`, or after a
+#'   character, `^{n={STUDY}}`.
 #' @param border An [rtf_border()] object controlling the border applied to
 #'   all rows of the header/footer table. `NULL` = no border (default for
 #'   header). Use `rtf_border(top = TRUE)` for a horizontal dividing line (default
 #'   for footer).
 #' @param width_twips Integer. Table width in twips. `NULL` (default) uses the
-#'   full writable width (page width minus margins).
+#'   full writable width (page width minus margins); so does `0`, as
+#'   `rtftable(table_width_twips = 0)` does, since a band of no width cannot
+#'   be read (`width`, when given, then sets the width).  A value that is not
+#'   one non-negative integer is an error.
 #' @param width Band width in the shared vocabulary: `"page"` (the writable
-#'   width, the default), a fraction in `(0, 1]` of it, or twips. `width_twips`
+#'   width, the default), a fraction in `(0, 1]` of it, or twips (a whole
+#'   number above 1; `1.5` or `Inf` is an error). `width_twips`
 #'   is the older absolute-only form and wins when both are given.
 #' @param font_size_half_points Font size for this band, in half-points.
 #'   `NULL` (default) inherits the document size. Setting it also recomputes
@@ -227,21 +244,34 @@
 #'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
 #' @param markup Cell-text markup for this band; `NULL` (default) inherits the
 #'   document setting. See [rtftable()].
-#' @param row_height_twips Integer. Row height in twips. `NULL` (default) reads
-#'   the value from `inst/resources/rtfreporter_defaults.R`.
+#' @param row_height_twips Integer. Row height in twips. `NULL` (default)
+#'   inherits the document's row height (its [rtf_style()], else the
+#'   `rtfreporter.row_height_twips` option), else the height the band's font
+#'   size implies.  A value that is not one non-negative integer is an error.
 #' @param cell_padding_left_twips,cell_padding_right_twips Integer cell padding
 #'   on the left / right side of each header (or footer) cell, matching the
-#'   content-table convention. `NULL` (default) reads from
-#'   `inst/resources/rtfreporter_defaults.R` (0L for both since v0.0.21).
+#'   content-table convention. `NULL` (default) inherits the document's
+#'   [rtf_style()], else the resource baseline (0).  A value that is not one
+#'   non-negative integer is an error.
+#' @param cell_padding_top_twips,cell_padding_bottom_twips Integer cell padding
+#'   above / below the text of each header (or footer) cell, in twips, written
+#'   into the cell definitions.  `NULL` (default) inherits the document's
+#'   [rtf_style()], else the resource baseline (0); 0 writes
+#'   nothing.
 #'
+#' @param color The band's text colour, a 6-digit hex string such as
+#'   `"#7F7F7F"`; `NULL` (default) leaves the text in the document's colour
+#'   (black).  A row given as `list(columns = , color = )` has its own.  The
+#'   colour is added to the document's colour table.
 #' @param drop_empty_rows Logical. `TRUE`: a row whose tokens of one's own
 #'   (`rtf_document(tokens = )`, `options(rtfreporter.tokens = )`) are all
 #'   empty when the file is written, and which says nothing else but blanks
 #'   and brackets (`"<{POPULATION}>"`), is left out.  One header can then
 #'   serve every report of a study, a report with no value for a line going
 #'   without it.  `FALSE` (default): every row is written.
-#' @return A named list with elements `rows`, `border`, `width_twips`, and
-#'   `row_height_twips`.
+#' @return A named list of the band's settings, one element per argument
+#'   (`rows`, `border`, `width_twips`, `width`, `row_height_twips`, ...), for
+#'   [rtf_section()]`(header = , footer = )`.
 #'
 #' @examples
 #' hdr <- rtf_header(
@@ -263,7 +293,10 @@ rtf_header <- function(rows,
                         markup                   = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL,
-                        drop_empty_rows          = FALSE) {
+                        cell_padding_top_twips    = NULL,
+                        cell_padding_bottom_twips = NULL,
+                        drop_empty_rows          = FALSE,
+                        color                    = NULL) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
     stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
   }
@@ -271,16 +304,26 @@ rtf_header <- function(rows,
   if (!is.list(rows)) stop("`rows` must be a named character vector or list of named vectors.", call. = FALSE)
   .check_hf_row_names(rows, "rtf_header")
   width <- .check_block_width(width, "width")
-  list(rows = rows, border = border, width_twips = width_twips,
+  list(rows = rows, border = border,
+       width_twips = .check_row_height(width_twips, "width_twips"),
        width = width,
        font_size_half_points =
          .check_font_size(font_size_half_points, "font_size_half_points"),
        font = .check_font(font, "font"),
        markup = if (is.null(markup)) NULL else .resolve_markup(markup),
-       row_height_twips         = row_height_twips,
-       cell_padding_left_twips  = cell_padding_left_twips,
-       cell_padding_right_twips = cell_padding_right_twips,
-       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
+       row_height_twips         =
+         .check_row_height(row_height_twips, "row_height_twips"),
+       cell_padding_left_twips  =
+         .check_row_height(cell_padding_left_twips, "cell_padding_left_twips"),
+       cell_padding_right_twips =
+         .check_row_height(cell_padding_right_twips, "cell_padding_right_twips"),
+       cell_padding_top_twips    =
+         .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
+       cell_padding_bottom_twips =
+         .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
+       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows),
+       border_default = missing(border),
+       color = .check_hf_color(color, "color"))
 }
 
 # A row's cells are named l / c / r; the renderer reads only those names, so
@@ -289,7 +332,15 @@ rtf_header <- function(rows,
 .check_hf_row_names <- function(rows, fn) {
   for (i in seq_along(rows)) {
     row <- rows[[i]]
-    if (is.list(row) && !is.null(row$columns)) row <- row$columns
+    if (is.list(row) && !is.null(row$columns)) {
+      # a row's own height, over the band's (#125), checked as a height is
+      .check_row_height(row$row_height_twips,
+                        sprintf("%s()` row %d's `row_height_twips", fn, i))
+      row <- row$columns
+    }
+    if (is.list(rows[[i]])) {
+      .check_hf_color(rows[[i]]$color, sprintf("%s()` row %d's `color", fn, i))
+    }
     nm <- names(row)
     bad <- setdiff(nm[!is.na(nm) & nzchar(nm)], c("l", "c", "r"))
     if (length(bad)) {
@@ -301,6 +352,18 @@ rtf_header <- function(rows,
     }
   }
   invisible(rows)
+}
+
+# A band's or a row's text colour: NULL, or one "#RRGGBB" (#42).  It used to
+# be taken and left out of the file without a word.
+.check_hf_color <- function(x, arg) {
+  if (is.null(x)) return(NULL)
+  if (!is.character(x) || length(x) != 1L || is.na(x) ||
+      !grepl("^#[0-9A-Fa-f]{6}$", x)) {
+    stop(sprintf("`%s` must be NULL or a 6-digit hex colour such as \"#7F7F7F\".", arg),
+         call. = FALSE)
+  }
+  toupper(x)
 }
 
 .check_drop_empty_rows <- function(x) {
@@ -322,7 +385,10 @@ rtf_footer <- function(rows,
                         markup                   = NULL,
                         cell_padding_left_twips  = NULL,
                         cell_padding_right_twips = NULL,
-                        drop_empty_rows          = FALSE) {
+                        cell_padding_top_twips    = NULL,
+                        cell_padding_bottom_twips = NULL,
+                        drop_empty_rows          = FALSE,
+                        color                    = NULL) {
   if (!is.null(border) && !inherits(border, "rtf_border")) {
     stop("`border` must be NULL or an rtf_border object.", call. = FALSE)
   }
@@ -330,16 +396,26 @@ rtf_footer <- function(rows,
   if (!is.list(rows)) stop("`rows` must be a named character vector or list of named vectors.", call. = FALSE)
   .check_hf_row_names(rows, "rtf_footer")
   width <- .check_block_width(width, "width")
-  list(rows = rows, border = border, width_twips = width_twips,
+  list(rows = rows, border = border,
+       width_twips = .check_row_height(width_twips, "width_twips"),
        width = width,
        font_size_half_points =
          .check_font_size(font_size_half_points, "font_size_half_points"),
        font = .check_font(font, "font"),
        markup = if (is.null(markup)) NULL else .resolve_markup(markup),
-       row_height_twips         = row_height_twips,
-       cell_padding_left_twips  = cell_padding_left_twips,
-       cell_padding_right_twips = cell_padding_right_twips,
-       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows))
+       row_height_twips         =
+         .check_row_height(row_height_twips, "row_height_twips"),
+       cell_padding_left_twips  =
+         .check_row_height(cell_padding_left_twips, "cell_padding_left_twips"),
+       cell_padding_right_twips =
+         .check_row_height(cell_padding_right_twips, "cell_padding_right_twips"),
+       cell_padding_top_twips    =
+         .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
+       cell_padding_bottom_twips =
+         .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
+       drop_empty_rows = .check_drop_empty_rows(drop_empty_rows),
+       border_default = missing(border),
+       color = .check_hf_color(color, "color"))
 }
 
 # ============================================================================

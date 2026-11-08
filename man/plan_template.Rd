@@ -42,7 +42,7 @@ hierarchy, contexts and statistics it actually found.
 \details{
 It writes \strong{both halves} --- the ARD to the table, and the table to the
 RTF pages --- because a plan that stops at the table is a plan that made
-you look up \code{stub_vars} and the header somewhere else.  The display half
+you look up the \code{stub} and the header somewhere else.  The display half
 is a starting point and is meant to be edited: only \code{plan_stub()} is
 derivable from the ARD, and the rest are display decisions nothing can
 guess.

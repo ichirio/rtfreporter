@@ -121,10 +121,10 @@
 
 # ---- first_rows: the rows the shared page takes -------------------------------
 
-.check_first_rows <- function(first_rows) {
-  if (!is.numeric(first_rows) || length(first_rows) != 1L || is.na(first_rows) ||
-      first_rows < 1 || first_rows != round(first_rows)) {
-    stop("rtf_tables(): `first_rows` is a whole number of rows, 1 or more.", call. = FALSE)
+.check_first_rows <- function(first_rows, fn = "rtf_tables") {
+  if (!.is_whole_number(first_rows, 1)) {
+    stop(sprintf("%s(): `first_rows` is a whole number of rows, 1 or more.", fn),
+         call. = FALSE)
   }
   as.integer(first_rows)
 }

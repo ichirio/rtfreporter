@@ -11,7 +11,7 @@ columns, and keep the ids unique.
 | `id` | `UR-NNN`, unique, never reused (a removed requirement keeps its number). |
 | `statement` | One need of your work, in your words: the output, not the function. |
 | `priority` | `High`, `Medium` or `Low`: how bad a wrong result would be for your reports. It sets how deeply you test (see the Validation Plan). |
-| `fr_ids` | The rtfreporter Functional Requirements (FR) the need relies on, separated by `;`. They are the ids of `requirements.csv` (in this kit). Each FR has its own tests in the package; the package's Quality Report says whether they passed. |
+| `fr_ids` | The rtfreporter Functional Requirements (FR) the need relies on, separated by `;`. They are the ids of `requirements.csv` (in this kit). Name only FRs whose `status` is `active`: when a new version removes one, name the active FR that now states the need. Each FR has its own tests in the package; the package's Quality Report says whether they passed. |
 
 To find FR ids: open `requirements.csv`, filter on `functions` (the
 function you will call) or search `statement`. Prefer the leaves (the rows no
@@ -45,7 +45,8 @@ before you build the matrix.
 and their results (`not run` until filled). The xlsx's sheet
 `by_requirement` has one row per UR with its status: `pass` (every case
 passed), `not run` (a case has no result yet), `fail or deviation`, or
-`no UAT case`. A pair with no UAT case is not an error: the UR is checked by
+`no UAT case`. The column `fr_status` is each FR's status in
+`requirements.csv`; the script lists any FR that is not `active`. A pair with no UAT case is not an error: the UR is checked by
 its other pairs' cases, and the FR by the package's own tests.
 
 From a shell, in the folder that holds the kit:

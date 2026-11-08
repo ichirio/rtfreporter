@@ -99,6 +99,38 @@
   if (!is_custom_split) split <- match.arg(split)
   group_by <- match.arg(group_by)
 
+  # One positive whole number of rows: 0, a negative number, a fraction or
+  # TRUE used to make the group-aware splits loop forever, NA or Inf to stop
+  # with "missing value where TRUE/FALSE needed".
+  .is_count <- function(v, min) {
+    is.numeric(v) && length(v) == 1L && is.finite(v) && v >= min &&
+      v == round(v)
+  }
+  if (!is.null(max_rows) && !.is_count(max_rows, 1)) {
+    stop("`max_rows` must be a single positive whole number (rows) or NULL.",
+         call. = FALSE)
+  }
+  if (!.is_count(min_group_rows, 0)) {
+    stop("`min_group_rows` must be a single non-negative whole number (rows).",
+         call. = FALSE)
+  }
+  if (!is.null(split_rows) &&
+      (!is.numeric(split_rows) || anyNA(split_rows) ||
+       any(!is.finite(split_rows)) || any(split_rows != round(split_rows)))) {
+    stop("`split_rows` must be whole row positions (numbers) or NULL.",
+         call. = FALSE)
+  }
+  if (!is.character(cont_label) || length(cont_label) != 1L ||
+      is.na(cont_label)) {
+    stop("`cont_label` must be a single string, e.g. \" (Cont.)\".",
+         call. = FALSE)
+  }
+  for (a in c("blank_row_first", "blank_row_end", "count_blank_rows")) {
+    v <- get(a)
+    if (!is.logical(v) || length(v) != 1L || is.na(v)) {
+      stop(sprintf("`%s` must be TRUE or FALSE.", a), call. = FALSE)
+    }
+  }
   if (!is_custom_split) {
     if (split %in% c("group_safe", "group_force") && is.null(max_rows)) {
       stop("`max_rows` is required when split = \"", split, "\".",
@@ -159,9 +191,11 @@
   # "filled" -- under which every non-empty cell opens a group, so every row
   # becomes its own group and `split = "group_safe"` is free to cut anywhere
   # (#330).  Resolving here is a no-op when nothing is materialised, because
-  # the body the detector sees is then the same one.
+  # the body the detector sees is then the same one.  `group_col = NULL` reads
+  # the groups from column 1, so that column is settled the same way (#824).
   if (identical(group_by, "auto") && isTRUE(count_blank_rows)) {
     gidx <- tryCatch(.resolve_group_col(group_col, x), error = function(e) NULL)
+    if (is.null(gidx) && ncol(x) >= 1L) gidx <- 1L
     if (!is.null(gidx) && length(gidx) == 1L && !is.na(gidx)) {
       group_by <- .detect_group_mode(as.character(x[[gidx]]))
     }
@@ -252,9 +286,26 @@
       if (ncol(x) >= cidx && !is.character(x[[cidx]]) && !is.list(x[[cidx]])) {
         x[[cidx]] <<- as.character(x[[cidx]])
       }
-      list(idx = gidx, info = .compute_group_info(x, gidx, group_by))
+      info <- info_override %||% .compute_group_info(x, gidx, group_by)
+      # A listing's group is a record, which has no heading to continue: a
+      # record longer than a page goes on at the next page's top, with no
+      # continuation row before it (#881, as a separator at a page edge is
+      # dropped, #859).
+      info$no_cont <- !is.null(collapse_record) && length(gidx) == 1L &&
+        !is.na(gidx) && identical(names(x)[gidx], collapse_record)
+      # A listing grouped by something larger than its record (a block of
+      # one value) is cut between records, not inside one.
+      if (!is.null(collapse_record) && !isTRUE(info$no_cont)) {
+        info$record <- collapse_record
+      }
+      list(idx = gidx, info = info)
     }
+    info_override <- NULL
     mgr <- as.integer(min_group_rows %||% 2L)
+    # A `collapse_repeats` cell that repeats the row above prints empty, so a
+    # listing record's blank row, which carries its key value down (#742),
+    # still prints blank (#859).
+    blank_repeat <- names(x)[.resolve_collapse_cols(collapse_repeats, x)]
     cut_rows <- function() switch(split,
       none        = list(x),
       rows        = {
@@ -269,13 +320,15 @@
                                         cont_label, g$idx, mgr,
                                         edge_first = edge_first,
                                         edge_end   = edge_end,
-                                        blank_ignore = blank_ignore) },
+                                        blank_ignore = blank_ignore,
+                                        blank_repeat = blank_repeat) },
       group_force = { g <- grouped()
                       .split_group_force(x, g$info, need_rows("group_force"),
                                          cont_label, g$idx, mgr,
                                          edge_first = edge_first,
                                          edge_end   = edge_end,
-                                         blank_ignore = blank_ignore) },
+                                         blank_ignore = blank_ignore,
+                                         blank_repeat = blank_repeat) },
       by_value    = { g <- grouped()
                       .split_by_value(x, g$info,
                                       if (is.null(max_rows)) NULL
@@ -290,6 +343,25 @@
              call. = FALSE)
       }
       fr <- seq_len(as.integer(first_rows))
+      # A listing record is not cut by the first page either: the cut moves
+      # back to where the record starts (unless it starts the page).
+      if (!is.null(collapse_record) && collapse_record %in% names(x)) {
+        rec <- x[[collapse_record]]
+        k <- length(fr)
+        if (!is.na(rec[k]) && !is.na(rec[k + 1L]) && rec[k] == rec[k + 1L]) {
+          st <- k
+          while (st > 1L && !is.na(rec[st - 1L]) && rec[st - 1L] == rec[k]) {
+            st <- st - 1L
+          }
+          if (st > 1L) fr <- seq_len(st - 1L)
+        }
+      }
+      # A group split reads the groups on the whole body, so the rest knows
+      # whether it opens inside the group the first page cut (#856).
+      g_all <- if (split %in% c("group_safe", "group_force")) {
+        need_rows(split)
+        grouped()
+      }
       whole <- x
       x <- whole[-fr, , drop = FALSE]
       # (split = "rows": its row positions are the whole table's)
@@ -297,7 +369,49 @@
         split_rows <- as.integer(split_rows) - length(fr)
         split_rows <- split_rows[split_rows > 0L]
       }
-      rest <- cut_rows()
+      if (!is.null(g_all)) {
+        rest_info <- lapply(g_all$info[c("id", "label", "headers")],
+                            function(v) v[-fr])
+        rest_info$mode <- g_all$info$mode
+        rest_info$record <- g_all$info$record
+        # The rest opens inside a group when a row of the cut group (not
+        # only its separators: counted ones, or blank rows such as a listing
+        # record's) follows the cut: it then opens with the group's
+        # continuation row, which counts toward its first page's `max_rows`,
+        # as a cut by `max_rows` does.  Not with `max_rows = 1`, where the
+        # continuation row would fill the page alone.  A group whose only
+        # rows past the cut are separators is not continued, and those
+        # separators, which would open the rest, are dropped (#859).
+        last <- length(fr)
+        gid  <- g_all$info$id
+        k <- last + 1L
+        inside <- FALSE
+        while (k <= nrow(whole) && !is.na(gid[last]) && !is.na(gid[k]) &&
+               gid[k] == gid[last]) {
+          if (!.is_separator_row(whole, k, blank_ignore, blank_repeat)) {
+            inside <- TRUE; break
+          }
+          k <- k + 1L
+        }
+        if (!inside && k > last + 1L) {
+          drop <- seq_len(k - last - 1L)
+          x <- x[-drop, , drop = FALSE]
+          rest_info <- lapply(rest_info[c("id", "label", "headers")],
+                              function(v) v[-drop])
+          rest_info$mode <- g_all$info$mode
+          rest_info$record <- g_all$info$record
+        }
+        if (inside && as.integer(max_rows) >= 2L && !isTRUE(g_all$info$no_cont)) {
+          label <- g_all$info$label[last]
+          x <- add_cont_label(x, label, cont_label, col = g_all$idx %||% 1L)
+          rest_info$id      <- c(gid[last], rest_info$id)
+          rest_info$label   <- c(label, rest_info$label)
+          rest_info$headers <- c(TRUE, rest_info$headers)
+        }
+        info_override <- rest_info
+      }
+      rest <- if (nrow(x) > 0L) cut_rows() else list()
+      info_override <- NULL
       x <- whole
       chunks <- c(list(whole[fr, , drop = FALSE]), unname(rest))
     }
@@ -340,17 +454,47 @@
                                        blank_row_first = blank_row_first,
                                        blank_row_end   = blank_row_end)
     } else {
+      # A continuation row ("B (Cont.)") opens the group it continues, so
+      # "between_groups" must not read a group change between it and B's
+      # rows: give it B's value while the blanks are placed (#824).
+      cidx <- tryCatch(.resolve_group_col(group_col, chunk),
+                       error = function(e) NULL) %||% 1L
+      gv   <- if (nrow(chunk) >= 2L && ncol(chunk) >= cidx) chunk[[cidx]]
+      is_cont <- is.character(gv) && !is.na(gv[2L]) && nzchar(cont_label %||% "") &&
+        identical(gv[1L], paste0(gv[2L], cont_label))
+      if (is_cont) chunk[[cidx]][1L] <- gv[2L]
       chunk <- set_blank_rows(chunk,
                                blank_rows      = blank_rows,
                                blank_row_first = blank_row_first,
                                blank_row_end   = blank_row_end,
                                group_col       = group_col,
                                group_by        = group_by)
+      if (is_cont) {
+        br <- attr(chunk, "rtf_blank_rows", exact = TRUE)
+        chunk[[cidx]][1L] <- gv[1L]
+        attr(chunk, "rtf_blank_rows") <- br
+      }
     }
     if (length(collapse_idx)) {
       rec <- if (!is.null(collapse_record) && collapse_record %in% names(chunk))
         chunk[[collapse_record]]
+      # A continuation row ("MILD (Cont.)") that heads a listing's page
+      # already shows the value its first record would repeat: that record
+      # reads it as a repeat of the row above, and prints it blank.
+      cvals <- NULL
+      if (!is.null(rec) && nrow(chunk) >= 2L && nzchar(cont_label %||% "")) {
+        cj <- tryCatch(.resolve_group_col(group_col, chunk),
+                       error = function(e) NULL)
+        gv <- if (length(cj) == 1L && !is.na(cj) && cj %in% collapse_idx)
+          chunk[[cj]]
+        if (is.character(gv) && !is.na(gv[2L]) &&
+            identical(gv[1L], paste0(gv[2L], cont_label))) {
+          cvals <- list(col = cj, label = gv[1L])
+          chunk[[cj]][1L] <- gv[2L]
+        }
+      }
       chunk <- .collapse_repeats_chunk(chunk, collapse_idx, record = rec)
+      if (!is.null(cvals)) chunk[[cvals$col]][1L] <- cvals$label
     }
     attr(chunk, "rtf_paginate_meta") <- list(
       strategy    = strategy,
@@ -361,6 +505,13 @@
     )
     if (length(page_values)) {
       attr(chunk, "rtf_paginate_meta")$page_values <- page_values
+    }
+    # A value split's page is a GROUP page: record the group, the outer page
+    # axis paginate_cols(order = ) sorts on (#824).  page_by + by_value
+    # records it the same way (.order_and_name_pages()).
+    if (identical(strategy, "by_value") && !is.null(chunk_names) &&
+        !is.na(chunk_names[i]) && nzchar(chunk_names[i])) {
+      attr(chunk, "rtf_paginate_meta")$page_group <- chunk_names[i]
     }
     chunk
   })
@@ -417,6 +568,33 @@
   ifelse(is.na(out), "", out)
 }
 
+# The record's own BY value, whole.  A listing wraps a value wider than its
+# column over several lines, so the lines of one record are not the value: a
+# page cut on them took "LIFE-", "THREATENIN" and "G" for three values and
+# split one record over three pages.  The value comes from the data before it
+# was wrapped (`values`, build_listing()'s record of it by record id); a body
+# without it takes the record's lines joined.  A record with no value has ""
+# -- a value of its own (a study's blank severity is a group of records, not a
+# gap to fill from the neighbour).  NA for a row with no record (a stub's
+# label row).
+.record_by_value <- function(v, rec, values = NULL, name = NULL) {
+  out <- rep(NA_character_, length(v))
+  ok  <- !is.na(rec)
+  if (!any(ok)) return(out)
+  whole <- if (!is.null(values) && !is.null(name)) values[[name]]
+  id <- as.integer(rec[ok])
+  if (!is.null(whole) && all(id >= 1L & id <= length(whole))) {
+    w <- as.character(whole)[id]
+  } else {
+    lines  <- ifelse(is.na(v) | !nzchar(trimws(v)), NA_character_, v)[ok]
+    joined <- tapply(lines, id, function(z) paste(z[!is.na(z)], collapse = " "))
+    w <- unname(joined[as.character(id)])
+  }
+  w[is.na(w)] <- ""
+  out[ok] <- trimws(w)
+  out
+}
+
 # The partitions `page_by` implies: one per DISTINCT BY value, holding every
 # row that has it.  A page gathers its rows even when they are scattered --
 # a value that comes back later belongs to the page it names, not to a new
@@ -427,8 +605,18 @@
 # alone, and a report whose rows are merely interleaved would otherwise lose
 # half of each page without saying so.  On an already-grouped body -- the
 # usual one -- this is exactly what the runs were.
-.page_by_runs <- function(df, idx) {
-  keys <- lapply(idx, function(j) .fill_page_by_gaps(as.character(df[[j]])))
+.page_by_runs <- function(df, idx, record = NULL) {
+  rec  <- if (!is.null(record) && record %in% names(df)) df[[record]]
+  vals <- attr(df, "rtf_listing_values", exact = TRUE)
+  keys <- lapply(idx, function(j) {
+    v   <- as.character(df[[j]])
+    out <- .fill_page_by_gaps(v)
+    if (!is.null(rec)) {
+      r <- .record_by_value(v, rec, vals, names(df)[j])
+      out[!is.na(r)] <- r[!is.na(r)]
+    }
+    out
+  })
   key  <- do.call(paste, c(keys, list(sep = "\r")))
   lab  <- do.call(paste, c(keys, list(sep = ", ")))
   cols <- names(df)[idx]
@@ -553,7 +741,7 @@
   inner   <- in_attr[in_attr > 0L]
 
   out <- list(); by_lab <- character(0); grp_lab <- character(0); by_val <- list()
-  for (r in .page_by_runs(x, idx)) {
+  for (r in .page_by_runs(x, idx, args$collapse_record)) {
     part <- x[r$rows, , drop = FALSE]
     rownames(part) <- NULL
     loc <- match(inner, r$rows)
@@ -567,7 +755,10 @@
     a$na              <- ""
     chunks <- do.call(.paginate_df, c(a, dots))
 
-    nm <- names(chunks)
+    # the group's heading, without the "...n" tail a split gives the pages of
+    # one value: the tail would order a group's pages by it, P1 and P2
+    # interleaved, instead of together
+    nm <- .page_name_base(names(chunks))
     for (k in seq_along(chunks)) {
       out[[length(out) + 1L]] <- chunks[[k]]
       by_val[[length(by_val) + 1L]] <- r$values
@@ -590,12 +781,8 @@
     }
     return(idx)
   }
-  idx <- as.integer(group_col)
-  if (is.na(idx) || idx < 1L || idx > ncol(df)) {
-    stop(sprintf("`group_col` index %s out of range (1..%d).",
-                 group_col, ncol(df)), call. = FALSE)
-  }
-  idx
+  # A position must be a whole number in range (#850): the shared resolver.
+  .resolve_col_indices(list(group_col), df, "group_col")
 }
 
 # Resolve a `collapse_repeats` column spec (character names and/or integer
@@ -604,23 +791,8 @@
 # real columns keep their natural 1-based positions for integer indexing.
 .resolve_collapse_cols <- function(cols, df) {
   if (is.null(cols) || length(cols) == 0L) return(integer(0))
-  vapply(cols, function(c1) {
-    if (is.character(c1)) {
-      idx <- match(c1, names(df))
-      if (is.na(idx)) {
-        stop(sprintf("`collapse_repeats` column '%s' not found in the table.",
-                     c1), call. = FALSE)
-      }
-      as.integer(idx)
-    } else {
-      idx <- as.integer(c1)
-      if (is.na(idx) || idx < 1L || idx > ncol(df)) {
-        stop(sprintf("`collapse_repeats` index %s out of range (1..%d).",
-                     c1, ncol(df)), call. = FALSE)
-      }
-      idx
-    }
-  }, integer(1L), USE.NAMES = FALSE)
+  # A position must be a whole number in range (#850): the shared resolver.
+  .resolve_col_indices(cols, df, "collapse_repeats")
 }
 
 # Blank out consecutive repeated values in the given columns of ONE page,
@@ -642,11 +814,34 @@
   # column is a repeat when it equals its own previous line.
   same_rec <- if (is.null(record)) rep(FALSE, n - 1L) else
     record[-1L] == record[-n] & !is.na(record[-1L]) & !is.na(record[-n])
+  # A value that wraps has no one line to carry down, so a repeat of it is
+  # told by the record as a whole: all its lines in the column (and in the
+  # columns before) equal the previous record's.  Then every line of the
+  # record is blanked, whether the value wraps or not.
+  run <- cumsum(c(TRUE, !same_rec))
+  rec_txt <- function(v) {
+    v[is.na(v)] <- ""
+    vapply(split(v, run), function(z) {
+      z <- z[seq_len(max(c(0L, which(nzchar(z)))))]
+      # a value carried down the record's rows is one value, however many
+      # rows the record has
+      if (length(unique(z)) == 1L) z <- z[1L]
+      paste(z, collapse = "\n")
+    }, character(1L))
+  }
+  rec_key <- NULL
   for (k in seq_along(cols)) {
     key <- do.call(paste, c(orig[seq_len(k)], list(sep = "\r")))
     own <- orig[[k]]
     dup <- c(FALSE, key[-1L] == key[-n] |
                     (same_rec & own[-1L] == own[-n] & nzchar(own[-1L])))
+    if (!is.null(record)) {
+      txt     <- rec_txt(own)
+      rec_key <- if (is.null(rec_key)) txt else paste(rec_key, txt, sep = "\r")
+      m       <- length(txt)
+      rdup    <- c(FALSE, rec_key[-1L] == rec_key[-m] & nzchar(txt[-1L]))
+      dup     <- dup | rdup[run]
+    }
     if (any(dup)) {
       colv      <- chunk[[cols[k]]]
       colv[dup] <- NA
@@ -859,6 +1054,32 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
   all(!nzchar(trimws(vals)))
 }
 
+# A row that separates a group from the next rather than being one of its
+# rows: a counted separator (count_blank_rows = TRUE), or a data row that
+# prints blank -- a listing record's blank row.  A `blank_repeat` cell
+# (a collapse_repeats column) that repeats the row above is suppressed on the
+# page, so it reads as empty: a listing carries its key value into the
+# record's blank row (#742).  An explicit blank position is not a separator.
+# A group whose only rows past a cut are separators is not continued, and
+# those separators, which would open the next page, are dropped (#824, #859).
+.is_separator_row <- function(df, i, ignore = character(0),
+                              blank_repeat = character(0)) {
+  if (i < 1L || i > nrow(df)) return(FALSE)
+  mk <- df[[".__rtf_blank__"]]
+  if (!is.null(mk) && !is.na(mk[[i]])) {
+    code <- as.integer(mk[[i]])
+    if (code == .MARK_SEP) return(TRUE)
+    if (code != .MARK_DATA) return(FALSE)
+  }
+  if (length(blank_repeat) && i > 1L) {
+    same <- vapply(blank_repeat, function(k) {
+      identical(as.character(df[[k]][[i]]), as.character(df[[k]][[i - 1L]]))
+    }, logical(1L))
+    ignore <- c(ignore, blank_repeat[same])
+  }
+  .row_is_blank(df, i, ignore)
+}
+
 # Rows the page-edge furniture adds to a chunk: 1 for an edge that is switched
 # on and does not fall against a blank row, 0 otherwise.
 .edge_cost <- function(df, edge_first = FALSE, edge_end = FALSE,
@@ -966,9 +1187,30 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 .split_group_force <- function(df, info, max_rows, cont_label, group_idx,
                                min_group_rows = 2L,
                                edge_first = FALSE, edge_end = FALSE,
-                               blank_ignore = character(0)) {
+                               blank_ignore = character(0),
+                               blank_repeat = character(0)) {
   if (nrow(df) == 0L) return(list(df))
   cont_col <- if (is.null(group_idx)) 1L else group_idx
+  # A counted separator (count_blank_rows = TRUE) is read as a row of the group
+  # before it, but it is not one of the group's rows: a group whose only rows
+  # past a cut are its separators is not continued -- no continuation row, and
+  # the separators, which would open the next page, are dropped (a separator
+  # never prints on a page edge, FR-IX324) (#824).  A blank row that ends a
+  # group, such as a listing record's, is such a separator too (#859).
+  is_sep <- function(i) {
+    v <- df[[".__rtf_blank__"]]
+    !is.null(v) && isTRUE(as.integer(v[[i]]) == .MARK_SEP)
+  }
+  is_gap <- function(i) .is_separator_row(df, i, blank_ignore, blank_repeat)
+  continues <- function(e) {
+    k <- e + 1L
+    while (k <= nrow(df) && !is.na(info$id[k]) && !is.na(info$id[e]) &&
+           info$id[k] == info$id[e]) {
+      if (!is_gap(k)) return(TRUE)
+      k <- k + 1L
+    }
+    FALSE
+  }
   result <- list()
   pos <- 1L
   while (pos <= nrow(df)) {
@@ -997,7 +1239,8 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     if (min_group_rows > 0L && end < nrow(df)) {
       end_gid  <- info$id[end]
       next_gid <- info$id[end + 1L]
-      cut_here <- !is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid
+      cut_here <- !is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid &&
+                  continues(end)
       if (cut_here) {
         hpos <- end
         while (hpos > pos && !isTRUE(info$headers[hpos])) hpos <- hpos - 1L
@@ -1008,9 +1251,30 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
           end <- hpos - 1L                 # ORPHAN: push the group to next page
         } else {
           # WIDOW: count the same-group rows that would spill past `end`.
-          tail_n <- 0L; k <- end + 1L
+          tail_n <- 0L; n_sep <- 0L; k <- end + 1L
           while (k <= nrow(df) && !is.na(info$id[k]) &&
-                 info$id[k] == end_gid) { tail_n <- tail_n + 1L; k <- k + 1L }
+                 info$id[k] == end_gid) {
+            if (is_sep(k)) n_sep <- n_sep + 1L else tail_n <- tail_n + 1L
+            k <- k + 1L
+          }
+          # The tail's counted separators count too when they print on the
+          # next page, i.e. when the next group can join the tail there
+          # (heading plus `min_group_rows` children, or all of it if smaller).
+          # Otherwise they fall on that page's edge and are dropped (#824).
+          # Leaving a printed one out pulls the cut back a row too far and
+          # under-fills this page.
+          if (n_sep > 0L && tail_n > 0L && k <= nrow(df)) {
+            nxt <- k; ng <- 0L
+            while (nxt <= nrow(df) && identical(info$id[nxt], info$id[k])) {
+              if (!is_sep(nxt)) ng <- ng + 1L
+              nxt <- nxt + 1L
+            }
+            nb <- max_rows - (if (isTRUE(edge_first)) 1L else 0L) -
+              (if (isTRUE(edge_end)) 1L else 0L)
+            if (1L + tail_n + n_sep + min(ng, 1L + min_group_rows) <= nb) {
+              tail_n <- tail_n + n_sep
+            }
+          }
           if (tail_n > 0L && tail_n < min_group_rows) {
             new_end <- end - (min_group_rows - tail_n)
             # First row of this group on the current page (a (Cont.) header
@@ -1026,13 +1290,42 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
       }
     }
 
+    # A listing record is not cut across pages unless it is longer than one:
+    # the cut moves back to where the record starts.  (The continuation row
+    # has no record, so a page is never left with only that.)
+    if (!is.null(info$record) && end < nrow(df)) {
+      rec <- df[[info$record]]
+      if (!is.na(rec[end]) && !is.na(rec[end + 1L]) && rec[end] == rec[end + 1L]) {
+        st <- end
+        while (st > pos && !is.na(rec[st - 1L]) && rec[st - 1L] == rec[end]) {
+          st <- st - 1L
+        }
+        if (st > pos && any(!is.na(rec[pos:(st - 1L)]))) end <- st - 1L
+      }
+    }
+
     result[[length(result) + 1L]] <- df[pos:end, , drop = FALSE]
 
-    # Mid-group cut?  Inject a Cont. header row before end+1.
-    if (end < nrow(df)) {
+    # The blank rows that end the cut group, when nothing else of it is left,
+    # would open the next page: drop them (#859).
+    if (end < nrow(df) && !continues(end)) {
+      while (end < nrow(df) && !is.na(info$id[end + 1L]) &&
+             identical(info$id[end + 1L], info$id[end]) && is_gap(end + 1L)) {
+        df <- df[-(end + 1L), , drop = FALSE]
+        info$id      <- info$id[-(end + 1L)]
+        info$label   <- info$label[-(end + 1L)]
+        info$headers <- info$headers[-(end + 1L)]
+      }
+    }
+
+    # Mid-group cut?  Inject a Cont. header row before end+1 -- when the next
+    # page has room for it and a row (with a budget of one row it would hold
+    # only that header, injected again before the same row, forever).
+    if (end < nrow(df) && budget >= 2L && !isTRUE(info$no_cont)) {
       end_gid  <- info$id[end]
       next_gid <- info$id[end + 1L]
-      if (!is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid) {
+      if (!is.na(end_gid) && !is.na(next_gid) && end_gid == next_gid &&
+          continues(end)) {
         label <- info$label[end]
         cont_row <- df[end + 1L, , drop = FALSE]
         # Zero-out every cell, then place the (Cont.) label in cont_col.
@@ -1048,6 +1341,7 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
       }
     }
     pos <- end + 1L
+    while (pos <= nrow(df) && is_sep(pos)) pos <- pos + 1L
   }
   result
 }
@@ -1083,10 +1377,17 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     if (!nzchar(label)) label <- paste0("group_", g)
 
     if (!is.null(max_rows) && g_n > max_rows) {
+      # A value's rows gathered from several runs are ONE group: its first
+      # row is its only header.  The later runs' headers would read as a new
+      # group starting mid-page, which the widow control moved down again
+      # and again, a continuation row each time, forever.
+      hd <- info$headers[rows]
+      if (identical(info$mode, "value")) hd <- seq_len(g_n) == 1L
       sub_info <- list(id      = gid[rows],
                        label   = info$label[rows],
-                       headers = info$headers[rows],
-                       mode    = info$mode)
+                       headers = hd,
+                       mode    = info$mode,
+                       no_cont = info$no_cont)
       sub <- .split_group_force(chunk, sub_info, max_rows,
                                  cont_label, group_idx, min_group_rows)
       names(sub) <- rep(label, length(sub))
@@ -1105,7 +1406,8 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 .split_group_safe <- function(df, info, max_rows, cont_label, group_idx,
                               min_group_rows = 2L,
                               edge_first = FALSE, edge_end = FALSE,
-                              blank_ignore = character(0)) {
+                              blank_ignore = character(0),
+                              blank_repeat = character(0)) {
   if (nrow(df) == 0L) return(list(df))
 
   # What this page would PRINT if it ended with `tail`: the rows themselves,
@@ -1137,30 +1439,54 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
     if (!is.null(buf)) { result[[length(result) + 1L]] <<- buf; buf <<- NULL }
   }
 
+  # A counted separator (count_blank_rows = TRUE) is read as a row of the
+  # group before it.  It is not part of that group's size: it costs a row only
+  # where the next group joins this one's page, and it is dropped where the
+  # next group opens a page, since a separator never prints on a page edge
+  # (FR-IX324).  So a group's trailing separators are held back (`pend`) and
+  # put between it and the next group only when the two share a page (#824).
+  mk  <- df[[".__rtf_blank__"]]
+  sep <- if (is.null(mk)) rep(FALSE, nrow(df)) else {
+    v <- suppressWarnings(as.integer(mk)); !is.na(v) & v == .MARK_SEP
+  }
+  pend <- NULL
+
   for (g in unique_gids) {
     rows <- which(gid == g)
-    g_n  <- length(rows)
+    k    <- length(rows)
+    while (k >= 1L && sep[rows[k]]) k <- k - 1L
+    trail <- if (k < length(rows)) df[rows[(k + 1L):length(rows)], , drop = FALSE]
+    rows  <- rows[seq_len(k)]
+    if (k == 0L) {                       # nothing but separators
+      pend <- if (is.null(pend)) trail else rbind(pend, trail)
+      next
+    }
     gdf  <- df[rows, , drop = FALSE]
+    held <- if (is.null(buf) || is.null(pend)) buf else rbind(buf, pend)
 
     if (printed(NULL, gdf) > max_rows) {
       flush()
       sub_info <- list(id      = info$id[rows],
                        label   = info$label[rows],
-                       headers = info$headers[rows])
+                       headers = info$headers[rows],
+                       no_cont = info$no_cont,
+                       record  = info$record)
       sub <- .split_group_force(gdf, sub_info, max_rows, cont_label,
                                 group_idx, min_group_rows,
                                 edge_first = edge_first, edge_end = edge_end,
-                                blank_ignore = blank_ignore)
+                                blank_ignore = blank_ignore,
+                                blank_repeat = blank_repeat)
       # All but the last sub-chunk are full pages; keep the last (the tail)
       # in the buffer so the next group(s) can pack onto it.
       if (length(sub) > 1L) result <- c(result, sub[-length(sub)])
       buf <- sub[[length(sub)]]
-    } else if (!is.null(buf) && printed(buf, gdf) > max_rows) {
+    } else if (!is.null(held) && printed(held, gdf) > max_rows) {
       flush()
       buf <- gdf
     } else {
-      buf <- if (is.null(buf)) gdf else rbind(buf, gdf)
+      buf <- if (is.null(held)) gdf else rbind(held, gdf)
     }
+    pend <- trail
   }
   flush()
   result
@@ -1227,7 +1553,10 @@ add_cont_label <- function(data, label, cont_label = " (Cont.)", col = 1L) {
 
   one <- function(s) {
     if (is.numeric(s) && !is.list(s)) {
-      return(as.integer(s))
+      # -1 is after the page's last row; it used to be dropped as negative
+      s <- as.integer(s)
+      s[!is.na(s) & s == -1L] <- nrow(chunk)
+      return(s)
     }
     if (is.character(s) && length(s) == 1L && s == "between_groups") {
       info <- .compute_group_info(chunk, group_idx, group_by = group_by)

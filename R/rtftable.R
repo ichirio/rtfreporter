@@ -4,14 +4,30 @@
 # Pass an rtftable to rtf_tables() instead of a bare data.frame for richer
 # control.
 
+# A token argument (`markup`, `blank_row_normalize`) is a character vector of
+# tokens.  Another type (a logical NA, a number) and an NA or "" element are
+# errors (#846: they used to be dropped, so `markup = NA` was read as "none").
+.check_token_vector <- function(x, arg, allowed) {
+  if (!is.character(x) || anyNA(x) || !all(nzchar(x))) {
+    got <- if (is.character(x)) {
+      paste(ifelse(is.na(x), "NA", sprintf("\"%s\"", x)), collapse = ", ")
+    } else {
+      sprintf("a %s", class(x)[1L])
+    }
+    stop(sprintf("`%s` must be a subset of %s; got: %s", arg, allowed, got),
+         call. = FALSE)
+  }
+  invisible(x)
+}
+
 # Resolve the `blank_row_normalize` argument to a clean character vector of the
 # enabled tokens (a subset of c("detect", "collapse")).  Accepts the token
 # vector, `NULL` / `"none"` / `character(0)` (all -> none enabled), and errors on
 # any other token.
 .resolve_blank_row_normalize <- function(x) {
   if (is.null(x)) return(character(0))
-  x <- as.character(x)
-  x <- x[!is.na(x) & nzchar(x)]
+  .check_token_vector(x, "blank_row_normalize",
+                      "c(\"detect\", \"collapse\") (or \"none\" / NULL)")
   if (length(x) == 0L || identical(x, "none")) return(character(0))
   allowed <- c("detect", "collapse")
   bad <- setdiff(x, allowed)
@@ -31,8 +47,8 @@
 #   "relational" -- ">=" -> U+2265, "<=" -> U+2264
 .resolve_markup <- function(x) {
   if (is.null(x)) return(NULL)
-  x <- as.character(x)
-  x <- x[!is.na(x) & nzchar(x)]
+  .check_token_vector(x, "markup",
+                      "c(\"script\", \"relational\") (or \"all\" / \"none\" / NULL)")
   if (length(x) == 0L || identical(x, "none")) return(character(0))
   if (identical(x, "all")) return(c("script", "relational"))
   allowed <- c("script", "relational")
@@ -474,12 +490,18 @@
 #'   }
 #' @param border The table borders. One of:
 #'   \describe{
-#'     \item{`"tfl"`}{(default) the clinical TFL preset: header top + bottom
-#'       rules and a bottom rule on the last row.}
-#'     \item{`"none"`}{no borders.}
+#'     \item{`"tfl"`}{(default) the clinical TFL preset: a top and a bottom
+#'       rule on the column-header block only (see [rtf_table_style_tfl()]);
+#'       no rule under the last row.}
+#'     \item{`"none"`}{no borders, the underline under a spanning header cell
+#'       included (add one per cell with [col_cell()]`(border = )` or
+#'       [style_header()]).}
 #'     \item{an [rtf_border()] object}{its outer edges frame the whole table
 #'       and its `inside_h` / `inside_v` rules fall between the rows / cells;
-#'       [style_zone()] then sets one kind of row.}
+#'       [style_zone()] then sets one kind of row.  The blank rows of
+#'       `blank_rows` are inside the frame: a blank row carries the left /
+#'       right edges, `inside_v` and `inside_h`, and a leading (no header
+#'       row) or trailing one the top or bottom edge.}
 #'     \item{an [rtf_table_style()] object}{its border zones are used.}
 #'   }
 #' @param style Optional shared `rtf_table_style` (S3).  Provides default
@@ -490,30 +512,43 @@
 #'   combining any of (positions are unioned):
 #'   \describe{
 #'     \item{an integer vector}{positions: `0` = before the first row, `k` =
-#'       after data row `k`, `-1` = after the last row.}
+#'       after data row `k`, `-1` = after the last row.  A position is a
+#'       whole number in `-1..nrow`: a fraction, `NA`, or a position past
+#'       the last row (or below `-1`) stops, naming the positions.}
 #'     \item{a [blank_rows_by_change()] spec}{insert when a column value changes.}
 #'     \item{a [blank_rows_by_rule()] spec}{insert before / after rows matching a
 #'       regular expression.}
 #'   }
-#' @param read_attributes Logical. When `TRUE` (default), read recognised
+#' @param read_attributes `TRUE` or `FALSE`. When `TRUE` (default), read recognised
 #'   attributes off `data` for use as fallback defaults -- currently
 #'   `attr(data, "rtf_blank_rows")` is folded into `blank_rows` when the
 #'   argument is `NULL`. Set `FALSE` to ignore attributes.
 #' @param col_rel_width Numeric vector of relative column widths (e.g.
-#'   `c(2, 1, 1)` makes the first column twice as wide as the others).
+#'   `c(2, 1, 1)` makes the first column twice as wide as the others), one
+#'   positive finite number per column; another value is an error when the
+#'   file is written.
 #' @param column_widths_twips Integer vector of absolute column widths in
-#'   twips. Overrides `col_rel_width`.
-#' @param table_width_twips Total table width in twips.
+#'   twips, one positive whole number per column. Overrides `col_rel_width`.
+#' @param table_width_twips Total table width in twips.  A value that is not
+#'   one non-negative integer is an error.  When it is given together with
+#'   `table_width_pct_of_writable` or `table_width_pct`, the twips win.
 #' @param table_width_pct_of_writable Table width as a fraction 0-1 of the
-#'   writable page width.
+#'   writable page width.  A value that is not one number in (0, 1] is an
+#'   error.
 #' @param table_width_pct Table width as a percentage 0-100 of the writable
 #'   page width (convenience alias for `table_width_pct_of_writable * 100`).
+#'   A value that is not one number in (0, 100] is an error.  Given together
+#'   with `table_width_pct_of_writable`, this one is used; given with
+#'   `table_width_twips`, the twips win.
 #' @param table_align Horizontal placement: `"left"` (default), `"center"`,
 #'   or `"right"`.
 #' @param row_height_twips Row height for data rows in twips. `NULL` (default)
-#'   uses the document-wide default from `rtfreporter_defaults.R`
-#'   (font-size-aware). A positive integer specifies an explicit value.
-#' @param row_height_exact Logical. `TRUE` = exact (clipped); `FALSE` = minimum.
+#'   takes the `style`'s, else the document's ([rtf_style()]), else the
+#'   `rtfreporter.row_height_twips` option, else the height the font size
+#'   implies. A non-negative integer specifies an explicit value; anything
+#'   else is an error, as it is for the other `*_twips` arguments.
+#' @param row_height_exact `TRUE` = exact (clipped); `FALSE` = minimum; `NA`
+#'   or another value is an error.
 #' @param header_row_height_twips Row height for column-header rows.
 #' @param font_size_half_points Font size for this table, in half-points.
 #'   `NULL` (default) inherits the document size. Setting it also recomputes
@@ -525,9 +560,17 @@
 #'   `east_asian`, `complex`, optional `hansi`), e.g. `c(latin =
 #'   "Times New Roman", east_asian = "MS Mincho")`; see [rtf_document()].
 #' @param blank_row_height_twips Row height for blank separator rows.
-#' @param cell_padding_left_twips Left cell padding in twips (default 0
-#'   since v0.0.21; cell content sits flush against the cell border).
-#' @param cell_padding_right_twips Right cell padding in twips (default 0).
+#' @param cell_padding_left_twips Left cell padding in twips.  `NULL`
+#'   (default) takes the `style`'s, else the document's ([rtf_style()]), else
+#'   the `rtfreporter.cell_padding_left_twips` option, else 0 (cell content
+#'   sits flush against the cell border).
+#' @param cell_padding_right_twips Right cell padding in twips, resolved as
+#'   `cell_padding_left_twips` is.
+#' @param cell_padding_top_twips,cell_padding_bottom_twips Cell padding above /
+#'   below the text in twips, written into every header and data cell's
+#'   definition (blank separator rows excepted).  `NULL` (default) takes the
+#'   style's, else the document's ([rtf_style()]), else 0; 0
+#'   writes nothing.
 #' @param cell_valign Vertical alignment: `"bottom"` (default), `"top"`,
 #'   or `"center"`.
 #' @param cell_styles `NULL` (default), or a list of length `nrow(data)`.
@@ -575,11 +618,15 @@
 #'       `U+2264`.}
 #'   }
 #'   `"all"` enables both; `"none"` / `character(0)` enables neither. `NULL`
-#'   (default) **inherits** the document default (`rtf_document(default_format =
-#'   list(markup = ))` / the `rtfreporter.markup` option), which is `"script"` --
+#'   (default) **inherits** the document default (`rtf_document(style =
+#'   rtf_style(markup = ))` / the `rtfreporter.markup` option), which is `"script"` --
 #'   so super/subscript (e.g. adapter footnote marks `^{N}`) work while the
 #'   `>=` / `<=` symbol conversion is **opt-in**. Applies to all cell text: data
 #'   cells, column / spanning headers, and title / footnote blocks.
+#'   The braces after `^` / `_` are the markup's own, so a token written
+#'   there is not filled: `^{STUDY}` raises the word STUDY.  To raise a
+#'   token's value, put the token's braces inside, `^{{STUDY}}`, or write
+#'   other text with it, `^{n={STUDY}}`.
 #'
 #' @return An `rtftable` (S3) object suitable for use in `rtf_tables()`.
 #'
@@ -640,11 +687,17 @@ rtftable <- function(
   blank_row_height_twips = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
   cell_valign = "bottom",
   cell_styles = NULL,
   blank_row_normalize = c("detect", "collapse"),
   markup = NULL
 ) {
+  # The whole-table settings whose default is a value, not NULL: an
+  # rtf_style() table section (#804) may set the ones left at it.
+  style_defaulted <- c("table_align", "cell_valign", "row_height_exact")[
+    c(missing(table_align), missing(cell_valign), missing(row_height_exact))]
   # -- Resolve defaults from a shared style template, when supplied ---
   # The style provides defaults; explicit arguments always override.
   if (!is.null(style)) {
@@ -663,6 +716,10 @@ rtftable <- function(
       cell_padding_left_twips <- style$cell_padding_left_twips
     if (is.null(cell_padding_right_twips))
       cell_padding_right_twips <- style$cell_padding_right_twips
+    if (is.null(cell_padding_top_twips))
+      cell_padding_top_twips <- style$cell_padding_top_twips
+    if (is.null(cell_padding_bottom_twips))
+      cell_padding_bottom_twips <- style$cell_padding_bottom_twips
   }
 
 
@@ -747,9 +804,14 @@ rtftable <- function(
   # the whole-table shortcuts (outer / inside_h / inside_v) into the five zones.
   # Whether a column header exists decides where the table's top edge lands,
   # which is why the expansion happens here and not in the constructor.
+  # col_header = NULL still writes a header row (the column names), so the
+  # top edge is that row's; only a header of no rows (list()) has none.  It
+  # used to read NULL as "no header": the top rule fell between the column
+  # names and the first data row, and the inside_h seam under them was lost.
+  first_hdr <- if (!is.null(data_single)) col_hdr_one else col_hdr_list[[1L]]
   border_resolved <- .expand_table_border(
     .normalize_table_border(border),
-    has_header = !is.null(col_header))
+    has_header = is.null(first_hdr) || length(first_hdr) > 0L)
   # Raised here because it needs the shape of the table to know whether the
   # pre-0.5 reading would have produced anything different.
   .warn_old_edge_reading(.normalize_table_border(border),
@@ -769,26 +831,43 @@ rtftable <- function(
              call. = FALSE)
       }
       v <- as.integer(blank_rows)
-      if (any(is.na(v)) || any(v < -1L)) {
+      if (any(is.na(v)) || any(v < -1L) ||
+          any(blank_rows != trunc(blank_rows))) {
         stop("`blank_rows` integers must be -1, 0, or positive.", call. = FALSE)
       }
       blank_rows_resolved <- sort(unique(v))
     }
   }
 
-  # table width %
+  # table width %: a fraction in (0, 1]; 2 or "x" used to be kept as given
   twpw <- table_width_pct_of_writable
+  if (!is.null(twpw)) {
+    twpw <- suppressWarnings(as.numeric(twpw))
+    if (length(twpw) != 1L || is.na(twpw) || twpw <= 0 || twpw > 1) {
+      stop("`table_width_pct_of_writable` must be a number in (0, 1].",
+           call. = FALSE)
+    }
+  }
   if (!is.null(table_width_pct)) {
     twpw <- .table_width_pct_frac(table_width_pct)
   }
 
-  if (!table_align %in% c("left", "center", "right")) {
+  # one value: a vector of two, or none, used to stop with "the condition has
+  # length > 1" / "argument is of length zero"; NA was taken for FALSE
+  if (length(table_align) != 1L ||
+      !table_align %in% c("left", "center", "right")) {
     stop("`table_align` must be 'left', 'center', or 'right'.", call. = FALSE)
   }
-  if (!is.logical(row_height_exact) || length(row_height_exact) != 1L) {
+  if (!is.logical(row_height_exact) || length(row_height_exact) != 1L ||
+      is.na(row_height_exact)) {
     stop("`row_height_exact` must be TRUE or FALSE.", call. = FALSE)
   }
-  if (!cell_valign %in% c("top", "center", "bottom")) {
+  if (!is.logical(read_attributes) || length(read_attributes) != 1L ||
+      is.na(read_attributes)) {
+    stop("`read_attributes` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (length(cell_valign) != 1L ||
+      !cell_valign %in% c("top", "center", "bottom")) {
     stop("`cell_valign` must be 'top', 'center', or 'bottom'.", call. = FALSE)
   }
 
@@ -821,22 +900,31 @@ rtftable <- function(
       border                      = border_resolved,
       blank_rows                  = blank_rows_resolved,
       col_rel_width               = col_rel_width,
-      column_widths_twips         = if (!is.null(column_widths_twips)) as.integer(column_widths_twips) else NULL,
-      table_width_twips           = table_width_twips,
+      # kept as given unless whole numbers: the writer refuses the rest
+      column_widths_twips         = if (is.numeric(column_widths_twips) &&
+                                        all(is.finite(column_widths_twips)) &&
+                                        all(column_widths_twips == round(column_widths_twips)))
+                                      as.integer(column_widths_twips) else column_widths_twips,
+      # the twips arguments are checked as the top / bottom padding is: a
+      # non-number used to be written into the file as NA
+      table_width_twips           = if (is.null(.check_row_height(table_width_twips, "table_width_twips"))) NULL else table_width_twips,
       table_width_pct_of_writable = twpw,
       table_align                 = table_align,
-      row_height_twips            = if (is.null(row_height_twips)) NULL else as.integer(row_height_twips),
+      row_height_twips            = .check_row_height(row_height_twips, "row_height_twips"),
       font_size_half_points       = .check_font_size(font_size_half_points, "font_size_half_points"),
       font                        = .check_font(font, "font"),
       row_height_exact            = row_height_exact,
-      header_row_height_twips     = if (!is.null(header_row_height_twips)) as.integer(header_row_height_twips) else NULL,
-      blank_row_height_twips      = if (!is.null(blank_row_height_twips)) as.integer(blank_row_height_twips) else NULL,
-      cell_padding_left_twips     = if (is.null(cell_padding_left_twips)) NULL else as.integer(cell_padding_left_twips),
-      cell_padding_right_twips    = if (is.null(cell_padding_right_twips)) NULL else as.integer(cell_padding_right_twips),
+      header_row_height_twips     = .check_row_height(header_row_height_twips, "header_row_height_twips"),
+      blank_row_height_twips      = .check_row_height(blank_row_height_twips, "blank_row_height_twips"),
+      cell_padding_left_twips     = .check_row_height(cell_padding_left_twips, "cell_padding_left_twips"),
+      cell_padding_right_twips    = .check_row_height(cell_padding_right_twips, "cell_padding_right_twips"),
+      cell_padding_top_twips      = .check_row_height(cell_padding_top_twips, "cell_padding_top_twips"),
+      cell_padding_bottom_twips   = .check_row_height(cell_padding_bottom_twips, "cell_padding_bottom_twips"),
       cell_valign                 = cell_valign,
       cell_styles                 = cell_styles_resolved,
       blank_row_normalize         = .resolve_blank_row_normalize(blank_row_normalize),
-      markup                      = .resolve_markup(markup)
+      markup                      = .resolve_markup(markup),
+      style_defaulted             = style_defaulted
     ),
     class = "rtftable"
   )

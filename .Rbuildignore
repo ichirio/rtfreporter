@@ -37,3 +37,4 @@
 ^vignettes/figures$
 ^CLAUDE\.md$
 ^validation$
+^\.claude$

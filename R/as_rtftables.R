@@ -7,13 +7,18 @@
 # (#382): an absolute `table_width_twips` first, then a percentage of the
 # writable width, then NULL for "whatever the page gives".  The two spellings
 # of a percentage are rtftable()'s own, and reach as_rtftables() through `...`.
+# Given both, `table_width_pct` wins, as in rtftable(): the width that splits
+# the pages is the width that is rendered.
 .resolve_total_width_twips <- function(twips, user_args) {
   if (!is.null(twips)) return(as.integer(twips))
-  frac <- user_args$table_width_pct_of_writable
-  if (is.null(frac) && !is.null(user_args$table_width_pct)) {
+  # (exact `[[`: `$` would match table_width_pct to table_width_pct_of_writable)
+  frac <- NULL
+  if (!is.null(user_args[["table_width_pct"]])) {
     # Validated here rather than coerced, so a bad percentage is refused with
     # rtftable()'s own message instead of quietly resolving to NA (#388).
-    frac <- .table_width_pct_frac(user_args$table_width_pct)
+    frac <- .table_width_pct_frac(user_args[["table_width_pct"]])
+  } else if (!is.null(user_args[["table_width_pct_of_writable"]])) {
+    frac <- user_args[["table_width_pct_of_writable"]]
   }
   if (is.null(frac)) return(NULL)
   as.integer(round(.default_writable_twips() * as.numeric(frac)))
@@ -137,7 +142,9 @@
 #' tables, rlistings `listing_df` listings,
 #' `flextable` tables, `huxtable` tables, plain `data.frame` / tibble,
 #' or a `list` of any of these (the list is flattened, names propagated as
-#' `name`, repeated on every page it makes).  Figures are out of scope -- use
+#' `name`, repeated on every page it makes, with the `"...n"` tail of pages
+#' that share a heading: `"name...1"`, `"name...2"`).  Figures are out of
+#' scope -- use
 #' [rtf_figures()] for those.
 #'
 #' @section What is carried, by source:
@@ -164,9 +171,9 @@
 #'   Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 #'   Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
 #'   Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
-#'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab -- \cr
-#'   In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab -- \tab -- \cr
-#'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \cr
+#'   Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (`add_footnote()` rows) \cr
+#'   In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+#'   Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 #'   `tab_style()` cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 #' }
 #'
@@ -185,10 +192,19 @@
 #'
 #' For flextable the *displayed* text is read (header labels set via
 #' `set_header_labels()` and `colformat_*()` formatting included), not the raw
-#' `$body$dataset`.  Cells composed of images / equations and `footnote()`
-#' reference marks are not carried.  For huxtable the displayed text is likewise
-#' read (its `number_format` applied); huxtable has no footnote concept, so only
-#' the caption (a page title) is carried.
+#' `$body$dataset`.  Cells composed of images / equations are not carried.  A
+#' `footnote()` reference mark is read as plain text, not superscript: it
+#' follows the cell's text (`"55.1a"`) and leads its footer line (`"aNote"`).
+#' The group rows `as_grouped_data()` makes are rows of text (`"g: A"`) and the
+#' rows under them get no indent (the cell padding is not read).  For huxtable
+#' the displayed text is likewise read (its `number_format` applied), and the
+#' caption is the page title.  huxtable has no footnote concept of its own; the
+#' rows `add_footnote()` appends (a last row whose first cell spans the table)
+#' are read as the footnote lines, not as body rows -- with one column the
+#' shape cannot be told from a row, so they stay in the body then.  Only the
+#' `header_rows()` from the first row on are the column header, and the text of
+#' a cell is read as typed (leading spaces kept; `left_padding()` is not read,
+#' so there is no indent).
 #'
 #' **Not carried** (RTF cannot reproduce these, or they belong to the
 #' source's own theme): cell background colours / fills, font and size
@@ -209,9 +225,11 @@
 #'   \describe{
 #'     \item{`TRUE`}{(default) read everything in the table above.}
 #'     \item{`FALSE`}{use only the rendered body -- equivalent to the old
-#'       `paginate()`.}
+#'       `paginate()`.  `NULL` is the same.}
 #'     \item{a character vector}{of tokens, by source below.}
 #'   }
+#'   Anything else (`NA`, a number, two logicals, a token `NA`) is an
+#'   error, for every source.
 #'   The tokens:
 #'   \describe{
 #'     \item{gt / gtsummary}{`"col_header"`, `"alignment"`, `"spanning"`,
@@ -224,7 +242,7 @@
 #'     \item{flextable}{`"col_header"`, `"alignment"`, `"spanning"`,
 #'       `"titles"`, `"footnotes"`.}
 #'     \item{huxtable}{`"col_header"`, `"alignment"`, `"spanning"`,
-#'       `"titles"`.}
+#'       `"titles"`, `"footnotes"`.}
 #'     \item{data.frame / tibble}{The single token `"labels"`: a column's
 #'       `label` attribute (the haven / labelled / xportr convention) is
 #'       used as its header label (columns without one keep their name).
@@ -232,7 +250,8 @@
 #'       table objects and data.frames shares one `read_meta`, so adapter
 #'       tokens must not error on the data.frame elements.}
 #'   }
-#' @param split How to break the body into pages. A strategy name:
+#' @param split How to break the body into pages. A strategy name (a unique
+#'   prefix such as `"group_s"` is enough; another value is an error):
 #'   \describe{
 #'     \item{`"none"`}{(default) one page; no row limit checked.}
 #'     \item{`"rows"`}{cut before each row position given in `split_rows`;
@@ -250,11 +269,11 @@
 #'       will split a group that would have fitted whole on the next
 #'       page, so it is not `"group_safe"` with an escape hatch.  Only
 #'       `min_group_rows` pulls a cut back, and only to avoid a widow or an
-#'       orphan.  Requires `max_rows`.}
-#'
-#'       Ten groups of four rows with `max_rows = 30` and the blanks counted:
-#'       `"group_safe"` gives 26 and 26 rows, `"group_force"` gives 30 and 24 with the
-#'       sixth group cut in half.
+#'       orphan.  Requires `max_rows`.  Ten groups of four rows with
+#'       `max_rows = 30`, `blank_rows = "between_groups"`, `blank_row_first`
+#'       and `blank_row_end` and the blanks counted (`count_blank_rows =
+#'       TRUE`): `"group_safe"` prints 26 and 26 rows, `"group_force"` 30 and
+#'       24 with the sixth group cut.}
 #'     \item{`"by_value"`}{one page per distinct value of `group_col`; the pages
 #'       are named by that value.  A page gathers every row with its value,
 #'       scattered or not, in the body's own order.}
@@ -270,19 +289,26 @@
 #'   with a `...` so it tolerates the context arguments it does not use, and see
 #'   [add_cont_label()] for re-creating the `" (Cont.)"` continuation row.
 #'   A plan passes it the same way: `plan_paginate_rows(split = f)`.
-#' @param max_rows Integer or `NULL`.  Maximum body rows per page for the
-#'   `"group_safe"` / `"group_force"` splits (required by them).  **This is the
+#' @param max_rows A positive whole number, or `NULL`; anything else is an
+#'   error, whatever the split.  Maximum body rows per page for the
+#'   `"group_safe"` / `"group_force"` splits (required by them); with `1`
+#'   a continued group gets no continuation row.  **This is the
 #'   setting for fixed-size pages** -- `max_rows = 25` gives pages of 25 rows.
-#'   Ignored by `"none"`, `"rows"` (which cuts at the positions in
-#'   `split_rows`) and `"by_value"`.
+#'   Ignored by `"none"` and `"rows"` (which cuts at the positions in
+#'   `split_rows`).  Optional for `"by_value"`: a value's page longer than
+#'   `max_rows` is cut as `"group_force"` cuts, its pages named by the value
+#'   with the `"...n"` tail (`"A...1"`, `"A...2"`).
 #' @param split_rows Integer vector or `NULL`.  Row **positions** to cut
 #'   before, for `split = "rows"` (required by it; ignored otherwise).
 #'   `split_rows = c(20, 40)` yields pages `1:19`, `20:39`, `40:nrow`.  It is
 #'   not a page size: for pages of a fixed number of rows use `max_rows` with
-#'   `split = "group_safe"` or `"group_force"`.
+#'   `split = "group_safe"` or `"group_force"`.  The positions are whole
+#'   numbers in any order; one outside `2:nrow` cuts nothing.
 #' @param group_col Character, integer, or `NULL`.  The column the
 #'   group-aware splits (`"group_safe"`, `"group_force"`, `"by_value"`)
-#'   detect groups on, given by name or position.  `NULL` (default) uses
+#'   detect groups on, given by name or position (a whole number in
+#'   `1..ncol`; `TRUE`, a fraction or a factor is an error, as in every
+#'   column argument).  `NULL` (default) uses
 #'   **column 1**.  This selects only the *column*; how a group boundary is
 #'   found on it is set by `group_by`.
 #'   \describe{
@@ -296,7 +322,8 @@
 #'       happens *after* `sort_by`, which still orders a factor by its
 #'       **levels**.}
 #'   }
-#' @param group_by How a group boundary is found on `group_col`:
+#' @param group_by How a group boundary is found on `group_col` (a unique
+#'   prefix of a name is enough; another value is an error):
 #'   \describe{
 #'     \item{`"auto"`}{(default) pick from the column content: leading
 #'       indentation present -> `"indent"`; else interspersed empty cells ->
@@ -402,14 +429,22 @@
 #'   `sort_by` is `NULL`.
 #' @param cont_label Character (default `" (Cont.)"`).  Suffix appended to a
 #'   group's label on the second and later pages it continues onto (the
-#'   group-aware splits), marking a continued group.
+#'   group-aware splits), marking a continued group.  One string; `""`
+#'   repeats the label alone.  A group whose only rows past a cut are blank
+#'   rows -- a listing record's blank row, or the separators `blank_rows`
+#'   counts -- is not continued: no continuation row, and those blank rows,
+#'   which would open the next page, are dropped.
 #' @param blank_rows Where to insert blank separator rows in the body.  `NULL`
 #'   (default) inserts none (but an `rtf_blank_rows` attribute already on the
 #'   input is still honoured).  Accepts any of -- or a `list()` combining:
 #'   \describe{
 #'     \item{an integer vector of positions}{a blank row is inserted *after* each
 #'       given data-row index; `0` = before the first row, `-1` = after the last
-#'       row (e.g. `c(0, 5, -1)`).}
+#'       row (e.g. `c(0, 5, -1)`).  A position is a whole number in
+#'       `-1..nrow` of the whole body (after `stub`, before pagination): a
+#'       fraction, `NA`, or a position past the body's last row (or below
+#'       `-1`) stops, naming the positions.  On a page shorter than `k`, a
+#'       position `k` within the body puts no blank on that page.}
 #'     \item{`"between_groups"`}{a blank at every group transition on `group_col`,
 #'       using this call's `group_by` detection (auto / indent / value / filled).}
 #'     \item{a [blank_rows_by_change()] object}{insert a blank whenever the group
@@ -443,13 +478,16 @@
 #'   Ignored when `cell_format` is supplied, which takes precedence.
 #'   Neither one controls whether missing values are substituted -- that is
 #'   `na` -- only whether the substituted token is aligned with the counts.
-#' @param min_group_rows Integer (default `2`).  Widow/orphan control for the
+#' @param min_group_rows A non-negative whole number (default `2`).
+#'   Widow/orphan control for the
 #'   group-aware splits (`"group_force"`, `"group_safe"`, `"by_value"`): when a
 #'   page would end on a group that *starts* on that page while showing fewer
-#'   than `min_group_rows` of the group's child rows, the whole group is moved
-#'   to the next page.  This prevents a lone group header being stranded at the
-#'   foot of a page with none (or too few) of its members.  Set to `0` to
-#'   disable (the previous behaviour).
+#'   than `min_group_rows` of the group's child rows (the rows after its first
+#'   row), the whole group is moved to the next page; and a cut inside a group
+#'   is pulled back so at least `min_group_rows` of its rows go on to the next
+#'   page.  This prevents a lone group header being stranded at the foot of a
+#'   page with none (or too few) of its members.  Set to `0` to disable (the
+#'   previous behaviour).
 #' @param count_blank_rows Logical (default `FALSE`).  What `max_rows` counts.
 #'   \describe{
 #'     \item{`TRUE`}{`max_rows` is the number of rows the page **prints**:
@@ -522,9 +560,14 @@
 #'     -            <- na = "-"
 #'    NE            <- na = "NE", right edge still under the ones digit
 #'   ```
-#' @param first_rows The rows of the first page, the rest paginated as the
+#' @param first_rows The rows of the first page (a whole number, 1 or more;
+#'   as many as the table has or more is one page), the rest paginated as the
 #'   other arguments say (`max_rows`, `split`): the page a table shares with
-#'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  `NULL`
+#'   the content before it, [rtf_tables()]`(page_break = FALSE)`.  Under
+#'   `"group_safe"` / `"group_force"` a group the cut falls inside goes on
+#'   with its continuation row on the next page, counted in its `max_rows`,
+#'   as a cut by `max_rows` does.  A **listing** record is not cut: the first
+#'   page ends before the record the row count falls in.  `NULL`
 #'   (the default): the first page as the others.  Not with `page_by`,
 #'   `split = "by_value"` or a custom `split`.
 #' @param collapse_repeats Columns in which to blank **consecutive repeated
@@ -598,7 +641,7 @@
 #'   }
 #' @param stub Row-stub settings, as a [stub_spec()] object -- or, as a
 #'   shorthand for `stub_spec(vars)`, a bare vector of hierarchy columns
-#'   (parent first, leaf last; at least two).  `NULL` (default) builds no
+#'   (parent first, leaf last; one column is the stub as it is).  `NULL` (default) builds no
 #'   stub.  This is the **one** argument for everything [stub_cols()] can do,
 #'   including `layout` and `label_span`.
 #'   \describe{
@@ -649,8 +692,10 @@
 #'     \item{Default}{Recognizes **both** built-in delimiters: `"____"`
 #'       (from `ydisctools::pivot_stats_wider()`) and `"___tlang_delim___"`
 #'       (tfrmt's column delimiter).}
-#'     \item{Your own}{Pass your own separator(s) to override, or `NULL` to
-#'       disable (use the plain `names(data)` single-row header).}
+#'     \item{Your own}{Pass your own separator(s), a character vector, to
+#'       override, or `NULL` (or `character(0)`) to disable (use the plain
+#'       `names(data)` single-row header).  `NA` and `""` entries are
+#'       ignored; another type is an error.}
 #'     \item{Blank cells}{With the `"____"` separator a doubled separator
 #'       (`"________"`) yields an empty middle segment, i.e. a **blank
 #'       cell** at that header level (handy to align a column that skips an
@@ -680,7 +725,10 @@
 #'       total turns out to be.}
 #'     \item{`table_width_twips`}{the total, absolute.}
 #'     \item{`table_width_pct` / `table_width_pct_of_writable`}{the total, as
-#'       a share of the writable page width (paper minus the side margins).}
+#'       a share of the writable page width (paper minus the side margins).
+#'       Used only when `table_width_twips` is not given: the twips win.  Give
+#'       one of the two percentages, not both; given both, `table_width_pct`
+#'       wins, as in [rtftable()].}
 #'     \item{nothing}{the writable width: the row-heading columns by their
 #'       content, the data columns sharing the rest ([default_col_widths()]).}
 #'   }
@@ -697,10 +745,10 @@
 #'       and sets the per-column default alignment (heading columns left,
 #'       others centre).}
 #'     \item{`col_header`}{A user-supplied `col_header` is resolved against
-#'       the **final printed columns** -- after `stub_vars` folding and
+#'       the **final printed columns** -- after `stub` folding and
 #'       `drop_cols` removal -- so its [col_cell()] positions and names
 #'       refer to the columns you actually see (position 1 = first printed
-#'       column; the `stub_vars` stub is that column).  This is equivalent
+#'       column; the `stub` column is that column).  This is equivalent
 #'       to building the pages and then calling [set_col_header()]; use
 #'       [rtf_columns()] to list the final names first.}
 #'     \item{`col_spec`, `col_rel_width`, `row_title`}{still use the pre-drop
@@ -848,6 +896,31 @@ as_rtftables.default <- function(x,
   if (!is.function(split)) split <- match.arg(split)
   group_by <- match.arg(group_by)
   na <- .check_na_text(na)
+  if (!is.logical(auto_width) || length(auto_width) != 1L || is.na(auto_width)) {
+    stop("`auto_width` must be TRUE or FALSE.", call. = FALSE)
+  }
+  # one column: two used to stop with "the condition has length > 1"
+  if (!is.null(group_col) && length(group_col) != 1L) {
+    stop("`group_col` must be one column, by name or position, or NULL.",
+         call. = FALSE)
+  }
+  # checked for every source: a data.frame used to read NA, 1 or a vector of
+  # two logicals as FALSE without a word
+  if (!is.null(read_meta) &&
+      !(is.logical(read_meta) && length(read_meta) == 1L && !is.na(read_meta)) &&
+      !(is.character(read_meta) && !anyNA(read_meta))) {
+    stop("`read_meta` must be FALSE/TRUE or a character vector of tokens.",
+         call. = FALSE)
+  }
+  # a number used to be taken as the separator "1"
+  if (!is.null(header_sep) && !is.character(header_sep)) {
+    stop("`header_sep` must be NULL or a character vector of separators.",
+         call. = FALSE)
+  }
+  # 0 used to give empty pages, NA / Inf / a vector unrelated base-R errors
+  if (!is.null(first_rows)) {
+    first_rows <- .check_first_rows(first_rows, "as_rtftables")
+  }
   user_args <- list(...)
 
   # One spec from `stub =` (#314).  `stub_spec` is the only place new stub
@@ -1056,6 +1129,10 @@ as_rtftables.default <- function(x,
     # (via ...) always wins, so skip then.
     if (is.null(kw$col_header) && is.null(user_args$col_header)) {
       disp     <- .df_display_names(body, read_meta)
+      # a stub folded by plan_stub(before = TRUE, heading = ): its heading,
+      # a blank one too, over its name
+      hd <- lapply(body, attr, which = "rtf_heading", exact = TRUE)
+      for (j in which(!vapply(hd, is.null, NA))) disp[j] <- hd[[j]]
       auto_hdr <- .split_names_to_col_header(disp, header_sep)
       if (!is.null(auto_hdr)) {
         kw$col_header <- auto_hdr
@@ -1096,6 +1173,17 @@ as_rtftables.default <- function(x,
       user_args$cell_styles <- NULL
     }
     if (!is.null(stub_spec_obj)) {
+      # The stub is folded over the whole body, then cut into pages.  Say
+      # where the `page_by` key changes, so every page opens with its own
+      # heading rows (stub_cols() reads this and nothing else does).
+      if (!is.null(page_by_arg) && nrow(body)) {
+        pbi <- .resolve_page_by(page_by_arg, body)
+        if (length(pbi)) {
+          attr(body, "rtf_stub_break") <- do.call(paste, c(lapply(pbi, function(j) {
+            .fill_page_by_gaps(as.character(body[[j]]))
+          }), list(sep = "\r")))
+        }
+      }
       st          <- .apply_stub_vars(body, kw, cell_styles, stub_spec_obj)
       body        <- st$body
       kw          <- st$kw
@@ -1108,6 +1196,12 @@ as_rtftables.default <- function(x,
     # hidden).  Resolved on this body's coordinates, before the sidx helper
     # column is appended below.
     drop_idx <- .resolve_drop_cols(drop_cols, body)
+
+    # ---- blank_rows positions: whole numbers within the body (#853) -----
+    # Checked once on the whole body, before pagination: a position past its
+    # last row reaches no page.  Within the body it is "after row k of each
+    # page", so a page shorter than k simply has none.
+    .check_blank_positions(blank_rows, nrow(body))
 
     # ---- sort body rows -------------------------------------------------
     # Order the body BEFORE pagination so group detection, (Cont.) labels and
@@ -1240,9 +1334,10 @@ as_rtftables.default <- function(x,
   # a fixed group1) collapses into a single stub label row that spans every
   # group and cannot be divided, and the outer value grouping fragments to one
   # page per row.  So here we split the raw body by the `group_col` value first,
-  # then run build_pages(split = "none") on each group.  For every OTHER split
-  # the table stays one logical table paginated across pages, so the stub is
-  # built once on the full body (the plain build_pages() call below).
+  # then run build_pages() on each group (split "none", or "group_force" with
+  # `max_rows`).  For every OTHER split the table stays one logical table
+  # paginated across pages, so the stub is built once on the full body (the
+  # plain build_pages() call below).
   if (!is.function(split) && identical(split, "by_value") &&
       !is.null(stub_spec_obj)) {
     # `page_by` stays the OUTER level here too: partition the raw body by it
@@ -1281,14 +1376,19 @@ as_rtftables.default <- function(x,
         # time, and `group_col` would be resolved against the post-stub body,
         # where the column it names has just been folded into the stub -- the
         # error #429 reported, raised on an argument nothing would use.
-        pgs <- build_pages(sub_body, kw, sub_cs, split_mode = "none",
+        # With `max_rows`, a value's page longer than it is cut as
+        # "group_force" cuts, on the stub this value's page builds: the
+        # stub's label rows are the groups, a cut inside one opens the next
+        # page with its continuation row, and every row counts (#857).
+        pgs <- build_pages(sub_body, kw, sub_cs,
+                           split_mode = if (is.null(max_rows)) "none" else "group_force",
                            page_by_arg = NULL, group_col_arg = NULL)
         # The name is the GROUP alone -- the outermost value -- never the
         # group and the BY value joined: it is the section heading, so joining
         # them would break one group into a section per BY value.  The BY value
         # stays in the page's `rtf_paginate_meta$page_by`.
         nm  <- g_nm
-        names(pgs) <- rep(nm, length(pgs))  # split_mode "none" => one page
+        names(pgs) <- rep(nm, length(pgs))  # one value: its pages share the name
         for (q in seq_along(pgs)) {
           meta <- attr(pgs[[q]]$data, "rtf_paginate_meta", exact = TRUE)
           if (!is.list(meta)) meta <- list()

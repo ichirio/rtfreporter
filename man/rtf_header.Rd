@@ -16,7 +16,10 @@ rtf_header(
   markup = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
-  drop_empty_rows = FALSE
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
+  drop_empty_rows = FALSE,
+  color = NULL
 )
 
 rtf_footer(
@@ -30,7 +33,10 @@ rtf_footer(
   markup = NULL,
   cell_padding_left_twips = NULL,
   cell_padding_right_twips = NULL,
-  drop_empty_rows = FALSE
+  cell_padding_top_twips = NULL,
+  cell_padding_bottom_twips = NULL,
+  drop_empty_rows = FALSE,
+  color = NULL
 )
 }
 \arguments{
@@ -42,14 +48,26 @@ a row, the name of each element chooses its column:
 \item{\code{c}}{centred text}
 \item{\code{r}}{right-aligned text}
 }
-e.g. \code{c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")}. Cell text may
+e.g. \code{c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")}.  A row may
+also be a list, \code{list(columns = c(l = , c = , r = ), row_height_twips = 400L, color = "#C00000")}, whose \code{row_height_twips} is that row's height
+(over the band's \code{row_height_twips}) and \code{color} its text colour (over
+the band's \code{color}).  Cell text may
 contain \strong{page-number tokens} that the renderer substitutes: \code{{AUTO_PAGE}}
 (the current page, updated live by the viewer), \code{{AUTO_TOTAL_PAGES}} (the
 document total), and \code{{PAGE}} / \code{{TOTAL_PAGES}} (static numbers baked in at
 render time).  A table paginated on a column (\code{as_rtftables(page_by = )})
 gives each page its value of that column, written \verb{\{<column name>\}}
 (\code{{PARAM}}): the band then shows the page's value, and is written for
-each page.  See \emph{Page values} in \code{\link[=rtf_tables]{rtf_tables()}}.}
+each page.  See \emph{Page values} in \code{\link[=rtf_tables]{rtf_tables()}}.  The run tokens
+(\code{{PROGRAM}}, \code{{DATETIME}}), the \code{{BOOK_PAGE}} slot and tokens of one's
+own (\code{\link[=rtf_document]{rtf_document()}}\verb{(tokens = )}) are filled too (\code{\link[=rtf_text_tokens]{rtf_text_tokens()}}
+lists them); a token's value is written as it is, and an unknown token
+is printed as written.  \verb{\{\{} and \verb{\}\}} print a literal \verb{\{} and \verb{\}} (as in
+a column header), so \code{"{{PAGE}}"} prints \code{{PAGE}} and fills nothing.
+With \code{markup = "script"}, the braces of \verb{^\{...\}} / \verb{_\{...\}} are the
+markup's own: \verb{^\{STUDY\}} raises the word STUDY.  To raise a token's
+value, write the token inside the braces, \verb{^\{\{STUDY\}\}}, or after a
+character, \verb{^\{n=\{STUDY\}\}}.}
 
 \item{border}{An \code{\link[=rtf_border]{rtf_border()}} object controlling the border applied to
 all rows of the header/footer table. \code{NULL} = no border (default for
@@ -57,14 +75,20 @@ header). Use \code{rtf_border(top = TRUE)} for a horizontal dividing line (defau
 for footer).}
 
 \item{width_twips}{Integer. Table width in twips. \code{NULL} (default) uses the
-full writable width (page width minus margins).}
+full writable width (page width minus margins); so does \code{0}, as
+\code{rtftable(table_width_twips = 0)} does, since a band of no width cannot
+be read (\code{width}, when given, then sets the width).  A value that is not
+one non-negative integer is an error.}
 
 \item{width}{Band width in the shared vocabulary: \code{"page"} (the writable
-width, the default), a fraction in \verb{(0, 1]} of it, or twips. \code{width_twips}
+width, the default), a fraction in \verb{(0, 1]} of it, or twips (a whole
+number above 1; \code{1.5} or \code{Inf} is an error). \code{width_twips}
 is the older absolute-only form and wins when both are given.}
 
-\item{row_height_twips}{Integer. Row height in twips. \code{NULL} (default) reads
-the value from \code{inst/resources/rtfreporter_defaults.R}.}
+\item{row_height_twips}{Integer. Row height in twips. \code{NULL} (default)
+inherits the document's row height (its \code{\link[=rtf_style]{rtf_style()}}, else the
+\code{rtfreporter.row_height_twips} option), else the height the band's font
+size implies.  A value that is not one non-negative integer is an error.}
 
 \item{font_size_half_points}{Font size for this band, in half-points.
 \code{NULL} (default) inherits the document size. Setting it also recomputes
@@ -81,8 +105,15 @@ document setting. See \code{\link[=rtftable]{rtftable()}}.}
 
 \item{cell_padding_left_twips, cell_padding_right_twips}{Integer cell padding
 on the left / right side of each header (or footer) cell, matching the
-content-table convention. \code{NULL} (default) reads from
-\code{inst/resources/rtfreporter_defaults.R} (0L for both since v0.0.21).}
+content-table convention. \code{NULL} (default) inherits the document's
+\code{\link[=rtf_style]{rtf_style()}}, else the resource baseline (0).  A value that is not one
+non-negative integer is an error.}
+
+\item{cell_padding_top_twips, cell_padding_bottom_twips}{Integer cell padding
+above / below the text of each header (or footer) cell, in twips, written
+into the cell definitions.  \code{NULL} (default) inherits the document's
+\code{\link[=rtf_style]{rtf_style()}}, else the resource baseline (0); 0 writes
+nothing.}
 
 \item{drop_empty_rows}{Logical. \code{TRUE}: a row whose tokens of one's own
 (\code{rtf_document(tokens = )}, \code{options(rtfreporter.tokens = )}) are all
@@ -90,10 +121,16 @@ empty when the file is written, and which says nothing else but blanks
 and brackets (\code{"<{POPULATION}>"}), is left out.  One header can then
 serve every report of a study, a report with no value for a line going
 without it.  \code{FALSE} (default): every row is written.}
+
+\item{color}{The band's text colour, a 6-digit hex string such as
+\code{"#7F7F7F"}; \code{NULL} (default) leaves the text in the document's colour
+(black).  A row given as \code{list(columns = , color = )} has its own.  The
+colour is added to the document's colour table.}
 }
 \value{
-A named list with elements \code{rows}, \code{border}, \code{width_twips}, and
-\code{row_height_twips}.
+A named list of the band's settings, one element per argument
+(\code{rows}, \code{border}, \code{width_twips}, \code{width}, \code{row_height_twips}, ...), for
+\code{\link[=rtf_section]{rtf_section()}}\verb{(header = , footer = )}.
 }
 \description{
 \code{rtf_header()} and \code{rtf_footer()} create structured header/footer objects

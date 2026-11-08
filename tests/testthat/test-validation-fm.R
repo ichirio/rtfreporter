@@ -34,13 +34,13 @@ test_that("FT-FM089 [FR-FM168 FR-FM172 FR-FM173]: fmt_numeric() refuses several 
     expect_error(fmt_numeric(d, cols = "b", digits = v),
                  "`fmt_numeric(digits = )` must be a single non-negative integer.", fixed = TRUE)
     expect_error(fmt_numeric(d, cols = "b", signif = v),
-                 "`fmt_numeric(signif = )` must be a single non-negative integer.", fixed = TRUE)
+                 "`fmt_numeric(signif = )` must be a single positive integer.", fixed = TRUE)
   }
   # a rule's own digits / signif is checked the same way
   expect_error(fmt_numeric(d, cols = "b", by = "a", formats = list(x = list(digits = -1), y = list(digits = 1))),
                "`fmt_numeric(digits = )` must be a single non-negative integer.", fixed = TRUE)
   expect_error(fmt_numeric(d, cols = "b", by = "a", formats = list(x = list(signif = "a"), y = list(digits = 1))),
-               "`fmt_numeric(signif = )` must be a single non-negative integer.", fixed = TRUE)
+               "`fmt_numeric(signif = )` must be a single positive integer.", fixed = TRUE)
   expect_error(fmt_numeric(d, cols = "b", by = "a", formats = list(x = list(digits = 0.5), y = list(digits = 1))),
                "`fmt_numeric(digits = )` must be a single non-negative integer.", fixed = TRUE)
   # a whole number given as a double is fine
@@ -50,7 +50,7 @@ test_that("FT-FM089 [FR-FM168 FR-FM172 FR-FM173]: fmt_numeric() refuses several 
 test_that("FT-FM098 [FR-FM127 FR-FM146]: fmt_round() and fmt_signif() refuse a fractional digits as they refuse a negative one (#785)", {
   expect_error(fmt_round(1.234, digits = 1.5), "`fmt_round(digits = )` must be a single non-negative integer.",
                fixed = TRUE)
-  expect_error(fmt_signif(1.234, digits = 2.5), "`fmt_signif(digits = )` must be a single non-negative integer.",
+  expect_error(fmt_signif(1.234, digits = 2.5), "`fmt_signif(digits = )` must be a single positive integer.",
                fixed = TRUE)
   expect_identical(fmt_round(1.234, digits = 1), "1.2")
 })
@@ -112,4 +112,15 @@ test_that("FT-FM097 [FR-FM215 FR-FM235]: fmt_count_paren() and fmt_value_paren()
   expect_identical(fmt_count_paren(c(12, 3)), fmt_count_paren(c("12", "3")))
   expect_identical(fmt_value_paren(character(0)), character(0))
   expect_identical(fmt_value_paren("1.2 (3.4 (5))"), "1.2 (3.4 (5))")
+})
+
+test_that("FT-FM099 [FR-FM248]: fmt_value_paren(rounding = ) rounds a parenthetical of 100 or more by r or sas, NULL following the option", {
+  x <- c("1 (100.5)", "2 (50.0)")
+  expect_identical(fmt_value_paren(x, nbsp = " ", rounding = "r"), c("1  (100)", "2 (50.0)"))
+  expect_identical(fmt_value_paren(x, nbsp = " ", rounding = "sas"), c("1  (101)", "2 (50.0)"))
+  old <- options(rtfreporter.rounding = "sas")
+  on.exit(options(old), add = TRUE)
+  expect_identical(fmt_value_paren("1 (100.5)", nbsp = " "), "1 (101)")
+  options(rtfreporter.rounding = "r")
+  expect_identical(fmt_value_paren("1 (100.5)", nbsp = " "), "1 (100)")
 })

@@ -27,14 +27,25 @@ rtf_page(
 \strong{win} over \code{paper_size}, and the orientation is \emph{inferred} from them
 (\code{width_in >= height_in} means landscape). \code{NULL} (default) uses
 \code{paper_size}. With dimensions given, \code{paper_size} and \code{orientation} stay
-unset unless you pass them, so only a value you passed is warned about.}
+unset unless you pass them, so only a value you passed is warned about.
+Giving only one of the two takes the other from landscape Letter:
+\code{width_in} alone is a page \code{width_in} wide and 8.5" high, \code{height_in}
+alone one 11" wide and \code{height_in} high; the orientation is then
+inferred from that pair (\code{width_in = 8} is 8 x 8.5, portrait).}
 
 \item{margin_top_in, margin_bottom_in, margin_left_in, margin_right_in}{The four
-page margins, in inches.}
+page margins, in inches.  Each inch value here is one positive finite
+number; another (\code{0}, \code{Inf}, \code{NA}, a string) is an error.  The margins
+must leave a writable area: when the document is written, left + right
+at least the page width, or top + bottom at least the page height, is an
+error (checked then, because a margin can also come from an
+\verb{rtfreporter.page.*} option).}
 
 \item{header_dist_in, footer_dist_in}{Distance (inches) of the header / footer
 band from the page edge. \code{NULL} (default) uses the \strong{full} corresponding
-top / bottom margin (so the band sits at the margin boundary).}
+top / bottom margin (so the band sits at the margin boundary).  A
+distance of at least the page height is an error when the document is
+written.}
 }
 \value{
 An \code{rtf_page} object (a classed named list) for \code{rtf_document(page =)}.
@@ -70,5 +81,5 @@ doc <- rtf_document(page = rtf_page(paper_size = "A4", orientation = "portrait")
 
 }
 \seealso{
-\code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_default_format]{rtf_default_format()}}, \code{\link[=rtfreporter_options]{rtfreporter_options()}}.
+\code{\link[=rtf_document]{rtf_document()}}, \code{\link[=rtf_style]{rtf_style()}}, \code{\link[=rtfreporter_options]{rtfreporter_options()}}.
 }

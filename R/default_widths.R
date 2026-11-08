@@ -10,7 +10,9 @@
 #      data columns), within a share of the table: 40% at most, less
 #      when there are many data columns (2 points less a column over four,
 #      20% at the least), 5 points more when the rows are indented (a
-#      hierarchy: SOC / PT, a statistic under its variable);
+#      hierarchy: SOC / PT, a statistic under its variable) -- and, above
+#      that share where it takes it, never less than one and a half data
+#      columns' equal share (one data column: 60:40);
 #    * the data columns share the rest equally;
 #    * a data column whose longest cell does not fit its share is widened to
 #      fit, taken from the others as far as they stay wide enough for theirs.
@@ -26,7 +28,8 @@
 #' `col_rel_width`, `column_widths_twips`, or a plan's `plan_columns(widths = )`):
 #' the row-heading columns as wide as their longest line, within a share of
 #' the table (at most 40%; less with many data columns, down to 20%; 5
-#' points more when the rows are indented), the data columns sharing the
+#' points more when the rows are indented) but never narrower than one and a
+#' half data columns (one data column: 60:40), the data columns sharing the
 #' rest equally, and a data column whose longest cell does not fit widened
 #' from the others.  A program that wants these as its starting point writes
 #' them out: `col_rel_width = default_col_widths(data)` gives the same table
@@ -107,6 +110,8 @@ default_col_widths <- function(data, row_title = NULL, col_header = NULL, width_
   # (and at least half what an equal split would give it)
   floor_w <- max(floor_w, 0.5 * width * length(rt) / n)
   rt_w <- min(max(sum(need[rt]), floor_w), max(cap * width, 0.5 * width * length(rt) / n))
+  # never narrower than one and a half data columns, over the cap if need be
+  rt_w <- max(rt_w, 1.5 * width / (nd + 1.5))
   rest <- width - rt_w
   # the data columns: equal; one whose longest cell does not fit is widened,
   # from the others as far as they keep what they need (half a share at least)

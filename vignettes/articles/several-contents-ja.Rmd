@@ -1,7 +1,7 @@
 ---
 title: "1 ページに複数のコンテンツを置く"
 description: >
-  表の下に表、表の下に図、PK の集計表とそのリスティング、長いリスティングの続き。
+  表の下に表、表の下に図、長いリスティングの続き。
   置き方の引数、タイトルと脚注、セクションとページの値、書き出す前に
   rtf_layout() でページを確かめる方法。
 ---
@@ -41,7 +41,7 @@ knitr::opts_knit$set(root.dir = Sys.getenv("RTFREPORTER_ARTICLE_OUT", tempdir())
 帳票では、1 ページに 2 つのコンテンツを置くことがよくあります。集計表とその元のリスティング、
 表とその図、短い表 2 つなどです。rtfreporter では `rtf_tables()` や `rtf_figures()` を
 1 回呼ぶごとにコンテンツが 1 つ足され、`page_break = FALSE` を付けると、新しいページではなく
-前のコンテンツの下に続きます。この記事では、そうした帳票を 4 つ作り、その決まりを説明します。
+前のコンテンツの下に続きます。この記事では、そうした帳票を 3 つ作り、その決まりを説明します。
 
 ```{r setup, fold = FALSE}
 library(rtfreporter)
@@ -69,39 +69,52 @@ library(rtfreporter)
 
 ## (a) 表の下に表
 
-同じ集団の 2 つの集計です。それぞれ自分の ARD と plan から作ります。人口統計と、被験者の内訳（中止理由など）です。
+有害事象の概要と、その下に同じ集団の人口統計学的特性を置きます。ARD も plan も 2 つずつですが、
+列見出し（投与群とその N）は 1 回書いて両方で使います。
 
 ```{r a-data, fold = "closed"}
-adsl <- cards::ADSL
-adsl$ARM <- factor(adsl$ARM, levels = c("Placebo", "Xanomeline Low Dose",
-                                        "Xanomeline High Dose"))
+arms <- c("Placebo", "Xanomeline Low Dose", "Xanomeline High Dose")
+adsl <- cards::ADSL[cards::ADSL$SAFFL == "Y", ]
+adsl$ARM <- factor(adsl$ARM, levels = arms)
+adae <- cards::ADAE[cards::ADAE$TRTEMFL == "Y", ]
+# a subject-level flag for each row of the overview
+had <- function(rows) adsl$USUBJID %in% adae$USUBJID[rows]
+adsl$ANYAE <- had(TRUE)
+adsl$RELAE <- had(adae$AEREL %in% c("POSSIBLE", "PROBABLE"))
+adsl$SEVAE <- had(adae$AESEV == "SEVERE")
+adsl$SERAE <- had(adae$AESER == "Y")
+adsl$DISAE <- adsl$DSRAEFL %in% "Y"
+adsl$DTHAE <- had(adae$AESDTH == "Y")
+ard_ae <- cards::ard_tabulate_value(adsl, by = ARM,
+                                    variables = c(ANYAE, RELAE, SEVAE, SERAE, DISAE, DTHAE))
 ard_dm <- cards::ard_stack(
   adsl, .by = ARM,
   cards::ard_summary(variables = AGE),
-  cards::ard_tabulate(variables = c(AGEGR1, SEX)))
-ard_ds <- cards::ard_stack(
-  adsl, .by = ARM,
-  cards::ard_tabulate(variables = DCDECOD))
+  cards::ard_tabulate(variables = c(AGEGR1, SEX, RACE)))
 
 # the column header both tables share: the arm and its N
 arm_header <- rtf_col_header(c("", "{col}"), c("", "(N={n})"))
+ae <- ard_ae |>
+  normalize_ard() |>
+  table_plan(cols = "ARM", rows = "variable") |>
+  plan_cells(c(n == 0 ~ "0", "{n:.0f} ({p:.1f%})"), notes = FALSE) |>
+  plan_labels(c(ANYAE = "Any TEAE", RELAE = "Any drug-related TEAE",
+                SEVAE = "Any severe TEAE", SERAE = "Any serious TEAE",
+                DISAE = "Any TEAE leading to discontinuation",
+                DTHAE = "Any TEAE leading to death")) |>
+  plan_col_header(values = list(n = TRUE), arm_header) |>
+  plan_hide("label") |>
+  plan_columns(widths = c(4, 2, 2, 2)) |>
+  plan_style(border = "tfl", align_count_pct = TRUE)
 dm <- ard_dm |>
   normalize_ard() |>
   table_plan(cols = "ARM", rows = c(group = "variable")) |>
   plan_cells(continuous = c("n" = "{N:.0f}", "Mean (SD)" = "{mean:.1f} ({sd:.2f})",
-                            "Min, Max" = "{min:.0f}, {max:.0f}"),
-             categorical = "{n:.0f} ({p:.1f%})", notes = FALSE) |>
-  plan_labels(c(AGE = "Age (years)", AGEGR1 = "Age group, n (%)", SEX = "Sex, n (%)")) |>
+                            "Median" = "{median:.1f}", "Min, Max" = "{min:.0f}, {max:.0f}"),
+             categorical = c(n == 0 ~ "0", "{n:.0f} ({p:.1f%})"), notes = FALSE) |>
+  plan_labels(c(AGE = "Age (years)", AGEGR1 = "Age group (years), n (%)",
+                SEX = "Sex, n (%)", RACE = "Race, n (%)")) |>
   plan_levels(AGEGR1 = c("<65", "65-80", ">80"), SEX = c("F", "M")) |>
-  plan_col_header(values = list(n = TRUE), arm_header) |>
-  plan_stub(name = "row_label") |>
-  plan_columns(widths = c(4, 2, 2, 2)) |>
-  plan_style(border = "tfl", align_count_pct = TRUE)
-ds <- ard_ds |>
-  normalize_ard() |>
-  table_plan(cols = "ARM", rows = c(group = "variable")) |>
-  plan_cells(categorical = "{n:.0f} ({p:.1f%})", notes = FALSE) |>
-  plan_labels(c(DCDECOD = "Disposition, n (%)")) |>
   plan_col_header(values = list(n = TRUE), arm_header) |>
   plan_stub(name = "row_label") |>
   plan_columns(widths = c(4, 2, 2, 2)) |>
@@ -115,17 +128,18 @@ ds <- ard_ds |>
 header <- rtf_header(list(c(l = "Protocol: CDISCPILOT01", r = "Page {PAGE} of {TOTAL_PAGES}")))
 doc_a <- rtf_document() |>
   rtf_section(header = header) |>
-  rtf_tables(dm, titles = list(c("Table 14.1.1",
-                                 "Demographics and Disposition",
-                                 "Intent-to-Treat Population")),
-             footnotes = list("Percentages are of the subjects in the arm.")) |>
-  rtf_tables(ds, page_break = FALSE, space_before = 1L,
-             titles = list("Disposition"),
-             footnotes = list("Source: ADSL."))
+  rtf_tables(ae, titles = list(c("Table 14.3.1.1",
+                                 "Overview of Treatment-Emergent Adverse Events and Demographic Characteristics",
+                                 "Safety Population")),
+             footnotes = list(c("TEAE = treatment-emergent adverse event. A subject is counted once in each row.",
+                                "Drug-related: possibly or probably related to the study drug, as judged by the investigator."))) |>
+  rtf_tables(dm, page_break = FALSE, space_before = 1L,
+             titles = list("Demographic Characteristics"),
+             footnotes = list("Percentages are based on the number of subjects in the Safety Population in each arm."))
 generate_rtfreport(doc_a, "a_table_table.rtf", overwrite = TRUE)
 ```
 
-![1 ページに人口統計の表と、その下に内訳の表](img/several-contents/a_table_table.png)
+![1 ページに有害事象の概要の表と、その下に人口統計学的特性の表](img/several-contents/a_table_table.png)
 
 どちらの表も自分のタイトルと脚注を持ちます。出力全体のタイトル（表番号、表題、集団）は
 1 つ目のコンテンツのタイトルに書きます。出力全体の脚注は最後のコンテンツの脚注に書きます。
@@ -133,173 +147,133 @@ generate_rtfreport(doc_a, "a_table_table.rtf", overwrite = TRUE)
 
 ## (b) 表の下に図
 
+Kaplan-Meier 曲線を、その表の下に置きます。表はイベント数、打ち切り数、中央値とその信頼区間、
+図の目盛りの時点の at risk 数です。図と同じ `survfit()` の結果から作るふつうのデータフレームです:
+
+```{r b-data, fold = "closed"}
+adtte <- cards::ADTTE[cards::ADTTE$PARAMCD == "TTDE", ]
+adtte$TRTA <- factor(adtte$TRTA, levels = arms)
+fit <- survival::survfit(survival::Surv(AVAL, 1 - CNSR) ~ TRTA, data = adtte)
+s <- summary(fit)$table
+q <- quantile(fit, probs = 0.5)
+ne <- function(x) if (is.na(x)) "NE" else format(round(x))
+days <- c(0, 28, 56, 84, 112, 140, 168)
+at_risk <- matrix(summary(fit, times = days, extend = TRUE)$n.risk, ncol = length(arms))
+km_tab <- data.frame(
+  Item = c("Subjects with an event, n (%)", "Censored, n (%)",
+           "Median time to event (days) (95% CI)", "Number at risk", paste0("  Day ", days)))
+for (i in seq_along(arms)) {
+  n <- s[i, "records"]
+  e <- s[i, "events"]
+  km_tab[[arms[i]]] <- c(sprintf("%d (%.1f)", e, 100 * e / n),
+                         sprintf("%d (%.1f)", n - e, 100 * (n - e) / n),
+                         sprintf("%s (%s, %s)", ne(q$quantile[i]), ne(q$lower[i]), ne(q$upper[i])),
+                         "", as.character(at_risk[, i]))
+}
+names(km_tab)[1] <- ""
+km_table <- table_plan(km_tab) |>
+  plan_col_header(rtf_col_header(c("", arms), c("", sprintf("(N=%d)", s[, "records"])))) |>
+  plan_columns(widths = c(4, 2, 2, 2)) |>
+  plan_style(border = "tfl")
+```
+
 `rtf_figures()` も同じ `page_break` と `space_before` を取ります。図の高さは、ページの残りに合わせて決めます:
 
 ```{r b-doc}
 library(ggplot2)
-age_plot <- ggplot(adsl, aes(ARM, AGE)) +
-  geom_boxplot() +
-  labs(x = NULL, y = "Age (years)") +
-  theme_bw(base_size = 9)
+# the curves from `fit` above: a step from (0, 1) per arm, a + at each censoring
+arm <- sub("^TRTA=", "", names(fit$strata))
+km_df <- rbind(data.frame(time = 0, surv = 1, arm = arm, n.censor = 0),
+               data.frame(time = fit$time, surv = fit$surv,
+                          arm = rep(arm, fit$strata), n.censor = fit$n.censor))
+km_plot <- ggplot(km_df, aes(time, surv, colour = arm)) +
+  geom_step(linewidth = 0.6) +
+  geom_point(data = km_df[km_df$n.censor > 0, ], shape = 3, size = 1.5) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_x_continuous(breaks = days) +
+  labs(x = "Days since first dose", y = "Probability of no dermatologic event") +
+  theme_bw(base_size = 9) +
+  theme(legend.position = "bottom", legend.title = element_blank())
 doc_b <- rtf_document() |>
   rtf_section(header = header) |>
-  rtf_tables(dm, titles = list(c("Table 14.1.2", "Age by Arm",
-                                 "Intent-to-Treat Population"))) |>
-  rtf_figures(age_plot, page_break = FALSE, space_before = 1L,
-              render_width = 6, render_height = 2.6,
-              titles = list("Figure: age by arm"),
-              footnotes = list("Box: quartiles; whiskers: 1.5 IQR."))
+  rtf_tables(km_table, titles = list(c("Figure 14.3.2.1",
+                                       "Kaplan-Meier Plot of Time to First Dermatologic Event",
+                                       "Safety Population"))) |>
+  rtf_figures(km_plot, page_break = FALSE, space_before = 1L,
+              render_width = 7, render_height = 3.2,
+              footnotes = list(c("Dermatologic event: a treatment-emergent skin and subcutaneous tissue event.",
+                                 "+ Censored at the last contact.",
+                                 "Median and 95% CI from the Kaplan-Meier estimate. NE = not estimable.")))
 generate_rtfreport(doc_b, "b_table_figure.rtf", overwrite = TRUE)
 ```
 
-![人口統計の表と、その下に群ごとの年齢の箱ひげ図](img/several-contents/b_table_figure.png)
+![イベントまでの時間の表と、その下に Kaplan-Meier 曲線](img/several-contents/b_table_figure.png)
 
-## (c) PK 濃度の集計表とリスティング
+## (c) 長いリスティングの続き
 
-時点ごとの濃度の集計表と、その下に同じ濃度のリスティングを置きます。どちらも時点を横に並べ、
-集計表の行は統計量、リスティングの行は被験者です。データはここで作る合成の物です。24 人、8 時点、
-1-コンパートメントの曲線に誤差を足し、2 ng/mL 未満は BLQ です。この例ではそのうち 5 人を使います。
-時点を横に並べるので、集計表とリスティングが 1 ページに収まります。(d) では 24 人全員を使います。
-
-```{r c-data, fold = "closed"}
-set.seed(20261028)
-n_subj <- 24
-tpt <- data.frame(ATPTN = c(0, 0.5, 1, 2, 4, 8, 12, 24),
-                  ATPT  = c("Pre-dose", "0.5 h", "1 h", "2 h", "4 h", "8 h", "12 h", "24 h"))
-subj <- data.frame(USUBJID = sprintf("DEMO-01-%03d", seq_len(n_subj)),
-                   ka   = stats::rlnorm(n_subj, log(1.2), 0.25),
-                   ke   = stats::rlnorm(n_subj, log(0.12), 0.25),
-                   dose = stats::rlnorm(n_subj, log(400), 0.20))
-adpc <- merge(subj, tpt, by = NULL)
-adpc <- adpc[order(adpc$USUBJID, adpc$ATPTN), ]
-conc <- with(adpc, dose * ka / (ka - ke) * (exp(-ke * ATPTN) - exp(-ka * ATPTN)))
-conc <- conc * stats::rlnorm(nrow(adpc), 0, 0.12)
-adpc$ARELTM <- round(pmax(0, adpc$ATPTN +
-  ifelse(adpc$ATPTN == 0, -0.1, stats::runif(nrow(adpc), -0.08, 0.12))), 2)
-blq <- adpc$ATPTN == 0 | conc < 2
-adpc$AVAL  <- ifelse(blq, NA_real_, round(conc, 1))
-adpc$AVALC <- ifelse(blq, "BLQ", format(round(conc, 1), nsmall = 1, trim = TRUE))
-adpc$ATPT  <- factor(adpc$ATPT, levels = tpt$ATPT)
-```
-
-集計表は時点ごとの ARD から作り、時点を横に並べます。BLQ の検体は除き、投与前（全員 BLQ）の列は
-ありません。plan は 1 つの関数で作り、(d) では 24 人全員に使います:
-
-```{r c-summary}
-cv <- function(x) 100 * stats::sd(x) / mean(x)
-gm <- function(x) exp(mean(log(x)))
-pk_summary_plan <- function(data, cells) {
-  ard <- cards::ard_summary(
-    droplevels(data[!is.na(data$AVAL), ]), by = ATPT, variables = AVAL,
-    statistic = ~ list(N = length, mean = mean, sd = stats::sd, cv = cv,
-                       geo_mean = gm, median = stats::median, min = min, max = max))
-  ard |>
-    normalize_ard() |>
-    table_plan(cols = "ATPT", rows = c(group = "variable")) |>
-    plan_cells(continuous = cells, notes = FALSE) |>
-    plan_labels(c(AVAL = "Concentration (ng/mL)")) |>
-    plan_levels(ATPT = tpt$ATPT[-1]) |>
-    plan_col_header(rtf_col_header(c("Drug X (ng/mL)", "{col}"))) |>
-    plan_stub(name = "row_label") |>
-    plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
-    plan_style(border = "tfl")
-}
-pk_cells <- c("n" = "{N:.0f}", "Mean" = "{mean:.1f}", "SD" = "{sd:.2f}",
-              "CV%" = "{cv:.1f}", "Geometric mean" = "{geo_mean:.1f}",
-              "Median" = "{median:.1f}", "Min" = "{min:.1f}", "Max" = "{max:.1f}")
-pk5 <- adpc[adpc$USUBJID %in% unique(adpc$USUBJID)[1:5], ]
-summary5 <- pk_summary_plan(pk5, pk_cells)
-```
-
-リスティングは集計表と同じ形にします。行が被験者、列が時点、セルが濃度です（下限未満は `BLQ`）。
-ふつうのデータフレームで、列名が見出しになります。列幅を集計表と同じにして、2 つの列をそろえます:
-
-```{r c-listing}
-post <- pk5[pk5$ATPT != "Pre-dose", ]
-listing5 <- data.frame(Subject = unique(post$USUBJID))
-for (t in tpt$ATPT[-1]) {
-  at <- post[post$ATPT == t, ]
-  listing5[[t]] <- at$AVALC[match(listing5$Subject, at$USUBJID)]
-}
-listing5_plan <- table_plan(listing5) |>
-  plan_columns(widths = c(3, rep(1, nrow(tpt) - 1))) |>
-  plan_style(border = "tfl")
-listing5
-```
-
-集計表がページを始めて出力のタイトルを持ち、リスティングはその下に続きます:
-
-```{r c-doc}
-pk_header <- rtf_header(list(
-  c(l = "Protocol: {STUDY} (synthetic data)", r = "Page {PAGE} of {TOTAL_PAGES}")))
-pk_footer <- rtf_footer(list(
-  c(l = "BLQ: below the lower limit of quantification (2 ng/mL); left out of the summary."),
-  c(l = "Pre-dose: BLQ for every subject. Synthetic data made for this page.")))
-doc_c <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
-  rtf_section(header = pk_header, footer = pk_footer) |>
-  rtf_tables(summary5,
-             titles = list(c("Table 14.4.1",
-                             "Drug X Plasma Concentrations: Summary and Listing",
-                             "Safety Population"))) |>
-  rtf_tables(listing5_plan, page_break = FALSE, space_before = 1L,
-             titles = list("Listing of concentrations (ng/mL)"))
-generate_rtfreport(doc_c, "c_pk.rtf", overwrite = TRUE)
-```
-
-![5 人の PK 濃度の集計表と、その下に時点ごとの濃度のリスティング](img/several-contents/c_pk.png)
-
-## (d) 長いリスティングの続き
-
-24 人全員では、リスティングは集計表の下の残りより長くなります。ここでは 1 行が 1 検体のふつうの表として
-書きます。列は印刷する形にし、列名を見出しにします。`plan_row_group()` は被験者番号を最初の行だけに出し
-（ページの頭では出し直す）、`plan_blanks()` は被験者の間に空行を入れ、`plan_paginate_rows()` は被験者の
-途中で切らずに 1 ページ 24 行（3 人分）に分けます:
+被験者の内訳の集計表と、その下に中止した被験者のリスティングを置きます。中止は 144 人で、
+集計表の下の残りよりずっと長くなります。リスティングはふつうの表として書き、列は印刷する形にし、
+列名を見出しにします。`plan_row_group()` は投与群を最初の行だけに出し（ページの頭では出し直す）、
+`plan_paginate_rows()` は 1 ページ 30 行に分けます:
 
 ```{r d-listing}
-pk_summary <- pk_summary_plan(adpc, pk_cells)
-lst <- data.frame(Subject = adpc$USUBJID,
-                  `Nominal time` = as.character(adpc$ATPT),
-                  `Actual time (h)` = format(adpc$ARELTM, nsmall = 2),
-                  `Concentration (ng/mL)` = adpc$AVALC,
+ard_ds <- cards::ard_stack(adsl, .by = ARM, cards::ard_tabulate(variables = DCDECOD))
+ds <- ard_ds |>
+  normalize_ard() |>
+  table_plan(cols = "ARM", rows = c(group = "variable")) |>
+  plan_cells(categorical = c(n == 0 ~ "0", "{n:.0f} ({p:.1f%})"), notes = FALSE) |>
+  plan_labels(c(DCDECOD = "Status at end of study, n (%)")) |>
+  plan_col_header(values = list(n = TRUE), arm_header) |>
+  plan_stub(name = "row_label") |>
+  plan_columns(widths = c(4, 2, 2, 2)) |>
+  plan_style(border = "tfl", align_count_pct = TRUE)
+
+disc <- adsl[adsl$DCDECOD != "COMPLETED", ]
+disc <- disc[order(disc$ARM, disc$USUBJID), ]
+lst <- data.frame(Treatment = as.character(disc$ARM),
+                  `Subject ID` = disc$USUBJID,
+                  `Age/Sex` = paste0(disc$AGE, "/", disc$SEX),
+                  `Last dose (study day)` = as.character(disc$TRTDUR),
+                  `Reason for discontinuation` = tools::toTitleCase(tolower(disc$DCDECOD)),
                   check.names = FALSE)
-pk_listing <- table_plan(lst) |>
-  plan_row_group(mode = "value", collapse = "Subject", group_col = "Subject") |>
-  plan_blanks(where = "between_groups") |>
-  plan_paginate_rows(max_rows = 24, split = "group_safe") |>
-  plan_columns(widths = c(2, 1.5, 1.5, 2)) |>
+disc_listing <- table_plan(lst) |>
+  plan_row_group(mode = "value", collapse = "Treatment", group_col = "Treatment") |>
+  plan_paginate_rows(max_rows = 30, split = "group_force") |>
+  plan_columns(widths = c(2.4, 1.6, 1, 1.6, 3)) |>
   plan_style(border = "tfl")
 ```
 
-（`plan_listing()` と `listing_spec()` は、有害事象のように 1 件が何行にも折り返すリスティング向けで、
-1 件ごとに空行が入ります。[Listings with a plan](plan-listings.html) を見てください。）
+（`plan_listing()` と `listing_spec()` は、有害事象のように 1 件が何行にも折り返すリスティング向けです。
+[Listings with a plan](plan-listings.html) を見てください。リスティングと同じ列に要約を置く表
+（PK 濃度のリスティングと、その下の要約統計量など）は、2 つのコンテンツではなく 1 つの表です。
+[リスティングとその要約を 1 つの表に](plan-append-ja.html) を見てください。）
 
-`first_rows` で、共有するページに載せるリスティングの行数を書きます（データの行数で、被験者の間の空行は
-数えません）。残りは plan のページ分けのとおりに自分のページへ続き、各ページにリスティングのタイトル、
-`cont_title` の行、列見出し、脚注が付きます:
+`first_rows` で、共有するページに載せるリスティングの行数を書きます。残りは plan のページ分けのとおりに
+自分のページへ続き、各ページにリスティングのタイトル、`cont_title` の行、列見出し、脚注が付きます:
 
 ```{r d-doc}
-doc_pk <- rtf_document(tokens = list(STUDY = "DEMO-01")) |>
-  rtf_section(header = pk_header, footer = pk_footer) |>
-  rtf_tables(pk_summary,
-             titles = list(c("Table 14.4.2",
-                             "Drug X Plasma Concentrations: Summary and Listing",
-                             "Safety Population"))) |>
-  rtf_tables(pk_listing, page_break = FALSE, space_before = 1L,
-             first_rows = 16L, cont_title = "(continued)",
-             titles = list("Listing of concentrations"))
-generate_rtfreport(doc_pk, "d_pk.rtf", overwrite = TRUE)
+doc_d <- rtf_document() |>
+  rtf_section(header = header) |>
+  rtf_tables(ds, titles = list(c("Table 14.1.2",
+                                 "Subject Disposition and Subjects Who Discontinued",
+                                 "Safety Population"))) |>
+  rtf_tables(disc_listing, page_break = FALSE, space_before = 1L,
+             first_rows = 12L, cont_title = "(continued)",
+             titles = list("Subjects Who Discontinued the Study"),
+             footnotes = list("Last dose: the study day of the last dose, day 1 being the first."))
+generate_rtfreport(doc_d, "c_listing.rtf", overwrite = TRUE)
 ```
 
-1 ページ目: 集計表と、リスティングの最初の 16 行:
+1 ページ目: 集計表と、リスティングの最初の 12 行:
 
-![1 ページ目: PK 濃度の集計表とリスティングの始め](img/several-contents/d_pk_page1.png)
+![1 ページ目: 内訳の集計表とリスティングの始め](img/several-contents/c_listing_page1.png)
 
 2 ページ目: リスティングの続き:
 
-![2 ページ目: (continued) の付いたリスティングの続き](img/several-contents/d_pk_page2.png)
+![2 ページ目: (continued) の付いたリスティングの続き](img/several-contents/c_listing_page2.png)
 
-この例の脚注はページのフッターに入れたので、どのページにも出ます。`rtf_tables(footnotes = )` に
-書いた脚注はそのコンテンツの物で、そのコンテンツの各ページで、その下に出ます。
+`rtf_tables(footnotes = )` に書いた脚注はそのコンテンツの物で、そのコンテンツの各ページで、その下に出ます。
+どのページにも出したい脚注は、ページのフッターに書きます。
 
 ## ページを確かめる: `rtf_layout()`
 
@@ -308,7 +282,7 @@ generate_rtfreport(doc_pk, "d_pk.rtf", overwrite = TRUE)
 コンテンツがどこで切れるかを確かめるのに使います:
 
 ```{r layout}
-rtf_layout(doc_pk)
+rtf_layout(doc_d)
 ```
 
 結果はリストでもあります。`rtf_layout(doc)$pages` は印刷するページごとに 1 つで、それぞれの

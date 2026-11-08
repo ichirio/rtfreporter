@@ -54,10 +54,10 @@ gt-extracted ones.
 and sets the per-column default alignment (heading columns left,
 others centre).}
 \item{\code{col_header}}{A user-supplied \code{col_header} is resolved against
-the \strong{final printed columns} -- after \code{stub_vars} folding and
+the \strong{final printed columns} -- after \code{stub} folding and
 \code{drop_cols} removal -- so its \code{\link[=col_cell]{col_cell()}} positions and names
 refer to the columns you actually see (position 1 = first printed
-column; the \code{stub_vars} stub is that column).  This is equivalent
+column; the \code{stub} column is that column).  This is equivalent
 to building the pages and then calling \code{\link[=set_col_header]{set_col_header()}}; use
 \code{\link[=rtf_columns]{rtf_columns()}} to list the final names first.}
 \item{\code{col_spec}, \code{col_rel_width}, \code{row_title}}{still use the pre-drop
@@ -68,9 +68,11 @@ input coordinates.}
 \describe{
 \item{\code{TRUE}}{(default) read everything in the table above.}
 \item{\code{FALSE}}{use only the rendered body -- equivalent to the old
-\code{paginate()}.}
+\code{paginate()}.  \code{NULL} is the same.}
 \item{a character vector}{of tokens, by source below.}
 }
+Anything else (\code{NA}, a number, two logicals, a token \code{NA}) is an
+error, for every source.
 The tokens:
 \describe{
 \item{gt / gtsummary}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
@@ -83,7 +85,7 @@ The tokens:
 \item{flextable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
 \code{"titles"}, \code{"footnotes"}.}
 \item{huxtable}{\code{"col_header"}, \code{"alignment"}, \code{"spanning"},
-\code{"titles"}.}
+\code{"titles"}, \code{"footnotes"}.}
 \item{data.frame / tibble}{The single token \code{"labels"}: a column's
 \code{label} attribute (the haven / labelled / xportr convention) is
 used as its header label (columns without one keep their name).
@@ -92,13 +94,18 @@ table objects and data.frames shares one \code{read_meta}, so adapter
 tokens must not error on the data.frame elements.}
 }}
 
-\item{max_rows}{Integer or \code{NULL}.  Maximum body rows per page for the
-\code{"group_safe"} / \code{"group_force"} splits (required by them).  \strong{This is the
+\item{max_rows}{A positive whole number, or \code{NULL}; anything else is an
+error, whatever the split.  Maximum body rows per page for the
+\code{"group_safe"} / \code{"group_force"} splits (required by them); with \code{1}
+a continued group gets no continuation row.  \strong{This is the
 setting for fixed-size pages} -- \code{max_rows = 25} gives pages of 25 rows.
-Ignored by \code{"none"}, \code{"rows"} (which cuts at the positions in
-\code{split_rows}) and \code{"by_value"}.}
+Ignored by \code{"none"} and \code{"rows"} (which cuts at the positions in
+\code{split_rows}).  Optional for \code{"by_value"}: a value's page longer than
+\code{max_rows} is cut as \code{"group_force"} cuts, its pages named by the value
+with the \code{"...n"} tail (\code{"A...1"}, \code{"A...2"}).}
 
-\item{split}{How to break the body into pages. A strategy name:
+\item{split}{How to break the body into pages. A strategy name (a unique
+prefix such as \code{"group_s"} is enough; another value is an error):
 \describe{
 \item{\code{"none"}}{(default) one page; no row limit checked.}
 \item{\code{"rows"}}{cut before each row position given in \code{split_rows};
@@ -116,16 +123,13 @@ out the same height, which is why a report asks for it --- but it
 will split a group that would have fitted whole on the next
 page, so it is not \code{"group_safe"} with an escape hatch.  Only
 \code{min_group_rows} pulls a cut back, and only to avoid a widow or an
-orphan.  Requires \code{max_rows}.}
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{  Ten groups of four rows with `max_rows = 30` and the blanks counted:
-  `"group_safe"` gives 26 and 26 rows, `"group_force"` gives 30 and 24 with the
-  sixth group cut in half.
-\\item\{`"by_value"`\}\{one page per distinct value of `group_col`; the pages
-  are named by that value.  A page gathers every row with its value,
-  scattered or not, in the body's own order.\}
-}\if{html}{\out{</div>}}
-
+orphan.  Requires \code{max_rows}.  Ten groups of four rows with
+\code{max_rows = 30}, \code{blank_rows = "between_groups"}, \code{blank_row_first}
+and \code{blank_row_end} and the blanks counted (\code{count_blank_rows = TRUE}): \code{"group_safe"} prints 26 and 26 rows, \code{"group_force"} 30 and
+24 with the sixth group cut.}
+\item{\code{"by_value"}}{one page per distinct value of \code{group_col}; the pages
+are named by that value.  A page gathers every row with its value,
+scattered or not, in the body's own order.}
 }
 \code{split} may also be a \strong{custom function} for bespoke page-break rules.
 It is called as
@@ -143,11 +147,14 @@ A plan passes it the same way: \code{plan_paginate_rows(split = f)}.}
 before, for \code{split = "rows"} (required by it; ignored otherwise).
 \code{split_rows = c(20, 40)} yields pages \code{1:19}, \code{20:39}, \code{40:nrow}.  It is
 not a page size: for pages of a fixed number of rows use \code{max_rows} with
-\code{split = "group_safe"} or \code{"group_force"}.}
+\code{split = "group_safe"} or \code{"group_force"}.  The positions are whole
+numbers in any order; one outside \code{2:nrow} cuts nothing.}
 
 \item{group_col}{Character, integer, or \code{NULL}.  The column the
 group-aware splits (\code{"group_safe"}, \code{"group_force"}, \code{"by_value"})
-detect groups on, given by name or position.  \code{NULL} (default) uses
+detect groups on, given by name or position (a whole number in
+\verb{1..ncol}; \code{TRUE}, a fraction or a factor is an error, as in every
+column argument).  \code{NULL} (default) uses
 \strong{column 1}.  This selects only the \emph{column}; how a group boundary is
 found on it is set by \code{group_by}.
 \describe{
@@ -162,7 +169,8 @@ happens \emph{after} \code{sort_by}, which still orders a factor by its
 \strong{levels}.}
 }}
 
-\item{group_by}{How a group boundary is found on \code{group_col}:
+\item{group_by}{How a group boundary is found on \code{group_col} (a unique
+prefix of a name is enough; another value is an error):
 \describe{
 \item{\code{"auto"}}{(default) pick from the column content: leading
 indentation present -> \code{"indent"}; else interspersed empty cells ->
@@ -273,15 +281,22 @@ vector the same length as \code{sort_by} (one direction per key).  Ignored when
 
 \item{cont_label}{Character (default \code{" (Cont.)"}).  Suffix appended to a
 group's label on the second and later pages it continues onto (the
-group-aware splits), marking a continued group.}
+group-aware splits), marking a continued group.  One string; \code{""}
+repeats the label alone.  A group whose only rows past a cut are blank
+rows -- a listing record's blank row, or the separators \code{blank_rows}
+counts -- is not continued: no continuation row, and those blank rows,
+which would open the next page, are dropped.}
 
-\item{min_group_rows}{Integer (default \code{2}).  Widow/orphan control for the
+\item{min_group_rows}{A non-negative whole number (default \code{2}).
+Widow/orphan control for the
 group-aware splits (\code{"group_force"}, \code{"group_safe"}, \code{"by_value"}): when a
 page would end on a group that \emph{starts} on that page while showing fewer
-than \code{min_group_rows} of the group's child rows, the whole group is moved
-to the next page.  This prevents a lone group header being stranded at the
-foot of a page with none (or too few) of its members.  Set to \code{0} to
-disable (the previous behaviour).}
+than \code{min_group_rows} of the group's child rows (the rows after its first
+row), the whole group is moved to the next page; and a cut inside a group
+is pulled back so at least \code{min_group_rows} of its rows go on to the next
+page.  This prevents a lone group header being stranded at the foot of a
+page with none (or too few) of its members.  Set to \code{0} to disable (the
+previous behaviour).}
 
 \item{blank_rows}{Where to insert blank separator rows in the body.  \code{NULL}
 (default) inserts none (but an \code{rtf_blank_rows} attribute already on the
@@ -289,7 +304,11 @@ input is still honoured).  Accepts any of -- or a \code{list()} combining:
 \describe{
 \item{an integer vector of positions}{a blank row is inserted \emph{after} each
 given data-row index; \code{0} = before the first row, \code{-1} = after the last
-row (e.g. \code{c(0, 5, -1)}).}
+row (e.g. \code{c(0, 5, -1)}).  A position is a whole number in
+\verb{-1..nrow} of the whole body (after \code{stub}, before pagination): a
+fraction, \code{NA}, or a position past the body's last row (or below
+\code{-1}) stops, naming the positions.  On a page shorter than \code{k}, a
+position \code{k} within the body puts no blank on that page.}
 \item{\code{"between_groups"}}{a blank at every group transition on \code{group_col},
 using this call's \code{group_by} detection (auto / indent / value / filled).}
 \item{a \code{\link[=blank_rows_by_change]{blank_rows_by_change()}} object}{insert a blank whenever the group
@@ -476,7 +495,7 @@ up and passing \code{listing} as well is an error.  An rlistings
 
 \item{stub}{Row-stub settings, as a \code{\link[=stub_spec]{stub_spec()}} object -- or, as a
 shorthand for \code{stub_spec(vars)}, a bare vector of hierarchy columns
-(parent first, leaf last; at least two).  \code{NULL} (default) builds no
+(parent first, leaf last; one column is the stub as it is).  \code{NULL} (default) builds no
 stub.  This is the \strong{one} argument for everything \code{\link[=stub_cols]{stub_cols()}} can do,
 including \code{layout} and \code{label_span}.
 \describe{
@@ -527,8 +546,10 @@ bottom (leaf) row with blank cells above.}
 \item{Default}{Recognizes \strong{both} built-in delimiters: \code{"____"}
 (from \code{ydisctools::pivot_stats_wider()}) and \code{"___tlang_delim___"}
 (tfrmt's column delimiter).}
-\item{Your own}{Pass your own separator(s) to override, or \code{NULL} to
-disable (use the plain \code{names(data)} single-row header).}
+\item{Your own}{Pass your own separator(s), a character vector, to
+override, or \code{NULL} (or \code{character(0)}) to disable (use the plain
+\code{names(data)} single-row header).  \code{NA} and \code{""} entries are
+ignored; another type is an error.}
 \item{Blank cells}{With the \code{"____"} separator a doubled separator
 (\code{"________"}) yields an empty middle segment, i.e. a \strong{blank
 cell} at that header level (handy to align a column that skips an
@@ -560,7 +581,10 @@ and the table's total is their sum.}
 total turns out to be.}
 \item{\code{table_width_twips}}{the total, absolute.}
 \item{\code{table_width_pct} / \code{table_width_pct_of_writable}}{the total, as
-a share of the writable page width (paper minus the side margins).}
+a share of the writable page width (paper minus the side margins).
+Used only when \code{table_width_twips} is not given: the twips win.  Give
+one of the two percentages, not both; given both, \code{table_width_pct}
+wins, as in \code{\link[=rtftable]{rtftable()}}.}
 \item{nothing}{the writable width: the row-heading columns by their
 content, the data columns sharing the rest (\code{\link[=default_col_widths]{default_col_widths()}}).}
 }
@@ -570,9 +594,14 @@ there.}
 \item{border, style}{Passed to \code{\link[=rtftable]{rtftable()}} for every page.  \code{border}
 defaults to \code{"tfl"}.}
 
-\item{first_rows}{The rows of the first page, the rest paginated as the
+\item{first_rows}{The rows of the first page (a whole number, 1 or more;
+as many as the table has or more is one page), the rest paginated as the
 other arguments say (\code{max_rows}, \code{split}): the page a table shares with
-the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  \code{NULL}
+the content before it, \code{\link[=rtf_tables]{rtf_tables()}}\code{(page_break = FALSE)}.  Under
+\code{"group_safe"} / \code{"group_force"} a group the cut falls inside goes on
+with its continuation row on the next page, counted in its \code{max_rows},
+as a cut by \code{max_rows} does.  A \strong{listing} record is not cut: the first
+page ends before the record the row count falls in.  \code{NULL}
 (the default): the first page as the others.  Not with \code{page_by},
 \code{split = "by_value"} or a custom \code{split}.}
 }
@@ -584,8 +613,8 @@ value-based (or the input was a named list) the list is named.
 \code{as_rtftables()} is the single entry point for turning a \emph{table object}
 into a list of \code{\link[=rtftable]{rtftable()}} objects -- one per RTF page -- ready to hand
 straight to \code{\link[=rtf_tables]{rtf_tables()}}.  It unifies two jobs that used to be split
-across \code{paginate()} (page splitting, removed in 0.9.0) and \code{rtf_tables(read_gt = )}
-(metadata extraction):
+across \code{paginate()} (page splitting) and \code{rtf_tables(read_gt = )} (metadata
+extraction), both removed in 0.9.0:
 }
 \details{
 \enumerate{
@@ -610,7 +639,9 @@ expanded member by member), rtables/tern \code{VTableTree}
 tables, rlistings \code{listing_df} listings,
 \code{flextable} tables, \code{huxtable} tables, plain \code{data.frame} / tibble,
 or a \code{list} of any of these (the list is flattened, names propagated as
-\code{name}, repeated on every page it makes).  Figures are out of scope -- use
+\code{name}, repeated on every page it makes, with the \code{"...n"} tail of pages
+that share a heading: \code{"name...1"}, \code{"name...2"}).  Figures are out of
+scope -- use
 \code{\link[=rtf_figures]{rtf_figures()}} for those.
 }
 \section{What is carried, by source}{
@@ -638,9 +669,9 @@ Per-column alignment        \tab yes \tab yes \tab yes \tab yes \cr
 Spanning headers            \tab yes \tab yes \tab yes \tab yes \cr
 Column widths               \tab yes (px/pct) \tab -- \tab -- \tab -- \cr
 Title + subtitle            \tab yes \tab yes \tab yes (caption) \tab yes (caption) \cr
-Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab -- \cr
-In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab -- \tab -- \cr
-Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \tab yes (rendered) \cr
+Footnotes / source notes    \tab yes \tab yes \tab yes (footer) \tab yes (\code{add_footnote()} rows) \cr
+In-cell footnote marks      \tab yes (superscript) \tab yes (superscript) \tab as text \tab -- \cr
+Row-group rows + indent     \tab yes (rendered) \tab yes (rendered) \tab group rows, no indent \tab as typed, no indent \cr
 \code{tab_style()} cell styles   \tab yes (see below) \tab -- \tab -- \tab -- \cr
 }
 
@@ -659,10 +690,19 @@ fonts and sizes, header text colour, and gt's \strong{theme} borders
 
 For flextable the \emph{displayed} text is read (header labels set via
 \code{set_header_labels()} and \verb{colformat_*()} formatting included), not the raw
-\verb{$body$dataset}.  Cells composed of images / equations and \code{footnote()}
-reference marks are not carried.  For huxtable the displayed text is likewise
-read (its \code{number_format} applied); huxtable has no footnote concept, so only
-the caption (a page title) is carried.
+\verb{$body$dataset}.  Cells composed of images / equations are not carried.  A
+\code{footnote()} reference mark is read as plain text, not superscript: it
+follows the cell's text (\code{"55.1a"}) and leads its footer line (\code{"aNote"}).
+The group rows \code{as_grouped_data()} makes are rows of text (\code{"g: A"}) and the
+rows under them get no indent (the cell padding is not read).  For huxtable
+the displayed text is likewise read (its \code{number_format} applied), and the
+caption is the page title.  huxtable has no footnote concept of its own; the
+rows \code{add_footnote()} appends (a last row whose first cell spans the table)
+are read as the footnote lines, not as body rows -- with one column the
+shape cannot be told from a row, so they stay in the body then.  Only the
+\code{header_rows()} from the first row on are the column header, and the text of
+a cell is read as typed (leading spaces kept; \code{left_padding()} is not read,
+so there is no indent).
 
 \strong{Not carried} (RTF cannot reproduce these, or they belong to the
 source's own theme): cell background colours / fills, font and size

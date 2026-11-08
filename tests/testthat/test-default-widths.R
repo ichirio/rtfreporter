@@ -12,7 +12,7 @@ test_that("the data columns share the rest equally; the row headings by content"
   expect_named(w, c("Characteristic", "Placebo", "Active"))
   expect_identical(unname(w[2:3]), c(1, 1))
   # a longer label, a wider row-heading column -- up to its cap
-  long <- default_col_widths(.dm(strrep("x", 40)))
+  long <- default_col_widths(.dm(strrep("x", 60)))
   expect_gt(long[["Characteristic"]], w[["Characteristic"]])
   huge <- default_col_widths(.dm(strrep("x", 200)), digits = 6L)
   expect_lte(huge[["Characteristic"]] / sum(huge), 0.45 + 1e-6)
@@ -28,6 +28,20 @@ test_that("many data columns lower the row headings' cap; indentation raises it"
   wf <- default_col_widths(flat, digits = 6L)
   wi <- default_col_widths(.dm(strrep("x", 200)), digits = 6L)
   expect_gt(wi[["Characteristic"]] / sum(wi), wf[["Characteristic"]] / sum(wf))
+})
+
+test_that("the row headings are at least one and a half data columns, at any count (#791)", {
+  short <- function(nd) {
+    data.frame(Param = c("A", "B"),
+               as.data.frame(matrix("1", 2, nd, dimnames = list(NULL, paste0("V", seq_len(nd))))),
+               stringsAsFactors = FALSE)
+  }
+  for (nd in c(1L, 2L, 3L, 6L, 12L)) {
+    w <- default_col_widths(short(nd), digits = 6L)
+    expect_gte(w[["Param"]], 1.5 - 1e-6)
+  }
+  # one data column: 60:40, over the 40% cap
+  expect_identical(unname(default_col_widths(short(1L))), c(1.5, 1))
 })
 
 test_that("a data column whose cells do not fit is widened from the others", {
@@ -63,6 +77,6 @@ test_that("an rtftable with no widths renders them; one with widths is unchanged
 test_that("a table split into column pages keeps each column's default width", {
   d <- cbind(.dm(), as.data.frame(matrix("1", 3, 4, dimnames = list(NULL, paste0("V", 1:4)))))
   tbl <- rtftable(d)
-  pages <- paginate_cols(tbl, at = 5, width = "keep")
+  pages <- paginate_cols(tbl, at = 5, keep = 1)
   expect_equal(pages[[1L]]$col_rel_width[1L], pages[[2L]]$col_rel_width[1L])
 })
