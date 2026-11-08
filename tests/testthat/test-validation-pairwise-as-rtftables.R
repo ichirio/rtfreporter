@@ -362,6 +362,12 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
   # the counted separators after records 1 and 2 are among the first rows
   if (!is.na(fr) && count && cs$blank_rows == "yes") fr <- fr + if (cs$first_rows == "end") 1L else 2L
   if (!is.na(fr)) args$first_rows <- fr
+  # first_rows does not cut a record (FR-IX414): a cut on the first line of a
+  # record of several rows leaves that record to the next page, so the first page is the
+  # records before it
+  fr_page <- if (identical(cs$first_rows, "inside") && rec_rows[3L] > 1L) {
+    sum(rec_rows[1:2]) + as.integer(count && cs$blank_rows == "yes")
+  } else fr
   if (cs$blank_rows == "yes") args$blank_rows <- "between_groups"
   pages <- do.call(as_rtftables, args)
   bad <- character(0)
@@ -425,7 +431,7 @@ test_that("FT-TB782 [FR-TB596 FR-TB611]: decision table -- by_value with a stub 
     top_empty <- !nzchar(r$subj[1L]) && !nzchar(r$seq[1L]) && !nzchar(r$term[1L])
     as.integer(count && 0L %in% pages[[i]]$blank_rows && !top_empty)
   }, 0L)
-  if (!is.na(fr) && body_n[1L] != fr) bad <- c(bad, "first_rows")
+  if (!is.na(fr) && body_n[1L] != fr_page) bad <- c(bad, "first_rows")
   if (!is.na(mr)) {
     if (any((if (!is.na(fr)) n[-1L] else n) > mr)) bad <- c(bad, "budget")
   } else if (length(pages) != 1L + !is.na(fr)) {
