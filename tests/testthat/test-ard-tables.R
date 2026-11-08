@@ -1637,3 +1637,93 @@ test_that("a label two variables share keeps each variable's own order", {
   expect_identical(as.character(tbl$label[tbl$group == "RACE"]),
                    c("White", "Asian", "Not known"))
 })
+
+test_that("a label column that names a key is recoded like a row key", {
+  skip_if_no_cards()
+  d <- data.frame(
+    TRTA   = rep(c("Drug", "Control"), each = 24),
+    PARAM  = rep(c("ALT", "AST"), 24),
+    BNRIND = rep(c("LOW", "NORMAL", "HIGH", "NORMAL"), 12),
+    ANRIND = rep(c("NORMAL", "HIGH", "LOW"), 16),
+    stringsAsFactors = FALSE)
+  ard <- cards::ard_stack(d, .by = c("TRTA", "PARAM", "BNRIND"),
+                          cards::ard_tabulate(variables = ANRIND),
+                          .attributes = FALSE)
+  codes <- c(LOW = "Low", NORMAL = "Normal", HIGH = "High")
+  built <- function(...) {
+    p <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                    rows = c(group = "PARAM"), label = "BNRIND") |>
+      plan_cells(categorical = "{n}", notes = FALSE) |>
+      plan_labels(...)
+    plan_apply(p, "table")
+  }
+  rows_of <- function(x) as.character(x$BNRIND[x$group == "ALT"])
+  none <- built()
+  expect_setequal(rows_of(none), c("LOW", "NORMAL", "HIGH"))
+
+  # the key's own entry reaches the rows; the header (.label) is another key
+  x <- built(BNRIND = codes)
+  expect_setequal(rows_of(x), c("Low", "Normal", "High"))
+  expect_true(all(c("Control____LOW", "Control____HIGH") %in% names(x)))
+  # the cells are the ones the codes had
+  expect_identical(unname(unlist(x[x$group == "ALT" & x$BNRIND == "High",
+                                   grep("____", names(x))])),
+                   unname(unlist(none[none$group == "ALT" & none$BNRIND == "HIGH",
+                                      grep("____", names(none))])))
+
+  # a flat entry too, and a value with no label keeps its code
+  expect_setequal(rows_of(built(LOW = "Low", HIGH = "High")),
+                  c("Low", "NORMAL", "High"))
+
+  # the order plan_levels() gives, in the codes or in the text
+  lv_codes <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                         rows = c(group = "PARAM"), label = "BNRIND") |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_levels(BNRIND = c("LOW", "NORMAL", "HIGH")) |>
+    plan_labels(BNRIND = codes)
+  expect_identical(rows_of(plan_apply(lv_codes, "table")), c("Low", "Normal", "High"))
+  lv_text <- table_plan(normalize_ard(ard), cols = c("TRTA", ".label"),
+                        rows = c(group = "PARAM"), label = "BNRIND") |>
+    plan_cells(categorical = "{n}", notes = FALSE) |>
+    plan_levels(BNRIND = c("High", "Normal", "Low")) |>
+    plan_labels(BNRIND = codes)
+  expect_identical(rows_of(plan_apply(lv_text, "table")), c("High", "Normal", "Low"))
+
+  # the analysis variable's entry is for the analysis variable's values: it no
+  # longer relabels the key's rows (it did, when the two lists shared codes)
+  y <- built(ANRIND = codes)
+  expect_setequal(rows_of(y), c("LOW", "NORMAL", "HIGH"))
+  z <- built(BNRIND = c(LOW = "Baseline low", NORMAL = "Baseline normal", HIGH = "Baseline high"),
+             ANRIND = codes)
+  expect_setequal(rows_of(z), c("Baseline low", "Baseline normal", "Baseline high"))
+})
+
+test_that("a hierarchy's label with a Total column: a term's text is on all its cells, one row", {
+  skip_if_no_cards()
+  adae <- cards::ADAE[cards::ADAE$AESOC %in% unique(cards::ADAE$AESOC)[1:2], ]
+  ard <- cards::ard_stack_hierarchical(adae, variables = c(AESOC, AEDECOD, AESEV),
+                                       by = TRTA, denominator = cards::ADSL,
+                                       id = USUBJID)
+  d <- normalize_ard(ard, hierarchy = c("AESOC", "AEDECOD", "AESEV"))
+  built <- function(...) {
+    p <- table_plan(d, cols = c("TRTA", "AESEV"), rows = c(soc = "AESOC"),
+                    label = c(label = "AEDECOD")) |>
+      plan_cells(categorical = "{n}", notes = FALSE) |>
+      plan_total(label = "Any", position = "first") |>
+      plan_labels(...)
+    x <- as.data.frame(plan_apply(p, "table"))
+    x[] <- lapply(x, function(v) if (is.factor(v)) as.character(v) else v)
+    x
+  }
+  plain <- built()
+  pt <- "DIARRHOEA"
+  x <- built(AEDECOD = c(DIARRHOEA = "Loose stools"))
+  # the same rows, the term's text on one of them, with the cells it had
+  expect_identical(nrow(x), nrow(plain))
+  expect_false(pt %in% x$label)
+  expect_identical(sum(x$label %in% "Loose stools"), 1L)
+  cells <- grep("____", names(x), value = TRUE)
+  expect_identical(x[x$label %in% "Loose stools", cells],
+                   plain[plain$label %in% pt, cells])
+  expect_false(anyNA(x[x$label %in% "Loose stools", "Placebo____Any"]))
+})

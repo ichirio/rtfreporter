@@ -532,6 +532,20 @@
   ifelse(is.na(out), "", out)
 }
 
+# A listing record's own lines are one row of the listing: a line with no BY
+# value (a wrapped line, the record's blank row) belongs to the record's BY
+# value, not to the next record's.  Filling it from the next real row, as
+# .fill_page_by_gaps() does for a stub's label row, moved the record's
+# trailing blank row onto the next BY page, as a row of the previous record's
+# keys at its top.
+.fill_record_gaps <- function(v, rec) {
+  miss <- is.na(v) | !nzchar(trimws(v))
+  if (!any(miss) || all(miss)) return(v)
+  first <- v[!miss][match(rec, rec[!miss])]
+  v[miss & !is.na(first)] <- first[miss & !is.na(first)]
+  v
+}
+
 # The partitions `page_by` implies: one per DISTINCT BY value, holding every
 # row that has it.  A page gathers its rows even when they are scattered --
 # a value that comes back later belongs to the page it names, not to a new
@@ -542,8 +556,13 @@
 # alone, and a report whose rows are merely interleaved would otherwise lose
 # half of each page without saying so.  On an already-grouped body -- the
 # usual one -- this is exactly what the runs were.
-.page_by_runs <- function(df, idx) {
-  keys <- lapply(idx, function(j) .fill_page_by_gaps(as.character(df[[j]])))
+.page_by_runs <- function(df, idx, record = NULL) {
+  rec <- if (!is.null(record) && record %in% names(df)) df[[record]]
+  keys <- lapply(idx, function(j) {
+    v <- as.character(df[[j]])
+    if (!is.null(rec)) v <- .fill_record_gaps(v, rec)
+    .fill_page_by_gaps(v)
+  })
   key  <- do.call(paste, c(keys, list(sep = "\r")))
   lab  <- do.call(paste, c(keys, list(sep = ", ")))
   cols <- names(df)[idx]
@@ -668,7 +687,7 @@
   inner   <- in_attr[in_attr > 0L]
 
   out <- list(); by_lab <- character(0); grp_lab <- character(0); by_val <- list()
-  for (r in .page_by_runs(x, idx)) {
+  for (r in .page_by_runs(x, idx, args$collapse_record)) {
     part <- x[r$rows, , drop = FALSE]
     rownames(part) <- NULL
     loc <- match(inner, r$rows)
