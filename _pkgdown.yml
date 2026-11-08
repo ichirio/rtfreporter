@@ -784,6 +784,9 @@ articles:
     contents:
       - articles/ai-plan-code-ja
       - articles/ai-development-ja
+      - articles/ai-agents-ja
+      - articles/ai-agents-claude-app-ja
+      - articles/ai-agents-vscode-copilot-ja
       - articles/architecture-ja
       - articles/extending-adapters-ja
       - articles/several-contents-ja

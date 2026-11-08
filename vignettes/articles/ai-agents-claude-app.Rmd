@@ -25,11 +25,9 @@ knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 ```
 
-<!-- The Japanese page is added later, beside this one. Then put this here:
 <p align="right">
   <a class="btn btn-outline-secondary btn-sm" href="ai-agents-claude-app-ja.html">In Japanese</a>
 </p>
--->
 
 This page sets up the Claude desktop app's Code tab for work on rtfreporter,
 tflspec or tflplanner. Read [Developing with AI agents](ai-agents.html) first:

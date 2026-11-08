@@ -25,11 +25,9 @@ knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 ```
 
-<!-- The Japanese page is added later, beside this one. Then put this here:
 <p align="right">
   <a class="btn btn-outline-secondary btn-sm" href="ai-agents-ja.html">In Japanese</a>
 </p>
--->
 
 This article is for a contributor who works with an **agent**: a tool that
 edits files and runs commands in the repository. Two such tools are covered:

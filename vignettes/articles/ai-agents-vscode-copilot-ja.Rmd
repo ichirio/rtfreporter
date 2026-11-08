@@ -1,0 +1,219 @@
+---
+title: "AI エージェント：VS Code と GitHub Copilot の設定"
+---
+
+```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+<p align="right">
+  <a class="btn btn-outline-secondary btn-sm" href="ai-agents-vscode-copilot.html">In English</a>
+</p>
+
+このページでは、rtfreporter、tflspec、tflplanner の作業用に、VS Code と GitHub
+Copilot のエージェントを設定します。先に
+[AI エージェントを使った開発](ai-agents-ja.html) を読んでください。設定が何のためか
+が書いてあります。設定が終わったら、ワークフローはそちらのページに戻って確認します。
+
+ここに書いた内容は、2026-11-08 に読んだ VS Code と GitHub のドキュメントに基づいて
+います（リンクを参照）。Copilot の画面や設定はよく変わります。ドキュメントで手順を
+確認できなかった箇所には **（要確認）** と付けています。
+
+## リポジトリを開く
+
+1. リポジトリをクローンします。コントリビューターはフォークをクローンし、
+   コラボレーターは `ichirio/rtfreporter` をクローンします
+   （`CONTRIBUTING.md` の *Contributor vs Collaborator*）。VS Code の Source Control
+   を使う手順も `CONTRIBUTING.md` にあります。
+2. VS Code でフォルダーを開きます（**File** > **Open Folder**）。
+3. 正しいベースからトピックブランチを作ります。コマンドパレットで
+   **Git: Create Branch...** を実行します。コントリビューターは `main` からブランチ
+   を作り、`main` に向けて PR を出します。メンテナーのブランチは `next` に向けます
+   （`CONTRIBUTING.md` の *Branching & collaboration*）。Copilot の指示ファイルが指す
+   `AGENTS.md` には `main` しか書かれていないので、メンテナーは
+   `CONTRIBUTING.md` に従ってください。
+4. Chat ビューを開き、Agent picker で **Agent** を選びます。**（要確認：**どの
+   「ハーネス」を選ぶか。ドキュメントには Local と Copilot のハーネスセッションが
+   出てきます。**）**
+
+## 環境
+
+エージェントが実行するコマンドには、自分の環境ではなく、作業用のライブラリと作業用
+のホームが見えている必要があります
+（[共有ページの「環境」](ai-agents-ja.html#the-environment)）。
+
+* エージェントはコマンドを統合ターミナルで実行します。変数（`R_LIBS_USER`、`HOME`、
+  `R_USER_CACHE_DIR`、`R_USER_DATA_DIR`、`R_USER_CONFIG_DIR`、`TMP`、`TEMP`、
+  `TMPDIR`、`WORK_ROOT`）を設定したシェルから VS Code を起動します。そうすれば、
+  すべてのターミナルが変数を引き継ぎます。
+  **（要確認：**お使いのプラットフォームで、統合ターミナルに変数を設定する VS Code
+  の設定は何か。エージェントのターミナルがそれを使うかどうか。**）**
+* どの R を呼ぶかは、フルパスで指示ファイルに書いてエージェントに伝えます
+  （次の節）。
+
+そのうえで、共有ページのチェックスクリプトをエージェントに実行させます。
+
+> 「環境」のスクリプトをリポジトリの外に `check-env.R` として保存し、プロジェクトの
+> R で実行して、出力を見せてください。
+
+最後に `Environment OK.` と出れば成功です。途中で止まったら、先に環境を直します。
+
+## 指示ファイル
+
+VS Code の Copilot は `.github/copilot-instructions.md` または `AGENTS.md` を読み
+ます。このリポジトリには両方あります。`.github/copilot-instructions.md` は
+`AGENTS.md`、`CONTRIBUTING.md`、AI 開発者マニュアルをすでに指しています。短く保ち、
+ルールは 1 か所にまとめてください。エージェント専用の行だけを追加します。
+
+```markdown
+- Call R by its full path (the project's R), never a bare `Rscript`.
+- Run the pre-PR check (`/pre-pr`) before you open a pull request.
+- Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:` in `DESCRIPTION`.
+- Stop and ask before you push, install into a library, or delete files.
+```
+
+ファイルが読まれたかどうかは、次の方法で確認します。
+
+* コマンドパレットで **Chat: Open Customizations** を実行し、**Instructions** を
+  選びます。ファイルが一覧に出るはずです。これは、ファイルが見つかったことを示す
+  だけで、エージェントが従ったことは示しません。
+* 新しいチャットを始め、回答の **References** セクションを見ます（表示される場合）。
+* 変更内容とツールの動きを読んで、ルールが守られたかを確認します。
+
+出典：<https://code.visualstudio.com/docs/copilot/customization/custom-instructions>、
+<https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions>
+
+## 承認
+
+エージェントは、ツールを実行する前に承認を求めます。承認のプロンプトでは
+**Allow Once** を選べます。ターミナルの設定 `chat.tools.terminal.autoApprove` には、
+確認なしでコマンドを承認するルールを書きます。各ルールは `true`（承認）、
+`false`（確認する）、または `/` で囲んだ正規表現です。この作業では、ユーザー設定
+またはワークスペース設定に次のように書きます。
+
+```json
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^git (status|diff|log)\\b/": true,
+    "git push": false,
+    "rm": false
+  }
+}
+```
+
+ドキュメントから、3 点を挙げます。複合コマンドは、すべての部分が `true` のルールに
+一致したときだけ承認されます。`false` のルールは VS Code に確認させるだけで、コマンド
+をブロックはしません。そしてドキュメントはこのルールを「最善努力の便宜機能であり、
+セキュリティ境界ではない」としています。そのため、環境の節にあるように、作業領域を
+自分のファイルから分けておいてください。
+
+次の 3 つは「確認する」のままにします。`git push`、作業用ライブラリ以外への
+インストール、ファイルの削除です。**（要確認：**プロジェクトの R をフルパスで許可
+するルールの書き方。`Rscript` を許可するルールが適切かどうか。**）**
+
+出典：<https://code.visualstudio.com/docs/agents/run/approvals>
+
+## PR 前チェック
+
+**プロンプトファイル**は、`<name>.prompt.md` という名前の Markdown ファイルです。
+ワークスペースのプロンプトファイルは `.github/prompts/` に置きます。チャット入力で
+`/<name>` と入力するか、コマンドパレットの **Chat: Run Prompt** で起動します。
+Chat ビューの Local セッションで実行されます。次は
+`.github/prompts/pre-pr.prompt.md` の例です。
+
+```markdown
+Run these in order. Stop at the first failure and report it.
+
+1. Run the tests of the changed area.
+2. Run `lintr::lint_package()`. It must report 0 lints.
+3. List the `pkg::` uses and `requireNamespace()` calls added in the diff, and
+   check each is declared in `DESCRIPTION`.
+4. If the change is in tflspec, run tflplanner's tests too.
+5. Report each result in the form the pull request template asks for.
+
+Do not edit `NEWS.md`, `CHANGELOG.md` or `Version:`.
+```
+
+プロンプトファイルは、先頭にフロントマターを置けます。項目はすべて任意です。
+`description`、`name`、`argument-hint`、`agent`（`ask`、`agent`、`plan`、または
+カスタムエージェント）、`model`、`tools` があります。`mode` という項目はありません。
+この例にはどれも要りません。実行するエージェントを固定したいときは `agent: agent`
+を足します。
+
+これは、変更ごとに回す軽いサブセットです。`CONTRIBUTING.md` にある push 前の 4 つの
+チェック（`R CMD check --as-cran`、`devtools::test()`、`pkgdown::check_pkgdown()`、
+lintr）の代わりにはなりません。完全なセットは CI が実行し、リリース前にはメンテナー
+も実行します。
+
+出典：<https://code.visualstudio.com/docs/copilot/customization/prompt-files>
+
+## 編集ごとのチェック
+
+VS Code にはフックがあります（**Preview**）。フックは、決まったタイミングで実行
+されるコマンドです。ワークスペースのフックは `.github/hooks/` の JSON ファイルです。
+イベント名は `preToolUse` と `postToolUse` です。`preToolUse` フックは
+`permissionDecision` に `"deny"` を入れて返すと、呼び出しをブロックします。
+`postToolUse` フックは、終わった操作を取り消せません。`preToolUse` フックがエラーで
+失敗すると、呼び出しは拒否されます。タイムアウトの場合は、通常の承認に進みます。
+「`NEWS.md` や `Version:` の編集を拒否する」というルールは、`preToolUse` フック
+1 つで書けます。
+
+フックファイルの形は次のとおりです（コマンドはプレースホルダーです）。
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      { "type": "command", "command": "<your script>", "timeoutSec": 10 }
+    ]
+  }
+}
+```
+
+スクリプトには入力として `toolName` と `toolArgs` が渡されます。拒否するには、
+`permissionDecision` に `"deny"` を入れ、`permissionDecisionReason` を付けて出力
+します。`{}` は「判断しない」の意味です。`PreToolUse` のようなパスカルケースの
+イベント名は別名で、snake_case の項目と Claude 形式のツール名（`Read`、`Write`、
+`Edit`）を使います。**（要確認：**ファイル編集の Copilot ネイティブのツール名。
+ドキュメントに載っていないため、このページではマッチャーの例を示しません。**）**
+この機能は Preview なので、自分でフックを試すまでは、これらのルールを PR 前チェック
+と CI に任せてください。
+
+PR #935 のブランチ（まだデフォルトブランチにはありません）の `.claude/` にある
+フックの例は、Claude Code 向けに書かれ、Claude でのみ確認しています。
+[Claude アプリのページ](ai-agents-claude-app-ja.html#checks-on-each-edit) を参照して
+ください。
+
+出典：<https://code.visualstudio.com/docs/copilot/customization/hooks>
+
+## その後
+
+[共有ページのワークフロー](ai-agents-ja.html#the-workflow)に戻ります。Issue、小さな
+ブランチ、テストを先に書く、PR 前チェック、PR の順です。Issue や PR を読むときは、
+ターミナルの GitHub CLI（`gh`）を使うのが安全です。**（要確認：**VS Code の GitHub
+連携で Issue や PR を読む方法。**）**
+
+作業の一部を別のエージェントに任せるには、VS Code のサブエージェントを使います。
+サブエージェントは、自分のコンテキストで作業し、絞った結果だけを返します。会話は
+引き継がないので、目的、対象のファイル、期待する結果を伝えてください。
+出典：<https://code.visualstudio.com/docs/copilot/agents/subagents>

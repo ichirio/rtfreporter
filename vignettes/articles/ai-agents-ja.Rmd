@@ -1,0 +1,317 @@
+---
+title: "AI エージェントを使った開発"
+---
+
+```{r, include = FALSE}
+# A chunk's code sits under "Show code": open when it is what the page is
+# about (`fold = "open"`), closed when it only supports it (`fold = "closed"`,
+# the default unless the page sets another); `fold = FALSE` shows it plain,
+# and so is code of three lines or fewer.
+# Its results stay outside, always shown.
+.fold_src <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+  f <- if (is.null(options$fold)) "closed" else options$fold
+  # short code -- three lines or fewer, a chunk or the part of one before
+  # its next output -- is shown as it is: folded, it would hide less than
+  # the fold itself takes
+  if (isFALSE(f) || length(unlist(strsplit(x, "\n", fixed = TRUE))) <= 3L) {
+    return(.fold_src(x, options))
+  }
+  paste0("\n\n<details", if (identical(f, "open")) " open", ">",
+         "<summary>Show code</summary>\n\n",
+         .fold_src(x, options), "\n\n</details>\n\n")
+})
+knitr::opts_chunk$set(fold = "open")   # this page: the code is the subject
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+<p align="right">
+  <a class="btn btn-outline-secondary btn-sm" href="ai-agents.html">In English</a>
+</p>
+
+この記事は、**エージェント**と一緒に開発するコントリビューター向けです。エージェントとは、
+リポジトリのファイルを編集し、コマンドを実行するツールです。ここでは 2 つを扱います。
+Claude デスクトップアプリ（Code タブ）と、VS Code の GitHub Copilot エージェントです。
+このページには、両方に共通する内容を書きます。ツールごとの手順は、それぞれのページにあります。
+
+* [Claude デスクトップアプリのセットアップ](ai-agents-claude-app-ja.html)
+* [VS Code と GitHub Copilot のセットアップ](ai-agents-vscode-copilot-ja.html)
+
+**（要確認）** と付けた項目は、まだ確認が取れていません。事実ではなく、未解決の疑問として読んでください。
+ツールのドキュメントに書かれていない、この記事独自の助言には、そのことを明記しています。
+
+## 1. この記事の位置づけ
+
+近い内容を扱うページはすでにあります。この記事では繰り返しません。
+
+* `CONTRIBUTING.md` と[アーキテクチャの記事](architecture.html)には、ブランチ、ラベル、レビュー、
+  バージョン管理のルールがあります。
+* [AI アシスタントを使った開発](ai-development-ja.html)は、AI 開発者マニュアルを渡すチャット
+  アシスタント向けです。
+* この記事は、エージェントのセットアップ、エージェントとの進め方、
+  エージェントが作ったものの確認方法を扱います。
+
+rtfreporter、tflspec、tflplanner の 3 パッケージは、1 つのセットアップで足ります。1 つの変更が
+複数のパッケージにまたがることが多いためです。パッケージごとに違う点は、本文で述べます。
+
+この記事の対象外は 2 つです。試験の解析コードを書くこと（[AI チャットに Table のプランコードを
+頼む](ai-plan-code-ja.html)を参照）と、各パッケージがユーザー向けに同梱する AI キットです。
+
+## 2. 環境 {#the-environment}
+
+エージェントは、ブランチのビルドをインストールし、テストを実行します。自分の R ライブラリがパスに
+あると、たまたまインストールしてあるパッケージのおかげでテストが通ることがあります。
+インストールが、別の作業で使っているパッケージを上書きすることもあります。
+そこで、エージェントには専用の**作業ライブラリ**と**作業用ホーム**を用意します。
+
+* **R のバージョン。** `DESCRIPTION`（`Depends:`）と、`.github/workflows/R-CMD-check.yaml` の
+  CI マトリクスで確認します。このページから写さないでください。
+* **フォルダ。** 最初の R 呼び出しの前に、`R_LIBS_USER`、`HOME`、`R_USER_*` のフォルダ
+  （`R_USER_CACHE_DIR`、`R_USER_DATA_DIR`、`R_USER_CONFIG_DIR`）を、作業エリアのフォルダに
+  設定します。`Rscript -e` の 1 行だけの呼び出しでも同じです。`TMP`、`TEMP`、`TMPDIR` も設定し、
+  システムの一時フォルダにファイルが残らないようにします。
+* **Windows。** `HOME` だけでは足りません。R はユーザーライブラリを見つけてしまいます。
+  `R_LIBS_USER` も設定します。
+* **どの R か。** プロジェクトが指定する R を、フルパスで呼びます。パスの先頭にある `Rscript` を
+  そのまま使わないでください。
+
+セッションごとに、最初に下のスクリプトを実行します。重要な情報を出力し、作業エリアの外のライブラリや
+フォルダが使われていれば停止します。実行する前に、`WORK_ROOT` を作業フォルダに設定してください。
+このページはスクリプトを表示するだけで、実行はしません。
+
+```{r check-env, eval = FALSE}
+# check-env.R -- run first: Rscript check-env.R
+# WORK_ROOT is the folder that holds the work library and the work home.
+win <- .Platform$OS.type == "windows"
+norm <- function(path) {
+  p <- sub("/+$", "", normalizePath(path, winslash = "/", mustWork = FALSE))
+  if (win) tolower(p) else p   # drive and folder case do not matter on Windows
+}
+root <- Sys.getenv("WORK_ROOT")
+if (!nzchar(root) || !dir.exists(root)) {
+  stop("Set WORK_ROOT to an existing work folder first.", call. = FALSE)
+}
+root <- norm(root)
+# TRUE for the root itself and for a path below it; "C:/work-old" is not.
+under_root <- function(path) {
+  p <- norm(path)
+  nzchar(path) && (p == root || startsWith(p, paste0(root, "/")))
+}
+
+cat("R:", R.version.string, "\n")
+cat("R home:", R.home(), "\n")
+cat("Library paths:\n")
+print(.libPaths())
+
+for (pkg in c("rtfreporter", "tflspec", "tflplanner")) {
+  loc <- system.file(package = pkg)
+  cat(sprintf("%-12s %s\n", pkg, if (nzchar(loc)) loc else "(not installed)"))
+}
+for (pkg in c("testthat", "lintr", "roxygen2", "covr")) {
+  ver <- tryCatch(as.character(utils::packageVersion(pkg)),
+                  error = function(e) "(not installed)")
+  cat(sprintf("%-12s %s\n", pkg, ver))
+}
+
+# The base library and the site library of this R are allowed and listed;
+# every other library must be in WORK_ROOT.
+allowed <- unique(c(.Library, .Library.site))
+cat("Allowed (base and site):\n", paste0("  ", allowed, collapse = "\n"), "\n")
+libs <- .libPaths()
+libs <- libs[!norm(libs) %in% norm(allowed)]
+outside <- libs[!vapply(libs, under_root, logical(1))]
+
+# R_LIBS_USER must be set, and each folder in it must exist and be in WORK_ROOT.
+# (.libPaths() leaves out a folder that does not exist.)
+user_libs <- strsplit(Sys.getenv("R_LIBS_USER"), .Platform$path.sep)[[1]]
+bad_user <- length(user_libs) == 0L ||
+  !all(vapply(user_libs, function(p) under_root(p) && dir.exists(p), logical(1)))
+
+dirs <- Sys.getenv(c("HOME", "R_USER_CACHE_DIR", "R_USER_DATA_DIR",
+                     "R_USER_CONFIG_DIR", "TMP", "TEMP", "TMPDIR"))
+bad_dirs <- names(dirs)[!vapply(dirs, under_root, logical(1))]
+
+if (length(outside) > 0L || bad_user || length(bad_dirs) > 0L) {
+  if (length(outside) > 0L) {
+    cat("Libraries outside WORK_ROOT:\n", paste0("  ", outside, collapse = "\n"), "\n")
+  }
+  if (bad_user) {
+    cat("R_LIBS_USER is unset, missing, or outside WORK_ROOT.\n")
+  }
+  if (length(bad_dirs) > 0L) {
+    cat("Folders outside WORK_ROOT (or unset):", paste(bad_dirs, collapse = ", "), "\n")
+  }
+  stop("A library or folder outside the work area is in use. Fix the environment first.",
+       call. = FALSE)
+}
+cat("Environment OK.\n")
+```
+
+**データ。** 使うのは架空のデータ（Example Pharma）と、パッケージに同梱のサンプル試験だけです。
+会社、試験、患者のデータは、コード、テスト、Issue、プルリクエスト、エージェントのセッションに
+入れないでください。
+
+## 3. ハーネスに入れるもの
+
+**ハーネス**とは、エージェントの周りにあるものすべてです。指示、繰り返し使うタスク、権限、
+そして合否を決めるチェックが含まれます。
+
+### 指示ファイル
+
+3 つのコピーを持たず、原本を 1 つにして、そこを指す短いポインターを置きます。ファイルは次のとおりです。
+
+* `AGENTS.md`: 共通の案内です。このリポジトリにあります。
+* `CLAUDE.md`: Claude Code が読みます。このリポジトリにあります。`@AGENTS.md` をインポートし、
+  Claude Code 向けのメモを足しています。この形を保ってください。
+* `.github/copilot-instructions.md`: Copilot が読みます。このリポジトリにあります。
+
+書く内容は短くします。
+
+* 正式な文書の場所（`CONTRIBUTING.md`、アーキテクチャの記事、AI 開発者マニュアル）。
+* どのブランチから作業するか。
+* エージェントが触ってはいけないもの。`DESCRIPTION` の `Version:` と `NEWS.md` です。
+* テストと lint のコマンド。
+* 止まって質問する場面。
+
+Claude Code は、セッションの開始時に `CLAUDE.md` を読みます。`AGENTS.md` を読むのは `CLAUDE.md` が
+ないときだけです。共通の文面を使いたい `CLAUDE.md` は、このリポジトリのようにインポートします。
+VS Code の Copilot は、`.github/copilot-instructions.md` か `AGENTS.md` を読みます。ファイルが
+読まれたことを確かめる方法は、各セットアップのページにあります。指示ファイルは依頼であって、
+ロックではありません。Claude Code のドキュメントもそう述べており、操作を止めるのはフックだと
+書いています。
+
+### PR 前チェックを繰り返し使うタスクにする
+
+どちらのツールも、名前で起動できるタスクを持てます。内容は共通なので、どちらでも同じチェックが
+できます。変更のたびに実行する、軽めのサブセットです。
+
+1. 変更した部分のテストを実行する。
+2. `lintr::lint_package()` を実行する。結果は lint 0 件にする。
+3. 新しく使った `pkg::` や `requireNamespace()` が、`DESCRIPTION` で宣言されているか確認する。
+4. tflspec の変更が tflplanner を壊しうる場合は、tflplanner のテストも実行する。
+5. 各結果を PR の説明に書く。
+
+このタスクは、`CONTRIBUTING.md` にある push 前の 4 つのチェックとは別物です。4 つとは、
+`R CMD check --as-cran`、`devtools::test()`、`pkgdown::check_pkgdown()`、lintr です。
+全部を実行するのは CI と、リリース前のメンテナーです。
+
+Claude デスクトップアプリでは、このタスクを**スキル**として、VS Code では**プロンプトファイル**として
+持ちます。両方の例は、セットアップのページにあります。
+
+### 合否を決めるチェック
+
+エージェントの判断はチェックではありません。チェックとは次のものです。
+
+* `testthat`。`CONTRIBUTING.md` のとおりに実行します。
+* `lintr`。リポジトリの `.lintr` を使います。
+* `R CMD check` と、`cran-readiness` ワークフロー（スペル、URL、例の実行時間）。
+* カバレッジ。`test-coverage.yaml` にあります。
+* 宣言されていない依存。差分で `pkg::` と `requireNamespace()` を検索し、名前を `DESCRIPTION` と
+  突き合わせます。**（要確認:** 既製のツールでこの検索を置き換えるべきか。**）**
+* 依存パッケージの既知の脆弱性のスキャン。GitHub が公開している Dependabot 対応エコシステムの
+  一覧には GitHub Actions があり、R の行はありません。そのため Dependabot は R パッケージの
+  `DESCRIPTION` を読みません。このリポジトリには、現在 `.github/dependabot.yml` もありません。
+  **（要確認:** R の依存にはどのスキャナーを使うか。リポジトリの設定ですでに有効なものは何か。**）**
+
+### 編集ごとのチェック
+
+ルールによっては、最後にまとめて確認するより、編集のたびに強制するほうが向いています。変更した
+R ファイルの lint や、`DESCRIPTION` の `Version:` と `NEWS.md` への編集の拒否などです。Claude Code
+では**フック**で行います。VS Code にもフックがありますが、プレビュー版です。Claude のページには、
+プルリクエスト #935 にある例のセットを載せています。これはまだデフォルトブランチにありません。
+VS Code のページには、フックの形式を載せています。ツールにできない場合は、PR 前チェックと CI が
+同じ範囲をカバーします。
+
+## 4. 進め方 {#the-workflow}
+
+### 流れ
+
+Issue、ブランチ、小さなプルリクエスト、CI、レビュー、マージの順です。
+
+* 1 つのプルリクエストで 1 つの変更にします。説明には `Closes #n` を入れます。
+* コントリビューターは `main` に向けてプルリクエストを出します。メンテナーのトピックブランチは
+  `next` に向け、`next` は週に 1 回ほど `main` にマージされます（`CONTRIBUTING.md` の
+  *Branching & collaboration*）。Copilot の指示が指す `AGENTS.md` は `main` だけを挙げているので、
+  Copilot を使うメンテナーは `CONTRIBUTING.md` に従います。
+* 説明には、*User-visible change (for NEWS)* の文を書きます。エージェントは `NEWS.md` もバージョンも
+  編集しません。
+* エージェントはプルリクエストを作りますが、マージはしません。レビューのための間を置くことが
+  目的です。
+
+### テストを先に
+
+エージェントには、修正の前に失敗するテストを書かせ、失敗するところを見せてもらいます。そのあとで
+コードを直します。バグ報告では、再現が先です。再現手順は Issue かプルリクエストに入れます。
+
+### エージェントが得意なこと
+
+* 問題を再現し、原因を絞り込むこと。
+* 多くのファイルにまたがる機械的な編集。
+* テストを書くこと。
+* こちらが示したルールに沿った文章の翻訳。
+* ブランチを `next` に追従させること。
+
+### 人が確認すること
+
+エージェントの報告にかかわらず、次は人が確認します。
+
+* **出力の数値。** 別の方法で数えた結果と比べます（セクション 5）。
+* **画面。** 実際のブラウザーで見ます。
+* **設計上の判断、API 名、ユーザーに見えるものすべて。**
+* **次のパッケージ。** 1 つのパッケージの変更が、後続のパッケージを壊してはいけません
+  （rtfreporter、tflspec、tflplanner の順）。
+* **「完了」がコミットと一致していること。** 要約ではなく、差分を読みます。
+
+## 5. 出来上がったものの確認
+
+見た目が正しい Table でも、間違っていることがあります。確認とは、パッケージを使わずに計算した数値との
+比較です。
+
+### 手計算の期待 Table
+
+小さな架空のデータセット（Example Pharma）を作ります。例数、パーセント、N のすべてを一度だけ手で
+計算し、結果をテストの隣に置きます。テストでは、生成された Table をその結果とセルごとに比べます。
+コード自身の以前の出力とは比べません。
+
+### 例: 空の値
+
+`.xpt` ファイルから読んだデータでは、文字型の欠測は `NA` ではなく `""` になります。事象を数える
+Table は、この `""` を 1 つのカテゴリとして扱います。空白の行が 1 行余分に出力されますが、
+パーセントは正しく見えます。
+
+`NA` を使ったメモリ上のデータのテストは通ってしまい、この問題を隠します。試験が保存するのと同じ形で、
+書き出して読み戻したデータから作った手計算の Table なら、見つけられます。
+
+### 順序
+
+1. 試験が保存する形のデータを用意する（`.xpt` に書き出して読み戻す）。
+2. 期待する Table を手で作る。
+3. パッケージを実行する。
+4. 2 つをセルごとに比べる。
+5. そのあとで、人がページを見る。
+
+チェックで一度でも問題が見つかったら、回帰テストとして残します。
+
+## 6. 2 つのツールの機能比較
+
+| 作業 | Claude デスクトップアプリ（Code タブ） | VS Code と Copilot |
+|---|---|---|
+| リポジトリの常設の指示 | `CLAUDE.md`。`AGENTS.md` は `CLAUDE.md` がないときだけ読まれます。`CLAUDE.md` がインポートしていれば読まれます。 | `.github/copilot-instructions.md` か `AGENTS.md`。 |
+| 繰り返し使うタスク（PR 前チェック） | スキル: `.claude/skills/<name>/SKILL.md`。`/name` で起動します。 | プロンプトファイル: `.github/prompts/<name>.prompt.md`。`/name` で起動します。 |
+| テストと lint の実行 | ターミナルツールでコマンドを実行します。 | 統合ターミナルでコマンドを実行します。 |
+| 確認なしで実行できるもの | 権限ルールと権限モード。 | ターミナルの自動承認ルール（`chat.tools.terminal.autoApprove`）。 |
+| 編集ごとのチェック | `.claude/settings.json` のフック。 | `.github/hooks/*.json` のフック（プレビュー）。 |
+| 作業の一部を補助に渡す | 別々のセッション。それぞれ専用の worktree を使えます。 | サブエージェント。独自のコンテキストで動きます。 |
+| Issue やプルリクエストの読み取り | ターミナルの `gh`。アプリは、プルリクエストを開くと CI の状態を表示します。 | **（要確認:** VS Code の Copilot が Issue やプルリクエストをどう読むか。**）** |
+
+この表の内容は、各ツールのドキュメントを 2026-11-08 に読んで得たものです。リンクはセットアップの
+ページにあります。ツールの変化は速いので、手順どおりに動かないときは、そのツールのドキュメントを
+確認してください。
+
+## 次に読むもの
+
+* [Claude デスクトップアプリのセットアップ](ai-agents-claude-app-ja.html)
+* [VS Code と GitHub Copilot のセットアップ](ai-agents-vscode-copilot-ja.html)
+* ルールは `CONTRIBUTING.md`、チャットに添付する資料は
+  [AI 開発者マニュアル](https://ichirio.github.io/rtfreporter/ai/rtfreporter-ai-dev-manual-0.8.2.md)です。
+* チャットアシスタントについては、[AI アシスタントを使った開発](ai-development-ja.html)を参照してください。
