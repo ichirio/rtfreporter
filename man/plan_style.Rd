@@ -27,6 +27,7 @@ plan_style(
   border_body = NULL,
   border_first_row = NULL,
   border_last_row = NULL,
+  border_group = NULL,
   header_align = NULL,
   header_bold = NULL,
   header_italic = NULL,
@@ -77,6 +78,21 @@ markup applied when the page is rendered, such as \code{"script"}) and
 \item{border_header, border_spanning, border_body, border_first_row, border_last_row}{The rules of one kind of row (the column header, a spanning header
 row, the body, its first and its last row), each an \code{\link[=rtf_border]{rtf_border()}}, by
 the names \code{\link[=rtf_table_style]{rtf_table_style()}} gives them.}
+
+\item{border_group}{An \code{\link[=rtf_border]{rtf_border()}} drawn under the \strong{last row of
+each row group}, the groups \code{\link[=plan_row_group]{plan_row_group()}}'s \code{mode} finds.  A
+plan with no \code{plan_row_group()} has no groups, so nothing is drawn.
+\code{NULL} (the default) draws nothing, and the table is written exactly
+as before.  It is one
+of the \verb{border_*} zones, so it is said with them, not with \code{border}.
+The rule goes to the group's last body row, not to a blank row
+between groups, and a group cut by a page break has it under its
+real last row only, not at the break.  The last row of a page takes
+\code{border_last_row} when that is given: it wins, and the group rule is
+not written on that row, so there is no double line.  The table's
+final row is the end of the table, not of a group: it never takes the
+group rule (that is \code{border_last_row}'s), so the last group has none.
+A table with no groups, or one, changes nothing.}
 
 \item{header_align, header_bold, header_italic}{The whole header's default
 look, \code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.}

@@ -3098,6 +3098,20 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   The rules of one kind of row (the column header, a spanning header
 #'   row, the body, its first and its last row), each an [rtf_border()], by
 #'   the names [rtf_table_style()] gives them.
+#' @param border_group An [rtf_border()] drawn under the **last row of
+#'   each row group**, the groups [plan_row_group()]'s `mode` finds.  A
+#'   plan with no `plan_row_group()` has no groups, so nothing is drawn.
+#'   `NULL` (the default) draws nothing, and the table is written exactly
+#'   as before.  It is one
+#'   of the `border_*` zones, so it is said with them, not with `border`.
+#'   The rule goes to the group's last body row, not to a blank row
+#'   between groups, and a group cut by a page break has it under its
+#'   real last row only, not at the break.  The last row of a page takes
+#'   `border_last_row` when that is given: it wins, and the group rule is
+#'   not written on that row, so there is no double line.  The table's
+#'   final row ends the last group: with no `border_last_row` it takes
+#'   the group rule like any other group's.  A table with no groups, or
+#'   one, changes nothing.
 #' @param align_count_pct `as_rtftables(align_count_pct = )`: `TRUE`
 #'   realigns `"n (xx.x)"` cells to one width before the pages are cut, or
 #'   the name of another built-in cell format (`"count_paren"`, ...).
@@ -3172,16 +3186,18 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
                        blank_row_normalize = NULL,
                        border_header = NULL, border_spanning = NULL,
                        border_body = NULL, border_first_row = NULL,
-                       border_last_row = NULL, header_align = NULL,
-                       header_bold = NULL, header_italic = NULL,
-                       align = NULL, bold = NULL, italic = NULL,
-                       underline = NULL, table_width_twips = NULL,
+                       border_last_row = NULL, border_group = NULL,
+                       header_align = NULL, header_bold = NULL,
+                       header_italic = NULL, align = NULL, bold = NULL,
+                       italic = NULL, underline = NULL,
+                       table_width_twips = NULL,
                        table_width_pct = NULL,
                        table_width_pct_of_writable = NULL) {
   zones <- list(border_header = border_header,
                 border_spanning = border_spanning, border_body = border_body,
                 border_first_row = border_first_row,
-                border_last_row = border_last_row)
+                border_last_row = border_last_row,
+                border_group = border_group)
   zones <- zones[!vapply(zones, is.null, logical(1L))]
   # the table's default look, which rtf_table_style() carries by these
   # names; .plan_rtf_args() folds them into it with the border zones
