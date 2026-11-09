@@ -74,3 +74,24 @@ test_that("normalize_ard() keeps a total by group, marked as no cell; the study 
   expect_true(all(kept$.key_own))
   expect_identical(attr(n, "ard_total_n"), 10)
 })
+
+test_that("two counts of a column at the same level stop, naming both sources", {
+  skip_if_not_installed("cards")
+  x <- .tn_data()
+  # the arm counted twice, as its own tabulation: all subjects (5 / 5) and
+  # the safety set (4 / 5) -- an ARD no template or SPEC makes
+  all_n <- cards::ard_tabulate(x$adsl, variables = TRT01A)
+  all_n$analysis_id <- "GROUPN_ALL"
+  saf_n <- cards::ard_tabulate(x$saf, variables = TRT01A)
+  saf_n$analysis_id <- "GROUPN_SAF"
+  body <- cards::ard_summary(x$adsl, by = TRT01A, variables = AGE,
+                             statistic = ~ cards::continuous_summary_fns("mean"))
+  ard <- dplyr::bind_rows(all_n, saf_n, body)
+  err <- tryCatch(.tn_header(ard), error = conditionMessage)
+  expect_match(err, "two different counts", fixed = TRUE)
+  expect_match(err, "Drug X: the ARD states two different counts for this column (analysis_id GROUPN_ALL says 5, analysis_id GROUPN_SAF says 4)",
+               fixed = TRUE)
+  # the same counts twice are one count
+  saf_n$stat <- all_n$stat
+  expect_true("Drug X (N=5)" %in% .tn_header(dplyr::bind_rows(all_n, saf_n, body))$header)
+})

@@ -2441,6 +2441,7 @@ test_that("a group count stated twice is one count; two different ones say why",
   expect_identical(twice$values, alone$values)
   expect_identical(unname(unlist(twice$values)), c(86, 84, 84))
   # two different counts for one column: not a column's number, and why
+  # (building the header stops on it: test-header-n-total-by-group.R)
   other <- groupn
   other$stat[[1]] <- 99L
   clash <- tok(dplyr::bind_rows(other, st))
