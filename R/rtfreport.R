@@ -149,41 +149,6 @@
   )
 }
 
-# -- Internal helper: update a single row in a header/footer rows list ---------
-
-.update_hf_rows <- function(hf, row, content) {
-  if (!is.list(hf) || is.null(hf$rows)) {
-    stop("First argument must be an rtf_header() or rtf_footer() object.", call. = FALSE)
-  }
-  row <- as.integer(row)
-  if (row < 1L) stop("`row` must be >= 1.", call. = FALSE)
-  # Normalize to a plain character vector, but preserve names.
-  if (is.character(content) && !is.list(content)) {
-    nm      <- names(content)
-    content <- as.vector(content)
-    if (length(nm)) names(content) <- nm
-  }
-
-  current_rows <- hf$rows
-  n_current    <- length(current_rows)
-
-  if (row > n_current) {
-    # Fill gap with empty center rows, then append content at target row.
-    n_gap <- row - n_current - 1L
-    if (n_gap > 0L) {
-      gap <- replicate(n_gap, c(c = ""), simplify = FALSE)
-      current_rows <- c(current_rows, gap)
-    }
-    current_rows <- c(current_rows, list(content))
-  } else {
-    # Replace existing row.
-    current_rows[[row]] <- content
-  }
-
-  hf$rows <- current_rows
-  hf
-}
-
 # -- rtf_header() / rtf_footer() ----------------------------------------------
 
 #' Create a header or footer object for a section
