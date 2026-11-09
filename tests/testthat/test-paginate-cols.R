@@ -544,3 +544,78 @@ test_that("a col_header with col_cell() rows is resolved before it is sliced", {
   expect_true(grepl("(N=84)", txt, fixed = TRUE))
   expect_gte(lengths(gregexpr(paste0(intToUtf8(92), "line"), txt, fixed = TRUE)), 4L)
 })
+
+# ──────── gaps: argument checks, spanning headers, widths ──────────────────
+
+.small <- function() {
+  data.frame(P = c("a", "b"), A_n = 1:2, A_m = 3:4, B_n = 5:6, B_m = 7:8,
+             stringsAsFactors = FALSE)
+}
+
+test_that("`cut_by` that is neither a list, a separator nor a key per column is an error", {
+  expect_error(paginate_cols(rtftable(.small()), cut_by = 2:3),
+               "must be a list of column blocks")
+})
+
+test_that("a single block needs no span check even with allow_span_break = FALSE", {
+  pages <- paginate_cols(rtftable(.small()), cut_by = list(2:5),
+                         allow_span_break = FALSE)
+  expect_length(pages, 1L)
+  expect_equal(names(pages[[1L]]$data), names(.small()))
+})
+
+test_that("every on an empty page list gives an empty list", {
+  expect_identical(paginate_cols(list(), every = 2L), list())
+})
+
+test_that("a cut through a spanning header cell is an error unless it falls between spans", {
+  hdr <- list(list(col_cell(c(2, 3), "Pl"), col_cell(c(4, 5), "Act")),
+              c("P", "n", "m", "n", "m"))
+  tbl <- set_col_header(rtftable(.small()), hdr[[1L]], hdr[[2L]])
+  expect_error(paginate_cols(tbl, at = 3, allow_span_break = FALSE),
+               "would break the spanning header cell 'Pl'")
+  expect_length(paginate_cols(tbl, at = 4, allow_span_break = FALSE), 2L)
+})
+
+test_that("a one-column header cell can never be broken by a cut", {
+  hdr <- list(list(col_cell(3, "One"), col_cell(c(4, 5), "Act")),
+              c("P", "n", "m", "n", "m"))
+  tbl <- set_col_header(rtftable(.small()), hdr[[1L]], hdr[[2L]])
+  pages <- paginate_cols(tbl, at = 4, allow_span_break = FALSE)
+  expect_length(pages, 2L)
+  expect_equal(names(pages[[1L]]$data), c("P", "A_n", "A_m"))
+})
+
+test_that("a header cell positioned by a function is resolved against the column names", {
+  hdr <- list(list(col_cell(function(n) grep("^A", n), "A")),
+              c("P", "n", "m", "n", "m"))
+  tbl <- set_col_header(rtftable(.small()), hdr[[1L]], hdr[[2L]])
+  expect_error(paginate_cols(tbl, at = 3, allow_span_break = FALSE),
+               "would break the spanning header cell 'A'")
+  expect_length(paginate_cols(tbl, at = 4, allow_span_break = FALSE), 2L)
+})
+
+test_that("pinned widths and relative widths both split into column pages", {
+  pinned <- rtftable(.small(), column_widths_twips = c(2000, 1000, 1000, 1000, 1000))
+  rel    <- rtftable(.small(), col_rel_width = c(2, 1, 1, 1, 1))
+  for (tbl in list(pinned, rel, rtftable(.small()))) {
+    for (fit in c(TRUE, FALSE)) {
+      pages <- paginate_cols(tbl, at = 4, fit = fit)
+      expect_length(pages, 2L)
+      expect_equal(names(pages[[2L]]$data), c("P", "B_n", "B_m"))
+    }
+  }
+  # pinned widths are kept for the columns that stay
+  p <- paginate_cols(pinned, at = 4)
+  expect_equal(unname(p[[1L]]$column_widths_twips), c(2000, 1000, 1000))
+})
+
+test_that("a multi-data.frame table takes the `col_header` override on every data.frame", {
+  tm <- rtftable(list(.small(), .small()))
+  hdr <- c("P", "n", "m", "n", "m")
+  pages <- paginate_cols(tm, at = 4, col_header = hdr)
+  expect_length(pages, 2L)
+  expect_equal(pages[[2L]]$col_header[[1L]], c("P", "n", "m"))
+  expect_length(pages[[2L]]$col_header_list, 2L)
+  expect_equal(pages[[2L]]$col_header_list[[2L]][[1L]], c("P", "n", "m"))
+})
