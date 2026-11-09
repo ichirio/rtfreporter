@@ -45,13 +45,13 @@ test_that("border_group is a zone: NULL or an rtf_border, kept by name", {
     plan_style(table_plan(.bg_df()), border_group = .bg_rule), "table_plan")
 })
 
-test_that("a rule goes under the last row of each group but the final one", {
+test_that("a rule goes under the last row of every group, the final one too", {
   pg <- as_rtftables(.bg_df(), group_by = "indent",
                      style = rtf_table_style(border_group = .bg_rule))
   expect_length(pg, 1L)
   b <- .bg_bottoms(.bg_rtf(pg))
-  # header row, then 9 body rows: the rule is under rows 3 and 6 (SD, Male)
-  expect_equal(b, c(0L, 0L, 0L, 2L, 0L, 0L, 2L, 0L, 0L, 0L))
+  # header row, then 9 body rows: the rule is under rows 3, 6 and 9 (SD, Male, White)
+  expect_equal(b, c(0L, 0L, 0L, 2L, 0L, 0L, 2L, 0L, 0L, 2L))
 })
 
 test_that("border_last_row wins on the last row, with no double line", {
@@ -116,14 +116,14 @@ test_that("a group split across pages has its rule under its real last row only"
   bt <- lapply(pg, function(p) .bg_bottoms(.bg_rtf(list(p))))
   # no page break is a rule: page 1 ends inside Age and has none
   expect_equal(sum(bt[[1L]]), 0L)
-  # over the whole table, one rule: under Age's real last row (a5); Sex
-  # ends the table and takes none
-  expect_equal(sum(vapply(bt, function(x) sum(x > 0L), integer(1L))), 1L)
+  # over the whole table, a rule under Age's real last row (a5) and one
+  # under the table's final row (Sex's M): two, none at a page break
+  expect_equal(sum(vapply(bt, function(x) sum(x > 0L), integer(1L))), 2L)
   rows <- unlist(lapply(pg, function(p)
     strsplit(.bg_rtf(list(p)), "\\\\trowd")[[1L]][-1L]))
   has <- grepl("\\\\clbrdrb\\\\brdrs", rows)
-  expect_equal(sum(has), 1L)
-  expect_match(rows[has], "a5")
+  expect_equal(sum(has), 2L)
+  expect_match(rows[has][1L], "a5")
 })
 
 test_that("a page's last row takes border_last_row, not the group rule", {
@@ -146,7 +146,7 @@ test_that("a blank row between groups is not where the rule goes", {
                      style = rtf_table_style(border_group = .bg_rule))
   rows <- unlist(strsplit(.bg_rtf(pg), "\\\\trowd"))[-1]
   has <- grepl("\\\\clbrdrb\\\\brdrs", rows)
-  expect_equal(sum(has), 2L)
+  expect_equal(sum(has), 3L)
   # the rows that carry the rule have text: the groups' last body rows
-  expect_true(all(grepl("SD|Male", rows[has])))
+  expect_true(all(grepl("SD|Male|White", rows[has])))
 })

@@ -3109,9 +3109,9 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   real last row only, not at the break.  The last row of a page takes
 #'   `border_last_row` when that is given: it wins, and the group rule is
 #'   not written on that row, so there is no double line.  The table's
-#'   final row is the end of the table, not of a group: it never takes the
-#'   group rule (that is `border_last_row`'s), so the last group has none.
-#'   A table with no groups, or one, changes nothing.
+#'   final row ends the last group: with no `border_last_row` it takes
+#'   the group rule like any other group's.  A table with no groups, or
+#'   one, changes nothing.
 #' @param align_count_pct `as_rtftables(align_count_pct = )`: `TRUE`
 #'   realigns `"n (xx.x)"` cells to one width before the pages are cut, or
 #'   the name of another built-in cell format (`"count_paren"`, ...).

@@ -1609,14 +1609,14 @@ combine_sections <- function(...) {
     if (inherits(border, "rtf_table_border")) border$last_row
 }
 
-# Which rows of `body` are the last row of a row group that a LATER row of the
-# table follows -- where `border_group` goes.  The table's final row is never
-# one: it is the table's end, `border_last_row`'s.  Groups are the ones
-# as_rtftables() finds with `group_col` / `group_by` (plan_row_group()), read
-# the way the pagination reads them; `has_groups = FALSE` (nothing said how to
-# group) and `border_group = NULL` both give all FALSE, so a table without the
-# argument is not touched.  With `page_by`, groups are found inside each
-# page-key partition.
+# Which rows of `body` are the last row of a row group -- where `border_group`
+# goes.  The table's final row is the last row of the last group, so it is
+# one; `border_last_row` winning on it is decided per page, in
+# .add_group_borders().  Groups are the ones as_rtftables() finds with
+# `group_col` / `group_by` (plan_row_group()), read the way the pagination
+# reads them; `has_groups = FALSE` (nothing said how to group), a single
+# group, and `border_group = NULL` all give all FALSE, so such a table is not
+# touched.  With `page_by`, groups are found inside each page-key partition.
 .group_last_rows <- function(body, border_group, has_groups, group_col,
                              group_by, page_by = NULL) {
   n   <- nrow(body)
@@ -1637,10 +1637,11 @@ combine_sections <- function(...) {
     id  <- tryCatch(.compute_group_info(sub, gidx, group_by)$id,
                     error = function(e) NULL)
     if (is.null(id)) next
+    if (length(unique(id[!is.na(id)])) < 2L) next
     nxt <- c(id[-1L], NA_integer_)
-    # a row ends its group when the next row is another group; the last row
-    # of a partition ends nothing here (its page key ends it)
-    ends <- !is.na(id) & !is.na(nxt) & id != nxt
+    # a row ends its group when the next row is another group, or when it is
+    # the last row of the partition
+    ends <- !is.na(id) & (is.na(nxt) | id != nxt)
     out[rows[ends]] <- TRUE
   }
   out
