@@ -1628,14 +1628,21 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
   ignored <- NULL
   total_n <- NULL
   if (length(drop_contexts)) {
-    gone <- d[d$context %in% drop_contexts, , drop = FALSE]
+    # a total BY GROUP (cards::ard_strata(.by = TRT01A, .f = ~ ard_total_n(.x)))
+    # is each column's population, the number a header's {n} reads first:
+    # it stays, as a sentinel row keyed by the group (no cell of the body)
+    g1 <- if ("group1" %in% names(d)) {
+      as.character(.ard_unlist_col(d[["group1"]]))
+    } else rep(NA_character_, nrow(d))
+    by_group <- d$context %in% "total_n" & !is.na(g1)
+    gone <- d[d$context %in% drop_contexts & !by_group, , drop = FALSE]
     ignored <- .ard_ignored_bind(
       ignored, .ard_tally(gone, "not a table statistic"))
     # The row goes, the NUMBER stays: `..ard_total_n..` is not a table
     # statistic, but it is the denominator a column header asks for,
     # and dropping it is no reason to lose it.
     total_n <- .ard_total_n_value(gone)
-    d <- d[!d$context %in% drop_contexts, , drop = FALSE]
+    d <- d[!d$context %in% drop_contexts | by_group, , drop = FALSE]
   }
 
   # cards' own formatter, when available and not already applied
@@ -1819,7 +1826,8 @@ normalize_ard <- function(x, keys = NULL, hierarchy = character(),
     d <- d[!own, , drop = FALSE]
     own <- rep(FALSE, nrow(d))
   }
-  d$.key_own <- own
+  # (a total by group kept above: the header's, no cell either)
+  d$.key_own <- own | d$variable %in% "..ard_total_n.."
 
   # A key column holds ONE variable, so the order its factor declared can
   # ride on the column itself -- unlike `variable_level`, where every

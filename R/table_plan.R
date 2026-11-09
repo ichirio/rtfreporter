@@ -3319,13 +3319,16 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
 #'   \describe{
 #'     \item{`list(n = TRUE)`}{(or `TRUE`) the population of each column,
 #'       read from the ARD at every depth of the `cols` keys.  Only a
-#'       number the ARD states as a population size is read: a cards
-#'       sentinel's `N` (`ard_stack_hierarchical(over_variables = TRUE)`),
-#'       the column variable's own tabulation (the `.key_own` rows
-#'       [normalize_ard()] keeps from `ard_stack(.by = )`), or an analysis
-#'       `N` that is a denominator by construction or that two variables
-#'       agree on.  What cannot be read prints `NA`, with one warning that
-#'       says why.}
+#'       number the ARD states as a population size is read, the first of:
+#'       a total stated by group (`..ard_total_n..` keyed by the column,
+#'       `cards::ard_strata(.by = TRT01A, .f = ~ cards::ard_total_n(.x))`);
+#'       a cards sentinel's `N` (`ard_stack_hierarchical(over_variables =
+#'       TRUE)`, the stack's denominator); the column variable's own
+#'       tabulation (the `.key_own` rows [normalize_ard()] keeps from
+#'       `ard_stack(.by = )`); an analysis `N` that is a denominator by
+#'       construction or that two variables agree on.  So a header N that
+#'       differs from the percentages' denominator is a total by group.
+#'       What cannot be read prints `NA`, with one warning that says why.}
 #'     \item{`list(n = "page")`, `list(n = "table")`}{for pages split by a
 #'       group value ([plan_paginate_group()]): each page's own population
 #'       (the ARD rows carrying the page key), or the analysis set's (the
@@ -5169,8 +5172,13 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
   none <- Reduce(`&`, lapply(has, `!`))
   tt <- unique(st[sent & none & sn %in% "N" & !is.na(st)])
   if (length(tt) == 1L) total <- tt
-  # two different sentinels are a choice, and choosing is a guess
-  one_sent <- length(unique(v[sent & !none])) <= 1L
+  # a population stated by group (..ard_total_n.. keyed by the columns:
+  # cards::ard_strata(.f = ~ ard_total_n(.x))) is read first, before a
+  # stack's denominator (..ard_hierarchical_overall..); two other
+  # different sentinels are a choice, and choosing is a guess
+  use <- sent & !none
+  if (any(use & v %in% "..ard_total_n..")) use <- use & v %in% "..ard_total_n.."
+  one_sent <- length(unique(v[use])) <= 1L
   for (k in seq_along(cols)) {
     at <- Reduce(`&`, has[seq_len(k)])
     if (k < length(cols)) {
@@ -5184,7 +5192,7 @@ plan_paginate_cols <- function(.plan, at = NULL, cut_by = NULL,
       x <- x[!names(x) %in% names(got)]
       got <<- c(got, x)
     }
-    if (one_sent) add(.plan_n_unique(st, key, at & sent & sn %in% "N"))
+    if (one_sent) add(.plan_n_unique(st, key, at & use & sn %in% "N"))
     # a stacked key (normalize_ard(stack = )) is tabulated as its layer's
     # variable: `subgroup_level` F under `subgroup` SEX is SEX's own count
     kvar <- if (k > 1L && identical(cols[k], paste0(cols[k - 1L], "_level"))) {

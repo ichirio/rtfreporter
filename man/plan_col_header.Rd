@@ -44,13 +44,15 @@ token}; one value that is not a list is taken as \code{n}:
 \describe{
 \item{\code{list(n = TRUE)}}{(or \code{TRUE}) the population of each column,
 read from the ARD at every depth of the \code{cols} keys.  Only a
-number the ARD states as a population size is read: a cards
-sentinel's \code{N} (\code{ard_stack_hierarchical(over_variables = TRUE)}),
-the column variable's own tabulation (the \code{.key_own} rows
-\code{\link[=normalize_ard]{normalize_ard()}} keeps from \code{ard_stack(.by = )}), or an analysis
-\code{N} that is a denominator by construction or that two variables
-agree on.  What cannot be read prints \code{NA}, with one warning that
-says why.}
+number the ARD states as a population size is read, the first of:
+a total stated by group (\code{..ard_total_n..} keyed by the column,
+\code{cards::ard_strata(.by = TRT01A, .f = ~ cards::ard_total_n(.x))});
+a cards sentinel's \code{N} (\code{ard_stack_hierarchical(over_variables = TRUE)}, the stack's denominator); the column variable's own
+tabulation (the \code{.key_own} rows \code{\link[=normalize_ard]{normalize_ard()}} keeps from
+\code{ard_stack(.by = )}); an analysis \code{N} that is a denominator by
+construction or that two variables agree on.  So a header N that
+differs from the percentages' denominator is a total by group.
+What cannot be read prints \code{NA}, with one warning that says why.}
 \item{\code{list(n = "page")}, \code{list(n = "table")}}{for pages split by a
 group value (\code{\link[=plan_paginate_group]{plan_paginate_group()}}): each page's own population
 (the ARD rows carrying the page key), or the analysis set's (the
