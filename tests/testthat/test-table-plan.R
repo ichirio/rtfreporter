@@ -1275,11 +1275,22 @@ test_that("n = TRUE reads a cards sentinel keyed by the cols", {
   expect_identical(nv(p), c(A = 40, B = 50))
 })
 
-test_that("two sentinels are a choice, so neither is made", {
+test_that("a total stated by group is read before a stack's denominator", {
   skip_if_no_cards2()
   d <- data.frame(
     TRT = c("A", "A"),
     variable = c("..ard_total_n..", "..ard_hierarchical_overall.."),
+    stat_name = c("N", "N"), stat = c(40, 12),
+    .label = c("all", "any"), stringsAsFactors = FALSE)
+  p <- table_plan(d, cols = "TRT") |> plan_cells(notes = FALSE)
+  expect_identical(unname(nv(p)[["A"]]), 40)
+})
+
+test_that("two other sentinels are a choice, so neither is made", {
+  skip_if_no_cards2()
+  d <- data.frame(
+    TRT = c("A", "A"),
+    variable = c("..ard_hierarchical_overall..", "..ard_other.."),
     stat_name = c("N", "N"), stat = c(40, 12),
     .label = c("all", "any"), stringsAsFactors = FALSE)
   p <- table_plan(d, cols = "TRT") |> plan_cells(notes = FALSE)
@@ -2430,6 +2441,7 @@ test_that("a group count stated twice is one count; two different ones say why",
   expect_identical(twice$values, alone$values)
   expect_identical(unname(unlist(twice$values)), c(86, 84, 84))
   # two different counts for one column: not a column's number, and why
+  # (building the header stops on it: test-header-n-total-by-group.R)
   other <- groupn
   other$stat[[1]] <- 99L
   clash <- tok(dplyr::bind_rows(other, st))
