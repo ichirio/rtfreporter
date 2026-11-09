@@ -238,6 +238,36 @@
   pick(out) %||% pick(ref) %||% sp$flat
 }
 
+# An entry of `labels` named by a row key is matched against that key's
+# values.  When it names none of them but names values of ANOTHER key of the
+# table, it was aimed at the wrong key (a grade under a hierarchy's level
+# key, a SOC under the PT key): say so, with the keys that hold them.  An
+# entry that matches nothing anywhere is left alone -- a dictionary kept for
+# many tables does not apply to every one.
+.ard_label_misaimed <- function(labels, r, long, keys) {
+  sp <- .ard_labels_split(labels)$scopes
+  k <- c(r$out, r$ref)
+  k <- k[!is.na(k) & k %in% names(sp)]
+  if (!length(k)) return(invisible(NULL))
+  codes <- names(sp[[k[1L]]])
+  if (!length(codes) || any(codes %in% as.character(long[[r$out]]))) {
+    return(invisible(NULL))
+  }
+  for (o in setdiff(keys, r$out)) {
+    hit <- intersect(codes, as.character(long[[o]]))
+    if (length(hit)) {
+      .ard_stop(sprintf(paste0(
+        "`labels$%s` names %s, which does not occur in '%s'.\n",
+        "  It occurs in '%s': an entry of `labels` is matched against the ",
+        "values of the key it is named by,\n  so name it `labels$%s`.  ",
+        "The keys of this table: %s."),
+        k[1L], paste(sQuote(utils::head(hit, 3L)), collapse = ", "), r$out,
+        o, o, paste(keys, collapse = ", ")))
+    }
+  }
+  invisible(NULL)
+}
+
 .ard_check_named <- function(x, arg) {
   if (is.null(x) || !length(x)) return(invisible(TRUE))
   nms <- names(x)
@@ -2948,13 +2978,15 @@ widen_ard <- function(x, cols, rows = NULL, label = ".label",
   }
 
   # recode + factorise the row keys
+  keys_shown <- c(rowname_cols, label_out)
   for (r in rowrefs) {
+    .ard_label_misaimed(labels, r, long, keys_shown)
     v <- recode(long[[r$out]], r$ref, r$out)
     lab <- .ard_labels_for(labels, r$ref, r$out)
     lv <- lev_for(r)
     if (!is.null(lv)) {
       long[[r$out]] <- .ard_as_factor(v, recode(lv, r$ref, r$out))
-    } else if (!is.null(lab) && any(as.character(long[[r$out]]) != v)) {
+    } else if (!is.null(lab) && any(as.character(long[[r$out]]) != v, na.rm = TRUE)) {
       # recoded: its values in the data's order, as text (a label sets no
       # order -- `levels` does)
       long[[r$out]] <- .ard_as_factor(v, recode(.ard_first_seen(
