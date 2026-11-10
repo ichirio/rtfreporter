@@ -2401,8 +2401,10 @@
 
 
 
-# =====================================================================# Pipe API Adapter: Convert rtf_document (public S3) -> rtfreport (internal S3)
-# =====================================================================
+# ============================================================================
+# Pipe API Adapter: Convert rtf_document (public S3) -> rtfreport (internal S3)
+# ============================================================================
+
 # -- auto_section helpers -------------------------------------------------------
 
 # Build a per-section header by appending a label row to the base header
