@@ -40,7 +40,10 @@ more than one value is named (by statistic, or by value for a row key).
 Anything else --- \code{1.5}, \code{-1}, \code{Inf}, \code{NA}, \code{TRUE}, \code{"2"} on its own,
 \code{"x"}, \code{c(1, 2)} unnamed, a zero-length vector --- stops at the verb,
 naming the key.  (A whole number as text, \code{"0"}, is read as decimals
-inside a named vector, as \code{c(mean = "4s", n = 0)} makes it.)}
+inside a named vector, as \code{c(mean = "4s", n = 0)} makes it.)
+
+A later call replaces a key's entry as a whole: \code{AGE = c(mean = 1, sd = 2)} followed by \code{AGE = c(mean = 0)} leaves \code{mean} only for \code{AGE}, and
+its \code{sd} then takes the next wider key's digits.}
 
 \item{rounding}{The tie-breaking family for the run, as
 \code{widen_ard(rounding = )} takes it.  Last wins.  A study sets the rule

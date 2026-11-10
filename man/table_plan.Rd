@@ -116,6 +116,12 @@ two-line edit:
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{plan_digits(2) |> plan_digits(AGE = 0)
 }\if{html}{\out{</div>}}
 
+Last wins argument by argument.  An argument whose value is a named list
+or named vector, such as \code{plan_columns(widths = c(AGE = 1200, SEX = 900))}, is replaced as a whole: a later \code{plan_columns(widths = c(AGE = 1500))} leaves \code{AGE} only, and the names it leaves out are not kept from
+the earlier call.  An argument the later call leaves out keeps its
+earlier value.  \code{\link[=plan_levels]{plan_levels()}}, \code{\link[=plan_labels]{plan_labels()}} and \code{\link[=plan_nest]{plan_nest()}} are
+the exception: they merge one key at a time.
+
 This is tfrmt's \code{frmt_structure} rule.  Within one layer the keys are
 picked by specificity, as \code{\link[=widen_ard]{widen_ard()}}'s \code{cells} are: an analysis
 variable before a kind, a kind before the default.

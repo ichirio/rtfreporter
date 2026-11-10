@@ -456,6 +456,14 @@
 #' plan_digits(2) |> plan_digits(AGE = 0)
 #' ```
 #'
+#' Last wins argument by argument.  An argument whose value is a named list
+#' or named vector, such as `plan_columns(widths = c(AGE = 1200, SEX =
+#' 900))`, is replaced as a whole: a later `plan_columns(widths = c(AGE =
+#' 1500))` leaves `AGE` only, and the names it leaves out are not kept from
+#' the earlier call.  An argument the later call leaves out keeps its
+#' earlier value.  [plan_levels()], [plan_labels()] and [plan_nest()] are
+#' the exception: they merge one key at a time.
+#'
 #' This is tfrmt's `frmt_structure` rule.  Within one layer the keys are
 #' picked by specificity, as [widen_ard()]'s `cells` are: an analysis
 #' variable before a kind, a kind before the default.
@@ -1015,6 +1023,10 @@ print.table_plan <- function(x, ...) {
 #'
 #' @description
 #' Each verb adds a layer to an [table_plan()].  **A later layer wins.**
+#' It wins argument by argument, and an argument that is a named list or
+#' named vector (`widths`, `values`, the digits or template of a key) is
+#' replaced as a whole.  Only [plan_levels()], [plan_labels()] and
+#' [plan_nest()] merge one key at a time.
 #' The roles --- which column goes across, which go down, which carries
 #' the row identity --- are said once, on [table_plan()]; these verbs are
 #' the things a report really does declare twice.  Their arguments are
@@ -1394,6 +1406,9 @@ plan_labels <- function(.plan, ...) {
 #'   variable called `stats`, `value`, `na` or `notes` cannot be keyed
 #'   here; name it otherwise in the ARD.
 #'
+#'   A later call replaces a key's entry as a whole, a named vector of
+#'   templates too: its rows are not merged with the earlier call's.
+#'
 #'   An unnamed vector of several templates, `c("{n} ({p})", "{n}")`, is
 #'   one row: the first template whose statistics the record has wins, as
 #'   with guards.  A template with no token prints as written, so a
@@ -1597,6 +1612,10 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 #'   `"x"`, `c(1, 2)` unnamed, a zero-length vector --- stops at the verb,
 #'   naming the key.  (A whole number as text, `"0"`, is read as decimals
 #'   inside a named vector, as `c(mean = "4s", n = 0)` makes it.)
+#'
+#'   A later call replaces a key's entry as a whole: `AGE = c(mean = 1, sd =
+#'   2)` followed by `AGE = c(mean = 0)` leaves `mean` only for `AGE`, and
+#'   its `sd` then takes the next wider key's digits.
 #' @param rounding The tie-breaking family for the run, as
 #'   `widen_ard(rounding = )` takes it.  Last wins.  A study sets the rule
 #'   once with `options(rtfreporter.rounding = )`; give it here only for a
@@ -3367,6 +3386,9 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
 #'   total is never put in every column: it answers a one-column table and
 #'   a cell over all the columns.  Keep the header consistent with the
 #'   body: the percentages are over the denominator cards used.
+#'
+#'   A later `plan_col_header(values = )` replaces the earlier `values` as
+#'   a whole: a token or column the later call leaves out is not kept.
 #' @param header_sep [as_rtftables()]'s `header_sep`: the separator a plain
 #'   table's column names are split on into spanning header rows.
 #' @param col_header_align [rtftable()]'s `col_header_align`.
@@ -3491,7 +3513,10 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   a column in order, as `col_rel_width` itself.  A name that is not a
 #'   column of the table stops with the names the table has.  Each width is
 #'   a positive finite number: `0`, a negative, `NA`, `Inf` or a string
-#'   stops at `plan_columns()`.
+#'   stops at `plan_columns()`.  A later `plan_columns(widths = )` replaces
+#'   the earlier one as a whole: `c(AGE = 1200, SEX = 900)` followed by
+#'   `c(AGE = 1500)` leaves the width of `AGE` only.  Say every width in
+#'   one call.
 #' @param decimal The columns whose numbers line up at the decimal point
 #'   (`.values` for every value column), [set_decimal_split()]'s `cols`, by
 #'   name.  A value that is not column names (`NA`, `""`, a number) stops at
@@ -3502,7 +3527,8 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   name as `widths` are: a row key's name as `table_plan(rows = )` gives
 #'   it, `.values` for every value column.  A position counts the
 #'   **printed** columns: a key hidden with [plan_hide()] or taken out by
-#'   `page_by` is left out.
+#'   `page_by` is left out.  Like `widths`, a later call replaces it as a
+#'   whole.
 #' @param auto_width `TRUE` sizes each column to its widest content,
 #'   `as_rtftables(auto_width = )`.
 #' @param sep The separator several `cols` keys are joined with in the
