@@ -7,7 +7,7 @@
 plan_paginate_group(
   .plan,
   col = NULL,
-  keep = TRUE,
+  keep = NULL,
   heading = NULL,
   heading_at = NULL
 )
@@ -25,7 +25,9 @@ first printed row key.}
 \item{keep}{\code{FALSE} also hides the page key.  A column can be \strong{needed
 and not wanted} --- the key a page break reads --- and the verb that
 needs it is the one place that knows, so it says so here instead of
-the name being written again in a \code{\link[=plan_hide]{plan_hide()}}.}
+the name being written again in a \code{\link[=plan_hide]{plan_hide()}}.  Left out (\code{NULL}):
+\code{TRUE}, or what an earlier \code{plan_paginate_group()} said -- a later call
+that leaves it out keeps it.}
 
 \item{heading}{The page's name as a template, in place of the bare value:
 \code{"Treatment: {value} (N={n})"}.  \code{{value}} is the page's value as
