@@ -175,6 +175,34 @@ test_that("plan_style(border = \"tfl\", border_last_row = ) is the preset with t
   expect_false(is.null(got4[[1L]]$border$last_row$bottom))
 })
 
+test_that("plan_style(border = <whole-table rtf_border()>, border_spanning = ) on a spanning header is style_zone() after the expansion", {
+  box <- rtf_border(all = TRUE)
+  sp <- rtf_border(bottom = "double", inside_h = FALSE, inside_v = FALSE)
+  base <- table_plan(.hl_df()) |> plan_col_header(.hl_hdr())
+  want <- suppressWarnings(.hl_direct(col_header = .hl_hdr(), border = box) |>
+                             style_zone(spanning = sp))
+  # in one call, and across calls in either order
+  one <- suppressWarnings(.hl_pages(base |> plan_style(border = box, border_spanning = sp)))
+  expect_equal(one, want)
+  expect_identical(.hl_rtf(one), .hl_rtf(want))
+  two <- suppressWarnings(.hl_pages(base |> plan_style(border_spanning = sp) |>
+                                      plan_style(border = box)))
+  expect_equal(two, want)
+  # the spanning zone is the zone style_zone() gives: no frame sides of the
+  # header expansion on it
+  expect_null(one[[1L]]$border$spanning$left)
+  expect_identical(one[[1L]]$border$spanning$bottom$style, "double")
+  # with the other zones too, and the inside rules
+  grid <- rtf_border(all = TRUE, inside_h = TRUE, inside_v = TRUE)
+  lr <- rtf_border(bottom = "double")
+  want2 <- suppressWarnings(.hl_direct(col_header = .hl_hdr(), border = grid) |>
+                              style_zone(spanning = sp, last_row = lr))
+  got2 <- suppressWarnings(.hl_pages(base |> plan_style(border = grid, border_spanning = sp,
+                                                        border_last_row = lr)))
+  expect_equal(got2, want2)
+  expect_identical(.hl_rtf(got2), .hl_rtf(want2))
+})
+
 test_that("what these calls do not use is written as before", {
   # a plan without any of the new arguments: the same RTF as the direct call
   p <- table_plan(.hl_df()) |> plan_col_header(.hl_hdr()) |>

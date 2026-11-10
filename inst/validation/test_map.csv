@@ -1453,3 +1453,7 @@
 "test-plan-header-look.R","plan_cell_style(header = TRUE, color = , background = ) is style_cols(header_color = , header_background = )","FT-PL2004","FR-PL408 FR-PL416 FR-PL979"
 "test-plan-header-look.R","plan_style(border = ""tfl"", border_last_row = ) is the preset with that zone merged on, as style_zone()","FT-PL2005","FR-PL424 FR-PL429"
 "test-plan-header-look.R","what these calls do not use is written as before","FT-PL2006","FR-PL979 FR-TB634 FR-PL424"
+"test-plan-header-look.R","plan_style(border = <whole-table rtf_border()>, border_spanning = ) on a spanning header is style_zone() after the expansion","FT-PL2040","FR-PL429"
+"test-plan-preset-look.R","plan_style(border = ""tfl"", <look field> = ) keeps the preset's rules","FT-PL2041","FR-PL990"
+"test-plan-preset-look.R","the RTF has the preset's rules over and under the header","FT-PL2042","FR-PL990"
+"test-plan-preset-look.R","border = ""none"" with a look field stays without rules, and other plans are as before","FT-PL2043","FR-PL990"
