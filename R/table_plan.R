@@ -3612,15 +3612,19 @@ plan_columns <- function(.plan, widths = NULL, decimal = NULL,
 # list of blocks, one per page, for a table whose pages differ.  Nothing
 # is guessed from the shape: a three-row title and a three-page table
 # would be ambiguous, and guessing there is how the wrong title ships.
-.plan_block <- function(plan, kind, dots, pages) {
+.plan_block <- function(plan, kind, dots, pages, border = NULL) {
   if (length(dots) && !is.null(pages)) {
     .ard_stop(paste0(
       "plan_", kind, "(): give the rows of one block, or `pages = ` ",
       "with one block per page.\n  Not both."))
   }
+  if (!is.null(border) && !inherits(border, "rtf_border")) {
+    .ard_stop(sprintf("plan_%s(border = ) must be NULL or an rtf_border() object.",
+                      kind))
+  }
   .plan_layer(plan, kind,
               list(block = if (length(dots)) dots else NULL,
-                   pages = pages))
+                   pages = pages, border = border))
 }
 
 # A listing has no ARD anywhere near it: the source is SDTM or ADaM, an
@@ -3732,6 +3736,14 @@ plan_listing <- function(.plan, ..., type = NULL, sep = NULL,
 #' @param pages A list with one block per page, when the pages do not share
 #'   one.  Give `...` or `pages`, never both: a three-row title on a
 #'   three-page table cannot be told apart from three one-row titles.
+#' @param border `NULL` (default) for none, or an [rtf_border()] for the
+#'   title block as a whole on every page of this table, read as
+#'   [rtf_titles()]`(border = )` is: `top` above the first row, `bottom`
+#'   below the last row, `inside_h` between rows, `left` / `right` on every
+#'   row.  It is this table's own, so it wins over the document's
+#'   [rtf_titles()]`(border = )` and [rtf_style()]`(titles = list(border =
+#'   ))`.  It is drawn with `rtf_style(title_format = "table")`; the text
+#'   form ignores it, with a warning.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -3763,8 +3775,8 @@ plan_listing <- function(.plan, ..., type = NULL, sep = NULL,
 #'   plan_apply()
 #' lapply(pages, attr, "rtf_titles")
 #' @export
-plan_titles <- function(.plan, ..., pages = NULL) {
-  .plan_block(.plan, "titles", list(...), pages)
+plan_titles <- function(.plan, ..., pages = NULL, border = NULL) {
+  .plan_block(.plan, "titles", list(...), pages, border)
 }
 
 #' Put a block of footnotes below the table
@@ -3780,6 +3792,14 @@ plan_titles <- function(.plan, ..., pages = NULL) {
 #'   line, or a character vector of them.
 #' @param pages A list with one block per page, when the pages do not share
 #'   one.  Give `...` or `pages`, never both.
+#' @param border `NULL` (default) for none, or an [rtf_border()] for the
+#'   footnote block as a whole on every page of this table, read as
+#'   [rtf_footnotes()]`(border = )` is (`rtf_border(top = TRUE)` is the
+#'   separator rule above the block).  It is this table's own, so it wins
+#'   over the document's [rtf_footnotes()]`(border = )` and
+#'   [rtf_style()]`(footnotes = list(border = ))`.  It is drawn in the
+#'   table form (`rtf_style(footnote_format = "table")`, the default); the
+#'   text form ignores it, with a warning.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -3807,8 +3827,8 @@ plan_titles <- function(.plan, ..., pages = NULL) {
 #'   plan_apply()
 #' lapply(pages, attr, "rtf_footnotes")
 #' @export
-plan_footnotes <- function(.plan, ..., pages = NULL) {
-  .plan_block(.plan, "footnotes", list(...), pages)
+plan_footnotes <- function(.plan, ..., pages = NULL, border = NULL) {
+  .plan_block(.plan, "footnotes", list(...), pages, border)
 }
 
 # Steps that run on the finished pages: the way out for what no verb
@@ -4813,6 +4833,11 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     }
     at <- if (identical(kind, "titles")) "rtf_titles" else "rtf_footnotes"
     for (i in seq_along(pg)) attr(pg[[i]], at) <- blocks[[i]]
+    # the block's own border (plan_titles(border = )), which rtf_tables()
+    # keeps with each page's content: it wins over the document's
+    if (!is.null(l$border)) {
+      for (i in seq_along(pg)) attr(pg[[i]], paste0(at, "_border")) <- l$border
+    }
   }
   if (one) pg[[1L]] else pg
 }

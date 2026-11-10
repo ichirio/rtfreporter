@@ -2081,6 +2081,13 @@
   # rtf_footnotes(border = )), last, so a document without them keeps its table
   cols <- c(cols, .collect_border_colors(report$document$title_style$border),
             .collect_border_colors(report$document$footnote_style$border))
+  # and a content's own (plan_titles(border = ), plan_footnotes(border = ))
+  for (pg in report$pages) {
+    for (sg in pg$segments) {
+      cols <- c(cols, .collect_border_colors(sg[["title_border"]]),
+                .collect_border_colors(sg[["footnote_border"]]))
+    }
+  }
   cols <- cols[!is.na(cols) & nzchar(cols)]
   # Black / white already occupy the reserved colour-table slots (index 1 / 2),
   # so drop them: declaring them adds nothing, and it keeps the default

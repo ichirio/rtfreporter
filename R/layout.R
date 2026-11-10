@@ -102,6 +102,9 @@ rtf_layout <- function(doc) {
                 space_before = b$space_before %||% 0L,
                 group = b$group, page_in_group = b$page_in_group,
                 section = b[["section"]], values = .content_page_values(b[["content"]]))
+    # the content's own title / footnote border, when it has one
+    if (!is.null(b[["title_border"]]))    seg$title_border    <- b[["title_border"]]
+    if (!is.null(b[["footnote_border"]])) seg$footnote_border <- b[["footnote_border"]]
     if (flow) {
       k <- length(pages)
       pages[[k]]$segments[[length(pages[[k]]$segments) + 1L]] <- seg

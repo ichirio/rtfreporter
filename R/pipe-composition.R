@@ -733,10 +733,17 @@ rtf_tables <- function(doc, tables,
     stop("rtf_tables(): `cont_title` is one line of text, or NULL.", call. = FALSE)
   }
 
+  # A page's own title / footnote block border (plan_titles(border = ),
+  # plan_footnotes(border = )): it stays with the page's content and wins
+  # over the document's (rtf_titles(border = ), rtf_style())
+  borders <- function(at) lapply(tables, function(t) attr(t, at, exact = TRUE))
+
   # Each page a block, with its title, footnote and placement (R/blocks.R)
   .rtf_add_blocks(doc, tables, titles, footnotes, page_break = page_break,
                   space_before = space_before, cont_title = cont_title,
-                  sections = sections)
+                  sections = sections,
+                  title_borders = borders("rtf_titles_border"),
+                  footnote_borders = borders("rtf_footnotes_border"))
 }
 
 # A title block with one row more at its end: the rows it has (a character

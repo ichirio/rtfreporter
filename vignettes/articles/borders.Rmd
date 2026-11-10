@@ -85,7 +85,10 @@ whatever is selected.
 | `rtftable(border = )` | the whole table |
 | `style_zone(header = , body = , ...)` | that kind of row |
 | `col_cell(border = )`, `cell_styles` | one cell |
-| `rtf_header(border = )` / `rtf_footer(border = )` | that block |
+| `rtf_header(border = )` / `rtf_footer(border = )` | that band, all its rows |
+| a band or footnote row's `list(columns = , border = )` | that row |
+| `rtf_titles(border = )` / `rtf_footnotes(border = )` | that block, all its rows |
+| `plan_titles(border = )` / `plan_footnotes(border = )` | that table's block |
 
 An edge always means the outer edge of the selection, and an absent `inside_h`
 / `inside_v` always means "no rule there" -- the reading never depends on which

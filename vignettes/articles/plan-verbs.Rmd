@@ -616,6 +616,23 @@ populations.
 by a whole report and set in the running header, as in the examples above.
 These verbs are for the text that belongs to one table.
 
+Both take `border =`, an `rtf_border()` for the block as a whole: `top`
+above its first row, `bottom` below its last row, `inside_h` between rows.
+It belongs to this table, so it wins over a border the document sets for
+every block (`rtf_titles(border = )`, `rtf_style(titles = list(border = ))`).
+The title border is drawn when titles are a table
+(`rtf_style(title_format = "table")`); the footnotes are a table by default.
+
+```{r titles-border}
+pages <- table_plan(data.frame(Parameter = "Subjects", Placebo = "86",
+                               Active = "84")) |>
+  plan_titles("Table 14.1.1", "Demographics",
+              border = rtf_border(bottom = TRUE)) |>
+  plan_footnotes("Source: ADSL.", border = rtf_border(top = TRUE)) |>
+  plan_apply()
+attr(pages[[1]], "rtf_titles_border")
+```
+
 `plan_after(function(pages) ...)` runs your own functions on the finished
 pages. It is for what no verb declares. Prefer a verb when there is one: a
 declaration names columns and so survives a reordered table, while a function
