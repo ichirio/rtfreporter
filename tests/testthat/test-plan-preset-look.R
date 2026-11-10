@@ -119,3 +119,41 @@ test_that("no border said: the default preset keeps its rules with a look field"
   expect_equal(.pl_pages(table_plan(.pl_df()) |> plan_style(border_last_row = z, header_bold = TRUE)),
                .pl_strip(.pl_direct(style = rtf_table_style(border_last_row = z, header_bold = TRUE))))
 })
+
+test_that("no border said: the default preset keeps its rules with border_group", {
+  df <- data.frame(Item = c("Age", " Mean", " SD", "Sex", " Female", " Male"),
+                   Value = as.character(1:6), stringsAsFactors = FALSE)
+  rule <- rtf_border(bottom = TRUE)
+  tfl <- rtfreporter:::.normalize_table_border("tfl")
+  got <- .pl_strip(suppressMessages(plan_apply(
+    table_plan(df) |> plan_row_group(mode = "indent") |> plan_style(border_group = rule),
+    "pages")))
+  want <- .pl_strip(suppressMessages(as_rtftables(
+    df, read_meta = FALSE, group_by = "indent", border = tfl,
+    style = rtf_table_style(border_group = rule))))
+  expect_equal(got, want)
+  expect_identical(.pl_rtf(got), .pl_rtf(want))
+  # the header has the preset's rules, and the group rules are there too
+  rtf <- .pl_rtf(got)
+  hdr <- .pl_header_row(rtf)
+  expect_identical(lengths(regmatches(hdr, gregexpr("\\\\clbrdrt\\\\brdrs", hdr))), 2L)
+  expect_identical(.pl_rtf(got),
+                   .pl_rtf(.pl_strip(suppressMessages(plan_apply(
+                     table_plan(df) |> plan_row_group(mode = "indent") |>
+                       plan_style(border = "tfl", border_group = rule), "pages")))))
+  # border = "none" with border_group: no table rules, the group rules only
+  none <- .pl_rtf(.pl_strip(suppressMessages(plan_apply(
+    table_plan(df) |> plan_row_group(mode = "indent") |>
+      plan_style(border = "none", border_group = rule), "pages"))))
+  expect_no_match(.pl_header_row(none), "clbrdr", fixed = TRUE)
+  # border_group with a zone of the table's rows and no border: the zones
+  # stay the table's only rules
+  z <- rtf_border(top = TRUE)
+  got2 <- .pl_strip(suppressMessages(plan_apply(
+    table_plan(df) |> plan_row_group(mode = "indent") |>
+      plan_style(border_header = z, border_group = rule), "pages")))
+  want2 <- .pl_strip(suppressMessages(as_rtftables(
+    df, read_meta = FALSE, group_by = "indent",
+    style = rtf_table_style(border_header = z, border_group = rule))))
+  expect_identical(.pl_rtf(got2), .pl_rtf(want2))
+})

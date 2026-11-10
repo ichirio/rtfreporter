@@ -1440,7 +1440,7 @@
 "test-border-group.R","border_group is a zone: NULL or an rtf_border, kept by name","FT-TB2001","FR-PL424 FR-TB446"
 "test-border-group.R","a rule goes under the last row of every group, the final one too","FT-TB2002","FR-TB446"
 "test-border-group.R","border_last_row wins on the last row, with no double line","FT-TB2003","FR-TB446"
-"test-border-group.R","through plan_style(): the same table, with plan_row_group()","FT-PL2001","FR-PL424"
+"test-border-group.R","through plan_style(): the same table, with plan_row_group()","FT-PL2001","FR-PL424 FR-PL990"
 "test-border-group.R","default NULL: the RTF is byte-identical to a table without it","FT-TB2004","FR-PL424 FR-TB446"
 "test-border-group.R","no groups said, or one group: nothing changes","FT-TB2005","FR-TB446"
 "test-border-group.R","a group split across pages has its rule under its real last row only","FT-TB2006","FR-TB446"
@@ -1472,3 +1472,4 @@
 "test-plan-null-defaults.R","plan_empty() left out is the sentence, when ""auto"", position ""last""","FT-PL2035","FR-PL984 FR-PL327 FR-PL329"
 "test-plan-null-defaults.R","plan_sort(keep = FALSE) survives a later plan_sort() that leaves it out","FT-PL2036","FR-PL984 FR-PL311 FR-PL313"
 "test-plan-null-defaults.R","plan_paginate_group(keep = FALSE) survives a later call that leaves it out","FT-PL2037","FR-PL984 FR-PL452 FR-PL456"
+"test-plan-preset-look.R","no border said: the default preset keeps its rules with border_group","FT-PL2046","FR-PL990"

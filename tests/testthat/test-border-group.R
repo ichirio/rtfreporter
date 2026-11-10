@@ -65,7 +65,10 @@ test_that("border_last_row wins on the last row, with no double line", {
 
 test_that("through plan_style(): the same table, with plan_row_group()", {
   tb <- .bg_df()
+  # no border said: the default preset's rules stay with the group rule
+  # (FR-PL990); the direct call says the preset as an object
   direct <- as_rtftables(tb, group_by = "indent",
+                         border = rtfreporter:::.normalize_table_border("tfl"),
                          style = rtf_table_style(border_group = .bg_rule))
   viaplan <- table_plan(tb) |>
     plan_row_group(mode = "indent") |>
