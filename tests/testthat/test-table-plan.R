@@ -2288,9 +2288,12 @@ test_that("every as_rtftables() setting has a plan verb, with the direct call's 
        table_width_pct = 80)
   same(table_plan(tbl) |> plan_style(table_width_pct_of_writable = 0.9),
        table_width_pct_of_writable = 0.9)
+  # (no border said: the default preset's rules stay with the look, FR-PL990;
+  # the direct call says the preset as an object)
   same(table_plan(tbl) |> plan_style(header_bold = TRUE, header_italic = TRUE,
                                      header_align = "left", align = "right",
                                      bold = TRUE, italic = TRUE, underline = TRUE),
+       border = rtfreporter:::.normalize_table_border("tfl"),
        style = rtf_table_style(header_bold = TRUE, header_italic = TRUE,
                                header_align = "left", align = "right",
                                bold = TRUE, italic = TRUE, underline = TRUE))

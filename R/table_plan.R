@@ -2111,6 +2111,29 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
   .plan_keyed(.plan, "styles", spec)
 }
 
+# A table border given with the whole-table shortcuts (outer / inside_h /
+# inside_v), which rtftable() expands to zones once it knows the header.
+.plan_border_whole <- function(tb) {
+  inherits(tb, "rtf_table_border") &&
+    (!is.null(tb$outer) || !is.null(tb$inside_h) || !is.null(tb$inside_v))
+}
+
+# The border_* zones plan_style() gives with a whole-table border: merged
+# onto the pages' expanded border by style_zone(), as the direct call
+# `as_rtftables(border = ) |> style_zone()` does.  Empty for any other
+# plan, whose zones .plan_rtf_args() has already merged (or passed on).
+.plan_border_zones <- function(plan) {
+  stl <- .plan_merge(.plan_of(plan, "style"))
+  rows <- setdiff(grep("^border_", names(stl), value = TRUE), "border_group")
+  if (is.null(stl[["border"]]) || !length(rows) ||
+      !.plan_border_whole(.normalize_table_border(stl[["border"]]))) {
+    return(list())
+  }
+  z <- stl[rows]
+  names(z) <- sub("^border_", "", rows)
+  z
+}
+
 # The border of a computed style: a list, one element a row (or one for
 # every row), each an rtf_border() or NULL / NA for "no border of its own";
 # a single rtf_border() is every row's.  It goes to cell_styles[[r]]$border,
@@ -3279,7 +3302,11 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   the start and each zone is merged onto its zone side by side, as
 #'   [style_zone()] merges: `border = "tfl", border_last_row =
 #'   rtf_border(bottom = TRUE)` is the clinical rules with a rule under the
-#'   last row.  A side a zone leaves `NULL` keeps the preset's.
+#'   last row.  A side a zone leaves `NULL` keeps the preset's.  A
+#'   whole-table [rtf_border()] is expanded by [rtftable()] first and the
+#'   zones merged onto that, the pages `style_zone()` gives.  Given with
+#'   the look fields (`header_bold`, `align`, ...), the preset's rules stay
+#'   the table's; with no `border` and no zone, the default `"tfl"` does.
 #' @param border_header,border_spanning,border_body,border_first_row,border_last_row
 #'   The rules of one kind of row (the column header, a spanning header
 #'   row, the body, its first and its last row), each an [rtf_border()], by
@@ -4745,19 +4772,22 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # result is the table's rules; border_group, which is not one of its
   # zones, stays with the style.  It is an object, not "tfl", so a style
   # given with it (border_group, the look fields) does not take the
-  # preset's place.  A whole-table rtf_border() keeps its outer / inside_*
-  # shortcuts: rtftable() expands them and merges these zones on top, so a
-  # zone's sides win as they do in style_zone().
+  # preset's place.  A whole-table rtf_border() (outer / inside_*) is only
+  # expanded to zones by rtftable(), which needs the table's header to do
+  # it; its zones are merged after that, on the pages, by style_zone()
+  # itself (.plan_border_zones()).
   if (!is.null(out[["border"]]) && length(zn)) {
     rows <- setdiff(zn, "border_group")
+    for (z in rows) {
+      if (!inherits(out[[z]], "rtf_border")) {
+        stop(sprintf("`%s` must be NULL or an rtf_border object.", z),
+             call. = FALSE)
+      }
+    }
     base <- .normalize_table_border(out[["border"]])
-    if (length(rows)) {
+    if (length(rows) && !.plan_border_whole(base)) {
       base <- base %||% .rtf_table_border()
       for (z in rows) {
-        if (!inherits(out[[z]], "rtf_border")) {
-          stop(sprintf("`%s` must be NULL or an rtf_border object.", z),
-               call. = FALSE)
-        }
         k <- sub("^border_", "", z)
         base[[k]] <- .merge_rtf_border(base[[k]], out[[z]])
       }
@@ -4772,6 +4802,14 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (length(zn) || length(look)) {
     out$style <- do.call(rtf_table_style, c(out[zn], look))
     out[zn] <- NULL
+    # rtftable() reads border = "tfl" (its default) as "take the style's
+    # rules", and this style has none of its own: given as an object, the
+    # preset's rules are the table's, as they are with a zone above.  No
+    # border said and no zone is the default preset, "tfl", the same way.
+    if (identical(out[["border"]], "tfl") ||
+        (is.null(out[["border"]]) && !length(zn))) {
+      out[["border"]] <- .normalize_table_border("tfl")
+    }
   }
   # plan_columns(widths = ) without names is col_rel_width itself, one a
   # column in order; named, it is applied to the pages by column name
@@ -6261,6 +6299,8 @@ plan_n_candidates <- function(.plan) {
     do.call(as_rtftables, c(list(x = tbl), rtf)), plan,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
       "styles"))
+  zs <- .plan_border_zones(plan)
+  if (length(zs)) out <- do.call(style_zone, c(list(out), zs))
   # a border plan_cell_style(where = / a formula) put on a page's last row
   # gives way to the table's border_last_row, as border_group does
   if (!is.null(rtf$cell_styles)) out <- .plan_last_row_wins(out)
