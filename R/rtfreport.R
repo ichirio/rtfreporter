@@ -166,10 +166,15 @@
 #'   }
 #'   e.g. `c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")`.  A row may
 #'   also be a list, `list(columns = c(l = , c = , r = ), row_height_twips =
-#'   400L, color = "#C00000", border = rtf_border(bottom = TRUE))`, whose
-#'   `row_height_twips` is that row's height (over the band's
-#'   `row_height_twips`), `color` its text colour (over the band's `color`)
-#'   and `border` its own [rtf_border()] (see `border`).  Cell text may
+#'   400L, color = "#C00000", border = rtf_border(bottom = TRUE), bold =
+#'   TRUE)`, whose `row_height_twips` is that row's height (over the band's
+#'   `row_height_twips`), `color` its text colour (over the band's `color`),
+#'   `border` its own [rtf_border()] (see `border`), and `bold`, `italic`
+#'   and `underline` (each `TRUE` or `FALSE`, default `FALSE`) the emphasis
+#'   of every cell of the row, the words a title row uses
+#'   ([rtf_titles()]).  Tokens and `^{}` / `_{}` markup work inside them.
+#'   A value that is not one `TRUE` / `FALSE` is an error naming the
+#'   row.  Cell text may
 #'   contain **page-number tokens** that the renderer substitutes: `{AUTO_PAGE}`
 #'   (the current page, updated live by the viewer), `{AUTO_TOTAL_PAGES}` (the
 #'   document total), and `{PAGE}` / `{TOTAL_PAGES}` (static numbers baked in at
@@ -314,6 +319,7 @@ rtf_header <- function(rows,
     if (is.list(rows[[i]])) {
       .check_hf_color(rows[[i]]$color, sprintf("%s()` row %d's `color", fn, i))
       .check_hf_row_border(rows[[i]]$border, fn, i)
+      .check_hf_row_emphasis(rows[[i]], fn, i)
     }
     nm <- names(row)
     bad <- setdiff(nm[!is.na(nm) & nzchar(nm)], c("l", "c", "r"))
@@ -334,6 +340,21 @@ rtf_header <- function(rows,
   if (is.null(x) || inherits(x, "rtf_border")) return(x)
   stop(sprintf("`%s()` row %d's `border` must be NULL or an rtf_border() object.",
                fn, i), call. = FALSE)
+}
+
+# A band (or footnote) row's bold / italic / underline, given as a list's
+# `bold = ` etc., the words a title row uses: each NULL (left out, FALSE) or
+# one TRUE / FALSE, applied to every cell of the row.
+.check_hf_row_emphasis <- function(r, fn, i) {
+  for (f in c("bold", "italic", "underline")) {
+    x <- r[[f]]
+    if (is.null(x)) next
+    if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+      stop(sprintf("`%s()` row %d's `%s` must be TRUE or FALSE.", fn, i, f),
+           call. = FALSE)
+    }
+  }
+  invisible(r)
 }
 
 # A band's or a row's text colour: NULL, or one "#RRGGBB" (#42).  It used to
