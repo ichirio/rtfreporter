@@ -257,11 +257,17 @@
 #' `style_body(rows = ~ Item == "Total",
 #' border = rtf_border(bottom = TRUE))`, and an
 #' `"none"` side erases a zone rule on the selected cells.
-#' Row height and cell padding are deliberately *not* per-row properties --
-#' they stay uniform per table / document (see `rtf_document(style = rtf_style())`
-#' and the `rtfreporter.*` options).
+#' Row height, cell padding, vertical alignment and font size apply to the
+#' whole table (the body, and the header for its own settings); they are not
+#' set per row or per cell.  Set them on [rtftable()], or for the whole
+#' document with [rtf_style()].
 #'
 #' @section Header rows and the two row kinds:
+#' `style_header()` does not set row height, cell padding, vertical alignment
+#' or font size: these apply to the whole table, with
+#' `header_row_height_twips` for the header's own row height (see
+#' [rtftable()]).
+#'
 #' A column header holds two kinds of rows (see [rtf_col_header()]): **cell
 #' rows** (lists of [col_cell()] spans -- spanning rows, or any row built from
 #' cells) and one or more **character label rows**.  `style_header()` patches

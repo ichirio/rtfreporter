@@ -89,6 +89,10 @@
 #' ([as_rtftables()]) before the style reaches it, so a section's row height
 #' does not change where the pages break.
 #'
+#' Row height, cell padding, vertical alignment and font size apply to the
+#' whole table (the body, and the header for its own settings); they are not
+#' set per row or per cell.
+#'
 #' Several `rtf_style()` objects given through [rtf_config()] merge key by
 #' key, the later winning.  `rtf_style()` replaces [rtf_default_format()],
 #' which is deprecated: a `default_format` still given maps onto the shared
