@@ -252,7 +252,7 @@ test_that("FT-DC239 [FR-DC320 FR-DC321 FR-DC322 FR-DC323]: an unknown key or sec
   expect_error(rtf_style(table = list(bold = TRUE, align = "left")),
                "unknown key `bold`, `align`", fixed = TRUE)
   expect_error(rtf_style(titles = list(cell_padding_left_twips = 10L)),
-               "The keys of `titles` are font, font_size_half_points, row_height_twips, markup, align.",
+               "The keys of `titles` are font, font_size_half_points, row_height_twips, markup, align, border.",
                fixed = TRUE)
   expect_error(rtf_style(tables = list(font = "Arial")),
                "`rtf_style()`: unknown argument `tables`.  The sections are table, titles, footnotes, header, footer",

@@ -228,6 +228,52 @@
   out
 }
 
+# A verb records only what its call says: an argument left out is NULL and
+# is not written, so a later call of the same verb cannot reset what an
+# earlier one set.  The defaults those arguments stand for are applied
+# here, once the layers are merged -- and only when the verb was called at
+# all.  Each entry: the defaults, and the order the verb writes its fields
+# in, so one call resolves to the fields it always had.
+.plan_defaults <- list(
+  stub  = list(defaults = function(m) list(before = FALSE),
+               order = c("vars", "name", "indent", "group_summary", "before",
+                         "heading")),
+  total = list(defaults = function(m) list(label = "Total", position = "last"),
+               order = c("label", "position", "direction")),
+  empty = list(defaults = function(m) c(
+                 if (!isTRUE(m$.no_text)) list(text = "No subjects met the criteria."),
+                 list(when = "auto", position = "last", .no_text = FALSE)),
+               order = c("text", "when", "position", "footnote", ".no_text")),
+  sort  = list(defaults = function(m) list(.keep = TRUE),
+               order = c("sort", "sort_stat", ".keep")),
+  # `.keep` is plan_paginate_group()'s; plan_row_group() shares the kind
+  group = list(defaults = function(m) if (isTRUE(m$.page)) list(.keep = TRUE),
+               order = c("group_col", ".keep", ".page", ".heading", ".heading_at"))
+)
+
+# The layers of one kind merged (last wins, per field), with the defaults
+# of the arguments no call gave.  Not called: an empty list.
+.plan_resolve <- function(plan, kind) {
+  layers <- .plan_of(plan, kind)
+  out <- .plan_merge(layers)
+  d <- .plan_defaults[[kind]]
+  if (!length(layers) || is.null(d)) return(out)
+  def <- d$defaults(out)
+  miss <- setdiff(names(def), names(out))
+  if (!length(miss)) return(out)
+  # each default goes in before the field that follows it in the verb's
+  # order, the others staying where the merge put them
+  for (nm in miss) {
+    after <- d$order[seq_along(d$order) > match(nm, d$order)]
+    nms <- names(out) %||% character()
+    at <- match(intersect(after, nms)[1L], nms)
+    one <- stats::setNames(list(def[[nm]]), nm)
+    out <- if (is.na(at)) c(out, one) else
+      c(out[seq_len(at - 1L)], one, out[seq.int(at, length.out = length(out) - at + 1L)])
+  }
+  out
+}
+
 
 # -- digits ------------------------------------------------------------------
 
@@ -720,7 +766,7 @@ table_plan <- function(x = NULL, cols = NULL, rows = NULL, label = NULL,
   keys <- unname(as.character(unlist(plan$roles$cols)))
   # the stub: the columns it folded, and the page's column they became (its
   # name, else the first column, where stub_cols() puts it)
-  stub <- .plan_merge(.plan_of(plan, "stub"))
+  stub <- .plan_resolve(plan, "stub")
   folded <- character()
   stub_col <- NA_character_
   if (length(stub)) {
@@ -1800,14 +1846,15 @@ plan_digits <- function(.plan, ..., rounding = NULL) {
 #'   summary, folding its statistics onto the group's heading row, as
 #'   `stub_cols(group_summary = )`: `"empty"`, `"parent"`, `"all"` or
 #'   `"none"`.
-#' @param before `FALSE` (default) folds the stub inside [as_rtftables()],
+#' @param before `FALSE` folds the stub inside [as_rtftables()],
 #'   after grouping and pagination have had their say.  `TRUE` folds it
 #'   first, with [stub_cols()], which is what a condition of
 #'   `plan_cell_style()` needs: only then can it see the rows that will be
 #'   printed.  The two do **not** always give the same table: folded
 #'   first, the row keys are gone before a page split or a row group could
 #'   read them, so `plan_paginate_group(col = )` naming one of them no
-#'   longer finds it.
+#'   longer finds it.  Left out (`NULL`): `FALSE`, or what an earlier
+#'   `plan_stub()` said -- a later call that leaves it out keeps it.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -1841,13 +1888,14 @@ plan_digits <- function(.plan, ..., rounding = NULL) {
 # `label = `, and a grouping carrier is not part of the stub.  Left out,
 # it is worked out from what has already been declared.
 plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
-                      group_summary = NULL, before = FALSE, heading = NULL) {
+                      group_summary = NULL, before = NULL, heading = NULL) {
   if (!is.null(heading) && (!is.character(heading) || length(heading) != 1L ||
                             is.na(heading))) {
     .ard_stop("plan_stub(heading = ) is one text: \"\" for a blank stub heading.")
   }
   # NA and "yes" used to be read as FALSE
-  if (!(is.logical(before) && length(before) == 1L && !is.na(before))) {
+  # NULL is left out: FALSE, or an earlier call's value (.plan_stub_spec())
+  if (!is.null(before) && !(is.logical(before) && length(before) == 1L && !is.na(before))) {
     .ard_stop("plan_stub(before = ) is TRUE (fold the stub first) or FALSE (fold it inside as_rtftables()).")
   }
   # `name` rather than `label`: table_plan(label = ) is the column whose
@@ -2111,6 +2159,29 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
   .plan_keyed(.plan, "styles", spec)
 }
 
+# A table border given with the whole-table shortcuts (outer / inside_h /
+# inside_v), which rtftable() expands to zones once it knows the header.
+.plan_border_whole <- function(tb) {
+  inherits(tb, "rtf_table_border") &&
+    (!is.null(tb$outer) || !is.null(tb$inside_h) || !is.null(tb$inside_v))
+}
+
+# The border_* zones plan_style() gives with a whole-table border: merged
+# onto the pages' expanded border by style_zone(), as the direct call
+# `as_rtftables(border = ) |> style_zone()` does.  Empty for any other
+# plan, whose zones .plan_rtf_args() has already merged (or passed on).
+.plan_border_zones <- function(plan) {
+  stl <- .plan_merge(.plan_of(plan, "style"))
+  rows <- setdiff(grep("^border_", names(stl), value = TRUE), "border_group")
+  if (is.null(stl[["border"]]) || !length(rows) ||
+      !.plan_border_whole(.normalize_table_border(stl[["border"]]))) {
+    return(list())
+  }
+  z <- stl[rows]
+  names(z) <- sub("^border_", "", rows)
+  z
+}
+
 # The border of a computed style: a list, one element a row (or one for
 # every row), each an rtf_border() or NULL / NA for "no border of its own";
 # a single rtf_border() is every row's.  It goes to cell_styles[[r]]$border,
@@ -2290,7 +2361,9 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
 #' @param keep `FALSE` also hides the page key.  A column can be **needed
 #'   and not wanted** --- the key a page break reads --- and the verb that
 #'   needs it is the one place that knows, so it says so here instead of
-#'   the name being written again in a [plan_hide()].
+#'   the name being written again in a [plan_hide()].  Left out (`NULL`):
+#'   `TRUE`, or what an earlier `plan_paginate_group()` said -- a later call
+#'   that leaves it out keeps it.
 #' @param heading The page's name as a template, in place of the bare value:
 #'   `"Treatment: {value} (N={n})"`.  `{value}` is the page's value as
 #'   printed; `{n}` its population **as the ARD states it** --- the page
@@ -2338,7 +2411,7 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
 #' names(pages)
 #' pages[[2]]
 #' @export
-plan_paginate_group <- function(.plan, col = NULL, keep = TRUE, heading = NULL,
+plan_paginate_group <- function(.plan, col = NULL, keep = NULL, heading = NULL,
                                 heading_at = NULL) {
   .plan_check_heading(heading, "plan_paginate_group")
   heading_at <- .plan_check_heading_at(heading_at, "plan_paginate_group")
@@ -2544,12 +2617,15 @@ plan_nest <- function(.plan, ...) {
 #'
 #' @param .plan A [table_plan()].
 #' @param label The heading of the Total column (or the label of the Total
-#'   row), one text: `"Total"`.
+#'   row), one text.  Left out (`NULL`): `"Total"`, or what an earlier
+#'   `plan_total()` said -- a later call that leaves it out keeps it.
 #' @param position Where it goes among the column key's values: `"last"`
-#'   (default) or `"first"`.
-#' @param direction What is added:
+#'   or `"first"`.  Left out (`NULL`): `"last"`, or what an earlier
+#'   `plan_total()` said.
+#' @param direction What is added (left out, `NULL`: `"cols"`, or what an
+#'   earlier `plan_total()` said):
 #'   \describe{
-#'     \item{`"cols"`}{(default) the Total **column**, from the records
+#'     \item{`"cols"`}{the Total **column**, from the records
 #'       with no value of the column key.  With two column keys the
 #'       innermost is folded: `cols = c(TRTA, AESEV)` gives each arm a
 #'       total column from its records with no `AESEV` (an AE at any
@@ -2589,17 +2665,17 @@ plan_nest <- function(.plan, ...) {
 #'   plan_total(label = "All subjects", position = "first") |>
 #'   plan_apply("table")
 #' @export
-plan_total <- function(.plan, label = "Total", position = c("last", "first"),
-                       direction = c("cols", "rows", "both")) {
-  if (!is.character(label) || length(label) != 1L || is.na(label) ||
-      !nzchar(label)) {
+plan_total <- function(.plan, label = NULL, position = NULL, direction = NULL) {
+  if (!is.null(label) && (!is.character(label) || length(label) != 1L ||
+                          is.na(label) || !nzchar(label))) {
     .ard_stop("plan_total(label = ) is one text, the column's heading: \"Total\".")
   }
-  position <- match.arg(position)
-  direction <- match.arg(direction)
-  # (the default as before, byte for byte: no `direction` in the layer)
-  .plan_layer(.plan, "total", c(list(label = label, position = position),
-                                if (!identical(direction, "cols")) list(direction = direction)))
+  # left out (NULL), each is an earlier call's value or its default,
+  # applied where the layers are resolved (.plan_resolve())
+  if (!is.null(position)) position <- match.arg(position, c("last", "first"))
+  if (!is.null(direction)) direction <- match.arg(direction, c("cols", "rows", "both"))
+  .plan_layer(.plan, "total", list(label = label, position = position,
+                                   direction = direction))
 }
 
 # Rows dropped by a condition over the record -- `p >= 0.05` in any arm --
@@ -2916,9 +2992,11 @@ plan_hide <- function(.plan, ...) {
 #'   separate blocks together, `FALSE` moves only what an order declares.
 #' @param stat The statistic totalled into `.sort_stat` for a frequency
 #'   order (`widen_ard(sort_stat = )`), one name, e.g. `stat = "n"`.
-#' @param keep `TRUE` (default) or `FALSE`; `FALSE` also hides the sort keys that are columns: a sort
+#' @param keep `TRUE` or `FALSE`; `FALSE` also hides the sort keys that are columns: a sort
 #'   carrier needed and not wanted.  Names that are not columns (a
-#'   statistic, `".depth"`) are ignored rather than refused.
+#'   statistic, `".depth"`) are ignored rather than refused.  Left out
+#'   (`NULL`): `TRUE`, or what an earlier `plan_sort()` said -- a later call
+#'   that leaves it out keeps it.
 #'
 #' @return The plan, with one more layer.
 #' @family plan verbs
@@ -2950,12 +3028,13 @@ plan_hide <- function(.plan, ...) {
 #'   plan_apply()
 #' pages[[1]]
 #' @export
-plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
+plan_sort <- function(.plan, ..., stat = NULL, keep = NULL) {
   v <- list(...)
   keys <- if (length(v) == 1L && is.logical(v[[1L]])) v[[1L]]
           else unlist(v, use.names = FALSE)
   # (NA and "yes" used to be read as TRUE, two statistics as the first)
-  if (!is.logical(keep) || length(keep) != 1L || is.na(keep)) {
+  # NULL is left out: TRUE, or an earlier call's value (.plan_resolve())
+  if (!is.null(keep) && (!is.logical(keep) || length(keep) != 1L || is.na(keep))) {
     .ard_stop("plan_sort(keep = ) is TRUE (the sort keys stay) or FALSE (hide them).")
   }
   if (!is.null(stat) && (!is.character(stat) || length(stat) != 1L ||
@@ -2983,16 +3062,20 @@ plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
 #'
 #' @param .plan A [table_plan()].
 #' @param text The row's text, one string, in the row label column (the
-#'   first column when there is none); `NULL` for no row.
-#' @param when When the table is empty:
+#'   first column when there is none); `NULL` for no row.  Left out: the
+#'   default sentence, or what an earlier `plan_empty()` said -- a later
+#'   call that leaves it out keeps it.
+#' @param when When the table is empty (left out, `NULL`: `"auto"`, or
+#'   what an earlier `plan_empty()` said):
 #'   \describe{
-#'     \item{`"auto"`}{(default) either of the two below.}
+#'     \item{`"auto"`}{either of the two below.}
 #'     \item{`"no_rows"`}{no body row, after [plan_filter()].}
 #'     \item{`"overall_zero"`}{its overall row (`normalize_ard(overall = )`)
 #'       is 0 in every column.}
 #'   }
-#' @param position Where the row goes: `"last"` (default, after the rows:
-#'   the overall row's 0 stays), `"first"` or `"replace"` (the row alone).
+#' @param position Where the row goes: `"last"` (after the rows: the
+#'   overall row's 0 stays), `"first"` or `"replace"` (the row alone).
+#'   Left out (`NULL`): `"last"`, or what an earlier `plan_empty()` said.
 #' @param footnote A line added to the table's footnotes when it is empty,
 #'   after any [plan_footnotes()]; `NULL` (default) none.
 #'
@@ -3029,18 +3112,22 @@ plan_sort <- function(.plan, ..., stat = NULL, keep = TRUE) {
 #' pages[[1]]
 #' @export
 plan_empty <- function(.plan, text = "No subjects met the criteria.",
-                       when = c("auto", "no_rows", "overall_zero"),
-                       position = c("last", "first", "replace"), footnote = NULL) {
-  when <- match.arg(when)
-  position <- match.arg(position)
+                       when = NULL, position = NULL, footnote = NULL) {
+  # left out, each is an earlier call's value or its default, applied
+  # where the layers are resolved (.plan_resolve()).  `text` keeps its
+  # default in the signature, because NULL there means "no row".
+  if (!is.null(when)) when <- match.arg(when, c("auto", "no_rows", "overall_zero"))
+  if (!is.null(position)) position <- match.arg(position, c("last", "first", "replace"))
+  given <- !missing(text)
   if (!is.null(text) && (!is.character(text) || length(text) != 1L || is.na(text))) {
     .ard_stop("plan_empty(text = ) is one string, or NULL for no row.")
   }
   if (!is.null(footnote) && (!is.character(footnote) || !length(footnote))) {
     .ard_stop("plan_empty(footnote = ) is the footnote's text, or NULL.")
   }
-  .plan_layer(.plan, "empty", list(text = text, when = when, position = position,
-                                   footnote = footnote, .no_text = is.null(text)))
+  .plan_layer(.plan, "empty", list(text = if (given) text, when = when,
+                                   position = position, footnote = footnote,
+                                   .no_text = if (given) is.null(text)))
 }
 
 #' Say where the blank rows go
@@ -3279,7 +3366,13 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   the start and each zone is merged onto its zone side by side, as
 #'   [style_zone()] merges: `border = "tfl", border_last_row =
 #'   rtf_border(bottom = TRUE)` is the clinical rules with a rule under the
-#'   last row.  A side a zone leaves `NULL` keeps the preset's.
+#'   last row.  A side a zone leaves `NULL` keeps the preset's.  A
+#'   whole-table [rtf_border()] is expanded by [rtftable()] first and the
+#'   zones merged onto that, the pages `style_zone()` gives.  Given with
+#'   the look fields (`header_bold`, `align`, ...), the preset's rules stay
+#'   the table's, and so they do with `border_group`, which adds a rule
+#'   under each group; with no `border` and no zone of the table's rows,
+#'   the default `"tfl"` keeps its rules the same way.
 #' @param border_header,border_spanning,border_body,border_first_row,border_last_row
 #'   The rules of one kind of row (the column header, a spanning header
 #'   row, the body, its first and its last row), each an [rtf_border()], by
@@ -4338,7 +4431,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     # the one that decides.
     return(list(widen = s_args, rtf = .plan_rtf_args(.plan)))
   }
-  emp <- .plan_merge(.plan_of(.plan, "empty"))
+  emp <- .plan_resolve(.plan, "empty")
   # a records plan: one record a cell, checked by widen_ard() (#835)
   if (!is.null(.plan$records) && is.data.frame(x)) attr(x, ".ard_records") <- TRUE
   tbl <- .plan_stage(.plan_widen(x, s_args, empty = length(emp) > 0L),
@@ -4435,7 +4528,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (is.na(lcol)) {
     .ard_stop("plan_nest(): the table has no row label column to match the level in.")
   }
-  stub <- .plan_merge(.plan_of(plan, "stub"))
+  stub <- .plan_resolve(plan, "stub")
   pad <- strrep(.stub_nbsp(), stub$indent %||% 4L)
   for (child in names(nest)) {
     par <- nest[[child]]$parent
@@ -4508,7 +4601,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
 
 # plan_total(): its label and position, or NULL
 .plan_total_spec <- function(plan) {
-  t <- .plan_merge(.plan_of(plan, "total"))
+  t <- .plan_resolve(plan, "total")
   if (length(t)) t
 }
 
@@ -4745,19 +4838,22 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   # result is the table's rules; border_group, which is not one of its
   # zones, stays with the style.  It is an object, not "tfl", so a style
   # given with it (border_group, the look fields) does not take the
-  # preset's place.  A whole-table rtf_border() keeps its outer / inside_*
-  # shortcuts: rtftable() expands them and merges these zones on top, so a
-  # zone's sides win as they do in style_zone().
+  # preset's place.  A whole-table rtf_border() (outer / inside_*) is only
+  # expanded to zones by rtftable(), which needs the table's header to do
+  # it; its zones are merged after that, on the pages, by style_zone()
+  # itself (.plan_border_zones()).
   if (!is.null(out[["border"]]) && length(zn)) {
     rows <- setdiff(zn, "border_group")
+    for (z in rows) {
+      if (!inherits(out[[z]], "rtf_border")) {
+        stop(sprintf("`%s` must be NULL or an rtf_border object.", z),
+             call. = FALSE)
+      }
+    }
     base <- .normalize_table_border(out[["border"]])
-    if (length(rows)) {
+    if (length(rows) && !.plan_border_whole(base)) {
       base <- base %||% .rtf_table_border()
       for (z in rows) {
-        if (!inherits(out[[z]], "rtf_border")) {
-          stop(sprintf("`%s` must be NULL or an rtf_border object.", z),
-               call. = FALSE)
-        }
         k <- sub("^border_", "", z)
         base[[k]] <- .merge_rtf_border(base[[k]], out[[z]])
       }
@@ -4772,6 +4868,16 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
   if (length(zn) || length(look)) {
     out$style <- do.call(rtf_table_style, c(out[zn], look))
     out[zn] <- NULL
+    # rtftable() reads border = "tfl" (its default) as "take the style's
+    # rules", and this style has none of its own: given as an object, the
+    # preset's rules are the table's, as they are with a zone above.  No
+    # border said and no zone of the table's rows is the default preset,
+    # "tfl", the same way: border_group adds a rule under each group, it
+    # does not take the place of the table's rules.
+    if (identical(out[["border"]], "tfl") ||
+        (is.null(out[["border"]]) && !length(setdiff(zn, "border_group")))) {
+      out[["border"]] <- .normalize_table_border("tfl")
+    }
   }
   # plan_columns(widths = ) without names is col_rel_width itself, one a
   # column in order; named, it is applied to the pages by column name
@@ -4996,7 +5102,7 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     l <- .plan_merge(.plan_of(plan, kind))
     # plan_empty(footnote = ): a line more, on an empty table only
     extra <- if (identical(kind, "footnotes") && isTRUE(plan$cache$empty)) {
-      .plan_merge(.plan_of(plan, "empty"))$footnote
+      .plan_resolve(plan, "empty")$footnote
     }
     if (!length(l) && is.null(extra)) next
     blocks <- if (!length(l)) rep(list(character()), length(pg)) else
@@ -6168,7 +6274,7 @@ plan_n_candidates <- function(.plan) {
 
   .plan_remember(plan, "table", tbl)
 
-  stub <- .plan_merge(.plan_of(plan, "stub"))
+  stub <- .plan_resolve(plan, "stub")
   if (length(stub) && is.null(stub$vars)) {
     stub$vars <- .plan_stub_vars(plan, tbl)
   }
@@ -6261,6 +6367,8 @@ plan_n_candidates <- function(.plan) {
     do.call(as_rtftables, c(list(x = tbl), rtf)), plan,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
       "styles"))
+  zs <- .plan_border_zones(plan)
+  if (length(zs)) out <- do.call(style_zone, c(list(out), zs))
   # a border plan_cell_style(where = / a formula) put on a page's last row
   # gives way to the table's border_last_row, as border_group does
   if (!is.null(rtf$cell_styles)) out <- .plan_last_row_wins(out)
@@ -7001,7 +7109,7 @@ plan_layers <- function(.plan) {
     layers[[k]] <- if (k %in% c("after", "restyle", "part")) .plan_of(.plan, k)
                    else if (k %in% c("levels", "labels", "nest"))
                      .plan_merge(.plan_of(.plan, k), deep = k)
-                   else .plan_merge(.plan_of(.plan, k))
+                   else .plan_resolve(.plan, k)
   }
   s <- a$widen
   cells <- NULL

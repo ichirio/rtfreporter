@@ -1388,7 +1388,7 @@ test_that("FT-PL973 [FR-PL265 FR-PL275 FR-PL276]: plan_total(): equivalence clas
     E("label", "length 2", c("a", "b"), lb),
     E("label", "a number", 1, lb),
     E("label", "length 0", character(0), lb),
-    E("label", "NULL", NULL, lb),
+    O("label", "NULL (left out: the default)", NULL, hd("Placebo", "Active", "Total")),
     O("position", "first", "first", hd("Total", "Placebo", "Active")),
     O("position", "prefix", "f", hd("Total", "Placebo", "Active")),
     E("position", "another case", "First", "^'arg' should be one of"),

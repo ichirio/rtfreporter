@@ -680,9 +680,9 @@ test_that("FT-PL156 [FR-PL264 FR-PL265 FR-PL270 FR-PL271]: the overall rows beco
                    c("param", "row", "All", "A", "B"))
   expect_identical(names(vc_tab(vc_plan(vc_total()) |> plan_levels(TRT = c("B", "A")) |> plan_total(position = "first"))),
                    c("param", "row", "Total", "B", "A"))
-  # twice: the last call, its defaults included
+  # twice: field by field, an argument left out keeps the earlier call's
   expect_identical(names(vc_tab(vc_plan(vc_total()) |> plan_total(label = "All") |> plan_total(position = "first"))),
-                   c("param", "row", "Total", "A", "B"))
+                   c("param", "row", "All", "A", "B"))
   # a factor key keeps its order
   d <- vc_total()
   d$TRT <- factor(d$TRT, levels = c("B", "A"))
@@ -994,9 +994,9 @@ test_that("FT-PL170 [FR-PL327 FR-PL328 FR-PL329 FR-PL331]: an empty table says s
   # a table with events is as it was
   events <- vc_ep(vc_empty(5, body = TRUE))
   expect_identical(vc_tab(events |> plan_empty()), vc_tab(events))
-  # twice: the last call, its defaults included
+  # twice: field by field, an argument left out keeps the earlier call's
   expect_identical(vc_tab(none |> plan_empty(text = "a") |> plan_empty(position = "first"))$label[1L],
-                   "No subjects met the criteria.")
+                   "a")
 })
 
 test_that("FT-PL171 [FR-PL330 FR-PL332]: text = NULL, the footnote, a filtered-out table, label = NA", {
