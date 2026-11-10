@@ -105,6 +105,10 @@ style, its height following its size.  A table is cut into pages
 (\code{\link[=as_rtftables]{as_rtftables()}}) before the style reaches it, so a section's row height
 does not change where the pages break.
 
+Row height, cell padding, vertical alignment and font size apply to the
+whole table (the body, and the header for its own settings); they are not
+set per row or per cell.
+
 Several \code{rtf_style()} objects given through \code{\link[=rtf_config]{rtf_config()}} merge key by
 key, the later winning.  \code{rtf_style()} replaces \code{\link[=rtf_default_format]{rtf_default_format()}},
 which is deprecated: a \code{default_format} still given maps onto the shared

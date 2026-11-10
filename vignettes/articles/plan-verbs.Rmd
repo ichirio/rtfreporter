@@ -489,7 +489,10 @@ analysis of that subgroup. The whole table, with
 `plan_style()` takes the whole-table settings `rtftable()` and
 `as_rtftables()` have: `border`, `font_size_half_points`, `row_height_twips`,
 `align_count_pct`, and the rules of each kind of row (`border_header`,
-`border_body`, `border_first_row`, ...).
+`border_body`, `border_first_row`, ...). Given with `border = "tfl"`, a
+`border_*` zone is merged onto the preset side by side, so
+`plan_style(border = "tfl", border_last_row = rtf_border(bottom = TRUE))`
+is the clinical rules with one more under the last row.
 
 ### `plan_cell_style()`: some cells
 

@@ -16,7 +16,8 @@ plan_cell_style(
   background = NULL,
   border = NULL,
   underline = NULL,
-  indent_twips = NULL
+  indent_twips = NULL,
+  row = NULL
 )
 }
 \arguments{
@@ -25,9 +26,11 @@ plan_cell_style(
 \item{cols}{The columns styled, by name (\code{.values} for every value
 column); left out, every column.}
 
-\item{header}{\code{TRUE} styles the column header (\code{\link[=style_header]{style_header()}}) instead
-of the body; it takes \code{bold}, \code{italic}, \code{underline}, \code{align} and
-\code{border}, and no \code{where}.}
+\item{header}{\code{TRUE} styles the column header instead of the body; it
+takes \code{bold}, \code{italic}, \code{underline}, \code{align} and \code{border}
+(\code{\link[=style_header]{style_header()}}), \code{color} and \code{background} (the columns' header text
+colour and fill, \code{\link[=style_cols]{style_cols()}}'s \code{header_color} and
+\code{header_background}), and no \code{where} or \code{indent_twips}.}
 
 \item{where}{A one-sided formula over the table's columns choosing the
 rows, \code{where = ~ is.na(label)}; the attributes given apply there and
@@ -51,6 +54,13 @@ the header, not with \code{where}.}
 
 \item{indent_twips}{The left indent of the cells' text,
 \code{\link[=style_cols]{style_cols()}}'s \code{indent_twips} (not on the header).}
+
+\item{row}{With \code{header = TRUE}, the header rows styled, 1 being the top
+row (\code{\link[=style_header]{style_header()}}'s \code{row}): \code{row = 1} is a spanning row over the
+labels, the last row the column labels.  Left out, every header row.
+It takes \code{bold}, \code{italic}, \code{underline}, \code{align} and \code{border}; the
+header's \code{color} and \code{background} belong to the columns, on every
+label row, so they are given in a call without \code{row}.}
 }
 \value{
 The plan, with one more layer.
@@ -81,12 +91,23 @@ pages[[1]]$col_spec[[3]]$bold
 pages <- table_plan(tbl) |>
   plan_col_header(rtf_col_header(c("Parameter", "Placebo", "Active"))) |>
   plan_cell_style(header = TRUE, bold = TRUE) |>
+  plan_cell_style(header = TRUE, color = "#1F3864",
+                  background = "#D9E2F3") |>
   plan_cell_style(cols = c("Placebo", "Active"), align = "center") |>
   plan_cell_style(where = ~ Parameter == "Subjects", italic = TRUE) |>
   plan_cell_style(color = list(
     Active = ~ ifelse(startsWith(Parameter, "Female"), "#CC0000", NA))) |>
   plan_apply()
 pages[[1]]
+
+# A two-row header: only the spanning row (row 1) in italics
+pages <- table_plan(tbl) |>
+  plan_col_header(rtf_col_header(
+    list(col_cell(1, ""), col_cell(c(2, 3), "Treatment")),
+    c("Parameter", "Placebo", "Active"))) |>
+  plan_cell_style(header = TRUE, row = 1, italic = TRUE) |>
+  plan_apply()
+pages[[1]]$col_header[[1]][[2]]$italic
 }
 \seealso{
 \link{plan_verbs} for every verb; \code{\link[=plan_style]{plan_style()}} for the whole
