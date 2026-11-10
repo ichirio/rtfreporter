@@ -67,7 +67,8 @@ with \code{rtf_style(title_format = "table")}, as a single-column table the
 same width as the content; title rows default to centred + bold.  A row's
 \code{row_height_twips} is that row's height, over the block's
 \code{row_height_twips}; it applies to the table form
-(\code{rtf_style(title_format = "table")}), as the block's does.
+(\code{rtf_style(title_format = "table")}), as the block's does.  So does a
+row's \code{border}: the text form draws none, ignores one you set, and warns.
 }
 \examples{
 df1 <- data.frame(Parameter = "Age", Value = "75.1")

@@ -48,7 +48,8 @@ now the shared colour reaches the page header and footer only.}
 \item{title_format, footnote_format}{How the title / footnote block is
 written: \code{"text"} (plain paragraphs) or \code{"table"} (a single-column
 table).  The defaults are \code{"text"} for the title and \code{"table"} for the
-footnote.}
+footnote.  A \code{border} on a title or footnote needs the \code{"table"} form;
+the \code{"text"} form ignores it and warns.}
 
 \item{title_width, footnote_width}{The width of the title / footnote
 block: \code{"content"} (the table's), \code{"page"} (the writable width), a
