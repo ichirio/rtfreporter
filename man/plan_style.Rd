@@ -44,8 +44,11 @@ plan_style(
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
 
 \item{border}{The table's rules, \code{\link[=rtftable]{rtftable()}}'s \code{border}: \code{"tfl"} (the
-clinical preset), \code{"none"}, or an \code{\link[=rtf_border]{rtf_border()}} object.  Say the
-rules one way: \code{border}, or the \verb{border_*} zones below, not both.}
+clinical preset), \code{"none"}, or an \code{\link[=rtf_border]{rtf_border()}} object.  Given with
+the \verb{border_*} zones below (in this call or another), the preset is
+the start and each zone is merged onto its zone side by side, as
+\code{\link[=style_zone]{style_zone()}} merges: \verb{border = "tfl", border_last_row = rtf_border(bottom = TRUE)} is the clinical rules with a rule under the
+last row.  A side a zone leaves \code{NULL} keeps the preset's.}
 
 \item{align_count_pct}{\code{as_rtftables(align_count_pct = )}: \code{TRUE}
 realigns \code{"n (xx.x)"} cells to one width before the pages are cut, or
@@ -84,15 +87,15 @@ each row group}, the groups \code{\link[=plan_row_group]{plan_row_group()}}'s \c
 plan with no \code{plan_row_group()} has no groups, so nothing is drawn.
 \code{NULL} (the default) draws nothing, and the table is written exactly
 as before.  It is one
-of the \verb{border_*} zones, so it is said with them, not with \code{border}.
+of the \verb{border_*} zones, and goes with \code{border} as they do.
 The rule goes to the group's last body row, not to a blank row
 between groups, and a group cut by a page break has it under its
 real last row only, not at the break.  The last row of a page takes
 \code{border_last_row} when that is given: it wins, and the group rule is
 not written on that row, so there is no double line.  The table's
-final row is the end of the table, not of a group: it never takes the
-group rule (that is \code{border_last_row}'s), so the last group has none.
-A table with no groups, or one, changes nothing.}
+final row ends the last group: with no \code{border_last_row} it takes
+the group rule like any other group's.  A table with no groups, or
+one, changes nothing.}
 
 \item{header_align, header_bold, header_italic}{The whole header's default
 look, \code{\link[=rtf_table_style]{rtf_table_style()}}'s fields.}
