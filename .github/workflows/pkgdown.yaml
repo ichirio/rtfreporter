@@ -8,7 +8,16 @@ on:
     branches-ignore: [next]
   release:
     types: [published]
+  # Nightly, 16:00 UTC = 1:00 JST: build next (no deploy), so a broken
+  # article shows before the daily next -> main merge at about 2:00 JST.
+  schedule:
+    - cron: "0 16 * * *"
   workflow_dispatch:
+    inputs:
+      nightly:
+        description: "Build next only, as the nightly run does (no deploy)"
+        type: boolean
+        default: false
 
 name: pkgdown
 
@@ -20,14 +29,18 @@ permissions:
 jobs:
   pkgdown:
     runs-on: ubuntu-latest
-    # Only restrict concurrency for non-PR jobs
+    # Only restrict concurrency for non-PR jobs; the nightly build of next
+    # has a group of its own, so it never cancels or waits on a main deploy
     concurrency:
-      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+      group: ${{ (github.event_name == 'schedule' || inputs.nightly) && 'pkgdown-nightly' || format('pkgdown-{0}', github.event_name != 'pull_request' || github.run_id) }}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      # true on the nightly build of next: build only, no deploy
+      NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ (github.event_name == 'schedule' || inputs.nightly) && 'next' || '' }}
           # tags + history: the AI-manual step reads released copies out of
           # the tags (see "Publish the AI manuals").
           fetch-depth: 0
@@ -110,7 +123,7 @@ jobs:
         shell: bash
 
       - name: Deploy to GitHub Pages
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && env.NIGHTLY != 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
