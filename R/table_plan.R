@@ -3370,7 +3370,9 @@ plan_paginate_rows <- function(.plan, max_rows = NULL, split = NULL,
 #'   whole-table [rtf_border()] is expanded by [rtftable()] first and the
 #'   zones merged onto that, the pages `style_zone()` gives.  Given with
 #'   the look fields (`header_bold`, `align`, ...), the preset's rules stay
-#'   the table's; with no `border` and no zone, the default `"tfl"` does.
+#'   the table's, and so they do with `border_group`, which adds a rule
+#'   under each group; with no `border` and no zone of the table's rows,
+#'   the default `"tfl"` keeps its rules the same way.
 #' @param border_header,border_spanning,border_body,border_first_row,border_last_row
 #'   The rules of one kind of row (the column header, a spanning header
 #'   row, the body, its first and its last row), each an [rtf_border()], by
@@ -4869,9 +4871,11 @@ plan_apply <- function(.plan, stage = c("auto", "input", "args",
     # rtftable() reads border = "tfl" (its default) as "take the style's
     # rules", and this style has none of its own: given as an object, the
     # preset's rules are the table's, as they are with a zone above.  No
-    # border said and no zone is the default preset, "tfl", the same way.
+    # border said and no zone of the table's rows is the default preset,
+    # "tfl", the same way: border_group adds a rule under each group, it
+    # does not take the place of the table's rules.
     if (identical(out[["border"]], "tfl") ||
-        (is.null(out[["border"]]) && !length(zn))) {
+        (is.null(out[["border"]]) && !length(setdiff(zn, "border_group")))) {
       out[["border"]] <- .normalize_table_border("tfl")
     }
   }
