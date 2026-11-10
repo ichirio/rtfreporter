@@ -193,12 +193,18 @@ of the row's resolved zone border (\code{body} crossed with \code{first_row} /
 \code{last_row}), per side.  So a rule under a summary row is
 \code{style_body(rows = ~ Item == "Total", border = rtf_border(bottom = TRUE))}, and an
 \code{"none"} side erases a zone rule on the selected cells.
-Row height and cell padding are deliberately \emph{not} per-row properties --
-they stay uniform per table / document (see \code{rtf_document(style = rtf_style())}
-and the \verb{rtfreporter.*} options).
+Row height, cell padding, vertical alignment and font size apply to the
+whole table (the body, and the header for its own settings); they are not
+set per row or per cell.  Set them on \code{\link[=rtftable]{rtftable()}}, or for the whole
+document with \code{\link[=rtf_style]{rtf_style()}}.
 }
 
 \section{Header rows and the two row kinds}{
+
+\code{style_header()} does not set row height, cell padding, vertical alignment
+or font size: these apply to the whole table, with
+\code{header_row_height_twips} for the header's own row height (see
+\code{\link[=rtftable]{rtftable()}}).
 
 A column header holds two kinds of rows (see \code{\link[=rtf_col_header]{rtf_col_header()}}): \strong{cell
 rows} (lists of \code{\link[=col_cell]{col_cell()}} spans -- spanning rows, or any row built from
