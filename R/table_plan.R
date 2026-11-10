@@ -1563,7 +1563,10 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
     }
     chain(e)
   }
-  if (ok(x, identical(verb, "plan_compare"))) return(invisible(NULL))
+  if (ok(x, identical(verb, "plan_compare"))) {
+    .plan_check_cell_code(x, verb, key)
+    return(invisible(NULL))
+  }
   # what was given, said in the words of the help
   what <- function(e, map = FALSE) {
     if (is.null(e)) return("NULL")
@@ -1609,6 +1612,23 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
   .ard_stop(sprintf(paste0("%s is %s, not %s.\n",
                            "  A constant cell is written as text: \"-\"."),
                     arg, shapes, what(x, identical(verb, "plan_compare"))))
+}
+
+# A rule of the right shape whose template is R code written as text: a
+# guard list deparsed into one string, or an `!r` guard read as plain text.
+# Its cells would print that code with the numbers filled in ("list(...)").
+.plan_check_cell_code <- function(x, verb, key) {
+  texts <- function(e) {
+    if (inherits(e, "formula")) return(character())
+    if (is.list(e)) return(unlist(lapply(unclass(e), texts), use.names = FALSE))
+    if (is.character(e)) return(e[!is.na(e)])
+    character()
+  }
+  bad <- Filter(.ard_tpl_is_code, texts(x))
+  if (!length(bad)) return(invisible(NULL))
+  arg <- if (nzchar(key)) sprintf("%s(%s = )", verb, key)
+         else sprintf("%s(<the unnamed entry>)", verb)
+  .ard_stop(.ard_tpl_code_msg(arg, bad[[1L]]))
 }
 
 # `round` used to be a verb of its own, and it never earned one: the whole

@@ -651,7 +651,42 @@
     }
     return(list(cond = x[[2L]], env = e, tpl = tpl))
   }
-  list(cond = NULL, env = NULL, tpl = as.character(x))
+  list(cond = NULL, env = NULL, tpl = .ard_chain_text(x))
+}
+
+# A chain element that is not a guard is one template text.  Anything else
+# would reach the cell as R's own text -- as.character() of a list is
+# "list(...)" -- so it stops, and so does a template that is R code written
+# as text: a guard chain or a guard turned into a string on its way here (a
+# YAML `!r` read as plain text, a deparsed list).  The cell would print that
+# code with the numbers filled in.  plan_cells() says it at the call
+# (.plan_check_cell_rule()); this is for widen_ard(cells = ).
+.ard_chain_text <- function(x) {
+  if (is.list(x) || length(x) != 1L || !is.atomic(x)) {
+    .ard_stop(sprintf(paste0(
+      "A cell template is one text or a guard (`n == 0 ~ \"0\"`), not %s.\n",
+      "  A chain of them is one list or c(): c(n == 0 ~ \"0\", \"{n} ({p:.1f%%})\")."),
+      if (is.list(x)) "a list inside the chain" else sprintf("%d values", length(x))))
+  }
+  tpl <- as.character(x)
+  if (!is.na(tpl) && .ard_tpl_is_code(tpl)) .ard_stop(.ard_tpl_code_msg("cells", tpl))
+  tpl
+}
+
+# R code as a template's text: a deparsed list(), c() or structure() of
+# quoted texts, or a guard `condition ~ "template"` as a string
+.ard_tpl_is_code <- function(tpl) {
+  grepl("^\\s*(list|c|structure)\\(.*\"", tpl) ||
+    grepl("^[^\"{}]*[^\"{}~ ]\\s*~\\s*\".*\"\\s*$", tpl)
+}
+
+.ard_tpl_code_msg <- function(arg, tpl) {
+  shown <- if (nchar(tpl) > 70L) paste0(substr(tpl, 1L, 67L), "...") else tpl
+  sprintf(paste0(
+    "%s: the cell template %s is R code written as text, not a template; ",
+    "the cells would print it.\n",
+    "  Give the guards themselves: c(n == 0 ~ \"0\", \"{n} ({p:.1f%%})\")."),
+    arg, encodeString(shown, quote = "'"))
 }
 
 # A chain is whatever c() or list() produced: strings, guards, or both.
