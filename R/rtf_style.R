@@ -114,7 +114,8 @@
 #' @param title_format,footnote_format How the title / footnote block is
 #'   written: `"text"` (plain paragraphs) or `"table"` (a single-column
 #'   table).  The defaults are `"text"` for the title and `"table"` for the
-#'   footnote.
+#'   footnote.  A `border` on a title or footnote needs the `"table"` form;
+#'   the `"text"` form ignores it and warns.
 #' @param title_width,footnote_width The width of the title / footnote
 #'   block: `"content"` (the table's), `"page"` (the writable width), a
 #'   fraction in `(0, 1]` of the writable width, or twips (a whole number
