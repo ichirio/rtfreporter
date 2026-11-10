@@ -67,7 +67,8 @@ template and where it prints, as \code{\link[=plan_paginate_group]{plan_paginate
 carries a token for each column by its name, \code{"Analyte: {ANALYTE}"},
 and no \code{{value}}.}
 
-\item{na_label}{With \code{page_by}: the text a \strong{blank} BY value (\code{""} or \code{NA}) prints as in the page's heading (\code{{value}}, a \code{{<column>}}) and in
+\item{na_label}{With \code{page_by}: the text a \strong{blank} BY value (\code{""} or
+\code{NA}) prints as in the page's heading (\code{{value}}, a \verb{\{<column>\}}) and in
 its name.  The default \code{NULL} is the empty text, so a template
 \code{"Severity: {value}"} prints \code{"Severity: "}.  Like \code{cont_label}, a text
 of the page, and like \code{na}, the text of a missing value.}
