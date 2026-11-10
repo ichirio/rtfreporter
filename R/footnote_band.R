@@ -33,11 +33,12 @@
     # row's own height over the block's (#125).  Its columns are read as a
     # row given bare; the paragraph form has no rows, so it keeps the text.
     if (is.list(r) && !is.null(r$columns)) {
-      bad <- setdiff(names(r), c("columns", "row_height_twips", "border"))
+      bad <- setdiff(names(r), c("columns", "row_height_twips", "border",
+                                 "bold", "italic", "underline"))
       if (length(bad)) {
         stop(sprintf(paste0("`rtf_footnotes()` row %d: a row given as a list ",
-                            "takes columns =, row_height_twips = and border =; ",
-                            "got %s."),
+                            "takes columns =, row_height_twips =, border =, ",
+                            "bold =, italic = and underline =; got %s."),
                      i, paste0("'", bad, "'", collapse = ", ")), call. = FALSE)
       }
       h <- .check_row_height(
@@ -45,9 +46,15 @@
         sprintf("rtf_footnotes()` row %d's `row_height_twips", i))
       # the row's own border, over the block's (side by side)
       b <- .check_hf_row_border(r$border, "rtf_footnotes", i)
+      # bold / italic / underline on every cell of the row, as a band row's
+      .check_hf_row_emphasis(r, "rtf_footnotes", i)
+      emph <- r[intersect(c("bold", "italic", "underline"), names(r))]
       cols <- .footnote_rows(list(r$columns), align, format)[[1L]]
-      if (identical(format, "text")) return(cols)
-      return(list(columns = cols, row_height_twips = h, border = b))
+      if (identical(format, "text")) {
+        # the paragraph form reads a title-style row list for its emphasis
+        return(if (length(emph)) c(list(text = cols), emph) else cols)
+      }
+      return(c(list(columns = cols, row_height_twips = h, border = b), emph))
     }
     if (is.list(r)) {
       stop(paste0("A footnote row is a string or a named vector such as ",

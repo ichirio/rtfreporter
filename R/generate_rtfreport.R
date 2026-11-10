@@ -1907,6 +1907,11 @@
     row_color <- (if (is.list(row_def)) row_def$color) %||% hf$color
     color_idx <- if (!is.null(row_color) && !is.null(color_index_map))
                    color_index_map[[toupper(row_color)]] else NULL
+    # bold / italic / underline: the row's (list form), on every cell, in
+    # the words a title row uses (GAPS G14); left out, the text is plain
+    row_emph <- if (is.list(row_def))
+      c(bold = isTRUE(row_def$bold), italic = isTRUE(row_def$italic),
+        underline = isTRUE(row_def$underline)) else c(FALSE, FALSE, FALSE)
     if (is.null(cols_vec) || length(cols_vec) == 0L) {
       cols_vec <- c("")
     }
@@ -1976,6 +1981,12 @@
                    center = align_cmd$center, align_cmd$default)
       txt <- .render_tokens(cols_display[i], current_page = current_page,
                             total_pages = total_pages, markup = hf_markup)
+      # decorations inside-out, as a title cell's (.build_cell_content())
+      if (nzchar(txt)) {
+        if (row_emph[[3L]]) txt <- paste0("\\ul ", txt, "\\ulnone ")
+        if (row_emph[[2L]]) txt <- paste0("\\i ",  txt, "\\i0 ")
+        if (row_emph[[1L]]) txt <- paste0("\\b ",  txt, "\\b0 ")
+      }
       if (!is.null(color_idx) && nzchar(txt)) {
         txt <- paste0("\\cf", as.integer(color_idx), " ", txt, "\\cf1 ")
       }
