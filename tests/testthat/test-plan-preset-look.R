@@ -94,3 +94,28 @@ test_that("border = \"none\" with a look field stays without rules, and other pl
   expect_equal(.pl_pages(table_plan(.pl_df()) |> plan_style(border = "tfl", font = "Arial")),
                .pl_direct(border = "tfl", font = "Arial"))
 })
+
+test_that("no border said: the default preset keeps its rules with a look field", {
+  # header_bold, a font field, another look field
+  got <- .pl_pages(table_plan(.pl_df()) |> plan_style(header_bold = TRUE))
+  want <- .pl_direct() |> style_cols(header_bold = TRUE)
+  expect_equal(got, want)
+  expect_identical(.pl_rtf(got), .pl_rtf(want))
+  got2 <- .pl_pages(table_plan(.pl_df()) |> plan_style(header_bold = TRUE, font = "Arial"))
+  want2 <- .pl_direct(font = "Arial") |> style_cols(header_bold = TRUE)
+  expect_equal(got2, want2)
+  expect_identical(.pl_rtf(got2), .pl_rtf(want2))
+  got3 <- .pl_pages(table_plan(.pl_df()) |> plan_style(align = "right", italic = TRUE))
+  want3 <- .pl_direct() |> style_cols(align = "right", italic = TRUE, header_align = "right")
+  expect_equal(got3, want3)
+  # the same rules as the plan with border = "tfl"
+  expect_identical(.pl_rtf(got),
+                   .pl_rtf(.pl_pages(table_plan(.pl_df()) |>
+                                       plan_style(border = "tfl", header_bold = TRUE))))
+  hdr <- .pl_header_row(.pl_rtf(got3))
+  expect_identical(lengths(regmatches(hdr, gregexpr("\\\\clbrdrt\\\\brdrs", hdr))), 3L)
+  # zones without a border are still the table's rules (no preset added)
+  z <- rtf_border(bottom = TRUE)
+  expect_equal(.pl_pages(table_plan(.pl_df()) |> plan_style(border_last_row = z, header_bold = TRUE)),
+               .pl_strip(.pl_direct(style = rtf_table_style(border_last_row = z, header_bold = TRUE))))
+})

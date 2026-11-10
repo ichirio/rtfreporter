@@ -120,9 +120,11 @@
   sty <- args[intersect(names(args), c(zone_names, look_names))]
   rest <- args[setdiff(names(args), names(sty))]
   if (length(sty)) rest$style <- do.call(rtf_table_style, sty)
-  # border = "tfl" with a style: the plan keeps the preset's rules (FR-PL990),
+  # border = "tfl" (or no border, the default "tfl") with a look-only style:
+  # the plan keeps the preset's rules (FR-PL990),
   # which the direct call says with the preset as an object
-  if (length(sty) && identical(rest$border, "tfl")) {
+  if (length(sty) && (identical(rest$border, "tfl") ||
+                      (is.null(rest$border) && !any(names(sty) %in% zone_names)))) {
     rest$border <- rtfreporter:::.normalize_table_border("tfl")
   }
   out <- suppressMessages(do.call(as_rtftables, c(list(d, read_meta = FALSE), rest)))

@@ -52,7 +52,7 @@ last row.  A side a zone leaves \code{NULL} keeps the preset's.  A
 whole-table \code{\link[=rtf_border]{rtf_border()}} is expanded by \code{\link[=rtftable]{rtftable()}} first and the
 zones merged onto that, the pages \code{style_zone()} gives.  Given with
 the look fields (\code{header_bold}, \code{align}, ...), the preset's rules stay
-the table's.}
+the table's; with no \code{border} and no zone, the default \code{"tfl"} does.}
 
 \item{align_count_pct}{\code{as_rtftables(align_count_pct = )}: \code{TRUE}
 realigns \code{"n (xx.x)"} cells to one width before the pages are cut, or

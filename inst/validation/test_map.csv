@@ -30,7 +30,7 @@
 "test-table-plan.R","plan_columns(sep = ) also drives the ARD plan's own spanning header (#520)","FT-PL029","FR-PL168 FR-PL106 FR-PL387 FR-IX251"
 "test-table-plan.R","table_plan() takes the roles, and stat = names the parts","FT-PL030","FR-PL127 FR-PL128"
 "test-table-plan.R","plan_blanks(where = ""records"") separates a listing's records","FT-PL031","FR-PL189 FR-PL193"
-"test-table-plan.R","every as_rtftables() setting has a plan verb, with the direct call's RTF","FT-PL032","FR-PL119 FR-PL170 FR-PL171 FR-PL173 FR-PL174 FR-PL387 FR-PL388 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL424 FR-PL425 FR-PL426 FR-PL428 FR-PL459 FR-PL475 FR-PL477 FR-TB455"
+"test-table-plan.R","every as_rtftables() setting has a plan verb, with the direct call's RTF","FT-PL032","FR-PL119 FR-PL170 FR-PL171 FR-PL173 FR-PL174 FR-PL387 FR-PL388 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL424 FR-PL425 FR-PL426 FR-PL428 FR-PL459 FR-PL475 FR-PL477 FR-TB455 FR-PL990"
 "test-table-plan.R","plan_total(direction = ""both""): a shift table's Total row and corner from cards' plain margins","FT-PL033","FR-PL113 FR-PL267 FR-IX208"
 "test-table-plan.R","table_plan(show_keys = ) and plan_stat_groups(.variables, .others): SEX's own n (%) beside the SEX subgroups' ORR (#621)","FT-PL034","FR-PL115 FR-PL116 FR-PL169 FR-PL281 FR-AR186 FR-AR207"
 "test-table-plan.R","plan_stat_groups(): a split record takes its group's cells, an .others record its context's, with a plan-wide categorical","FT-PL035","FR-PL104 FR-PL239"
@@ -1457,3 +1457,4 @@
 "test-plan-preset-look.R","plan_style(border = ""tfl"", <look field> = ) keeps the preset's rules","FT-PL2041","FR-PL990"
 "test-plan-preset-look.R","the RTF has the preset's rules over and under the header","FT-PL2042","FR-PL990"
 "test-plan-preset-look.R","border = ""none"" with a look field stays without rules, and other plans are as before","FT-PL2043","FR-PL990"
+"test-plan-preset-look.R","no border said: the default preset keeps its rules with a look field","FT-PL2044","FR-PL990"
