@@ -49,10 +49,14 @@ a row, the name of each element chooses its column:
 \item{\code{r}}{right-aligned text}
 }
 e.g. \code{c(l = "Protocol XYZ-001", r = "Page {AUTO_PAGE}")}.  A row may
-also be a list, \code{list(columns = c(l = , c = , r = ), row_height_twips = 400L, color = "#C00000", border = rtf_border(bottom = TRUE))}, whose
-\code{row_height_twips} is that row's height (over the band's
-\code{row_height_twips}), \code{color} its text colour (over the band's \code{color})
-and \code{border} its own \code{\link[=rtf_border]{rtf_border()}} (see \code{border}).  Cell text may
+also be a list, \code{list(columns = c(l = , c = , r = ), row_height_twips = 400L, color = "#C00000", border = rtf_border(bottom = TRUE), bold = TRUE)}, whose \code{row_height_twips} is that row's height (over the band's
+\code{row_height_twips}), \code{color} its text colour (over the band's \code{color}),
+\code{border} its own \code{\link[=rtf_border]{rtf_border()}} (see \code{border}), and \code{bold}, \code{italic}
+and \code{underline} (each \code{TRUE} or \code{FALSE}, default \code{FALSE}) the emphasis
+of every cell of the row, the words a title row uses
+(\code{\link[=rtf_titles]{rtf_titles()}}).  Tokens and \verb{^\{\}} / \verb{_\{\}} markup work inside them.
+A value that is not one \code{TRUE} / \code{FALSE} is an error naming the
+row.  Cell text may
 contain \strong{page-number tokens} that the renderer substitutes: \code{{AUTO_PAGE}}
 (the current page, updated live by the viewer), \code{{AUTO_TOTAL_PAGES}} (the
 document total), and \code{{PAGE}} / \code{{TOTAL_PAGES}} (static numbers baked in at

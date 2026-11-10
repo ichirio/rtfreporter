@@ -1097,7 +1097,9 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #' figure page; or length 1, common to all). Each block is a character vector or a list of rows (a string,
 #' a named vector `c(l = , c = , r = )`, or the page footer's row list
 #' `list(columns = , row_height_twips = )`, whose `row_height_twips` is that
-#' row's height over the block's).
+#' row's height over the block's; it takes `border =` and, as a band row
+#' does, `bold =`, `italic =` and `underline =` (each `TRUE` or `FALSE`)
+#' for every cell of the row).
 #' Footnote rows default to left-aligned and draw no rule unless `border`
 #' (or a row's own `border`) asks for one. `NULL` per element
 #' suppresses the footnote for that content.

@@ -108,6 +108,19 @@ rows[[3]] <- c(c = "DRAFT")
 hdr <- rtf_header(rows = rows)
 ```
 
+A row can also be a list, `list(columns = c(l = , c = , r = ), ...)`, which
+carries that row's own look: `row_height_twips`, `color`, `border`, and
+`bold` / `italic` / `underline` -- the same words a title row uses -- for
+every cell of the row. Here only the study line is bold:
+
+```{r bold-row}
+hdr <- rtf_header(rows = list(
+  list(columns = c(l = "Example Pharma Study EP-101", r = "Confidential"),
+       bold = TRUE),
+  c(l = "Table 14.1.1", r = "Page {AUTO_PAGE} of {AUTO_TOTAL_PAGES}")
+))
+```
+
 A header/footer can also take a `border` (e.g. a rule under the footer) -- see
 `?rtf_header`.
 
