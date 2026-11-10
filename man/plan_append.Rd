@@ -48,6 +48,9 @@ contents on one page").
 }
 \section{Parts}{
 
+Each \code{plan_append()} call adds a part of its own, below the ones added
+before it; a later call does not replace an earlier one.
+
 \code{plan_append(part)} lays another plan's rows under this plan's.  The
 first plan (the \strong{parent}) is an ordinary table with its column axis
 and header; a \strong{part} (the child) is an ordinary plan too, written as

@@ -37,9 +37,9 @@
 #  ---------------------------------------------------------------------------
 #
 #  1. LAST WINS.  Every verb adds a layer; layers are merged in order and a
-#     later one overwrites what an earlier one said about the same key.  This
-#     is tfrmt's `frmt_structure` rule, and it is what makes "set everything,
-#     then fix one variable" a two-line edit instead of a rewrite.
+#     later one overwrites what an earlier one said about the same key.  That
+#     is what makes "set everything, then fix one variable" a two-line edit
+#     instead of a rewrite.
 #
 #     Note this is a DIFFERENT rule from `widen_ard(cells = )`, which picks
 #     by SPECIFICITY (variable, then context, then kind, then default) and
@@ -444,8 +444,8 @@
 #'
 #' `table_plan()` starts a plan, and takes the **roles**: which column goes
 #' across the table, which go down it, which carries the row identity.
-#' This is `ggplot(data, aes(x, y))` --- the names must be columns of the
-#' data you hand it, so you can check them by looking.  Every `plan_*()`
+#' The names must be columns of the data you hand it, so you can check them
+#' by looking.  Every `plan_*()`
 #' verb after it adds a declaration, and nothing runs until [plan_apply()].
 #'
 #' The rule is **last wins** --- a later layer overwrites what an earlier one
@@ -464,7 +464,7 @@
 #' earlier value.  [plan_levels()], [plan_labels()] and [plan_nest()] are
 #' the exception: they merge one key at a time.
 #'
-#' This is tfrmt's `frmt_structure` rule.  Within one layer the keys are
+#' Within one layer the keys are
 #' picked by specificity, as [widen_ard()]'s `cells` are: an analysis
 #' variable before a kind, a kind before the default.
 #'
@@ -2453,6 +2453,8 @@ plan_total <- function(.plan, label = "Total", position = c("last", "first"),
 #' conditions are R over a record's statistics and keys, the language of
 #' [plan_cells()]' guards; nothing is computed, `p` is the ARD's.  The
 #' columns stay.  In a SOC / PT table a SOC goes with its last PT.
+#' A later `plan_filter()` replaces the earlier one as a whole: the last call
+#' is the filter.
 #'
 #' @param .plan A [table_plan()].
 #' @param ... The conditions, unnamed, all of them holding:
@@ -2524,6 +2526,8 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 #' `ard_stats_fisher_test()`, ...).  Each goes on its **variable's block**:
 #' the row of its level when it has one, else the block's first row as the
 #' table is sorted.  Nothing is computed; the numbers are the ARD's.
+#' A later `plan_compare()` replaces the earlier one as a whole: the last call
+#' says every comparison column.
 #'
 #' @param .plan A [table_plan()].  The dot keeps `p = `, the commonest
 #'   column here, from being taken for it.
