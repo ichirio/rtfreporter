@@ -19,17 +19,22 @@
 # layout design: the first block on a page that has one).
 .rtf_block <- function(content, group = 1L, page_in_group = 1L,
                        title = NULL, footnote = NULL, page_break = TRUE,
-                       space_before = 0L, cont_title = NULL, section = NULL) {
-  structure(list(content       = content,
-                 group         = as.integer(group),
-                 page_in_group = as.integer(page_in_group),
-                 title         = title,
-                 footnote      = footnote,
-                 page_break    = isTRUE(page_break),
-                 space_before  = as.integer(space_before),
-                 cont_title    = cont_title,
-                 section       = section),
-            class = "rtf_block")
+                       space_before = 0L, cont_title = NULL, section = NULL,
+                       title_border = NULL, footnote_border = NULL) {
+  b <- list(content       = content,
+            group         = as.integer(group),
+            page_in_group = as.integer(page_in_group),
+            title         = title,
+            footnote      = footnote,
+            page_break    = isTRUE(page_break),
+            space_before  = as.integer(space_before),
+            cont_title    = cont_title,
+            section       = section)
+  # the content's own title / footnote block border (plan_titles(border = ),
+  # plan_footnotes(border = )), over the document's; kept only when given
+  if (!is.null(title_border))    b$title_border    <- title_border
+  if (!is.null(footnote_border)) b$footnote_border <- footnote_border
+  structure(b, class = "rtf_block")
 }
 
 # The blocks of a document, first to last (names: the page names
@@ -79,7 +84,8 @@ length.rtf_contents <- function(x) {
 .rtf_add_blocks <- function(doc, contents, titles, footnotes,
                             page_break = TRUE, space_before = 0L,
                             fn = "rtf_tables", cont_title = NULL,
-                            sections = NULL) {
+                            sections = NULL, title_borders = NULL,
+                            footnote_borders = NULL) {
   n_new <- length(contents)
   if (!is.logical(page_break) || anyNA(page_break) ||
       !length(page_break) %in% c(1L, n_new)) {
@@ -103,7 +109,9 @@ length.rtf_contents <- function(x) {
     blocks[[i]] <- .rtf_block(contents[[i]], group = group[i], page_in_group = in_group[i],
                               title = titles[[i]], footnote = footnotes[[i]],
                               page_break = pb[i], space_before = space_before,
-                              cont_title = cont_title, section = sections[[i]])
+                              cont_title = cont_title, section = sections[[i]],
+                              title_border = title_borders[[i]],
+                              footnote_border = footnote_borders[[i]])
   }
   names(blocks) <- names(contents)
   doc$contents <- .rtf_contents(c(unclass(old), blocks))

@@ -22,9 +22,14 @@
 .page_segments <- function(page) {
   segs <- page$segments
   if (length(segs) > 1L) return(segs)
-  list(list(content = page[["content"]], title = page[["title"]],
-            footnote = page[["footnote"]], space_before = 0L,
-            values = if (length(segs)) segs[[1L]][["values"]]))
+  one <- list(content = page[["content"]], title = page[["title"]],
+              footnote = page[["footnote"]], space_before = 0L,
+              values = if (length(segs)) segs[[1L]][["values"]])
+  if (length(segs)) {
+    one$title_border    <- segs[[1L]][["title_border"]]
+    one$footnote_border <- segs[[1L]][["footnote_border"]]
+  }
+  list(one)
 }
 
 # Each segment draws its title, content and footnote, with a separating
@@ -52,12 +57,15 @@
     content_w     <- .content_width_twips(ct, writable_w)
     content_align <- .content_align(ct)
     title_w    <- .resolve_block_width(ctx$doc_title_width,    content_w, writable_w)
+    # a content's own block border (plan_titles(border = ), ...) wins over
+    # the document's
+    title_st <- .segment_block_style(doc$title_style, b[["title_border"]])
     footnote_w <- .resolve_block_width(ctx$doc_footnote_width, content_w, writable_w)
     # -- Title (default centre + bold; NULL -> one blank gap row).  Plain
     # paragraphs by default; the content-width table form is opt-in via
     # title_format = "table".
     out <- c(out, if (identical(ctx$doc_title_format, "text")) {
-      .render_text_block_text(b$title, is_footer = FALSE, style = doc$title_style,
+      .render_text_block_text(b$title, is_footer = FALSE, style = title_st,
                               font_half_points = ctx$font_half_points,
                               font_index_map = ctx$font_index_map,
                               ctx$color_index_map, markup = ctx$doc_markup,
@@ -70,14 +78,14 @@
         paste0("\\clvertalt", .cell_vpad_cmd(ctx$doc_pad_t, ctx$doc_pad_b)),
         content_align, ctx$color_index_map,
         doc_row_height = ctx$doc_row_height, markup = ctx$doc_markup,
-        style = doc$title_style, font_index_map = ctx$font_index_map,
+        style = title_st, font_index_map = ctx$font_index_map,
         current_page = p_idx, total_pages = ctx$total_pages)
     })
     out <- c(out, .render_content(ct, ctx))
     # -- Footnote (default left; the table form's first row carries the
     # separator rule).  The table form is the default so the rule is drawn;
     # footnote_format = "text" switches to plain paragraphs.
-    footnote_st <- doc$footnote_style
+    footnote_st <- .segment_block_style(doc$footnote_style, b[["footnote_border"]])
     out <- c(out, if (identical(ctx$doc_footnote_format, "text")) {
       .render_text_block_text(
         .footnote_rows(b$footnote, footnote_st$align %||% "left", "text"),
@@ -106,6 +114,15 @@
     })
   }
   out
+}
+
+# The style a segment's title or footnote block is drawn with: the
+# document's, with the content's own block border over its border.
+.segment_block_style <- function(style, border) {
+  if (is.null(border)) return(style)
+  style <- style %||% list()
+  style$border <- border
+  style
 }
 
 # ---- the content itself -----------------------------------------------------

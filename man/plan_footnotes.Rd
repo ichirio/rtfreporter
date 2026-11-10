@@ -4,7 +4,7 @@
 \alias{plan_footnotes}
 \title{Put a block of footnotes below the table}
 \usage{
-plan_footnotes(.plan, ..., pages = NULL)
+plan_footnotes(.plan, ..., pages = NULL, border = NULL)
 }
 \arguments{
 \item{.plan}{A \code{\link[=table_plan]{table_plan()}}.}
@@ -14,6 +14,15 @@ line, or a character vector of them.}
 
 \item{pages}{A list with one block per page, when the pages do not share
 one.  Give \code{...} or \code{pages}, never both.}
+
+\item{border}{\code{NULL} (default) for none, or an \code{\link[=rtf_border]{rtf_border()}} for the
+footnote block as a whole on every page of this table, read as
+\code{\link[=rtf_footnotes]{rtf_footnotes()}}\verb{(border = )} is (\code{rtf_border(top = TRUE)} is the
+separator rule above the block).  It is this table's own, so it wins
+over the document's \code{\link[=rtf_footnotes]{rtf_footnotes()}}\verb{(border = )} and
+\code{\link[=rtf_style]{rtf_style()}}\code{(footnotes = list(border = ))}.  It is drawn in the
+table form (\code{rtf_style(footnote_format = "table")}, the default); the
+text form ignores it, with a warning.}
 }
 \value{
 The plan, with one more layer.

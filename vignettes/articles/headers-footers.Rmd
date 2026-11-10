@@ -121,8 +121,11 @@ hdr <- rtf_header(rows = list(
 ))
 ```
 
-A header/footer can also take a `border` (e.g. a rule under the footer) -- see
-`?rtf_header`.
+A header/footer can also take a `border`, for the band as a whole: `top`
+above its first row, `bottom` below its last row, `inside_h` between rows,
+`left` / `right` on every row and `inside_v` between a row's cells. A row
+given as `list(columns = , border = )` has its own, which wins over the
+band's -- see `?rtf_header`.
 
 
 ## One header/footer for the whole document
