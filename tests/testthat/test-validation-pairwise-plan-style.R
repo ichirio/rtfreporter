@@ -120,11 +120,18 @@
   sty <- args[intersect(names(args), c(zone_names, look_names))]
   rest <- args[setdiff(names(args), names(sty))]
   if (length(sty)) rest$style <- do.call(rtf_table_style, sty)
+  # border = "tfl" (or no border, the default "tfl") with a look-only style:
+  # the plan keeps the preset's rules (FR-PL990),
+  # which the direct call says with the preset as an object
+  if (length(sty) && (identical(rest$border, "tfl") ||
+                      (is.null(rest$border) && !any(names(sty) %in% zone_names)))) {
+    rest$border <- rtfreporter:::.normalize_table_border("tfl")
+  }
   out <- suppressMessages(do.call(as_rtftables, c(list(d, read_meta = FALSE), rest)))
   if (inherits(out, "rtftable")) list(out) else out
 }
 
-test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX407]: plan_style(): rules x look x width x heights x padding x font x placement x other settings, pairwise", {
+test_that("FT-PL990 [FR-PL422 FR-PL423 FR-PL424 FR-PL425 FR-PL426 FR-PL427 FR-IX407 FR-PL990]: plan_style(): rules x look x width x heights x padding x font x placement x other settings, pairwise", {
   cand <- expand.grid(lapply(.ps_levels, names), stringsAsFactors = FALSE)
   expect_identical(nrow(cand), 61440L)
   ap <- .allpairs(cand)
@@ -180,15 +187,10 @@ test_that("FT-PL991 [FR-PL424 FR-PL428 FR-PL429 FR-IX407]: plan_style(): border 
              "border_last_row")
   d <- .ps_df()
   borders <- list(tfl = "tfl", none = "none", box = rtf_border(all = TRUE))
-  # a preset is the same object as style_zone() makes; a whole-table
-  # rtf_border() is expanded by rtftable() with the zones merged on top, so
-  # it is the same RTF
+  # the same pages as style_zone() makes, and the same RTF
   same <- function(got, want, b, info) {
-    if (b == "box") {
-      expect_identical(.ps_rtf(got), .ps_rtf(want), info = info)
-    } else {
-      expect_equal(got, want, info = info)
-    }
+    expect_equal(got, want, info = info)
+    expect_identical(.ps_rtf(got), .ps_rtf(want), info = info)
   }
   for (b in names(borders)) for (z in zones) {
     zone_args <- stats::setNames(list(.ps_zone()), z)
