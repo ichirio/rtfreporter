@@ -954,7 +954,8 @@
 #   italic       -- (optional) TRUE / FALSE.  Default FALSE.
 #   underline    -- (optional) TRUE / FALSE.  Default FALSE.
 #   promoted     -- (internal) TRUE on a label-row cell promoted by
-#                   style_header(); it takes col_spec[[from]]$header_background.
+#                   style_header(); it takes col_spec[[from]]$header_background
+#                   and $header_color.
 #
 # `border_spec` is the row-level border (only top on first / bottom on
 # last header row, per .header_outer_border()).  `group_bottom_side`,
@@ -1125,6 +1126,15 @@
       if (isTRUE(sp$underline)) label <- paste0("\\ul ", label, "\\ulnone ")
       if (isTRUE(sp$italic))    label <- paste0("\\i ",  label, "\\i0 ")
       if (isTRUE(sp$bold))      label <- paste0("\\b ",  label, "\\b0 ")
+      # A promoted label-row cell keeps its column's header text colour,
+      # as the label row had it.
+      hc <- if (isTRUE(sp$promoted) && !is.null(col_spec) &&
+                j <= length(col_spec)) col_spec[[j]]$header_color
+      if (!is.null(hc) && !is.null(color_index_map) &&
+          !is.null(color_index_map[[hc]])) {
+        label <- paste0("\\cf", as.integer(color_index_map[[hc]]), " ",
+                        label, "\\cf1 ")
+      }
       al        <- .span_align(sp)
       align_cmd <- switch(al, left = "\\ql", right = "\\qr",
                               center = "\\qc", "\\qc")
@@ -1174,8 +1184,12 @@
     bold  <- isTRUE(spec$header_bold)
     itl   <- isTRUE(spec$header_italic)
     align <- spec$header_align %||% "center"
+    # the column's header text colour (style_cols(header_color = )); none
+    # given, no colour command, as before
+    color_idx <- if (!is.null(spec$header_color) && !is.null(color_index_map))
+      color_index_map[[spec$header_color]] else NULL
     .build_cell_content(text, align, bold, itl, FALSE, 0L, pad_l, pad_r,
-                        fs_cmd = fs_cmd)
+                        color_idx = color_idx, fs_cmd = fs_cmd)
   }, character(1L))
   .build_row(cell_defs, cell_contents, row_height_twips, table_align)
 }
@@ -1978,6 +1992,8 @@
       out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$background),
                            use.names = FALSE))
       out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$header_background),
+                           use.names = FALSE))
+      out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$header_color),
                            use.names = FALSE))
       out <- c(out, unlist(lapply(tbl$col_spec, function(s)
         .collect_border_colors(s$border)), use.names = FALSE))

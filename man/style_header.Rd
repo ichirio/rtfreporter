@@ -52,6 +52,7 @@ style_cols(x, ...)
   header_bold = NULL,
   header_italic = NULL,
   header_background = NULL,
+  header_color = NULL,
   ...
 )
 
@@ -140,6 +141,12 @@ selected columns (what the character label rows render with).}
 cells, \code{"#RRGGBB"}. Kept separate from \code{background} so a shaded header
 does not drag the body along with it.}
 
+\item{header_color}{Text colour of the selected columns' \strong{header}
+labels, \code{"#RRGGBB"}: the column-label rows, and a label cell promoted by
+\verb{style_header(border = / underline = )}. Kept separate from \code{color} so
+a coloured header does not colour the body. \code{NULL} (default) leaves the
+labels in the default colour.}
+
 \item{rows}{Body-row selection: \code{NULL} (all rows), integer positions, a
 logical vector over all body rows, a predicate \verb{function(data)}
 returning one logical per row, or a one-sided formula evaluated inside
@@ -218,7 +225,8 @@ and current header styling are copied over, so the rendered output is
 unchanged; the promoted row renders through the \code{spanning} border zone,
 which falls back to the \code{header} zone when unset).  The promoted cells
 keep following the columns' header styling: a later \code{style_cols(header_bold = , header_italic = , header_align = )}, or \code{style_header(bold = , italic = , align = )} on another label row, reaches them too, and
-\code{style_cols(header_background = )} fills them, so the order of the verbs
+\code{style_cols(header_background = , header_color = )} fill and colour them,
+so the order of the verbs
 does not matter.
 }
 
