@@ -981,6 +981,14 @@ rtf_figures <- function(doc, figures,
 #' row's `border`: the text form draws none, ignores one you set, and warns.
 #'
 #' @param doc An rtf_document object.
+#' @param border `NULL` (default) for no rule, or an [rtf_border()] for the
+#'   title block as a whole, read as [rtf_footnotes()]'s is: `top` above
+#'   the first row, `bottom` below the last row, `inside_h` between rows,
+#'   `left` / `right` on the outer edges of every row.  A row's own
+#'   `border` is merged side by side over it, so the sides the row sets
+#'   win.  It is drawn in the table form
+#'   (`rtf_style(title_format = "table")`); the text form ignores it and
+#'   warns.
 #' @param titles A list of length = number of contents, or length 1 (common).
 #'   A page's heading (`rtf_tables(auto_title = TRUE)`, a plan's
 #'   `plan_paginate_group(heading_at = "title")`) is not replaced: it
@@ -1026,7 +1034,7 @@ rtf_figures <- function(doc, figures,
 #' @export
 rtf_titles <- function(doc, titles, font_size_half_points = NULL,
                        row_height_twips = NULL, markup = NULL, font = NULL,
-                       align = NULL) {
+                       align = NULL, border = NULL) {
   if (!inherits(doc, "rtf_document")) {
     stop("`doc` must be an rtf_document object", call. = FALSE)
   }
@@ -1074,6 +1082,13 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
   st <- .element_style(font_size_half_points, row_height_twips, markup,
                        align, verb = "rtf_titles")
   if (!is.null(font)) st$font <- .check_font(font, "rtf_titles(font)")
+  if (!is.null(border)) {
+    if (!inherits(border, "rtf_border")) {
+      stop("`rtf_titles(border = )` must be NULL or an rtf_border() object.",
+           call. = FALSE)
+    }
+    st$border <- border
+  }
   if (length(st)) doc_copy$title_style <- st
   doc_copy
 }
@@ -1096,8 +1111,13 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'   left / centre / right -- the same row model [rtf_footer()] uses. A bare
 #'   string lands in whichever slot `align` selects.
 #' @param border `NULL` (default) for **no rule** -- unlike the page footer,
-#'   the footnote draws none unless asked. An [rtf_border()] puts one on the
-#'   first row, e.g. `border = rtf_border(top = TRUE)`.  It is drawn only with
+#'   the footnote draws none unless asked.  An [rtf_border()] is the border
+#'   of the block as a whole, read as [rtf_footer()]'s is: `top` above the
+#'   first row, `bottom` below the last row, `inside_h` between rows, `left`
+#'   / `right` on the outer edges of every row, `inside_v` between the cells
+#'   of a row; e.g. `border = rtf_border(top = TRUE)` for a separator rule
+#'   above the block.  A row given as a list may carry its own `border =`
+#'   (`list(columns = , border = )`), merged side by side over the block's.  It is drawn only with
 #'   `rtf_style(footnote_format = "table")` (the default); the text form
 #'   ignores it and warns.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for

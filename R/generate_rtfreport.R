@@ -895,6 +895,36 @@
   b
 }
 
+# The border of each row of a block whose rows are fixed -- a page header or
+# footer band, a title or footnote block -- written as one zone.
+#
+# `zone` (an rtf_border or NULL) is the whole block's: `top` above the first
+# row, `bottom` below the last, `inside_h` between rows (.zone_row_border());
+# its `left` / `right` / `inside_v` are left for .cell_edge_border() to place
+# on each row's cells.  `own` holds each row's own rtf_border (or NULL),
+# merged side by side over the zone's, so a side the row sets wins.
+#
+# A boundary both rows draw is drawn once, as the upper row's bottom, as
+# .zone_row_border() does: the lower row's own `top` is dropped, after
+# replacing the upper row's bottom when that came only from the zone (a row's
+# side beats the zone's).  A lower row's top with nothing above it stays.
+.block_row_borders <- function(zone, own) {
+  n   <- length(own)
+  eff <- lapply(seq_len(n), function(i) {
+    .merge_rtf_border(.zone_row_border(zone, i, n), own[[i]])
+  })
+  for (i in seq_len(n)[-1L]) {
+    top    <- if (inherits(eff[[i]], "rtf_border")) eff[[i]]$top
+    bottom <- if (inherits(eff[[i - 1L]], "rtf_border")) eff[[i - 1L]]$bottom
+    if (is.null(top) || is.null(bottom)) next
+    # both rows draw the boundary: the upper row's bottom carries it -- the
+    # lower row's own top when the upper row's comes only from the zone
+    if (is.null(own[[i - 1L]]$bottom)) eff[[i - 1L]]["bottom"] <- list(top)
+    eff[[i]]["top"] <- list(NULL)
+  }
+  eff
+}
+
 .build_cell_defs <- function(cellx, border_spec, valign_cmd,
                              color_index_map = NULL, shade = NULL) {
   n <- length(cellx)
@@ -1856,6 +1886,13 @@
     hf$cell_padding_bottom_twips %||% doc_pad_b %||%
       defaults$default_cell_padding_bottom_twips %||% 0L)
 
+  # The band's border is the whole zone's, resolved over the rows written
+  # (after drop_empty_rows): top above the first, bottom below the last,
+  # inside_h between rows, left / right / inside_v on each row's cells.  A
+  # row given as a list may carry its own `border`, whose sides win.
+  row_borders <- .block_row_borders(
+    hf_border, lapply(rows, function(r) if (is.list(r)) r$border))
+
   out_rows <- character()
   for (row_idx in seq_along(rows)) {
     row_def  <- rows[[row_idx]]
@@ -1919,14 +1956,17 @@
     cellx  <- cumsum(rep(cell_w, n_cols))
     # the last cell ends at the band's edge, whatever the division leaves
     cellx[n_cols] <- as.integer(width)
-    # Border applies only to the first row of the header/footer block.
-    row_border_cmds <- if (row_idx == 1L) .build_border_commands(hf_border, color_index_map) else ""
+    cell_border_cmds <- vapply(seq_len(n_cols), function(j) {
+      .build_border_commands(.cell_edge_border(row_borders[[row_idx]], j, n_cols),
+                             color_index_map)
+    }, character(1L))
 
     row <- table_cmd$row_start
     row <- paste0(row, row_rh_str)
-    for (cx in cellx) {
-      if (nzchar(row_border_cmds) || nzchar(vpad_cmd)) {
-        row <- paste0(row, row_border_cmds, vpad_cmd, "\\cellx", cx)
+    for (j in seq_len(n_cols)) {
+      cx <- cellx[j]
+      if (nzchar(cell_border_cmds[j]) || nzchar(vpad_cmd)) {
+        row <- paste0(row, cell_border_cmds[j], vpad_cmd, "\\cellx", cx)
       } else {
         row <- paste0(row, .cmd_fmt(table_cmd$cell_boundary_template, list(cx = cx)))
       }
@@ -1962,9 +2002,14 @@
     txt <- c(hf$color, unlist(lapply(hf$rows, function(r) if (is.list(r)) r$color),
                               use.names = FALSE))
     txt <- toupper(as.character(txt))
+    # the rows' own borders, after the band's
+    rb <- unlist(lapply(hf$rows, function(r) {
+      if (is.list(r) && inherits(r$border, "rtf_border"))
+        .collect_border_colors(r$border)
+    }), use.names = FALSE)
     b <- hf$border
-    if (is.null(b) || !inherits(b, "rtf_border")) return(txt)
-    c(txt, .collect_border_colors(b))
+    if (is.null(b) || !inherits(b, "rtf_border")) return(c(txt, rb))
+    c(txt, .collect_border_colors(b), rb)
   }
 
   # Colours of the per-cell borders inside one col_header rows list.
@@ -2048,6 +2093,10 @@
       cols <- c(cols, .text_block_colors(sg[["footnote"]], is_footer = TRUE))
     }
   }
+  # The title and footnote blocks' own borders (rtf_titles(border = ),
+  # rtf_footnotes(border = )), last, so a document without them keeps its table
+  cols <- c(cols, .collect_border_colors(report$document$title_style$border),
+            .collect_border_colors(report$document$footnote_style$border))
   cols <- cols[!is.na(cols) & nzchar(cols)]
   # Black / white already occupy the reserved colour-table slots (index 1 / 2),
   # so drop them: declaring them adds nothing, and it keeps the default
@@ -2228,6 +2277,12 @@
                    .fs_cmd_for(m$fs, font_half_points))
   if (!is.null(style$markup)) markup <- style$markup
   cellx  <- as.integer(total_width_twips)
+  # The block's border (rtf_titles(border = )) is the whole block's, as a
+  # band's is; each row's own border wins side by side
+  # (.block_row_borders()).  One cell a row: its left / right are the row's.
+  borders <- .block_row_borders(style$border,
+                                lapply(rows, function(rec) rec$border))
+  for (i in seq_along(rows)) rows[[i]]$border <- borders[[i]]
 
   vapply(rows, function(rec) {
     cell_def <- paste0(.build_border_commands(rec$border, color_index_map),
