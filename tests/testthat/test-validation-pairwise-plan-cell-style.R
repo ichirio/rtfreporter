@@ -23,9 +23,11 @@
 #             indent_twips and border.  The header takes bold, italic,
 #             underline, align, border, color and background (the columns'
 #             header_color / header_background; indent_twips stops,
-#             FR-PL416); `where` takes all but border (FR-PL417); whole
-#             columns take all; a formula carries a value of an attribute
-#             that is a value (not a border).
+#             FR-PL416); `where` takes all, a border going on the body
+#             cells of the rows chosen (FR-PL417); whole columns take all,
+#             a border going on the header cells (FR-PL409); a formula
+#             carries a value of an attribute that is a value (a formula
+#             border is FR-PL980, tested in test-plan-cell-border.R).
 #    later    value styles run in the order written, a formula style is
 #             last-wins per attribute (FR-PL407): a later call on the same
 #             place that names an attribute gives the final value of it, and
@@ -36,8 +38,8 @@
 #  keeps it: col_spec for whole columns, the header cell of col_header, and
 #  cell_styles by row for a condition or a formula.
 #
-#  (A) FT-PL993, decision table, place x attribute (4 x 8 = 32 cells; a
-#  formula has no border, so 4 x 8 less 1): "ok" (the value is on the page, at
+#  (A) FT-PL993, decision table, place x attribute (4 x 8 = 32 cells; the
+#  formula border is tested elsewhere, so 4 x 8 less 1): "ok" (the value is on the page, at
 #  the places the rule names and nowhere else), or the error of the rule.
 #
 #  (B) FT-PL994, pairwise.  Factors and levels:
@@ -133,7 +135,8 @@
 test_that("FT-PL993 [FR-PL404 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL417 FR-PL972 FR-PL973 FR-IX408]: plan_cell_style(): which attributes each place takes, the decision table", {
   d <- .cs_tbl()
   hdr_msg <- "plan_cell_style(header = TRUE) takes bold, italic, underline, align, border, color and background."
-  where_msg <- "a border is set on whole columns."
+  # a border on whole columns warns once a session (FR-PL409); not this test's
+  local_deprecated("warn:plan_cell_style_cols_border")
   base <- .cs_snapshot(.cs_pg(table_plan(d) |> plan_style()))
   bord <- rtf_border(bottom = TRUE)
   places <- c("cols", "header", "where", "formula")
@@ -154,7 +157,12 @@ test_that("FT-PL993 [FR-PL404 FR-PL408 FR-PL409 FR-PL410 FR-PL416 FR-PL417 FR-PL
     if (pl == "header" && a == "indent_twips") {
       expect_error(do.call(plan_cell_style, args), hdr_msg, fixed = TRUE, info = label)
     } else if (pl == "where" && a == "border") {
-      expect_error(do.call(plan_cell_style, args), where_msg, fixed = TRUE, info = label)
+      # a condition: the body cell of column A on the rows chosen, nothing else
+      pg <- .cs_pg(do.call(plan_cell_style, args))
+      expect_false(is.null(pg$cell_styles[[1L]]$border[[2L]]), info = label)
+      expect_null(pg$cell_styles[[1L]]$border[[3L]], info = label)
+      expect_null(pg$cell_styles[[2L]]$border, info = label)
+      expect_null(pg$col_spec[[2L]]$border, info = label)
     } else {
       pg <- .cs_pg(do.call(plan_cell_style, args))
       if (a == "border") {

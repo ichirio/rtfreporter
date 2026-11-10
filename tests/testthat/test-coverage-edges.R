@@ -1257,8 +1257,9 @@ test_that("plan_cell_style() explains a where that cannot work", {
                "plan_cell_style\\(where = \\) is a one-sided formula over the table's columns")
   expect_error(plan_cell_style(p, header = TRUE, where = ~ label == "n", bold = TRUE),
                "plan_cell_style\\(header = TRUE\\) styles the column header, which has no rows")
-  expect_error(plan_cell_style(p, where = ~ label == "n", border = rtf_border(bottom = TRUE)),
-               "takes bold, italic, underline, align, indent_twips, color and background; a border is set on whole columns")
+  # a border with a condition goes on the body cells of those rows
+  expect_s3_class(plan_cell_style(p, where = ~ label == "n", border = rtf_border(bottom = TRUE)),
+                  "table_plan")
 })
 
 test_that("plan_columns(widths = ) must cover every printed column", {

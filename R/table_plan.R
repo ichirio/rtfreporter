@@ -1871,7 +1871,9 @@ plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
 #'
 #' @param .plan A [table_plan()].
 #' @param cols The columns styled, by name (`.values` for every value
-#'   column); left out, every column.
+#'   column); left out, every column.  With `cols` and no `where`, a
+#'   `border` is the header cells' border; for a body column's border write
+#'   `where = ~ TRUE` (or a condition).
 #' @param header `TRUE` styles the column header instead of the body; it
 #'   takes `bold`, `italic`, `underline`, `align` and `border`
 #'   ([style_header()]), `color` and `background` (the columns' header text
@@ -1895,8 +1897,26 @@ plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
 #'       list(Placebo = ~ ifelse(n > 50, "#CC0000", NA))`.}
 #'   }
 #'   A formula sees the printed rows only with `plan_stub(before = TRUE)`.
-#' @param border A column's border, an [rtf_border()]: on whole columns or
-#'   the header, not with `where`.
+#' @param border An [rtf_border()]. Where it is drawn depends on how the
+#'   cells are chosen:
+#'   \describe{
+#'     \item{`cols` and no `where`}{the border goes on the columns' **header
+#'       cells** only ([style_cols()]'s `border`).  This call warns about
+#'       that once a session.  For a border on a column's body cells, write
+#'       `where = ~ TRUE`, or a condition.}
+#'     \item{`where`}{the border goes on the body cells of the rows the
+#'       condition holds for, over `cols` or every column.  It is merged
+#'       side by side over the row's own rules, as
+#'       [style_body()]`(border = )` does.}
+#'     \item{a one-sided formula}{gives one border a row: a list of
+#'       [rtf_border()] objects, or `NULL` for no border, as in `border = ~
+#'       ifelse(is.na(label), list(rtf_border(bottom = TRUE)), list(NULL))`.
+#'       A single [rtf_border()] applies to every row.}
+#'     \item{`header = TRUE`}{the header cells.}
+#'   }
+#'   On a page's last row, the table's own last-row rule
+#'   ([plan_style()]'s `border_last_row`) wins side by side over a body
+#'   border given here, as it does over `border_group`.
 #' @param indent_twips The left indent of the cells' text,
 #'   [style_cols()]'s `indent_twips` (not on the header).
 #' @param row With `header = TRUE`, the header rows styled, 1 being the top
@@ -1944,6 +1964,20 @@ plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
 #'   plan_cell_style(header = TRUE, row = 1, italic = TRUE) |>
 #'   plan_apply()
 #' pages[[1]]$col_header[[1]][[2]]$italic
+#'
+#' # A body border: a rule under the "Subjects" row
+#' pages <- table_plan(tbl) |>
+#'   plan_cell_style(where = ~ Parameter == "Subjects",
+#'                   border = rtf_border(bottom = TRUE)) |>
+#'   plan_apply()
+#' pages[[1]]$cell_styles[[1]]$border[[2]]
+#'
+#' # A rule right of the Parameter column on every body row: where = ~ TRUE
+#' # (with `cols` alone, the border would go on the header cell)
+#' pages <- table_plan(tbl) |>
+#'   plan_cell_style(cols = "Parameter", where = ~ TRUE,
+#'                   border = rtf_border(right = TRUE)) |>
+#'   plan_apply()
 #' @export
 plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
                             bold = NULL, italic = NULL, align = NULL,
@@ -2025,24 +2059,98 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
     return(.plan)
   }
   if (is.null(where)) {
+    # A border on whole columns is style_cols()'s: the columns' HEADER
+    # cells.  The body takes a border through a condition, so say so once.
+    if (!is.null(attrs$border)) {
+      .warn_once("plan_cell_style_cols_border", paste0(
+        "plan_cell_style(cols = , border = ) draws the border on the ",
+        "columns' header cells only.
+  For a border on the body cells, ",
+        "write where = ~ TRUE (or a condition):
+",
+        "  plan_cell_style(cols = , where = ~ TRUE, border = )."))
+    }
     return(.plan_layer(.plan, "restyle",
                        list(fun = "style_cols", args = c(list(cols = cols), attrs))))
   }
   # A condition: each attribute becomes the computed form -- its value
   # where the rows match, the column default (NA) elsewhere -- scoped to
-  # `cols` when they are given.
-  if (!is.null(attrs$border)) {
-    .ard_stop(paste0("plan_cell_style(where = ) takes bold, italic, ",
-                     "underline, align, indent_twips, color and background;",
-                     " a border is set on whole columns."))
-  }
+  # `cols` when they are given.  A border is a list, so its form keeps it
+  # one: the border where the rows match, NULL elsewhere.
   cond <- where[[2L]]
-  spec <- lapply(attrs, function(value) {
-    f <- stats::as.formula(call("~", call("ifelse", cond, value, NA)),
-                           env = environment(where))
+  spec <- lapply(names(attrs), function(a) {
+    value <- attrs[[a]]
+    body <- if (identical(a, "border")) {
+      call("ifelse", cond, list(value), list(NULL))
+    } else {
+      call("ifelse", cond, value, NA)
+    }
+    f <- stats::as.formula(call("~", body), env = environment(where))
     if (is.null(cols)) f else stats::setNames(rep(list(f), length(cols)), cols)
   })
+  names(spec) <- names(attrs)
   .plan_keyed(.plan, "styles", spec)
+}
+
+# The border of a computed style: a list, one element a row (or one for
+# every row), each an rtf_border() or NULL / NA for "no border of its own";
+# a single rtf_border() is every row's.  It goes to cell_styles[[r]]$border,
+# a list of one rtf_border (or NULL) a column -- the path style_body(border
+# = ) takes -- merged side by side onto what an earlier attribute put there.
+.plan_cell_borders <- function(out, val, cols, n, m) {
+  if (inherits(val, "rtf_border")) val <- list(val)
+  if (!is.list(val) || !length(val) %in% c(1L, n)) {
+    .ard_stop(paste0(
+      "plan_cell_style(border): the formula gives an rtf_border() or a ",
+      "list of them, one a row
+  (NULL for none), for example ",
+      "`border = ~ ifelse(is.na(label), list(rtf_border(bottom = TRUE)), ",
+      "list(NULL))`."))
+  }
+  if (length(val) == 1L) val <- rep(val, n)
+  for (r in seq_len(n)) {
+    b <- val[[r]]
+    if (is.null(b) || (is.atomic(b) && length(b) == 1L && is.na(b))) next
+    if (!inherits(b, "rtf_border")) {
+      .ard_stop(paste0(
+        "plan_cell_style(border): row ", r, " gives ",
+        class(b)[1L], ", not an rtf_border() (or NULL for none)."))
+    }
+    cur <- out[[r]]
+    if (is.null(cur)) cur <- list()
+    if (is.null(cur$border)) cur$border <- vector("list", m)
+    for (j in cols) cur$border[[j]] <- .merge_rtf_border(cur$border[[j]], b)
+    out[[r]] <- cur
+  }
+  out
+}
+
+# On each page's last row, the table's `last_row` zone (border_last_row, or
+# that zone of the border) wins over a cell border the plan's styles put
+# there: its sides are merged on top of the cell's, so the renderer, which
+# lays a cell border over the zone, ends with the zone's sides.  The sides
+# it leaves NULL keep the cell's.  Only the plan's cell borders reach this
+# (cell_styles$border from plan_cell_style()); a page without them, or a
+# table without a last-row zone, is left as it is.
+.plan_last_row_wins <- function(pages) {
+  one <- function(pg) {
+    lr <- if (inherits(pg$border, "rtf_table_border")) pg$border$last_row
+    cs <- pg$cell_styles
+    n <- length(cs)
+    if (is.null(lr) || !n || !is.list(cs[[n]]) || !is.list(cs[[n]]$border)) {
+      return(pg)
+    }
+    cs[[n]]$border <- lapply(cs[[n]]$border, function(b)
+      if (is.null(b)) NULL else .merge_rtf_border(b, lr))
+    pg$cell_styles <- cs
+    pg
+  }
+  if (inherits(pages, "rtftable")) return(one(pages))
+  if (!is.list(pages)) return(pages)
+  for (i in seq_along(pages)) {
+    if (inherits(pages[[i]], "rtftable")) pages[[i]] <- one(pages[[i]])
+  }
+  pages
 }
 
 # A computed style: a one-sided formula, or a list of them named by column.
@@ -2097,6 +2205,10 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
           ".\n  Available: ", paste(nms, collapse = ", ")))
       }
       val <- eval(f[[2L]], frame, environment(f))
+      if (identical(att, "border")) {
+        out <- .plan_cell_borders(out, val, cols, n, m)
+        next
+      }
       if (length(val) == 1L) val <- rep(val, n)
       if (length(val) != n) {
         .ard_stop(paste0(
@@ -6119,6 +6231,9 @@ plan_n_candidates <- function(.plan) {
     do.call(as_rtftables, c(list(x = tbl), rtf)), plan,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
       "styles"))
+  # a border plan_cell_style(where = / a formula) put on a page's last row
+  # gives way to the table's border_last_row, as border_group does
+  if (!is.null(rtf$cell_styles)) out <- .plan_last_row_wins(out)
 
   # the `columns` sheet names the columns, so it is applied to the pages,
   # where the names are the ones printed (a folded stub, a hidden carrier)
