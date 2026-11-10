@@ -24,7 +24,10 @@ every value column) a reordered table keeps them; unnamed, they are one
 a column in order, as \code{col_rel_width} itself.  A name that is not a
 column of the table stops with the names the table has.  Each width is
 a positive finite number: \code{0}, a negative, \code{NA}, \code{Inf} or a string
-stops at \code{plan_columns()}.}
+stops at \code{plan_columns()}.  A later \code{plan_columns(widths = )} replaces
+the earlier one as a whole: \code{c(AGE = 1200, SEX = 900)} followed by
+\code{c(AGE = 1500)} leaves the width of \code{AGE} only.  Say every width in
+one call.}
 
 \item{decimal}{The columns whose numbers line up at the decimal point
 (\code{.values} for every value column), \code{\link[=set_decimal_split]{set_decimal_split()}}'s \code{cols}, by
@@ -37,7 +40,8 @@ allowed and changes nothing).}
 name as \code{widths} are: a row key's name as \code{table_plan(rows = )} gives
 it, \code{.values} for every value column.  A position counts the
 \strong{printed} columns: a key hidden with \code{\link[=plan_hide]{plan_hide()}} or taken out by
-\code{page_by} is left out.}
+\code{page_by} is left out.  Like \code{widths}, a later call replaces it as a
+whole.}
 
 \item{auto_width}{\code{TRUE} sizes each column to its widest content,
 \code{as_rtftables(auto_width = )}.}

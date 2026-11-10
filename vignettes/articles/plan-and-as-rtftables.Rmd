@@ -190,7 +190,10 @@ A few things behave differently because a plan is built from layers:
 
 * **A later layer wins** for every setting except one. `plan_hide()` **adds**:
   two `plan_hide()` calls hide both columns, because a later one un-hiding the
-  first would be a surprise.
+  first would be a surprise. A named list or vector argument is replaced as a
+  whole: `plan_columns(widths = c(AGE = 1200, SEX = 900))` followed by
+  `plan_columns(widths = c(AGE = 1500))` leaves the width of `AGE` only.
+  `plan_levels()`, `plan_labels()` and `plan_nest()` merge one key at a time.
 * **Contradictions are errors.** `plan_paginate_group()` with
   `plan_paginate_rows(max_rows = )` says both "a page per value" and "this
   many rows a page". A single call would quietly ignore `max_rows`. A plan

@@ -31,6 +31,9 @@ after them.  The names of the arguments after \code{...} are reserved: a
 variable called \code{stats}, \code{value}, \code{na} or \code{notes} cannot be keyed
 here; name it otherwise in the ARD.
 
+A later call replaces a key's entry as a whole, a named vector of
+templates too: its rows are not merged with the earlier call's.
+
 An unnamed vector of several templates, \code{c("{n} ({p})", "{n}")}, is
 one row: the first template whose statistics the record has wins, as
 with guards.  A template with no token prints as written, so a

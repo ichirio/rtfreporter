@@ -37,9 +37,9 @@
 #  ---------------------------------------------------------------------------
 #
 #  1. LAST WINS.  Every verb adds a layer; layers are merged in order and a
-#     later one overwrites what an earlier one said about the same key.  This
-#     is tfrmt's `frmt_structure` rule, and it is what makes "set everything,
-#     then fix one variable" a two-line edit instead of a rewrite.
+#     later one overwrites what an earlier one said about the same key.  That
+#     is what makes "set everything, then fix one variable" a two-line edit
+#     instead of a rewrite.
 #
 #     Note this is a DIFFERENT rule from `widen_ard(cells = )`, which picks
 #     by SPECIFICITY (variable, then context, then kind, then default) and
@@ -444,8 +444,8 @@
 #'
 #' `table_plan()` starts a plan, and takes the **roles**: which column goes
 #' across the table, which go down it, which carries the row identity.
-#' This is `ggplot(data, aes(x, y))` --- the names must be columns of the
-#' data you hand it, so you can check them by looking.  Every `plan_*()`
+#' The names must be columns of the data you hand it, so you can check them
+#' by looking.  Every `plan_*()`
 #' verb after it adds a declaration, and nothing runs until [plan_apply()].
 #'
 #' The rule is **last wins** --- a later layer overwrites what an earlier one
@@ -456,7 +456,15 @@
 #' plan_digits(2) |> plan_digits(AGE = 0)
 #' ```
 #'
-#' This is tfrmt's `frmt_structure` rule.  Within one layer the keys are
+#' Last wins argument by argument.  An argument whose value is a named list
+#' or named vector, such as `plan_columns(widths = c(AGE = 1200, SEX =
+#' 900))`, is replaced as a whole: a later `plan_columns(widths = c(AGE =
+#' 1500))` leaves `AGE` only, and the names it leaves out are not kept from
+#' the earlier call.  An argument the later call leaves out keeps its
+#' earlier value.  [plan_levels()], [plan_labels()] and [plan_nest()] are
+#' the exception: they merge one key at a time.
+#'
+#' Within one layer the keys are
 #' picked by specificity, as [widen_ard()]'s `cells` are: an analysis
 #' variable before a kind, a kind before the default.
 #'
@@ -1015,6 +1023,10 @@ print.table_plan <- function(x, ...) {
 #'
 #' @description
 #' Each verb adds a layer to an [table_plan()].  **A later layer wins.**
+#' It wins argument by argument, and an argument that is a named list or
+#' named vector (`widths`, `values`, the digits or template of a key) is
+#' replaced as a whole.  Only [plan_levels()], [plan_labels()] and
+#' [plan_nest()] merge one key at a time.
 #' The roles --- which column goes across, which go down, which carries
 #' the row identity --- are said once, on [table_plan()]; these verbs are
 #' the things a report really does declare twice.  Their arguments are
@@ -1394,6 +1406,9 @@ plan_labels <- function(.plan, ...) {
 #'   variable called `stats`, `value`, `na` or `notes` cannot be keyed
 #'   here; name it otherwise in the ARD.
 #'
+#'   A later call replaces a key's entry as a whole, a named vector of
+#'   templates too: its rows are not merged with the earlier call's.
+#'
 #'   An unnamed vector of several templates, `c("{n} ({p})", "{n}")`, is
 #'   one row: the first template whose statistics the record has wins, as
 #'   with guards.  A template with no token prints as written, so a
@@ -1597,6 +1612,10 @@ plan_cells <- function(.plan, ..., stats = NULL, value = NULL, na = NULL,
 #'   `"x"`, `c(1, 2)` unnamed, a zero-length vector --- stops at the verb,
 #'   naming the key.  (A whole number as text, `"0"`, is read as decimals
 #'   inside a named vector, as `c(mean = "4s", n = 0)` makes it.)
+#'
+#'   A later call replaces a key's entry as a whole: `AGE = c(mean = 1, sd =
+#'   2)` followed by `AGE = c(mean = 0)` leaves `mean` only for `AGE`, and
+#'   its `sd` then takes the next wider key's digits.
 #' @param rounding The tie-breaking family for the run, as
 #'   `widen_ard(rounding = )` takes it.  Last wins.  A study sets the rule
 #'   once with `options(rtfreporter.rounding = )`; give it here only for a
@@ -1871,7 +1890,9 @@ plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
 #'
 #' @param .plan A [table_plan()].
 #' @param cols The columns styled, by name (`.values` for every value
-#'   column); left out, every column.
+#'   column); left out, every column.  With `cols` and no `where`, a
+#'   `border` is the header cells' border; for a body column's border write
+#'   `where = ~ TRUE` (or a condition).
 #' @param header `TRUE` styles the column header instead of the body; it
 #'   takes `bold`, `italic`, `underline`, `align` and `border`
 #'   ([style_header()]), `color` and `background` (the columns' header text
@@ -1895,8 +1916,26 @@ plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
 #'       list(Placebo = ~ ifelse(n > 50, "#CC0000", NA))`.}
 #'   }
 #'   A formula sees the printed rows only with `plan_stub(before = TRUE)`.
-#' @param border A column's border, an [rtf_border()]: on whole columns or
-#'   the header, not with `where`.
+#' @param border An [rtf_border()]. Where it is drawn depends on how the
+#'   cells are chosen:
+#'   \describe{
+#'     \item{`cols` and no `where`}{the border goes on the columns' **header
+#'       cells** only ([style_cols()]'s `border`).  This call warns about
+#'       that once a session.  For a border on a column's body cells, write
+#'       `where = ~ TRUE`, or a condition.}
+#'     \item{`where`}{the border goes on the body cells of the rows the
+#'       condition holds for, over `cols` or every column.  It is merged
+#'       side by side over the row's own rules, as
+#'       [style_body()]`(border = )` does.}
+#'     \item{a one-sided formula}{gives one border a row: a list of
+#'       [rtf_border()] objects, or `NULL` for no border, as in `border = ~
+#'       ifelse(is.na(label), list(rtf_border(bottom = TRUE)), list(NULL))`.
+#'       A single [rtf_border()] applies to every row.}
+#'     \item{`header = TRUE`}{the header cells.}
+#'   }
+#'   On a page's last row, the table's own last-row rule
+#'   ([plan_style()]'s `border_last_row`) wins side by side over a body
+#'   border given here, as it does over `border_group`.
 #' @param indent_twips The left indent of the cells' text,
 #'   [style_cols()]'s `indent_twips` (not on the header).
 #' @param row With `header = TRUE`, the header rows styled, 1 being the top
@@ -1944,6 +1983,20 @@ plan_stub <- function(.plan, vars = NULL, name = NULL, indent = NULL,
 #'   plan_cell_style(header = TRUE, row = 1, italic = TRUE) |>
 #'   plan_apply()
 #' pages[[1]]$col_header[[1]][[2]]$italic
+#'
+#' # A body border: a rule under the "Subjects" row
+#' pages <- table_plan(tbl) |>
+#'   plan_cell_style(where = ~ Parameter == "Subjects",
+#'                   border = rtf_border(bottom = TRUE)) |>
+#'   plan_apply()
+#' pages[[1]]$cell_styles[[1]]$border[[2]]
+#'
+#' # A rule right of the Parameter column on every body row: where = ~ TRUE
+#' # (with `cols` alone, the border would go on the header cell)
+#' pages <- table_plan(tbl) |>
+#'   plan_cell_style(cols = "Parameter", where = ~ TRUE,
+#'                   border = rtf_border(right = TRUE)) |>
+#'   plan_apply()
 #' @export
 plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
                             bold = NULL, italic = NULL, align = NULL,
@@ -2025,24 +2078,98 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
     return(.plan)
   }
   if (is.null(where)) {
+    # A border on whole columns is style_cols()'s: the columns' HEADER
+    # cells.  The body takes a border through a condition, so say so once.
+    if (!is.null(attrs$border)) {
+      .warn_once("plan_cell_style_cols_border", paste0(
+        "plan_cell_style(cols = , border = ) draws the border on the ",
+        "columns' header cells only.
+  For a border on the body cells, ",
+        "write where = ~ TRUE (or a condition):
+",
+        "  plan_cell_style(cols = , where = ~ TRUE, border = )."))
+    }
     return(.plan_layer(.plan, "restyle",
                        list(fun = "style_cols", args = c(list(cols = cols), attrs))))
   }
   # A condition: each attribute becomes the computed form -- its value
   # where the rows match, the column default (NA) elsewhere -- scoped to
-  # `cols` when they are given.
-  if (!is.null(attrs$border)) {
-    .ard_stop(paste0("plan_cell_style(where = ) takes bold, italic, ",
-                     "underline, align, indent_twips, color and background;",
-                     " a border is set on whole columns."))
-  }
+  # `cols` when they are given.  A border is a list, so its form keeps it
+  # one: the border where the rows match, NULL elsewhere.
   cond <- where[[2L]]
-  spec <- lapply(attrs, function(value) {
-    f <- stats::as.formula(call("~", call("ifelse", cond, value, NA)),
-                           env = environment(where))
+  spec <- lapply(names(attrs), function(a) {
+    value <- attrs[[a]]
+    body <- if (identical(a, "border")) {
+      call("ifelse", cond, list(value), list(NULL))
+    } else {
+      call("ifelse", cond, value, NA)
+    }
+    f <- stats::as.formula(call("~", body), env = environment(where))
     if (is.null(cols)) f else stats::setNames(rep(list(f), length(cols)), cols)
   })
+  names(spec) <- names(attrs)
   .plan_keyed(.plan, "styles", spec)
+}
+
+# The border of a computed style: a list, one element a row (or one for
+# every row), each an rtf_border() or NULL / NA for "no border of its own";
+# a single rtf_border() is every row's.  It goes to cell_styles[[r]]$border,
+# a list of one rtf_border (or NULL) a column -- the path style_body(border
+# = ) takes -- merged side by side onto what an earlier attribute put there.
+.plan_cell_borders <- function(out, val, cols, n, m) {
+  if (inherits(val, "rtf_border")) val <- list(val)
+  if (!is.list(val) || !length(val) %in% c(1L, n)) {
+    .ard_stop(paste0(
+      "plan_cell_style(border): the formula gives an rtf_border() or a ",
+      "list of them, one a row
+  (NULL for none), for example ",
+      "`border = ~ ifelse(is.na(label), list(rtf_border(bottom = TRUE)), ",
+      "list(NULL))`."))
+  }
+  if (length(val) == 1L) val <- rep(val, n)
+  for (r in seq_len(n)) {
+    b <- val[[r]]
+    if (is.null(b) || (is.atomic(b) && length(b) == 1L && is.na(b))) next
+    if (!inherits(b, "rtf_border")) {
+      .ard_stop(paste0(
+        "plan_cell_style(border): row ", r, " gives ",
+        class(b)[1L], ", not an rtf_border() (or NULL for none)."))
+    }
+    cur <- out[[r]]
+    if (is.null(cur)) cur <- list()
+    if (is.null(cur$border)) cur$border <- vector("list", m)
+    for (j in cols) cur$border[[j]] <- .merge_rtf_border(cur$border[[j]], b)
+    out[[r]] <- cur
+  }
+  out
+}
+
+# On each page's last row, the table's `last_row` zone (border_last_row, or
+# that zone of the border) wins over a cell border the plan's styles put
+# there: its sides are merged on top of the cell's, so the renderer, which
+# lays a cell border over the zone, ends with the zone's sides.  The sides
+# it leaves NULL keep the cell's.  Only the plan's cell borders reach this
+# (cell_styles$border from plan_cell_style()); a page without them, or a
+# table without a last-row zone, is left as it is.
+.plan_last_row_wins <- function(pages) {
+  one <- function(pg) {
+    lr <- if (inherits(pg$border, "rtf_table_border")) pg$border$last_row
+    cs <- pg$cell_styles
+    n <- length(cs)
+    if (is.null(lr) || !n || !is.list(cs[[n]]) || !is.list(cs[[n]]$border)) {
+      return(pg)
+    }
+    cs[[n]]$border <- lapply(cs[[n]]$border, function(b)
+      if (is.null(b)) NULL else .merge_rtf_border(b, lr))
+    pg$cell_styles <- cs
+    pg
+  }
+  if (inherits(pages, "rtftable")) return(one(pages))
+  if (!is.list(pages)) return(pages)
+  for (i in seq_along(pages)) {
+    if (inherits(pages[[i]], "rtftable")) pages[[i]] <- one(pages[[i]])
+  }
+  pages
 }
 
 # A computed style: a one-sided formula, or a list of them named by column.
@@ -2097,6 +2224,10 @@ plan_cell_style <- function(.plan, cols = NULL, header = FALSE, where = NULL,
           ".\n  Available: ", paste(nms, collapse = ", ")))
       }
       val <- eval(f[[2L]], frame, environment(f))
+      if (identical(att, "border")) {
+        out <- .plan_cell_borders(out, val, cols, n, m)
+        next
+      }
       if (length(val) == 1L) val <- rep(val, n)
       if (length(val) != n) {
         .ard_stop(paste0(
@@ -2481,6 +2612,8 @@ plan_total <- function(.plan, label = "Total", position = c("last", "first"),
 #' conditions are R over a record's statistics and keys, the language of
 #' [plan_cells()]' guards; nothing is computed, `p` is the ARD's.  The
 #' columns stay.  In a SOC / PT table a SOC goes with its last PT.
+#' A later `plan_filter()` replaces the earlier one as a whole: the last call
+#' is the filter.
 #'
 #' @param .plan A [table_plan()].
 #' @param ... The conditions, unnamed, all of them holding:
@@ -2552,6 +2685,8 @@ plan_filter <- function(.plan, ..., any = TRUE, parents = c("keep", "drop"), by 
 #' `ard_stats_fisher_test()`, ...).  Each goes on its **variable's block**:
 #' the row of its level when it has one, else the block's first row as the
 #' table is sorted.  Nothing is computed; the numbers are the ARD's.
+#' A later `plan_compare()` replaces the earlier one as a whole: the last call
+#' says every comparison column.
 #'
 #' @param .plan A [table_plan()].  The dot keeps `p = `, the commonest
 #'   column here, from being taken for it.
@@ -3399,6 +3534,9 @@ plan_style <- function(.plan, border = NULL, align_count_pct = NULL,
 #'   total is never put in every column: it answers a one-column table and
 #'   a cell over all the columns.  Keep the header consistent with the
 #'   body: the percentages are over the denominator cards used.
+#'
+#'   A later `plan_col_header(values = )` replaces the earlier `values` as
+#'   a whole: a token or column the later call leaves out is not kept.
 #' @param header_sep [as_rtftables()]'s `header_sep`: the separator a plain
 #'   table's column names are split on into spanning header rows.
 #' @param col_header_align [rtftable()]'s `col_header_align`.
@@ -3523,7 +3661,10 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   a column in order, as `col_rel_width` itself.  A name that is not a
 #'   column of the table stops with the names the table has.  Each width is
 #'   a positive finite number: `0`, a negative, `NA`, `Inf` or a string
-#'   stops at `plan_columns()`.
+#'   stops at `plan_columns()`.  A later `plan_columns(widths = )` replaces
+#'   the earlier one as a whole: `c(AGE = 1200, SEX = 900)` followed by
+#'   `c(AGE = 1500)` leaves the width of `AGE` only.  Say every width in
+#'   one call.
 #' @param decimal The columns whose numbers line up at the decimal point
 #'   (`.values` for every value column), [set_decimal_split()]'s `cols`, by
 #'   name.  A value that is not column names (`NA`, `""`, a number) stops at
@@ -3534,7 +3675,8 @@ plan_col_header <- function(.plan, header = NULL, values = NULL,
 #'   name as `widths` are: a row key's name as `table_plan(rows = )` gives
 #'   it, `.values` for every value column.  A position counts the
 #'   **printed** columns: a key hidden with [plan_hide()] or taken out by
-#'   `page_by` is left out.
+#'   `page_by` is left out.  Like `widths`, a later call replaces it as a
+#'   whole.
 #' @param auto_width `TRUE` sizes each column to its widest content,
 #'   `as_rtftables(auto_width = )`.
 #' @param sep The separator several `cols` keys are joined with in the
@@ -6144,6 +6286,9 @@ plan_n_candidates <- function(.plan) {
     do.call(as_rtftables, c(list(x = tbl), rtf)), plan,
     c("group", "hide", "sort", "blanks", "pages", "style", "stub",
       "styles"))
+  # a border plan_cell_style(where = / a formula) put on a page's last row
+  # gives way to the table's border_last_row, as border_group does
+  if (!is.null(rtf$cell_styles)) out <- .plan_last_row_wins(out)
 
   # the `columns` sheet names the columns, so it is applied to the pages,
   # where the names are the ones printed (a folded stub, a hidden carrier)

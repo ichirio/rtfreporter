@@ -5,6 +5,10 @@
 \title{Declare the table, one layer at a time}
 \description{
 Each verb adds a layer to an \code{\link[=table_plan]{table_plan()}}.  \strong{A later layer wins.}
+It wins argument by argument, and an argument that is a named list or
+named vector (\code{widths}, \code{values}, the digits or template of a key) is
+replaced as a whole.  Only \code{\link[=plan_levels]{plan_levels()}}, \code{\link[=plan_labels]{plan_labels()}} and
+\code{\link[=plan_nest]{plan_nest()}} merge one key at a time.
 The roles --- which column goes across, which go down, which carries
 the row identity --- are said once, on \code{\link[=table_plan]{table_plan()}}; these verbs are
 the things a report really does declare twice.  Their arguments are
