@@ -10,7 +10,7 @@ plan_stub(
   name = NULL,
   indent = NULL,
   group_summary = NULL,
-  before = FALSE,
+  before = NULL,
   heading = NULL
 )
 }
@@ -37,14 +37,15 @@ summary, folding its statistics onto the group's heading row, as
 \code{stub_cols(group_summary = )}: \code{"empty"}, \code{"parent"}, \code{"all"} or
 \code{"none"}.}
 
-\item{before}{\code{FALSE} (default) folds the stub inside \code{\link[=as_rtftables]{as_rtftables()}},
+\item{before}{\code{FALSE} folds the stub inside \code{\link[=as_rtftables]{as_rtftables()}},
 after grouping and pagination have had their say.  \code{TRUE} folds it
 first, with \code{\link[=stub_cols]{stub_cols()}}, which is what a condition of
 \code{plan_cell_style()} needs: only then can it see the rows that will be
 printed.  The two do \strong{not} always give the same table: folded
 first, the row keys are gone before a page split or a row group could
 read them, so \code{plan_paginate_group(col = )} naming one of them no
-longer finds it.}
+longer finds it.  Left out (\code{NULL}): \code{FALSE}, or what an earlier
+\code{plan_stub()} said -- a later call that leaves it out keeps it.}
 
 \item{heading}{The stub's header text when it is not its \code{name}: \code{""}
 leaves the cell blank, so a column named for the program
