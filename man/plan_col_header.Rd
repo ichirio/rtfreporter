@@ -74,7 +74,10 @@ A \strong{data frame} of per-page values is \code{\link[=set_col_header]{set_col
 \code{values}: one row per page key, a column per \code{{token}}.  The study
 total is never put in every column: it answers a one-column table and
 a cell over all the columns.  Keep the header consistent with the
-body: the percentages are over the denominator cards used.}
+body: the percentages are over the denominator cards used.
+
+A later \code{plan_col_header(values = )} replaces the earlier \code{values} as
+a whole: a token or column the later call leaves out is not kept.}
 
 \item{header_sep}{\code{\link[=as_rtftables]{as_rtftables()}}'s \code{header_sep}: the separator a plain
 table's column names are split on into spanning header rows.}
