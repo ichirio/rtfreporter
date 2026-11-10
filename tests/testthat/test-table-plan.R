@@ -609,8 +609,8 @@ test_that("plan_cell_style() says where as well as how", {
   expect_false(all(b))
   # the two spellings of a condition do not mix in one call
   expect_error(plan_cell_style(base, bold = ~ TRUE, where = ~ TRUE), "two calls")
-  expect_error(plan_cell_style(base, header = TRUE, color = "#FF0000"),
-               "bold, italic, underline, align and border")
+  expect_error(plan_cell_style(base, header = TRUE, indent_twips = 100),
+               "bold, italic, underline, align, border, color and background")
   expect_error(plan_cell_style(base), "nothing to style")
 })
 
@@ -2003,8 +2003,13 @@ test_that("plan_style() takes the whole table's settings, and only those", {
   z <- plan_apply(plan_style(p, border_body = rtf_border(bottom = TRUE)),
                   "args")$rtf
   expect_s3_class(z$style, "rtf_table_style")
-  expect_error(plan_style(p, border = "tfl", border_body = rtf_border()),
-               "one way")
+  # `border` with a zone: the preset with that zone merged onto it
+  zb <- plan_apply(plan_style(p, border = "tfl",
+                              border_body = rtf_border(bottom = TRUE)),
+                   "args")$rtf
+  expect_s3_class(zb$border, "rtf_table_border")
+  expect_false(is.null(zb$border$header))
+  expect_false(is.null(zb$border$body))
 })
 
 test_that("plan_columns() declares the stub column, auto width and the key separator", {

@@ -984,7 +984,8 @@
 #   italic       -- (optional) TRUE / FALSE.  Default FALSE.
 #   underline    -- (optional) TRUE / FALSE.  Default FALSE.
 #   promoted     -- (internal) TRUE on a label-row cell promoted by
-#                   style_header(); it takes col_spec[[from]]$header_background.
+#                   style_header(); it takes col_spec[[from]]$header_background
+#                   and $header_color.
 #
 # `border_spec` is the row-level border (only top on first / bottom on
 # last header row, per .header_outer_border()).  `group_bottom_side`,
@@ -1155,6 +1156,15 @@
       if (isTRUE(sp$underline)) label <- paste0("\\ul ", label, "\\ulnone ")
       if (isTRUE(sp$italic))    label <- paste0("\\i ",  label, "\\i0 ")
       if (isTRUE(sp$bold))      label <- paste0("\\b ",  label, "\\b0 ")
+      # A promoted label-row cell keeps its column's header text colour,
+      # as the label row had it.
+      hc <- if (isTRUE(sp$promoted) && !is.null(col_spec) &&
+                j <= length(col_spec)) col_spec[[j]]$header_color
+      if (!is.null(hc) && !is.null(color_index_map) &&
+          !is.null(color_index_map[[hc]])) {
+        label <- paste0("\\cf", as.integer(color_index_map[[hc]]), " ",
+                        label, "\\cf1 ")
+      }
       al        <- .span_align(sp)
       align_cmd <- switch(al, left = "\\ql", right = "\\qr",
                               center = "\\qc", "\\qc")
@@ -1204,8 +1214,12 @@
     bold  <- isTRUE(spec$header_bold)
     itl   <- isTRUE(spec$header_italic)
     align <- spec$header_align %||% "center"
+    # the column's header text colour (style_cols(header_color = )); none
+    # given, no colour command, as before
+    color_idx <- if (!is.null(spec$header_color) && !is.null(color_index_map))
+      color_index_map[[spec$header_color]] else NULL
     .build_cell_content(text, align, bold, itl, FALSE, 0L, pad_l, pad_r,
-                        fs_cmd = fs_cmd)
+                        color_idx = color_idx, fs_cmd = fs_cmd)
   }, character(1L))
   .build_row(cell_defs, cell_contents, row_height_twips, table_align)
 }
@@ -2024,6 +2038,8 @@
                            use.names = FALSE))
       out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$header_background),
                            use.names = FALSE))
+      out <- c(out, unlist(lapply(tbl$col_spec, function(s) s$header_color),
+                           use.names = FALSE))
       out <- c(out, unlist(lapply(tbl$col_spec, function(s)
         .collect_border_colors(s$border)), use.names = FALSE))
     }
@@ -2199,8 +2215,29 @@
   # Footnote separator: a top rule on the first row unless it sets its own border.
   if (is_footer && length(out) >= 1L && is.null(out[[1L]]$border)) {
     out[[1L]]$border <- rtf_border(top = TRUE)
+    # marked, so the text format can tell this default from a border the user
+    # wrote (see .warn_text_block_border())
+    out[[1L]]$border_default <- TRUE
   }
   out
+}
+
+# The text format draws no paragraph border.  A `border` the user wrote on a
+# title / footnote (a row's own, or the block's) is therefore ignored there:
+# say so, once per render.  The footnote's default top line (marked
+# `border_default` by .normalize_text_block()) is not the user's and never
+# warns.  Outside a render (.run_ctx$text_border_warned is NULL) it warns
+# every call.
+.warn_text_block_border <- function(rows, style) {
+  user <- !is.null(style$border) ||
+    any(vapply(rows, function(r) !is.null(r$border) && !isTRUE(r$border_default),
+               logical(1L)))
+  if (!user || isTRUE(.run_ctx$text_border_warned)) return(invisible(FALSE))
+  if (!is.null(.run_ctx$text_border_warned)) .run_ctx$text_border_warned <- TRUE
+  warning("A title or footnote `border` is drawn only when title_format / ",
+          "footnote_format = \"table\"; it is ignored in the text format.",
+          call. = FALSE)
+  invisible(TRUE)
 }
 
 # Hex colours referenced by a title/footnote block (row text + row borders),
@@ -2274,7 +2311,8 @@
 # Render a title/footnote block as plain paragraphs (one per line) spanning the
 # writable width, honouring per-row align / bold / italic / underline / colour.
 # A row `border` does NOT apply in text mode (a paragraph carries no cell rule),
-# so the footnote separator is only drawn in the table form.
+# so the footnote separator is only drawn in the table form; a border the user
+# wrote is warned about once per render (.warn_text_block_border()).
 .render_text_block_text <- function(block, is_footer, color_index_map = NULL,
                                     markup = "script", pad_l = 0L, pad_r = 0L,
                                     style = NULL, font_half_points = 18L,
@@ -2282,6 +2320,7 @@
                                     current_page = NULL, total_pages = NULL) {
   rows <- .normalize_text_block(block, is_footer, style$align)
   if (length(rows) == 0L) return(character())
+  .warn_text_block_border(rows, style)
   # Honour the document-wide cell padding as left/right paragraph indent, so the
   # "every element inherits the document padding" contract still holds.
   if (!is.null(style$markup)) markup <- style$markup
@@ -2670,6 +2709,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
   .run_ctx$program_fallback <- .check_program(program_fallback,
                                               "program_fallback")
   .run_ctx$program_done <- FALSE
+  .run_ctx$text_border_warned <- FALSE
   .run_ctx$time <- .resolve_render_time()
   .run_ctx$tokens <- .user_tokens(
     if (inherits(report, "rtf_document")) report$document$tokens)
@@ -2677,6 +2717,7 @@ generate_rtfreport <- function(doc, file_path = NULL, overwrite = TRUE,
     .run_ctx$program <- NULL
     .run_ctx$program_fallback <- NULL
     .run_ctx$program_done <- NULL
+    .run_ctx$text_border_warned <- NULL
     .run_ctx$time <- NULL
     .run_ctx$tokens <- NULL
     .run_ctx$page_values <- NULL

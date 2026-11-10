@@ -572,7 +572,8 @@
 #'   style's, else the document's ([rtf_style()]), else 0; 0
 #'   writes nothing.
 #' @param cell_valign Vertical alignment: `"bottom"` (default), `"top"`,
-#'   or `"center"`.
+#'   or `"center"`.  It applies to the whole table, as do row height, cell
+#'   padding and font size; none of them is set per row or per cell.
 #' @param cell_styles `NULL` (default), or a list of length `nrow(data)`.
 #'   Each element is either `NULL` (no per-cell override for that row) or a
 #'   named list with optional vectors of length `ncol(data)`:

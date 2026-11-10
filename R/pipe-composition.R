@@ -977,7 +977,8 @@ rtf_figures <- function(doc, figures,
 #' same width as the content; title rows default to centred + bold.  A row's
 #' `row_height_twips` is that row's height, over the block's
 #' `row_height_twips`; it applies to the table form
-#' (`rtf_style(title_format = "table")`), as the block's does.
+#' (`rtf_style(title_format = "table")`), as the block's does.  So does a
+#' row's `border`: the text form draws none, ignores one you set, and warns.
 #'
 #' @param doc An rtf_document object.
 #' @param border `NULL` (default) for no rule, or an [rtf_border()] for the
@@ -986,7 +987,8 @@ rtf_figures <- function(doc, figures,
 #'   `left` / `right` on the outer edges of every row.  A row's own
 #'   `border` is merged side by side over it, so the sides the row sets
 #'   win.  It is drawn in the table form
-#'   (`rtf_style(title_format = "table")`).
+#'   (`rtf_style(title_format = "table")`); the text form ignores it and
+#'   warns.
 #' @param titles A list of length = number of contents, or length 1 (common).
 #'   A page's heading (`rtf_tables(auto_title = TRUE)`, a plan's
 #'   `plan_paginate_group(heading_at = "title")`) is not replaced: it
@@ -1115,7 +1117,9 @@ rtf_titles <- function(doc, titles, font_size_half_points = NULL,
 #'   / `right` on the outer edges of every row, `inside_v` between the cells
 #'   of a row; e.g. `border = rtf_border(top = TRUE)` for a separator rule
 #'   above the block.  A row given as a list may carry its own `border =`
-#'   (`list(columns = , border = )`), merged side by side over the block's.
+#'   (`list(columns = , border = )`), merged side by side over the block's.  It is drawn only with
+#'   `rtf_style(footnote_format = "table")` (the default); the text form
+#'   ignores it and warns.
 #' @param font_size_half_points,row_height_twips,markup,align,font Style for
 #'   this block, over the document's [rtf_style()] (its section, then its
 #'   shared level).
