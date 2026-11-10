@@ -183,8 +183,11 @@ print.rtf_page <- function(x, ...) {
 #'   See [rtftable()].
 #' @param title_format How the page **title** renders: `"text"` (default, plain
 #'   centred paragraphs) or `"table"` (a content-width single-column table).
+#'   A `border` on a title is drawn only in the `"table"` form; in the
+#'   `"text"` form it is ignored, with a warning.
 #' @param footnote_format How the **footnote** renders: `"table"` (default,
-#'   content-width table with the separator rule) or `"text"` (plain paragraphs).
+#'   content-width table with the separator rule) or `"text"` (plain paragraphs,
+#'   which draw no `border`: one you set is ignored, with a warning).
 #' @param title_width,footnote_width Width of the title / footnote block:
 #'   `"content"` (the default -- follow the table body), `"page"` (the writable
 #'   width, margins excluded), a fraction in `(0, 1]` of the writable width, or

@@ -45,7 +45,9 @@ size, and an explicit height always wins.}
 
 \item{border}{\code{NULL} (default) for \strong{no rule} -- unlike the page footer,
 the footnote draws none unless asked. An \code{\link[=rtf_border]{rtf_border()}} puts one on the
-first row, e.g. \code{border = rtf_border(top = TRUE)}.}
+first row, e.g. \code{border = rtf_border(top = TRUE)}.  It is drawn only with
+\code{rtf_style(footnote_format = "table")} (the default); the text form
+ignores it and warns.}
 }
 \value{
 Modified rtf_document.
